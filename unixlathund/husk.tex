@@ -1,0 +1,68 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[a4paper,vmargin={2cm,2.2cm}, hmargin={1.5cm}]{geometry}
+
+\pagestyle{empty}
+\begin{document}
+
+\section{Home directories}
+User home directories are served via NFS by \verb'garm.teokem.lu.se'. Some
+versions of Linux are not entirely compatible with MacOS which can cause
+problems with file locking. This is used in \verb+Mail.app+, \verb+Address Book.app+
+etc. and these programs will NOT work when home is on garm (as of
+writing, Dec. 2006). To circumvent this \verb+~/Library+ can be placed on a
+local disk and a symlink placed in the home directory (ln -s).
+
+To setup MacOS for NFS to garm I suggest using the free program
+\verb+NFS manager+ by Bresink -- see
+\verb+http://www.bresink.com/osx/NFSManager.html+.
+There you will also find a very nice manual on integrating MacOS in NFS
+and NIS environments. When setup, the mount point can be checked in
+\verb+NetInfo Manager+ and should have the following options: \verb+-s,-P,-b+.
+A restart is most likely required for the changes to take effect.
+
+
+\begin{table}
+\begin{tabular}{ll}\hline\hline
+Action              & Command \\\hline
+Pause/resume job    & \verb"kill -s STOP|CONT pid" \\
+Suicide             & \verb"kill -9 -1"\\
+Launch logout-safe job  & \verb"nohup utility &" \\
+\\
+Drive information   & \verb"df -h"\\
+Find file           & \verb'find * -iname "file*"'\\
+Find large files    & \verb'find * -size +1000k printf "%p %k \n"'\\
+Open file (mac)     & \verb"open file"\\
+\\
+Create zip archive  & \verb"zip -r zipfile.zip file(s)"\\
+Test zip archive    & \verb"unzip -t zipfile.zip"\\
+Unpack zip archive  & \verb"unzip zipfile.zip [file(s)]"\\
+Create tar archive  & \verb"tar -czf archive.tar.gz directory"\\
+List tar archive    & \verb"tar -tzf archive.tar.gz"\\
+Unpack tar archive  & \verb"tar -xzf archive.tar.gz"\\
+\\
+Crop PDF borders & \verb"pdfcrop file.pdf" \\
+Convert PDF/EPS to 300 dpi tiff & \verb"convert -compress lzw -density 300x300 in.pdf out.tif" \\
+Convert Xmgrace plot to pdf     & \verb"xmgrace -hardcopy -hdevice PDF file.agr"\\
+Print syntax-highlighted source code & \verb"enscript --media=a4 -E sourcefile"\\
+\\
+Search for package  & \verb"apt-cache search package"\\
+Install package     & \verb"sudo apt-get install package"\\
+Update packages     &  \verb"sudo apt-get update|upgrade"\\
+Install source fink package & \verb"sudo fink install package"\\
+System information  & \verb"cat /proc/cpuinfo" (linux) \\
+                    & \verb"system_profiler" (mac) \\
+\\
+X11 focus           & \verb"defaults write com.apple.X11 wm_ffm -bool true"\\
+Terminal.all focus  & \verb"defaults write com.apple.Terminal FocusFollowsMouse -string YES"\\
+\\
+Get svn repository   & \verb"svn checkout file:///Data/Users/mikael/svn/trunk destname"\\
+Update to latest repository & \verb"svn update"\\
+Review changes       & \verb"svn status" (go to top level dir to see all)\\
+Submit svn changes   & \verb"svn commit"\\
+Add file or directory& \verb"svn add file"\\
+\hline
+\end{tabular}
+\end{table}
+
+\end{document}
+

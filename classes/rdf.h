@@ -9,6 +9,7 @@
  *  \brief Class to calculate the radial distribution function between particles.
  *  \author Mikael Lund
  *  \date Prague, April 2007
+ *  \todo Needs testing. Could instead be based on the xydata class.
  */
 class rdf {
   private:

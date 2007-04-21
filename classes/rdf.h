@@ -49,7 +49,7 @@ void rdf::update(vector<particle> &p) {
     for (int j=i+1; j<n; j++) 
       if ( (p[i].id==a && p[j].id==b)
           || (p[j].id==a && p[i].id==b) )  {
-        k=static_cast<int>(p[i].dist(p[j])/res+0.5);
+        k=static_cast<int>(abs(p[i].dist(p[j]))/res+0.5);
         if (k>=v.size())
           v.resize(k+1);
         v[k]++;

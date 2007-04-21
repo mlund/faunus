@@ -1,5 +1,6 @@
 #include <vector>
 #include <iostream>
+#include <string>
 
 /*!
  * \brief Class for a 2D table, XY data etc.
@@ -21,10 +22,12 @@ class xytable {
         y.resize(i+1);
       return i;
     }
-    std::vector<TY> y; // actual data
+    std::vector<TY> y; 
   public:
-    TX xres,    //!< Distance between x values
-       xmin;    //!< Minimum x value
+    std::string comment;//!< Some (arbitrary) name
+    TX xres,            //!< Distance between x values
+       xmin;            //!< Minimum x value
+
     //! \param resolution Distance between x values
     //! \param xminimum Minimum x value (can be smaller than zero)
     xytable(TX resolution=0.5, TX xminimum=0) {

@@ -148,9 +148,12 @@ void average<T>::add(T x) {
 template<class T>
 T average<T>::avg() { return sum/cnt; }
 
-// A class to handle a vector of averages.
-// Restriction: x>=0.
-// M. Lund, Prague 2007.
+/*!
+ * \brief A class to handle a vector of averages. Restriction: x>=0.
+ * \author Mikael Lund
+ * \date Prague 2007.
+ * \warning Try not to use this -- works, but xytable<float,average> would be better!
+ */
 template<class T>
 class distribution {
   private:

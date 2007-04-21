@@ -59,8 +59,12 @@ Terminal.all focus  & \verb"defaults write com.apple.Terminal FocusFollowsMouse 
 Get svn repository   & \verb"svn checkout http://opensvn.csie.org/molecularmc/trunk molecularmc"\\
 Update to latest repository & \verb"svn update"\\
 Review changes       & \verb"svn status" (go to top level dir to see all)\\
+To compare with latest repository version& \verb"svn status -u" (if astrisks, update)\\
+Compare difference's after modification& \verb"svn diff"
 Submit svn changes   & \verb"svn commit"\\
 Add file or directory& \verb"svn add file"\\
+Regret modification and undo modification of file& \verb"svn revert foo"\\
+Make subversion ready to update after resolvin conflict by hand& \verb"svn resolved"(not need if using revert)\\
 \hline
 \end{tabular}
 \end{table}

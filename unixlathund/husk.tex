@@ -43,6 +43,7 @@ Unpack tar archive  & \verb"tar -xzf archive.tar.gz"\\
 Crop PDF borders & \verb"pdfcrop file.pdf" \\
 Convert PDF/EPS to 300 dpi tiff & \verb"convert -compress lzw -density 300x300 in.pdf out.tif" \\
 Convert Xmgrace plot to pdf     & \verb"xmgrace -hardcopy -hdevice PDF file.agr"\\
+Convert to monochrome           & \verb"convert -threshold 38% -despeckle out.jpg -monochrome in.jpg"
 Print syntax-highlighted source code & \verb"enscript --media=a4 -E sourcefile"\\
 \\
 Search for package  & \verb"apt-cache search package"\\

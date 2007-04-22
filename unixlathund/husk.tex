@@ -57,16 +57,16 @@ System information  & \verb"cat /proc/cpuinfo" (linux) \\
 X11 focus           & \verb"defaults write com.apple.X11 wm_ffm -bool true"\\
 Terminal.all focus  & \verb"defaults write com.apple.Terminal FocusFollowsMouse -string YES"\\
 \\
-Get svn repository   & \verb"svn checkout http://opensvn.csie.org/molecularmc/trunk molecularmc"\\
+Get svn repository   & \verb"svn checkout http://opensvn.csie.org/molecularmc/trunk foodir"\\
 Update to latest repository & \verb"svn update"\\
 Review changes       & \verb"svn status" (go to top level dir to see all)\\
-To compare with latest repository version& \verb"svn status -u" (if astrisks, update)\\
-Compare difference's after modification& \verb"svn diff"
+Compare with latest repository & \verb"svn status -u" (if astrisks, update)\\
+Compare difference's after modification& \verb"svn diff"\\
 Submit svn changes   & \verb"svn commit"\\
 Add file or directory& \verb"svn add file"\\
 Show log             & \verb"svn log"\\
-Regret modification and undo modification of file& \verb"svn revert foo"\\
-Make subversion ready to update after resolvin conflict by hand& \verb"svn resolved"(not need if using revert)\\
+Regret and undo modification & \verb"svn revert foo"\\
+Remove conflict files        & \verb"svn resolved"(not need if using revert)\\
 \hline
 \end{tabular}
 \end{table}

@@ -15,6 +15,8 @@
  */
 template <class TX, class TY>
 class xytable {
+  friend class histogram;
+  friend class rdf;
   private:
     int x2i(TX x) {
       int i=int( (x-xmin)/xres+0.5);
@@ -24,15 +26,17 @@ class xytable {
     }
     std::vector<TY> y; 
   public:
-    std::string comment;//!< Some (arbitrary) name
     TX xres,            //!< Distance between x values
        xmin;            //!< Minimum x value
 
     //! \param resolution Distance between x values
     //! \param xminimum Minimum x value (can be smaller than zero)
-    xytable(TX resolution=0.5, TX xminimum=0) {
+    //! \param xmaximum Maximum x value (for better memory optimization)
+    xytable(TX resolution=0.5, TX xminimum=0, TX xmaximum=0) {
       xres=resolution;
       xmin=xminimum;
+      if (xmaximum>0)
+        y.resize(xmaximum/resolution);
     }
 
     //! Convenient data access

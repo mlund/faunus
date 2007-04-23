@@ -74,8 +74,8 @@ class particle : public point {
 class spherical : private slump {
  public:
   double r,     //!< Radial
-         theta, //!< Zenith angle [0:pi]
-         phi;   //!< Azimuthal angle [0:2*pi]
+         theta, //!< Zenith angle \f$[0:\pi]\f$
+         phi;   //!< Azimuthal angle \f$[0:2\pi]\f$
   spherical(double=0,double=0,double=0);
   point cartesian();                            //!< Convert to cartesian coordinates
   void operator=(point &);                      //!< Convert from cartesian coordinates

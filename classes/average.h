@@ -17,14 +17,6 @@ using namespace std;
  * \brief Class to collect average values
  * \author Mikael Lund
  * \date 2002-2007
- *
- * Example:\n
- * \code
- *   average x;
- *   x+=2.0;
- *   x+=6.0;
- *   cout << x.avg() ;   // --> 4.0
- * \endcode
  */
 template<class T>
 class average {
@@ -37,6 +29,10 @@ class average {
     void reset();                   ///< Clear all data
     void operator+=(T);             ///< Add value to current set. 
     average operator+(average &);   ///< Add two averages
+
+    /*! Example of average class
+     * \example average-test.C
+     */
 };
 
 /*!
@@ -78,45 +74,6 @@ T statistics<T>::stddev() {
     sum+=pow( x[i]-xm, 2 );
   return sqrt( sum / (N-1) );
 }
-
-template<class T>
-class avgmatrix {
- private:
-  int nx,ny;
-  int x2i(T val) { return int((val-xbeg)/steps+.5); };
-  int y2i(T val) { return int((val-ybeg)/steps+.5); };
- public:
-  T xbeg,xend,ybeg,yend,steps;
-  vector< vector< average<T> > > d;
-  avgmatrix(T x1, T x2, T y1, T y2, T s=0.5) {
-    xbeg=x1;
-    xend=x2;
-    ybeg=y1;
-    yend=y2;
-    steps=s;
-    nx=x2i(xend);
-    ny=y2i(yend);
-    d.resize(nx);
-    for (unsigned int i=0; i<nx; i++)
-      d[i].resize(ny);
-  }
-  void add(T x, T y, T val) { d[ x2i(x) ][ y2i(y) ].add(val); }
-  bool save(string file) {
-    ofstream f(file.c_str());
-    if (f) {
-      f.precision(30);
-      for (T x=xbeg; x<xend; x+=steps) {
-	for (T y=ybeg; y<yend; y+=steps)
-	  f << x << " " << y << " "
-	       << d[x2i(x)][y2i(y)].avg() << endl;
-	f << endl;
-      };
-      f.close();
-      return true;
-    };
-    return false;
-  }
-};
 
 template<class T>
 average<T>::average() {

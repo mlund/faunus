@@ -26,10 +26,6 @@ class histogram : private xytable<float,unsigned long int> {
       : xytable<float,unsigned long int>(res,min,max)
     { cnt=0; }
     
-    /*! Example of histogram class
-     * \example histogram-test.C
-     */
-
     //! Increment bin for x value
     void add(float x) {
       (*this)(x)++;
@@ -38,7 +34,11 @@ class histogram : private xytable<float,unsigned long int> {
 
     //! \brief Get bin for x value
     //! \return \f$ \frac{N(r)}{N_{tot}}\f$
-    virtual float get(float x) { return (*this)(x)/float(cnt); }    
+    virtual float get(float x)
+    { return (*this)(x)/float(cnt); }    
+
+    //! Example of histogram class
+    //! \example histogram-test.C
 };
 void histogram::show() {
   float g;

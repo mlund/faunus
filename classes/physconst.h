@@ -14,8 +14,7 @@ class physconst {
            T,     //!< Temperature
            e_r,   //!< Relative dielectric constant
            beta,  //!< 1/kT
-           ecf,
-           beta_ecf; //!< Bjerrum length [AA]
+           lB;    //!< Bjerrum length [AA]
     physconst(double=298.15, double=80.);
 };
 #endif

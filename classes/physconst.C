@@ -13,6 +13,5 @@ physconst::physconst(double kelvin, double dielec) {
   Na  = 6.022137e23; 
 
   beta= 1./(k*T); 
-  ecf = e*e / (4.*pi*e_0*e_r*1e-10);
-  beta_ecf = beta * ecf; 
+  lB  = e*e / (4.*pi*e_0*e_r*1e-10) * beta;
 }

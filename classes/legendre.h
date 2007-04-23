@@ -4,34 +4,7 @@
 using namespace std;
 
 /*!
- * \brief Class to handle a 2D table.
- * \author Mikael Lund
- */
-class table{
-  private:
-    vector<double> y;
-    double min,max,steps;
-    unsigned short x2i(double x)
-    { return static_cast<unsigned short>(x/steps+.5); }
-  public:
-    table( double beg, double end, double resolution) {
-      min=beg;
-      max=end;
-      steps=resolution;
-      y.resize( x2i(max)+1 );
-    }
-    void set(double x, double val) {
-      if (x>=min && x<=max)
-        y[ x2i(val) ]=val;
-    }
-    double get(double x) {
-      if (x>=min && x<=max)
-        return y[ x2i(x) ];
-    }
-};
-
-/*!
- * \brief Evaluate n'th degree Legendre polynomium at x
+ * \brief Evaluate n'th degree Legendre polynomium
  * \author Mikael Lund
  * \date Canberra 2005-2006
  *

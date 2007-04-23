@@ -1,0 +1,16 @@
+About:
+======
+This directory contains some general c++ classes
+(and fortran code?) mainly used for molecular simulation.
+
+Documentation:
+==============
+Ideally all code should be commented using the Doxygen
+comment format so that a html manual will be created by
+issuing the command:
+
+$ doxygen
+
+Example programs can be put in the "examples" dir and
+preferably linked to using the \example keyword.
+

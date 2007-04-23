@@ -4,13 +4,19 @@
 
 /*!
  * \brief Class for a 2D table, XY data etc.
- * \author Mikael Lund
- * \todo Check if the STL resize command assign zero to new data
- * 
+* 
  * The types of X and Y are arbitrarily chosen.\n
  * X values:
  *  - can be smaller than zero (see constructor)
  *  - are assumed equidistant
+ *
+ * The in ternal data vector will be automatically resized to fit
+ * the added data. However, for better memory utilization it is
+ * possible to specify a maximum x value. (if this is exceeded the
+ * vector will be resized anyway).
+ *  
+ * \author Mikael Lund
+ * \todo Check if the STL resize command assign zero to new data
  *
  */
 template <class TX, class TY>

@@ -17,35 +17,57 @@ class histogram : private xytable<float,unsigned long int> {
     unsigned long long int cnt;
   public:
     string comment; //!< User defined comment
+    void show();    //!< Show results for all x
+
+    //! \param res x value resolution
+    //! \param min minimum x value
+    //! \param max maximum x value
     histogram(float res=0.5, float min=0, float max=0)
       : xytable<float,unsigned long int>(res,min,max)
     { cnt=0; }
     
-    //! Increase count for bin 
-    void add(float r) {
-      (*this)(r)++;
+    /*! Example of histogram class
+     * \example histogram-test.C
+     */
+
+    //! Increment bin for x value
+    void add(float x) {
+      (*this)(x)++;
       cnt++;
     }
 
-    //! Get value of bin (divided by the total counts)
-    float get(float r) { return (*this)(r)/float(cnt); }
+    //! \brief Get bin for x value
+    //! \return \f$ \frac{N(r)}{N_{tot}}\f$
+    float get(float x) { return (*this)(x)/float(cnt); }    
 };
+void histogram::show() {
+  float g;
+  for (float x=0; x<xmax(); x+=xres) {
+    g=get(x);
+    if (g!=0)
+      cout << x << " " << g << "\n";
+  };
+}
+
 
 /*!
- *  \brief Class to calculate the radial distribution function between particles.
+ *  \brief Class to calculate the radial distribution between particles.
+ *
+ *  The internal histogram vector will be automatically expanded but an initial
+ *  maximum x valued can be specified so as to utilize memory more efficiently.
  *  \author Mikael Lund
  *  \date Prague, April 2007
- *  \todo Needs testing. Could instead be based on the xydata class.
+ *  \todo Needs testing!
+ *
  */
 class rdf : public histogram {
   private:
-    short a,b;                  //!< Particle types to investigate
+    short a,b;                   //!< Particle types to investigate
     float volume(float);         //!< Volume of shell r->r+xres
   public:
-    rdf(short, short, float=.5, float=0);      //!< Constructor
-    void show();                                //!< Print g(r) for all r
-    void update(vector<particle> &);            //!< Update histogram vector
-    float get(float);                        //!< Get g(r)
+    rdf(short, short, float=.5, float=0); 
+    void update(vector<particle> &);      //!< Update histogram vector
+    float get(float);                     //!< Get g(x)
 };
 
 /*!
@@ -74,19 +96,11 @@ void rdf::update(vector<particle> &p) {
         (*this)( abs(p[i].dist(p[j]))/xres+0.5 )++;
 }
 
-/*!
- *  Get g(r) from histogram according to
- *    \f$ g(r) = \frac{N(r)}{N_{tot} 4\pi/3 \left ( (R_{cell}+binwidth)^3 - R_{cell}^3 \right ) } \f$
- */
-float rdf::volume(float r) { return 4./3.*acos(-1)*( pow(r+xres,3)-pow(r,3) ); }
-float rdf::get(float r) { return (*this)(r)/(cnt*volume(r)); }
-void rdf::show() {
-  float g;
-  for (float r=0; r<xmax(); r+=xres) {
-    g=get(r);
-    if (g!=0)
-      cout << r << " " << g << "\n";
-  };
-}
+float rdf::volume(float x) { return 4./3.*acos(-1)*( pow(x+xres,3)-pow(x,3) ); }
 
+/*!
+ *  Get g(x) from histogram according to
+ *    \f$ g(x) = \frac{N(r)}{N_{tot}} \frac{ 3 } { 4\pi\left [ (x+xres)^3 - x^3 \right ] }\f$
+ */
+float rdf::get(float x) { return (*this)(x)/(cnt*volume(x)); }
 #endif

@@ -8,7 +8,10 @@ int main() {
   h.add(0.5);
   h.add(1.0);
   h.add(1.0);
-
-  cout << h.get(0.5) << " "
-       << h.get(1.0) << endl;
+  h.show();
+  float val=h.get(0.5); // val=0.3333
 }
+
+// Output:
+// 0.5 0.333333
+// 1 0.666667

@@ -6,7 +6,7 @@ point::point() { clear(); }
 void point::clear() { x=y=z=0; };
 double point::dot(point &p) { return (x*p.x + y*p.y + z*p.z); }
 
-//! length of vector
+//! Length of vector
 double point::len() {
   double l2=x*x+y*y+z*z;
   return (l2!=0) ? sqrt(l2) : 0;

@@ -21,7 +21,7 @@ class point {
     double x,y,z;               ///< The coordinates
     point();                    ///< Constructor, zero data.
     void clear();               ///< Zero all data.
-    double len();               
+    double len(); 
     inline double sqdist(point &);  ///< Squared distance
     inline double dist(point &);    ///< Distance to another point
     double dot(point &);            ///< Angle with another point

@@ -1,7 +1,6 @@
+#ifndef _legendre_h
+#define _legendre_h
 #include<vector>
-#include<iostream>
-
-using namespace std;
 
 /*!
  * \brief Evaluate n'th degree Legendre polynomium
@@ -20,7 +19,7 @@ class legendre {
     unsigned short n;           //!< Legendre order
     void resize(unsigned short);//!< Re-set order
  public:
-    vector<double> p;           //!< Legendre terms stored here
+    std::vector<double> p;      //!< Legendre terms stored here
     legendre(unsigned short); 
 
     //! Evaluate polynomium at x
@@ -46,4 +45,6 @@ void legendre::resize(unsigned short order) {
   p.resize(n+1);
   p[0]=1.;
 }
- 
+
+#endif
+

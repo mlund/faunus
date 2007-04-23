@@ -16,30 +16,32 @@ class histogram : private xytable<float,unsigned long int> {
   private:
     unsigned long long int cnt;
   public:
-    string comment; //!< User defined comment
-    void show();    //!< Show results for all x
-
-    //! \param res x value resolution
-    //! \param min minimum x value
-    //! \param max maximum x value
-    histogram(float res=0.5, float min=0, float max=0)
-      : xytable<float,unsigned long int>(res,min,max)
-    { cnt=0; }
-    
-    //! Increment bin for x value
-    void add(float x) {
-      (*this)(x)++;
-      cnt++;
-    }
-
-    //! \brief Get bin for x value
-    //! \return \f$ \frac{N(r)}{N_{tot}}\f$
-    virtual float get(float x)
-    { return (*this)(x)/float(cnt); }    
+    histogram(float=0.5, float=0, float=0);
+    string comment;                     //!< User defined comment
+    void add(float); 
+    void show(); 
+    virtual float get(float); 
 
     //! Example of histogram class
     //! \example histogram-test.C
 };
+//! \param res x value resolution
+//! \param min minimum x value
+//! \param max maximum x value
+histogram::histogram(float res, float min, float max)
+: xytable<float,unsigned long int>(res,min,max) { cnt=0; }
+
+//! Increment bin for x value
+void histogram::add(float x) {
+  (*this)(x)++;
+  cnt++;
+}
+
+//! Get bin for x value
+//! \return \f$ \frac{N(r)}{N_{tot}}\f$
+float histogram::get(float x) { return (*this)(x)/float(cnt); }
+
+//! Show results for all x
 void histogram::show() {
   float g;
   for (float x=0; x<xmax(); x+=xres) {
@@ -68,7 +70,6 @@ class rdf : public histogram {
     void update(vector<particle> &);      //!< Update histogram vector
     float get(float);                     //!< Get g(x)
 };
-
 /*!
  * \param species1 Particle type 1
  * \param species2 Particle type 2
@@ -81,12 +82,12 @@ rdf::rdf(short species1, short species2, float resolution, float xmaximum) :
   a=species1;
   b=species2;
 }
-
 /*!
  * Calculate all distances between between species 1
  * and 2 and update the histogram.
  */
-void rdf::update(vector<particle> &p) {
+void rdf::update(vector<particle> &p)
+{
   int k,n=p.size();
   for (int i=0; i<n-1; i++)
     for (int j=i+1; j<n; j++) 
@@ -94,9 +95,7 @@ void rdf::update(vector<particle> &p) {
           || (p[j].id==a && p[i].id==b) ) 
         (*this)( abs(p[i].dist(p[j]))/xres+0.5 )++;
 }
-
 float rdf::volume(float x) { return 4./3.*acos(-1)*( pow(x+xres,3)-pow(x,3) ); }
-
 /*!
  *  Get g(x) from histogram according to
  *    \f$ g(x) = \frac{N(r)}{N_{tot}} \frac{ 3 } { 4\pi\left [ (x+xres)^3 - x^3 \right ] }\f$

@@ -38,7 +38,7 @@ class histogram : private xytable<float,unsigned long int> {
 
     //! \brief Get bin for x value
     //! \return \f$ \frac{N(r)}{N_{tot}}\f$
-    float get(float x) { return (*this)(x)/float(cnt); }    
+    virtual float get(float x) { return (*this)(x)/float(cnt); }    
 };
 void histogram::show() {
   float g;
@@ -48,7 +48,6 @@ void histogram::show() {
       cout << x << " " << g << "\n";
   };
 }
-
 
 /*!
  *  \brief Class to calculate the radial distribution between particles.

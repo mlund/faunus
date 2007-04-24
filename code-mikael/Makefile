@@ -1,0 +1,76 @@
+  #
+  # CONFIGURATION
+  #
+  # Uncomment line to match your system:
+
+  POTENTIAL = POT_COULOMB
+  #POTENTIAL = POT_COULOMB
+
+  #MODEL = intel
+  #MODEL = ibmxl
+  #MODEL = debug
+  #MODEL = mac
+  MODEL = generic
+
+  ##################################################################
+
+  INCFLAG = -I../classes
+
+  CXX=g++
+  ifeq ($(MODEL), mac)
+    CXXFLAGS = -O3 -funroll-loops \
+	       -Wall -Wno-sign-compare -Wno-unused \
+	       -mtune=G5 -mcpu=G5 -mpowerpc64 \
+	       -mpowerpc-gpopt -force_cpusubtype_ALL
+  endif
+  ifeq ($(MODEL), debug)
+    CXX=g++
+    CXXFLAGS = $(INCFLAG) -g -O0 -w -Wno-sign-compare -Wno-unused
+  endif
+  ifeq ($(MODEL), generic)
+    CXX=g++
+    CXXFLAGS = $(INCFLAG) -g -O0 -w -funroll-loops -D$(POTENTIAL)
+  endif
+  ifeq ($(MODEL), ibmxl)
+    CXX=xlC
+    CXXFLAGS = -O4 -DXLC
+  endif
+  ifeq ($(MODEL), intel)
+    CXX=icc
+    CXXFLAGS = -fast -w -openmp -parallel -D$(POTENTIAL)
+endif
+
+CLASSDIR=../classes
+CLASSDIR2=./
+
+OBJS=$(CLASSDIR2)/space.o \
+     $(CLASSDIR2)/group.o \
+     $(CLASSDIR)/point.o \
+     $(CLASSDIR2)/inputfile.o \
+     $(CLASSDIR2)/montecarlo.o \
+     $(CLASSDIR2)/povray.o \
+     $(CLASSDIR)/physconst.o\
+     $(CLASSDIR2)/cell.o\
+     $(CLASSDIR2)/potentials.o\
+     $(CLASSDIR)/slump.o\
+     $(CLASSDIR)/species.o\
+     $(CLASSDIR2)/io.o\
+     $(CLASSDIR2)/titrate.o
+
+all:	prot_md 
+
+prot_md:	$(OBJS) prot_md.C
+		$(CXX) $(CXXFLAGS) $(INCFLAG) $(OBJS) prot_md.C -o prot_md
+
+volume:      $(OBJS) volume.C
+	        $(CXX) $(CXXFLAGS) $(INCFLAG) $(OBJS) volume.C -o volume
+
+surface:	$(OBJS) surface.C
+	$(CXX) $(CXXFLAGS) $(INCFLAG) $(OBJS) surface.C -o surface
+
+doc:
+	doxygen
+
+clean:
+	rm -f $(OBJS) $(OBJSN) prot_md 
+

@@ -148,9 +148,9 @@ class pot_datapmf : private pot_lj {
  *  Calculates interaction energies between particles and groups. The
  *  pair potential is specified at compile time using the following
  *  macro definitions which is specified by the compiler "-D" option.\n
- *   - POT_COULOMB (Coulomb + LJ)
- *   - POT_DEBYEHUCKEL (Debye-Huckel + LJ)
- *   - POT_DATAPMF (Load pair potential from disk)
+ *   - POT_COULOMB (Coulomb + LJ) - see \link pot_coulomb \endlink.
+ *   - POT_DEBYEHUCKEL (Debye-Huckel + LJ) - see \link pot_debyehuckel \endlink.
+ *   - POT_DATAPMF (Load pair potential from disk) - see \link pot_datapmf \endlink.
  *
  *  Unless otherwise specified, all energies will be returned in units of \b kT.
  */
@@ -190,6 +190,9 @@ inline double interaction::quadratic(point &p1, point &p2) {
   return k*r*r;
 }
 
+/*!\brief Hardsphere overlap between particles
+ * \author Mikael Lund
+ */
 class hardsphere {
   public:
     bool overlap(vector<particle> &, int);                              ///< all<->particle i.

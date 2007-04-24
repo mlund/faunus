@@ -14,7 +14,7 @@
 
   ##################################################################
 
-  INCFLAG = -I../classes
+  INCFLAG = -I../classes -I./
 
   CXX=g++
   ifeq ($(MODEL), mac)
@@ -33,40 +33,40 @@
   endif
   ifeq ($(MODEL), ibmxl)
     CXX=xlC
-    CXXFLAGS = -O4 -DXLC
+    CXXFLAGS = $(INCFLAG) -O4 -DXLC
   endif
   ifeq ($(MODEL), intel)
     CXX=icc
-    CXXFLAGS = -fast -w -openmp -parallel -D$(POTENTIAL)
+    CXXFLAGS = $(INCFLAG) -fast -w -openmp -parallel -D$(POTENTIAL)
 endif
 
 CLASSDIR=../classes
 CLASSDIR2=./
+INCDIR=./
 
 OBJS=$(CLASSDIR2)/space.o \
      $(CLASSDIR2)/group.o \
-     $(CLASSDIR)/point.o \
-     $(CLASSDIR2)/inputfile.o \
+     $(CLASSDIR)/inputfile.o \
      $(CLASSDIR2)/montecarlo.o \
-     $(CLASSDIR2)/povray.o \
-     $(CLASSDIR)/physconst.o\
      $(CLASSDIR2)/cell.o\
-     $(CLASSDIR2)/potentials.o\
-     $(CLASSDIR)/slump.o\
-     $(CLASSDIR)/species.o\
      $(CLASSDIR2)/io.o\
-     $(CLASSDIR2)/titrate.o
-
+     $(CLASSDIR)/titrate.o\
+     $(CLASSDIR)/point.o \
+     $(CLASSDIR)/povray.o \
+     $(CLASSDIR)/physconst.o\
+     $(CLASSDIR)/potentials.o\
+     $(CLASSDIR)/slump.o\
+     $(CLASSDIR)/species.o
 all:	prot_md 
 
 prot_md:	$(OBJS) prot_md.C
-		$(CXX) $(CXXFLAGS) $(INCFLAG) $(OBJS) prot_md.C -o prot_md
+		$(CXX) $(CXXFLAGS) $(OBJS) prot_md.C -o prot_md
 
 volume:      $(OBJS) volume.C
-	        $(CXX) $(CXXFLAGS) $(INCFLAG) $(OBJS) volume.C -o volume
+	        $(CXX) $(CXXFLAGS) $(OBJS) volume.C -o volume
 
 surface:	$(OBJS) surface.C
-	$(CXX) $(CXXFLAGS) $(INCFLAG) $(OBJS) surface.C -o surface
+	$(CXX) $(CXXFLAGS) $(OBJS) surface.C -o surface
 
 doc:
 	doxygen

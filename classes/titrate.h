@@ -12,7 +12,10 @@
 
 using namespace std;
 
-//! Class to perform proton titration of molecules
+/*! \brief Class to perform proton titration of molecules
+ *  \author Mikael Lund
+ *  \todo Too much is public! Documentation is bad.
+ */
 class titrate : private slump {
   public:
     enum keywords {PROTONATED,DEPROTONATED,ANY,NOACID};

@@ -1,12 +1,8 @@
 #include "titrate.h"
 
-/*
- * CONSTRUCTOR (sets pH, finds titrateable sites)
- *
- * p      = full particle vector
- * mobile = salt group to look for protons (+1 ions)
- * peeage = pH
- * 
+/*!
+ * \param spec Species class
+ * \param peeage pH
  */
 titrate::titrate(species &spec, double peeage) {
   ph=peeage;

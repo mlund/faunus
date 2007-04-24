@@ -11,6 +11,10 @@
 
 using namespace std;
 
+/*! \brief Persistence of Vision Raytracer output
+ *  \author Mikael Lund
+ *  \todo This class is very messy -- someone should do something!
+ */
 class povray {
  public:
   string anionTxt, cationTxt, neutralTxt;

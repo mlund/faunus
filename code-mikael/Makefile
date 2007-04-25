@@ -45,7 +45,7 @@ CLASSDIR2=./
 INCDIR=./
 
 OBJS=$(CLASSDIR2)/space.o \
-     $(CLASSDIR2)/group.o \
+     $(CLASSDIR)/group.o \
      $(CLASSDIR)/inputfile.o \
      $(CLASSDIR2)/montecarlo.o \
      $(CLASSDIR2)/cell.o\

@@ -17,11 +17,10 @@
 class legendre {
   private:
     unsigned short n;           //!< Legendre order
-    void resize(unsigned short);//!< Re-set order
  public:
     std::vector<double> p;      //!< Legendre terms stored here
-    legendre(unsigned short); 
-
+    legendre(unsigned short=0); 
+    void resize(unsigned short);//!< Re-set order
     //! Evaluate polynomium at x
     inline void eval(double x) {
       if (n > 0) {
@@ -39,7 +38,6 @@ class legendre {
  * \param order Order of the polynomium
  */
 legendre::legendre(unsigned short order) { resize(order); }
-
 void legendre::resize(unsigned short order) {
   n=order;
   p.resize(n+1);

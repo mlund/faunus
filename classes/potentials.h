@@ -10,40 +10,25 @@
 #include "xydata.h"
 #include "group.h"
 #include "slump.h"
+#include "lennardjones.h"
 
 /*!
  *  \brief Setup for potentials.
  *  \author Mikael Lund
  *  \date Prague, 2007
+ *
+ *  This class is used to pass parameters to classes
+ *  that handles particle pair-potentials.
  */
 class pot_setup {
  public:
-   double kappa;        //!< Inverse Debye screening length
-   double lB;           //!< Bjerrum length
-   double eps;          //!< L-J parameter
-   double r0;           //!< Bond eq. distance
-};
-
-/*!
- *  \brief Lennard-Jones potential
- *  \author Mikael Lund
- *  \year Prague, 2007
- */
-class pot_lj {
-  private:
-    double eps;
-  public:
-    pot_lj(double epsilon) { eps=epsilon; }
-    /*!
-     *  L-J pair energy.
-     *  \f$ u_{lj} = \epsilon \left ( \frac{\sigma}{r^{12}} - \frac{\sigma}{r^6} \right ) \f$
-     *  \param r2 Squared distance between particle 1 and 2.
-     */
-    inline double lj(particle &p1, particle &p2, double &r2) {
-      double x=p1.radius+p2.radius, u=x*x/r2;
-      x=u*u*u;
-      return (x*x-x)*eps;
-    }
+   double kappa,        //!< Inverse Debye screening length
+          lB,           //!< Bjerrum length
+          eps,          //!< L-J parameter
+          r0,           //!< Bond eq. distance
+          epsi,         //!< Internal dielectric constant
+          epso,         //!< External dielectric constant
+          a;            //!< Cavity radius
 };
 
 /*!

@@ -92,7 +92,6 @@ point space::mass_center(group &g) {
   return c;
 };
 
-//Sort so that charged species are in front
 group space::sort(species &spc, group &g) {
   group out = g;
   int j=0;
@@ -112,11 +111,6 @@ group space::sort(species &spc, group &g) {
   return out;
 };
 
-/***************************************
- *                                     *
- * TRANSLATIONAL AND ROTATIONAL MOVES  *
- *                                     *
- ***************************************/
 void space::zmove(group &g, double dz, keys k) {
   for (int i=g.beg; i<=g.end; i++)
     trial[i].z = p[i].z + dz;
@@ -190,8 +184,6 @@ void space::rotate(group &g, point u, double angle, keys k) {
   if (k==AUTOACCEPT) accept(g);
 }
 
-
-// UNDO FUNCTIONS
 void space::undo(group &g, keys k) {
   int ilen=g.end+1;
   g.cm_trial = g.cm;
@@ -220,7 +212,6 @@ void space::accept(group &g, keys k) {
     };
 }
 
-// DATA HANDLING AND MANIPULATION
 group space::insert_chain(chain::chain &c) {
   group g;
   hardsphere hs;
@@ -317,7 +308,6 @@ bool space::save(string file) {
   return false;
 }
 
-// Read saved coordinates from disk
 bool space::load(string file) {
   ifstream f( file.c_str() );
   if (f) {

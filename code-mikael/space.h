@@ -1,9 +1,3 @@
-/*
- * SPACE (M. Lund, 2004)
- *
-*
- */
-
 #ifndef space_h
 #define space_h
 
@@ -34,7 +28,7 @@ using namespace std;
  */
 class space : private slump {
 public:
-  enum keys {XYZ, ALL, TRIALMOVE, AUTOACCEPT,MAX,AVERAGE,INTERIOR};         //keywords 
+  enum keys {XYZ, ALL, TRIALMOVE, AUTOACCEPT,MAX,AVERAGE,INTERIOR}; 
   
   vector<particle> p;           //!< The main particle vector
   vector<particle> trial;       //!< Trial particle vector. IMPORTANT: After a MC move this MUST be in sync with space::p
@@ -70,8 +64,6 @@ public:
   
   double recalc_dipole(group &);          //!< Calc. unit vector dipole and scalar
   point mass_center(group &);             //!< Calc. center-of-mass
-
-
 };
 
 #endif

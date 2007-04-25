@@ -6,11 +6,13 @@
 /*! \brief Charge interactions in- and outside a spherical cavity
  *  \author Mikael Lund
  *  \date 2005-2006 Canberra
- *  \todo A sketch (image) of the system would be nice.
+ *  \todo The sketch could be more clear.
  *
  *  Calculate the pair interaction between charges locate in-
  *  and/or outside a spherical dielectric discontinuity.
  *  See Woodward+Svensson, J.Phys.Chem, 1991, 95, p7471.
+ *
+ *  \image html reactionfield.png 
  */
 class pot_rfield : private pot_lj {
   private:

@@ -1,16 +1,3 @@
-/*
- * GROUP (M.Lund 2004)
- *
- * Defines a set of particles in terms of a list of integers
- * that points to the main particle vector in the SPACE class
- *
- * - Maaske klassen skulle hedde "SLICE" i stedet.
- * - der skal vaere en overloaded '+' operator til at tilfoeje partikler
- *   til 'v' vektoren... void +(int)
- * 
- *
- */
-
 #ifndef group_h
 #define group_h
 
@@ -24,11 +11,13 @@
 using std::ostream;
 using namespace std;
 
-//! Groups set of particles, such as molecules, salt etc.
-/*!
- * A group defines the range of a a protein, the mobile ions,
- * a chain or whatever. If is used extensively in MC movements,
- * energy calculations and many, many other places.
+/*! \brief Groups set of particles, such as molecules, salt etc.
+ *  \author Mikael Lund
+ *  \date Lund 2004
+ *
+ *  A group defines the range of a a protein, the mobile ions,
+ *  a chain or whatever. If is used extensively in MC movements,
+ *  energy calculations and many, many other places.
  */
 class group {
 public:

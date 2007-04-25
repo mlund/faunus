@@ -11,7 +11,6 @@ physconst::physconst(double kelvin, double dielec) {
   e   = 1.602177e-19; 
   e_0 = 8.85419e-12; 
   Na  = 6.022137e23; 
-
   beta= 1./(k*T); 
   lB  = e*e / (4.*pi*e_0*e_r*1e-10) * beta;
 }

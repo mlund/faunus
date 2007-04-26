@@ -64,7 +64,8 @@ bool iofile::readfile(string file) {
       if (s.size()>0 && s.find("#")==string::npos)
         v.push_back(s);
     }
-    return f.close();
+    f.close();
+    return true;
   }
   return false;
 }
@@ -101,7 +102,42 @@ particle ioaam::s2p(string &s) {
 string ioaam::p2s(particle &) {}
 
 //----------------- IOPOV ----------------------
-string iopov::p2s(particle &) {}
+string iopov::p2s(particle &p) {
+  stringstream s;
+  string tex;
+  if (p.charge>0)  tex="redish";
+  if (p.charge<0)  tex="greyish";
+  if (p.charge==0) tex="white";
+  if (p.radius>0 && p.id!=particle::GHOST) 
+    s << " sphere {<"<<p.x<<","<<p.y<<","<<p.z<<">,"<<p.radius
+      << " texture {"<<tex<<"}}\n";
+  return s.str();
+}
+
+string iopov::header() {
+  string s(
+    "#declare white=texture {\n"
+    " pigment {color rgb <1,1,1>}\n"
+    " finish {phong .9 ambient .1 reflection 0.2}\n"
+    "}\n"
+    "#declare black=texture {\n"
+    " pigment {color rgb <0,0,0>}\n"
+    " finish {phong .9 ambient .2 reflection .2}\n"
+    "}\n"
+    "#declare transp=texture {\n"
+    " pigment {color rgbf <1,1,1,.9>}\n"
+    " finish {phong .1 ambient .2}\n"
+    "}\n"
+    "#declare greyish=texture {\n"
+    " pigment {color rgbf <.5,.5,.5,.7>}\n"
+    " finish {phong .9 ambient .1 reflection .2}\n"
+    "}\n"
+    "#declare redish=texture {\n"
+    " pigment {color rgb <1,0,0>}\n"
+    " finish {phong .9 ambient .1 reflection .2}\n"
+    "}\n" );
+  return s;
+}
 
 /*
 // 1234567890123456789012345678901234567890123456789012345678901234567890

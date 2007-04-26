@@ -76,9 +76,14 @@ class ioaam : public iofile {
 class iopov : public iofile {
   private:
     string p2s(particle &); 
+    string header();
     vector<particle> load(string); //!< Disable load routine
   public:
     iopov(species &);
+    void box(float);                 //!< Add cubic box
+    void cell(float);                //!< Add spherical cell
+    void light(point);               //!< Add light source
+    void camera(point, point);       //!< Specify camera location and viewpoint
 };
 
 #endif

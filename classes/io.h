@@ -40,11 +40,13 @@ class io {
 class iofile {
   friend class ioaam;
   private:
+    species *spcPtr;
     vector<string> v;
-    virtual particle s2p(string &);
-    virtual string p2s(particle &);
+    virtual particle s2p(string &s) {};
+    virtual string p2s(particle &p) {};
     bool readfile(string);                      //!< Read entire file
   public:
+    iofile(species &);
     vector<particle> load(string);              //!< Load from disk
     bool save(vector<particle> &, string );     //!< Save to disk
 };
@@ -55,7 +57,6 @@ class iofile {
  */
 class ioaam : public iofile {
   private:
-    species *spcPtr;
     string p2s(particle &); //!< string->particle
     particle s2p(string &); //!< particle->string
   public:
@@ -68,7 +69,6 @@ class ioaam : public iofile {
  */
 class iopov : public iofile {
   private:
-    species *spcPtr;
     string p2s(particle &); //!< string->particle
     particle s2p(string &); //!< particle->string
     vector<particle> load(string); //!< Disable load routine

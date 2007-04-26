@@ -54,10 +54,6 @@ bool io::saveaam(species &spc, string file,
 vector<particle> iofile::load(string file) {
 }
 
-ioaam::ioaam(species &spc) {
-  spcPtr = &spc;
-}
-
 particle ioaam::s2p(string &s) {
   stringstream o;
   particle p;

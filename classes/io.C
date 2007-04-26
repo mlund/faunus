@@ -51,12 +51,44 @@ bool io::saveaam(species &spc, string file,
   return false;
 }
 
-vector<particle> iofile::load(string file) {
+//-------------- IO FILE -------------------
+iofile::iofile(species &spc) { spcPtr=&spc; }
+
+bool iofile::readfile(string file) {
+  string s;
+  v.resize(0);
+  ifstream f(file.c_str() );
+  if (f) {
+    while (!f.eof()) {
+      getline(f,s);
+      if (s.size()>0 && s.find("#")==string::npos)
+        v.push_back(s);
+    }
+    return f.close();
+  }
+  return false;
 }
 
+vector<particle> iofile::load(string file) {
+  unsigned int beg,end;
+  vector<particle> p(0);
+  if (readfile(file)==true) {
+    beg=first();
+    end=last();
+    for (int i=beg; i<=end; i++)
+      p.push_back( s2p(v[i]) );
+    return p;
+  }
+}
+
+//--------------- IOAAM ---------------------
+ioaam::ioaam(species &spc) : iofile(spc) {}
+unsigned int ioaam::first() { return 1; }
+unsigned int ioaam::last() { return atoi(v[0].c_str() ); }
+
 particle ioaam::s2p(string &s) {
-  stringstream o;
   particle p;
+  stringstream o;
   string name, num;
   o << s;
   o >> name >> num
@@ -65,6 +97,11 @@ particle ioaam::s2p(string &s) {
   p.id = spcPtr->id(name); 
   return p;
 }
+
+string ioaam::p2s(particle &) {}
+
+//----------------- IOPOV ----------------------
+string iopov::p2s(particle &) {}
 
 /*
 // 1234567890123456789012345678901234567890123456789012345678901234567890

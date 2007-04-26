@@ -39,12 +39,16 @@ class io {
  */
 class iofile {
   friend class ioaam;
+  friend class iopov;
   private:
     species *spcPtr;
-    vector<string> v;
-    virtual particle s2p(string &s) {};
-    virtual string p2s(particle &p) {};
+    vector<string> v;                           //!< All lines go here
     bool readfile(string);                      //!< Read entire file
+    virtual unsigned int first()=0;             //!< Line w. first particle
+    virtual unsigned int last()=0;              //!< Line w. last particle
+    virtual string header()=0;                  //!< Return header
+    virtual particle s2p(string &)=0;           //!< String -> particle
+    virtual string p2s(particle &)=0;           //!< Particle -> string
   public:
     iofile(species &);
     vector<particle> load(string);              //!< Load from disk
@@ -53,24 +57,25 @@ class iofile {
 
 /*! \brief Read/write AAM file format
  *  \author Mikael Lund
- *  \toto Unfinished!
+ *  \todo Unfinished!
  */
 class ioaam : public iofile {
   private:
-    string p2s(particle &); //!< string->particle
-    particle s2p(string &); //!< particle->string
+    unsigned int first();
+    unsigned int last();
+    string p2s(particle &); 
+    particle s2p(string &); 
   public:
     ioaam(species &);
 };
 
 /*! \brief Persistence of Vision Raytracer output
  *  \author Mikael Lund
- *  \todo Unfinished
+ *  \todo Unfinished!
  */
 class iopov : public iofile {
   private:
-    string p2s(particle &); //!< string->particle
-    particle s2p(string &); //!< particle->string
+    string p2s(particle &); 
     vector<particle> load(string); //!< Disable load routine
   public:
     iopov(species &);

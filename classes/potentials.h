@@ -75,8 +75,9 @@ class pot_debyehuckel : private pot_lj {
     //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
     //! \return Energy in kT/f (f=lB)
     inline double pairpot( particle &p1, particle &p2 ) {
-      double r2=p1.sqdist(p2), r=sqrt(r2);
-      return lj(p1,p2,r2) + p1.charge*p1.charge/r*exp(-k*r);
+      double r2=p1.sqdist(p2),
+             r=sqrt(r2);
+      return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
     }
 };
 

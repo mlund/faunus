@@ -12,7 +12,7 @@ using namespace std;
  * \brief Class to handle a dataset of xy values with equidistant x-values.
  * \author Mikael Lund
  * \date March 2007
- * \warning This class will be replaced by xytable<T>
+ * \warning This class will be replaced by \link xytable \endlink
  */
 template <class T=double>
 class xydata {

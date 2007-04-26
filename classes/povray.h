@@ -14,6 +14,7 @@ using namespace std;
 /*! \brief Persistence of Vision Raytracer output
  *  \author Mikael Lund
  *  \todo This class is very messy -- someone should do something!
+ *        Inherit from \link iofile \endlink would be ideal...
  */
 class povray {
  public:

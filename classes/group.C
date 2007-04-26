@@ -62,6 +62,6 @@ ostream &operator<<( ostream &out, group &g) {
   return out;
 }
 
-bool group::isingroup(int i)
+bool group::find(unsigned int i)
 { return (i>=beg && i<=end) ? true : false; }
 

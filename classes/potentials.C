@@ -119,7 +119,7 @@ bool hardsphere::overlap(vector<particle> &p, group &g, int j) {
       return false;
   int len=g.end+1;
 
-  if (g.isingroup(j)==false) {          //check if j is part of g
+  if (g.find(j)==false) {          //check if j is part of g
     for (int i=g.beg; i<len; i++)
       if (p[i].overlap(p[j])==true)
         return true;
@@ -135,7 +135,7 @@ bool hardsphere::overlap(vector<particle> &p, group &g, int j) {
 double interaction::energy(vector<particle> &p, group &g, int j) {
   double u=0;
   int len=g.end+1;
-  if (g.isingroup(j)==true) {   //avoid self-interaction...
+  if (g.find(j)==true) {   //avoid self-interaction...
     for (int i=g.beg; i<j; i++)
       u+=pairpot(p[i],p[j]);
     for (int i=j+1; i<len; i++)

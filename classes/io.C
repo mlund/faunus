@@ -1,34 +1,13 @@
 #include "io.h"
 
-// net charge
-double io::charge(vector<particle> &p) {
-  double q=0;
-  for (unsigned int i=0; i<p.size(); i++)
-    q+=p[i].charge;
-  return q;
-};
-
-// center of mass
-point io::cm(vector<particle> &p) {
-  particle cm;
-  double x=0,y=0,z=0,m=0;
-  for (int i=0; i<p.size(); i++) {
-    x+=p[i].x*p[i].mw;
-    y+=p[i].y*p[i].mw;
-    z+=p[i].z*p[i].mw;
-    m+=p[i].mw;
-  };
-  cm.x = x/m;
-  cm.y = y/m;
-  cm.z = z/m;
-  return cm;
-};
-
-// load file w. space separated fields formatted as
-// name num x y z charge weight radius
+/*!
+ * The first line in the AAM file format is the number of
+ * particles. The following lines defines the particles according
+ * to: \n
+ *   name num x y z charge weight radius
+ */
 vector<particle> io::loadaam(species &spc, string filename) {
   vector<particle> p(0);
-  point c;
   int n, num;
   string s,res;
   ifstream f(filename.c_str());
@@ -37,7 +16,6 @@ vector<particle> io::loadaam(species &spc, string filename) {
     while (s.find("#")!=string::npos);
     n=atoi(s.c_str());
     p.resize(n);
-    c.y=-6.*n/2.;
     for (int i=0; i<n; i++) {
       f >> res >> num >> p[i].x >> p[i].y
         >> p[i].z >> p[i].charge >> p[i].mw >> p[i].radius;
@@ -48,7 +26,7 @@ vector<particle> io::loadaam(species &spc, string filename) {
   else
     cout << "# Error! File '"<<filename<<"' not found.";
   return p;
-};
+}
 
 // save group
 bool io::saveaam(species &spc, string file,
@@ -71,7 +49,26 @@ bool io::saveaam(species &spc, string file,
     return true;
   };
   return false;
-};
+}
+
+vector<particle> iofile::load(string file) {
+}
+
+ioaam::ioaam(species &spc) {
+  spcPtr = &spc;
+}
+
+particle ioaam::s2p(string &s) {
+  stringstream o;
+  particle p;
+  string name, num;
+  o << s;
+  o >> name >> num
+    >> p.x >> p.y >> p.z
+    >> p.charge >> p.mw >> p.radius;
+  p.id = spcPtr->id(name); 
+  return p;
+}
 
 /*
 // 1234567890123456789012345678901234567890123456789012345678901234567890

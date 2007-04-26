@@ -44,12 +44,12 @@ CLASSDIR=../classes
 CLASSDIR2=./
 INCDIR=./
 
-OBJS=$(CLASSDIR2)/space.o \
+OBJS=$(CLASSDIR)/space.o \
      $(CLASSDIR)/group.o \
      $(CLASSDIR)/inputfile.o \
      $(CLASSDIR2)/montecarlo.o \
      $(CLASSDIR2)/cell.o\
-     $(CLASSDIR2)/io.o\
+     $(CLASSDIR)/io.o\
      $(CLASSDIR)/titrate.o\
      $(CLASSDIR)/point.o \
      $(CLASSDIR)/povray.o \

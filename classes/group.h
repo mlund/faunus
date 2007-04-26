@@ -38,7 +38,7 @@ public:
   void set(short int,short int);///< Set particle range, "beg" and "end".
   short int size();             ///< Number of particles in group
   short int random();           ///< Picks a random particle within this group
-  bool isingroup(int);          ///< Check if particle i is included in this group
+  bool find(unsigned int);      ///< Check if particle is part of the group
   void operator++(int);         ///< Expand range  -> [beg;end+1]
   void operator--(int);         ///< Decrease range-> [beg;end-1]
   

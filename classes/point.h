@@ -22,7 +22,7 @@ class point {
     point();                    ///< Constructor, zero data.
     void clear();               ///< Zero all data.
     double len(); 
-    inline double sqdist(point &);  ///< Squared distance
+    inline double sqdist(point &);  //!< Squared distance to another point
     inline double dist(point &);    ///< Distance to another point
     double dot(point &);            ///< Angle with another point
     point operator-();              ///< Sign reversal
@@ -103,7 +103,9 @@ inline void spherical::random_angles() {
   r=1.0 ;
 }
 
-//! \return \f$ |r_{12}|^2 = \Delta x^2 + \Delta y^2 + \Delta z^2 \f$
+/*!
+ * \return \f$ |r_{12}|^2 = \Delta x^2 + \Delta y^2 + \Delta z^2 \f$
+ */
 inline double point::sqdist(point &p) {
   double dx,dy,dz;
   dx=x-p.x;
@@ -114,7 +116,8 @@ inline double point::sqdist(point &p) {
 
 inline double point::dist(point &p) { return sqrt(sqdist(p)); }
 
-/*! \return The electrostatic potential in a point, \f$ \phi = \frac{charge}{r_{12}}\f$ where r12 is the distance to between the point and the particle.
+/*!
+ * \return \f$ \phi = \frac{z}{r_{12}}\f$
  * \note Not multiplied with the Bjerrum length!
  */
 inline double particle::potential(point &p) { return charge / dist(p); }

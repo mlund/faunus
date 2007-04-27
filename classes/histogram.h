@@ -16,7 +16,7 @@ class histogram : private xytable<float,unsigned long int> {
   private:
     unsigned long long int cnt;
   public:
-    histogram(float=0.5, float=0, float=0);
+    histogram(float, float, float);
     string comment;                     //!< User defined comment
     void add(float); 
     void show(); 

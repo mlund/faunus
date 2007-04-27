@@ -56,6 +56,7 @@ OBJS=$(CLASSDIR)/space.o \
      $(CLASSDIR)/physconst.o\
      $(CLASSDIR)/potentials.o\
      $(CLASSDIR)/slump.o\
+     $(CLASSDIR)/container.o\
      $(CLASSDIR)/species.o
 all:	prot_md 
 

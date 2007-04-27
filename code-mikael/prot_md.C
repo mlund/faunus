@@ -47,11 +47,11 @@ int main(int argc, char* argv[] ) {
   hardsphere hd;
   vector<group> g(LAST+1);
   average<double> systemenergy;
-  //rdf rdf_nacl(particle::NA, particle::CL);
+  rdf rdf_nacl(particle::NA, particle::CL, 0, c.maxsep);
 
   // prepare distribution functions
   enum distenum {GOFR=0, UTOT, DLAST};
-  //histogram<float, average<float> > d(0.5,0,c.maxsep);
+  //vector<histogram [0.5,0,100]> d(2);
   //d[GOFR].set(0.5, "g(r)", true);
   //d[UTOT].set(0.5, "Total energy");
 

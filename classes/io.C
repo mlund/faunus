@@ -6,74 +6,28 @@
  * to: \n
  *   name num x y z charge weight radius
  */
-vector<particle> io::loadaam(species &spc, string filename) {
-  vector<particle> p(0);
-  int n, num;
-  string s,res;
-  ifstream f(filename.c_str());
-  if (f) {
-    do getline(f,s);
-    while (s.find("#")!=string::npos);
-    n=atoi(s.c_str());
-    p.resize(n);
-    for (int i=0; i<n; i++) {
-      f >> res >> num >> p[i].x >> p[i].y
-        >> p[i].z >> p[i].charge >> p[i].mw >> p[i].radius;
-      p[i].id = spc.id(res);
-    };
-    f.close();
-  }
-  else
-    cout << "# Error! File '"<<filename<<"' not found.";
-  return p;
-}
 
-// save group
-bool io::saveaam(species &spc, string file,
-                      vector<particle> &p, group &g) {
-  ofstream f( file.c_str() );
-  if (f) {
-    f << g.size() << endl;
-    for (int i=g.beg; i<=g.end; i++) {
-      if (p[i].radius>0) {
-        if (p[i].id<spc.d.size())
-          f << spc.d[p[i].id].name <<" ";
-        else 
-          f << "UNK" << " ";
-        f << i+1 << " ";
-        f << p[i].x << " " << p[i].y << " " << p[i].z << " ";
-        f << p[i].charge << " " << p[i].mw << " " << p[i].radius << endl;
-      };
-    };
-    f.close();
-    return true;
-  };
-  return false;
-}
-
-//-------------- IO FILE -------------------
-iofile::iofile(species &spc) { spcPtr=&spc; }
-
-bool iofile::readfile(string file) {
+//-------------- IO -------------------
+bool io::readfile(string file, vector<string> &v) {
   string s;
-  v.resize(0);
   ifstream f(file.c_str() );
   if (f) {
-    while (!f.eof()) {
-      getline(f,s);
-      if (s.size()>0 && s.find("#")==string::npos)
-        v.push_back(s);
-    }
+    while (getline(f,s)) 
+      v.push_back(s);
     f.close();
     return true;
   }
   return false;
 }
 
-vector<particle> iofile::load(string file) {
+//--------------IO PARTICLE ------------------
+iopart::iopart(species &spc) { spcPtr=&spc; }
+
+vector<particle> iopart::load(string file) {
   unsigned int beg,end;
-  vector<particle> p(0);
-  if (readfile(file)==true) {
+  vector<string> v;
+  vector<particle> f,p;
+  if (readfile(file,v)==true) {
     beg=first();
     end=last();
     for (int i=beg; i<=end; i++)
@@ -82,8 +36,13 @@ vector<particle> iofile::load(string file) {
   }
 }
 
+bool iopart::save(vector<particle> &p, string file) {
+  for (int i=0; i<p.size(); i++)
+
+}
+
 //--------------- IOAAM ---------------------
-ioaam::ioaam(species &spc) : iofile(spc) {}
+ioaam::ioaam(species &spc) : iopart(spc) {}
 unsigned int ioaam::first() { return 1; }
 unsigned int ioaam::last() { return atoi(v[0].c_str() ); }
 

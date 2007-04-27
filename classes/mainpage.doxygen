@@ -1,0 +1,10 @@
+/*! \mainpage
+
+\section svn Subversion repository
+\verbatim svn checkout http://opensvn.csie.org/molecularmc/trunk molecularmc
+\endverbatim
+
+There is a lot \link todo \endlink so consider contributing.
+Write access to the repository is obtained by sending
+a mail to: mlund at mac com
+*/

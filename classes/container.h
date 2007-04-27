@@ -32,7 +32,6 @@ class cell : public container {
     }
 };
 
-
 /*! \brief Cubic simulation container
  *  \author Mikael Lund
  *  \todo Not finished!
@@ -45,4 +44,16 @@ class box : public container {
     bool collision(point &p) {};
 };
 
+/*! \brief Cylindrical simulation container
+ *  \author Mikael Lund
+ *  \todo Not finished!
+ */
+class cylinder : public container {
+  public:
+    float len; //!< Cylinder length
+    float r;   //!< Cylinder radius
+    cylinder(float);
+    void randompos(point &);
+    bool collision(point &p) {};
+};
 #endif

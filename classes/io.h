@@ -9,48 +9,35 @@
 #include "species.h"
 #include "group.h"
 
-/*! \brief File I/O for structures, coordinates etc.
- *  \author Mikael Lund
- *  \todo Could be made more elegant using an "loadfile" class inherited
- *        by classes for the AAM format, PDB format etc.
- */
+//!\brief Basic file I/O routines
+//!\author Mikael Lund
 class io {
- private:
-  struct filefmt {
-    double x,y,z,mw,charge;
-    string atomname, aminoname;
-    unsigned int atomnr, aminonr;
-  };
-
  public:
-  vector<particle> loadaam(species &, string);  //!< Load structure in AAM format
-  bool saveaam(species &, string, vector<particle> &, group &); //!< Save structure in AAM format
+   bool readfile(string, vector<string> &);     //!< Read entire file to vector
+   bool savefile(string, string);               //!< Save string to file
 };
 
 /*!
  * \brief General class for particle I/O.
  * \author Mikael Lund
  * \todo Unfinished!
- * \warning This class will eventually replace \link io \endlink
  *
  * The purpose of this class is to provide general read/write
  * routines for particle I/O. This can be used to load/save
  * structures, coordinate space, pdb files, povray etc.
  */
-class iofile {
+class iopart : private io {
   friend class ioaam;
   friend class iopov;
   private:
     species *spcPtr;
     vector<string> v;                           //!< All lines go here
-    bool readfile(string);                      //!< Read entire file
     virtual unsigned int first()=0;             //!< Line w. first particle
     virtual unsigned int last()=0;              //!< Line w. last particle
-    virtual string header()=0;                  //!< Return header
     virtual particle s2p(string &)=0;           //!< String -> particle
     virtual string p2s(particle &)=0;           //!< Particle -> string
   public:
-    iofile(species &);
+    iopart(species &);
     vector<particle> load(string);              //!< Load from disk
     bool save(vector<particle> &, string );     //!< Save to disk
 };
@@ -59,7 +46,7 @@ class iofile {
  *  \author Mikael Lund
  *  \todo Unfinished!
  */
-class ioaam : public iofile {
+class ioaam : public iopart {
   private:
     unsigned int first();
     unsigned int last();
@@ -69,11 +56,25 @@ class ioaam : public iofile {
     ioaam(species &);
 };
 
+/*! \brief Read/write configuration to disk
+ *  \author Mikael Lund
+ *  \todo Unfinished!
+ */
+class iospace : public iopart {
+  private:
+    unsigned int first();
+    unsigned int last();
+    string p2s(particle &); 
+    particle s2p(string &); 
+  public:
+    iospace(species &);
+};
+
 /*! \brief Persistence of Vision Raytracer output
  *  \author Mikael Lund
  *  \todo Unfinished!
  */
-class iopov : public iofile {
+class iopov : public iopart {
   private:
     string p2s(particle &); 
     string header();

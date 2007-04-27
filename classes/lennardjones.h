@@ -6,7 +6,7 @@
 /*!
  *  \brief Lennard-Jones potential
  *  \author Mikael Lund
- *  \year Prague, 2007
+ *  \date Prague, 2007
  */
 class pot_lj {
   private:

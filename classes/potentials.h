@@ -167,6 +167,7 @@ class interaction {
       return true;
     }
 };
+
 template<class T>
 double interaction<T>::energy(vector<particle> &p, int j) {
   int ps=p.size();
@@ -177,6 +178,7 @@ double interaction<T>::energy(vector<particle> &p, int j) {
     u+=pair.pairpot( p[i],p[j] );
   return pair.f*u;
 }
+
 template<class T>
 double interaction<T>::energy(vector<particle> &p, group &g) {
   int n=g.end+1, psize=p.size();
@@ -189,6 +191,7 @@ double interaction<T>::energy(vector<particle> &p, group &g) {
   };
   return pair.f*u;
 }
+
 template<class T>
 double interaction<T>::energy(vector<particle> &p, group &g, int j) {
   double u=0;
@@ -203,6 +206,7 @@ double interaction<T>::energy(vector<particle> &p, group &g, int j) {
       u+=pair.pairpot(p[i],p[j]);
   return pair.f*u;  
 }
+
 template<class T>
 double interaction<T>::energy(vector<particle> &p, group &g, particle &a) {
   if (g.beg==-1)
@@ -213,9 +217,7 @@ double interaction<T>::energy(vector<particle> &p, group &g, particle &a) {
     u+=pair.pairpot(a, p[i]); 
   return pair.f*u;
 }
-/*********************
-   SYSTEM ENERGY
- *********************/
+
 template<class T>
 double interaction<T>::energy(vector<particle> &p) {
   double u=0;
@@ -225,9 +227,7 @@ double interaction<T>::energy(vector<particle> &p) {
       u += pair.pairpot(p[i], p[j]);
   return pair.f*u; 
 }
-/**********************
-   BETWEEN TWO GROUPS
- **********************/
+
 template<class T>
 double interaction<T>::energy(vector<particle> &p, group &g1, group &g2) {
   int ilen=g1.end+1; 
@@ -326,22 +326,6 @@ inline double interaction<T>::quadratic(point &p1, point &p2) {
   double r=p1.dist(p2)-r0;
   return k*r*r;
 }
-
-/*!\brief Hardsphere overlap between particles
- * \author Mikael Lund
- */
-class hardsphere {
-  public:
-    bool overlap(vector<particle> &, int);                              ///< all<->particle i.
-    bool overlap(vector<particle> &, particle &);                       ///< all<->arbitrary (external) particle.
-    bool overlap(vector<particle> &, group::group &);                   ///< all<->group.
-    bool overlap(vector<particle> &, group::group &, int);              ///< group<->particle i.
-    bool overlap(vector<particle> &, group::group &, particle &);       ///< group<>arbitrary (external) particle
-    bool overlap(vector<particle> &, group::group &, group::group &);   ///< group<->group.
-    bool overlap(vector<particle> &, vector<short int> &, double);      ///< internal collisions within subset
-    bool celloverlap(vector<particle> &, group::group &, double);       ///< group with a spherical cell
-    bool chgoverlap(vector<particle> &, group::group &, double);        ///< charge overlap within group
-};
 
 #endif
 

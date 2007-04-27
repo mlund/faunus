@@ -1,16 +1,18 @@
 #include <iostream>
+#include "container.h"
+#include "potentials.h"
 #include "group.h"
 #include "point.h"
 #include "space.h"
 #include "slump.h"
 #include "species.h"
-#include "potentials.h"
 #include "inputfile.h"
 #include "montecarlo.h"
 #include "povray.h"
 #include "average.h"
 #include "io.h"
 #include "histogram.h"
+#include "physconst.h"
 
 /*
  * Monte Carlo simulation of Protein-Protein Interactions
@@ -42,7 +44,7 @@ int main(int argc, char* argv[] ) {
   pot_setup potcfg;
   potcfg.lB=7.1;
   potcfg.eps=0.2;
-  interaction pot(potcfg);
+  interaction<pot_coulomb> pot(potcfg);
 
   hardsphere hd;
   vector<group> g(LAST+1);
@@ -101,7 +103,7 @@ int main(int argc, char* argv[] ) {
     << "# Temperature (K)     = " << phys.T << endl
     << "# Jobid               = " << c.jobid << endl
     << "# Dielectric Const.   = " << phys.e_r << endl
-    << "# Bjerrum length      = " << pot.f << endl
+    << "# Bjerrum length      = " << pot.pair.f << endl
     << "# Protein 1           = " << c.protein1 << endl
     << "# Protein 2           = " << c.protein2 << endl
     << "# Max/min separation  = " << c.minsep << " " << c.maxsep << endl
@@ -132,7 +134,7 @@ int main(int argc, char* argv[] ) {
         rejectcause=montecarlo::HC;
         int n=g[SALT].random();  //pick random particle
         s.displace(n, c.ion_dp);   //displace it...
-        if (cell.cellCollision(s.trial[n])==false) {
+        if (cell.collision(s.trial[n])==false) {
           #pragma omp parallel
           {
             #pragma omp sections

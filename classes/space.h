@@ -11,7 +11,7 @@
 #include "slump.h"
 #include "chain.h"
 #include "potentials.h"
-#include "cell.h"
+#include "container.h"
 #include "average.h"
 
 using namespace std;
@@ -39,8 +39,8 @@ public:
 
   group insert_chain(chain::chain &);
   group insert_salt(int, double, double,
-      cell::cell &, particle::type=particle::GHOST);    //!< Insert mobile ions
-  group insert_salt(int, particle, cell::cell &);       //!< Insert mobile ions
+      container::container &, particle::type=particle::GHOST);    //!< Insert mobile ions
+  group insert_salt(int, particle, container::container &);       //!< Insert mobile ions
 
   int push_back(particle &);                            //!< add particle to both "p" and "trial"
   group sort(species &, group &);                       //!< put charged species first

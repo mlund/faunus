@@ -260,11 +260,11 @@ group space::insert_chain(chain::chain &c) {
 /*! \param n Number of particles to add
  *  \param charge Charge number of added particles
  *  \param radius Radius of added particles
- *  \param cell Reference to cell class
+ *  \param c Container class
  *  \param id id of added particles
  */
 group space::insert_salt(int n, double charge,
-    double radius, cell &c, particle::type id) {
+    double radius, container &c, particle::type id) {
   hardsphere hs;
   group g;
   if (n==0) return g;
@@ -276,7 +276,7 @@ group space::insert_salt(int n, double charge,
   for (int i=0; i<n; i++) {
     g.end=push_back(a)-1;
     while (hs.overlap(p, g.end)==true) {
-      c.randomPos(p[g.end]);
+      c.randompos(p[g.end]);
       trial[g.end] = p[g.end];
     };
   };
@@ -285,9 +285,9 @@ group space::insert_salt(int n, double charge,
 
 /*! \param n Number of particles
  *  \param p Take particle info from this particle
- *  \param cell Rerence to cell class
+ *  \param c Container class
  */
-group space::insert_salt(int n, particle p, cell &c) {
+group space::insert_salt(int n, particle p, container &c) {
   return insert_salt(n, p.charge, p.radius, c, p.id );
 }
 

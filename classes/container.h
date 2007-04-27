@@ -1,5 +1,5 @@
-#ifndef _container_h
-#define _contained_h
+#ifndef _CONTAINER_H
+#define _CONTAINER_H
 
 #include "slump.h"
 #include "point.h"

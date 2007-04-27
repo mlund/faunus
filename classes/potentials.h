@@ -130,20 +130,19 @@ class pot_datapmf : private pot_lj {
 /*!
  *  \brief Interaction between particles and groups
  *  \author Mikael Lund
+ *  \param T pairpotential
  *
  *  Calculates interaction energies between particles and groups. The
- *  pair potential is specified at compile time using the following
- *  macro definitions which is specified by the compiler "-D" option.\n
- *   - POT_COULOMB (Coulomb + LJ) - see \link pot_coulomb \endlink.
- *   - POT_DEBYEHUCKEL (Debye-Huckel + LJ) - see \link pot_debyehuckel \endlink.
- *   - POT_DATAPMF (Load pair potential from disk) - see \link pot_datapmf \endlink.
- *
+ *  pair potential is specified as a template type which allows inlining.
  *  Unless otherwise specified, all energies will be returned in units of \b kT.
  */
-class interaction : public PAIRPOTENTIAL, private slump
-{
+template<class T>
+class interaction {
+  private:
+    slump slp;
   public:
-    interaction(pot_setup &pot) : PAIRPOTENTIAL(pot) {};
+    T pair;     //!< Pair potential class
+    interaction(pot_setup &pot) : pair(pot) {};
     double energy(vector<particle> &, int);                     ///< all<->particle i.
     double energy(vector<particle> &, group &);                 ///< all<->group.
     double energy(vector<particle> &, group &, group &);        ///< group<->group.
@@ -153,7 +152,6 @@ class interaction : public PAIRPOTENTIAL, private slump
     double energy(vector<particle> &, int, vector<short int> &);///< particle<->list of particles.
     double energy(vector<particle> &);                          ///< all<->all (System energy).
     double internal(vector<particle> &, group &);               ///< internal energy in group
-
     double pot(vector<particle> &, point &);              ///< Electrostatic potential in a point
     double quadratic(point &, point &);
     double graft(vector<particle> &, group &);
@@ -164,13 +162,166 @@ class interaction : public PAIRPOTENTIAL, private slump
     //! Test Metropolis criteria (NVT ensemble)
     bool metropolis(double du) {
       if (du > 0)
-        if ( random_one()>exp(-du) )
+        if ( slp.random_one()>exp(-du) )
           return false;
       return true;
     }
 };
+template<class T>
+double interaction<T>::energy(vector<particle> &p, int j) {
+  int ps=p.size();
+  double u=0;
+  for (int i=0; i<j; i++)
+    u+=pair.pairpot( p[i],p[j] );
+  for (int i=j+1; i<ps; i++)
+    u+=pair.pairpot( p[i],p[j] );
+  return pair.f*u;
+}
+template<class T>
+double interaction<T>::energy(vector<particle> &p, group &g) {
+  int n=g.end+1, psize=p.size();
+  double u=0;
+  for (int i=g.beg; i<n; i++) {
+    for (int j=0; j<g.beg; j++)
+      u += pair.pairpot(p[i],p[j]);
+    for (int j=n; j<psize; j++)
+      u += pair.pairpot(p[i],p[j]);
+  };
+  return pair.f*u;
+}
+template<class T>
+double interaction<T>::energy(vector<particle> &p, group &g, int j) {
+  double u=0;
+  int len=g.end+1;
+  if (g.find(j)==true) {   //avoid self-interaction...
+    for (int i=g.beg; i<j; i++)
+      u+=pair.pairpot(p[i],p[j]);
+    for (int i=j+1; i<len; i++)
+      u+=pair.pairpot(p[i],p[j]);
+  } else                        //simple - j not in g
+    for (int i=g.beg; i<len; i++)
+      u+=pair.pairpot(p[i],p[j]);
+  return pair.f*u;  
+}
+template<class T>
+double interaction<T>::energy(vector<particle> &p, group &g, particle &a) {
+  if (g.beg==-1)
+    return 0;
+  double u=0;
+  int len=g.end+1;
+  for (int i=g.beg; i<len; i++) 
+    u+=pair.pairpot(a, p[i]); 
+  return pair.f*u;
+}
+/*********************
+   SYSTEM ENERGY
+ *********************/
+template<class T>
+double interaction<T>::energy(vector<particle> &p) {
+  double u=0;
+  int n = p.size();
+  for (int i=0; i<n-1; i++)
+    for (int j=i+1; j<n; j++)
+      u += pair.pairpot(p[i], p[j]);
+  return pair.f*u; 
+}
+/**********************
+   BETWEEN TWO GROUPS
+ **********************/
+template<class T>
+double interaction<T>::energy(vector<particle> &p, group &g1, group &g2) {
+  int ilen=g1.end+1; 
+  int jlen=g2.end+1;
+  double u=0;
+  for (int i=g1.beg; i<ilen; i++)
+    for (int j=g2.beg; j<jlen; j++)
+      u += pair.pairpot(p[i],p[j]);
+  return pair.f*u;
+}
 
-inline double interaction::quadratic(point &p1, point &p2) {
+//non-electrostatic energy of chain particle i with rest of the chain
+template<class T>
+double interaction<T>::chain(vector<particle> &p, group &g, int i) {
+  double u=0;
+  //the first ?
+  if (i==g.beg) {
+    u+=quadratic( p[i], p[i+1] );
+    if (g.graftpoint>-1)
+      u+=quadratic( p[i], p[g.graftpoint] );
+    return u;
+  };
+
+  //the last ?
+  if (i==g.end)
+    return quadratic( p[i], p[i-1] );
+
+  //otherwise...
+  return quadratic(p[i], p[i+1]) + quadratic(p[i], p[i-1]);
+}
+
+//graft energy of the chain, g.
+template<class T>
+double interaction<T>::graft(vector<particle> &p, group &g) {
+  if (g.graftpoint!=-1)
+    return quadratic( p[g.graftpoint], p[g.beg]);
+  else
+    return 0;
+}
+
+/*!
+ * ...between the two dipoles a and b, separated by the
+ * distance r.
+ * \f$ \beta u(r) = l_B \frac{a_x b_x + a_y b_y - 2a_z b_z  }{r^3}\f$
+ */
+template<class T>
+double interaction<T>::dipdip(point &a, point &b, double r) {
+  return pair.f*( a.x*b.x + a.y*b.y - 2*a.z*b.z )/(r*r*r);
+}
+template<class T>
+double interaction<T>::iondip(point &a, double q, double r) {
+  return -pair.f*q*a.z/(r*r);
+}
+
+// Total electrostatic potential in a point
+template<class T>
+double interaction<T>::pot(vector<particle> &p, point &a) {
+  double u=0;
+  int ps=p.size();  
+  for (int i=0; i<ps; i++)
+    u+=p[i].charge / p[i].dist(a);
+  return pair.f*u;
+}
+
+// Internal (NON)-electrostatic energy in group
+template<class T>
+double interaction<T>::internal(vector<particle> &p, group &g) {
+  int glen=g.end+1;
+  double u=0;
+  if (g.beg==-1)
+    return 0;
+  
+  if (g.chain==true) {
+    for (int i=g.beg; i<g.end; i++)
+      u+=quadratic( p[i], p[i+1]);
+    if (g.graftpoint>-1)
+      u+=quadratic( p[g.beg], p[g.graftpoint] );
+    return u;
+  }
+  else {
+    for (int i=g.beg; i<glen-1; i++)
+      for (int j=i+1; j<glen; j++)
+        u+=pair.pairpot(p[i],p[j]);
+  }
+  return pair.f*u;
+}
+
+
+
+
+
+
+template<class T>
+inline double interaction<T>::quadratic(point &p1, point &p2) {
   double r0,k;
   double r=p1.dist(p2)-r0;
   return k*r*r;

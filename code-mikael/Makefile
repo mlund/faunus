@@ -29,7 +29,7 @@
   endif
   ifeq ($(MODEL), generic)
     CXX=g++
-    CXXFLAGS = $(INCFLAG) -g -O0 -w -funroll-loops -D$(POTENTIAL)
+    CXXFLAGS = $(INCFLAG) -O3 -funroll-loops -D$(POTENTIAL) -Winline -fdump-tree-inlined
   endif
   ifeq ($(MODEL), ibmxl)
     CXX=xlC
@@ -47,8 +47,7 @@ INCDIR=./
 OBJS=$(CLASSDIR)/space.o \
      $(CLASSDIR)/group.o \
      $(CLASSDIR)/inputfile.o \
-     $(CLASSDIR2)/montecarlo.o \
-     $(CLASSDIR2)/cell.o\
+     $(CLASSDIR)/montecarlo.o \
      $(CLASSDIR)/io.o\
      $(CLASSDIR)/titrate.o\
      $(CLASSDIR)/point.o \

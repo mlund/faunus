@@ -37,8 +37,6 @@ vector<particle> iopart::load(string file) {
 }
 
 bool iopart::save(vector<particle> &p, string file) {
-  for (int i=0; i<p.size(); i++)
-
 }
 
 //--------------- IOAAM ---------------------

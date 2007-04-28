@@ -10,6 +10,7 @@
 #include "group.h"
 #include "slump.h"
 #include "chain.h"
+#include "hardsphere.h"
 #include "potentials.h"
 #include "container.h"
 #include "average.h"

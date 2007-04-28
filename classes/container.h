@@ -26,7 +26,7 @@ class cell : public container {
           diameter;       //!< Diameter
     cell(float);
     void randompos(point &);
-    bool collision(point &p) {
+    inline bool collision(point &p) {
       return 
         (p.x*p.x+p.y*p.y+p.z*p.z > r2) ? true:false;
     }

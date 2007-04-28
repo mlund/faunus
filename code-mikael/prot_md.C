@@ -13,6 +13,7 @@
 #include "io.h"
 #include "histogram.h"
 #include "physconst.h"
+#include "markovmove.h"
 
 /*
  * Monte Carlo simulation of Protein-Protein Interactions
@@ -44,7 +45,7 @@ int main(int argc, char* argv[] ) {
   pot_setup potcfg;
   potcfg.lB=7.1;
   potcfg.eps=0.2;
-  interaction<pot_coulomb> pot(potcfg);
+  interaction<T_pairpot> pot(potcfg);
 
   hardsphere hd;
   vector<group> g(LAST+1);
@@ -58,14 +59,14 @@ int main(int argc, char* argv[] ) {
   //d[UTOT].set(0.5, "Total energy");
 
   // load proteins, salt
-  g[P1] = s.append( io.loadaam(spc, c.protein1) );
+  //g[P1] = s.append( io.loadaam(spc, c.protein1) );
   g[P1].name = "Protein 1";
   s.mass_center(g[P1]);
   s.move( g[P1], -g[P1].cm, space::AUTOACCEPT);
   s.zmove( g[P1],  (c.maxsep/2.-0.5), space::AUTOACCEPT);
   g[P1].radius=s.radius( g[P1], g[P1].cm );
 
-  g[P2] = s.append( io.loadaam(spc, c.protein2) );
+  //g[P2] = s.append( io.loadaam(spc, c.protein2) );
   g[P2].name = "Protein 2";
   s.mass_center(g[P2]);
   s.move( g[P2], -g[P2].cm, space::AUTOACCEPT);

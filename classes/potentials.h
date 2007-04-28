@@ -9,7 +9,6 @@
 #include "species.h"
 #include "xydata.h"
 #include "group.h"
-#include "slump.h"
 #include "lennardjones.h"
 
 /*!
@@ -136,10 +135,9 @@ class pot_datapmf : private pot_lj {
  *  pair potential is specified as a template type which allows inlining.
  *  Unless otherwise specified, all energies will be returned in units of \b kT.
  */
+
 template<class T>
 class interaction {
-  private:
-    slump slp;
   public:
     T pair;     //!< Pair potential class
     interaction(pot_setup &pot) : pair(pot) {};
@@ -158,14 +156,6 @@ class interaction {
     double chain(vector<particle> &, group &, int);
     double dipdip(point &, point &, double);                    ///< Dipole-dipole energy.
     double iondip(point &, double, double);                     ///< Ion-dipole energy.
-
-    //! Test Metropolis criteria (NVT ensemble)
-    bool metropolis(double du) {
-      if (du > 0)
-        if ( slp.random_one()>exp(-du) )
-          return false;
-      return true;
-    }
 };
 
 template<class T>

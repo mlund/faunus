@@ -3,7 +3,6 @@
   #
   # Uncomment line to match your system:
 
-  POTENTIAL = POT_COULOMB
   #POTENTIAL = POT_COULOMB
 
   #MODEL = intel
@@ -14,7 +13,7 @@
 
   ##################################################################
 
-  INCFLAG = -I../classes -I./
+  INCFLAG = -I../classes
 
   CXX=g++
   ifeq ($(MODEL), mac)
@@ -29,7 +28,7 @@
   endif
   ifeq ($(MODEL), generic)
     CXX=g++
-    CXXFLAGS = $(INCFLAG) -O3 -funroll-loops -D$(POTENTIAL) -Winline -fdump-tree-inlined
+    CXXFLAGS = $(INCFLAG) -O0 -funroll-loops -Winline
   endif
   ifeq ($(MODEL), ibmxl)
     CXX=xlC
@@ -41,7 +40,6 @@
 endif
 
 CLASSDIR=../classes
-CLASSDIR2=./
 INCDIR=./
 
 OBJS=$(CLASSDIR)/space.o \
@@ -56,6 +54,7 @@ OBJS=$(CLASSDIR)/space.o \
      $(CLASSDIR)/potentials.o\
      $(CLASSDIR)/slump.o\
      $(CLASSDIR)/container.o\
+     $(CLASSDIR)/hardsphere.o\
      $(CLASSDIR)/species.o
 all:	prot_md 
 

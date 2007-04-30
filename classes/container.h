@@ -7,23 +7,24 @@
 /*! \brief Polymorphic class for simulation containers
  *  \author Mikael Lund
  */
-class container {
+class container : public particles {
   protected:
     slump slp;
   public:
     float volume;                               //!< Volume of the container [AA^3]
     virtual void randompos(point &)=0;          //!< Random point within container
     inline virtual bool collision(point &)=0;   //!< Check for collision with walls
+    virtual bool insert(particle, short);       //!< Insert particle
 };
 
 /*! \brief Spherical simulation container
  *  \author Mikael Lund
  */
 class cell : public container {
+  private:
+    float r2,diameter;
   public:
-    float r,              //!< Radius
-          r2,             //!< Squared radius
-          diameter;       //!< Diameter
+    float r;              //!< Radius
     cell(float);
     void randompos(point &);
     inline bool collision(point &p) {

@@ -1,5 +1,23 @@
 #include "container.h"
 
+//----------- CONTAINER -----------------
+group container::insert(particle a, short n) {
+  hardsphere hs;
+  group g;
+  if (n==0)
+    return g;
+  g.beg=p.size();
+  for (int i=0; i<n; i++) {
+    g.end=push_back(a)-1;
+    while (hs.overlap(p, g.end)==true) {
+      randompos(p[g.end]);
+      trial[g.end] = p[g.end];
+    }
+  }
+  return g;
+}
+
+
 //----------- CELL ----------------------
 cell::cell(float radius) {
   r = radius; 

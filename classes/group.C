@@ -1,12 +1,9 @@
 #include "group.h"
 
+//---------------- GROUP -----------------------
 group::group(int i) {
   set(-1,-1);     //is empty
-  chain=false;    //is not a chain
-  graftpoint=-1;  //is not grafted
-  radius=0;       //is sizeless
   name="(noname)";//is nameless
-  vdw=false;      //omit vdw interactions
 }
 
 void group::set(short int first, short int last) {
@@ -15,11 +12,7 @@ void group::set(short int first, short int last) {
 }
 
 short int group::size() { return (beg==-1) ? 0 : end-beg+1; }
-void group::operator++ (int) { end++; }
-void group::operator-- (int) { end--;}
 
-//append another group.
-//they 
 void group::operator+=(group g) {
   if (g.beg==-1 && g.end==-1)
     return;
@@ -28,7 +21,6 @@ void group::operator+=(group g) {
   end=g.end;
 }
 
-//merge two groups into one. Their ranges must be continous...!
 group group::operator+(group g) {
   group o;
   if (this->beg<g.beg) {
@@ -62,6 +54,15 @@ ostream &operator<<( ostream &out, group &g) {
   return out;
 }
 
-bool group::find(unsigned int i)
-{ return (i>=beg && i<=end) ? true : false; }
+bool group::find(unsigned int i) { return (i>=beg && i<=end) ? true : false; }
 
+//--------------- MACRO MOLECULE ---------------
+macromolecule::macromolecule() {
+  radius=0;       //is sizeless
+}
+
+
+//--------------- CHAIN -----------------
+chain::chain() {
+  graftpoint=-1;  //is not grafted
+}

@@ -19,14 +19,6 @@ group space::append(vector<particle> v) {
 };
 
 
-// PROPERTIES
-double space::charge(group &g) {
-  double z=0;
-  for (int i=g.beg; i<g.end+1; i++)
-    z+=p[i].charge;
-  g.Q += z;
-  return z;
-};
 double space::charge() {
   double z=0;
   for (int i=0; i<p.size(); i++)
@@ -43,72 +35,6 @@ double space::charge(point &origo, double r) {
     if (p[i].sqdist(origo) <= r2)
       q += p[i].charge;
   return q;
-};
-
-double space::radius(group &g, point &origo, keys k) {
-  double d, max=0,min=10000.;
-  average<double> r;
-  switch (k) {
-    case MAX :
-      for (int i=g.beg; i<=g.end; i++) {
-        d=p[i].dist(origo) + p[i].radius;
-        if (d>max)
-          max=d;
-      };
-      return max;
-      break;
-    case AVERAGE :
-      for (int i=g.beg; i<=g.end; i++)
-        r += p[i].dist(origo) + p[i].radius;
-      return r.avg();
-      break;
-    case INTERIOR :
-      for (int i=g.beg; i<=g.end; i++)
-        if (p[i].charge!=0) {
-          d=p[i].dist(origo);
-          if (d<min) min=d;
-        };
-      return min;
-      break;
-  };
-};
-
-/*!
- * Recalcute mass center of the particles
- * in a group. The result is stored in the
- * group CM placeholder as well as returned
- * by the function.
- */
-point space::mass_center(group &g) {
-  double sum=0;
-  point c;
-  for (int i=g.beg; i<=g.end; i++) {
-    c += p[i]*p[i].mw;
-    sum += p[i].mw;
-  };
-  c=c*(1./sum);
-  g.cm = c;
-  g.cm_trial = c;
-  return c;
-};
-
-group space::sort(species &spc, group &g) {
-  group out = g;
-  int j=0;
-  vector<particle> s(0);
-  for (int i=g.beg; i<=g.end; i++) //find charges and tit. sites
-    if (p[i].charge!=0 || spc.d[p[i].id].pka!=0)
-      s.push_back(p[i]);
-
-  out.end = out.beg + s.size() - 1; //end of charges
-  
-  for (int i=g.beg; i<=g.end; i++) //find neutral
-    if (p[i].charge==0 && spc.d[p[i].id].pka==0)
-      s.push_back(p[i]);
-  for (int i=g.beg; i<=g.end; i++) //copy into particle vector
-    p[i]=s[j++];
-
-  return out;
 };
 
 void space::zmove(group &g, double dz, keys k) {
@@ -347,23 +273,6 @@ bool space::safetytest_vector() {
   return rc;
 }
 
-
-/*!
- * Recalulates the dipole moment of a
- * group and stores the result in the
- * group dipole moment placeholder.
- * Origo is (0,0,0).
- */
-double space::recalc_dipole(group &g)
-{
-  g.mu.clear();
-  for (int i=g.beg; i<=g.end; i++) {
-    g.mu.x += (p[i].x-g.cm.x) * p[i].charge;
-    g.mu.y += (p[i].y-g.cm.y) * p[i].charge;
-    g.mu.z += (p[i].z-g.cm.z) * p[i].charge;
-  };
-  return g.mu.len();
-}
 
 double space::rho(point &p0, group &g, double r, double Z, double delta) {
   double d,vol,n=0;

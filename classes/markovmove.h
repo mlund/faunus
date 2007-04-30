@@ -1,7 +1,7 @@
 #ifndef _markovmove_h
 #define _markovmove_h
 
-#include "space.h"
+#include "container.h"
 #include "potentials.h"
 #include "ensemble.h"
 
@@ -33,7 +33,7 @@ class markovmove {
   protected:
     double uold, unew;
     unsigned long long int cnt, naccept; 
-    space *s;
+    container *s;
     ensemble *ensPtr;
     interaction<T_pairpot> *pot;
   public:
@@ -42,7 +42,7 @@ class markovmove {
     double du,            //!< Energy change of last move
            utot;          //!< Sum of energy changes for all moves
     float accepted();     //!< Return fraction of accepted moves
-    markovmove(ensemble &e, space &spc, interaction<T_pairpot> &inter) {
+    markovmove(ensemble &e, container &spc, interaction<T_pairpot> &inter) {
       float du=utot=0;
       s=&spc;
       ensPtr=&e;
@@ -57,7 +57,7 @@ class saltmove : public markovmove {
   private:
     container *cPtr;
   public:
-    saltmove( ensemble &, space&, interaction<T_pairpot>&, container & );
+    saltmove( ensemble &, container&, interaction<T_pairpot>&, container & );
     void move(group &, float, int=-1); //<! Move a salt particle
 };
 

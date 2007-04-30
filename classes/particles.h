@@ -37,12 +37,8 @@ public:
   void rotate(group &, point, double=0, keys=TRIALMOVE);//!< Rotate group around point
 
   double radius(group &, point &, keys=MAX);  //!<  Calculate radius of group, centered in point
-  double charge(group::group &);        //!<  Update netcharge of group
   double charge();                      //!<  Sum all charges in particle vector
   double charge(point &, double);       //!<  Sum all charges within a sphere region
-  
-  double recalc_dipole(group &);          //!< Calc. unit vector dipole and scalar
-  point mass_center(group &);             //!< Calc. center-of-mass
 };
 
 #endif

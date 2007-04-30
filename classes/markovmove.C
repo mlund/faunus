@@ -2,7 +2,7 @@
 
 //-------------- SALT MOVE -------------
 saltmove::saltmove(
-    ensemble &e, space &s,
+    ensemble &e, container &s,
     interaction<T_pairpot> &i, container &c ) : markovmove(e,s,i)
 {
   cPtr=&c;

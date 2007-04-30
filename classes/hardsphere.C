@@ -25,8 +25,8 @@ bool hardsphere::overlap(vector<particle> &p, group &g) {
 //group with j'th particle
 bool hardsphere::overlap(vector<particle> &p, group &g, int j) {
   if (g.beg==-1) return false;
-  if (g.radius>0)
-    if ( abs(g.cm.dist(p[j])) > g.radius+p[j].radius)
+  if (g.cm.radius>0)
+    if ( abs(g.cm.dist(p[j])) > g.cm.radius+p[j].radius)
       return false;
   int len=g.end+1;
 
@@ -60,8 +60,8 @@ bool hardsphere::overlap(vector<particle> &p, group &g, particle &a) {
 
 bool hardsphere::overlap(vector<particle> &p, group &g1, group &g2) {
   if (g1.beg==-1 || g2.beg==-1) return false;
-  if (g1.radius!=0 && g2.radius!=0)
-    if (abs(g1.cm.dist(g2.cm)) > g1.radius+g2.radius)
+  if (g1.cm.radius!=0 && g2.cm.radius!=0)
+    if (abs(g1.cm.dist(g2.cm)) > g1.cm.radius+g2.cm.radius)
       return false;
   int ilen=g1.end+1, jlen=g2.end+1;
   for (int i=g1.beg; i<ilen; i++) {

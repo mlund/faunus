@@ -229,35 +229,6 @@ double interaction<T>::energy(vector<particle> &p, group &g1, group &g2) {
   return pair.f*u;
 }
 
-//non-electrostatic energy of chain particle i with rest of the chain
-template<class T>
-double interaction<T>::chain(vector<particle> &p, group &g, int i) {
-  double u=0;
-  //the first ?
-  if (i==g.beg) {
-    u+=quadratic( p[i], p[i+1] );
-    if (g.graftpoint>-1)
-      u+=quadratic( p[i], p[g.graftpoint] );
-    return u;
-  };
-
-  //the last ?
-  if (i==g.end)
-    return quadratic( p[i], p[i-1] );
-
-  //otherwise...
-  return quadratic(p[i], p[i+1]) + quadratic(p[i], p[i-1]);
-}
-
-//graft energy of the chain, g.
-template<class T>
-double interaction<T>::graft(vector<particle> &p, group &g) {
-  if (g.graftpoint!=-1)
-    return quadratic( p[g.graftpoint], p[g.beg]);
-  else
-    return 0;
-}
-
 /*!
  * ...between the two dipoles a and b, separated by the
  * distance r.
@@ -289,14 +260,6 @@ double interaction<T>::internal(vector<particle> &p, group &g) {
   double u=0;
   if (g.beg==-1)
     return 0;
-  
-  if (g.chain==true) {
-    for (int i=g.beg; i<g.end; i++)
-      u+=quadratic( p[i], p[i+1]);
-    if (g.graftpoint>-1)
-      u+=quadratic( p[g.beg], p[g.graftpoint] );
-    return u;
-  }
   else {
     for (int i=g.beg; i<glen-1; i++)
       for (int j=i+1; j<glen; j++)

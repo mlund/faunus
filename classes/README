@@ -14,3 +14,13 @@ $ doxygen (Requires doxygen AND graphviz)
 Example programs can be put in the "examples" dir and
 referenced to using the \example keyword. Graphics can
 be put in the "images" catalog.
+
+
+Before committing changes:
+==========================
+Try to make sure that no classes nor examples are broken before
+committing changes to the repository. Check with
+
+$ make classes
+$ make examples (not yet implemented)
+

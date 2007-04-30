@@ -16,14 +16,6 @@ group particles::append(vector<particle> v) {
   return g;
 };
 
-double particles::charge(group &g) {
-  double z=0;
-  for (int i=g.beg; i<g.end+1; i++)
-    z+=p[i].charge;
-  g.Q += z;
-  return z;
-};
-
 double particles::charge() {
   double z=0;
   for (int i=0; i<p.size(); i++)
@@ -68,25 +60,6 @@ double particles::radius(group &g, point &origo, keys k) {
       return min;
       break;
   };
-};
-
-/*!
- * Recalcute mass center of the particles
- * in a group. The result is stored in the
- * group CM placeholder as well as returned
- * by the function.
- */
-point particles::mass_center(group &g) {
-  double sum=0;
-  point c;
-  for (int i=g.beg; i<=g.end; i++) {
-    c += p[i]*p[i].mw;
-    sum += p[i].mw;
-  };
-  c=c*(1./sum);
-  g.cm = c;
-  g.cm_trial = c;
-  return c;
 };
 
 void particles::zmove(group &g, double dz, keys k) {
@@ -190,19 +163,3 @@ void particles::accept(group &g, keys k) {
     };
 }
 
-/*!
- * Recalulates the dipole moment of a
- * group and stores the result in the
- * group dipole moment placeholder.
- * Origo is (0,0,0).
- */
-double particles::recalc_dipole(group &g)
-{
-  g.mu.clear();
-  for (int i=g.beg; i<=g.end; i++) {
-    g.mu.x += (p[i].x-g.cm.x) * p[i].charge;
-    g.mu.y += (p[i].y-g.cm.y) * p[i].charge;
-    g.mu.z += (p[i].z-g.cm.z) * p[i].charge;
-  };
-  return g.mu.len();
-}

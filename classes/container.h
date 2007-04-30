@@ -1,8 +1,11 @@
 #ifndef _CONTAINER_H
 #define _CONTAINER_H
 
+#include "particles.h"
 #include "slump.h"
 #include "point.h"
+#include "group.h"
+#include "hardsphere.h"
 
 /*! \brief Polymorphic class for simulation containers
  *  \author Mikael Lund
@@ -14,7 +17,7 @@ class container : public particles {
     float volume;                               //!< Volume of the container [AA^3]
     virtual void randompos(point &)=0;          //!< Random point within container
     inline virtual bool collision(point &)=0;   //!< Check for collision with walls
-    virtual bool insert(particle, short);       //!< Insert particle
+    virtual group insert(particle, short);       //!< Insert particles
 };
 
 /*! \brief Spherical simulation container

@@ -13,6 +13,18 @@ void group::set(short int first, short int last) {
 
 short int group::size() { return (beg==-1) ? 0 : end-beg+1; }
 
+/*! \brief Calculates total charge
+ *  \return Charge number. The charge is also stored in
+ *          cm.charge.
+ */
+double group::charge(vector<particle> &p) {
+  double z=0;
+  for (short i=beg; i<=end; i++)
+    z+=p[i].charge;
+  cm.charge=z;
+  return z;
+}
+
 void group::operator+=(group g) {
   if (g.beg==-1 && g.end==-1)
     return;
@@ -47,22 +59,92 @@ ostream &operator<<( ostream &out, group &g) {
     << setw(10) << g.name
     << right
     << setw(10) << s.str()
-    << setw(5)  << g.Q.avg()
     << setw(22) << g.cm
-    << setw(22) << g.mu
     << endl;
   return out;
 }
 
 bool group::find(unsigned int i) { return (i>=beg && i<=end) ? true : false; }
 
-//--------------- MACRO MOLECULE ---------------
-macromolecule::macromolecule() {
-  radius=0;       //is sizeless
+/*!
+ * Recalcute mass center of the particles
+ * in a group. The result is stored in the
+ * group CM placeholder as well as returned
+ * by the function.
+ */
+point group::masscenter(vector<particle> &p) {
+  cm.clear();
+  double sum=0;
+  for (short i=beg; i<=end; i++) {
+    cm += p[i] * p[i].mw;
+    sum += p[i].mw;
+  }
+  cm=cm*(1./sum);
+  cm_trial = cm;
+  return cm;
 }
+
+//--------------- MACRO MOLECULE ---------------
+macromolecule::macromolecule() {}
+
+/*!
+ * Recalulates the dipole moment of a
+ * group and stores the result in the
+ * group dipole moment placeholder.
+ * Origo is (0,0,0).
+ */
+double macromolecule::dipole(vector<particle> &p)
+{
+  mu.clear();
+  for (int i=beg; i<=end; i++) {
+    mu.x += (p[i].x-cm.x) * p[i].charge;
+    mu.y += (p[i].y-cm.y) * p[i].charge;
+    mu.z += (p[i].z-cm.z) * p[i].charge;
+  }
+  return mu.len();
+}
+
+double macromolecule::radius(vector<particle> &p) {
+  double r,max=0;
+  masscenter(p);
+  for (short i=beg; i<=end; i++) {
+    r=p[i].dist(cm) + p[i].radius;
+    if (r>max)
+      max=r;
+  }
+  cm.radius = max;
+  return max;
+} 
 
 
 //--------------- CHAIN -----------------
 chain::chain() {
   graftpoint=-1;  //is not grafted
+}
+
+double chain::monomerenergy(vector<particle> &p, short i) {
+  double u=0;
+  //the first ?
+  if (i==beg) {
+    u+=quadratic( p[i], p[i+1] );
+    if (graftpoint>-1)
+      u+=quadratic( p[i], p[graftpoint] );
+    return u;
+  }
+
+  //the last ?
+  if (i==end)
+    return quadratic( p[i], p[i-1] );
+
+  //otherwise...
+  return quadratic(p[i], p[i+1]) + quadratic(p[i], p[i-1]);
+}
+
+double chain::internalenergy(vector<particle> &p) {
+  double u=0;
+  for (short i=beg; i<end; i++)
+    u+=quadratic( p[i], p[i+1]);
+  if (graftpoint>-1)
+    u+=quadratic( p[beg], p[graftpoint] );
+  return u;
 }

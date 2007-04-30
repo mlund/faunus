@@ -1,8 +1,5 @@
 #include "hardsphere.h"
 
-/*********************************
-   J'TH WITH ALL OTHER PARTICLES
- *********************************/
 bool hardsphere::overlap(vector<particle> &p, int j) {
   int ps=p.size();
   for (int i=0; i<j; i++)
@@ -11,9 +8,7 @@ bool hardsphere::overlap(vector<particle> &p, int j) {
     if (p[i].overlap(p[j])==true) return true;
   return false;
 }
-/********************************
-   GROUP WITH REST OF PARTICLES
- ********************************/
+
 bool hardsphere::overlap(vector<particle> &p, group &g) {
   short int n=g.beg, psize=p.size();
   for (short int i=0; i<n; i++)
@@ -22,7 +17,7 @@ bool hardsphere::overlap(vector<particle> &p, group &g) {
     if (overlap(p, g, i)==true) return true;
   return false;
 }
-//group with j'th particle
+
 bool hardsphere::overlap(vector<particle> &p, group &g, int j) {
   if (g.beg==-1) return false;
   if (g.cm.radius>0)
@@ -39,15 +34,10 @@ bool hardsphere::overlap(vector<particle> &p, group &g, int j) {
       if (p[i].overlap(p[j])==true) return true;
     for (int i=j+1; i<len; i++)
       if (p[i].overlap(p[j])==true) return true;
-  };
+  }
   return false;
 }
 
-/********************************
- *
- * GROUP <-> ARBITRARY PARTICLE
- *
- ********************************/
 bool hardsphere::overlap(vector<particle> &p, group &g, particle &a) {
   int len=g.end+1;
   if (g.beg!=-1)
@@ -56,7 +46,6 @@ bool hardsphere::overlap(vector<particle> &p, group &g, particle &a) {
 	return true;
   return false;
 }
-
 
 bool hardsphere::overlap(vector<particle> &p, group &g1, group &g2) {
   if (g1.beg==-1 || g2.beg==-1) return false;
@@ -68,9 +57,7 @@ bool hardsphere::overlap(vector<particle> &p, group &g1, group &g2) {
     for (int j=g2.beg; j<jlen; j++) {
       if ( p[i].overlap(p[j])==true )
         return true;
-    };
-  };
+    }
+  }
   return false;
 }
-
-

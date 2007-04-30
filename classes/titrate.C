@@ -18,7 +18,7 @@ void titrate::init(vector<particle> &p, group &mobile) {
   for (int i=0; i<p.size(); i++)    //search for titrateable sites
     if ( spc->d[p[i].id].pka !=0 ) {
         sites.push_back(i);
-        p[i].charge = spc->d[p[i].id].charge;
+        p[i].charge = spc->d[p[i].id].p.charge;
         eqpos.push_back(p[i]);
       };
   for (int i=mobile.beg; i<mobile.end+1; i++) {
@@ -37,7 +37,7 @@ short int titrate::random(vector<short int> &iv) {
 
 //Returns protonation status of particle i in particle vector
 titrate::keywords titrate::status(vector<particle> &p, short int i) {
-  if ( p[i].charge> spc->d[p[i].id].charge)
+  if ( p[i].charge> spc->d[p[i].id].p.charge)
     return PROTONATED;
   return DEPROTONATED;
 };

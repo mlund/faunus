@@ -7,8 +7,8 @@
     CXXFLAGS = -O0 -Winline
   endif
 
-CLASSDIR=./
-INCDIR=./
+CLASSDIR=.
+INCDIR=.
 
 OBJS=$(CLASSDIR)/inputfile.o \
      $(CLASSDIR)/io.o\
@@ -21,13 +21,15 @@ OBJS=$(CLASSDIR)/inputfile.o \
      $(CLASSDIR)/hardsphere.o\
      $(CLASSDIR)/group.o \
      $(CLASSDIR)/particles.o \
-     $(CLASSDIR)/markovmove.o \
      $(CLASSDIR)/species.o
 all:	classes 
 
 classes:	$(OBJS)
-doc:
-	doxygen
+doc:	./
+	doxygen doc/Doxyfile
+examples:	$(OBJS) examples/markovmove-example.C
+	$(CXX) $(CXXFLAGS) $(OBJS) examples/markovmove-example.C -o a.out
+
 clean:
 	rm -f $(OBJS) 
 

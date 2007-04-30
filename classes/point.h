@@ -18,19 +18,19 @@ using namespace std;
  */
 class point {
   public:
-    double x,y,z;               ///< The coordinates
-    point();                    ///< Constructor, zero data.
-    void clear();               ///< Zero all data.
+    double x,y,z;                       ///< The coordinates
+    point();                            ///< Constructor, zero data.
+    void clear();                       ///< Zero all data.
     double len(); 
-    inline double sqdist(point &);  //!< Squared distance to another point
-    inline double dist(point &);    ///< Distance to another point
-    double dot(point &);            ///< Angle with another point
-    point operator-();              ///< Sign reversal
-    point operator*(point);     ///< Multiply two vectors
-    point operator*(double);    ///< Scale vector
-    point operator+(point);     ///< Add two vectors
-    point operator-(point);     ///< Substract vector
-    point operator+(double);    ///< Displace x,y,z by value
+    inline double sqdist(point &);      //!< Squared distance to another point
+    inline double dist(point &);        ///< Distance to another point
+    double dot(point &);                ///< Angle with another point
+    point operator-();                  ///< Sign reversal
+    point operator*(point);             ///< Multiply two vectors
+    point operator*(double);            ///< Scale vector
+    point operator+(point);             ///< Add two vectors
+    point operator-(point);             ///< Substract vector
+    point operator+(double);            ///< Displace x,y,z by value
     void operator+=(point);
     friend ostream &operator<<(ostream &, point &); /// Print x,y,z
     string str();
@@ -58,13 +58,15 @@ class particle : public point {
       ASP,GLN,GLU,ASN,LYS,ARG,PRO,UNK,NTR,CTR,NA,K,CL,BR,I,ION,CATION,ANION,GHOST,
       RNH3,RNH4,RCOOH,RCOO,LAST}; 
 
-    double charge;         //!< Charge number
-    double radius;         //!< Radius
-    float mw;              //!< Molecular weight
-    type id;               //!< Particle identifier
+    double charge;                      //!< Charge number
+    double radius;                      //!< Radius
+    float mw;                           //!< Molecular weight
+    type id;                            //!< Particle identifier
     inline bool overlap(particle &);    //!< Hardsphere overlap test
     inline double potential(point &);   //!< Electric potential in point
-    void operator=(point);         //!< Copy coordinates from a point
+    double vol(double=1);               //!< Estimate volume from weight
+    double rad(double=1);               //!< Estimate radius from weight           
+    void operator=(point);              //!< Copy coordinates from a point
 };
 
 /*! \brief Class for spherical coordinates

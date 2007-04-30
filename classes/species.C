@@ -1,34 +1,17 @@
 #include "species.h"
 
-string species::info(string name) {
-  int i=id(name);
-  return name;
-}
+//float species::getpka(particle::type id) { return d[id].pka; }
+particle species::get(particle::type id) { return d[id].p; }
+particle species::get(string name) { return d[id(name)].p; }
 
-particle species::get(string name) {
-  particle a;
-  a.id = id(name);
-  a.charge = d[a.id].charge;
-  a.radius = d[a.id].radius;
-  return a;
-  
-};
-
-double species::vol(double mw, double rho=1.)
-{ return 1.6606*rho*mw; };
-
-double species::radius(double mw, double rho=1.) {
-  double v = vol(mw, rho);
-  return pow(3.*v/4./3.14, 0.3333);
-}
-
-void species::set(int i, string name, float r, float z,
-		  float pka, bool hyd) {
-  d[i].name = name;
-  d[i].radius = r;
-  d[i].charge = z;
-  d[i].pka = pka;
-  d[i].hydrp = hyd;
+void species::set(
+    particle::type id, string name, float r, float z, float pka, bool hydr)
+{
+  d[id].name = name;
+  d[id].p.id=id;
+  d[id].pka = pka;
+  d[id].p.radius = r;
+  d[id].p.charge = z;
 }
 
 particle::type species::id(string name) {
@@ -40,7 +23,6 @@ particle::type species::id(string name) {
 
 species::species() {
   d.resize(particle::LAST);
-
   //  id    name  rad   Z   pKa  hydrp
   set(particle::ALA, "ALA", 3.5,  0,  0.0, false);
   set(particle::ARG, "ARG", 3.5,  0, 12.0, false);
@@ -71,5 +53,5 @@ species::species() {
   set(particle::BR,  "BR",  1.9, -1,  0.0, false);
   set(particle::I,   "I",   3.0, -1,  0.0, false);
   set(particle::GHOST,"GHOST",0,  0,  0.0, false);
-};
+}
 

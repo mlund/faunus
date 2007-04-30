@@ -21,6 +21,7 @@
  */
 class pot_setup {
  public:
+   pot_setup();
    double kappa,        //!< Inverse Debye screening length
           lB,           //!< Bjerrum length
           eps,          //!< L-J parameter
@@ -266,18 +267,6 @@ double interaction<T>::internal(vector<particle> &p, group &g) {
         u+=pair.pairpot(p[i],p[j]);
   }
   return pair.f*u;
-}
-
-
-
-
-
-
-template<class T>
-inline double interaction<T>::quadratic(point &p1, point &p2) {
-  double r0,k;
-  double r=p1.dist(p2)-r0;
-  return k*r*r;
 }
 
 #endif

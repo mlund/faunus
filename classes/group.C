@@ -26,21 +26,21 @@ double group::charge(vector<particle> &p) {
 }
 
 void group::operator+=(group g) {
-  if (g.beg==-1 && g.end==-1)
+  if (g.beg==-1 && g.end==-1)   // if added group is empty
     return;
-  if (beg==-1 && end==-1)
+  if (beg==-1 && end==-1)       // if this is empty
     beg=g.beg;
   end=g.end;
 }
 
 group group::operator+(group g) {
   group o;
-  if (this->beg<g.beg) {
-    o.beg=this->beg;
+  if (beg<g.beg) {
+    o.beg=beg;
     o.end=g.end;
   } else {
     o.beg=g.beg;
-    o.end=this->end;
+    o.end=end;
   };
   o.name = this->name + " + " + g.name;
   if (o.size()!=this->size()+g.size())

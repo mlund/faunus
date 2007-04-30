@@ -1,13 +1,12 @@
 #include "container.h"
 
 //----------- CONTAINER -----------------
-group container::insert(particle a, short n) {
-  hardsphere hs;
+group container::insert(particle::type id, short n) {
   group g;
-  if (n==0)
-    return g;
+  hardsphere hs;
+  particle a=get(id);
   g.beg=p.size();
-  for (int i=0; i<n; i++) {
+  for (unsigned short i=0; i<n; i++) {
     g.end=push_back(a)-1;
     while (hs.overlap(p, g.end)==true) {
       randompos(p[g.end]);
@@ -16,7 +15,6 @@ group container::insert(particle a, short n) {
   }
   return g;
 }
-
 
 //----------- CELL ----------------------
 cell::cell(float radius) {

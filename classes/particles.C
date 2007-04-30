@@ -1,5 +1,6 @@
 #include "particles.h"
 
+//! \return Size of particle vector after addition
 int particles::push_back(particle &par) {
   p.push_back(par);
   trial.push_back(par);
@@ -32,34 +33,6 @@ double particles::charge(point &origo, double r) {
     if (p[i].sqdist(origo) <= r2)
       q += p[i].charge;
   return q;
-};
-
-double particles::radius(group &g, point &origo, keys k) {
-  double d, max=0,min=10000.;
-  average<double> r;
-  switch (k) {
-    case MAX :
-      for (int i=g.beg; i<=g.end; i++) {
-        d=p[i].dist(origo) + p[i].radius;
-        if (d>max)
-          max=d;
-      };
-      return max;
-      break;
-    case AVERAGE :
-      for (int i=g.beg; i<=g.end; i++)
-        r += p[i].dist(origo) + p[i].radius;
-      return r.avg();
-      break;
-    case INTERIOR :
-      for (int i=g.beg; i<=g.end; i++)
-        if (p[i].charge!=0) {
-          d=p[i].dist(origo);
-          if (d<min) min=d;
-        };
-      return min;
-      break;
-  };
 };
 
 void particles::zmove(group &g, double dz, keys k) {

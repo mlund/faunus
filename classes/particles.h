@@ -36,7 +36,6 @@ public:
   void rotate(group &, double, keys=TRIALMOVE);
   void rotate(group &, point, double=0, keys=TRIALMOVE);//!< Rotate group around point
 
-  double radius(group &, point &, keys=MAX);  //!<  Calculate radius of group, centered in point
   double charge();                      //!<  Sum all charges in particle vector
   double charge(point &, double);       //!<  Sum all charges within a sphere region
 };

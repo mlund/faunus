@@ -5,19 +5,20 @@
 #include "slump.h"
 #include "point.h"
 #include "group.h"
+#include "species.h"
 #include "hardsphere.h"
 
 /*! \brief Polymorphic class for simulation containers
  *  \author Mikael Lund
  */
-class container : public particles {
+class container : public particles,  public species {
   protected:
     slump slp;
   public:
     float volume;                               //!< Volume of the container [AA^3]
     virtual void randompos(point &)=0;          //!< Random point within container
     inline virtual bool collision(point &)=0;   //!< Check for collision with walls
-    virtual group insert(particle, short);       //!< Insert particles
+    virtual group insert(particle::type, short);//!< Insert particles
 };
 
 /*! \brief Spherical simulation container

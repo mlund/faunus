@@ -1,12 +1,10 @@
 #include "point.h"
 
-//Constructor
 point::point() { clear(); }
 
 void point::clear() { x=y=z=0; };
 double point::dot(point &p) { return (x*p.x + y*p.y + z*p.z); }
 
-//! Length of vector
 double point::len() {
   double l2=x*x+y*y+z*z;
   return (l2!=0) ? sqrt(l2) : 0;
@@ -18,7 +16,6 @@ void point::operator+=(point p) {
   z += p.z;
 }
 
-// Sign reversal
 point point::operator-() {
   point o;
   o.x=-x; o.y=-y; o.z=-z;
@@ -55,7 +52,7 @@ point point::operator-(point p) {
   o.y = this->y - p.y;
   o.z = this->z - p.z;
   return o;
-};
+}
 
 point point::operator+(point p) {
   point o;
@@ -63,7 +60,16 @@ point point::operator+(point p) {
   o.y = y + p.y;
   o.z = z + p.z;
   return o;
-};
+}
+
+string point::str() {
+  stringstream s;
+  s.setf(ios::fixed);
+  s.precision(2);
+  s << x << "," << y << "," << z;
+  return "[" + s.str() + "]";
+}
+
 
 /*
 void point::random_unitv() {
@@ -80,31 +86,25 @@ void point::random_unitv() {
 };
 */
 
-//--- PARTICLE FUNCTIONS ----
+//------------------ PARTICLE -----------------------
+particle::particle() {
+  charge=mw=radius=0;
+  id=GHOST;
+}
 void particle::operator=(point p) {
   x=p.x;
   y=p.y;
   z=p.z;
-};
-
-string point::str() {
-  stringstream s;
-  s.setf(ios::fixed);
-  s.precision(2);
-  s << x << "," << y << "," << z;
-  return "[" + s.str() + "]";
-};
+}
+double particle::vol(double rho) { return 1.6606*rho*mw; };
+double particle::rad(double rho) { return pow( 3.*vol(rho)/4./3.14, 0.3333 ); }
 
 ostream &operator<<(ostream &out, point &p) {
   out << p.str();
   return out;
-};
+}
 
-particle::particle() {
-  charge=mw=radius=0;
-  id=GHOST;
-};
-
+//---------------- SPHERICAL -----------------
 spherical::spherical(double radial, double zenith, double azimuthal) {
   r=radial;
   theta=zenith;

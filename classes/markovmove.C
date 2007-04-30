@@ -2,11 +2,8 @@
 
 //-------------- SALT MOVE -------------
 saltmove::saltmove(
-    ensemble &e, container &s,
-    interaction<T_pairpot> &i, container &c ) : markovmove(e,s,i)
-{
-  cPtr=&c;
-}
+    ensemble &e, container &c, interaction<T_pairpot> &i ) :
+  markovmove(e,c,i) {}
 
 /*! \param group Group containing mobile ions
  *  \param dp Displacement parameter
@@ -36,8 +33,10 @@ void saltmove::move(group &g, float dp, int n) {
       rc=OK;
       naccept++;
       s->p[n] = s->trial[n];
+      return;
     }
     else
       rc=ENERGY;
+    s->trial[n] = s->p[n];
   }
 }

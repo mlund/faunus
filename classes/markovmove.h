@@ -5,8 +5,6 @@
 #include "potentials.h"
 #include "ensemble.h"
 
-typedef pot_coulomb T_pairpot;
-
 /*! \brief Base class for MC moves
  *  \author Mikael Lund
  *  \todo Perhaps the P_pairpot could be made more elegant?
@@ -57,7 +55,7 @@ class saltmove : public markovmove {
   private:
     container *cPtr;
   public:
-    saltmove( ensemble &, container&, interaction<T_pairpot>&, container & );
+    saltmove( ensemble &, container&, interaction<T_pairpot>& );
     void move(group &, float, int=-1); //<! Move a salt particle
 };
 

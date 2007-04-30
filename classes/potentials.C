@@ -1,5 +1,13 @@
 #include "potentials.h"
 
+pot_setup::pot_setup() {
+  lB=7.1;
+  eps=1;
+  epsi=80;
+  epso=2;
+};
+
+
 /*!\param spc Species class.
  * \param pmfir Directory in which to search for PMF's
  * \param type Particle name to search for. I.e. "NA" or "CL"

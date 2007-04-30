@@ -31,8 +31,8 @@ class markovmove {
   protected:
     double uold, unew;
     unsigned long long int cnt, naccept; 
-    container *s;
-    ensemble *ensPtr;
+    container *con;
+    ensemble *ens;
     interaction<T_pairpot> *pot;
   public:
     enum keys {OK, ENERGY, HC};
@@ -40,10 +40,10 @@ class markovmove {
     double du,            //!< Energy change of last move
            utot;          //!< Sum of energy changes for all moves
     float accepted();     //!< Return fraction of accepted moves
-    markovmove(ensemble &e, container &spc, interaction<T_pairpot> &inter) {
+    markovmove(ensemble &e, container &c, interaction<T_pairpot> &inter) {
       float du=utot=0;
-      s=&spc;
-      ensPtr=&e;
+      ens=&e;
+      con=&c;
       pot=&inter;
     }
 };
@@ -52,8 +52,6 @@ class markovmove {
  *  \author Mikael Lund
  */
 class saltmove : public markovmove {
-  private:
-    container *cPtr;
   public:
     saltmove( ensemble &, container&, interaction<T_pairpot>& );
     void move(group &, float, int=-1); //<! Move a salt particle

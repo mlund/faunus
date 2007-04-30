@@ -12,10 +12,10 @@ saltmove::saltmove(
 void saltmove::move(group &g, float dp, int n) {
   cnt++;
   du=0;
-  if (n>-1)
+  if (n==-1)
     n=g.random(); 
-  s->displace(n, dp); 
-  if (cPtr->collision( s->trial[n] )==true)
+  con->displace(n, dp); 
+  if (con->collision( con->trial[n] )==true)
     rc=HC;
   else {
     #pragma omp parallel
@@ -23,20 +23,20 @@ void saltmove::move(group &g, float dp, int n) {
       #pragma omp sections
       {
         #pragma omp section
-        { uold = pot->energy(s->p, n);   }
+        { uold = pot->energy(con->p, n);   }
         #pragma omp section
-        { unew = pot->energy(s->trial,n);   }
+        { unew = pot->energy(con->trial,n);   }
       }
     }
     du = unew - uold;
-    if (ensPtr->metropolis(du)==true) {
+    if (ens->metropolis(du)==true) {
       rc=OK;
       naccept++;
-      s->p[n] = s->trial[n];
+      con->p[n] = con->trial[n];
       return;
     }
     else
       rc=ENERGY;
-    s->trial[n] = s->p[n];
+    con->trial[n] = con->p[n];
   }
 }

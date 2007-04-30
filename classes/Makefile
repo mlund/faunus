@@ -4,7 +4,7 @@
 
   ifeq ($(MODEL), generic)
     CXX=g++
-    CXXFLAGS = -O0 -Winline
+    CXXFLAGS = -g -O0 -Winline
   endif
 
 CLASSDIR=.
@@ -25,7 +25,7 @@ OBJS=$(CLASSDIR)/inputfile.o \
 all:	classes 
 
 classes:	$(OBJS)
-doc:	./
+doc:	
 	doxygen doc/Doxyfile
 examples:	$(OBJS) examples/markovmove-example.C
 	$(CXX) $(CXXFLAGS) $(OBJS) examples/markovmove-example.C -o a.out

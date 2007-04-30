@@ -17,7 +17,7 @@ class container : public particles,  public species {
   public:
     float volume;                               //!< Volume of the container [AA^3]
     virtual void randompos(point &)=0;          //!< Random point within container
-    inline virtual bool collision(point &)=0;   //!< Check for collision with walls
+    virtual bool collision(point &)=0;          //!< Check for collision with walls
     virtual group insert(particle::type, short);//!< Insert particles
 };
 
@@ -31,7 +31,7 @@ class cell : public container {
     float r;              //!< Radius
     cell(float);
     void randompos(point &);
-    inline bool collision(point &p) {
+    bool collision(point &p) {
       return 
         (p.x*p.x+p.y*p.y+p.z*p.z > r2) ? true:false;
     }
@@ -46,7 +46,7 @@ class box : public container {
     float len; //!< Side length
     box(float);
     void randompos(point &);
-    bool collision(point &p) {};
+    inline bool collision(point &p) {};
 };
 
 /*! \brief Cylindrical simulation container

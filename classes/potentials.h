@@ -143,6 +143,7 @@ class interaction {
     T pair;     //!< Pair potential class
     interaction(pot_setup &pot) : pair(pot) {};
     double energy(vector<particle> &, int);                     ///< all<->particle i.
+    double energy(vector<particle> &, particle &);              ///< all<->external particle
     double energy(vector<particle> &, group &);                 ///< all<->group.
     double energy(vector<particle> &, group &, group &);        ///< group<->group.
     double energy(vector<particle> &, group &, int);            ///< group<->particle i.
@@ -266,6 +267,15 @@ double interaction<T>::internal(vector<particle> &p, group &g) {
       for (int j=i+1; j<glen; j++)
         u+=pair.pairpot(p[i],p[j]);
   }
+  return pair.f*u;
+}
+
+template<class T>
+double interaction<T>::energy(vector<particle> &p, particle &a) {
+  double u=0;
+  unsigned char n=p.size();
+  for (unsigned char i=0; i<n; i++)
+    u+=pair.pairpot(p[i], a);
   return pair.f*u;
 }
 

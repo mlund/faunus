@@ -9,7 +9,7 @@ Ideally all code should be commented using the Doxygen
 comment format so that a html (or pdf) manual can be
 automatically created by issuing the command:
 
-$ make doc (Requires doxygen AND graphviz)
+$ doxygen (Requires doxygen AND graphviz)
 
 Example programs can be put in the "examples" dir and
 referenced to using the \example keyword. Graphics can

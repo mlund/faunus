@@ -28,9 +28,11 @@ class widom {
       a=con->get(t1);
       b=con->get(t2);
     }
-    float muex() { return -log(expsum.avg()); }
-    float gamma() { return exp(muex()); }
-    //! Insert ghost particles and evaluate excess chemical potential
+    float muex() { return -log(expsum.avg()); } //!< Excess chemical potential
+    float gamma() { return exp(muex()); }       //!< Activity coefficient
+    
+    //! Insert a salt pair and evaluate the excess chemical potential
+    //! \param n Number of insertions
     void insert(unsigned char n=100) {
       for (unsigned char i=0; i<n; i++) {
         con->randompos(a);

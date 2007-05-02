@@ -13,7 +13,7 @@ $ doxygen (Requires doxygen AND graphviz)
 
 Example programs can be put in the "examples" dir and
 referenced to using the \example keyword. Graphics can
-be put in the "images" catalog.
+be put in the "doc/images" catalog.
 
 
 Before committing changes:

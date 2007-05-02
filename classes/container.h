@@ -17,7 +17,7 @@ class container : public particles,  public species {
   public:
     float volume;                               //!< Volume of the container [AA^3]
     virtual void randompos(point &)=0;          //!< Random point within container
-    virtual bool collision(point &)=0;          //!< Check for collision with walls
+    inline virtual bool collision(point &)=0;          //!< Check for collision with walls
     virtual group insert(particle::type, short);//!< Insert particles
     virtual string info() {
       float z=charge();
@@ -42,7 +42,7 @@ class cell : public container {
     cell(float);
     string info();
     void randompos(point &);
-    bool collision(point &p) {
+    inline bool collision(point &p) {
       return 
         (p.x*p.x+p.y*p.y+p.z*p.z > r2) ? true:false;
     }

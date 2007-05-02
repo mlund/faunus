@@ -1,9 +1,26 @@
 #include "markovmove.h"
+//--------------- MARKOV MODE ---------------------
+string markovmove::info() {
+  ostringstream o;
+  o << "# ";
+  return o.str();
+}
+// \param min Minimum percentage of accepted moves
+// \param max Maximum percentage of accepted moves
+void markovmove::adjust_dp(float min, float max) {
+  float a=accepted()*100.;
+  if (a>max) dp+=deltadp;
+  if (a<min) dp-=deltadp;
+  if (dp<=0) dp=deltadp;
+}
+float markovmove::accepted() { return naccept/float(cnt); }
 
-//-------------- SALT MOVE -------------
+//-------------- SALT MOVE ---------------------------------
 saltmove::saltmove(
-    ensemble &e, container &c, interaction<T_pairpot> &i ) :
-  markovmove(e,c,i) {}
+    ensemble &e, container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i) {
+    dp=60;
+    deltadp=2;
+  }
 
 /*! \param group Group containing mobile ions
  *  \param dp Displacement parameter

@@ -18,7 +18,7 @@ bool io::readfile(string file, vector<string> &v) {
   }
   return false;
 }
-bool io::writefile(string file, string &s) {
+bool io::writefile(string file, string s) {
   ofstream f(file.c_str());
   if (f) {
     f << s;
@@ -35,29 +35,8 @@ void io::strip(vector<string> &v, string pat) {
     else iter++;
 }
 
-//--------------IO PARTICLE ------------------
-iopart::iopart(species &spc) { spcPtr=&spc; }
-vector<particle> iopart::load(string file) {
-  v.resize(0);
-  p.resize(0);
-  if (readfile(file,v)==true) {
-    strip(v, "#");
-    for (unsigned char i=first(); i<=last(); i++)
-      p.push_back( s2p(v[i]) );
-  }
-  return p;
-}
-bool iopart::save(vector<particle> &p, string file) {
-  string s=header(p);
-  for (unsigned char i=0; i<p.size(); i++)
-    s+=p2s(p[i], i);
-  return writefile(file, s);
-}
-
 //--------------- IOAAM ---------------------
 ioaam::ioaam(species &spc) : iopart(spc) {}
-unsigned char ioaam::first() { return 1; }
-unsigned char ioaam::last() { return atoi(v[0].c_str())+first()-1; }
 string ioaam::p2s(particle &p, int i) {
   ostringstream o;
   o.precision(30);
@@ -77,14 +56,30 @@ particle ioaam::s2p(string &s) {
   p.id = spcPtr->id(name);
   return p;
 }
-string ioaam::header(vector<particle> &p) {
+vector<particle> ioaam::load(string file) {
+  v.resize(0);
+  p.resize(0);
+  if (readfile(file,v)==true) {
+    strip(v,"#");
+    unsigned char n=atoi(v[0].c_str());
+    for (unsigned char i=1; i<=n; i++)
+      p.push_back( s2p(v[i]) );
+  }
+  return p;
+}
+bool ioaam::save(string file, vector<particle> &) {
   ostringstream o;
   o << p.size() << endl;
-  return o.str();
+  for (unsigned char i=0; i<p.size(); i++)
+    o << p2s(p[i]);
+  return writefile(file, o.str());
 }
 
 //----------------- IOPOV ----------------------
-iopov::iopov(species &spc) : iopart(spc) {
+iopov::iopov(species &spc) : iopart(spc) {}
+void iopov::clear() { o.str(""); }
+void iopov::header() {
+  clear();
   o << 
     "#declare white=texture {\n"
     " pigment {color rgb <1,1,1>}\n"
@@ -107,7 +102,6 @@ iopov::iopov(species &spc) : iopart(spc) {
     " finish {phong .9 ambient .1 reflection .2}\n"
     "}\n";
 }
-string iopov::header(vector<particle> &p, int i) { return o.str(); }
 string iopov::p2s(particle &p, int i) {
   string tex;
   ostringstream s;
@@ -115,19 +109,18 @@ string iopov::p2s(particle &p, int i) {
   if (p.charge<0)  tex="greyish";
   if (p.charge==0) tex="white";
   if (p.radius>0 && p.id!=particle::GHOST) 
-    s << " sphere {<"<<p.x<<","<<p.y<<","<<p.z<<">,"<<p.radius
+    s << "sphere {<"<<p.x<<","<<p.y<<","<<p.z<<">,"<<p.radius
       << " texture {"<<tex<<"}}\n";
   return s.str();
 }
+bool iopov::save(string file, vector<particle> &p) {
+  header();
+  for (unsigned char i=0; i<p.size(); i++)
+    o << p2s(p[i]);
+  return writefile(file, o.str());
+}
 
-
-/*
+/*PQR
 // 1234567890123456789012345678901234567890123456789012345678901234567890
 // ATOM     25 H1A  CR      4      23.215  17.973  15.540 -0.017 1.000
-
-void io::pqrline(particle &) {
-};
-
-void io::savepqr(string filename, vector<particle> &p) {
-};
 */

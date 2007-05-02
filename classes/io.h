@@ -14,12 +14,12 @@
 //!\brief Basic file I/O routines
 //!\author Mikael Lund
 class io {
- private:
-   string s;
- public:
-   bool readfile(string, vector<string> &);     //!< Read entire file to vector
-   bool writefile(string, string &);            //!< Save string to file
-   void strip(vector<string> &, string="#");    //!< Remove lines containing pattern
+  private:
+    string s;
+  public:
+    bool readfile(string, vector<string>&);      //!< Read entire file to vector
+    bool writefile(string, string);              //!< Save string to file
+    void strip(vector<string> &, string="#");    //!< Remove lines containing pattern
 };
 
 //----------------------------------------
@@ -35,18 +35,13 @@ class iopart : private io {
   friend class ioaam;
   friend class iopov;
   private:
-    species *spcPtr;
-    vector<string> v;                           //!< All lines go here
-    vector<particle> p;
-    virtual unsigned char first()=0;            //!< Line w. first particle
-    virtual unsigned char last()=0;             //!< Line w. last particle
-    virtual particle s2p(string &)=0;           //!< String -> particle
-    virtual string p2s(particle &,int=0)=0;     //!< Particle -> string
-    virtual string header(vector<particle>&)=0; //!< Return header string
+  species *spcPtr;
+  vector<string> v; 
+  vector<particle> p;
   public:
-    iopart(species &);
-    vector<particle> load(string);              //!< Load from disk
-    bool save(vector<particle> &, string );     //!< Save to disk
+  iopart(species &spc) {spcPtr=&spc; }
+  virtual vector<particle> load(string)=0;            //!< Load from disk
+  virtual bool save(string, vector<particle>&)=0;     //!< Save to disk
 };
 
 //------------------------------------
@@ -56,13 +51,12 @@ class iopart : private io {
  */
 class ioaam : public iopart {
   private:
-    unsigned char first();
-    unsigned char last();
-    string header(vector<particle>&);
     string p2s(particle &, int=0); 
     particle s2p(string &); 
   public:
     ioaam(species &);
+    vector<particle> load(string);
+    bool save(string, vector<particle>&);
 };
 
 //-----------------------------------------------
@@ -73,15 +67,17 @@ class ioaam : public iopart {
 class iopov : public iopart {
   private:
     ostringstream o;
-    string p2s(particle &, int=0); 
-    vector<particle> load(string); //!< Disable load routine
+    string p2s(particle &, int=0);
+    void header();
+    vector<particle> load(string) {}; 
   public:
     iopov(species &);
+    void clear();                    //!< Clear output buffer
     void box(float);                 //!< Add cubic box
     void cell(float);                //!< Add spherical cell
     void light(point);               //!< Add light source
     void camera(point, point);       //!< Specify camera location and viewpoint
-    string header(vector<particle>&, int i=0);
+    bool save(string, vector<particle>&);
 };
 
 #endif

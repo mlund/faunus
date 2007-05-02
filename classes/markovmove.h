@@ -27,21 +27,27 @@
  *  #include "markovmove.C"
  *  \endcode
  */
+typedef pot_coulomb T_pairpot;
+
 class markovmove {
   protected:
-    double uold, unew;
+    double uold, unew, deltadp;
     unsigned long long int cnt, naccept; 
     container *con;
     ensemble *ens;
     interaction<T_pairpot> *pot;
   public:
     enum keys {OK, ENERGY, HC};
-    keys rc;
-    double du,            //!< Energy change of last move
-           utot;          //!< Sum of energy changes for all moves
-    float accepted();     //!< Return fraction of accepted moves
+    keys rc;                            //!< Return code from move() functions
+    double dp,                          //!< Displacement parameter
+           du,                          //!< Energy change of last move
+           utot;                        //!< Sum of energy changes for all moves
+    float accepted();                   //!< Return fraction of accepted moves
+    void adjust_dp(float=30, float=40); //!< Adjust displacement parameter
+    virtual string info();              //!< Show info about group 
     markovmove(ensemble &e, container &c, interaction<T_pairpot> &inter) {
-      float du=utot=0;
+      du=utot=dp=deltadp=0;
+      cnt=naccept=0;
       ens=&e;
       con=&c;
       pot=&inter;

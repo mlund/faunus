@@ -1,4 +1,13 @@
+/*! \file Example how to simulate a NaCl solution
+ *  \example markovmove-example.C
+ *
+ * This example program calculates the excess chemical
+ * potential of NaCl in an aqueous solution using Widom's
+ * particle insertion method. An output POVRAY file will
+ * be generated. Note: No equilibration run is incorporated.
+ */
 #include <iostream>
+#include "../io.h"
 #include "../widom.h"
 #include "../container.h"
 #include "../potentials.h"
@@ -8,8 +17,9 @@ typedef pot_coulomb T_pairpot;
 using namespace std;
 
 int main() {
-  cell cell(50.);                      // We want a spherical cell
-  canonical nvt;                        // Canonical ensemble
+  cell cell(50.);                       // We want a spherical cell
+  iopov povray(cell);                   // We want a POVRAY snapshot
+  canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg;                        // Setup pair potential
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
@@ -20,13 +30,14 @@ int main() {
   salt+=cell.insert( particle::NA, 10 );        // Insert sodium ions
   salt+=cell.insert( particle::CL, 10 );        // Insert chloride ions
 
-  // Markov chain
-  for (int macro=0; macro<10; macro++) {
-    for (int micro=0; micro<1e3; micro++) {
-      sm.move(salt, 30.);
-      widom.insert(10);
+  for (int macro=0; macro<10; macro++) {        // Markov chain
+    for (int micro=0; micro<1e4; micro++) {
+      sm.move(salt, 30.);                       // Displace salt particles
+      widom.insert(10);                         // Widom analysis
     }
+    cout << "NaCl mean activity coefficient = " // Print Widom result
+         << widom.gamma() << endl;
   }
-  cout << "NaCl mean activity coefficient = " << widom.gamma() << endl;
+  povray.save("markov-example.pov", cell.p);    // Save POVRAY file
 };
 

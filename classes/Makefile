@@ -4,7 +4,7 @@
 
   ifeq ($(MODEL), generic)
     CXX=g++
-    CXXFLAGS = -g -O0 -Winline
+    CXXFLAGS = -g -O3 -Winline
   endif
 
 CLASSDIR=.
@@ -28,7 +28,7 @@ classes:	$(OBJS)
 doc:	
 	doxygen doc/Doxyfile
 examples:	$(OBJS) examples/markovmove-example.C
-	$(CXX) $(CXXFLAGS) $(OBJS) examples/markovmove-example.C -o a.out
+		$(CXX) $(CXXFLAGS) $(OBJS) examples/markovmove-example.C -o examples/markovmove-example
 
 clean:
 	rm -f $(OBJS) 

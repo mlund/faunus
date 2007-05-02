@@ -6,7 +6,6 @@
 #include <iostream>
 #include "species.h"
 #include "point.h"
-#include "slump.h"
 #include "group.h"
 #include "average.h"
 
@@ -16,14 +15,11 @@ using namespace std;
  *  \author Mikael Lund
  *  \todo Too much is public! Documentation is bad.
  */
-class titrate : private slump {
+class titrate {
   public:
     enum keywords {PROTONATED,DEPROTONATED,ANY,NOACID};
     vector<short int> sites, protons, neutrons;
-    vector<average <double> >  q; //!< Stores the average charges of sites from titrate::sites
-    vector<point> eqpos; //!< Stores the equilibrium (starting) positions of sites
-
-    average<double> nprot; //!< Average number of protons. Updated with titrate::samplesites
+    double ph;                          //!< System pH
 
     struct action {
       keywords action;
@@ -31,27 +27,26 @@ class titrate : private slump {
       short int proton;    
     };
 
-    group sort(group &);
     titrate(species &, double);
     titrate(species &, vector<particle> &, group &, double);
     void init(vector<particle> &, group &);//!< Locate and initialize sites and protons
     action exchange(vector<particle> &);
     action exchange(vector<particle> &, action &);
-    double energy(vector<particle> &, double, action &);
     double sumsites();                     //!< Calculates total charge of titrateable sites
+    double energy(vector<particle> &, double, action &);
     void samplesites(vector<particle> &);  //!< Updates the average charge vector titrate::q
     void showsites(vector<particle> &);    //!< Print average charges of titrateable sites
     double applycharges(vector<particle> &);//!< Copy average charges to particles in the particle vector
-
-    void info();
-
   private:
+    void infos();
     species *spc;
-    double ph;  //!< System pH
+    short int random(vector<short int> &); //!< Pick a random item in a vector
+    average<float> nprot;               //!< Average number of protons. Updated with titrate::samplesites
+    vector<average <float> >  q;        //!< Stores the average charges of sites from titrate::sites
     action takeFromBulk(vector<particle> &, short int, short int=-1);
     action moveToBulk(vector<particle> &, short int, short int=-1);
     keywords status( vector<particle> &, short int );
-    short int random(vector<short int> &); //!< Pick a random item in a vector
+    group sort(group &);
 };
 
 #endif

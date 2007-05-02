@@ -5,21 +5,22 @@ int particles::push_back(particle &par) {
   p.push_back(par);
   trial.push_back(par);
   return p.size();
-};
+}
 
-group particles::append(vector<particle> v) {
-  group g;
+macromolecule particles::append(vector<particle> v) {
+  macromolecule g;
   g.beg=p.size();
-  for (unsigned int i=0; i<v.size(); i++) {
+  for (unsigned short i=0; i<v.size(); i++) {
     push_back(v[i]);
     g.end=g.beg+i;
-  };
+  }
+  g.masscenter(p);
   return g;
-};
+}
 
 double particles::charge() {
   double z=0;
-  for (int i=0; i<p.size(); i++)
+  for (unsigned short i=0; i<p.size(); i++)
     z+=p[i].charge;
   return z;
 }
@@ -39,7 +40,7 @@ void particles::zmove(group &g, double dz, keys k) {
   for (int i=g.beg; i<=g.end; i++)
     trial[i].z = p[i].z + dz;
   g.cm_trial.z = g.cm.z + dz;
-  if (k==AUTOACCEPT)
+  if (k==ACCEPT)
     accept(g);
 }
 
@@ -55,9 +56,9 @@ void particles::move(group &g, point c, keys k) {
     trial[i].z = p[i].z + c.z;
   };
   g.cm_trial = g.cm + c;
-
-  if (k==AUTOACCEPT) accept(g);
-};
+  if (k==ACCEPT)
+    accept(g);
+}
 void particles::displace(int i, double dp) {
   trial[i].x = p[i].x + dp*slp.random_half();
   trial[i].y = p[i].y + dp*slp.random_half();
@@ -105,7 +106,7 @@ void particles::rotate(group &g, point u, double angle, keys k) {
     trial[i].y=e1mcoy*eb+cosang*by+sinang*(u.z*bx - u.x*bz);
     trial[i].z=e1mcoz*eb+cosang*bz+sinang*(u.x*by - u.y*bx) + g.cm.z; //p[g.cm].z;
   };
-  if (k==AUTOACCEPT) accept(g);
+  if (k==ACCEPT) accept(g);
 }
 
 void particles::undo(group &g, keys k) {

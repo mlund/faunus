@@ -102,6 +102,19 @@ void iopov::header() {
     " finish {phong .9 ambient .1 reflection .2}\n"
     "}\n";
 }
+void iopov::camera() {
+  o << "camera {" << endl
+    << "  location <100,100,0>" << endl
+    << "  look_at <0,0,0>\n}" << endl;
+}
+void iopov::light(float r) {
+  o << "light_source {\n"
+    << "  <"<<r*1.5<<","<<r*1.5<<","<<r*0.5<<">\n"
+    << "  color rgb <1,1,1>\n}\n";
+  o << "light_source {\n"
+    << "  <"<<-r*1.5<<","<<r*1.5<<","<<-r*0.5<<">\n"
+    << "  color rgb <1,1,1>\n}" << endl;
+}
 string iopov::p2s(particle &p, int i) {
   string tex;
   ostringstream s;
@@ -114,7 +127,10 @@ string iopov::p2s(particle &p, int i) {
   return s.str();
 }
 bool iopov::save(string file, vector<particle> &p) {
+  clear();
   header();
+  light(100.);
+  camera();
   for (unsigned char i=0; i<p.size(); i++)
     o << p2s(p[i]);
   return writefile(file, o.str());

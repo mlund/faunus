@@ -49,6 +49,7 @@ class macromolecule : public group {
 
     double radius(vector<particle> &);  //!< Calculate radius
     double dipole(vector<particle> &);  //!< Calculate dipole moment
+    void operator=(group);              //!< Copy from group
 };
 
 /*! \brief Freely jointed chain with harmonic spring potentials

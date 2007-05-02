@@ -12,110 +12,109 @@ titrate::titrate(species &spec, vector<particle> &p, group &mobile, double peeag
   ph=peeage;
   spc=&spec;
   init(p, mobile);
-};
+}
 
 void titrate::init(vector<particle> &p, group &mobile) {
   for (int i=0; i<p.size(); i++)    //search for titrateable sites
-    if ( spc->d[p[i].id].pka !=0 ) {
-        sites.push_back(i);
-        p[i].charge = spc->d[p[i].id].p.charge;
-        eqpos.push_back(p[i]);
-      };
+    if ( (*spc).d[p[i].id].pka !=0 ) {
+      sites.push_back(i);
+      p[i].charge = spc->d[p[i].id].p.charge; // deprotonate
+    }
   for (int i=mobile.beg; i<mobile.end+1; i++) {
     if (p[i].charge==+1) protons.push_back(i);
     if (p[i].charge==0) neutrons.push_back(i);
-  };
+  }
   q.resize( sites.size() ); //adjust site average charge vector
-};
+}
 
 //returns number a random, titrateable
 //site in particle vector
 short int titrate::random(vector<short int> &iv) {
   short int i = rand() % iv.size();     //and pick randomly
-  return iv[i];
-};
+  return iv.at(i);
+}
 
 //Returns protonation status of particle i in particle vector
-titrate::keywords titrate::status(vector<particle> &p, short int i) {
-  if ( p[i].charge> spc->d[p[i].id].p.charge)
-    return PROTONATED;
-  return DEPROTONATED;
-};
+  titrate::keywords titrate::status(vector<particle> &p, short int i) {
+    if ( p[i].charge > (*spc).d[p[i].id].p.charge )
+      return PROTONATED;
+    return DEPROTONATED;
+  }
 
-titrate::action titrate::takeFromBulk(vector<particle> &p, short int i, short int j) {
-  if (j==-1)                               //if not specified..
-    j=random(protons);                     //..pick a random proton
-  
-  protons.erase(remove(protons.begin(), protons.end(), j));
+  titrate::action titrate::takeFromBulk(vector<particle> &p, short int i, short int j) {
+    if (j==-1)                               //if not specified..
+      j=random(protons);                     //..pick a random proton
 
-  p[i].charge+=1;                            //protonate site.
-  p[j].charge=0;                             //neutralize proton...
-  neutrons.push_back(j);                     //..and add to neutron vector
+    protons.erase(remove(protons.begin(), protons.end(), j));
 
-  action res;
-  res.action=PROTONATED;
-  res.site=i;
-  res.proton=j;
-  return res;
-};
+    p[i].charge+=1;                            //protonate site.
+    p[j].charge=0;                             //neutralize proton...
+    neutrons.push_back(j);                     //..and add to neutron vector
 
-titrate::action titrate::moveToBulk(vector<particle> &p, short int i, short int j) {
-  if (j==-1)             // if not specified..
-    j=random(neutrons);  // ..pick random neutron
-  neutrons.erase(remove(neutrons.begin(), neutrons.end(), j)); //del a neutron
+    action res;
+    res.action=PROTONATED;
+    res.site=i;
+    res.proton=j;
+    return res;
+  }
 
-  p[i].charge -= 1;      // deprotonate site.
-  p[j].charge  = 1;      // charge up neutron...
-  protons.push_back(j);  // ...add to proton vector
+  titrate::action titrate::moveToBulk(vector<particle> &p, short int i, short int j) {
+    if (j==-1)             // if not specified..
+      j=random(neutrons);  // ..pick random neutron
+    neutrons.erase(remove(neutrons.begin(), neutrons.end(), j)); //del a neutron
 
-  action res;
-  res.action=DEPROTONATED;
-  res.site=i;
-  res.proton=j;
-  return res;
-};
+    p[i].charge -= 1;      // deprotonate site.
+    p[j].charge  = 1;      // charge up neutron...
+    protons.push_back(j);  // ...add to proton vector
 
-titrate::action titrate::exchange(vector<particle> &p) {
-  int i=random( sites );        // pick a random, titrateable particle
-  if (status(p,i)==PROTONATED)
-    return moveToBulk(p,i);
-  else
-    return takeFromBulk(p,i);
-};
-titrate::action titrate::exchange(vector<particle> &p, action &a) {
-  if (status(p, a.site)==PROTONATED)
-    return moveToBulk(p, a.site, a.proton);
-  else
-    return takeFromBulk(p, a.site, a.proton);
-};
+    action res;
+    res.action=DEPROTONATED;
+    res.site=i;
+    res.proton=j;
+    return res;
+  };
+
+  titrate::action titrate::exchange(vector<particle> &p) {
+    int i=random( sites );        // pick a random, titrateable particle
+    if (status(p,i)==PROTONATED)
+      return moveToBulk(p,i);
+    else
+      return takeFromBulk(p,i);
+  }
+  titrate::action titrate::exchange(vector<particle> &p, action &a) {
+    if (status(p, a.site)==PROTONATED)
+      return moveToBulk(p, a.site, a.proton);
+    else
+      return takeFromBulk(p, a.site, a.proton);
+  };
 
 double titrate::energy(vector<particle> &p,
-                       double du, action &a) {
+    double du, action &a) {
   int i=p[a.site].id;
   if (a.action==PROTONATED)
     return du+( log(10.)*( ph - spc->d[i].pka ) );
   else
     return du-( log(10.)*( ph - spc->d[i].pka ) );
-};
+}
 
-void titrate::info() {
+void titrate::infos() {
   cout << "# Titrateable sites   = " << sites.size() << endl
-       << "# Protons             = " << protons.size() << endl
-       << "# pH                  = " << ph << endl ;
-};
+    << "# Protons             = " << protons.size() << endl
+    << "# pH                  = " << ph << endl ;
+}
 
 double titrate::sumsites() {
   double Q=0;
   for (int i=0; i<sites.size(); i++)
     Q+= q[i].avg();
   return Q;
-};
+}
 
 void titrate::samplesites(vector<particle> &p) {
   for (int i=0; i<sites.size(); i++)
     q[i] += p[sites[i]].charge;
   nprot+=protons.size();
-};
+}
 
 void titrate::showsites(vector<particle> &p) {
   cout << "# --- AVERAGE SITE CHARGES ---------------------\n";
@@ -145,11 +144,11 @@ double titrate::applycharges(vector<particle> &p) {
   double q = nprot.avg() / protons.size();
   for (int i=0; i<protons.size(); i++)
     p[protons[i]].charge = q;
-  
+
   cout << "# Charge, Titrateable sites = " << sumsites() << endl
-       << "# Charge, Protons           = " << nprot.avg() << endl
-       << "# Average proton charge     = " << q << endl
-       << "# Total                     = " << sumsites()+nprot.avg() << endl;
-  
+    << "# Charge, Protons           = " << nprot.avg() << endl
+    << "# Average proton charge     = " << q << endl
+    << "# Total                     = " << sumsites()+nprot.avg() << endl;
+
   return sumsites();
 };

@@ -75,8 +75,8 @@ class iopov : public iopart {
     void clear();                    //!< Clear output buffer
     void box(float);                 //!< Add cubic box
     void cell(float);                //!< Add spherical cell
-    void light(point);               //!< Add light source
-    void camera(point, point);       //!< Specify camera location and viewpoint
+    void light(float);               //!< Add light source
+    void camera();                   //!< Specify camera location and viewpoint
     bool save(string, vector<particle>&);
 };
 

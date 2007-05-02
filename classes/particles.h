@@ -19,22 +19,22 @@ class particles {
 private:
   slump slp;
 public:
-  enum keys {XYZ, ALL, TRIALMOVE, AUTOACCEPT,MAX,AVERAGE,INTERIOR}; 
+  enum keys {XYZ, ALL, TRIAL, ACCEPT}; 
   
-  vector<particle> p;                   //!< The main particle vector
-  vector<particle> trial;               //!< Trial particle vector. 
-  group append(vector<particle>);       //!< Add particle vector to both "p" and "trial"
+  vector<particle> p;                    //!< The main particle vector
+  vector<particle> trial;                //!< Trial particle vector. 
+  macromolecule append(vector<particle>);//!< Add particle vector to both "p" and "trial"
   
   int push_back(particle &);                            //!< add particle to both "p" and "trial"
-  void zmove(group &, double, keys=TRIALMOVE);          //!< Translate group in z-direction only
+  void zmove(group &, double, keys=TRIAL);              //!< Translate group in z-direction only
   void zundo(group &);                                  //!< Undo space::zmove
-  void move(group &, point, keys=TRIALMOVE);            //!< Translation group in x,y,z direction
+  void move(group &, point, keys=TRIAL);                //!< Translation group in x,y,z direction
   void displace(int, double);                           //!< Random displacement of particle i
   void undo(group &, keys=XYZ);                         //!< Regret MC move. Restores space::trial.
   void accept(group &, keys=XYZ);                       //!< Acceps MC move. Sync space::trial and space::p
 
-  void rotate(group &, double, keys=TRIALMOVE);
-  void rotate(group &, point, double=0, keys=TRIALMOVE);//!< Rotate group around point
+  void rotate(group &, double, keys=TRIAL);
+  void rotate(group &, point, double=0, keys=TRIAL);    //!< Rotate group around point
 
   double charge();                      //!<  Sum all charges in particle vector
   double charge(point &, double);       //!<  Sum all charges within a sphere region

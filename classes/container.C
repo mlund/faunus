@@ -23,6 +23,13 @@ cell::cell(float radius) {
   diameter = 2*r; 
   volume = (4./3.)*acos(-1)*r*r*r;
 }
+string cell::info() {
+  ostringstream o;
+  o << container::info() 
+    << "#   Shape                = Spherical" << endl
+    << "#   Radius               = " << r << endl;
+  return o.str();
+}
 void cell::randompos(point &p) {
   double l=r2+1;
   while (l>r2) {

@@ -86,7 +86,13 @@ point group::masscenter(vector<particle> &p) {
 
 //--------------- MACRO MOLECULE ---------------
 macromolecule::macromolecule() {}
-
+void macromolecule::operator=(group g) {
+  beg=g.beg;
+  end=g.end;
+  name=g.name;
+  cm=g.cm;
+  cm_trial=g.cm_trial;
+}
 /*!
  * Recalulates the dipole moment of a
  * group and stores the result in the
@@ -103,7 +109,6 @@ double macromolecule::dipole(vector<particle> &p)
   }
   return mu.len();
 }
-
 double macromolecule::radius(vector<particle> &p) {
   double r,max=0;
   masscenter(p);

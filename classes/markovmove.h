@@ -4,6 +4,9 @@
 #include "container.h"
 #include "potentials.h"
 #include "ensemble.h"
+#include "titrate.h"
+#include "slump.h"
+typedef pot_coulomb T_pairpot;
 
 /*! \brief Base class for MC moves
  *  \author Mikael Lund
@@ -27,12 +30,13 @@
  *  #include "markovmove.C"
  *  \endcode
  */
-typedef pot_coulomb T_pairpot;
-
 class markovmove {
+  private:
+    slump slp;
   protected:
     double uold, unew, deltadp;
-    unsigned long long int cnt, naccept; 
+    unsigned long long int cnt, naccept;
+    string name;
     container *con;
     ensemble *ens;
     interaction<T_pairpot> *pot;
@@ -43,6 +47,7 @@ class markovmove {
            du,                          //!< Energy change of last move
            utot;                        //!< Sum of energy changes for all moves
     float accepted();                   //!< Return fraction of accepted moves
+    bool run(float);                    //!< Probability
     void adjust_dp(float=30, float=40); //!< Adjust displacement parameter
     virtual string info();              //!< Show info about group 
     markovmove(ensemble &e, container &c, interaction<T_pairpot> &inter) {
@@ -53,6 +58,15 @@ class markovmove {
       pot=&inter;
     }
 };
+string markovmove::info() {
+  ostringstream o;
+  o << "# " << name << ":" << endl
+    << "#   Acceptance          = " << accepted()*100 << endl
+    << "#   Number of trials    = " << cnt << endl
+    << "#   Displacement param. = " << dp << endl
+    << "#   Total energy change = " << utot << endl;
+  return o.str();
+}
 
 /*! \brief Move salt particles
  *  \author Mikael Lund
@@ -60,7 +74,8 @@ class markovmove {
 class saltmove : public markovmove {
   public:
     saltmove( ensemble &, container&, interaction<T_pairpot>& );
-    void move(group &, float, int=-1); //<! Move a salt particle
+    void move(short);           //!< Move a single particle
+    void move(group &);         //!< Loop over group particles (randomly)
 };
 
 /*! \brief Symmetrically move two groups along z-axis
@@ -75,15 +90,16 @@ class dualzmove : public markovmove {
 /*! \brief Rotate group around mass-center.
 */
 class rotate : public markovmove { 
-  void move(group &);
 };
 
 /*! \brief Titrate all titrateable sites
  *  \author Mikael Lund
  */
-class titrateall : public markovmove {
-  //titrateall( space &, interaction<T_pairpot>&, container &, titrate &);
-  void move(group &);
+class chargereg : public markovmove, private titrate {
+  public:
+    chargereg( ensemble&, container&, interaction<T_pairpot>&, group&, float);
+    void titrateall();
+    string info();
 };
 
 #endif

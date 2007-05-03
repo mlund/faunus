@@ -15,6 +15,7 @@
 template<class T_pairpot>
 class widom {
   private:
+    unsigned long long int cnt;
     float u;
     particle a,b;
     container *con;
@@ -23,11 +24,13 @@ class widom {
   public:
     widom(container &c, interaction<T_pairpot> &i,
         particle::type t1, particle::type t2) {
+      cnt=0;
       con=&c;
       pot=&i;
       a=con->get(t1);
       b=con->get(t2);
     }
+    string info();                              //!< Print results of analysis
     float muex() { return -log(expsum.avg()); } //!< Excess chemical potential
     float gamma() { return exp(muex()); }       //!< Activity coefficient
     
@@ -35,6 +38,7 @@ class widom {
     //! \param n Number of insertions
     void insert(unsigned char n=100) {
       for (unsigned char i=0; i<n; i++) {
+        cnt++;
         con->randompos(a);
         con->randompos(b);
         u=pot->energy(con->p, a) +
@@ -44,5 +48,16 @@ class widom {
       }
     }
 };
+
+template<class T>
+string widom<T>::info() {
+  ostringstream o;
+  o << "# Widom Analysis:" << endl
+    << "#   Number of insertions = " << cnt << endl
+    << "#   Ion pair charges     = " << a.charge << ", " << b.charge << endl
+    << "#   Excess chemical pot. = " << muex()  << endl
+    << "#   Mean activity coeff. = " << gamma() << endl;
+  return o.str();
+}
 
 #endif

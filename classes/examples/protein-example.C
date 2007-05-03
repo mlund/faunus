@@ -33,11 +33,13 @@ int main() {
 
   cout << cell.info() << salt << protein << tit.info();
 
+  double u=0,u0=pot.energy(cell.p);
   for (int macro=0; macro<10; macro++) {        // Markov chain
     for (int micro=0; micro<1e3; micro++) {
       sm.move(salt);                            // Displace salt particles
       tit.titrateall();                         // Titrate groups
     }
+    cout << pot.energy(cell.p) - (u0 + sm.utot + tit.utot) << endl;
   }
   cout << sm.info() << tit.info();
   povray.save("protein-example.pov", cell.p);    // Save POVRAY file

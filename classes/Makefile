@@ -27,8 +27,14 @@ all:	classes
 classes:	$(OBJS)
 doc:	
 	doxygen doc/Doxyfile
-examples:	$(OBJS) examples/markovmove-example.C
-		$(CXX) $(CXXFLAGS) $(OBJS) examples/markovmove-example.C -o examples/markovmove-example
+
+widom:	examples/widom-example.C $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) examples/widom-example.C -o examples/widom-example
+
+pka:	examples/protein-example.C $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) examples/protein-example.C -o examples/protein-example
+
+examples:	widom pka
 
 clean:
 	rm -f $(OBJS) 

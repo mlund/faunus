@@ -1,5 +1,5 @@
 /*! \file Example how to simulate a NaCl solution
- *  \example markovmove-example.C
+ *  \example widom-example.C
  *
  * This example program calculates the excess chemical
  * potential of NaCl in an aqueous solution using Widom's

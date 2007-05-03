@@ -37,5 +37,5 @@ pka:	examples/protein-example.C $(OBJS)
 examples:	widom pka
 
 clean:
-	rm -f $(OBJS) 
+	rm -f $(OBJS) examples/protein-example examples/widom-example 
 

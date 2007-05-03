@@ -1,9 +1,16 @@
-#ifndef _WIDOM_H
-#define _WIDOM_H
+#ifndef _ANALYSIS_H
+#define _ANALYSIS_H
 
 #include "average.h"
 #include "container.h"
 #include "potentials.h"
+
+class analysis {
+  public:
+    //virtual string results()=0;
+    virtual string info()=0;
+};
+
 
 /*! \brief Widom method for excess chemical potentials
  *  \author Mikael Lund
@@ -13,13 +20,13 @@
  *  calculate the mean excess chemical potential.
  */
 template<class T_pairpot>
-class widom {
+class widom : public analysis {
   private:
     unsigned long long int cnt;
-    float u;
+    double u;
     particle a,b;
     container *con;
-    average<float> expsum; 
+    average<double> expsum; 
     interaction<T_pairpot> *pot;
   public:
     widom(container &c, interaction<T_pairpot> &i,
@@ -31,8 +38,8 @@ class widom {
       b=con->get(t2);
     }
     string info();                              //!< Print results of analysis
-    float muex() { return -log(expsum.avg()); } //!< Excess chemical potential
-    float gamma() { return exp(muex()); }       //!< Activity coefficient
+    double muex() { return -log(expsum.avg()); } //!< Excess chemical potential
+    double gamma() { return exp(muex()); }       //!< Activity coefficient
     
     //! Insert a salt pair and evaluate the excess chemical potential
     //! \param n Number of insertions

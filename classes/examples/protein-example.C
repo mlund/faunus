@@ -1,5 +1,5 @@
 /*! \file Example how to simulate a NaCl solution
- *  \example markovmove-example.C
+ *  \example protein-example.C
  */
 #include <iostream>
 #include "../io.h"

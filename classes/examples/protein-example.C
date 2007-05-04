@@ -3,7 +3,7 @@
  */
 #include <iostream>
 #include "../io.h"
-#include "../widom.h"
+#include "../analysis.h"
 #include "../container.h"
 #include "../potentials.h"
 typedef pot_coulomb T_pairpot;

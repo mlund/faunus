@@ -21,6 +21,7 @@ OBJS=$(CLASSDIR)/inputfile.o \
      $(CLASSDIR)/hardsphere.o\
      $(CLASSDIR)/group.o \
      $(CLASSDIR)/particles.o \
+     $(CLASSDIR)/analysis.o \
      $(CLASSDIR)/species.o
 all:	classes 
 

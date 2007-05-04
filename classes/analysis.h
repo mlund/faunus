@@ -16,9 +16,21 @@ class systemenergy : public analysis {
     average<double> uavg, u2avg;
   public:
     string info();
-    systemenergy();
+    systemenergy(double);
     void operator+=(double);    //!< Inform about system energy change
 };
+
+string systemenergy::info() {
+  uavg+=u;
+  u2avg+=u*u;
+  ostringstream o;
+  o << "# System energy (kT):" << endl
+    << "#   Averages <U> <U^2> = " << uavg.avg() << " " << u2avg.avg() << endl
+    << "#   Initial energy     = " << u0 << endl
+    << "#   Summed energy      = " << u << endl
+    << "#   Absolute drift     = " << 0 << endl;
+  return o.str();
+}
 
 /*! \brief Widom method for excess chemical potentials
  *  \author Mikael Lund

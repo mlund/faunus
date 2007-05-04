@@ -4,7 +4,7 @@
 
   ifeq ($(MODEL), generic)
     CXX=g++
-    CXXFLAGS = -O3 -finline-functions-called-once -finline-functions -funroll-loops -w -Winline -fdump-tree-inlined
+    CXXFLAGS = -O3 -funroll-loops -w -Winline
   endif
 
 CLASSDIR=.
@@ -39,4 +39,7 @@ examples:	widom pka
 
 clean:
 	rm -f $(OBJS) examples/protein-example examples/widom-example 
+
+docclean:
+	rm -fR doc/html doc/latex
 

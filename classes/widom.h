@@ -7,10 +7,18 @@
 
 class analysis {
   public:
-    //virtual string results()=0;
     virtual string info()=0;
 };
 
+class systemenergy : public analysis {
+  private:
+    double u,u0;
+    average<double> uavg, u2avg;
+  public:
+    string info();
+    systemenergy();
+    void operator+=(double);    //!< Inform about system energy change
+};
 
 /*! \brief Widom method for excess chemical potentials
  *  \author Mikael Lund
@@ -38,23 +46,25 @@ class widom : public analysis {
       b=con->get(t2);
     }
     string info();                              //!< Print results of analysis
-    double muex() { return -log(expsum.avg()); } //!< Excess chemical potential
-    double gamma() { return exp(muex()); }       //!< Activity coefficient
-    
-    //! Insert a salt pair and evaluate the excess chemical potential
-    //! \param n Number of insertions
-    void insert(unsigned char n=100) {
-      for (unsigned char i=0; i<n; i++) {
-        cnt++;
-        con->randompos(a);
-        con->randompos(b);
-        u=pot->energy(con->p, a) +
-          pot->energy(con->p, b) +
-          pot->pair.pairpot(a,b)*pot->pair.f;
-        expsum+=exp(-u);
-      }
-    }
+    double muex() { return -log(expsum.avg()); }//!< Excess chemical potential
+    double gamma() { return exp(muex()); }      //!< Activity coefficient
+    void insert(unsigned char=100);             //!< Widom insertions
 };
+
+//! Insert a salt pair and evaluate the excess chemical potential
+//! \param n Number of insertions
+template<class T>
+void widom<T>::insert(unsigned char n) {
+  for (unsigned char i=0; i<n; i++) {
+    cnt++;
+    con->randompos(a);
+    con->randompos(b);
+    u=pot->energy(con->p, a) +
+      pot->energy(con->p, b) +
+      pot->pair.pairpot(a,b)*pot->pair.f;
+    expsum+=exp(-u);
+  }
+}
 
 template<class T>
 string widom<T>::info() {

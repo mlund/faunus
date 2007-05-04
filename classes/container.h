@@ -17,18 +17,9 @@ class container : public particles,  public species {
   public:
     float volume;                               //!< Volume of the container [AA^3]
     virtual void randompos(point &)=0;          //!< Random point within container
-    inline virtual bool collision(point &)=0;          //!< Check for collision with walls
+    inline virtual bool collision(point &)=0;   //!< Check for collision with walls
     virtual group insert(particle::type, short);//!< Insert particles
-    virtual string info() {
-      float z=charge();
-      ostringstream o;
-      o << "# Container:" << endl
-        << "#   Number of particles  = " << p.size() << endl
-        << "#   Volume (AA^3)        = " << volume << endl
-        << "#   Electroneutrality    = " 
-        << ((z!=0) ? "NO!" : "Yes") << " "  << z << endl;;
-      return o.str();
-    }
+    virtual string info();                      //!< Return info string
 };
 
 /*! \brief Spherical simulation container

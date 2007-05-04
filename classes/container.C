@@ -1,6 +1,16 @@
 #include "container.h"
 
 //----------- CONTAINER -----------------
+string container::info() {
+  float z=charge();
+  ostringstream o;
+  o << "# Container:" << endl
+    << "#   Number of particles  = " << p.size() << endl
+    << "#   Volume (AA^3)        = " << volume << endl
+    << "#   Electroneutrality    = " 
+    << ((z!=0) ? "NO!" : "Yes") << " "  << z << endl;;
+  return o.str();
+}
 group container::insert(particle::type id, short n) {
   group g;
   hardsphere hs;

@@ -12,23 +12,25 @@ class analysis {
 
 class systemenergy : public analysis {
   private:
-    double u,u0;
+    double u0,sum,cur;
     average<double> uavg, u2avg;
   public:
     string info();
     systemenergy(double);
-    void operator+=(double);    //!< Inform about system energy change
+    void setcurrent(double);    //!< Tell about the current system energy
+    void operator+=(double);    //!< Add system energy change
 };
 
 string systemenergy::info() {
-  uavg+=u;
-  u2avg+=u*u;
+  uavg+=sum;
+  u2avg+=sum*sum;
   ostringstream o;
   o << "# System energy (kT):" << endl
     << "#   Averages <U> <U^2> = " << uavg.avg() << " " << u2avg.avg() << endl
     << "#   Initial energy     = " << u0 << endl
-    << "#   Summed energy      = " << u << endl
-    << "#   Absolute drift     = " << 0 << endl;
+    << "#   Initial + changes  = " << sum << endl
+    << "#   Current energy     = " << cur << endl
+    << "#   Absolute drift     = " << abs(cur-sum) << endl;
   return o.str();
 }
 

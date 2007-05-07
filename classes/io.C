@@ -11,11 +11,12 @@
 bool io::readfile(string file, vector<string> &v) {
   ifstream f(file.c_str() );
   if (f) {
-    while (getline(f,s)) 
+    while (getline(f,s))
       v.push_back(s);
     f.close();
     return true;
   }
+  cout << "# WARNING! FILE " << file << " NOT READ!\n";
   return false;
 }
 bool io::writefile(string file, string s) {
@@ -61,8 +62,8 @@ vector<particle> ioaam::load(string file) {
   p.resize(0);
   if (readfile(file,v)==true) {
     strip(v,"#");
-    unsigned char n=atoi(v[0].c_str());
-    for (unsigned char i=1; i<=n; i++)
+    unsigned short n=atoi(v[0].c_str());
+    for (unsigned short i=1; i<=n; i++)
       p.push_back( s2p(v[i]) );
   }
   return p;
@@ -70,7 +71,7 @@ vector<particle> ioaam::load(string file) {
 bool ioaam::save(string file, vector<particle> &) {
   ostringstream o;
   o << p.size() << endl;
-  for (unsigned char i=0; i<p.size(); i++)
+  for (unsigned short i=0; i<p.size(); i++)
     o << p2s(p[i]);
   return writefile(file, o.str());
 }
@@ -131,7 +132,7 @@ bool iopov::save(string file, vector<particle> &p) {
   header();
   light(100.);
   camera();
-  for (unsigned char i=0; i<p.size(); i++)
+  for (unsigned short i=0; i<p.size(); i++)
     o << p2s(p[i]);
   return writefile(file, o.str());
 }

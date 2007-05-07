@@ -1,5 +1,5 @@
 #include "markovmove.h"
-//--------------- MARKOV MODE ---------------------
+//--------------- MARKOV MOVE ---------------------
 bool markovmove::run(float p) { return (p>slp.random_one())?true:false; }
 float markovmove::accepted() { return naccept/float(cnt); }
 // \param min Minimum percentage of accepted moves
@@ -22,10 +22,14 @@ saltmove::saltmove(
 /*! \param group Group containing mobile ions
  */
 void saltmove::move(group &g) {
-  for (unsigned short i=g.beg; i<=g.end; i++)
+  double sum=0;
+  for (unsigned short i=0; i<g.size(); i++) {
     move( g.random() );
+    sum+=du;
+  }
+  du=sum;
 }
-void saltmove::move(short n) {
+void saltmove::move(unsigned short n) {
   cnt++;
   du=0;
   con->displace(n, dp); 
@@ -81,6 +85,7 @@ chargereg::chargereg(ensemble &e,
  */
 void chargereg::titrateall() {
   action t;
+  double sum=0;
   for (unsigned char i=0; i<sites.size(); i++) {
     cnt++;
     t=exchange(con->trial);
@@ -101,6 +106,8 @@ void chargereg::titrateall() {
       rc=ENERGY;
       exchange(con->trial, t);
     }
+    sum+=du;
   }
+  du=sum;
 }
 

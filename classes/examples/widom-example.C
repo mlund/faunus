@@ -17,8 +17,7 @@ typedef pot_coulomb T_pairpot;
 using namespace std;
 
 int main() {
-  cell cell(90.);                       // We want a spherical cell
-  iopov povray(cell);                   // We want a POVRAY snapshot
+  cell cell(70.);                       // We want a spherical cell
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg;                        // Setup pair potential
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
@@ -33,10 +32,10 @@ int main() {
   for (int macro=0; macro<10; macro++) {        // Markov chain
     for (int micro=0; micro<1e4; micro++) {
       sm.move(salt);                            // Displace salt particles
+      sm.adjust_dp(40,50);                      // Stride to 40-50% acceptance
       widom.insert(10);                         // Widom analysis
     }
   }
-  cout << sm.info() << widom.info();
-  povray.save("markov-example.pov", cell.p);    // Save POVRAY file
-};
+  cout << cell.info() << sm.info() << widom.info();
+}
 

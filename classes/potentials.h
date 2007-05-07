@@ -50,9 +50,9 @@ class pot_coulomb : private pot_lj {
      *  \f$ \beta u/f = \frac{z_1 z_2}{r} + u_{LJ}/f \f$
      */
     inline double pairpot(particle &p1, particle &p2) {
-      double r2=p1.sqdist(p2);
-      double qq=p1.charge*p2.charge;
-      double u=lj(p1,p2,r2);
+      register double r2=p1.sqdist(p2);
+      register double qq=p1.charge*p2.charge;
+      register double u=lj(p1,p2,r2);
       return (qq!=0) ? u+qq/sqrt(r2) : u;
     }
 };
@@ -162,11 +162,11 @@ class interaction {
 
 template<class T>
 double interaction<T>::energy(vector<particle> &p, int j) {
-  int ps=p.size();
+  unsigned short ps=p.size();
   double u=0;
-  for (int i=0; i<j; i++)
+  for (unsigned short i=0; i<j; i++)
     u+=pair.pairpot( p[i],p[j] );
-  for (int i=j+1; i<ps; i++)
+  for (unsigned short i=j+1; i<ps; i++)
     u+=pair.pairpot( p[i],p[j] );
   return pair.f*u;
 }
@@ -187,14 +187,14 @@ double interaction<T>::energy(vector<particle> &p, group &g) {
 template<class T>
 double interaction<T>::energy(vector<particle> &p, group &g, int j) {
   double u=0;
-  int len=g.end+1;
+  unsigned short len=g.end+1;
   if (g.find(j)==true) {   //avoid self-interaction...
-    for (int i=g.beg; i<j; i++)
+    for (unsigned short i=g.beg; i<j; i++)
       u+=pair.pairpot(p[i],p[j]);
-    for (int i=j+1; i<len; i++)
+    for (unsigned short i=j+1; i<len; i++)
       u+=pair.pairpot(p[i],p[j]);
   } else                        //simple - j not in g
-    for (int i=g.beg; i<len; i++)
+    for (unsigned short i=g.beg; i<len; i++)
       u+=pair.pairpot(p[i],p[j]);
   return pair.f*u;  
 }
@@ -273,8 +273,8 @@ double interaction<T>::internal(vector<particle> &p, group &g) {
 template<class T>
 double interaction<T>::energy(vector<particle> &p, particle &a) {
   double u=0;
-  unsigned char n=p.size();
-  for (unsigned char i=0; i<n; i++)
+  unsigned short n=p.size();
+  for (unsigned short i=0; i<n; i++)
     u+=pair.pairpot(p[i], a);
   return pair.f*u;
 }

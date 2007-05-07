@@ -16,13 +16,13 @@ class systemenergy : public analysis {
     average<double> uavg, u2avg;
   public:
     systemenergy(double);
-    void setcurrent(double);    //!< Tell about the current system energy
+    void setcurrent(double);    //!< Specify current system energy
     void operator+=(double);    //!< Add system energy change
     string info() {
       uavg+=sum;
       u2avg+=sum*sum;
       ostringstream o;
-      o << "# System energy (kT):"
+      o << "# System energy (kT):" << endl
         << "#   Averages <U> <U^2> = " << uavg.avg() << " " << u2avg.avg() << endl
         << "#   Initial energy     = " << u0 << endl
         << "#   Initial + changes  = " << sum << endl

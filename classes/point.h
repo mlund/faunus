@@ -109,7 +109,7 @@ inline void spherical::random_angles() {
  * \return \f$ |r_{12}|^2 = \Delta x^2 + \Delta y^2 + \Delta z^2 \f$
  */
 inline double point::sqdist(point &p) {
-  double dx,dy,dz;
+  register double dx,dy,dz;
   dx=x-p.x;
   dy=y-p.y;
   dz=z-p.z;

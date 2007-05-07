@@ -151,6 +151,7 @@ class interaction {
     double energy(vector<particle> &, vector<group> &, int,...);
     double energy(vector<particle> &, int, vector<short int> &);///< particle<->list of particles.
     double energy(vector<particle> &);                          ///< all<->all (System energy).
+    double potential(vector<particle> &, unsigned short);       //!< Electric potential at i'th particle
     double internal(vector<particle> &, group &);               ///< internal energy in group
     double pot(vector<particle> &, point &);              ///< Electrostatic potential in a point
     double quadratic(point &, point &);
@@ -201,11 +202,10 @@ double interaction<T>::energy(vector<particle> &p, group &g, int j) {
 
 template<class T>
 double interaction<T>::energy(vector<particle> &p, group &g, particle &a) {
-  if (g.beg==-1)
-    return 0;
+  if (g.beg==-1) return 0;
   double u=0;
-  int len=g.end+1;
-  for (int i=g.beg; i<len; i++) 
+  unsigned short i,n=g.end+1;
+  for (i=g.beg; i<n; i++)
     u+=pair.pairpot(a, p[i]); 
   return pair.f*u;
 }
@@ -241,32 +241,26 @@ double interaction<T>::dipdip(point &a, point &b, double r) {
   return pair.f*( a.x*b.x + a.y*b.y - 2*a.z*b.z )/(r*r*r);
 }
 template<class T>
-double interaction<T>::iondip(point &a, double q, double r) {
-  return -pair.f*q*a.z/(r*r);
-}
+double interaction<T>::iondip(point &a, double q, double r) { return -pair.f*q*a.z/(r*r); }
 
 // Total electrostatic potential in a point
 template<class T>
 double interaction<T>::pot(vector<particle> &p, point &a) {
   double u=0;
-  int ps=p.size();  
-  for (int i=0; i<ps; i++)
-    u+=p[i].charge / p[i].dist(a);
+  unsigned short i,n=p.size();  
+  for (i=0; i<n; i++) u+=p[i].charge/p[i].dist(a);
   return pair.f*u;
 }
 
 // Internal (NON)-electrostatic energy in group
 template<class T>
 double interaction<T>::internal(vector<particle> &p, group &g) {
-  int glen=g.end+1;
+  if (g.beg==-1) return 0;
   double u=0;
-  if (g.beg==-1)
-    return 0;
-  else {
-    for (int i=g.beg; i<glen-1; i++)
-      for (int j=i+1; j<glen; j++)
-        u+=pair.pairpot(p[i],p[j]);
-  }
+  unsigned short glen=g.end+1;
+  for (unsigned short i=g.beg; i<glen-1; i++)
+    for (unsigned short j=i+1; j<glen; j++)
+      u+=pair.pairpot(p[i],p[j]);
   return pair.f*u;
 }
 
@@ -277,6 +271,15 @@ double interaction<T>::energy(vector<particle> &p, particle &a) {
   for (unsigned short i=0; i<n; i++)
     u+=pair.pairpot(p[i], a);
   return pair.f*u;
+}
+
+template<class T>
+double interaction<T>::potential(vector<particle> &p, unsigned short j) {
+  double u=0;
+  unsigned short i,n=p.size();
+  for (i=0; i<j; i++) u+=p[i].charge/p[i].dist(p[j]);
+  for (i=j+1; i<n; i++) u+=p[i].charge/p[i].dist(p[j]);
+  return u;
 }
 
 #endif

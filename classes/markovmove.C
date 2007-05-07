@@ -89,13 +89,15 @@ void chargereg::titrateall() {
   for (unsigned char i=0; i<sites.size(); i++) {
     cnt++;
     t=exchange(con->trial);
-    uold = pot->energy( con->p, t.site )
-      + pot->energy( con->p, t.proton )
-      - pot->pair.pairpot(con->p[t.site], con->p[t.proton])*pot->pair.f;
-    unew = pot->energy( con->trial, t.site )
-      + pot->energy( con->trial, t.proton )
-      - pot->pair.pairpot(con->trial[t.site], con->trial[t.proton])*pot->pair.f;
-    du = unew-uold;
+    uold
+      = (con->p[t.site].charge!=0) ? pot->potential( con->p, t.site ) * con->p[t.site].charge : 0
+      + (con->p[t.proton].charge!=0) ? pot->potential( con->p, t.proton ) * con->p[t.proton].charge : 0
+      - con->p[t.site].potential(con->p[t.proton] ) * con->p[t.proton].charge;
+    unew
+      = (con->trial[t.site].charge!=0) ? pot->potential(con->trial,t.site)*con->trial[t.site].charge:0
+      + (con->trial[t.proton].charge!=0) ? pot->potential(con->trial,t.proton)*con->trial[t.proton].charge:0
+      - con->trial[t.site].potential(con->trial[t.proton] ) * con->trial[t.proton].charge;
+    du = (unew-uold) * pot->pair.f;
     if (ens->metropolis( energy(con->trial, du, t) )==true) {
       rc=OK;
       utot+=du;

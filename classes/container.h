@@ -20,6 +20,7 @@ class container : public particles,  public species {
     inline virtual bool collision(point &)=0;   //!< Check for collision with walls
     virtual group insert(particle::type, short);//!< Insert particles
     virtual string info();                      //!< Return info string
+    virtual string povray();                    //!< POVRAY object representing the cell
 };
 
 /*! \brief Spherical simulation container
@@ -33,6 +34,7 @@ class cell : public container {
     cell(float);
     string info();
     void randompos(point &);
+    string povray();
     inline bool collision(point &p) {
       return 
         (p.x*p.x+p.y*p.y+p.z*p.z > r2) ? true:false;

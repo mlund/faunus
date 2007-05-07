@@ -25,6 +25,13 @@ group container::insert(particle::type id, short n) {
   }
   return g;
 }
+string container::povray() {
+  return string(
+        "#declare cell=texture {\n"
+        "pigment {color rgbf <1,1,1,.9>}\n"
+        " finish {phong .1 ambient .2}\n"
+        "}\n" );
+}
 
 //----------- CELL ----------------------
 cell::cell(float radius) {
@@ -48,6 +55,12 @@ void cell::randompos(point &p) {
     p.z = slp.random_half()*diameter;
     l=p.x*p.x+p.y*p.y+p.z*p.z;
   }
+}
+string cell::povray() {
+  ostringstream o;
+  o << "sphere {<0,0,0>," << r << " texture {cell}}\n"
+    << "cylinder {<0,0," << -r << ">,<0,0," << r << ">,0.5 texture {cell}}\n";
+  return o.str();
 }
 //----------- BOX --------------------------
 box::box(float sidelength) {

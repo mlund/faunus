@@ -60,14 +60,15 @@ class widom : public analysis {
     string info();                              //!< Print results of analysis
     double muex() { return -log(expsum.avg()); }//!< Excess chemical potential
     double gamma() { return exp(muex()); }      //!< Activity coefficient
-    void insert(unsigned char=100);             //!< Widom insertions
+    void insert(unsigned short=100);            //!< Widom insertions
 };
 
 //! Insert a salt pair and evaluate the excess chemical potential
 //! \param n Number of insertions
 template<class T>
-void widom<T>::insert(unsigned char n) {
-  for (unsigned char i=0; i<n; i++) {
+void widom<T>::insert(unsigned short n) {
+  while (n>0) {
+    n--;
     cnt++;
     con->randompos(a);
     con->randompos(b);
@@ -87,6 +88,95 @@ string widom<T>::info() {
     << "#   Excess chemical pot. = " << muex()  << endl
     << "#   Mean activity coeff. = " << gamma() << endl;
   return o.str();
+}
+
+/*!
+ * \brief Calculates free energy pathway
+ * \author Mikael Lund
+ *
+ * Starting from some point this class will generate eight
+ * other points around it (cubic) and calculate the excess chemical
+ * potential in these eight points. The one with the lowest value
+ * will be the center of a point that will be used as the center
+ * for eight new points etc. This will go on until the path reaches a
+ * target point as specified in the constructor.
+ */
+template<class T>
+class widompath : public analysis {
+  private:
+    ostringstream ostr;
+    bool finished;
+    unsigned short cnt;
+    float r;
+    point goal;
+    vector<float> trajmu;
+    vector<point> cube, trajpos;
+    vector< average<float> > cubemu;
+    void setcube(point &);
+    void update();                      //!< Measure muexp in cube points
+  public:
+    particle p;                         //!< Particle to insert
+    widompath();
+};
+
+template<class T>
+widompath<T>::widompath() {
+  finished=false;
+  cnt=100;
+  p.charge=+1;
+  p.radius=2.0;
+  cube.resize(8);
+  cubemu.resize( cube.size() );
+}
+
+template<class T>
+void widompath<T>::update() {
+  unsigned char i,imax;
+  if (finished==false)
+    return;
+  if (cnt>0) {
+    cnt--;
+    for (i=0; i<cube.size(); i++) {
+      p=cube[i]; 
+      cubemu[i]+=exp( -0  ); //energy!
+    }
+  } else {
+    imax=0;
+    for (i=1; i<cube.size(); i++)
+      if (cubemu[i].avg()>cubemu[imax].avg())
+        imax=i;
+    p=cube[imax];
+    trajpos.push_back(p);
+    trajmu.push_back( -log(cubemu[imax].avg()) );
+    setcube();
+    cnt=100;
+    if (p.dist(goal)<p.radius) {
+    }
+  }
+}
+
+template<class T>
+void widompath<T>::setcube(point &p) {
+  for (unsigned char i=0; i<cube.size(); i++) {
+    cube[i]=p;
+    cubemu[i].reset();
+  }
+  cube[0].x+=r;
+  cube[0].y+=r;
+  cube[0].z+=r;
+  cube[1]=-cube[0];
+  cube[2].x-=r;
+  cube[2].y+=r;
+  cube[2].z+=r;
+  cube[3]=-cube[2];
+  cube[4].x+=r;
+  cube[4].y-=r;
+  cube[4].z+=r;
+  cube[5]=-cube[4];
+  cube[6].x+=r;
+  cube[6].y+=r;
+  cube[6].z-=r;
+  cube[7]=-cube[6];
 }
 
 #endif

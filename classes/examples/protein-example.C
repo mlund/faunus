@@ -21,13 +21,13 @@ int main() {
   macromolecule protein;                // Group for the protein
   ioaam aam(cell);                      // Protein file format is AAM
   protein=cell.append(
-      aam.load("/Users/mikael/Documents/Projekter/Protein/helms/cox_cut.aam")); // Load protein from disk
+      aam.load("examples/cox_cut.aam")); // Load protein from disk
   cell.move(protein, -protein.cm);      // ..and move it to origo
   cell.accept(protein);                 // (accept move)
 
   group salt;                           // Group for mobile ions
-  salt+=cell.insert( particle::NA, 291 );// Insert sodium ions
-  salt+=cell.insert( particle::CL, 188 );// Insert chloride ions
+  salt+=cell.insert( particle::NA, 188 );// Insert sodium ions
+  salt+=cell.insert( particle::CL, 85 );// Insert chloride ions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   chargereg tit(nvt,cell,pot,salt,7);   // Prepare titration. pH 7
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
@@ -36,9 +36,10 @@ int main() {
 
   double u=0,u0=pot.energy(cell.p);
   for (int macro=0; macro<10; macro++) {        // Markov chain
-    for (int micro=0; micro<1e2; micro++) {
+    for (int micro=0; micro<200; micro++) {
       sm.move(salt);                            // Displace salt particles
-      tit.titrateall();                         // Titrate groups
+      if (sm.run(0.7))
+        tit.titrateall();                         // Titrate groups
       sys += sm.du+tit.du;                      // Keep system energy updated
     }
   }

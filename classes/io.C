@@ -136,6 +136,13 @@ bool iopov::save(string file, vector<particle> &p) {
     o << p2s(p[i]);
   return writefile(file, o.str());
 }
+void iopov::connect(point &p1, point &p2, float radius) {
+  o << "cylinder {\n"
+    << "  <"<<p1.x<<","<<p1.y<<","<<p1.z<<">,"
+    << "  <"<<p2.x<<","<<p2.y<<","<<p2.z<<">,"<<radius
+    << "  texture {redish}\n }\n";
+}
+
 
 /*PQR
 // 1234567890123456789012345678901234567890123456789012345678901234567890

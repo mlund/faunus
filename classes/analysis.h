@@ -4,6 +4,7 @@
 #include "average.h"
 #include "container.h"
 #include "potentials.h"
+#include "io.h"
 
 class analysis {
   public:
@@ -101,7 +102,7 @@ string widom<T>::info() {
  * for eight new points etc. This will go on until the path reaches a
  * target point as specified in the constructor.
  */
-template<class T>
+template<class T_pairpot>
 class widompath : public analysis {
   private:
     ostringstream ostr;
@@ -112,15 +113,16 @@ class widompath : public analysis {
     vector<float> trajmu;
     vector<point> cube, trajpos;
     vector< average<float> > cubemu;
+    void update(container&, interaction<T_pairpot>&);
     void setcube(point &);
-    void update();                      //!< Measure muexp in cube points
   public:
-    particle p;                         //!< Particle to insert
+    particle p;                       //!< Particle to insert
     widompath();
+    void povpath(iopov&);             //!< Creates a povray trajectory
 };
 
-template<class T>
-widompath<T>::widompath() {
+template<class T_pairpot>
+widompath<T_pairpot>::widompath() {
   finished=false;
   cnt=100;
   p.charge=+1;
@@ -129,8 +131,9 @@ widompath<T>::widompath() {
   cubemu.resize( cube.size() );
 }
 
-template<class T>
-void widompath<T>::update() {
+template<class T_pairpot>
+void widompath<T_pairpot>::update(
+    container &con, interaction<T_pairpot> &pot) {
   unsigned char i,imax;
   if (finished==false)
     return;
@@ -138,7 +141,9 @@ void widompath<T>::update() {
     cnt--;
     for (i=0; i<cube.size(); i++) {
       p=cube[i]; 
-      cubemu[i]+=exp( -0  ); //energy!
+      if (con.collision(p)==false)
+        cubemu[i]+=exp(-pot.energy(con.p, p));
+      else cubemu[i]+=1e3;
     }
   } else {
     imax=0;
@@ -146,7 +151,7 @@ void widompath<T>::update() {
       if (cubemu[i].avg()>cubemu[imax].avg())
         imax=i;
     p=cube[imax];
-    trajpos.push_back(p);
+    trajpos.push_back(p); 
     trajmu.push_back( -log(cubemu[imax].avg()) );
     setcube();
     cnt=100;
@@ -155,8 +160,15 @@ void widompath<T>::update() {
   }
 }
 
-template<class T>
-void widompath<T>::setcube(point &p) {
+template<class T_pairpot>
+void widompath<T_pairpot>::povpath(iopov &pov) {
+  for (unsigned short i=0; i<trajpos.size()-1; i++)
+    pov.connect(trajpos[i], trajpos[i+1], 0.5);
+  pov.connect(trajpos[trajpos.size()-1], goal, 0.5);
+}
+
+template<class T_pairpot>
+void widompath<T_pairpot>::setcube(point &p) {
   for (unsigned char i=0; i<cube.size(); i++) {
     cube[i]=p;
     cubemu[i].reset();
@@ -178,5 +190,4 @@ void widompath<T>::setcube(point &p) {
   cube[6].z-=r;
   cube[7]=-cube[6];
 }
-
 #endif

@@ -26,7 +26,7 @@ int main() {
   cell.accept(protein);                 // (accept move)
 
   group salt;                           // Group for mobile ions
-  salt+=cell.insert( particle::NA, 188 );// Insert sodium ions
+  salt+=cell.insert( particle::NA, 188);// Insert sodium ions
   salt+=cell.insert( particle::CL, 85 );// Insert chloride ions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   chargereg tit(nvt,cell,pot,salt,7);   // Prepare titration. pH 7

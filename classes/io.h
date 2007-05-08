@@ -72,11 +72,12 @@ class iopov : public iopart {
     vector<particle> load(string) {}; 
   public:
     iopov(species &);
-    void clear();                    //!< Clear output buffer
-    void box(float);                 //!< Add cubic box
-    void cell(float);                //!< Add spherical cell
-    void light(float);               //!< Add light source
-    void camera();                   //!< Specify camera location and viewpoint
+    void clear();                       //!< Clear output buffer
+    void box(float);                    //!< Add cubic box
+    void cell(float);                   //!< Add spherical cell
+    void light(float);                  //!< Add light source
+    void connect(point&, point&, float);//!< Connect two points w. a cylinder
+    void camera();                      //!< Specify camera location and viewpoint
     bool save(string, vector<particle>&);
 };
 

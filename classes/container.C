@@ -4,7 +4,8 @@
 string container::info() {
   float z=charge();
   ostringstream o;
-  o << "# Container:" << endl
+  o << endl
+    << "# SIMULATION CONTAINER:" << endl
     << "#   Number of particles  = " << p.size() << endl
     << "#   Volume (AA^3)        = " << volume << endl
     << "#   Electroneutrality    = " 

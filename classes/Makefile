@@ -4,7 +4,7 @@
 
   ifeq ($(MODEL), generic)
     CXX=g++
-    CXXFLAGS = -g -ftree-vectorize -O3 -funroll-loops -w -Winline
+    CXXFLAGS = -ftree-vectorize -O3 -funroll-loops -w -Winline
   endif
 
 CLASSDIR=.

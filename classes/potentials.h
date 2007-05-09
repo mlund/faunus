@@ -57,6 +57,24 @@ class pot_coulomb : private pot_lj {
     }
 };
 
+class pot_test {
+  public:
+    double f;
+    pot_test( pot_setup &pot ) { f=pot.lB; }
+    inline double pairpot(particle &p1, particle &p2) {
+      register double r2=p1.sqdist(p2);
+      register double a=p1.radius+p2.radius;
+      a=a*a;
+      if (r2<4*a) {
+        a=a/r2;
+        a=a*a*a;
+        a=a*a/f;
+      } else a=0;
+      register double qq=p1.charge*p2.charge;
+      return (qq!=0) ? qq/sqrt(r2)+a : a;
+    }
+};
+
 /*! \brief Debye-Huckel potential
  *  \author Mikael Lund
  */
@@ -142,32 +160,32 @@ class interaction {
   public:
     T pair;     //!< Pair potential class
     interaction(pot_setup &pot) : pair(pot) {};
-    double energy(vector<particle> &, int);                     ///< all<->particle i.
-    double energy(vector<particle> &, particle &);              ///< all<->external particle
-    double energy(vector<particle> &, group &);                 ///< all<->group.
-    double energy(vector<particle> &, group &, group &);        ///< group<->group.
-    double energy(vector<particle> &, group &, int);            ///< group<->particle i.
-    double energy(vector<particle> &, group &, particle &);     ///< group<->external particle.
+    double energy(vector<particle> &, int);                     //!< all<->particle i.
+    double energy(vector<particle> &, particle &);              //!< all<->external particle
+    double energy(vector<particle> &, group &);                 //!< all<->group.
+    double energy(vector<particle> &, group &, group &);        //!< group<->group.
+    double energy(vector<particle> &, group &, int);            //!< group<->particle i.
+    double energy(vector<particle> &, group &, particle &);     //!< group<->external particle.
     double energy(vector<particle> &, vector<group> &, int,...);
-    double energy(vector<particle> &, int, vector<short int> &);///< particle<->list of particles.
-    double energy(vector<particle> &);                          ///< all<->all (System energy).
-    double potential(vector<particle> &, unsigned short);       //!< Electric potential at i'th particle
-    double internal(vector<particle> &, group &);               ///< internal energy in group
-    double pot(vector<particle> &, point &);              ///< Electrostatic potential in a point
+    double energy(vector<particle> &, int, vector<short int> &);//!< particle<->list of particles.
+    double energy(vector<particle> &);                          //!< all<->all (System energy).
+    double potential(vector<particle> &, unsigned short);       //!< Electric potential at j'th particle
+    double internal(vector<particle> &, group &);               //!< internal energy in group
+    double pot(vector<particle> &, point &);              //!< Electrostatic potential in a point
     double quadratic(point &, point &);
     double graft(vector<particle> &, group &);
     double chain(vector<particle> &, group &, int);
-    double dipdip(point &, point &, double);                    ///< Dipole-dipole energy.
-    double iondip(point &, double, double);                     ///< Ion-dipole energy.
+    double dipdip(point &, point &, double);                    //!< Dipole-dipole energy.
+    double iondip(point &, double, double);                     //!< Ion-dipole energy.
 };
 
 template<class T>
 double interaction<T>::energy(vector<particle> &p, int j) {
   unsigned short ps=p.size();
   double u=0;
-  for (unsigned short i=0; i<j; i++)
+  for (unsigned short i=0; i<j; ++i)
     u+=pair.pairpot( p[i],p[j] );
-  for (unsigned short i=j+1; i<ps; i++)
+  for (unsigned short i=j+1; i<ps; ++i)
     u+=pair.pairpot( p[i],p[j] );
   return pair.f*u;
 }
@@ -176,7 +194,7 @@ template<class T>
 double interaction<T>::energy(vector<particle> &p, group &g) {
   int n=g.end+1, psize=p.size();
   double u=0;
-  for (int i=g.beg; i<n; i++) {
+  for (int i=g.beg; i<n; ++i) {
     for (int j=0; j<g.beg; j++)
       u += pair.pairpot(p[i],p[j]);
     for (int j=n; j<psize; j++)
@@ -213,10 +231,10 @@ double interaction<T>::energy(vector<particle> &p, group &g, particle &a) {
 template<class T>
 double interaction<T>::energy(vector<particle> &p) {
   double u=0;
-  int n = p.size();
-  for (int i=0; i<n-1; i++)
-    for (int j=i+1; j<n; j++)
-      u += pair.pairpot(p[i], p[j]);
+  unsigned short i,j,n = p.size();
+  for (i=0; i<n-1; ++i)
+    for (j=i+1; j<n; ++j)
+      u+=pair.pairpot(p[i], p[j]);
   return pair.f*u; 
 }
 
@@ -273,12 +291,17 @@ double interaction<T>::energy(vector<particle> &p, particle &a) {
   return pair.f*u;
 }
 
+/*! \note If the charge of the j'th particle is 0, ZERO will be returned!
+ *  \return \f$ \phi_j = \sum_{i\neq j}^{N} \frac{l_B z_i}{r_{ij}} \f$
+ *  \param j The electric potential will be calculated in the point of this particle
+ */
 template<class T>
 double interaction<T>::potential(vector<particle> &p, unsigned short j) {
+  if (p[j].charge==0) return 0;
   double u=0;
   unsigned short i,n=p.size();
-  for (i=0; i<j; i++) u+=p[i].charge/p[i].dist(p[j]);
-  for (i=j+1; i<n; i++) u+=p[i].charge/p[i].dist(p[j]);
+  for (i=0; i<j; ++i) u+=p[i].charge/p[i].dist(p[j]);
+  for (i=j+1; i<n; ++i) u+=p[i].charge/p[i].dist(p[j]);
   return u;
 }
 

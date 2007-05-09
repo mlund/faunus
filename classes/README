@@ -1,7 +1,7 @@
 About:
 ======
 This directory contains some general c++ classes
-(and fortran code?) mainly used for molecular simulation.
+mainly used for molecular simulation.
 
 Documentation:
 ==============
@@ -22,5 +22,5 @@ Try to make sure that no classes nor examples are broken before
 committing changes to the repository. Check with
 
 $ make classes
-$ make examples (not yet implemented)
+$ make examples
 

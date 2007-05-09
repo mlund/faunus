@@ -6,7 +6,7 @@
 #include "ensemble.h"
 #include "titrate.h"
 #include "slump.h"
-typedef pot_coulomb T_pairpot;
+//typedef pot_coulomb T_pairpot;
 
 /*! \brief Base class for MC moves
  *  \author Mikael Lund
@@ -31,9 +31,9 @@ typedef pot_coulomb T_pairpot;
  *  \endcode
  */
 class markovmove {
-  private:
-    slump slp;
   protected:
+    slump slp;
+    float runfraction;
     double uold, unew, deltadp;
     unsigned long long int cnt, naccept;
     string name;
@@ -56,15 +56,20 @@ class markovmove {
       ens=&e;
       con=&c;
       pot=&inter;
+      runfraction=1;
     }
 };
 string markovmove::info() {
   ostringstream o;
-  o << "# " << name << ":" << endl
-    << "#   Acceptance          = " << accepted()*100 << endl
-    << "#   Number of trials    = " << cnt << endl
-    << "#   Displacement param. = " << dp << endl
-    << "#   Total energy change = " << utot << endl;
+  o << endl
+    << "# " << name << ":" << endl;
+  if (cnt>0) {
+    o << "#   Acceptance          = " << accepted()*100 << endl
+      << "#   Number of trials    = " << cnt << endl
+      << "#   \% of Markov steps   = " << runfraction*100 << endl
+      << "#   Displacement param. = " << dp << endl
+      << "#   Total energy change = " << utot << endl;
+  }
   return o.str();
 }
 
@@ -74,8 +79,8 @@ string markovmove::info() {
 class saltmove : public markovmove {
   public:
     saltmove( ensemble &, container&, interaction<T_pairpot>& );
-    void move(unsigned short);  //!< Move a single particle
-    void move(group &);         //!< Loop over group particles (randomly)
+    bool move(unsigned short);  //!< Move a single particle
+    bool move(group &);         //!< Loop over group particles (randomly)
 };
 
 /*! \brief Symmetrically move two groups along z-axis
@@ -98,7 +103,7 @@ class rotate : public markovmove {
 class chargereg : public markovmove, private titrate {
   public:
     chargereg( ensemble&, container&, interaction<T_pairpot>&, group&, float);
-    void titrateall();
+    bool titrateall();
     string info();
 };
 

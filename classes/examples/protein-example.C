@@ -6,7 +6,8 @@
 #include "../analysis.h"
 #include "../container.h"
 #include "../potentials.h"
-typedef pot_coulomb T_pairpot;
+#include "../countdown.h"
+typedef pot_test T_pairpot;
 #include "../markovmove.C"
 
 using namespace std;
@@ -17,33 +18,38 @@ int main() {
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg;                        // Setup pair potential
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
+  countdown<int> clock(10);             // Estimate simulation time
 
   macromolecule protein;                // Group for the protein
   ioaam aam(cell);                      // Protein file format is AAM
-  protein=cell.append(
-      aam.load("examples/cox_cut.aam")); // Load protein from disk
+  protein=cell.append( aam.load(
+        "examples/calbindin.aam" ));    // Load protein from disk
   cell.move(protein, -protein.cm);      // ..and move it to origo
   cell.accept(protein);                 // (accept move)
 
   group salt;                           // Group for mobile ions
-  salt+=cell.insert( particle::NA, 188);// Insert sodium ions
-  salt+=cell.insert( particle::CL, 85 );// Insert chloride ions
+  salt+=cell.insert( particle::NA, 11+19);// Insert sodium ions
+  salt+=cell.insert( particle::CL, 11 );// Insert chloride ions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   chargereg tit(nvt,cell,pot,salt,7);   // Prepare titration. pH 7
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
 
-  cout << cell.info() << salt << protein << tit.info();
+  cout << cell.info() << tit.info();
 
   double u=0,u0=pot.energy(cell.p);
-  for (int macro=0; macro<10; macro++) {        // Markov chain
-    for (int micro=0; micro<200; micro++) {
+  for (int macro=1; macro<=10; macro++) {        // Markov chain
+    for (int micro=1; micro<=1e4; micro++) {
       sm.move(salt);                            // Displace salt particles
-      if (sm.run(0.7))
-        tit.titrateall();                         // Titrate groups
-      sys += sm.du+tit.du;                      // Keep system energy updated
+      if (tit.titrateall()) {                   // Titrate groups
+        protein.charge(cell.p);                 // Re-calc. protein charge
+        protein.dipole(cell.p);                 // Re-calc. dipole moment
+      }
+      sys+=sm.du+tit.du;                        // Keep system energy updated
     }
+    cout << "Macro step " << macro << " completed. ETA: " << clock.eta(macro);
+    sys.update(pot.energy(cell.p));
   }
-  cout << sys.info() << sm.info() << tit.info();
+  cout << sys.info() << sm.info() << tit.info() << salt.info() << protein.info();
   povray.save("protein-example.pov", cell.p);    // Save POVRAY file
 }
 

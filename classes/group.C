@@ -50,18 +50,13 @@ group group::operator+(group g) {
 
 short int group::random() { return beg + rand() % size(); }
 
-ostream &operator<<( ostream &out, group &g) {
-  stringstream s;
-  s << "[" << g.beg << "," << g.end << "]";
-  //s.str(""); // clear stringstream
-  out << "# "
-    << left
-    << setw(10) << g.name
-    << right
-    << setw(10) << s.str()
-    << setw(22) << g.cm
-    << endl;
-  return out;
+string group::info() {
+  ostringstream o;
+  o << endl
+    << "# GROUP: " << name << endl
+    << "#   Range                  = [" << beg << "," << end << "]" << " " << size() << endl
+    << "#   Mass center            = " << cm << endl;
+  return o.str();
 }
 
 bool group::find(unsigned int i) { return (i>=beg && i<=end) ? true : false; }
@@ -86,6 +81,18 @@ point group::masscenter(vector<particle> &p) {
 
 //--------------- MACRO MOLECULE ---------------
 macromolecule::macromolecule() {}
+string macromolecule::info() {
+  ostringstream o;
+  o << group::info();
+  if (Q.cnt>0)
+    o << "#   Average charge         = " << Q.avg() << endl
+      << "#   Average charge squared = " << Q2.avg() << endl
+      << "#   Capacitance            = " << Q2.avg()-pow(Q.avg(),2) << endl;
+  if (dip.cnt>0)
+    o << "#   Dipole moment          = " << dip.avg() << " " << mu << endl;
+  return o.str();
+}
+
 void macromolecule::operator=(group g) {
   beg=g.beg;
   end=g.end;
@@ -102,12 +109,15 @@ void macromolecule::operator=(group g) {
 double macromolecule::dipole(vector<particle> &p)
 {
   mu.clear();
-  for (int i=beg; i<=end; i++) {
+  double a;
+  for (unsigned short i=beg; i<=end; ++i) {
     mu.x += (p[i].x-cm.x) * p[i].charge;
     mu.y += (p[i].y-cm.y) * p[i].charge;
     mu.z += (p[i].z-cm.z) * p[i].charge;
   }
-  return mu.len();
+  a=mu.len();
+  dip+=a;
+  return a;
 }
 double macromolecule::radius(vector<particle> &p) {
   double r,max=0;
@@ -120,6 +130,12 @@ double macromolecule::radius(vector<particle> &p) {
   cm.radius = max;
   return max;
 } 
+double macromolecule::charge(vector<particle> &p) {
+  double z=group::charge(p);
+  Q+=z;
+  Q2+=z*z;
+  return z;
+}
 
 
 //--------------- CHAIN -----------------

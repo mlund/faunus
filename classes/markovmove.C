@@ -16,22 +16,26 @@ saltmove::saltmove(
     ensemble &e, container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i) {
   dp=60;
   deltadp=2;
-  name="Salt displacements";
+  name="SALT DISPLACEMENTS";
 }
 
 /*! \param group Group containing mobile ions
  */
-void saltmove::move(group &g) {
+bool saltmove::move(group &g) {
+  du=0;
+  if (slp.runtest(runfraction)==false)
+    return false;
   double sum=0;
   for (unsigned short i=0; i<g.size(); i++) {
     move( g.random() );
     sum+=du;
   }
   du=sum;
+  return true;
 }
-void saltmove::move(unsigned short n) {
-  cnt++;
+bool saltmove::move(unsigned short n) {
   du=0;
+  cnt++;
   con->displace(n, dp); 
   if (con->collision( con->trial[n] )==true)
     rc=HC;
@@ -52,11 +56,12 @@ void saltmove::move(unsigned short n) {
       utot+=du;
       naccept++;
       con->p[n] = con->trial[n];
-      return;
-    }
-    else rc=ENERGY;
+      return true;
+    } else rc=ENERGY;
   }
+  du=0;
   con->trial[n] = con->p[n];
+  return false;
 }
 
 //---------- CHARGE REG ---------------------
@@ -74,7 +79,8 @@ chargereg::chargereg(ensemble &e,
     group &g,
     float ph ) : markovmove(e,c,i), titrate(c,c.p,g,ph)
 {
-  name="Proton titration";
+  name="PROTON TITRATION";
+  runfraction=0.2;
   con->trial = con->p;
 }
 
@@ -83,19 +89,22 @@ chargereg::chargereg(ensemble &e,
  *  This move will randomly go through the titrateable sites and
  *  try to exchange protons with the bulk. The trial energy is:
  */
-void chargereg::titrateall() {
+bool chargereg::titrateall() {
+  du=0;
+  if (slp.runtest(runfraction)==false)
+    return false;
   action t;
   double sum=0;
-  for (unsigned char i=0; i<sites.size(); i++) {
+  for (unsigned short i=0; i<sites.size(); i++) {
     cnt++;
     t=exchange(con->trial);
     uold
-      = (con->p[t.site].charge!=0) ? pot->potential( con->p, t.site ) * con->p[t.site].charge : 0
-      + (con->p[t.proton].charge!=0) ? pot->potential( con->p, t.proton ) * con->p[t.proton].charge : 0
+      = pot->potential( con->p, t.site ) * con->p[t.site].charge
+      + pot->potential( con->p, t.proton ) * con->p[t.proton].charge
       - con->p[t.site].potential(con->p[t.proton] ) * con->p[t.proton].charge;
     unew
-      = (con->trial[t.site].charge!=0) ? pot->potential(con->trial,t.site)*con->trial[t.site].charge:0
-      + (con->trial[t.proton].charge!=0) ? pot->potential(con->trial,t.proton)*con->trial[t.proton].charge:0
+      = pot->potential(con->trial,t.site)*con->trial[t.site].charge
+      + pot->potential(con->trial,t.proton)*con->trial[t.proton].charge
       - con->trial[t.site].potential(con->trial[t.proton] ) * con->trial[t.proton].charge;
     du = (unew-uold) * pot->pair.f;
     if (ens->metropolis( energy(con->trial, du, t) )==true) {
@@ -106,10 +115,12 @@ void chargereg::titrateall() {
       con->p[t.proton] = con->trial[t.proton];
     } else {
       rc=ENERGY;
+      du=0;
       exchange(con->trial, t);
     }
     sum+=du;
   }
   du=sum;
+  return true;
 }
 

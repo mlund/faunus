@@ -31,10 +31,10 @@ public:
   short int size();                     ///< Number of particles in group
   short int random();                   ///< Picks a random particle within this group
   bool find(unsigned int);              ///< Check if particle is part of the group
-  double charge(vector<particle> &);    //!< Calculate total charge
+  virtual double charge(vector<particle> &);//!< Calculate total charge
   point masscenter(vector<particle> &); //!< Calculate center-of-mass
+  virtual string info();                //!< Print information
 
-  friend ostream &operator<<(ostream &, group &);
   void operator+=(group);
   group operator+(group);
 };
@@ -47,6 +47,8 @@ class macromolecule : public group {
     average<float> Q2;   //!< Total charge squared.
     average<float> dip;  //!< Dipole moment scalar.
 
+    string info();                      //!< Show info
+    double charge(vector<particle> &);  //!< Calculate total charge
     double radius(vector<particle> &);  //!< Calculate radius
     double dipole(vector<particle> &);  //!< Calculate dipole moment
     void operator=(group);              //!< Copy from group

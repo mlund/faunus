@@ -4,9 +4,12 @@
 #include "average.h"
 #include "container.h"
 #include "potentials.h"
+#include "slump.h"
 #include "io.h"
 
 class analysis {
+  private:
+    slump slp;
   public:
     virtual string info()=0;
 };
@@ -17,13 +20,12 @@ class systemenergy : public analysis {
     average<double> uavg, u2avg;
   public:
     systemenergy(double);
-    void setcurrent(double);    //!< Specify current system energy
+    void update(double);        //!< Specify current system energy and recalc averages
     void operator+=(double);    //!< Add system energy change
     string info() {
-      uavg+=sum;
-      u2avg+=sum*sum;
       ostringstream o;
-      o << "# System energy (kT):" << endl
+      o << endl
+        << "# SYSTEM ENERGY (kT):" << endl
         << "#   Averages <U> <U^2> = " << uavg.avg() << " " << u2avg.avg() << endl
         << "#   Initial energy     = " << u0 << endl
         << "#   Initial + changes  = " << sum << endl
@@ -83,7 +85,8 @@ void widom<T>::insert(unsigned short n) {
 template<class T>
 string widom<T>::info() {
   ostringstream o;
-  o << "# Widom Analysis:" << endl
+  o << endl
+    << "# WIDOM PARTICLE INSERTION ANALYSIS:" << endl
     << "#   Number of insertions = " << cnt << endl
     << "#   Ion pair charges     = " << a.charge << ", " << b.charge << endl
     << "#   Excess chemical pot. = " << muex()  << endl
@@ -109,31 +112,33 @@ class widompath : public analysis {
     bool finished;
     unsigned short cnt;
     float r;
-    point goal;
+    particle goal;
     vector<float> trajmu;
     vector<point> cube, trajpos;
     vector< average<float> > cubemu;
-    void update(container&, interaction<T_pairpot>&);
+    void update(container&, interaction<T_pairpot>&, iopov&);
     void setcube(point &);
   public:
     particle p;                       //!< Particle to insert
-    widompath();
+    widompath(particle &, particle &);//!< Constructor
     void povpath(iopov&);             //!< Creates a povray trajectory
 };
 
+//! \param beg Particle to insert, including starting position
+//! \param end Destination particle - Pathway ends here!
 template<class T_pairpot>
-widompath<T_pairpot>::widompath() {
+widompath<T_pairpot>::widompath(particle &beg, particle &end) {
+  p=beg;
+  goal=end;
   finished=false;
   cnt=100;
-  p.charge=+1;
-  p.radius=2.0;
   cube.resize(8);
   cubemu.resize( cube.size() );
 }
 
 template<class T_pairpot>
 void widompath<T_pairpot>::update(
-    container &con, interaction<T_pairpot> &pot) {
+    container &con, interaction<T_pairpot> &pot, iopov &pov) {
   unsigned char i,imax;
   if (finished==false)
     return;
@@ -143,7 +148,7 @@ void widompath<T_pairpot>::update(
       p=cube[i]; 
       if (con.collision(p)==false)
         cubemu[i]+=exp(-pot.energy(con.p, p));
-      else cubemu[i]+=1e3;
+      else cubemu[i]+=exp(100.);
     }
   } else {
     imax=0;
@@ -155,7 +160,9 @@ void widompath<T_pairpot>::update(
     trajmu.push_back( -log(cubemu[imax].avg()) );
     setcube();
     cnt=100;
-    if (p.dist(goal)<p.radius) {
+    if (p.dist(goal)<p.radius+2.) {
+      finished==true;
+      povpath(pov);
     }
   }
 }

@@ -13,3 +13,8 @@ a mail to: mlund at mac com
 \section gpl License
 \verbinclude "LICENSE"
 */
+
+/*! \page Readme
+\section readme Readme
+\verbinclude "README"
+*/

@@ -98,14 +98,22 @@ bool chargereg::titrateall() {
   for (unsigned short i=0; i<sites.size(); i++) {
     cnt++;
     t=exchange(con->trial);
-    uold
-      = pot->potential( con->p, t.site ) * con->p[t.site].charge
-      + pot->potential( con->p, t.proton ) * con->p[t.proton].charge
-      - con->p[t.site].potential(con->p[t.proton] ) * con->p[t.proton].charge;
-    unew
-      = pot->potential(con->trial,t.site)*con->trial[t.site].charge
-      + pot->potential(con->trial,t.proton)*con->trial[t.proton].charge
-      - con->trial[t.site].potential(con->trial[t.proton] ) * con->trial[t.proton].charge;
+    #pragma omp parallel
+    {
+      #pragma omp sections
+      {
+        #pragma omp section
+        { uold = pot->potential( con->p, t.site ) * con->p[t.site].charge
+          + pot->potential( con->p, t.proton ) * con->p[t.proton].charge
+            - con->p[t.site].potential(con->p[t.proton] )*con->p[t.proton].charge;
+        }
+        #pragma omp section
+        { unew = pot->potential(con->trial,t.site)*con->trial[t.site].charge 
+          + pot->potential(con->trial,t.proton)*con->trial[t.proton].charge
+            - con->trial[t.site].potential(con->trial[t.proton] )*con->trial[t.proton].charge;
+        }
+      }
+    }
     du = (unew-uold) * pot->pair.f;
     if (ens->metropolis( energy(con->trial, du, t) )==true) {
       rc=OK;

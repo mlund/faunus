@@ -16,8 +16,8 @@ class container : public particles,  public species {
     slump slp;
   public:
     float volume;                               //!< Volume of the container [AA^3]
-    virtual void randompos(point &)=0;          //!< Random point within container
     inline virtual bool collision(point &)=0;   //!< Check for collision with walls
+    virtual void randompos(point &)=0;          //!< Random point within container
     virtual group insert(particle::type, short);//!< Insert particles
     virtual string info();                      //!< Return info string
     virtual string povray();                    //!< POVRAY object representing the cell
@@ -51,6 +51,33 @@ class box : public container {
     box(float);
     void randompos(point &);
     inline bool collision(point &p) {};
+};
+
+/*! \brief "Clutch" like container.
+ *  \author Mikael Lund
+ *
+ *  A spherical cell with a particle inaccessible area shaped
+ *  as a disc in the middle of the sphere. The disc is parallel
+ *  to the XY-plane and spans two Z-values as specified in the
+ *  constructor.
+ *
+ *  \image html clutch.png
+ */
+class clutch : public container {
+  private:
+    double r2;
+    float diameter;
+  public:
+    float r,zmin,zmax;
+    clutch(float, float, float);
+    void randompos(point &);
+    bool collision(point &p) {
+      if (p.z<zmax && p.z>zmin)
+        return true;
+      if (p.x*p.x+p.y*p.y+p.z*p.z > r2)
+        return true;
+      return false;
+    }
 };
 
 /*! \brief Cylindrical simulation container

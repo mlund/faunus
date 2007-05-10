@@ -71,3 +71,26 @@ box::box(float sidelength) {
 
 void box::randompos(point &p) {
 }
+
+//-------------- CLUTCH -------------------------
+//! \param radius Radius of the cell
+//! \param min Beginning of the particle-excluded region
+//! \param max Ending of the particle-excluded region (Note max>min)
+clutch::clutch(float radius, float min, float max) {
+  r=radius;
+  r2=r*r;
+  diameter=2*r;
+  volume=(4./3.)*acos(-1)*r2*r;
+  zmin=min;
+  zmax=max;
+}
+void clutch::randompos(point &p) {
+  double l=r2+1;
+  while (l>r2) {
+    p.x = slp.random_half()*diameter;
+    p.y = slp.random_half()*diameter;
+    p.z = slp.random_half()*diameter;
+    if (p.z>zmax || p.z<zmin)
+      l=p.x*p.x+p.y*p.y+p.z*p.z; //squared distance from origo
+  };
+}

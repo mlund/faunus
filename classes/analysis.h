@@ -8,10 +8,12 @@
 #include "io.h"
 
 class analysis {
-  private:
+  protected:
     slump slp;
   public:
-    virtual string info()=0;
+    float runfraction;          //!< Fraction of times analysis should be run
+    virtual string info()=0;    //!< Information/results
+    analysis() { runfraction=1; }
 };
 
 class systemenergy : public analysis {
@@ -116,39 +118,39 @@ class widompath : public analysis {
     vector<float> trajmu;
     vector<point> cube, trajpos;
     vector< average<float> > cubemu;
-    void update(container&, interaction<T_pairpot>&, iopov&);
     void setcube(point &);
   public:
-    particle p;                       //!< Particle to insert
-    widompath(particle &, particle &);//!< Constructor
-    void povpath(iopov&);             //!< Creates a povray trajectory
+    particle p;                         //!< Particle to insert
+    widompath(particle &, particle &);  //!< Constructor
+    void povpath(iopov&);               //!< Plot trajectory in povray
+    void update(container&, interaction<T_pairpot>&, iopov&);
+    string info();                      //!< Information
 };
 
 //! \param beg Particle to insert, including starting position
 //! \param end Destination particle - Pathway ends here!
 template<class T_pairpot>
 widompath<T_pairpot>::widompath(particle &beg, particle &end) {
-  p=beg;
-  goal=end;
+  r=5.;
+  runfraction=0.2;
   finished=false;
   cnt=100;
-  cube.resize(8);
-  cubemu.resize( cube.size() );
+  p=beg;
+  goal=end;
+  setcube(p);
 }
-
 template<class T_pairpot>
 void widompath<T_pairpot>::update(
     container &con, interaction<T_pairpot> &pot, iopov &pov) {
-  unsigned char i,imax;
-  if (finished==false)
+  if (slp.runtest(runfraction)==false || finished==true)
     return;
+  unsigned char i,imax;
   if (cnt>0) {
     cnt--;
     for (i=0; i<cube.size(); i++) {
       p=cube[i]; 
-      if (con.collision(p)==false)
-        cubemu[i]+=exp(-pot.energy(con.p, p));
-      else cubemu[i]+=exp(100.);
+      cubemu[i] += (con.collision(p)==false) ?
+        exp(-pot.energy(con.p, p)) : exp(-100);
     }
   } else {
     imax=0;
@@ -158,43 +160,66 @@ void widompath<T_pairpot>::update(
     p=cube[imax];
     trajpos.push_back(p); 
     trajmu.push_back( -log(cubemu[imax].avg()) );
-    setcube();
+    //cout << p << " " << -log(cubemu[imax].avg()) << endl;
+    setcube(p);
     cnt=100;
-    if (p.dist(goal)<p.radius+2.) {
+    if (p.dist(goal)<4*p.radius) {
       finished==true;
-      povpath(pov);
+      //povpath(pov);
     }
   }
 }
-
 template<class T_pairpot>
 void widompath<T_pairpot>::povpath(iopov &pov) {
   for (unsigned short i=0; i<trajpos.size()-1; i++)
     pov.connect(trajpos[i], trajpos[i+1], 0.5);
-  pov.connect(trajpos[trajpos.size()-1], goal, 0.5);
+  //pov.connect(trajpos[trajpos.size()-1], goal, 0.5);
 }
-
 template<class T_pairpot>
 void widompath<T_pairpot>::setcube(point &p) {
+  cube.resize(8);
+  cubemu.resize( cube.size() );
   for (unsigned char i=0; i<cube.size(); i++) {
-    cube[i]=p;
     cubemu[i].reset();
-  }
+    cube[i].x = p.x + r*slp.random_half();
+    cube[i].y = p.y + r*slp.random_half();
+    cube[i].z = p.z + r*slp.random_half();
+  } 
+  /*}
   cube[0].x+=r;
   cube[0].y+=r;
   cube[0].z+=r;
-  cube[1]=-cube[0];
+  cube[1]=-cube[0]+p;
   cube[2].x-=r;
   cube[2].y+=r;
   cube[2].z+=r;
-  cube[3]=-cube[2];
+  cube[3]=-cube[2]+p;
   cube[4].x+=r;
   cube[4].y-=r;
   cube[4].z+=r;
-  cube[5]=-cube[4];
+  cube[5]=-cube[4]+p;
   cube[6].x+=r;
   cube[6].y+=r;
   cube[6].z-=r;
-  cube[7]=-cube[6];
+  cube[7]=-cube[6]+p;
+  cout << p << endl << cube[0] << endl << cube[1] << endl << cube[2]
+    << endl << cube[3] << endl << cube[4] << endl << cube[5] << endl
+    << cube[6] << endl << cube[7] << endl;
+    */
+}
+template<class T_pairpot>
+string widompath<T_pairpot>::info() {
+  ostringstream o;
+  o << "# WIDOMPATH ANALYSIS:" << endl
+    << "#   Ghost particle (z,r) = " << p << " " << p.charge << " " << p.radius << endl
+    << "#   Target position      = " << goal << endl
+    << "#   Points in trajectory = " << trajpos.size() << endl
+    << "#   Target reached       = ";
+  if (finished==true) o << "Yes";
+  else o << "NO!";
+  o << endl;
+  for (int i=0; i<trajpos.size(); i++)
+    o << i << " " << trajmu[i] << " " << trajpos[i] << endl;
+  return o.str();
 }
 #endif

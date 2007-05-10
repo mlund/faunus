@@ -4,7 +4,7 @@
 
   ifeq ($(MODEL), generic)
     CXX=g++
-    CXXFLAGS = -ftree-vectorize -O3 -funroll-loops -w -Winline
+    CXXFLAGS = -O3 -funroll-loops -w -Winline -fopenmp
   endif
 
 CLASSDIR=.
@@ -35,7 +35,10 @@ widom:	examples/widom-example.C $(OBJS)
 pka:	examples/protein-example.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) examples/protein-example.C -o examples/protein-example
 
-examples:	widom pka
+clutch:	examples/clutch-example.C $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) examples/clutch-example.C -o examples/clutch-example
+
+examples:	widom pka clutch
 
 clean:
 	rm -f $(OBJS) examples/protein-example examples/widom-example 

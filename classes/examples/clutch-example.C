@@ -13,7 +13,7 @@ typedef pot_test T_pairpot;
 using namespace std;
 
 int main() {
-  cell cell(100.);                      // We want a spherical cell
+  clutch cell(100.,-15,15);             // We want a spherical cell
   iopov povray(cell);                   // We want a POVRAY snapshot
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg;                        // Setup pair potential
@@ -23,32 +23,39 @@ int main() {
   macromolecule protein;                // Group for the protein
   ioaam aam(cell);                      // Protein file format is AAM
   protein=cell.append( aam.load(
-        "examples/calbindin.aam" ));    // Load protein from disk
-  cell.move(protein, -protein.cm);      // ..and move it to origo
-  cell.accept(protein);                 // (accept move)
+   "examples/clutch-example-small.aam" ));    // Load protein from disk
+
+  particle ghost;
+  ghost.z=90.;
+  ghost.charge=+1;
+  ghost.radius=2.0;
+  widompath<T_pairpot> widom(ghost,cell.p[3]);
 
   group salt;                           // Group for mobile ions
-  salt+=cell.insert( particle::NA, 11+19);// Insert sodium ions
-  salt+=cell.insert( particle::CL, 11 );// Insert chloride ions
+  salt+=cell.insert( particle::NA, 32+9);// Insert sodium ions
+  salt+=cell.insert( particle::CL, 32);// Insert chloride ions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   chargereg tit(nvt,cell,pot,salt,7);   // Prepare titration. pH 7
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
 
-  cout << cell.info() << tit.info();
+  cout << cell.info() << tit.info() << protein.info();
 
-  for (int macro=1; macro<=10; macro++) {        // Markov chain
-    for (int micro=1; micro<=1e4; micro++) {
+  for (int macro=1; macro<=10; macro++) {       // Markov chain
+    for (int micro=1; micro<=3e4; micro++) {
       sm.move(salt);                            // Displace salt particles
       if (tit.titrateall()) {                   // Titrate groups
         protein.charge(cell.p);                 // Re-calc. protein charge
         protein.dipole(cell.p);                 // Re-calc. dipole moment
       }
+      widom.update(cell,pot,povray);
       sys+=sm.du+tit.du;                        // Keep system energy updated
     }
     cout << "Macro step " << macro << " completed. ETA: " << clock.eta(macro);
     sys.update(pot.energy(cell.p));
+    cout << widom.info();
   }
   cout << sys.info() << sm.info() << tit.info() << salt.info() << protein.info();
-  povray.save("protein-example.pov", cell.p);    // Save POVRAY file
+  widom.povpath(povray);
+  povray.save("clutch-example.pov", cell.p);    // Save POVRAY file
 }
 

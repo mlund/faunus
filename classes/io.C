@@ -77,7 +77,12 @@ bool ioaam::save(string file, vector<particle> &) {
 }
 
 //----------------- IOPOV ----------------------
-iopov::iopov(species &spc) : iopart(spc) {}
+iopov::iopov(species &spc) : iopart(spc) {
+  clear();
+  header();
+  light(100.);
+  camera();
+}
 void iopov::clear() { o.str(""); }
 void iopov::header() {
   clear();
@@ -128,10 +133,6 @@ string iopov::p2s(particle &p, int i) {
   return s.str();
 }
 bool iopov::save(string file, vector<particle> &p) {
-  clear();
-  header();
-  light(100.);
-  camera();
   for (unsigned short i=0; i<p.size(); i++)
     o << p2s(p[i]);
   return writefile(file, o.str());

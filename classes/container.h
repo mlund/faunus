@@ -4,9 +4,7 @@
 #include "particles.h"
 #include "slump.h"
 #include "point.h"
-#include "group.h"
 #include "species.h"
-#include "hardsphere.h"
 
 /*! \brief Polymorphic class for simulation containers
  *  \author Mikael Lund
@@ -18,7 +16,6 @@ class container : public particles,  public species {
     float volume;                               //!< Volume of the container [AA^3]
     inline virtual bool collision(point &)=0;   //!< Check for collision with walls
     virtual void randompos(point &)=0;          //!< Random point within container
-    virtual group insert(particle::type, short);//!< Insert particles
     virtual string info();                      //!< Return info string
     virtual string povray();                    //!< POVRAY object representing the cell
 };

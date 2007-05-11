@@ -27,16 +27,16 @@ bool saltmove::move(group &g) {
     return false;
   double sum=0;
   for (unsigned short i=0; i<g.size(); i++) {
-    move( g.random() );
+    move(g, 1);
     sum+=du;
   }
   du=sum;
   return true;
 }
-bool saltmove::move(unsigned short n) {
+bool saltmove::move(group &g, int n) {
   du=0;
   cnt++;
-  con->displace(n, dp); 
+  n=g.displace(*con, dp); 
   if (con->collision( con->trial[n] )==true)
     rc=HC;
   else {

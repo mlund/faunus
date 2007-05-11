@@ -3,6 +3,7 @@
 //---------------- GROUP -----------------------
 group::group(int i) {
   set(-1,-1);     //is empty
+  title="GROUP";
   name="(noname)";//is nameless
 }
 
@@ -53,7 +54,7 @@ short int group::random() { return beg + rand() % size(); }
 string group::info() {
   ostringstream o;
   o << endl
-    << "# GROUP: " << name << endl
+    << "# " << title << ": " << name << endl
     << "#   Range                  = [" << beg << "," << end << "]" << " " << size() << endl
     << "#   Mass center            = " << cm << endl;
   return o.str();
@@ -78,9 +79,51 @@ point group::masscenter(vector<particle> &p) {
   cm_trial = cm;
   return cm;
 }
+void group::undo(particles &par) {
+  int ilen=end+1;
+  cm_trial = cm;
+  for (short i=beg; i<=end; i++) {
+    par.trial[i].x = par.p[i].x;
+    par.trial[i].y = par.p[i].y;
+    par.trial[i].z = par.p[i].z;
+  }
+}
+void group::accept(particles &par) {
+  cm = cm_trial;
+  unsigned short i,ilen=end+1;
+  for (i=beg; i<ilen; i++) {
+    par.p[i].x = par.trial[i].x;
+    par.p[i].y = par.trial[i].y;
+    par.p[i].z = par.trial[i].z;
+  }
+}
+void group::add(particles &par, vector<particle> v) {
+  beg=par.p.size();
+  for (unsigned short i=0; i<v.size(); i++) {
+    par.push_back(v[i]);
+    end=beg+i;
+  }
+  masscenter(par.p);
+}
+void group::add(container &con, particle::type id, short n) {
+  particle a=con.get(id);
+  if (beg<0) beg=con.p.size();
+  for (unsigned short i=0; i<n; i++) {
+    do con.randompos(a);
+    while (con.overlap(a)==true); 
+    end=con.push_back(a)-1;
+  }
+}
+unsigned short group::displace(container &c, double dp) {
+  unsigned short i=random();
+  c.trial[i].x = c.p[i].x + dp*slp.random_half();
+  c.trial[i].y = c.p[i].y + dp*slp.random_half();
+  c.trial[i].z = c.p[i].z + dp*slp.random_half();
+  return i;
+}
 
 //--------------- MACRO MOLECULE ---------------
-macromolecule::macromolecule() {}
+macromolecule::macromolecule() { title="MACROMOLECULE"; }
 string macromolecule::info() {
   ostringstream o;
   o << group::info();
@@ -136,12 +179,68 @@ double macromolecule::charge(vector<particle> &p) {
   Q2+=z*z;
   return z;
 }
+void macromolecule::zmove(particles &par, double dz) {
+  cm_trial.z = cm.z + dz;
+  for (int i=beg; i<=end; i++)
+    par.trial[i].z = par.p[i].z + dz;
+}
+/*!
+ * \param par Particles class
+ * \param c ...by adding this vector to all particles
+ * \param k Keyword to specify if the move should be automatically accepted (default no).
+ */
+void macromolecule::move(particles &par, point c) {
+  for (short i=beg; i<=end; i++) {
+    par.trial[i].x = par.p[i].x + c.x;
+    par.trial[i].y = par.p[i].y + c.y;
+    par.trial[i].z = par.p[i].z + c.z;
+  }
+  cm_trial = cm + c;
+}
+void macromolecule::rotate(particles &par, double drot) {
+  point u;
+  double r=2;
+  while (r > 1.) { //random unit vector
+    u.x=slp.random_one();
+    u.y=slp.random_one();
+    u.z=slp.random_one();
+    r=sqrt(u.x*u.x+u.y*u.y+u.z*u.z);
+  };
+  u.x=u.x/r;
+  u.y=u.y/r; 
+  u.z=u.z/r;
+  rotate(par, u, drot*slp.random_half());
+}
 
+/*!
+ * \param g Group to rotate
+ * \param u Vector to rotate around
+ * \param angle ..by this many degrees (rad)
+ * \param k Keyword to specify automatic acceptance
+ */
+void macromolecule::rotate(particles &par, point u, double angle) {
+  double bx, by, bz;
+  double cosang, sinang, eb;
+  double e1mcox, e1mcoy, e1mcoz;
+  
+  cosang=cos(angle);
+  sinang=sin(angle);
+  e1mcox=(1.-cosang)*u.x;
+  e1mcoy=(1.-cosang)*u.y;
+  e1mcoz=(1.-cosang)*u.z;
+  for (short i=beg; i<=end; i++) {
+    bx=par.p[i].x;
+    by=par.p[i].y;
+    bz=par.p[i].z - cm.z; //p[g.cm].z;
+    eb=u.x*bx + u.y*by + u.z*bz;
+    par.trial[i].x=e1mcox*eb+cosang*bx+sinang*(u.y*bz - u.z*by);
+    par.trial[i].y=e1mcoy*eb+cosang*by+sinang*(u.z*bx - u.x*bz);
+    par.trial[i].z=e1mcoz*eb+cosang*bz+sinang*(u.x*by - u.y*bx) + cm.z;
+  }
+}
 
 //--------------- CHAIN -----------------
-chain::chain() {
-  graftpoint=-1;  //is not grafted
-}
+chain::chain() { graftpoint=-1; }
 
 double chain::monomerenergy(vector<particle> &p, short i) {
   double u=0;
@@ -169,3 +268,34 @@ double chain::internalenergy(vector<particle> &p) {
     u+=quadratic( p[beg], p[graftpoint] );
   return u;
 }
+
+//-------------------- PLANE -----------------
+//! By default the plane lies in the XY plane at
+//! z=0. This plane can be put in XZ and YZ by changing
+//! the plane vector. To shift the plane, modify the
+//! offset vector.
+planarsurface::planarsurface() {
+  plane.x=1;
+  plane.y=1;
+  plane.z=0;
+}
+void planarsurface::project(point &p) { p=p*plane + offset; }
+
+//--------------------- PHOSPHOMEMBRANE -------------------
+double zwittermembrane::selfenergy(particles &par) {
+  double u=0;
+  for (short i=beg; i<end; i=i+2)
+    u+=pairpot(par.p[i], par.p[i+1]);
+}
+short zwittermembrane::mate(short i) { return (i%2==0) ? i+1 : i-1; }
+
+//! Even particles can move only in the plane while odd
+//! particles can move in any direction. The latter
+//! corresponds to flexible N(CH3)+ groups attached to
+//! phosphate groups. 
+unsigned short zwittermembrane::displace(container &c, double d) {
+  unsigned short i=group::displace(c,d);
+  if (i%2==0)
+    project(c.trial[i]); // keep even particles in the plane
+  return i;
+}       

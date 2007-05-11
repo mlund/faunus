@@ -4,7 +4,7 @@
 
   ifeq ($(MODEL), generic)
     CXX=g++
-    CXXFLAGS = -O3 -funroll-loops -w -Winline -fopenmp
+    CXXFLAGS = -O3 -funroll-loops -w -Winline  -g
   endif
 
 CLASSDIR=.

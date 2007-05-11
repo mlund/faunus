@@ -1,5 +1,5 @@
 /*! \file Example how to simulate a NaCl solution
- *  \example protein-example.C
+ *  \example clutch-example.C
  */
 #include <iostream>
 #include "../io.h"
@@ -22,7 +22,7 @@ int main() {
 
   macromolecule protein;                // Group for the protein
   ioaam aam(cell);                      // Protein file format is AAM
-  protein=cell.append( aam.load(
+  protein.add( cell, aam.load(
    "examples/clutch-example-small.aam" ));    // Load protein from disk
 
   particle ghost;
@@ -32,8 +32,8 @@ int main() {
   widompath<T_pairpot> widom(ghost,cell.p[3]);
 
   group salt;                           // Group for mobile ions
-  salt+=cell.insert( particle::NA, 32+9);// Insert sodium ions
-  salt+=cell.insert( particle::CL, 32);// Insert chloride ions
+  salt.add( cell, particle::NA, 32+9);  // Insert sodium ions
+  salt.add( cell, particle::CL, 32);    // Insert chloride ions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   chargereg tit(nvt,cell,pot,salt,7);   // Prepare titration. pH 7
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
@@ -41,7 +41,7 @@ int main() {
   cout << cell.info() << tit.info() << protein.info();
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain
-    for (int micro=1; micro<=3e4; micro++) {
+    for (int micro=1; micro<=6e4; micro++) {
       sm.move(salt);                            // Displace salt particles
       if (tit.titrateall()) {                   // Titrate groups
         protein.charge(cell.p);                 // Re-calc. protein charge

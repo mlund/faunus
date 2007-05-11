@@ -27,12 +27,12 @@ int main() {
       particle::NA, particle::CL);      // Class for Widom particle insertion
 
   group salt;                                   // Group for mobile ions
-  salt+=cell.insert( particle::NA, 10 );        // Insert sodium ions
-  salt+=cell.insert( particle::CL, 10 );        // Insert chloride ions
+  salt.add( cell, particle::NA, 10 );           // Insert sodium ions
+  salt.add( cell, particle::CL, 10 );           // Insert chloride ions
   systemenergy sys(pot.energy(cell.p));         // Track system energy
 
   for (int macro=0; macro<10; macro++) {        // Markov chain
-    for (int micro=0; micro<1e5; micro++) {
+    for (int micro=0; micro<1e2; micro++) {
       sm.move(salt);                            // Displace salt particles
       sm.adjust_dp(40,50);                      // Stride to 40-50% acceptance
       sys+=sm.du;                               // Sum system energy changes

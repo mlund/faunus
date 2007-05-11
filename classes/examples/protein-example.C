@@ -7,7 +7,7 @@
 #include "../container.h"
 #include "../potentials.h"
 #include "../countdown.h"
-typedef pot_test T_pairpot;
+typedef pot_coulomb T_pairpot;
 #include "../markovmove.C"
 
 using namespace std;
@@ -22,22 +22,22 @@ int main() {
 
   macromolecule protein;                // Group for the protein
   ioaam aam(cell);                      // Protein file format is AAM
-  protein=cell.append( aam.load(
+  protein.add( cell, aam.load(
         "examples/calbindin.aam" ));    // Load protein from disk
-  cell.move(protein, -protein.cm);      // ..and move it to origo
-  cell.accept(protein);                 // (accept move)
+  protein.move(cell, -protein.cm);      // ..and move it to origo
+  protein.accept(cell);                 // (accept move)
 
   group salt;                           // Group for mobile ions
-  salt+=cell.insert( particle::NA, 11+19);// Insert sodium ions
-  salt+=cell.insert( particle::CL, 11 );// Insert chloride ions
+  salt.add( cell, particle::NA, 11+19); // Insert sodium ions
+  salt.add( cell, particle::CL, 11 );   // Insert chloride ions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   chargereg tit(nvt,cell,pot,salt,7);   // Prepare titration. pH 7
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
 
-  cout << cell.info() << tit.info();
+  cout << cell.info() << tit.info();    // Some information
 
-  for (int macro=1; macro<=10; macro++) {        // Markov chain
-    for (int micro=1; micro<=1e4; micro++) {
+  for (int macro=1; macro<=10; macro++) {       // Markov chain
+    for (int micro=1; micro<=1e3; micro++) {
       sm.move(salt);                            // Displace salt particles
       if (tit.titrateall()) {                   // Titrate groups
         protein.charge(cell.p);                 // Re-calc. protein charge
@@ -48,7 +48,8 @@ int main() {
     cout << "Macro step " << macro << " completed. ETA: " << clock.eta(macro);
     sys.update(pot.energy(cell.p));
   }
-  cout << sys.info() << sm.info() << tit.info() << salt.info() << protein.info();
-  povray.save("protein-example.pov", cell.p);    // Save POVRAY file
+  cout << sys.info() << sm.info() << tit.info() // More information...
+    << salt.info() << protein.info();
+  povray.save("protein-example.pov", cell.p);   // Save POVRAY file
 }
 

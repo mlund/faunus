@@ -1,7 +1,7 @@
 /*! \mainpage
 
 \section svn Subversion repository
-\verbatim svn checkout http://opensvn.csie.org/molecularmc/trunk molecularmc
+\verbatim svn checkout http://faunus.svn.sourceforge.net/svnroot/faunus faunus
 \endverbatim
 
 There is a lot \link todo \endlink so consider contributing.

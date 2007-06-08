@@ -114,19 +114,27 @@ bool chargereg::titrateall() {
         }
       }
     }
-    du = (unew-uold) * pot->pair.f;
+    du = (unew-uold)*pot->pair.f;
+
+    //uold = pot->energy(con->p, t.site)
+    //  +    pot->energy(con->p, t.proton)
+    //  -    pot->pair.pairpot(con->p[t.site], con->p[t.proton] ) * pot->pair.f;
+    //unew = pot->energy(con->trial, t.site)
+    //  +    pot->energy(con->trial, t.proton)
+    //  -    pot->pair.pairpot(con->trial[t.site], con->trial[t.proton] ) * pot->pair.f;
+    //du = (unew-uold);
+
     if (ens->metropolis( energy(con->trial, du, t) )==true) {
       rc=OK;
       utot+=du;
       naccept++;
-      con->p[t.site]   = con->trial[t.site];
-      con->p[t.proton] = con->trial[t.proton];
+      con->p[t.site].charge   = con->trial[t.site].charge;
+      con->p[t.proton].charge = con->trial[t.proton].charge;
+      sum+=du;
     } else {
       rc=ENERGY;
-      du=0;
       exchange(con->trial, t);
     }
-    sum+=du;
   }
   du=sum;
   return true;

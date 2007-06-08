@@ -29,3 +29,21 @@ bool particles::overlap(particle &a) {
     if (p[i].overlap(a)==true) return true;
   return false;
 }
+
+bool particles::check_vector() {
+  bool rc=false;
+  if (p.size()==trial.size())
+    for (unsigned short i=0; i<p.size(); i++) {
+      if (p[i].x!=trial[i].x ||
+          p[i].y!=trial[i].y ||
+          p[i].z!=trial[i].z ||
+          p[i].charge!=trial[i].charge)
+      {
+        rc=false;
+        break;
+      } else rc=true;
+    }
+  if (rc==false)
+    cout << "# Fatal error: Particle vectors corrupted!!\n";
+  return rc;
+}

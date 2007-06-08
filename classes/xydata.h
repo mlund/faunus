@@ -12,7 +12,6 @@ using namespace std;
  * \brief Class to handle a dataset of xy values with equidistant x-values.
  * \author Mikael Lund
  * \date March 2007
- * \warning This class will be replaced by \link xytable \endlink
  */
 template <class T=double>
 class xydata {
@@ -65,7 +64,9 @@ xydata<T>::xydata(T min, T max, T resolution) {
 
 template <class T>
 void xydata<T>::add(T xin, T yin) {
-  int i=x2i(xin);
+  unsigned int i=x2i(xin);
+  if (i>=y.size())
+    y.resize(i+1);
   y[i] = yin;
 }
 
@@ -74,25 +75,28 @@ void xydata<T>::add(T xin, T yin) {
  */
 template <class T>
 bool xydata<T>::add(vector<T> &xin, vector<T> &yin) {
-  T d0,d=0;
+  T d0,d;
   unsigned int i=0, n=xin.size()-1;
   average<T> meanx, meany;
   setup( xin[0], xin[n], res); 
   d0=abs( xin[1] - xin[0] );
   if (d0>res)
     return false;
-  while (i<xin.size()) {
-    meanx+=xin[i];
-    meany+=yin[i];
-    i++;
-    d+=d0;
-    if (d>=d0) {
-      add( meanx.avg(), meany.avg() );
-      meanx.reset();
-      meany.reset();
-      d=0;
+  d=d0;
+  while (i<n) {
+    while (d<res && i<n) {
+      meanx+=xin.at(i);              // Add data to average
+      meany+=yin.at(i);
+      //cout << xin[i] << endl;
+      i++; 
+      d+=abs(xin.at(i)-xin.at(i-1));
     }
-  };
+    add( meanx.avg(), meany.avg() );
+    //cout << meanx.avg() << ", " << meany.avg() << " " <<i2x(x2i(meanx.avg())) << endl;
+    meanx.reset();
+    meany.reset();
+    d=0;
+  }
   xmax=i2x( y.size()-1 ) ;
   return true;
 }

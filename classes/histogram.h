@@ -14,7 +14,7 @@
 class histogram : private xytable<float,unsigned long int> {
   friend class rdf;
   private:
-    unsigned long long int cnt;
+    unsigned long int cnt;
   public:
     histogram(float, float, float);
     string comment;                     //!< User defined comment
@@ -48,7 +48,7 @@ void histogram::show() {
     g=get(x);
     if (g!=0)
       cout << x << " " << g << "\n";
-  };
+  }
 }
 
 /*!
@@ -88,17 +88,19 @@ rdf::rdf(short species1, short species2, float resolution, float xmaximum) :
  */
 void rdf::update(vector<particle> &p)
 {
-  int k,n=p.size();
-  for (int i=0; i<n-1; i++)
-    for (int j=i+1; j<n; j++) 
+  unsigned short k,n=p.size();
+  for (unsigned short i=0; i<n-1; i++)
+    for (unsigned short j=i+1; j<n; j++) 
       if ( (p[i].id==a && p[j].id==b)
-          || (p[j].id==a && p[i].id==b) ) 
-        (*this)( abs(p[i].dist(p[j]))/xres+0.5 )++;
+          || (p[j].id==a && p[i].id==b) )
+        add( abs(p[i].dist(p[j])) );
 }
 float rdf::volume(float x) { return 4./3.*acos(-1)*( pow(x+xres,3)-pow(x,3) ); }
 /*!
  *  Get g(x) from histogram according to
  *    \f$ g(x) = \frac{N(r)}{N_{tot}} \frac{ 3 } { 4\pi\left [ (x+xres)^3 - x^3 \right ] }\f$
  */
-float rdf::get(float x) { return (*this)(x)/(cnt*volume(x)); }
+float rdf::get(float x) {
+  return (*this)(x)/(cnt*volume(x));
+}
 #endif

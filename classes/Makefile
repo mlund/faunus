@@ -2,13 +2,14 @@
 
   ##################################################################
 
+CLASSDIR=.
+INCLUDE=-I/usr/local/gromacs/include/gromacs/
+LDFLAGS=-L/usr/local/gromacs/lib/ -lgmx
+
   ifeq ($(MODEL), generic)
     CXX=g++
-    CXXFLAGS = -O3 -funroll-loops -w -Winline  -g
+    CXXFLAGS = -O3 -funroll-loops -w -Winline  -g -D GROMACS $(INCLUDE)
   endif
-
-CLASSDIR=.
-INCDIR=.
 
 OBJS=$(CLASSDIR)/inputfile.o \
      $(CLASSDIR)/io.o\
@@ -30,13 +31,13 @@ doc:
 	doxygen doc/Doxyfile
 
 widom:	examples/widom-example.C $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) examples/widom-example.C -o examples/widom-example
+	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/widom-example.C -o examples/widom-example
 
 pka:	examples/protein-example.C $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) examples/protein-example.C -o examples/protein-example
+	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/protein-example.C -o examples/protein-example
 
 clutch:	examples/clutch-example.C $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) examples/clutch-example.C -o examples/clutch-example
+	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/clutch-example.C -o examples/clutch-example
 
 examples:	widom pka clutch
 

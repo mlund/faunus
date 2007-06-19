@@ -76,6 +76,19 @@ bool ioaam::save(string file, vector<particle> &) {
   return writefile(file, o.str());
 }
 
+//----------------- IOXYZ ----------------------
+ioxyz::ioxyz(species &spc) : iopart(spc) {}
+bool ioxyz::save(string file, vector<particle> &p) {
+  ostringstream o;
+  o << p.size() << endl << endl;
+  for (unsigned short i=0; i<p.size(); i++)
+    o << spcPtr->d[p[i].id].name << " "
+      << p[i].x << " " << p[i].y << " " << p[i].z
+      << endl;
+  o << endl;
+  return writefile(file, o.str());
+}
+
 //----------------- IOPOV ----------------------
 iopov::iopov(species &spc) : iopart(spc) {
   clear();
@@ -149,3 +162,29 @@ void iopov::connect(point &p1, point &p2, float radius) {
 // 1234567890123456789012345678901234567890123456789012345678901234567890
 // ATOM     25 H1A  CR      4      23.215  17.973  15.540 -0.017 1.000
 */
+
+//----------------- IOXTC ----------------------
+ioxtc::ioxtc(container &con) : iopart(con) {
+  time=step=1;
+  for (char i=0; i<3; i++)
+    for (char j=0; j<3; j++)
+      box[i][j]=0;
+  box[0][0]=200;
+  box[1][1]=200;
+  box[2][2]=200;
+  xd=open_xtc("test.xtc", "w");
+}
+bool ioxtc::save(string file, vector<particle> &p) {
+  if (p.size()<1000) {
+    for (unsigned short i=0; i<p.size(); i++) {
+      x[i][0]=p[i].x/10+100;      // AA->nm
+      x[i][1]=p[i].y/10+100;
+      x[i][2]=p[i].z/10+100;
+    }
+    write_xtc(xd,p.size(),step++,time++,box,x,1000.);
+  }
+}
+void ioxtc::close() {
+  close_xtc(xd);
+}
+

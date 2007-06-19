@@ -9,6 +9,14 @@
 #include <cmath>
 #include "species.h"
 #include "group.h"
+#include "container.h"
+
+#ifdef GROMACS
+#ifndef CPLUSPLUS
+#define CPLUSPLUS
+#endif
+#include "xtcio.h"
+#endif
 
 //--------------------------------
 //!\brief Basic file I/O routines
@@ -34,6 +42,8 @@ class io {
 class iopart : private io {
   friend class ioaam;
   friend class iopov;
+  friend class ioxyz;
+  friend class ioxtz;
   private:
   species *spcPtr;
   vector<string> v; 
@@ -43,6 +53,19 @@ class iopart : private io {
   virtual vector<particle> load(string)=0;            //!< Load from disk
   virtual bool save(string, vector<particle>&)=0;     //!< Save to disk
 };
+
+//------------------------------------
+/*! \brief Write XYZ structure files
+ *  \author Mikael Lund
+ */
+class ioxyz : public iopart {
+  private:
+    vector<particle> load(string) {};
+  public:
+    ioxyz(species &);
+    bool save(string, vector<particle>&);
+};
+
 
 //------------------------------------
 /*! \brief Read/write AAM file format
@@ -80,5 +103,19 @@ class iopov : public iopart {
     void camera();                      //!< Specify camera location and viewpoint
     bool save(string, vector<particle>&);
 };
+
+#ifdef GROMACS
+class ioxtc : public iopart {
+  private:
+    vector<particle> load(string) {}
+    rvec x[1000];
+    int xd;
+    float box[3][3], time, step;
+  public:
+    ioxtc(container &);
+    bool save(string, vector<particle> &);
+    void close();
+};
+#endif
 
 #endif

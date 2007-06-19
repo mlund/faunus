@@ -1,6 +1,3 @@
-/*! \file Example how to simulate a NaCl solution
- *  \example protein-example.C
- */
 #include <iostream>
 #include "../io.h"
 #include "../analysis.h"
@@ -19,9 +16,10 @@ int main() {
   pot_setup cfg;                        // Setup pair potential (default values)
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   countdown<int> clock(10);             // Estimate simulation time
-
   macromolecule protein;                // Group for the protein
   ioaam aam(cell);                      // Protein input file format is AAM
+  ioxyz xyz(cell);
+  ioxtc xtc(cell);
   protein.add( cell, aam.load(
         "examples/calbindin.aam" ));    // Load protein from disk
   protein.move(cell, -protein.cm);      // ..and translate it to origo (0,0,0)
@@ -35,16 +33,19 @@ int main() {
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
 
   cout << cell.info() << tit.info();    // Some information
+  xyz.save("test.xyz", cell.p);
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain
     for (int micro=1; micro<=2e3; micro++) {
       sm.move(salt);                            // Displace salt particles
+      sys+=sm.du;
       if (tit.titrateall()==true) {             // Titrate groups
         protein.charge(cell.p);                 // Re-calc. protein charge
         protein.dipole(cell.p);                 // Re-calc. dipole moment
         sys+=tit.du;
       }
       sys+=sm.du;                               // Keep system energy updated
+      xtc.save("hej.xtc", cell.p);
     }
     cout << "Macro step " << macro << " completed. ETA: " << clock.eta(macro);
     sys.update(pot.energy(cell.p));             // Update system energy averages
@@ -53,5 +54,6 @@ int main() {
   cout << sys.info() << sm.info() << tit.info() // More information...
     << salt.info() << protein.info();
   povray.save("protein-example.pov", cell.p);   // Save POVRAY file
+  xtc.close();
 }
 

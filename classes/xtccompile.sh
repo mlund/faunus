@@ -3,4 +3,4 @@
 incdir="/usr/local/gromacs/include/gromacs"
 libdir="/usr/local/gromacs/lib/"
 
-g++ -D CPLUSPLUS -I${incdir} -L${libdir} -lgmx xtc.C
+g++ -I${incdir} -L${libdir} xtc.C slump.C io.C point.C species.C -lgmx

@@ -105,6 +105,22 @@ class iopov : public iopart {
 };
 
 #ifdef GROMACS
+//-----------------------------------------------
+/*! \brief GROMACS xtc compressed trajectory fileformat
+ *  \author Mikael Lund
+ *  \date June 2007, Prague
+ *  \todo Filename ignored, should be changed. Static box length.
+ *  \note Distances are stored in nanometers.
+ *
+ *  This class is used for output of configurations
+ *  to a GROMACS xtc file, originally designed for MD trajectories.
+ *  The MC configurations in the xtc file can subsequently be used
+ *  in a number of other programs VMD, for example, as well as analysed
+ *  using a range of tools as part of GROMACS -- distribution
+ *  functions etc.
+ *  It can also be used to store lenghty simulations as commonly
+ *  done in MD.
+ */
 class ioxtc : public iopart {
   private:
     vector<particle> load(string) {}

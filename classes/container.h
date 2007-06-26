@@ -18,6 +18,7 @@ class container : public particles,  public species {
     virtual void randompos(point &)=0;          //!< Random point within container
     virtual string info();                      //!< Return info string
     virtual string povray();                    //!< POVRAY object representing the cell
+    virtual void displace(point &, float);      //!< Displace particle
 };
 
 /*! \brief Spherical simulation container
@@ -38,16 +39,47 @@ class cell : public container {
     }
 };
 
-/*! \brief Cubic simulation container
+//---------------------------------------------------------
+/*! \brief Cubic simulation container w. periodic boundaries
  *  \author Mikael Lund
  *  \todo Not finished!
  */
 class box : public container {
+  private:
+    point d;
+    float len_half, len_inv;
   public:
     float len; //!< Side length
     box(float);
     void randompos(point &);
     inline bool collision(point &p) {};
+
+    //! Calculate squared distance w. minimum image convention
+    inline double sqdist(point &p1, point &p2) {
+      double dx,dy,dz;
+      dx=p1.x-p2.x;
+      dy=p1.y-p2.y;
+      dz=p1.z-p2.z;
+      dx=dx-len*int(dx*len_inv+.5);
+      dy=dy-len*int(dy*len_inv+.5);
+      dz=dz-len*int(dz*len_inv+.5);
+      return dx*dx+dy*dy+dz*dz;
+    }
+
+    //! Apply periodic boundary conditions
+    void bpc(point &p) {
+      p.x-=p.x-len*int(p.x*len_inv+.5);
+      p.y-=p.y-len*int(p.y*len_inv+.5);
+      p.z-=p.z-len*int(p.z*len_inv+.5);
+    }
+
+    //! Randomly displace particle w. bpc.
+    void displace(point &p, float dp) {
+      p.x+=dp*slp.random_half();
+      p.y+=dp*slp.random_half();
+      p.z+=dp*slp.random_half();
+      bpc(p);
+    }
 };
 
 /*! \brief "Clutch" like container.

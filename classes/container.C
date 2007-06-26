@@ -52,6 +52,8 @@ string cell::povray() {
 //----------- BOX --------------------------
 box::box(float sidelength) {
   len = sidelength;
+  len_half=len/2;
+  len_inv=1/len;
   volume = len*len*len;
 }
 

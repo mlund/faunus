@@ -7,6 +7,7 @@
 #include "average.h"
 #include "xytable.h"
 
+//---------------------------------------------------
 /*!
  * \brief Histogram class
  * \author Mikael Lund
@@ -51,6 +52,7 @@ void histogram::show() {
   }
 }
 
+//-----------------------------------------------------------------
 /*!
  *  \brief Class to calculate the radial distribution between particles.
  *

@@ -28,6 +28,7 @@ class pot_setup {
           r0,           //!< Bond eq. distance
           epsi,         //!< Internal dielectric constant
           epso,         //!< External dielectric constant
+          box,          //!< Cubic box length
           a;            //!< Cavity radius
 };
 

@@ -82,3 +82,37 @@ void clutch::randompos(point &p) {
       l=p.x*p.x+p.y*p.y+p.z*p.z; //squared distance from origo
   };
 }
+//------------CYLINDER---------------------------
+//! \param len  Length of the cylinder
+//! \param r    Radius of the cylinder
+cylinder::cylinder(float length, float radius) {
+  len=length;
+  r=radius;
+  r2=r*r;
+  diameter=r*2;
+  volume=2*r2*acos(-1)*len;
+}
+void cylinder::randompos(point &p) {
+  double l=r2+1;
+  p.z = slp.random_one()*len;
+  while (l>r2) {
+    p.x = slp.random_half()*diameter;
+    p.y = slp.random_half()*diameter;
+    l=p.x*p.x+p.y*p.y;
+  };
+}
+string cylinder::info() {
+  ostringstream o;
+  o << container::info()
+    << "#   Shape                = Cylindrical" << endl
+    << "#   Lenght               = " << len <<endl
+    << "#   Radius               = " << r << endl;
+  return o.str();
+}
+string cylinder::povray() {
+  ostringstream o;
+  o << "cylinder {<0,0,0>,<0,0" << len << ">," << r <<" texture {cell}}\n"
+    << "cylinder {<0,0,0>,<0,0" << len << ">,0.5 texture {cell}}\n";
+  return o.str();
+}     
+

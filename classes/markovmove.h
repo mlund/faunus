@@ -83,6 +83,16 @@ class saltmove : public markovmove {
     bool move(group &);         //!< Loop over group particles (randomly)
 };
 
+/*! \brief Move one group along z-axis
+ *  \author Bjoern Persson
+ */
+class zmove : public markovmove {
+  public:
+    zmove( ensemble&, container&, interaction<T_pairpot>&, macromolecule&, float);
+    bool move(macromolecule &);
+    float z;
+};
+
 /*! \brief Symmetrically move two groups along z-axis
  *  \author Mikael Lund
  */

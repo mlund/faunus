@@ -139,4 +139,63 @@ bool chargereg::titrateall() {
   du=sum;
   return true;
 }
+//-----------Z-MOVE--------------------------------------
+/*! \breif Class to make moves of a single particle along z-axis
+ *  
+ *  This class will make a random walk along the z-axis for a
+ *  macromolece
+ *
+ *  \todo Needs some testing and perhaps some optimization
+ */
+
+zmove::zmove(
+    ensemble &e, container &c, interaction<T_pairpot> &i, macromolecule &g 
+    ,float rf) : markovmove(e,c,i) {
+  runfraction=rf;
+  dp=8;
+  deltadp=1;
+  name="MACROMOLECULE Z-DISPLACEMENTS";
+}     
+
+bool zmove::move(macromolecule &g) {
+  du=0;
+  if (slp.runtest(runfraction)==false)
+    return false;
+  cnt++;
+  z=2*dp*slp.random_half();
+  g.zmove(*con, z);
+  for (int i=g.beg; i<(g.size()+g.beg); i++) { 
+    if (con->collision( con->trial[i] )==true) 
+      rc=HC;
+    }
+  if (rc==HC) {
+    for (int i=g.beg; i<(g.size()+g.beg); i++) 
+      con->trial[i] = con->p[i];
+    return false; }
+  else {
+    #pragma omp parallel
+    {
+      #pragma omp sections
+      {
+        #pragma omp section
+        { uold = pot->energy(con->p, g);   }
+        #pragma omp section
+        { unew = pot->energy(con->trial,g);   }
+      }
+    }
+    du += unew - uold; }
+    if (ens->metropolis(du)==true) {
+      rc=OK;
+      utot+=du;
+      naccept++;
+      for (int i=g.beg; i<(g.beg+g.size()); i++)
+        con->p[i] = con->trial[i];
+      return true;
+    } else rc=ENERGY;
+    
+  du=0;
+  for (int i=g.beg; i<(g.size()+g.beg); i++) 
+    con->trial[i] = con->p[i];
+  return false;
+}
 

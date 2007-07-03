@@ -110,15 +110,22 @@ class clutch : public container {
 };
 
 /*! \brief Cylindrical simulation container
- *  \author Mikael Lund
- *  \todo Not finished!
+ *  \author Mikael Lund/Bjoern Persson
+ *  \todo Needs some testing
  */
 class cylinder : public container {
   public:
-    float len; //!< Cylinder length
-    float r;   //!< Cylinder radius
-    cylinder(float);
+    float len;   //!< Cylinder length
+    float r;     //!< Cylinder radius
+    float r2;    //!< Cylinder radius squared
+    float diameter;
+    cylinder(float,float);
     void randompos(point &);
-    bool collision(point &p) {};
+    inline bool collision(point &p) {
+      return 
+     (p.x*p.x+p.y*p.y>r2 || (p.z<0||p.z>len)) ? true:false;
+    };
+    string info(); //!< Cylinder info
+    string povray();
 };
 #endif

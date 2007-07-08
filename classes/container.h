@@ -18,7 +18,7 @@ class container : public particles,  public species {
     virtual void randompos(point &)=0;          //!< Random point within container
     virtual string info();                      //!< Return info string
     virtual string povray();                    //!< POVRAY object representing the cell
-    virtual void displace(point &, float);      //!< Displace particle
+    //void displace(point &, float);      //!< Displace particle
 };
 
 /*! \brief Spherical simulation container
@@ -74,12 +74,12 @@ class box : public container {
     }
 
     //! Randomly displace particle w. bpc.
-    void displace(point &p, float dp) {
-      p.x+=dp*slp.random_half();
-      p.y+=dp*slp.random_half();
-      p.z+=dp*slp.random_half();
-      bpc(p);
-    }
+    //void displace(point &p, float dp) {
+    //  p.x+=dp*slp.random_half();
+    //  p.y+=dp*slp.random_half();
+    //  p.z+=dp*slp.random_half();
+    //  bpc(p);
+    //}
 };
 
 /*! \brief "Clutch" like container.

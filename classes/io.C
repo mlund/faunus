@@ -164,6 +164,7 @@ void iopov::connect(point &p1, point &p2, float radius) {
 */
 
 //----------------- IOXTC ----------------------
+#ifdef GROMACS
 ioxtc::ioxtc(container &con) : iopart(con) {
   time=step=0;
   for (char i=0; i<3; i++)
@@ -185,4 +186,6 @@ bool ioxtc::save(string file, vector<particle> &p) {
   }
 }
 void ioxtc::close() { close_xtc(xd); }
+#endif
+
 

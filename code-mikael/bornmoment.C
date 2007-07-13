@@ -15,6 +15,7 @@ using namespace std;
 int main() {
   cell cell(100.);
   ioaam aam(cell);
+  ioxyz xyz(cell);
   macromolecule mol;
   mol.add(cell, aam.load("test.aam"));
   mol.move(cell, -mol.cm);
@@ -29,4 +30,7 @@ int main() {
     b.z+=f*cell.p[i].z;
   }
   cout << b << " " << b.len() << endl;
+  b=b*10;
+  cout << b << endl;
+  xyz.save("test.xyz", cell.p);
 }

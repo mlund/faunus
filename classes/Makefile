@@ -4,11 +4,11 @@
 
 CLASSDIR=.
 INCLUDE=-I/usr/local/gromacs/include/gromacs/
-LDFLAGS=-L/usr/local/gromacs/lib/ -lgmx
+#LDFLAGS=-L/usr/local/gromacs/lib/ -lgmx
 
   ifeq ($(MODEL), generic)
     CXX=g++
-    CXXFLAGS = -O3 -funroll-loops -w -Winline  -g -D GROMACS $(INCLUDE)
+    CXXFLAGS = -O3 -funroll-loops -w -Winline  -g $(INCLUDE)
   endif
 
 OBJS=$(CLASSDIR)/inputfile.o \

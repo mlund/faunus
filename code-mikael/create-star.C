@@ -16,14 +16,15 @@
 using namespace std;
 
 int main() {
-  double a=2.;  // particle radus
-  int nmon=10;  // number of monomers per chain
-  int nchain=3; // number of chains
-  int cnt=0;
+  double a;
+  int nmon,nchain,cnt=0;
   bool coll;
-
   slump s;
   vector<particle> p(1);
+  
+  cout << "Number of chains attached to center ? "; cin >> nchain;
+  cout << "Number of monomers per chain ? "; cin >> nmon;
+  cout << "Monomer radius ? "; cin >> a;
 
   p[cnt++].radius=a;      // center
 
@@ -54,5 +55,5 @@ int main() {
   printf("%5d\n",p.size());
   for (int i=0; i<p.size(); i++)
     printf("%5d%5s%5s%5d%8.3f%8.3f%8.3f\n",
-        1,"STR","MON",i+1,p[i].x,p[i].y,p[i].z);
+        1,"STR","MON",i+1,p[i].x/10,p[i].y/10,p[i].z/10);
 }

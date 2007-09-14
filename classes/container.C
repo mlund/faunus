@@ -57,7 +57,30 @@ box::box(float sidelength) {
   volume = len*len*len;
 }
 
+point box::randompos() {
+  point p;
+  p.x = slp.random_half()*len;
+  p.y = slp.random_half()*len;
+  p.z = slp.random_half()*len;
+  return p;
+}
+
 void box::randompos(point &p) {
+  p.x = slp.random_half()*len;
+  p.y = slp.random_half()*len;
+  p.z = slp.random_half()*len;
+}
+
+/*void box::randompos(vector<point> &p) {
+  short unsigned size=p.size;
+  
+}*/
+
+string box::povray() {
+  ostringstream o;
+  o << "box {<" <<-len_half <<"," <<-len_half <<"," <<-len_half <<"> , <"
+    << len_half <<"," <<len_half <<"," <<len_half <<"> texture {cell}}\n";
+  return o.str();
 }
 
 //-------------- CLUTCH -------------------------

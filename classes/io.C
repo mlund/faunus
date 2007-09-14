@@ -80,9 +80,9 @@ bool ioaam::save(string file, vector<particle> &) {
 ioxyz::ioxyz(species &spc) : iopart(spc) {}
 bool ioxyz::save(string file, vector<particle> &p) {
   ostringstream o;
-  o << p.size() << endl << endl;
+  //o << p.size() << endl << endl;
   for (unsigned short i=0; i<p.size(); i++)
-    o << spcPtr->d[p[i].id].name << " "
+    o //<< spcPtr->d[p[i].id].name << " "
       << p[i].x << " " << p[i].y << " " << p[i].z
       << endl;
   o << endl;
@@ -90,11 +90,13 @@ bool ioxyz::save(string file, vector<particle> &p) {
 }
 
 //----------------- IOPOV ----------------------
-iopov::iopov(species &spc) : iopart(spc) {
+//iopov::iopov(species &spc) : iopart(spc) {
+iopov::iopov(container &c, species &spc ) : iopart(spc) {
   clear();
   header();
   light(100.);
   camera();
+  o << c.povray();
 }
 void iopov::clear() { o.str(""); }
 void iopov::header() {
@@ -119,6 +121,10 @@ void iopov::header() {
     "#declare redish=texture {\n"
     " pigment {color rgb <1,0,0>}\n"
     " finish {phong .9 ambient .1 reflection .2}\n"
+    "}\n"
+    "#declare cell=texture {\n"
+    " pigment {color rgbf <1,1,1,.9>}\n"
+    " finish {phong .1 ambient .2}\n"
     "}\n";
 }
 void iopov::camera() {

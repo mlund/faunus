@@ -23,7 +23,10 @@ class point {
     void clear();                       ///< Zero all data.
     double len(); 
     inline double sqdist(point &);      //!< Squared distance to another point
+    inline double sqdist(point &,       //!< -- / / -- 3D minimum image
+                        double, double);
     inline double dist(point &);        ///< Distance to another point
+    inline double dist(point &, double, double);        ///< Distance to another point
     double dot(point &);                ///< Angle with another point
     point operator-();                  ///< Sign reversal
     point operator*(point);             ///< Multiply two vectors
@@ -116,7 +119,20 @@ inline double point::sqdist(point &p) {
   return dx*dx + dy*dy + dz*dz;
 }
 
+inline double point::sqdist(point &p, double len, double inv_len) {
+  register double dx,dy,dz;
+  dx=x-p.x;
+  dy=y-p.y;
+  dz=z-p.z;
+  dx-=len*floor(dx*inv_len+0.5);
+  dy-=len*floor(dy*inv_len+0.5);
+  dz-=len*floor(dz*inv_len+0.5);
+  return dx*dx + dy*dy + dz*dz;
+}
+
 inline double point::dist(point &p) { return sqrt(sqdist(p)); }
+inline double point::dist(point &p, double len, double inv_len) { 
+  return sqrt(sqdist(p, len, inv_len)); }
 
 /*!
  * \return \f$ \phi = \frac{z}{r_{12}}\f$

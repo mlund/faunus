@@ -23,6 +23,7 @@ template <class TX, class TY>
 class xytable {
   friend class histogram;
   friend class rdf;
+  friend class rdfP3;
   private:
     int x2i(TX x) {
       int i=int( (x-xmin)/xres+0.5);

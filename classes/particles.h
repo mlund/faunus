@@ -26,6 +26,7 @@ public:
   double charge();                      //!<  Sum all charges in particle vector
   double charge(point &, double);       //!<  Sum all charges within a sphere region
   bool overlap(particle &);             //!< Check for overlap w. particle
+  bool overlap(vector<particle> &);
   bool check_vector();                  //!< Check if p and trial are equal!
 };
 

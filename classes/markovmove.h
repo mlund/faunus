@@ -83,6 +83,19 @@ class saltmove : public markovmove {
     bool move(group &);         //!< Loop over group particles (randomly)
 };
 
+/*! \brief Random move of a macromolecule in a container 
+ *
+ *  \todo generalize, it is cubix periodic boundry specific
+ *
+ *  \author Bjoern Persson
+ */
+class move : public markovmove {
+  private:
+    box *b;
+  public:
+    move( ensemble&, container&, interaction<T_pairpot>&, box &, float);
+    bool mOve(macromolecule &);
+};
 /*! \brief Move one group along z-axis
  *  \author Bjoern Persson
  */

@@ -114,6 +114,12 @@ void group::add(container &con, particle::type id, short n) {
     end=con.push_back(a)-1;
   }
 }
+/*void macromolecule::add(container &con, vector<particle> v){
+  
+  do
+  while(con.overlap(v)==true && masscenter(v) );
+
+}*/
 unsigned short group::displace(container &c, double dp) {
   unsigned short i=random();
   c.trial[i].x = c.p[i].x + dp*slp.random_half();
@@ -196,6 +202,18 @@ void macromolecule::move(particles &par, point c) {
     par.trial[i].z = par.p[i].z + c.z;
   }
   cm_trial = cm + c;
+}
+void macromolecule::BOXmove(particles &par, box &b, point c) {
+  for (short i=beg; i<=end; i++) {
+    par.trial[i].x = par.p[i].x + c.x;
+    par.trial[i].y = par.p[i].y + c.y;
+    par.trial[i].z = par.p[i].z + c.z;
+  }
+  cm_trial = cm + c;
+  for (short i=beg; i<=end; i++) {
+    b.bpc(par.trial[i]);
+  }
+  b.bpc(cm_trial);
 }
 void macromolecule::rotate(particles &par, double drot) {
   point u;

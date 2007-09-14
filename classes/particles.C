@@ -29,7 +29,15 @@ bool particles::overlap(particle &a) {
     if (p[i].overlap(a)==true) return true;
   return false;
 }
-
+bool particles::overlap(vector<particle> &v) {
+  unsigned short i = v.size();
+  for (unsigned int j=0; j<p.size(); j++) {
+    for (unsigned int k=0; k<i; k++) {
+      if(p[j].overlap(v[k])==true) return true;
+    }
+  }
+  return false;
+}
 bool particles::check_vector() {
   bool rc=false;
   if (p.size()==trial.size())

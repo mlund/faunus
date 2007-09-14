@@ -61,6 +61,7 @@ class macromolecule : public group {
     double radius(vector<particle> &);  //!< Calculate radius
     double dipole(vector<particle> &);  //!< Calculate dipole moment
     void move(particles &, point);      //!< Translate group
+    void BOXmove(particles &, box &, point);
     void zmove(particles &, double);    //!< Move in z-direction, only
     void rotate(particles &, double);          //!< Rotate around a point
     void rotate(particles &, point, double);

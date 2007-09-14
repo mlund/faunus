@@ -139,6 +139,67 @@ bool chargereg::titrateall() {
   du=sum;
   return true;
 }
+//-----------MOVE----------------------------------------
+/*! \breif Class to prefom a random walk of a macromolecule
+ *   in space
+ */
+move::move(
+   ensemble &e, container &c, interaction<T_pairpot> &i 
+   , box &BOX,float rf) : markovmove(e, c, i) {
+  runfraction=rf;
+  dp=100;
+  deltadp=1;
+  name="MACROMOLECULE MOVE";
+  b=&BOX;
+}
+
+bool move::mOve(macromolecule &g) {
+  du=0;
+  if (slp.runtest(runfraction)==false)
+    return false;
+  cnt++;
+  point rand;
+  rand.x = dp*slp.random_half();
+  rand.y = dp*slp.random_half();
+  rand.z = dp*slp.random_half();
+  g.move(*con, rand);
+  for (int i=g.beg; i<(g.size()+g.beg); i++) { 
+    b->bpc(con->trial[i]);
+    if (con->collision( con->trial[i] )==true) 
+      rc=HC;
+    }
+  if (rc==HC) {
+    for (int i=g.beg; i<(g.size()+g.beg); i++) 
+      con->trial[i] = con->p[i];
+    cout << "rejected"<<endl;
+    return false; }
+  else {
+    #pragma omp parallel
+    {
+      #pragma omp sections
+      {
+        #pragma omp section
+        { uold = pot->energy(con->p, g);   }
+        #pragma omp section
+        { unew = pot->energy(con->trial,g);   }
+      }
+    }
+    du += unew - uold; }
+    if (ens->metropolis(du)==true) {
+      rc=OK;
+      utot+=du;
+      naccept++;
+      for (int i=g.beg; i<(g.beg+g.size()); i++)
+        con->p[i] = con->trial[i];
+      return true;
+    } else rc=ENERGY;
+    
+  du=0;
+  for (int i=g.beg; i<(g.size()+g.beg); i++) 
+    con->trial[i] = con->p[i];
+  return false;
+}
+
 //-----------Z-MOVE--------------------------------------
 /*! \breif Class to make moves of a single particle along z-axis
  *  

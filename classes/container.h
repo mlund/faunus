@@ -52,7 +52,11 @@ class box : public container {
     float len; //!< Side length
     box(float);
     void randompos(point &);
-    inline bool collision(point &p) {};
+    void randompos(vector<point> &);
+    point randompos();
+    inline bool collision(point &p) {return false;};
+    //void bpc(point &p);
+    string povray();
 
     //! Calculate squared distance w. minimum image convention
     inline double sqdist(point &p1, point &p2) {
@@ -67,10 +71,10 @@ class box : public container {
     }
 
     //! Apply periodic boundary conditions
-    void bpc(point &p) {
-      p.x-=p.x-len*int(p.x*len_inv+.5);
-      p.y-=p.y-len*int(p.y*len_inv+.5);
-      p.z-=p.z-len*int(p.z*len_inv+.5);
+    inline void bpc(point &p) {
+      p.x=p.x-len*floor(p.x*len_inv+.5);
+      p.y=p.y-len*floor(p.y*len_inv+.5);
+      p.z=p.z-len*floor(p.z*len_inv+.5);
     }
 
     //! Randomly displace particle w. bpc.

@@ -34,6 +34,7 @@ class io {
 /*!\brief General class for particle I/O.
  * \author Mikael Lund
  * \todo Unfinished!
+ * \todo move transformations s2p p2s to iopart
  *
  * The purpose of this class is to provide general read/write
  * routines for particle I/O. This can be used to load/save
@@ -55,15 +56,20 @@ class iopart : private io {
 };
 
 //------------------------------------
-/*! \brief Write XYZ structure files
+/*! \brief Write XYZ structure files, only 
+ *  \brief intended for particles.p IO
  *  \author Mikael Lund
  */
 class ioxyz : public iopart {
+  friend class particles;
   private:
-    vector<particle> load(string) {};
+  particle s2p(string &);
+  particles *sys;
   public:
     ioxyz(species &);
+    ioxyz(species &, particles &);
     bool save(string, vector<particle>&);
+    vector<particle> load(string);
 };
 
 

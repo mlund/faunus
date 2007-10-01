@@ -77,16 +77,56 @@ bool ioaam::save(string file, vector<particle> &) {
 }
 
 //----------------- IOXYZ ----------------------
-ioxyz::ioxyz(species &spc) : iopart(spc) {}
+ioxyz::ioxyz(species &spc) : iopart(spc) {
+}
+ioxyz::ioxyz(species &spc, particles &p) : iopart(spc) {
+  sys=&p;
+}
+particle ioxyz::s2p(string &s) {
+  particle p;
+  stringstream o;
+  string name, num;
+  o << s;
+  o >> name >> num
+    >> p.x >> p.y >> p.z
+    >> p.charge >> p.mw >> p.radius;
+  p.id = spcPtr->id(name);
+  return p;
+}
+
 bool ioxyz::save(string file, vector<particle> &p) {
   ostringstream o;
-  //o << p.size() << endl << endl;
+  o << p.size() << endl;
   for (unsigned short i=0; i<p.size(); i++)
-    o //<< spcPtr->d[p[i].id].name << " "
+    o << spcPtr->d[p[i].id].name << " "
       << p[i].x << " " << p[i].y << " " << p[i].z
       << endl;
   o << endl;
   return writefile(file, o.str());
+}
+
+vector<particle> ioxyz::load(string file) {
+  v.resize(0);
+  particle dummy;
+  
+  if (readfile(file,v)==true) {
+    strip(v,"#");
+    unsigned short n=atoi(v[0].c_str());
+    if (n!=sys->p.size()) {
+      cout << "!! System vector and .coord vector are out of sync! !!\n"
+           << "!! Closing the factory since n=" <<n<< "and p.size() ="<<sys->p.size()<<" !!\n"
+           << endl;
+    }else{ 
+    for (unsigned short i=1; i<=n; i++) {
+      sys->p[i-1]=s2p(v[i]);
+      sys->p[i-1].charge=s2p(v[i]).charge;
+      sys->p[i-1].radius=s2p(v[i]).radius;
+      sys->p[i-1].mw=s2p(v[i]).mw;
+      }
+    cout << "# Old coordinates loaded\n";
+    }
+  }else{ cout << "# Can't find .coord${jobid} \n";}
+  return p;
 }
 
 //----------------- IOPOV ----------------------

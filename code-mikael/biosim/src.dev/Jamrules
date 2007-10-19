@@ -1,0 +1,7 @@
+CC       = gcc ;
+C++      = g++ ;
+LINK     = g++ ;
+CCFLAGS  =  -Wall -g ;
+C++FLAGS =  -Wall -g -DPOT_DATAPMF;
+OPTIM    =  -O3 -funroll-loops ;
+

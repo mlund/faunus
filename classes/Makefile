@@ -4,7 +4,7 @@
 
 CLASSDIR=.
 INCLUDE=-I/usr/local/gromacs/include/gromacs/
-#LDFLAGS=-L/usr/local/gromacs/lib/ -lgmx
+LDFLAGS=-L/usr/local/gromacs/lib/ -lgmx
 
   ifeq ($(MODEL), generic)
     CXX=g++

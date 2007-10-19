@@ -196,7 +196,7 @@ int main(int argc, char* argv[] ) {
   cout << "Pass 3.\n";
  
   //PREPARE TRAJECTORY OUTPUT
-  xyz trj("trj");
+  xyz trj("trj60-70");
   
   //PRINT INFORMATION
   cout << "\n# --- SYSTEM ----------------------------------------\n"
@@ -531,7 +531,7 @@ int main(int argc, char* argv[] ) {
  
       //Multipole analysis
       if (slump.random_one()>0.5) {
-        if (z<70.)
+        if (z>60. && z<70.)
           trj.writetrj( s.p, pep );
         double q1=s.charge(g[P1]);
         double q2=s.charge(g[P2]);

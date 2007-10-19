@@ -1,0 +1,94 @@
+=====================================
+  BIOMOLECULAR MONTE CARLO ROUTINES 
+=====================================
+
+Introduction:
+=============
+Currently this package contains two MC programs
+for protein simulations:
+
+* pka  - Protonation properties of a single protein
+         in a salt solution.
+* prot - Protein-protein interaction in a salt solution
+         including charge regulation. Also, flexible
+         titrating polyelectrolytes can be added (un-documented)
+* pka_chain - Protonation properties of a single protein
+         in a salt solution
+
+The documentation is very limited and you may resort
+to the scripts in the "prot-prot" and "pka" directories.
+
+Requirements:
+=============
+* C++ compiler (tested with g++, icc, xlC)
+* Some shell, like BASH.
+* Python (for converting PDB files to "AAM" format)
+* scientificpython module (-//-)
+
+
+Compilation and installation:
+=============================
+The programs are written in standard C++ using the
+GNU Compiler Collection (GCC) available on most unix
+systems, including MacOS X, linux, bsd etc. Simply
+edit the Makefile to match your system and type the
+following (generic is default):
+
+$ cd src
+$ make
+$ make doc (if you want source code documentation)
+
+This will create the binary files in the src directory
+where they should stay put since this is where the
+script (.sh) files in the "prot-prot" and "pka" directories
+will look for them.
+
+
+Source Code Documentation:
+==========================
+I have recently started documenting the source code using
+doxygen. However, only a fraction of the classes are included
+so far. They are found in src/html after you have envoked
+'make doc' (Requires a full doxygen installation).
+
+
+Citing:
+=======
+One of these:
+Lund, M. and Jonsson, B., Biophysical Journal, Vol. 85, 2940-2947, 2003
+Lund, M. and Jonsson, B., Biochemistry, Vol. 44, 5722-5727, 2005
+
+Contact:
+========
+Mikael Lund / Bo jonsson
+Dept. of Theoretical Chemistry
+University of Lund
+Chemical Center P.O.B. 124 S-22100 Lund, Sweden
+Email: mikael.lund@teokem.lu.se
+
+
+The pKa program:
+================
+This program will calculate the protonation status of a single
+molecule in a salt solution. When the program starts it will
+deprotonate all titrateable sites, which will typicall render
+the (protein) molecule charged. In order to maintain electro-
+neutrality, you will need to add counter ions in addition to
+possible salt particles. In the shell scripts, this is typically
+specified by nion_init. Next, the simulation will begin and you
+should first run a short equilibration run, followed by a more
+elaborate run where you improve the statistics. This is automa-
+tically handled in the shell scripts.
+
+cell_r          simulation cell radius in aangstrom
+temp            temperature in kelvin
+dielec          relative solvent dielectric constant
+macro           number of macro loops (outer loop, collect data)
+micro           number of micro loops (titration, ions displacements)
+ion_dp          ion displacement in aangstrom
+nionN           number of ions of type N (N=[1,2,3])
+chionN          valency of type N ions
+protein1        name of structure file (Amino Acid Model format)
+pH              pH of the solution
+
+

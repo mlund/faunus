@@ -20,15 +20,25 @@ class xyz {
       base=file;
       newfile();
     }
-    void writetrj( vector<particle> &p, peptide &pep ) {
-      f << p.size() << endl;
-      if (virgin==true) f << endl; // VMD hack
-      for (int i=0; i<p.size(); i++)
-        f << pep.d[p[i].id].name << " "
-          << p[i].x << " " << p[i].y << " " << p[i].z << endl;
-      f << endl;
+
+    void header( unsigned short n ) {
+      f << n << endl;
+      if (virgin==true) f << endl;
+    }
+
+    void footer() { f << endl; }
+
+    void add( vector<particle> &p, peptide &pep, unsigned short i) {
+      f << pep.d[p[i].id].name << " "
+                  << p[i].x << " " << p[i].y << " " << p[i].z << endl;
       virgin=false;
     }
+
+    void add( vector<particle> &p, peptide &pep, group &g) {
+      for (unsigned short i=g.beg; i<=g.end; i++)
+        add(p, pep, i);
+    }
+
     void newfile() {
       if (f) close();
       ostringstream suffix;

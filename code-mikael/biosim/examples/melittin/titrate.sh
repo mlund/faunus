@@ -1,15 +1,12 @@
 #!/bin/bash
-#PBS -l walltime=48:00:00
 
-biosim=/mnt/data/mikael/mc-temp/biosim
+biosim=../../
 source ${biosim}/src/pka.sh
 exe=${biosim}/src/pka
 
 cell_r=40
 setjobid .b
-protein1="../struct/melittin.aam"
-r_dielec=6.8
-dielec_i=2
+protein1="melittin.aam"
 chion1=+1
 chion2=-2
 

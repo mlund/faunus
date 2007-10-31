@@ -24,6 +24,7 @@
 #include "histogram.h"
 #include "imdwrap.h"
 #include "pdbclass.h"
+#include "xyz.h"
 
 using namespace std;
 
@@ -84,6 +85,8 @@ int main(int argc, char* argv[] ) {
 
   pot.k   = springk;
   pot.r0  = 0.0;
+  //PREPARE TRAJECTORY OUTPUT
+  xyz trj("trj");
 
   //Distribution functions
   vector<histogram::data> h(2);
@@ -115,8 +118,8 @@ int main(int argc, char* argv[] ) {
   g[PROT].radius=s.radius( g[PROT], s.p[g[PROT].cm] );
 
   g[SALT].name="mobile ions";
-  g[SALT]+=s.insert_salt( nion1, chion1, 2.0, cell);
-  g[SALT]+=s.insert_salt( nion2, chion2, 2.0, cell);
+  g[SALT]+=s.insert_salt( nion1, chion1, 2.0, cell, peptide::NA);
+  g[SALT]+=s.insert_salt( nion2, chion2, 2.0, cell, peptide::UNK);
 
   if (s.safetytest_vector()==false) return 1;
 
@@ -347,6 +350,13 @@ int main(int argc, char* argv[] ) {
 
       //imd.send_particles(s.p);
 
+      // Write "trajectory" xyz file
+      trj.header( g[PROT].size()+g[SALT].size() );
+      trj.add( s.p, pep, g[PROT] );
+      trj.add( s.p, pep, g[SALT] );
+      trj.footer();
+
+
     }; //end of micro loop
     
     if (s.safetytest_vector()==false) return 1;
@@ -395,6 +405,8 @@ int main(int argc, char* argv[] ) {
     vrml.add( s.p, g[PROT] );
     vrml.add( s.p, g[SALT] );
     vrml.save("vrml.py");
+
+    trj.newfile();                      //dump trj into new file
     
   }; //end of macro step 
     

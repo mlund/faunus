@@ -1,0 +1,781 @@
+HEADER    CALCIUM-BINDING PROTEIN                 09-SEP-86   3ICB      3ICB   3
+COMPND    CALCIUM-BINDING PROTEIN (VITAMIN D-DEPENDENT, MINOR A FORM)   3ICB   4
+COMPND   2 (/ICABP$)                                                    3ICB   5
+SOURCE    BOVINE (BOS $TAURUS) INTESTINE                                3ICB   6
+AUTHOR    D.M.E.SZEBENYI,K.MOFFAT                                       3ICB   7
+REVDAT   1   24-OCT-86 3ICB    0                                        3ICB   8
+SPRSDE     24-OCT-86 3ICB      2ICB                                     3ICB   9
+JRNL        AUTH   D.M.E.SZEBENYI,K.MOFFAT                              3ICB  10
+JRNL        TITL   THE REFINED STRUCTURE OF VITAMIN D-DEPENDENT         3ICB  11
+JRNL        TITL 2 CALCIUM-BINDING PROTEIN FROM BOVINE INTESTINE.       3ICB  12
+JRNL        TITL 3 MOLECULAR DETAILS, ION BINDING, AND IMPLICATIONS     3ICB  13
+JRNL        TITL 4 FOR THE STRUCTURE OF OTHER CALCIUM-BINDING PROTEINS  3ICB  14
+JRNL        REF    J.BIOL.CHEM.                  V. 261  8761 1986      3ICB  15
+JRNL        REFN   ASTM JBCHA3  US ISSN 0021-9258                  071  3ICB  16
+REMARK   1                                                              3ICB  17
+REMARK   1 REFERENCE 1                                                  3ICB  18
+REMARK   1  AUTH   D.M.E.SZEBENYI,S.K.OBENDORF,K.MOFFAT                 3ICB  19
+REMARK   1  TITL   STRUCTURE OF VITAMIN D-DEPENDENT CALCIUM-BINDING     3ICB  20
+REMARK   1  TITL 2 PROTEIN FROM BOVINE INTESTINE                        3ICB  21
+REMARK   1  REF    NATURE                        V. 294   327 1981      3ICB  22
+REMARK   1  REFN   ASTM NATUAS  UK ISSN 0028-0836                  006  3ICB  23
+REMARK   1 REFERENCE 2                                                  3ICB  24
+REMARK   1  AUTH   K.MOFFAT,C.H.FULLMER,R.H.WASSERMAN                   3ICB  25
+REMARK   1  TITL   PRELIMINARY CRYSTALLOGRAPHIC DATA FOR A CALCIUM      3ICB  26
+REMARK   1  TITL 2 BINDING PROTEIN FROM BOVINE INTESTINE                3ICB  27
+REMARK   1  REF    J.MOL.BIOL.                   V.  97   661 1975      3ICB  28
+REMARK   1  REFN   ASTM JMOBAK  UK ISSN 0022-2836                  070  3ICB  29
+REMARK   1 REFERENCE 3                                                  3ICB  30
+REMARK   1  AUTH   C.S.FULLMER,R.H.WASSERMAN                            3ICB  31
+REMARK   1  TITL   THE AMINO ACID SEQUENCE OF BOVINE INTESTINAL         3ICB  32
+REMARK   1  TITL 2 CALCIUM-BINDING PROTEIN                              3ICB  33
+REMARK   1  REF    J.BIOL.CHEM.                  V. 256  5669 1981      3ICB  34
+REMARK   1  REFN   ASTM JBCHA3  US ISSN 0021-9258                  071  3ICB  35
+REMARK   2                                                              3ICB  36
+REMARK   2 RESOLUTION. 2.3 ANGSTROMS.                                   3ICB  37
+REMARK   3                                                              3ICB  38
+REMARK   3 REFINEMENT. HENDRICKSON-KONNERT RESTRAINED LEAST SQUARES,    3ICB  39
+REMARK   3  WITH INDIVIDUAL ISOTROPIC TEMPERATURE FACTORS AND VARIABLE  3ICB  40
+REMARK   3  OCCUPANCY FOR SOLVENT MOLECULES.  THE R VALUE IS 0.178 FOR  3ICB  41
+REMARK   3  DATA IN THE RANGE 9.0 TO 2.3 ANGSTROMS.  THE RMS DEVIATION  3ICB  42
+REMARK   3  FROM IDEALITY OF THE BOND LENGTHS IS 0.016 ANGSTROMS.       3ICB  43
+REMARK   4                                                              3ICB  44
+REMARK   4 THIS DATA SET IS DESIGNATED 4/81 R46C8A BY THE DEPOSITORS.   3ICB  45
+REMARK   5                                                              3ICB  46
+REMARK   5 THE MOLECULE CONTAINS TWO CALCIUM BINDING LOOPS - I-II       3ICB  47
+REMARK   5 (CB1) AND III-IV (CB2) COMPRISING RESIDUES 14-27 AND 54-65   3ICB  48
+REMARK   5 RESPECTIVELY.                                                3ICB  49
+REMARK   6                                                              3ICB  50
+REMARK   6 STRUCTURE FACTORS CORRESPONDING TO THIS ENTRY ARE AVAILABLE  3ICB  51
+REMARK   6 FROM THE PROTEIN DATA BANK AS A SEPARATE ENTRY.              3ICB  52
+SEQRES   1     75  LYS SER PRO GLU GLU LEU LYS GLY ILE PHE GLU LYS TYR  3ICB  53
+SEQRES   2     75  ALA ALA LYS GLU GLY ASP PRO ASN GLN LEU SER LYS GLU  3ICB  54
+SEQRES   3     75  GLU LEU LYS LEU LEU LEU GLN THR GLU PHE PRO SER LEU  3ICB  55
+SEQRES   4     75  LEU LYS GLY PRO SER THR LEU ASP GLU LEU PHE GLU GLU  3ICB  56
+SEQRES   5     75  LEU ASP LYS ASN GLY ASP GLY GLU VAL SER PHE GLU GLU  3ICB  57
+SEQRES   6     75  PHE GLN VAL LEU VAL LYS LYS ILE SER GLN              3ICB  58
+HET     CA      1       1     CALCIUM ION                               3ICB  59
+HET     CA      2       1     CALCIUM ION                               3ICB  60
+HET    SO4      3       5     SULFATE ION                               3ICB  61
+FORMUL   2   CA    2(CA1 ++)                                            3ICB  62
+FORMUL   3  SO4    O4 S1 --                                             3ICB  63
+FORMUL   4  HOH   *36(H2 O1)                                            3ICB  64
+HELIX    1 I   SER      2  LYS     16  1 BECOMES 3/10 RES 13-16         3ICB  65
+HELIX    2 II  SER     24  PHE     36  1                                3ICB  66
+HELIX    3 L   PHE     36  LYS     41  1 IRREGULAR                      3ICB  67
+HELIX    4 III THR     45  ASP     54  1                                3ICB  68
+HELIX    5 IV  SER     62  GLN     75  1 IRREGULAR, 3/10 FOR 66-70      3ICB  69
+SITE     1 CB1 14 ALA    14  ALA    15  LYS    16  GLU    17            3ICB  70
+SITE     2 CB1 14 GLY    18  ASP    19  PRO    20  ASN    21            3ICB  71
+SITE     3 CB1 14 GLN    22  LEU    23  SER    24  LYS    25            3ICB  72
+SITE     4 CB1 14 GLU    26  GLU    27                                  3ICB  73
+SITE     1 CB2 12 ASP    54  LYS    55  ASN    56  GLY    57            3ICB  74
+SITE     2 CB2 12 ASP    58  GLY    59  GLU    60  VAL    61            3ICB  75
+SITE     3 CB2 12 SER    62  PHE    63  GLU    64  GLU    65            3ICB  76
+CRYST1   56.200   42.600   29.200  90.00  90.00  90.00 P 21 21 2     4  3ICB  77
+ORIGX1      1.000000  0.000000  0.000000        0.00000                 3ICB  78
+ORIGX2      0.000000  1.000000  0.000000        0.00000                 3ICB  79
+ORIGX3      0.000000  0.000000  1.000000        0.00000                 3ICB  80
+SCALE1       .017794  0.000000  0.000000        0.00000                 3ICB  81
+SCALE2      0.000000   .023494  0.000000        0.00000                 3ICB  82
+SCALE3      0.000000  0.000000   .034247        0.00000                 3ICB  83
+ATOM      1  N   LYS     1       3.440  10.397  -1.989  1.00 18.23      3ICB  84
+ATOM      2  CA  LYS     1       3.897  11.093  -3.203  1.00 17.09      3ICB  85
+ATOM      3  C   LYS     1       4.920  10.272  -3.962  1.00 16.14      3ICB  86
+ATOM      4  O   LYS     1       5.472   9.269  -3.488  1.00 15.98      3ICB  87
+ATOM      5  CB  LYS     1       4.545  12.393  -2.714  1.00 18.69      3ICB  88
+ATOM      6  CG  LYS     1       3.718  12.949  -1.529  1.00 19.75      3ICB  89
+ATOM      7  CD  LYS     1       4.482  14.041   -.807  1.00 21.02      3ICB  90
+ATOM      8  CE  LYS     1       4.965  13.581    .550  1.00 22.73      3ICB  91
+ATOM      9  NZ  LYS     1       3.774  13.315   1.420  1.00 24.88      3ICB  92
+ATOM     10  N   SER     2       5.184  10.759  -5.169  1.00 14.91      3ICB  93
+ATOM     11  CA  SER     2       6.164  10.106  -6.045  1.00 12.43      3ICB  94
+ATOM     12  C   SER     2       7.559  10.305  -5.463  1.00 10.83      3ICB  95
+ATOM     13  O   SER     2       7.776  11.189  -4.644  1.00 10.93      3ICB  96
+ATOM     14  CB  SER     2       6.127  10.586  -7.471  1.00 13.07      3ICB  97
+ATOM     15  OG  SER     2       6.646  11.890  -7.621  1.00 13.28      3ICB  98
+ATOM     16  N   PRO     3       8.436   9.466  -5.979  1.00 10.44      3ICB  99
+ATOM     17  CA  PRO     3       9.823   9.462  -5.576  1.00 10.01      3ICB 100
+ATOM     18  C   PRO     3      10.500  10.788  -5.888  1.00 10.08      3ICB 101
+ATOM     19  O   PRO     3      11.335  11.240  -5.085  1.00 10.42      3ICB 102
+ATOM     20  CB  PRO     3      10.412   8.256  -6.289  1.00 10.13      3ICB 103
+ATOM     21  CG  PRO     3       9.247   7.405  -6.659  1.00  9.99      3ICB 104
+ATOM     22  CD  PRO     3       8.149   8.404  -6.983  1.00 10.13      3ICB 105
+ATOM     23  N   GLU     4      10.120  11.390  -6.990  1.00 10.30      3ICB 106
+ATOM     24  CA  GLU     4      10.667  12.653  -7.479  1.00 10.93      3ICB 107
+ATOM     25  C   GLU     4      10.259  13.832  -6.599  1.00 10.08      3ICB 108
+ATOM     26  O   GLU     4      11.041  14.803  -6.404  1.00  9.14      3ICB 109
+ATOM     27  CB  GLU     4      10.378  12.900  -8.962  1.00 11.24      3ICB 110
+ATOM     28  CG  GLU     4      10.885  14.250  -9.510  1.00 12.85      3ICB 111
+ATOM     29  CD  GLU     4      12.384  14.414  -9.487  1.00 15.35      3ICB 112
+ATOM     30  OE1 GLU     4      12.973  15.480  -9.503  1.00 15.72      3ICB 113
+ATOM     31  OE2 GLU     4      12.996  13.304  -9.468  1.00 16.12      3ICB 114
+ATOM     32  N   GLU     5       9.085  13.705  -6.027  1.00  9.47      3ICB 115
+ATOM     33  CA  GLU     5       8.452  14.646  -5.096  1.00  9.31      3ICB 116
+ATOM     34  C   GLU     5       9.149  14.546  -3.729  1.00  8.29      3ICB 117
+ATOM     35  O   GLU     5       9.370  15.582  -3.128  1.00  7.63      3ICB 118
+ATOM     36  CB  GLU     5       6.993  14.350  -4.833  1.00 10.87      3ICB 119
+ATOM     37  CG  GLU     5       6.230  15.160  -3.801  1.00 14.28      3ICB 120
+ATOM     38  CD  GLU     5       4.724  15.139  -3.993  1.00 16.27      3ICB 121
+ATOM     39  OE1 GLU     5       4.144  14.437  -4.820  1.00 18.50      3ICB 122
+ATOM     40  OE2 GLU     5       4.146  15.926  -3.227  1.00 16.78      3ICB 123
+ATOM     41  N   LEU     6       9.473  13.317  -3.298  1.00  7.37      3ICB 124
+ATOM     42  CA  LEU     6      10.194  13.162  -2.032  1.00  6.64      3ICB 125
+ATOM     43  C   LEU     6      11.604  13.764  -2.161  1.00  5.41      3ICB 126
+ATOM     44  O   LEU     6      12.097  14.327  -1.177  1.00  5.26      3ICB 127
+ATOM     45  CB  LEU     6      10.233  11.706  -1.593  1.00  8.26      3ICB 128
+ATOM     46  CG  LEU     6       8.839  11.159  -1.220  1.00 11.69      3ICB 129
+ATOM     47  CD1 LEU     6       8.930   9.768   -.615  1.00 11.31      3ICB 130
+ATOM     48  CD2 LEU     6       8.239  12.196   -.260  1.00 12.48      3ICB 131
+ATOM     49  N   LYS     7      12.224  13.575  -3.291  1.00  4.35      3ICB 132
+ATOM     50  CA  LYS     7      13.572  14.104  -3.498  1.00  5.66      3ICB 133
+ATOM     51  C   LYS     7      13.515  15.621  -3.411  1.00  4.64      3ICB 134
+ATOM     52  O   LYS     7      14.439  16.301  -2.930  1.00  5.13      3ICB 135
+ATOM     53  CB  LYS     7      14.219  13.606  -4.771  1.00  7.91      3ICB 136
+ATOM     54  CG  LYS     7      15.674  14.013  -4.919  1.00 11.22      3ICB 137
+ATOM     55  CD  LYS     7      16.516  13.117  -5.813  1.00 13.26      3ICB 138
+ATOM     56  CE  LYS     7      17.958  12.966  -5.286  1.00 15.80      3ICB 139
+ATOM     57  NZ  LYS     7      18.520  11.643  -5.784  1.00 18.48      3ICB 140
+ATOM     58  N   GLY     8      12.396  16.134  -3.813  1.00  5.16      3ICB 141
+ATOM     59  CA  GLY     8      12.092  17.578  -3.812  1.00  5.29      3ICB 142
+ATOM     60  C   GLY     8      12.081  18.149  -2.387  1.00  5.32      3ICB 143
+ATOM     61  O   GLY     8      12.677  19.220  -2.106  1.00  5.64      3ICB 144
+ATOM     62  N   ILE     9      11.365  17.474  -1.536  1.00  5.37      3ICB 145
+ATOM     63  CA  ILE     9      11.168  17.753   -.086  1.00  4.93      3ICB 146
+ATOM     64  C   ILE     9      12.530  17.546    .563  1.00  4.55      3ICB 147
+ATOM     65  O   ILE     9      13.098  18.466   1.160  1.00  5.29      3ICB 148
+ATOM     66  CB  ILE     9      10.043  16.794    .425  1.00  5.10      3ICB 149
+ATOM     67  CG1 ILE     9       8.683  17.233   -.197  1.00  3.71      3ICB 150
+ATOM     68  CG2 ILE     9       9.859  16.517   1.922  1.00  2.58      3ICB 151
+ATOM     69  CD1 ILE     9       7.557  16.223    .303  1.00  5.25      3ICB 152
+ATOM     70  N   PHE    10      13.081  16.336    .400  1.00  4.51      3ICB 153
+ATOM     71  CA  PHE    10      14.426  16.064    .939  1.00  4.46      3ICB 154
+ATOM     72  C   PHE    10      15.316  17.291    .691  1.00  6.70      3ICB 155
+ATOM     73  O   PHE    10      15.913  17.825   1.637  1.00  8.18      3ICB 156
+ATOM     74  CB  PHE    10      15.072  14.789    .406  1.00  2.01      3ICB 157
+ATOM     75  CG  PHE    10      16.496  14.590    .809  1.00  2.00      3ICB 158
+ATOM     76  CD1 PHE    10      16.822  13.894   1.982  1.00  2.00      3ICB 159
+ATOM     77  CD2 PHE    10      17.530  15.118    .043  1.00  2.00      3ICB 160
+ATOM     78  CE1 PHE    10      18.159  13.713   2.362  1.00  2.00      3ICB 161
+ATOM     79  CE2 PHE    10      18.877  14.978    .411  1.00  2.00      3ICB 162
+ATOM     80  CZ  PHE    10      19.187  14.235   1.575  1.00  2.00      3ICB 163
+ATOM     81  N   GLU    11      15.421  17.704   -.548  1.00  7.84      3ICB 164
+ATOM     82  CA  GLU    11      16.202  18.783  -1.104  1.00  8.54      3ICB 165
+ATOM     83  C   GLU    11      16.078  20.179   -.543  1.00  6.72      3ICB 166
+ATOM     84  O   GLU    11      17.121  20.847   -.324  1.00  5.06      3ICB 167
+ATOM     85  CB  GLU    11      15.981  18.836  -2.627  1.00 15.11      3ICB 168
+ATOM     86  CG  GLU    11      17.088  18.245  -3.498  1.00 18.56      3ICB 169
+ATOM     87  CD  GLU    11      16.839  18.427  -4.971  1.00 22.46      3ICB 170
+ATOM     88  OE1 GLU    11      17.078  17.519  -5.750  1.00 23.62      3ICB 171
+ATOM     89  OE2 GLU    11      16.370  19.559  -5.287  1.00 25.38      3ICB 172
+ATOM     90  N   LYS    12      14.861  20.621   -.273  1.00  6.69      3ICB 173
+ATOM     91  CA  LYS    12      14.643  21.946    .341  1.00  6.59      3ICB 174
+ATOM     92  C   LYS    12      15.383  22.028   1.673  1.00  4.92      3ICB 175
+ATOM     93  O   LYS    12      16.006  23.047   1.991  1.00  4.94      3ICB 176
+ATOM     94  CB  LYS    12      13.171  22.249    .629  1.00  8.47      3ICB 177
+ATOM     95  CG  LYS    12      12.382  22.575   -.625  1.00 11.29      3ICB 178
+ATOM     96  CD  LYS    12      10.983  23.025   -.407  1.00 13.52      3ICB 179
+ATOM     97  CE  LYS    12      10.173  22.249    .619  1.00 14.70      3ICB 180
+ATOM     98  NZ  LYS    12       9.470  23.288   1.470  1.00 16.73      3ICB 181
+ATOM     99  N   TYR    13      15.292  20.971   2.439  1.00  4.20      3ICB 182
+ATOM    100  CA  TYR    13      15.890  20.838   3.760  1.00  2.95      3ICB 183
+ATOM    101  C   TYR    13      17.367  20.589   3.769  1.00  2.43      3ICB 184
+ATOM    102  O   TYR    13      18.119  21.337   4.438  1.00  2.31      3ICB 185
+ATOM    103  CB  TYR    13      15.101  19.755   4.552  1.00  3.85      3ICB 186
+ATOM    104  CG  TYR    13      13.680  20.233   4.795  1.00  5.17      3ICB 187
+ATOM    105  CD1 TYR    13      13.378  21.044   5.880  1.00  6.31      3ICB 188
+ATOM    106  CD2 TYR    13      12.629  19.881   3.950  1.00  6.80      3ICB 189
+ATOM    107  CE1 TYR    13      12.079  21.485   6.131  1.00  6.97      3ICB 190
+ATOM    108  CE2 TYR    13      11.315  20.332   4.162  1.00  5.53      3ICB 191
+ATOM    109  CZ  TYR    13      11.063  21.132   5.252  1.00  5.87      3ICB 192
+ATOM    110  OH  TYR    13       9.801  21.573   5.483  1.00  8.00      3ICB 193
+ATOM    111  N   ALA    14      17.876  19.583   3.115  1.00  2.23      3ICB 194
+ATOM    112  CA  ALA    14      19.323  19.287   3.086  1.00  2.87      3ICB 195
+ATOM    113  C   ALA    14      20.263  20.477   2.848  1.00  3.54      3ICB 196
+ATOM    114  O   ALA    14      21.466  20.513   3.289  1.00  3.81      3ICB 197
+ATOM    115  CB  ALA    14      19.550  18.308   1.920  1.00  2.96      3ICB 198
+ATOM    116  N   ALA    15      19.761  21.432   2.101  1.00  2.00      3ICB 199
+ATOM    117  CA  ALA    15      20.399  22.654   1.705  1.00  2.00      3ICB 200
+ATOM    118  C   ALA    15      20.308  23.774   2.716  1.00  2.00      3ICB 201
+ATOM    119  O   ALA    15      20.938  24.806   2.381  1.00  2.92      3ICB 202
+ATOM    120  CB  ALA    15      19.762  23.179    .386  1.00  2.00      3ICB 203
+ATOM    121  N   LYS    16      19.575  23.714   3.810  1.00  2.00      3ICB 204
+ATOM    122  CA  LYS    16      19.518  24.891   4.710  1.00  2.54      3ICB 205
+ATOM    123  C   LYS    16      20.850  25.230   5.356  1.00  2.31      3ICB 206
+ATOM    124  O   LYS    16      21.095  26.403   5.708  1.00  2.00      3ICB 207
+ATOM    125  CB  LYS    16      18.408  24.783   5.749  1.00  3.87      3ICB 208
+ATOM    126  CG  LYS    16      17.125  24.195   5.190  1.00  5.37      3ICB 209
+ATOM    127  CD  LYS    16      15.912  24.237   6.087  1.00  7.24      3ICB 210
+ATOM    128  CE  LYS    16      14.670  24.790   5.417  1.00  8.39      3ICB 211
+ATOM    129  NZ  LYS    16      14.691  26.305   5.643  1.00 15.30      3ICB 212
+ATOM    130  N   GLU    17      21.712  24.225   5.481  1.00  2.43      3ICB 213
+ATOM    131  CA  GLU    17      23.041  24.322   6.095  1.00  2.59      3ICB 214
+ATOM    132  C   GLU    17      23.926  23.111   5.717  1.00  3.37      3ICB 215
+ATOM    133  O   GLU    17      23.431  22.091   5.231  1.00  3.77      3ICB 216
+ATOM    134  CB  GLU    17      22.948  24.263   7.628  1.00  3.30      3ICB 217
+ATOM    135  CG  GLU    17      22.497  22.988   8.309  1.00  5.65      3ICB 218
+ATOM    136  CD  GLU    17      22.483  22.840   9.784  1.00  9.30      3ICB 219
+ATOM    137  OE1 GLU    17      21.712  22.085  10.377  1.00  8.57      3ICB 220
+ATOM    138  OE2 GLU    17      23.348  23.512  10.428  1.00 10.96      3ICB 221
+ATOM    139  N   GLY    18      25.202  23.257   6.025  1.00  3.95      3ICB 222
+ATOM    140  CA  GLY    18      26.332  22.357   5.858  1.00  3.89      3ICB 223
+ATOM    141  C   GLY    18      26.411  21.850   4.405  1.00  3.14      3ICB 224
+ATOM    142  O   GLY    18      26.426  22.713   3.545  1.00  3.24      3ICB 225
+ATOM    143  N   ASP    19      26.406  20.558   4.254  1.00  3.15      3ICB 226
+ATOM    144  CA  ASP    19      26.399  19.902   2.919  1.00  4.37      3ICB 227
+ATOM    145  C   ASP    19      24.967  20.187   2.432  1.00  4.09      3ICB 228
+ATOM    146  O   ASP    19      24.060  19.850   3.236  1.00  3.43      3ICB 229
+ATOM    147  CB  ASP    19      26.771  18.427   3.145  1.00  5.51      3ICB 230
+ATOM    148  CG  ASP    19      26.972  17.650   1.861  1.00  7.61      3ICB 231
+ATOM    149  OD1 ASP    19      26.381  18.028    .833  1.00 10.63      3ICB 232
+ATOM    150  OD2 ASP    19      27.645  16.610   1.834  1.00  6.63      3ICB 233
+ATOM    151  N   PRO    20      24.807  20.851   1.298  1.00  3.88      3ICB 234
+ATOM    152  CA  PRO    20      23.496  21.205    .755  1.00  3.71      3ICB 235
+ATOM    153  C   PRO    20      22.752  20.036    .161  1.00  4.85      3ICB 236
+ATOM    154  O   PRO    20      21.648  20.248   -.356  1.00  4.26      3ICB 237
+ATOM    155  CB  PRO    20      23.805  22.224   -.355  1.00  3.04      3ICB 238
+ATOM    156  CG  PRO    20      25.116  21.746   -.881  1.00  3.75      3ICB 239
+ATOM    157  CD  PRO    20      25.880  21.287    .384  1.00  4.21      3ICB 240
+ATOM    158  N   ASN    21      23.395  18.883    .208  1.00  7.02      3ICB 241
+ATOM    159  CA  ASN    21      23.014  17.605   -.320  1.00  8.81      3ICB 242
+ATOM    160  C   ASN    21      22.575  16.532    .692  1.00  9.32      3ICB 243
+ATOM    161  O   ASN    21      22.029  15.530    .177  1.00 11.40      3ICB 244
+ATOM    162  CB  ASN    21      24.241  16.859   -.953  1.00 12.79      3ICB 245
+ATOM    163  CG  ASN    21      24.672  17.491  -2.249  1.00 14.34      3ICB 246
+ATOM    164  OD1 ASN    21      23.808  17.680  -3.114  1.00 13.57      3ICB 247
+ATOM    165  ND2 ASN    21      25.984  17.783  -2.271  1.00 17.61      3ICB 248
+ATOM    166  N   GLN    22      22.911  16.765   1.910  1.00  8.24      3ICB 249
+ATOM    167  CA  GLN    22      22.677  15.879   3.041  1.00  6.55      3ICB 250
+ATOM    168  C   GLN    22      22.034  16.581   4.228  1.00  5.51      3ICB 251
+ATOM    169  O   GLN    22      22.102  17.828   4.354  1.00  3.75      3ICB 252
+ATOM    170  CB  GLN    22      24.061  15.295   3.404  1.00  7.84      3ICB 253
+ATOM    171  CG  GLN    22      24.715  14.801   2.064  1.00  9.32      3ICB 254
+ATOM    172  CD  GLN    22      25.718  13.766   2.551  1.00 12.94      3ICB 255
+ATOM    173  OE1 GLN    22      25.388  12.598   2.645  1.00 14.08      3ICB 256
+ATOM    174  NE2 GLN    22      26.865  14.271   2.997  1.00 14.21      3ICB 257
+ATOM    175  N   LEU    23      21.381  15.729   5.032  1.00  3.17      3ICB 258
+ATOM    176  CA  LEU    23      20.689  16.172   6.215  1.00  3.17      3ICB 259
+ATOM    177  C   LEU    23      21.636  16.045   7.442  1.00  2.41      3ICB 260
+ATOM    178  O   LEU    23      22.319  15.061   7.596  1.00  2.00      3ICB 261
+ATOM    179  CB  LEU    23      19.399  15.384   6.542  1.00  2.00      3ICB 262
+ATOM    180  CG  LEU    23      18.319  15.359   5.498  1.00  2.30      3ICB 263
+ATOM    181  CD1 LEU    23      17.283  14.260   5.703  1.00  2.00      3ICB 264
+ATOM    182  CD2 LEU    23      17.604  16.733   5.483  1.00  2.00      3ICB 265
+ATOM    183  N   SER    24      21.542  17.069   8.215  1.00  2.93      3ICB 266
+ATOM    184  CA  SER    24      22.132  17.357   9.504  1.00  2.41      3ICB 267
+ATOM    185  C   SER    24      21.032  16.843  10.465  1.00  3.73      3ICB 268
+ATOM    186  O   SER    24      19.882  16.549  10.014  1.00  3.47      3ICB 269
+ATOM    187  CB  SER    24      22.348  18.862   9.591  1.00  2.00      3ICB 270
+ATOM    188  OG  SER    24      21.219  19.539  10.099  1.00  3.87      3ICB 271
+ATOM    189  N   LYS    25      21.338  16.616  11.710  1.00  4.16      3ICB 272
+ATOM    190  CA  LYS    25      20.256  16.182  12.648  1.00  5.60      3ICB 273
+ATOM    191  C   LYS    25      19.192  17.300  12.682  1.00  5.81      3ICB 274
+ATOM    192  O   LYS    25      18.000  16.979  12.763  1.00  7.79      3ICB 275
+ATOM    193  CB  LYS    25      20.815  16.036  14.022  1.00  6.81      3ICB 276
+ATOM    194  CG  LYS    25      20.227  15.122  15.082  1.00  9.93      3ICB 277
+ATOM    195  CD  LYS    25      21.049  15.453  16.351  1.00 12.84      3ICB 278
+ATOM    196  CE  LYS    25      21.442  14.220  17.137  1.00 15.00      3ICB 279
+ATOM    197  NZ  LYS    25      21.734  14.699  18.554  1.00 17.17      3ICB 280
+ATOM    198  N   GLU    26      19.517  18.570  12.621  1.00  5.01      3ICB 281
+ATOM    199  CA  GLU    26      18.629  19.706  12.688  1.00  4.91      3ICB 282
+ATOM    200  C   GLU    26      17.628  19.868  11.553  1.00  3.48      3ICB 283
+ATOM    201  O   GLU    26      16.458  20.276  11.721  1.00  2.00      3ICB 284
+ATOM    202  CB  GLU    26      19.459  20.993  12.610  1.00 12.35      3ICB 285
+ATOM    203  CG  GLU    26      20.110  21.455  13.909  1.00 20.20      3ICB 286
+ATOM    204  CD  GLU    26      19.054  22.094  14.786  1.00 26.40      3ICB 287
+ATOM    205  OE1 GLU    26      18.381  21.417  15.561  1.00 30.44      3ICB 288
+ATOM    206  OE2 GLU    26      18.984  23.329  14.572  1.00 29.97      3ICB 289
+ATOM    207  N   GLU    27      18.199  19.636  10.386  1.00  2.17      3ICB 290
+ATOM    208  CA  GLU    27      17.477  19.658   9.100  1.00  2.00      3ICB 291
+ATOM    209  C   GLU    27      16.540  18.475   9.026  1.00  2.00      3ICB 292
+ATOM    210  O   GLU    27      15.427  18.607   8.514  1.00  2.00      3ICB 293
+ATOM    211  CB  GLU    27      18.474  19.576   7.932  1.00  2.00      3ICB 294
+ATOM    212  CG  GLU    27      19.167  20.856   7.478  1.00  3.37      3ICB 295
+ATOM    213  CD  GLU    27      20.367  20.706   6.602  1.00  6.47      3ICB 296
+ATOM    214  OE1 GLU    27      20.994  21.604   6.058  1.00  7.18      3ICB 297
+ATOM    215  OE2 GLU    27      20.760  19.520   6.439  1.00  8.23      3ICB 298
+ATOM    216  N   LEU    28      16.923  17.303   9.524  1.00  2.00      3ICB 299
+ATOM    217  CA  LEU    28      16.055  16.134   9.541  1.00  2.00      3ICB 300
+ATOM    218  C   LEU    28      14.897  16.422  10.511  1.00  2.00      3ICB 301
+ATOM    219  O   LEU    28      13.715  16.089  10.294  1.00  2.00      3ICB 302
+ATOM    220  CB  LEU    28      16.822  14.846   9.898  1.00  2.00      3ICB 303
+ATOM    221  CG  LEU    28      15.897  13.608  10.016  1.00  2.00      3ICB 304
+ATOM    222  CD1 LEU    28      15.421  13.075   8.689  1.00  2.00      3ICB 305
+ATOM    223  CD2 LEU    28      16.607  12.509  10.791  1.00  2.43      3ICB 306
+ATOM    224  N   LYS    29      15.238  17.083  11.610  1.00  2.57      3ICB 307
+ATOM    225  CA  LYS    29      14.198  17.401  12.609  1.00  4.69      3ICB 308
+ATOM    226  C   LYS    29      13.143  18.325  12.011  1.00  4.28      3ICB 309
+ATOM    227  O   LYS    29      11.924  18.161  12.077  1.00  3.89      3ICB 310
+ATOM    228  CB  LYS    29      14.800  17.997  13.861  1.00  6.66      3ICB 311
+ATOM    229  CG  LYS    29      13.692  18.393  14.850  1.00  8.35      3ICB 312
+ATOM    230  CD  LYS    29      14.315  19.255  15.932  1.00 12.21      3ICB 313
+ATOM    231  CE  LYS    29      13.322  20.188  16.564  1.00 13.87      3ICB 314
+ATOM    232  NZ  LYS    29      12.304  19.410  17.351  1.00 15.53      3ICB 315
+ATOM    233  N   LEU    30      13.678  19.315  11.368  1.00  4.88      3ICB 316
+ATOM    234  CA  LEU    30      12.934  20.398  10.657  1.00  4.42      3ICB 317
+ATOM    235  C   LEU    30      12.053  19.764   9.599  1.00  4.58      3ICB 318
+ATOM    236  O   LEU    30      10.824  20.018   9.432  1.00  4.29      3ICB 319
+ATOM    237  CB  LEU    30      14.083  21.327  10.284  1.00  5.42      3ICB 320
+ATOM    238  CG  LEU    30      13.958  22.735   9.821  1.00  7.82      3ICB 321
+ATOM    239  CD1 LEU    30      12.814  23.467  10.516  1.00  9.58      3ICB 322
+ATOM    240  CD2 LEU    30      15.296  23.475  10.057  1.00  7.41      3ICB 323
+ATOM    241  N   LEU    31      12.637  18.839   8.820  1.00  3.19      3ICB 324
+ATOM    242  CA  LEU    31      11.863  18.199   7.775  1.00  3.46      3ICB 325
+ATOM    243  C   LEU    31      10.680  17.449   8.329  1.00  3.98      3ICB 326
+ATOM    244  O   LEU    31       9.583  17.601   7.851  1.00  4.37      3ICB 327
+ATOM    245  CB  LEU    31      12.796  17.269   6.985  1.00  4.63      3ICB 328
+ATOM    246  CG  LEU    31      12.176  16.619   5.751  1.00  3.68      3ICB 329
+ATOM    247  CD1 LEU    31      13.326  16.168   4.854  1.00  4.23      3ICB 330
+ATOM    248  CD2 LEU    31      11.367  15.412   6.221  1.00  4.47      3ICB 331
+ATOM    249  N   LEU    32      11.022  16.621   9.290  1.00  5.88      3ICB 332
+ATOM    250  CA  LEU    32      10.123  15.705   9.973  1.00  6.77      3ICB 333
+ATOM    251  C   LEU    32       8.982  16.410  10.652  1.00  8.03      3ICB 334
+ATOM    252  O   LEU    32       7.791  16.019  10.491  1.00  8.50      3ICB 335
+ATOM    253  CB  LEU    32      10.950  14.767  10.861  1.00  4.63      3ICB 336
+ATOM    254  CG  LEU    32      11.743  13.610  10.319  1.00  3.71      3ICB 337
+ATOM    255  CD1 LEU    32      12.209  12.677  11.449  1.00  2.72      3ICB 338
+ATOM    256  CD2 LEU    32      11.003  12.751   9.316  1.00  3.20      3ICB 339
+ATOM    257  N   GLN    33       9.289  17.438  11.437  1.00  9.72      3ICB 340
+ATOM    258  CA  GLN    33       8.124  18.074  12.087  1.00 12.40      3ICB 341
+ATOM    259  C   GLN    33       7.273  18.810  11.093  1.00 13.40      3ICB 342
+ATOM    260  O   GLN    33       6.026  18.613  11.226  1.00 15.65      3ICB 343
+ATOM    261  CB  GLN    33       8.407  18.825  13.335  1.00 16.00      3ICB 344
+ATOM    262  CG  GLN    33       9.723  19.553  13.362  1.00 18.81      3ICB 345
+ATOM    263  CD  GLN    33      10.001  20.158  14.729  1.00 19.16      3ICB 346
+ATOM    264  OE1 GLN    33      10.004  19.464  15.735  1.00 19.96      3ICB 347
+ATOM    265  NE2 GLN    33      10.247  21.456  14.726  1.00 20.33      3ICB 348
+ATOM    266  N   THR    34       7.815  19.548  10.128  1.00 13.61      3ICB 349
+ATOM    267  CA  THR    34       6.931  20.285   9.172  1.00 12.11      3ICB 350
+ATOM    268  C   THR    34       6.146  19.393   8.220  1.00 11.71      3ICB 351
+ATOM    269  O   THR    34       4.932  19.549   8.008  1.00 11.69      3ICB 352
+ATOM    270  CB  THR    34       7.691  21.422   8.395  1.00 10.24      3ICB 353
+ATOM    271  OG1 THR    34       8.683  22.008   9.287  1.00  9.45      3ICB 354
+ATOM    272  CG2 THR    34       6.813  22.508   7.770  1.00  9.04      3ICB 355
+ATOM    273  N   GLU    35       6.831  18.454   7.593  1.00 11.87      3ICB 356
+ATOM    274  CA  GLU    35       6.303  17.520   6.604  1.00 10.61      3ICB 357
+ATOM    275  C   GLU    35       5.771  16.240   7.154  1.00 10.68      3ICB 358
+ATOM    276  O   GLU    35       4.600  15.943   6.795  1.00 12.97      3ICB 359
+ATOM    277  CB  GLU    35       7.371  17.262   5.534  1.00 10.20      3ICB 360
+ATOM    278  CG  GLU    35       8.111  18.532   5.023  1.00  7.91      3ICB 361
+ATOM    279  CD  GLU    35       7.223  19.439   4.250  1.00  8.79      3ICB 362
+ATOM    280  OE1 GLU    35       7.180  20.661   4.252  1.00 11.58      3ICB 363
+ATOM    281  OE2 GLU    35       6.369  18.772   3.612  1.00 10.07      3ICB 364
+ATOM    282  N   PHE    36       6.437  15.511   7.999  1.00 11.04      3ICB 365
+ATOM    283  CA  PHE    36       5.959  14.248   8.557  1.00 13.16      3ICB 366
+ATOM    284  C   PHE    36       5.964  14.110  10.075  1.00 14.92      3ICB 367
+ATOM    285  O   PHE    36       6.695  13.230  10.616  1.00 14.36      3ICB 368
+ATOM    286  CB  PHE    36       6.768  13.069   7.940  1.00 12.27      3ICB 369
+ATOM    287  CG  PHE    36       6.988  13.189   6.467  1.00 12.49      3ICB 370
+ATOM    288  CD1 PHE    36       8.152  13.792   5.979  1.00 12.18      3ICB 371
+ATOM    289  CD2 PHE    36       6.020  12.733   5.558  1.00 12.63      3ICB 372
+ATOM    290  CE1 PHE    36       8.399  13.953   4.621  1.00 11.82      3ICB 373
+ATOM    291  CE2 PHE    36       6.245  12.900   4.185  1.00 13.06      3ICB 374
+ATOM    292  CZ  PHE    36       7.444  13.491   3.724  1.00 11.79      3ICB 375
+ATOM    293  N   PRO    37       5.105  14.862  10.765  1.00 15.69      3ICB 376
+ATOM    294  CA  PRO    37       4.982  14.848  12.206  1.00 15.92      3ICB 377
+ATOM    295  C   PRO    37       4.878  13.555  12.954  1.00 16.59      3ICB 378
+ATOM    296  O   PRO    37       5.430  13.540  14.102  1.00 16.98      3ICB 379
+ATOM    297  CB  PRO    37       3.849  15.830  12.528  1.00 15.27      3ICB 380
+ATOM    298  CG  PRO    37       3.841  16.771  11.337  1.00 16.27      3ICB 381
+ATOM    299  CD  PRO    37       4.215  15.888  10.149  1.00 15.92      3ICB 382
+ATOM    300  N   SER    38       4.279  12.471  12.525  1.00 17.65      3ICB 383
+ATOM    301  CA  SER    38       4.248  11.257  13.365  1.00 20.20      3ICB 384
+ATOM    302  C   SER    38       5.467  10.366  13.167  1.00 21.78      3ICB 385
+ATOM    303  O   SER    38       5.478   9.253  13.772  1.00 23.75      3ICB 386
+ATOM    304  CB  SER    38       3.105  10.328  12.939  1.00 22.30      3ICB 387
+ATOM    305  OG  SER    38       3.511   9.913  11.615  1.00 25.09      3ICB 388
+ATOM    306  N   LEU    39       6.378  10.736  12.279  1.00 21.65      3ICB 389
+ATOM    307  CA  LEU    39       7.518   9.817  12.086  1.00 21.23      3ICB 390
+ATOM    308  C   LEU    39       8.371   9.955  13.348  1.00 21.19      3ICB 391
+ATOM    309  O   LEU    39       8.888   8.961  13.845  1.00 20.35      3ICB 392
+ATOM    310  CB  LEU    39       8.223  10.120  10.789  1.00 20.67      3ICB 393
+ATOM    311  CG  LEU    39       7.906   9.325   9.547  1.00 20.17      3ICB 394
+ATOM    312  CD1 LEU    39       9.160   9.206   8.673  1.00 20.20      3ICB 395
+ATOM    313  CD2 LEU    39       7.479   7.906   9.932  1.00 18.77      3ICB 396
+ATOM    314  N   LEU    40       8.420  11.228  13.723  1.00 22.78      3ICB 397
+ATOM    315  CA  LEU    40       9.229  11.664  14.870  1.00 24.29      3ICB 398
+ATOM    316  C   LEU    40       8.501  11.576  16.189  1.00 24.17      3ICB 399
+ATOM    317  O   LEU    40       9.189  11.830  17.213  1.00 25.94      3ICB 400
+ATOM    318  CB  LEU    40       9.958  12.973  14.579  1.00 25.30      3ICB 401
+ATOM    319  CG  LEU    40       9.268  14.299  14.795  1.00 26.12      3ICB 402
+ATOM    320  CD1 LEU    40       9.522  14.843  16.196  1.00 27.47      3ICB 403
+ATOM    321  CD2 LEU    40       9.769  15.356  13.806  1.00 26.21      3ICB 404
+ATOM    322  N   LYS    41       7.241  11.196  16.225  1.00 23.32      3ICB 405
+ATOM    323  CA  LYS    41       6.540  11.040  17.497  1.00 22.24      3ICB 406
+ATOM    324  C   LYS    41       6.088   9.594  17.650  1.00 21.55      3ICB 407
+ATOM    325  O   LYS    41       4.911   9.337  17.963  1.00 22.38      3ICB 408
+ATOM    326  CB  LYS    41       5.372  11.975  17.718  1.00 26.17      3ICB 409
+ATOM    327  CG  LYS    41       5.814  13.416  17.979  1.00 29.14      3ICB 410
+ATOM    328  CD  LYS    41       5.300  13.950  19.321  1.00 31.54      3ICB 411
+ATOM    329  CE  LYS    41       6.202  15.103  19.764  1.00 33.85      3ICB 412
+ATOM    330  NZ  LYS    41       5.378  16.273  20.176  1.00 35.59      3ICB 413
+ATOM    331  N   GLY    42       7.021   8.693  17.440  1.00 19.59      3ICB 414
+ATOM    332  CA  GLY    42       6.842   7.225  17.513  1.00 17.18      3ICB 415
+ATOM    333  C   GLY    42       7.733   6.709  18.643  1.00 15.33      3ICB 416
+ATOM    334  O   GLY    42       7.961   7.570  19.525  1.00 17.32      3ICB 417
+ATOM    335  N   PRO    43       8.188   5.466  18.568  1.00 12.32      3ICB 418
+ATOM    336  CA  PRO    43       9.033   4.837  19.567  1.00 10.42      3ICB 419
+ATOM    337  C   PRO    43      10.461   5.312  19.603  1.00  9.91      3ICB 420
+ATOM    338  O   PRO    43      11.132   5.115  20.643  1.00  9.15      3ICB 421
+ATOM    339  CB  PRO    43       9.048   3.343  19.256  1.00  9.66      3ICB 422
+ATOM    340  CG  PRO    43       8.735   3.299  17.797  1.00 10.34      3ICB 423
+ATOM    341  CD  PRO    43       7.868   4.511  17.501  1.00 11.47      3ICB 424
+ATOM    342  N   SER    44      10.912   5.847  18.493  1.00 10.09      3ICB 425
+ATOM    343  CA  SER    44      12.317   6.343  18.438  1.00 11.06      3ICB 426
+ATOM    344  C   SER    44      12.373   7.831  18.754  1.00 11.33      3ICB 427
+ATOM    345  O   SER    44      11.366   8.557  18.618  1.00 13.51      3ICB 428
+ATOM    346  CB  SER    44      12.882   6.018  17.082  1.00 11.71      3ICB 429
+ATOM    347  OG  SER    44      13.254   4.665  16.961  1.00 16.91      3ICB 430
+ATOM    348  N   THR    45      13.491   8.307  19.242  1.00 11.14      3ICB 431
+ATOM    349  CA  THR    45      13.665   9.749  19.492  1.00 11.15      3ICB 432
+ATOM    350  C   THR    45      14.333  10.235  18.198  1.00 11.76      3ICB 433
+ATOM    351  O   THR    45      14.861   9.390  17.440  1.00 11.69      3ICB 434
+ATOM    352  CB  THR    45      14.629  10.034  20.696  1.00 11.07      3ICB 435
+ATOM    353  OG1 THR    45      15.792   9.172  20.400  1.00 11.74      3ICB 436
+ATOM    354  CG2 THR    45      14.002   9.784  22.055  1.00  9.93      3ICB 437
+ATOM    355  N   LEU    46      14.354  11.524  17.969  1.00 12.04      3ICB 438
+ATOM    356  CA  LEU    46      14.981  12.040  16.745  1.00 11.42      3ICB 439
+ATOM    357  C   LEU    46      16.437  11.587  16.685  1.00 11.24      3ICB 440
+ATOM    358  O   LEU    46      16.899  11.188  15.602  1.00 11.89      3ICB 441
+ATOM    359  CB  LEU    46      14.867  13.565  16.726  1.00 12.01      3ICB 442
+ATOM    360  CG  LEU    46      15.659  14.195  15.586  1.00 11.83      3ICB 443
+ATOM    361  CD1 LEU    46      14.730  14.442  14.426  1.00 12.96      3ICB 444
+ATOM    362  CD2 LEU    46      16.212  15.505  16.134  1.00 14.66      3ICB 445
+ATOM    363  N   ASP    47      17.066  11.650  17.823  1.00 11.03      3ICB 446
+ATOM    364  CA  ASP    47      18.457  11.262  17.981  1.00 12.93      3ICB 447
+ATOM    365  C   ASP    47      18.644   9.813  17.497  1.00 13.16      3ICB 448
+ATOM    366  O   ASP    47      19.605   9.558  16.772  1.00 12.57      3ICB 449
+ATOM    367  CB  ASP    47      18.940  11.387  19.410  1.00 16.96      3ICB 450
+ATOM    368  CG  ASP    47      19.338  12.721  19.961  1.00 19.41      3ICB 451
+ATOM    369  OD1 ASP    47      20.328  12.740  20.746  1.00 22.96      3ICB 452
+ATOM    370  OD2 ASP    47      18.706  13.776  19.726  1.00 19.69      3ICB 453
+ATOM    371  N   GLU    48      17.733   8.970  17.972  1.00 13.49      3ICB 454
+ATOM    372  CA  GLU    48      17.771   7.531  17.671  1.00 13.17      3ICB 455
+ATOM    373  C   GLU    48      17.411   7.233  16.233  1.00 12.36      3ICB 456
+ATOM    374  O   GLU    48      17.941   6.278  15.624  1.00 11.40      3ICB 457
+ATOM    375  CB  GLU    48      17.132   6.673  18.691  1.00 16.36      3ICB 458
+ATOM    376  CG  GLU    48      15.741   6.511  19.189  1.00 17.18      3ICB 459
+ATOM    377  CD  GLU    48      15.542   5.892  20.543  1.00 17.15      3ICB 460
+ATOM    378  OE1 GLU    48      16.135   4.955  21.027  1.00 16.00      3ICB 461
+ATOM    379  OE2 GLU    48      14.623   6.487  21.168  1.00 20.61      3ICB 462
+ATOM    380  N   LEU    49      16.588   8.085  15.643  1.00 11.26      3ICB 463
+ATOM    381  CA  LEU    49      16.221   7.943  14.209  1.00 10.58      3ICB 464
+ATOM    382  C   LEU    49      17.476   8.324  13.411  1.00 10.14      3ICB 465
+ATOM    383  O   LEU    49      17.866   7.682  12.462  1.00 10.65      3ICB 466
+ATOM    384  CB  LEU    49      15.051   8.850  14.005  1.00 11.85      3ICB 467
+ATOM    385  CG  LEU    49      13.941   8.535  13.050  1.00 12.09      3ICB 468
+ATOM    386  CD1 LEU    49      13.809   7.044  12.808  1.00 13.62      3ICB 469
+ATOM    387  CD2 LEU    49      12.665   9.064  13.736  1.00 12.35      3ICB 470
+ATOM    388  N   PHE    50      18.131   9.384  13.833  1.00 10.52      3ICB 471
+ATOM    389  CA  PHE    50      19.374   9.863  13.264  1.00 10.82      3ICB 472
+ATOM    390  C   PHE    50      20.440   8.776  13.221  1.00 11.63      3ICB 473
+ATOM    391  O   PHE    50      21.137   8.590  12.210  1.00 12.18      3ICB 474
+ATOM    392  CB  PHE    50      19.951  11.150  13.911  1.00  7.78      3ICB 475
+ATOM    393  CG  PHE    50      20.900  11.783  12.892  1.00  7.83      3ICB 476
+ATOM    394  CD1 PHE    50      22.282  11.762  13.083  1.00  6.39      3ICB 477
+ATOM    395  CD2 PHE    50      20.392  12.340  11.713  1.00  5.89      3ICB 478
+ATOM    396  CE1 PHE    50      23.130  12.324  12.131  1.00  4.62      3ICB 479
+ATOM    397  CE2 PHE    50      21.232  12.908  10.744  1.00  4.94      3ICB 480
+ATOM    398  CZ  PHE    50      22.615  12.903  10.972  1.00  4.60      3ICB 481
+ATOM    399  N   GLU    51      20.650   8.048  14.295  1.00 13.63      3ICB 482
+ATOM    400  CA  GLU    51      21.670   6.996  14.325  1.00 15.13      3ICB 483
+ATOM    401  C   GLU    51      21.371   5.897  13.312  1.00 14.28      3ICB 484
+ATOM    402  O   GLU    51      22.236   5.346  12.638  1.00 15.15      3ICB 485
+ATOM    403  CB  GLU    51      21.730   6.294  15.681  1.00 19.77      3ICB 486
+ATOM    404  CG  GLU    51      22.420   7.051  16.806  1.00 27.47      3ICB 487
+ATOM    405  CD  GLU    51      23.905   7.249  16.822  1.00 30.18      3ICB 488
+ATOM    406  OE1 GLU    51      24.459   8.357  16.750  1.00 32.08      3ICB 489
+ATOM    407  OE2 GLU    51      24.546   6.171  16.982  1.00 30.96      3ICB 490
+ATOM    408  N   GLU    52      20.111   5.520  13.293  1.00 13.49      3ICB 491
+ATOM    409  CA  GLU    52      19.608   4.454  12.431  1.00 11.15      3ICB 492
+ATOM    410  C   GLU    52      19.874   4.857  10.992  1.00  9.72      3ICB 493
+ATOM    411  O   GLU    52      20.418   4.106  10.191  1.00  8.88      3ICB 494
+ATOM    412  CB  GLU    52      18.096   4.271  12.629  1.00 13.68      3ICB 495
+ATOM    413  CG  GLU    52      17.495   3.018  12.087  1.00 16.46      3ICB 496
+ATOM    414  CD  GLU    52      16.057   2.694  12.067  1.00 17.16      3ICB 497
+ATOM    415  OE1 GLU    52      15.291   2.911  12.982  1.00 19.25      3ICB 498
+ATOM    416  OE2 GLU    52      15.722   2.119  10.989  1.00 18.18      3ICB 499
+ATOM    417  N   LEU    53      19.474   6.094  10.706  1.00  8.56      3ICB 500
+ATOM    418  CA  LEU    53      19.653   6.602   9.347  1.00  7.92      3ICB 501
+ATOM    419  C   LEU    53      21.121   6.836   9.027  1.00  6.47      3ICB 502
+ATOM    420  O   LEU    53      21.529   6.385   7.930  1.00  7.65      3ICB 503
+ATOM    421  CB  LEU    53      18.667   7.661   9.018  1.00  8.78      3ICB 504
+ATOM    422  CG  LEU    53      17.203   7.697   9.304  1.00  8.99      3ICB 505
+ATOM    423  CD1 LEU    53      16.621   9.032   8.806  1.00  7.71      3ICB 506
+ATOM    424  CD2 LEU    53      16.474   6.535   8.646  1.00  8.48      3ICB 507
+ATOM    425  N   ASP    54      21.947   7.458   9.809  1.00  5.09      3ICB 508
+ATOM    426  CA  ASP    54      23.359   7.633   9.427  1.00  5.73      3ICB 509
+ATOM    427  C   ASP    54      24.111   6.299   9.397  1.00  7.89      3ICB 510
+ATOM    428  O   ASP    54      24.718   5.880  10.399  1.00  7.97      3ICB 511
+ATOM    429  CB  ASP    54      23.990   8.723  10.292  1.00  2.00      3ICB 512
+ATOM    430  CG  ASP    54      25.366   9.116   9.801  1.00  2.00      3ICB 513
+ATOM    431  OD1 ASP    54      25.663   8.803   8.641  1.00  2.00      3ICB 514
+ATOM    432  OD2 ASP    54      26.111   9.713  10.626  1.00  2.32      3ICB 515
+ATOM    433  N   LYS    55      24.137   5.623   8.232  1.00  9.98      3ICB 516
+ATOM    434  CA  LYS    55      24.842   4.334   8.073  1.00 10.82      3ICB 517
+ATOM    435  C   LYS    55      26.342   4.570   8.203  1.00 10.92      3ICB 518
+ATOM    436  O   LYS    55      26.962   3.991   9.149  1.00 12.36      3ICB 519
+ATOM    437  CB  LYS    55      24.518   3.493   6.877  1.00 11.82      3ICB 520
+ATOM    438  CG  LYS    55      23.134   2.873   6.725  1.00 12.86      3ICB 521
+ATOM    439  CD  LYS    55      22.164   3.828   6.030  1.00 16.04      3ICB 522
+ATOM    440  CE  LYS    55      20.691   3.543   6.214  1.00 15.30      3ICB 523
+ATOM    441  NZ  LYS    55      19.839   4.765   5.985  1.00 11.15      3ICB 524
+ATOM    442  N   ASN    56      26.921   5.438   7.386  1.00  9.95      3ICB 525
+ATOM    443  CA  ASN    56      28.377   5.617   7.587  1.00 10.52      3ICB 526
+ATOM    444  C   ASN    56      28.712   6.247   8.916  1.00 11.54      3ICB 527
+ATOM    445  O   ASN    56      29.549   5.680   9.630  1.00 13.61      3ICB 528
+ATOM    446  CB  ASN    56      29.144   6.132   6.449  1.00  8.92      3ICB 529
+ATOM    447  CG  ASN    56      28.623   7.187   5.552  1.00  8.59      3ICB 530
+ATOM    448  OD1 ASN    56      27.751   7.990   5.907  1.00  9.29      3ICB 531
+ATOM    449  ND2 ASN    56      29.220   7.194   4.358  1.00  8.87      3ICB 532
+ATOM    450  N   GLY    57      28.148   7.349   9.319  1.00 12.84      3ICB 533
+ATOM    451  CA  GLY    57      28.525   7.930  10.635  1.00 12.28      3ICB 534
+ATOM    452  C   GLY    57      29.343   9.209  10.376  1.00 12.20      3ICB 535
+ATOM    453  O   GLY    57      30.122   9.634  11.247  1.00 12.15      3ICB 536
+ATOM    454  N   ASP    58      29.062   9.741   9.186  1.00 10.47      3ICB 537
+ATOM    455  CA  ASP    58      29.666  10.968   8.701  1.00  8.80      3ICB 538
+ATOM    456  C   ASP    58      28.877  12.199   9.164  1.00  8.52      3ICB 539
+ATOM    457  O   ASP    58      29.204  13.328   8.729  1.00  9.53      3ICB 540
+ATOM    458  CB  ASP    58      29.832  10.874   7.210  1.00  7.68      3ICB 541
+ATOM    459  CG  ASP    58      28.572  10.741   6.426  1.00  9.74      3ICB 542
+ATOM    460  OD1 ASP    58      27.465  10.542   6.962  1.00 10.79      3ICB 543
+ATOM    461  OD2 ASP    58      28.723  10.848   5.171  1.00 10.62      3ICB 544
+ATOM    462  N   GLY    59      27.859  12.008   9.989  1.00  7.13      3ICB 545
+ATOM    463  CA  GLY    59      27.023  13.056  10.538  1.00  4.29      3ICB 546
+ATOM    464  C   GLY    59      25.961  13.609   9.613  1.00  3.45      3ICB 547
+ATOM    465  O   GLY    59      25.251  14.543   9.959  1.00  2.08      3ICB 548
+ATOM    466  N   GLU    60      25.830  13.007   8.445  1.00  4.32      3ICB 549
+ATOM    467  CA  GLU    60      24.849  13.403   7.439  1.00  3.94      3ICB 550
+ATOM    468  C   GLU    60      24.068  12.193   6.965  1.00  3.66      3ICB 551
+ATOM    469  O   GLU    60      24.515  11.051   7.032  1.00  4.00      3ICB 552
+ATOM    470  CB  GLU    60      25.571  14.011   6.251  1.00  5.73      3ICB 553
+ATOM    471  CG  GLU    60      26.798  14.825   6.761  1.00  6.98      3ICB 554
+ATOM    472  CD  GLU    60      26.548  16.290   6.657  1.00  7.20      3ICB 555
+ATOM    473  OE1 GLU    60      26.087  17.049   7.424  1.00  5.68      3ICB 556
+ATOM    474  OE2 GLU    60      26.870  16.648   5.492  1.00 13.20      3ICB 557
+ATOM    475  N   VAL    61      22.890  12.495   6.526  1.00  3.17      3ICB 558
+ATOM    476  CA  VAL    61      21.904  11.588   5.962  1.00  2.00      3ICB 559
+ATOM    477  C   VAL    61      21.786  12.096   4.505  1.00  2.00      3ICB 560
+ATOM    478  O   VAL    61      21.389  13.240   4.331  1.00  2.00      3ICB 561
+ATOM    479  CB  VAL    61      20.633  11.684   6.793  1.00  2.00      3ICB 562
+ATOM    480  CG1 VAL    61      19.356  11.208   6.180  1.00  2.00      3ICB 563
+ATOM    481  CG2 VAL    61      20.882  10.968   8.099  1.00  2.00      3ICB 564
+ATOM    482  N   SER    62      22.188  11.276   3.597  1.00  2.99      3ICB 565
+ATOM    483  CA  SER    62      22.104  11.469   2.147  1.00  5.50      3ICB 566
+ATOM    484  C   SER    62      20.697  10.990   1.741  1.00  6.72      3ICB 567
+ATOM    485  O   SER    62      19.974  10.469   2.621  1.00  7.54      3ICB 568
+ATOM    486  CB  SER    62      23.101  10.612   1.410  1.00  7.00      3ICB 569
+ATOM    487  OG  SER    62      22.905   9.253   1.810  1.00 10.68      3ICB 570
+ATOM    488  N   PHE    63      20.356  11.157    .475  1.00  7.70      3ICB 571
+ATOM    489  CA  PHE    63      19.049  10.776   -.045  1.00  7.20      3ICB 572
+ATOM    490  C   PHE    63      18.856   9.270   -.023  1.00  8.31      3ICB 573
+ATOM    491  O   PHE    63      17.734   8.809    .208  1.00  9.39      3ICB 574
+ATOM    492  CB  PHE    63      18.790  11.306  -1.484  1.00  7.63      3ICB 575
+ATOM    493  CG  PHE    63      17.348  11.010  -1.848  1.00  7.45      3ICB 576
+ATOM    494  CD1 PHE    63      16.348  11.477   -.969  1.00  4.82      3ICB 577
+ATOM    495  CD2 PHE    63      17.024  10.275  -3.005  1.00  8.54      3ICB 578
+ATOM    496  CE1 PHE    63      15.030  11.237  -1.259  1.00  4.51      3ICB 579
+ATOM    497  CE2 PHE    63      15.671  10.012  -3.329  1.00  5.62      3ICB 580
+ATOM    498  CZ  PHE    63      14.708  10.510  -2.424  1.00  7.12      3ICB 581
+ATOM    499  N   GLU    64      19.910   8.542   -.317  1.00  8.95      3ICB 582
+ATOM    500  CA  GLU    64      19.933   7.086   -.327  1.00 10.05      3ICB 583
+ATOM    501  C   GLU    64      19.675   6.551   1.089  1.00 10.16      3ICB 584
+ATOM    502  O   GLU    64      18.924   5.550   1.185  1.00 11.14      3ICB 585
+ATOM    503  CB  GLU    64      21.281   6.514   -.760  1.00 13.73      3ICB 586
+ATOM    504  CG  GLU    64      21.627   6.508  -2.219  1.00 20.23      3ICB 587
+ATOM    505  CD  GLU    64      20.596   5.911  -3.145  1.00 25.09      3ICB 588
+ATOM    506  OE1 GLU    64      20.213   6.431  -4.192  1.00 27.37      3ICB 589
+ATOM    507  OE2 GLU    64      20.167   4.815  -2.695  1.00 28.17      3ICB 590
+ATOM    508  N   GLU    65      20.297   7.165   2.105  1.00  8.10      3ICB 591
+ATOM    509  CA  GLU    65      20.119   6.791   3.503  1.00  6.21      3ICB 592
+ATOM    510  C   GLU    65      18.673   7.053   3.950  1.00  5.68      3ICB 593
+ATOM    511  O   GLU    65      18.058   6.306   4.704  1.00  5.25      3ICB 594
+ATOM    512  CB  GLU    65      21.040   7.565   4.447  1.00  4.90      3ICB 595
+ATOM    513  CG  GLU    65      22.454   7.074   4.556  1.00  3.90      3ICB 596
+ATOM    514  CD  GLU    65      23.528   7.820   5.242  1.00  2.00      3ICB 597
+ATOM    515  OE1 GLU    65      24.499   7.364   5.835  1.00  2.52      3ICB 598
+ATOM    516  OE2 GLU    65      23.419   9.022   5.050  1.00  2.83      3ICB 599
+ATOM    517  N   PHE    66      18.144   8.144   3.454  1.00  6.88      3ICB 600
+ATOM    518  CA  PHE    66      16.786   8.619   3.695  1.00  8.03      3ICB 601
+ATOM    519  C   PHE    66      15.788   7.590   3.204  1.00  8.98      3ICB 602
+ATOM    520  O   PHE    66      14.735   7.413   3.782  1.00  8.22      3ICB 603
+ATOM    521  CB  PHE    66      16.560  10.012   3.152  1.00  8.48      3ICB 604
+ATOM    522  CG  PHE    66      15.272  10.691   3.518  1.00  8.21      3ICB 605
+ATOM    523  CD1 PHE    66      14.188  10.645   2.640  1.00  9.32      3ICB 606
+ATOM    524  CD2 PHE    66      15.142  11.404   4.687  1.00  7.22      3ICB 607
+ATOM    525  CE1 PHE    66      12.985  11.261   2.972  1.00 11.56      3ICB 608
+ATOM    526  CE2 PHE    66      13.964  12.064   5.035  1.00  9.23      3ICB 609
+ATOM    527  CZ  PHE    66      12.861  11.973   4.168  1.00  9.86      3ICB 610
+ATOM    528  N   GLN    67      16.128   6.855   2.171  1.00 12.43      3ICB 611
+ATOM    529  CA  GLN    67      15.191   5.837   1.615  1.00 14.61      3ICB 612
+ATOM    530  C   GLN    67      14.664   4.968   2.723  1.00 14.66      3ICB 613
+ATOM    531  O   GLN    67      13.423   4.853   2.770  1.00 14.85      3ICB 614
+ATOM    532  CB  GLN    67      15.676   5.210    .337  1.00 18.97      3ICB 615
+ATOM    533  CG  GLN    67      15.370   5.991   -.937  1.00 23.34      3ICB 616
+ATOM    534  CD  GLN    67      16.517   6.034  -1.914  1.00 27.06      3ICB 617
+ATOM    535  OE1 GLN    67      16.789   5.221  -2.810  1.00 30.25      3ICB 618
+ATOM    536  NE2 GLN    67      17.324   7.086  -1.750  1.00 29.22      3ICB 619
+ATOM    537  N   VAL    68      15.351   4.409   3.665  1.00 15.49      3ICB 620
+ATOM    538  CA  VAL    68      14.706   3.638   4.764  1.00 17.53      3ICB 621
+ATOM    539  C   VAL    68      13.328   4.165   5.208  1.00 19.32      3ICB 622
+ATOM    540  O   VAL    68      12.263   3.472   5.151  1.00 20.31      3ICB 623
+ATOM    541  CB  VAL    68      15.747   3.670   5.913  1.00 17.80      3ICB 624
+ATOM    542  CG1 VAL    68      15.156   3.515   7.304  1.00 17.53      3ICB 625
+ATOM    543  CG2 VAL    68      16.879   2.702   5.665  1.00 18.34      3ICB 626
+ATOM    544  N   LEU    69      13.215   5.335   5.764  1.00 18.58      3ICB 627
+ATOM    545  CA  LEU    69      12.052   6.041   6.279  1.00 19.05      3ICB 628
+ATOM    546  C   LEU    69      10.890   6.105   5.298  1.00 20.97      3ICB 629
+ATOM    547  O   LEU    69       9.681   6.097   5.578  1.00 20.51      3ICB 630
+ATOM    548  CB  LEU    69      12.634   7.445   6.519  1.00 16.56      3ICB 631
+ATOM    549  CG  LEU    69      12.380   8.415   7.598  1.00 15.76      3ICB 632
+ATOM    550  CD1 LEU    69      12.470   7.840   9.004  1.00 13.13      3ICB 633
+ATOM    551  CD2 LEU    69      13.452   9.519   7.470  1.00 15.91      3ICB 634
+ATOM    552  N   VAL    70      11.275   6.307   4.036  1.00 23.54      3ICB 635
+ATOM    553  CA  VAL    70      10.290   6.479   2.948  1.00 25.20      3ICB 636
+ATOM    554  C   VAL    70       9.156   5.471   3.074  1.00 25.86      3ICB 637
+ATOM    555  O   VAL    70       8.014   5.796   2.723  1.00 27.64      3ICB 638
+ATOM    556  CB  VAL    70      10.914   6.449   1.529  1.00 24.08      3ICB 639
+ATOM    557  CG1 VAL    70       9.810   6.357    .460  1.00 23.70      3ICB 640
+ATOM    558  CG2 VAL    70      11.814   7.632   1.241  1.00 23.41      3ICB 641
+ATOM    559  N   LYS    71       9.466   4.288   3.504  1.00 26.29      3ICB 642
+ATOM    560  CA  LYS    71       8.470   3.191   3.632  1.00 27.43      3ICB 643
+ATOM    561  C   LYS    71       7.381   3.587   4.596  1.00 28.15      3ICB 644
+ATOM    562  O   LYS    71       6.183   3.372   4.392  1.00 28.06      3ICB 645
+ATOM    563  CB  LYS    71       9.220   1.945   3.983  1.00 27.99      3ICB 646
+ATOM    564  CG  LYS    71       8.518    .666   4.346  1.00 29.82      3ICB 647
+ATOM    565  CD  LYS    71       9.414   -.110   5.350  1.00 29.97      3ICB 648
+ATOM    566  CE  LYS    71       8.571   -.862   6.354  1.00 30.57      3ICB 649
+ATOM    567  NZ  LYS    71       7.506  -1.622   5.634  1.00 31.11      3ICB 650
+ATOM    568  N   LYS    72       7.807   4.238   5.669  1.00 29.23      3ICB 651
+ATOM    569  CA  LYS    72       6.896   4.744   6.716  1.00 29.61      3ICB 652
+ATOM    570  C   LYS    72       6.168   5.975   6.216  1.00 29.63      3ICB 653
+ATOM    571  O   LYS    72       4.992   6.183   6.524  1.00 28.57      3ICB 654
+ATOM    572  CB  LYS    72       7.730   4.994   7.970  1.00 31.11      3ICB 655
+ATOM    573  CG  LYS    72       8.787   3.874   8.123  1.00 32.67      3ICB 656
+ATOM    574  CD  LYS    72       9.850   4.298   9.109  1.00 35.21      3ICB 657
+ATOM    575  CE  LYS    72      10.169   3.224  10.121  1.00 37.66      3ICB 658
+ATOM    576  NZ  LYS    72      10.430   3.860  11.459  1.00 39.45      3ICB 659
+ATOM    577  N   ILE    73       6.873   6.788   5.443  1.00 30.73      3ICB 660
+ATOM    578  CA  ILE    73       6.347   8.025   4.842  1.00 31.98      3ICB 661
+ATOM    579  C   ILE    73       5.195   7.698   3.874  1.00 34.00      3ICB 662
+ATOM    580  O   ILE    73       4.077   8.267   3.912  1.00 33.15      3ICB 663
+ATOM    581  CB  ILE    73       7.515   8.790   4.141  1.00 29.71      3ICB 664
+ATOM    582  CG1 ILE    73       8.499   9.383   5.178  1.00 28.10      3ICB 665
+ATOM    583  CG2 ILE    73       7.056   9.868   3.139  1.00 31.13      3ICB 666
+ATOM    584  CD1 ILE    73       9.943   9.448   4.595  1.00 25.68      3ICB 667
+ATOM    585  N   SER    74       5.495   6.750   2.999  1.00 35.66      3ICB 668
+ATOM    586  CA  SER    74       4.597   6.256   1.954  1.00 37.65      3ICB 669
+ATOM    587  C   SER    74       3.451   5.450   2.550  1.00 39.92      3ICB 670
+ATOM    588  O   SER    74       2.382   5.288   1.936  1.00 39.79      3ICB 671
+ATOM    589  CB  SER    74       5.358   5.411    .935  1.00 36.43      3ICB 672
+ATOM    590  OG  SER    74       6.499   6.113    .489  1.00 36.20      3ICB 673
+ATOM    591  N   GLN    75       3.694   4.974   3.754  1.00 42.72      3ICB 674
+ATOM    592  CA  GLN    75       2.756   4.149   4.526  1.00 45.45      3ICB 675
+ATOM    593  C   GLN    75       1.503   4.850   5.040  1.00 46.53      3ICB 676
+ATOM    594  O   GLN    75        .404   4.226   4.937  1.00 46.51      3ICB 677
+ATOM    595  CB  GLN    75       3.512   3.511   5.725  1.00 48.13      3ICB 678
+ATOM    596  CG  GLN    75       2.803   2.245   6.206  1.00 51.09      3ICB 679
+ATOM    597  CD  GLN    75       2.489   1.376   4.987  1.00 53.60      3ICB 680
+ATOM    598  OE1 GLN    75       1.446   1.529   4.337  1.00 55.26      3ICB 681
+ATOM    599  NE2 GLN    75       3.430    .492   4.659  1.00 53.86      3ICB 682
+ATOM    600  OXT GLN    75       1.623   5.971   5.586  1.00 48.40      3ICB 683
+TER     601      GLN    75                                              3ICB 684
+HETATM  602 CA    CA     1      22.527  19.883   5.062  1.00  3.59      3ICB 685
+HETATM  603 CA    CA     2      25.690   9.260   6.305  1.00  4.99      3ICB 686
+HETATM  604  S   SO4     3       2.105  12.775   8.936  1.00 44.97      3ICB 687
+HETATM  605  O1  SO4     3       2.829  13.928   8.293  1.00 45.29      3ICB 688
+HETATM  606  O2  SO4     3       3.087  11.638   9.077  1.00 44.78      3ICB 689
+HETATM  607  O3  SO4     3       1.566  13.178  10.270  1.00 44.24      3ICB 690
+HETATM  608  O4  SO4     3        .977  12.361   8.014  1.00 45.02      3ICB 691
+HETATM  609  O   HOH     4      26.196  10.049   4.261  1.00 25.00      3ICB 692
+HETATM  610  O   HOH     5      24.180  18.687   6.571  1.00 25.00      3ICB 693
+HETATM  611  O   HOH     6       9.136  10.233  19.543  1.00 25.00      3ICB 694
+HETATM  612  O   HOH     7       9.849   8.053  16.320  1.00 25.00      3ICB 695
+HETATM  613  O   HOH     8       5.671   8.813    .050   .94 25.00      3ICB 696
+HETATM  614  O   HOH     9      28.166   6.245  17.549  1.00 25.00      3ICB 697
+HETATM  615  O   HOH    10      19.347  19.335  -1.440  1.00 25.00      3ICB 698
+HETATM  616  O   HOH    11      22.263  12.839   -.959  1.00 25.00      3ICB 699
+HETATM  617  O   HOH    12      24.398  16.283  11.972   .96 25.00      3ICB 700
+HETATM  618  O   HOH    13      22.779  18.701  13.493   .88 25.00      3ICB 701
+HETATM  619  O   HOH    14       3.496  21.615   6.064  1.00 25.00      3ICB 702
+HETATM  620  O   HOH    15      15.955  13.939  20.131  1.00 25.00      3ICB 703
+HETATM  621  O   HOH    16      28.627  10.002  14.403  1.00 25.00      3ICB 704
+HETATM  622  O   HOH    17      19.061   3.132   2.358  1.00 25.00      3ICB 705
+HETATM  623  O   HOH    18      12.725   2.428  11.861   .52 25.00      3ICB 706
+HETATM  624  O   HOH    19      12.723  21.037  -3.842   .80 25.00      3ICB 707
+HETATM  625  O   HOH    20      26.994  25.747   7.096  1.00 25.00      3ICB 708
+HETATM  626  O   HOH    21      26.519  25.316   3.779  1.00 25.00      3ICB 709
+HETATM  627  O   HOH    22      26.804  19.241   7.347   .76 25.00      3ICB 710
+HETATM  628  O   HOH    23       3.645  16.015   4.182   .81 25.00      3ICB 711
+HETATM  629  O   HOH    24       5.539   6.544  13.995  1.00 25.00      3ICB 712
+HETATM  630  O   HOH    25      31.967  14.735   6.962  1.00 25.00      3ICB 713
+HETATM  631  O   HOH    26      22.499   9.984  -2.460  1.00 25.00      3ICB 714
+HETATM  632  O   HOH    27      12.331   1.751   2.709   .77 25.00      3ICB 715
+HETATM  633  O   HOH    28       1.943   8.486   1.801  1.00 25.00      3ICB 716
+HETATM  634  O   HOH    29       -.064   5.745    .949  1.00 25.00      3ICB 717
+HETATM  635  O   HOH    30      -1.171   1.791   5.747   .83 25.00      3ICB 718
+HETATM  636  O   HOH    31      26.868   1.504  10.494   .72 25.00      3ICB 719
+HETATM  637  O   HOH    32       8.476  18.229  -3.556  1.00 25.00      3ICB 720
+HETATM  638  O   HOH    33      10.360  17.472  -6.717   .86 25.00      3ICB 721
+HETATM  639  O   HOH    34      12.073  17.480  19.330   .64 25.00      3ICB 722
+HETATM  640  O   HOH    35      24.711  25.741   9.717   .58 25.00      3ICB 723
+HETATM  641  O   HOH    36      17.882   9.156  22.244   .93 25.00      3ICB 724
+HETATM  642  O   HOH    37      18.497   3.482  22.314   .76 25.00      3ICB 725
+HETATM  643  O   HOH    38       1.920  17.385  -3.037   .60 25.00      3ICB 726
+HETATM  644  O   HOH    39      15.345  25.762   2.499   .60 25.00      3ICB 727
+CONECT   15   14                                 32                     3ICB 728
+CONECT   32   25   33             15                                    3ICB 729
+CONECT  110  109                 280                                    3ICB 730
+CONECT  114  113  602                                                   3ICB 731
+CONECT  130  123  131            214                                    3ICB 732
+CONECT  133  132  602                                                   3ICB 733
+CONECT  146  145  602                           158                     3ICB 734
+CONECT  149  148                                158                     3ICB 735
+CONECT  158  153  159            146  149                               3ICB 736
+CONECT  169  168  602                                                   3ICB 737
+CONECT  175  168  176            478                                    3ICB 738
+CONECT  178  177                                475                     3ICB 739
+CONECT  183  177  184            215                                    3ICB 740
+CONECT  188  187                                207                     3ICB 741
+CONECT  207  200  208            188                                    3ICB 742
+CONECT  214  213  602                           130                     3ICB 743
+CONECT  215  213  602                           183                     3ICB 744
+CONECT  280  279                                110                     3ICB 745
+CONECT  348  344  349            379                                    3ICB 746
+CONECT  353  352                                371                     3ICB 747
+CONECT  371  365  372            353                                    3ICB 748
+CONECT  379  377                                348                     3ICB 749
+CONECT  420  419                                433  441                3ICB 750
+CONECT  431  430  603                           450  454                3ICB 751
+CONECT  432  430                                462                     3ICB 752
+CONECT  433  427  434            420  515                               3ICB 753
+CONECT  441  440                 420  511                               3ICB 754
+CONECT  442  435  443            515                                    3ICB 755
+CONECT  448  447  603                                                   3ICB 756
+CONECT  450  444  451            431                                    3ICB 757
+CONECT  454  452  455            431  460                               3ICB 758
+CONECT  460  459  603                           454  466                3ICB 759
+CONECT  462  456  463            432                                    3ICB 760
+CONECT  466  464  467            460                                    3ICB 761
+CONECT  469  468  603                                                   3ICB 762
+CONECT  475  468  476            178                                    3ICB 763
+CONECT  478  477                                175                     3ICB 764
+CONECT  482  477  483            516                                    3ICB 765
+CONECT  487  486                                508                     3ICB 766
+CONECT  508  501  509            487                                    3ICB 767
+CONECT  511  510                                441                     3ICB 768
+CONECT  515  514  603                           433  442                3ICB 769
+CONECT  516  514  603                           482                     3ICB 770
+CONECT  602  114  133  146  169                                         3ICB 771
+CONECT  602  214  215  610                                              3ICB 772
+CONECT  603  431  448  460  469                                         3ICB 773
+CONECT  603  515  516  609                                              3ICB 774
+CONECT  604  605  606  607  608                                         3ICB 775
+CONECT  605  604                                                        3ICB 776
+CONECT  606  604                                                        3ICB 777
+CONECT  607  604                                                        3ICB 778
+CONECT  608  604                                                        3ICB 779
+CONECT  609  603                                                        3ICB 780
+CONECT  610  602                                                        3ICB 781
+MASTER       36    0    3    5    0    0    7    6  643    1   54    6  3ICB 782
+END                                                                     3ICB 783

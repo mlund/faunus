@@ -12,15 +12,13 @@ using namespace std;
 int main() {
   slump slump;
   cell cell(100.);                      // We want a spherical cell
-//iopov povray(cell);                   // We want a POVRAY snapshot
+  iopov povray(cell);                   // We want a POVRAY snapshot
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg;                        // Setup pair potential (default values)
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   countdown<int> clock(10);             // Estimate simulation time
   macromolecule protein;                // Group for the protein
   ioaam aam(cell);                      // Protein input file format is AAM
-  ioxyz xyz(cell);
-  ioxtc xtc(cell);
   protein.add( cell, aam.load(
         "examples/fab.aam" ));          // Load protein from disk
   protein.move(cell, -protein.cm);      // ..and translate it to origo (0,0,0)
@@ -34,7 +32,10 @@ int main() {
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
 
   cout << cell.info() << tit.info();    // Some information
-  xyz.save("test.xyz", cell.p);
+
+  #ifdef GROMACS
+  ioxtc xtc(cell);
+  #endif
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain
     for (int micro=1; micro<=2e4; micro++) {
@@ -46,8 +47,11 @@ int main() {
         sys+=tit.du;
       }
       sys+=sm.du;                               // Keep system energy updated
+
+      #ifdef GROMACS
       if (slump.random_one()>0.8)
         xtc.save("ignored-name.xtc", cell.p);
+      #endif
     }
     cout << "Macro step " << macro << " completed. ETA: " << clock.eta(macro);
     sys.update(pot.energy(cell.p));             // Update system energy averages
@@ -55,7 +59,9 @@ int main() {
   }
   cout << sys.info() << sm.info() << tit.info() // More information...
     << salt.info() << protein.info();
-//povray.save("protein-example.pov", cell.p);   // Save POVRAY file
+  povray.save("protein-example.pov", cell.p);   // Save POVRAY file
+  #ifdef GROMACS
   xtc.close();
+  #endif
 }
 

@@ -1,16 +1,25 @@
-  MODEL = generic
+  MODEL = debug
+  GROMACS = no
 
   ##################################################################
 
 CLASSDIR=.
-INCLUDE=-I/usr/local/gromacs/include/gromacs/
-LDFLAGS=-L/usr/local/gromacs/lib/ -lgmx
-MISCFLAGS=-DGROMACS
 
-  ifeq ($(MODEL), generic)
-    CXX=g++
-    CXXFLAGS = -O3 -funroll-loops -w -Winline  -g $(INCLUDE) -DGROMACS 
-  endif
+ifeq ($(GROMACS), yes)
+  INCLUDE=-I/usr/local/gromacs/include/gromacs/
+  LDFLAGS=-L/usr/local/gromacs/lib/ -lgmx
+  GROFLAG=-DGROMACS
+endif
+
+ifeq ($(MODEL), debug)
+  CXX=g++
+  CXXFLAGS = -O0 -w -Winline  -g $(INCLUDE) $(GROFLAG)
+endif
+
+ifeq ($(MODEL), generic)
+  CXX=g++
+  CXXFLAGS = -O3 -funroll-loops -w -Winline  -g $(INCLUDE) $(GROFLAG)
+endif
 
 OBJS=$(CLASSDIR)/inputfile.o \
      $(CLASSDIR)/io.o\

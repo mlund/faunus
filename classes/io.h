@@ -100,8 +100,8 @@ class iopov : public iopart {
     void header();
     vector<particle> load(string) {}; 
   public:
-//    iopov(species &);
-    iopov(container &, species &);
+    iopov(container &);
+    //iopov(container &, species &);
     void clear();                       //!< Clear output buffer
     void box(float);                    //!< Add cubic box
     void cell(float);                   //!< Add spherical cell

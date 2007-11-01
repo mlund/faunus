@@ -77,8 +77,8 @@ bool ioaam::save(string file, vector<particle> &) {
 }
 
 //----------------- IOXYZ ----------------------
-ioxyz::ioxyz(species &spc) : iopart(spc) {
-}
+//ioxyz::ioxyz(species &spc) : iopart(spc) {
+//}
 ioxyz::ioxyz(species &spc, particles &p) : iopart(spc) {
   sys=&p;
 }
@@ -131,7 +131,7 @@ vector<particle> ioxyz::load(string file) {
 
 //----------------- IOPOV ----------------------
 //iopov::iopov(species &spc) : iopart(spc) {
-iopov::iopov(container &c, species &spc ) : iopart(spc) {
+iopov::iopov(container &c) : iopart(c) {
   clear();
   header();
   light(100.);

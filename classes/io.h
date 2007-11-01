@@ -120,7 +120,8 @@ class iopov : public iopart {
  *  \note Distances are stored in nanometers.
  *
  *  This class is used for output of configurations
- *  to a GROMACS xtc file, originally designed for MD trajectories.
+ *  to a GROMACS xtc file, originally designed for MD trajectories albeit
+ *  with no forces included.
  *  The MC configurations in the xtc file can subsequently be used
  *  in a number of other programs VMD, for example, as well as analysed
  *  using a range of tools as part of GROMACS -- distribution

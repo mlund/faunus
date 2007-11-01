@@ -10,8 +10,9 @@ typedef pot_coulomb T_pairpot;
 using namespace std;
 
 int main() {
+  slump slump;
   cell cell(100.);                      // We want a spherical cell
-  iopov povray(cell);                   // We want a POVRAY snapshot
+//iopov povray(cell);                   // We want a POVRAY snapshot
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg;                        // Setup pair potential (default values)
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
@@ -21,22 +22,22 @@ int main() {
   ioxyz xyz(cell);
   ioxtc xtc(cell);
   protein.add( cell, aam.load(
-        "examples/calbindin.aam" ));    // Load protein from disk
+        "examples/fab.aam" ));          // Load protein from disk
   protein.move(cell, -protein.cm);      // ..and translate it to origo (0,0,0)
   protein.accept(cell);                 // ..accept translation
 
   group salt;                           // Group for mobile ions
-  salt.add( cell, particle::NA, 11+19); // Insert sodium ions
-  salt.add( cell, particle::CL, 11 );   // Insert chloride ions
+  salt.add( cell, particle::NA, 24+33); // Insert sodium ions
+  salt.add( cell, particle::CL, 24 );   // Insert chloride ions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
-  chargereg tit(nvt,cell,pot,salt,7);   // Prepare titration. pH 7
+  chargereg tit(nvt,cell,pot,salt,7.6); // Prepare titration. pH 7
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
 
   cout << cell.info() << tit.info();    // Some information
   xyz.save("test.xyz", cell.p);
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain
-    for (int micro=1; micro<=2e3; micro++) {
+    for (int micro=1; micro<=2e4; micro++) {
       sm.move(salt);                            // Displace salt particles
       sys+=sm.du;
       if (tit.titrateall()==true) {             // Titrate groups
@@ -45,7 +46,8 @@ int main() {
         sys+=tit.du;
       }
       sys+=sm.du;                               // Keep system energy updated
-      xtc.save("hej.xtc", cell.p);
+      if (slump.random_one()>0.8)
+        xtc.save("ignored-name.xtc", cell.p);
     }
     cout << "Macro step " << macro << " completed. ETA: " << clock.eta(macro);
     sys.update(pot.energy(cell.p));             // Update system energy averages
@@ -53,7 +55,7 @@ int main() {
   }
   cout << sys.info() << sm.info() << tit.info() // More information...
     << salt.info() << protein.info();
-  povray.save("protein-example.pov", cell.p);   // Save POVRAY file
+//povray.save("protein-example.pov", cell.p);   // Save POVRAY file
   xtc.close();
 }
 

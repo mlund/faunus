@@ -218,7 +218,7 @@ Mikael Lund\correspondingauthor$^{1}$%
 \section*{Background}
 Molecular simulation has become a standard tool for investigating molecular systems such as proteins, polymer solutions, lamellar phases etc.
 It is safe to say that for biological applications Molecular Dynamics (MD) is by far the most abundant method as it provides both static and dynamic properties of the system.
-Metropolis Monte Carlo (MC) simulation~\cite{metropolis:53}, on the other hand, is less utilized and only few software packages exists\cite{Kamberaj:2001fk,carlsson:01,Jie-Hu:2006lr}. One advantage of MC over MD is that it allows ''unphysical`` particle moves, enabling very efficient sampling of the configurational space\cite{frenkel}. The tradeoff for this freedom to move particle is the loss of all dynamic information and, in addition, MC programs tend to become less general.
+Metropolis Monte Carlo (MC) simulation~\cite{metropolis:53}, on the other hand, is less utilized and only few software packages exists\cite{Kamberaj:2001fk,carlsson:01,Jie-Hu:2006lr}. One advantage of MC over MD is that it allows ``unphysical'' particle moves, enabling very efficient sampling of the configurational space\cite{frenkel}. The tradeoff for this freedom to move particle is the loss of all dynamic information and, in addition, MC programs tend to become less general.
 However, if one is interested in equilibrium properties only -- binding constants, free energy changes, pKa values etc. -- MC simulation may be a good option.
 
 Using a standard, pre-compiled software package should require no prior knowledge of programming and as such can be a fast and practical approach to solve a specific scientific problem. On the other hand, the underlying physical theory is somewhat hidden and there is always a risk that the application is regarded as a ``black box'' producing numbers. It becomes even worse if new features are to be implemented.
@@ -255,7 +255,7 @@ svn checkout
   http://faunus.svn.sourceforge.net/
   svnroot/faunus/trunk faunus
 \end{verbatim}
-The software is licensed under the GNU open source model and developers who wish to gain write are welcome to contact the author.
+The software is licensed under the GNU open source model and developers who wish to gain write access are welcome to contact the author.
 
 %    \subsubsection*{This is a sub-sub-heading}
    %   Sub-sub-sub-headings are made with the \textsl{\\subsubsection} command. \pb
@@ -298,11 +298,12 @@ will cause \verb"Doxygen" to recongnize it as a comment that should be put in th
 Figure 2 shows a small code example for simulating the ionization state of a protein in a salt solution at various pH. Experimentally this corresponds to a standard potentiometric titration experiment where the net-charge is measured as a function of pH~\cite{tanford:72}. We will not go through all lines in the code as the comments should be more or less self-explanatory. The overall program structure is
 \begin{enumerate}
 \item Set up the simulation cell (line 13)
-\item Add protein and ions (line 21-28)
+\item Add protein(s) and ions (line 21-28)
 \item Main loop with salt- and proton moves (line 35)
 \item Print results incl. Povray output (line 50-52)
 \end{enumerate}
-For simplicity we have left out the equilibration step but in this particular case it does not matter too much since the system equilibrates fast and the initial configurations will influence the overall statistics only by a small amount. Results and comparisons with experimental data for such calculations can be found in a recent article published by Lund \emph{et al.}~\cite{lund:07}.
+For simplicity we have left out the equilibration step but in this particular case it does not matter too much since the system equilibrates fast and the initial configurations will influence the overall statistics only to a minor extent.
+Results and comparisons with experimental data for such calculations can be found in a recent article published by Lund \emph{et al.}~\cite{lund:07}.
 Coordinates from any given configuration can be exported to various formats, including povray as shown in Figure 3.
 Particles in the systems can be clustered into groups and derived classes and hence, there is a general group class (line 26), a class for macromolecules (line 19), chains etc. Note that we have also incorporated a general polymorphic class for markov moves and data analysis so that all derived classes have a common interface. For example, both the salt move (line 29) and titration class (line 30) will store information about energy changes, if the move was a success etc. Data and analysis about each type of move is automatically shown by calling the respective information functions (line 50).
 
@@ -343,7 +344,8 @@ Particles in the systems can be clustered into groups and derived classes and he
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section*{Acknowledgements}
   \ifthenelse{\boolean{publ}}{\small}{}
-  The author wish to thank Pavel Jungwirth, Academy of Sciences, Prague for useful discussions.
+  For financial support the author would like to thank the European Molecular Biology Organization (EMBO).
+ Pavel Jungwirth, The Academy of Sciences in Prague for useful discussions.
 
  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

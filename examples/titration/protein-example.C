@@ -1,11 +1,11 @@
 #include <iostream>
-#include "../io.h"
-#include "../analysis.h"
-#include "../container.h"
-#include "../potentials.h"
-#include "../countdown.h"
+#include "io.h"
+#include "analysis.h"
+#include "container.h"
+#include "potentials.h"
+#include "countdown.h"
 typedef pot_coulomb T_pairpot;
-#include "../markovmove.C"
+#include "markovmove.C"
 
 using namespace std;
 

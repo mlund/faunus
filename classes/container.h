@@ -18,6 +18,7 @@ class container : public particles,  public species {
     virtual void randompos(point &)=0;          //!< Random point within container
     virtual string info();                      //!< Return info string
     virtual string povray();                    //!< POVRAY object representing the cell
+    inline virtual void boundary(point &)=0;    //!< Apply boundary conditions to a point
     //void displace(point &, float);      //!< Displace particle
 };
 
@@ -31,6 +32,7 @@ class cell : public container {
     float r;              //!< Radius
     cell(float);
     string info();
+    inline void boundary(point &) {};
     void randompos(point &);
     string povray();
     inline bool collision(point &p) {
@@ -55,7 +57,6 @@ class box : public container {
     void randompos(vector<point> &);
     point randompos();
     inline bool collision(point &p) {return false;};
-    //void bpc(point &p);
     string povray();
 
     //! Calculate squared distance w. minimum image convention
@@ -71,7 +72,7 @@ class box : public container {
     }
 
     //! Apply periodic boundary conditions
-    inline void bpc(point &p) {
+    inline void boundary(point &p) {
       p.x=p.x-len*floor(p.x*len_inv+.5);
       p.y=p.y-len*floor(p.y*len_inv+.5);
       p.z=p.z-len*floor(p.z*len_inv+.5);
@@ -104,6 +105,7 @@ class clutch : public container {
     float r,zmin,zmax;
     clutch(float, float, float);
     void randompos(point &);
+    void boundary(point &) {};
     bool collision(point &p) {
       if (p.z<zmax && p.z>zmin)
         return true;
@@ -123,11 +125,12 @@ class cylinder : public container {
     float r;     //!< Cylinder radius
     float r2;    //!< Cylinder radius squared
     float diameter;
+    void boundary(point &) {};
     cylinder(float,float);
     void randompos(point &);
     inline bool collision(point &p) {
       return 
-     (p.x*p.x+p.y*p.y>r2 || (p.z<0||p.z>len)) ? true:false;
+        (p.x*p.x+p.y*p.y>r2 || (p.z<0||p.z>len)) ? true:false;
     };
     string info(); //!< Cylinder info
     string povray();

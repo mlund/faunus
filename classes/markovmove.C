@@ -164,7 +164,7 @@ bool move::mOve(macromolecule &g) {
   rand.z = dp*slp.random_half();
   g.move(*con, rand);
   for (int i=g.beg; i<(g.size()+g.beg); i++) { 
-    b->bpc(con->trial[i]);
+    b->boundary(con->trial[i]);
     if (con->collision( con->trial[i] )==true) 
       rc=HC;
     }

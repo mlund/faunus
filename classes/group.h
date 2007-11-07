@@ -63,8 +63,8 @@ class macromolecule : public group {
     void move(particles &, point);      //!< Translate group
     void BOXmove(particles &, box &, point);
     void zmove(particles &, double);    //!< Move in z-direction, only
-    void rotate(particles &, double);          //!< Rotate around a point
-    void rotate(particles &, point, double);
+    void rotate(container &, double);   //!< Rotate around a point
+    void rotate(container &, point, double);
     void operator=(group);              //!< Copy from group
 };
 

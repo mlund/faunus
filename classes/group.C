@@ -211,11 +211,11 @@ void macromolecule::BOXmove(particles &par, box &b, point c) {
   }
   cm_trial = cm + c;
   for (short i=beg; i<=end; i++) {
-    b.bpc(par.trial[i]);
+    b.boundary(par.trial[i]);
   }
-  b.bpc(cm_trial);
+  b.boundary(cm_trial);
 }
-void macromolecule::rotate(particles &par, double drot) {
+void macromolecule::rotate(container &par, double drot) {
   point u;
   double r=2;
   while (r > 1.) { //random unit vector
@@ -236,8 +236,8 @@ void macromolecule::rotate(particles &par, double drot) {
  * \param angle ..by this many degrees (rad)
  * \param k Keyword to specify automatic acceptance
  */
-void macromolecule::rotate(particles &par, point u, double angle) {
-  double bx, by, bz;
+void macromolecule::rotate(container &par, point u, double angle) {
+  point b;
   double cosang, sinang, eb;
   double e1mcox, e1mcoy, e1mcoz;
   
@@ -247,13 +247,15 @@ void macromolecule::rotate(particles &par, point u, double angle) {
   e1mcoy=(1.-cosang)*u.y;
   e1mcoz=(1.-cosang)*u.z;
   for (short i=beg; i<=end; i++) {
-    bx=par.p[i].x;
-    by=par.p[i].y;
-    bz=par.p[i].z - cm.z; //p[g.cm].z;
-    eb=u.x*bx + u.y*by + u.z*bz;
-    par.trial[i].x=e1mcox*eb+cosang*bx+sinang*(u.y*bz - u.z*by);
-    par.trial[i].y=e1mcoy*eb+cosang*by+sinang*(u.z*bx - u.x*bz);
-    par.trial[i].z=e1mcoz*eb+cosang*bz+sinang*(u.x*by - u.y*bx) + cm.z;
+    b.x=par.p[i].x - cm.x;              // translate to origo...
+    b.y=par.p[i].y - cm.y;
+    b.z=par.p[i].z - cm.z;
+    par.boundary(b);                    // Apply boundary conditions
+    eb=u.x*b.x + u.y*b.y + u.z*b.z;
+    par.trial[i].x=e1mcox*eb+cosang*b.x+sinang*(u.y*b.z - u.z*b.y) + cm.x;
+    par.trial[i].y=e1mcoy*eb+cosang*b.y+sinang*(u.z*b.x - u.x*b.z) + cm.y;
+    par.trial[i].z=e1mcoz*eb+cosang*b.z+sinang*(u.x*b.y - u.y*b.x) + cm.z;
+    par.boundary(par.trial[i]);
   }
 }
 

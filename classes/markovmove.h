@@ -84,9 +84,7 @@ class saltmove : public markovmove {
 };
 
 /*! \brief Random move of a macromolecule in a container 
- *
  *  \todo generalize, it is cubix periodic boundry specific
- *
  *  \author Bjoern Persson
  */
 class move : public markovmove {

@@ -97,21 +97,25 @@ void group::accept(particles &par) {
     par.p[i].z = par.trial[i].z;
   }
 }
-void group::add(particles &par, vector<particle> v) {
+void group::add(container &par, vector<particle> v) {
+  particle tmp;
   beg=par.p.size();
   for (unsigned short i=0; i<v.size(); i++) {
-    par.push_back(v[i]);
+    tmp = v[i];
+    par.boundary(tmp);
+    par.push_back(tmp);
     end=beg+i;
   }
   masscenter(par.p);
 }
 void group::add(container &con, particle::type id, short n) {
   particle a=con.get(id);
-  if (beg<0) beg=con.p.size();
+  if (beg<0)
+    beg=con.p.size();
   for (unsigned short i=0; i<n; i++) {
     do con.randompos(a);
     while (con.overlap(a)==true); 
-    end=con.push_back(a)-1;
+    end = con.push_back(a)-1;
   }
 }
 /*void macromolecule::add(container &con, vector<particle> v){
@@ -125,10 +129,11 @@ unsigned short group::displace(container &c, double dp) {
   c.trial[i].x = c.p[i].x + dp*slp.random_half();
   c.trial[i].y = c.p[i].y + dp*slp.random_half();
   c.trial[i].z = c.p[i].z + dp*slp.random_half();
+  c.boundary(c.trial[i]);
   return i;
 }
 
-//--------------- MACRO MOLECULE ---------------
+//--------------- MACROMOLECULE ---------------
 macromolecule::macromolecule() { title="MACROMOLECULE"; }
 string macromolecule::info() {
   ostringstream o;
@@ -154,6 +159,8 @@ void macromolecule::operator=(group g) {
  * group and stores the result in the
  * group dipole moment placeholder.
  * Origo is (0,0,0).
+ *
+ * \todo Implement PBC!
  */
 double macromolecule::dipole(vector<particle> &p)
 {
@@ -185,35 +192,28 @@ double macromolecule::charge(vector<particle> &p) {
   Q2+=z*z;
   return z;
 }
-void macromolecule::zmove(particles &par, double dz) {
+void macromolecule::zmove(container &par, double dz) {
   cm_trial.z = cm.z + dz;
-  for (int i=beg; i<=end; i++)
+  par.boundary(cm_trial);
+  for (short int i=beg; i<=end; i++) {
     par.trial[i].z = par.p[i].z + dz;
+    par.boundary(par.trial[i]);
+  };
 }
 /*!
- * \param par Particles class
+ * \param par Container class
  * \param c ...by adding this vector to all particles
  * \param k Keyword to specify if the move should be automatically accepted (default no).
  */
-void macromolecule::move(particles &par, point c) {
-  for (short i=beg; i<=end; i++) {
+void macromolecule::move(container &par, point c) {
+  for (short int i=beg; i<=end; i++) {
     par.trial[i].x = par.p[i].x + c.x;
     par.trial[i].y = par.p[i].y + c.y;
     par.trial[i].z = par.p[i].z + c.z;
+    par.boundary(par.trial[i]);
   }
   cm_trial = cm + c;
-}
-void macromolecule::BOXmove(particles &par, box &b, point c) {
-  for (short i=beg; i<=end; i++) {
-    par.trial[i].x = par.p[i].x + c.x;
-    par.trial[i].y = par.p[i].y + c.y;
-    par.trial[i].z = par.p[i].z + c.z;
-  }
-  cm_trial = cm + c;
-  for (short i=beg; i<=end; i++) {
-    b.boundary(par.trial[i]);
-  }
-  b.boundary(cm_trial);
+  par.boundary(cm_trial);
 }
 void macromolecule::rotate(container &par, double drot) {
   point u;

@@ -43,7 +43,7 @@ class group {
 
     void undo(particles &);
     void accept(particles &);                           //!< Accept a move
-    void add(particles &, vector<particle>);            //!< Add a particle vector
+    void add(container &, vector<particle>);            //!< Add a particle vector
     void add(container &, particle::type, short);       //!< Add particles w. collision check
     virtual unsigned short displace(container&,double); //!< Displace random particle
 };
@@ -60,9 +60,8 @@ class macromolecule : public group {
     double charge(vector<particle> &);  //!< Calculate total charge
     double radius(vector<particle> &);  //!< Calculate radius
     double dipole(vector<particle> &);  //!< Calculate dipole moment
-    void move(particles &, point);      //!< Translate group
-    void BOXmove(particles &, box &, point);
-    void zmove(particles &, double);    //!< Move in z-direction, only
+    void move(container &, point);      //!< Translate group
+    void zmove(container &, double);    //!< Move in z-direction, only
     void rotate(container &, double);   //!< Rotate around a point
     void rotate(container &, point, double);
     void operator=(group);              //!< Copy from group

@@ -41,8 +41,8 @@ classes:	$(OBJS)
 doc:	
 	doxygen doc/Doxyfile
 
-widom:	examples/widom-example.C $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/widom-example.C -o examples/widom-example
+widom:	examples/widom/widom-example.C $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/widom/widom-example.C -o examples/widom/widom-example
 
 pka:	examples/titration/pka.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/pka.C -o examples/titration/pka

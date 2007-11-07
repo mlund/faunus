@@ -52,7 +52,7 @@ Ewald::Ewald(int size, double bjerrum, double a, int ink) {
 };
 
 /*********************
-   SYSTEM ENERGY
+  SYSTEM ENERGY
  *********************/
 
 double Ewald::realSpaceEwald(vector<Particle> &p, Simbox &s) {
@@ -83,10 +83,10 @@ void Ewald::calcAlphaEwald(int size, Simbox &s, double inewaldpression) {
   double rcut2;
 
   rcut2=s.len_half*s.len_half;
-  
+
   while( A > (1.+1e-10) || A < (1-1e-10)) {
     A=sqrt(alpha) * ewaldpres / exp(-alpha * rcut2);
-    
+
     if(A>1){
       while(A > 1.){
         alpha-= incr;
@@ -103,7 +103,7 @@ void Ewald::calcAlphaEwald(int size, Simbox &s, double inewaldpression) {
         exit(1);
         return;
       };
-      
+
       if( A < (1.-1e-10)) {
         alpha += 2*incr;
         A = sqrt(alpha)*ewaldpres / exp(-alpha*rcut2);
@@ -130,10 +130,10 @@ void Ewald::calcAlphaEwald(int size, Simbox &s, double inewaldpression) {
         A = sqrt(alpha)*ewaldpres / exp(-alpha*rcut2);
         incr = incr*0.1;
       };
-      
+
     }; 
   };
- 
+
   if(alpha < 0. ) {
     cout << "#### Alpha negative !!!! ###### " << endl;
     exit(1); 
@@ -144,7 +144,7 @@ void Ewald::calcAlphaEwald(int size, Simbox &s, double inewaldpression) {
   kmax = 1. + alpha*s.len_half*s.len/twopi*2.;
   cout << "# New kmax fit = " << kmax << endl;
   ksqmax = (1.+alpha*s.len_half*s.len/twopi*2.)*(1.+alpha*s.len_half*s.len/twopi*2.);
-  
+
   for(int i=0; i<size; i++) {
     eix[i].resize(kmax+1);
     eiy[i].resize(2*kmax+1);
@@ -166,7 +166,7 @@ double Ewald::selfEwald(vector<Particle> &p){
     u-= p[i].charge*p[i].charge*alphasqrt/pisqrt;
   return u*lB;
 };
-  
+
 void Ewald::initKSpaceEwald(Simbox &s){
   double b;
   int maxk=2000;
@@ -190,7 +190,7 @@ void Ewald::initKSpaceEwald(Simbox &s){
             cout << "K vector to small" << endl;
             exit(1);
           };
-          
+
           rksq = rkx*rkx + rky*rky + rkz*rkz;
           kvec.push_back(twopi * exp( -b*rksq)/rksq/s.vol_A);
         };
@@ -201,7 +201,7 @@ void Ewald::initKSpaceEwald(Simbox &s){
   eikr.resize(totk);
   eikrold.resize(totk);
   cout << "# Number of wavefunctions :" << totk << endl;
-  
+
 };
 
 void Ewald::kSpaceEwald(vector<Particle> &p, Simbox &s) {
@@ -212,11 +212,11 @@ void Ewald::kSpaceEwald(vector<Particle> &p, Simbox &s) {
     eix[i][0]=complex<double>(1.0,0.0);
     eiy[i][kmax]=complex<double>(1.0,0.0);      //kmax = defines the '0'
     eiz[i][kmax]=complex<double>(1.0,0.0);
- 
+
     eix[i][1]= complex<double>(cos(twopii*p[i].x),sin(twopii*p[i].x));
     eiy[i][kmax+1]= complex<double>(cos(twopii*p[i].y),sin(twopii*p[i].y));
     eiz[i][kmax+1]= complex<double>(cos(twopii*p[i].z),sin(twopii*p[i].z));
-    
+
     eiy[i][kmax-1]= conj(eiy[i][kmax+1]);
     eiz[i][kmax-1]= conj(eiz[i][kmax+1]);
   };
@@ -230,7 +230,7 @@ void Ewald::kSpaceEwald(vector<Particle> &p, Simbox &s) {
       eiz[i][kmax-kk]=conj(eiz[i][kmax+kk]);
     };
   };
-  
+
 };
 
 void Ewald::kSpaceEwald(vector<Particle> &p, Simbox &s, int j) {
@@ -239,11 +239,11 @@ void Ewald::kSpaceEwald(vector<Particle> &p, Simbox &s, int j) {
   eix[j][0]=complex<double>(1.0,0.0);
   eiy[j][kmax]=complex<double>(1.0,0.0);
   eiz[j][kmax]=complex<double>(1.0,0.0);
- 
+
   eix[j][1]= complex<double>(cos(twopii*p[j].x),sin(twopii*p[j].x));
   eiy[j][kmax+1]= complex<double>(cos(twopii*p[j].y),sin(twopii*p[j].y));
   eiz[j][kmax+1]= complex<double>(cos(twopii*p[j].z),sin(twopii*p[j].z));
-    
+
   eiy[j][kmax-1]= conj(eiy[j][kmax+1]); //1+kmax = -1   2+kmax = -2 osv.
   eiz[j][kmax-1]= conj(eiz[j][kmax+1]);
 
@@ -254,7 +254,7 @@ void Ewald::kSpaceEwald(vector<Particle> &p, Simbox &s, int j) {
     eiz[j][kmax+kk]=eiz[j][kmax+kk-1]*eiz[j][kmax+1];
     eiz[j][kmax-kk]=conj(eiz[j][kmax+kk]);
   };
-  
+
 };
 
 double Ewald::sumkSpaceEwald(vector<Particle> &p) {
@@ -277,7 +277,7 @@ double Ewald::sumkSpaceEwald(vector<Particle> &p) {
         if(ksq < ksqmax && ksq!=0){
           sum = complex<double>(0.0,0.0);
           for(int i=0;i<size; i++)
-              sum += p[i].charge*eix[i][kx]*eiy[i][ky]*eiz[i][kz];
+            sum += p[i].charge*eix[i][kx]*eiy[i][ky]*eiz[i][kz];
           eikr[totk] = sum;
           u += fact*kvec[totk]*real(sum*conj(sum));
           totk+=1;
@@ -308,7 +308,7 @@ double Ewald::sumkSpaceEwald(vector<Particle> &p, int j) {
           eikr[totk] = eikrold[totk]+p[j].charge*(eix[j][kx]*eiy[j][ky]*eiz[j][kz]
               -eixold[j][kx]*eiyold[j][ky]*eizold[j][kz]);
           sum = eikr[totk];
-          
+
           u += fact*kvec[totk]*real(sum*conj(sum));
           totk+=1;
         };

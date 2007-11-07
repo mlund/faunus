@@ -7,14 +7,14 @@
  * be generated. Note: No equilibration run is incorporated.
  */
 #include <iostream>
-#include "../io.h"
-#include "../analysis.h"
-#include "../container.h"
-#include "../potentials.h"
+#include "io.h"
+#include "analysis.h"
+#include "container.h"
+#include "potentials.h"
 typedef pot_test T_pairpot;
-#include "../markovmove.C"
-#include "../analysis.h"
-#include "../histogram.h"
+#include "markovmove.C"
+#include "analysis.h"
+#include "histogram.h"
 
 using namespace std;
 
@@ -25,8 +25,8 @@ int main() {
   rdf rdf(particle::NA,particle::CL);
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
-  ioxyz xyz(cell);
-  ioxtc xtc(cell);
+  //ioxyz xyz(cell);
+  //ioxtc xtc(cell);
   widom<T_pairpot> widom(cell, pot,
       particle::NA, particle::CL);      // Class for Widom particle insertion
 
@@ -35,7 +35,8 @@ int main() {
   salt.add( cell, particle::CL, 60 );           // Insert chloride ions
   systemenergy sys(pot.energy(cell.p));         // Track system energy
 
-  xyz.save("test.xyz", cell.p);
+  //xyz.save("coord.xyz", cell.p);
+  
   for (int macro=0; macro<10; macro++) {        // Markov chain
     for (int micro=0; micro<2e3; micro++) {
       sm.move(salt);                            // Displace salt particles
@@ -43,11 +44,11 @@ int main() {
       sys+=sm.du;                               // Sum system energy changes
       widom.insert(10);                         // Widom particle insertion analysis
       rdf.update(cell.p);
-      xtc.save("hej",cell.p);
+      //xtc.save("hej",cell.p);
     }
     sys.update(pot.energy(cell.p));             // Update system energy
   }
-  xtc.close();
+  //xtc.close();
   rdf.show();
   cout << cell.info() << sys.info() << sm.info() << widom.info();
 }

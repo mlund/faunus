@@ -1,10 +1,9 @@
-Molecularmc SVN repository
-==========================
+faunus SVN repository
+======================
 
-code-bpe        User specific code.
-code-mikael     - // -
-code-trulle     - // -
 classes         Mostly finished, general classes.
-misc            Mostly temporary stuff.
 examples        Example programs
+legacy          Older, working programs
+misc            Mostly temporary stuff.
+undone          Unfinished code under preparation
 

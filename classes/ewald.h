@@ -1,11 +1,17 @@
-/*      Ewald Class
- *      Martin Trulsson (2007) 
- *      Energies are calculated using Ewald
- *      the class also contains a optimazation concerning
- *      cutoff in the Fourier room
- *      Cutoff in realspace is set equal to half the box
- */
+#ifndef ewald_h
+#define ewald_h
 
+/*!
+ * \brief Ewald Summation for long-ranged electrostatics
+ * \author Martin Trulsson
+ * \date 2007
+ * \todo Implement in newer faunus framework.
+ *
+ * Energies are calculated using Ewald
+ * the class also contains a optimazation concerning
+ * cutoff in the Fourier room
+ * Cutoff in realspace is set equal to half the box
+ */
 
 #include <vector>
 #include <cstdarg>
@@ -14,13 +20,10 @@
 #include "group.h"
 #include "slump.h"
 #include "particle.h"
-#include "simbox.h"
+#include "simbox.h"      // <- Should be obselete
 #include "histogram.h"
 #include "interact.h"
 #include "physconst.h"
-
-#ifndef ewald_h
-#define ewald_h
 
 
 class Ewald : public Interact {

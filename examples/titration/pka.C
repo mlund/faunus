@@ -20,7 +20,7 @@ int main() {
   macromolecule protein;                // Group for the protein
   ioaam aam(cell);                      // Protein input file format is AAM
   protein.add( cell, aam.load(
-        "calbindin.aam" ));             // Load protein from disk
+        "calbindin.aam" ) );            // Load protein from disk
   protein.move(cell, -protein.cm);      // ..and translate it to origo (0,0,0)
   protein.accept(cell);                 // ..accept translation
 
@@ -58,7 +58,7 @@ int main() {
     cell.check_vector();
   }
   cout << sys.info() << sm.info() << tit.info() // More information...
-    << salt.info() << protein.info();
+       << salt.info() << protein.info();
   povray.save("protein-example.pov", cell.p);   // Save POVRAY file
 
   #ifdef GROMACS

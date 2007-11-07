@@ -41,8 +41,8 @@ classes:	$(OBJS)
 doc:	
 	doxygen classes/Doxyfile
 
-widom:	examples/widom/widom-example.C $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/widom/widom-example.C -o examples/widom/widom
+widom:	examples/widom/widom.C $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/widom/widom.C -o examples/widom/widom
 
 pka:	examples/titration/pka.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/pka.C -o examples/titration/pka
@@ -53,5 +53,5 @@ clean:
 	rm -vf $(OBJS) examples/titrate/pka examples/widom/widom
 
 docclean:
-	rm -vfR classes/doc/html doc/latex
+	rm -vfR classes/doc/html classes/doc/latex
 

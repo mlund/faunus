@@ -1,4 +1,4 @@
-  MODEL = debug
+  MODEL = generic
   GROMACS = no
 
   ##################################################################
@@ -39,22 +39,19 @@ all:	classes
 
 classes:	$(OBJS)
 doc:	
-	doxygen doc/Doxyfile
+	doxygen classes/Doxyfile
 
 widom:	examples/widom/widom-example.C $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/widom/widom-example.C -o examples/widom/widom-example
+	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/widom/widom-example.C -o examples/widom/widom
 
 pka:	examples/titration/pka.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/pka.C -o examples/titration/pka
 
-clutch:	examples/clutch-example.C $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/clutch-example.C -o examples/clutch-example
-
-examples:	widom pka clutch
+examples:	widom pka
 
 clean:
-	rm -f $(OBJS) examples/titrate/pka examples/widom/widom-example 
+	rm -vf $(OBJS) examples/titrate/pka examples/widom/widom
 
 docclean:
-	rm -fR doc/html doc/latex
+	rm -vfR classes/doc/html doc/latex
 

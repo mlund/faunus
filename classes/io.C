@@ -79,8 +79,7 @@ bool ioaam::save(string file, vector<particle> &) {
 //----------------- IOXYZ ----------------------
 //ioxyz::ioxyz(species &spc) : iopart(spc) {
 //}
-ioxyz::ioxyz(species &spc, particles &p) : iopart(spc) {
-  sys=&p;
+ioxyz::ioxyz(species &s) : iopart(s) {
 }
 particle ioxyz::s2p(string &s) {
   particle p;

@@ -3,8 +3,8 @@
  *
  * This example program calculates the excess chemical
  * potential of NaCl in an aqueous solution using Widom's
- * particle insertion method. An output POVRAY file will
- * be generated. Note: No equilibration run is incorporated.
+ * particle insertion method.
+ * Note: No equilibration run is incorporated.
  */
 #include <iostream>
 #include "io.h"
@@ -25,8 +25,7 @@ int main() {
   rdf rdf(particle::NA,particle::CL);
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
-  //ioxyz xyz(cell);
-  //ioxtc xtc(cell);
+  ioxyz xyz(cell);
   widom<T_pairpot> widom(cell, pot,
       particle::NA, particle::CL);      // Class for Widom particle insertion
 
@@ -35,21 +34,19 @@ int main() {
   salt.add( cell, particle::CL, 60 );           // Insert chloride ions
   systemenergy sys(pot.energy(cell.p));         // Track system energy
 
-  //xyz.save("coord.xyz", cell.p);
+  xyz.save("coord.xyz", cell.p);
   
   for (int macro=0; macro<10; macro++) {        // Markov chain
-    for (int micro=0; micro<2e3; micro++) {
+    for (int micro=0; micro<1e2; micro++) {
       sm.move(salt);                            // Displace salt particles
       sm.adjust_dp(40,50);                      // Stride to 40-50% acceptance
       sys+=sm.du;                               // Sum system energy changes
       widom.insert(10);                         // Widom particle insertion analysis
       rdf.update(cell.p);
-      //xtc.save("hej",cell.p);
     }
     sys.update(pot.energy(cell.p));             // Update system energy
   }
-  //xtc.close();
-  rdf.show();
+  rdf.write("rdf.dat");
   cout << cell.info() << sys.info() << sm.info() << widom.info();
 }
 

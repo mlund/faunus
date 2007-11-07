@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <string>
+#include <iostream>
 #include "point.h"
 #include "average.h"
 #include "xytable.h"
@@ -21,7 +22,7 @@ class histogram : private xytable<float,unsigned long int> {
     histogram(float, float, float);
     string comment;                     //!< User defined comment
     void add(float); 
-    void show(); 
+    void write(string); 
     virtual float get(float); 
 
     //! Example of histogram class
@@ -44,12 +45,16 @@ void histogram::add(float x) {
 float histogram::get(float x) { return (*this)(x)/float(cnt); }
 
 //! Show results for all x
-void histogram::show() {
+void histogram::write(string file) {
   float g;
-  for (float x=0; x<xmax(); x+=xres) {
-    g=get(x);
-    if (g!=0)
-      cout << x << " " << g << "\n";
+  ofstream f(file.c_str());
+  if (f) {
+    for (float x=0; x<xmax(); x+=xres) {
+      g=get(x);
+      if (g!=0)
+        f << x << " " << g << "\n";
+    }
+    f.close();
   }
 }
 
@@ -127,7 +132,7 @@ void rdfP3::update(vector<particle*> &p)
   unsigned short i,j,n=p.size();
   for (i=0; i<n-1; i++)
     for (j=i+1; j<n; j++) 
-        add( abs(p[i]->dist(*p[j], len, len_inv )));
+      add( abs(p[i]->dist(*p[j], len, len_inv )));
 }
 float rdf::volume(float x) { return 4./3.*acos(-1)*( pow(x+xres,3)-pow(x,3) ); }
 /*!

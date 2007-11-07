@@ -50,7 +50,9 @@ class iopart : private io {
   vector<string> v; 
   vector<particle> p;
   public:
-  iopart(species &spc) {spcPtr=&spc; }
+  iopart(species &spc) {
+    spcPtr=&spc;
+  }
   virtual vector<particle> load(string)=0;            //!< Load from disk
   virtual bool save(string, vector<particle>&)=0;     //!< Save to disk
 };
@@ -62,14 +64,15 @@ class iopart : private io {
  */
 class ioxyz : public iopart {
   friend class particles;
+
   private:
   particle s2p(string &);
   particles *sys;
+
   public:
-    ioxyz(species &);
-    ioxyz(species &, particles &);
-    bool save(string, vector<particle>&);
-    vector<particle> load(string);
+  ioxyz(species &);
+  bool save(string, vector<particle>&);
+  vector<particle> load(string);
 };
 
 

@@ -1,4 +1,4 @@
-  MODEL = debug
+  MODEL = generic
   GROMACS = no
 
   ##################################################################
@@ -44,8 +44,8 @@ doc:
 widom:	examples/widom-example.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/widom-example.C -o examples/widom-example
 
-pka:	examples/titration/protein-example.C $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/protein-example.C -o examples/titration/protein-example
+pka:	examples/titration/pka.C $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/pka.C -o examples/titration/pka
 
 clutch:	examples/clutch-example.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/clutch-example.C -o examples/clutch-example
@@ -53,7 +53,7 @@ clutch:	examples/clutch-example.C $(OBJS)
 examples:	widom pka clutch
 
 clean:
-	rm -f $(OBJS) examples/protein-example examples/widom-example 
+	rm -f $(OBJS) examples/titrate/pka examples/widom/widom-example 
 
 docclean:
 	rm -fR doc/html doc/latex

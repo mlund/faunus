@@ -4,7 +4,7 @@
 #include "container.h"
 #include "potentials.h"
 #include "countdown.h"
-typedef pot_coulomb T_pairpot;
+typedef pot_coulomb T_pairpot;          // Specific pair interaction function
 #include "markovmove.C"
 
 using namespace std;
@@ -20,25 +20,25 @@ int main() {
   macromolecule protein;                // Group for the protein
   ioaam aam(cell);                      // Protein input file format is AAM
   protein.add( cell, aam.load(
-        "examples/fab.aam" ));          // Load protein from disk
+        "calbindin.aam" ));             // Load protein from disk
   protein.move(cell, -protein.cm);      // ..and translate it to origo (0,0,0)
   protein.accept(cell);                 // ..accept translation
 
   group salt;                           // Group for mobile ions
-  salt.add( cell, particle::NA, 24+33); // Insert sodium ions
+  salt.add( cell, particle::NA, 43);    // Insert sodium ions
   salt.add( cell, particle::CL, 24 );   // Insert chloride ions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
-  chargereg tit(nvt,cell,pot,salt,7.6); // Prepare titration. pH 7
+  chargereg tit(nvt,cell,pot,salt,7.6); // Prepare titration. pH 7.6
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
 
   cout << cell.info() << tit.info();    // Some information
 
   #ifdef GROMACS
-  ioxtc xtc(cell);
+  ioxtc xtc(cell);                      // Gromacs xtc output (if installed)
   #endif
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain
-    for (int micro=1; micro<=2e4; micro++) {
+    for (int micro=1; micro<=1e3; micro++) {
       sm.move(salt);                            // Displace salt particles
       sys+=sm.du;
       if (tit.titrateall()==true) {             // Titrate groups
@@ -60,6 +60,7 @@ int main() {
   cout << sys.info() << sm.info() << tit.info() // More information...
     << salt.info() << protein.info();
   povray.save("protein-example.pov", cell.p);   // Save POVRAY file
+
   #ifdef GROMACS
   xtc.close();
   #endif

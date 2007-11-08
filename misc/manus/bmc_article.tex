@@ -264,15 +264,34 @@ The software is licensed under the GNU open source model and developers who wish
 %	  Text for this sub-sub-section \ldots
 
 \subsection*{Performance Aspects}
-\subsubsection*{Function inlining}
-The most demanding loop in most MC simulations is the evaluation of configurational energies. Hence the applied pair potential must be highly optimized and inlined in all inner loops.
-This is accomplished by passing the pair potential class as a template parameter and create a local instance inside the interaction class,
+\subsubsection*{Function Inlining via Templates}
+The probably most demanding loop in molecular simulations is the evaluation of configurational energies.
+Hence the applied pair potential must be highly optimized and preferably inlined in all inner loops.
+This is accomplished by passing a pair potential class as a template parameter that will create a local instance inside the inner loop template,
 \begin{verbatim}
-  template<class T_pairpot>
-  class interactions {
-    T_pairpot pair;
-    ...
+  class coulomb {
+    float energy(particle &a, particle &b)
+    {
+      return a.charge*b.charge/a.dist(b);
+    }
   };
+
+  template<class T_pairpot>
+  class innerloop {
+    T_pairpot pair;
+    float sum( vector<particle> &p ) {
+      for (i=0; i<N-1; i++)
+        for (j=i+1; j<N; j++) 
+          u=u+pair.energy(p[i], p[j]);
+      ...
+  };
+\end{verbatim}
+This enables the programmer to arbitrarily invoke various pair potential functions re-cycling the inner loop implementation,
+\begin{verbatim}
+  innerloop<coulomb> elec;
+  innerloop<lennardjones> lj;
+  elec.sum(p);
+  ...
 \end{verbatim}
 
 \subsubsection*{Passing arguments as references}
@@ -345,8 +364,8 @@ Particles in the systems can be clustered into groups and derived classes and he
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section*{Acknowledgements}
   \ifthenelse{\boolean{publ}}{\small}{}
-  For financial support the author would like to thank the European Molecular Biology Organization (EMBO).
- Pavel Jungwirth, The Academy of Sciences in Prague for useful discussions.
+  For financial support the authors would like to thank the Research School of Pharmaceutical Sciences, Sweden, the Linnaeus Center of Excellence on Organizing Molecular Matter, Sweden,
+and the European Molecular Biology Organization. We also thank Sourceforge, Inc. for freely hosting the projects source code.
 
  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

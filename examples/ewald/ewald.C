@@ -1,10 +1,7 @@
 /*! \file Example how to simulate a NaCl solution
- *  \example widom-example.C
+ *  \example ewald-example.C
  *  \author Martin Trulsson?
  *  \todo Not yet done -- Martin?
- *
- * This could be changed into a cubic box with
- * long range electrostatic corrections
  *
  */
 #include <iostream>

@@ -54,7 +54,7 @@ pka:	examples/titration/pka.C $(OBJS)
 examples:	widom pka ewald
 
 clean:
-	rm -vf $(OBJS) examples/titrate/pka examples/widom/widom
+	rm -vf $(OBJS) examples/titrate/pka examples/widom/widom examples/ewald/ewald
 
 docclean:
 	rm -vfR classes/doc/html classes/doc/latex

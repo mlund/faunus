@@ -53,6 +53,7 @@ class box : public container {
   public:
     float len; //!< Side length
     box(float);
+    string info();
     void randompos(point &);
     void randompos(vector<point> &);
     point randompos();

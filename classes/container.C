@@ -57,6 +57,14 @@ box::box(float sidelength) {
   volume = len*len*len;
 }
 
+string box::info() {
+  ostringstream o;
+  o << container::info() 
+    << "#   Shape                = Cube" << endl
+    << "#   Side length          = " << len << endl;
+  return o.str();
+}
+
 point box::randompos() {
   point p;
   p.x = slp.random_half()*len;

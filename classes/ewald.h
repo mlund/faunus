@@ -5,7 +5,7 @@
  * \brief Ewald Summation for long-ranged electrostatics
  * \author Martin Trulsson
  * \date 2007
- * \todo Implement in newer faunus framework.
+ * \todo Implement in newer faunus framework. I.e. a pairpot(p1,p2) function
  *
  * Energies are calculated using Ewald
  * the class also contains a optimazation concerning

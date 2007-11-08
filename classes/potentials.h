@@ -20,18 +20,18 @@
  *  that handles particle pair-potentials.
  */
 class pot_setup {
- public:
-   pot_setup();
-   pot_setup(double, double);
-   pot_setup(double, double, double, double);
-   double kappa,        //!< Inverse Debye screening length
-          lB,           //!< Bjerrum length
-          eps,          //!< L-J parameter
-          r0,           //!< Bond eq. distance
-          epsi,         //!< Internal dielectric constant
-          epso,         //!< External dielectric constant
-          box,          //!< Cubic box length
-          a;            //!< Cavity radius
+  public:
+    pot_setup();
+    pot_setup(double, double);
+    pot_setup(double, double, double, double);
+    double kappa,        //!< Inverse Debye screening length
+           lB,           //!< Bjerrum length
+           eps,          //!< L-J parameter
+           r0,           //!< Bond eq. distance
+           epsi,         //!< Internal dielectric constant
+           epso,         //!< External dielectric constant
+           box,          //!< Cubic box length
+           a;            //!< Cavity radius
 };
 
 /*!
@@ -59,6 +59,36 @@ class pot_coulomb : private pot_lj {
       return (qq!=0) ? u+qq/sqrt(r2) : u;
     }
 };
+
+/*!
+ * \brief Coulomb pot. with minimum image and zero for overlapping spheres.
+ * \author Mikael Lund
+ * \date 2007
+ */
+class pot_minimage {
+  private:
+    double invbox,box;
+  public:
+    double f;
+    pot_minimage(pot_setup &pot) {
+      f=pot.lB;
+      box=pot.box;
+      invbox=1./box;
+    }
+    inline double pairpot(particle &p1, particle &p2) {
+      register double dx,dy,dz,r2;
+      dx=p1.x-p2.x;
+      dy=p1.y-p2.y;
+      dz=p1.z-p2.z;
+      dx-=box*floor(dx*invbox+.5);
+      dy-=box*floor(dy*invbox+.5);
+      dz-=box*floor(dz*invbox+.5);
+      r2=dx*dx+dy*dy+dz*dz;
+      dx=p1.radius+p2.radius;
+      return (r2<dx*dx) ? 1e8 : p1.charge*p2.charge/sqrt(r2);
+    }
+};
+
 
 class pot_test {
   public:

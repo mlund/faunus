@@ -12,7 +12,7 @@
 #include "analysis.h"
 #include "container.h"
 #include "potentials.h"
-typedef pot_test T_pairpot;
+typedef pot_minimage T_pairpot;         // Coulomb pot. with minimum image convention.
 #include "markovmove.C"
 #include "analysis.h"
 #include "histogram.h"
@@ -20,22 +20,21 @@ typedef pot_test T_pairpot;
 using namespace std;
 
 int main() {
-  box cell(50.);                        // We want a cubic cell - periodic boundaries
+  box box(50.);                         // A cubic box - periodic boundaries
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg;                        // Setup pair potential - default values
-  rdf rdf(particle::NA,particle::CL);
-  interaction<T_pairpot> pot(cfg);      // Functions for interactions
-  saltmove sm(nvt, cell, pot);          // Class for salt movements
-  ioxyz xyz(cell);
-  widom<T_pairpot> widom(cell, pot,
+  cfg.box = box.len;                    // Specific box len. for minimum image
+  rdf rdf(particle::NA,particle::CL);   // Prepare Na-Cl radial distribution, g(r)
+  interaction<T_pairpot> pot(cfg);      // Particle energy functions
+  ioxyz xyz(box);                       // Class for XYZ output
+  saltmove sm(nvt, box, pot);           // Class for salt movements
+  widom<T_pairpot> widom(box, pot,
       particle::NA, particle::CL);      // Class for Widom particle insertion
-
   group salt;                                   // Group for mobile ions
-  salt.add( cell, particle::NA, 60 );           // Insert sodium ions
-  salt.add( cell, particle::CL, 60 );           // Insert chloride ions
-  systemenergy sys(pot.energy(cell.p));         // Track system energy
+  salt.add( box, particle::NA, 80 );            // Insert sodium ions
+  salt.add( box, particle::CL, 80 );            // Insert chloride ions
 
-  xyz.save("coord.xyz", cell.p);
+  systemenergy sys(pot.energy(box.p));          // Track system energy
   
   for (int macro=0; macro<10; macro++) {        // Markov chain
     for (int micro=0; micro<1e2; micro++) {
@@ -43,11 +42,12 @@ int main() {
       sm.adjust_dp(40,50);                      // Stride to 40-50% acceptance
       sys+=sm.du;                               // Sum system energy changes
       widom.insert(10);                         // Widom particle insertion analysis
-      rdf.update(cell.p);
+      rdf.update(box.p);                        // Analyse Na-Cl distribution
     }
-    sys.update(pot.energy(cell.p));             // Update system energy
+    sys.update(pot.energy(box.p));              // Update system energy
   }
-  rdf.write("rdf.dat");
-  cout << cell.info() << sys.info() << sm.info() << widom.info();
+  xyz.save("coord.xyz", box.p);                 // Write XYZ file
+  rdf.write("rdf.dat");                         // Write g(r)
+  cout << box.info() << sys.info() << sm.info() << widom.info();
 }
 

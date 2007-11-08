@@ -39,10 +39,10 @@ class systemenergy : public analysis {
 
 /*! \brief Widom method for excess chemical potentials
  *  \author Mikael Lund
- *  \todo Expand to one-particle insertion (Woodward+Svensson)
+ *  \todo Expand with a corrected one-particle insertion (Woodward+Svensson's charge scaling)
  *
- *  This class will insert "ghost" particles so as to
- *  calculate the mean excess chemical potential.
+ *  This class will insert "ghost" particle(s) so as to
+ *  calculate the (mean) excess chemical potential.
  */
 template<class T_pairpot>
 class widom : public analysis {

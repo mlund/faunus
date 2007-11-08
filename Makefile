@@ -51,7 +51,7 @@ ewald:	examples/ewald/ewald.C $(OBJS)
 pka:	examples/titration/pka.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/pka.C -o examples/titration/pka
 
-examples:	widom pka
+examples:	widom pka ewald
 
 clean:
 	rm -vf $(OBJS) examples/titrate/pka examples/widom/widom

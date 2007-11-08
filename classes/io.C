@@ -95,7 +95,7 @@ particle ioxyz::s2p(string &s) {
 
 bool ioxyz::save(string file, vector<particle> &p) {
   ostringstream o;
-  o << p.size() << endl;
+  o << p.size() << endl << endl;
   for (unsigned short i=0; i<p.size(); i++)
     o << spcPtr->d[p[i].id].name << " "
       << p[i].x << " " << p[i].y << " " << p[i].z

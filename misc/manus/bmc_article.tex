@@ -223,11 +223,10 @@ Metropolis Monte Carlo (MC) simulation~\cite{metropolis:53}, on the other hand, 
 However, if one is interested in equilibrium properties only -- binding constants, free energy changes, pKa values etc. -- MC simulation may be a good option.
 
 Using a standard, pre-compiled software package should require no prior knowledge of programming and as such can be a fast and practical approach to solve a specific scientific problem. On the other hand, the underlying physical theory is somewhat hidden and there is always a risk that the application is regarded as a ``black box'' producing numbers. It becomes even worse if new features are to be implemented.
-
-The alternative is for researchers to create their own programs. This approach of course require some programming skills and writing an advanced simulation program from scratch may be an overwhelming -- and perhaps even error prone -- task.
+The alternative is for researchers to create their own programs. This approach of course requires some programming skills and writing an advanced simulation program from scratch may be an overwhelming -- and likely error prone -- task.
 Instead the programmer may resort to existing libraries, thus approaching the ``black box'' situation described above. However, the abstraction level will typically be lower which has several advantages that allows the researcher to
 (i) be able to quickly develop a working program,
-(ii) have a high level of control,
+(ii) have a high level of control, and
 (iii) experience high performance due a minimalistic design.
 
 In this text we present a C++~\cite{stroustrup:97} framework or class library that can be used to quickly build customized MC simulation programs.
@@ -242,7 +241,7 @@ In this text we present a C++~\cite{stroustrup:97} framework or class library th
 \section*{Results and Discussion}
 
 \subsection*{General Features}
-The class library provides simulation routines for ions, macromolecules and chains in solutions with a strong focus on electrostatics using the primitive model of electrolytes~\cite{hill:86} where the solvent is treated as a structureless dielectric continuum. It is, however, completely possible to expand the library to other systems, include explicit solvent etc. The routines have been developed over several years in connection with a number of scientific investigations, including proteins in solution~\cite{lund:05}. As of writing the code library contain general classes for studying the following,
+The class library provides simulation routines for ions, macromolecules and chains in solutions with a strong focus on electrostatics using the primitive model of electrolytes~\cite{hill:86} where the solvent is treated as a structureless dielectric continuum. It is, however, completely possible to expand the library to other systems, include an explicit solvent etc. The routines have been developed over several years in connection with a number of scientific investigations, including proteins in solution~\cite{lund:05}. As of writing the code library contain general classes for studying the following,
 \begin{itemize}
 \item Explicit treatment of ions, including ion-ion correlation effects.
 \item Macromolecules -- Proteins, flexible chains, charged surfaces.
@@ -250,13 +249,17 @@ The class library provides simulation routines for ions, macromolecules and chai
 \item Raytracing output (povray~\cite{povray})
 \item Particle distribution functions and other statistical mechanical averages.
 \end{itemize}
-An example of protein ionization will be presented later in the text. We stress that the project is under ongoing development and encourage interested users and developers to contribute. All access to the library goes through the subversion (svn) repository hosted at sourceforge.net and, for example, to obtain the latest version use the svn checkout command,
+An example of protein ionization will be presented later in the text.
+We stress that the project is under ongoing development and encourage interested users and developers to contribute.
+As of writing the framework is hosted by Sourceforge, Inc. and the latest version can be downloaded using the versioning control system ``subversion'' (SVN).
+On most UNIX type operating systems this is done by invoking the following command,
 \begin{verbatim}
-svn checkout
+$ svn checkout
   http://faunus.svn.sourceforge.net/
   svnroot/faunus/trunk faunus
 \end{verbatim}
-The software is licensed under the GNU open source model and developers who wish to gain write access are welcome to contact the author.
+
+The software is licensed under the GNU open source model and developers who wish to submit code to the the project are welcome to contact the authors.
 
 %    \subsubsection*{This is a sub-sub-heading}
    %   Sub-sub-sub-headings are made with the \textsl{\\subsubsection} command. \pb
@@ -265,9 +268,9 @@ The software is licensed under the GNU open source model and developers who wish
 
 \subsection*{Performance Aspects}
 \subsubsection*{Function Inlining via Templates}
-The probably most demanding loop in molecular simulations is the evaluation of configurational energies.
+The most demanding loop in most molecular simulations is the evaluation of configurational energies.
 Hence the applied pair potential must be highly optimized and preferably inlined in all inner loops.
-This is accomplished by passing a pair potential class as a template parameter that will create a local instance inside the inner loop template,
+This is accomplished by passing a pair potential \emph{class} as a template parameter that will create a local instance inside the inner loop template,
 \begin{verbatim}
   class coulomb {
     float energy(particle &a, particle &b)
@@ -286,7 +289,7 @@ This is accomplished by passing a pair potential class as a template parameter t
       ...
   };
 \end{verbatim}
-This enables the programmer to arbitrarily invoke various pair potential functions re-cycling the inner loop implementation,
+This so-called Expression Template technique enables the programmer to arbitrarily invoke various pair potential functions, re-cycling the inner loop implementation,
 \begin{verbatim}
   innerloop<coulomb> elec;
   innerloop<lennardjones> lj;
@@ -295,15 +298,15 @@ This enables the programmer to arbitrarily invoke various pair potential functio
 \end{verbatim}
 
 \subsubsection*{Passing arguments as references}
-In C++ argument passing is done by creating a new copy of the object. Working with large, aggregate structures such as particle vectors, this will negatively impact performance. To circumvent this we pass all objects as references, for example: \verb"void function(fooclass &)".
+In C++ argument passing is done by creating a new copy of the object. Working with large, aggregate structures such as particle vectors, this will negatively impact performance. To circumvent this we pass all objects as references, for example: \verb"void function(someclass &)".
 
 \subsubsection*{Minimize memory comsumption}
 Computer simulations of classical mechanical systems are usually not memory intensive and by minimizing the memory requirements there is a good chance that the executing code will stay in the local cache. In that regard C++ templates are a concern since code will be generated for each template type. We therefore stride to avoid extensive use of multiple template types -- for example it would seem silly to instantiate both a \verb"float" and a \verb"double" version of a template class.
 
 \subsubsection*{Parallization}
-In systems that equilibrate fast, Monte Carlo simulations can be linearly parallelized using the ``embarrasingly simple technique'' -- that is start several independent runs with different random seeds and combine the results afterwards.
+In systems that equilibrate fast, Monte Carlo simulations can be linearly parallelized using the ``embarrasingly simple technique'' -- that is start several independent runs with different random seeds, combining the results afterwards.
 Tightly coupled parallization is incorporated in parts of the code by threading the energy evaluation into two processes: before and after a trial move.
-For systems with particles in the order of hundreds, this scales well on dual-core computers, whereas the overhead becomes unacceptable for small systems. To enable threading, the approprite compiler flag for OpemMP~\cite{openmp:98} must be set. The GNU, Intel and IBM C++ compilers all support OpenMP.
+For systems with particles in the order of hundreds, this scales well on dual-core computers, whereas the overhead becomes unacceptable for small systems. To enable threading, the approprite compiler flag for OpenMP~\cite{openmp:98} must be set. The GNU, Intel and IBM C++ compilers all support OpenMP.
 
 \subsection*{Code Documentation}
 We provide a class library and as such need to describe both what the classes do as well as how to use them. This can be conveniently achieved using a code documentation system -- here we have chosen \verb"Doxygen"~\cite{doxygen} since (i) the documentation appears as normal code comments and (ii) the output is highly configurable, allowing LaTeX equations to be inserted etc.
@@ -381,7 +384,6 @@ and the European Molecular Biology Organization. We also thank Sourceforge, Inc.
 %%  in the online Instructions for Authors.                %% 
 %%                                                         %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 {\ifthenelse{\boolean{publ}}{\footnotesize}{\small}
  \bibliographystyle{bmc_article}  % Style BST file

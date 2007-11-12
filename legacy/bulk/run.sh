@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Script to automatically vary input parameters for "bulk".
-# This example is set up to simulate a very simple seawater
+# This example is set up to simulate a simple seawater
 # solution at different concentrations and temperatures.
 
 # P A R A M E T E R S :

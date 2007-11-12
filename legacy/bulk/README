@@ -11,7 +11,7 @@ Introduction:
 ==============
 This text explains how to use the program 'bulk.run' to evaluate activity
 coefficients/osmotic pressures in ionic solutions. This program can be freely
-used and modified but users are requested to cite the following publication:
+used and modified but we ask users to cite the following publication:
 
 Lund, M., Jonsson, B. and Pedersen, T.
 Activity Coefficients in Seawater Using Monte Carlo Simulations
@@ -25,8 +25,6 @@ bulk.inc    Fortran variable definitions
 bulk.inp    Bulk input file
 compile     Compile script
 script.sh   Example script
-bin/        Precompiled binaries for various architectures
-output/     Results from the example script
 
 
 Compiling:

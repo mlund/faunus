@@ -20,8 +20,8 @@ c  ********************************************************************
       DATA kn1,kn2,key,kntot / 4*0 /
       DATA tijd / 10*0. /                  
    43 FORMAT('MONTE CARLO SIMULATION OF MULTICOMPONENT ISOTROPIC    '
-     *      ,'IONIC SYSTEM  ',/,/,'Written by Peter Bolhuis, February'
-     *      ,'1992',/)
+     *      ,'IONIC SYSTEM  ',/,/,'Written by P. Bolhuis, B. Jonsson, '
+     *      ,'T. Akesson, February 1992',/)
    44 FORMAT('************************************************************
      ************************',/)
 

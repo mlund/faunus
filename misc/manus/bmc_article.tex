@@ -219,10 +219,11 @@ Bj\"orn Persson$^{2}$
 \section*{Background}
 Molecular simulation has become a standard tool for investigating molecular systems such as proteins, polymer solutions, lamellar phases etc.
 It is safe to say that for biological applications Molecular Dynamics (MD) is by far the most abundant method as it provides both static and dynamic properties of the system.
-Metropolis Monte Carlo (MC) simulation~\cite{metropolis:53}, on the other hand, is less utilized and only few software packages exists\cite{Kamberaj:2001fk,carlsson:01,Jie-Hu:2006lr}. One advantage of MC over MD is that it allows ``unphysical'' particle moves, enabling very efficient sampling of the configurational space\cite{frenkel}. The tradeoff for this freedom to move particle is the loss of all dynamic information and, in addition, MC programs tend to become less general.
+Metropolis Monte Carlo (MC) simulation~\cite{metropolis:53}, on the other hand, is less utilized and only few software packages exists\cite{Kamberaj:2001fk,carlsson:01,Jie-Hu:2006lr}.
+One advantage of MC is that it allows ``unphysical'' particle moves, enabling very efficient sampling of the configurational space\cite{frenkel}. The tradeoff for this freedom to move particle is the loss of all dynamic information and, in addition, MC programs tend to become less general.
 However, if one is interested in equilibrium properties only -- binding constants, free energy changes, pKa values etc. -- MC simulation may be a good option.
 
-Using a standard, pre-compiled software package should require no prior knowledge of programming and as such can be a fast and practical approach to solve a specific scientific problem. On the other hand, the underlying physical theory is somewhat hidden and there is always a risk that the application is regarded as a ``black box'' producing numbers. It becomes even worse if new features are to be implemented.
+Using a standard, pre-compiled software package should require no prior knowledge of programming and as such can be a fast and practical approach for solving a specific scientific problem. On the other hand, the underlying physical theory is somewhat hidden and there is always a risk that the application is regarded as a ``black box'' producing numbers. It becomes even worse if new features are to be implemented.
 The alternative is for researchers to create their own programs. This approach of course requires some programming skills and writing an advanced simulation program from scratch may be an overwhelming -- and likely error prone -- task.
 Instead the programmer may resort to existing libraries, thus approaching the ``black box'' situation described above. However, the abstraction level will typically be lower which has several advantages that allows the researcher to
 (i) be able to quickly develop a working program,
@@ -234,6 +235,107 @@ In this text we present a C++~\cite{stroustrup:97} framework or class library th
  %Text for this section.\cite{koon,oreg,khar,zvai,xjon,schn,pond,smith,marg,hunn,advi,koha,mouse}
 
 
+%%%%%%%%%%%%%%%%%%
+%
+\section*{Implementation}
+\subsection*{Object Oriented Design}
+The object oriented capabilities of C++ have enabled us to create a suite of classes with an intuitive interface.
+For example, the handling of particles -- a key undertaking of all classical simulations -- is provided by a class hierarchy:
+\begin{verbatim}
+class point {
+public:
+  double x,y,z;
+  double dist(point &);
+  ...
+};
+class particle {
+public:
+  double charge, radius;
+  ...
+};
+\end{verbatim}
+The Standard Template Library (STL) is subsequently used to construct a vector of particles, \verb"vector<particle>", that allows for easy access and manipulation.
+For instance, \verb"p[i].radius" will return the size of the $i$'th particle.
+
+\subsection*{Polymorphic Classes -- Virtual Functions}
+One of the unique features of C++ is \emph{polymorph classes} that allows for very generic and intuitively appealing code.
+To demonstrate this, we now outline the design of our framework for handling the simulation container -- see Figure~\ref{fig:container}.
+Basically, the end programmer will want to select among different geometries -- a box, sphere, cylinder etc.
+For each geometry we need functions that can calculate the volume, generate a random point and decide whether a given point falls within the boundaries.
+We now construct a polymorph class, \verb"container", that contains the unimplemented \emph{virtual functions}.
+Derived classes -- \verb"box", \verb"cylinder" etc. -- then implement specialized versions of the functions and the \verb"container" class hence acts as an interface to the various geometries.
+This means that we can construct functions that accept any geometry derived from the \verb"container" class.
+For example:
+\begin{verbatim}
+double concentration(container &c)
+{ return N / c.volume(); }
+\end{verbatim}.
+Due to a large overhead, virtual functions may, however, negatively impact performance and are generally avoided in critical, inner loops.
+
+\subsection*{Performance Aspects}
+\subsubsection*{Function Inlining via Templates}
+The most computationally demanding step in most molecular simulations is the evaluation of configurational energies.
+Hence the applied pair potential must be highly optimized and preferably inlined in all inner loops.
+This is accomplished by passing a pair potential \emph{class} as a template parameter that will create a local instance inside the inner loop template,
+\begin{verbatim}
+class coulomb {
+  float energy(particle &a, particle &b)
+  {
+    return a.charge*b.charge/a.dist(b);
+  }
+};
+
+template<class T_pairpot>
+class innerloop {
+  T_pairpot pair;
+  float sum( vector<particle> &p ) {
+    for (i=0; i<N-1; i++)
+      for (j=i+1; j<N; j++) 
+        u=u+pair.energy(p[i], p[j]);
+    ...
+};
+\end{verbatim}
+This so-called Expression Template technique~\cite{veldhuizen:95} enables the programmer to arbitrarily invoke various pair potential functions, re-cycling the inner loop implementation,
+\begin{verbatim}
+innerloop<coulomb> elec;
+innerloop<lennardjones> lj;
+elec.sum(p);
+...
+\end{verbatim}
+
+\subsubsection*{Passing arguments as references}
+In C++ argument passing is done by creating a new copy of the object. Working with large, aggregate structures such as particle vectors, this will negatively impact performance. To circumvent this we pass all complex objects as references, for example: \verb"void function(someclass &)".
+
+\subsubsection*{Minimize memory comsumption}
+Computer simulations of classical mechanical systems are usually not memory intensive and by minimizing the memory requirements there is a good chance that the executing code will stay in the local cache. In this regard C++ templates are a concern since code will be generated for each template type. We therefore stride to avoid extensive use of multiple template types -- for example it would seem silly to instantiate both a \verb"float" and a \verb"double" version of a template class.
+
+\subsubsection*{Parallization}
+In systems that equilibrate fast, Monte Carlo simulations can be linearly parallelized using the ``embarrasingly simple technique'' -- that is start several independent runs with different random seeds, combining the results afterwards.
+Tightly coupled parallization is incorporated in parts of the code by threading the energy evaluation into two processes: before and after a trial move.
+For systems with particles in the order of hundreds, this scales well on dual-core computers, whereas the overhead becomes unacceptable for small systems. To enable threading, the approprite compiler flag for OpenMP~\cite{openmp:98} must be set. The GNU, Intel and IBM C++ compilers all support OpenMP.
+
+\subsection*{Code Documentation}
+We provide a class library and as such need to describe both what the classes do as well as how to use them. This can be conveniently achieved using a code documentation system -- here we have chosen \verb"Doxygen"~\cite{doxygen} since (i) the documentation appears as normal code comments and (ii) the output is highly configurable, allowing LaTeX equations to be inserted etc.
+For example, commenting a class like this,
+\begin{verbatim}
+/*!
+ * \brief n'th degree Legendre polynomium
+ * \author M. Lund
+ * \date Canberra 2005-2006
+ * Example\n
+ * \code
+ * legendre l(10);
+ * l.eval(1.3);
+ * cout << l.p[3]
+ * \endcode
+ */
+class legendre { ... }
+\end{verbatim}
+will cause \verb"Doxygen" to recognize the individual keywords and include them in the manual (HTML, PDF etc).
+Another very useful feature of Doxygen is the ability to generate a graphical view of the class hierachy. This enables the end programmer to visually see how a class is constructed as shown in Figure 1.
+
+
+
  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Results and Discussion %%
@@ -241,7 +343,8 @@ In this text we present a C++~\cite{stroustrup:97} framework or class library th
 \section*{Results and Discussion}
 
 \subsection*{General Features}
-The class library provides simulation routines for ions, macromolecules and chains in solutions with a strong focus on electrostatics using the primitive model of electrolytes~\cite{hill:86} where the solvent is treated as a structureless dielectric continuum. It is, however, completely possible to expand the library to other systems, include an explicit solvent etc. The routines have been developed over several years in connection with a number of scientific investigations, including proteins in solution~\cite{lund:05}. As of writing the code library contain general classes for studying the following,
+The class library provides simulation routines for ions, macromolecules and chains in solutions with a strong focus on electrostatic interactions using the primitive model of electrolytes~\cite{hill:86} where the solvent is treated as a structureless dielectric continuum. It is, however, completely possible to expand the library to other systems, include explicit solvent etc. The routines have been developed over several years in connection with a number of scientific investigations, including proteins in solution~\cite{lund:05}.
+As of writing, the code library contains general classes for studying the following,
 \begin{itemize}
 \item Explicit treatment of ions, including ion-ion correlation effects.
 \item Macromolecules -- Proteins, flexible chains, charged surfaces.
@@ -251,70 +354,12 @@ The class library provides simulation routines for ions, macromolecules and chai
 \end{itemize}
 An example of protein ionization will be presented later in the text.
 We stress that the project is under ongoing development and encourage interested users and developers to contribute.
-As of writing the framework is hosted by Sourceforge, Inc. and the latest version can be downloaded using the versioning control system ``subversion'' (SVN).
-On most UNIX type operating systems this is done by invoking the following command,
-\begin{verbatim}
-$ svn checkout
-  http://faunus.svn.sourceforge.net/
-  svnroot/faunus/trunk faunus
-\end{verbatim}
-
-The software is licensed under the GNU open source model and developers who wish to submit code to the the project are welcome to contact the authors.
 
 %    \subsubsection*{This is a sub-sub-heading}
    %   Sub-sub-sub-headings are made with the \textsl{\\subsubsection} command. \pb
  %     pb at end of lines ensures correct paragraph spacing.\pb
 %	  Text for this sub-sub-section \ldots
 
-\subsection*{Performance Aspects}
-\subsubsection*{Function Inlining via Templates}
-The most demanding loop in most molecular simulations is the evaluation of configurational energies.
-Hence the applied pair potential must be highly optimized and preferably inlined in all inner loops.
-This is accomplished by passing a pair potential \emph{class} as a template parameter that will create a local instance inside the inner loop template,
-\begin{verbatim}
-  class coulomb {
-    float energy(particle &a, particle &b)
-    {
-      return a.charge*b.charge/a.dist(b);
-    }
-  };
-
-  template<class T_pairpot>
-  class innerloop {
-    T_pairpot pair;
-    float sum( vector<particle> &p ) {
-      for (i=0; i<N-1; i++)
-        for (j=i+1; j<N; j++) 
-          u=u+pair.energy(p[i], p[j]);
-      ...
-  };
-\end{verbatim}
-This so-called Expression Template technique enables the programmer to arbitrarily invoke various pair potential functions, re-cycling the inner loop implementation,
-\begin{verbatim}
-  innerloop<coulomb> elec;
-  innerloop<lennardjones> lj;
-  elec.sum(p);
-  ...
-\end{verbatim}
-
-\subsubsection*{Passing arguments as references}
-In C++ argument passing is done by creating a new copy of the object. Working with large, aggregate structures such as particle vectors, this will negatively impact performance. To circumvent this we pass all objects as references, for example: \verb"void function(someclass &)".
-
-\subsubsection*{Minimize memory comsumption}
-Computer simulations of classical mechanical systems are usually not memory intensive and by minimizing the memory requirements there is a good chance that the executing code will stay in the local cache. In that regard C++ templates are a concern since code will be generated for each template type. We therefore stride to avoid extensive use of multiple template types -- for example it would seem silly to instantiate both a \verb"float" and a \verb"double" version of a template class.
-
-\subsubsection*{Parallization}
-In systems that equilibrate fast, Monte Carlo simulations can be linearly parallelized using the ``embarrasingly simple technique'' -- that is start several independent runs with different random seeds, combining the results afterwards.
-Tightly coupled parallization is incorporated in parts of the code by threading the energy evaluation into two processes: before and after a trial move.
-For systems with particles in the order of hundreds, this scales well on dual-core computers, whereas the overhead becomes unacceptable for small systems. To enable threading, the approprite compiler flag for OpenMP~\cite{openmp:98} must be set. The GNU, Intel and IBM C++ compilers all support OpenMP.
-
-\subsection*{Code Documentation}
-We provide a class library and as such need to describe both what the classes do as well as how to use them. This can be conveniently achieved using a code documentation system -- here we have chosen \verb"Doxygen"~\cite{doxygen} since (i) the documentation appears as normal code comments and (ii) the output is highly configurable, allowing LaTeX equations to be inserted etc.
-For example commenting a class variable like this,
-\begin{verbatim}
-  float x;  //!< Some x value
-\end{verbatim}
-will cause \verb"Doxygen" to recongnize it as a comment that should be put in the manual (HTML, PDF etc). Another very useful feature of Doxygen is the ability to generate a graphical view of the class hierachy. This enables the end programmer to visually see how a class is constructed as shown in Figure 1.
 
 
 \subsection*{An example}
@@ -341,23 +386,26 @@ Particles in the systems can be clustered into groups and derived classes and he
 
 %%%%%%%%%%%%%%%%%%%%%%
 \section*{Conclusions}
-  Text for this section \ldots
+
+\section*{Availability and requirements}
+\textsl{Project name:} faunus\\
+\textsl{Project home page:} http://faunus.sourceforge.net\\
+\textsl{Operating systems:} MacOS X, Linux, UNIX\\
+\textsl{Programming language:} C++\\
+\textsl{Other requirements:} Doxygen, Povray (optional)\\
+\textsl{License:} GNU GPL\\
+\textsl{Restrictions to use by non-academics:} GNU GPL\\
+
+The latest version can be downloaded using the versioning control system ``subversion'' (SVN).
+On most UNIX type operating systems this is done by invoking the following shell command,
+\begin{verbatim}
+$ svn checkout
+  http://faunus.svn.sourceforge.net/
+  svnroot/faunus/trunk faunus
+\end{verbatim}
+Developers who wish to submit code to the project are welcome to contact the authors.
 
 
-  
-%%%%%%%%%%%%%%%%%%
-\section*{Methods}
-  \subsection*{Standard Template Library}
-    Text for this sub-section \ldots
-
-  \subsection*{Polymorphic Classes -- Virtual Functions}
-    Text for this sub-section \ldots
-
-  \subsection*{Performance Optimization}
-    Text for this sub-section \ldots
-
-
-    
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\section*{Authors contributions}
 %    Text for this section \ldots
@@ -368,7 +416,7 @@ Particles in the systems can be clustered into groups and derived classes and he
 \section*{Acknowledgements}
   \ifthenelse{\boolean{publ}}{\small}{}
   For financial support the authors would like to thank the Research School of Pharmaceutical Sciences, Sweden, the Linnaeus Center of Excellence on Organizing Molecular Matter, Sweden,
-and the European Molecular Biology Organization. We also thank Sourceforge, Inc. for freely hosting the projects source code.
+and the European Molecular Biology Organization. We also thank Sourceforge, Inc. for hosting the project.
 
  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -415,6 +463,8 @@ and the European Molecular Biology Organization. We also thank Sourceforge, Inc.
       etc. Graphic produced by Doxygen.
       \begin{figure}[ht]\center
       \includegraphics[width=6cm]{pics/container}
+      \caption{fig}
+      \label{fig:container}
 	\end{figure}
 
   \subsection*{Figure 2 - Source code example}

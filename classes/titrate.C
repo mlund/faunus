@@ -159,11 +159,11 @@ double titrate::applycharges(vector<particle> &p) {
  * \param spec Species class
  * \param peeage pH
  */
-GCtitrate::titrate(species &spec, double peeage) {
+GCtitrate::GCtitrate(species &spec, double peeage) {
   ph=peeage;
   spc=&spec;
 };
-GCtitrate::titrate(species &spec, vector<particle> &p, group &mobile, double peeage) {
+GCtitrate::GCtitrate(species &spec, vector<particle> &p, group &mobile, double peeage) {
   ph=peeage;
   spc=&spec;
   init(p, mobile);

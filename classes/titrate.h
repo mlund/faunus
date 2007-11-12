@@ -61,8 +61,8 @@ class GCtitrate {
       short int proton;    
     };
 
-    titrate(species &, double);
-    titrate(species &, vector<particle> &, group &, double);
+    GCtitrate(species &, double);
+    GCtitrate(species &, vector<particle> &, group &, double);
     void init(vector<particle> &, group &);//!< Locate and initialize sites and protons
     action exchange(vector<particle> &);
     action exchange(vector<particle> &, action &);

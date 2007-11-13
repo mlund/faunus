@@ -530,7 +530,7 @@ int main(int argc, char* argv[] ) {
       hist.add( h[20], z, utot ); //total energy 
  
       //Multipole analysis
-      if (slump.random_one()>0.5) {
+      if (slump.random_one()>1.5) {
         if (z>40. && z<65.) {
           trj.header( g[P1].size()+1 );
           trj.add( s.p, pep, g[P1] );

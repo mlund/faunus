@@ -113,6 +113,12 @@ class dualzmove : public markovmove {
     void move(group &, group &);
 };
 
+class translate : public markovmove {
+  public:                                                                                                                     
+    translate( ensemble&, container&, interaction<T_pairpot>&);                                                                
+    bool move(macromolecule &); 
+};
+
 /*! \brief Rotate group around its mass-center.
  *  \author Mikael Lund
  *  \date Prague 2007

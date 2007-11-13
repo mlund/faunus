@@ -1,3 +1,12 @@
+/*
+ * This program will simulate an arbitrary number of
+ * protein molecules in a dielectric solvent with
+ * explicit mobile ions.
+ *
+ * \author Mikael Lund
+ * \date Prague 2007
+ */
+
 #include <iostream>
 #include "io.h"
 #include "analysis.h"
@@ -19,7 +28,7 @@ int main() {
   ioxyz xyz(cell);
 
   ioaam aam(cell);                      // Protein input file format is AAM
-  vector<macromolecule> g(20);           // Vector of proteins
+  vector<macromolecule> g(20);          // Vector of proteins
   for (short i=0; i<g.size(); i++) {    // Loop over all proteins...
     g[i].add( cell, aam.load(
           "mrh4a.aam" ) );              // Load structure from disk
@@ -34,10 +43,11 @@ int main() {
   }
 
   group salt;                           // Group for mobile ions
-  salt.add( cell, particle::NA, 40 );    // Insert sodium ions
-  salt.add( cell, particle::CL, 40 );    // Insert chloride ions
+  salt.add( cell, particle::NA, 10 );   // Insert sodium ions
+  salt.add( cell, particle::CL, 70 );   // Insert chloride ions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
-  macrorot mr(nvt, cell, pot);           // Class for macromolecule rotation
+  macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
+  translate mt(nvt, cell, pot);         // Class for macromolecular translation
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
   cout << cell.info();                  // Some information
 
@@ -45,16 +55,18 @@ int main() {
   ioxtc xtc(cell);                      // Gromacs xtc output (if installed)
   #endif
 
-  for (int macro=1; macro<=10; macro++) {       // Markov chain
-    for (int micro=1; micro<=1e2; micro++) {
+  for (int macro=1; macro<=10; macro++) {       // Markov chain -- outer loop
+    for (int micro=1; micro<=1e2; micro++) {    //  - // -      -- inner loop
       sm.move(salt);                            // Displace salt particles
-      sys+=sm.du;                               // Keep system energy updated
-
+      sys+=sm.du;                               // ... and keep system energy updated
       for (int i=0; i<g.size(); i++) {          // Loop over proteins
         mr.move(g[i]);                          // ...and rotate them
         sys+=mr.du;
       }
-
+      for (int i=0; i<g.size(); i++) {          // Loop over proteins
+        mt.move(g[i]);                          // ...and translate them
+        sys+=mt.du;
+      }
       #ifdef GROMACS
       if (slump.random_one()>0.8)
         xtc.save("ignored-name.xtc", cell.p);
@@ -62,13 +74,13 @@ int main() {
     }
     cout << "Macro step " << macro << " completed. ETA: " << clock.eta(macro);
     sys.update(pot.energy(cell.p));             // Update system energy averages
-    cell.check_vector();
+    cell.check_vector();                        // Check sanity of particle vector
   }
 
   xyz.save("coord.xyz", cell.p);
 
-  cout << sys.info() << sm.info()               // More information...
-       << salt.info() << mr.info();
+  cout << sys.info() << salt.info()               // Final information...
+       << sm.info() << mr.info() << mt.info();
 
   #ifdef GROMACS
   xtc.close();

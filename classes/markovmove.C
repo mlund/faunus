@@ -64,11 +64,57 @@ bool saltmove::move(group &g, int n) {
   return false;
 }
 
+//---------- TRANSLATE GROUP ----------------
+translate::translate( ensemble &e,
+    container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i)
+{
+  name = "MACROMOLECULAR TRANSLATION";
+  runfraction=0.5;
+  dp=6.;
+};
+
+bool translate::move(macromolecule &g) {
+  du=0;
+  cnt++;
+  point p;
+  p.x=dp*slp.random_half();
+  p.y=dp*slp.random_half();
+  p.z=dp*slp.random_half();
+  g.move(*con, p); 
+  if (con->collision(g.cm_trial)==true) {
+    rc=ENERGY;
+    g.undo(*con);
+    return false;
+  }
+
+  #pragma omp parallel
+  {
+    #pragma omp sections
+    {
+      #pragma omp section
+      { uold = pot->energy(con->p, g);   }
+      #pragma omp section
+      { unew = pot->energy(con->trial, g);   }
+    }
+  }
+  du = unew-uold;
+  if (ens->metropolis(du)==true) {
+    rc=OK;
+    utot+=du;
+    naccept++;
+    g.accept(*con);
+    return true;
+  } else rc=ENERGY;
+  du=0;
+  g.undo(*con);
+  return false;
+}
+
 //---------- ROTATE GROUP AROUND CM ---------
 macrorot::macrorot( ensemble &e,
     container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i)
 {
-  name = "ROTATE MACROMOLECULE";
+  name = "MACROMOLECULAR ROTATION";
   runfraction=0.5;
   dp=0.5;
 };

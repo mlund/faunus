@@ -64,6 +64,7 @@ class macromolecule : public group {
     void zmove(container &, double);    //!< Move in z-direction, only
     void rotate(container &, double);   //!< Rotate around a point
     void rotate(container &, point, double);
+    bool overlap(container &);          //!< Test if group overlaps with other particles in the system
     void operator=(group);              //!< Copy from group
 };
 

@@ -47,11 +47,13 @@ widom:	examples/widom/widom.C $(OBJS)
 ewald:	examples/ewald/ewald.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/ewald/ewald.C -o examples/ewald/ewald
 
+twobody:	examples/twobody/twobody.C $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/twobody/twobody.C -o examples/twobody/twobody
 
 pka:	examples/titration/pka.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/pka.C -o examples/titration/pka
 
-examples:	widom pka ewald
+examples:	widom pka ewald twobody
 
 clean:
 	rm -vf $(OBJS) examples/titration/pka examples/widom/widom examples/ewald/ewald

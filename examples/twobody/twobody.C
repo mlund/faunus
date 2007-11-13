@@ -16,36 +16,44 @@ int main() {
   pot_setup cfg;                        // Setup pair potential (default values)
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   countdown<int> clock(10);             // Estimate simulation time
-  macromolecule p1, p2;                 // Group for the proteins
+  ioxyz xyz(cell);
+
   ioaam aam(cell);                      // Protein input file format is AAM
-  protein.add( cell, aam.load(
-        "calbindin.aam" ) );            // Load protein from disk
-  protein.move(cell, -protein.cm);      // ..and translate it to origo (0,0,0)
-  protein.accept(cell);                 // ..accept translation
+  vector<macromolecule> g(20);           // Vector of proteins
+  for (short i=0; i<g.size(); i++) {    // Loop over all proteins...
+    g[i].add( cell, aam.load(
+          "mrh4a.aam" ) );              // Load structure from disk
+    g[i].move(cell, -g[i].cm);          // ..and translate it to origo (0,0,0)
+    g[i].accept(cell);                  // ..accept translation
+    while (g[i].overlap(cell)==true) {  // Place proteins
+      point a;                          // ..at random positions
+      cell.randompos(a);                // ..within the cell
+      g[i].move(cell, a);
+      g[i].accept(cell);                // ..accept translation
+    }
+  }
 
   group salt;                           // Group for mobile ions
-  salt.add( cell, particle::NA, 43);    // Insert sodium ions
-  salt.add( cell, particle::CL, 24 );   // Insert chloride ions
+  salt.add( cell, particle::NA, 40 );    // Insert sodium ions
+  salt.add( cell, particle::CL, 40 );    // Insert chloride ions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
-  chargereg tit(nvt,cell,pot,salt,7.6); // Prepare titration. pH 7.6
+  macrorot mr(nvt, cell, pot);           // Class for macromolecule rotation
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
-
-  cout << cell.info() << tit.info();    // Some information
+  cout << cell.info();                  // Some information
 
   #ifdef GROMACS
   ioxtc xtc(cell);                      // Gromacs xtc output (if installed)
   #endif
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain
-    for (int micro=1; micro<=1e3; micro++) {
+    for (int micro=1; micro<=1e2; micro++) {
       sm.move(salt);                            // Displace salt particles
-      sys+=sm.du;
-      if (tit.titrateall()==true) {             // Titrate groups
-        protein.charge(cell.p);                 // Re-calc. protein charge
-        protein.dipole(cell.p);                 // Re-calc. dipole moment
-        sys+=tit.du;
-      }
       sys+=sm.du;                               // Keep system energy updated
+
+      for (int i=0; i<g.size(); i++) {          // Loop over proteins
+        mr.move(g[i]);                          // ...and rotate them
+        sys+=mr.du;
+      }
 
       #ifdef GROMACS
       if (slump.random_one()>0.8)
@@ -56,8 +64,11 @@ int main() {
     sys.update(pot.energy(cell.p));             // Update system energy averages
     cell.check_vector();
   }
-  cout << sys.info() << sm.info() << tit.info() // More information...
-       << salt.info() << protein.info();
+
+  xyz.save("coord.xyz", cell.p);
+
+  cout << sys.info() << sm.info()               // More information...
+       << salt.info() << mr.info();
 
   #ifdef GROMACS
   xtc.close();

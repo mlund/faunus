@@ -192,6 +192,21 @@ double macromolecule::charge(vector<particle> &p) {
   Q2+=z*z;
   return z;
 }
+
+/*!
+ * \todo Overlap function doesn't use minimum image!
+ */
+bool macromolecule::overlap(container &c) {
+  for (int i=beg; i<=end; i++) {
+    for (int j=0; j<beg; j++)
+      if (c.p[i].overlap( c.p[j] )==true)
+        return true;
+    for (int j=end+1; j<c.p.size(); j++)
+      if (c.p[i].overlap( c.p[j] )==true)
+        return true;
+  }
+}
+
 void macromolecule::zmove(container &par, double dz) {
   cm_trial.z = cm.z + dz;
   par.boundary(cm_trial);

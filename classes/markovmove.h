@@ -113,9 +113,14 @@ class dualzmove : public markovmove {
     void move(group &, group &);
 };
 
-/*! \brief Rotate group around mass-center.
+/*! \brief Rotate group around its mass-center.
+ *  \author Mikael Lund
+ *  \date Prague 2007
 */
-class rotate : public markovmove { 
+class macrorot : public markovmove { 
+  public:
+    macrorot( ensemble&, container&, interaction<T_pairpot>&);
+    bool move(macromolecule &);
 };
 
 /*! \brief Titrate all titrateable sites

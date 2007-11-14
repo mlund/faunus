@@ -75,6 +75,7 @@ class rdf : public histogram {
     short a,b;                   //!< Particle types to investigate
     float volume(float);         //!< Volume of shell r->r+xres
   public:
+    rdf(float=.5, float=0);
     rdf(short, short, float=.5, float=0); 
     void update(container &);             //!< Update histogram vector
     void update(vector<particle> &);      //!< Update histogram vector
@@ -97,6 +98,14 @@ class rdfP3 : public histogram {
     float get(float);                     //!< Get g(x)
     double len, len_inv;
 };
+
+/*!
+ * \param resolution Histogram resolution (binwidth)
+ * \param xmaximum Maximum x value (used for better memory utilisation)
+ */
+rdf::rdf( float resolution, float xmaximum) :
+  histogram(resolution, 0, xmaximum) { }
+
 /*!
  * \param species1 Particle type 1
  * \param species2 Particle type 2

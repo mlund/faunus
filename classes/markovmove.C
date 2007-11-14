@@ -73,7 +73,7 @@ translate::translate( ensemble &e,
   dp=6.;
 };
 
-bool translate::move(macromolecule &g) {
+double translate::move(macromolecule &g) {
   du=0;
   cnt++;
   point p;
@@ -84,7 +84,7 @@ bool translate::move(macromolecule &g) {
   if (con->collision(g.cm_trial)==true) {
     rc=ENERGY;
     g.undo(*con);
-    return false;
+    return du;
   }
 
   #pragma omp parallel
@@ -103,11 +103,11 @@ bool translate::move(macromolecule &g) {
     utot+=du;
     naccept++;
     g.accept(*con);
-    return true;
+    return du;
   } else rc=ENERGY;
   du=0;
   g.undo(*con);
-  return false;
+  return du;
 }
 
 //---------- ROTATE GROUP AROUND CM ---------
@@ -115,11 +115,11 @@ macrorot::macrorot( ensemble &e,
     container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i)
 {
   name = "MACROMOLECULAR ROTATION";
-  runfraction=0.5;
+  runfraction=0.7;
   dp=0.5;
 };
 
-bool macrorot::move(macromolecule &g) {
+double macrorot::move(macromolecule &g) {
   du=0;
   cnt++;
   g.rotate(*con, dp); 
@@ -139,11 +139,11 @@ bool macrorot::move(macromolecule &g) {
     utot+=du;
     naccept++;
     g.accept(*con);
-    return true;
+    return du;
   } else rc=ENERGY;
   du=0;
   g.undo(*con);
-  return false;
+  return du;
 }
 //---------- CHARGE REG ---------------------
 string chargereg::info() {

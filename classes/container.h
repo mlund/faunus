@@ -68,11 +68,18 @@ class box : public container {
       return a.dist(b, len, len_inv);
     }
 
+    inline int anint(double x) {
+      return int(x>0 ? x+.5 : x-.5);
+    }
+
     //! Apply periodic boundary conditions
     inline void boundary(point &p) {
-      p.x=p.x-len*floor(p.x*len_inv+.5);
-      p.y=p.y-len*floor(p.y*len_inv+.5);
-      p.z=p.z-len*floor(p.z*len_inv+.5);
+      p.x=p.x-len*anint(p.x*len_inv);
+      p.y=p.y-len*anint(p.y*len_inv);
+      p.z=p.z-len*anint(p.z*len_inv);
+      //p.x=p.x-len*floor(p.x*len_inv+.5);
+      //p.y=p.y-len*floor(p.y*len_inv+.5);
+      //p.z=p.z-len*floor(p.z*len_inv+.5);
     }
 
     //! Randomly displace particle w. bpc.

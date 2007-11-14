@@ -114,9 +114,9 @@ class dualzmove : public markovmove {
 };
 
 class translate : public markovmove {
-  public:                                                                                                                     
-    translate( ensemble&, container&, interaction<T_pairpot>&);                                                                
-    bool move(macromolecule &); 
+  public: 
+    translate( ensemble&, container&, interaction<T_pairpot>&);
+    double move(macromolecule &); 
 };
 
 /*! \brief Rotate group around its mass-center.
@@ -126,7 +126,7 @@ class translate : public markovmove {
 class macrorot : public markovmove { 
   public:
     macrorot( ensemble&, container&, interaction<T_pairpot>&);
-    bool move(macromolecule &);
+    double move(macromolecule &);
 };
 
 /*! \brief Titrate all titrateable sites

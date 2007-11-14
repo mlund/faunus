@@ -19,7 +19,7 @@ endif
 
 ifeq ($(MODEL), generic)
   CXX=g++
-  CXXFLAGS = -O3 -funroll-loops -w -Winline  -g $(INCDIR) $(GROFLAG)
+  CXXFLAGS = -O3 -funroll-loops -w -Winline -g $(INCDIR) $(GROFLAG)
 endif
 
 OBJS=$(CLASSDIR)/inputfile.o \

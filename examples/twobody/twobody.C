@@ -13,22 +13,25 @@
 #include "container.h"
 #include "potentials.h"
 #include "countdown.h"
-typedef pot_coulomb T_pairpot;          // Specific pair interaction function
+#include "histogram.h"
+typedef pot_minimage T_pairpot;          // Specific pair interaction function
 #include "markovmove.C"
 
 using namespace std;
 
 int main() {
-  slump slump;
-  cell cell(100.);                      // We want a spherical cell
+  slump slump;                          // A random number generator
+  box cell(100.);                       // We want a spherical cell
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg;                        // Setup pair potential (default values)
+  cfg.box = cell.len;
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   countdown<int> clock(10);             // Estimate simulation time
+  rdf rdf;                              // Protein radial distribution, g(r)
   ioxyz xyz(cell);
 
   ioaam aam(cell);                      // Protein input file format is AAM
-  vector<macromolecule> g(20);          // Vector of proteins
+  vector<macromolecule> g(12);          // Vector of proteins
   for (short i=0; i<g.size(); i++) {    // Loop over all proteins...
     g[i].add( cell, aam.load(
           "mrh4a.aam" ) );              // Load structure from disk
@@ -43,8 +46,8 @@ int main() {
   }
 
   group salt;                           // Group for mobile ions
-  salt.add( cell, particle::NA, 10 );   // Insert sodium ions
-  salt.add( cell, particle::CL, 70 );   // Insert chloride ions
+  salt.add( cell, particle::NA, 0 ); // Insert sodium ions
+  salt.add( cell, particle::CL, 36 ); // Insert chloride ions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
   translate mt(nvt, cell, pot);         // Class for macromolecular translation
@@ -57,16 +60,21 @@ int main() {
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain -- outer loop
     for (int micro=1; micro<=1e2; micro++) {    //  - // -      -- inner loop
+
       sm.move(salt);                            // Displace salt particles
-      sys+=sm.du;                               // ... and keep system energy updated
+      sm.adjust_dp(40,50);
+      sys+=sm.du;
       for (int i=0; i<g.size(); i++) {          // Loop over proteins
-        mr.move(g[i]);                          // ...and rotate them
-        sys+=mr.du;
+        if (slump.random_one()<0.5)
+          sys+=mr.move(g[i]);                   // Rotate...
+        else {
+          sys+=mt.move(g[i]);                   // ...or translate
+          for (int j=0; j<g.size(); j++)
+            if (j!=i)
+              rdf.update(cell,g[i].cm,g[j].cm); // Update mass center g(r)
+        }
       }
-      for (int i=0; i<g.size(); i++) {          // Loop over proteins
-        mt.move(g[i]);                          // ...and translate them
-        sys+=mt.du;
-      }
+
       #ifdef GROMACS
       if (slump.random_one()>0.8)
         xtc.save("ignored-name.xtc", cell.p);
@@ -78,6 +86,7 @@ int main() {
   }
 
   xyz.save("coord.xyz", cell.p);
+  rdf.write("rdf.dat");
 
   cout << sys.info() << salt.info()               // Final information...
        << sm.info() << mr.info() << mt.info();

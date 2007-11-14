@@ -53,7 +53,7 @@ string cell::povray() {
 box::box(double sidelength) {
   len = sidelength;
   len_half=len/2;
-  len_inv=1/len;
+  len_inv=1./len;
   volume = len*len*len;
 }
 

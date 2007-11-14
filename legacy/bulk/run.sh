@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Script to automatically vary input parameters for "bulk".
 # This example is set up to simulate a simple seawater

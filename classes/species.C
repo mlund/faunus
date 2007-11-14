@@ -52,6 +52,7 @@ species::species() {
   set(particle::CL,  "CL",  1.6, -1,  0.0, false);
   set(particle::BR,  "BR",  1.9, -1,  0.0, false);
   set(particle::I,   "I",   3.0, -1,  0.0, false);
+  set(particle::SO4, "SO4", 2.0, -2,  0.0, false);
   set(particle::GHOST,"GHOST",0,  0,  0.0, false);
 }
 

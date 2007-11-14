@@ -21,19 +21,19 @@ saltmove::saltmove(
 
 /*! \param group Group containing mobile ions
  */
-bool saltmove::move(group &g) {
+double saltmove::move(group &g) {
   du=0;
   if (slp.runtest(runfraction)==false)
-    return false;
+    return du;
   double sum=0;
   for (unsigned short i=0; i<g.size(); i++) {
     move(g, 1);
     sum+=du;
   }
   du=sum;
-  return true;
+  return du;
 }
-bool saltmove::move(group &g, int n) {
+double saltmove::move(group &g, int n) {
   du=0;
   cnt++;
   n=g.displace(*con, dp); 
@@ -56,20 +56,20 @@ bool saltmove::move(group &g, int n) {
       utot+=du;
       naccept++;
       con->p[n] = con->trial[n];
-      return true;
+      return du;
     } else rc=ENERGY;
   }
   du=0;
   con->trial[n] = con->p[n];
-  return false;
+  return du;
 }
 
 //---------- TRANSLATE GROUP ----------------
 translate::translate( ensemble &e,
-    container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i)
-{
+    container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i) {
   name = "MACROMOLECULAR TRANSLATION";
   runfraction=0.5;
+  deltadp=1.;
   dp=6.;
 };
 
@@ -82,7 +82,7 @@ double translate::move(macromolecule &g) {
   p.z=dp*slp.random_half();
   g.move(*con, p); 
   if (con->collision(g.cm_trial)==true) {
-    rc=ENERGY;
+    rc=HC;
     g.undo(*con);
     return du;
   }
@@ -116,13 +116,18 @@ macrorot::macrorot( ensemble &e,
 {
   name = "MACROMOLECULAR ROTATION";
   runfraction=0.7;
+  deltadp=0.1;
   dp=0.5;
 };
 
+/*!
+ * \todo Cell overlap test missing
+ */
 double macrorot::move(macromolecule &g) {
   du=0;
   cnt++;
   g.rotate(*con, dp); 
+  //insert cell overlap test
   #pragma omp parallel
   {
     #pragma omp sections

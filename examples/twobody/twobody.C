@@ -27,10 +27,11 @@ int main() {
   cfg.box = cell.len;
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   countdown<int> clock(10);             // Estimate simulation time
-  rdf rdf;                              // Protein radial distribution, g(r)
-  ioxyz xyz(cell);
-
+  ioxyz xyz(cell);                      // xyz output for VMD etc.
   ioaam aam(cell);                      // Protein input file format is AAM
+  rdf protrdf(0,0,.5,cell.len/2);       // Protein and salt radial distributions, g(r)
+  rdf saltrdf(particle::NA,particle::SO4, .5, cell.len/2);
+
   vector<macromolecule> g(12);          // Vector of proteins
   for (short i=0; i<g.size(); i++) {    // Loop over all proteins...
     g[i].add( cell, aam.load(
@@ -41,13 +42,13 @@ int main() {
       point a;                          // ..at random positions
       cell.randompos(a);                // ..within the cell
       g[i].move(cell, a);
-      g[i].accept(cell);                // ..accept translation
+      g[i].accept(cell);
     }
   }
 
   group salt;                           // Group for mobile ions
-  salt.add( cell, particle::NA, 0 ); // Insert sodium ions
-  salt.add( cell, particle::CL, 36 ); // Insert chloride ions
+  salt.add( cell, particle::NA, 0+1200);// Insert sodium ions
+  salt.add( cell, particle::SO4,18+600);// Insert chloride ions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
   translate mt(nvt, cell, pot);         // Class for macromolecular translation
@@ -59,11 +60,10 @@ int main() {
   #endif
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain -- outer loop
-    for (int micro=1; micro<=1e2; micro++) {    //  - // -      -- inner loop
+    for (int micro=1; micro<=1e4; micro++) {    //  - // -      -- inner loop
 
-      sm.move(salt);                            // Displace salt particles
-      sm.adjust_dp(40,50);
-      sys+=sm.du;
+      sys+=sm.move(salt);                       // Displace salt particles
+      saltrdf.update(cell);
       for (int i=0; i<g.size(); i++) {          // Loop over proteins
         if (slump.random_one()<0.5)
           sys+=mr.move(g[i]);                   // Rotate...
@@ -71,14 +71,18 @@ int main() {
           sys+=mt.move(g[i]);                   // ...or translate
           for (int j=0; j<g.size(); j++)
             if (j!=i)
-              rdf.update(cell,g[i].cm,g[j].cm); // Update mass center g(r)
+              protrdf.update(cell,g[i].cm,g[j].cm); // Update mass center g(r)
         }
       }
 
-      #ifdef GROMACS
-      if (slump.random_one()>0.8)
+      if (slump.random_one()>0.8) {
+        sm.adjust_dp(50,60);
+        mr.adjust_dp(50,60);
+        mt.adjust_dp(50,60);
+        #ifdef GROMACS
         xtc.save("ignored-name.xtc", cell.p);
-      #endif
+        #endif
+      }
     }
     cout << "Macro step " << macro << " completed. ETA: " << clock.eta(macro);
     sys.update(pot.energy(cell.p));             // Update system energy averages
@@ -86,9 +90,10 @@ int main() {
   }
 
   xyz.save("coord.xyz", cell.p);
-  rdf.write("rdf.dat");
+  protrdf.write("rdfprot.dat");
+  saltrdf.write("rdfsalt.dat");
 
-  cout << sys.info() << salt.info()               // Final information...
+  cout << sys.info() << salt.info()             // Final information...
        << sm.info() << mr.info() << mt.info();
 
   #ifdef GROMACS

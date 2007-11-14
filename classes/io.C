@@ -215,19 +215,19 @@ ioxtc::ioxtc(container &con) : iopart(con) {
   for (char i=0; i<3; i++)
     for (char j=0; j<3; j++)
       box[i][j]=0;
-  box[0][0]=200; // corners of the
-  box[1][1]=200; // rectangular box
-  box[2][2]=200;
-  xd=open_xtc("test.xtc", "w");
+  box[0][0]=100; // corners of the
+  box[1][1]=100; // rectangular box
+  box[2][2]=100;
+  xd=open_xtc("coord.xtc", "w");
 }
 bool ioxtc::save(string file, vector<particle> &p) {
-  if (p.size()<1000) {
+  if (p.size()<3000) {
     for (unsigned short i=0; i<p.size(); i++) {
       x[i][0]=p[i].x/10;      // AA->nm
       x[i][1]=p[i].y/10;
       x[i][2]=p[i].z/10;
     }
-    write_xtc(xd,p.size(),step++,time++,box,x,1000.);
+    write_xtc(xd,p.size(),step++,time++,box,x,3000.);
   }
 }
 void ioxtc::close() { close_xtc(xd); }

@@ -19,6 +19,7 @@ class histogram : private xytable<float,unsigned long int> {
   friend class rdfP3;
   private:
     unsigned long int cnt;
+    float xmaxi;  // ugly solution!
   public:
     histogram(float, float, float);
     string comment;                     //!< User defined comment
@@ -33,10 +34,14 @@ class histogram : private xytable<float,unsigned long int> {
 //! \param min minimum x value
 //! \param max maximum x value
 histogram::histogram(float res, float min, float max)
-: xytable<float,unsigned long int>(res,min,max) { cnt=0; }
+: xytable<float,unsigned long int>(res,min,max) {
+  cnt=0;
+  xmaxi=max;
+}
 
 //! Increment bin for x value
 void histogram::add(float x) {
+  if (x>=xmaxi) return;
   (*this)(x)++;
   cnt++;
 }
@@ -75,7 +80,6 @@ class rdf : public histogram {
     short a,b;                   //!< Particle types to investigate
     float volume(float);         //!< Volume of shell r->r+xres
   public:
-    rdf(float=.5, float=0);
     rdf(short, short, float=.5, float=0); 
     void update(container &);             //!< Update histogram vector
     void update(vector<particle> &);      //!< Update histogram vector
@@ -98,13 +102,6 @@ class rdfP3 : public histogram {
     float get(float);                     //!< Get g(x)
     double len, len_inv;
 };
-
-/*!
- * \param resolution Histogram resolution (binwidth)
- * \param xmaximum Maximum x value (used for better memory utilisation)
- */
-rdf::rdf( float resolution, float xmaximum) :
-  histogram(resolution, 0, xmaximum) { }
 
 /*!
  * \param species1 Particle type 1

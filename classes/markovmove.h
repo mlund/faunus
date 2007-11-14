@@ -79,8 +79,8 @@ string markovmove::info() {
 class saltmove : public markovmove {
   public:
     saltmove( ensemble &, container&, interaction<T_pairpot>& );
-    bool move(group &, int);  //!< Move a single particle
-    bool move(group &);         //!< Loop over group particles (randomly)
+    double move(group &, int);  //!< Move a single particle
+    double move(group &);         //!< Loop over group particles (randomly)
 };
 
 /*! \brief Random move of a macromolecule in a container 

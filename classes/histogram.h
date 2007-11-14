@@ -7,6 +7,7 @@
 #include "point.h"
 #include "average.h"
 #include "xytable.h"
+#include "container.h"
 
 //---------------------------------------------------
 /*!
@@ -75,10 +76,16 @@ class rdf : public histogram {
     float volume(float);         //!< Volume of shell r->r+xres
   public:
     rdf(short, short, float=.5, float=0); 
+    void update(container &);             //!< Update histogram vector
     void update(vector<particle> &);      //!< Update histogram vector
-    void update(vector<particle*> &);
+    void update(container &, point &, point &); //!< Update for two points
     float get(float);                     //!< Get g(x)
 };
+
+/*
+ * \brief RDF class for cubic min. image
+ * \todo Obselete?
+ */
 class rdfP3 : public histogram {
   private:
     short a,b;                   //!< Particle types to investigate
@@ -88,7 +95,7 @@ class rdfP3 : public histogram {
     void update(vector<particle> &);      //!< Update histogram vector
     void update(vector<particle*> &);
     float get(float);                     //!< Get g(x)
-    float len, len_inv;
+    double len, len_inv;
 };
 /*!
  * \param species1 Particle type 1
@@ -110,9 +117,36 @@ rdfP3::rdfP3(short species1, short species2, float resolution, float xmaximum, f
   len=boxl;
   len_inv=1/boxl;
 }
+
+/*!
+ * Update histogram between two known points
+ *
+ * \note Uses the container distance function
+ */
+void rdf::update(container &c, point &a, point &b) {
+  add( abs( c.dist(a, b) ) );
+}
+
 /*!
  * Calculate all distances between between species 1
  * and 2 and update the histogram.
+ *
+ * \note Uses the container function to calculate distances
+ */
+void rdf::update(container &c) {
+  unsigned short i,j,n=c.p.size();
+  for (i=0; i<n-1; i++)
+    for (j=i+1; j<n; j++) 
+      if ( (c.p[i].id==a && c.p[j].id==b)
+          || (c.p[j].id==a && c.p[i].id==b) )
+        update( c, c.p[i], c.p[j] );
+}
+
+/*!
+ * Calculate all distances between between species 1
+ * and 2 and update the histogram.
+ *
+ * \warning This function uses a simple distance function (no mim. image)
  */
 void rdf::update(vector<particle> &p)
 {
@@ -123,6 +157,7 @@ void rdf::update(vector<particle> &p)
           || (p[j].id==a && p[i].id==b) )
         add( abs(p[i].dist(p[j])) );
 }
+
 /*!
  * Calculate all distances between vector<particle> and 
  * update the histogram under P3 conditions

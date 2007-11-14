@@ -13,12 +13,15 @@ class container : public particles,  public species {
   protected:
     slump slp;
   public:
-    float volume;                               //!< Volume of the container [AA^3]
-    inline virtual bool collision(point &)=0;   //!< Check for collision with walls
-    virtual void randompos(point &)=0;          //!< Random point within container
-    virtual string info();                      //!< Return info string
-    virtual string povray();                    //!< POVRAY object representing the cell
-    inline virtual void boundary(point &)=0;    //!< Apply boundary conditions to a point
+    float volume;                                  //!< Volume of the container [AA^3]
+    inline virtual bool collision(point &)=0;      //!< Check for collision with walls
+    virtual void randompos(point &)=0;             //!< Random point within container
+    virtual string info();                         //!< Return info string
+    virtual string povray();                       //!< POVRAY object representing the cell
+    inline virtual void boundary(point &)=0;       //!< Apply boundary conditions to a point
+    inline virtual double dist(point &a,point &b) {//!< Calculate distance between points
+      return a.dist(b);
+    }
     //void displace(point &, float);      //!< Displace particle
 };
 
@@ -49,10 +52,10 @@ class cell : public container {
 class box : public container {
   private:
     point d;
-    float len_half, len_inv;
+    double len_half, len_inv;
   public:
-    float len; //!< Side length
-    box(float);
+    double len; //!< Side length
+    box(double);
     string info();
     void randompos(point &);
     void randompos(vector<point> &);
@@ -60,16 +63,9 @@ class box : public container {
     inline bool collision(point &p) {return false;};
     string povray();
 
-    //! Calculate squared distance w. minimum image convention
-    inline double sqdist(point &p1, point &p2) {
-      double dx,dy,dz;
-      dx=p1.x-p2.x;
-      dy=p1.y-p2.y;
-      dz=p1.z-p2.z;
-      dx=dx-len*int(dx*len_inv+.5);
-      dy=dy-len*int(dy*len_inv+.5);
-      dz=dz-len*int(dz*len_inv+.5);
-      return dx*dx+dy*dy+dz*dz;
+    //! Calculate distance using the minimum image convention
+    inline double dist(point &a, point &b) {
+      return a.dist(b, len, len_inv);
     }
 
     //! Apply periodic boundary conditions

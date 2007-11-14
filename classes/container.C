@@ -50,7 +50,7 @@ string cell::povray() {
   return o.str();
 }
 //----------- BOX --------------------------
-box::box(float sidelength) {
+box::box(double sidelength) {
   len = sidelength;
   len_half=len/2;
   len_inv=1/len;

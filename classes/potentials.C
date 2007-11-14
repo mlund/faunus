@@ -5,22 +5,16 @@ pot_setup::pot_setup() {
   eps=1;
   epsi=80;
   epso=2;
-};
+}
 
-pot_setup::pot_setup(double bjer, double epsr) {
-  lB=bjer;
-  eps=1;
-  epsi=epsr;
-  epso=2;
-};
-pot_setup::pot_setup(double bjer, double epsr, double len, double k) {
-  lB=bjer;
-  eps=1;
-  epsi=epsr;
-  epso=2;
-  box=len;
-  kappa=k;
-};
+pot_setup::pot_setup(inputfile &in) {
+  lB    = in.getflt("bjerrum", 7.1);
+  box   = in.getflt("boxlen");
+  kappa = in.getflt("kappa");
+  epsi  = in.getflt("epsi");
+  epso  = in.getflt("epso");
+  a     = in.getflt("cavity");
+}
 
 /*!\param spc Species class.
  * \param pmfir Directory in which to search for PMF's

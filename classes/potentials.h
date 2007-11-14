@@ -10,6 +10,7 @@
 #include "xydata.h"
 #include "group.h"
 #include "lennardjones.h"
+#include "inputfile.h"
 
 /*!
  *  \brief Setup for potentials.
@@ -22,8 +23,7 @@
 class pot_setup {
   public:
     pot_setup();
-    pot_setup(double, double);
-    pot_setup(double, double, double, double);
+    pot_setup(inputfile &);
     double kappa,        //!< Inverse Debye screening length
            lB,           //!< Bjerrum length
            eps,          //!< L-J parameter

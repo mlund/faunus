@@ -97,7 +97,7 @@ void group::accept(particles &par) {
     par.p[i].z = par.trial[i].z;
   }
 }
-void group::add(container &par, vector<particle> v) {
+void group::add(container &par, vector<particle> v, bool collision) {
   particle tmp;
   beg=par.p.size();
   for (unsigned short i=0; i<v.size(); i++) {
@@ -106,7 +106,19 @@ void group::add(container &par, vector<particle> v) {
     par.push_back(tmp);
     end=beg+i;
   }
-  masscenter(par.p);
+  masscenter(par.p);              // calc. mass center
+  
+  // test for overlap w. other particles
+  if (collision==true) {
+    move(par, cm);                // translate to origo (0,0,0)
+    accept(par); 
+    point a;
+    while (overlap(par)==true) {  // No overlap allowed
+      par.randompos(a);           // find a random, vacent 
+      move(par, a);               // position.
+      accept(par);
+    }
+  }
 }
 void group::add(container &con, particle::type id, short n) {
   particle a=con.get(id);
@@ -132,6 +144,38 @@ unsigned short group::displace(container &c, double dp) {
   c.boundary(c.trial[i]);
   return i;
 }
+
+/*!
+ * \param par Container class
+ * \param c ...by adding this vector to all particles
+ * \param k Keyword to specify if the move should be automatically accepted (default no).
+ */
+void group::move(container &par, point c) {
+  for (short int i=beg; i<=end; i++) {
+    par.trial[i].x = par.p[i].x + c.x;
+    par.trial[i].y = par.p[i].y + c.y;
+    par.trial[i].z = par.p[i].z + c.z;
+    par.boundary(par.trial[i]);
+  }
+  cm_trial = cm + c;
+  par.boundary(cm_trial);
+}
+
+/*!
+ * \todo Overlap function doesn't use minimum image!
+ */
+bool group::overlap(container &c) {
+  for (int i=beg; i<=end; i++) {
+    for (int j=0; j<beg; j++)
+      if (c.p[i].overlap( c.p[j] )==true)
+        return true;
+    for (int j=end+1; j<c.p.size(); j++)
+      if (c.p[i].overlap( c.p[j] )==true)
+        return true;
+  }
+}
+
+
 
 //--------------- MACROMOLECULE ---------------
 macromolecule::macromolecule() { title="MACROMOLECULE"; }
@@ -193,20 +237,6 @@ double macromolecule::charge(vector<particle> &p) {
   return z;
 }
 
-/*!
- * \todo Overlap function doesn't use minimum image!
- */
-bool macromolecule::overlap(container &c) {
-  for (int i=beg; i<=end; i++) {
-    for (int j=0; j<beg; j++)
-      if (c.p[i].overlap( c.p[j] )==true)
-        return true;
-    for (int j=end+1; j<c.p.size(); j++)
-      if (c.p[i].overlap( c.p[j] )==true)
-        return true;
-  }
-}
-
 void macromolecule::zmove(container &par, double dz) {
   cm_trial.z = cm.z + dz;
   par.boundary(cm_trial);
@@ -214,21 +244,6 @@ void macromolecule::zmove(container &par, double dz) {
     par.trial[i].z = par.p[i].z + dz;
     par.boundary(par.trial[i]);
   };
-}
-/*!
- * \param par Container class
- * \param c ...by adding this vector to all particles
- * \param k Keyword to specify if the move should be automatically accepted (default no).
- */
-void macromolecule::move(container &par, point c) {
-  for (short int i=beg; i<=end; i++) {
-    par.trial[i].x = par.p[i].x + c.x;
-    par.trial[i].y = par.p[i].y + c.y;
-    par.trial[i].z = par.p[i].z + c.z;
-    par.boundary(par.trial[i]);
-  }
-  cm_trial = cm + c;
-  par.boundary(cm_trial);
 }
 void macromolecule::rotate(container &par, double drot) {
   point u;
@@ -272,6 +287,10 @@ void macromolecule::rotate(container &par, point u, double angle) {
     par.trial[i].z=e1mcoz*eb+cosang*b.z+sinang*(u.x*b.y - u.y*b.x) + cm.z;
     par.boundary(par.trial[i]);
   }
+}
+
+void macromolecule::add(container &c, inputfile &in ) {
+  
 }
 
 //--------------- CHAIN -----------------

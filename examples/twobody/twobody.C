@@ -14,12 +14,14 @@
 #include "potentials.h"
 #include "countdown.h"
 #include "histogram.h"
+#include "inputfile.h"
 typedef pot_minimage T_pairpot;          // Specific pair interaction function
 #include "markovmove.C"
 
 using namespace std;
 
 int main() {
+  inputfile in("twobody.conf");         // Read input file
   slump slump;                          // A random number generator
   box cell(100.);                       // We want a spherical cell
   canonical nvt;                        // Use the canonical ensemble
@@ -33,18 +35,9 @@ int main() {
   rdf saltrdf(particle::NA,particle::SO4, .5, cell.len/2);
 
   vector<macromolecule> g(12);          // Vector of proteins
-  for (short i=0; i<g.size(); i++) {    // Loop over all proteins...
-    g[i].add( cell, aam.load(
-          "mrh4a.aam" ) );              // Load structure from disk
-    g[i].move(cell, -g[i].cm);          // ..and translate it to origo (0,0,0)
-    g[i].accept(cell);                  // ..accept translation
-    while (g[i].overlap(cell)==true) {  // Place proteins
-      point a;                          // ..at random positions
-      cell.randompos(a);                // ..within the cell
-      g[i].move(cell, a);
-      g[i].accept(cell);
-    }
-  }
+  for (short i=0; i<g.size(); i++)      // Insert proteins...
+    g[i].add( cell,                     // ...at random, non-overlapping
+        aam.load("mrh4a.aam"), true );  // ...positions.
 
   group salt;                           // Group for mobile ions
   salt.add( cell, particle::NA, 0+1200);// Insert sodium ions

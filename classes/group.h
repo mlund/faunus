@@ -12,6 +12,7 @@
 #include "container.h"
 #include "pot_spring.h"
 #include "slump.h"
+#include "inputfile.h"
 
 /*! \brief Groups set of particles, such as molecules, salt etc.
  *  \author Mikael Lund
@@ -41,9 +42,11 @@ class group {
     void operator+=(group);
     group operator+(group);
 
+    void move(container &, point);                      //!< Translate group
+    bool overlap(container &);                          //!< Test overlap w all particles
     void undo(particles &);
     void accept(particles &);                           //!< Accept a move
-    void add(container &, vector<particle>);            //!< Add a particle vector
+    void add(container &, vector<particle>, bool=false);//!< Add a particle vector
     void add(container &, particle::type, short);       //!< Add particles w. collision check
     virtual unsigned short displace(container&,double); //!< Displace random particle
 };
@@ -60,11 +63,11 @@ class macromolecule : public group {
     double charge(vector<particle> &);  //!< Calculate total charge
     double radius(vector<particle> &);  //!< Calculate radius
     double dipole(vector<particle> &);  //!< Calculate dipole moment
-    void move(container &, point);      //!< Translate group
     void zmove(container &, double);    //!< Move in z-direction, only
     void rotate(container &, double);   //!< Rotate around a point
     void rotate(container &, point, double);
-    bool overlap(container &);          //!< Test if group overlaps with other particles in the system
+    using group::add;
+    void add(container &, inputfile &); //!< Add according to inputfile
     void operator=(group);              //!< Copy from group
 };
 

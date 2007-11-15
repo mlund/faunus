@@ -35,11 +35,11 @@ OBJS=$(CLASSDIR)/inputfile.o \
      $(CLASSDIR)/particles.o \
      $(CLASSDIR)/analysis.o \
      $(CLASSDIR)/species.o
-all:	classes 
+all:	classes examples
 
 classes:	$(OBJS)
-doc:	
-	doxygen classes/Doxyfile
+manual:
+	doxygen doc/Doxyfile
 
 widom:	examples/widom/widom.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/widom/widom.C -o examples/widom/widom
@@ -59,5 +59,5 @@ clean:
 	rm -vf $(OBJS) examples/titration/pka examples/widom/widom examples/ewald/ewald
 
 docclean:
-	rm -vfR classes/doc/html classes/doc/latex
+	rm -vfR doc/html doc/latex
 

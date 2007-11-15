@@ -7,11 +7,22 @@
 There is a lot \link todo \endlink so consider contributing.
 Write access to the repository is obtained by sending
 a mail to: mlund at mac com
+
+\subsection guide Guidelines for Submitting Code
+\li Make sure "make all" works before submitting
+\li Avoid submitting temporary files (.o, .xyz etc.)
+\li Use code-recycling via class inheritance
+\li Document the code using Doxygen keywords
+
+\section Authors
+\li Mikael Lund
+\li Bjorn Persson
+\li Martin Trulsson
 */
 
 /*! \page License
 \section gpl License
-\verbinclude "LICENSE"
+\verbinclude "../LICENSE"
 */
 
 /*! \page Readme

@@ -1,5 +1,5 @@
 # Generic linux compile
-gfortran -O3 -o bulk.run bulk.f
+ifort -O3 -o bulk.run bulk.f
 
 #fort77 -O2 -funroll-loops -finit-local-zero -fno-automatic -o bulk.run bulk.f
 

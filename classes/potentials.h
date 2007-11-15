@@ -246,6 +246,7 @@ template<class T>
 double interaction<T>::energy(vector<particle> &p, int j) {
   unsigned short ps=p.size();
   double u=0;
+  //pragma omp parallel for reduction (+:u)
   for (unsigned short i=0; i<j; ++i)
     u+=pair.pairpot( p[i],p[j] );
   for (unsigned short i=j+1; i<ps; ++i)

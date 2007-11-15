@@ -221,13 +221,13 @@ ioxtc::ioxtc(container &con) : iopart(con) {
   xd=open_xtc("coord.xtc", "w");
 }
 bool ioxtc::save(string file, vector<particle> &p) {
-  if (p.size()<3000) {
+  if (p.size()<3300) {
     for (unsigned short i=0; i<p.size(); i++) {
       x[i][0]=p[i].x/10;      // AA->nm
       x[i][1]=p[i].y/10;
       x[i][2]=p[i].z/10;
     }
-    write_xtc(xd,p.size(),step++,time++,box,x,3000.);
+    write_xtc(xd,p.size(),step++,time++,box,x,3300.);
   }
 }
 void ioxtc::close() { close_xtc(xd); }

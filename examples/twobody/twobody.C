@@ -23,7 +23,7 @@ using namespace std;
 int main() {
   inputfile in("twobody.conf");         // Read input file
   slump slump;                          // A random number generator
-  box cell(100.);                       // We want a spherical cell
+  box cell(80.);                       // We want a spherical cell
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg;                        // Setup pair potential (default values)
   cfg.box = cell.len;
@@ -40,8 +40,8 @@ int main() {
         aam.load("mrh4a.aam"), true );  // ...positions.
 
   group salt;                           // Group for mobile ions
-  salt.add( cell, particle::NA, 0+1200);// Insert sodium ions
-  salt.add( cell, particle::SO4,18+600);// Insert chloride ions
+  salt.add( cell, particle::NA, 0+2000);// Insert sodium ions
+  salt.add( cell, particle::SO4,30+1000);// Insert chloride ions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
   translate mt(nvt, cell, pot);         // Class for macromolecular translation
@@ -53,7 +53,7 @@ int main() {
   #endif
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain 
-    for (int micro=1; micro<=1e4; micro++) {
+    for (int micro=1; micro<=1e5; micro++) {
 
       sys+=sm.move(salt);                       // Displace salt particles
       saltrdf.update(cell);
@@ -80,11 +80,12 @@ int main() {
     cout << "Macro step " << macro << " completed. ETA: " << clock.eta(macro);
     sys.update(pot.energy(cell.p));             // Update system energy averages
     cell.check_vector();                        // Check sanity of particle vector
-  } // End of outer loop
 
-  xyz.save("coord.xyz", cell.p);
-  protrdf.write("rdfprot.dat");
-  saltrdf.write("rdfsalt.dat");
+    xyz.save("coord.xyz", cell.p);
+    protrdf.write("rdfprot.dat");
+    saltrdf.write("rdfsalt.dat");
+
+  } // End of outer loop
 
   cout << sys.info() << salt.info()             // Final information...
        << sm.info() << mr.info() << mt.info();

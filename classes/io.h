@@ -135,7 +135,7 @@ class iopov : public iopart {
 class ioxtc : public iopart {
   private:
     vector<particle> load(string) {}
-    rvec x[3000];
+    rvec x[3300];
     int xd;
     float box[3][3], time, step;
   public:

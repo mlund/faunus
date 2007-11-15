@@ -11,8 +11,10 @@ a mail to: mlund at mac com
 \subsection guide Guidelines for Submitting Code
 \li Make sure "make all" works before submitting
 \li Avoid submitting temporary files (.o, .xyz etc.)
-\li Use code-recycling via class inheritance
-\li Document the code using Doxygen keywords
+\li Stride to recycle code via inheritance
+\li Document your code using Doxygen keywords
+\li Provide a descriptive comment of your changes when issuing "svn commit"
+\li Example applications are most welcome!
 
 \section Authors
 \li Mikael Lund

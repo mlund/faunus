@@ -1,9 +1,33 @@
-faunus SVN repository
-======================
+WELCOME TO FAUNUS:
+  Faunus is a C++ class library for easily creating
+  code for Monte Carlo simulation of molecular systems.
 
-classes         Mostly finished, general classes.
-examples        Example programs
-legacy          Older, working programs
-misc            Mostly temporary stuff.
-undone          Unfinished code under preparation
+  Get the latest version via SVN from:
+  http://faunus.sourceforge.net
+
+AUTHORS:
+  Mikael Lund <mlund at mac.com>
+  Bjorn Persson <bjorn.persson at teokem.lu.se>
+  Martin Trulsson <martin.trulsson at teokem.lu.se>
+
+REQUIREMENTS:
+  * C++ compiler (gnu, ibm, intel etc.)
+  * Gromacs (optional, for trajectory output)
+  * Doxygen (optional, for code manual)
+  * Graphviz (optional, for code manual)
+
+COMPILING:
+  * make classes
+  * make examples
+  * make manual (requires doxygen)
+
+  (Edit Makefile to enable Gromacs and OpenMP support)
+
+FILES:
+  classes      Mostly finished, general classes.
+  examples     Example programs
+  legacy       Older, working programs
+  undone       Unfinished code
+  misc         Mostly temporary stuff.
+  doc          Code manual files
 

@@ -52,8 +52,8 @@ int main() {
   ioxtc xtc(cell);                      // Gromacs xtc output (if installed)
   #endif
 
-  for (int macro=1; macro<=10; macro++) {       // Markov chain -- outer loop
-    for (int micro=1; micro<=1e4; micro++) {    //  - // -      -- inner loop
+  for (int macro=1; macro<=10; macro++) {       // Markov chain 
+    for (int micro=1; micro<=1e4; micro++) {
 
       sys+=sm.move(salt);                       // Displace salt particles
       saltrdf.update(cell);
@@ -76,11 +76,11 @@ int main() {
         xtc.save("ignored-name.xtc", cell.p);
         #endif
       }
-    }
+    } // End of inner loop
     cout << "Macro step " << macro << " completed. ETA: " << clock.eta(macro);
     sys.update(pot.energy(cell.p));             // Update system energy averages
     cell.check_vector();                        // Check sanity of particle vector
-  }
+  } // End of outer loop
 
   xyz.save("coord.xyz", cell.p);
   protrdf.write("rdfprot.dat");

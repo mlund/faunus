@@ -1,6 +1,6 @@
 WELCOME TO FAUNUS:
-  Faunus is a C++ class library for easily creating
-  code for Monte Carlo simulation of molecular systems.
+  Faunus is a C++ class library for creating programs
+  for Monte Carlo simulation of molecular systems.
 
   Get the latest version via SVN from:
   http://faunus.sourceforge.net
@@ -17,8 +17,7 @@ REQUIREMENTS:
   * Graphviz (optional, for code manual)
 
 COMPILING:
-  * make classes
-  * make examples
+  * make
   * make manual (requires doxygen)
 
   (Edit Makefile to enable Gromacs and OpenMP support)

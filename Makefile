@@ -1,25 +1,29 @@
-  MODEL = generic
+  MODEL = debug
   GROMACS = no
+  OPENMP = yes
 
   ##################################################################
 
+CXX=g++-4.2
 CLASSDIR=./classes
 INCDIR=-I$(CLASSDIR)
+
+ifeq ($(OPENMP), yes)
+  OMP=-fopenmp
+endif
 
 ifeq ($(GROMACS), yes)
   INCDIR=-I/usr/local/gromacs/include/gromacs/ -I$(CLASSDIR)
   LDFLAGS=-L/usr/local/gromacs/lib/ -lgmx
-  GROFLAG=-DGROMACS
+  GRO=-DGROMACS
 endif
 
 ifeq ($(MODEL), debug)
-  CXX=g++
-  CXXFLAGS = -O0 -w -Winline  -g $(INCDIR) $(GROFLAG)
+  CXXFLAGS = -O0 -Wextra -Wno-sign-compare -Winline -g $(INCDIR) $(GRO) $(OMP)
 endif
 
-ifeq ($(MODEL), generic)
-  CXX=g++
-  CXXFLAGS = -O3 -funroll-loops -w -Winline -g $(INCDIR) $(GROFLAG)
+ifeq ($(MODEL), gnu)
+  CXXFLAGS = -O3 -w -funroll-loops -Winline -g $(INCDIR) $(GRO) $(OMP)
 endif
 
 OBJS=$(CLASSDIR)/inputfile.o \

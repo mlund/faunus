@@ -53,7 +53,7 @@ class pot_coulomb : private pot_lj {
      *  \f$ \beta u/f = \frac{z_1 z_2}{r} + u_{LJ}/f \f$
      */
     inline double pairpot(particle &p1, particle &p2) {
-      register double r2=p1.sqdist(p2);
+      double r2=p1.sqdist(p2);
       register double qq=p1.charge*p2.charge;
       register double u=lj(p1,p2,r2);
       return (qq!=0) ? u+qq/sqrt(r2) : u;

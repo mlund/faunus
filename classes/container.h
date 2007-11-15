@@ -14,7 +14,7 @@ class container : public particles,  public species {
     slump slp;
   public:
     float volume;                                  //!< Volume of the container [AA^3]
-    inline virtual bool collision(point &)=0;      //!< Check for collision with walls
+    virtual bool collision(point &)=0;             //!< Check for collision with walls
     virtual void randompos(point &)=0;             //!< Random point within container
     virtual string info();                         //!< Return info string
     virtual string povray();                       //!< POVRAY object representing the cell
@@ -38,7 +38,7 @@ class cell : public container {
     inline void boundary(point &) {};
     void randompos(point &);
     string povray();
-    inline bool collision(point &p) {
+    bool collision(point &p) {
       return 
         (p.x*p.x+p.y*p.y+p.z*p.z > r2) ? true:false;
     }
@@ -60,7 +60,7 @@ class box : public container {
     void randompos(point &);
     void randompos(vector<point> &);
     point randompos();
-    inline bool collision(point &p) {return false;};
+    bool collision(point &p) {return false;};
     string povray();
 
     //! Calculate distance using the minimum image convention
@@ -132,7 +132,7 @@ class cylinder : public container {
     void boundary(point &) {};
     cylinder(float,float);
     void randompos(point &);
-    inline bool collision(point &p) {
+    bool collision(point &p) {
       return 
         (p.x*p.x+p.y*p.y>r2 || (p.z<0||p.z>len)) ? true:false;
     };

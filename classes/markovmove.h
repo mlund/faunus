@@ -138,5 +138,13 @@ class chargereg : public markovmove, private titrate {
     bool titrateall();
     string info();
 };
+/*! \brief Grand Canonical titation of all sites
+ *  \author Bjoern Persson
+ */
+class GCchargereg : public markovmove, private GCtitrate {
+  public: 
+    GCchargereg( ensemble&, container&, interaction<T_pairpot>&, group&, float, float, float); //!< pH, CatPot, volume
+    bool titrateall();
+    string info();
 
 #endif

@@ -225,6 +225,30 @@ bool chargereg::titrateall() {
   du=sum;
   return true;
 }
+//-----------GRAND CANONICAL CHARGE REGULAION------------
+GCchargereg::GCchargereg(
+    ensemble &e, 
+    container &c,
+    interaction<T_pairpot> &i,
+    group &g,
+    float ph, float cp, float vol ) : markovmove(e,c,i), GCtitrate(c,c.p,g,ph,cp,vol)
+{
+  name="PROTON TITRATION";
+  runfraction=0.2;
+  con->trial = con->p;
+}
+bool GCchargereg::titrateall() {
+  return true;
+};
+string GCchargereg::info() {
+  ostringstream o;
+  o <<  markovmove::info()
+    << "#   pH (concentration)  = " << tit.ph << endl
+    << "#   Cation potential(kT)= " << CatPot << endl
+    << "#   Titrateable sites   = " << tit.sites.size() << endl
+    << "#   Number of protons   = " << tit.protons.size() << endl;
+  return o.str();
+}  
 //-----------MOVE----------------------------------------
 /*! \breif Class to prefom a random walk of a macromolecule
  *   in space

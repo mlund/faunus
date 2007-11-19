@@ -61,9 +61,10 @@ class GCtitrate {
     double  CatPot, volume;         //!< Systems chemical potential of cation, system volume
     titrate tit;
 
-    GCtitrate GCtitrate(species &, double, double, double);//!< Constructor
-    GCtitrate GCtitrate(species &, vector<particle> &, group &, double, double, double); //!<Constroctor
+    GCtitrate(species &, double, double, double);//!< Constructor
+    GCtitrate(species &, vector<particle> &, group &, double, double, double); //!<Constroctor
     void updateVolume( double );            //!< Update the system volume, for isobaric ensemble
+    double energy();                        //!< Returns the appropriate energy to be Boltzmann weighted
 };
 
 #endif

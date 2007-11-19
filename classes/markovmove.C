@@ -287,7 +287,7 @@ bool move::mOve(macromolecule &g) {
 }
 
 //-----------Z-MOVE--------------------------------------
-/*! \breif Class to make moves of a single particle along z-axis
+/*! \brief Class to make moves of a single particle along z-axis
  *  
  *  This class will make a random walk along the z-axis for a
  *  macromolece

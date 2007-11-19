@@ -1,10 +1,10 @@
-  MODEL = gnu
-  GROMACS = yes
-  OPENMP = no
+  MODEL = debug
+  GROMACS = no
+  OPENMP = yes
 
   ##################################################################
 
-CXX=g++
+CXX=g++-4.2
 CLASSDIR=./classes
 INCDIR=-I$(CLASSDIR)
 
@@ -19,7 +19,7 @@ ifeq ($(GROMACS), yes)
 endif
 
 ifeq ($(MODEL), debug)
-  CXXFLAGS = -O0 -Wextra -Wno-sign-compare -Winline -g $(INCDIR) $(GRO) $(OMP)
+  CXXFLAGS = -O0 -Wno-sign-compare -Winline -g $(INCDIR) $(GRO) $(OMP)
 endif
 
 ifeq ($(MODEL), gnu)

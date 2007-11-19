@@ -246,10 +246,12 @@ template<class T>
 double interaction<T>::energy(vector<particle> &p, int j) {
   unsigned short ps=p.size();
   double u=0;
-  //pragma omp parallel for reduction (+:u)
-  for (unsigned short i=0; i<j; ++i)
+  #pragma omp parallel for reduction (+:u)
+  for (short i=0; i<j; ++i)
     u+=pair.pairpot( p[i],p[j] );
-  for (unsigned short i=j+1; i<ps; ++i)
+
+  #pragma omp parallel for reduction (+:u)
+  for (short i=j+1; i<ps; ++i)
     u+=pair.pairpot( p[i],p[j] );
   return pair.f*u;
 }
@@ -258,6 +260,7 @@ template<class T>
 double interaction<T>::energy(vector<particle> &p, group &g) {
   int n=g.end+1, psize=p.size();
   double u=0;
+  #pragma omp parallel for reduction (+:u)
   for (int i=g.beg; i<n; ++i) {
     for (int j=0; j<g.beg; j++)
       u += pair.pairpot(p[i],p[j]);

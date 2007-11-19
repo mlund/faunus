@@ -31,7 +31,7 @@ CONTACT:
 
 REQUIREMENTS:
   * C++ compiler (gnu, ibm, intel etc.)
-  * Gromacs (optional, for trajectory output)
+  * Gromacs (optional, for xtc trajectory output)
   * Doxygen (optional, for code manual)
   * Graphviz (optional, for code manual)
 

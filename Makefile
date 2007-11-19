@@ -25,7 +25,7 @@ ifeq ($(GROMACS), yes)
 endif
 
 ifeq ($(MODEL), debug)
-  CXXFLAGS = -O0 -Wextra -Winline -Wno-sign-compare -g $(INCDIR) $(GRO)
+  CXXFLAGS = -O0 -W -Winline -Wno-sign-compare -g $(INCDIR) $(GRO)
 endif
 
 ifeq ($(MODEL), gnu)

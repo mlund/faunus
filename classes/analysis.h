@@ -164,7 +164,7 @@ void widompath<T_pairpot>::update(
     setcube(p);
     cnt=100;
     if (p.dist(goal)<4*p.radius) {
-      finished==true;
+      finished=true;
       //povpath(pov);
     }
   }

@@ -76,7 +76,8 @@ class pot_minimage : private pot_lj {
       invbox=1./box;
     }
     inline double pairpot(particle &p1, particle &p2) {
-      register double dx,dy,dz,r2;
+      double r2;
+      register double dx,dy,dz;
       dx=p1.x-p2.x;
       dy=p1.y-p2.y;
       dz=p1.z-p2.z;

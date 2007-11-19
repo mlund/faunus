@@ -7,7 +7,7 @@
 titrate::titrate(species &spec, double peeage) {
   ph=peeage;
   spc=&spec;
-};
+}
 titrate::titrate(species &spec, vector<particle> &p, group &mobile, double peeage) {
   ph=peeage;
   spc=&spec;
@@ -15,7 +15,7 @@ titrate::titrate(species &spec, vector<particle> &p, group &mobile, double peeag
 }
 
 void titrate::init(vector<particle> &p, group &mobile) {
-  for (int i=0; i<p.size(); i++)    //search for titrateable sites
+  for (unsigned int i=0; i<p.size(); i++)    //search for titrateable sites
     if ( (*spc).d[p[i].id].pka !=0 ) {
       sites.push_back(i);
       p[i].charge = spc->d[p[i].id].p.charge; // deprotonate
@@ -72,7 +72,7 @@ short int titrate::random(vector<short int> &iv) {
     res.site=i;
     res.proton=j;
     return res;
-  };
+  }
 
   titrate::action titrate::exchange(vector<particle> &p) {
     int i=random( sites );        // pick a random, titrateable particle
@@ -86,7 +86,7 @@ short int titrate::random(vector<short int> &iv) {
       return moveToBulk(p, a.site, a.proton);
     else
       return takeFromBulk(p, a.site, a.proton);
-  };
+  }
 
 double titrate::energy(vector<particle> &p,
     double du, action &a) {
@@ -105,29 +105,29 @@ void titrate::infos() {
 
 double titrate::sumsites() {
   double Q=0;
-  for (int i=0; i<sites.size(); i++)
+  for (unsigned int i=0; i<sites.size(); i++)
     Q+= q[i].avg();
   return Q;
 }
 
 void titrate::samplesites(vector<particle> &p) {
-  for (int i=0; i<sites.size(); i++)
+  for (unsigned int i=0; i<sites.size(); i++)
     q[i] += p[sites[i]].charge;
   nprot+=protons.size();
 }
 
 void titrate::showsites(vector<particle> &p) {
   cout << "# --- AVERAGE SITE CHARGES ---------------------\n";
-  for (int i=0; i<spc->d.size(); i++)
+  for (unsigned int i=0; i<spc->d.size(); i++)
     if (spc->d[i].pka!=0) {
       cout << spc->d[i].name << ": " << setiosflags(ios::fixed);
       cout.precision(3);
-      for (int j=0; j<sites.size(); j++)
+      for (unsigned int j=0; j<sites.size(); j++)
         if (p[sites[j]].id==i)
           cout << q[j].avg() << " ";
       cout << endl;
     };
-};
+}
 
 /*!
  * This function will take the average charges from titrate::q
@@ -138,11 +138,11 @@ void titrate::showsites(vector<particle> &p) {
  * to disk, so as to include the partial charges of the system.
  */
 double titrate::applycharges(vector<particle> &p) {
-  for (int i=0; i<sites.size(); i++)
+  for (unsigned int i=0; i<sites.size(); i++)
     p[sites[i]].charge = q[i].avg();
 
   double q = nprot.avg() / protons.size();
-  for (int i=0; i<protons.size(); i++)
+  for (unsigned int i=0; i<protons.size(); i++)
     p[protons[i]].charge = q;
 
   cout << "# Charge, Titrateable sites = " << sumsites() << endl
@@ -151,7 +151,7 @@ double titrate::applycharges(vector<particle> &p) {
     << "# Total                     = " << sumsites()+nprot.avg() << endl;
 
   return sumsites();
-};
+}
 
 //---GC-titration
 

@@ -2,7 +2,7 @@
 
 point::point() { clear(); }
 
-void point::clear() { x=y=z=0; };
+void point::clear() { x=y=z=0; }
 double point::dot(point &p) { return (x*p.x + y*p.y + z*p.z); }
 
 double point::len() {
@@ -20,7 +20,7 @@ point point::operator-() {
   point o;
   o.x=-x; o.y=-y; o.z=-z;
   return o;
-};
+}
 
 point point::operator*(point p) {
   point o;
@@ -28,14 +28,14 @@ point point::operator*(point p) {
   o.y = p.y * y;
   o.z = p.z * z;
   return o;
-};
+}
 point point::operator*(double s) {
   point o;
   o.x = x*s;
   o.y = y*s;
   o.z = z*s;
   return o;
-};
+}
 
 point point::operator+(double d) {
   point o;
@@ -43,7 +43,7 @@ point point::operator+(double d) {
   o.y = y+d;
   o.z = z+d;
   return o;
-};
+}
 
 
 point point::operator-(point p) {
@@ -96,7 +96,7 @@ void particle::operator=(point p) {
   y=p.y;
   z=p.z;
 }
-double particle::vol(double rho) { return 1.6606*rho*mw; };
+double particle::vol(double rho) { return 1.6606*rho*mw; }
 double particle::rad(double rho) { return pow( 3.*vol(rho)/4./3.14, 0.3333 ); }
 
 ostream &operator<<(ostream &out, point &p) {
@@ -109,4 +109,4 @@ spherical::spherical(double radial, double zenith, double azimuthal) {
   r=radial;
   theta=zenith;
   phi=azimuthal;
-};
+}

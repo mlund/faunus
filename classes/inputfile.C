@@ -14,13 +14,13 @@ inputfile::inputfile(string filename) {
     f.close();
     cout << "# Configuration read from: " << filename << endl;
   } else cout << "*** Failed to open inputfile ***" << endl;
-};
+}
 
 int inputfile::findKey(string &key) {
    for (int i=0; i<matrix.size(); i++)
       if (matrix[i].name.compare(key)==0) return i;
    return -1;
-};
+}
 
 //! \param key Keyword to look for
 //! \param def Default value if keyword is not found
@@ -32,7 +32,7 @@ string inputfile::getstr(string key, string def) {
     cout << "# Warning: keyword '" << key << "' not found - using "
          << def << endl;
   return def;
-};
+}
 
 //! \param key Keyword to look for
 //! \param def Default value if keyword is not found
@@ -43,7 +43,7 @@ double inputfile::getflt(string key, double def) {
     cout << "Keyword '" << key << "' not found! - using "<<def<<"\n";
     return def;
   };
-};
+}
 
 //! \param key Keyword to look for
 //! \param def Default value if keyword is not found
@@ -54,7 +54,7 @@ int inputfile::getint(string key, int def) {
     cout << "Keyword '" << key << "' not found! -using "<<def<<"\n";
     return def;
   };
-};
+}
 
 //! \param key Keyword to look for
 //! \param def Default value if keyword is not found
@@ -69,7 +69,7 @@ bool inputfile::getboo(string key, bool def) {
     cout << "Keyword '" << key << "' not found! - using "<<def<<"\n";
     return def;
   };
-};
+}
 
 // config constructor
 config::config(string filename) : inputfile(filename) {
@@ -121,5 +121,5 @@ config::config(string filename) : inputfile(filename) {
   minsnapshot = getboo("minsnapshot",false);
   adjust_dp   = getboo("adjust_dp", false);
   imdBool     = getboo("imdsupport",false);
-};
+}
 

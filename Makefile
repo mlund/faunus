@@ -1,10 +1,10 @@
   MODEL = gnu
   GROMACS = no
-  OPENMP = no
+  OPENMP = yes
 
   ##################################################################
 
-CXX=g++
+CXX=g++-4.2
 CLASSDIR=./classes
 INCDIR=-I$(CLASSDIR)
 

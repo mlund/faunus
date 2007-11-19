@@ -225,6 +225,8 @@ bool chargereg::titrateall() {
   du=sum;
   return true;
 }
+
+/*
 //-----------GRAND CANONICAL CHARGE REGULAION------------
 GCchargereg::GCchargereg(
     ensemble &e, 
@@ -249,6 +251,8 @@ string GCchargereg::info() {
     << "#   Number of protons   = " << tit.protons.size() << endl;
   return o.str();
 }  
+*/
+
 //-----------MOVE----------------------------------------
 /*! \breif Class to prefom a random walk of a macromolecule
  *   in space

@@ -1,4 +1,4 @@
-# Specify compiler (gnu, intel)
+# Specify compiler (gnu,intel,pathscale,debug)
 MODEL = gnu
 
 # Set to yes if you need Gromacs xtc file support
@@ -7,7 +7,7 @@ GROMACS = no
 
 # Set to "yes" to enable parallel computing on multi-core
 # CPU's. OpenMP must be supported by the compiler.
-OPENMP = no
+OPENMP = no	
 
 ###########################################
 #  Normally you would not want to modify  #
@@ -42,6 +42,11 @@ ifeq ($(MODEL), intel)
   endif
   CXX=icc
   CXXFLAGS = -O3 -w $(INCDIR) $(GRO) $(OMP)
+endif
+
+ifeq ($(MODEL), pathscale)
+  CXX=pathCC
+  CXXFLAGS = -Ofast $(INCDIR) $(GRO)
 endif
 
 OBJS=$(CLASSDIR)/inputfile.o \

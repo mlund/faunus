@@ -55,7 +55,7 @@ class titrate {
  *  \todo Everything...
  */
 
-
+/*
 class GCtitrate {
   public:
     double  CatPot, volume;         //!< Systems chemical potential of cation, system volume
@@ -66,5 +66,6 @@ class GCtitrate {
     void updateVolume( double );            //!< Update the system volume, for isobaric ensemble
     double energy();                        //!< Returns the appropriate energy to be Boltzmann weighted
 };
+*/
 
 #endif

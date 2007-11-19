@@ -107,11 +107,13 @@ class zmove : public markovmove {
 /*! \brief Symmetrically move two groups along z-axis
  *  \author Mikael Lund
  */
+/*
 class dualzmove : public markovmove {
   public:
     float z;    //!< Distance between CM's of the groups
     void move(group &, group &);
 };
+*/
 
 class translate : public markovmove {
   public: 
@@ -141,10 +143,11 @@ class chargereg : public markovmove, private titrate {
 /*! \brief Grand Canonical titation of all sites
  *  \author Bjoern Persson
  */
+/*
 class GCchargereg : public markovmove, private GCtitrate {
   public: 
     GCchargereg( ensemble&, container&, interaction<T_pairpot>&, group&, float, float, float); //!< pH, CatPot, volume
     bool titrateall();
     string info();
-
+*/
 #endif

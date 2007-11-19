@@ -28,10 +28,10 @@ endif
 
 ifeq ($(MODEL), intel)
   ifeq ($(OPENMP), yes)
-    OMP=-openmp -parallel
+    OMP=-openmp
   endif
   CXX=icc
-  CXXFLAGS = -fast -w -g $(INCDIR) $(GRO) $(OMP)
+  CXXFLAGS = -O3 -w $(INCDIR) $(GRO) $(OMP)
 endif
 
 OBJS=$(CLASSDIR)/inputfile.o \
@@ -41,6 +41,7 @@ OBJS=$(CLASSDIR)/inputfile.o \
      $(CLASSDIR)/physconst.o\
      $(CLASSDIR)/slump.o\
      $(CLASSDIR)/container.o\
+     $(CLASSDIR)/potentials.o\
      $(CLASSDIR)/hardsphere.o\
      $(CLASSDIR)/group.o \
      $(CLASSDIR)/particles.o \

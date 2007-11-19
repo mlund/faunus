@@ -14,8 +14,8 @@
 #include "countdown.h"
 #include "histogram.h"
 #include "inputfile.h"
+#include "potentials.h"
 typedef pot_minimage T_pairpot;         // Specific pair interaction function
-#include "potentials.C"
 #include "markovmove.C"
 
 using namespace std;
@@ -23,7 +23,7 @@ using namespace std;
 int main() {
   inputfile in("twobody.conf");         // Read input file
   slump slump;                          // A random number generator
-  box cell(90.);                        // We want a cubic cell
+  box cell(900.);                        // We want a cubic cell
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg;                        // Setup pair potential (default values)
   cfg.box = cell.len;

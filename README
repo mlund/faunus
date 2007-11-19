@@ -41,6 +41,9 @@ COMPILING:
 
   (Edit Makefile to enable Gromacs and OpenMP support)
 
+  Note that OpenMP support is experimental and at the moment
+  the Intel C++ compiler (version 10+) seems to work best.
+
 FILES:
   classes      Mostly finished, general classes.
   examples     Example programs

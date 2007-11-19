@@ -51,7 +51,7 @@ void pot_datapmf::showpmf(species &spc) {
  */
 bool pot_datapmf::loadpmf(species &spc, string filename) {
   string s,a_str,b_str;
-  int a,b,len,tmp;
+  int a,b,len;
   vector<double> x,y;
   ifstream fh(filename.c_str());
   if (fh) {

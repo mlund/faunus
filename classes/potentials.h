@@ -299,7 +299,7 @@ double interaction<T>::energy(vector<particle> &p, group &g, particle &a) {
 template<class T>
 double interaction<T>::energy(vector<particle> &p) {
   double u=0;
-  unsigned short i,j,n = p.size();
+  short i,j,n = p.size();
   #pragma omp parallel for reduction (+:u)
   for (i=0; i<n-1; ++i)
     for (j=i+1; j<n; ++j)

@@ -1,26 +1,22 @@
-# Specify compiler (gnu,intel,pathscale,debug)
+# Specify compiler (gnu,intel,pgi,pathscale,debug)
 MODEL = gnu
 
 # Set to yes if you need Gromacs xtc file support
 # (requires a working Gromacs installation)
 GROMACS = no
 
-# Set to "yes" to enable parallel computing on multi-core
+# Set to "yes" to enable parallel execution on multi-core
 # CPU's. OpenMP must be supported by the compiler.
-OPENMP = no	
+OPENMP = no
 
 ###########################################
 #  Normally you would not want to modify  #
-#  beyond this point.                     #
+#  things beyond this point.              #
 ###########################################
 
 CXX=g++
 CLASSDIR=./classes
 INCDIR=-I$(CLASSDIR)
-
-ifeq ($(OPENMP), yes)
-  OMP=-fopenmp
-endif
 
 ifeq ($(GROMACS), yes)
   INCDIR=-I/usr/local/gromacs/include/gromacs/ -I$(CLASSDIR)
@@ -29,10 +25,13 @@ ifeq ($(GROMACS), yes)
 endif
 
 ifeq ($(MODEL), debug)
-  CXXFLAGS = -O0 -Wextra -Winline -Wno-sign-compare -g $(INCDIR) $(GRO) $(OMP)
+  CXXFLAGS = -O0 -Wextra -Winline -Wno-sign-compare -g $(INCDIR) $(GRO)
 endif
 
 ifeq ($(MODEL), gnu)
+  ifeq ($(OPENMP), yes)
+    OMP=-fopenmp
+  endif
   CXXFLAGS = -O3 -w -funroll-loops $(INCDIR) $(GRO) $(OMP)
 endif
 
@@ -48,6 +47,15 @@ ifeq ($(MODEL), pathscale)
   CXX=pathCC
   CXXFLAGS = -Ofast $(INCDIR) $(GRO)
 endif
+
+ifeq ($(MODEL), pgi)
+  CXX=pgCC
+  ifeq ($(OPENMP), yes)
+    OMP=-mp
+  endif 
+  CXXFLAGS = -O3 $(INCDIR) $(GRO) $(OMP)
+endif
+
 
 OBJS=$(CLASSDIR)/inputfile.o \
      $(CLASSDIR)/io.o\

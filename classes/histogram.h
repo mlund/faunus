@@ -175,14 +175,14 @@ void rdfP3::update(vector<particle*> &p)
     for (j=i+1; j<n; j++) 
       add( abs(p[i]->dist(*p[j], len, len_inv )));
 }
-float rdf::volume(float x) { return 4./3.*acos(-1)*( pow(x+xres,3)-pow(x,3) ); }
+float rdf::volume(float x) { return 4./3.*acos(-1.)*( pow(x+xres,3)-pow(x,3) ); }
 /*!
  *  Get g(x) from histogram according to
  *    \f$ g(x) = \frac{N(r)}{N_{tot}} \frac{ 3 } { 4\pi\left [ (x+xres)^3 - x^3 \right ] }\f$
  */
 float rdf::get(float x) { return (*this)(x)/(cnt*volume(x)); }
 
-float rdfP3::volume(float x) { return 4./3.*acos(-1)*( pow(x+xres,3)-pow(x,3) ); }
+float rdfP3::volume(float x) { return 4./3.*acos(-1.)*( pow(x+xres,3)-pow(x,3) ); }
 /*!
  *  Get g(x) from histogram according to
  *    \f$ g(x) = \frac{N(r)}{N_{tot}} \frac{ 3 } { 4\pi\left [ (x+xres)^3 - x^3 \right ] }\f$

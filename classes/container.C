@@ -25,7 +25,7 @@ cell::cell(float radius) {
   r = radius; 
   r2 = r*r; 
   diameter = 2*r; 
-  volume = (4./3.)*acos(-1)*r*r*r;
+  volume = (4./3.)*acos(-1.)*r*r*r;
 }
 string cell::info() {
   ostringstream o;
@@ -99,7 +99,7 @@ clutch::clutch(float radius, float min, float max) {
   r=radius;
   r2=r*r;
   diameter=2*r;
-  volume=(4./3.)*acos(-1)*r2*r;
+  volume=(4./3.)*acos(-1.)*r2*r;
   zmin=min;
   zmax=max;
 }
@@ -121,7 +121,7 @@ cylinder::cylinder(float length, float radius) {
   r=radius;
   r2=r*r;
   diameter=r*2;
-  volume=2*r2*acos(-1)*len;
+  volume=2*r2*acos(-1.)*len;
 }
 void cylinder::randompos(point &p) {
   double l=r2+1;

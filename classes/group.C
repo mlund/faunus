@@ -80,7 +80,6 @@ point group::masscenter(vector<particle> &p) {
   return cm;
 }
 void group::undo(particles &par) {
-  int ilen=end+1;
   cm_trial = cm;
   for (short i=beg; i<=end; i++) {
     par.trial[i].x = par.p[i].x;
@@ -341,6 +340,7 @@ double zwittermembrane::selfenergy(particles &par) {
   double u=0;
   for (short i=beg; i<end; i=i+2)
     u+=pairpot(par.p[i], par.p[i+1]);
+  return u;
 }
 short zwittermembrane::mate(short i) { return (i%2==0) ? i+1 : i-1; }
 

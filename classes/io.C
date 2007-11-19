@@ -137,6 +137,12 @@ iopov::iopov(container &c) : iopart(c) {
   camera();
   o << c.povray();
 }
+
+vector<particle> iopov::load(string s) {
+  vector<particle> dummy(0);
+  return dummy;
+}
+
 void iopov::clear() { o.str(""); }
 void iopov::header() {
   clear();

@@ -101,7 +101,7 @@ class iopov : public iopart {
     ostringstream o;
     string p2s(particle &, int=0);
     void header();
-    vector<particle> load(string) {}; 
+    vector<particle> load(string);
   public:
     iopov(container &);
     //iopov(container &, species &);

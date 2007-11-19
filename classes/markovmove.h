@@ -66,7 +66,7 @@ string markovmove::info() {
   if (cnt>0) {
     o << "#   Acceptance          = " << accepted()*100 << endl
       << "#   Number of trials    = " << cnt << endl
-      << "#   \% of Markov steps   = " << runfraction*100 << endl
+      << "#   Pct. of Markov steps= " << runfraction*100 << endl
       << "#   Displacement param. = " << dp << endl
       << "#   Total energy change = " << utot << endl;
   }

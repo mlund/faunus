@@ -40,6 +40,7 @@ COMPILING:
   * make manual (requires doxygen)
 
   Edit the Makefile to:
+  - Specify C++ compiler.
   - Enable Gromacs compressed trajectory output (.xtc).
   - Enable experimental OpenMP support.
 

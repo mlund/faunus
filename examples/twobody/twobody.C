@@ -52,8 +52,8 @@ int main() {
   ioxtc xtc(cell);                      // Gromacs xtc output (if installed)
   #endif
 
-  for (int macro=1; macro<=2; macro++) {       // Markov chain 
-    for (int micro=1; micro<=6e1; micro++) {
+  for (int macro=1; macro<=10; macro++) {       // Markov chain 
+    for (int micro=1; micro<=6e4; micro++) {
 
       sys+=sm.move(salt);                       // Displace salt particles
       for (int i=0; i<g.size(); i++) {          // Loop over proteins

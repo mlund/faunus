@@ -61,16 +61,16 @@ class pot_coulomb : private pot_lj {
 };
 
 /*!
- * \brief Coulomb pot. with minimum image and zero for overlapping spheres.
+ * \brief Coulomb pot. with minimum image.
  * \author Mikael Lund
  * \date 2007
  */
-class pot_minimage {
+class pot_minimage : private pot_lj {
   private:
     double invbox,box;
   public:
     double f;
-    pot_minimage(pot_setup &pot) {
+    pot_minimage(pot_setup &pot) : pot_lj(pot.eps/pot.lB) {
       f=pot.lB;
       box=pot.box;
       invbox=1./box;
@@ -84,9 +84,9 @@ class pot_minimage {
       dy-=box*floor(dy*invbox+.5);
       dz-=box*floor(dz*invbox+.5);
       r2=dx*dx+dy*dy+dz*dz;
-      //r2=p1.sqdist(p2,box,invbox);
       dx=p1.radius+p2.radius;
-      return (r2<dx*dx) ? 1e7 : p1.charge*p2.charge/sqrt(r2);
+      return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
+      //return (r2<dx*dx) ? 1e7 : p1.charge*p2.charge/sqrt(r2);
     }
 };
 

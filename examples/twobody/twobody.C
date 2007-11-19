@@ -10,11 +10,11 @@
 #include <iostream>
 #include "io.h"
 #include "analysis.h"
+#include "potentials.h"
 #include "container.h"
 #include "countdown.h"
 #include "histogram.h"
 #include "inputfile.h"
-#include "potentials.h"
 typedef pot_minimage T_pairpot;         // Specific pair interaction function
 #include "markovmove.C"
 
@@ -23,10 +23,10 @@ using namespace std;
 int main() {
   inputfile in("twobody.conf");         // Read input file
   slump slump;                          // A random number generator
-  box cell(900.);                        // We want a cubic cell
+  box cell(90.);                        // We want a cubic cell
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg;                        // Setup pair potential (default values)
-  cfg.box = cell.len;
+  cfg.box = cell.len;                   // Pass box len to pair potential
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   countdown<int> clock(10);             // Estimate simulation time
   ioxyz xyz(cell);                      // xyz output for VMD etc.
@@ -36,8 +36,8 @@ int main() {
 
   vector<macromolecule> g(12);          // Vector of proteins
   for (short i=0; i<g.size(); i++)      // Insert proteins...
-    g[i].add( cell,                     // ...at random, non-overlapping
-        aam.load("mrh4a.aam"), true );  // ...positions.
+    g[i].add( cell,
+        aam.load("mrh4a.aam"), true );
 
   group salt;                           // Group for mobile ions
   salt.add( cell, particle::NA, 0+880); // Insert sodium ions
@@ -52,8 +52,8 @@ int main() {
   ioxtc xtc(cell);                      // Gromacs xtc output (if installed)
   #endif
 
-  for (int macro=1; macro<=10; macro++) {       // Markov chain 
-    for (int micro=1; micro<=6e4; micro++) {
+  for (int macro=1; macro<=2; macro++) {       // Markov chain 
+    for (int micro=1; micro<=6e1; micro++) {
 
       sys+=sm.move(salt);                       // Displace salt particles
       for (int i=0; i<g.size(); i++) {          // Loop over proteins

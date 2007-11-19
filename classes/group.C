@@ -173,6 +173,7 @@ bool group::overlap(container &c) {
       if (c.p[i].overlap( c.p[j] )==true)
         return true;
   }
+  return false;
 }
 
 

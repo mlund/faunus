@@ -37,7 +37,7 @@ int main() {
   xyz.save("coord.xyz", cell.p);
   
   for (int macro=0; macro<10; macro++) {        // Markov chain
-    for (int micro=0; micro<1e2; micro++) {
+    for (int micro=0; micro<1e3; micro++) {
       sm.move(salt);                            // Displace salt particles
       sm.adjust_dp(40,50);                      // Stride to 40-50% acceptance
       sys+=sm.du;                               // Sum system energy changes

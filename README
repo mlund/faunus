@@ -39,10 +39,9 @@ COMPILING:
   * make
   * make manual (requires doxygen)
 
-  (Edit Makefile to enable Gromacs and OpenMP support)
-
-  Note that OpenMP support is experimental and at the moment
-  the Intel C++ compiler (version 10+) seems to work best.
+  Edit the Makefile to:
+  - Enable Gromacs compressed trajectory output (.xtc).
+  - Enable experimental OpenMP support.
 
 FILES:
   classes      Mostly finished, general classes.

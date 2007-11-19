@@ -18,7 +18,7 @@ class container : public particles,  public species {
     virtual void randompos(point &)=0;             //!< Random point within container
     virtual string info();                         //!< Return info string
     virtual string povray();                       //!< POVRAY object representing the cell
-    inline virtual void boundary(point &)=0;       //!< Apply boundary conditions to a point
+    virtual void boundary(point &)=0;              //!< Apply boundary conditions to a point
     inline virtual double dist(point &a,point &b) {//!< Calculate distance between points
       return a.dist(b);
     }
@@ -35,7 +35,7 @@ class cell : public container {
     float r;              //!< Radius
     cell(float);
     string info();
-    inline void boundary(point &) {};
+    inline void boundary(point &) { return; };
     void randompos(point &);
     string povray();
     bool collision(point &p) {
@@ -62,16 +62,9 @@ class box : public container {
     point randompos();
     bool collision(point &p) {return false;};
     string povray();
-
     //! Calculate distance using the minimum image convention
-    inline double dist(point &a, point &b) {
-      return a.dist(b, len, len_inv);
-    }
-
-    inline int anint(double x) {
-      return int(x>0 ? x+.5 : x-.5);
-    }
-
+    inline double dist(point &a, point &b) { return a.dist(b, len, len_inv); }
+    inline int anint(double x) { return int(x>0 ? x+.5 : x-.5); }
     //! Apply periodic boundary conditions
     inline void boundary(point &p) {
       p.x=p.x-len*anint(p.x*len_inv);

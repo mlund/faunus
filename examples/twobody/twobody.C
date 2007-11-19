@@ -11,11 +11,11 @@
 #include "io.h"
 #include "analysis.h"
 #include "container.h"
-#include "potentials.h"
 #include "countdown.h"
 #include "histogram.h"
 #include "inputfile.h"
 typedef pot_minimage T_pairpot;         // Specific pair interaction function
+#include "potentials.C"
 #include "markovmove.C"
 
 using namespace std;

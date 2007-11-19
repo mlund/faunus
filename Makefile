@@ -1,4 +1,4 @@
-  MODEL = debug
+  MODEL = intel
   GROMACS = no
   OPENMP = yes
 
@@ -26,12 +26,19 @@ ifeq ($(MODEL), gnu)
   CXXFLAGS = -O3 -w -funroll-loops -Winline -g $(INCDIR) $(GRO) $(OMP)
 endif
 
+ifeq ($(MODEL), intel)
+  ifeq ($(OPENMP), yes)
+    OMP=-openmp -parallel
+  endif
+  CXX=icc
+  CXXFLAGS = -fast -w -g $(INCDIR) $(GRO) $(OMP)
+endif
+
 OBJS=$(CLASSDIR)/inputfile.o \
      $(CLASSDIR)/io.o\
      $(CLASSDIR)/titrate.o\
      $(CLASSDIR)/point.o \
      $(CLASSDIR)/physconst.o\
-     $(CLASSDIR)/potentials.o\
      $(CLASSDIR)/slump.o\
      $(CLASSDIR)/container.o\
      $(CLASSDIR)/hardsphere.o\

@@ -66,16 +66,17 @@ int main() {
               protrdf.update(cell,g[i].cm,g[j].cm);
         }
       }
-
-      if (slump.random_one()>0.9) {
+      if (slump.random_one()>0.8) {
         saltrdf.update(cell);                   // Analyse salt g(r)
         sm.adjust_dp(60,70);                    // Tune displacement
         mr.adjust_dp(60,70);                    // ...parameters
         mt.adjust_dp(60,70);
-        #ifdef GROMACS
-        xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
-        #endif
       }
+      #ifdef GROMACS
+      if (slump.random_one()>0.3)
+        xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
+      #endif
+
     } // End of inner loop
 
     cout << "Macro step " << macro << " completed. ETA: " << clock.eta(macro);

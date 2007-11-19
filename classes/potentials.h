@@ -84,8 +84,8 @@ class pot_minimage : private pot_lj {
       dy-=box*floor(dy*invbox+.5);
       dz-=box*floor(dz*invbox+.5);
       r2=dx*dx+dy*dy+dz*dz;
-      dx=p1.radius+p2.radius;
       return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
+      //dx=p1.radius+p2.radius;
       //return (r2<dx*dx) ? 1e7 : p1.charge*p2.charge/sqrt(r2);
     }
 };

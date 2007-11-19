@@ -139,7 +139,7 @@ class ioxtc : public iopart {
     int xd;
     float box[3][3], time, step;
   public:
-    ioxtc(container &);
+    ioxtc(box::box &);
     bool save(string, vector<particle> &);
     void close();
 };

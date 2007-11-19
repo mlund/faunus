@@ -33,10 +33,6 @@ int main() {
 
   cout << cell.info() << tit.info();    // Some information
 
-  #ifdef GROMACS
-  ioxtc xtc(cell);                      // Gromacs xtc output (if installed)
-  #endif
-
   for (int macro=1; macro<=10; macro++) {       // Markov chain
     for (int micro=1; micro<=1e3; micro++) {
       sm.move(salt);                            // Displace salt particles
@@ -47,12 +43,8 @@ int main() {
         sys+=tit.du;
       }
       sys+=sm.du;                               // Keep system energy updated
-
-      #ifdef GROMACS
-      if (slump.random_one()>0.8)
-        xtc.save("ignored-name.xtc", cell.p);
-      #endif
     }
+
     cout << "Macro step " << macro << " completed. ETA: " << clock.eta(macro);
     sys.update(pot.energy(cell.p));             // Update system energy averages
     cell.check_vector();
@@ -60,9 +52,5 @@ int main() {
   cout << sys.info() << sm.info() << tit.info() // More information...
        << salt.info() << protein.info();
   povray.save("protein-example.pov", cell.p);   // Save POVRAY file
-
-  #ifdef GROMACS
-  xtc.close();
-  #endif
 }
 

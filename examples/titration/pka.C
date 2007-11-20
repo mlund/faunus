@@ -35,14 +35,19 @@ int main() {
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain
     for (int micro=1; micro<=1e3; micro++) {
-      sm.move(salt);                            // Displace salt particles
-      sys+=sm.du;
-      if (tit.titrateall()==true) {             // Titrate groups
-        protein.charge(cell.p);                 // Re-calc. protein charge
-        protein.dipole(cell.p);                 // Re-calc. dipole moment
-        sys+=tit.du;
+
+      switch (rand() % 2) {
+        case 0:
+          sys+=sm.move(salt);                   // Displace salt particles
+          break;
+        case 1:
+          if (tit.titrateall()==true) {             // Titrate groups
+            protein.charge(cell.p);                 // Re-calc. protein charge
+            protein.dipole(cell.p);                 // Re-calc. dipole moment
+            sys+=tit.du;
+          }
+          break;
       }
-      sys+=sm.du;                               // Keep system energy updated
     }
 
     cout << "Macro step " << macro << " completed. ETA: " << clock.eta(macro);

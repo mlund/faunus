@@ -11,7 +11,7 @@
 #include "analysis.h"
 #include "container.h"
 #include "potentials.h"
-typedef pot_test T_pairpot;
+typedef pot_minimage T_pairpot;
 #include "markovmove.h"
 #include "analysis.h"
 #include "histogram.h"
@@ -19,7 +19,7 @@ typedef pot_test T_pairpot;
 using namespace std;
 
 int main() {
-  cell cell(50.);                       // We want a spherical cell
+  box cell(90.);                        // We want a cubic cell
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg;                        // Setup pair potential - default values
   rdf rdf(particle::NA,particle::CL);
@@ -38,9 +38,7 @@ int main() {
   
   for (int macro=0; macro<10; macro++) {        // Markov chain
     for (int micro=0; micro<1e3; micro++) {
-      sm.move(salt);                            // Displace salt particles
-      sm.adjust_dp(40,50);                      // Stride to 40-50% acceptance
-      sys+=sm.du;                               // Sum system energy changes
+      sys+=sm.move(salt);                       // Displace salt particles
       widom.insert(10);                         // Widom particle insertion analysis
       rdf.update(cell.p);
     }

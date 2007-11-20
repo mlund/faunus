@@ -265,6 +265,7 @@ void macromolecule::rotate(container &par, double drot) {
  * \param u Vector to rotate around
  * \param angle ..by this many degrees (rad)
  * \param k Keyword to specify automatic acceptance
+ * \toto This could be done more elegant using quaternion parameters (Frenkel p49)
  */
 void macromolecule::rotate(container &par, point u, double angle) {
   point b;

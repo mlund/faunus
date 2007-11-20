@@ -157,6 +157,7 @@ bool markovmove::run(float p) { return (p>slp.random_one())?true:false; }
 float markovmove::accepted() { return naccept/float(cnt); }
 // \param min Minimum percentage of accepted moves
 // \param max Maximum percentage of accepted moves
+// \warning This violates the detailed balance criteria! (use for equilibration, only)
 void markovmove::adjust_dp(float min, float max) {
   float a=accepted()*100.;
   if (a>max) dp+=deltadp;

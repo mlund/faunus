@@ -55,23 +55,31 @@ int main() {
   for (int macro=1; macro<=10; macro++) {       // Markov chain 
     for (int micro=1; micro<=3e4; micro++) {
 
-      sys+=sm.move(salt);                       // Displace salt particles
-      for (int i=0; i<g.size(); i++) {          // Loop over proteins
-        if (slump.random_one()<0.5)
-          sys+=mr.move(g[i]);                   // Rotate...
-        else {
-          sys+=mt.move(g[i]);                   // ...or translate
-          for (int j=0; j<g.size(); j++)        // Analyse protein g(r)
-            if (j!=i)
-              protrdf.update(cell,g[i].cm,g[j].cm);
-        }
+      short i,j,n;
+      switch (rand() % 3) {                     // Pick a random MC move
+        case 0:                                 // Displace salt
+          sys+=sm.move(salt);                   //   Do the move.
+          break;
+        case 1:                                 // Rotate proteins
+          for (n=0; n<g.size(); n++) {          //   Loop over all proteins
+            i = rand() % g.size();              //   and pick at random.
+            sys+=mr.move(g[i]);                 //   Do the move.
+          }
+          break;
+        case 2:                                 // Translate proteins
+          for (n=0; n<g.size(); n++) {          //   Loop over all proteins
+            i = rand() % g.size();              //   and pick at random.
+            sys+=mt.move(g[i]);                 //   Do the move.
+            for (j=0; j<g.size(); j++)          //   Analyse g(r)...
+              if (j!=i)
+                protrdf.update(cell,g[i].cm,g[j].cm);
+          }
+          break;
       }
-      if (slump.random_one()>0.8) {
+
+      if (slump.random_one()>0.8)
         saltrdf.update(cell);                   // Analyse salt g(r)
-        sm.adjust_dp(60,70);                    // Tune displacement
-        mr.adjust_dp(60,70);                    // ...parameters
-        mt.adjust_dp(60,70);
-      }
+
       #ifdef GROMACS
       if (slump.random_one()>0.3)
         xtc.save("ignored-name.xtc", cell.p);   // Save trajectory

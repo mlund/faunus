@@ -10,7 +10,7 @@
 #include "container.h"
 #include "potentials.h"
 typedef pot_minimage T_pairpot;         // Coulomb pot. with minimum image convention.
-#include "markovmove.C"
+#include "markovmove.h"
 #include "analysis.h"
 #include "histogram.h"
 

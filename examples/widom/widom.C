@@ -12,7 +12,7 @@
 #include "container.h"
 #include "potentials.h"
 typedef pot_test T_pairpot;
-#include "markovmove.C"
+#include "markovmove.h"
 #include "analysis.h"
 #include "histogram.h"
 

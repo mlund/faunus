@@ -1,0 +1,317 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 42;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		73B0A7300CF3460D0026CD5F /* twobody.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A72F0CF3460D0026CD5F /* twobody.C */; };
+		73B0A7660CF3463E0026CD5F /* analysis.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A7360CF3463E0026CD5F /* analysis.C */; };
+		73B0A7670CF3463E0026CD5F /* container.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A73A0CF3463E0026CD5F /* container.C */; };
+		73B0A7680CF3463E0026CD5F /* group.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A73E0CF3463E0026CD5F /* group.C */; };
+		73B0A7690CF3463E0026CD5F /* hardsphere.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A7400CF3463E0026CD5F /* hardsphere.C */; };
+		73B0A76A0CF3463E0026CD5F /* inputfile.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A7430CF3463E0026CD5F /* inputfile.C */; };
+		73B0A76B0CF3463E0026CD5F /* io.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A7450CF3463E0026CD5F /* io.C */; };
+		73B0A7700CF3463E0026CD5F /* particles.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A7520CF3463E0026CD5F /* particles.C */; };
+		73B0A7710CF3463E0026CD5F /* physconst.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A7540CF3463E0026CD5F /* physconst.C */; };
+		73B0A7720CF3463E0026CD5F /* point.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A7560CF3463E0026CD5F /* point.C */; };
+		73B0A7730CF3463E0026CD5F /* potentials.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A75A0CF3463E0026CD5F /* potentials.C */; };
+		73B0A7740CF3463E0026CD5F /* slump.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A75D0CF3463E0026CD5F /* slump.C */; };
+		73B0A7750CF3463E0026CD5F /* species.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A75F0CF3463E0026CD5F /* species.C */; };
+		73B0A7760CF3463E0026CD5F /* titrate.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A7620CF3463E0026CD5F /* titrate.C */; };
+		73B0A7B40CF34AA00026CD5F /* mrh4a.aam in CopyFiles */ = {isa = PBXBuildFile; fileRef = 73B0A7AC0CF34A220026CD5F /* mrh4a.aam */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		73B0A7B20CF34A720026CD5F /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 16;
+			files = (
+				73B0A7B40CF34AA00026CD5F /* mrh4a.aam in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		08FB7796FE84155DC02AAC07 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		73B0A72D0CF345EB0026CD5F /* twobody */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = twobody; sourceTree = BUILT_PRODUCTS_DIR; };
+		73B0A72F0CF3460D0026CD5F /* twobody.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = twobody.C; path = ../examples/twobody/twobody.C; sourceTree = SOURCE_ROOT; };
+		73B0A7360CF3463E0026CD5F /* analysis.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = analysis.C; path = ../classes/analysis.C; sourceTree = SOURCE_ROOT; };
+		73B0A7370CF3463E0026CD5F /* analysis.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = analysis.h; path = ../classes/analysis.h; sourceTree = SOURCE_ROOT; };
+		73B0A7380CF3463E0026CD5F /* average.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = average.h; path = ../classes/average.h; sourceTree = SOURCE_ROOT; };
+		73B0A7390CF3463E0026CD5F /* config.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = config.h; path = ../classes/config.h; sourceTree = SOURCE_ROOT; };
+		73B0A73A0CF3463E0026CD5F /* container.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = container.C; path = ../classes/container.C; sourceTree = SOURCE_ROOT; };
+		73B0A73B0CF3463E0026CD5F /* container.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = container.h; path = ../classes/container.h; sourceTree = SOURCE_ROOT; };
+		73B0A73C0CF3463E0026CD5F /* countdown.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = countdown.h; path = ../classes/countdown.h; sourceTree = SOURCE_ROOT; };
+		73B0A73D0CF3463E0026CD5F /* ensemble.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = ensemble.h; path = ../classes/ensemble.h; sourceTree = SOURCE_ROOT; };
+		73B0A73E0CF3463E0026CD5F /* group.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = group.C; path = ../classes/group.C; sourceTree = SOURCE_ROOT; };
+		73B0A73F0CF3463E0026CD5F /* group.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = group.h; path = ../classes/group.h; sourceTree = SOURCE_ROOT; };
+		73B0A7400CF3463E0026CD5F /* hardsphere.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = hardsphere.C; path = ../classes/hardsphere.C; sourceTree = SOURCE_ROOT; };
+		73B0A7410CF3463E0026CD5F /* hardsphere.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = hardsphere.h; path = ../classes/hardsphere.h; sourceTree = SOURCE_ROOT; };
+		73B0A7420CF3463E0026CD5F /* histogram.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = histogram.h; path = ../classes/histogram.h; sourceTree = SOURCE_ROOT; };
+		73B0A7430CF3463E0026CD5F /* inputfile.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = inputfile.C; path = ../classes/inputfile.C; sourceTree = SOURCE_ROOT; };
+		73B0A7440CF3463E0026CD5F /* inputfile.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = inputfile.h; path = ../classes/inputfile.h; sourceTree = SOURCE_ROOT; };
+		73B0A7450CF3463E0026CD5F /* io.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = io.C; path = ../classes/io.C; sourceTree = SOURCE_ROOT; };
+		73B0A7460CF3463E0026CD5F /* io.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = io.h; path = ../classes/io.h; sourceTree = SOURCE_ROOT; };
+		73B0A7470CF3463E0026CD5F /* legendre.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = legendre.h; path = ../classes/legendre.h; sourceTree = SOURCE_ROOT; };
+		73B0A7480CF3463E0026CD5F /* lennardjones.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = lennardjones.h; path = ../classes/lennardjones.h; sourceTree = SOURCE_ROOT; };
+		73B0A74A0CF3463E0026CD5F /* markovmove.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = markovmove.h; path = ../classes/markovmove.h; sourceTree = SOURCE_ROOT; };
+		73B0A7520CF3463E0026CD5F /* particles.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = particles.C; path = ../classes/particles.C; sourceTree = SOURCE_ROOT; };
+		73B0A7530CF3463E0026CD5F /* particles.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = particles.h; path = ../classes/particles.h; sourceTree = SOURCE_ROOT; };
+		73B0A7540CF3463E0026CD5F /* physconst.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = physconst.C; path = ../classes/physconst.C; sourceTree = SOURCE_ROOT; };
+		73B0A7550CF3463E0026CD5F /* physconst.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = physconst.h; path = ../classes/physconst.h; sourceTree = SOURCE_ROOT; };
+		73B0A7560CF3463E0026CD5F /* point.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = point.C; path = ../classes/point.C; sourceTree = SOURCE_ROOT; };
+		73B0A7570CF3463E0026CD5F /* point.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = point.h; path = ../classes/point.h; sourceTree = SOURCE_ROOT; };
+		73B0A7580CF3463E0026CD5F /* pot_rfield.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = pot_rfield.h; path = ../classes/pot_rfield.h; sourceTree = SOURCE_ROOT; };
+		73B0A7590CF3463E0026CD5F /* pot_spring.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = pot_spring.h; path = ../classes/pot_spring.h; sourceTree = SOURCE_ROOT; };
+		73B0A75A0CF3463E0026CD5F /* potentials.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = potentials.C; path = ../classes/potentials.C; sourceTree = SOURCE_ROOT; };
+		73B0A75B0CF3463E0026CD5F /* potentials.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = potentials.h; path = ../classes/potentials.h; sourceTree = SOURCE_ROOT; };
+		73B0A75C0CF3463E0026CD5F /* simpson.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = simpson.h; path = ../classes/simpson.h; sourceTree = SOURCE_ROOT; };
+		73B0A75D0CF3463E0026CD5F /* slump.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = slump.C; path = ../classes/slump.C; sourceTree = SOURCE_ROOT; };
+		73B0A75E0CF3463E0026CD5F /* slump.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = slump.h; path = ../classes/slump.h; sourceTree = SOURCE_ROOT; };
+		73B0A75F0CF3463E0026CD5F /* species.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = species.C; path = ../classes/species.C; sourceTree = SOURCE_ROOT; };
+		73B0A7600CF3463E0026CD5F /* species.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = species.h; path = ../classes/species.h; sourceTree = SOURCE_ROOT; };
+		73B0A7610CF3463E0026CD5F /* statistics.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = statistics.h; path = ../classes/statistics.h; sourceTree = SOURCE_ROOT; };
+		73B0A7620CF3463E0026CD5F /* titrate.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = titrate.C; path = ../classes/titrate.C; sourceTree = SOURCE_ROOT; };
+		73B0A7630CF3463E0026CD5F /* titrate.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = titrate.h; path = ../classes/titrate.h; sourceTree = SOURCE_ROOT; };
+		73B0A7640CF3463E0026CD5F /* xydata.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = xydata.h; path = ../classes/xydata.h; sourceTree = SOURCE_ROOT; };
+		73B0A7650CF3463E0026CD5F /* xytable.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = xytable.h; path = ../classes/xytable.h; sourceTree = SOURCE_ROOT; };
+		73B0A7AC0CF34A220026CD5F /* mrh4a.aam */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; name = mrh4a.aam; path = ../examples/twobody/mrh4a.aam; sourceTree = SOURCE_ROOT; };
+		C6859E8B029090EE04C91782 /* faunus.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = faunus.1; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		73B0A72B0CF345EB0026CD5F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		08FB7794FE84155DC02AAC07 /* faunus */ = {
+			isa = PBXGroup;
+			children = (
+				73B0A7AB0CF349EF0026CD5F /* Data */,
+				08FB7795FE84155DC02AAC07 /* Source */,
+				C6859E8C029090F304C91782 /* Documentation */,
+				1AB674ADFE9D54B511CA2CBB /* Products */,
+			);
+			name = faunus;
+			sourceTree = "<group>";
+		};
+		08FB7795FE84155DC02AAC07 /* Source */ = {
+			isa = PBXGroup;
+			children = (
+				73B0A7360CF3463E0026CD5F /* analysis.C */,
+				73B0A7370CF3463E0026CD5F /* analysis.h */,
+				73B0A7380CF3463E0026CD5F /* average.h */,
+				73B0A7390CF3463E0026CD5F /* config.h */,
+				73B0A73A0CF3463E0026CD5F /* container.C */,
+				73B0A73B0CF3463E0026CD5F /* container.h */,
+				73B0A73C0CF3463E0026CD5F /* countdown.h */,
+				73B0A73D0CF3463E0026CD5F /* ensemble.h */,
+				73B0A73E0CF3463E0026CD5F /* group.C */,
+				73B0A73F0CF3463E0026CD5F /* group.h */,
+				73B0A7400CF3463E0026CD5F /* hardsphere.C */,
+				73B0A7410CF3463E0026CD5F /* hardsphere.h */,
+				73B0A7420CF3463E0026CD5F /* histogram.h */,
+				73B0A7430CF3463E0026CD5F /* inputfile.C */,
+				73B0A7440CF3463E0026CD5F /* inputfile.h */,
+				73B0A7450CF3463E0026CD5F /* io.C */,
+				73B0A7460CF3463E0026CD5F /* io.h */,
+				73B0A7470CF3463E0026CD5F /* legendre.h */,
+				73B0A7480CF3463E0026CD5F /* lennardjones.h */,
+				73B0A74A0CF3463E0026CD5F /* markovmove.h */,
+				73B0A7520CF3463E0026CD5F /* particles.C */,
+				73B0A7530CF3463E0026CD5F /* particles.h */,
+				73B0A7540CF3463E0026CD5F /* physconst.C */,
+				73B0A7550CF3463E0026CD5F /* physconst.h */,
+				73B0A7560CF3463E0026CD5F /* point.C */,
+				73B0A7570CF3463E0026CD5F /* point.h */,
+				73B0A7580CF3463E0026CD5F /* pot_rfield.h */,
+				73B0A7590CF3463E0026CD5F /* pot_spring.h */,
+				73B0A75A0CF3463E0026CD5F /* potentials.C */,
+				73B0A75B0CF3463E0026CD5F /* potentials.h */,
+				73B0A75C0CF3463E0026CD5F /* simpson.h */,
+				73B0A75D0CF3463E0026CD5F /* slump.C */,
+				73B0A75E0CF3463E0026CD5F /* slump.h */,
+				73B0A75F0CF3463E0026CD5F /* species.C */,
+				73B0A7600CF3463E0026CD5F /* species.h */,
+				73B0A7610CF3463E0026CD5F /* statistics.h */,
+				73B0A7620CF3463E0026CD5F /* titrate.C */,
+				73B0A7630CF3463E0026CD5F /* titrate.h */,
+				73B0A7640CF3463E0026CD5F /* xydata.h */,
+				73B0A7650CF3463E0026CD5F /* xytable.h */,
+				73B0A72F0CF3460D0026CD5F /* twobody.C */,
+				08FB7796FE84155DC02AAC07 /* main.cpp */,
+			);
+			name = Source;
+			sourceTree = "<group>";
+		};
+		1AB674ADFE9D54B511CA2CBB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				73B0A72D0CF345EB0026CD5F /* twobody */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		73B0A7AB0CF349EF0026CD5F /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				73B0A7AC0CF34A220026CD5F /* mrh4a.aam */,
+			);
+			name = Data;
+			sourceTree = "<group>";
+		};
+		C6859E8C029090F304C91782 /* Documentation */ = {
+			isa = PBXGroup;
+			children = (
+				C6859E8B029090EE04C91782 /* faunus.1 */,
+			);
+			name = Documentation;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		73B0A72C0CF345EB0026CD5F /* twobody */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 73B0A7310CF3460D0026CD5F /* Build configuration list for PBXNativeTarget "twobody" */;
+			buildPhases = (
+				73B0A72A0CF345EB0026CD5F /* Sources */,
+				73B0A72B0CF345EB0026CD5F /* Frameworks */,
+				73B0A7B20CF34A720026CD5F /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = twobody;
+			productName = twobody;
+			productReference = 73B0A72D0CF345EB0026CD5F /* twobody */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		08FB7793FE84155DC02AAC07 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 1DEB923508733DC60010E9CD /* Build configuration list for PBXProject "faunus" */;
+			hasScannedForEncodings = 1;
+			mainGroup = 08FB7794FE84155DC02AAC07 /* faunus */;
+			projectDirPath = "";
+			targets = (
+				73B0A72C0CF345EB0026CD5F /* twobody */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		73B0A72A0CF345EB0026CD5F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				73B0A7660CF3463E0026CD5F /* analysis.C in Sources */,
+				73B0A7670CF3463E0026CD5F /* container.C in Sources */,
+				73B0A7680CF3463E0026CD5F /* group.C in Sources */,
+				73B0A7690CF3463E0026CD5F /* hardsphere.C in Sources */,
+				73B0A76A0CF3463E0026CD5F /* inputfile.C in Sources */,
+				73B0A76B0CF3463E0026CD5F /* io.C in Sources */,
+				73B0A7700CF3463E0026CD5F /* particles.C in Sources */,
+				73B0A7710CF3463E0026CD5F /* physconst.C in Sources */,
+				73B0A7720CF3463E0026CD5F /* point.C in Sources */,
+				73B0A7730CF3463E0026CD5F /* potentials.C in Sources */,
+				73B0A7740CF3463E0026CD5F /* slump.C in Sources */,
+				73B0A7750CF3463E0026CD5F /* species.C in Sources */,
+				73B0A7760CF3463E0026CD5F /* titrate.C in Sources */,
+				73B0A7300CF3460D0026CD5F /* twobody.C in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1DEB923608733DC60010E9CD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				PREBINDING = NO;
+				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+			};
+			name = Debug;
+		};
+		1DEB923708733DC60010E9CD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				PREBINDING = NO;
+				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+			};
+			name = Release;
+		};
+		73B0A7320CF3460D0026CD5F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				INSTALL_PATH = "$(HOME)/bin";
+				PREBINDING = NO;
+				PRODUCT_NAME = twobody;
+				ZERO_LINK = YES;
+			};
+			name = Debug;
+		};
+		73B0A7330CF3460D0026CD5F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = "$(HOME)/bin";
+				PREBINDING = NO;
+				PRODUCT_NAME = twobody;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1DEB923508733DC60010E9CD /* Build configuration list for PBXProject "faunus" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1DEB923608733DC60010E9CD /* Debug */,
+				1DEB923708733DC60010E9CD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		73B0A7310CF3460D0026CD5F /* Build configuration list for PBXNativeTarget "twobody" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				73B0A7320CF3460D0026CD5F /* Debug */,
+				73B0A7330CF3460D0026CD5F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 08FB7793FE84155DC02AAC07 /* Project object */;
+}

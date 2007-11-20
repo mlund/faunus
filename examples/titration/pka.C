@@ -5,7 +5,7 @@
 #include "potentials.h"
 #include "countdown.h"
 typedef pot_coulomb T_pairpot;          // Specific pair interaction function
-#include "markovmove.C"
+#include "markovmove.h"
 
 using namespace std;
 

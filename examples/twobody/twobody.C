@@ -16,7 +16,7 @@
 #include "histogram.h"
 #include "inputfile.h"
 typedef pot_minimage T_pairpot;         // Specific pair interaction function
-#include "markovmove.C"
+#include "markovmove.h"
 
 using namespace std;
 

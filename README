@@ -21,8 +21,8 @@ WELCOME TO FAUNUS:
   Faunus is a C++ class library for creating programs
   for Monte Carlo simulation of molecular systems.
 
-  Get the latest version via SVN from:
-  http://faunus.sourceforge.net
+  Get the latest code resivions via SVN from sourceforge.net:
+  $ svn co https://faunus.svn.sourceforge.net/svnroot/faunus/trunk faunus
 
 CONTACT:
   Mikael Lund <mlund at mac.com>
@@ -30,6 +30,7 @@ CONTACT:
   Martin Trulsson <martin.trulsson at teokem.lu.se>
 
 REQUIREMENTS:
+  * A unix-type environment (MacOS X, Linux etc.)
   * C++ compiler (gnu, ibm, intel etc.)
   * Gromacs (optional, for xtc trajectory output)
   * Doxygen (optional, for code manual)
@@ -40,7 +41,7 @@ COMPILING:
   * make manual (requires doxygen)
 
   Edit the Makefile to:
-  - Specify C++ compiler.
+  - Specify the C++ compiler.
   - Enable Gromacs compressed trajectory output (.xtc).
   - Enable experimental OpenMP support.
 

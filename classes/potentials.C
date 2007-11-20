@@ -2,7 +2,7 @@
 
 pot_setup::pot_setup() {
   lB=7.1;
-  eps=1;
+  eps=2;
   epsi=80;
   epso=2;
 }

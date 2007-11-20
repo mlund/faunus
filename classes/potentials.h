@@ -77,14 +77,15 @@ class pot_minimage : private pot_lj {
     }
     inline double pairpot(particle &p1, particle &p2) {
       double r2;
-      register double dx,dy,dz;
-      dx=p1.x-p2.x;
-      dy=p1.y-p2.y;
-      dz=p1.z-p2.z;
-      dx-=box*floor(dx*invbox+.5);
-      dy-=box*floor(dy*invbox+.5);
-      dz-=box*floor(dz*invbox+.5);
-      r2=dx*dx+dy*dy+dz*dz;
+      //register double dx,dy,dz;
+      //dx=p1.x-p2.x;
+      //dy=p1.y-p2.y;
+      //dz=p1.z-p2.z;
+      //dx-=box*floor(dx*invbox+.5);
+      //dy-=box*floor(dy*invbox+.5);
+      //dz-=box*floor(dz*invbox+.5);
+      //r2=dx*dx+dy*dy+dz*dz;
+      r2=p1.sqdist(p2);
       return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
       //dx=p1.radius+p2.radius;
       //return (r2<dx*dx) ? 1e7 : p1.charge*p2.charge/sqrt(r2);

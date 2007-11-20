@@ -17,6 +17,8 @@ using namespace std;
  * \date 2002-2007
  */
 class point {
+  private:
+    inline int anint(double);
   public:
     double x,y,z;                       ///< The coordinates
     point();                            ///< Constructor, zero data.
@@ -119,14 +121,20 @@ inline double point::sqdist(point &p) {
   return dx*dx + dy*dy + dz*dz;
 }
 
+//\note <cmath> has a round() function -- speed?
+inline int point::anint(double x) { return int(x>0 ? x+.5 : x-.5); }
+
 inline double point::sqdist(point &p, double &len, double &inv_len) {
   register double dx,dy,dz;
   dx=x-p.x;
   dy=y-p.y;
   dz=z-p.z;
-  dx-=len*floor(dx*inv_len+.5);
-  dy-=len*floor(dy*inv_len+.5);
-  dz-=len*floor(dz*inv_len+.5);
+  dx=dx-len*anint(dx*inv_len);
+  dy=dy-len*anint(dy*inv_len);
+  dz=dz-len*anint(dz*inv_len);
+  //dx-=len*floor(dx*inv_len+.5);
+  //dy-=len*floor(dy*inv_len+.5);
+  //dz-=len*floor(dz*inv_len+.5);
   return dx*dx + dy*dy + dz*dz;
 }
 

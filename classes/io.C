@@ -221,9 +221,9 @@ ioxtc::ioxtc(box::box &con) : iopart(con) {
   for (char i=0; i<3; i++)
     for (char j=0; j<3; j++)
       box[i][j]=0;
-  box[0][0]=con.len; // corners of the
-  box[1][1]=con.len; // rectangular box
-  box[2][2]=con.len;
+  box[0][0]=con.len/10.; // corners of the
+  box[1][1]=con.len/10.; // rectangular box
+  box[2][2]=con.len/10.;
   xd=open_xtc("coord.xtc", "w");
 }
 bool ioxtc::save(string file, vector<particle> &p) {

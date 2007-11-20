@@ -355,6 +355,16 @@ As of writing, the code library contains general classes for studying the follow
 An example of protein ionization will be presented later in the text.
 We stress that the project is under ongoing development and encourage interested users and developers to contribute.
 
+\subsubsection*{``Trajectory'' Output}
+Molecular Dynamics simulation packages often save the time propagated particle trajectory to disk which is then subsequently analyzed.
+In order to adopt this strategy we include an export routine that can dump the simulated particle configurations to a compressed Gromacs XTC file~\cite{gromacs}.
+This (large) file can then be analyzed using the extensive set of tools provided in the Gromacs package, or visualized using VMD~\cite{vmd}, for example.
+As an example of the latter, we have simulated lysozyme interacting the a fab-H fragment and, using VMD, plotted the spatial mass center distribution as shown in Figure~\ref{fig:}
+
+
+ 
+
+
 %    \subsubsection*{This is a sub-sub-heading}
    %   Sub-sub-sub-headings are made with the \textsl{\\subsubsection} command. \pb
  %     pb at end of lines ensures correct paragraph spacing.\pb

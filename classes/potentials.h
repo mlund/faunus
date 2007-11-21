@@ -58,6 +58,7 @@ class pot_coulomb : private pot_lj {
       register double u=lj(p1,p2,r2);
       return (qq!=0) ? u+qq/sqrt(r2) : u;
     }
+    string info();
 };
 
 /*!
@@ -75,6 +76,7 @@ class pot_minimage : private pot_lj {
       box=pot.box;
       invbox=1./box;
     }
+    string info();
     inline double pairpot(particle &p1, particle &p2) {
       double r2;
       //register double dx,dy,dz;
@@ -97,6 +99,7 @@ class pot_test {
   public:
     double f;
     pot_test( pot_setup &pot ) { f=pot.lB; }
+    string info();
     inline double pairpot(particle &p1, particle &p2) {
       register double r2=p1.sqdist(p2);
       register double a=p1.radius+p2.radius;
@@ -126,6 +129,7 @@ class pot_debyehuckel : private pot_lj {
       f=pot.lB; 
       k=pot.kappa; 
     };
+    string info();
     //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
     //! \return Energy in kT/f (f=lB)
     inline double pairpot( particle &p1, particle &p2 ) {
@@ -155,6 +159,7 @@ class pot_debyehuckelP3 : private pot_lj {
       b=pot.box; 
       inv_b=1/pot.box;
     };
+    string info();
     //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
     //! \return Energy in kT/f (f=lB)
     inline double pairpot( particle &p1, particle &p2 ) {
@@ -184,6 +189,7 @@ class pot_datapmf : private pot_lj {
     bool loadpmf(species &, string);          // load pmf's from disk
     void loadpmf(species &, string,string);   // -//-
     void showpmf(species &);                  //!< Lists loaded pmf's.
+    string info();
     double pairpot (particle &p1, particle &p2) {
       unsigned short i=p1.id,j=p2.id;
       if (i>j) swap(i,j);
@@ -200,16 +206,6 @@ class pot_datapmf : private pot_lj {
     }
 };
 
-#ifdef POT_COULOMB
-#define PAIRPOTENTIAL pot_coulomb     /* plain coulomb potential */
-#endif
-#ifdef POT_DATAPMF
-#define PAIRPOTENTIAL pot_datapmf     /* potential from disk */
-#endif
-#ifdef POT_DEBYEHUCKEL
-#define PAIRPOTENTIAL pot_debyehuckel /* D-H screened potential */
-#endif
-
 /*!
  *  \brief Interaction between particles and groups
  *  \author Mikael Lund
@@ -225,6 +221,7 @@ class interaction {
   public:
     T pair;     //!< Pair potential class
     interaction(pot_setup &pot) : pair(pot) {};
+    string info();
     double energy(vector<particle> &, int);                     //!< all<->particle i.
     double energy(vector<particle> &, particle &);              //!< all<->external particle
     double energy(vector<particle> &, group &);                 //!< all<->group.
@@ -377,5 +374,13 @@ double interaction<T>::potential(vector<particle> &p, unsigned short j) {
   return u;
 }
 
+template<class T>
+string interaction<T>::info() {
+  ostringstream o;
+  o << endl
+    << "# POTENTIAL ENERGY FUNCTION:" << endl
+    << pair.info();
+  return o.str();
+}
 #endif
 

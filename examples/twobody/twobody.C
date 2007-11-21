@@ -15,7 +15,7 @@
 #include "countdown.h"
 #include "histogram.h"
 #include "inputfile.h"
-typedef pot_minimage T_pairpot;         // Specific pair interaction function
+typedef pot_coulomb T_pairpot;         // Specific pair interaction function
 #include "markovmove.h"
 
 using namespace std;
@@ -23,37 +23,38 @@ using namespace std;
 int main() {
   inputfile in("twobody.conf");         // Read input file
   slump slump;                          // A random number generator
-  box cell(90.);                        // We want a cubic cell
+  cell cell(90.);                        // We want a cubic cell
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg;                        // Setup pair potential (default values)
-  cfg.box = cell.len;                   // Pass box len to pair potential
+  //cfg.box = cell.len;                   // Pass box len to pair potential
+  cfg.eps = 1.0;
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   countdown<int> clock(10);             // Estimate simulation time
   ioxyz xyz(cell);                      // xyz output for VMD etc.
   ioaam aam(cell);                      // Protein input file format is AAM
-  rdf protrdf(0,0,.5,cell.len/2);       // Protein and salt radial distributions, g(r)
-  rdf saltrdf(particle::NA,particle::SO4, .5, cell.len/2);
+  rdf protrdf(0,0,.5, 45.);       // Protein and salt radial distributions, g(r)
+  rdf saltrdf(particle::NA,particle::SO4, .5, 45.);
 
-  vector<macromolecule> g(12);          // Vector of proteins
+  vector<macromolecule> g(0);          // Vector of proteins
   for (short i=0; i<g.size(); i++)      // Insert proteins...
     g[i].add( cell,
         aam.load("mrh4a.aam"), true );
 
   group salt;                           // Group for mobile ions
-  salt.add( cell, particle::NA, 0+880); // Insert sodium ions
-  salt.add( cell, particle::SO4,30+440);// Insert chloride ions
+  salt.add( cell, particle::NA, 0+80); // Insert sodium ions
+  salt.add( cell, particle::SO4,0+40);// Insert chloride ions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
   translate mt(nvt, cell, pot);         // Class for macromolecular translation
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
-  cout << cell.info();                  // Some information
+  cout << cell.info() << pot.info();    // Some information
 
   #ifdef GROMACS
-  ioxtc xtc(cell);                      // Gromacs xtc output (if installed)
+    ioxtc xtc(cell, 45.);                      // Gromacs xtc output (if installed)
   #endif
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain 
-    for (int micro=1; micro<=3e4; micro++) {
+    for (int micro=1; micro<=3e2; micro++) {
 
       short i,j,n;
       switch (rand() % 3) {                     // Pick a random MC move

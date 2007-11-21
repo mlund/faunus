@@ -139,8 +139,9 @@ class ioxtc : public iopart {
     int xd;
     float box[3][3], time, step;
   public:
-    ioxtc(box::box &);
+    ioxtc(container::container &, float);
     bool save(string, vector<particle> &);
+    void setbox(float);
     void close();
 };
 #endif

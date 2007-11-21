@@ -9,9 +9,8 @@
  *  \date Prague, 2007
  */
 class pot_lj {
-  private:
-    double eps;
   public:
+    double eps;
     pot_lj(double epsilon) { eps=epsilon; }
     /*!
      *  L-J pair energy.

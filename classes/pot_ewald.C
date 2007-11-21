@@ -1,5 +1,5 @@
 
-#include "ewald.h"
+#include "pot_ewald.h"
 
 Ewald::Ewald(int size, double bjerrum, int ink) {
   lB = bjerrum; // bjerrum length in aangstroms

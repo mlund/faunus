@@ -216,16 +216,21 @@ void iopov::connect(point &p1, point &p2, float radius) {
 
 //----------------- IOXTC ----------------------
 #ifdef GROMACS
-ioxtc::ioxtc(box::box &con) : iopart(con) {
+ioxtc::ioxtc(container::container &con, float len) : iopart(con) {
   time=step=0;
+  setbox(len);
+  xd=open_xtc("coord.xtc", "w");
+}
+
+void ioxtc::setbox(float len) {
   for (char i=0; i<3; i++)
     for (char j=0; j<3; j++)
       box[i][j]=0;
-  box[0][0]=con.len/10.; // corners of the
-  box[1][1]=con.len/10.; // rectangular box
-  box[2][2]=con.len/10.;
-  xd=open_xtc("coord.xtc", "w");
-}
+  box[0][0]=len/10.; // corners of the
+  box[1][1]=len/10.; // rectangular box
+  box[2][2]=len/10.; // (in nanometers!)
+};
+
 bool ioxtc::save(string file, vector<particle> &p) {
   if (p.size()<3300) {
     for (unsigned short i=0; i<p.size(); i++) {

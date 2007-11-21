@@ -16,6 +16,33 @@ pot_setup::pot_setup(inputfile &in) {
   a     = in.getflt("cavity");
 }
 
+string pot_minimage::info() {
+  ostringstream o;
+  o << "#   Type           = LJ/Coulomb w. minimum image" << endl
+    << "#   Image length   = " << box << endl
+    << "#   Bjerrum length = " << f << endl
+    << "#   LJ epsilon (kT)= " << eps*f << endl;
+  return o.str();
+}
+
+string pot_coulomb::info() {
+  ostringstream o;
+  o << "#   Type           = LJ/Coulomb" << endl
+    << "#   Bjerrum length = " << f << endl
+    << "#   LJ epsilon (kT)= " << eps*f << endl;
+  return o.str();
+}
+
+string pot_debyehuckel::info() {
+  ostringstream o;
+  o << "#   Type           = LJ/Debye-Huckel" << endl
+    << "#   Bjerrum length = " << f << endl
+    << "#   Debye length   = " << k << endl
+    << "#   LJ epsilon (kT)= " << eps*f << endl;
+  return o.str();
+}
+
+
 /*!\param spc Species class.
  * \param pmfir Directory in which to search for PMF's
  * \param type Particle name to search for. I.e. "NA" or "CL"

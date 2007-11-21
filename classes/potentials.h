@@ -44,7 +44,7 @@ class pot_coulomb : private pot_lj {
     double f; //!< Factor to convert kT/lB to kT (here the Bjerrum length).
 
     /*! \param pot.lB Bjerrum length
-     *  \param pot.eps L-J epsilon parameter */
+     *  \param pot.eps L-J epsilon parameter (in kT) */
     pot_coulomb ( pot_setup &pot) : pot_lj(pot.eps/pot.lB) { f=pot.lB; };
 
     /*! \brief Return Coulomb energy between a pair of particles
@@ -78,16 +78,7 @@ class pot_minimage : private pot_lj {
     }
     string info();
     inline double pairpot(particle &p1, particle &p2) {
-      double r2;
-      //register double dx,dy,dz;
-      //dx=p1.x-p2.x;
-      //dy=p1.y-p2.y;
-      //dz=p1.z-p2.z;
-      //dx-=box*floor(dx*invbox+.5);
-      //dy-=box*floor(dy*invbox+.5);
-      //dz-=box*floor(dz*invbox+.5);
-      //r2=dx*dx+dy*dy+dz*dz;
-      r2=p1.sqdist(p2);
+      double r2=p1.sqdist(p2,box,invbox);
       return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
       //dx=p1.radius+p2.radius;
       //return (r2<dx*dx) ? 1e7 : p1.charge*p2.charge/sqrt(r2);
@@ -257,7 +248,7 @@ double interaction<T>::energy(vector<particle> &p, int j) {
 
 template<class T>
 double interaction<T>::energy(vector<particle> &p, group &g) {
-  static int n=g.end+1, psize=p.size();
+  int n=g.end+1, psize=p.size();
   double u=0;
   #pragma omp parallel for reduction (+:u)
   for (int i=g.beg; i<n; ++i) {

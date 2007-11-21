@@ -129,12 +129,27 @@ void group::add(container &con, particle::type id, short n) {
     end = con.push_back(a)-1;
   }
 }
-/*void macromolecule::add(container &con, vector<particle> v){
-  
-  do
-  while(con.overlap(v)==true && masscenter(v) );
 
-}*/
+/*!
+ * This searches the inputfile object for the
+ * keywords "nion#" and "tion#" and if found
+ * tries to insert the salt particles at random
+ * positions.
+ */
+void group::add(container &con, inputfile &in) {
+  short n=1, npart;
+  particle::type id;
+  while (n<3) {
+    ostringstream nion, tion;
+    nion << "nion" << n;
+    tion << "tion" << n++;
+    npart = in.getint(nion.str(), 0);
+    id = con.id(in.getstr(tion.str()));
+    if (npart!=0)
+      add(con, id, npart ); 
+  }
+}
+
 unsigned short group::displace(container &c, double dp) {
   unsigned short i=random();
   c.trial[i].x = c.p[i].x + dp*slp.random_half();
@@ -290,8 +305,7 @@ void macromolecule::rotate(container &par, point u, double angle) {
   }
 }
 
-void macromolecule::add(container &c, inputfile &in ) {
-  
+void macromolecule::add(container &con, inputfile &in ) {
 }
 
 //--------------- CHAIN -----------------

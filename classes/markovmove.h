@@ -10,7 +10,7 @@
 
 /*! \brief Base class for MC moves
  *  \author Mikael Lund
- *  \todo Perhaps the P_pairpot could be made more elegant?
+ *  \todo Perhaps the T_pairpot could be made more elegant?
  *
  *  This class will keep track of the returned energy, if the
  *  move was successful of not and can provide statistics about the
@@ -40,6 +40,7 @@ class markovmove {
     container *con;
     ensemble *ens;
     interaction<T_pairpot> *pot;
+    average<float> dpsqr;               //!< Average displacement squared
   public:
     enum keys {OK, ENERGY, HC};
     keys rc;                            //!< Return code from move() functions
@@ -68,6 +69,7 @@ string markovmove::info() {
       << "#   Number of trials    = " << cnt << endl
       << "#   Pct. of Markov steps= " << runfraction*100 << endl
       << "#   Displacement param. = " << dp << endl
+      << "#   Average displacement= " << sqrt(dpsqr.avg()) << endl
       << "#   Total energy change = " << utot << endl;
   }
   return o.str();
@@ -155,9 +157,16 @@ class GCchargereg : public markovmove, private GCtitrate {
 //--------------- MARKOV MOVE ---------------------
 bool markovmove::run(float p) { return (p>slp.random_one())?true:false; }
 float markovmove::accepted() { return naccept/float(cnt); }
-// \param min Minimum percentage of accepted moves
-// \param max Maximum percentage of accepted moves
-// \warning This violates the detailed balance criteria! (use for equilibration, only)
+
+/*!
+ * This function will adjust the displacement parameter in a way
+ * that the acceptance ration lies within a certain tange. Useful
+ * for equilibration runs -- do not use it in production runs!
+ * \param max Maximum percentage of accepted moves
+ * \warning This violates the detailed balance criteria!
+ * \param min Minimum percentage of accepted moves
+ * \author Mikael Lund
+ */
 void markovmove::adjust_dp(float min, float max) {
   float a=accepted()*100.;
   if (a>max) dp+=deltadp;
@@ -207,13 +216,15 @@ double saltmove::move(group &g, int n) {
     du = unew - uold;
     if (ens->metropolis(du)==true) {
       rc=OK;
-      utot+=du;
-      naccept++;
-      con->p[n] = con->trial[n];
+      utot+=du;                               // track energy changes
+      dpsqr+=con->p[n].sqdist(con->trial[n]); // track avg. displacement
+      naccept++;                              // accept counter
+      con->p[n] = con->trial[n];              // Accept move
       return du;
     } else rc=ENERGY;
   }
   du=0;
+  dpsqr+=0;
   con->trial[n] = con->p[n];
   return du;
 }
@@ -222,7 +233,7 @@ double saltmove::move(group &g, int n) {
 translate::translate( ensemble &e,
     container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i) {
   name = "MACROMOLECULAR TRANSLATION";
-  runfraction=0.5;
+  runfraction=1.0;
   deltadp=1.;
   dp=6.;
 };
@@ -237,6 +248,7 @@ double translate::move(macromolecule &g) {
   g.move(*con, p); 
   if (con->collision(g.cm_trial)==true) {
     rc=HC;
+    dpsqr+=0;
     g.undo(*con);
     return du;
   }
@@ -255,11 +267,13 @@ double translate::move(macromolecule &g) {
   if (ens->metropolis(du)==true) {
     rc=OK;
     utot+=du;
+    dpsqr+=g.cm.sqdist( g.cm_trial );
     naccept++;
     g.accept(*con);
     return du;
   } else rc=ENERGY;
   du=0;
+  dpsqr+=0;
   g.undo(*con);
   return du;
 }
@@ -269,7 +283,7 @@ macrorot::macrorot( ensemble &e,
     container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i)
 {
   name = "MACROMOLECULAR ROTATION";
-  runfraction=0.7;
+  runfraction=1.0;
   deltadp=0.1;
   dp=0.5;
 };

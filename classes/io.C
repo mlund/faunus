@@ -76,6 +76,32 @@ bool ioaam::save(string file, vector<particle> &) {
   return writefile(file, o.str());
 }
 
+/*!
+ * Searches inputfile object for the following keywords:\n
+ *   "nprot#" -- number protein # structures\n
+ *   "protein#" -- name of protein # structure file\n
+ * The found proteins will be inserted in the particle vector
+ * and for each structure a group will be appended to the
+ * macromolecular vector.
+ *
+ * \author Mikael Lund
+ */
+void ioaam::load(container &con, inputfile &in, vector<macromolecule> &g) {
+  short cnt=1,nprot;
+  do {
+    ostringstream os_prot,os_file;
+    os_prot << "nprot" << cnt;
+    os_file << "protein" << cnt++;
+    nprot = in.getint(os_prot.str(), 0);
+    if (nprot>0)
+      for (short i=0; i<nprot; i++) {
+        macromolecule m;
+        m.add(con, load(in.getstr(os_file.str())), true );
+        g.push_back(m);
+      }
+  } while (nprot>0);
+}
+
 //----------------- IOXYZ ----------------------
 //ioxyz::ioxyz(species &spc) : iopart(spc) {
 //}

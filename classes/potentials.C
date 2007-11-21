@@ -3,16 +3,17 @@
 pot_setup::pot_setup() {
   lB=7.1;
   eps=2;
-  epsi=80;
-  epso=2;
+  epsi=2;
+  epso=80;
 }
 
 pot_setup::pot_setup(inputfile &in) {
   lB    = in.getflt("bjerrum", 7.1);
+  eps   = in.getflt("LJ-epsilon", 2);
   box   = in.getflt("boxlen");
   kappa = in.getflt("kappa");
-  epsi  = in.getflt("epsi");
-  epso  = in.getflt("epso");
+  epsi  = in.getflt("epsi",2);
+  epso  = in.getflt("epso",80);
   a     = in.getflt("cavity");
 }
 

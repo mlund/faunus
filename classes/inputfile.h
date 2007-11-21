@@ -29,17 +29,5 @@ private:
   vector<dataformat> matrix;
   int findKey(string &);
 };
-
-class config : private inputfile {
-  public:
-    config(string="input.cfg");
-    int macro, micro, seed, nion1, nion2, nion3;
-    bool rotate, adjust_dp,titrateBool,hairy,smear,minsnapshot,
-         imdBool;
-    double cell_r, temp, dielec, prot_dp, prot_rot, ion_dp,
-          minsep, maxsep, zion1, zion2, zion3, rion3, dp_monomer,
-          clust_dp,pH,vdw,springk,springeq, u_penalty;
-    string protein1, protein2, pmfdir, tion1, tion2, tion3,jobid;
-};
 #endif
 

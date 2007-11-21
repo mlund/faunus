@@ -25,37 +25,31 @@ int main() {
   slump slump;                          // A random number generator
   box cell(90.);                        // We want a cubic cell
   canonical nvt;                        // Use the canonical ensemble
-  pot_setup cfg;                        // Setup pair potential (default values)
-  cfg.box = cell.len;                   // Pass box len to pair potential
-  cfg.eps = 1.0;
+  pot_setup cfg(in);                    // Setup pair potential (default values)
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   countdown<int> clock(10);             // Estimate simulation time
   ioxyz xyz(cell);                      // xyz output for VMD etc.
-  ioaam aam(cell);                      // Protein input file format is AAM
   rdf protrdf(0,0,.5,cell.len/2);       // Protein and salt radial distributions, g(r)
   rdf saltrdf(particle::NA,particle::SO4, .5, cell.len/2);
 
-  vector<macromolecule> g(12);          // Vector of proteins
-  for (short i=0; i<g.size(); i++)      // Insert proteins...
-    g[i].add( cell,
-        aam.load("mrh4a.aam"), true );
+  vector<macromolecule> g;              // Protein groups
+  ioaam aam(cell);                      // Protein input file format is AAM
+  aam.load(cell, in, g);                // Load and insert proteins
 
   group salt;                           // Group for mobile ions
-  salt.add( cell, particle::NA, 0+280); // Insert sodium ions
-  salt.add( cell, particle::SO4,30+140);// Insert chloride ions
+  salt.add(cell, in);                   // Add salt particles
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
   translate mt(nvt, cell, pot);         // Class for macromolecular translation
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
-  cout << cell.info() << pot.info();    // Some information
+  cout << cell.info() << pot.info();    // Print information to screen
 
   #ifdef GROMACS
-    ioxtc xtc(cell, cell.len/2.);       // Gromacs xtc output (if installed)
+  ioxtc xtc(cell, cell.len/2.);         // Gromacs xtc output (if installed)
   #endif
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain 
     for (int micro=1; micro<=3e1; micro++) {
-
       short i,j,n;
       switch (rand() % 3) {                     // Pick a random MC move
         case 0:                                 // Displace salt
@@ -77,12 +71,11 @@ int main() {
           }
           break;
       }
-
-      if (slump.random_one()>0.8)
+      if (slump.random_one()>.8)
         saltrdf.update(cell);                   // Analyse salt g(r)
 
       #ifdef GROMACS
-      if (slump.random_one()>0.3)
+      if (slump.random_one()>.3)
         xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
       #endif
 

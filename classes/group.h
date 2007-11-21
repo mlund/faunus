@@ -48,6 +48,7 @@ class group {
     void accept(particles &);                           //!< Accept a move
     void add(container &, vector<particle>, bool=false);//!< Add a particle vector
     void add(container &, particle::type, short);       //!< Add particles w. collision check
+    void add(container &, inputfile &);                 //!< Add salt as specified in config file
     virtual unsigned short displace(container&,double); //!< Displace random particle
 };
 

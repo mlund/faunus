@@ -50,6 +50,9 @@ string cell::povray() {
   return o.str();
 }
 //----------- BOX --------------------------
+box::box(inputfile &in) {
+  box( in.getflt("boxlen") );
+}
 box::box(double sidelength) {
   len = sidelength;
   len_half=len/2;

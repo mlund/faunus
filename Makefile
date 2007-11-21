@@ -3,7 +3,7 @@ MODEL = gnu
 
 # Set to yes if you need Gromacs xtc file support
 # (requires a working Gromacs installation)
-GROMACS = yes
+GROMACS = no
 
 # Set to "yes" to enable parallel execution on multi-core
 # CPU's. OpenMP must be supported by the compiler.
@@ -14,7 +14,7 @@ OPENMP = no
 #  things beyond this point.              #
 ###########################################
 
-CXX=g++-4.2
+CXX=g++
 CLASSDIR=./classes
 INCDIR=-I$(CLASSDIR)
 
@@ -96,3 +96,8 @@ clean:
 docclean:
 	rm -vfR doc/html doc/latex
 
+babel:
+	#curl -L -o openbabel-2.1.1.tar.gz http://downloads.sourceforge.net/openbabel/openbabel-2.1.1.tar.gz
+	#tar -zxf openbabel-2.1.1.tar.gz
+	cd openbabel-2.1.1 ; ./configure ;make
+	

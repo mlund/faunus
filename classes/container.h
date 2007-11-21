@@ -5,6 +5,7 @@
 #include "slump.h"
 #include "point.h"
 #include "species.h"
+#include "inputfile.h"
 
 /*! \brief Polymorphic class for simulation containers
  *  \author Mikael Lund
@@ -56,6 +57,7 @@ class box : public container {
   public:
     double len; //!< Side length
     box(double);
+    box(inputfile &);
     string info();
     void randompos(point &);
     void randompos(vector<point> &);

@@ -23,7 +23,6 @@
 class pot_setup {
   public:
     pot_setup();
-    pot_setup(inputfile &);
     double kappa,        //!< Inverse Debye screening length
            lB,           //!< Bjerrum length
            eps,          //!< L-J parameter
@@ -32,6 +31,7 @@ class pot_setup {
            epso,         //!< External dielectric constant
            box,          //!< Cubic box length
            a;            //!< Cavity radius
+    pot_setup(inputfile &);
 };
 
 /*!

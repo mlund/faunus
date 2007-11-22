@@ -20,6 +20,9 @@ class container : public particles,  public species {
     virtual string info();                         //!< Return info string
     virtual string povray();                       //!< POVRAY object representing the cell
     virtual void boundary(point &)=0;              //!< Apply boundary conditions to a point
+    inline virtual double sqdist(point &a,point &b) {
+      return a.sqdist(b);
+    }
     inline virtual double dist(point &a,point &b) {//!< Calculate distance between points
       return a.dist(b);
     }
@@ -66,6 +69,7 @@ class box : public container {
     string povray();
     //! Calculate distance using the minimum image convention
     inline double dist(point &a, point &b) { return a.dist(b, len, len_inv); }
+    inline double sqdist(point &a, point &b) { return a.sqdist(b, len, len_inv); }
     inline int anint(double x) { return int(x>0 ? x+.5 : x-.5); }
     //! Apply periodic boundary conditions
     inline void boundary(point &p) {

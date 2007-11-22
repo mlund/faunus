@@ -177,7 +177,7 @@ void markovmove::adjust_dp(float min, float max) {
 //-------------- SALT MOVE ---------------------------------
 saltmove::saltmove(
     ensemble &e, container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i) {
-  dp=60;
+  dp=12;
   deltadp=2;
   name="SALT DISPLACEMENTS";
 }
@@ -217,7 +217,7 @@ double saltmove::move(group &g, int n) {
     if (ens->metropolis(du)==true) {
       rc=OK;
       utot+=du;                               // track energy changes
-      dpsqr+=con->p[n].sqdist(con->trial[n]); // track avg. displacement
+      dpsqr+=con->sqdist(con->p[n],con->trial[n]); // track avg. displacement
       naccept++;                              // accept counter
       con->p[n] = con->trial[n];              // Accept move
       return du;
@@ -235,7 +235,7 @@ translate::translate( ensemble &e,
   name = "MACROMOLECULAR TRANSLATION";
   runfraction=1.0;
   deltadp=1.;
-  dp=6.;
+  dp=1.;
 };
 
 double translate::move(macromolecule &g) {
@@ -267,7 +267,7 @@ double translate::move(macromolecule &g) {
   if (ens->metropolis(du)==true) {
     rc=OK;
     utot+=du;
-    dpsqr+=g.cm.sqdist( g.cm_trial );
+    dpsqr+=con->sqdist( g.cm, g.cm_trial );
     naccept++;
     g.accept(*con);
     return du;
@@ -285,7 +285,7 @@ macrorot::macrorot( ensemble &e,
   name = "MACROMOLECULAR ROTATION";
   runfraction=1.0;
   deltadp=0.1;
-  dp=0.5;
+  dp=1.0;
 };
 
 /*!
@@ -352,16 +352,16 @@ bool chargereg::titrateall() {
   for (unsigned short i=0; i<sites.size(); i++) {
     cnt++;
     t=exchange(con->trial);
-    //#pragma omp parallel
+    #pragma omp parallel
     {
-      //#pragma omp sections
+      #pragma omp sections
       {
-        //#pragma omp section
+        #pragma omp section
         { uold = pot->potential( con->p, t.site ) * con->p[t.site].charge
           + pot->potential( con->p, t.proton ) * con->p[t.proton].charge
             - con->p[t.site].potential(con->p[t.proton] )*con->p[t.proton].charge;
         }
-        //#pragma omp section
+        #pragma omp section
         { unew = pot->potential(con->trial,t.site)*con->trial[t.site].charge 
           + pot->potential(con->trial,t.proton)*con->trial[t.proton].charge
             - con->trial[t.site].potential(con->trial[t.proton] )*con->trial[t.proton].charge;
@@ -456,13 +456,13 @@ bool move::mOve(macromolecule &g) {
     cout << "rejected"<<endl;
     return false; }
   else {
-    //#pragma omp parallel
+    #pragma omp parallel
     {
-      //#pragma omp sections
+      #pragma omp sections
       {
-        //#pragma omp section
+        #pragma omp section
         { uold = pot->energy(con->p, g);   }
-        //#pragma omp section
+        #pragma omp section
         { unew = pot->energy(con->trial,g);   }
       }
     }
@@ -516,13 +516,13 @@ bool zmove::move(macromolecule &g) {
       con->trial[i] = con->p[i];
     return false; }
   else {
-    //#pragma omp parallel
+    #pragma omp parallel
     {
-      //#pragma omp sections
+      #pragma omp sections
       {
-        //#pragma omp section
+        #pragma omp section
         { uold = pot->energy(con->p, g);   }
-        //#pragma omp section
+        #pragma omp section
         { unew = pot->energy(con->trial,g);   }
       }
     }

@@ -3,18 +3,18 @@ MODEL = gnu
 
 # Set to yes if you need Gromacs xtc file support
 # (requires a working Gromacs installation)
-GROMACS = no
+GROMACS = yes
 
 # Set to "yes" to enable parallel execution on multi-core
 # CPU's. OpenMP must be supported by the compiler.
-OPENMP = no
+OPENMP = yes
 
 ###########################################
 #  Normally you would not want to modify  #
 #  things beyond this point.              #
 ###########################################
 
-CXX=g++
+CXX=g++-4.2
 CLASSDIR=./classes
 INCDIR=-I$(CLASSDIR)
 

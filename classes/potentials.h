@@ -236,11 +236,11 @@ template<class T>
 double interaction<T>::energy(vector<particle> &p, int j) {
   unsigned short ps=p.size();
   double u=0;
-  #pragma omp parallel for reduction (+:u)
+  //#pragma omp parallel for reduction (+:u)
   for (short i=0; i<j; ++i)
     u+=pair.pairpot( p[i],p[j] );
 
-  #pragma omp parallel for reduction (+:u)
+  //#pragma omp parallel for reduction (+:u)
   for (short i=j+1; i<ps; ++i)
     u+=pair.pairpot( p[i],p[j] );
   return pair.f*u;
@@ -250,7 +250,7 @@ template<class T>
 double interaction<T>::energy(vector<particle> &p, group &g) {
   int n=g.end+1, psize=p.size();
   double u=0;
-  #pragma omp parallel for reduction (+:u)
+  //#pragma omp parallel for reduction (+:u)
   for (int i=g.beg; i<n; ++i) {
     for (int j=0; j<g.beg; j++)
       u += pair.pairpot(p[i],p[j]);
@@ -280,7 +280,7 @@ double interaction<T>::energy(vector<particle> &p, group &g, particle &a) {
   if (g.beg==-1) return 0;
   double u=0;
   unsigned short i,n=g.end+1;
-  #pragma omp parallel for reduction (+:u)
+  //#pragma omp parallel for reduction (+:u)
   for (i=g.beg; i<n; i++)
     u+=pair.pairpot(a, p[i]); 
   return pair.f*u;
@@ -290,7 +290,7 @@ template<class T>
 double interaction<T>::energy(vector<particle> &p) {
   double u=0;
   short i,j,n = p.size();
-  #pragma omp parallel for reduction (+:u)
+  //#pragma omp parallel for reduction (+:u)
   for (i=0; i<n-1; ++i)
     for (j=i+1; j<n; ++j)
       u+=pair.pairpot(p[i], p[j]);
@@ -302,7 +302,7 @@ double interaction<T>::energy(vector<particle> &p, group &g1, group &g2) {
   int ilen=g1.end+1; 
   int jlen=g2.end+1;
   double u=0;
-  #pragma omp parallel for reduction (+:u)
+  //#pragma omp parallel for reduction (+:u)
   for (int i=g1.beg; i<ilen; i++)
     for (int j=g2.beg; j<jlen; j++)
       u += pair.pairpot(p[i],p[j]);

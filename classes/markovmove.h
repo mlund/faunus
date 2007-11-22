@@ -180,6 +180,7 @@ saltmove::saltmove(
   dp=12;
   deltadp=2;
   name="SALT DISPLACEMENTS";
+  runfraction=0.5;
 }
 
 /*! \param group Group containing mobile ions
@@ -233,7 +234,7 @@ double saltmove::move(group &g, int n) {
 translate::translate( ensemble &e,
     container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i) {
   name = "MACROMOLECULAR TRANSLATION";
-  runfraction=1.0;
+  runfraction=0.8;
   deltadp=1.;
   dp=1.;
 };

@@ -49,7 +49,7 @@ int main() {
   #endif
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain 
-    for (int micro=1; micro<=3e4; micro++) {
+    for (int micro=1; micro<=1e5; micro++) {
       short i,j,n;
       switch (rand() % 3) {                     // Pick a random MC move
         case 0:                                 // Displace salt
@@ -66,20 +66,21 @@ int main() {
             i = rand() % g.size();              //   and pick at random.
             sys+=mt.move(g[i]);                 //   Do the move.
             for (j=0; j<g.size(); j++)          //   Analyse g(r)...
-              if (j!=i)
+              if (j!=i && macro>1)
                 protrdf.update(cell,g[i].cm,g[j].cm);
           }
           break;
       }
-      //mt.adjust_dp(40,50);
-      //mr.adjust_dp(40,50);
-      //sm.adjust_dp(40,50);
-
-      if (slump.random_one()>.8)
+      if (macro==1 && micro<1e3) {
+        mt.adjust_dp(30,40);                    // Adjust displacement
+        mr.adjust_dp(40,50);                    // parameters. Use ONLY
+        sm.adjust_dp(20,30);                    // during equillibration!
+      }
+      if (slump.random_one()>.8 && macro>1)
         saltrdf.update(cell);                   // Analyse salt g(r)
 
       #ifdef GROMACS
-      if (slump.random_one()>.3)
+      if (slump.random_one()>.95 && macro>1)
         xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
       #endif
 

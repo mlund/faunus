@@ -21,7 +21,7 @@ typedef pot_minimage T_pairpot;         // Specific pair interaction function
 using namespace std;
 
 int main() {
-  inputfile in("twobody.conf");         // Read input file
+  inputfile in("manybody.conf");        // Read input file
   slump slump;                          // A random number generator
   box cell(90.);                        // We want a cubic cell
   canonical nvt;                        // Use the canonical ensemble

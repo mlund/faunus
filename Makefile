@@ -82,13 +82,13 @@ widom:	examples/widom/widom.C $(OBJS)
 ewald:	examples/ewald/ewald.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/ewald/ewald.C -o examples/ewald/ewald
 
-twobody:	examples/twobody/twobody.C $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/twobody/twobody.C -o examples/twobody/twobody
+manybody:	examples/manybody/manybody.C $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/manybody/manybody.C -o examples/manybody/manybody
 
 pka:	examples/titration/pka.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/pka.C -o examples/titration/pka
 
-examples:	widom pka ewald twobody
+examples:	widom pka ewald manybody
 
 clean:
 	rm -vf $(OBJS) examples/titration/pka examples/widom/widom examples/ewald/ewald

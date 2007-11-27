@@ -49,7 +49,7 @@ int main() {
   #endif
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain 
-    for (int micro=1; micro<=1e5; micro++) {
+    for (int micro=1; micro<=1e3; micro++) {
       short i,j,n;
       switch (rand() % 3) {                     // Pick a random MC move
         case 0:                                 // Displace salt

@@ -7,14 +7,14 @@ GROMACS = yes
 
 # Set to "yes" to enable parallel execution on multi-core
 # CPU's. OpenMP must be supported by the compiler.
-OPENMP = yes
+OPENMP = no
 
 ###########################################
 #  Normally you would not want to modify  #
 #  things beyond this point.              #
 ###########################################
 
-CXX=g++-4.2
+CXX=g++
 CLASSDIR=./classes
 INCDIR=-I$(CLASSDIR)
 

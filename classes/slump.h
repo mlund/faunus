@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <ctime>
 
+#ifndef NRRAND
 /*!
  * \brief Random number functions
  * \author Mikael Lund
@@ -19,5 +20,15 @@ class slump {
   double random_one();                  //!< Random number between [0:1[
   double random_half();                 //!< Random number between [-0.5:0.5[
 };
+#endif
+
+#ifdef NRRAND
+//Insert numerical recipes routine here. To compile with this
+//use -DNRRAND when compiling.
+class slump {
+
+};
+#endif
+
 #endif
 

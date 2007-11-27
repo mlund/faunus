@@ -52,6 +52,15 @@ class group {
     virtual unsigned short displace(container&,double); //!< Displace random particle
 };
 
+/*!
+ * \brief Group for handling salt particles
+ */
+class salt : public group {
+  public:
+    particle::type anion, cation; //!< Anion and cation types
+    double muex;                  //!< Excess chemical potential
+};
+
 class macromolecule : public group {
   public:
     macromolecule();

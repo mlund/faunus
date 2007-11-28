@@ -139,7 +139,7 @@ class macrorot : public markovmove {
 class chargereg : public markovmove, private titrate {
   public:
     chargereg( ensemble&, container&, interaction<T_pairpot>&, group&, float);
-    bool titrateall();
+    double titrateall();
     string info();
 };
 /*! \brief Grand Canonical titation of all sites
@@ -344,10 +344,10 @@ chargereg::chargereg(ensemble &e,
  *  This move will randomly go through the titrateable sites and
  *  try to exchange protons with the bulk. The trial energy is:
  */
-bool chargereg::titrateall() {
+double chargereg::titrateall() {
   du=0;
   if (slp.runtest(runfraction)==false)
-    return false;
+    return du;
   action t;
   double sum=0;
   for (unsigned short i=0; i<sites.size(); i++) {
@@ -391,8 +391,7 @@ bool chargereg::titrateall() {
       exchange(con->trial, t);
     }
   }
-  du=sum;
-  return true;
+  return sum;
 }
 
 /*

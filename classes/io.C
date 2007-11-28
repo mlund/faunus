@@ -68,11 +68,23 @@ vector<particle> ioaam::load(string file) {
   }
   return p;
 }
-bool ioaam::save(string file, vector<particle> &) {
+
+bool ioaam::load(container &con, string file) {
+  vector<particle> a=load(file);
+  if (a.size()==con.p.size()) {
+    con.p = a;
+    con.trial = a;
+    return true;
+  }
+  return false;
+}
+
+bool ioaam::save(string file, vector<particle> &p) {
   ostringstream o;
   o << p.size() << endl;
-  for (unsigned short i=0; i<p.size(); i++)
+  for (unsigned short i=0; i<p.size(); i++) {
     o << p2s(p[i]);
+  }
   return writefile(file, o.str());
 }
 

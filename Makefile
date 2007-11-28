@@ -3,7 +3,7 @@ MODEL = gnu
 
 # Set to yes if you need Gromacs xtc file support
 # (requires a working Gromacs installation)
-GROMACS = yes
+GROMACS = no
 
 # Set to "yes" to enable parallel execution on multi-core
 # CPU's. OpenMP must be supported by the compiler.

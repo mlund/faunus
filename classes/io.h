@@ -89,6 +89,7 @@ class ioaam : public iopart {
     ioaam(species &);
     vector<particle> load(string);
     void load(container&,inputfile&,vector<macromolecule>&);//!< Read proteins from disk
+    bool load(container &, string); //!< Reads a configuration from disk
     bool save(string, vector<particle>&);
 };
 

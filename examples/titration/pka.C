@@ -22,11 +22,12 @@ int main() {
   protein.move(con, -protein.cm);       // ..and translate it to origo (0,0,0)
   protein.accept(con);                  // ..accept translation
   group salt;                           // Group for salt and counter ions
-  salt.add( con, particle::NA, 43);     // Insert sodium ions
-  salt.add( con, particle::CL, 24 );    // Insert chloride ions
-  aam.load(con, "confout.aam");
+  salt.add( con, particle::NA, 34+19);  // Insert sodium ions
+  salt.add( con, particle::CL, 34 );    // Insert chloride ions
   saltmove sm(nvt, con, pot);           // Class for salt movements
+  aam.load(con, "confout.aam");         // Load old config (if present)
   chargereg tit(nvt,con,pot,salt,7.6);  // Prepare titration. pH 7.6
+  aam.load(con, "confout.aam");         // Load old config (if present)
   systemenergy sys(pot.energy(con.p));  // System energy analysis (drift etc)
   cout << con.info() << tit.info();     // Some information
 
@@ -44,7 +45,7 @@ int main() {
       }
     }                                          // END of micro loop
     sys.update(pot.energy(con.p));             // Update system energy averages
-    aam.save("confout.aam", con.p);
+    aam.save("confout.aam", con.p);            // Save configuration to disk
     cout << "Macro step " << macro << " completed. ETA: "
          << clock.eta(macro);
   }                                            // END of macro loop

@@ -7,7 +7,49 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		73B0A7300CF3460D0026CD5F /* twobody.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A72F0CF3460D0026CD5F /* twobody.C */; };
+		7333042D0CFEE0100025AE1E /* manybody.C in Sources */ = {isa = PBXBuildFile; fileRef = 7333042C0CFEE0100025AE1E /* manybody.C */; };
+		733304340CFEE06A0025AE1E /* mrh4a.aam in CopyFiles */ = {isa = PBXBuildFile; fileRef = 733304330CFEE06A0025AE1E /* mrh4a.aam */; };
+		7352F0F20CFEE1AD0042BEF7 /* manybody.conf in CopyFiles */ = {isa = PBXBuildFile; fileRef = 7352F0F10CFEE1AD0042BEF7 /* manybody.conf */; };
+		7352F10E0CFEE36F0042BEF7 /* analysis.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A7360CF3463E0026CD5F /* analysis.C */; };
+		7352F10F0CFEE36F0042BEF7 /* container.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A73A0CF3463E0026CD5F /* container.C */; };
+		7352F1100CFEE36F0042BEF7 /* group.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A73E0CF3463E0026CD5F /* group.C */; };
+		7352F1110CFEE36F0042BEF7 /* hardsphere.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A7400CF3463E0026CD5F /* hardsphere.C */; };
+		7352F1120CFEE36F0042BEF7 /* inputfile.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A7430CF3463E0026CD5F /* inputfile.C */; };
+		7352F1130CFEE36F0042BEF7 /* io.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A7450CF3463E0026CD5F /* io.C */; };
+		7352F1140CFEE36F0042BEF7 /* particles.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A7520CF3463E0026CD5F /* particles.C */; };
+		7352F1150CFEE36F0042BEF7 /* physconst.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A7540CF3463E0026CD5F /* physconst.C */; };
+		7352F1160CFEE36F0042BEF7 /* point.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A7560CF3463E0026CD5F /* point.C */; };
+		7352F1170CFEE36F0042BEF7 /* potentials.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A75A0CF3463E0026CD5F /* potentials.C */; };
+		7352F1180CFEE36F0042BEF7 /* slump.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A75D0CF3463E0026CD5F /* slump.C */; };
+		7352F11A0CFEE36F0042BEF7 /* species.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A75F0CF3463E0026CD5F /* species.C */; };
+		7352F11B0CFEE36F0042BEF7 /* titrate.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A7620CF3463E0026CD5F /* titrate.C */; };
+		7352F1250CFEE43E0042BEF7 /* xytable.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7650CF3463E0026CD5F /* xytable.h */; };
+		7352F1260CFEE43E0042BEF7 /* species.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7600CF3463E0026CD5F /* species.h */; };
+		7352F1270CFEE43E0042BEF7 /* statistics.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7610CF3463E0026CD5F /* statistics.h */; };
+		7352F1280CFEE43E0042BEF7 /* titrate.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7630CF3463E0026CD5F /* titrate.h */; };
+		7352F1290CFEE43E0042BEF7 /* xydata.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7640CF3463E0026CD5F /* xydata.h */; };
+		7352F12A0CFEE43E0042BEF7 /* analysis.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7370CF3463E0026CD5F /* analysis.h */; };
+		7352F12B0CFEE43E0042BEF7 /* average.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7380CF3463E0026CD5F /* average.h */; };
+		7352F12C0CFEE43E0042BEF7 /* config.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7390CF3463E0026CD5F /* config.h */; };
+		7352F12D0CFEE43E0042BEF7 /* container.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A73B0CF3463E0026CD5F /* container.h */; };
+		7352F12E0CFEE43E0042BEF7 /* countdown.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A73C0CF3463E0026CD5F /* countdown.h */; };
+		7352F12F0CFEE43E0042BEF7 /* ensemble.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A73D0CF3463E0026CD5F /* ensemble.h */; };
+		7352F1300CFEE43E0042BEF7 /* group.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A73F0CF3463E0026CD5F /* group.h */; };
+		7352F1310CFEE43E0042BEF7 /* hardsphere.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7410CF3463E0026CD5F /* hardsphere.h */; };
+		7352F1320CFEE43E0042BEF7 /* histogram.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7420CF3463E0026CD5F /* histogram.h */; };
+		7352F1330CFEE43E0042BEF7 /* inputfile.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7440CF3463E0026CD5F /* inputfile.h */; };
+		7352F1340CFEE43E0042BEF7 /* io.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7460CF3463E0026CD5F /* io.h */; };
+		7352F1350CFEE43E0042BEF7 /* legendre.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7470CF3463E0026CD5F /* legendre.h */; };
+		7352F1360CFEE43E0042BEF7 /* lennardjones.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7480CF3463E0026CD5F /* lennardjones.h */; };
+		7352F1370CFEE43E0042BEF7 /* markovmove.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A74A0CF3463E0026CD5F /* markovmove.h */; };
+		7352F1380CFEE43E0042BEF7 /* particles.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7530CF3463E0026CD5F /* particles.h */; };
+		7352F1390CFEE43E0042BEF7 /* physconst.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7550CF3463E0026CD5F /* physconst.h */; };
+		7352F13A0CFEE43E0042BEF7 /* point.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7570CF3463E0026CD5F /* point.h */; };
+		7352F13B0CFEE43E0042BEF7 /* pot_rfield.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7580CF3463E0026CD5F /* pot_rfield.h */; };
+		7352F13C0CFEE43E0042BEF7 /* pot_spring.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A7590CF3463E0026CD5F /* pot_spring.h */; };
+		7352F13D0CFEE43E0042BEF7 /* potentials.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A75B0CF3463E0026CD5F /* potentials.h */; };
+		7352F13E0CFEE43E0042BEF7 /* simpson.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A75C0CF3463E0026CD5F /* simpson.h */; };
+		7352F1410CFEE4830042BEF7 /* slump.h in Headers */ = {isa = PBXBuildFile; fileRef = 73B0A75E0CF3463E0026CD5F /* slump.h */; };
 		73B0A7660CF3463E0026CD5F /* analysis.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A7360CF3463E0026CD5F /* analysis.C */; };
 		73B0A7670CF3463E0026CD5F /* container.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A73A0CF3463E0026CD5F /* container.C */; };
 		73B0A7680CF3463E0026CD5F /* group.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A73E0CF3463E0026CD5F /* group.C */; };
@@ -21,7 +63,6 @@
 		73B0A7740CF3463E0026CD5F /* slump.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A75D0CF3463E0026CD5F /* slump.C */; };
 		73B0A7750CF3463E0026CD5F /* species.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A75F0CF3463E0026CD5F /* species.C */; };
 		73B0A7760CF3463E0026CD5F /* titrate.C in Sources */ = {isa = PBXBuildFile; fileRef = 73B0A7620CF3463E0026CD5F /* titrate.C */; };
-		73B0A7B40CF34AA00026CD5F /* mrh4a.aam in CopyFiles */ = {isa = PBXBuildFile; fileRef = 73B0A7AC0CF34A220026CD5F /* mrh4a.aam */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -31,15 +72,19 @@
 			dstPath = "";
 			dstSubfolderSpec = 16;
 			files = (
-				73B0A7B40CF34AA00026CD5F /* mrh4a.aam in CopyFiles */,
+				733304340CFEE06A0025AE1E /* mrh4a.aam in CopyFiles */,
+				7352F0F20CFEE1AD0042BEF7 /* manybody.conf in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		7333042C0CFEE0100025AE1E /* manybody.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = manybody.C; path = ../examples/manybody/manybody.C; sourceTree = SOURCE_ROOT; };
+		733304330CFEE06A0025AE1E /* mrh4a.aam */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; name = mrh4a.aam; path = ../examples/manybody/mrh4a.aam; sourceTree = SOURCE_ROOT; };
+		7352F0F10CFEE1AD0042BEF7 /* manybody.conf */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; name = manybody.conf; path = ../examples/manybody/manybody.conf; sourceTree = SOURCE_ROOT; };
+		7352F0FB0CFEE2650042BEF7 /* libfaunus.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; name = libfaunus.a; path = build/Release/libfaunus.a; sourceTree = "<group>"; };
 		73B0A72D0CF345EB0026CD5F /* twobody */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "compiled.mach-o.executable"; path = twobody; sourceTree = BUILT_PRODUCTS_DIR; };
-		73B0A72F0CF3460D0026CD5F /* twobody.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = twobody.C; path = ../examples/twobody/twobody.C; sourceTree = SOURCE_ROOT; };
 		73B0A7360CF3463E0026CD5F /* analysis.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = analysis.C; path = ../classes/analysis.C; sourceTree = SOURCE_ROOT; };
 		73B0A7370CF3463E0026CD5F /* analysis.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = analysis.h; path = ../classes/analysis.h; sourceTree = SOURCE_ROOT; };
 		73B0A7380CF3463E0026CD5F /* average.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = average.h; path = ../classes/average.h; sourceTree = SOURCE_ROOT; };
@@ -80,10 +125,16 @@
 		73B0A7630CF3463E0026CD5F /* titrate.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = titrate.h; path = ../classes/titrate.h; sourceTree = SOURCE_ROOT; };
 		73B0A7640CF3463E0026CD5F /* xydata.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = xydata.h; path = ../classes/xydata.h; sourceTree = SOURCE_ROOT; };
 		73B0A7650CF3463E0026CD5F /* xytable.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = xytable.h; path = ../classes/xytable.h; sourceTree = SOURCE_ROOT; };
-		73B0A7AC0CF34A220026CD5F /* mrh4a.aam */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; name = mrh4a.aam; path = ../examples/twobody/mrh4a.aam; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		7352F0F90CFEE2650042BEF7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		73B0A72B0CF345EB0026CD5F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -97,6 +148,8 @@
 		08FB7794FE84155DC02AAC07 /* faunus */ = {
 			isa = PBXGroup;
 			children = (
+				7352F1090CFEE2FC0042BEF7 /* Headers */,
+				7352F1030CFEE2990042BEF7 /* Classes */,
 				73B0A7AB0CF349EF0026CD5F /* Data */,
 				08FB7795FE84155DC02AAC07 /* Source */,
 				1AB674ADFE9D54B511CA2CBB /* Products */,
@@ -107,47 +160,7 @@
 		08FB7795FE84155DC02AAC07 /* Source */ = {
 			isa = PBXGroup;
 			children = (
-				73B0A7360CF3463E0026CD5F /* analysis.C */,
-				73B0A7370CF3463E0026CD5F /* analysis.h */,
-				73B0A7380CF3463E0026CD5F /* average.h */,
-				73B0A7390CF3463E0026CD5F /* config.h */,
-				73B0A73A0CF3463E0026CD5F /* container.C */,
-				73B0A73B0CF3463E0026CD5F /* container.h */,
-				73B0A73C0CF3463E0026CD5F /* countdown.h */,
-				73B0A73D0CF3463E0026CD5F /* ensemble.h */,
-				73B0A73E0CF3463E0026CD5F /* group.C */,
-				73B0A73F0CF3463E0026CD5F /* group.h */,
-				73B0A7400CF3463E0026CD5F /* hardsphere.C */,
-				73B0A7410CF3463E0026CD5F /* hardsphere.h */,
-				73B0A7420CF3463E0026CD5F /* histogram.h */,
-				73B0A7430CF3463E0026CD5F /* inputfile.C */,
-				73B0A7440CF3463E0026CD5F /* inputfile.h */,
-				73B0A7450CF3463E0026CD5F /* io.C */,
-				73B0A7460CF3463E0026CD5F /* io.h */,
-				73B0A7470CF3463E0026CD5F /* legendre.h */,
-				73B0A7480CF3463E0026CD5F /* lennardjones.h */,
-				73B0A74A0CF3463E0026CD5F /* markovmove.h */,
-				73B0A7520CF3463E0026CD5F /* particles.C */,
-				73B0A7530CF3463E0026CD5F /* particles.h */,
-				73B0A7540CF3463E0026CD5F /* physconst.C */,
-				73B0A7550CF3463E0026CD5F /* physconst.h */,
-				73B0A7560CF3463E0026CD5F /* point.C */,
-				73B0A7570CF3463E0026CD5F /* point.h */,
-				73B0A7580CF3463E0026CD5F /* pot_rfield.h */,
-				73B0A7590CF3463E0026CD5F /* pot_spring.h */,
-				73B0A75A0CF3463E0026CD5F /* potentials.C */,
-				73B0A75B0CF3463E0026CD5F /* potentials.h */,
-				73B0A75C0CF3463E0026CD5F /* simpson.h */,
-				73B0A75D0CF3463E0026CD5F /* slump.C */,
-				73B0A75E0CF3463E0026CD5F /* slump.h */,
-				73B0A75F0CF3463E0026CD5F /* species.C */,
-				73B0A7600CF3463E0026CD5F /* species.h */,
-				73B0A7610CF3463E0026CD5F /* statistics.h */,
-				73B0A7620CF3463E0026CD5F /* titrate.C */,
-				73B0A7630CF3463E0026CD5F /* titrate.h */,
-				73B0A7640CF3463E0026CD5F /* xydata.h */,
-				73B0A7650CF3463E0026CD5F /* xytable.h */,
-				73B0A72F0CF3460D0026CD5F /* twobody.C */,
+				7333042C0CFEE0100025AE1E /* manybody.C */,
 			);
 			name = Source;
 			sourceTree = "<group>";
@@ -156,24 +169,134 @@
 			isa = PBXGroup;
 			children = (
 				73B0A72D0CF345EB0026CD5F /* twobody */,
+				7352F0FB0CFEE2650042BEF7 /* libfaunus.a */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		7352F1030CFEE2990042BEF7 /* Classes */ = {
+			isa = PBXGroup;
+			children = (
+				73B0A7360CF3463E0026CD5F /* analysis.C */,
+				73B0A73A0CF3463E0026CD5F /* container.C */,
+				73B0A73E0CF3463E0026CD5F /* group.C */,
+				73B0A7400CF3463E0026CD5F /* hardsphere.C */,
+				73B0A7430CF3463E0026CD5F /* inputfile.C */,
+				73B0A7450CF3463E0026CD5F /* io.C */,
+				73B0A7520CF3463E0026CD5F /* particles.C */,
+				73B0A7540CF3463E0026CD5F /* physconst.C */,
+				73B0A7560CF3463E0026CD5F /* point.C */,
+				73B0A75A0CF3463E0026CD5F /* potentials.C */,
+				73B0A75D0CF3463E0026CD5F /* slump.C */,
+				73B0A75F0CF3463E0026CD5F /* species.C */,
+				73B0A7620CF3463E0026CD5F /* titrate.C */,
+			);
+			name = Classes;
+			sourceTree = "<group>";
+		};
+		7352F1090CFEE2FC0042BEF7 /* Headers */ = {
+			isa = PBXGroup;
+			children = (
+				73B0A75E0CF3463E0026CD5F /* slump.h */,
+				73B0A7650CF3463E0026CD5F /* xytable.h */,
+				73B0A7600CF3463E0026CD5F /* species.h */,
+				73B0A7610CF3463E0026CD5F /* statistics.h */,
+				73B0A7630CF3463E0026CD5F /* titrate.h */,
+				73B0A7640CF3463E0026CD5F /* xydata.h */,
+				73B0A7370CF3463E0026CD5F /* analysis.h */,
+				73B0A7380CF3463E0026CD5F /* average.h */,
+				73B0A7390CF3463E0026CD5F /* config.h */,
+				73B0A73B0CF3463E0026CD5F /* container.h */,
+				73B0A73C0CF3463E0026CD5F /* countdown.h */,
+				73B0A73D0CF3463E0026CD5F /* ensemble.h */,
+				73B0A73F0CF3463E0026CD5F /* group.h */,
+				73B0A7410CF3463E0026CD5F /* hardsphere.h */,
+				73B0A7420CF3463E0026CD5F /* histogram.h */,
+				73B0A7440CF3463E0026CD5F /* inputfile.h */,
+				73B0A7460CF3463E0026CD5F /* io.h */,
+				73B0A7470CF3463E0026CD5F /* legendre.h */,
+				73B0A7480CF3463E0026CD5F /* lennardjones.h */,
+				73B0A74A0CF3463E0026CD5F /* markovmove.h */,
+				73B0A7530CF3463E0026CD5F /* particles.h */,
+				73B0A7550CF3463E0026CD5F /* physconst.h */,
+				73B0A7570CF3463E0026CD5F /* point.h */,
+				73B0A7580CF3463E0026CD5F /* pot_rfield.h */,
+				73B0A7590CF3463E0026CD5F /* pot_spring.h */,
+				73B0A75B0CF3463E0026CD5F /* potentials.h */,
+				73B0A75C0CF3463E0026CD5F /* simpson.h */,
+			);
+			name = Headers;
 			sourceTree = "<group>";
 		};
 		73B0A7AB0CF349EF0026CD5F /* Data */ = {
 			isa = PBXGroup;
 			children = (
-				73B0A7AC0CF34A220026CD5F /* mrh4a.aam */,
+				7352F0F10CFEE1AD0042BEF7 /* manybody.conf */,
+				733304330CFEE06A0025AE1E /* mrh4a.aam */,
 			);
 			name = Data;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
+/* Begin PBXHeadersBuildPhase section */
+		7352F0F70CFEE2650042BEF7 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7352F1410CFEE4830042BEF7 /* slump.h in Headers */,
+				7352F1250CFEE43E0042BEF7 /* xytable.h in Headers */,
+				7352F1260CFEE43E0042BEF7 /* species.h in Headers */,
+				7352F1270CFEE43E0042BEF7 /* statistics.h in Headers */,
+				7352F1280CFEE43E0042BEF7 /* titrate.h in Headers */,
+				7352F1290CFEE43E0042BEF7 /* xydata.h in Headers */,
+				7352F12A0CFEE43E0042BEF7 /* analysis.h in Headers */,
+				7352F12B0CFEE43E0042BEF7 /* average.h in Headers */,
+				7352F12C0CFEE43E0042BEF7 /* config.h in Headers */,
+				7352F12D0CFEE43E0042BEF7 /* container.h in Headers */,
+				7352F12E0CFEE43E0042BEF7 /* countdown.h in Headers */,
+				7352F12F0CFEE43E0042BEF7 /* ensemble.h in Headers */,
+				7352F1300CFEE43E0042BEF7 /* group.h in Headers */,
+				7352F1310CFEE43E0042BEF7 /* hardsphere.h in Headers */,
+				7352F1320CFEE43E0042BEF7 /* histogram.h in Headers */,
+				7352F1330CFEE43E0042BEF7 /* inputfile.h in Headers */,
+				7352F1340CFEE43E0042BEF7 /* io.h in Headers */,
+				7352F1350CFEE43E0042BEF7 /* legendre.h in Headers */,
+				7352F1360CFEE43E0042BEF7 /* lennardjones.h in Headers */,
+				7352F1370CFEE43E0042BEF7 /* markovmove.h in Headers */,
+				7352F1380CFEE43E0042BEF7 /* particles.h in Headers */,
+				7352F1390CFEE43E0042BEF7 /* physconst.h in Headers */,
+				7352F13A0CFEE43E0042BEF7 /* point.h in Headers */,
+				7352F13B0CFEE43E0042BEF7 /* pot_rfield.h in Headers */,
+				7352F13C0CFEE43E0042BEF7 /* pot_spring.h in Headers */,
+				7352F13D0CFEE43E0042BEF7 /* potentials.h in Headers */,
+				7352F13E0CFEE43E0042BEF7 /* simpson.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
 /* Begin PBXNativeTarget section */
-		73B0A72C0CF345EB0026CD5F /* twobody */ = {
+		7352F0FA0CFEE2650042BEF7 /* faunus */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 73B0A7310CF3460D0026CD5F /* Build configuration list for PBXNativeTarget "twobody" */;
+			buildConfigurationList = 7352F0FC0CFEE2840042BEF7 /* Build configuration list for PBXNativeTarget "faunus" */;
+			buildPhases = (
+				7352F0F70CFEE2650042BEF7 /* Headers */,
+				7352F0F80CFEE2650042BEF7 /* Sources */,
+				7352F0F90CFEE2650042BEF7 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = faunus;
+			productName = libfaunus;
+			productReference = 7352F0FB0CFEE2650042BEF7 /* libfaunus.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		73B0A72C0CF345EB0026CD5F /* manybody */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 73B0A7310CF3460D0026CD5F /* Build configuration list for PBXNativeTarget "manybody" */;
 			buildPhases = (
 				73B0A72A0CF345EB0026CD5F /* Sources */,
 				73B0A72B0CF345EB0026CD5F /* Frameworks */,
@@ -183,7 +306,7 @@
 			);
 			dependencies = (
 			);
-			name = twobody;
+			name = manybody;
 			productName = twobody;
 			productReference = 73B0A72D0CF345EB0026CD5F /* twobody */;
 			productType = "com.apple.product-type.tool";
@@ -198,12 +321,33 @@
 			mainGroup = 08FB7794FE84155DC02AAC07 /* faunus */;
 			projectDirPath = "";
 			targets = (
-				73B0A72C0CF345EB0026CD5F /* twobody */,
+				73B0A72C0CF345EB0026CD5F /* manybody */,
+				7352F0FA0CFEE2650042BEF7 /* faunus */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
+		7352F0F80CFEE2650042BEF7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7352F10E0CFEE36F0042BEF7 /* analysis.C in Sources */,
+				7352F10F0CFEE36F0042BEF7 /* container.C in Sources */,
+				7352F1100CFEE36F0042BEF7 /* group.C in Sources */,
+				7352F1110CFEE36F0042BEF7 /* hardsphere.C in Sources */,
+				7352F1120CFEE36F0042BEF7 /* inputfile.C in Sources */,
+				7352F1130CFEE36F0042BEF7 /* io.C in Sources */,
+				7352F1140CFEE36F0042BEF7 /* particles.C in Sources */,
+				7352F1150CFEE36F0042BEF7 /* physconst.C in Sources */,
+				7352F1160CFEE36F0042BEF7 /* point.C in Sources */,
+				7352F1170CFEE36F0042BEF7 /* potentials.C in Sources */,
+				7352F1180CFEE36F0042BEF7 /* slump.C in Sources */,
+				7352F11A0CFEE36F0042BEF7 /* species.C in Sources */,
+				7352F11B0CFEE36F0042BEF7 /* titrate.C in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		73B0A72A0CF345EB0026CD5F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -221,7 +365,7 @@
 				73B0A7740CF3463E0026CD5F /* slump.C in Sources */,
 				73B0A7750CF3463E0026CD5F /* species.C in Sources */,
 				73B0A7760CF3463E0026CD5F /* titrate.C in Sources */,
-				73B0A7300CF3460D0026CD5F /* twobody.C in Sources */,
+				7333042D0CFEE0100025AE1E /* manybody.C in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -245,6 +389,36 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PREBINDING = NO;
 				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+			};
+			name = Release;
+		};
+		7352F0FD0CFEE2840042BEF7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				INSTALL_PATH = /usr/local/lib;
+				PREBINDING = NO;
+				PRODUCT_NAME = libfaunus;
+				ZERO_LINK = YES;
+			};
+			name = Debug;
+		};
+		7352F0FE0CFEE2840042BEF7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = /usr/local/lib;
+				PREBINDING = NO;
+				PRODUCT_NAME = libfaunus;
+				ZERO_LINK = NO;
 			};
 			name = Release;
 		};
@@ -290,7 +464,16 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		73B0A7310CF3460D0026CD5F /* Build configuration list for PBXNativeTarget "twobody" */ = {
+		7352F0FC0CFEE2840042BEF7 /* Build configuration list for PBXNativeTarget "faunus" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7352F0FD0CFEE2840042BEF7 /* Debug */,
+				7352F0FE0CFEE2840042BEF7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		73B0A7310CF3460D0026CD5F /* Build configuration list for PBXNativeTarget "manybody" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				73B0A7320CF3460D0026CD5F /* Debug */,

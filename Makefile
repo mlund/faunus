@@ -70,9 +70,12 @@ OBJS=$(CLASSDIR)/inputfile.o \
      $(CLASSDIR)/particles.o \
      $(CLASSDIR)/analysis.o \
      $(CLASSDIR)/species.o
-all:	classes examples
+all:	classes examples libfaunus
 
 classes:	$(OBJS)
+libfaunus:      $(OBJS)
+	ar cq lib/libfaunus.a $(OBJS)
+	
 manual:
 	doxygen doc/Doxyfile
 
@@ -91,7 +94,11 @@ pka:	examples/titration/pka.C $(OBJS)
 examples:	widom pka ewald manybody
 
 clean:
-	rm -vf $(OBJS) examples/titration/pka examples/widom/widom examples/ewald/ewald
+	rm -vf $(OBJS) \
+	examples/titration/pka \
+	examples/widom/widom \
+	examples/ewald/ewald \
+	lib/libfaunus.a
 
 docclean:
 	rm -vfR doc/html doc/latex

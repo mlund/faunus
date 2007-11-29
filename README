@@ -49,6 +49,7 @@ FILES:
   classes      Mostly finished, general classes.
   examples     Example programs
   legacy       Older, working programs
+  lib          The faunus library (currently static)
   undone       Unfinished code
   misc         Mostly temporary stuff.
   doc          Code manual files

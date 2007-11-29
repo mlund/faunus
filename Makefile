@@ -17,43 +17,44 @@ OPENMP = no
 CXX=g++
 CLASSDIR=./classes
 INCDIR=-I$(CLASSDIR)
+LDFLAGS=-L./lib
 
 ifeq ($(GROMACS), yes)
-  INCDIR=-I/usr/local/gromacs/include/gromacs/ -I$(CLASSDIR)
-  LDFLAGS=-L/usr/local/gromacs/lib/ -lgmx
-  GRO=-DGROMACS
+  INCDIR:=${INCDIR} -I/usr/local/gromacs/include/gromacs
+  LDFLAGS:=${LDFLAGS} -L/usr/local/gromacs/lib/ -lgmx
+  EXTRA=-DGROMACS
 endif
 
 ifeq ($(MODEL), debug)
-  CXXFLAGS = -O0 -W -Winline -Wno-sign-compare -g $(INCDIR) $(GRO)
+  CXXFLAGS = -O0 -W -Winline -Wno-sign-compare -g $(INCDIR) $(EXTRA)
 endif
 
 ifeq ($(MODEL), gnu)
   ifeq ($(OPENMP), yes)
-    OMP=-fopenmp
+    EXTRA:=$(EXTRA) -fopenmp
   endif
-  CXXFLAGS = -O3 -w -funroll-loops $(INCDIR) $(GRO) $(OMP)
+  CXXFLAGS = -O3 -w -funroll-loops $(INCDIR) $(EXTRA)
 endif
 
 ifeq ($(MODEL), intel)
   ifeq ($(OPENMP), yes)
-    OMP=-openmp
+    EXTRA:=$(EXTRA) -openmp
   endif
   CXX=icc
-  CXXFLAGS = -O3 -w $(INCDIR) $(GRO) $(OMP)
+  CXXFLAGS = -O3 -w $(INCDIR) $(EXTRA)
 endif
 
 ifeq ($(MODEL), pathscale)
   CXX=pathCC
-  CXXFLAGS = -Ofast $(INCDIR) $(GRO)
+  CXXFLAGS = -Ofast $(INCDIR) $(EXTRA)
 endif
 
 ifeq ($(MODEL), pgi)
   CXX=pgCC
   ifeq ($(OPENMP), yes)
-    OMP=-mp
+    EXTRA:=$(EXTRA) -mp
   endif 
-  CXXFLAGS = -O3 $(INCDIR) $(GRO) $(OMP)
+  CXXFLAGS = -O3 $(INCDIR) $(EXTRA)
 endif
 
 
@@ -74,7 +75,7 @@ all:	classes examples libfaunus
 
 classes:	$(OBJS)
 libfaunus:      $(OBJS)
-	ar cq lib/libfaunus.a $(OBJS)
+	ar cr lib/libfaunus.a $(OBJS)
 	
 manual:
 	doxygen doc/Doxyfile
@@ -85,8 +86,11 @@ widom:	examples/widom/widom.C $(OBJS)
 ewald:	examples/ewald/ewald.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/ewald/ewald.C -o examples/ewald/ewald
 
-manybody:	examples/manybody/manybody.C $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/manybody/manybody.C -o examples/manybody/manybody
+manybody:	examples/manybody/manybody.C libfaunus
+	$(CXX) $(CXXFLAGS) \
+	examples/manybody/manybody.C \
+	-o examples/manybody/manybody \
+	-lfaunus ${LDFLAGS}
 
 pka:	examples/titration/pka.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/pka.C -o examples/titration/pka

@@ -109,16 +109,22 @@ class zmove : public markovmove {
     float z;
 };
 
-/*! \brief Symmetrically move two groups along z-axis
- *  \author Mikael Lund
+/*!
+ * This move will symmetrically translate two macromolecules
+ * along the line connecting their mass centers.
+ *
+ * \brief Symmetrically move two groups along z-axis
+ * \author Mikael Lund
  */
-/*
-class dualzmove : public markovmove {
+class dualmove : public markovmove {
+  private:
+    point v;
+    //float z;    //!< Distance between CM's of the groups
   public:
-    float z;    //!< Distance between CM's of the groups
-    void move(group &, group &);
+    dualmove( ensemble&, container&, interaction<T_pairpot>&);
+    void direction(double, double, double);
+    double move(macromolecule &, macromolecule &);
 };
-*/
 
 class translate : public markovmove {
   public: 
@@ -544,5 +550,70 @@ bool zmove::move(macromolecule &g) {
   for (int i=g.beg; i<(g.size()+g.beg); i++) 
     con->trial[i] = con->p[i];
   return false;
+}
+
+//------- DUAL MOVE --------------
+dualmove::dualmove( ensemble &e,
+    container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i) {
+  name = "SYMMETRIC GROUP MOVE";
+  cite = "Lund+Jonsson, Biophys J. 2003, 85, 2940";
+  runfraction=1.0;
+  deltadp=1.;
+  dp=1.;
+  direction(0,0,1);
+}
+
+/*! Specify unit vector that determines which coordinates
+ * that will be moved. The default is (0,0,1) meaning that
+ * the macromolecules will be moved in the z direction only.
+ */
+void dualmove::direction(double x, double y, double z) {
+  v.x=x;
+  v.y=y;
+  v.z=z;
+}
+double dualmove::move(macromolecule &g1, macromolecule &g2) {
+  du=0;
+  cnt++;
+  point p;
+  group g12=g1+g2;
+  p.x=v.x*dp*slp.random_half();
+  p.y=v.y*dp*slp.random_half();
+  p.z=v.z*dp*slp.random_half();
+  g1.move(*con, p);
+  g2.move(*con,-p);
+  if (con->collision(g1.cm_trial)==true ||
+      con->collision(g2.cm_trial)==true) {
+    rc=HC;
+    dpsqr+=0;
+    g1.undo(*con);
+    g2.undo(*con);
+    return du;
+  }
+  #pragma omp parallel
+  {
+    #pragma omp sections
+    {
+      #pragma omp section
+      { uold = pot->energy(con->p,g12) + pot->energy(con->p,g1,g2);   }
+      #pragma omp section
+      { unew = pot->energy(con->trial,g12) + pot->energy(con->p,g1,g2);   }
+    }
+  }
+  du = unew-uold;
+  if (ens->metropolis(du)==true) {
+    rc=OK;
+    utot+=du;
+    dpsqr+=con->sqdist( g1.cm, g1.cm_trial );
+    naccept++;
+    g1.accept(*con);
+    g2.accept(*con);
+    return du;
+  } else rc=ENERGY;
+  du=0;
+  dpsqr+=0;
+  g1.undo(*con);
+  g2.undo(*con);
+  return du;
 }
 

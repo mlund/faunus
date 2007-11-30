@@ -51,7 +51,7 @@ int main() {
   #endif
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain 
-    for (int micro=1; micro<=6e4; micro++) {
+    for (int micro=1; micro<=3e5; micro++) {
       short i,j,n;
       switch (rand() % 3) {                     // Pick a random MC move
         case 0:                                 // Displace salt
@@ -84,7 +84,7 @@ int main() {
         saltrdf.update(cell);                   // Analyse salt g(r)
 
       #ifdef GROMACS
-      if (slump.random_one()>.95 && macro>1)
+      if (slump.random_one()>.96 && macro>1)
         xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
       #endif
 

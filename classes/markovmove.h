@@ -36,7 +36,8 @@ class markovmove {
     float runfraction;
     double uold, unew, deltadp;
     unsigned long long int cnt, naccept;
-    string name;
+    string name;                        //!< Arbitrary name for the move
+    string cite;                        //!< Reference to additional info. (article, url etc.)
     container *con;
     ensemble *ens;
     interaction<T_pairpot> *pot;
@@ -72,6 +73,8 @@ string markovmove::info() {
       << "#   Average displacement= " << sqrt(dpsqr.avg()) << endl
       << "#   Total energy change = " << utot << endl;
   }
+  if (cite.empty()==false)
+    o << "#   More information:   = " << cite << endl;
   return o.str();
 }
 
@@ -335,6 +338,7 @@ chargereg::chargereg(ensemble &e,
     float ph ) : markovmove(e,c,i), titrate(c,c.p,g,ph)
 {
   name="PROTON TITRATION";
+  cite="Lund & Jonsson, Biochem. 2005, 44, 5722-5727.";
   runfraction=0.2;
   con->trial = con->p;
 }

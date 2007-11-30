@@ -57,6 +57,7 @@ class box : public container {
   private:
     point d;
     double len_half, len_inv;
+    void setlen(double);
   public:
     double len; //!< Side length
     box(double);

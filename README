@@ -24,7 +24,7 @@ WELCOME TO FAUNUS:
   Get the latest code resivions via SVN from sourceforge.net:
   $ svn co https://faunus.svn.sourceforge.net/svnroot/faunus/trunk faunus
 
-CONTACT:
+CONTRIBUTORS:
   Mikael Lund <mlund at mac.com>
   Bjorn Persson <bjorn.persson at teokem.lu.se>
   Martin Trulsson <martin.trulsson at teokem.lu.se>

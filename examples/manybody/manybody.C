@@ -21,9 +21,9 @@ typedef pot_minimage T_pairpot;         // Specific pair interaction function
 using namespace std;
 
 int main() {
-  inputfile in("manybody.conf");        // Read input file
   slump slump;                          // A random number generator
-  box cell(90.);                        // We want a cubic cell
+  inputfile in("manybody.conf");        // Read input file
+  box cell(in);                         // We want a cubic cell
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg(in);                    // Setup pair potential (default values)
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
@@ -35,6 +35,8 @@ int main() {
   vector<macromolecule> g;              // Protein groups
   ioaam aam(cell);                      // Protein input file format is AAM
   aam.load(cell, in, g);                // Load and insert proteins
+  g[0].move(cell, -g[0].cm);
+  g[0].accept(cell);
 
   group salt;                           // Group for mobile ions
   salt.add(cell, in);                   // Add salt particles
@@ -49,7 +51,7 @@ int main() {
   #endif
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain 
-    for (int micro=1; micro<=1e3; micro++) {
+    for (int micro=1; micro<=6e4; micro++) {
       short i,j,n;
       switch (rand() % 3) {                     // Pick a random MC move
         case 0:                                 // Displace salt
@@ -58,12 +60,14 @@ int main() {
         case 1:                                 // Rotate proteins
           for (n=0; n<g.size(); n++) {          //   Loop over all proteins
             i = rand() % g.size();              //   and pick at random.
+            if (i>0)
             sys+=mr.move(g[i]);                 //   Do the move.
           }
           break;
         case 2:                                 // Translate proteins
           for (n=0; n<g.size(); n++) {          //   Loop over all proteins
             i = rand() % g.size();              //   and pick at random.
+            if (i>0)
             sys+=mt.move(g[i]);                 //   Do the move.
             for (j=0; j<g.size(); j++)          //   Analyse g(r)...
               if (j!=i && macro>1)

@@ -50,15 +50,14 @@ string cell::povray() {
   return o.str();
 }
 //----------- BOX --------------------------
-box::box(inputfile &in) {
-  box( in.getflt("boxlen") );
-}
-box::box(double sidelength) {
-  len = sidelength;
+void box::setlen(double l) {
+  len = l;    // cubic box sidelength
   len_half=len/2;
   len_inv=1./len;
   volume = len*len*len;
 }
+box::box(double l) { setlen(l); }
+box::box(inputfile &in) { setlen( in.getflt("boxlen") ); }
 
 string box::info() {
   ostringstream o;

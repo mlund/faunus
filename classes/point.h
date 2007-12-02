@@ -22,6 +22,7 @@ class point {
   public:
     double x,y,z;                       ///< The coordinates
     point();                            ///< Constructor, zero data.
+    point(double,double,double);        ///< Constructor, set vector
     void clear();                       ///< Zero all data.
     double len(); 
     inline double sqdist(point &);      //!< Squared distance to another point

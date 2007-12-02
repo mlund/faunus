@@ -69,12 +69,14 @@ string markovmove::info() {
     o << "#   Acceptance          = " << accepted()*100 << endl
       << "#   Number of trials    = " << cnt << endl
       << "#   Pct. of Markov steps= " << runfraction*100 << endl
-      << "#   Displacement param. = " << dp << endl
-      << "#   Average displacement= " << sqrt(dpsqr.avg()) << endl
       << "#   Total energy change = " << utot << endl;
+    if (dp!=0) {
+      o << "#   Displacement param. = " << dp << endl
+        << "#   Average displacement= " << sqrt(dpsqr.avg()) << endl;
+    }
   }
   if (cite.empty()==false)
-    o << "#   More information:   = " << cite << endl;
+    o << "#   More information:     " << cite << endl;
   return o.str();
 }
 
@@ -119,8 +121,8 @@ class zmove : public markovmove {
 class dualmove : public markovmove {
   private:
     point v;
-    //float z;    //!< Distance between CM's of the groups
   public:
+    double r; //!< Distance between group mass centers
     dualmove( ensemble&, container&, interaction<T_pairpot>&);
     void direction(double, double, double);
     double move(macromolecule &, macromolecule &);
@@ -344,7 +346,7 @@ chargereg::chargereg(ensemble &e,
     float ph ) : markovmove(e,c,i), titrate(c,c.p,g,ph)
 {
   name="PROTON TITRATION";
-  cite="Lund & Jonsson, Biochem. 2005, 44, 5722-5727.";
+  cite="Lund+Jonsson, Biochem. 2005, 44, 5722-5727.";
   runfraction=0.2;
   con->trial = con->p;
 }
@@ -573,6 +575,7 @@ void dualmove::direction(double x, double y, double z) {
   v.z=z;
 }
 double dualmove::move(macromolecule &g1, macromolecule &g2) {
+  r=con->dist(g1.cm, g2.cm_trial);
   du=0;
   cnt++;
   point p;
@@ -597,14 +600,15 @@ double dualmove::move(macromolecule &g1, macromolecule &g2) {
       #pragma omp section
       { uold = pot->energy(con->p,g12) + pot->energy(con->p,g1,g2);   }
       #pragma omp section
-      { unew = pot->energy(con->trial,g12) + pot->energy(con->p,g1,g2);   }
+      { unew = pot->energy(con->trial,g12) + pot->energy(con->trial,g1,g2);   }
     }
   }
   du = unew-uold;
   if (ens->metropolis(du)==true) {
     rc=OK;
     utot+=du;
-    dpsqr+=con->sqdist( g1.cm, g1.cm_trial );
+    r=con->dist(g1.cm, g2.cm_trial);
+    dpsqr+=r*r;
     naccept++;
     g1.accept(*con);
     g2.accept(*con);

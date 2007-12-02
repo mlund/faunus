@@ -1,6 +1,11 @@
 #include "point.h"
 
 point::point() { clear(); }
+point::point(double xx, double yy, double zz) {
+  x=xx;
+  y=yy;
+  z=zz;
+}
 
 void point::clear() { x=y=z=0; }
 double point::dot(point &p) { return (x*p.x + y*p.y + z*p.z); }

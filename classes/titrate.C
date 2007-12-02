@@ -14,17 +14,25 @@ titrate::titrate(species &spec, vector<particle> &p, group &mobile, double peeag
   init(p, mobile);
 }
 
+/*!
+ * Search for titrateable sites and locate "protons" and "neutrons"
+ * in the particle vector.
+ *
+ * \note This function will de-protonate ALL titratable sites if no "neutrons" are found.
+ */
 void titrate::init(vector<particle> &p, group &mobile) {
-  for (unsigned int i=0; i<p.size(); i++)    //search for titrateable sites
-    if ( (*spc).d[p[i].id].pka !=0 ) {
-      sites.push_back(i);
-      p[i].charge = spc->d[p[i].id].p.charge; // deprotonate
-    }
-  for (int i=mobile.beg; i<mobile.end+1; i++) {
+  unsigned short i;
+  for (i=mobile.beg; i<mobile.end+1; i++) {
     if (p[i].charge==+1) protons.push_back(i);
     if (p[i].charge==0) neutrons.push_back(i);
   }
-  q.resize( sites.size() ); //adjust site average charge vector
+  for (i=0; i<p.size(); i++)    //search for titrateable sites
+    if ( (*spc).d[p[i].id].pka !=0 ) {
+      sites.push_back(i);
+      if ( neutrons.size()==0 )
+        p[i].charge = spc->d[p[i].id].p.charge; // deprotonate everything
+    }
+ q.resize( sites.size() ); //adjust site average charge vector
 }
 
 //returns number a random, titrateable

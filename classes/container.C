@@ -21,12 +21,15 @@ string container::povray() {
 }
 
 //----------- CELL ----------------------
-cell::cell(float radius) {
+cell::cell(float radius) { setradius(radius); }
+cell::cell(inputfile &in) { setradius(in.getflt("cellradius"));}
+void cell::setradius(float radius) {
   r = radius; 
   r2 = r*r; 
   diameter = 2*r; 
   volume = (4./3.)*acos(-1.)*r*r*r;
 }
+
 string cell::info() {
   ostringstream o;
   o << container::info() 

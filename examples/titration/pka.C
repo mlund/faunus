@@ -27,7 +27,6 @@ int main() {
   saltmove sm(nvt, con, pot);           // Class for salt movements
   aam.load(con, "confout.aam");         // Load old config (if present)
   chargereg tit(nvt,con,pot,salt,7.6);  // Prepare titration. pH 7.6
-  aam.load(con, "confout.aam");         // Load old config (if present)
   systemenergy sys(pot.energy(con.p));  // System energy analysis (drift etc)
   cout << con.info() << tit.info();     // Some information
 

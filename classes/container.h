@@ -35,9 +35,11 @@ class container : public particles,  public species {
 class cell : public container {
   private:
     float r2,diameter;
+    void setradius(float);
   public:
     float r;              //!< Radius
     cell(float);
+    cell(inputfile &);
     string info();
     inline void boundary(point &) { return; };
     void randompos(point &);

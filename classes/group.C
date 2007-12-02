@@ -190,7 +190,20 @@ bool group::overlap(container &c) {
   return false;
 }
 
-
+//--------------- SALT ------------------------
+salt::salt(particle::type cat, particle::type an)
+{
+  title="MOBILE SALT PARTICLES";
+  cation=cat;
+  anion=cat;
+}
+string salt::info(container &con) {
+  ostringstream o;
+  o << group::info();
+  o << "#   Cations (type,z,N,conc)= "
+    << con.d[cation].name << ", " << con.d[cation].p.charge << endl;
+  return o.str();
+}
 
 //--------------- MACROMOLECULE ---------------
 macromolecule::macromolecule() { title="MACROMOLECULE"; }
@@ -198,8 +211,8 @@ string macromolecule::info() {
   ostringstream o;
   o << group::info();
   if (Q.cnt>0)
-    o << "#   Average charge         = " << Q.avg() << endl
-      << "#   Average charge squared = " << Q2.avg() << endl
+    o << "#   Charge <Z>             = " << Q.avg() << endl
+      << "#   Charge Sqr <Z^2>       = " << Q2.avg() << endl
       << "#   Capacitance            = " << Q2.avg()-pow(Q.avg(),2) << endl;
   if (dip.cnt>0)
     o << "#   Dipole moment          = " << dip.avg() << " " << mu << endl;

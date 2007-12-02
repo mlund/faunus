@@ -40,10 +40,10 @@ void io::strip(vector<string> &v, string pat) {
 ioaam::ioaam(species &spc) : iopart(spc) {}
 string ioaam::p2s(particle &p, int i) {
   ostringstream o;
-  o.precision(30);
-  o << spcPtr->d[p.id].name<<" "<<i+1<<" "
+  o.precision(5);
+  o << spcPtr->d[p.id].name << " " << i+1 << " "
     << p.x<<" "<< p.y<<" "<<p.z<<" "
-    << p.charge<<" "<<p.radius<<endl;
+    << p.charge << " " << p.mw << " " << p.radius << endl;
   return o.str();
 }
 particle ioaam::s2p(string &s) {
@@ -82,9 +82,8 @@ bool ioaam::load(container &con, string file) {
 bool ioaam::save(string file, vector<particle> &p) {
   ostringstream o;
   o << p.size() << endl;
-  for (unsigned short i=0; i<p.size(); i++) {
-    o << p2s(p[i]);
-  }
+  for (unsigned short i=0; i<p.size(); i++)
+    o << p2s(p[i], i);
   return writefile(file, o.str());
 }
 
@@ -109,6 +108,7 @@ void ioaam::load(container &con, inputfile &in, vector<macromolecule> &g) {
       for (short i=0; i<nprot; i++) {
         macromolecule m;
         m.add(con, load(in.getstr(os_file.str())), true );
+        m.name = in.getstr(os_file.str());
         g.push_back(m);
       }
   } while (nprot>0);

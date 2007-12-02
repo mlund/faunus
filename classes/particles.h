@@ -23,8 +23,9 @@ public:
   vector<particle> trial;               //!< Trial particle vector. 
   
   int push_back(particle &);            //!< add particle to both "p" and "trial"
-  double charge();                      //!<  Sum all charges in particle vector
-  double charge(point &, double);       //!<  Sum all charges within a sphere region
+  double charge();                      //!< Sum all charges in particle vector
+  double charge(point &, double);       //!< Sum all charges within a sphere region
+  short count(particle::type);          //!< Count number of particles
   bool overlap(particle &);             //!< Check for overlap w. particle
   bool overlap(vector<particle> &);
   bool check_vector();                  //!< Check if p and trial are equal!

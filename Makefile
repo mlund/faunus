@@ -3,7 +3,7 @@ MODEL = gnu
 
 # Set to yes if you need Gromacs xtc file support
 # (requires a working Gromacs installation)
-GROMACS = no
+GROMACS = yes
 
 # Set to "yes" to enable parallel execution on multi-core
 # CPU's. OpenMP must be supported by the compiler.
@@ -86,6 +86,13 @@ widom:	examples/widom/widom.C $(OBJS)
 ewald:	examples/ewald/ewald.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/ewald/ewald.C -o examples/ewald/ewald
 
+twobody:	examples/twobody/twobody.C libfaunus
+	$(CXX) $(CXXFLAGS) \
+	examples/twobody/twobody.C \
+	-o examples/twobody/twobody \
+	-lfaunus ${LDFLAGS}
+
+
 manybody:	examples/manybody/manybody.C libfaunus
 	$(CXX) $(CXXFLAGS) \
 	examples/manybody/manybody.C \
@@ -95,13 +102,15 @@ manybody:	examples/manybody/manybody.C libfaunus
 pka:	examples/titration/pka.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/pka.C -o examples/titration/pka
 
-examples:	widom pka ewald manybody
+examples:	widom pka ewald twobody manybody
 
 clean:
 	rm -vf $(OBJS) \
 	examples/titration/pka \
 	examples/widom/widom \
 	examples/ewald/ewald \
+	examples/twobody/twobody \
+	examples/manybody/manybody \
 	lib/libfaunus.a
 
 docclean:

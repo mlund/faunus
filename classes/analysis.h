@@ -29,6 +29,7 @@ class systemenergy : public analysis {
       o << endl
         << "# SYSTEM ENERGY (kT):" << endl
         << "#   Averages <U> <U^2> = " << uavg.avg() << " " << u2avg.avg() << endl
+        << "#   sqrt(<U^2>-<U>^2)  = " << sqrt(u2avg.avg()-uavg.avg()*uavg.avg()) << endl
         << "#   Initial energy     = " << u0 << endl
         << "#   Initial + changes  = " << sum << endl
         << "#   Current energy     = " << cur << endl

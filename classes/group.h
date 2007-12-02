@@ -56,9 +56,14 @@ class group {
  * \brief Group for handling salt particles
  */
 class salt : public group {
+  private:
+    short nanion, ncation;
   public:
+    salt(particle::type=particle::NA,
+        particle::type=particle::CL);
     particle::type anion, cation; //!< Anion and cation types
     double muex;                  //!< Excess chemical potential
+    string info(container &);     //!< Show info
 };
 
 class macromolecule : public group {

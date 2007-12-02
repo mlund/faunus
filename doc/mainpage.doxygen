@@ -24,7 +24,7 @@ a mail to: mlund at mac com
 
 /*! \page License
 \section gpl License
-\verbinclude "../LICENSE"
+\verbinclude "LICENSE"
 */
 
 /*! \page Readme

@@ -55,3 +55,7 @@ bool particles::check_vector() {
     cout << "# Fatal error: Particle vectors corrupted!!\n";
   return rc;
 }
+
+short particles::count(particle::type id) {
+  return 0;
+}

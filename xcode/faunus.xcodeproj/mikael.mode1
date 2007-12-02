@@ -219,8 +219,6 @@
 			<key>Layout</key>
 			<array>
 				<dict>
-					<key>BecomeActive</key>
-					<true/>
 					<key>ContentConfiguration</key>
 					<dict>
 						<key>PBXBottomSmartGroupGIDs</key>
@@ -267,6 +265,8 @@
 							<key>PBXSmartGroupTreeModuleOutlineStateSelectionKey</key>
 							<array>
 								<array>
+									<integer>9</integer>
+									<integer>8</integer>
 									<integer>6</integer>
 								</array>
 							</array>
@@ -290,7 +290,7 @@
 							<real>186</real>
 						</array>
 						<key>RubberWindowFrame</key>
-						<string>311 218 907 646 0 0 1440 878 </string>
+						<string>195 223 907 646 0 0 1440 878 </string>
 					</dict>
 					<key>Module</key>
 					<string>PBXSmartGroupTreeModule</string>
@@ -301,6 +301,8 @@
 					<key>Dock</key>
 					<array>
 						<dict>
+							<key>BecomeActive</key>
+							<true/>
 							<key>ContentConfiguration</key>
 							<dict>
 								<key>PBXProjectModuleGUID</key>
@@ -318,7 +320,7 @@
 										<key>_historyCapacity</key>
 										<integer>0</integer>
 										<key>bookmark</key>
-										<string>7352F1740CFEE6A50042BEF7</string>
+										<string>7352F1770D0077540042BEF7</string>
 										<key>history</key>
 										<array>
 											<string>739CCC820CF351F5002086E6</string>
@@ -399,7 +401,7 @@
 								<key>Frame</key>
 								<string>{{0, 0}, {699, 362}}</string>
 								<key>RubberWindowFrame</key>
-								<string>311 218 907 646 0 0 1440 878 </string>
+								<string>195 223 907 646 0 0 1440 878 </string>
 							</dict>
 							<key>Module</key>
 							<string>PBXNavigatorGroup</string>
@@ -419,7 +421,7 @@
 								<key>Frame</key>
 								<string>{{0, 367}, {699, 238}}</string>
 								<key>RubberWindowFrame</key>
-								<string>311 218 907 646 0 0 1440 878 </string>
+								<string>195 223 907 646 0 0 1440 878 </string>
 							</dict>
 							<key>Module</key>
 							<string>XCDetailModule</string>
@@ -584,7 +586,7 @@
 		<string>/Users/mikael/Documents/Code/faunus/trunk/xcode/faunus.xcodeproj</string>
 	</array>
 	<key>WindowString</key>
-	<string>311 218 907 646 0 0 1440 878 </string>
+	<string>195 223 907 646 0 0 1440 878 </string>
 	<key>WindowTools</key>
 	<array>
 		<dict>

@@ -6,7 +6,13 @@
 #include "potentials.h"
 #include "slump.h"
 #include "io.h"
+#include "xytable.h"
 
+/*!
+ * Base class for analysis functions
+ * \author Mikael Lund
+ * \data Prague, 2007
+ */
 class analysis {
   protected:
     slump slp;
@@ -14,6 +20,24 @@ class analysis {
     float runfraction;          //!< Fraction of times analysis should be run
     virtual string info()=0;    //!< Information/results
     analysis() { runfraction=1; }
+};
+
+/*!
+ * Average properties as a function of a variable,
+ * typically a distance.
+ * \author Mikael Lund
+ * \date December 2007
+ */
+class distributions : public analysis {
+  private:
+    io::io io;
+    vector<string> s;
+    vector< xytable<float,average<float> > > d;
+  public:
+    distributions(unsigned short, float, float);
+    void add(unsigned short, float, float);
+    string info();
+    void write(string);
 };
 
 class systemenergy : public analysis {

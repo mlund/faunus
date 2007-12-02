@@ -1,3 +1,6 @@
+#ifndef _XYTABLE.H
+#define _XYTABLE.H
+
 #include <vector>
 #include <iostream>
 #include <string>
@@ -58,3 +61,5 @@ class xytable {
  * \example xytable-test.C
  * Example of the xytable class
  */
+
+#endif

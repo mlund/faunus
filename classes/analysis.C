@@ -12,3 +12,17 @@ void systemenergy::update(double energy) {
   u2avg+=cur*cur;
 }
 void systemenergy::operator+=(double du) { sum+=du; }
+
+
+distributions::distributions(unsigned short n, float min, float max) {
+  // Resize vectors!
+  // (cumbersome syntax, but there's no way around it)
+  d.resize( n, xytable<float, average<float> >(0.5,min,max));
+  s.resize( n );
+}
+
+void distributions::add( unsigned short i, float x, float y ) { d[i](x)+=y; }
+
+string distributions::info() {
+  
+}

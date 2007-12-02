@@ -30,7 +30,8 @@ int main() {
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   countdown<int> clock(10);             // Estimate simulation time
   ioxyz xyz(cell);                      // xyz output for VMD etc.
-  vector<histogram> h(3, histogram(0.5,0,180));
+  histogram gofr(0.5,0,180);            // Protein-protein g(r)
+  distributions dst(2,0,180);
   rdf saltrdf(particle::NA,particle::SO4, .5, cell.r);
 
   vector<macromolecule> g;              // Protein groups
@@ -75,7 +76,7 @@ int main() {
           break;
         case 2:                                 // Translate proteins
           sys+=dm.move(g[0], g[1]);             //   Do the move.
-          h[0].add(dm.r);                       //   Add to g(r) histogram
+          gofr.add(dm.r);                       //   Add to g(r) histogram
           break;
         case 3:                                 // Fluctuate charges
           sys+=tit.titrateall();                // Titrate sites on the protein
@@ -83,6 +84,7 @@ int main() {
             g[n].charge(cell.p);                // Re-calc. protein charges
             g[n].dipole(cell.p);                // ..and dipole moments
           }
+          //dst.add(0,dm.r,g[0].Q);
           break;
       }
       if (slump.random_one()>.8 && macro>1)
@@ -100,7 +102,7 @@ int main() {
 
     xyz.save("coord.xyz", cell.p);              // Write .xyz coordinate file
     aam.save("confout.aam", cell.p);            // Save config. for next run
-    h[0].write("rdfprot.dat");
+    gofr.write("rdfprot.dat");
     saltrdf.write("rdfsalt.dat");
     cout << "Macro step " << macro
          << " completed. ETA: " << clock.eta(macro);

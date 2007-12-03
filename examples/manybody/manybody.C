@@ -30,18 +30,19 @@ int main() {
   countdown<int> clock(10);             // Estimate simulation time
   ioxyz xyz(cell);                      // xyz output for VMD etc.
   rdf protrdf(0,0,.5,cell.len/2);       // Protein and salt radial distributions, g(r)
-  rdf saltrdf(particle::NA,particle::SO4, .5, cell.len/2);
+  rdf saltrdf(particle::UNK,particle::SO4, .5, cell.len/2);
 
-  vector<macromolecule> g;              // Protein groups
+  vector<macromolecule> g;              // PROTEIN groups
   ioaam aam(cell);                      //   Protein input file format is AAM
   aam.load(cell, in, g);                //   Load and insert proteins
+  macrorot mr(nvt, cell, pot);          //   Class for macromolecule rotation
+  translate mt(nvt, cell, pot);         //   Class for macromolecular translation
   g[0].move(cell, -g[0].cm);            //   Center first protein (mlund temp.)
   g[0].accept(cell);
-  group salt;                           // Group for mobile ions
+  group salt;                           // SALT group
   salt.add(cell, in);                   //   Add salt particles
   saltmove sm(nvt, cell, pot);          //   Class for salt movements
-  macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
-  translate mt(nvt, cell, pot);         // Class for macromolecular translation
+
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
   cout << cell.info() << pot.info();    // Print information to screen
 

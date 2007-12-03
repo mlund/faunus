@@ -126,7 +126,6 @@ rdfP3::rdfP3(short species1, short species2, float resolution, float xmaximum, f
 
 /*!
  * Update histogram between two known points
- *
  * \note Uses the container distance function
  */
 void rdf::update(container &c, point &a, point &b) {

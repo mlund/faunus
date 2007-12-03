@@ -22,6 +22,7 @@ typedef pot_coulomb T_pairpot;         // Specific pair interaction function
 using namespace std;
 
 int main() {
+  enum dstkeys { Q1=0,Q2,MU1,MU2, LAST };
   slump slump;                          // A random number generator
   inputfile in("twobody.conf");         // Read input file
   cell cell(in);                        // We want a spherical, hard cell
@@ -31,7 +32,7 @@ int main() {
   countdown<int> clock(10);             // Estimate simulation time
   ioxyz xyz(cell);                      // xyz output for VMD etc.
   histogram gofr(0.5,0,180);            // Protein-protein g(r)
-  distributions dst(2,0,180);
+  distributions dst(LAST,0,180);
   rdf saltrdf(particle::NA,particle::SO4, .5, cell.r);
 
   vector<macromolecule> g;              // Protein groups
@@ -80,11 +81,10 @@ int main() {
           break;
         case 3:                                 // Fluctuate charges
           sys+=tit.titrateall();                // Titrate sites on the protein
-          for (n=0; n<2; n++) {
-            g[n].charge(cell.p);                // Re-calc. protein charges
-            g[n].dipole(cell.p);                // ..and dipole moments
-          }
-          //dst.add(0,dm.r,g[0].Q);
+          dst.add(Q1,dm.r, g[0].charge(cell.p));// Re-calc. protein charges
+          dst.add(Q2,dm.r, g[1].charge(cell.p));
+          dst.add(MU1,dm.r,g[0].dipole(cell.p));// ..and dipole moments
+          dst.add(MU2,dm.r,g[1].dipole(cell.p));
           break;
       }
       if (slump.random_one()>.8 && macro>1)

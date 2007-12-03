@@ -6,6 +6,8 @@
 #include "ensemble.h"
 #include "titrate.h"
 #include "slump.h"
+#include "io.h"
+#include "histogram.h"
 //typedef pot_coulomb T_pairpot;
 
 /*! \brief Base class for MC moves
@@ -122,8 +124,10 @@ class dualmove : public markovmove {
   private:
     point v;
   public:
-    double r; //!< Distance between group mass centers
+    histogram::histogram gofr;  //!< g(r) of the two group mass centers
+    double r;                   //!< Current distance between group mass centers
     dualmove( ensemble&, container&, interaction<T_pairpot>&);
+    void load(inputfile &, vector<macromolecule> &g, float);
     void direction(double, double, double);
     double move(macromolecule &, macromolecule &);
 };
@@ -556,8 +560,9 @@ bool zmove::move(macromolecule &g) {
 
 //------- DUAL MOVE --------------
 dualmove::dualmove( ensemble &e,
-    container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i) {
-  name = "SYMMETRIC GROUP MOVE";
+    container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i), gofr(0.5,0,100)
+{
+  name = "SYMMETRIC 1D GROUP TRANSLATION";
   cite = "Lund+Jonsson, Biophys J. 2003, 85, 2940";
   runfraction=1.0;
   deltadp=1.;
@@ -574,8 +579,29 @@ void dualmove::direction(double x, double y, double z) {
   v.y=y;
   v.z=z;
 }
+
+/*!
+ * Loads two macromolecules from disk and place them symmetrically
+ * around the cell origin, separated by a specified distance.
+ *
+ * \param in Inputfile object that contains the protein filenames
+ * \param g Macromolecular vector (will be erased!)
+ * \param dist Initial distance between the protein mass-centers
+ * \note The macromolecule vector is erased before any proteins are loaded!
+ */
+void dualmove::load(inputfile &in, vector<macromolecule> &g, float dist) {
+  g.clear();
+  point a = v*(dist/2.);
+  ioaam aam(*con);
+  aam.load(*con, in, g); 
+  g[0].move(*con, -( g[0].cm + a ));    // ...around the cell origo
+  g[1].move(*con, -( g[1].cm - a ));    // ...along the z-axis
+  g[0].accept(*con);
+  g[1].accept(*con);
+}
+
 double dualmove::move(macromolecule &g1, macromolecule &g2) {
-  r=con->dist(g1.cm, g2.cm_trial);
+  r=con->dist(g1.cm, g2.cm);
   du=0;
   cnt++;
   point p;
@@ -591,6 +617,7 @@ double dualmove::move(macromolecule &g1, macromolecule &g2) {
     dpsqr+=0;
     g1.undo(*con);
     g2.undo(*con);
+    gofr.add(r);
     return du;
   }
   #pragma omp parallel
@@ -607,17 +634,20 @@ double dualmove::move(macromolecule &g1, macromolecule &g2) {
   if (ens->metropolis(du)==true) {
     rc=OK;
     utot+=du;
-    r=con->dist(g1.cm, g2.cm_trial);
-    dpsqr+=r*r;
+    r=con->dist(g1.cm, g2.cm);
+    gofr.add(r);
+    dpsqr+=4.*con->sqdist(g1.cm,g1.cm_trial);
     naccept++;
     g1.accept(*con);
     g2.accept(*con);
     return du;
-  } else rc=ENERGY;
+  } else
+    rc=ENERGY;
   du=0;
   dpsqr+=0;
   g1.undo(*con);
   g2.undo(*con);
+  gofr.add(r);
   return du;
 }
 

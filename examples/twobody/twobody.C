@@ -31,25 +31,18 @@ int main() {
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   countdown<int> clock(10);             // Estimate simulation time
   ioxyz xyz(cell);                      // xyz output for VMD etc.
-  histogram gofr(0.5,0,180);            // Protein-protein g(r)
   distributions dst(LAST,0,180);
   rdf saltrdf(particle::NA,particle::SO4, .5, cell.r);
 
-  vector<macromolecule> g;              // Protein groups
-  ioaam aam(cell);                      // Protein input file format is AAM
-  aam.load(cell, in, g);                // Load and insert proteins
-  point a(0,0,20);                      // Place them symmetrically
-  g[0].move(cell, -( g[0].cm + a ));    // ...around the cell origo
-  g[1].move(cell, -( g[1].cm - a ));    // ...along the z-axis
-  g[0].accept(cell);
-  g[1].accept(cell);
-
+  vector<macromolecule> g;              // Group for proteins
+  dualmove dm(nvt, cell, pot);          //   Class for 1D macromolecular translation
+  dm.load( in, g, 40.);                 //   Load proteins and separate them 
   salt salt;                            // Group for mobile ions
-  salt.add(cell, in);                   // Add salt particles
+  salt.add(cell, in);                   //   Add salt particles
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
-  dualmove dm(nvt, cell, pot);          // Class for macromolecular translation
 
+  ioaam aam(cell);                      // Protein input file format is AAM
   if (aam.load(cell,"confout.aam")) {
     g[0].masscenter(cell.p);            // Load old config (if present)
     g[1].masscenter(cell.p);            // ...and recalc mass centers
@@ -63,7 +56,7 @@ int main() {
   #endif
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain 
-    for (int micro=1; micro<=2e3; micro++) {
+    for (int micro=1; micro<=2e5; micro++) {
       short i,n;
       switch (rand() % 4) {                     // Pick a random MC move
         case 0:                                 // Displace salt
@@ -77,7 +70,6 @@ int main() {
           break;
         case 2:                                 // Translate proteins
           sys+=dm.move(g[0], g[1]);             //   Do the move.
-          gofr.add(dm.r);                       //   Add to g(r) histogram
           break;
         case 3:                                 // Fluctuate charges
           sys+=tit.titrateall();                // Titrate sites on the protein
@@ -102,7 +94,7 @@ int main() {
 
     xyz.save("coord.xyz", cell.p);              // Write .xyz coordinate file
     aam.save("confout.aam", cell.p);            // Save config. for next run
-    gofr.write("rdfprot.dat");
+    dm.gofr.write("rdfprot.dat");
     saltrdf.write("rdfsalt.dat");
     cout << "Macro step " << macro
          << " completed. ETA: " << clock.eta(macro);

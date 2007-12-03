@@ -116,6 +116,12 @@ class iopov : public iopart {
     bool save(string, vector<particle>&);
 };
 
+class iogro : public iopart {
+// printf("%5d\n",p.size()); 
+// printf("%5d%5s%5s%5d%8.3f%8.3f%8.3f\n",                                                         
+//        1,"STR","MON",i+1,p[i].x/10,p[i].y/10,p[i].z/10);
+};
+
 #ifdef GROMACS
 //-----------------------------------------------
 /*! \brief GROMACS xtc compressed trajectory fileformat

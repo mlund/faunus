@@ -109,7 +109,7 @@ void group::add(container &par, vector<particle> v, bool collision) {
   
   // test for overlap w. other particles
   if (collision==true) {
-    move(par, cm);                // translate to origo (0,0,0)
+    move(par, -cm);               // translate to origo (0,0,0)
     accept(par); 
     point a;
     while (overlap(par)==true) {  // No overlap allowed

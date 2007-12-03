@@ -24,5 +24,14 @@ distributions::distributions(unsigned short n, float min, float max) {
 void distributions::add( unsigned short i, float x, float y ) { d[i](x)+=y; }
 
 string distributions::info() {
-  
+  /*
+  cout << "# DISTRIBUTION FUNCTIONS:\n"
+       << "# 1 = distance" << endl;
+  for (int i=min; i<max; i++) {
+    cout << i*width << " ";
+    for (int j=0; j<d.size(); j++) {
+      cout << d(j) << " ";
+    cout << endl;
+  }
+  */
 }

@@ -33,14 +33,13 @@ int main() {
   rdf saltrdf(particle::NA,particle::SO4, .5, cell.len/2);
 
   vector<macromolecule> g;              // Protein groups
-  ioaam aam(cell);                      // Protein input file format is AAM
-  aam.load(cell, in, g);                // Load and insert proteins
-  g[0].move(cell, -g[0].cm);
+  ioaam aam(cell);                      //   Protein input file format is AAM
+  aam.load(cell, in, g);                //   Load and insert proteins
+  g[0].move(cell, -g[0].cm);            //   Center first protein (mlund temp.)
   g[0].accept(cell);
-
   group salt;                           // Group for mobile ions
-  salt.add(cell, in);                   // Add salt particles
-  saltmove sm(nvt, cell, pot);          // Class for salt movements
+  salt.add(cell, in);                   //   Add salt particles
+  saltmove sm(nvt, cell, pot);          //   Class for salt movements
   macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
   translate mt(nvt, cell, pot);         // Class for macromolecular translation
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
@@ -51,7 +50,7 @@ int main() {
   #endif
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain 
-    for (int micro=1; micro<=3e5; micro++) {
+    for (int micro=1; micro<=3e2; micro++) {
       short i,j,n;
       switch (rand() % 3) {                     // Pick a random MC move
         case 0:                                 // Displace salt

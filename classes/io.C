@@ -109,6 +109,7 @@ void ioaam::load(container &con, inputfile &in, vector<macromolecule> &g) {
         macromolecule m;
         m.add(con, load(in.getstr(os_file.str())), true );
         m.name = in.getstr(os_file.str());
+        m.masscenter(con.p);
         g.push_back(m);
       }
   } while (nprot>0);
@@ -270,13 +271,13 @@ void ioxtc::setbox(float len) {
 };
 
 bool ioxtc::save(string file, vector<particle> &p) {
-  if (p.size()<3300) {
+  if (p.size()<1300) {
     for (unsigned short i=0; i<p.size(); i++) {
       x[i][0]=p[i].x/10;      // AA->nm
       x[i][1]=p[i].y/10;
       x[i][2]=p[i].z/10;
     }
-    write_xtc(xd,p.size(),step++,time++,box,x,3300.);
+    write_xtc(xd,p.size(),step++,time++,box,x,1300.);
   }
 }
 void ioxtc::close() { close_xtc(xd); }

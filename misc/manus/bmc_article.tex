@@ -349,8 +349,8 @@ As of writing, the code library contains general classes for studying the follow
 \item Explicit treatment of ions, including ion-ion correlation effects.
 \item Macromolecules -- Proteins, flexible chains, charged surfaces.
 \item Proton titration of molecules.
-\item Raytracing output (povray~\cite{povray})
 \item Particle distribution functions and other statistical mechanical averages.
+\item Popular file format are supported: PQR, Gromacs (GRO/XTC), Povray~\cite{povray}, XYZ.
 \end{itemize}
 An example of protein ionization will be presented later in the text.
 We stress that the project is under ongoing development and encourage interested users and developers to contribute.
@@ -358,11 +358,8 @@ We stress that the project is under ongoing development and encourage interested
 \subsubsection*{``Trajectory'' Output}
 Molecular Dynamics simulation packages often save the time propagated particle trajectory to disk which is then subsequently analyzed.
 In order to adopt this strategy we include an export routine that can dump the simulated particle configurations to a compressed Gromacs XTC file~\cite{gromacs}.
-This (large) file can then be analyzed using the extensive set of tools provided in the Gromacs package, or visualized using VMD~\cite{vmd}, for example.
+This (large) file can be analyzed using the extensive set of tools provided in the Gromacs package, or visualized using VMD~\cite{vmd}, for example.
 As an example of the latter, we have simulated lysozyme interacting the a fab-H fragment and, using VMD, plotted the spatial mass center distribution as shown in Figure~\ref{fig:}
-
-
- 
 
 
 %    \subsubsection*{This is a sub-sub-heading}
@@ -391,9 +388,6 @@ Particles in the systems can be clustered into groups and derived classes and he
 %\subsection*{Yet another results sub-heading}
 %    Text for this sub-section.  More results \ldots
 
-
-    
-
 %%%%%%%%%%%%%%%%%%%%%%
 \section*{Conclusions}
 
@@ -417,16 +411,16 @@ Developers who wish to submit code to the project are welcome to contact the aut
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\section*{Authors contributions}
-%    Text for this section \ldots
-
-    
+\section*{Authors contributions}
+M. Lund did the Faunus software design and wrote the paper.
+B. Persson and M. Trulsson contributed to the implementation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section*{Acknowledgements}
   \ifthenelse{\boolean{publ}}{\small}{}
-  For financial support the authors would like to thank the Research School of Pharmaceutical Sciences, Sweden, the Linnaeus Center of Excellence on Organizing Molecular Matter, Sweden,
-and the European Molecular Biology Organization. We also thank Sourceforge, Inc. for hosting the project.
+  The authors would like to thank the Research School of Pharmaceutical Sciences, Sweden, the Linnaeus Center of Excellence on Organizing Molecular Matter, Sweden,
+and the European Molecular Biology Organization.
+We also thank Sourceforge, Inc. for hosting the project.
 
  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -482,7 +476,7 @@ and the European Molecular Biology Organization. We also thank Sourceforge, Inc.
       ionization states in an aqueous salt solutions using explicit ions as well as
       a slightly coarse grained protein model.
       \begin{figure}[ht]\center
-      \includegraphics[width=6cm]{pics/source}
+      \includegraphics[width=16cm]{pics/source}
       \end{figure}
       
   \subsection*{Figure 3 - Povray output}

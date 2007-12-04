@@ -45,6 +45,8 @@ class iopart : private io {
   friend class iopov;
   friend class ioxyz;
   friend class ioxtz;
+  friend class iogro;
+  friend class iopqr;
   private:
   species *spcPtr;
   vector<string> v; 
@@ -116,10 +118,36 @@ class iopov : public iopart {
     bool save(string, vector<particle>&);
 };
 
+/*!
+ * \brief PQR format
+ * \date December 2007
+ * \author Mikael Lund
+ */
+class iopqr : public iopart {
+  private:
+    string p2s(particle &, int=0) {};
+    void header() {};
+    vector<particle> load(string) {};
+  public:
+    iopqr(species &);
+    bool save(string, vector<particle> &);
+};
+
+
+/*!
+ * \brief Gromacs GRO format
+ * \date December 2007
+ * \author Mikael Lund
+ */
 class iogro : public iopart {
-// printf("%5d\n",p.size()); 
-// printf("%5d%5s%5s%5d%8.3f%8.3f%8.3f\n",                                                         
-//        1,"STR","MON",i+1,p[i].x/10,p[i].y/10,p[i].z/10);
+  private:
+    string p2s(particle &, int=0) {};
+    void header() {};
+    vector<particle> load(string) {};
+    float box;
+  public:
+    iogro(species &, inputfile &);
+    bool save(string, vector<particle> &);
 };
 
 #ifdef GROMACS

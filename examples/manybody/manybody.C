@@ -28,7 +28,7 @@ int main() {
   pot_setup cfg(in);                    // Setup pair potential (default values)
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   countdown<int> clock(10);             // Estimate simulation time
-  ioxyz xyz(cell);                      // xyz output for VMD etc.
+  iogro gro(cell, in);                  // Gromacs file output for VMD etc.
   rdf protrdf(0,0,.5,cell.len/2);       // Protein and salt radial distributions, g(r)
   rdf saltrdf(particle::UNK,particle::SO4, .5, cell.len/2);
 
@@ -47,11 +47,11 @@ int main() {
   cout << cell.info() << pot.info();    // Print information to screen
 
   #ifdef GROMACS
-  ioxtc xtc(cell, cell.len/2.);         // Gromacs xtc output (if installed)
+  ioxtc xtc(cell, cell.len);            // Gromacs xtc output (if installed)
   #endif
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain 
-    for (int micro=1; micro<=3e2; micro++) {
+    for (int micro=1; micro<=5e2; micro++) {
       short i,j,n;
       switch (rand() % 3) {                     // Pick a random MC move
         case 0:                                 // Displace salt
@@ -94,12 +94,10 @@ int main() {
     sys.update(pot.energy(cell.p));             // Update system energy averages
     cell.check_vector();                        // Check sanity of particle vector
 
-    xyz.save("coord.xyz", cell.p);              // Write .xyz coordinate file
+    gro.save("confout.gro", cell.p);            // Write PQR output file
     protrdf.write("rdfprot.dat");               // Write g(r)'s
     saltrdf.write("rdfsalt.dat");               //   -//-
-
   } // End of outer loop
-
   cout << sys.info() << salt.info()             // Final information...
        << sm.info() << mr.info() << mt.info();
 

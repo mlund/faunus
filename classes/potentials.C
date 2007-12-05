@@ -37,12 +37,20 @@ string pot_coulomb::info() {
 string pot_debyehuckel::info() {
   ostringstream o;
   o << "#   Type           = LJ/Debye-Huckel" << endl
-    << "#   Bjerrum length = " << f << endl
-    << "#   Debye length   = " << k << endl
+    << "#   Bjerrum length = " << f     << endl
+    << "#   Debye length   = " << 1./k  << endl
     << "#   LJ epsilon (kT)= " << eps*f << endl;
   return o.str();
 }
 
+string pot_debyehuckelP3::info() {
+  ostringstream o;
+  o << "#   Type           = LJ/Debye-Huckel" << endl
+    << "#   Bjerrum length = " << f     << endl
+    << "#   Debye length   = " << 1./k  << endl
+    << "#   LJ epsilon (kT)= " << eps*f << endl;
+  return o.str();
+}
 
 /*!\param spc Species class.
  * \param pmfir Directory in which to search for PMF's

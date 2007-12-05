@@ -165,25 +165,24 @@ double titrate::applycharges(vector<particle> &p) {
 
 /*!
  * \param spec Species class
- * \param peeage pH
+ */ /*/\param peeage pH
 GCtitrate::GCtitrate(species &spec, double peeage, double cp, double vol) {
-  tit.ph=peeage;
-  tit.spc=&spec;
+  tit(spec, peeage);
   CatPot=cp;
   volume=vol;
-};
+}
 GCtitrate::GCtitrate(species &spec, vector<particle> &p, group &mobile, double peeage, double cp, double vol) {
   tit.ph=peeage;
   tit.spc=&spec;
   tit.init(p, mobile);
   volume=vol;
   CatPot=cp;
-};
+}
 double GCtitrate::energy(){
   return 1;
 }
 
-void  GCtitration::updateVolume (double vol) {
+void  GCtitrate::updateVolume (double vol) {
 
-};
+}
 */

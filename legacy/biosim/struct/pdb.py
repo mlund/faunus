@@ -37,7 +37,7 @@ def cm(residue):
   p[3]=wtot
   return p
 
-conf = Structure('~/sletmig.pdb')
+conf = Structure('~/TPA-modified.pdb')
 print conf
 for residue in conf.residues:
   if residue.name!="HOH":

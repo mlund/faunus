@@ -23,21 +23,29 @@ class analysis {
 };
 
 /*!
- * Average properties as a function of a variable,
- * typically a distance.
+ * This class can encompass several distributions
+ * of average values (y) as a function of some variable (x)
+ * Each distribution is automatically identified by specifying
+ * its name while adding to it.
+ * This will typically be used to average a certain property as
+ * a function of, say, an intermolecular separation.
+ *
  * \author Mikael Lund
  * \date December 2007
  */
 class distributions : public analysis {
   private:
+    float xmax, xmin; // maximum/minimum encountered x value
+    float xmax_set, xmin_set, dx;
     io::io io;
     vector<string> s;
     vector< xytable<float,average<float> > > d;
+    unsigned short find(string);
   public:
-    distributions(unsigned short, float, float);
-    void add(unsigned short, float, float);
-    string info();
-    void write(string);
+    distributions(float=0, float=0); //!< Constructor
+    bool add(string, float, float);  //!< Add value to distribution
+    bool write(string);  //!< Write distributions to a file
+    string info();       //!< Write distributions to a string
 };
 
 class systemenergy : public analysis {

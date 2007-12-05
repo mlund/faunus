@@ -217,10 +217,10 @@ Bj\"orn Persson$^{2}$
 %% Background %%
 %%
 \section*{Background}
-Molecular simulation has become a standard tool for investigating molecular systems such as proteins, polymer solutions, lamellar phases etc.
-It is safe to say that for biological applications Molecular Dynamics (MD) is by far the most abundant method as it provides both static and dynamic properties of the system.
-Metropolis Monte Carlo (MC) simulation~\cite{metropolis:53}, on the other hand, is less utilized and only few software packages exists\cite{Kamberaj:2001fk,carlsson:01,Jie-Hu:2006lr}.
-One advantage of MC is that it allows ``unphysical'' particle moves, enabling very efficient sampling of the configurational space\cite{frenkel}. The tradeoff for this freedom to move particle is the loss of all dynamic information and, in addition, MC programs tend to become less general.
+Molecular simulation has become a standard tool for investigating molecular systems such as proteins, polymer solutions and other colloidal particles.
+It is safe to say that for biological applications Molecular Dynamics (MD) is by far the most polular method as it provides both static and dynamic properties of the system.
+Metropolis Monte Carlo (MC) simulation~\cite{metropolis:53}, on the other hand, is less utilized and relatively few software packages exists\cite{Kamberaj:2001fk,carlsson:01,Jie-Hu:2006lr}.
+One advantage of MC is that it allows ``unphysical'' particle moves, enabling a more creative sampling of the configurational space\cite{frenkel}. The tradeoff for this freedom to move particle is the loss of all dynamic information and, in addition, MC programs tend to become less general.
 However, if one is interested in equilibrium properties only -- binding constants, free energy changes, pKa values etc. -- MC simulation may be a good option.
 
 Using a standard, pre-compiled software package should require no prior knowledge of programming and as such can be a fast and practical approach for solving a specific scientific problem. On the other hand, the underlying physical theory is somewhat hidden and there is always a risk that the application is regarded as a ``black box'' producing numbers. It becomes even worse if new features are to be implemented.
@@ -230,10 +230,7 @@ Instead the programmer may resort to existing libraries, thus approaching the ``
 (ii) have a high level of control, and
 (iii) experience high performance due a minimalistic design.
 
-In this text we present a C++~\cite{stroustrup:97} framework or class library that can be used to quickly build customized MC simulation programs.
-
- %Text for this section.\cite{koon,oreg,khar,zvai,xjon,schn,pond,smith,marg,hunn,advi,koha,mouse}
-
+In this text we present a modular C++~\cite{stroustrup:97} framework or class library that can be used to quickly build customized MC simulation programs.
 
 %%%%%%%%%%%%%%%%%%
 %
@@ -259,8 +256,8 @@ For instance, \verb"p[i].radius" will return the size of the $i$'th particle.
 
 \subsection*{Polymorphic Classes -- Virtual Functions}
 One of the unique features of C++ is \emph{polymorph classes} that allows for very generic and intuitively appealing code.
-To demonstrate this, we now outline the design of our framework for handling the simulation container -- see Figure~\ref{fig:container}.
-Basically, the end programmer will want to select among different geometries -- a box, sphere, cylinder etc.
+To demonstrate this, we outline the design of our framework for handling the simulation container -- see Figure~\ref{fig:container}.
+Essentially, the end programmer will want to select among different geometries -- a box, sphere, cylinder etc.
 For each geometry we need functions that can calculate the volume, generate a random point and decide whether a given point falls within the boundaries.
 We now construct a polymorph class, \verb"container", that contains the unimplemented \emph{virtual functions}.
 Derived classes -- \verb"box", \verb"cylinder" etc. -- then implement specialized versions of the functions and the \verb"container" class hence acts as an interface to the various geometries.
@@ -304,46 +301,38 @@ elec.sum(p);
 \end{verbatim}
 
 \subsubsection*{Passing arguments as references}
-In C++ argument passing is done by creating a new copy of the object. Working with large, aggregate structures such as particle vectors, this will negatively impact performance. To circumvent this we pass all complex objects as references, for example: \verb"void function(someclass &)".
+In C++ standard argument passing is done by creating a new copy of the object.
+Working with large, aggregate structures such as particle vectors, this will negatively impact performance. To circumvent this we pass all complex objects as references, for example: \verb"void function(someclass &)".
 
 \subsubsection*{Minimize memory comsumption}
-Computer simulations of classical mechanical systems are usually not memory intensive and by minimizing the memory requirements there is a good chance that the executing code will stay in the local cache. In this regard C++ templates are a concern since code will be generated for each template type. We therefore stride to avoid extensive use of multiple template types -- for example it would seem silly to instantiate both a \verb"float" and a \verb"double" version of a template class.
+Computer simulations of classical mechanical systems are usually not memory intensive and by minimizing the memory requirements there is a good chance that the executing code will stay in the local cache.
+Code re-cycling via class enheritage is extensively utililized to reduce the memory imprint as well as easy the development.
+In this regard C++ templates are a concern since code will be generated for each template type.
+We therefore stride to avoid extensive use of multiple template types -- for example it would seem silly to instantiate both a \verb"float" and a \verb"double" version of a laborate template class.
 
-\subsubsection*{Parallization}
+\subsubsection*{Parallelization}
 In systems that equilibrate fast, Monte Carlo simulations can be linearly parallelized using the ``embarrasingly simple technique'' -- that is start several independent runs with different random seeds, combining the results afterwards.
-Tightly coupled parallization is incorporated in parts of the code by threading the energy evaluation into two processes: before and after a trial move.
-For systems with particles in the order of hundreds, this scales well on dual-core computers, whereas the overhead becomes unacceptable for small systems. To enable threading, the approprite compiler flag for OpenMP~\cite{openmp:98} must be set. The GNU, Intel and IBM C++ compilers all support OpenMP.
+Tightly coupled parallelization is incorporated in parts of the code by threading the energy evaluation into two processes: before and after a trial move.
+For systems with particles in the order of hundreds, this scales well on dual-core computers, whereas the overhead becomes unacceptable for small systems.
+To enable threading, the approprite compiler flag for OpenMP~\cite{openmp:98} must be set; as of writing the GNU, Intel and IBM C++ compilers all support OpenMP.
 
 \subsection*{Code Documentation}
-We provide a class library and as such need to describe both what the classes do as well as how to use them. This can be conveniently achieved using a code documentation system -- here we have chosen \verb"Doxygen"~\cite{doxygen} since (i) the documentation appears as normal code comments and (ii) the output is highly configurable, allowing LaTeX equations to be inserted etc.
-For example, commenting a class like this,
-\begin{verbatim}
-/*!
- * \brief n'th degree Legendre polynomium
- * \author M. Lund
- * \date Canberra 2005-2006
- * Example\n
- * \code
- * legendre l(10);
- * l.eval(1.3);
- * cout << l.p[3]
- * \endcode
- */
-class legendre { ... }
-\end{verbatim}
-will cause \verb"Doxygen" to recognize the individual keywords and include them in the manual (HTML, PDF etc).
-Another very useful feature of Doxygen is the ability to generate a graphical view of the class hierachy. This enables the end programmer to visually see how a class is constructed as shown in Figure 1.
-
-
+We provide a class library and as such need to describe both what the classes do as well as how to use them.
+This can be conveniently achieved using a code documentation system -- here we have chosen \verb"Doxygen"~\cite{doxygen} since
+(i) the documentation appears as normal code comments and
+(ii) the output is highly configurable, allowing LaTeX equations to be inserted etc.
+In Figure~\ref{fig:doxygen} we show how commented code is used to construct a HTML based manual of the available
+classes and functions in the code library.
+Another very useful feature of Doxygen is the ability to generate a graphical view of the class hierachy.
+This enables the end programmer to visually see how a class is constructed as shown in Figure~\ref{fig:container}.
 
  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Results and Discussion %%
 %%
 \section*{Results and Discussion}
-
 \subsection*{General Features}
-The class library provides simulation routines for ions, macromolecules and chains in solutions with a strong focus on electrostatic interactions using the primitive model of electrolytes~\cite{hill:86} where the solvent is treated as a structureless dielectric continuum. It is, however, completely possible to expand the library to other systems, include explicit solvent etc. The routines have been developed over several years in connection with a number of scientific investigations, including proteins in solution~\cite{lund:05}.
+The class library provides simulation routines for ions, macromolecules and chains in solutions with a strong focus on electrostatic interactions using the primitive model of electrolytes~\cite{hill:86} where the solvent is treated as a structureless dielectric continuum. It is, however, completely possible to expand the library to other systems, include explicit solvent etc. The routines have been developed over several years in connection with a number of scientific investigations~\cite{lund-thesis}, including proteins in solution~\cite{lund:05}.
 As of writing, the code library contains general classes for studying the following,
 \begin{itemize}
 \item Explicit treatment of ions, including ion-ion correlation effects.
@@ -359,34 +348,31 @@ We stress that the project is under ongoing development and encourage interested
 Molecular Dynamics simulation packages often save the time propagated particle trajectory to disk which is then subsequently analyzed.
 In order to adopt this strategy we include an export routine that can dump the simulated particle configurations to a compressed Gromacs XTC file~\cite{gromacs}.
 This (large) file can be analyzed using the extensive set of tools provided in the Gromacs package, or visualized using VMD~\cite{vmd}, for example.
-As an example of the latter, we have simulated lysozyme interacting the a fab-H fragment and, using VMD, plotted the spatial mass center distribution as shown in Figure~\ref{fig:}
-
+As an example of the latter, we have simulated lysozyme interacting the a fab-H fragment and, using VMD, plotted the spatial mass center distribution as shown in Figure~\ref{fig:snapshot}
 
 %    \subsubsection*{This is a sub-sub-heading}
-   %   Sub-sub-sub-headings are made with the \textsl{\\subsubsection} command. \pb
- %     pb at end of lines ensures correct paragraph spacing.\pb
+%   Sub-sub-sub-headings are made with the \textsl{\\subsubsection} command. \pb
+%     pb at end of lines ensures correct paragraph spacing.\pb
 %	  Text for this sub-sub-section \ldots
 
 
-
-\subsection*{An example}
-Figure 2 shows a small code example for simulating the ionization state of a protein in a salt solution at various pH. Experimentally this corresponds to a standard potentiometric titration experiment where the net-charge is measured as a function of pH~\cite{tanford:72}. We will not go through all lines in the code as the comments should be more or less self-explanatory. The overall program structure is
+\subsection*{A Minimal Example: 50 Lines of Code}
+Figure 2 shows a complete MC program for simulating the protonation state of a protein in a salt solution at a given pH value.
+Experimentally this corresponds to a standard potentiometric titration experiment where the net-charge is measured as a function of pH~\cite{tanford:72}.
+We will not go through all lines in the code as the comments should be more or less self-explanatory.
+The overall program structure is
 \begin{enumerate}
-\item Set up the simulation cell (line 13)
-\item Add protein(s) and ions (line 21-28)
-\item Main loop with salt- and proton moves (line 35)
-\item Print results incl. Povray output (line 50-52)
+\item Set up the simulation cell (line 12)
+\item Add protein(s) and ions (line 17--25)
+\item Main loop with salt- and proton moves (line 32--49)
+\item Print results incl. Povray output (line 50)
 \end{enumerate}
-For simplicity we have left out the equilibration step but in this particular case it does not matter too much since the system equilibrates fast and the initial configurations will influence the overall statistics only to a minor extent.
-Results and comparisons with experimental data for such calculations can be found in a recent article published by Lund \emph{et al.}~\cite{lund:07}.
-Coordinates from any given configuration can be exported to various formats, including povray as shown in Figure 3.
-Particles in the systems can be clustered into groups and derived classes and hence, there is a general group class (line 26), a class for macromolecules (line 19), chains etc. Note that we have also incorporated a general polymorphic class for markov moves and data analysis so that all derived classes have a common interface. For example, both the salt move (line 29) and titration class (line 30) will store information about energy changes, if the move was a success etc. Data and analysis about each type of move is automatically shown by calling the respective information functions (line 50).
+Results and comparisons with experimental data for such calculations can be found in a recent article~\cite{lund:07}.
+Particles in the systems are clustered into groups and derived classes and hence, there is a general \verb"group" class (line 23), a class for macromolecules (line 17), chains etc.
+Note that we have also incorporated a general polymorphic class for markov moves and data analysis so that all derived classes have a common interface.
+For example, both the salt move (line 36) and titration class (line 39) will store information about energy changes, if the move was a success etc.
+Data and analysis about each type of move is automatically shown by calling the respective information functions (line 51).
 
-%\subsection*{Another results sub-heading}
-%    Text for this sub-section \ldots
-
-%\subsection*{Yet another results sub-heading}
-%    Text for this sub-section.  More results \ldots
 
 %%%%%%%%%%%%%%%%%%%%%%
 \section*{Conclusions}
@@ -461,28 +447,41 @@ We also thank Sourceforge, Inc. for hosting the project.
 
 \section*{Figures}
   \subsection*{Figure 1 - Graphical class hierarchy}
-      Schematic representation of the class inheritance used for the
-      container class. Intuitive inheritance is used whenever possible.
+      Schematic representation of class inheritance used for the
+      \verb"container" class. Intuitive inheritance is used whenever possible.
       For example, a container contains particles, it can have a shape
-      etc. Graphic produced by Doxygen.
+      etc. The graphical representation is produced using Doxygen.
       \begin{figure}[ht]\center
       \includegraphics[width=6cm]{pics/container}
       \caption{fig}
       \label{fig:container}
-	\end{figure}
+      \end{figure}
 
-  \subsection*{Figure 2 - Source code example}
+  \subsection*{Figure 2 - Doxygen Manual}
+      \begin{figure}[ht]\center
+      \includegraphics[width=10cm]{pics/doxygen}
+      \caption{Code documentation through code comments. All code is commented with
+      special keywords that are eventually used to construct a HTML based manual of
+      the code library.}
+      \label{fig:doxygen}
+      \end{figure}
+
+  \subsection*{Figure 3 - Source code example}
       Example of a Monte Carlo simulation program to calculate protein
-      ionization states in an aqueous salt solutions using explicit ions as well as
+      ionization states in an aqueous salt solutions using explicit ions and
       a slightly coarse grained protein model.
       \begin{figure}[ht]\center
-      \includegraphics[width=16cm]{pics/source}
+      \includegraphics[width=16.5cm]{pics/source}
       \end{figure}
       
-  \subsection*{Figure 3 - Povray output}
-     Snapshot from a simulation of a single protein in a salt solution.
+  \subsection*{Figure 4 - Graphical Analysis}
+     Lysozyme interacting with a fab-fragment -- a simulation containing
+     more than 340 amino acid residues as well as salt particles.
+     The probability of finding lysozyme's mass-center near
+     the the fab fragment (shown) is illustrated by the pink iso-surface.
+     VMD and Povray was used to visualize the generated output from Faunus.
      \begin{figure}[ht]\center
-      \includegraphics[width=6cm]{pics/snapshot}
+      \includegraphics[width=8cm]{pics/snapshot}
       \end{figure}
 
 \begin{comment}
@@ -511,7 +510,6 @@ We also thank Sourceforge, Inc. for hosting the project.
   \subsection*{Table 2 - Sample table title}
     Large tables are attached as separate files but should
     still be described here.
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

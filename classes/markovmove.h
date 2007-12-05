@@ -103,7 +103,7 @@ class move : public markovmove {
     move( ensemble&, container&, interaction<T_pairpot>&, box &, float);
     bool mOve(macromolecule &);
 };
-/*! \brief Move one group along z-axis
+/*! \brief Move one group parallel z-axis
  *  \author Bjoern Persson
  */
 class zmove : public markovmove {
@@ -159,14 +159,19 @@ class chargereg : public markovmove, private titrate {
 };
 /*! \brief Grand Canonical titation of all sites
  *  \author Bjoern Persson
+ *
+ *  \todo Untested, in principle it must be supplemented with grand canonical salt
  */
-/*
-class GCchargereg : public markovmove, private GCtitrate {
+
+class GCchargereg : public markovmove, private titrate {
   public: 
-    GCchargereg( ensemble&, container&, interaction<T_pairpot>&, group&, float, float, float); //!< pH, CatPot, volume
-    bool titrateall();
+    GCchargereg( ensemble&, container&, interaction<T_pairpot>&, group&, float, float); //!< pH, CatPot
+    double titrateall();
     string info();
-*/
+  private:
+    double CatPot;  //!< Chemical potential of coupled cation
+};
+
 #endif
 
 //--------------- MARKOV MOVE ---------------------
@@ -410,32 +415,82 @@ double chargereg::titrateall() {
   return sum;
 }
 
-/*
+
 //-----------GRAND CANONICAL CHARGE REGULAION------------
+string GCchargereg::info() {
+  ostringstream o;
+  o <<  markovmove::info()
+    << "#   pH (concentration)  = " << ph << endl
+    << "#   Cation potential(kT)= " << CatPot << endl
+    << "#   Titrateable sites   = " << sites.size() << endl
+    << "#   Number of protons   = " << protons.size() << endl;
+  return o.str();
+}  
 GCchargereg::GCchargereg(
     ensemble &e, 
     container &c,
     interaction<T_pairpot> &i,
     group &g,
-    float ph, float cp, float vol ) : markovmove(e,c,i), GCtitrate(c,c.p,g,ph,cp,vol)
+    float ph, 
+    float cp 
+              ) : markovmove(e,c,i), titrate(c,c.p,g,ph)
 {
   name="PROTON TITRATION";
+  cite="Labbes and Joensson, Applied parallel...";
   runfraction=0.2;
   con->trial = con->p;
+  CatPot=cp;
 }
-bool GCchargereg::titrateall() {
-  return true;
-};
-string GCchargereg::info() {
-  ostringstream o;
-  o <<  markovmove::info()
-    << "#   pH (concentration)  = " << tit.ph << endl
-    << "#   Cation potential(kT)= " << CatPot << endl
-    << "#   Titrateable sites   = " << tit.sites.size() << endl
-    << "#   Number of protons   = " << tit.protons.size() << endl;
-  return o.str();
-}  
-*/
+
+/*! \brief Coupled proton exchange.
+ *
+ *  This move will randomly go through the titrateable sites and
+ *  try to exchange protons with the bulk as to explore all configurations
+ *  that don't contain any proton. 
+ *  The trial energy is:
+ */
+double GCchargereg::titrateall() {
+  du=0;
+  if (slp.runtest(runfraction)==false)
+    return du;
+  action t;
+  double sum=0;
+  for (unsigned short i=0; i<sites.size(); i++) {
+    cnt++;
+    t=exchange(con->trial);
+    #pragma omp parallel
+    {
+      #pragma omp sections
+      {
+        #pragma omp section
+        { uold = pot->potential( con->p, t.site ) * con->p[t.site].charge
+          + pot->potential( con->p, t.proton ) * con->p[t.proton].charge
+            - con->p[t.site].potential(con->p[t.proton] )*con->p[t.proton].charge;
+        }
+        #pragma omp section
+        { unew = pot->potential(con->trial,t.site)*con->trial[t.site].charge 
+          + pot->potential(con->trial,t.proton)*con->trial[t.proton].charge
+            - con->trial[t.site].potential(con->trial[t.proton] )*con->trial[t.proton].charge;
+        }
+      }
+    }
+    du = (unew-uold)*pot->pair.f;
+
+    if (ens->metropolis( GCenergy(con->trial, du, t, CatPot, con->volume) )==true) {
+      rc=OK;
+      utot+=du;
+      naccept++;
+      con->p[t.site].charge   = con->trial[t.site].charge;
+      con->p[t.proton].charge = con->trial[t.proton].charge;
+      sum+=du;
+    } else {
+      rc=ENERGY;
+      exchange(con->trial, t);
+    }
+  }
+  return sum;
+}
+
 
 //-----------MOVE----------------------------------------
 /*! \breif Class to prefom a random walk of a macromolecule

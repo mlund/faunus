@@ -105,6 +105,15 @@ double titrate::energy(vector<particle> &p,
     return du-( log(10.)*( ph - spc->d[i].pka ) );
 }
 
+double titrate::GCenergy(vector<particle> &p,
+    double du, action &a, double &CatPot, double volume) { // (A^3)
+  int i=p[a.site].id;
+  if (a.action==PROTONATED)
+    return du+( log(10.)*( ph - spc->d[i].pka ) )+CatPot+log(protons.size()/volume) ;
+  else
+    return du-( log(10.)*( ph - spc->d[i].pka ) )-CatPot-log((protons.size()+1)/volume);
+}
+
 void titrate::infos() {
   cout << "# Titrateable sites   = " << sites.size() << endl
     << "# Protons             = " << protons.size() << endl

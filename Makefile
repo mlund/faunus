@@ -3,18 +3,18 @@ MODEL = gnu
 
 # Set to yes if you need Gromacs xtc file support
 # (requires a working Gromacs installation)
-GROMACS = yes
+GROMACS = no 
 
 # Set to "yes" to enable parallel execution on multi-core
 # CPU's. OpenMP must be supported by the compiler.
-OPENMP = yes
+OPENMP = no
 
 ###########################################
 #  Normally you would not want to modify  #
 #  things beyond this point.              #
 ###########################################
 
-CXX=g++-4.2
+CXX=g++
 CLASSDIR=./classes
 INCDIR=-I$(CLASSDIR)
 LDFLAGS=-L./lib
@@ -93,10 +93,10 @@ twobody:	examples/twobody/twobody.C libfaunus
 	-lfaunus ${LDFLAGS}
 
 
-manybody:	examples/manybody/manybody.C libfaunus
+manybody:	examples/manybodyDH/manybody.C libfaunus
 	$(CXX) $(CXXFLAGS) \
-	examples/manybody/manybody.C \
-	-o examples/manybody/manybody \
+	examples/manybodyDH/manybody.C \
+	-o examples/manybodyDH/manybody \
 	-lfaunus ${LDFLAGS}
 
 pka:	examples/titration/pka.C $(OBJS)

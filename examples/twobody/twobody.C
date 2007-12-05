@@ -31,7 +31,7 @@ int main() {
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   countdown<int> clock(10);             // Estimate simulation time
   ioxyz xyz(cell);                      // xyz output for VMD etc.
-  distributions dst(LAST,0,180);
+  distributions dst;
   rdf saltrdf(particle::NA,particle::SO4, .5, cell.r);
 
   vector<macromolecule> g;              // Group for proteins
@@ -73,10 +73,10 @@ int main() {
           break;
         case 3:                                 // Fluctuate charges
           sys+=tit.titrateall();                // Titrate sites on the protein
-          dst.add(Q1,dm.r, g[0].charge(cell.p));// Re-calc. protein charges
-          dst.add(Q2,dm.r, g[1].charge(cell.p));
-          dst.add(MU1,dm.r,g[0].dipole(cell.p));// ..and dipole moments
-          dst.add(MU2,dm.r,g[1].dipole(cell.p));
+          dst.add("Q1",dm.r, g[0].charge(cell.p));// Re-calc. protein charges
+          dst.add("Q2",dm.r, g[1].charge(cell.p));
+          dst.add("MU1",dm.r,g[0].dipole(cell.p));// ..and dipole moments
+          dst.add("MU2",dm.r,g[1].dipole(cell.p));
           break;
       }
       if (slump.random_one()>.8 && macro>1)
@@ -96,6 +96,7 @@ int main() {
     aam.save("confout.aam", cell.p);            // Save config. for next run
     dm.gofr.write("rdfprot.dat");
     saltrdf.write("rdfsalt.dat");
+    dst.write("distributions.dat");
     cout << "Macro step " << macro
          << " completed. ETA: " << clock.eta(macro);
  

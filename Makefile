@@ -93,10 +93,10 @@ twobody:	examples/twobody/twobody.C libfaunus
 	-lfaunus ${LDFLAGS}
 
 
-manybody:	examples/manybodyDH/manybody.C libfaunus
+manybody:	examples/manybody/manybody.C libfaunus
 	$(CXX) $(CXXFLAGS) \
-	examples/manybodyDH/manybody.C \
-	-o examples/manybodyDH/manybody \
+	examples/manybody/manybody.C \
+	-o examples/manybody/manybody \
 	-lfaunus ${LDFLAGS}
 
 pka:	examples/titration/pka.C $(OBJS)

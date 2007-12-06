@@ -126,10 +126,13 @@ class dualmove : public markovmove {
   public:
     histogram::histogram gofr;  //!< g(r) of the two group mass centers
     double r;                   //!< Current distance between group mass centers
+    double rmax;                //!< Maximum allowed mass-center distance
+    double rmin;                //!< Minimum allowed mass-center distance
     dualmove( ensemble&, container&, interaction<T_pairpot>&);
-    void load(inputfile &, vector<macromolecule> &g, float);
+    void load(inputfile &, vector<macromolecule> &g, float=0);
     void direction(double, double, double);
     double move(macromolecule &, macromolecule &);
+    string info();
 };
 
 class translate : public markovmove {
@@ -197,7 +200,7 @@ void markovmove::adjust_dp(float min, float max) {
 //-------------- SALT MOVE ---------------------------------
 saltmove::saltmove(
     ensemble &e, container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i) {
-  dp=12;
+  dp=30;
   deltadp=2;
   name="SALT DISPLACEMENTS";
   runfraction=0.5;
@@ -355,7 +358,7 @@ chargereg::chargereg(ensemble &e,
     float ph ) : markovmove(e,c,i), titrate(c,c.p,g,ph)
 {
   name="PROTON TITRATION";
-  cite="Lund+Jonsson, Biochem. 2005, 44, 5722-5727.";
+  cite="Biochem. 2005, 44, 5722-5727.";
   runfraction=0.2;
   con->trial = con->p;
 }
@@ -560,6 +563,7 @@ bool move::mOve(macromolecule &g) {
  *  macromolece
  *
  *  \todo Needs some testing and perhaps some optimization
+ *  \note Is now replaced by dualmove
  */
 
 zmove::zmove(
@@ -618,11 +622,13 @@ dualmove::dualmove( ensemble &e,
     container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i), gofr(0.5,0,100)
 {
   name = "SYMMETRIC 1D GROUP TRANSLATION";
-  cite = "Lund+Jonsson, Biophys J. 2003, 85, 2940";
+  cite = "Biophys J. 2003, 85, 2940";
   runfraction=1.0;
   deltadp=1.;
   dp=1.;
   direction(0,0,1);
+  rmin=0;
+  rmax=pow(double(c.volume), 0.3333)/2.; // rough estimate from volume
 }
 
 /*! Specify unit vector that determines which coordinates
@@ -645,6 +651,8 @@ void dualmove::direction(double x, double y, double z) {
  * \note The macromolecule vector is erased before any proteins are loaded!
  */
 void dualmove::load(inputfile &in, vector<macromolecule> &g, float dist) {
+  if (dist==0)
+    dist=rmax;
   g.clear();
   point a = v*(dist/2.);
   ioaam aam(*con);
@@ -655,10 +663,17 @@ void dualmove::load(inputfile &in, vector<macromolecule> &g, float dist) {
   g[1].accept(*con);
 }
 
+string dualmove::info() {
+  ostringstream o;
+  o <<  markovmove::info()
+    << "#   Min/max separation  = " << rmin << " " << rmax << endl;
+  return o.str();
+} 
+
 double dualmove::move(macromolecule &g1, macromolecule &g2) {
-  r=con->dist(g1.cm, g2.cm);
   du=0;
   cnt++;
+  r=con->dist(g1.cm, g2.cm);
   point p;
   group g12=g1+g2;
   p.x=v.x*dp*slp.random_half();
@@ -666,8 +681,10 @@ double dualmove::move(macromolecule &g1, macromolecule &g2) {
   p.z=v.z*dp*slp.random_half();
   g1.move(*con, p);
   g2.move(*con,-p);
+  double rtrial = con->dist(g1.cm_trial,g2.cm_trial);
   if (con->collision(g1.cm_trial)==true ||
-      con->collision(g2.cm_trial)==true) {
+      con->collision(g2.cm_trial)==true || 
+      rtrial > rmax || rtrial < rmin) {
     rc=HC;
     dpsqr+=0;
     g1.undo(*con);

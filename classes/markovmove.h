@@ -752,7 +752,10 @@ string HAchargereg::info() {
   return o.str();
 }
 
-double HAchargereg::energy( vector<particle> &p, double u, titrate::action &a ) {
-  // Implement new routine here
-  return CatPot;
+double HAchargereg::energy( vector<particle> &p, double du, titrate::action &a ) {
+  int i=p[a.site].id;
+  if (a.action==PROTONATED)
+    return du+( log(10.)*( ph - con->d[i].pka ) )+CatPot+log(protons.size()/con->volume) ;
+  else
+    return du-( log(10.)*( ph - con->d[i].pka ) )-CatPot-log((protons.size()+1)/con->volume);
 }

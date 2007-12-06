@@ -1,6 +1,12 @@
 /*! \mainpage
 
 \section svn Subversion repository
+The faunus is project is available through subversion.
+You may browse the source code on <A HREF="http://sourceforge.net/projects/faunus">
+<B>Sourceforge</B>
+</A>
+or download the most recent version by issuing the command:
+
 \verbatim svn checkout http://faunus.svn.sourceforge.net/svnroot/faunus faunus
 \endverbatim
 

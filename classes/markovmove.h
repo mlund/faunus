@@ -154,7 +154,8 @@ class macrorot : public markovmove {
 /*! \brief Titrate all titrateable sites
  *  \author Mikael Lund
  */
-class chargereg : public markovmove, private titrate {
+class chargereg : public markovmove, protected titrate {
+  friend class HAchargereg;
   public:
     chargereg( ensemble&, container&, interaction<T_pairpot>&, group&, float);
     double titrateall();
@@ -174,6 +175,16 @@ class GCchargereg : public markovmove, private titrate {
   private:
     double CatPot;  //!< Chemical potential of coupled cation
 };
+
+class HAchargereg : public chargereg {
+  public: 
+    HAchargereg( ensemble&, container&, interaction<T_pairpot>&, group&, float, float);
+    string info();
+  private:
+    double energy(vector<particle> &, double, action &); //!< New titrate energy function
+    double CatPot;  //!< Chemical potential of coupled cation
+};
+
 
 #endif
 
@@ -723,3 +734,25 @@ double dualmove::move(macromolecule &g1, macromolecule &g2) {
   return du;
 }
 
+//---------- INHERITED GCTITRATE ---------
+HAchargereg::HAchargereg(ensemble &e,
+    container &c,
+    interaction<T_pairpot> &i,
+    group &g, float ph, float mu ) : chargereg(e,c,i,g,ph)
+{
+  name="GC PROTON TITRATION...";
+  cite="Labbez+Jonsson....";
+  CatPot=mu;
+}
+
+string HAchargereg::info() {
+  ostringstream o;
+  o << chargereg::info();
+  o << "# Excess chem. pot = " << CatPot << endl;
+  return o.str();
+}
+
+double HAchargereg::energy( vector<particle> &p, double u, titrate::action &a ) {
+  // Implement new routine here
+  return CatPot;
+}

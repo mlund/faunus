@@ -155,7 +155,6 @@ class macrorot : public markovmove {
  *  \author Mikael Lund
  */
 class chargereg : public markovmove, protected titrate {
-  friend class HAchargereg;
   public:
     chargereg( ensemble&, container&, interaction<T_pairpot>&, group&, float);
     double titrateall();
@@ -163,7 +162,6 @@ class chargereg : public markovmove, protected titrate {
 };
 /*! \brief Grand Canonical titation of all sites
  *  \author Bjoern Persson
- *
  *  \todo Untested, in principle it must be supplemented with grand canonical salt
  */
 
@@ -176,6 +174,11 @@ class GCchargereg : public markovmove, private titrate {
     double CatPot;  //!< Chemical potential of coupled cation
 };
 
+/*!
+ * \brief Grand Canonical titation of all sites
+ * \author Bjoern Persson
+ * \todo Untested, in principle it must be supplemented with grand canonical salt
+ */
 class HAchargereg : public chargereg {
   public: 
     HAchargereg( ensemble&, container&, interaction<T_pairpot>&, group&, float, float);
@@ -184,8 +187,6 @@ class HAchargereg : public chargereg {
     double energy(vector<particle> &, double, action &); //!< New titrate energy function
     double CatPot;  //!< Chemical potential of coupled cation
 };
-
-
 #endif
 
 //--------------- MARKOV MOVE ---------------------
@@ -200,6 +201,7 @@ float markovmove::accepted() { return naccept/float(cnt); }
  * \warning This violates the detailed balance criteria!
  * \param min Minimum percentage of accepted moves
  * \author Mikael Lund
+ * \todo Specify a maxmimum dp
  */
 void markovmove::adjust_dp(float min, float max) {
   float a=accepted()*100.;
@@ -507,8 +509,8 @@ double GCchargereg::titrateall() {
 
 
 //-----------MOVE----------------------------------------
-/*! \breif Class to prefom a random walk of a macromolecule
- *   in space
+/*! \breif Class to prefom a random walk of a macromolecule in space
+ *  \note Replaced by translate(?)
  */
 move::move(
    ensemble &e, container &c, interaction<T_pairpot> &i 
@@ -574,7 +576,7 @@ bool move::mOve(macromolecule &g) {
  *  macromolece
  *
  *  \todo Needs some testing and perhaps some optimization
- *  \note Is now replaced by dualmove
+ *  \note Replaced by dualmove(?)
  */
 
 zmove::zmove(
@@ -735,6 +737,10 @@ double dualmove::move(macromolecule &g1, macromolecule &g2) {
 }
 
 //---------- INHERITED GCTITRATE ---------
+/*!
+ * \param ph pH value
+ * \param mu Proton excess chemical potential
+ */
 HAchargereg::HAchargereg(ensemble &e,
     container &c,
     interaction<T_pairpot> &i,
@@ -748,7 +754,7 @@ HAchargereg::HAchargereg(ensemble &e,
 string HAchargereg::info() {
   ostringstream o;
   o << chargereg::info();
-  o << "# Excess chem. pot = " << CatPot << endl;
+  o << "#   Excess chem. pot = " << CatPot << endl;
   return o.str();
 }
 

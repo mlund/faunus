@@ -20,11 +20,12 @@ void systemenergy::operator+=(double du) { sum+=du; }
  * resized to match any given dataset (for x>=0).
  *
  * \note If x<0, "min" should be specified
+ * \param deltax x value resolution
  * \param min Minimum x value (optional, auto-resizes)
  * \param max Maximum x value (optional, auto-resizes)
  */
-distributions::distributions(float min, float max) {
-  dx=.5;
+distributions::distributions(float deltax, float min, float max) {
+  dx=deltax;
   xmax_set=max;
   xmin_set=min;
   xmax=-1e7;
@@ -69,7 +70,7 @@ string distributions::info() {
     << "# 1 = distance" << endl;
   for (i=0; i<s.size(); i++)
     o << "# " << i+2 << " = " << s[i] << endl;
-  for (float x=xmin; x<=xmax; x+=.5) {
+  for (float x=xmin; x<=xmax; x+=dx) {
     o << x;
     for (i=0; i<d.size(); i++)
       o << " " << d[i](x).avg();

@@ -26,9 +26,10 @@ class analysis {
  * This class can encompass several distributions
  * of average values (y) as a function of some variable (x)
  * Each distribution is automatically identified by specifying
- * its name while adding to it.
+ * an arbitrary name while adding to it.
  * This will typically be used to average a certain property as
- * a function of, say, an intermolecular separation.
+ * a function of, say, an intermolecular separation. It is assumed
+ * that the x range is identical for all distributions.
  *
  * \author Mikael Lund
  * \date December 2007
@@ -42,7 +43,7 @@ class distributions : public analysis {
     vector< xytable<float,average<float> > > d;
     unsigned short find(string);
   public:
-    distributions(float=0, float=0); //!< Constructor
+    distributions(float=0.5, float=0, float=0); //!< Constructor
     bool add(string, float, float);  //!< Add value to distribution
     bool write(string);  //!< Write distributions to a file
     string info();       //!< Write distributions to a string

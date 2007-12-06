@@ -32,7 +32,7 @@ int main() {
   countdown<int> clock(10);             // Estimate simulation time
   ioxyz xyz(cell);                      // xyz output for VMD etc.
   distributions dst;
-  rdf saltrdf(particle::NA,particle::SO4, .5, cell.r);
+  rdf saltrdf(particle::NA,particle::CL, .5, cell.r);
 
   vector<macromolecule> g;              // Group for proteins
   dualmove dm(nvt, cell, pot);          //   Class for 1D macromolecular translation
@@ -47,7 +47,7 @@ int main() {
     g[0].masscenter(cell.p);            // Load old config (if present)
     g[1].masscenter(cell.p);            // ...and recalc mass centers
   }
-  chargereg tit(nvt,cell,pot,salt,5.0); // Prepare titration.
+  chargereg tit(nvt,cell,pot,salt,4.0); // Prepare titration.
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
   cout << cell.info() << pot.info();    // Print information to screen
 
@@ -56,7 +56,7 @@ int main() {
   #endif
 
   for (int macro=1; macro<=10; macro++) {       // Markov chain 
-    for (int micro=1; micro<=2e5; micro++) {
+    for (int micro=1; micro<=2e3; micro++) {
       short i,n;
       switch (rand() % 4) {                     // Pick a random MC move
         case 0:                                 // Displace salt
@@ -73,10 +73,12 @@ int main() {
           break;
         case 3:                                 // Fluctuate charges
           sys+=tit.titrateall();                // Titrate sites on the protein
-          dst.add("Q1",dm.r, g[0].charge(cell.p));// Re-calc. protein charges
-          dst.add("Q2",dm.r, g[1].charge(cell.p));
-          dst.add("MU1",dm.r,g[0].dipole(cell.p));// ..and dipole moments
-          dst.add("MU2",dm.r,g[1].dipole(cell.p));
+          if (tit.du!=0) {                      // Average charge and dipole
+            dst.add("Q1",dm.r, g[0].charge(cell.p));
+            dst.add("Q2",dm.r, g[1].charge(cell.p));
+            dst.add("MU1",dm.r,g[0].dipole(cell.p));
+            dst.add("MU2",dm.r,g[1].dipole(cell.p));
+          }
           break;
       }
       if (slump.random_one()>.8 && macro>1)

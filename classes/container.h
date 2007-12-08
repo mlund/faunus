@@ -14,19 +14,18 @@ class container : public particles,  public species {
   protected:
     slump slp;
   public:
-    float volume;                                  //!< Volume of the container [AA^3]
-    virtual bool collision(point &)=0;             //!< Check for collision with walls
-    virtual void randompos(point &)=0;             //!< Random point within container
-    virtual string info();                         //!< Return info string
-    virtual string povray();                       //!< POVRAY object representing the cell
-    virtual void boundary(point &)=0;              //!< Apply boundary conditions to a point
+    float volume;                          //!< Volume of the container [AA^3]
+    virtual bool collision(point &)=0;     //!< Check for collision with walls
+    virtual void randompos(point &)=0;     //!< Random point within container
+    virtual string info();                 //!< Return info string
+    virtual string povray();               //!< POVRAY object representing the cell
+    virtual void boundary(point &)=0;      //!< Apply boundary conditions to a point
     inline virtual double sqdist(point &a,point &b) {
       return a.sqdist(b);
     }
     inline virtual double dist(point &a,point &b) {//!< Calculate distance between points
       return a.dist(b);
     }
-    //void displace(point &, float);      //!< Displace particle
 };
 
 /*! \brief Spherical simulation container
@@ -68,7 +67,13 @@ class box : public container {
     void randompos(point &);
     void randompos(vector<point> &);
     point randompos();
-    bool collision(point &p) {return false;};
+    bool collision(point &p) {
+      if (abs(p.x)>len_half ||
+          abs(p.y)>len_half ||
+          abs(p.z)>len_half )
+        return true;
+      return false;
+    }
     string povray();
     //! Calculate distance using the minimum image convention
     inline double dist(point &a, point &b) { return a.dist(b, len, len_inv); }
@@ -79,18 +84,7 @@ class box : public container {
       p.x=p.x-len*anint(p.x*len_inv);
       p.y=p.y-len*anint(p.y*len_inv);
       p.z=p.z-len*anint(p.z*len_inv);
-      //p.x=p.x-len*floor(p.x*len_inv+.5);
-      //p.y=p.y-len*floor(p.y*len_inv+.5);
-      //p.z=p.z-len*floor(p.z*len_inv+.5);
     }
-
-    //! Randomly displace particle w. bpc.
-    //void displace(point &p, float dp) {
-    //  p.x+=dp*slp.random_half();
-    //  p.y+=dp*slp.random_half();
-    //  p.z+=dp*slp.random_half();
-    //  bpc(p);
-    //}
 };
 
 /*! \brief "Clutch" like container.

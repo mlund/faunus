@@ -43,8 +43,8 @@ int main() {
 
   ioaam aam(cell);                      // Protein input file format is AAM
   if (aam.load(cell,"confout.aam")) {
-    g[0].masscenter(cell.p);            // Load old config (if present)
-    g[1].masscenter(cell.p);            // ...and recalc mass centers
+    g[0].masscenter(cell);              // Load old config (if present)
+    g[1].masscenter(cell);              // ...and recalc mass centers
   }
   chargereg tit(nvt,cell,pot,salt,4.0); // Prepare titration.
   systemenergy sys(pot.energy(cell.p)); // System energy analysis

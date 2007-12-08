@@ -49,14 +49,11 @@ class pot_coulomb : private pot_lj {
 
     /*! \brief Return Coulomb energy between a pair of particles
      *  \return Energy in units of kT/f (f=lB).
-     *
      *  \f$ \beta u/f = \frac{z_1 z_2}{r} + u_{LJ}/f \f$
      */
     inline double pairpot(particle &p1, particle &p2) {
-      double r2=p1.sqdist(p2);
-      register double qq=p1.charge*p2.charge;
-      register double u=lj(p1,p2,r2);
-      return (qq!=0) ? u+qq/sqrt(r2) : u;
+      register double r2=p1.sqdist(p2);
+      return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
     }
     string info();
 };
@@ -78,10 +75,10 @@ class pot_minimage : private pot_lj {
     }
     string info();
     inline double pairpot(particle &p1, particle &p2) {
-      double r2=p1.sqdist(p2,box,invbox);
+      register double r2=p1.sqdist(p2,box,invbox);
       return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
-      //dx=p1.radius+p2.radius;
-      //return (r2<dx*dx) ? 1e7 : p1.charge*p2.charge/sqrt(r2);
+      //register double dx=p1.radius+p2.radius;
+      //return (r2<dx*dx) ? 0 : p1.charge*p2.charge/sqrt(r2);
     }
 };
 

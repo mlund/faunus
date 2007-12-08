@@ -52,8 +52,8 @@
 %%  submitted article.                         %% 
 %%                                             %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                     
-\def\includegraphic{}
-\def\includegraphics{}
+%\def\includegraphic{}
+%\def\includegraphics{}
 
 \setlength{\topmargin}{0.0cm}
 \setlength{\textheight}{21.5cm}
@@ -265,7 +265,7 @@ This enables the end programmer to visually see how a class is constructed as sh
 \section*{Results and Discussion}
 \subsection*{General Features}
 The class library provides simulation routines for ions, macromolecules and polymers in solution with a strong focus on electrostatic interactions using the primitive model of electrolytes where the solvent is treated as a structureless dielectric continuum~\cite{hill:86}.
-It is, however, completely possible to expand the library to other systems, include explicit solvent etc. The routines have been developed over several years in connection with a number of scientific investigations~\cite{lund-thesis}, including proteins in solution.
+It is, however, completely possible to expand the library to other systems, include explicit solvent etc. The routines have been developed over several years in connection with a number of scientific investigations, including proteins in solution~\cite{lund-thesis}.
 As of writing, the code library contains general classes for the following,
 \begin{itemize}
 \item Explicit treatment of ions, including ion-ion correlation effects.
@@ -289,8 +289,8 @@ As an example of the latter, we have simulated lysozyme interacting with a fab-H
 %	  Text for this sub-sub-section \ldots
 
 
-\subsection*{A 50 Lines of Code Example}
-Figure 4 shows a complete MC program for simulating the protonation state of a protein in a salt solution at a given pH value.
+\subsection*{An Example: Proton Titration}
+Figure 4 shows -- in 50 lines of code -- a complete MC program for simulating the protonation state of a protein in a salt solution at a given pH value.
 Experimentally this corresponds to a standard potentiometric titration experiment where the net-charge is measured as a function of pH~\cite{tanford:72}.
 We will not go through all the lines in the code as the comments should be more or less self-explanatory.
 The overall program structure is
@@ -306,6 +306,7 @@ Note that we have also incorporated a general polymorphic class for markov moves
 For example, both the salt move class (line 36) and titration class (line 39) will store information about energy changes, if the move was a success etc.
 Data and analysis about each type of move is automatically shown by calling the respective information functions (line 51).
 
+The source code for this and other examples are included with the class library; more will be added over time and we of course encourage users to submit their own code.
 
 %%%%%%%%%%%%%%%%%%%%%%
 \section*{Conclusions}
@@ -317,15 +318,14 @@ The software design is object oriented, meaning that the code is extensively re-
 \item Development and debugging is eased.
 \item Memory requirements are minimized.
 \end{itemize}
-As an example we demonstrate -- in 50 lines of code -- how to construct a program that can simulate protein protonation states in an aqueous salt solution.
-High performance in inner loops are retained using Expression Templates, keeping the flexibility of the object oriented design.
-
 The class library is documented through extensive use of inline code comments.
-These comments are subsequently collected by a third party program (Doxygen) that will automatically construct a code manual. Hence, no separate document has to be maintained.
+These comments are subsequently collected by a third party program (Doxygen) that will automatically construct a code manual and, hence, obsolete a separately maintained instruction book.
+In 50 lines of C++ code we demonstrate how to construct a program that can simulate protein protonation states in an aqueous salt solution.
+High performance in inner loops are established using Expression Templates, perfectly compatible with the flexibility and intuitive appeal of an object oriented design.
 
 \section*{Availability and requirements}
 \textsl{Project name:} faunus\\
-\textsl{Project home page:} http://sourceforge.net/projects/faunus\\
+\textsl{Project home page:} http://faunus.sourceforge.net\\
 \textsl{Operating systems:} MacOS X, Linux, ``Cygwin"\\
 \textsl{Programming language:} C++\\
 \textsl{Other requirements:} C++, Doxygen (optional)\\
@@ -352,8 +352,7 @@ BP and MT contributed to the implementation.
   \ifthenelse{\boolean{publ}}{\small}{}
   The authors would like to thank the Research School of Pharmaceutical Sciences, Sweden, the Linnaeus Center of Excellence on Organizing Molecular Matter, Sweden,
 and the European Molecular Biology Organization.
-Pavel Jungwirth is acknowledged for useful discussions.
-We also thank Sourceforge, Inc. for hosting the project.
+We also thank Pavel Jungwirth for useful discussions and Sourceforge, Inc. for hosting the project.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%                  The Bibliography                       %%

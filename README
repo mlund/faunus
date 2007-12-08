@@ -45,7 +45,7 @@ COMPILING:
   - Enable Gromacs compressed trajectory output (.xtc).
   - Enable experimental OpenMP support.
 
-FILES:
+DIRECTORY LAYOUT:
   classes      Mostly finished, general classes.
   examples     Example programs
   legacy       Older, working programs

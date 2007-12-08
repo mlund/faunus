@@ -72,9 +72,7 @@ string box::info() {
 
 point box::randompos() {
   point p;
-  p.x = slp.random_half()*len;
-  p.y = slp.random_half()*len;
-  p.z = slp.random_half()*len;
+  randompos(p);
   return p;
 }
 

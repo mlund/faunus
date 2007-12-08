@@ -38,6 +38,7 @@ class group {
     bool find(unsigned int);              ///< Check if particle is part of the group
     virtual double charge(vector<particle> &);//!< Calculate total charge
     point masscenter(vector<particle> &); //!< Calculate center-of-mass
+    point masscenter(container &);        //!< Calc. center-of-mass
     virtual string info();                //!< Print information
     void operator+=(group);
     group operator+(group);

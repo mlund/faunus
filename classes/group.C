@@ -67,6 +67,8 @@ bool group::find(unsigned int i) { return (i>=beg && i<=end) ? true : false; }
  * in a group. The result is stored in the
  * group CM placeholder as well as returned
  * by the function.
+ * \warning Doesn't consider periodic boundaries!
+ * \note Use masscenter(container &) instead.
  */
 point group::masscenter(vector<particle> &p) {
   cm.clear();
@@ -79,6 +81,32 @@ point group::masscenter(vector<particle> &p) {
   cm_trial = cm;
   return cm;
 }
+
+/*!
+ * This mass-center routine obeys periodic boundaries (if only)
+ * by first centering the first particle in (0,0,0), calc. CM
+ * and move it back.
+ *
+ * \author Mikael Lund
+ * \date Dec. 2007, Prague
+ */
+point group::masscenter(container &con) {
+  double a, sum=0;
+  cm.clear();
+  point t, o = con.p[beg]; // set origo to first particle
+  for (unsigned short i=beg; i<=end; i++) {
+    t = con.p[i]-o;        // translate to origo
+    con.boundary(t);       // periodic boundary (if any)
+    cm += t * con.p[i].mw;
+    sum += con.p[i].mw; 
+  }
+  cm=cm*(1./sum) + o;
+  con.boundary(cm);
+  cm_trial = cm;
+  return cm;
+}
+
+
 void group::undo(particles &par) {
   cm_trial = cm;
   for (short i=beg; i<=end; i++) {
@@ -97,15 +125,13 @@ void group::accept(particles &par) {
   }
 }
 void group::add(container &par, vector<particle> v, bool collision) {
-  particle tmp;
   beg=par.p.size();
   for (unsigned short i=0; i<v.size(); i++) {
-    tmp = v[i];
-    par.boundary(tmp);
-    par.push_back(tmp);
+    par.boundary(v[i]);
+    par.push_back(v[i]);
     end=beg+i;
   }
-  masscenter(par.p);              // calc. mass center
+  masscenter(par);                // calc. mass center
   
   // test for overlap w. other particles
   if (collision==true) {
@@ -171,21 +197,28 @@ void group::move(container &par, point c) {
     par.trial[i].z = par.p[i].z + c.z;
     par.boundary(par.trial[i]);
   }
-  cm_trial = cm + c;
+  cm_trial.x = cm.x + c.x;
+  cm_trial.y = cm.y + c.y;
+  cm_trial.z = cm.z + c.z;
   par.boundary(cm_trial);
 }
 
-/*!
- * \todo Overlap function doesn't use minimum image!
- */
 bool group::overlap(container &c) {
-  for (int i=beg; i<=end; i++) {
-    for (int j=0; j<beg; j++)
-      if (c.p[i].overlap( c.p[j] )==true)
+  double s;
+  unsigned short i,j;
+  for (i=beg; i<=end; i++) {
+    if (c.collision(c.p[i])==true)  // check cell collision
+      return true;
+    for (j=0; j<beg; j++) {
+      s=c.p[i].radius+c.p[j].radius;
+      if ( c.sqdist(c.p[i],c.p[j]) < s*s )
         return true;
-    for (int j=end+1; j<c.p.size(); j++)
-      if (c.p[i].overlap( c.p[j] )==true)
+    }
+    for (j=end+1; j<c.p.size(); j++) {
+      s=c.p[i].radius+c.p[j].radius;
+      if ( c.sqdist(c.p[i],c.p[j]) < s*s )
         return true;
+    }
   }
   return false;
 }
@@ -276,12 +309,12 @@ void macromolecule::zmove(container &par, double dz) {
 void macromolecule::rotate(container &par, double drot) {
   point u;
   double r=2;
-  while (r > 1.) { //random unit vector
+  while (r > 1.) { //Generate a random unit vector
     u.x=slp.random_one();
     u.y=slp.random_one();
     u.z=slp.random_one();
     r=sqrt(u.x*u.x+u.y*u.y+u.z*u.z);
-  };
+  }
   u.x=u.x/r;
   u.y=u.y/r; 
   u.z=u.z/r;

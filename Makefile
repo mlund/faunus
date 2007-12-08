@@ -3,7 +3,7 @@ MODEL = gnu
 
 # Set to yes if you need Gromacs xtc file support
 # (requires a working Gromacs installation)
-GROMACS = no 
+GROMACS = yes
 
 # Set to "yes" to enable parallel execution on multi-core
 # CPU's. OpenMP must be supported by the compiler.
@@ -79,6 +79,9 @@ libfaunus:      $(OBJS)
 	
 manual:
 	doxygen doc/Doxyfile
+
+manualul:
+	scp -rC doc/html/* mikaellund@shell.sourceforge.net:/home/groups/f/fa/faunus/htdocs/
 
 widom:	examples/widom/widom.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/widom/widom.C -o examples/widom/widom

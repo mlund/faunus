@@ -109,7 +109,7 @@ void ioaam::load(container &con, inputfile &in, vector<macromolecule> &g) {
         macromolecule m;
         m.add(con, load(in.getstr(os_file.str())), true );
         m.name = in.getstr(os_file.str());
-        m.masscenter(con.p);
+        m.masscenter(con);
         g.push_back(m);
       }
   } while (nprot>0);

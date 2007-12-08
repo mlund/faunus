@@ -76,6 +76,7 @@ class macromolecule : public group {
     average<float> dip;  //!< Dipole moment scalar.
 
     string info();                      //!< Show info
+    void center(container &);           //!< Center group in origo (0,0,0)
     double charge(vector<particle> &);  //!< Calculate total charge
     double radius(vector<particle> &);  //!< Calculate radius
     double dipole(vector<particle> &);  //!< Calculate dipole moment

@@ -298,6 +298,11 @@ double macromolecule::charge(vector<particle> &p) {
   return z;
 }
 
+void macromolecule::center(container &con) {
+  move(con, -cm);
+  accept(con);
+};
+
 void macromolecule::zmove(container &par, double dz) {
   cm_trial.z = cm.z + dz;
   par.boundary(cm_trial);

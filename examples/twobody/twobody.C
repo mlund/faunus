@@ -10,11 +10,9 @@
 
 #include <iostream>
 #include "analysis.h"
-#include "potentials.h"
-#include "countdown.h"
+#include "mcloop.h"
 typedef pot_coulomb T_pairpot;         // Specific pair interaction function
 #include "markovmove.h"
-#include "mcloop.h"
 
 using namespace std;
 
@@ -33,6 +31,7 @@ int main() {
   vector<macromolecule> g;              // Group for proteins
   dualmove dm(nvt, cell, pot);          //   Class for 1D macromolecular translation
   dm.load( in, g, 40.);                 //   Load proteins and separate them 
+  dm.rmax=60;
   salt salt;                            // Group for mobile ions
   salt.add(cell, in);                   //   Add salt particles
   saltmove sm(nvt, cell, pot);          // Class for salt movements

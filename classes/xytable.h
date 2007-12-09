@@ -1,5 +1,5 @@
-#ifndef _XYTABLE.H
-#define _XYTABLE.H
+#ifndef _XYTABLE_H
+#define _XYTABLE_H
 
 #include <vector>
 #include <iostream>

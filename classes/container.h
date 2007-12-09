@@ -52,7 +52,6 @@ class cell : public container {
 //---------------------------------------------------------
 /*! \brief Cubic simulation container w. periodic boundaries
  *  \author Mikael Lund
- *  \todo Not finished!
  */
 class box : public container {
   private:

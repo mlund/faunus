@@ -23,6 +23,11 @@ class pot_lj {
       x=u*u*u;
       return (x*x-x)*eps;
     }
+    inline void lj(particle &p1, particle &p2, double &r2, double u) {
+      register double s=p1.radius+p2.radius, a=s*s/r2;
+      s=a*a*a;
+      u+=(s*s-s)*eps;
+    }
 };
 
 #endif

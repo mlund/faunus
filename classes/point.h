@@ -152,5 +152,4 @@ inline bool particle::overlap(particle &p) {
   double r=radius+p.radius;
   return (sqdist(p) < r*r) ? true : false;
 }
-
 #endif

@@ -91,7 +91,7 @@ point group::masscenter(vector<particle> &p) {
  * \date Dec. 2007, Prague
  */
 point group::masscenter(container &con) {
-  double a, sum=0;
+  double sum=0;
   cm.clear();
   point t, o = con.p[beg]; // set origo to first particle
   for (unsigned short i=beg; i<=end; i++) {

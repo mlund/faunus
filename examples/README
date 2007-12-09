@@ -1,0 +1,7 @@
+DESCRIPTION OF EXAMPLES:
+
+manybody   Multiple macro-molecules in a continuum solvent - cubic box
+titrate    Proton titration of a macromolecule - cell model.
+twobody    Two macro-molecules in a continuum solvent - cell model.
+widom      Ion activity coefficients by particle insertion
+

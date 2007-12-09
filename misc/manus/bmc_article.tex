@@ -134,7 +134,7 @@ Bj\"orn Persson$^{2}$
 
 \begin{abstract}
         % Do not use inserted blank lines (ie \\) until main body of text.
-        \paragraph*{Background:} We present a C++ class library for Monte Carlo simulation of molecular systems, including proteins in solution. The design is generic and highly modular, enabling multiple developers to easily implement additional features. The statistical mechanical methods are documented by extensive use of code comments that -- subsequently -- is collected to automatically build a web-based manual.
+        \paragraph*{Background:} We present a C++ class library for Monte Carlo simulation of molecular systems, including proteins in solution. The design is generic and highly modular, enabling multiple developers to easily implement additional features. The statistical mechanical methods are documented by extensive use of code comments that -- subsequently -- are collected to automatically build a web-based manual.
         \paragraph*{Results:} We show how an object oriented design can be used to create an intuitively appealing coding framework for molecular simulation. This is exemplified in a \emph{minimalistic} C++ program that can calculate protein protonation states. We further discuss performance issues related to high level coding abstraction.
 
         \paragraph*{Conclusions:} C++ and the Standard Template Library (STL) provide a high-performance platform for generic molecular modeling.
@@ -161,7 +161,7 @@ Instead the programmer may resort to existing libraries, thus approaching the bl
 (i) have a high level of control, and
 (ii) experience high performance due a minimalistic design.
 
-In this text we present a modular C++~\cite{stroustrup:97} framework or class library that can be used to quickly build customized MC simulation programs.
+In this text we present a modular C++~\cite{stroustrup:97} framework or class library that can be used to construct MC simulation programs in an expeditious manner.
 
 %%%%%%%%%%%%%%%%%%
 %
@@ -238,24 +238,24 @@ Working with large, aggregate structures such as particle vectors, this will neg
 
 \subsubsection*{Minimize memory comsumption}
 Computer simulations of classical mechanical systems are usually not memory intensive and by minimizing the memory requirements there is a good chance that the executing code will stay in the local cache.
-Code re-cycling via class enheritage is extensively utililized to reduce the memory imprint as well as assist development.
+Code re-cycling via class enheritage is extensively utililized to reduce the memory imprint as well as assist efficient development.
 In this regard C++ templates are a concern since code will be generated for each template type.
-We therefore stride to avoid extensive use of multiple template types -- for example it would seem silly to instantiate both a \verb"float" and a \verb"double" version of a laborate template class.
+We therefore stride to avoid extensive use of multiple template types -- for example it would seem silly to instantiate both a \verb"float" and a \verb"double" version of an elaborate template class.
 
 \subsubsection*{Parallelization}
 In systems that equilibrate fast, Monte Carlo simulations can be linearly parallelized using the ``embarrasingly simple technique'' -- that is start several independent runs with different random seeds, combining the results afterwards.
 Tightly coupled parallelization is incorporated in parts of the code by threading the energy evaluation into two processes: before and after a trial move.
 For systems with particles in the order of hundreds, this scales well on dual-core computers, whereas the overhead becomes unacceptable for small systems.
-To enable threading, the approprite compiler flag for OpenMP~\cite{openmp:98} must be set; as of writing the GNU, Intel and IBM C++ compilers all support OpenMP.
+To enable threading, the appropriate compiler flag for OpenMP~\cite{openmp:98} must be set; as of writing the GNU, Intel and IBM C++ compilers all support OpenMP.
 
 \subsection*{Code Documentation}
 We provide a class library and as such need to describe both what the classes do as well as how to use them.
 This can be conveniently achieved using a code documentation system -- here we have chosen \verb"Doxygen"~\cite{doxygen} since
 (i) the documentation appears as normal code comments and
 (ii) the output is highly configurable, allowing LaTeX equations to be inserted etc.
-In Figure~2 we show how commented code is used to construct a HTML based manual of the available
+In Figure~2 we show how commented code is used to construct a web based manual of the available
 classes and functions in the code library.
-Another very useful feature of Doxygen is the ability to generate a graphical view of the class hierachy.
+Another very useful feature of Doxygen is the ability to generate a graphical view of the class hierarchy.
 This enables the end programmer to visually see how a class is constructed as shown in Figure~1.
 
  
@@ -272,7 +272,7 @@ As of writing, the code library contains general classes for the following,
 \item Macromolecules -- Proteins, flexible chains, charged surfaces.
 \item Charge regulation of molecules~\cite{lund:05}.
 \item Particle distribution functions and other statistical mechanical averages.
-\item Standard file formats are supported: PQR, Gromacs (GRO/XTC), Povray, XYZ.
+\item Standard file formats are supported: PQR, Gromacs (GRO, XTC), Povray, XYZ.
 \end{itemize}
 An example of protein ionization will be presented later in the text.
 We stress that the project is under ongoing development and encourage interested users and developers to contribute.
@@ -306,22 +306,22 @@ Note that we have also incorporated a general polymorphic class for markov moves
 For example, both the salt move class (line 36) and titration class (line 39) will store information about energy changes, if the move was a success etc.
 Data and analysis about each type of move is automatically shown by calling the respective information functions (line 51).
 
-The source code for this and other examples are included with the class library; more will be added over time and we of course encourage users to submit their own code.
+The source code for this and other examples are included with the class library and should serve as good starting points for developing new programs.
 
 %%%%%%%%%%%%%%%%%%%%%%
 \section*{Conclusions}
 A general class library for (macro-)molecular simulation is presented.
 We focus on Monte Carlo methods and the primitive model of electrolytes, although we see no technical limitations in expanding the project to cover other methods and molecular levels.
-The software design is object oriented, meaning that the code is extensively re-used which has several advantages:
+The software design is object oriented, meaning that the code is extensively re-cycled which has several advantages:
 \begin{itemize}
 \item Programs can be developed in a modular manner (\`a la ``Lego'' bricks).
-\item Development and debugging is eased.
+\item Development and debugging is reduced.
 \item Memory requirements are minimized.
 \end{itemize}
 The class library is documented through extensive use of inline code comments.
 These comments are subsequently collected by a third party program (Doxygen) that will automatically construct a code manual and, hence, obsolete a separately maintained instruction book.
-In 50 lines of C++ code we demonstrate how to construct a program that can simulate protein protonation states in an aqueous salt solution.
-High performance in inner loops are established using Expression Templates, perfectly compatible with the flexibility and intuitive appeal of an object oriented design.
+In 50 lines of C++ code we demonstrate how to construct a complete MC program that can simulate protein protonation states in an aqueous salt solution.
+High performance in inner loops is established using Expression Templates, completely compatible with the flexibility and intuitive appeal of an object oriented design.
 
 \section*{Availability and requirements}
 \textsl{Project name:} faunus\\
@@ -339,7 +339,7 @@ $ svn checkout
   http://faunus.svn.sourceforge.net/
   svnroot/faunus/trunk faunus
 \end{verbatim}
-Prospect developers are welcome to contact the authors.
+Prospective developers are welcome to contact the authors for write access to the online code repository, currently hosted by Sourceforge, Inc.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -348,7 +348,7 @@ ML did the Faunus software design and wrote the paper.
 BP and MT contributed to the implementation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section*{Acknowledgements}
+\section*{Acknowledgments}
   \ifthenelse{\boolean{publ}}{\small}{}
   The authors would like to thank the Research School of Pharmaceutical Sciences, Sweden, the Linnaeus Center of Excellence on Organizing Molecular Matter, Sweden,
 and the European Molecular Biology Organization.
@@ -403,7 +403,7 @@ We also thank Pavel Jungwirth for useful discussions and Sourceforge, Inc. for h
 
   \subsection*{Figure 2 - Source Code Manual}
       Code documentation through code comments. All code is commented with
-      special keywords that are eventually collected into a HTML based manual.
+      special keywords that are eventually collected into a web based manual.
       \begin{figure}[ht]\center
       \includegraphics[width=10cm]{pics/doxygen}
       \label{fig:doxygen}
@@ -414,7 +414,7 @@ We also thank Pavel Jungwirth for useful discussions and Sourceforge, Inc. for h
      more than 340 amino acid residues as well as salt particles.
      The probability of finding lysozyme's mass-center around
      the the fab fragment is illustrated by the pink iso-surface.
-     VMD and Povray~\cite{povray} was used to visualize the generated output from Faunus.
+     VMD~\cite{vmd} and Povray~\cite{povray} was used to visualize the generated output from Faunus.
      \begin{figure}[ht]\center
            \label{fig:snapshot}
       \includegraphics[width=8cm]{pics/snapshot}
@@ -422,8 +422,7 @@ We also thank Pavel Jungwirth for useful discussions and Sourceforge, Inc. for h
 
   \subsection*{Figure 4 - Source code example}
       Example of a Monte Carlo simulation program to calculate protein
-      ionization states in an aqueous salt solutions using explicit ions and
-      a slightly coarse grained protein model.
+      ionization states in an aqueous salt solution using explicit ions and the detailed three-dimensional protein structure. 
       \begin{figure}[ht]\center
       \includegraphics[width=16.5cm]{pics/source}
       \end{figure}

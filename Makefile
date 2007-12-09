@@ -3,7 +3,7 @@ MODEL = gnu
 
 # Set to yes if you need Gromacs xtc file support
 # (requires a working Gromacs installation)
-GROMACS = yes
+GROMACS = no
 
 # Set to "yes" to enable parallel execution on multi-core
 # CPU's. OpenMP must be supported by the compiler.
@@ -104,6 +104,14 @@ manybody:	examples/manybody/manybody.C libfaunus
 
 pka:	examples/titration/pka.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/pka.C -o examples/titration/pka
+
+undone:		undone/mikael/namespace.C libfaunus
+	$(CXX) $(CXXFLAGS) \
+	undone/mikael/namespace.C \
+	-o undone/mikael/namespace \
+	-lfaunus ${LDFLAGS}
+
+
 
 examples:	widom pka ewald twobody manybody
 

@@ -2,7 +2,10 @@
 #define _metropolis_h
 #include "slump.h"
 
-//! Polymorph ensemble class
+/*!
+ * Polymorph ensemble class
+ * \todo Maybe not really needed...
+ */
 class ensemble {
   protected:
     slump slp;

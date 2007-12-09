@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7312338A0D0BDD3D007D60FB /* mcloop.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 731233890D0BDD3D007D60FB /* mcloop.h */; };
+		7312338B0D0BDD3D007D60FB /* mcloop.h in Headers */ = {isa = PBXBuildFile; fileRef = 731233890D0BDD3D007D60FB /* mcloop.h */; };
 		7333042D0CFEE0100025AE1E /* manybody.C in Sources */ = {isa = PBXBuildFile; fileRef = 7333042C0CFEE0100025AE1E /* manybody.C */; };
 		733304340CFEE06A0025AE1E /* mrh4a.aam in CopyFiles */ = {isa = PBXBuildFile; fileRef = 733304330CFEE06A0025AE1E /* mrh4a.aam */; };
 		7352F0F20CFEE1AD0042BEF7 /* manybody.conf in CopyFiles */ = {isa = PBXBuildFile; fileRef = 7352F0F10CFEE1AD0042BEF7 /* manybody.conf */; };
@@ -74,17 +76,19 @@
 			files = (
 				733304340CFEE06A0025AE1E /* mrh4a.aam in CopyFiles */,
 				7352F0F20CFEE1AD0042BEF7 /* manybody.conf in CopyFiles */,
+				7312338A0D0BDD3D007D60FB /* mcloop.h in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		731233890D0BDD3D007D60FB /* mcloop.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = mcloop.h; path = ../classes/mcloop.h; sourceTree = SOURCE_ROOT; };
 		7333042C0CFEE0100025AE1E /* manybody.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = manybody.C; path = ../examples/manybody/manybody.C; sourceTree = SOURCE_ROOT; };
 		733304330CFEE06A0025AE1E /* mrh4a.aam */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; name = mrh4a.aam; path = ../examples/manybody/mrh4a.aam; sourceTree = SOURCE_ROOT; };
 		7352F0F10CFEE1AD0042BEF7 /* manybody.conf */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; name = manybody.conf; path = ../examples/manybody/manybody.conf; sourceTree = SOURCE_ROOT; };
-		7352F0FB0CFEE2650042BEF7 /* libfaunus.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; name = libfaunus.a; path = build/Release/libfaunus.a; sourceTree = "<group>"; };
-		73B0A72D0CF345EB0026CD5F /* twobody */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "compiled.mach-o.executable"; path = twobody; sourceTree = BUILT_PRODUCTS_DIR; };
+		7352F0FB0CFEE2650042BEF7 /* liblibfaunus.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = liblibfaunus.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		73B0A72D0CF345EB0026CD5F /* twobody */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = twobody; sourceTree = BUILT_PRODUCTS_DIR; };
 		73B0A7360CF3463E0026CD5F /* analysis.C */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = analysis.C; path = ../classes/analysis.C; sourceTree = SOURCE_ROOT; };
 		73B0A7370CF3463E0026CD5F /* analysis.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = analysis.h; path = ../classes/analysis.h; sourceTree = SOURCE_ROOT; };
 		73B0A7380CF3463E0026CD5F /* average.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = average.h; path = ../classes/average.h; sourceTree = SOURCE_ROOT; };
@@ -169,7 +173,7 @@
 			isa = PBXGroup;
 			children = (
 				73B0A72D0CF345EB0026CD5F /* twobody */,
-				7352F0FB0CFEE2650042BEF7 /* libfaunus.a */,
+				7352F0FB0CFEE2650042BEF7 /* liblibfaunus.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -197,6 +201,7 @@
 		7352F1090CFEE2FC0042BEF7 /* Headers */ = {
 			isa = PBXGroup;
 			children = (
+				731233890D0BDD3D007D60FB /* mcloop.h */,
 				73B0A75E0CF3463E0026CD5F /* slump.h */,
 				73B0A7650CF3463E0026CD5F /* xytable.h */,
 				73B0A7600CF3463E0026CD5F /* species.h */,
@@ -271,6 +276,7 @@
 				7352F13C0CFEE43E0042BEF7 /* pot_spring.h in Headers */,
 				7352F13D0CFEE43E0042BEF7 /* potentials.h in Headers */,
 				7352F13E0CFEE43E0042BEF7 /* simpson.h in Headers */,
+				7312338B0D0BDD3D007D60FB /* mcloop.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -291,7 +297,7 @@
 			);
 			name = faunus;
 			productName = libfaunus;
-			productReference = 7352F0FB0CFEE2650042BEF7 /* libfaunus.a */;
+			productReference = 7352F0FB0CFEE2650042BEF7 /* liblibfaunus.a */;
 			productType = "com.apple.product-type.library.static";
 		};
 		73B0A72C0CF345EB0026CD5F /* manybody */ = {

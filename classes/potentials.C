@@ -9,7 +9,7 @@ pot_setup::pot_setup() {
 
 pot_setup::pot_setup(inputfile &in) {
   lB    = in.getflt("bjerrum", 7.1);
-  eps   = in.getflt("LJ-epsilon", 2);
+  eps   = in.getflt("LJeps", 2);
   box   = in.getflt("boxlen");
   kappa = in.getflt("kappa");
   epsi  = in.getflt("epsi",2);

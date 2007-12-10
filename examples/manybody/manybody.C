@@ -53,7 +53,7 @@ int main() {
         case 1:                                 // Rotate proteins
           for (n=0; n<g.size(); n++) {          //   Loop over all proteins
             i = rand() % g.size();              //   and pick at random.
-            if (i>0)                            //   (freeze 1st molecule)
+            //if (i>0)                            //   (freeze 1st molecule)
               sys+=mr.move(g[i]);               //   Do the move.
           }
           break;

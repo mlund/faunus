@@ -156,26 +156,6 @@ void group::add(container &con, particle::type id, short n) {
   }
 }
 
-/*!
- * This searches the inputfile object for the
- * keywords "nion#" and "tion#" and if found
- * tries to insert the salt particles at random
- * positions.
- */
-void group::add(container &con, inputfile &in) {
-  short n=1, npart;
-  particle::type id;
-  while (n<3) {
-    ostringstream nion, tion;
-    nion << "nion" << n;
-    tion << "tion" << n++;
-    npart = in.getint(nion.str(), 0);
-    id = con.id(in.getstr(tion.str()));
-    if (npart!=0)
-      add(con, id, npart ); 
-  }
-}
-
 unsigned short group::displace(container &c, double dp) {
   unsigned short i=random();
   c.trial[i].x = c.p[i].x + dp*slp.random_half();
@@ -223,7 +203,19 @@ bool group::overlap(container &c) {
   return false;
 }
 
-//--------------- SALT ------------------------
+short int group::count(vector<particle> &p, particle::type id) {
+  short int i,n=0;
+  for (i=0; i<p.size(); i++)
+    if (p[i].id==id)
+      n++;
+  return n;
+}
+
+/*****************************
+ *
+ *          S A L T
+ *
+ *****************************/
 salt::salt(particle::type cat, particle::type an)
 {
   title="MOBILE SALT PARTICLES";
@@ -232,10 +224,41 @@ salt::salt(particle::type cat, particle::type an)
 }
 string salt::info(container &con) {
   ostringstream o;
+  float c=1./6.022e23/1e-27;
+  short nan=count(con.p, anion),
+        ncat=count(con.p, cation);
   o << group::info();
-  o << "#   Cations (type,z,N,conc)= "
-    << con.d[cation].name << ", " << con.d[cation].p.charge << endl;
+  o << "#   Cation (type,z,N,conc) = "
+    << con.d[cation].name << ", " << con.d[cation].p.charge << ", "
+    << ncat << ", " << ncat/con.volume*c << endl
+    << "#   Anion (type,z,N,conc)  = "
+    << con.d[anion].name << ", " << con.d[anion].p.charge << ", "
+    << nan << ", " << nan/con.volume*c << endl;
   return o.str();
+}
+
+/*!
+ * This searches the inputfile object for the
+ * keywords "nion#" and "tion#" and if found
+ * tries to insert the salt particles at random
+ * positions.
+ */
+void salt::add(container &con, inputfile &in) {
+  short n=1, npart;
+  particle::type id;
+  while (n<3) {
+    ostringstream nion, tion;
+    nion << "nion" << n;
+    tion << "tion" << n++;
+    npart = in.getint(nion.str(), 0);
+    id = con.id(in.getstr(tion.str()));
+    if (npart!=0)
+      group::add(con, id, npart ); // add particles
+    if (con.d[id].p.charge>0)
+      cation=id;
+    if (con.d[id].p.charge<0)
+      anion=id;
+  }
 }
 
 //--------------- MACROMOLECULE ---------------

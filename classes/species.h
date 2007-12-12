@@ -14,6 +14,7 @@ class species {
       particle p;
       float pka;
       string name;
+      bool hydrophobic;
     };
     void set(particle::type,string,float,float,float,bool);
 

@@ -49,7 +49,7 @@ class group {
     void accept(particles &);                           //!< Accept a move
     void add(container &, vector<particle>, bool=false);//!< Add a particle vector
     void add(container &, particle::type, short);       //!< Add particles w. collision check
-    void add(container &, inputfile &);                 //!< Add salt as specified in config file
+    short int count(vector<particle> &, particle::type);//!< Count number of specific particles
     virtual unsigned short displace(container&,double); //!< Displace random particle
 };
 
@@ -64,6 +64,7 @@ class salt : public group {
         particle::type=particle::CL);
     particle::type anion, cation; //!< Anion and cation types
     double muex;                  //!< Excess chemical potential
+    void add(container &, inputfile &);                 //!< Add salt as specified in config file
     string info(container &);     //!< Show info
 };
 

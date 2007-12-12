@@ -58,11 +58,10 @@ class point {
 class particle : public point {
   public:
     particle();
-   
     //! Particle type identifier
     enum type {FIRST=0,GLY,ALA,VAL,LEU,ILE,PHE,TRP,TYR,HIS,SER,THR,MET,CYS,
-      ASP,GLN,GLU,ASN,LYS,ARG,PRO,UNK,NTR,CTR,NA,K,CL,BR,I,SO4,ION,CATION,ANION,GHOST,
-      RNH3,RNH4,RCOOH,RCOO,LAST}; 
+      ASP,GLN,GLU,ASN,LYS,ARG,PRO,UNK,NTR,CTR,NA,K,F,CL,BR,I,SO4,ION,CATION,ANION,GHOST,
+      RNH3,RNH4,RCOOH,RCOO,HYDROPHOBIC,LAST}; 
 
     double charge;                      //!< Charge number
     double radius;                      //!< Radius
@@ -71,7 +70,7 @@ class particle : public point {
     inline bool overlap(particle &);    //!< Hardsphere overlap test
     inline double potential(point &);   //!< Electric potential in point
     double vol(double=1);               //!< Estimate volume from weight
-    double rad(double=1);               //!< Estimate radius from weight           
+    double rad(double=1);               //!< Estimate radius from weight
     void operator=(point);              //!< Copy coordinates from a point
 };
 

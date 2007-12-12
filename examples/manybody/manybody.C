@@ -9,12 +9,14 @@
 
 #include "analysis.h"
 #include "mcloop.h"
-typedef pot_minimage T_pairpot;         // Specific pair interaction function
+#include "pot_hydrophobic.h"
+typedef pot_hydrophobic T_pairpot;      // Specific pair interaction function
 #include "markovmove.h"
 
 using namespace std;
 
 int main() {
+  cout << "---------- INITIAL PARAMETERS -----------" << endl;
   slump slump;                          // A random number generator
   inputfile in("manybody.conf");        // Read input file
   mcloop loop(in);                      // Keep track of time and MC loop
@@ -32,7 +34,7 @@ int main() {
   g[0].center(cell);                    //   Center first protein (will be frozen)
   macrorot mr(nvt, cell, pot);          //   Class for macromolecule rotation
   translate mt(nvt, cell, pot);         //   Class for macromolecular translation
-  group salt;                           // SALT group
+  salt salt;                            // SALT group
   salt.add(cell, in);                   //   Add salt particles
   saltmove sm(nvt, cell, pot);          //   Class for salt movements
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
@@ -43,6 +45,7 @@ int main() {
   ioxtc xtc(cell, cell.len);            // Gromacs xtc output (if installed)
   #endif
 
+  cout << "---------- RUN-TIME INFORMATION  -----------" << endl;
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {
       short i,j,n;
@@ -92,7 +95,8 @@ int main() {
 
   } // End of outer loop
 
-  cout << sys.info() << salt.info()             // Final information...
+  cout << "----------- FINAL INFORMATION -----------" << endl ;
+  cout << sys.info() << salt.info(cell)             // Final information...
        << sm.info() << mr.info() << mt.info();
 
   #ifdef GROMACS

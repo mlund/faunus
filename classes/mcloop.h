@@ -14,11 +14,11 @@
  */
 class mcloop {
   private:
-    countdown<unsigned short> cnt;
+    countdown<unsigned int> cnt;
   public:
-    unsigned short macro, micro;
+    unsigned int macro, micro;
     mcloop(inputfile &);           //!< Setup
-    string timing(unsigned short); //!< Show macrostep middle time and ETA.
+    string timing(unsigned int); //!< Show macrostep middle time and ETA.
 };
 
 /*!
@@ -31,7 +31,7 @@ mcloop::mcloop(inputfile &in)
   micro=in.getint("microsteps");
 }
 
-string mcloop::timing(unsigned short mac) {
+string mcloop::timing(unsigned int mac) {
   ostringstream o;
   o << "# Macrostep " << mac << " completed. ETA: "
     << cnt.eta(mac);

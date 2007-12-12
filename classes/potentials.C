@@ -15,6 +15,7 @@ pot_setup::pot_setup(inputfile &in) {
   epsi  = in.getflt("epsi",2);
   epso  = in.getflt("epso",80);
   a     = in.getflt("cavity");
+  hydroscale = in.getflt("hydroscale", 4.0);
 }
 
 string pot_minimage::info() {

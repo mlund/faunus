@@ -12,7 +12,7 @@ void species::set(
   d[id].pka = pka;
   d[id].p.radius = r;
   d[id].p.charge = z;
-  d[id].hydrophobic=hydr;
+  d[id].p.hydrophobic = hydr;
 }
 
 particle::type species::id(string name) {
@@ -25,11 +25,11 @@ particle::type species::id(string name) {
 species::species() {
   d.resize(particle::LAST);
   //  id             name   rad   Z   pKa  hydrp
-  set(particle::ALA, "ALA", 3.5,  0,  0.0, false);
+  set(particle::ALA, "ALA", 3.5,  0,  0.0, true);
   set(particle::ARG, "ARG", 3.5,  0, 12.0, false);
   set(particle::ASN, "ASN", 3.5,  0,  0.0, false);
   set(particle::ASP, "ASP", 3.5, -1,  4.0, false);
-  set(particle::CYS, "CYS", 3.5, -1, 10.8, true );
+  set(particle::CYS, "CYS", 3.5, -1, 10.8, false);
   set(particle::GLN, "GLN", 3.5,  0,  0.0, false);
   set(particle::GLU, "GLU", 3.5, -1,  4.4, false);
   set(particle::GLY, "GLY", 3.5,  0,  0.0, false);
@@ -39,12 +39,12 @@ species::species() {
   set(particle::LYS, "LYS", 3.5,  0, 10.4, false);
   set(particle::MET, "MET", 3.5,  0,  0.0, true );
   set(particle::PHE, "PHE", 3.5,  0,  0.0, true );
-  set(particle::PRO, "PRO", 3.5,  0,  0.0, false);
+  set(particle::PRO, "PRO", 3.5,  0,  0.0, true);
   set(particle::SER, "SER", 3.5,  0,  0.0, false);
   set(particle::THR, "THR", 3.5,  0,  0.0, false);
   set(particle::TRP, "TRP", 3.5,  0,  0.0, true );
-  set(particle::TYR, "TYR", 3.5, -1,  9.6, true ); //true
-  set(particle::VAL, "VAL", 3.5,  0,  0.0, false);
+  set(particle::TYR, "TYR", 3.5, -1,  9.6, false );
+  set(particle::VAL, "VAL", 3.5,  0,  0.0, true);
   set(particle::CTR, "CTR", 3.5, -1,  3.8, false);
   set(particle::NTR, "NTR", 3.5,  0,  7.5, false);
   set(particle::UNK, "UNK", 3.5,  0,  0.0, false);

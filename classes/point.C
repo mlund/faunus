@@ -94,6 +94,7 @@ void point::random_unitv() {
 //------------------ PARTICLE -----------------------
 particle::particle() {
   charge=mw=radius=0;
+  hydrophobic=false;
   id=GHOST;
 }
 void particle::operator=(point p) {

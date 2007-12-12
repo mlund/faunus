@@ -67,6 +67,7 @@ class particle : public point {
     double radius;                      //!< Radius
     float mw;                           //!< Molecular weight
     type id;                            //!< Particle identifier
+    bool hydrophobic;                   //!< Hydrophobic flag
     inline bool overlap(particle &);    //!< Hardsphere overlap test
     inline double potential(point &);   //!< Electric potential in point
     double vol(double=1);               //!< Estimate volume from weight

@@ -23,10 +23,16 @@ class pot_hydrophobic : private pot_lj {
         u=scale*u;
       return u + p1.charge*p2.charge/sqrt(r2);
     }
-    string info() {
-      string s="Hydrophobic\n";
-      return s;
-    }
+    string info();
 };
+
+string pot_hydrophobic::info() {
+  ostringstream o;
+  o << "#   Type               = LJ/Coulomb w. extra hydrophobicity" << endl
+    << "#   Bjerrum length     = " << f << endl
+    << "#   LJ epsilon (kT)    = " << eps*f << endl
+    << "#   Hydrop. LJ scaling = " << scale << endl;
+  return o.str();
+}
 
 #endif

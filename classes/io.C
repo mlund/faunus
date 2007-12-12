@@ -55,6 +55,7 @@ particle ioaam::s2p(string &s) {
     >> p.x >> p.y >> p.z
     >> p.charge >> p.mw >> p.radius;
   p.id = spcPtr->id(name);
+  p.hydrophobic = spcPtr->d[p.id].p.hydrophobic;
   return p;
 }
 vector<particle> ioaam::load(string file) {
@@ -129,6 +130,7 @@ particle ioxyz::s2p(string &s) {
     >> p.x >> p.y >> p.z
     >> p.charge >> p.mw >> p.radius;
   p.id = spcPtr->id(name);
+  p.hydrophobic = spcPtr->d[p.id].p.hydrophobic;
   return p;
 }
 

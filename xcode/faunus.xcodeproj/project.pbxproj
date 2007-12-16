@@ -69,21 +69,21 @@
 			isa = PBXContainerItemProxy;
 			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 7359EA160D1475890022D178 /* faunus */;
+			remoteGlobalIDString = 7359EA160D1475890022D178;
 			remoteInfo = faunus;
 		};
 		7359EA610D15420C0022D178 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 7359EA160D1475890022D178 /* faunus */;
+			remoteGlobalIDString = 7359EA160D1475890022D178;
 			remoteInfo = faunus;
 		};
 		7359EC1D0D1547F70022D178 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 7359EA160D1475890022D178 /* faunus */;
+			remoteGlobalIDString = 7359EA160D1475890022D178;
 			remoteInfo = faunus;
 		};
 		7359EC330D15490A0022D178 /* PBXContainerItemProxy */ = {
@@ -143,8 +143,8 @@
 		7359EA170D1475890022D178 /* libfaunus.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libfaunus.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		7359EC100D1547970022D178 /* pka.C */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pka.C; path = ../examples/titration/pka.C; sourceTree = SOURCE_ROOT; };
 		7359EC150D1547E10022D178 /* calbindin.aam */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = calbindin.aam; path = ../examples/titration/calbindin.aam; sourceTree = SOURCE_ROOT; };
-		7359EC190D1547F10022D178 /* pka */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = pka; path = build/Release/pka; sourceTree = "<group>"; };
-		7359EC3E0D15490A0022D178 /* manybody */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = manybody; sourceTree = BUILT_PRODUCTS_DIR; };
+		7359EC190D1547F10022D178 /* pka */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pka; sourceTree = BUILT_PRODUCTS_DIR; };
+		7359EC3E0D15490A0022D178 /* twobody */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = twobody; sourceTree = BUILT_PRODUCTS_DIR; };
 		7359EC420D1549570022D178 /* calbindin.aam */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = calbindin.aam; path = ../examples/twobody/calbindin.aam; sourceTree = SOURCE_ROOT; };
 		7359EC430D1549570022D178 /* lysozyme.aam */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = lysozyme.aam; path = ../examples/twobody/lysozyme.aam; sourceTree = SOURCE_ROOT; };
 		7359EC440D1549570022D178 /* twobody.C */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = twobody.C; path = ../examples/twobody/twobody.C; sourceTree = SOURCE_ROOT; };
@@ -236,7 +236,6 @@
 		08FB7794FE84155DC02AAC07 /* faunus */ = {
 			isa = PBXGroup;
 			children = (
-				7359EC440D1549570022D178 /* twobody.C */,
 				7352F1090CFEE2FC0042BEF7 /* Headers */,
 				7352F1030CFEE2990042BEF7 /* Classes */,
 				73B0A7AB0CF349EF0026CD5F /* Data */,
@@ -251,6 +250,7 @@
 			children = (
 				7359EC100D1547970022D178 /* pka.C */,
 				7359E7070D145AD60022D178 /* widom.C */,
+				7359EC440D1549570022D178 /* twobody.C */,
 				7333042C0CFEE0100025AE1E /* manybody.C */,
 			);
 			name = Source;
@@ -260,10 +260,10 @@
 			isa = PBXGroup;
 			children = (
 				7359E6F30D145A210022D178 /* widom */,
-				7359E74F0D145E340022D178 /* manybody */,
 				7359EA170D1475890022D178 /* libfaunus.a */,
 				7359EC190D1547F10022D178 /* pka */,
-				7359EC3E0D15490A0022D178 /* manybody */,
+				7359EC3E0D15490A0022D178 /* twobody */,
+				7359E74F0D145E340022D178 /* manybody */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -462,7 +462,7 @@
 			);
 			name = twobody;
 			productName = manybody;
-			productReference = 7359EC3E0D15490A0022D178 /* manybody */;
+			productReference = 7359EC3E0D15490A0022D178 /* twobody */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
@@ -568,6 +568,7 @@
 		1DEB923608733DC60010E9CD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_AUTO_VECTORIZATION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PREBINDING = NO;
@@ -578,6 +579,8 @@
 		1DEB923708733DC60010E9CD /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = i386;
+				GCC_AUTO_VECTORIZATION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PREBINDING = NO;
@@ -604,6 +607,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G5;
@@ -722,12 +726,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G5;
 				INSTALL_PATH = /usr/local/bin;
 				PREBINDING = NO;
-				PRODUCT_NAME = manybody;
+				PRODUCT_NAME = twobody;
 				ZERO_LINK = NO;
 			};
 			name = Release;

@@ -52,8 +52,8 @@
 %%  submitted article.                         %% 
 %%                                             %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                     
-%\def\includegraphic{}
-%\def\includegraphics{}
+\def\includegraphic{}
+\def\includegraphics{}
 
 \setlength{\topmargin}{0.0cm}
 \setlength{\textheight}{21.5cm}
@@ -110,8 +110,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-\author{
-Mikael Lund\correspondingauthor$^{1}$%
+\author{Mikael Lund\correspondingauthor$^{1}$%
        \email{Mikael Lund\correspondingauthor - mikael.lund@uochb.cas.cz}%
 \and
 Martin Trulsson$^{2}$
@@ -138,7 +137,7 @@ Bj\"orn Persson$^{2}$
         \paragraph*{Results:} We show how an object oriented design can be used to create an intuitively appealing coding framework for molecular simulation. This is exemplified in a \emph{minimalistic} C++ program that can calculate protein protonation states. We further discuss performance issues related to high level coding abstraction.
 
         \paragraph*{Conclusions:} C++ and the Standard Template Library (STL) provide a high-performance platform for generic molecular modeling.
-        Automatic generation of code documentation from inline comments has proven particularly useful in that no seperate manual needs to be maintained.
+        Automatic generation of code documentation from inline comments has proven particularly useful in that no separate manual needs to be maintained.
 \end{abstract}
 
 \ifthenelse{\boolean{publ}}{\begin{multicols}{2}}{}
@@ -148,7 +147,7 @@ Bj\"orn Persson$^{2}$
 %%
 \section*{Background}
 Molecular simulation has become a standard tool for investigating molecular systems such as proteins, polymer solutions and other colloidal particles.
-It is safe to say that for biological applications Molecular Dynamics (MD) is by far the most polular method as it provides both static and dynamic properties of the system.
+It is safe to say that for biological applications Molecular Dynamics (MD) is by far the most popular method as it provides both static and dynamic properties of the system.
 Metropolis Monte Carlo (MC) simulation~\cite{metropolis:53}, on the other hand, is less utilized and relatively few software packages exists\cite{Kamberaj:2001fk,carlsson:01,Jie-Hu:2006lr}.
 One advantage of MC simulation is that it allows ``unphysical'' particle moves, enabling a more creative sampling of the configurational space\cite{frenkel}.
 The tradeoff for this freedom to move particles is the loss of all dynamic information and, in addition, MC programs tend to become less general.
@@ -160,8 +159,10 @@ The alternative is for researchers to create their own programs. This approach o
 Instead the programmer may resort to existing libraries, thus approaching the black box situation described above. However, the abstraction level will typically be lower which has several advantages that allows the researcher to
 (i) have a high level of control, and
 (ii) experience high performance due a minimalistic design.
-
 In this text we present a modular C++~\cite{stroustrup:97} framework or class library that can be used to construct MC simulation programs in an expeditious manner.
+Other C/C++ libraries for molecular simulation do exist: MDAPI~\cite{mdapi}, OOMPAA~\cite{oompaa}, Glotzilla, for example, albeit none of these target Monte Carlo simulation specifically.
+Due to the common language, faunus can easily interweave these libraries to broaden the intrinsic feature set with additional well-proven code.
+A successful example of incorporating features from an external library, Gromacs GMX~\cite{gromacs}, is presented in the text.
 
 %%%%%%%%%%%%%%%%%%
 %
@@ -236,14 +237,16 @@ elec.sum(p);
 In C++ standard argument passing is done by creating a new copy of the object.
 Working with large, aggregate structures such as particle vectors, this will negatively impact performance. To circumvent this we pass all complex objects as references, for example: \verb"void function(someclass &)".
 
-\subsubsection*{Minimize memory comsumption}
+\subsubsection*{Minimize memory consumption}
 Computer simulations of classical mechanical systems are usually not memory intensive and by minimizing the memory requirements there is a good chance that the executing code will stay in the local cache.
-Code re-cycling via class enheritage is extensively utililized to reduce the memory imprint as well as assist efficient development.
+Code re-cycling via class enheritage is extensively utilized to reduce the memory imprint as well as assist efficient development.
 In this regard C++ templates are a concern since code will be generated for each template type.
 We therefore stride to avoid extensive use of multiple template types -- for example it would seem silly to instantiate both a \verb"float" and a \verb"double" version of an elaborate template class.
 
+Only for systems with tens of thousands of atoms the particle coordinate vector may extend beyond the local cache -- for example, one megabyte of cache can encompass $1024^2/8/3\approx 43700$ double precision three dimensional particle coordinates. List methods and additional single particle information may decrease this number and, while not yet implemented in faunus, sophisticated methods do exist for cache efficient bookkeeping of many particle systems~\cite{meloni:121102}.
+
 \subsubsection*{Parallelization}
-In systems that equilibrate fast, Monte Carlo simulations can be linearly parallelized using the ``embarrasingly simple technique'' -- that is start several independent runs with different random seeds, combining the results afterwards.
+In systems that equilibrate fast, Monte Carlo simulations can be linearly parallelized using the ``embarrassingly simple technique'' -- that is start several independent runs with different random seeds, combining the results afterwards.
 Tightly coupled parallelization is incorporated in parts of the code by threading the energy evaluation into two processes: before and after a trial move.
 For systems with particles in the order of hundreds, this scales well on dual-core computers, whereas the overhead becomes unacceptable for small systems.
 To enable threading, the appropriate compiler flag for OpenMP~\cite{openmp:98} must be set; as of writing the GNU, Intel and IBM C++ compilers all support OpenMP.

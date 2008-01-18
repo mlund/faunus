@@ -94,7 +94,7 @@
 %%                                          %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\title{Faunus: An Object Oriented Framework for Molecular Si\-mu\-la\-tion}
+\title{Faunus: An object oriented framework for molecular si\-mu\-la\-tion}
  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%                                          %%
@@ -167,7 +167,7 @@ A successful example of incorporating features from an external library, Gromacs
 %%%%%%%%%%%%%%%%%%
 %
 \section*{Implementation}
-\subsection*{Object Oriented Design}
+\subsection*{Object oriented design}
 The object oriented capabilities of C++ have enabled us to create a
 more appealing interface than traditional procedural approaches.
 For example, the handling of particles -- a key undertaking of all classical simulations -- is provided by a class hierarchy:
@@ -187,7 +187,7 @@ public:
 The Standard Template Library (STL) is subsequently used to construct a vector of particles, \verb"vector<particle>", that allows for easy access and manipulation.
 For instance, \verb"p[i].radius" will return the size of the $i$'th particle.
 
-\subsection*{Polymorphic Classes -- Virtual Functions}
+\subsection*{Polymorphic classes -- Virtual functions}
 One of the unique features of C++ is \emph{polymorph classes} that allows for very generic and intuitively appealing code.
 To demonstrate this, we outline the design of our framework for handling the simulation container -- see Figure 1.
 Essentially, the end programmer will want to select among different geometries -- a box, sphere, cylinder etc.
@@ -202,8 +202,8 @@ double concentration(container &c)
 \end{verbatim}.
 Due to a large overhead, virtual functions may, however, negatively impact performance and are generally avoided in critical, inner loops.
 
-\subsection*{Performance Aspects}
-\subsubsection*{Function Inlining via Templates}
+\subsection*{Performance aspects}
+\subsubsection*{Function inlining via templates}
 The most computationally demanding step in most molecular simulations is the evaluation of configurational energies.
 Hence the applied pair potential must be highly optimized and preferably inlined in all inner loops.
 This is accomplished by passing a pair potential \emph{class} as a template parameter that creates a local instance inside the inner loop template,
@@ -251,7 +251,7 @@ Tightly coupled parallelization is incorporated in parts of the code by threadin
 For systems with particles in the order of hundreds, this scales well on dual-core computers, whereas the overhead becomes unacceptable for small systems.
 To enable threading, the appropriate compiler flag for OpenMP~\cite{openmp:98} must be set; as of writing the GNU, Intel and IBM C++ compilers all support OpenMP.
 
-\subsection*{Code Documentation}
+\subsection*{Code documentation}
 We provide a class library and as such need to describe both what the classes do as well as how to use them.
 This can be conveniently achieved using a code documentation system -- here we have chosen \verb"Doxygen"~\cite{doxygen} since
 (i) the documentation appears as normal code comments and
@@ -265,8 +265,8 @@ This enables the end programmer to visually see how a class is constructed as sh
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Results and Discussion %%
 %%
-\section*{Results and Discussion}
-\subsection*{General Features}
+\section*{Results and discussion}
+\subsection*{General features}
 The class library provides simulation routines for ions, macromolecules and polymers in solution with a strong focus on electrostatic interactions using the primitive model of electrolytes where the solvent is treated as a structureless dielectric continuum~\cite{hill:86}.
 It is, however, completely possible to expand the library to other systems, include explicit solvent etc. The routines have been developed over several years in connection with a number of scientific investigations, including proteins in solution~\cite{lund-thesis}.
 As of writing, the code library contains general classes for the following,
@@ -280,7 +280,7 @@ As of writing, the code library contains general classes for the following,
 An example of protein ionization will be presented later in the text.
 We stress that the project is under ongoing development and encourage interested users and developers to contribute.
 
-\subsubsection*{``Trajectory'' Output}
+\subsubsection*{``Trajectory'' output}
 Molecular Dynamics simulation packages often save the time propagated particle trajectory to disk which is subsequently analyzed.
 In order to adopt this strategy we include an export routine that can write the simulated particle configurations to a compressed Gromacs XTC file~\cite{gromacs}.
 This (sizable) file can be analyzed using the extensive set of tools provided in the Gromacs package, or visualized using VMD~\cite{vmd}, for example.
@@ -292,7 +292,7 @@ As an example of the latter, we have simulated lysozyme interacting with a fab-H
 %	  Text for this sub-sub-section \ldots
 
 
-\subsection*{An Example: Proton Titration}
+\subsection*{An example: Proton titration}
 Figure 4 shows -- in 50 lines of code -- a complete MC program for simulating the protonation state of a protein in a salt solution at a given pH value.
 Experimentally this corresponds to a standard potentiometric titration experiment where the net-charge is measured as a function of pH~\cite{tanford:72}.
 We will not go through all the lines in the code as the comments should be more or less self-explanatory.
@@ -348,7 +348,8 @@ Prospective developers are welcome to contact the authors for write access to th
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section*{Authors contributions}
 ML did the Faunus software design and wrote the paper.
-BP and MT contributed to the implementation.
+BP and MT contributed to the implementation. All
+authors have read and approved the final manuscript.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section*{Acknowledgments}
@@ -393,26 +394,26 @@ We also thank Pavel Jungwirth for useful discussions and Sourceforge, Inc. for h
 %%
 %% Do not use \listoffigures as most will included as separate files
 
-\section*{Figures}
+\section*{Figure legends}
   \subsection*{Figure 1 - Graphical class hierarchy}
       Schematic representation of class inheritance used for the
       \verb"container" class. Intuitive inheritance is used whenever possible.
       For example, a container contains particles, it can have a shape
       etc. The graphical representation is produced using Doxygen.
       \begin{figure}[ht]\center
-      \includegraphics[width=6cm]{pics/container}
+      %\includegraphics[width=6cm]{pics/container}
       \label{fig:container}
       \end{figure}
 
-  \subsection*{Figure 2 - Source Code Manual}
+  \subsection*{Figure 2 - Source code manual}
       Code documentation through code comments. All code is commented with
       special keywords that are eventually collected into a web based manual.
       \begin{figure}[ht]\center
-      \includegraphics[width=10cm]{pics/doxygen}
+      %\includegraphics[width=10cm]{pics/doxygen}
       \label{fig:doxygen}
       \end{figure}
 
-  \subsection*{Figure 3 - Graphical Analysis}
+  \subsection*{Figure 3 - Graphical analysis}
      Lysozyme interacting with a fab-fragment -- a simulation containing
      more than 340 amino acid residues as well as salt particles.
      The probability of finding lysozyme's mass-center around
@@ -420,14 +421,14 @@ We also thank Pavel Jungwirth for useful discussions and Sourceforge, Inc. for h
      VMD~\cite{vmd} and Povray~\cite{povray} was used to visualize the generated output from Faunus.
      \begin{figure}[ht]\center
            \label{fig:snapshot}
-      \includegraphics[width=8cm]{pics/snapshot}
+      %\includegraphics[width=8cm]{pics/snapshot}
       \end{figure}
 
   \subsection*{Figure 4 - Source code example}
       Example of a Monte Carlo simulation program to calculate protein
       ionization states in an aqueous salt solution using explicit ions and the detailed three-dimensional protein structure. 
       \begin{figure}[ht]\center
-      \includegraphics[width=16.5cm]{pics/source}
+      %\includegraphics[width=16.5cm]{pics/source}
       \end{figure}
       
 \begin{comment}
@@ -456,7 +457,7 @@ We also thank Pavel Jungwirth for useful discussions and Sourceforge, Inc. for h
   \subsection*{Table 2 - Sample table title}
     Large tables are attached as separate files but should
     still be described here.
-
+\end{comment}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%                               %%
@@ -464,16 +465,11 @@ We also thank Pavel Jungwirth for useful discussions and Sourceforge, Inc. for h
 %%                               %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section*{Additional Files}
-  \subsection*{Additional file 1 --- Sample additional file title}
-    Additional file descriptions text (including details of how to
-    view the file, if it is in a non-standard format or the file extension).  This might
-    refer to a multi-page table or a figure.
-
-  \subsection*{Additional file 2 --- Sample additional file title}
-    Additional file descriptions text.
-\end{comment}
-
+\section*{Additional files}
+  \subsection*{Additional file 1 --- Source code snapshot}
+   This zip-archive contains a snapshot of the source code
+   repository at the time of publication. The most recent version
+   can always be obtained from SourceForge as described in ``Availability and requirements''.
 \end{bmcformat}
 \end{document}
 

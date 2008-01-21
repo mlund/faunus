@@ -51,14 +51,15 @@ class cell : public container {
 
 //---------------------------------------------------------
 /*! \brief Cubic simulation container w. periodic boundaries
+ *  
  *  \author Mikael Lund
  */
 class box : public container {
   private:
     point d;
-    double len_half, len_inv;
-    void setlen(double);
   public:
+    double len_half, len_inv;
+    void setlen(double); //!< Temp. public for isobaric
     double len; //!< Side length
     box(double);
     box(inputfile &);

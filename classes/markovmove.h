@@ -26,7 +26,6 @@
  *  type \verb T_pairpot \endverbatim that must be
  *  defined before processing the source code. For example,
  *
- *  \code
  *  #include "potentials.h"
  *  typedef pot_coulomb T_pairpot
  *  #include "markovmove.C"
@@ -140,6 +139,28 @@ class translate : public markovmove {
     translate( ensemble&, container&, interaction<T_pairpot>&);
     double move(macromolecule &); 
 };
+
+/*
+ * This move will perturb the volume of a system consiting 
+ * of macromolecules only! It changes the volume by a $\delta$V
+ * and scales the distances reltive to the origin. It will do the 
+ * trick in a cube but can it be extended?
+ */
+
+class isobaric : public markovmove {
+  public:
+    isobaric( ensemble&, box&, interaction<T_pairpot>&, double);
+    string info();
+    double move(vector<macromolecule> &);
+  private:
+    box *b;
+    double P;
+    average<float> vol, vol2;
+    double dV, lenfrac;
+    double scaleddistance();
+    int cntUP, cntDOWN;
+};
+
 
 /*! \brief Rotate group around its mass-center.
  *  \author Mikael Lund
@@ -764,4 +785,81 @@ double HAchargereg::energy( vector<particle> &p, double du, titrate::action &a )
     return du+( log(10.)*( ph - con->d[i].pka ) )+CatPot+log(protons.size()/con->volume) ;
   else
     return du-( log(10.)*( ph - con->d[i].pka ) )-CatPot-log((protons.size()+1)/con->volume);
+}
+
+//---------- ISOBARIC ----------
+/*!
+ * \param P is the bulk pressure
+ */
+isobaric::isobaric (
+  ensemble &e,
+  box &c,
+  interaction<T_pairpot> &i,
+  double pressure) : markovmove(e,c,i) {
+    cout <<"isotest2"<<endl;
+    *b=box(c);
+    cout <<"isotest"<<endl;
+    name="ISOBARIC";
+    cite="none so far";
+    P=pressure;
+    runfraction=0.001;
+    dp=200; //A^3! rewrite in log(dp)?
+}
+string isobaric::info() {
+  ostringstream o;
+  o << markovmove::info();
+  o << "# External pressure       = "<< P <<"(A^-3) = "<<P*1660<<" (M) = "<< endl
+    << "# <Volume>                = "<< vol.avg() << " A^3  , <Vol^2> " << vol2.avg() <<endl
+    << "# <Density>               = "<< endl //Solve outside markovemove?
+    << "# Fraction of expansions  : " << cntUP << endl
+    << "# Fraction of contractions: " <<cntDOWN << endl;
+}
+double isobaric::scaleddistance() {
+  if (slp.random_one()<0.5){
+    dV=dp;
+    cntUP++; 
+    } else {
+    dV=-dp;
+    cntDOWN++;
+  }
+  return exp(log(con->volume+dV)/3.)*(b->len_inv);
+}
+double isobaric::move(vector<macromolecule> &g) {
+  du=0;
+  cnt++;
+  lenfrac=scaleddistance();
+  int i=g.size();
+  for (int n=0; n<i; n++) {
+    g[n].move(*con, g[n].cm*lenfrac-g[n].cm);
+  }   
+  #pragma omp parallel
+  { 
+    #pragma omp sections     
+    {
+      #pragma omp section
+      { uold = pot->energy(con->p); }
+      #pragma omp section
+      { unew = pot->energy(con->trial); }      
+    }
+  }
+  du = unew-uold+P*dV-i*log((con->volume+dV)/(con->volume));
+  if (ens->metropolis(du)==true) {
+    rc=OK;
+    utot+=du;
+    dpsqr+=dp*dp;
+    naccept++;
+    for (int n=0; n<i; n++) 
+      g[n].accept(*con);
+    b->setlen(lenfrac*(b->len));
+    vol+=con->volume;
+    vol2+=pow(con->volume,2);
+    return du;
+  } else rc=ENERGY;
+  du=0;
+  dpsqr+=0;
+  for (int n=0; n<i; n++)
+    g[n].undo(*con);
+  vol+=con->volume;
+  vol2+=pow(con->volume,2);
+  return du;
 }

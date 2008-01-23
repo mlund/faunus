@@ -129,7 +129,7 @@ rdfP3::rdfP3(short species1, short species2, float resolution, float xmaximum, f
  * \note Uses the container distance function
  */
 void rdf::update(container &c, point &a, point &b) {
-  add( abs( c.dist(a, b) ) );
+  add( c.dist(a, b) );
 }
 
 /*!
@@ -160,7 +160,7 @@ void rdf::update(vector<particle> &p)
     for (j=i+1; j<n; j++) 
       if ( (p[i].id==a && p[j].id==b)
           || (p[j].id==a && p[i].id==b) )
-        add( abs(p[i].dist(p[j])) );
+        add( p[i].dist(p[j]) );
 }
 
 /*!
@@ -172,7 +172,7 @@ void rdfP3::update(vector<particle*> &p)
   unsigned short i,j,n=p.size();
   for (i=0; i<n-1; i++)
     for (j=i+1; j<n; j++) 
-      add( abs(p[i]->dist(*p[j], len, len_inv )));
+      add( p[i]->dist(*p[j], len, len_inv ));
 }
 float rdf::volume(float x) { return 4./3.*acos(-1.)*( pow(x+xres,3)-pow(x,3) ); }
 /*!

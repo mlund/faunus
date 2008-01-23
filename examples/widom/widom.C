@@ -22,7 +22,7 @@ int main() {
   box cell(90.);                        // We want a cubic cell
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg;                        // Setup pair potential - default values
-  rdf rdf(particle::NA,particle::CL);
+  rdf rdf(particle::NA,particle::CL,.5, 45.);
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   ioxyz xyz(cell);
@@ -37,10 +37,10 @@ int main() {
   xyz.save("coord.xyz", cell.p);
   
   for (int macro=0; macro<10; macro++) {        // Markov chain
-    for (int micro=0; micro<1e3; micro++) {
+    for (int micro=0; micro<1e2; micro++) {
       sys+=sm.move(salt);                       // Displace salt particles
       widom.insert(10);                         // Widom particle insertion analysis
-      rdf.update(cell.p);
+      rdf.update(cell);
     }
     sys.update(pot.energy(cell.p));             // Update system energy
   }

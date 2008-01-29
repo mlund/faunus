@@ -1,5 +1,5 @@
 # Specify compiler (gnu,intel,pgi,pathscale,debug)
-MODEL = debug 
+MODEL = gnu 
 
 # Set to yes if you need Gromacs xtc file support
 # (requires a working Gromacs installation)
@@ -86,10 +86,11 @@ manualul:
 widom:	examples/widom/widom.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/widom/widom.C -o examples/widom/widom
 	
-ewald:		examples/ewald/ewald.C $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR)\
+ewald:		examples/ewald/ewald.C libfaunus
+	$(CXX) $(CXXFLAGS) \
 	examples/ewald/ewald.C \
-	-o examples/ewald/ewald 
+	-o examples/ewald/ewald \
+	-lfaunus ${LDFLAGS}
 
 twobody:	examples/twobody/twobody.C libfaunus
 	$(CXX) $(CXXFLAGS) \

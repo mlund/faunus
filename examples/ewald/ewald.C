@@ -5,14 +5,14 @@
  *
  */
 #include <iostream>
-#include "io.h"
-#include "analysis.h"
-#include "container.h"
-#include "potentials.h"
+#include "../../classes/io.h"
+#include "../../classes/analysis.h"
+#include "../../classes/container.h"
+#include "../../classes/potentials.h"
 typedef pot_minimage T_pairpot;         // Coulomb pot. with minimum image convention.
-#include "markovmove.h"
-#include "analysis.h"
-#include "histogram.h"
+#include "../../classes/markovmove.h"
+#include "../../classes/analysis.h"
+#include "../../classes/histogram.h"
 
 using namespace std;
 

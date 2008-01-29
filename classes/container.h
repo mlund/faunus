@@ -26,6 +26,7 @@ class container : public particles,  public species {
     inline virtual double dist(point &a,point &b) {//!< Calculate distance between points
       return a.dist(b);
     }
+    virtual void reset_volume(double);   //!< Recalculates the volume for the container (dangerus...)
 };
 
 /*! \brief Spherical simulation container
@@ -84,6 +85,9 @@ class box : public container {
       p.x=p.x-len*anint(p.x*len_inv);
       p.y=p.y-len*anint(p.y*len_inv);
       p.z=p.z-len*anint(p.z*len_inv);
+    }
+    void reset_volume(double newlen) {
+      setlen(newlen);
     }
 };
 

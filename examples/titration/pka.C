@@ -9,7 +9,7 @@ typedef pot_coulomb T_pairpot;         // Specify pair potential
 using namespace std;
 
 int main() {
-  cell::cell con(100.);                // Use a spherical container
+  cell con(100.);                // Use a spherical container
   canonical nvt;                       // Use the canonical ensemble
   pot_setup cfg;                       // Setup pair potential (default)
   interaction<T_pairpot> pot(cfg);     // Functions for interactions

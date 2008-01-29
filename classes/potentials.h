@@ -57,6 +57,15 @@ class pot_coulomb : private pot_lj {
       return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
     }
     string info();
+    void setscale(double d) {}     //setscale and dr_scale are here
+    point dr_scale(point &p) {   //dummie functions due to isobaric
+      point q;                          //implementation under pbc
+      q.x=0;                            //Could definetly be look better (other solution)
+      q.y=0;
+      q.z=0;
+      return q;
+      }
+    inline double scaledpairpot(particle &p1, particle &p2) {return pairpot(p1, p1);}
 };
 
 /*!
@@ -81,6 +90,15 @@ class pot_minimage : private pot_lj {
       //register double dx=p1.radius+p2.radius;
       //return (r2<dx*dx) ? 0 : p1.charge*p2.charge/sqrt(r2);
     }
+    void setscale(double d) {}     //setscale and dr_scale are here
+    point dr_scale(point &p) {   //dummie functions due to isobaric
+      point q;                          //implementation under pbc
+      q.x=0;                            //Could definetly be look better (other solution)
+      q.y=0;
+      q.z=0;
+      return q;
+      }
+    inline double scaledpairpot(particle &p1, particle &p2) {return pairpot(p1, p1);}
 };
 
 
@@ -101,6 +119,15 @@ class pot_test {
       register double qq=p1.charge*p2.charge;
       return (qq!=0) ? qq/sqrt(r2)+a : a;
     }
+    void setscale(double d) {}     //setscale and dr_scale are here
+    point dr_scale(point &p) {   //dummie functions due to isobaric
+      point q;                          //implementation under pbc
+      q.x=0;                            //Could definetly be look better (other solution)
+      q.y=0;
+      q.z=0;
+      return q;
+      }
+    inline double scaledpairpot(particle &p1, particle &p2) {return pairpot(p1, p1);}
 };
 
 /*! \brief Debye-Huckel potential
@@ -126,19 +153,31 @@ class pot_debyehuckel : private pot_lj {
              r=sqrt(r2);
       return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
     }
+    void setscale(double d) {}     //setscale and dr_scale are here
+    point dr_scale(point &p) {   //dummie functions due to isobaric
+      point q;                          //implementation under pbc
+      q.x=0;                            //Could definetly be look better (other solution)
+      q.y=0;
+      q.z=0;
+      return q;
+   }   
+    inline double scaledpairpot(particle &p1, particle &p2) {return pairpot(p1, p1);}
 };
 
 /*! \brief Debye-Huckel potential for periodic boundry 
- *         conditions in 3D
+ *         conditions in 3D, it is extended to preform 
+ *         under conditions of constant pressure.
+           See class isobaric->markovmove.h
  *  \author Mikael Lund/Bjoern Persson
+ *  \date Lund/Prag 2008
  */
 class pot_debyehuckelP3 : private pot_lj {
   private:
     double k;
   public:
     double f;
-    double b;
-    double inv_b;
+    double b, newb;
+    double inv_b, newinv_b;
     //! \param pot.lB Bjerrum length
     //! \param pot.eps L-J parameter
     //! \param pot.kappa Inverse Debye screening length
@@ -156,7 +195,19 @@ class pot_debyehuckelP3 : private pot_lj {
              r=sqrt(r2);
       return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
     }
-};
+    inline double scaledpairpot( particle &p1, particle &p2 ) {
+      double r2=p1.sqdist(p2,newb, newinv_b);
+      register double r=sqrt(r2);
+      return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
+    }
+    void  setscale(double triallen) {
+      newb=triallen;
+      newinv_b=1.0/triallen;
+    }
+    point dr_scale(point &p) {
+      return p*(1-newb*inv_b);
+    }
+}; 
 
 /*!
  * \brief Load pair potentials from disk
@@ -193,6 +244,15 @@ class pot_datapmf : private pot_lj {
         p1.charge*p2.charge/r2 : // use Coulomb pot. outside data 
         pmfd[i][j].x2y(r2);      // ...else use table. 
     }
+    void setscale(double d) {}     //setscale and dr_scale are here
+    point dr_scale(point &p) {   //dummie functions due to isobaric
+      point q;                          //implementation under pbc
+      q.x=0;                            //Could definetly be look better (other solution)
+      q.y=0;
+      q.z=0;
+      return q;
+    }
+    inline double scaledpairpot(particle &p1, particle &p2) {return pairpot(p1, p1);}
 };
 
 /*!
@@ -228,6 +288,9 @@ class interaction {
     double chain(vector<particle> &, group &, int);
     double dipdip(point &, point &, double);                    //!< Dipole-dipole energy.
     double iondip(point &, double, double);                     //!< Ion-dipole energy.
+    double scaledenergy(vector<particle> &);                    //!< Scaled all<->all.
+    inline void setscale(double d) {pair.setscale(d);}          //!< Updates boundry condition under volume fluctuations
+    inline point dr_scale(point &p) {return pair.dr_scale(p);}  //!< Returns displacement for volume fluctuations
 };
 
 template<class T>
@@ -248,7 +311,7 @@ template<class T>
 double interaction<T>::energy(vector<particle> &p, group &g) {
   int n=g.end+1, psize=p.size();
   double u=0;
-  //#pragma omp parallel for reduction (+:u)
+  #pragma omp parallel for reduction (+:u)
   for (int i=g.beg; i<n; ++i) {
     for (int j=0; j<g.beg; j++)
       u += pair.pairpot(p[i],p[j]);
@@ -285,6 +348,17 @@ double interaction<T>::energy(vector<particle> &p, group &g, particle &a) {
 }
 
 template<class T>
+double interaction<T>::scaledenergy(vector<particle> &p) {
+  double u=0;
+  short i,j,n = p.size();
+  //#pragma omp parallel for reduction (+:u)
+  for (i=0; i<n-1; ++i)
+    for (j=i+1; j<n; ++j)
+      u+=pair.scaledpairpot(p[i], p[j]);
+  return pair.f*u; 
+}
+
+template<class T>
 double interaction<T>::energy(vector<particle> &p) {
   double u=0;
   short i,j,n = p.size();
@@ -292,7 +366,7 @@ double interaction<T>::energy(vector<particle> &p) {
   for (i=0; i<n-1; ++i)
     for (j=i+1; j<n; ++j)
       u+=pair.pairpot(p[i], p[j]);
-  return pair.f*u; 
+  return pair.f*u;
 }
 
 template<class T>

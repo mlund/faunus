@@ -17,6 +17,7 @@ class mcloop {
     countdown<unsigned int> cnt;
   public:
     unsigned int macro, micro;
+    bool eq;
     mcloop(inputfile &);           //!< Setup
     string timing(unsigned int); //!< Show macrostep middle time and ETA.
 };
@@ -29,6 +30,7 @@ mcloop::mcloop(inputfile &in)
 {
   macro=in.getint("macrosteps",10);
   micro=in.getint("microsteps");
+  eq=in.getboo("equilibration", false);
 }
 
 string mcloop::timing(unsigned int mac) {

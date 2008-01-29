@@ -17,6 +17,7 @@ class physconst {
            beta,  //!< 1/kT [1/J] 
            lB;    //!< Bjerrum length [AA]
     physconst(double=298.15, double=80.);
+    void lB_TO_T(double);
 };
 #endif
 

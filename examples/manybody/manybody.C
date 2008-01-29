@@ -7,11 +7,11 @@
  * \date Prague 2007
  */
 
-#include "analysis.h"
-#include "mcloop.h"
-#include "pot_hydrophobic.h"
+#include "../../classes/analysis.h"
+#include "../../classes/mcloop.h"
+#include "../../classes/pot_hydrophobic.h"
 typedef pot_hydrophobic T_pairpot;      // Specific pair interaction function
-#include "markovmove.h"
+#include "../../classes/markovmove.h"
 
 using namespace std;
 

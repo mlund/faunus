@@ -48,7 +48,7 @@ void histogram::add(float x) {
 
 //! Get bin for x value
 //! \return \f$ \frac{N(r)}{N_{tot}}\f$
-float histogram::get(float x) { return (*this)(x)/float(cnt); }
+float histogram::get(float x) { return (*this)(x)/cnt; }
 
 //! Show results for all x
 void histogram::write(string file) {
@@ -87,22 +87,6 @@ class rdf : public histogram {
     float get(float);                     //!< Get g(x)
 };
 
-/*
- * \brief RDF class for cubic min. image
- * \todo Obselete?
- */
-class rdfP3 : public histogram {
-  private:
-    short a,b;                   //!< Particle types to investigate
-    float volume(float);         //!< Volume of shell r->r+xres
-  public:
-    rdfP3(short, short, float=.5, float=0, float=0);
-    void update(vector<particle> &);      //!< Update histogram vector
-    void update(vector<particle*> &);
-    float get(float);                     //!< Get g(x)
-    double len, len_inv;
-};
-
 /*!
  * \param species1 Particle type 1
  * \param species2 Particle type 2
@@ -114,14 +98,6 @@ rdf::rdf(short species1, short species2, float resolution, float xmaximum) :
 {
   a=species1;
   b=species2;
-}
-rdfP3::rdfP3(short species1, short species2, float resolution, float xmaximum, float boxl) :
-  histogram(resolution, 0, xmaximum)
-{
-  a=species1;
-  b=species2;
-  len=boxl;
-  len_inv=1/boxl;
 }
 
 /*!
@@ -167,24 +143,15 @@ void rdf::update(vector<particle> &p)
  * Calculate all distances between vector<particle> and 
  * update the histogram under P3 conditions
  */
-void rdfP3::update(vector<particle*> &p)
-{
-  unsigned short i,j,n=p.size();
-  for (i=0; i<n-1; i++)
-    for (j=i+1; j<n; j++) 
-      add( p[i]->dist(*p[j], len, len_inv ));
-}
-float rdf::volume(float x) { return 4./3.*acos(-1.)*( pow(x+xres,3)-pow(x,3) ); }
+float rdf::volume(float x) { return 4./3.*acos(-1.)*( pow(x+0.5*xres,3)-pow(x-0.5*xres,3) ); }
 /*!
  *  Get g(x) from histogram according to
  *    \f$ g(x) = \frac{N(r)}{N_{tot}} \frac{ 3 } { 4\pi\left [ (x+xres)^3 - x^3 \right ] }\f$
  */
 float rdf::get(float x) { return (*this)(x)/(cnt*volume(x)); }
 
-float rdfP3::volume(float x) { return 4./3.*acos(-1.)*( pow(x+xres,3)-pow(x,3) ); }
 /*!
  *  Get g(x) from histogram according to
  *    \f$ g(x) = \frac{N(r)}{N_{tot}} \frac{ 3 } { 4\pi\left [ (x+xres)^3 - x^3 \right ] }\f$
  */
-float rdfP3::get(float x) { return (*this)(x)/(cnt*volume(x)); }
 #endif

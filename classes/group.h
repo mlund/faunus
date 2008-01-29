@@ -51,6 +51,7 @@ class group {
     void add(container &, particle::type, short);       //!< Add particles w. collision check
     short int count(vector<particle> &, particle::type);//!< Count number of specific particles
     virtual unsigned short displace(container&,double); //!< Displace random particle
+    virtual void isobaricmove(container &);             //!< Scale coordinates for a volume fluctuation
 };
 
 /*!
@@ -87,6 +88,7 @@ class macromolecule : public group {
     using group::add;
     void add(container &, inputfile &); //!< Add according to inputfile
     void operator=(group);              //!< Copy from group
+    void isobaricmove(container &);     //!< Displace CM with scale difference
 };
 
 /*! \brief Freely jointed chain with harmonic spring potentials

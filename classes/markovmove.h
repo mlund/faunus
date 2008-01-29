@@ -141,10 +141,9 @@ class translate : public markovmove {
 };
 
 /*
- * This move will perturb the volume of a system consiting 
- * of macromolecules only! It changes the volume by a $\delta$V
- * and scales the distances reltive to the origin. It will do the 
- * trick in a cube but can it be extended?
+ * \brief Fluctuate the volume against an external pressure 
+ * \author Bjoern Persson
+ * \date Lund 2008
  */
 
 class isobaric : public markovmove {
@@ -152,13 +151,11 @@ class isobaric : public markovmove {
     isobaric( ensemble&, box&, interaction<T_pairpot>&, double);
     string info();
     double move(vector<macromolecule> &);
+    average<float> vol, vol2;   //Only ment for sampling, protect?
   private:
-    box *b;
-    double P;
-    average<float> vol, vol2;
-    double dV, lenfrac;
-    double scaleddistance();
-    int cntUP, cntDOWN;
+    box *b;        
+    double P, dV;
+    double bnew;
 };
 
 
@@ -293,7 +290,7 @@ translate::translate( ensemble &e,
   name = "MACROMOLECULAR TRANSLATION";
   runfraction=0.8;
   deltadp=1.;
-  dp=1.;
+  dp=10.;
 };
 
 double translate::move(macromolecule &g) {
@@ -789,48 +786,52 @@ double HAchargereg::energy( vector<particle> &p, double du, titrate::action &a )
 
 //---------- ISOBARIC ----------
 /*!
- * \param P is the bulk pressure
+ * \breif This class preforms a random walk in volume
+ *
+ *  This construction has some not so obvius features.
+ *  It requires a potential that 'remembers' the last 
+ *  interactions (see pot_debyehuckelP3). Further it 
+ *  will make an energy drift appear in systemenergy since
+ *  this does not store the pressure-volume work between 
+ *  fist and last configurations. Note that every type 
+ *  of distance calculation must be in sync with this 
+ *  rutine!
+ *
+ * \note P is the bulk pressure in A^-3, random walk preformed in ln(V)
+ *
  */
 isobaric::isobaric (
   ensemble &e,
   box &c,
   interaction<T_pairpot> &i,
   double pressure) : markovmove(e,c,i) {
-    cout <<"isotest2"<<endl;
-    *b=box(c);
-    cout <<"isotest"<<endl;
     name="ISOBARIC";
     cite="none so far";
     P=pressure;
-    runfraction=0.001;
-    dp=200; //A^3! rewrite in log(dp)?
+    runfraction=0.30;
+    dp=500; //
 }
 string isobaric::info() {
+  cout <<"test isobaric info"<< P <<endl;
   ostringstream o;
   o << markovmove::info();
   o << "# External pressure       = "<< P <<"(A^-3) = "<<P*1660<<" (M) = "<< endl
-    << "# <Volume>                = "<< vol.avg() << " A^3  , <Vol^2> " << vol2.avg() <<endl
-    << "# <Density>               = "<< endl //Solve outside markovemove?
-    << "# Fraction of expansions  : " << cntUP << endl
-    << "# Fraction of contractions: " <<cntDOWN << endl;
+    << "# <Volume>                = "<< vol.avg() << " A^3  , <Vol^2> " << vol2.avg() <<endl;
+  return o.str();
 }
-double isobaric::scaleddistance() {
-  if (slp.random_one()<0.5){
-    dV=dp;
-    cntUP++; 
-    } else {
-    dV=-dp;
-    cntDOWN++;
-  }
-  return exp(log(con->volume+dV)/3.)*(b->len_inv);
-}
+
 double isobaric::move(vector<macromolecule> &g) {
   du=0;
+  dV=0;
   cnt++;
-  lenfrac=scaleddistance();
+  bnew=exp(log(con->volume)+slp.random_half()*dp);
+  dV=bnew-con->volume;
+  bnew=pow(bnew,1.0/3.0);
+  pot->setscale(bnew);
   int i=g.size();
   for (int n=0; n<i; n++) {
-    g[n].move(*con, g[n].cm*lenfrac-g[n].cm);
+    g[n].move(*con, pot->dr_scale(g[n].cm ));
+
   }   
   #pragma omp parallel
   { 
@@ -839,10 +840,10 @@ double isobaric::move(vector<macromolecule> &g) {
       #pragma omp section
       { uold = pot->energy(con->p); }
       #pragma omp section
-      { unew = pot->energy(con->trial); }      
+      { unew = pot->scaledenergy(con->trial); }      
     }
   }
-  du = unew-uold+P*dV-i*log((con->volume+dV)/(con->volume));
+  du = unew-uold+P*dV-(i+1)*log((con->volume+dV)/(con->volume));
   if (ens->metropolis(du)==true) {
     rc=OK;
     utot+=du;
@@ -850,7 +851,7 @@ double isobaric::move(vector<macromolecule> &g) {
     naccept++;
     for (int n=0; n<i; n++) 
       g[n].accept(*con);
-    b->setlen(lenfrac*(b->len));
+    con->reset_volume(bnew);
     vol+=con->volume;
     vol2+=pow(con->volume,2);
     return du;

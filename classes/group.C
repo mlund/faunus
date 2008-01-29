@@ -211,6 +211,9 @@ short int group::count(vector<particle> &p, particle::type id) {
   return n;
 }
 
+void group::isobaricmove(container &con) {
+}
+
 /*****************************
  *
  *          S A L T
@@ -380,6 +383,10 @@ void macromolecule::rotate(container &par, point u, double angle) {
 }
 
 void macromolecule::add(container &con, inputfile &in ) {
+}
+
+void macromolecule::isobaricmove(container &con) {
+
 }
 
 //--------------- CHAIN -----------------

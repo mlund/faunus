@@ -9,10 +9,10 @@
  */
 
 #include <iostream>
-#include "analysis.h"
-#include "mcloop.h"
+#include "../../classes/analysis.h"
+#include "../../classes/mcloop.h"
 typedef pot_coulomb T_pairpot;         // Specific pair interaction function
-#include "markovmove.h"
+#include "../../classes/markovmove.h"
 
 using namespace std;
 

@@ -19,7 +19,7 @@ string container::povray() {
         " finish {phong .1 ambient .2}\n"
         "}\n" );
 }
-
+void container::reset_volume(double d){}
 //----------- CELL ----------------------
 cell::cell(float radius) { setradius(radius); }
 cell::cell(inputfile &in) { setradius(in.getflt("cellradius"));}

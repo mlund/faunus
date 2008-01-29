@@ -14,3 +14,9 @@ physconst::physconst(double kelvin, double dielec) {
   beta= 1./(k*T); 
   lB  = e*e / (4.*pi*e_0*e_r*1e-10) * beta;
 }
+void physconst::lB_TO_T(double bjerr) {       //Calculate the absolute T (K) from lB
+  T=e*e*1e10/(4.*pi*e_0*e_r*k*bjerr);    //assuming e_r has been set
+  beta=1./(k*T);
+  lB=bjerr;
+}
+

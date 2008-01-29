@@ -1,5 +1,5 @@
 # Specify compiler (gnu,intel,pgi,pathscale,debug)
-MODEL = gnu
+MODEL = debug 
 
 # Set to yes if you need Gromacs xtc file support
 # (requires a working Gromacs installation)
@@ -70,7 +70,7 @@ OBJS=$(CLASSDIR)/inputfile.o \
      $(CLASSDIR)/group.o \
      $(CLASSDIR)/particles.o \
      $(CLASSDIR)/analysis.o \
-     $(CLASSDIR)/species.o
+     $(CLASSDIR)/species.o 
 all:	classes examples libfaunus
 
 classes:	$(OBJS)
@@ -84,10 +84,12 @@ manualul:
 	scp -rC doc/html/* mikaellund@shell.sourceforge.net:/home/groups/f/fa/faunus/htdocs/
 
 widom:	examples/widom/widom.C $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/widom/widom.C -o examples/widom/widom
+	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/widom/widom.C -o examples/widom/widom
 	
-ewald:	examples/ewald/ewald.C $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) examples/ewald/ewald.C -o examples/ewald/ewald
+ewald:		examples/ewald/ewald.C $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR)\
+	examples/ewald/ewald.C \
+	-o examples/ewald/ewald 
 
 twobody:	examples/twobody/twobody.C libfaunus
 	$(CXX) $(CXXFLAGS) \
@@ -96,10 +98,16 @@ twobody:	examples/twobody/twobody.C libfaunus
 	-lfaunus ${LDFLAGS}
 
 
-manybody:	examples/manybody/manybody.C libfaunus
+manybody:	examples/manybody/manybody.C libfaunus 
 	$(CXX) $(CXXFLAGS) \
 	examples/manybody/manybody.C \
 	-o examples/manybody/manybody \
+	-lfaunus ${LDFLAGS}
+
+isobaric:	examples/isobaric/isobaric.C libfaunus 
+	$(CXX) $(CXXFLAGS) \
+	examples/isobaric/isobaric.C \
+	-o examples/isobaric/isobaric \
 	-lfaunus ${LDFLAGS}
 
 pka:	examples/titration/pka.C $(OBJS)
@@ -113,7 +121,7 @@ undone:		undone/mikael/namespace.C libfaunus
 
 
 
-examples:	widom pka ewald twobody manybody
+examples:	widom pka ewald twobody manybody isobaric
 
 clean:
 	rm -vf $(OBJS) \
@@ -121,7 +129,8 @@ clean:
 	examples/widom/widom \
 	examples/ewald/ewald \
 	examples/twobody/twobody \
-	examples/manybody/manybody \
+	examples/manybody/manybody\
+	examples/isobaric/isobaric\
 	lib/libfaunus.a
 
 docclean:

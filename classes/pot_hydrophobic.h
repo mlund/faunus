@@ -31,14 +31,8 @@ class pot_hydrophobic : private pot_lj {
     }
     string info();
     void setscale(double d) {}     //setscale and dr_scale are here
-    point dr_scale(point &p) {   //dummie functions due to isobaric
-      point q;                          //implementation under pbc
-      q.x=0;                            //Could definetly be look better (other solution)
-      q.y=0;
-      q.z=0;
-      return q;
-      }
     inline double scaledpairpot(particle &p1, particle &p2) {return pairpot(p1, p1);}
+    void reset_potential(double newV) {}
 };
 
 string pot_hydrophobic::info() {

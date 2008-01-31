@@ -58,14 +58,8 @@ class pot_coulomb : private pot_lj {
     }
     string info();
     void setscale(double d) {}     //setscale and dr_scale are here
-    point dr_scale(point &p) {   //dummie functions due to isobaric
-      point q;                          //implementation under pbc
-      q.x=0;                            //Could definetly be look better (other solution)
-      q.y=0;
-      q.z=0;
-      return q;
-      }
     inline double scaledpairpot(particle &p1, particle &p2) {return pairpot(p1, p1);}
+    void reset_potential(double newV) {}
 };
 
 /*!
@@ -91,14 +85,8 @@ class pot_minimage : private pot_lj {
       //return (r2<dx*dx) ? 0 : p1.charge*p2.charge/sqrt(r2);
     }
     void setscale(double d) {}     //setscale and dr_scale are here
-    point dr_scale(point &p) {   //dummie functions due to isobaric
-      point q;                          //implementation under pbc
-      q.x=0;                            //Could definetly be look better (other solution)
-      q.y=0;
-      q.z=0;
-      return q;
-      }
     inline double scaledpairpot(particle &p1, particle &p2) {return pairpot(p1, p1);}
+    void reset_potential(double newV) {}
 };
 
 
@@ -128,6 +116,7 @@ class pot_test {
       return q;
       }
     inline double scaledpairpot(particle &p1, particle &p2) {return pairpot(p1, p1);}
+    void reset_potential(double newV) {}
 };
 
 /*! \brief Debye-Huckel potential
@@ -162,6 +151,7 @@ class pot_debyehuckel : private pot_lj {
       return q;
    }   
     inline double scaledpairpot(particle &p1, particle &p2) {return pairpot(p1, p1);}
+    void reset_potential(double newV) {}
 };
 
 /*! \brief Debye-Huckel potential for periodic boundry 
@@ -200,12 +190,13 @@ class pot_debyehuckelP3 : private pot_lj {
       register double r=sqrt(r2);
       return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
     }
-    void  setscale(double triallen) {
-      newb=triallen;
-      newinv_b=1.0/triallen;
+    void  setscale(double triallen) { //triallen = new volume
+      newb=pow(triallen,1./3.);
+      newinv_b=1.0/newb;
     }
-    point dr_scale(point &p) {
-      return p*(1-newb*inv_b);
+    void reset_potential(double newV) { // 
+      b=pow(newV,1./3.);
+      inv_b=1./b;
     }
 }; 
 
@@ -253,6 +244,7 @@ class pot_datapmf : private pot_lj {
       return q;
     }
     inline double scaledpairpot(particle &p1, particle &p2) {return pairpot(p1, p1);}
+    void reset_potential(double newV) {}
 };
 
 /*!
@@ -280,17 +272,19 @@ class interaction {
     double energy(vector<particle> &, vector<group> &, int,...);
     double energy(vector<particle> &, int, vector<short int> &);//!< particle<->list of particles.
     double energy(vector<particle> &);                          //!< all<->all (System energy).
+    double energy(vector<particle> &, vector<macromolecule> &);         //!< vector<group> <-> vector<group>
     double potential(vector<particle> &, unsigned short);       //!< Electric potential at j'th particle
     double internal(vector<particle> &, group &);               //!< internal energy in group
-    double pot(vector<particle> &, point &);              //!< Electrostatic potential in a point
+    double pot(vector<particle> &, point &);                    //!< Electrostatic potential in a point
     double quadratic(point &, point &);
     double graft(vector<particle> &, group &);
     double chain(vector<particle> &, group &, int);
     double dipdip(point &, point &, double);                    //!< Dipole-dipole energy.
     double iondip(point &, double, double);                     //!< Ion-dipole energy.
     double scaledenergy(vector<particle> &);                    //!< Scaled all<->all.
-    inline void setscale(double d) {pair.setscale(d);}          //!< Updates boundry condition under volume fluctuations
-    inline point dr_scale(point &p) {return pair.dr_scale(p);}  //!< Returns displacement for volume fluctuations
+    double scaledenergy(vector<particle> &, vector<macromolecule> &);   //!< Scaled vector<group> <-> vector<group>, implies constant internal potentials
+    inline void setscale(double d) {pair.setscale(d);}          //!< Updates boundry condition under volume fluctuations, d is the new VOLUME
+    inline void reset_potential(double &newV) {pair.reset_potential(newV);}  //!< Returns displacement for volume fluctuations, OBSOLETE!!!
 };
 
 template<class T>
@@ -356,6 +350,40 @@ double interaction<T>::scaledenergy(vector<particle> &p) {
     for (j=i+1; j<n; ++j)
       u+=pair.scaledpairpot(p[i], p[j]);
   return pair.f*u; 
+}
+
+template<class T>
+double interaction<T>::scaledenergy(vector<particle> &p, vector<macromolecule> &g) {
+  double u=0;
+  short i,k,l=0;
+  short j=g.size();
+  short t=p.size();
+  for (int l; l<j; l++) {
+    k=g[l].end;
+    for (i=g[l].beg; i<k; i++) {
+      for (unsigned short s=(g[l].end+1); s<t; s++) {
+         u+=pair.scaledpairpot(p[i],p[s]);
+      }
+    }
+  }
+  return pair.f*u;
+}
+
+template<class T>
+double interaction<T>::energy(vector<particle> &p, vector<macromolecule> &g) {
+  double u=0;
+  short i,k,l=0;
+  short j=g.size();
+  short t=p.size();
+  for (int l; l<j; l++) {
+    k=g[l].end;
+    for (i=g[l].beg; i<k; i++) {
+      for (unsigned short s=(g[l].end+1); s<t; s++) {
+         u+=pair.pairpot(p[i],p[s]);
+      }
+    }
+  }
+  return pair.f*u;
 }
 
 template<class T>

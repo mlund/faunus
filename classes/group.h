@@ -88,7 +88,7 @@ class macromolecule : public group {
     using group::add;
     void add(container &, inputfile &); //!< Add according to inputfile
     void operator=(group);              //!< Copy from group
-    void isobaricmove(container &);     //!< Displace CM with scale difference
+//    void isobaricmove(container &);     //!< Displace CM with scale difference
 };
 
 /*! \brief Freely jointed chain with harmonic spring potentials

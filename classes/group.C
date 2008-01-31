@@ -211,7 +211,22 @@ short int group::count(vector<particle> &p, particle::type id) {
   return n;
 }
 
-void group::isobaricmove(container &con) {
+void group::isobaricmove(container &par) {
+  point newcm=par.dr(cm);               //<! Get lab coordinate of new CM
+  move(par,cm*(-1.));                   //<! Move all to origin to ensure
+                                        //<! that none is crossing the boundry of 
+                                        //<! the lab coordinates
+
+  for (short int i=beg; i<=end; i++) {  //<! Translate to new CM + internal vector 
+    par.trial[i].x += newcm.x;          //<! This procedure could be avoided if the boundry was
+    par.trial[i].y += newcm.y;          //<! set with respect to CM instead of all
+    par.trial[i].z += newcm.z;          //<! particles
+    par.trialboundary(par.trial[i]);
+  }
+  cm_trial.x += newcm.x;
+  cm_trial.y += newcm.y;
+  cm_trial.z += newcm.z;
+  par.trialboundary(cm_trial);
 }
 
 /*****************************
@@ -385,9 +400,9 @@ void macromolecule::rotate(container &par, point u, double angle) {
 void macromolecule::add(container &con, inputfile &in ) {
 }
 
-void macromolecule::isobaricmove(container &con) {
+/*void macromolecule::isobaricmove(container &con) {
 
-}
+}*/
 
 //--------------- CHAIN -----------------
 chain::chain() { graftpoint=-1; }

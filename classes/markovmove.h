@@ -143,19 +143,20 @@ class translate : public markovmove {
 /*
  * \brief Fluctuate the volume against an external pressure 
  * \author Bjoern Persson
- * \date Lund 2008
+ * \todo Should take an arbritray vector of groups and implement a more efficent energycalculation
+ * \note Tested and found valid using debyehuckel_P3 and point charges
+ * \date Lund, jan 2008
  */
 
 class isobaric : public markovmove {
   public:
-    isobaric( ensemble&, box&, interaction<T_pairpot>&, double);
+    isobaric( ensemble&, container&, interaction<T_pairpot>&, double);
     string info();
-    double move(vector<macromolecule> &);
-    average<float> vol, vol2;   //Only ment for sampling, protect?
+    double move(vector<macromolecule> &); // Change in to a vector of arbitrary groups
+    average<float> vol, vol2;   //Sampling
   private:
-    box *b;        
-    double P, dV;
-    double bnew;
+    double P, dV, dh; // Pressure, volume difference and hamiltonian difference
+    double newV;      // New volume
 };
 
 
@@ -786,7 +787,7 @@ double HAchargereg::energy( vector<particle> &p, double du, titrate::action &a )
 
 //---------- ISOBARIC ----------
 /*!
- * \breif This class preforms a random walk in volume
+ * \breif This class preforms a random walk in ln(volume)
  *
  *  This construction has some not so obvius features.
  *  It requires a potential that 'remembers' the last 
@@ -802,21 +803,20 @@ double HAchargereg::energy( vector<particle> &p, double du, titrate::action &a )
  */
 isobaric::isobaric (
   ensemble &e,
-  box &c,
+  container &c,
   interaction<T_pairpot> &i,
   double pressure) : markovmove(e,c,i) {
     name="ISOBARIC";
     cite="none so far";
     P=pressure;
     runfraction=0.30;
-    dp=500; //
+    dp=100; 
 }
 string isobaric::info() {
-  cout <<"test isobaric info"<< P <<endl;
   ostringstream o;
   o << markovmove::info();
-  o << "# External pressure       = "<< P <<"(A^-3) = "<<P*1660<<" (M) = "<< endl
-    << "# <Volume>                = "<< vol.avg() << " A^3  , <Vol^2> " << vol2.avg() <<endl;
+  o << "#   External pressure       = "<< P <<"(A^-3) = "<<P*1660<<" (M) "<< endl
+    << "#   <Volume>                = "<< vol.avg() << " A^3  , <Vol^2> " << vol2.avg() <<endl;
   return o.str();
 }
 
@@ -824,13 +824,13 @@ double isobaric::move(vector<macromolecule> &g) {
   du=0;
   dV=0;
   cnt++;
-  bnew=exp(log(con->volume)+slp.random_half()*dp);
-  dV=bnew-con->volume;
-  bnew=pow(bnew,1.0/3.0);
-  pot->setscale(bnew);
+  newV=exp(log(con->volume)+slp.random_half()*dp);   // Calculate new V
+  con->settrialboundary(newV); // Set trial part of con
+  dV=newV-con->volume;       
+  pot->setscale(newV);
   int i=g.size();
   for (int n=0; n<i; n++) {
-    g[n].move(*con, pot->dr_scale(g[n].cm ));
+    g[n].isobaricmove(*con);
 
   }   
   #pragma omp parallel
@@ -838,20 +838,22 @@ double isobaric::move(vector<macromolecule> &g) {
     #pragma omp sections     
     {
       #pragma omp section
-      { uold = pot->energy(con->p); }
-      #pragma omp section
-      { unew = pot->scaledenergy(con->trial); }      
+      { uold = pot->energy(con->p); }//,g); }  Need to fix all <group> <-> all <group> to evoid internal
+      #pragma omp section                   // energies
+      { unew = pot->scaledenergy(con->trial); }//,g); }      
     }
   }
-  du = unew-uold+P*dV-(i+1)*log((con->volume+dV)/(con->volume));
-  if (ens->metropolis(du)==true) {
+  du = unew-uold;
+  dh = unew-uold+P*dV-(i+1)*log(newV/(con->volume));
+  if (ens->metropolis(dh)==true) {
     rc=OK;
     utot+=du;
-    dpsqr+=dp*dp;
+    dpsqr+=pow(newV,1./3.);
     naccept++;
     for (int n=0; n<i; n++) 
       g[n].accept(*con);
-    con->reset_volume(bnew);
+    con->reset_volume(newV);      // Update the container
+    pot->reset_potential(newV);   // Update the potential
     vol+=con->volume;
     vol2+=pow(con->volume,2);
     return du;

@@ -44,7 +44,12 @@ int main() {
   rdf protrdf(0,0,.5,cell.len/2.);      // Protein and salt radial distributions
   histogram lendist(1,0,1000); //5555ram over volume 
 
-  vector<macromolecule> g;              // PROTEIN groups
+  int templendist[1000];        
+  for (int p=0;p<1000;p++)
+    templendist[p]=0;
+  int templencnt=0;
+
+  vector<macromolecule> g;                      // PROTEIN groups
   ioxyz xyz(cell);
   ioaam aam(cell);                      //   Protein input file format is AAM
   aam.load(cell, in, g);                //   Load and insert proteins
@@ -59,7 +64,7 @@ int main() {
   translate mt(nvt, cell, pot);         //   Class for macromolecular translation
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
   isobaric vol(nvt, cell, pot, in.getflt("pressure"));
-  if (in.getflt("voldp"))
+//  if (in.getflt("voldp"))
     vol.dp=in.getflt("voldp");
 
   cout << cell.info();// << pot.info();    // Print information to screen
@@ -73,9 +78,9 @@ int main() {
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {
       short i,j,n;
-      switch (int(slump.random_one() * 3)) {                     // Pick a random MC move
-        case 0:                                 // Displace salt
-          sys+=vol.move(g);                   //   Do the move.
+      switch (int(slump.random_one() * 3 )) {    // Pick a random MC move
+        case 0:                                 // Fluctuate the volume
+          sys+=vol.move(g);                     //   Do the move.
           break;
         case 1:                                 // Rotate proteins
           for (n=0; n<g.size(); n++) {          //   Loop over all proteins
@@ -100,9 +105,9 @@ int main() {
         mr.adjust_dp(40,50);                    // parameters. Use ONLY
         vol.adjust_dp(20,30);                    // during equillibration!
       }
-
+      templendist[int(cell.len)]++;
+      templencnt++;
       lendist.add(cell.len);
-      cout << cell.len <<endl;
       #ifdef GROMACS
       if (slump.random_one()>.80 && macro>1)
         xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
@@ -116,16 +121,25 @@ int main() {
     cell.check_vector();                        // Check sanity of particle vector
     gro.save("confout.gro", cell.p);            // Write GRO output file
     protrdf.write("rdfprot.dat");               // Write g(r)'s
-    lendist.write("volume.dat");                  // Write volume distribution
+    //lendist.write("volume.dat");                  // Write volume distribution
 
   } // End of outer loop
 
   cout << "----------- FINAL INFORMATION -----------" << endl ;
   cout << sys.info() << vol.info()             // Final information...
        << mr.info() << mt.info();
-  cout << "# Final side length = " <<cell.len<<endl;
+  cout << "#   Final side length = " <<cell.len<<endl;
   aam.save("confout.aam", cell.p);            // Save config. for next run
   xyz.save("confout.xyz", cell.p);
+
+  ofstream ledist("tempvoldist.dat");
+  if (ledist) {
+    int s=1000;
+    for (int t=0;t<s;t++)
+      if (templendist[t]!=0)
+        ledist << t <<"  "<< float(templendist[t])/templencnt<< endl;
+    ledist.close();
+  }
 
   #ifdef GROMACS
   xtc.close();

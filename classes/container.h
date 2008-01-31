@@ -14,19 +14,25 @@ class container : public particles,  public species {
   protected:
     slump slp;
   public:
-    float volume;                          //!< Volume of the container [AA^3]
-    virtual bool collision(point &)=0;     //!< Check for collision with walls
-    virtual void randompos(point &)=0;     //!< Random point within container
-    virtual string info();                 //!< Return info string
-    virtual string povray();               //!< POVRAY object representing the cell
-    virtual void boundary(point &)=0;      //!< Apply boundary conditions to a point
+    float volume;                            //!< Volume of the container [AA^3]
+    virtual bool collision(point &)=0;       //!< Check for collision with walls
+    virtual void randompos(point &)=0;       //!< Random point within container
+    virtual string info();                   //!< Return info string
+    virtual string povray();                 //!< POVRAY object representing the cell
+    virtual void boundary(point &)=0;        //!< Apply boundary conditions to a point
+    virtual void settrialboundary(double){}  //!< Set the boundry for a trial container, takes new V as arg.
+    virtual void trialboundary(point &){}   //!< Apply boundary conditions to a point in trial container
+    inline virtual point dr(point &cm) {              //!< Calculate translation due to change in volume
+      point p;
+      return p;
+    }
     inline virtual double sqdist(point &a,point &b) {
       return a.sqdist(b);
     }
     inline virtual double dist(point &a,point &b) {//!< Calculate distance between points
       return a.dist(b);
     }
-    virtual void reset_volume(double);   //!< Recalculates the volume for the container (dangerus...)
+    virtual void reset_volume(double);   //!< Recalculates the volume for the container, arg = V
 };
 
 /*! \brief Spherical simulation container
@@ -59,9 +65,9 @@ class box : public container {
   private:
     point d;
   public:
-    double len_half, len_inv;
-    void setlen(double); //!< Temp. public for isobaric
-    double len; //!< Side length
+    double len_half, len_inv, tlen_inv;  //!< tlen is the trial box
+    void setlen(double); //!< Public for isobaric
+    double len, tlen; //!< Side length
     box(double);
     box(inputfile &);
     string info();
@@ -86,8 +92,20 @@ class box : public container {
       p.y=p.y-len*anint(p.y*len_inv);
       p.z=p.z-len*anint(p.z*len_inv);
     }
+    inline void trialboundary(point &p) {
+      p.x=p.x-tlen*anint(p.x*tlen_inv);
+      p.y=p.y-tlen*anint(p.y*tlen_inv);
+      p.z=p.z-tlen*anint(p.z*tlen_inv);
+    }
+    void settrialboundary(double newV) {  //!< newV is the trial volume
+      tlen=pow(newV,1./3.);
+      tlen_inv=1./tlen;
+    }  
     void reset_volume(double newlen) {
-      setlen(newlen);
+      setlen(pow(newlen,1./3.));
+    }
+    inline point dr(point &cm) {
+      return cm*(tlen/len);
     }
 };
 

@@ -2,36 +2,39 @@
 #include "analysis.h"
 #include "container.h"
 #include "potentials.h"
-#include "countdown.h"
+#include "mcloop.h"
 typedef pot_coulomb T_pairpot;         // Specify pair potential
 #include "markovmove.h"
 
 using namespace std;
 
-int main() {
-  cell con(100.);                // Use a spherical container
+int main(int argc, char* argv[]) {
+  string config = "pka.conf";
+  if (argc==2) config = argv[1];
+  inputfile in(config);                // Read input file
+  mcloop loop(in);                     // Set Markov chain loop lengths
+  cell con(in);                        // Use a spherical container
   canonical nvt;                       // Use the canonical ensemble
-  pot_setup cfg;                       // Setup pair potential (default)
+  pot_setup cfg(in);                   // Setup pair potential (default)
   interaction<T_pairpot> pot(cfg);     // Functions for interactions
-  countdown<int> clock(10);            // Estimate simulation time
   macromolecule protein;               // Group for the protein
   ioaam aam(con);                      // Protein input file format is AAM
   iopqr pqr(con);                      // PQR coordinate output
-  protein.add( con, aam.load(
-        "calbindin.aam" ) );           // Load protein from disk
+  protein.add( con,
+      aam.load( in.getstr("protein")) );
   protein.move(con, -protein.cm);      // ..translate it to origo (0,0,0)
   protein.accept(con);                 // ..accept translation
-  group salt;                          // Group for salt and counter ions
-  salt.add( con, particle::NA, 34+19); //   Insert sodium ions
-  salt.add( con, particle::CL, 34 );   //   Insert chloride ions
+  salt salt;                           // Group for salt and counter ions
+  salt.add( con, in );                 //   Insert sodium ions
   saltmove sm(nvt, con, pot);          // Class for salt movements
   aam.load(con, "confout.aam");        // Load old config (if present)
   chargereg tit(nvt,con,pot,salt,7.6); // Prepare titration. pH 7.6
   systemenergy sys(pot.energy(con.p)); // System energy analysis
-  cout << con.info() << tit.info();    // Some information
+  cout << con.info() << tit.info()     // Some information
+       << pot.info();
 
-  for (int macro=1; macro<=10; macro++) {   // Markov chain
-    for (int micro=1; micro<=1e3; micro++) {
+  for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
+    for (int micro=1; micro<=loop.micro; micro++) {
       switch (rand() % 2) {                 // Randomly chose move
         case 0:
           sys+=sm.move(salt);               // Displace salt particles
@@ -46,10 +49,9 @@ int main() {
     sys.update(pot.energy(con.p));          // Update system energy
     aam.save("confout.aam", con.p);         // Save config. to disk
     pqr.save("confout.pqr", con.p, tit);    // Save PQR file to disk - cool in VMD!
-    cout << "Macro step " << macro
-         << " completed. ETA: " << clock.eta(macro);
+    cout << loop.timing(macro);             // Show progress
   }                                         // END of macro loop
-  cout << sys.info() << sm.info()           // Print results
-       << tit.info() << salt.info() << protein.info();
+  cout << sys.info() << sm.info()           // Print final results
+       << tit.info() << salt.info(con) << protein.info();
 }
 

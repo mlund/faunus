@@ -16,6 +16,7 @@ int main() {
   countdown<int> clock(10);            // Estimate simulation time
   macromolecule protein;               // Group for the protein
   ioaam aam(con);                      // Protein input file format is AAM
+  iopqr pqr(con);                      // PQR coordinate output
   protein.add( con, aam.load(
         "calbindin.aam" ) );           // Load protein from disk
   protein.move(con, -protein.cm);      // ..translate it to origo (0,0,0)
@@ -44,6 +45,7 @@ int main() {
     }                                       // END of micro loop
     sys.update(pot.energy(con.p));          // Update system energy
     aam.save("confout.aam", con.p);         // Save config. to disk
+    pqr.save("confout.pqr", con.p, tit);    // Save PQR file to disk - cool in VMD!
     cout << "Macro step " << macro
          << " completed. ETA: " << clock.eta(macro);
   }                                         // END of macro loop

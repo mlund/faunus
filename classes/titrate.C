@@ -133,6 +133,17 @@ void titrate::samplesites(vector<particle> &p) {
   nprot+=protons.size();
 }
 
+/*
+ * Returns the average charge of a titratable site. If
+ * the chosen particle, i, is not titratable its charge
+ * from the particle vector will be returned instead.
+ */
+double titrate::avgcharge(vector<particle> &p, unsigned int i) {
+  for (unsigned int j=0; j<sites.size(); j++)
+    if (sites[j]==i) return q[j].avg();
+  return p[i].charge;
+}
+
 void titrate::showsites(vector<particle> &p) {
   cout << "# --- AVERAGE SITE CHARGES ---------------------\n";
   for (unsigned int i=0; i<spc->d.size(); i++)

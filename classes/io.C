@@ -190,6 +190,12 @@ bool iopqr::save(string file, vector<particle> &p) {
   }
   return writefile(file, o.str());
 }
+bool iopqr::save(string file, vector<particle> &p, titrate &tit) {
+  vector<particle> tmp = p;
+  for (unsigned short i=0; i<p.size(); i++)
+    tmp[i].charge = tit.avgcharge(p, i);
+  return save(file, tmp);
+}
 
 //----------------- IOGRO ----------------------
 /*!

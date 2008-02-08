@@ -10,6 +10,7 @@
 #include "species.h"
 #include "group.h"
 #include "container.h"
+#include "titrate.h"
 
 #ifdef GROMACS
 #ifndef CPLUSPLUS
@@ -130,7 +131,8 @@ class iopqr : public iopart {
     vector<particle> load(string) {};
   public:
     iopqr(species &);
-    bool save(string, vector<particle> &);
+    bool save(string, vector<particle> &);            //!< Save with particle charge
+    bool save(string, vector<particle> &, titrate &); //!< Save with average charges
 };
 
 

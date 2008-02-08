@@ -172,8 +172,9 @@ class macrorot : public markovmove {
 
 /*! \brief Titrate all titrateable sites
  *  \author Mikael Lund
+ *  \note "titrate" used to be private. Changed because iopqr::save()
  */
-class chargereg : public markovmove, protected titrate {
+class chargereg : public markovmove, public titrate {
   public:
     chargereg( ensemble&, container&, interaction<T_pairpot>&, group&, float);
     double titrateall();
@@ -446,6 +447,7 @@ double chargereg::titrateall() {
       rc=ENERGY;
       exchange(con->trial, t);
     }
+    samplesites(con->p);  // Average charges on all sites
   }
   return sum;
 }

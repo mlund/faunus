@@ -114,6 +114,9 @@ isobaric:	examples/isobaric/isobaric.C libfaunus
 pka:	examples/titration/pka.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/pka.C -o examples/titration/pka
 
+GCpka:	examples/titration/GCpka.C $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/GCpka.C -o examples/titration/GCpka
+
 undone:		undone/mikael/namespace.C libfaunus
 	$(CXX) $(CXXFLAGS) \
 	undone/mikael/namespace.C \
@@ -122,7 +125,7 @@ undone:		undone/mikael/namespace.C libfaunus
 
 
 
-examples:	widom pka ewald twobody manybody isobaric
+examples:	widom pka GCpka ewald twobody manybody isobaric
 
 clean:
 	rm -vf $(OBJS) \

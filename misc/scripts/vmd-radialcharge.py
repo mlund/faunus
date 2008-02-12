@@ -18,37 +18,48 @@ from Molecule import *
 # Select first molecule
 m = moleculeList()[0]
 n = m.numFrames()
-method = "shell"
+n = 11000
+method = "surface"
 center = "protein"
+volume = 0
 
 beg=0     # Starting radius
-end=40    # Ending radius
-dr=1.0    # Resolution [AA]
+end=30    # Ending radius
+dr=0.5    # Resolution [AA]
 frame = 0 # Starting frame
 
-qavg=[0]*int(end/dr)
+qavg=[0.]*int(end/dr+2)
+vavg=[0.]*int(end/dr+2)
 
 # Loop over frames
 while frame<n:
-  print "Processing frame: ", frame+1, "/", n
+  print "Frame: ",frame+1,"/",n
   # Loop over distances
   for b in range(beg, int(end/dr)):
 
     if method=="sphere":
       sel = atomsel(center, 0, frame)
       cm = sel.center()
-      sel = atomsel( "sqr(x-" + str(cm[0]) + ")" \
+      selstr = "sqr(x-" + str(cm[0]) + ")" \
           + " + sqr(y-" + str(cm[1]) + ")" \
           + " + sqr(z-" + str(cm[2]) + ")" \
-          + " < sqr(" + str(b*dr) + ")", 0, frame)
+          + " < sqr(" + str(b*dr) + ")"
+      sel = atomsel(selstr,0,frame)
 
     elif method=="surface":
-      sel = atomsel("exwithin "+str(b*dr)+" of "+center,0,frame)
+      selstr = "exwithin "+str(b*dr)+" of "+center
+      sel = atomsel(selstr,0,frame)
 
     elif method=="shell":
-      sel = atomsel("(exwithin "+str(b*dr+dr)+" of "+center+") "\
-          + "and (not exwithin "+str(b*dr)+" of "+center+")"\
-          ,0,frame)
+      selstr = "(exwithin "+str(b*dr+dr)+" of "+center+") "\
+          + "and (not exwithin "+str(b*dr)+" of "+center+")"
+      sel = atomsel(selstr,0,frame)
+
+    if volume==1:
+      selstr = "name OW and ("+selstr+")"
+      sel = atomsel(selstr,0,frame)
+      vol = len(sel)/(55*6.022e23)*1e30 # Aangstrom^3
+      vavg+=vol
 
     # Loop over charges
     qvec = sel.get("charge")

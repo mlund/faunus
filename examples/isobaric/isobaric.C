@@ -15,11 +15,6 @@
 #include "../../classes/countdown.h"
 #include "../../classes/histogram.h"
 #include "../../classes/inputfile.h"
-
-/*
-#include "analysis.h"
-#include "mcloop.h"
-#include "pot_hydrophobic.h"*/
 typedef pot_debyehuckelP3 T_pairpot;      // Specific pair interaction function
 #include "../../classes/markovmove.h"
 #include "../../classes/mcloop.h"
@@ -42,7 +37,7 @@ int main() {
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   iogro gro(cell, in);                  // Gromacs file output for VMD etc.
   rdf protrdf(0,0,.5,cell.len/2.);      // Protein and salt radial distributions
-  histogram lendist(1,0,1000); //5555ram over volume 
+  histogram lendist(1,0,500);          // 5555ram over volume 
 
   int templendist[1000];        
   for (int p=0;p<1000;p++)
@@ -78,7 +73,7 @@ int main() {
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {
       short i,j,n;
-      switch (int(slump.random_one() * 3 )) {    // Pick a random MC move
+      switch (int(slump.random_one() * 3 )) {   // Pick a random MC move
         case 0:                                 // Fluctuate the volume
           sys+=vol.move(g);                     //   Do the move.
           break;
@@ -116,12 +111,11 @@ int main() {
     } // End of inner loop
 
     cout << loop.timing(macro);
-    //cout << cell.volume;                 // Show middle time and ETA
     sys.update(pot.energy(cell.p));             // Update system energy averages
     cell.check_vector();                        // Check sanity of particle vector
-    gro.save("confout.gro", cell.p);            // Write GRO output file
+    gro.save("confout.gro", cell);              // Write GRO output file
     protrdf.write("rdfprot.dat");               // Write g(r)'s
-    //lendist.write("volume.dat");                  // Write volume distribution
+    lendist.write("length-distribution.dat");                  // Write volume distribution
 
   } // End of outer loop
 

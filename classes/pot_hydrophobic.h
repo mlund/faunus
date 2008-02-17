@@ -10,7 +10,7 @@
  *  a particle of type "id" AND a hydrophobic group, the LJ epsilon parameter will be
  *  scaled by pot_setup::hydroscale (Input keyword: "hydroscale").
  */
-class pot_hydrophobic : private pot_lj {
+class pot_hydrophobic : public pot_lj {
   private:
     double scale;
   public:
@@ -30,9 +30,6 @@ class pot_hydrophobic : private pot_lj {
       return u + p1.charge*p2.charge/sqrt(r2);
     }
     string info();
-    void setscale(double d) {}     //setscale and dr_scale are here
-    inline double scaledpairpot(particle &p1, particle &p2) {return pairpot(p1, p1);}
-    void reset_potential(double newV) {}
 };
 
 string pot_hydrophobic::info() {

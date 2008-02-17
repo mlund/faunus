@@ -307,9 +307,9 @@ double interact::energy(vector<particle> &p, vector<group> &g, int groups,...) {
     if (j==-1)
       break;
     u+=energy( p, g[i], g[j] ); //already in kT
-  };
-  return u; //do not multiply with lB!
-};
+  }
+  return u;
+}
 
 //non-electrostatic energy of chain particle i with rest of the chain
 double interact::chain(vector<particle> &p, group &g, int i) {

@@ -171,7 +171,7 @@ unsigned short group::displace(container &c, double dp) {
  * \param k Keyword to specify if the move should be automatically accepted (default no).
  */
 void group::move(container &par, point c) {
-  for (short int i=beg; i<=end; i++) {
+  for (unsigned short i=beg; i<=end; i++) {
     par.trial[i].x = par.p[i].x + c.x;
     par.trial[i].y = par.p[i].y + c.y;
     par.trial[i].z = par.p[i].z + c.z;
@@ -202,7 +202,6 @@ bool group::overlap(container &c) {
   }
   return false;
 }
-
 short int group::count(vector<particle> &p, particle::type id) {
   short int i,n=0;
   for (i=0; i<p.size(); i++)
@@ -210,24 +209,7 @@ short int group::count(vector<particle> &p, particle::type id) {
       n++;
   return n;
 }
-
-void group::isobaricmove(container &par) {
-  point newcm=par.dr(cm);               //<! Get lab coordinate of new CM
-  move(par,cm*(-1.));                   //<! Move all to origin to ensure
-                                        //<! that none is crossing the boundry of 
-                                        //<! the lab coordinates
-
-  for (short int i=beg; i<=end; i++) {  //<! Translate to new CM + internal vector 
-    par.trial[i].x += newcm.x;          //<! This procedure could be avoided if the boundry was
-    par.trial[i].y += newcm.y;          //<! set with respect to CM instead of all
-    par.trial[i].z += newcm.z;          //<! particles
-    par.trialboundary(par.trial[i]);
-  }
-  cm_trial.x += newcm.x;
-  cm_trial.y += newcm.y;
-  cm_trial.z += newcm.z;
-  par.trialboundary(cm_trial);
-}
+unsigned short group::nummolecules() { return size(); }
 
 /*****************************
  *
@@ -248,11 +230,15 @@ string salt::info(container &con) {
   o << group::info();
   o << "#   Cation (type,z,N,conc) = "
     << con.d[cation].name << ", " << con.d[cation].p.charge << ", "
-    << ncat << ", " << ncat/con.volume*c << endl
+    << ncat << ", " << ncat/con.getvolume()*c << endl
     << "#   Anion (type,z,N,conc)  = "
     << con.d[anion].name << ", " << con.d[anion].p.charge << ", "
-    << nan << ", " << nan/con.volume*c << endl;
+    << nan << ", " << nan/con.getvolume()*c << endl;
   return o.str();
+}
+void salt::isobaricmove(container &con, double newlen) {
+  for (unsigned short i=beg; i<=end; i++)
+    con.scale(con.trial[i], newlen);
 }
 
 /*!
@@ -292,6 +278,8 @@ string macromolecule::info() {
     o << "#   Dipole moment          = " << dip.avg() << " " << mu << endl;
   return o.str();
 }
+
+unsigned short macromolecule::nummolecules() { return 1; }
 
 void macromolecule::operator=(group g) {
   beg=g.beg;
@@ -397,12 +385,15 @@ void macromolecule::rotate(container &par, point u, double angle) {
   }
 }
 
-void macromolecule::add(container &con, inputfile &in ) {
+void macromolecule::add(container &con, inputfile &in ) { }
+
+void macromolecule::isobaricmove(container &con, double newlen) {
+  double oldvol=con.getvolume(); // store original volume
+  con.scale(cm_trial, newlen);   // scale mass center
+  con.setvolume(pow(newlen,3));  // the boundary function needs the trial volume...
+  move(con, cm_trial-cm );       // apply periodic boundaries
+  con.setvolume(oldvol);         // restore original volume
 }
-
-/*void macromolecule::isobaricmove(container &con) {
-
-}*/
 
 //--------------- CHAIN -----------------
 chain::chain() { graftpoint=-1; }

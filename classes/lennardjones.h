@@ -28,6 +28,7 @@ class pot_lj {
       s=a*a*a;
       u+=(s*s-s)*eps;
     }
+    virtual void setvolume(double) {}; //!< Function to specify volume for periodic containers
 };
 
 #endif

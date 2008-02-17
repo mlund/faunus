@@ -46,7 +46,7 @@ string pot_debyehuckel::info() {
 
 string pot_debyehuckelP3::info() {
   ostringstream o;
-  o << "#   Type           = LJ/Debye-Huckel" << endl
+  o << "#   Type           = LJ/Debye-Huckel w. minimum image" << endl
     << "#   Bjerrum length = " << f     << endl
     << "#   Debye length   = " << 1./k  << endl
     << "#   LJ epsilon (kT)= " << eps*f << endl;

@@ -51,7 +51,8 @@ class group {
     void add(container &, particle::type, short);       //!< Add particles w. collision check
     short int count(vector<particle> &, particle::type);//!< Count number of specific particles
     virtual unsigned short displace(container&,double); //!< Displace random particle
-    virtual void isobaricmove(container &);             //!< Scale coordinates for a volume fluctuation
+    virtual void isobaricmove(container &, double){};   //!< Pressure scaling
+    virtual unsigned short nummolecules();              //!< Number of molecules
 };
 
 /*!
@@ -67,6 +68,7 @@ class salt : public group {
     double muex;                  //!< Excess chemical potential
     void add(container &, inputfile &);                 //!< Add salt as specified in config file
     string info(container &);     //!< Show info
+    virtual void isobaricmove(container &, double);
 };
 
 class macromolecule : public group {
@@ -77,18 +79,19 @@ class macromolecule : public group {
     average<float> Q2;   //!< Total charge squared.
     average<float> dip;  //!< Dipole moment scalar.
 
-    string info();                      //!< Show info
-    void center(container &);           //!< Center group in origo (0,0,0)
-    double charge(vector<particle> &);  //!< Calculate total charge
-    double radius(vector<particle> &);  //!< Calculate radius
-    double dipole(vector<particle> &);  //!< Calculate dipole moment
-    void zmove(container &, double);    //!< Move in z-direction, only
-    void rotate(container &, double);   //!< Rotate around a point
+    string info();                           //!< Show info
+    void center(container &);                //!< Center group in origo (0,0,0)
+    double charge(vector<particle> &);       //!< Calculate total charge
+    double radius(vector<particle> &);       //!< Calculate radius
+    double dipole(vector<particle> &);       //!< Calculate dipole moment
+    void zmove(container &, double);         //!< Move in z-direction, only
+    void rotate(container &, double);        //!< Rotate around a point
     void rotate(container &, point, double);
     using group::add;
-    void add(container &, inputfile &); //!< Add according to inputfile
-    void operator=(group);              //!< Copy from group
-//    void isobaricmove(container &);     //!< Displace CM with scale difference
+    void add(container &, inputfile &);      //!< Add according to inputfile
+    void operator=(group);                   //!< Copy from group
+    virtual void isobaricmove(container &,double);//!< Displace CM with scale difference
+    virtual unsigned short nummolecules();
 };
 
 /*! \brief Freely jointed chain with harmonic spring potentials

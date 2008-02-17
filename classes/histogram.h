@@ -52,12 +52,13 @@ float histogram::get(float x) { return (*this)(x)/cnt; }
 
 //! Show results for all x
 void histogram::write(string file) {
-  float g;
+  double g;
   ofstream f(file.c_str());
   if (f) {
-    for (float x=0; x<xmax(); x+=xres) {
+    f.precision(12);
+    for (double x=0; x<xmax(); x+=xres) {
       g=get(x);
-      if (g!=0)
+      //if (g!=0.0)
         f << x << " " << g << "\n";
     }
     f.close();

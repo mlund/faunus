@@ -146,10 +146,11 @@ class iogro : public iopart {
     string p2s(particle &, int=0) {};
     void header() {};
     vector<particle> load(string) {};
-    float box;
+    float len;
   public:
     iogro(species &, inputfile &);
     bool save(string, vector<particle> &);
+    bool save(string, box &);
 };
 
 #ifdef GROMACS

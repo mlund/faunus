@@ -203,7 +203,11 @@ bool iopqr::save(string file, vector<particle> &p, titrate &tit) {
  * \param in Inputfile. Keyword "boxlen" is used to specify a cubic box
  */
 iogro::iogro(species &s, inputfile &in) : iopart(s) {
-  box = in.getflt("boxlen", 0)/10;
+  len = in.getflt("boxlen", 0)/10;
+}
+bool iogro::save(string file, box &b) {
+  len = b.len/10.;
+  return save(file, b.p);
 }
 bool iogro::save(string file, vector<particle> &p) {
   string name;
@@ -220,8 +224,8 @@ bool iogro::save(string file, vector<particle> &p) {
     o << buf;
     if (p[i].id==particle::CTR) nres++;
   }
-  if (box>0)
-    o << box << " " << box << " " << box << endl;
+  if (len>0)
+    o << len << " " << len << " " << len << endl;
   return writefile(file, o.str());
 }
 

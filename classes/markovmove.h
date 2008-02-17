@@ -1,6 +1,7 @@
 #ifndef _markovmove_h
 #define _markovmove_h
 
+#include <cstdarg>
 #include "container.h"
 #include "potentials.h"
 #include "ensemble.h"
@@ -140,25 +141,34 @@ class translate : public markovmove {
     double move(macromolecule &); 
 };
 
-/*
+/*!
  * \brief Fluctuate the volume against an external pressure 
- * \author Bjoern Persson
- * \todo Should take an arbritray vector of groups and implement a more efficent energycalculation
- * \note Tested and found valid using debyehuckel_P3 and point charges
- * \date Lund, jan 2008
+ * \author Bjoern Persson and Mikael Lund
+ * \todo Should take an arbritray vector of groups and implement a more efficent energycalculation.
+ * Salt scaling not yet implemented
+ * \note Tested and found valid using debyehuckel_P3 and point charges.
+ * \date Lund/Canberra, Jan-Feb 2008
+ *
+ * This move is intended to maintain constant pressure in a canonical
+ * Monte Carlo simulation. It will perform volume fluctuations and scale
+ * particle positions according to the scaling algorithm specified for the container.
  */
-
 class isobaric : public markovmove {
   public:
     isobaric( ensemble&, container&, interaction<T_pairpot>&, double);
     string info();
-    double move(vector<macromolecule> &); // Change in to a vector of arbitrary groups
-    average<float> vol, vol2;   //Sampling
+    void move(group &, unsigned short);  //!< Pressure scale group
+    void move(unsigned short, group &,...);
+    double move(vector<macromolecule> &);
+    average<float> vol, vol2, len, len2;
   private:
+    unsigned short N;
+    interaction<T_pairpot> trialpot; // Copy of potential class for volume changes
     double P, dV, dh; // Pressure, volume difference and hamiltonian difference
     double newV;      // New volume
+    void newvolume();
+    void accept();
 };
-
 
 /*! \brief Rotate group around its mass-center.
  *  \author Mikael Lund
@@ -179,19 +189,6 @@ class chargereg : public markovmove, public titrate {
     chargereg( ensemble&, container&, interaction<T_pairpot>&, group&, float);
     double titrateall();
     string info();
-};
-/*! \brief Grand Canonical titation of all sites
- *  \author Bjoern Persson
- *  \todo Untested, in principle it must be supplemented with grand canonical salt
- */
-
-class GCchargereg : public markovmove, private titrate {
-  public: 
-    GCchargereg( ensemble&, container&, interaction<T_pairpot>&, group&, float, float); //!< pH, CatPot
-    double titrateall();
-    string info();
-  private:
-    double CatPot;  //!< Chemical potential of coupled cation
 };
 
 /*!
@@ -452,83 +449,6 @@ double chargereg::titrateall() {
   return sum;
 }
 
-
-//-----------GRAND CANONICAL CHARGE REGULAION------------
-string GCchargereg::info() {
-  ostringstream o;
-  o <<  markovmove::info()
-    << "#   pH (concentration)  = " << ph << endl
-    << "#   Cation potential(kT)= " << CatPot << endl
-    << "#   Titrateable sites   = " << sites.size() << endl
-    << "#   Number of protons   = " << protons.size() << endl;
-  return o.str();
-}  
-GCchargereg::GCchargereg(
-    ensemble &e, 
-    container &c,
-    interaction<T_pairpot> &i,
-    group &g,
-    float ph, 
-    float cp 
-              ) : markovmove(e,c,i), titrate(c,c.p,g,ph)
-{
-  name="PROTON TITRATION";
-  cite="Labbes and Joensson, Applied parallel...";
-  runfraction=0.2;
-  con->trial = con->p;
-  CatPot=cp;
-}
-
-/*! \brief Coupled proton exchange.
- *
- *  This move will randomly go through the titrateable sites and
- *  try to exchange protons with the bulk as to explore all configurations
- *  that don't contain any proton. 
- *  The trial energy is:
- */
-double GCchargereg::titrateall() {
-  du=0;
-  if (slp.runtest(runfraction)==false)
-    return du;
-  action t;
-  double sum=0;
-  for (unsigned short i=0; i<sites.size(); i++) {
-    cnt++;
-    t=exchange(con->trial);
-    #pragma omp parallel
-    {
-      #pragma omp sections
-      {
-        #pragma omp section
-        { uold = pot->potential( con->p, t.site ) * con->p[t.site].charge
-          + pot->potential( con->p, t.proton ) * con->p[t.proton].charge
-            - con->p[t.site].potential(con->p[t.proton] )*con->p[t.proton].charge;
-        }
-        #pragma omp section
-        { unew = pot->potential(con->trial,t.site)*con->trial[t.site].charge 
-          + pot->potential(con->trial,t.proton)*con->trial[t.proton].charge
-            - con->trial[t.site].potential(con->trial[t.proton] )*con->trial[t.proton].charge;
-        }
-      }
-    }
-    du = (unew-uold)*pot->pair.f;
-
-    if (ens->metropolis( GCenergy(con->trial, du, t, CatPot, con->volume) )==true) {
-      rc=OK;
-      utot+=du;
-      naccept++;
-      con->p[t.site].charge   = con->trial[t.site].charge;
-      con->p[t.proton].charge = con->trial[t.proton].charge;
-      sum+=du;
-    } else {
-      rc=ENERGY;
-      exchange(con->trial, t);
-    }
-  }
-  return sum;
-}
-
-
 //-----------MOVE----------------------------------------
 /*! \breif Class to prefom a random walk of a macromolecule in space
  *  \note Replaced by translate(?)
@@ -662,7 +582,7 @@ dualmove::dualmove( ensemble &e,
   dp=1.;
   direction(0,0,1);
   rmin=0;
-  rmax=pow(double(c.volume), 0.3333)/2.; // rough estimate from volume
+  rmax=pow(double(c.getvolume()), 0.3333)/2.; // rough estimate from volume
 }
 
 /*! Specify unit vector that determines which coordinates
@@ -782,89 +702,112 @@ string HAchargereg::info() {
 double HAchargereg::energy( vector<particle> &p, double du, titrate::action &a ) {
   int i=p[a.site].id;
   if (a.action==PROTONATED)
-    return du+( log(10.)*( ph - con->d[i].pka ) )+CatPot+log(protons.size()/con->volume) ;
+    return du+( log(10.)*( ph - con->d[i].pka ) )+CatPot+log(protons.size()/con->getvolume()) ;
   else
-    return du-( log(10.)*( ph - con->d[i].pka ) )-CatPot-log((protons.size()+1)/con->volume);
+    return du-( log(10.)*( ph - con->d[i].pka ) )-CatPot-log((protons.size()+1)/con->getvolume());
 }
 
 //---------- ISOBARIC ----------
 /*!
- * \breif This class preforms a random walk in ln(volume)
+ * \note If your pair-potential depends on the geometry of the 
+ * container (minimum image, for example) make sure that
+ * the pair-potential has a correct implementation of the
+ * setvolume() function.
  *
- *  This construction has some not so obvius features.
- *  It requires a potential that 'remembers' the last 
- *  interactions (see pot_debyehuckelP3). Further it 
- *  will make an energy drift appear in systemenergy since
- *  this does not store the pressure-volume work between 
- *  fist and last configurations. Note that every type 
- *  of distance calculation must be in sync with this 
- *  rutine!
- *
- * \note P is the bulk pressure in A^-3, random walk preformed in ln(V)
- *
+ * \param pressure bulk pressure in A^-3
+ * \param i Potential class. Make sure that the T_pairpot::setvolume() function is appropriate.
  */
 isobaric::isobaric (
   ensemble &e,
   container &c,
-  interaction<T_pairpot> &i,
-  double pressure) : markovmove(e,c,i) {
+  interaction<T_pairpot> &i, double pressure) : markovmove(e,c,i), trialpot(i) {
     name="ISOBARIC";
     cite="none so far";
     P=pressure;
     runfraction=0.30;
     dp=100; 
+    N=0;
 }
 string isobaric::info() {
   ostringstream o;
   o << markovmove::info();
-  o << "#   External pressure       = "<< P <<"(A^-3) = "<<P*1660<<" (M) "<< endl
-    << "#   <Volume>                = "<< vol.avg() << " A^3  , <Vol^2> " << vol2.avg() <<endl;
-  return o.str();
+  o << "#   External pressure   = "<< P <<"(A^-3) = "<<P*1660<<" (M)"<< endl
+    << "#   Average volume      = "<< vol.avg() << " A^3" << endl
+    << "#     sqrt(<V^2>-<V>^2) = "<< sqrt(vol2.avg()-pow(vol.avg(),2)) << endl
+    << "#   Average box length  = "<< len.avg() << " A^3" << endl
+    << "#     sqrt(<l^2>-<l>^2) = "<< sqrt(len2.avg()-pow(len.avg(),2)) << endl;
+   return o.str();
+}
+void isobaric::newvolume() {
+  newV = exp(log(con->getvolume())  // Random move in ln(V)
+      + slp.random_half()*dp);
+  trialpot.pair.setvolume(newV);    // Set volume for trial-pair-potential
+  dV=newV - con->getvolume();
+}
+void isobaric::accept() {
+  naccept++;
+  rc=OK;
+  utot+=du;
+  dpsqr+=pow(newV,1./3.);
+  con->setvolume(newV);         // save the trial volume in the container
+  pot->pair.setvolume(newV);    // ...AND in the pair-potential function
+  vol += con->getvolume();
+  vol2+= pow(con->getvolume(),2);
+  len += pow(con->getvolume(),1./3);
+  len2+= pow(con->getvolume(),2./3);
+}
+
+/*!\param n Number of groups
+ * \param g List of groups
+ * \note Unfinished
+ */
+void isobaric::move(unsigned short n, group &g,...) {
+  group first=g; // check if first group is included!!
+  double newlen=pow(newV,1./3);
+  group *gPtr;
+  va_list ap;
+  va_start(ap, g);
+  while (n>0) { 
+    gPtr=&va_arg(ap, group);
+    //gPtr->isobaricmove(*con, newlen);
+    //cout << gPtr->name << endl;
+    //N+=gPtr->nummolecules();
+    n--;
+  }
 }
 
 double isobaric::move(vector<macromolecule> &g) {
-  du=0;
-  dV=0;
   cnt++;
-  newV=exp(log(con->volume)+slp.random_half()*dp);   // Calculate new V
-  con->settrialboundary(newV); // Set trial part of con
-  dV=newV-con->volume;       
-  pot->setscale(newV);
-  int i=g.size();
-  for (int n=0; n<i; n++) {
-    g[n].isobaricmove(*con);
-
-  }   
+  du=0;
+  newvolume();
+  unsigned short i=g.size();
+  for (unsigned short n=0; n<i; n++)          // Loop over macromolecules
+    g[n].isobaricmove(*con, pow(newV,1./3));  // ..and scale their mass-centers
   #pragma omp parallel
   { 
-    #pragma omp sections     
+    #pragma omp sections
     {
       #pragma omp section
-      { uold = pot->energy(con->p); }//,g); }  Need to fix all <group> <-> all <group> to evoid internal
-      #pragma omp section                   // energies
-      { unew = pot->scaledenergy(con->trial); }//,g); }      
+      { uold = pot->energy(con->p); }         // calc. old energy with original potential class
+      #pragma omp section
+      { unew = trialpot.energy(con->trial); } // calc. new energy using a COPY of the potential class
     }
   }
   du = unew-uold;
-  dh = unew-uold+P*dV-(i+1)*log(newV/(con->volume));
+  dh = du + P*dV-(i+1)*log( newV/con->getvolume() );
   if (ens->metropolis(dh)==true) {
-    rc=OK;
-    utot+=du;
-    dpsqr+=pow(newV,1./3.);
-    naccept++;
-    for (int n=0; n<i; n++) 
+    accept();
+    for (unsigned short n=0; n<i; n++) 
       g[n].accept(*con);
-    con->reset_volume(newV);      // Update the container
-    pot->reset_potential(newV);   // Update the potential
-    vol+=con->volume;
-    vol2+=pow(con->volume,2);
     return du;
   } else rc=ENERGY;
   du=0;
   dpsqr+=0;
-  for (int n=0; n<i; n++)
+  for (unsigned short n=0; n<i; n++)
     g[n].undo(*con);
-  vol+=con->volume;
-  vol2+=pow(con->volume,2);
+  vol += con->getvolume();
+  vol2+= pow(con->getvolume(),2);
+  len += pow(con->getvolume(),1./3);
+  len2+= pow(con->getvolume(),2./3);
   return du;
 }

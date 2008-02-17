@@ -40,7 +40,7 @@ class pot_setup {
  *  \author Mikael Lund
  *  \date Prague, 2007
  */
-class pot_coulomb : private pot_lj {
+class pot_coulomb : public pot_lj {
   public:
     double f; //!< Factor to convert kT/lB to kT (here the Bjerrum length).
 
@@ -57,9 +57,6 @@ class pot_coulomb : private pot_lj {
       return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
     }
     string info();
-    void setscale(double d) {}     //setscale and dr_scale are here
-    inline double scaledpairpot(particle &p1, particle &p2) {return pairpot(p1, p1);}
-    void reset_potential(double newV) {}
 };
 
 /*!
@@ -67,7 +64,7 @@ class pot_coulomb : private pot_lj {
  * \author Mikael Lund
  * \date 2007
  */
-class pot_minimage : private pot_lj {
+class pot_minimage : public pot_lj {
   private:
     double invbox,box;
   public:
@@ -78,15 +75,16 @@ class pot_minimage : private pot_lj {
       invbox=1./box;
     }
     string info();
+    void setvolume(double vol) {
+      box=pow(vol, 1./3);;
+      invbox=1./box;
+    }
     inline double pairpot(particle &p1, particle &p2) {
       register double r2=p1.sqdist(p2,box,invbox);
       return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
       //register double dx=p1.radius+p2.radius;
       //return (r2<dx*dx) ? 0 : p1.charge*p2.charge/sqrt(r2);
     }
-    void setscale(double d) {}     //setscale and dr_scale are here
-    inline double scaledpairpot(particle &p1, particle &p2) {return pairpot(p1, p1);}
-    void reset_potential(double newV) {}
 };
 
 
@@ -107,22 +105,12 @@ class pot_test {
       register double qq=p1.charge*p2.charge;
       return (qq!=0) ? qq/sqrt(r2)+a : a;
     }
-    void setscale(double d) {}     //setscale and dr_scale are here
-    point dr_scale(point &p) {   //dummie functions due to isobaric
-      point q;                          //implementation under pbc
-      q.x=0;                            //Could definetly be look better (other solution)
-      q.y=0;
-      q.z=0;
-      return q;
-      }
-    inline double scaledpairpot(particle &p1, particle &p2) {return pairpot(p1, p1);}
-    void reset_potential(double newV) {}
 };
 
 /*! \brief Debye-Huckel potential
  *  \author Mikael Lund
  */
-class pot_debyehuckel : private pot_lj {
+class pot_debyehuckel : public pot_lj {
   private:
     double k;
   public:
@@ -142,16 +130,6 @@ class pot_debyehuckel : private pot_lj {
              r=sqrt(r2);
       return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
     }
-    void setscale(double d) {}     //setscale and dr_scale are here
-    point dr_scale(point &p) {   //dummie functions due to isobaric
-      point q;                          //implementation under pbc
-      q.x=0;                            //Could definetly be look better (other solution)
-      q.y=0;
-      q.z=0;
-      return q;
-   }   
-    inline double scaledpairpot(particle &p1, particle &p2) {return pairpot(p1, p1);}
-    void reset_potential(double newV) {}
 };
 
 /*! \brief Debye-Huckel potential for periodic boundry 
@@ -161,42 +139,31 @@ class pot_debyehuckel : private pot_lj {
  *  \author Mikael Lund/Bjoern Persson
  *  \date Lund/Prag 2008
  */
-class pot_debyehuckelP3 : private pot_lj {
+class pot_debyehuckelP3 : public pot_lj {
   private:
     double k;
   public:
-    double f;
-    double b, newb;
-    double inv_b, newinv_b;
+    double f, box, invbox;
     //! \param pot.lB Bjerrum length
     //! \param pot.eps L-J parameter
     //! \param pot.kappa Inverse Debye screening length
     pot_debyehuckelP3( pot_setup &pot ) : pot_lj(pot.eps/pot.lB) {
       f=pot.lB; 
       k=pot.kappa;
-      b=pot.box; 
-      inv_b=1/pot.box;
+      box=pot.box;
+      invbox=1./box;
     };
     string info();
     //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
     //! \return Energy in kT/f (f=lB)
     inline double pairpot( particle &p1, particle &p2 ) {
-      double r2=p1.sqdist(p2,b,inv_b),
+      register double r2=p1.sqdist(p2,box,invbox),
              r=sqrt(r2);
       return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
     }
-    inline double scaledpairpot( particle &p1, particle &p2 ) {
-      double r2=p1.sqdist(p2,newb, newinv_b);
-      register double r=sqrt(r2);
-      return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
-    }
-    void  setscale(double triallen) { //triallen = new volume
-      newb=pow(triallen,1./3.);
-      newinv_b=1.0/newb;
-    }
-    void reset_potential(double newV) { // 
-      b=pow(newV,1./3.);
-      inv_b=1./b;
+    void setvolume(double vol) {
+      box=pow(vol, 1./3);;
+      invbox=1./box;
     }
 }; 
 
@@ -209,7 +176,7 @@ class pot_debyehuckelP3 : private pot_lj {
  * the distance between the particles is outside the data range a 
  * simple Coulomb + LJ potential will be applied.
  */
-class pot_datapmf : private pot_lj {
+class pot_datapmf : public pot_lj {
   private:
     xydata<double> pmfd[particle::LAST][particle::LAST];
   public:
@@ -235,16 +202,6 @@ class pot_datapmf : private pot_lj {
         p1.charge*p2.charge/r2 : // use Coulomb pot. outside data 
         pmfd[i][j].x2y(r2);      // ...else use table. 
     }
-    void setscale(double d) {}     //setscale and dr_scale are here
-    point dr_scale(point &p) {   //dummie functions due to isobaric
-      point q;                          //implementation under pbc
-      q.x=0;                            //Could definetly be look better (other solution)
-      q.y=0;
-      q.z=0;
-      return q;
-    }
-    inline double scaledpairpot(particle &p1, particle &p2) {return pairpot(p1, p1);}
-    void reset_potential(double newV) {}
 };
 
 /*!
@@ -256,7 +213,6 @@ class pot_datapmf : private pot_lj {
  *  pair potential is specified as a template type which allows inlining.
  *  Unless otherwise specified, all energies will be returned in units of \b kT.
  */
-
 template<class T>
 class interaction {
   public:
@@ -281,12 +237,23 @@ class interaction {
     double chain(vector<particle> &, group &, int);
     double dipdip(point &, point &, double);                    //!< Dipole-dipole energy.
     double iondip(point &, double, double);                     //!< Ion-dipole energy.
-    double scaledenergy(vector<particle> &);                    //!< Scaled all<->all.
-    double scaledenergy(vector<particle> &, vector<macromolecule> &);   //!< Scaled vector<group> <-> vector<group>, implies constant internal potentials
-    inline void setscale(double d) {pair.setscale(d);}          //!< Updates boundry condition under volume fluctuations, d is the new VOLUME
-    inline void reset_potential(double &newV) {pair.reset_potential(newV);}  //!< Returns displacement for volume fluctuations, OBSOLETE!!!
 };
 
+// A simple test that shows how to expand the
+// interaction class. Note the special way of
+// accessing the "pair" class due to a namespace
+// confusion with "std". (Bjorn: that was our problem
+// when we tried to do this in Lund)
+template<class T>
+class heirtest_interaction : public interaction<T> {
+  public:
+    heirtest_interaction(pot_setup &pot) : interaction<T>(pot) {}
+    void testfunc(double x) {interaction<T>::pair.setvolume(x);}
+}; 
+
+/*
+ * IMPLEMENTATION
+ */
 template<class T>
 double interaction<T>::energy(vector<particle> &p, int j) {
   unsigned short ps=p.size();
@@ -338,34 +305,6 @@ double interaction<T>::energy(vector<particle> &p, group &g, particle &a) {
   //#pragma omp parallel for reduction (+:u)
   for (i=g.beg; i<n; i++)
     u+=pair.pairpot(a, p[i]); 
-  return pair.f*u;
-}
-
-template<class T>
-double interaction<T>::scaledenergy(vector<particle> &p) {
-  double u=0;
-  short i,j,n = p.size();
-  //#pragma omp parallel for reduction (+:u)
-  for (i=0; i<n-1; ++i)
-    for (j=i+1; j<n; ++j)
-      u+=pair.scaledpairpot(p[i], p[j]);
-  return pair.f*u; 
-}
-
-template<class T>
-double interaction<T>::scaledenergy(vector<particle> &p, vector<macromolecule> &g) {
-  double u=0;
-  short i,k,l=0;
-  short j=g.size();
-  short t=p.size();
-  for (int l; l<j; l++) {
-    k=g[l].end;
-    for (i=g[l].beg; i<k; i++) {
-      for (unsigned short s=(g[l].end+1); s<t; s++) {
-         u+=pair.scaledpairpot(p[i],p[s]);
-      }
-    }
-  }
   return pair.f*u;
 }
 

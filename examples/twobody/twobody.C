@@ -11,7 +11,8 @@
 #include <iostream>
 #include "../../classes/analysis.h"
 #include "../../classes/mcloop.h"
-typedef pot_coulomb T_pairpot;         // Specific pair interaction function
+#include "../../classes/pot_netz.h"
+typedef pot_netz T_pairpot;         // Specific pair interaction function
 #include "../../classes/markovmove.h"
 
 using namespace std;

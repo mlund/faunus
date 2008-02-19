@@ -31,7 +31,8 @@ class pot_setup {
            epso,         //!< External dielectric constant
            hydroscale,   //!< LJ scaling factor for hydrophobic interactions
            box,          //!< Cubic box length
-           a;            //!< Cavity radius
+           a,            //!< Cavity radius
+           A,B,C,D;      //!< Empirical parameters for "pot_netz"
     pot_setup(inputfile &);
 };
 

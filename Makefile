@@ -111,6 +111,13 @@ isobaric:	examples/isobaric/isobaric.C libfaunus
 	-o examples/isobaric/isobaric \
 	-lfaunus ${LDFLAGS}
 
+tools:	examples/tools/printpotential.C libfaunus 
+	$(CXX) $(CXXFLAGS) \
+	examples/tools/printpotential.C \
+	-o examples/tools/printpotential \
+	-lfaunus ${LDFLAGS}
+
+
 pka:	examples/titration/pka.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/pka.C -o examples/titration/pka
 

@@ -16,6 +16,7 @@ class pot_netz : public pot_lj {
         + D1*exp(-D3*pow(z-D2,2) ) ) / f;
     }
     inline double air(double z, particle::type &id) {
+      if (z>1.5) return 0; // fit not valid beyond 1.5nm
       if (id==particle::I)
         A=.066,B=.977,zn=2.39,C1=-5.1,C2=.7,C3=8.7,D1=-7.32,D2=-.011,D3=2.49,n=1;
       if (id==particle::CL)
@@ -30,13 +31,13 @@ class pot_netz : public pot_lj {
     double f;             //!< Factor to convert returned energy to kT
     pot_netz( pot_setup &pot ) : pot_lj( pot.eps/pot.lB ) { f=pot.lB; }
     inline double pairpot(particle &p1, particle &p2) {
-      register double r2=p1.sqdist(p2), u=lj(p1,p2,r2), r=sqrt(r);
+      register double r2=p1.sqdist(p2), u=lj(p1,p2,r2), r=sqrt(r2);
       if (p2.hydrophobic==true)
         if (p1.id==particle::I || p1.id==particle::CL || p1.id==particle::NA)
-          u+=air(0.1*r, p1.id); // AA->nm
+          u=air( 0.1*(r-p2.radius), p1.id); // AA->nm, center2center->surface2center
       if (p1.hydrophobic==true)
-        if (p1.id==particle::I || p1.id==particle::CL || p1.id==particle::NA)
-          u+=air(0.1*r, p1.id);
+        if (p2.id==particle::I || p2.id==particle::CL || p2.id==particle::NA)
+          u=air( 0.1*(r-p1.radius), p2.id);
       return u + p1.charge*p2.charge/r;
     }
     string info();
@@ -47,11 +48,11 @@ string pot_netz::info() {
   o << "#   Type               = LJ/Coulomb + empirical PMF" << endl
     << "#   Reference          = PRL (2007),99,226104" << endl
     << "#   Bjerrum length     = " << f << endl
-    << "#   LJ epsilon (kT)    = " << eps*f << endl
-    << "#   Parameters:"           << endl
-    << "#     A,B,zn,n         = " <<  A << "," <<  B << "," << zn << "," << n << endl
-    << "#     C1,C2,C3         = " << C1 << "," << C2 << "," << C3 << endl
-    << "#     D1,D2,D3         = " << D1 << "," << D2 << "," << D3 << endl;
+    << "#   LJ epsilon (kT)    = " << eps*f << endl;
+    //<< "#   Parameters:"           << endl
+    //<< "#     A,B,zn,n         = " <<  A << "," <<  B << "," << zn << "," << n << endl
+    //<< "#     C1,C2,C3         = " << C1 << "," << C2 << "," << C3 << endl
+    //<< "#     D1,D2,D3         = " << D1 << "," << D2 << "," << D3 << endl;
   return o.str();
 }
 #endif

@@ -129,6 +129,7 @@ class dualmove : public markovmove {
     double rmax;                //!< Maximum allowed mass-center distance
     double rmin;                //!< Minimum allowed mass-center distance
     dualmove( ensemble&, container&, interaction<T_pairpot>&);
+    void setup(inputfile &);
     void load(inputfile &, vector<macromolecule> &g, float=0);
     void direction(double, double, double);
     double move(macromolecule &, macromolecule &);
@@ -585,9 +586,19 @@ dualmove::dualmove( ensemble &e,
   rmax=pow(double(c.getvolume()), 1./3)/2.; // rough estimate from volume
 }
 
+/*! Load the following parameters from an input
+ * object: displacement (dm_dp), minimum separation
+ * (dm_minsep), maximum separation (dm_maxsep)
+ */
+void dualmove::setup( inputfile &in ) {
+  dp = in.getflt("dm_dp",dp);
+  rmin = in.getflt("dm_minsep",rmin);
+  rmax = in.getflt("dm_maxsep",rmax);
+}
+
 /*! Specify unit vector that determines which coordinates
- * that will be moved. The default is (0,0,1) meaning that
- * the macromolecules will be moved in the z direction only.
+ *  that will be moved. The default is (0,0,1) meaning that
+ *  the macromolecules will be moved in the z direction only.
  */
 void dualmove::direction(double x, double y, double z) {
   v.x=x;

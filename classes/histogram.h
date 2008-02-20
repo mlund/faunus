@@ -58,7 +58,7 @@ void histogram::write(string file) {
     f.precision(12);
     for (double x=0; x<xmax(); x+=xres) {
       g=get(x);
-      //if (g!=0.0)
+      if (g!=0.0)
         f << x << " " << g << "\n";
     }
     f.close();

@@ -46,7 +46,7 @@ class pot_netz : public pot_lj {
 string pot_netz::info() {
   ostringstream o;
   o << "#   Type               = LJ/Coulomb + empirical PMF" << endl
-    << "#   Reference          = PRL (2007),99,226104" << endl
+    << "#   Reference          = PRL 2007, 99, 226104" << endl
     << "#   Bjerrum length     = " << f << endl
     << "#   LJ epsilon (kT)    = " << eps*f << endl;
     //<< "#   Parameters:"           << endl

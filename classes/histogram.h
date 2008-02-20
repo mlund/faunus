@@ -16,16 +16,16 @@
  */
 class histogram : private xytable<float,unsigned long int> {
   friend class rdf;
-  friend class rdfP3;
+  //friend class rdfP3;
   private:
     unsigned long int cnt;
     float xmaxi;  // ugly solution!
   public:
     histogram(float, float, float);
     string comment;                     //!< User defined comment
-    void add(float); 
-    void write(string); 
-    virtual float get(float); 
+    void add(float);
+    void write(string);
+    virtual float get(float);
 
     //! Example of histogram class
     //! \example histogram-test.C
@@ -48,11 +48,11 @@ void histogram::add(float x) {
 
 //! Get bin for x value
 //! \return \f$ \frac{N(r)}{N_{tot}}\f$
-float histogram::get(float x) { return (*this)(x)/cnt; }
+float histogram::get(float x) { return (*this)(x)/float(cnt); }
 
 //! Show results for all x
 void histogram::write(string file) {
-  double g;
+  float g;
   ofstream f(file.c_str());
   if (f) {
     f.precision(12);

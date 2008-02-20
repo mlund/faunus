@@ -19,6 +19,7 @@ class mcloop {
     unsigned int macro, micro;
     bool eq;
     mcloop(inputfile &);           //!< Setup
+    string info();               //!< Shows setup
     string timing(unsigned int); //!< Show macrostep middle time and ETA.
 };
 
@@ -31,6 +32,13 @@ mcloop::mcloop(inputfile &in)
   macro=in.getint("macrosteps",10);
   micro=in.getint("microsteps");
   eq=in.getboo("equilibration", false);
+}
+
+string mcloop::info() {
+  ostringstream o;
+  o << "# Steps (macro micro tot)  = "
+    << macro << " " << micro << " " << macro*micro << endl;
+  return o.str();
 }
 
 string mcloop::timing(unsigned int mac) {

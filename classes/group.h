@@ -53,6 +53,7 @@ class group {
     virtual unsigned short displace(container&,double); //!< Displace random particle
     virtual void isobaricmove(container &, double){};   //!< Pressure scaling
     virtual unsigned short nummolecules();              //!< Number of molecules
+    unsigned short numhydrophobic(vector<particle> &);  //!< Number of hydrophobic particles
 };
 
 /*!
@@ -80,6 +81,7 @@ class macromolecule : public group {
     average<float> dip;  //!< Dipole moment scalar.
 
     string info();                           //!< Show info
+    string info(container &);                //!< Show more info!
     void center(container &);                //!< Center group in origo (0,0,0)
     double charge(vector<particle> &);       //!< Calculate total charge
     double radius(vector<particle> &);       //!< Calculate radius

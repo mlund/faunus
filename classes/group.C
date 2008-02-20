@@ -210,6 +210,12 @@ short int group::count(vector<particle> &p, particle::type id) {
   return n;
 }
 unsigned short group::nummolecules() { return size(); }
+unsigned short group::numhydrophobic( vector<particle> &p ) {
+  unsigned short n=0;
+  for (int i=beg; i<=end; i++)
+    if (p[i].hydrophobic==true) n++;
+  return n;
+}
 
 /*****************************
  *
@@ -278,7 +284,13 @@ string macromolecule::info() {
     o << "#   Dipole moment          = " << dip.avg() << " " << mu << endl;
   return o.str();
 }
-
+string macromolecule::info(container &con) {
+  ostringstream o;
+  o << info();
+  o << "#   Current charge         = " << charge(con.p) << endl
+    << "#   Hydrophobic particles  = " << numhydrophobic(con.p) << endl;
+  return o.str();
+}
 unsigned short macromolecule::nummolecules() { return 1; }
 
 void macromolecule::operator=(group g) {

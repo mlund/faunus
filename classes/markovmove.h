@@ -573,16 +573,16 @@ bool zmove::move(macromolecule &g) {
 
 //------- DUAL MOVE --------------
 dualmove::dualmove( ensemble &e,
-    container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i), gofr(0.5,0,100)
+    container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i), gofr(0.5,0.,100.)
 {
   name = "SYMMETRIC 1D GROUP TRANSLATION";
   cite = "Biophys J. 2003, 85, 2940";
   runfraction=1.0;
   deltadp=1.;
   dp=1.;
-  direction(0,0,1);
+  direction(0,0,1); // move only in z direction
   rmin=0;
-  rmax=pow(double(c.getvolume()), 0.3333)/2.; // rough estimate from volume
+  rmax=pow(double(c.getvolume()), 1./3)/2.; // rough estimate from volume
 }
 
 /*! Specify unit vector that determines which coordinates
@@ -768,7 +768,7 @@ void isobaric::move(unsigned short n, group &g,...) {
   va_list ap;
   va_start(ap, g);
   while (n>0) { 
-    gPtr=&va_arg(ap, group);
+    //gPtr=&va_arg(ap, group);
     //gPtr->isobaricmove(*con, newlen);
     //cout << gPtr->name << endl;
     //N+=gPtr->nummolecules();

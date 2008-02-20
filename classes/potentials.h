@@ -245,11 +245,14 @@ class interaction {
 // accessing the "pair" class due to a namespace
 // confusion with "std". (Bjorn: that was our problem
 // when we tried to do this in Lund)
+// This class will call a force function from the pairpot class
+// (implemented where appropriate)
 template<class T>
-class heirtest_interaction : public interaction<T> {
+class interaction_force : public interaction<T> {
   public:
-    heirtest_interaction(pot_setup &pot) : interaction<T>(pot) {}
+    interaction_force(pot_setup &pot) : interaction<T>(pot) {}
     void testfunc(double x) {interaction<T>::pair.setvolume(x);}
+    point force( vector<particle> &, group & );     //!< Calculate the force acting on a group
 }; 
 
 /*
@@ -413,5 +416,12 @@ string interaction<T>::info() {
     << pair.info();
   return o.str();
 }
-#endif
 
+// ----- INTERACTION FORCE CLASS --------
+// Not finished!
+template<class T>
+point interaction_force<T>::force( vector<particle> &p, group &g ) {
+  point f = interaction<T>::pair.force(p[1],p[2]);
+  return f;
+}
+#endif

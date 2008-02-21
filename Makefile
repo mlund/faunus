@@ -132,7 +132,7 @@ undone:		undone/mikael/namespace.C libfaunus
 
 
 
-examples:	widom pka GCpka ewald twobody manybody isobaric
+examples:	tools widom pka GCpka ewald twobody manybody isobaric
 
 clean:
 	rm -vf $(OBJS) \

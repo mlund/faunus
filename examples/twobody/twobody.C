@@ -27,6 +27,7 @@ int main() {
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   ioxyz xyz(cell);                      // xyz output for VMD etc.
   distributions dst;                    // Distance dep. averages
+  iopqr pqr(cell);                      // PQR output (pos, charge, radius)
   rdf saltrdf(particle::NA,particle::CL, .5, cell.r);
 
   vector<macromolecule> g;              // Group for proteins
@@ -41,15 +42,17 @@ int main() {
   dm.dp=6;                              // Set displacement parameters
   sm.dp=90;                             // Set displacement parameters
 
+  chargereg tit(nvt,cell,pot,salt,4.0); // Prepare titration.
+
   ioaam aam(cell);                      // Protein input file format is AAM
   if (aam.load(cell,"confout.aam")) {
     g[0].masscenter(cell);              // Load old config (if present)
     g[1].masscenter(cell);              // ...and recalc mass centers
   }
-  chargereg tit(nvt,cell,pot,salt,4.0); // Prepare titration.
+  
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
   cout << cell.info() << pot.info()     // Print information to screen
-    << tit.info();
+       << tit.info();
 
   #ifdef GROMACS
   ioxtc xtc(cell, cell.r);              // Gromacs xtc output (if installed)
@@ -58,7 +61,7 @@ int main() {
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {
       short i,n;
-      switch (rand() % 4) {                     // Pick a random MC move
+      switch (rand() % 3) {                     // Pick a random MC move
         case 0:                                 // Displace salt
           sys+=sm.move(salt);                   //   Do the move.
           break;
@@ -98,13 +101,14 @@ int main() {
     dst.write("distributions.dat");             // Write other distributions
     xyz.save("coord.xyz", cell.p);              // Write .xyz coordinate file
     aam.save("confout.aam", cell.p);            // Save config. for next run
+    pqr.save("confout.pqr", cell.p);            // ...also save a PQR file
     cout << loop.timing(macro);                 // Show progress
   } // End of outer loop
 
   cout << salt.info(cell)                       // Final information...
        << sm.info() << mr.info() << dm.info()
-       << tit.info() << sys.info()
-       << g[0].info() << g[1].info() << cell.info();
+       << sys.info() << g[0].info() << g[1].info() << cell.info()
+       << tit.info();
 
   #ifdef GROMACS
   xtc.close();

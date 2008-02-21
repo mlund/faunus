@@ -12,6 +12,7 @@ int main() {
   pot_setup cfg;
   pot_netz netz(cfg);
   pot_coulomb coulomb(cfg);
+  //coulomb.eps=coulomb.eps*3.;
 
   p1.charge=-1;
   p1.radius=2.;
@@ -27,7 +28,7 @@ int main() {
   cout << coulomb.info() << endl << netz.info();
  
   cout << "# r/AA  U/kT" << endl;
-  for (float r=p2.radius+p1.radius; r<20; r+=.1) {
+  for (float r=0; r<20; r+=.1) {
     p1.z=r;
     p3.z=r;
     cout << p1.dist(p2) << " "

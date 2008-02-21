@@ -574,7 +574,7 @@ bool zmove::move(macromolecule &g) {
 
 //------- DUAL MOVE --------------
 dualmove::dualmove( ensemble &e,
-    container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i), gofr(0.5,0.,100.)
+    container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i), gofr(0.1,0.,100.)
 {
   name = "SYMMETRIC 1D GROUP TRANSLATION";
   cite = "Biophys J. 2003, 85, 2940";

@@ -88,7 +88,6 @@ class pot_minimage : public pot_lj {
     }
 };
 
-
 class pot_test {
   public:
     double f;
@@ -220,16 +219,16 @@ class interaction {
     T pair;     //!< Pair potential class
     interaction(pot_setup &pot) : pair(pot) {};
     string info();
-    double energy(vector<particle> &, int);                     //!< all<->particle i.
-    double energy(vector<particle> &, particle &);              //!< all<->external particle
-    double energy(vector<particle> &, group &);                 //!< all<->group.
-    double energy(vector<particle> &, group &, group &);        //!< group<->group.
+    double energy(vector<particle> &, particle &);            //!< all<->external particle
+    virtual double energy(vector<particle> &, int);           //!< all<->particle i.
+    virtual double energy(vector<particle> &, group &);               //!< all<->group.
+    virtual double energy(vector<particle> &);                          //!< all<->all (System energy).
+    virtual double energy(vector<particle> &, group &, group &);     //!< group<->group.
     double energy(vector<particle> &, group &, int);            //!< group<->particle i.
     double energy(vector<particle> &, group &, particle &);     //!< group<->external particle.
     double energy(vector<particle> &, vector<group> &, int,...);
     double energy(vector<particle> &, int, vector<short int> &);//!< particle<->list of particles.
-    double energy(vector<particle> &);                          //!< all<->all (System energy).
-    double energy(vector<particle> &, vector<macromolecule> &);         //!< vector<group> <-> vector<group>
+    double energy(vector<particle> &, vector<macromolecule> &); //!< vector<group> <-> vector<group>
     double potential(vector<particle> &, unsigned short);       //!< Electric potential at j'th particle
     double internal(vector<particle> &, group &);               //!< internal energy in group
     double pot(vector<particle> &, point &);                    //!< Electrostatic potential in a point
@@ -245,14 +244,15 @@ class interaction {
 // accessing the "pair" class due to a namespace
 // confusion with "std". (Bjorn: that was our problem
 // when we tried to do this in Lund)
-// This class will call a force function from the pairpot class
-// (implemented where appropriate)
 template<class T>
 class interaction_force : public interaction<T> {
   public:
     interaction_force(pot_setup &pot) : interaction<T>(pot) {}
     void testfunc(double x) {interaction<T>::pair.setvolume(x);}
     point force( vector<particle> &, group & );     //!< Calculate the force acting on a group
+    double energy(vector<particle> &, int);                     //!< all<->particle i.
+    double energy(vector<particle> &, group &);                 //!< all<->group.
+    double energy(vector<particle> &, group &, group &);        //!< group<->group.
 }; 
 
 /*
@@ -424,4 +424,53 @@ point interaction_force<T>::force( vector<particle> &p, group &g ) {
   point f = interaction<T>::pair.force(p[1],p[2]);
   return f;
 }
+
+// ------ HYDROPHOBIC INTERACTION ------------
+template<class T>
+class int_hydrophobic : public interaction<T> {
+  private:
+    vector<unsigned short> hy,pa;
+    double hyenergy(vector<particle> &);
+  public:
+    int_hydrophobic(pot_setup &pot) : interaction<T>(pot) {}
+    void setup(vector<particle> &, particle::type);      //!< Locate hydrophobic groups and partners
+    double energy(vector<particle> &);
+    double energy(vector<particle> &, int);              //!< all<->particle i.
+    double energy(vector<particle> &, group &);          //!< all<->group.
+};
+template<class T>
+void int_hydrophobic<T>::setup(vector<particle> &p, particle::type id) {
+  hy.resize(0);
+  for (unsigned short i=0; i<p.size(); i++)
+    if (p[i].hydrophobic==true)
+      hy.push_back(i);
+    else if (p[i].id==id)
+      pa.push_back(i);
+}
+template<class T>
+double int_hydrophobic<T>::hyenergy(vector<particle> &p) {
+  unsigned short i,j,hymin;
+  double u=0,d,dmin=1e7;
+  for (i=0; i<pa.size(); i++) {
+    for (j=0; j<hy.size(); j++) {
+      d=p[pa[i]].sqdist(p[hy[j]]);
+      if (d<dmin) {
+        dmin=d; 
+        hymin=hy[j];
+      }
+    }
+    u+=interaction<T>::pair.hypairpot(p[pa[i]], p[hymin], sqrt(dmin));
+  }
+  return u*interaction<T>::pair.f;
+}
+template<class T> double int_hydrophobic<T>::energy( vector<particle> &p ) {
+  return interaction<T>::energy(p) + hyenergy(p);
+}
+template<class T> double int_hydrophobic<T>::energy( vector<particle> &p, int i) {
+  return interaction<T>::energy(p,i) + hyenergy(p);
+}
+template<class T> double int_hydrophobic<T>::energy( vector<particle> &p, group &g ) {
+  return interaction<T>::energy(p,g) + hyenergy(p);
+}
+
 #endif

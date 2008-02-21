@@ -25,7 +25,7 @@ class pot_hydrophobic : public pot_lj {
       register double r2=p1.sqdist(p2), u=lj(p1,p2,r2);
       if (p1.id==id && p2.hydrophobic==true)
         u=scale*u;
-      if (p2.id==id && p1.hydrophobic==true)
+      else if (p2.id==id && p1.hydrophobic==true)
         u=scale*u;
       return u + p1.charge*p2.charge/sqrt(r2);
     }

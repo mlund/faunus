@@ -14,12 +14,12 @@ class pot_hydrophobic : public pot_lj {
   private:
     double scale;
   public:
-    double f;             //!< Factor to convert returned energy to kT
     particle::type id;    //!< Particle to interact with hydrophobic groups (default: iodide)
     pot_hydrophobic( pot_setup &pot ) : pot_lj( pot.eps/pot.lB ) {
       f=pot.lB;
       scale=pot.hydroscale;
       id=particle::I;
+      name+="/Coulomb w. extra hydrophobicity";
     }
     inline double pairpot(particle &p1, particle &p2) {
       register double r2=p1.sqdist(p2), u=lj(p1,p2,r2);
@@ -34,9 +34,8 @@ class pot_hydrophobic : public pot_lj {
 
 string pot_hydrophobic::info() {
   ostringstream o;
-  o << "#   Type               = LJ/Coulomb w. extra hydrophobicity" << endl
+  o << pot_lj::info()
     << "#   Bjerrum length     = " << f << endl
-    << "#   LJ epsilon (kT)    = " << eps*f << endl
     << "#   Hydrop. LJ scaling = " << scale << endl;
   return o.str();
 }

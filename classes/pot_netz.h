@@ -50,8 +50,10 @@ class pot_netz : public pot_coulomb {
           + D1*exp( -D3*pow(z-D2,2)  ) ) / f;
     }
   public:
-    pot_netz( pot_setup &pot ) : pot_coulomb( pot ) { }
-    string info();
+    pot_netz( pot_setup &pot ) : pot_coulomb( pot ) {
+     name+="/Empirial PMF";
+     cite="PRL 2007, 99, 226104";
+    }
     inline double hypairpot(particle &p1, particle &p2, double r) {
       if (p1.hydrophobic==true)
         return air(r-p1.radius, p2.id); // c2c -> surface2center
@@ -60,13 +62,5 @@ class pot_netz : public pot_coulomb {
       return 0;
     }
 };
-string pot_netz::info() {
-  ostringstream o;
-  o << "#   Type               = LJ/Coulomb + empirical PMF" << endl
-    << "#   Reference          = PRL 2007, 99, 226104" << endl
-    << "#   Bjerrum length     = " << f << endl
-    << "#   LJ epsilon (kT)    = " << eps*f << endl;
-  return o.str();
-}
 #endif
 

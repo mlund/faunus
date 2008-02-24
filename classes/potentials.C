@@ -20,36 +20,32 @@ pot_setup::pot_setup(inputfile &in) {
 
 string pot_minimage::info() {
   ostringstream o;
-  o << "#   Type           = LJ/Coulomb w. minimum image" << endl
-    << "#   Image length   = " << box << endl
-    << "#   Bjerrum length = " << f << endl
-    << "#   LJ epsilon (kT)= " << eps*f << endl;
+  o << pot_lj::info()
+    << "#   Bjerrum length    = " << f << endl
+    << "#   Image length      = " << box << endl;
   return o.str();
 }
 
 string pot_coulomb::info() {
   ostringstream o;
-  o << "#   Type           = LJ/Coulomb" << endl
-    << "#   Bjerrum length = " << f << endl
-    << "#   LJ epsilon (kT)= " << eps*f << endl;
+  o << pot_lj::info()
+    << "#   Bjerrum length    = " << f << endl;
   return o.str();
 }
 
 string pot_debyehuckel::info() {
   ostringstream o;
-  o << "#   Type           = LJ/Debye-Huckel" << endl
-    << "#   Bjerrum length = " << f     << endl
-    << "#   Debye length   = " << 1./k  << endl
-    << "#   LJ epsilon (kT)= " << eps*f << endl;
+  o << pot_lj::info()
+    << "#   Bjerrum length    = " << f     << endl
+    << "#   Debye length      = " << 1./k  << endl;
   return o.str();
 }
 
 string pot_debyehuckelP3::info() {
   ostringstream o;
-  o << "#   Type           = LJ/Debye-Huckel w. minimum image" << endl
-    << "#   Bjerrum length = " << f     << endl
-    << "#   Debye length   = " << 1./k  << endl
-    << "#   LJ epsilon (kT)= " << eps*f << endl;
+  o << pot_lj::info()
+    << "#   Bjerrum length    = " << f     << endl
+    << "#   Debye length      = " << 1./k  << endl;
   return o.str();
 }
 

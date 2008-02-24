@@ -36,19 +36,18 @@ class pot_setup {
     pot_setup(inputfile &);
 };
 
-/*!
- *  \brief Coulomb potential
+/*! \brief Coulomb potential
  *  \author Mikael Lund
  *  \date Prague, 2007
  */
 class pot_coulomb : public pot_lj {
   public:
-    double f; //!< Factor to convert kT/lB to kT (here the Bjerrum length).
-
     /*! \param pot.lB Bjerrum length
      *  \param pot.eps L-J epsilon parameter (in kT) */
-    pot_coulomb ( pot_setup &pot) : pot_lj(pot.eps/pot.lB) { f=pot.lB; };
-
+    pot_coulomb ( pot_setup &pot) : pot_lj(pot.eps/pot.lB) {
+      f=pot.lB;
+      name+="/Coulomb";
+    }
     /*! \brief Return Coulomb energy between a pair of particles
      *  \return Energy in units of kT/f (f=lB).
      *  \f$ \beta u/f = \frac{z_1 z_2}{r} + u_{LJ}/f \f$
@@ -69,11 +68,11 @@ class pot_minimage : public pot_lj {
   private:
     double invbox,box;
   public:
-    double f;
     pot_minimage(pot_setup &pot) : pot_lj(pot.eps/pot.lB) {
       f=pot.lB;
       box=pot.box;
       invbox=1./box;
+      name+="/Coulomb w. minimum image";
     }
     string info();
     void setvolume(double vol) {
@@ -83,15 +82,12 @@ class pot_minimage : public pot_lj {
     inline double pairpot(particle &p1, particle &p2) {
       register double r2=p1.sqdist(p2,box,invbox);
       return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
-      //register double dx=p1.radius+p2.radius;
-      //return (r2<dx*dx) ? 0 : p1.charge*p2.charge/sqrt(r2);
     }
 };
 
-class pot_test {
+class pot_test : public pot_lj {
   public:
-    double f;
-    pot_test( pot_setup &pot ) { f=pot.lB; }
+    pot_test( pot_setup &pot ) : pot_lj(pot.eps/pot.lB) { f=pot.lB; }
     string info();
     inline double pairpot(particle &p1, particle &p2) {
       register double r2=p1.sqdist(p2);
@@ -114,13 +110,13 @@ class pot_debyehuckel : public pot_lj {
   private:
     double k;
   public:
-    double f;
     //! \param pot.lB Bjerrum length
     //! \param pot.eps L-J parameter
     //! \param pot.kappa Inverse Debye screening length
     pot_debyehuckel( pot_setup &pot ) : pot_lj(pot.eps/pot.lB) {
       f=pot.lB; 
       k=pot.kappa; 
+      name+="/Debye-Huckel";
     };
     string info();
     //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
@@ -143,7 +139,7 @@ class pot_debyehuckelP3 : public pot_lj {
   private:
     double k;
   public:
-    double f, box, invbox;
+    double box, invbox;
     //! \param pot.lB Bjerrum length
     //! \param pot.eps L-J parameter
     //! \param pot.kappa Inverse Debye screening length
@@ -152,6 +148,7 @@ class pot_debyehuckelP3 : public pot_lj {
       k=pot.kappa;
       box=pot.box;
       invbox=1./box;
+      name+="/Debye-Huckel w. minimum image";
     };
     string info();
     //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
@@ -180,10 +177,12 @@ class pot_datapmf : public pot_lj {
   private:
     xydata<double> pmfd[particle::LAST][particle::LAST];
   public:
-    double f;
     //! \param pot.lB Bjerrum length
     //! \param pot.eps L-J parameter
-    pot_datapmf(pot_setup &pot) : pot_lj(pot.eps/pot.lB) { f=pot.lB; }
+    pot_datapmf(pot_setup &pot) : pot_lj(pot.eps/pot.lB) {
+      f=pot.lB;
+      name+="/Empirical data potential";
+    }
     bool loadpmf(species &, string);          // load pmf's from disk
     void loadpmf(species &, string,string);   // -//-
     void showpmf(species &);                  //!< Lists loaded pmf's.
@@ -244,11 +243,11 @@ double interaction<T>::energy(vector<particle> &p, int j) {
   unsigned short ps=p.size();
   double u=0;
   //#pragma omp parallel for reduction (+:u)
-  for (short i=0; i<j; ++i)
+  for (unsigned short i=0; i<j; ++i)
     u+=pair.pairpot( p[i],p[j] );
 
   //#pragma omp parallel for reduction (+:u)
-  for (short i=j+1; i<ps; ++i)
+  for (unsigned short i=j+1; i<ps; ++i)
     u+=pair.pairpot( p[i],p[j] );
   return pair.f*u;
 }
@@ -288,12 +287,10 @@ template<class T> double interaction<T>::energy(vector<particle> &p, group &g, p
 }
 template<class T> double interaction<T>::energy(vector<particle> &p, vector<macromolecule> &g) {
   double u=0;
-  short i,k,l=0;
-  short j=g.size();
-  short t=p.size();
-  for (int l; l<j; l++) {
+  unsigned short k,j=g.size(),t=p.size();
+  for (unsigned l=0; l<j; l++) {
     k=g[l].end;
-    for (i=g[l].beg; i<k; i++) {
+    for (unsigned short i=g[l].beg; i<k; i++) {
       for (unsigned short s=(g[l].end+1); s<t; s++) {
          u+=pair.pairpot(p[i],p[s]);
       }
@@ -303,20 +300,19 @@ template<class T> double interaction<T>::energy(vector<particle> &p, vector<macr
 }
 template<class T> double interaction<T>::energy(vector<particle> &p) {
   double u=0;
-  short i,j,n = p.size();
+  unsigned short n = p.size();
   //#pragma omp parallel for reduction (+:u)
-  for (i=0; i<n-1; ++i)
-    for (j=i+1; j<n; ++j)
+  for (unsigned short i=0; i<n-1; ++i)
+    for (unsigned short j=i+1; j<n; ++j)
       u+=pair.pairpot(p[i], p[j]);
   return pair.f*u;
 }
 template<class T> double interaction<T>::energy(vector<particle> &p, group &g1, group &g2) {
-  int ilen=g1.end+1; 
-  int jlen=g2.end+1;
   double u=0;
+  unsigned short ilen=g1.end+1, jlen=g2.end+1;
   //#pragma omp parallel for reduction (+:u)
-  for (int i=g1.beg; i<ilen; i++)
-    for (int j=g2.beg; j<jlen; j++)
+  for (unsigned short i=g1.beg; i<ilen; i++)
+    for (unsigned short j=g2.beg; j<jlen; j++)
       u += pair.pairpot(p[i],p[j]);
   return pair.f*u;
 }
@@ -400,12 +396,14 @@ template<class T> point interaction_force<T>::force( vector<particle> &p, group 
  * \brief Hydrophobic interaction between ions and molecular surfaces
  * \author Mikael Lund
  * \date Canberra 2008
- * \todo Not optimized
+ * \todo Not optimized - inelegant "end_of_protein_one" hack. Use vector instead...
  *
  * This class will use the specified pair potential as usual but in addition add
  * a hydrophobic interaction between ions (or any specified species) and the
  * nearest hydrophobic particle. This requires an expanded pair-potential that
- * contains a function hypairpot().
+ * contains a function hypairpot(). If you need the ions to interact with the
+ * hydrophobic groups on TWO proteins, you must set the end_of_protein_one variable.
+ * In this way the minimum distance search is repeated on the remaining particles.
  */
 template<class T> class int_hydrophobic : public interaction<T> {
   private:
@@ -413,9 +411,10 @@ template<class T> class int_hydrophobic : public interaction<T> {
     double hyenergy(vector<particle> &);
     double hyenergy(vector<particle> &, int);
   public:
-    int_hydrophobic(pot_setup &pot) : interaction<T>(pot) {}
+    unsigned int end_of_protein_one;                  //!< Last particle in protein one (set if appropriate)
+    int_hydrophobic(pot_setup &pot) : interaction<T>(pot) { end_of_protein_one=1e7; }
     void search(vector<particle> &);                  //!< Locate hydrophobic groups and ions
-    double energy(vector<particle> &);
+    double energy(vector<particle> &);                //!< all<->all
     double energy(vector<particle> &, int);           //!< all<->particle i.
     double energy(vector<particle> &, group &);       //!< all<->group.
 };
@@ -437,16 +436,20 @@ template<class T> double int_hydrophobic<T>::hyenergy(vector<particle> &p) {
 template<class T> double int_hydrophobic<T>::hyenergy(vector<particle> &p, int i) {
   if (p[i].hydrophobic==true) return 0;
   unsigned short j,hymin;
-  double d,dmin=1e7;
-  for (j=0; j<hy.size(); j++) {  // loop over hydrophobic groups
-    d=p[i].sqdist( p[hy[j]]);   // find min. distance
+  double d,dmin=1e7,u=0;
+  for (j=0; j<hy.size(); j++) {     // loop over hydrophobic groups
+    if (hy[j]>end_of_protein_one) { // test if we move into second protein
+      u=interaction<T>::pair.hypairpot( p[i], p[hymin], sqrt(dmin) );
+      dmin=1e7;                     // reset min. distance
+    }
+    d=p[i].sqdist( p[hy[j]]);       // find min. distance
     if (d<dmin) {
       dmin=d;      // save min dist.
       hymin=hy[j]; // ...and particle number
     }
   }
   return interaction<T>::pair.f *
-    interaction<T>::pair.hypairpot( p[i], p[hymin], sqrt(dmin) );
+    (u + interaction<T>::pair.hypairpot( p[i], p[hymin], sqrt(dmin) ) );
 }
 template<class T> double int_hydrophobic<T>::energy( vector<particle> &p ) {
   return interaction<T>::energy(p) + hyenergy(p);

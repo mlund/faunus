@@ -1,8 +1,6 @@
 #ifndef _LENNARDJONES_H
 #define _LENNARDJONES_H
-
 #include "point.h"
-
 /*!
  *  \brief Lennard-Jones potential
  *  \author Mikael Lund
@@ -10,25 +8,38 @@
  */
 class pot_lj {
   public:
-    double eps;
-    pot_lj(double epsilon) { eps=epsilon; }
+    string name; //!< Arbitrary name
+    string cite; //!< Litterature reference
+    double eps;  //!< 4*Lennard-Jones interaction parameter (kT)
+    double f;    //!< Factor to convert to kT (used after energy summations)
+    pot_lj(double epsilon) {
+      eps=epsilon;
+      name="LJ12-6";
+      f=1;
+    }
     /*!
      *  L-J pair energy.
      *  \f$ u_{lj} = \epsilon \left ( \frac{\sigma}{r^{12}} - \frac{\sigma}{r^6} \right ) \f$
      *  \param r2 Squared distance between particle 1 and 2.
      */
     inline double lj(particle &p1, particle &p2, double &r2) {
-      register double x=p1.radius+p2.radius,
-             u=x*x/r2;
+      register double x=p1.radius+p2.radius,u=x*x/r2;
       x=u*u*u;
       return (x*x-x)*eps;
     }
-    inline void lj(particle &p1, particle &p2, double &r2, double u) {
+    inline void lj(particle &p1, particle &p2, double &r2, double &u) {
       register double s=p1.radius+p2.radius, a=s*s/r2;
       s=a*a*a;
       u+=(s*s-s)*eps;
     }
-    virtual void setvolume(double) {}; //!< Function to specify volume for periodic containers
+    virtual void setvolume(double) {}; //!< Function to specify volume for fluctuating periodic boundaries
+    virtual string info() {
+      ostringstream o;
+      o << "#   Type              = " << name << endl
+        << "#   4*LJ epsilon (kT) = " << eps*f << endl;
+      if (cite.length()!=0)
+        o << "#   Reference         = " << cite << endl;
+      return o.str();
+    }
 };
-
 #endif

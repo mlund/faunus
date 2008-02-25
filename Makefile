@@ -98,6 +98,13 @@ twobody:	examples/twobody/twobody.C libfaunus
 	-o examples/twobody/twobody \
 	-lfaunus ${LDFLAGS}
 
+twobody-hof:	examples/twobody-hofmeister/twobody-hof.C libfaunus
+	$(CXX) $(CXXFLAGS) \
+	examples/twobody-hofmeister/twobody-hof.C \
+	-o examples/twobody-hofmeister/twobody-hof \
+	-lfaunus ${LDFLAGS}
+
+
 
 manybody:	examples/manybody/manybody.C libfaunus 
 	$(CXX) $(CXXFLAGS) \
@@ -132,10 +139,10 @@ undone:		undone/mikael/namespace.C libfaunus
 
 
 
-examples:	tools widom pka GCpka ewald twobody manybody isobaric
+examples:	tools widom pka GCpka ewald twobody twobody-hof manybody isobaric
 
 clean:
-	rm -vf $(OBJS) \
+	rm -f $(OBJS) \
 	examples/titration/pka \
 	examples/widom/widom \
 	examples/ewald/ewald \
@@ -145,7 +152,7 @@ clean:
 	lib/libfaunus.a
 
 docclean:
-	rm -vfR doc/html doc/latex
+	rm -fR doc/html doc/latex
 
 babel:
 	#curl -L -o openbabel-2.1.1.tar.gz http://downloads.sourceforge.net/openbabel/openbabel-2.1.1.tar.gz

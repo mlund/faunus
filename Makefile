@@ -36,6 +36,14 @@ ifeq ($(MODEL), gnu)
   CXXFLAGS = -O3 -w -funroll-loops $(INCDIR) $(EXTRA)
 endif
 
+ifeq ($(MODEL), gnu686)
+  ifeq ($(OPENMP), yes)
+    EXTRA:=$(EXTRA) -fopenmp
+  endif
+  CXXFLAGS = -mtune=i686 -msse3 -O3 -w -funroll-loops $(INCDIR) $(EXTRA)
+endif
+
+
 ifeq ($(MODEL), intel)
   ifeq ($(OPENMP), yes)
     EXTRA:=$(EXTRA) -openmp

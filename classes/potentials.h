@@ -412,7 +412,7 @@ template<class T> class int_hydrophobic : public interaction<T> {
     double hyenergy(vector<particle> &, int);
   public:
     unsigned int end_of_protein_one;                  //!< Last particle in protein one (set if appropriate)
-    int_hydrophobic(pot_setup &pot) : interaction<T>(pot) { end_of_protein_one=1e7; }
+    int_hydrophobic(pot_setup &pot) : interaction<T>(pot) { end_of_protein_one=int(1e7); }
     void search(vector<particle> &);                  //!< Locate hydrophobic groups and ions
     double energy(vector<particle> &);                //!< all<->all
     double energy(vector<particle> &, int);           //!< all<->particle i.

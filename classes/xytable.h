@@ -46,7 +46,7 @@ class xytable {
       xres=resolution;
       xmin=xminimum;
       if (xmaximum>0)
-        y.resize(xmaximum/resolution);
+        y.resize(int(xmaximum/resolution));
     }
 
     //! Convenient data access

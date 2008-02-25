@@ -50,13 +50,16 @@ int main() {
   pot.end_of_protein_one=g[0].end;      // Hydrophobic interactions w. BOTH proteins
 
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
-  cout << cell.info() << pot.info();    // Print information to screen
-  cout << loop.info();
+
+  cout << "# ------ INITIAL INFORMATION ------" << endl
+       << cell.info() << pot.info()     // Print information to screen
+       << loop.info();
+  
+  cout << "# ------ RUNTIME INFORMATION ------" << endl;
 
   #ifdef GROMACS
   ioxtc xtc(cell, cell.r);              // Gromacs xtc output (if installed)
   #endif
-
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {
       short i,n;
@@ -94,9 +97,11 @@ int main() {
     cout << loop.timing(macro);                 // Show progres;s
   } // End of outer loop
 
-  cout << salt.info(cell)                       // Final information...
+  cout << "# ------ FINAL INFORMATION ------" << endl
+       << salt.info(cell)                       // Final information...
        << sm.info() << mr.info() << dm.info()
-       << sys.info() << g[0].info() << g[1].info() << cell.info();
+       << sys.info() << g[0].info() << g[1].info() << cell.info()
+       << loop.info();
 
   #ifdef GROMACS
   xtc.close();

@@ -46,7 +46,7 @@ do
   do
     rm confout.aam
     suffix="-${tion2}${nion2}-air" #-Sep-${dm_minsep}-${dm_maxsep}"
-    microsteps=2000
+    microsteps=200
     mkinput
     ./twobody-hof
     microsteps=100000

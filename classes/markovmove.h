@@ -773,6 +773,7 @@ void isobaric::accept() {
  * \note Unfinished
  */
 void isobaric::move(unsigned short n, group &g,...) {
+  /*
   group first=g; // check if first group is included!!
   double newlen=pow(newV,1./3);
   group *gPtr;
@@ -785,6 +786,7 @@ void isobaric::move(unsigned short n, group &g,...) {
     //N+=gPtr->nummolecules();
     n--;
   }
+  */
 }
 
 double isobaric::move(vector<macromolecule> &g) {

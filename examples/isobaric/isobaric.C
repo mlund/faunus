@@ -7,19 +7,12 @@
  * \date Prague 2007
  */
 
-#include <iostream>
-#include "../../classes/io.h"
 #include "../../classes/analysis.h"
 #include "../../classes/potentials.h"
-#include "../../classes/container.h"
-#include "../../classes/countdown.h"
-#include "../../classes/histogram.h"
-#include "../../classes/inputfile.h"
 typedef pot_debyehuckelP3 T_pairpot;      // Specific pair interaction function
 #include "../../classes/markovmove.h"
 #include "../../classes/mcloop.h"
 #include "../../classes/physconst.h"
-
 
 using namespace std;
 

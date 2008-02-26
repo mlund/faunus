@@ -154,8 +154,7 @@ class pot_debyehuckelP3 : public pot_lj {
     //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
     //! \return Energy in kT/f (f=lB)
     inline double pairpot( particle &p1, particle &p2 ) {
-      register double r2=p1.sqdist(p2,box,invbox),
-             r=sqrt(r2);
+      register double r2=p1.sqdist(p2,box,invbox), r=sqrt(r2);
       return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
     }
     void setvolume(double vol) {
@@ -265,21 +264,21 @@ template<class T> double interaction<T>::energy(vector<particle> &p, group &g) {
 }
 template<class T> double interaction<T>::energy(vector<particle> &p, group &g, int j) {
   double u=0;
-  unsigned short len=g.end+1;
+  int len=g.end+1;
   if (g.find(j)==true) {   //avoid self-interaction...
-    for (unsigned short i=g.beg; i<j; i++)
+    for (int i=g.beg; i<j; i++)
       u+=pair.pairpot(p[i],p[j]);
-    for (unsigned short i=j+1; i<len; i++)
+    for (int i=j+1; i<len; i++)
       u+=pair.pairpot(p[i],p[j]);
   } else                        //simple - j not in g
-    for (unsigned short i=g.beg; i<len; i++)
+    for (int i=g.beg; i<len; i++)
       u+=pair.pairpot(p[i],p[j]);
   return pair.f*u;  
 }
 template<class T> double interaction<T>::energy(vector<particle> &p, group &g, particle &a) {
   if (g.beg==-1) return 0;
   double u=0;
-  unsigned short i,n=g.end+1;
+  int i,n=g.end+1;
   //#pragma omp parallel for reduction (+:u)
   for (i=g.beg; i<n; i++)
     u+=pair.pairpot(a, p[i]); 
@@ -301,7 +300,7 @@ template<class T> double interaction<T>::energy(vector<particle> &p, vector<macr
 template<class T> double interaction<T>::energy(vector<particle> &p) {
   double u=0;
   int n = p.size();
-  //#pragma omp parallel for reduction (+:u)
+  #pragma omp parallel for reduction (+:u)
   for (int i=0; i<n-1; ++i)
     for (int j=i+1; j<n; ++j)
       u+=pair.pairpot(p[i], p[j]);
@@ -331,24 +330,25 @@ double interaction<T>::iondip(point &a, double q, double r) { return -pair.f*q*a
 // Total electrostatic potential in a point
 template<class T> double interaction<T>::pot(vector<particle> &p, point &a) {
   double u=0;
-  unsigned short i,n=p.size();  
-  for (i=0; i<n; i++) u+=p[i].charge/p[i].dist(a);
+  int i,n=p.size();  
+  for (i=0; i<n; i++)
+    u+=p[i].charge/p[i].dist(a);
   return pair.f*u;
 }
 // Internal (NON)-electrostatic energy in group
 template<class T> double interaction<T>::internal(vector<particle> &p, group &g) {
   if (g.beg==-1) return 0;
   double u=0;
-  unsigned short glen=g.end+1;
-  for (unsigned short i=g.beg; i<glen-1; i++)
-    for (unsigned short j=i+1; j<glen; j++)
+  int i,j,glen=g.end+1;
+  for (i=g.beg; i<glen-1; i++)
+    for (j=i+1; j<glen; j++)
       u+=pair.pairpot(p[i],p[j]);
   return pair.f*u;
 }
 template<class T> double interaction<T>::energy(vector<particle> &p, particle &a) {
   double u=0;
-  unsigned short n=p.size();
-  for (unsigned short i=0; i<n; i++)
+  int i,n=p.size();
+  for (i=0; i<n; i++)
     u+=pair.pairpot(p[i], a);
   return pair.f*u;
 }
@@ -359,7 +359,7 @@ template<class T> double interaction<T>::energy(vector<particle> &p, particle &a
 template<class T> double interaction<T>::potential(vector<particle> &p, unsigned short j) {
   if (p[j].charge==0) return 0;
   double u=0;
-  unsigned short i,n=p.size();
+  int i,n=p.size();
   for (i=0; i<j; ++i) u+=p[i].charge/p[i].dist(p[j]);
   for (i=j+1; i<n; ++i) u+=p[i].charge/p[i].dist(p[j]);
   return u;
@@ -421,7 +421,7 @@ template<class T> class int_hydrophobic : public interaction<T> {
 template<class T> void int_hydrophobic<T>::search(vector<particle> &p) {
   pa.resize(0);
   hy.resize(0);
-  for (unsigned short i=0; i<p.size(); i++)
+  for (int i=0; i<p.size(); i++)
     if (p[i].hydrophobic==true)
       hy.push_back(i);
     else if (p[i].id==particle::NA || p[i].id==particle::CL || p[i].id==particle::I)
@@ -436,7 +436,7 @@ template<class T> double int_hydrophobic<T>::hyenergy(vector<particle> &p) {
 }
 template<class T> double int_hydrophobic<T>::hyenergy(vector<particle> &p, int i) {
   if (p[i].hydrophobic==true) return 0;
-  unsigned short j,hymin;
+  int j,hymin;
   double d,dmin=1e7,u=0;
   for (j=0; j<hy.size(); j++) {     // loop over hydrophobic groups
     if (hy[j]>end_of_protein_one) { // test if we move into second protein

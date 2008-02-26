@@ -1,4 +1,4 @@
-# Specify compiler (gnu,intel,pgi,pathscale,debug)
+# Specify compiler (gnu,gnu686,intel,pgi,pathscale,debug)
 MODEL = gnu
 
 # Set to yes if you need Gromacs xtc file support
@@ -43,7 +43,6 @@ ifeq ($(MODEL), gnu686)
   CXXFLAGS = -mtune=i686 -msse3 -O3 -w -funroll-loops $(INCDIR) $(EXTRA)
 endif
 
-
 ifeq ($(MODEL), intel)
   ifeq ($(OPENMP), yes)
     EXTRA:=$(EXTRA) -openmp -parallel
@@ -64,7 +63,6 @@ ifeq ($(MODEL), pgi)
   endif 
   CXXFLAGS = -O3 $(INCDIR) $(EXTRA)
 endif
-
 
 OBJS=$(CLASSDIR)/inputfile.o \
      $(CLASSDIR)/io.o\
@@ -112,8 +110,6 @@ twobody-hof:	examples/twobody-hofmeister/twobody-hof.C libfaunus
 	-o examples/twobody-hofmeister/twobody-hof \
 	-lfaunus ${LDFLAGS}
 
-
-
 manybody:	examples/manybody/manybody.C libfaunus 
 	$(CXX) $(CXXFLAGS) \
 	examples/manybody/manybody.C \
@@ -132,7 +128,6 @@ tools:	examples/tools/printpotential.C libfaunus
 	-o examples/tools/printpotential \
 	-lfaunus ${LDFLAGS}
 
-
 pka:	examples/titration/pka.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/pka.C -o examples/titration/pka
 
@@ -145,8 +140,6 @@ undone:		undone/mikael/namespace.C libfaunus
 	-o undone/mikael/namespace \
 	-lfaunus ${LDFLAGS}
 
-
-
 examples:	tools widom pka GCpka ewald twobody twobody-hof manybody isobaric
 
 clean:
@@ -155,8 +148,9 @@ clean:
 	examples/widom/widom \
 	examples/ewald/ewald \
 	examples/twobody/twobody \
-	examples/manybody/manybody\
-	examples/isobaric/isobaric\
+	examples/manybody/manybody \
+	examples/isobaric/isobaric \
+	examples/twobody-hofmeister/twobody-hof \
 	lib/libfaunus.a
 
 docclean:

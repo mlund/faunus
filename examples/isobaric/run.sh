@@ -8,10 +8,6 @@ microsteps $microsteps
 boxlen     $boxlen
 bjerrum    $bjerrum
 LJeps      $LJeps
-nion1      $nion1
-nion2      $nion2
-tion1      $tion1
-tion2      $tion2
 nprot1     $nprot1
 protein1   $protein1
 nprot2     $nprot2
@@ -42,7 +38,8 @@ do
   rm confout.aam
   suffix=".lj-${LJeps}"
   mkinput
-  ./isobaric > eq${suffix}
+  ./isobaric #> eq${suffix}
+  exit
   boxlen=$(less eq${suffix}| grep "length"|awk '{print $ 6}')
   microsteps=50000
   mkinput

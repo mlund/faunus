@@ -134,7 +134,6 @@ inline double point::sqdist(point &p, double &len, double &inv_len) {
   dz=dz-len*anint(dz*inv_len);
   return dx*dx + dy*dy + dz*dz;
 }
-
 inline double point::dist(point &p) { return sqrt(sqdist(p)); }
 inline double point::dist(point &p, double &len, double &inv_len) { 
   return sqrt(sqdist(p, len, inv_len)); }

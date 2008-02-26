@@ -292,7 +292,6 @@ translate::translate( ensemble &e,
   deltadp=1.;
   dp=10.;
 };
-
 double translate::move(macromolecule &g) {
   du=0;
   cnt++;
@@ -307,7 +306,6 @@ double translate::move(macromolecule &g) {
     g.undo(*con);
     return du;
   }
-
   //#pragma omp parallel
   {
     //#pragma omp sections
@@ -721,12 +719,15 @@ double HAchargereg::energy( vector<particle> &p, double du, titrate::action &a )
 //---------- ISOBARIC ----------
 /*!
  * \note If your pair-potential depends on the geometry of the 
- * container (minimum image, for example) make sure that
- * the pair-potential has a correct implementation of the
- * setvolume() function.
+ *       container (minimum image, for example) make sure that
+ *       the pair-potential has a correct implementation of the
+ *       setvolume() function. To allow for parallization this 
+ *       class will instantiate a new (private) interaction class
+ *       and in this way allow for two different container sizes.
  *
  * \param pressure bulk pressure in A^-3
- * \param i Potential class. Make sure that the T_pairpot::setvolume() function is appropriate.
+ * \param i Potential class. Make sure that the T_pairpot::setvolume()
+ *        function is appropriate.
  */
 isobaric::isobaric (
   ensemble &e,
@@ -767,7 +768,6 @@ void isobaric::accept() {
   len += pow(con->getvolume(),1./3);
   len2+= pow(con->getvolume(),2./3);
 }
-
 /*!\param n Number of groups
  * \param g List of groups
  * \note Unfinished
@@ -788,24 +788,15 @@ void isobaric::move(unsigned short n, group &g,...) {
   }
   */
 }
-
 double isobaric::move(vector<macromolecule> &g) {
   cnt++;
   du=0;
-  newvolume();
+  newvolume();                                // Generate new trial volume - prep. trial potential
   unsigned short i=g.size();
   for (unsigned short n=0; n<i; n++)          // Loop over macromolecules
     g[n].isobaricmove(*con, pow(newV,1./3));  // ..and scale their mass-centers
-  //#pragma omp parallel
-  { 
-    //#pragma omp sections
-    {
-      //#pragma omp section
-      { uold = pot->energy(con->p); }         // calc. old energy with original potential class
-      //#pragma omp section
-      { unew = trialpot.energy(con->trial); } // calc. new energy using a COPY of the potential class
-    }
-  }
+  uold = pot->energy(con->p);                 // calc. old energy with original potential class
+  unew = trialpot.energy(con->trial);         // calc. new energy using a COPY of the potential class
   du = unew-uold;
   dh = du + P*dV-(i+1)*log( newV/con->getvolume() );
   if (ens->metropolis(dh)==true) {

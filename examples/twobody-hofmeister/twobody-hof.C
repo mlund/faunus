@@ -8,7 +8,6 @@
  * \todo Maybe use a cylindrical cell?
  */
 
-#include <iostream>
 #include "analysis.h"
 #include "mcloop.h"
 #include "pot_netz.h"
@@ -39,23 +38,20 @@ int main() {
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
   sm.dp=90;                             // Set displacement parameters
-
   ioaam aam(cell);                      // Protein input file format is AAM
   if (aam.load(cell,"confout.aam")) {
     g[0].masscenter(cell);              // Load old config (if present)
     g[1].masscenter(cell);              // ...and recalc mass centers
   }
- 
   pot.search(cell.p);                   // Find hydrophobic particles
   pot.end_of_protein_one=g[0].end;      // Hydrophobic interactions w. BOTH proteins
-
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
+  cout << sys.info();
 
   cout << "# ------ INITIAL INFORMATION ------" << endl
        << cell.info() << pot.info()     // Print information to screen
-       << loop.info();
-  
-  cout << "# ------ RUNTIME INFORMATION ------" << endl;
+       << loop.info() << endl
+       << "# ------ RUNTIME INFORMATION ------" << endl;
 
   #ifdef GROMACS
   ioxtc xtc(cell, cell.r);              // Gromacs xtc output (if installed)

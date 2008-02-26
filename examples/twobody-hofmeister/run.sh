@@ -39,17 +39,16 @@ dm_dp=3
 dm_minsep=0
 dm_maxsep=60
 
-for nion1 in 300
+for nion1 in 150
 do
   nion2=$[nion1+18]
   for tion2 in "CL"
   do
     rm confout.aam
     suffix="-${tion2}${nion2}-air" #-Sep-${dm_minsep}-${dm_maxsep}"
-    microsteps=20
+    microsteps=2000
     mkinput
     ./twobody-hof
-    exit
     microsteps=100000
     mkinput
     echo ${suffix}

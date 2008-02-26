@@ -1,6 +1,6 @@
 ***************************************************************************
   Faunus -- A Framework for Molecular Modelling 
-  Copyright (C) 2002-2007 Mikael Lund 
+  Copyright (C) 2002-2008 Mikael Lund 
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -22,15 +22,19 @@ WELCOME TO FAUNUS:
   for Monte Carlo simulation of molecular systems.
 
   Get the latest code resivions via SVN from sourceforge.net:
-  $ svn co https://faunus.svn.sourceforge.net/svnroot/faunus/trunk faunus
+  $ svn co http://faunus.svn.sourceforge.net/svnroot/faunus/trunk faunus
 
 CONTRIBUTORS:
   Mikael Lund <mlund at mac.com>
   Bjorn Persson <bjorn.persson at teokem.lu.se>
   Martin Trulsson <martin.trulsson at teokem.lu.se>
 
+CITING FAUNUS:
+  Lund, M., Persson, B., Trulsson, M. (2008) Source Code Biol. Med. 3:1
+  http://www.scfbm.org/content/3/1/1 (open access)
+
 REQUIREMENTS:
-  * A unix-type environment (MacOS X, Linux etc.)
+  * A unix-type environment (Linux, MacOS etc.)
   * C++ compiler (gnu, ibm, intel etc.)
   * Gromacs (optional, for xtc trajectory output)
   * Doxygen (optional, for code manual)
@@ -43,14 +47,21 @@ COMPILING:
   Edit the Makefile to:
   - Specify the C++ compiler.
   - Enable Gromacs compressed trajectory output (.xtc).
-  - Enable experimental OpenMP support.
+  - Enable OpenMP parallization. 
+
+  Experimental support for multicore parallization is supported
+  thought OpenMP. Most modern C++ compilers support OpenMP
+  directives including gnu, intel, ibm, portland etc. Edit the
+  makefile to enable this feature. At runtime you may specify
+  the number of processors to use via OMP_NUM_THREADS. For
+  small systems it may be faster to turn off parallization.
 
 DIRECTORY LAYOUT:
   classes      Mostly finished, general classes.
   examples     Example programs
   legacy       Older, working programs
-  lib          The faunus library (currently static)
+  lib          The faunus library (static)
   undone       Unfinished code
-  misc         Mostly temporary stuff.
+  misc         Mostly temporary stuff
   doc          Code manual files
-
+  xcode        Apple Xcode project

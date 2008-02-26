@@ -46,7 +46,7 @@ endif
 
 ifeq ($(MODEL), intel)
   ifeq ($(OPENMP), yes)
-    EXTRA:=$(EXTRA) -openmp
+    EXTRA:=$(EXTRA) -openmp -parallel
   endif
   CXX=icc
   CXXFLAGS = -O3 -w $(INCDIR) $(EXTRA)

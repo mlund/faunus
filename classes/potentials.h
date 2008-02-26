@@ -240,25 +240,25 @@ class interaction {
 
 template<class T>
 double interaction<T>::energy(vector<particle> &p, int j) {
-  unsigned short ps=p.size();
+  int i,ps=p.size();
   double u=0;
-  //#pragma omp parallel for reduction (+:u)
-  for (unsigned short i=0; i<j; ++i)
+  #pragma omp parallel for reduction (+:u)
+  for (i=0; i<j; i++)
     u+=pair.pairpot( p[i],p[j] );
 
-  //#pragma omp parallel for reduction (+:u)
-  for (unsigned short i=j+1; i<ps; ++i)
+  #pragma omp parallel for reduction (+:u)
+  for (i=j+1; i<ps; i++)
     u+=pair.pairpot( p[i],p[j] );
   return pair.f*u;
 }
 template<class T> double interaction<T>::energy(vector<particle> &p, group &g) {
-  int n=g.end+1, psize=p.size();
+  int i,j,n=g.end+1, psize=p.size();
   double u=0;
   #pragma omp parallel for reduction (+:u)
-  for (int i=g.beg; i<n; ++i) {
-    for (int j=0; j<g.beg; j++)
+  for (i=g.beg; i<n; i++) {
+    for (j=0; j<g.beg; j++)
       u += pair.pairpot(p[i],p[j]);
-    for (int j=n; j<psize; j++)
+    for (j=n; j<psize; j++)
       u += pair.pairpot(p[i],p[j]);
   };
   return pair.f*u;
@@ -287,11 +287,11 @@ template<class T> double interaction<T>::energy(vector<particle> &p, group &g, p
 }
 template<class T> double interaction<T>::energy(vector<particle> &p, vector<macromolecule> &g) {
   double u=0;
-  unsigned short k,j=g.size(),t=p.size();
-  for (unsigned l=0; l<j; l++) {
+  int k,j=g.size(),t=p.size();
+  for (int l=0; l<j; l++) {
     k=g[l].end;
-    for (unsigned short i=g[l].beg; i<k; i++) {
-      for (unsigned short s=(g[l].end+1); s<t; s++) {
+    for (int i=g[l].beg; i<k; i++) {
+      for (int s=(g[l].end+1); s<t; s++) {
          u+=pair.pairpot(p[i],p[s]);
       }
     }
@@ -300,19 +300,19 @@ template<class T> double interaction<T>::energy(vector<particle> &p, vector<macr
 }
 template<class T> double interaction<T>::energy(vector<particle> &p) {
   double u=0;
-  unsigned short n = p.size();
+  int n = p.size();
   //#pragma omp parallel for reduction (+:u)
-  for (unsigned short i=0; i<n-1; ++i)
-    for (unsigned short j=i+1; j<n; ++j)
+  for (int i=0; i<n-1; ++i)
+    for (int j=i+1; j<n; ++j)
       u+=pair.pairpot(p[i], p[j]);
   return pair.f*u;
 }
 template<class T> double interaction<T>::energy(vector<particle> &p, group &g1, group &g2) {
   double u=0;
-  unsigned short ilen=g1.end+1, jlen=g2.end+1;
-  //#pragma omp parallel for reduction (+:u)
-  for (unsigned short i=g1.beg; i<ilen; i++)
-    for (unsigned short j=g2.beg; j<jlen; j++)
+  int i,j,ilen=g1.end+1, jlen=g2.end+1;
+  #pragma omp parallel for reduction (+:u)
+  for (i=g1.beg; i<ilen; i++)
+    for (j=g2.beg; j<jlen; j++)
       u += pair.pairpot(p[i],p[j]);
   return pair.f*u;
 }
@@ -429,7 +429,8 @@ template<class T> void int_hydrophobic<T>::search(vector<particle> &p) {
 }
 template<class T> double int_hydrophobic<T>::hyenergy(vector<particle> &p) {
   double u=0;
-  for (unsigned short i=0; i<pa.size(); i++)  // loop over ions
+  #pragma omp parallel for reduction (+:u)
+  for (int i=0; i<pa.size(); i++)  // loop over ions
     u+=hyenergy(p, pa[i]);                    // energy with hydrophobic groups
   return u; // in kT
 }

@@ -8,7 +8,6 @@
  */
 class pot_netz : public pot_coulomb {
   private:
-    double A,B,zn,C1,C2,C3,D1,D2,D3,n;
     inline double simple(particle::type &id) {
       switch (id) {
         case particle::I:
@@ -21,6 +20,7 @@ class pot_netz : public pot_coulomb {
       return 1.;
     }
     inline double sam(double z, particle::type &id) {
+      double A,B,zn,C1,C2,C3,D1,D2,D3,n;
       return ( A/pow(z-zn,12)
           - B/pow(z-zn,8)
           + C1*(z-C2)*exp(-C3*pow(z-C2,2) )
@@ -31,6 +31,7 @@ class pot_netz : public pot_coulomb {
     inline double air(double z, particle::type &id) { // optimize, please
       z=0.1*z; // AA->nm
       if (z>1.5) return 0; // fit not valid beyond 1.5nm
+      register double A,B,zn,C1,C2,C3,D1,D2,D3,n;
       switch (id) {
         case particle::I:
           A=.066,B=.977,zn=2.39,C1=-5.1,C2=.7,C3=8.7,D1=-7.32,D2=-.011,D3=2.49,n=1;

@@ -258,13 +258,13 @@ double saltmove::move(group &g, int n) {
   if (con->collision( con->trial[n] )==true)
     rc=HC;
   else {
-    #pragma omp parallel
+    //#pragma omp parallel
     {
-      #pragma omp sections
+      //#pragma omp sections
       {
-        #pragma omp section
+        //#pragma omp section
         { uold = pot->energy(con->p, n);   }
-        #pragma omp section
+        //#pragma omp section
         { unew = pot->energy(con->trial,n);   }
       }
     }
@@ -308,13 +308,13 @@ double translate::move(macromolecule &g) {
     return du;
   }
 
-  #pragma omp parallel
+  //#pragma omp parallel
   {
-    #pragma omp sections
+    //#pragma omp sections
     {
-      #pragma omp section
+      //#pragma omp section
       { uold = pot->energy(con->p, g);   }
-      #pragma omp section
+      //#pragma omp section
       { unew = pot->energy(con->trial, g);   }
     }
   }
@@ -351,13 +351,13 @@ double macrorot::move(macromolecule &g) {
   cnt++;
   g.rotate(*con, dp); 
   //insert cell overlap test
-  #pragma omp parallel
+  //#pragma omp parallel
   {
-    #pragma omp sections
+    //#pragma omp sections
     {
-      #pragma omp section
+      //#pragma omp section
       { uold = pot->energy(con->p, g);   }
-      #pragma omp section
+      //#pragma omp section
       { unew = pot->energy(con->trial, g);   }
     }
   }
@@ -408,16 +408,16 @@ double chargereg::titrateall() {
   for (unsigned short i=0; i<sites.size(); i++) {
     cnt++;
     t=exchange(con->trial);
-    #pragma omp parallel
+    //#pragma omp parallel
     {
-      #pragma omp sections
+      //#pragma omp sections
       {
-        #pragma omp section
+        //#pragma omp section
         { uold = pot->potential( con->p, t.site ) * con->p[t.site].charge
           + pot->potential( con->p, t.proton ) * con->p[t.proton].charge
             - con->p[t.site].potential(con->p[t.proton] )*con->p[t.proton].charge;
         }
-        #pragma omp section
+        //#pragma omp section
         { unew = pot->potential(con->trial,t.site)*con->trial[t.site].charge 
           + pot->potential(con->trial,t.proton)*con->trial[t.proton].charge
             - con->trial[t.site].potential(con->trial[t.proton] )*con->trial[t.proton].charge;
@@ -485,13 +485,13 @@ bool move::mOve(macromolecule &g) {
     cout << "rejected"<<endl;
     return false; }
   else {
-    #pragma omp parallel
+    //#pragma omp parallel
     {
-      #pragma omp sections
+      //#pragma omp sections
       {
-        #pragma omp section
+        //#pragma omp section
         { uold = pot->energy(con->p, g);   }
-        #pragma omp section
+        //#pragma omp section
         { unew = pot->energy(con->trial,g);   }
       }
     }
@@ -546,13 +546,13 @@ bool zmove::move(macromolecule &g) {
       con->trial[i] = con->p[i];
     return false; }
   else {
-    #pragma omp parallel
+    //#pragma omp parallel
     {
-      #pragma omp sections
+      //#pragma omp sections
       {
-        #pragma omp section
+        //#pragma omp section
         { uold = pot->energy(con->p, g);   }
-        #pragma omp section
+        //#pragma omp section
         { unew = pot->energy(con->trial,g);   }
       }
     }
@@ -657,13 +657,13 @@ double dualmove::move(macromolecule &g1, macromolecule &g2) {
     gofr.add(r);
     return du;
   }
-  #pragma omp parallel
+  //#pragma omp parallel
   {
-    #pragma omp sections
+    //#pragma omp sections
     {
-      #pragma omp section
+      //#pragma omp section
       { uold = pot->energy(con->p,g12) + pot->energy(con->p,g1,g2);   }
-      #pragma omp section
+      //#pragma omp section
       { unew = pot->energy(con->trial,g12) + pot->energy(con->trial,g1,g2);   }
     }
   }
@@ -796,13 +796,13 @@ double isobaric::move(vector<macromolecule> &g) {
   unsigned short i=g.size();
   for (unsigned short n=0; n<i; n++)          // Loop over macromolecules
     g[n].isobaricmove(*con, pow(newV,1./3));  // ..and scale their mass-centers
-  #pragma omp parallel
+  //#pragma omp parallel
   { 
-    #pragma omp sections
+    //#pragma omp sections
     {
-      #pragma omp section
+      //#pragma omp section
       { uold = pot->energy(con->p); }         // calc. old energy with original potential class
-      #pragma omp section
+      //#pragma omp section
       { unew = trialpot.energy(con->trial); } // calc. new energy using a COPY of the potential class
     }
   }

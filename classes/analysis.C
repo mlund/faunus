@@ -81,5 +81,5 @@ string distributions::info() {
 
 bool distributions::write(string name)
 {
-  return io.writefile(name, info() );
+  return fio.writefile(name, info() );
 }

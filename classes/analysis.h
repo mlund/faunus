@@ -38,7 +38,7 @@ class distributions : public analysis {
   private:
     float xmax, xmin; // maximum/minimum encountered x value
     float xmax_set, xmin_set, dx;
-    io::io io;
+    io fio;
     vector<string> s;
     vector< xytable<float,average<float> > > d;
     unsigned short find(string);

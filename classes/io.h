@@ -126,9 +126,9 @@ class iopov : public iopart {
  */
 class iopqr : public iopart {
   private:
-    string p2s(particle &, int=0) {};
-    void header() {};
-    vector<particle> load(string) {};
+    string p2s(particle &, int=0) { return string(); }
+    void header() {}
+    vector<particle> load(string) { return vector<particle>(); }
   public:
     iopqr(species &);
     bool save(string, vector<particle> &);            //!< Save with particle charge
@@ -143,9 +143,9 @@ class iopqr : public iopart {
  */
 class iogro : public iopart {
   private:
-    string p2s(particle &, int=0) {};
+    string p2s(particle &, int=0) { return string(); }
     void header() {};
-    vector<particle> load(string) {};
+    vector<particle> load(string) { return vector<particle>(); }
     float len;
   public:
     iogro(species &, inputfile &);

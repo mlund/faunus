@@ -1,4 +1,4 @@
-# Specify compiler (gnu,gnu686,intel,pgi,pathscale,debug)
+# Specify compiler (gnu,gnu686,intel,sun,pgi,pathscale,debug)
 MODEL = gnu
 
 # Set to yes if you need Gromacs xtc file support
@@ -15,9 +15,9 @@ OPENMP = no
 ###########################################
 
 CXX=g++
-CLASSDIR=./classes
+CLASSDIR=classes
 INCDIR=-I$(CLASSDIR)
-LDFLAGS=-L./lib
+LDFLAGS=-L./lib -lfaunus
 
 ifeq ($(GROMACS), yes)
   INCDIR:=${INCDIR} -I/usr/local/gromacs/include/gromacs
@@ -45,7 +45,7 @@ endif
 
 ifeq ($(MODEL), intel)
   ifeq ($(OPENMP), yes)
-    EXTRA:=$(EXTRA) -openmp -parallel
+    EXTRA:=$(EXTRA) -openmp
   endif
   CXX=icc
   CXXFLAGS = -O3 -w $(INCDIR) $(EXTRA)
@@ -61,9 +61,17 @@ ifeq ($(MODEL), pgi)
   ifeq ($(OPENMP), yes)
     EXTRA:=$(EXTRA) -mp
   endif 
-  CXXFLAGS = -O3 $(INCDIR) $(EXTRA)
+  CXXFLAGS = -O3 -w $(INCDIR) $(EXTRA)
 endif
 
+ifeq ($(MODEL), sun)
+  ifeq ($(OPENMP), yes)
+    EXTRA:=$(EXTRA) -xopenmp
+  endif
+  CXX=sunCC
+  CXXFLAGS = -fast -w $(INCDIR) $(EXTRA)
+endif
+	    
 OBJS=$(CLASSDIR)/inputfile.o \
      $(CLASSDIR)/io.o\
      $(CLASSDIR)/titrate.o\
@@ -82,68 +90,35 @@ all:	classes examples libfaunus
 classes:	$(OBJS)
 libfaunus:      $(OBJS)
 	ar cr lib/libfaunus.a $(OBJS)
-	
 manual:
 	doxygen doc/Doxyfile
-
 manualul:
 	scp -rC doc/html/* mikaellund@shell.sourceforge.net:/home/groups/f/fa/faunus/htdocs/
-
 widom:	examples/widom/widom.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/widom/widom.C -o examples/widom/widom
-	
 ewald:		examples/ewald/ewald.C libfaunus
-	$(CXX) $(CXXFLAGS) \
-	examples/ewald/ewald.C \
-	-o examples/ewald/ewald \
-	-lfaunus ${LDFLAGS}
-
+	$(CXX) $(CXXFLAGS) examples/ewald/ewald.C -o examples/ewald/ewald ${LDFLAGS}
 twobody:	examples/twobody/twobody.C libfaunus
-	$(CXX) $(CXXFLAGS) \
-	examples/twobody/twobody.C \
-	-o examples/twobody/twobody \
-	-lfaunus ${LDFLAGS}
-
+	$(CXX) $(CXXFLAGS) examples/twobody/twobody.C -o examples/twobody/twobody ${LDFLAGS}
 twobody-hof:	examples/twobody-hofmeister/twobody-hof.C libfaunus
-	$(CXX) $(CXXFLAGS) \
-	examples/twobody-hofmeister/twobody-hof.C \
-	-o examples/twobody-hofmeister/twobody-hof \
-	-lfaunus ${LDFLAGS}
-
+	$(CXX) $(CXXFLAGS) $(INCDIR) examples/twobody-hofmeister/twobody-hof.C -o examples/twobody-hofmeister/twobody-hof ${LDFLAGS}
 manybody:	examples/manybody/manybody.C libfaunus 
-	$(CXX) $(CXXFLAGS) \
-	examples/manybody/manybody.C \
-	-o examples/manybody/manybody \
-	-lfaunus ${LDFLAGS}
-
+	$(CXX) $(CXXFLAGS) examples/manybody/manybody.C -o examples/manybody/manybody ${LDFLAGS}
 isobaric:	examples/isobaric/isobaric.C libfaunus 
-	$(CXX) $(CXXFLAGS) \
-	examples/isobaric/isobaric.C \
-	-o examples/isobaric/isobaric \
-	-lfaunus ${LDFLAGS}
-
+	$(CXX) $(CXXFLAGS) examples/isobaric/isobaric.C -o examples/isobaric/isobaric ${LDFLAGS}
 tools:	examples/tools/printpotential.C libfaunus 
-	$(CXX) $(CXXFLAGS) \
-	examples/tools/printpotential.C \
-	-o examples/tools/printpotential \
-	-lfaunus ${LDFLAGS}
-
+	$(CXX) $(CXXFLAGS) examples/tools/printpotential.C -o examples/tools/printpotential ${LDFLAGS}
 pka:	examples/titration/pka.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/pka.C -o examples/titration/pka
-
 GCpka:	examples/titration/GCpka.C $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/GCpka.C -o examples/titration/GCpka
-
 undone:		undone/mikael/namespace.C libfaunus
 	$(CXX) $(CXXFLAGS) \
 	undone/mikael/namespace.C \
-	-o undone/mikael/namespace \
-	-lfaunus ${LDFLAGS}
-
+	-o undone/mikael/namespace ${LDFLAGS}
 examples:	tools widom pka GCpka ewald twobody twobody-hof manybody isobaric
-
 clean:
-	rm -f $(OBJS) \
+	rm -f $(OBJS) *.o \
 	examples/titration/pka \
 	examples/widom/widom \
 	examples/ewald/ewald \
@@ -152,10 +127,8 @@ clean:
 	examples/isobaric/isobaric \
 	examples/twobody-hofmeister/twobody-hof \
 	lib/libfaunus.a
-
 docclean:
 	rm -fR doc/html doc/latex
-
 babel:
 	#curl -L -o openbabel-2.1.1.tar.gz http://downloads.sourceforge.net/openbabel/openbabel-2.1.1.tar.gz
 	#tar -zxf openbabel-2.1.1.tar.gz

@@ -43,9 +43,9 @@ class cell : public container {
     string info();
     void randompos(point &);
     string povray();
-    bool collision(point &p) {
+    bool collision(point &a) {
       return 
-        (p.x*p.x+p.y*p.y+p.z*p.z > r2) ? true:false;
+        (a.x*a.x+a.y*a.y+a.z*a.z > r2) ? true:false;
     }
 };
 
@@ -68,10 +68,10 @@ class box : public container {
     void randompos(point &);
     void randompos(vector<point> &);
     point randompos();
-    bool collision(point &p) {
-      if (abs(p.x)>len_half ||
-          abs(p.y)>len_half ||
-          abs(p.z)>len_half )
+    bool collision(point &a) {
+      if (abs(a.x)>len_half ||
+          abs(a.y)>len_half ||
+          abs(a.z)>len_half )
         return true;
       return false;
     }
@@ -81,12 +81,12 @@ class box : public container {
     inline double sqdist(point &a, point &b) { return a.sqdist(b, len, len_inv); }
     inline int anint(double x) { return int(x>0 ? x+.5 : x-.5); }
     //! Apply periodic boundary conditions
-    inline void boundary(point &p) {
-      p.x=p.x-len*anint(p.x*len_inv);
-      p.y=p.y-len*anint(p.y*len_inv);
-      p.z=p.z-len*anint(p.z*len_inv);
+    inline void boundary(point &a) {
+      a.x=a.x-len*anint(a.x*len_inv);
+      a.y=a.y-len*anint(a.y*len_inv);
+      a.z=a.z-len*anint(a.z*len_inv);
     }
-    inline void scale(point &p, double &newlen) { p*(newlen/len); }
+    inline void scale(point &a, double &newlen) { a*(newlen/len); }
 };
 
 /*! \brief "Clutch" like container.
@@ -107,10 +107,10 @@ class clutch : public container {
     float r,zmin,zmax;
     clutch(float, float, float);
     void randompos(point &);
-    bool collision(point &p) {
-      if (p.z<zmax && p.z>zmin)
+    bool collision(point &a) {
+      if (a.z<zmax && a.z>zmin)
         return true;
-      if (p.x*p.x+p.y*p.y+p.z*p.z > r2)
+      if (a.x*a.x+a.y*a.y+a.z*a.z > r2)
         return true;
       return false;
     }
@@ -128,9 +128,9 @@ class cylinder : public container {
     float diameter;
     cylinder(float,float);
     void randompos(point &);
-    bool collision(point &p) {
+    bool collision(point &a) {
       return 
-        (p.x*p.x+p.y*p.y>r2 || (p.z<0||p.z>len)) ? true:false;
+        (a.x*a.x+a.y*a.y>r2 || (a.z<0||a.z>len)) ? true:false;
     };
     string info(); //!< Cylinder info
     string povray();

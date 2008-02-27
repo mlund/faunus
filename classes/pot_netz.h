@@ -20,11 +20,12 @@ class pot_netz : public pot_coulomb {
       return 1.;
     }
     inline double sam(double z, particle::type &id) {
-      double A,B,zn,C1,C2,C3,D1,D2,D3,n;
-      return ( A/pow(z-zn,12)
-          - B/pow(z-zn,8)
-          + C1*(z-C2)*exp(-C3*pow(z-C2,2) )
-          + D1*exp(-D3*pow(z-D2,2) ) ) / f;
+      //double A,B,zn,C1,C2,C3,D1,D2,D3,n;
+      //return ( A/pow(z-zn,12)
+      //    - B/pow(z-zn,8)
+      //    + C1*(z-C2)*exp(-C3*pow(z-C2,2) )
+      //    + D1*exp(-D3*pow(z-D2,2) ) ) / f;
+      return 0;
     }
     //!< \params z distance from SURFACE.
     //!< \params id particle type

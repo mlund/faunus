@@ -4,6 +4,10 @@
 #include <cstdlib>
 #include <ctime>
 
+// Needed for sunCC
+#include <stdlib.h>
+#include <time.h>
+
 #ifndef NRRAND
 /*!
  * \brief Random number functions

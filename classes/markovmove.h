@@ -124,7 +124,7 @@ class dualmove : public markovmove {
   private:
     point v;
   public:
-    histogram::histogram gofr;  //!< g(r) of the two group mass centers
+    histogram gofr;             //!< g(r) of the two group mass centers
     double r;                   //!< Current distance between group mass centers
     double rmax;                //!< Maximum allowed mass-center distance
     double rmin;                //!< Minimum allowed mass-center distance

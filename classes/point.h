@@ -99,7 +99,7 @@ inline void spherical::operator=(point &p) {
 }
 
 inline point spherical::cartesian() {
-  point::point p;
+  point p;
   p.x=r*sin(theta)*cos(phi);
   p.y=r*sin(theta)*sin(phi);
   p.z=r*cos(theta);
@@ -123,7 +123,7 @@ inline double point::sqdist(point &p) {
 }
 
 //!\note <cmath> has a round() function -- speed?
-inline int point::anint(double x) { return int(x>0 ? x+.5 : x-.5); }
+inline int point::anint(double a) { return int(a>0 ? a+.5 : a-.5); }
 inline double point::sqdist(point &p, double &len, double &inv_len) {
   register double dx,dy,dz;
   dx=x-p.x;

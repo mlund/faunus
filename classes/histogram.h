@@ -16,7 +16,6 @@
  */
 class histogram : private xytable<float,unsigned long int> {
   friend class rdf;
-  //friend class rdfP3;
   private:
     unsigned long int cnt;
     float xmaxi;  // ugly solution!

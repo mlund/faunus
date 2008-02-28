@@ -9,6 +9,7 @@
  */
 
 #include "analysis.h"
+#include "profile.h"
 #include "mcloop.h"
 #include "pot_netz.h"
 typedef pot_netz T_pairpot;             // Specific pair interaction function
@@ -28,6 +29,7 @@ int main() {
   distributions dst;                    // Distance dep. averages
   iopqr pqr(cell);                      // PQR output (pos, charge, radius)
   rdf saltrdf(particle::NA,particle::I, .5, cell.r);
+  cylindric_profile cyl(16,particle::I,-40,40,.5);
 
   vector<macromolecule> g;              // Group for proteins
   dualmove dm(nvt, cell, pot);          //   Class for 1D macromolecular translation
@@ -73,8 +75,10 @@ int main() {
           sys+=dm.move(g[0], g[1]);             //   Do the move.
           break;
       }
-      if (slump.random_one()>.8 && macro>1)
+      if (slump.random_one()>.2 && macro>1) {
         saltrdf.update(cell);                   // Analyse salt g(r)
+        cyl.update(cell.p);
+      }
 
       #ifdef GROMACS
       if (slump.random_one()>.95 && macro>1)
@@ -98,6 +102,7 @@ int main() {
        << sm.info() << mr.info() << dm.info()
        << sys.info() << g[0].info() << g[1].info() << cell.info()
        << loop.info();
+  cyl.show();
 
   #ifdef GROMACS
   xtc.close();

@@ -24,7 +24,7 @@ protein2   $protein2
 
 #--- Input parameters ---
 macrosteps=10
-cellradius=90
+cellradius=50
 bjerrum=7.1
 LJeps=0.3
 nion1=10
@@ -35,20 +35,21 @@ nprot1=1
 protein1="lysozyme-ph4.7.aam"
 nprot2=1
 protein2="lysozyme-ph4.7.aam"
-dm_dp=3
+dm_dp=0
 dm_minsep=0
-dm_maxsep=60
+dm_maxsep=40
 
-for nion1 in 150
+for nion1 in 20
 do
   nion2=$[nion1+18]
-  for tion2 in "CL"
+  for tion2 in "I"
   do
     rm confout.aam
     suffix="-${tion2}${nion2}-air" #-Sep-${dm_minsep}-${dm_maxsep}"
-    microsteps=2000
+    microsteps=300
     mkinput
     ./twobody-hof
+    exit
     microsteps=100000
     mkinput
     echo ${suffix}

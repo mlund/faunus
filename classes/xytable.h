@@ -38,7 +38,6 @@ class xytable {
   public:
     TX xres,            //!< Distance between x values
        xmin;            //!< Minimum x value
-
     //! \param resolution Distance between x values
     //! \param xminimum Minimum x value (can be smaller than zero)
     //! \param xmaximum Maximum x value (for better memory optimization)
@@ -46,20 +45,15 @@ class xytable {
       xres=resolution;
       xmin=xminimum;
       if (xmaximum>0)
-        y.resize(int(xmaximum/resolution));
+        y.resize( int(abs(xmaximum-xminimum)/resolution) );
     }
-
     //! Convenient data access
     TY& operator()(TX val) { return y[ x2i(val) ]; }
-
     //! Max x-value in set
-    TX xmax() { return y.size()*xres-xmin; }
+    TX xmax() { return y.size()*xres+xmin; }
 };
-
-
 /*! 
  * \example xytable-test.C
  * Example of the xytable class
  */
-
 #endif

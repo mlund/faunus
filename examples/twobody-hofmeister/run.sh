@@ -24,7 +24,7 @@ protein2   $protein2
 
 #--- Input parameters ---
 macrosteps=10
-cellradius=50
+cellradius=60
 bjerrum=7.1
 LJeps=0.3
 nion1=10
@@ -42,11 +42,11 @@ dm_maxsep=40
 for nion1 in 20
 do
   nion2=$[nion1+18]
-  for tion2 in "I"
+  for tion2 in "CL"
   do
     rm confout.aam
     suffix="-${tion2}${nion2}-air" #-Sep-${dm_minsep}-${dm_maxsep}"
-    microsteps=300
+    microsteps=100
     mkinput
     ./twobody-hof
     exit

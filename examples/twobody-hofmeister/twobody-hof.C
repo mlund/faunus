@@ -29,7 +29,7 @@ int main() {
   distributions dst;                    // Distance dep. averages
   iopqr pqr(cell);                      // PQR output (pos, charge, radius)
   rdf saltrdf(particle::NA,particle::I, .5, cell.r);
-  cylindric_profile cyl(16,particle::I,-40,40,.5);
+  cylindric_profile cyl(16,particle::CL,-50,50,.5);
 
   vector<macromolecule> g;              // Group for proteins
   dualmove dm(nvt, cell, pot);          //   Class for 1D macromolecular translation
@@ -71,7 +71,7 @@ int main() {
             sys+=mr.move(g[i]);                 //   Do the move.
           }
           break;
-        case 2:                                 // Translate proteins
+        case 2222:                                 // Translate proteins
           sys+=dm.move(g[0], g[1]);             //   Do the move.
           break;
       }
@@ -102,7 +102,7 @@ int main() {
        << sm.info() << mr.info() << dm.info()
        << sys.info() << g[0].info() << g[1].info() << cell.info()
        << loop.info();
-  cyl.show();
+  cyl.write("cyl.dat");
 
   #ifdef GROMACS
   xtc.close();

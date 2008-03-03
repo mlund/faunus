@@ -277,18 +277,19 @@ string macromolecule::info() {
   ostringstream o;
   o << group::info();
   if (Q.cnt>0)
-    o << "#   Charge <Z>             = " << Q.avg() << endl
-      << "#   Charge Sqr <Z^2>       = " << Q2.avg() << endl
-      << "#   Capacitance            = " << Q2.avg()-pow(Q.avg(),2) << endl;
+    o << "#  Charge fluctuations:" << endl
+      << "#    <Z> <Z^2>-<Z>^2       = " << Q.avg()<<" "<<Q2.avg()-pow(Q.avg(),2)<<endl;
   if (dip.cnt>0)
-    o << "#   Dipole moment          = " << dip.avg() << " " << mu << endl;
+    o << "#    <mu> <mu^2>-<mu>^2    = " << dip.avg()<<" "<<dip2.avg()-pow(dip.avg(),2)<<endl
+      << "#    Dipole vector         = " << mu << endl;
   return o.str();
 }
 string macromolecule::info(container &con) {
   ostringstream o;
   o << info();
   o << "#   Current charge         = " << charge(con.p) << endl
-    << "#   Hydrophobic particles  = " << numhydrophobic(con.p) << endl;
+    << "#   Hydrophobic particles  = " << numhydrophobic(con.p) << endl
+    << "#   Radius                 = " << radius(con.p) << endl;
   return o.str();
 }
 unsigned short macromolecule::nummolecules() { return 1; }
@@ -318,7 +319,8 @@ double macromolecule::dipole(vector<particle> &p)
     mu.z += (p[i].z-cm.z) * p[i].charge;
   }
   a=mu.len();
-  dip+=a;
+  dip+=a;    // avg. scalar
+  dip2+=a*a; // avg. scalar squared
   return a;
 }
 double macromolecule::radius(vector<particle> &p) {

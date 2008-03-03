@@ -635,6 +635,8 @@ string dualmove::info() {
 
 double dualmove::move(macromolecule &g1, macromolecule &g2) {
   du=0;
+  if (dp==0)
+    return du;
   cnt++;
   r=con->dist(g1.cm, g2.cm);
   point p;

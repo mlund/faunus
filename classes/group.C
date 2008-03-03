@@ -234,11 +234,13 @@ string salt::info(container &con) {
   short nan=count(con.p, anion),
         ncat=count(con.p, cation);
   o << group::info();
-  o << "#   Cation (type,z,N,conc) = "
+  o << "#   Cation (id,z,r,N,conc) = "
     << con.d[cation].name << ", " << con.d[cation].p.charge << ", "
+    << con.d[cation].p.radius << ", "
     << ncat << ", " << ncat/con.getvolume()*c << endl
-    << "#   Anion (type,z,N,conc)  = "
+    << "#   Anion (id,z,r,N,conc)  = "
     << con.d[anion].name << ", " << con.d[anion].p.charge << ", "
+    << con.d[anion].p.radius << ", "
     << nan << ", " << nan/con.getvolume()*c << endl;
   return o.str();
 }

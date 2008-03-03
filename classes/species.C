@@ -48,13 +48,13 @@ species::species() {
   set(particle::CTR, "CTR", 3.5, -1,  3.8, false);
   set(particle::NTR, "NTR", 3.5,  0,  7.5, false);
   set(particle::UNK, "UNK", 3.5,  0,  0.0, false);
-  set(particle::NA,  "NA",  1.5, +1,  0.0, false);
-  set(particle::K,   "K",   1.7, +1,  0.0, false);
+  set(particle::NA,  "NA",  1.8, +1,  0.0, false);
+  set(particle::K,   "K",   1.5, +1,  0.0, false);
   set(particle::F,   "F",   1.4, -1,  0.0, false);
-  set(particle::CL,  "CL",  1.6, -1,  0.0, false);
+  set(particle::CL,  "CL",  1.7, -1,  0.0, false);
   set(particle::BR,  "BR",  1.9, -1,  0.0, false);
-  set(particle::I,   "I",   3.0, -1,  0.0, false);
-  set(particle::SO4, "SO4", 2.0, -2,  0.0, false);
+  set(particle::I,   "I",   2.0, -1,  0.0, false);
+  set(particle::SO4, "SO4", 1.6, -2,  0.0, false);
   set(particle::GHOST,"GHOST",0,  0,  0.0, false);
   set(particle::HYDROPHOBIC,"HYDR",3.5,0,0, true);
 }

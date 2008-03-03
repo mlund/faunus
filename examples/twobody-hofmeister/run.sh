@@ -46,15 +46,17 @@ do
   do
     rm confout.aam
     suffix="-${tion2}${nion2}-air" #-Sep-${dm_minsep}-${dm_maxsep}"
-    microsteps=100
+    microsteps=10
     mkinput
     ./twobody-hof
     exit
+    rm rdfprot.dat cyl.dat
     microsteps=100000
     mkinput
     echo ${suffix}
     ./twobody-hof > out${suffix}
     mv rdfprot.dat rdfprot${suffix}.dat
+    mv cyl.dat cyl${suffix}.dat
     #mv rdfsalt.dat rdfsalt${suffix}.dat
     #mv coord.xtc coord${suffix}.xtc
     #mv coord.gro coord${suffix}.gro

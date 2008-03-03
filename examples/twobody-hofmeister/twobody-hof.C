@@ -25,18 +25,15 @@ int main() {
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg(in);                    // Setup pair potential (default values)
   int_hydrophobic<T_pairpot> pot(cfg);  // Interactions incl. hydrophobic surfaces
-  ioxyz xyz(cell);                      // xyz output for VMD etc.
   distributions dst;                    // Distance dep. averages
   iopqr pqr(cell);                      // PQR output (pos, charge, radius)
-  rdf saltrdf(particle::NA,particle::I, .5, cell.r);
-  cylindric_profile cyl(16,particle::CL,-50,50,.5);
-
   vector<macromolecule> g;              // Group for proteins
   dualmove dm(nvt, cell, pot);          //   Class for 1D macromolecular translation
   dm.setup(in);                         //   Read input params. (optional)
   dm.load( in, g );                     //   Load proteins and separate them 
   salt salt;                            // Group for mobile ions
   salt.add(cell, in);                   //   Add salt particles
+
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
   sm.dp=90;                             // Set displacement parameters
@@ -48,9 +45,12 @@ int main() {
   pot.search(cell.p);                   // Find hydrophobic particles
   pot.end_of_protein_one=g[0].end;      // Hydrophobic interactions w. BOTH proteins
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
-  cout << sys.info();
+
+  rdf saltrdf(salt.anion,salt.cation, .5, cell.r);
+  cylindric_profile cyl(16,salt.anion,-50,50,.5);
 
   cout << "# ------ INITIAL INFORMATION ------" << endl
+       << sys.info() 
        << cell.info() << pot.info()     // Print information to screen
        << loop.info() << endl
        << "# ------ RUNTIME INFORMATION ------" << endl;
@@ -71,7 +71,7 @@ int main() {
             sys+=mr.move(g[i]);                 //   Do the move.
           }
           break;
-        case 2222:                                 // Translate proteins
+        case 2:                                 // Translate proteins
           sys+=dm.move(g[0], g[1]);             //   Do the move.
           break;
       }
@@ -91,7 +91,6 @@ int main() {
     dm.gofr.write("rdfprot.dat");               // Write interprotein g(r)
     //saltrdf.write("rdfsalt.dat");               // Write salt g(r)
     //dst.write("distributions.dat");             // Write other distributions
-    //xyz.save("coord.xyz", cell.p);              // Write .xyz coordinate file
     aam.save("confout.aam", cell.p);            // Save config. for next run
     pqr.save("confout.pqr", cell.p);            // ...also save a PQR file
     cout << loop.timing(macro);                 // Show progres;s

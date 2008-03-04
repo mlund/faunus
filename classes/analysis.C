@@ -13,6 +13,19 @@ void systemenergy::update(double energy) {
 }
 void systemenergy::operator+=(double du) { sum+=du; }
 
+//---------------- ANGULAR CORRELATIONS ---------------------------
+angularcorr::angularcorr() {}
+void angularcorr::update(macromolecule &g1, macromolecule &g2, distributions &d) {
+  double l1=g1.mu.len(), l2=g2.mu.len(), z;
+  if (l1>0 && l2>0 )  {
+    m1=g1.mu*(1./l1);
+    m2=g1.mu*(1./l2); // unit vectors at origo
+    z=g1.cm.dist(g2.cm);
+    d.add("dip_z*z", z, m1.z*m2.z);
+    d.add("dip_x*x", z, m1.x*m2.x);
+    d.add("dip_y*y", z, m1.y*m2.y);
+  }
+}
 
 //---------------- DISTRIBUTIONS ----------------------------------
 /*!

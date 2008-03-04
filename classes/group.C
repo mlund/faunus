@@ -295,7 +295,6 @@ string macromolecule::info(container &con) {
   return o.str();
 }
 unsigned short macromolecule::nummolecules() { return 1; }
-
 void macromolecule::operator=(group g) {
   beg=g.beg;
   end=g.end;
@@ -342,12 +341,10 @@ double macromolecule::charge(vector<particle> &p) {
   Q2+=z*z;
   return z;
 }
-
 void macromolecule::center(container &con) {
   move(con, -cm);
   accept(con);
 };
-
 void macromolecule::zmove(container &par, double dz) {
   cm_trial.z = cm.z + dz;
   par.boundary(cm_trial);
@@ -400,9 +397,7 @@ void macromolecule::rotate(container &par, point u, double angle) {
     par.boundary(par.trial[i]);
   }
 }
-
 void macromolecule::add(container &con, inputfile &in ) { }
-
 void macromolecule::isobaricmove(container &con, double newlen) {
   double oldvol=con.getvolume(); // store original volume
   con.scale(cm_trial, newlen);   // scale mass center
@@ -431,7 +426,6 @@ double chain::monomerenergy(vector<particle> &p, short i) {
   //otherwise...
   return quadratic(p[i], p[i+1]) + quadratic(p[i], p[i-1]);
 }
-
 double chain::internalenergy(vector<particle> &p) {
   double u=0;
   for (short i=beg; i<end; i++)

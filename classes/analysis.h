@@ -59,11 +59,11 @@ class systemenergy : public analysis {
     void operator+=(double);    //!< Add system energy change
     string info() {
       ostringstream o;
-      o << endl
-        << "# SYSTEM ENERGY (kT):" << endl
-        << "#   Averages <U> <U^2> = " << uavg.avg() << " " << u2avg.avg() << endl
-        << "#   sqrt(<U^2>-<U>^2)  = " << sqrt(u2avg.avg()-uavg.avg()*uavg.avg()) << endl
-        << "#   Initial energy     = " << u0 << endl
+      o << endl << "# SYSTEM ENERGY (kT):" << endl;
+      if (uavg.sum>0)
+        o << "#   Averages <U> <U^2> = " << uavg.avg() << " " << u2avg.avg() << endl
+          << "#   sqrt(<U^2>-<U>^2)  = " << sqrt(u2avg.avg()-uavg.avg()*uavg.avg()) << endl;
+      o << "#   Initial energy     = " << u0 << endl
         << "#   Initial + changes  = " << sum << endl
         << "#   Current energy     = " << cur << endl
         << "#   Absolute drift     = " << abs(cur-sum) << endl;
@@ -256,4 +256,20 @@ string widompath<T_pairpot>::info() {
     o << i << " " << trajmu[i] << " " << trajpos[i] << endl;
   return o.str();
 }
+
+/*!
+ * This class analyses angular correlations between
+ * any two macromolecules.
+ * \author Mikael Lund
+ * \date ADFA, 2008
+ */
+class angularcorr : public analysis {
+  private:
+    point m1,m2;
+  public:
+    angularcorr();
+    void update(macromolecule &, macromolecule &, distributions &);
+};
+
+
 #endif

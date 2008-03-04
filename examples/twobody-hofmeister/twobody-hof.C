@@ -89,6 +89,7 @@ int main() {
     sys.update(pot.energy(cell.p));             // Update system energy averages
     cell.check_vector();                        // Check sanity of particle vector
     dm.gofr.write("rdfprot.dat");               // Write interprotein g(r)
+    cyl.write("cyl.dat");
     //saltrdf.write("rdfsalt.dat");               // Write salt g(r)
     //dst.write("distributions.dat");             // Write other distributions
     aam.save("confout.aam", cell.p);            // Save config. for next run
@@ -101,7 +102,6 @@ int main() {
        << sm.info() << mr.info() << dm.info()
        << sys.info() << g[0].info() << g[1].info() << cell.info()
        << loop.info();
-  cyl.write("cyl.dat");
 
   #ifdef GROMACS
   xtc.close();

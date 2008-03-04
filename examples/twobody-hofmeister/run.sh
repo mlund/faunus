@@ -24,7 +24,7 @@ protein2   $protein2
 
 #--- Input parameters ---
 macrosteps=10
-cellradius=60
+cellradius=90
 bjerrum=7.1
 LJeps=0.3
 nion1=10
@@ -39,19 +39,18 @@ dm_dp=0
 dm_minsep=0
 dm_maxsep=40
 
-for nion1 in 20
+for nion1 in 182
 do
   nion2=$[nion1+18]
   for tion2 in "CL"
   do
     rm confout.aam
     suffix="-${tion2}${nion2}-air" #-Sep-${dm_minsep}-${dm_maxsep}"
-    microsteps=10
+    microsteps=500
     mkinput
-    ./twobody-hof
-    exit
+    ./twobody-hof > sletmig
     rm rdfprot.dat cyl.dat
-    microsteps=100000
+    microsteps=5000
     mkinput
     echo ${suffix}
     ./twobody-hof > out${suffix}

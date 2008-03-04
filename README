@@ -35,7 +35,7 @@ CITING FAUNUS:
 
 REQUIREMENTS:
   * A unix-type environment (Linux, MacOS etc.)
-  * C++ compiler (gnu, ibm, intel etc.)
+  * C++ compiler (gnu, ibm, intel, sun etc.)
   * Gromacs (optional, for xtc trajectory output)
   * Doxygen (optional, for code manual)
   * Graphviz (optional, for code manual)

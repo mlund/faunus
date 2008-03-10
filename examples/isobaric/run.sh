@@ -38,8 +38,7 @@ do
   rm confout.aam
   suffix=".lj-${LJeps}"
   mkinput
-  ./isobaric #> eq${suffix}
-  exit
+  ./isobaric > eq${suffix}
   boxlen=$(less eq${suffix}| grep "length"|awk '{print $ 6}')
   microsteps=50000
   mkinput

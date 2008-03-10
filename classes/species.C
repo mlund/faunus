@@ -28,10 +28,10 @@ species::species() {
   set(particle::ALA, "ALA", 3.5,  0,  0.0, true);
   set(particle::ARG, "ARG", 3.5,  0, 12.0, false);
   set(particle::ASN, "ASN", 3.5,  0,  0.0, false);
-  set(particle::ASP, "ASP", 3.5, -1,  4.0, false);
+  set(particle::ASP, "ASP", 3.5, -1,  4.8, false);
   set(particle::CYS, "CYS", 3.5, -1, 10.8, false);
   set(particle::GLN, "GLN", 3.5,  0,  0.0, false);
-  set(particle::GLU, "GLU", 3.5, -1,  4.4, false);
+  set(particle::GLU, "GLU", 3.5, -1,  4.8, false);
   set(particle::GLY, "GLY", 3.5,  0,  0.0, false);
   set(particle::HIS, "HIS", 3.5,  0,  6.3, false);
   set(particle::ILE, "ILE", 3.5,  0,  0.0, true );

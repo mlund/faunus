@@ -30,12 +30,8 @@ int main() {
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   iogro gro(cell, in);                  // Gromacs file output for VMD etc.
   rdf protrdf(0,0,.5,cell.len/2.);      // Protein and salt radial distributions
-  histogram lendist(1,0,500);          // 5555ram over volume 
+  histogram lendist(1,0,500);           //  
 
-  int templendist[1000];        
-  for (int p=0;p<1000;p++)
-    templendist[p]=0;
-  int templencnt=0;
 
   vector<macromolecule> g;                      // PROTEIN groups
   ioxyz xyz(cell);
@@ -93,8 +89,6 @@ int main() {
         mr.adjust_dp(40,50);                    // parameters. Use ONLY
         vol.adjust_dp(20,30);                    // during equillibration!
       }
-      templendist[int(cell.len)]++;
-      templencnt++;
       lendist.add(cell.len);
       #ifdef GROMACS
       if (slump.random_one()>.80 && macro>1)
@@ -119,14 +113,6 @@ int main() {
   aam.save("confout.aam", cell.p);            // Save config. for next run
   xyz.save("confout.xyz", cell.p);
 
-  ofstream ledist("tempvoldist.dat");
-  if (ledist) {
-    int s=1000;
-    for (int t=0;t<s;t++)
-      if (templendist[t]!=0)
-        ledist << t <<"  "<< float(templendist[t])/templencnt<< endl;
-    ledist.close();
-  }
 
   #ifdef GROMACS
   xtc.close();

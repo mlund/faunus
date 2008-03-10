@@ -706,16 +706,16 @@ HAchargereg::HAchargereg(ensemble &e,
 string HAchargereg::info() {
   ostringstream o;
   o << chargereg::info();
-  o << "#   Excess chem. pot = " << CatPot << endl;
+  o << "#   Excess chem. pot.   = " << CatPot << endl;
   return o.str();
 }
 
 double HAchargereg::energy( vector<particle> &p, double du, titrate::action &a ) {
   int i=p[a.site].id;
   if (a.action==PROTONATED)
-    return du+( log(10.)*( ph - con->d[i].pka ) )+CatPot+log(protons.size()/con->getvolume()) ;
+    return du+( log(10.)*( ph - con->d[i].pka ) )+CatPot-log(protons.size()/con->getvolume()) ;
   else
-    return du-( log(10.)*( ph - con->d[i].pka ) )-CatPot-log((protons.size()+1)/con->getvolume());
+    return du-( log(10.)*( ph - con->d[i].pka ) )-CatPot+log((protons.size()+1)/con->getvolume());
 }
 
 //---------- ISOBARIC ----------

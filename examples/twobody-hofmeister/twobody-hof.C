@@ -100,7 +100,7 @@ int main() {
   cout << "# ------ FINAL INFORMATION ------" << endl
        << salt.info(cell)                       // Final information...
        << sm.info() << mr.info() << dm.info()
-       << sys.info() << g[0].info() << g[1].info() << cell.info()
+       << sys.info() << g[0].info(cell) << g[1].info(cell) << cell.info()
        << loop.info();
 
   #ifdef GROMACS

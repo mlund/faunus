@@ -17,7 +17,7 @@ int main() {
 
   p1.charge=-0;
   p1.radius=2.;
-  p1.id=particle::I;
+  p1.id=particle::CL;
 
   p2.radius=3.5;
   p2.hydrophobic=true;
@@ -29,11 +29,11 @@ int main() {
   cout << coulomb.info() << endl << netz.info();
  
   cout << "# r/AA  U/kT" << endl;
-  for (float r=p1.radius+p2.radius; r<20; r+=.1) {
+  for (float r=p1.radius+p2.radius-2.; r<15; r+=.1) {
     p1.z=r;
     p3.z=r;
     cout << p1.dist(p2) << " "
-      //<< netz.f*netz.pairpot(p1,p2) << " "
+      << netz.f*netz.hypairpot(p1,p2, p1.dist(p2) ) << " "
       << coulomb.f*coulomb.pairpot(p1,p2) << endl;
   }
 }

@@ -46,9 +46,9 @@ do
   do
     rm confout.aam
     suffix="-${tion2}${nion2}-air" #-Sep-${dm_minsep}-${dm_maxsep}"
-    microsteps=500
+    microsteps=10
     mkinput
-    ./twobody-hof > sletmig
+    ./twobody-hof #> sletmig
     rm rdfprot.dat cyl.dat
     microsteps=5000
     mkinput

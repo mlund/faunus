@@ -1,9 +1,25 @@
 DESCRIPTION OF EXAMPLES:
 
-titrate     Proton titration of a macromolecule - cell model.
-widom       Ion activity coefficients by particle insertion
-manybody    Many rigid bodies in a continuum solvent - cubic box
-isobaric    Many rigid bodies in a Debye-Huckel solution. NPT ensemble.
-twobody     Two macro-molecules in a continuum solvent - cell model.
-twobody-hof ...as above + an empirical pot. between ions and hydrophobic groups.
+Implicit solvent:
+------------------
+titrate
+  Proton titration of a single macromolecule in an explicit salt
+  envirinment. Protons are moved in and out of the protein to
+  sample the average protonation state, pka values and dipole
+  moment as well as charge fluctuations.
+  
+widom
+  Ion activity coefficients by particle insertion
+
+manybody
+  Many rigid bodies in a continuum solvent - cubic box
+
+isobaric
+  Many rigid bodies in a Debye-Huckel solution. NPT ensemble.
+
+twobody
+  Two macro-molecules in a continuum solvent - cell model.
+
+twobody-hof
+  ...as above + an empirical pot. between ions and hydrophobic groups.
 

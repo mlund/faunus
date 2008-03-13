@@ -94,24 +94,24 @@ manual:
 	doxygen doc/Doxyfile
 manualul:
 	scp -rC doc/html/* mikaellund@shell.sourceforge.net:/home/groups/f/fa/faunus/htdocs/
-widom:	examples/widom/widom.C $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/widom/widom.C -o examples/widom/widom
+widom:	examples/widom/widom.C libfaunus
+	$(CXX) $(CXXFLAGS) examples/widom/widom.C -o examples/widom/widom ${LDFLAGS}
 ewald:		examples/ewald/ewald.C libfaunus
 	$(CXX) $(CXXFLAGS) examples/ewald/ewald.C -o examples/ewald/ewald ${LDFLAGS}
 twobody:	examples/twobody/twobody.C libfaunus
 	$(CXX) $(CXXFLAGS) examples/twobody/twobody.C -o examples/twobody/twobody ${LDFLAGS}
 twobody-hof:	examples/twobody-hofmeister/twobody-hof.C libfaunus
-	$(CXX) $(CXXFLAGS) $(INCDIR) examples/twobody-hofmeister/twobody-hof.C -o examples/twobody-hofmeister/twobody-hof ${LDFLAGS}
+	$(CXX) $(CXXFLAGS) examples/twobody-hofmeister/twobody-hof.C -o examples/twobody-hofmeister/twobody-hof ${LDFLAGS}
 manybody:	examples/manybody/manybody.C libfaunus 
 	$(CXX) $(CXXFLAGS) examples/manybody/manybody.C -o examples/manybody/manybody ${LDFLAGS}
 isobaric:	examples/isobaric/isobaric.C libfaunus 
 	$(CXX) $(CXXFLAGS) examples/isobaric/isobaric.C -o examples/isobaric/isobaric ${LDFLAGS}
 tools:	examples/tools/printpotential.C libfaunus 
 	$(CXX) $(CXXFLAGS) examples/tools/printpotential.C -o examples/tools/printpotential ${LDFLAGS}
-pka:	examples/titration/pka.C $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/pka.C -o examples/titration/pka
-GCpka:	examples/titration/GCpka.C $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) $(INCDIR) examples/titration/GCpka.C -o examples/titration/GCpka
+pka:	examples/titration/pka.C libfaunus
+	$(CXX) $(CXXFLAGS) examples/titration/pka.C -o examples/titration/pka $(LDFLAGS) 
+GCpka:	examples/titration/GCpka.C libfaunus
+	$(CXX) $(CXXFLAGS) examples/titration/GCpka.C -o examples/titration/GCpka $(LDFLAGS) 
 undone:		undone/mikael/namespace.C libfaunus
 	$(CXX) $(CXXFLAGS) \
 	undone/mikael/namespace.C \

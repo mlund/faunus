@@ -9,16 +9,20 @@ titrate
   moment as well as charge fluctuations.
   
 widom
-  Ion activity coefficients by particle insertion
+  Ion activity coefficients by particle insertion. An "ghost" ion pair is
+  randomly inserted in a salt solution.
 
 manybody
-  Many rigid bodies in a continuum solvent - cubic box
+  Many arbitrary rigid bodies in a continuum solvent - cubic box
 
 isobaric
   Many rigid bodies in a Debye-Huckel solution. NPT ensemble.
 
 twobody
-  Two macro-molecules in a continuum solvent - cell model.
+  Two macro-molecules in a continuum solvent - cell model. The macromolecules
+  are allowed to symmetrically move along the z-axis and rotate around their
+  mass centers. Calculates the potential of mean force and includes charge
+  and dipole fluctuations.
 
 twobody-hof
   ...as above + an empirical pot. between ions and hydrophobic groups.

@@ -112,11 +112,13 @@ pka:	examples/titration/pka.C libfaunus
 	$(CXX) $(CXXFLAGS) examples/titration/pka.C -o examples/titration/pka $(LDFLAGS) 
 GCpka:	examples/titration/GCpka.C libfaunus
 	$(CXX) $(CXXFLAGS) examples/titration/GCpka.C -o examples/titration/GCpka $(LDFLAGS) 
+binding:	examples/binding/binding.C libfaunus
+	$(CXX) $(CXXFLAGS) examples/binding/binding.C -o examples/binding/binding $(LDFLAGS) 
 undone:		undone/mikael/namespace.C libfaunus
 	$(CXX) $(CXXFLAGS) \
 	undone/mikael/namespace.C \
 	-o undone/mikael/namespace ${LDFLAGS}
-examples:	tools widom pka GCpka ewald twobody twobody-hof manybody isobaric
+examples:	binding tools widom pka GCpka ewald twobody twobody-hof manybody isobaric
 clean:
 	rm -f $(OBJS) *.o \
 	examples/titration/pka \

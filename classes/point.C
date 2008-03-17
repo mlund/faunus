@@ -102,9 +102,9 @@ void particle::operator=(point p) {
   y=p.y;
   z=p.z;
 }
-double particle::vol(double rho) { return 1.6606*rho*mw; }
-double particle::rad(double rho) { return pow( 3.*vol(rho)/4./3.14, 0.3333 ); }
-
+double particle::volume() { return 4.18879*radius*radius*radius; }
+double particle::mw2vol(double rho) { return 1.6606*rho*mw; }
+double particle::mw2rad(double rho) { return pow( 3.*mw2vol(rho)/4./3.14, 0.3333 ); }
 ostream &operator<<(ostream &out, point &p) {
   out << p.str();
   return out;

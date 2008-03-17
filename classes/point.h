@@ -70,8 +70,9 @@ class particle : public point {
     bool hydrophobic;                   //!< Hydrophobic flag
     inline bool overlap(particle &);    //!< Hardsphere overlap test
     inline double potential(point &);   //!< Electric potential in point
-    double vol(double=1);               //!< Estimate volume from weight
-    double rad(double=1);               //!< Estimate radius from weight
+    double volume();                    //!< Return volume of sphere
+    double mw2vol(double=1);            //!< Estimate volume from weight
+    double mw2rad(double=1);            //!< Estimate radius from weight
     void operator=(point);              //!< Copy coordinates from a point
 };
 

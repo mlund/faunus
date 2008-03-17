@@ -23,7 +23,7 @@ double particles::charge(point &origo, double r) {
     if (p[i].sqdist(origo) <= r2)
       q += p[i].charge;
   return q;
-};
+}
 bool particles::overlap(particle &a) {
   for (unsigned short i=0; i<p.size(); i++)
     if (p[i].overlap(a)==true) return true;
@@ -55,7 +55,10 @@ bool particles::check_vector() {
     cout << "# Fatal error: Particle vectors corrupted!!\n";
   return rc;
 }
-
-short particles::count(particle::type id) {
-  return 0;
+int particles::count(particle::type id, point &origo, double r) {
+  int i,cnt=0,n=p.size();
+  double r2=r*r;
+  for (i=0; i<n; i++)
+    if (p[i].sqdist(origo) < r2) cnt++;
+  return cnt;
 }

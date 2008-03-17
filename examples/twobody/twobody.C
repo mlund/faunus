@@ -9,11 +9,11 @@
  */
 
 #include <iostream>
-#include "../../classes/analysis.h"
-#include "../../classes/mcloop.h"
-#include "../../classes/pot_netz.h"
-typedef pot_netz T_pairpot;         // Specific pair interaction function
-#include "../../classes/markovmove.h"
+#include "analysis.h"
+#include "mcloop.h"
+#include "pot_netz.h"
+typedef pot_coulomb T_pairpot;         // Specific pair interaction function
+#include "markovmove.h"
 
 using namespace std;
 
@@ -29,6 +29,7 @@ int main() {
   distributions dst;                    // Distance dep. averages
   iopqr pqr(cell);                      // PQR output (pos, charge, radius)
   rdf saltrdf(particle::NA,particle::CL, .5, cell.r);
+  twostatebinding bind(20.);            // Two state binding model
 
   vector<macromolecule> g;              // Group for proteins
   dualmove dm(nvt, cell, pot);          //   Class for 1D macromolecular translation
@@ -38,10 +39,8 @@ int main() {
   salt.add(cell, in);                   //   Add salt particles
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
-
   dm.dp=6;                              // Set displacement parameters
   sm.dp=90;                             // Set displacement parameters
-
   chargereg tit(nvt,cell,pot,salt,4.0); // Prepare titration.
 
   ioaam aam(cell);                      // Protein input file format is AAM
@@ -84,8 +83,10 @@ int main() {
           }
           break;
       }
-      if (slump.random_one()>.8 && macro>1)
-        saltrdf.update(cell);                   // Analyse salt g(r)
+      if (slump.random_one()>.5 && macro>1) {
+        //saltrdf.update(cell);                   // Analyse salt g(r)
+        bind.update(cell, cell.p[g[0].beg], g[1]);
+      }
 
       #ifdef GROMACS
       if (slump.random_one()>.95 && macro>1)
@@ -108,7 +109,7 @@ int main() {
   cout << salt.info(cell)                       // Final information...
        << sm.info() << mr.info() << dm.info()
        << sys.info() << g[0].info() << g[1].info() << cell.info()
-       << tit.info();
+       << tit.info() << bind.info( 1/cell.getvolume() );
 
   #ifdef GROMACS
   xtc.close();

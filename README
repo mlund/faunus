@@ -50,9 +50,9 @@ COMPILING:
   - Enable OpenMP parallization. 
 
   Experimental support for multicore parallization is supported
-  thought OpenMP. Most modern C++ compilers support OpenMP
+  through OpenMP. Most modern C++ compilers support OpenMP
   directives including gnu, intel, ibm, portland etc. Edit the
-  makefile to enable this feature. At runtime you may specify
+  makefile to enable this feature. At runtime one may specify
   the number of processors to use via OMP_NUM_THREADS. For
   small systems it may be faster to turn off parallization.
 

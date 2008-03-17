@@ -35,6 +35,29 @@ bool profile::write(string name) {
   return fio.writefile(name,o.str());
 }
 
+/*!\brief Cummulative sum around a central particle
+ * \author Mikael Lund
+ * \date Canberra, 2008
+ * \warning The central particle is passed through the constructor and
+ *          it is assumed that the particle (usually in a vector) is not
+ *          reallocated. Hence, do NOT modify the particle vector after
+ *          having called the constructor.
+ */
+class cummsum : public profile {
+  protected:
+    particle *origo;         //!< Central particle (coordinate origo)
+    float volume(double z) { return 1.; }
+  public:
+    particle::type id;       //!< Particle type to analyse
+    cummsum(
+        particle::type type, particle &center, float max,float res=.5) :
+      profile(0,max,res) {
+        id=type;
+        origo=&center;
+      }
+    void add(particle &p) { if (p.id==id) (*this)(origo->dist(p))++; }
+};
+
 /*!\brief Cylindrical particle distribution
  * \author Mikael Lund
  * \date Canberra, 2008

@@ -18,6 +18,12 @@ manybody
 isobaric
   Many rigid bodies in a Debye-Huckel solution. NPT ensemble.
 
+binding
+  Binding of ligands to a single macro-molecule. Spherical
+  cell, multiple ligands. A binding site is specified and
+  the local concentration is measured relative to the bulk
+  concentration.
+
 twobody
   Two macro-molecules in a continuum solvent - cell model. The macromolecules
   are allowed to symmetrically move along the z-axis and rotate around their

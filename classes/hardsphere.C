@@ -61,3 +61,17 @@ bool hardsphere::overlap(vector<particle> &p, group &g1, group &g2) {
   }
   return false;
 }
+bool hardsphere::overlap(vector<particle> &p, group &g1, group &g2, double &s) {
+  if (g1.beg==-1 || g2.beg==-1) return false;
+  if (g1.cm.radius!=0 && g2.cm.radius!=0)
+    if (abs(g1.cm.dist(g2.cm)) > g1.cm.radius+g2.cm.radius)
+      return false;
+  int ilen=g1.end+1, jlen=g2.end+1;
+  for (int i=g1.beg; i<ilen; i++) {
+    for (int j=g2.beg; j<jlen; j++) {
+      if ( p[i].overlap(p[j], s)==true )
+        return true;
+    }
+  }
+  return false;
+}

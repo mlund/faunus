@@ -69,6 +69,7 @@ class particle : public point {
     type id;                            //!< Particle identifier
     bool hydrophobic;                   //!< Hydrophobic flag
     inline bool overlap(particle &);    //!< Hardsphere overlap test
+    inline bool overlap(particle &, double &);
     inline double potential(point &);   //!< Electric potential in point
     double volume();                    //!< Return volume of sphere
     double mw2vol(double=1);            //!< Estimate volume from weight
@@ -150,6 +151,10 @@ inline double particle::potential(point &p) { return charge / dist(p); }
  */
 inline bool particle::overlap(particle &p) {
   double r=radius+p.radius;
+  return (sqdist(p) < r*r) ? true : false;
+}
+inline bool particle::overlap(particle &p, double &s) {
+  double r=radius+p.radius+s;
   return (sqdist(p) < r*r) ? true : false;
 }
 #endif

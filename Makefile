@@ -1,5 +1,5 @@
 # Specify compiler (gnu,gnu686,intel,sun,pgi,pathscale,debug)
-MODEL = gnu
+MODEL = intel
 
 # Set to yes if you need Gromacs xtc file support
 # (requires a working Gromacs installation)

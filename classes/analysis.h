@@ -7,6 +7,7 @@
 #include "slump.h"
 #include "io.h"
 #include "xytable.h"
+#include "hardsphere.h"
 
 /*!
  * Base class for analysis functions
@@ -53,11 +54,15 @@ class systemenergy : public analysis {
   private:
     double u0,sum,cur;
     average<double> uavg, u2avg;
+    vector<float> confu;  //!< Vector to track system energy in time
+    io fio;
   public:
     systemenergy(double);
     void update(double);        //!< Specify current system energy and recalc averages
+    void track();               //!< Add a time element to confu
     void operator+=(double);    //!< Add system energy change
     string info() {
+      write();                  //!< Print dynamics of system energy 
       ostringstream o;
       o << endl << "# SYSTEM ENERGY (kT):" << endl;
       if (uavg.sum>0)
@@ -69,6 +74,15 @@ class systemenergy : public analysis {
         << "#   Absolute drift     = " << abs(cur-sum) << endl;
       return o.str();
     }
+    string confuout() {
+      int j=confu.size();
+      ostringstream o;
+      o << endl << "# SYSTEM ENERGY (kT):"<< endl;
+      for (int i=0;i<j;i++)
+        o << i+1 << " " << confu[i] << endl;
+      return o.str();
+    }
+    void write(); 
 };
 
 /*! \brief Widom method for excess chemical potentials
@@ -323,6 +337,27 @@ class twostatebinding : public analysis {
         o << "#   Site excess      = " << conc.avg()/bulkconc
           << " (" << -log(conc.avg()/bulkconc) << " kT)" << endl;
       return o.str();
+    }
+};
+
+class aggregation :public analysis {
+  private:
+    vector<macromolecule*> g;
+    container *con;
+    vector<int> dist;  // Vector to store the histogram
+    vector<macromolecule*> agg;
+    vector<macromolecule*> unagg;
+    double CNT;
+    hardsphere coll;
+    double sep;
+  public:
+    aggregation(container &, vector<macromolecule> &i, double);
+    void count();
+    void write(string);
+    string info() {
+      ostringstream o;
+      o << endl
+        << "# AGGREGATION COUNT"<< endl<<endl;
     }
 };
 

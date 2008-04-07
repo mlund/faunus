@@ -5,11 +5,19 @@ systemenergy::systemenergy(double u_init) {
   u0=u_init;
   sum=u0;
   cur=u0;
+  confu.clear();
 }
 void systemenergy::update(double energy) {
   cur=energy;
   uavg+=cur;
   u2avg+=cur*cur;
+}
+void systemenergy::track() {
+  confu.push_back(sum);
+}
+void systemenergy::write() {
+  if (confu.size())
+    fio.writefile("systemenergy.dat", confuout() );
 }
 void systemenergy::operator+=(double du) { sum+=du; }
 
@@ -96,3 +104,58 @@ bool distributions::write(string name)
 {
   return fio.writefile(name, info() );
 }
+
+//aggregation
+aggregation::aggregation(container &C, vector<macromolecule> &G, double s) {
+  con=&C;
+  g.clear();
+  for (int iter=0;iter<G.size();iter++)
+    g.push_back(&(G[iter]));
+  //g=&G;
+  CNT=0;
+  dist.clear();
+  dist.resize(g.size(), 0);
+  sep=s;  
+}
+void aggregation::count() {
+  ++CNT;
+  for (int k=0; k<g.size();k++) {  //start looking for aggregates around k
+  //prepare the vectors
+    agg.clear();
+    unagg.clear();
+    for (int iter=0;iter<g.size();iter++)
+      if (iter!=k)
+        unagg.push_back(g[iter]);
+    agg.push_back(g[k]);
+  //start looking
+    for (int i=0; i<agg.size(); i++){
+      for (int j=0; j<unagg.size(); j++)
+        if (coll.overlap(con->p, *agg[i], *unagg[j], sep) ) // Find the aggregated
+          agg.push_back(unagg[j]);                              // pairs
+      for (int i=0; i<agg.size(); i++)   
+        for (int j=0; j<unagg.size(); j++)
+          if (agg[i]==unagg[j]) {
+            unagg.erase(unagg.begin()+j);                   // Remove any found from
+            j--;                                            // unagg
+          } 
+    } 
+    dist[agg.size()-1]++;                                     // One aggregate of size
+    if (agg.size()+unagg.size()!=g.size()) {
+      cout <<" Error in aggregation::count()"<<endl
+           <<" g.size() = agg.size()+unagg.size()"<<endl
+           <<"    "<< g.size()<<" = "<<agg.size()<<" +  "<<unagg.size()<<endl;
+    }
+  }
+}
+void aggregation::write(string file) {
+  ofstream f(file.c_str());
+  if (f) {
+    for (int i=0;i<g.size();i++) {
+      if (dist[i]!=0)
+        f << i+1 << "  "<<double(dist[i])/double((i+1))/CNT/g.size() <<endl;
+   
+    }
+    f.close();
+  }
+}
+//

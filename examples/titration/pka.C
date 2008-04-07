@@ -1,3 +1,4 @@
+
 #include <iostream>
 #include "analysis.h"
 #include "container.h"
@@ -45,6 +46,7 @@ int main(int argc, char* argv[]) {
           protein.dipole(con.p);            // Re-calc. dipole moment
           break;
       }
+      //sys.track();
     }                                       // END of micro loop
     sys.update(pot.energy(con.p));          // Update system energy
     aam.save("confout.aam", con.p);         // Save config. to disk

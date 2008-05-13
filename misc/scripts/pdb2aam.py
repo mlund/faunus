@@ -14,6 +14,8 @@
 from Scientific.IO.PDB import *
 import sys
 
+# ---------- FUNCTIONS: -----------
+
 def atomWeight(atom):
   s=atom.__getitem__("name")
   #if atom.type=="ATOM":
@@ -38,9 +40,8 @@ def cm(res):
 def findTitAtom(res):
   s="UNK"
   if res.name=="NTR":
-    for atom in res:
-      if atom.name=="N":
-        return atom
+    if res[0].name=="N":
+      return res[0]
   if res.name=="ASP": s="OD"
   if res.name=="GLU": s="OE"
   if res.name=="HIS": s="ND"
@@ -53,6 +54,11 @@ def findTitAtom(res):
       return atom
   return False
 
+def aamStr(resname,number,pos,z,mw,r):
+  return resname+" " + str(number) +" " \
+      + str(pos[0])+" "+str(pos[1])+" "+str(pos[2])+" "\
+      + str(z) + " " + str(mw) + " " + str(r)
+
 def aamString(res,atom):
   z=0.0
   mw=0
@@ -61,13 +67,30 @@ def aamString(res,atom):
       + str(atom.position[0])+" "+str(atom.position[1])+" "+str(atom.position[2])+" "\
       + str(z) + " " + str(mw) + " " + str(r)
 
+# get Name, charge and weight
+def findHetatom(name):
+  r=False
+  if name=="CA": r=[2,40.078]
+  if name.find("V")==0: r=[4,50.94]   # III,IV,V
+  #if name.find("MG")==0: r=[2,24.3]
+  if name.find("FE")==0: r=[2,55.85]  # II,III
+  if name.find("CO")==0: r=[3,58.93]
+  if name.find("CU")==0: r=[2,63.55]  # I,II
+  if name.find("CR")==0: r=[3,51.996]
+  if name.find("ZN")==0: r=[2,65.409]
+  if name.find("MN")==0: r=[4,54.938] # II,IV
+  return r
+
+# ---------- MAIN PROGRAM -----------
+
 # Load PDB file
-model="MESO"
-infile="test.pdb"
+model="DUMMY"
+infile="1jb0.pdb"
 conf = Structure(infile)
 
 # Loop over chains in PDB file
-nchain=0
+nchain=0  # Chain counter
+aam=[]    # Array of aam lines
 for chain in conf.peptide_chains:
   nchain+=1
   line=[]
@@ -93,7 +116,7 @@ for chain in conf.peptide_chains:
 
   # Take care of NTR and CTR
   first=0
-  last=chain.__len__()-1
+  last=len(chain)-1
   chain[first].changeName("NTR")
   chain[last].changeName("CTR")
   for n in [first, last]:
@@ -110,5 +133,24 @@ for chain in conf.peptide_chains:
     f.write(l+"\n")
   f.close()
 
-sys.exit(0)
+  # Add AAM info to array
+  aam.append(line[:])
 
+# Write an AAM file with ALL chains and relevant HETATOM's
+# Search for HETATOM's
+line=[]
+for res in conf:
+  for atom in res:
+    if atom.type()=="HETATM":
+      name=atom.__getitem__("name")
+      het=findHetatom(name)
+      if het!=False:
+        line.append( aamStr(name,res.number,atom.position,het[0],het[1],3.0) )
+aam.append(line[:])
+n=0
+for chain in aam:
+  n+=len(chain)
+print n
+for chain in aam:
+  for line in chain:
+    print line

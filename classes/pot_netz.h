@@ -6,7 +6,7 @@
 /*! \brief Coulomb potential w. an extra empirical PMF
  *  \author Mikael Lund 
  */
-class pot_netz : public pot_coulomb {
+class pot_netz : public pot_hscoulomb {
   private:
     inline double simple(particle::type &id) {
       switch (id) {
@@ -67,15 +67,15 @@ class pot_netz : public pot_coulomb {
           + D1*exp( -D3*pow(z-D2,2)  ) ) / f;
     }
   public:
-    pot_netz( pot_setup &pot ) : pot_coulomb( pot ) {
-     name+="/Empirial PMF (SAM)";
+    pot_netz( pot_setup &pot ) : pot_hscoulomb( pot ) {
+     name+="/Empirial PMF (AIR)";
      cite="PRL 2007, 99, 226104";
     }
     inline double hypairpot(particle &p1, particle &p2, double r) {
       if (p1.hydrophobic==true)
-        return sam(r-p1.radius, p2.id); // c2c -> surface2center
+        return air(r-p1.radius, p2.id); // c2c -> surface2center
       else if (p2.hydrophobic==true)
-        return sam(r-p2.radius, p1.id);
+        return air(r-p2.radius, p1.id);
       return 0;
     }
 };

@@ -26,6 +26,12 @@ string pot_minimage::info() {
   return o.str();
 }
 
+string pot_hscoulomb::info() {
+  ostringstream o;
+  o << pot_hs::info()
+    << "#   Bjerrum length    = " << f << endl;
+  return o.str();
+}
 string pot_coulomb::info() {
   ostringstream o;
   o << pot_lj::info()

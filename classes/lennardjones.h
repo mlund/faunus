@@ -42,4 +42,33 @@ class pot_lj {
       return o.str();
     }
 };
+
+/*!
+ *  \brief Hardsphere potential
+ *  \author Mikael Lund
+ *  \date Prague, 2008
+ */
+class pot_hs {
+  public:
+    string name; //!< Arbitrary name
+    string cite; //!< Litterature reference
+    double f;    //!< Factor to convert to kT (used after energy summations)
+    pot_hs(double dummy=0) {
+      name="Hardsphere";
+      f=1;
+    }
+    inline double hs(particle &p1, particle &p2, double &r2) {
+      register double s=p1.radius+p2.radius;
+      return (r2>s*s) ? 0 : 99999.;
+    }
+    inline void hs(particle &p1, particle &p2, double &r2, double &u) { u+=hs(p1,p2,r2); }
+    virtual void setvolume(double) {}; //!< Function to specify volume for fluctuating periodic boundaries
+    virtual string info() {
+      ostringstream o;
+      o << "#   Type              = " << name << endl;
+      if (cite.length()!=0)
+        o << "#   Reference         = " << cite << endl;
+      return o.str();
+    }
+};
 #endif

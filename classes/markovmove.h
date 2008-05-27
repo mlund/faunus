@@ -156,12 +156,17 @@ class translate : public markovmove {
  */
 class isobaric : public markovmove {
   public:
-    isobaric( ensemble&, container&, interaction<T_pairpot>&, double);
+    isobaric( ensemble&, container&, interaction<T_pairpot>&, double, double, int);
     string info();
     void move(group &, unsigned short);  //!< Pressure scale group
     void move(unsigned short, group &,...);
     double move(vector<macromolecule> &);
     average<float> vol, vol2, len, len2;
+    double pen;
+    vector<double> penalty;
+    void loadpenaltyfunction(string);
+    void printpenalty(string, histogram &);
+    void printpenalty(string);
   private:
     unsigned short N;
     interaction<T_pairpot> trialpot; // Copy of potential class for volume changes
@@ -169,6 +174,7 @@ class isobaric : public markovmove {
     double newV;      // New volume
     void newvolume();
     void accept();
+    vector<double> newpenalty;
 };
 
 /*! \brief Rotate group around its mass-center.
@@ -734,13 +740,62 @@ double HAchargereg::energy( vector<particle> &p, double du, titrate::action &a )
 isobaric::isobaric (
   ensemble &e,
   container &c,
-  interaction<T_pairpot> &i, double pressure) : markovmove(e,c,i), trialpot(i) {
+  interaction<T_pairpot> &i, double pressure, double PEN,int maxsize ) : markovmove(e,c,i), trialpot(i) {
     name="ISOBARIC";
     cite="none so far";
     P=pressure;
-    runfraction=0.30;
+    runfraction=0.10;
     dp=100; 
     N=0;
+    penalty.clear();
+    penalty.resize(maxsize,0);
+    pen=PEN;
+    newpenalty.clear();
+    newpenalty.resize(maxsize,0);
+}
+void isobaric::printpenalty(string file, histogram &ld) {
+  ofstream f(file.c_str());
+  if (f) {
+    int j=penalty.size();
+    f.precision(12);
+    for (int i=0; i<j; i++)
+        f << i <<" "<< penalty[i]+newpenalty[i]/cnt+log(ld.get(i))<<endl;
+    f.close();
+  }
+}
+void isobaric::printpenalty(string file) {
+  ofstream f(file.c_str());
+  if (f) {
+    int j=penalty.size();
+    f.precision(12);
+    for (int i=0; i<j; i++)
+        f << i <<" "<< penalty[i]<<endl;
+    f.close();
+  }
+}
+void isobaric::loadpenaltyfunction(string file) {
+  vector<string> v;
+  string s;
+  v.clear();
+  ifstream f(file.c_str() );
+  if (f) {
+    while (getline(f,s))
+      v.push_back(s);
+    f.close();
+    cout << "# Penalty function loaded!! Let's go biased" << endl;
+  }
+  else cout << "# WARNING! Penalty function " << file << " NOT READ!\n";
+  short c=v.size();
+  double val;
+  int bin;
+  for (short i=0;i<c;i++) {
+    val=0;
+    bin=0;
+    stringstream o;
+    o << v[i];
+    o >> bin >> val;
+    penalty[bin]=val;
+  }
 }
 string isobaric::info() {
   ostringstream o;
@@ -801,10 +856,14 @@ double isobaric::move(vector<macromolecule> &g) {
   unew = trialpot.energy(con->trial);         // calc. new energy using a COPY of the potential class
   du = unew-uold;
   dh = du + P*dV-(i+1)*log( newV/con->getvolume() );
+  if (pen!=0) 
+    dh += penalty[int(pow(newV,1./3))]-penalty[int(pow(con->getvolume(),1./3))];
   if (ens->metropolis(dh)==true) {
     accept();
     for (unsigned short n=0; n<i; n++) 
       g[n].accept(*con);
+    if (pen!=0)
+      newpenalty[int(pow(con->getvolume(),1./3))]+=pen;
     return du;
   } else rc=ENERGY;
   du=0;
@@ -813,6 +872,8 @@ double isobaric::move(vector<macromolecule> &g) {
     g[n].undo(*con);
   vol += con->getvolume();
   vol2+= pow(con->getvolume(),2);
+  if (pen!=0)
+    newpenalty[int(pow(con->getvolume(),1./3))]+=pen;
   len += pow(con->getvolume(),1./3);
   len2+= pow(con->getvolume(),2./3);
   return du;

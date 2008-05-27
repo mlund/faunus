@@ -16,6 +16,8 @@ voldp      $voldp
 pressure   $pressure
 e_r        $e_r
 kappa      $kappa
+max        $max
+penalty    $penalty
 " > isobaric.conf
 }
 
@@ -33,7 +35,9 @@ voldp=1.00
 pressure=0.000001
 kappa=0.050  #  0.147
 e_r=78.67
-for LJeps in 0.00 
+max=1000
+penalty=0.1
+for LJeps in 0.20 
 do
   rm confout.aam
   suffix=".lj-${LJeps}"

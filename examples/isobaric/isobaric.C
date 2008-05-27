@@ -30,14 +30,14 @@ int main() {
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   iogro gro(cell, in);                  // Gromacs file output for VMD etc.
   rdf protrdf(0,0,.5,cell.len/2.);      // Protein and salt radial distributions
-  histogram lendist(1,0,500);           //  
-
 
   vector<macromolecule> g;                      // PROTEIN groups
   ioxyz xyz(cell);
-  ioaam aam(cell);                      //   Protein input file format is AAM
-  aam.load(cell, in, g);                //   Load and insert proteins
-  g[0].center(cell);                    //   Center first protein (will be frozen)
+  ioaam aam(cell);
+  if (in.getboo("lattice")==true)           //   Protein input file format is AAM
+    aam.loadlattice(cell, in, g);                //   Load and insert proteins
+  else                                      //   Center first protein (will be frozen)
+    aam.load(cell, in, g);
   if (aam.load(cell,"confout.aam")) {
     for (int i=0;i<g.size();i++) 
       g[i].masscenter(cell);              // Load old config (if present)
@@ -47,11 +47,13 @@ int main() {
   macrorot mr(nvt, cell, pot);          //   Class for macromolecule rotation
   translate mt(nvt, cell, pot);         //   Class for macromolecular translation
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
-  isobaric vol(nvt, cell, pot, in.getflt("pressure"));
-//  if (in.getflt("voldp"))
-    vol.dp=in.getflt("voldp");
-
+  isobaric vol(nvt, cell, pot, in.getflt("pressure"), in.getflt("penalty"), in.getflt("max"));
+  histogram lendist(1,0,in.getint("max"));           //  
+  
+  vol.dp=in.getflt("voldp");
+  mt.dp=in.getflt("mvdp");
   cout << cell.info();// << pot.info();    // Print information to screen
+
 
   #ifdef GROMACS
   ioxtc xtc(cell, cell.len);            // Gromacs xtc output (if installed)
@@ -69,22 +71,20 @@ int main() {
         case 1:                                 // Rotate proteins
           for (n=0; n<g.size(); n++) {          //   Loop over all proteins
             i = rand() % g.size();              //   and pick at random.
-            if (i>0)                            //   (freeze 1st molecule)
-              sys+=mr.move(g[i]);               //   Do the move.
+            sys+=mr.move(g[i]);                 //   Do the move.
           }
           break;
         case 2:                                 // Translate proteins
           for (n=0; n<g.size(); n++) {          //   Loop over all proteins
             i = rand() % g.size();              //   and pick at random.
-            if (i>0)                            //   (freeze 1st molecule)
-              sys+=mt.move(g[i]);               //   Do the move.
+            sys+=mt.move(g[i]);                 //   Do the move.
             for (j=0; j<g.size(); j++)          //   Analyse g(r)...
               if (j!=i && macro>1)
                 protrdf.update(cell,g[i].cm,g[j].cm);
           }
           break;
       }
-      if (macro==1 && micro<1e3) {
+      if (macro==0 && micro<1e3) {
         mt.adjust_dp(30,40);                    // Adjust displacement
         mr.adjust_dp(40,50);                    // parameters. Use ONLY
         vol.adjust_dp(20,30);                    // during equillibration!
@@ -102,6 +102,7 @@ int main() {
     cell.check_vector();                        // Check sanity of particle vector
     gro.save("confout.gro", cell);              // Write GRO output file
     protrdf.write("rdfprot.dat");               // Write g(r)'s
+    vol.printpenalty("penalty.dat", lendist);
     lendist.write("length-distribution.dat");                  // Write volume distribution
 
   } // End of outer loop

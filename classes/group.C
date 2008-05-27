@@ -401,8 +401,14 @@ void macromolecule::add(container &con, inputfile &in ) { }
 void macromolecule::isobaricmove(container &con, double newlen) {
   double oldvol=con.getvolume(); // store original volume
   con.scale(cm_trial, newlen);   // scale mass center
+  point CM_trial=cm_trial;
+  move(con, -cm );       // move with old boundaries
   con.setvolume(pow(newlen,3));  // the boundary function needs the trial volume...
-  move(con, cm_trial-cm );       // apply periodic boundaries
+  for (short i=beg;i<=end;i++) {
+    con.trial[i]+= CM_trial;
+    con.boundary(con.trial[i]);
+  }
+  cm_trial=CM_trial;
   con.setvolume(oldvol);         // restore original volume
 }
 

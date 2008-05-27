@@ -92,6 +92,7 @@ class ioaam : public iopart {
     ioaam(species &);
     vector<particle> load(string);
     void load(container&,inputfile&,vector<macromolecule>&);//!< Read proteins from disk
+    void loadlattice(container&,inputfile&,vector<macromolecule>&);//!< Read proteins from disk on to a lattice
     bool load(container &, string); //!< Reads a configuration from disk
     bool save(string, vector<particle>&);
 };

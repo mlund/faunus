@@ -108,12 +108,60 @@ void ioaam::load(container &con, inputfile &in, vector<macromolecule> &g) {
     if (nprot>0)
       for (short i=0; i<nprot; i++) {
         macromolecule m;
-        m.add(con, load(in.getstr(os_file.str())), true );
+        m.add(con, load(in.getstr(os_file.str())), true ); 
         m.name = in.getstr(os_file.str());
         m.masscenter(con);
         g.push_back(m);
       }
   } while (nprot>0);
+}
+void ioaam::loadlattice(container &con, inputfile &in, vector<macromolecule> &g) {
+  ostringstream n_prot;
+  short pcnt=1, n, N=0, unitclen;
+  double len;
+  n_prot << "nprot" <<pcnt++;
+  n=in.getint(n_prot.str(),0);  //Determine the number of proteins
+  if (n!=0) {
+    N+=n;
+    n_prot.flush();
+    n_prot << "nprot" <<pcnt++;
+    n=in.getint(n_prot.str(),0);
+  }
+  len=pow(con.getvolume(),1./3);    //Calculate the length of a unit cell
+  unitclen=pow(N,1./3);
+  len/=(unitclen+1);
+  short cnt=1,nprot;
+  do {
+    ostringstream os_prot,os_file;
+    os_prot << "nprot" << cnt;
+    os_file << "protein" << cnt++;
+    nprot = in.getint(os_prot.str(), 0);
+    if (nprot>0)
+      for (short i=0; i<nprot; i++) {
+        macromolecule m;
+        m.add(con, load(in.getstr(os_file.str())), false ); 
+        m.masscenter(con);
+        m.center(con);
+        m.name = in.getstr(os_file.str());
+        g.push_back(m);
+      }
+  } while (nprot>0);
+  point P;
+  n=0;
+  for (short p=0;p<unitclen+1;p++){
+    P.x=len*p;
+    for (short q=0; q<unitclen+1;q++){
+      P.y=len*q;
+      for (short r=0; r<unitclen+1;r++){
+        P.z=len*r;
+        if (n<g.size()) {
+          g[n].move(con, P);
+          g[n].accept(con);
+          n++;
+        }
+      }
+    }
+  }
 }
 
 //----------------- IOXYZ ----------------------

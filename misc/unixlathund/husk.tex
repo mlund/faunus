@@ -1,31 +1,78 @@
 \documentclass[a4paper,10pt]{article}
 \usepackage[a4paper,vmargin={2cm,2.2cm}, hmargin={1.5cm}]{geometry}
 
-\pagestyle{empty}
+%\pagestyle{empty}
 \begin{document}
 
-\section{Home directories}
+\begin{center}
+\Huge
+\textbf{A handy ``Lathund''\\ for MacOS X \& Linux\footnote{To a lesser extent.}}\\
+\normalsize
+\vspace{0.5cm}
+\emph{By Mikael Lund, Bj\"orn Persson. Last updated \today}
+\end{center}
+
+\tableofcontents
+
+\section{Specific to Theoretical Chemistry, Lund University}
+\subsection{Home directories (most likely outdated?)}
 User home directories are served via NFS by \verb'garm.teokem.lu.se'. Some
 versions of Linux are not entirely compatible with MacOS which can cause
 problems with file locking. This is used in \verb+Mail.app+, \verb+Address Book.app+
 etc. and these programs will NOT work when home is on garm (as of
 writing, Dec. 2006). To circumvent this \verb+~/Library+ can be placed on a
 local disk and a symlink placed in the home directory (ln -s).
-
 To setup MacOS for NFS to garm I suggest using the free program
-\verb+NFS manager+ by Bresink -- see
-\verb+http://www.bresink.com/osx/NFSManager.html+.
-There you will also find a very nice manual on integrating MacOS in NFS
+\verb+NFS manager+ by Bresink.
+There you will also find a nice manual on integrating MacOS in NFS
 and NIS environments. When setup, the mount point can be checked in
 \verb+NetInfo Manager+ and should have the following options: \verb+-s,-P,-b+.
 A restart is most likely required for the changes to take effect.
 
+\section{Graphics}
+\subsection{Convert vector graphics to bitmap with defined size and resolution}
+This is useful for Word documents where correct graphic dimensions/resolution should be maintained \emph{before} importing. A hassle, but here's one way of doing it:
+\begin{enumerate}
+\item Open vector graphics in Preview.app
+\item Create a new paper size in the desired format.
+\item Print to PDF, selecting the new paper format.
+\item Open new PDF in Gimp. You will be prompted for a resolution (DPI).
+\item Save bitmap file to png, tiff etc.
+\end{enumerate}
+This could likely be done easier using ImageMagick's \verb"convert" command.
 
-\begin{table}
+\subsection{Making vector illustrations}
+Vector illustrations can be made in a number of different programs such as
+\verb+Pages+, \verb+Keynote+, \verb+Powerpoint+ etc. To export them to a PDF file do as follows:
+\begin{enumerate}
+\item Create illustration and select the objects you wish to export.
+\item Select \verb+Edit->Copy+
+\item Launch Preview.app and select \verb+File->New From Clipboard+.
+\item Export to PDF or any other format.
+\end{enumerate}
+
+\section{Software Ports}
+...are handy interfaces to automatically download and install a large number of open source software. Usually they require that Xcode -- Apple's developer and compiler tools -- are installed.
+
+\subsection{Macports}
+\begin{itemize}
+\item \verb"port search keyword" -- search for a package.
+\item \verb+port variants packagename+ -- show \emph{variants} of a package.
+\item \verb"sudo port install packagename" -- install a package.
+\item \verb"sudo port install emacs +x11" -- install emacs variant with X11 support.
+\item \verb"sudo port -d selfupdate" -- update entire package system (do this only occasionally).
+\end{itemize}
+Useful packages are \verb+grace gnuplot povray sshfs vim aspell wget gawk tetex findutils+
+\subsection{Fink}
+
+\newpage
+\section{Table of useful commands}
+\begin{table}[h]
+\begin{small}
 \begin{tabular}{ll}\hline\hline
 Action              & Command \\\hline
 Pause/resume job    & \verb"kill -s STOP|CONT pid" \\
-Suicide             & \verb"kill -9 -1"\\
+Suicide!            & \verb"kill -9 -1"\\
 Launch logout-safe job  & \verb"nohup utility &" \\
 \\
 Drive information   & \verb"df -h"\\
@@ -57,7 +104,7 @@ System information  & \verb"cat /proc/cpuinfo" (linux) \\
 X11 focus           & \verb"defaults write com.apple.X11 wm_ffm -bool true"\\
 Terminal.all focus  & \verb"defaults write com.apple.Terminal FocusFollowsMouse -string YES"\\
 \\
-Get svn repository   & \verb"svn checkout http://opensvn.csie.org/molecularmc/trunk molecularmc"\\
+Get svn repository   & \verb"svn checkout URL destdir"\\
 Update to latest repository & \verb"svn update"\\
 Review changes       & \verb"svn status" (go to top level dir to see all)\\
 Compare with latest repository & \verb"svn status -u" (if astrisks, update)\\
@@ -69,7 +116,9 @@ Regret and undo modification & \verb"svn revert foo"\\
 Remove conflict files        & \verb"svn resolved"(not need if using revert)\\
 \hline
 \end{tabular}
+\end{small}
 \end{table}
+
 
 \end{document}
 

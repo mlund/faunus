@@ -1,13 +1,13 @@
 \documentclass[a4paper,10pt]{article}
 \usepackage[a4paper,vmargin={2cm,2.2cm}, hmargin={1.5cm}]{geometry}
-
-%\pagestyle{empty}
+\usepackage{hyperref}
+\hypersetup{pdftex,bookmarks=true,bookmarksopen=true,colorlinks=true}
 \begin{document}
 \renewcommand{\thefootnote}{\fnsymbol{footnote}}%A sequence of nine symbols (try it and see!)
 
 \begin{center}
 \Huge
-\textbf{The Foxy ``Lathund''\\ for MacOS X \& Linux\footnote[2]{To a lesser extent.}}\\
+\textbf{The Foxy \emph{Lathund}\\ for MacOS X \& Linux\footnote[2]{To a lesser extent.}}\\
 \normalsize
 \vspace{0.5cm}
 \emph{By Mikael Lund and Bj\"orn Persson.
@@ -45,7 +45,7 @@ Vector illustrations can be made in a number of different programs such as
 \center
 \begin{tabular}{ll}\hline\hline
 Action              & Command \\\hline
-Crop PDF borders & \verb"pdfcrop file.pdf" \\
+Crop blank PDF borders & \verb"pdfcrop file.pdf" \\
 Convert PDF/EPS to 300 dpi tiff & \verb"convert -compress lzw -density 300x300 in.pdf out.tif" \\
 Convert Xmgrace plot to pdf     & \verb"xmgrace -hardcopy -hdevice PDF file.agr"\\
 Convert to monochrome           & \verb"convert -threshold 38% -despeckle out.jpg -monochrome in.jpg"\\
@@ -69,7 +69,7 @@ For this \verb+sshfs+ needs to be installed -- for example using MacPorts or Mac
 
 \verb+$ sshfs milleotto.lunarc.lu.se:/disk/global/mikael mntdir+\\
 
-\noindent The remote disk will appear in ``mntdir'' and you'll have full read and write access. To unmount, simply do ``\verb+umount mntdir+''. As usual ``-C'' will enable compression.
+\noindent The remote disk will appear in ``mntdir'' and you'll have full read and write access. To unmount, simply do ``\verb+umount mntdir+''. As usual ``-C'' will enable compression. \textbf{Important:} if the mntdir resides in your home directory, the remote disk may be included in the daily backup!
 
 \subsection{Printing}
 \subsubsection{Automatic CUPS detection}
@@ -84,7 +84,7 @@ If auto-detection fails, try adding ``ServerName SERVER'' to /etc/cups/client.co
 
 \section{Software}
 \subsection{Port Managers}
-...are handy interfaces to automatically download and install a large number of open source software. Usually they require that Xcode -- Apple's developer and compiler tools -- are installed.
+...are handy interfaces to automatically download and install a large number of open source software in a self-consistent manner. Usually they require that Xcode -- Apple's developer and compiler tools -- are installed.
 \subsubsection{Macports}
 \begin{table}[h!]
 \center
@@ -123,10 +123,50 @@ To fetch the newest revision from the subversion repository, do\\
 
 \noindent Make sure to specify the compiler in the Makefile -- in particular parallel execution works, as of now, much better on Intels C++ compiler than with g++.
 
-\subsection{Prehistoric ACE/gr or ``Xmgr''}
-Yikes! This is a hassle to compile on recent versions of MacOS, maybe because development has been frozen for a decade! Someone should give it another go with gfortran or similar. I have a PowerPC version running (compiled via Fink) on an Intel mac -- works nicely via the transparent rosetta emulation. Detailed instructions to follow.
+\subsection{ACE/gr or ``Xmgr''}
+Yikes! This is a hassle to compile on recent versions of MacOS since development has been discontinued for a decade. PowerPC versions (compiled via Fink) run on Intel macs via transparent rosetta emulation. I have ideas for a more robust solution...soon to follow.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\LaTeX{} typesetting}
+\subsection{Getting started}
+\begin{enumerate}
+\item Create a \LaTeX{} file, ``test.tex'', for example from the following template that shows some of the basic commands:
+\begin{verbatim}
+\documentclass[a4paper,12pt]{article}
+\usepackage[a4paper,vmargin={2cm,2.2cm}, hmargin={1.5cm}]{geometry}
+\usepackage{hyperref} % Enables clickable links for on screen reading
+\usepackage{graphicx} % Enables graphics import
+\hypersetup{pdftex,bookmarks=true,bookmarksopen=true,colorlinks=true}
+\begin{document}
+\section{Some section}
+\subsection{Some subsection}
+This is Equation~\ref{coulomb}:
+\begin{equation}
+\beta u = \frac{l_b z_iz_j}{r_{ij}} \cdot \exp({-\kappa r_{ij}})
+\label{coulomb}
+\end{equation}
+...and some inline math, $\sqrt{x}$, like this.
+
+Also web-links can be useful for on screen reading:
+\href{http://www.bmj.com/cgi/content/full/319/7225/1596}{[Exciting experiments]}
+\end{document}
+\end{verbatim}
+\item Compile with: \verb"pdflatex test.tex" to automatically produce a PDF file with hyperlinks and bookmarks.
+\end{enumerate}
+Note that using pdf\LaTeX{} any graphics inserted with \verb"\includegraphics" must be in the format pdf, png, jpg, mps, or tif. EPS files \emph{cannot} be used with pdf\LaTeX{} and must be converted first. For example:\\
+
+\verb"$ epstopdf file.eps"
+
+\subsection{Attaching papers to a document}
+Insert \verb"\usepackage{pdfpages}" in the header and attach pdf files -- anywhere -- with\\
+
+\verb"\includepdf[pages=-]{file.pdf} % For all pages in the file"\\
+
+\verb"\includepdf{file.pdf} % For the first page only"\\
+
+\noindent Fancy stuff like scaling and advanced page layouts are possible; see the manual for \verb"pdfpages".
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \newpage
 \section{Table of useful commands}
 \begin{table}[h]
@@ -174,7 +214,7 @@ Remove conflict files        & \verb"svn resolved"(not need if using revert)\\
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Specific to Theoretical Chemistry, Lund University}
-\subsection{Home directories (most likely outdated?)}
+\subsection{Home directories (outdated?)}
 User home directories are served via NFS by \verb'garm.teokem.lu.se'. Some
 versions of Linux are not entirely compatible with MacOS which can cause
 problems with file locking. This is used in \verb+Mail.app+, \verb+Address Book.app+

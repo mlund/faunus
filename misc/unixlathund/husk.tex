@@ -7,7 +7,7 @@
 
 \begin{center}
 \Huge
-\textbf{The Foxy \emph{Lathund}\\ for MacOS X \& Linux\footnote[2]{To a lesser extent.}}\\
+\textbf{The Foxy $\mathcal{LATHUND}$\\ for MacOS X \& Linux\footnote[2]{To a lesser extent.}}\\
 \normalsize
 \vspace{0.5cm}
 \emph{By Mikael Lund and Bj\"orn Persson.
@@ -59,21 +59,36 @@ Print syntax-highlighted source code & \verb"enscript --media=a4 -E sourcefile"\
 \subsection{Access scientific journals from home}
 Establish an encrypted SSH-tunnel to any computer situated on campus:
 \begin{enumerate}
-\item From home: \verb+$ ssh -D 9999 username@host.at.campus+
+\item From home: \verb+ssh -D 9999 username@host.at.campus+
 \item In \verb+System Preferences->Network->Advanced->Proxies+ set SOCKS proxy to \verb+localhost+, port 9999.
 \end{enumerate}
 All your web browsing will now appear as if you are situated inside campus. If you have a slow connection, you may want to add ``-C'' in the ssh command to enable compression.  When you close the ssh connection you must again remove the proxy setting in the network preferences to return to ``normal'' browsing.
+
+\subsection{Automatic SSH login}
+This will allow login/scp to ssh servers without entering your password:
+\begin{enumerate}
+\item Protect your local .ssh dir: \verb"chmod 700 ~/.ssh"
+
+\item If you haven't got one, create a public ssh key.
+Look at \verb"~/.ssh". If you see a file named id\_dsa.pub then you already have a public key. If not, create one with: \verb"ssh-keygen -t dsa"
+
+\item Transfer your public key to the remote server:\\
+
+\verb"$ cat ~/.ssh/id_dsa.pub | ssh user@server 'cat >> ~/.ssh/authorized_keys'"\\
+
+(In this step you may be able to use \verb"ssh-copy-id user@server" instead.)
+\end{enumerate}
 
 \subsection{Mount remote disks from SSH-servers}
 For this \verb+sshfs+ needs to be installed -- for example using MacPorts or MacFUSE. In this example we will mount /disk/gloabal/mikael from the host milleotto,\\
 
 \verb+$ sshfs milleotto.lunarc.lu.se:/disk/global/mikael mntdir+\\
 
-\noindent The remote disk will appear in ``mntdir'' and you'll have full read and write access. To unmount, simply do ``\verb+umount mntdir+''. As usual ``-C'' will enable compression. \textbf{Important:} if the mntdir resides in your home directory, the remote disk may be included in the daily backup!
+\noindent The remote disk will appear in ``mntdir'' and you'll have full read and write access. To unmount, simply do \verb+umount mntdir+. As usual ``-C'' will enable compression. \textbf{Warning:} if the mntdir resides in your home directory, the remote disk may be included in the hourly/daily backup!
 
 \subsection{Printing}
 \subsubsection{Automatic CUPS detection}
-For some reason, CUPS printer detection has been disable in some versions of MacOS (10.5, higher?). Use the following command to re-enable automatic discovery:\\
+CUPS printer detection has been disable in some versions of MacOS (10.5, higher?). Use the following command to re-enable automatic discovery:\\
 
 \verb+cupsctl BrowseRemoteProtocols=cups+
 
@@ -84,7 +99,7 @@ If auto-detection fails, try adding ``ServerName SERVER'' to /etc/cups/client.co
 
 \section{Software}
 \subsection{Port Managers}
-...are handy interfaces to automatically download and install a large number of open source software in a self-consistent manner. Usually they require that Xcode -- Apple's developer and compiler tools -- are installed.
+$\mathcal{A}$re handy interfaces to automatically download and install a large number of open source software in a self-consistent manner. Usually they require that Xcode -- Apple's developer and compiler tools -- are installed.
 \subsubsection{Macports}
 \begin{table}[h!]
 \center
@@ -122,6 +137,14 @@ To fetch the newest revision from the subversion repository, do\\
 \verb+$ svn checkout http://faunus.svn.sourceforge.net/svnroot/faunus/trunk faunus+\\
 
 \noindent Make sure to specify the compiler in the Makefile -- in particular parallel execution works, as of now, much better on Intels C++ compiler than with g++.
+
+\subsection{Grace}
+Some tips:
+\begin{itemize}
+\item White borders in graphs can be removed in \LaTeX{} by including graphs with\\
+
+\verb+\includegraphics[clip]+
+\end{itemize}
 
 \subsection{ACE/gr or ``Xmgr''}
 Yikes! This is a hassle to compile on recent versions of MacOS since development has been discontinued for a decade. PowerPC versions (compiled via Fink) run on Intel macs via transparent rosetta emulation. I have ideas for a more robust solution...soon to follow.
@@ -165,6 +188,29 @@ Insert \verb"\usepackage{pdfpages}" in the header and attach pdf files -- anywhe
 \verb"\includepdf{file.pdf} % For the first page only"\\
 
 \noindent Fancy stuff like scaling and advanced page layouts are possible; see the manual for \verb"pdfpages".
+
+\subsection{Attaching files to a document}
+Files (programs, images etc.) can be attached to PDF documents. In pdf\LaTeX{} this is done via the \verb"attachfile" package that allows file insertion with \verb"\attachfile{filename}".
+
+\subsection{Using \LaTeX{} commands in EPS figures}
+Text labels in eps files generated with Xmgr, gnuplot etc. can be replaced with \LaTeX{} commands for advanced math symbols and equations.
+\begin{enumerate}
+\item Do something like this:
+\begin{verbatim}
+\documentclass{article}
+\usepackage[on]{auto-pst-pdf}
+\begin{document}
+
+\begin{figure}
+\psfrag{_X}{$\sqrt{x+y}$} % Replace "_X" in fig with latex math.
+\includegraphics{epsfile.eps}
+\end{figure}
+
+\end{document}
+\end{verbatim}
+\item latex/pdflatex with the argument \verb"-shell-escape" to produce either a dvi or pdf file.
+\end{enumerate}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \newpage

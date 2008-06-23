@@ -10,13 +10,14 @@
 \textbf{The Foxy $\mathcal{LATHUND}$\\ for MacOS X \& Linux\footnote[2]{To a lesser extent.}}\\
 \normalsize
 \vspace{0.5cm}
-\emph{By Mikael Lund and Bj\"orn Persson.
+\emph{Compiled by Mikael Lund, Bj\"orn Persson, Bo J\"onsson\\
 Last updated \today}
 \end{center}
 
 \tableofcontents
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 \section{Graphics}
 \subsection{Convert vector graphics to bitmap with defined size and resolution}
@@ -49,7 +50,10 @@ Crop blank PDF borders & \verb"pdfcrop file.pdf" \\
 Convert PDF/EPS to 300 dpi tiff & \verb"convert -compress lzw -density 300x300 in.pdf out.tif" \\
 Convert Xmgrace plot to pdf     & \verb"xmgrace -hardcopy -hdevice PDF file.agr"\\
 Convert to monochrome           & \verb"convert -threshold 38% -despeckle out.jpg -monochrome in.jpg"\\
-Print syntax-highlighted source code & \verb"enscript --media=a4 -E sourcefile"\\\hline
+Print syntax-highlighted source code & \verb"enscript --media=a4 -E sourcefile"\\
+Convert DVI to PS with \textbf{pretty} text & \verb"dvips -Ppdf t.dvi -o t.ps"\\
+Convert PS to PDF                           & \verb"pstopdf t.ps"\\
+\hline
 \end{tabular}\end{table}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -59,7 +63,7 @@ Print syntax-highlighted source code & \verb"enscript --media=a4 -E sourcefile"\
 \subsection{Access scientific journals from home}
 Establish an encrypted SSH-tunnel to any computer situated on campus:
 \begin{enumerate}
-\item From home: \verb+ssh -D 9999 username@host.at.campus+
+\item For example: \verb+ssh -D 9999 mimer.teokem.lu.se+
 \item In \verb+System Preferences->Network->Advanced->Proxies+ set SOCKS proxy to \verb+localhost+, port 9999.
 \end{enumerate}
 All your web browsing will now appear as if you are situated inside campus. If you have a slow connection, you may want to add ``-C'' in the ssh command to enable compression.  When you close the ssh connection you must again remove the proxy setting in the network preferences to return to ``normal'' browsing.
@@ -147,7 +151,9 @@ Some tips:
 \end{itemize}
 
 \subsection{ACE/gr or ``Xmgr''}
-Yikes! This is a hassle to compile on recent versions of MacOS since development has been discontinued for a decade. PowerPC versions (compiled via Fink) run on Intel macs via transparent rosetta emulation. I have ideas for a more robust solution...soon to follow.
+Yikes! This is a hassle to compile on recent versions of MacOS since development has been discontinued for a decade. PowerPC versions (compiled via Fink) run on Intel macs via transparent rosetta emulation. I have prepared a MacOS X installer that should work on MacOS X 10.4--10.5, PowerPC or Intel:\\
+
+\url{http://idisk.mac.com/mlund/Public/Software/Xmgr.pkg.zip}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\LaTeX{} typesetting}
@@ -176,7 +182,7 @@ Also web-links can be useful for on screen reading:
 \end{verbatim}
 \item Compile with: \verb"pdflatex test.tex" to automatically produce a PDF file with hyperlinks and bookmarks.
 \end{enumerate}
-Note that using pdf\LaTeX{} any graphics inserted with \verb"\includegraphics" must be in the format pdf, png, jpg, mps, or tif. EPS files \emph{cannot} be used with pdf\LaTeX{} and must be converted first. For example:\\
+Note that using pdf\LaTeX{} any graphics inserted with \verb"\includegraphics" must be in the format pdf, png, jpg, mps, or tif. EPS files \emph{cannot} be used with pdf\LaTeX{} and must be converted first.\footnote{This can be done automatically using the auto-pst-pdf package -- see Section~\ref{sec:psfrag}} For example:\\
 
 \verb"$ epstopdf file.eps"
 
@@ -189,28 +195,30 @@ Insert \verb"\usepackage{pdfpages}" in the header and attach pdf files -- anywhe
 
 \noindent Fancy stuff like scaling and advanced page layouts are possible; see the manual for \verb"pdfpages".
 
-\subsection{Attaching files to a document}
+\subsection{Attaching files to a PDF document}
 Files (programs, images etc.) can be attached to PDF documents. In pdf\LaTeX{} this is done via the \verb"attachfile" package that allows file insertion with \verb"\attachfile{filename}".
 
-\subsection{Using \LaTeX{} commands in EPS figures}
+\subsection{\label{sec:psfrag}Using \LaTeX{} commands in EPS figures}
 Text labels in eps files generated with Xmgr, gnuplot etc. can be replaced with \LaTeX{} commands for advanced math symbols and equations.
 \begin{enumerate}
-\item Do something like this:
+\item Do like this:
 \begin{verbatim}
 \documentclass{article}
 \usepackage[on]{auto-pst-pdf}
 \begin{document}
 
 \begin{figure}
-\psfrag{_X}{$\sqrt{x+y}$} % Replace "_X" in fig with latex math.
+\psfrag{MYAXIS}{$\sqrt{x+y}$} % Replace "MYAXIS" in fig with latex math.
 \includegraphics{epsfile.eps}
 \end{figure}
 
 \end{document}
 \end{verbatim}
-\item latex/pdflatex with the argument \verb"-shell-escape" to produce either a dvi or pdf file.
+\item latex/pdflatex with the argument \verb"-shell-escape" to produce either a dvi or pdf file. Note that the \verb"auto-pst-pdf" package automatically converts EPS files to PDF when using pdf\LaTeX{}.
 \end{enumerate}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\section{General UNIX command}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \newpage
@@ -219,22 +227,31 @@ Text labels in eps files generated with Xmgr, gnuplot etc. can be replaced with 
 \begin{small}
 \begin{tabular}{ll}\hline\hline
 Action              & Command \\\hline
-Pause/resume job    & \verb"kill -s STOP|CONT pid" \\
-Suicide!            & \verb"kill -9 -1"\\
-Launch logout-safe job  & \verb"nohup utility &" \\
+\textbf{Processes Handling}\\
+Quick suicide!       & \verb"kill -9 -1"\\
+Pause/resume job     & \verb"kill -s STOP|CONT pid" \\
+Terminate job by name     & \verb"killall jobname" \\
+Launch logout-safe job  & \verb"nohup program &" \\
+Be a gentleman: run in low priority & \verb"nice program" (use when exploiting a colleagues computer)\\
 \\
-Drive information   & \verb"df -h"\\
+\textbf{Files and search}\\
+Disk information   & \verb"df -h"\\
+Space used in current directory & \verb"du -h" or \verb"du -csh" for a summary only.\\
 Find file           & \verb'find * -iname "file*"'\\
 Find large files    & \verb'find * -size +1000k printf "%p %k \n"'\\
-Open file (mac)     & \verb"open file"\\
-Mount disk image    & \verb"hdid image.dmg"\\
+Find files and contents (mac) & \verb'mdfind text...'\\
+``Double-click'' file (mac)     & \verb"open file"\\
+Mount disk image (mac)    & \verb"hdid image.dmg"\\
 \\
+\textbf{Archives}\\
 Create zip archive  & \verb"zip -r zipfile.zip file(s)"\\
 Test zip archive    & \verb"unzip -t zipfile.zip"\\
 Unpack zip archive  & \verb"unzip zipfile.zip [file(s)]"\\
 Create tar archive  & \verb"tar -czf archive.tar.gz directory"\\
 List tar archive    & \verb"tar -tzf archive.tar.gz"\\
 Unpack tar archive  & \verb"tar -xzf archive.tar.gz"\\
+Send files via tar and SSH & \verb+tar czf - file(s) | ssh host "cat > archive.tar.gz"+\\
+                    & (For \verb".tar.bz2" files, replace \verb"z" with \verb"j")\\
 \\
 System information  & \verb"cat /proc/cpuinfo" (linux) \\
                     & \verb"system_profiler" (mac) \\

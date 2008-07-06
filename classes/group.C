@@ -6,12 +6,10 @@ group::group(int i) {
   title="GROUP";
   name="(noname)";//is nameless
 }
-
 void group::set(short int first, short int last) {
   beg=first;
   end=last;
 }
-
 short int group::size() { return (beg==-1) ? 0 : end-beg+1; }
 
 /*! \brief Calculates total charge
@@ -412,9 +410,30 @@ void macromolecule::isobaricmove(container &con, double newlen) {
   con.setvolume(oldvol);         // restore original volume
 }
 
+//--------------- SOLVENT -----------------
+short int solvent::random() { return group::random()/numatom; }
+group solvent::operator[](unsigned short i) {
+  gtmp.beg=i*numatom;
+  gtmp.end=gtmp.beg+numatom-1;
+  return gtmp;
+}
+string solvent::info() {
+  ostringstream o;
+  o << group::info()
+    << "#  Atoms/solvent molecule  = " << numatom << endl 
+    << "#  Solvent molecules       = " << size()/double(numatom) << endl; //check!!
+  if (dip.cnt>0 && dip2.cnt>0)
+    o << "#    <mu> <mu^2>-<mu>^2    = " << dip.avg()<<" "<<dip2.avg()-pow(dip.avg(),2)<<endl;
+  return o.str();
+}
+
+spce::spce() {
+  name = "SPC/E water";
+  numatom=3;
+}
+
 //--------------- CHAIN -----------------
 chain::chain() { graftpoint=-1; }
-
 double chain::monomerenergy(vector<particle> &p, short i) {
   double u=0;
   //the first ?
@@ -424,11 +443,9 @@ double chain::monomerenergy(vector<particle> &p, short i) {
       u+=quadratic( p[i], p[graftpoint] );
     return u;
   }
-
   //the last ?
   if (i==end)
     return quadratic( p[i], p[i-1] );
-
   //otherwise...
   return quadratic(p[i], p[i+1]) + quadratic(p[i], p[i-1]);
 }

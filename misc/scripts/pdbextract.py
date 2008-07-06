@@ -43,6 +43,7 @@ def cm(residue):
 
 conf = Structure('test.pdb')
 print conf
+print conf.chain
 cnt=0
 for res in conf.residues:
   cnt+=1;

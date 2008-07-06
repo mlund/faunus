@@ -89,6 +89,21 @@ class box : public container {
     inline void scale(point &a, double &newlen) { a*(newlen/len); }
 };
 
+//---------------------------------------------------------
+/*! \brief Box with periodic boundaries in the x and y direction.
+ *  
+ *  \author Mikael Lund
+ *  \Date Asljunga, 2008
+ */
+class slit : public box {
+  public:
+    string info();
+    inline void boundary(point &a) {
+      a.x=a.x-len*anint(a.x*len_inv);
+      a.y=a.y-len*anint(a.y*len_inv);
+    }
+};
+ 
 /*! \brief "Clutch" like container.
  *  \author Mikael Lund
  *

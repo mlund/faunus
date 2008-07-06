@@ -33,7 +33,7 @@ class titrate {
     action exchange(vector<particle> &, action &);
     double sumsites();                        //!< Calculates total charge of titrateable sites
     virtual double energy(vector<particle> &, double, action &);
-    double GCenergy(vector<particle> &, double, action &, double &, double);
+    //double GCenergy(vector<particle> &, double, action &, double &, double);
     void samplesites(vector<particle> &);     //!< Updates the average charge vector titrate::q
     void showsites(vector<particle> &);       //!< Print average charges of titrateable sites
     double applycharges(vector<particle> &);  //!< Copy average charges to particles in the particle vector

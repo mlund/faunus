@@ -211,6 +211,10 @@ class HAchargereg : public chargereg {
     double energy(vector<particle> &, double, action &); //!< New titrate energy function
     double CatPot;  //!< Chemical potential of coupled cation
 };
+
+class DHchargereg : public chargereg {
+
+};
 #endif
 
 //--------------- MARKOV MOVE ---------------------

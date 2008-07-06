@@ -34,7 +34,7 @@ class group {
 
     void set(short int,short int);        ///< Set particle range, "beg" and "end".
     short int size();                     ///< Number of particles in group
-    short int random();                   ///< Picks a random particle within this group
+    virtual short int random();           ///< Picks a random particle within this group
     bool find(unsigned int);              ///< Check if particle is part of the group
     virtual double charge(vector<particle> &);//!< Calculate total charge
     point masscenter(vector<particle> &); //!< Calculate center-of-mass
@@ -97,6 +97,45 @@ class macromolecule : public group {
     virtual unsigned short nummolecules();
 };
 
+/*! \brief Group container for solvent molecules
+ *  \author Mikael Lund
+ *  \date Asljunga 2008
+ *
+ * This group derivative is for handling an atom collection of
+ * solvent molecules in the particle vector. A [ ] operator is
+ * implemented for convenient access to individual solvent molecules.
+ * Note that the group::random() function is redefined to point to a
+ * random molecule instead of an atom.\n
+ * Example:\n
+ * \code
+ * int i = spc.random(); // pick random solvent molecule
+ * group w = spc[i];     // ..and return it as a group
+ * w.beg; // --> first atom of i'th solvent molecule
+ * \endcode
+ */
+class solvent : public group {
+  private:
+    group gtmp;             //!< A temporary group class
+  public:
+    float dp_trans;         //!< Translational displacement
+    float dp_rot;           //!< Rotational displacement
+    average<float> dip;     //!< Average dipole moment
+    average<float> dip2;    //!< Average squared dipole moment
+    unsigned short numatom; //!< Number of atoms in each solvent molecule
+    short random();         //!< Pick a random solvent molecule (NOT atom)
+    string info();          //!< Show information
+    group operator[](unsigned short); //!< Access n'th solvent molecule
+};
+
+/*! \brief Group container for SPC/E water (and similar three-point water models)
+ *  \author Mikael Lund
+ *  \date Asljunga 2008
+ */
+class spce : public solvent {
+  public:
+    spce();
+};
+
 /*! \brief Freely jointed chain with harmonic spring potentials
  *  \author Mikael Lund
  */
@@ -106,7 +145,6 @@ class chain : public group, private pot_spring {
     double k;                   //!< Spring constant
     double req;                 //!< Equilibrium distance between monomers
     short int graftpoint;       //!< Chain is grafted to this point. -1 if free (default)
-
     double monomerenergy(vector<particle> &, short);    //!< Spring energy of a monomer
     double internalenergy(vector<particle> &);          //!< Internal spring energy
     //!< Spring potential

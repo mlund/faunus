@@ -11,11 +11,11 @@ int main()
   obconversion.SetInFormat("pdb");
   OBMol mol;
 
-  bool notatend = obconversion.ReadFile(&mol,"test.pdb");
+  bool notatend = obconversion.ReadFile(&mol,"1BRS.pdb");
   while (notatend)
   {
-    std::cout << "Molecular Weight: " << mol.GetMolWt() << std::endl;
-    cout << "Residues = " << mol.NumResidues() << endl
+    cout << "Molecular Weight: " << mol.GetMolWt() << endl
+         << "Residues = " << mol.NumResidues() << endl
          << "Atoms    = " << mol.NumAtoms() << endl
          << "NumRotors= " << mol.NumRotors() << endl;
 

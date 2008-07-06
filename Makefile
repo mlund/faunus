@@ -90,7 +90,7 @@ all:	classes examples libfaunus
 classes:	$(OBJS)
 libfaunus:      $(OBJS)
 	ar cr lib/libfaunus.a $(OBJS)
-	$(CXX) $(CXXFLAGS) -current_version 1.0 -compatibility_version 1.0 -fvisibility=hidden \
+	#$(CXX) $(CXXFLAGS) -current_version 1.0 -compatibility_version 1.0 -fvisibility=hidden \
 	  -o lib/libfaunus.A.dylib -dynamiclib $(OBJS)
 manual:
 	doxygen doc/Doxyfile

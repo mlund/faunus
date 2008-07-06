@@ -37,7 +37,7 @@ int main() {
   xyz.save("coord.xyz", cell.p);
   
   for (int macro=0; macro<10; macro++) {        // Markov chain
-    for (int micro=0; micro<1e2; micro++) {
+    for (int micro=0; micro<1e3; micro++) {
       sys+=sm.move(salt);                       // Displace salt particles
       widom.insert(10);                         // Widom particle insertion analysis
       rdf.update(cell);

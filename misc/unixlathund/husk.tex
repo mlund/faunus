@@ -228,15 +228,15 @@ Text labels in eps files generated with Xmgr, gnuplot etc. can be replaced with 
 \begin{tabular}{ll}\hline\hline
 Action              & Command \\\hline
 \textbf{Processes Handling}\\
-Quick suicide!       & \verb"kill -9 -1"\\
+Quick and dirty suicide!       & \verb"kill -9 -1"\\
 Pause/resume job     & \verb"kill -s STOP|CONT pid" \\
 Terminate job by name     & \verb"killall jobname" \\
 Launch logout-safe job  & \verb"nohup program &" \\
-Be a gentleman: run in low priority & \verb"nice program" (use when exploiting a colleagues computer)\\
+Be a gentleman, run in low priority & \verb"nice program" (use when exploiting a colleagues computer)\\
 \\
 \textbf{Files and search}\\
 Disk information   & \verb"df -h"\\
-Space used in current directory & \verb"du -h" or \verb"du -csh" for a summary only.\\
+Space used in current directory & \verb"du -h" (or \verb"-csh" for a summary)\\
 Find file           & \verb'find * -iname "file*"'\\
 Find large files    & \verb'find * -size +1000k printf "%p %k \n"'\\
 Find files and contents (mac) & \verb'mdfind text...'\\

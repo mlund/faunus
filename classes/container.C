@@ -29,7 +29,6 @@ void cell::setradius(float radius) {
   diameter = 2*r; 
   volume = (4./3.)*acos(-1.)*r*r*r;
 }
-
 string cell::info() {
   ostringstream o;
   o << container::info() 
@@ -65,7 +64,6 @@ void box::setlen(double l) {
 }
 box::box(double l) { setlen(l); }
 box::box(inputfile &in) { setlen( in.getflt("boxlen") ); }
-
 string box::info() {
   ostringstream o;
   o << container::info() 
@@ -73,28 +71,31 @@ string box::info() {
     << "#   Side length          = " << len << endl;
   return o.str();
 }
-
 point box::randompos() {
   point p;
   randompos(p);
   return p;
 }
-
 void box::randompos(point &p) {
   p.x = slp.random_half()*len;
   p.y = slp.random_half()*len;
   p.z = slp.random_half()*len;
 }
-
 /*void box::randompos(vector<point> &p) {
   short unsigned size=p.size;
-  
 }*/
-
 string box::povray() {
   ostringstream o;
   o << "box {<" <<-len_half <<"," <<-len_half <<"," <<-len_half <<"> , <"
     << len_half <<"," <<len_half <<"," <<len_half <<"> texture {cell}}\n";
+  return o.str();
+}
+//----------- SLIT --------------------------
+string slit::info() {
+  ostringstream o;
+  o << container::info() 
+    << "#   Shape                = Cube - xy periodicity, only" << endl
+    << "#   Side length          = " << len << endl;
   return o.str();
 }
 

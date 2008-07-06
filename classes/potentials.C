@@ -69,7 +69,6 @@ void pot_datapmf::loadpmf(species &spc, string pmfdir, string type) {
       loadpmf( spc, pmfdir + n2 + ".dat");                                
   };                                   
 }
-
 // Show table of loaded PMF's
 void pot_datapmf::showpmf(species &spc) {
   cout << "# --- LOADED PMF's ----------------------------------\n"; 
@@ -83,7 +82,6 @@ void pot_datapmf::showpmf(species &spc) {
           << pmfd[i][j].comment << endl; 
   cout << endl; 
 }
-
 /*! Load PMF(s) from a file. File format: Each set starts
  * with "#$ type1 type2 length". Several sets can be present
  * in the same file.
@@ -121,5 +119,3 @@ bool pot_datapmf::loadpmf(species &spc, string filename) {
   }
   return false;
 }
-
-

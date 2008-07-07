@@ -108,8 +108,9 @@ manybody:	examples/manybody/manybody.C libfaunus
 	$(CXX) $(CXXFLAGS) examples/manybody/manybody.C -o examples/manybody/manybody ${LDFLAGS}
 isobaric:	examples/isobaric/isobaric.C libfaunus 
 	$(CXX) $(CXXFLAGS) examples/isobaric/isobaric.C -o examples/isobaric/isobaric ${LDFLAGS}
-tools:	examples/tools/printpotential.C libfaunus 
+tools:	examples/tools/printpotential.C examples/tools/aam2pqr.C libfaunus 
 	$(CXX) $(CXXFLAGS) examples/tools/printpotential.C -o examples/tools/printpotential ${LDFLAGS}
+	$(CXX) $(CXXFLAGS) examples/tools/aam2pqr.C -o examples/tools/aam2prq ${LDFLAGS}
 pka:	examples/titration/pka.C libfaunus
 	$(CXX) $(CXXFLAGS) examples/titration/pka.C -o examples/titration/pka $(LDFLAGS) 
 GCpka:	examples/titration/GCpka.C libfaunus

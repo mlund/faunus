@@ -34,15 +34,22 @@ CITING FAUNUS:
   http://www.scfbm.org/content/3/1/1 (open access)
 
 REQUIREMENTS:
-  * A unix-type environment (Linux, MacOS etc.)
-  * C++ compiler (gnu, ibm, intel, sun etc.)
-  * Gromacs (optional, for xtc trajectory output)
-  * Doxygen (optional, for code manual)
-  * Graphviz (optional, for code manual)
+  1. C++ compiler (gnu, ibm, intel, sun etc.)
+  2. cmake
+  + Gromacs (optional, for xtc trajectory output)
+  + Doxygen (optional, for code manual)
+  + Graphviz (optional, for code manual)
+
+COMPILING (Experimental):
+  $ [options] cmake .
+  $ make
+
+  Options:
+    CXX=icpc | pathCC | pgCC | g++
 
 COMPILING:
-  * make
-  * make manual (requires doxygen)
+  $ make
+  $ make manual (requires doxygen)
 
   Edit the Makefile to:
   - Specify the C++ compiler.

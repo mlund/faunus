@@ -395,7 +395,50 @@ void macromolecule::rotate(container &par, point u, double angle) {
     par.boundary(par.trial[i]);
   }
 }
+
+/*!
+ * \param g Group to rotate around arbitrary point 
+ * \param cr Center of rotation, center of mass of seed
+ * \param u Vector to rotate around
+ * \param angle ..by this many degrees (rad)
+ * \param k Keyword to specify automatic acceptance
+ * \warning Ej bijektiv avbildning med periodiska randvilkor
+ * \warning Anvand bindningsvektorer
+ */
+void macromolecule::rotate(container &par, point cr, point u, double angle) {
+  point b;
+  double cosang, sinang, eb;
+  double e1mcox, e1mcoy, e1mcoz;
+  
+  cosang=cos(angle);
+  sinang=sin(angle);
+  e1mcox=(1.-cosang)*u.x;
+  e1mcoy=(1.-cosang)*u.y;
+  e1mcoz=(1.-cosang)*u.z;
+  for (short i=beg; i<=end; i++) {
+    b.x=par.p[i].x - cr.x;              // translate to cr...
+    b.y=par.p[i].y - cr.y;
+    b.z=par.p[i].z - cr.z;
+    par.boundary(b);                    // Apply boundary conditions
+    eb=u.x*b.x + u.y*b.y + u.z*b.z;
+    par.trial[i].x=e1mcox*eb+cosang*b.x+sinang*(u.y*b.z - u.z*b.y) + cr.x;
+    par.trial[i].y=e1mcoy*eb+cosang*b.y+sinang*(u.z*b.x - u.x*b.z) + cr.y;
+    par.trial[i].z=e1mcoz*eb+cosang*b.z+sinang*(u.x*b.y - u.y*b.x) + cr.z;
+    par.boundary(par.trial[i]);
+  }
+  b.x=cm.x - cr.x;              // translate to cr...
+  b.y=cm.y - cr.y;
+  b.z=cm.z - cr.z;
+  par.boundary(b);                    // Apply boundary conditions
+  eb=u.x*b.x + u.y*b.y + u.z*b.z;
+  cm_trial.x=e1mcox*eb+cosang*b.x+sinang*(u.y*b.z - u.z*b.y) + cr.x;
+  cm_trial.y=e1mcoy*eb+cosang*b.y+sinang*(u.z*b.x - u.x*b.z) + cr.y;
+  cm_trial.z=e1mcoz*eb+cosang*b.z+sinang*(u.x*b.y - u.y*b.x) + cr.z;
+  par.boundary(cm_trial);
+}
+
 void macromolecule::add(container &con, inputfile &in ) { }
+
 void macromolecule::isobaricmove(container &con, double newlen) {
   double oldvol=con.getvolume(); // store original volume
   con.scale(cm_trial, newlen);   // scale mass center
@@ -433,14 +476,59 @@ spce::spce() {
 }
 
 //--------------- CHAIN -----------------
-chain::chain() { graftpoint=-1; }
+chain::chain(container &con, int n, particle::type sort, double r) { graftpoint=false; 
+  req=r;
+  add(con, n, sort);
+}
+void chain::add(container &con, int n, particle::type sort) { // no check of PARTICLE overlap
+  point ru;
+  particle a=con.get(sort);
+  beg=con.p.size();
+  con.randompos(a);
+  end=con.push_back(a)-1;
+  ru.ranunit(slp);
+  a+=ru*req;
+  for (int i=1; i<n; i++) {
+    do {
+      a=a-ru*req;
+      ru.ranunit(slp);
+      a+=ru*req;
+    } while (con.overlap(a));
+    end = con.push_back(a)-1;
+  }
+}
+
+chain::chain(container &con, int n, particle::type sort, double r, point &gp) { graftpoint=true; 
+  GP=&gp;
+  req=r;
+  addgrafted(con, n, sort, gp);
+}
+
+void chain::addgrafted(container &con, int n, particle::type sort, point &gp) { // no check of PARTICLE overlap
+  point ru;
+  particle a=con.get(sort);
+  beg=con.p.size();
+  con.randompos(a);
+  a=gp;
+  ru.ranunit(slp);
+  a+=ru*req;
+  for (int i=0; i<n; i++) {
+    do {
+      a=a-ru*req;
+      ru.ranunit(slp);
+      a+=ru*req;
+    } while (con.overlap(a));
+    end = con.push_back(a)-1;
+  }
+}
+
 double chain::monomerenergy(vector<particle> &p, short i) {
   double u=0;
   //the first ?
   if (i==beg) {
     u+=quadratic( p[i], p[i+1] );
-    if (graftpoint>-1)
-      u+=quadratic( p[i], p[graftpoint] );
+    if (graftpoint)
+      u+=quadratic( p[i], *GP );
     return u;
   }
   //the last ?
@@ -453,8 +541,8 @@ double chain::internalenergy(vector<particle> &p) {
   double u=0;
   for (short i=beg; i<end; i++)
     u+=quadratic( p[i], p[i+1]);
-  if (graftpoint>-1)
-    u+=quadratic( p[beg], p[graftpoint] );
+  if (graftpoint)
+    u+=quadratic( p[beg], *GP );
   return u;
 }
 
@@ -488,4 +576,8 @@ unsigned short zwittermembrane::displace(container &c, double d) {
   if (i%2==0)
     project(c.trial[i]); // keep even particles in the plane
   return i;
-}       
+} 
+// Brush
+/*
+brush::brush
+t*/      

@@ -106,6 +106,8 @@ twobody-hof:	examples/twobody-hofmeister/twobody-hof.C libfaunus
 	$(CXX) $(CXXFLAGS) examples/twobody-hofmeister/twobody-hof.C -o examples/twobody-hofmeister/twobody-hof ${LDFLAGS}
 manybody:	examples/manybody/manybody.C libfaunus 
 	$(CXX) $(CXXFLAGS) examples/manybody/manybody.C -o examples/manybody/manybody ${LDFLAGS}
+manybodyclust:	examples/manybody/manybodyclust.C libfaunus 
+	$(CXX) $(CXXFLAGS) examples/manybody/manybodyclust.C -o examples/manybody/manybodyclust ${LDFLAGS}
 isobaric:	examples/isobaric/isobaric.C libfaunus 
 	$(CXX) $(CXXFLAGS) examples/isobaric/isobaric.C -o examples/isobaric/isobaric ${LDFLAGS}
 tools:	examples/tools/printpotential.C examples/tools/aam2pqr.C libfaunus 
@@ -129,6 +131,7 @@ clean:
 	examples/ewald/ewald \
 	examples/twobody/twobody \
 	examples/manybody/manybody \
+	examples/manybody/manybodyclust \
 	examples/isobaric/isobaric \
 	examples/twobody-hofmeister/twobody-hof \
 	lib/libfaunus.a

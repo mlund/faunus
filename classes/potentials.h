@@ -265,11 +265,11 @@ template<class T>
 double interaction<T>::energy(vector<particle> &p, int j) {
   int i,ps=p.size();
   double u=0;
-  #pragma omp parallel for reduction (+:u)
+  #pragma omp parallel for reduction (+:u) num_threads(2)
   for (i=0; i<j; i++)
     u+=pair.pairpot( p[i],p[j] );
 
-  #pragma omp parallel for reduction (+:u)
+  #pragma omp parallel for reduction (+:u) num_threads(2)
   for (i=j+1; i<ps; i++)
     u+=pair.pairpot( p[i],p[j] );
   return pair.f*u;
@@ -277,7 +277,7 @@ double interaction<T>::energy(vector<particle> &p, int j) {
 template<class T> double interaction<T>::energy(vector<particle> &p, group &g) {
   int i,j,n=g.end+1, psize=p.size();
   double u=0;
-  #pragma omp parallel for reduction (+:u)
+  #pragma omp parallel for reduction (+:u) num_threads(2)
   for (i=g.beg; i<n; i++) {
     for (j=0; j<g.beg; j++)
       u += pair.pairpot(p[i],p[j]);
@@ -312,7 +312,7 @@ template<class T> double interaction<T>::energy(vector<particle> &p, vector<macr
   double u=0;
   int k,j=g.size(),t=p.size();
   for (int l=0; l<j; l++) {
-    k=g[l].end;
+    k=g[l].end+1;
     for (int i=g[l].beg; i<k; i++) {
       for (int s=(g[l].end+1); s<t; s++) {
          u+=pair.pairpot(p[i],p[s]);
@@ -324,7 +324,7 @@ template<class T> double interaction<T>::energy(vector<particle> &p, vector<macr
 template<class T> double interaction<T>::energy(vector<particle> &p) {
   double u=0;
   int n = p.size();
-  #pragma omp parallel for reduction (+:u)
+  #pragma omp parallel for reduction (+:u) num_threads(2)
   for (int i=0; i<n-1; ++i)
     for (int j=i+1; j<n; ++j)
       u+=pair.pairpot(p[i], p[j]);
@@ -333,7 +333,7 @@ template<class T> double interaction<T>::energy(vector<particle> &p) {
 template<class T> double interaction<T>::energy(vector<particle> &p, group &g1, group &g2) {
   double u=0;
   int i,j,ilen=g1.end+1, jlen=g2.end+1;
-  #pragma omp parallel for reduction (+:u)
+  #pragma omp parallel for reduction (+:u) num_threads(2)
   for (i=g1.beg; i<ilen; i++)
     for (j=g2.beg; j<jlen; j++)
       u += pair.pairpot(p[i],p[j]);

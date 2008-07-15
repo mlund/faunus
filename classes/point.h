@@ -11,6 +11,11 @@
 using std::ostream;
 using namespace std;
 
+/*extern "C" {
+ double sqdf_(double &, double &, double &, double &
+              , double &);
+}*/
+
 /*!
  * \brief Cartesian coordinates
  * \author Mikael Lund
@@ -30,6 +35,7 @@ class point {
                         double &, double &);
     inline double dist(point &);        ///< Distance to another point
     inline double dist(point &, double &, double &);        ///< Distance to another point
+    void ranunit(slump &);              ///< Generate a random unit vector
     double dot(point &);                ///< Angle with another point
     point operator-();                  ///< Sign reversal
     point operator*(point);             ///< Multiply two vectors
@@ -128,14 +134,28 @@ inline double point::sqdist(point &p) {
 inline int point::anint(double a) { return int(a>0 ? a+.5 : a-.5); }
 inline double point::sqdist(point &p, double &len, double &inv_len) {
   register double dx,dy,dz;
-  dx=x-p.x;
+/*  dx=x-p.x;
   dy=y-p.y;
   dz=z-p.z;
   dx=dx-len*anint(dx*inv_len);
   dy=dy-len*anint(dy*inv_len);
   dz=dz-len*anint(dz*inv_len);
+  return dx*dx + dy*dy + dz*dz;*/
+  dx=abs(x-p.x);
+  dy=abs(y-p.y);
+  dz=abs(z-p.z);
+  if (dx>len*0.5) dx-=len;
+  if (dy>len*0.5) dy-=len;
+  if (dz>len*0.5) dz-=len;
   return dx*dx + dy*dy + dz*dz;
 }
+/*inline double point::sqdist(point &p, double &len, double &inv_len) {
+  register double dx,dy,dz;
+  dx=x-p.x;
+  dy=y-p.y;
+  dz=z-p.z;
+  return sqdf_(&dx, &dy, &dz, &len, &inv_len);
+}*/
 inline double point::dist(point &p) { return sqrt(sqdist(p)); }
 inline double point::dist(point &p, double &len, double &inv_len) { 
   return sqrt(sqdist(p, len, inv_len)); }

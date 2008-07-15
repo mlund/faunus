@@ -15,6 +15,20 @@ double point::len() {
   return (l2!=0) ? sqrt(l2) : 0;
 }
 
+void point::ranunit(slump &slp) {
+  point u;
+  double r=2;
+  while (r > 1.) { //Generate a random unit vector
+    u.x=slp.random_one();
+    u.y=slp.random_one();
+    u.z=slp.random_one();
+    r=sqrt(u.x*u.x+u.y*u.y+u.z*u.z);
+  }
+  x=u.x/r;
+  y=u.y/r;
+  z=u.z/r;
+}
+
 void point::operator+=(point p) {
   x += p.x;
   y += p.y;

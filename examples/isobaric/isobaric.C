@@ -102,7 +102,7 @@ int main() {
     cell.check_vector();                        // Check sanity of particle vector
     gro.save("confout.gro", cell);              // Write GRO output file
     protrdf.write("rdfprot.dat");               // Write g(r)'s
-    vol.printpenalty("penalty.dat", lendist);
+    vol.printpenalty("penalty.dat");
     lendist.write("length-distribution.dat");                  // Write volume distribution
 
   } // End of outer loop

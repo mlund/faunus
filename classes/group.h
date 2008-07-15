@@ -90,6 +90,7 @@ class macromolecule : public group {
     void zmove(container &, double);         //!< Move in z-direction, only
     void rotate(container &, double);        //!< Rotate around a point
     void rotate(container &, point, double);
+    void rotate(container &, point, point, double); //!< Rotate around arbitrary point
     using group::add;
     void add(container &, inputfile &);      //!< Add according to inputfile
     void operator=(group);                   //!< Copy from group
@@ -141,18 +142,33 @@ class spce : public solvent {
  */
 class chain : public group, private pot_spring {
   public:
-    chain();
+    chain(container &, int, particle::type, double );
+    chain(container &, int, particle::type, double , point &);
     double k;                   //!< Spring constant
     double req;                 //!< Equilibrium distance between monomers
-    short int graftpoint;       //!< Chain is grafted to this point. -1 if free (default)
+    bool graftpoint;       //!< Is chain grafted? (default == false)
+    point *GP;             //!< Pointer to graft point
+    void add(container &, int, particle::type);
+    void addgrafted(container &, int, particle::type, point &);
     double monomerenergy(vector<particle> &, short);    //!< Spring energy of a monomer
     double internalenergy(vector<particle> &);          //!< Internal spring energy
     //!< Spring potential
-    inline double quadratic(particle &p1, particle &p2) {
+    inline double quadratic(point &p1, point &p2) {
       double r=p1.dist(p2)-req;
       return k*r*r;
     }
 };
+
+/*
+// A brush lying in the xy-plane
+
+class brush : public group, private pot_spring {
+  private:
+    vector<chain>;
+  public:
+    brush(int, int)
+};
+*/
 
 class planarsurface : public group {
   public:

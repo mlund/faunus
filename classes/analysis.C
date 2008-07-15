@@ -115,6 +115,10 @@ aggregation::aggregation(container &C, vector<macromolecule> &G, double s) {
   CNT=0;
   dist.clear();
   dist.resize(g.size(), 0);
+  RG2.clear();
+  average<double> start;
+  for (int i=0;i<g.size();i++)
+  RG2.push_back(start);
   sep=s;  
 }
 void aggregation::count() {
@@ -139,11 +143,24 @@ void aggregation::count() {
             j--;                                            // unagg
           } 
     } 
+  //analysis
     dist[agg.size()-1]++;                                     // One aggregate of size
     if (agg.size()+unagg.size()!=g.size()) {
       cout <<" Error in aggregation::count()"<<endl
            <<" g.size() = agg.size()+unagg.size()"<<endl
            <<"    "<< g.size()<<" = "<<agg.size()<<" +  "<<unagg.size()<<endl;
+    }
+    point CMagg, fix;
+    for (int i=1; i<agg.size(); i++) {
+      fix=agg[i]->cm-agg[0]->cm;
+      CMagg+=fix;
+    }
+    CMagg+=agg[0]->cm;
+    con->boundary(CMagg);
+    for (int i=0; i<agg.size();i++) {
+      for (int j=agg[i]->beg; j<agg[i]->end+1; j++) {
+        RG2[agg.size()-1]+=con->sqdist(con->p[j], CMagg);
+      }
     }
   }
 }
@@ -152,7 +169,7 @@ void aggregation::write(string file) {
   if (f) {
     for (int i=0;i<g.size();i++) {
       if (dist[i]!=0)
-        f << i+1 << "  "<<double(dist[i])/double((i+1))/CNT/g.size() <<endl;
+        f << i+1 << "  "<<double(dist[i])/CNT/g.size() <<"  " <<RG2[i].avg() <<endl;
    
     }
     f.close();

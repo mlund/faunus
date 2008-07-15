@@ -54,7 +54,7 @@ class systemenergy : public analysis {
   private:
     double u0,sum,cur;
     average<double> uavg, u2avg;
-    vector<float> confu;  //!< Vector to track system energy in time
+    vector<double> confu;  //!< Vector to track system energy in time
     io fio;
   public:
     systemenergy(double);
@@ -343,6 +343,7 @@ class twostatebinding : public analysis {
 class aggregation :public analysis {
   private:
     vector<macromolecule*> g;
+    vector<average<double> > RG2;
     container *con;
     vector<int> dist;  // Vector to store the histogram
     vector<macromolecule*> agg;

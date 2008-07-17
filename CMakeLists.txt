@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
-enable_language(CXX)
-project (FAUNUS CXX)
+project ("faunus")
+#enable_language(CXX)
 
 # ------------------------------
 #   Default build is "Release"
@@ -31,14 +31,9 @@ ENDIF(UNIX)
 # ----------------------------
 set (CMAKE_MODULE_PATH classes)
 find_package(DOXYGEN)
-
-if (GROMACS)
-  find_package(GMX)
-  if(GMX_FOUND)
-    message("-- Gromacs library: ${GMX_LIBRARIES}")
-    add_definitions(-DGROMACS)
-  endif(GMX_FOUND)
-endif(GROMACS)
+find_package(GMX)
+find_package(X11)
+find_package(MOTIF)
 
 # ------------------
 #   Compiler flags
@@ -70,4 +65,5 @@ MESSAGE("-- Setting compiler flags: "${CMAKE_CXX_FLAGS_RELEASE})
 # ---------------------------
 add_subdirectory (classes build)
 add_subdirectory (doc build EXCLUDE_FROM_ALL)
+
 

@@ -6,7 +6,7 @@
 /*! \brief Coulomb potential w. an extra empirical PMF
  *  \author Mikael Lund 
  */
-class pot_netz : public pot_hscoulomb {
+class pot_netz : public pot_coulomb {
   private:
     inline double simple(particle::type &id) {
       switch (id) {
@@ -67,7 +67,7 @@ class pot_netz : public pot_hscoulomb {
           + D1*exp( -D3*pow(z-D2,2)  ) ) / f;
     }
   public:
-    pot_netz( pot_setup &pot ) : pot_hscoulomb( pot ) {
+    pot_netz( pot_setup &pot ) : pot_coulomb( pot ) {
      name+="/Empirial PMF (AIR)";
      cite="PRL 2007, 99, 226104";
     }

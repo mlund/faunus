@@ -401,7 +401,7 @@ template<class T> string interaction<T>::info() {
  * \brief Interaction class w. additional force functions
  * \author Mikael Lund
  * \date Amaroo, 2008
- * \toto Unfinished
+ * \todo Unfinished
  */
 template<class T>
 class interaction_force : public interaction<T> {

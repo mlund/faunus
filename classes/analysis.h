@@ -12,7 +12,7 @@
 /*!
  * Base class for analysis functions
  * \author Mikael Lund
- * \data Prague, 2007
+ * \date Prague, 2007
  */
 class analysis {
   protected:

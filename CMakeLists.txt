@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
 project ("faunus")
-#enable_language(CXX)
-
 # ------------------------------
 #   Default build is "Release"
 # ------------------------------
@@ -11,59 +9,53 @@ IF(NOT CMAKE_BUILD_TYPE)
     FORCE)
 ENDIF(NOT CMAKE_BUILD_TYPE)
 
-# -----------------
-#   Build options
-# -----------------
-option (OPENMP "Enable OpenMP support")
-option (GROMACS "Enable Gromacs file support" on)
-
-# -----------------
-#   Test platform
-# -----------------
-IF(UNIX)
-  IF(APPLE)
-  ELSE(APPLE)
-  ENDIF(APPLE)
-ENDIF(UNIX)
-
 # ----------------------------
 #   Locate external packages
 # ----------------------------
+include(TestCXXAcceptsFlag)
 set (CMAKE_MODULE_PATH classes)
 find_package(DOXYGEN)
-find_package(GMX)
-find_package(X11)
-find_package(MOTIF)
+if (GROMACS)
+  find_package(GMX)
+  find_package(X11)
+  find_package(MOTIF)
+endif(GROMACS)
+
+# -----------------
+#   User options
+# -----------------
+option (OPENMP "Enable OpenMP parallel execution on multicore CPU's")
+option (GROMACS "Enable Gromacs xtc trajectory output" off)
+option (CODEMANUAL "Create a HTML manual of C++ classes" off)
+mark_as_advanced(CLEAR CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS_RELEASE)
+mark_as_advanced(EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH CMAKE_OSX_SYSROOT)
 
 # ------------------
 #   Compiler flags
 # ------------------
-if (CMAKE_COMPILER_IS_GNUCXX)
-  set (CMAKE_CXX_FLAGS_RELEASE "-O3 -w -funroll-loops -DNDEBUG")
-  if (OPENMP)
-    #CMAKE_CXX_FLAGS_RELEASE
-  endif(OPENMP)
-endif (CMAKE_COMPILER_IS_GNUCXX)
-if (CMAKE_CXX_COMPILER MATCHES "icpc")
-  set (CMAKE_CXX_FLAGS_RELEASE "-O3 -w -DNDEBUG")
-endif(CMAKE_CXX_COMPILER MATCHES "icpc")
-if (CMAKE_CXX_COMPILER MATCHES "sunCC")
-  set (CMAKE_CXX_FLAGS_RELEASE "-fast -w -DNDEBUG")
-endif(CMAKE_CXX_COMPILER MATCHES "sunCC")
-if (CMAKE_CXX_COMPILER MATCHES "pathCC")
-  set (CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG")
-endif(CMAKE_CXX_COMPILER MATCHES "pathCC")
-if (CMAKE_CXX_COMPILER MATCHES "pgCC")
-  set (CMAKE_CXX_FLAGS_RELEASE "-O3 -w -DNDEBUG")
-endif(CMAKE_CXX_COMPILER MATCHES "pgCC")
-MESSAGE("-- Setting compiler flags: "${CMAKE_CXX_FLAGS_RELEASE})
+function( fau_setcmp cid flags fomp )
+if (CMAKE_CXX_COMPILER_ID MATCHES "${cid}")
+  set (DUMMY "${flags}" PARENT_SCOPE)
+  CHECK_CXX_ACCEPTS_FLAG( ${fomp} OMP_CHECK)
+  if (OPENMP AND OMP_CHECK)
+    set(DUMMY "${flags} ${fomp}" PARENT_SCOPE)
+  endif(OPENMP AND OMP_CHECK)
+endif (CMAKE_CXX_COMPILER_ID MATCHES "${cid}")
+set (CMAKE_CXX_FLAGS_RELEASE "${DUMMY}" CACHE STRING "C++ compiler flags (automatic)" FORCE)
+endfunction( fau_setcmp )
 
-#message("hej: ${CMAKE_INCLUDE_PATH}")
+fau_setcmp("GNU" "-O3 -w -funroll-loops -DNDEBUG" "-fopenmp" ) # GNU
+fau_setcmp("Intel" "-O3 -w -DNDEBUG" "-openmp")  # Intel
+fau_setcmp("Sun" "-fast -w -DNDEBUG" "-xopenmp") # Sun
+fau_setcmp("pgCC" "-O3 -w -DNDEBUG" "-mp")       # Portland
+fau_setcmp("pathCC" "-Ofast -DNDEBUG" " ")       # Pathscale
+
+message("-- Compiler optimizations: "${CMAKE_CXX_FLAGS_RELEASE})
 
 # ---------------------------
 #   Add source directories
 # ---------------------------
 add_subdirectory (classes build)
+add_subdirectory (examples build)
 add_subdirectory (doc build EXCLUDE_FROM_ALL)
-
 

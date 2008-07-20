@@ -217,7 +217,7 @@ class HAchargereg : public chargereg {
  * obeys some criteria (here a hardcore overlap) with a symmetric transition
  * matrix (no flow through the clusters).
  * \author Bjoern Persson
- * \breif Quick and dirty translational cluster move
+ * \brief Quick and dirty translational cluster move
  * \warning This rutine is only compatible for systems containing a set of macromolecules!
  *
  */
@@ -244,7 +244,7 @@ class clustertranslate : public markovmove {
  * obeys some criteria (here a hardcore overlap) with a symmetric transition
  * matrix (no flow through the clusters).
  * \author Bjoern Persson
- * \breif Quick and dirty rotational cluster move
+ * \brief Quick and dirty rotational cluster move
  * \warning This rutine is only compatible for systems containing a set of macromolecules!
  *
  */
@@ -514,7 +514,7 @@ double chargereg::titrateall() {
 }
 
 //-----------MOVE----------------------------------------
-/*! \breif Class to prefom a random walk of a macromolecule in space
+/*! \brief Class to prefom a random walk of a macromolecule in space
  *  \note Replaced by translate(?)
  */
 move::move(

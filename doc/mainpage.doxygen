@@ -14,11 +14,11 @@ Write access to the repository is obtained by sending
 a mail to: mlund at mac com
 
 \subsection guide Guidelines for Submitting Code
-\li Make sure "make all" works before submitting
+\li Make sure "make all" or works before submitting
 \li Avoid submitting temporary files (.o, .xyz etc.)
 \li Stride to recycle code via inheritance, virtual functions, templates etc.
-\li Document your code using Doxygen keywords
-\li Provide a descriptive comment of your changes when issuing "svn commit"
+\li Document code using Doxygen keywords
+\li Provide a descriptive comment of changes when issuing "svn commit"
 \li Example applications are most welcome!
 
 \section Contributors

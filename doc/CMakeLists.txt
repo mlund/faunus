@@ -1,4 +1,6 @@
 if(DOXYGEN_FOUND)
-  execute_process(COMMAND ${DOXYGEN_EXUCUTABLE} Doxyfile)
+  add_custom_target(manual
+  COMMAND ${DOXYGEN_EXECUTABLE} doc/Doxyfile
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} ) 
 endif(DOXYGEN_FOUND)
 

@@ -93,7 +93,7 @@ class box : public container {
 /*! \brief Box with periodic boundaries in the x and y direction.
  *  
  *  \author Mikael Lund
- *  \Date Asljunga, 2008
+ *  \date Asljunga, 2008
  */
 class slit : public box {
   public:

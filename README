@@ -40,13 +40,6 @@ REQUIREMENTS:
   + Doxygen (optional, for code manual)
   + Graphviz (optional, for code manual)
 
-COMPILING (Experimental):
-  $ [options] cmake .
-  $ make
-
-  Options:
-    CXX=icpc | pathCC | pgCC | g++
-
 COMPILING:
   $ make
   $ make manual (requires doxygen)
@@ -62,6 +55,24 @@ COMPILING:
   makefile to enable this feature. At runtime one may specify
   the number of processors to use via OMP_NUM_THREADS. For
   small systems it may be faster to turn off parallization.
+
+COMPILING USING CMAKE (Experimental):
+  Faunus and all dependencies can by automatically configured
+  using a menu-based interface. Here you may switch on/off options,
+  select the compiler, installation directories etc.
+  $ ccmake .
+  $ make
+
+  Alternatively, use the command line:
+  $ cmake . [options]
+  $ make
+
+  Options:
+    -DOPENMP=on|*off     Enable OpenMP support
+    -DGROMACS=on|*off    Enable Gromacs XTC file support
+
+  Environmental variables:
+    CXX - C++ compiler command (icpc, pathCC, pgCC etc.)
 
 DIRECTORY LAYOUT:
   classes      Mostly finished, general classes.

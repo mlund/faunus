@@ -9,7 +9,7 @@ protein1="4LZT.aam"
 r_dielec=6.8
 dielec_i=2
 
-for ph in 12.5
+for ph in 13
 do
   for salt in 19
   do

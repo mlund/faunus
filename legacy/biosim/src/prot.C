@@ -530,9 +530,9 @@ int main(int argc, char* argv[] ) {
       hist.add( h[20], z, utot ); //total energy 
  
       //Multipole analysis
-      if (slump.random_one()>1.5) {
+      if (slump.random_one()>0.6) {
         if (z>40. && z<65.) {
-          trj.header( g[P1].size()+1 );
+          trj.header( g[P1].size()-2+1 );
           trj.add( s.p, pep, g[P1] );
           trj.add( s.p, pep, g[P2].cm );
           trj.footer();
@@ -553,11 +553,11 @@ int main(int argc, char* argv[] ) {
         hist.add(h[4], z, s.p[g[P1].dipv].x * s.p[g[P2].dipv].x);
         hist.add(h[5], z, s.p[g[P1].dipv].y * s.p[g[P2].dipv].y);
         hist.add(h[6], z, (s.p[g[P1].dipv].z-s.p[g[P1].cm].z)
-                 * (s.p[g[P2].dipv].z-s.p[g[P2].cm].z) );
+            * (s.p[g[P2].dipv].z-s.p[g[P2].cm].z) );
         hist.add(h[7], z, pot.lB*q1*q2/z);
         hist.add(h[8], z, pot.iondip(mu1,q2,z)+pot.iondip(mu2,q1,z));
         hist.add(h[9], z, pot.dipdip(mu1,mu2,z));
-        
+
         //single dipole orientation
         hist.add(h[13], z, s.p[g[P1].dipv].x );
         hist.add(h[14], z, s.p[g[P1].dipv].y );
@@ -567,12 +567,12 @@ int main(int argc, char* argv[] ) {
         hist.add(h[18], z, s.p[g[P2].dipv].z-s.p[g[P2].cm].z);        
         mu1_z += s.p[g[P1].dipv].z-s.p[g[P1].cm].z;
         mu2_z += s.p[g[P2].dipv].z-s.p[g[P2].cm].z;
-        
+
         bool savevdw=g[1].vdw; g[1].vdw=false; //turn off vdw interactions
         double up1p2=pot.energy(s.p,g[P1],g[P2]);
         hist.add(h[10],z, up1p2);
         g[1].vdw=savevdw;
-        
+
         hist.add(h[11],z, g[P1].dip);
         hist.add(h[12],z, g[P2].dip);
 
@@ -588,8 +588,9 @@ int main(int argc, char* argv[] ) {
           s.save( ".min.coord" + jobid );
         };
       };
-      
+
       //Adjust displacement parameter
+      //(Detailed balance violation! Use for equilibration, only)
       if (adjust_dp==true && slump.random_one()>0.9) {
         mc.adjust_dp(montecarlo::ION, ion_dp);
         mc.adjust_dp(montecarlo::TRANSLATE, prot_dp);
@@ -602,19 +603,19 @@ int main(int argc, char* argv[] ) {
         imd.send_particles(s.p);
 
     }; //end of micro loop
-    
+
     // Check if particle vectors are in sync
     if (s.safetytest_vector()==false)
       return 1; //teminate program
-    
+
     // System energy check:
     cout << "# --- MACROSTEP COMPLETED  --------------------------\n";
     mc.showStatus(macroCnt);
     double usys = pot.energy(s.p) + pot.energy_vdw(s.p, g[P1], g[P2]);
-	if (hairy==true)
-	  for (int k=CHAIN1; k<ENDCHAIN; k++)
-	    usys += pot.internal(s.p, g[k]);
-    
+    if (hairy==true)
+      for (int k=CHAIN1; k<ENDCHAIN; k++)
+        usys += pot.internal(s.p, g[k]);
+
     double mu   = -log(muex.avg());
     cout << "# System energy (kT)       = " << usys << endl
       << "# Energy drift (rel abs)      = " << utot - usys << " " << (utot-usys)/usys << endl
@@ -622,19 +623,19 @@ int main(int argc, char* argv[] ) {
       << "# Protein charges          = " << s.charge(g[P1]) << " " << s.charge(g[P2]) << endl
       << "# Total system charge      = " << s.charge() << endl
       << "# Widom analysis (1:1 salt): " << endl
-      << "#   excess. chem. pot.     = " << mu << endl
-      << "#   mean activity coeff.   = " << exp(mu) << endl
-      << "#   debye length           = " << -pot.lB/(2.0*mu) << endl
-      << "# Protein 1 (Q,C,mu)       = "
-      << Q1.avg() << " " << Q1sq.avg()-pow(Q1.avg(),2) << " " << dip1.avg() << endl 
-      << "# Protein 2 (Q,C,mu)       = "
-      << Q2.avg() << " " << Q2sq.avg()-pow(Q2.avg(),2) << " " << dip2.avg() << endl
-      << "# Avg. dipole z components = " << mu1_z << " " << mu2_z << endl
-      << endl;
-    
+                                            << "#   excess. chem. pot.     = " << mu << endl
+                                            << "#   mean activity coeff.   = " << exp(mu) << endl
+                                            << "#   debye length           = " << -pot.lB/(2.0*mu) << endl
+                                            << "# Protein 1 (Q,C,mu)       = "
+                                            << Q1.avg() << " " << Q1sq.avg()-pow(Q1.avg(),2) << " " << dip1.avg() << endl 
+                                            << "# Protein 2 (Q,C,mu)       = "
+                                            << Q2.avg() << " " << Q2sq.avg()-pow(Q2.avg(),2) << " " << dip2.avg() << endl
+                                            << "# Avg. dipole z components = " << mu1_z << " " << mu2_z << endl
+                                            << endl;
+
     s.save( ".coord" + jobid);          //save coordinates
     trj.newfile();                      //dump trj into new file
-    
+
     //Graphical output (Povray and vpython)
     povray pov;
     pov.sphere(cell_r);
@@ -646,44 +647,50 @@ int main(int argc, char* argv[] ) {
       for (int i=CHAIN1; i<ENDCHAIN; i++)
         pov.add( s.p, g[i] );
     pov.save("snapshot.pov" + jobid);
-    
+
     /*
-    vpython vpy;
-    vpy.add( s.p, g[SALT]);
-    vpy.add( s.p, g[P1] );
-    vpy.add( s.p, g[P2] );                                           
-    if (hairy==true)
-      for (int i=CHAIN1; i<ENDCHAIN; i++)
-        vpy.add( s.p, g[i] );                                                                  
-    vpy.save("vpython" + jobid + ".py");
-    */
-    
+       vpython vpy;
+       vpy.add( s.p, g[SALT]);
+       vpy.add( s.p, g[P1] );
+       vpy.add( s.p, g[P2] );                                           
+       if (hairy==true)
+       for (int i=CHAIN1; i<ENDCHAIN; i++)
+       vpy.add( s.p, g[i] );                                                                  
+       vpy.save("vpython" + jobid + ".py");
+       */
+
     //test for any static particles...
     for (int i=0; i<tmp.size(); i++)
       if (abs(tmp[i].x-s.p[i].x)<0.01)
         if (abs(tmp[i].y-s.p[i].y)<0.01)
           if (abs(tmp[i].z-s.p[i].z)<0.01)
             cout << "Possible static particle: " << i << endl;
-  
+
     cout << endl;
     //hist.show(h, minsep, maxsep );
-    
+
   }; //end of macro step 
-  
+
   /**************************************
     Print results and terminate program
-    **************************************/
+   **************************************/
   trj.close();
   hist.show(h, minsep, maxsep);
   mc.showStatistics();
-  
+
   if (smear==true)
     tit.applycharges(s.p);    // apply average charges, and smeared out protons
   s.save(".coord" + jobid);
-  
+
+  // Save a PQR file for VMD.
+  pqr pqr("out.pqr");
+  pqr.add(s.p,pep,g[P1]);
+  pqr.add(s.p,pep,g[P2].cm);
+  pqr.close();
+
   for (int i=g[CHAIN1].beg; i<g[CHAIN1].end; i++) {
     cout << geo.dist( s.p[i], s.p[i+1]) << endl;
   };
-  
+
   return 0;
 };

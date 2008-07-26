@@ -10,7 +10,7 @@
   #MODEL = ibmxl
   #MODEL = debug
   #MODEL = mac
-  MODEL = generic
+  #MODEL = generic
 
   ##################################################################
 
@@ -56,7 +56,7 @@
   endif
   ifeq ($(MODEL), intel)
     CXX=icc
-    CXXFLAGS = -g -fast -w #-openmp
+    CXXFLAGS = -O3 -w #-openmp
 endif
 
 CLASSDIR=./

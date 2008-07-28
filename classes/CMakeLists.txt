@@ -3,7 +3,7 @@ include_directories(${CMAKE_SOURCE_DIR}/classes)
 set(objs inputfile io titrate point physconst slump container
     potentials hardsphere group particles analysis species) 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
-add_library ("fns" STATIC ${objs})
+add_library (fns STATIC ${objs})
 
 if (GROMACS)
   if(GMX_FOUND) 
@@ -22,4 +22,7 @@ if (GROMACS)
 endif(GROMACS)
 
 install(TARGETS fns ARCHIVE DESTINATION lib)
-install(DIRECTORY classes DESTINATION include FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/classes/
+  DESTINATION include/faunus FILES_MATCHING PATTERN "*.h"
+  PATTERN "CMakeFiles" EXCLUDE
+  PATTERN "examples" EXCLUDE)

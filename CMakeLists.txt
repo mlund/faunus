@@ -12,13 +12,15 @@ ENDIF(NOT CMAKE_BUILD_TYPE)
 # ----------------------------
 #   Locate external packages
 # ----------------------------
-include(TestCXXAcceptsFlag)
 set (CMAKE_MODULE_PATH classes)
+include(TestCXXAcceptsFlag)
 find_package(DOXYGEN)
 if (GROMACS)
   find_package(GMX)
-  find_package(X11)
-  find_package(MOTIF)
+  if (GMX_MOTIF)
+    find_package(X11)
+    find_package(MOTIF)
+  endif (GMX_MOTIF)
 endif(GROMACS)
 
 # -----------------
@@ -50,12 +52,14 @@ fau_setcmp("Sun" "-fast -w -DNDEBUG" "-xopenmp") # Sun
 fau_setcmp("pgCC" "-O3 -w -DNDEBUG" "-mp")       # Portland
 fau_setcmp("pathCC" "-Ofast -DNDEBUG" " ")       # Pathscale
 
-message("-- Compiler optimizations: "${CMAKE_CXX_FLAGS_RELEASE})
+#message("-- Compiler optimizations: "${CMAKE_CXX_FLAGS_RELEASE})
 
 # ---------------------------
 #   Add source directories
 # ---------------------------
-add_subdirectory (classes build)
-add_subdirectory (examples build)
-add_subdirectory (doc build EXCLUDE_FROM_ALL)
+add_subdirectory (classes)
+add_subdirectory (examples)
+add_subdirectory (doc EXCLUDE_FROM_ALL)
+
+#message("${CMAKE_INSTALL_PREFIX}")
 

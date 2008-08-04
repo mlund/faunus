@@ -14,7 +14,7 @@ Write access to the repository is obtained by sending
 a mail to: mlund at mac com
 
 \subsection guide Guidelines for Submitting Code
-\li Make sure "make all" or works before submitting
+\li Make sure "make all" works before submitting
 \li Avoid submitting temporary files (.o, .xyz etc.)
 \li Stride to recycle code via inheritance, virtual functions, templates etc.
 \li Document code using Doxygen keywords

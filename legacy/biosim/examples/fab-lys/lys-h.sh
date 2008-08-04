@@ -30,9 +30,10 @@ do
     cleanup
     nion1=$[salt+39]
     nion2=$[salt]  
-    micro=2000
+    micro=200
     smear="no"
     simulate 
+    exit
 
     output="lys-h.ph${ph}.salt${salt}.vdw${hamaker}"
     micro=400000

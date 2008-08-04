@@ -532,7 +532,7 @@ int main(int argc, char* argv[] ) {
       //Multipole analysis
       if (slump.random_one()>0.6) {
         if (z>40. && z<65.) {
-          trj.header( g[P1].size()-2+1 );
+          trj.header( g[P1].size()-2+1 ); //subtract ghosts, "mu", "cm". Add 1 for P2.cm
           trj.add( s.p, pep, g[P1] );
           trj.add( s.p, pep, g[P2].cm );
           trj.footer();

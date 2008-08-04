@@ -34,7 +34,7 @@ class xyz {
       for (unsigned short i=g.beg; i<=g.end-2; i++) add(p, pep, i); //skip cm and dipole!
     }
     void newfile() {
-      if (f) close();
+      close();
       ostringstream suffix;
       suffix << "." << ++fid << ".xyz";
       string s = base + suffix.str();
@@ -42,7 +42,7 @@ class xyz {
       f.precision(3);
       virgin=true;
     }
-    void close() { f.close(); }
+    void close() { if (f.is_open()) f.close(); }
 };
 
 // PQR file output stolen from faunus/classes.

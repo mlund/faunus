@@ -9,20 +9,6 @@ IF(NOT CMAKE_BUILD_TYPE)
     FORCE)
 ENDIF(NOT CMAKE_BUILD_TYPE)
 
-# ----------------------------
-#   Locate external packages
-# ----------------------------
-set (CMAKE_MODULE_PATH classes)
-include(TestCXXAcceptsFlag)
-find_package(Doxygen)
-if (GROMACS)
-  find_package(GMX)
-  if (GMX_MOTIF)
-    find_package(X11)
-    find_package(Motif)
-  endif (GMX_MOTIF)
-endif(GROMACS)
-
 # -----------------
 #   User options
 # -----------------
@@ -31,6 +17,21 @@ option (GROMACS "Enable Gromacs xtc trajectory output" off)
 option (CODEMANUAL "Create a HTML manual of C++ classes" off)
 mark_as_advanced(CLEAR CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS_RELEASE)
 mark_as_advanced(EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH CMAKE_OSX_SYSROOT)
+
+# ----------------------------
+#   Locate external packages
+# ----------------------------
+set (CMAKE_MODULE_PATH cmake/modules)
+include(TestCXXAcceptsFlag)
+find_package(OpenBabel2)
+find_package(Doxygen)
+if (GROMACS)
+  find_package(GMX)
+  if (GMX_MOTIF)
+    find_package(X11)
+    find_package(Motif)
+  endif (GMX_MOTIF)
+endif(GROMACS)
 
 # ------------------
 #   Compiler flags

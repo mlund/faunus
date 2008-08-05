@@ -38,12 +38,13 @@ Vector illustrations can be made in a number of different programs such as
 \item Create illustration and select the objects you wish to export.
 \item Select \verb+Edit->Copy+
 \item Launch Preview.app and select \verb+File->New From Clipboard+.
-\item Export to PDF or any other format.
+\item Export to PDF or any other format in \verb+File->Save As...+
 \end{enumerate}
 
 \subsection{Conversion commands etc.}
 \begin{table}[h!]
 \center
+\begin{small}
 \begin{tabular}{ll}\hline\hline
 Action              & Command \\\hline
 Crop blank PDF borders & \verb"pdfcrop file.pdf" \\
@@ -54,13 +55,13 @@ Print syntax-highlighted source code & \verb"enscript --media=a4 -E sourcefile"\
 Convert DVI to PS with \textbf{pretty} text & \verb"dvips -Ppdf t.dvi -o t.ps"\\
 Convert PS to PDF                           & \verb"pstopdf t.ps"\\
 \hline
-\end{tabular}\end{table}
+\end{tabular}\end{small}\end{table}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 \section{Networking}
-\subsection{Access scientific journals from home}
+\subsection{\label{sec:proxy}Access scientific journals from home}
 Establish an encrypted SSH-tunnel to any computer situated on campus:
 \begin{enumerate}
 \item For example: \verb+ssh -D 9999 mimer.teokem.lu.se+
@@ -84,7 +85,7 @@ Look at \verb"~/.ssh". If you see a file named id\_dsa.pub then you already have
 \end{enumerate}
 
 \subsection{Mount remote disks from SSH-servers}
-For this \verb+sshfs+ needs to be installed -- for example using MacPorts or MacFUSE. In this example we will mount /disk/gloabal/mikael from the host milleotto,\\
+For this \verb+sshfs+ needs to be installed -- for example using MacPorts or MacFUSE. In this example we will mount /disk/global/mikael from the host milleotto,\\
 
 \verb+$ sshfs milleotto.lunarc.lu.se:/disk/global/mikael mntdir+\\
 
@@ -97,14 +98,14 @@ CUPS printer detection has been disable in some versions of MacOS (10.5, higher?
 \verb+cupsctl BrowseRemoteProtocols=cups+
 
 \subsubsection{Connect to a specific CUPS server}
-If auto-detection fails, try adding ``ServerName SERVER'' to /etc/cups/client.conf. Note that this usually causes printing to hang if the computer is disconnected from the network and, hence not recommended for laptops.
+If auto-detection fails, try adding \verb"ServerName servername" to \verb"/etc/cups/client.conf". This usually causes printing to hang if the computer is disconnected from the network and, hence not recommended for laptops.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Software}
 \subsection{Port Managers}
 $\mathcal{A}$re handy interfaces to automatically download and install a large number of open source software in a self-consistent manner. Usually they require that Xcode -- Apple's developer and compiler tools -- are installed.
-\subsubsection{Macports}
+\subsubsection{\label{sec:macports}Macports}
 \begin{table}[h!]
 \center
 \begin{tabular}{ll}\hline\hline
@@ -113,10 +114,10 @@ Command              & Action \\\hline
 \verb+port variants packagename+ & show \emph{variants} of a package.\\
 \verb"sudo port install packagename" & install a package.\\
 \verb"sudo port install emacs +x11" & install emacs variant with X11 support.\\
-\verb"sudo port -d selfupdate" & update entire package system (do this only occasionally)\\\hline
+\verb"sudo port -d selfupdate" & update entire package system (do this occasionally)\\\hline
 \end{tabular}\end{table}
 %
-Useful packages are \verb+grace gnuplot povray sshfs vim aspell wget gawk tetex findutils+
+Useful packages are: grace gnuplot povray sshfs vim aspell wget gawk tetex findutils xmgr subversion sshfs.
 
 \subsubsection{Fink}
 \begin{table}[h!]
@@ -130,7 +131,7 @@ Install source fink package & \verb"sudo fink install package"\\\hline
 \end{tabular}\end{table}
 
 \subsection{Visual Molecular Dynamics}
-Or just VMD is a very impressive program for molecular visualization/analysis and although the name refers to MD, it works nicely with MC. A speciel feature of the mac port is that the command line tool is buried. Here are two ways to surface it:
+Or just VMD is a very impressive program for molecular visualization/analysis and despite the name, it works nicely with MC. A speciel ``feature'' of the mac version is that the command line tool is buried. Here are two ways to surface it:
 \begin{itemize}
 \item[\$] \verb+ alias vmd='/Applications/VMD\ 1.8.6.app/Contents/vmd/vmd_MACOSXX86'+
 \item[\$] \verb+ sudo ln -s /Applications/VMD\ 1.8.6.app/Contents/vmd/vmd_MACOSXX86 /usr/local/bin/vmd+\end{itemize}
@@ -138,11 +139,11 @@ Or just VMD is a very impressive program for molecular visualization/analysis an
 \subsection{Faunus}
 To fetch the newest revision from the subversion repository, do\\
 
-\verb+$ svn checkout http://faunus.svn.sourceforge.net/svnroot/faunus/trunk faunus+\\
+\verb+$ svn checkout https://faunus.svn.sourceforge.net/svnroot/faunus/trunk faunus+\\
 
-\noindent Make sure to specify the compiler in the Makefile -- in particular parallel execution works, as of now, much better on Intels C++ compiler than with g++.
+\noindent Make sure to specify the compiler in the Makefile -- in particular parallel execution works, as of now, much better on Intels C++ compiler than with the GNU compiler.
 
-\subsection{Grace}
+\subsection{\label{sec:grace}Grace}
 Some tips:
 \begin{itemize}
 \item White borders in graphs can be removed in \LaTeX{} by including graphs with\\
@@ -150,10 +151,13 @@ Some tips:
 \verb+\includegraphics[clip]+
 \end{itemize}
 
-\subsection{ACE/gr or ``Xmgr''}
-Yikes! This is a hassle to compile on recent versions of MacOS since development has been discontinued for a decade. PowerPC versions (compiled via Fink) run on Intel macs via transparent rosetta emulation. I have prepared a MacOS X installer that should work on MacOS X 10.4--10.5, PowerPC or Intel:\\
+\subsection{Xmgr}
+I have made a MacPorts (\ref{sec:macports}) port of this program -- simply install it with \verb+sudo port install xmgr+.
+Alternatively, a native MacOS package is available:\\
 
-\url{http://idisk.mac.com/mlund/Public/Software/Xmgr.pkg.zip}
+\url{http://idisk.mac.com/mlund/Public/Software/Xmgr.pkg.zip}\\
+
+\noindent Note that the development of Xmgr was discontinued in 1998; consider \verb"Grace", its superior descendant.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\LaTeX{} typesetting}
@@ -277,6 +281,16 @@ Remove conflict files        & \verb"svn resolved"(not need if using revert)\\
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Specific to Theoretical Chemistry, Lund University}
+\subsection{SSH Options for connections to mimer}
+Add the following to \verb"~/.ssh/config" to allow X tunelling, start a proxy server (see Section~\ref{sec:proxy}) and forward local Subversion traffic to gloin:
+\begin{verbatim}
+Host mimer
+  DynamicForward 9999
+  ForwardX11 yes
+  Compression yes
+  LocalForward 8910 gloin:22
+\end{verbatim}
+
 \subsection{Home directories (outdated?)}
 User home directories are served via NFS by \verb'garm.teokem.lu.se'. Some
 versions of Linux are not entirely compatible with MacOS which can cause

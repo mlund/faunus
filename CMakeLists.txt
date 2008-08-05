@@ -14,7 +14,6 @@ ENDIF(NOT CMAKE_BUILD_TYPE)
 # -----------------
 option (OPENMP "Enable OpenMP parallel execution on multicore CPU's")
 option (GROMACS "Enable Gromacs xtc trajectory output" off)
-option (CODEMANUAL "Create a HTML manual of C++ classes" off)
 mark_as_advanced(CLEAR CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS_RELEASE)
 mark_as_advanced(EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH CMAKE_OSX_SYSROOT)
 
@@ -24,7 +23,6 @@ mark_as_advanced(EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH CMAKE_OSX_SYSROOT)
 set (CMAKE_MODULE_PATH cmake/modules)
 include(TestCXXAcceptsFlag)
 find_package(OpenBabel2)
-find_package(Doxygen)
 if (GROMACS)
   find_package(GMX)
   if (GMX_MOTIF)
@@ -53,14 +51,10 @@ fau_setcmp("Sun" "-fast -w -DNDEBUG" "-xopenmp") # Sun
 fau_setcmp("pgCC" "-O3 -w -DNDEBUG" "-mp")       # Portland
 fau_setcmp("pathCC" "-Ofast -DNDEBUG" " ")       # Pathscale
 
-#message("-- Compiler optimizations: "${CMAKE_CXX_FLAGS_RELEASE})
-
 # ---------------------------
 #   Add source directories
 # ---------------------------
 add_subdirectory (classes)
 add_subdirectory (examples)
 add_subdirectory (doc EXCLUDE_FROM_ALL)
-
-#message("${CMAKE_INSTALL_PREFIX}")
 

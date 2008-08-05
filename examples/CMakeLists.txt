@@ -1,5 +1,4 @@
 include_directories(${CMAKE_SOURCE_DIR}/classes)
-include_directories(${OPENBABEL_INCLUDE_DIR})
 
 # Function to add a generic C++ example
 function( fau_example tname tdir tsrc )
@@ -7,7 +6,7 @@ function( fau_example tname tdir tsrc )
   set_source_files_properties( "${tdir}/${tsrc}" PROPERTIES LANGUAGE CXX)
   set_target_properties(${tname}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${tdir}/")
-  target_link_libraries(${tname} fns ${GMX_LIBRARIES})
+  target_link_libraries(${tname} fns)
   install (TARGETS ${tname} RUNTIME DESTINATION "bin")
 endfunction( fau_example )
 
@@ -20,5 +19,6 @@ fau_example(manybody manybody manybody.C)
 fau_example(isobaric isobaric isobaric.C)
 
 if (OPENBABEL_FOUND)
+  include_directories(${OPENBABEL_INCLUDE_DIR})
   fau_example(babel2aam tools babel2aam.C)
 endif (OPENBABEL_FOUND)

@@ -1,4 +1,5 @@
 include_directories(${CMAKE_SOURCE_DIR}/classes)
+include_directories(${OPENBABEL_INCLUDE_DIR})
 
 # Function to add a generic C++ example
 function( fau_example tname tdir tsrc )
@@ -18,3 +19,6 @@ fau_example(widom widom widom.C)
 fau_example(manybody manybody manybody.C)
 fau_example(isobaric isobaric isobaric.C)
 
+if (OPENBABEL_FOUND)
+  fau_example(babel2aam tools babel2aam.C)
+endif (OPENBABEL_FOUND)

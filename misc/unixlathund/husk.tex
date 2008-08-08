@@ -49,13 +49,17 @@ Vector illustrations can be made in a number of different programs such as
 Action              & Command \\\hline
 Crop blank PDF borders & \verb"pdfcrop file.pdf" \\
 Convert PDF/EPS to 300 dpi tiff & \verb"convert -compress lzw -density 300x300 in.pdf out.tif" \\
-Convert Xmgrace plot to pdf     & \verb"xmgrace -hardcopy -hdevice PDF file.agr"\\
+Convert grace plot to pdf       & \verb"xmgrace -hardcopy -hdevice PDF file.agr"\\
 Convert to monochrome           & \verb"convert -threshold 38% -despeckle out.jpg -monochrome in.jpg"\\
 Print syntax-highlighted source code & \verb"enscript --media=a4 -E sourcefile"\\
 Convert DVI to PS with \textbf{pretty} text & \verb"dvips -Ppdf t.dvi -o t.ps"\\
 Convert PS to PDF                           & \verb"pstopdf t.ps"\\
+Convert PDF to EPS                          & \verb"pdftops -eps t.pdf"\\
 \hline
 \end{tabular}\end{small}\end{table}
+
+\subsubsection{How to keep bitmap EPS files small}
+The package \verb"jpeg2ps" (available on macports) can be used to convert jpeg bitmap pictures into compressed EPS files. Another tool is \verb"sam2p".
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -103,35 +107,32 @@ If auto-detection fails, try adding \verb"ServerName servername" to \verb"/etc/c
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Software}
-\subsection{Port Managers}
-$\mathcal{A}$re handy interfaces to automatically download and install a large number of open source software in a self-consistent manner. Usually they require that Xcode -- Apple's developer and compiler tools -- are installed.
-\subsubsection{\label{sec:macports}Macports}
+\subsection{\label{sec:ports}Port Managers}
+..$\mathcal{A}$re handy interfaces to automatically download and install a large number of open source software in a self-consistent manner. Usually they require that Xcode -- Apple's developer and compiler tools -- are installed.
 \begin{table}[h!]
 \center
+\begin{small}
 \begin{tabular}{ll}\hline\hline
 Command              & Action \\\hline
+\textbf{Macports}    & (\url{http://www.macports.org})\\
 \verb"port search keyword" & search for a package\\
 \verb+port variants packagename+ & show \emph{variants} of a package.\\
 \verb"sudo port install packagename" & install a package.\\
 \verb"sudo port install emacs +x11" & install emacs variant with X11 support.\\
-\verb"sudo port -d selfupdate" & update entire package system (do this occasionally)\\\hline
-\end{tabular}\end{table}
-%
-Useful packages are: grace gnuplot povray sshfs vim aspell wget gawk tetex findutils xmgr subversion sshfs.
-
-\subsubsection{Fink}
-\begin{table}[h!]
-\center
-\begin{tabular}{ll}\hline\hline
-Action              & Command \\\hline
+\verb"sudo port -d selfupdate" & update entire package system (do this occasionally)\\
+\\
+\textbf{Fink}       & (\url{http://www.finkproject.org})\\
 Search for package  & \verb"apt-cache search package"\\
 Install package     & \verb"sudo apt-get install package"\\
 Update packages     &  \verb"sudo apt-get update|upgrade"\\
 Install source fink package & \verb"sudo fink install package"\\\hline
-\end{tabular}\end{table}
+\end{tabular}\end{small}\end{table}
 
-\subsection{Visual Molecular Dynamics}
-Or just VMD is a very impressive program for molecular visualization/analysis and despite the name, it works nicely with MC. A speciel ``feature'' of the mac version is that the command line tool is buried. Here are two ways to surface it:
+Useful MacPorts packages are: grace gnuplot povray sshfs vim aspell wget gawk tetex findutils xmgr subversion sshfs.
+
+
+\subsection{VMD}
+Or \href{http://www.google.com/search?q=vmd}{Visual Molecular Dynamics} is an impressive program for molecular visualization/analysis and despite the name, it works nicely with MC too. A speciel ``feature'' of the mac version is that the command line tool is buried. Here are two ways to surface it:
 \begin{itemize}
 \item[\$] \verb+ alias vmd='/Applications/VMD\ 1.8.6.app/Contents/vmd/vmd_MACOSXX86'+
 \item[\$] \verb+ sudo ln -s /Applications/VMD\ 1.8.6.app/Contents/vmd/vmd_MACOSXX86 /usr/local/bin/vmd+\end{itemize}
@@ -141,7 +142,7 @@ To fetch the newest revision from the subversion repository, do\\
 
 \verb+$ svn checkout https://faunus.svn.sourceforge.net/svnroot/faunus/trunk faunus+\\
 
-\noindent Make sure to specify the compiler in the Makefile -- in particular parallel execution works, as of now, much better on Intels C++ compiler than with the GNU compiler.
+\noindent Make sure to specify the compiler in the Makefile -- in particular parallel execution works, as of now, much better on Intel's C++ compiler than with the GNU compiler.
 
 \subsection{\label{sec:grace}Grace}
 Some tips:
@@ -152,19 +153,60 @@ Some tips:
 \end{itemize}
 
 \subsection{Xmgr}
-I have made a MacPorts (\ref{sec:macports}) port of this program -- simply install it with \verb+sudo port install xmgr+.
-Alternatively, a native MacOS package is available:\\
+I have made a MacPorts (see \ref{sec:ports}) port of this ancient\footnote{The development of Xmgr was frozen in the last century (1998). Grace is the successor.} program. Alternatively, a native MacOS package is available:\\
 
 \url{http://idisk.mac.com/mlund/Public/Software/Xmgr.pkg.zip}\\
 
-\noindent Note that the development of Xmgr was discontinued in 1998; consider \verb"Grace", its superior descendant.
+\subsection{Apple Terminal.app}
+\subsubsection{Enable \textsc{Home} and \textsc{End} keys}
+\begin{enumerate}
+\item Go to \verb"Preferences->Settings->Keyboard"
+\item Add: ``Home'' key, no modifier, shell string: \verb"ctrl-a" (001)
+\item Add: ``End'' key, no modifier, shell string: \verb"ctrl-e" (005)
+\end{enumerate}
+For this to work over SSH use instead the following strings:
+\begin{itemize}
+\item Home: \verb"ctrl+[ [ 1 ~"
+\item End: \verb"ctrl+[ [ 4 ~"
+\item PgUp: \verb"ctrl+[ [ 5 ~"
+\item PgDw: \verb"ctrl+[ [ 6 ~"
+\end{itemize}
+
+\subsection{VIM}
+Here is an example of a typical \verb"~/.vimrc" file that provides syntax highlighting etc.:
+\begin{footnotesize}\begin{verbatim}
+set backspace=indent,eol,start
+set autoindent
+set term=ansi
+syntax on
+set hlsearch
+colorscheme elflord
+set backgound=dark
+set et
+set sw=2
+set smarttab
+\end{verbatim}\end{footnotesize}
+
+\section{Table of useful commands}
+\begin{table}[h]
+\center\begin{small}
+\begin{tabular}{ll}\hline\hline
+Action         & Command \\\hline
+Split screen   & \verb":S" or \verb":split"\\
+Swap screen    & \verb"ctrl+w w"\\
+Page down      & \verb"ctrl+f"\\
+Page up        & \verb"ctrl+b"\\
+End of file    & \verb"G"\\
+n'th line      & :n\\
+Indent all     & =G\\
+\end{tabular}\end{small}\end{table}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\LaTeX{} typesetting}
 \subsection{Getting started}
 \begin{enumerate}
 \item Create a \LaTeX{} file, ``test.tex'', for example from the following template that shows some of the basic commands:
-\begin{verbatim}
+\begin{small}\begin{verbatim}
 \documentclass[a4paper,12pt]{article}
 \usepackage[a4paper,vmargin={2cm,2.2cm}, hmargin={1.5cm}]{geometry}
 \usepackage{hyperref} % Enables clickable links for on screen reading
@@ -183,7 +225,7 @@ This is Equation~\ref{coulomb}:
 Also web-links can be useful for on screen reading:
 \href{http://www.bmj.com/cgi/content/full/319/7225/1596}{[Exciting experiments]}
 \end{document}
-\end{verbatim}
+\end{verbatim}\end{small}
 \item Compile with: \verb"pdflatex test.tex" to automatically produce a PDF file with hyperlinks and bookmarks.
 \end{enumerate}
 Note that using pdf\LaTeX{} any graphics inserted with \verb"\includegraphics" must be in the format pdf, png, jpg, mps, or tif. EPS files \emph{cannot} be used with pdf\LaTeX{} and must be converted first.\footnote{This can be done automatically using the auto-pst-pdf package -- see Section~\ref{sec:psfrag}} For example:\\
@@ -222,6 +264,34 @@ Text labels in eps files generated with Xmgr, gnuplot etc. can be replaced with 
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Specific to Theoretical Chemistry, Lund University}
+\subsection{SSH Options for connections to mimer}
+Add the following to \verb"~/.ssh/config" to allow X tunelling, start a proxy server (see Section~\ref{sec:proxy}) and forward local Subversion traffic to gloin:
+\begin{verbatim}
+Host mimer
+  DynamicForward 9999
+  ForwardX11 yes
+  Compression yes
+  LocalForward 8910 gloin:22
+\end{verbatim}
+
+\subsection{Home directories (outdated?)}
+User home directories are served via NFS by \verb'garm.teokem.lu.se'. Some
+versions of Linux are not entirely compatible with MacOS which can cause
+problems with file locking. This is used in \verb+Mail.app+, \verb+Address Book.app+
+etc. and these programs will NOT work when home is on garm (as of
+writing, Dec. 2006). To circumvent this \verb+~/Library+ can be placed on a
+local disk and a symlink placed in the home directory (ln -s).
+To setup MacOS for NFS to garm I suggest using the free program
+\verb+NFS manager+ by Bresink.
+There you will also find a nice manual on integrating MacOS in NFS
+and NIS environments. When setup, the mount point can be checked in
+\verb+NetInfo Manager+ and should have the following options: \verb+-s,-P,-b+.
+A restart is most likely required for the changes to take effect.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\section{General UNIX command}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -232,7 +302,7 @@ Text labels in eps files generated with Xmgr, gnuplot etc. can be replaced with 
 \begin{tabular}{ll}\hline\hline
 Action              & Command \\\hline
 \textbf{Processes Handling}\\
-Quick and dirty suicide!       & \verb"kill -9 -1"\\
+Quick and dirty suicide       & \verb"kill -9 -1"\\
 Pause/resume job     & \verb"kill -s STOP|CONT pid" \\
 Terminate job by name     & \verb"killall jobname" \\
 Launch logout-safe job  & \verb"nohup program &" \\
@@ -241,7 +311,7 @@ Be a gentleman, run in low priority & \verb"nice program" (use when exploiting a
 \textbf{Files and search}\\
 Disk information   & \verb"df -h"\\
 Space used in current directory & \verb"du -h" (or \verb"-csh" for a summary)\\
-Find file           & \verb'find * -iname "file*"'\\
+Find file           & \verb'find * -iname "*something*.pdf"'\\
 Find large files    & \verb'find * -size +1000k printf "%p %k \n"'\\
 Find files and contents (mac) & \verb'mdfind text...'\\
 ``Double-click'' file (mac)     & \verb"open file"\\
@@ -273,38 +343,17 @@ Add file or directory& \verb"svn add file"\\
 Show log             & \verb"svn log"\\
 Regret and undo modification & \verb"svn revert foo"\\
 Remove conflict files        & \verb"svn resolved"(not need if using revert)\\
+\\
+\textbf{Text manipulation etc.}\\
+Print file w. linenumbers & \verb"cat -n file.dat"\\
+Manipulate columns  & \verb:cat file.dat | gawk '{print "Sum="$2+$3}':\\
+Show lines with ``HIS''    & \verb+cat file.dat | grep "HIS"+\\
+Show lines without ``LYS''  & \verb+cat file.dat | grep -v "LYS"+\\
+Calculator (floats should have a .)  & \verb+echo "print sqrt(2)/3." | gnuplot+\\
 \hline
 \end{tabular}
 \end{small}
 \end{table}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\section{Specific to Theoretical Chemistry, Lund University}
-\subsection{SSH Options for connections to mimer}
-Add the following to \verb"~/.ssh/config" to allow X tunelling, start a proxy server (see Section~\ref{sec:proxy}) and forward local Subversion traffic to gloin:
-\begin{verbatim}
-Host mimer
-  DynamicForward 9999
-  ForwardX11 yes
-  Compression yes
-  LocalForward 8910 gloin:22
-\end{verbatim}
-
-\subsection{Home directories (outdated?)}
-User home directories are served via NFS by \verb'garm.teokem.lu.se'. Some
-versions of Linux are not entirely compatible with MacOS which can cause
-problems with file locking. This is used in \verb+Mail.app+, \verb+Address Book.app+
-etc. and these programs will NOT work when home is on garm (as of
-writing, Dec. 2006). To circumvent this \verb+~/Library+ can be placed on a
-local disk and a symlink placed in the home directory (ln -s).
-To setup MacOS for NFS to garm I suggest using the free program
-\verb+NFS manager+ by Bresink.
-There you will also find a nice manual on integrating MacOS in NFS
-and NIS environments. When setup, the mount point can be checked in
-\verb+NetInfo Manager+ and should have the following options: \verb+-s,-P,-b+.
-A restart is most likely required for the changes to take effect.
-
 
 \end{document}
 

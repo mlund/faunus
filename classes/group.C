@@ -453,26 +453,29 @@ void macromolecule::isobaricmove(container &con, double newlen) {
   con.setvolume(oldvol);         // restore original volume
 }
 
-//--------------- SOLVENT -----------------
-short int solvent::random() { return group::random()/numatom; }
-group solvent::operator[](unsigned short i) {
+//--------------- MOLECULES -----------------
+molecules::molecules(unsigned short n) {
+  dp_trans=dp_rot=0;
+  numatom=n;
+}
+short int molecules::random() { return group::random()/numatom; }
+group molecules::operator[](unsigned short i) {
   gtmp.beg=i*numatom;
   gtmp.end=gtmp.beg+numatom-1;
   return gtmp;
 }
-string solvent::info() {
+string molecules::info() {
   ostringstream o;
   o << group::info()
-    << "#  Atoms/solvent molecule  = " << numatom << endl 
+    << "#  Atoms per molecule      = " << numatom << endl 
     << "#  Solvent molecules       = " << size()/double(numatom) << endl; //check!!
   if (dip.cnt>0 && dip2.cnt>0)
     o << "#    <mu> <mu^2>-<mu>^2    = " << dip.avg()<<" "<<dip2.avg()-pow(dip.avg(),2)<<endl;
   return o.str();
 }
 
-spce::spce() {
+spce::spce() : molecules(3) {
   name = "SPC/E water";
-  numatom=3;
 }
 
 //--------------- CHAIN -----------------

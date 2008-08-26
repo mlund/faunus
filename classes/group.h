@@ -116,13 +116,9 @@ class macromolecule : public group {
  */
 class molecules : public group {
   private:
-    group gtmp;               //!< A temporary group class
+    group sel;                //!< A temporary group class
   public:
     molecules(unsigned short);//!< Constructor. Specify number of atoms in each molecule.
-    float dp_trans;           //!< Translational displacement
-    float dp_rot;             //!< Rotational displacement
-    average<float> dip;       //!< Average dipole moment
-    average<float> dip2;      //!< Average squared dipole moment
     unsigned short numatom;   //!< Number of atoms in each molecule
     short random();           //!< Pick a random molecule (NOT atom)
     string info();            //!< Show information
@@ -133,10 +129,15 @@ class molecules : public group {
  *  \author Mikael Lund
  *  \date Asljunga 2008
  */
-class spce : public molecules {
+class spc : public molecules {
   public:
-    spce();
-};
+    spc();
+    string info();
+    float dp_trans;           //!< Translational displacement
+    float dp_rot;             //!< Rotational displacement
+    average<float> dip;       //!< Average dipole moment
+    average<float> dip2;      //!< Average squared dipole moment
+  };
 
 /*! \brief Freely jointed chain with harmonic spring potentials
  *  \author Mikael Lund

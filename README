@@ -25,13 +25,13 @@ WELCOME TO FAUNUS:
   $ svn co http://faunus.svn.sourceforge.net/svnroot/faunus/trunk faunus
 
 CONTRIBUTORS:
-  Mikael Lund <mlund at mac.com>
+  Mikael Lund <mlund at mac.com> - http://web.mac.com/mlund
   Bjorn Persson <bjorn.persson at teokem.lu.se>
   Martin Trulsson <martin.trulsson at teokem.lu.se>
 
 CITING FAUNUS:
   Lund, M., Persson, B., Trulsson, M. (2008) Source Code Biol. Med. 3:1
-  http://www.scfbm.org/content/3/1/1 (open access)
+  http://www.scfbm.org/content/3/1/1 (free full text)
 
 REQUIREMENTS:
   1. C++ compiler (gnu, ibm, intel, sun etc.)
@@ -82,4 +82,5 @@ DIRECTORY LAYOUT:
   undone       Unfinished code
   misc         Mostly temporary stuff
   doc          Code manual files
-  xcode        Apple Xcode project
+  xcode        Apple Xcode project (redundant due to cmake Xcode target)
+

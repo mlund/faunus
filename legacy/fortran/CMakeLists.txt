@@ -1,5 +1,4 @@
 enable_language(Fortran OPTIONAL)
-include_directories(${CMAKE_SOURCE_DIR}/legacy/fortran)
 
 # Function to add a generic fortran target
 function( fortran_target tname tdir tsrc )
@@ -10,7 +9,7 @@ function( fortran_target tname tdir tsrc )
   install (TARGETS ${tname} RUNTIME DESTINATION "bin")
 endfunction( fortran_target )
 
-# Add targets:
-fortran_target(bulk bulk "bulk/bulk.f")
-
-
+# Add targets
+if (CMAKE_Fortran_COMPILER_WORKS)
+  fortran_target(bulk bulk "bulk/bulk.f")
+endif (CMAKE_Fortran_COMPILER_WORKS)

@@ -57,7 +57,7 @@ void histogram::write(string file) {
   ofstream f(file.c_str());
   if (f) {
     f.precision(12);
-    for (double x=0; x<xmax(); x+=xres) {
+    for (double x=xmin; x<xmax(); x+=xres) {
       g=get(x);
       if (g!=0.0)
         f << x << " " << g << "\n";

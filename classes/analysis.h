@@ -19,6 +19,7 @@ namespace Faunus {
 class analysis {
   protected:
     slump slp;
+    bool runtest();             //!< True if we should run, false if not.
   public:
     float runfraction;          //!< Fraction of times analysis should be run
     virtual string info()=0;    //!< Information/results
@@ -190,7 +191,7 @@ widompath<T_pairpot>::widompath(particle &beg, particle &end) {
 template<class T_pairpot>
 void widompath<T_pairpot>::update(
     container &con, interaction<T_pairpot> &pot, iopov &pov) {
-  if (slp.runtest(runfraction)==false || finished==true)
+  if (runtest()==false || finished==true)
     return;
   unsigned char i,imax;
   if (cnt>0) {

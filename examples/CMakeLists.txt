@@ -1,6 +1,6 @@
 include_directories(${CMAKE_SOURCE_DIR}/classes)
 
-# Function to add a generic C++ example
+#----- function to add a generic C++ example -----
 function( fau_example tname tdir tsrc )
   add_executable( ${tname} "${tdir}/${tsrc}" )
   set_source_files_properties( "${tdir}/${tsrc}" PROPERTIES LANGUAGE CXX)
@@ -10,6 +10,7 @@ function( fau_example tname tdir tsrc )
   install (TARGETS ${tname} RUNTIME DESTINATION "bin")
 endfunction( fau_example )
 
+#----- add examples to build process -----
 fau_example(pka titration pka.C)
 fau_example(GCpka titration GCpka.C)
 fau_example(twobody twobody twobody.C)
@@ -19,6 +20,7 @@ fau_example(manybody manybody manybody.C)
 fau_example(isobaric isobaric isobaric.C)
 fau_example(binding binding binding.C)
 
+#----- examples where openbabel is needed -----
 if (OPENBABEL_FOUND)
   include_directories(${OPENBABEL_INCLUDE_DIR})
   fau_example(babel2aam tools babel2aam.C)

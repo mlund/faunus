@@ -56,5 +56,6 @@ fau_setcmp("pathCC" "-Ofast -DNDEBUG" " ")       # Pathscale
 # ---------------------------
 add_subdirectory (classes)
 add_subdirectory (examples)
+add_subdirectory (legacy/fortran EXCLUDE_FROM_ALL)
 add_subdirectory (doc EXCLUDE_FROM_ALL)
 

@@ -10,11 +10,14 @@
 
 #include <iostream>
 #include "analysis.h"
+#include "histogram.h"
 #include "mcloop.h"
 #include "pot_netz.h"
-typedef pot_coulomb T_pairpot;         // Specific pair interaction function
+namespace Faunus {
+  typedef pot_coulomb T_pairpot; // Specific pair interaction function
+}
 #include "markovmove.h"
-
+using namespace Faunus;
 using namespace std;
 
 int main() {
@@ -28,7 +31,7 @@ int main() {
   ioxyz xyz(cell);                      // xyz output for VMD etc.
   distributions dst;                    // Distance dep. averages
   iopqr pqr(cell);                      // PQR output (pos, charge, radius)
-  rdf saltrdf(particle::NA,particle::CL, .5, cell.r);
+  FAUrdf saltrdf(particle::NA,particle::CL, .5, cell.r);
   twostatebinding bind(20.);            // Two state binding model
 
   vector<macromolecule> g;              // Group for proteins
@@ -60,7 +63,7 @@ int main() {
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {
       short i,n;
-      switch (rand() % 3) {                     // Pick a random MC move
+      switch (rand() % 4) {                     // Pick a random MC move
         case 0:                                 // Displace salt
           sys+=sm.move(salt);                   //   Do the move.
           break;

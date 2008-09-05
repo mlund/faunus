@@ -1,9 +1,11 @@
-#ifndef _HARDSPHERE_H
-#define _HARDSPHERE_H
+#ifndef FAU_HARDSPHERE_H
+#define FAU_HARDSPHERE_H
 
 #include <vector>
 #include "point.h"
 #include "group.h"
+
+namespace Faunus {
 
 /*!\brief Hardsphere overlap between particles
  * \author Mikael Lund
@@ -19,5 +21,5 @@ class hardsphere {
     bool overlap(vector<particle> &, group::group &, group::group &, double &);   ///< group<->group.
     bool overlap(vector<particle> &, vector<short int> &, double);      ///< internal collisions within subset
 };
-
+}
 #endif

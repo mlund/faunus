@@ -1,5 +1,5 @@
-#ifndef _POINT_H
-#define _POINT_H
+#ifndef FAU_POINT_H
+#define FAU_POINT_H
 
 #include <string>
 #include <iostream>
@@ -11,10 +11,7 @@
 using std::ostream;
 using namespace std;
 
-/*extern "C" {
- double sqdf_(double &, double &, double &, double &
-              , double &);
-}*/
+namespace Faunus {
 
 /*!
  * \brief Cartesian coordinates
@@ -177,4 +174,6 @@ inline bool particle::overlap(particle &p, double &s) {
   double r=radius+p.radius+s;
   return (sqdist(p) < r*r) ? true : false;
 }
+
+}//namespace
 #endif

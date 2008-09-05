@@ -1,8 +1,10 @@
-#ifndef _PROFILE_H
-#define _PROFILE_H
+#ifndef FAU_PROFILE_H
+#define FAU_PROFILE_H
 
 #include "xytable.h"
 #include "io.h"
+
+namespace Faunus {
 
 /*!\brief Particle profile base class
  * \author Mikael Lund
@@ -86,5 +88,6 @@ void cylindric_profile::add(particle &p) {
         (*this)(p.z)++;
         cnt++;
       }
+}
 }
 #endif

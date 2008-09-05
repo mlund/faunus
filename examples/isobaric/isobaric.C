@@ -9,11 +9,14 @@
 
 #include "../../classes/analysis.h"
 #include "../../classes/potentials.h"
-typedef pot_debyehuckelP3 T_pairpot;      // Specific pair interaction function
+namespace Faunus{
+  typedef pot_debyehuckelP3 T_pairpot; // Specific pair interaction function
+}
 #include "../../classes/markovmove.h"
 #include "../../classes/mcloop.h"
 #include "../../classes/physconst.h"
 
+using namespace Faunus;
 using namespace std;
 
 int main() {
@@ -29,7 +32,7 @@ int main() {
   pot_setup cfg(in);                    // Setup pair potential (default values)
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   iogro gro(cell, in);                  // Gromacs file output for VMD etc.
-  rdf protrdf(0,0,.5,cell.len/2.);      // Protein and salt radial distributions
+  FAUrdf protrdf(0,0,.5,cell.len/2.);   // Protein and salt radial distributions
 
   vector<macromolecule> g;                      // PROTEIN groups
   ioxyz xyz(cell);

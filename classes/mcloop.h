@@ -1,7 +1,9 @@
-#ifndef MCLOOP_H
-#define MCLOOP_H
+#ifndef FAU_MCLOOP_H
+#define FAU_MCLOOP_H
 #include "inputfile.h"
 #include "countdown.h"
+
+namespace Faunus {
 /*!
  * This class keeps track of the outer and inner
  * Markov chain loops. Also, after each macro step
@@ -48,4 +50,5 @@ string mcloop::timing(unsigned int mac) {
     << cnt.eta(mac);
   return o.str();
 }
+}//namespace
 #endif

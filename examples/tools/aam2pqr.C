@@ -2,6 +2,7 @@
 #include "group.h"
 #include "io.h"
 
+using namespace Faunus;
 using namespace std;
 
 int main() {

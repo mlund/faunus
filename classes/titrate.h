@@ -1,5 +1,5 @@
-#ifndef titrate_h
-#define titrate_h
+#ifndef FAU_titrate_h
+#define FAU_titrate_h
 
 #include <vector>
 #include <algorithm>
@@ -10,6 +10,8 @@
 #include "average.h"
 
 using namespace std;
+
+namespace Faunus {
 
 /*! \brief Class to perform proton titration of molecules
  *  \author Mikael Lund
@@ -49,4 +51,5 @@ class titrate {
     keywords status( vector<particle> &, short int );
     group sort(group &);
 };
+}
 #endif

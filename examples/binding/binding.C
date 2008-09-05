@@ -6,10 +6,13 @@
 #include "analysis.h"
 #include "mcloop.h"
 #include "pot_hydrophobic.h"
-typedef pot_coulomb T_pairpot;      // Specific pair interaction function
+namespace Faunus{
+  typedef pot_coulomb T_pairpot; // Specific pair interaction function
+}
 #include "markovmove.h"
 
 using namespace std;
+using namespace Faunus;
 
 int main() {
   cout << "---------- INITIAL PARAMETERS -----------" << endl;
@@ -21,7 +24,7 @@ int main() {
   pot_setup cfg(in);                    // Setup pair potential (default values)
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   iogro gro(cell, in);                  // Gromacs file output for VMD etc.
-  rdf protrdf(0,0,.5,cell.r);           // Protein and salt radial distributions
+  FAUrdf protrdf(0,0,.5,cell.r);        // Protein and salt radial distributions
   twostatebinding bind(20.);            // Two state binding analysis
 
   vector<macromolecule> g;              // PROTEIN groups

@@ -12,9 +12,12 @@
 #include "profile.h"
 #include "mcloop.h"
 #include "pot_netz.h"
-typedef pot_netz T_pairpot;             // Specific pair interaction function
+namespace Faunus {
+  typedef pot_netz T_pairpot;             // Specific pair interaction function
+}
 #include "markovmove.h"
 
+using namespace Faunus;
 using namespace std;
 
 int main() {
@@ -46,7 +49,7 @@ int main() {
   pot.end_of_protein_one=g[0].end;      // Hydrophobic interactions w. BOTH proteins
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
 
-  rdf saltrdf(salt.anion,salt.cation, .5, cell.r);
+  FAUrdf saltrdf(salt.anion,salt.cation, .5, cell.r);
   cylindric_profile cyl(16,salt.anion,-50,50,.5);
 
   cout << "# ------ INITIAL INFORMATION ------" << endl

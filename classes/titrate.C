@@ -1,5 +1,5 @@
 #include "titrate.h"
-
+namespace Faunus {
 /*!
  * \param spec Species class
  * \param peeage pH
@@ -206,3 +206,4 @@ void  GCtitrate::updateVolume (double vol) {
 
 }
 */
+}

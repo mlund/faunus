@@ -8,11 +8,14 @@
 #include "analysis.h"
 #include "container.h"
 #include "potentials.h"
-typedef pot_minimage T_pairpot;
+namespace Faunus {
+  typedef pot_minimage T_pairpot;
+}
 #include "markovmove.h"
 #include "analysis.h"
 #include "hardsphere.h"
 
+using namespace Faunus;
 using namespace std;
 
 int main() {

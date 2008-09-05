@@ -1,5 +1,5 @@
-#ifndef _CONFIG_H
-#define _CONFIG_H
+#ifndef FAU_CONFIG_H
+#define FAU_CONFIG_H
 
 #include <vector>
 #include <string>
@@ -8,6 +8,8 @@
 #include <stdlib.h>
 
 using namespace std;
+
+namespace Faunus {
 
 /*!
  * \brief Retrieve data from a formatted input file
@@ -29,5 +31,6 @@ private:
   vector<dataformat> matrix;
   int findKey(string &);
 };
+}//namespace
 #endif
 

@@ -1,10 +1,12 @@
-#ifndef _particles_h
-#define _particles_h
+#ifndef FAU_particles_h
+#define FAU_particles_h
 
 #include <vector>
 #include <string>
 #include "slump.h"
 #include "point.h"
+
+namespace Faunus {
 
 /*!
  * \brief Class the contains all particles and manipulating methods.
@@ -30,5 +32,5 @@ public:
   bool check_vector();                  //!< Check if p and trial are equal!
   int count(particle::type,point&,double);//!< Count particles of "type" within a sphere
 };
-
+}
 #endif

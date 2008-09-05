@@ -17,6 +17,7 @@ fau_example(twobody-hof twobody-hofmeister twobody-hof.C)
 fau_example(widom widom widom.C)
 fau_example(manybody manybody manybody.C)
 fau_example(isobaric isobaric isobaric.C)
+fau_example(binding binding binding.C)
 
 if (OPENBABEL_FOUND)
   include_directories(${OPENBABEL_INCLUDE_DIR})

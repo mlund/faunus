@@ -11,18 +11,21 @@
 #include "analysis.h"
 #include "container.h"
 #include "potentials.h"
-typedef pot_minimage T_pairpot;
+namespace Faunus {
+  typedef pot_minimage T_pairpot;
+}
 #include "markovmove.h"
 #include "analysis.h"
 #include "histogram.h"
 
 using namespace std;
+using namespace Faunus;
 
 int main() {
   box cell(90.);                        // We want a cubic cell
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg;                        // Setup pair potential - default values
-  rdf rdf(particle::NA,particle::CL,.5, 45.);
+  FAUrdf rdf(particle::NA,particle::CL,.5, 45.);
   interaction<T_pairpot> pot(cfg);      // Functions for interactions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   ioxyz xyz(cell);

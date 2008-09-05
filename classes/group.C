@@ -1,5 +1,7 @@
 #include "group.h"
 
+namespace Faunus {
+
 //---------------- GROUP -----------------------
 group::group(int i) {
   set(-1,-1);     //is empty
@@ -588,3 +590,5 @@ unsigned short zwittermembrane::displace(container &c, double d) {
 /*
 brush::brush
 t*/      
+
+}//namespace

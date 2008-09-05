@@ -1,5 +1,6 @@
 #include "container.h"
 
+namespace Faunus {
 //----------- CONTAINER -----------------
 string container::info() {
   float z=charge();
@@ -154,4 +155,4 @@ string cylinder::povray() {
     << "cylinder {<0,0,0>,<0,0" << len << ">,0.5 texture {cell}}\n";
   return o.str();
 }     
-
+}//namespace

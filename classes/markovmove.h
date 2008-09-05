@@ -1,5 +1,5 @@
-#ifndef _markovmove_h
-#define _markovmove_h
+#ifndef FAU_markovmove_h
+#define FAU_markovmove_h
 
 #include <cstdarg>
 #include "container.h"
@@ -9,6 +9,9 @@
 #include "slump.h"
 #include "io.h"
 #include "histogram.h"
+
+namespace Faunus {
+
 //typedef pot_coulomb T_pairpot;
 
 /*! \brief Base class for MC moves
@@ -1171,3 +1174,4 @@ string clusterrotate::info() {
   }
   return o.str();
 }
+}//namespace

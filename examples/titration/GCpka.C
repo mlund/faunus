@@ -7,9 +7,10 @@
 #include "container.h"
 #include "potentials.h"
 #include "mcloop.h"
-typedef pot_coulomb T_pairpot;         // Specify pair potential
+namespace Faunus{typedef pot_coulomb T_pairpot;} // Specify pair potential
 #include "markovmove.h"
 
+using namespace Faunus;
 using namespace std;
 
 int main(int argc, char* argv[]) {

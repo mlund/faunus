@@ -1,5 +1,5 @@
 #include "species.h"
-
+namespace Faunus {
 //float species::getpka(particle::type id) { return d[id].pka; }
 particle species::get(particle::type id) { return d[id].p; }
 particle species::get(string name) { return d[id(name)].p; }
@@ -58,4 +58,4 @@ species::species() {
   set(particle::GHOST,"GHOST",0,  0,  0.0, false);
   set(particle::HYDROPHOBIC,"HYDR",3.5,0,0, true);
 }
-
+}

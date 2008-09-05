@@ -9,11 +9,14 @@
 #include "../../classes/analysis.h"
 #include "../../classes/container.h"
 #include "../../classes/potentials.h"
-typedef pot_minimage T_pairpot;         // Coulomb pot. with minimum image convention.
+namespace Faunus{
+  typedef pot_minimage T_pairpot; // Coulomb pot. with minimum image convention.
+}
 #include "../../classes/markovmove.h"
 #include "../../classes/analysis.h"
 #include "../../classes/histogram.h"
 
+using namespace Faunus;
 using namespace std;
 
 int main() {
@@ -21,7 +24,7 @@ int main() {
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg;                        // Setup pair potential - default values
   cfg.box = box.len;                    // Specific box len. for minimum image
-  rdf rdf(particle::NA,particle::CL);   // Prepare Na-Cl radial distribution, g(r)
+  FAUrdf rdf(particle::NA,particle::CL);// Prepare Na-Cl radial distribution, g(r)
   interaction<T_pairpot> pot(cfg);      // Particle energy functions
   ioxyz xyz(box);                       // Class for XYZ output
   saltmove sm(nvt, box, pot);           // Class for salt movements

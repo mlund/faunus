@@ -1,6 +1,9 @@
-#ifndef _LENNARDJONES_H
-#define _LENNARDJONES_H
+#ifndef FAU_LENNARDJONES_H
+#define FAU_LENNARDJONES_H
 #include "point.h"
+
+namespace Faunus {
+
 /*!
  *  \brief Lennard-Jones potential
  *  \author Mikael Lund
@@ -71,4 +74,5 @@ class pot_hs {
       return o.str();
     }
 };
+}//namespace
 #endif

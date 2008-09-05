@@ -1,5 +1,5 @@
-#ifndef _HISTOGRAM_H
-#define _HISTOGRAM_H
+#ifndef FAU_HISTOGRAM_H
+#define FAU_HISTOGRAM_H
 
 #include <cmath>
 #include <string>
@@ -9,13 +9,15 @@
 #include "xytable.h"
 #include "container.h"
 
+namespace Faunus {
+
 //---------------------------------------------------
 /*!
  * \brief Histogram class
  * \author Mikael Lund
  */
 class histogram : private xytable<float,unsigned long int> {
-  friend class rdf;
+  friend class FAUrdf;
   private:
     unsigned long int cnt;
     float xmaxi;  // ugly solution!
@@ -63,8 +65,6 @@ void histogram::write(string file) {
     f.close();
   }
 }
-//-----------------------------------------------------------------
-
 
 //-----------------------------------------------------------------
 /*!
@@ -77,12 +77,12 @@ void histogram::write(string file) {
  *  \todo Needs testing!
  *
  */
-class rdf : public histogram {
+class FAUrdf : public histogram {
   private:
     short a,b;                   //!< Particle types to investigate
     float volume(float);         //!< Volume of shell r->r+xres
   public:
-    rdf(short, short, float=.5, float=0); 
+    FAUrdf(short, short, float=.5, float=0); 
     void update(container &);             //!< Update histogram vector
     void update(vector<particle> &);      //!< Update histogram vector
     void update(container &, point &, point &); //!< Update for two points
@@ -95,7 +95,7 @@ class rdf : public histogram {
  * \param resolution Histogram resolution (binwidth)
  * \param xmaximum Maximum x value (used for better memory utilisation)
  */
-rdf::rdf(short species1, short species2, float resolution, float xmaximum) :
+FAUrdf::FAUrdf(short species1, short species2, float resolution, float xmaximum) :
   histogram(resolution, 0, xmaximum)
 {
   a=species1;
@@ -106,7 +106,7 @@ rdf::rdf(short species1, short species2, float resolution, float xmaximum) :
  * Update histogram between two known points
  * \note Uses the container distance function
  */
-void rdf::update(container &c, point &a, point &b) {
+void FAUrdf::update(container &c, point &a, point &b) {
   add( c.dist(a, b) );
 }
 
@@ -116,7 +116,7 @@ void rdf::update(container &c, point &a, point &b) {
  *
  * \note Uses the container function to calculate distances
  */
-void rdf::update(container &c) {
+void FAUrdf::update(container &c) {
   unsigned short i,j,n=c.p.size();
   for (i=0; i<n-1; i++)
     for (j=i+1; j<n; j++) 
@@ -131,7 +131,7 @@ void rdf::update(container &c) {
  *
  * \warning This function uses a simple distance function (no mim. image)
  */
-void rdf::update(vector<particle> &p)
+void FAUrdf::update(vector<particle> &p)
 {
   unsigned short i,j,n=p.size();
   for (i=0; i<n-1; i++)
@@ -145,15 +145,17 @@ void rdf::update(vector<particle> &p)
  * Calculate all distances between vector<particle> and 
  * update the histogram under P3 conditions
  */
-float rdf::volume(float x) { return 4./3.*acos(-1.)*( pow(x+0.5*xres,3)-pow(x-0.5*xres,3) ); }
+float FAUrdf::volume(float x) { return 4./3.*acos(-1.)*( pow(x+0.5*xres,3)-pow(x-0.5*xres,3) ); }
 /*!
  *  Get g(x) from histogram according to
  *    \f$ g(x) = \frac{N(r)}{N_{tot}} \frac{ 3 } { 4\pi\left [ (x+xres)^3 - x^3 \right ] }\f$
  */
-float rdf::get(float x) { return (*this)(x)/(cnt*volume(x)); }
+float FAUrdf::get(float x) { return (*this)(x)/(cnt*volume(x)); }
 
 /*!
  *  Get g(x) from histogram according to
  *    \f$ g(x) = \frac{N(r)}{N_{tot}} \frac{ 3 } { 4\pi\left [ (x+xres)^3 - x^3 \right ] }\f$
  */
+
+};//namespace
 #endif

@@ -1,5 +1,7 @@
 #include "inputfile.h"
 
+namespace Faunus {
+
 //! \param filename Input file to scan
 inputfile::inputfile(string filename) {
   matrix.resize(50);
@@ -59,3 +61,4 @@ bool inputfile::getboo(string key, bool def) {
   }
   return def;
 }
+}//namespace

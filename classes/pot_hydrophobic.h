@@ -1,7 +1,9 @@
-#ifndef _POT_HYDROPHOBIC_H
-#define _POT_HYDROPHOBIC_H
+#ifndef FAU_POT_HYDROPHOBIC_H
+#define FAU_POT_HYDROPHOBIC_H
 
 #include "potentials.h"
+
+namespace Faunus {
 
 /*! \brief Double vdW interaction for certain particles with hydrophobic groups 
  *  \author Mikael Lund 
@@ -39,4 +41,5 @@ string pot_hydrophobic::info() {
     << "#   Hydrop. LJ scaling = " << scale << endl;
   return o.str();
 }
+}//namespace
 #endif

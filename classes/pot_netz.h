@@ -3,6 +3,8 @@
 
 #include "potentials.h"
 
+namespace Faunus {
+
 /*! \brief Coulomb potential w. an extra empirical PMF
  *  \author Mikael Lund 
  */
@@ -79,5 +81,6 @@ class pot_netz : public pot_coulomb {
       return 0;
     }
 };
+}
 #endif
 

@@ -1,6 +1,9 @@
-#ifndef _countdown_h
-#define _countdown_h
+#ifndef FAU_COUNTDOWN_H
+#define FAU_COUNTDOWN_H
 #include <string>
+
+namespace Faunus {
+
 /*! \brief Estimate speed of a computational process
  *  \author Mikael Lund
  * 
@@ -38,4 +41,6 @@ template<class T> std::string countdown<T>::eta(T midvalue) {
   return asctime(timeinfo);
 }
 template<class T> int countdown<T>::elapsed() { return time(0)-time_i; }
+
+}//namespace
 #endif

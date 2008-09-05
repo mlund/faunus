@@ -5,6 +5,7 @@
 #include "../../classes/pot_hydrophobic.h"
 #include "../../classes/pot_netz.h"
 
+using namespace Faunus;
 using namespace std;
 
 int main() {

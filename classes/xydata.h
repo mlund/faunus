@@ -1,5 +1,5 @@
-#ifndef _xydata_h
-#define _xydata_h
+#ifndef FAU_xydata_h
+#define FAU_xydata_h
 #include <cmath>
 #include <vector>
 #include <iostream>
@@ -7,6 +7,8 @@
 #include "average.h"
 
 using namespace std;
+
+namespace Faunus {
 
 /*!
  * \brief Class to handle a dataset of xy values with equidistant x-values.
@@ -105,5 +107,6 @@ template <class T>
 void xydata<T>::list() {
   for (unsigned int i=0; i<y.size(); i++)
     cout << i2x(i) << " " << i2y(i) << endl;
+}
 }
 #endif

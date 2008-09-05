@@ -1,4 +1,5 @@
 #include "potentials.h"
+namespace Faunus {
 
 pot_setup::pot_setup() {
   lB=7.1;
@@ -119,3 +120,5 @@ bool pot_datapmf::loadpmf(species &spc, string filename) {
   }
   return false;
 }
+}//namespace
+

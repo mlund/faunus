@@ -1,11 +1,13 @@
-#ifndef _CONTAINER_H
-#define _CONTAINER_H
+#ifndef FAU_CONTAINER_H
+#define FAU_CONTAINER_H
 
 #include "particles.h"
 #include "slump.h"
 #include "point.h"
 #include "species.h"
 #include "inputfile.h"
+
+namespace Faunus {
 
 /*! \brief Polymorphic class for simulation containers
  *  \author Mikael Lund
@@ -150,4 +152,5 @@ class cylinder : public container {
     string info(); //!< Cylinder info
     string povray();
 };
+}//namespace
 #endif

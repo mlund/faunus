@@ -1,5 +1,5 @@
-#ifndef _ANALYSIS_H
-#define _ANALYSIS_H
+#ifndef FAU_ANALYSIS_H
+#define FAU_ANALYSIS_H
 
 #include "average.h"
 #include "container.h"
@@ -8,6 +8,8 @@
 #include "io.h"
 #include "xytable.h"
 #include "hardsphere.h"
+
+namespace Faunus {
 
 /*!
  * Base class for analysis functions
@@ -361,5 +363,5 @@ class aggregation :public analysis {
         << "# AGGREGATION COUNT"<< endl<<endl;
     }
 };
-
+}//namespace
 #endif

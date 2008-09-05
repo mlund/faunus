@@ -1,7 +1,8 @@
-#ifndef _legendre_h
-#define _legendre_h
+#ifndef FAU_LEGENDRE_H
+#define FAU_LEGENDRE_H
 #include<vector>
 
+namespace Faunus {
 /*!
  * \brief Evaluate n'th degree Legendre polynomium
  * \author Mikael Lund
@@ -43,6 +44,6 @@ void legendre::resize(unsigned short order) {
   p.resize(n+1);
   p[0]=1.;
 }
-
+}//namespace
 #endif
 

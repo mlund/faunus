@@ -1,5 +1,5 @@
-#ifndef _iobabel_h
-#define _iobabel_h
+#ifndef FAU_IOBABEL_H
+#define FAU_IOBABEL_H
 
 #include <iostream>
 #include <vector>
@@ -8,6 +8,8 @@
 #include "point.h"
 
 using namespace OpenBabel;
+
+namespace Faunus {
 
 /*! \brief OpenBabel file support
  *  \author Mikael Lund
@@ -23,7 +25,7 @@ class iobabel {
     OBConversion obconv;
     OBMol mol;
     OBAtom *atom;
-    particle a;
+    particle a;   // Tmp particle
     vector3 v;    // OpenBabel vector
     double c[3];  // Temp. vector storage
   public:
@@ -31,4 +33,5 @@ class iobabel {
     particle get(unsigned int); //!< Convert n'th babel atom to a particle
     void read(string,string);   //!< Read entire file
 };
+}//namespace
 #endif

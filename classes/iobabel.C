@@ -1,4 +1,5 @@
 #include "iobabel.h"
+namespace Faunus {
 void iobabel::read(string filename, string format) {
   p.clear();
   mol.Clear();
@@ -21,3 +22,4 @@ particle iobabel::get(unsigned int i) {
   a.charge=atom->GetPartialCharge();
   return a;
 }
+}//namespace

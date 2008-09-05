@@ -1,6 +1,6 @@
 #include <cmath>
 #include "physconst.h"
-
+namespace Faunus {
 //! \param kelvin Temperature in Kelvin
 //! \param dielec Relative dielectric constant
 physconst::physconst(double kelvin, double dielec) {
@@ -19,4 +19,4 @@ void physconst::lB_TO_T(double bjerr) {       //Calculate the absolute T (K) fro
   beta=1./(k*T);
   lB=bjerr;
 }
-
+}

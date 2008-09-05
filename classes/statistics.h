@@ -2,7 +2,7 @@
 #define _statistics_h
 #include <vector>
 #include <cmath>
-
+namespace Faunus {
 /*!
  *  \brief Statistical functions for a single dataset
  *
@@ -67,5 +67,6 @@ T statistics<T>::rms()
   for (int i=0; i<x.size(); i++)
     sum+=x[i]*x[i];
   return sqrt(sum/x.size());
+}
 }
 #endif

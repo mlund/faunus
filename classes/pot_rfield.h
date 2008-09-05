@@ -3,6 +3,8 @@
 #include "potentials.h"
 #include "lennardjones.h"
 
+namespace Faunus {
+
 /*! \brief Charge interactions in- and outside a spherical cavity
  *  \author Mikael Lund
  *  \date 2005-2006 Canberra
@@ -115,3 +117,5 @@ class pot_rfield : private pot_lj {
       return sum * p0.charge;
     }
 };
+}//namespace
+

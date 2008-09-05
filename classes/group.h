@@ -1,5 +1,5 @@
-#ifndef group_h
-#define group_h
+#ifndef FAU_GROUP_H
+#define FAU_GROUP_H
 
 #include <string>
 #include <iostream>
@@ -13,6 +13,8 @@
 #include "pot_spring.h"
 #include "slump.h"
 #include "inputfile.h"
+
+namespace Faunus {
 
 /*! \brief Groups set of particles, such as molecules, salt etc.
  *  \author Mikael Lund
@@ -194,6 +196,6 @@ class zwittermembrane : public planarsurface, private pot_spring {
     unsigned short displace(container&, double);        //!< Displace random particle
     double selfenergy(particles &);                     //!< Return internal spring energy
 };
-
+}//namespace
 #endif
 

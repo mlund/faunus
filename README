@@ -35,10 +35,12 @@ CITING FAUNUS:
 
 REQUIREMENTS:
   1. C++ compiler (gnu, ibm, intel, sun etc.)
-  2. cmake
-  + Gromacs (optional, for xtc trajectory output)
-  + Doxygen (optional, for code manual)
-  + Graphviz (optional, for code manual)
+  + cmake (for cross platform compilation)
+  + Gromacs (for xtc trajectory output)
+  + Doxygen (for code manual)
+  + Graphviz (for code manual)
+
+  (+ optional)
 
 COMPILING:
   $ make
@@ -58,8 +60,9 @@ COMPILING:
 
 COMPILING USING CMAKE (Experimental):
   Faunus and all dependencies can by automatically configured
-  using a menu-based interface. Here you may switch on/off options,
-  select the compiler, installation directories etc.
+  using a menu-based interface. Here one may switch on/off options,
+  select the compiler, installation directories etc. With time
+  this will be the default method of compilation.
   $ ccmake .
   $ make
 
@@ -68,8 +71,8 @@ COMPILING USING CMAKE (Experimental):
   $ make
 
   Options:
-    -DOPENMP=on|*off     Enable OpenMP support
-    -DGROMACS=on|*off    Enable Gromacs XTC file support
+    -DOPENMP=on|off     Enable OpenMP support
+    -DGROMACS=on|off    Enable Gromacs XTC file support
 
   Environmental variables:
     CXX - C++ compiler command (icpc, pathCC, pgCC etc.)
@@ -77,7 +80,7 @@ COMPILING USING CMAKE (Experimental):
 DIRECTORY LAYOUT:
   classes      Mostly finished, general classes.
   examples     Example programs
-  legacy       Older, working programs
+  legacy       Older programs. FORTRAN programs are also placed here.
   lib          The faunus library (static)
   undone       Unfinished code
   misc         Mostly temporary stuff

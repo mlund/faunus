@@ -1,5 +1,7 @@
 #include "point.h"
 
+namespace Faunus {
+
 point::point() { clear(); }
 point::point(double xx, double yy, double zz) {
   x=xx;
@@ -130,3 +132,4 @@ spherical::spherical(double radial, double zenith, double azimuthal) {
   theta=zenith;
   phi=azimuthal;
 }
+}//namespace

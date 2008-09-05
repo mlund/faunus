@@ -1,8 +1,9 @@
-#ifndef _GEOMETRY_H
-#define _GEOMETRY_H
+#ifndef FAU_GEOMETRY_H
+#define FAU_GEOMETRY_H
 
 #include "point.h"
 
+namespace Faunus {
 class shape {
 public:
   double volume, area;
@@ -32,4 +33,5 @@ class cube : public shape {
       p.z=p.z-len*anint(p.z*len_inv);
     }
  };
+}//namespace
 #endif

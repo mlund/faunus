@@ -1,5 +1,5 @@
 #include "particles.h"
-
+namespace Faunus {
 //! \return Size of particle vector after addition
 int particles::push_back(particle &par) {
   p.push_back(par);
@@ -62,3 +62,4 @@ int particles::count(particle::type id, point &origo, double r) {
     if (p[i].sqdist(origo) < r2) cnt++;
   return cnt;
 }
+}//namespace

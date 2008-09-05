@@ -1,5 +1,5 @@
-#ifndef _io_h
-#define _io_h
+#ifndef FAU_IO_H
+#define FAU_IO_H
 #include <string>
 #include <algorithm>
 #include <vector>
@@ -18,6 +18,8 @@
 #endif
 #include "xtcio.h"
 #endif
+
+namespace Faunus {
 
 //--------------------------------
 //!\brief Basic file I/O routines
@@ -185,5 +187,5 @@ class ioxtc : public iopart {
     void close();
 };
 #endif
-
+};//namespace
 #endif

@@ -1,5 +1,7 @@
 #include "hardsphere.h"
 
+namespace Faunus {
+
 bool hardsphere::overlap(vector<particle> &p, int j) {
   int ps=p.size();
   for (int i=0; i<j; i++)
@@ -75,3 +77,4 @@ bool hardsphere::overlap(vector<particle> &p, group &g1, group &g2, double &s) {
   }
   return false;
 }
+}//namespace

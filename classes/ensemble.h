@@ -1,7 +1,8 @@
-#ifndef _metropolis_h
-#define _metropolis_h
+#ifndef FAU_METROPOLIS_H
+#define FAU_METROPOLIS_H
 #include "slump.h"
 
+namespace Faunus {
 /*!
  * Polymorph ensemble class
  * \todo Maybe not really needed...
@@ -27,4 +28,6 @@ class canonical : public ensemble {
 };
 
 class grandcanonical : public ensemble {};
+
+}//namespace
 #endif

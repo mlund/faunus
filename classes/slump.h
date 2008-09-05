@@ -1,5 +1,5 @@
-#ifndef _slump_h
-#define _slump_h
+#ifndef FAU_slump_h
+#define FAU_slump_h
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
@@ -7,6 +7,8 @@
 // Needed for sunCC
 #include <stdlib.h>
 #include <time.h>
+
+namespace Faunus {
 
 #ifndef NRRAND
 /*!
@@ -33,6 +35,6 @@ class slump {
 
 };
 #endif
-
+}
 #endif
 

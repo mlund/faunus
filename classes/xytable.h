@@ -1,10 +1,11 @@
-#ifndef _XYTABLE_H
-#define _XYTABLE_H
+#ifndef FAU_XYTABLE_H
+#define FAU_XYTABLE_H
 
 #include <vector>
 #include <iostream>
 #include <string>
 
+namespace Faunus {
 /*!
  * \brief Class for a 2D table, XY data etc.
 * 
@@ -56,4 +57,5 @@ class xytable {
  * \example xytable-test.C
  * Example of the xytable class
  */
+}//namespace
 #endif

@@ -1,8 +1,10 @@
-#ifndef _species_h
-#define _species_h
+#ifndef FAU_species_h
+#define FAU_species_h
 #include <string>
 #include <vector>
 #include "point.h"
+
+namespace Faunus {
 
 /*!
  * \brief Specific data for particles
@@ -25,4 +27,5 @@ class species {
     particle get(particle::type);       //!< Get particle from id
     particle get(string);               //!< Get particle from string (name)
 };
+}
 #endif

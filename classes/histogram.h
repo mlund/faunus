@@ -20,7 +20,7 @@ class histogram : private xytable<float,unsigned long int> {
   friend class FAUrdf;
   private:
     unsigned long int cnt;
-    float xmaxi;  // ugly solution!
+    float xmaxi,xmini;  // ugly solution!
   public:
     histogram(float, float, float);
     string comment;                     //!< User defined comment
@@ -38,11 +38,12 @@ histogram::histogram(float res, float min, float max)
 : xytable<float,unsigned long int>(res,min,max) {
   cnt=0;
   xmaxi=max;
+  xmini=min;
 }
 
 //! Increment bin for x value
 void histogram::add(float x) {
-  if (x>=xmaxi) return;
+  if (x>=xmaxi || x<=xmini) return;
   (*this)(x)++;
   cnt++;
 }
@@ -56,7 +57,7 @@ void histogram::write(string file) {
   float g;
   ofstream f(file.c_str());
   if (f) {
-    f.precision(12);
+    f.precision(6);
     for (double x=xmin; x<xmax(); x+=xres) {
       g=get(x);
       if (g!=0.0)

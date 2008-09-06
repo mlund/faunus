@@ -1,17 +1,12 @@
-#include <iostream>
 #include "../histogram.h"
 
-using namespace std;
+using namespace Faunus;
 
 int main() {
-  histogram h(0.5);
-  h.add(0.5);
-  h.add(1.0);
-  h.add(1.0);
-  h.show();
-  float val=h.get(0.5); // val=0.3333
+  histogram h(0.1,-5,5);
+  h.add(-4.9);
+  h.add(4);
+  h.add(-5.0);
+  h.write("sletmig");
+  float val=h.get(4); // val=0.3333
 }
-
-// Output:
-// 0.5 0.333333
-// 1 0.666667

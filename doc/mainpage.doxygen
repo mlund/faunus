@@ -1,10 +1,14 @@
-/*! \mainpage
+/*! \mainpage FAUNUS
+
+\image html faunus-icon.jpg
+<center><i>&quot;...one of the oldest Roman deities, <br>
+a good spirit of the forest, plains, and fields.&quot;</i></center>
 
 \section welcome Welcome to Faunus!
 Faunus is an object oriented  C++ framework for creating programs for molecular simulations.
 We currently focus on Metropolis Monte Carlo techniques for studies of charged macro-molecules
-in aqueous solutions but, with time, anything is possible!
-A number of example programs are supplied and at the moment these include tools for:
+in aqueous solutions.
+A number of (preliminary) example programs are supplied and at the moment these include tools for:
 
 \li Protein-protein interactions in salt solutions (pmf, free energy surfaces, virial coefficients)
 \li Proton fluctuations (pka predictions, charge regulation, ionization states)
@@ -12,9 +16,9 @@ A number of example programs are supplied and at the moment these include tools 
 \li Hofmeister or ion-specific effects
 \li Widom particle intertion techniques
 
-The input and output formats are quite flexible with support for PDB, PQR,
+The input and output formats are quite flexible with support for
 <A HREF="http://www.openbabel.org">OpenBabel</A>
-as well as <A HREF="http://www.gromacs.org">Gromacs</A> compressed trajectory files (XTC).
+as well as <A HREF="http://www.gromacs.org">Gromacs</A> compressed trajectory files (xtc).
 
 \subsection cit Citation
 Faunus is released under the GNU Public Licence (\ref gpl "GPL") and can thus be freely used. We would appreciate
@@ -26,11 +30,14 @@ that you cite the following paper, though:
 
 \section download Download
 We do not maintain regular releases of Faunus and the code can be accessed
-only via the subversion repository at <A HREF="http://sourceforge.net/projects/faunus">
-Sourceforge</A>. For example, get the most recent code with the command:
+only via the subversion repository at Sourceforge. 
+For example, get the most recent code with the command:
 
 \verbatim svn checkout http://faunus.svn.sourceforge.net/svnroot/faunus faunus
 \endverbatim
+
+Or use the code <A HREF="http://faunus.svn.sourceforge.net/viewvc/faunus/trunk/">browser</A>
+to download a tar-ball of any revision.
 
 The code will compile on most unix-like systems including Linux, MacOS and most likely
 also in a Cygwin environment. Detailed instructions can be found \ref readme "here".

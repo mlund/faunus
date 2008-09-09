@@ -128,6 +128,7 @@ examples:	binding tools widom pka GCpka ewald twobody twobody-hof manybody isoba
 clean:
 	rm -f $(OBJS) *.o \
 	src/examples/titration/pka \
+	src/examples/titration/GCpka \
 	src/examples/widom/widom \
 	src/examples/ewald/ewald \
 	src/examples/twobody/twobody \
@@ -135,6 +136,9 @@ clean:
 	src/examples/manybody/manybodyclust \
 	src/examples/isobaric/isobaric \
 	src/examples/twobody-hofmeister/twobody-hof \
+	src/examples/binding/binding \
+	src/examples/tools/aam2pqr \
+	src/examples/tools/printpotential \
 	src/libfaunus.a
 docclean:
 	rm -fR doc/html doc/latex

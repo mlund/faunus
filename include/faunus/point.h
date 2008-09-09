@@ -6,7 +6,7 @@
 #include <sstream>
 #include <iomanip>
 #include <cmath>
-#include "slump.h"
+#include "faunus/slump.h"
 
 using std::ostream;
 using namespace std;

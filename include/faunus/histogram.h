@@ -4,10 +4,10 @@
 #include <cmath>
 #include <string>
 #include <iostream>
-#include "point.h"
-#include "average.h"
-#include "xytable.h"
-#include "container.h"
+#include "faunus/point.h"
+#include "faunus/average.h"
+#include "faunus/xytable.h"
+#include "faunus/container.h"
 
 namespace Faunus {
 

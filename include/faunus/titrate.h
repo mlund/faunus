@@ -4,10 +4,10 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
-#include "species.h"
-#include "point.h"
-#include "group.h"
-#include "average.h"
+#include "faunus/species.h"
+#include "faunus/point.h"
+#include "faunus/group.h"
+#include "faunus/average.h"
 
 namespace Faunus {
 

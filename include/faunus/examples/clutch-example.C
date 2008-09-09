@@ -2,13 +2,13 @@
  *  \example clutch-example.C
  */
 #include <iostream>
-#include "../io.h"
-#include "../analysis.h"
-#include "../container.h"
-#include "../potentials.h"
-#include "../countdown.h"
+#include "faunus/io.h"
+#include "faunus/analysis.h"
+#include "faunus/container.h"
+#include "faunus/potentials.h"
+#include "faunus/countdown.h"
 typedef pot_test T_pairpot;
-#include "../markovmove.C"
+#include "faunus/markovmove.C"
 
 using namespace std;
 

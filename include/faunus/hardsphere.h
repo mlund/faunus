@@ -1,9 +1,8 @@
 #ifndef FAU_HARDSPHERE_H
 #define FAU_HARDSPHERE_H
 
-#include <vector>
-#include "point.h"
-#include "group.h"
+#include "faunus/point.h"
+#include "faunus/group.h"
 
 namespace Faunus {
 

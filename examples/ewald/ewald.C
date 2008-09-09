@@ -5,16 +5,16 @@
  *
  */
 #include <iostream>
-#include "../../classes/io.h"
-#include "../../classes/analysis.h"
-#include "../../classes/container.h"
-#include "../../classes/potentials.h"
+#include "faunus/io.h"
+#include "faunus/analysis.h"
+#include "faunus/container.h"
+#include "faunus/potentials.h"
 namespace Faunus{
   typedef pot_minimage T_pairpot; // Coulomb pot. with minimum image convention.
 }
-#include "../../classes/markovmove.h"
-#include "../../classes/analysis.h"
-#include "../../classes/histogram.h"
+#include "faunus/markovmove.h"
+#include "faunus/analysis.h"
+#include "faunus/histogram.h"
 
 using namespace Faunus;
 using namespace std;

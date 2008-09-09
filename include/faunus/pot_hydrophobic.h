@@ -1,7 +1,7 @@
 #ifndef FAU_POT_HYDROPHOBIC_H
 #define FAU_POT_HYDROPHOBIC_H
 
-#include "potentials.h"
+#include "faunus/potentials.h"
 
 namespace Faunus {
 

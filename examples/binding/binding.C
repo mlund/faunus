@@ -3,13 +3,13 @@
  * \date Canberra 2008
  */
 
-#include "analysis.h"
-#include "mcloop.h"
-#include "pot_hydrophobic.h"
+#include "faunus/analysis.h"
+#include "faunus/mcloop.h"
+#include "faunus/pot_hydrophobic.h"
 namespace Faunus{
   typedef pot_coulomb T_pairpot; // Specific pair interaction function
 }
-#include "markovmove.h"
+#include "faunus/markovmove.h"
 
 using namespace std;
 using namespace Faunus;

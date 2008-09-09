@@ -6,15 +6,15 @@
  * particle insertion method.
  * Note: No equilibration run is incorporated.
  */
-#include "io.h"
-#include "analysis.h"
-#include "container.h"
-#include "potentials.h"
+#include "faunus/io.h"
+#include "faunus/analysis.h"
+#include "faunus/container.h"
+#include "faunus/potentials.h"
 namespace Faunus {
   typedef pot_coulomb T_pairpot;       // Specify pair potential
 }
-#include "markovmove.h"
-#include "matubayashi.h"
+#include "faunus/markovmove.h"
+#include "faunus/matubayashi.h"
 
 using namespace std;
 using namespace Faunus;                 // Access to Faunus classes

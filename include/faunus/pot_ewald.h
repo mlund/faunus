@@ -17,13 +17,13 @@
 #include <cstdarg>
 #include <cmath>
 #include <complex>
-#include "group.h"
-#include "slump.h"
-#include "particle.h"
-#include "simbox.h"      // <- Should be obselete
-#include "histogram.h"
-#include "interact.h"
-#include "physconst.h"
+#include "faunus/group.h"
+#include "faunus/slump.h"
+#include "faunus/particle.h"
+#include "faunus/simbox.h"      // <- Should be obselete
+#include "faunus/histogram.h"
+#include "faunus/interact.h"
+#include "faunus/physconst.h"
 
 
 class Ewald : public Interact {

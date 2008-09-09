@@ -1,6 +1,7 @@
 #ifndef FAU_METROPOLIS_H
 #define FAU_METROPOLIS_H
-#include "slump.h"
+
+#include "faunus/slump.h"
 
 namespace Faunus {
 /*!

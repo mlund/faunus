@@ -3,17 +3,16 @@
  *
  */
 #include <iostream>
-#include "group.h"  
-#include "io.h"
-#include "analysis.h"
-#include "container.h"
-#include "potentials.h"
+#include "faunus/io.h"
+#include "faunus/analysis.h"
+#include "faunus/container.h"
+#include "faunus/potentials.h"
 namespace Faunus {
   typedef pot_minimage T_pairpot;
 }
-#include "markovmove.h"
-#include "analysis.h"
-#include "hardsphere.h"
+#include "faunus/markovmove.h"
+#include "faunus/analysis.h"
+#include "faunus/hardsphere.h"
 
 using namespace Faunus;
 using namespace std;

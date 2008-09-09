@@ -1,7 +1,7 @@
 #ifndef FAU_MCLOOP_H
 #define FAU_MCLOOP_H
-#include "inputfile.h"
-#include "countdown.h"
+#include "faunus/inputfile.h"
+#include "faunus/countdown.h"
 
 namespace Faunus {
   /*!

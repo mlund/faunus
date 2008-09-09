@@ -1,7 +1,7 @@
 #ifndef FAU_MATUBAYASHI_H
 #define FAU_MATUBAYASHI_H
-#include "histogram.h"
-#include "analysis.h"
+#include "faunus/histogram.h"
+#include "faunus/analysis.h"
 
 namespace Faunus {
   /*!

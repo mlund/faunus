@@ -54,7 +54,7 @@ fau_setcmp("pathCC" "-Ofast -DNDEBUG" " ")       # Pathscale
 # ---------------------------
 #   Add source directories
 # ---------------------------
-add_subdirectory (classes)
+add_subdirectory (include/faunus)
 add_subdirectory (examples)
 add_subdirectory (legacy/fortran)
 add_subdirectory (doc EXCLUDE_FROM_ALL)

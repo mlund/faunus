@@ -1,16 +1,13 @@
 #ifndef FAU_IO_H
 #define FAU_IO_H
-#include <string>
 #include <algorithm>
-#include <vector>
-#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <cmath>
-#include "species.h"
-#include "group.h"
-#include "container.h"
-#include "titrate.h"
+#include "faunus/species.h"
+#include "faunus/group.h"
+#include "faunus/container.h"
+#include "faunus/titrate.h"
 
 #ifdef GROMACS
 #ifndef CPLUSPLUS

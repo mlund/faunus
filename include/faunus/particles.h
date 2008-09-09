@@ -3,8 +3,8 @@
 
 #include <vector>
 #include <string>
-#include "slump.h"
-#include "point.h"
+#include "faunus/slump.h"
+#include "faunus/point.h"
 
 namespace Faunus {
 

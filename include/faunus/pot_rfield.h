@@ -1,7 +1,7 @@
-#include "point.h"
-#include "legendre.h"
-#include "potentials.h"
-#include "lennardjones.h"
+#include "faunus/point.h"
+#include "faunus/legendre.h"
+#include "faunus/potentials.h"
+#include "faunus/lennardjones.h"
 
 namespace Faunus {
 

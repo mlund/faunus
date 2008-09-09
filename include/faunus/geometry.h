@@ -1,7 +1,7 @@
 #ifndef FAU_GEOMETRY_H
 #define FAU_GEOMETRY_H
 
-#include "point.h"
+#include "faunus/point.h"
 
 namespace Faunus {
 class shape {

@@ -1,6 +1,6 @@
 // Converts an AAM file to PQR (for VMD)
-#include "group.h"
-#include "io.h"
+#include "faunus/group.h"
+#include "faunus/io.h"
 
 using namespace Faunus;
 using namespace std;

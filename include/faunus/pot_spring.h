@@ -1,6 +1,6 @@
 #ifndef FAU_POT_SPRING_H
 #define FAU_POT_SPRING_H
-#include "point.h"
+#include "faunus/point.h"
 namespace Faunus {
   class pot_spring {
     public:

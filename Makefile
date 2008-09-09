@@ -15,8 +15,8 @@ OPENMP = no
 ###########################################
 
 CXX=g++
-CLASSDIR=classes
-INCDIR=-I$(CLASSDIR)
+CLASSDIR=include/faunus
+INCDIR=-Iinclude
 LDFLAGS=-L./lib -lfaunus
 
 ifeq ($(GROMACS), yes)

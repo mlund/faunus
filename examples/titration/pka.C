@@ -1,12 +1,12 @@
 #include <iostream>
-#include "analysis.h"
-#include "container.h"
-#include "potentials.h"
-#include "mcloop.h"
+#include "faunus/analysis.h"
+#include "faunus/container.h"
+#include "faunus/potentials.h"
+#include "faunus/mcloop.h"
 namespace Faunus {
   typedef pot_coulomb T_pairpot; // Specify pair potential
 }
-#include "markovmove.h"
+#include "faunus/markovmove.h"
 
 using namespace Faunus;
 using namespace std;

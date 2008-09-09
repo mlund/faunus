@@ -6,13 +6,13 @@
 #include <iomanip>
 #include <sstream>
 #include <vector>
-#include "point.h"
-#include "average.h"
-#include "particles.h"
-#include "container.h"
-#include "pot_spring.h"
-#include "slump.h"
-#include "inputfile.h"
+#include "faunus/point.h"
+#include "faunus/average.h"
+#include "faunus/particles.h"
+#include "faunus/container.h"
+#include "faunus/pot_spring.h"
+#include "faunus/slump.h"
+#include "faunus/inputfile.h"
 
 namespace Faunus {
 

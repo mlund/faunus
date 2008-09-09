@@ -1,13 +1,13 @@
 #ifndef FAU_ANALYSIS_H
 #define FAU_ANALYSIS_H
 
-#include "average.h"
-#include "container.h"
-#include "potentials.h"
-#include "slump.h"
-#include "io.h"
-#include "xytable.h"
-#include "hardsphere.h"
+#include "faunus/average.h"
+#include "faunus/container.h"
+#include "faunus/potentials.h"
+#include "faunus/slump.h"
+#include "faunus/io.h"
+#include "faunus/xytable.h"
+#include "faunus/hardsphere.h"
 
 namespace Faunus {
 

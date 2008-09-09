@@ -1,11 +1,11 @@
 #ifndef FAU_CONTAINER_H
 #define FAU_CONTAINER_H
 
-#include "particles.h"
-#include "slump.h"
-#include "point.h"
-#include "species.h"
-#include "inputfile.h"
+#include "faunus/particles.h"
+#include "faunus/slump.h"
+#include "faunus/point.h"
+#include "faunus/species.h"
+#include "faunus/inputfile.h"
 
 namespace Faunus {
   /*! \brief Polymorphic class for simulation containers

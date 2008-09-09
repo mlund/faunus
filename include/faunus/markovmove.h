@@ -2,13 +2,13 @@
 #define FAU_markovmove_h
 
 #include <cstdarg>
-#include "container.h"
-#include "potentials.h"
-#include "ensemble.h"
-#include "titrate.h"
-#include "slump.h"
-#include "io.h"
-#include "histogram.h"
+#include "faunus/container.h"
+#include "faunus/potentials.h"
+#include "faunus/ensemble.h"
+#include "faunus/titrate.h"
+#include "faunus/slump.h"
+#include "faunus/io.h"
+#include "faunus/histogram.h"
 
 namespace Faunus {
 

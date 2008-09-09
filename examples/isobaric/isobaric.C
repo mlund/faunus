@@ -7,14 +7,14 @@
  * \date Prague 2007
  */
 
-#include "../../classes/analysis.h"
-#include "../../classes/potentials.h"
+#include "faunus/analysis.h"
+#include "faunus/potentials.h"
 namespace Faunus{
   typedef pot_debyehuckelP3 T_pairpot; // Specific pair interaction function
 }
-#include "../../classes/markovmove.h"
-#include "../../classes/mcloop.h"
-#include "../../classes/physconst.h"
+#include "faunus/markovmove.h"
+#include "faunus/mcloop.h"
+#include "faunus/physconst.h"
 
 using namespace Faunus;
 using namespace std;

@@ -5,7 +5,7 @@
 #include <vector>
 #include <openbabel/obconversion.h>
 #include <openbabel/mol.h>
-#include "point.h"
+#include "faunus/point.h"
 
 using namespace OpenBabel;
 

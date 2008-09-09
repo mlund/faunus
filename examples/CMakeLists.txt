@@ -1,4 +1,4 @@
-include_directories(${CMAKE_SOURCE_DIR}/classes)
+include_directories(${CMAKE_SOURCE_DIR}/include)
 
 #----- function to add a generic C++ example -----
 function( fau_example tname tdir tsrc )

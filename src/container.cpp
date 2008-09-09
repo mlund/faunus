@@ -1,4 +1,4 @@
-#include "container.h"
+#include "faunus/container.h"
 
 namespace Faunus {
 //----------- CONTAINER -----------------

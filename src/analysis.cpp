@@ -1,4 +1,4 @@
-#include "analysis.h"
+#include "faunus/analysis.h"
 
 namespace Faunus {
 

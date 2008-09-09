@@ -1,4 +1,4 @@
-#include "io.h"
+#include "faunus/io.h"
 namespace Faunus {
   /*!
    * The first line in the AAM file format is the number of

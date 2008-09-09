@@ -1,6 +1,6 @@
 /*  SIMBOX CLASS
     -------------------------------------------*/
-#include "simbox.h"
+#include "faunus/simbox.h"
 
 Simbox::Simbox(double boxlen, double boxsep) {
   len = boxlen;             //lateral boxlength

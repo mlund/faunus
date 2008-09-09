@@ -1,4 +1,4 @@
-#include "titrate.h"
+#include "faunus/titrate.h"
 namespace Faunus {
   /*!
    * \param spec Species class

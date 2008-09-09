@@ -15,9 +15,9 @@ OPENMP = no
 ###########################################
 
 CXX=g++
-CLASSDIR=include/faunus
+CLASSDIR=src
 INCDIR=-Iinclude
-LDFLAGS=-L./lib -lfaunus
+LDFLAGS=-L./src -lfaunus
 
 ifeq ($(GROMACS), yes)
   INCDIR:=${INCDIR} -I/usr/local/gromacs/include/gromacs
@@ -89,7 +89,7 @@ all:	classes examples libfaunus
 
 classes:	$(OBJS)
 libfaunus:      $(OBJS)
-	ar cr lib/libfaunus.a $(OBJS)
+	ar cr src/libfaunus.a $(OBJS)
 
 #$(CXX) $(CXXFLAGS) -current_version 1.0 -compatibility_version 1.0 -fvisibility=hidden -o lib/libfaunus.A.dylib -dynamiclib $(OBJS)
 
@@ -97,29 +97,29 @@ manual:
 	doxygen doc/Doxyfile
 manualul:
 	scp -rC doc/html/* mikaellund@shell.sourceforge.net:/home/groups/f/fa/faunus/htdocs/
-widom:	examples/widom/widom.C libfaunus
-	$(CXX) $(CXXFLAGS) examples/widom/widom.C -o examples/widom/widom ${LDFLAGS}
-ewald:		examples/ewald/ewald.C libfaunus
-	$(CXX) $(CXXFLAGS) examples/ewald/ewald.C -o examples/ewald/ewald ${LDFLAGS}
-twobody:	examples/twobody/twobody.C libfaunus
-	$(CXX) $(CXXFLAGS) examples/twobody/twobody.C -o examples/twobody/twobody ${LDFLAGS}
-twobody-hof:	examples/twobody-hofmeister/twobody-hof.C libfaunus
-	$(CXX) $(CXXFLAGS) examples/twobody-hofmeister/twobody-hof.C -o examples/twobody-hofmeister/twobody-hof ${LDFLAGS}
-manybody:	examples/manybody/manybody.C libfaunus 
-	$(CXX) $(CXXFLAGS) examples/manybody/manybody.C -o examples/manybody/manybody ${LDFLAGS}
-manybodyclust:	examples/manybody/manybodyclust.C libfaunus 
-	$(CXX) $(CXXFLAGS) examples/manybody/manybodyclust.C -o examples/manybody/manybodyclust ${LDFLAGS}
-isobaric:	examples/isobaric/isobaric.C libfaunus 
-	$(CXX) $(CXXFLAGS) examples/isobaric/isobaric.C -o examples/isobaric/isobaric ${LDFLAGS}
-tools:	examples/tools/printpotential.C examples/tools/aam2pqr.C libfaunus 
-	$(CXX) $(CXXFLAGS) examples/tools/printpotential.C -o examples/tools/printpotential ${LDFLAGS}
-	$(CXX) $(CXXFLAGS) examples/tools/aam2pqr.C -o examples/tools/aam2prq ${LDFLAGS}
-pka:	examples/titration/pka.C libfaunus
-	$(CXX) $(CXXFLAGS) examples/titration/pka.C -o examples/titration/pka $(LDFLAGS) 
-GCpka:	examples/titration/GCpka.C libfaunus
-	$(CXX) $(CXXFLAGS) examples/titration/GCpka.C -o examples/titration/GCpka $(LDFLAGS) 
-binding:	examples/binding/binding.C libfaunus
-	$(CXX) $(CXXFLAGS) examples/binding/binding.C -o examples/binding/binding $(LDFLAGS) 
+widom:	src/examples/widom/widom.C libfaunus
+	$(CXX) $(CXXFLAGS) src/examples/widom/widom.C -o src/examples/widom/widom ${LDFLAGS}
+ewald:		src/examples/ewald/ewald.C libfaunus
+	$(CXX) $(CXXFLAGS) src/examples/ewald/ewald.C -o src/examples/ewald/ewald ${LDFLAGS}
+twobody:	src/examples/twobody/twobody.C libfaunus
+	$(CXX) $(CXXFLAGS) src/examples/twobody/twobody.C -o src/examples/twobody/twobody ${LDFLAGS}
+twobody-hof:	src/examples/twobody-hofmeister/twobody-hof.C libfaunus
+	$(CXX) $(CXXFLAGS) src/examples/twobody-hofmeister/twobody-hof.C -o src/examples/twobody-hofmeister/twobody-hof ${LDFLAGS}
+manybody:	src/examples/manybody/manybody.C libfaunus 
+	$(CXX) $(CXXFLAGS) src/examples/manybody/manybody.C -o src/examples/manybody/manybody ${LDFLAGS}
+manybodyclust:	src/examples/manybody/manybodyclust.C libfaunus 
+	$(CXX) $(CXXFLAGS) src/examples/manybody/manybodyclust.C -o src/examples/manybody/manybodyclust ${LDFLAGS}
+isobaric:	src/examples/isobaric/isobaric.C libfaunus 
+	$(CXX) $(CXXFLAGS) src/examples/isobaric/isobaric.C -o src/examples/isobaric/isobaric ${LDFLAGS}
+tools:	src/examples/tools/printpotential.C src/examples/tools/aam2pqr.C libfaunus 
+	$(CXX) $(CXXFLAGS) src/examples/tools/printpotential.C -o src/examples/tools/printpotential ${LDFLAGS}
+	$(CXX) $(CXXFLAGS) src/examples/tools/aam2pqr.C -o src/examples/tools/aam2prq ${LDFLAGS}
+pka:	src/examples/titration/pka.C libfaunus
+	$(CXX) $(CXXFLAGS) src/examples/titration/pka.C -o src/examples/titration/pka $(LDFLAGS) 
+GCpka:	src/examples/titration/GCpka.C libfaunus
+	$(CXX) $(CXXFLAGS) src/examples/titration/GCpka.C -o src/examples/titration/GCpka $(LDFLAGS) 
+binding:	src/examples/binding/binding.C libfaunus
+	$(CXX) $(CXXFLAGS) src/examples/binding/binding.C -o src/examples/binding/binding $(LDFLAGS) 
 undone:		undone/mikael/namespace.C libfaunus
 	$(CXX) $(CXXFLAGS) \
 	undone/mikael/namespace.C \
@@ -127,15 +127,15 @@ undone:		undone/mikael/namespace.C libfaunus
 examples:	binding tools widom pka GCpka ewald twobody twobody-hof manybody isobaric
 clean:
 	rm -f $(OBJS) *.o \
-	examples/titration/pka \
-	examples/widom/widom \
-	examples/ewald/ewald \
-	examples/twobody/twobody \
-	examples/manybody/manybody \
-	examples/manybody/manybodyclust \
-	examples/isobaric/isobaric \
-	examples/twobody-hofmeister/twobody-hof \
-	lib/libfaunus.a
+	src/examples/titration/pka \
+	src/examples/widom/widom \
+	src/examples/ewald/ewald \
+	src/examples/twobody/twobody \
+	src/examples/manybody/manybody \
+	src/examples/manybody/manybodyclust \
+	src/examples/isobaric/isobaric \
+	src/examples/twobody-hofmeister/twobody-hof \
+	src/libfaunus.a
 docclean:
 	rm -fR doc/html doc/latex
 babel:

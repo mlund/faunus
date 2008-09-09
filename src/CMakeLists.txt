@@ -33,8 +33,7 @@ target_link_libraries(fns ${LINKLIBS})
 
 #----- set install targets -----
 install(TARGETS fns ARCHIVE DESTINATION lib)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/classes/
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/faunus
   DESTINATION include/faunus FILES_MATCHING PATTERN "*.h"
-  PATTERN "CMakeFiles" EXCLUDE
-  PATTERN "examples" EXCLUDE)
+  PATTERN "CMakeFiles" EXCLUDE)
 

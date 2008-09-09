@@ -1,4 +1,4 @@
-#include "slump.h"
+#include "faunus/slump.h"
 namespace Faunus {
   slump::slump() { rand_max_inv = 1./RAND_MAX; }
   double slump::random_one() { return rand_max_inv*rand(); }

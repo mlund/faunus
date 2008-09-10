@@ -11,10 +11,6 @@ if (OPENBABEL_FOUND)
   set(LINKLIBS ${LINKLIBS} ${OPENBABEL_LIBRARIES})
 endif (OPENBABEL_FOUND)
 
-#----- add libfaunus target -----
-set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
-add_library (fns STATIC ${objs})
-
 #----- locate gromacs -----
 if (GROMACS AND GMX_FOUND)
   include_directories(${GMX_INCLUDE_DIR})
@@ -28,8 +24,12 @@ if (GROMACS AND GMX_FOUND)
   endif (GMX_MOTIF AND X11_FOUND AND MOTIF_FOUND)
 endif(GROMACS AND GMX_FOUND)
 
-#----- add external libraries -----
+#----- add libfaunus targets -----
+set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
+add_library (fns STATIC ${objs})
 target_link_libraries(fns ${LINKLIBS})
+add_library (fnsdyn SHARED ${objs})
+target_link_libraries(fnsdyn ${LINKLIBS})
 
 #----- set install targets -----
 install(TARGETS fns ARCHIVE DESTINATION lib)

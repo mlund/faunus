@@ -14,18 +14,19 @@ namespace Faunus {
   class container : public particles,  public species {
     protected:
       slump slp;
-      double volume;                         //!< Volume of the container [AA^3]
+      double volume;                          //!< Volume of the container [AA^3]
     public:
       double getvolume() {return volume;}
-      virtual void setvolume(double){}       //!< Specify new volume
-      virtual bool collision(point &)=0;     //!< Check for collision with walls
-      virtual void randompos(point &)=0;     //!< Random point within container
-      virtual string info();                 //!< Return info string
-      virtual string povray();               //!< POVRAY object representing the cell
-      virtual void boundary(point &){};      //!< Apply boundary conditions to a point
-      virtual void scale(point&, double&){}  //!< Scale point to a new box length
-      inline virtual double sqdist(point &a,point &b) { return a.sqdist(b); }
-      inline virtual double dist(point &a,point &b) {//!< Calculate distance between points
+      virtual void setvolume(double){}        //!< Specify new volume
+      virtual bool collision(const point &)=0;//!< Check for collision with walls
+      virtual void randompos(point &)=0;      //!< Random point within container
+      virtual string info();                  //!< Return info string
+      virtual string povray();                //!< POVRAY object representing the cell
+      virtual void boundary(point &){};       //!< Apply boundary conditions to a point
+      virtual void scale(point&, double&){}   //!< Scale point to a new box length
+      inline virtual double sqdist(const point &a, const point &b) { 
+        return a.sqdist(b); }
+      inline virtual double dist(const point &a,const point &b) {//!< Calculate distance between points
         return a.dist(b);
       }
   };
@@ -44,7 +45,7 @@ namespace Faunus {
       string info();
       void randompos(point &);
       string povray();
-      bool collision(point &a) {
+      bool collision(const point &a) {
         return 
           (a.x*a.x+a.y*a.y+a.z*a.z > r2) ? true:false;
       }
@@ -69,7 +70,7 @@ namespace Faunus {
       void randompos(point &);
       void randompos(vector<point> &);
       point randompos();
-      bool collision(point &a) {
+      bool collision(const point &a) {
         if (abs(a.x)>len_half ||
             abs(a.y)>len_half ||
             abs(a.z)>len_half )
@@ -78,8 +79,8 @@ namespace Faunus {
       }
       string povray();
       //! Calculate distance using the minimum image convention
-      inline double dist(point &a, point &b) { return a.dist(b, len, len_inv); }
-      inline double sqdist(point &a, point &b) { return a.sqdist(b, len, len_inv); }
+      inline double dist(const point &a, const point &b) { return a.dist(b, len, len_inv); }
+      inline double sqdist(const point &a, const point &b) { return a.sqdist(b, len, len_inv); }
       inline int anint(double x) { return int(x>0 ? x+.5 : x-.5); }
       //! Apply periodic boundary conditions
       inline void boundary(point &a) {
@@ -123,7 +124,7 @@ namespace Faunus {
       float r,zmin,zmax;
       clutch(float, float, float);
       void randompos(point &);
-      bool collision(point &a) {
+      bool collision(const point &a) {
         if (a.z<zmax && a.z>zmin)
           return true;
         if (a.x*a.x+a.y*a.y+a.z*a.z > r2)
@@ -144,7 +145,7 @@ namespace Faunus {
       float diameter;
       cylinder(float,float);
       void randompos(point &);
-      bool collision(point &a) {
+      bool collision(const point &a) {
         return 
           (a.x*a.x+a.y*a.y>r2 || (a.z<0||a.z>len)) ? true:false;
       };

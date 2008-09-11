@@ -36,14 +36,13 @@ CITING FAUNUS:
   http://www.scfbm.org/content/3/1/1 (free full text)
 
 REQUIREMENTS:
-  1. C++ compiler (gnu, ibm, intel, sun etc.)
-  + cmake 2.6 (for cross platform compilation)
-  + Gromacs (for xtc trajectory output)
-  + OpenBabel 2
-  + Doxygen (for code manual)
-  + Graphviz (for code manual)
-
-  (+ optional)
+  - C++ compiler (gnu, ibm, intel, sun etc.)
+  Optional:
+  - cmake 2.6 (for cross platform compilation)
+  - Gromacs (for xtc trajectory output)
+  - OpenBabel 2 (numerous molecular formats)
+  - Doxygen (for code manual)
+  - Graphviz (for code manual)
 
 COMPILING:
   $ make
@@ -81,10 +80,9 @@ COMPILING USING CMAKE (Experimental):
     CXX - C++ compiler command (icpc, pathCC, pgCC etc.)
 
 DIRECTORY LAYOUT:
-  classes      Mostly finished, general classes.
-  examples     Example programs
+  src          Sourcecode and examples
+  include      Faunus header files
   legacy       Older programs. FORTRAN programs are also placed here.
-  lib          The faunus library (static)
   undone       Unfinished code
   misc         Mostly temporary stuff
   doc          Code manual files

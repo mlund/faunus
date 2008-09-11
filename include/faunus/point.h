@@ -26,12 +26,12 @@ class point {
     point();                            ///< Constructor, zero data.
     point(double,double,double);        ///< Constructor, set vector
     void clear();                       ///< Zero all data.
-      double len(); 
-    inline double sqdist(const point &);      //!< Squared distance to another point
-    inline double sqdist(const point &,       //!< -- / / -- 3D minimum image
-                        const double &, const double &);
-    inline double dist(const point &);        ///< Distance to another point
-    inline double dist(const point &, double &, double &);        ///< Distance to another point
+    double len(); 
+    inline double sqdist(const point &) const;      //!< Squared distance to another point
+    inline double sqdist(const point &,             //!< -- / / -- 3D minimum image
+                        const double &, const double &) const;
+    inline double dist(const point &) const;        ///< Distance to another point
+    inline double dist(const point &, double &, double &) const ; //!< Distance to another point
     void ranunit(slump &);              ///< Generate a random unit vector
     double dot(point &);                ///< Angle with another point
     point operator-();                  ///< Sign reversal
@@ -73,11 +73,11 @@ class particle : public point {
     bool hydrophobic;                   //!< Hydrophobic flag
     inline bool overlap(particle &);    //!< Hardsphere overlap test
     inline bool overlap(particle &, double &);
-    inline double potential(point &);   //!< Electric potential in point
-    double volume();                    //!< Return volume of sphere
-    double mw2vol(double=1);            //!< Estimate volume from weight
-    double mw2rad(double=1);            //!< Estimate radius from weight
-    void operator=(point);              //!< Copy coordinates from a point
+    inline double potential(const point &);   //!< Electric potential in point
+    double volume();                          //!< Return volume of sphere
+    double mw2vol(double=1);                  //!< Estimate volume from weight
+    double mw2rad(double=1);                  //!< Estimate radius from weight
+    void operator=(point);                    //!< Copy coordinates from a point
 };
 
 /*! \brief Class for spherical coordinates
@@ -119,7 +119,7 @@ inline void spherical::random_angles() {
 /*!
  * \return \f$ |r_{12}|^2 = \Delta x^2 + \Delta y^2 + \Delta z^2 \f$
  */
-inline double point::sqdist(const point &p) {
+inline double point::sqdist(const point &p) const {
   register double dx,dy,dz;
   dx=x-p.x;
   dy=y-p.y;
@@ -129,7 +129,7 @@ inline double point::sqdist(const point &p) {
 
 //!\note <cmath> has a round() function -- speed?
 inline int point::anint(double a) { return int(a>0 ? a+.5 : a-.5); }
-inline double point::sqdist(const point &p, const double &len, const double &inv_len) {
+inline double point::sqdist(const point &p, const double &len, const double &inv_len) const {
   register double dx,dy,dz;
 /*  dx=x-p.x;
   dy=y-p.y;
@@ -153,15 +153,15 @@ inline double point::sqdist(const point &p, const double &len, const double &inv
   dz=z-p.z;
   return sqdf_(&dx, &dy, &dz, &len, &inv_len);
 }*/
-inline double point::dist(const point &p) { return sqrt(sqdist(p)); }
-inline double point::dist(const point &p, double &len, double &inv_len) { 
+inline double point::dist(const point &p) const { return sqrt(sqdist(p)); }
+inline double point::dist(const point &p, double &len, double &inv_len) const { 
   return sqrt(sqdist(p, len, inv_len)); }
 
 /*!
  * \return \f$ \phi = \frac{z}{r_{12}}\f$
  * \note Not multiplied with the Bjerrum length!
  */
-inline double particle::potential(point &p) { return charge / dist(p); }
+inline double particle::potential(const point &p) { return charge / dist(p); }
 
 /*!
  * \return True if \f$ r_{12}<(\sigma_1+\sigma_2)/2 \f$ - otherwise false.

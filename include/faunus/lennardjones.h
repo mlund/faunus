@@ -25,12 +25,12 @@ class pot_lj {
      *  \f$ u_{lj} = \epsilon \left ( \frac{\sigma}{r^{12}} - \frac{\sigma}{r^6} \right ) \f$
      *  \param r2 Squared distance between particle 1 and 2.
      */
-    inline double lj(particle &p1, particle &p2, double &r2) {
+    inline double lj(const particle &p1, const particle &p2, double &r2) {
       register double x=p1.radius+p2.radius,u=x*x/r2;
       x=u*u*u;
       return (x*x-x)*eps;
     }
-    inline void lj(particle &p1, particle &p2, double &r2, double &u) {
+    inline void lj(const particle &p1, const particle &p2, const double &r2, double &u) {
       register double s=p1.radius+p2.radius, a=s*s/r2;
       s=a*a*a;
       u+=(s*s-s)*eps;
@@ -60,11 +60,11 @@ class pot_hs {
       name="Hardsphere";
       f=1;
     }
-    inline double hs(particle &p1, particle &p2, double &r2) {
+    inline double hs(const particle &p1, const particle &p2, const double &r2) {
       register double s=p1.radius+p2.radius;
       return (r2>s*s) ? 0 : 99999.;
     }
-    inline void hs(particle &p1, particle &p2, double &r2, double &u) { u+=hs(p1,p2,r2); }
+    inline void hs(const particle &p1, const particle &p2, const double &r2, double &u) { u+=hs(p1,p2,r2); }
     virtual void setvolume(double) {}; //!< Function to specify volume for fluctuating periodic boundaries
     virtual string info() {
       ostringstream o;

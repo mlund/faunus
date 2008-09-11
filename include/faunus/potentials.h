@@ -49,7 +49,7 @@ namespace Faunus {
        *  \return Energy in units of kT/f (f=lB).
        *  \f$ \beta u/f = \frac{z_1 z_2}{r} + u_{HS}/f \f$
        */
-      inline double pairpot(particle &p1, particle &p2) {
+      inline double pairpot(const particle &p1, const particle &p2) {
         register double r2=p1.sqdist(p2);
         return hs(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
       }
@@ -73,7 +73,7 @@ namespace Faunus {
        *  \return Energy in units of kT/f (f=lB).
        *  \f$ \beta u/f = \frac{z_1 z_2}{r} + u_{LJ}/f \f$
        */
-      inline double pairpot(particle &p1, particle &p2) {
+      inline double pairpot(const particle &p1, const particle &p2) {
         register double r2=p1.sqdist(p2);
         return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
       }
@@ -100,7 +100,7 @@ namespace Faunus {
         box=pow(vol, 1./3);;
         invbox=1./box;
       }
-      inline double pairpot(particle &p1, particle &p2) {
+      inline double pairpot(const particle &p1, const particle &p2) {
         register double r2=p1.sqdist(p2,box,invbox);
         return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
       }
@@ -110,7 +110,7 @@ namespace Faunus {
     public:
       pot_test( pot_setup &pot ) : pot_lj(pot.eps/pot.lB) { f=pot.lB; }
       string info();
-      inline double pairpot(particle &p1, particle &p2) {
+      inline double pairpot(const particle &p1, const particle &p2) {
         register double r2=p1.sqdist(p2);
         register double a=p1.radius+p2.radius;
         a=a*a;
@@ -142,7 +142,7 @@ namespace Faunus {
       string info();
       //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
       //! \return Energy in kT/f (f=lB)
-      inline double pairpot( particle &p1, particle &p2 ) {
+      inline double pairpot( const particle &p1, const particle &p2 ) {
         double r2=p1.sqdist(p2),
                r=sqrt(r2);
         return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
@@ -174,7 +174,7 @@ namespace Faunus {
       string info();
       //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
       //! \return Energy in kT/f (f=lB)
-      inline double pairpot( particle &p1, particle &p2 ) {
+      inline double pairpot( const particle &p1, const particle &p2 ) {
         register double r2=p1.sqdist(p2,box,invbox), r=sqrt(r2);
         return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
       }
@@ -207,7 +207,7 @@ namespace Faunus {
       void loadpmf(species &, string,string);   // -//-
       void showpmf(species &);                  //!< Lists loaded pmf's.
       string info();
-      double pairpot (particle &p1, particle &p2) {
+      double pairpot (const particle &p1, const particle &p2) {
         unsigned short i=p1.id,j=p2.id;
         if (i>j) swap(i,j);
         double r2=p1.sqdist(p2);

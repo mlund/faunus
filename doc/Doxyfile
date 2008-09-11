@@ -515,6 +515,8 @@ WARN_LOGFILE           =
 
 INPUT                  = doc \
                          src \
+                         src/examples/twobody \
+                         src/examples/titration \
                          include/faunus
 
 # This tag can be used to specify the character encoding of the source files 
@@ -577,6 +579,8 @@ EXCLUDE_SYMBOLS        =
 # the \include command).
 
 EXAMPLE_PATH           = src/classexamples \
+                         src/examples/twobody \
+                         src/examples/titration \
                          doc \
                          ./
 

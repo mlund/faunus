@@ -1,3 +1,12 @@
+/*!\page test_pka Titration
+ * Proton titration of a single macromolecule in an explicit salt
+ * envirinment. Protons are moved in and out of the protein to
+ * sample the average protonation state, pka values and dipole
+ * moment as well as charge fluctuations.
+ *
+ * \author Mikael Lund
+ * \include pka.C
+ */
 #include <iostream>
 #include "faunus/analysis.h"
 #include "faunus/container.h"

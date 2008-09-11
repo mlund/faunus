@@ -8,7 +8,7 @@ a good spirit of the forest, plains, and fields.&quot;</i></center>
 Faunus is an object oriented  C++ framework for creating programs for molecular simulations.
 We currently focus on Metropolis Monte Carlo techniques for studies of charged macro-molecules
 in aqueous solutions.
-A number of (preliminary) example programs are supplied and at the moment these include tools for:
+A number of (preliminary) example \ref programs "programs" are supplied and at the moment these include tools for:
 
 \li Protein-protein interactions in salt solutions (pmf, free energy surfaces, virial coefficients)
 \li Proton fluctuations (pka predictions, charge regulation, ionization states)

@@ -1,4 +1,4 @@
-/*
+/*!\page test_twobody Twobody
  * This program will simulate two protein molecules
  * in a dielectric solvent with explicit mobile ions.
  * The container is SPHERICAL w. hard walls.
@@ -6,6 +6,7 @@
  * \author Mikael Lund
  * \date Prague 2007
  * \todo Maybe use a cylindrical cell?
+ * \include twobody.C
  */
 
 #include <iostream>

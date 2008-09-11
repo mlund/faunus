@@ -376,6 +376,8 @@ namespace Faunus {
   /*! \note If the charge of the j'th particle is 0, ZERO will be returned!
    *  \return \f$ \phi_j = \sum_{i\neq j}^{N} \frac{l_B z_i}{r_{ij}} \f$
    *  \param j The electric potential will be calculated in the point of this particle
+   *  \warning Uses simple particle->dist() function!
+   *  \todo Respect cell boundaries
    */
   template<class T> double interaction<T>::potential(vector<particle> &p, unsigned short j) {
     if (p[j].charge==0) return 0;

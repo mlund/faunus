@@ -26,12 +26,12 @@ class point {
     point();                            ///< Constructor, zero data.
     point(double,double,double);        ///< Constructor, set vector
     void clear();                       ///< Zero all data.
-    double len(); 
-    inline double sqdist(point &);      //!< Squared distance to another point
-    inline double sqdist(point &,       //!< -- / / -- 3D minimum image
-                        double &, double &);
-    inline double dist(point &);        ///< Distance to another point
-    inline double dist(point &, double &, double &);        ///< Distance to another point
+      double len(); 
+    inline double sqdist(const point &);      //!< Squared distance to another point
+    inline double sqdist(const point &,       //!< -- / / -- 3D minimum image
+                        const double &, const double &);
+    inline double dist(const point &);        ///< Distance to another point
+    inline double dist(const point &, double &, double &);        ///< Distance to another point
     void ranunit(slump &);              ///< Generate a random unit vector
     double dot(point &);                ///< Angle with another point
     point operator-();                  ///< Sign reversal
@@ -119,7 +119,7 @@ inline void spherical::random_angles() {
 /*!
  * \return \f$ |r_{12}|^2 = \Delta x^2 + \Delta y^2 + \Delta z^2 \f$
  */
-inline double point::sqdist(point &p) {
+inline double point::sqdist(const point &p) {
   register double dx,dy,dz;
   dx=x-p.x;
   dy=y-p.y;
@@ -129,7 +129,7 @@ inline double point::sqdist(point &p) {
 
 //!\note <cmath> has a round() function -- speed?
 inline int point::anint(double a) { return int(a>0 ? a+.5 : a-.5); }
-inline double point::sqdist(point &p, double &len, double &inv_len) {
+inline double point::sqdist(const point &p, const double &len, const double &inv_len) {
   register double dx,dy,dz;
 /*  dx=x-p.x;
   dy=y-p.y;
@@ -153,8 +153,8 @@ inline double point::sqdist(point &p, double &len, double &inv_len) {
   dz=z-p.z;
   return sqdf_(&dx, &dy, &dz, &len, &inv_len);
 }*/
-inline double point::dist(point &p) { return sqrt(sqdist(p)); }
-inline double point::dist(point &p, double &len, double &inv_len) { 
+inline double point::dist(const point &p) { return sqrt(sqdist(p)); }
+inline double point::dist(const point &p, double &len, double &inv_len) { 
   return sqrt(sqdist(p, len, inv_len)); }
 
 /*!

@@ -37,8 +37,9 @@ CITING FAUNUS:
 
 REQUIREMENTS:
   1. C++ compiler (gnu, ibm, intel, sun etc.)
-  + cmake (for cross platform compilation)
+  + cmake 2.6 (for cross platform compilation)
   + Gromacs (for xtc trajectory output)
+  + OpenBabel 2
   + Doxygen (for code manual)
   + Graphviz (for code manual)
 

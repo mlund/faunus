@@ -7,7 +7,8 @@ function( fau_example tname tdir tsrc )
   set_target_properties(${tname}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${tdir}/")
   target_link_libraries(${tname} libfaunus)
-  install (TARGETS ${tname} RUNTIME DESTINATION "bin")
+  install (DIRECTORY "${tdir}" DESTINATION "share/faunus/examples"
+    PATTERN ".svn" EXCLUDE)
 endfunction( fau_example )
 
 #----- add examples to build process -----

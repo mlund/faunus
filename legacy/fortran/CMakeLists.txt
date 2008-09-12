@@ -6,7 +6,10 @@ function( fortran_target tname tdir tsrc )
   add_executable( ${tname} "${tsrc}" )
   set_target_properties(${tname}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${tdir}/")
-  install (TARGETS ${tname} RUNTIME DESTINATION "bin")
+  install (DIRECTORY "${tdir}" DESTINATION "share/faunus/examples"
+    PATTERN ".svn" EXCLUDE
+    PATTERN "*.f" EXCLUDE
+    PATTERN "*.inc" EXCLUDE)
 endfunction( fortran_target )
 
 # Add targets

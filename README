@@ -86,5 +86,4 @@ DIRECTORY LAYOUT:
   undone       Unfinished code
   misc         Mostly temporary stuff
   doc          Code manual files
-  xcode        Apple Xcode project (redundant due to cmake Xcode target)
 

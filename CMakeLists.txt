@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
-project ("faunus")
+project ("Faunus")
 # ------------------------------
 #   Default build is "Release"
 # ------------------------------
@@ -12,8 +12,9 @@ ENDIF(NOT CMAKE_BUILD_TYPE)
 # -----------------
 #   User options
 # -----------------
-option (OPENMP "Enable OpenMP parallel execution on multicore CPU's")
+option (OPENMP  "Enable OpenMP parallel execution on multicore CPU's" off)
 option (GROMACS "Enable Gromacs xtc trajectory output" off)
+option (PYTHON  "Create python interface" on)
 mark_as_advanced(CLEAR CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS_RELEASE)
 mark_as_advanced(EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH CMAKE_OSX_SYSROOT)
 
@@ -22,7 +23,14 @@ mark_as_advanced(EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH CMAKE_OSX_SYSROOT)
 # ----------------------------
 set (CMAKE_MODULE_PATH cmake/modules)
 include(TestCXXAcceptsFlag)
+include(OptimizationFlags)
 find_package(OpenBabel2)
+if (PYTHON)
+  find_package(Boost COMPONENTS python)
+  find_package(PythonLibs)
+  find_package(PythonInterp)
+  find_package(GCCXML)
+endif (PYTHON)
 if (GROMACS)
   find_package(GMX)
   if (GMX_MOTIF)
@@ -31,26 +39,6 @@ if (GROMACS)
   endif (GMX_MOTIF)
 endif(GROMACS)
 
-# ------------------
-#   Compiler flags
-# ------------------
-function( fau_setcmp cid flags fomp )
-if (CMAKE_CXX_COMPILER_ID MATCHES "${cid}")
-  set (DUMMY "${flags}" PARENT_SCOPE)
-  CHECK_CXX_ACCEPTS_FLAG( ${fomp} OMP_CHECK)
-  if (OPENMP AND OMP_CHECK)
-    set(DUMMY "${flags} ${fomp}" PARENT_SCOPE)
-  endif(OPENMP AND OMP_CHECK)
-endif (CMAKE_CXX_COMPILER_ID MATCHES "${cid}")
-set (CMAKE_CXX_FLAGS_RELEASE "${DUMMY}" CACHE STRING "C++ compiler flags (automatic)" FORCE)
-endfunction( fau_setcmp )
-
-fau_setcmp("GNU" "-O3 -w -funroll-loops -DNDEBUG" "-fopenmp" ) # GNU
-fau_setcmp("Intel" "-O3 -w -DNDEBUG" "-openmp")  # Intel
-fau_setcmp("Sun" "-fast -w -DNDEBUG" "-xopenmp") # Sun
-fau_setcmp("pgCC" "-O3 -w -DNDEBUG" "-mp")       # Portland
-fau_setcmp("pathCC" "-Ofast -DNDEBUG" " ")       # Pathscale
-
 # ---------------------------
 #   Add source directories
 # ---------------------------
@@ -58,5 +46,8 @@ add_subdirectory (src)
 add_subdirectory (src/examples)
 add_subdirectory (legacy/fortran)
 add_subdirectory (doc EXCLUDE_FROM_ALL)
-add_subdirectory (undone/python EXCLUDE_FROM_ALL)
+if (PYTHON AND PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND AND Boost_FOUND)
+  #add_subdirectory(src/python)
+  add_subdirectory (undone/python EXCLUDE_FROM_ALL)
+endif (PYTHON AND PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND AND Boost_FOUND)
 

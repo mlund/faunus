@@ -1,14 +1,14 @@
 # Compiler specific optimization flags.
-# - Set OPENMP to test and enable OpenMP support
+# - Set FAUNUS_OPENMP to test and enable OpenMP support
 # $Mikael Lund, 2008
 
 function( fau_setcmp cid flags fomp )
 if (CMAKE_CXX_COMPILER_ID MATCHES "${cid}")
   set (DUMMY "${flags}" PARENT_SCOPE)
   CHECK_CXX_ACCEPTS_FLAG( ${fomp} OMP_CHECK)
-  if (OPENMP AND OMP_CHECK)
+  if (FAUNUS_OPENMP AND OMP_CHECK)
     set(DUMMY "${flags} ${fomp}" PARENT_SCOPE)
-  endif(OPENMP AND OMP_CHECK)
+  endif(FAUNUS_OPENMP AND OMP_CHECK)
 endif (CMAKE_CXX_COMPILER_ID MATCHES "${cid}")
 set (CMAKE_CXX_FLAGS_RELEASE "${DUMMY}" CACHE STRING "C++ compiler flags (automatic)" FORCE)
 endfunction( fau_setcmp )

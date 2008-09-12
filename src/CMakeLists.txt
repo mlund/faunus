@@ -13,7 +13,7 @@ if (OPENBABEL_FOUND)
 endif (OPENBABEL_FOUND)
 
 #----- locate gromacs -----
-if (GROMACS AND GMX_FOUND)
+if (FAUNUS_GROMACS AND GMX_FOUND)
   include_directories(${GMX_INCLUDE_DIR})
   if (NOT GMX_MOTIF)
     add_definitions(-DGROMACS)
@@ -23,12 +23,12 @@ if (GROMACS AND GMX_FOUND)
     add_definitions(-DGROMACS)
     set(LINKLIBS ${LINKLIBS} ${GMX_LIBRARIES} ${X11_Xt_LIB} ${MOTIF_LIBRARIES})
   endif (GMX_MOTIF AND X11_FOUND AND MOTIF_FOUND)
-endif(GROMACS AND GMX_FOUND)
+endif(FAUNUS_GROMACS AND GMX_FOUND)
 
 #----- static faunus library -----
-add_library (libfaunus_so STATIC EXCLUDE_FROM_ALL ${objs})
-set_target_properties(libfaunus_so PROPERTIES OUTPUT_NAME faunus)
-target_link_libraries(libfaunus_so ${LINKLIBS})
+add_library (libfaunus.a STATIC EXCLUDE_FROM_ALL ${objs})
+set_target_properties(libfaunus.a PROPERTIES OUTPUT_NAME faunus)
+target_link_libraries(libfaunus.a ${LINKLIBS})
 
 #----- dynamic faunus library -----
 add_library (libfaunus SHARED ${objs})

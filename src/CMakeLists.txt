@@ -25,19 +25,18 @@ if (GROMACS AND GMX_FOUND)
   endif (GMX_MOTIF AND X11_FOUND AND MOTIF_FOUND)
 endif(GROMACS AND GMX_FOUND)
 
-#----- static faunus targets -----
-add_library (fns STATIC ${objs})
-set_target_properties(fns PROPERTIES OUTPUT_NAME faunus)
-target_link_libraries(fns ${LINKLIBS})
+#----- static faunus library -----
+add_library (libfaunus_so STATIC EXCLUDE_FROM_ALL ${objs})
+set_target_properties(libfaunus_so PROPERTIES OUTPUT_NAME faunus)
+target_link_libraries(libfaunus_so ${LINKLIBS})
 
 #----- dynamic faunus library -----
-add_library (fnsdyn SHARED ${objs})
-set_target_properties(fnsdyn PROPERTIES OUTPUT_NAME faunus)
-target_link_libraries(fnsdyn ${LINKLIBS})
+add_library (libfaunus SHARED ${objs})
+set_target_properties(libfaunus PROPERTIES OUTPUT_NAME faunus)
+target_link_libraries(libfaunus ${LINKLIBS})
+install(TARGETS libfaunus LIBRARY DESTINATION lib)
 
-#----- set install targets -----
-install(TARGETS fns ARCHIVE DESTINATION lib)
+#----- header install target -----
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/faunus
-  DESTINATION include/faunus FILES_MATCHING PATTERN "*.h"
-  PATTERN "CMakeFiles" EXCLUDE)
+  DESTINATION include FILES_MATCHING PATTERN "*.h" PATTERN "CMakeFiles" EXCLUDE)
 

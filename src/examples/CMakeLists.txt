@@ -6,7 +6,7 @@ function( fau_example tname tdir tsrc )
   set_source_files_properties( "${tdir}/${tsrc}" PROPERTIES LANGUAGE CXX)
   set_target_properties(${tname}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${tdir}/")
-  target_link_libraries(${tname} fns)
+  target_link_libraries(${tname} libfaunus)
   install (TARGETS ${tname} RUNTIME DESTINATION "bin")
 endfunction( fau_example )
 

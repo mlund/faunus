@@ -1,7 +1,6 @@
 #ifndef FAU_LENNARDJONES_H
 #define FAU_LENNARDJONES_H
 
-#include <sstream>
 #include "faunus/point.h"
 
 namespace Faunus {

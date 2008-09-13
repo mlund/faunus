@@ -1,11 +1,8 @@
 #ifndef FAU_species_h
 #define FAU_species_h
-#include <string>
-#include <vector>
 #include "faunus/point.h"
 
 namespace Faunus {
-
   /*!
    * \brief Specific data for particles
    * \author Mikael Lund

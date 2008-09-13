@@ -1,9 +1,6 @@
 #ifndef FAU_xydata_h
 #define FAU_xydata_h
-#include <cmath>
-#include <vector>
-#include <iostream>
-#include <algorithm>
+#include "faunus/scopes.h"
 #include "faunus/average.h"
 
 namespace Faunus {

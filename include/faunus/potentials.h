@@ -1,12 +1,11 @@
 #ifndef FAU_potential_h
 #define FAU_potential_h
 
-#include <cmath>
-#include "species.h"
-#include "xydata.h"
-#include "group.h"
-#include "lennardjones.h"
-#include "inputfile.h"
+#include "faunus/species.h"
+#include "faunus/xydata.h"
+#include "faunus/group.h"
+#include "faunus/lennardjones.h"
+#include "faunus/inputfile.h"
 
 namespace Faunus {
   /*!

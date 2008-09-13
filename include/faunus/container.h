@@ -3,7 +3,6 @@
 
 #include "faunus/particles.h"
 #include "faunus/slump.h"
-#include "faunus/point.h"
 #include "faunus/species.h"
 #include "faunus/inputfile.h"
 

@@ -1,20 +1,9 @@
 #ifndef FAU_IO_H
 #define FAU_IO_H
-#include <algorithm>
-#include <fstream>
-#include <sstream>
-#include <cmath>
-#include "faunus/species.h"
+#include "faunus/scopes.h"
 #include "faunus/group.h"
 #include "faunus/container.h"
 #include "faunus/titrate.h"
-
-#ifdef GROMACS
-#ifndef CPLUSPLUS
-#define CPLUSPLUS
-#endif
-#include "xtcio.h"
-#endif
 
 namespace Faunus {
   //--------------------------------

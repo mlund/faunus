@@ -1,5 +1,6 @@
 #ifndef FAU_physconst_h
 #define FAU_physconst_h
+#include "faunus/scopes.h"
 namespace Faunus {
   /*! \brief Physical constants and parameters.
   */

@@ -1,7 +1,7 @@
 #ifndef FAU_markovmove_h
 #define FAU_markovmove_h
 
-#include <cstdarg>
+#include "faunus/scopes.h"
 #include "faunus/container.h"
 #include "faunus/potentials.h"
 #include "faunus/ensemble.h"
@@ -11,7 +11,6 @@
 #include "faunus/histogram.h"
 
 namespace Faunus {
-
   /*! \brief Base class for MC moves
    *  \author Mikael Lund
    *  \todo Perhaps the T_pairpot could be made more elegant?

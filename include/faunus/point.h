@@ -1,21 +1,10 @@
 #ifndef FAU_POINT_H
 #define FAU_POINT_H
 
-#include <string>
-#include <vector>
-#include <iostream>
-#include <sstream>
-#include <cmath>
+#include "faunus/scopes.h"
 #include "faunus/slump.h"
 
 namespace Faunus {
-
-  // The point.h is used in most classes
-  // hence we put these here (we're being naughty).
-  using std::string;
-  using std::vector;
-  using std::endl;
-
   /*!
    * \brief Cartesian coordinates
    * \author Mikael Lund

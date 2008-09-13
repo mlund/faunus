@@ -1,8 +1,6 @@
 #ifndef FAU_particles_h
 #define FAU_particles_h
 
-#include <vector>
-#include <string>
 #include "faunus/slump.h"
 #include "faunus/point.h"
 

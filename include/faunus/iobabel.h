@@ -1,8 +1,6 @@
 #ifndef FAU_IOBABEL_H
 #define FAU_IOBABEL_H
 
-#include <iostream>
-#include <vector>
 #include <openbabel/obconversion.h>
 #include <openbabel/mol.h>
 #include <openbabel/obmolecformat.h>

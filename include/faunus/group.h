@@ -1,17 +1,11 @@
 #ifndef FAU_GROUP_H
 #define FAU_GROUP_H
 
-#include <string>
-#include <iostream>
-#include <iomanip>
-#include <sstream>
-#include <vector>
-#include "faunus/point.h"
+#include "faunus/scopes.h"
 #include "faunus/average.h"
 #include "faunus/particles.h"
 #include "faunus/container.h"
 #include "faunus/pot_spring.h"
-#include "faunus/slump.h"
 #include "faunus/inputfile.h"
 
 namespace Faunus {

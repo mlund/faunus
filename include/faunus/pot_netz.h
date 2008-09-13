@@ -1,6 +1,5 @@
 #ifndef _POT_NETZ_H
 #define _POT_NETZ_H
-
 #include "faunus/potentials.h"
 
 namespace Faunus {

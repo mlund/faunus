@@ -1,4 +1,3 @@
-#include <cmath>
 #include "faunus/physconst.h"
 namespace Faunus {
   //! \param kelvin Temperature in Kelvin

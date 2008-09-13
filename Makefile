@@ -97,29 +97,29 @@ manual:
 	doxygen doc/Doxyfile
 manualul:
 	scp -rC doc/html/* mikaellund@shell.sourceforge.net:/home/groups/f/fa/faunus/htdocs/
-widom:	src/examples/widom/widom.C libfaunus
-	$(CXX) $(CXXFLAGS) src/examples/widom/widom.C -o src/examples/widom/widom ${LDFLAGS}
-ewald:		src/examples/ewald/ewald.C libfaunus
-	$(CXX) $(CXXFLAGS) src/examples/ewald/ewald.C -o src/examples/ewald/ewald ${LDFLAGS}
-twobody:	src/examples/twobody/twobody.C libfaunus
-	$(CXX) $(CXXFLAGS) src/examples/twobody/twobody.C -o src/examples/twobody/twobody ${LDFLAGS}
-twobody-hof:	src/examples/twobody-hofmeister/twobody-hof.C libfaunus
-	$(CXX) $(CXXFLAGS) src/examples/twobody-hofmeister/twobody-hof.C -o src/examples/twobody-hofmeister/twobody-hof ${LDFLAGS}
-manybody:	src/examples/manybody/manybody.C libfaunus 
-	$(CXX) $(CXXFLAGS) src/examples/manybody/manybody.C -o src/examples/manybody/manybody ${LDFLAGS}
-manybodyclust:	src/examples/manybody/manybodyclust.C libfaunus 
-	$(CXX) $(CXXFLAGS) src/examples/manybody/manybodyclust.C -o src/examples/manybody/manybodyclust ${LDFLAGS}
-isobaric:	src/examples/isobaric/isobaric.C libfaunus 
-	$(CXX) $(CXXFLAGS) src/examples/isobaric/isobaric.C -o src/examples/isobaric/isobaric ${LDFLAGS}
-tools:	src/examples/tools/printpotential.C src/examples/tools/aam2pqr.C libfaunus 
-	$(CXX) $(CXXFLAGS) src/examples/tools/printpotential.C -o src/examples/tools/printpotential ${LDFLAGS}
+widom:	src/examples/widom/widom.cpp libfaunus
+	$(CXX) $(CXXFLAGS) src/examples/widom/widom.cpp -o src/examples/widom/widom ${LDFLAGS}
+ewald:		src/examples/ewald/ewald.cpp libfaunus
+	$(CXX) $(CXXFLAGS) src/examples/ewald/ewald.cpp -o src/examples/ewald/ewald ${LDFLAGS}
+twobody:	src/examples/twobody/twobody.cpp libfaunus
+	$(CXX) $(CXXFLAGS) src/examples/twobody/twobody.cpp -o src/examples/twobody/twobody ${LDFLAGS}
+twobody-hof:	src/examples/twobody-hofmeister/twobody-hof.cpp libfaunus
+	$(CXX) $(CXXFLAGS) src/examples/twobody-hofmeister/twobody-hof.cpp -o src/examples/twobody-hofmeister/twobody-hof ${LDFLAGS}
+manybody:	src/examples/manybody/manybody.cpp libfaunus 
+	$(CXX) $(CXXFLAGS) src/examples/manybody/manybody.cpp -o src/examples/manybody/manybody ${LDFLAGS}
+manybodyclust:	src/examples/manybody/manybodyclust.cpp libfaunus 
+	$(CXX) $(CXXFLAGS) src/examples/manybody/manybodyclust.cpp -o src/examples/manybody/manybodyclust ${LDFLAGS}
+isobaric:	src/examples/isobaric/isobaric.cpp libfaunus 
+	$(CXX) $(CXXFLAGS) src/examples/isobaric/isobaric.cpp -o src/examples/isobaric/isobaric ${LDFLAGS}
+tools:	src/examples/tools/printpotential.cpp src/examples/tools/aam2pqr.C libfaunus 
+	$(CXX) $(CXXFLAGS) src/examples/tools/printpotential.cpp -o src/examples/tools/printpotential ${LDFLAGS}
 	$(CXX) $(CXXFLAGS) src/examples/tools/aam2pqr.C -o src/examples/tools/aam2prq ${LDFLAGS}
-pka:	src/examples/titration/pka.C libfaunus
-	$(CXX) $(CXXFLAGS) src/examples/titration/pka.C -o src/examples/titration/pka $(LDFLAGS) 
-GCpka:	src/examples/titration/GCpka.C libfaunus
-	$(CXX) $(CXXFLAGS) src/examples/titration/GCpka.C -o src/examples/titration/GCpka $(LDFLAGS) 
-binding:	src/examples/binding/binding.C libfaunus
-	$(CXX) $(CXXFLAGS) src/examples/binding/binding.C -o src/examples/binding/binding $(LDFLAGS) 
+pka:	src/examples/titration/pka.cpp libfaunus
+	$(CXX) $(CXXFLAGS) src/examples/titration/pka.cpp -o src/examples/titration/pka $(LDFLAGS) 
+GCpka:	src/examples/titration/GCpka.cpp libfaunus
+	$(CXX) $(CXXFLAGS) src/examples/titration/GCpka.cpp -o src/examples/titration/GCpka $(LDFLAGS) 
+binding:	src/examples/binding/binding.cpp libfaunus
+	$(CXX) $(CXXFLAGS) src/examples/binding/binding.cpp -o src/examples/binding/binding $(LDFLAGS) 
 undone:		undone/mikael/namespace.C libfaunus
 	$(CXX) $(CXXFLAGS) \
 	undone/mikael/namespace.C \

@@ -103,7 +103,7 @@ namespace Faunus {
   template <class T>
     void xydata<T>::list() {
       for (unsigned int i=0; i<y.size(); i++)
-        cout << i2x(i) << " " << i2y(i) << endl;
+        std::cout << i2x(i) << " " << i2y(i) << std::endl;
     }
 }
 #endif

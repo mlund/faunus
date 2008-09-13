@@ -1,9 +1,13 @@
 /*! \mainpage FAUNUS
-
+\htmlonly
+<meta name="verify-v1" content="iihHF7mxGiuJpqArcZfqTpOPIUH9qcuf7QiI7i596Z8="></meta>
+\endhtmlonly
 \image html faunus-icon.jpg
 <center><i>&quot;...one of the oldest Roman deities, <br>
 a good spirit of the forest, plains, and fields.&quot;</i></center>
-
+<hr>
+\image html techlogos.jpg
+<hr>
 \section welcome Welcome to Faunus!
 Faunus is an object oriented  C++ framework for creating programs for molecular simulations.
 We currently focus on Metropolis Monte Carlo techniques for studies of charged macro-molecules
@@ -21,11 +25,11 @@ The input and output formats are quite flexible with support for
 as well as <A HREF="http://www.gromacs.org">Gromacs</A> compressed trajectory files (xtc).
 
 \subsection cit Citation
-Faunus is released under the GNU Public Licence (\ref gpl "GPL") and can thus be freely used. We would appreciate
-that you cite the following paper, though:
+Faunus is released under the GNU Public Licence (\ref gpl "GPL") and can thus be freely used.
+To cite it in a scientific paper, please use the following reference:
 \li Lund, M., Trulsson, M., Persson, B.
 <I>Source Code Biol. Med.</I>, 2008, <B>3</B>:1
-[<A HREF="http://www.scfbm.org/content/3/1/1"><B>full text</B></A>]
+[<A HREF="http://www.scfbm.org/content/3/1/1"><B>free full text</B></A>]
 
 
 \section download Download
@@ -47,7 +51,7 @@ also in a Cygwin environment. Detailed instructions can be found \ref readme "he
 \li Mikael Lund (<A HREF="http://web.mac.com/mlund"><B>homepage</B></A>)
 \li Bjorn Persson
 \li Martin Trulsson
-\li As indicated in the icons above, Faunus relies on a range of excellent open source software. Thanks a lot!
+\li Thanks to all the authors of the open source technologies that Faunus relies on!
 
 \subsection guide Guidelines for Submitting Code
 \li Make sure "make all" works before submitting

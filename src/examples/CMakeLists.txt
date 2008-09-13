@@ -12,14 +12,14 @@ function( fau_example tname tdir tsrc )
 endfunction( fau_example )
 
 #----- add examples to build process -----
-fau_example(pka titration pka.C)
-fau_example(GCpka titration GCpka.C)
-fau_example(twobody twobody twobody.C)
-fau_example(twobody-hof twobody-hofmeister twobody-hof.C)
-fau_example(widom widom widom.C)
-fau_example(manybody manybody manybody.C)
-fau_example(isobaric isobaric isobaric.C)
-fau_example(binding binding binding.C)
+fau_example(pka titration pka.cpp)
+fau_example(GCpka titration GCpka.cpp)
+fau_example(twobody twobody twobody.cpp)
+fau_example(twobody-hof twobody-hofmeister twobody-hof.cpp)
+fau_example(widom widom widom.cpp)
+fau_example(manybody manybody manybody.cpp)
+fau_example(isobaric isobaric isobaric.cpp)
+fau_example(binding binding binding.cpp)
 
 #----- examples where openbabel is needed -----
 if (OPENBABEL_FOUND)

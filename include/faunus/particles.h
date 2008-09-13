@@ -7,7 +7,6 @@
 #include "faunus/point.h"
 
 namespace Faunus {
-
   /*!
    * \brief Class the contains all particles and manipulating methods.
    * \author Mikael Lund

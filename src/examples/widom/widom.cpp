@@ -6,10 +6,10 @@
  * particle insertion method.
  * Note: No equilibration run is incorporated.
  */
-#include "faunus/io.h"
-#include "faunus/analysis.h"
-#include "faunus/container.h"
-#include "faunus/potentials.h"
+#include "faunus/faunus.h"
+//#include "faunus/analysis.h"
+//#include "faunus/container.h"
+//#include "faunus/potentials.h"
 namespace Faunus {
   typedef pot_coulomb T_pairpot;       // Specify pair potential
 }

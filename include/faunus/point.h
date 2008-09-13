@@ -6,10 +6,14 @@
 #include <sstream>
 #include <iomanip>
 #include <cmath>
+#include <vector>
 #include "faunus/slump.h"
 
 using std::ostream;
-using namespace std;
+using std::vector;
+using std::string;
+using std::stringstream;
+using std::ios;
 
 namespace Faunus {
 

@@ -7,12 +7,8 @@
  * \date Prague 2007
  */
 
-#include "faunus/analysis.h"
-#include "faunus/mcloop.h"
-#include "faunus/pot_hydrophobic.h"
-namespace Faunus{
-  typedef pot_hydrophobic T_pairpot;// Specific pair interaction function
-}
+#include "faunus/faunus.h"
+namespace Faunus {typedef pot_hydrophobic T_pairpot;} // Specify pair potential
 #include "faunus/markovmove.h"
 
 using namespace std;

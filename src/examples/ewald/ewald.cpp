@@ -4,17 +4,9 @@
  *  \todo Not yet done -- Martin?
  *
  */
-#include <iostream>
-#include "faunus/io.h"
-#include "faunus/analysis.h"
-#include "faunus/container.h"
-#include "faunus/potentials.h"
-namespace Faunus{
-  typedef pot_minimage T_pairpot; // Coulomb pot. with minimum image convention.
-}
+#include "faunus/faunus.h"
+namespace Faunus {typedef pot_minimage T_pairpot;} // Coulomb pot. with minimum image convention.
 #include "faunus/markovmove.h"
-#include "faunus/analysis.h"
-#include "faunus/histogram.h"
 
 using namespace Faunus;
 using namespace std;

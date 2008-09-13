@@ -5,9 +5,8 @@
 #include <vector>
 #include <openbabel/obconversion.h>
 #include <openbabel/mol.h>
+#include <openbabel/obmolecformat.h>
 #include "faunus/point.h"
-
-using namespace OpenBabel;
 
 namespace Faunus {
   /*! \brief OpenBabel file support
@@ -21,16 +20,19 @@ namespace Faunus {
    */
   class iobabel {
     private:
-      OBConversion obconv;
-      OBMol mol;
-      OBAtom *atom;
+      OpenBabel::OBConversion obconv;
+      OpenBabel::OBMol mol;
+      OpenBabel::OBAtom atom;
+      OpenBabel::OBAtom *atomPtr;
+      OpenBabel::vector3 v;    // OpenBabel vector
       particle a;   // Tmp particle
-      vector3 v;    // OpenBabel vector
       double c[3];  // Temp. vector storage
+      void p2atom(particle &); // Convert particle to ObenBabel atom
     public:
       vector<particle> p;         //!< Placeholder for loaded data
       particle get(unsigned int); //!< Convert n'th babel atom to a particle
-      void read(string,string);   //!< Read entire file
+      void read(string);          //!< Read entire file (autodetect format from extension)
+      bool write(string,vector<particle> &);//!< Write coordinates (format from extension)
   };
 }
 #endif

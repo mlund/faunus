@@ -7,14 +7,8 @@
  * \author Mikael Lund
  * \include pka.C
  */
-#include <iostream>
-#include "faunus/analysis.h"
-#include "faunus/container.h"
-#include "faunus/potentials.h"
-#include "faunus/mcloop.h"
-namespace Faunus {
-  typedef pot_coulomb T_pairpot; // Specify pair potential
-}
+#include "faunus/faunus.h"
+namespace Faunus {typedef pot_coulomb T_pairpot;} // Specify pair potential
 #include "faunus/markovmove.h"
 
 using namespace Faunus;

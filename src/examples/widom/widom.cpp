@@ -1,18 +1,16 @@
-/*! \file Example how to simulate a NaCl solution
- *  \example widom-example.C
+/*! \page test_widom Widom
  *
  * This example program calculates the excess chemical
  * potential of NaCl in an aqueous solution using Widom's
  * particle insertion method.
- * Note: No equilibration run is incorporated.
+ *
+ * \note: No equilibration run is incorporated.
+ * \author Mikael Lund
+ * \date Dejvice, 2007
+ * \include widom.cpp
  */
 #include "faunus/faunus.h"
-//#include "faunus/analysis.h"
-//#include "faunus/container.h"
-//#include "faunus/potentials.h"
-namespace Faunus {
-  typedef pot_coulomb T_pairpot;       // Specify pair potential
-}
+namespace Faunus {typedef pot_coulomb T_pairpot;}  // Specify pair potential
 #include "faunus/markovmove.h"
 #include "faunus/matubayashi.h"
 

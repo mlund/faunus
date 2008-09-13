@@ -1,10 +1,11 @@
-/*
+/*!\page test_manybody Manybody
  * This program will simulate an arbitrary number of
  * protein molecules in a dielectric solvent with
  * explicit mobile ions.
  *
  * \author Mikael Lund
  * \date Prague 2007
+ * \include manybody.cpp
  */
 
 #include "faunus/faunus.h"

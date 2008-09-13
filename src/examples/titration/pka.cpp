@@ -5,7 +5,7 @@
  * moment as well as charge fluctuations.
  *
  * \author Mikael Lund
- * \include pka.C
+ * \include pka.cpp
  */
 #include "faunus/faunus.h"
 namespace Faunus {typedef pot_coulomb T_pairpot;} // Specify pair potential

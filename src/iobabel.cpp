@@ -16,7 +16,7 @@ namespace Faunus {
       notatend = obconv.Read(&mol);
     }
   }
-  bool iobabel::write(string filename, vector<particle> &) {
+  bool iobabel::write(string filename, const vector<particle> &) {
     mol.Clear();
     for (unsigned int i=0; i<p.size(); i++) {
       p2atom(p[i]);

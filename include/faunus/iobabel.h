@@ -30,7 +30,7 @@ namespace Faunus {
       vector<particle> p;         //!< Placeholder for loaded data
       particle get(unsigned int); //!< Convert n'th babel atom to a particle
       void read(string);          //!< Read entire file (autodetect format from extension)
-      bool write(string,vector<particle> &);//!< Write coordinates (format from extension)
+      bool write(string,const vector<particle> &);//!< Write coordinates (format from extension)
   };
 }
 #endif

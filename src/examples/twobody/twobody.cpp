@@ -6,7 +6,7 @@
  * \author Mikael Lund
  * \date Prague 2007
  * \todo Maybe use a cylindrical cell?
- * \include twobody.C
+ * \include twobody.cpp
  */
 
 #include "faunus/faunus.h"

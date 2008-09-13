@@ -516,6 +516,8 @@ WARN_LOGFILE           =
 INPUT                  = doc \
                          src \
                          src/examples/twobody \
+                         src/examples/manybody \
+                         src/examples/widom \
                          src/examples/titration \
                          include/faunus
 
@@ -580,6 +582,8 @@ EXCLUDE_SYMBOLS        =
 
 EXAMPLE_PATH           = src/classexamples \
                          src/examples/twobody \
+                         src/examples/manybody \
+                         src/examples/widom \
                          src/examples/titration \
                          doc \
                          ./

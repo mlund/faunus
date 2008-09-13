@@ -1,12 +1,9 @@
-/*
+/*\page test_GCpka Grand Canonical Titration
  * Program for perform semi-Grand Caninical titration
- * - Bearnix??
+ * \author Bjorn Persson
+ * \include GCpka.cpp
  */
-#include <iostream>
-#include "faunus/analysis.h"
-#include "faunus/container.h"
-#include "faunus/potentials.h"
-#include "faunus/mcloop.h"
+#include "faunus/faunus.h"
 namespace Faunus{typedef pot_coulomb T_pairpot;} // Specify pair potential
 #include "faunus/markovmove.h"
 
@@ -36,7 +33,7 @@ int main(int argc, char* argv[]) {
   HAchargereg tit(nvt,con,pot,salt,in.getflt("pH"),in.getflt("catpot")); // Prepare titration. pH 7.6
   systemenergy sys(pot.energy(con.p)); // System energy analysis
   cout << con.info() << tit.info()     // Some information
-       << pot.info();
+    << pot.info();
 
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {
@@ -57,6 +54,6 @@ int main(int argc, char* argv[]) {
     cout << loop.timing(macro);             // Show progress
   }                                         // END of macro loop
   cout << sys.info() << sm.info()           // Print final results
-       << tit.info() << salt.info(con) << protein.info();
+    << tit.info() << salt.info(con) << protein.info();
 }
 

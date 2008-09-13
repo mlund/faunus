@@ -1,4 +1,5 @@
-/*
+/*\page test_twobody_hof Twobody w. extra ion specific potential
+ *
  * This program will simulate two protein molecules
  * in a dielectric solvent with explicit mobile ions.
  * The container is SPHERICAL w. hard walls.
@@ -6,6 +7,7 @@
  * \author Mikael Lund
  * \date Prague 2007
  * \todo Maybe use a cylindrical cell?
+ * \include twobody_hof.cpp
  */
 
 #include "faunus/faunus.h"
@@ -48,14 +50,14 @@ int main() {
   cylindric_profile cyl(16,salt.anion,-50,50,.5);
 
   cout << "# ------ INITIAL INFORMATION ------" << endl
-       << sys.info() 
-       << cell.info() << pot.info()     // Print information to screen
-       << loop.info() << endl
-       << "# ------ RUNTIME INFORMATION ------" << endl;
+    << sys.info() 
+    << cell.info() << pot.info()     // Print information to screen
+    << loop.info() << endl
+    << "# ------ RUNTIME INFORMATION ------" << endl;
 
-  #ifdef GROMACS
+#ifdef GROMACS
   ioxtc xtc(cell, cell.r);              // Gromacs xtc output (if installed)
-  #endif
+#endif
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {
       short i,n;
@@ -78,10 +80,10 @@ int main() {
         cyl.update(cell.p);
       }
 
-      #ifdef GROMACS
+#ifdef GROMACS
       if (slump.random_one()>.95 && macro>1)
         xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
-      #endif
+#endif
     } // End of inner loop
 
     sys.update(pot.energy(cell.p));             // Update system energy averages
@@ -96,13 +98,13 @@ int main() {
   } // End of outer loop
 
   cout << "# ------ FINAL INFORMATION ------" << endl
-       << salt.info(cell)                       // Final information...
-       << sm.info() << mr.info() << dm.info()
-       << sys.info() << g[0].info(cell) << g[1].info(cell) << cell.info()
-       << loop.info();
+    << salt.info(cell)                       // Final information...
+    << sm.info() << mr.info() << dm.info()
+    << sys.info() << g[0].info(cell) << g[1].info(cell) << cell.info()
+    << loop.info();
 
-  #ifdef GROMACS
+#ifdef GROMACS
   xtc.close();
-  #endif
+#endif
 }
 

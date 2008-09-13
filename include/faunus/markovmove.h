@@ -65,7 +65,7 @@ namespace Faunus {
       }
   };
   string markovmove::info() {
-    ostringstream o;
+    std::ostringstream o;
     o << endl
       << "# " << name << ":" << endl;
     if (cnt>0) {
@@ -384,7 +384,7 @@ namespace Faunus {
   }
   //---------- CHARGE REG ---------------------
   string chargereg::info() {
-    ostringstream o;
+    std::ostringstream o;
     o <<  markovmove::info()
       << "#   pH (concentration)  = " << ph << endl
       << "#   Titrateable sites   = " << sites.size() << endl
@@ -491,7 +491,7 @@ namespace Faunus {
     if (rc==HC) {
       for (int i=g.beg; i<(g.size()+g.beg); i++) 
         con->trial[i] = con->p[i];
-      cout << "rejected"<<endl;
+      std::cout << "rejected"<<endl;
       return false; }
     else {
       //#pragma omp parallel
@@ -638,7 +638,7 @@ namespace Faunus {
   }
 
   string dualmove::info() {
-    ostringstream o;
+    std::ostringstream o;
     o <<  markovmove::info()
       << "#   Min/max separation  = " << rmin << " " << rmax << endl;
     return o.str();
@@ -715,7 +715,7 @@ namespace Faunus {
   }
 
   string HAchargereg::info() {
-    ostringstream o;
+    std::ostringstream o;
     o << chargereg::info();
     o << "#   Excess chem. pot.   = " << CatPot << endl;
     return o.str();
@@ -759,7 +759,7 @@ namespace Faunus {
     newpenalty.resize(maxsize,0);
   }
   void isobaric::printpenalty(string file, histogram &ld) {
-    ofstream f(file.c_str());
+    std::ofstream f(file.c_str());
     if (f) {
       int j=penalty.size();
       f.precision(12);
@@ -769,7 +769,7 @@ namespace Faunus {
     }
   }
   void isobaric::printpenalty(string file) {
-    ofstream f(file.c_str());
+    std::ofstream f(file.c_str());
     if (f) {
       int j=penalty.size();
       f.precision(12);
@@ -782,28 +782,28 @@ namespace Faunus {
     vector<string> v;
     string s;
     v.clear();
-    ifstream f(file.c_str() );
+    std::ifstream f(file.c_str() );
     if (f) {
       while (getline(f,s))
         v.push_back(s);
       f.close();
-      cout << "# Penalty function loaded!! Let's go biased" << endl;
+      std::cout << "# Penalty function loaded!! Let's go biased" << endl;
     }
-    else cout << "# WARNING! Penalty function " << file << " NOT READ!\n";
+    else std::cout << "# WARNING! Penalty function " << file << " NOT READ!\n";
     short c=v.size();
     double val;
     int bin;
     for (short i=0;i<c;i++) {
       val=0;
       bin=0;
-      stringstream o;
+      std::stringstream o;
       o << v[i];
       o >> bin >> val;
       penalty[bin]=val;
     }
   }
   string isobaric::info() {
-    ostringstream o;
+    std::ostringstream o;
     o << markovmove::info();
     o << "#   External pressure   = "<< P <<"(A^-3) = "<<P*1660<<" (M)"<< endl
       << "#   Average volume      = "<< vol.avg() << " A^3" << endl

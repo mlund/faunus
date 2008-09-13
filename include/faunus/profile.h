@@ -31,7 +31,7 @@ namespace Faunus {
   void profile::update(vector<particle> &p) { for (int i=0; i<p.size(); i++) add(p[i]); }
   bool profile::write(string name) {
     io fio;
-    ostringstream o;
+    std::ostringstream o;
     for (float d=xmin; d<xmax(); d+=xres)
       o << d << " " << conc(d) << endl;
     return fio.writefile(name,o.str());

@@ -209,7 +209,7 @@ namespace Faunus {
       string info();
       double pairpot (const particle &p1, const particle &p2) {
         unsigned short i=p1.id,j=p2.id;
-        if (i>j) swap(i,j);
+        if (i>j) std::swap(i,j);
         double r2=p1.sqdist(p2);
         if (pmfd[i][j].xmax==0) {               // if no data exists:
           double u,x=p1.charge*p2.charge;       // use Coulomb + lj pot.
@@ -388,7 +388,7 @@ namespace Faunus {
     return u;
   }
   template<class T> string interaction<T>::info() {
-    ostringstream o;
+    std::ostringstream o;
     o << endl
       << "# POTENTIAL ENERGY FUNCTION:" << endl
       << pair.info();

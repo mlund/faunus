@@ -19,7 +19,7 @@ namespace Faunus {
   }
 
   string pot_minimage::info() {
-    ostringstream o;
+    std::ostringstream o;
     o << pot_lj::info()
       << "#   Bjerrum length    = " << f << endl
       << "#   Image length      = " << box << endl;
@@ -27,20 +27,20 @@ namespace Faunus {
   }
 
   string pot_hscoulomb::info() {
-    ostringstream o;
+    std::ostringstream o;
     o << pot_hs::info()
       << "#   Bjerrum length    = " << f << endl;
     return o.str();
   }
   string pot_coulomb::info() {
-    ostringstream o;
+    std::ostringstream o;
     o << pot_lj::info()
       << "#   Bjerrum length    = " << f << endl;
     return o.str();
   }
 
   string pot_debyehuckel::info() {
-    ostringstream o;
+    std::ostringstream o;
     o << pot_lj::info()
       << "#   Bjerrum length    = " << f     << endl
       << "#   Debye length      = " << 1./k  << endl;
@@ -48,7 +48,7 @@ namespace Faunus {
   }
 
   string pot_debyehuckelP3::info() {
-    ostringstream o;
+    std::ostringstream o;
     o << pot_lj::info()
       << "#   Bjerrum length    = " << f     << endl
       << "#   Debye length      = " << 1./k  << endl;
@@ -71,16 +71,16 @@ namespace Faunus {
   }
   // Show table of loaded PMF's
   void pot_datapmf::showpmf(species &spc) {
-    cout << "# --- LOADED PMF's ----------------------------------\n"; 
-    cout << "# (a,b,resolution,r_max,file)\n"; 
+    std::cout << "# --- LOADED PMF's ----------------------------------\n"; 
+    std::cout << "# (a,b,resolution,r_max,file)\n"; 
     for (unsigned int i=particle::FIRST; i<particle::LAST; i++)
       for (unsigned int j=particle::FIRST; j<particle::LAST; j++)
         if (pmfd[i][j].xmax>0) 
-          cout << "# " << spc.d[i].name << " " << spc.d[j].name << " "
+          std::cout << "# " << spc.d[i].name << " " << spc.d[j].name << " "
             << pmfd[i][j].res << " "
             << pmfd[i][j].xmax << " "
             << pmfd[i][j].comment << endl; 
-    cout << endl; 
+    std::cout << endl; 
   }
   /*! Load PMF(s) from a file. File format: Each set starts
    * with "#$ type1 type2 length". Several sets can be present
@@ -90,7 +90,7 @@ namespace Faunus {
     string s,a_str,b_str;
     int a,b,len;
     vector<double> x,y;
-    ifstream fh(filename.c_str());
+    std::ifstream fh(filename.c_str());
     if (fh) {
       //scan file, word-by-word
       while (!fh.eof()) {
@@ -103,7 +103,7 @@ namespace Faunus {
           a = spc.id(a_str);
           b = spc.id(b_str);
           if (a>b)
-            swap(a,b);
+            std::swap(a,b);
           for (int i=0; i<len; i++) {
             fh >> x[i] >> y[i];
             y[i]=y[i]/f; // unit: kT/f

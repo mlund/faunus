@@ -4,13 +4,13 @@ namespace Faunus {
 //----------- CONTAINER -----------------
 string container::info() {
   float z=charge();
-  ostringstream o;
+  std::ostringstream o;
   o << endl
     << "# SIMULATION CONTAINER:" << endl
     << "#   Number of particles  = " << p.size() << endl
     << "#   Volume (AA^3)        = " << volume << endl
     << "#   Electroneutrality    = " 
-    << ((z!=0) ? "NO!" : "Yes") << " "  << z << endl;;
+    << ((z!=0) ? "NO!" : "Yes") << " "  << z << endl;
   return o.str();
 }
 string container::povray() {
@@ -31,7 +31,7 @@ void cell::setradius(float radius) {
   volume = (4./3.)*acos(-1.)*r*r*r;
 }
 string cell::info() {
-  ostringstream o;
+  std::ostringstream o;
   o << container::info() 
     << "#   Shape                = Spherical" << endl
     << "#   Radius               = " << r << endl;
@@ -47,7 +47,7 @@ void cell::randompos(point &p) {
   }
 }
 string cell::povray() {
-  ostringstream o;
+  std::ostringstream o;
   o << "sphere {<0,0,0>," << r << " texture {cell}}\n"
     << "cylinder {<0,0," << -r << ">,<0,0," << r << ">,0.5 texture {cell}}\n";
   return o.str();
@@ -66,7 +66,7 @@ void box::setlen(double l) {
 box::box(double l) { setlen(l); }
 box::box(inputfile &in) { setlen( in.getflt("boxlen") ); }
 string box::info() {
-  ostringstream o;
+  std::ostringstream o;
   o << container::info() 
     << "#   Shape                = Cube" << endl
     << "#   Side length          = " << len << endl;
@@ -86,14 +86,14 @@ void box::randompos(point &p) {
   short unsigned size=p.size;
 }*/
 string box::povray() {
-  ostringstream o;
+  std::ostringstream o;
   o << "box {<" <<-len_half <<"," <<-len_half <<"," <<-len_half <<"> , <"
     << len_half <<"," <<len_half <<"," <<len_half <<"> texture {cell}}\n";
   return o.str();
 }
 //----------- SLIT --------------------------
 string slit::info() {
-  ostringstream o;
+  std::ostringstream o;
   o << container::info() 
     << "#   Shape                = Cube - xy periodicity, only" << endl
     << "#   Side length          = " << len << endl;
@@ -142,7 +142,7 @@ void cylinder::randompos(point &p) {
   };
 }
 string cylinder::info() {
-  ostringstream o;
+  std::ostringstream o;
   o << container::info()
     << "#   Shape                = Cylindrical" << endl
     << "#   Lenght               = " << len <<endl
@@ -150,7 +150,7 @@ string cylinder::info() {
   return o.str();
 }
 string cylinder::povray() {
-  ostringstream o;
+  std::ostringstream o;
   o << "cylinder {<0,0,0>,<0,0" << len << ">," << r <<" texture {cell}}\n"
     << "cylinder {<0,0,0>,<0,0" << len << ">,0.5 texture {cell}}\n";
   return o.str();

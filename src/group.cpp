@@ -45,14 +45,14 @@ namespace Faunus {
     };
     o.name = this->name + " + " + g.name;
     if (o.size()!=this->size()+g.size())
-      cout << "# Warning: Added groups are not continous!\n";
+      std::cout << "# Warning: Added groups are not continous!\n";
     return o;
   }
 
   short int group::random() { return beg + rand() % size(); }
 
   string group::info() {
-    ostringstream o;
+    std::ostringstream o;
     o << endl
       << "# " << title << ": " << name << endl
       << "#   Range                  = [" << beg << "," << end << "]" << " " << size() << endl
@@ -229,7 +229,7 @@ namespace Faunus {
     anion=cat;
   }
   string salt::info(container &con) {
-    ostringstream o;
+    std::ostringstream o;
     float c=1./6.022e23/1e-27;
     short nan=count(con.p, anion),
           ncat=count(con.p, cation);
@@ -259,7 +259,7 @@ namespace Faunus {
     short n=1, npart;
     particle::type id;
     while (n<3) {
-      ostringstream nion, tion;
+      std::ostringstream nion, tion;
       nion << "nion" << n;
       tion << "tion" << n++;
       npart = in.getint(nion.str(), 0);
@@ -276,7 +276,7 @@ namespace Faunus {
   //--------------- MACROMOLECULE ---------------
   macromolecule::macromolecule() { title="MACROMOLECULE"; }
   string macromolecule::info() {
-    ostringstream o;
+    std::ostringstream o;
     o << group::info();
     if (Q.cnt>0)
       o << "#  Charge fluctuations:" << endl
@@ -287,7 +287,7 @@ namespace Faunus {
     return o.str();
   }
   string macromolecule::info(container &con) {
-    ostringstream o;
+    std::ostringstream o;
     o << info();
     o << "#   Current charge         = " << charge(con.p) << endl
       << "#   Hydrophobic particles  = " << numhydrophobic(con.p) << endl
@@ -464,7 +464,7 @@ namespace Faunus {
     return sel;
   }
   string molecules::info() {
-    ostringstream o;
+    std::ostringstream o;
     o << group::info()
       << "#  Atoms per molecule      = " << numatom << endl 
       << "#  Solvent molecules       = " << size()/double(numatom) << endl; //check!!
@@ -477,7 +477,7 @@ namespace Faunus {
     dp_trans=dp_rot=0;
   }
   string spc::info() {
-    ostringstream o;
+    std::ostringstream o;
     o << molecules::info();
     if (dip.cnt>0 && dip2.cnt>0)
       o << "#    <mu> <mu^2>-<mu>^2    = " << dip.avg()<<" "<<dip2.avg()-pow(dip.avg(),2)<<endl;

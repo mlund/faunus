@@ -33,7 +33,7 @@ namespace Faunus {
     eq=in.getboo("equilibration", false);
   }
   string mcloop::info() {
-    ostringstream o;
+    std::ostringstream o;
     o << endl << "# STEP AND TIME DETAILS:" << endl
       << "#   Steps (macro micro tot)= "
       << macro << " " << micro << " " << macro*micro << endl;
@@ -45,7 +45,7 @@ namespace Faunus {
     return o.str();
   }
   string mcloop::timing(unsigned int mac) {
-    ostringstream o;
+    std::ostringstream o;
     o << "# Macrostep " << mac << " completed. ETA: "
       << cnt.eta(mac);
     return o.str();

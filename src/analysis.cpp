@@ -90,7 +90,7 @@ namespace Faunus {
 
   string distributions::info() {
     unsigned char i;
-    ostringstream o;
+    std::ostringstream o;
     o << "# DISTRIBUTION FUNCTIONS:\n"
       << "# 1 = distance" << endl;
     for (i=0; i<s.size(); i++)
@@ -150,7 +150,7 @@ namespace Faunus {
       //analysis
       dist[agg.size()-1]++;                                     // One aggregate of size
       if (agg.size()+unagg.size()!=g.size()) {
-        cout <<" Error in aggregation::count()"<<endl
+        std::cout <<" Error in aggregation::count()"<<endl
           <<" g.size() = agg.size()+unagg.size()"<<endl
           <<"    "<< g.size()<<" = "<<agg.size()<<" +  "<<unagg.size()<<endl;
       }
@@ -169,7 +169,7 @@ namespace Faunus {
     }
   }
   void aggregation::write(string file) {
-    ofstream f(file.c_str());
+    std::ofstream f(file.c_str());
     if (f) {
       for (int i=0;i<g.size();i++) {
         if (dist[i]!=0)

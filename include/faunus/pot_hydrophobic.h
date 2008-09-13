@@ -35,7 +35,7 @@ class pot_hydrophobic : public pot_lj {
 };
 
 string pot_hydrophobic::info() {
-  ostringstream o;
+  std::ostringstream o;
   o << pot_lj::info()
     << "#   Bjerrum length     = " << f << endl
     << "#   Hydrop. LJ scaling = " << scale << endl;

@@ -12,14 +12,10 @@
 #include "faunus/countdown.h"
 #include "faunus/mcloop.h"
 
+//Interaction headers
 #include "faunus/potentials.h"
 #include "faunus/pot_hydrophobic.h"
 #include "faunus/pot_netz.h"
 
-using std::ostream;
-using std::vector;
-using std::string;
-using std::stringstream;
-using std::ios;
 
 #endif

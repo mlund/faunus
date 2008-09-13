@@ -55,7 +55,7 @@ float histogram::get(float x) { return (*this)(x)/float(cnt); }
 //! Show results for all x
 void histogram::write(string file) {
   float g;
-  ofstream f(file.c_str());
+  std::ofstream f(file.c_str());
   if (f) {
     f.precision(6);
     for (double x=xmin; x<xmax(); x+=xres) {

@@ -106,7 +106,7 @@ namespace Faunus {
   }
 
   void titrate::infos() {
-    cout << "# Titrateable sites   = " << sites.size() << endl
+    std::cout << "# Titrateable sites   = " << sites.size() << endl
       << "# Protons             = " << protons.size() << endl
       << "# pH                  = " << ph << endl ;
   }
@@ -136,15 +136,15 @@ namespace Faunus {
   }
 
   void titrate::showsites(vector<particle> &p) {
-    cout << "# --- AVERAGE SITE CHARGES ---------------------\n";
+    std::cout << "# --- AVERAGE SITE CHARGES ---------------------\n";
     for (unsigned int i=0; i<spc->d.size(); i++)
       if (spc->d[i].pka!=0) {
-        cout << spc->d[i].name << ": " << setiosflags(ios::fixed);
-        cout.precision(3);
+        std::cout << spc->d[i].name << ": " << setiosflags(std::ios::fixed);
+        std::cout.precision(3);
         for (unsigned int j=0; j<sites.size(); j++)
           if (p[sites[j]].id==i)
-            cout << q[j].avg() << " ";
-        cout << endl;
+            std::cout << q[j].avg() << " ";
+        std::cout << endl;
       };
   }
 
@@ -164,11 +164,10 @@ namespace Faunus {
     for (unsigned int i=0; i<protons.size(); i++)
       p[protons[i]].charge = q;
 
-    cout << "# Charge, Titrateable sites = " << sumsites() << endl
+    std::cout << "# Charge, Titrateable sites = " << sumsites() << endl
       << "# Charge, Protons           = " << nprot.avg() << endl
       << "# Average proton charge     = " << q << endl
       << "# Total                     = " << sumsites()+nprot.avg() << endl;
-
     return sumsites();
   }
 }

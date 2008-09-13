@@ -84,8 +84,8 @@ namespace Faunus {
   }
 
   string point::str() {
-    stringstream s;
-    s.setf(ios::fixed);
+    std::stringstream s;
+    s.setf(std::ios::fixed);
     s.precision(2);
     s << x << "," << y << "," << z;
     return "[" + s.str() + "]";
@@ -121,7 +121,7 @@ namespace Faunus {
   double particle::volume() { return 4.18879*radius*radius*radius; }
   double particle::mw2vol(double rho) { return 1.6606*rho*mw; }
   double particle::mw2rad(double rho) { return pow( 3.*mw2vol(rho)/4./3.14, 0.3333 ); }
-  ostream &operator<<(ostream &out, point &p) {
+  std::ostream &operator<<(std::ostream &out, point &p) {
     out << p.str();
     return out;
   }

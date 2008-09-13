@@ -29,7 +29,7 @@ namespace Faunus {
       hist.add( pot.energy(p,g,i) );
   }
   string matubayashi::info() {
-    ostringstream o;                                                        
+    std::ostringstream o;                                                        
     o << endl << "# MAUBAYASHI HISTOGRAM:" << endl
       << "#   More information:  Paper ref?" << endl;
     return o.str();

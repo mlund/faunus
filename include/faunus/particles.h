@@ -20,14 +20,14 @@ namespace Faunus {
     private:
       slump slp;
     public:
-      vector<particle> p;                   //!< The main particle vector
-      vector<particle> trial;               //!< Trial particle vector. 
+      std::vector<particle> p;              //!< The main particle vector
+      std::vector<particle> trial;          //!< Trial particle vector. 
 
       int push_back(particle &);            //!< add particle to both "p" and "trial"
       double charge();                      //!< Sum all charges in particle vector
       double charge(point &, double);       //!< Sum all charges within a sphere region
       bool overlap(particle &);             //!< Check for overlap w. particle
-      bool overlap(vector<particle> &);
+      bool overlap(std::vector<particle> &);
       bool check_vector();                  //!< Check if p and trial are equal!
       int count(particle::type,point&,double);//!< Count particles of "type" within a sphere
   };

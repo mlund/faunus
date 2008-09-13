@@ -47,6 +47,7 @@ also in a Cygwin environment. Detailed instructions can be found \ref readme "he
 \li Mikael Lund (<A HREF="http://web.mac.com/mlund"><B>homepage</B></A>)
 \li Bjorn Persson
 \li Martin Trulsson
+\li As indicated in the icons above, Faunus relies on a range of excellent open source software. Thanks a lot!
 
 \subsection guide Guidelines for Submitting Code
 \li Make sure "make all" works before submitting
@@ -55,7 +56,6 @@ also in a Cygwin environment. Detailed instructions can be found \ref readme "he
 \li Document code using Doxygen keywords
 \li Provide a descriptive comment of changes when issuing "svn commit"
 \li Example applications are most welcome!
-
 */
 
 /*! \page License

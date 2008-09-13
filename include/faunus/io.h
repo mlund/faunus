@@ -5,6 +5,13 @@
 #include "faunus/container.h"
 #include "faunus/titrate.h"
 
+#ifdef GROMACS
+#ifndef CPLUSPLUS
+#define CPLUSPLUS
+#endif
+#include "xtcio.h"
+#endif
+
 namespace Faunus {
   //--------------------------------
   //!\brief Basic file I/O routines

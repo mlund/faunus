@@ -10,15 +10,9 @@
 #include <cmath>
 #include <algorithm>
 
-#ifdef GROMACS
-#ifndef CPLUSPLUS
-#define CPLUSPLUS
-#endif
-#include "xtcio.h"
-#endif
-
 namespace Faunus {
   //Keep this at a minimum, please!
+  using namespace std;
   using std::string;
   using std::vector; // Perhaps try boost::vector?
   using std::endl;

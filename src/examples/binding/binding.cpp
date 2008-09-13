@@ -37,7 +37,7 @@ int main() {
   cout << cell.info() << pot.info();    // Print information to screen
 
   #ifdef GROMACS
-  ioxtc xtc(cell, cell.len);            // Gromacs xtc output (if installed)
+  ioxtc xtc(cell, 52.3);            // Gromacs xtc output (if installed)
   #endif
 
   cout << "---------- RUN-TIME INFORMATION  -----------" << endl;

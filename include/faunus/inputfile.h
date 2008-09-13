@@ -1,8 +1,8 @@
 #ifndef FAU_INPUTFILE_H
 #define FAU_INPUTFILE_H
 
-#include <faunus/scopes.h>
 #include <stdlib.h>
+#include <faunus/scopes.h>
 
 namespace Faunus {
   /*!
@@ -16,7 +16,7 @@ namespace Faunus {
   class inputfile {
     public:
       inputfile(string);                    //!< Constructor
-      string getstr(string, string="");//!< Get string value
+      string getstr(string, string="");     //!< Get string value
       double getflt(string, double=0);      //!< Get double value
       int getint(string, int=0);            //!< Get integer value
       bool getboo(string, bool=false);      //!< Get boolean value

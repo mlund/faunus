@@ -1,6 +1,6 @@
 #ifndef FAU_IO_H
 #define FAU_IO_H
-#include "faunus/scopes.h"
+#include "faunus/common.h"
 #include "faunus/group.h"
 #include "faunus/container.h"
 #include "faunus/titrate.h"

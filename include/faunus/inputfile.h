@@ -1,8 +1,7 @@
 #ifndef FAU_INPUTFILE_H
 #define FAU_INPUTFILE_H
 
-#include <stdlib.h>
-#include <faunus/scopes.h>
+#include <faunus/common.h>
 
 namespace Faunus {
   /*!

@@ -1,6 +1,6 @@
-#ifndef FAU_xydata_h
-#define FAU_xydata_h
-#include "faunus/scopes.h"
+#ifndef FAU_XYDATE_h
+#define FAU_XYDATA_h
+#include "faunus/common.h"
 #include "faunus/average.h"
 
 namespace Faunus {

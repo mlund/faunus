@@ -1,7 +1,7 @@
 #ifndef FAU_POINT_H
 #define FAU_POINT_H
 
-#include "faunus/scopes.h"
+#include "faunus/common.h"
 #include "faunus/slump.h"
 
 namespace Faunus {

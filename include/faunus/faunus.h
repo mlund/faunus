@@ -1,7 +1,7 @@
 #ifndef FAUNUS_H
 #define FAUNUS_H
 
-#include "faunus/scopes.h"
+#include "faunus/common.h"
 
 #include "faunus/analysis.h"
 #include "faunus/histogram.h"

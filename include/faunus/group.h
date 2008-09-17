@@ -1,7 +1,7 @@
 #ifndef FAU_GROUP_H
 #define FAU_GROUP_H
 
-#include "faunus/scopes.h"
+#include "faunus/common.h"
 #include "faunus/average.h"
 #include "faunus/particles.h"
 #include "faunus/container.h"

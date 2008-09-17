@@ -1,7 +1,7 @@
 #ifndef FAU_markovmove_h
 #define FAU_markovmove_h
 
-#include "faunus/scopes.h"
+#include "faunus/common.h"
 #include "faunus/container.h"
 #include "faunus/potentials.h"
 #include "faunus/ensemble.h"

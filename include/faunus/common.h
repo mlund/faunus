@@ -1,5 +1,5 @@
-#ifndef FAU_SCOPES_H
-#define FAU_SCOPES_H
+#ifndef FAU_COMMON_H
+#define FAU_COMMON_H
 #include <string>
 #include <vector>
 #include <iostream>
@@ -12,7 +12,6 @@
 
 namespace Faunus {
   //Keep this at a minimum, please!
-  using namespace std;
   using std::string;
   using std::vector; // Perhaps try boost::vector?
   using std::endl;

@@ -6,7 +6,7 @@
 namespace Faunus {
   /*!
    *  \brief Lennard-Jones potential
-   *  \author Mikael Lund
+   *  \author mikaek lund
    *  \date Prague, 2007
    */
   class pot_lj {
@@ -48,7 +48,7 @@ namespace Faunus {
 
   /*!
    *  \brief Hardsphere potential
-   *  \author Mikael Lund
+   *  \author mikaek lund
    *  \date Prague, 2008
    */
   class pot_hs {

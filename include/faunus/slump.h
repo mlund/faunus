@@ -8,32 +8,47 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include "faunus/MersenneTwister.h"
+
 namespace Faunus {
-#ifndef NRRAND
+  class random {
+    public:
+      virtual double random_one()=0;              //!< Random number between [0:1[
+      virtual void random_seed(unsigned int=0)=0; //!< Seed random generator (globally)
+      bool runtest(float=0.5);                    //!< Probability bool
+      double random_half();                       //!< Random number between [-0.5:0.5[
+  };
+
   /*!
-   * \brief Random number functions
-   * \author Mikael Lund
+   * \brief Default C++ random number generator
+   * \author mikaek lund
    * \date Lund, 2002
    */
-  class slump {
+  class randomDefault : public random {
     private:
       double rand_max_inv;
     public:
-      slump();
-      void random_seed(unsigned int=0);     //!< Seed random generator (globally)
-      bool runtest(float=0.5);              //!< Probability bool
-      double random_one();                  //!< Random number between [0:1[
-      double random_half();                 //!< Random number between [-0.5:0.5[
+      randomDefault();
+      void random_seed(unsigned int=0);
+      double random_one();
   };
-#endif
 
-#ifdef NRRAND
-  //Insert numerical recipes routine here. To compile with this
-  //use -DNRRAND when compiling.
-  class slump {
-
+  /*!
+   * \brief Mersenne Twister Random number functions
+   * \author mikaek lund etc.
+   * \date Prague, 2008
+   */
+  class randomTwister : public random {
+    private:
+      MTRand mt;
+    public:
+      void random_seed(unsigned int=0);
+      double random_one();
   };
-#endif
+
+  /*! \typedef Speficy random number generator
+   */
+  typedef Faunus::randomDefault slump;
 }
 #endif
 

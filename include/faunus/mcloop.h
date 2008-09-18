@@ -9,7 +9,7 @@ namespace Faunus {
    * Markov chain loops. Also, after each macro step
    * it can estimate when the simulation will finish
    *
-   * \author Mikael Lund
+   * \author mikaek lund
    * \date 2007
    */
   class mcloop {

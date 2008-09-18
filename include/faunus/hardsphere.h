@@ -7,7 +7,7 @@
 namespace Faunus {
 
 /*!\brief Hardsphere overlap between particles
- * \author Mikael Lund
+ * \author mikaek lund
  */
 class hardsphere {
   public:

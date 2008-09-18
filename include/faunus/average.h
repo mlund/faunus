@@ -4,7 +4,7 @@
 namespace Faunus {
   /*!
    * \brief Class to collect average values
-   * \author Mikael Lund
+   * \author mikaek lund
    * \date 2002-2007
    */
   template<class T>

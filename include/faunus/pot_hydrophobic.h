@@ -6,7 +6,7 @@
 namespace Faunus {
 
 /*! \brief Double vdW interaction for certain particles with hydrophobic groups 
- *  \author Mikael Lund 
+ *  \author mikaek lund 
  *
  *  This potential consists of a Coulomb and LJ potential as usual. When encountering
  *  a particle of type "id" AND a hydrophobic group, the LJ epsilon parameter will be

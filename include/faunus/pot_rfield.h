@@ -5,7 +5,7 @@
 
 namespace Faunus {
   /*! \brief Charge interactions in- and outside a spherical cavity
-   *  \author Mikael Lund
+   *  \author mikaek lund
    *  \date 2005-2006 Canberra
    *  \todo The sketch could be more clear.
    *

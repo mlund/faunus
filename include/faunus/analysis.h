@@ -12,7 +12,7 @@
 namespace Faunus {
   /*!
    * Base class for analysis functions
-   * \author Mikael Lund
+   * \author mikaek lund
    * \date Prague, 2007
    */
   class analysis {
@@ -34,7 +34,7 @@ namespace Faunus {
    * a function of, say, an intermolecular separation. It is assumed
    * that the x range is identical for all distributions.
    *
-   * \author Mikael Lund
+   * \author mikaek lund
    * \date December 2007
    */
   class distributions : public analysis {
@@ -88,7 +88,7 @@ namespace Faunus {
   };
 
   /*! \brief Widom method for excess chemical potentials
-   *  \author Mikael Lund
+   *  \author mikaek lund
    *  \todo Expand with a corrected one-particle insertion (Woodward+Svensson's charge scaling)
    *
    *  This class will insert "ghost" particle(s) so as to
@@ -146,7 +146,7 @@ namespace Faunus {
 
   /*!
    * \brief Calculates free energy pathway
-   * \author Mikael Lund
+   * \author mikaek lund
    *
    * Starting from some point this class will generate eight
    * other points around it (cubic) and calculate the excess chemical
@@ -274,7 +274,7 @@ string widompath<T_pairpot>::info() {
 /*!
  * This class analyses angular correlations between
  * any two macromolecules.
- * \author Mikael Lund
+ * \author mikaek lund
  * \date ADFA, 2008
  */
 class angularcorr : public analysis {
@@ -290,7 +290,7 @@ class angularcorr : public analysis {
  * type or group in a spherical shell around a central particle
  * (binding site)
  *
- * \author Mikael Lund
+ * \author mikaek lund
  * \date ADFA, 2008
  */
 class twostatebinding : public analysis {

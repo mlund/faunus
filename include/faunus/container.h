@@ -8,7 +8,7 @@
 
 namespace Faunus {
   /*! \brief Polymorphic class for simulation containers
-   *  \author Mikael Lund
+   *  \author mikaek lund
    */
   class container : public particles,  public species {
     protected:
@@ -31,7 +31,7 @@ namespace Faunus {
   };
 
   /*! \brief Spherical simulation container
-   *  \author Mikael Lund
+   *  \author mikaek lund
    */
   class cell : public container {
     private:
@@ -53,7 +53,7 @@ namespace Faunus {
   //---------------------------------------------------------
   /*! \brief Cubic simulation container w. periodic boundaries
    *  
-   *  \author Mikael Lund
+   *  \author mikaek lund
    */
   class box : public container {
     private:
@@ -93,7 +93,7 @@ namespace Faunus {
   //---------------------------------------------------------
   /*! \brief Box with periodic boundaries in the x and y direction.
    *  
-   *  \author Mikael Lund
+   *  \author mikaek lund
    *  \date Asljunga, 2008
    */
   class slit : public box {
@@ -106,7 +106,7 @@ namespace Faunus {
   };
 
   /*! \brief "Clutch" like container.
-   *  \author Mikael Lund
+   *  \author mikaek lund
    *
    *  A spherical cell with a particle inaccessible area shaped
    *  as a disc in the middle of the sphere. The disc is parallel
@@ -133,7 +133,7 @@ namespace Faunus {
   };
 
   /*! \brief Cylindrical simulation container
-   *  \author Mikael Lund/Bjoern Persson
+   *  \author mikaek lund/Bjoern Persson
    *  \todo Needs some testing
    */
   class cylinder : public container {

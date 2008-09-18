@@ -1,5 +1,5 @@
 /*! \brief Integration using Simpson's method
- *  \author Mikael Lund 
+ *  \author mikaek lund 
  *  \param a Lower boundary
  *  \param b Upper boundary
  *  \param n Number of steps

@@ -5,7 +5,7 @@
 namespace Faunus {
 
 /*! \brief Estimate speed of a computational process
- *  \author Mikael Lund
+ *  \author mikaek lund
  * 
  *  This class can be used to estimate when a computational
  *  process will finish. The current resolution is seconds.

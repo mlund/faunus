@@ -5,7 +5,7 @@
 namespace Faunus {
 
 /*! \brief Coulomb potential w. an extra empirical PMF
- *  \author Mikael Lund 
+ *  \author mikaek lund 
  */
 class pot_netz : public pot_coulomb {
   private:

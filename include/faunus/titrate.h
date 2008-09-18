@@ -12,7 +12,7 @@
 namespace Faunus {
 
   /*! \brief Class to perform proton titration of molecules
-   *  \author Mikael Lund
+   *  \author mikaek lund
    *  \todo Too much is public! Documentation is bad.
    */
   class titrate {

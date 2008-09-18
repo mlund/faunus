@@ -6,7 +6,7 @@
 namespace Faunus {
   /*!
    * \brief Class to handle a dataset of xy values with equidistant x-values.
-   * \author Mikael Lund
+   * \author mikaek lund
    * \date March 2007
    */
   template <class T=double>

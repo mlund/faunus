@@ -18,7 +18,7 @@ namespace Faunus {
    *  s.avg(); // --> 3.
    *  \endcode
    *
-   *  \author Mikael Lund
+   *  \author mikaek lund
    *  \date Prague, 2007
    *  \todo Specify weight for each sample. Via an internal vector?
    */

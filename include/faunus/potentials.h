@@ -10,7 +10,7 @@
 namespace Faunus {
   /*!
    *  \brief Setup for potentials.
-   *  \author Mikael Lund
+   *  \author mikaek lund
    *  \date Prague, 2007
    *
    *  This class is used to pass parameters to classes
@@ -33,7 +33,7 @@ namespace Faunus {
   };
 
   /*! \brief Coulomb potential
-   *  \author Mikael Lund
+   *  \author mikaek lund
    *  \date Prague, 2007
    */
   class pot_hscoulomb : public pot_hs {
@@ -57,7 +57,7 @@ namespace Faunus {
 
 
   /*! \brief Coulomb potential
-   *  \author Mikael Lund
+   *  \author mikaek lund
    *  \date Prague, 2007
    */
   class pot_coulomb : public pot_lj {
@@ -81,7 +81,7 @@ namespace Faunus {
 
   /*!
    * \brief Coulomb pot. with minimum image.
-   * \author Mikael Lund
+   * \author mikaek lund
    * \date 2007
    */
   class pot_minimage : public pot_lj {
@@ -124,7 +124,7 @@ namespace Faunus {
   };
 
   /*! \brief Debye-Huckel potential
-   *  \author Mikael Lund
+   *  \author mikaek lund
    */
   class pot_debyehuckel : public pot_lj {
     private:
@@ -152,7 +152,7 @@ namespace Faunus {
    *         conditions in 3D, it is extended to preform 
    *         under conditions of constant pressure.
    See class isobaric->markovmove.h
-   *  \author Mikael Lund/Bjoern Persson
+   *  \author mikaek lund/Bjoern Persson
    *  \date Lund/Prag 2008
    */
   class pot_debyehuckelP3 : public pot_lj {
@@ -185,7 +185,7 @@ namespace Faunus {
 
   /*!
    * \brief Load pair potentials from disk
-   * \author Mikael Lund
+   * \author mikaek lund
    * \date Prague, 2007
    *
    * Class to load potential of mean force (PMF) data from file(s). If
@@ -224,7 +224,7 @@ namespace Faunus {
 
   /*!
    *  \brief Interaction between particles and groups
-   *  \author Mikael Lund
+   *  \author mikaek lund
    *  \param T pairpotential
    *
    *  Calculates interaction energies between particles and groups. The
@@ -397,7 +397,7 @@ namespace Faunus {
   // -------------------------------------- INTERACTION W. FORCES ---------
   /*!
    * \brief Interaction class w. additional force functions
-   * \author Mikael Lund
+   * \author mikaek lund
    * \date Amaroo, 2008
    * \todo Unfinished
    */
@@ -416,7 +416,7 @@ namespace Faunus {
   // --------------------------------- HYDROPHOBIC INTERACTION ------------
   /*!
    * \brief Hydrophobic interaction between ions and molecular surfaces
-   * \author Mikael Lund
+   * \author mikaek lund
    * \date Canberra 2008
    * \todo Not optimized - inelegant "end_of_protein_one" hack. Use vector instead...
    *

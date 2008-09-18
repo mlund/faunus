@@ -34,9 +34,13 @@ target_link_libraries(libfaunus.a ${LINKLIBS})
 add_library (libfaunus SHARED ${objs})
 set_target_properties(libfaunus PROPERTIES OUTPUT_NAME faunus)
 target_link_libraries(libfaunus ${LINKLIBS})
-install(TARGETS libfaunus LIBRARY DESTINATION lib)
+install(TARGETS libfaunus
+        LIBRARY DESTINATION lib)
 
 #----- header install target -----
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/faunus
-  DESTINATION include FILES_MATCHING PATTERN "*.h" PATTERN "CMakeFiles" EXCLUDE)
+        DESTINATION include
+        FILES_MATCHING PATTERN "*.h"
+        PATTERN ".svn" EXCLUDE
+        PATTERN "CMakeFiles" EXCLUDE)
 

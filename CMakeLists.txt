@@ -22,7 +22,7 @@ mark_as_advanced(EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH
 # ----------------------------
 #   Locate external packages
 # ----------------------------
-set (CMAKE_MODULE_PATH cmake/modules)
+set (CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
 include(TestCXXAcceptsFlag)
 include(OptimizationFlags)
 find_package(OpenBabel2)
@@ -49,6 +49,6 @@ add_subdirectory (legacy/fortran)
 add_subdirectory (doc EXCLUDE_FROM_ALL)
 if (FAUNUS_PYTHON AND PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND AND Boost_FOUND)
   #add_subdirectory(src/python)
-  add_subdirectory (undone/python EXCLUDE_FROM_ALL)
+  add_subdirectory(undone/python-new EXCLUDE_FROM_ALL)
 endif (FAUNUS_PYTHON AND PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND AND Boost_FOUND)
 

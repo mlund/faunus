@@ -5,10 +5,11 @@ function( fau_example tname tdir tsrc )
   add_executable( ${tname} "${tdir}/${tsrc}" )
   set_source_files_properties( "${tdir}/${tsrc}" PROPERTIES LANGUAGE CXX)
   set_target_properties(${tname}
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${tdir}/")
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${tdir}/")
   target_link_libraries(${tname} libfaunus)
-  install (DIRECTORY "${tdir}" DESTINATION "share/faunus/examples"
-    PATTERN ".svn" EXCLUDE)
+  install (DIRECTORY "${tdir}"
+           DESTINATION "share/faunus/examples"
+           PATTERN ".svn" EXCLUDE)
 endfunction( fau_example )
 
 #----- add examples to build process -----

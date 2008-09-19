@@ -32,5 +32,9 @@
 #include "faunus/countdown.h"
 #include "faunus/mcloop.h"
 #include "faunus/energy.h"
+#include "faunus/moves/translational.h"
+#include "faunus/moves/rotational.h"
+#include "faunus/moves/charge.h"
+#include "faunus/moves/volume.h"
 
 #endif

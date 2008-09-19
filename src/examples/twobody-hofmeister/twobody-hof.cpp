@@ -11,8 +11,6 @@
  */
 
 #include "faunus/faunus.h"
-#include "faunus/potentials/pot_netz.h"
-#include "faunus/moves/markovmove.h"
 
 using namespace Faunus;
 using namespace std;
@@ -24,7 +22,7 @@ int main() {
   cell cell(in);                        // We want a spherical, hard cell
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg(in);                    // Setup pair potential (default values)
-  int_hydrophobic<T_pairpot> pot(cfg);  // Interactions incl. hydrophobic surfaces
+  int_hydrophobic<pot_netz> pot(cfg);   // Interactions incl. hydrophobic surfaces
   distributions dst;                    // Distance dep. averages
   iopqr pqr(cell);                      // PQR output (pos, charge, radius)
   vector<macromolecule> g;              // Group for proteins

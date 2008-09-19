@@ -1,6 +1,6 @@
 #ifndef FAU_POT_HSCOULOMB_H
 #define FAU_POT_HSCOULOMB_H
-#include "faunus/potentials/hardsphere.h"
+#include "faunus/potentials/base.h"
 namespace Faunus {
   /*! \brief Coulomb potential
    *  \author Mikael Lund

@@ -9,8 +9,6 @@
  */
 
 #include "faunus/faunus.h"
-#include "faunus/potentials/pot_hydrophobic.h"
-#include "faunus/moves/markovmove.h"
 
 using namespace std;
 using namespace Faunus;
@@ -23,7 +21,7 @@ int main() {
   box cell(in);                         // We want a cubic cell
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg(in);                    // Setup pair potential (default values)
-  interaction<T_pairpot> pot(cfg);      // Functions for interactions
+  interaction<pot_minimage> pot(cfg);   // Functions for interactions
   iogro gro(cell, in);                  // Gromacs file output for VMD etc.
   FAUrdf protrdf(0,0,.5,cell.len/2.);   // Protein and salt radial distributions
   FAUrdf saltrdf(particle::NA,particle::SO4, .5, cell.len/2.);

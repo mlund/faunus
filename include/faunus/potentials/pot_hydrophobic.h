@@ -39,6 +39,5 @@ namespace Faunus {
       << "#   Hydrop. LJ scaling = " << scale << endl;
     return o.str();
   }
-  typedef Faunus::pot_hydrophobic T_pairpot;
 }
 #endif

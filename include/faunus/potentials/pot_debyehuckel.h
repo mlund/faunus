@@ -33,6 +33,5 @@ namespace Faunus {
       << "#   Debye length      = " << 1./k  << endl;
     return o.str();
   }
-  typedef Faunus::pot_debyehuckel T_pairpot;
 }
 #endif

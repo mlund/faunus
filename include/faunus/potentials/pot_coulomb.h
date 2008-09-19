@@ -5,7 +5,6 @@ namespace Faunus {
   /*! \brief Coulomb potential
    *  \author Mikael Lund
    *  \date Prague, 2007
-   *  \todo Remove the hackish typedef to allow pot_netz to enherit
    */
   class pot_coulomb : public pot_lj {
     public:
@@ -31,8 +30,5 @@ namespace Faunus {
       << "#   Bjerrum length    = " << f << endl;
     return o.str();
   }
-#ifndef _POT_NETZ_H
-  typedef Faunus::pot_coulomb T_pairpot;
-#endif
 }
 #endif

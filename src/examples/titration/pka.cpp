@@ -8,8 +8,6 @@
  * \include pka.cpp
  */
 #include "faunus/faunus.h"
-#include "faunus/potentials/pot_coulomb.h"
-#include "faunus/moves/markovmove.h"
 
 using namespace Faunus;
 using namespace std;
@@ -22,7 +20,7 @@ int main(int argc, char* argv[]) {
   cell con(in);                        // Use a spherical container
   canonical nvt;                       // Use the canonical ensemble
   pot_setup cfg(in);                   // Setup pair potential (default)
-  interaction<T_pairpot> pot(cfg);     // Functions for interactions
+  interaction<pot_coulomb> pot(cfg);   // Functions for interactions
   macromolecule protein;               // Group for the protein
   ioaam aam(con);                      // Protein input file format is AAM
   iopqr pqr(con);                      // PQR coordinate output

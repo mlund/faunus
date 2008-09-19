@@ -1,6 +1,7 @@
 #ifndef FAU_POT_DATAPMF_H
 #define FAU_POT_DATAPMF_H
 #include "faunus/potentials/base.h"
+#include "faunus/xydata.h"
 namespace Faunus {
   /*!
    * \brief Load pair potentials from disk

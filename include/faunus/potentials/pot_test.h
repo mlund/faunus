@@ -19,6 +19,5 @@ namespace Faunus {
         return (qq!=0) ? qq/sqrt(r2)+a : a;
       }
   };
-  typedef Faunus::pot_test T_pairpot;
 }
 #endif

@@ -14,9 +14,6 @@ namespace Faunus {
       double k;
     public:
       double box, invbox;
-      //! \param pot.lB Bjerrum length
-      //! \param pot.eps L-J parameter
-      //! \param pot.kappa Inverse Debye screening length
       pot_debyehuckelP3( pot_setup &pot ) : pot_lj(pot.eps/pot.lB) {
         f=pot.lB; 
         k=pot.kappa;
@@ -26,13 +23,13 @@ namespace Faunus {
       };
       string info();
       //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
-      //! \return Energy in kT/f (f=lB)
-      inline double pairpot( const particle &p1, const particle &p2 ) {
-        register double r2=p1.sqdist(p2,box,invbox), r=sqrt(r2);
+      //! \return Energy in units of kT/lB
+      inline double pairpot( const particle &p1, const particle &p2 ) const {
+        double r2=p1.sqdist(p2,box,invbox), r=sqrt(r2);
         return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
       }
       void setvolume(double vol) {
-        box=pow(vol, 1./3);;
+        box=pow(vol, 1./3);
         invbox=1./box;
       }
   }; 
@@ -43,6 +40,5 @@ namespace Faunus {
       << "#   Debye length      = " << 1./k  << endl;
     return o.str();
   }
-  typedef Faunus::pot_debyehuckelP3 T_pairpot;
 }
 #endif

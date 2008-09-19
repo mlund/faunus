@@ -10,8 +10,7 @@
  */
 
 #include "faunus/faunus.h"
-#include "faunus/potentials/pot_coulomb.h"
-#include "faunus/moves/markovmove.h"
+
 using namespace Faunus;
 using namespace std;
 
@@ -22,7 +21,7 @@ int main() {
   cell cell(in);                        // We want a spherical, hard cell
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg(in);                    // Setup pair potential (default values)
-  interaction<T_pairpot> pot(cfg);      // Functions for interactions
+  interaction<pot_coulomb> pot(cfg);    // Functions for interactions
   ioxyz xyz(cell);                      // xyz output for VMD etc.
   distributions dst;                    // Distance dep. averages
   iopqr pqr(cell);                      // PQR output (pos, charge, radius)

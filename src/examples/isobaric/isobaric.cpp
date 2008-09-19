@@ -7,33 +7,31 @@
  */
 
 #include "faunus/faunus.h"
-#include "faunus/potentials/pot_debyehuckelP3.h"
-#include "faunus/moves/markovmove.h"
 
 using namespace Faunus;
 using namespace std;
 
 int main() {
   cout << "---------- INITIAL PARAMETERS -----------" << endl;
-  slump slump;                          // A random number generator
-  inputfile in("isobaric.conf");        // Read input file
+  slump slump;                            // A random number generator
   physconst phys;
+  inputfile in("isobaric.conf");          // Read input file
   phys.e_r=in.getflt("e_r");
   phys.lB_TO_T(in.getflt("bjerrum"));
-  mcloop loop(in);                      // Keep track of time and MC loop
-  box cell(in);                         // We want a cubic cell
-  canonical nvt;                        // Use the canonical ensemble
-  pot_setup cfg(in);                    // Setup pair potential (default values)
-  interaction<T_pairpot> pot(cfg);      // Functions for interactions
-  iogro gro(cell, in);                  // Gromacs file output for VMD etc.
-  FAUrdf protrdf(0,0,.5,cell.len/2.);   // Protein and salt radial distributions
+  mcloop loop(in);                        // Keep track of time and MC loop
+  box cell(in);                           // We want a cubic cell
+  canonical nvt;                          // Use the canonical ensemble
+  pot_setup cfg(in);                      // Setup pair potential (default values)
+  interaction<pot_debyehuckelP3> pot(cfg);// Functions for interactions
+  iogro gro(cell, in);                    // Gromacs file output for VMD etc.
+  FAUrdf protrdf(0,0,.5,cell.len/2.);     // Protein and salt radial distributions
 
-  vector<macromolecule> g;                      // PROTEIN groups
+  vector<macromolecule> g;                // PROTEIN groups
   ioxyz xyz(cell);
   ioaam aam(cell);
-  if (in.getboo("lattice")==true)           //   Protein input file format is AAM
+  if (in.getboo("lattice")==true)         //   Protein input file format is AAM
     aam.loadlattice(cell, in, g);                //   Load and insert proteins
-  else                                      //   Center first protein (will be frozen)
+  else                                    //   Center first protein (will be frozen)
     aam.load(cell, in, g);
   if (aam.load(cell,"confout.aam")) {
     for (int i=0;i<g.size();i++) 
@@ -41,10 +39,10 @@ int main() {
                                           // ...and recalc mass centers
   }
 
-  macrorot mr(nvt, cell, pot);          //   Class for macromolecule rotation
-  translate mt(nvt, cell, pot);         //   Class for macromolecular translation
-  systemenergy sys(pot.energy(cell.p)); // System energy analysis
-  isobaric vol(nvt, cell, pot, in.getflt("pressure"), in.getflt("penalty"), in.getflt("max"));
+  macrorot mr(nvt, cell, pot);            //   Class for macromolecule rotation
+  translate mt(nvt, cell, pot);           //   Class for macromolecular translation
+  systemenergy sys(pot.energy(cell.p));   // System energy analysis
+  isobaric<pot_debyehuckelP3> vol(nvt, cell, pot, in.getflt("pressure"), in.getflt("penalty"), in.getflt("max"));
   histogram lendist(1,0,in.getint("max"));           //  
   
   vol.dp=in.getflt("voldp");

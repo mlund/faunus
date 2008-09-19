@@ -10,8 +10,6 @@
  * \include widom.cpp
  */
 #include "faunus/faunus.h"
-#include "faunus/potentials/pot_coulomb.h"
-#include "faunus/moves/markovmove.h"
 
 using namespace std;
 using namespace Faunus;                 // Access to Faunus classes
@@ -23,8 +21,8 @@ int main() {
   canonical nvt;                        // Use the canonical ensemble
   pot_setup cfg;                        // Setup pair potential - default values
   FAUrdf rdf(particle::NA,particle::CL,.5, 45.);
-  interaction<T_pairpot> pot(cfg);      // Energy functions
-  widom<T_pairpot> widom(cell, pot,
+  interaction<pot_coulomb> pot(cfg);      // Energy functions
+  widom widom(cell, pot,
       particle::NA, particle::CL);      // Class for Widom particle insertions
   widom.runfraction=0.5;
   saltmove sm(nvt, cell, pot);          // Class for salt movements

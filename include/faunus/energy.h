@@ -2,206 +2,211 @@
 #define FAU_ENERGY_H
 
 #include "faunus/common.h"
-#include "faunus/species.h"
-#include "faunus/xydata.h"
 #include "faunus/group.h"
 #include "faunus/inputfile.h"
-#include "faunus/potentials/base.h"
+#include "faunus/potentials/pot_coulomb.h"
+#include "faunus/potentials/pot_minimage.h"
+#include "faunus/potentials/pot_hydrophobic.h"
+#include "faunus/potentials/pot_datapmf.h"
+#include "faunus/potentials/pot_debyehuckel.h"
+#include "faunus/potentials/pot_debyehuckelP3.h"
+#include "faunus/potentials/pot_hccoulomb.h"
+#include "faunus/potentials/pot_netz.h"
 
 namespace Faunus {
   /*!
-   *  \brief Interaction between particles and groups
+   *  \brief Base class for interactions between particles and groups
    *  \author Mikael Lund
-   *  \param T pairpotential
-   *  \todo Rename class to "energy"
    *
    *  Calculates interaction energies between particles and groups. The
    *  pair potential is specified as a template type which allows inlining.
    *  Unless otherwise specified, all energies will be returned in units of \b kT.
    */
-  template<class T>
-    class interaction {
-      public:
-        T pair;     //!< Pair potential class
-        interaction(pot_setup &pot) : pair(pot) {};
-        string info();
-        double energy(const vector<particle> &, const particle &);            //!< all<->external particle
-        virtual double energy(const vector<particle> &, int);           //!< all<->particle i.
-        virtual double energy(const vector<particle> &, const group &);               //!< all<->group.
-        virtual double energy(const vector<particle> &);                          //!< all<->all (System energy).
-        double energy(const vector<particle> &, const group &, const group &);     //!< group<->group.
-        double energy(const vector<particle> &, const group &, int);            //!< group<->particle i.
-        double energy(const vector<particle> &, const group &, const particle &);     //!< group<->external particle.
-        double energy(const vector<particle> &, vector<group> &, int,...);
-        double energy(const vector<particle> &, int, const vector<short int> &);//!< particle<->list of particles.
-        double energy(const vector<particle> &, const vector<macromolecule> &); //!< vector<group> <-> vector<group>
-        double potential(const vector<particle> &, unsigned short);       //!< Electric potential at j'th particle
-        double internal(const vector<particle> &, const group &);               //!< internal energy in group
-        double pot(const vector<particle> &, const point &);                    //!< Electrostatic potential in a point
-        double quadratic(const point &, const point &);
-        double graft(const vector<particle> &, const group &);
-        double chain(const vector<particle> &, const group &, int);
-        double dipdip(const point &, const point &, double);                    //!< Dipole-dipole energy.
-        double iondip(const point &, double, double);                     //!< Ion-dipole energy.
-    };
-
-  template<class T>
-    double interaction<T>::energy(const vector<particle> &p, int j) {
-      int i,ps=p.size();
-      double u=0;
-#pragma omp parallel for reduction (+:u) num_threads(2)
-      for (i=0; i<j; i++)
-        u+=pair.pairpot( p[i],p[j] );
-
-#pragma omp parallel for reduction (+:u) num_threads(2)
-      for (i=j+1; i<ps; i++)
-        u+=pair.pairpot( p[i],p[j] );
-      return pair.f*u;
-    }
-  template<class T> double interaction<T>::energy(const vector<particle> &p, const group &g) {
-    int i,j,n=g.end+1, psize=p.size();
-    double u=0;
-#pragma omp parallel for reduction (+:u) num_threads(2)
-    for (i=g.beg; i<n; i++) {
-      for (j=0; j<g.beg; j++)
-        u += pair.pairpot(p[i],p[j]);
-      for (j=n; j<psize; j++)
-        u += pair.pairpot(p[i],p[j]);
-    };
-    return pair.f*u;
-  }
-  template<class T> double interaction<T>::energy(const vector<particle> &p, const group &g, int j) {
-    double u=0;
-    int len=g.end+1;
-    if (g.find(j)==true) {   //avoid self-interaction...
-      for (int i=g.beg; i<j; i++)
-        u+=pair.pairpot(p[i],p[j]);
-      for (int i=j+1; i<len; i++)
-        u+=pair.pairpot(p[i],p[j]);
-    } else                        //simple - j not in g
-      for (int i=g.beg; i<len; i++)
-        u+=pair.pairpot(p[i],p[j]);
-    return pair.f*u;  
-  }
-  template<class T> double interaction<T>::energy(const vector<particle> &p, const group &g, const particle &a) {
-    if (g.beg==-1) return 0;
-    double u=0;
-    int i,n=g.end+1;
-    //#pragma omp parallel for reduction (+:u)
-    for (i=g.beg; i<n; i++)
-      u+=pair.pairpot(a, p[i]); 
-    return pair.f*u;
-  }
-  template<class T> double interaction<T>::energy(const vector<particle> &p, const vector<macromolecule> &g) {
-    double u=0;
-    int k,j=g.size(),t=p.size();
-    for (int l=0; l<j; l++) {
-      k=g[l].end+1;
-      for (int i=g[l].beg; i<k; i++) {
-        for (int s=(g[l].end+1); s<t; s++) {
-          u+=pair.pairpot(p[i],p[s]);
-        }
-      }
-    }
-    return pair.f*u;
-  }
-  template<class T> double interaction<T>::energy(const vector<particle> &p) {
-    double u=0;
-    int n = p.size();
-#pragma omp parallel for reduction (+:u) num_threads(2)
-    for (int i=0; i<n-1; ++i)
-      for (int j=i+1; j<n; ++j)
-        u+=pair.pairpot(p[i], p[j]);
-    return pair.f*u;
-  }
-  template<class T> double interaction<T>::energy(const vector<particle> &p, const group &g1, const group &g2) {
-    double u=0;
-    int i,j,ilen=g1.end+1, jlen=g2.end+1;
-#pragma omp parallel for reduction (+:u) num_threads(2)
-    for (i=g1.beg; i<ilen; i++)
-      for (j=g2.beg; j<jlen; j++)
-        u += pair.pairpot(p[i],p[j]);
-    return pair.f*u;
-  }
+  class energybase {
+    public:
+      double tokT;
+      energybase(double f) { tokT=f; }
+      virtual string info()=0;
+      virtual double energy(const particle &, const particle &)=0;                       //!< particle<->particle (slow!)
+      virtual double energy(const vector<particle> &, const particle &)=0;               //!< all<->external particle
+      virtual double energy(const vector<particle> &, int)=0;                            //!< all<->particle i.
+      virtual double energy(const vector<particle> &, const group &)=0;                  //!< all<->group.
+      virtual double energy(const vector<particle> &)=0;                                 //!< all<->all (System energy).
+      virtual double energy(const vector<particle> &, const group &, const group &)=0;   //!< group<->group.
+      virtual double energy(const vector<particle> &, const group &, int)=0;             //!< group<->particle i.
+      virtual double energy(const vector<particle> &, const group &, const particle &)=0;//!< group<->external particle.
+      virtual double energy(const vector<particle> &, const vector<macromolecule> &)=0;  //!< vector<group> <-> vector<group>
+      virtual double potential(const vector<particle> &, unsigned short)=0;              //!< Electric potential at j'th particle
+      virtual double internal(const vector<particle> &, const group &)=0;                //!< internal energy in group
+      virtual double pot(const vector<particle> &, const point &)=0;                     //!< Electrostatic potential in a point
+      virtual double dipdip(const point &, const point &, double)=0;                     //!< Dipole-dipole energy.
+      virtual double iondip(const point &, double, double)=0;                            //!< Ion-dipole energy.
+  };
 
   /*!
-   * ...between the two dipoles a and b, separated by the
-   * distance r.
-   * \f$ \beta u(r) = l_B \frac{a_x b_x + a_y b_y - 2a_z b_z  }{r^3}\f$
-   */
-  template<class T> double interaction<T>::dipdip(const point &a, const point &b, double r) {
-    return pair.f*( a.x*b.x + a.y*b.y - 2*a.z*b.z )/(r*r*r);
-  }
-  template<class T>
-    double interaction<T>::iondip(const point &a, double q, double r) { return -pair.f*q*a.z/(r*r); }
-
-  // Total electrostatic potential in a point
-  template<class T> double interaction<T>::pot(const vector<particle> &p, const point &a) {
-    double u=0;
-    int i,n=p.size();  
-    for (i=0; i<n; i++)
-      u+=p[i].charge/p[i].dist(a);
-    return pair.f*u;
-  }
-  // Internal (NON)-electrostatic energy in group
-  template<class T> double interaction<T>::internal(const vector<particle> &p, const group &g) {
-    if (g.beg==-1) return 0;
-    double u=0;
-    int i,j,glen=g.end+1;
-    for (i=g.beg; i<glen-1; i++)
-      for (j=i+1; j<glen; j++)
-        u+=pair.pairpot(p[i],p[j]);
-    return pair.f*u;
-  }
-  template<class T> double interaction<T>::energy(const vector<particle> &p, const particle &a) {
-    double u=0;
-    int i,n=p.size();
-    for (i=0; i<n; i++)
-      u+=pair.pairpot(p[i], a);
-    return pair.f*u;
-  }
-  /*! \note If the charge of the j'th particle is 0, ZERO will be returned!
-   *  \return \f$ \phi_j = \sum_{i\neq j}^{N} \frac{l_B z_i}{r_{ij}} \f$
-   *  \param j The electric potential will be calculated in the point of this particle
-   *  \warning Uses simple particle->dist() function!
-   *  \todo Respect cell boundaries
-   */
-  template<class T> double interaction<T>::potential(const vector<particle> &p, unsigned short j) {
-    if (p[j].charge==0) return 0;
-    double u=0;
-    int i,n=p.size();
-    for (i=0; i<j; ++i) u+=p[i].charge/p[i].dist(p[j]);
-    for (i=j+1; i<n; ++i) u+=p[i].charge/p[i].dist(p[j]);
-    return u;
-  }
-  template<class T> string interaction<T>::info() {
-    std::ostringstream o;
-    o << endl
-      << "# POTENTIAL ENERGY FUNCTION:" << endl
-      << pair.info();
-    return o.str();
-  }
-
-  // -------------------------------------- INTERACTION W. FORCES ---------
-  /*!
-   * \brief Interaction class w. additional force functions
+   * \brief Implementation of all energy functions
    * \author Mikael Lund
-   * \date Amaroo, 2008
-   * \todo Unfinished
+   *
+   * This template will take as a type a pair potential
+   * i.e. Faunus::pot_xxx and attempt to inline it in
+   * all crusial inner loops in the energy functions.
+   * (expression templating)
    */
-  template<class T>
-    class interaction_force : public interaction<T> {
-      public:
-        interaction_force(pot_setup &pot) : interaction<T>(pot) {}
-        point force( const vector<particle> &, const group & );     //!< Calculate the force acting on a group
-    }; 
+  template<class T> class interaction : public energybase {
+    public:
+      T pair;
+      interaction(pot_setup &pot) : pair(pot), energybase(pair.f) { tokT=pair.f;};
 
-  template<class T> point interaction_force<T>::force( const vector<particle> &p, const group &g ) {
-    point f = interaction<T>::pair.force(p[1],p[2]);
-    return f;
-  }
+      double energy(const particle &a, const particle &b) {
+        return pair.pairpot(a,b) * pair.f;
+      }
 
-  // --------------------------------- HYDROPHOBIC INTERACTION ------------
+      double energy(const vector<particle> &p, int j) {
+        int i,ps=p.size();
+        double u=0;
+#pragma omp parallel for reduction (+:u)
+        for (i=0; i<j; i++)
+          u+=pair.pairpot( p[i],p[j] );
+
+#pragma omp parallel for reduction (+:u)
+        for (i=j+1; i<ps; i++)
+          u+=pair.pairpot( p[i],p[j] );
+        return pair.f*u;
+      }
+
+      double energy(const vector<particle> &p, const group &g) {
+        int i,j,n=g.end+1, psize=p.size();
+        double u=0;
+#pragma omp parallel for reduction (+:u)
+        for (i=g.beg; i<n; i++) {
+          for (j=0; j<g.beg; j++)
+            u += pair.pairpot(p[i],p[j]);
+          for (j=n; j<psize; j++)
+            u += pair.pairpot(p[i],p[j]);
+        };
+        return pair.f*u;
+      }
+
+      double energy(const vector<particle> &p, const group &g, int j) {
+        double u=0;
+        int len=g.end+1;
+        if (g.find(j)==true) {   //avoid self-interaction...
+          for (int i=g.beg; i<j; i++)
+            u+=pair.pairpot(p[i],p[j]);
+          for (int i=j+1; i<len; i++)
+            u+=pair.pairpot(p[i],p[j]);
+        } else                        //simple - j not in g
+          for (int i=g.beg; i<len; i++)
+            u+=pair.pairpot(p[i],p[j]);
+        return pair.f*u;  
+      }
+
+      double energy(const vector<particle> &p, const group &g, const particle &a) {
+        if (g.beg==-1) return 0;
+        double u=0;
+        int i,n=g.end+1;
+        //#pragma omp parallel for reduction (+:u)
+        for (i=g.beg; i<n; i++)
+          u+=pair.pairpot(a, p[i]); 
+        return pair.f*u;
+      }
+
+      double energy(const vector<particle> &p, const vector<macromolecule> &g) {
+        double u=0;
+        int k,j=g.size(),t=p.size();
+        for (int l=0; l<j; l++) {
+          k=g[l].end+1;
+          for (int i=g[l].beg; i<k; i++) {
+            for (int s=(g[l].end+1); s<t; s++) {
+              u+=pair.pairpot(p[i],p[s]);
+            }
+          }
+        }
+        return pair.f*u;
+      }
+
+      double energy(const vector<particle> &p) {
+        double u=0;
+        int n = p.size();
+#pragma omp parallel for reduction (+:u) num_threads(2)
+        for (int i=0; i<n-1; ++i)
+          for (int j=i+1; j<n; ++j)
+            u+=pair.pairpot(p[i], p[j]);
+        return pair.f*u;
+      }
+
+      double energy(const vector<particle> &p, const group &g1, const group &g2) {
+        double u=0;
+        int i,j,ilen=g1.end+1, jlen=g2.end+1;
+#pragma omp parallel for reduction (+:u) num_threads(2)
+        for (i=g1.beg; i<ilen; i++)
+          for (j=g2.beg; j<jlen; j++)
+            u += pair.pairpot(p[i],p[j]);
+        return pair.f*u;
+      }
+
+      /*!
+       * ...between the two dipoles a and b, separated by the
+       * distance r.
+       * \f$ \beta u(r) = l_B \frac{a_x b_x + a_y b_y - 2a_z b_z  }{r^3}\f$
+       */
+      double dipdip(const point &a, const point &b, double r) {
+        return pair.f*( a.x*b.x + a.y*b.y - 2*a.z*b.z )/(r*r*r);
+      }
+      double iondip(const point &a, double q, double r) { return -pair.f*q*a.z/(r*r); }
+
+      // Total electrostatic potential in a point
+      double pot(const vector<particle> &p, const point &a) {
+        double u=0;
+        int i,n=p.size();  
+        for (i=0; i<n; i++)
+          u+=p[i].charge/p[i].dist(a);
+        return pair.f*u;
+      }
+
+      // Internal (NON)-electrostatic energy in group
+      double internal(const vector<particle> &p, const group &g) {
+        if (g.beg==-1) return 0;
+        double u=0;
+        int i,j,glen=g.end+1;
+        for (i=g.beg; i<glen-1; i++)
+          for (j=i+1; j<glen; j++)
+            u+=pair.pairpot(p[i],p[j]);
+        return pair.f*u;
+      }
+
+      double energy(const vector<particle> &p, const particle &a) {
+        double u=0;
+        int i,n=p.size();
+        for (i=0; i<n; i++)
+          u+=pair.pairpot(p[i], a);
+        return pair.f*u;
+      }
+
+      /*! \note If the charge of the j'th particle is 0, ZERO will be returned!
+       *  \return \f$ \phi_j = \sum_{i\neq j}^{N} \frac{l_B z_i}{r_{ij}} \f$
+       *  \param j The electric potential will be calculated in the point of this particle
+       *  \warning Uses simple particle->dist() function!
+       *  \todo Respect cell boundaries
+       */
+      double potential(const vector<particle> &p, unsigned short j) {
+        if (p[j].charge==0) return 0;
+        double u=0;
+        int i,n=p.size();
+        for (i=0; i<j; ++i) u+=p[i].charge/p[i].dist(p[j]);
+        for (i=j+1; i<n; ++i) u+=p[i].charge/p[i].dist(p[j]);
+        return u;
+      }
+
+      string info() {
+        std::ostringstream o;
+        o << endl
+          << "# POTENTIAL ENERGY FUNCTION:" << endl
+          << pair.info();
+        return o.str();
+      }
+  }; //end of interaction class
+
   /*!
    * \brief Hydrophobic interaction between ions and molecular surfaces
    * \author Mikael Lund
@@ -221,13 +226,14 @@ namespace Faunus {
       double hyenergy(const vector<particle> &);
       double hyenergy(const vector<particle> &, int);
     public:
-      unsigned int end_of_protein_one;                  //!< Last particle in protein one (set if appropriate)
       int_hydrophobic(pot_setup &pot) : interaction<T>(pot) { end_of_protein_one=int(1e7); }
-      void search(const vector<particle> &);                  //!< Locate hydrophobic groups and ions
-      double energy(const vector<particle> &);                //!< all<->all
-      double energy(const vector<particle> &, int);           //!< all<->particle i.
-      double energy(const vector<particle> &, const group &);       //!< all<->group.
+      unsigned int end_of_protein_one;              //!< Last particle in protein one (set if appropriate)
+      void search(const vector<particle> &);        //!< Locate hydrophobic groups and ions
+      double energy(const vector<particle> &p ) { interaction<T>::energy(p) + hyenergy(p);}
+      double energy(const vector<particle> &p, int i) { return interaction<T>::energy(p,i) + hyenergy(p);}
+      double energy(const  vector<particle> &p, const group &g ) { return interaction<T>::energy(p,g) + hyenergy(p);}
   };
+
   template<class T> void int_hydrophobic<T>::search(const vector<particle> &p) {
     pa.resize(0);
     hy.resize(0);
@@ -237,6 +243,7 @@ namespace Faunus {
       else if (p[i].id==particle::NA || p[i].id==particle::CL || p[i].id==particle::I)
         pa.push_back(i);
   }
+
   template<class T> double int_hydrophobic<T>::hyenergy(const vector<particle> &p) {
     double u=0;
 #pragma omp parallel for reduction (+:u)
@@ -244,6 +251,7 @@ namespace Faunus {
       u+=hyenergy(p, pa[i]);                    // energy with hydrophobic groups
     return u; // in kT
   }
+
   template<class T> double int_hydrophobic<T>::hyenergy(const vector<particle> &p, int i) {
     if (p[i].hydrophobic==true) return 0;
     int j,hymin;
@@ -262,14 +270,5 @@ namespace Faunus {
     return interaction<T>::pair.f *
       (u + interaction<T>::pair.hypairpot( p[i], p[hymin], sqrt(dmin) ) );
   }
-  template<class T> double int_hydrophobic<T>::energy(const vector<particle> &p ) {
-    return interaction<T>::energy(p) + hyenergy(p);
-  }
-  template<class T> double int_hydrophobic<T>::energy(const vector<particle> &p, int i) {
-    return interaction<T>::energy(p,i) + hyenergy(p);
-  }
-  template<class T> double int_hydrophobic<T>::energy(const  vector<particle> &p, const group &g ) {
-    return interaction<T>::energy(p,g) + hyenergy(p);
-  }
-}//namespace
+}
 #endif

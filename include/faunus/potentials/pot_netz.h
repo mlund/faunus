@@ -80,7 +80,6 @@ namespace Faunus {
         return 0;
       }
   };
-  typedef Faunus::pot_netz T_pairpot;
 }
 #endif
 

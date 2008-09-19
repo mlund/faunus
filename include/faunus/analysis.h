@@ -94,51 +94,46 @@ namespace Faunus {
    *  This class will insert a neutral "ghost" particle pair so as to
    *  calculate the mean excess chemical potential / activity coefficient
    */
-  template<class T_pairpot>
-    class widom : public analysis {
-      private:
-        particle a,b;
-        container *con;
-        average<double> expsum; 
-        interaction<T_pairpot> *pot;
-      public:
-        widom(container &c, interaction<T_pairpot> &i, particle::type t1, particle::type t2) {
-          con=&c;
-          pot=&i;
-          a=con->get(t1);
-          b=con->get(t2);
-        }
-        string info();                              //!< Print results of analysis
-        double muex() { return -log(expsum.avg()); }//!< Excess chemical potential
-        double gamma() { return exp(muex()); }      //!< Activity coefficient
-        void insert(unsigned short=100);            //!< Widom insertions
-    };
+  class widom : public analysis {
+    private:
+      particle a,b;
+      container *con;
+      average<double> expsum; 
+      energybase *pot;
+    public:
+      widom(container &c, energybase &i, particle::type t1, particle::type t2) {
+        con=&c;
+        pot=&i;
+        a=con->get(t1);
+        b=con->get(t2);
+      }
+      string info();                              //!< Print results of analysis
+      double muex() { return -log(expsum.avg()); }//!< Excess chemical potential
+      double gamma() { return exp(muex()); }      //!< Activity coefficient
+      void insert(unsigned short=100);            //!< Widom insertions
+  };
   //! Insert a salt pair and evaluate the excess chemical potential
   //! \param n Number of insertions
-  template<class T>
-    void widom<T>::insert(unsigned short n) {
-      if (runtest()) {
-        while (n-->0) {
-          con->randompos(a);
-          con->randompos(b);
-          expsum+=exp( - pot->energy(con->p, a)
-                       - pot->energy(con->p, b)
-                       - pot->pair.pairpot(a,b)*pot->pair.f );
-        }
+  void widom::insert(unsigned short n) {
+    if (runtest()) {
+      while (n-->0) {
+        con->randompos(a);
+        con->randompos(b);
+        expsum+=exp( -pot->energy(con->p,a) - pot->energy(con->p,b) - pot->energy(a,b) );
       }
     }
-  template<class T>
-    string widom<T>::info() {
-      std::ostringstream o;
-      o << endl
-        << "# WIDOM PARTICLE INSERTION ANALYSIS:" << endl
-        << "#   Number of insertions      = " << expsum.cnt << endl
-        << "#   Run fraction              = " << runfraction << endl
-        << "#   Ion pair charges          = " << a.charge << ", " << b.charge << endl
-        << "#   Excess chemical pot. (kT) = " << muex()  << endl
-        << "#   Mean activity coeff.      = " << gamma() << endl;
-      return o.str();
-    }
+  }
+  string widom::info() {
+    std::ostringstream o;
+    o << endl
+      << "# WIDOM PARTICLE INSERTION ANALYSIS:" << endl
+      << "#   Number of insertions      = " << expsum.cnt << endl
+      << "#   Run fraction              = " << runfraction << endl
+      << "#   Ion pair charges          = " << a.charge << ", " << b.charge << endl
+      << "#   Excess chemical pot. (kT) = " << muex()  << endl
+      << "#   Mean activity coeff.      = " << gamma() << endl;
+    return o.str();
+  }
 
   /*!
    * \brief Calculates free energy pathway

@@ -34,6 +34,5 @@ namespace Faunus {
       << "#   Image length      = " << box << endl;
     return o.str();
   }
-  typedef Faunus::pot_minimage T_pairpot;
 }
 #endif

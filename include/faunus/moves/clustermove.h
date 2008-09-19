@@ -1,6 +1,6 @@
 #ifndef FAU_CLUSTERMOVE_H
 #define FAU_CLUSTERMOVE_H
-#include "faunus/moves/markovmove.h"
+#include "faunus/moves/base.h"
 namespace Faunus {
   /*!
    * This type of move will attempt to move collective sets of macromolecules that
@@ -13,7 +13,7 @@ namespace Faunus {
    */
   class clustertranslate : public markovmove {
     public: 
-      clustertranslate( ensemble&, container&, interaction<T_pairpot>&, double);
+      clustertranslate( ensemble&, container&, energybase&, double);
       double move(vector<macromolecule> &); 
       vector<int> cluster;    //! Index vector for macromolecule number in cluster
       vector<int> free;       //! Index vector for 'free' macromolecules
@@ -40,7 +40,7 @@ namespace Faunus {
    */
   class clusterrotate : public markovmove {
     public: 
-      clusterrotate( ensemble&, container&, interaction<T_pairpot>&);
+      clusterrotate( ensemble&, container&, energybase&);
       double move(vector<macromolecule> &); 
       vector<int> cluster;    //! Index vector for macromolecule number in cluster
       vector<int> free;       //! Index vector for 'free' macromolecules
@@ -58,7 +58,7 @@ namespace Faunus {
 
   //---------- TRANSLATE CLUSTER OF GROUP ----------------
   clustertranslate::clustertranslate( ensemble &e,
-      container &c, interaction<T_pairpot> &i, double S ) : markovmove(e,c,i) {
+      container &c, energybase &i, double S ) : markovmove(e,c,i) {
     name = "MACROMOLECULAR CLUSTER TRANSLATION";
     runfraction=0.5;
     deltadp=1.;

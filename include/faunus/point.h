@@ -58,13 +58,13 @@ namespace Faunus {
         ASP,GLN,GLU,ASN,LYS,ARG,PRO,UNK,NTR,CTR,NA,K,F,CL,BR,I,SO4,ION,CATION,ANION,GHOST,
         RNH3,RNH4,RCOOH,RCOO,HYDROPHOBIC,LAST}; 
 
-      double charge;                      //!< Charge number
-      double radius;                      //!< Radius
-      float mw;                           //!< Molecular weight
-      type id;                            //!< Particle identifier
-      bool hydrophobic;                   //!< Hydrophobic flag
-      inline bool overlap(particle &);    //!< Hardsphere overlap test
-      inline bool overlap(particle &, double &);
+      double charge;                         //!< Charge number
+      double radius;                         //!< Radius
+      float mw;                              //!< Molecular weight
+      type id;                               //!< Particle identifier
+      bool hydrophobic;                      //!< Hydrophobic flag
+      inline bool overlap(const particle &); //!< Hardsphere overlap test
+      inline bool overlap(const particle &, double &);
       inline double potential(const point &);   //!< Electric potential in point
       double volume();                          //!< Return volume of sphere
       double mw2vol(double=1);                  //!< Estimate volume from weight
@@ -158,11 +158,11 @@ namespace Faunus {
   /*!
    * \return True if \f$ r_{12}<(\sigma_1+\sigma_2)/2 \f$ - otherwise false.
    */
-  inline bool particle::overlap(particle &p) {
+  inline bool particle::overlap(const particle &p) {
     double r=radius+p.radius;
     return (sqdist(p) < r*r) ? true : false;
   }
-  inline bool particle::overlap(particle &p, double &s) {
+  inline bool particle::overlap(const particle &p, double &s) {
     double r=radius+p.radius+s;
     return (sqdist(p) < r*r) ? true : false;
   }

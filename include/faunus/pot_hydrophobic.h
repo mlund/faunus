@@ -23,8 +23,8 @@ class pot_hydrophobic : public pot_lj {
       id=particle::I;
       name+="/Coulomb w. extra hydrophobicity";
     }
-    inline double pairpot(particle &p1, particle &p2) {
-      register double r2=p1.sqdist(p2), u=lj(p1,p2,r2);
+    inline double pairpot(const particle &p1, const particle &p2) const {
+      double r2=p1.sqdist(p2), u=lj(p1,p2,r2);
       if (p1.id==id && p2.hydrophobic==true)
         u=scale*u;
       else if (p2.id==id && p1.hydrophobic==true)

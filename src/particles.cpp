@@ -1,7 +1,7 @@
 #include "faunus/particles.h"
 namespace Faunus {
   //! \return Size of particle vector after addition
-  int particles::push_back(particle &par) {
+  int particles::push_back(const particle &par) {
     p.push_back(par);
     trial.push_back(par);
     return p.size();
@@ -17,19 +17,19 @@ namespace Faunus {
   /*!\param origo Center of the spherical region
    * \param r Radius of the spherical region
    */
-  double particles::charge(point &origo, double r) {
+  double particles::charge(const point &origo, double r) {
     double q=0,r2=r*r;
     for (int i=0; i<p.size(); i++)
       if (p[i].sqdist(origo) <= r2)
         q += p[i].charge;
     return q;
   }
-  bool particles::overlap(particle &a) {
+  bool particles::overlap(const particle &a) {
     for (unsigned short i=0; i<p.size(); i++)
       if (p[i].overlap(a)==true) return true;
     return false;
   }
-  bool particles::overlap(vector<particle> &v) {
+  bool particles::overlap(const vector<particle> &v) {
     unsigned short i = v.size();
     for (unsigned int j=0; j<p.size(); j++) {
       for (unsigned int k=0; k<i; k++) {
@@ -55,7 +55,7 @@ namespace Faunus {
       std::cout << "# Fatal error: Particle vectors corrupted!!\n";
     return rc;
   }
-  int particles::count(particle::type id, point &origo, double r) {
+  int particles::count(particle::type id, const point &origo, double r) {
     int i,cnt=0,n=p.size();
     double r2=r*r;
     for (i=0; i<n; i++)

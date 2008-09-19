@@ -39,7 +39,7 @@ namespace Faunus {
         l.resize(steps);
       };
 
-      inline double pairpot(particle &p1, particle &p2) {
+      inline double pairpot(const particle &p1, const particle &p2) const {
         double r2=p1.sqdist(p2);
         return lj(p1,p2,r2) +
           (p2.charge!=0) ? p2.charge * phi(p1, p2) : 0;
@@ -48,7 +48,7 @@ namespace Faunus {
       /*! \brief Self energy (interaction with image charge)
        *  \return \f$ \frac{1}{2} q \phi \f$
        */
-      inline double selfenergy(particle &p) {
+      inline double selfenergy(const particle &p) const {
         return 0.5 * p.charge * phi(p,p,true);
       }
 
@@ -58,7 +58,7 @@ namespace Faunus {
        *  \param p  Calculate potential in this point
        *  \param self Set to true to calculate self-energy of p0
        */
-      double phi(particle &p0, point &p, bool self=false) {
+      double phi(const particle &p0, const point &p, bool self=false) const {
         if (p0.charge==0)
           return 0;
         double sum = 0;

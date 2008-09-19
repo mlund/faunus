@@ -4,9 +4,11 @@
 #include <cstdlib>
 #include <ctime>
 
-// Needed for sunCC
+// Needed for sunCC ("__SUNPRO_CC" or "__sun" ?)
+#ifdef __SUNPRO_CC
 #include <stdlib.h>
 #include <time.h>
+#endif
 
 #include "faunus/MersenneTwister.h"
 
@@ -21,7 +23,7 @@ namespace Faunus {
 
   /*!
    * \brief Default C++ random number generator
-   * \author mikaek lund
+   * \author Mikael Lund
    * \date Lund, 2002
    */
   class randomDefault : public random {
@@ -35,7 +37,7 @@ namespace Faunus {
 
   /*!
    * \brief Mersenne Twister Random number functions
-   * \author mikaek lund etc.
+   * \author Mikael Lund
    * \date Prague, 2008
    */
   class randomTwister : public random {

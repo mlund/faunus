@@ -30,7 +30,7 @@ namespace Faunus {
       void set(short int,short int);        ///< Set particle range, "beg" and "end".
       short int size();                     ///< Number of particles in group
       virtual short int random();           ///< Picks a random particle within this group
-      bool find(unsigned int);              ///< Check if particle is part of the group
+      bool find(unsigned int) const;        ///< Check if particle is part of the group
       virtual double charge(vector<particle> &);//!< Calculate total charge
       point masscenter(vector<particle> &); //!< Calculate center-of-mass
       point masscenter(container &);        //!< Calc. center-of-mass

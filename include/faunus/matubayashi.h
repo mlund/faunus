@@ -16,13 +16,13 @@ namespace Faunus {
       histogram hist; //!< The histogram
       matubayashi(); 
       string info(); 
-      void add(interaction<T_pairpot> &, vector<particle> &, group &);
+      void add(interaction<T_pairpot> &, const vector<particle> &, const group &);
   };
   matubayashi::matubayashi() : hist(0.02, -10., 10.) {
     runfraction=0.3;
     hist.comment="Matubayashi energy histogram";
   }
-  void matubayashi::add(interaction<T_pairpot> &pot, vector<particle> &p, group &g) {
+  void matubayashi::add(interaction<T_pairpot> &pot, const vector<particle> &p, const group &g) {
     for (int i=0; i<g.beg; i++)           // particles before the group
       hist.add ( pot.energy(p,g,i) );     // add energy to histogram      
     for (int i=g.end+1; i<p.size(); i++)  // ...and after the group

@@ -25,12 +25,12 @@ namespace Faunus {
        *  \f$ u_{lj} = \epsilon \left ( \frac{\sigma}{r^{12}} - \frac{\sigma}{r^6} \right ) \f$
        *  \param r2 Squared distance between particle 1 and 2.
        */
-      inline double lj(const particle &p1, const particle &p2, double &r2) {
+      inline double lj(const particle &p1, const particle &p2, double &r2) const {
         register double x=p1.radius+p2.radius,u=x*x/r2;
         x=u*u*u;
         return (x*x-x)*eps;
       }
-      inline void lj(const particle &p1, const particle &p2, const double &r2, double &u) {
+      inline void lj(const particle &p1, const particle &p2, const double &r2, double &u) const {
         register double s=p1.radius+p2.radius, a=s*s/r2;
         s=a*a*a;
         u+=(s*s-s)*eps;

@@ -60,7 +60,7 @@ namespace Faunus {
     return o.str();
   }
 
-  bool group::find(unsigned int i) { return (i>=beg && i<=end) ? true : false; }
+  bool group::find(unsigned int i) const { return (i>=beg && i<=end) ? true : false; }
 
   /*!
    * Recalcute mass center of the particles

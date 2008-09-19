@@ -17,7 +17,6 @@ namespace Faunus {
         k=pot.kappa; 
         name+="/Debye-Huckel";
       };
-      string info();
       //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
       //! \return Energy in kT/f (f=lB)
       inline double pairpot( const particle &p1, const particle &p2 ) {
@@ -25,13 +24,13 @@ namespace Faunus {
                r=sqrt(r2);
         return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
       }
+      string info() {
+        std::ostringstream o;
+        o << pot_lj::info()
+          << "#   Bjerrum length    = " << f     << endl
+          << "#   Debye length      = " << 1./k  << endl;
+        return o.str();
+      }
   };
-  string pot_debyehuckel::info() {
-    std::ostringstream o;
-    o << pot_lj::info()
-      << "#   Bjerrum length    = " << f     << endl
-      << "#   Debye length      = " << 1./k  << endl;
-    return o.str();
-  }
 }
 #endif

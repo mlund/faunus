@@ -21,24 +21,26 @@ namespace Faunus {
         invbox=1./box;
         name+="/Debye-Huckel w. minimum image";
       };
-      string info();
+
       //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
       //! \return Energy in units of kT/lB
       inline double pairpot( const particle &p1, const particle &p2 ) const {
         double r2=p1.sqdist(p2,box,invbox), r=sqrt(r2);
         return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
       }
+
       void setvolume(double vol) {
         box=pow(vol, 1./3);
         invbox=1./box;
       }
-  }; 
-  string pot_debyehuckelP3::info() {
-    std::ostringstream o;
-    o << pot_lj::info()
-      << "#   Bjerrum length    = " << f     << endl
-      << "#   Debye length      = " << 1./k  << endl;
-    return o.str();
-  }
+
+      string info() {
+        std::ostringstream o;
+        o << pot_lj::info()
+          << "#   Bjerrum length    = " << f     << endl
+          << "#   Debye length      = " << 1./k  << endl;
+        return o.str();
+      }
+  };
 }
 #endif

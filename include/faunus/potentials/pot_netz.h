@@ -1,5 +1,5 @@
-#ifndef _POT_NETZ_H
-#define _POT_NETZ_H
+#ifndef POT_NETZ_H
+#define POT_NETZ_H
 #include "faunus/potentials/base.h"
 #include "faunus/potentials/pot_coulomb.h"
 

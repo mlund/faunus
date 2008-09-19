@@ -21,6 +21,7 @@ namespace Faunus {
         id=particle::I;
         name+="/Coulomb w. extra hydrophobicity";
       }
+
       inline double pairpot(const particle &p1, const particle &p2) const {
         double r2=p1.sqdist(p2), u=lj(p1,p2,r2);
         if (p1.id==id && p2.hydrophobic==true)
@@ -29,15 +30,14 @@ namespace Faunus {
           u=scale*u;
         return u + p1.charge*p2.charge/sqrt(r2);
       }
-      string info();
-  };
 
-  string pot_hydrophobic::info() {
-    std::ostringstream o;
-    o << pot_lj::info()
-      << "#   Bjerrum length     = " << f << endl
-      << "#   Hydrop. LJ scaling = " << scale << endl;
-    return o.str();
-  }
+      string info() {
+        std::ostringstream o;
+        o << pot_lj::info()
+          << "#   Bjerrum length     = " << f << endl
+          << "#   Hydrop. LJ scaling = " << scale << endl;
+        return o.str();
+      }
+  };
 }
 #endif

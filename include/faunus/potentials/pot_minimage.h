@@ -17,7 +17,6 @@ namespace Faunus {
         invbox=1./box;
         name+="/Coulomb w. minimum image";
       }
-      string info();
       void setvolume(double vol) {
         box=pow(vol, 1./3);;
         invbox=1./box;
@@ -26,13 +25,13 @@ namespace Faunus {
         register double r2=p1.sqdist(p2,box,invbox);
         return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
       }
+      string info() {
+        std::ostringstream o;
+        o << pot_lj::info()
+          << "#   Bjerrum length    = " << f << endl
+          << "#   Image length      = " << box << endl;
+        return o.str();
+      }
   };
-  string pot_minimage::info() {
-    std::ostringstream o;
-    o << pot_lj::info()
-      << "#   Bjerrum length    = " << f << endl
-      << "#   Image length      = " << box << endl;
-    return o.str();
-  }
 }
 #endif

@@ -22,13 +22,13 @@ namespace Faunus {
         register double r2=p1.sqdist(p2);
         return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
       }
-      string info();
+
+      string info() {
+        std::ostringstream o;
+        o << pot_lj::info()
+          << "#   Bjerrum length    = " << f << endl;
+        return o.str();
+      }
   };
-  string pot_coulomb::info() {
-    std::ostringstream o;
-    o << pot_lj::info()
-      << "#   Bjerrum length    = " << f << endl;
-    return o.str();
-  }
 }
 #endif

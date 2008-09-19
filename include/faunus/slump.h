@@ -39,6 +39,7 @@ namespace Faunus {
    * \brief Mersenne Twister Random number functions
    * \author Mikael Lund
    * \date Prague, 2008
+   * \note Not thread safe
    */
   class randomTwister : public random {
     private:

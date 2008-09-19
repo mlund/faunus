@@ -64,6 +64,7 @@ void box::setlen(double l) {
   volume = len*len*len;
 }
 box::box(double l) { setlen(l); }
+
 box::box(inputfile &in) { setlen( in.getflt("boxlen") ); }
 string box::info() {
   std::ostringstream o;

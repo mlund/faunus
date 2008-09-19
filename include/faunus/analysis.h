@@ -88,25 +88,21 @@ namespace Faunus {
   };
 
   /*! \brief Widom method for excess chemical potentials
-   *  \author mikaek lund
+   *  \author Mikael Lund
    *  \todo Expand with a corrected one-particle insertion (Woodward+Svensson's charge scaling)
    *
-   *  This class will insert "ghost" particle(s) so as to
-   *  calculate the (mean) excess chemical potential.
+   *  This class will insert a neutral "ghost" particle pair so as to
+   *  calculate the mean excess chemical potential / activity coefficient
    */
   template<class T_pairpot>
     class widom : public analysis {
       private:
-        unsigned long long int cnt;
-        double u;
         particle a,b;
         container *con;
         average<double> expsum; 
         interaction<T_pairpot> *pot;
       public:
-        widom(container &c, interaction<T_pairpot> &i,
-            particle::type t1, particle::type t2) {
-          cnt=0;
+        widom(container &c, interaction<T_pairpot> &i, particle::type t1, particle::type t2) {
           con=&c;
           pot=&i;
           a=con->get(t1);
@@ -121,15 +117,14 @@ namespace Faunus {
   //! \param n Number of insertions
   template<class T>
     void widom<T>::insert(unsigned short n) {
-      while (n>0) {
-        n--;
-        cnt++;
-        con->randompos(a);
-        con->randompos(b);
-        u=pot->energy(con->p, a) +
-          pot->energy(con->p, b) +
-          pot->pair.pairpot(a,b)*pot->pair.f;
-        expsum+=exp(-u);
+      if (runtest()) {
+        while (n-->0) {
+          con->randompos(a);
+          con->randompos(b);
+          expsum+=exp( - pot->energy(con->p, a)
+                       - pot->energy(con->p, b)
+                       - pot->pair.pairpot(a,b)*pot->pair.f );
+        }
       }
     }
   template<class T>
@@ -137,10 +132,11 @@ namespace Faunus {
       std::ostringstream o;
       o << endl
         << "# WIDOM PARTICLE INSERTION ANALYSIS:" << endl
-        << "#   Number of insertions = " << cnt << endl
-        << "#   Ion pair charges     = " << a.charge << ", " << b.charge << endl
-        << "#   Excess chemical pot. = " << muex()  << endl
-        << "#   Mean activity coeff. = " << gamma() << endl;
+        << "#   Number of insertions      = " << expsum.cnt << endl
+        << "#   Run fraction              = " << runfraction << endl
+        << "#   Ion pair charges          = " << a.charge << ", " << b.charge << endl
+        << "#   Excess chemical pot. (kT) = " << muex()  << endl
+        << "#   Mean activity coeff.      = " << gamma() << endl;
       return o.str();
     }
 

@@ -4,8 +4,8 @@
  */
 
 #include "faunus/faunus.h"
-namespace Faunus {typedef pot_coulomb T_pairpot;} // Specific pair interaction function
-#include "faunus/markovmove.h"
+#include "faunus/potentials/pot_coulomb.h"
+#include "faunus/moves/markovmove.h"
 
 using namespace std;
 using namespace Faunus;

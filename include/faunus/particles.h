@@ -7,7 +7,7 @@
 namespace Faunus {
   /*!
    * \brief Class the contains all particles and manipulating methods.
-   * \author mikaek lund
+   * \author Mikael Lund
    * \date Lund, 2004
    *
    * Handles all particles in a system and provides manipulating

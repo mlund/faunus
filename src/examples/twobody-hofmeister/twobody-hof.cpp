@@ -11,8 +11,8 @@
  */
 
 #include "faunus/faunus.h"
-namespace Faunus {typedef pot_netz T_pairpot;} // Specific pair interaction function
-#include "faunus/markovmove.h"
+#include "faunus/potentials/pot_netz.h"
+#include "faunus/moves/markovmove.h"
 
 using namespace Faunus;
 using namespace std;

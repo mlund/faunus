@@ -5,8 +5,8 @@
  *
  */
 #include "faunus/faunus.h"
-namespace Faunus {typedef pot_minimage T_pairpot;} // Coulomb pot. with minimum image convention.
-#include "faunus/markovmove.h"
+#include "faunus/potentials/pot_minimage.h"
+#include "faunus/moves/markovmove.h"
 
 using namespace Faunus;
 using namespace std;

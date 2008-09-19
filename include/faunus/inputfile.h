@@ -6,7 +6,7 @@
 namespace Faunus {
   /*!
    * \brief Retrieve data from a formatted input file
-   * \author mikaek lund
+   * \author Mikael Lund
    *
    * The input file is expected to have the following
    * format:

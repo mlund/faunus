@@ -1,60 +1,45 @@
-#include "faunus/potentials.h"
+#ifndef FAU_POT_DATAPMF_H
+#define FAU_POT_DATAPMF_H
+#include "faunus/potentials/base.h"
 namespace Faunus {
-  pot_setup::pot_setup() {
-    lB=7.1;
-    eps=2;
-    epsi=2;
-    epso=80;
-  }
-
-  pot_setup::pot_setup(inputfile &in) {
-    lB    = in.getflt("bjerrum", 7.1);
-    eps   = in.getflt("LJeps", 2);
-    box   = in.getflt("boxlen");
-    kappa = in.getflt("kappa");
-    epsi  = in.getflt("epsi",2);
-    epso  = in.getflt("epso",80);
-    a     = in.getflt("cavity");
-    hydroscale = in.getflt("hydroscale", 4.0);
-  }
-
-  string pot_minimage::info() {
-    std::ostringstream o;
-    o << pot_lj::info()
-      << "#   Bjerrum length    = " << f << endl
-      << "#   Image length      = " << box << endl;
-    return o.str();
-  }
-
-  string pot_hscoulomb::info() {
-    std::ostringstream o;
-    o << pot_hs::info()
-      << "#   Bjerrum length    = " << f << endl;
-    return o.str();
-  }
-  string pot_coulomb::info() {
-    std::ostringstream o;
-    o << pot_lj::info()
-      << "#   Bjerrum length    = " << f << endl;
-    return o.str();
-  }
-
-  string pot_debyehuckel::info() {
-    std::ostringstream o;
-    o << pot_lj::info()
-      << "#   Bjerrum length    = " << f     << endl
-      << "#   Debye length      = " << 1./k  << endl;
-    return o.str();
-  }
-
-  string pot_debyehuckelP3::info() {
-    std::ostringstream o;
-    o << pot_lj::info()
-      << "#   Bjerrum length    = " << f     << endl
-      << "#   Debye length      = " << 1./k  << endl;
-    return o.str();
-  }
-
+  /*!
+   * \brief Load pair potentials from disk
+   * \author Mikael Lund
+   * \date Prague, 2007
+   *
+   * Class to load potential of mean force (PMF) data from file(s). If
+   * the distance between the particles is outside the data range a 
+   * simple Coulomb + LJ potential will be applied.
+   */
+  class pot_datapmf : public pot_lj {
+    private:
+      xydata<double> pmfd[particle::LAST][particle::LAST];
+    public:
+      //! \param pot.lB Bjerrum length
+      //! \param pot.eps L-J parameter
+      pot_datapmf(pot_setup &pot) : pot_lj(pot.eps/pot.lB) {
+        f=pot.lB;
+        name+="/Empirical data potential";
+      }
+      bool loadpmf(species &, string);          // load pmf's from disk
+      void loadpmf(species &, string,string);   // -//-
+      void showpmf(species &);                  //!< Lists loaded pmf's.
+      string info();
+      double pairpot (const particle &p1, const particle &p2) {
+        unsigned short i=p1.id,j=p2.id;
+        if (i>j) std::swap(i,j);
+        double r2=p1.sqdist(p2);
+        if (pmfd[i][j].xmax==0) {               // if no data exists:
+          double u,x=p1.charge*p2.charge;       // use Coulomb + lj pot.
+          u=lj(p1,p2,r2);
+          return (x!=0) ? u+x/sqrt(r2) : u; 
+        }; 
+        r2=sqrt(r2);
+        return (r2>pmfd[i][j].xmax) ? 
+          p1.charge*p2.charge/r2 : // use Coulomb pot. outside data 
+          pmfd[i][j].x2y(r2);      // ...else use table. 
+      }
+  };
   /*!\param spc Species class.
    * \param pmfir Directory in which to search for PMF's
    * \param type Particle name to search for. I.e. "NA" or "CL"
@@ -119,5 +104,5 @@ namespace Faunus {
     }
     return false;
   }
-}//namespace
-
+}
+#endif

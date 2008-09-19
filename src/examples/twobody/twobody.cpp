@@ -10,13 +10,8 @@
  */
 
 #include "faunus/faunus.h"
-//#include "faunus/analysis.h"
-//#include "faunus/histogram.h"
-//#include "faunus/mcloop.h"
-namespace Faunus {
-  typedef pot_coulomb T_pairpot; // Specific pair interaction function
-}
-#include "faunus/markovmove.h"
+#include "faunus/potentials/pot_coulomb.h"
+#include "faunus/moves/markovmove.h"
 using namespace Faunus;
 using namespace std;
 

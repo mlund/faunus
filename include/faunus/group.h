@@ -10,7 +10,7 @@
 
 namespace Faunus {
   /*! \brief Groups set of particles, such as molecules, salt etc.
-   *  \author mikaek lund
+   *  \author Mikael Lund
    *  \date Lund 2004
    *
    *  A group defines the range of a a protein, the mobile ions,
@@ -94,7 +94,7 @@ namespace Faunus {
   };
 
   /*! \brief Group container for an array of molecules
-   *  \author mikaek lund
+   *  \author Mikael Lund
    *  \date Asljunga 2008
    *
    * This group derivative is for handling an atom collection of
@@ -121,7 +121,7 @@ namespace Faunus {
   };
 
   /*! \brief Group container for SPC/E water (and similar three-point water models)
-   *  \author mikaek lund
+   *  \author Mikael Lund
    *  \date Asljunga 2008
    */
   class spc : public molecules {
@@ -135,7 +135,7 @@ namespace Faunus {
   };
 
   /*! \brief Freely jointed chain with harmonic spring potentials
-   *  \author mikaek lund
+   *  \author Mikael Lund
    */
   class chain : public group, private pot_spring {
     public:
@@ -176,7 +176,7 @@ namespace Faunus {
   };
 
   /*! \brief This class is used for zwitter ions present on a surface.
-   *  \author mikaek lund
+   *  \author Mikael Lund
    *
    *  One end of the zwitter ion (even particles) can move only on the
    *  surface while the other ends (odd particles) are allowed to move

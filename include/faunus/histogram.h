@@ -9,7 +9,7 @@
 namespace Faunus {
   /*!
    * \brief Histogram class
-   * \author mikaek lund
+   * \author Mikael Lund
    */
   class histogram : private xytable<float,unsigned long int> {
     friend class FAUrdf;
@@ -68,7 +68,7 @@ namespace Faunus {
    *
    *  The internal histogram vector will be automatically expanded but an initial
    *  maximum x valued can be specified so as to utilize memory more efficiently.
-   *  \author mikaek lund
+   *  \author Mikael Lund
    *  \date Prague, April 2007
    *  \todo Needs testing!
    *

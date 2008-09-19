@@ -7,8 +7,8 @@
  */
 
 #include "faunus/faunus.h"
-namespace Faunus {typedef pot_debyehuckelP3 T_pairpot;}// Specific pair interaction function
-#include "faunus/markovmove.h"
+#include "faunus/potentials/pot_debyehuckelP3.h"
+#include "faunus/moves/markovmove.h"
 
 using namespace Faunus;
 using namespace std;

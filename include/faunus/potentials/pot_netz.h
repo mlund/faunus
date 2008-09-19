@@ -1,11 +1,11 @@
 #ifndef _POT_NETZ_H
 #define _POT_NETZ_H
-#include "faunus/potentials.h"
+#include "faunus/potentials/base.h"
+#include "faunus/potentials/pot_coulomb.h"
 
 namespace Faunus {
-
   /*! \brief Coulomb potential w. an extra empirical PMF
-   *  \author mikaek lund 
+   *  \author Mikael Lund 
    */
   class pot_netz : public pot_coulomb {
     private:
@@ -80,6 +80,7 @@ namespace Faunus {
         return 0;
       }
   };
+  typedef Faunus::pot_netz T_pairpot;
 }
 #endif
 

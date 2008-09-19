@@ -1,231 +1,19 @@
-#ifndef FAU_potential_h
-#define FAU_potential_h
+#ifndef FAU_ENERGY_H
+#define FAU_ENERGY_H
 
+#include "faunus/common.h"
 #include "faunus/species.h"
 #include "faunus/xydata.h"
 #include "faunus/group.h"
-#include "faunus/lennardjones.h"
 #include "faunus/inputfile.h"
+#include "faunus/potentials/base.h"
 
 namespace Faunus {
   /*!
-   *  \brief Setup for potentials.
-   *  \author mikaek lund
-   *  \date Prague, 2007
-   *
-   *  This class is used to pass parameters to classes
-   *  that handles particle pair-potentials.
-   */
-  class pot_setup {
-    public:
-      pot_setup();
-      double kappa,        //!< Inverse Debye screening length
-             lB,           //!< Bjerrum length
-             eps,          //!< L-J parameter
-             r0,           //!< Bond eq. distance
-             epsi,         //!< Internal dielectric constant
-             epso,         //!< External dielectric constant
-             hydroscale,   //!< LJ scaling factor for hydrophobic interactions
-             box,          //!< Cubic box length
-             a,            //!< Cavity radius
-             A,B,C,D;      //!< Empirical parameters for "pot_netz"
-      pot_setup(inputfile &);
-  };
-
-  /*! \brief Coulomb potential
-   *  \author mikaek lund
-   *  \date Prague, 2007
-   */
-  class pot_hscoulomb : public pot_hs {
-    public:
-      /*! \param pot.lB Bjerrum length
-       *  \param pot.eps L-J epsilon parameter (in kT) */
-      pot_hscoulomb ( pot_setup &pot) : pot_hs() {
-        f=pot.lB;
-        name+="/Coulomb";
-      }
-      /*! \brief Return Coulomb energy between a pair of particles
-       *  \return Energy in units of kT/f (f=lB).
-       *  \f$ \beta u/f = \frac{z_1 z_2}{r} + u_{HS}/f \f$
-       */
-      inline double pairpot(const particle &p1, const particle &p2) {
-        register double r2=p1.sqdist(p2);
-        return hs(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
-      }
-      string info();
-  };
-
-
-  /*! \brief Coulomb potential
-   *  \author mikaek lund
-   *  \date Prague, 2007
-   */
-  class pot_coulomb : public pot_lj {
-    public:
-      /*! \param pot.lB Bjerrum length
-       *  \param pot.eps L-J epsilon parameter (in kT) */
-      pot_coulomb ( pot_setup &pot) : pot_lj(pot.eps/pot.lB) {
-        f=pot.lB;
-        name+="/Coulomb";
-      }
-      /*! \brief Return Coulomb energy between a pair of particles
-       *  \return Energy in units of kT/f (f=lB).
-       *  \f$ \beta u/f = \frac{z_1 z_2}{r} + u_{LJ}/f \f$
-       */
-      inline double pairpot(const particle &p1, const particle &p2) {
-        register double r2=p1.sqdist(p2);
-        return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
-      }
-      string info();
-  };
-
-  /*!
-   * \brief Coulomb pot. with minimum image.
-   * \author mikaek lund
-   * \date 2007
-   */
-  class pot_minimage : public pot_lj {
-    private:
-      double invbox,box;
-    public:
-      pot_minimage(pot_setup &pot) : pot_lj(pot.eps/pot.lB) {
-        f=pot.lB;
-        box=pot.box;
-        invbox=1./box;
-        name+="/Coulomb w. minimum image";
-      }
-      string info();
-      void setvolume(double vol) {
-        box=pow(vol, 1./3);;
-        invbox=1./box;
-      }
-      inline double pairpot(const particle &p1, const particle &p2) {
-        register double r2=p1.sqdist(p2,box,invbox);
-        return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
-      }
-  };
-
-  class pot_test : public pot_lj {
-    public:
-      pot_test( pot_setup &pot ) : pot_lj(pot.eps/pot.lB) { f=pot.lB; }
-      string info();
-      inline double pairpot(const particle &p1, const particle &p2) {
-        register double r2=p1.sqdist(p2);
-        register double a=p1.radius+p2.radius;
-        a=a*a;
-        if (r2<4*a) {
-          a=a/r2;
-          a=a*a*a;
-          a=a*a/f;
-        } else a=0;
-        register double qq=p1.charge*p2.charge;
-        return (qq!=0) ? qq/sqrt(r2)+a : a;
-      }
-  };
-
-  /*! \brief Debye-Huckel potential
-   *  \author mikaek lund
-   */
-  class pot_debyehuckel : public pot_lj {
-    private:
-      double k;
-    public:
-      //! \param pot.lB Bjerrum length
-      //! \param pot.eps L-J parameter
-      //! \param pot.kappa Inverse Debye screening length
-      pot_debyehuckel( pot_setup &pot ) : pot_lj(pot.eps/pot.lB) {
-        f=pot.lB; 
-        k=pot.kappa; 
-        name+="/Debye-Huckel";
-      };
-      string info();
-      //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
-      //! \return Energy in kT/f (f=lB)
-      inline double pairpot( const particle &p1, const particle &p2 ) {
-        double r2=p1.sqdist(p2),
-               r=sqrt(r2);
-        return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
-      }
-  };
-
-  /*! \brief Debye-Huckel potential for periodic boundry 
-   *         conditions in 3D, it is extended to preform 
-   *         under conditions of constant pressure.
-   See class isobaric->markovmove.h
-   *  \author mikaek lund/Bjoern Persson
-   *  \date Lund/Prag 2008
-   */
-  class pot_debyehuckelP3 : public pot_lj {
-    private:
-      double k;
-    public:
-      double box, invbox;
-      //! \param pot.lB Bjerrum length
-      //! \param pot.eps L-J parameter
-      //! \param pot.kappa Inverse Debye screening length
-      pot_debyehuckelP3( pot_setup &pot ) : pot_lj(pot.eps/pot.lB) {
-        f=pot.lB; 
-        k=pot.kappa;
-        box=pot.box;
-        invbox=1./box;
-        name+="/Debye-Huckel w. minimum image";
-      };
-      string info();
-      //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
-      //! \return Energy in kT/f (f=lB)
-      inline double pairpot( const particle &p1, const particle &p2 ) {
-        register double r2=p1.sqdist(p2,box,invbox), r=sqrt(r2);
-        return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
-      }
-      void setvolume(double vol) {
-        box=pow(vol, 1./3);;
-        invbox=1./box;
-      }
-  }; 
-
-  /*!
-   * \brief Load pair potentials from disk
-   * \author mikaek lund
-   * \date Prague, 2007
-   *
-   * Class to load potential of mean force (PMF) data from file(s). If
-   * the distance between the particles is outside the data range a 
-   * simple Coulomb + LJ potential will be applied.
-   */
-  class pot_datapmf : public pot_lj {
-    private:
-      xydata<double> pmfd[particle::LAST][particle::LAST];
-    public:
-      //! \param pot.lB Bjerrum length
-      //! \param pot.eps L-J parameter
-      pot_datapmf(pot_setup &pot) : pot_lj(pot.eps/pot.lB) {
-        f=pot.lB;
-        name+="/Empirical data potential";
-      }
-      bool loadpmf(species &, string);          // load pmf's from disk
-      void loadpmf(species &, string,string);   // -//-
-      void showpmf(species &);                  //!< Lists loaded pmf's.
-      string info();
-      double pairpot (const particle &p1, const particle &p2) {
-        unsigned short i=p1.id,j=p2.id;
-        if (i>j) std::swap(i,j);
-        double r2=p1.sqdist(p2);
-        if (pmfd[i][j].xmax==0) {               // if no data exists:
-          double u,x=p1.charge*p2.charge;       // use Coulomb + lj pot.
-          u=lj(p1,p2,r2);
-          return (x!=0) ? u+x/sqrt(r2) : u; 
-        }; 
-        r2=sqrt(r2);
-        return (r2>pmfd[i][j].xmax) ? 
-          p1.charge*p2.charge/r2 : // use Coulomb pot. outside data 
-          pmfd[i][j].x2y(r2);      // ...else use table. 
-      }
-  };
-
-  /*!
    *  \brief Interaction between particles and groups
-   *  \author mikaek lund
+   *  \author Mikael Lund
    *  \param T pairpotential
+   *  \todo Rename class to "energy"
    *
    *  Calculates interaction energies between particles and groups. The
    *  pair potential is specified as a template type which allows inlining.
@@ -397,7 +185,7 @@ namespace Faunus {
   // -------------------------------------- INTERACTION W. FORCES ---------
   /*!
    * \brief Interaction class w. additional force functions
-   * \author mikaek lund
+   * \author Mikael Lund
    * \date Amaroo, 2008
    * \todo Unfinished
    */
@@ -416,7 +204,7 @@ namespace Faunus {
   // --------------------------------- HYDROPHOBIC INTERACTION ------------
   /*!
    * \brief Hydrophobic interaction between ions and molecular surfaces
-   * \author mikaek lund
+   * \author Mikael Lund
    * \date Canberra 2008
    * \todo Not optimized - inelegant "end_of_protein_one" hack. Use vector instead...
    *

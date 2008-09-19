@@ -15,7 +15,7 @@
 namespace Faunus {
   //--------------------------------
   //!\brief Basic file I/O routines
-  //!\author mikaek lund
+  //!\author Mikael Lund
   class io {
     private:
       string s;
@@ -27,7 +27,7 @@ namespace Faunus {
 
   //----------------------------------------
   /*!\brief General class for particle I/O.
-   * \author mikaek lund
+   * \author Mikael Lund
    * \todo Unfinished!
    * \todo move transformations s2p p2s to iopart
    *
@@ -57,7 +57,7 @@ namespace Faunus {
   //------------------------------------
   /*! \brief Write XYZ structure files, only 
    *  \brief intended for particles.p IO
-   *  \author mikaek lund
+   *  \author Mikael Lund
    */
   class ioxyz : public iopart {
     friend class particles;
@@ -75,7 +75,7 @@ namespace Faunus {
 
   //------------------------------------
   /*! \brief Read/write AAM file format
-   *  \author mikaek lund
+   *  \author Mikael Lund
    *  \todo Unfinished!
    */
   class ioaam : public iopart {
@@ -93,7 +93,7 @@ namespace Faunus {
 
   //-----------------------------------------------
   /*! \brief Persistence of Vision Raytracer output
-   *  \author mikaek lund
+   *  \author Mikael Lund
    *  \todo Unfinished!
    */
   class iopov : public iopart {
@@ -117,7 +117,7 @@ namespace Faunus {
   /*!
    * \brief PQR format
    * \date December 2007
-   * \author mikaek lund
+   * \author Mikael Lund
    */
   class iopqr : public iopart {
     private:
@@ -134,7 +134,7 @@ namespace Faunus {
   /*!
    * \brief Gromacs GRO format
    * \date December 2007
-   * \author mikaek lund
+   * \author Mikael Lund
    */
   class iogro : public iopart {
     private:
@@ -151,7 +151,7 @@ namespace Faunus {
 #ifdef GROMACS
   //-----------------------------------------------
   /*! \brief GROMACS xtc compressed trajectory fileformat
-   *  \author mikaek lund
+   *  \author Mikael Lund
    *  \date June 2007, Prague
    *  \todo Filename ignored, should be changed. Static box length.
    *        The XTC format is now included in OpenBabel2!

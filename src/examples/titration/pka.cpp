@@ -8,8 +8,8 @@
  * \include pka.cpp
  */
 #include "faunus/faunus.h"
-namespace Faunus {typedef pot_coulomb T_pairpot;} // Specify pair potential
-#include "faunus/markovmove.h"
+#include "faunus/potentials/pot_coulomb.h"
+#include "faunus/moves/markovmove.h"
 
 using namespace Faunus;
 using namespace std;

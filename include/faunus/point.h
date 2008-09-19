@@ -7,7 +7,7 @@
 namespace Faunus {
   /*!
    * \brief Cartesian coordinates
-   * \author mikaek lund
+   * \author Mikael Lund
    * \date 2002-2007
    */
   class point {
@@ -39,7 +39,7 @@ namespace Faunus {
 
   /*!
    * \brief Class for particles
-   * \author mikaek lund
+   * \author Mikael Lund
    * \date 2002-2007
    *
    * Example\n
@@ -73,7 +73,7 @@ namespace Faunus {
   };
 
   /*! \brief Class for spherical coordinates
-   *  \author mikaek lund
+   *  \author Mikael Lund
    *  \date Canberra, 2005-2006
    */
   class spherical : private slump {

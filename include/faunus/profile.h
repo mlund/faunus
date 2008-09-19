@@ -7,7 +7,7 @@
 namespace Faunus {
 
   /*!\brief Particle profile base class
-   * \author mikaek lund
+   * \author Mikael Lund
    * \date Canberra, 2008
    *
    * This is a base class for analysing particle distributions
@@ -38,7 +38,7 @@ namespace Faunus {
   }
 
   /*!\brief Cummulative sum around a central particle
-   * \author mikaek lund
+   * \author Mikael Lund
    * \date Canberra, 2008
    * \warning The central particle is passed through the constructor and
    *          it is assumed that the particle (usually in a vector) is not
@@ -61,7 +61,7 @@ namespace Faunus {
   };
 
   /*!\brief Cylindrical particle distribution
-   * \author mikaek lund
+   * \author Mikael Lund
    * \date Canberra, 2008
    *
    * Calculates the particle density in a cylinder around

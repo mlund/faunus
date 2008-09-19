@@ -8,7 +8,7 @@
 
 namespace Faunus {
   /*! \brief OpenBabel file support
-   *  \author mikaek lund
+   *  \author Mikael Lund
    *  \date Helsingor, 2008
    *
    *  This class offers support for OpenBabel - a set of programs and

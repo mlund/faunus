@@ -4,7 +4,7 @@
 namespace Faunus {
   /*!
    * \brief Evaluate n'th degree Legendre polynomium
-   * \author mikaek lund
+   * \author Mikael Lund
    * \date Canberra 2005-2006
    *
    * Example\n

@@ -9,8 +9,8 @@
  */
 
 #include "faunus/faunus.h"
-namespace Faunus {typedef pot_hydrophobic T_pairpot;} // Specify pair potential
-#include "faunus/markovmove.h"
+#include "faunus/potentials/pot_hydrophobic.h"
+#include "faunus/moves/markovmove.h"
 
 using namespace std;
 using namespace Faunus;

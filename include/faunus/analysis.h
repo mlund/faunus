@@ -3,16 +3,16 @@
 
 #include "faunus/average.h"
 #include "faunus/container.h"
-#include "faunus/potentials.h"
 #include "faunus/slump.h"
 #include "faunus/io.h"
 #include "faunus/xytable.h"
 #include "faunus/hardsphere.h"
+#include "faunus/energy.h"
 
 namespace Faunus {
   /*!
    * Base class for analysis functions
-   * \author mikaek lund
+   * \author Mikael Lund
    * \date Prague, 2007
    */
   class analysis {
@@ -34,7 +34,7 @@ namespace Faunus {
    * a function of, say, an intermolecular separation. It is assumed
    * that the x range is identical for all distributions.
    *
-   * \author mikaek lund
+   * \author Mikael Lund
    * \date December 2007
    */
   class distributions : public analysis {
@@ -142,7 +142,7 @@ namespace Faunus {
 
   /*!
    * \brief Calculates free energy pathway
-   * \author mikaek lund
+   * \author Mikael Lund
    *
    * Starting from some point this class will generate eight
    * other points around it (cubic) and calculate the excess chemical
@@ -270,7 +270,7 @@ string widompath<T_pairpot>::info() {
 /*!
  * This class analyses angular correlations between
  * any two macromolecules.
- * \author mikaek lund
+ * \author Mikael Lund
  * \date ADFA, 2008
  */
 class angularcorr : public analysis {
@@ -286,7 +286,7 @@ class angularcorr : public analysis {
  * type or group in a spherical shell around a central particle
  * (binding site)
  *
- * \author mikaek lund
+ * \author Mikael Lund
  * \date ADFA, 2008
  */
 class twostatebinding : public analysis {

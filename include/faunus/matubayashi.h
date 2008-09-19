@@ -8,7 +8,7 @@ namespace Faunus {
    * Samples a histogram of pair energies of one
    * group with all other single particles.
    *
-   * \author mikaek lund
+   * \author Mikael Lund
    * \date Prague, 2008
    */
   class matubayashi : public analysis {

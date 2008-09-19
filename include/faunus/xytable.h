@@ -19,7 +19,7 @@ namespace Faunus {
  * possible to specify a maximum x value. (if this is exceeded the
  * vector will be resized anyway).
  *  
- * \author mikaek lund
+ * \author Mikael Lund
  * \todo Check if the STL resize command assign zero to new data
  *
  */

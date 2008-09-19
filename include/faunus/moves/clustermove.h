@@ -1,7 +1,6 @@
 #ifndef FAU_CLUSTERMOVE_H
 #define FAU_CLUSTERMOVE_H
-
-#include "faunus/markovmove.h"
+#include "faunus/moves/markovmove.h"
 namespace Faunus {
   /*!
    * This type of move will attempt to move collective sets of macromolecules that

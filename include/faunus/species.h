@@ -5,7 +5,7 @@
 namespace Faunus {
   /*!
    * \brief Specific data for particles
-   * \author mikaek lund
+   * \author Mikael Lund
    */
   class species {
     private:

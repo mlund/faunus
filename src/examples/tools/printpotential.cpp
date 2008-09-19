@@ -2,8 +2,8 @@
  * Program to print a pair-potentials
  */
 
-#include "faunus/pot_hydrophobic.h"
-#include "faunus/pot_netz.h"
+#include "faunus/potentials/pot_netz.h"
+#include "faunus/potentials/pot_coulomb.h"
 
 using namespace Faunus;
 using namespace std;

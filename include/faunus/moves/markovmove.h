@@ -3,7 +3,7 @@
 
 #include "faunus/common.h"
 #include "faunus/container.h"
-#include "faunus/potentials.h"
+#include "faunus/energy.h"
 #include "faunus/ensemble.h"
 #include "faunus/titrate.h"
 #include "faunus/slump.h"
@@ -12,7 +12,7 @@
 
 namespace Faunus {
   /*! \brief Base class for MC moves
-   *  \author mikaek lund
+   *  \author Mikael Lund
    *  \todo Perhaps the T_pairpot could be made more elegant?
    *
    *  This class will keep track of the returned energy, if the
@@ -27,9 +27,8 @@ namespace Faunus {
    *  type \verb T_pairpot \endverbatim that must be
    *  defined before processing the source code. For example,
    *
-   *  #include "potentials.h"
-   *  typedef pot_coulomb T_pairpot
-   *  #include "markovmove.C"
+   *  #include "faunus/potentials/pot_coulomb.h" //This sets T_pairpot
+   *  #include "faunus/moves/markovmove.h"
    *  \endcode
    */
   class markovmove {
@@ -83,7 +82,7 @@ namespace Faunus {
   }
 
   /*! \brief Move salt particles
-   *  \author mikaek lund
+   *  \author Mikael Lund
    */
   class saltmove : public markovmove {
     public:
@@ -118,7 +117,7 @@ namespace Faunus {
    * along the line connecting their mass centers.
    *
    * \brief Symmetrically move two groups along z-axis
-   * \author mikaek lund
+   * \author Mikael Lund
    */
   class dualmove : public markovmove {
     private:
@@ -144,7 +143,7 @@ namespace Faunus {
 
   /*!
    * \brief Fluctuate the volume against an external pressure 
-   * \author Bjoern Persson and mikaek lund
+   * \author Bjoern Persson and Mikael Lund
    * \todo Should take an arbritray vector of groups and implement a more efficent energycalculation.
    * Salt scaling not yet implemented
    * \note Tested and found valid using debyehuckel_P3 and point charges.
@@ -178,7 +177,7 @@ namespace Faunus {
   };
 
   /*! \brief Rotate group around its mass-center.
-   *  \author mikaek lund
+   *  \author Mikael Lund
    *  \date Prague 2007
    */
   class macrorot : public markovmove { 
@@ -188,7 +187,7 @@ namespace Faunus {
   };
 
   /*! \brief Titrate all titrateable sites
-   *  \author mikaek lund
+   *  \author Mikael Lund
    *  \note "titrate" used to be private. Changed because iopqr::save()
    */
   class chargereg : public markovmove, public titrate {
@@ -228,7 +227,7 @@ namespace Faunus {
    * \param max Maximum percentage of accepted moves
    * \warning This violates the detailed balance criteria!
    * \param min Minimum percentage of accepted moves
-   * \author mikaek lund
+   * \author Mikael Lund
    * \todo Specify a maxmimum dp
    */
   void markovmove::adjust_dp(float min, float max) {

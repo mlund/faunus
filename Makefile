@@ -79,7 +79,6 @@ OBJS=$(CLASSDIR)/inputfile.o \
      $(CLASSDIR)/physconst.o\
      $(CLASSDIR)/slump.o\
      $(CLASSDIR)/container.o\
-     $(CLASSDIR)/potentials.o\
      $(CLASSDIR)/hardsphere.o\
      $(CLASSDIR)/group.o \
      $(CLASSDIR)/particles.o \

@@ -2,17 +2,10 @@
  *  
  *
  */
-#include <iostream>
-#include "faunus/io.h"
-#include "faunus/analysis.h"
-#include "faunus/container.h"
-#include "faunus/potentials.h"
-namespace Faunus {
-  typedef pot_minimage T_pairpot;
-}
-#include "faunus/markovmove.h"
-#include "faunus/analysis.h"
-#include "faunus/hardsphere.h"
+#include "faunus/faunus.h"
+#include "faunus/energy.h"
+#include "faunus/potentials/pot_minimage.h"
+#include "faunus/moves/markovmove.h"
 
 using namespace Faunus;
 using namespace std;

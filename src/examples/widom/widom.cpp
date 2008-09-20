@@ -19,9 +19,8 @@ int main() {
   mcloop loop(in);                      // Set Markov chain loop lengths
   cell cell(in);                        // We want a spherical cell
   canonical nvt;                        // Use the canonical ensemble
-  pot_setup cfg;                        // Setup pair potential - default values
   FAUrdf rdf(particle::NA,particle::CL,.5, 45.);
-  interaction<pot_coulomb> pot(cfg);      // Energy functions
+  interaction<pot_coulomb> pot(in);     // Energy functions
   widom widom(cell, pot,
       particle::NA, particle::CL);      // Class for Widom particle insertions
   widom.runfraction=0.5;
@@ -30,6 +29,8 @@ int main() {
   salt.add( cell, in );                 // Insert some sodium ions
 
   systemenergy sys(pot.energy(cell.p)); // Track system energy
+
+  cout << pot.info();
 
   while ( loop.macroCnt()==true ) {           //Markov chain 
     while ( loop.microCnt()==true ) {

@@ -1,6 +1,7 @@
 #include <boost/python.hpp>
 #include "faunus/point.h"
-#include "faunus/potentials.h"
+#include "faunus/energy.h"
+#include "faunus/inputfile.h"
 
 namespace Faunus {
     typedef Faunus::interaction<Faunus::pot_coulomb> interaction_coulomb;
@@ -36,12 +37,12 @@ BOOST_PYTHON_MODULE( pyfaunus ) {
         .def_readwrite("z", &Faunus::point::z)
         .def("clear", &Faunus::point::clear)
     ;
-
-    class_<Faunus::pot_setup>("pot_setup")
+/*
+    class_<Faunus::inputfile>("inputfile")
     ;
-
-    class_<Faunus::interaction_coulomb>("interaction_coulomb", init<Faunus::pot_setup&>())
+    class_<Faunus::interaction_coulomb>("interaction_coulomb", init<Faunus::inputfile&>())
         .def("dipdip", &Faunus::interaction_coulomb::dipdip)
     ;
+    */
 }
 

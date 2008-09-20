@@ -56,6 +56,11 @@ namespace Faunus {
       string cite; //!< Litterature reference
       double eps;  //!< 4*Lennard-Jones interaction parameter (kT)
       double f;    //!< Factor to convert to kT (used after energy summations)
+      pot_lj(const inputfile &in) {
+        eps=in.getflt("LJeps", 2);
+        name="LJ12-6";
+        f=1;
+      }
       pot_lj(double epsilon) {
         eps=epsilon;
         name="LJ12-6";

@@ -5,9 +5,18 @@ namespace Faunus {
   /*! \brief Coulomb potential
    *  \author Mikael Lund
    *  \date Prague, 2007
+   *
+   *  This potential class calculates the solvent screened pair
+   *  potential between two charges. The Faunus::inputfile
+   *  constructor argument looks for the Bjerrum length, "bjerrum".
+   *  If not found that of water at 298K is used (7.1 Angstrom).
    */
   class pot_coulomb : public pot_lj {
     public:
+      pot_coulomb(const inputfile &in) : pot_lj(in) {
+        f=in.getflt("bjerrum",7.1);
+        name+="/Coulomb";
+      }
       /*! \param pot.lB Bjerrum length
        *  \param pot.eps L-J epsilon parameter (in kT) */
       pot_coulomb ( pot_setup &pot) : pot_lj(pot.eps/pot.lB) {
@@ -16,7 +25,7 @@ namespace Faunus {
       }
       /*! \brief Return Coulomb energy between a pair of particles
        *  \return Energy in units of kT/f (f=lB).
-       *  \f$ \beta u/f = \frac{z_1 z_2}{r} + u_{LJ}/f \f$
+       *  \f[ \beta u/f = \frac{z_1 z_2}{r} + u_{LJ}/f \f]
        */
       inline double pairpot(const particle &p1, const particle &p2) {
         register double r2=p1.sqdist(p2);

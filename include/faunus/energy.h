@@ -56,6 +56,7 @@ namespace Faunus {
     public:
       T pair;
       interaction(pot_setup &pot) : pair(pot), energybase(pair.f) { tokT=pair.f;};
+      interaction(inputfile const &in) : pair(in), energybase(pair.f) { tokT=pair.f;};
 
       double energy(const particle &a, const particle &b) {
         return pair.pairpot(a,b) * pair.f;

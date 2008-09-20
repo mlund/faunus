@@ -1,8 +1,8 @@
 #include "faunus/species.h"
 namespace Faunus {
   //float species::getpka(particle::type id) { return d[id].pka; }
-  particle species::get(particle::type id) { return d[id].p; }
-  particle species::get(string name) { return d[id(name)].p; }
+  particle species::get(particle::type id) const { return d[id].p; }
+  particle species::get(string name) const { return d[id(name)].p; }
 
   void species::set(
       particle::type id, string name, float r, float z, float pka, bool hydr)
@@ -15,7 +15,7 @@ namespace Faunus {
     d[id].p.hydrophobic = hydr;
   }
 
-  particle::type species::id(string name) {
+  particle::type species::id(string name) const {
     for (int i=0; i<d.size(); i++)
       if (d[i].name==name)
         return particle::type(i);

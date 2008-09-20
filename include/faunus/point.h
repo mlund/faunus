@@ -24,15 +24,15 @@ namespace Faunus {
           const double &, const double &) const;
       inline double dist(const point &) const;        ///< Distance to another point
       inline double dist(const point &, double &, double &) const ; //!< Distance to another point
-      void ranunit(slump &);              ///< Generate a random unit vector
+      void ranunit(random &);             ///< Generate a random unit vector
       double dot(point &);                ///< Angle with another point
       point operator-();                  ///< Sign reversal
-      point operator*(point);             ///< Multiply two vectors
-      point operator*(double);            ///< Scale vector
-      point operator+(point);             ///< Add two vectors
-      point operator-(point);             ///< Substract vector
+      point operator*(const point);       ///< Multiply two vectors
+      point operator*(double) const;            ///< Scale vector
+      point operator+(const point);             ///< Add two vectors
+      point operator-(const point) const;             ///< Substract vector
       point operator+(double);            ///< Displace x,y,z by value
-      void operator+=(point);
+      void operator+=(const point);
       friend std::ostream &operator<<(std::ostream &, point &); /// Print x,y,z
       std::string str();
   };

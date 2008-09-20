@@ -10,12 +10,11 @@ using namespace Faunus;
 using namespace std;
 
 int main() {
+  inputfile in("ewald.in");             // Inputfile
   box box(50.);                         // A cubic box - periodic boundaries
   canonical nvt;                        // Use the canonical ensemble
-  pot_setup cfg;                        // Setup pair potential - default values
-  cfg.box = box.len;                    // Specific box len. for minimum image
   FAUrdf rdf(particle::NA,particle::CL);// Prepare Na-Cl radial distribution, g(r)
-  interaction<pot_minimage> pot(cfg);   // Particle energy functions
+  interaction<pot_minimage> pot(in);    // Particle energy functions
   ioxyz xyz(box);                       // Class for XYZ output
   saltmove sm(nvt, box, pot);           // Class for salt movements
   widom widom(box, pot,

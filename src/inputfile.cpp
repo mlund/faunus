@@ -1,20 +1,26 @@
 #include "faunus/inputfile.h"
 
 namespace Faunus {
-  //! \param filename Input file to scan
   inputfile::inputfile(string filename) {
-    matrix.resize(50);
-    int i=0;
+    dataformat tmp;
     std::ifstream f( filename.c_str() );
     if (f) {
       while (!f.eof()) {
-        f >> matrix[i].name >> matrix[i].val;
-        i++;
+        f >> tmp.name;
+        if (tmp.name.find("#")!=string::npos ||
+            tmp.name.find("[")!=string::npos)
+          f.ignore(256, '\n');
+        else {
+          f >> tmp.val;
+          matrix.push_back(tmp);
+        }
       };
-      matrix.resize(i-1);
       f.close();
       std::cout << "# Configuration read from: " << filename << endl;
-    } else std::cout << "*** Failed to open inputfile ***" << endl;
+    } else {
+      std::cout << "*** Failed to open inputfile ***" << endl;
+      throw;
+    }
   }
 
   int inputfile::findKey(string &key) const {
@@ -27,25 +33,21 @@ namespace Faunus {
   //! \param def Default value if keyword is not found
   string inputfile::getstr(string key, string def) const {
     int i = findKey(key);
-    if (i!=-1)
-      return matrix[i].val;
-    return def;
+    return (i!=-1) ? matrix[i].val : def;
   }
 
   //! \param key Keyword to look for
   //! \param def Default value if keyword is not found
   double inputfile::getflt(string key, double def) const {
     int i = findKey(key);
-    if (i!=-1) return atof(matrix[i].val.c_str());
-    return def;
+    return (i!=-1) ? atof(matrix[i].val.c_str()) : def;
   }
 
   //! \param key Keyword to look for
   //! \param def Default value if keyword is not found
   int inputfile::getint(string key, int def) const {
     int i = findKey(key);
-    if (i!=-1) return atoi(matrix[i].val.c_str());
-    return def;
+    return (i!=-1) ? atoi(matrix[i].val.c_str()) : def;
   }
 
   //! \param key Keyword to look for
@@ -59,5 +61,22 @@ namespace Faunus {
         return false;
     }
     return def;
+  }
+
+  //! \param key Name of the new keyword
+  //! \param val String value
+  void inputfile::add(string key, string val) {
+    dataformat tmp;
+    tmp.name=key;
+    tmp.val=val;
+    matrix.push_back(tmp);
+  }
+
+  //! \param key Name of the new keyword
+  //! \param val Floating point number
+  void inputfile::add(string key, double val) {
+    std::ostringstream o;
+    o << val;
+    add(key, o.str());
   }
 }

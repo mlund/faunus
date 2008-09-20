@@ -32,11 +32,12 @@ namespace Faunus {
       //! \param pot.a Radius of sphere (origo = [0,0,0]).
       //! \param pot.lB Bjerrum length
       //! \param pot.eps L-J parameter
-      pot_rfield( pot_setup &pot ) : pot_lj( pot.eps/(pot.epso*pot.lB) ) {
-        f=pot.epso*pot.lB;
-        a=pot.a;
-        eo=pot.epso;
-        ei=pot.epsi;
+      pot_rfield( const inputfile &in ) : pot_lj(in) {
+        a  = in.getflt("rfield_a");
+        eo = in.getflt("rfield_epso",80.);
+        ei = in.getflt("rfield_epsi",2.);
+        f  = in.getflt("bjerrum") * eo;
+        eps=eps/f;
         steps=50; 
         l.resize(steps);
       };

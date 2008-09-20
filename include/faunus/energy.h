@@ -55,7 +55,6 @@ namespace Faunus {
   template<class T> class interaction : public energybase {
     public:
       T pair;
-      interaction(pot_setup &pot) : pair(pot), energybase(pair.f) { tokT=pair.f;};
       interaction(inputfile const &in) : pair(in), energybase(pair.f) { tokT=pair.f;};
 
       double energy(const particle &a, const particle &b) {
@@ -227,7 +226,7 @@ namespace Faunus {
       double hyenergy(const vector<particle> &);
       double hyenergy(const vector<particle> &, int);
     public:
-      int_hydrophobic(pot_setup &pot) : interaction<T>(pot) { end_of_protein_one=int(1e7); }
+      int_hydrophobic(const inputfile &in) : interaction<T>(in) { end_of_protein_one=int(1e7); }
       unsigned int end_of_protein_one;              //!< Last particle in protein one (set if appropriate)
       void search(const vector<particle> &);        //!< Locate hydrophobic groups and ions
       double energy(const vector<particle> &p ) { interaction<T>::energy(p) + hyenergy(p);}

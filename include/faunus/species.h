@@ -20,9 +20,9 @@ namespace Faunus {
     public:
       species();
       vector<data> d; //!< Data is stored here.
-      particle::type id(string);          //!< Transform name to particle
-      particle get(particle::type);       //!< Get particle from id
-      particle get(string);               //!< Get particle from string (name)
+      particle::type id(string) const;    //!< Transform name to particle
+      particle get(particle::type) const; //!< Get particle from id
+      particle get(string) const;         //!< Get particle from string (name)
   };
 }
 #endif

@@ -11,11 +11,12 @@ namespace Faunus {
     private:
       double invbox,box;
     public:
-      pot_minimage(pot_setup &pot) : pot_lj(pot.eps/pot.lB) {
-        f=pot.lB;
-        box=pot.box;
-        invbox=1./box;
+      pot_minimage( const inputfile &in ) : pot_lj(in) {
         name+="/Coulomb w. minimum image";
+        f=in.getflt("bjerrum",7.1);
+        box=in.getflt("boxlen");
+        invbox=1./box;
+        eps=eps/f;
       }
       void setvolume(double vol) {
         box=pow(vol, 1./3);;

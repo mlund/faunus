@@ -15,12 +15,7 @@ namespace Faunus {
     public:
       pot_coulomb(const inputfile &in) : pot_lj(in) {
         f=in.getflt("bjerrum",7.1);
-        name+="/Coulomb";
-      }
-      /*! \param pot.lB Bjerrum length
-       *  \param pot.eps L-J epsilon parameter (in kT) */
-      pot_coulomb ( pot_setup &pot) : pot_lj(pot.eps/pot.lB) {
-        f=pot.lB;
+        eps=eps/f;
         name+="/Coulomb";
       }
       /*! \brief Return Coulomb energy between a pair of particles

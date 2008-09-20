@@ -68,7 +68,7 @@ namespace Faunus {
             + D1*exp( -D3*pow(z-D2,2)  ) ) / f;
       }
     public:
-      pot_netz( pot_setup &pot ) : pot_coulomb( pot ) {
+      pot_netz( const inputfile &in ) : pot_coulomb(in) {
         name+="/Empirial PMF (AIR)";
         cite="PRL 2007, 99, 226104";
       }

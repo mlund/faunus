@@ -4,19 +4,19 @@
 namespace Faunus {
   /*! \brief Debye-Huckel potential
    *  \author Mikael Lund
+   *  
+   *  Faunus::inputfile is scanned for "bjerrum", "debyelen", "LJeps".
    */
   class pot_debyehuckel : public pot_lj {
     private:
       double k;
     public:
-      //! \param pot.lB Bjerrum length
-      //! \param pot.eps L-J parameter
-      //! \param pot.kappa Inverse Debye screening length
-      pot_debyehuckel( pot_setup &pot ) : pot_lj(pot.eps/pot.lB) {
-        f=pot.lB; 
-        k=pot.kappa; 
+      pot_debyehuckel( const inputfile &in ) : pot_lj(in) {
         name+="/Debye-Huckel";
-      };
+        k=in.getflt("debyelen",10);
+        f=in.getflt("bjerrum",7.1);
+        eps=eps/f;
+      }
       //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
       //! \return Energy in kT/f (f=lB)
       inline double pairpot( const particle &p1, const particle &p2 ) {

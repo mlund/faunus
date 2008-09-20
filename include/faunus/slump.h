@@ -40,6 +40,9 @@ namespace Faunus {
    * \author Mikael Lund
    * \date Prague, 2008
    * \note Not thread safe
+   *
+   * To enable this random number generator -DTWISTER must be
+   * set at compile time.
    */
   class randomTwister : public random {
     private:
@@ -49,9 +52,7 @@ namespace Faunus {
       double random_one();
   };
 
-  /*! \typedef Speficy random number generator
-   */
-  typedef Faunus::randomDefault slump;
+  typedef Faunus::randomTwister slump; // Generator selection!
+
 }
 #endif
-

@@ -19,8 +19,7 @@ int main(int argc, char* argv[]) {
   mcloop loop(in);                     // Set Markov chain loop lengths
   cell con(in);                        // Use a spherical container
   canonical nvt;                       // Use the canonical ensemble
-  pot_setup cfg(in);                   // Setup pair potential (default)
-  interaction<pot_coulomb> pot(cfg);   // Functions for interactions
+  interaction<pot_coulomb> pot(in);    // Functions for interactions
   macromolecule protein;               // Group for the protein
   ioaam aam(con);                      // Protein input file format is AAM
   iopqr pqr(con);                      // PQR coordinate output

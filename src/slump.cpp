@@ -10,7 +10,7 @@ namespace Faunus {
   double randomDefault::random_one() { return rand_max_inv*rand(); }
   void randomDefault::random_seed(unsigned int s) { (s!=0) ? srand(s) : srand(time(0)); }
 
-  // "Twister" - the default generator
+  // "Twister" - Mersenne Twister generator
   double randomTwister::random_one() { return mt.rand(); }
   void randomTwister::random_seed(unsigned int s) { mt.seed(s); }
 }

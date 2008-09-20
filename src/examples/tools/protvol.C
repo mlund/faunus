@@ -16,7 +16,7 @@ int main() {
  
   macromolecule protein;
   ioaam aam(con);
-  protein.add(con, aam.load(in.getstr("protein")));
+  protein.add(con, aam.load(in.getflt("protein")));
   protein.center(con);
   protein.accept(con);
   hardsphere hs;
@@ -24,8 +24,8 @@ int main() {
   probe.radius=0;
   int hit=0;
  
-  for (int macro=0; macro<in.getint("macro"); macro++) {        // Markov chain
-    for (int micro=0; micro<in.getint("micro"); micro++) {
+  for (int macro=0; macro<in.getflt("macro"); macro++) {        // Markov chain
+    for (int micro=0; micro<in.getflt("micro"); micro++) {
       con.randompos(probe);
       if(hs.overlap(con.p, protein, probe)==true)
         hit++;
@@ -34,11 +34,11 @@ int main() {
   }
   cout << con.info()<<endl <<protein.info()<<endl
        << "#  Protein radius      = "<< protein.radius(con.p) <<endl
-       << "#  Number of shots     = "<< in.getint("macro")*in.getint("micro") <<endl
+       << "#  Number of shots     = "<< in.getflt("macro")*in.getflt("micro") <<endl
        << "#  Number of hist      = "<< hit << endl
-       << "#  Hit ratio           = "<< hit/double(in.getint("macro")*in.getint("micro")) <<endl
+       << "#  Hit ratio           = "<< hit/double(in.getflt("macro")*in.getflt("micro")) <<endl
        << "#  _____________________________________" << endl
-       << "#  Protein volume is " << con.getvolume()*hit/(in.getint("macro")*in.getint("micro"))<<" A^3"<<endl;
+       << "#  Protein volume is " << con.getvolume()*hit/(in.getflt("macro")*in.getflt("micro"))<<" A^3"<<endl;
    
 }
 

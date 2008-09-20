@@ -21,8 +21,7 @@ int main() {
   mcloop loop(in);                      // Set Markov chain loop lengths
   cell cell(in);                        // We want a spherical, hard cell
   canonical nvt;                        // Use the canonical ensemble
-  pot_setup cfg(in);                    // Setup pair potential (default values)
-  int_hydrophobic<pot_netz> pot(cfg);   // Interactions incl. hydrophobic surfaces
+  int_hydrophobic<pot_netz> pot(in);    // Interactions incl. hydrophobic surfaces
   distributions dst;                    // Distance dep. averages
   iopqr pqr(cell);                      // PQR output (pos, charge, radius)
   vector<macromolecule> g;              // Group for proteins

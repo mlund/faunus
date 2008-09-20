@@ -18,10 +18,9 @@ namespace Faunus {
     private:
       xydata<double> pmfd[particle::LAST][particle::LAST];
     public:
-      //! \param pot.lB Bjerrum length
-      //! \param pot.eps L-J parameter
-      pot_datapmf(pot_setup &pot) : pot_lj(pot.eps/pot.lB) {
-        f=pot.lB;
+      pot_datapmf(const inputfile &in) : pot_lj(in) {
+        f=in.getflt("bjerrum",7.1);
+        eps=eps/f;
         name+="/Empirical data potential";
       }
       double pairpot (const particle &p1, const particle &p2) {

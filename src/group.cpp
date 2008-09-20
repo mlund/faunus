@@ -12,13 +12,13 @@ namespace Faunus {
     beg=first;
     end=last;
   }
-  short int group::size() { return (beg==-1) ? 0 : end-beg+1; }
+  short int group::size() const { return (beg==-1) ? 0 : end-beg+1; }
 
   /*! \brief Calculates total charge
    *  \return Charge number. The charge is also stored in
    *          cm.charge.
    */
-  double group::charge(vector<particle> &p) {
+  double group::charge(const vector<particle> &p) {
     double z=0;
     for (short i=beg; i<=end; i++)
       z+=p[i].charge;
@@ -70,7 +70,7 @@ namespace Faunus {
    * \warning Doesn't consider periodic boundaries!
    * \note Use masscenter(container &) instead.
    */
-  point group::masscenter(vector<particle> &p) {
+  point group::masscenter(const vector<particle> &p) {
     cm.clear();
     double sum=0;
     for (short i=beg; i<=end; i++) {
@@ -262,8 +262,8 @@ namespace Faunus {
       std::ostringstream nion, tion;
       nion << "nion" << n;
       tion << "tion" << n++;
-      npart = in.getint(nion.str(), 0);
-      id = con.id(in.getstr(tion.str()));
+      npart = in.getflt(nion.str(), 0);
+      id = con.id(  in.getstr( tion.str() )  );
       if (npart!=0)
         group::add(con, id, npart ); // add particles
       if (con.d[id].p.charge>0)

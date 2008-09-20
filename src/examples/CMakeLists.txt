@@ -21,6 +21,7 @@ fau_example(widom widom widom.cpp)
 fau_example(manybody manybody manybody.cpp)
 fau_example(isobaric isobaric isobaric.cpp)
 fau_example(binding binding binding.cpp)
+fau_example(ewald ewald ewald.cpp)
 
 #----- examples where openbabel is needed -----
 if (OPENBABEL_FOUND)

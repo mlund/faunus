@@ -8,10 +8,8 @@ namespace Faunus {
    */
   class pot_hscoulomb : public pot_hs {
     public:
-      /*! \param pot.lB Bjerrum length
-       *  \param pot.eps L-J epsilon parameter (in kT) */
-      pot_hscoulomb ( pot_setup &pot) : pot_hs() {
-        f=pot.lB;
+      pot_hscoulomb (const inputfile &in) : pot_hs() {
+        f=in.getflt("bjerrum",7.1);
         name+="/Coulomb";
       }
       /*! \brief Return Coulomb energy between a pair of particles

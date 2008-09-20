@@ -98,8 +98,8 @@ namespace Faunus {
     private:
       particle a,b;
       container *con;
-      average<double> expsum; 
       energybase *pot;
+      average<double> expsum; 
     public:
       widom(container &c, energybase &i, particle::type t1, particle::type t2) {
         con=&c;

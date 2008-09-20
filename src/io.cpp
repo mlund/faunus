@@ -108,7 +108,7 @@ namespace Faunus {
       if (nprot>0)
         for (short i=0; i<nprot; i++) {
           macromolecule m;
-          m.add(con, load(in.getstr(os_file.str())), true ); 
+          m.add(con, load( in.getstr(os_file.str() )  ), true ); 
           m.name = in.getstr(os_file.str());
           m.masscenter(con);
           g.push_back(m);
@@ -142,7 +142,7 @@ namespace Faunus {
           m.add(con, load(in.getstr(os_file.str())), false ); 
           m.masscenter(con);
           m.center(con);
-          m.name = in.getstr(os_file.str());
+          m.name = in.getstr( os_file.str() );
           g.push_back(m);
         }
     } while (nprot>0);

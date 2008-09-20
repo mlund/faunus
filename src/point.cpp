@@ -17,7 +17,7 @@ namespace Faunus {
     return (l2!=0) ? sqrt(l2) : 0;
   }
 
-  void point::ranunit(slump &slp) {
+  void point::ranunit(random &slp) {
     point u;
     double r=2;
     while (r > 1.) { //Generate a random unit vector
@@ -31,7 +31,7 @@ namespace Faunus {
     z=u.z/r;
   }
 
-  void point::operator+=(point p) {
+  void point::operator+=(const point p) {
     x += p.x;
     y += p.y;
     z += p.z;
@@ -43,14 +43,14 @@ namespace Faunus {
     return o;
   }
 
-  point point::operator*(point p) {
+  point point::operator*(const point p) {
     point o;
     o.x = p.x * x;
     o.y = p.y * y;
     o.z = p.z * z;
     return o;
   }
-  point point::operator*(double s) {
+  point point::operator*(double s) const {
     point o;
     o.x = x*s;
     o.y = y*s;
@@ -67,7 +67,7 @@ namespace Faunus {
   }
 
 
-  point point::operator-(point p) {
+  point point::operator-(const point p) const {
     point o;
     o.x = this->x - p.x;
     o.y = this->y - p.y;
@@ -75,7 +75,7 @@ namespace Faunus {
     return o;
   }
 
-  point point::operator+(point p) {
+  point point::operator+(const point p) {
     point o;
     o.x = x + p.x;
     o.y = y + p.y;

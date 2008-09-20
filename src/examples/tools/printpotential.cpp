@@ -9,11 +9,10 @@ using namespace Faunus;
 using namespace std;
 
 int main() {
+  inputfile in("printpotential.conf");
   particle p1,p2,p3;
-  pot_setup cfg;
-  cfg.eps=0.3;
-  pot_netz netz(cfg);
-  pot_coulomb coulomb(cfg);
+  pot_netz netz(in);
+  pot_coulomb coulomb(in);
   //coulomb.eps=coulomb.eps*3.;
 
   p1.charge=-0;

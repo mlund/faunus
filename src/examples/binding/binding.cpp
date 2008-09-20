@@ -13,10 +13,9 @@ int main() {
   slump slump;                          // A random number generator
   inputfile in("binding.conf");         // Read input file
   mcloop loop(in);                      // Keep track of time and MC loop
-  cell cell(in);                         // We want a cubic cell
+  cell cell(in);                        // We want a cubic cell
   canonical nvt;                        // Use the canonical ensemble
-  pot_setup cfg(in);                    // Setup pair potential (default values)
-  interaction<pot_coulomb> pot(cfg);      // Functions for interactions
+  interaction<pot_coulomb> pot(in);     // Functions for interactions
   iogro gro(cell, in);                  // Gromacs file output for VMD etc.
   FAUrdf protrdf(0,0,.5,cell.r);        // Protein and salt radial distributions
   twostatebinding bind(20.);            // Two state binding analysis

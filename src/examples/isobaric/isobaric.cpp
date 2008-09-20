@@ -21,15 +21,14 @@ int main() {
   mcloop loop(in);                        // Keep track of time and MC loop
   box cell(in);                           // We want a cubic cell
   canonical nvt;                          // Use the canonical ensemble
-  pot_setup cfg(in);                      // Setup pair potential (default values)
-  interaction<pot_debyehuckelP3> pot(cfg);// Functions for interactions
+  interaction<pot_debyehuckelP3> pot(in); // Functions for interactions
   iogro gro(cell, in);                    // Gromacs file output for VMD etc.
   FAUrdf protrdf(0,0,.5,cell.len/2.);     // Protein and salt radial distributions
 
   vector<macromolecule> g;                // PROTEIN groups
   ioxyz xyz(cell);
   ioaam aam(cell);
-  if (in.getboo("lattice")==true)         //   Protein input file format is AAM
+  if (in.getflt("lattice")==true)         //   Protein input file format is AAM
     aam.loadlattice(cell, in, g);                //   Load and insert proteins
   else                                    //   Center first protein (will be frozen)
     aam.load(cell, in, g);
@@ -43,7 +42,7 @@ int main() {
   translate mt(nvt, cell, pot);           //   Class for macromolecular translation
   systemenergy sys(pot.energy(cell.p));   // System energy analysis
   isobaric<pot_debyehuckelP3> vol(nvt, cell, pot, in.getflt("pressure"), in.getflt("penalty"), in.getflt("max"));
-  histogram lendist(1,0,in.getint("max"));           //  
+  histogram lendist(1,0,in.getflt("max"));           //  
   
   vol.dp=in.getflt("voldp");
   mt.dp=in.getflt("mvdp");

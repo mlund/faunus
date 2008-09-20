@@ -20,8 +20,7 @@ int main() {
   mcloop loop(in);                      // Set Markov chain loop lengths
   cell cell(in);                        // We want a spherical, hard cell
   canonical nvt;                        // Use the canonical ensemble
-  pot_setup cfg(in);                    // Setup pair potential (default values)
-  interaction<pot_coulomb> pot(cfg);    // Functions for interactions
+  interaction<pot_coulomb> pot(in);     // Functions for interactions
   ioxyz xyz(cell);                      // xyz output for VMD etc.
   distributions dst;                    // Distance dep. averages
   iopqr pqr(cell);                      // PQR output (pos, charge, radius)

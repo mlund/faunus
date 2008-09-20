@@ -28,11 +28,11 @@ namespace Faunus {
       group(int=0);         ///< Constructor, initialize data.
 
       void set(short int,short int);        ///< Set particle range, "beg" and "end".
-      short int size();                     ///< Number of particles in group
+      short int size() const;               ///< Number of particles in group
       virtual short int random();           ///< Picks a random particle within this group
       bool find(unsigned int) const;        ///< Check if particle is part of the group
-      virtual double charge(vector<particle> &);//!< Calculate total charge
-      point masscenter(vector<particle> &); //!< Calculate center-of-mass
+      virtual double charge(const vector<particle> &);//!< Calculate total charge
+      point masscenter(const vector<particle> &); //!< Calculate center-of-mass
       point masscenter(container &);        //!< Calc. center-of-mass
       virtual string info();                //!< Print information
       void operator+=(group);

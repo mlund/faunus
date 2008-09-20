@@ -23,7 +23,7 @@ string container::povray() {
 
 //----------- CELL ----------------------
 cell::cell(float radius) { setradius(radius); }
-cell::cell(inputfile &in) { setradius(in.getflt("cellradius"));}
+cell::cell(const inputfile &in) { setradius(in.getflt("cellradius"));}
 void cell::setradius(float radius) {
   r = radius; 
   r2 = r*r; 
@@ -65,7 +65,7 @@ void box::setlen(double l) {
 }
 box::box(double l) { setlen(l); }
 
-box::box(inputfile &in) { setlen( in.getflt("boxlen") ); }
+box::box(const inputfile &in) { setlen( in.getflt("boxlen") ); }
 string box::info() {
   std::ostringstream o;
   o << container::info() 

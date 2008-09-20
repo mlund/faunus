@@ -13,7 +13,6 @@
 namespace Faunus {
   /*! \brief Base class for MC moves
    *  \author Mikael Lund
-   *  \todo Perhaps the T_pairpot could be made more elegant?
    *
    *  This class will keep track of the returned energy, if the
    *  move was successful of not and can provide statistics about the
@@ -22,14 +21,6 @@ namespace Faunus {
    *  Each derived class should provide a simple move() function that will
    *  perform a trial move, calculate the energy and either accept or reject
    *  the move. Unsuccessful moves are automatically undone.
-   *
-   *  The used pair-potential is identified using the
-   *  type \verb T_pairpot \endverbatim that must be
-   *  defined before processing the source code. For example,
-   *
-   *  #include "faunus/potentials/pot_coulomb.h" //This sets T_pairpot
-   *  #include "faunus/moves/markovmove.h"
-   *  \endcode
    */
   class markovmove {
     protected:

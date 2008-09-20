@@ -519,7 +519,9 @@ INPUT                  = doc \
                          src/examples/manybody \
                          src/examples/widom \
                          src/examples/titration \
-                         include/faunus
+                         include/faunus \
+                         include/faunus/moves \
+                         include/faunus/potentials
 
 # This tag can be used to specify the character encoding of the source files 
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is 

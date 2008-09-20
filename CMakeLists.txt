@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 project("Faunus")
-
 # ------------------------------
 #   Default build is "Release"
 # ------------------------------
@@ -15,8 +14,8 @@ endif(NOT CMAKE_BUILD_TYPE)
 option(FAUNUS_OPENMP  "Enable OpenMP parallel execution on multicore CPU's" off)
 option(FAUNUS_GROMACS "Enable Gromacs xtc trajectory output" off)
 option(FAUNUS_PYTHON  "Create python interface" off)
-mark_as_advanced(CLEAR CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS_RELEASE
-                 EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH
+mark_as_advanced(CLEAR CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS_RELEASE )
+mark_as_advanced(EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH
                  CMAKE_OSX_ARCHITECTURES CMAKE_OSX_SYSROOT)
 
 # ----------------------------

@@ -10,12 +10,18 @@ namespace Faunus {
    *  \author mikaek lund
    *  \date 2005-2006 Canberra
    *  \todo The sketch could be more clear.
+   *  \note Woodward+Svensson, J.Phys.Chem, 1991, 95, p7471.
+   *  \image html reactionfield.png 
    *
    *  Calculate the pair interaction between charges locate in-
    *  and/or outside a spherical dielectric discontinuity.
-   *  See Woodward+Svensson, J.Phys.Chem, 1991, 95, p7471.
-   *
-   *  \image html reactionfield.png 
+   *  
+   *  Faunus::inputfile keywords:
+   *  \li "rfield_epso" - Dielectric constant outside sphere
+   *  \li "rfield_epsi" - Dielectric constant inside sphere
+   *  \li "rfield_cavity" - Radius of sphere (origo = [0,0,0]).
+   *  \li "bjerrum" - the Bjerrum length
+   *  \li "LJeps" - L-J parameter
    */
   class pot_rfield : private pot_lj {
     private:
@@ -26,14 +32,8 @@ namespace Faunus {
       double eo, ei;        // dielectric constants (solvent, inside sphere)
     public:
       double f;             //!< Factor to convert to kT
-
-      //! \param pot.epso Dielectric constant outside sphere
-      //! \param pot.epsi Dielectric constant inside sphere
-      //! \param pot.a Radius of sphere (origo = [0,0,0]).
-      //! \param pot.lB Bjerrum length
-      //! \param pot.eps L-J parameter
       pot_rfield( const inputfile &in ) : pot_lj(in) {
-        a  = in.getflt("rfield_a");
+        a  = in.getflt("rfield_cavity");
         eo = in.getflt("rfield_epso",80.);
         ei = in.getflt("rfield_epsi",2.);
         f  = in.getflt("bjerrum") * eo;
@@ -41,7 +41,6 @@ namespace Faunus {
         steps=50; 
         l.resize(steps);
       };
-
       inline double pairpot(const particle &p1, const particle &p2) const {
         double r2=p1.sqdist(p2);
         return lj(p1,p2,r2) +

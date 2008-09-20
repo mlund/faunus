@@ -47,14 +47,19 @@ namespace Faunus {
    * \brief Implementation of all energy functions
    * \author Mikael Lund
    *
-   * This template will take as a type a pair potential
-   * i.e. Faunus::pot_xxx and attempt to inline it in
-   * all crusial inner loops in the energy functions.
-   * (expression templating)
+   * This is an expression template that constructs the
+   * energy functions of a particular pair potential. All
+   * returned energies are in units of kT.
+   *
+   * \code
+   * inputfile in("input.conf");
+   * interaction<pot_coulomb> pot(in);
+   * pot.energy(...);
+   * \endcode
    */
   template<class T> class interaction : public energybase {
     public:
-      T pair;
+      T pair; //!< An instance of the pair-potential.
       interaction(inputfile const &in) : pair(in), energybase(pair.f) { tokT=pair.f;};
 
       double energy(const particle &a, const particle &b) {

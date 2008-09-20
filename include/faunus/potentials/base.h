@@ -14,7 +14,7 @@ namespace Faunus {
     public:
       string name; //!< Arbitrary name
       string cite; //!< Litterature reference
-      double eps;  //!< 4*Lennard-Jones interaction parameter (kT)
+      double eps;  //!< Lennard-Jones interaction parameter (kT)
       double f;    //!< Factor to convert to kT (used after energy summations)
       pot_lj(const inputfile &in) {
         eps=in.getflt("LJeps", 2);
@@ -27,9 +27,10 @@ namespace Faunus {
         f=1;
       }
       /*!
-       *  L-J pair energy.
-       *  \f$ u_{lj} = \epsilon \left ( \frac{\sigma}{r^{12}} - \frac{\sigma}{r^6} \right ) \f$
-       *  \param r2 Squared distance between particle 1 and 2.
+       *  \param r2 Squared distance between particle p1 and p2.
+       *  \returns Interaction energy in units of kT,
+       *           \f[ \beta u_{lj} = \epsilon_{lj} \left ( \frac{\sigma}{r^{12}} - \frac{\sigma}{r^6} \right ) \f]
+       *           \f[ \sigma = \frac{\sigma_1+\sigma_2}{2}\f]
        */
       inline double lj(const particle &p1, const particle &p2, double &r2) const {
         register double x=p1.radius+p2.radius,u=x*x/r2;

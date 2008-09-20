@@ -10,6 +10,10 @@ namespace Faunus {
    *  potential between two charges. The Faunus::inputfile
    *  constructor argument looks for the Bjerrum length, "bjerrum".
    *  If not found that of water at 298K is used (7.1 Angstrom).
+   *
+   *  Faunus::inputfile keywords:
+   *  \li bjerrum - The Bjerrum length, \f$l_B\f$ [AAngstrom]
+   *  \li LJeps - Lennard-Jones interaction parameter [kT] (see Faunus::pot_lj::eps)
    */
   class pot_coulomb : public pot_lj {
     public:
@@ -19,8 +23,7 @@ namespace Faunus {
         name+="/Coulomb";
       }
       /*! \brief Return Coulomb energy between a pair of particles
-       *  \return Energy in units of kT/f (f=lB).
-       *  \f[ \beta u/f = \frac{z_1 z_2}{r} + u_{LJ}/f \f]
+       *  \return Energy in units of \f$kT/l_B\f$ (lB=f). \f[ \beta u/l_B = \frac{z_1 z_2}{r} + \frac{u_{lj}}{l_B} \f]
        */
       inline double pairpot(const particle &p1, const particle &p2) {
         register double r2=p1.sqdist(p2);

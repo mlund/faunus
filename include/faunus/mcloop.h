@@ -6,8 +6,25 @@
 namespace Faunus {
   /*!
    * This class keeps track of the outer and inner
-   * Markov chain loops. Also, after each macro step
-   * it can estimate when the simulation will finish
+   * Markov chain loops. After each macro step an
+   * estimated time of the simulations will be evaluated.
+   *
+   * The constructor will search the passed Faunus::inputfile object for the
+   * keywords:
+   * \li "macrosteps" - corresponding to the number of steps in the outer loop
+   * \li "microsteps" - ...and the steps in the inner loop
+   *
+   * A typical usage is as follows\n
+   * \code
+   * mcloop(in) mc;
+   * while (mc.macroCnt()) {
+   *   while (mc.microCnt()) {
+   *     //inner loop code
+   *   }
+   *   std::cout << mc.timing();
+   * }
+   * std::cout << mc.info();
+   * \endcode
    *
    * \author Mikael Lund
    * \date 2007
@@ -21,14 +38,12 @@ namespace Faunus {
       bool eq;
       mcloop(const inputfile &);   //!< Setup
       string info();               //!< Shows setup
-      string timing(unsigned int); //!< Show macrostep middle time and ETA.
+      string timing(unsigned int); //!< Show macrostep middle time and ETA (outdated!)
       string timing();             //!< Show macrostep middle time and ETA.
       bool macroCnt();             //!< Increase macro loop counter
       bool microCnt();             //!< Increase micro loop counter
   };
-  /*!
-   * \param in Inputfile class. "macrosteps" and "microsteps" will be searched for.
-   */
+
   mcloop::mcloop(const inputfile &in) : cnt( in.getint("macrosteps",10)) {
     macro=in.getint("macrosteps",10);
     micro=in.getint("microsteps");
@@ -55,7 +70,9 @@ namespace Faunus {
     return o.str();
   }
 
-  bool mcloop::macroCnt() { return (++cnt_macro>macro) ? false : true; }
+  bool mcloop::macroCnt() {
+    return (++cnt_macro>macro) ? false : true;
+  }
   bool mcloop::microCnt() {
     if (cnt_micro++<micro)
       return true;

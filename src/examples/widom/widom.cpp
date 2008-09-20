@@ -32,8 +32,8 @@ int main() {
 
   cout << pot.info();
 
-  while ( loop.macroCnt()==true ) {           //Markov chain 
-    while ( loop.microCnt()==true ) {
+  while ( loop.macroCnt() ) {           //Markov chain 
+    while ( loop.microCnt() ) {
       sys+=sm.move(salt);               // Displace salt particles
       widom.insert(10);                 // Widom particle insertion analysis
       rdf.update(cell);                 // Update g-of-r

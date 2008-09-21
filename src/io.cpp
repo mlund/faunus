@@ -391,6 +391,36 @@ namespace Faunus {
     }
   }
   void ioxtc::close() { close_xtc(xd); }
+};
+#endif
+#ifdef LIBXTC
+namespace Faunus {
+  ioxtc::ioxtc(container::container &con, float len) : iopart(con) {
+    time=0;
+    step=0;
+    setbox(len);
+    xd=xtc_create("coord.xtc", "w");
+  }
+  void ioxtc::setbox(float len) {
+    for (char i=0; i<3; i++)
+      for (char j=0; j<3; j++)
+        box[i][j]=0;
+    box[0][0]=len/10.; // corners of the
+    box[1][1]=len/10.; // rectangular box
+    box[2][2]=len/10.; // (in nanometers!)
+  };
+
+  bool ioxtc::save(string file, vector<particle> &p) {
+    if (p.size()<1300) {
+      for (unsigned short i=0; i<p.size(); i++) {
+        x[i][0]=p[i].x/10;      // AA->nm
+        x[i][1]=p[i].y/10;
+        x[i][2]=p[i].z/10;
+      }
+      xtc_write(xd,p.size(),step++,time++,box,x,1300.);
+    }
+  }
+  void ioxtc::close() {} //missing, hrmf!
 };//namespace
 #endif
 

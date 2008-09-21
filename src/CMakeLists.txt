@@ -12,6 +12,14 @@ if (OPENBABEL_FOUND)
   set(LINKLIBS ${LINKLIBS} ${OPENBABEL_LIBRARIES})
 endif (OPENBABEL_FOUND)
 
+#---- libxtc -----
+if (FAUNUS_LIBXTC)
+  add_subdirectory(libxtc)
+  add_definitions(-DLIBXTC)
+  include_directories("${CMAKE_SOURCE_DIR}/src/libxtc/")
+  set(LINKLIBS ${LINKLIBS} libxtc)
+endif (FAUNUS_LIBXTC)
+
 #----- locate gromacs -----
 if (FAUNUS_GROMACS AND GMX_FOUND)
   include_directories(${GMX_INCLUDE_DIR})

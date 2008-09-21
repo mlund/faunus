@@ -1,0 +1,146 @@
+/*
+ * $Id: /local/xtcio/src/typedefs.h 27 2008-09-14T05:47:11.743296Z lidb  $
+ * 
+ *                This source code is part of
+ * 
+ *                 G   R   O   M   A   C   S
+ * 
+ *          GROningen MAchine for Chemical Simulations
+ * 
+ *                        VERSION 3.2.0
+ * Written by David van der Spoel, Erik Lindahl, Berk Hess, and others.
+ * Copyright (c) 1991-2000, University of Groningen, The Netherlands.
+ * Copyright (c) 2001-2004, The GROMACS development team,
+ * check out http://www.gromacs.org for more information.
+
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * If you want to redistribute modifications, please consider that
+ * scientific software is very special. Version control is crucial -
+ * bugs must be traceable. We will be happy to consider code for
+ * inclusion in the official distribution, but derived work must not
+ * be called official GROMACS. Details are found in the README & COPYING
+ * files - if they are missing, get the official version at www.gromacs.org.
+ * 
+ * To help us fund GROMACS development, we humbly ask that you cite
+ * the papers on the package - you can find them in the top README file.
+ * 
+ * For more info, check our website at http://www.gromacs.org
+ * 
+ * And Hey:
+ * GRoups of Organic Molecules in ACtion for Science
+ */
+
+#ifndef TYPEDEFS_H
+#define TYPEDEFS_H
+
+#include "xtc.h"
+
+#if ! defined(XTCIO_ENABLE_FLOAT) && ! defined(GMX_DOUBLE)
+#define GMX_DOUBLE 1
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define STRLEN 4096
+
+#ifndef FALSE
+#define FALSE   0
+#endif
+#ifndef TRUE
+#define TRUE    1
+#endif
+#define BOOL_NR 2
+
+#define XX	0			/* Defines for indexing in	*/
+#define	YY	1			/* vectors			*/
+#define ZZ	2
+#define DIM   	3			/* Dimension of vectors		*/
+#define XXXX    0                       /* defines to index matrices */
+#define XXYY    1
+#define XXZZ    2
+#define YYXX    3
+#define YYYY    4
+#define YYZZ    5
+#define ZZXX    6
+#define ZZYY    7
+#define ZZZZ    8
+/* Max number of nodes 	*/  
+#define MAXNODES	256
+  
+/* #ifndef HAVE_BOOL */
+/* #define bool int */
+/*   /\* typedef int         	bool; *\/ */
+/* #endif */
+
+
+typedef int     	atom_id;	/* To indicate an atoms id         */
+#define NO_ATID		(atom_id)(~0)	/* Use this to indicate invalid atid */
+
+    /*! \brief Double precision accuracy */
+#define GMX_DOUBLE_EPS   1.11022302E-16
+    
+    /*! \brief Maximum double precision value */
+#define GMX_DOUBLE_MAX   1.79769313E+308
+    
+    /*! \brief Minimum double precision value */
+#define GMX_DOUBLE_MIN   2.22507386E-308
+    
+    /*! \brief Single precision accuracy */
+#define GMX_FLOAT_EPS    5.96046448E-08
+    
+    /*! \brief Maximum single precision value */
+#define GMX_FLOAT_MAX    3.40282347E+38
+    
+    /*! \brief Minimum single precision value */
+#define GMX_FLOAT_MIN    1.17549435E-38
+
+
+
+/* Check whether we already have a real type! */
+typedef xtc_real real;
+#define HAVE_REAL  
+
+#ifdef GMX_DOUBLE
+#define GMX_MPI_REAL    MPI_DOUBLE
+#define GMX_REAL_EPS    GMX_DOUBLE_EPS
+#define GMX_REAL_MIN    GMX_DOUBLE_MIN
+#define GMX_REAL_MAX    GMX_DOUBLE_MAX
+#else  /* GMX_DOUBLE */
+#define GMX_MPI_REAL    MPI_FLOAT
+#define GMX_REAL_EPS    GMX_FLOAT_EPS
+#define GMX_REAL_MIN    GMX_FLOAT_MIN
+#define GMX_REAL_MAX    GMX_FLOAT_MAX
+#endif  /* GMX_DOUBLE */
+
+#ifndef VECTORIZATION_BUFLENGTH
+#define VECTORIZATION_BUFLENGTH 1000
+  /* The total memory size of the vectorization buffers will
+   * be 5*sizeof(real)*VECTORIZATION_BUFLENGTH
+   */
+#endif  
+/* typedef real        	rvec[DIM]; */
+  typedef xtc_rvec        rvec;  
+
+typedef double       	dvec[DIM];
+
+/* typedef real	    	matrix[DIM][DIM]; */
+  typedef xtc_matrix    matrix;
+
+typedef real        	tensor[DIM][DIM];
+
+typedef int             ivec[DIM];
+
+typedef int             imatrix[DIM][DIM];
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
+

@@ -12,6 +12,10 @@
 #include "xtcio.h"
 #endif
 
+#ifdef LIBXTC
+#include "xtc.h"
+#endif
+
 namespace Faunus {
   //--------------------------------
   //!\brief Basic file I/O routines
@@ -173,6 +177,22 @@ namespace Faunus {
       rvec x[3300];
       int xd;
       float box[3][3], time, step;
+    public:
+      ioxtc(container::container &, float);
+      bool save(string, vector<particle> &);
+      void setbox(float);
+      void close();
+  };
+#endif
+#ifdef LIBXTC
+  class ioxtc : public iopart {
+    private:
+      vector<particle> load(string) {}
+      xtc_rvec x[3300];
+      Xtc *xd;
+      xtc_matrix box;
+      xtc_real time;
+      int step;
     public:
       ioxtc(container::container &, float);
       bool save(string, vector<particle> &);

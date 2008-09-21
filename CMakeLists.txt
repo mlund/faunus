@@ -11,13 +11,14 @@ endif(NOT CMAKE_BUILD_TYPE)
 # -----------------
 #   User options
 # -----------------
-option(FAUNUS_OPENMP  "Enable OpenMP parallel execution on multicore CPU's" off)
-option(FAUNUS_PYTHON  "Create python interface" off)
-option(FAUNUS_GROMACS "Enable Gromacs xtc trajectory output" off)
+option(FAUNUS_BABEL   "Try to use OpenBabel for file I/O" on)
+option(FAUNUS_OPENMP  "Try to use OpenMP parallization" off)
+option(FAUNUS_PYTHON  "Try to create a python interface" off)
+option(FAUNUS_GROMACS "Try to enable Gromacs xtc trajectory output" off)
 option(FAUNUS_LIBXTC  "Internal xtc support (experimental!)" off)
-mark_as_advanced(CLEAR CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS_RELEASE )
-mark_as_advanced(EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH
-                 CMAKE_OSX_ARCHITECTURES CMAKE_OSX_SYSROOT)
+mark_as_advanced( CLEAR CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS_RELEASE )
+mark_as_advanced( EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH
+                  CMAKE_OSX_ARCHITECTURES CMAKE_OSX_SYSROOT )
 
 # ----------------------------
 #   Locate external packages
@@ -26,19 +27,11 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
 include(TestCXXAcceptsFlag)
 include(OptimizationFlags)
 find_package(OpenBabel2)
-if(FAUNUS_PYTHON)
-  find_package(Boost COMPONENTS python)
-  find_package(PythonLibs)
-  find_package(PythonInterp)
-  find_package(GCCXML)
-endif(FAUNUS_PYTHON)
-if(FAUNUS_GROMACS)
-  find_package(GMX)
-  if(GMX_MOTIF)
-    find_package(X11)
-    find_package(Motif)
-  endif(GMX_MOTIF)
-endif(FAUNUS_GROMACS)
+find_package(Boost COMPONENTS python)
+find_package(PythonLibs)
+find_package(PythonInterp)
+find_package(GCCXML)
+find_package(GMX)
 
 # ---------------------------
 #   Add source directories

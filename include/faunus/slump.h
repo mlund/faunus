@@ -40,6 +40,8 @@ namespace Faunus {
    * \author Mikael Lund
    * \date Prague, 2008
    * \note Not thread safe
+   * \warning Weird behavior with rotational moves.
+   * \todo Fix weird behavior
    *
    * To enable this random number generator -DTWISTER must be
    * set at compile time.
@@ -52,7 +54,7 @@ namespace Faunus {
       double random_one();
   };
 
-  typedef Faunus::randomTwister slump; // Generator selection!
+  typedef Faunus::randomDefault slump; // Generator selection!
 
 }
 #endif

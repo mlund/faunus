@@ -6,11 +6,11 @@ set(objs inputfile io titrate point physconst slump container
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 #----- link with openbabel ------
-if (FAUNUS_BABEL AND OPENBABEL_FOUND)
+if(FAUNUS_BABEL AND OPENBABEL_FOUND)
   set(objs ${objs} iobabel)
   include_directories(${OPENBABEL_INCLUDE_DIR})
   set(LINKLIBS ${LINKLIBS} ${OPENBABEL_LIBRARIES})
-endif (FAUNUS_BABEL AND OPENBABEL_FOUND)
+endif(FAUNUS_BABEL AND OPENBABEL_FOUND)
 
 #---- link with libxtc -----
 if (FAUNUS_LIBXTC)
@@ -28,21 +28,21 @@ if (FAUNUS_GROMACS AND GMX_FOUND)
 endif (FAUNUS_GROMACS AND GMX_FOUND)
 
 #----- static faunus library -----
-add_library (libfaunus.a STATIC EXCLUDE_FROM_ALL ${objs})
+add_library(libfaunus.a STATIC EXCLUDE_FROM_ALL ${objs})
 set_target_properties(libfaunus.a PROPERTIES OUTPUT_NAME faunus)
 target_link_libraries(libfaunus.a ${LINKLIBS})
 
 #----- dynamic faunus library -----
-add_library (libfaunus SHARED ${objs})
+add_library(libfaunus SHARED ${objs})
 set_target_properties(libfaunus PROPERTIES OUTPUT_NAME faunus)
 target_link_libraries(libfaunus ${LINKLIBS})
 install(TARGETS libfaunus
-  LIBRARY DESTINATION lib)
+        LIBRARY DESTINATION lib)
 
 #----- header install target -----
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/faunus
-  DESTINATION include
-  FILES_MATCHING PATTERN "*.h"
-  PATTERN ".svn" EXCLUDE
-  PATTERN "CMakeFiles" EXCLUDE)
+        DESTINATION include
+        FILES_MATCHING PATTERN "*.h"
+        PATTERN ".svn" EXCLUDE
+        PATTERN "CMakeFiles" EXCLUDE)
 

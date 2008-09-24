@@ -19,8 +19,10 @@ namespace Faunus {
     private:
       xydata<double> pmfd[particle::LAST][particle::LAST];
     public:
+      string pmfdir; //!< Directory containing PMF data
       pot_datapmf(const inputfile &in) : pot_coulomb(in) {
         name+="/Empirical data potential";
+        pmfdir=in.getstr("pmfdir","./");
       }
       double pairpot (const particle &p1, const particle &p2) {
         unsigned short i=p1.id,j=p2.id;
@@ -38,22 +40,38 @@ namespace Faunus {
        * \param pmfdir Directory in which to search for PMF's
        * \param type Particle name to search for. I.e. "NA" or "CL"
        */
-      void pot_datapmf::loadpmf(species &spc, string pmfdir, string type) {
-        string n1,n2;                                                      
-        unsigned short i,j=spc.id(type); 
-        for (i=particle::FIRST; i<particle::LAST; i++) { 
-          n1=spc.d[i].name+"-"+spc.d[j].name;                                      
-          n2=spc.d[j].name+"-"+spc.d[i].name;                                      
-          if (loadpmf( spc, pmfdir + n1 + ".dat")==false)                       
-            loadpmf( spc, pmfdir + n2 + ".dat");                                
-        };                                   
+      void pot_datapmf::loadpmf(const species &spc, particle::type id) {
+        string n1,n2;
+        unsigned short i,j=id;
+        for (i=particle::FIRST; i<particle::LAST; i++) {
+          n1=spc.d[i].name+"-"+spc.d[j].name;
+          n2=spc.d[j].name+"-"+spc.d[i].name;
+          if (loadpmf( spc, n1 + ".dat")==false)
+            loadpmf( spc, n2 + ".dat");
+        }
+      }
+
+      /* Search through particle vector and attempt to load pmf's for all possible
+       * particle combinations.
+       */
+      void pot_datapmf::loadpmf(const container &c) {
+        vector<particle::type> id;
+        for (unsigned short i=0; i<c.p.size(); i++) {
+          vector<particle::type>::iterator iter = std::find(id.begin(), id.end(), c.p[i].id);
+          if (iter==id.end())
+            id.push_back(c.p[i].id);
+        }
+        for (unsigned short i=0; i<id.size(); i++)
+          for (unsigned short j=i; j<id.size(); j++)
+            loadpmf(c, c.d[id[i]].name+"-"+c.d[id[j]].name+".dat"); 
       }
 
       /*! Load PMF(s) from a file. File format: Each set starts
        * with "#$ type1 type2 length". Several sets can be present
        * in the same file.
        */
-      bool loadpmf(species &spc, string filename) {
+      bool pot_datapmf::loadpmf(const species &spc, string filename) {
+        filename=pmfdir+"/"+filename;
         string s,a_str,b_str;
         int a,b,len;
         vector<double> x,y;
@@ -90,7 +108,8 @@ namespace Faunus {
       string info() {
         std::ostringstream o;
         o << pot_lj::info()
-          << "#   Bjerrum length    = " << f << endl;
+          << "#   Bjerrum length    = " << f << endl
+          << "#   PMF directory     = " << pmfdir << endl;
         return o.str();
       }
 

@@ -20,7 +20,7 @@ int main() {
   cell cell(in);                        // We want a spherical cell
   canonical nvt;                        // Use the canonical ensemble
   FAUrdf rdf(particle::NA,particle::CL,.5, 45.);
-  interaction<pot_datapmf> pot(in);     // Energy functions
+  interaction<pot_datapmf> pot(in);     // Pair potential
   widom widom(cell, pot,
       particle::NA, particle::CL);      // Class for Widom particle insertions
   widom.runfraction=0.5;
@@ -28,8 +28,7 @@ int main() {
   salt salt;                            // Define some groups for mobile ions
   salt.add( cell, in );                 // Insert some sodium ions
 
-  pot.pair.loadpmf(cell, "pmf/", "NA"); 
-  pot.pair.loadpmf(cell, "pmf/", "CL"); 
+  pot.pair.loadpmf(cell);               // Load pmf's for the particles in the system
   cout << pot.pair.info(cell);
   systemenergy sys(pot.energy(cell.p)); // Track system energy
 

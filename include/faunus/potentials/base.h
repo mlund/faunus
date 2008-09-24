@@ -69,7 +69,7 @@ namespace Faunus {
       }
       inline double hs(const particle &p1, const particle &p2, const double &r2) const {
         register double s=p1.radius+p2.radius;
-        return (r2>s*s) ? 0 : 99999.;
+        return (r2>s*s) ? 0 : 9999.;
       }
       inline void hs(const particle &p1, const particle &p2, const double &r2, double &u) const {
         u+=hs(p1,p2,r2);

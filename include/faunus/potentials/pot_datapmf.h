@@ -3,6 +3,7 @@
 
 #include "faunus/xydata.h"
 #include "faunus/potentials/base.h"
+#include "faunus/potentials/pot_coulomb.h"
 
 namespace Faunus {
   /*!
@@ -14,59 +15,38 @@ namespace Faunus {
    * the distance between the particles is outside the data range a 
    * simple Coulomb + LJ potential will be applied.
    */
-  class pot_datapmf : public pot_lj {
+  class pot_datapmf : public pot_coulomb {
     private:
       xydata<double> pmfd[particle::LAST][particle::LAST];
     public:
-      pot_datapmf(const inputfile &in) : pot_lj(in) {
-        f=in.getflt("bjerrum",7.1);
-        eps=eps/f;
+      pot_datapmf(const inputfile &in) : pot_coulomb(in) {
         name+="/Empirical data potential";
       }
       double pairpot (const particle &p1, const particle &p2) {
         unsigned short i=p1.id,j=p2.id;
-        if (i>j) std::swap(i,j);
+        if (i>j)
+          std::swap(i,j);
+        if (pmfd[i][j].xmax<0.01)
+          return pot_coulomb::pairpot(p1,p2);
         double r2=p1.sqdist(p2);
-        if (pmfd[i][j].xmax==0) {               // if no data exists:
-          double u,x=p1.charge*p2.charge;       // use Coulomb + lj pot.
-          u=lj(p1,p2,r2);
-          return (x!=0) ? u+x/sqrt(r2) : u; 
-        }; 
-        r2=sqrt(r2);
-        return (r2>pmfd[i][j].xmax) ? 
-          p1.charge*p2.charge/r2 : // use Coulomb pot. outside data 
-          pmfd[i][j].x2y(r2);      // ...else use table. 
+        return ( r2 > pmfd[i][j].xmax * pmfd[i][j].xmax ) ? 
+          pot_coulomb::pairpot(p1,p2) :  // use Coulomb pot. outside data 
+          pmfd[i][j].x2y(sqrt(r2));      // ...else use table. 
       }
 
       /*!\param spc Species class.
-       * \param pmfir Directory in which to search for PMF's
+       * \param pmfdir Directory in which to search for PMF's
        * \param type Particle name to search for. I.e. "NA" or "CL"
        */
-      /*
-         void pot_datapmf::loadpmf(species &spc, string pmfdir, string type) {
-         string n1,n2;                                                      
-         unsigned short i,j=spc.id(type); 
-         for (i=particle::FIRST; i<particle::LAST; i++) { 
-         n1=spc.d[i].name+"-"+spc.d[j].name;                                      
-         n2=spc.d[j].name+"-"+spc.d[i].name;                                      
-         if (loadpmf( spc, pmfdir + n1 + ".dat")==false)                       
-         loadpmf( spc, pmfdir + n2 + ".dat");                                
-         };                                   
-         }
-         */
-
-      // Show table of loaded PMF's
-      void showpmf(species &spc) {
-        std::cout << "# --- LOADED PMF's ----------------------------------\n"; 
-        std::cout << "# (a,b,resolution,r_max,file)\n"; 
-        for (unsigned int i=particle::FIRST; i<particle::LAST; i++)
-          for (unsigned int j=particle::FIRST; j<particle::LAST; j++)
-            if (pmfd[i][j].xmax>0) 
-              std::cout << "# " << spc.d[i].name << " " << spc.d[j].name << " "
-                << pmfd[i][j].res << " "
-                << pmfd[i][j].xmax << " "
-                << pmfd[i][j].comment << endl; 
-        std::cout << endl; 
+      void pot_datapmf::loadpmf(species &spc, string pmfdir, string type) {
+        string n1,n2;                                                      
+        unsigned short i,j=spc.id(type); 
+        for (i=particle::FIRST; i<particle::LAST; i++) { 
+          n1=spc.d[i].name+"-"+spc.d[j].name;                                      
+          n2=spc.d[j].name+"-"+spc.d[i].name;                                      
+          if (loadpmf( spc, pmfdir + n1 + ".dat")==false)                       
+            loadpmf( spc, pmfdir + n2 + ".dat");                                
+        };                                   
       }
 
       /*! Load PMF(s) from a file. File format: Each set starts
@@ -105,6 +85,29 @@ namespace Faunus {
           return true;
         }
         return false;
+      }
+
+      string info() {
+        std::ostringstream o;
+        o << pot_lj::info()
+          << "#   Bjerrum length    = " << f << endl;
+        return o.str();
+      }
+
+      /*! Show info + list of loaded pmf data */
+      string info(species &spc) {
+        std::ostringstream o;
+        o << info()
+          << "#   PMF Info: (a,b,resolution,r_max,file)" << std::endl; 
+        for (unsigned short i=particle::FIRST; i<particle::LAST; i++)
+          for (unsigned short j=particle::FIRST; j<particle::LAST; j++)
+            if (pmfd[i][j].xmax>0) 
+              o << "#     " << spc.d[i].name << " " << spc.d[j].name << " "
+                << pmfd[i][j].res << " "
+                << pmfd[i][j].xmax << " "
+                << pmfd[i][j].comment << endl; 
+        o << endl; 
+        return o.str();
       }
   };
 }

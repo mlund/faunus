@@ -40,7 +40,7 @@ namespace Faunus {
        * \param pmfdir Directory in which to search for PMF's
        * \param type Particle name to search for. I.e. "NA" or "CL"
        */
-      void pot_datapmf::loadpmf(const species &spc, particle::type id) {
+      void loadpmf(const species &spc, particle::type id) {
         string n1,n2;
         unsigned short i,j=id;
         for (i=particle::FIRST; i<particle::LAST; i++) {
@@ -54,7 +54,7 @@ namespace Faunus {
       /* Search through particle vector and attempt to load pmf's for all possible
        * particle combinations.
        */
-      void pot_datapmf::loadpmf(const container &c) {
+      void loadpmf(const container &c) {
         vector<particle::type> id;
         for (unsigned short i=0; i<c.p.size(); i++) {
           vector<particle::type>::iterator iter = std::find(id.begin(), id.end(), c.p[i].id);
@@ -70,7 +70,7 @@ namespace Faunus {
        * with "#$ type1 type2 length". Several sets can be present
        * in the same file.
        */
-      bool pot_datapmf::loadpmf(const species &spc, string filename) {
+      bool loadpmf(const species &spc, string filename) {
         filename=pmfdir+"/"+filename;
         string s,a_str,b_str;
         int a,b,len;

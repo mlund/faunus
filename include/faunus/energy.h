@@ -4,6 +4,7 @@
 #include "faunus/common.h"
 #include "faunus/group.h"
 #include "faunus/inputfile.h"
+#include "faunus/hardsphere.h"
 #include "faunus/potentials/pot_coulomb.h"
 #include "faunus/potentials/pot_minimage.h"
 #include "faunus/potentials/pot_hydrophobic.h"
@@ -11,6 +12,7 @@
 #include "faunus/potentials/pot_debyehuckel.h"
 #include "faunus/potentials/pot_debyehuckelP3.h"
 #include "faunus/potentials/pot_hccoulomb.h"
+#include "faunus/potentials/pot_barecoulomb.h"
 #include "faunus/potentials/pot_netz.h"
 
 namespace Faunus {
@@ -69,11 +71,10 @@ namespace Faunus {
       double energy(const vector<particle> &p, int j) {
         int i,ps=p.size();
         double u=0;
-#pragma omp parallel for reduction (+:u)
+//#pragma omp parallel for reduction (+:u)
         for (i=0; i<j; i++)
           u+=pair.pairpot( p[i],p[j] );
-
-#pragma omp parallel for reduction (+:u)
+//#pragma omp parallel for reduction (+:u)
         for (i=j+1; i<ps; i++)
           u+=pair.pairpot( p[i],p[j] );
         return pair.f*u;
@@ -88,7 +89,7 @@ namespace Faunus {
             u += pair.pairpot(p[i],p[j]);
           for (j=n; j<psize; j++)
             u += pair.pairpot(p[i],p[j]);
-        };
+        }
         return pair.f*u;
       }
 
@@ -190,6 +191,7 @@ namespace Faunus {
 
       /*! \note If the charge of the j'th particle is 0, ZERO will be returned!
        *  \return \f$ \phi_j = \sum_{i\neq j}^{N} \frac{l_B z_i}{r_{ij}} \f$
+       *  \param p Particle vector
        *  \param j The electric potential will be calculated in the point of this particle
        *  \warning Uses simple particle->dist() function!
        *  \todo Respect cell boundaries
@@ -275,5 +277,41 @@ namespace Faunus {
     return interaction<T>::pair.f *
       (u + interaction<T>::pair.hypairpot( p[i], p[hymin], sqrt(dmin) ) );
   }
+
+
+
+  /*!
+   * \brief Hardsphere check, then normal potential function
+   * \author Mikael Lund
+   * \date Prague 2008
+   * \todo Add overlap check in the system energy function.
+   * \warning Untested!
+   *
+   * This interaction class first check for hardsphere overlap
+   * and - if none found - proceeds with normal energy summation
+   * according the specified pair potential.
+   */
+  template<class T>
+    class interaction_hs : public interaction<T>, private hardsphere {
+      private:
+        double infty;
+      public:
+        interaction_hs(const inputfile &in) : interaction<T>(in) { infty=1000.; }
+        double energy(const particle &a, const particle &b) {
+          return (a.overlap(b)==true) ? infty  : interaction<T>::energy(a,b);
+        }
+        double energy(const vector<particle> &p) {
+          return interaction<T>::energy(p);
+        }
+        double energy(const vector<particle> &p, int i) {
+          return (overlap(p,i)==true) ? infty : interaction<T>::energy(p,i);
+        }
+        double energy(const vector<particle> &p, const particle &a) {
+          return (overlap(p,a)==true) ? infty : interaction<T>::energy(p,a);
+        }
+        double energy(const vector<particle> &p, const group &g) {
+          return (overlap(p,g)==true) ? infty : interaction<T>::energy(p,g);
+        }
+    };
 }
 #endif

@@ -15,6 +15,7 @@ using namespace std;
 using namespace Faunus;                 // Access to Faunus classes
 
 int main() {
+  slump slump;
   inputfile in("widom.conf");           // Read input file
   mcloop loop(in);                      // Set Markov chain loop lengths
   cell cell(in);                        // We want a spherical cell
@@ -23,7 +24,6 @@ int main() {
   interaction<pot_datapmf> pot(in);     // Pair potential
   widom widom(cell, pot,
       particle::NA, particle::CL);      // Class for Widom particle insertions
-  widom.runfraction=0.5;
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   salt salt;                            // Define some groups for mobile ions
   salt.add( cell, in );                 // Insert some sodium ions
@@ -36,7 +36,8 @@ int main() {
     while ( loop.microCnt() ) {
       sys+=sm.move(salt);               // Displace salt particles
       widom.insert(10);                 // Widom particle insertion analysis
-      rdf.update(cell);                 // Update g-of-r
+      if (slump.random_one()>0.9)
+        rdf.update(cell);               // Update g-of-r
     }                                   // END of micro loop
     sys.update(pot.energy(cell.p));     // Update system energy
     cout << loop.timing();              // Show progres;s

@@ -9,14 +9,14 @@ namespace Faunus {
    */
   class hardsphere {
     public:
-      bool overlap(vector<particle> &, int);                ///< all<->particle i.
-      bool overlap(vector<particle> &, particle &);         ///< all<->arbitrary (external) particle.
-      bool overlap(vector<particle> &, group &);            ///< all<->group.
-      bool overlap(vector<particle> &, group &, int);       ///< group<->particle i.
-      bool overlap(vector<particle> &, group &, particle &);///< group<>arbitrary (external) particle
-      bool overlap(vector<particle> &, group &, group &);   ///< group<->group.
-      bool overlap(vector<particle> &, group::group &, group::group &, double &);   ///< group<->group.
-      bool overlap(vector<particle> &, vector<short int> &, double);      ///< internal collisions within subset
+      bool overlap(const vector<particle> &, int);                            ///< all<->particle i.
+      bool overlap(const vector<particle> &, const particle &);               ///< all<->arbitrary (external) particle.
+      bool overlap(const vector<particle> &, const group &);                  ///< all<->group.
+      bool overlap(const vector<particle> &, const group &, int);             ///< group<->particle i.
+      bool overlap(const vector<particle> &, const group &, const particle &);///< group<>arbitrary (external) particle
+      bool overlap(const vector<particle> &, const group &, const group &);   ///< group<->group.
+      bool overlap(const vector<particle> &, const group &, const group &, double &); ///< group<->group.
+      bool overlap(vector<particle> &, vector<short int> &, double);          ///< internal collisions within subset
   };
 }
 #endif

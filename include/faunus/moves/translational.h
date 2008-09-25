@@ -354,7 +354,7 @@ namespace Faunus {
     runfraction=0.5;
   }
 
-  /*! \param group Group containing mobile ions
+  /*! \param g Group containing mobile ions
   */
   double saltmove::move(group &g) {
     du=0;

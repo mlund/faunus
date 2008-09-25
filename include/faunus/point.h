@@ -63,8 +63,8 @@ namespace Faunus {
       float mw;                              //!< Molecular weight
       type id;                               //!< Particle identifier
       bool hydrophobic;                      //!< Hydrophobic flag
-      inline bool overlap(const particle &); //!< Hardsphere overlap test
-      inline bool overlap(const particle &, double &);
+      inline bool overlap(const particle &) const; //!< Hardsphere overlap test
+      inline bool overlap(const particle &, double &) const;
       inline double potential(const point &);   //!< Electric potential in point
       double volume();                          //!< Return volume of sphere
       double mw2vol(double=1);                  //!< Estimate volume from weight
@@ -158,11 +158,11 @@ namespace Faunus {
   /*!
    * \return True if \f$ r_{12}<(\sigma_1+\sigma_2)/2 \f$ - otherwise false.
    */
-  inline bool particle::overlap(const particle &p) {
+  inline bool particle::overlap(const particle &p) const {
     double r=radius+p.radius;
     return (sqdist(p) < r*r) ? true : false;
   }
-  inline bool particle::overlap(const particle &p, double &s) {
+  inline bool particle::overlap(const particle &p, double &s) const {
     double r=radius+p.radius+s;
     return (sqdist(p) < r*r) ? true : false;
   }

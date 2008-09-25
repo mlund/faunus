@@ -2,7 +2,7 @@
 
 namespace Faunus {
 
-  bool hardsphere::overlap(vector<particle> &p, int j) {
+  bool hardsphere::overlap(const vector<particle> &p, int j) {
     int ps=p.size();
     for (int i=0; i<j; i++)
       if (p[i].overlap(p[j])==true) return true;
@@ -11,7 +11,14 @@ namespace Faunus {
     return false;
   }
 
-  bool hardsphere::overlap(vector<particle> &p, group &g) {
+  bool hardsphere::overlap(const vector<particle> &p, const particle &a) {
+    int i,n=p.size();
+    for (i=0; i<n; i++)
+      if (p[i].overlap(a)==true) return true;
+    return false;
+  }
+
+  bool hardsphere::overlap(const vector<particle> &p, const group &g) {
     short int n=g.beg, psize=p.size();
     for (short int i=0; i<n; i++)
       if (overlap(p, g, i)==true) return true;
@@ -20,7 +27,7 @@ namespace Faunus {
     return false;
   }
 
-  bool hardsphere::overlap(vector<particle> &p, group &g, int j) {
+  bool hardsphere::overlap(const vector<particle> &p, const group &g, int j) {
     if (g.beg==-1) return false;
     if (g.cm.radius>0)
       if ( abs(g.cm.dist(p[j])) > g.cm.radius+p[j].radius)
@@ -40,7 +47,7 @@ namespace Faunus {
     return false;
   }
 
-  bool hardsphere::overlap(vector<particle> &p, group &g, particle &a) {
+  bool hardsphere::overlap(const vector<particle> &p, const group &g, const particle &a) {
     int len=g.end+1;
     if (g.beg!=-1)
       for (int i=g.beg; i<len; i++)
@@ -49,7 +56,7 @@ namespace Faunus {
     return false;
   }
 
-  bool hardsphere::overlap(vector<particle> &p, group &g1, group &g2) {
+  bool hardsphere::overlap(const vector<particle> &p, const group &g1, const group &g2) {
     if (g1.beg==-1 || g2.beg==-1) return false;
     if (g1.cm.radius!=0 && g2.cm.radius!=0)
       if (abs(g1.cm.dist(g2.cm)) > g1.cm.radius+g2.cm.radius)
@@ -63,7 +70,7 @@ namespace Faunus {
     }
     return false;
   }
-  bool hardsphere::overlap(vector<particle> &p, group &g1, group &g2, double &s) {
+  bool hardsphere::overlap(const vector<particle> &p, const group &g1, const group &g2, double &s) {
     if (g1.beg==-1 || g2.beg==-1) return false;
     if (g1.cm.radius!=0 && g2.cm.radius!=0)
       if (abs(g1.cm.dist(g2.cm)) > g1.cm.radius+g2.cm.radius)

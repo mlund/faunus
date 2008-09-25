@@ -28,12 +28,12 @@ else (GMX_INCLUDE_DIR)
 
   find_path( GMX_INCLUDE_DIR xtcio.h
     HINTS "$ENV{GMXLDLIB}/../" /opt/local /usr/local /sw /usr
-    PATH_SUFFIXES include/gromacs )
+    PATH_SUFFIXES include/gromacs gromacs/include )
 
-  set(GMX_NAMES gmx)
+  set(GMX_NAMES gmx gmx_d gmx_mpi)
   find_library( GMX_LIBRARIES NAMES ${GMX_NAMES}
     HINTS "$ENV{GMXLDLIB}/../" /opt/local /usr/local /sw /usr
-    PATH_SUFFIXES lib lib64 )
+    PATH_SUFFIXES lib lib64 gromacs/lib )
 
   # Does libgmx need X11 and Motif?
   if(GMX_INCLUDE_DIR AND GMX_LIBRARIES)

@@ -106,6 +106,7 @@ namespace Faunus {
         pot=&i;
         a=con->get(t1);
         b=con->get(t2);
+        runfraction=0.1;
       }
       string info();                              //!< Print results of analysis
       double muex() { return -log(expsum.avg()); }//!< Excess chemical potential

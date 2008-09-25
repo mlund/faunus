@@ -48,6 +48,7 @@ also in a Cygwin environment. Detailed instructions can be found \ref readme "he
 \li Mikael Lund (<A HREF="http://web.mac.com/mlund"><B>homepage</B></A>)
 \li Bjorn Persson
 \li Martin Trulsson
+\li Ondrej Marsalek
 \li Thanks to all the authors of the open source technologies that Faunus relies on!
 
 \subsection guide Guidelines for Submitting Code

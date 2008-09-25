@@ -3,7 +3,7 @@
 
 #include "faunus/xydata.h"
 #include "faunus/potentials/base.h"
-#include "faunus/potentials/pot_coulomb.h"
+#include "faunus/potentials/pot_hccoulomb.h"
 
 namespace Faunus {
   /*!
@@ -13,14 +13,14 @@ namespace Faunus {
    *
    * Class to load potential of mean force (PMF) data from file(s). If
    * the distance between the particles is outside the data range a 
-   * simple Coulomb + LJ potential will be applied.
+   * simple Coulomb/Hardsphere potential will be applied.
    */
-  class pot_datapmf : public pot_coulomb {
+  class pot_datapmf : public pot_hscoulomb {
     private:
       xydata<double> pmfd[particle::LAST][particle::LAST];
     public:
       string pmfdir; //!< Directory containing PMF data
-      pot_datapmf(const inputfile &in) : pot_coulomb(in) {
+      pot_datapmf(const inputfile &in) : pot_hscoulomb(in) {
         name+="/Empirical data potential";
         pmfdir=in.getstr("pmfdir","./");
       }
@@ -29,16 +29,15 @@ namespace Faunus {
         if (i>j)
           std::swap(i,j);
         if (pmfd[i][j].xmax<0.01)
-          return pot_coulomb::pairpot(p1,p2);
+          return pot_hscoulomb::pairpot(p1,p2);
         double r2=p1.sqdist(p2);
-        return ( r2 > pmfd[i][j].xmax * pmfd[i][j].xmax ) ? 
-          pot_coulomb::pairpot(p1,p2) :  // use Coulomb pot. outside data 
-          pmfd[i][j].x2y(sqrt(r2));      // ...else use table. 
+        return ( r2 > pmfd[i][j].xmax * pmfd[i][j].xmax ) ?
+          pot_hscoulomb::pairpot(p1,p2) :  // use Coulomb pot. outside data
+          pmfd[i][j].x2y(sqrt(r2));        // ...else use table.
       }
 
       /*!\param spc Species class.
-       * \param pmfdir Directory in which to search for PMF's
-       * \param type Particle name to search for. I.e. "NA" or "CL"
+       * \param id particle type to search for.
        */
       void loadpmf(const species &spc, particle::type id) {
         string n1,n2;
@@ -92,13 +91,13 @@ namespace Faunus {
               for (int i=0; i<len; i++) {
                 fh >> x[i] >> y[i];
                 y[i]=y[i]/f; // unit: kT/f
-              };
+              }
               if (pmfd[a][b].xmax==0) {
                 pmfd[a][b].add( x, y );
                 pmfd[a][b].comment=filename;
-              };
-            };
-          };
+              }
+            }
+          }
           fh.close();
           return true;
         }
@@ -107,8 +106,7 @@ namespace Faunus {
 
       string info() {
         std::ostringstream o;
-        o << pot_lj::info()
-          << "#   Bjerrum length    = " << f << endl
+        o << pot_hscoulomb::info()
           << "#   PMF directory     = " << pmfdir << endl;
         return o.str();
       }

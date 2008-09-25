@@ -4,7 +4,7 @@ if(DOXYGEN_FOUND AND DOXYGEN_DOT_EXECUTABLE)
     COMMAND ${DOXYGEN_EXECUTABLE} doc/Doxyfile
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} ) 
   add_custom_target(manualul
-    COMMAND scp -rC doc/html/* mikaellund@shell.sourceforge.net:/home/groups/f/fa/faunus/htdocs/
+    COMMAND scp -rC doc/html/* mikaellund,faunus@web.sourceforge.net:htdocs
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} ) 
   add_custom_target(docclean
     COMMAND rm -fR doc/html doc/latex 

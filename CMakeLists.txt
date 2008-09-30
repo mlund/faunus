@@ -37,7 +37,6 @@ find_package(GMX)
 #   Add source directories
 # ---------------------------
 add_subdirectory(src)
-add_subdirectory(src/examples)
 add_subdirectory(legacy/fortran)
 add_subdirectory(doc EXCLUDE_FROM_ALL)
 if(FAUNUS_PYTHON)

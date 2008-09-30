@@ -9,7 +9,12 @@
  * \include twobody.cpp
  */
 
+
 #include "faunus/faunus.h"
+
+#ifdef LIBXTC
+#define GROMACS
+#endif
 
 using namespace Faunus;
 using namespace std;

@@ -46,3 +46,6 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/faunus
         PATTERN ".svn" EXCLUDE
         PATTERN "CMakeFiles" EXCLUDE)
 
+#----- Add example programs -----
+add_subdirectory(examples)
+

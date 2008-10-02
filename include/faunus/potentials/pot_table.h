@@ -51,9 +51,7 @@ namespace Faunus {
           std::swap(i,j);
         if (pmf[i][j].xmax()<0.01)
           return pot_hscoulomb::pairpot(p1,p2);
-        double r2=p1.sqdist(p2), xmax=pmf[i][j].xmax();
-        std::cout << xmax << " ";
-        //xmax=25;
+        double r2=p1.sqdist(p2), xmax=pmf[i][j].xmax()-0.5;
         return ( r2 > xmax*xmax ) ?
           pot_hscoulomb::pairpot(p1,p2) :  // use Coulomb pot. outside data
           pmf[i][j]( sqrt(r2) );           // ...else use table.

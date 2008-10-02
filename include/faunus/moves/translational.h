@@ -340,17 +340,28 @@ namespace Faunus {
    *  \author Mikael Lund
    */
   class saltmove : public markovmove {
+    private:
+      void init();
     public:
       saltmove( ensemble &, container&, energybase& );
-      double move(group &, int);  //!< Move a single particle
-      double move(group &);         //!< Loop over group particles (randomly)
+      saltmove( ensemble &, container&, energybase&, inputfile &);
+      double move(group &, int);      //!< Move a single particle
+      double move(group &);           //!< Loop over group particles (randomly)
   };
 
   saltmove::saltmove(
-      ensemble &e, container &c, energybase &i ) : markovmove(e,c,i) {
+      ensemble &e, container &c, energybase &i ) : markovmove(e,c,i) { init(); }
+
+  saltmove::saltmove(
+      ensemble &e, container &c, energybase &i, inputfile &in ) : markovmove(e,c,i) {
+    init();
+    dp=in.getflt("dp_salt", 30.);
+  }
+
+  void saltmove::init() {
+    name="SALT DISPLACEMENTS";
     dp=30;
     deltadp=2;
-    name="SALT DISPLACEMENTS";
     runfraction=0.5;
   }
 

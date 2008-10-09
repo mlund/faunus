@@ -113,14 +113,31 @@ namespace Faunus {
     hydrophobic=false;
     id=GHOST;
   }
-  void particle::operator=(point p) {
+
+  point& particle::operator=(const point& p) {
     x=p.x;
     y=p.y;
     z=p.z;
+
+    return *this;  // return a reference to myself
   }
-  double particle::volume() { return 4.18879*radius*radius*radius; }
-  double particle::mw2vol(double rho) { return 1.6606*rho*mw; }
-  double particle::mw2rad(double rho) { return pow( 3.*mw2vol(rho)/4./3.14, 0.3333 ); }
+
+  bool particle::operator==(const particle& p) const {
+    return (*this == p);
+  }
+
+  double particle::volume() const {
+    return (4./3.)*M_PI*radius*radius*radius;
+  }
+
+  double particle::mw2vol(double rho) const {
+    return 1.6606*rho*mw;
+  }
+
+  double particle::mw2rad(double rho) const {
+    return pow( mw2vol(rho)*3./4./M_PI, (1/3.) );
+  }
+
   std::ostream &operator<<(std::ostream &out, point &p) {
     out << p.str();
     return out;

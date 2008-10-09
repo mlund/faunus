@@ -23,7 +23,7 @@ namespace Faunus {
       inline double sqdist(const point &,             //!< -- / / -- 3D minimum image
           const double &, const double &) const;
       inline double dist(const point &) const;        ///< Distance to another point
-      inline double dist(const point &, double &, double &) const ; //!< Distance to another point
+      inline double dist(const point &, const double &, const double &) const ; //!< Distance to another point
       void ranunit(random &);             ///< Generate a random unit vector
       double dot(point &);                ///< Angle with another point
       point operator-();                  ///< Sign reversal
@@ -64,12 +64,13 @@ namespace Faunus {
       type id;                               //!< Particle identifier
       bool hydrophobic;                      //!< Hydrophobic flag
       inline bool overlap(const particle &) const; //!< Hardsphere overlap test
-      inline bool overlap(const particle &, double &) const;
+      inline bool overlap(const particle &, const double &) const;
       inline double potential(const point &);   //!< Electric potential in point
-      double volume();                          //!< Return volume of sphere
-      double mw2vol(double=1);                  //!< Estimate volume from weight
-      double mw2rad(double=1);                  //!< Estimate radius from weight
-      void operator=(point);                    //!< Copy coordinates from a point
+      double volume() const;                    //!< Return volume of sphere
+      double mw2vol(double=1) const;            //!< Estimate volume from weight
+      double mw2rad(double=1) const;            //!< Estimate radius from weight
+      point& operator=(const point&);           //!< Copy coordinates from a point
+      bool operator==(const particle&) const;
   };
 
   /*! \brief Class for spherical coordinates
@@ -146,7 +147,7 @@ namespace Faunus {
     return sqdf_(&dx, &dy, &dz, &len, &inv_len);
     }*/
   inline double point::dist(const point &p) const { return sqrt(sqdist(p)); }
-  inline double point::dist(const point &p, double &len, double &inv_len) const { 
+  inline double point::dist(const point &p, const double &len, const double &inv_len) const { 
     return sqrt(sqdist(p, len, inv_len)); }
 
   /*!
@@ -162,7 +163,7 @@ namespace Faunus {
     double r=radius+p.radius;
     return (sqdist(p) < r*r) ? true : false;
   }
-  inline bool particle::overlap(const particle &p, double &s) const {
+  inline bool particle::overlap(const particle &p, const double &s) const {
     double r=radius+p.radius+s;
     return (sqdist(p) < r*r) ? true : false;
   }

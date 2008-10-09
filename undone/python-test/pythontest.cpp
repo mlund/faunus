@@ -6,26 +6,19 @@
  * particle insertion method.
  * Note: No equilibration run is incorporated.
  */
-#include "faunus/io.h"
-#include "faunus/analysis.h"
-#include "faunus/container.h"
-#include "faunus/potentials.h"
-namespace Faunus {
-  typedef pot_coulomb T_pairpot;       // Specify pair potential
-}
-#include "faunus/markovmove.h"
-#include "faunus/matubayashi.h"
+#include "faunus/faunus.h"
+#include "faunus/potentials/pot_coulomb.h"
 
 using namespace std;
 using namespace Faunus;                 // Access to Faunus classes
 
 int main() {
-  box cell(90.);                        // We want a cubic cell
+  inputfile in("pythontest.conf");      // Read input file (not complete at this moment)
+  box cell(in);                         // We want a cubic cell
   canonical nvt;                        // Use the canonical ensemble
-  pot_setup cfg;                        // Setup pair potential - default values
-  interaction<T_pairpot> pot(cfg);      // Energy functions
+  interaction<pot_coulomb> pot(in);     // Energy functions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
-  widom<T_pairpot> widom(cell, pot,
+  widom widom(cell, pot,
       particle::NA, particle::CL);      // Class for Widom particle insertions
   group salt;
   salt.add( cell, particle::NA, 60 );   // Insert some sodium ions

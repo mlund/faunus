@@ -81,13 +81,13 @@ namespace Faunus {
       }
 
       double energy(const vector<particle> &p, const group &g) {
-        int i,j,n=g.end+1, psize=p.size();
+        int n=g.end+1, psize=p.size();
         double u=0;
 #pragma omp parallel for reduction (+:u)
-        for (i=g.beg; i<n; i++) {
-          for (j=0; j<g.beg; j++)
+        for (int i=g.beg; i<n; i++) {
+          for (int j=0; j<g.beg; j++)
             u += pair.pairpot(p[i],p[j]);
-          for (j=n; j<psize; j++)
+          for (int j=n; j<psize; j++)
             u += pair.pairpot(p[i],p[j]);
         }
         return pair.f*u;
@@ -143,10 +143,10 @@ namespace Faunus {
 
       double energy(const vector<particle> &p, const group &g1, const group &g2) {
         double u=0;
-        int i,j,ilen=g1.end+1, jlen=g2.end+1;
+        int ilen=g1.end+1, jlen=g2.end+1;
 #pragma omp parallel for reduction (+:u)
-        for (i=g1.beg; i<ilen; i++)
-          for (j=g2.beg; j<jlen; j++)
+        for (int i=g1.beg; i<ilen; i++)
+          for (int j=g2.beg; j<jlen; j++)
             u += pair.pairpot(p[i],p[j]);
         return pair.f*u;
       }

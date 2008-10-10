@@ -55,6 +55,7 @@ namespace Faunus {
     set(particle::BR,  "BR",  1.9, -1,  0.0, false);
     set(particle::I,   "I",   2.0, -1,  0.0, false);
     set(particle::SO4, "SO4", 1.6, -2,  0.0, false);
+    set(particle::LA,  "LA",  2.0, +3,  0.0, false);
     set(particle::GHOST,"GHOST",0,  0,  0.0, false);
     set(particle::HYDROPHOBIC,"HYDR",3.5,0,0, true);
   }

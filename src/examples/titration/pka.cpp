@@ -31,7 +31,8 @@ int main(int argc, char* argv[]) {
   salt.add( con, in );                 //   Insert sodium ions
   saltmove sm(nvt, con, pot);          // Class for salt movements
   aam.load(con, "confout.aam");        // Load old config (if present)
-  chargereg tit(nvt,con,pot,salt,7.6); // Prepare titration. pH 7.6
+  chargereg tit(nvt,con,pot,salt,
+      in.getflt("pH",7.0));            // Prepare titration. pH 7.6
   systemenergy sys(pot.energy(con.p)); // System energy analysis
   cout << con.info() << tit.info()     // Some information
        << pot.info();

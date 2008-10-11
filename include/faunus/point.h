@@ -24,15 +24,16 @@ namespace Faunus {
           const double &, const double &) const;
       inline double dist(const point &) const;        ///< Distance to another point
       inline double dist(const point &, const double &, const double &) const ; //!< Distance to another point
-      void ranunit(random &);             ///< Generate a random unit vector
-      double dot(point &);                ///< Angle with another point
-      point operator-();                  ///< Sign reversal
-      point operator*(const point);       ///< Multiply two vectors
-      point operator*(double) const;            ///< Scale vector
-      point operator+(const point);             ///< Add two vectors
-      point operator-(const point) const;             ///< Substract vector
-      point operator+(double);            ///< Displace x,y,z by value
+      void ranunit(random &);               ///< Generate a random unit vector
+      double dot(point &);                  ///< Angle with another point
+      point operator-();                    ///< Sign reversal
+      point operator*(const point);         ///< Multiply two vectors
+      point operator*(double) const;        ///< Scale vector
+      point operator+(const point);         ///< Add two vectors
+      point operator-(const point) const;   ///< Substract vector
+      point operator+(double);              ///< Displace x,y,z by value
       void operator+=(const point);
+      bool operator==(const point&) const;
       friend std::ostream &operator<<(std::ostream &, point &); /// Print x,y,z
       std::string str();
   };
@@ -77,7 +78,7 @@ namespace Faunus {
    *  \author Mikael Lund
    *  \date Canberra, 2005-2006
    */
-  class spherical : private slump {
+  class spherical : public slump {
     public:
       double r,     //!< Radial
              theta, //!< Zenith angle \f$[0:\pi]\f$

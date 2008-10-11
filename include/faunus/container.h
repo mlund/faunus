@@ -16,13 +16,13 @@ namespace Faunus {
       double volume;                          //!< Volume of the container [AA^3]
     public:
       double getvolume() {return volume;}
-      virtual void setvolume(double){}        //!< Specify new volume
-      virtual bool collision(const point &)=0;//!< Check for collision with walls
-      virtual void randompos(point &)=0;      //!< Random point within container
-      virtual string info();                  //!< Return info string
-      virtual string povray();                //!< POVRAY object representing the cell
-      virtual void boundary(point &){};       //!< Apply boundary conditions to a point
-      virtual void scale(point&, double&){}   //!< Scale point to a new box length
+      virtual void setvolume(double){}                    //!< Specify new volume
+      virtual bool collision(const point &)=0;            //!< Check for collision with walls
+      virtual void randompos(point &)=0;                  //!< Random point within container
+      virtual string info();                              //!< Return info string
+      virtual string povray();                            //!< POVRAY object representing the cell
+      virtual void boundary(point &){};                   //!< Apply boundary conditions to a point
+      virtual void scale(point&, const double&) const {}  //!< Scale point to a new box length
       inline virtual double sqdist(const point &a, const point &b) { 
         return a.sqdist(b); }
       inline virtual double dist(const point &a,const point &b) {//!< Calculate distance between points
@@ -87,7 +87,7 @@ namespace Faunus {
         a.y=a.y-len*anint(a.y*len_inv);
         a.z=a.z-len*anint(a.z*len_inv);
       }
-      inline void scale(point &a, double &newlen) { a*(newlen/len); }
+      inline void scale(point &a, const double &newlen) const { a = a*(newlen/len); }
   };
 
   //---------------------------------------------------------

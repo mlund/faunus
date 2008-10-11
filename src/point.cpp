@@ -83,6 +83,10 @@ namespace Faunus {
     return o;
   }
 
+  bool point::operator==(const point& p) const {
+    return (*this == p);
+  }
+
   string point::str() {
     std::stringstream s;
     s.setf(std::ios::fixed);

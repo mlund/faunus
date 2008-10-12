@@ -35,8 +35,9 @@ namespace Faunus {
       point masscenter(const vector<particle> &); //!< Calculate center-of-mass
       point masscenter(container &);        //!< Calc. center-of-mass
       virtual string info();                //!< Print information
-      void operator+=(group);
-      group operator+(group);
+      group& operator+=(const group&);
+      const group operator+(const group&) const;
+      bool operator==(const group&) const;
 
       void move(container &, point);                      //!< Translate group
       bool overlap(container &);                          //!< Test overlap w all particles
@@ -88,7 +89,7 @@ namespace Faunus {
       void rotate(container &, point, point, double); //!< Rotate around arbitrary point
       using group::add;
       void add(container &, inputfile &);      //!< Add according to inputfile
-      void operator=(group);                   //!< Copy from group
+      macromolecule& operator=(const group&);  //!< Copy from group
       virtual void isobaricmove(container &,double);//!< Displace CM with scale difference
       virtual unsigned short nummolecules();
   };

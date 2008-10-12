@@ -118,16 +118,12 @@ namespace Faunus {
     id=GHOST;
   }
 
-  point& particle::operator=(const point& p) {
+  particle& particle::operator=(const point& p) {
     x=p.x;
     y=p.y;
     z=p.z;
 
     return *this;  // return a reference to myself
-  }
-
-  bool particle::operator==(const particle& p) const {
-    return (*this == p);
   }
 
   double particle::volume() const {

@@ -67,7 +67,7 @@ namespace Faunus {
       box(const inputfile &);
       string info();
       void randompos(point &);
-      void randompos(vector<point> &);
+      //void randompos(vector<point> &);   // not implemented
       point randompos();
       bool collision(const point &a) {
         if (abs(a.x)>len_half ||

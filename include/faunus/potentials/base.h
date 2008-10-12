@@ -32,7 +32,7 @@ namespace Faunus {
        *           \f[ \beta u_{lj} = \epsilon_{lj} \left ( \frac{\sigma}{r^{12}} - \frac{\sigma}{r^6} \right ) \f]
        *           \f[ \sigma = \frac{\sigma_1+\sigma_2}{2}\f]
        */
-      inline double lj(const particle &p1, const particle &p2, double &r2) const {
+      inline double lj(const particle &p1, const particle &p2, const double &r2) const {
         register double x=p1.radius+p2.radius,u=x*x/r2;
         x=u*u*u;
         return (x*x-x)*eps;

@@ -70,8 +70,7 @@ namespace Faunus {
       double volume() const;                    //!< Return volume of sphere
       double mw2vol(double=1) const;            //!< Estimate volume from weight
       double mw2rad(double=1) const;            //!< Estimate radius from weight
-      point& operator=(const point&);           //!< Copy coordinates from a point
-      bool operator==(const particle&) const;
+      particle& operator=(const point&);           //!< Copy coordinates from a point
   };
 
   /*! \brief Class for spherical coordinates

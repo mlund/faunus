@@ -26,15 +26,19 @@ namespace Faunus {
     return z;
   }
 
-  void group::operator+=(group g) {
+  group& group::operator+=(const group& g) {
     if (g.beg==-1 && g.end==-1)   // if added group is empty
-      return;
+      return (*this);
     if (beg==-1 && end==-1)       // if this is empty
       beg=g.beg;
     end=g.end;
+    return (*this);
   }
 
-  group group::operator+(group g) {
+  const group group::operator+(const group& g) const {
+    // TODO: this should probably be done using operator += like this:
+    // return group(*this) += g;
+    // (move extra functionality to +=)
     group o;
     if (beg<g.beg) {
       o.beg=beg;
@@ -47,6 +51,11 @@ namespace Faunus {
     if (o.size()!=this->size()+g.size())
       std::cout << "# Warning: Added groups are not continous!\n";
     return o;
+  }
+
+  bool group::operator==(const group& g) const {
+    // TODO: perhaps there could even be a real comparison (?)
+    return (*this == g);
   }
 
   short int group::random() { return beg + rand() % size(); }
@@ -295,12 +304,13 @@ namespace Faunus {
     return o.str();
   }
   unsigned short macromolecule::nummolecules() { return 1; }
-  void macromolecule::operator=(group g) {
+  macromolecule& macromolecule::operator=(const group& g) {
     beg=g.beg;
     end=g.end;
     name=g.name;
     cm=g.cm;
     cm_trial=g.cm_trial;
+    return (*this);
   }
   /*!
    * Recalulates the dipole moment of a

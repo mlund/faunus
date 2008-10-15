@@ -23,6 +23,7 @@ namespace Faunus {
       particle::type id(string) const;    //!< Transform name to particle
       particle get(particle::type) const; //!< Get particle from id
       particle get(string) const;         //!< Get particle from string (name)
+      string particleinfo(particle::type) const;  //!< Show particle info
   };
 }
 #endif

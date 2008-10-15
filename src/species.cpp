@@ -59,4 +59,12 @@ namespace Faunus {
     set(particle::GHOST,"GHOST",0,  0,  0.0, false);
     set(particle::HYDROPHOBIC,"HYDR",3.5,0,0, true);
   }
+
+  string species::particleinfo(particle::type id) const {
+    std::ostringstream o;
+    o << "# Particle specs (name,z,r,pka): "
+      << d[id].name << " " << d[id].p.charge << " " << d[id].p.radius
+      << " " << d[id].pka << std::endl;
+    return o.str();
+  }
 }

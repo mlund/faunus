@@ -7,6 +7,7 @@
 #include "faunus/hardsphere.h"
 #include "faunus/potentials/pot_coulomb.h"
 #include "faunus/potentials/pot_minimage.h"
+#include "faunus/potentials/pot_hsminimage.h"
 #include "faunus/potentials/pot_hydrophobic.h"
 #include "faunus/potentials/pot_datapmf.h"
 #include "faunus/potentials/pot_debyehuckel.h"

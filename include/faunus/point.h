@@ -12,7 +12,7 @@ namespace Faunus {
    */
   class point {
     private:
-      inline int anint(double);
+      inline int anint(double) const;
     public:
       double x,y,z;                       ///< The coordinates
       point();                            ///< Constructor, zero data.
@@ -66,6 +66,7 @@ namespace Faunus {
       bool hydrophobic;                      //!< Hydrophobic flag
       inline bool overlap(const particle &) const; //!< Hardsphere overlap test
       inline bool overlap(const particle &, const double &) const;
+      inline bool overlap(const particle &, const double &, const double &) const;
       inline double potential(const point &);   //!< Electric potential in point
       double volume() const;                    //!< Return volume of sphere
       double mw2vol(double=1) const;            //!< Estimate volume from weight
@@ -121,23 +122,24 @@ namespace Faunus {
   }
 
   //!\note <cmath> has a round() function -- speed?
-  inline int point::anint(double a) { return int(a>0 ? a+.5 : a-.5); }
+  inline int point::anint(double a) const { return int(a>0 ? a+.5 : a-.5); }
   inline double point::sqdist(const point &p, const double &len, const double &inv_len) const {
     register double dx,dy,dz;
-    /*  dx=x-p.x;
-        dy=y-p.y;
-        dz=z-p.z;
-        dx=dx-len*anint(dx*inv_len);
-        dy=dy-len*anint(dy*inv_len);
-        dz=dz-len*anint(dz*inv_len);
-        return dx*dx + dy*dy + dz*dz;*/
-    dx=abs(x-p.x);
-    dy=abs(y-p.y);
-    dz=abs(z-p.z);
-    if (dx>len*0.5) dx-=len;
-    if (dy>len*0.5) dy-=len;
-    if (dz>len*0.5) dz-=len;
+    dx=x-p.x;
+    dy=y-p.y;
+    dz=z-p.z;
+    dx=dx-len*anint(dx*inv_len);
+    dy=dy-len*anint(dy*inv_len);
+    dz=dz-len*anint(dz*inv_len);
     return dx*dx + dy*dy + dz*dz;
+    /*
+       dx=abs(x-p.x);
+       dy=abs(y-p.y);
+       dz=abs(z-p.z);
+       if (dx>len*0.5) dx-=len;
+       if (dy>len*0.5) dy-=len;
+       if (dz>len*0.5) dz-=len;
+       return dx*dx + dy*dy + dz*dz;*/
   }
   /*inline double point::sqdist(point &p, double &len, double &inv_len) {
     register double dx,dy,dz;
@@ -166,6 +168,10 @@ namespace Faunus {
   inline bool particle::overlap(const particle &p, const double &s) const {
     double r=radius+p.radius+s;
     return (sqdist(p) < r*r) ? true : false;
+  }
+  inline bool particle::overlap(const particle &p, const double &len, const double &invlen) const {
+    double r=radius+p.radius;
+    return (sqdist(p,len,invlen) < r*r) ? true : false;
   }
 
 }//namespace

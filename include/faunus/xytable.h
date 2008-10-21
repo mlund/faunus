@@ -46,7 +46,7 @@ class xytable {
       xres=resolution;
       xmin=xminimum;
       if (xmaximum>0)
-        y.resize( int(abs(xmaximum-xminimum)/resolution) );
+        y.resize( int(std::abs(xmaximum-xminimum)/resolution) );
     }
     //! Convenient data access
     TY& operator()(TX val) { return y[ x2i(val) ]; }

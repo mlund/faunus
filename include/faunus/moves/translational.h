@@ -362,7 +362,7 @@ namespace Faunus {
     name="SALT DISPLACEMENTS";
     dp=30;
     deltadp=2;
-    runfraction=0.5;
+    runfraction=1.0;
   }
 
   /*! \param g Group containing mobile ions

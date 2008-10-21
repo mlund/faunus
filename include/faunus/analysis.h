@@ -73,7 +73,7 @@ namespace Faunus {
         o << "#   Initial energy     = " << u0 << endl
           << "#   Initial + changes  = " << sum << endl
           << "#   Current energy     = " << cur << endl
-          << "#   Absolute drift     = " << abs(cur-sum) << endl;
+          << "#   Absolute drift     = " << std::abs(cur-sum) << endl;
         return o.str();
       }
       string confuout() {
@@ -106,11 +106,11 @@ namespace Faunus {
         pot=&i;
         a=con->get(t1);
         b=con->get(t2);
-        runfraction=0.1;
+        runfraction=1;
       }
       string info();                              //!< Print results of analysis
-      double muex() { return -log(expsum.avg()); }//!< Excess chemical potential
-      double gamma() { return exp(muex()); }      //!< Activity coefficient
+      double muex() { return -0.5*log(expsum.avg()); }//!< Mean excess chemical potential
+      double gamma() { return exp(muex()); }      //!< Mean activity coefficient
       void insert(unsigned short=100);            //!< Widom insertions
   };
 

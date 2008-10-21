@@ -14,12 +14,12 @@ namespace Faunus {
     private:
       double k;
     public:
-      double box, invbox;
+      double box, halfbox;
       pot_debyehuckelP3( const inputfile &in ) : pot_lj(in) {
         k=in.getflt("debyelen",10);
         f=in.getflt("bjerrum",7.1);
         box=in.getflt("boxlen");
-        invbox=1./box;
+        halfbox=box/2.;
         eps=eps/f;
         name+="/Debye-Huckel w. minimum image";
       }
@@ -27,13 +27,13 @@ namespace Faunus {
       //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
       //! \return Energy in units of kT/lB
       inline double pairpot( const particle &p1, const particle &p2 ) const {
-        double r2=p1.sqdist(p2,box,invbox), r=sqrt(r2);
+        double r2=p1.sqdist(p2,box,halfbox), r=sqrt(r2);
         return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
       }
 
       void setvolume(double vol) {
         box=pow(vol, 1./3);
-        invbox=1./box;
+        halfbox=box/2.;
       }
 
       string info() {

@@ -70,22 +70,22 @@ namespace Faunus {
       //void randompos(vector<point> &);   // not implemented
       point randompos();
       bool collision(const point &a) {
-        if (abs(a.x)>len_half ||
-            abs(a.y)>len_half ||
-            abs(a.z)>len_half )
+        if (std::abs(a.x)>len_half ||
+            std::abs(a.y)>len_half ||
+            std::abs(a.z)>len_half )
           return true;
         return false;
       }
       string povray();
       //! Calculate distance using the minimum image convention
-      inline double dist(const point &a, const point &b) { return a.dist(b, len, len_inv); }
-      inline double sqdist(const point &a, const point &b) { return a.sqdist(b, len, len_inv); }
-      inline int anint(double x) { return int(x>0 ? x+.5 : x-.5); }
+      inline double dist(const point &a, const point &b) { return a.dist(b, len, len_half); }
+      inline double sqdist(const point &a, const point &b) { return a.sqdist(b, len, len_half); }
+      inline int anint(double x) { return int(x>0. ? x+.5 : x-.5); }
       //! Apply periodic boundary conditions
       inline void boundary(point &a) {
-        a.x=a.x-len*anint(a.x*len_inv);
-        a.y=a.y-len*anint(a.y*len_inv);
-        a.z=a.z-len*anint(a.z*len_inv);
+        if (std::abs(a.x)>len_half) a.x-=len*anint(a.x/len);
+        if (std::abs(a.y)>len_half) a.y-=len*anint(a.y/len);
+        if (std::abs(a.z)>len_half) a.z-=len*anint(a.z/len);
       }
       inline void scale(point &a, const double &newlen) const { a = a*(newlen/len); }
   };

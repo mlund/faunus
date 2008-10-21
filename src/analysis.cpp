@@ -194,12 +194,12 @@ namespace Faunus {
   string widom::info() {
     std::ostringstream o;
     o << endl
-      << "# WIDOM PARTICLE INSERTION ANALYSIS:" << endl
+      << "# WIDOM PARTICLE-PAIR INSERTION ANALYSIS:" << endl
       << "#   Number of insertions      = " << expsum.cnt << endl
       << "#   Run fraction              = " << runfraction << endl
       << "#   Ion pair charges          = " << a.charge << ", " << b.charge << endl
       << "#   Excess chemical pot. (kT) = " << muex()  << endl
-      << "#   Mean activity coeff.      = " << gamma() << endl;
+      << "#   Mean activity coefficient = " << gamma() << endl;
     return o.str();
   }
 }

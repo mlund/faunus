@@ -75,7 +75,7 @@ namespace Faunus {
       unsigned int i=0, n=xin.size()-1;
       average<T> meanx, meany;
       setup( xin[0], xin[n], res); 
-      d0=abs( xin[1] - xin[0] );
+      d0=std::abs( xin[1] - xin[0] );
       if (d0>res)
         return false;
       d=d0;
@@ -85,7 +85,7 @@ namespace Faunus {
           meany+=yin.at(i);
           //cout << xin[i] << endl;
           i++; 
-          d+=abs(xin.at(i)-xin.at(i-1));
+          d+=std::abs(xin.at(i)-xin.at(i-1));
         }
         add( meanx.avg(), meany.avg() );
         //cout << meanx.avg() << ", " << meany.avg() << " " <<i2x(x2i(meanx.avg())) << endl;

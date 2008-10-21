@@ -1,7 +1,7 @@
 #ifndef FAU_slump_h
 #define FAU_slump_h
 #include <cmath>
-#include <cstdlib>
+#include <cstdlib>  // Including this SUCKS! Be aware of abs()!
 #include <ctime>
 
 // Needed for sunCC ("__SUNPRO_CC" or "__sun" ?)

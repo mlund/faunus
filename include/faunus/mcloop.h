@@ -54,7 +54,7 @@ namespace Faunus {
     std::ostringstream o;
     o << endl << "# STEP AND TIME DETAILS:" << endl
       << "#   Steps (macro micro tot)= "
-      << macro << " " << micro << " " << macro*micro << endl;
+      << macro << " x " << micro << " = " << macro*micro << endl;
     int t=cnt.elapsed();
     if (t>5) {
       o << "#   Time elapsed (hours)   = " << t/(3600.) << endl

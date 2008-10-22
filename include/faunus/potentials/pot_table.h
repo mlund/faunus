@@ -4,6 +4,7 @@
 #include "faunus/potentials/base.h"
 #include "faunus/xytable.h"
 #include "faunus/potentials/pot_hccoulomb.h"
+#include "faunus/potentials/pot_hsminimage.h"
 
 namespace Faunus {
   /*!
@@ -28,7 +29,7 @@ namespace Faunus {
    *
    */
   class pot_table : public pot_hscoulomb {
-    private:
+    protected:
       xytable<double, double> pmf[particle::LAST][particle::LAST];
       double xres; //!< Distance resolution
       double nan;  //!< Energy of no data found.
@@ -94,7 +95,7 @@ namespace Faunus {
               loadpmf(c,id[j],id[i]);
       }
 
-      string info() {
+      virtual string info() {
         std::ostringstream o;
         o << pot_hscoulomb::info()
           << "#   PMF directory     = " << pmfdir << endl;
@@ -102,7 +103,7 @@ namespace Faunus {
       }
 
       /*! Show info + list of loaded pmf data */
-      string info(species &spc) {
+      virtual string info(species &spc) {
         std::ostringstream o;
         o << info()
           << "#   PMF Info: (a,b,resolution,r_max,file)" << std::endl; 
@@ -115,6 +116,32 @@ namespace Faunus {
         o << std::endl; 
         return o.str();
       }
+  };
+
+ /*!
+   * \brief As Faunus::pot_table but with periodic boundaries.
+   * \author Mikael Lund
+   * \date Prague, 2008
+   * \todo info() output could be more elegant.
+   */
+  class pot_tableMI : public pot_table {
+    private:
+      pot_hsminimage coulomb;
+    public:
+      pot_tableMI(const inputfile &in) : pot_table(in), coulomb(in) {};
+      inline double pairpot(const particle &p1, const particle &p2) {
+        unsigned short i=p1.id,j=p2.id;
+        if (i>j)
+          std::swap(i,j);
+        if (pmf[i][j].xmax()<0.01)
+          return coulomb.pairpot(p1,p2);
+        double r2=p1.sqdist(p2), xmax=pmf[i][j].xmax()-0.5;
+        return ( r2 > xmax*xmax ) ?
+          coulomb.pairpot(p1,p2) :   // use Coulomb pot. outside data
+          pmf[i][j]( sqrt(r2) );     // ...else use table.
+      }
+      string info() { return pot_table::info() + coulomb.info(); }
+      string info(species &spc) { return pot_table::info(spc); }
   };
 }//namespace
 #endif

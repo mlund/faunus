@@ -1,8 +1,21 @@
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 project("Faunus")
+
+# ----------------------------
+#   Locate external packages
+# ----------------------------
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
+find_package(OpenBabel2)
+find_package(Boost COMPONENTS python)
+find_package(PythonLibs)
+find_package(PythonInterp)
+find_package(GCCXML)
+find_package(GMX)
+
 # ------------------------------
 #   Default build is "Release"
 # ------------------------------
+include(OptimizationFlags)
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release
       CACHE STRING "Build type: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
@@ -16,22 +29,9 @@ option(FAUNUS_OPENMP  "Try to use OpenMP parallization" off)
 option(FAUNUS_PYTHON  "Try to create a python interface" off)
 option(FAUNUS_GROMACS "Try to enable Gromacs xtc trajectory output" off)
 option(FAUNUS_LIBXTC  "Internal xtc support (experimental!)" off)
-mark_as_advanced( CLEAR CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS_RELEASE )
+mark_as_advanced( CLEAR CMAKE_VERBOSE_MAKEFILE CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS_RELEASE )
 mark_as_advanced( EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH
-                  CMAKE_OSX_ARCHITECTURES CMAKE_OSX_SYSROOT )
-
-# ----------------------------
-#   Locate external packages
-# ----------------------------
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
-include(TestCXXAcceptsFlag)
-include(OptimizationFlags)
-find_package(OpenBabel2)
-find_package(Boost COMPONENTS python)
-find_package(PythonLibs)
-find_package(PythonInterp)
-find_package(GCCXML)
-find_package(GMX)
+                  CMAKE_OSX_ARCHITECTURES CMAKE_OSX_SYSROOT GCCXML)
 
 # ---------------------------
 #   Add source directories

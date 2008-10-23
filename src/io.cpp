@@ -128,7 +128,7 @@ namespace Faunus {
       n=in.getint(n_prot.str(),0);
     }
     len=pow(con.getvolume(),1./3);    //Calculate the length of a unit cell
-    unitclen=pow(N,1./3);
+    unitclen=int( pow(N,1./3) );
     len/=(unitclen+1);
     short cnt=1,nprot;
     do {

@@ -35,11 +35,11 @@ namespace Faunus {
    */
   class cell : public container {
     private:
-      float r2,diameter;
-      void setradius(float);
+      double r2,diameter;
+      void setradius(double);
     public:
-      float r;              //!< Radius
-      cell(float);
+      double r;              //!< Radius
+      cell(double);
       cell(const inputfile &);
       string info();
       void randompos(point &);
@@ -118,10 +118,10 @@ namespace Faunus {
   class clutch : public container {
     private:
       double r2;
-      float diameter;
+      double diameter;
     public:
-      float r,zmin,zmax;
-      clutch(float, float, float);
+      double r,zmin,zmax;
+      clutch(double, double, double);
       void randompos(point &);
       bool collision(const point &a) {
         if (a.z<zmax && a.z>zmin)
@@ -138,11 +138,11 @@ namespace Faunus {
    */
   class cylinder : public container {
     public:
-      float len;   //!< Cylinder length
-      float r;     //!< Cylinder radius
-      float r2;    //!< Cylinder radius squared
-      float diameter;
-      cylinder(float,float);
+      double len;   //!< Cylinder length
+      double r;     //!< Cylinder radius
+      double r2;    //!< Cylinder radius squared
+      double diameter;
+      cylinder(double,double);
       void randompos(point &);
       bool collision(const point &a) {
         return 

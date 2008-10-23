@@ -237,7 +237,7 @@ namespace Faunus {
       int_hydrophobic(const inputfile &in) : interaction<T>(in) { end_of_protein_one=int(1e7); }
       unsigned int end_of_protein_one;              //!< Last particle in protein one (set if appropriate)
       void search(const vector<particle> &);        //!< Locate hydrophobic groups and ions
-      double energy(const vector<particle> &p ) { interaction<T>::energy(p) + hyenergy(p);}
+      double energy(const vector<particle> &p ) { return interaction<T>::energy(p) + hyenergy(p);}
       double energy(const vector<particle> &p, int i) { return interaction<T>::energy(p,i) + hyenergy(p);}
       double energy(const  vector<particle> &p, const group &g ) { return interaction<T>::energy(p,g) + hyenergy(p);}
   };

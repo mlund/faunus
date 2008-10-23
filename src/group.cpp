@@ -271,7 +271,7 @@ namespace Faunus {
       std::ostringstream nion, tion;
       nion << "nion" << n;
       tion << "tion" << n++;
-      npart = in.getflt(nion.str(), 0);
+      npart = in.getint(nion.str(), 0);
       id = con.id(  in.getstr( tion.str() )  );
       if (npart!=0)
         group::add(con, id, npart ); // add particles
@@ -345,7 +345,7 @@ namespace Faunus {
     cm.radius = max;
     return max;
   } 
-  double macromolecule::charge(vector<particle> &p) {
+  double macromolecule::charge(const vector<particle> &p) {
     double z=group::charge(p);
     Q+=z;
     Q2+=z*z;

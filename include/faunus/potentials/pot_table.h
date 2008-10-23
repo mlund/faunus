@@ -46,7 +46,7 @@ namespace Faunus {
             pmf[i][j].xres=xres;
       }
 
-      double pairpot (const particle &p1, const particle &p2) {
+      inline double pairpot (const particle &p1, const particle &p2) {
         unsigned short i=p1.id,j=p2.id;
         if (i>j)
           std::swap(i,j);

@@ -26,7 +26,7 @@ namespace Faunus {
        *  \return Energy in units of \f$kT/l_B\f$ (lB=f). \f[ \beta u/l_B = \frac{z_1 z_2}{r} + \frac{u_{lj}}{l_B} \f]
        */
       inline double pairpot(const particle &p1, const particle &p2) {
-        register double r2=p1.sqdist(p2);
+        double r2=p1.sqdist(p2);
         return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
       }
 

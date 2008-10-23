@@ -23,7 +23,7 @@ namespace Faunus {
         invbox=1./box;
       }
       inline double pairpot(const particle &p1, const particle &p2) {
-        register double r2=p1.sqdist(p2,box,invbox);
+        double r2=p1.sqdist(p2,box,invbox);
         return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
       }
       string info() {

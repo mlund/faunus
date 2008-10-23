@@ -31,7 +31,7 @@ namespace Faunus {
       chhc[i]=0.;
       chex[i]=0.;
       chtot[i]=0.;
-      ihc[i]=0.;
+      ihc[i]=0;
       ewden[i].resize(11);
       ewnom[i].resize(11);
       chint[i].resize(11);

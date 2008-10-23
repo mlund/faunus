@@ -3,7 +3,7 @@
 namespace Faunus {
 //----------- CONTAINER -----------------
 string container::info() {
-  float z=charge();
+  double z=charge();
   std::ostringstream o;
   o << endl
     << "# SIMULATION CONTAINER:" << endl
@@ -22,9 +22,9 @@ string container::povray() {
 }
 
 //----------- CELL ----------------------
-cell::cell(float radius) { setradius(radius); }
+cell::cell(double radius) { setradius(radius); }
 cell::cell(const inputfile &in) { setradius(in.getflt("cellradius"));}
-void cell::setradius(float radius) {
+void cell::setradius(double radius) {
   r = radius; 
   r2 = r*r; 
   diameter = 2*r; 
@@ -105,7 +105,7 @@ string slit::info() {
 //! \param radius Radius of the cell
 //! \param min Beginning of the particle-excluded region
 //! \param max Ending of the particle-excluded region (Note max>min)
-clutch::clutch(float radius, float min, float max) {
+clutch::clutch(double radius, double min, double max) {
   r=radius;
   r2=r*r;
   diameter=2*r;
@@ -126,7 +126,7 @@ void clutch::randompos(point &p) {
 //------------CYLINDER---------------------------
 //! \param len  Length of the cylinder
 //! \param r    Radius of the cylinder
-cylinder::cylinder(float length, float radius) {
+cylinder::cylinder(double length, double radius) {
   len=length;
   r=radius;
   r2=r*r;

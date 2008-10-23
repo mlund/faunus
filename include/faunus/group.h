@@ -59,6 +59,7 @@ namespace Faunus {
     private:
       short nanion, ncation;
     public:
+      using group::info;
       salt(particle::type=particle::NA,
           particle::type=particle::CL);
       particle::type anion, cation; //!< Anion and cation types
@@ -80,7 +81,7 @@ namespace Faunus {
       string info();                           //!< Show info
       string info(container &);                //!< Show more info!
       void center(container &);                //!< Center group in origo (0,0,0)
-      double charge(vector<particle> &);       //!< Calculate total charge
+      double charge(const vector<particle> &);       //!< Calculate total charge
       double radius(vector<particle> &);       //!< Calculate radius
       double dipole(vector<particle> &);       //!< Calculate dipole moment
       void zmove(container &, double);         //!< Move in z-direction, only

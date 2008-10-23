@@ -33,14 +33,14 @@ ifeq ($(MODEL), gnu)
   ifeq ($(OPENMP), yes)
     EXTRA:=$(EXTRA) -fopenmp
   endif
-  CXXFLAGS = -O3 -w -funroll-loops $(INCDIR) $(EXTRA)
+  CXXFLAGS = -O3 -funroll-loops -W -Wno-sign-compare -Wconversion $(INCDIR) $(EXTRA)
 endif
 
 ifeq ($(MODEL), gnu686)
   ifeq ($(OPENMP), yes)
     EXTRA:=$(EXTRA) -fopenmp
   endif
-  CXXFLAGS = -mtune=i686 -msse3 -O3 -w -funroll-loops $(INCDIR) $(EXTRA)
+  CXXFLAGS = -mtune=i686 -msse3 -O3 -funroll-loops $(INCDIR) $(EXTRA)
 endif
 
 ifeq ($(MODEL), intel)
@@ -48,7 +48,7 @@ ifeq ($(MODEL), intel)
     EXTRA:=$(EXTRA) -openmp
   endif
   CXX=icc
-  CXXFLAGS = -O3 -w $(INCDIR) $(EXTRA)
+  CXXFLAGS = -O3 -w1 -Wno-unknown-pragmas $(INCDIR) $(EXTRA)
 endif
 
 ifeq ($(MODEL), pathscale)
@@ -61,7 +61,7 @@ ifeq ($(MODEL), pgi)
   ifeq ($(OPENMP), yes)
     EXTRA:=$(EXTRA) -mp
   endif 
-  CXXFLAGS = -O3 -w $(INCDIR) $(EXTRA)
+  CXXFLAGS = -O3 $(INCDIR) $(EXTRA)
 endif
 
 ifeq ($(MODEL), sun)
@@ -69,7 +69,7 @@ ifeq ($(MODEL), sun)
     EXTRA:=$(EXTRA) -xopenmp
   endif
   CXX=sunCC
-  CXXFLAGS = -fast -w $(INCDIR) $(EXTRA)
+  CXXFLAGS = -fast $(INCDIR) $(EXTRA)
 endif
 	    
 OBJS=$(CLASSDIR)/inputfile.o \

@@ -305,6 +305,7 @@ namespace Faunus {
         std::ostringstream o;
         o << endl
           << "# AGGREGATION COUNT"<< endl<<endl;
+        return o.str();
       }
   };
 }//namespace

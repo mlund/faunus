@@ -3,9 +3,9 @@ using namespace std;
 using namespace Faunus;
 int main() {
   iobabel b;
-  b.read("/Users/mikael/out.pdb");
+  b.read("/Users/mikael/sletmig.pqr");
   cout << "Size = " << b.p.size() << endl;
   for (int i=0; i<b.p.size(); i++)
     cout << b.p[i].x << " " << b.p[i].y << " " << b.p[i].z
-      << " " << b.p[i].charge << endl;
+      << " " << b.p[i].charge << " " << b.p[i].radius << endl;
 }

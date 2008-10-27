@@ -6,20 +6,16 @@
 
 namespace Faunus {
   /*!
-   * \brief Class the contains all particles and manipulating methods.
+   * \brief Class the contains the all particles including coordinates, trials etc.
    * \author Mikael Lund
    * \date Lund, 2004
-   *
-   * Handles all particles in a system and provides manipulating
-   * functions like translation, rotation, etc. It contains the
-   * main particle vector space::p
    */
   class particles {
     private:
       slump slp;
     public:
-      std::vector<particle> p;              //!< The main particle vector
-      std::vector<particle> trial;          //!< Trial particle vector. 
+      vector<particle> p;                   //!< The main particle vector
+      vector<particle> trial;               //!< Trial particle vector. 
 
       int push_back(const particle &);      //!< add particle to both "p" and "trial"
       double charge();                      //!< Sum all charges in particle vector
@@ -28,6 +24,7 @@ namespace Faunus {
       bool overlap(const std::vector<particle> &);
       bool check_vector();                  //!< Check if p and trial are equal!
       int count(particle::type, const point&,double);//!< Count particles of "type" within a sphere
+      vector<particle::type> list_of_species() const; //!< Get vector of particle types in the system
   };
 }
 #endif

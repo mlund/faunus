@@ -1,9 +1,11 @@
 #include "faunus/iobabel.h"
 namespace Faunus {
+
   void iobabel::p2atom(particle &p) {
     atom.SetVector(p.x, p.y, p.z);
     atom.SetPartialCharge(p.charge);
   }
+
   void iobabel::read(string filename) {
     p.clear();
     mol.Clear();
@@ -16,6 +18,7 @@ namespace Faunus {
       notatend = obconv.Read(&mol);
     }
   }
+
   bool iobabel::write(string filename, const vector<particle> &) {
     mol.Clear();
     for (unsigned int i=0; i<p.size(); i++) {
@@ -25,15 +28,22 @@ namespace Faunus {
     obconv.SetOutFormat(obconv.FormatFromExt(filename.c_str()));
     return obconv.WriteFile(&mol,filename.c_str());
   }
+
   particle iobabel::get(unsigned int i) {
     atomPtr = mol.GetAtom(i);
     v=atomPtr->GetVector();
     v.Get(c);
     a.x=c[0]; a.y=c[1]; a.z=c[2];
     a.mw=atomPtr->GetAtomicMass();
-    if (a.mw==0)
-      a.mw=1;  //we don't like weightless atoms.
+    if (a.mw<1e-5)
+      a.mw=1;   //we don't like weightless atoms.
     a.charge=atomPtr->GetPartialCharge();
+
+    if (atomPtr->HasData("Radius")) {
+      OpenBabel::OBPairData *gdat = dynamic_cast<OpenBabel::OBPairData *>( atomPtr->GetData("Radius") );
+      a.radius = atof( gdat->GetValue().c_str() );
+    } else
+      a.radius=2;
     return a;
   }
 }

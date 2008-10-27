@@ -1,5 +1,48 @@
-#include "faunus/widomSW.h"
+#include "faunus/widom.h"
 namespace Faunus {
+
+  void widom::insert(container &c, energybase &pot) {
+    if (runtest()) {
+      double du;
+      int i,j,n=g.size();
+      for (int k=0; k<ghostin; k++) {
+        du=0;
+        for (i=0; i<n; i++)
+          c.randompos( g[i] );
+        for (i=0; i<n; i++)
+          du+=pot.energy( c.p, g[i] );
+        for (i=0; i<n-1; i++)
+          for (j=i+1; j<n; j++)
+            du+=pot.energy( g[i], g[j] );
+        expsum += exp(-du);
+      }
+    }
+  }
+
+  void widom::add(const particle &p) { g.push_back(p); }
+  void widom::add(container &c) {
+    vector<particle::type> id = c.list_of_species();
+    for (int i=0; i<id.size(); i++)
+      add(c.d[id[i]].p);
+  }
+
+  string widom::info() {
+    std::ostringstream o;
+    o << endl
+      << "# MULTIPLE PARTICLE WIDOM ANALYSIS:" << endl
+      << "#   Number of insertions      = " << expsum.cnt << endl
+      << "#   Run fraction              = " << runfraction << endl
+      << "#   Excess chemical pot. (kT) = " << muex()  << endl
+      << "#   Mean activity coefficient = " << gamma() << endl
+      << "#   Particles [charge radius] =";
+    for (int i=0; i<g.size(); i++)
+      o << " [" << g[i].charge << " " << g[i].radius << "]";
+    o << endl;
+    return o.str();
+  }
+
+  //--------------------------------------------------------------------------------
+
   widomSW::widomSW(int insertions){
     cnt=0;
     ghostin = insertions;
@@ -8,6 +51,12 @@ namespace Faunus {
     g.push_back(p);
     init();
   }
+  void widomSW::add(container &c) {
+    vector<particle::type> id = c.list_of_species();
+    for (int i=0; i<id.size(); i++)
+      add(c.d[id[i]].p);
+  }
+
   bool widomSW::overlap(particle &a, particle &b, container &c) {
     double s=a.radius+b.radius;
     return (c.sqdist(a,b)<s*s) ? true : false;
@@ -53,9 +102,8 @@ namespace Faunus {
         ghost.radius = g[k].radius;
         irej[k]=0;
         int j=0;
-        while(!overlap(ghost,c.p[j],c) && j<c.p.size()){
+        while(!overlap(ghost,c.p[j],c) && j<c.p.size())
           j++;
-        }
         if(j != c.p.size()) {
           ihc[k]++;
           irej[k]=1;
@@ -86,7 +134,6 @@ namespace Faunus {
             }
           }
         }
-
       }
     }
   }
@@ -96,11 +143,10 @@ namespace Faunus {
     double aint4,aint2,aint1;
     for(int i=0; i<g.size(); i++) {
       for(int cint=0; cint<11; cint++) {
-        if(ewden[i][cint]==0) {
-          std::cout << "Widom denominator equals zero" << std::endl;
-        } else {
+        if(ewden[i][cint]==0)
+          std::cout << "# WARNING: Widom denominator equals zero" << endl;
+        else
           chint[i][cint]=ewnom[i][cint]/ewden[i][cint];
-        }
       }
       aint4=chint[i][1]+chint[i][3]+chint[i][5]+chint[i][7]+chint[i][9];
       aint2=chint[i][2]+chint[i][4]+chint[i][6]+chint[i][8];
@@ -110,11 +156,12 @@ namespace Faunus {
 
     double cnttot;
     cnttot=cnt*ghostin;
-    o << "# SINGLE PARTICLE WIDOM ANALYSIS: (w. charge scaling)" << std::endl
-      << "#   Reference:             Mol. Phys. 1988, 64, 247-259" << std::endl
-      << "#   Number of Insertions = " << cnttot << std::endl
-      << "#   Excess chemical potentials (kT):" << std::endl
-      << "#         total   elec.  hs       z     r"<< std::endl;
+    o << endl
+      << "# SINGLE PARTICLE WIDOM ANALYSIS: (w. charge scaling)" << endl
+      << "#   Reference:             Mol. Phys. 1988, 64, 247-259" << endl
+      << "#   Number of Insertions = " << cnttot << endl
+      << "#   Excess chemical potentials (kT):" << endl
+      << "#         total   elec.  hs       z     r"<< endl;
     for(int i=0; i < g.size(); i++) {
       chhc[i]=-log(double(cnttot-ihc[i])/cnttot);
       chexw[i]=-log(expuw[i]);
@@ -127,9 +174,8 @@ namespace Faunus {
         << std::setw(8) << chhc[i]
         << std::setprecision(2) << std::fixed
         << std::setw(6) << g[i].charge
-        << std::setw(6) << g[i].radius << std::endl;
+        << std::setw(6) << g[i].radius << endl;
     }
-    o << std::endl;
     return o.str();
   }
 }

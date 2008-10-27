@@ -58,7 +58,6 @@ namespace Faunus {
   class box : public container {
     private:
       void setlen(double);                 //!< Reset box length
-      point d;
     public:
       double len_half, len_inv, tlen_inv;  //!< tlen is the trial box
       void setvolume(double);

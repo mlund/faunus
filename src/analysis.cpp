@@ -174,33 +174,9 @@ namespace Faunus {
       for (int i=0;i<g.size();i++) {
         if (dist[i]!=0)
           f << i+1 << "  "<<double(dist[i])/CNT/g.size() <<"  " <<RG2[i].avg() <<endl;
-
       }
       f.close();
     }
-  }
-
-  //! Insert a salt pair and evaluate the excess chemical potential
-  //! \param n Number of insertions
-  void widom::insert(unsigned short n) {
-    if (runtest()) {
-      while (n-->0) {
-        con->randompos(a);
-        con->randompos(b);
-        expsum+=exp( -pot->energy(con->p,a) - pot->energy(con->p,b) - pot->energy(a,b) );
-      }
-    }
-  }
-  string widom::info() {
-    std::ostringstream o;
-    o << endl
-      << "# WIDOM PARTICLE-PAIR INSERTION ANALYSIS:" << endl
-      << "#   Number of insertions      = " << expsum.cnt << endl
-      << "#   Run fraction              = " << runfraction << endl
-      << "#   Ion pair charges          = " << a.charge << ", " << b.charge << endl
-      << "#   Excess chemical pot. (kT) = " << muex()  << endl
-      << "#   Mean activity coefficient = " << gamma() << endl;
-    return o.str();
   }
 }
 

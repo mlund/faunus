@@ -62,4 +62,14 @@ namespace Faunus {
       if (p[i].sqdist(origo) < r2) cnt++;
     return cnt;
   }
+
+  vector<particle::type> particles::list_of_species() const {
+    vector<particle::type> id;
+    for (int i=0; i<p.size(); i++) {
+      vector<particle::type>::iterator iter = std::find(id.begin(), id.end(), p[i].id);
+      if (iter==id.end())
+        id.push_back(p[i].id);
+    }
+    return id;
+  }
 }//namespace

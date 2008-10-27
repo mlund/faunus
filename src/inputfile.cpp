@@ -16,7 +16,7 @@ namespace Faunus {
         }
       };
       f.close();
-      std::cout << "# Configuration read from: " << filename << endl;
+      std::cout << "# Input parameters read from: " << filename << endl;
     } else {
       std::cout << "*** Failed to open inputfile ***" << endl;
       throw;

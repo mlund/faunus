@@ -4,6 +4,7 @@
 #include <openbabel/obconversion.h>
 #include <openbabel/mol.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/generic.h>
 #include "faunus/point.h"
 
 namespace Faunus {

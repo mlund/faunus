@@ -36,6 +36,9 @@ namespace Faunus {
       else iter++;
   }
 
+  bool io_aam::load(container &c, string file) {
+  }
+
   //--------------- IOAAM ---------------------
   ioaam::ioaam(species &spc) : iopart(spc) {}
   string ioaam::p2s(particle &p, int i) {
@@ -75,8 +78,10 @@ namespace Faunus {
     if (a.size()==con.p.size()) {
       con.p = a;
       con.trial = a;
+      std::cout << "# " << a.size() << " particles loaded from " << file << endl;
       return true;
     }
+    std::cout << "# " << file << " skipped due to container mismatch!\n";
     return false;
   }
 

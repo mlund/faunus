@@ -83,12 +83,7 @@ namespace Faunus {
       }
 
       void loadpmf(const container &c) {
-        vector<particle::type> id; // vector of particle id's found in container.
-        for (unsigned short i=0; i<c.p.size(); i++) {
-          vector<particle::type>::iterator iter = std::find(id.begin(), id.end(), c.p[i].id);
-          if (iter==id.end())
-            id.push_back(c.p[i].id);
-        }
+        vector<particle::type> id=c.list_of_species();
         for (unsigned short i=0; i<id.size(); i++)
           for (unsigned short j=i; j<id.size(); j++)
             if( loadpmf(c,id[i],id[j])==false )

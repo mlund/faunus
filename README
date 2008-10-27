@@ -74,8 +74,8 @@ COMPILING USING CMAKE (Experimental):
   $ make
 
   Options:
-    -DFAUNUS_OPENMP=on|off   Enable OpenMP support
-    -DFAUNUS_GROMACS=on|off  Enable Gromacs XTC file support
+    -DENABLE_OPENMP=on|off   Enable OpenMP support
+    -DENABLE_GROMACS=on|off  Enable Gromacs XTC file support
 
   Environmental variables:
     CXX - C++ compiler command (icpc, pathCC, pgCC etc.)

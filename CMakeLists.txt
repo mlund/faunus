@@ -24,11 +24,11 @@ endif(NOT CMAKE_BUILD_TYPE)
 # -----------------
 #   User options
 # -----------------
-option(FAUNUS_BABEL   "Try to use OpenBabel for file I/O" on)
-option(FAUNUS_OPENMP  "Try to use OpenMP parallization" off)
-option(FAUNUS_PYTHON  "Try to create a python interface" off)
-option(FAUNUS_GROMACS "Try to enable Gromacs xtc trajectory output" off)
-option(FAUNUS_LIBXTC  "Internal xtc support (experimental!)" off)
+option(ENABLE_BABEL   "Try to use OpenBabel for file I/O" on)
+option(ENABLE_OPENMP  "Try to use OpenMP parallization" off)
+option(ENABLE_PYTHON  "Try to create a python interface" off)
+option(ENABLE_GROMACS "Try to enable Gromacs XTC trajectory output" off)
+option(ENABLE_LIBXTC  "Internal xtc support (experimental!)" off)
 mark_as_advanced( CLEAR CMAKE_VERBOSE_MAKEFILE CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS_RELEASE )
 mark_as_advanced( EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH
                   CMAKE_OSX_ARCHITECTURES CMAKE_OSX_SYSROOT GCCXML)
@@ -39,7 +39,7 @@ mark_as_advanced( EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH
 add_subdirectory(src)
 add_subdirectory(legacy/fortran)
 add_subdirectory(doc EXCLUDE_FROM_ALL)
-if(FAUNUS_PYTHON)
+if(ENABLE_PYTHON)
   add_subdirectory(undone/python-test EXCLUDE_FROM_ALL)
   add_subdirectory(undone/python-proof-of-concept EXCLUDE_FROM_ALL)
-endif(FAUNUS_PYTHON)
+endif(ENABLE_PYTHON)

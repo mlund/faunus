@@ -83,6 +83,7 @@ OBJS=$(CLASSDIR)/inputfile.o \
      $(CLASSDIR)/group.o \
      $(CLASSDIR)/particles.o \
      $(CLASSDIR)/analysis.o \
+     $(CLASSDIR)/widom.o \
      $(CLASSDIR)/species.o 
 all:	classes examples libfaunus
 
@@ -98,8 +99,6 @@ manualul:
 	scp -rC doc/html/* mikaellund@shell.sourceforge.net:/home/groups/f/fa/faunus/htdocs/
 widom:	src/examples/widom/widom.cpp libfaunus
 	$(CXX) $(CXXFLAGS) src/examples/widom/widom.cpp -o src/examples/widom/widom ${LDFLAGS}
-ewald:		src/examples/ewald/ewald.cpp libfaunus
-	$(CXX) $(CXXFLAGS) src/examples/ewald/ewald.cpp -o src/examples/ewald/ewald ${LDFLAGS}
 twobody:	src/examples/twobody/twobody.cpp libfaunus
 	$(CXX) $(CXXFLAGS) src/examples/twobody/twobody.cpp -o src/examples/twobody/twobody ${LDFLAGS}
 twobody-hof:	src/examples/twobody-hofmeister/twobody-hof.cpp libfaunus
@@ -123,13 +122,12 @@ undone:		undone/mikael/namespace.C libfaunus
 	$(CXX) $(CXXFLAGS) \
 	undone/mikael/namespace.C \
 	-o undone/mikael/namespace ${LDFLAGS}
-examples:	binding tools widom pka GCpka ewald twobody twobody-hof manybody isobaric
+examples:	binding tools widom pka GCpka twobody twobody-hof manybody isobaric
 clean:
 	rm -f $(OBJS) *.o \
 	src/examples/titration/pka \
 	src/examples/titration/GCpka \
 	src/examples/widom/widom \
-	src/examples/ewald/ewald \
 	src/examples/twobody/twobody \
 	src/examples/manybody/manybody \
 	src/examples/manybody/manybodyclust \

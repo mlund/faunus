@@ -67,7 +67,7 @@ namespace Faunus {
         write();                  //!< Print dynamics of system energy 
         std::ostringstream o;
         o << endl << "# SYSTEM ENERGY (kT):" << endl;
-        if (uavg.sum>0)
+        if (uavg.cnt>0)
           o << "#   Averages <U> <U^2> = " << uavg.avg() << " " << u2avg.avg() << endl
             << "#   sqrt(<U^2>-<U>^2)  = " << sqrt(u2avg.avg()-uavg.avg()*uavg.avg()) << endl;
         o << "#   Initial energy     = " << u0 << endl
@@ -85,33 +85,6 @@ namespace Faunus {
         return o.str();
       }
       void write(); 
-  };
-
-  /*! \brief Widom method for excess chemical potentials
-   *  \author Mikael Lund
-   *  \todo Expand with a corrected one-particle insertion (Woodward+Svensson's charge scaling)
-   *
-   *  This class will insert a neutral "ghost" particle pair so as to
-   *  calculate the mean excess chemical potential / activity coefficient
-   */
-  class widom : public analysis {
-    private:
-      particle a,b;
-      container *con;
-      energybase *pot;
-      average<double> expsum; 
-    public:
-      widom(container &c, energybase &i, particle::type t1, particle::type t2) {
-        con=&c;
-        pot=&i;
-        a=con->get(t1);
-        b=con->get(t2);
-        runfraction=1;
-      }
-      string info();                              //!< Print results of analysis
-      double muex() { return -0.5*log(expsum.avg()); }//!< Mean excess chemical potential
-      double gamma() { return exp(muex()); }      //!< Mean activity coefficient
-      void insert(unsigned short=100);            //!< Widom insertions
   };
 
   /*!

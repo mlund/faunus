@@ -4,7 +4,6 @@
  * potential of NaCl in an aqueous solution using Widom's
  * particle insertion method.
  *
- * \note: No equilibration run is incorporated.
  * \author Mikael Lund
  * \date Dejvice, 2007
  * \include widom.cpp
@@ -15,37 +14,43 @@ using namespace std;
 using namespace Faunus;                 // Access to Faunus classes
 
 int main() {
-  slump slump;
+  cout << faunus_splash();              // Show Faunus information
   inputfile in("widom.conf");           // Read input file
   mcloop loop(in);                      // Set Markov chain loop lengths
-  cell cell(in);                        // We want a spherical cell
+  box cell(in);                         // We want a cubic simulation container
   canonical nvt;                        // Use the canonical ensemble
-  FAUrdf rdf(particle::NA,particle::CL,.5, 45.);
-  interaction<pot_datapmf> pot(in);     // Pair potential
-  widom widom(cell, pot,
-      particle::NA, particle::CL);      // Class for Widom particle insertions
-  saltmove sm(nvt, cell, pot);          // Class for salt movements
-  salt salt;                            // Define some groups for mobile ions
-  salt.add( cell, in );                 // Insert some sodium ions
+  interaction<pot_hsminimage> pot(in);  // Pair potential
 
-  pot.pair.loadpmf(cell);               // Load pmf's for the particles in the system
-  cout << pot.pair.info(cell);
+  saltmove sm(nvt,cell,pot,in);         // Class for salt movements
+  salt salt;                            // Define some groups for mobile ions
+  salt.add(cell,in);                    // Insert some ions
+
+  ioaam aam(cell);                      // File I/O class
+  aam.load(cell,"widom.aam");           // Read initial config. from disk (if present)
+
+  widom wid1(10);                       // Class for multiple particle insertion
+  widomSW wid2(10);                     // Class for single particle insertion w. charge scaling
+  wid1.add(cell);                       // Detect all species in the cell
+  wid2.add(cell);                       // - // -
+
   systemenergy sys(pot.energy(cell.p)); // Track system energy
 
-  while ( loop.macroCnt() ) {           //Markov chain 
+  cout << cell.info() << pot.info()
+       << salt.info(cell) << endl;      // Print initial information
+
+  while ( loop.macroCnt() ) {           // Markov chain 
     while ( loop.microCnt() ) {
       sys+=sm.move(salt);               // Displace salt particles
-      widom.insert(10);                 // Widom particle insertion analysis
-      if (slump.random_one()>0.9)
-        rdf.update(cell);               // Update g-of-r
+      wid1.insert(cell,pot);            // Widom particle insertion analysis
+      wid2.insert(cell,pot);            // - // -
     }                                   // END of micro loop
     sys.update(pot.energy(cell.p));     // Update system energy
-    cout << loop.timing();              // Show progres;s
-  }                                    // END of macro loop and simulation
+    aam.save("widom.aam",cell.p);       // Save particle configuration to disk
+    cout << loop.timing();              // Show progres
+  }                                     // END of macro loop and simulation
 
-  rdf.write("rdf.dat");                 // Write g-of-r to disk
-
-  cout << cell.info() << sys.info() << loop.info()
-    << sm.info() << widom.info();       // Print information!
+  cout << sys.info() << sm.info()
+       << wid1.info() << wid2.info()
+       << loop.info();                  // Final information and results!
 }
 

@@ -18,8 +18,8 @@ int main() {
   canonical nvt;                        // Use the canonical ensemble
   interaction<pot_coulomb> pot(in);     // Energy functions
   saltmove sm(nvt, cell, pot);          // Class for salt movements
-  widom widom(cell, pot,
-      particle::NA, particle::CL);      // Class for Widom particle insertions
+  widom widom(10);                      // Class for Widom particle insertions
+  widom.add(cell);                      // Locate species in the container
   group salt;
   salt.add( cell, particle::NA, 60 );   // Insert some sodium ions
   salt.add( cell, particle::CL, 60 );   // Insert some chloride ions
@@ -27,7 +27,7 @@ int main() {
   for (int macro=0; macro<10; macro++) {        // Markov chain
     for (int micro=0; micro<1e2; micro++) {
       sys+=sm.move(salt);                       // Displace salt particles
-      widom.insert(10);                         // Widom particle insertion analysis
+      widom.insert(cell,pot);                   // Widom particle insertion analysis
     }                                           // END of micro loop
     sys.update(pot.energy(cell.p));             // Update system energy
   }                                             // END of macro loop and simulation

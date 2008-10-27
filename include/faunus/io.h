@@ -29,6 +29,21 @@ namespace Faunus {
       void strip(vector<string> &, string="#");    //!< Remove lines containing pattern
   };
 
+  class particleIO {
+    protected:
+      string warning();
+      string format;
+    public:
+      virtual bool save(container &, string)=0;
+      virtual bool load(container &, string)=0;
+      virtual bool load(vector<particle> &, string)=0;
+      virtual string info() {};
+  };
+
+  class io_aam : public particleIO {
+    virtual bool load(container &, string);
+  };
+
   //----------------------------------------
   /*!\brief General class for particle I/O.
    * \author Mikael Lund

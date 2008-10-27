@@ -2,30 +2,30 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 #----- object files for libfaunus -----
 set(objs inputfile io titrate point physconst slump container
-    hardsphere group particles analysis species widomSW) 
+    hardsphere group particles analysis species widom) 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 #----- link with openbabel ------
-if(FAUNUS_BABEL AND OPENBABEL_FOUND)
+if(ENABLE_BABEL AND OPENBABEL_FOUND)
   set(objs ${objs} iobabel)
   include_directories(${OPENBABEL_INCLUDE_DIR})
   set(LINKLIBS ${LINKLIBS} ${OPENBABEL_LIBRARIES})
-endif(FAUNUS_BABEL AND OPENBABEL_FOUND)
+endif(ENABLE_BABEL AND OPENBABEL_FOUND)
 
 #---- link with libxtc -----
-if (FAUNUS_LIBXTC)
+if (ENABLE_LIBXTC)
   add_subdirectory(libxtc)
   add_definitions(-DLIBXTC)
   include_directories("${CMAKE_SOURCE_DIR}/src/libxtc/")
   set(LINKLIBS ${LINKLIBS} libxtc)
-endif (FAUNUS_LIBXTC)
+endif (ENABLE_LIBXTC)
 
 #----- link with gromacs -----
-if (FAUNUS_GROMACS AND GMX_FOUND)
+if (ENABLE_GROMACS AND GMX_FOUND)
   add_definitions(-DGROMACS)
   include_directories(${GMX_INCLUDE_DIR})
   set(LINKLIBS ${LINKLIBS} ${GMX_LIBRARIES})
-endif (FAUNUS_GROMACS AND GMX_FOUND)
+endif (ENABLE_GROMACS AND GMX_FOUND)
 
 #----- static faunus library -----
 add_library(libfaunus.a STATIC EXCLUDE_FROM_ALL ${objs})

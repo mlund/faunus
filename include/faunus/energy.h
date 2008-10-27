@@ -26,10 +26,11 @@ namespace Faunus {
    *  Unless otherwise specified, all energies will be returned in units of \b kT.
    */
   class energybase {
+    protected:
+      string name;
     public:
       double tokT;
       energybase(double f) { tokT=f; }
-      virtual string info()=0;
       virtual double energy(const particle &, const particle &)=0;                       //!< particle<->particle (slow!)
       virtual double energy(const vector<particle> &, const particle &)=0;               //!< all<->external particle
       virtual double energy(const vector<particle> &, int)=0;                            //!< all<->particle i.
@@ -44,6 +45,14 @@ namespace Faunus {
       virtual double pot(const vector<particle> &, const point &)=0;                     //!< Electrostatic potential in a point
       virtual double dipdip(const point &, const point &, double)=0;                     //!< Dipole-dipole energy.
       virtual double iondip(const point &, double, double)=0;                            //!< Ion-dipole energy.
+
+      string info() {
+        std::ostringstream o;
+        o << endl
+          << "# ENERGY EVALUATION:" << endl
+          << "#   Scheme:             " << name << endl;
+        return o.str();
+      }
   };
 
   /*!
@@ -63,7 +72,10 @@ namespace Faunus {
   template<class T> class interaction : public energybase {
     public:
       T pair; //!< An instance of the pair-potential.
-      interaction(inputfile const &in) : pair(in), energybase(pair.f) { tokT=pair.f;};
+      interaction(inputfile const &in) : pair(in), energybase(pair.f) {
+        name="Standard";
+        tokT=pair.f;
+      };
 
       double energy(const particle &a, const particle &b) {
         return pair.pairpot(a,b) * pair.f;
@@ -72,10 +84,10 @@ namespace Faunus {
       double energy(const vector<particle> &p, int j) {
         int i,ps=p.size();
         double u=0;
-//#pragma omp parallel for reduction (+:u)
+        //#pragma omp parallel for reduction (+:u)
         for (i=0; i<j; i++)
           u+=pair.pairpot( p[i],p[j] );
-//#pragma omp parallel for reduction (+:u)
+        //#pragma omp parallel for reduction (+:u)
         for (i=j+1; i<ps; i++)
           u+=pair.pairpot( p[i],p[j] );
         return pair.f*u;
@@ -208,9 +220,8 @@ namespace Faunus {
 
       string info() {
         std::ostringstream o;
-        o << endl
-          << "# POTENTIAL ENERGY FUNCTION:" << endl
-          << pair.info();
+        o << energybase::info()
+          << "#   Pair potential:" << endl << pair.info();
         return o.str();
       }
   }; //end of interaction class

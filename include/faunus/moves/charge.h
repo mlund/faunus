@@ -69,26 +69,16 @@ namespace Faunus {
         //#pragma omp sections
         {
           //#pragma omp section
-          { uold = pot->potential( con->p, t.site ) * con->p[t.site].charge
-            + pot->potential( con->p, t.proton ) * con->p[t.proton].charge
-              - con->p[t.site].potential(con->p[t.proton] )*con->p[t.proton].charge;
+          { uold = pot->energy(con->p, t.site) + pot->energy(con->p, t.proton)
+                   - pot->energy( con->p[t.site], con->p[t.proton]);
           }
           //#pragma omp section
-          { unew = pot->potential(con->trial,t.site)*con->trial[t.site].charge 
-            + pot->potential(con->trial,t.proton)*con->trial[t.proton].charge
-              - con->trial[t.site].potential(con->trial[t.proton] )*con->trial[t.proton].charge;
+          { unew = pot->energy(con->trial, t.site) + pot->energy(con->trial, t.proton)
+                   - pot->energy( con->trial[t.site], con->trial[t.proton]);
           }
         }
       }
-      du = (unew-uold)*pot->tokT;
-
-      //uold = pot->energy(con->p, t.site)
-      //  +    pot->energy(con->p, t.proton)
-      //  -    pot->pair.pairpot(con->p[t.site], con->p[t.proton] ) * pot->pair.f;
-      //unew = pot->energy(con->trial, t.site)
-      //  +    pot->energy(con->trial, t.proton)
-      //  -    pot->pair.pairpot(con->trial[t.site], con->trial[t.proton] ) * pot->pair.f;
-      //du = (unew-uold);
+      du = (unew-uold);
 
       if (ens->metropolis( energy(con->trial, du, t) )==true) {
         rc=OK;

@@ -14,13 +14,16 @@ endfunction( fau_example )
 
 #----- add examples to build process -----
 fau_example(pka titration pka.cpp)
-fau_example(GCpka titration GCpka.cpp)
+fau_example(pkaGC titration pka.cpp)
 fau_example(twobody twobody twobody.cpp)
 fau_example(twobody-hof twobody-hofmeister twobody-hof.cpp)
 fau_example(widom widom widom.cpp)
 fau_example(manybody manybody manybody.cpp)
 fau_example(isobaric isobaric isobaric.cpp)
 fau_example(binding binding binding.cpp)
+
+#----- target specific build options -----
+set_target_properties( pkaGC PROPERTIES COMPILE_DEFINITIONS "GCPKA")
 
 #----- examples where openbabel is needed -----
 if (ENABLE_BABEL AND OPENBABEL_FOUND)

@@ -114,19 +114,19 @@ tools:	src/examples/tools/printpotential.cpp src/examples/tools/aam2pqr.C libfau
 	$(CXX) $(CXXFLAGS) src/examples/tools/aam2pqr.C -o src/examples/tools/aam2prq ${LDFLAGS}
 pka:	src/examples/titration/pka.cpp libfaunus
 	$(CXX) $(CXXFLAGS) src/examples/titration/pka.cpp -o src/examples/titration/pka $(LDFLAGS) 
-GCpka:	src/examples/titration/GCpka.cpp libfaunus
-	$(CXX) $(CXXFLAGS) src/examples/titration/GCpka.cpp -o src/examples/titration/GCpka $(LDFLAGS) 
+pkaGC:	src/examples/titration/pka.cpp libfaunus
+	$(CXX) $(CXXFLAGS) src/examples/titration/pka.cpp -o src/examples/titration/pkaGC $(LDFLAGS) -DGCPKA
 binding:	src/examples/binding/binding.cpp libfaunus
 	$(CXX) $(CXXFLAGS) src/examples/binding/binding.cpp -o src/examples/binding/binding $(LDFLAGS) 
 undone:		undone/mikael/namespace.C libfaunus
 	$(CXX) $(CXXFLAGS) \
 	undone/mikael/namespace.C \
 	-o undone/mikael/namespace ${LDFLAGS}
-examples:	binding tools widom pka GCpka twobody twobody-hof manybody isobaric
+examples:	binding tools widom pka pkaGC twobody twobody-hof manybody isobaric
 clean:
 	rm -f $(OBJS) *.o \
 	src/examples/titration/pka \
-	src/examples/titration/GCpka \
+	src/examples/titration/pkaGC \
 	src/examples/widom/widom \
 	src/examples/twobody/twobody \
 	src/examples/manybody/manybody \

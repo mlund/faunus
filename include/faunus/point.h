@@ -56,7 +56,7 @@ namespace Faunus {
       particle();
       //! Particle type identifier
       enum type {FIRST=0,GLY,ALA,VAL,LEU,ILE,PHE,TRP,TYR,HIS,SER,THR,MET,CYS,
-        ASP,GLN,GLU,ASN,LYS,ARG,PRO,UNK,NTR,CTR,NA,K,F,CL,BR,I,SO4,LA,ION,CATION,ANION,GHOST,
+        ASP,GLN,GLU,ASN,LYS,ARG,PRO,UNK,NTR,CTR,NA,K,F,CL,BR,I,SO4,PO4,LA,ION,CATION,ANION,GHOST,
         RNH3,RNH4,RCOOH,RCOO,HYDROPHOBIC,LAST}; 
 
       double charge;                         //!< Charge number

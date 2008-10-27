@@ -267,7 +267,7 @@ namespace Faunus {
   void salt::add(container &con, inputfile &in) {
     short n=1, npart;
     particle::type id;
-    while (n<3) {
+    while (n<4) {
       std::ostringstream nion, tion;
       nion << "nion" << n;
       tion << "tion" << n++;

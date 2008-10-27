@@ -4,7 +4,7 @@
  * sample the average protonation state, pka values and dipole
  * moment as well as charge fluctuations.
  *
- * \author Mikael Lund
+ * \author Mikael Lund and Bjorn Persson
  * \include pka.cpp
  */
 #include "faunus/faunus.h"
@@ -13,50 +13,56 @@ using namespace Faunus;
 using namespace std;
 
 int main(int argc, char* argv[]) {
-  string config = "pka.conf";
-  if (argc==2) config = argv[1];
+  cout << faunus_splash();             // Faunus spam
+  string config = "pka.conf";          // Default input (parameter) file
+  if (argc==2) config = argv[1];       // ..also try to get it from the command line
   inputfile in(config);                // Read input file
   mcloop loop(in);                     // Set Markov chain loop lengths
-  cell con(in);                        // Use a spherical container
+  cell con(in);                        // Use a spherical simulation container
   canonical nvt;                       // Use the canonical ensemble
-  interaction<pot_coulomb> pot(in);    // Functions for interactions
+  interaction<pot_hscoulomb> pot(in);  // Specify pair potential
   macromolecule protein;               // Group for the protein
   ioaam aam(con);                      // Protein input file format is AAM
   iopqr pqr(con);                      // PQR coordinate output
   protein.add( con,
-      aam.load( in.getstr("protein")) );
+      aam.load(in.getstr("protein"))); // Load protein structure
   protein.move(con, -protein.cm);      // ..translate it to origo (0,0,0)
   protein.accept(con);                 // ..accept translation
   salt salt;                           // Group for salt and counter ions
   salt.add( con, in );                 //   Insert sodium ions
   saltmove sm(nvt, con, pot);          // Class for salt movements
   aam.load(con, "confout.aam");        // Load old config (if present)
-  chargereg tit(nvt,con,pot,salt,
-      in.getflt("pH",7.0));            // Prepare titration. pH 7.6
+
+#ifdef GCPKA // "Grand Canonical" titration
+  HAchargereg tit(nvt,con,pot,salt,in.getflt("pH", 7.),in.getflt("catpot"));
+#else        // "Normal" titration
+  chargereg tit(nvt,con,pot,salt,in.getflt("pH",7.));
+#endif
+
   systemenergy sys(pot.energy(con.p)); // System energy analysis
   cout << con.info() << tit.info()     // Some information
        << pot.info();
 
-  for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
-    for (int micro=1; micro<=loop.micro; micro++) {
-      switch (rand() % 2) {                 // Randomly chose move
+  while ( loop.macroCnt() ) {            // Markov chain 
+    while ( loop.microCnt() ) {
+      switch (rand() % 2) {              // Randomly chose move
         case 0:
-          sys+=sm.move(salt);               // Displace salt particles
+          sys+=sm.move(salt);            // Displace salt particles
           break;
         case 1:
-          sys+=tit.titrateall();            // Titrate protein sites
-          protein.charge(con.p);            // Re-calc. protein charge
-          protein.dipole(con.p);            // Re-calc. dipole moment
+          sys+=tit.titrateall();         // Titrate protein sites
+          protein.charge(con.p);         // Re-calc. protein charge
+          protein.dipole(con.p);         // Re-calc. dipole moment
           break;
       }
-      //sys.track();
-    }                                       // END of micro loop
-    sys.update(pot.energy(con.p));          // Update system energy
-    aam.save("confout.aam", con.p);         // Save config. to disk
-    pqr.save("confout.pqr", con.p, tit);    // Save PQR file to disk - cool in VMD!
-    cout << loop.timing(macro);             // Show progress
-  }                                         // END of macro loop
-  cout << sys.info() << sm.info()           // Print final results
-       << tit.info() << salt.info(con) << protein.info();
+    }                                    // END of micro loop
+    sys.update(pot.energy(con.p));       // Update system energy
+    aam.save("confout.aam", con.p);      // Save config. to disk
+    pqr.save("confout.pqr", con.p, tit); // Save PQR file to disk - cool in VMD!
+    cout << loop.timing();               // Show progress
+  }                                      // END of macro loop
+  cout << sys.info() << sm.info()
+       << tit.info() << salt.info(con)
+       << protein.info() << loop.info(); // Print final results
 }
 

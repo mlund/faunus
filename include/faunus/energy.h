@@ -8,11 +8,11 @@
 #include "faunus/potentials/pot_coulomb.h"
 #include "faunus/potentials/pot_minimage.h"
 #include "faunus/potentials/pot_hsminimage.h"
+#include "faunus/potentials/pot_hscoulomb.h"
 #include "faunus/potentials/pot_hydrophobic.h"
 #include "faunus/potentials/pot_datapmf.h"
 #include "faunus/potentials/pot_debyehuckel.h"
 #include "faunus/potentials/pot_debyehuckelP3.h"
-#include "faunus/potentials/pot_hccoulomb.h"
 #include "faunus/potentials/pot_barecoulomb.h"
 #include "faunus/potentials/pot_netz.h"
 
@@ -72,7 +72,7 @@ namespace Faunus {
   template<class T> class interaction : public energybase {
     public:
       T pair; //!< An instance of the pair-potential.
-      interaction(inputfile const &in) : pair(in), energybase(pair.f) {
+      interaction(inputfile &in) : pair(in), energybase(pair.f) {
         name="Standard";
         tokT=pair.f;
       };
@@ -179,7 +179,7 @@ namespace Faunus {
         double u=0;
         int i,n=p.size();  
         for (i=0; i<n; i++)
-          u+=p[i].charge/p[i].dist(a);
+          u+=p[i].charge/sqrt(pair.sqdist(a,p[i]));
         return pair.f*u;
       }
 
@@ -206,16 +206,18 @@ namespace Faunus {
        *  \return \f$ \phi_j = \sum_{i\neq j}^{N} \frac{l_B z_i}{r_{ij}} \f$
        *  \param p Particle vector
        *  \param j The electric potential will be calculated in the point of this particle
-       *  \warning Uses simple particle->dist() function!
        *  \todo Respect cell boundaries
        */
       double potential(const vector<particle> &p, unsigned short j) {
-        if (p[j].charge==0) return 0;
+        if (abs(p[j].charge)<1e-6)
+          return 0;
         double u=0;
         int i,n=p.size();
-        for (i=0; i<j; ++i) u+=p[i].charge/p[i].dist(p[j]);
-        for (i=j+1; i<n; ++i) u+=p[i].charge/p[i].dist(p[j]);
-        return u;
+        for (i=0; i<j; ++i)
+          u+=p[i].charge/sqrt(pair.sqdist(p[i],p[j]));
+        for (i=j+1; i<n; ++i)
+          u+=p[i].charge/sqrt(pair.sqdist(p[i],p[j]));
+        return pair.f*u;
       }
 
       string info() {
@@ -245,7 +247,7 @@ namespace Faunus {
       double hyenergy(const vector<particle> &);
       double hyenergy(const vector<particle> &, int);
     public:
-      int_hydrophobic(const inputfile &in) : interaction<T>(in) { end_of_protein_one=int(1e7); }
+      int_hydrophobic(inputfile &in) : interaction<T>(in) { end_of_protein_one=int(1e7); }
       unsigned int end_of_protein_one;              //!< Last particle in protein one (set if appropriate)
       void search(const vector<particle> &);        //!< Locate hydrophobic groups and ions
       double energy(const vector<particle> &p ) { return interaction<T>::energy(p) + hyenergy(p);}
@@ -273,7 +275,7 @@ namespace Faunus {
 
   template<class T> double int_hydrophobic<T>::hyenergy(const vector<particle> &p, int i) {
     if (p[i].hydrophobic==true) return 0;
-    int j,hymin;
+    int j,hymin=0;
     double d,dmin=1e7,u=0;
     for (j=0; j<hy.size(); j++) {     // loop over hydrophobic groups
       if (hy[j]>end_of_protein_one) { // test if we move into second protein
@@ -308,7 +310,7 @@ namespace Faunus {
       private:
         double infty;
       public:
-        interaction_hs(const inputfile &in) : interaction<T>(in) { infty=1000.; }
+        interaction_hs(inputfile &in) : interaction<T>(in) { infty=1000.; }
         double energy(const particle &a, const particle &b) {
           return (a.overlap(b)==true) ? infty  : interaction<T>::energy(a,b);
         }

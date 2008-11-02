@@ -69,12 +69,18 @@ namespace Faunus {
         //#pragma omp sections
         {
           //#pragma omp section
-          { uold = pot->energy(con->p, t.site) + pot->energy(con->p, t.proton)
-                   - pot->energy( con->p[t.site], con->p[t.proton]);
+          {
+            uold = pot->potential( con->p, t.site ) * con->p[t.site].charge
+              + pot->potential( con->p, t.proton ) * con->p[t.proton].charge
+              - con->p[t.site].charge * con->p[t.proton].charge * pot->tokT /
+              sqrt( con->sqdist( con->p[t.site], con->p[t.proton]) );
           }
           //#pragma omp section
-          { unew = pot->energy(con->trial, t.site) + pot->energy(con->trial, t.proton)
-                   - pot->energy( con->trial[t.site], con->trial[t.proton]);
+          {
+            unew = pot->potential( con->trial, t.site ) * con->trial[t.site].charge
+              + pot->potential( con->trial, t.proton ) * con->trial[t.proton].charge
+              - con->trial[t.site].charge * con->trial[t.proton].charge * pot->tokT / 
+              sqrt( con->sqdist( con->trial[t.site], con->trial[t.proton]) );
           }
         }
       }

@@ -17,7 +17,7 @@ namespace Faunus {
    */
   class pot_coulomb : public pot_lj {
     public:
-      pot_coulomb(const inputfile &in) : pot_lj(in) {
+      pot_coulomb(inputfile &in) : pot_lj(in) {
         f=in.getflt("bjerrum",7.1);
         eps=eps/f;
         name+="/Coulomb";
@@ -28,6 +28,10 @@ namespace Faunus {
       inline double pairpot(const particle &p1, const particle &p2) {
         double r2=p1.sqdist(p2);
         return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
+      }
+
+      inline double sqdist(const point &p1, const point &p2) {
+        return p1.sqdist(p2);
       }
 
       string info() {

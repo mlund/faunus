@@ -11,7 +11,7 @@ namespace Faunus {
     public:
       double f;
       string name;
-      pot_barecoulomb (const inputfile &in) {
+      pot_barecoulomb (inputfile &in) {
         f=in.getflt("bjerrum",7.1);
         name="Bare coulomb potential";
       }

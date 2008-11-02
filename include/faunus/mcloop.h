@@ -36,7 +36,7 @@ namespace Faunus {
     public:
       unsigned int macro, micro;
       bool eq;
-      mcloop(const inputfile &);   //!< Setup
+      mcloop(inputfile &);         //!< Setup
       string info();               //!< Shows setup
       string timing(unsigned int); //!< Show macrostep middle time and ETA (outdated!)
       string timing();             //!< Show macrostep middle time and ETA.
@@ -44,7 +44,7 @@ namespace Faunus {
       bool microCnt();             //!< Increase micro loop counter
   };
 
-  mcloop::mcloop(const inputfile &in) : cnt( in.getint("macrosteps",10)) {
+  mcloop::mcloop(inputfile &in) : cnt( in.getint("macrosteps",10)) {
     macro=in.getint("macrosteps",10);
     micro=in.getint("microsteps");
     eq=in.getboo("equilibration", false);

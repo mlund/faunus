@@ -19,12 +19,13 @@ namespace Faunus {
    * in the particle vector.
    *
    * \note This function will de-protonate ALL titratable sites if no "neutrons" are found.
+   *       Usefull if class is called after loading a prviously saved configuration.
    */
   void titrate::init(vector<particle> &p, group &mobile) {
     unsigned short i;
     for (i=mobile.beg; i<mobile.end+1; i++) {
       if (p[i].charge==+1) protons.push_back(i);
-      if (p[i].charge==0) neutrons.push_back(i);
+      if (abs(p[i].charge)<1e-6) neutrons.push_back(i);
     }
     for (i=0; i<p.size(); i++)    //search for titrateable sites
       if ( (*spc).d[p[i].id].pka !=0 ) {

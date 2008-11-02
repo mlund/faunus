@@ -32,7 +32,7 @@ namespace Faunus {
       double eo, ei;        // dielectric constants (solvent, inside sphere)
     public:
       double f;             //!< Factor to convert to kT
-      pot_rfield( const inputfile &in ) : pot_lj(in) {
+      pot_rfield( inputfile &in ) : pot_lj(in) {
         a  = in.getflt("rfield_cavity");
         eo = in.getflt("rfield_epso",80.);
         ei = in.getflt("rfield_epsi",2.);

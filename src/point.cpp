@@ -31,10 +31,11 @@ namespace Faunus {
     z=u.z/r;
   }
 
-  void point::operator+=(const point p) {
+  point & point::operator+=(const point &p) {
     x += p.x;
     y += p.y;
     z += p.z;
+    return *this;
   }
 
   point point::operator-() {
@@ -122,7 +123,6 @@ namespace Faunus {
     x=p.x;
     y=p.y;
     z=p.z;
-
     return *this;  // return a reference to myself
   }
 

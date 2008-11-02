@@ -41,7 +41,11 @@ int main() {
   macrorot mr(nvt, cell, pot);            //   Class for macromolecule rotation
   translate mt(nvt, cell, pot);           //   Class for macromolecular translation
   systemenergy sys(pot.energy(cell.p));   // System energy analysis
-  isobaric<pot_debyehuckelP3> vol(nvt, cell, pot, in.getflt("pressure"), in.getflt("penalty"), in.getflt("max"));
+  isobaric<pot_debyehuckelP3> vol(
+      nvt, cell, pot,
+      in.getflt("pressure"),
+      in.getflt("penalty"),
+      int(in.getflt("max")) );
   histogram lendist(1,0,in.getflt("max"));           //  
   
   vol.dp=in.getflt("voldp");

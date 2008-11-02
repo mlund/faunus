@@ -15,11 +15,11 @@ namespace Faunus {
       double k;
     public:
       double box, halfbox;
-      pot_debyehuckelP3( const inputfile &in ) : pot_lj(in) {
+      pot_debyehuckelP3( inputfile &in ) : pot_lj(in) {
         k=in.getflt("debyelen",10);
         f=in.getflt("bjerrum",7.1);
         box=in.getflt("boxlen");
-        halfbox=box/2.;
+        halfbox=box/2;
         eps=eps/f;
         name+="/Debye-Huckel w. minimum image";
       }
@@ -29,6 +29,10 @@ namespace Faunus {
       inline double pairpot( const particle &p1, const particle &p2 ) const {
         double r2=p1.sqdist(p2,box,halfbox), r=sqrt(r2);
         return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
+      }
+
+      inline double sqdist(const point &p1, const point &p2) {
+        return p1.sqdist(p2,box,halfbox);
       }
 
       void setvolume(double vol) {

@@ -11,7 +11,7 @@ namespace Faunus {
     private:
       double k;
     public:
-      pot_debyehuckel( const inputfile &in ) : pot_lj(in) {
+      pot_debyehuckel( inputfile &in ) : pot_lj(in) {
         name+="/Debye-Huckel";
         k=in.getflt("debyelen",10);
         f=in.getflt("bjerrum",7.1);
@@ -23,6 +23,9 @@ namespace Faunus {
         double r2=p1.sqdist(p2),
                r=sqrt(r2);
         return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
+      }
+      inline double sqdist(const point &p1, const point &p2) {
+        return p1.sqdist(p2);
       }
       string info() {
         std::ostringstream o;

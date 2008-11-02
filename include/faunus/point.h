@@ -32,7 +32,7 @@ namespace Faunus {
       point operator+(const point);         ///< Add two vectors
       point operator-(const point) const;   ///< Substract vector
       point operator+(double);              ///< Displace x,y,z by value
-      void operator+=(const point);
+      point & operator+=(const point&);
       bool operator==(const point&) const;
       friend std::ostream &operator<<(std::ostream &, point &); /// Print x,y,z
       std::string str();

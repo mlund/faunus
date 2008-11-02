@@ -17,10 +17,14 @@ int main() {
   cout << faunus_splash();              // Show Faunus information
   inputfile in("widom.conf");           // Read input file
   mcloop loop(in);                      // Set Markov chain loop lengths
-  box cell(in);                         // We want a cubic simulation container
   canonical nvt;                        // Use the canonical ensemble
-  interaction<pot_hsminimage> pot(in);  // Pair potential
-
+#ifdef WIDOM_SPHERE
+  cell cell(in);                        // We want a spherical simulation container
+  interaction<pot_hscoulomb> pot(in);   // ...and a Coulomb + Hard sphere potential
+#else
+  box cell(in);                         // We want a cubic simulation container
+  interaction<pot_hsminimage> pot(in);  // ...and a Coulomb + Hard sphere potential w. minimum image distances
+#endif
   saltmove sm(nvt,cell,pot,in);         // Class for salt movements
   salt salt;                            // Define some groups for mobile ions
   salt.add(cell,in);                    // Insert some ions
@@ -36,7 +40,8 @@ int main() {
   systemenergy sys(pot.energy(cell.p)); // Track system energy
 
   cout << cell.info() << pot.info()
-       << salt.info(cell) << endl;      // Print initial information
+       << salt.info(cell)
+       << in.info();                    // Print initial information
 
   while ( loop.macroCnt() ) {           // Markov chain 
     while ( loop.microCnt() ) {

@@ -98,7 +98,8 @@ manual:
 manualul:
 	scp -rC doc/html/* mikaellund@shell.sourceforge.net:/home/groups/f/fa/faunus/htdocs/
 widom:	src/examples/widom/widom.cpp libfaunus
-	$(CXX) $(CXXFLAGS) src/examples/widom/widom.cpp -o src/examples/widom/widom ${LDFLAGS}
+	$(CXX) $(CXXFLAGS) src/examples/widom/widom.cpp -o src/examples/widom/widom_cube ${LDFLAGS}
+	$(CXX) $(CXXFLAGS) src/examples/widom/widom.cpp -o src/examples/widom/widom_sphere ${LDFLAGS} -DWIDOM_SPHERE
 twobody:	src/examples/twobody/twobody.cpp libfaunus
 	$(CXX) $(CXXFLAGS) src/examples/twobody/twobody.cpp -o src/examples/twobody/twobody ${LDFLAGS}
 twobody-hof:	src/examples/twobody-hofmeister/twobody-hof.cpp libfaunus
@@ -114,20 +115,16 @@ tools:	src/examples/tools/printpotential.cpp src/examples/tools/aam2pqr.C libfau
 	$(CXX) $(CXXFLAGS) src/examples/tools/aam2pqr.C -o src/examples/tools/aam2prq ${LDFLAGS}
 pka:	src/examples/titration/pka.cpp libfaunus
 	$(CXX) $(CXXFLAGS) src/examples/titration/pka.cpp -o src/examples/titration/pka $(LDFLAGS) 
-pkaGC:	src/examples/titration/pka.cpp libfaunus
 	$(CXX) $(CXXFLAGS) src/examples/titration/pka.cpp -o src/examples/titration/pkaGC $(LDFLAGS) -DGCPKA
 binding:	src/examples/binding/binding.cpp libfaunus
 	$(CXX) $(CXXFLAGS) src/examples/binding/binding.cpp -o src/examples/binding/binding $(LDFLAGS) 
-undone:		undone/mikael/namespace.C libfaunus
-	$(CXX) $(CXXFLAGS) \
-	undone/mikael/namespace.C \
-	-o undone/mikael/namespace ${LDFLAGS}
-examples:	binding tools widom pka pkaGC twobody twobody-hof manybody isobaric
+examples:	binding tools widom pka twobody twobody-hof manybody isobaric
 clean:
 	rm -f $(OBJS) *.o \
 	src/examples/titration/pka \
 	src/examples/titration/pkaGC \
-	src/examples/widom/widom \
+	src/examples/widom/widom_sphere \
+	src/examples/widom/widom_cube \
 	src/examples/twobody/twobody \
 	src/examples/manybody/manybody \
 	src/examples/manybody/manybodyclust \

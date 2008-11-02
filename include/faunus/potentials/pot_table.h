@@ -36,7 +36,7 @@ namespace Faunus {
     public:
       string pmfdir; //!< Directory containing PMF data
 
-      pot_table(const inputfile &in) : pot_hscoulomb(in) {
+      pot_table(inputfile &in) : pot_hscoulomb(in) {
         xres=0.1;
         nan=30;
         name+="/Empirical data potential";
@@ -46,7 +46,7 @@ namespace Faunus {
             pmf[i][j].xres=xres;
       }
 
-      inline double pairpot (const particle &p1, const particle &p2) {
+      inline double pairpot(const particle &p1, const particle &p2) {
         unsigned short i=p1.id,j=p2.id;
         if (i>j)
           std::swap(i,j);
@@ -123,7 +123,7 @@ namespace Faunus {
     private:
       pot_hsminimage coulomb;
     public:
-      pot_tableMI(const inputfile &in) : pot_table(in), coulomb(in) {};
+      pot_tableMI(inputfile &in) : pot_table(in), coulomb(in) {};
       inline double pairpot(const particle &p1, const particle &p2) {
         unsigned short i=p1.id,j=p2.id;
         if (i>j)
@@ -134,6 +134,9 @@ namespace Faunus {
         return ( r2 > xmax*xmax ) ?
           coulomb.pairpot(p1,p2) :   // use Coulomb pot. outside data
           pmf[i][j]( sqrt(r2) );     // ...else use table.
+      }
+      double sqdist(const point &p1, const point &p2) {
+        return coulomb.sqdist(p1,p2);
       }
       string info() { return pot_table::info() + coulomb.info(); }
       string info(species &spc) { return pot_table::info(spc); }

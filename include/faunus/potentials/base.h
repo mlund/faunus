@@ -16,7 +16,7 @@ namespace Faunus {
       string cite; //!< Litterature reference
       double eps;  //!< Lennard-Jones interaction parameter (kT)
       double f;    //!< Factor to convert to kT (used after energy summations)
-      pot_lj(const inputfile &in) {
+      pot_lj(inputfile &in) {
         eps=in.getflt("LJeps", 2);
         name="LJ12-6";
         f=1;
@@ -33,12 +33,12 @@ namespace Faunus {
        *           \f[ \sigma = \frac{\sigma_1+\sigma_2}{2}\f]
        */
       inline double lj(const particle &p1, const particle &p2, const double &r2) const {
-        register double x=p1.radius+p2.radius,u=x*x/r2;
+        double x=p1.radius+p2.radius,u=x*x/r2;
         x=u*u*u;
         return (x*x-x)*eps;
       }
       inline void lj(const particle &p1, const particle &p2, const double &r2, double &u) const {
-        register double s=p1.radius+p2.radius, a=s*s/r2;
+        double s=p1.radius+p2.radius, a=s*s/r2;
         s=a*a*a;
         u+=(s*s-s)*eps;
       }
@@ -68,12 +68,13 @@ namespace Faunus {
         f=1;
       }
       inline double hs(const particle &p1, const particle &p2, const double &r2) const {
-        register double s=p1.radius+p2.radius;
+        double s=p1.radius+p2.radius;
         return (r2>s*s) ? 0 : 9999.;
       }
+      /*
       inline void hs(const particle &p1, const particle &p2, const double &r2, double &u) const {
         u+=hs(p1,p2,r2);
-      }
+      }*/
       virtual void setvolume(double) {}; //!< specify volume for fluctuating periodic boundaries
       virtual string info() {
         std::ostringstream o;

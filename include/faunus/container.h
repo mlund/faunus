@@ -40,7 +40,7 @@ namespace Faunus {
     public:
       double r;              //!< Radius
       cell(double);
-      cell(const inputfile &);
+      cell(inputfile &);
       string info();
       void randompos(point &);
       string povray();
@@ -63,7 +63,7 @@ namespace Faunus {
       void setvolume(double);
       double len;                          //!< Side length
       box(double);
-      box(const inputfile &);
+      box(inputfile &);
       string info();
       void randompos(point &);
       //void randompos(vector<point> &);   // not implemented

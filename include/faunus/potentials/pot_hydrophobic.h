@@ -15,7 +15,7 @@ namespace Faunus {
       double scale;
     public:
       particle::type id;    //!< Particle to interact with hydrophobic groups (default: iodide)
-      pot_hydrophobic(const inputfile &in) : pot_lj(in) {
+      pot_hydrophobic(inputfile &in) : pot_lj(in) {
         f=in.getflt("bjerrum",7.1);
         scale=in.getflt("hydroscale",4);
         eps=eps/f;

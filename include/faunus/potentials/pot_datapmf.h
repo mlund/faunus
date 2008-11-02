@@ -3,7 +3,7 @@
 
 #include "faunus/xydata.h"
 #include "faunus/potentials/base.h"
-#include "faunus/potentials/pot_hccoulomb.h"
+#include "faunus/potentials/pot_hscoulomb.h"
 
 namespace Faunus {
   /*!
@@ -20,7 +20,7 @@ namespace Faunus {
       xydata<double> pmfd[particle::LAST][particle::LAST];
     public:
       string pmfdir; //!< Directory containing PMF data
-      pot_datapmf(const inputfile &in) : pot_hscoulomb(in) {
+      pot_datapmf(inputfile &in) : pot_hscoulomb(in) {
         name+="/Empirical data potential";
         pmfdir=in.getstr("pmfdir","./");
       }

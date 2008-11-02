@@ -20,6 +20,7 @@ using namespace Faunus;
 using namespace std;
 
 int main() {
+  cout << faunus_splash();              // Faunus info
   slump slump;                          // A random number generator
   inputfile in("twobody.conf");         // Read input file
   mcloop loop(in);                      // Set Markov chain loop lengths
@@ -42,17 +43,18 @@ int main() {
   macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
   dm.dp=6;                              // Set displacement parameters
   sm.dp=90;                             // Set displacement parameters
-  chargereg tit(nvt,cell,pot,salt,4.0); // Prepare titration.
 
   ioaam aam(cell);                      // Protein input file format is AAM
   if (aam.load(cell,"confout.aam")) {
     g[0].masscenter(cell);              // Load old config (if present)
     g[1].masscenter(cell);              // ...and recalc mass centers
   }
+
+  chargereg tit(nvt,cell,pot,salt,4.0); // Prepare titration.
   
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
-  cout << cell.info() << pot.info()     // Print information to screen
-       << tit.info();
+  cout << in.info() << cell.info()
+       << tit.info() << pot.info();     // Print information to screen
 
   #ifdef GROMACS
   ioxtc xtc(cell, cell.r);              // Gromacs xtc output (if installed)
@@ -86,7 +88,7 @@ int main() {
       }
       if (slump.random_one()>.5 && macro>1) {
         //saltrdf.update(cell);                   // Analyse salt g(r)
-        bind.update(cell, cell.p[g[0].beg], g[1]);
+        //bind.update(cell, cell.p[g[0].beg], g[1]);
       }
 
       #ifdef GROMACS

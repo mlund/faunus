@@ -9,22 +9,25 @@ namespace Faunus {
    */
   class pot_minimage : public pot_lj {
     private:
-      double invbox,box;
+      double halfbox,box;
     public:
-      pot_minimage( const inputfile &in ) : pot_lj(in) {
+      pot_minimage( inputfile &in ) : pot_lj(in) {
         name+="/Coulomb w. minimum image";
         f=in.getflt("bjerrum",7.1);
         box=in.getflt("boxlen");
-        invbox=1./box;
+        halfbox=box/2;
         eps=eps/f;
       }
       void setvolume(double vol) {
         box=pow(vol, 1./3);;
-        invbox=1./box;
+        halfbox=box/2;
       }
       inline double pairpot(const particle &p1, const particle &p2) {
-        double r2=p1.sqdist(p2,box,invbox);
+        double r2=p1.sqdist(p2,box,halfbox);
         return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
+      }
+      inline double sqdist(const point &p1, const point &p2) {
+        return p1.sqdist(p2,box,halfbox);
       }
       string info() {
         std::ostringstream o;

@@ -26,6 +26,7 @@
 #endif
 
 using std::ostream;
+using std::abs;
 
 //**********************************
 //! Class for cartesian coordinates

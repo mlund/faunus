@@ -22,7 +22,7 @@ namespace Faunus {
        */
       inline double pairpot(const particle &p1, const particle &p2) {
         double r=p1.dist(p2), u=p1.charge*p2.charge/r;
-        return (r<p1.radius+p2.radius) ? u+100. : u;
+        return (r<p1.radius+p2.radius) ? u+50. : u;
        }
       inline double sqdist(const point &p1, const point &p2) {
         return p1.sqdist(p2);

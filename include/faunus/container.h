@@ -28,6 +28,7 @@ namespace Faunus {
       inline virtual double dist(const point &a,const point &b) {//!< Calculate distance between points
         return a.dist(b);
       }
+      inline virtual point vdist(const point &a, const point &b) { return a-b; }
   };
 
   /*! \brief Spherical simulation container
@@ -57,7 +58,7 @@ namespace Faunus {
    */
   class box : public container {
     private:
-      void setlen(double);                 //!< Reset box length
+      bool setlen(double);                 //!< Reset box length
     public:
       double len_half, len_inv, tlen_inv;  //!< tlen is the trial box
       void setvolume(double);
@@ -79,6 +80,16 @@ namespace Faunus {
       //! Calculate distance using the minimum image convention
       inline double dist(const point &a, const point &b) { return a.dist(b, len, len_half); }
       inline double sqdist(const point &a, const point &b) { return a.sqdist(b, len, len_half); }
+      inline point vdist(const point &a, const point &b) {
+        point r;
+        r.x=std::abs(a.x-b.x);
+        r.y=std::abs(a.y-b.y);
+        r.z=std::abs(a.z-b.z);
+        if (r.x>len_half) r.x-=len;
+        if (r.y>len_half) r.y-=len;
+        if (r.z>len_half) r.z-=len;
+        return r;
+      }
       inline int anint(double x) { return int(x>0. ? x+.5 : x-.5); }
       //! Apply periodic boundary conditions
       inline void boundary(point &a) {

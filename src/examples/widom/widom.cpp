@@ -23,7 +23,7 @@ int main() {
   interaction<pot_hscoulomb> pot(in);   // ...and a Coulomb + Hard sphere potential
 #else
   box cell(in);                         // We want a cubic simulation container
-  interaction<pot_hsminimage> pot(in);  // ...and a Coulomb + Hard sphere potential w. minimum image distances
+  interaction<pot_hsminimage> pot(in);  // ...and a Coulomb/HS pot. w. minimum image
 #endif
   saltmove sm(nvt,cell,pot,in);         // Class for salt movements
   salt salt;                            // Define some groups for mobile ions
@@ -32,6 +32,7 @@ int main() {
   ioaam aam(cell);                      // File I/O class
   aam.load(cell,"widom.aam");           // Read initial config. from disk (if present)
 
+  virial virial(cell);                  // Virial analysis
   widom wid1(10);                       // Class for multiple particle insertion
   widomSW wid2(10);                     // Class for single particle insertion w. charge scaling
   wid1.add(cell);                       // Detect all species in the cell
@@ -48,6 +49,7 @@ int main() {
       sys+=sm.move(salt);               // Displace salt particles
       wid1.insert(cell,pot);            // Widom particle insertion analysis
       wid2.insert(cell,pot);            // - // -
+      virial.sample(cell,pot);          // Virial sampling (NOT really approprite for this pot.!)
     }                                   // END of micro loop
     sys.update(pot.energy(cell.p));     // Update system energy
     aam.save("widom.aam",cell.p);       // Save particle configuration to disk
@@ -56,6 +58,6 @@ int main() {
 
   cout << sys.info() << sm.info()
        << wid1.info() << wid2.info()
-       << loop.info();                  // Final information and results!
+       << virial.info() << loop.info(); // Final information and results!
 }
 

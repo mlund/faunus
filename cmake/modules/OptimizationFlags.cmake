@@ -27,6 +27,6 @@ endfunction( fau_setcmp )
 fau_setcmp("GNU" "-O3 -funroll-loops -W -Wno-sign-compare -Wconversion -DNDEBUG" "-fopenmp" ) # GNU
 fau_setcmp("Intel" "-O3 -w1 -Wno-unknown-pragmas -DNDEBUG" "-openmp") # Intel
 fau_setcmp("Sun" "-fast -DNDEBUG" "-xopenmp") # Sun
-fau_setcmp("pgCC" "-O3 -DNDEBUG" "-mp")       # Portland
+fau_setcmp("PGI" "-O3 -DNDEBUG" "-mp")       # Portland
 fau_setcmp("pathCC" "-Ofast -DNDEBUG" " ")    # Pathscale
 

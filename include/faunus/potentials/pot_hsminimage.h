@@ -10,8 +10,8 @@ namespace Faunus {
   class pot_hsminimage {
     private:
       double halfbox,box;
-      string name;
     public:
+      string name;
       double f;
       pot_hsminimage( inputfile &in ) {
         name+="Coulomb/Hardsphere w. minimum image";

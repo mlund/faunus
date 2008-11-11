@@ -55,36 +55,17 @@ namespace Faunus {
   class systemenergy : public analysis {
     private:
       double u0,sum,cur;
-      average<double> uavg, u2avg;
       vector<double> confu;  //!< Vector to track system energy in time
       io fio;
     public:
+      average<double> uavg, u2avg;
       systemenergy(double);
       void update(double);        //!< Specify current system energy and recalc averages
       void track();               //!< Add a time element to confu
       void operator+=(double);    //!< Add system energy change
-      string info() {
-        write();                  //!< Print dynamics of system energy 
-        std::ostringstream o;
-        o << endl << "# SYSTEM ENERGY (kT):" << endl;
-        if (uavg.cnt>0)
-          o << "#   Averages <U> <U^2> = " << uavg.avg() << " " << u2avg.avg() << endl
-            << "#   sqrt(<U^2>-<U>^2)  = " << sqrt(u2avg.avg()-uavg.avg()*uavg.avg()) << endl;
-        o << "#   Initial energy     = " << u0 << endl
-          << "#   Initial + changes  = " << sum << endl
-          << "#   Current energy     = " << cur << endl
-          << "#   Absolute drift     = " << std::abs(cur-sum) << endl;
-        return o.str();
-      }
-      string confuout() {
-        int j=confu.size();
-        std::ostringstream o;
-        o << endl << "# SYSTEM ENERGY (kT):"<< endl;
-        for (int i=0;i<j;i++)
-          o << i+1 << " " << confu[i] << endl;
-        return o.str();
-      }
+      string info();              //!< Info
       void write(); 
+      string confuout();
   };
 
   /*!
@@ -217,7 +198,7 @@ namespace Faunus {
       average<float> conc; //!< Local or "bound" concentration
       twostatebinding(double radius) {
         r2=radius*radius;
-        vol=4./3.*acos(-1)*pow(radius,3);
+        vol=4./3.*acos(-1.)*pow(radius,3);
       }
       void update(container &con, point &site, group &g) {
         unsigned short i,cnt=0;
@@ -280,6 +261,25 @@ namespace Faunus {
           << "# AGGREGATION COUNT"<< endl<<endl;
         return o.str();
       }
+  };
+
+  /* Calculates the virial pressure by calculating the forces between
+   * the particles. The force is calculated by taking the derivative
+   * of the pair-potential and does therefore *not* work with
+   * hardsphere potentials.
+   *
+   * \author Mikael Lund
+   * \date Lund, 2008
+   */
+  class virial : public analysis {
+    private:
+      double conc;
+    public:
+      double dr; //!< r-step when taking the derivative of the pair potential.
+      virial(container &);
+      average_ext<float> pex; //!< Excess pressure
+      void sample(container &, energybase &);
+      string info();
   };
 }//namespace
 #endif

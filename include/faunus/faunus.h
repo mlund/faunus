@@ -20,11 +20,13 @@
 #define FAUNUS_H
 
 #include "faunus/common.h"
-
-#include "faunus/analysis.h"
-#include "faunus/histogram.h"
-#include "faunus/profile.h"
 #include "faunus/physconst.h"
+
+Faunus::physconst pst;
+
+#include "faunus/histogram.h"
+#include "faunus/analysis.h"
+#include "faunus/profile.h"
 #include "faunus/particles.h"
 #include "faunus/io.h"
 #include "faunus/inputfile.h"

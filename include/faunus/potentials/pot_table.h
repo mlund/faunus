@@ -3,7 +3,7 @@
 
 #include "faunus/potentials/base.h"
 #include "faunus/xytable.h"
-#include "faunus/potentials/pot_hccoulomb.h"
+#include "faunus/potentials/pot_hscoulomb.h"
 #include "faunus/potentials/pot_hsminimage.h"
 
 namespace Faunus {
@@ -123,14 +123,16 @@ namespace Faunus {
     private:
       pot_hsminimage coulomb;
     public:
-      pot_tableMI(inputfile &in) : pot_table(in), coulomb(in) {};
+      pot_tableMI(inputfile &in) : pot_table(in), coulomb(in) {
+        coulomb.name+=" (fallback outside table)";
+      };
       inline double pairpot(const particle &p1, const particle &p2) {
         unsigned short i=p1.id,j=p2.id;
         if (i>j)
           std::swap(i,j);
         if (pmf[i][j].xmax()<0.01)
           return coulomb.pairpot(p1,p2);
-        double r2=p1.sqdist(p2), xmax=pmf[i][j].xmax()-0.5;
+        double r2=coulomb.sqdist(p1,p2), xmax=pmf[i][j].xmax()-0.5;
         return ( r2 > xmax*xmax ) ?
           coulomb.pairpot(p1,p2) :   // use Coulomb pot. outside data
           pmf[i][j]( sqrt(r2) );     // ...else use table.

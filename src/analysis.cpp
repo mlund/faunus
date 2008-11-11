@@ -24,6 +24,27 @@ namespace Faunus {
       fio.writefile("systemenergy.dat", confuout() );
   }
   void systemenergy::operator+=(double du) { sum+=du; }
+  string systemenergy::info() {
+    write();                  //!< Print dynamics of system energy 
+    std::ostringstream o;
+    o << endl << "# SYSTEM ENERGY (kT):" << endl;
+    if (uavg.cnt>0)
+      o << "#   Averages <U> <U^2> = " << uavg.avg() << " " << u2avg.avg() << endl
+        << "#   sqrt(<U^2>-<U>^2)  = " << sqrt(u2avg.avg()-uavg.avg()*uavg.avg()) << endl;
+    o << "#   Initial energy     = " << u0 << endl
+      << "#   Initial + changes  = " << sum << endl
+      << "#   Current energy     = " << cur << endl
+      << "#   Absolute drift     = " << std::abs(cur-sum) << endl;
+    return o.str();
+  }
+  string systemenergy::confuout() {
+    int j=confu.size();
+    std::ostringstream o;
+    o << endl << "# SYSTEM ENERGY (kT):"<< endl;
+    for (int i=0;i<j;i++)
+      o << i+1 << " " << confu[i] << endl;
+    return o.str();
+  }
 
   //---------------- ANGULAR CORRELATIONS ---------------------------
   angularcorr::angularcorr() {}
@@ -178,5 +199,50 @@ namespace Faunus {
       f.close();
     }
   }
-}
+
+  virial::virial(container &c) {
+    runfraction=0.3;
+    dr=0.1;
+    conc = c.p.size()/c.getvolume();
+  }
+
+  void virial::sample(container &c, energybase &pot) {
+    if (runtest()) {
+      point f,rij;
+      double dr=0.1,r,p=0;
+      int n=c.p.size();
+      for (int i=0; i<n-1; i++)
+        for (int j=i+1; j<n; j++) {
+          rij=c.vdist(c.p[i],c.p[j]);
+          r=rij.len();
+          f = rij * ( pot.force(c,c.p[i],c.p[j],r,dr) / r );
+          p+= rij.x*f.x + rij.y*f.y + rij.z*f.z;
+        }
+      pex+=p*pot.tokT / (3*c.getvolume());  // kT/AA^3
+    }
+  }
+
+  string virial::info() {
+    std::ostringstream o;
+    char w=10;
+    double tokPa=2.487*1e30/6.022e23,
+           toM=2.487*1e30/(8.314*298.15*6.022e23),
+           pid=conc*1e27/6.022e23,
+           ex=pex.avg()*toM;
+
+    o.unsetf( std::ios_base::floatfield );
+    o << "\n# VIRIAL ANALYSIS: (Frenkel & Smith 2nd Ed. p.84)\n"
+      << "#   Number of force calculations = " << pex.cnt << "\n"
+      << "#   Run fraction                 = " << runfraction << "\n"
+      << std::setprecision(4)
+      << "#   Osmotic coefficient          = " << (pid+ex)/pid << "\n"
+      << "#                     "
+      << setw(w) << "ideal" << setw(w) << "excess" << setw(w) << "total" << setw(w+3) << "ex. stddev\n"
+      << "#   Pressure (mol/l): "
+      << setw(w) << pid << setw(w) << ex << setw(w) << pid+ex << setw(w) << pex.stddev()*toM
+      << endl;
+    return o.str();
+  }
+
+}//namespace
 

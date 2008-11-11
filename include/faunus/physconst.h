@@ -18,6 +18,14 @@ namespace Faunus {
       physconst(double=298.15, double=80.);
       void lB_TO_T(double);
   };
-}
+
+  namespace phystest {
+    static double pi=acos(-1.),
+                  e0=8.85419e-19,
+                  kB=1.380658e-23,
+                  e=1.602177e-19,
+                  Nav=6.022137e23;
+  }
+} // namespace
 #endif
 

@@ -30,7 +30,7 @@ namespace Faunus {
       point operator*(const point);         ///< Multiply two vectors
       point operator*(double) const;        ///< Scale vector
       point operator+(const point);         ///< Add two vectors
-      point operator-(const point) const;   ///< Substract vector
+      point operator-(const point) const;   ///< Subtract vector
       point operator+(double);              ///< Displace x,y,z by value
       point & operator+=(const point&);
       bool operator==(const point&) const;

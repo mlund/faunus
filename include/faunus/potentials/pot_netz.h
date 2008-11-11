@@ -13,10 +13,8 @@ namespace Faunus {
         switch (id) {
           case particle::I:
             return 8.;
-            break;
           case particle::CL:
             return .5;
-            break;
         }
         return 1.;
       }
@@ -36,7 +34,6 @@ namespace Faunus {
             break;
           default:
             return 0;
-            break;
         }
         return ( A/pow(z-zn,12)
             - B/pow(z-zn,8)
@@ -61,7 +58,6 @@ namespace Faunus {
             break;
           default:
             return 0;
-            break;
         }
         return (  A * ( pow(  exp(-B*(z-zn)) + pow(-1,n)   ,2) - 1. )
             + C1*(z-C2)*exp( -C3*pow(z-C2,2)  )

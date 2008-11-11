@@ -57,11 +57,11 @@ namespace Faunus {
    */
   template<class T>
     class average_ext : public average<T> {
-      using average<T>::cnt;
-      using average<T>::sum;
       private:
         T sqsum;
       public:
+        using average<T>::cnt;
+        using average<T>::sum;
         average_ext() { sqsum=0; }
         void add(T x) {
           average<T>::add(x);

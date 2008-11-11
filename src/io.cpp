@@ -36,8 +36,11 @@ namespace Faunus {
       else iter++;
   }
 
+  /*
   bool io_aam::load(container &c, string file) {
+    return false;
   }
+  */
 
   //--------------- IOAAM ---------------------
   ioaam::ioaam(species &spc) : iopart(spc) {}

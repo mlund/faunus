@@ -11,6 +11,7 @@
 #include "faunus/potentials/pot_hscoulomb.h"
 #include "faunus/potentials/pot_hydrophobic.h"
 #include "faunus/potentials/pot_datapmf.h"
+#include "faunus/potentials/pot_table.h"
 #include "faunus/potentials/pot_debyehuckel.h"
 #include "faunus/potentials/pot_debyehuckelP3.h"
 #include "faunus/potentials/pot_barecoulomb.h"
@@ -45,6 +46,8 @@ namespace Faunus {
       virtual double pot(const vector<particle> &, const point &)=0;                     //!< Electrostatic potential in a point
       virtual double dipdip(const point &, const point &, double)=0;                     //!< Dipole-dipole energy.
       virtual double iondip(const point &, double, double)=0;                            //!< Ion-dipole energy.
+      virtual double force(container &, particle, particle, double&, double=.5)=0;       //!< Force vector
+      virtual void forceall(container &, vector<point> &)=0;
 
       string info() {
         std::ostringstream o;
@@ -220,6 +223,37 @@ namespace Faunus {
         return pair.f*u;
       }
 
+      void forceall(container &c, vector<point> &f) {
+        point r;
+        double ff;
+        int n=c.p.size();
+        f.resize(n);
+        for (int i=0; i<n; i++)
+          f[i].clear();
+        for (int i=0; i<n-1; i++)
+          for (int j=i+1; j<n; j++)
+          {
+            r=c.vdist(c.p[i], c.p[j]);
+            ff=c.p[i].charge*c.p[j].charge/(r.x*r.x+r.y*r.y+r.z*r.z);
+            f[i].x+=ff*r.x;
+            f[i].y+=ff*r.y;
+            f[i].z+=ff*r.z;
+            f[j].x-=ff*r.x;
+            f[j].y-=ff*r.y;
+            f[j].z-=ff*r.z;
+          }
+      }
+
+      double force(container &c, particle a, particle b, double &r, double dr) {
+        double forward,center;
+        a.x=a.y=a.z=b.y=b.z=0;
+        b.x=r+dr;
+        forward=pair.pairpot(a,b);
+        b.x=r-dr;
+        center=pair.pairpot(a,b);
+        return -(forward-center)/(2*dr);
+      }
+
       string info() {
         std::ostringstream o;
         o << energybase::info()
@@ -267,8 +301,9 @@ namespace Faunus {
 
   template<class T> double int_hydrophobic<T>::hyenergy(const vector<particle> &p) {
     double u=0;
+    int n=pa.size();
 #pragma omp parallel for reduction (+:u)
-    for (int i=0; i<pa.size(); i++)  // loop over ions
+    for (int i=0; i<n; i++)  // loop over ions
       u+=hyenergy(p, pa[i]);                    // energy with hydrophobic groups
     return u; // in kT
   }

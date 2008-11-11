@@ -37,11 +37,15 @@ namespace Faunus {
       virtual bool save(container &, string)=0;
       virtual bool load(container &, string)=0;
       virtual bool load(vector<particle> &, string)=0;
-      virtual string info() {};
+      virtual string info() {
+        return "";
+      }
   };
 
   class io_aam : public particleIO {
-    virtual bool load(container &, string);
+    bool load(container &, string);
+    bool load(vector<particle> &, string);
+    bool sabe(container &, string);
   };
 
   //----------------------------------------

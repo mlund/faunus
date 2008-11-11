@@ -13,6 +13,7 @@ function( fau_example tname tdir tsrc )
 endfunction( fau_example )
 
 #----- add examples to build process -----
+# Arguments: (target directory source)
 fau_example(pka titration pka.cpp)
 fau_example(pkaGC titration pka.cpp)
 fau_example(twobody twobody twobody.cpp)
@@ -22,6 +23,7 @@ fau_example(widom_sphere widom widom.cpp)
 fau_example(manybody manybody manybody.cpp)
 fau_example(isobaric isobaric isobaric.cpp)
 fau_example(binding binding binding.cpp)
+fau_example(printpotential tools printpotential.cpp)
 
 #----- target specific build options -----
 set_target_properties( pkaGC PROPERTIES COMPILE_DEFINITIONS "GCPKA")

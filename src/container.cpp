@@ -57,15 +57,22 @@ namespace Faunus {
     len=pow(v, 1./3);
     setlen(len);
   }
-  void box::setlen(double l) {
+  bool box::setlen(double l) {
+    if (l<=0)
+      return false;
     len = l;    // cubic box sidelength
     len_half=len/2;
     len_inv=1./len;
     volume = len*len*len;
+    return true;
   }
   box::box(double l) { setlen(l); }
 
-  box::box(inputfile &in) { setlen( in.getflt("boxlen") ); }
+  box::box(inputfile &in) {
+    if (!setlen( in.getflt("boxlen",-1) ))
+      setvolume( in.getflt("volume") );
+  }
+
   string box::info() {
     std::ostringstream o;
     o << container::info() 

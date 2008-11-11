@@ -27,7 +27,7 @@ WELCOME TO FAUNUS:
   Website: http://faunus.sourceforge.net
 
 CONTRIBUTORS:
-  Mikael Lund <mlund at mac.com> - http://web.mac.com/mlund
+  Mikael Lund <mikael.lund at teokem.lu.se> - http://web.mac.com/mlund
   Bjorn Persson <bjorn.persson at teokem.lu.se>
   Martin Trulsson <martin.trulsson at teokem.lu.se>
   Ondrej Marsalek <ondrej.marsalek at uochb.cas.cz>
@@ -78,7 +78,10 @@ COMPILING USING CMAKE (Experimental):
     -DENABLE_GROMACS=on|off  Enable Gromacs XTC file support
 
   Environmental variables:
-    CXX - C++ compiler command (icpc, pathCC, pgCC etc.)
+    CXX - C++ compiler command (g++, icpc, pathCC, pgCC etc.)
+
+  Example for Intel's C++ compiler with OpenMP parallization:
+    $ CXX=icpc cmake . -DENABLE_OPENMP=on
 
 DIRECTORY LAYOUT:
   src          Sourcecode and examples

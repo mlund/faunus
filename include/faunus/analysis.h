@@ -58,7 +58,7 @@ namespace Faunus {
       vector<double> confu;  //!< Vector to track system energy in time
       io fio;
     public:
-      average<double> uavg, u2avg;
+      average<double> uavg;
       systemenergy(double);
       void update(double);        //!< Specify current system energy and recalc averages
       void track();               //!< Add a time element to confu
@@ -277,7 +277,7 @@ namespace Faunus {
     public:
       double dr; //!< r-step when taking the derivative of the pair potential.
       virial(container &);
-      average_ext<float> pex; //!< Excess pressure
+      average<double> pex; //!< Excess pressure
       void sample(container &, energybase &);
       string info();
   };

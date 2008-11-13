@@ -42,7 +42,10 @@ class xytable {
     //! \param resolution Distance between x values
     //! \param xminimum Minimum x value (can be smaller than zero)
     //! \param xmaximum Maximum x value (for better memory optimization)
-    xytable(TX resolution=0.5, TX xminimum=0, TX xmaximum=0) {
+    xytable(TX resolution=.5, TX xminimum=0, TX xmaximum=0) {
+      init(resolution, xminimum, xmaximum);
+    }
+    void init(TX resolution=.5, TX xminimum=0, TX xmaximum=0) {
       xres=resolution;
       xmin=xminimum;
       if (xmaximum>0)

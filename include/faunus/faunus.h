@@ -21,9 +21,6 @@
 
 #include "faunus/common.h"
 #include "faunus/physconst.h"
-
-Faunus::physconst pst;
-
 #include "faunus/histogram.h"
 #include "faunus/analysis.h"
 #include "faunus/profile.h"

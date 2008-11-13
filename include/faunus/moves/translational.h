@@ -192,12 +192,12 @@ namespace Faunus {
     if (ens->metropolis(du)==true) {
       rc=OK;
       utot+=du;
-      r=con->dist(g1.cm, g2.cm);
-      gofr.add(r);
-      dpsqr+=4.*con->sqdist(g1.cm,g1.cm_trial);
       naccept++;
       g1.accept(*con);
       g2.accept(*con);
+      r=con->dist(g1.cm, g2.cm);
+      dpsqr+=r*r;
+      gofr.add(r);
       return du;
     } else
       rc=ENERGY;

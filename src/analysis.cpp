@@ -14,7 +14,6 @@ namespace Faunus {
   void systemenergy::update(double energy) {
     cur=energy;
     uavg+=cur;
-    u2avg+=cur*cur;
   }
   void systemenergy::track() {
     confu.push_back(sum);
@@ -29,8 +28,7 @@ namespace Faunus {
     std::ostringstream o;
     o << endl << "# SYSTEM ENERGY (kT):" << endl;
     if (uavg.cnt>0)
-      o << "#   Averages <U> <U^2> = " << uavg.avg() << " " << u2avg.avg() << endl
-        << "#   sqrt(<U^2>-<U>^2)  = " << sqrt(u2avg.avg()-uavg.avg()*uavg.avg()) << endl;
+      o << "#   Average <U> s      = " << uavg.avg() << " " << uavg.stdev() << "\n";
     o << "#   Initial energy     = " << u0 << endl
       << "#   Initial + changes  = " << sum << endl
       << "#   Current energy     = " << cur << endl
@@ -201,23 +199,26 @@ namespace Faunus {
   }
 
   virial::virial(container &c) {
-    runfraction=0.3;
+    runfraction=1.0;
     dr=0.1;
     conc = c.p.size()/c.getvolume();
   }
 
   void virial::sample(container &c, energybase &pot) {
     if (runtest()) {
-      point f,rij;
-      double dr=0.1,r,p=0;
+      double p=0;
       int n=c.p.size();
-      for (int i=0; i<n-1; i++)
+#pragma omp parallel for reduction (+:p)
+      for (int i=0; i<n-1; i++) {
+        point f,rij;
+        double r;
         for (int j=i+1; j<n; j++) {
           rij=c.vdist(c.p[i],c.p[j]);
           r=rij.len();
           f = rij * ( pot.force(c,c.p[i],c.p[j],r,dr) / r );
           p+= rij.x*f.x + rij.y*f.y + rij.z*f.z;
         }
+      }
       pex+=p*pot.tokT / (3*c.getvolume());  // kT/AA^3
     }
   }
@@ -231,15 +232,16 @@ namespace Faunus {
            ex=pex.avg()*toM;
 
     o.unsetf( std::ios_base::floatfield );
-    o << "\n# VIRIAL ANALYSIS: (Frenkel & Smith 2nd Ed. p.84)\n"
+    o << "\n# VIRIAL ANALYSIS: (Frenkel & Smith 2nd Ed. p.84 / McQuarrie p.338)\n"
       << "#   Number of force calculations = " << pex.cnt << "\n"
+      << "#   Differentiation step (AA)    = " << dr << "\n"
       << "#   Run fraction                 = " << runfraction << "\n"
       << std::setprecision(4)
       << "#   Osmotic coefficient          = " << (pid+ex)/pid << "\n"
       << "#                     "
       << setw(w) << "ideal" << setw(w) << "excess" << setw(w) << "total" << setw(w+3) << "ex. stddev\n"
       << "#   Pressure (mol/l): "
-      << setw(w) << pid << setw(w) << ex << setw(w) << pid+ex << setw(w) << pex.stddev()*toM
+      << setw(w) << pid << setw(w) << ex << setw(w) << pid+ex << setw(w) << pex.stdev()*toM
       << endl;
     return o.str();
   }

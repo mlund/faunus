@@ -19,13 +19,20 @@ namespace Faunus {
       void lB_TO_T(double);
   };
 
-  namespace phystest {
-    static double pi=acos(-1.),
-                  e0=8.85419e-19,
-                  kB=1.380658e-23,
-                  e=1.602177e-19,
-                  Nav=6.022137e23;
-  }
+  class pc {
+    public:
+      pc(double temp=298.15) { T=temp; }
+      const static double
+        pi,
+        e0,                 //!< Permittivity of vacuum [C^2/(J*m)]
+        kB,                 //!< Boltzmann's constant [J/K]
+        e,                  //!< Electronic charge [C] 
+        R,                  //!< Molar gas constant [J/(K*mol)]
+        Nav;                //!< Avogadro's number [1/mol]
+      double T;             //!< Temperature [K]
+      double lB(double=80); //!< Bjerrum length [Aangstrom]
+      double kT2kJ(double); //!< kT/molecule -> kJ/mol
+  };
 } // namespace
 #endif
 

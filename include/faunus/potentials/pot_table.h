@@ -19,7 +19,7 @@ namespace Faunus {
    * The PMF-file must contain a list of space-separated
    * distances and energies. No text is tolerated! The
    * data need not be equidistant and will be averaged
-   * to fit the current resolution of 0.1 Aangstrom.
+   * to fit the current resolution of 0.1 Aangstrom (default).
    *
    * If the data resolution is less than 0.1 AA or if
    * data is not found (for example from 0 to contact)
@@ -33,17 +33,20 @@ namespace Faunus {
       xytable<double, double> pmf[particle::LAST][particle::LAST];
       double xres; //!< Distance resolution
       double nan;  //!< Energy of no data found.
+      void inittables() {
+        for (int i=particle::FIRST; i<particle::LAST; i++)
+          for (int j=particle::FIRST; j<particle::LAST; j++)
+            pmf[i][j].init(xres);
+      }
     public:
       string pmfdir; //!< Directory containing PMF data
 
       pot_table(inputfile &in) : pot_hscoulomb(in) {
-        xres=0.1;
         nan=30;
         name+="/Empirical data potential";
         pmfdir=in.getstr("pmfdir","./");
-        for (int i=particle::FIRST; i<particle::LAST; i++)
-          for (int j=particle::FIRST; j<particle::LAST; j++)
-            pmf[i][j].xres=xres;
+        xres=in.getflt("pmfres",.5);
+        inittables();
       }
 
       inline double pairpot(const particle &p1, const particle &p2) {

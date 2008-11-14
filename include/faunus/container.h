@@ -10,12 +10,15 @@ namespace Faunus {
   /*! \brief Polymorphic class for simulation containers
    *  \author Mikael Lund
    */
-  class container : public particles,  public species {
+  class container : public particles {
     protected:
       slump slp;
-      double volume;                          //!< Volume of the container [AA^3]
+      double volume;                                      //!< Volume of the container [AA^3]
     public:
+      atoms atom;
       double getvolume() {return volume;}
+//      container();
+//      container(inputfile &);
       virtual void setvolume(double){}                    //!< Specify new volume
       virtual bool collision(const point &)=0;            //!< Check for collision with walls
       virtual void randompos(point &)=0;                  //!< Random point within container

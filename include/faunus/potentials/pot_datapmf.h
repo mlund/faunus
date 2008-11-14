@@ -36,24 +36,24 @@ namespace Faunus {
           pmfd[i][j].x2y(sqrt(r2));        // ...else use table.
       }
 
-      /*!\param spc Species class.
+      /*!\param atom Species class.
        * \param id particle type to search for.
        */
-      void loadpmf(const species &spc, particle::type id) {
+      void loadpmf(atoms &atom, particle::type id) {
         string n1,n2;
-        unsigned short i,j=id;
+        char i,j=id;
         for (i=particle::FIRST; i<particle::LAST; i++) {
-          n1=spc.d[i].name+"-"+spc.d[j].name;
-          n2=spc.d[j].name+"-"+spc.d[i].name;
-          if (loadpmf( spc, n1 + ".dat")==false)
-            loadpmf( spc, n2 + ".dat");
+          n1=atom[i].name+"-"+atom[j].name;
+          n2=atom[j].name+"-"+atom[i].name;
+          if (loadpmf( atom, n1 + ".dat")==false)
+            loadpmf( atom, n2 + ".dat");
         }
       }
 
       /* Search through particle vector and attempt to load pmf's for all possible
        * particle combinations.
        */
-      void loadpmf(const container &c) {
+      void loadpmf(container &c) {
         vector<particle::type> id;
         for (unsigned short i=0; i<c.p.size(); i++) {
           vector<particle::type>::iterator iter = std::find(id.begin(), id.end(), c.p[i].id);
@@ -62,14 +62,14 @@ namespace Faunus {
         }
         for (unsigned short i=0; i<id.size(); i++)
           for (unsigned short j=i; j<id.size(); j++)
-            loadpmf(c, c.d[id[i]].name+"-"+c.d[id[j]].name+".dat"); 
+            loadpmf(c.atom, c.atom[id[i]].name+"-"+c.atom[id[j]].name+".dat"); 
       }
 
       /*! Load PMF(s) from a file. File format: Each set starts
        * with "#$ type1 type2 length". Several sets can be present
        * in the same file.
        */
-      bool loadpmf(const species &spc, string filename) {
+      bool loadpmf(atoms &atom, string filename) {
         filename=pmfdir+"/"+filename;
         string s,a_str,b_str;
         int a,b,len;
@@ -84,8 +84,8 @@ namespace Faunus {
               fh >> a_str >> b_str >> len;
               x.resize(len);
               y.resize(len);
-              a = spc.id(a_str);
-              b = spc.id(b_str);
+              a = atom[a_str].id;
+              b = atom[b_str].id;
               if (a>b)
                 std::swap(a,b);
               for (int i=0; i<len; i++) {
@@ -112,14 +112,14 @@ namespace Faunus {
       }
 
       /*! Show info + list of loaded pmf data */
-      string info(species &spc) {
+      string info(atoms &atom) {
         std::ostringstream o;
         o << info()
           << "#   PMF Info: (a,b,resolution,r_max,file)" << std::endl; 
         for (unsigned short i=particle::FIRST; i<particle::LAST; i++)
           for (unsigned short j=particle::FIRST; j<particle::LAST; j++)
             if (pmfd[i][j].xmax>0) 
-              o << "#     " << spc.d[i].name << " " << spc.d[j].name << " "
+              o << "#     " << atom[i].name << " " << atom[j].name << " "
                 << pmfd[i][j].res << " "
                 << pmfd[i][j].xmax << " "
                 << pmfd[i][j].comment << endl; 

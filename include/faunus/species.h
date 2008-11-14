@@ -1,29 +1,53 @@
 #ifndef FAU_species_h
 #define FAU_species_h
 #include "faunus/point.h"
+#include "faunus/inputfile.h"
 
 namespace Faunus {
   /*!
-   * \brief Specific data for particles
+   * Class to load and handle atom types from disk
+   * Example:\n
+   * \code
+   *   atoms atom;
+   *   atom.load("atoms.dat");         // load parameters
+   *   double s=atom["Na"].sigma;      // get LJ sigma for sodium
+   *   particle p=atom("Na");          // Initialize a particle
+   *   std::cout << atom[p.id].charge; // Get charge via particle id
+   * \endcode
+   *
    * \author Mikael Lund
+   * \date Lund 2008
    */
-  class species {
+  class atoms {
     private:
-      struct data {
-        particle p;
-        float pka;
-        string name;
-        //bool hydrophobic;
-      };
-      void set(particle::type,string,float,float,float,bool);
-
+      void init();                  //!< Recalc eps and sigma vectors
+      char find(string);
+      particle get(char);           //!< Convert n'th atom to a particle
+      string filename;
     public:
-      species();
-      vector<data> d; //!< Data is stored here.
-      particle::type id(string) const;    //!< Transform name to particle
-      particle get(particle::type) const; //!< Get particle from id
-      particle get(string) const;         //!< Get particle from string (name)
-      string particleinfo(particle::type) const;  //!< Show particle info
+      struct data {
+        char id;          //!< id number
+        double sigma,     //!< LJ diameter
+               eps,       //!< LJ epsilon
+               radius,    //!< Radius
+               mw,        //!< Weight
+               charge,    //!< Charge
+               pka;       //!< pKa value
+        bool hydrophobic; //!< Are we hydrophobic?
+        string name;
+      };
+      atoms();                               //!< Constructor - set UNK atom type (fallback)
+      vector<data> list;                     //!< List of atoms
+      vector< vector<double> >
+        eps,                                 //!< LJ epsilon between atoms i and j
+        sigma;                               //!< LJ sigma between atoms i and j
+      bool load(string);                     //!< Load atom parameter from a file
+      bool load(inputfile &);                //!< Load atom parameter from a file
+      particle operator() (string);          //!< Name->particle
+      particle operator() (char);            //!< Id->particle
+      data & operator[] (string);            //!< Name->data
+      data & operator[] (char);              //!< Id->data
+      string info();                         //!< Print info
   };
-}
+}//namespace
 #endif

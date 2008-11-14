@@ -27,7 +27,7 @@ namespace Faunus {
         runfraction=1.0;
       }
       string info();                          //!< Print results of analysis
-      void add(const particle &);             //!< Add particle to insert
+      void add(particle);                     //!< Add particle to insert
       void add(container &);                  //!< All all species found in the container
       void insert(container &, energybase &); //!< Insert and analyse
       double gamma() { return exp(muex()); }  //!< Mean activity coefficient
@@ -67,7 +67,7 @@ namespace Faunus {
 
     public:
       widomSW(int=10);        //!< Constructor, number of test insertions
-      void add(particle &);   //!< Add test particle
+      void add(particle);     //!< Add test particle
       void add(container &);
       string info();          //!< Get results
       void insert(container &, energybase &); //!< Ghost insertion

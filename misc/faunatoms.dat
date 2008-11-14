@@ -1,0 +1,48 @@
+# ------------------------------------------------------------
+#   Faunus atom parameters
+#    Format:
+#     name   charge radius eps    Mw     pKa   hydrophobic
+# ------------------------------------------------------------
+
+# Ions
+Atom  NA      +1     1.8    0      1     0.0    no
+Atom  CL      -1     1.7    0      1     0.0    no
+Atom  K       +1     1.5    0      1     0.0    no
+Atom  F       -1     1.4    0      1     0.0    no
+Atom  BR      -1     1.9    0      1     0.0    no
+Atom  I       -1     2.0    0      1     0.0    no
+Atom  SO4     -2     1.6    0      1     0.0    no
+Atom  PO4     -2     3.5    0      1     7.2    no
+Atom  LA      +3     2.0    0      1     0.0    no
+Atom  GHOST    0     0      0      1     0.0    no
+
+# Titratable residues
+# (charges represent the deprotonated states)
+Atom  CTR     -1     3.5    0      1     3.8    no
+Atom  ASP     -1     3.5    0      1     4.8    no
+Atom  GLU     -1     3.5    0      1     4.8    no
+Atom  HIS      0     3.5    0      1     6.3    no
+Atom  NTR      0     3.5    0      1     7.5    no
+Atom  TYR     -1     3.5    0      1     9.6    no
+Atom  LYS      0     3.5    0      1    10.4    no
+Atom  CYS     -1     3.5    0      1    10.8    no
+Atom  ARG      0     3.5    0      1    12.0    no
+
+# Hydrophobic residues (VMD definitions)
+Atom  ALA      0     3.5    0      1     0.0    yes
+Atom  ILE      0     3.5    0      1     0.0    yes
+Atom  LEU      0     3.5    0      1     0.0    yes
+Atom  MET      0     3.5    0      1     0.0    yes
+Atom  PHE      0     3.5    0      1     0.0    yes
+Atom  PRO      0     3.5    0      1     0.0    yes
+Atom  TRP      0     3.5    0      1     0.0    yes
+Atom  VAL      0     3.5    0      1     0.0    yes
+Atom  HYDRO    0     3.5    0      1     0.0    yes
+
+# Other residues
+Atom  SER      0     3.5    0      1     0.0    no
+Atom  THR      0     3.5    0      1     0.0    no
+Atom  ASN      0     3.5    0      1     0.0    no
+Atom  GLN      0     3.5    0      1     0.0    no
+Atom  GLY      0     3.5    0      1     0.0    no
+

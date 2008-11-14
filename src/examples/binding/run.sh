@@ -15,6 +15,7 @@ nprot1     $nprot1
 protein1   $protein1
 nprot2     $nprot2
 protein2   $protein2
+atomfile   $atomfile
 " > binding.conf
 }
 
@@ -32,6 +33,7 @@ nprot1=1
 protein1="substrate.aam"
 nprot2=1
 protein2="ligand.aam"
+atomfile=../../../misc/faunatoms.dat
 for LJeps in 0.3 
 do
   microsteps=10000

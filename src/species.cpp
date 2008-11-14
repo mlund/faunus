@@ -1,71 +1,88 @@
 #include "faunus/species.h"
 namespace Faunus {
-  //float species::getpka(particle::type id) { return d[id].pka; }
-  particle species::get(particle::type id) const { return d[id].p; }
-  particle species::get(string name) const { return d[id(name)].p; }
-
-  void species::set(
-      particle::type id, string name, float r, float z, float pka, bool hydr)
-  {
-    d[id].name = name;
-    d[id].p.id=id;
-    d[id].pka = pka;
-    d[id].p.radius = r;
-    d[id].p.charge = z;
-    d[id].p.hydrophobic = hydr;
+  atoms::atoms() {
+    filename="faunatoms.dat";
+    data a = {0,0,0,0,1.,0,0,false,"UNK"};
+    list.push_back(a);
+    init();
   }
 
-  particle::type species::id(string name) const {
-    for (int i=0; i<d.size(); i++)
-      if (d[i].name==name)
-        return particle::type(i);
-    return particle::UNK;
+  void atoms::init() {
+    int n=list.size();
+    eps.resize(n);
+    sigma.resize(n);
+    for (int i=0; i<n; i++) {
+      eps[i].resize(n);
+      sigma[i].resize(n);
+      for (int j=0; j<n; j++) {
+        eps[i][j]=sqrt(list[i].eps*list[j].eps);
+        sigma[i][j]=(list[i].sigma+list[j].sigma)/2;
+      }
+    }
   }
 
-  species::species() {
-    d.resize(particle::LAST);
-    //  id             name   rad   Z   pKa  hydrp
-    set(particle::ALA, "ALA", 3.5,  0,  0.0, true);
-    set(particle::ARG, "ARG", 3.5,  0, 12.0, false);
-    set(particle::ASN, "ASN", 3.5,  0,  0.0, false);
-    set(particle::ASP, "ASP", 3.5, -1,  4.8, false);
-    set(particle::CYS, "CYS", 3.5, -1, 10.8, false);
-    set(particle::GLN, "GLN", 3.5,  0,  0.0, false);
-    set(particle::GLU, "GLU", 3.5, -1,  4.8, false);
-    set(particle::GLY, "GLY", 3.5,  0,  0.0, false);
-    set(particle::HIS, "HIS", 3.5,  0,  6.3, false);
-    set(particle::ILE, "ILE", 3.5,  0,  0.0, true );
-    set(particle::LEU, "LEU", 3.5,  0,  0.0, true );
-    set(particle::LYS, "LYS", 3.5,  0, 10.4, false);
-    set(particle::MET, "MET", 3.5,  0,  0.0, true );
-    set(particle::PHE, "PHE", 3.5,  0,  0.0, true );
-    set(particle::PRO, "PRO", 3.5,  0,  0.0, true);
-    set(particle::SER, "SER", 3.5,  0,  0.0, false);
-    set(particle::THR, "THR", 3.5,  0,  0.0, false);
-    set(particle::TRP, "TRP", 3.5,  0,  0.0, true );
-    set(particle::TYR, "TYR", 3.5, -1,  9.6, false );
-    set(particle::VAL, "VAL", 3.5,  0,  0.0, true);
-    set(particle::CTR, "CTR", 3.5, -1,  3.8, false);
-    set(particle::NTR, "NTR", 3.5,  0,  7.5, false);
-    set(particle::UNK, "UNK", 3.5,  0,  0.0, false);
-    set(particle::NA,  "NA",  1.8, +1,  0.0, false);
-    set(particle::K,   "K",   1.5, +1,  0.0, false);
-    set(particle::F,   "F",   1.4, -1,  0.0, false);
-    set(particle::CL,  "CL",  1.7, -1,  0.0, false);
-    set(particle::BR,  "BR",  1.9, -1,  0.0, false);
-    set(particle::I,   "I",   2.0, -1,  0.0, false);
-    set(particle::SO4, "SO4", 1.6, -2,  0.0, false);
-    set(particle::PO4, "PO4", 3.5, -2,  7.2, false);
-    set(particle::LA,  "LA",  2.0, +3,  0.0, false);
-    set(particle::GHOST,"GHOST",0,  0,  0.0, false);
-    set(particle::HYDROPHOBIC,"HYDR",3.5,0,0, true);
+  particle atoms::get(char i) {
+    particle a;
+    a.charge=list[i].charge;
+    a.mw=list[i].mw;
+    a.id=static_cast<particle::type>(list[i].id);
+    a.radius=list[i].radius;
+    return a;
   }
 
-  string species::particleinfo(particle::type id) const {
+  atoms::data & atoms::operator[] (char i) { return list[i]; }
+  atoms::data & atoms::operator[] (string s) { return list[ find(s) ]; }
+  particle atoms::operator() (char i) { return get(i); }
+  particle atoms::operator() (string s) { return get(find(s)); }
+
+  char atoms::find(string s) {
+    for (char i=0; i<list.size(); i++)
+      if (s==list[i].name)
+        return list[i].id;
+    return 0;
+  }
+
+  bool atoms::load(inputfile &in) {
+    return load(in.getstr("atomfile",filename));
+  }
+
+  bool atoms::load(string file) {
+    data a;
+    string t;
+    filename=file;
+    std::ifstream f(filename.c_str());
+    if (f) {
+      while (!f.eof()) {
+        f >> t;
+        if (t=="Atom") {
+          f >> a.name >> a.charge >> a.radius >> a.eps >> a.mw >> a.pka >> t;
+          a.sigma=2*a.radius;
+          a.hydrophobic = (t=="yes") ? true : false;
+          a.id=list.size();
+          list.push_back(a);
+        }
+      }
+      //init();
+      f.close();
+      return true;
+    }
+    std::cerr << "# WARNING! Parameter file " << filename << " NOT found.\n";
+    filename+=" (not found)";
+    return false;
+  }
+
+  string atoms::info() {
     std::ostringstream o;
-    o << "# Particle specs (name,z,r,pka): "
-      << d[id].name << " " << d[id].p.charge << " " << d[id].p.radius
-      << " " << d[id].pka << std::endl;
+    o << endl
+      << "# ATOM PARAMETERS:\n"
+      << "#   Number of species     = " << list.size() << endl
+      << "#   Parameter file        = " << filename << endl
+      << "#   Species found:";
+    for (int i=0; i<list.size(); i++) {
+      if (i%10==0) o << endl << "#     ";
+      o << setw(6) << std::left << list[i].name;
+    }
+    o << endl;
     return o.str();
   }
-}
+}//namespace

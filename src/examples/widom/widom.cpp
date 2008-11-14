@@ -29,7 +29,7 @@ int main() {
   salt salt;                            // Define some groups for mobile ions
   salt.add(cell,in);                    // Insert some ions
 
-  ioaam aam(cell);                      // File I/O class
+  ioaam aam(cell.atom);                 // File I/O class
   aam.load(cell,"widom.aam");           // Read initial config. from disk (if present)
 
   virial virial(cell);                  // Virial analysis
@@ -40,8 +40,8 @@ int main() {
 
   systemenergy sys(pot.energy(cell.p)); // Track system energy
 
-  cout << cell.info() << pot.info()
-       << salt.info(cell)
+  cout << cell.info() << cell.atom.info()
+       << pot.info() << salt.info(cell)
        << in.info();                    // Print initial information
 
   while ( loop.macroCnt() ) {           // Markov chain 

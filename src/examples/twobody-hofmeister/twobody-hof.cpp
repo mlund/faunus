@@ -23,7 +23,7 @@ int main() {
   canonical nvt;                        // Use the canonical ensemble
   int_hydrophobic<pot_netz> pot(in);    // Interactions incl. hydrophobic surfaces
   distributions dst;                    // Distance dep. averages
-  iopqr pqr(cell);                      // PQR output (pos, charge, radius)
+  iopqr pqr(cell.atom);                 // PQR output (pos, charge, radius)
   vector<macromolecule> g;              // Group for proteins
   dualmove dm(nvt, cell, pot);          //   Class for 1D macromolecular translation
   dm.setup(in);                         //   Read input params. (optional)
@@ -34,7 +34,7 @@ int main() {
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
   sm.dp=90;                             // Set displacement parameters
-  ioaam aam(cell);                      // Protein input file format is AAM
+  ioaam aam(cell.atom);                 // Protein input file format is AAM
   if (aam.load(cell,"confout.aam")) {
     g[0].masscenter(cell);              // Load old config (if present)
     g[1].masscenter(cell);              // ...and recalc mass centers
@@ -53,7 +53,7 @@ int main() {
     << "# ------ RUNTIME INFORMATION ------" << endl;
 
 #ifdef GROMACS
-  ioxtc xtc(cell, cell.r);              // Gromacs xtc output (if installed)
+  ioxtc xtc(cell.atom, cell.r);                 // Gromacs xtc output (if installed)
 #endif
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {

@@ -20,6 +20,7 @@ voldp      $voldp
 pressure   $pressure
 e_r        $e_r
 kappa      $kappa
+atomfile   $atomfile
 " > isobaric.conf
 }
 
@@ -41,6 +42,7 @@ voldp=1
 pressure=0.000001
 kappa=0.050
 e_r=78.67
+atomfile="../../../misc/faunatoms.dat"
 for LJeps in 0.0 
 do
   suffix=".lj-${LJeps}"

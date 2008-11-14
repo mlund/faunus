@@ -23,7 +23,10 @@ namespace Faunus {
 
   //----------- CELL ----------------------
   cell::cell(double radius) { setradius(radius); }
-  cell::cell(inputfile &in) { setradius(in.getflt("cellradius"));}
+  cell::cell(inputfile &in)  {
+    atom.load(in);
+    setradius(in.getflt("cellradius"));
+  }
   void cell::setradius(double radius) {
     r = radius; 
     r2 = r*r; 
@@ -69,6 +72,7 @@ namespace Faunus {
   box::box(double l) { setlen(l); }
 
   box::box(inputfile &in) {
+    atom.load(in);
     if (!setlen( in.getflt("boxlen",-1) ))
       setvolume( in.getflt("volume") );
   }

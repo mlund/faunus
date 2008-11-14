@@ -27,9 +27,9 @@ int main() {
   cell cell(in);                        // We want a spherical, hard cell
   canonical nvt;                        // Use the canonical ensemble
   interaction<pot_coulomb> pot(in);     // Functions for interactions
-  ioxyz xyz(cell);                      // xyz output for VMD etc.
+  ioxyz xyz(cell.atom);                 // xyz output for VMD etc.
   distributions dst;                    // Distance dep. averages
-  iopqr pqr(cell);                      // PQR output (pos, charge, radius)
+  iopqr pqr(cell.atom);                 // PQR output (pos, charge, radius)
   FAUrdf saltrdf(particle::NA,particle::CL, .5, cell.r);
   twostatebinding bind(20.);            // Two state binding model
 
@@ -44,7 +44,7 @@ int main() {
   dm.dp=6;                              // Set displacement parameters
   sm.dp=90;                             // Set displacement parameters
 
-  ioaam aam(cell);                      // Protein input file format is AAM
+  ioaam aam(cell.atom);                 // Protein input file format is AAM
   if (aam.load(cell,"confout.aam")) {
     g[0].masscenter(cell);              // Load old config (if present)
     g[1].masscenter(cell);              // ...and recalc mass centers

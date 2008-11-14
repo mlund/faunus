@@ -19,6 +19,7 @@ nprot1     $nprot1
 protein1   $protein1
 nprot2     $nprot2
 protein2   $protein2
+atomfile   $atomfile
 " > twobody.conf
 }
 
@@ -38,6 +39,7 @@ protein2="lysozyme-ph4.7.aam"
 dm_dp=0
 dm_minsep=0
 dm_maxsep=40
+atomfile=../../../misc/faunatoms.dat
 
 for nion1 in 182
 do

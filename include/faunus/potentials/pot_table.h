@@ -61,10 +61,10 @@ namespace Faunus {
           pmf[i][j]( sqrt(r2) );           // ...else use table.
       }
 
-      bool loadpmf(const species &spc, particle::type t1, particle::type t2) {
+      bool loadpmf(atoms &atom, particle::type t1, particle::type t2) {
         double x,y;
         xytable< double, Faunus::average<double> > avgpmf(xres);
-        string file = pmfdir + "/" + spc.d[t1].name + "-" + spc.d[t2].name + ".dat";
+        string file = pmfdir + "/" + atom[t1].name + "-" + atom[t2].name + ".dat";
         if (t1>t2)
           std::swap(t1,t2);
         std::ifstream fs( file.c_str() );
@@ -85,12 +85,12 @@ namespace Faunus {
         return false;
       }
 
-      void loadpmf(const container &c) {
+      void loadpmf(container &c) {
         vector<particle::type> id=c.list_of_species();
         for (unsigned short i=0; i<id.size(); i++)
           for (unsigned short j=i; j<id.size(); j++)
-            if( loadpmf(c,id[i],id[j])==false )
-              loadpmf(c,id[j],id[i]);
+            if( loadpmf(c.atom,id[i],id[j])==false )
+              loadpmf(c.atom,id[j],id[i]);
       }
 
       virtual string info() {
@@ -101,14 +101,14 @@ namespace Faunus {
       }
 
       /*! Show info + list of loaded pmf data */
-      virtual string info(species &spc) {
+      virtual string info(atoms &atom) {
         std::ostringstream o;
         o << info()
           << "#   PMF Info: (a,b,resolution,r_max,file)" << std::endl; 
         for (unsigned short i=particle::FIRST; i<particle::LAST; i++)
           for (unsigned short j=particle::FIRST; j<particle::LAST; j++)
             if (pmf[i][j].xmax()>0) 
-              o << "#     " << spc.d[i].name << " " << spc.d[j].name << " "
+              o << "#     " << atom[i].name << " " << atom[j].name << " "
                 << pmf[i][j].xres << " "
                 << pmf[i][j].xmax() << std::endl;
         o << std::endl; 
@@ -144,7 +144,7 @@ namespace Faunus {
         return coulomb.sqdist(p1,p2);
       }
       string info() { return pot_table::info() + coulomb.info(); }
-      string info(species &spc) { return pot_table::info(spc); }
+      string info(atoms &atom) { return pot_table::info(atom); }
   };
 }//namespace
 #endif

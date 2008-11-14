@@ -42,7 +42,7 @@ namespace Faunus {
     return o.str();
   }
 
-  chargereg::chargereg(ensemble &e, container &c, energybase &i, group &g, float ph ) : markovmove(e,c,i), titrate(c,c.p,g,ph)
+  chargereg::chargereg(ensemble &e, container &c, energybase &i, group &g, float ph ) : markovmove(e,c,i), titrate(c.atom,c.p,g,ph)
   {
     name="PROTON TITRATION";
     cite="Biochem. 2005, 44, 5722-5727.";
@@ -127,10 +127,10 @@ namespace Faunus {
   double HAchargereg::energy( vector<particle> &p, double du, titrate::action &a ) {
     int i=p[a.site].id;
     if (a.action==this->PROTONATED)
-      return du+( log(10.)*( this->ph - this->con->d[i].pka ) ) + 
+      return du+( log(10.)*( this->ph - this->con->atom.list[i].pka ) ) + 
         CatPot - log( this->protons.size() / this->con->getvolume() ) ;
     else
-      return du-( log(10.)*( this->ph - this->con->d[i].pka ) ) -
+      return du-( log(10.)*( this->ph - this->con->atom.list[i].pka ) ) -
         CatPot + log( (this->protons.size()+1) / this->con->getvolume() );
   }
 }

@@ -16,12 +16,12 @@ int main() {
   cell cell(in);                        // We want a cubic cell
   canonical nvt;                        // Use the canonical ensemble
   interaction<pot_coulomb> pot(in);     // Functions for interactions
-  iogro gro(cell, in);                  // Gromacs file output for VMD etc.
+  iogro gro(cell.atom, in);             // Gromacs file output for VMD etc.
   FAUrdf protrdf(0,0,.5,cell.r);        // Protein and salt radial distributions
   twostatebinding bind(20.);            // Two state binding analysis
 
   vector<macromolecule> g;              // PROTEIN groups
-  ioaam aam(cell);                      //   Protein input file format is AAM
+  ioaam aam(cell.atom);                 //   Protein input file format is AAM
   aam.load(cell, in, g);                //   Load and insert proteins
   g[0].center(cell);                    //   Center first protein (will be frozen)
   macrorot mr(nvt, cell, pot);          //   Class for macromolecule rotation

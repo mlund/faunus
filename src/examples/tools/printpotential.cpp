@@ -8,7 +8,7 @@ using namespace Faunus;
 using namespace std;
 
 int main() {
-  species spc;
+  atoms atom;
   inputfile in("printpotential.conf");
   particle p1,p2,p3;
   pot_netz netz(in);
@@ -27,12 +27,12 @@ int main() {
   p3.radius=0.;
   p3.id=particle::NA;
 
-  pmf.loadpmf(spc, p2.id, p1.id);
-  pmf.loadpmf(spc, p1.id, p1.id);
-  pmf.loadpmf(spc, p2.id, p2.id);
+  pmf.loadpmf(atom, p2.id, p1.id);
+  pmf.loadpmf(atom, p1.id, p1.id);
+  pmf.loadpmf(atom, p2.id, p2.id);
  
   //cout << coulomb.info() << endl << netz.info() << endl << pmf.info();
-  cout << pmf.info(spc);
+  cout << pmf.info(atom);
  
   cout << "# r/AA  U/kT" << endl;
   for (float r=2.0; r<40; r+=.1) {

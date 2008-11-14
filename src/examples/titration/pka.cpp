@@ -22,8 +22,8 @@ int main(int argc, char* argv[]) {
   canonical nvt;                       // Use the canonical ensemble
   interaction<pot_hscoulomb> pot(in);  // Specify pair potential
   macromolecule protein;               // Group for the protein
-  ioaam aam(con);                      // Protein input file format is AAM
-  iopqr pqr(con);                      // PQR coordinate output
+  ioaam aam(con.atom);                 // Protein input file format is AAM
+  iopqr pqr(con.atom);                 // PQR coordinate output
   protein.add( con,
       aam.load(in.getstr("protein"))); // Load protein structure
   protein.move(con, -protein.cm);      // ..translate it to origo (0,0,0)
@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
 
   systemenergy sys(pot.energy(con.p)); // System energy analysis
   cout << con.info() << tit.info()     // Some information
-       << pot.info();
+       << pot.info() << con.atom.info();
 
   while ( loop.macroCnt() ) {            // Markov chain 
     while ( loop.microCnt() ) {

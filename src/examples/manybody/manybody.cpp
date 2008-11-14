@@ -14,19 +14,19 @@ using namespace std;
 using namespace Faunus;
 
 int main() {
-  cout << "---------- INITIAL PARAMETERS -----------" << endl;
+  cout << faunus_splash();
   slump slump;                          // A random number generator
   inputfile in("manybody.conf");        // Read input file
   mcloop loop(in);                      // Keep track of time and MC loop
   box cell(in);                         // We want a cubic cell
   canonical nvt;                        // Use the canonical ensemble
   interaction<pot_minimage> pot(in);    // Functions for interactions
-  iogro gro(cell, in);                  // Gromacs file output for VMD etc.
+  iogro gro(cell.atom, in);             // Gromacs file output for VMD etc.
   FAUrdf protrdf(0,0,.5,cell.len/2.);   // Protein and salt radial distributions
   FAUrdf saltrdf(particle::NA,particle::SO4, .5, cell.len/2.);
 
   vector<macromolecule> g;              // PROTEIN groups
-  ioaam aam(cell);                      //   Protein input file format is AAM
+  ioaam aam(cell.atom);                 //   Protein input file format is AAM
   aam.load(cell, in, g);                //   Load and insert proteins
   g[0].center(cell);                    //   Center first protein (will be frozen)
   macrorot mr(nvt, cell, pot);          //   Class for macromolecule rotation
@@ -36,13 +36,12 @@ int main() {
   saltmove sm(nvt, cell, pot);          //   Class for salt movements
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
 
-  cout << cell.info() << pot.info();    // Print information to screen
-
+  cout << cell.info() << pot.info()     // Print information to screen
+       << cell.atom.info();
   #ifdef GROMACS
   ioxtc xtc(cell, cell.len);            // Gromacs xtc output (if installed)
   #endif
 
-  cout << "---------- RUN-TIME INFORMATION  -----------" << endl;
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {
       short i,j,n;

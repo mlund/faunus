@@ -7,9 +7,10 @@ using namespace std;
 
 int main() {
   cell con(100);
+  con.atom.load("../../../misc/faunatoms.dat");
   macromolecule protein;
-  ioaam aam(con);
-  iopqr pqr(con);
+  ioaam aam(con.atom);
+  iopqr pqr(con.atom);
   protein.add( con, aam.load( "../twobody-hofmeister/lysozyme-ph4.7.aam" ));
   pqr.save("out.pqr", con.p);
 }

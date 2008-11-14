@@ -155,7 +155,7 @@ namespace Faunus {
     }
   }
   void group::add(container &con, particle::type id, short n) {
-    particle a=con.get(id);
+    particle a=con.atom(id);
     if (beg<0)
       beg=con.p.size();
     for (unsigned short i=0; i<n; i++) {
@@ -244,12 +244,12 @@ namespace Faunus {
           ncat=count(con.p, cation);
     o << group::info();
     o << "#   Cation (id,z,r,N,conc) = "
-      << con.d[cation].name << ", " << con.d[cation].p.charge << ", "
-      << con.d[cation].p.radius << ", "
+      << con.atom[cation].name << ", " << con.atom[cation].charge << ", "
+      << con.atom[cation].radius << ", "
       << ncat << ", " << ncat/con.getvolume()*c << endl
       << "#   Anion (id,z,r,N,conc)  = "
-      << con.d[anion].name << ", " << con.d[anion].p.charge << ", "
-      << con.d[anion].p.radius << ", "
+      << con.atom[anion].name << ", " << con.atom[anion].charge << ", "
+      << con.atom[anion].radius << ", "
       << nan << ", " << nan/con.getvolume()*c << endl;
     return o.str();
   }
@@ -272,12 +272,12 @@ namespace Faunus {
       nion << "nion" << n;
       tion << "tion" << n++;
       npart = in.getint(nion.str(), 0);
-      id = con.id(  in.getstr( tion.str() )  );
+      id = con.atom( in.getstr( tion.str() ) ).id;
       if (npart!=0)
         group::add(con, id, npart ); // add particles
-      if (con.d[id].p.charge>0)
+      if (con.atom[id].charge>0)
         cation=id;
-      if (con.d[id].p.charge<0)
+      if (con.atom[id].charge<0)
         anion=id;
     }
   }
@@ -501,7 +501,7 @@ namespace Faunus {
   }
   void chain::add(container &con, int n, particle::type sort) { // no check of PARTICLE overlap
     point ru;
-    particle a=con.get(sort);
+    particle a=con.atom(sort);
     beg=con.p.size();
     con.randompos(a);
     end=con.push_back(a)-1;
@@ -525,7 +525,7 @@ namespace Faunus {
 
   void chain::addgrafted(container &con, int n, particle::type sort, point &gp) { // no check of PARTICLE overlap
     point ru;
-    particle a=con.get(sort);
+    particle a=con.atom(sort);
     beg=con.p.size();
     con.randompos(a);
     a=gp;

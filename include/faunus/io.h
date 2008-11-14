@@ -66,12 +66,12 @@ namespace Faunus {
     friend class iogro;
     friend class iopqr;
     private:
-    species *spcPtr;
+    atoms *atomPtr;
     vector<string> v; 
     vector<particle> p;
     public:
-    iopart(species &spc) {
-      spcPtr=&spc;
+    iopart(atoms &a) {
+      atomPtr=&a;
     }
     virtual vector<particle> load(string)=0;            //!< Load from disk
     virtual bool save(string, vector<particle>&)=0;     //!< Save to disk
@@ -90,7 +90,7 @@ namespace Faunus {
     particles *sys;
 
     public:
-    ioxyz(species &);
+    ioxyz(atoms &);
     bool save(string, vector<particle>&);
     vector<particle> load(string);
   };
@@ -106,7 +106,7 @@ namespace Faunus {
       string p2s(particle &, int=0); 
       particle s2p(string &); 
     public:
-      ioaam(species &);
+      ioaam(atoms &);
       vector<particle> load(string);
       void load(container&,inputfile&,vector<macromolecule>&);//!< Read proteins from disk
       void loadlattice(container&,inputfile&,vector<macromolecule>&);//!< Read proteins from disk on to a lattice
@@ -127,7 +127,7 @@ namespace Faunus {
       vector<particle> load(string);
     public:
       iopov(container &);
-      //iopov(container &, species &);
+      //iopov(container &, atoms &);
       void clear();                       //!< Clear output buffer
       void box(float);                    //!< Add cubic box
       void cell(float);                   //!< Add spherical cell
@@ -148,7 +148,7 @@ namespace Faunus {
       void header() {}
       vector<particle> load(string) { return vector<particle>(); }
     public:
-      iopqr(species &);
+      iopqr(atoms &);
       bool save(string, vector<particle> &);            //!< Save with particle charge
       bool save(string, vector<particle> &, titrate &); //!< Save with average charges
   };
@@ -166,7 +166,7 @@ namespace Faunus {
       vector<particle> load(string) { return vector<particle>(); }
       float len;
     public:
-      iogro(species &, inputfile &);
+      iogro(atoms &, inputfile &);
       bool save(string, vector<particle> &);
       bool save(string, box &);
   };

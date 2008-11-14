@@ -19,11 +19,11 @@ namespace Faunus {
     }
   }
 
-  void widom::add(const particle &p) { g.push_back(p); }
+  void widom::add(particle p) { g.push_back(p); }
   void widom::add(container &c) {
     vector<particle::type> id = c.list_of_species();
     for (int i=0; i<id.size(); i++)
-      add(c.d[id[i]].p);
+      add( c.atom(id[i]) );
   }
 
   string widom::info() {
@@ -47,14 +47,14 @@ namespace Faunus {
     cnt=0;
     ghostin = insertions;
   }
-  void widomSW::add(particle &p) {
+  void widomSW::add(particle p) {
     g.push_back(p);
     init();
   }
   void widomSW::add(container &c) {
     vector<particle::type> id = c.list_of_species();
     for (int i=0; i<id.size(); i++)
-      add(c.d[id[i]].p);
+      add( c.atom(id[i]) );
   }
 
   bool widomSW::overlap(particle &a, particle &b, container &c) {

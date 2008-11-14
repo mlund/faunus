@@ -18,6 +18,7 @@ e_r        $e_r
 kappa      $kappa
 max        $max
 penalty    $penalty
+atomfile   $atomfile
 " > isobaric.conf
 }
 
@@ -37,6 +38,7 @@ kappa=0.050  #  0.147
 e_r=78.67
 max=1000
 penalty=0.1
+atomfile=../../../misc/faunatoms.dat
 for LJeps in 0.20 
 do
   rm confout.aam

@@ -20,7 +20,7 @@ namespace Faunus {
 //      container();
 //      container(inputfile &);
       virtual void setvolume(double){}                    //!< Specify new volume
-      virtual bool collision(const point &)=0;            //!< Check for collision with walls
+      virtual bool collision(const particle &)=0;            //!< Check for collision with walls
       virtual void randompos(point &)=0;                  //!< Random point within container
       virtual string info();                              //!< Return info string
       virtual string povray();                            //!< POVRAY object representing the cell
@@ -48,9 +48,9 @@ namespace Faunus {
       string info();
       void randompos(point &);
       string povray();
-      bool collision(const point &a) {
+      bool collision(const particle &a) {
         return 
-          (a.x*a.x+a.y*a.y+a.z*a.z > r2) ? true:false;
+          ( sqrt(a.x*a.x+a.y*a.y+a.z*a.z)+a.radius > r) ? true:false;
       }
   };
 
@@ -72,7 +72,7 @@ namespace Faunus {
       void randompos(point &);
       //void randompos(vector<point> &);   // not implemented
       point randompos();
-      bool collision(const point &a) {
+      bool collision(const particle &a) {
         if (std::abs(a.x)>len_half ||
             std::abs(a.y)>len_half ||
             std::abs(a.z)>len_half )
@@ -136,7 +136,7 @@ namespace Faunus {
       double r,zmin,zmax;
       clutch(double, double, double);
       void randompos(point &);
-      bool collision(const point &a) {
+      bool collision(const particle &a) {
         if (a.z<zmax && a.z>zmin)
           return true;
         if (a.x*a.x+a.y*a.y+a.z*a.z > r2)
@@ -157,7 +157,7 @@ namespace Faunus {
       double diameter;
       cylinder(double,double);
       void randompos(point &);
-      bool collision(const point &a) {
+      bool collision(const particle &a) {
         return 
           (a.x*a.x+a.y*a.y>r2 || (a.z<0||a.z>len)) ? true:false;
       };

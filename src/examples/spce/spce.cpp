@@ -9,6 +9,7 @@ using namespace Faunus;
 using namespace std;
 
 int main(int argc, char* argv[]) {
+  slump slump;
   cout << faunus_splash();             // Faunus spam
   inputfile in("spce.conf");           // Read input file
   cell con(in);                        // Use a spherical simulation container
@@ -42,8 +43,13 @@ int main(int argc, char* argv[]) {
   sol.add(con,water,sol.numatom);      // Inject water into the cell - avoid salt and protein overlap
   water.clear();                       // Free the (large) bulk water reservoir
   macromolecule m;
-  mr.dp=0.5;
-  mt.dp=1.0;
+  mr.dp=0.1;
+  mt.dp=0.3;
+
+  int io=con.p[ sol.beg ].id;
+  int ih=con.p[ sol.beg+1 ].id;
+  cout <<  con.atom[io].sigma << " " << con.atom[io].eps << endl;
+  cout <<  con.atom[ih].sigma << " " << con.atom[ih].eps << endl;
 
   aam.load(con, "confout.aam");        // Load old config (if present)
   systemenergy sys(pot.energy(con.p)); // System energy analysis
@@ -60,14 +66,10 @@ int main(int argc, char* argv[]) {
         case 1:
           for (int i=0; i<sol.size()/sol.numatom; i++) {
             m=sol[ sol.random() ];
-            switch (rand() & 2) {
-              case 0:
-                sys+=mr.move(m);
-                break;
-              case 1:
-                sys+=mt.move(m);
-                break;
-            }
+            if (slump.random_one()<0.5)
+              sys+=mr.move(m);
+            else
+              sys+=mt.move(m);
           }
           break;
       }

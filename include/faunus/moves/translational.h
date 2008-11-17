@@ -213,7 +213,7 @@ namespace Faunus {
   class translate : public markovmove {
     public: 
       translate( ensemble&, container&, energybase&);
-      double move(macromolecule &); 
+      double move(group &); 
   };
 
   translate::translate( ensemble &e,
@@ -224,7 +224,7 @@ namespace Faunus {
     dp=10.;
   };
 
-  double translate::move(macromolecule &g) {
+  double translate::move(group &g) {
     du=0;
     cnt++;
     point p;

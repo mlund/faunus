@@ -111,7 +111,7 @@ namespace Faunus {
    * w.beg; // --> first atom of i'th molecule
    * \endcode
    */
-  class molecules : public group {
+  class molecules : public macromolecule {
     private:
       group sel;                //!< A temporary group class
     public:
@@ -120,20 +120,7 @@ namespace Faunus {
       short random();           //!< Pick a random molecule (NOT atom)
       string info();            //!< Show information
       group operator[](unsigned short); //!< Access n'th molecule
-  };
-
-  /*! \brief Group container for SPC/E water (and similar three-point water models)
-   *  \author Mikael Lund
-   *  \date Asljunga 2008
-   */
-  class spc : public molecules {
-    public:
-      spc();
-      string info();
-      float dp_trans;           //!< Translational displacement
-      float dp_rot;             //!< Rotational displacement
-      average<float> dip;       //!< Average dipole moment
-      average<float> dip2;      //!< Average squared dipole moment
+      void add(container &, vector<particle> &, short=1);
   };
 
   /*! \brief Freely jointed chain with harmonic spring potentials

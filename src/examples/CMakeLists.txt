@@ -24,6 +24,7 @@ fau_example(manybody manybody manybody.cpp)
 fau_example(isobaric isobaric isobaric.cpp)
 fau_example(binding binding binding.cpp)
 fau_example(printpotential tools printpotential.cpp)
+fau_example(spce spce spce.cpp)
 
 #----- target specific build options -----
 set_target_properties( pkaGC PROPERTIES COMPILE_DEFINITIONS "GCPKA")

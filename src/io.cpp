@@ -16,7 +16,7 @@ namespace Faunus {
       f.close();
       return true;
     }
-    std::cout << "# WARNING! FILE " << file << " NOT READ!\n";
+    std::cerr << "# WARNING! FILE " << file << " NOT READ!\n";
     return false;
   }
   bool io::writefile(string file, string s) {
@@ -65,14 +65,15 @@ namespace Faunus {
     return p;
   }
   vector<particle> ioaam::load(string file) {
-    v.resize(0);
-    p.resize(0);
+    vector<string> v;
+    vector<particle> p;
     if (readfile(file,v)==true) {
       strip(v,"#");
-      unsigned short n=atoi(v[0].c_str());
-      for (unsigned short i=1; i<=n; i++)
+      unsigned int n=atoi(v[0].c_str());
+      for (unsigned int i=1; i<=n; i++)
         p.push_back( s2p(v[i]) );
     }
+    v.clear();
     return p;
   }
 
@@ -91,7 +92,7 @@ namespace Faunus {
   bool ioaam::save(string file, vector<particle> &p) {
     std::ostringstream o;
     o << p.size() << std::endl;
-    for (unsigned short i=0; i<p.size(); i++)
+    for (unsigned int i=0; i<p.size(); i++)
       o << p2s(p[i], i);
     return writefile(file, o.str());
   }
@@ -209,7 +210,7 @@ namespace Faunus {
       strip(v,"#");
       unsigned short n=atoi(v[0].c_str());
       if (n!=sys->p.size()) {
-        std::cout << "!! System vector and .coord vector are out of sync! !!\n"
+        std::cerr << "!! System vector and .coord vector are out of sync! !!\n"
           << "!! Closing the factory since n=" <<n<< "and p.size() ="<<sys->p.size()<<" !!\n"
           << std::endl;
       }else{ 

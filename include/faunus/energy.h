@@ -16,6 +16,7 @@
 #include "faunus/potentials/pot_debyehuckelP3.h"
 #include "faunus/potentials/pot_barecoulomb.h"
 #include "faunus/potentials/pot_netz.h"
+#include "faunus/potentials/pot_test.h"
 
 namespace Faunus {
   /*!

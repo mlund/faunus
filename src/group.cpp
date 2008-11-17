@@ -475,23 +475,29 @@ namespace Faunus {
   }
   string molecules::info() {
     std::ostringstream o;
-    o << group::info()
+    o << macromolecule::info()
       << "#  Atoms per molecule      = " << numatom << endl 
       << "#  Solvent molecules       = " << size()/double(numatom) << endl; //check!!
     return o.str();
   }
+  void molecules::add(container &c, vector<particle> &p, short step) {
+    bool col;
+    beg=end=c.p.size();
+    for (int i=0; i<p.size(); i+=step) {
+      col=c.collision(p[i]);
+      if (col==false)
+        for (int j=0; j<c.p.size(); j++)
+          if (c.p[j].overlap(p[i])==true) {
+            col=true;
+            break;
+          }
+      if (col==false)
+        for (int k=i; k<i+step; k++) {
+          c.push_back(p[k]);
+          end=c.p.size()-1;
+        }
+    }
 
-  //------------ SPC LIKE WATER --------------------
-  spc::spc() : molecules(3) {
-    name = "SPC/E water";
-    dp_trans=dp_rot=0;
-  }
-  string spc::info() {
-    std::ostringstream o;
-    o << molecules::info();
-    if (dip.cnt>0 && dip2.cnt>0)
-      o << "#    <mu> <mu^2>-<mu>^2    = " << dip.avg()<<" "<<dip2.avg()-pow(dip.avg(),2)<<endl;
-    return o.str();
   }
 
   //--------------- CHAIN -----------------

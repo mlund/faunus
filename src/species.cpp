@@ -23,11 +23,15 @@ namespace Faunus {
 
   particle atoms::get(char i) {
     particle a;
-    a.charge=list[i].charge;
-    a.mw=list[i].mw;
-    a.id=static_cast<particle::type>(list[i].id);
-    a.radius=list[i].radius;
-    return a;
+    return set(a,i);
+  }
+
+  particle & atoms::set(particle &p, char i) {
+    p.charge=list[i].charge;
+    p.mw=list[i].mw;
+    p.id=static_cast<particle::type>(list[i].id);
+    p.radius=list[i].radius;
+    return p;
   }
 
   atoms::data & atoms::operator[] (char i) { return list[i]; }
@@ -62,7 +66,7 @@ namespace Faunus {
           list.push_back(a);
         }
       }
-      //init();
+      init();
       f.close();
       return true;
     }
@@ -84,5 +88,10 @@ namespace Faunus {
     }
     o << endl;
     return o.str();
+  }
+
+  void atoms::reset_properties(vector<particle> &p) {
+    for (int i=0; i<p.size(); i++)
+      set(p[i],p[i].id);
   }
 }//namespace

@@ -43,11 +43,13 @@ namespace Faunus {
         sigma;                               //!< LJ sigma between atoms i and j
       bool load(string);                     //!< Load atom parameter from a file
       bool load(inputfile &);                //!< Load atom parameter from a file
+      particle & set(particle &, char);      //!< Set particle properties
       particle operator() (string);          //!< Name->particle
       particle operator() (char);            //!< Id->particle
       data & operator[] (string);            //!< Name->data
       data & operator[] (char);              //!< Id->data
       string info();                         //!< Print info
+      void reset_properties(vector<particle> &);//!< Reset particle properties according to particle id
   };
 }//namespace
 #endif

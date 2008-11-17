@@ -3,7 +3,7 @@ using namespace std;
 using namespace Faunus;
 int main() {
   iobabel b;
-  b.read("/Users/mikael/sletmig.pqr");
+  b.read("water.pdb");
   cout << "Size = " << b.p.size() << endl;
   for (int i=0; i<b.p.size(); i++)
     cout << b.p[i].x << " " << b.p[i].y << " " << b.p[i].z

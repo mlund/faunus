@@ -118,6 +118,8 @@ pka:	src/examples/titration/pka.cpp libfaunus
 	$(CXX) $(CXXFLAGS) src/examples/titration/pka.cpp -o src/examples/titration/pkaGC $(LDFLAGS) -DGCPKA
 binding:	src/examples/binding/binding.cpp libfaunus
 	$(CXX) $(CXXFLAGS) src/examples/binding/binding.cpp -o src/examples/binding/binding $(LDFLAGS) 
+spce:	src/examples/spce/spce.cpp libfaunus
+	$(CXX) $(CXXFLAGS) src/examples/spce/spce.cpp -o src/examples/spce/spce $(LDFLAGS) 
 examples:	binding tools widom pka twobody twobody-hof manybody isobaric
 clean:
 	rm -f $(OBJS) *.o \
@@ -133,6 +135,7 @@ clean:
 	src/examples/binding/binding \
 	src/examples/tools/aam2pqr \
 	src/examples/tools/printpotential \
+	src/examples/spce/spce \
 	src/libfaunus.a
 docclean:
 	rm -fR doc/html doc/latex

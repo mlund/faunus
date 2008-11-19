@@ -11,7 +11,9 @@ namespace Faunus {
    */
   class pot_test {
     private:
-      vector< vector<double> > sigma2, eps;
+      vector< vector<double> >
+        sigma2, // ij squared avg. diameter
+        eps;    // ij quadratic epsilon
     public:
       string name;
       double f;
@@ -37,15 +39,18 @@ namespace Faunus {
         return o.str();
       }
       void init(atoms &a) {
-        eps=a.eps;
-        sigma2=a.sigma;
-        short i,j,n=eps.size();
-        for (i=0; i<n; i++)
+        short i,j,n=a.list.size();
+        eps.resize(n);
+        sigma2.resize(n);
+        for (i=0; i<n; i++) {
+          eps[i].resize(n);
+          sigma2[i].resize(n);
           for (j=0; j<n; j++)
           {
-            eps[i][j]=4/f*a.eps[i][j];
-            sigma2[i][j]=pow(a.sigma[i][j],2);
+            eps[i][j]=4/f*sqrt( a[i].eps * a[j].eps );
+            sigma2[i][j]=std::pow( a[i].radius+a[j].radius, 2);
           }
+        }
       }
   };
 }//namespace

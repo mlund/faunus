@@ -66,7 +66,8 @@ namespace Faunus {
       o << "#   Acceptance          = " << accepted()*100 << endl
         << "#   Number of trials    = " << cnt << endl
         << "#   Pct. of Markov steps= " << runfraction*100 << endl
-        << "#   Total energy change = " << utot << endl;
+        << "#   Energy change (kT)  = " << utot << " " << utot/cnt << " "
+                                        << utot/(accepted()*cnt) << endl;
       if (dp!=0) {
         o << "#   Displacement param. = " << dp << endl
           << "#   Average displacement= " << sqrt(dpsqr.avg()) << endl;

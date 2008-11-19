@@ -14,11 +14,12 @@ int main(int argc, char* argv[]) {
   inputfile in("spce.conf");           // Read input file
   cell con(in);                        // Use a spherical simulation container
   ioaam aam(con.atom);                 // Protein input file format is AAM
-  iopqr pqr(con.atom);                 // PQR coordinate output
+  iogro gro(con.atom,in);
   mcloop loop(in);                     // Set Markov chain loop lengths
   canonical nvt;                       // Use the canonical ensemble
   interaction<pot_test> pot(in);       // Specify pair potential
   pot.pair.init(con.atom);
+
   macrorot mr(nvt, con, pot);          // Class for molecular rotation
   translate mt(nvt, con, pot);         // Class for molecular translation
 
@@ -39,49 +40,69 @@ int main(int argc, char* argv[]) {
   vector<particle>
     water = aam.load("water.aam");     // Load bulk water from disk (typically from MD)
   con.atom.reset_properties(water);    // Set particle parameters according to Faunus
-
   sol.add(con,water,sol.numatom);      // Inject water into the cell - avoid salt and protein overlap
   water.clear();                       // Free the (large) bulk water reservoir
-  macromolecule m;
-  mr.dp=0.1;
-  mt.dp=0.3;
 
-  int io=con.p[ sol.beg ].id;
-  int ih=con.p[ sol.beg+1 ].id;
-  cout <<  con.atom[io].sigma << " " << con.atom[io].eps << endl;
-  cout <<  con.atom[ih].sigma << " " << con.atom[ih].eps << endl;
+  // Distribution functions
+  FAUrdf saltrdf(con.atom["NA"].id,con.atom["CL"].id,0.2,20.);
+  FAUrdf catcat( con.atom["NA"].id,con.atom["NA"].id,0.2,20.);
+  FAUrdf spcrdf( con.atom["OW"].id,con.atom["OW"].id,0.2,10.);
+
+  mr.dp=0.6;
+  mt.dp=1.0; //1.0
+  sm.dp=0.6; //0.6
 
   aam.load(con, "confout.aam");        // Load old config (if present)
   systemenergy sys(pot.energy(con.p)); // System energy analysis
 
-  cout << con.info() << con.atom.info()
-       << pot.info() << sol.info();
+  cout << in.info()
+    << con.info() << con.atom.info()
+    << pot.info() << sol.info();
+
+  group head;                            // Group of first three particles [0:2]
+  head.set(0,2);                         // (Used to swap w. SPC for parallization reasons)
+  macromolecule m;
 
   while ( loop.macroCnt() ) {            // Markov chain 
     while ( loop.microCnt() ) {
-      switch (rand() % 2) {              // Randomly chose move
+      m=sol[ sol.random() ];
+      m.cm=m.cm_trial=con.p[m.beg];
+      switch (rand() % 3) {              // Randomly chose move
         case 0:
-          sys+=sm.move(salt);            // Displace salt particles
+          sys+=sm.move(salt,1);          // Displace a salt particle
           break;
         case 1:
-          for (int i=0; i<sol.size()/sol.numatom; i++) {
-            m=sol[ sol.random() ];
-            if (slump.random_one()<0.5)
-              sys+=mr.move(m);
-            else
-              sys+=mt.move(m);
+          if (m.swap(con,head)) {
+            sys+=mr.move(m);             // Rotate solvent
+            m.swap(con,head);
+          }
+          break;
+        case 2:
+          if (m.swap(con,head)) {
+            sys+=mt.move(m);             // Translate solvent
+            m.swap(con,head);
           }
           break;
       }
-    }                                    // END of micro loop
+      if (slump.random_one()<0.05) {
+        saltrdf.update(con, salt);
+        catcat.update(con, salt);
+      }
+    }//end of micro-loop 
+
+    spcrdf.update(con, sol);
+    spcrdf.write("rdf-OW-OW.dat");
+    catcat.write("rdf-Na-Na.dat");
+    saltrdf.write("rdf-Na-Cl.dat");
     sys.update(pot.energy(con.p));       // Update system energy
+    gro.save("confout.gro", con.p);      // Save config. to disk
     aam.save("confout.aam", con.p);      // Save config. to disk
-    pqr.save("confout.pqr", con.p);
     cout << loop.timing();               // Show progress
-  }                                      // END of macro loop
-  cout << sys.info() << sm.info()
+
+  }//end of macro-loop
+  cout << sys.info()
        << salt.info(con)
        << protein.info() << loop.info()  // Print final results
-       << mr.info() << mt.info();
+       << sm.info() << mr.info() << mt.info();
 }
 

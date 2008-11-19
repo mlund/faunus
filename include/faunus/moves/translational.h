@@ -383,6 +383,9 @@ namespace Faunus {
     du=0;
     cnt++;
     n=g.displace(*con, dp); 
+    std::swap(con->p[n], con->p[0]);
+    std::swap(con->trial[n], con->trial[0]);
+    n=0;
     if (con->collision( con->trial[n] )==true)
       rc=HC;
     else {
@@ -403,13 +406,17 @@ namespace Faunus {
         dpsqr+=con->sqdist(con->p[n],con->trial[n]); // track avg. displacement
         naccept++;                              // accept counter
         con->p[n] = con->trial[n];              // Accept move
+    std::swap(con->p[n], con->p[0]);
+    std::swap(con->trial[n], con->trial[0]);
         return du;
       } else rc=ENERGY;
     }
     du=0;
     dpsqr+=0;
+    std::swap(con->p[n], con->p[0]);
+    std::swap(con->trial[n], con->trial[0]);
     con->trial[n] = con->p[n];
-    return du;
+   return du;
   }
 }
 #endif

@@ -226,6 +226,19 @@ namespace Faunus {
     return n;
   }
 
+  bool group::swap(container &c, group &g) {
+    int i,n=size();
+    if (n!=g.size())
+      return false;
+    for (i=0; i<n; i++) {
+      std::swap( c.p[ beg+i ], c.p[ g.beg+i ] );
+      std::swap( c.trial[ beg+i ], c.trial[ g.beg+i ] );
+    }
+    std::swap(beg, g.beg);
+    std::swap(end, g.end);
+    return true;
+  }
+
   /*****************************
    *
    *          S A L T
@@ -466,10 +479,15 @@ namespace Faunus {
   }
 
   //--------------- MOLECULES -----------------
-  molecules::molecules(unsigned short n) { numatom=n; }
-  short int molecules::random() { return group::random()/numatom; }
+  molecules::molecules(unsigned short n) {
+    name="MOLECULAR ARRAY";
+    numatom=n;
+  }
+  short int molecules::random() {
+    return (group::random()-beg)/numatom;
+  }
   group molecules::operator[](unsigned short i) {
-    sel.beg=i*numatom;
+    sel.beg=beg+i*numatom;
     sel.end=sel.beg+numatom-1;
     return sel;
   }

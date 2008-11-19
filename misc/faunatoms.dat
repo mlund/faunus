@@ -4,9 +4,14 @@
 #     name   charge radius eps    Mw     pKa   hydrophobic
 # ------------------------------------------------------------
 
+# SPC/E Water
+Atom  OW   -0.8476   1.6    0.2623 16    0.0    no
+Atom  HW1   0.4238   0.0    0      1     0.0    no
+Atom  HW2   0.4238   0.0    0      1     0.0    no
+
 # Ions
-Atom  NA      +1     1.8    0.1    1     0.0    no
-Atom  CL      -1     1.7    0.1    1     0.0    no
+Atom  NA      +1     1.2    0.2179 1     0.0    no
+Atom  CL      -1     2.17   0.1689 1     0.0    no
 Atom  K       +1     1.5    0.1    1     0.0    no
 Atom  F       -1     1.4    0.1    1     0.0    no
 Atom  I       -1     2.0    0.1    1     0.0    no
@@ -14,11 +19,6 @@ Atom  SO4     -2     1.6    0.1    1     0.0    no
 Atom  PO4     -2     3.5    0.1    1     7.2    no
 Atom  LA      +3     2.0    0.1    1     0.0    no
 Atom  GHOST    0     0      0.1    1     0.0    no
-
-# SPC/E Water
-Atom  Ow   -0.8476   1.6    0.26  16     0.0    no
-Atom  Hw    0.4238   0.0    0      1     0.0    no
-
 
 # Titratable residues
 # (charges represent the deprotonated states)

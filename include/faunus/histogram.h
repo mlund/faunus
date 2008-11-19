@@ -5,6 +5,7 @@
 #include "faunus/average.h"
 #include "faunus/xytable.h"
 #include "faunus/container.h"
+#include "faunus/group.h"
 
 namespace Faunus {
   /*!
@@ -80,6 +81,7 @@ namespace Faunus {
     public:
       FAUrdf(short, short, float=.5, float=0); 
       void update(container &);             //!< Update histogram vector
+      void update(container &, group &);    //!< Update histogram vector - search only in group
       void update(vector<particle> &);      //!< Update histogram vector
       void update(container &, point &, point &); //!< Update for two points
       float get(float);                     //!< Get g(x)
@@ -113,9 +115,20 @@ namespace Faunus {
    * \note Uses the container function to calculate distances
    */
   void FAUrdf::update(container &c) {
-    unsigned short i,j,n=c.p.size();
-    for (i=0; i<n-1; i++)
-      for (j=i+1; j<n; j++) 
+    int n=c.p.size();
+#pragma omp for
+    for (int i=0; i<n-1; i++)
+      for (int j=i+1; j<n; j++) 
+        if ( (c.p[i].id==a && c.p[j].id==b)
+            || (c.p[j].id==a && c.p[i].id==b) )
+          update( c, c.p[i], c.p[j] );
+  }
+
+  void FAUrdf::update(container &c, group &g) {
+    int n=g.end+1;
+#pragma omp for
+    for (int i=g.beg; i<n-1; i++)
+      for (int j=i+1; j<n; j++) 
         if ( (c.p[i].id==a && c.p[j].id==b)
             || (c.p[j].id==a && c.p[i].id==b) )
           update( c, c.p[i], c.p[j] );
@@ -125,13 +138,14 @@ namespace Faunus {
    * Calculate all distances between between species 1
    * and 2 and update the histogram.
    *
-   * \warning This function uses a simple distance function (no mim. image)
+   * \warning This function uses a simple distance function (no min. image)
    */
   void FAUrdf::update(vector<particle> &p)
   {
-    unsigned short i,j,n=p.size();
-    for (i=0; i<n-1; i++)
-      for (j=i+1; j<n; j++) 
+    int n=p.size();
+#pragma omp for
+    for (int i=0; i<n-1; i++)
+      for (int j=i+1; j<n; j++) 
         if ( (p[i].id==a && p[j].id==b)
             || (p[j].id==a && p[i].id==b) )
           add( p[i].dist(p[j]) );

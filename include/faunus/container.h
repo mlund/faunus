@@ -49,8 +49,7 @@ namespace Faunus {
       void randompos(point &);
       string povray();
       bool collision(const particle &a) {
-        return 
-          ( sqrt(a.x*a.x+a.y*a.y+a.z*a.z)+a.radius > r) ? true:false;
+        return ( a.x*a.x+a.y*a.y+a.z*a.z > r2 ) ? true:false;
       }
   };
 

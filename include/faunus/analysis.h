@@ -54,10 +54,12 @@ namespace Faunus {
 
   class systemenergy : public analysis {
     private:
-      double u0,sum,cur;
-      vector<double> confu;  //!< Vector to track system energy in time
+      double u0;
+      vector<double> confu;        //!< Vector to track system energy in time
       io fio;
     public:
+      double cur;
+      double sum;                 //!< Initial energy + all changes
       average<double> uavg;
       systemenergy(double);
       void update(double);        //!< Specify current system energy and recalc averages

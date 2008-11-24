@@ -20,13 +20,8 @@ namespace Faunus {
   using std::sqrt;
   using std::exp;
 
-  namespace phys {
-    static double pi=acos(-1.),
-                  e0=8.85419e-19,  //!< Permittivity of vacuum
-                  kB=1.380658e-23, //!< Boltzmann's constant [J/K]
-                  e=1.602177e-19,  //!< Electron unit charge [C]
-                  Nav=6.022137e23; //!< Avogadro's number [1/mol]
-  }
-}
+  typedef double Double;
+
+}//namespace
 
 #endif

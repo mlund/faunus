@@ -25,10 +25,10 @@ int main(int argc, char* argv[]) {
 
   // Load central protein
   macromolecule protein;               // Group for the protein
-  protein.add( con,
-      aam.load(in.getstr("protein"))); // Load protein structure
-  protein.move(con, -protein.cm);      // ..translate it to origo (0,0,0)
-  protein.accept(con);                 // ..accept translation
+  //protein.add( con,
+  //    aam.load(in.getstr("protein"))); // Load protein structure
+  //protein.move(con, -protein.cm);      // ..translate it to origo (0,0,0)
+  //protein.accept(con);                 // ..accept translation
 
   // Add salt
   salt salt;                           // Group for salt and counter ions
@@ -37,6 +37,7 @@ int main(int argc, char* argv[]) {
 
   // Add water
   molecules sol(3);                    // We want a three point water model
+  sol.name="SPC/E Solvent";
   vector<particle>
     water = aam.load("water.aam");     // Load bulk water from disk (typically from MD)
   con.atom.reset_properties(water);    // Set particle parameters according to Faunus
@@ -44,16 +45,21 @@ int main(int argc, char* argv[]) {
   water.clear();                       // Free the (large) bulk water reservoir
 
   // Distribution functions
+  FAUrdf spccell(float(0.2), float(50.));
+  FAUrdf nacell(float(0.2), float(50.));
   FAUrdf saltrdf(con.atom["NA"].id,con.atom["CL"].id,0.2,20.);
   FAUrdf catcat( con.atom["NA"].id,con.atom["NA"].id,0.2,20.);
   FAUrdf spcrdf( con.atom["OW"].id,con.atom["OW"].id,0.2,10.);
 
   mr.dp=0.6;
-  mt.dp=1.0; //1.0
-  sm.dp=0.6; //0.6
+  mt.dp=0.6; //0.6
+  sm.dp=0.4; //0.4
 
   aam.load(con, "confout.aam");        // Load old config (if present)
-  systemenergy sys(pot.energy(con.p)); // System energy analysis
+
+  systemenergy sys( 
+      pot.internal(con.p, sol, sol.numatom) +
+      pot.internal(con.p, salt) + pot.energy(con.p, salt)   );
 
   cout << in.info()
     << con.info() << con.atom.info()
@@ -62,42 +68,55 @@ int main(int argc, char* argv[]) {
   group head;                            // Group of first three particles [0:2]
   head.set(0,2);                         // (Used to swap w. SPC for parallization reasons)
   macromolecule m;
+  point origo;
 
   while ( loop.macroCnt() ) {            // Markov chain 
     while ( loop.microCnt() ) {
       m=sol[ sol.random() ];
       m.cm=m.cm_trial=con.p[m.beg];
-      switch (rand() % 3) {              // Randomly chose move
+      switch (rand() % 3) {              // Randomly choose move
         case 0:
           sys+=sm.move(salt,1);          // Displace a salt particle
           break;
         case 1:
-          if (m.swap(con,head)) {
+          //if (m.swap(con,head)) {
             sys+=mr.move(m);             // Rotate solvent
-            m.swap(con,head);
-          }
+          //  m.swap(con,head);
+          //}
           break;
         case 2:
-          if (m.swap(con,head)) {
+          //if (m.swap(con,head)) {
             sys+=mt.move(m);             // Translate solvent
-            m.swap(con,head);
-          }
+          //  m.swap(con,head);
+          //}
           break;
       }
       if (slump.random_one()<0.05) {
         saltrdf.update(con, salt);
         catcat.update(con, salt);
+        nacell.update(con, origo, "NA");
+      }
+      if (slump.random_one()<0.03) {
+        spccell.update(con, origo, "OW");
       }
     }//end of micro-loop 
 
     spcrdf.update(con, sol);
+    nacell.write("rdf-cell-NA.dat");
+    spccell.write("rdf-cell-OW.dat");
     spcrdf.write("rdf-OW-OW.dat");
     catcat.write("rdf-Na-Na.dat");
     saltrdf.write("rdf-Na-Cl.dat");
-    sys.update(pot.energy(con.p));       // Update system energy
+
+    sys.update( 
+        pot.internal(con.p, sol, sol.numatom) +
+        pot.internal(con.p, salt) + pot.energy(con.p, salt) );
+
     gro.save("confout.gro", con.p);      // Save config. to disk
     aam.save("confout.aam", con.p);      // Save config. to disk
-    cout << loop.timing();               // Show progress
+    cout << loop.timing()                // Show progress
+         << "# Energy (kT): sum average drift = " << sys.sum << " " << sys.uavg.avg() << " "
+                            << std::abs(sys.cur-sys.sum) << endl;
 
   }//end of macro-loop
   cout << sys.info()

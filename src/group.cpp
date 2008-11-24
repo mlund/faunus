@@ -227,10 +227,11 @@ namespace Faunus {
   }
 
   bool group::swap(container &c, group &g) {
-    int i,n=size();
-    if (n!=g.size())
-      return false;
-    for (i=0; i<n; i++) {
+    int n=size();
+    if (n!=g.size() ||
+        find(g.beg) ||
+        find(g.end) ) return false;
+    for (int i=0; i<n; i++) {
       std::swap( c.p[ beg+i ], c.p[ g.beg+i ] );
       std::swap( c.trial[ beg+i ], c.trial[ g.beg+i ] );
     }
@@ -464,15 +465,17 @@ namespace Faunus {
 
   void macromolecule::add(container &con, inputfile &in ) { }
 
+  /*! \warning Assumes a cubic box!
+   */
   void macromolecule::isobaricmove(container &con, double newlen) {
     double oldvol=con.getvolume(); // store original volume
-    con.scale(cm_trial, newlen);   // scale mass center
-    point CM_trial=cm_trial;
-    move(con, -cm );       // move with old boundaries
-    con.setvolume(pow(newlen,3));  // the boundary function needs the trial volume...
-    for (short i=beg;i<=end;i++) {
-      con.trial[i]+= CM_trial;
-      con.boundary(con.trial[i]);
+    con.scale(cm_trial, newlen);   // scale center of mass (cm)
+    point CM_trial=cm_trial;       // copy trial cm
+    move(con, -cm );               // move to origo
+    con.setvolume(pow(newlen,3));  // apply trial volume
+    for (int i=beg;i<=end;i++) {
+      con.trial[i]+= CM_trial;     // move all particles to new cm
+      con.boundary(con.trial[i]);  // respect boundary conditions
     }
     cm_trial=CM_trial;
     con.setvolume(oldvol);         // restore original volume
@@ -480,7 +483,7 @@ namespace Faunus {
 
   //--------------- MOLECULES -----------------
   molecules::molecules(unsigned short n) {
-    name="MOLECULAR ARRAY";
+    title="MOLECULAR ARRAY";
     numatom=n;
   }
   short int molecules::random() {
@@ -494,8 +497,8 @@ namespace Faunus {
   string molecules::info() {
     std::ostringstream o;
     o << macromolecule::info()
-      << "#  Atoms per molecule      = " << numatom << endl 
-      << "#  Solvent molecules       = " << size()/double(numatom) << endl; //check!!
+      << "#   Atoms per molecule     = " << numatom << endl 
+      << "#   Solvent molecules      = " << size()/double(numatom) << endl; //check!!
     return o.str();
   }
   void molecules::add(container &c, vector<particle> &p, short step) {
@@ -511,11 +514,11 @@ namespace Faunus {
           }
       if (col==false)
         for (int k=i; k<i+step; k++) {
-          c.push_back(p[k]);
-          end=c.p.size()-1;
+          c.trial.push_back(p[k]);
+          end=c.trial.size()-1;
         }
     }
-
+    c.p=c.trial;
   }
 
   //--------------- CHAIN -----------------

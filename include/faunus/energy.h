@@ -43,7 +43,7 @@ namespace Faunus {
       virtual double energy(const vector<particle> &, const group &, const particle &)=0;//!< group<->external particle.
       virtual double energy(const vector<particle> &, const vector<macromolecule> &)=0;  //!< vector<group> <-> vector<group>
       virtual double potential(const vector<particle> &, unsigned short)=0;              //!< Electric potential at j'th particle
-      virtual double internal(const vector<particle> &, const group &)=0;                //!< internal energy in group
+      virtual double internal(const vector<particle> &, const group &, int=1)=0;         //!< internal energy in group
       virtual double pot(const vector<particle> &, const point &)=0;                     //!< Electrostatic potential in a point
       virtual double dipdip(const point &, const point &, double)=0;                     //!< Dipole-dipole energy.
       virtual double iondip(const point &, double, double)=0;                            //!< Ion-dipole energy.
@@ -77,7 +77,7 @@ namespace Faunus {
     public:
       T pair; //!< An instance of the pair-potential.
       interaction(inputfile &in) : pair(in), energybase(pair.f) {
-        name="Standard";
+        name="Full N^2 - No tricks!";
         tokT=pair.f;
       };
 
@@ -190,13 +190,12 @@ namespace Faunus {
         return pair.f*u;
       }
 
-      // Internal (NON)-electrostatic energy in group
-      double internal(const vector<particle> &p, const group &g) {
+      virtual double internal(const vector<particle> &p, const group &g, int step=1) {
         if (g.beg==-1) return 0;
         double u=0;
-        int i,j,glen=g.end+1;
-        for (i=g.beg; i<glen-1; i++)
-          for (j=i+1; j<glen; j++)
+        int n=g.end+1;
+        for (int i=g.beg; i<n-step; i++)
+          for (int j=g.beg+step*((i-g.beg)/step+1); j<n; j++)
             u+=pair.pairpot(p[i],p[j]);
         return pair.f*u;
       }
@@ -366,5 +365,61 @@ namespace Faunus {
           return (overlap(p,g)==true) ? infty : interaction<T>::energy(p,g);
         }
     };
-}
+
+  /*!
+   * \brief Interaction class that includes image charges outside a spherical cell
+   * \warning Untested!
+   */
+  template<class T> class sphericalimage : public interaction<T> {
+    private:
+      double scale, radius, epso, epsi;
+      vector<point> img; //!< Contain image charge particles
+    public:
+      sphericalimage(inputfile &in) : interaction<T>(in) {
+        epso=in.getflt("epsi",80);
+        epsi=in.getflt("epso",1);
+        radius=in.getflt("cellradius",0);
+        scale=0; //!!!!
+      }
+      double energy(const vector<particle> &p ) {
+        recalc(p);
+        return interaction<T>::energy(p) + image(p);
+      }
+      double energy(const vector<particle> &p, int i) {
+        recalc(p,i);
+        return interaction<T>::energy(p,i) + image(p,i);
+      }
+      double energy(const vector<particle> &p, const group &g ) {
+        recalc(p,g);
+        return interaction<T>::energy(p,g) + image(p,g);
+      }
+      void recalc(point &p, int i) {
+        img[i] = p[i]*1.000000; //implement image position calculation
+      }
+      void recalc(vector<particle> &) {
+        img.resize( p.size() );
+        for (int i=0; i<img.size(); ++i)
+          recalc(p[i],i)
+      }
+      double image(const vector<particle> &p) {
+        double u=0;
+        for (int i=0; i<p.size(); ++i)
+          u+=image(p,i);
+        return u;
+      }
+      double image(const vector<particle> &p, int i) {
+        double u=0;
+        for (int j=0; j<img.size(); ++j)
+          u += p[j].charge / p[i].dist( img[j] );
+        return p[i].charge*scale*u;
+      }
+      double image(const vector<particle> &p, group &g) {
+        double u=0;
+        for (int i=g.beg; i<=g.end; ++i)
+          u+=image(p,i);
+        return u;
+      }
+  };
+
+}//namespace
 #endif

@@ -150,7 +150,7 @@ namespace Faunus {
   string dualmove::info() {
     std::ostringstream o;
     o <<  markovmove::info()
-      << "#   Min/max separation  = " << rmin << " " << rmax << endl;
+      << "#   Min/max separation        = " << rmin << " " << rmax << endl;
     return o.str();
   } 
 
@@ -342,11 +342,13 @@ namespace Faunus {
   class saltmove : public markovmove {
     private:
       void init();
+      long double rsqr;  //!< Mean square displacement
     public:
       saltmove( ensemble &, container&, energybase& );
       saltmove( ensemble &, container&, energybase&, inputfile &);
       double move(group &, int);      //!< Move a single particle
       double move(group &);           //!< Loop over group particles (randomly)
+      string info();
   };
 
   saltmove::saltmove(
@@ -363,6 +365,7 @@ namespace Faunus {
     dp=30;
     deltadp=2;
     runfraction=1.0;
+    rsqr=0;
   }
 
   /*! \param g Group containing mobile ions
@@ -380,12 +383,14 @@ namespace Faunus {
     return du;
   }
   double saltmove::move(group &g, int n) {
+    if (g.size()==0)
+      return 0;
     du=0;
     cnt++;
     n=g.displace(*con, dp); 
-    std::swap(con->p[n], con->p[0]);
-    std::swap(con->trial[n], con->trial[0]);
-    n=0;
+    //std::swap(con->p[n], con->p[0]);
+    //std::swap(con->trial[n], con->trial[0]);
+    //n=0;
     if (con->collision( con->trial[n] )==true)
       rc=HC;
     else {
@@ -403,20 +408,28 @@ namespace Faunus {
       if (ens->metropolis(du)==true) {
         rc=OK;
         utot+=du;                               // track energy changes
-        dpsqr+=con->sqdist(con->p[n],con->trial[n]); // track avg. displacement
+        double d2=con->sqdist(con->p[n],con->trial[n]); // track avg. displacement
+        dpsqr+=d2;
+        rsqr+=d2/pow(g.size(),2);               // Track mean square displacement per particle
         naccept++;                              // accept counter
         con->p[n] = con->trial[n];              // Accept move
-    std::swap(con->p[n], con->p[0]);
-    std::swap(con->trial[n], con->trial[0]);
+    //std::swap(con->p[n], con->p[0]);
+    //std::swap(con->trial[n], con->trial[0]);
         return du;
       } else rc=ENERGY;
     }
     du=0;
     dpsqr+=0;
-    std::swap(con->p[n], con->p[0]);
-    std::swap(con->trial[n], con->trial[0]);
+    //std::swap(con->p[n], con->p[0]);
+    //std::swap(con->trial[n], con->trial[0]);
     con->trial[n] = con->p[n];
    return du;
+  }
+  string saltmove::info() {
+    std::ostringstream o;
+    o << markovmove::info()
+      << "#   Mean sq. displ./particle  = " << sqrt(rsqr) << endl;
+    return o.str();
   }
 }
 #endif

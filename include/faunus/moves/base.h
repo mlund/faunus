@@ -63,18 +63,20 @@ namespace Faunus {
     o << endl
       << "# " << name << ":" << endl;
     if (cnt>0) {
-      o << "#   Acceptance          = " << accepted()*100 << endl
-        << "#   Number of trials    = " << cnt << endl
-        << "#   Pct. of Markov steps= " << runfraction*100 << endl
-        << "#   Energy change (kT)  = " << utot << " " << utot/cnt << " "
+      o << "#   Acceptance                = " << accepted()*100 << endl
+        << "#   Number of trials          = " << cnt << endl
+        << "#   Pct. of Markov steps      = " << runfraction*100 << endl
+        << "#   Energy change (kT)        = " << utot << " " << utot/cnt << " "
                                         << utot/(accepted()*cnt) << endl;
       if (dp!=0) {
-        o << "#   Displacement param. = " << dp << endl
-          << "#   Average displacement= " << sqrt(dpsqr.avg()) << endl;
+        o << "#   Displacement param.       = " << dp << endl;
+        if (dpsqr.sum>0)
+          o << "#   Average displacement      = " << sqrt(dpsqr.avg()) << endl
+            << "#   Mean square displacement  = " << sqrt(dpsqr.sum) << endl;
       }
     }
     if (cite.empty()==false)
-      o << "#   More information:     " << cite << endl;
+      o << "#   More information:           " << cite << endl;
     return o.str();
   }
 

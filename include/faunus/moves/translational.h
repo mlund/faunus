@@ -218,7 +218,7 @@ namespace Faunus {
 
   translate::translate( ensemble &e,
       container &c, energybase &i ) : markovmove(e,c,i) {
-    name = "MACROMOLECULAR TRANSLATION";
+    name = "MOLECULAR TRANSLATION";
     runfraction=1.0;
     deltadp=1.;
     dp=10.;

@@ -283,5 +283,19 @@ namespace Faunus {
       void sample(container &, energybase &);
       string info();
   };
+
+  class pointpotential : public analysis {
+    private:
+      struct data {
+        point p;
+        string name;
+        average<double> phi, expphi;
+      };
+    public:
+      vector<data> list;
+      void add(point, string);
+      void sample(container &, energybase &);
+      string info();
+  };
 }//namespace
 #endif

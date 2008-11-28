@@ -10,9 +10,9 @@ namespace Faunus {
   }
 
   void point::clear() { x=y=z=0; }
-  double point::dot(point &p) { return (x*p.x + y*p.y + z*p.z); }
+  double point::dot(const point &p) const { return (x*p.x + y*p.y + z*p.z); }
 
-  double point::len() {
+  double point::len() const {
     double l2=x*x+y*y+z*z;
     return (l2!=0) ? sqrt(l2) : 0;
   }

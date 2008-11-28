@@ -245,6 +245,37 @@ namespace Faunus {
       << endl;
     return o.str();
   }
+  //----------------------------------------------
+
+  void pointpotential::add(point p, string name) {
+    data d = {p, name};
+    d.p.x+=slp.random_half()*1e-9; // avoid overlapping particles.
+    list.push_back(d);
+  }
+  void pointpotential::sample(container &c, energybase &pot) {
+    int n=list.size();
+#pragma omp for
+    for (int i=0; i<n; ++i) {
+      double phi=pot.potential(c.p, list[i].p);
+      list[i].phi+=phi;
+      list[i].expphi+=exp(-phi);
+    }
+  }
+  string pointpotential::info() {
+    std::ostringstream o;
+    o << endl
+      << "# Point Potential Analysis:\n"
+      << "#   Number of points         = " << list.size() << endl
+      << "#   Number of samples        = "
+      << ((list.size()==0) ? 0 : list[0].phi.cnt) << endl;
+    for (int i=0; i<list.size(); ++i)
+      o << "#    " << list[i].name << " " << list[i].p << " "
+        << list[i].phi.avg() << " "
+        << list[i].phi.stdev() << "              "
+        << -log(list[i].expphi.avg()) << " "
+        << -log(list[i].expphi.stdev()) << endl;
+    return o.str();
+  }
 
 }//namespace
 

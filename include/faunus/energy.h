@@ -43,6 +43,7 @@ namespace Faunus {
       virtual double energy(const vector<particle> &, const group &, const particle &)=0;//!< group<->external particle.
       virtual double energy(const vector<particle> &, const vector<macromolecule> &)=0;  //!< vector<group> <-> vector<group>
       virtual double potential(const vector<particle> &, unsigned short)=0;              //!< Electric potential at j'th particle
+      virtual double potential(const vector<particle> &, point)=0;                       //!< Electric potential in point
       virtual double internal(const vector<particle> &, const group &, int=1)=0;         //!< internal energy in group
       virtual double pot(const vector<particle> &, const point &)=0;                     //!< Electrostatic potential in a point
       virtual double dipdip(const point &, const point &, double)=0;                     //!< Dipole-dipole energy.
@@ -77,7 +78,7 @@ namespace Faunus {
     public:
       T pair; //!< An instance of the pair-potential.
       interaction(inputfile &in) : pair(in), energybase(pair.f) {
-        name="Full N^2 - No tricks!";
+        name="Full N^2";
         tokT=pair.f;
       };
 
@@ -226,6 +227,13 @@ namespace Faunus {
         return pair.f*u;
       }
 
+      double potential(const vector<particle> &p, point a) {
+        double phi=0;
+        for (int i=0; i<p.size(); ++i)
+          phi+=p[i].charge/sqrt( pair.sqdist(a,p[i]) );
+        return pair.f*phi;
+      }
+
       void forceall(container &c, vector<point> &f) {
         point r;
         double ff;
@@ -368,39 +376,46 @@ namespace Faunus {
 
   /*!
    * \brief Interaction class that includes image charges outside a spherical cell
+   * \toto Not finished
    * \warning Untested!
+   * \author Mikael Lund
+   * \date Lund 2008
+   *
+   * Calculates inter-particle interactions in a dielectric sphere (epsi) and
+   * adds image charge interactions with the dielectric surroundings (epso). Useful
+   * for simulating explicit water in a spherical container. Note that after each
+   * MC move -- both accepted and rejected -- the img vector *must* be updated
+   * with the updateimg() function.
    */
   template<class T> class sphericalimage : public interaction<T> {
     private:
-      double scale, radius, epso, epsi;
+      average<double> ratio;
+      double scale, radius, epso, epsi, ui, ur;
       vector<point> img; //!< Contain image charge particles
     public:
       sphericalimage(inputfile &in) : interaction<T>(in) {
-        epso=in.getflt("epsi",80);
-        epsi=in.getflt("epso",1);
+        interaction<T>::name+=" w. spherical image charges";
+        epso=in.getflt("epsi",1);
+        epsi=in.getflt("epso",80);
         radius=in.getflt("cellradius",0);
         scale=0; //!!!!
       }
-      double energy(const vector<particle> &p ) {
-        recalc(p);
-        return interaction<T>::energy(p) + image(p);
+
+      // RE-CALC IMAGE POSITIONS
+      inline void updateimg(const point &a, int i) {
+        img[i] = a*1.000000; //implement image position calculation
       }
-      double energy(const vector<particle> &p, int i) {
-        recalc(p,i);
-        return interaction<T>::energy(p,i) + image(p,i);
-      }
-      double energy(const vector<particle> &p, const group &g ) {
-        recalc(p,g);
-        return interaction<T>::energy(p,g) + image(p,g);
-      }
-      void recalc(point &p, int i) {
-        img[i] = p[i]*1.000000; //implement image position calculation
-      }
-      void recalc(vector<particle> &) {
+      void updateimg(const vector<particle> &p) {
         img.resize( p.size() );
         for (int i=0; i<img.size(); ++i)
-          recalc(p[i],i)
+          updateimg(p[i],i);
       }
+      void updateimg(const vector<particle> &p, const group &g) {
+        for (int i=g.beg; i<=g.end; ++i)
+          updateimg(p[i],i);
+      }
+
+      // IMAGE ENERGY
       double image(const vector<particle> &p) {
         double u=0;
         for (int i=0; i<p.size(); ++i)
@@ -413,11 +428,43 @@ namespace Faunus {
           u += p[j].charge / p[i].dist( img[j] );
         return p[i].charge*scale*u;
       }
-      double image(const vector<particle> &p, group &g) {
+      double image(const vector<particle> &p, const group &g) {
         double u=0;
         for (int i=g.beg; i<=g.end; ++i)
           u+=image(p,i);
         return u;
+      }
+
+      // TOTAL ENERGY
+      double energy(const vector<particle> &p ) {
+        updateimg(p);
+        ur=interaction<T>::energy(p);
+        ui=image(p);
+        ratio+=std::abs(ui/(ur+ui));
+        return ur+ui;
+      }
+      double energy(const vector<particle> &p, int i) {
+        updateimg(p[i],i);
+        ur=interaction<T>::energy(p,i);
+        ui=image(p,i);
+        ratio+=std::abs(ui/(ur+ui));
+        return ur+ui;
+      }
+      double energy(const vector<particle> &p, const group &g ) {
+        updateimg(p,g); // update all images in group
+        ur=interaction<T>::energy(p,g);
+        ui=image(p,g);
+        ratio+=std::abs(ui/(ur+ui));
+        return ur+ui;
+      }
+      string info() {
+        std::ostringstream o;
+        o << interaction<T>::info()
+          << "#   Dielectric const. (in, out) = " << epsi << " " << epso << endl
+          << "#   Cavity radius               = " << radius << endl
+          << "#   Avg. image energy ratio     = " << ratio.avg() << endl
+          << "#   Number of images            = " << img.size() << endl;
+        return o.str();
       }
   };
 

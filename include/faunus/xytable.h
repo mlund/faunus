@@ -35,8 +35,8 @@ class xytable {
         y.resize(i+1);
       return i;
     }
-    std::vector<TY> y; 
   public:
+    std::vector<TY> y; 
     TX xres,            //!< Distance between x values
        xmin;            //!< Minimum x value
     //! \param resolution Distance between x values

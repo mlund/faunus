@@ -18,14 +18,14 @@ namespace Faunus {
       point();                            ///< Constructor, zero data.
       point(double,double,double);        ///< Constructor, set vector
       void clear();                       ///< Zero all data.
-      double len(); 
+      double len() const; 
       inline double sqdist(const point &) const;      //!< Squared distance to another point
       inline double sqdist(const point &,             //!< -- / / -- 3D minimum image
           const double &, const double &) const;
       inline double dist(const point &) const;        ///< Distance to another point
       inline double dist(const point &, const double &, const double &) const ; //!< Distance to another point
       void ranunit(random &);               ///< Generate a random unit vector
-      double dot(point &);                  ///< Angle with another point
+      double dot(const point &) const;      ///< Angle with another point
       point operator-();                    ///< Sign reversal
       point operator*(const point);         ///< Multiply two vectors
       point operator*(double) const;        ///< Scale vector

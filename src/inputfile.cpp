@@ -2,20 +2,24 @@
 
 namespace Faunus {
   inputfile::inputfile(string filename) {
+    string s;
+    char cstr[256];
     file=filename;
-    dataformat tmp;
     std::ifstream f( filename.c_str() );
     if (f) {
       while (!f.eof()) {
-        f >> tmp.name;
-        if (tmp.name.find("#")!=string::npos ||
-            tmp.name.find("[")!=string::npos)
-          f.ignore(256, '\n');
-        else {
-          f >> tmp.val;
+        dataformat tmp;
+        f.getline(cstr,256);
+        std::istringstream i( cstr );
+        i >> tmp.name;
+        if (tmp.name.find("#")==string::npos &&
+            tmp.name.find("[")==string::npos)
+        {
+          while (i >> s)
+            tmp.val.push_back(s);
           matrix.push_back(tmp);
         }
-      };
+      }
       f.close();
       std::cout << "# Input parameters read from: " << filename << endl;
     } else {
@@ -35,21 +39,21 @@ namespace Faunus {
   //! \param def Default value if keyword is not found
   string inputfile::getstr(string key, string def) {
     int i = findKey(key);
-    return (i!=-1) ? matrix[i].val : def;
+    return (i!=-1) ? matrix[i].val[0] : def;
   }
 
   //! \param key Keyword to look for
   //! \param def Default value if keyword is not found
   double inputfile::getflt(string key, double def) {
     int i = findKey(key);
-    return (i!=-1) ? atof(matrix[i].val.c_str()) : def;
+    return (i!=-1) ? atof(matrix[i].val[0].c_str()) : def;
   }
 
   //! \param key Keyword to look for
   //! \param def Default value if keyword is not found
   int inputfile::getint(string key, int def) {
     int i = findKey(key);
-    return (i!=-1) ? atoi(matrix[i].val.c_str()) : def;
+    return (i!=-1) ? atoi(matrix[i].val[0].c_str()) : def;
   }
 
   //! \param key Keyword to look for
@@ -57,7 +61,7 @@ namespace Faunus {
   bool inputfile::getboo(string key, bool def) {
     int i = findKey(key);
     if (i!=-1) {
-      if (matrix[i].val.compare("yes")==0)
+      if (matrix[i].val[0].compare("yes")==0)
         return true;
       else
         return false;
@@ -65,12 +69,17 @@ namespace Faunus {
     return def;
   }
 
+  vector<string> inputfile::getvec(string key, string def) {
+    int i = findKey(key);
+    return (i!=-1) ? matrix[i].val : vector<string>(1,def);
+  }
+
   //! \param key Name of the new keyword
   //! \param val String value
   void inputfile::add(string key, string val) {
     dataformat tmp;
     tmp.name=key;
-    tmp.val=val;
+    tmp.val.push_back(val);
     matrix.push_back(tmp);
   }
 
@@ -108,4 +117,4 @@ namespace Faunus {
     o << endl;
     return o.str();
   }
-}
+} //namespace

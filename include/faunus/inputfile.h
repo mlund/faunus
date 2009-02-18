@@ -16,7 +16,10 @@ namespace Faunus {
    */
   class inputfile {
     private:
-      struct dataformat { string name, val; };
+      struct dataformat {
+        string name;
+        vector<string> val;
+      };
       vector<dataformat> matrix;
       vector<string> calls;
       int findKey(string &);
@@ -28,6 +31,7 @@ namespace Faunus {
       double getflt(string, double=0); //!< Get double value
       int getint(string, int=0);       //!< Get integer value
       bool getboo(string, bool=false); //!< Get boolean value
+      vector<string> getvec(string,string);  //!< Get vector of strings
       void add(string,string);               //!< Add an entry to the loaded list
       void add(string,double);               //!< Add an entry to the loaded list
       string info();                         //!< Show info

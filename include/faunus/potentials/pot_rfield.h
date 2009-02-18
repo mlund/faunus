@@ -26,10 +26,10 @@ namespace Faunus {
     private:
       legendre l;           // legendre polynomium 
       int steps;            // # of steps in summation (precision)
-      double a;             // cavity radius
-      double eo, ei;        // dielectric constants (solvent, inside sphere)
     public:
+      double eo, ei;        // dielectric constants (solvent, inside sphere)
       double f;             //!< Factor to convert to kT
+      double a;             // cavity radius
       pot_rfield( inputfile &in ) {
         a  = in.getflt("rfield_cavity");
         eo = in.getflt("rfield_epso",80.);

@@ -72,4 +72,18 @@ namespace Faunus {
     }
     return id;
   }
+
+  bool particles::insert(particle a, unsigned int i) {
+    if (i>p.size())
+      return false;
+    p.insert(p.begin()+i, a);
+    trial.insert(trial.begin()+i, a);
+    return true;
+  };
+
+  bool particles::remove(unsigned int i) {
+    p.erase( p.begin()+i );
+    trial.erase( trial.begin()+i );
+    return true;
+  }
 }//namespace

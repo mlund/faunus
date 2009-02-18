@@ -56,7 +56,7 @@
   endif
   ifeq ($(MODEL), intel)
     CXX=icc
-    CXXFLAGS = -O3 -w #-openmp
+    CXXFLAGS = -O3 -w -openmp
 endif
 
 CLASSDIR=./

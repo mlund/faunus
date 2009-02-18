@@ -36,6 +36,7 @@
 #include "faunus/moves/rotational.h"
 #include "faunus/moves/charge.h"
 #include "faunus/moves/volume.h"
+#include "faunus/moves/rosembluth.h"
 
 namespace Faunus {
   string faunus_splash() {

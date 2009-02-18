@@ -18,6 +18,8 @@ namespace Faunus {
       vector<particle> trial;               //!< Trial particle vector. 
 
       int push_back(const particle &);      //!< add particle to both "p" and "trial"
+      bool insert(particle, unsigned int);  //!< Insert particle at pos n.
+      bool remove(unsigned int);            //!< Remove particle n.
       double charge();                      //!< Sum all charges in particle vector
       double charge(const point &, double); //!< Sum all charges within a sphere region
       bool overlap(const particle &);       //!< Check for overlap w. particle

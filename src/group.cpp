@@ -12,7 +12,7 @@ namespace Faunus {
     beg=first;
     end=last;
   }
-  short int group::size() const { return (beg==-1) ? 0 : end-beg+1; }
+  short int group::size() const { return (beg<0 || end<0) ? 0 : end-beg+1; }
 
   /*! \brief Calculates total charge
    *  \return Charge number. The charge is also stored in

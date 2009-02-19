@@ -24,13 +24,15 @@ namespace Faunus {
       double mu;                // Chemical potential
       void insert();
       void remove();
+      vector<unsigned int> ins; // Particles inserted or deleted in last move.
     public:
       // Keep as much as possible private! Easier for the user of the class.
       rosembluth( grandcanonical&, container&, energybase&, inputfile &, int);
       double move();
       string info();
   };
-  
+ 
+  // Constructor
   rosembluth::rosembluth( grandcanonical &gc,
       container &c, energybase &i, inputfile &in, int idx) : markovmove(gc,c,i)
   {
@@ -41,6 +43,7 @@ namespace Faunus {
     dp=0;
     index=idx;
     gcPtr=&gc;
+    ins.resize(0);
 
     // Fetch from input
     std::ostringstream rb_counter, rb_k, rb_polymer, rb_bond, rb_mu;
@@ -69,7 +72,16 @@ namespace Faunus {
   void rosembluth::insert() {
     // just an example:
     // insert a monomer at end of monomer group
+    int i = polymer.gPtr->end; // last particle in group
+    ins.push_back(i);          // keep track of what was moved.
     gcPtr->insert(con->trial, polymer.gPtr->end, con->atom(polymer.seq[0]), polymer.valency );
+
+    // let's assign a random position (within the container) to the inserted particle:
+    con->randompos( con->trial[i] );
+    // ...or manually:
+    con->trial[i].x = 2.3;
+    // ...hmm maybe this took us outside the container boundaries. Let's fix that:
+    con->boundary( con->trial[i] );
   }
 
   void rosembluth::remove() {
@@ -79,12 +91,16 @@ namespace Faunus {
 
     gcPtr->erase( con->trial, m, polymer.valency );
     gcPtr->erase( con->trial, c, counter.valency );
+
+    ins.push_back(m);
+    ins.push_back(c);
   }
 
   /*!
    * \todo Cell overlap test missing
    */
   double rosembluth::move() {
+    ins.clear();
     du=0;
     cnt++;
     // 1. Randomly insert or remove.
@@ -98,6 +114,7 @@ namespace Faunus {
     }
     du = unew-uold;
     if (ens->metropolis(du)==true) {
+      con->p = con->trial; // sync. particle vectors
       rc=OK;
       utot+=du;
       naccept++;
@@ -106,6 +123,8 @@ namespace Faunus {
     } else rc=ENERGY;
     du=0;
     //undo move!
+    //1) insert or remove particle(s)
+    con->trial = con->p; // sync. particle vectors
     return du;
   }
 

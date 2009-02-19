@@ -48,7 +48,7 @@ namespace Faunus {
       }
 
     public:
-      vector<group> g; //!< Groups with fluctuating species
+      vector<group> g;      //!< Groups with fluctuating species
       void addgroup(group &group) { g.push_back(group); }
 
       short findgroup(string name) {

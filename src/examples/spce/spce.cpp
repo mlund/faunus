@@ -12,7 +12,7 @@ using namespace std;
 
 class ionpmf {
   private:
-    slump slump;
+    Faunus::slump slump;
     particle a,b;
   public:
     double dr,rmax;
@@ -282,7 +282,10 @@ int main(int argc, char* argv[]) {
 
   aam.load(con, "confout.aam");        // Load old config (if present)
 
+#ifdef SPCE_MINIMAGE
+#else
   pot.updateimg(con.p);                // Initiate image charges
+#endif
 
   systemenergy sys( 
       pot.internal(con.p, sol, sol.numatom) +
@@ -314,7 +317,7 @@ int main(int argc, char* argv[]) {
 
   // Switch paramters
   double trans, rots, trs, sums, randy;
-  int switcher;
+  int switcher=-1;
   sums=in.getflt("t")+in.getflt("rot")+in.getflt("tr");
   trans=in.getflt("t")/sums;
   rots=in.getflt("rot")/sums;
@@ -356,12 +359,18 @@ int main(int argc, char* argv[]) {
          // sys+=sm.move(salt,1);          // Displace a salt particle
           break;
       }
+#ifdef SPCE_MINIMAGE
+#else
       pot.updateimg(con.p, m);
+#endif
 
       if (slump.random_one()<0.05) {
 //        ppot.sample(con,pot);
 //        ip.insert(con,pot);
+#ifdef SPCE_MINIMAGE
+#else
         solvation.sample(con, pot);
+#endif
 //        acidsolv.sample(con, pot, acids); 
       }
       if (slump.random_one()<0.05) {
@@ -369,7 +378,10 @@ int main(int argc, char* argv[]) {
         catcat.update(con, salt);
         nacell.update(con, origo, "NA");
         acidwrdf.update(con);
+#ifdef SPCE_MINIMAGE
+#else
         imu+=pot.image(con.p);
+#endif
       }
       if (slump.random_one()<0.05) {  
         solsize=sol.size()/3;
@@ -473,7 +485,10 @@ int main(int argc, char* argv[]) {
        << protein.info() << loop.info()  // Print final results
        << sm.info() << mr.info() << mt.info() <<mrt.info() <<pot.info();
 
+#ifdef SPCE_MINIMAGE
+#else
   io.writefile("img.dat", pot.printimg());
+#endif
 
   // Print dipole intertion results
 /*  particle a,b;

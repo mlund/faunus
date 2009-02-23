@@ -280,7 +280,8 @@ namespace Faunus {
   //----------------------------------------------
 
   void pointpotential::add(point p, string name) {
-    data d = {p, name};
+    average<double> dummy;
+    data d = {p, name, dummy , dummy };
     d.p.x+=slp.random_half()*1e-9; // avoid overlapping particles.
     list.push_back(d);
   }

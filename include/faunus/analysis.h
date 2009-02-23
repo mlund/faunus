@@ -1,6 +1,7 @@
 #ifndef FAU_ANALYSIS_H
 #define FAU_ANALYSIS_H
 
+//#include "faunus/histogram.h"
 #include "faunus/average.h"
 #include "faunus/container.h"
 #include "faunus/slump.h"
@@ -50,6 +51,20 @@ namespace Faunus {
       bool add(string, float, float);  //!< Add value to distribution
       bool write(string);  //!< Write distributions to a file
       string info();       //!< Write distributions to a string
+  };
+
+  class gfactor : public analysis {
+    private:
+      average<float> g;
+      double N,V,mu2,MU2;
+      macromolecule mol;
+      double gamma;
+      double gscale;
+  //    histogram h;
+    public:
+      gfactor(container &, molecules &) ;//: h(float(0.1), float(0.), float(40.));
+      double add(vector<particle> &, molecules &);
+      string info();
   };
 
   class systemenergy : public analysis {

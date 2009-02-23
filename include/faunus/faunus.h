@@ -1,6 +1,6 @@
 /***************************************************************************
   Faunus -- A Framework for Molecular Modelling 
-  Copyright (C) 2002-2008 Mikael Lund 
+  Copyright (C) 2002-2009 Mikael Lund 
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@
 #include "faunus/moves/rotational.h"
 #include "faunus/moves/charge.h"
 #include "faunus/moves/volume.h"
+#include "faunus/moves/miscmove.h"
 #include "faunus/moves/rosembluth.h"
 
 namespace Faunus {
@@ -43,7 +44,7 @@ namespace Faunus {
     std::ostringstream o;
     o << "# ---------------------------------------------------------------------\n"
       << "#  Welcome to FAUNUS - A Framework for Molecule Simulation.\n"
-      << "#  Copyright (C) 2002-2008 Mikael Lund\n"
+      << "#  Copyright (C) 2002-2009 Mikael Lund\n"
       << "#\n"
       << "#  This program is free software; you can redistribute it and/or modify\n"
       << "#  it under the terms of the GNU General Public License as published by\n"

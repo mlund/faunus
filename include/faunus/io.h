@@ -27,6 +27,7 @@ namespace Faunus {
       bool readfile(string, vector<string>&);      //!< Read entire file to vector
       bool writefile(string, string);              //!< Save string to file
       void strip(vector<string> &, string="#");    //!< Remove lines containing pattern
+      void splash(string);                       //!< Splashes the content of a file
   };
 
   class particleIO {

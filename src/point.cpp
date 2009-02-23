@@ -21,9 +21,9 @@ namespace Faunus {
     point u;
     double r=2;
     while (r > 1.) { //Generate a random unit vector
-      u.x=slp.random_one();
-      u.y=slp.random_one();
-      u.z=slp.random_one();
+      u.x=2*slp.random_half();
+      u.y=2*slp.random_half();
+      u.z=2*slp.random_half();
       r=sqrt(u.x*u.x+u.y*u.y+u.z*u.z);
     }
     x=u.x/r;

@@ -232,7 +232,12 @@ namespace Faunus {
     p.y=dp*slp.random_half();
     p.z=dp*slp.random_half();
     g.move(*con, p); 
-    if (con->collision(g.cm_trial)==true) {
+    bool hc=false;
+    for (int i=g.beg; i<=g.end; i++) {
+      if(con->collision(con->trial[i]))
+        hc=true;
+    }
+    if (hc==true) {
       rc=HC;
       dpsqr+=0;
       g.undo(*con);

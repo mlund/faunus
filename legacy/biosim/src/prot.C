@@ -196,7 +196,7 @@ int main(int argc, char* argv[] ) {
   cout << "Pass 3.\n";
  
   //PREPARE TRAJECTORY OUTPUT
-  xyz trj("trj40-65");
+  xyz trj("trj20-50");
   
   //PRINT INFORMATION
   cout << "\n# --- SYSTEM ----------------------------------------\n"
@@ -530,8 +530,8 @@ int main(int argc, char* argv[] ) {
       hist.add( h[20], z, utot ); //total energy 
  
       //Multipole analysis
-      if (slump.random_one()>0.6) {
-        if (z>40. && z<65.) {
+      if (slump.random_one()>0.9) {
+        if (z>20. && z<55.) {
           trj.header( g[P1].size()-2+1 ); //subtract ghosts, "mu", "cm". Add 1 for P2.cm
           trj.add( s.p, pep, g[P1] );
           trj.add( s.p, pep, g[P2].cm );

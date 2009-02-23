@@ -10,6 +10,7 @@ namespace Faunus {
   template<class T>
     class average {
       private:
+     //   vector v;
         T sqsum;                        ///< Square sum
       public:
         average();

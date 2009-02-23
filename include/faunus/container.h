@@ -21,6 +21,7 @@ namespace Faunus {
 //      container(inputfile &);
       virtual void setvolume(double){}                    //!< Specify new volume
       virtual bool collision(const particle &)=0;            //!< Check for collision with walls
+      virtual bool collision(const particle &, const particle &){return false;}            //!< Check for collision between p & p
       virtual void randompos(point &)=0;                  //!< Random point within container
       virtual string info();                              //!< Return info string
       virtual string povray();                            //!< POVRAY object representing the cell
@@ -49,7 +50,11 @@ namespace Faunus {
       void randompos(point &);
       string povray();
       bool collision(const particle &a) {
-        return ( a.x*a.x+a.y*a.y+a.z*a.z > r2 ) ? true:false;
+        double x,y,z;
+        x=std::abs(a.x)+a.radius;
+        y=std::abs(a.y)+a.radius;
+        z=std::abs(a.z)+a.radius;
+        return ( x*x+y*y+z*z > r2 ) ? true:false;
       }
   };
 
@@ -74,8 +79,22 @@ namespace Faunus {
       bool collision(const particle &a) {
         if (std::abs(a.x)>len_half ||
             std::abs(a.y)>len_half ||
-            std::abs(a.z)>len_half )
-          return true;
+            std::abs(a.z)>len_half ) {
+		return true;
+	}
+        return false;
+      }
+      bool collision(const particle &a, const particle &b) {
+        point p;
+        p.x=std::abs(a.x-b.x);
+        p.y=std::abs(a.y-b.y);
+        p.z=std::abs(a.z-b.z);
+        if (p.x>len_half) p.x-=len;
+        if (p.y>len_half) p.y-=len;
+        if (p.z>len_half) p.z-=len;
+        if (pow(p.len(),2)<pow(a.radius+b.radius, 2))   
+		return true;
+	
         return false;
       }
       string povray();

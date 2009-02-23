@@ -35,6 +35,13 @@ namespace Faunus {
         v.erase(iter);
       else iter++;
   }
+  void io::splash(string f) {
+    vector<string> t;
+    t.clear();
+    readfile(f,t);
+    for (int i=0; i<t.size(); i++)
+      std::cout << "# "<<t[i]<<endl;
+  }
 
   /*
   bool io_aam::load(container &c, string file) {

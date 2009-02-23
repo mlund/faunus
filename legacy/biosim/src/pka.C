@@ -351,10 +351,10 @@ int main(int argc, char* argv[] ) {
       //imd.send_particles(s.p);
 
       // Write "trajectory" xyz file
-      trj.header( g[PROT].size()+g[SALT].size() );
-      trj.add( s.p, pep, g[PROT] );
-      trj.add( s.p, pep, g[SALT] );
-      trj.footer();
+      //trj.header( g[PROT].size()+g[SALT].size() );
+      //trj.add( s.p, pep, g[PROT] );
+      //trj.add( s.p, pep, g[SALT] );
+      //trj.footer();
 
 
     }; //end of micro loop
@@ -406,7 +406,7 @@ int main(int argc, char* argv[] ) {
     vrml.add( s.p, g[SALT] );
     vrml.save("vrml.py");
 
-    trj.newfile();                      //dump trj into new file
+    //trj.newfile();                      //dump trj into new file
     
   }; //end of macro step 
     

@@ -377,7 +377,7 @@ namespace Faunus {
       par.boundary(par.trial[i]);
     };
   }
-  void macromolecule::rotate(container &par, double drot) {
+  void macromolecule::rotate(container &par, double drot, double dp) {
     point u;
     double r=2;
     while (r > 1.) { //Generate a random unit vector
@@ -389,7 +389,7 @@ namespace Faunus {
     u.x=u.x/r;
     u.y=u.y/r; 
     u.z=u.z/r;
-    rotate(par, u, drot*slp.random_half());
+    rotate(par, u, drot*slp.random_half(), dp);
   }
 
   /*!
@@ -399,11 +399,13 @@ namespace Faunus {
    * \param k Keyword to specify automatic acceptance
    * \toto This could be done more elegant using quaternion parameters (Frenkel p49)
    */
-  void macromolecule::rotate(container &par, point u, double angle) {
-    point b;
+  void macromolecule::rotate(container &par, point u, double angle, double dr) {
+    point b, q;
+    q.x=dr*slp.random_half();
+    q.y=dr*slp.random_half();
+    q.z=dr*slp.random_half();
     double cosang, sinang, eb;
     double e1mcox, e1mcoy, e1mcoz;
-
     cosang=cos(angle);
     sinang=sin(angle);
     e1mcox=(1.-cosang)*u.x;
@@ -415,11 +417,14 @@ namespace Faunus {
       b.z=par.p[i].z - cm.z;
       par.boundary(b);                    // Apply boundary conditions
       eb=u.x*b.x + u.y*b.y + u.z*b.z;
-      par.trial[i].x=e1mcox*eb+cosang*b.x+sinang*(u.y*b.z - u.z*b.y) + cm.x;
-      par.trial[i].y=e1mcoy*eb+cosang*b.y+sinang*(u.z*b.x - u.x*b.z) + cm.y;
-      par.trial[i].z=e1mcoz*eb+cosang*b.z+sinang*(u.x*b.y - u.y*b.x) + cm.z;
+      par.trial[i].x=e1mcox*eb+cosang*b.x+sinang*(u.y*b.z - u.z*b.y) + cm.x + q.x;
+      par.trial[i].y=e1mcoy*eb+cosang*b.y+sinang*(u.z*b.x - u.x*b.z) + cm.y + q.y;
+      par.trial[i].z=e1mcoz*eb+cosang*b.z+sinang*(u.x*b.y - u.y*b.x) + cm.z + q.z;
       par.boundary(par.trial[i]);
+      
     }
+    cm_trial = cm + q;
+    par.boundary(cm_trial);
   }
 
   /*!
@@ -461,6 +466,57 @@ namespace Faunus {
     cm_trial.y=e1mcoy*eb+cosang*b.y+sinang*(u.z*b.x - u.x*b.z) + cr.y;
     cm_trial.z=e1mcoz*eb+cosang*b.z+sinang*(u.x*b.y - u.y*b.x) + cr.z;
     par.boundary(cm_trial);
+  }
+
+  /*!
+   * \param g Consecutice rotation and translation 
+   * \param c displacement vector
+   * \param u Vector to rotate around
+   * \param angle ..by this many degrees (rad)
+   * \param k Keyword to specify automatic acceptance
+   * \warning Ej bijektiv avbildning med periodiska randvilkor
+   * \warning Anvand bindningsvektorer
+   */
+  void macromolecule::transrot(container &par, double dr, double angle) {
+   // Let us first translate...
+    point c;
+    c.ranunit(slp); 
+    c=c*dr; //random displacement vector
+    for (unsigned short i=beg; i<=end; i++) {
+      par.trial[i].x = par.p[i].x + c.x;
+      par.trial[i].y = par.p[i].y + c.y;
+      par.trial[i].z = par.p[i].z + c.z;
+      par.boundary(par.trial[i]);
+    }
+    cm_trial.x = cm.x + c.x;
+    cm_trial.y = cm.y + c.y;
+    cm_trial.z = cm.z + c.z;
+    par.boundary(cm_trial);
+
+    //... then we rotate
+    c.ranunit(slp);
+    double ang;
+    ang=angle*slp.random_half();
+    point b;
+    double cosang, sinang, eb;
+    double e1mcox, e1mcoy, e1mcoz;
+
+    cosang=cos(ang);
+    sinang=sin(ang);
+    e1mcox=(1.-cosang)*c.x;
+    e1mcoy=(1.-cosang)*c.y;
+    e1mcoz=(1.-cosang)*c.z;
+    for (short i=beg; i<=end; i++) {
+      b.x=par.trial[i].x - cm_trial.x;              // center cm_trial...
+      b.y=par.trial[i].y - cm_trial.y;
+      b.z=par.trial[i].z - cm_trial.z;
+      par.boundary(b);                    // Apply boundary conditions
+      eb=c.x*b.x + c.y*b.y + c.z*b.z;
+      par.trial[i].x=e1mcox*eb+cosang*b.x+sinang*(c.y*b.z - c.z*b.y) + cm_trial.x; // move back in to laboratory frame
+      par.trial[i].y=e1mcoy*eb+cosang*b.y+sinang*(c.z*b.x - c.x*b.z) + cm_trial.y;
+      par.trial[i].z=e1mcoz*eb+cosang*b.z+sinang*(c.x*b.y - c.y*b.x) + cm_trial.z;
+      par.boundary(par.trial[i]);
+    }
   }
 
   void macromolecule::add(container &con, inputfile &in ) { }
@@ -508,7 +564,7 @@ namespace Faunus {
       col=c.collision(p[i]);
       if (col==false)
         for (int j=0; j<c.p.size(); j++)
-          if (c.p[j].overlap(p[i])==true) {
+          if (c.collision(c.p[j], p[i])==true) {
             col=true;
             break;
           }

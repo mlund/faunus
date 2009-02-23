@@ -6,7 +6,7 @@ namespace Faunus {
     list.push_back(a);
     init();
   }
-
+// dumtest
   void atoms::init() {
     int n=list.size();
     eps.resize(n);

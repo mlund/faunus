@@ -58,6 +58,38 @@ namespace Faunus {
     }
   }
 
+  //--------------- KIRKWOOD FACTOR ----------------------------------
+  gfactor::gfactor(container &c, molecules &m) //: h(float(0.1), float(0.), float(40.))
+  {
+    N=m.size()/m.numatom;
+    V=c.getvolume();
+    mol.beg=m[0].beg;
+    mol.end=m[0].end;
+    mu2=pow(mol.dipole(c.p),2);  //Identical dipoles
+    gamma=pow(1.602*10e-19,2)*10e10*N/V*mu2/(8.854*10e-12)/9; //in gaussian units times kT
+    gscale=1./N/mu2;
+  } //: h(0.1,0.1,40.); 
+  double gfactor::add(vector<particle> &p, molecules &m) {
+    mol.beg=0;
+    mol.end=p.size()-1;
+    MU2=pow( mol.dipole(p) , 2);
+    g.add(MU2);
+  //  h.add(MU2/N/mu2);
+    return MU2/N/mu2;
+  }
+  string gfactor::info() {
+  //  h.write("kirkwood.dat");
+    std::ostringstream o;
+    o << endl << "# KIRKWOOD FACTOR: "<<endl;
+            o << "#"<<endl
+              << "# "<<N<<" solvent molecules in a "<<V<<" A^2 cavity, rho ="<<N/V<<endl
+              << "# Molecular dipole = "<<sqrt(mu2)<<" (mu^2 = "<<mu2<<" )"<<endl     
+              << "# MU^2    = " << g.avg() << "(per particle), stdev =  "<<g.stdev()<<endl
+              << "# g       = " << g.avg()*gscale<<endl
+  //            << "# gamma = " << 4*acos(-1)*N/V*mu2/9*10e10 <<" (times kT)" <<endl
+              << "# 3*gamma'= " << 3*gamma<<" (gaussian times kT)"<<endl<<endl;
+    return o.str();
+  }
   //---------------- DISTRIBUTIONS ----------------------------------
   /*!
    * By default the maximum and minimum x values are dynamically

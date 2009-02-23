@@ -71,6 +71,7 @@ namespace Faunus {
       void add(container &);
       string info();          //!< Get results
       void insert(container &, energybase &); //!< Ghost insertion
+      void insert(container &, energybase &, vector<point> &); //!< Ghost insertion in a set of points
   };
 }
 #endif

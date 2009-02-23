@@ -45,7 +45,7 @@ namespace Faunus {
         nan=30;
         name+="/Empirical data potential";
         pmfdir=in.getstr("pmfdir","./");
-        xres=in.getflt("pmfres",.5);
+        xres=in.getflt("pmfres",.25);
         inittables();
       }
 

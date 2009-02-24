@@ -15,7 +15,7 @@ protein2   $protein2
 voldp      $voldp
 pressure   $pressure
 e_r        $e_r
-kappa      $kappa
+debyelen   $debyelen
 max        $max
 penalty    $penalty
 atomfile   $atomfile
@@ -34,7 +34,7 @@ nprot2=0
 protein2="mrh4a.aam"
 voldp=1.00
 pressure=0.000001
-kappa=0.050  #  0.147
+debyelen=20
 e_r=78.67
 max=1000
 penalty=0.1

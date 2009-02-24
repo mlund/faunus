@@ -8,13 +8,16 @@ namespace Faunus {
    *  Faunus::inputfile is scanned for "bjerrum", "debyelen", "LJeps".
    */
   class pot_debyehuckel : public pot_lj {
-    private:
-      double k;
     public:
+      double I,k;
       pot_debyehuckel( inputfile &in ) : pot_lj(in) {
         name+="/Debye-Huckel";
-        k=in.getflt("debyelen",10);
         f=in.getflt("bjerrum",7.1);
+        k=1./in.getflt("debyelen",1.1e4);
+        if ( 1/k>=1e4) {
+          I=in.getflt("ionicstr",0);
+          k=sqrt( 4*std::acos(-1)*f*6.022e23/1e27*2*I );
+        }
         eps=eps/f;
       }
       //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
@@ -30,8 +33,10 @@ namespace Faunus {
       string info() {
         std::ostringstream o;
         o << pot_lj::info()
-          << "#   Bjerrum length    = " << f     << endl
-          << "#   Debye length      = " << 1./k  << endl;
+          << "#   Bjerrum length    = " << f << endl
+          << "#   Kappa             = " << k << endl
+          << "#   Debye length      = " << 1./k << endl
+          << "#   Ionic strength (M)= " << k*k*1e27/(8*std::acos(-1)*f*6.022e23) << endl;
         return o.str();
       }
   };

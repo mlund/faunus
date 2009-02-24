@@ -12,12 +12,16 @@ namespace Faunus {
    */
   class pot_debyehuckelP3 : public pot_lj {
     private:
-      double k;
+      double I,k;
     public:
       double box, halfbox;
       pot_debyehuckelP3( inputfile &in ) : pot_lj(in) {
-        k=in.getflt("debyelen",10);
         f=in.getflt("bjerrum",7.1);
+        k=1/in.getflt("debyelen",1.1e6);
+        if ( 1/k>=1e6) {
+          I=in.getflt("ionicstr",0);
+          k=sqrt( 4*std::acos(-1)*f*6.022e23/1e27*2*I );
+        }
         box=in.getflt("boxlen");
         halfbox=box/2;
         eps=eps/f;
@@ -44,7 +48,8 @@ namespace Faunus {
         std::ostringstream o;
         o << pot_lj::info()
           << "#   Bjerrum length    = " << f     << endl
-          << "#   Debye length      = " << 1./k  << endl;
+          << "#   Debye length      = " << 1./k  << endl
+          << "#   Ionic strength (M)= " << k*k*1e27/(8*std::acos(-1)*f*6.022e23) << endl;
         return o.str();
       }
   };

@@ -338,8 +338,6 @@ namespace Faunus {
       (u + interaction<T>::pair.hypairpot( p[i], p[hymin], sqrt(dmin) ) );
   }
 
-
-
   /*!
    * \brief Hardsphere check, then normal potential function
    * \author Mikael Lund
@@ -371,6 +369,73 @@ namespace Faunus {
         }
         double energy(const vector<particle> &p, const group &g) {
           return (overlap(p,g)==true) ? infty : interaction<T>::energy(p,g);
+        }
+    };
+
+  /*!
+   * \brief Treats far-away groups as monopoles for faster energy evaluation
+   * \author Mikael Lund
+   * \date Lund 2009
+   * \note This approximation will naturally cause an energy drift.
+   * \warning Be careful when you have non-molecular groups such as salt.
+   *
+   * This interaction class redefines group-group and group-particle interactions
+   * so that groups (i.e. molecules) far away will be seen as monopoles centered
+   * at their charge-centers. I.e. the interaction between two charged proteins beyond
+   * some threshold distance will interact as two point charges. Likewise a particle
+   * far way from a group will see it only as a single particle
+   */
+  template<class T>
+    class interaction_monopole : public interaction<T> {
+      private:
+        particle monopole(const vector<particle> &p, const group &g) {
+          particle a; 
+          double zabs,zabstot=0; // sum of absolute charges
+          unsigned short i,n=g.end+1;
+          for (i=g.beg; i<n; ++i) {
+            zabs=std::abs(p[i].charge);
+            if (zabs>0.00001) {
+              zabstot+=zabs;
+              a.charge+=p[i].charge;
+              a.x+=zabs*p[i].x;
+              a.y+=zabs*p[i].y;
+              a.z+=zabs*p[i].z;
+            }
+          }
+          return a*(1/zabstot);
+        }
+      public:
+        double cut_g2g; //!< Cut-off distance for group-group interactions
+        double cut_g2p; //!< Cut-off distance for group-particle interactions
+        interaction_monopole(inputfile &in) : interaction<T>(in) {
+          interaction<T>::name+=" w. monopole cut-offs";
+          cut_g2g = in.getflt( "threshold_g2g", 1e6 );
+          cut_g2p = in.getflt( "threshold_g2p", 1e6 );
+        }
+        double energy(const vector<particle> &p, const group &g1, const group &g2) {
+          particle mp1=monopole(p,g1), mp2=monopole(p,g2);
+          return ( mp1.dist(mp1) > cut_g2g ) ?
+            interaction<T>::energy( mp1, mp2 ) : interaction<T>::energy(p, g1, g2);
+        }
+        double energy(const vector<particle> &p, group &g, int i) {
+          particle mp=monopole(p,g);
+          return ( p[i].dist(mp)>cut_g2p ) ?
+            interaction<T>::energy( p[i], mp ) : interaction<T>::energy( p, g, i );
+        }
+        double energy(const vector<particle> &p, const group &g) {
+          double u=0;
+          for (int i=0; i<g.beg; i++)
+            u+=energy(p,g,i);
+          for (int i=g.beg+1; i<p.size(); i++)
+            u+=energy(p,g,i);
+          return u;
+        }
+        string info() {
+          std::ostringstream o;
+          o << interaction<T>::info()
+            << "#   Group-group threshold       = " << cut_g2g << endl
+            << "#   Group-particle threshold    = " << cut_g2p << endl;
+          return o.str();
         }
     };
 

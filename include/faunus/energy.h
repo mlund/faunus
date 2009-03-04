@@ -41,7 +41,6 @@ namespace Faunus {
       virtual double energy(const vector<particle> &, const group &, const group &)=0;   //!< group<->group.
       virtual double energy(const vector<particle> &, const group &, int)=0;             //!< group<->particle i.
       virtual double energy(const vector<particle> &, const group &, const particle &)=0;//!< group<->external particle.
-      virtual double energy(const vector<particle> &, const vector<macromolecule> &)=0;  //!< vector<group> <-> vector<group>
       virtual double potential(const vector<particle> &, unsigned short)=0;              //!< Electric potential at j'th particle
       virtual double potential(const vector<particle> &, point)=0;                       //!< Electric potential in point
       virtual double internal(const vector<particle> &, const group &, int=1)=0;         //!< internal energy in group
@@ -388,57 +387,59 @@ namespace Faunus {
   template<class T>
     class interaction_monopole : public interaction<T> {
       private:
+        container *cPtr;
         particle monopole(const vector<particle> &p, const group &g) {
-          particle a; 
-          double zabs,zabstot=0; // sum of absolute charges
+          double zabs,sum=0; // sum of absolute charges
           unsigned short i,n=g.end+1;
+          particle mp; 
+          point t,o=p[g.beg]; // temporary origo
           for (i=g.beg; i<n; ++i) {
             zabs=std::abs(p[i].charge);
             if (zabs>0.00001) {
-              zabstot+=zabs;
-              a.charge+=p[i].charge;
-              a.x+=zabs*p[i].x;
-              a.y+=zabs*p[i].y;
-              a.z+=zabs*p[i].z;
+              t=p[i]-o;      // move to origo
+              cPtr->boundary(t);
+              mp+=t*zabs;
+              mp.charge+=p[i].charge;
+              sum+=zabs;
             }
           }
-          return a*(1/zabstot);
+          mp=mp*(1./sum) + o;
+          cPtr->boundary(mp);
+          return mp;
         }
       public:
         double cut_g2g; //!< Cut-off distance for group-group interactions
         double cut_g2p; //!< Cut-off distance for group-particle interactions
-        interaction_monopole(inputfile &in) : interaction<T>(in) {
+        interaction_monopole(inputfile &in, container &con) : interaction<T>(in) {
+          cPtr=&con;
           interaction<T>::name+=" w. monopole cut-offs";
           cut_g2g = in.getflt( "threshold_g2g", 1e6 );
           cut_g2p = in.getflt( "threshold_g2p", 1e6 );
         }
+        double energy(const vector<particle> &p ) { return interaction<T>::energy(p); } 
         double energy(const vector<particle> &p, const group &g1, const group &g2) {
           particle mp1=monopole(p,g1), mp2=monopole(p,g2);
-          return ( mp1.dist(mp1) > cut_g2g ) ?
+          return ( cPtr->dist(mp1, mp2) > cut_g2g ) ?
             interaction<T>::energy( mp1, mp2 ) : interaction<T>::energy(p, g1, g2);
-        }
-        double energy(const vector<particle> &p, group &g, int i) {
-          particle mp=monopole(p,g);
-          return ( p[i].dist(mp)>cut_g2p ) ?
-            interaction<T>::energy( p[i], mp ) : interaction<T>::energy( p, g, i );
         }
         double energy(const vector<particle> &p, const group &g) {
           double u=0;
+          particle mp=monopole(p,g);
           for (int i=0; i<g.beg; i++)
-            u+=energy(p,g,i);
+            u+= (cPtr->dist(mp,p[i])>cut_g2p) ? interaction<T>::energy(mp,p[i]) : interaction<T>::energy(p,g,i);
           for (int i=g.beg+1; i<p.size(); i++)
-            u+=energy(p,g,i);
+            u+= (cPtr->dist(mp,p[i])>cut_g2p) ? interaction<T>::energy(mp,p[i]) : interaction<T>::energy(p,g,i);
           return u;
         }
         string info() {
           std::ostringstream o;
           o << interaction<T>::info()
-            << "#   Group-group threshold       = " << cut_g2g << endl
-            << "#   Group-particle threshold    = " << cut_g2p << endl;
+            << "#   Group-Group threshold    = " << cut_g2g << endl
+            << "#   Group-Particle threshold = " << cut_g2p << endl;
           return o.str();
         }
     };
-
+ 
   /*!
    * \brief Interaction class that includes image charges outside a spherical cell
    * \todo Not finished

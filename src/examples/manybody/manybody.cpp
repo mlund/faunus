@@ -20,8 +20,13 @@ int main() {
   mcloop loop(in);                      // Keep track of time and MC loop
   box cell(in);                         // We want a cubic cell
   canonical nvt;                        // Use the canonical ensemble
+#ifndef MONOPOLE
   interaction<pot_minimage> pot(in);    // Functions for interactions
+#else
+  interaction_monopole<pot_minimage> pot(in,cell); // Far-away monopole approximation?
+#endif
   iogro gro(cell.atom, in);             // Gromacs file output for VMD etc.
+
   FAUrdf protrdf(0,0,.5,cell.len/2.);   // Protein and salt radial distributions
   FAUrdf saltrdf(particle::NA,particle::SO4, .5, cell.len/2.);
 

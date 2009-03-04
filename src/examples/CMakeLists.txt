@@ -21,6 +21,7 @@ fau_example(twobody-hof twobody-hofmeister twobody-hof.cpp)
 fau_example(widom_cube widom widom.cpp)
 fau_example(widom_sphere widom widom.cpp)
 fau_example(manybody manybody manybody.cpp)
+fau_example(manybodyMP manybody manybody.cpp)
 fau_example(isobaric isobaric isobaric.cpp)
 fau_example(binding binding binding.cpp)
 fau_example(printpotential tools printpotential.cpp)
@@ -31,6 +32,7 @@ fau_example(rosembluth rosembluth rb.cpp)
 
 #----- target specific build options -----
 set_target_properties( pkaGC PROPERTIES COMPILE_DEFINITIONS "GCPKA")
+set_target_properties( manybodyMP PROPERTIES COMPILE_DEFINITIONS "MONOPOLE")
 set_target_properties( widom_sphere PROPERTIES COMPILE_DEFINITIONS "WIDOM_SPHERE")
 set_target_properties( spceMI PROPERTIES COMPILE_DEFINITIONS "SPCE_MINIMAGE")
 

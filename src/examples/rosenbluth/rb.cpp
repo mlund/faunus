@@ -1,4 +1,4 @@
-/*! \page test_rosembluth Rosembluth
+/*! \page test_rosenbluth Rosenbluth
  *
  * This example program calculates the excess chemical
  * potential of NaCl in an aqueous solution using Widom's
@@ -26,11 +26,11 @@ int main() {
 
   nmt.searchsalt(cell,salt);
 
-  vector<rosembluth> rb;
+  vector<rosenbluth> rb;
   int ndx=1;
   while (ndx<6)
     rb.push_back( 
-        rosembluth(nmt,cell,pot,in,ndx++) );
+        rosenbluth(nmt,cell,pot,in,ndx++) );
 
   ioaam aam(cell.atom);                 // File I/O class
   aam.load(cell,"widom.aam");           // Read initial config. from disk (if present)
@@ -49,7 +49,7 @@ int main() {
       sys+=sm.move(salt);               // Displace salt particles
       wid.insert(cell,pot);             // Widom particle insertion analysis
       int i=rand() % rb.size();         // Pick a random...
-      sys+=rb[i].move();                // ...Rosembluth pair
+      sys+=rb[i].move();                // ...Rosenbluth pair
     }                                   // END of micro loop
     sys.update(pot.energy(cell.p));     // Update system energy
     aam.save("rb.aam",cell.p);          // Save particle configuration to disk

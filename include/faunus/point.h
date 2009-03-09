@@ -78,7 +78,7 @@ namespace Faunus {
    *  \author Mikael Lund
    *  \date Canberra, 2005-2006
    */
-  class spherical : public slump {
+  class spherical {
     public:
       double r,     //!< Radial
              theta, //!< Zenith angle \f$[0:\pi]\f$

@@ -2,13 +2,13 @@
 #define FAU_ROSEMBLUTH_H
 #include "faunus/moves/base.h"
 namespace Faunus {
-  /*! \brief Rosembluth polymer and salt insertion
+  /*! \brief Rosenbluth polymer and salt insertion
    *  \author Christophe Labbez and Mikael Lund
    *  \date Dijon / Lund, 2009
    *  \warning ....
    *  \todo a lot...
    */
-  class rosembluth : public markovmove { 
+  class rosenbluth : public markovmove { 
     private:
       grandcanonical *gcPtr;    // Pointer to GC class
       struct data {
@@ -27,17 +27,17 @@ namespace Faunus {
       vector<unsigned int> ins; // Particles inserted or deleted in last move.
     public:
       // Keep as much as possible private! Easier for the user of the class.
-      rosembluth( grandcanonical&, container&, energybase&, inputfile &, int);
+      rosenbluth( grandcanonical&, container&, energybase&, inputfile &, int);
       double move();
       string info();
   };
  
   // Constructor
-  rosembluth::rosembluth( grandcanonical &gc,
+  rosenbluth::rosenbluth( grandcanonical &gc,
       container &c, energybase &i, inputfile &in, int idx) : markovmove(gc,c,i)
   {
-    name = "ROSEMBLUTH INSERTION";
-    cite = "Rosembluth reference...or Frenkel?";
+    name = "ROSENBLUTH INSERTION";
+    cite = "Rosenbluth reference...or Frenkel?";
     runfraction=1.0;
     deltadp=0;
     dp=0;
@@ -69,7 +69,7 @@ namespace Faunus {
     counter.gPtr    = & gcPtr->g[  gcPtr->findgroup( counter.seq[0] ) ];
   }
 
-  void rosembluth::insert() {
+  void rosenbluth::insert() {
     // just an example:
     // insert a monomer at end of monomer group
     int i = polymer.gPtr->end; // last particle in group
@@ -84,7 +84,7 @@ namespace Faunus {
     con->boundary( con->trial[i] );
   }
 
-  void rosembluth::remove() {
+  void rosenbluth::remove() {
     // just an example:
     int m=polymer.gPtr->random(); // Pick random monomer
     int c=counter.gPtr->random(); // Pick random counterion
@@ -99,7 +99,7 @@ namespace Faunus {
   /*!
    * \todo Cell overlap test missing
    */
-  double rosembluth::move() {
+  double rosenbluth::move() {
     ins.clear();
     du=0;
     cnt++;
@@ -128,7 +128,7 @@ namespace Faunus {
     return du;
   }
 
-  string rosembluth::info() {
+  string rosenbluth::info() {
     std::ostringstream o;
     if (runfraction>0) {
       o << markovmove::info()

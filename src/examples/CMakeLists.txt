@@ -28,7 +28,7 @@ fau_example(printpotential tools printpotential.cpp)
 fau_example(pmf2muex tools pmf2muex.cpp)
 fau_example(spce spce spce.cpp)
 fau_example(spceMI spce spce.cpp)
-fau_example(rosembluth rosembluth rb.cpp)
+fau_example(rosenbluth rosenbluth rb.cpp)
 
 #----- target specific build options -----
 set_target_properties( pkaGC PROPERTIES COMPILE_DEFINITIONS "GCPKA")

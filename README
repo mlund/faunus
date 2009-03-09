@@ -46,9 +46,29 @@ REQUIREMENTS:
   - Doxygen (for code manual)
   - Graphviz (for code manual)
 
-COMPILING:
+COMPILING USING CMAKE:
+  Menu based setup:
+  $ ccmake .
   $ make
-  $ make manual (requires doxygen)
+
+  Alternatively, use the command line:
+  $ cmake . [options]
+  $ make
+
+  Options:
+    -DENABLE_OPENMP=on|off   Enable OpenMP support
+    -DENABLE_GROMACS=on|off  Enable Gromacs XTC file support
+    -DENABLE_PYTHON=on|off   Enable python support (experimental)
+
+  Environmental variables:
+    CXX - C++ compiler command (g++, icpc, pathCC, pgCC etc.)
+
+  Example for Intel's C++ compiler with OpenMP parallization:
+    $ CXX=icpc cmake . -DENABLE_OPENMP=on
+
+COMPILING WITHOUT CMAKE:
+  $ mv Makefile.nocmake Makefile
+  $ make
 
   Edit the Makefile to:
   - Specify the C++ compiler.
@@ -62,33 +82,10 @@ COMPILING:
   the number of processors to use via OMP_NUM_THREADS. For
   small systems it may be faster to turn off parallization.
 
-COMPILING USING CMAKE (Experimental):
-  Faunus and all dependencies can by automatically configured
-  using a menu-based interface. Here one may switch on/off options,
-  select the compiler, installation directories etc. With time
-  this will be the default method of compilation.
-  $ ccmake .
-  $ make
-
-  Alternatively, use the command line:
-  $ cmake . [options]
-  $ make
-
-  Options:
-    -DENABLE_OPENMP=on|off   Enable OpenMP support
-    -DENABLE_GROMACS=on|off  Enable Gromacs XTC file support
-
-  Environmental variables:
-    CXX - C++ compiler command (g++, icpc, pathCC, pgCC etc.)
-
-  Example for Intel's C++ compiler with OpenMP parallization:
-    $ CXX=icpc cmake . -DENABLE_OPENMP=on
-
 DIRECTORY LAYOUT:
   src          Sourcecode and examples
   include      Faunus header files
   legacy       Older programs. FORTRAN programs are also placed here.
   undone       Unfinished code
-  misc         Mostly temporary stuff
+  misc         Stuff that wouldn't fit in elsewhere...
   doc          Code manual files
-

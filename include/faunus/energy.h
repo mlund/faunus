@@ -47,7 +47,7 @@ namespace Faunus {
       virtual double pot(const vector<particle> &, const point &)=0;                     //!< Electrostatic potential in a point
       virtual double dipdip(const point &, const point &, double)=0;                     //!< Dipole-dipole energy.
       virtual double iondip(const point &, double, double)=0;                            //!< Ion-dipole energy.
-      virtual double force(container &, particle, particle, double&, double=.5)=0;       //!< Force vector
+      virtual double force(container &, particle, particle, double, double=.5)=0;        //!< Force vector
       virtual void forceall(container &, vector<point> &)=0;
 
       string info() {
@@ -254,7 +254,7 @@ namespace Faunus {
           }
       }
 
-      double force(container &c, particle a, particle b, double &r, double dr) {
+      double force(container &c, particle a, particle b, double r, double dr) {
         double forward,center;
         a.x=a.y=a.z=b.y=b.z=0;
         b.x=r+dr;

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from IPython.Shell import IPShellEmbed
+#from IPython.Shell import IPShellEmbed
 
-ipshell = IPShellEmbed([])
+#ipshell = IPShellEmbed([])
 
 try:
     from pyplusplus import module_builder
@@ -14,9 +14,11 @@ except:
 # TODO: get gccxml path from the configuration/cmake
 # TODO: a proper way to treat include search directories?
 
+
+
 # parse the header files
 mb = module_builder.module_builder_t(files=['faunus_export.h'],
-                                     include_paths=['/home/andy/code/faunus/trunk/include/'],
+                                     include_paths=['../../include/'],
                                      indexing_suite_version=2
                                     )
 
@@ -30,7 +32,7 @@ mb.decls().exclude()
 # will that be it in the end?
 #to_expose.append(mb.classes(header_dir='/home/andy/code/faunus/trunk/include'))
 
-ipshell()
+#ipshell()
 
 # point.h
 mb.class_('point').include()

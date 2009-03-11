@@ -35,6 +35,7 @@ namespace Faunus {
                pka;       //!< pKa value
         bool hydrophobic; //!< Are we hydrophobic?
         string name;
+        bool operator==(const data &d) const { return (*this==d); }
       };
       atoms();                               //!< Constructor - set UNK atom type (fallback)
       vector<data> list;                     //!< List of atoms

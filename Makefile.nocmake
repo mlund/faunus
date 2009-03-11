@@ -84,7 +84,11 @@ OBJS=$(CLASSDIR)/inputfile.o \
      $(CLASSDIR)/particles.o \
      $(CLASSDIR)/analysis.o \
      $(CLASSDIR)/widom.o \
-     $(CLASSDIR)/species.o 
+     $(CLASSDIR)/histogram.o \
+     $(CLASSDIR)/species.o \ 
+     $(CLASSDIR)/moves/base.o \
+     $(CLASSDIR)/moves/translational.o \
+     $(CLASSDIR)/moves/rotational.o
 all:	classes examples libfaunus
 
 classes:	$(OBJS)
@@ -120,9 +124,9 @@ binding:	src/examples/binding/binding.cpp libfaunus
 	$(CXX) $(CXXFLAGS) src/examples/binding/binding.cpp -o src/examples/binding/binding $(LDFLAGS) 
 spce:	src/examples/spce/spce.cpp libfaunus
 	$(CXX) $(CXXFLAGS) src/examples/spce/spce.cpp -o src/examples/spce/spce $(LDFLAGS) 
-rosembluth:	src/examples/rosembluth/rb.cpp libfaunus
-	$(CXX) $(CXXFLAGS) src/examples/rosembluth/rb.cpp -o src/examples/rosembluth/rosembluth $(LDFLAGS) 
-examples:	rosembluth spce binding tools widom pka twobody twobody-hof manybody isobaric
+rosenbluth:	src/examples/rosenbluth/rb.cpp libfaunus
+	$(CXX) $(CXXFLAGS) src/examples/rosenbluth/rb.cpp -o src/examples/rosenbluth/rosenbluth $(LDFLAGS) 
+examples:	rosenbluth spce binding tools widom pka twobody twobody-hof manybody isobaric
 clean:
 	rm -f $(OBJS) *.o \
 	src/examples/titration/pka \
@@ -138,7 +142,7 @@ clean:
 	src/examples/tools/aam2pqr \
 	src/examples/tools/printpotential \
 	src/examples/spce/spce \
-	src/examples/rosembluth/rosembluth \
+	src/examples/rosenbluth/rosenbluth \
 	src/libfaunus.a
 docclean:
 	rm -fR doc/html doc/latex

@@ -21,12 +21,14 @@ namespace Faunus {
     }
   }
 
+  // Get atom of type i
   particle atoms::get(char i) {
     particle a;
     return set(a,i);
   }
 
-  particle & atoms::set(particle &p, char i) {
+  // Set p to atom i
+  particle atoms::set(particle &p, char i) {
     p.charge=list[i].charge;
     p.mw=list[i].mw;
     p.id=static_cast<particle::type>(list[i].id);

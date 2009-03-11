@@ -2,7 +2,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 #----- object files for libfaunus -----
 set(objs inputfile io titrate point physconst slump container
-    hardsphere group particles analysis species widom) 
+    hardsphere group particles analysis species widom histogram) 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 #----- link with openbabel ------

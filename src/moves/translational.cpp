@@ -1,4 +1,6 @@
 #include "faunus/moves/translational.h"
+#include "faunus/io.h"
+
 namespace Faunus {
   zmove::zmove( ensemble &e, container &c, energybase &i, macromolecule &g,float rf) : markovmove(e,c,i) {
     runfraction=rf;

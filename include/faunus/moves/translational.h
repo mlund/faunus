@@ -1,6 +1,9 @@
 #ifndef FAU_TRANSLATIONAL_H
 #define FAU_TRANSLATIONAL_H
+
 #include "faunus/moves/base.h"
+#include "faunus/histogram.h"
+
 namespace Faunus {
 
   //-----------Z-MOVE--------------------------------------

@@ -1,30 +1,62 @@
 #!/usr/bin/env python
 
 #from IPython.Shell import IPShellEmbed
-
 #ipshell = IPShellEmbed([])
 
 try:
-    from pyplusplus import module_builder
+    from pyplusplus.module_builder import module_builder_t, create_text_fc
+    from pygccxml.declarations.matchers import access_type_matcher_t
 except:
     import sys
-    print "pyplusplus import failed, aborting"
+    print "import from pyplusplus or pygccxml failed, aborting"
     sys.exit(1)
 
-# TODO: get gccxml path from the configuration/cmake
-# TODO: a proper way to treat include search directories?
+# TODO: generate this string for all templates we want instantiated
+code = """
+#include <faunus/energy.h>
+#include <faunus/potentials/pot_coulomb.h>
 
+namespace pyplusplus{ namespace aliases{
 
+    typedef Faunus::interaction<Faunus::pot_coulomb> interaction_coulomb;
+
+    inline void instantiate() {
+        sizeof(Faunus::interaction<Faunus::pot_coulomb>);
+    }
+
+} }
+"""
+
+header_files = [create_text_fc(code),
+                'faunus/common.h',
+                'faunus/point.h',
+                'faunus/particles.h',
+                'faunus/slump.h',
+                'faunus/inputfile.h',
+                'faunus/species.h',
+                'faunus/io.h',
+                'faunus/container.h',
+                'faunus/potentials/pot_coulomb.h',
+                'faunus/moves/base.h',
+                'faunus/moves/translational.h',
+                'faunus/group.h',
+                'faunus/analysis.h',
+                'faunus/widom.h',
+                'faunus/energy.h',
+                'faunus/ensemble.h',
+                'faunus/histogram.h',
+                'faunus/xytable.h',
+               ]
 
 # parse the header files
-mb = module_builder.module_builder_t(files=['faunus_export.h'],
-                                     include_paths=['../../include/'],
-                                     indexing_suite_version=2
-                                    )
+mb = module_builder_t(files=header_files,
+                      include_paths=['../../include/'],
+                      #indexing_suite_version=1
+                     )
 
+#
 # pick what gets exposed
-#TODO: get classes from Faunus::, perhaps not all of them
-#      get some stl? how much?
+#
 
 # by default, do not expose anything
 mb.decls().exclude()
@@ -32,66 +64,71 @@ mb.decls().exclude()
 # will that be it in the end?
 #to_expose.append(mb.classes(header_dir='/home/andy/code/faunus/trunk/include'))
 
-#ipshell()
-
+classes = [
 # point.h
-mb.class_('point').include()
-mb.class_('particle').include()
-mb.class_('spherical').include()
-
+'point',
+'particle',
+'spherical',
 # particles.h
-mb.class_('particles').include()
-
+'particles',
 # slump.h
-mb.class_('random').include()
-mb.class_('randomDefault').include()
-mb.class_('randomTwister').include()
-
+'random',
+'randomDefault',
+'randomTwister',
 # inputfile.h
-mb.class_('inputfile').include()
-
+'inputfile',
 # species.h
-mb.class_('atoms').include()
-
+'atoms',
 # container.h
-mb.class_('container').include()
-mb.class_('cell').include()
-mb.class_('box').include()
-mb.class_('slit').include()
-mb.class_('clutch').include()
-mb.class_('cylinder').include()
-
+'container',
+'cell',
+'box',
+'slit',
+'clutch',
+'cylinder',
 # ensemble.h
-mb.class_('ensemble').include()
-mb.class_('canonical').include()
-
+'ensemble',
+'canonical',
 # potentials
-mb.class_('pot_coulomb').include()
-mb.class_('pot_lj').include()
-
+'pot_coulomb',
+'pot_lj',
 # energy.h
-mb.class_('energybase').include()
-mb.class_('interaction<Faunus::pot_coulomb>').include()
-mb.decls(lambda decl: 'interaction' in decl.name).include()
-
-# moves
-mb.class_('markovmove').include()
-mb.class_('saltmove').include()
-
-# group.h
-mb.class_('group').include()
-
+'energybase',
+'interaction<Faunus::pot_coulomb>',
+# # moves
+'markovmove',
+'saltmove',
+# # group.h
+'group',
 # analysis.h
-mb.class_('analysis').include()
-mb.class_('systemenergy').include()
-
+'analysis',
+'systemenergy',
 # widom.h
-mb.class_('widom').include()
+'widom',
+]
 
-# take care of other settings
-# (nothing at the moment)
+decls_to_include = []
+decls_to_exclude = []
 
-# generate the code
+decls_to_include.extend([mb.class_(cls) for cls in classes])
+
+# TODO: do we need this?
+#mb.decls(lambda decl: 'interaction' in decl.name).include()
+
+for decl in decls_to_include:
+   decl.include()
+
+for decl in decls_to_exclude:
+    decl.exclude()
+
+# do not expose private and protected members
+mb.calldefs( access_type_matcher_t( 'private' ) ).exclude()
+mb.calldefs( access_type_matcher_t( 'protected' ) ).exclude()
+
+# run the generator
 mb.build_code_creator(module_name='faunus')
-mb.split_module('./generated')
 
+# write source files to disk
+# TODO: switch to split files as soon as moves are split into .h and .cpp
+#mb.split_module('./generated')
+mb.write_module('./generated/main.cpp')

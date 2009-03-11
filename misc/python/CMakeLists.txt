@@ -1,7 +1,9 @@
 if(PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND AND Boost_FOUND)
   include_directories( ${CMAKE_SOURCE_DIR}/include
                        ${Boost_INCLUDE_DIR}
-                       ${PYTHON_INCLUDE_PATH} )
+                       ${PYTHON_INCLUDE_PATH}
+                       ${CMAKE_CURRENT_SOURCE_DIR}
+                     )
   file(GLOB_RECURSE objs generated/ *.cpp)
   set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
   add_library(pyfaunus SHARED ${objs})

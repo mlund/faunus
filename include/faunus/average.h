@@ -1,6 +1,8 @@
 #ifndef FAU_AVERAGE_H
 #define FAU_AVERAGE_H
 
+#include "faunus/common.h"
+
 namespace Faunus {
   /*!
    * \brief Class to collect average values

@@ -5,6 +5,8 @@
 #include <iostream>
 #include <string>
 
+#include "faunus/common.h"
+
 namespace Faunus {
 /*!
  * \brief Class for a 2D table, XY data etc.

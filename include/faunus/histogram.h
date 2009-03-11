@@ -1,6 +1,7 @@
 #ifndef FAU_HISTOGRAM_H
 #define FAU_HISTOGRAM_H
 
+#include "faunus/common.h"
 #include "faunus/point.h"
 #include "faunus/average.h"
 #include "faunus/xytable.h"

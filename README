@@ -47,57 +47,48 @@ REQUIREMENTS:
   - Doxygen (for code manual)
   - Graphviz (for code manual)
 
+  Tested on Linux, MacOSX.
+
 COMPILING USING CMAKE (RECOMMENDED):
   Menu based setup:
   $ ccmake .
-  $ make
+  $ make [help]
 
-  Alternatively, use the command line:
+  Or text based:
   $ cmake . [options]
-  $ make
 
   Options:
     -DENABLE_OPENMP=on|off   Enable OpenMP support
     -DENABLE_GROMACS=on|off  Enable Gromacs XTC file support
     -DENABLE_PYTHON=on|off   Enable python support (experimental)
-
-  Environmental variables:
-    CXX - C++ compiler command (g++, icpc, pathCC, pgCC etc.)
+    -DENABLE_FORTRAN=on|off  Compile legacy fortran programs
+    -DENABLE_BABEL=on|off    Use OpenBabel for file I/O
 
   Example for Intel's C++ compiler with OpenMP parallization:
     $ CXX=icpc cmake . -DENABLE_OPENMP=on
+    $ make
 
 COMPILING WITHOUT CMAKE:
   $ mv Makefile.nocmake Makefile
   $ make
 
-  Edit the Makefile to:
-  - Specify the C++ compiler.
-  - Enable Gromacs compressed trajectory output (.xtc).
-  - Enable OpenMP parallization. 
-
-  Experimental support for multicore parallization is supported
-  through OpenMP. Most modern C++ compilers support OpenMP
-  directives including gnu, intel, ibm, portland etc. Edit the
-  makefile to enable this feature. At runtime one may specify
-  the number of processors to use via OMP_NUM_THREADS. For
-  small systems it may be faster to turn off parallization.
+  Edit the Makefile to specify compiler, openmp etc.
 
 PYTHON SUPPORT (EXPERIMENTAL):
-  A large number of (but not all) classes from Faunus can be
-  accessed via Python, provided that you have compiled the python
-  module (requires boost python). Build with:
+  A large number of classes from Faunus can be accessed via
+  Python, provided that the python module is compiled
+  (requires boost python). Build with:
 
   $ cmake . -DENABLE-PYTHON
   $ make pyfaunus
 
-  Include misc/python in your PYTHONPATH and access Faunus
+  Include misc/python in PYTHONPATH and access Faunus
   via "import faunus". Check out the example programs.
 
 DIRECTORY LAYOUT:
   src          Sourcecode and examples
-  include      Faunus header files
+  include      Header files
   legacy       Older programs. FORTRAN programs are also placed here.
   undone       Unfinished code
-  misc         Stuff that wouldn't fit in elsewhere...
-  doc          Code manual files
+  misc         Miscellaneous
+  doc          Code documentation (auto generated)

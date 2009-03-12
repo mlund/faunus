@@ -41,12 +41,13 @@ REQUIREMENTS:
   - C++ compiler (gnu, ibm, intel, sun etc.)
   Optional:
   - cmake 2.6 (for cross platform compilation)
+  - Boost python (for python module)
   - Gromacs (for xtc trajectory output)
   - OpenBabel 2 (numerous molecular formats)
   - Doxygen (for code manual)
   - Graphviz (for code manual)
 
-COMPILING USING CMAKE:
+COMPILING USING CMAKE (RECOMMENDED):
   Menu based setup:
   $ ccmake .
   $ make
@@ -81,6 +82,17 @@ COMPILING WITHOUT CMAKE:
   makefile to enable this feature. At runtime one may specify
   the number of processors to use via OMP_NUM_THREADS. For
   small systems it may be faster to turn off parallization.
+
+PYTHON SUPPORT (EXPERIMENTAL):
+  A large number of (but not all) classes from Faunus can be
+  accessed via Python, provided that you have compiled the python
+  module (requires boost python). Build with:
+
+  $ cmake . -DENABLE-PYTHON
+  $ make pyfaunus
+
+  Include misc/python in your PYTHONPATH and access Faunus
+  via "import faunus". Check out the example programs.
 
 DIRECTORY LAYOUT:
   src          Sourcecode and examples

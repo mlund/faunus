@@ -19,6 +19,8 @@ namespace Faunus {
   using std::abs;    // *very* important if cstdlib.h or algorithm is included!
   using std::sqrt;
   using std::exp;
+  using std::cout;
+  using std::ostringstream;
 
   typedef double Double;
 

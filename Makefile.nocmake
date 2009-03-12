@@ -85,9 +85,13 @@ OBJS=$(CLASSDIR)/inputfile.o \
      $(CLASSDIR)/analysis.o \
      $(CLASSDIR)/widom.o \
      $(CLASSDIR)/histogram.o \
-     $(CLASSDIR)/species.o \ 
+     $(CLASSDIR)/species.o \
      $(CLASSDIR)/moves/base.o \
      $(CLASSDIR)/moves/translational.o \
+     $(CLASSDIR)/moves/charge.o \
+     $(CLASSDIR)/moves/rosenbluth.o \
+     $(CLASSDIR)/moves/miscmove.o \
+     $(CLASSDIR)/moves/saltbath.o \
      $(CLASSDIR)/moves/rotational.o
 all:	classes examples libfaunus
 

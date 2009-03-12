@@ -213,48 +213,12 @@ namespace Faunus {
       float r2, vol;
     public:
       average<float> conc; //!< Local or "bound" concentration
-      twostatebinding(double radius) {
-        r2=radius*radius;
-        vol=4./3.*acos(-1.)*pow(radius,3);
-      }
-      void update(container &con, point &site, group &g) {
-        unsigned short i,cnt=0;
-        for (i=g.beg; i<=g.end; i++)
-          if (con.sqdist(site,con.p[i])<r2) {
-            cnt=1;
-            break;
-          }
-        conc+=float(cnt)/vol;
-      }
-      void update(container &con, point &site, vector<macromolecule> &g, int first=0) {
-        unsigned short i,j,cnt=0;
-        for (j=first; j<g.size(); j++)
-          for (i=g[j].beg; i<=g[j].end; i++)
-            if (con.sqdist(site, con.p[i])<r2) {
-              cnt+=1;
-              break;
-            }
-        conc+=float(cnt)/vol;
-      }
-      void update(container &con, point &site, particle::type id) {
-        unsigned short i,n=con.p.size(),cnt=0;
-        for (i=0; i<n; i++)
-          if (con.p[i].id==id)
-            if (con.sqdist(site,con.p[i])<r2) cnt++;
-        conc+=float(cnt)/vol;
-      }
-      string info() { return string(0); }
-      string info(double bulkconc) {
-        std::ostringstream o;
-        o << endl << "# TWOSTATE BINDING ANALYSIS:" << endl
-          << "#   More information:  J. Phys. Chem. 1995, 99, 10412" << endl
-          << "#   Site radius      = " << sqrt(r2) << endl
-          << "#   Avg. site conc.  = " << conc.avg() << endl;
-        if (bulkconc>0)
-          o << "#   Site excess      = " << conc.avg()/bulkconc
-            << " (" << -log(conc.avg()/bulkconc) << " kT)" << endl;
-        return o.str();
-      }
+      twostatebinding(double);
+      void update(container &, point &, group &);
+      void update(container &, point &, vector<macromolecule> &, int=0);
+      void update(container &c, point &, particle::type);
+      string info();
+      string info(double);
   };
 
   class aggregation :public analysis {

@@ -86,6 +86,7 @@ OBJS=$(CLASSDIR)/inputfile.o \
      $(CLASSDIR)/widom.o \
      $(CLASSDIR)/histogram.o \
      $(CLASSDIR)/species.o \
+     $(CLASSDIR)/mcloop.o \
      $(CLASSDIR)/moves/base.o \
      $(CLASSDIR)/moves/translational.o \
      $(CLASSDIR)/moves/charge.o \

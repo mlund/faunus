@@ -9,8 +9,8 @@ gccxml
 
 install
 - ubuntu package - gccxml
+- mac os macports - gccxml
 - other distros - ?
-- mac os - ?
 
 attention, gccxml bug in ubuntu 8.10 intrepid ibex:
 https://bugs.launchpad.net/ubuntu/+source/gccxml/+bug/293807
@@ -23,12 +23,12 @@ pygccxml & py++
 download both here:
 http://sourceforge.net/project/showfiles.php?group_id=118209
 
-unzip /home/andy/download/pygccxml-1.0.0.zip
+unzip pygccxml-1.0.0.zip
 cd pygccxml-1.0.0
 sudo python setup.py install --prefix=/opt/pyplusplus-1.0.0
 cd ..
 
-unzip /home/andy/download/pyplusplus-1.0.0.zip
+unzip pyplusplus-1.0.0.zip
 cd Py++-1.0.0
 sudo python setup.py install --prefix=/opt/pyplusplus-1.0.0
 cd ..

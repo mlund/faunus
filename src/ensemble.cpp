@@ -1,7 +1,13 @@
 #include <faunus/ensemble.h>
 
 namespace Faunus {
+
+  //
+  // class ensemble
+  //
+
   ensemble::ensemble() {};
+
   bool ensemble::metropolis(double du)
   {
     if (du > 0)
@@ -10,8 +16,21 @@ namespace Faunus {
     return true;
   }
 
+  //
+  // class canonical
+  //
+
   canonical::canonical() {};
+
+  //
+  // class isobarical
+  //
+
   isobarical::isobarical() {};
+
+  //
+  // class grandcanonical
+  //
 
   int grandcanonical::size() {};
 
@@ -21,13 +40,16 @@ namespace Faunus {
     return -1;
   }
 
-  void grandcanonical::addgroup(group &group) { g.push_back(group); }
+  void grandcanonical::addgroup(group &group) {
+    g.push_back(group);
+  }
 
   short grandcanonical::findgroup(string name) {
     for (int k=0; k<g.size(); k++)
       if (g[k].name==name) return k;
     return -1;
   }
+
   void grandcanonical::searchsalt(container &c, salt &salt) {
     particle ref = c.p[salt.beg];
     group w;
@@ -64,6 +86,7 @@ namespace Faunus {
     }
     return false;
   }
+
   bool grandcanonical::erase(vector<particle> &p, unsigned int i, unsigned char num) {
     short n=findgroup(i);
     if (n>0) {
@@ -85,4 +108,5 @@ namespace Faunus {
       << "  Number of groups     = " << g.size() << endl
       << "  Number of particles  = " << size() << endl;
   }
-}//namespace
+
+} //namespace

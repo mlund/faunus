@@ -28,6 +28,8 @@
 
 #include "generated/ensemble.pypp.hpp"
 
+#include "generated/faunus_free_functions.pypp.hpp"
+
 #include "generated/group.pypp.hpp"
 
 #include "generated/inputfile.pypp.hpp"
@@ -160,5 +162,7 @@ BOOST_PYTHON_MODULE(faunus){
     register_systemenergy_class();
 
     register_widom_class();
+
+    register_free_functions();
 }
 

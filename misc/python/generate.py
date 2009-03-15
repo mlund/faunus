@@ -5,8 +5,8 @@ import sys
 import fnmatch
 from glob import glob
 
-#from IPython.Shell import IPShellEmbed
-#ipshell = IPShellEmbed([])
+from IPython.Shell import IPShellEmbed
+ipshell = IPShellEmbed([])
 
 try:
     from pyplusplus.module_builder import module_builder_t
@@ -91,6 +91,8 @@ classes = ['point',                             # point.h
            'ioaam',                             # io.h
            ]
 
+other_stuff = ['faunus_splash']
+
 # template instantiation requests
 # dictionary with the fillowing structure:
 # key - C++ template
@@ -169,6 +171,9 @@ decls_to_exclude = []
 
 # include all the requested classes
 decls_to_include.extend([mb.class_(cls) for cls in classes])
+
+# include other requested stuff
+decls_to_include.extend([mb.decl(decl) for decl in other_stuff])
 
 # apply the requested includes and excludes
 for decl in decls_to_include:

@@ -3,7 +3,7 @@
 import faunus
 
 # show Faunus information
-#print faunus.faunus_splash()
+print faunus.faunus_splash()
 
 # read input file
 inp = faunus.inputfile('widom.conf')

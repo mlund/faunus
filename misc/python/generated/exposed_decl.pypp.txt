@@ -7238,7 +7238,7 @@
 ~@free_function_t@__ostream_insert@::std::basic_ostream< char, std::char_traits< char > > & (*)( ::std::basic_ostream< char, std::char_traits< char > > &,char const *,::std::streamsize )::std::basic_ostream<char,std::char_traits<char> > & (*)( ::std::basic_ostream<char,std::char_traits<char> > &,char const *,::std::streamsize )
 ~@free_function_t@fileno@int (*)( ::FILE * )int (*)( ::FILE * )
 ~@free_function_t@__getlogin_r_chk_warn@int (*)( char *,::size_t,::size_t )int (*)( char *,::size_t,::size_t )
-~@free_function_t@faunus_splash@::std::string (*)(  )::std::string (*)(  )
++@free_function_t@faunus_splash@::std::string (*)(  )::std::string (*)(  )
 ~@free_function_t@__pread64_chk_warn@::ssize_t (*)( int,void *,::size_t,::__off64_t,::size_t )::ssize_t (*)( int,void *,::size_t,::__off64_t,::size_t )
 ~@free_function_t@pthread_mutexattr_init@int (*)( ::pthread_mutexattr_t * )int (*)( ::pthread_mutexattr_t * )
 ~@free_function_t@wcpncpy@wchar_t * (*)( wchar_t *,wchar_t const *,::size_t )wchar_t * (*)( wchar_t *,wchar_t const *,::size_t )

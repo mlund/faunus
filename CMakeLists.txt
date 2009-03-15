@@ -7,10 +7,11 @@ project("Faunus")
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
 find_package(OpenBabel2)
 find_package(Boost COMPONENTS python)
-find_package(PythonLibs)
 find_package(PythonInterp)
 find_package(GCCXML)
 find_package(GMX)
+find_package(PythonLibs)
+#find_package(PythonLibsNOFRAME) # try to avoid framework on MacOS
 
 # ------------------------------
 #   Default build is "Release"

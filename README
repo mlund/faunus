@@ -75,15 +75,14 @@ COMPILING WITHOUT CMAKE:
   Edit the Makefile to specify compiler, openmp etc.
 
 PYTHON SUPPORT (EXPERIMENTAL):
-  A large number of classes from Faunus can be accessed via
-  Python, provided that the python module is compiled
-  (requires boost python). Build with:
+  Classes from Faunus can be accessed via Python, provided that
+  the python module is compiled (requires boost python). Build with:
 
-  $ cmake . -DENABLE-PYTHON
+  $ cmake . -DENABLE_PYTHON=on
   $ make pyfaunus
 
   Include misc/python in PYTHONPATH and access Faunus
-  via "import faunus". Check out the example programs.
+  via "import faunus".
 
 DIRECTORY LAYOUT:
   src          Sourcecode and examples

@@ -1,4 +1,14 @@
 if(PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND AND Boost_FOUND)
+  # Target for building boost definitions using pyplusplys and
+  # pygccxml (required)
+  # Perhaps add "generate.sh" that sets environment and
+  # calls generate.py (python_exe passes as argument)?
+  add_custom_target( updatepython
+                     COMMAND ${PYTHON_EXECUTABLE} generate.py
+                     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                   )
+
+  # Target for building the python module
   include_directories( ${CMAKE_SOURCE_DIR}/include
                        ${Boost_INCLUDE_DIR}
                        ${PYTHON_INCLUDE_PATH}

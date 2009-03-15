@@ -55,5 +55,61 @@ namespace Faunus {
       void update(container &, point &, point &);//!< Update for two points
       float get(float);                        //!< Get g(x)
   };
+
+  /*!\brief Particle profile base class
+   * \author Mikael Lund
+   * \date Canberra, 2008
+   *
+   * This is a base class for analysing particle distributions
+   * along some one-dimensional coordinate. Derived classes should
+   * implement an add() function that, given, a particle adds it
+   * to a histogram if certain criteria are fulfulled.
+   */
+  class profile : protected xytable<float,unsigned long int>{
+    protected:
+      unsigned int cnt;
+      virtual float volume(double)=0; //!< Get volume at coordinate
+    public:
+      profile(float, float, float=.5);
+      virtual void add(particle &)=0; //!< Add a particle
+      void update(vector<particle> &);//!< Search for and add particles
+      float conc(float);              //!< Get concentration at coordinate
+      bool write(string);             //!< Print distribution
+  };
+
+  /*!\brief Cummulative sum around a central particle
+   * \author Mikael Lund
+   * \date Canberra, 2008
+   * \warning The central particle is passed through the constructor and
+   *          it is assumed that the particle (usually in a vector) is not
+   *          reallocated. Hence, do NOT modify the particle vector after
+   *          having called the constructor.
+   */
+  class cummsum : public profile {
+    protected:
+      particle *origo;         //!< Central particle (coordinate origo)
+      float volume(double);
+    public:
+      particle::type id;       //!< Particle type to analyse
+      cummsum(particle::type, particle &, float, float=.5);
+      void add(particle &);
+  };
+
+  /*!\brief Cylindrical particle distribution
+   * \author Mikael Lund
+   * \date Canberra, 2008
+   *
+   * Calculates the particle density in a cylinder around
+   * the z-axis.
+   */
+  class cylindric_profile : public profile {
+    protected:
+      float volume(double);
+    public:
+      double r;                //!< Radius of the cylinder
+      particle::type id;       //!< Particle type to analyse
+      cylindric_profile(float, particle::type, float, float, float=.5);
+      void add(particle &);
+  };
 };//namespace
 #endif

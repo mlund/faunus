@@ -23,7 +23,6 @@
 #include "faunus/physconst.h"
 #include "faunus/histogram.h"
 #include "faunus/analysis.h"
-#include "faunus/profile.h"
 #include "faunus/particles.h"
 #include "faunus/io.h"
 #include "faunus/inputfile.h"

@@ -1,4 +1,5 @@
-#include "faunus/histogram.h"
+#include <faunus/histogram.h>
+#include <faunus/io.h>
 
 namespace Faunus {
   //! \param res x value resolution
@@ -141,4 +142,44 @@ namespace Faunus {
    *    \f$ g(x) = \frac{N(r)}{N_{tot}} \frac{ 3 } { 4\pi\left [ (x+xres)^3 - x^3 \right ] }\f$
    */
 
-};//namespace
+  profile::profile(float min, float max, float res) :
+    xytable<float,unsigned long int>(res,min,max) { cnt=0; }
+  float profile::conc(float x) { return ((*this)(x)>0) ? (*this)(x)/(cnt*volume(x)) : 0; }
+  void profile::update(vector<particle> &p) { for (int i=0; i<p.size(); i++) add(p[i]); }
+  bool profile::write(string name) {
+    io fio;
+    std::ostringstream o;
+    for (float d=xmin; d<xmax(); d+=xres)
+      o << d << " " << conc(d) << endl;
+    return fio.writefile(name,o.str());
+  }
+
+  float cummsum::volume(double z) { return 1.; }
+
+  cummsum::cummsum(
+      particle::type type, particle &center, float max,float res) :
+    profile(0,max,res) {
+      id=type;
+      origo=&center;
+    }
+
+  void cummsum::add(particle &p) { if (p.id==id) (*this)(origo->dist(p))++; }
+
+  float cylindric_profile::volume(double z) { return xres*acos(-1.)*r*r; }
+
+  cylindric_profile::cylindric_profile(
+      float radius, particle::type type, float min,float max,float res) :
+    profile(min,max,res) {
+      r=radius;
+      id=type;
+    }
+
+  void cylindric_profile::add(particle &p) {
+    if (p.id==id)
+      if (p.z>=xmin && p.z<=xmax())
+        if (p.x*p.x+p.y*p.y<=r*r) {
+          (*this)(p.z)++;
+          cnt++;
+        }
+  }
+}//namespace

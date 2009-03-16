@@ -79,7 +79,7 @@ PYTHON SUPPORT (EXPERIMENTAL):
   the python module is compiled (requires boost python). Build with:
 
   $ cmake . -DENABLE_PYTHON=on
-  $ make pyfaunus
+  $ make python
 
   Include misc/python in PYTHONPATH and access Faunus
   via "import faunus".

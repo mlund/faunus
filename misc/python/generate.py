@@ -5,8 +5,8 @@ import sys
 import fnmatch
 from glob import glob
 
-from IPython.Shell import IPShellEmbed
-ipshell = IPShellEmbed([])
+#from IPython.Shell import IPShellEmbed
+#ipshell = IPShellEmbed([])
 
 try:
     from pyplusplus.module_builder import module_builder_t

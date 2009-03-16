@@ -10,8 +10,13 @@ find_package(Boost COMPONENTS python)
 find_package(PythonInterp)
 find_package(GCCXML)
 find_package(GMX)
-find_package(PythonLibs)
-#find_package(PythonLibsNOFRAME) # try to avoid framework on MacOS
+if (ENABLE_MACPORTS)
+  find_package(PythonLibsNOFRAME)
+else (ENABLE_MACPORTS)
+  find_package(PythonLibs)
+endif(ENABLE_MACPORTS)
+
+#find_package(PythonLibsNOFRAME) # Fix linking of non-standard framework locations
 
 # ------------------------------
 #   Default build is "Release"
@@ -25,12 +30,13 @@ endif(NOT CMAKE_BUILD_TYPE)
 # -----------------
 #   User options
 # -----------------
-option(ENABLE_BABEL   "Try to use OpenBabel for file I/O" on)
-option(ENABLE_OPENMP  "Try to use OpenMP parallization" off)
-option(ENABLE_PYTHON  "Try to create a python interface" off)
-option(ENABLE_FORTRAN "Try to compile legacy fortran code" off)
-option(ENABLE_GROMACS "Try to enable Gromacs XTC trajectory output" off)
-option(ENABLE_LIBXTC  "Internal xtc support (experimental!)" off)
+option(ENABLE_BABEL    "Try to use OpenBabel for file I/O" on)
+option(ENABLE_OPENMP   "Try to use OpenMP parallization" off)
+option(ENABLE_PYTHON   "Try to create a python interface" on)
+option(ENABLE_FORTRAN  "Try to compile legacy fortran code" off)
+option(ENABLE_GROMACS  "Try to enable Gromacs XTC trajectory output" off)
+option(ENABLE_MACPORTS "Search Macports and Fink directories for Python frameworks" off)
+option(ENABLE_LIBXTC   "Internal xtc support (experimental!)" off)
 mark_as_advanced( CLEAR CMAKE_VERBOSE_MAKEFILE CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS_RELEASE )
 mark_as_advanced( EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH
                   CMAKE_OSX_ARCHITECTURES CMAKE_OSX_SYSROOT GCCXML)

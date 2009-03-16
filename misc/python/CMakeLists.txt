@@ -1,21 +1,17 @@
 if(PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND AND Boost_FOUND)
 
-  if (GCCXML)
-    # Download and install Py++ and pygccxml locally
+  if (GCCXML AND WGET_FOUND)
+    # Download and install Py++ and pygccxml in misc/python/
     add_custom_target( pyplusplus_install
-      COMMAND source install_pyplusplus.sh ${PYTHON_EXECUTABLE}
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      )
+      COMMAND bash install_pyplusplus.sh ${PYTHON_EXECUTABLE} ${WGET_EXECUTABLE}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
     # Target for building boost definitions using pyplusplys and
     # pygccxml (required)
-    # Perhaps add "generate.sh" that sets environment and
-    # calls generate.py (python_exe passes as argument)?
     add_custom_target( pyplusplus_rerun
-      COMMAND source generate.sh ${PYTHON_EXECUTABLE}
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      )
-  endif (GCCXML)
+      COMMAND bash generate.sh ${PYTHON_EXECUTABLE}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+  endif (GCCXML AND WGET_FOUND)
 
   # Target for building the python module
   include_directories( ${CMAKE_SOURCE_DIR}/include

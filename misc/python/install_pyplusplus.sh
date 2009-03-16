@@ -5,6 +5,7 @@
 # working directory.
 
 python_exe=$1
+wget_exe=$2
 version="1.0.0"
 mirror="http://downloads.sourceforge.net/pygccxml"
 pgx_arc="pygccxml-${version}.zip"
@@ -16,7 +17,7 @@ do
   # Download archives if missing
   if [ ! -e $file ]
   then
-    wget ${mirror}/${file}
+    ${wget_exe} ${mirror}/${file}
   fi
   # Unpack and install
   if [ -e $file ]

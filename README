@@ -50,7 +50,7 @@ REQUIREMENTS:
   Tested on Linux, MacOSX.
 
 COMPILING USING CMAKE (RECOMMENDED):
-  Menu based setup:
+  Curses menu based setup:
   $ ccmake .
   $ make [help]
 
@@ -83,10 +83,13 @@ PYTHON SUPPORT (EXPERIMENTAL):
   Include misc/python in PYTHONPATH and access Faunus
   via "import faunus".
 
-  NOTE: Using Macports/Fink on MacOSX you can force usage of
-        macports installed python frameworks:
+  Macports/Fink:
+    Force usage of external python frameworks with
+    $ cmake . -DENABLE_MACPORTS=on
 
-        $ cmake . -DENABLE_MACPORTS=on
+  Update Python bindings (developers):
+    $ make pyplusplus_install
+    $ make pyplusplus_rerun (requires gccxml)
 
 DIRECTORY LAYOUT:
   src          Sourcecode and examples

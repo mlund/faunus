@@ -13,9 +13,6 @@ export PYTHONPATH=$ppath:$PYTHONPATH
 
 if [ -x ${python_exe} ]
 then
+  rm generated/*.cpp generated/*.hpp generated/*.h generated/*.txt
   $python_exe generate.py
 fi
-
-unset ppath
-unset base
-unset python_exe

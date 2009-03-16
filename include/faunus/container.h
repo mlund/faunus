@@ -129,6 +129,7 @@ namespace Faunus {
    */
   class slit : public box {
     public:
+      slit(inputfile &);
       string info();
       inline void boundary(point &a) {
         a.x=a.x-len*anint(a.x*len_inv);

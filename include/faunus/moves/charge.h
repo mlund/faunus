@@ -30,8 +30,8 @@ namespace Faunus {
       double CatPot;  //!< Chemical potential of coupled cation
   };
 
-  class DHchargereg : public chargereg {
-  };
+//  class DHchargereg : public chargereg {
+//  };
 
 }//namespace
 #endif

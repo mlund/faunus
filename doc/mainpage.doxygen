@@ -49,6 +49,7 @@ also in a Cygwin environment. Detailed instructions can be found \ref readme "he
 \li Bjorn Persson
 \li Martin Trulsson
 \li Ondrej Marsalek
+\li Christophe Labbez
 \li Thanks to all the authors of the open source technologies that Faunus relies on!
 
 \subsection guide Guidelines for Submitting Code

@@ -104,6 +104,7 @@ namespace Faunus {
     return o.str();
   }
   //----------- SLIT --------------------------
+  slit::slit(inputfile &in) : box(in) {};
   string slit::info() {
     std::ostringstream o;
     o << container::info() 

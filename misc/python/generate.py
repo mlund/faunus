@@ -74,6 +74,7 @@ classes = ['point',                             # point.h
            'cylinder',
            'ensemble',                          # ensemble.h
            'canonical',
+           'grandcanonical',
            'pot_coulomb',                       # potentials
            'pot_lj',
            'energybase',                        # energy.h
@@ -82,13 +83,17 @@ classes = ['point',                             # point.h
            'markovmove',                        # moves
            'saltmove',
            'group',                             # group.h
+           'macromolecule',
            'salt',
            'analysis',                          # analysis.h
+           'virial',
            'systemenergy',
            'widom',                             # widom.h
            #'widomSW',
            'mcloop',                            # mcloop.h
            'ioaam',                             # io.h
+           'iopqr',
+           'ioxyz',
            ]
 
 other_stuff = ['faunus_splash']

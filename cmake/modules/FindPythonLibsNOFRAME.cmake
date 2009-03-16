@@ -78,6 +78,7 @@ MARK_AS_ADVANCED(
 IF(Python_FRAMEWORKS)
   # If a framework has been selected for the include path,
   # make sure "-framework" is used to link it.
+  SET(PYTHON_FRAMEWORK_PATH ${PYTHON_FRAMEWORK_PATH} CACHE STRING "Python Framework Location") 
   IF("${PYTHON_INCLUDE_PATH}" MATCHES "Python\\.framework")
     SET(PYTHON_LIBRARY "")
     SET(PYTHON_DEBUG_LIBRARY "")

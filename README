@@ -78,11 +78,15 @@ PYTHON SUPPORT (EXPERIMENTAL):
   Classes from Faunus can be accessed via Python, provided that
   the python module is compiled (requires boost python). Build with:
 
-  $ cmake . -DENABLE_PYTHON=on
   $ make python
 
   Include misc/python in PYTHONPATH and access Faunus
   via "import faunus".
+
+  NOTE: Using Macports/Fink on MacOSX you can force usage of
+        macports installed python frameworks:
+
+        $ cmake . -DENABLE_MACPORTS=on
 
 DIRECTORY LAYOUT:
   src          Sourcecode and examples

@@ -10,12 +10,6 @@ find_package(Boost COMPONENTS python)
 find_package(PythonInterp)
 find_package(GCCXML)
 find_package(GMX)
-if (ENABLE_MACPORTS)
-  find_package(PythonLibsNOFRAME)
-else (ENABLE_MACPORTS)
-  find_package(PythonLibs)
-endif(ENABLE_MACPORTS)
-
 #find_package(PythonLibsNOFRAME) # Fix linking of non-standard framework locations
 
 # ------------------------------
@@ -40,6 +34,12 @@ option(ENABLE_LIBXTC   "Internal xtc support (experimental!)" off)
 mark_as_advanced( CLEAR CMAKE_VERBOSE_MAKEFILE CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS_RELEASE )
 mark_as_advanced( EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH
                   CMAKE_OSX_ARCHITECTURES CMAKE_OSX_SYSROOT GCCXML)
+
+if (ENABLE_MACPORTS)
+  find_package(PythonLibsNOFRAME)
+else (ENABLE_MACPORTS)
+  find_package(PythonLibs)
+endif(ENABLE_MACPORTS)
 
 # ---------------------------
 #   Add source directories

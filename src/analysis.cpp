@@ -72,6 +72,9 @@ namespace Faunus {
   double gfactor::add(vector<particle> &p, molecules &m) {
     mol.beg=0;
     mol.end=p.size()-1;
+    mol.cm.x=0;
+    mol.cm.y=0;
+    mol.cm.z=0;
     MU2=pow( mol.dipole(p) , 2);
     g.add(MU2);
   //  h.add(MU2/N/mu2);
@@ -82,7 +85,7 @@ namespace Faunus {
     std::ostringstream o;
     o << endl << "# KIRKWOOD FACTOR: "<<endl;
             o << "#"<<endl
-              << "# "<<N<<" solvent molecules in a "<<V<<" A^2 cavity, rho ="<<N/V<<endl
+              << "# "<<N<<" solvent molecules in a "<<V<<" A^3 cavity, rho ="<<N/V<<endl
               << "# Molecular dipole = "<<sqrt(mu2)<<" (mu^2 = "<<mu2<<" )"<<endl     
               << "# MU^2    = " << g.avg() << "(per particle), stdev =  "<<g.stdev()<<endl
               << "# g       = " << g.avg()*gscale<<endl

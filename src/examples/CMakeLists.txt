@@ -27,6 +27,8 @@ fau_example(binding binding binding.cpp)
 fau_example(printpotential tools printpotential.cpp)
 fau_example(pmf2muex tools pmf2muex.cpp)
 fau_example(spce spce spce.cpp)
+fau_example(spcecavity spce spcecavity.cpp)
+fau_example(acid spce spceacid.cpp)
 fau_example(spceMI spce spce.cpp)
 fau_example(rosenbluth rosenbluth rb.cpp)
 

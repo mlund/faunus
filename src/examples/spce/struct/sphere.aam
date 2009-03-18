@@ -1,0 +1,9 @@
+#Structure('pdb/3ICB.pdb'):
+#  Peptide chain of length 75
+#  deleted: 2 CA molecules
+#  deleted: 1 SO4 molecule
+#  deleted: 36 HOH molecules
+2
+ HEJ     0   0.0 0.0 0.0    0.0   1  10.0
+ DU      0  20.0 0.0 0.0    0.0   1   0.5
+

@@ -576,6 +576,33 @@ namespace Faunus {
     }
     c.p=c.trial;
   }
+  vector<int> molecules::pick(int m) {
+    vector<int> n;
+    n.clear();
+    //find m pointers
+    n.push_back(int(size()*slp.random_one()/numatom));
+    int c=0, o=0;
+    while (n.size()<m) {
+      c=1;
+      o=int(size()*slp.random_one()/numatom);
+      for (int i=0; i<n.size(); i++)
+        if (n[i]==o)
+          c=0;
+      if (c==1)
+        n.push_back(o);
+    }
+    //sort the pointers 
+    for (int i =0; i<m-1; i++)
+      for (int j=i+1; j<m; j++)
+        if(n[i]>n[j]) {
+          o=n[j];
+          n[j]=n[i];
+          n[i]=o;
+        }
+    if (m!=n.size())
+      std::cerr << "# MOLECULES::PICK Iterator out of sync with 'm'"<<endl;
+    return n;
+  }
 
   //--------------- CHAIN -----------------
   chain::chain(container &con, int n, particle::type sort, double r) { graftpoint=false; 

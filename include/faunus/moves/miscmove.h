@@ -14,5 +14,18 @@ namespace Faunus {
       string info();
       
   };
+  /*! \brief Rotate group around cm plus dr (effectively a combined rotation and translation).
+   *  \author Bjorn Persson
+   *  \date Lund 2008
+   */
+  class multtr : public markovmove { 
+    public:
+      multtr( ensemble&, container&, energybase&, int);
+      double move(molecules &, vector<int> &);
+      double dpt, dpr;      // step parameters
+      string info();
+      int m;
+      
+  };
 }//namespace
 #endif

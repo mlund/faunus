@@ -50,7 +50,7 @@ namespace Faunus {
     a=species1;
     b=species2;
   }
-  FAUrdf::FAUrdf(float resolution, float xmaximum) : histogram(resolution, 0, xmaximum) {};
+  FAUrdf::FAUrdf(float resolution, float xmaximum, float xminimum) : histogram(resolution, xminimum, xmaximum) {};
 
   /*!
    * Update histogram between two known points

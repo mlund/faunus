@@ -46,7 +46,7 @@ namespace Faunus {
       float volume(float);         //!< Volume of shell r->r+xres
       unsigned int npart;
     public:
-      FAUrdf(float=.5, float=0);
+      FAUrdf(float=.5, float=0, float=0);
       FAUrdf(short, short, float=.5, float=0); 
       void update(container &, point &, string);//!< Search around a point
       void update(container &);                 //!< Update histogram vector

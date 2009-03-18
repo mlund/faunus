@@ -16,11 +16,11 @@ int main(int argc, char* argv[]) {
 
   inputfile in("spce.conf");           // Read input file
 #ifdef SPCE_MINIMAGE
-  box con(in);                         // Use a spherical simulation container
-  interaction<pot_testminim> pot(in);  // Specify pair potential
+  box con(in);                        // Use a spherical simulation container
+  interaction<pot_testminim> pot(in);       // Specify pair potential
 #else
   cell con(in);                        // Use a spherical simulation container
-  sphericalimage<pot_test> pot(in);    // Specify pair potential
+  sphericalimage<pot_test> pot(in);       // Specify pair potential
 #endif
   io io;
   ioaam aam(con.atom);                 // Protein input file format is AAM
@@ -32,9 +32,15 @@ int main(int argc, char* argv[]) {
 
   macrorot mr(nvt, con, pot);          // Class for molecular rotation
   translate mt(nvt, con, pot);         // Class for molecular translation
-  transrot mrt(nvt, con, pot);         // Class for combined molecular trans. and rot.
+  transrot mrt(nvt, con, pot);       // Class for combined molecular trans. and rot.
   multtr multtr(nvt, con, pot, in.getint("multinum"));
-                                       // Class for mulitple combined molecualr trans. and rot.
+
+  // Load central protein
+  macromolecule protein;               // Group for the protein
+  protein.add( con,
+      aam.load(in.getstr("protein"))); // Load protein structure
+  protein.move(con, -protein.cm);      // ..translate it to origo (0,0,0)
+  protein.accept(con);                 // ..accept translation
 
   // Add water
   molecules sol(3);                    // We want a three point water model
@@ -53,13 +59,9 @@ int main(int argc, char* argv[]) {
   FAUrdf nacell(float(0.2), float(50.));
   FAUrdf saltrdf(con.atom["NA"].id,con.atom["CL"].id,0.2,20.);
   FAUrdf catcat( con.atom["NA"].id,con.atom["NA"].id,0.2,20.);
-  FAUrdf spcrdf1( con.atom["OW"].id,con.atom["OW"].id,0.2,20.);
-  FAUrdf spcrdf2( con.atom["OW"].id,con.atom["HW1"].id,0.2,20.);
-  FAUrdf spcrdf3( con.atom["HW1"].id,con.atom["HW1"].id,0.2,20.);
-  FAUrdf spcinner1( float(0.2), float(50.), float(1.));
-  FAUrdf spcinner2( float(0.2), float(50.), float(1.));
-  FAUrdf spcinner3( float(0.2), float(50.), float(1.));
-
+  FAUrdf spcrdf( con.atom["OW"].id,con.atom["OW"].id,0.2,20.);
+  FAUrdf acidwrdf( con.atom["C1"].id,con.atom["OW"].id,0.2,20.);
+  FAUrdf cavOW( con.atom["GLU"].id,con.atom["OW"].id,0.2,30.);
   distributions radorder(float(0.2), float(0.), float(in.getflt("distmax")));
 
   histogram kfuck(float(0.02), float(0.), float(40.));
@@ -87,6 +89,8 @@ int main(int argc, char* argv[]) {
 
   systemenergy sys( 
       pot.internal(con.p, sol, sol.numatom) +
+      //pot.internal(con.p, salt) +
+      //pot.energy(con.p, protein, salt) +
       pot.energy(con.p, sol)
       );
   if (in.getboo("splash")==true)
@@ -185,7 +189,7 @@ int main(int argc, char* argv[]) {
 #endif
       }
       // Update hist. of dipolemoment, dipolar correlation of spce  and sample kirkwood factor
-      if (slump.random_one()<0.005) {  
+      if (slump.random_one()<0.05) {  
         solsize=sol.size()/3;
           for (int j=0; j<sol.size()/3; j++) {
             m=sol[j];
@@ -206,7 +210,7 @@ int main(int argc, char* argv[]) {
         dipc.add(m.mu.x);
       } 
       // Update hist. spce dipole and radial vector correlation
-      if (slump.random_one()<0.001) {
+      if (slump.random_one()<0.01) {
         solsize=sol.size()/3;
         for (int j=0; j<1000; j++) {
         m=sol[ sol.random() ];
@@ -226,42 +230,26 @@ int main(int argc, char* argv[]) {
         radorder.add("Water-Water, cos(theta)^2 dip vect with dip", drlen, scalar*scalar);
         }
       }
-      // Sample potential correlations
-#ifdef SPCE_MINIMAGE
-#else
-      if (slump.random_one()<0.001)
-        for (int i=0; i<100; i++) {
-          p1.ranunit(slump);
-          p2.ranunit(slump);
-          p1=p1*in.getflt("cellradius")*0.5;
-          p2=p2*in.getflt("cellradius")*0.5;
-          radorder.add("Potential correlation between two points in a central cavity of radius/2",
-                       p1.dist(p2), pot.potential(con.p,p1)*pot.potential(con.p,p2));
-
-        }
-#endif
-      // Update water rdf:s
+      // Update rdf:s
       if (slump.random_one()<0.001) {
         spccell.update(con, origo, "OW");
-        spcrdf1.update(con, sol);
-        spcrdf2.update(con, sol);
-        spcrdf3.update(con, sol);
-        for (int i=0; i<10; i++) {
-        m=sol[ sol.random() ];
-          if (con.p[m.beg].dist(origo)<in.getflt("cellradius")*0.5) {
-            spcinner1.update(con, con.p[m.beg], "OW");
-            spcinner2.update(con, con.p[m.beg], "HW1");
-          }
-          if (con.p[m.beg+1].dist(origo)<in.getflt("cellradius")*0.5) { 
-            spcinner2.update(con, con.p[m.beg+1], "OW");
-            spcinner3.update(con, con.p[m.beg+1], "HW1");
-            spcinner3.update(con, con.p[m.beg+1], "HW2");
-          }
-          if (con.p[m.beg+2].dist(origo)<in.getflt("cellradius")*0.5) 
-            spcinner2.update(con, con.p[m.beg+2], "OW");
-            spcinner3.update(con, con.p[m.beg+2], "HW1");
-            spcinner3.update(con, con.p[m.beg+2], "HW2");
-        }
+        spcrdf.update(con, sol);
+        cavOW.update(con);
+      }
+      // Potential fluctuation analysis
+      if (slump.random_one()<0.001 && protein.size()==2) {
+        Phi11+=pow(pot.potential(con.p, protein.beg),2);
+        Phi22+=pow(pot.potential(con.p, protein.end),2);
+        Phi12+=pot.potential(con.p, protein.beg)*pot.potential(con.p, protein.end);
+#ifdef SPCE_MINIMAGE
+#else
+/*        p1.ranunit(slump);
+        p2.ranunit(slump);
+        p1*=in.getflt("cellradius")/2;
+        p2*=in.getflt("cellradius")/2;
+        radorder.add("Potential correlation between two points in a central cavity of radius/2",
+                     p1.dist(p2), pot.potential(con.p,p1)*pot.potential(con.p,p2));*/
+#endif
       }
       // Trace system energy during simulation
       if ( cnt%eprint==0 )
@@ -269,12 +257,8 @@ int main(int argc, char* argv[]) {
     }//end of micro-loop 
 
     spccell.write("rdf-cell-OW.dat");
-    spcrdf1.write("rdf-OW-OW.dat");
-    spcrdf2.write("rdf-OW-HW.dat");
-    spcrdf3.write("rdf-HW-HW.dat");
-    spcinner1.write("rdf-OW-OW-inner.dat");
-    spcinner2.write("rdf-OW-HW-inner.dat");
-    spcinner3.write("rdf-HW-HW-inner.dat");
+    spcrdf.write("rdf-OW-OW.dat");
+    cavOW.write("rdf-cav-OW.dat");
     radorder.write("mu-OW.dat");
     dip.write("dipoledist.dat");
     dipc.write("dipolexdist.dat");
@@ -293,7 +277,15 @@ int main(int argc, char* argv[]) {
          << "#   Energy (kT): sum average drift = "
          << sys.sum << " " << sys.uavg.avg() << " "
          << std::abs(sys.cur-sys.sum) << endl;
-    std::cout << "#   Reaction field energy  = "<<imu.avg()<<" , stdev = "<<imu.stdev() <<endl;
+    std::cout << "#   Reaction field energy  = "<<imu.avg()<<" , stdev = "<<imu.stdev() <<endl
+              << "#   'Cavity potential' analysis on the two first particles in p"<<endl;
+    if (protein.size()==2) {
+     std::cout<< "#   Diameter(LJ-sigma): p[0] = "<<con.atom[con.p[0].id].sigma<<", p[1] ="<<con.atom[con.p[1].id].sigma<<endl
+              << "#   Separation   = "<<con.p[0].dist(con.p[1])<<endl
+              << "#       Phi11 = "<<Phi11.avg()<<" ("<<Phi11.stdev()<<")"<<endl
+              << "#       Phi22 = "<<Phi22.avg()<<" ("<<Phi22.stdev()<<")"<<endl
+              << "#       Phi12 = "<<Phi12.avg()<<" ("<<Phi12.stdev()<<")"<<endl;
+      }
     std::cout <<endl;
     //std::cout << gf.info();
 
@@ -306,7 +298,7 @@ int main(int argc, char* argv[]) {
 
   }//end of macro-loop
   cout << sys.info()
-       << loop.info()  // Print final results
+       << protein.info() << loop.info()  // Print final results
        << mr.info() << mt.info() <<mrt.info() <<multtr.info() <<pot.info() <<gf.info();
 
 #ifdef SPCE_MINIMAGE

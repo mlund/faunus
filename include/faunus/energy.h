@@ -41,6 +41,7 @@ namespace Faunus {
       virtual double energy(const vector<particle> &, const group &, const group &)=0;   //!< group<->group.
       virtual double energy(const vector<particle> &, const group &, int)=0;             //!< group<->particle i.
       virtual double energy(const vector<particle> &, const group &, const particle &)=0;//!< group<->external particle.
+      virtual double energy(const vector<particle> &, molecules &, vector<int> &)=0;     //!< subset[molecules]<->all
       virtual double potential(const vector<particle> &, unsigned short)=0;              //!< Electric potential at j'th particle
       virtual double potential(const vector<particle> &, point)=0;                       //!< Electric potential in point
       virtual double internal(const vector<particle> &, const group &, int=1)=0;         //!< internal energy in group
@@ -170,7 +171,10 @@ namespace Faunus {
             u += pair.pairpot(p[i],p[j]);
         return pair.f*u;
       }
-
+      double energy(const vector<particle> &p, molecules &m, vector<int> &i) {
+        double du=0;
+        return du;
+      }
       /*!
        * ...between the two dipoles a and b, separated by the
        * distance r.
@@ -442,16 +446,26 @@ namespace Faunus {
  
   /*!
    * \brief Interaction class that includes image charges outside a spherical cell
-   * \todo Not finished
-   * \warning Untested!
-   * \author Mikael Lund
-   * \date Lund 2008
+   * \todo Not optimized
+   * \warning Untested! (behaves properly but not independently confirmed correct)
+   * \warnign This class is only INTENDED to be used with the potetnential test_pot!
+   * \author Mikael Lund, Bjorn Persson
+   * \date Lund 2008-2009
    *
    * Calculates inter-particle interactions in a dielectric sphere (epsi) and
    * adds image charge interactions with the dielectric surroundings (epso). Useful
    * for simulating explicit water in a spherical container. Note that after each
    * MC move -- both accepted and rejected -- the img vector *must* be updated
-   * with the updateimg() function. The cavity origin is assumed to be 0,0,0.
+   * with the updateimg() function. The cavity origin is assumed to be 0,0,0. Note that
+   * image charge and distance are divergent at (0,0,0). Also keep in mind that the energy
+   * is NOT the product of the potential at a charge times the charge it self but rather 
+   * half of the product since it is an reaction potential (as what is conserned for
+   * the reaction part). There are there for additional 
+   * functions sphericalimage::elenergy to obtain the electrostatic energy for particles 
+   * and groups. The functions sphericalimage::potential returns the total potential.
+   *
+   * For reference: Harold L Friedman, Molecular Physics, 1975 vol. 29 ppg. 1533-1543.
+   * Extended method: Wei Cai, XXXX.
    */
   template<class T> class sphericalimage : public interaction<T> {
     private:
@@ -466,9 +480,9 @@ namespace Faunus {
         epsi=in.getflt("epsi",1);  //permitivity of inner medium
         radius=in.getflt("cellradius",0); 
         radius2=radius*radius;
-        scale=-(epso-1)/(epso+1)*radius/2*in.getflt("bjerrum", 560.2);  // Friedman 1975, Mol. Phys 29 pp. 1533
+        scale=-(epso-epsi)/(epso+epsi)*radius/2*in.getflt("bjerrum", 560.2);  // Friedman 1975, Mol. Phys 29 pp. 1533
       }                                                                 // warning!!! temperature units are given through scale!
-                                                                        // warning!!! epso are relative to epsi
+                                                                      
       // RE-CALC IMAGE POSITIONS
       inline void updateimg(const particle &a, int i) {
         img[i] = a* (radius2 / a.dot(a)); 
@@ -484,6 +498,16 @@ namespace Faunus {
         for (int i=g.beg; i<=g.end; ++i)
           updateimg(p[i],i);
       }
+      void updateimg(const vector<particle> &p, molecules &m, vector<int> &n) {
+        for (int i=0; i<n.size(); i++) {
+          updateimg(p,m[i]);
+          updateimg(p,m[n[i]]);
+        }
+      }
+      // IMAGE POTENTIAL  (half the potential)
+      double impot(double &ich, const point &pr, point &pi) {
+        return ich/pr.dist(pi);
+      }
 
       // IMAGE ENERGY
       double image(const vector<particle> &p) {
@@ -494,9 +518,10 @@ namespace Faunus {
       }
       double image(const vector<particle> &p, int i) {
         double u=0;
-        for (int j=0; j<img.size(); ++j)
-          u += ich[j] / p[i].dist( img[j] );
-        return p[i].charge*scale*u*2. - p[i].charge*scale*ich[i]/p[i].dist( img[i]) ;        //make sure too and not too double count?
+        int t=img.size();
+        for (int j=0; j<t; ++j)
+          u += impot(ich[j], p[i], img[j] );
+        return p[i].charge*scale*u*2. - p[i].charge*scale*impot(ich[i],p[i],img[i]) ;        //make sure too and not too double count
       }
       double image(const vector<particle> &p, const group &g) {
         double u=0;
@@ -508,12 +533,12 @@ namespace Faunus {
         double uin=0;
         double uex=0;
         for (int s=0; s<j; s++)
-          uex += ich[s] / p[i].dist( img[s] );  //make sure to double count
+          uex += impot(ich[s], p[i], img[s] );  //make sure to double count
         for (int t=k+1; t<p.size(); t++)
-          uex += ich[t] / p[i].dist( img[t] );  //make sure to double count
+          uex += impot(ich[t], p[i], img[t] );  //make sure to double count
         for (int u=j; u<=k; u++)
-          uin += ich[u] / p[i].dist( img[u] );  // internal interactions will be double counted implicitly
-                                                // the born term will not be double counted
+          uin += impot(ich[u], p[i], img[u] );  // internal interactions will be double counted implicitly
+                                                // the self term will not be double counted
         return p[i].charge*scale*(uex*2+uin); 
       }
       double imageint(const vector<particle> &p, group) {
@@ -525,20 +550,34 @@ namespace Faunus {
         ur=ui=0;
         updateimg(p[i],i);
         ur=interaction<T>::potential(p,i);
-        //ui=image(p,i);
-        //ratio+=std::abs(ui/(ur+ui));
         for (int s=0; s<p.size(); s++)
-          ui += ich[s] / p[i].dist( img[s] );  
+          ui += impot(ich[s], p[i], img[s] );  
         ui*=2;
-        //ui-=ich[i] / p[i].dist( img[i] );               // dont double count the self term
-        return ur+ui*scale;
-      }
+        return ur+ui*scale;  // This is the POTENTIAL, this should not be used to calculate the 
+      }                      // interaction since that would 'double' count the self term.
+      double potential(const vector<particle> &p, point i) {
+        ur=ui=0;
+        ur=interaction<T>::potential(p,i);
+        for (int s=0; s<p.size(); s++)
+          ui += impot(ich[s], i, img[s] );  
+        ui*=2;               // Due to the definition of scale
+        return ur+ui*scale;  // This is the POTENTIAL in any given point inside the cavity
+      }                     
       double elenergy(const vector<particle> &p, int i) {
         ur=ui=0;
         updateimg(p[i],i);
         ur=p[i].charge*interaction<T>::potential(p,i);
         ui=image(p,i);
-        return ur+ui;
+        return ur+ui;        // Returns the electrostatic interaction energy of i with p
+      }
+      double elenergy(const vector<particle> &p, const group &g) {
+        ur=ui=0;
+        updateimg(p,g);
+        for (int i=g.beg; i<=g.end; i++) {
+          ur+=p[i].charge*interaction<T>::potential(p,i);
+          ui+=image(p,i);
+        }
+        return ur+ui;        // Returns the electrostatic energy of g with p
       }
       double energy(const vector<particle> &p ) {
         updateimg(p);
@@ -561,6 +600,23 @@ namespace Faunus {
         ratio+=std::abs(ui/(ur+ui));
         return ur+ui;
       }
+      double energy(const vector<particle> &p, molecules &m, vector<int> &n) {
+        ur=ui=0;
+        group g;
+        g.beg=m[0].beg;
+        g.end=m[n.size()-1].end;
+        updateimg(p,m,n);
+        ur=interaction<T>::energy(p,g);
+        for (int i=0; i<n.size()-1; i++)
+          for (int j=i+1; j<n.size(); j++)
+            ur+=interaction<T>::energy(p,m[i],m[j]);
+        //for (int i=0; i<n.size(); i++)
+        //  ur+=interaction<T>::energy(p, m[i]);
+        ui=image(p,g);
+        ratio+=std::abs(ui/(ur+ui));
+        return ur+ui;
+      }
+      // INFO
       string info() {
         std::ostringstream o;
         o << interaction<T>::info()

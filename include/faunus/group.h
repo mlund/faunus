@@ -123,7 +123,8 @@ namespace Faunus {
       string info();            //!< Show information
       group operator[](unsigned short); //!< Access n'th molecule
       void add(container &, vector<particle> &, short=1);
-  };
+      vector<int> pick(int );
+};
 
   /*! \brief Freely jointed chain with harmonic spring potentials
    *  \author Mikael Lund

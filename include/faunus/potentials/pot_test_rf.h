@@ -20,8 +20,8 @@ namespace Faunus {
       string name;
       double f;
       pot_test_rf( inputfile &in ) : rf(in) {
-        name+="Reactionfield Coulomb + 4*eij*[(sij/r)^12-(sij/r)^6]";
-        f=in.getflt("bjerrum",7.1);
+        name+="Reactionfield + 4*eij*[(sij/r)^12-(sij/r)^6]";
+        f=rf.f;
       }
       inline double pairpot(const particle &p1, const particle &p2) {
         register double a=p1.x-p2.x,
@@ -38,8 +38,7 @@ namespace Faunus {
         std::ostringstream o;
         o << "#   Type              = " << name << std::endl
           << "#   L-J parm. pairs   = " << eps.size() << std::endl
-          << "#   Bjerrum length    = " << f << std::endl;
-        o << rf.info();
+          << rf.info();
         return o.str();
       }
       void init(atoms &a) {

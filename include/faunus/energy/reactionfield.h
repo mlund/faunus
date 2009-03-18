@@ -1,7 +1,7 @@
 #ifndef FAU_ENERGY_RF_H
 #define FAU_ENERGY_RF_H
 
-#include "faunus/energy.h"
+#include "faunus/energy/base.h"
 #include "faunus/potentials/pot_test_rf.h"
 
 namespace Faunus {

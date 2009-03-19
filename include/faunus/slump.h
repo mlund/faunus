@@ -54,6 +54,32 @@ namespace Faunus {
       double random_one();
   };
 
+
+ /*!
+  * \brief Ran2 Random Number Gererator
+  * \author Bjorn Persson
+  * \date Lund, 2008
+  * \note A class for ran2 from 'Numerical Recipies'.
+  */
+  class ran2: public random {
+    private:
+      const static int IM1=2147483563, IM2=2147483399;
+      const static int IA1=40014, IA2=40692, IQ1=53668, IQ2=52774;
+      const static int IR1=12211, IR2=3791, NTAB=32, IMM1=IM1-1;
+      const static int NDIV=1+IMM1/NTAB;
+      const static double EPS=3.0e-16;
+      double AM,RNMX;
+      int idum, idum2, iy;
+      int iv[32]; 
+      int j,k;
+      double temp;
+    public:
+      ran2();
+      double random_one();
+      void   random_seed(unsigned int=-7);
+
+  };
+
   typedef Faunus::randomDefault slump; // Generator selection!
 
 }

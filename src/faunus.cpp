@@ -18,6 +18,13 @@ namespace Faunus {
       << "#\n"
       << "#  Reference:\n"
       << "#     Source Code Biol. Med. (2008) 3:1\n"
+      << "#\n"
+      << "#  Library build details:\n"
+      << "#     Compiled on " << __DATE__ << " " << __TIME__ << " using " << __VERSION__
+#ifdef __SVN_REV__
+      << "\n#     SVN revision: " << __SVN_REV__ << "."
+#endif
+      << "\n"
       << "# --------------------------------------------------------------------\n" << std::endl;
     return o.str();
   }

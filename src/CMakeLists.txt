@@ -37,7 +37,10 @@ target_link_libraries(libfaunus.a ${LINKLIBS})
 
 #----- dynamic faunus library -----
 add_library(libfaunus SHARED ${objs})
-set_target_properties(libfaunus PROPERTIES OUTPUT_NAME faunus)
+set_target_properties(libfaunus PROPERTIES
+                      OUTPUT_NAME faunus
+                      COMPILE_DEFINITIONS "__SVN_REV__=0"
+                      )
 target_link_libraries(libfaunus ${LINKLIBS})
 install(TARGETS libfaunus
         LIBRARY DESTINATION lib)

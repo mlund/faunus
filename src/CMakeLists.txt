@@ -39,7 +39,7 @@ target_link_libraries(libfaunus.a ${LINKLIBS})
 add_library(libfaunus SHARED ${objs})
 set_target_properties(libfaunus PROPERTIES
                       OUTPUT_NAME faunus
-                      COMPILE_DEFINITIONS "__SVN_REV__=0"
+                      COMPILE_DEFINITIONS "__SVN_REV__=${SVNREVISION}"
                       )
 target_link_libraries(libfaunus ${LINKLIBS})
 install(TARGETS libfaunus

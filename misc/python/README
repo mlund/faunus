@@ -1,0 +1,16 @@
+Python crash on MacOSX
+----------------------
+When importing the faunus module, python may crash.
+If this happens if probably means that faunus.so is
+linked against another python framework than boost
+python. Check with:
+
+$ otool -L faunus.so
+$ otool -L path_to_boost_library/libboost_python-mt.dylib
+
+Fix this by forcing the dynamic linker to search the
+framework directory used by boost python before
+starting your python session:
+
+$ export DYLD_LIBRARY_PATH=dir_with_python_library_to_use
+$ python

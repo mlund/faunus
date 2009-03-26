@@ -6,7 +6,7 @@ if(PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND AND Boost_FOUND)
       COMMAND bash install_pyplusplus.sh ${PYTHON_EXECUTABLE} ${WGET_EXECUTABLE}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
-    # Target for building boost definitions using pyplusplys and
+    # Target for building boost definitions using pyplusplus and
     # pygccxml (required)
     add_custom_target( pyplusplus_rerun
       COMMAND bash generate.sh ${PYTHON_EXECUTABLE}

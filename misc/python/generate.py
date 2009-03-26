@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #
-# imports
+# imports and preparation
 #
 
 import os
@@ -9,8 +9,19 @@ import sys
 import fnmatch
 from glob import glob
 
-from IPython.Shell import IPShellEmbed
-ipshell = IPShellEmbed([])
+
+base = 'pyplusplus/lib/python%s'
+for version in ('2.5', '2.6'):
+    if os.path.exists(base % version):
+        path = (base + '/site-packages') % version
+        sys.path.insert(0, path)
+        print 'found path: %s' % path
+
+# do we really want this?
+#rm generated/*.cpp generated/*.hpp generated/*.h generated/*.txt
+
+#from IPython.Shell import IPShellEmbed
+#ipshell = IPShellEmbed([])
 
 try:
     from pyplusplus.module_builder import module_builder_t
@@ -193,7 +204,7 @@ td.add_instantiation('float', 'average_float')
 td.add_instantiation('double', 'average_double')
 template_data.append(td)
 
-#td = TemplateSpec('vector', 'std')
+td = TemplateSpec('vector', 'std')
 #td.add_instantiation('float', 'vector_float')
 #td.add_instantiation('double', 'vector_double')
 #template_data.append(td)

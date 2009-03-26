@@ -12,6 +12,10 @@
 
 #include "generated/atoms.pypp.hpp"
 
+#include "generated/average_double.pypp.hpp"
+
+#include "generated/average_float.pypp.hpp"
+
 #include "generated/box.pypp.hpp"
 
 #include "generated/canonical.pypp.hpp"
@@ -30,6 +34,8 @@
 
 #include "generated/faunus_free_functions.pypp.hpp"
 
+#include "generated/grandcanonical.pypp.hpp"
+
 #include "generated/group.pypp.hpp"
 
 #include "generated/inputfile.pypp.hpp"
@@ -39,6 +45,12 @@
 #include "generated/interaction_hscoulomb.pypp.hpp"
 
 #include "generated/ioaam.pypp.hpp"
+
+#include "generated/iopqr.pypp.hpp"
+
+#include "generated/ioxyz.pypp.hpp"
+
+#include "generated/macromolecule.pypp.hpp"
 
 #include "generated/markovmove.pypp.hpp"
 
@@ -72,15 +84,21 @@
 
 #include "generated/vector_less__Faunus_scope_atoms_scope_data__greater_.pypp.hpp"
 
+#include "generated/vector_less__Faunus_scope_group__greater_.pypp.hpp"
+
 #include "generated/vector_less__Faunus_scope_macromolecule__greater_.pypp.hpp"
 
 #include "generated/vector_less__Faunus_scope_particle__greater_.pypp.hpp"
 
 #include "generated/vector_less__Faunus_scope_point__greater_.pypp.hpp"
 
+#include "generated/vector_less__int__greater_.pypp.hpp"
+
 #include "generated/vector_less__std_scope_string__greater_.pypp.hpp"
 
 #include "generated/vector_less__std_scope_vector_less__double__greater___greater_.pypp.hpp"
+
+#include "generated/virial.pypp.hpp"
 
 #include "generated/widom.pypp.hpp"
 
@@ -91,6 +109,8 @@ BOOST_PYTHON_MODULE(faunus){
 
     register_vector_less__std_scope_string__greater__class();
 
+    register_vector_less__int__greater__class();
+
     register_vector_less__Faunus_scope_point__greater__class();
 
     register___type_class();
@@ -99,11 +119,17 @@ BOOST_PYTHON_MODULE(faunus){
 
     register_vector_less__Faunus_scope_macromolecule__greater__class();
 
+    register_vector_less__Faunus_scope_group__greater__class();
+
     register_vector_less__Faunus_scope_atoms_scope_data__greater__class();
 
     register_analysis_class();
 
     register_atoms_class();
+
+    register_average_double_class();
+
+    register_average_float_class();
 
     register_point_class();
 
@@ -127,6 +153,8 @@ BOOST_PYTHON_MODULE(faunus){
 
     register_energybase_class();
 
+    register_grandcanonical_class();
+
     register_group_class();
 
     register_inputfile_class();
@@ -136,6 +164,12 @@ BOOST_PYTHON_MODULE(faunus){
     register_interaction_hscoulomb_class();
 
     register_ioaam_class();
+
+    register_iopqr_class();
+
+    register_ioxyz_class();
+
+    register_macromolecule_class();
 
     register_markovmove_class();
 
@@ -160,6 +194,8 @@ BOOST_PYTHON_MODULE(faunus){
     register_spherical_class();
 
     register_systemenergy_class();
+
+    register_virial_class();
 
     register_widom_class();
 

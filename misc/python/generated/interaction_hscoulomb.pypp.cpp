@@ -111,6 +111,18 @@ struct interaction_less__Faunus_scope_pot_hscoulomb__greater__wrapper : Faunus::
         return Faunus::interaction< Faunus::pot_hscoulomb >::energy( boost::ref(p), boost::ref(g1), boost::ref(g2) );
     }
 
+    virtual double energy( ::std::vector< Faunus::particle > const & p, ::Faunus::molecules & m, ::std::vector< int > & i ) {
+        if( bp::override func_energy = this->get_override( "energy" ) )
+            return func_energy( boost::ref(p), boost::ref(m), boost::ref(i) );
+        else
+            return this->Faunus::interaction< Faunus::pot_hscoulomb >::energy( boost::ref(p), boost::ref(m), boost::ref(i) );
+    }
+    
+    
+    double default_energy( ::std::vector< Faunus::particle > const & p, ::Faunus::molecules & m, ::std::vector< int > & i ) {
+        return Faunus::interaction< Faunus::pot_hscoulomb >::energy( boost::ref(p), boost::ref(m), boost::ref(i) );
+    }
+
     virtual double energy( ::std::vector< Faunus::particle > const & p, ::Faunus::particle const & a ) {
         if( bp::override func_energy = this->get_override( "energy" ) )
             return func_energy( boost::ref(p), boost::ref(a) );
@@ -329,6 +341,19 @@ void register_interaction_hscoulomb_class(){
                 , energy_function_type(&::Faunus::interaction< Faunus::pot_hscoulomb >::energy)
                 , default_energy_function_type(&interaction_less__Faunus_scope_pot_hscoulomb__greater__wrapper::default_energy)
                 , ( bp::arg("p"), bp::arg("g1"), bp::arg("g2") ) );
+        
+        }
+        { //::Faunus::interaction< Faunus::pot_hscoulomb >::energy
+        
+            typedef Faunus::interaction< Faunus::pot_hscoulomb > exported_class_t;
+            typedef double ( exported_class_t::*energy_function_type )( ::std::vector< Faunus::particle > const &,::Faunus::molecules &,::std::vector< int > & ) ;
+            typedef double ( interaction_less__Faunus_scope_pot_hscoulomb__greater__wrapper::*default_energy_function_type )( ::std::vector< Faunus::particle > const &,::Faunus::molecules &,::std::vector< int > & ) ;
+            
+            interaction_hscoulomb_exposer.def( 
+                "energy"
+                , energy_function_type(&::Faunus::interaction< Faunus::pot_hscoulomb >::energy)
+                , default_energy_function_type(&interaction_less__Faunus_scope_pot_hscoulomb__greater__wrapper::default_energy)
+                , ( bp::arg("p"), bp::arg("m"), bp::arg("i") ) );
         
         }
         { //::Faunus::interaction< Faunus::pot_hscoulomb >::energy

@@ -34,7 +34,7 @@ struct randomDefault_wrapper : Faunus::randomDefault, bp::wrapper< Faunus::rando
         return Faunus::randomDefault::random_one( );
     }
 
-    virtual void random_seed( unsigned int arg0=0 ) {
+    virtual void random_seed( int arg0=0 ) {
         if( bp::override func_random_seed = this->get_override( "random_seed" ) )
             func_random_seed( arg0 );
         else
@@ -42,7 +42,7 @@ struct randomDefault_wrapper : Faunus::randomDefault, bp::wrapper< Faunus::rando
     }
     
     
-    void default_random_seed( unsigned int arg0=0 ) {
+    void default_random_seed( int arg0=0 ) {
         Faunus::randomDefault::random_seed( arg0 );
     }
 
@@ -57,8 +57,8 @@ void register_randomDefault_class(){
             , (double ( randomDefault_wrapper::* )(  ) )(&randomDefault_wrapper::default_random_one) )    
         .def( 
             "random_seed"
-            , (void ( ::Faunus::randomDefault::* )( unsigned int ) )(&::Faunus::randomDefault::random_seed)
-            , (void ( randomDefault_wrapper::* )( unsigned int ) )(&randomDefault_wrapper::default_random_seed)
-            , ( bp::arg("arg0")=(unsigned int)(0) ) );
+            , (void ( ::Faunus::randomDefault::* )( int ) )(&::Faunus::randomDefault::random_seed)
+            , (void ( randomDefault_wrapper::* )( int ) )(&randomDefault_wrapper::default_random_seed)
+            , ( bp::arg("arg0")=(int)(0) ) );
 
 }

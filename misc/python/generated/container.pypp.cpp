@@ -25,18 +25,6 @@ struct container_wrapper : Faunus::container, bp::wrapper< Faunus::container > {
         return func_collision( boost::ref(arg0) );
     }
 
-    virtual bool collision( ::Faunus::particle const & arg0, ::Faunus::particle const & arg1 ) {
-        if( bp::override func_collision = this->get_override( "collision" ) )
-            return func_collision( boost::ref(arg0), boost::ref(arg1) );
-        else
-            return this->Faunus::container::collision( boost::ref(arg0), boost::ref(arg1) );
-    }
-    
-    
-    bool default_collision( ::Faunus::particle const & arg0, ::Faunus::particle const & arg1 ) {
-        return Faunus::container::collision( boost::ref(arg0), boost::ref(arg1) );
-    }
-
     virtual double dist( ::Faunus::point const & a, ::Faunus::point const & b ) {
         if( bp::override func_dist = this->get_override( "dist" ) )
             return func_dist( boost::ref(a), boost::ref(b) );
@@ -126,6 +114,18 @@ struct container_wrapper : Faunus::container, bp::wrapper< Faunus::container > {
         return Faunus::container::vdist( boost::ref(a), boost::ref(b) );
     }
 
+    virtual bool clash( ::Faunus::particle const & arg0, ::Faunus::particle const & arg1 ) {
+        if( bp::override func_clash = this->get_override( "clash" ) )
+            return func_clash( boost::ref(arg0), boost::ref(arg1) );
+        else
+            return this->Faunus::particles::clash( boost::ref(arg0), boost::ref(arg1) );
+    }
+    
+    
+    bool default_clash( ::Faunus::particle const & arg0, ::Faunus::particle const & arg1 ) {
+        return Faunus::particles::clash( boost::ref(arg0), boost::ref(arg1) );
+    }
+
 };
 
 void register_container_class(){
@@ -140,11 +140,6 @@ void register_container_class(){
             "collision"
             , bp::pure_virtual( (bool ( ::Faunus::container::* )( ::Faunus::particle const & ) )(&::Faunus::container::collision) )
             , ( bp::arg("arg0") ) )    
-        .def( 
-            "collision"
-            , (bool ( ::Faunus::container::* )( ::Faunus::particle const &,::Faunus::particle const & ) )(&::Faunus::container::collision)
-            , (bool ( container_wrapper::* )( ::Faunus::particle const &,::Faunus::particle const & ) )(&container_wrapper::default_collision)
-            , ( bp::arg("arg0"), bp::arg("arg1") ) )    
         .def( 
             "dist"
             , (double ( ::Faunus::container::* )( ::Faunus::point const &,::Faunus::point const & ) )(&::Faunus::container::dist)
@@ -185,6 +180,11 @@ void register_container_class(){
             , (::Faunus::point ( ::Faunus::container::* )( ::Faunus::point const &,::Faunus::point const & ) )(&::Faunus::container::vdist)
             , (::Faunus::point ( container_wrapper::* )( ::Faunus::point const &,::Faunus::point const & ) )(&container_wrapper::default_vdist)
             , ( bp::arg("a"), bp::arg("b") ) )    
-        .def_readonly( "atom", &Faunus::container::atom );
+        .def_readonly( "atom", &Faunus::container::atom )    
+        .def( 
+            "clash"
+            , (bool ( ::Faunus::particles::* )( ::Faunus::particle const &,::Faunus::particle const & ) )(&::Faunus::particles::clash)
+            , (bool ( container_wrapper::* )( ::Faunus::particle const &,::Faunus::particle const & ) )(&container_wrapper::default_clash)
+            , ( bp::arg("arg0"), bp::arg("arg1") ) );
 
 }

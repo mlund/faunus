@@ -34,6 +34,18 @@ struct box_wrapper : Faunus::box, bp::wrapper< Faunus::box > {
         Faunus::box::boundary( boost::ref(a) );
     }
 
+    virtual bool clash( ::Faunus::particle const & a, ::Faunus::particle const & b ) {
+        if( bp::override func_clash = this->get_override( "clash" ) )
+            return func_clash( boost::ref(a), boost::ref(b) );
+        else
+            return this->Faunus::box::clash( boost::ref(a), boost::ref(b) );
+    }
+    
+    
+    bool default_clash( ::Faunus::particle const & a, ::Faunus::particle const & b ) {
+        return Faunus::box::clash( boost::ref(a), boost::ref(b) );
+    }
+
     virtual bool collision( ::Faunus::particle const & a ) {
         if( bp::override func_collision = this->get_override( "collision" ) )
             return func_collision( boost::ref(a) );
@@ -44,18 +56,6 @@ struct box_wrapper : Faunus::box, bp::wrapper< Faunus::box > {
     
     bool default_collision( ::Faunus::particle const & a ) {
         return Faunus::box::collision( boost::ref(a) );
-    }
-
-    virtual bool collision( ::Faunus::particle const & a, ::Faunus::particle const & b ) {
-        if( bp::override func_collision = this->get_override( "collision" ) )
-            return func_collision( boost::ref(a), boost::ref(b) );
-        else
-            return this->Faunus::box::collision( boost::ref(a), boost::ref(b) );
-    }
-    
-    
-    bool default_collision( ::Faunus::particle const & a, ::Faunus::particle const & b ) {
-        return Faunus::box::collision( boost::ref(a), boost::ref(b) );
     }
 
     virtual double dist( ::Faunus::point const & a, ::Faunus::point const & b ) {
@@ -187,6 +187,18 @@ void register_box_class(){
                 , ( bp::arg("a") ) );
         
         }
+        { //::Faunus::box::clash
+        
+            typedef bool ( ::Faunus::box::*clash_function_type )( ::Faunus::particle const &,::Faunus::particle const & ) ;
+            typedef bool ( box_wrapper::*default_clash_function_type )( ::Faunus::particle const &,::Faunus::particle const & ) ;
+            
+            box_exposer.def( 
+                "clash"
+                , clash_function_type(&::Faunus::box::clash)
+                , default_clash_function_type(&box_wrapper::default_clash)
+                , ( bp::arg("a"), bp::arg("b") ) );
+        
+        }
         { //::Faunus::box::collision
         
             typedef bool ( ::Faunus::box::*collision_function_type )( ::Faunus::particle const & ) ;
@@ -197,18 +209,6 @@ void register_box_class(){
                 , collision_function_type(&::Faunus::box::collision)
                 , default_collision_function_type(&box_wrapper::default_collision)
                 , ( bp::arg("a") ) );
-        
-        }
-        { //::Faunus::box::collision
-        
-            typedef bool ( ::Faunus::box::*collision_function_type )( ::Faunus::particle const &,::Faunus::particle const & ) ;
-            typedef bool ( box_wrapper::*default_collision_function_type )( ::Faunus::particle const &,::Faunus::particle const & ) ;
-            
-            box_exposer.def( 
-                "collision"
-                , collision_function_type(&::Faunus::box::collision)
-                , default_collision_function_type(&box_wrapper::default_collision)
-                , ( bp::arg("a"), bp::arg("b") ) );
         
         }
         { //::Faunus::box::dist

@@ -6,9 +6,25 @@
 
 namespace bp = boost::python;
 
+struct particles_wrapper : Faunus::particles, bp::wrapper< Faunus::particles > {
+
+    virtual bool clash( ::Faunus::particle const & arg0, ::Faunus::particle const & arg1 ) {
+        if( bp::override func_clash = this->get_override( "clash" ) )
+            return func_clash( boost::ref(arg0), boost::ref(arg1) );
+        else
+            return this->Faunus::particles::clash( boost::ref(arg0), boost::ref(arg1) );
+    }
+    
+    
+    bool default_clash( ::Faunus::particle const & arg0, ::Faunus::particle const & arg1 ) {
+        return Faunus::particles::clash( boost::ref(arg0), boost::ref(arg1) );
+    }
+
+};
+
 void register_particles_class(){
 
-    bp::class_< Faunus::particles, boost::noncopyable >( "particles", bp::no_init )    
+    bp::class_< particles_wrapper, boost::noncopyable >( "particles", bp::no_init )    
         .def( 
             "charge"
             , (double ( ::Faunus::particles::* )(  ) )( &::Faunus::particles::charge ) )    
@@ -19,6 +35,11 @@ void register_particles_class(){
         .def( 
             "check_vector"
             , (bool ( ::Faunus::particles::* )(  ) )( &::Faunus::particles::check_vector ) )    
+        .def( 
+            "clash"
+            , (bool ( ::Faunus::particles::* )( ::Faunus::particle const &,::Faunus::particle const & ) )(&::Faunus::particles::clash)
+            , (bool ( particles_wrapper::* )( ::Faunus::particle const &,::Faunus::particle const & ) )(&particles_wrapper::default_clash)
+            , ( bp::arg("arg0"), bp::arg("arg1") ) )    
         .def( 
             "count"
             , (int ( ::Faunus::particles::* )( ::Faunus::particle::type,::Faunus::point const &,double ) )( &::Faunus::particles::count )

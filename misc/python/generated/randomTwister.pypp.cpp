@@ -20,7 +20,7 @@ struct randomTwister_wrapper : Faunus::randomTwister, bp::wrapper< Faunus::rando
         return Faunus::randomTwister::random_one( );
     }
 
-    virtual void random_seed( unsigned int arg0=0 ) {
+    virtual void random_seed( int arg0=0 ) {
         if( bp::override func_random_seed = this->get_override( "random_seed" ) )
             func_random_seed( arg0 );
         else
@@ -28,7 +28,7 @@ struct randomTwister_wrapper : Faunus::randomTwister, bp::wrapper< Faunus::rando
     }
     
     
-    void default_random_seed( unsigned int arg0=0 ) {
+    void default_random_seed( int arg0=0 ) {
         Faunus::randomTwister::random_seed( arg0 );
     }
 
@@ -43,8 +43,8 @@ void register_randomTwister_class(){
             , (double ( randomTwister_wrapper::* )(  ) )(&randomTwister_wrapper::default_random_one) )    
         .def( 
             "random_seed"
-            , (void ( ::Faunus::randomTwister::* )( unsigned int ) )(&::Faunus::randomTwister::random_seed)
-            , (void ( randomTwister_wrapper::* )( unsigned int ) )(&randomTwister_wrapper::default_random_seed)
-            , ( bp::arg("arg0")=(unsigned int)(0) ) );
+            , (void ( ::Faunus::randomTwister::* )( int ) )(&::Faunus::randomTwister::random_seed)
+            , (void ( randomTwister_wrapper::* )( int ) )(&randomTwister_wrapper::default_random_seed)
+            , ( bp::arg("arg0")=(int)(0) ) );
 
 }

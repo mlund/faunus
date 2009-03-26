@@ -51,16 +51,16 @@ struct clutch_wrapper : Faunus::clutch, bp::wrapper< Faunus::clutch > {
         Faunus::container::boundary( boost::ref(arg0) );
     }
 
-    virtual bool collision( ::Faunus::particle const & arg0, ::Faunus::particle const & arg1 ) {
-        if( bp::override func_collision = this->get_override( "collision" ) )
-            return func_collision( boost::ref(arg0), boost::ref(arg1) );
+    virtual bool clash( ::Faunus::particle const & arg0, ::Faunus::particle const & arg1 ) {
+        if( bp::override func_clash = this->get_override( "clash" ) )
+            return func_clash( boost::ref(arg0), boost::ref(arg1) );
         else
-            return this->Faunus::container::collision( boost::ref(arg0), boost::ref(arg1) );
+            return this->Faunus::particles::clash( boost::ref(arg0), boost::ref(arg1) );
     }
     
     
-    bool default_collision( ::Faunus::particle const & arg0, ::Faunus::particle const & arg1 ) {
-        return Faunus::container::collision( boost::ref(arg0), boost::ref(arg1) );
+    bool default_clash( ::Faunus::particle const & arg0, ::Faunus::particle const & arg1 ) {
+        return Faunus::particles::clash( boost::ref(arg0), boost::ref(arg1) );
     }
 
     virtual double dist( ::Faunus::point const & a, ::Faunus::point const & b ) {
@@ -171,9 +171,9 @@ void register_clutch_class(){
             , (void ( clutch_wrapper::* )( ::Faunus::point & ) )(&clutch_wrapper::default_boundary)
             , ( bp::arg("arg0") ) )    
         .def( 
-            "collision"
-            , (bool ( ::Faunus::container::* )( ::Faunus::particle const &,::Faunus::particle const & ) )(&::Faunus::container::collision)
-            , (bool ( clutch_wrapper::* )( ::Faunus::particle const &,::Faunus::particle const & ) )(&clutch_wrapper::default_collision)
+            "clash"
+            , (bool ( ::Faunus::particles::* )( ::Faunus::particle const &,::Faunus::particle const & ) )(&::Faunus::particles::clash)
+            , (bool ( clutch_wrapper::* )( ::Faunus::particle const &,::Faunus::particle const & ) )(&clutch_wrapper::default_clash)
             , ( bp::arg("arg0"), bp::arg("arg1") ) )    
         .def( 
             "dist"

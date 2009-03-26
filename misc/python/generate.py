@@ -1,12 +1,16 @@
 #!/usr/bin/env python
 
+#
+# imports
+#
+
 import os
 import sys
 import fnmatch
 from glob import glob
 
-#from IPython.Shell import IPShellEmbed
-#ipshell = IPShellEmbed([])
+from IPython.Shell import IPShellEmbed
+ipshell = IPShellEmbed([])
 
 try:
     from pyplusplus.module_builder import module_builder_t
@@ -14,6 +18,77 @@ try:
 except:
     print "import from pyplusplus or pygccxml failed, aborting"
     sys.exit(1)
+
+#
+# helper code
+#
+
+class TemplateSpec(object):
+
+    def __init__(self, name, namespace):
+        self.name = name
+        self.namespace = namespace
+        self.arguments = []
+        self.aliases = []
+
+    def __str__(self):
+        result = self.full_name()
+        for class_name, alias in zip(self.class_names(), self.aliases):
+            result += '\n    %s --- %s' % (class_name, alias)
+        return result
+
+    def add_instantiation(self, argument, alias):
+        self.arguments.append(argument)
+        self.aliases.append(alias)
+
+    def full_name(self):
+        return '%s::%s' % (self.namespace, self.name)
+
+    def class_names(self, use_namespace=True):
+        if use_namespace:
+            full_name = self.full_name()
+        else:
+            full_name = self.name
+        for argument in self.arguments:
+            yield '%s< %s >' % (full_name, argument)
+
+    def typedef_code(self, indent=0):
+        typedef_lines = [indent*' ' + 'typedef %s %s;' % (class_name, alias)
+                         for class_name, alias in zip(self.class_names(), self.aliases)
+                        ]
+        return '\n'.join(typedef_lines)
+
+    def sizeof_code(self, indent=0):
+        sizeof_lines = [indent*' ' + 'sizeof(%s);' % class_name
+                        for class_name in self.class_names()
+                       ]
+        return '\n'.join(sizeof_lines)
+
+
+class TemplateData(list):
+
+    def __init__(self):
+        pass
+
+    def __str__(self):
+        return '\n'.join([t.full_name() for t in self])
+
+    def full_str(self):
+        return '\n'.join([str(t) for t in self])
+
+    def class_names(self, use_namespace=True):
+        for t in self:
+            for cls in t.class_names(use_namespace=use_namespace):
+                yield cls
+
+    def add(self, template_spec):
+        self.append(template_spec)
+
+    def typedef_code(self, indent=0):
+        return '\n'.join([t.typedef_code(indent=indent) for t in self])
+
+    def sizeof_code(self, indent=0):
+        return '\n'.join([t.sizeof_code(indent=indent) for t in self])
 
 
 def locate(pattern, root=os.curdir):
@@ -26,6 +101,8 @@ def locate(pattern, root=os.curdir):
         for filename in fnmatch.filter(files, pattern):
             yield os.path.join(path, filename)
 
+
+# exec open('filename').read() 
 
 #
 # settings
@@ -52,11 +129,13 @@ header_files_list = ['faunus/faunus.h',
                      'faunus/histogram.h',
                      'faunus/xytable.h',
                      'faunus/mcloop.h',
+                     'faunus/average.h',
                     ]
 
 header_files = header_files_list
 #header_files = list(locate('*.h', '../../include/faunus'))
 
+# class wrapper requests
 classes = ['point',                             # point.h
            'particle',
            'spherical',
@@ -78,8 +157,6 @@ classes = ['point',                             # point.h
            'pot_coulomb',                       # potentials
            'pot_lj',
            'energybase',                        # energy.h
-           'interaction<Faunus::pot_coulomb>',
-           'interaction<Faunus::pot_hscoulomb>',
            'markovmove',                        # moves
            'saltmove',
            'group',                             # group.h
@@ -100,12 +177,31 @@ other_stuff = ['faunus_splash']
 
 # template instantiation requests
 # dictionary with the fillowing structure:
-# key - C++ template
-# value - a tuple of of two-tuples, each of them contains template arguments and a python alias
-template_data = {'Faunus::interaction': (('Faunus::pot_coulomb','interaction_coulomb'),
-                                         ('Faunus::pot_hscoulomb', 'interaction_hscoulomb'),
-                                        ),
-                }
+# - key - C++ template
+# - value - a tuple of of two-tuples, each of them contains template arguments and a python alias
+# also include here any non-Faunus templates that you want instantiated and/or aliased (e. g. vector<double>)
+
+template_data = TemplateData()
+
+td = TemplateSpec('interaction', 'Faunus')
+td.add_instantiation('Faunus::pot_coulomb', 'interaction_coulomb')
+td.add_instantiation('Faunus::pot_hscoulomb', 'interaction_hscoulomb')
+template_data.append(td)
+
+td = TemplateSpec('average', 'Faunus')
+td.add_instantiation('float', 'average_float')
+td.add_instantiation('double', 'average_double')
+template_data.append(td)
+
+#td = TemplateSpec('vector', 'std')
+#td.add_instantiation('float', 'vector_float')
+#td.add_instantiation('double', 'vector_double')
+#template_data.append(td)
+
+del td
+
+print template_data.full_str()
+
 
 #
 # generator code
@@ -126,26 +222,14 @@ namespace pyplusplus{ namespace aliases{
 } }
 """
 
-def generate_header(header_files, template_data):
+def generate_header(header_files, template_data_list):
     """
     template_data is a dictionary as explained above
     """
 
-    typedefs_list = []
-    sizeofs_list = []
-
-    for key, value in template_data.items():
-        template_name = key
-        for inst_data in value:
-            template_arguments, type_name = inst_data
-            typedefs_list.append('    typedef %s< %s > %s;' % (template_name, template_arguments, type_name))
-            sizeofs_list.append('        sizeof(%s< %s >);' % (template_name, template_arguments))
-
     headers = '\n'.join(['#include <%s>' % header for header in header_files])
-    typedefs = '\n'.join(typedefs_list)
-    sizeofs = '\n'.join(sizeofs_list)
 
-    return generated_header_template % (headers, typedefs, sizeofs)
+    return generated_header_template % (headers, template_data.typedef_code(indent=4), template_data.sizeof_code(indent=8))
 
 
 # generate the header file to be passed to gccxml
@@ -179,6 +263,16 @@ decls_to_include.extend([mb.class_(cls) for cls in classes])
 
 # include other requested stuff
 decls_to_include.extend([mb.decl(decl) for decl in other_stuff])
+
+# also include all the instantiated templates
+decls_to_include.extend([mb.decl(template) for template in template_data.class_names(use_namespace=False)])
+
+# print all the declaration to be included
+print
+print 'Declarations to be included:'
+for d in decls_to_include:
+    print d
+print
 
 # apply the requested includes and excludes
 for decl in decls_to_include:

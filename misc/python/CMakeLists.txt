@@ -9,7 +9,7 @@ if(PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND AND Boost_FOUND)
     # Target for building boost definitions using pyplusplus and
     # pygccxml (required)
     add_custom_target( pyplusplus_rerun
-      COMMAND bash generate.sh ${PYTHON_EXECUTABLE}
+      COMMAND ${PYTHON_EXECUTABLE} generate.py
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
   endif (GCCXML AND WGET_FOUND)
 

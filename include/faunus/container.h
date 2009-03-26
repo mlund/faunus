@@ -21,7 +21,6 @@ namespace Faunus {
 //      container(inputfile &);
       virtual void setvolume(double){}                    //!< Specify new volume
       virtual bool collision(const particle &)=0;            //!< Check for collision with walls
-      virtual bool collision(const particle &, const particle &){return false;}            //!< Check for collision between p & p
       virtual void randompos(point &)=0;                  //!< Random point within container
       virtual string info();                              //!< Return info string
       virtual string povray();                            //!< POVRAY object representing the cell
@@ -84,7 +83,7 @@ namespace Faunus {
 	}
         return false;
       }
-      bool collision(const particle &a, const particle &b) {
+      bool clash(const particle &a, const particle &b) {
         point p;
         p.x=std::abs(a.x-b.x);
         p.y=std::abs(a.y-b.y);
@@ -92,10 +91,8 @@ namespace Faunus {
         if (p.x>len_half) p.x-=len;
         if (p.y>len_half) p.y-=len;
         if (p.z>len_half) p.z-=len;
-        if (pow(p.len(),2)<pow(a.radius+b.radius, 2))   
-		return true;
-	
-        return false;
+        return (pow(p.len(),2)<pow(a.radius+b.radius, 2))
+          ? true : false;
       }
       string povray();
       //! Calculate distance using the minimum image convention

@@ -32,7 +32,7 @@ namespace Faunus {
   // class grandcanonical
   //
 
-  int grandcanonical::size() {};
+  int grandcanonical::size() { return 0; };
 
   short grandcanonical::findgroup(unsigned int i) {
     for (unsigned int n=0; n<g.size(); n++)
@@ -107,6 +107,7 @@ namespace Faunus {
     o << "Grand Canonical Master Class:\n"
       << "  Number of groups     = " << g.size() << endl
       << "  Number of particles  = " << size() << endl;
+    return o.str();
   }
 
 } //namespace

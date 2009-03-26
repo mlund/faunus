@@ -564,7 +564,7 @@ namespace Faunus {
       col=c.collision(p[i]);
       if (col==false)
         for (int j=0; j<c.p.size(); j++)
-          if (c.collision(c.p[j], p[i])==true) {
+          if (c.clash(c.p[j], p[i])==true) {
             col=true;
             break;
           }

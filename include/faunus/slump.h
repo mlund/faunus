@@ -16,7 +16,7 @@ namespace Faunus {
   class random {
     public:
       virtual double random_one()=0;              //!< Random number between [0:1[
-      virtual void random_seed(unsigned int=0)=0; //!< Seed random generator (globally)
+      virtual void random_seed(int=0)=0;          //!< Seed random generator (globally)
       bool runtest(float=0.5);                    //!< Probability bool
       double random_half();                       //!< Random number between [-0.5:0.5[
   };
@@ -31,7 +31,7 @@ namespace Faunus {
       double rand_max_inv;
     public:
       randomDefault();
-      void random_seed(unsigned int=0);
+      void random_seed(int=0);
       double random_one();
   };
 
@@ -50,7 +50,7 @@ namespace Faunus {
     private:
       MTRand mt;
     public:
-      void random_seed(unsigned int=0);
+      void random_seed(int=0);
       double random_one();
   };
 
@@ -76,8 +76,7 @@ namespace Faunus {
     public:
       ran2();
       double random_one();
-      void   random_seed(unsigned int=-7);
-
+      void   random_seed(int=-7);
   };
 
   typedef Faunus::randomDefault slump; // Generator selection!

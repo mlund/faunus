@@ -8,11 +8,11 @@ namespace Faunus {
   // "slump" - the default generator
   randomDefault::randomDefault() { rand_max_inv = 1./RAND_MAX; }
   double randomDefault::random_one() { return rand_max_inv*rand(); }
-  void randomDefault::random_seed(unsigned int s) { (s!=0) ? srand(s) : srand(time(0)); }
+  void randomDefault::random_seed(int s) { (s!=0) ? srand(s) : srand(time(0)); }
 
   // "Twister" - Mersenne Twister generator
   double randomTwister::random_one() { return mt.rand(); }
-  void randomTwister::random_seed(unsigned int s) { mt.seed(s); }
+  void randomTwister::random_seed(int s) { mt.seed(s); }
 
   // "Ran2" - ran2 from 'Numerical Recipies'
   ran2::ran2() {
@@ -42,7 +42,7 @@ namespace Faunus {
     else
       return temp;
   }
-  void ran2::random_seed( unsigned int s ) {
+  void ran2::random_seed(int s ) {
     idum=s;    
     if(idum<=0) {
       std::cout << "insied seeder!"<<std::endl;

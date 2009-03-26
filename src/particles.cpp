@@ -24,16 +24,18 @@ namespace Faunus {
         q += p[i].charge;
     return q;
   }
+  /*!\param test particle
+   */
   bool particles::overlap(const particle &a) {
     for (unsigned short i=0; i<p.size(); i++)
-      if (p[i].overlap(a)==true) return true;
+      if ( clash(p[i],a)==true) return true;
     return false;
   }
   bool particles::overlap(const vector<particle> &v) {
     unsigned short i = v.size();
     for (unsigned int j=0; j<p.size(); j++) {
       for (unsigned int k=0; k<i; k++) {
-        if(p[j].overlap(v[k])==true) return true;
+        if( clash(p[j],v[k])==true ) return true;
       }
     }
     return false;
@@ -85,5 +87,9 @@ namespace Faunus {
     p.erase( p.begin()+i );
     trial.erase( trial.begin()+i );
     return true;
+  }
+
+  bool particles::clash(const particle &p1, const particle &p2) {
+    return p1.overlap(p2);
   }
 }//namespace

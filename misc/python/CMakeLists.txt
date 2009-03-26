@@ -1,5 +1,12 @@
 if(PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND AND Boost_FOUND)
 
+  if (CVS_FOUND)
+    # Download and install gccxml in misc/python/opt
+    add_custom_target( gccxml_install
+      COMMAND bash install_gccxml.sh ${CVS_EXECUTABLE}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+  endif (CVS_FOUND)
+
   if (GCCXML AND WGET_FOUND)
     # Download and install Py++ and pygccxml in misc/python/
     add_custom_target( pyplusplus_install

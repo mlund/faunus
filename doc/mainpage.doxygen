@@ -20,6 +20,7 @@ A number of (preliminary) example \ref programs "programs" are supplied and at t
 The input and output formats are quite flexible with support for
 <A HREF="http://www.openbabel.org">OpenBabel</A>
 as well as <A HREF="http://www.gromacs.org">Gromacs</A> compressed trajectory files (xtc).
+Recently we have also wrapped Faunus into a \ref python "Python" module.
 
 \subsection cit Citation
 Faunus is released under the GNU Public Licence (\ref gpl "GPL") and can thus be freely used.

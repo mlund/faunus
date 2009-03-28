@@ -10,7 +10,7 @@ import fnmatch
 from glob import glob
 
 
-base = 'pyplusplus/lib/python%s'
+base = '../auxiliary/lib/python%s'
 for version in ('2.5', '2.6'):
     if os.path.exists(base % version):
         path = (base + '/site-packages') % version

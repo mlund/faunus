@@ -1,26 +1,9 @@
 /*! \page python Python
 
 \section pyintro Python Module
-\subsection pyinstall Installation
-To compile the python module the following tools
-are required:
-\li boost python
-\li gccxml 0.9+
-\li py++ and pygccxml
-
-Except for boost python these can be downloaded and installed
-inside the faunus directory with:
-
+\subsection pyinstall Building
+The python module requires boost python.
 \verbatim
-$ make gccxml_install
-$ make pyplusplus_install
-\endverbatim
-
-Next, rebuild the python definitions and compile the python
-module:
-
-\verbatim
-$ make pyplusplus_rerun
 $ make python
 \endverbatim
 
@@ -31,8 +14,28 @@ $ python
 >>> import faunus
 >>> p = faunus.particle()
 >>> p.charge = +1.0
+>>> help(faunus)
 \endverbatim
-(Have a look at src/examples/widom/widom.py)
+Have a look at src/examples/widom/widom.py for a full simulation example.
+
+\subsection pyupdate Updating Python Bindings   
+In order to update the python bindings after
+adding C++ code to the faunus library, you will need
+gccxml 0.9, py++ and pygccxml. Download and install
+these locally (in misc/auxiliary) with:
+
+\verbatim
+$ make gccxml_install
+$ make pyplusplus_install
+\endverbatim
+
+The python bindings can now be updated with
+
+\verbatim
+$ make pyplusplus_rerun
+\endverbatim
+
+The file misc/python/generate.py specifies the exposed classes.
 
 \subsection pytrouble Python Crash on MacOS X
 If python crashes upon importing the faunus module,
@@ -43,11 +46,10 @@ $ otool -L library_path/libboost_python-mt.dylib
 $ otool -L misc/python/faunus.so
 \endverbatim
 Is this the case, force the dynamic linker
-to look first in another framework directory. For example:
+to favor a specific framework directory before starting python. For example:
 \verbatim
 $ export DYLD_LIBRARY_PATH=/opt/local/Library/Frameworks/Python.framework/Versions/2.6/ 
+$ python
 \endverbatim
 
 */
-
-

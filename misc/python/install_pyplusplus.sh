@@ -10,7 +10,7 @@ version="1.0.0"
 mirror="http://downloads.sourceforge.net/pygccxml"
 pgx_arc="pygccxml-${version}.zip"
 ppp_arc="pyplusplus-${version}.zip"
-prefix=pyplusplus
+prefix=${PWD}/../auxiliary
 
 for file in $pgx_arc $ppp_arc
 do
@@ -23,22 +23,13 @@ do
   if [ -e $file ]
   then
     unzip -q $file
-    if [ -e "Py++-1.0.0" ]
+    if [ -e "Py++-${version}" ]
     then
-      mv Py++-1.0.0 `basename ${ppp_arc} .zip`
+      mv Py++-${version} `basename ${ppp_arc} .zip`
     fi
     cd `basename ${file} .zip`
-    ${python_exe} setup.py install --prefix=../$prefix
+    ${python_exe} setup.py install --prefix=${prefix}
     cd ..
     rm -fR `basename ${file} .zip`
   fi
 done
-
-unset python_exe
-unset version
-unset mirror
-unset pgx_arc
-unset ppp_arc
-unset prefix
-
-

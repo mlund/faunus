@@ -15,7 +15,7 @@ A number of (preliminary) example \ref programs "programs" are supplied and at t
 \li Proton fluctuations (pka predictions, charge regulation, ionization states)
 \li Manybody macromolecular simulations
 \li Hofmeister or ion-specific effects
-\li Widom particle intertion techniques
+\li Widom particle insertion techniques
 
 The input and output formats are quite flexible with support for
 <A HREF="http://www.openbabel.org">OpenBabel</A>

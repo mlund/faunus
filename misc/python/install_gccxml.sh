@@ -1,7 +1,7 @@
 #!/bin/bash
 
 cvs=$1
-prefix=`pwd`/opt
+prefix=${PWD}/../auxiliary
 
 # checkout from cvs
 if [ ! -e gccxml ]

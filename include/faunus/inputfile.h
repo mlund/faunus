@@ -35,6 +35,8 @@ namespace Faunus {
       void add(string,string);               //!< Add an entry to the loaded list
       void add(string,double);               //!< Add an entry to the loaded list
       string info();                         //!< Show info
+      string print();                        //!< Print a string of the inputfile
+      void updateval(string, string);        //!< Update the inputfile for next run
   };
 }
 #endif

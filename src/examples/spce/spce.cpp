@@ -204,6 +204,8 @@ int main(int argc, char* argv[]) {
         mdip=m.dipole(con.p);
         dip.add(mdip);
         dipc.add(m.mu.x);
+        dipc.add(m.mu.y);
+        dipc.add(m.mu.z);
       } 
       // Update hist. spce dipole and radial vector correlation
       if (slump.random_one()<0.001) {

@@ -1,0 +1,33 @@
+isobaric.cpp
+
+Handles a set of macromolecules that can translate, rotate and the system volume can 
+fluctuate against a constant external pressure.
+
+General:
+The simulation can be biased by applying a penalty function. Penalty functions can be generated in the 
+program. By default the program will create a flat penalty function and update it if a 'penalty' != 0 is
+declared in isobaric.conf but it will NOT use it by any means. The program will exit and leave a penalty
+function corresponding to an unbiased distribution with propper boundrays and resolution.
+
+Enable 'penalize': 
+The program will try to read a penalty function (penalty.dat) and use it to biase in the Markov chain.
+It will also update a new penalty function that will be printed each macro step. This will over-write
+the original penalty.dat but the original, the only one used as bias, will be saved as 'oldpenalty.dat'.
+If the penalty function cant be found/does not have propper boundarys or resolution the program creates
+a flat (unbiased) function and starts to apply it to the markow chain. Unless 'updatepenalty' is 
+enabled this will effectively not cause any bias.
+
+Enable 'updatepenalty':
+The program will add an update to the penalty function after each macro step, reset the updated penalty 
+function and reduce the penalty by one half.
+
+Examples:
+Standard NPT-sampling: dissable 'penalize', dissable 'updatepenalty'. 
+
+Biased NPT-sampling (static bias): enable 'penalize' and a penalty function, penalty.dat. dissable
+                                   'updatepenalize'. (Production)
+
+Biased NPT-sampling (dynamic bias): enable 'penalize' and 'updatepenalize' (density distributions should be 
+                                    compared with a static simulation of the final penalty function).
+
+

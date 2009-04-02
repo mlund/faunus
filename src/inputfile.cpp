@@ -117,4 +117,21 @@ namespace Faunus {
     o << endl;
     return o.str();
   }
+
+  void inputfile::updateval(string key, string v) {
+    int i=findKey( key);
+    if (i<0) {
+      std::cerr <<"# Could not find "<<key<<" during update!!!"<<endl;
+    } else {
+      matrix[i].val[0]=v;
+    }
+  }
+  string inputfile::print() {
+    std::ostringstream o;
+    o <<"\n";
+    for (int i=1; i<matrix.size()-1; i++) {
+      o <<matrix[i].name<<"   "<<matrix[i].val[0]<<"\n";
+    }
+    return o.str();
+  }
 } //namespace

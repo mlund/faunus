@@ -83,9 +83,28 @@ rfield_steps=100
 splash="no"
 for epso in 80  
 do
+<<<<<<< .mine
+  suffix="calbtest"
+=======
   suffix="test"
+>>>>>>> .r394
   microsteps=1000
   mkinput
+<<<<<<< .mine
+  ./spce > calb/${suffix}eq
+  microsteps=1000
+  mkinput
+#  ./spce > calb/${suffix}
+  mv rdf-OW-OW.dat calb/${suffix}rdf-OW-OW.dat
+  mv rdf-cell-OW.dat calb/${suffix}rdf-cell-OW.dat
+  mv mu-OW.dat calb/${suffix}mu-OW.dat
+  mv kirkwood.dat calb/${suffix}kirkwood.dat
+  mv confout.gro calb/${suffix}confout.gro
+  mv systemenergy.dat calb/${suffix}syse.dat
+  mv dipoledist.dat calb/${suffix}dipoledist.dat
+  mv widom.dat calb/${suffix}widom.dat
+  cp confout.aam calb/${suffix}conf.aam
+=======
   ./spce > ${suffix}
   microsteps=1000
 #  mkinput
@@ -99,5 +118,6 @@ do
 #  mv dipoledist.dat RF/${suffix}dipoledist.dat
 #  mv widom.dat RF/${suffix}widom.dat
 #  cp confout.aam RF/${suffix}conf.aam
+>>>>>>> .r394
 done
 

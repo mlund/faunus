@@ -132,6 +132,7 @@ header_files_list = ['faunus/faunus.h',
                      'faunus/potentials/pot_coulomb.h',
                      'faunus/moves/base.h',
                      'faunus/moves/translational.h',
+                     'faunus/moves/charge.h',
                      'faunus/group.h',
                      'faunus/analysis.h',
                      'faunus/widom.h',
@@ -170,6 +171,7 @@ classes = ['point',                             # point.h
            'energybase',                        # energy.h
            'markovmove',                        # moves
            'saltmove',
+           'chargereg',
            'group',                             # group.h
            'macromolecule',
            'salt',

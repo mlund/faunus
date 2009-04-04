@@ -88,8 +88,9 @@ PYTHON SUPPORT (EXPERIMENTAL):
     $ cmake . -DENABLE_MACPORTS=on
 
   Update Python bindings (developers):
+    $ make gccxml_install
     $ make pyplusplus_install
-    $ make pyplusplus_rerun (requires gccxml)
+    $ make pyplusplus_rerun
 
 DIRECTORY LAYOUT:
   src          Sourcecode and examples

@@ -1,35 +1,37 @@
 if(PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND AND Boost_FOUND)
 
-  if (CVS_FOUND)
-    # Download and install gccxml in misc/python/opt
+  if (CVS_FOUND AND WGET_FOUND)
+
+    # GCCXML dl&install target
     add_custom_target( gccxml_install
       COMMAND bash install_gccxml.sh ${CVS_EXECUTABLE}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
-  endif (CVS_FOUND)
 
-  if (GCCXML AND WGET_FOUND)
-    # Download and install Py++ and pygccxml in misc/python/
+    # Py++ and pygccxml dl&install target
     add_custom_target( pyplusplus_install
       COMMAND bash install_pyplusplus.sh ${PYTHON_EXECUTABLE} ${WGET_EXECUTABLE}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+    add_dependencies( pyplusplus_install gccxml_install )
 
     # Target for building boost definitions using pyplusplus and
-    # pygccxml (required)
+    # pygccxml
     add_custom_target( pyplusplus_rerun
       COMMAND ${PYTHON_EXECUTABLE} generate.py
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
-  endif (GCCXML AND WGET_FOUND)
+
+  endif (CVS_FOUND AND WGET_FOUND)
 
   # Target for building the python module
   include_directories( ${CMAKE_SOURCE_DIR}/include
-                       ${Boost_INCLUDE_DIR}
-                       ${PYTHON_INCLUDE_PATH}
-                       ${CMAKE_CURRENT_SOURCE_DIR}
-                     )
+    ${Boost_INCLUDE_DIR}
+    ${PYTHON_INCLUDE_PATH}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    )
   file(GLOB_RECURSE objs generated/ *.cpp)
   set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
   add_library(python SHARED ${objs})
   target_link_libraries(python libfaunus ${Boost_PYTHON_LIBRARY} ${PYTHON_LIBRARY})
   set_target_properties(python PROPERTIES PREFIX ""
-                        OUTPUT_NAME "faunus" SUFFIX ".so")
+    OUTPUT_NAME "faunus" SUFFIX ".so")
+
 endif(PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND AND Boost_FOUND)

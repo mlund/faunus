@@ -74,10 +74,10 @@ namespace Faunus {
     public:
       macromolecule();
       point mu;            //!< Dipole moment
-      average<float> Q;    //!< Total charge. Updated with space::charge()
-      average<float> Q2;   //!< Total charge squared.
-      average<float> dip;  //!< Dipole moment scalar.
-      average<float> dip2; //!< Dipole moment scalar squared.
+      average<double> Q;    //!< Total charge. Updated with space::charge()
+      average<double> Q2;   //!< Total charge squared.
+      average<double> dip;  //!< Dipole moment scalar.
+      average<double> dip2; //!< Dipole moment scalar squared.
 
       string info();                           //!< Show info
       string info(container &);                //!< Show more info!

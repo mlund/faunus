@@ -5,16 +5,17 @@
 #include "faunus/container.h"
 #include "faunus/titrate.h"
 
+
 #ifdef GROMACS
-#ifndef CPLUSPLUS
-#define CPLUSPLUS
+#ifndef __cplusplus
+#define __cplusplus
 #endif
-#include "xtcio.h"
+#include "xdrfile/xdrfile_trr.h"
+#include "xdrfile/xdrfile_xtc.h"
 #endif
 
-#ifdef LIBXTC
-#include "xtc.h"
-#endif
+//#include "xdrfile/xdrfile_trr.h"
+//#endif GROMACS
 
 namespace Faunus {
   //--------------------------------
@@ -195,24 +196,8 @@ namespace Faunus {
     private:
       vector<particle> load(string) {}
       rvec x[3300];
-      int xd;
+      XDFILE xd;
       float box[3][3], time, step;
-    public:
-      ioxtc(container::container &, float);
-      bool save(string, vector<particle> &);
-      void setbox(float);
-      void close();
-  };
-#endif
-#ifdef LIBXTC
-  class ioxtc : public iopart {
-    private:
-      vector<particle> load(string) {}
-      xtc_rvec x[3300];
-      Xtc *xd;
-      xtc_matrix box;
-      xtc_real time;
-      int step;
     public:
       ioxtc(container::container &, float);
       bool save(string, vector<particle> &);

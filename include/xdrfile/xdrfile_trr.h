@@ -1,5 +1,5 @@
 /*
- * $Id: /local/xtcio/src/fatal.h 21 2006-08-05T20:58:43.457505Z svm  $
+ * $Id: xdrfile_trr.h,v 1.1 2009/03/05 10:52:06 spoel Exp $
  * 
  *                This source code is part of
  * 
@@ -34,46 +34,34 @@
  * Gromacs Runs On Most of All Computer Systems
  */
 
-#ifndef FATAL_H
-#define FATAL_H
+#ifndef _xdrfile_trr_h
+#define _xdrfile_trr_h
 
-#include <stdio.h>
-
-#ifdef __cplusplus
+#ifdef CPLUSPLUS
 extern "C" {
 #endif
 
-void _where(const char *file, int line);
-#define where() _where(__FILE__, __LINE__)
-/* Prints filename and line to stdlog and only on amba memvail */
-
-void gmx_fatal(int fatal_errno,const char *file,int line,const char *fmt,...);
-#define FARGS 0,__FILE__,__LINE__
+#include "xdrfile.h"
   
-/* 
- * Functions can write to this file for debug info
- * Before writing to it, it should be checked whether
- * the file is not NULL:
- * if (debug) fprintf(debug,"%s","Hallo");
- */
-extern FILE *debug;
+  /* All functions return exdrOK if succesfull. 
+   * (error codes defined in xdrfile.h).
+   */  
+   
+  /* This function returns the number of atoms in the xtc file in *natoms */
+  extern int read_trr_natoms(char *fn,int *natoms);
+  
+  /* Read one frame of an open xtc file. If either of x,v,f,box are
+     NULL the arrays will be read from the file but not used.  */
+  extern int read_trr(XDRFILE *xd,int natoms,int *step,float *t,float *lambda,
+		      matrix box,rvec *x,rvec *v,rvec *f);
 
-extern void _range_check(int n,int n_min,int n_max,const char *var,
-                         const char *file,int line);
-#define range_check(n,n_min,n_max) _range_check(n,n_min,n_max,#n,__FILE__,__LINE__)
-  /* Range check will terminate with an error message if not
-   * n E [ n_min, n_max >
-   * That is n_min is inclusive but not n_max.
-   */
+  /* Write a frame to xtc file */
+  extern int write_trr(XDRFILE *xd,int natoms,int step,float t,float lambda,
+		       matrix box,rvec *x,rvec *v,rvec *f);
 
-
-extern void _gmx_error(const char *key,const char *msg,const char *file,int line);
-#define gmx_error(key,msg) _gmx_error(key,msg,__FILE__,__LINE__)
-#define gmx_open(fn)    gmx_error("open",fn) 
-#define gmx_file(msg)   gmx_error("file",msg)
-
-#ifdef __cplusplus
-	   }
+  
+#ifdef CPLUSPLUS
+}
 #endif
 
-#endif	/* _fatal_h */
+#endif

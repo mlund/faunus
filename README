@@ -42,7 +42,6 @@ REQUIREMENTS:
   Optional:
   - cmake 2.6 (for cross platform compilation)
   - Boost python (for python module)
-  - Gromacs (for xtc trajectory output)
   - OpenBabel 2 (numerous molecular formats)
   - Doxygen (for code manual)
   - Graphviz (for code manual)
@@ -59,7 +58,7 @@ COMPILING USING CMAKE (RECOMMENDED):
 
   Options:
     -DENABLE_OPENMP=on|off   Enable OpenMP support
-    -DENABLE_GROMACS=on|off  Enable Gromacs XTC file support
+    -DENABLE_GROMACS=on|off  Enable Gromacs XTC file support (experimental)
     -DENABLE_PYTHON=on|off   Enable python support (experimental)
     -DENABLE_FORTRAN=on|off  Compile legacy fortran programs
     -DENABLE_BABEL=on|off    Use OpenBabel for file I/O

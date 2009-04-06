@@ -1,5 +1,5 @@
 /*
- * $Id: /local/xtcio/src/futil.h 21 2006-08-05T20:58:43.457505Z svm  $
+ * $Id: xdrfile_xtc.h,v 1.4 2009/03/05 10:52:06 spoel Exp $
  * 
  *                This source code is part of
  * 
@@ -34,28 +34,33 @@
  * Gromacs Runs On Most of All Computer Systems
  */
 
-#ifndef _futil_h
-#define _futil_h
+#ifndef _xdrfile_xtc_h
+#define _xdrfile_xtc_h
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
+#ifdef CPLUSPLUS
+extern "C" {
 #endif
 
-#include <stdio.h>
-#include "typedefs.h"
-
-#ifdef __cplusplus
-extern "C" { 
-#endif
+#include "xdrfile.h"
   
-extern bool fexist(const char *fname);
-/* Return TRUE when fname exists, FALSE otherwise */
-
-extern const char *backup_fn(const char *file);
-/* Return a backup name for file (name with # before and after) */
-
-#ifdef __cplusplus
+  /* All functions return exdrOK if succesfull. 
+   * (error codes defined in xdrfile.h).
+   */  
+   
+  /* This function returns the number of atoms in the xtc file in *natoms */
+  extern int read_xtc_natoms(char *fn,int *natoms);
+  
+  /* Read one frame of an open xtc file */
+  extern int read_xtc(XDRFILE *xd,int natoms,int *step,float *time,
+		      matrix box,rvec *x,float *prec);
+  
+  /* Write a frame to xtc file */
+  extern int write_xtc(XDRFILE *xd,
+		       int natoms,int step,float time,
+		       matrix box,rvec *x,float prec);
+  
+#ifdef CPLUSPLUS
 }
 #endif
 
-#endif	/* _futil_h */
+#endif

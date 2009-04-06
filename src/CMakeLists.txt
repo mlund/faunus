@@ -8,6 +8,9 @@ set(objs inputfile io titrate point physconst slump container
     moves/miscmove moves/rosenbluth moves/saltbath ) 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
+#----- xdrfile static library for gromacs output -----
+add_subdirectory(xdrfile)
+
 #----- link with openbabel ------
 if(ENABLE_BABEL AND OPENBABEL_FOUND)
   set(objs ${objs} iobabel)
@@ -15,25 +18,10 @@ if(ENABLE_BABEL AND OPENBABEL_FOUND)
   set(LINKLIBS ${LINKLIBS} ${OPENBABEL_LIBRARIES})
 endif(ENABLE_BABEL AND OPENBABEL_FOUND)
 
-#---- link with libxtc -----
-if (ENABLE_LIBXTC)
-  add_subdirectory(libxtc)
-  add_definitions(-DLIBXTC)
-  include_directories("${CMAKE_SOURCE_DIR}/src/libxtc/")
-  set(LINKLIBS ${LINKLIBS} libxtc)
-endif (ENABLE_LIBXTC)
-
-#----- link with gromacs -----
-if (ENABLE_GROMACS AND GMX_FOUND)
-  add_definitions(-DGROMACS)
-  include_directories(${GMX_INCLUDE_DIR})
-  set(LINKLIBS ${LINKLIBS} ${GMX_LIBRARIES})
-endif (ENABLE_GROMACS AND GMX_FOUND)
-
 #----- static faunus library -----
 add_library(libfaunus.a STATIC EXCLUDE_FROM_ALL ${objs})
 set_target_properties(libfaunus.a PROPERTIES OUTPUT_NAME faunus)
-target_link_libraries(libfaunus.a ${LINKLIBS})
+target_link_libraries(libfaunus.a xdrfile ${LINKLIBS})
 
 #----- dynamic faunus library -----
 add_library(libfaunus SHARED ${objs})
@@ -41,7 +29,12 @@ set_target_properties(libfaunus PROPERTIES
                       OUTPUT_NAME faunus
                       COMPILE_DEFINITIONS "__SVN_REV__=${SVNREVISION}"
                       )
-target_link_libraries(libfaunus ${LINKLIBS})
+if(ENABLE_GROMACS)
+  set_target_properties(libfaunus PROPERTIES COMPILE_DEFINITIONS "GROMACS" )
+endif(ENABLE_GROMACS)
+
+
+target_link_libraries(libfaunus xdrfile ${LINKLIBS})
 install(TARGETS libfaunus
         LIBRARY DESTINATION lib)
 

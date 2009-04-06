@@ -5,10 +5,12 @@
 #include "faunus/container.h"
 #include "faunus/titrate.h"
 
-
 #ifdef GROMACS
 #ifndef __cplusplus
 #define __cplusplus
+#endif
+#ifndef CPLUSPLUS
+#define CPLUSPLUS
 #endif
 #include "xdrfile/xdrfile_trr.h"
 #include "xdrfile/xdrfile_xtc.h"
@@ -196,7 +198,7 @@ namespace Faunus {
     private:
       vector<particle> load(string) {}
       rvec x[3300];
-      XDFILE xd;
+      XDRFILE *xd;
       float box[3][3], time, step;
     public:
       ioxtc(container::container &, float);

@@ -96,9 +96,6 @@ typedef struct XDRFILE XDRFILE;
 extern "C" 
 {
 #endif
-#if 0
-} /* fixes auto-indentation problems */
-#endif
 
 enum { exdrOK, exdrHEADER, exdrSTRING, exdrDOUBLE, 
 	   exdrINT, exdrFLOAT, exdrUINT, exdr3DX, exdrCLOSE, exdrMAGIC,
@@ -109,7 +106,7 @@ extern char *exdr_message[exdrNR];
 #define DIM 3
 typedef float matrix[DIM][DIM];
 typedef float rvec[DIM];
-typedef int   bool;
+typedef int   cbool;
 
 
 /*! \brief Open a portable binary file, just like fopen()

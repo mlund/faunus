@@ -43,7 +43,7 @@
 typedef struct		/* This struct describes the order and the	*/
 /* sizes of the structs in a trjfile, sizes are given in bytes.	*/
 {
-    bool  bDouble;        /* Double precision?                            */
+    cbool  bDouble;        /* Double precision?                            */
     int	ir_size;	/* Backward compatibility		        */
     int	e_size;		/* Backward compatibility		        */
     int	box_size;	/* Non zero if a box is present			*/
@@ -87,7 +87,7 @@ static int nFloatSize(t_trnheader *sh,int *nflsz)
     return exdrOK;
 }
 
-static int do_trnheader(XDRFILE *xd,bool bRead,t_trnheader *sh)
+static int do_trnheader(XDRFILE *xd,cbool bRead,t_trnheader *sh)
 {
 	int magic=GROMACS_MAGIC;
 	int nflsz,slen,result;
@@ -167,7 +167,7 @@ static int do_trnheader(XDRFILE *xd,bool bRead,t_trnheader *sh)
     return exdrOK;
 }
 
-static int do_htrn(XDRFILE *xd,bool bRead,t_trnheader *sh,
+static int do_htrn(XDRFILE *xd,cbool bRead,t_trnheader *sh,
 				   matrix box,rvec *x,rvec *v,rvec *f)
 {
 	double pvd[DIM*DIM];
@@ -420,7 +420,7 @@ static int do_htrn(XDRFILE *xd,bool bRead,t_trnheader *sh,
 	return exdrOK;
 }
 
-static int do_trn(XDRFILE *xd,bool bRead,int *step,float *t,float *lambda,
+static int do_trn(XDRFILE *xd,cbool bRead,int *step,float *t,float *lambda,
 				  matrix box,int *natoms,rvec *x,rvec *v,rvec *f)
 {
     t_trnheader *sh;

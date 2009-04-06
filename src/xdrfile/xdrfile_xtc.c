@@ -35,7 +35,7 @@
 
 enum { FALSE, TRUE };
 
-static int xtc_header(XDRFILE *xd,int *natoms,int *step,float *time,bool bRead)
+static int xtc_header(XDRFILE *xd,int *natoms,int *step,float *time,cbool bRead)
 {
 	int result,magic,n=1;
 	
@@ -61,7 +61,7 @@ static int xtc_header(XDRFILE *xd,int *natoms,int *step,float *time,bool bRead)
 }
 
 static int xtc_coord(XDRFILE *xd,int *natoms,matrix box,rvec *x,float *prec,
-					 bool bRead)
+					 cbool bRead)
 {
 	int i,j,result;
     

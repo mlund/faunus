@@ -165,11 +165,11 @@ namespace Faunus {
     }
   }
 
-  unsigned short group::displace(container &c, double dp) {
+  unsigned short group::displace(container &c, point dp) {
     unsigned short i=random();
-    c.trial[i].x = c.p[i].x + dp*slp.random_half();
-    c.trial[i].y = c.p[i].y + dp*slp.random_half();
-    c.trial[i].z = c.p[i].z + dp*slp.random_half();
+    c.trial[i].x = c.p[i].x + dp.x*slp.random_half();
+    c.trial[i].y = c.p[i].y + dp.y*slp.random_half();
+    c.trial[i].z = c.p[i].z + dp.z*slp.random_half();
     c.boundary(c.trial[i]);
     return i;
   }
@@ -701,7 +701,7 @@ namespace Faunus {
   //! corresponds to flexible N(CH3)+ groups attached to
   //! phosphate groups. 
   unsigned short zwittermembrane::displace(container &c, double d) {
-    unsigned short i=group::displace(c,d);
+    unsigned short i=0;//=group::displace(c,d);
     if (i%2==0)
       project(c.trial[i]); // keep even particles in the plane
     return i;

@@ -294,10 +294,10 @@ namespace Faunus {
 
   void saltmove::init() {
     name="SALT DISPLACEMENTS";
-    dp=30;
     deltadp=2;
     runfraction=1.0;
     rsqr=0;
+    dpv.x=dpv.y=dpv.z=1;
   }
 
   /*! \param g Group containing mobile ions
@@ -319,7 +319,7 @@ namespace Faunus {
       return 0;
     du=0;
     cnt++;
-    n=g.displace(*con, dp); 
+    n=g.displace(*con, dpv*dp); 
     //std::swap(con->p[n], con->p[0]);
     //std::swap(con->trial[n], con->trial[0]);
     //n=0;
@@ -360,7 +360,8 @@ namespace Faunus {
   string saltmove::info() {
     std::ostringstream o;
     o << markovmove::info()
-      << "#   Mean sq. displ./particle  = " << sqrt(rsqr) << endl;
+      << "#   Mean sq. displ./particle  = " << sqrt(rsqr) << endl
+      << "#   Displacement directions   = " << dpv.x << " " << dpv.y << " " << dpv.z << endl;
     return o.str();
   }
 }//namespace

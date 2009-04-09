@@ -76,6 +76,7 @@ namespace Faunus {
       void init();
       long double rsqr;  //!< Mean square displacement
     public:
+      point dpv;                      //!< Displacement direction vector
       saltmove( ensemble &, container&, energybase& );
       saltmove( ensemble &, container&, energybase&, inputfile &);
       double move(group &, int);      //!< Move a single particle

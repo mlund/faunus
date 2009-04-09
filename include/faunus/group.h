@@ -47,7 +47,7 @@ namespace Faunus {
       void add(container &, particle::type, short);       //!< Add particles w. collision check
       bool swap(container &, group &);                    //!< Swap location of two groups
       short int count(vector<particle> &, particle::type);//!< Count number of specific particles
-      virtual unsigned short displace(container&,double); //!< Displace random particle
+      virtual unsigned short displace(container&, point); //!< Displace random particle
       virtual void isobaricmove(container &, double){};   //!< Pressure scaling
       virtual unsigned short nummolecules();              //!< Number of molecules
       unsigned short numhydrophobic(vector<particle> &);  //!< Number of hydrophobic particles

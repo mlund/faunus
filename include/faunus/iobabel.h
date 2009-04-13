@@ -8,6 +8,7 @@
 #include "faunus/point.h"
 
 namespace Faunus {
+  using OpenBabel::OBAtomAtomIter;
   /*! \brief OpenBabel file support
    *  \author Mikael Lund
    *  \date Helsingor, 2008
@@ -19,6 +20,7 @@ namespace Faunus {
    */
   class iobabel {
     private:
+      vector<unsigned short> nb;
       OpenBabel::OBConversion obconv;
       OpenBabel::OBMol mol;
       OpenBabel::OBAtom atom;
@@ -32,6 +34,7 @@ namespace Faunus {
       particle get(unsigned int); //!< Convert n'th babel atom to a particle
       void read(string);          //!< Read entire file (autodetect format from extension)
       bool write(string,const vector<particle> &);//!< Write coordinates (format from extension)
+      vector<unsigned short> neighbors(unsigned short int); //!< Get list of neighboring atoms
   };
 }
 #endif

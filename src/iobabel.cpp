@@ -19,6 +19,15 @@ namespace Faunus {
     }
   }
 
+  vector<unsigned short> iobabel::neighbors(unsigned short i) {
+    nb.clear();
+    OpenBabel::OBAtom* atomPtr, nbrPtr;
+    atomPtr = mol.GetAtom(i+1);  // Babel starts at 1; Faunus at 0.
+    FOR_NBORS_OF_ATOM(nbrPtr, atomPtr)  // Maybe FOR_BONDS_OF_ATOM?
+      nb.push_back( nbrPtr->GetIdx()-1 );
+    return nb;
+  }
+
   bool iobabel::write(string filename, const vector<particle> &) {
     mol.Clear();
     for (unsigned int i=0; i<p.size(); i++) {

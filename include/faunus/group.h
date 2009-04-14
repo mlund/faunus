@@ -7,6 +7,7 @@
 #include "faunus/container.h"
 #include "faunus/pot_spring.h"
 #include "faunus/inputfile.h"
+#include "faunus/iobabel.h"
 
 namespace Faunus {
   /*! \brief Groups set of particles, such as molecules, salt etc.
@@ -124,62 +125,20 @@ namespace Faunus {
       group operator[](unsigned short); //!< Access n'th molecule
       void add(container &, vector<particle> &, short=1);
       vector<int> pick(int );
-};
+  };
 
-  /*! \brief Freely jointed chain with harmonic spring potentials
+  /*! \brief Class for polymer molecules
    *  \author Mikael Lund
+   *  \date Lund 2009
    */
-  class chain : public group, private pot_spring {
+  class polymer : public group {
+    private:
+      vector< vector<unsigned short> > nb;
     public:
-      chain(container &, int, particle::type, double );
-      chain(container &, int, particle::type, double , point &);
-      double k;                   //!< Spring constant
-      double req;                 //!< Equilibrium distance between monomers
-      bool graftpoint;       //!< Is chain grafted? (default == false)
-      point *GP;             //!< Pointer to graft point
-      void add(container &, int, particle::type);
-      void addgrafted(container &, int, particle::type, point &);
-      double monomerenergy(vector<particle> &, short);    //!< Spring energy of a monomer
-      double internalenergy(vector<particle> &);          //!< Internal spring energy
-      //!< Spring potential
-      inline double quadratic(point &p1, point &p2) {
-        double r=p1.dist(p2)-req;
-        return k*r*r;
-      }
-  };
-
-  /*
-  // A brush lying in the xy-plane
-
-  class brush : public group, private pot_spring {
-  private:
-  vector<chain>;
-  public:
-  brush(int, int)
-  };
-  */
-
-  class planarsurface : public group {
-    public:
-      point plane;                //!< Plane definition
-      point offset;               //!< Plane translation
-      planarsurface();
-      void project(point &);      //!< Project point onto plane
-  };
-
-  /*! \brief This class is used for zwitter ions present on a surface.
-   *  \author Mikael Lund
-   *
-   *  One end of the zwitter ion (even particles) can move only on the
-   *  surface while the other ends (odd particles) are allowed to move
-   *  in any direction. The two ends are connected by a spring.
-   */
-  class zwittermembrane : public planarsurface, private pot_spring {
-    public:
-      short mate(short);                                  //!< Find Zwitter ion partners (two "mates")
-      void add(container&, particle, particle, short=1);  //!< Add Zwitter ion(s)
-      unsigned short displace(container&, double);        //!< Displace random particle
-      double selfenergy(particles &);                     //!< Return internal spring energy
+      polymer();
+      bool babeladd( container &, inputfile & ); //!< Load molecule from disk using OpenBabel
+      vector<unsigned short> neighbors(unsigned short);
+      string info();
   };
 }//namespace
 #endif

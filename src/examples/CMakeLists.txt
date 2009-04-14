@@ -43,5 +43,6 @@ set_target_properties( spceMI PROPERTIES COMPILE_DEFINITIONS "SPCE_MINIMAGE")
 if (ENABLE_BABEL AND OPENBABEL_FOUND)
   include_directories(${OPENBABEL_INCLUDE_DIR})
   fau_example(babel2aam tools babel2aam.cpp)
+  fau_example(wallprotein wallprotein wp.cpp)
 endif (ENABLE_BABEL AND OPENBABEL_FOUND)
 

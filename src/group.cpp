@@ -1,5 +1,4 @@
-#include "faunus/group.h"
-
+#include <faunus/group.h>
 namespace Faunus {
 
   //---------------- GROUP -----------------------
@@ -604,111 +603,35 @@ namespace Faunus {
     return n;
   }
 
-  //--------------- CHAIN -----------------
-  chain::chain(container &con, int n, particle::type sort, double r) { graftpoint=false; 
-    req=r;
-    add(con, n, sort);
-  }
-  void chain::add(container &con, int n, particle::type sort) { // no check of PARTICLE overlap
-    point ru;
-    particle a=con.atom(sort);
-    beg=con.p.size();
-    con.randompos(a);
-    end=con.push_back(a)-1;
-    ru.ranunit(slp);
-    a+=ru*req;
-    for (int i=1; i<n; i++) {
-      do {
-        a=a-ru*req;
-        ru.ranunit(slp);
-        a+=ru*req;
-      } while (con.overlap(a));
-      end = con.push_back(a)-1;
+  polymer::polymer() {}
+  bool polymer::babeladd(container &c, inputfile &in) {
+    iobabel ob;
+    nb.clear();
+    ob.read(in.getstr("polymer"));
+    add(c,ob.p);
+    move(c,-cm);
+    accept(c);
+    for (int i=beg; i<=end; i++) {
+      nb.push_back( ob.neighbors(i-beg) );
+      for (int j=0; j<nb[i-beg].size(); j++)
+        nb[i-beg][j]+=beg;
     }
+    return true;
   }
 
-  chain::chain(container &con, int n, particle::type sort, double r, point &gp) { graftpoint=true; 
-    GP=&gp;
-    req=r;
-    addgrafted(con, n, sort, gp);
-  }
+  vector<unsigned short> polymer::neighbors(unsigned short i) { return nb.at(i-beg); }
 
-  void chain::addgrafted(container &con, int n, particle::type sort, point &gp) { // no check of PARTICLE overlap
-    point ru;
-    particle a=con.atom(sort);
-    beg=con.p.size();
-    con.randompos(a);
-    a=gp;
-    ru.ranunit(slp);
-    a+=ru*req;
-    for (int i=0; i<n; i++) {
-      do {
-        a=a-ru*req;
-        ru.ranunit(slp);
-        a+=ru*req;
-      } while (con.overlap(a));
-      end = con.push_back(a)-1;
+  string polymer::info() {
+    std::ostringstream o;
+    o << group::info();
+    o << "#   Connectivity:" << std::endl;
+    for (int i=0; i<nb.size(); i++) {
+      o << "#     Atom " << i+beg << ": ";
+      for (int j=0; j<nb[i].size(); j++)
+        o << nb[i][j] << " ";
+      o << std::endl;
     }
+    return o.str();
   }
 
-  double chain::monomerenergy(vector<particle> &p, short i) {
-    double u=0;
-    //the first ?
-    if (i==beg) {
-      u+=quadratic( p[i], p[i+1] );
-      if (graftpoint)
-        u+=quadratic( p[i], *GP );
-      return u;
-    }
-    //the last ?
-    if (i==end)
-      return quadratic( p[i], p[i-1] );
-    //otherwise...
-    return quadratic(p[i], p[i+1]) + quadratic(p[i], p[i-1]);
-  }
-  double chain::internalenergy(vector<particle> &p) {
-    double u=0;
-    for (short i=beg; i<end; i++)
-      u+=quadratic( p[i], p[i+1]);
-    if (graftpoint)
-      u+=quadratic( p[beg], *GP );
-    return u;
-  }
-
-  //-------------------- PLANE -----------------
-  //! By default the plane lies in the XY plane at
-  //! z=0. This plane can be put in XZ and YZ by changing
-  //! the plane vector. To shift the plane, modify the
-  //! offset vector.
-  planarsurface::planarsurface() {
-    plane.x=1;
-    plane.y=1;
-    plane.z=0;
-  }
-  void planarsurface::project(point &p) { p=p*plane + offset; }
-
-  //--------------------- PHOSPHOMEMBRANE -------------------
-  double zwittermembrane::selfenergy(particles &par) {
-    double u=0;
-    for (short i=beg; i<end; i=i+2)
-      u+=pairpot(par.p[i], par.p[i+1]);
-    return u;
-  }
-  short zwittermembrane::mate(short i) { return (i%2==0) ? i+1 : i-1; }
-
-  //! Even particles can move only in the plane while odd
-  //! particles can move in any direction. The latter
-  //! corresponds to flexible N(CH3)+ groups attached to
-  //! phosphate groups. 
-  unsigned short zwittermembrane::displace(container &c, double d) {
-    unsigned short i=0;//=group::displace(c,d);
-    if (i%2==0)
-      project(c.trial[i]); // keep even particles in the plane
-    return i;
-  } 
-  // Brush
-  /*
-     brush::brush
-     t*/      
-
-}
+}//namespace

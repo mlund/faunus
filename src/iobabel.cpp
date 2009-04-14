@@ -14,17 +14,20 @@ namespace Faunus {
     while (notatend) {
       for (unsigned int i=1; i<=mol.NumAtoms(); i++)
         p.push_back(get(i));
-      mol.Clear();
+      //mol.Clear();
       notatend = obconv.Read(&mol);
     }
   }
 
   vector<unsigned short> iobabel::neighbors(unsigned short i) {
-    nb.clear();
-    OpenBabel::OBAtom* atomPtr, nbrPtr;
-    atomPtr = mol.GetAtom(i+1);  // Babel starts at 1; Faunus at 0.
-    FOR_NBORS_OF_ATOM(nbrPtr, atomPtr)  // Maybe FOR_BONDS_OF_ATOM?
-      nb.push_back( nbrPtr->GetIdx()-1 );
+    vector<unsigned short> nb;
+    if (mol.NumAtoms()>0) {
+      OpenBabel::OBAtom* atomPtr, nbrPtr;
+      atomPtr = mol.GetAtom(i+1);  // Babel starts at 1; Faunus at 0.
+      FOR_NBORS_OF_ATOM(nbrPtr, atomPtr) {  // Maybe FOR_BONDS_OF_ATOM?
+        nb.push_back( nbrPtr->GetIdx()-1 );
+      }
+    }
     return nb;
   }
 

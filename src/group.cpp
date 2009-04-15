@@ -603,6 +603,7 @@ namespace Faunus {
     return n;
   }
 
+#ifdef BABEL
   polymer::polymer() {}
   bool polymer::babeladd(container &c, inputfile &in) {
     iobabel ob;
@@ -633,5 +634,6 @@ namespace Faunus {
     }
     return o.str();
   }
+#endif
 
 }//namespace

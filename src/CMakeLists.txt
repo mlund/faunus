@@ -16,6 +16,7 @@ if(ENABLE_BABEL AND OPENBABEL_FOUND)
   set(objs ${objs} iobabel)
   include_directories(${OPENBABEL_INCLUDE_DIR})
   set(LINKLIBS ${LINKLIBS} ${OPENBABEL_LIBRARIES})
+  add_definitions(-DBABEL)
 endif(ENABLE_BABEL AND OPENBABEL_FOUND)
 
 #----- static faunus library -----

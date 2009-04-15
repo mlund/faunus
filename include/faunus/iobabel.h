@@ -1,6 +1,8 @@
 #ifndef FAU_IOBABEL_H
 #define FAU_IOBABEL_H
 
+#ifdef BABEL
+
 #include <openbabel/obconversion.h>
 #include <openbabel/mol.h>
 #include <openbabel/obmolecformat.h>
@@ -37,4 +39,5 @@ namespace Faunus {
       vector<unsigned short> neighbors(unsigned short int); //!< Get list of neighboring atoms
   };
 }
+#endif
 #endif

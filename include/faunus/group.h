@@ -127,6 +127,7 @@ namespace Faunus {
       vector<int> pick(int );
   };
 
+#ifdef BABEL
   /*! \brief Class for polymer molecules
    *  \author Mikael Lund
    *  \date Lund 2009
@@ -140,6 +141,7 @@ namespace Faunus {
       vector<unsigned short> neighbors(unsigned short);
       string info();
   };
+#endif
 }//namespace
 #endif
 

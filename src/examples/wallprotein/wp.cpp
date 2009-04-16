@@ -7,6 +7,7 @@
  * \include wp.cpp
  */
 #include "faunus/faunus.h"
+#include "faunus/energy/springinteraction.h"
 
 using namespace std;
 using namespace Faunus;                 // Access to Faunus classes
@@ -17,7 +18,7 @@ int main() {
   mcloop loop(in);                      // Set Markov chain loop lengths
   canonical nvt;                        // Use the canonical ensemble
   box cell(in);                         // We want a cubic simulation container
-  interaction<pot_hsminimage> pot(in);  // ...and a Coulomb/HS pot. w. minimum image
+  springinteraction<pot_hsminimage> pot(in);  // ...and a Coulomb/HS pot. w. minimum image
   saltmove sm(nvt,cell,pot,in);         // Class for salt movements
   salt salt;                            // Define some groups for mobile ions
   salt.add(cell,in);                    // Insert some ions
@@ -25,6 +26,7 @@ int main() {
   polymer pol;
   pol.babeladd( cell, in );
   cout << pol.info() ;
+  pot.monomerenergy(cell.p, pol, 9);
   return 0;
   iopqr pqr(cell.atom);                 // File I/O class
   ioaam aam(cell.atom);                 // File I/O class

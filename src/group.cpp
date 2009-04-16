@@ -622,6 +622,11 @@ namespace Faunus {
 
   vector<unsigned short> polymer::neighbors(unsigned short i) { return nb.at(i-beg); }
 
+  //!< is j a neighbor to polymer atom i?
+  bool polymer::areneighbors(unsigned short i, unsigned short j) {
+    return ( std::find( nb[i].begin(), nb[i].end(), j) != nb[i].end() ) ? true : false;
+  }
+
   string polymer::info() {
     std::ostringstream o;
     o << group::info();

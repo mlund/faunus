@@ -133,13 +133,13 @@ namespace Faunus {
    *  \date Lund 2009
    */
   class polymer : public group {
-    private:
-      vector< vector<unsigned short> > nb;
     public:
+      vector< vector<unsigned short> > nb; //!< Neighbor list
       polymer();
       bool babeladd( container &, inputfile & ); //!< Load molecule from disk using OpenBabel
       vector<unsigned short> neighbors(unsigned short);
       string info();
+      bool areneighbors(unsigned short, unsigned short);
   };
 #endif
 }//namespace

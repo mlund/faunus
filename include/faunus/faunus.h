@@ -37,6 +37,7 @@
 #include "faunus/moves/volume.h"
 #include "faunus/moves/miscmove.h"
 #include "faunus/moves/rosenbluth.h"
+#include "faunus/moves/clustermove.h"
 
 namespace Faunus {
   string faunus_splash();

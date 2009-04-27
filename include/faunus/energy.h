@@ -541,6 +541,19 @@ namespace Faunus {
                                                 // the self term will not be double counted
         return p[i].charge*scale*(uex*2+uin); 
       }
+      double image(const vector<particle> &p, const group &g1, const group &g2) {
+        double u=0;
+        for (int i=g1.beg; i<=g1.end; i++)               //Dielectric and g1
+          for (int j=g1.beg; j<=g1.end; j++)
+            u += p[i].charge*impot(ich[j], p[i], img[j]);
+        for (int i=g2.beg; i<=g2.end; i++)               //Delectric and g2
+          for (int j=g2.beg; j<=g2.end; j++)
+            u += p[i].charge*impot(ich[j], p[i], img[j]);
+        for (int i=g1.beg; i<=g1.end; i++)               //g1 and g2 through dielectric
+          for (int j=g2.beg; j<=g2.end; j++)
+            u += 2*p[i].charge*impot(ich[j], p[i], img[j]);
+        return u*scale;
+      } 
       double imageint(const vector<particle> &p, group) {
         double u=0;
         return u;
@@ -598,6 +611,12 @@ namespace Faunus {
         ur=interaction<T>::energy(p,g);
         ui=image(p,g);
         ratio+=std::abs(ui/(ur+ui));
+        return ur+ui;
+      }
+      double energy(const vector<particle> &p, const group&g1, const group &g2) {
+        updateimg(p,g1), updateimg(p,g2);
+        ur=interaction<T>::energy(p, g1, g2);
+        ui=image(p,g1,g2);
         return ur+ui;
       }
       double energy(const vector<particle> &p, molecules &m, vector<int> &n) {

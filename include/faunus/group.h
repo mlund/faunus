@@ -41,6 +41,7 @@ namespace Faunus {
       bool operator==(const group&) const;
 
       void move(container &, point);                      //!< Translate group
+      void invert(vector<particle> &, point &);           //!< Invert a group
       bool overlap(container &);                          //!< Test overlap w all particles
       void undo(particles &);
       void accept(particles &);                           //!< Accept a move

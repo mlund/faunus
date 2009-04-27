@@ -238,6 +238,13 @@ namespace Faunus {
     std::swap(end, g.end);
     return true;
   }
+  void group::invert(vector<particle> &p, point &iv) {
+    for (int i=beg; i<=end; i++) {
+      p[i].x=-p[i].x+2*iv.x;
+      p[i].y=-p[i].y+2*iv.y;
+      p[i].z=-p[i].z+2*iv.z;
+    }
+  }
 
   /*****************************
    *

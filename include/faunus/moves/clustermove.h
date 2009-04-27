@@ -12,7 +12,7 @@ namespace Faunus {
    * \brief Quick and dirty translational cluster move
    * \warning This rutine is only compatible for systems containing a set of macromolecules!
    *
-   */
+   *
   class clustertranslate : public markovmove {
     public: 
       clustertranslate( ensemble&, container&, energybase&, double);
@@ -31,7 +31,7 @@ namespace Faunus {
       string info();
   };
 
-  /*!
+  *!
    * This type of move will attempt to move collective sets of macromolecules that
    * obeys some criteria (here a hardcore overlap) with a symmetric transition
    * matrix (no flow through the clusters).
@@ -39,7 +39,7 @@ namespace Faunus {
    * \brief Quick and dirty rotational cluster move
    * \warning This rutine is only compatible for systems containing a set of macromolecules!
    *
-   */
+   *
   class clusterrotate : public markovmove {
     public: 
       clusterrotate( ensemble&, container&, energybase&);
@@ -56,6 +56,51 @@ namespace Faunus {
       double sep, angle;             // separation parameter
       int FLOW;               // control variable
       string info();
+  };*/
+
+  // Non-rejective cluster inversion. Minor testing suggest that 
+  // the algorithm is ok.
+
+  class clusterinvw : public markovmove {
+  public :
+    clusterinvw( ensemble&, container&, sphericalimage<pot_test>&);
+    double move(molecules &);
+    string info();
+    average< double > movefrac;
+    vector<int> moved;
+    vector<int> remaining;
+    sphericalimage<pot_test> *ipot;
+  };
+
+  // Non-rejective cluster inversion on a partial volume and meteropolis weigth
+  // with the rest. Untested and undone.
+
+  class clusterrinvw : public markovmove {
+  public :
+    clusterrinvw( ensemble&, container&, sphericalimage<pot_test>&,
+                  double&, double&);
+    double r;                 // restricted radius
+    double cr,cr2;            // cavity radius
+    double move(molecules &);
+    string info();
+    average< double > movefrac;
+    vector<int> moved;
+    vector<int> remaining;
+    sphericalimage<pot_test> *ipot;
+  };
+
+  // Non-rejective cluster translation. Undone and untested
+
+  class clustertrans : public markovmove {
+  public :
+    clustertrans( ensemble&, container&, energybase&, vector<macromolecule>&);
+    double move(vector<macromolecule> &);
+    string info();
+    average< double > movefrac;
+//    distributions dist;
+    vector<int> moved;
+    vector<int> remaining;
+//    vector<macromolecule> *g;
   };
 }//namespace
 #endif

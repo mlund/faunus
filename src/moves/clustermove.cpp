@@ -1,6 +1,181 @@
 #include <faunus/moves/clustermove.h>
 
 namespace Faunus {
+//  INVERSION  
+  clusterinvw::clusterinvw( ensemble &e,
+    container &c, sphericalimage<pot_test> &i 
+    ) : markovmove(e,c,i) {
+      name ="WATER CLUSTER INVERSION, cite xxx";
+      runfraction=1.;
+      ipot=&i;
+     }
+
+  string clusterinvw::info() {
+    ostringstream o;
+    o << markovmove::info()
+      << "#   A fraction of "<<movefrac.avg()<<" are moved ( "<<movefrac.stdev()<<")"<<endl;
+    return o.str();
+  }
+
+  double clusterinvw::move(molecules &m) {
+    cnt++;
+    du=-pot->energy(con->p,m)-pot->internal(con->p, m, m.numatom);
+    double udiff=0, un=0, uo=0;
+      moved.clear(), remaining.clear();
+    for (int i=0; i<m.size()/m.numatom; i++)
+      remaining.push_back(i);
+    int f;
+    point origin;
+    origin.x=0, origin.y=0, origin.z=0;
+    f=slp.random_one()*remaining.size();
+    moved.push_back(remaining[f]);
+    remaining.erase(remaining.begin()+f);    // Pick first index in m to move
+    for(int i=0; i<moved.size(); i++) {
+      m[moved[i]].invert(con->trial, origin);
+      for(int j=0; j<remaining.size();j++) {
+        uo=pot->energy(con->p,     m[moved[i]], m[remaining[j]]);
+        un=pot->energy(con->trial, m[moved[i]], m[remaining[j]]);
+        udiff=un-uo;
+        if(slp.random_one() < (1.-exp(-udiff)) ) {
+          moved.push_back(remaining[j]);
+          remaining.erase(remaining.begin()+j);
+          j=j-1;
+        }
+      }
+      m[moved[i]].accept(*con);
+      ipot->updateimg(con->p, m[moved[i]]);
+    } 
+    du+=pot->energy(con->p,m) + pot->internal(con->p,m, m.numatom);
+    movefrac+=moved.size()/(moved.size()+remaining.size());
+    rc=OK;
+    naccept++;
+    utot+=du;
+    return du;   
+  }
+
+//  RESTRICTED INVERSION  
+  clusterrinvw::clusterrinvw( ensemble &e,
+    container &c, sphericalimage<pot_test> &i, double &rad, double &cavrad 
+    ) : markovmove(e,c,i) {
+      name ="RESTRICTED WATER CLUSTER INVERSION, cite xxx";
+      runfraction=1.;
+      ipot=&i;
+      r=rad-3;
+      cr=cavrad;
+      cr2=cr*cr;
+     }
+
+  string clusterrinvw::info() {
+    ostringstream o;
+    o << markovmove::info()
+      << "#   A fraction of "<<movefrac.avg()<<" are moved ( "<<movefrac.stdev()<<")"<<endl;
+    return o.str();
+  }
+
+  double clusterrinvw::move(molecules &m) {
+    cnt++;
+    du=-pot->energy(con->p,m)-pot->internal(con->p, m, m.numatom);
+    point ip;
+    ip.ranunit(slp);
+    ip=ip*r*slp.random_one();
+    double udiff=0, un=0, uo=0;
+      moved.clear(), remaining.clear();
+    for (int i=0; i<m.size()/m.numatom; i++)
+      if (con->sqdist(con->trial[m[i].beg], ip)<cr2)
+        remaining.push_back(i);
+    group g;
+    for (int i=0; i<remaining.size(); i++) {
+      g.beg=m[i].beg, g.end=m[i].end;
+      m[remaining[i]].swap(*con, g);
+    }
+    int f;
+    f=slp.random_one()*remaining.size();
+    moved.push_back(remaining[f]);
+    remaining.erase(remaining.begin()+f);    // Pick first index in m to move
+    for(int i=0; i<moved.size(); i++) {
+      m[moved[i]].invert(con->trial, ip);
+      for(int j=0; j<remaining.size();j++) {
+        uo=pot->energy(con->p,     m[moved[i]], m[remaining[j]]);
+        un=pot->energy(con->trial, m[moved[i]], m[remaining[j]]);
+        udiff=un-uo;
+        if(slp.random_one() < (1.-exp(-udiff)) ) {
+          moved.push_back(remaining[j]);
+          remaining.erase(remaining.begin()+j);
+          j=j-1;
+        }
+      }
+//      m[moved[i]].accept(*con);
+      ipot->updateimg(con->p, m[moved[i]]);
+    } 
+    du+=pot->energy(con->p,m) + pot->internal(con->p,m, m.numatom);
+    movefrac+=moved.size()/(moved.size()+remaining.size());
+    rc=OK;
+    naccept++;
+    utot+=du;
+    return du;   
+  }
+
+//  CLUSTER TRANSLATION  
+  clustertrans::clustertrans( ensemble &e,
+    container &c, energybase &i , vector<macromolecule> &g
+    ) : markovmove(e,c,i) {
+      name ="Non-rejective cluster translation, cite xxx";
+      runfraction=1.;
+//      g=&G;
+//      distributions d(1., 1., g.size());
+//      dist=d;
+     }
+
+  string clustertrans::info() {
+    ostringstream o;
+    o << markovmove::info()
+      << "#   A fraction of "<<movefrac.avg()<<" of the molecules are moved on avg. ( "<<movefrac.stdev()<<")"<<endl;
+    return o.str();
+  }
+
+  double clustertrans::move(vector<macromolecule> &g) {
+    cnt++;
+    du=0;
+    for (int i=0; i<g.size()-1; i++)
+      for (int j=i+1; j<g.size(); j++)
+        du-=pot->energy(con->p, g[i], g[j]);
+    point ip;
+    ip.x=dp*slp.random_half();
+    ip.y=dp*slp.random_half();
+    ip.z=dp*slp.random_half();
+    double udiff=0, un=0, uo=0;
+    moved.clear(), remaining.clear();
+    for (int i=0; i<g.size(); i++)
+      remaining.push_back(i);
+    int f;
+    f=slp.random_one()*remaining.size();
+    moved.push_back(remaining[f]);
+    remaining.erase(remaining.begin()+f);    // Pick first index in m to move
+    for(int i=0; i<moved.size(); i++) {
+      g[moved[i]].move(*con, ip);
+      for(int j=0; j<remaining.size();j++) {
+        uo=pot->energy(con->p,     g[moved[i]], g[remaining[j]]);
+        un=pot->energy(con->trial, g[moved[i]], g[remaining[j]]);
+        udiff=un-uo;
+        if(slp.random_one() < (1.-exp(-udiff)) ) {
+          moved.push_back(remaining[j]);
+          remaining.erase(remaining.begin()+j);
+          j=j-1;
+        }
+      }
+      g[moved[i]].accept(*con);
+    }
+    for (int i=0; i<g.size()-1; i++)
+      for (int j=i+1; j<g.size(); j++)
+        du+=pot->energy(con->p, g[i], g[j]);
+    movefrac+=double(moved.size())/double((moved.size()+remaining.size()));
+    rc=OK;
+    naccept++;
+    utot+=du;
+    return du;   
+  }
+
+/*/ TRANSLATION
   clustertranslate::clustertranslate( ensemble &e,
       container &c, energybase &i, double S ) : markovmove(e,c,i) {
     name = "MACROMOLECULAR CLUSTER TRANSLATION";
@@ -232,4 +407,49 @@ namespace Faunus {
     }
     return o.str();
   }
+*  clusterinv::clusterinv( ensemble &e, container &c, interaction<T_pairpot> &i) : markovmove(e,c,i) {
+    name = "REJECTION FREE INVERTATIONS, Explicitly writen for spce water!!!";
+    runfraction=0;
+  }
+  double clusterinv::move(molecules &m) {
+  udiff=0;
+  remaining.clear();
+  moved.clear();
+  for (int i=0; i<m.size/m.numatom; i++)
+    remaining.push_back(i);
+  int f;
+  f=slp.random_one()*remaining.size();
+  moved.push_back(remaining[f]);
+  remaining.erase(remaining.begin()+int(f-1));    // Pick first index in m to move
+
+  for(int i=0; i<moved.size(); i++) {
+    con->p[m[i].beg].x=-con->p[m[i].beg].x
+    con->p[m[i].beg].y=-con->p[m[i].beg].y
+    con->p[m[i].beg].z=-con->p[m[i].beg].z
+    con->p[m[i].beg+1].x=-con->p[m[i].beg+1].x
+    con->p[m[i].beg+1].y=-con->p[m[i].beg+1].y
+    con->p[m[i].beg+1].z=-con->p[m[i].beg+1].z
+    con->p[m[i].beg+2].x=-con->p[m[i].beg+2].x
+    con->p[m[i].beg+2].y=-con->p[m[i].beg+2].y
+    con->p[m[i].beg+2].z=-con->p[m[i].beg+2].z
+    for(int j=0; i<moved.size(); j++) {
+      udiff=pot->energy(con->p, m[i], m[j]) - pot->energy(con->trial, m[i], m[j]);
+      if(slp.random_one() < (1.-exp(-udiff))) {
+        con->p[m[j].beg].x=-con->p[m[j].beg].x
+        con->p[m[j].beg].y=-con->p[m[j].beg].y
+        con->p[m[j].beg].z=-con->p[m[j].beg].z
+        con->p[m[j].beg+1].x=-con->p[m[j].beg+1].x
+        con->p[m[j].beg+1].y=-con->p[m[j].beg+1].y
+        con->p[m[j].beg+1].z=-con->p[m[j].beg+1].z
+        con->p[m[j].beg+2].x=-con->p[m[j].beg+2].x
+        con->p[m[j].beg+2].y=-con->p[m[j].beg+2].y
+        con->p[m[j].beg+2].z=-con->p[m[j].beg+2].z
+
+        flytta over mellan vektorer...
+
+        } 
+      }
+    }
+    m[i].accept(*con)
+  }*/
 }//namespace

@@ -32,6 +32,7 @@ inline std::string stringify(double x)
 }
 
 int main() {
+  cout << faunus_splash();
   cout << "---------- INITIAL PARAMETERS -----------" << endl;
   slump slump;                            // A random number generator
   physconst phys;
@@ -43,7 +44,6 @@ int main() {
   canonical nvt;                          // Use the canonical ensemble
   interaction<pot_debyehuckelP3> pot(in); // Functions for interactions
   iogro gro(cell.atom, in);               // Gromacs file output for VMD etc.
-  FAUrdf protrdf(0,0,.5,cell.len/2.);     // Protein and salt radial distributions
 
   vector<macromolecule> g;                // PROTEIN groups
   io io;
@@ -62,6 +62,7 @@ int main() {
   // Markovsteps
   macrorot mr(nvt, cell, pot);            //   Class for macromolecule rotation
   translate mt(nvt, cell, pot);           //   Class for macromolecular translation
+  clustertrans ct(nvt, cell, pot, g);     //   Class for non-rejective cluster translation
   isobaric<pot_debyehuckelP3> vol(
       nvt, cell, pot,
       in.getflt("pressure"),              // Set external pressure (in kT)
@@ -78,19 +79,27 @@ int main() {
   vol.dp=in.getflt("voldp");
   mt.dp =in.getflt("mtdp");
   mr.dp =in.getflt("mrdp");
+  ct.dp=in.getflt("ctdp");
 
   // Analysis and energy
-  systemenergy sys(pot.energy(cell.p));   // System energy analysis
-  histogram lendist(1. ,in.getflt("minlen"), in.getflt("maxlen"));             
+  double usys=0;
+  for (int i=0; i<g.size()-1; i++)
+    for (int j=i+1; j<g.size(); j++)
+      usys+=pot.energy(cell.p, g[i], g[j]);
+  
+  systemenergy sys(usys);   // System energy analysis
+  histogram lendist(in.getflt("binlen",1.) ,in.getflt("minlen"), in.getflt("maxlen"));             
+  aggregation agg(cell, g, 1.5);
 
-  FAUrdf pp(cell.atom["LYS"].id, cell.atom["LYS"].id, 1., 100.); 
-  FAUrdf pm(cell.atom["LYS"].id, cell.atom["ASP"].id, 1., 100.); 
-  FAUrdf mm(cell.atom["ASP"].id, cell.atom["ASP"].id, 1., 100.); 
+  FAUrdf protrdf(0,0,.5,cell.len/2.);   // Protein and salt radial distributions
+  FAUrdf protrdf11(0,0,.5,cell.len/2.); // Protein and salt radial distributions
+  FAUrdf protrdf22(0,0,.5,cell.len/2.); // Protein and salt radial distributions
+  FAUrdf protrdf12(0,0,.5,cell.len/2.); // Protein and salt radial distributions
 
   // Switch parameters
-  double sum, volr, tr, rr, randy=-1;
-  volr = in.getflt("volr"), tr=in.getflt("tr"), rr=in.getflt("rr");
-  sum  = volr+tr+rr, volr/=sum, tr/=sum, rr/=sum;
+  double sum, volr, tr, rr, clt, randy=-1;
+  volr = in.getflt("volr"), tr=in.getflt("tr"), rr=in.getflt("rr"), clt=in.getflt("clt");
+  sum  = volr+tr+rr+clt, volr/=sum, tr/=sum, rr/=sum, clt/=sum;
   int switcher=-1;
 
   // Help variables
@@ -101,7 +110,7 @@ int main() {
   ioxtc xtc(cell, cell.len);              // Gromacs xtc output (if installed)
   #endif
 
-  cout << cell.info() << pot.info();      // Print information to screen
+  cout << cell.info() << pot.info() <<in.info();      // Print information to screen
 
   cout <<endl<< "#  Temperature = "<<phys.T<<" K"<<endl<<endl;
   cout << "---------- RUN-TIME INFORMATION  -----------" << endl;
@@ -122,33 +131,49 @@ int main() {
         for (n=0; n<g.size(); n++) {            //   Loop over all proteins
           i = slump.random_one()*g.size();      //   and pick at random.
           sys+=mt.move(g[i]);                   //   Do the move.
-          for (j=0; j<g.size(); j++)            //   Analyse g(r)...
-            if (j!=i && macro>1)
-              protrdf.update(cell,g[i].cm,g[j].cm);
           }
       
-      if (macro==-1 && micro<1e3) {
-        mt.adjust_dp(30,40);                    // Adjust displacement
-        mr.adjust_dp(40,50);                    // parameters. Use ONLY
-        vol.adjust_dp(20,30);                   // during equillibration!
-      }
+      if (randy<clt+volr+rr+tr && randy>volr+rr+tr)// Cluster translation
+        sys+=ct.move(g);                        //   Do the move.
+
       lendist.add(cell.len);
       #ifdef GROMACS
       if (slump.random_one()>.80 && macro>1)
         xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
       #endif
-      if (cnt%eprint==0)
+      if (slump.random_one()>-.99)
         sys.track();
-      if(slump.random_one()>.99) {
-        pp.update(cell);
-        pm.update(cell);
-        mm.update(cell);
+      if(slump.random_one()>-.99) {
+        for (i=0;i<g.size();i++) 
+          g[i].masscenter(cell);                // Recalculate mass centers
+      
+        for (i=0; i<g.size()-1; i++)
+          for (j=i+1; j<g.size(); j++) {        //   Analyse g(r)...
+            protrdf.update(cell,g[i].cm,g[j].cm);
+            if ((i<in.getint("nprot2") && j>=in.getint("nprot2")) || 
+                (i>=in.getint("nprot2") && j<in.getint("nprot2")))
+              protrdf12.update(cell,g[i].cm,g[j].cm);
+            else {
+              if(i<in.getint("nprot2"))
+                protrdf11.update(cell,g[i].cm,g[j].cm);
+              else
+                protrdf22.update(cell,g[i].cm,g[j].cm);
+            }
+          }
+        agg.count();
       }
     } // End of inner loop
 
+    usys=0;
+    for (int i=0; i<g.size()-1; i++)
+      for (int j=i+1; j<g.size(); j++)
+        usys+=pot.energy(cell.p, g[i], g[j]);
+    sys.update(usys);                           // Update system energy averages
+
     cout << loop.timing(macro);
-    cout << "#   Energy (cur, avg, std)    = "<<sys.cur<<", "<<sys.uavg.avg()<<", "<<sys.uavg.stdev()<<endl;
-    sys.update(pot.energy(cell.p));             // Update system energy averages
+    cout << "#   Energy (cur, avg, std)    = "<<sys.cur<<", "<<sys.uavg.avg()<<", "<<sys.uavg.stdev()<<endl
+         << "#   Drift                     = "<<abs(sys.cur-sys.sum)<<endl;
+
     cell.check_vector();                        // Check sanity of particle vector
     gro.save("confout.gro", cell);              // Write GRO output file
     protrdf.write("rdfprot.dat");               // Write g(r)'s
@@ -167,9 +192,11 @@ int main() {
     io.writefile("isobaric.conf", in.print());
     aam.save("confout.aam", cell.p);
 
-    pp.write("pp-rdf.dat");
-    pm.write("pm-rdf.dat");
-    mm.write("mm-rdf.dat");
+    protrdf.write("rdfprot.dat");               // Write g(r)'s
+    protrdf11.write("rdfprot11.dat");               // Write g(r)'s
+    protrdf12.write("rdfprot12.dat");               // Write g(r)'s
+    protrdf22.write("rdfprot22.dat");               // Write g(r)'s
+    agg.write("aggregates.dat");
 
   } // End of outer loop
   
@@ -178,8 +205,8 @@ int main() {
   }
 
   cout << "----------- FINAL INFORMATION -----------" << endl ;
-  cout << loop.info() << sys.info() << vol.info()             // Final information...
-       << mr.info() << mt.info();
+  cout << loop.info() << sys.info() << agg.info() << vol.info()             // Final information...
+       << mr.info() << mt.info() << ct.info();
   cout <<endl << "#   Final      side length  = " <<cell.len<<endl
        << "#   Ideal     <side length> = " <<pow( double( g.size() )/ in.getflt("pressure" ),1./3.)<<endl
        << "#   Simulated <side length> = " <<vol.len.avg()<<" ("<<vol.len.stdev()<<")"<<endl

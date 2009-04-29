@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct markovmove_wrapper : Faunus::markovmove, bp::wrapper< Faunus::markovmove > {
 
+    markovmove_wrapper(Faunus::markovmove const & arg )
+    : Faunus::markovmove( arg )
+      , bp::wrapper< Faunus::markovmove >(){
+        // copy constructor
+        
+    }
+
     markovmove_wrapper(::Faunus::ensemble & arg0, ::Faunus::container & arg1, ::Faunus::energybase & arg2 )
     : Faunus::markovmove( boost::ref(arg0), boost::ref(arg1), boost::ref(arg2) )
       , bp::wrapper< Faunus::markovmove >(){
@@ -40,7 +47,7 @@ struct markovmove_wrapper : Faunus::markovmove, bp::wrapper< Faunus::markovmove 
 void register_markovmove_class(){
 
     { //::Faunus::markovmove
-        typedef bp::class_< markovmove_wrapper, boost::noncopyable > markovmove_exposer_t;
+        typedef bp::class_< markovmove_wrapper > markovmove_exposer_t;
         markovmove_exposer_t markovmove_exposer = markovmove_exposer_t( "markovmove", bp::init< Faunus::ensemble &, Faunus::container &, Faunus::energybase & >(( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2") )) );
         bp::scope markovmove_scope( markovmove_exposer );
         bp::enum_< Faunus::markovmove::keys>("keys")

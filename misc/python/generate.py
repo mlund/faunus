@@ -261,6 +261,7 @@ out.close()
 # parse the header file
 mb = module_builder_t(files=['generated/generated_header.h'],
                       include_paths=['../../include/'],
+                      gccxml_path='../auxiliary/bin/gccxml',
                       indexing_suite_version=1
                      )
 

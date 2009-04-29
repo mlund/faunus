@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct cell_wrapper : Faunus::cell, bp::wrapper< Faunus::cell > {
 
+    cell_wrapper(Faunus::cell const & arg )
+    : Faunus::cell( arg )
+      , bp::wrapper< Faunus::cell >(){
+        // copy constructor
+        
+    }
+
     cell_wrapper(double arg0 )
     : Faunus::cell( arg0 )
       , bp::wrapper< Faunus::cell >(){
@@ -159,7 +166,7 @@ struct cell_wrapper : Faunus::cell, bp::wrapper< Faunus::cell > {
 void register_cell_class(){
 
     { //::Faunus::cell
-        typedef bp::class_< cell_wrapper, bp::bases< Faunus::container >, boost::noncopyable > cell_exposer_t;
+        typedef bp::class_< cell_wrapper, bp::bases< Faunus::container > > cell_exposer_t;
         cell_exposer_t cell_exposer = cell_exposer_t( "cell", bp::init< double >(( bp::arg("arg0") )) );
         bp::scope cell_scope( cell_exposer );
         bp::implicitly_convertible< double, Faunus::cell >();

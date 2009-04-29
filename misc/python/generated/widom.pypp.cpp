@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct widom_wrapper : Faunus::widom, bp::wrapper< Faunus::widom > {
 
+    widom_wrapper(Faunus::widom const & arg )
+    : Faunus::widom( arg )
+      , bp::wrapper< Faunus::widom >(){
+        // copy constructor
+        
+    }
+
     widom_wrapper(int n=10 )
     : Faunus::widom( n )
       , bp::wrapper< Faunus::widom >(){
@@ -32,7 +39,7 @@ struct widom_wrapper : Faunus::widom, bp::wrapper< Faunus::widom > {
 void register_widom_class(){
 
     { //::Faunus::widom
-        typedef bp::class_< widom_wrapper, bp::bases< Faunus::analysis >, boost::noncopyable > widom_exposer_t;
+        typedef bp::class_< widom_wrapper, bp::bases< Faunus::analysis > > widom_exposer_t;
         widom_exposer_t widom_exposer = widom_exposer_t( "widom", bp::init< bp::optional< int > >(( bp::arg("n")=(int)(10) )) );
         bp::scope widom_scope( widom_exposer );
         bp::implicitly_convertible< int, Faunus::widom >();

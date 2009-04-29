@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct average_less__float__greater__wrapper : Faunus::average< float >, bp::wrapper< Faunus::average< float > > {
 
+    average_less__float__greater__wrapper(Faunus::average<float> const & arg )
+    : Faunus::average<float>( arg )
+      , bp::wrapper< Faunus::average< float > >(){
+        // copy constructor
+        
+    }
+
     average_less__float__greater__wrapper( )
     : Faunus::average<float>( )
       , bp::wrapper< Faunus::average< float > >(){
@@ -31,7 +38,7 @@ struct average_less__float__greater__wrapper : Faunus::average< float >, bp::wra
 
 void register_average_float_class(){
 
-    bp::class_< average_less__float__greater__wrapper, boost::noncopyable >( "average_float", bp::init< >() )    
+    bp::class_< average_less__float__greater__wrapper >( "average_float", bp::init< >() )    
         .def( 
             "add"
             , (void ( ::Faunus::average<float>::* )( float ) )(&::Faunus::average< float >::add)

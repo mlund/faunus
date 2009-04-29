@@ -8,7 +8,7 @@ namespace bp = boost::python;
 
 void register_ensemble_class(){
 
-    bp::class_< Faunus::ensemble, boost::noncopyable >( "ensemble", bp::init< >() )    
+    bp::class_< Faunus::ensemble >( "ensemble", bp::init< >() )    
         .def( 
             "metropolis"
             , (bool ( ::Faunus::ensemble::* )( double ) )( &::Faunus::ensemble::metropolis )

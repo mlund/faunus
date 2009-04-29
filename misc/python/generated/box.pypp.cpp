@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct box_wrapper : Faunus::box, bp::wrapper< Faunus::box > {
 
+    box_wrapper(Faunus::box const & arg )
+    : Faunus::box( arg )
+      , bp::wrapper< Faunus::box >(){
+        // copy constructor
+        
+    }
+
     box_wrapper(double arg0 )
     : Faunus::box( arg0 )
       , bp::wrapper< Faunus::box >(){
@@ -159,7 +166,7 @@ struct box_wrapper : Faunus::box, bp::wrapper< Faunus::box > {
 void register_box_class(){
 
     { //::Faunus::box
-        typedef bp::class_< box_wrapper, bp::bases< Faunus::container >, boost::noncopyable > box_exposer_t;
+        typedef bp::class_< box_wrapper, bp::bases< Faunus::container > > box_exposer_t;
         box_exposer_t box_exposer = box_exposer_t( "box", bp::init< double >(( bp::arg("arg0") )) );
         bp::scope box_scope( box_exposer );
         bp::implicitly_convertible< double, Faunus::box >();

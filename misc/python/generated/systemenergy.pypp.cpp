@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct systemenergy_wrapper : Faunus::systemenergy, bp::wrapper< Faunus::systemenergy > {
 
+    systemenergy_wrapper(Faunus::systemenergy const & arg )
+    : Faunus::systemenergy( arg )
+      , bp::wrapper< Faunus::systemenergy >(){
+        // copy constructor
+        
+    }
+
     systemenergy_wrapper(double arg0 )
     : Faunus::systemenergy( arg0 )
       , bp::wrapper< Faunus::systemenergy >(){
@@ -32,7 +39,7 @@ struct systemenergy_wrapper : Faunus::systemenergy, bp::wrapper< Faunus::systeme
 void register_systemenergy_class(){
 
     { //::Faunus::systemenergy
-        typedef bp::class_< systemenergy_wrapper, bp::bases< Faunus::analysis >, boost::noncopyable > systemenergy_exposer_t;
+        typedef bp::class_< systemenergy_wrapper, bp::bases< Faunus::analysis > > systemenergy_exposer_t;
         systemenergy_exposer_t systemenergy_exposer = systemenergy_exposer_t( "systemenergy", bp::init< double >(( bp::arg("arg0") )) );
         bp::scope systemenergy_scope( systemenergy_exposer );
         bp::implicitly_convertible< double, Faunus::systemenergy >();
@@ -87,7 +94,7 @@ void register_systemenergy_class(){
         }
         systemenergy_exposer.def_readwrite( "cur", &Faunus::systemenergy::cur );
         systemenergy_exposer.def_readwrite( "sum", &Faunus::systemenergy::sum );
-        systemenergy_exposer.def_readonly( "uavg", &Faunus::systemenergy::uavg );
+        systemenergy_exposer.def_readwrite( "uavg", &Faunus::systemenergy::uavg );
     }
 
 }

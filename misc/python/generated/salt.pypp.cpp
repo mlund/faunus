@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct salt_wrapper : Faunus::salt, bp::wrapper< Faunus::salt > {
 
+    salt_wrapper(Faunus::salt const & arg )
+    : Faunus::salt( arg )
+      , bp::wrapper< Faunus::salt >(){
+        // copy constructor
+        
+    }
+
     salt_wrapper(::Faunus::particle::type arg0=::Faunus::particle::NA, ::Faunus::particle::type arg1=::Faunus::particle::CL )
     : Faunus::salt( arg0, arg1 )
       , bp::wrapper< Faunus::salt >(){
@@ -39,7 +46,7 @@ struct salt_wrapper : Faunus::salt, bp::wrapper< Faunus::salt > {
         return Faunus::group::charge( boost::ref(arg0) );
     }
 
-    virtual short unsigned int displace( ::Faunus::container & arg0, double arg1 ) {
+    virtual short unsigned int displace( ::Faunus::container & arg0, ::Faunus::point arg1 ) {
         if( bp::override func_displace = this->get_override( "displace" ) )
             return func_displace( boost::ref(arg0), arg1 );
         else
@@ -47,7 +54,7 @@ struct salt_wrapper : Faunus::salt, bp::wrapper< Faunus::salt > {
     }
     
     
-    short unsigned int default_displace( ::Faunus::container & arg0, double arg1 ) {
+    short unsigned int default_displace( ::Faunus::container & arg0, ::Faunus::point arg1 ) {
         return Faunus::group::displace( boost::ref(arg0), arg1 );
     }
 
@@ -91,7 +98,7 @@ struct salt_wrapper : Faunus::salt, bp::wrapper< Faunus::salt > {
 
 void register_salt_class(){
 
-    bp::class_< salt_wrapper, bp::bases< Faunus::group >, boost::noncopyable >( "salt", bp::init< bp::optional< Faunus::particle::type, Faunus::particle::type > >(( bp::arg("arg0")=::Faunus::particle::NA, bp::arg("arg1")=::Faunus::particle::CL )) )    
+    bp::class_< salt_wrapper, bp::bases< Faunus::group > >( "salt", bp::init< bp::optional< Faunus::particle::type, Faunus::particle::type > >(( bp::arg("arg0")=::Faunus::particle::NA, bp::arg("arg1")=::Faunus::particle::CL )) )    
         .def( 
             "add"
             , (void ( ::Faunus::salt::* )( ::Faunus::container &,::Faunus::inputfile & ) )( &::Faunus::salt::add )
@@ -115,8 +122,8 @@ void register_salt_class(){
             , ( bp::arg("arg0") ) )    
         .def( 
             "displace"
-            , (short unsigned int ( ::Faunus::group::* )( ::Faunus::container &,double ) )(&::Faunus::group::displace)
-            , (short unsigned int ( salt_wrapper::* )( ::Faunus::container &,double ) )(&salt_wrapper::default_displace)
+            , (short unsigned int ( ::Faunus::group::* )( ::Faunus::container &,::Faunus::point ) )(&::Faunus::group::displace)
+            , (short unsigned int ( salt_wrapper::* )( ::Faunus::container &,::Faunus::point ) )(&salt_wrapper::default_displace)
             , ( bp::arg("arg0"), bp::arg("arg1") ) )    
         .def( 
             "info"

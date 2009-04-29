@@ -8,7 +8,7 @@ namespace bp = boost::python;
 
 void register_grandcanonical_class(){
 
-    bp::class_< Faunus::grandcanonical, bp::bases< Faunus::ensemble >, boost::noncopyable >( "grandcanonical", bp::no_init )    
+    bp::class_< Faunus::grandcanonical, bp::bases< Faunus::ensemble > >( "grandcanonical" )    
         .def( 
             "addgroup"
             , (void ( ::Faunus::grandcanonical::* )( ::Faunus::group & ) )( &::Faunus::grandcanonical::addgroup )

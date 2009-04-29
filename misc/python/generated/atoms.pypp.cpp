@@ -9,10 +9,10 @@ namespace bp = boost::python;
 void register_atoms_class(){
 
     { //::Faunus::atoms
-        typedef bp::class_< Faunus::atoms, boost::noncopyable > atoms_exposer_t;
+        typedef bp::class_< Faunus::atoms > atoms_exposer_t;
         atoms_exposer_t atoms_exposer = atoms_exposer_t( "atoms", bp::init< >() );
         bp::scope atoms_scope( atoms_exposer );
-        bp::class_< Faunus::atoms::data, boost::noncopyable >( "data", bp::no_init )    
+        bp::class_< Faunus::atoms::data >( "data" )    
             .def( bp::self == bp::self )    
             .def_readwrite( "charge", &Faunus::atoms::data::charge )    
             .def_readwrite( "eps", &Faunus::atoms::data::eps )    

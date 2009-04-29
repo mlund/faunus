@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct virial_wrapper : Faunus::virial, bp::wrapper< Faunus::virial > {
 
+    virial_wrapper(Faunus::virial const & arg )
+    : Faunus::virial( arg )
+      , bp::wrapper< Faunus::virial >(){
+        // copy constructor
+        
+    }
+
     virial_wrapper(::Faunus::container & arg0 )
     : Faunus::virial( boost::ref(arg0) )
       , bp::wrapper< Faunus::virial >(){
@@ -32,7 +39,7 @@ struct virial_wrapper : Faunus::virial, bp::wrapper< Faunus::virial > {
 void register_virial_class(){
 
     { //::Faunus::virial
-        typedef bp::class_< virial_wrapper, bp::bases< Faunus::analysis >, boost::noncopyable > virial_exposer_t;
+        typedef bp::class_< virial_wrapper, bp::bases< Faunus::analysis > > virial_exposer_t;
         virial_exposer_t virial_exposer = virial_exposer_t( "virial", bp::init< Faunus::container & >(( bp::arg("arg0") )) );
         bp::scope virial_scope( virial_exposer );
         bp::implicitly_convertible< Faunus::container &, Faunus::virial >();
@@ -58,7 +65,7 @@ void register_virial_class(){
         
         }
         virial_exposer.def_readwrite( "dr", &Faunus::virial::dr );
-        virial_exposer.def_readonly( "pex", &Faunus::virial::pex );
+        virial_exposer.def_readwrite( "pex", &Faunus::virial::pex );
     }
 
 }

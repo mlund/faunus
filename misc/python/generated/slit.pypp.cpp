@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct slit_wrapper : Faunus::slit, bp::wrapper< Faunus::slit > {
 
+    slit_wrapper(Faunus::slit const & arg )
+    : Faunus::slit( arg )
+      , bp::wrapper< Faunus::slit >(){
+        // copy constructor
+        
+    }
+
     slit_wrapper(::Faunus::inputfile & arg0 )
     : Faunus::slit( boost::ref(arg0) )
       , bp::wrapper< Faunus::slit >(){
@@ -152,7 +159,7 @@ struct slit_wrapper : Faunus::slit, bp::wrapper< Faunus::slit > {
 void register_slit_class(){
 
     { //::Faunus::slit
-        typedef bp::class_< slit_wrapper, bp::bases< Faunus::box >, boost::noncopyable > slit_exposer_t;
+        typedef bp::class_< slit_wrapper, bp::bases< Faunus::box > > slit_exposer_t;
         slit_exposer_t slit_exposer = slit_exposer_t( "slit", bp::init< Faunus::inputfile & >(( bp::arg("arg0") )) );
         bp::scope slit_scope( slit_exposer );
         bp::implicitly_convertible< Faunus::inputfile &, Faunus::slit >();

@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct ioaam_wrapper : Faunus::ioaam, bp::wrapper< Faunus::ioaam > {
 
+    ioaam_wrapper(Faunus::ioaam const & arg )
+    : Faunus::ioaam( arg )
+      , bp::wrapper< Faunus::ioaam >(){
+        // copy constructor
+        
+    }
+
     ioaam_wrapper(::Faunus::atoms & arg0 )
     : Faunus::ioaam( boost::ref(arg0) )
       , bp::wrapper< Faunus::ioaam >(){
@@ -44,7 +51,7 @@ struct ioaam_wrapper : Faunus::ioaam, bp::wrapper< Faunus::ioaam > {
 void register_ioaam_class(){
 
     { //::Faunus::ioaam
-        typedef bp::class_< ioaam_wrapper, boost::noncopyable > ioaam_exposer_t;
+        typedef bp::class_< ioaam_wrapper > ioaam_exposer_t;
         ioaam_exposer_t ioaam_exposer = ioaam_exposer_t( "ioaam", bp::init< Faunus::atoms & >(( bp::arg("arg0") )) );
         bp::scope ioaam_scope( ioaam_exposer );
         bp::implicitly_convertible< Faunus::atoms &, Faunus::ioaam >();

@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct macromolecule_wrapper : Faunus::macromolecule, bp::wrapper< Faunus::macromolecule > {
 
+    macromolecule_wrapper(Faunus::macromolecule const & arg )
+    : Faunus::macromolecule( arg )
+      , bp::wrapper< Faunus::macromolecule >(){
+        // copy constructor
+        
+    }
+
     macromolecule_wrapper( )
     : Faunus::macromolecule( )
       , bp::wrapper< Faunus::macromolecule >(){
@@ -63,7 +70,7 @@ struct macromolecule_wrapper : Faunus::macromolecule, bp::wrapper< Faunus::macro
         return Faunus::macromolecule::nummolecules( );
     }
 
-    virtual short unsigned int displace( ::Faunus::container & arg0, double arg1 ) {
+    virtual short unsigned int displace( ::Faunus::container & arg0, ::Faunus::point arg1 ) {
         if( bp::override func_displace = this->get_override( "displace" ) )
             return func_displace( boost::ref(arg0), arg1 );
         else
@@ -71,7 +78,7 @@ struct macromolecule_wrapper : Faunus::macromolecule, bp::wrapper< Faunus::macro
     }
     
     
-    short unsigned int default_displace( ::Faunus::container & arg0, double arg1 ) {
+    short unsigned int default_displace( ::Faunus::container & arg0, ::Faunus::point arg1 ) {
         return Faunus::group::displace( boost::ref(arg0), arg1 );
     }
 
@@ -92,10 +99,9 @@ struct macromolecule_wrapper : Faunus::macromolecule, bp::wrapper< Faunus::macro
 void register_macromolecule_class(){
 
     { //::Faunus::macromolecule
-        typedef bp::class_< macromolecule_wrapper, bp::bases< Faunus::group >, boost::noncopyable > macromolecule_exposer_t;
-        macromolecule_exposer_t macromolecule_exposer = macromolecule_exposer_t( "macromolecule", bp::no_init );
+        typedef bp::class_< macromolecule_wrapper, bp::bases< Faunus::group > > macromolecule_exposer_t;
+        macromolecule_exposer_t macromolecule_exposer = macromolecule_exposer_t( "macromolecule", bp::init< >() );
         bp::scope macromolecule_scope( macromolecule_exposer );
-        macromolecule_exposer.def( bp::init< >() );
         { //::Faunus::macromolecule::add
         
             typedef void ( ::Faunus::macromolecule::*add_function_type )( ::Faunus::container &,::Faunus::inputfile & ) ;
@@ -253,15 +259,15 @@ void register_macromolecule_class(){
                 , ( bp::arg("arg0"), bp::arg("arg1") ) );
         
         }
-        macromolecule_exposer.def_readonly( "Q", &Faunus::macromolecule::Q );
-        macromolecule_exposer.def_readonly( "Q2", &Faunus::macromolecule::Q2 );
-        macromolecule_exposer.def_readonly( "dip", &Faunus::macromolecule::dip );
-        macromolecule_exposer.def_readonly( "dip2", &Faunus::macromolecule::dip2 );
-        macromolecule_exposer.def_readonly( "mu", &Faunus::macromolecule::mu );
+        macromolecule_exposer.def_readwrite( "Q", &Faunus::macromolecule::Q );
+        macromolecule_exposer.def_readwrite( "Q2", &Faunus::macromolecule::Q2 );
+        macromolecule_exposer.def_readwrite( "dip", &Faunus::macromolecule::dip );
+        macromolecule_exposer.def_readwrite( "dip2", &Faunus::macromolecule::dip2 );
+        macromolecule_exposer.def_readwrite( "mu", &Faunus::macromolecule::mu );
         { //::Faunus::group::displace
         
-            typedef short unsigned int ( ::Faunus::group::*displace_function_type )( ::Faunus::container &,double ) ;
-            typedef short unsigned int ( macromolecule_wrapper::*default_displace_function_type )( ::Faunus::container &,double ) ;
+            typedef short unsigned int ( ::Faunus::group::*displace_function_type )( ::Faunus::container &,::Faunus::point ) ;
+            typedef short unsigned int ( macromolecule_wrapper::*default_displace_function_type )( ::Faunus::container &,::Faunus::point ) ;
             
             macromolecule_exposer.def( 
                 "displace"

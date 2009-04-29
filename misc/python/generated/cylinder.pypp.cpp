@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct cylinder_wrapper : Faunus::cylinder, bp::wrapper< Faunus::cylinder > {
 
+    cylinder_wrapper(Faunus::cylinder const & arg )
+    : Faunus::cylinder( arg )
+      , bp::wrapper< Faunus::cylinder >(){
+        // copy constructor
+        
+    }
+
     cylinder_wrapper(double arg0, double arg1 )
     : Faunus::cylinder( arg0, arg1 )
       , bp::wrapper< Faunus::cylinder >(){
@@ -151,7 +158,7 @@ struct cylinder_wrapper : Faunus::cylinder, bp::wrapper< Faunus::cylinder > {
 
 void register_cylinder_class(){
 
-    bp::class_< cylinder_wrapper, bp::bases< Faunus::container >, boost::noncopyable >( "cylinder", bp::init< double, double >(( bp::arg("arg0"), bp::arg("arg1") )) )    
+    bp::class_< cylinder_wrapper, bp::bases< Faunus::container > >( "cylinder", bp::init< double, double >(( bp::arg("arg0"), bp::arg("arg1") )) )    
         .def( 
             "collision"
             , (bool ( ::Faunus::cylinder::* )( ::Faunus::particle const & ) )(&::Faunus::cylinder::collision)

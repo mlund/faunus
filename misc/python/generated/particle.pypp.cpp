@@ -9,7 +9,7 @@ namespace bp = boost::python;
 void register_particle_class(){
 
     { //::Faunus::particle
-        typedef bp::class_< Faunus::particle, bp::bases< Faunus::point >, boost::noncopyable > particle_exposer_t;
+        typedef bp::class_< Faunus::particle, bp::bases< Faunus::point > > particle_exposer_t;
         particle_exposer_t particle_exposer = particle_exposer_t( "particle", bp::init< >() );
         bp::scope particle_scope( particle_exposer );
         bp::enum_< Faunus::particle::type>("type")

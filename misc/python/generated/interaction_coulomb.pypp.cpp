@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct interaction_less__Faunus_scope_pot_coulomb__greater__wrapper : Faunus::interaction< Faunus::pot_coulomb >, bp::wrapper< Faunus::interaction< Faunus::pot_coulomb > > {
 
+    interaction_less__Faunus_scope_pot_coulomb__greater__wrapper(Faunus::interaction<Faunus::pot_coulomb> const & arg )
+    : Faunus::interaction<Faunus::pot_coulomb>( arg )
+      , bp::wrapper< Faunus::interaction< Faunus::pot_coulomb > >(){
+        // copy constructor
+        
+    }
+
     interaction_less__Faunus_scope_pot_coulomb__greater__wrapper(::Faunus::inputfile & in )
     : Faunus::interaction<Faunus::pot_coulomb>( boost::ref(in) )
       , bp::wrapper< Faunus::interaction< Faunus::pot_coulomb > >(){
@@ -224,7 +231,7 @@ struct interaction_less__Faunus_scope_pot_coulomb__greater__wrapper : Faunus::in
 void register_interaction_coulomb_class(){
 
     { //::Faunus::interaction< Faunus::pot_coulomb >
-        typedef bp::class_< interaction_less__Faunus_scope_pot_coulomb__greater__wrapper, bp::bases< Faunus::energybase >, boost::noncopyable > interaction_coulomb_exposer_t;
+        typedef bp::class_< interaction_less__Faunus_scope_pot_coulomb__greater__wrapper, bp::bases< Faunus::energybase > > interaction_coulomb_exposer_t;
         interaction_coulomb_exposer_t interaction_coulomb_exposer = interaction_coulomb_exposer_t( "interaction_coulomb", bp::init< Faunus::inputfile & >(( bp::arg("in") )) );
         bp::scope interaction_coulomb_scope( interaction_coulomb_exposer );
         bp::implicitly_convertible< Faunus::inputfile &, Faunus::interaction< Faunus::pot_coulomb > >();
@@ -470,7 +477,7 @@ void register_interaction_coulomb_class(){
                 , ( bp::arg("p"), bp::arg("a") ) );
         
         }
-        interaction_coulomb_exposer.def_readonly( "pair", &Faunus::interaction< Faunus::pot_coulomb >::pair );
+        interaction_coulomb_exposer.def_readwrite( "pair", &Faunus::interaction< Faunus::pot_coulomb >::pair );
     }
 
 }

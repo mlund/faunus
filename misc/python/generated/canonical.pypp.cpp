@@ -8,6 +8,6 @@ namespace bp = boost::python;
 
 void register_canonical_class(){
 
-    bp::class_< Faunus::canonical, bp::bases< Faunus::ensemble >, boost::noncopyable >( "canonical", bp::init< >() );
+    bp::class_< Faunus::canonical, bp::bases< Faunus::ensemble > >( "canonical", bp::init< >() );
 
 }

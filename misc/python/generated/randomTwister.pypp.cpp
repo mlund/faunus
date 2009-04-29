@@ -8,6 +8,20 @@ namespace bp = boost::python;
 
 struct randomTwister_wrapper : Faunus::randomTwister, bp::wrapper< Faunus::randomTwister > {
 
+    randomTwister_wrapper(Faunus::randomTwister const & arg )
+    : Faunus::randomTwister( arg )
+      , bp::wrapper< Faunus::randomTwister >(){
+        // copy constructor
+        
+    }
+
+    randomTwister_wrapper()
+    : Faunus::randomTwister()
+      , bp::wrapper< Faunus::randomTwister >(){
+        // null constructor
+        
+    }
+
     virtual double random_one(  ) {
         if( bp::override func_random_one = this->get_override( "random_one" ) )
             return func_random_one(  );
@@ -36,7 +50,7 @@ struct randomTwister_wrapper : Faunus::randomTwister, bp::wrapper< Faunus::rando
 
 void register_randomTwister_class(){
 
-    bp::class_< randomTwister_wrapper, bp::bases< Faunus::random >, boost::noncopyable >( "randomTwister", bp::no_init )    
+    bp::class_< randomTwister_wrapper, bp::bases< Faunus::random > >( "randomTwister" )    
         .def( 
             "random_one"
             , (double ( ::Faunus::randomTwister::* )(  ) )(&::Faunus::randomTwister::random_one)

@@ -10,6 +10,7 @@
 #include <faunus/potentials/pot_coulomb.h>
 #include <faunus/moves/base.h>
 #include <faunus/moves/translational.h>
+#include <faunus/moves/charge.h>
 #include <faunus/group.h>
 #include <faunus/analysis.h>
 #include <faunus/widom.h>

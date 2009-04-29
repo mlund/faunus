@@ -9,7 +9,7 @@ namespace bp = boost::python;
 void register_inputfile_class(){
 
     { //::Faunus::inputfile
-        typedef bp::class_< Faunus::inputfile, boost::noncopyable > inputfile_exposer_t;
+        typedef bp::class_< Faunus::inputfile > inputfile_exposer_t;
         inputfile_exposer_t inputfile_exposer = inputfile_exposer_t( "inputfile", bp::init< std::string >(( bp::arg("arg0") )) );
         bp::scope inputfile_scope( inputfile_exposer );
         bp::implicitly_convertible< std::string, Faunus::inputfile >();
@@ -90,6 +90,25 @@ void register_inputfile_class(){
             inputfile_exposer.def( 
                 "info"
                 , info_function_type( &::Faunus::inputfile::info ) );
+        
+        }
+        { //::Faunus::inputfile::print
+        
+            typedef ::std::string ( ::Faunus::inputfile::*print_function_type )(  ) ;
+            
+            inputfile_exposer.def( 
+                "print"
+                , print_function_type( &::Faunus::inputfile::print ) );
+        
+        }
+        { //::Faunus::inputfile::updateval
+        
+            typedef void ( ::Faunus::inputfile::*updateval_function_type )( ::std::string,::std::string ) ;
+            
+            inputfile_exposer.def( 
+                "updateval"
+                , updateval_function_type( &::Faunus::inputfile::updateval )
+                , ( bp::arg("arg0"), bp::arg("arg1") ) );
         
         }
     }

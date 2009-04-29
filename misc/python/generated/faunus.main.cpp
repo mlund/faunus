@@ -22,6 +22,8 @@
 
 #include "generated/cell.pypp.hpp"
 
+#include "generated/chargereg.pypp.hpp"
+
 #include "generated/clutch.pypp.hpp"
 
 #include "generated/container.pypp.hpp"
@@ -147,6 +149,10 @@ BOOST_PYTHON_MODULE(faunus){
 
     register_cell_class();
 
+    register_markovmove_class();
+
+    register_chargereg_class();
+
     register_clutch_class();
 
     register_cylinder_class();
@@ -170,8 +176,6 @@ BOOST_PYTHON_MODULE(faunus){
     register_ioxyz_class();
 
     register_macromolecule_class();
-
-    register_markovmove_class();
 
     register_mcloop_class();
 

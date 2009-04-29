@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct random_wrapper : Faunus::random, bp::wrapper< Faunus::random > {
 
+    random_wrapper()
+    : Faunus::random()
+      , bp::wrapper< Faunus::random >(){
+        // null constructor
+        
+    }
+
     virtual double random_one(  ){
         bp::override func_random_one = this->get_override( "random_one" );
         return func_random_one(  );
@@ -22,7 +29,7 @@ struct random_wrapper : Faunus::random, bp::wrapper< Faunus::random > {
 
 void register_random_class(){
 
-    bp::class_< random_wrapper, boost::noncopyable >( "random", bp::no_init )    
+    bp::class_< random_wrapper, boost::noncopyable >( "random" )    
         .def( 
             "random_half"
             , (double ( ::Faunus::random::* )(  ) )( &::Faunus::random::random_half ) )    

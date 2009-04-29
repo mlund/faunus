@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct saltmove_wrapper : Faunus::saltmove, bp::wrapper< Faunus::saltmove > {
 
+    saltmove_wrapper(Faunus::saltmove const & arg )
+    : Faunus::saltmove( arg )
+      , bp::wrapper< Faunus::saltmove >(){
+        // copy constructor
+        
+    }
+
     saltmove_wrapper(::Faunus::ensemble & arg0, ::Faunus::container & arg1, ::Faunus::energybase & arg2 )
     : Faunus::saltmove( boost::ref(arg0), boost::ref(arg1), boost::ref(arg2) )
       , bp::wrapper< Faunus::saltmove >(){
@@ -38,7 +45,7 @@ struct saltmove_wrapper : Faunus::saltmove, bp::wrapper< Faunus::saltmove > {
 
 void register_saltmove_class(){
 
-    bp::class_< saltmove_wrapper, bp::bases< Faunus::markovmove >, boost::noncopyable >( "saltmove", bp::init< Faunus::ensemble &, Faunus::container &, Faunus::energybase & >(( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2") )) )    
+    bp::class_< saltmove_wrapper, bp::bases< Faunus::markovmove > >( "saltmove", bp::init< Faunus::ensemble &, Faunus::container &, Faunus::energybase & >(( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2") )) )    
         .def( bp::init< Faunus::ensemble &, Faunus::container &, Faunus::energybase &, Faunus::inputfile & >(( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2"), bp::arg("arg3") )) )    
         .def( 
             "info"
@@ -51,6 +58,7 @@ void register_saltmove_class(){
         .def( 
             "move"
             , (double ( ::Faunus::saltmove::* )( ::Faunus::group & ) )( &::Faunus::saltmove::move )
-            , ( bp::arg("arg0") ) );
+            , ( bp::arg("arg0") ) )    
+        .def_readwrite( "dpv", &Faunus::saltmove::dpv );
 
 }

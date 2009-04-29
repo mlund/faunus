@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct container_wrapper : Faunus::container, bp::wrapper< Faunus::container > {
 
+    container_wrapper()
+    : Faunus::container()
+      , bp::wrapper< Faunus::container >(){
+        // null constructor
+        
+    }
+
     virtual void boundary( ::Faunus::point & arg0 ) {
         if( bp::override func_boundary = this->get_override( "boundary" ) )
             func_boundary( boost::ref(arg0) );
@@ -130,7 +137,7 @@ struct container_wrapper : Faunus::container, bp::wrapper< Faunus::container > {
 
 void register_container_class(){
 
-    bp::class_< container_wrapper, bp::bases< Faunus::particles >, boost::noncopyable >( "container", bp::no_init )    
+    bp::class_< container_wrapper, bp::bases< Faunus::particles >, boost::noncopyable >( "container" )    
         .def( 
             "boundary"
             , (void ( ::Faunus::container::* )( ::Faunus::point & ) )(&::Faunus::container::boundary)
@@ -180,7 +187,7 @@ void register_container_class(){
             , (::Faunus::point ( ::Faunus::container::* )( ::Faunus::point const &,::Faunus::point const & ) )(&::Faunus::container::vdist)
             , (::Faunus::point ( container_wrapper::* )( ::Faunus::point const &,::Faunus::point const & ) )(&container_wrapper::default_vdist)
             , ( bp::arg("a"), bp::arg("b") ) )    
-        .def_readonly( "atom", &Faunus::container::atom )    
+        .def_readwrite( "atom", &Faunus::container::atom )    
         .def( 
             "clash"
             , (bool ( ::Faunus::particles::* )( ::Faunus::particle const &,::Faunus::particle const & ) )(&::Faunus::particles::clash)

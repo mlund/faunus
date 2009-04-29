@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct iopqr_wrapper : Faunus::iopqr, bp::wrapper< Faunus::iopqr > {
 
+    iopqr_wrapper(Faunus::iopqr const & arg )
+    : Faunus::iopqr( arg )
+      , bp::wrapper< Faunus::iopqr >(){
+        // copy constructor
+        
+    }
+
     iopqr_wrapper(::Faunus::atoms & arg0 )
     : Faunus::iopqr( boost::ref(arg0) )
       , bp::wrapper< Faunus::iopqr >(){
@@ -32,7 +39,7 @@ struct iopqr_wrapper : Faunus::iopqr, bp::wrapper< Faunus::iopqr > {
 void register_iopqr_class(){
 
     { //::Faunus::iopqr
-        typedef bp::class_< iopqr_wrapper, boost::noncopyable > iopqr_exposer_t;
+        typedef bp::class_< iopqr_wrapper > iopqr_exposer_t;
         iopqr_exposer_t iopqr_exposer = iopqr_exposer_t( "iopqr", bp::init< Faunus::atoms & >(( bp::arg("arg0") )) );
         bp::scope iopqr_scope( iopqr_exposer );
         bp::implicitly_convertible< Faunus::atoms &, Faunus::iopqr >();

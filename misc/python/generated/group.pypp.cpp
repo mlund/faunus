@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct group_wrapper : Faunus::group, bp::wrapper< Faunus::group > {
 
+    group_wrapper(Faunus::group const & arg )
+    : Faunus::group( arg )
+      , bp::wrapper< Faunus::group >(){
+        // copy constructor
+        
+    }
+
     group_wrapper(int arg0=0 )
     : Faunus::group( arg0 )
       , bp::wrapper< Faunus::group >(){
@@ -27,7 +34,7 @@ struct group_wrapper : Faunus::group, bp::wrapper< Faunus::group > {
         return Faunus::group::charge( boost::ref(arg0) );
     }
 
-    virtual short unsigned int displace( ::Faunus::container & arg0, double arg1 ) {
+    virtual short unsigned int displace( ::Faunus::container & arg0, ::Faunus::point arg1 ) {
         if( bp::override func_displace = this->get_override( "displace" ) )
             return func_displace( boost::ref(arg0), arg1 );
         else
@@ -35,7 +42,7 @@ struct group_wrapper : Faunus::group, bp::wrapper< Faunus::group > {
     }
     
     
-    short unsigned int default_displace( ::Faunus::container & arg0, double arg1 ) {
+    short unsigned int default_displace( ::Faunus::container & arg0, ::Faunus::point arg1 ) {
         return Faunus::group::displace( boost::ref(arg0), arg1 );
     }
 
@@ -92,7 +99,7 @@ struct group_wrapper : Faunus::group, bp::wrapper< Faunus::group > {
 void register_group_class(){
 
     { //::Faunus::group
-        typedef bp::class_< group_wrapper, boost::noncopyable > group_exposer_t;
+        typedef bp::class_< group_wrapper > group_exposer_t;
         group_exposer_t group_exposer = group_exposer_t( "group", bp::init< bp::optional< int > >(( bp::arg("arg0")=(int)(0) )) );
         bp::scope group_scope( group_exposer );
         bp::implicitly_convertible< int, Faunus::group >();
@@ -150,8 +157,8 @@ void register_group_class(){
         }
         { //::Faunus::group::displace
         
-            typedef short unsigned int ( ::Faunus::group::*displace_function_type )( ::Faunus::container &,double ) ;
-            typedef short unsigned int ( group_wrapper::*default_displace_function_type )( ::Faunus::container &,double ) ;
+            typedef short unsigned int ( ::Faunus::group::*displace_function_type )( ::Faunus::container &,::Faunus::point ) ;
+            typedef short unsigned int ( group_wrapper::*default_displace_function_type )( ::Faunus::container &,::Faunus::point ) ;
             
             group_exposer.def( 
                 "displace"
@@ -179,6 +186,16 @@ void register_group_class(){
                 "info"
                 , info_function_type(&::Faunus::group::info)
                 , default_info_function_type(&group_wrapper::default_info) );
+        
+        }
+        { //::Faunus::group::invert
+        
+            typedef void ( ::Faunus::group::*invert_function_type )( ::std::vector< Faunus::particle > &,::Faunus::point & ) ;
+            
+            group_exposer.def( 
+                "invert"
+                , invert_function_type( &::Faunus::group::invert )
+                , ( bp::arg("arg0"), bp::arg("arg1") ) );
         
         }
         { //::Faunus::group::isobaricmove

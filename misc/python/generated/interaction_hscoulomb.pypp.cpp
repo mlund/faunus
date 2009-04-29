@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct interaction_less__Faunus_scope_pot_hscoulomb__greater__wrapper : Faunus::interaction< Faunus::pot_hscoulomb >, bp::wrapper< Faunus::interaction< Faunus::pot_hscoulomb > > {
 
+    interaction_less__Faunus_scope_pot_hscoulomb__greater__wrapper(Faunus::interaction<Faunus::pot_hscoulomb> const & arg )
+    : Faunus::interaction<Faunus::pot_hscoulomb>( arg )
+      , bp::wrapper< Faunus::interaction< Faunus::pot_hscoulomb > >(){
+        // copy constructor
+        
+    }
+
     interaction_less__Faunus_scope_pot_hscoulomb__greater__wrapper(::Faunus::inputfile & in )
     : Faunus::interaction<Faunus::pot_hscoulomb>( boost::ref(in) )
       , bp::wrapper< Faunus::interaction< Faunus::pot_hscoulomb > >(){
@@ -224,7 +231,7 @@ struct interaction_less__Faunus_scope_pot_hscoulomb__greater__wrapper : Faunus::
 void register_interaction_hscoulomb_class(){
 
     { //::Faunus::interaction< Faunus::pot_hscoulomb >
-        typedef bp::class_< interaction_less__Faunus_scope_pot_hscoulomb__greater__wrapper, bp::bases< Faunus::energybase >, boost::noncopyable > interaction_hscoulomb_exposer_t;
+        typedef bp::class_< interaction_less__Faunus_scope_pot_hscoulomb__greater__wrapper, bp::bases< Faunus::energybase > > interaction_hscoulomb_exposer_t;
         interaction_hscoulomb_exposer_t interaction_hscoulomb_exposer = interaction_hscoulomb_exposer_t( "interaction_hscoulomb", bp::init< Faunus::inputfile & >(( bp::arg("in") )) );
         bp::scope interaction_hscoulomb_scope( interaction_hscoulomb_exposer );
         bp::implicitly_convertible< Faunus::inputfile &, Faunus::interaction< Faunus::pot_hscoulomb > >();
@@ -470,7 +477,7 @@ void register_interaction_hscoulomb_class(){
                 , ( bp::arg("p"), bp::arg("a") ) );
         
         }
-        interaction_hscoulomb_exposer.def_readonly( "pair", &Faunus::interaction< Faunus::pot_hscoulomb >::pair );
+        interaction_hscoulomb_exposer.def_readwrite( "pair", &Faunus::interaction< Faunus::pot_hscoulomb >::pair );
     }
 
 }

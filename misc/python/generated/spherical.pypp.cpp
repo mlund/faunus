@@ -9,7 +9,7 @@ namespace bp = boost::python;
 void register_spherical_class(){
 
     { //::Faunus::spherical
-        typedef bp::class_< Faunus::spherical, boost::noncopyable > spherical_exposer_t;
+        typedef bp::class_< Faunus::spherical > spherical_exposer_t;
         spherical_exposer_t spherical_exposer = spherical_exposer_t( "spherical", bp::init< bp::optional< double, double, double > >(( bp::arg("arg0")=0, bp::arg("arg1")=0, bp::arg("arg2")=0 )) );
         bp::scope spherical_scope( spherical_exposer );
         { //::Faunus::spherical::cartesian

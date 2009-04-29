@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct clutch_wrapper : Faunus::clutch, bp::wrapper< Faunus::clutch > {
 
+    clutch_wrapper(Faunus::clutch const & arg )
+    : Faunus::clutch( arg )
+      , bp::wrapper< Faunus::clutch >(){
+        // copy constructor
+        
+    }
+
     clutch_wrapper(double arg0, double arg1, double arg2 )
     : Faunus::clutch( arg0, arg1, arg2 )
       , bp::wrapper< Faunus::clutch >(){
@@ -151,7 +158,7 @@ struct clutch_wrapper : Faunus::clutch, bp::wrapper< Faunus::clutch > {
 
 void register_clutch_class(){
 
-    bp::class_< clutch_wrapper, bp::bases< Faunus::container >, boost::noncopyable >( "clutch", bp::init< double, double, double >(( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2") )) )    
+    bp::class_< clutch_wrapper, bp::bases< Faunus::container > >( "clutch", bp::init< double, double, double >(( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2") )) )    
         .def( 
             "collision"
             , (bool ( ::Faunus::clutch::* )( ::Faunus::particle const & ) )(&::Faunus::clutch::collision)

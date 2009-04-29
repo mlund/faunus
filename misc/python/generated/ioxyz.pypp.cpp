@@ -8,6 +8,13 @@ namespace bp = boost::python;
 
 struct ioxyz_wrapper : Faunus::ioxyz, bp::wrapper< Faunus::ioxyz > {
 
+    ioxyz_wrapper(Faunus::ioxyz const & arg )
+    : Faunus::ioxyz( arg )
+      , bp::wrapper< Faunus::ioxyz >(){
+        // copy constructor
+        
+    }
+
     ioxyz_wrapper(::Faunus::atoms & arg0 )
     : Faunus::ioxyz( boost::ref(arg0) )
       , bp::wrapper< Faunus::ioxyz >(){
@@ -44,7 +51,7 @@ struct ioxyz_wrapper : Faunus::ioxyz, bp::wrapper< Faunus::ioxyz > {
 void register_ioxyz_class(){
 
     { //::Faunus::ioxyz
-        typedef bp::class_< ioxyz_wrapper, boost::noncopyable > ioxyz_exposer_t;
+        typedef bp::class_< ioxyz_wrapper > ioxyz_exposer_t;
         ioxyz_exposer_t ioxyz_exposer = ioxyz_exposer_t( "ioxyz", bp::init< Faunus::atoms & >(( bp::arg("arg0") )) );
         bp::scope ioxyz_scope( ioxyz_exposer );
         bp::implicitly_convertible< Faunus::atoms &, Faunus::ioxyz >();

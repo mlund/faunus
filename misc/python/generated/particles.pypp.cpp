@@ -8,6 +8,20 @@ namespace bp = boost::python;
 
 struct particles_wrapper : Faunus::particles, bp::wrapper< Faunus::particles > {
 
+    particles_wrapper(Faunus::particles const & arg )
+    : Faunus::particles( arg )
+      , bp::wrapper< Faunus::particles >(){
+        // copy constructor
+        
+    }
+
+    particles_wrapper()
+    : Faunus::particles()
+      , bp::wrapper< Faunus::particles >(){
+        // null constructor
+        
+    }
+
     virtual bool clash( ::Faunus::particle const & arg0, ::Faunus::particle const & arg1 ) {
         if( bp::override func_clash = this->get_override( "clash" ) )
             return func_clash( boost::ref(arg0), boost::ref(arg1) );
@@ -24,7 +38,7 @@ struct particles_wrapper : Faunus::particles, bp::wrapper< Faunus::particles > {
 
 void register_particles_class(){
 
-    bp::class_< particles_wrapper, boost::noncopyable >( "particles", bp::no_init )    
+    bp::class_< particles_wrapper >( "particles" )    
         .def( 
             "charge"
             , (double ( ::Faunus::particles::* )(  ) )( &::Faunus::particles::charge ) )    

@@ -9,7 +9,7 @@ namespace bp = boost::python;
 void register_mcloop_class(){
 
     { //::Faunus::mcloop
-        typedef bp::class_< Faunus::mcloop, boost::noncopyable > mcloop_exposer_t;
+        typedef bp::class_< Faunus::mcloop > mcloop_exposer_t;
         mcloop_exposer_t mcloop_exposer = mcloop_exposer_t( "mcloop", bp::init< Faunus::inputfile & >(( bp::arg("arg0") )) );
         bp::scope mcloop_scope( mcloop_exposer );
         bp::implicitly_convertible< Faunus::inputfile &, Faunus::mcloop >();

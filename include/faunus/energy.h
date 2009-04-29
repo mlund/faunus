@@ -48,7 +48,7 @@ namespace Faunus {
       virtual double pot(const vector<particle> &, const point &)=0;                     //!< Electrostatic potential in a point
       virtual double dipdip(const point &, const point &, double)=0;                     //!< Dipole-dipole energy.
       virtual double iondip(const point &, double, double)=0;                            //!< Ion-dipole energy.
-      virtual double force(container &, particle, particle, double, double=.5)=0;        //!< Force vector
+      virtual double force(container &, particle, particle, point, double, double=.5)=0;        //!< Force vector
       virtual void forceall(container &, vector<point> &)=0;
 
       string info() {
@@ -258,14 +258,17 @@ namespace Faunus {
           }
       }
 
-      double force(container &c, particle a, particle b, double r, double dr) {
-        double forward,center;
-        a.x=a.y=a.z=b.y=b.z=0;
-        b.x=r+dr;
+      double force(container &c, particle a, particle b, point rij, double r, double dr) {
+        double forward,center,f;
+        point unit;
+        unit=rij, forward=1./rij.len(), unit=unit*forward*dr;  // Dirty lending of variable
+        a.x=a.y=a.z=0;
+        b.x=rij.x+unit.x, b.y=rij.y+unit.y, b.z=rij.z+unit.z;
         forward=pair.pairpot(a,b);
-        b.x=r-dr;
+        b.x=rij.x-unit.x, b.y=rij.y-unit.y, b.z=rij.z-unit.z;
         center=pair.pairpot(a,b);
-        return -(forward-center)/(2*dr);
+        f= -(forward-center)/(2*dr);
+        return f;
       }
 
       string info() {

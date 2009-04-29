@@ -258,8 +258,10 @@ namespace Faunus {
     public:
       double dr; //!< r-step when taking the derivative of the pair potential.
       virial(container &);
+      virial(container &, vector<macromolecule> &);
       average<double> pex; //!< Excess pressure
       void sample(container &, energybase &);
+      void sample(container &, energybase &, vector<macromolecule> &);
       string info();
   };
 

@@ -8,15 +8,14 @@ nvt  = faunus.canonical()                # use the canonical ensemble
 con  = faunus.cell(inp)                  # use a spherical simulation container...
 pot  = faunus.interaction_hscoulomb(inp) # ... and a Coulomb + hard sphere potential
 sm   = faunus.saltmove(nvt,con,pot,inp)  # create object for salt movements
-prot = faunus.macromolecule
+prot = faunus.macromolecule()
 aam  = faunus.ioaam(con.atom)            # load/save configurations from/to disk
 pqr  = faunus.iopqr(con.atom)            # load/save configurations from/to disk
-prot.add( con,
-   aam.load(inp.getstr("protein")))      # laod protein
+prot.add(con, inp)                                # laod protein
 prot.move(con, -prot.cm);                # ..translate it to origo (0,0,0)
 prot.accept(con)                         # ..accept translation
-salt = faunus.salt                       # Group for salt and counter ions
-salt.add( con, inp )                     #   Insert sodium ions
+salt = faunus.salt()                     # Group for salt and counter ions
+salt.add(con, inp)                       #   Insert sodium ions
 aam.load(con, "confout.aam")             # Load old config (if present)
 
 tit = faunus.chargereg(nvt,con,pot,salt,inp.getflt("pH",7.))

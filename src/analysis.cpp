@@ -238,6 +238,11 @@ namespace Faunus {
     dr=0.1;
     conc = c.p.size()/c.getvolume();
   }
+  virial::virial(container &c, vector<macromolecule> &g) {
+    runfraction=1.0;
+    dr=0.01;
+    conc = g.size()/c.getvolume();
+  }
 
   void virial::sample(container &c, energybase &pot) {
     if (runtest()) {
@@ -250,10 +255,31 @@ namespace Faunus {
         for (int j=i+1; j<n; j++) {
           rij=c.vdist(c.p[i],c.p[j]);
           r=rij.len();
-          f = rij * ( pot.force(c,c.p[i],c.p[j],r,dr) / r );
-          p+= rij.x*f.x + rij.y*f.y + rij.z*f.z;
+//          f = rij * ( pot.force(c,c.p[i],c.p[j],r,dr) / r );
+//          p+= rij.x*f.x + rij.y*f.y + rij.z*f.z;
+          p+=pot.force(c, c.p[i], c.p[j],rij,r,dr)*r;
         }
       }
+      pex+=p*pot.tokT / (3*c.getvolume());  // kT/AA^3
+    }
+  }
+  void virial::sample(container &c, energybase &pot, vector<macromolecule> &g) {
+    if (runtest()) {
+      double p=0;
+      int n=g.size();
+//#pragma omp parallel for reduction (+:p)
+      for (int i=0; i<n-1; i++) 
+        for (int j=i+1; j<n; j++)
+          for (int s=g[i].beg; s<=g[i].end; s++) {
+            point f,rij;
+            double r;
+            for (int t=g[j].beg; t<=g[j].end; t++) {
+              rij=c.vdist(c.p[s],c.p[t]);
+              r=rij.len();
+  //            f = rij * ( pot.force(c,c.p[s],c.p[t],r,dr) / r );
+  //            p+= rij.x*f.x + rij.y*f.y + rij.z*f.z;
+            }
+          }
       pex+=p*pot.tokT / (3*c.getvolume());  // kT/AA^3
     }
   }

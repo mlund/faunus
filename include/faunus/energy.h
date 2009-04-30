@@ -261,7 +261,7 @@ namespace Faunus {
       double force(container &c, particle a, particle b, point rij, double r, double dr) {
         double forward,center,f;
         point unit;
-        unit=rij, forward=1./rij.len(), unit=unit*forward*dr;  // Dirty lending of variable
+        unit=rij, forward=1./r, unit=unit*forward*dr;  // Dirty lending of variable
         a.x=a.y=a.z=0;
         b.x=rij.x+unit.x, b.y=rij.y+unit.y, b.z=rij.z+unit.z;
         forward=pair.pairpot(a,b);

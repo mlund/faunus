@@ -104,6 +104,16 @@ CUPS printer detection has been disable in some versions of MacOS (10.5, higher?
 \subsubsection{Connect to a specific CUPS server}
 If auto-detection fails, try adding \verb"ServerName servername" to \verb"/etc/cups/client.conf". This usually causes printing to hang if the computer is disconnected from the network and, hence not recommended for laptops.
 
+\subsection{Screen Sharing}
+\subsubsection{MacOS Screen Sharing}
+MacOS has a ``screen sharing'' feature (actually a VNC server) that can be enable in the sharing preferences or via the command:\\
+
+\verb+$ sudo echo -n enabled > /Library/Preferences/com.apple.ScreenSharing.launchd+.
+
+\subsubsection{NoMachine on Unix}
+A NX server can currently be installed only on Linux machines, while client software is available
+also for Mac and Windows. Despite that NX also tunnels through SSH it is \emph{much} faster than normal X11 forwarding.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Software}
@@ -186,10 +196,8 @@ set et
 set sw=2
 set smarttab
 \end{verbatim}\end{footnotesize}
-
-\section{Table of useful commands}
 \begin{table}[h]
-\center\begin{small}
+\begin{small}
 \begin{tabular}{ll}\hline\hline
 Action         & Command \\\hline
 Split screen   & \verb":S" or \verb":split"\\
@@ -199,10 +207,14 @@ Page up        & \verb"ctrl+b"\\
 End of file    & \verb"G"\\
 n'th line      & :n\\
 Indent all     & =G\\
+\hline
 \end{tabular}\end{small}\end{table}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\LaTeX{} typesetting}
+\subsection{Installing \LaTeX{}}
+\LaTeX{} is available both via Fink and MacPorts, yet I'd recommend installing \href{http://www.tug.org/mactex}{MacTeX} which also includes the awesome TeXShop program.
+
 \subsection{Getting started}
 \begin{enumerate}
 \item Create a \LaTeX{} file, ``test.tex'', for example from the following template that shows some of the basic commands:
@@ -233,12 +245,11 @@ Note that using pdf\LaTeX{} any graphics inserted with \verb"\includegraphics" m
 \verb"$ epstopdf file.eps"
 
 \subsection{Attaching papers to a document}
-Insert \verb"\usepackage{pdfpages}" in the header and attach pdf files -- anywhere -- with\\
-
-\verb"\includepdf[pages=-]{file.pdf} % For all pages in the file"\\
-
-\verb"\includepdf{file.pdf} % For the first page only"\\
-
+Insert \verb"\usepackage{pdfpages}" in the header and attach pdf files -- anywhere -- with
+\begin{verbatim}
+   \includepdf[pages=-]{file.pdf} % For all pages in the file
+   \includepdf{file.pdf}          % For the first page only
+\end{verbatim}
 \noindent Fancy stuff like scaling and advanced page layouts are possible; see the manual for \verb"pdfpages".
 
 \subsection{Attaching files to a PDF document}

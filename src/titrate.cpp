@@ -171,4 +171,43 @@ namespace Faunus {
       << "# Total                     = " << sumsites()+nprot.avg() << endl;
     return sumsites();
   }
-}
+
+  //-------------------------------------------
+
+  titrate_implicit::titrate_implicit(atoms &a, vector<particle> &p, double peeage, double muH) {
+    ph=peeage;
+    mu_proton=muH;
+    atom=&a;
+    for (int i=0; i<p.size(); i++)    //search for titrateable sites
+      if ( (*atom)[p[i].id].pka !=0 ) {
+        sites.push_back(i);
+        p[i].charge = (*atom)[p[i].id].charge; // deprotonate everything
+      }
+  }
+
+  int titrate_implicit::exchange(vector<particle> &p, int i) {
+    if (i<0) i=random();
+    double Zdp =(*atom)[p[i].id].charge; // deprotonated charge of residue
+    if ( p[i].charge > Zdp ) {
+      p[i].charge=Zdp;
+      recent = titrate_implicit::DEPROTONATED;
+    }
+    else {
+      p[i].charge=Zdp+1.;
+      recent = titrate_implicit::PROTONATED;
+    }
+    return i;
+  }
+
+  unsigned int titrate_implicit::random() {
+    unsigned int i = rand() % sites.size();
+    return sites.at(i);
+  }
+  double titrate_implicit::energy(vector<particle> &p, double du, int j) {
+    int i=p[j].id;
+    if (recent==PROTONATED)
+      return du+( log(10.)*( ph - (*atom)[i].pka ) ) - mu_proton;
+    else
+      return du-( log(10.)*( ph - (*atom)[i].pka ) ) + mu_proton;
+  }
+}//namespace

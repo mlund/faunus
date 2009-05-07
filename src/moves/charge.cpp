@@ -103,4 +103,57 @@ namespace Faunus {
       return du-( log(10.)*( this->ph - this->con->atom.list[i].pka ) ) -
         CatPot + log( (this->protons.size()+1) / this->con->getvolume() );
   }
+
+
+  // ----------- DH Titration ----------------
+
+ DHchargereg::DHchargereg(ensemble &e, container &c, energybase &i, float ph, float muH ) : markovmove(e,c,i), titrate_implicit(c.atom,c.p,ph,muH)
+  {
+    name="DH-PROTON TITRATION";
+    cite="Biochem. 2005, 44, 5722-5727.";
+    runfraction=0.2;
+    con->trial = con->p;
+  }
+  /*! \brief Exchange protons between bulk and titrateable sites.
+   *
+   *  This move will randomly go through the titrateable sites and
+   *  try to exchange protons with the bulk. The trial energy is:
+   */
+  double DHchargereg::titrateall() {
+    du=0;
+    if (slp.runtest(runfraction)==false)
+      return du;
+    double sum=0;
+    for (unsigned short i=0; i<sites.size(); i++) {
+      cnt++;
+      int k=exchange(con->trial);
+
+      uold = pot->energy( con->p, k );
+      unew = pot->energy( con->trial, k );
+      du = (unew-uold);
+
+      if (ens->metropolis( energy(con->trial, du, k) )==true) {
+        rc=OK;
+        utot+=du;
+        naccept++;
+        con->p[k].charge = con->trial[k].charge;
+        sum+=du;
+      } else {
+        rc=ENERGY;
+        exchange(con->trial, k);
+      }
+      //samplesites(con->p);  // Average charges on all sites
+    }
+    return sum;
+  }
+
+  string DHchargereg::info() {
+    std::ostringstream o;
+    o <<  markovmove::info()
+      << "#   pH (concentration)  = " << ph << endl
+      << "#   Proton excess (kT)  = " << mu_proton << endl
+      << "#   Titrateable sites   = " << sites.size() << endl;
+    return o.str();
+  }
+
 }//namespace

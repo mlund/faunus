@@ -30,8 +30,12 @@ namespace Faunus {
       double CatPot;  //!< Chemical potential of coupled cation
   };
 
-//  class DHchargereg : public chargereg {
-//  };
+  class DHchargereg : public markovmove, public titrate_implicit {
+    public:
+      DHchargereg( ensemble&, container&, energybase&, float, float);
+      double titrateall();
+      string info();
+   };
 
 }//namespace
 #endif

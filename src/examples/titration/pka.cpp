@@ -32,6 +32,10 @@ int main(int argc, char* argv[]) {
   salt.add( con, in );                 //   Insert sodium ions
   saltmove sm(nvt, con, pot);          // Class for salt movements
   aam.load(con, "confout.aam");        // Load old config (if present)
+  widom wid(10);
+  wid.add(con.atom("NA"));
+  wid.add(con.atom("CL"));
+  wid.runfraction=0.05;
 
 #ifdef GCPKA // "Grand Canonical" titration
   HAchargereg tit(nvt,con,pot,salt,in.getflt("pH", 7.),in.getflt("catpot"));
@@ -55,13 +59,14 @@ int main(int argc, char* argv[]) {
           protein.dipole(con.p);         // Re-calc. dipole moment
           break;
       }
+      wid.insert(con,pot);
     }                                    // END of micro loop
     sys.update(pot.energy(con.p));       // Update system energy
     aam.save("confout.aam", con.p);      // Save config. to disk
     pqr.save("confout.pqr", con.p, tit); // Save PQR file to disk - cool in VMD!
     cout << loop.timing();               // Show progress
   }                                      // END of macro loop
-  cout << sys.info() << sm.info()
+  cout << sys.info() << sm.info() << wid.info()
        << tit.info() << salt.info(con)
        << protein.info() << loop.info(); // Print final results
 }

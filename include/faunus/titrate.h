@@ -51,5 +51,19 @@ namespace Faunus {
       bool loadstate(string);                   //!< Load titration state of the system
       void infos();
   };
+
+  class titrate_implicit {
+    private:
+      enum keys {PROTONATED,DEPROTONATED};
+      keys recent;                          //!< Store information about the most recent action.
+      atoms* atom;
+    public:
+      vector<unsigned int> sites;
+      double ph, mu_proton;
+      titrate_implicit(atoms&, vector<particle> &, double, double);
+      int exchange(vector<particle> &, int=-1);
+      double energy(vector<particle> &, double, int);
+      unsigned int random();
+  };
 }
 #endif

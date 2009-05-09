@@ -142,16 +142,16 @@ struct interaction_less__Faunus_scope_pot_hscoulomb__greater__wrapper : Faunus::
         return Faunus::interaction< Faunus::pot_hscoulomb >::energy( boost::ref(p), boost::ref(a) );
     }
 
-    virtual double force( ::Faunus::container & c, ::Faunus::particle a, ::Faunus::particle b, double r, double dr ) {
+    virtual double force( ::Faunus::container & c, ::Faunus::particle a, ::Faunus::particle b, ::Faunus::point rij, double r, double dr ) {
         if( bp::override func_force = this->get_override( "force" ) )
-            return func_force( boost::ref(c), a, b, r, dr );
+            return func_force( boost::ref(c), a, b, rij, r, dr );
         else
-            return this->Faunus::interaction< Faunus::pot_hscoulomb >::force( boost::ref(c), a, b, r, dr );
+            return this->Faunus::interaction< Faunus::pot_hscoulomb >::force( boost::ref(c), a, b, rij, r, dr );
     }
     
     
-    double default_force( ::Faunus::container & c, ::Faunus::particle a, ::Faunus::particle b, double r, double dr ) {
-        return Faunus::interaction< Faunus::pot_hscoulomb >::force( boost::ref(c), a, b, r, dr );
+    double default_force( ::Faunus::container & c, ::Faunus::particle a, ::Faunus::particle b, ::Faunus::point rij, double r, double dr ) {
+        return Faunus::interaction< Faunus::pot_hscoulomb >::force( boost::ref(c), a, b, rij, r, dr );
     }
 
     virtual void forceall( ::Faunus::container & c, ::std::vector< Faunus::point > & f ) {
@@ -379,14 +379,14 @@ void register_interaction_hscoulomb_class(){
         { //::Faunus::interaction< Faunus::pot_hscoulomb >::force
         
             typedef Faunus::interaction< Faunus::pot_hscoulomb > exported_class_t;
-            typedef double ( exported_class_t::*force_function_type )( ::Faunus::container &,::Faunus::particle,::Faunus::particle,double,double ) ;
-            typedef double ( interaction_less__Faunus_scope_pot_hscoulomb__greater__wrapper::*default_force_function_type )( ::Faunus::container &,::Faunus::particle,::Faunus::particle,double,double ) ;
+            typedef double ( exported_class_t::*force_function_type )( ::Faunus::container &,::Faunus::particle,::Faunus::particle,::Faunus::point,double,double ) ;
+            typedef double ( interaction_less__Faunus_scope_pot_hscoulomb__greater__wrapper::*default_force_function_type )( ::Faunus::container &,::Faunus::particle,::Faunus::particle,::Faunus::point,double,double ) ;
             
             interaction_hscoulomb_exposer.def( 
                 "force"
                 , force_function_type(&::Faunus::interaction< Faunus::pot_hscoulomb >::force)
                 , default_force_function_type(&interaction_less__Faunus_scope_pot_hscoulomb__greater__wrapper::default_force)
-                , ( bp::arg("c"), bp::arg("a"), bp::arg("b"), bp::arg("r"), bp::arg("dr") ) );
+                , ( bp::arg("c"), bp::arg("a"), bp::arg("b"), bp::arg("rij"), bp::arg("r"), bp::arg("dr") ) );
         
         }
         { //::Faunus::interaction< Faunus::pot_hscoulomb >::forceall

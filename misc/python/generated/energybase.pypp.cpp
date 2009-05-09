@@ -65,9 +65,9 @@ struct energybase_wrapper : Faunus::energybase, bp::wrapper< Faunus::energybase 
         return func_energy( boost::ref(arg0), boost::ref(arg1), boost::ref(arg2) );
     }
 
-    virtual double force( ::Faunus::container & arg0, ::Faunus::particle arg1, ::Faunus::particle arg2, double arg3, double arg4=5.0e-1 ){
+    virtual double force( ::Faunus::container & arg0, ::Faunus::particle arg1, ::Faunus::particle arg2, ::Faunus::point arg3, double arg4, double arg5=5.0e-1 ){
         bp::override func_force = this->get_override( "force" );
-        return func_force( boost::ref(arg0), arg1, arg2, arg3, arg4 );
+        return func_force( boost::ref(arg0), arg1, arg2, arg3, arg4, arg5 );
     }
 
     virtual void forceall( ::Faunus::container & arg0, ::std::vector< Faunus::point > & arg1 ){
@@ -147,8 +147,8 @@ void register_energybase_class(){
             , ( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2") ) )    
         .def( 
             "force"
-            , bp::pure_virtual( (double ( ::Faunus::energybase::* )( ::Faunus::container &,::Faunus::particle,::Faunus::particle,double,double ) )(&::Faunus::energybase::force) )
-            , ( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2"), bp::arg("arg3"), bp::arg("arg4")=5.0e-1 ) )    
+            , bp::pure_virtual( (double ( ::Faunus::energybase::* )( ::Faunus::container &,::Faunus::particle,::Faunus::particle,::Faunus::point,double,double ) )(&::Faunus::energybase::force) )
+            , ( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2"), bp::arg("arg3"), bp::arg("arg4"), bp::arg("arg5")=5.0e-1 ) )    
         .def( 
             "forceall"
             , bp::pure_virtual( (void ( ::Faunus::energybase::* )( ::Faunus::container &,::std::vector< Faunus::point > & ) )(&::Faunus::energybase::forceall) )

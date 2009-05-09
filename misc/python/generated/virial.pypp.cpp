@@ -22,6 +22,13 @@ struct virial_wrapper : Faunus::virial, bp::wrapper< Faunus::virial > {
     
     }
 
+    virial_wrapper(::Faunus::container & arg0, ::std::vector< Faunus::macromolecule > & arg1 )
+    : Faunus::virial( boost::ref(arg0), boost::ref(arg1) )
+      , bp::wrapper< Faunus::virial >(){
+        // constructor
+    
+    }
+
     virtual ::std::string info(  ) {
         if( bp::override func_info = this->get_override( "info" ) )
             return func_info(  );
@@ -43,6 +50,7 @@ void register_virial_class(){
         virial_exposer_t virial_exposer = virial_exposer_t( "virial", bp::init< Faunus::container & >(( bp::arg("arg0") )) );
         bp::scope virial_scope( virial_exposer );
         bp::implicitly_convertible< Faunus::container &, Faunus::virial >();
+        virial_exposer.def( bp::init< Faunus::container &, std::vector< Faunus::macromolecule > & >(( bp::arg("arg0"), bp::arg("arg1") )) );
         { //::Faunus::virial::info
         
             typedef ::std::string ( ::Faunus::virial::*info_function_type )(  ) ;
@@ -62,6 +70,16 @@ void register_virial_class(){
                 "sample"
                 , sample_function_type( &::Faunus::virial::sample )
                 , ( bp::arg("arg0"), bp::arg("arg1") ) );
+        
+        }
+        { //::Faunus::virial::sample
+        
+            typedef void ( ::Faunus::virial::*sample_function_type )( ::Faunus::container &,::Faunus::energybase &,::std::vector< Faunus::macromolecule > & ) ;
+            
+            virial_exposer.def( 
+                "sample"
+                , sample_function_type( &::Faunus::virial::sample )
+                , ( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2") ) );
         
         }
         virial_exposer.def_readwrite( "dr", &Faunus::virial::dr );

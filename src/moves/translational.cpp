@@ -364,5 +364,43 @@ namespace Faunus {
       << "#   Displacement directions   = " << dpv.x << " " << dpv.y << " " << dpv.z << endl;
     return o.str();
   }
+
+  //------------------------------------------------
+
+  monomermove::monomermove(
+      ensemble &e, container &c, energybase &i, inputfile &in ) : saltmove(e,c,i,in) {
+    init();
+    dp=in.getflt("dp_monomer", 3.);
+    name="MONOMER DISPLACEMENTS";
+  }
+
+  double monomermove::move(polymer &g) {
+    du=0;
+    if (slp.runtest( runfraction )==false || g.size()==0)
+      return du;
+    cnt++;
+    int n=g.displace(*con, dpv*dp); 
+    if (con->collision( con->trial[n] )==true)
+      rc=HC;
+    else {
+      uold = pot->u_monomer(con->p, g, n);   
+      unew = pot->u_monomer(con->trial, g, n);   
+      du = unew - uold;
+      if (ens->metropolis(du)==true) {
+        rc=OK;
+        utot+=du;                               // track energy changes
+        double d2=con->sqdist(con->p[n],con->trial[n]); // track avg. displacement
+        dpsqr+=d2;
+        rsqr+=d2/pow(g.size(),2);               // Track mean square displacement per particle
+        naccept++;                              // accept counter
+        con->p[n] = con->trial[n];              // Accept move
+        return du;
+      } else rc=ENERGY;
+    }
+    du=0;
+    dpsqr+=0;
+    con->trial[n] = con->p[n];
+    return du;
+  }
 }//namespace
 

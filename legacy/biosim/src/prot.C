@@ -530,14 +530,13 @@ int main(int argc, char* argv[] ) {
       hist.add( h[20], z, utot ); //total energy 
  
       //Multipole analysis
-      if (slump.random_one()>0.9) {
-        if (z>20. && z<55.) {
-          trj.header( g[P1].size()-2+1 ); //subtract ghosts, "mu", "cm". Add 1 for P2.cm
+          trj.header( g[P1].size()-2+1+g[SALT].size() ); //subtract ghosts, "mu", "cm". Add 1 for P2.cm
           trj.add( s.p, pep, g[P1] );
-          trj.add( s.p, pep, g[P2].cm );
+          trj.add( s.p, pep, g[P2]);
+          trj.add( s.p, pep, g[SALT]);
           trj.footer();
-        }
 
+      if (slump.random_one()>0.9) {
         double q1=s.charge(g[P1]);
         double q2=s.charge(g[P2]);
         Q1+=q1;
@@ -685,7 +684,8 @@ int main(int argc, char* argv[] ) {
   // Save a PQR file for VMD.
   pqr pqr("out.pqr");
   pqr.add(s.p,pep,g[P1]);
-  pqr.add(s.p,pep,g[P2].cm);
+  pqr.add(s.p,pep,g[P2]);
+  pqr.add(s.p,pep,g[SALT]);
   pqr.close();
 
   for (int i=g[CHAIN1].beg; i<g[CHAIN1].end; i++) {

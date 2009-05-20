@@ -31,7 +31,7 @@ namespace Faunus {
         req = in.getflt("springeqdist", 2);
       };
 
-      double monomerenergy( vector<particle> &p, polymer &g, unsigned int i ) {
+      double u_monomer(const vector<particle> &p, const polymer &g, unsigned int i ) {
         // normal energy function if no neighbors
         if ( g.nb[i].size()==0 )
           return interaction<T>::energy(p,g,i);
@@ -52,6 +52,20 @@ namespace Faunus {
                  dr = r - req;
           u+=k*dr*dr + pair.f * p[i].charge * p[g.nb[i][j]].charge / r;
         }
+        return u;
+      }
+      double uself_polymer(const vector<particle> &p, const polymer &g) {
+        double dr,r,u=0;
+        int i,j,n=g.end+1;
+        for (i=g.beg; i<n-1; i++)
+          for (j=i+1; j<n; j++)
+            if ( g.areneighbors(i,j)==false )
+              u+=pair.f*pair.pairpot(p[i], p[j]);
+            else {
+              r=sqrt( pair.sqdist( p[i], p[j] ) );
+              dr = r - req;
+              u+=k*dr*dr + pair.f * p[i].charge*p[j].charge/r;
+            }
         return u;
       }
   };

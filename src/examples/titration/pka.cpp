@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
 #endif
 
   systemenergy sys(pot.energy(con.p)); // System energy analysis
-  cout << con.info() << tit.info()     // Some information
+  cout << in.info() << con.info() << tit.info()     // Some information
        << pot.info() << con.atom.info();
 
   while ( loop.macroCnt() ) {            // Markov chain 

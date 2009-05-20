@@ -627,10 +627,10 @@ namespace Faunus {
     return true;
   }
 
-  vector<unsigned short> polymer::neighbors(unsigned short i) { return nb.at(i-beg); }
+  vector<unsigned short> polymer::neighbors(unsigned short i) const { return nb.at(i-beg); }
 
   //!< is j a neighbor to polymer atom i?
-  bool polymer::areneighbors(unsigned short i, unsigned short j) {
+  bool polymer::areneighbors(unsigned short i, unsigned short j) const {
     return ( std::find( nb[i].begin(), nb[i].end(), j) != nb[i].end() ) ? true : false;
   }
 

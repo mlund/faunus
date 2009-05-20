@@ -1,6 +1,7 @@
 /*! \page test_widom Widom
  *
- * bla...
+ * Simulate a number of flexible polymers in a salt
+ * solution.
  *
  * \author Mikael Lund
  * \date Lund, 2009
@@ -17,22 +18,30 @@ int main() {
   inputfile in("wp.conf");              // Read input file
   mcloop loop(in);                      // Set Markov chain loop lengths
   canonical nvt;                        // Use the canonical ensemble
-  box cell(in);                         // We want a cubic simulation container
-  springinteraction<pot_hsminimage> pot(in);  // ...and a Coulomb/HS pot. w. minimum image
+  //box cell(in);                         // We want a cubic simulation container
+  //springinteraction<pot_hsminimage> pot(in);  // ...and a Coulomb/HS pot. w. minimum image
+  cell cell(in);
+  springinteraction<pot_hscoulomb> pot(in);  // ...and a Coulomb/HS pot.
+
+  polymer pol;
+  pol.babeladd( cell, in );
+  monomermove mm(nvt,cell,pot,in);
+  cout << pol.info();
+
+  cell.trial = cell.p;
+
   saltmove sm(nvt,cell,pot,in);         // Class for salt movements
   salt salt;                            // Define some groups for mobile ions
   salt.add(cell,in);                    // Insert some ions
 
-  polymer pol;
-  pol.babeladd( cell, in );
-  cout << pol.info() ;
-  pot.monomerenergy(cell.p, pol, 9);
-  return 0;
   iopqr pqr(cell.atom);                 // File I/O class
   ioaam aam(cell.atom);                 // File I/O class
-  aam.load(cell,"conf.aam");           // Read initial config. from disk (if present)
+  //aam.load(cell,"conf.aam");           // Read initial config. from disk (if present)
 
-  systemenergy sys(pot.energy(cell.p)); // Track system energy
+  systemenergy sys(
+        pot.internal(cell.p, salt)  +
+        pot.energy(cell.p, salt, pol) +
+        pot.uself_polymer(cell.p,pol) ); // Track system energy
 
   cout << cell.info() << cell.atom.info()
        << pot.info() << salt.info(cell)
@@ -41,14 +50,18 @@ int main() {
   while ( loop.macroCnt() ) {           // Markov chain 
     while ( loop.microCnt() ) {
       sys+=sm.move(salt);               // Displace salt particles
+      sys+=mm.move(pol);
     }                                   // END of micro loop
-    sys.update(pot.energy(cell.p));     // Update system energy
+    sys.update(
+        pot.internal(cell.p, salt) +
+        pot.energy(cell.p, salt, pol) +
+        pot.uself_polymer(cell.p,pol) );     // Update system energy
     aam.save("conf.aam",cell.p);       // Save particle configuration to disk
     pqr.save("conf.pqr",cell.p);
     cout << loop.timing();              // Show progres
   }                                     // END of macro loop and simulation
 
-  cout << sys.info() << sm.info()
+  cout << sys.info() << sm.info() << mm.info()
        << loop.info(); // Final information and results!
 }
 

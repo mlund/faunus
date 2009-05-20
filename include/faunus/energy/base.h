@@ -36,6 +36,7 @@ namespace Faunus {
       virtual double iondip(const point &, double, double)=0;                            //!< Ion-dipole energy.
       virtual double force(container &, particle, particle, double, double=.5)=0;        //!< Force vector
       virtual void forceall(container &, vector<point> &)=0;
+      virtual double u_monomer(const vector<particle> &, const polymer &, unsigned int)=0; //!< all<->monomer in polymer
 
       string info() {
         std::ostringstream o;

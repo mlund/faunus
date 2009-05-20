@@ -72,7 +72,7 @@ namespace Faunus {
    *  \author Mikael Lund
    */
   class saltmove : public markovmove {
-    private:
+    protected:
       void init();
       long double rsqr;  //!< Mean square displacement
     public:
@@ -82,6 +82,16 @@ namespace Faunus {
       double move(group &, int);      //!< Move a single particle
       double move(group &);           //!< Loop over group particles (randomly)
       string info();
+  };
+
+  //-------------- TRANSLATE A MONOMER PARTICLE ----------------------------
+  /*! \brief Translate monomer particle
+   *  \author Mikael Lund
+   */
+  class monomermove : public saltmove {
+    public:
+      monomermove(ensemble &, container&, energybase&, inputfile&);
+      double move(polymer &);      //!< Move a single monomer particle
   };
 }//namespace
 #endif

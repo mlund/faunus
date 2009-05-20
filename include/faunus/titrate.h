@@ -29,7 +29,7 @@ namespace Faunus {
       action exchange(vector<particle> &, action &);
       short int random(vector<short int> &); //!< Pick a random item in a vector
       average<float> nprot;                  //!< Average number of protons. Updated with titrate::samplesites
-      vector<average <float> >  q;           //!< Stores the average charges of sites from titrate::sites
+      vector<average <double> > q;           //!< Stores the average charges of sites from titrate::sites
       action takeFromBulk(vector<particle> &, short int, short int=-1);
       action moveToBulk(vector<particle> &, short int, short int=-1);
       keywords status( vector<particle> &, short int );

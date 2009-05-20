@@ -47,7 +47,7 @@ namespace Faunus {
     atomPtr = mol.GetAtom(i);
     v=atomPtr->GetVector();
     v.Get(c);
-    //a.id=faunatomsPtr->find("NA");
+    a.id=faunatomsPtr->get(faunatomsPtr->find( "NA" )).id;
     a.x=c[0]; a.y=c[1]; a.z=c[2];
     a.mw=atomPtr->GetAtomicMass();
     if (a.mw<1e-5)

@@ -21,10 +21,10 @@ namespace Faunus {
   class atoms {
     private:
       void init();                  //!< Recalc eps and sigma vectors
-      char find(string);
-      particle get(char);           //!< Convert n'th atom to a particle
       string filename;
     public:
+      particle get(char);           //!< Convert n'th atom to a particle
+      char find(string);
       struct data {
         char id;          //!< id number
         double sigma,     //!< LJ diameter

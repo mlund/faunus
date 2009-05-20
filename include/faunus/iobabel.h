@@ -8,6 +8,7 @@
 #include <openbabel/obmolecformat.h>
 #include <openbabel/generic.h>
 #include "faunus/point.h"
+#include "faunus/species.h"
 
 namespace Faunus {
   using OpenBabel::OBAtomAtomIter;
@@ -31,7 +32,9 @@ namespace Faunus {
       particle a;   // Tmp particle
       double c[3];  // Temp. vector storage
       void p2atom(particle &); // Convert particle to ObenBabel atom
+      atoms* faunatomsPtr;
     public:
+      iobabel(atoms&);
       vector<particle> p;         //!< Placeholder for loaded data
       particle get(unsigned int); //!< Convert n'th babel atom to a particle
       void read(string);          //!< Read entire file (autodetect format from extension)

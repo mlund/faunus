@@ -1,6 +1,8 @@
 #include "faunus/iobabel.h"
 namespace Faunus {
 
+  iobabel::iobabel(atoms &a) { faunatomsPtr=&a; }
+
   void iobabel::p2atom(particle &p) {
     atom.SetVector(p.x, p.y, p.z);
     atom.SetPartialCharge(p.charge);
@@ -45,6 +47,7 @@ namespace Faunus {
     atomPtr = mol.GetAtom(i);
     v=atomPtr->GetVector();
     v.Get(c);
+    //a.id=faunatomsPtr->find("NA");
     a.x=c[0]; a.y=c[1]; a.z=c[2];
     a.mw=atomPtr->GetAtomicMass();
     if (a.mw<1e-5)

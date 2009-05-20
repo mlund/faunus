@@ -18,10 +18,10 @@ int main() {
   inputfile in("wp.conf");              // Read input file
   mcloop loop(in);                      // Set Markov chain loop lengths
   canonical nvt;                        // Use the canonical ensemble
-  //box cell(in);                         // We want a cubic simulation container
-  //springinteraction<pot_hsminimage> pot(in);  // ...and a Coulomb/HS pot. w. minimum image
-  cell cell(in);
-  springinteraction<pot_hscoulomb> pot(in);  // ...and a Coulomb/HS pot.
+  box cell(in);                         // We want a cubic simulation container
+  springinteraction<pot_hsminimage> pot(in);  // ...and a Coulomb/HS pot. w. minimum image
+  //cell cell(in);
+  //springinteraction<pot_hscoulomb> pot(in);  // ...and a Coulomb/HS pot.
 
   polymer pol;
   pol.babeladd( cell, in );

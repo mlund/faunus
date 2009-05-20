@@ -613,7 +613,7 @@ namespace Faunus {
 #ifdef BABEL
   polymer::polymer() {}
   bool polymer::babeladd(container &c, inputfile &in) {
-    iobabel ob;
+    iobabel ob(c.atom);
     nb.clear();
     ob.read(in.getstr("polymer"));
     add(c,ob.p);

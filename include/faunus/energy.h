@@ -272,6 +272,13 @@ namespace Faunus {
         f= -(forward-center)/(2*dr);
         return f;
       }
+;
+      double u_monomer(const vector<particle> &p, const polymer &g, unsigned int i) {
+        return 0;
+      }
+      double uself_polymer(const vector<particle> &p, const polymer &g) {
+        return 0;
+      }
 
       string info() {
         std::ostringstream o;

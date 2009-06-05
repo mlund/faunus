@@ -25,8 +25,9 @@ int main() {
 
   polymer pol;
   pol.babeladd( cell, in );
-  monomermove mm(nvt,cell,pot,in);
   cout << pol.info();
+  return 0;
+  monomermove mm(nvt,cell,pot,in);
 
   cell.trial = cell.p;
 

@@ -13,12 +13,8 @@ namespace Faunus {
     mol.Clear();
     obconv.SetInFormat(obconv.FormatFromExt(filename.c_str()));
     bool notatend = obconv.ReadFile(&mol,filename.c_str());
-    while (notatend) {
-      for (unsigned int i=1; i<=mol.NumAtoms(); i++)
-        p.push_back(get(i));
-      //mol.Clear();
-      notatend = obconv.Read(&mol);
-    }
+    for (unsigned int i=1; i<=mol.NumAtoms(); i++)
+      p.push_back(get(i));
   }
 
   vector<unsigned short> iobabel::neighbors(unsigned short i) {
@@ -47,8 +43,8 @@ namespace Faunus {
     atomPtr = mol.GetAtom(i);
     v=atomPtr->GetVector();
     v.Get(c);
-    a.id=faunatomsPtr->get(faunatomsPtr->find( "NA" )).id;
     a.x=c[0]; a.y=c[1]; a.z=c[2];
+    a.id=faunatomsPtr->get(faunatomsPtr->find( "NA" )).id;
     a.mw=atomPtr->GetAtomicMass();
     if (a.mw<1e-5)
       a.mw=1;   //we don't like weightless atoms.

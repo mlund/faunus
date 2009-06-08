@@ -20,6 +20,11 @@ namespace Faunus {
    *  libraries for reading and writing a large number of molecular formats.
    *  The main purpose of this class is to bridge between the babel api and
    *  the faunus particle class approach.
+   *
+   *  Particle types defined in "faunatoms.dat" are added to the OB
+   *  element table so that external OB input routines automatically
+   *  recognize these. Note that OB can have a maximum of 255 (one char)
+   *  elements where approximately 116 of these are already occupied.
    */
   class iobabel {
     private:
@@ -36,7 +41,7 @@ namespace Faunus {
     public:
       iobabel(atoms&);
       vector<particle> p;         //!< Placeholder for loaded data
-      particle get(unsigned int); //!< Convert n'th babel atom to a particle
+      particle get(unsigned int); //!< Convert i'th babel atom to a particle
       void read(string);          //!< Read entire file (autodetect format from extension)
       bool write(string,const vector<particle> &);//!< Write coordinates (format from extension)
       vector<unsigned short> neighbors(unsigned short int); //!< Get list of neighboring atoms

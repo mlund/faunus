@@ -24,7 +24,8 @@ namespace Faunus {
       string filename;
     public:
       particle get(char);           //!< Convert n'th atom to a particle
-      char find(string);
+      char find(string);            //!< Find atom id from name
+      char find(double, double=0.1);//!< Find atom id from molecular weight
       struct data {
         char id;          //!< id number
         double sigma,     //!< LJ diameter

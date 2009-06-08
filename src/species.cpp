@@ -2,7 +2,7 @@
 namespace Faunus {
   atoms::atoms() {
     filename="faunatoms.dat";
-    data a = {0,0,0,0,1.,0,0,false,"UNK"};
+    data a = {0,0,0,0,0.1,0,0,false,"UNK"};
     list.push_back(a);
     init();
   }
@@ -44,6 +44,13 @@ namespace Faunus {
   char atoms::find(string s) {
     for (char i=0; i<list.size(); i++)
       if (s==list[i].name)
+        return list[i].id;
+    return 0;
+  }
+
+  char atoms::find(double mw, double tol) {
+    for (char i=0; i<list.size(); i++)
+      if ( std::abs(mw-list[i].mw)<tol )
         return list[i].id;
     return 0;
   }

@@ -18,8 +18,9 @@ def charge(name):
   return 0.
 
 # Approximate radius from weight
+# Note: 1.666 converts ml/mol -> A^3/molecule
 def radius(mw):
-  rho=0.9
+  rho=0.9  # g/ml
   return pow( mw/rho * 3./4./3.14*1.661, 0.3333 )
 
 # Return weight of an atom

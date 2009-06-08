@@ -1,7 +1,23 @@
 #include "faunus/iobabel.h"
 namespace Faunus {
 
-  iobabel::iobabel(atoms &a) { faunatomsPtr=&a; }
+  iobabel::iobabel(atoms &a) {
+    faunatomsPtr=&a;
+    // Teach Babel some new "elements"!! (see openbabel "data.cpp")
+    unsigned int n = OpenBabel::etab.GetNumberOfElements();
+    for (unsigned int i=0; i<a.list.size(); i++) {
+      std::ostringstream o;
+      o << n++ << " "              // "atomic" number
+        << a.list[i].name << " "   // symbol
+        << 0 << " "                // AREneg
+        << a.list[i].radius << " " // radius covalent
+        << a.list[i].radius << " " // radius vdw
+        << 20 << " "               // max bonds
+        << a.list[i].mw << " "     // weight
+        << "0 0 0 0 0 0 Faunus";
+      OpenBabel::etab.ParseLine(o.str().c_str());     
+    }
+  }
 
   void iobabel::p2atom(particle &p) {
     atom.SetVector(p.x, p.y, p.z);
@@ -39,15 +55,31 @@ namespace Faunus {
     return obconv.WriteFile(&mol,filename.c_str());
   }
 
+  /*!
+   * This function will convert between a babel atom and the
+   * faunus particle approach. Coordinates and molecular weight
+   * can be obtained from most file formats. Charge and radius
+   * are currently supported only by the PQR format (at least
+   * as far as we know).
+   *
+   * \note Since we cannot fetch the atomname from the original
+   *       structure file, opened by babel, the recognition of
+   *       particles is done via their molecular weight. That is,
+   *       if you want to recognize a non-atomic particle one could
+   *       use an exotic element and assign the same weight to a
+   *       particle in the "faunatoms.dat" file. Ugly, we know but
+   *       it'll have to do for now.
+   */
   particle iobabel::get(unsigned int i) {
     atomPtr = mol.GetAtom(i);
     v=atomPtr->GetVector();
     v.Get(c);
     a.x=c[0]; a.y=c[1]; a.z=c[2];
-    a.id=faunatomsPtr->get(faunatomsPtr->find( "NA" )).id;
     a.mw=atomPtr->GetAtomicMass();
     if (a.mw<1e-5)
       a.mw=1;   //we don't like weightless atoms.
+    string name=string( OpenBabel::etab.GetSymbol( atomPtr->GetAtomicNum() ) );
+    a.id=faunatomsPtr->get( faunatomsPtr->find(name) ).id;
     a.charge=atomPtr->GetPartialCharge();
 
     if (atomPtr->HasData("Radius")) {

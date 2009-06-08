@@ -20,14 +20,18 @@ int main() {
   canonical nvt;                        // Use the canonical ensemble
   box cell(in);                         // We want a cubic simulation container
   springinteraction<pot_hsminimage> pot(in);  // ...and a Coulomb/HS pot. w. minimum image
-  //cell cell(in);
-  //springinteraction<pot_hscoulomb> pot(in);  // ...and a Coulomb/HS pot.
 
   polymer pol;
   pol.babeladd( cell, in );
   cout << pol.info();
-  return 0;
+  for (int i=pol.beg; i<=pol.end; i++)
+    cout << cell.atom[ cell.p[i].id ].name << " ";
+  cout << std::endl;
+
   monomermove mm(nvt,cell,pot,in);
+
+  saltmove wm(nvt,cell,pot,in);         // Class for wall charge displacements.
+  wm.dpv.z=0;                           // - disable move in z.
 
   cell.trial = cell.p;
 
@@ -51,7 +55,7 @@ int main() {
   while ( loop.macroCnt() ) {           // Markov chain 
     while ( loop.microCnt() ) {
       sys+=sm.move(salt);               // Displace salt particles
-      sys+=mm.move(pol);
+      sys+=mm.move(pol);                // Displace monomers
     }                                   // END of micro loop
     sys.update(
         pot.internal(cell.p, salt) +

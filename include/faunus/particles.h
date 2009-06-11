@@ -26,8 +26,8 @@ namespace Faunus {
       bool overlap(const particle &);       //!< Check for overlap w. particle
       bool overlap(const std::vector<particle> &);
       bool check_vector();                  //!< Check if p and trial are equal!
-      int count(particle::type, const point&,double);//!< Count particles of "type" within a sphere
-      vector<particle::type> list_of_species() const; //!< Get vector of particle types in the system
+      int count(unsigned char, const point&,double);//!< Count particles of "type" within a sphere
+      vector<unsigned char> list_of_species() const; //!< Get vector of particle types in the system
   };
 }
 #endif

@@ -57,7 +57,7 @@ namespace Faunus {
       std::cout << "# Fatal error: Particle vectors corrupted!!\n";
     return rc;
   }
-  int particles::count(particle::type id, const point &origo, double r) {
+  int particles::count(unsigned char id, const point &origo, double r) {
     int i,cnt=0,n=p.size();
     double r2=r*r;
     for (i=0; i<n; i++)
@@ -65,10 +65,10 @@ namespace Faunus {
     return cnt;
   }
 
-  vector<particle::type> particles::list_of_species() const {
-    vector<particle::type> id;
+  vector<unsigned char> particles::list_of_species() const {
+    vector<unsigned char> id;
     for (int i=0; i<p.size(); i++) {
-      vector<particle::type>::iterator iter = std::find(id.begin(), id.end(), p[i].id);
+      vector<unsigned char>::iterator iter = std::find(id.begin(), id.end(), p[i].id);
       if (iter==id.end())
         id.push_back(p[i].id);
     }

@@ -43,12 +43,12 @@ int main() {
   box cell(in);                           // We want a cubic cell
   canonical nvt;                          // Use the canonical ensemble
   interaction<pot_debyehuckelP3> pot(in); // Functions for interactions
-  iogro gro(cell.atom, in);               // Gromacs file output for VMD etc.
+  iogro gro(in);                          // Gromacs file output for VMD etc.
 
   vector<macromolecule> g;                // PROTEIN groups
   io io;
-  ioxyz xyz(cell.atom);
-  ioaam aam(cell.atom);
+  ioxyz xyz;
+  ioaam aam;
   if (in.getboo("lattice")==true)         //   Protein input file format is AAM
     aam.loadlattice(cell, in, g);                //   Load and insert proteins
   else                                    //   Center first protein (will be frozen)

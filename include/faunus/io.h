@@ -70,13 +70,9 @@ namespace Faunus {
     friend class iogro;
     friend class iopqr;
     private:
-    atoms *atomPtr;
     vector<string> v; 
     vector<particle> p;
     public:
-    iopart(atoms &a) {
-      atomPtr=&a;
-    }
     virtual vector<particle> load(string)=0;            //!< Load from disk
     virtual bool save(string, vector<particle>&)=0;     //!< Save to disk
   };
@@ -94,7 +90,7 @@ namespace Faunus {
     particles *sys;
 
     public:
-    ioxyz(atoms &);
+    ioxyz();
     bool save(string, vector<particle>&);
     vector<particle> load(string);
   };
@@ -110,7 +106,7 @@ namespace Faunus {
       string p2s(particle &, int=0); 
       particle s2p(string &); 
     public:
-      ioaam(atoms &);
+      ioaam();
       vector<particle> load(string);
       void load(container&,inputfile&,vector<macromolecule>&);//!< Read proteins from disk
       void loadlattice(container&,inputfile&,vector<macromolecule>&);//!< Read proteins from disk on to a lattice
@@ -131,7 +127,6 @@ namespace Faunus {
       vector<particle> load(string);
     public:
       iopov(container &);
-      //iopov(container &, atoms &);
       void clear();                       //!< Clear output buffer
       void box(float);                    //!< Add cubic box
       void cell(float);                   //!< Add spherical cell
@@ -152,7 +147,7 @@ namespace Faunus {
       void header() {}
       vector<particle> load(string) { return vector<particle>(); }
     public:
-      iopqr(atoms &);
+      iopqr();
       bool save(string, vector<particle> &);            //!< Save with particle charge
       bool save(string, vector<particle> &, titrate &); //!< Save with average charges
   };
@@ -170,7 +165,7 @@ namespace Faunus {
       vector<particle> load(string) { return vector<particle>(); }
       float len;
     public:
-      iogro(atoms &, inputfile &);
+      iogro(inputfile &);
       bool save(string, vector<particle> &);
       bool save(string, box &);
   };

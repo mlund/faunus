@@ -33,6 +33,7 @@ namespace Faunus {
       double lB(double=80); //!< Bjerrum length [Aangstrom]
       double kT2kJ(double); //!< kT/molecule -> kJ/mol
   };
+  extern pc pyc;
 } // namespace
 #endif
 

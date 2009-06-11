@@ -116,7 +116,7 @@ namespace Faunus {
   particle::particle() {
     charge=mw=radius=0;
     hydrophobic=false;
-    id=GHOST;
+    id=0;
   }
 
   particle& particle::operator=(const point& p) {

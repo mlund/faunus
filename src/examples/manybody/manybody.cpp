@@ -25,13 +25,13 @@ int main() {
 #else
   interaction_monopole<pot_minimage> pot(in,cell); // Far-away monopole approximation?
 #endif
-  iogro gro(cell.atom, in);             // Gromacs file output for VMD etc.
+  iogro gro(in);                        // Gromacs file output for VMD etc.
 
   FAUrdf protrdf(0,0,.5,cell.len/2.);   // Protein and salt radial distributions
-  FAUrdf saltrdf(particle::NA,particle::SO4, .5, cell.len/2.);
+  FAUrdf saltrdf(atom["NA"].id, atom["SO4"].id, .5, cell.len/2.);
 
   vector<macromolecule> g;              // PROTEIN groups
-  ioaam aam(cell.atom);                 //   Protein input file format is AAM
+  ioaam aam;                            //   Protein input file format is AAM
   aam.load(cell, in, g);                //   Load and insert proteins
   g[0].center(cell);                    //   Center first protein (will be frozen)
   macrorot mr(nvt, cell, pot);          //   Class for macromolecule rotation
@@ -42,7 +42,7 @@ int main() {
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
 
   cout << cell.info() << pot.info()     // Print information to screen
-       << cell.atom.info();
+       << atom.info();
   #ifdef GROMACS
   ioxtc xtc(cell, cell.len);            // Gromacs xtc output (if installed)
   #endif

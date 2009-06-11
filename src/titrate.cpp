@@ -4,13 +4,11 @@ namespace Faunus {
    * \param atom Species class
    * \param peeage pH
    */
-  titrate::titrate(atoms &a, double peeage) {
+  titrate::titrate(double peeage) {
     ph=peeage;
-    atom=&a;
   }
-  titrate::titrate(atoms &a, vector<particle> &p, group &mobile, double peeage) {
+  titrate::titrate(vector<particle> &p, group &mobile, double peeage) {
     ph=peeage;
-    atom=&a;
     init(p, mobile);
   }
 
@@ -28,10 +26,10 @@ namespace Faunus {
       if (abs(p[i].charge)<1e-6) neutrons.push_back(i);
     }
     for (i=0; i<p.size(); i++)    //search for titrateable sites
-      if ( (*atom)[p[i].id].pka !=0 ) {
+      if ( atom[p[i].id].pka !=0 ) {
         sites.push_back(i);
         if ( neutrons.size()==0 )
-          p[i].charge = (*atom)[p[i].id].charge; // deprotonate everything
+          p[i].charge = atom[p[i].id].charge; // deprotonate everything
       }
     q.resize( sites.size() ); //adjust site average charge vector
   }
@@ -45,7 +43,7 @@ namespace Faunus {
 
   //Returns protonation status of particle i in particle vector
   titrate::keywords titrate::status(vector<particle> &p, short int i) {
-    if ( p[i].charge > (*atom)[p[i].id].charge )
+    if ( p[i].charge > atom[p[i].id].charge )
       return PROTONATED;
     return DEPROTONATED;
   }
@@ -101,9 +99,9 @@ namespace Faunus {
       double du, action &a) {
     int i=p[a.site].id;
     if (a.action==PROTONATED)
-      return du+( log(10.)*( ph - (*atom)[i].pka ) );
+      return du+( log(10.)*( ph - atom[i].pka ) );
     else
-      return du-( log(10.)*( ph - (*atom)[i].pka ) );
+      return du-( log(10.)*( ph - atom[i].pka ) );
   }
 
   void titrate::infos() {
@@ -138,9 +136,9 @@ namespace Faunus {
 
   void titrate::showsites(vector<particle> &p) {
     std::cout << "# --- AVERAGE SITE CHARGES ---------------------\n";
-    for (unsigned int i=0; i<atom->list.size(); i++)
-      if ( (*atom)[i].pka!=0) {
-        std::cout << (*atom)[i].name << ": " << setiosflags(std::ios::fixed);
+    for (unsigned int i=0; i<atom.list.size(); i++)
+      if ( atom[i].pka!=0) {
+        std::cout << atom[i].name << ": " << setiosflags(std::ios::fixed);
         std::cout.precision(3);
         for (unsigned int j=0; j<sites.size(); j++)
           if (p[sites[j]].id==i)
@@ -174,20 +172,19 @@ namespace Faunus {
 
   //-------------------------------------------
 
-  titrate_implicit::titrate_implicit(atoms &a, vector<particle> &p, double peeage, double muH) {
+  titrate_implicit::titrate_implicit(vector<particle> &p, double peeage, double muH) {
     ph=peeage;
     mu_proton=muH;
-    atom=&a;
     for (int i=0; i<p.size(); i++)    //search for titrateable sites
-      if ( (*atom)[p[i].id].pka !=0 ) {
+      if ( atom[p[i].id].pka !=0 ) {
         sites.push_back(i);
-        p[i].charge = (*atom)[p[i].id].charge; // deprotonate everything
+        p[i].charge = atom[p[i].id].charge; // deprotonate everything
       }
   }
 
   int titrate_implicit::exchange(vector<particle> &p, int i) {
     if (i<0) i=random();
-    double Zdp =(*atom)[p[i].id].charge; // deprotonated charge of residue
+    double Zdp =atom[p[i].id].charge; // deprotonated charge of residue
     if ( p[i].charge > Zdp ) {
       p[i].charge=Zdp;
       recent = titrate_implicit::DEPROTONATED;
@@ -206,8 +203,8 @@ namespace Faunus {
   double titrate_implicit::energy(vector<particle> &p, double du, int j) {
     int i=p[j].id;
     if (recent==PROTONATED)
-      return du+( log(10.)*( ph - (*atom)[i].pka ) ) - mu_proton;
+      return du+( log(10.)*( ph - atom[i].pka ) ) - mu_proton;
     else
-      return du-( log(10.)*( ph - (*atom)[i].pka ) ) + mu_proton;
+      return du-( log(10.)*( ph - atom[i].pka ) ) + mu_proton;
   }
 }//namespace

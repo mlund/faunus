@@ -1,5 +1,7 @@
 #include "faunus/species.h"
 namespace Faunus {
+  atoms atom; // Instantiate global copy
+
   atoms::atoms() {
     filename="faunatoms.dat";
     data a = {0,0,0,0,0.1,0,0,false,"UNK"};
@@ -31,7 +33,7 @@ namespace Faunus {
   particle atoms::set(particle &p, char i) {
     p.charge=list[i].charge;
     p.mw=list[i].mw;
-    p.id=static_cast<particle::type>(list[i].id);
+    p.id=list[i].id;
     p.radius=list[i].radius;
     return p;
   }

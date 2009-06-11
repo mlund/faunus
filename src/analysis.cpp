@@ -362,7 +362,7 @@ namespace Faunus {
         }
     conc+=float(cnt)/vol;
   }
-  void twostatebinding::update(container &con, point &site, particle::type id) {
+  void twostatebinding::update(container &con, point &site, unsigned char id) {
     unsigned short i,n=con.p.size(),cnt=0;
     for (i=0; i<n; i++)
       if (con.p[i].id==id)

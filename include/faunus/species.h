@@ -53,5 +53,7 @@ namespace Faunus {
       string info();                         //!< Print info
       void reset_properties(vector<particle> &);//!< Reset particle properties according to particle id
   };
+
+  extern atoms atom; // GLOBAL SCOPE
 }//namespace
 #endif

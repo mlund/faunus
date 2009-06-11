@@ -21,9 +21,9 @@ namespace Faunus {
 
   void widom::add(particle p) { g.push_back(p); }
   void widom::add(container &c) {
-    vector<particle::type> id = c.list_of_species();
+    vector<unsigned char> id = c.list_of_species();
     for (int i=0; i<id.size(); i++)
-      add( c.atom(id[i]) );
+      add( atom(id[i]) );
   }
 
   string widom::info() {
@@ -52,9 +52,9 @@ namespace Faunus {
     init();
   }
   void widomSW::add(container &c) {
-    vector<particle::type> id = c.list_of_species();
+    vector<unsigned char> id = c.list_of_species();
     for (int i=0; i<id.size(); i++)
-      add( c.atom(id[i]) );
+      add( atom(id[i]) );
   }
 
   bool widomSW::overlap(particle &a, particle &b, container &c) {

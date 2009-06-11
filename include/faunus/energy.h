@@ -321,8 +321,10 @@ namespace Faunus {
     for (int i=0; i<p.size(); i++)
       if (p[i].hydrophobic==true)
         hy.push_back(i);
-      else if (p[i].id==particle::NA || p[i].id==particle::CL || p[i].id==particle::I)
+      else if (p[i].id==0 || p[i].id==1 || p[i].id==3)
         pa.push_back(i);
+      //else if (p[i].id==particle::NA || p[i].id==particle::CL || p[i].id==particle::I)
+      //  pa.push_back(i);
   }
 
   template<class T> double int_hydrophobic<T>::hyenergy(const vector<particle> &p) {

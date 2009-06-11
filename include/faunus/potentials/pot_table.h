@@ -30,12 +30,12 @@ namespace Faunus {
    */
   class pot_table : public pot_hscoulomb {
     protected:
-      xytable<double, double> pmf[particle::LAST][particle::LAST];
+      xytable<double, double> pmf[50][50];
       double xres; //!< Distance resolution
       double nan;  //!< Energy of no data found.
       void inittables() {
-        for (int i=particle::FIRST; i<particle::LAST; i++)
-          for (int j=particle::FIRST; j<particle::LAST; j++)
+        for (int i=0; i<atom.list.size(); i++)
+          for (int j=0; j<atom.list.size(); j++)
             pmf[i][j].init(xres);
       }
     public:
@@ -61,7 +61,7 @@ namespace Faunus {
           pmf[i][j]( sqrt(r2) );           // ...else use table.
       }
 
-      bool loadpmf(atoms &atom, particle::type t1, particle::type t2) {
+      bool loadpmf(unsigned char t1, unsigned char t2) {
         double x,y;
         xytable< double, Faunus::average<double> > avgpmf(xres);
         string file = pmfdir + "/" + atom[t1].name + "-" + atom[t2].name + ".dat";
@@ -86,27 +86,21 @@ namespace Faunus {
       }
 
       void loadpmf(container &c) {
-        vector<particle::type> id=c.list_of_species();
+        vector<unsigned char> id=c.list_of_species();
         for (unsigned short i=0; i<id.size(); i++)
           for (unsigned short j=i; j<id.size(); j++)
-            if( loadpmf(c.atom,id[i],id[j])==false )
-              loadpmf(c.atom,id[j],id[i]);
-      }
-
-      virtual string info() {
-        std::ostringstream o;
-        o << pot_hscoulomb::info()
-          << "#   PMF directory     = " << pmfdir << endl;
-        return o.str();
+            if( loadpmf(id[i],id[j])==false )
+              loadpmf(id[j],id[i]);
       }
 
       /*! Show info + list of loaded pmf data */
-      virtual string info(atoms &atom) {
+      virtual string info() {
         std::ostringstream o;
-        o << info()
+        o << pot_hscoulomb::info()
+          << "#   PMF directory     = " << pmfdir << endl
           << "#   PMF Info: (a,b,resolution,r_max,file)" << std::endl; 
-        for (unsigned short i=particle::FIRST; i<particle::LAST; i++)
-          for (unsigned short j=particle::FIRST; j<particle::LAST; j++)
+        for (unsigned char i=0; i<atom.list.size(); i++)
+          for (unsigned char j=0; j<atom.list.size(); j++)
             if (pmf[i][j].xmax()>0) 
               o << "#     " << atom[i].name << " " << atom[j].name << " "
                 << pmf[i][j].xres << " "
@@ -116,7 +110,7 @@ namespace Faunus {
       }
   };
 
- /*!
+  /*!
    * \brief As Faunus::pot_table but with periodic boundaries.
    * \author Mikael Lund
    * \date Prague, 2008
@@ -144,7 +138,6 @@ namespace Faunus {
         return coulomb.sqdist(p1,p2);
       }
       string info() { return pot_table::info() + coulomb.info(); }
-      string info(atoms &atom) { return pot_table::info(atom); }
   };
 }//namespace
 #endif

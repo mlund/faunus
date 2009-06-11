@@ -90,8 +90,8 @@ namespace Faunus {
       particle *origo;         //!< Central particle (coordinate origo)
       float volume(double);
     public:
-      particle::type id;       //!< Particle type to analyse
-      cummsum(particle::type, particle &, float, float=.5);
+      unsigned char id;        //!< Particle type to analyse
+      cummsum(unsigned char, particle &, float, float=.5);
       void add(particle &);
   };
 
@@ -107,8 +107,8 @@ namespace Faunus {
       float volume(double);
     public:
       double r;                //!< Radius of the cylinder
-      particle::type id;       //!< Particle type to analyse
-      cylindric_profile(float, particle::type, float, float, float=.5);
+      unsigned char id;        //!< Particle type to analyse
+      cylindric_profile(float, unsigned char, float, float, float=.5);
       void add(particle &);
   };
 };//namespace

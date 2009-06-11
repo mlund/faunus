@@ -239,12 +239,12 @@ int main(int argc, char* argv[]) {
   sphericalimage<pot_test> pot(in);    // Specify pair potential
 #endif
   io io;
-  ioaam aam(con.atom);                 // Protein input file format is AAM
-  iogro gro(con.atom,in);
+  ioaam aam;                           // Protein input file format is AAM
+  iogro gro(in);
   mcloop loop(in);                     // Set Markov chain loop lengths
   canonical nvt;                       // Use the canonical ensemble
   pot_rfield rfield(in);
-  pot.pair.init(con.atom);
+  pot.pair.init(atom);
   ionpmf ip;
 
   macrorot mr(nvt, con, pot);          // Class for molecular rotation
@@ -269,7 +269,7 @@ int main(int argc, char* argv[]) {
   sol.name="SPC/E Solvent";
   vector<particle>
     water = aam.load("water.aam");     // Load bulk water from disk (typically from MD)
-  con.atom.reset_properties(water);    // Set particle parameters according to Faunus
+  atom.reset_properties(water);        // Set particle parameters according to Faunus
   sol.add(con,water,sol.numatom);      // Inject water into the cell - avoid salt and protein overlap
   water.clear();                       // Free the (large) bulk water reservoir
 
@@ -284,10 +284,10 @@ int main(int argc, char* argv[]) {
   // Distribution functions
   FAUrdf spccell(float(0.2), float(50.));
   FAUrdf nacell(float(0.2), float(50.));
-  FAUrdf saltrdf(con.atom["NA"].id,con.atom["CL"].id,0.2,20.);
-  FAUrdf catcat( con.atom["NA"].id,con.atom["NA"].id,0.2,20.);
-  FAUrdf spcrdf( con.atom["OW"].id,con.atom["OW"].id,0.2,20.);
-  FAUrdf acidwrdf( con.atom["C1"].id,con.atom["OW"].id,0.2,20.);
+  FAUrdf saltrdf( atom["NA"].id, atom["CL"].id, 0.2, 20.);
+  FAUrdf catcat(  atom["NA"].id, atom["NA"].id, 0.2, 20.);
+  FAUrdf spcrdf(  atom["OW"].id, atom["OW"].id, 0.2, 20.);
+  FAUrdf acidwrdf(atom["C1"].id, atom["OW"].id, 0.2, 20.);
 
   distributions radorder(float(0.2), float(0.), float(in.getflt("distmax")));
 
@@ -301,7 +301,7 @@ int main(int argc, char* argv[]) {
   vector<int> dgpoints;
   dgpoints.clear();
   for (int i=0; i<con.p.size(); i++)
-    if (con.atom["GLU"].id==con.p[i].id)
+    if (atom["GLU"].id==con.p[i].id)
       dgpoints.push_back(i);
   dgsolv solvation(dgpoints, in.getflt("charge", 0.1));
 
@@ -309,7 +309,7 @@ int main(int argc, char* argv[]) {
   group acid;
   acids.clear();
   for (int i=0; i<con.p.size(); i++)
-    if (con.atom["C1"].id==con.p[i].id){
+    if (atom["C1"].id==con.p[i].id){
       acid.beg=i;
       acid.end=i+3;            //Every acid is assumed to consist of four atoms, carbonyl carbon, O=, O- and H-
       acids.push_back(acid);   //in the order above, see protonate in acidsolv i.g. Faunus atoms are C1,O2,O1 and H1
@@ -344,7 +344,7 @@ int main(int argc, char* argv[]) {
     io.splash("README");
 
   cout << in.info() << salt.info()
-    << con.info() << con.atom.info()
+    << con.info() << atom.info()
     << pot.info() << sol.info() << protein.info(); //rfield.info();
   
   if (in.getboo("splash")==true)

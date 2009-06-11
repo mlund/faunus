@@ -54,15 +54,10 @@ namespace Faunus {
   class particle : public point {
     public:
       particle();
-      //! Particle type identifier
-      enum type {FIRST=0,GLY,ALA,VAL,LEU,ILE,PHE,TRP,TYR,HIS,SER,THR,MET,CYS,
-        ASP,GLN,GLU,ASN,LYS,ARG,PRO,UNK,NTR,CTR,NA,K,F,CL,BR,I,SO4,PO4,LA,ION,CATION,ANION,GHOST,
-        RNH3,RNH4,RCOOH,RCOO,HYDROPHOBIC,LAST}; 
-
       double charge;                         //!< Charge number
       double radius;                         //!< Radius
       float mw;                              //!< Molecular weight
-      type id;                               //!< Particle identifier
+      unsigned char id;                      //!< Particle identifier
       bool hydrophobic;                      //!< Hydrophobic flag
       inline bool overlap(const particle &) const; //!< Hardsphere overlap test
       inline bool overlap(const particle &, const double &) const;

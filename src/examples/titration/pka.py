@@ -9,9 +9,9 @@ con  = faunus.cell(inp)                  # use a spherical simulation container.
 pot  = faunus.interaction_hscoulomb(inp) # ... and a Coulomb + hard sphere potential
 sm   = faunus.saltmove(nvt,con,pot,inp)  # create object for salt movements
 prot = faunus.macromolecule()
-aam  = faunus.ioaam(con.atom)            # load/save configurations from/to disk
-pqr  = faunus.iopqr(con.atom)            # load/save configurations from/to disk
-prot.add(con, inp)                                # laod protein
+aam  = faunus.ioaam()                    # load/save configurations from/to disk
+pqr  = faunus.iopqr()                    # load/save configurations from/to disk
+prot.add(con, inp)                       # laod protein
 prot.move(con, -prot.cm);                # ..translate it to origo (0,0,0)
 prot.accept(con)                         # ..accept translation
 salt = faunus.salt()                     # Group for salt and counter ions

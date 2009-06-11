@@ -2,8 +2,7 @@
 using namespace std;
 using namespace Faunus;
 int main() {
-  atoms a;
-  iobabel b(a);
+  iobabel b;
   b.read("water.pdb");
   cout << "Size = " << b.p.size() << endl;
   for (int i=0; i<b.p.size(); i++)

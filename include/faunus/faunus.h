@@ -42,6 +42,7 @@
 namespace Faunus {
   string faunus_splash();
 
-  pc pc(298.15); // Physical constants, temperature
+  //pc pc(298.15); // Physical constants, temperature
+  //atoms atoms;   // Particle information
 }//namespace
 #endif

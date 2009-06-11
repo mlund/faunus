@@ -24,7 +24,6 @@ namespace Faunus {
         short int site;        
         short int proton;    
       };
-      atoms *atom;
       action exchange(vector<particle> &);
       action exchange(vector<particle> &, action &);
       short int random(vector<short int> &); //!< Pick a random item in a vector
@@ -39,8 +38,8 @@ namespace Faunus {
     public:
       double ph;                          //!< System pH
 
-      titrate(atoms &, double);
-      titrate(atoms &, vector<particle> &, group &, double);
+      titrate(double);
+      titrate(vector<particle> &, group &, double);
       void init(vector<particle> &, group &);   //!< Locate and initialize sites and protons
       double sumsites();                        //!< Calculates total charge of titrateable sites
       void samplesites(vector<particle> &);     //!< Updates the average charge vector titrate::q
@@ -56,11 +55,10 @@ namespace Faunus {
     private:
       enum keys {PROTONATED,DEPROTONATED};
       keys recent;                          //!< Store information about the most recent action.
-      atoms* atom;
     public:
       vector<unsigned int> sites;
       double ph, mu_proton;
-      titrate_implicit(atoms&, vector<particle> &, double, double);
+      titrate_implicit(vector<particle> &, double, double);
       int exchange(vector<particle> &, int=-1);
       double energy(vector<particle> &, double, int);
       unsigned int random();

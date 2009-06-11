@@ -30,16 +30,15 @@ namespace Faunus {
     private:
       vector<unsigned short> nb;
       OpenBabel::OBConversion obconv;
-      OpenBabel::OBMol mol;
-      OpenBabel::OBAtom atom;
-      OpenBabel::OBAtom *atomPtr;
+      OpenBabel::OBMol obmol;
+      OpenBabel::OBAtom obatom;
+      OpenBabel::OBAtom *obatomPtr;
       OpenBabel::vector3 v;    // OpenBabel vector
       particle a;   // Tmp particle
       double c[3];  // Temp. vector storage
       void p2atom(particle &); // Convert particle to ObenBabel atom
-      atoms* faunatomsPtr;
     public:
-      iobabel(atoms&);
+      iobabel();
       vector<particle> p;         //!< Placeholder for loaded data
       particle get(unsigned int); //!< Convert i'th babel atom to a particle
       void read(string);          //!< Read entire file (autodetect format from extension)

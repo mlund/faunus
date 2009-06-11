@@ -1,44 +1,43 @@
 #include "faunus/iobabel.h"
 namespace Faunus {
 
-  iobabel::iobabel(atoms &a) {
-    faunatomsPtr=&a;
+  iobabel::iobabel() {
     // Teach Babel some new "elements"!! (see openbabel "data.cpp")
     unsigned int n = OpenBabel::etab.GetNumberOfElements();
-    for (unsigned int i=0; i<a.list.size(); i++) {
+    for (unsigned int i=0; i<atom.list.size(); i++) {
       std::ostringstream o;
       o << n++ << " "              // "atomic" number
-        << a.list[i].name << " "   // symbol
+        << atom.list[i].name << " "   // symbol
         << 0 << " "                // AREneg
-        << a.list[i].radius << " " // radius covalent
-        << a.list[i].radius << " " // radius vdw
+        << atom.list[i].radius << " " // radius covalent
+        << atom.list[i].radius << " " // radius vdw
         << 20 << " "               // max bonds
-        << a.list[i].mw << " "     // weight
+        << atom.list[i].mw << " "     // weight
         << "0 0 0 0 0 0 Faunus";
       OpenBabel::etab.ParseLine(o.str().c_str());     
     }
   }
 
   void iobabel::p2atom(particle &p) {
-    atom.SetVector(p.x, p.y, p.z);
-    atom.SetPartialCharge(p.charge);
+    obatom.SetVector(p.x, p.y, p.z);
+    obatom.SetPartialCharge(p.charge);
   }
 
   void iobabel::read(string filename) {
     p.clear();
-    mol.Clear();
+    obmol.Clear();
     obconv.SetInFormat(obconv.FormatFromExt(filename.c_str()));
-    bool notatend = obconv.ReadFile(&mol,filename.c_str());
-    for (unsigned int i=1; i<=mol.NumAtoms(); i++)
+    bool notatend = obconv.ReadFile(&obmol,filename.c_str());
+    for (unsigned int i=1; i<=obmol.NumAtoms(); i++)
       p.push_back(get(i));
   }
 
   vector<unsigned short> iobabel::neighbors(unsigned short i) {
     vector<unsigned short> nb;
-    if (mol.NumAtoms()>0) {
-      OpenBabel::OBAtom* atomPtr, nbrPtr;
-      atomPtr = mol.GetAtom(i+1);  // Babel starts at 1; Faunus at 0.
-      FOR_NBORS_OF_ATOM(nbrPtr, atomPtr) {  // Maybe FOR_BONDS_OF_ATOM?
+    if (obmol.NumAtoms()>0) {
+      OpenBabel::OBAtom* obatomPtr, nbrPtr;
+      obatomPtr = obmol.GetAtom(i+1);  // Babel starts at 1; Faunus at 0.
+      FOR_NBORS_OF_ATOM(nbrPtr, obatomPtr) {  // Maybe FOR_BONDS_OF_ATOM?
         nb.push_back( nbrPtr->GetIdx()-1 );
       }
     }
@@ -46,13 +45,13 @@ namespace Faunus {
   }
 
   bool iobabel::write(string filename, const vector<particle> &) {
-    mol.Clear();
+    obmol.Clear();
     for (unsigned int i=0; i<p.size(); i++) {
       p2atom(p[i]);
-      mol.AddAtom(atom);
+      obmol.AddAtom(obatom);
     }
     obconv.SetOutFormat(obconv.FormatFromExt(filename.c_str()));
-    return obconv.WriteFile(&mol,filename.c_str());
+    return obconv.WriteFile(&obmol,filename.c_str());
   }
 
   /*!
@@ -71,19 +70,19 @@ namespace Faunus {
    *       it'll have to do for now.
    */
   particle iobabel::get(unsigned int i) {
-    atomPtr = mol.GetAtom(i);
-    v=atomPtr->GetVector();
+    obatomPtr = obmol.GetAtom(i);
+    v=obatomPtr->GetVector();
     v.Get(c);
     a.x=c[0]; a.y=c[1]; a.z=c[2];
-    a.mw=atomPtr->GetAtomicMass();
+    a.mw=obatomPtr->GetAtomicMass();
     if (a.mw<1e-5)
       a.mw=1;   //we don't like weightless atoms.
-    string name=string( OpenBabel::etab.GetSymbol( atomPtr->GetAtomicNum() ) );
-    a.id=faunatomsPtr->get( faunatomsPtr->find(name) ).id;
-    a.charge=atomPtr->GetPartialCharge();
+    string name=string( OpenBabel::etab.GetSymbol( obatomPtr->GetAtomicNum() ) );
+    a.id=atom.get( atom.find(name) ).id;
+    a.charge=obatomPtr->GetPartialCharge();
 
-    if (atomPtr->HasData("Radius")) {
-      OpenBabel::OBPairData *gdat = dynamic_cast<OpenBabel::OBPairData *>( atomPtr->GetData("Radius") );
+    if (obatomPtr->HasData("Radius")) {
+      OpenBabel::OBPairData *gdat = dynamic_cast<OpenBabel::OBPairData *>( obatomPtr->GetData("Radius") );
       a.radius = atof( gdat->GetValue().c_str() );
     } else
       a.radius=2;

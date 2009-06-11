@@ -23,12 +23,12 @@ int main(int argc, char* argv[]) {
   sphericalimage<pot_test> pot(in);    // Specify pair potential
 #endif
   io io;
-  ioaam aam(con.atom);                 // Protein input file format is AAM
-  iogro gro(con.atom,in);
+  ioaam aam;                           // Protein input file format is AAM
+  iogro gro(in);
   mcloop loop(in);                     // Set Markov chain loop lengths
   canonical nvt;                       // Use the canonical ensemble
   pot_rfield rfield(in);
-  pot.pair.init(con.atom);
+  pot.pair.init(atom);
 
   macrorot mr(nvt, con, pot);          // Class for molecular rotation
   translate mt(nvt, con, pot);         // Class for molecular translation
@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
   sol.name="SPC/E Solvent";
   vector<particle>
     water = aam.load("water.aam");     // Load bulk water from disk (typically from MD)
-  con.atom.reset_properties(water);    // Set particle parameters according to Faunus
+  atom.reset_properties(water);    // Set particle parameters according to Faunus
   sol.add(con,water,sol.numatom);      // Inject water into the cell - avoid salt and protein overlap
   water.clear();                       // Free the (large) bulk water reservoir
 
@@ -51,11 +51,11 @@ int main(int argc, char* argv[]) {
   // Distribution functions and analysis
   FAUrdf spccell(float(0.2), float(50.));
   FAUrdf nacell(float(0.2), float(50.));
-  FAUrdf saltrdf(con.atom["NA"].id,con.atom["CL"].id,0.2,20.);
-  FAUrdf catcat( con.atom["NA"].id,con.atom["NA"].id,0.2,20.);
-  FAUrdf spcrdf1( con.atom["OW"].id,con.atom["OW"].id,0.2,20.);
-  FAUrdf spcrdf2( con.atom["OW"].id,con.atom["HW1"].id,0.2,20.);
-  FAUrdf spcrdf3( con.atom["HW1"].id,con.atom["HW1"].id,0.2,20.);
+  FAUrdf saltrdf( atom["NA"].id,atom["CL"].id,0.2,20.);
+  FAUrdf catcat(  atom["NA"].id,atom["NA"].id,0.2,20.);
+  FAUrdf spcrdf1( atom["OW"].id,atom["OW"].id,0.2,20.);
+  FAUrdf spcrdf2( atom["OW"].id,atom["HW1"].id,0.2,20.);
+  FAUrdf spcrdf3( atom["HW1"].id,atom["HW1"].id,0.2,20.);
   FAUrdf spcinner1( float(0.2), float(50.), float(1.));
   FAUrdf spcinner2( float(0.2), float(50.), float(1.));
   FAUrdf spcinner3( float(0.2), float(50.), float(1.));
@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
     io.splash("README");
 
   cout << in.info() 
-    << con.info() << con.atom.info()
+    << con.info() << atom.info()
     << pot.info() << sol.info() << rfield.info();
   if (in.getboo("splash")==true)
     io.splash("../../../misc/faunatoms.dat");

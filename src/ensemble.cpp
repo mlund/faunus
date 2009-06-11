@@ -59,12 +59,12 @@ namespace Faunus {
       if (c.p[i].id==ref.id) 
         w.end++;
       else {
-        w.name=c.atom[ref.id].name;
+        w.name=atom[ref.id].name;
         g.push_back(w);
         w.beg=w.end=i;
         ref.id=c.p[i].id;
       }
-    w.name=c.atom[ref.id].name;
+    w.name=atom[ref.id].name;
     g.push_back(w);
   }
 

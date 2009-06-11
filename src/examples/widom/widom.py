@@ -11,7 +11,7 @@ sm   = faunus.saltmove(nvt,cell,pot,inp) # create object for salt movements
 wid  = faunus.widom(10)                  # object for multiple particle insertion
 salt = faunus.salt()                     # define some groups for mobile ions
 salt.add(cell,inp)                       #    insert some ions
-aam  = faunus.ioaam(cell.atom)           # load/save configurations from/to disk
+aam  = faunus.ioaam()                    # load/save configurations from/to disk
 aam.load(cell, 'widom.aam')              #    get initial configuration (if present)
 wid.add(cell)                            # detect all species in the cell
 sys  = faunus.systemenergy(pot.energy(cell.p)) # track system energy

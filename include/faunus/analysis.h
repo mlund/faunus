@@ -216,7 +216,7 @@ namespace Faunus {
       twostatebinding(double);
       void update(container &, point &, group &);
       void update(container &, point &, vector<macromolecule> &, int=0);
-      void update(container &c, point &, particle::type);
+      void update(container &c, point &, unsigned char);
       string info();
       string info(double);
   };

@@ -22,8 +22,8 @@ int main(int argc, char* argv[]) {
   canonical nvt;                       // Use the canonical ensemble
   interaction<pot_hscoulomb> pot(in);  // Specify pair potential
   macromolecule protein;               // Group for the protein
-  ioaam aam(con.atom);                 // Protein input file format is AAM
-  iopqr pqr(con.atom);                 // PQR coordinate output
+  ioaam aam;                           // Protein input file format is AAM
+  iopqr pqr;                           // PQR coordinate output
   protein.add( con,
       aam.load(in.getstr("protein"))); // Load protein structure
   protein.move(con, -protein.cm);      // ..translate it to origo (0,0,0)
@@ -33,8 +33,8 @@ int main(int argc, char* argv[]) {
   saltmove sm(nvt, con, pot);          // Class for salt movements
   aam.load(con, "confout.aam");        // Load old config (if present)
   widom wid(10);
-  wid.add(con.atom("NA"));
-  wid.add(con.atom("CL"));
+  wid.add( atom("NA") );
+  wid.add( atom("CL") );
   wid.runfraction=0.05;
 
 #ifdef GCPKA // "Grand Canonical" titration
@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
 
   systemenergy sys(pot.energy(con.p)); // System energy analysis
   cout << in.info() << con.info() << tit.info()     // Some information
-       << pot.info() << con.atom.info();
+       << pot.info() << atom.info();
 
   while ( loop.macroCnt() ) {            // Markov chain 
     while ( loop.microCnt() ) {

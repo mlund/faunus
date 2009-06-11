@@ -98,7 +98,7 @@ namespace Faunus {
       dist=rmax;
     g.clear();
     point a = v*(dist/2.);
-    ioaam aam( (*con).atom );
+    ioaam aam;
     aam.load(*con, in, g); 
     g[0].move(*con, -( g[0].cm + a ));    // ...around the cell origo
     g[1].move(*con, -( g[1].cm - a ));    // ...along the z-axis

@@ -46,9 +46,9 @@ namespace Faunus {
       void undo(particles &);
       void accept(particles &);                           //!< Accept a move
       void add(container &, vector<particle>, bool=false);//!< Add a particle vector
-      void add(container &, particle::type, short);       //!< Add particles w. collision check
+      void add(container &, unsigned char, short);        //!< Add particles w. collision check
       bool swap(container &, group &);                    //!< Swap location of two groups
-      short int count(vector<particle> &, particle::type);//!< Count number of specific particles
+      short int count(vector<particle> &, unsigned char); //!< Count number of specific particles
       virtual unsigned short displace(container&, point); //!< Displace random particle
       virtual void isobaricmove(container &, double){};   //!< Pressure scaling
       virtual unsigned short nummolecules();              //!< Number of molecules
@@ -63,9 +63,8 @@ namespace Faunus {
       short nanion, ncation;
     public:
       using group::info;
-      salt(particle::type=particle::NA,
-          particle::type=particle::CL);
-      particle::type anion, cation; //!< Anion and cation types
+      salt(unsigned char=0, unsigned char=0);
+      unsigned char anion, cation;  //!< Anion and cation types
       double muex;                  //!< Excess chemical potential
       void add(container &, inputfile &);                 //!< Add salt as specified in config file
       string info(container &);     //!< Show info

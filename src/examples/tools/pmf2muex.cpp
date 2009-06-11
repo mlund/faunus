@@ -9,7 +9,6 @@ using namespace Faunus;
 using namespace std;
 
 int main() {
-  atoms atom;
   inputfile in("pmf2muex.conf");
 
   double conc=in.getflt("pmfconc",0);
@@ -23,10 +22,10 @@ int main() {
   //pot_table pmf(in);
 
   particle p1,p2;
-  p1=cell.atom("NA");
+  p1=atom("NA");
   p1.charge=+1;
   p1.radius=2.0;
-  p2=cell.atom("CL");
+  p2=atom("CL");
   p2.charge=-1;
   p2.radius=2.0;
 

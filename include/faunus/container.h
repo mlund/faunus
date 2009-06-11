@@ -15,7 +15,7 @@ namespace Faunus {
       slump slp;
       double volume;                                      //!< Volume of the container [AA^3]
     public:
-      atoms atom;
+      //atoms atom;
       double getvolume() {return volume;}
 //      container();
 //      container(inputfile &);

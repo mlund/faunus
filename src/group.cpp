@@ -153,8 +153,8 @@ namespace Faunus {
       }
     }
   }
-  void group::add(container &con, particle::type id, short n) {
-    particle a=con.atom(id);
+  void group::add(container &con, unsigned char id, short n) {
+    particle a=atom(id);
     if (beg<0)
       beg=con.p.size();
     for (unsigned short i=0; i<n; i++) {
@@ -210,7 +210,7 @@ namespace Faunus {
     }
     return false;
   }
-  short int group::count(vector<particle> &p, particle::type id) {
+  short int group::count(vector<particle> &p, unsigned char id) {
     short int i,n=0;
     for (i=0; i<p.size(); i++)
       if (p[i].id==id)
@@ -251,7 +251,7 @@ namespace Faunus {
    *          S A L T
    *
    *****************************/
-  salt::salt(particle::type cat, particle::type an)
+  salt::salt(unsigned char cat, unsigned char an)
   {
     title="MOBILE SALT PARTICLES";
     cation=cat;
@@ -264,12 +264,12 @@ namespace Faunus {
           ncat=count(con.p, cation);
     o << group::info();
     o << "#   Cation (id,z,r,N,conc) = "
-      << con.atom[cation].name << ", " << con.atom[cation].charge << ", "
-      << con.atom[cation].radius << ", "
+      << atom[cation].name << ", " << atom[cation].charge << ", "
+      << atom[cation].radius << ", "
       << ncat << ", " << ncat/con.getvolume()*c << endl
       << "#   Anion (id,z,r,N,conc)  = "
-      << con.atom[anion].name << ", " << con.atom[anion].charge << ", "
-      << con.atom[anion].radius << ", "
+      << atom[anion].name << ", " << atom[anion].charge << ", "
+      << atom[anion].radius << ", "
       << nan << ", " << nan/con.getvolume()*c << endl;
     return o.str();
   }
@@ -286,18 +286,18 @@ namespace Faunus {
    */
   void salt::add(container &con, inputfile &in) {
     short n=1, npart;
-    particle::type id;
+    unsigned char id;
     while (n<4) {
       std::ostringstream nion, tion;
       nion << "nion" << n;
       tion << "tion" << n++;
       npart = in.getint(nion.str(), 0);
-      id = con.atom( in.getstr( tion.str() ) ).id;
+      id = atom( in.getstr( tion.str() ) ).id;
       if (npart!=0)
         group::add(con, id, npart ); // add particles
-      if (con.atom[id].charge>0)
+      if (atom[id].charge>0)
         cation=id;
-      if (con.atom[id].charge<0)
+      if (atom[id].charge<0)
         anion=id;
     }
   }
@@ -616,7 +616,7 @@ namespace Faunus {
   bool polymer::babeladd(container &c, inputfile &in) {
     name=in.getstr("polymer");
     nb.clear();
-    iobabel ob(c.atom);
+    iobabel ob;
     ob.read(name);
     add(c,ob.p);
     move(c,-cm);

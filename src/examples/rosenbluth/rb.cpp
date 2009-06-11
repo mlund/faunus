@@ -32,7 +32,7 @@ int main() {
     rb.push_back( 
         rosenbluth(nmt,cell,pot,in,ndx++) );
 
-  ioaam aam(cell.atom);                 // File I/O class
+  ioaam aam;                            // File I/O class
   aam.load(cell,"widom.aam");           // Read initial config. from disk (if present)
 
   widom wid(10);                        // Class for multiple particle insertion
@@ -40,7 +40,7 @@ int main() {
 
   systemenergy sys(pot.energy(cell.p)); // Track system energy
 
-  cout << cell.info() << cell.atom.info()
+  cout << cell.info() << atom.info()
        << pot.info() << salt.info(cell)
        << in.info();                    // Print initial information
 

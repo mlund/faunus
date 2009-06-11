@@ -1,4 +1,4 @@
-/*! \page test_widom Widom
+/*! \page test_wallprotein Wallprotein
  *
  * Simulate a number of flexible polymers in a salt
  * solution.
@@ -14,43 +14,44 @@ using namespace std;
 using namespace Faunus;                 // Access to Faunus classes
 
 int main() {
-  cout << faunus_splash();              // Show Faunus information
-  inputfile in("wp.conf");              // Read input file
-  mcloop loop(in);                      // Set Markov chain loop lengths
-  canonical nvt;                        // Use the canonical ensemble
-  box cell(in);                         // We want a cubic simulation container
-  springinteraction<pot_hsminimage> pot(in);  // ...and a Coulomb/HS pot. w. minimum image
+  // General setup
+  cout << faunus_splash();
+  inputfile in("wp.conf");
+  mcloop loop(in);
+  canonical nvt;
+  box cell(in);
+  springinteraction<pot_hsminimage> pot(in);
 
+  // Handle polymers
   polymer pol;
   pol.babeladd( cell, in );
-  cout << pol.info();
-  for (int i=pol.beg; i<=pol.end; i++)
-    cout << cell.atom[ cell.p[i].id ].name << " ";
-  cout << std::endl;
-
   monomermove mm(nvt,cell,pot,in);
+  cout << pol.info();
 
-  saltmove wm(nvt,cell,pot,in);         // Class for wall charge displacements.
-  wm.dpv.z=0;                           // - disable move in z.
+  // Handle wall particles
+  group wall;
+  //wall.add(cell, cell.atom["NA"].id, 20);
+  saltmove wm(nvt,cell,pot,in);
+  wm.dpv.z=0;
 
-  cell.trial = cell.p;
+  // Handle salt particles
+  salt salt(1,1); 
+  salt.add(cell,in);           
+  saltmove sm(nvt,cell,pot,in);
 
-  saltmove sm(nvt,cell,pot,in);         // Class for salt movements
-  salt salt;                            // Define some groups for mobile ions
-  salt.add(cell,in);                    // Insert some ions
-
-  iopqr pqr(cell.atom);                 // File I/O class
-  ioaam aam(cell.atom);                 // File I/O class
-  //aam.load(cell,"conf.aam");           // Read initial config. from disk (if present)
+  // File I/O
+  iopqr pqr;
+  ioaam aam;
+  //aam.load(cell,"conf.aam");
 
   systemenergy sys(
         pot.internal(cell.p, salt)  +
         pot.energy(cell.p, salt, pol) +
-        pot.uself_polymer(cell.p,pol) ); // Track system energy
+        pot.uself_polymer(cell.p,pol) );
 
-  cout << cell.info() << cell.atom.info()
+  cout << cell.info() << atom.info()
        << pot.info() << salt.info(cell)
-       << in.info();                    // Print initial information
+       << in.info();
 
   while ( loop.macroCnt() ) {           // Markov chain 
     while ( loop.microCnt() ) {

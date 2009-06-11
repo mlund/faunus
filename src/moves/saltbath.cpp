@@ -42,7 +42,7 @@ namespace Faunus {
     // insert a monomer at end of monomer group
     int i = polymer.gPtr->end; // last particle in group
     ins.push_back(i);          // keep track of what was moved.
-    gcPtr->insert(con->trial, polymer.gPtr->end, con->atom(polymer.seq[0]), polymer.valency );
+    gcPtr->insert(con->trial, polymer.gPtr->end, atom(polymer.seq[0]), polymer.valency );
 
     // let's assign a random position (within the container) to the inserted particle:
     con->randompos( con->trial[i] );

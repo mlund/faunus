@@ -23,7 +23,7 @@ int main() {
   interaction<pot_minimage> pot(in);    // Functions for interactions
 
   vector<macromolecule> g;              // PROTEIN groups
-  ioaam aam(cell.atom);                 //   Protein input file format is AAM
+  ioaam aam;                            //   Protein input file format is AAM
   aam.load(cell, in, g);                //   Load and insert proteins
   macrorot mr(nvt, cell, pot);          //   Class for macromolecule rotation
   translate mt(nvt, cell, pot);         //   Class for macromolecular translation
@@ -42,7 +42,7 @@ int main() {
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
 
   cout << cell.info() << pot.info()     // Print information to screen
-    << cell.atom.info();
+    << atom.info();
 
   while (loop.macroCnt()) {                     //Markov chain 
     while (loop.microCnt()) {

@@ -95,7 +95,7 @@ namespace Faunus {
   }
 
   void FAUrdf::update(container &c, point &p, string name) {
-    int id=c.atom[name].id, n=c.p.size();
+    int id=atom[name].id, n=c.p.size();
     npart=0;
     //#pragma omp for
     for (int i=0; i<n; ++i)
@@ -157,7 +157,7 @@ namespace Faunus {
   float cummsum::volume(double z) { return 1.; }
 
   cummsum::cummsum(
-      particle::type type, particle &center, float max,float res) :
+      unsigned char type, particle &center, float max,float res) :
     profile(0,max,res) {
       id=type;
       origo=&center;
@@ -168,7 +168,7 @@ namespace Faunus {
   float cylindric_profile::volume(double z) { return xres*acos(-1.)*r*r; }
 
   cylindric_profile::cylindric_profile(
-      float radius, particle::type type, float min,float max,float res) :
+      float radius, unsigned char type, float min,float max,float res) :
     profile(min,max,res) {
       r=radius;
       id=type;

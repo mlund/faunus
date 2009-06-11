@@ -34,7 +34,7 @@ namespace Faunus {
         a  = in.getflt("rfield_cavity");
         eo = in.getflt("rfield_epso",80.);
         ei = in.getflt("rfield_epsi",1.);
-        f  = in.getflt("rfield_bjerrum",7.0025) * eo;
+        f  = pc.lB(eo)*eo; // Bjerrum length in vacuum
         steps=in.getint("rfield_steps",50); 
         l.resize(steps);
       };
@@ -117,6 +117,7 @@ namespace Faunus {
         o << "#  Reaction field pair-potential:" << endl
           << "#    Cavity radius                = " << a << endl
           << "#    Dielectric constant (in out) = " << ei << " " << eo << endl
+          << "#    Temperature                  = " << pc.T << endl
           << "#    Legendre steps               = " << steps << endl;
         return o.str();
       }

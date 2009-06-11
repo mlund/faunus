@@ -610,8 +610,9 @@ namespace Faunus {
     return n;
   }
 
-#ifdef BABEL
   polymer::polymer() {}
+
+#ifdef BABEL
   bool polymer::babeladd(container &c, inputfile &in) {
     name=in.getstr("polymer");
     nb.clear();
@@ -627,6 +628,7 @@ namespace Faunus {
     }
     return true;
   }
+#endif
 
   vector<unsigned short> polymer::neighbors(unsigned short i) const { return nb.at(i-beg); }
 
@@ -647,6 +649,5 @@ namespace Faunus {
     }
     return o.str();
   }
-#endif
 
 }//namespace

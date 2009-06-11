@@ -1,6 +1,6 @@
 #
 # Cmake script to extract the Subversion revision
-# of the current directory. Zero if returned of the 
+# of the current directory. Zero is returned if the 
 # dir is not under version control.
 # Mikael Lund, 2009
 #

@@ -41,5 +41,7 @@
 
 namespace Faunus {
   string faunus_splash();
+
+  pc pc(298.15); // Physical constants, temperature
 }//namespace
 #endif

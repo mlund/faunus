@@ -107,6 +107,8 @@
 namespace bp = boost::python;
 
 BOOST_PYTHON_MODULE(faunus){
+    register___type_class();
+
     register_vector_less__std_scope_vector_less__double__greater___greater__class();
 
     register_vector_less__std_scope_string__greater__class();
@@ -114,8 +116,6 @@ BOOST_PYTHON_MODULE(faunus){
     register_vector_less__int__greater__class();
 
     register_vector_less__Faunus_scope_point__greater__class();
-
-    register___type_class();
 
     register_vector_less__Faunus_scope_particle__greater__class();
 
@@ -132,10 +132,6 @@ BOOST_PYTHON_MODULE(faunus){
     register_average_double_class();
 
     register_average_float_class();
-
-    register_point_class();
-
-    register_particle_class();
 
     register_particles_class();
 
@@ -178,6 +174,10 @@ BOOST_PYTHON_MODULE(faunus){
     register_macromolecule_class();
 
     register_mcloop_class();
+
+    register_point_class();
+
+    register_particle_class();
 
     register_pot_lj_class();
 

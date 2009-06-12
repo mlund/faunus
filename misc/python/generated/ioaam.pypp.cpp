@@ -15,10 +15,10 @@ struct ioaam_wrapper : Faunus::ioaam, bp::wrapper< Faunus::ioaam > {
         
     }
 
-    ioaam_wrapper(::Faunus::atoms & arg0 )
-    : Faunus::ioaam( boost::ref(arg0) )
+    ioaam_wrapper( )
+    : Faunus::ioaam( )
       , bp::wrapper< Faunus::ioaam >(){
-        // constructor
+        // null constructor
     
     }
 
@@ -50,65 +50,28 @@ struct ioaam_wrapper : Faunus::ioaam, bp::wrapper< Faunus::ioaam > {
 
 void register_ioaam_class(){
 
-    { //::Faunus::ioaam
-        typedef bp::class_< ioaam_wrapper > ioaam_exposer_t;
-        ioaam_exposer_t ioaam_exposer = ioaam_exposer_t( "ioaam", bp::init< Faunus::atoms & >(( bp::arg("arg0") )) );
-        bp::scope ioaam_scope( ioaam_exposer );
-        bp::implicitly_convertible< Faunus::atoms &, Faunus::ioaam >();
-        { //::Faunus::ioaam::load
-        
-            typedef ::std::vector< Faunus::particle > ( ::Faunus::ioaam::*load_function_type )( ::std::string ) ;
-            typedef ::std::vector< Faunus::particle > ( ioaam_wrapper::*default_load_function_type )( ::std::string ) ;
-            
-            ioaam_exposer.def( 
-                "load"
-                , load_function_type(&::Faunus::ioaam::load)
-                , default_load_function_type(&ioaam_wrapper::default_load)
-                , ( bp::arg("arg0") ) );
-        
-        }
-        { //::Faunus::ioaam::load
-        
-            typedef void ( ::Faunus::ioaam::*load_function_type )( ::Faunus::container &,::Faunus::inputfile &,::std::vector< Faunus::macromolecule > & ) ;
-            
-            ioaam_exposer.def( 
-                "load"
-                , load_function_type( &::Faunus::ioaam::load )
-                , ( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2") ) );
-        
-        }
-        { //::Faunus::ioaam::load
-        
-            typedef bool ( ::Faunus::ioaam::*load_function_type )( ::Faunus::container &,::std::string ) ;
-            
-            ioaam_exposer.def( 
-                "load"
-                , load_function_type( &::Faunus::ioaam::load )
-                , ( bp::arg("arg0"), bp::arg("arg1") ) );
-        
-        }
-        { //::Faunus::ioaam::loadlattice
-        
-            typedef void ( ::Faunus::ioaam::*loadlattice_function_type )( ::Faunus::container &,::Faunus::inputfile &,::std::vector< Faunus::macromolecule > & ) ;
-            
-            ioaam_exposer.def( 
-                "loadlattice"
-                , loadlattice_function_type( &::Faunus::ioaam::loadlattice )
-                , ( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2") ) );
-        
-        }
-        { //::Faunus::ioaam::save
-        
-            typedef bool ( ::Faunus::ioaam::*save_function_type )( ::std::string,::std::vector< Faunus::particle > & ) ;
-            typedef bool ( ioaam_wrapper::*default_save_function_type )( ::std::string,::std::vector< Faunus::particle > & ) ;
-            
-            ioaam_exposer.def( 
-                "save"
-                , save_function_type(&::Faunus::ioaam::save)
-                , default_save_function_type(&ioaam_wrapper::default_save)
-                , ( bp::arg("arg0"), bp::arg("arg1") ) );
-        
-        }
-    }
+    bp::class_< ioaam_wrapper >( "ioaam", bp::init< >() )    
+        .def( 
+            "load"
+            , (::std::vector< Faunus::particle > ( ::Faunus::ioaam::* )( ::std::string ) )(&::Faunus::ioaam::load)
+            , (::std::vector< Faunus::particle > ( ioaam_wrapper::* )( ::std::string ) )(&ioaam_wrapper::default_load)
+            , ( bp::arg("arg0") ) )    
+        .def( 
+            "load"
+            , (void ( ::Faunus::ioaam::* )( ::Faunus::container &,::Faunus::inputfile &,::std::vector< Faunus::macromolecule > & ) )( &::Faunus::ioaam::load )
+            , ( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2") ) )    
+        .def( 
+            "load"
+            , (bool ( ::Faunus::ioaam::* )( ::Faunus::container &,::std::string ) )( &::Faunus::ioaam::load )
+            , ( bp::arg("arg0"), bp::arg("arg1") ) )    
+        .def( 
+            "loadlattice"
+            , (void ( ::Faunus::ioaam::* )( ::Faunus::container &,::Faunus::inputfile &,::std::vector< Faunus::macromolecule > & ) )( &::Faunus::ioaam::loadlattice )
+            , ( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2") ) )    
+        .def( 
+            "save"
+            , (bool ( ::Faunus::ioaam::* )( ::std::string,::std::vector< Faunus::particle > & ) )(&::Faunus::ioaam::save)
+            , (bool ( ioaam_wrapper::* )( ::std::string,::std::vector< Faunus::particle > & ) )(&ioaam_wrapper::default_save)
+            , ( bp::arg("arg0"), bp::arg("arg1") ) );
 
 }

@@ -15,7 +15,7 @@ struct salt_wrapper : Faunus::salt, bp::wrapper< Faunus::salt > {
         
     }
 
-    salt_wrapper(::Faunus::particle::type arg0=::Faunus::particle::NA, ::Faunus::particle::type arg1=::Faunus::particle::CL )
+    salt_wrapper(unsigned char arg0=0, unsigned char arg1=0 )
     : Faunus::salt( arg0, arg1 )
       , bp::wrapper< Faunus::salt >(){
         // constructor
@@ -98,7 +98,7 @@ struct salt_wrapper : Faunus::salt, bp::wrapper< Faunus::salt > {
 
 void register_salt_class(){
 
-    bp::class_< salt_wrapper, bp::bases< Faunus::group > >( "salt", bp::init< bp::optional< Faunus::particle::type, Faunus::particle::type > >(( bp::arg("arg0")=::Faunus::particle::NA, bp::arg("arg1")=::Faunus::particle::CL )) )    
+    bp::class_< salt_wrapper, bp::bases< Faunus::group > >( "salt", bp::init< bp::optional< unsigned char, unsigned char > >(( bp::arg("arg0")=(unsigned char)(0), bp::arg("arg1")=(unsigned char)(0) )) )    
         .def( 
             "add"
             , (void ( ::Faunus::salt::* )( ::Faunus::container &,::Faunus::inputfile & ) )( &::Faunus::salt::add )

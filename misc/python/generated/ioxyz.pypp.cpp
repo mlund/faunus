@@ -15,10 +15,10 @@ struct ioxyz_wrapper : Faunus::ioxyz, bp::wrapper< Faunus::ioxyz > {
         
     }
 
-    ioxyz_wrapper(::Faunus::atoms & arg0 )
-    : Faunus::ioxyz( boost::ref(arg0) )
+    ioxyz_wrapper( )
+    : Faunus::ioxyz( )
       , bp::wrapper< Faunus::ioxyz >(){
-        // constructor
+        // null constructor
     
     }
 
@@ -50,35 +50,16 @@ struct ioxyz_wrapper : Faunus::ioxyz, bp::wrapper< Faunus::ioxyz > {
 
 void register_ioxyz_class(){
 
-    { //::Faunus::ioxyz
-        typedef bp::class_< ioxyz_wrapper > ioxyz_exposer_t;
-        ioxyz_exposer_t ioxyz_exposer = ioxyz_exposer_t( "ioxyz", bp::init< Faunus::atoms & >(( bp::arg("arg0") )) );
-        bp::scope ioxyz_scope( ioxyz_exposer );
-        bp::implicitly_convertible< Faunus::atoms &, Faunus::ioxyz >();
-        { //::Faunus::ioxyz::load
-        
-            typedef ::std::vector< Faunus::particle > ( ::Faunus::ioxyz::*load_function_type )( ::std::string ) ;
-            typedef ::std::vector< Faunus::particle > ( ioxyz_wrapper::*default_load_function_type )( ::std::string ) ;
-            
-            ioxyz_exposer.def( 
-                "load"
-                , load_function_type(&::Faunus::ioxyz::load)
-                , default_load_function_type(&ioxyz_wrapper::default_load)
-                , ( bp::arg("arg0") ) );
-        
-        }
-        { //::Faunus::ioxyz::save
-        
-            typedef bool ( ::Faunus::ioxyz::*save_function_type )( ::std::string,::std::vector< Faunus::particle > & ) ;
-            typedef bool ( ioxyz_wrapper::*default_save_function_type )( ::std::string,::std::vector< Faunus::particle > & ) ;
-            
-            ioxyz_exposer.def( 
-                "save"
-                , save_function_type(&::Faunus::ioxyz::save)
-                , default_save_function_type(&ioxyz_wrapper::default_save)
-                , ( bp::arg("arg0"), bp::arg("arg1") ) );
-        
-        }
-    }
+    bp::class_< ioxyz_wrapper >( "ioxyz", bp::init< >() )    
+        .def( 
+            "load"
+            , (::std::vector< Faunus::particle > ( ::Faunus::ioxyz::* )( ::std::string ) )(&::Faunus::ioxyz::load)
+            , (::std::vector< Faunus::particle > ( ioxyz_wrapper::* )( ::std::string ) )(&ioxyz_wrapper::default_load)
+            , ( bp::arg("arg0") ) )    
+        .def( 
+            "save"
+            , (bool ( ::Faunus::ioxyz::* )( ::std::string,::std::vector< Faunus::particle > & ) )(&::Faunus::ioxyz::save)
+            , (bool ( ioxyz_wrapper::* )( ::std::string,::std::vector< Faunus::particle > & ) )(&ioxyz_wrapper::default_save)
+            , ( bp::arg("arg0"), bp::arg("arg1") ) );
 
 }

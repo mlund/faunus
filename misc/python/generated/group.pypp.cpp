@@ -125,7 +125,7 @@ void register_group_class(){
         }
         { //::Faunus::group::add
         
-            typedef void ( ::Faunus::group::*add_function_type )( ::Faunus::container &,::Faunus::particle::type,short int ) ;
+            typedef void ( ::Faunus::group::*add_function_type )( ::Faunus::container &,unsigned char,short int ) ;
             
             group_exposer.def( 
                 "add"
@@ -147,7 +147,7 @@ void register_group_class(){
         }
         { //::Faunus::group::count
         
-            typedef short int ( ::Faunus::group::*count_function_type )( ::std::vector< Faunus::particle > &,::Faunus::particle::type ) ;
+            typedef short int ( ::Faunus::group::*count_function_type )( ::std::vector< Faunus::particle > &,unsigned char ) ;
             
             group_exposer.def( 
                 "count"

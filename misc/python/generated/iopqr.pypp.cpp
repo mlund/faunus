@@ -15,10 +15,10 @@ struct iopqr_wrapper : Faunus::iopqr, bp::wrapper< Faunus::iopqr > {
         
     }
 
-    iopqr_wrapper(::Faunus::atoms & arg0 )
-    : Faunus::iopqr( boost::ref(arg0) )
+    iopqr_wrapper( )
+    : Faunus::iopqr( )
       , bp::wrapper< Faunus::iopqr >(){
-        // constructor
+        // null constructor
     
     }
 
@@ -38,33 +38,15 @@ struct iopqr_wrapper : Faunus::iopqr, bp::wrapper< Faunus::iopqr > {
 
 void register_iopqr_class(){
 
-    { //::Faunus::iopqr
-        typedef bp::class_< iopqr_wrapper > iopqr_exposer_t;
-        iopqr_exposer_t iopqr_exposer = iopqr_exposer_t( "iopqr", bp::init< Faunus::atoms & >(( bp::arg("arg0") )) );
-        bp::scope iopqr_scope( iopqr_exposer );
-        bp::implicitly_convertible< Faunus::atoms &, Faunus::iopqr >();
-        { //::Faunus::iopqr::save
-        
-            typedef bool ( ::Faunus::iopqr::*save_function_type )( ::std::string,::std::vector< Faunus::particle > & ) ;
-            typedef bool ( iopqr_wrapper::*default_save_function_type )( ::std::string,::std::vector< Faunus::particle > & ) ;
-            
-            iopqr_exposer.def( 
-                "save"
-                , save_function_type(&::Faunus::iopqr::save)
-                , default_save_function_type(&iopqr_wrapper::default_save)
-                , ( bp::arg("arg0"), bp::arg("arg1") ) );
-        
-        }
-        { //::Faunus::iopqr::save
-        
-            typedef bool ( ::Faunus::iopqr::*save_function_type )( ::std::string,::std::vector< Faunus::particle > &,::Faunus::titrate & ) ;
-            
-            iopqr_exposer.def( 
-                "save"
-                , save_function_type( &::Faunus::iopqr::save )
-                , ( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2") ) );
-        
-        }
-    }
+    bp::class_< iopqr_wrapper >( "iopqr", bp::init< >() )    
+        .def( 
+            "save"
+            , (bool ( ::Faunus::iopqr::* )( ::std::string,::std::vector< Faunus::particle > & ) )(&::Faunus::iopqr::save)
+            , (bool ( iopqr_wrapper::* )( ::std::string,::std::vector< Faunus::particle > & ) )(&iopqr_wrapper::default_save)
+            , ( bp::arg("arg0"), bp::arg("arg1") ) )    
+        .def( 
+            "save"
+            , (bool ( ::Faunus::iopqr::* )( ::std::string,::std::vector< Faunus::particle > &,::Faunus::titrate & ) )( &::Faunus::iopqr::save )
+            , ( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2") ) );
 
 }

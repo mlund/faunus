@@ -100,6 +100,16 @@ struct energybase_wrapper : Faunus::energybase, bp::wrapper< Faunus::energybase 
         return func_potential( boost::ref(arg0), arg1 );
     }
 
+    virtual double u_monomer( ::std::vector< Faunus::particle > const & arg0, ::Faunus::polymer const & arg1, unsigned int arg2 ){
+        bp::override func_u_monomer = this->get_override( "u_monomer" );
+        return func_u_monomer( boost::ref(arg0), boost::ref(arg1), arg2 );
+    }
+
+    virtual double uself_polymer( ::std::vector< Faunus::particle > const & arg0, ::Faunus::polymer const & arg1 ){
+        bp::override func_uself_polymer = this->get_override( "uself_polymer" );
+        return func_uself_polymer( boost::ref(arg0), boost::ref(arg1) );
+    }
+
 };
 
 void register_energybase_class(){
@@ -175,6 +185,14 @@ void register_energybase_class(){
         .def( 
             "potential"
             , bp::pure_virtual( (double ( ::Faunus::energybase::* )( ::std::vector< Faunus::particle > const &,::Faunus::point ) )(&::Faunus::energybase::potential) )
+            , ( bp::arg("arg0"), bp::arg("arg1") ) )    
+        .def( 
+            "u_monomer"
+            , bp::pure_virtual( (double ( ::Faunus::energybase::* )( ::std::vector< Faunus::particle > const &,::Faunus::polymer const &,unsigned int ) )(&::Faunus::energybase::u_monomer) )
+            , ( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2") ) )    
+        .def( 
+            "uself_polymer"
+            , bp::pure_virtual( (double ( ::Faunus::energybase::* )( ::std::vector< Faunus::particle > const &,::Faunus::polymer const & ) )(&::Faunus::energybase::uself_polymer) )
             , ( bp::arg("arg0"), bp::arg("arg1") ) )    
         .def_readwrite( "tokT", &Faunus::energybase::tokT );
 

@@ -9,11 +9,11 @@ namespace bp = boost::python;
 
 void register___type_class(){
 
-    { //::std::vector< Faunus::particle::type >
-        typedef bp::class_< std::vector< Faunus::particle::type > > __type_exposer_t;
+    { //::std::vector< unsigned char >
+        typedef bp::class_< std::vector< unsigned char > > __type_exposer_t;
         __type_exposer_t __type_exposer = __type_exposer_t( "__type" );
         bp::scope __type_scope( __type_exposer );
-        __type_exposer.def( bp::vector_indexing_suite< ::std::vector< Faunus::particle::type >, true >() );
+        __type_exposer.def( bp::vector_indexing_suite< ::std::vector< unsigned char >, true >() );
     }
 
 }

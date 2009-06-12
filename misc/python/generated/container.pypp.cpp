@@ -187,7 +187,6 @@ void register_container_class(){
             , (::Faunus::point ( ::Faunus::container::* )( ::Faunus::point const &,::Faunus::point const & ) )(&::Faunus::container::vdist)
             , (::Faunus::point ( container_wrapper::* )( ::Faunus::point const &,::Faunus::point const & ) )(&container_wrapper::default_vdist)
             , ( bp::arg("a"), bp::arg("b") ) )    
-        .def_readwrite( "atom", &Faunus::container::atom )    
         .def( 
             "clash"
             , (bool ( ::Faunus::particles::* )( ::Faunus::particle const &,::Faunus::particle const & ) )(&::Faunus::particles::clash)

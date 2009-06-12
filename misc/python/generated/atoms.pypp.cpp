@@ -23,6 +23,36 @@ void register_atoms_class(){
             .def_readwrite( "pka", &Faunus::atoms::data::pka )    
             .def_readwrite( "radius", &Faunus::atoms::data::radius )    
             .def_readwrite( "sigma", &Faunus::atoms::data::sigma );
+        { //::Faunus::atoms::find
+        
+            typedef char ( ::Faunus::atoms::*find_function_type )( ::std::string ) ;
+            
+            atoms_exposer.def( 
+                "find"
+                , find_function_type( &::Faunus::atoms::find )
+                , ( bp::arg("arg0") ) );
+        
+        }
+        { //::Faunus::atoms::find
+        
+            typedef char ( ::Faunus::atoms::*find_function_type )( double,double ) ;
+            
+            atoms_exposer.def( 
+                "find"
+                , find_function_type( &::Faunus::atoms::find )
+                , ( bp::arg("arg0"), bp::arg("arg1")=1.000000000000000055511151231257827021181583404541015625e-1 ) );
+        
+        }
+        { //::Faunus::atoms::get
+        
+            typedef ::Faunus::particle ( ::Faunus::atoms::*get_function_type )( char ) ;
+            
+            atoms_exposer.def( 
+                "get"
+                , get_function_type( &::Faunus::atoms::get )
+                , ( bp::arg("arg0") ) );
+        
+        }
         { //::Faunus::atoms::info
         
             typedef ::std::string ( ::Faunus::atoms::*info_function_type )(  ) ;

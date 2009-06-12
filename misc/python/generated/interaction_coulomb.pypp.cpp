@@ -226,6 +226,30 @@ struct interaction_less__Faunus_scope_pot_coulomb__greater__wrapper : Faunus::in
         return Faunus::interaction< Faunus::pot_coulomb >::potential( boost::ref(p), a );
     }
 
+    virtual double u_monomer( ::std::vector< Faunus::particle > const & p, ::Faunus::polymer const & g, unsigned int i ) {
+        if( bp::override func_u_monomer = this->get_override( "u_monomer" ) )
+            return func_u_monomer( boost::ref(p), boost::ref(g), i );
+        else
+            return this->Faunus::interaction< Faunus::pot_coulomb >::u_monomer( boost::ref(p), boost::ref(g), i );
+    }
+    
+    
+    double default_u_monomer( ::std::vector< Faunus::particle > const & p, ::Faunus::polymer const & g, unsigned int i ) {
+        return Faunus::interaction< Faunus::pot_coulomb >::u_monomer( boost::ref(p), boost::ref(g), i );
+    }
+
+    virtual double uself_polymer( ::std::vector< Faunus::particle > const & p, ::Faunus::polymer const & g ) {
+        if( bp::override func_uself_polymer = this->get_override( "uself_polymer" ) )
+            return func_uself_polymer( boost::ref(p), boost::ref(g) );
+        else
+            return this->Faunus::interaction< Faunus::pot_coulomb >::uself_polymer( boost::ref(p), boost::ref(g) );
+    }
+    
+    
+    double default_uself_polymer( ::std::vector< Faunus::particle > const & p, ::Faunus::polymer const & g ) {
+        return Faunus::interaction< Faunus::pot_coulomb >::uself_polymer( boost::ref(p), boost::ref(g) );
+    }
+
 };
 
 void register_interaction_coulomb_class(){
@@ -475,6 +499,32 @@ void register_interaction_coulomb_class(){
                 , potential_function_type(&::Faunus::interaction< Faunus::pot_coulomb >::potential)
                 , default_potential_function_type(&interaction_less__Faunus_scope_pot_coulomb__greater__wrapper::default_potential)
                 , ( bp::arg("p"), bp::arg("a") ) );
+        
+        }
+        { //::Faunus::interaction< Faunus::pot_coulomb >::u_monomer
+        
+            typedef Faunus::interaction< Faunus::pot_coulomb > exported_class_t;
+            typedef double ( exported_class_t::*u_monomer_function_type )( ::std::vector< Faunus::particle > const &,::Faunus::polymer const &,unsigned int ) ;
+            typedef double ( interaction_less__Faunus_scope_pot_coulomb__greater__wrapper::*default_u_monomer_function_type )( ::std::vector< Faunus::particle > const &,::Faunus::polymer const &,unsigned int ) ;
+            
+            interaction_coulomb_exposer.def( 
+                "u_monomer"
+                , u_monomer_function_type(&::Faunus::interaction< Faunus::pot_coulomb >::u_monomer)
+                , default_u_monomer_function_type(&interaction_less__Faunus_scope_pot_coulomb__greater__wrapper::default_u_monomer)
+                , ( bp::arg("p"), bp::arg("g"), bp::arg("i") ) );
+        
+        }
+        { //::Faunus::interaction< Faunus::pot_coulomb >::uself_polymer
+        
+            typedef Faunus::interaction< Faunus::pot_coulomb > exported_class_t;
+            typedef double ( exported_class_t::*uself_polymer_function_type )( ::std::vector< Faunus::particle > const &,::Faunus::polymer const & ) ;
+            typedef double ( interaction_less__Faunus_scope_pot_coulomb__greater__wrapper::*default_uself_polymer_function_type )( ::std::vector< Faunus::particle > const &,::Faunus::polymer const & ) ;
+            
+            interaction_coulomb_exposer.def( 
+                "uself_polymer"
+                , uself_polymer_function_type(&::Faunus::interaction< Faunus::pot_coulomb >::uself_polymer)
+                , default_uself_polymer_function_type(&interaction_less__Faunus_scope_pot_coulomb__greater__wrapper::default_uself_polymer)
+                , ( bp::arg("p"), bp::arg("g") ) );
         
         }
         interaction_coulomb_exposer.def_readwrite( "pair", &Faunus::interaction< Faunus::pot_coulomb >::pair );

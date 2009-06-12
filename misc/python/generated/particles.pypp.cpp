@@ -56,7 +56,7 @@ void register_particles_class(){
             , ( bp::arg("arg0"), bp::arg("arg1") ) )    
         .def( 
             "count"
-            , (int ( ::Faunus::particles::* )( ::Faunus::particle::type,::Faunus::point const &,double ) )( &::Faunus::particles::count )
+            , (int ( ::Faunus::particles::* )( unsigned char,::Faunus::point const &,double ) )( &::Faunus::particles::count )
             , ( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2") ) )    
         .def( 
             "insert"
@@ -64,7 +64,7 @@ void register_particles_class(){
             , ( bp::arg("arg0"), bp::arg("arg1") ) )    
         .def( 
             "list_of_species"
-            , (::std::vector< Faunus::particle::type > ( ::Faunus::particles::* )(  ) const)( &::Faunus::particles::list_of_species ) )    
+            , (::std::vector< unsigned char > ( ::Faunus::particles::* )(  ) const)( &::Faunus::particles::list_of_species ) )    
         .def( 
             "overlap"
             , (bool ( ::Faunus::particles::* )( ::Faunus::particle const & ) )( &::Faunus::particles::overlap )

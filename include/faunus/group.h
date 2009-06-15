@@ -131,7 +131,7 @@ namespace Faunus {
    *  \author Mikael Lund
    *  \date Lund 2009
    */
-  class polymer : public group {
+  class polymer : public macromolecule {
     public:
       vector< vector<unsigned short> > nb; //!< Neighbor list
       polymer();

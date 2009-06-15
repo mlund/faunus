@@ -23,13 +23,29 @@ namespace Faunus {
     obatom.SetPartialCharge(p.charge);
   }
 
-  void iobabel::read(string filename) {
+  /*!
+   * This will read a molecular file format into the particle
+   * vector. If the structure file contain residue names and
+   * if the number of pacticles is equal to the number of
+   * residues, the residue name will be used to identify the
+   * particle type.
+   */
+  void iobabel::read(string filename, bool resnaming) {
     p.clear();
     obmol.Clear();
     obconv.SetInFormat(obconv.FormatFromExt(filename.c_str()));
     bool notatend = obconv.ReadFile(&obmol,filename.c_str());
     for (unsigned int i=1; i<=obmol.NumAtoms(); i++)
       p.push_back(get(i));
+
+    // Use residue names for particle recognition
+    if ( resnaming==true && obmol.NumResidues() == p.size() ) {
+      unsigned int i=0;
+      OpenBabel::OBResidue* obres;
+      FOR_RESIDUES_OF_MOL(obres, obmol) {
+        p[i++].id = atom[ obres->GetName() ].id;
+      }
+    }
   }
 
   vector<unsigned short> iobabel::neighbors(unsigned short i) {
@@ -78,8 +94,9 @@ namespace Faunus {
     if (a.mw<1e-5)
       a.mw=1;   //we don't like weightless atoms.
     string name=string( OpenBabel::etab.GetSymbol( obatomPtr->GetAtomicNum() ) );
-    a.id=atom.get( atom.find(name) ).id;
+    a.id=atom[name].id;
     a.charge=obatomPtr->GetPartialCharge();
+    std::cout << int(a.id) << " " << name << " " << obatomPtr->GetAtomicNum() << std::endl;
 
     if (obatomPtr->HasData("Radius")) {
       OpenBabel::OBPairData *gdat = dynamic_cast<OpenBabel::OBPairData *>( obatomPtr->GetData("Radius") );

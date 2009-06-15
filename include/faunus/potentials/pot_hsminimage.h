@@ -64,7 +64,7 @@ namespace Faunus {
         double r=sqrt(sqdist(p1,p2)), u=p1.charge*p2.charge/r;
         return (r<p1.radius+p2.radius) ? u+200. : u;
       }
-      inline double sqdist(const particle &p1, const particle &p2) {
+      inline double sqdist(const point &p1, const point &p2) {
         double dz=p1.z-p2.z;
         double dx=std::abs(p1.x-p2.x);
         double dy=std::abs(p1.y-p2.y);

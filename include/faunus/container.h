@@ -132,6 +132,15 @@ namespace Faunus {
         a.x=a.x-len*anint(a.x*len_inv);
         a.y=a.y-len*anint(a.y*len_inv);
       }
+      inline double sqdist(const point &p1, const point &p2) {
+        double dz=p1.z-p2.z,
+               dx=std::abs(p1.x-p2.x),
+               dy=std::abs(p1.y-p2.y);
+        if (dx>len_half) dx-=len;
+        if (dy>len_half) dy-=len;
+        return dx*dx + dy*dy + dz*dz;
+      }
+      inline double dist(const point &p1, const point &p2) { return sqrt(sqdist(p1,p2)); }
   };
 
   /*! \brief "Clutch" like container.

@@ -11,6 +11,7 @@
 #include "faunus/species.h"
 
 namespace Faunus {
+  using OpenBabel::OBResidueIter;
   using OpenBabel::OBAtomAtomIter;
   /*! \brief OpenBabel file support
    *  \author Mikael Lund
@@ -23,8 +24,14 @@ namespace Faunus {
    *
    *  Particle types defined in "faunatoms.dat" are added to the OB
    *  element table so that external OB input routines automatically
-   *  recognize these. Note that OB can have a maximum of 255 (one char)
+   *  recognize these. Note that OB can have a maximum of 128 (one char)
    *  elements where approximately 116 of these are already occupied.
+   *
+   *  If the number of residues equals the number of particles, the
+   *  residue name will be used to identify the particle according
+   *  the list provided by Faunus::atoms
+   *
+   *  Recommended file format: Sybyl/mol2 but any should work.
    */
   class iobabel {
     private:
@@ -33,15 +40,15 @@ namespace Faunus {
       OpenBabel::OBMol obmol;
       OpenBabel::OBAtom obatom;
       OpenBabel::OBAtom *obatomPtr;
-      OpenBabel::vector3 v;    // OpenBabel vector
+      OpenBabel::vector3 v;  // OpenBabel vector
       particle a;   // Tmp particle
       double c[3];  // Temp. vector storage
       void p2atom(particle &); // Convert particle to ObenBabel atom
     public:
       iobabel();
-      vector<particle> p;         //!< Placeholder for loaded data
-      particle get(unsigned int); //!< Convert i'th babel atom to a particle
-      void read(string);          //!< Read entire file (autodetect format from extension)
+      vector<particle> p;           //!< Placeholder for loaded data
+      particle get(unsigned int);   //!< Convert i'th babel atom to a particle
+      void read(string, bool=true); //!< Read entire file (autodetect format from extension)
       bool write(string,const vector<particle> &);//!< Write coordinates (format from extension)
       vector<unsigned short> neighbors(unsigned short int); //!< Get list of neighboring atoms
   };

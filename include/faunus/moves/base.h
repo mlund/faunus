@@ -24,12 +24,12 @@ namespace Faunus {
       float runfraction;
       double uold, unew, deltadp;
       unsigned long long int cnt, naccept;
-      string name;                        //!< Arbitrary name for the move
       string cite;                        //!< Reference to additional info. (article, url etc.)
       container *con;
       ensemble *ens;
       average<float> dpsqr;               //!< Average displacement squared
     public:
+      string name;                        //!< Arbitrary name for the move
       enum keys {OK, ENERGY, HC};
       keys rc;                            //!< Return code from move() functions
       double dp,                          //!< Displacement parameter

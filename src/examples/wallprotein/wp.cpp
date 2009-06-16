@@ -15,6 +15,7 @@ using namespace Faunus;                 // Access to Faunus classes
 
 int main() {
   // General setup
+  slump slump;
   cout << faunus_splash();
   inputfile in("wp.conf");
   //atom.load(in);
@@ -30,10 +31,6 @@ int main() {
   macrorot mr(nvt, con, pot);     // ...rotate
   translate mt(nvt, con, pot);    // ...translate
   cout << pol.info();
-  for (int i=pol.beg; i<=pol.end; i++) {
-    cout << atom[ con.p[i].id ].name << " ";
-  }
-  return 0;
 
   // Handle wall particles
   group wall;
@@ -55,6 +52,7 @@ int main() {
   // File I/O
   iopqr pqr;
   ioaam aam;
+  ioxtc xtc(con.len);
   aam.load(con,"conf.aam");
 
   chargereg tit(nvt,con,pot,salt,in.getflt("pH",7.));
@@ -87,6 +85,9 @@ int main() {
           sys+=mr.move(pol);
           break;
       }
+      if (slump.random_one()>0.5)
+        xtc.save( "tis", con.p );
+
     }                                   // END of micro loop
 
     sys.update(

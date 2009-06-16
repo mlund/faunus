@@ -31,7 +31,8 @@ set_target_properties(libfaunus PROPERTIES
                       COMPILE_DEFINITIONS "__SVN_REV__=${SVNREVISION}"
                       )
 if(ENABLE_GROMACS)
-  set_target_properties(libfaunus PROPERTIES COMPILE_DEFINITIONS "GROMACS" )
+  add_definitions(-DGROMACS)
+  #  set_target_properties(libfaunus PROPERTIES COMPILE_DEFINITIONS "GROMACS" )
 endif(ENABLE_GROMACS)
 
 

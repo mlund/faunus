@@ -394,6 +394,7 @@ namespace Faunus {
         rsqr+=d2/pow(g.size(),2);               // Track mean square displacement per particle
         naccept++;                              // accept counter
         con->p[n] = con->trial[n];              // Accept move
+        g.masscenter(*con);                     // Recalc mass center
         return du;
       } else rc=ENERGY;
     }

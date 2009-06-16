@@ -378,7 +378,7 @@ namespace Faunus {
   //----------------- IOXTC ----------------------
 #ifdef GROMACS
 namespace Faunus {
-  ioxtc::ioxtc(container::container &con, float len) : iopart(con.atom) {
+  ioxtc::ioxtc(float len) {
     time=step=0;
     setbox(len);
     xd=xdrfile_open("coord.xtc", "w");

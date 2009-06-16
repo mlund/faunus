@@ -176,7 +176,7 @@ namespace Faunus {
    *  \author Mikael Lund
    *  \date June 2007, Prague
    *  \todo Filename ignored, should be changed. Static box length.
-   *        The XTC format is now included in OpenBabel2!
+   *        The XTC format is now included in OpenBabel2. Can we use that?
    *  \note Distances are stored in nanometers.
    *
    *  This class is used for output of configurations
@@ -196,7 +196,7 @@ namespace Faunus {
       XDRFILE *xd;
       float box[3][3], time, step;
     public:
-      ioxtc(container::container &, float);
+      ioxtc(float);
       bool save(string, vector<particle> &);
       void setbox(float);
       void close();

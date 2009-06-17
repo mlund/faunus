@@ -4,8 +4,8 @@ namespace Faunus {
   rosenbluth::rosenbluth( grandcanonical &gc,
       container &c, energybase &i, inputfile &in, int idx) : markovmove(gc,c,i)
   {
-    name = "ROSENBLUTH INSERTION";
-    cite = "Rosenbluth reference...or Frenkel?";
+    name.assign("ROSENBLUTH INSERTION");
+    cite.assign("Rosenbluth reference...or Frenkel?");
     runfraction=1.0;
     deltadp=0;
     dp=0;

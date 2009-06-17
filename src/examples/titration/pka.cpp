@@ -43,6 +43,8 @@ int main(int argc, char* argv[]) {
   chargereg tit(nvt,con,pot,salt,in.getflt("pH",7.));
 #endif
 
+  vector<particle> psmear = con.p;
+
   systemenergy sys(pot.energy(con.p)); // System energy analysis
   cout << in.info() << con.info() << tit.info()     // Some information
        << pot.info() << atom.info();
@@ -64,6 +66,8 @@ int main(int argc, char* argv[]) {
     sys.update(pot.energy(con.p));       // Update system energy
     aam.save("confout.aam", con.p);      // Save config. to disk
     pqr.save("confout.pqr", con.p, tit); // Save PQR file to disk - cool in VMD!
+    tit.applycharges(psmear);
+    aam.save("smeared.aam", psmear);
     cout << loop.timing();               // Show progress
   }                                      // END of macro loop
   cout << sys.info() << sm.info() << wid.info()

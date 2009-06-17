@@ -5,7 +5,7 @@ namespace Faunus {
   macrorot::macrorot( ensemble &e,
       container &c, energybase &i ) : markovmove(e,c,i)
   {
-    name = "MACROMOLECULAR ROTATION";
+    name.assign("MACROMOLECULAR ROTATION");
     runfraction=1.0;
     deltadp=0.1;
     dp=1.0;

@@ -4,7 +4,7 @@ namespace Faunus {
   transrot::transrot( ensemble &e,
       container &c, energybase &i ) : markovmove(e,c,i)
   {
-    name = "COMBINED ROTATION and TRANSLATION";
+    name.assign("COMBINED ROTATION and TRANSLATION");
     runfraction=1.0;
     deltadp=0.1;
     dp=1.0;
@@ -62,7 +62,7 @@ namespace Faunus {
   multtr::multtr( ensemble &e,
       container &c, energybase &i, int M ) : markovmove(e,c,i)
   {
-    name = "MULTIPLE COMBINED ROTATION and TRANSLATION";
+    name.assign("MULTIPLE COMBINED ROTATION and TRANSLATION");
     runfraction=1.0;
     deltadp=0.1;
     dp=1.0;

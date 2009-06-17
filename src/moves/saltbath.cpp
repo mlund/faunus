@@ -4,8 +4,8 @@ namespace Faunus {
   saltbath::saltbath( grandcanonical &gc,
       container &c, energybase &i, inputfile &in, int idx) : markovmove(gc,c,i)
   {
-    name = "ROSEMBLUTH INSERTION";
-    cite = "Rosembluth reference...or Frenkel?";
+    name.assign("ROSEMBLUTH INSERTION");
+    cite.assign("Rosembluth reference...or Frenkel?");
     runfraction=1.0;
     deltadp=0;
     dp=0;

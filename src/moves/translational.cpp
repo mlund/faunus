@@ -6,7 +6,7 @@ namespace Faunus {
     runfraction=rf;
     dp=8;
     deltadp=1;
-    name="MACROMOLECULE Z-DISPLACEMENTS";
+    name.assign("MACROMOLECULE Z-DISPLACEMENTS");
   }     
 
   bool zmove::move(macromolecule &g) {
@@ -54,8 +54,8 @@ namespace Faunus {
   dualmove::dualmove( ensemble &e,
       container &c, energybase &i ) : markovmove(e,c,i), gofr(0.1,0.,100.)
   {
-    name = "SYMMETRIC 1D GROUP TRANSLATION";
-    cite = "Biophys J. 2003, 85, 2940";
+    name.assign("SYMMETRIC 1D GROUP TRANSLATION");
+    cite.assign("Biophys J. 2003, 85, 2940");
     runfraction=1.0;
     deltadp=1.;
     dp=1.;
@@ -171,7 +171,7 @@ namespace Faunus {
   //---------- TRANSLATE GROUP ----------------
   translate::translate( ensemble &e,
       container &c, energybase &i ) : markovmove(e,c,i) {
-    name = "MOLECULAR TRANSLATION";
+    name.assign("MOLECULAR TRANSLATION");
     runfraction=1.0;
     deltadp=1.;
     dp=10.;
@@ -230,7 +230,7 @@ namespace Faunus {
     runfraction=rf;
     dp=100;
     deltadp=1;
-    name="MACROMOLECULE MOVE";
+    name.assign("MACROMOLECULE MOVE");
     b=&BOX;
   }
 
@@ -293,7 +293,7 @@ namespace Faunus {
   }
 
   void saltmove::init() {
-    name="SALT DISPLACEMENTS";
+    name.assign("SALT DISPLACEMENTS");
     deltadp=2;
     runfraction=1.0;
     rsqr=0;
@@ -371,7 +371,7 @@ namespace Faunus {
       ensemble &e, container &c, energybase &i, inputfile &in ) : saltmove(e,c,i,in) {
     init();
     dp=in.getflt("dp_monomer", 3.);
-    name="MONOMER DISPLACEMENTS";
+    name.assign("MONOMER DISPLACEMENTS");
   }
 
   double monomermove::move(polymer &g) {

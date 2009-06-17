@@ -14,8 +14,8 @@ namespace Faunus {
 
   chargereg::chargereg(ensemble &e, container &c, energybase &i, group &g, float ph ) : markovmove(e,c,i), titrate(c.p,g,ph)
   {
-    name="PROTON TITRATION";
-    cite="Biochem. 2005, 44, 5722-5727.";
+    name.assign("PROTON TITRATION");
+    cite.assign("Biochem. 2005, 44, 5722-5727.");
     runfraction=0.2;
     con->trial = con->p;
   }
@@ -82,8 +82,8 @@ namespace Faunus {
       energybase &i,
       group &g, float ph, float mu ) : chargereg(e,c,i,g,ph)
   {
-    this->name="GC PROTON TITRATION...";
-    this->cite="Labbez+Jonsson....";
+    this->name.assign("GC PROTON TITRATION...");
+    this->cite.assign("Labbez+Jonsson....");
     CatPot=mu;
   }
 
@@ -109,8 +109,8 @@ namespace Faunus {
 
  DHchargereg::DHchargereg(ensemble &e, container &c, energybase &i, float ph, float muH ) : markovmove(e,c,i), titrate_implicit(c.p,ph,muH)
   {
-    name="DH-PROTON TITRATION";
-    cite="Biochem. 2005, 44, 5722-5727.";
+    name.assign("DH-PROTON TITRATION");
+    cite.assign("Biochem. 2005, 44, 5722-5727.");
     runfraction=0.2;
     con->trial = con->p;
   }

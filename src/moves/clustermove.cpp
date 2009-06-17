@@ -5,7 +5,7 @@ namespace Faunus {
   clusterinvw::clusterinvw( ensemble &e,
     container &c, sphericalimage<pot_test> &i 
     ) : markovmove(e,c,i) {
-      name ="WATER CLUSTER INVERSION, cite xxx";
+      name.assign("WATER CLUSTER INVERSION, cite xxx");
       runfraction=1.;
       ipot=&i;
      }
@@ -57,7 +57,7 @@ namespace Faunus {
   clusterrinvw::clusterrinvw( ensemble &e,
     container &c, sphericalimage<pot_test> &i, double &rad, double &cavrad 
     ) : markovmove(e,c,i) {
-      name ="RESTRICTED WATER CLUSTER INVERSION, cite xxx";
+      name.assign("RESTRICTED WATER CLUSTER INVERSION, cite xxx");
       runfraction=1.;
       ipot=&i;
       r=rad-3;
@@ -119,7 +119,7 @@ namespace Faunus {
   clustertrans::clustertrans( ensemble &e,
     container &c, energybase &i , vector<macromolecule> &g
     ) : markovmove(e,c,i) {
-      name ="Non-rejective cluster translation, cite xxx";
+      name.assign("Non-rejective cluster translation, cite xxx");
       runfraction=1.;
 //      g=&G;
 //      distributions d(1., 1., g.size());

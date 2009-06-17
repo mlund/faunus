@@ -5,7 +5,6 @@
 #include "faunus/container.h"
 #include "faunus/titrate.h"
 
-#ifdef GROMACS
 #ifndef __cplusplus
 #define __cplusplus
 #endif
@@ -14,7 +13,6 @@
 #endif
 #include "xdrfile/xdrfile_trr.h"
 #include "xdrfile/xdrfile_xtc.h"
-#endif
 
 //#include "xdrfile/xdrfile_trr.h"
 //#endif GROMACS
@@ -170,7 +168,6 @@ namespace Faunus {
       bool save(string, box &);
   };
 
-#ifdef GROMACS
   //-----------------------------------------------
   /*! \brief GROMACS xtc compressed trajectory fileformat
    *  \author Mikael Lund
@@ -201,6 +198,5 @@ namespace Faunus {
       void setbox(float);
       void close();
   };
-#endif
 };//namespace
 #endif

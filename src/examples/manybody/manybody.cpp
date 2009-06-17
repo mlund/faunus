@@ -43,9 +43,7 @@ int main() {
 
   cout << cell.info() << pot.info()     // Print information to screen
        << atom.info();
-  #ifdef GROMACS
-  ioxtc xtc(cell, cell.len);            // Gromacs xtc output (if installed)
-  #endif
+  ioxtc xtc(cell.len);                  // Gromacs xtc output (if installed)
 
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {
@@ -80,10 +78,8 @@ int main() {
       if (slump.random_one()>.8 && macro>1)
         saltrdf.update(cell);                   // Update salt g(r)
 
-      #ifdef GROMACS
       if (slump.random_one()>.96 && macro>1)
         xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
-      #endif
 
     } // End of inner loop
 
@@ -100,8 +96,6 @@ int main() {
   cout << sys.info() << salt.info(cell)             // Final information...
        << sm.info() << mr.info() << mt.info();
 
-  #ifdef GROMACS
   xtc.close();
-  #endif
 }
 

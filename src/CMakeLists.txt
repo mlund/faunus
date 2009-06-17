@@ -30,11 +30,6 @@ set_target_properties(libfaunus PROPERTIES
                       OUTPUT_NAME faunus
                       COMPILE_DEFINITIONS "__SVN_REV__=${SVNREVISION}"
                       )
-if(ENABLE_GROMACS)
-  add_definitions(-DGROMACS)
-  #  set_target_properties(libfaunus PROPERTIES COMPILE_DEFINITIONS "GROMACS" )
-endif(ENABLE_GROMACS)
-
 
 target_link_libraries(libfaunus xdrfile ${LINKLIBS})
 install(TARGETS libfaunus

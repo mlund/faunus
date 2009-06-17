@@ -44,10 +44,10 @@ namespace Faunus {
   }
 
   /*
-  bool io_aam::load(container &c, string file) {
-    return false;
-  }
-  */
+     bool io_aam::load(container &c, string file) {
+     return false;
+     }
+     */
 
   //--------------- IOAAM ---------------------
   ioaam::ioaam() {}
@@ -369,15 +369,12 @@ namespace Faunus {
       << "  <"<<p2.x<<","<<p2.y<<","<<p2.z<<">,"<<radius
       << "  texture {redish}\n }\n";
   }
-}
   /*PQR
   // 1234567890123456789012345678901234567890123456789012345678901234567890
   // ATOM     25 H1A  CR      4      23.215  17.973  15.540 -0.017 1.000
   */
 
   //----------------- IOXTC ----------------------
-#ifdef GROMACS
-namespace Faunus {
   ioxtc::ioxtc(float len) {
     time=step=0;
     setbox(len);
@@ -404,4 +401,3 @@ namespace Faunus {
   }
   void ioxtc::close() { xdrfile_close(xd); }
 };//namespace
-#endif

@@ -33,9 +33,7 @@ int main() {
 
   cout << cell.info() << pot.info();    // Print information to screen
 
-  #ifdef GROMACS
-  ioxtc xtc(cell, 52.3);            // Gromacs xtc output (if installed)
-  #endif
+  ioxtc xtc(52.3);                      // Gromacs xtc output
 
   cout << "---------- RUN-TIME INFORMATION  -----------" << endl;
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
@@ -64,11 +62,8 @@ int main() {
           break;
       }
       bind.update(cell, cell.p[g[0].end], g, 1);
-
-      #ifdef GROMACS
       if (slump.random_one()>.96 && macro>1)
         xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
-      #endif
 
     } // End of inner loop
 
@@ -84,8 +79,6 @@ int main() {
        << sm.info() << mr.info() << mt.info() << g[0].info(cell) << g[1].info(cell)
        << bind.info( 1./cell.getvolume() );
 
-  #ifdef GROMACS
   xtc.close();
-  #endif
 }
 

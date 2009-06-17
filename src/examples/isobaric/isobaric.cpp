@@ -14,7 +14,6 @@
 
 using namespace Faunus;
 using namespace std;
-
  
 class BadConversion : public std::runtime_error {
 public:
@@ -106,9 +105,7 @@ int main() {
   int eprint, cnt=0;
   eprint=int(0.001*in.getflt("microsteps")); //loop.macro);
 
-  #ifdef GROMACS
-  ioxtc xtc(cell, cell.len);              // Gromacs xtc output (if installed)
-  #endif
+  ioxtc xtc(cell.len);                                // Gromacs xtc output (if installed)
 
   cout << cell.info() << pot.info() <<in.info();      // Print information to screen
 
@@ -137,10 +134,8 @@ int main() {
         sys+=ct.move(g);                        //   Do the move.
 
       lendist.add(cell.len);
-      #ifdef GROMACS
       if (slump.random_one()>.80 && macro>1)
         xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
-      #endif
       if (slump.random_one()>-.99)
         sys.track();
       if(slump.random_one()>-.99) {
@@ -214,10 +209,6 @@ int main() {
        << "#   Simulated <density>     = " <<g.size()*vol.ivol.avg()<<" ("<<g.size()*vol.ivol.avg()<<")"<<endl;
   aam.save("confout.aam", cell.p);            // Save config. for next run
   xyz.save("confout.xyz", cell.p);
-
-
-  #ifdef GROMACS
   xtc.close();
-  #endif
 }
 

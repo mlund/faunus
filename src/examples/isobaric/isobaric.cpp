@@ -41,7 +41,7 @@ int main() {
   mcloop loop(in);                        // Keep track of time and MC loop
   box cell(in);                           // We want a cubic cell
   canonical nvt;                          // Use the canonical ensemble
-  interaction<pot_debyehuckelP3> pot(in); // Functions for interactions
+  interaction<pot_debyehuckelP3trunk> pot(in); // Functions for interactions
   iogro gro(in);                          // Gromacs file output for VMD etc.
 
   vector<macromolecule> g;                // PROTEIN groups
@@ -62,7 +62,7 @@ int main() {
   macrorot mr(nvt, cell, pot);            //   Class for macromolecule rotation
   translate mt(nvt, cell, pot);           //   Class for macromolecular translation
   clustertrans ct(nvt, cell, pot, g);     //   Class for non-rejective cluster translation
-  isobaric<pot_debyehuckelP3> vol(
+  isobaric<pot_debyehuckelP3trunk> vol(
       nvt, cell, pot,
       in.getflt("pressure"),              // Set external pressure (in kT)
       in.getflt("penalty"),               // Set penalty           (in kT)

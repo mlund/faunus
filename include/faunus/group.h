@@ -142,6 +142,24 @@ namespace Faunus {
       bool babeladd( container &, inputfile & ); //!< Load molecule from disk using OpenBabel
 #endif
   };
+
+  /*! \brief Class for phospholipid-membrane
+   *  \author Bjoern Persson
+   *  \date Lund 2009
+   *
+   *//*
+  class popscmembrane {
+    private:
+      double scratio;          //Ratio of pops in percent
+      double headarea;         //Headgroup area
+      vector<polymer> pops;    //Pops vector
+      vector<polymer> popc;    //Popc vector
+
+    public:
+      popscmembrane();
+      void load(inputfile &, slit &);  //Scannes for "scratio", "headarea"
+
+  }*/
 }//namespace
 #endif
 

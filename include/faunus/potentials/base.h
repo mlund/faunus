@@ -84,5 +84,56 @@ namespace Faunus {
         return o.str();
       }
   };
+  class pot_lj_trunk {
+    public:
+      string name; //!< Arbitrary name
+      string cite; //!< Litterature reference
+      double eps;  //!< Lennard-Jones interaction parameter (kT)
+      double f;    //!< Factor to convert to kT (used after energy summations)
+      double third2;
+      pot_lj_trunk(inputfile &in) {
+        eps=in.getflt("LJeps", 2);
+        name="Truncated and shifted LJ12-6";
+        f=1;
+        third2=pow(2.,1./3.);
+      }
+      pot_lj_trunk(double epsilon) {
+        eps=epsilon;
+        name="Truncated and shifted LJ12-6";
+        f=1;
+        third2=pow(2.,1./3.);
+      }
+      /*!
+       *  \param r2 Squared distance between particle p1 and p2.
+       *  \returns Interaction energy in units of kT,
+       *           \f[ \beta u_{lj} = \epsilon_{lj} \left ( \frac{\sigma}{r^{12}} - \frac{\sigma}{r^6} \right ) \f]
+       *           \f[ \sigma = \frac{\sigma_1+\sigma_2}{2}\f]
+       */
+      inline double lj(const particle &p1, const particle &p2, const double &r2) const {
+
+        double x=p1.radius+p2.radius;
+        if (r2>x*x*third2)
+          return 0;
+        else {
+          double u=x*x/r2;
+          x=u*u*u;
+          return (x*x-x+0.25)*eps;
+        }
+      }
+      inline void lj(const particle &p1, const particle &p2, const double &r2, double &u) const {
+        double s=p1.radius+p2.radius, a=s*s/r2;
+        s=a*a*a;
+        u+=(s*s-s)*eps;
+      }
+      virtual void setvolume(double) {}; //!< specify volume for fluctuating periodic boundaries
+      virtual string info() {
+        std::ostringstream o;
+        o << "#   Type              = " << name << std::endl
+          << "#   4*LJ epsilon (kT) = " << eps*f << std::endl;
+        if (cite.length()!=0)
+          o << "#   Reference         = " << cite << std::endl;
+        return o.str();
+      }
+  };
 }
 #endif

@@ -26,8 +26,8 @@ int main() {
   particle plus,minus;
   plus.x=plus.y=plus.z=0;
   minus.x=minus.y=minus.z=0;
-  double   plussum, minussum;
-  plussum=minussum=0;
+  double   plussum, minussum, masssum;
+  plussum=minussum=masssum=0.;
   int hit=0;
   int hitcgp=0;
   int comhit=0;
@@ -52,6 +52,7 @@ int main() {
       minus.z +=con.p[i].z*con.p[i].charge;
       minussum+=con.p[i].charge;
     }
+	masssum+=con.p[i].mw;
   }
   plus.x=plus.x/plussum;
   plus.y=plus.y/plussum;
@@ -68,7 +69,7 @@ int main() {
   //Adjust the volume
   p[0].radius=in.getflt("blobradius");
   p[1].radius=p[0].radius;
-
+  p[0].mw=p[1].mw=masssum/2.;
     for (int macro=0; macro<in.getflt("macro"); macro++) {        
       for (int micro=0; micro<in.getflt("micro"); micro++) {
         cgpb=pb=false;

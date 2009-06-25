@@ -106,6 +106,8 @@
 
 #include "generated/widom.pypp.hpp"
 
+#include "generated/widomSW.pypp.hpp"
+
 namespace bp = boost::python;
 
 BOOST_PYTHON_MODULE(faunus){
@@ -206,6 +208,8 @@ BOOST_PYTHON_MODULE(faunus){
     register_virial_class();
 
     register_widom_class();
+
+    register_widomSW_class();
 
     register_free_functions();
 }

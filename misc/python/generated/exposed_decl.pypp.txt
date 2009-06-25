@@ -5,7 +5,7 @@
 ~@casting_operator_t@operator bool@bool ( ::std::_Bit_reference::* )(  ) constbool ( ::std::_Bit_reference::* )(  ) const
 ~@casting_operator_t@operator bool@bool ( ::std::basic_ostream<char,std::char_traits<char> >::sentry::* )(  ) constbool ( ::std::basic_ostream<char,std::char_traits<char> >::sentry::* )(  ) const
 ~@casting_operator_t@operator bool@bool ( ::std::basic_istream<wchar_t, std::char_traits<wchar_t> >::sentry::* )(  ) constbool ( ::std::basic_istream<wchar_t, std::char_traits<wchar_t> >::sentry::* )(  ) const
-~@destructor_t@~widomSW@ ( ::Faunus::widomSW::* )(  )  ( ::Faunus::widomSW::* )(  ) 
++@destructor_t@~widomSW@ ( ::Faunus::widomSW::* )(  )  ( ::Faunus::widomSW::* )(  ) 
 +@destructor_t@~iopqr@ ( ::Faunus::iopqr::* )(  )  ( ::Faunus::iopqr::* )(  ) 
 ~@destructor_t@~bidirectional_iterator_tag@ ( ::std::bidirectional_iterator_tag::* )(  )  ( ::std::bidirectional_iterator_tag::* )(  ) 
 ~@destructor_t@~particleIO@ ( ::Faunus::particleIO::* )(  )  ( ::Faunus::particleIO::* )(  ) 
@@ -2136,7 +2136,7 @@
 ~@variable_t@f@::Faunus::pot_barecoulomb::f
 +@variable_t@f@::Faunus::pot_lj::f
 ~@variable_t@f@::Faunus::pot_spring::f
-~@variable_t@chexw@::Faunus::widomSW::chexw
++@variable_t@chexw@::Faunus::widomSW::chexw
 ~@variable_t@_ZTISt7num_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE@::_ZTISt7num_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE
 ~@variable_t@_ZTIN6Faunus9chargeregE@::_ZTIN6Faunus9chargeregE
 ~@variable_t@_M_dataplus@::std::wstring::_M_dataplus
@@ -2157,7 +2157,7 @@
 ~@variable_t@_ZTISt12ctype_bynameIwE@::_ZTISt12ctype_bynameIwE
 ~@variable_t@_ZTISt5ctypeIcE@::_ZTISt5ctypeIcE
 ~@variable_t@_ZTIN6Faunus6randomE@::_ZTIN6Faunus6randomE
-~@variable_t@chel@::Faunus::widomSW::chel
++@variable_t@chel@::Faunus::widomSW::chel
 ~@variable_t@_IO_read_base@::_IO_FILE::_IO_read_base
 ~@variable_t@__lock@::pthread_cond_t::__lock
 ~@variable_t@__lock@::pthread_mutex_t::__pthread_mutex_s::__lock
@@ -2179,7 +2179,7 @@
 ~@variable_t@_M_state_cur@::std::basic_filebuf< char, std::char_traits< char > >::_M_state_cur
 ~@variable_t@__writer_wakeup@::pthread_rwlock_t::__writer_wakeup
 ~@variable_t@_ZTIN6Faunus9translateE@::_ZTIN6Faunus9translateE
-~@variable_t@chint@::Faunus::widomSW::chint
++@variable_t@chint@::Faunus::widomSW::chint
 ~@variable_t@_M_widen@::std::ctype< wchar_t >::_M_widen
 ~@variable_t@_M_widen@::std::ctype< char >::_M_widen
 ~@variable_t@_M_ok@::std::basic_istream< char, std::char_traits< char > >::sentry::_M_ok
@@ -2187,7 +2187,7 @@
 ~@variable_t@_M_ok@::std::basic_ostream< char, std::char_traits< char > >::sentry::_M_ok
 ~@variable_t@_M_ok@::std::basic_istream< wchar_t, std::char_traits< wchar_t > >::sentry::_M_ok
 ~@variable_t@NTAB@::Faunus::ran2::NTAB
-~@variable_t@expuw@::Faunus::widomSW::expuw
++@variable_t@expuw@::Faunus::widomSW::expuw
 ~@variable_t@RNMX@::Faunus::ran2::RNMX
 ~@variable_t@_ZTIN6Faunus17cylindric_profileE@::_ZTIN6Faunus17cylindric_profileE
 ~@variable_t@_M_os@::std::basic_ostream< wchar_t, std::char_traits< wchar_t > >::sentry::_M_os
@@ -2323,7 +2323,7 @@
 ~@variable_t@xmin@::Faunus::xytable< float, unsigned long >::xmin
 ~@variable_t@xmin@::Faunus::distributions::xmin
 ~@variable_t@badbit@::std::ios_base::badbit
-~@variable_t@chid@::Faunus::widomSW::chid
++@variable_t@chid@::Faunus::widomSW::chid
 ~@variable_t@xmin_set@::Faunus::distributions::xmin_set
 ~@variable_t@end@::std::ios_base::end
 +@variable_t@end@::Faunus::group::end
@@ -2349,7 +2349,7 @@
 ~@variable_t@rmax@::Faunus::dualmove::rmax
 ~@variable_t@_ZTIN6Faunus9moleculesE@::_ZTIN6Faunus9moleculesE
 ~@variable_t@tm_year@::tm::tm_year
-~@variable_t@irej@::Faunus::widomSW::irej
++@variable_t@irej@::Faunus::widomSW::irej
 ~@variable_t@_ZTISo@::_ZTISo
 ~@variable_t@_ZTIN6Faunus14pointpotentialE@::_ZTIN6Faunus14pointpotentialE
 ~@variable_t@a@::Faunus::FAUrdf::a
@@ -2377,7 +2377,7 @@
 ~@variable_t@_ZTISt23__codecvt_abstract_baseIwc11__mbstate_tE@::_ZTISt23__codecvt_abstract_baseIwc11__mbstate_tE
 +@variable_t@dr@::Faunus::virial::dr
 ~@variable_t@_ZTISt23__codecvt_abstract_baseIcc11__mbstate_tE@::_ZTISt23__codecvt_abstract_baseIcc11__mbstate_tE
-~@variable_t@ewden@::Faunus::widomSW::ewden
++@variable_t@ewden@::Faunus::widomSW::ewden
 +@variable_t@ens@::Faunus::markovmove::ens
 +@variable_t@dp@::Faunus::markovmove::dp
 ~@variable_t@_M_string@::std::basic_stringbuf< char, std::char_traits< char >, std::allocator< char > >::_M_string
@@ -2484,7 +2484,7 @@
 ~@variable_t@r0@::Faunus::pot_spring::r0
 ~@variable_t@g@::Faunus::gfactor::g
 +@variable_t@g@::Faunus::widom::g
-~@variable_t@g@::Faunus::widomSW::g
++@variable_t@g@::Faunus::widomSW::g
 ~@variable_t@g@::Faunus::aggregation::g
 +@variable_t@g@::Faunus::grandcanonical::g
 ~@variable_t@_ZTINSt8ios_base7failureE@::_ZTINSt8ios_base7failureE
@@ -2511,7 +2511,7 @@
 ~@variable_t@__is_signed@::__gnu_cxx::__numeric_traits_integer< int >::__is_signed
 ~@variable_t@_next@::_IO_marker::_next
 ~@variable_t@_ZTISt15basic_streambufIwSt11char_traitsIwEE@::_ZTISt15basic_streambufIwSt11char_traitsIwEE
-~@variable_t@ihc@::Faunus::widomSW::ihc
++@variable_t@ihc@::Faunus::widomSW::ihc
 ~@variable_t@__ctype_tolower@::__locale_struct::__ctype_tolower
 +@variable_t@tlen_inv@::Faunus::box::tlen_inv
 ~@variable_t@_sys_nerr@::_sys_nerr
@@ -2531,7 +2531,7 @@
 ~@variable_t@skipws@::std::ios_base::skipws
 ~@variable_t@__c@::drand48_data::__c
 ~@variable_t@R@::Faunus::pc::R
-~@variable_t@chex@::Faunus::widomSW::chex
++@variable_t@chex@::Faunus::widomSW::chex
 ~@variable_t@positive_sign@::lconv::positive_sign
 ~@variable_t@alnum@::std::ctype_base::alnum
 ~@variable_t@_ZTIN6Faunus11pot_datapmfE@::_ZTIN6Faunus11pot_datapmfE
@@ -2604,13 +2604,13 @@
 ~@variable_t@_ZTIN10__cxxabiv115__forced_unwindE@::_ZTIN10__cxxabiv115__forced_unwindE
 ~@variable_t@_ZTISt5ctypeIwE@::_ZTISt5ctypeIwE
 ~@variable_t@_M_cfile@::std::__basic_file< char >::_M_cfile
-~@variable_t@chtot@::Faunus::widomSW::chtot
++@variable_t@chtot@::Faunus::widomSW::chtot
 ~@variable_t@_ZTIN6Faunus7widomSWE@::_ZTIN6Faunus7widomSWE
 ~@variable_t@unitbuf@::std::ios_base::unitbuf
 ~@variable_t@__nr_readers_queued@::pthread_rwlock_t::__nr_readers_queued
 +@variable_t@sigma@::Faunus::atoms::data::sigma
 +@variable_t@sigma@::Faunus::atoms::sigma
-~@variable_t@ewnom@::Faunus::widomSW::ewnom
++@variable_t@ewnom@::Faunus::widomSW::ewnom
 ~@variable_t@rawtime@::Faunus::countdown< unsigned int >::rawtime
 ~@variable_t@_IO_read_end@::_IO_FILE::_IO_read_end
 ~@variable_t@_M_ext_buf_size@::std::basic_filebuf< wchar_t, std::char_traits< wchar_t > >::_M_ext_buf_size
@@ -2628,7 +2628,7 @@
 ~@variable_t@sigma2@::Faunus::pot_test::sigma2
 ~@variable_t@cr2@::Faunus::clusterrinvw::cr2
 ~@variable_t@e_0@::Faunus::physconst::e_0
-~@variable_t@chhc@::Faunus::widomSW::chhc
++@variable_t@chhc@::Faunus::widomSW::chhc
 +@variable_t@title@::Faunus::group::title
 ~@variable_t@_IO_2_1_stdin_@::_IO_2_1_stdin_
 ~@variable_t@_ZTIN6Faunus8transrotE@::_ZTIN6Faunus8transrotE
@@ -3068,7 +3068,7 @@
 ~@variable_t@showbase@::std::ios_base::showbase
 ~@variable_t@alpha@::std::ctype_base::alpha
 +@variable_t@ghostin@::Faunus::widom::ghostin
-~@variable_t@ghostin@::Faunus::widomSW::ghostin
++@variable_t@ghostin@::Faunus::widomSW::ghostin
 ~@variable_t@_M_narrow@::std::ctype< wchar_t >::_M_narrow
 ~@variable_t@_M_narrow@::std::ctype< char >::_M_narrow
 ~@variable_t@int_frac_digits@::lconv::int_frac_digits
@@ -3143,7 +3143,7 @@
 +@variable_t@cnt@::Faunus::average< double >::cnt
 +@variable_t@cnt@::Faunus::average< float >::cnt
 +@variable_t@cnt@::Faunus::widom::cnt
-~@variable_t@cnt@::Faunus::widomSW::cnt
++@variable_t@cnt@::Faunus::widomSW::cnt
 +@variable_t@cnt@::Faunus::mcloop::cnt
 ~@variable_t@cnt@::Faunus::profile::cnt
 ~@variable_t@cnt@::Faunus::histogram::cnt
@@ -3381,7 +3381,7 @@
 ~@class_t@__mbstate_t@::__mbstate_t
 ~@class_t@__add_unsigned< int >@::__gnu_cxx::__add_unsigned< int >
 ~@class_t@allocator< int >@::std::allocator< int >
-~@class_t@widomSW@::Faunus::widomSW
++@class_t@widomSW@::Faunus::widomSW
 ~@class_t@bad_alloc@::std::bad_alloc
 ~@class_t@ran2@::Faunus::ran2
 ~@class_t@__enable_if< true, std::vector< unsigned char > >@::__gnu_cxx::__enable_if< true, std::vector< unsigned char > >
@@ -5553,8 +5553,8 @@
 ~@member_function_t@add@bool ( ::Faunus::xydata<double>::* )( ::std::vector< double > &,::std::vector< double > & ) bool ( ::Faunus::xydata<double>::* )( ::std::vector<double, std::allocator<double> > &,::std::vector<double, std::allocator<double> > & ) 
 +@member_function_t@add@void ( ::Faunus::widom::* )( ::Faunus::particle ) void ( ::Faunus::widom::* )( ::Faunus::particle ) 
 +@member_function_t@add@void ( ::Faunus::widom::* )( ::Faunus::container & ) void ( ::Faunus::widom::* )( ::Faunus::container & ) 
-~@member_function_t@add@void ( ::Faunus::widomSW::* )( ::Faunus::particle ) void ( ::Faunus::widomSW::* )( ::Faunus::particle ) 
-~@member_function_t@add@void ( ::Faunus::widomSW::* )( ::Faunus::container & ) void ( ::Faunus::widomSW::* )( ::Faunus::container & ) 
++@member_function_t@add@void ( ::Faunus::widomSW::* )( ::Faunus::particle ) void ( ::Faunus::widomSW::* )( ::Faunus::particle ) 
++@member_function_t@add@void ( ::Faunus::widomSW::* )( ::Faunus::container & ) void ( ::Faunus::widomSW::* )( ::Faunus::container & ) 
 ~@member_function_t@add@void ( ::Faunus::pointpotential::* )( ::Faunus::point,::std::string ) void ( ::Faunus::pointpotential::* )( ::Faunus::point,::std::string ) 
 ~@member_function_t@add@void ( ::Faunus::profile::* )( ::Faunus::particle & ) void ( ::Faunus::profile::* )( ::Faunus::particle & ) 
 +@member_function_t@add@void ( ::Faunus::macromolecule::* )( ::Faunus::container &,::Faunus::inputfile & ) void ( ::Faunus::macromolecule::* )( ::Faunus::container &,::Faunus::inputfile & ) 
@@ -5660,8 +5660,7 @@
 ~@member_function_t@insert@::__gnu_cxx::__normal_iterator< char*, std::basic_string< char, std::char_traits< char >, std::allocator< char > > > ( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::* )( ::__gnu_cxx::__normal_iterator< char*, std::basic_string< char, std::char_traits< char >, std::allocator< char > > >,char ) ::__gnu_cxx::__normal_iterator<char*,std::basic_string<char, std::char_traits<char>, std::allocator<char> > > ( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::* )( ::__gnu_cxx::__normal_iterator<char*,std::basic_string<char, std::char_traits<char>, std::allocator<char> > >,char ) 
 +@member_function_t@insert@void ( ::Faunus::widom::* )( ::Faunus::container &,::Faunus::energybase & ) void ( ::Faunus::widom::* )( ::Faunus::container &,::Faunus::energybase & ) 
 ~@member_function_t@insert@void ( ::Faunus::rosenbluth::* )(  ) void ( ::Faunus::rosenbluth::* )(  ) 
-~@member_function_t@insert@void ( ::Faunus::widomSW::* )( ::Faunus::container &,::Faunus::energybase & ) void ( ::Faunus::widomSW::* )( ::Faunus::container &,::Faunus::energybase & ) 
-~@member_function_t@insert@void ( ::Faunus::widomSW::* )( ::Faunus::container &,::Faunus::energybase &,::std::vector< Faunus::point > & ) void ( ::Faunus::widomSW::* )( ::Faunus::container &,::Faunus::energybase &,::std::vector<Faunus::point, std::allocator<Faunus::point> > & ) 
++@member_function_t@insert@void ( ::Faunus::widomSW::* )( ::Faunus::container &,::Faunus::energybase & ) void ( ::Faunus::widomSW::* )( ::Faunus::container &,::Faunus::energybase & ) 
 +@member_function_t@insert@bool ( ::Faunus::particles::* )( ::Faunus::particle,unsigned int ) bool ( ::Faunus::particles::* )( ::Faunus::particle,unsigned int ) 
 +@member_function_t@insert@bool ( ::Faunus::grandcanonical::* )( ::std::vector< Faunus::particle > &,unsigned int,::Faunus::particle,unsigned char ) bool ( ::Faunus::grandcanonical::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > &,unsigned int,::Faunus::particle,unsigned char ) 
 +@member_function_t@rotate@void ( ::Faunus::macromolecule::* )( ::Faunus::container &,double,double ) void ( ::Faunus::macromolecule::* )( ::Faunus::container &,double,double ) 
@@ -5983,7 +5982,7 @@
 ~@member_function_t@info@::std::string ( ::Faunus::twostatebinding::* )(  ) ::std::string ( ::Faunus::twostatebinding::* )(  ) 
 ~@member_function_t@info@::std::string ( ::Faunus::twostatebinding::* )( double ) ::std::string ( ::Faunus::twostatebinding::* )( double ) 
 ~@member_function_t@info@::std::string ( ::Faunus::rosenbluth::* )(  ) ::std::string ( ::Faunus::rosenbluth::* )(  ) 
-~@member_function_t@info@::std::string ( ::Faunus::widomSW::* )(  ) ::std::string ( ::Faunus::widomSW::* )(  ) 
++@member_function_t@info@::std::string ( ::Faunus::widomSW::* )(  ) ::std::string ( ::Faunus::widomSW::* )(  ) 
 ~@member_function_t@info@::std::string ( ::Faunus::pot_table::* )(  ) ::std::string ( ::Faunus::pot_table::* )(  ) 
 +@member_function_t@info@::std::string ( ::Faunus::mcloop::* )(  ) ::std::string ( ::Faunus::mcloop::* )(  ) 
 ~@member_function_t@info@::std::string ( ::Faunus::pointpotential::* )(  ) ::std::string ( ::Faunus::pointpotential::* )(  ) 
@@ -6921,8 +6920,8 @@
 ~@constructor_t@_G_fpos64_t@ ( ::_G_fpos64_t::* )(  )  ( ::_G_fpos64_t::* )(  ) 
 ~@constructor_t@_pthread_cleanup_buffer@ ( ::_pthread_cleanup_buffer::* )( ::_pthread_cleanup_buffer const & )  ( ::_pthread_cleanup_buffer::* )( ::_pthread_cleanup_buffer const & ) 
 ~@constructor_t@_pthread_cleanup_buffer@ ( ::_pthread_cleanup_buffer::* )(  )  ( ::_pthread_cleanup_buffer::* )(  ) 
-~@constructor_t@widomSW@ ( ::Faunus::widomSW::* )( ::Faunus::widomSW const & )  ( ::Faunus::widomSW::* )( ::Faunus::widomSW const & ) 
-~@constructor_t@widomSW@ ( ::Faunus::widomSW::* )( int )  ( ::Faunus::widomSW::* )( int ) 
++@constructor_t@widomSW@ ( ::Faunus::widomSW::* )( ::Faunus::widomSW const & )  ( ::Faunus::widomSW::* )( ::Faunus::widomSW const & ) 
++@constructor_t@widomSW@ ( ::Faunus::widomSW::* )( int )  ( ::Faunus::widomSW::* )( int ) 
 ~@constructor_t@bad_alloc@ ( ::std::bad_alloc::* )( ::std::bad_alloc const & )  ( ::std::bad_alloc::* )( ::std::bad_alloc const & ) 
 ~@constructor_t@bad_alloc@ ( ::std::bad_alloc::* )(  )  ( ::std::bad_alloc::* )(  ) 
 +@constructor_t@pot_lj@ ( ::Faunus::pot_lj::* )( ::Faunus::pot_lj const & )  ( ::Faunus::pot_lj::* )( ::Faunus::pot_lj const & ) 
@@ -7734,7 +7733,7 @@
 ~@member_operator_t@operator=@::Faunus::twostatebinding & ( ::Faunus::twostatebinding::* )( ::Faunus::twostatebinding const & ) ::Faunus::twostatebinding & ( ::Faunus::twostatebinding::* )( ::Faunus::twostatebinding const & ) 
 ~@member_operator_t@operator=@::Faunus::rosenbluth & ( ::Faunus::rosenbluth::* )( ::Faunus::rosenbluth const & ) ::Faunus::rosenbluth & ( ::Faunus::rosenbluth::* )( ::Faunus::rosenbluth const & ) 
 ~@member_operator_t@operator=@::Faunus::rosenbluth::data & ( ::Faunus::rosenbluth::data::* )( ::Faunus::rosenbluth::data const & ) ::Faunus::rosenbluth::data & ( ::Faunus::rosenbluth::data::* )( ::Faunus::rosenbluth::data const & ) 
-~@member_operator_t@operator=@::Faunus::widomSW & ( ::Faunus::widomSW::* )( ::Faunus::widomSW const & ) ::Faunus::widomSW & ( ::Faunus::widomSW::* )( ::Faunus::widomSW const & ) 
++@member_operator_t@operator=@::Faunus::widomSW & ( ::Faunus::widomSW::* )( ::Faunus::widomSW const & ) ::Faunus::widomSW & ( ::Faunus::widomSW::* )( ::Faunus::widomSW const & ) 
 +@member_operator_t@operator=@::Faunus::spherical & ( ::Faunus::spherical::* )( ::Faunus::spherical const & ) ::Faunus::spherical & ( ::Faunus::spherical::* )( ::Faunus::spherical const & ) 
 +@member_operator_t@operator=@void ( ::Faunus::spherical::* )( ::Faunus::point & ) void ( ::Faunus::spherical::* )( ::Faunus::point & ) 
 +@member_operator_t@operator=@::Faunus::random & ( ::Faunus::random::* )( ::Faunus::random const & ) ::Faunus::random & ( ::Faunus::random::* )( ::Faunus::random const & ) 

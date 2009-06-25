@@ -7,26 +7,41 @@ loop = faunus.mcloop(inp)                # set Markov chain loop lengths
 nvt  = faunus.canonical()                # use the canonical ensemble
 cell = faunus.cell(inp)                  # use a spherical simulation container...
 pot  = faunus.interaction_hscoulomb(inp) # ... and a Coulomb + hard sphere potential
-sm   = faunus.saltmove(nvt,cell,pot,inp) # create object for salt movements
+sm   = faunus.saltmove(nvt,
+                       cell,
+                       pot,
+                       inp)              # create object for salt movements
 wid  = faunus.widom(10)                  # object for multiple particle insertion
+widSW  = faunus.widomSW(10)              # Class for single particle insertion w. charge scaling
 salt = faunus.salt()                     # define some groups for mobile ions
 salt.add(cell,inp)                       #    insert some ions
 aam  = faunus.ioaam()                    # load/save configurations from/to disk
 aam.load(cell, 'widom.aam')              #    get initial configuration (if present)
 wid.add(cell)                            # detect all species in the cell
-sys  = faunus.systemenergy(pot.energy(cell.p)) # track system energy
+widSW.add(cell);                         # - // -
+sys = faunus.systemenergy(pot.energy(cell.p)) # track system energy
 
 # print initial information
-print cell.info(), pot.info(), salt.info(), inp.info()
+print(inp.info() +
+      cell.info() +
+      pot.info() +
+      salt.info()
+     )
 
 # begin simulation
 while(loop.macroCnt()):
     while(loop.microCnt()):
         sys += sm.move(salt)        # displace salt particles
         wid.insert(cell, pot)       # Widom particle insertion analysis
+        widSW.insert(cell, pot)     # - // -
     sys.update(pot.energy(cell.p))  # update system energy
     aam.save('widom.aam', cell.p)   # save particle configuration to disk
     print loop.timing(),            # show progress
     
 # print final information and results
-print sys.info(), sm.info(), wid.info(), loop.info()
+print(sys.info() +
+      sm.info() +
+      wid.info() +
+      widSW.info() +
+      loop.info()
+     )

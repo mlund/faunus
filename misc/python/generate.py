@@ -181,7 +181,7 @@ classes = ['point',                             # point.h
            'virial',
            'systemenergy',
            'widom',                             # widom.h
-           #'widomSW',
+           'widomSW',
            'mcloop',                            # mcloop.h
            'ioaam',                             # io.h
            'iopqr',

@@ -171,7 +171,7 @@
 ~@destructor_t@~basic_iostream@ ( ::std::basic_iostream<char,std::char_traits<char> >::* )(  )  ( ::std::basic_iostream<char,std::char_traits<char> >::* )(  ) 
 ~@destructor_t@~basic_iostream@ ( ::std::basic_iostream<wchar_t, std::char_traits<wchar_t> >::* )(  )  ( ::std::basic_iostream<wchar_t, std::char_traits<wchar_t> >::* )(  ) 
 ~@destructor_t@~clusterrinvw@ ( ::Faunus::clusterrinvw::* )(  )  ( ::Faunus::clusterrinvw::* )(  ) 
-~@destructor_t@~transrot@ ( ::Faunus::transrot::* )(  )  ( ::Faunus::transrot::* )(  ) 
+~@destructor_t@~pot_debyehuckelP3trunk@ ( ::Faunus::pot_debyehuckelP3trunk::* )(  )  ( ::Faunus::pot_debyehuckelP3trunk::* )(  ) 
 ~@destructor_t@~._38@ ( ::__fsid_t::* )(  )  ( ::__fsid_t::* )(  ) 
 ~@destructor_t@~__remove_unsigned@ ( ::__gnu_cxx::__remove_unsigned<unsigned long long>::* )(  )  ( ::__gnu_cxx::__remove_unsigned<unsigned long long>::* )(  ) 
 ~@destructor_t@~__remove_unsigned@ ( ::__gnu_cxx::__remove_unsigned<unsigned long>::* )(  )  ( ::__gnu_cxx::__remove_unsigned<unsigned long>::* )(  ) 
@@ -219,6 +219,7 @@
 ~@destructor_t@~__forced_unwind@ ( ::__cxxabiv1::__forced_unwind::* )(  )  ( ::__cxxabiv1::__forced_unwind::* )(  ) 
 ~@destructor_t@~cummsum@ ( ::Faunus::cummsum::* )(  )  ( ::Faunus::cummsum::* )(  ) 
 ~@destructor_t@~__num_base@ ( ::std::__num_base::* )(  )  ( ::std::__num_base::* )(  ) 
+~@destructor_t@~drand48_data@ ( ::drand48_data::* )(  )  ( ::drand48_data::* )(  ) 
 ~@destructor_t@~__is_byte@ ( ::std::__is_byte<unsigned char>::* )(  )  ( ::std::__is_byte<unsigned char>::* )(  ) 
 ~@destructor_t@~__is_byte@ ( ::std::__is_byte<signed char>::* )(  )  ( ::std::__is_byte<signed char>::* )(  ) 
 ~@destructor_t@~__is_byte@ ( ::std::__is_byte<char>::* )(  )  ( ::std::__is_byte<char>::* )(  ) 
@@ -237,6 +238,7 @@
 ~@destructor_t@~._48@ ( ::pthread_mutexattr_t::* )(  )  ( ::pthread_mutexattr_t::* )(  ) 
 ~@destructor_t@~._49@ ( ::pthread_cond_t::* )(  )  ( ::pthread_cond_t::* )(  ) 
 ~@destructor_t@~translate@ ( ::Faunus::translate::* )(  )  ( ::Faunus::translate::* )(  ) 
+~@destructor_t@~pot_lj_trunk@ ( ::Faunus::pot_lj_trunk::* )(  )  ( ::Faunus::pot_lj_trunk::* )(  ) 
 ~@destructor_t@~__iter_swap@ ( ::std::__iter_swap<true>::* )(  )  ( ::std::__iter_swap<true>::* )(  ) 
 ~@destructor_t@~pot_debyehuckel@ ( ::Faunus::pot_debyehuckel::* )(  )  ( ::Faunus::pot_debyehuckel::* )(  ) 
 ~@destructor_t@~__true_type@ ( ::std::__true_type::* )(  )  ( ::std::__true_type::* )(  ) 
@@ -260,9 +262,10 @@
 +@destructor_t@~randomDefault@ ( ::Faunus::randomDefault::* )(  )  ( ::Faunus::randomDefault::* )(  ) 
 ~@destructor_t@~Init@ ( ::std::ios_base::Init::* )(  )  ( ::std::ios_base::Init::* )(  ) 
 ~@destructor_t@~timeval@ ( ::timeval::* )(  )  ( ::timeval::* )(  ) 
-~@destructor_t@~titrate@ ( ::Faunus::titrate::* )(  )  ( ::Faunus::titrate::* )(  ) 
++@destructor_t@~titrate@ ( ::Faunus::titrate::* )(  )  ( ::Faunus::titrate::* )(  ) 
 +@destructor_t@~widom@ ( ::Faunus::widom::* )(  )  ( ::Faunus::widom::* )(  ) 
 ~@destructor_t@~__copy_move_backward@ ( ::std::__copy_move_backward<false, false, std::random_access_iterator_tag>::* )(  )  ( ::std::__copy_move_backward<false, false, std::random_access_iterator_tag>::* )(  ) 
+~@destructor_t@~transrot@ ( ::Faunus::transrot::* )(  )  ( ::Faunus::transrot::* )(  ) 
 ~@destructor_t@~monomermove@ ( ::Faunus::monomermove::* )(  )  ( ::Faunus::monomermove::* )(  ) 
 ~@destructor_t@~output_iterator_tag@ ( ::std::output_iterator_tag::* )(  )  ( ::std::output_iterator_tag::* )(  ) 
 +@destructor_t@~group@ ( ::Faunus::group::* )(  )  ( ::Faunus::group::* )(  ) 
@@ -358,7 +361,7 @@
 ~@destructor_t@~__pthread_internal_list@ ( ::__pthread_internal_list::* )(  )  ( ::__pthread_internal_list::* )(  ) 
 +@destructor_t@~clutch@ ( ::Faunus::clutch::* )(  )  ( ::Faunus::clutch::* )(  ) 
 ~@destructor_t@~pot_table@ ( ::Faunus::pot_table::* )(  )  ( ::Faunus::pot_table::* )(  ) 
-~@destructor_t@~drand48_data@ ( ::drand48_data::* )(  )  ( ::drand48_data::* )(  ) 
+~@destructor_t@~ioxtc@ ( ::Faunus::ioxtc::* )(  )  ( ::Faunus::ioxtc::* )(  ) 
 ~@destructor_t@~input_iterator_tag@ ( ::std::input_iterator_tag::* )(  )  ( ::std::input_iterator_tag::* )(  ) 
 ~@destructor_t@~angularcorr@ ( ::Faunus::angularcorr::* )(  )  ( ::Faunus::angularcorr::* )(  ) 
 ~@destructor_t@~itimerspec@ ( ::itimerspec::* )(  )  ( ::itimerspec::* )(  ) 
@@ -471,7 +474,7 @@
 ~@destructor_t@~__uninitialized_fill_n@ ( ::std::__uninitialized_fill_n<false>::* )(  )  ( ::std::__uninitialized_fill_n<false>::* )(  ) 
 ~@destructor_t@~__uninitialized_fill_n@ ( ::std::__uninitialized_fill_n<true>::* )(  )  ( ::std::__uninitialized_fill_n<true>::* )(  ) 
 +@destructor_t@~energybase@ ( ::Faunus::energybase::* )(  )  ( ::Faunus::energybase::* )(  ) 
-~@destructor_t@~action@ ( ::Faunus::titrate::action::* )(  )  ( ::Faunus::titrate::action::* )(  ) 
++@destructor_t@~action@ ( ::Faunus::titrate::action::* )(  )  ( ::Faunus::titrate::action::* )(  ) 
 ~@destructor_t@~._39@ ( ::_G_fpos_t::* )(  )  ( ::_G_fpos_t::* )(  ) 
 ~@destructor_t@~ctype_byname@ ( ::std::ctype_byname<wchar_t>::* )(  )  ( ::std::ctype_byname<wchar_t>::* )(  ) 
 ~@destructor_t@~ctype_byname@ ( ::std::ctype_byname<char>::* )(  )  ( ::std::ctype_byname<char>::* )(  ) 
@@ -496,7 +499,7 @@
 ~@enumeration_t@result@::std::codecvt_base::result
 ~@enumeration_t@('/usr/include/c++/4.3/bits/stl_algo.h', 2943)@::std
 ~@enumeration_t@('/usr/include/c++/4.3/bits/cpp_type_traits.h', 389)@::std::__is_byte< unsigned char >
-~@enumeration_t@keywords@::Faunus::titrate::keywords
++@enumeration_t@keywords@::Faunus::titrate::keywords
 ~@enumeration_t@('/usr/include/c++/4.3/bits/cpp_type_traits.h', 187)@::std::__is_integer< wchar_t >
 ~@enumeration_t@event@::std::ios_base::event
 ~@enumeration_t@('/usr/include/c++/4.3/bits/cpp_type_traits.h', 179)@::std::__is_integer< unsigned char >
@@ -518,6 +521,7 @@
 ~@enumeration_t@('/usr/include/c++/4.3/bits/cpp_type_traits.h', 165)@::std::__is_integer< char >
 ~@enumeration_t@('/usr/include/ctype.h', 48)@::
 ~@enumeration_t@('/usr/include/pthread.h', 191)@::
+~@enumeration_t@('/home/andy/code/faunus/trunk/include/xdrfile/xdrfile.h', 100)@::
 ~@enumeration_t@('/usr/include/pthread.h', 36)@::
 ~@enumeration_t@('/usr/include/c++/4.3/bits/cpp_type_traits.h', 244)@::std::__is_integer< unsigned long long >
 ~@enumeration_t@('/usr/include/c++/4.3/bits/cpp_type_traits.h', 123)@::std::__are_same< unsigned char*, unsigned char* >
@@ -841,6 +845,7 @@
 ~@typedef_t@__fsfilcnt_t@::__fsfilcnt_t
 ~@typedef_t@_Atomic_word@::_Atomic_word
 ~@typedef_t@ifstream@::std::ifstream
+~@typedef_t@cbool@::cbool
 ~@typedef_t@wint_t@::wint_t
 ~@typedef_t@sigset_t@::sigset_t
 ~@typedef_t@float_t@::float_t
@@ -977,7 +982,7 @@
 ~@typedef_t@comparison_fn_t@::comparison_fn_t
 ~@typedef_t@__off_t@::__off_t
 ~@typedef_t@__wmask_type@::std::ctype< wchar_t >::__wmask_type
-~@typedef_t@__fd_mask@::__fd_mask
+~@typedef_t@slump@::Faunus::slump
 ~@typedef_t@__ios_type@::std::basic_istream< char, std::char_traits< char > >::__ios_type
 ~@typedef_t@__ios_type@::std::basic_ostream< wchar_t, std::char_traits< wchar_t > >::__ios_type
 ~@typedef_t@__ios_type@::std::basic_fstream< wchar_t, std::char_traits< wchar_t > >::__ios_type
@@ -1067,7 +1072,7 @@
 ~@typedef_t@category@::std::locale::category
 ~@typedef_t@__clockid_t@::__clockid_t
 ~@typedef_t@ofstream@::std::ofstream
-~@typedef_t@__clock_t@::__clock_t
+~@typedef_t@matrix@::matrix
 ~@typedef_t@uint_fast32_t@::uint_fast32_t
 ~@typedef_t@int_least8_t@::int_least8_t
 ~@typedef_t@wostringstream@::std::wostringstream
@@ -1076,6 +1081,7 @@
 ~@typedef_t@__iostream_type@::std::basic_stringstream< wchar_t, std::char_traits< wchar_t >, std::allocator< wchar_t > >::__iostream_type
 ~@typedef_t@__iostream_type@::std::basic_fstream< wchar_t, std::char_traits< wchar_t > >::__iostream_type
 ~@typedef_t@__iostream_type@::std::basic_fstream< char, std::char_traits< char > >::__iostream_type
+~@typedef_t@__clock_t@::__clock_t
 ~@typedef_t@int_type@::std::basic_istringstream< char, std::char_traits< char >, std::allocator< char > >::int_type
 ~@typedef_t@int_type@::std::basic_istringstream< wchar_t, std::char_traits< wchar_t >, std::allocator< wchar_t > >::int_type
 ~@typedef_t@int_type@::std::basic_ifstream< char, std::char_traits< char > >::int_type
@@ -1604,6 +1610,7 @@
 ~@typedef_t@intmax_t@::intmax_t
 ~@typedef_t@wstringbuf@::std::wstringbuf
 ~@typedef_t@__fsfilcnt64_t@::__fsfilcnt64_t
+~@typedef_t@XDRFILE@::XDRFILE
 ~@typedef_t@allocator_type@::std::basic_istringstream< char, std::char_traits< char >, std::allocator< char > >::allocator_type
 ~@typedef_t@allocator_type@::std::basic_istringstream< wchar_t, std::char_traits< wchar_t >, std::allocator< wchar_t > >::allocator_type
 ~@typedef_t@allocator_type@::std::wstring::allocator_type
@@ -1858,7 +1865,7 @@
 ~@typedef_t@size_type@::__gnu_cxx::new_allocator< Faunus::particle >::size_type
 ~@typedef_t@size_type@::__gnu_cxx::new_allocator< wchar_t >::size_type
 ~@typedef_t@size_type@::__gnu_cxx::new_allocator< char >::size_type
-~@typedef_t@slump@::Faunus::slump
+~@typedef_t@rvec@::rvec
 ~@typedef_t@average_double@::pyplusplus::aliases::average_double
 ~@typedef_t@__quad_t@::__quad_t
 ~@typedef_t@daddr_t@::daddr_t
@@ -1931,6 +1938,7 @@
 ~@typedef_t@__ctype_type@::std::basic_istream< wchar_t, std::char_traits< wchar_t > >::__ctype_type
 ~@typedef_t@__ctype_type@::std::basic_istream< wchar_t, std::char_traits< wchar_t > >::sentry::__ctype_type
 ~@typedef_t@suseconds_t@::suseconds_t
+~@typedef_t@__fd_mask@::__fd_mask
 ~@namespace_t@std@::std
 ~@namespace_t@__gnu_cxx@::__gnu_cxx
 ~@namespace_t@__cxxabiv1@::__cxxabiv1
@@ -2063,6 +2071,7 @@
 ~@class_declaration_t@reverse_iterator< __gnu_cxx::__normal_iterator< Faunus::average< double >, std::vector< Faunus::average<double> > > >@::std::reverse_iterator< __gnu_cxx::__normal_iterator< Faunus::average< double >, std::vector< Faunus::average<double> > > >
 ~@class_declaration_t@reverse_iterator< __gnu_cxx::__normal_iterator< Faunus::particle*, std::vector< Faunus::particle > > >@::std::reverse_iterator< __gnu_cxx::__normal_iterator< Faunus::particle*, std::vector< Faunus::particle > > >
 ~@class_declaration_t@money_base@::std::money_base
+~@class_declaration_t@XDRFILE@::XDRFILE
 ~@class_declaration_t@__normal_iterator< long unsigned int*, std::vector< long unsigned int > >@::__gnu_cxx::__normal_iterator< long unsigned int*, std::vector< long unsigned int > >
 ~@class_declaration_t@__normal_iterator< const Faunus::particle*, std::vector< Faunus::particle > >@::__gnu_cxx::__normal_iterator< const Faunus::particle*, std::vector< Faunus::particle > >
 ~@class_declaration_t@__normal_iterator< Faunus::macromolecule*, std::vector< Faunus::macromolecule > >@::__gnu_cxx::__normal_iterator< Faunus::macromolecule*, std::vector< Faunus::macromolecule > >
@@ -2118,6 +2127,7 @@
 ~@variable_t@f@::Faunus::pot_hsminimageXY::f
 ~@variable_t@f@::Faunus::pot_r12minimage::f
 ~@variable_t@f@::Faunus::pot_hs::f
+~@variable_t@f@::Faunus::pot_lj_trunk::f
 ~@variable_t@f@::Faunus::pot_coulombr12::f
 ~@variable_t@f@::Faunus::pot_hsminimage::f
 ~@variable_t@f@::Faunus::pot_hscoulomb::f
@@ -2189,13 +2199,16 @@
 ~@variable_t@_S_terminal@::std::string::_Rep::_S_terminal
 ~@variable_t@trunc@::std::ios_base::trunc
 ~@variable_t@box@::Faunus::pot_hsminimageXY::box
+~@variable_t@box@::Faunus::ioxtc::box
 ~@variable_t@box@::Faunus::pot_r12minimage::box
+~@variable_t@box@::Faunus::pot_debyehuckelP3trunk::box
 ~@variable_t@box@::Faunus::pot_debyehuckelP3::box
 ~@variable_t@box@::Faunus::pot_hsminimage::box
 ~@variable_t@box@::Faunus::pot_minimage::box
 ~@variable_t@__list@::pthread_mutex_t::__pthread_mutex_s::__list
 ~@variable_t@_S_id_numeric@::std::locale::_Impl::_S_id_numeric
 ~@variable_t@_ZTIN6Faunus9particlesE@::_ZTIN6Faunus9particlesE
+~@variable_t@k@::Faunus::pot_debyehuckelP3trunk::k
 ~@variable_t@k@::Faunus::pot_debyehuckelP3::k
 ~@variable_t@k@::Faunus::physconst::k
 ~@variable_t@k@::Faunus::rosenbluth::k
@@ -2207,7 +2220,7 @@
 +@variable_t@trial@::Faunus::particles::trial
 ~@variable_t@cerr@::std::cerr
 ~@variable_t@wcout@::std::wcout
-~@variable_t@action@::Faunus::titrate::action::action
++@variable_t@action@::Faunus::titrate::action::action
 ~@variable_t@_M_mode@::std::basic_stringbuf< char, std::char_traits< char >, std::allocator< char > >::_M_mode
 ~@variable_t@_M_mode@::std::basic_stringbuf< wchar_t, std::char_traits< wchar_t >, std::allocator< wchar_t > >::_M_mode
 ~@variable_t@_M_mode@::std::basic_filebuf< wchar_t, std::char_traits< wchar_t > >::_M_mode
@@ -2226,9 +2239,9 @@
 ~@variable_t@_M_buf@::std::basic_filebuf< wchar_t, std::char_traits< wchar_t > >::_M_buf
 ~@variable_t@_M_buf@::std::basic_filebuf< char, std::char_traits< char > >::_M_buf
 ~@variable_t@app@::std::ios_base::app
-~@variable_t@_ZTIN6Faunus6FAUrdfE@::_ZTIN6Faunus6FAUrdfE
+~@variable_t@_ZTIN6Faunus5widomE@::_ZTIN6Faunus5widomE
 ~@variable_t@tm_isdst@::tm::tm_isdst
-~@variable_t@neutrons@::Faunus::titrate::neutrons
++@variable_t@neutrons@::Faunus::titrate::neutrons
 ~@variable_t@_ZTIN6Faunus13macromoleculeE@::_ZTIN6Faunus13macromoleculeE
 ~@variable_t@_ZTISt7codecvtIcc11__mbstate_tE@::_ZTISt7codecvtIcc11__mbstate_tE
 ~@variable_t@frac_digits@::lconv::frac_digits
@@ -2269,7 +2282,7 @@
 ~@variable_t@_M_n@::std::_Setw::_M_n
 ~@variable_t@_M_n@::std::_Setprecision::_M_n
 ~@variable_t@_M_c@::std::_Setfill< char >::_M_c
-~@variable_t@protons@::Faunus::titrate::protons
++@variable_t@protons@::Faunus::titrate::protons
 ~@variable_t@tv_nsec@::timespec::tv_nsec
 ~@variable_t@mu@::Faunus::rosenbluth::mu
 +@variable_t@mu@::Faunus::macromolecule::mu
@@ -2343,7 +2356,7 @@
 ~@variable_t@tm_mday@::tm::tm_mday
 ~@variable_t@stdin@::stdin
 ~@variable_t@_M_current@::__gnu_cxx::__normal_iterator< unsigned char*, std::vector< unsigned char > >::_M_current
-~@variable_t@q@::Faunus::titrate::q
++@variable_t@q@::Faunus::titrate::q
 ~@variable_t@__woken_seq@::pthread_cond_t::__woken_seq
 ~@variable_t@environ@::environ
 ~@variable_t@_IO_read_ptr@::_IO_FILE::_IO_read_ptr
@@ -2377,6 +2390,7 @@
 ~@variable_t@_ZTIN6Faunus7averageIdEE@::_ZTIN6Faunus7averageIdEE
 ~@variable_t@halfbox@::Faunus::pot_hsminimageXY::halfbox
 ~@variable_t@halfbox@::Faunus::pot_r12minimage::halfbox
+~@variable_t@halfbox@::Faunus::pot_debyehuckelP3trunk::halfbox
 ~@variable_t@halfbox@::Faunus::pot_debyehuckelP3::halfbox
 ~@variable_t@halfbox@::Faunus::pot_hsminimage::halfbox
 ~@variable_t@halfbox@::Faunus::pot_minimage::halfbox
@@ -2460,7 +2474,7 @@
 ~@variable_t@_ZTISt9basic_iosIcSt11char_traitsIcEE@::_ZTISt9basic_iosIcSt11char_traitsIcEE
 ~@variable_t@_ZTISt9bad_alloc@::_ZTISt9bad_alloc
 ~@variable_t@_ZTIN6Faunus5groupE@::_ZTIN6Faunus5groupE
-+@variable_t@x@::Faunus::point::x
+~@variable_t@_ZTIN6Faunus6FAUrdfE@::_ZTIN6Faunus6FAUrdfE
 ~@variable_t@ipot@::Faunus::clusterrinvw::ipot
 ~@variable_t@ipot@::Faunus::clusterinvw::ipot
 ~@variable_t@e0@::Faunus::pc::e0
@@ -2486,6 +2500,7 @@
 ~@variable_t@_chain@::_IO_FILE::_chain
 ~@variable_t@_ZTISt15basic_stringbufIcSt11char_traitsIcESaIcEE@::_ZTISt15basic_stringbufIcSt11char_traitsIcESaIcEE
 ~@variable_t@_ZTISt18basic_stringstreamIwSt11char_traitsIwESaIwEE@::_ZTISt18basic_stringstreamIwSt11char_traitsIwESaIwEE
+~@variable_t@xd@::Faunus::ioxtc::xd
 ~@variable_t@_M_offset@::std::_Bit_iterator_base::_M_offset
 ~@variable_t@_ZTISt7collateIcE@::_ZTISt7collateIcE
 ~@variable_t@__pos@::_G_fpos_t::__pos
@@ -2508,6 +2523,7 @@
 ~@variable_t@n_sign_posn@::lconv::n_sign_posn
 +@variable_t@cite@::Faunus::markovmove::cite
 ~@variable_t@cite@::Faunus::pot_hs::cite
+~@variable_t@cite@::Faunus::pot_lj_trunk::cite
 +@variable_t@cite@::Faunus::pot_lj::cite
 ~@variable_t@tm_min@::tm::tm_min
 ~@variable_t@_ZTISt19basic_istringstreamIwSt11char_traitsIwESaIwEE@::_ZTISt19basic_istringstreamIwSt11char_traitsIwESaIwEE
@@ -2566,7 +2582,7 @@
 ~@variable_t@xres@::Faunus::pot_table::xres
 ~@variable_t@xmini@::Faunus::histogram::xmini
 ~@variable_t@pNext@::MTRand::pNext
-~@variable_t@nprot@::Faunus::titrate::nprot
++@variable_t@nprot@::Faunus::titrate::nprot
 ~@variable_t@kB@::Faunus::pc::kB
 ~@variable_t@_ZTIN6Faunus13randomTwisterE@::_ZTIN6Faunus13randomTwisterE
 ~@variable_t@_M_pback@::std::basic_filebuf< wchar_t, std::char_traits< wchar_t > >::_M_pback
@@ -2582,6 +2598,7 @@
 ~@variable_t@pyc@::Faunus::pyc
 ~@variable_t@wclog@::std::wclog
 ~@variable_t@mon_decimal_point@::lconv::mon_decimal_point
+~@variable_t@_ZTIN6Faunus22pot_debyehuckelP3trunkE@::_ZTIN6Faunus22pot_debyehuckelP3trunkE
 ~@variable_t@_M_pback_end_save@::std::basic_filebuf< wchar_t, std::char_traits< wchar_t > >::_M_pback_end_save
 ~@variable_t@_M_pback_end_save@::std::basic_filebuf< char, std::char_traits< char > >::_M_pback_end_save
 ~@variable_t@_ZTIN10__cxxabiv115__forced_unwindE@::_ZTIN10__cxxabiv115__forced_unwindE
@@ -2599,7 +2616,7 @@
 ~@variable_t@_M_ext_buf_size@::std::basic_filebuf< wchar_t, std::char_traits< wchar_t > >::_M_ext_buf_size
 ~@variable_t@_M_ext_buf_size@::std::basic_filebuf< char, std::char_traits< char > >::_M_ext_buf_size
 ~@variable_t@atom@::Faunus::atom
-~@variable_t@sites@::Faunus::titrate::sites
++@variable_t@sites@::Faunus::titrate::sites
 ~@variable_t@sites@::Faunus::titrate_implicit::sites
 ~@variable_t@_S_classic@::std::locale::_S_classic
 +@variable_t@pka@::Faunus::atoms::data::pka
@@ -2655,6 +2672,7 @@
 +@variable_t@du@::Faunus::markovmove::du
 ~@variable_t@__do_it@::__pthread_cleanup_frame::__do_it
 ~@variable_t@__do_it@::__pthread_cleanup_class::__do_it
+~@variable_t@third2@::Faunus::pot_lj_trunk::third2
 ~@variable_t@_M_bit@::std::ctype< wchar_t >::_M_bit
 +@variable_t@dpv@::Faunus::saltmove::dpv
 ~@variable_t@dpt@::Faunus::multtr::dpt
@@ -2688,7 +2706,8 @@
 ~@variable_t@_ZTISt21__ctype_abstract_baseIwE@::_ZTISt21__ctype_abstract_baseIwE
 ~@variable_t@xmax@::Faunus::xydata< double >::xmax
 ~@variable_t@xmax@::Faunus::distributions::xmax
-+@variable_t@calls@::Faunus::inputfile::calls
+~@variable_t@x@::Faunus::ioxtc::x
++@variable_t@x@::Faunus::point::x
 ~@variable_t@fixed@::std::ios_base::fixed
 ~@variable_t@__wait_stopped@::wait::__wait_stopped
 ~@variable_t@j@::Faunus::ran2::j
@@ -2743,8 +2762,8 @@
 ~@variable_t@_IO_backup_base@::_IO_FILE::_IO_backup_base
 ~@variable_t@_ZTIN6Faunus6pot_hsE@::_ZTIN6Faunus6pot_hsE
 ~@variable_t@__tzname@::__tzname
-~@variable_t@len@::Faunus::pot_testminim::len
 ~@variable_t@len@::Faunus::iogro::len
+~@variable_t@len@::Faunus::pot_testminim::len
 +@variable_t@len@::Faunus::box::len
 +@variable_t@len@::Faunus::cylinder::len
 ~@variable_t@s@::Faunus::io::s
@@ -2761,7 +2780,7 @@
 +@variable_t@cm@::Faunus::group::cm
 ~@variable_t@_ZTIN6Faunus12pot_minimageE@::_ZTIN6Faunus12pot_minimageE
 ~@variable_t@__w_stopval@::wait::__w_stopval
-~@variable_t@proton@::Faunus::titrate::action::proton
++@variable_t@proton@::Faunus::titrate::action::proton
 ~@variable_t@_M_ext_end@::std::basic_filebuf< wchar_t, std::char_traits< wchar_t > >::_M_ext_end
 ~@variable_t@_M_ext_end@::std::basic_filebuf< char, std::char_traits< char > >::_M_ext_end
 ~@variable_t@_M_pword@::std::ios_base::_Words::_M_pword
@@ -2777,7 +2796,7 @@
 ~@variable_t@_S_id_collate@::std::locale::_Impl::_S_id_collate
 +@variable_t@len_inv@::Faunus::box::len_inv
 ~@variable_t@_M_tolower@::std::ctype< char >::_M_tolower
-~@variable_t@ph@::Faunus::titrate::ph
++@variable_t@ph@::Faunus::titrate::ph
 ~@variable_t@ph@::Faunus::titrate_implicit::ph
 ~@variable_t@_ZTISt8ios_base@::_ZTISt8ios_base
 ~@variable_t@_M_flags@::std::ios_base::_M_flags
@@ -2787,6 +2806,7 @@
 ~@variable_t@floatfield@::std::ios_base::floatfield
 ~@variable_t@_ZTIN6Faunus11pot_coulombE@::_ZTIN6Faunus11pot_coulombE
 ~@variable_t@_ZTISt13bad_exception@::_ZTISt13bad_exception
++@variable_t@calls@::Faunus::inputfile::calls
 ~@variable_t@_S_c_locale@::std::locale::facet::_S_c_locale
 ~@variable_t@__ioinit@::std::__ioinit
 ~@variable_t@_cur_column@::_IO_FILE::_cur_column
@@ -2814,7 +2834,7 @@
 ~@variable_t@stdout@::stdout
 ~@variable_t@vol@::Faunus::twostatebinding::vol
 ~@variable_t@Nav@::Faunus::pc::Nav
-~@variable_t@site@::Faunus::titrate::action::site
++@variable_t@site@::Faunus::titrate::action::site
 ~@variable_t@iv@::Faunus::ran2::iv
 ~@variable_t@_ZTISt19basic_ostringstreamIcSt11char_traitsIcESaIcEE@::_ZTISt19basic_ostringstreamIcSt11char_traitsIcESaIcEE
 ~@variable_t@_ZTISt14basic_ofstreamIcSt11char_traitsIcEE@::_ZTISt14basic_ofstreamIcSt11char_traitsIcEE
@@ -2862,6 +2882,7 @@
 +@variable_t@phi@::Faunus::spherical::phi
 ~@variable_t@phi@::Faunus::pointpotential::data::phi
 ~@variable_t@_ZTIN6Faunus9histogramE@::_ZTIN6Faunus9histogramE
+~@variable_t@I@::Faunus::pot_debyehuckelP3trunk::I
 ~@variable_t@I@::Faunus::pot_debyehuckelP3::I
 ~@variable_t@I@::Faunus::pot_debyehuckel::I
 ~@variable_t@tm_hour@::tm::tm_hour
@@ -2880,6 +2901,7 @@
 ~@variable_t@lower@::std::ctype_base::lower
 +@variable_t@macro@::Faunus::mcloop::macro
 ~@variable_t@_ZTIN6Faunus10markovmoveE@::_ZTIN6Faunus10markovmoveE
+~@variable_t@eps@::Faunus::pot_lj_trunk::eps
 ~@variable_t@eps@::Faunus::pot_testminim::eps
 ~@variable_t@eps@::Faunus::pot_test::eps
 +@variable_t@eps@::Faunus::pot_lj::eps
@@ -2918,6 +2940,7 @@
 ~@variable_t@_M_refcount@::std::locale::_Impl::_M_refcount
 ~@variable_t@_M_refcount@::std::ios_base::_Callback_list::_M_refcount
 ~@variable_t@rand_type@::random_data::rand_type
+~@variable_t@_ZTIN6Faunus12pot_lj_trunkE@::_ZTIN6Faunus12pot_lj_trunkE
 ~@variable_t@cur@::std::ios_base::cur
 +@variable_t@cur@::Faunus::systemenergy::cur
 ~@variable_t@__nr_writers_queued@::pthread_rwlock_t::__nr_writers_queued
@@ -2927,7 +2950,6 @@
 ~@variable_t@optopt@::optopt
 ~@variable_t@_ZTISt7collateIwE@::_ZTISt7collateIwE
 +@variable_t@pot@::Faunus::markovmove::pot
-~@variable_t@_ZTIN6Faunus5widomE@::_ZTIN6Faunus5widomE
 ~@variable_t@_M_start@::std::_Vector_base< Faunus::group, std::allocator< Faunus::group > >::_Vector_impl::_M_start
 ~@variable_t@_M_start@::std::_Vector_base< Faunus::pointpotential::data, std::allocator< Faunus::pointpotential::data > >::_Vector_impl::_M_start
 ~@variable_t@_M_start@::std::_Vector_base< Faunus::macromolecule*, std::allocator< Faunus::macromolecule* > >::_Vector_impl::_M_start
@@ -2953,6 +2975,7 @@
 ~@variable_t@format@::Faunus::particleIO::format
 ~@variable_t@read@::_IO_cookie_io_functions_t::read
 ~@variable_t@__old_x@::drand48_data::__old_x
+~@variable_t@exdr_message@::exdr_message
 ~@variable_t@mon_thousands_sep@::lconv::mon_thousands_sep
 ~@variable_t@__prev@::__pthread_internal_list::__prev
 ~@variable_t@__prev@::_pthread_cleanup_buffer::__prev
@@ -2968,6 +2991,7 @@
 ~@variable_t@name@::Faunus::pot_r12minimage::name
 ~@variable_t@name@::Faunus::pot_hs::name
 ~@variable_t@name@::Faunus::pointpotential::data::name
+~@variable_t@name@::Faunus::pot_lj_trunk::name
 ~@variable_t@name@::Faunus::pot_coulombr12::name
 ~@variable_t@name@::Faunus::pot_hsminimage::name
 ~@variable_t@name@::Faunus::pot_hscoulomb::name
@@ -3004,6 +3028,7 @@
 ~@variable_t@_M_ext_buf@::std::basic_filebuf< wchar_t, std::char_traits< wchar_t > >::_M_ext_buf
 ~@variable_t@_M_ext_buf@::std::basic_filebuf< char, std::char_traits< char > >::_M_ext_buf
 ~@variable_t@_ZTISt13basic_filebufIwSt11char_traitsIwEE@::_ZTISt13basic_filebufIwSt11char_traitsIwEE
+~@variable_t@_ZTIN6Faunus5ioxtcE@::_ZTIN6Faunus5ioxtcE
 ~@variable_t@__next@::__pthread_internal_list::__next
 ~@variable_t@scientific@::std::ios_base::scientific
 ~@variable_t@__sched_priority@::sched_param::__sched_priority
@@ -3013,6 +3038,7 @@
 ~@variable_t@gscale@::Faunus::gfactor::gscale
 ~@variable_t@_ZTISt14basic_ifstreamIcSt11char_traitsIcEE@::_ZTISt14basic_ifstreamIcSt11char_traitsIcEE
 ~@variable_t@idum@::Faunus::ran2::idum
+~@variable_t@step@::Faunus::ioxtc::step
 ~@variable_t@_M_width@::std::ios_base::_M_width
 ~@variable_t@_ZTIN6Faunus6pot_ljE@::_ZTIN6Faunus6pot_ljE
 ~@variable_t@NDIV@::Faunus::ran2::NDIV
@@ -3153,6 +3179,7 @@
 ~@variable_t@npos@::std::string::npos
 ~@variable_t@__w_retcode@::wait::__w_retcode
 ~@variable_t@time@::std::locale::time
+~@variable_t@time@::Faunus::ioxtc::time
 ~@variable_t@_M_lock@::std::basic_filebuf< wchar_t, std::char_traits< wchar_t > >::_M_lock
 ~@variable_t@_M_lock@::std::basic_filebuf< char, std::char_traits< char > >::_M_lock
 ~@variable_t@_M_cfile_created@::std::__basic_file< char >::_M_cfile_created
@@ -3167,6 +3194,7 @@
 ~@class_t@__remove_unsigned< unsigned short >@::__gnu_cxx::__remove_unsigned< unsigned short >
 +@class_t@vector< std::string >@::std::vector< std::string >
 ~@class_t@__is_integer< unsigned long >@::std::__is_integer< unsigned long >
+~@class_t@pot_lj_trunk@::Faunus::pot_lj_trunk
 ~@class_t@tm@::tm
 ~@class_t@vector< Faunus::inputfile::dataformat >@::std::vector< Faunus::inputfile::dataformat >
 ~@class_t@ctype< char >@::std::ctype< char >
@@ -3210,7 +3238,7 @@
 ~@class_t@__remove_unsigned< unsigned int >@::__gnu_cxx::__remove_unsigned< unsigned int >
 ~@class_t@_Rep@::std::wstring::_Rep
 ~@class_t@_Rep@::std::string::_Rep
-~@class_t@action@::Faunus::titrate::action
++@class_t@action@::Faunus::titrate::action
 ~@class_t@allocator< double >@::std::allocator< double >
 ~@class_t@numpunct< wchar_t >@::std::numpunct< wchar_t >
 ~@class_t@codecvt< char, char, __mbstate_t >@::std::codecvt< char, char, __mbstate_t >
@@ -3242,7 +3270,7 @@
 ~@class_t@__remove_unsigned< char >@::__gnu_cxx::__remove_unsigned< char >
 ~@class_t@FAUrdf@::Faunus::FAUrdf
 ~@class_t@_IO_FILE@::_IO_FILE
-~@class_t@titrate@::Faunus::titrate
++@class_t@titrate@::Faunus::titrate
 ~@class_t@__locale_struct@::__locale_struct
 ~@class_t@_Setfill< char >@::std::_Setfill< char >
 ~@class_t@num_put< wchar_t, std::ostreambuf_iterator< wchar_t, std::char_traits< wchar_t > > >@::std::num_put< wchar_t, std::ostreambuf_iterator< wchar_t, std::char_traits< wchar_t > > >
@@ -3280,7 +3308,7 @@
 ~@class_t@random_access_iterator_tag@::std::random_access_iterator_tag
 ~@class_t@HAchargereg@::Faunus::HAchargereg
 ~@class_t@new_allocator< Faunus::particle >@::__gnu_cxx::new_allocator< Faunus::particle >
-~@class_t@xydata< double >@::Faunus::xydata< double >
+~@class_t@('/usr/include/bits/waitstatus.h', 86)@::wait
 ~@class_t@__is_integer< short >@::std::__is_integer< short >
 ~@class_t@__is_integer< unsigned int >@::std::__is_integer< unsigned int >
 ~@class_t@move@::Faunus::move
@@ -3383,7 +3411,7 @@
 ~@class_t@rebind< Faunus::point >@::std::allocator< Faunus::point >::rebind< Faunus::point >
 ~@class_t@__is_arithmetic< double >@::std::__is_arithmetic< double >
 ~@class_t@input_iterator_tag@::std::input_iterator_tag
-~@class_t@('/usr/include/bits/waitstatus.h', 86)@::wait
+~@class_t@xydata< double >@::Faunus::xydata< double >
 ~@class_t@__is_floating< double >@::std::__is_floating< double >
 ~@class_t@_Setbase@::std::_Setbase
 ~@class_t@histogram@::Faunus::histogram
@@ -3460,6 +3488,7 @@
 ~@class_t@rebind< unsigned char >@::std::allocator< unsigned char >::rebind< unsigned char >
 ~@class_t@new_allocator< Faunus::group >@::__gnu_cxx::new_allocator< Faunus::group >
 ~@class_t@rebind< short >@::std::allocator< short >::rebind< short >
+~@class_t@ioxtc@::Faunus::ioxtc
 ~@class_t@pot_hsminimage@::Faunus::pot_hsminimage
 ~@class_t@codecvt_byname< char, char, __mbstate_t >@::std::codecvt_byname< char, char, __mbstate_t >
 ~@class_t@__class_type_info_pseudo@::__class_type_info_pseudo
@@ -3484,6 +3513,7 @@
 ~@class_t@char_traits< wchar_t >@::std::char_traits< wchar_t >
 +@class_t@chargereg@::Faunus::chargereg
 ~@class_t@allocator< void >@::std::allocator< void >
+~@class_t@pot_debyehuckelP3trunk@::Faunus::pot_debyehuckelP3trunk
 +@class_t@saltmove@::Faunus::saltmove
 ~@class_t@pc@::Faunus::pc
 ~@class_t@__exception@::__exception
@@ -3646,6 +3676,7 @@
 +@member_function_t@dist@double ( ::Faunus::point::* )( ::Faunus::point const & ) constdouble ( ::Faunus::point::* )( ::Faunus::point const & ) const
 +@member_function_t@dist@double ( ::Faunus::point::* )( ::Faunus::point const &,double const &,double const & ) constdouble ( ::Faunus::point::* )( ::Faunus::point const &,double const &,double const & ) const
 +@member_function_t@dist@double ( ::Faunus::box::* )( ::Faunus::point const &,::Faunus::point const & ) double ( ::Faunus::box::* )( ::Faunus::point const &,::Faunus::point const & ) 
++@member_function_t@dist@double ( ::Faunus::slit::* )( ::Faunus::point const &,::Faunus::point const & ) double ( ::Faunus::slit::* )( ::Faunus::point const &,::Faunus::point const & ) 
 ~@member_function_t@global@::std::locale (*)( ::std::locale const & )::std::locale (*)( ::std::locale const & )
 ~@member_function_t@sgetn@::std::streamsize ( ::std::basic_streambuf<wchar_t, std::char_traits<wchar_t> >::* )( wchar_t *,::std::streamsize ) ::std::streamsize ( ::std::basic_streambuf<wchar_t, std::char_traits<wchar_t> >::* )( wchar_t *,::std::streamsize ) 
 ~@member_function_t@sgetn@::std::streamsize ( ::std::basic_streambuf<char, std::char_traits<char> >::* )( char *,::std::streamsize ) ::std::streamsize ( ::std::basic_streambuf<char, std::char_traits<char> >::* )( char *,::std::streamsize ) 
@@ -3664,7 +3695,7 @@
 ~@member_function_t@is_open@bool ( ::std::basic_filebuf<wchar_t, std::char_traits<wchar_t> >::* )(  ) constbool ( ::std::basic_filebuf<wchar_t, std::char_traits<wchar_t> >::* )(  ) const
 ~@member_function_t@is_open@bool ( ::std::basic_filebuf<char, std::char_traits<char> >::* )(  ) constbool ( ::std::basic_filebuf<char, std::char_traits<char> >::* )(  ) const
 ~@member_function_t@is_open@bool ( ::std::__basic_file<char>::* )(  ) constbool ( ::std::__basic_file<char>::* )(  ) const
-~@member_function_t@avgcharge@double ( ::Faunus::titrate::* )( ::std::vector< Faunus::particle > &,unsigned int ) double ( ::Faunus::titrate::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > &,unsigned int ) 
++@member_function_t@avgcharge@double ( ::Faunus::titrate::* )( ::std::vector< Faunus::particle > &,unsigned int ) double ( ::Faunus::titrate::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > &,unsigned int ) 
 ~@member_function_t@pubsetbuf@::std::basic_streambuf< wchar_t, std::char_traits< wchar_t > > * ( ::std::basic_streambuf<wchar_t, std::char_traits<wchar_t> >::* )( wchar_t *,::std::streamsize ) ::std::basic_streambuf<wchar_t, std::char_traits<wchar_t> > * ( ::std::basic_streambuf<wchar_t, std::char_traits<wchar_t> >::* )( wchar_t *,::std::streamsize ) 
 ~@member_function_t@pubsetbuf@::std::basic_streambuf< char, std::char_traits< char > > * ( ::std::basic_streambuf<char, std::char_traits<char> >::* )( char *,::std::streamsize ) ::std::basic_streambuf<char, std::char_traits<char> > * ( ::std::basic_streambuf<char, std::char_traits<char> >::* )( char *,::std::streamsize ) 
 ~@member_function_t@sgetc@::wint_t ( ::std::basic_streambuf<wchar_t, std::char_traits<wchar_t> >::* )(  ) ::wint_t ( ::std::basic_streambuf<wchar_t, std::char_traits<wchar_t> >::* )(  ) 
@@ -3676,7 +3707,7 @@
 ~@member_function_t@init@void ( ::Faunus::xytable<double, double>::* )( double,double,double ) void ( ::Faunus::xytable<double, double>::* )( double,double,double ) 
 ~@member_function_t@init@void ( ::Faunus::xytable<float, unsigned long>::* )( float,float,float ) void ( ::Faunus::xytable<float, unsigned long>::* )( float,float,float ) 
 ~@member_function_t@init@void ( ::Faunus::widomSW::* )(  ) void ( ::Faunus::widomSW::* )(  ) 
-~@member_function_t@init@void ( ::Faunus::titrate::* )( ::std::vector< Faunus::particle > &,::Faunus::group & ) void ( ::Faunus::titrate::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > &,::Faunus::group & ) 
++@member_function_t@init@void ( ::Faunus::titrate::* )( ::std::vector< Faunus::particle > &,::Faunus::group & ) void ( ::Faunus::titrate::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > &,::Faunus::group & ) 
 ~@member_function_t@init@void ( ::Faunus::pot_testminim::* )( ::Faunus::atoms & ) void ( ::Faunus::pot_testminim::* )( ::Faunus::atoms & ) 
 ~@member_function_t@init@void ( ::Faunus::pot_test::* )( ::Faunus::atoms & ) void ( ::Faunus::pot_test::* )( ::Faunus::atoms & ) 
 ~@member_function_t@init@void ( ::Faunus::atoms::* )(  ) void ( ::Faunus::atoms::* )(  ) 
@@ -3736,7 +3767,6 @@
 ~@member_function_t@_M_is_shared@bool ( ::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::_Rep::* )(  ) constbool ( ::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::_Rep::* )(  ) const
 ~@member_function_t@_M_is_shared@bool ( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::_Rep::* )(  ) constbool ( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::_Rep::* )(  ) const
 ~@member_function_t@setlen@bool ( ::Faunus::box::* )( double ) bool ( ::Faunus::box::* )( double ) 
-~@member_function_t@savestate@bool ( ::Faunus::titrate::* )( ::std::string ) bool ( ::Faunus::titrate::* )( ::std::string ) 
 ~@member_function_t@seekoff@::std::wstreampos ( ::std::basic_streambuf<wchar_t, std::char_traits<wchar_t> >::* )( ::std::streamoff,::std::_Ios_Seekdir,::std::_Ios_Openmode ) ::std::wstreampos ( ::std::basic_streambuf<wchar_t, std::char_traits<wchar_t> >::* )( ::std::streamoff,::std::_Ios_Seekdir,::std::_Ios_Openmode ) 
 ~@member_function_t@seekoff@::std::streampos ( ::std::basic_streambuf<char, std::char_traits<char> >::* )( ::std::streamoff,::std::_Ios_Seekdir,::std::_Ios_Openmode ) ::std::streampos ( ::std::basic_streambuf<char, std::char_traits<char> >::* )( ::std::streamoff,::std::_Ios_Seekdir,::std::_Ios_Openmode ) 
 ~@member_function_t@seekoff@::std::streampos ( ::std::basic_stringbuf<char, std::char_traits<char>, std::allocator<char> >::* )( ::std::streamoff,::std::_Ios_Seekdir,::std::_Ios_Openmode ) ::std::streampos ( ::std::basic_stringbuf<char, std::char_traits<char>, std::allocator<char> >::* )( ::std::streamoff,::std::_Ios_Seekdir,::std::_Ios_Openmode ) 
@@ -3759,7 +3789,7 @@
 +@member_function_t@force@double ( ::Faunus::energybase::* )( ::Faunus::container &,::Faunus::particle,::Faunus::particle,::Faunus::point,double,double ) double ( ::Faunus::energybase::* )( ::Faunus::container &,::Faunus::particle,::Faunus::particle,::Faunus::point,double,double ) 
 ~@member_function_t@to_int_type@int (*)( char const & )int (*)( char const & )
 ~@member_function_t@to_int_type@::wint_t (*)( wchar_t const & )::wint_t (*)( wchar_t const & )
-~@member_function_t@sumsites@double ( ::Faunus::titrate::* )(  ) double ( ::Faunus::titrate::* )(  ) 
++@member_function_t@sumsites@double ( ::Faunus::titrate::* )(  ) double ( ::Faunus::titrate::* )(  ) 
 ~@member_function_t@sync@int ( ::std::basic_istream<char,std::char_traits<char> >::* )(  ) int ( ::std::basic_istream<char,std::char_traits<char> >::* )(  ) 
 ~@member_function_t@sync@int ( ::std::basic_streambuf<wchar_t, std::char_traits<wchar_t> >::* )(  ) int ( ::std::basic_streambuf<wchar_t, std::char_traits<wchar_t> >::* )(  ) 
 ~@member_function_t@sync@int ( ::std::basic_streambuf<char, std::char_traits<char> >::* )(  ) int ( ::std::basic_streambuf<char, std::char_traits<char> >::* )(  ) 
@@ -4357,6 +4387,8 @@
 ~@member_function_t@do_out@::std::codecvt_base::result ( ::std::__codecvt_abstract_base<wchar_t, char, __mbstate_t>::* )( ::__mbstate_t &,wchar_t const *,wchar_t const *,wchar_t const * &,char *,char *,char * & ) const::std::codecvt_base::result ( ::std::__codecvt_abstract_base<wchar_t, char, __mbstate_t>::* )( ::__mbstate_t &,wchar_t const *,wchar_t const *,wchar_t const * &,char *,char *,char * & ) const
 ~@member_function_t@do_out@::std::codecvt_base::result ( ::std::__codecvt_abstract_base<char, char, __mbstate_t>::* )( ::__mbstate_t &,char const *,char const *,char const * &,char *,char *,char * & ) const::std::codecvt_base::result ( ::std::__codecvt_abstract_base<char, char, __mbstate_t>::* )( ::__mbstate_t &,char const *,char const *,char const * &,char *,char *,char * & ) const
 ~@member_function_t@randNorm@double ( ::MTRand::* )( double const &,double const & ) double ( ::MTRand::* )( double const &,double const & ) 
+~@member_function_t@lj@double ( ::Faunus::pot_lj_trunk::* )( ::Faunus::particle const &,::Faunus::particle const &,double const & ) constdouble ( ::Faunus::pot_lj_trunk::* )( ::Faunus::particle const &,::Faunus::particle const &,double const & ) const
+~@member_function_t@lj@void ( ::Faunus::pot_lj_trunk::* )( ::Faunus::particle const &,::Faunus::particle const &,double const &,double & ) constvoid ( ::Faunus::pot_lj_trunk::* )( ::Faunus::particle const &,::Faunus::particle const &,double const &,double & ) const
 +@member_function_t@lj@double ( ::Faunus::pot_lj::* )( ::Faunus::particle const &,::Faunus::particle const &,double const & ) constdouble ( ::Faunus::pot_lj::* )( ::Faunus::particle const &,::Faunus::particle const &,double const & ) const
 +@member_function_t@lj@void ( ::Faunus::pot_lj::* )( ::Faunus::particle const &,::Faunus::particle const &,double const &,double & ) constvoid ( ::Faunus::pot_lj::* )( ::Faunus::particle const &,::Faunus::particle const &,double const &,double & ) const
 ~@member_function_t@lt@bool (*)( char const &,char const & )bool (*)( char const &,char const & )
@@ -4515,7 +4547,7 @@
 ~@member_function_t@_M_data@wchar_t * ( ::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::* )( wchar_t * ) wchar_t * ( ::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::* )( wchar_t * ) 
 ~@member_function_t@_M_data@char * ( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::* )(  ) constchar * ( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::* )(  ) const
 ~@member_function_t@_M_data@char * ( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::* )( char * ) char * ( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::* )( char * ) 
-~@member_function_t@infos@void ( ::Faunus::titrate::* )(  ) void ( ::Faunus::titrate::* )(  ) 
++@member_function_t@infos@void ( ::Faunus::titrate::* )(  ) void ( ::Faunus::titrate::* )(  ) 
 +@member_function_t@undo@void ( ::Faunus::group::* )( ::Faunus::particles & ) void ( ::Faunus::group::* )( ::Faunus::particles & ) 
 ~@member_function_t@base@::std::_Bit_const_iterator ( ::std::reverse_iterator<std::_Bit_const_iterator>::* )(  ) const::std::_Bit_const_iterator ( ::std::reverse_iterator<std::_Bit_const_iterator>::* )(  ) const
 ~@member_function_t@base@::std::_Bit_iterator ( ::std::reverse_iterator<std::_Bit_iterator>::* )(  ) const::std::_Bit_iterator ( ::std::reverse_iterator<std::_Bit_iterator>::* )(  ) const
@@ -4816,8 +4848,9 @@
 ~@member_function_t@destroy@void ( ::__gnu_cxx::new_allocator<Faunus::particle>::* )( ::Faunus::particle * ) void ( ::__gnu_cxx::new_allocator<Faunus::particle>::* )( ::Faunus::particle * ) 
 ~@member_function_t@destroy@void ( ::__gnu_cxx::new_allocator<wchar_t>::* )( wchar_t * ) void ( ::__gnu_cxx::new_allocator<wchar_t>::* )( wchar_t * ) 
 ~@member_function_t@destroy@void ( ::__gnu_cxx::new_allocator<char>::* )( char * ) void ( ::__gnu_cxx::new_allocator<char>::* )( char * ) 
-~@member_function_t@sqdist@double ( ::Faunus::pot_hsminimageXY::* )( ::Faunus::particle const &,::Faunus::particle const & ) double ( ::Faunus::pot_hsminimageXY::* )( ::Faunus::particle const &,::Faunus::particle const & ) 
+~@member_function_t@sqdist@double ( ::Faunus::pot_hsminimageXY::* )( ::Faunus::point const &,::Faunus::point const & ) double ( ::Faunus::pot_hsminimageXY::* )( ::Faunus::point const &,::Faunus::point const & ) 
 ~@member_function_t@sqdist@double ( ::Faunus::pot_r12minimage::* )( ::Faunus::point const &,::Faunus::point const & ) double ( ::Faunus::pot_r12minimage::* )( ::Faunus::point const &,::Faunus::point const & ) 
+~@member_function_t@sqdist@double ( ::Faunus::pot_debyehuckelP3trunk::* )( ::Faunus::point const &,::Faunus::point const & ) double ( ::Faunus::pot_debyehuckelP3trunk::* )( ::Faunus::point const &,::Faunus::point const & ) 
 ~@member_function_t@sqdist@double ( ::Faunus::pot_debyehuckelP3::* )( ::Faunus::point const &,::Faunus::point const & ) double ( ::Faunus::pot_debyehuckelP3::* )( ::Faunus::point const &,::Faunus::point const & ) 
 +@member_function_t@sqdist@double ( ::Faunus::container::* )( ::Faunus::point const &,::Faunus::point const & ) double ( ::Faunus::container::* )( ::Faunus::point const &,::Faunus::point const & ) 
 +@member_function_t@sqdist@double ( ::Faunus::pot_coulomb::* )( ::Faunus::point const &,::Faunus::point const & ) double ( ::Faunus::pot_coulomb::* )( ::Faunus::point const &,::Faunus::point const & ) 
@@ -4832,6 +4865,7 @@
 +@member_function_t@sqdist@double ( ::Faunus::point::* )( ::Faunus::point const &,double const &,double const & ) constdouble ( ::Faunus::point::* )( ::Faunus::point const &,double const &,double const & ) const
 ~@member_function_t@sqdist@double ( ::Faunus::pot_debyehuckel::* )( ::Faunus::point const &,::Faunus::point const & ) double ( ::Faunus::pot_debyehuckel::* )( ::Faunus::point const &,::Faunus::point const & ) 
 +@member_function_t@sqdist@double ( ::Faunus::box::* )( ::Faunus::point const &,::Faunus::point const & ) double ( ::Faunus::box::* )( ::Faunus::point const &,::Faunus::point const & ) 
++@member_function_t@sqdist@double ( ::Faunus::slit::* )( ::Faunus::point const &,::Faunus::point const & ) double ( ::Faunus::slit::* )( ::Faunus::point const &,::Faunus::point const & ) 
 ~@member_function_t@_M_update_egptr@void ( ::std::basic_stringbuf<char, std::char_traits<char>, std::allocator<char> >::* )(  ) void ( ::std::basic_stringbuf<char, std::char_traits<char>, std::allocator<char> >::* )(  ) 
 ~@member_function_t@_M_update_egptr@void ( ::std::basic_stringbuf<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::* )(  ) void ( ::std::basic_stringbuf<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::* )(  ) 
 ~@member_function_t@do_grouping@::std::string ( ::std::numpunct<wchar_t>::* )(  ) const::std::basic_string<char,std::char_traits<char>,std::allocator<char> > ( ::std::numpunct<wchar_t>::* )(  ) const
@@ -5070,6 +5104,7 @@
 ~@member_function_t@xmax@float ( ::Faunus::xytable<float, unsigned long>::* )(  ) float ( ::Faunus::xytable<float, unsigned long>::* )(  ) 
 ~@member_function_t@pairpot@double ( ::Faunus::pot_hsminimageXY::* )( ::Faunus::particle const &,::Faunus::particle const & ) double ( ::Faunus::pot_hsminimageXY::* )( ::Faunus::particle const &,::Faunus::particle const & ) 
 ~@member_function_t@pairpot@double ( ::Faunus::pot_r12minimage::* )( ::Faunus::particle const &,::Faunus::particle const & ) double ( ::Faunus::pot_r12minimage::* )( ::Faunus::particle const &,::Faunus::particle const & ) 
+~@member_function_t@pairpot@double ( ::Faunus::pot_debyehuckelP3trunk::* )( ::Faunus::particle const &,::Faunus::particle const & ) constdouble ( ::Faunus::pot_debyehuckelP3trunk::* )( ::Faunus::particle const &,::Faunus::particle const & ) const
 ~@member_function_t@pairpot@double ( ::Faunus::pot_debyehuckelP3::* )( ::Faunus::particle const &,::Faunus::particle const & ) constdouble ( ::Faunus::pot_debyehuckelP3::* )( ::Faunus::particle const &,::Faunus::particle const & ) const
 ~@member_function_t@pairpot@double ( ::Faunus::pot_table::* )( ::Faunus::particle const &,::Faunus::particle const & ) double ( ::Faunus::pot_table::* )( ::Faunus::particle const &,::Faunus::particle const & ) 
 +@member_function_t@pairpot@double ( ::Faunus::pot_coulomb::* )( ::Faunus::particle const &,::Faunus::particle const & ) double ( ::Faunus::pot_coulomb::* )( ::Faunus::particle const &,::Faunus::particle const & ) 
@@ -5111,6 +5146,7 @@
 ~@member_function_t@close@::std::basic_filebuf< wchar_t, std::char_traits< wchar_t > > * ( ::std::basic_filebuf<wchar_t, std::char_traits<wchar_t> >::* )(  ) ::std::basic_filebuf<wchar_t, std::char_traits<wchar_t> > * ( ::std::basic_filebuf<wchar_t, std::char_traits<wchar_t> >::* )(  ) 
 ~@member_function_t@close@::std::basic_filebuf< char, std::char_traits< char > > * ( ::std::basic_filebuf<char, std::char_traits<char> >::* )(  ) ::std::basic_filebuf<char, std::char_traits<char> > * ( ::std::basic_filebuf<char, std::char_traits<char> >::* )(  ) 
 ~@member_function_t@close@::std::__basic_file< char > * ( ::std::__basic_file<char>::* )(  ) ::std::__basic_file<char> * ( ::std::__basic_file<char>::* )(  ) 
+~@member_function_t@close@void ( ::Faunus::ioxtc::* )(  ) void ( ::Faunus::ioxtc::* )(  ) 
 ~@member_function_t@capacity@::size_t ( ::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::* )(  ) const::size_t ( ::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::* )(  ) const
 ~@member_function_t@capacity@::size_t ( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> >::* )(  ) const::size_t ( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> >::* )(  ) const
 ~@member_function_t@capacity@::size_t ( ::std::vector<Faunus::point, std::allocator<Faunus::point> >::* )(  ) const::size_t ( ::std::vector<Faunus::point, std::allocator<Faunus::point> >::* )(  ) const
@@ -5151,17 +5187,19 @@
 +@member_function_t@randompos@void ( ::Faunus::cylinder::* )( ::Faunus::point & ) void ( ::Faunus::cylinder::* )( ::Faunus::point & ) 
 ~@member_function_t@loBits@long unsigned int ( ::MTRand::* )( long unsigned int const & ) constlong unsigned int ( ::MTRand::* )( long unsigned int const & ) const
 ~@member_function_t@unsetf@void ( ::std::ios_base::* )( ::std::_Ios_Fmtflags ) void ( ::std::ios_base::* )( ::std::_Ios_Fmtflags ) 
+~@member_function_t@p2s@::std::string ( ::Faunus::iogro::* )( ::Faunus::particle &,int ) ::std::string ( ::Faunus::iogro::* )( ::Faunus::particle &,int ) 
 ~@member_function_t@p2s@::std::string ( ::Faunus::ioaam::* )( ::Faunus::particle &,int ) ::std::string ( ::Faunus::ioaam::* )( ::Faunus::particle &,int ) 
 ~@member_function_t@p2s@::std::string ( ::Faunus::iopov::* )( ::Faunus::particle &,int ) ::std::string ( ::Faunus::iopov::* )( ::Faunus::particle &,int ) 
-~@member_function_t@p2s@::std::string ( ::Faunus::iogro::* )( ::Faunus::particle &,int ) ::std::string ( ::Faunus::iogro::* )( ::Faunus::particle &,int ) 
 ~@member_function_t@p2s@::std::string ( ::Faunus::iopqr::* )( ::Faunus::particle &,int ) ::std::string ( ::Faunus::iopqr::* )( ::Faunus::particle &,int ) 
 +@member_function_t@stdev@double ( ::Faunus::average<double>::* )(  ) double ( ::Faunus::average<double>::* )(  ) 
 +@member_function_t@stdev@float ( ::Faunus::average<float>::* )(  ) float ( ::Faunus::average<float>::* )(  ) 
 ~@member_function_t@setvolume@void ( ::Faunus::pot_hsminimageXY::* )( double ) void ( ::Faunus::pot_hsminimageXY::* )( double ) 
 ~@member_function_t@setvolume@void ( ::Faunus::pot_r12minimage::* )( double ) void ( ::Faunus::pot_r12minimage::* )( double ) 
+~@member_function_t@setvolume@void ( ::Faunus::pot_debyehuckelP3trunk::* )( double ) void ( ::Faunus::pot_debyehuckelP3trunk::* )( double ) 
 ~@member_function_t@setvolume@void ( ::Faunus::pot_debyehuckelP3::* )( double ) void ( ::Faunus::pot_debyehuckelP3::* )( double ) 
 ~@member_function_t@setvolume@void ( ::Faunus::pot_hs::* )( double ) void ( ::Faunus::pot_hs::* )( double ) 
 +@member_function_t@setvolume@void ( ::Faunus::container::* )( double ) void ( ::Faunus::container::* )( double ) 
+~@member_function_t@setvolume@void ( ::Faunus::pot_lj_trunk::* )( double ) void ( ::Faunus::pot_lj_trunk::* )( double ) 
 ~@member_function_t@setvolume@void ( ::Faunus::pot_hsminimage::* )( double ) void ( ::Faunus::pot_hsminimage::* )( double ) 
 +@member_function_t@setvolume@void ( ::Faunus::pot_lj::* )( double ) void ( ::Faunus::pot_lj::* )( double ) 
 ~@member_function_t@setvolume@void ( ::Faunus::pot_minimage::* )( double ) void ( ::Faunus::pot_minimage::* )( double ) 
@@ -5188,6 +5226,8 @@
 ~@member_function_t@_M_iend@::__gnu_cxx::__normal_iterator< wchar_t*, std::basic_string< wchar_t, std::char_traits< wchar_t >, std::allocator< wchar_t > > > ( ::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::* )(  ) const::__gnu_cxx::__normal_iterator<wchar_t*,std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> > > ( ::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::* )(  ) const
 ~@member_function_t@_M_iend@::__gnu_cxx::__normal_iterator< char*, std::basic_string< char, std::char_traits< char >, std::allocator< char > > > ( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::* )(  ) const::__gnu_cxx::__normal_iterator<char*,std::basic_string<char, std::char_traits<char>, std::allocator<char> > > ( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::* )(  ) const
 ~@member_function_t@load@void ( ::MTRand::* )( long unsigned int * const ) void ( ::MTRand::* )( long unsigned int * const ) 
+~@member_function_t@load@::std::vector< Faunus::particle > ( ::Faunus::ioxtc::* )( ::std::string ) ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > ( ::Faunus::ioxtc::* )( ::std::string ) 
+~@member_function_t@load@::std::vector< Faunus::particle > ( ::Faunus::iogro::* )( ::std::string ) ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > ( ::Faunus::iogro::* )( ::std::string ) 
 ~@member_function_t@load@void ( ::Faunus::dualmove::* )( ::Faunus::inputfile &,::std::vector< Faunus::macromolecule > &,float ) void ( ::Faunus::dualmove::* )( ::Faunus::inputfile &,::std::vector<Faunus::macromolecule, std::allocator<Faunus::macromolecule> > &,float ) 
 ~@member_function_t@load@bool ( ::Faunus::io_aam::* )( ::Faunus::container &,::std::string ) bool ( ::Faunus::io_aam::* )( ::Faunus::container &,::std::string ) 
 ~@member_function_t@load@bool ( ::Faunus::io_aam::* )( ::std::vector< Faunus::particle > &,::std::string ) bool ( ::Faunus::io_aam::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > &,::std::string ) 
@@ -5198,7 +5238,6 @@
 ~@member_function_t@load@bool ( ::Faunus::particleIO::* )( ::std::vector< Faunus::particle > &,::std::string ) bool ( ::Faunus::particleIO::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > &,::std::string ) 
 ~@member_function_t@load@::std::vector< Faunus::particle > ( ::Faunus::iopart::* )( ::std::string ) ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > ( ::Faunus::iopart::* )( ::std::string ) 
 ~@member_function_t@load@::std::vector< Faunus::particle > ( ::Faunus::iopov::* )( ::std::string ) ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > ( ::Faunus::iopov::* )( ::std::string ) 
-~@member_function_t@load@::std::vector< Faunus::particle > ( ::Faunus::iogro::* )( ::std::string ) ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > ( ::Faunus::iogro::* )( ::std::string ) 
 ~@member_function_t@load@::std::vector< Faunus::particle > ( ::Faunus::iopqr::* )( ::std::string ) ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > ( ::Faunus::iopqr::* )( ::std::string ) 
 +@member_function_t@load@bool ( ::Faunus::atoms::* )( ::std::string ) bool ( ::Faunus::atoms::* )( ::std::string ) 
 +@member_function_t@load@bool ( ::Faunus::atoms::* )( ::Faunus::inputfile & ) bool ( ::Faunus::atoms::* )( ::Faunus::inputfile & ) 
@@ -5213,8 +5252,8 @@
 +@member_function_t@pot@double ( ::Faunus::interaction<Faunus::pot_hscoulomb>::* )( ::std::vector< Faunus::particle > const &,::Faunus::point const & ) double ( ::Faunus::interaction<Faunus::pot_hscoulomb>::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > const &,::Faunus::point const & ) 
 +@member_function_t@pot@double ( ::Faunus::interaction<Faunus::pot_coulomb>::* )( ::std::vector< Faunus::particle > const &,::Faunus::point const & ) double ( ::Faunus::interaction<Faunus::pot_coulomb>::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > const &,::Faunus::point const & ) 
 +@member_function_t@pot@double ( ::Faunus::energybase::* )( ::std::vector< Faunus::particle > const &,::Faunus::point const & ) double ( ::Faunus::energybase::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > const &,::Faunus::point const & ) 
-~@member_function_t@header@void ( ::Faunus::iopov::* )(  ) void ( ::Faunus::iopov::* )(  ) 
 ~@member_function_t@header@void ( ::Faunus::iogro::* )(  ) void ( ::Faunus::iogro::* )(  ) 
+~@member_function_t@header@void ( ::Faunus::iopov::* )(  ) void ( ::Faunus::iopov::* )(  ) 
 ~@member_function_t@header@void ( ::Faunus::iopqr::* )(  ) void ( ::Faunus::iopqr::* )(  ) 
 ~@member_function_t@push_back@void ( ::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::* )( wchar_t ) void ( ::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::* )( wchar_t ) 
 ~@member_function_t@push_back@void ( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> >::* )( ::Faunus::particle const & ) void ( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> >::* )( ::Faunus::particle const & ) 
@@ -5305,7 +5344,7 @@
 +@member_function_t@loadlattice@void ( ::Faunus::ioaam::* )( ::Faunus::container &,::Faunus::inputfile &,::std::vector< Faunus::macromolecule > & ) void ( ::Faunus::ioaam::* )( ::Faunus::container &,::Faunus::inputfile &,::std::vector<Faunus::macromolecule, std::allocator<Faunus::macromolecule> > & ) 
 ~@member_function_t@_M_call_callbacks@void ( ::std::ios_base::* )( ::std::ios_base::event ) void ( ::std::ios_base::* )( ::std::ios_base::event ) 
 +@member_function_t@mw2vol@double ( ::Faunus::particle::* )( double ) constdouble ( ::Faunus::particle::* )( double ) const
-~@member_function_t@samplesites@void ( ::Faunus::titrate::* )( ::std::vector< Faunus::particle > & ) void ( ::Faunus::titrate::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > & ) 
++@member_function_t@samplesites@void ( ::Faunus::titrate::* )( ::std::vector< Faunus::particle > & ) void ( ::Faunus::titrate::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > & ) 
 ~@member_function_t@_M_rep@::std::wstring::_Rep * ( ::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::* )(  ) const::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::_Rep * ( ::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::* )(  ) const
 ~@member_function_t@_M_rep@::std::string::_Rep * ( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::* )(  ) const::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::_Rep * ( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::* )(  ) const
 ~@member_function_t@_M_dispose_callbacks@void ( ::std::ios_base::* )(  ) void ( ::std::ios_base::* )(  ) 
@@ -5533,12 +5572,13 @@
 ~@member_function_t@do_truename@::std::wstring ( ::std::numpunct<wchar_t>::* )(  ) const::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> > ( ::std::numpunct<wchar_t>::* )(  ) const
 ~@member_function_t@do_truename@::std::string ( ::std::numpunct<char>::* )(  ) const::std::basic_string<char,std::char_traits<char>,std::allocator<char> > ( ::std::numpunct<char>::* )(  ) const
 ~@member_function_t@save@void ( ::MTRand::* )( long unsigned int * ) constvoid ( ::MTRand::* )( long unsigned int * ) const
+~@member_function_t@save@bool ( ::Faunus::ioxtc::* )( ::std::string,::std::vector< Faunus::particle > & ) bool ( ::Faunus::ioxtc::* )( ::std::string,::std::vector<Faunus::particle, std::allocator<Faunus::particle> > & ) 
+~@member_function_t@save@bool ( ::Faunus::iogro::* )( ::std::string,::std::vector< Faunus::particle > & ) bool ( ::Faunus::iogro::* )( ::std::string,::std::vector<Faunus::particle, std::allocator<Faunus::particle> > & ) 
+~@member_function_t@save@bool ( ::Faunus::iogro::* )( ::std::string,::Faunus::box & ) bool ( ::Faunus::iogro::* )( ::std::string,::Faunus::box & ) 
 +@member_function_t@save@bool ( ::Faunus::ioaam::* )( ::std::string,::std::vector< Faunus::particle > & ) bool ( ::Faunus::ioaam::* )( ::std::string,::std::vector<Faunus::particle, std::allocator<Faunus::particle> > & ) 
 ~@member_function_t@save@bool ( ::Faunus::particleIO::* )( ::Faunus::container &,::std::string ) bool ( ::Faunus::particleIO::* )( ::Faunus::container &,::std::string ) 
 ~@member_function_t@save@bool ( ::Faunus::iopart::* )( ::std::string,::std::vector< Faunus::particle > & ) bool ( ::Faunus::iopart::* )( ::std::string,::std::vector<Faunus::particle, std::allocator<Faunus::particle> > & ) 
 ~@member_function_t@save@bool ( ::Faunus::iopov::* )( ::std::string,::std::vector< Faunus::particle > & ) bool ( ::Faunus::iopov::* )( ::std::string,::std::vector<Faunus::particle, std::allocator<Faunus::particle> > & ) 
-~@member_function_t@save@bool ( ::Faunus::iogro::* )( ::std::string,::std::vector< Faunus::particle > & ) bool ( ::Faunus::iogro::* )( ::std::string,::std::vector<Faunus::particle, std::allocator<Faunus::particle> > & ) 
-~@member_function_t@save@bool ( ::Faunus::iogro::* )( ::std::string,::Faunus::box & ) bool ( ::Faunus::iogro::* )( ::std::string,::Faunus::box & ) 
 +@member_function_t@save@bool ( ::Faunus::iopqr::* )( ::std::string,::std::vector< Faunus::particle > & ) bool ( ::Faunus::iopqr::* )( ::std::string,::std::vector<Faunus::particle, std::allocator<Faunus::particle> > & ) 
 +@member_function_t@save@bool ( ::Faunus::iopqr::* )( ::std::string,::std::vector< Faunus::particle > &,::Faunus::titrate & ) bool ( ::Faunus::iopqr::* )( ::std::string,::std::vector<Faunus::particle, std::allocator<Faunus::particle> > &,::Faunus::titrate & ) 
 +@member_function_t@save@bool ( ::Faunus::ioxyz::* )( ::std::string,::std::vector< Faunus::particle > & ) bool ( ::Faunus::ioxyz::* )( ::std::string,::std::vector<Faunus::particle, std::allocator<Faunus::particle> > & ) 
@@ -5800,7 +5840,7 @@
 ~@member_function_t@_M_replace_aux@::std::string & ( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::* )( ::size_t,::size_t,::size_t,char ) ::std::basic_string<char,std::char_traits<char>,std::allocator<char> > & ( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::* )( ::size_t,::size_t,::size_t,char ) 
 ~@member_function_t@c_str@wchar_t const * ( ::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::* )(  ) constwchar_t const * ( ::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::* )(  ) const
 ~@member_function_t@c_str@char const * ( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::* )(  ) constchar const * ( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::* )(  ) const
-~@member_function_t@showsites@void ( ::Faunus::titrate::* )( ::std::vector< Faunus::particle > & ) void ( ::Faunus::titrate::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > & ) 
++@member_function_t@showsites@void ( ::Faunus::titrate::* )( ::std::vector< Faunus::particle > & ) void ( ::Faunus::titrate::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > & ) 
 +@member_function_t@u_monomer@double ( ::Faunus::interaction<Faunus::pot_hscoulomb>::* )( ::std::vector< Faunus::particle > const &,::Faunus::polymer const &,unsigned int ) double ( ::Faunus::interaction<Faunus::pot_hscoulomb>::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > const &,::Faunus::polymer const &,unsigned int ) 
 +@member_function_t@u_monomer@double ( ::Faunus::interaction<Faunus::pot_coulomb>::* )( ::std::vector< Faunus::particle > const &,::Faunus::polymer const &,unsigned int ) double ( ::Faunus::interaction<Faunus::pot_coulomb>::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > const &,::Faunus::polymer const &,unsigned int ) 
 +@member_function_t@u_monomer@double ( ::Faunus::energybase::* )( ::std::vector< Faunus::particle > const &,::Faunus::polymer const &,unsigned int ) double ( ::Faunus::energybase::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > const &,::Faunus::polymer const &,unsigned int ) 
@@ -5845,12 +5885,11 @@
 ~@member_function_t@_M_range_check@void ( ::std::vector<Faunus::inputfile::dataformat, std::allocator<Faunus::inputfile::dataformat> >::* )( ::size_t ) constvoid ( ::std::vector<Faunus::inputfile::dataformat, std::allocator<Faunus::inputfile::dataformat> >::* )( ::size_t ) const
 +@member_function_t@adjust_dp@void ( ::Faunus::markovmove::* )( float,float ) void ( ::Faunus::markovmove::* )( float,float ) 
 ~@member_function_t@strip@void ( ::Faunus::io::* )( ::std::vector< std::string > &,::std::string ) void ( ::Faunus::io::* )( ::std::vector<std::string, std::allocator<std::string> > &,::std::string ) 
-~@member_function_t@loadstate@bool ( ::Faunus::titrate::* )( ::std::string ) bool ( ::Faunus::titrate::* )( ::std::string ) 
 ~@member_function_t@_M_convert_to_wmask@::wctype_t ( ::std::ctype<wchar_t>::* )( short unsigned int const ) const::wctype_t ( ::std::ctype<wchar_t>::* )( short unsigned int const ) const
 ~@member_function_t@_M_install_facet@void ( ::std::locale::_Impl::* )( ::std::locale::id const *,::std::locale::facet const * ) void ( ::std::locale::_Impl::* )( ::std::locale::id const *,::std::locale::facet const * ) 
 ~@member_function_t@transform@::std::wstring ( ::std::collate<wchar_t>::* )( wchar_t const *,wchar_t const * ) const::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> > ( ::std::collate<wchar_t>::* )( wchar_t const *,wchar_t const * ) const
 ~@member_function_t@transform@::std::string ( ::std::collate<char>::* )( char const *,char const * ) const::std::basic_string<char,std::char_traits<char>,std::allocator<char> > ( ::std::collate<char>::* )( char const *,char const * ) const
-~@member_function_t@applycharges@double ( ::Faunus::titrate::* )( ::std::vector< Faunus::particle > & ) double ( ::Faunus::titrate::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > & ) 
++@member_function_t@applycharges@double ( ::Faunus::titrate::* )( ::std::vector< Faunus::particle > & ) double ( ::Faunus::titrate::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > & ) 
 ~@member_function_t@width@::std::streamsize ( ::std::ios_base::* )(  ) const::std::streamsize ( ::std::ios_base::* )(  ) const
 ~@member_function_t@width@::std::streamsize ( ::std::ios_base::* )( ::std::streamsize ) ::std::streamsize ( ::std::ios_base::* )( ::std::streamsize ) 
 ~@member_function_t@splash@void ( ::Faunus::io::* )( ::std::string ) void ( ::Faunus::io::* )( ::std::string ) 
@@ -5933,6 +5972,7 @@
 ~@member_function_t@info@::std::string ( ::Faunus::pot_hsminimageXY::* )(  ) ::std::string ( ::Faunus::pot_hsminimageXY::* )(  ) 
 ~@member_function_t@info@::std::string ( ::Faunus::gfactor::* )(  ) ::std::string ( ::Faunus::gfactor::* )(  ) 
 ~@member_function_t@info@::std::string ( ::Faunus::pot_r12minimage::* )(  ) ::std::string ( ::Faunus::pot_r12minimage::* )(  ) 
+~@member_function_t@info@::std::string ( ::Faunus::pot_debyehuckelP3trunk::* )(  ) ::std::string ( ::Faunus::pot_debyehuckelP3trunk::* )(  ) 
 ~@member_function_t@info@::std::string ( ::Faunus::pot_debyehuckelP3::* )(  ) ::std::string ( ::Faunus::pot_debyehuckelP3::* )(  ) 
 +@member_function_t@info@::std::string ( ::Faunus::widom::* )(  ) ::std::string ( ::Faunus::widom::* )(  ) 
 +@member_function_t@info@::std::string ( ::Faunus::saltmove::* )(  ) ::std::string ( ::Faunus::saltmove::* )(  ) 
@@ -5950,6 +5990,7 @@
 ~@member_function_t@info@::std::string ( ::Faunus::multtr::* )(  ) ::std::string ( ::Faunus::multtr::* )(  ) 
 +@member_function_t@info@::std::string ( ::Faunus::interaction<Faunus::pot_hscoulomb>::* )(  ) ::std::basic_string<char,std::char_traits<char>,std::allocator<char> > ( ::Faunus::interaction<Faunus::pot_hscoulomb>::* )(  ) 
 +@member_function_t@info@::std::string ( ::Faunus::interaction<Faunus::pot_coulomb>::* )(  ) ::std::basic_string<char,std::char_traits<char>,std::allocator<char> > ( ::Faunus::interaction<Faunus::pot_coulomb>::* )(  ) 
+~@member_function_t@info@::std::string ( ::Faunus::pot_lj_trunk::* )(  ) ::std::string ( ::Faunus::pot_lj_trunk::* )(  ) 
 ~@member_function_t@info@::std::string ( ::Faunus::polymer::* )(  ) ::std::string ( ::Faunus::polymer::* )(  ) 
 +@member_function_t@info@::std::string ( ::Faunus::pot_coulomb::* )(  ) ::std::string ( ::Faunus::pot_coulomb::* )(  ) 
 ~@member_function_t@info@::std::string ( ::Faunus::pot_coulombr12::* )(  ) ::std::string ( ::Faunus::pot_coulombr12::* )(  ) 
@@ -6011,6 +6052,7 @@
 ~@member_function_t@_M_fill_initialize@void ( ::std::vector<unsigned long, std::allocator<unsigned long> >::* )( ::size_t,long unsigned int const & ) void ( ::std::vector<unsigned long, std::allocator<unsigned long> >::* )( ::size_t,long unsigned int const & ) 
 ~@member_function_t@_M_fill_initialize@void ( ::std::vector<std::vector<unsigned short, std::allocator<unsigned short> >, std::allocator<std::vector<unsigned short, std::allocator<unsigned short> > > >::* )( ::size_t,::std::vector< unsigned short > const & ) void ( ::std::vector<std::vector<unsigned short, std::allocator<unsigned short> >, std::allocator<std::vector<unsigned short, std::allocator<unsigned short> > > >::* )( ::size_t,::std::vector<unsigned short, std::allocator<unsigned short> > const & ) 
 ~@member_function_t@_M_fill_initialize@void ( ::std::vector<Faunus::inputfile::dataformat, std::allocator<Faunus::inputfile::dataformat> >::* )( ::size_t,::Faunus::inputfile::dataformat const & ) void ( ::std::vector<Faunus::inputfile::dataformat, std::allocator<Faunus::inputfile::dataformat> >::* )( ::size_t,::Faunus::inputfile::dataformat const & ) 
+~@member_function_t@setbox@void ( ::Faunus::ioxtc::* )( float ) void ( ::Faunus::ioxtc::* )( float ) 
 ~@member_function_t@_M_leak_hard@void ( ::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::* )(  ) void ( ::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::* )(  ) 
 ~@member_function_t@_M_leak_hard@void ( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::* )(  ) void ( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> >::* )(  ) 
 ~@member_function_t@do_falsename@::std::wstring ( ::std::numpunct<wchar_t>::* )(  ) const::std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> > ( ::std::numpunct<wchar_t>::* )(  ) const
@@ -6699,6 +6741,8 @@
 ~@constructor_t@__pthread_internal_list@ ( ::__pthread_internal_list::* )(  )  ( ::__pthread_internal_list::* )(  ) 
 ~@constructor_t@_IO_cookie_io_functions_t@ ( ::_IO_cookie_io_functions_t::* )( ::_IO_cookie_io_functions_t const & )  ( ::_IO_cookie_io_functions_t::* )( ::_IO_cookie_io_functions_t const & ) 
 ~@constructor_t@_IO_cookie_io_functions_t@ ( ::_IO_cookie_io_functions_t::* )(  )  ( ::_IO_cookie_io_functions_t::* )(  ) 
+~@constructor_t@ioxtc@ ( ::Faunus::ioxtc::* )( ::Faunus::ioxtc const & )  ( ::Faunus::ioxtc::* )( ::Faunus::ioxtc const & ) 
+~@constructor_t@ioxtc@ ( ::Faunus::ioxtc::* )( float )  ( ::Faunus::ioxtc::* )( float ) 
 +@constructor_t@atoms@ ( ::Faunus::atoms::* )( ::Faunus::atoms const & )  ( ::Faunus::atoms::* )( ::Faunus::atoms const & ) 
 +@constructor_t@atoms@ ( ::Faunus::atoms::* )(  )  ( ::Faunus::atoms::* )(  ) 
 ~@constructor_t@clusterrinvw@ ( ::Faunus::clusterrinvw::* )( ::Faunus::clusterrinvw const & )  ( ::Faunus::clusterrinvw::* )( ::Faunus::clusterrinvw const & ) 
@@ -6755,8 +6799,8 @@
 +@constructor_t@pot_coulomb@ ( ::Faunus::pot_coulomb::* )( ::Faunus::inputfile & )  ( ::Faunus::pot_coulomb::* )( ::Faunus::inputfile & ) 
 ~@constructor_t@HAchargereg@ ( ::Faunus::HAchargereg::* )( ::Faunus::HAchargereg const & )  ( ::Faunus::HAchargereg::* )( ::Faunus::HAchargereg const & ) 
 ~@constructor_t@HAchargereg@ ( ::Faunus::HAchargereg::* )( ::Faunus::ensemble &,::Faunus::container &,::Faunus::energybase &,::Faunus::group &,float,float )  ( ::Faunus::HAchargereg::* )( ::Faunus::ensemble &,::Faunus::container &,::Faunus::energybase &,::Faunus::group &,float,float ) 
-~@constructor_t@action@ ( ::Faunus::titrate::action::* )( ::Faunus::titrate::action const & )  ( ::Faunus::titrate::action::* )( ::Faunus::titrate::action const & ) 
-~@constructor_t@action@ ( ::Faunus::titrate::action::* )(  )  ( ::Faunus::titrate::action::* )(  ) 
++@constructor_t@action@ ( ::Faunus::titrate::action::* )( ::Faunus::titrate::action const & )  ( ::Faunus::titrate::action::* )( ::Faunus::titrate::action const & ) 
++@constructor_t@action@ ( ::Faunus::titrate::action::* )(  )  ( ::Faunus::titrate::action::* )(  ) 
 ~@constructor_t@('/usr/include/pthread.h', 498)@ ( ::::* )( :: const & )  ( ::::* )( :: const & ) 
 ~@constructor_t@('/usr/include/pthread.h', 498)@ ( ::::* )(  )  ( ::::* )(  ) 
 +@constructor_t@inputfile@ ( ::Faunus::inputfile::* )( ::Faunus::inputfile const & )  ( ::Faunus::inputfile::* )( ::Faunus::inputfile const & ) 
@@ -6906,6 +6950,8 @@
 ~@constructor_t@__forced_unwind@ ( ::__cxxabiv1::__forced_unwind::* )(  )  ( ::__cxxabiv1::__forced_unwind::* )(  ) 
 ~@constructor_t@pthread_barrierattr_t@ ( ::pthread_barrierattr_t::* )( ::pthread_barrierattr_t const & )  ( ::pthread_barrierattr_t::* )( ::pthread_barrierattr_t const & ) 
 ~@constructor_t@pthread_barrierattr_t@ ( ::pthread_barrierattr_t::* )(  )  ( ::pthread_barrierattr_t::* )(  ) 
+~@constructor_t@pot_debyehuckelP3trunk@ ( ::Faunus::pot_debyehuckelP3trunk::* )( ::Faunus::pot_debyehuckelP3trunk const & )  ( ::Faunus::pot_debyehuckelP3trunk::* )( ::Faunus::pot_debyehuckelP3trunk const & ) 
+~@constructor_t@pot_debyehuckelP3trunk@ ( ::Faunus::pot_debyehuckelP3trunk::* )( ::Faunus::inputfile & )  ( ::Faunus::pot_debyehuckelP3trunk::* )( ::Faunus::inputfile & ) 
 ~@constructor_t@exception@ ( ::std::exception::* )( ::std::exception const & )  ( ::std::exception::* )( ::std::exception const & ) 
 ~@constructor_t@exception@ ( ::std::exception::* )(  )  ( ::std::exception::* )(  ) 
 ~@constructor_t@_Bit_iterator_base@ ( ::std::_Bit_iterator_base::* )( ::std::_Bit_iterator_base const & )  ( ::std::_Bit_iterator_base::* )( ::std::_Bit_iterator_base const & ) 
@@ -6929,9 +6975,9 @@
 ~@constructor_t@__is_char@ ( ::std::__is_char<wchar_t>::* )(  )  ( ::std::__is_char<wchar_t>::* )(  ) 
 ~@constructor_t@__is_char@ ( ::std::__is_char<char>::* )( ::std::__is_char< char > const & )  ( ::std::__is_char<char>::* )( ::std::__is_char<char> const & ) 
 ~@constructor_t@__is_char@ ( ::std::__is_char<char>::* )(  )  ( ::std::__is_char<char>::* )(  ) 
-~@constructor_t@titrate@ ( ::Faunus::titrate::* )( ::Faunus::titrate const & )  ( ::Faunus::titrate::* )( ::Faunus::titrate const & ) 
-~@constructor_t@titrate@ ( ::Faunus::titrate::* )( double )  ( ::Faunus::titrate::* )( double ) 
-~@constructor_t@titrate@ ( ::Faunus::titrate::* )( ::std::vector< Faunus::particle > &,::Faunus::group &,double )  ( ::Faunus::titrate::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > &,::Faunus::group &,double ) 
++@constructor_t@titrate@ ( ::Faunus::titrate::* )( ::Faunus::titrate const & )  ( ::Faunus::titrate::* )( ::Faunus::titrate const & ) 
++@constructor_t@titrate@ ( ::Faunus::titrate::* )( double )  ( ::Faunus::titrate::* )( double ) 
++@constructor_t@titrate@ ( ::Faunus::titrate::* )( ::std::vector< Faunus::particle > &,::Faunus::group &,double )  ( ::Faunus::titrate::* )( ::std::vector<Faunus::particle, std::allocator<Faunus::particle> > &,::Faunus::group &,double ) 
 ~@constructor_t@basic_stringstream@ ( ::std::basic_stringstream<char, std::char_traits<char>, std::allocator<char> >::* )( ::std::_Ios_Openmode )  ( ::std::basic_stringstream<char, std::char_traits<char>, std::allocator<char> >::* )( ::std::_Ios_Openmode ) 
 ~@constructor_t@basic_stringstream@ ( ::std::basic_stringstream<char, std::char_traits<char>, std::allocator<char> >::* )( ::std::string const &,::std::_Ios_Openmode )  ( ::std::basic_stringstream<char, std::char_traits<char>, std::allocator<char> >::* )( ::std::basic_string<char,std::char_traits<char>,std::allocator<char> > const &,::std::_Ios_Openmode ) 
 ~@constructor_t@basic_stringstream@ ( ::std::basic_stringstream<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::* )( ::std::_Ios_Openmode )  ( ::std::basic_stringstream<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::* )( ::std::_Ios_Openmode ) 
@@ -7220,6 +7266,9 @@
 ~@constructor_t@pthread_mutex_t@ ( ::pthread_mutex_t::* )(  )  ( ::pthread_mutex_t::* )(  ) 
 ~@constructor_t@('/usr/include/bits/pthreadtypes.h', 154)@ ( ::pthread_rwlock_t::* )( ::pthread_rwlock_t const & )  ( ::pthread_rwlock_t::* )( ::pthread_rwlock_t const & ) 
 ~@constructor_t@('/usr/include/bits/pthreadtypes.h', 154)@ ( ::pthread_rwlock_t::* )(  )  ( ::pthread_rwlock_t::* )(  ) 
+~@constructor_t@pot_lj_trunk@ ( ::Faunus::pot_lj_trunk::* )( ::Faunus::pot_lj_trunk const & )  ( ::Faunus::pot_lj_trunk::* )( ::Faunus::pot_lj_trunk const & ) 
+~@constructor_t@pot_lj_trunk@ ( ::Faunus::pot_lj_trunk::* )( ::Faunus::inputfile & )  ( ::Faunus::pot_lj_trunk::* )( ::Faunus::inputfile & ) 
+~@constructor_t@pot_lj_trunk@ ( ::Faunus::pot_lj_trunk::* )( double )  ( ::Faunus::pot_lj_trunk::* )( double ) 
 ~@constructor_t@('/usr/include/bits/waitstatus.h', 86)@ ( ::wait::* )( ::wait const & )  ( ::wait::* )( ::wait const & ) 
 ~@constructor_t@('/usr/include/bits/waitstatus.h', 86)@ ( ::wait::* )(  )  ( ::wait::* )(  ) 
 +@constructor_t@salt@ ( ::Faunus::salt::* )( ::Faunus::salt const & )  ( ::Faunus::salt::* )( ::Faunus::salt const & ) 
@@ -7659,10 +7708,13 @@
 +@member_operator_t@operator=@::Faunus::average< float > & ( ::Faunus::average<float>::* )( ::Faunus::average< float > const & ) ::Faunus::average<float> & ( ::Faunus::average<float>::* )( ::Faunus::average<float> const & ) 
 ~@member_operator_t@operator=@::Faunus::pot_hsminimageXY & ( ::Faunus::pot_hsminimageXY::* )( ::Faunus::pot_hsminimageXY const & ) ::Faunus::pot_hsminimageXY & ( ::Faunus::pot_hsminimageXY::* )( ::Faunus::pot_hsminimageXY const & ) 
 ~@member_operator_t@operator=@::Faunus::gfactor & ( ::Faunus::gfactor::* )( ::Faunus::gfactor const & ) ::Faunus::gfactor & ( ::Faunus::gfactor::* )( ::Faunus::gfactor const & ) 
+~@member_operator_t@operator=@::Faunus::ioxtc & ( ::Faunus::ioxtc::* )( ::Faunus::ioxtc const & ) ::Faunus::ioxtc & ( ::Faunus::ioxtc::* )( ::Faunus::ioxtc const & ) 
 ~@member_operator_t@operator=@::Faunus::move & ( ::Faunus::move::* )( ::Faunus::move const & ) ::Faunus::move & ( ::Faunus::move::* )( ::Faunus::move const & ) 
+~@member_operator_t@operator=@::Faunus::iogro & ( ::Faunus::iogro::* )( ::Faunus::iogro const & ) ::Faunus::iogro & ( ::Faunus::iogro::* )( ::Faunus::iogro const & ) 
 ~@member_operator_t@operator=@::Faunus::xydata< double > & ( ::Faunus::xydata<double>::* )( ::Faunus::xydata< double > const & ) ::Faunus::xydata<double> & ( ::Faunus::xydata<double>::* )( ::Faunus::xydata<double> const & ) 
 ~@member_operator_t@operator=@::Faunus::pot_r12minimage & ( ::Faunus::pot_r12minimage::* )( ::Faunus::pot_r12minimage const & ) ::Faunus::pot_r12minimage & ( ::Faunus::pot_r12minimage::* )( ::Faunus::pot_r12minimage const & ) 
 ~@member_operator_t@operator=@::Faunus::angularcorr & ( ::Faunus::angularcorr::* )( ::Faunus::angularcorr const & ) ::Faunus::angularcorr & ( ::Faunus::angularcorr::* )( ::Faunus::angularcorr const & ) 
+~@member_operator_t@operator=@::Faunus::pot_debyehuckelP3trunk & ( ::Faunus::pot_debyehuckelP3trunk::* )( ::Faunus::pot_debyehuckelP3trunk const & ) ::Faunus::pot_debyehuckelP3trunk & ( ::Faunus::pot_debyehuckelP3trunk::* )( ::Faunus::pot_debyehuckelP3trunk const & ) 
 ~@member_operator_t@operator=@::Faunus::pot_debyehuckelP3 & ( ::Faunus::pot_debyehuckelP3::* )( ::Faunus::pot_debyehuckelP3 const & ) ::Faunus::pot_debyehuckelP3 & ( ::Faunus::pot_debyehuckelP3::* )( ::Faunus::pot_debyehuckelP3 const & ) 
 +@member_operator_t@operator=@::Faunus::widom & ( ::Faunus::widom::* )( ::Faunus::widom const & ) ::Faunus::widom & ( ::Faunus::widom::* )( ::Faunus::widom const & ) 
 +@member_operator_t@operator=@::Faunus::saltmove & ( ::Faunus::saltmove::* )( ::Faunus::saltmove const & ) ::Faunus::saltmove & ( ::Faunus::saltmove::* )( ::Faunus::saltmove const & ) 
@@ -7687,8 +7739,8 @@
 +@member_operator_t@operator=@void ( ::Faunus::spherical::* )( ::Faunus::point & ) void ( ::Faunus::spherical::* )( ::Faunus::point & ) 
 +@member_operator_t@operator=@::Faunus::random & ( ::Faunus::random::* )( ::Faunus::random const & ) ::Faunus::random & ( ::Faunus::random::* )( ::Faunus::random const & ) 
 ~@member_operator_t@operator=@::Faunus::pot_table & ( ::Faunus::pot_table::* )( ::Faunus::pot_table const & ) ::Faunus::pot_table & ( ::Faunus::pot_table::* )( ::Faunus::pot_table const & ) 
-~@member_operator_t@operator=@::Faunus::titrate & ( ::Faunus::titrate::* )( ::Faunus::titrate const & ) ::Faunus::titrate & ( ::Faunus::titrate::* )( ::Faunus::titrate const & ) 
-~@member_operator_t@operator=@::Faunus::titrate::action & ( ::Faunus::titrate::action::* )( ::Faunus::titrate::action const & ) ::Faunus::titrate::action & ( ::Faunus::titrate::action::* )( ::Faunus::titrate::action const & ) 
++@member_operator_t@operator=@::Faunus::titrate & ( ::Faunus::titrate::* )( ::Faunus::titrate const & ) ::Faunus::titrate & ( ::Faunus::titrate::* )( ::Faunus::titrate const & ) 
++@member_operator_t@operator=@::Faunus::titrate::action & ( ::Faunus::titrate::action::* )( ::Faunus::titrate::action const & ) ::Faunus::titrate::action & ( ::Faunus::titrate::action::* )( ::Faunus::titrate::action const & ) 
 +@member_operator_t@operator=@::Faunus::ensemble & ( ::Faunus::ensemble::* )( ::Faunus::ensemble const & ) ::Faunus::ensemble & ( ::Faunus::ensemble::* )( ::Faunus::ensemble const & ) 
 +@member_operator_t@operator=@::Faunus::mcloop & ( ::Faunus::mcloop::* )( ::Faunus::mcloop const & ) ::Faunus::mcloop & ( ::Faunus::mcloop::* )( ::Faunus::mcloop const & ) 
 ~@member_operator_t@operator=@::Faunus::io_aam & ( ::Faunus::io_aam::* )( ::Faunus::io_aam const & ) ::Faunus::io_aam & ( ::Faunus::io_aam::* )( ::Faunus::io_aam const & ) 
@@ -7700,6 +7752,7 @@
 +@member_operator_t@operator=@::Faunus::interaction< Faunus::pot_hscoulomb > & ( ::Faunus::interaction<Faunus::pot_hscoulomb>::* )( ::Faunus::interaction< Faunus::pot_hscoulomb > const & ) ::Faunus::interaction<Faunus::pot_hscoulomb> & ( ::Faunus::interaction<Faunus::pot_hscoulomb>::* )( ::Faunus::interaction<Faunus::pot_hscoulomb> const & ) 
 +@member_operator_t@operator=@::Faunus::interaction< Faunus::pot_coulomb > & ( ::Faunus::interaction<Faunus::pot_coulomb>::* )( ::Faunus::interaction< Faunus::pot_coulomb > const & ) ::Faunus::interaction<Faunus::pot_coulomb> & ( ::Faunus::interaction<Faunus::pot_coulomb>::* )( ::Faunus::interaction<Faunus::pot_coulomb> const & ) 
 ~@member_operator_t@operator=@::Faunus::zmove & ( ::Faunus::zmove::* )( ::Faunus::zmove const & ) ::Faunus::zmove & ( ::Faunus::zmove::* )( ::Faunus::zmove const & ) 
+~@member_operator_t@operator=@::Faunus::pot_lj_trunk & ( ::Faunus::pot_lj_trunk::* )( ::Faunus::pot_lj_trunk const & ) ::Faunus::pot_lj_trunk & ( ::Faunus::pot_lj_trunk::* )( ::Faunus::pot_lj_trunk const & ) 
 ~@member_operator_t@operator=@::Faunus::polymer & ( ::Faunus::polymer::* )( ::Faunus::polymer const & ) ::Faunus::polymer & ( ::Faunus::polymer::* )( ::Faunus::polymer const & ) 
 ~@member_operator_t@operator=@::Faunus::io & ( ::Faunus::io::* )( ::Faunus::io const & ) ::Faunus::io & ( ::Faunus::io::* )( ::Faunus::io const & ) 
 +@member_operator_t@operator=@::Faunus::ioaam & ( ::Faunus::ioaam::* )( ::Faunus::ioaam const & ) ::Faunus::ioaam & ( ::Faunus::ioaam::* )( ::Faunus::ioaam const & ) 
@@ -7736,7 +7789,6 @@
 ~@member_operator_t@operator=@::Faunus::clustertrans & ( ::Faunus::clustertrans::* )( ::Faunus::clustertrans const & ) ::Faunus::clustertrans & ( ::Faunus::clustertrans::* )( ::Faunus::clustertrans const & ) 
 ~@member_operator_t@operator=@::Faunus::clusterrinvw & ( ::Faunus::clusterrinvw::* )( ::Faunus::clusterrinvw const & ) ::Faunus::clusterrinvw & ( ::Faunus::clusterrinvw::* )( ::Faunus::clusterrinvw const & ) 
 +@member_operator_t@operator=@::Faunus::randomTwister & ( ::Faunus::randomTwister::* )( ::Faunus::randomTwister const & ) ::Faunus::randomTwister & ( ::Faunus::randomTwister::* )( ::Faunus::randomTwister const & ) 
-~@member_operator_t@operator=@::Faunus::iogro & ( ::Faunus::iogro::* )( ::Faunus::iogro const & ) ::Faunus::iogro & ( ::Faunus::iogro::* )( ::Faunus::iogro const & ) 
 +@member_operator_t@operator=@::Faunus::iopqr & ( ::Faunus::iopqr::* )( ::Faunus::iopqr const & ) ::Faunus::iopqr & ( ::Faunus::iopqr::* )( ::Faunus::iopqr const & ) 
 ~@member_operator_t@operator=@::Faunus::titrate_implicit & ( ::Faunus::titrate_implicit::* )( ::Faunus::titrate_implicit const & ) ::Faunus::titrate_implicit & ( ::Faunus::titrate_implicit::* )( ::Faunus::titrate_implicit const & ) 
 ~@member_operator_t@operator=@::Faunus::clusterinvw & ( ::Faunus::clusterinvw::* )( ::Faunus::clusterinvw const & ) ::Faunus::clusterinvw & ( ::Faunus::clusterinvw::* )( ::Faunus::clusterinvw const & ) 
@@ -7968,6 +8020,7 @@
 ~@member_operator_t@operator>>@::std::basic_istream< wchar_t, std::char_traits< wchar_t > > & ( ::std::basic_istream<wchar_t, std::char_traits<wchar_t> >::* )( void * & ) ::std::basic_istream<wchar_t, std::char_traits<wchar_t> > & ( ::std::basic_istream<wchar_t, std::char_traits<wchar_t> >::* )( void * & ) 
 ~@member_operator_t@operator>>@::std::basic_istream< wchar_t, std::char_traits< wchar_t > > & ( ::std::basic_istream<wchar_t, std::char_traits<wchar_t> >::* )( ::std::basic_streambuf< wchar_t, std::char_traits< wchar_t > > * ) ::std::basic_istream<wchar_t, std::char_traits<wchar_t> > & ( ::std::basic_istream<wchar_t, std::char_traits<wchar_t> >::* )( ::std::basic_streambuf<wchar_t, std::char_traits<wchar_t> > * ) 
 ~@free_function_t@getc_unlocked@int (*)( ::FILE * )int (*)( ::FILE * )
+~@free_function_t@wcsftime@::size_t (*)( __restrict__ wchar_t *,::size_t,__restrict__ wchar_t const *,__restrict__ ::tm const * )::size_t (*)( __restrict__ wchar_t *,::size_t,__restrict__ wchar_t const *,__restrict__ ::tm const * )
 ~@free_function_t@__builtin_prefetch@void (*)( void const *,... )void (*)( void const *,... )
 ~@free_function_t@sleep@unsigned int (*)( unsigned int )unsigned int (*)( unsigned int )
 ~@free_function_t@group_member@int (*)( ::__gid_t )int (*)( ::__gid_t )
@@ -8099,6 +8152,7 @@
 ~@free_function_t@vfwscanf@int (*)( __restrict__ ::__FILE *,__restrict__ wchar_t const *,::__va_list_tag * )int (*)( __restrict__ ::__FILE *,__restrict__ wchar_t const *,::__va_list_tag * )
 ~@free_function_t@gcvt@char * (*)( double,int,char * )char * (*)( double,int,char * )
 ~@free_function_t@pthread_cancel@int (*)( ::pthread_t )int (*)( ::pthread_t )
+~@free_function_t@read_xtc_natoms@int (*)( char *,int * )int (*)( char *,int * )
 ~@free_function_t@vsscanf@int (*)( __restrict__ char const *,__restrict__ char const *,::__va_list_tag * )int (*)( __restrict__ char const *,__restrict__ char const *,::__va_list_tag * )
 ~@free_function_t@__builtin_ceilf@float (*)( float )float (*)( float )
 ~@free_function_t@__sin@double (*)( double )double (*)( double )
@@ -8113,7 +8167,6 @@
 ~@free_function_t@vswscanf@int (*)( __restrict__ wchar_t const *,__restrict__ wchar_t const *,::__va_list_tag * )int (*)( __restrict__ wchar_t const *,__restrict__ wchar_t const *,::__va_list_tag * )
 ~@free_function_t@sprintf@int (*)( __restrict__ char *,__restrict__ char const *,... )int (*)( __restrict__ char *,__restrict__ char const *,... )
 ~@free_function_t@__ctype_b_loc@short unsigned int const * * (*)(  )short unsigned int const * * (*)(  )
-~@free_function_t@__builtin_ccosl@complex long double (*)( complex long double )complex long double (*)( complex long double )
 ~@free_function_t@iswspace_l@int (*)( ::wint_t,::__locale_t )int (*)( ::wint_t,::__locale_t )
 ~@free_function_t@pthread_rwlock_destroy@int (*)( ::pthread_rwlock_t * )int (*)( ::pthread_rwlock_t * )
 ~@free_function_t@__sinf@float (*)( float )float (*)( float )
@@ -8178,6 +8231,7 @@
 ~@free_function_t@getwc_unlocked@::wint_t (*)( ::__FILE * )::wint_t (*)( ::__FILE * )
 ~@free_function_t@__builtin_cosh@double (*)( double )double (*)( double )
 ~@free_function_t@__builtin_cosl@long double (*)( long double )long double (*)( long double )
+~@free_function_t@xdrfile_read_int@int (*)( int *,int,::XDRFILE * )int (*)( int *,int,::XDRFILE * )
 ~@free_function_t@pthread_rwlock_tryrdlock@int (*)( ::pthread_rwlock_t * )int (*)( ::pthread_rwlock_t * )
 ~@free_function_t@alarm@unsigned int (*)( unsigned int )unsigned int (*)( unsigned int )
 ~@free_function_t@__cosl@long double (*)( long double )long double (*)( long double )
@@ -8196,15 +8250,11 @@
 ~@free_function_t@pthread_setconcurrency@int (*)( int )int (*)( int )
 ~@free_function_t@__log1pl@long double (*)( long double )long double (*)( long double )
 ~@free_function_t@__underflow@int (*)( ::_IO_FILE * )int (*)( ::_IO_FILE * )
+~@free_function_t@pthread_attr_setaffinity_np@int (*)( ::pthread_attr_t *,::size_t,::cpu_set_t const * )int (*)( ::pthread_attr_t *,::size_t,::cpu_set_t const * )
 ~@free_function_t@__fpclassify@int (*)( double )int (*)( double )
 ~@free_function_t@__log1pf@float (*)( float )float (*)( float )
 ~@free_function_t@lockf64@int (*)( int,int,::__off64_t )int (*)( int,int,::__off64_t )
-~@free_function_t@abs@long int (*)( long int )long int (*)( long int )
-~@free_function_t@abs@long double (*)( long double )long double (*)( long double )
-~@free_function_t@abs@float (*)( float )float (*)( float )
-~@free_function_t@abs@double (*)( double )double (*)( double )
-~@free_function_t@abs@long long int (*)( long long int )long long int (*)( long long int )
-~@free_function_t@abs@int (*)( int )int (*)( int )
+~@free_function_t@__expm1l@long double (*)( long double )long double (*)( long double )
 ~@free_function_t@oct@::std::ios_base & (*)( ::std::ios_base & )::std::ios_base & (*)( ::std::ios_base & )
 ~@free_function_t@lgammaf@float (*)( float )float (*)( float )
 ~@free_function_t@wmemset@wchar_t * (*)( wchar_t *,wchar_t,::size_t )wchar_t * (*)( wchar_t *,wchar_t,::size_t )
@@ -8292,8 +8342,10 @@
 ~@free_function_t@__gthrw_pthread_cancel@int (*)( ::pthread_t )int (*)( ::pthread_t )
 ~@free_function_t@clearenv@int (*)(  )int (*)(  )
 ~@free_function_t@__gthrw_pthread_setspecific@int (*)( ::pthread_key_t,void const * )int (*)( ::pthread_key_t,void const * )
+~@free_function_t@xdrfile_write_int@int (*)( int *,int,::XDRFILE * )int (*)( int *,int,::XDRFILE * )
 ~@free_function_t@__cbrt@double (*)( double )double (*)( double )
 ~@free_function_t@wcwidth@int (*)( wchar_t )int (*)( wchar_t )
+~@free_function_t@__builtin_csin@complex double (*)( complex double )complex double (*)( complex double )
 ~@free_function_t@__builtin_sin@double (*)( double )double (*)( double )
 ~@free_function_t@__throw_invalid_argument@void (*)( char const * )void (*)( char const * )
 ~@free_function_t@getusershell@char * (*)(  )char * (*)(  )
@@ -8335,6 +8387,7 @@
 ~@free_function_t@flush@::std::basic_ostream< char, std::char_traits< char > > & (*)( ::std::basic_ostream< char, std::char_traits< char > > & )::std::basic_ostream<char,std::char_traits<char> > & (*)( ::std::basic_ostream<char,std::char_traits<char> > & )
 ~@free_function_t@__builtin_isfinite@bool (*)( ... )bool (*)( ... )
 ~@free_function_t@__builtin_sinh@double (*)( double )double (*)( double )
+~@free_function_t@xdrfile_write_ushort@int (*)( short unsigned int *,int,::XDRFILE * )int (*)( short unsigned int *,int,::XDRFILE * )
 ~@free_function_t@ttyname_r@int (*)( int,char *,::size_t )int (*)( int,char *,::size_t )
 ~@free_function_t@getpagesize@int (*)(  )int (*)(  )
 ~@free_function_t@pthread_rwlock_trywrlock@int (*)( ::pthread_rwlock_t * )int (*)( ::pthread_rwlock_t * )
@@ -8392,7 +8445,6 @@
 ~@free_function_t@__builtin_ccoshf@complex float (*)( complex float )complex float (*)( complex float )
 ~@free_function_t@__gthrw_pthread_mutex_lock@int (*)( ::pthread_mutex_t * )int (*)( ::pthread_mutex_t * )
 ~@free_function_t@getegid@::__gid_t (*)(  )::__gid_t (*)(  )
-~@free_function_t@gets@char * (*)( char * )char * (*)( char * )
 ~@free_function_t@strtoul_l@long unsigned int (*)( __restrict__ char const *,__restrict__ char * *,int,::__locale_t )long unsigned int (*)( __restrict__ char const *,__restrict__ char * *,int,::__locale_t )
 ~@free_function_t@time@::time_t (*)( ::time_t * )::time_t (*)( ::time_t * )
 ~@free_function_t@__throw_out_of_range@void (*)( char const * )void (*)( char const * )
@@ -8411,9 +8463,10 @@
 ~@free_function_t@sched_getaffinity@int (*)( ::__pid_t,::size_t,::cpu_set_t * )int (*)( ::__pid_t,::size_t,::cpu_set_t * )
 ~@free_function_t@sched_setparam@int (*)( ::__pid_t,::sched_param const * )int (*)( ::__pid_t,::sched_param const * )
 ~@free_function_t@isspace@int (*)( int )int (*)( int )
+~@free_function_t@write_xtc@int (*)( ::XDRFILE *,int,int,float,float[3] *,::rvec *,float )int (*)( ::XDRFILE *,int,int,float,float[3] *,::rvec *,float )
 ~@free_function_t@pthread_attr_getaffinity_np@int (*)( ::pthread_attr_t const *,::size_t,::cpu_set_t * )int (*)( ::pthread_attr_t const *,::size_t,::cpu_set_t * )
 ~@free_function_t@seteuid@int (*)( ::__uid_t )int (*)( ::__uid_t )
-~@free_function_t@sched_setaffinity@int (*)( ::__pid_t,::size_t,::cpu_set_t const * )int (*)( ::__pid_t,::size_t,::cpu_set_t const * )
+~@free_function_t@__builtin_ccosl@complex long double (*)( complex long double )complex long double (*)( complex long double )
 ~@free_function_t@__builtin_ccosh@complex double (*)( complex double )complex double (*)( complex double )
 ~@free_function_t@__builtin_ccosf@complex float (*)( complex float )complex float (*)( complex float )
 ~@free_function_t@iswspace@int (*)( ::wint_t )int (*)( ::wint_t )
@@ -8435,6 +8488,7 @@
 ~@free_function_t@__nan@double (*)( char const * )double (*)( char const * )
 ~@free_function_t@getchar_unlocked@int (*)(  )int (*)(  )
 ~@free_function_t@towupper_l@::wint_t (*)( ::wint_t,::__locale_t )::wint_t (*)( ::wint_t,::__locale_t )
+~@free_function_t@xdrfile_compress_coord_double@int (*)( double *,int,double,::XDRFILE * )int (*)( double *,int,double,::XDRFILE * )
 ~@free_function_t@__throw_runtime_error@void (*)( char const * )void (*)( char const * )
 ~@free_function_t@pthread_attr_setdetachstate@int (*)( ::pthread_attr_t *,int )int (*)( ::pthread_attr_t *,int )
 ~@free_function_t@significandl@long double (*)( long double )long double (*)( long double )
@@ -8494,6 +8548,7 @@
 ~@free_function_t@pthread_attr_setschedpolicy@int (*)( ::pthread_attr_t *,int )int (*)( ::pthread_attr_t *,int )
 ~@free_function_t@wctob@int (*)( ::wint_t )int (*)( ::wint_t )
 ~@free_function_t@setpgrp@int (*)(  )int (*)(  )
+~@free_function_t@xdrfile_compress_coord_float@int (*)( float *,int,float,::XDRFILE * )int (*)( float *,int,float,::XDRFILE * )
 ~@free_function_t@roundl@long double (*)( long double )long double (*)( long double )
 ~@free_function_t@mbrlen@::size_t (*)( __restrict__ char const *,::size_t,__restrict__ ::mbstate_t * )::size_t (*)( __restrict__ char const *,::size_t,__restrict__ ::mbstate_t * )
 ~@free_function_t@wcsnrtombs@::size_t (*)( __restrict__ char *,__restrict__ wchar_t const * *,::size_t,::size_t,__restrict__ ::mbstate_t * )::size_t (*)( __restrict__ char *,__restrict__ wchar_t const * *,::size_t,::size_t,__restrict__ ::mbstate_t * )
@@ -8506,7 +8561,8 @@
 ~@free_function_t@isxdigit_l@int (*)( int,::__locale_t )int (*)( int,::__locale_t )
 ~@free_function_t@__builtin_frame_address@void * (*)( unsigned int )void * (*)( unsigned int )
 ~@free_function_t@setreuid@int (*)( ::__uid_t,::__uid_t )int (*)( ::__uid_t,::__uid_t )
-~@free_function_t@seed48@short unsigned int * (*)( short unsigned int * )short unsigned int * (*)( short unsigned int * )
+~@free_function_t@getdelim@::__ssize_t (*)( __restrict__ char * *,__restrict__ ::size_t *,int,__restrict__ ::FILE * )::__ssize_t (*)( __restrict__ char * *,__restrict__ ::size_t *,int,__restrict__ ::FILE * )
+~@free_function_t@xdrfile_write_char@int (*)( char *,int,::XDRFILE * )int (*)( char *,int,::XDRFILE * )
 ~@free_function_t@__coshf@float (*)( float )float (*)( float )
 ~@free_function_t@uncaught_exception@bool (*)(  )bool (*)(  )
 ~@free_function_t@__coshl@long double (*)( long double )long double (*)( long double )
@@ -8547,9 +8603,11 @@
 ~@free_function_t@fma@double (*)( double,double,double )double (*)( double,double,double )
 ~@free_function_t@__significandl@long double (*)( long double )long double (*)( long double )
 ~@free_function_t@confstr@::size_t (*)( int,char *,::size_t )::size_t (*)( int,char *,::size_t )
-~@free_function_t@wctrans_l@::wctrans_t (*)( char const *,::__locale_t )::wctrans_t (*)( char const *,::__locale_t )
+~@free_function_t@j0@double (*)( double )double (*)( double )
 ~@free_function_t@__throw_length_error@void (*)( char const * )void (*)( char const * )
+~@free_function_t@xdrfile_write_opaque@int (*)( char *,int,::XDRFILE * )int (*)( char *,int,::XDRFILE * )
 ~@free_function_t@funlockfile@void (*)( ::FILE * )void (*)( ::FILE * )
+~@free_function_t@xdrfile_read_uchar@int (*)( unsigned char *,int,::XDRFILE * )int (*)( unsigned char *,int,::XDRFILE * )
 ~@free_function_t@copy@::std::_Bit_iterator (*)( ::std::_Bit_const_iterator,::std::_Bit_const_iterator,::std::_Bit_iterator )::std::_Bit_iterator (*)( ::std::_Bit_const_iterator,::std::_Bit_const_iterator,::std::_Bit_iterator )
 ~@free_function_t@copy@::std::_Bit_type * (*)( ::std::_Bit_type *,::std::_Bit_type *,::std::_Bit_type * )::std::_Bit_type * (*)( ::std::_Bit_type *,::std::_Bit_type *,::std::_Bit_type * )
 ~@free_function_t@iswlower_l@int (*)( ::wint_t,::__locale_t )int (*)( ::wint_t,::__locale_t )
@@ -8603,7 +8661,7 @@
 ~@free_function_t@finitef@int (*)( float )int (*)( float )
 ~@free_function_t@__gthrw_pthread_cond_broadcast@int (*)( ::pthread_cond_t * )int (*)( ::pthread_cond_t * )
 ~@free_function_t@__log2f@float (*)( float )float (*)( float )
-~@free_function_t@j0@double (*)( double )double (*)( double )
+~@free_function_t@wctrans_l@::wctrans_t (*)( char const *,::__locale_t )::wctrans_t (*)( char const *,::__locale_t )
 ~@free_function_t@j1@double (*)( double )double (*)( double )
 ~@free_function_t@qgcvt@char * (*)( long double,int,char * )char * (*)( long double,int,char * )
 ~@free_function_t@__gthrw_pthread_getspecific@void * (*)( ::pthread_key_t )void * (*)( ::pthread_key_t )
@@ -8634,6 +8692,7 @@
 ~@free_function_t@fcvt_r@int (*)( double,int,__restrict__ int *,__restrict__ int *,__restrict__ char *,::size_t )int (*)( double,int,__restrict__ int *,__restrict__ int *,__restrict__ char *,::size_t )
 ~@free_function_t@__builtin_floorf@float (*)( float )float (*)( float )
 ~@free_function_t@__nanl@long double (*)( char const * )long double (*)( char const * )
+~@free_function_t@xdrfile_write_uchar@int (*)( unsigned char *,int,::XDRFILE * )int (*)( unsigned char *,int,::XDRFILE * )
 ~@free_function_t@__builtin_floorl@long double (*)( long double )long double (*)( long double )
 ~@free_function_t@wcstoul_l@long unsigned int (*)( __restrict__ wchar_t const *,__restrict__ wchar_t * *,int,::__locale_t )long unsigned int (*)( __restrict__ wchar_t const *,__restrict__ wchar_t * *,int,::__locale_t )
 ~@free_function_t@__nanf@float (*)( char const * )float (*)( char const * )
@@ -8684,11 +8743,13 @@
 ~@free_function_t@fgetc@int (*)( ::FILE * )int (*)( ::FILE * )
 ~@free_function_t@uppercase@::std::ios_base & (*)( ::std::ios_base & )::std::ios_base & (*)( ::std::ios_base & )
 ~@free_function_t@tanhf@float (*)( float )float (*)( float )
+~@free_function_t@xdrfile_write_string@int (*)( char *,::XDRFILE * )int (*)( char *,::XDRFILE * )
 ~@free_function_t@getresuid@int (*)( ::__uid_t *,::__uid_t *,::__uid_t * )int (*)( ::__uid_t *,::__uid_t *,::__uid_t * )
 ~@free_function_t@__gthread_recursive_mutex_lock@int (*)( ::__gthread_recursive_mutex_t * )int (*)( ::__gthread_recursive_mutex_t * )
 ~@free_function_t@fgets@char * (*)( __restrict__ char *,int,__restrict__ ::FILE * )char * (*)( __restrict__ char *,int,__restrict__ ::FILE * )
 ~@free_function_t@exp2f@float (*)( float )float (*)( float )
 ~@free_function_t@__gthrw_pthread_key_create@int (*)( ::pthread_key_t *,void (*)( void * ) * )int (*)( ::pthread_key_t *,void (*)( void * ) * )
+~@free_function_t@sched_setaffinity@int (*)( ::__pid_t,::size_t,::cpu_set_t const * )int (*)( ::__pid_t,::size_t,::cpu_set_t const * )
 ~@free_function_t@exp2l@long double (*)( long double )long double (*)( long double )
 ~@free_function_t@ftell@long int (*)( ::FILE * )long int (*)( ::FILE * )
 ~@free_function_t@exit@void (*)( int )void (*)( int )
@@ -8741,7 +8802,7 @@
 ~@free_function_t@pthread_mutexattr_settype@int (*)( ::pthread_mutexattr_t *,int )int (*)( ::pthread_mutexattr_t *,int )
 ~@free_function_t@pthread_cond_destroy@int (*)( ::pthread_cond_t * )int (*)( ::pthread_cond_t * )
 ~@free_function_t@ispunct@int (*)( int )int (*)( int )
-~@free_function_t@pthread_attr_setaffinity_np@int (*)( ::pthread_attr_t *,::size_t,::cpu_set_t const * )int (*)( ::pthread_attr_t *,::size_t,::cpu_set_t const * )
+~@free_function_t@wcstol_l@long int (*)( __restrict__ wchar_t const *,__restrict__ wchar_t * *,int,::__locale_t )long int (*)( __restrict__ wchar_t const *,__restrict__ wchar_t * *,int,::__locale_t )
 ~@free_function_t@__expl@long double (*)( long double )long double (*)( long double )
 ~@free_function_t@fwscanf@int (*)( __restrict__ ::__FILE *,__restrict__ wchar_t const *,... )int (*)( __restrict__ ::__FILE *,__restrict__ wchar_t const *,... )
 ~@free_function_t@__expf@float (*)( float )float (*)( float )
@@ -8758,9 +8819,10 @@
 ~@free_function_t@difftime@double (*)( ::time_t,::time_t )double (*)( ::time_t,::time_t )
 ~@free_function_t@__builtin_fmodf@float (*)( float,float )float (*)( float,float )
 ~@free_function_t@chown@int (*)( char const *,::__uid_t,::__gid_t )int (*)( char const *,::__uid_t,::__gid_t )
+~@free_function_t@xdrfile_write_short@int (*)( short int *,int,::XDRFILE * )int (*)( short int *,int,::XDRFILE * )
 ~@free_function_t@__builtin_fmodl@long double (*)( long double,long double )long double (*)( long double,long double )
 ~@free_function_t@__exp2@double (*)( double )double (*)( double )
-~@free_function_t@wcsftime@::size_t (*)( __restrict__ wchar_t *,::size_t,__restrict__ wchar_t const *,__restrict__ ::tm const * )::size_t (*)( __restrict__ wchar_t *,::size_t,__restrict__ wchar_t const *,__restrict__ ::tm const * )
+~@free_function_t@xdrfile_read_string@int (*)( char *,int,::XDRFILE * )int (*)( char *,int,::XDRFILE * )
 ~@free_function_t@wctomb@int (*)( char *,wchar_t )int (*)( char *,wchar_t )
 ~@free_function_t@acosl@long double (*)( long double )long double (*)( long double )
 ~@free_function_t@__cxa_end_catch@void (*)(  )void (*)(  )
@@ -8770,11 +8832,13 @@
 ~@free_function_t@strptime@char * (*)( __restrict__ char const *,__restrict__ char const *,::tm * )char * (*)( __restrict__ char const *,__restrict__ char const *,::tm * )
 ~@free_function_t@qecvt@char * (*)( long double,int,__restrict__ int *,__restrict__ int * )char * (*)( long double,int,__restrict__ int *,__restrict__ int * )
 ~@free_function_t@mktime@::time_t (*)( ::tm * )::time_t (*)( ::tm * )
+~@free_function_t@xdrfile_write_double@int (*)( double *,int,::XDRFILE * )int (*)( double *,int,::XDRFILE * )
 ~@free_function_t@__builtin_csinh@complex double (*)( complex double )complex double (*)( complex double )
 ~@free_function_t@__builtin_csinl@complex long double (*)( complex long double )complex long double (*)( complex long double )
 ~@free_function_t@__builtin_csinf@complex float (*)( complex float )complex float (*)( complex float )
 ~@free_function_t@__ceil@double (*)( double )double (*)( double )
 ~@free_function_t@vswprintf@int (*)( __restrict__ wchar_t *,::size_t,__restrict__ wchar_t const *,::__va_list_tag * )int (*)( __restrict__ wchar_t *,::size_t,__restrict__ wchar_t const *,::__va_list_tag * )
+~@free_function_t@xdrfile_write_uint@int (*)( unsigned int *,int,::XDRFILE * )int (*)( unsigned int *,int,::XDRFILE * )
 ~@free_function_t@__sqrt@double (*)( double )double (*)( double )
 ~@free_function_t@__sched_cpucount@int (*)( ::size_t,::cpu_set_t const * )int (*)( ::size_t,::cpu_set_t const * )
 ~@free_function_t@tcsetpgrp@int (*)( int,::__pid_t )int (*)( int,::__pid_t )
@@ -8791,7 +8855,7 @@
 ~@free_function_t@pthread_spin_destroy@int (*)( ::pthread_spinlock_t * )int (*)( ::pthread_spinlock_t * )
 ~@free_function_t@y1f@float (*)( float )float (*)( float )
 ~@free_function_t@nanf@float (*)( char const * )float (*)( char const * )
-~@free_function_t@__expm1l@long double (*)( long double )long double (*)( long double )
+~@free_function_t@xdrfile_open@::XDRFILE * (*)( char const *,char const * )::XDRFILE * (*)( char const *,char const * )
 ~@free_function_t@llroundl@long long int (*)( long double )long long int (*)( long double )
 ~@free_function_t@__expm1f@float (*)( float )float (*)( float )
 ~@free_function_t@wcschrnul@wchar_t * (*)( wchar_t const *,wchar_t )wchar_t * (*)( wchar_t const *,wchar_t )
@@ -8824,9 +8888,11 @@
 ~@free_function_t@fopencookie@::FILE * (*)( __restrict__ void *,__restrict__ char const *,::_IO_cookie_io_functions_t )::FILE * (*)( __restrict__ void *,__restrict__ char const *,::_IO_cookie_io_functions_t )
 ~@free_function_t@ftruncate@int (*)( int,::__off_t )int (*)( int,::__off_t )
 ~@free_function_t@dec@::std::ios_base & (*)( ::std::ios_base & )::std::ios_base & (*)( ::std::ios_base & )
+~@free_function_t@xdrfile_decompress_coord_double@int (*)( double *,int *,double *,::XDRFILE * )int (*)( double *,int *,double *,::XDRFILE * )
 ~@free_function_t@pthread_mutex_getprioceiling@int (*)( __restrict__ ::pthread_mutex_t const *,__restrict__ int * )int (*)( __restrict__ ::pthread_mutex_t const *,__restrict__ int * )
 ~@free_function_t@pthread_getspecific@void * (*)( ::pthread_key_t )void * (*)( ::pthread_key_t )
 ~@free_function_t@atanf@float (*)( float )float (*)( float )
+~@free_function_t@xdrfile_read_opaque@int (*)( char *,int,::XDRFILE * )int (*)( char *,int,::XDRFILE * )
 ~@free_function_t@atanh@double (*)( double )double (*)( double )
 ~@free_function_t@atanl@long double (*)( long double )long double (*)( long double )
 ~@free_function_t@putc_unlocked@int (*)( int,::FILE * )int (*)( int,::FILE * )
@@ -8863,7 +8929,7 @@
 ~@free_function_t@ldexp@long double (*)( long double,int )long double (*)( long double,int )
 ~@free_function_t@ldexp@float (*)( float,int )float (*)( float,int )
 ~@free_function_t@ldexp@double (*)( double,int )double (*)( double,int )
-~@free_function_t@finite@int (*)( double )int (*)( double )
+~@free_function_t@gets@char * (*)( char * )char * (*)( char * )
 ~@free_function_t@ynf@float (*)( int,float )float (*)( int,float )
 ~@free_function_t@__gthrw_pthread_mutex_unlock@int (*)( ::pthread_mutex_t * )int (*)( ::pthread_mutex_t * )
 ~@free_function_t@fmod@long double (*)( long double,long double )long double (*)( long double,long double )
@@ -8913,6 +8979,12 @@
 ~@free_function_t@gmtime_r@::tm * (*)( __restrict__ ::time_t const *,__restrict__ ::tm * )::tm * (*)( __restrict__ ::time_t const *,__restrict__ ::tm * )
 ~@free_function_t@vsnprintf@int (*)( __restrict__ char *,::size_t,__restrict__ char const *,::__va_list_tag * )int (*)( __restrict__ char *,::size_t,__restrict__ char const *,::__va_list_tag * )
 ~@free_function_t@_IO_peekc_locked@int (*)( ::_IO_FILE * )int (*)( ::_IO_FILE * )
+~@free_function_t@abs@long int (*)( long int )long int (*)( long int )
+~@free_function_t@abs@long double (*)( long double )long double (*)( long double )
+~@free_function_t@abs@float (*)( float )float (*)( float )
+~@free_function_t@abs@double (*)( double )double (*)( double )
+~@free_function_t@abs@long long int (*)( long long int )long long int (*)( long long int )
+~@free_function_t@abs@int (*)( int )int (*)( int )
 ~@free_function_t@pthread_attr_getstackaddr@int (*)( __restrict__ ::pthread_attr_t const *,__restrict__ void * * )int (*)( __restrict__ ::pthread_attr_t const *,__restrict__ void * * )
 ~@free_function_t@pselect@int (*)( int,__restrict__ ::fd_set *,__restrict__ ::fd_set *,__restrict__ ::fd_set *,__restrict__ ::timespec const *,__restrict__ ::__sigset_t const * )int (*)( int,__restrict__ ::fd_set *,__restrict__ ::fd_set *,__restrict__ ::fd_set *,__restrict__ ::timespec const *,__restrict__ ::__sigset_t const * )
 ~@free_function_t@__builtin_ctan@complex double (*)( complex double )complex double (*)( complex double )
@@ -8951,6 +9023,7 @@
 ~@free_function_t@iswxdigit@int (*)( ::wint_t )int (*)( ::wint_t )
 ~@free_function_t@wcsncmp@int (*)( wchar_t const *,wchar_t const *,::size_t )int (*)( wchar_t const *,wchar_t const *,::size_t )
 ~@free_function_t@strtod_l@double (*)( __restrict__ char const *,__restrict__ char * *,::__locale_t )double (*)( __restrict__ char const *,__restrict__ char * *,::__locale_t )
+~@free_function_t@xdrfile_read_double@int (*)( double *,int,::XDRFILE * )int (*)( double *,int,::XDRFILE * )
 ~@free_function_t@readlinkat@::ssize_t (*)( int,__restrict__ char const *,__restrict__ char *,::size_t )::ssize_t (*)( int,__restrict__ char const *,__restrict__ char *,::size_t )
 ~@free_function_t@nouppercase@::std::ios_base & (*)( ::std::ios_base & )::std::ios_base & (*)( ::std::ios_base & )
 ~@free_function_t@pthread_getschedparam@int (*)( ::pthread_t,__restrict__ int *,__restrict__ ::sched_param * )int (*)( ::pthread_t,__restrict__ int *,__restrict__ ::sched_param * )
@@ -9034,7 +9107,7 @@
 ~@free_function_t@cbrt@double (*)( double )double (*)( double )
 ~@free_function_t@strptime_l@char * (*)( __restrict__ char const *,__restrict__ char const *,::tm *,::__locale_t )char * (*)( __restrict__ char const *,__restrict__ char const *,::tm *,::__locale_t )
 ~@free_function_t@pthread_rwlockattr_init@int (*)( ::pthread_rwlockattr_t * )int (*)( ::pthread_rwlockattr_t * )
-~@free_function_t@__builtin_csin@complex double (*)( complex double )complex double (*)( complex double )
+~@free_function_t@xdrfile_read_uint@int (*)( unsigned int *,int,::XDRFILE * )int (*)( unsigned int *,int,::XDRFILE * )
 ~@free_function_t@exp10l@long double (*)( long double )long double (*)( long double )
 ~@free_function_t@__exchange_and_add_dispatch@::_Atomic_word (*)( ::_Atomic_word *,int )::_Atomic_word (*)( ::_Atomic_word *,int )
 ~@free_function_t@exp10f@float (*)( float )float (*)( float )
@@ -9046,6 +9119,7 @@
 ~@free_function_t@fgetwc_unlocked@::wint_t (*)( ::__FILE * )::wint_t (*)( ::__FILE * )
 ~@free_function_t@mblen@int (*)( char const *,::size_t )int (*)( char const *,::size_t )
 ~@free_function_t@setegid@int (*)( ::__gid_t )int (*)( ::__gid_t )
+~@free_function_t@write_trr@int (*)( ::XDRFILE *,int,int,float,float,float[3] *,::rvec *,::rvec *,::rvec * )int (*)( ::XDRFILE *,int,int,float,float,float[3] *,::rvec *,::rvec *,::rvec * )
 ~@free_function_t@__builtin_clogf@complex float (*)( complex float )complex float (*)( complex float )
 ~@free_function_t@_IO_vfprintf@int (*)( __restrict__ ::_IO_FILE *,__restrict__ char const *,::__va_list_tag * )int (*)( __restrict__ ::_IO_FILE *,__restrict__ char const *,::__va_list_tag * )
 ~@free_function_t@__builtin_clogl@complex long double (*)( complex long double )complex long double (*)( complex long double )
@@ -9063,6 +9137,7 @@
 ~@free_function_t@__y1f@float (*)( float )float (*)( float )
 ~@free_function_t@__y1l@long double (*)( long double )long double (*)( long double )
 ~@free_function_t@timer_gettime@int (*)( ::timer_t,::itimerspec * )int (*)( ::timer_t,::itimerspec * )
+~@free_function_t@read_trr_natoms@int (*)( char *,int * )int (*)( char *,int * )
 ~@free_function_t@__gthrw_pthread_mutexattr_init@int (*)( ::pthread_mutexattr_t * )int (*)( ::pthread_mutexattr_t * )
 ~@free_function_t@dremf@float (*)( float,float )float (*)( float,float )
 ~@free_function_t@bsearch@void * (*)( void const *,void const *,::size_t,::size_t,::__compar_fn_t )void * (*)( void const *,void const *,::size_t,::size_t,::__compar_fn_t )
@@ -9091,6 +9166,7 @@
 ~@free_function_t@fread@::size_t (*)( __restrict__ void *,::size_t,::size_t,__restrict__ ::FILE * )::size_t (*)( __restrict__ void *,::size_t,::size_t,__restrict__ ::FILE * )
 ~@free_function_t@pread64@::ssize_t (*)( int,void *,::size_t,::__off64_t )::ssize_t (*)( int,void *,::size_t,::__off64_t )
 ~@free_function_t@isdigit@int (*)( int )int (*)( int )
+~@free_function_t@read_xtc@int (*)( ::XDRFILE *,int,int *,float *,float[3] *,::rvec *,float * )int (*)( ::XDRFILE *,int,int *,float *,float[3] *,::rvec *,float * )
 ~@free_function_t@crypt@char * (*)( char const *,char const * )char * (*)( char const *,char const * )
 ~@free_function_t@nan@double (*)( char const * )double (*)( char const * )
 ~@free_function_t@setenv@int (*)( char const *,char const *,int )int (*)( char const *,char const *,int )
@@ -9169,6 +9245,8 @@
 ~@free_function_t@__gthrw_pthread_mutex_trylock@int (*)( ::pthread_mutex_t * )int (*)( ::pthread_mutex_t * )
 ~@free_function_t@wprintf@int (*)( __restrict__ wchar_t const *,... )int (*)( __restrict__ wchar_t const *,... )
 ~@free_function_t@fprintf@int (*)( __restrict__ ::FILE *,__restrict__ char const *,... )int (*)( __restrict__ ::FILE *,__restrict__ char const *,... )
+~@free_function_t@xdrfile_read_short@int (*)( short int *,int,::XDRFILE * )int (*)( short int *,int,::XDRFILE * )
+~@free_function_t@xdrfile_close@int (*)( ::XDRFILE * )int (*)( ::XDRFILE * )
 ~@free_function_t@tan@long double (*)( long double )long double (*)( long double )
 ~@free_function_t@tan@float (*)( float )float (*)( float )
 ~@free_function_t@tan@double (*)( double )double (*)( double )
@@ -9243,6 +9321,7 @@
 ~@free_function_t@__erff@float (*)( float )float (*)( float )
 ~@free_function_t@__builtin_clog@complex double (*)( complex double )complex double (*)( complex double )
 ~@free_function_t@__erfl@long double (*)( long double )long double (*)( long double )
+~@free_function_t@xdrfile_read_float@int (*)( float *,int,::XDRFILE * )int (*)( float *,int,::XDRFILE * )
 ~@free_function_t@fscanf@int (*)( __restrict__ ::FILE *,__restrict__ char const *,... )int (*)( __restrict__ ::FILE *,__restrict__ char const *,... )
 ~@free_function_t@__builtin_atan@double (*)( double )double (*)( double )
 ~@free_function_t@fexecve@int (*)( int,char * const *,char * const * )int (*)( int,char * const *,char * const * )
@@ -9273,6 +9352,8 @@
 ~@free_function_t@wcsstr@wchar_t * (*)( wchar_t const *,wchar_t const * )wchar_t * (*)( wchar_t const *,wchar_t const * )
 ~@free_function_t@__acosf@float (*)( float )float (*)( float )
 ~@free_function_t@terminate@void (*)(  )void (*)(  )
+~@free_function_t@read_trr@int (*)( ::XDRFILE *,int,int *,float *,float *,float[3] *,::rvec *,::rvec *,::rvec * )int (*)( ::XDRFILE *,int,int *,float *,float *,float[3] *,::rvec *,::rvec *,::rvec * )
+~@free_function_t@xdrfile_write_float@int (*)( float *,int,::XDRFILE * )int (*)( float *,int,::XDRFILE * )
 ~@free_function_t@strtol@long int (*)( __restrict__ char const *,__restrict__ char * *,int )long int (*)( __restrict__ char const *,__restrict__ char * *,int )
 ~@free_function_t@pause@int (*)(  )int (*)(  )
 ~@free_function_t@strtod@double (*)( __restrict__ char const *,__restrict__ char * * )double (*)( __restrict__ char const *,__restrict__ char * * )
@@ -9319,6 +9400,7 @@
 ~@free_function_t@tmpfile64@::FILE * (*)(  )::FILE * (*)(  )
 ~@free_function_t@getsubopt@int (*)( __restrict__ char * *,__restrict__ char * const *,__restrict__ char * * )int (*)( __restrict__ char * *,__restrict__ char * const *,__restrict__ char * * )
 ~@free_function_t@nanosleep@int (*)( ::timespec const *,::timespec * )int (*)( ::timespec const *,::timespec * )
+~@free_function_t@xdrfile_decompress_coord_float@int (*)( float *,int *,float *,::XDRFILE * )int (*)( float *,int *,float *,::XDRFILE * )
 ~@free_function_t@__sched_cpufree@void (*)( ::cpu_set_t * )void (*)( ::cpu_set_t * )
 ~@free_function_t@drand48@double (*)(  )double (*)(  )
 ~@free_function_t@truncl@long double (*)( long double )long double (*)( long double )
@@ -9326,6 +9408,7 @@
 ~@free_function_t@truncf@float (*)( float )float (*)( float )
 ~@free_function_t@random_r@int (*)( __restrict__ ::random_data *,__restrict__ ::int32_t * )int (*)( __restrict__ ::random_data *,__restrict__ ::int32_t * )
 ~@free_function_t@pthread_attr_getschedpolicy@int (*)( __restrict__ ::pthread_attr_t const *,__restrict__ int * )int (*)( __restrict__ ::pthread_attr_t const *,__restrict__ int * )
+~@free_function_t@xdrfile_read_char@int (*)( char *,int,::XDRFILE * )int (*)( char *,int,::XDRFILE * )
 ~@free_function_t@vsprintf@int (*)( __restrict__ char *,__restrict__ char const *,::__va_list_tag * )int (*)( __restrict__ char *,__restrict__ char const *,::__va_list_tag * )
 ~@free_function_t@rename@int (*)( char const *,char const * )int (*)( char const *,char const * )
 ~@free_function_t@log10l@long double (*)( long double )long double (*)( long double )
@@ -9345,7 +9428,7 @@
 ~@free_function_t@sqrt@float (*)( float )float (*)( float )
 ~@free_function_t@sqrt@double (*)( double )double (*)( double )
 ~@free_function_t@pthread_mutex_timedlock@int (*)( __restrict__ ::pthread_mutex_t *,__restrict__ ::timespec const * )int (*)( __restrict__ ::pthread_mutex_t *,__restrict__ ::timespec const * )
-~@free_function_t@wcstol_l@long int (*)( __restrict__ wchar_t const *,__restrict__ wchar_t * *,int,::__locale_t )long int (*)( __restrict__ wchar_t const *,__restrict__ wchar_t * *,int,::__locale_t )
+~@free_function_t@finite@int (*)( double )int (*)( double )
 ~@free_function_t@setstate@char * (*)( char * )char * (*)( char * )
 ~@free_function_t@__gthread_once@int (*)( ::__gthread_once_t *,void (*)(  ) * )int (*)( ::__gthread_once_t *,void (*)(  ) * )
 ~@free_function_t@pthread_condattr_setclock@int (*)( ::pthread_condattr_t *,::__clockid_t )int (*)( ::pthread_condattr_t *,::__clockid_t )
@@ -9382,11 +9465,12 @@
 ~@free_function_t@__y0@double (*)( double )double (*)( double )
 ~@free_function_t@pclose@int (*)( ::FILE * )int (*)( ::FILE * )
 ~@free_function_t@llabs@long long int (*)( long long int )long long int (*)( long long int )
-~@free_function_t@getdelim@::__ssize_t (*)( __restrict__ char * *,__restrict__ ::size_t *,int,__restrict__ ::FILE * )::__ssize_t (*)( __restrict__ char * *,__restrict__ ::size_t *,int,__restrict__ ::FILE * )
+~@free_function_t@seed48@short unsigned int * (*)( short unsigned int * )short unsigned int * (*)( short unsigned int * )
 ~@free_function_t@wcstod_l@double (*)( __restrict__ wchar_t const *,__restrict__ wchar_t * *,::__locale_t )double (*)( __restrict__ wchar_t const *,__restrict__ wchar_t * *,::__locale_t )
 ~@free_function_t@__throw_range_error@void (*)( char const * )void (*)( char const * )
 ~@free_function_t@__builtin_modff@float (*)( float,float * )float (*)( float,float * )
 ~@free_function_t@fgetc_unlocked@int (*)( ::FILE * )int (*)( ::FILE * )
+~@free_function_t@xdrfile_read_ushort@int (*)( short unsigned int *,int,::XDRFILE * )int (*)( short unsigned int *,int,::XDRFILE * )
 ~@free_function_t@isxdigit@int (*)( int )int (*)( int )
 ~@free_function_t@__builtin_cabsl@long double (*)( complex long double )long double (*)( complex long double )
 ~@free_function_t@asctime@char * (*)( ::tm const * )char * (*)( ::tm const * )

@@ -8,6 +8,7 @@
 #include <faunus/io.h>
 #include <faunus/container.h>
 #include <faunus/potentials/pot_coulomb.h>
+#include <faunus/titrate.h>
 #include <faunus/moves/base.h>
 #include <faunus/moves/translational.h>
 #include <faunus/moves/charge.h>

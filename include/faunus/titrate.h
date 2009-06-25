@@ -46,8 +46,8 @@ namespace Faunus {
       void showsites(vector<particle> &);       //!< Print average charges of titrateable sites
       double applycharges(vector<particle> &);  //!< Copy average charges to particles in the particle vector
       double avgcharge(vector<particle> &, unsigned int);//!< Returns average charge of a particle
-      bool savestate(string);                   //!< Save titration state of the system
-      bool loadstate(string);                   //!< Load titration state of the system
+      //bool savestate(string);                   //!< Save titration state of the system
+      //bool loadstate(string);                   //!< Load titration state of the system
       void infos();
   };
 

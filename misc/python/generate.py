@@ -130,6 +130,7 @@ header_files_list = ['faunus/faunus.h',
                      'faunus/io.h',
                      'faunus/container.h',
                      'faunus/potentials/pot_coulomb.h',
+                     'faunus/titrate.h',
                      'faunus/moves/base.h',
                      'faunus/moves/translational.h',
                      'faunus/moves/charge.h',
@@ -171,6 +172,7 @@ classes = ['point',                             # point.h
            'energybase',                        # energy.h
            'markovmove',                        # moves
            'saltmove',
+           'titrate',
            'chargereg',
            'group',                             # group.h
            'macromolecule',

@@ -38,7 +38,7 @@ struct chargereg_wrapper : Faunus::chargereg, bp::wrapper< Faunus::chargereg > {
 
 void register_chargereg_class(){
 
-    bp::class_< chargereg_wrapper, bp::bases< Faunus::markovmove > >( "chargereg", bp::init< Faunus::ensemble &, Faunus::container &, Faunus::energybase &, Faunus::group &, float >(( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2"), bp::arg("arg3"), bp::arg("arg4") )) )    
+    bp::class_< chargereg_wrapper, bp::bases< Faunus::markovmove, Faunus::titrate > >( "chargereg", bp::init< Faunus::ensemble &, Faunus::container &, Faunus::energybase &, Faunus::group &, float >(( bp::arg("arg0"), bp::arg("arg1"), bp::arg("arg2"), bp::arg("arg3"), bp::arg("arg4") )) )    
         .def( 
             "info"
             , (::std::string ( ::Faunus::chargereg::* )(  ) )(&::Faunus::chargereg::info)

@@ -84,6 +84,8 @@
 
 #include "generated/systemenergy.pypp.hpp"
 
+#include "generated/titrate.pypp.hpp"
+
 #include "generated/vector_less__Faunus_scope_atoms_scope_data__greater_.pypp.hpp"
 
 #include "generated/vector_less__Faunus_scope_group__greater_.pypp.hpp"
@@ -146,6 +148,8 @@ BOOST_PYTHON_MODULE(faunus){
     register_cell_class();
 
     register_markovmove_class();
+
+    register_titrate_class();
 
     register_chargereg_class();
 

@@ -98,6 +98,7 @@ void register_markovmove_class(){
         }
         markovmove_exposer.def_readwrite( "dp", &Faunus::markovmove::dp );
         markovmove_exposer.def_readwrite( "du", &Faunus::markovmove::du );
+        markovmove_exposer.def_readwrite( "name", &Faunus::markovmove::name );
         markovmove_exposer.add_property( "pot"
                     , bp::make_function( (::Faunus::energybase * (*)( ::Faunus::markovmove const & ))(&markovmove_wrapper::get_pot), bp::return_internal_reference< >() )
                     , bp::make_function( (void (*)( ::Faunus::markovmove &,::Faunus::energybase * ))(&markovmove_wrapper::set_pot), bp::with_custodian_and_ward_postcall< 1, 2 >() ) );

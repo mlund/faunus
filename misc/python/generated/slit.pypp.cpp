@@ -34,6 +34,18 @@ struct slit_wrapper : Faunus::slit, bp::wrapper< Faunus::slit > {
         Faunus::slit::boundary( boost::ref(a) );
     }
 
+    virtual double dist( ::Faunus::point const & p1, ::Faunus::point const & p2 ) {
+        if( bp::override func_dist = this->get_override( "dist" ) )
+            return func_dist( boost::ref(p1), boost::ref(p2) );
+        else
+            return this->Faunus::slit::dist( boost::ref(p1), boost::ref(p2) );
+    }
+    
+    
+    double default_dist( ::Faunus::point const & p1, ::Faunus::point const & p2 ) {
+        return Faunus::slit::dist( boost::ref(p1), boost::ref(p2) );
+    }
+
     virtual ::std::string info(  ) {
         if( bp::override func_info = this->get_override( "info" ) )
             return func_info(  );
@@ -44,6 +56,18 @@ struct slit_wrapper : Faunus::slit, bp::wrapper< Faunus::slit > {
     
     ::std::string default_info(  ) {
         return Faunus::slit::info( );
+    }
+
+    virtual double sqdist( ::Faunus::point const & p1, ::Faunus::point const & p2 ) {
+        if( bp::override func_sqdist = this->get_override( "sqdist" ) )
+            return func_sqdist( boost::ref(p1), boost::ref(p2) );
+        else
+            return this->Faunus::slit::sqdist( boost::ref(p1), boost::ref(p2) );
+    }
+    
+    
+    double default_sqdist( ::Faunus::point const & p1, ::Faunus::point const & p2 ) {
+        return Faunus::slit::sqdist( boost::ref(p1), boost::ref(p2) );
     }
 
     virtual bool clash( ::Faunus::particle const & a, ::Faunus::particle const & b ) {
@@ -68,18 +92,6 @@ struct slit_wrapper : Faunus::slit, bp::wrapper< Faunus::slit > {
     
     bool default_collision( ::Faunus::particle const & a ) {
         return Faunus::box::collision( boost::ref(a) );
-    }
-
-    virtual double dist( ::Faunus::point const & a, ::Faunus::point const & b ) {
-        if( bp::override func_dist = this->get_override( "dist" ) )
-            return func_dist( boost::ref(a), boost::ref(b) );
-        else
-            return this->Faunus::box::dist( boost::ref(a), boost::ref(b) );
-    }
-    
-    
-    double default_dist( ::Faunus::point const & a, ::Faunus::point const & b ) {
-        return Faunus::box::dist( boost::ref(a), boost::ref(b) );
     }
 
     virtual ::std::string povray(  ) {
@@ -130,18 +142,6 @@ struct slit_wrapper : Faunus::slit, bp::wrapper< Faunus::slit > {
         Faunus::box::setvolume( arg0 );
     }
 
-    virtual double sqdist( ::Faunus::point const & a, ::Faunus::point const & b ) {
-        if( bp::override func_sqdist = this->get_override( "sqdist" ) )
-            return func_sqdist( boost::ref(a), boost::ref(b) );
-        else
-            return this->Faunus::box::sqdist( boost::ref(a), boost::ref(b) );
-    }
-    
-    
-    double default_sqdist( ::Faunus::point const & a, ::Faunus::point const & b ) {
-        return Faunus::box::sqdist( boost::ref(a), boost::ref(b) );
-    }
-
     virtual ::Faunus::point vdist( ::Faunus::point const & a, ::Faunus::point const & b ) {
         if( bp::override func_vdist = this->get_override( "vdist" ) )
             return func_vdist( boost::ref(a), boost::ref(b) );
@@ -175,6 +175,18 @@ void register_slit_class(){
                 , ( bp::arg("a") ) );
         
         }
+        { //::Faunus::slit::dist
+        
+            typedef double ( ::Faunus::slit::*dist_function_type )( ::Faunus::point const &,::Faunus::point const & ) ;
+            typedef double ( slit_wrapper::*default_dist_function_type )( ::Faunus::point const &,::Faunus::point const & ) ;
+            
+            slit_exposer.def( 
+                "dist"
+                , dist_function_type(&::Faunus::slit::dist)
+                , default_dist_function_type(&slit_wrapper::default_dist)
+                , ( bp::arg("p1"), bp::arg("p2") ) );
+        
+        }
         { //::Faunus::slit::info
         
             typedef ::std::string ( ::Faunus::slit::*info_function_type )(  ) ;
@@ -184,6 +196,18 @@ void register_slit_class(){
                 "info"
                 , info_function_type(&::Faunus::slit::info)
                 , default_info_function_type(&slit_wrapper::default_info) );
+        
+        }
+        { //::Faunus::slit::sqdist
+        
+            typedef double ( ::Faunus::slit::*sqdist_function_type )( ::Faunus::point const &,::Faunus::point const & ) ;
+            typedef double ( slit_wrapper::*default_sqdist_function_type )( ::Faunus::point const &,::Faunus::point const & ) ;
+            
+            slit_exposer.def( 
+                "sqdist"
+                , sqdist_function_type(&::Faunus::slit::sqdist)
+                , default_sqdist_function_type(&slit_wrapper::default_sqdist)
+                , ( bp::arg("p1"), bp::arg("p2") ) );
         
         }
         { //::Faunus::box::clash
@@ -208,18 +232,6 @@ void register_slit_class(){
                 , collision_function_type(&::Faunus::box::collision)
                 , default_collision_function_type(&slit_wrapper::default_collision)
                 , ( bp::arg("a") ) );
-        
-        }
-        { //::Faunus::box::dist
-        
-            typedef double ( ::Faunus::box::*dist_function_type )( ::Faunus::point const &,::Faunus::point const & ) ;
-            typedef double ( slit_wrapper::*default_dist_function_type )( ::Faunus::point const &,::Faunus::point const & ) ;
-            
-            slit_exposer.def( 
-                "dist"
-                , dist_function_type(&::Faunus::box::dist)
-                , default_dist_function_type(&slit_wrapper::default_dist)
-                , ( bp::arg("a"), bp::arg("b") ) );
         
         }
         { //::Faunus::box::povray
@@ -276,18 +288,6 @@ void register_slit_class(){
                 , setvolume_function_type(&::Faunus::box::setvolume)
                 , default_setvolume_function_type(&slit_wrapper::default_setvolume)
                 , ( bp::arg("arg0") ) );
-        
-        }
-        { //::Faunus::box::sqdist
-        
-            typedef double ( ::Faunus::box::*sqdist_function_type )( ::Faunus::point const &,::Faunus::point const & ) ;
-            typedef double ( slit_wrapper::*default_sqdist_function_type )( ::Faunus::point const &,::Faunus::point const & ) ;
-            
-            slit_exposer.def( 
-                "sqdist"
-                , sqdist_function_type(&::Faunus::box::sqdist)
-                , default_sqdist_function_type(&slit_wrapper::default_sqdist)
-                , ( bp::arg("a"), bp::arg("b") ) );
         
         }
         { //::Faunus::box::vdist

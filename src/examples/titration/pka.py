@@ -1,8 +1,13 @@
 #!/usr/bin/env python
+
+import sys
 import faunus
 
 print faunus.faunus_splash(),            # Faunus spam
-inp  = faunus.inputfile("pka.conf")      # read input file
+config = "pka.conf"                      # Default input (parameter) file
+if len(sys.argv) == 2:
+    config = sys.argv[1]                 # ..also try to get it from the command line
+inp  = faunus.inputfile(config)          # read input file
 loop = faunus.mcloop(inp)                # set Markov chain loop lengths
 nvt  = faunus.canonical()                # use the canonical ensemble
 con  = faunus.cell(inp)                  # use a spherical simulation container...
@@ -18,16 +23,16 @@ salt = faunus.salt()                     # Group for salt and counter ions
 salt.add(con, inp)                       #   Insert sodium ions
 aam.load(con, "confout.aam")             # Load old config (if present)
 
-tit = faunus.chargereg(nvt,con,pot,salt,inp.getflt("pH",7.))
+tit = faunus.chargereg(nvt, con, pot, salt, inp.getflt("pH",7.))
 
 sys = faunus.systemenergy(pot.energy(con.p)) # System energy analysis
-print con.info(), tit.info(), pot.info(), con.atom.info(),
+print inp.info(), con.info(), tit.info(), pot.info(),
 
-while(loop.macroCnt()):                  # Markov chain 
-    while (loop.microCnt() ):
-        sys+=sm.move(salt)               # Displace salt particles
+while loop.macroCnt():                   # Markov chain 
+    while loop.microCnt():
+        sys += sm.move(salt)             # Displace salt particles
 
-        sys+=tit.titrateall()            # Titrate protein sites
+        sys += tit.titrateall()          # Titrate protein sites
         prot.charge(con.p)               # Re-calc. protein charge
         prot.dipole(con.p)               # Re-calc. dipole moment
     sys.update(pot.energy(con.p))        # Update system energy

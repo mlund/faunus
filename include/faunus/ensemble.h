@@ -1,5 +1,5 @@
-#ifndef FAU_METROPOLIS_H
-#define FAU_METROPOLIS_H
+#ifndef FAU_SLUMP_H
+#define FAU_SLUMP_H
 
 #include <faunus/common.h>
 #include <faunus/slump.h>

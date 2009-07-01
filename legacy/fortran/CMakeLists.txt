@@ -18,9 +18,9 @@ if (ENABLE_FORTRAN)
     fortran_target(bulk bulk "bulk/bulk.f")
 
     # Add fortran library
-    set(fobj functions/vscoul2pc.f)
+    set(fobj functions/vscoul2pc.f functions/gauss.f)
     set_source_files_properties(${fobj}, PROPERTIES LANGUAGE Fortran)
-    add_library( fortranfunc STATIC EXCLUDE_FROM_ALL ${fobj}) 
+    add_library( fortranfunc SHARED EXCLUDE_FROM_ALL ${fobj}) 
   endif (CMAKE_Fortran_COMPILER_WORKS)
 
 endif (ENABLE_FORTRAN)

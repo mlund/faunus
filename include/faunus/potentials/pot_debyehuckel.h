@@ -40,5 +40,55 @@ namespace Faunus {
         return o.str();
       }
   };
+  /*!
+   * \brief Screened Columb/LJ potential with minimum image in XY, hard in Z.
+   * \author Mikael Lund
+   * \date 2009
+   */
+  class pot_debyehuckelXY : public pot_lj {
+    private:
+      double halfbox,box;
+    public:
+      string name;
+      double k,I;
+      pot_debyehuckelXY( inputfile &in ) : pot_lj(in) {
+        name+="Screened Columb/LJ w. minimum image (XY, only)";
+        f=in.getflt("bjerrum",7.1);
+        box=in.getflt("boxlen");
+        halfbox=box/2.;
+        k=1./in.getflt("debyelen",1.1e4);
+        if ( 1/k>=1e4) {
+          I=in.getflt("ionicstr",0);
+          k=sqrt( 4*std::acos(-1)*f*6.022e23/1e27*2*I );
+        }
+        eps=eps/f;
+      }
+      void setvolume(double vol) {
+        box=pow(vol, 1./3);
+        halfbox=box/2.;
+      }
+      inline double pairpot(const particle &p1, const particle &p2) {
+        double r2=p1.sqdist(p2),
+               r=sqrt(r2);
+        return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
+      }
+      inline double sqdist(const point &p1, const point &p2) {
+        double dz=p1.z-p2.z;
+        double dx=std::abs(p1.x-p2.x);
+        double dy=std::abs(p1.y-p2.y);
+        if (dx>halfbox) dx-=box;
+        if (dy>halfbox) dy-=box;
+        return dx*dx + dy*dy + dz*dz;
+      }
+      string info() {
+        std::ostringstream o;
+        o << "#   Type              = " << name << std::endl
+          << "#   Bjerrum length    = " << f << std::endl
+          << "#   Screening length  = " << 1./k << std::endl
+          << "#   4*LJ epsilon      = " <<f*eps<<std::endl
+          << "#   Image length      = " << box << std::endl;
+        return o.str();
+      }
+  };
 }
 #endif

@@ -64,7 +64,7 @@ namespace Faunus {
     if (l<=0)
       return false;
     len = l;    // cubic box sidelength
-    len_half=len/2;
+    len_half=len/2.;
     len_inv=1./len;
     volume = len*len*len;
     return true;
@@ -104,7 +104,9 @@ namespace Faunus {
     return o.str();
   }
   //----------- SLIT --------------------------
-  slit::slit(inputfile &in) : box(in) {};
+  slit::slit(inputfile &in) : box(in) {
+    xyarea=pow(len, 2.);
+  };
   string slit::info() {
     std::ostringstream o;
     o << container::info() 

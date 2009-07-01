@@ -126,6 +126,7 @@ namespace Faunus {
    */
   class slit : public box {
     public:
+      double xyarea; //crossecional area
       slit(inputfile &);
       string info();
       inline void boundary(point &a) {

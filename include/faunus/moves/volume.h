@@ -219,14 +219,17 @@ namespace Faunus {
   }
   template<typename T> double isobaric<T>::move(vector<macromolecule> &g) {
     cnt++;
-    du=0;
+    uold=unew=du=0;
     newvolume();                                // Generate new trial volume - prep. trial potential
     if (newV>pow(double(minlen), 3.) && newV<pow(double(maxlen),3.)) {
       unsigned short i=g.size();
       for (unsigned short n=0; n<i; n++)          // Loop over macromolecules
         g[n].isobaricmove(*con, pow(newV,1./3.));  // ..and scale their mass-centers
-      uold = pot->energy(con->p);                 // calc. old energy with original potential class
-      unew = trialpot.energy(con->trial);         // calc. new energy using a COPY of the potential class
+      for (int j=0; j<g.size()-1; j++)
+        for (int k=j+1; k<g.size(); k++) {
+          uold += pot->energy(con->p, g[j], g[k]);         // calc. old energy with original potential class
+          unew += trialpot.energy(con->trial, g[j], g[k]); // calc. new energy using a COPY of the potential class
+        }
       du = unew-uold;
       dh = du + P*dV-(i+1)*log( newV/con->getvolume() );
       if (penalize==true) 

@@ -182,4 +182,21 @@ namespace Faunus {
           cnt++;
         }
   }
+  radial_profile::radial_profile(point o, float min, float max, float res) :
+    xytable<float,unsigned long int>(res,min,max) { cnt=0, origo=o; }
+  float radial_profile::volume(float x) {return acos(-1)*(pow(x+xres*0.5,2.)-pow(x-xres*0.5,2.));}
+  float radial_profile::conc(float x) { return ((*this)(x)>0) ? (*this)(x)/(cnt*volume(x)) : 0; }
+  void  radial_profile::add(particle &p) { if (p.id==id){cnt++, (*this)(sqrt(pow(p.x-origo.x,2)+pow(p.y-origo.y,2)))++;} }
+  void  radial_profile::add(point &p) { 
+    cnt++ ;
+    (*this)(sqrt(pow(p.x-origo.x,2)+pow(p.y-origo.y,2)))++; 
+  }
+  void  radial_profile::update(vector<particle> &p) { for (int i=0; i<p.size(); i++) add(p[i]); }
+  bool  radial_profile::write(string name) {
+    io fio;
+    std::ostringstream o;
+    for (float d=xmin; d<xmax(); d+=xres)
+      o << d << " " << conc(d) << endl;
+    return fio.writefile(name,o.str());
+  }
 }//namespace

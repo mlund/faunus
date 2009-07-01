@@ -40,7 +40,7 @@ namespace Faunus {
       }
 
       void setvolume(double vol) {
-        box=pow(vol, 1./3);
+        box=pow(vol, 1./3.);
         halfbox=box/2.;
       }
 

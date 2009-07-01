@@ -28,50 +28,67 @@ volr          $volr
 tr            $tr
 rr            $rr
 penaltyupdate $penaltyupdate
-scalepen      $scalepen
-" > isobaric.conf
+scalepen      $scalepen 
+movie         $movie"> isobaric.conf
 }
 
 #--- Input parameters ---
 macrosteps=10
-microsteps=5000
+microsteps=1
 boxlen=350
-LJeps=0.00
-nprot1=30
-protein1="neu.aam"
-nprot2=0
-protein2="mrh4a.aam"
+LJeps=0.2
+nprot1=5
+protein1="../twobody/struct/alphaLa1F6S5mM75PH.aam"
+nprot2=5
+protein2="../twobody/struct/lysozyme5mM75PH.aam"
 #--- Markov Parameters ---
 voldp=1.00        
 mrdp=2.00
 mtdp=10.00
+volr=1
+tr=1
+rr=1
 #--- Interactions and potentials
 bjerrum=7.12
 pressure=0.000001
-debyelen=20
+debyelen=42.99
 e_r=78.67
 atomfile=../../../misc/faunatoms.dat
-LJeps=0.2
+LJeps=0.30
 #--- Sampling constrictions and penaltyfunction
 maxlen=1000
 minlen=100
 binlen=1
-penalize="yes"
+penalize="no"
 penalty=0.01
 scalepen=0.5
-penaltyupdate="yes"
+penaltyupdate="no"
+movie="no"
 #--- Variations and execution
 
-for LJeps in 0.20 
-do
-#  rm confout.aam
-#  suffix=".lj-${LJeps}"
+  export OMP_NUM_THREADS=2
+
+  rm confout.aam
+  suffix="test"
   mkinput
-#  ./isobaric > eq${suffix}
-#  boxlen=$(less eq${suffix}| grep "length"|awk '{print $ 6}')
-#  microsteps=50000
-#  mkinput
-#  ./isobaric > prod${suffix}
-#  rm confout.aam 
-done
+  ./isobaric > eq${suffix}
+  boxlen=$(less eq${suffix}| grep "#   Final      side length"|awk '{print $ 6}')
+  microsteps=1
+  mkinput
+  ./isobaric > ${suffix}.out
+  mv confout.aam ${suffix}-conf.aam
+  mv confout.gro ${suffix}-conf.gro
+  mv confout.xyz ${suffix}-conf.xyz
+  mv coord.xtc ${suffix}-coord.xtc
+  mv aggregates.dat ${suffix}agg.dat
+  mv length-distribution.dat ${suffix}-Ldist.dat
+  mv rdfprot.dat ${suffix}-rdf.dat
+  mv rdfprot11.dat ${suffix}-rdf11.dat
+  mv rdfprot12.dat ${suffix}-rdf12.dat
+  mv rdfprot22.dat ${suffix}-rdf22.dat
+  mv systemenergy.dat ${suffix}-energy.dat
+  mv penalty.dat ${suffix}-pen.dat
+  mv oldpenalty.dat ${suffix}-oldpen.dat
+  mv confout.pqr ${suffix}-conf.pqr
+
 

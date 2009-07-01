@@ -147,19 +147,17 @@ namespace Faunus {
    *  \author Bjoern Persson
    *  \date Lund 2009
    *
-   *//*
-  class popscmembrane {
-    private:
+   */
+  class popscmembrane : public group{
+    public:
       double scratio;          //Ratio of pops in percent
       double headarea;         //Headgroup area
       vector<polymer> pops;    //Pops vector
       vector<polymer> popc;    //Popc vector
-
-    public:
       popscmembrane();
       void load(inputfile &, slit &);  //Scannes for "scratio", "headarea"
-
-  }*/
+      string info();
+  };
 }//namespace
 #endif
 

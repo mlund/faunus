@@ -36,6 +36,7 @@ fau_example(acid spce spceacid.cpp)
 fau_example(spceMI spce spce.cpp)
 fau_example(rosenbluth rosenbluth rb.cpp)
 fau_example(membrane membrane mem.cpp)
+fau_example(memp wallprotein memp.cpp)
 
 #----- target specific build options -----
 set_target_properties( pkaGC PROPERTIES COMPILE_DEFINITIONS "GCPKA")

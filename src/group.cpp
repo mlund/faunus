@@ -634,7 +634,12 @@ namespace Faunus {
 
   //!< is j a neighbor to polymer atom i?
   bool polymer::areneighbors(unsigned short i, unsigned short j) const {
-    return ( std::find( nb[i].begin(), nb[i].end(), j) != nb[i].end() ) ? true : false;
+//    return ( std::find( nb[i-beg].begin(), nb[i-beg].end(), j) != nb[i-end].end() ) ? true : false;
+//    std::cout <<"particel "<<i<<" with "<<nb[i-beg].size()<<"n, looking for "<<j<<std::endl;
+    for (int k=0; k<nb[i-beg].size(); k++)
+      if (nb[i-beg][k]==j)
+        return true;
+    return false;
   }
 
   string polymer::info() {
@@ -649,67 +654,103 @@ namespace Faunus {
     }
     return o.str();
   }
-/*
+
   popscmembrane::popscmembrane() {}
 
-  popscmembrane::load(inputfile &in, slit &con) {
+  string popscmembrane::info() {
+    std::ostringstream o;
+    o << group::info();
+    o <<"#   Phospholipid membrane of POPS:POPC model"<<std::endl
+      <<"#   ----------------------------------------"<<std::endl
+      <<"#   Area per headgroup        = "<<headarea<<" (A^2) "<<std::endl
+      <<"#   POPS:POPC ratio           = "<<pops.size()/double(pops.size()+popc.size())*100.
+         <<":"<<popc.size()/double(popc.size()+pops.size())*100.<<std::endl
+      <<"#   "<<popc.size()+pops.size()<<" lipids ("<<pops.size()<<" POPS and "<<popc.size()<<" POPC)"<<std::endl
+      <<std::endl;
+    return o.str();
+  }
+
+  void popscmembrane::load(inputfile &in, slit &con) {
+    //Some objects and variables
     int bbeg=con.p.size();
-    int npoly, npolys, graftp;
+    int npoly, npolys, npolyc, graftp;
     double gstep;
     particle a;
-    vector<particle> pops, popc;
+    a.mw=1.;
+    vector<particle> Pops, Popc;
     polymer p;
-    pop.clear();
-    a.radius=3.0, a.id="PLG", a.charge=0, a.z=-con.len_half;
-    pops.push_back(a), popc.push_back(a);
-    a.id="PL1", a.charge=-1, a.z=-con.len_half+5;
-    pops.push_back(a), popc.push_back(a);
-    a.id="PL2", a.charge=1,  a.z=-con.len_half+10;
-    pops.push_back(a), popc.push_back(a);
-    a.id="PL1", a.charge=-1, a.z=-con.len_half+15;
-    pops.push_back(a);
-    //Prepare the membrane
+    Pops.clear(), Popc.clear();
+    popc.clear(), pops.clear();
+    //Prepare particle vector of popc/s
+    a.radius=3.0, /*a.id='PLG',*/ a.charge=0, a.z=-con.len_half;
+    Pops.push_back(a), Popc.push_back(a);
+    /*a.id="PL1",*/ a.charge=-1, a.z=-con.len_half+5;
+    Pops.push_back(a), Popc.push_back(a);
+    /*a.id="PL2",*/ a.charge=1,  a.z=-con.len_half+10;
+    Pops.push_back(a), Popc.push_back(a);
+    /*a.id="PL1",*/ a.charge=-1, a.z=-con.len_half+15;
+    Pops.push_back(a);
+    //Prepare the membrane and grid
     scratio =in.getflt("scratio",-1);
     headarea=in.getflt("headarea", -1);
-    npoly   =int(headarea*con.xyarea);
+    npoly   =int(con.xyarea/headarea);
     npolys  =int(double(npoly)*scratio);
     npolyc  =npoly-npolys;
-    graftp  =int(sqrt(double(npoly))+1.)     //No. gridpoints along a axis
+    graftp  =int(sqrt(double(npoly))+1.);     //No. gridpoints along a axis
     gstep   =sqrt(con.xyarea)/(double(graftp));
     double x,y;
     x=y=-con.len_half;
     int cnt=0;
     vector<unsigned short> nb;
     for (int i=0; i<graftp; i++) {
-      pops[0].x=pops[1].x=pops[2].x=pops[3].x=x+i*gstep;
-      popc[0].x=popc[1].x=popc[2].x=x+i*gstep;
+      Pops[0].x=Pops[1].x=Pops[2].x=Pops[3].x=x+i*gstep;
+      Popc[0].x=Popc[1].x=Popc[2].x=x+i*gstep;
       for (int j=0; j<graftp; j++) {
-        nb.clear();
-        p.nb.clear();
-        cnt++;
-        pops[0].y=pops[1].y=pops[2].y=pops[3].y=y+j*gstep;
-        popc[0].y=popc[1].y=popc[2].y=y+j*gstep;
-        if(cnt<=npolys) {
-          p.add(con, pops);
+//        nb.clear();
+//        p.nb.clear();
+        ++cnt;
+        Pops[0].y=Pops[1].y=Pops[2].y=Pops[3].y=y+j*gstep;
+        Popc[0].y=Popc[1].y=Popc[2].y=y+j*gstep;
+        if(cnt<=npolys) {  //Push back and set neigbour lists
+          p.add(con, Pops);
+          p.nb.clear();
+          nb.clear();
+          p.nb.resize(4);
+          nb.push_back(1+p.beg);
+          p.nb[0]=nb;
+          nb.clear();
+          nb.push_back(p.beg),   nb.push_back(p.beg+2);
+          p.nb[1]=nb;
+          nb.clear();
+          nb.push_back(1+p.beg), nb.push_back(3+p.beg);
+          p.nb[2]=nb;
+          nb.clear();
+          nb.push_back(2+p.beg);
+          p.nb[3]=nb;
+          pops.push_back(p);
         }
         if(cnt>npolys && cnt<=npoly) {
-          p.add(con, popc);
+          p.add(con, Popc);
+          p.nb.clear();
+          nb.clear();
+          p.nb.resize(3);
+          nb.push_back(1+p.beg);
+          p.nb[0]=nb;
+          nb.clear();
+          nb.push_back(p.beg),   nb.push_back(p.beg+2);
+          p.nb[1]=nb; 
+          nb.clear();
+          nb.push_back(1+p.beg);
+          p.nb[2]=nb;
+          popc.push_back(p);
         }
-        for (s=p.beg; s<=p.end; s++) {
-          if (s=p.beg)
-            nb.push_back(beg+1);
-          if (s=p.beg)
-            nb.push_back(end-1);
-          if (s!=p.beg && s!=p.end){
-            nb.push_back(s-1);
-            nb.push_back(s+1);
-          }
-          p.nb.push_back(nb);
-        }
-        
       }
     }
+//    for (int i=0; i<popc.size(); i++)
+//      for (int j=0; j<popc[i].nb.size(); j++)
+//        for (int k=0; j<popc[i].nb[j].size(); k++)
+//          std::cout <<popc[i].nb[j][k]<<std::endl;
     beg=bbeg;
     end=con.p.size()-1;
-  }*/
+  }
 }//namespace

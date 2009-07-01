@@ -18,8 +18,8 @@ namespace Faunus {
    */
   class zmove : public markovmove {
     public:
-      zmove( ensemble&, container&, energybase&, macromolecule&, float);
-      bool move(macromolecule &);
+      zmove( ensemble&, container&, energybase&);
+      double move(macromolecule &);
       float z;
   };
 

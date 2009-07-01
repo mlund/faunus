@@ -2,17 +2,17 @@
 #include "faunus/io.h"
 
 namespace Faunus {
-  zmove::zmove( ensemble &e, container &c, energybase &i, macromolecule &g,float rf) : markovmove(e,c,i) {
-    runfraction=rf;
+  zmove::zmove( ensemble &e, container &c, energybase &i) : markovmove(e,c,i) {
+    runfraction=1;
     dp=8;
     deltadp=1;
     name.assign("MACROMOLECULE Z-DISPLACEMENTS");
   }     
 
-  bool zmove::move(macromolecule &g) {
+  double zmove::move(macromolecule &g) {
     du=0;
     if (slp.runtest(runfraction)==false)
-      return false;
+      return du;
     cnt++;
     z=2*dp*slp.random_half();
     g.zmove(*con, z);
@@ -21,9 +21,8 @@ namespace Faunus {
         rc=HC;
     }
     if (rc==HC) {
-      for (int i=g.beg; i<(g.size()+g.beg); i++) 
-        con->trial[i] = con->p[i];
-      return false; }
+      g.undo(*con);
+      return 0; }
     else {
       //#pragma omp parallel
       {
@@ -40,15 +39,14 @@ namespace Faunus {
         rc=OK;
         utot+=du;
         naccept++;
-        for (int i=g.beg; i<(g.beg+g.size()); i++)
-          con->p[i] = con->trial[i];
-        return true;
+        dpsqr+=z*z; 
+        g.accept(*con);
+        return du;
       } else rc=ENERGY;
 
       du=0;
-      for (int i=g.beg; i<(g.size()+g.beg); i++) 
-        con->trial[i] = con->p[i];
-      return false;
+      g.undo(*con);
+      return du;
   }
 
   dualmove::dualmove( ensemble &e,

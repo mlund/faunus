@@ -111,5 +111,19 @@ namespace Faunus {
       cylindric_profile(float, unsigned char, float, float, float=.5);
       void add(particle &);
   };
+  class radial_profile : protected xytable<float,unsigned long int>{
+    protected:
+      unsigned int cnt;
+      float volume(float);            //!< Get area at coordinate
+      point origo;
+    public:
+      radial_profile(point, float, float, float=.5);
+      void add(particle &);           //!< Add a particle
+      void add(point &);              //!< Add a particle
+      void update(vector<particle> &);//!< Search for and add particles
+      float conc(float);              //!< Get concentration at coordinate
+      bool write(string);             //!< Print distribution
+      unsigned char id;
+  };
 };//namespace
 #endif

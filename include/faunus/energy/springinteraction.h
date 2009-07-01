@@ -33,24 +33,27 @@ namespace Faunus {
 
       double u_monomer(const vector<particle> &p, const polymer &g, unsigned int i ) {
         // normal energy function if no neighbors
-        if ( g.nb[i].size()==0 )
+        // isnt this function a bit ambiguous? It either returns the interaction of particle i 
+        // with a polymer or it returns the interaction of a monomer in a polymer with the 
+        // rest of the system?? or did I get it wrong??
+        if ( g.nb[i-g.beg].size()==0 )
           return interaction<T>::energy(p,g,i);
 
         // energy w. all particles, skip neighbors (uses stl::find - maybe slow).
         double u=0;
-        for (unsigned int j=0; j<i; j++)
-          if ( g.areneighbors(i,j)==false )
+        for (unsigned int j=0; j<i; j++) 
+          if ( g.areneighbors(i,j)==false ) 
             u+=pair.pairpot( p[i], p[j] );
-        for (unsigned int j=i+1; j<p.size(); j++)
+        for (unsigned int j=i+1; j<p.size(); j++) 
           if ( g.areneighbors(i,j)==false )
             u+=pair.pairpot( p[i], p[j] );
         u=u*pair.f;
 
         // calc. spring and coulomb energy w. neighbors
-        for (unsigned int j=0; j<g.nb[i].size(); j++) {
-          double r=sqrt( pair.sqdist( p[i], p[ g.nb[i][j] ] ) ),
+        for (unsigned int j=0; j<g.nb[i-g.beg].size(); j++) {
+          double r=sqrt( pair.sqdist( p[i], p[ g.nb[i-g.beg][j] ] ) ),
                  dr = r - req;
-          u+=k*dr*dr + pair.f * p[i].charge * p[g.nb[i][j]].charge / r;
+          u+=k*dr*dr + pair.f *pair.pairpot(p[i],p[g.nb[i-g.beg][j] ]); 
         }
         return u;
       }
@@ -64,8 +67,25 @@ namespace Faunus {
             else {
               r=sqrt( pair.sqdist( p[i], p[j] ) );
               dr = r - req;
-              u+=k*dr*dr + pair.f * p[i].charge*p[j].charge/r;
+              u+=k*dr*dr + pair.f * pair.pairpot(p[i],p[j]); 
             }
+        return u;
+      }
+      double uself_popscmem(const vector<particle> &p, const popscmembrane &g) {
+        double u=0;
+        int i,j;
+        for (i=0; i<g.pops.size(); i++) {
+          u+=uself_polymer(p, g.pops[i]);
+          for (j=i+1; j<g.pops.size(); j++) 
+            u+=interaction<T>::energy(p,g.pops[i],g.pops[j]);
+          for (j=0; j<g.popc.size(); j++)
+            u+=interaction<T>::energy(p,g.pops[i],g.popc[j]);
+        }
+        for (i=0; i<g.popc.size(); i++) {
+          u+=uself_polymer(p, g.popc[i]); 
+          for (j=i+1; j<g.popc.size();j++)
+            u+=interaction<T>::energy(p, g.popc[i], g.popc[j]);
+        }
         return u;
       }
   };

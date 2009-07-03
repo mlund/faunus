@@ -50,14 +50,13 @@ int main() {
     prot.move(con, -move);
     prot.accept(con);
   }
-  zmove z(nvt, con, pot);
+  translate z(nvt, con, pot);
   z.dp=in.getflt("prot_zdp",10);
   macrorot r(nvt, con, pot);
   r.dp=in.getflt("prot_rotdp", 1);
 
   // Analysis
-  point slask;
-  radial_profile popsend(slask, 0, con.len/2);
+  radial_profile popsend( 0, con.len/2, 1);
   histogram dfpw(1, 0, con.len);
 
   aam.load(con,"conf.aam");
@@ -77,22 +76,32 @@ int main() {
        << pot.info() 
        << in.info();
 
+  // Switch parameters
+  double sum, tr, rr, mr, randy;
+  tr=in.getflt("tr", 1), rr=in.getflt("rr", 1), mr=in.getflt("mr",1);
+  sum=tr+rr+mr, tr/=sum, rr/=sum, mr/=sum;
+
+  // Help variables
+  point slask;
+
   while ( loop.macroCnt() ) {
     while ( loop.microCnt() ) {
-      switch (int(slump.random_one()*3)) {
-        case 0:
-          sys+=mm.move(mem);
-          break;
-        case 1:
-          sys+=z.move(prot);
-         // slask=prot.cm;
-          dfpw.add(prot.cm.z+con.len/2);
-          break;
-        case 2:
-          sys+=r.move(prot);
-          break;
+      randy=slump.random_one();
+      if(randy<mr){
+        sys+=mm.move(mem);
+        if (prot.cm.z+con.len*0.5<50.)
+          for (int i=0; i<mem.pops.size(); i++){
+            slask=con.p[mem.pops[i].end];
+            popsend.add(prot.cm, slask);
+          }
       }
-      if (slump.random_one()>0.5)
+      if(randy<tr+mr && randy > mr) {
+        sys+=z.move(prot);
+        dfpw.add(prot.cm.z+con.len/2);
+      }
+      if(randy<tr+mr+rr && randy>tr+mr) 
+          sys+=r.move(prot);
+      if (slump.random_one()>0.99 && in.getboo("movie",false)==true)
         xtc.save( "tis", con.p );
 
       }                                   // END of micro loop
@@ -101,15 +110,11 @@ int main() {
       dfpw.write("rdfw.dat");
       cout <<loop.timing(); 
       cout <<"#   Energy    (c, a, d)    = "<<sys.cur<<", "<<sys.uavg.avg()<<", "<<sys.cur-sys.sum<<endl;
-      for (int i=0; i<mem.pops.size(); i++){
-        slask=con.p[mem.pops[i].end];
-        popsend.add(slask);
-      }
     }                                     // END of macro loop
 
     // Object 
 
-    cout <<z.info()<<r.info()<<mm.info()<<sys.info();
+    cout <<loop.info()<<z.info()<<r.info()<<mm.info()<<sys.info();
 
     aam.save("conf.aam",con.p);
     pqr.save("conf.pqr",con.p);

@@ -9,8 +9,8 @@ namespace Faunus {
     endacc=lattacc=popsacc=popcacc=0;
     endcnt=lattcnt=popscnt=popccnt=0;
     double sum;
-    sum=3.*m.pops.size()+2.*m.popc.size();
-    rfend =m.pops.size()/sum, rflatt=(m.pops.size()+m.popc.size())/sum;
+    sum=2.*m.pops.size()+1.*m.popc.size();
+    rfend =m.pops.size()/sum; // disabled due to error energy drift ->, rflatt=(m.pops.size()+m.popc.size())/sum;
     rfpopc=m.popc.size()/sum, rfpops =rfend;
     steps =m.popc.size()+m.pops.size();
     dpv.x =1.0, dpv.y =1.0, dpv.z =1.0;
@@ -178,8 +178,8 @@ namespace Faunus {
         }
         du=0;
       }
-      if(rand>rfpops+rfpopc+rfend) {// Translate polymers
-        lattcnt++;
+      if(rand-1>rfpops+rfpopc+rfend) {// Translate polymers
+        lattcnt++;                    // This does NOT work, gives rise to energy drift
         group tempp;
         point slptrans;
         slptrans.x=dplatt*slp.random_half();

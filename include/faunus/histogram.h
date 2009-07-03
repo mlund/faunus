@@ -117,9 +117,9 @@ namespace Faunus {
       float volume(float);            //!< Get area at coordinate
       point origo;
     public:
-      radial_profile(point, float, float, float=.5);
+      radial_profile( float, float, float=.5);
       void add(particle &);           //!< Add a particle
-      void add(point &);              //!< Add a particle
+      void add(point &, point &);              //!< Add a particle
       void update(vector<particle> &);//!< Search for and add particles
       float conc(float);              //!< Get concentration at coordinate
       bool write(string);             //!< Print distribution

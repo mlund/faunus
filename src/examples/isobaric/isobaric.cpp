@@ -41,12 +41,15 @@ int main() {
   mcloop loop(in);                        // Keep track of time and MC loop
   box cell(in);                           // We want a cubic cell
   canonical nvt;                          // Use the canonical ensemble
+#ifndef MONOPOLE
   interaction<pot_debyehuckelP3> pot(in); // Functions for interactions
-  iogro gro(in);                          // Gromacs file output for VMD etc.
-
+#else
+  interaction_monopole<pot_debyehuckelP3> pot(in,cell); // Far-away monopole approximation
+#endif
   vector<macromolecule> g;                // PROTEIN groups
   io io;
-  ioxyz xyz;
+  iogro gro(in);                          // Gromacs file output for VMD etc.
+  iopqr pqr;
   ioaam aam;
   if (in.getboo("lattice")==true)         //   Protein input file format is AAM
     aam.loadlattice(cell, in, g);                //   Load and insert proteins
@@ -208,7 +211,7 @@ int main() {
        << "#   Ideal     <density>     = " <<in.getflt("pressure")<<endl
        << "#   Simulated <density>     = " <<g.size()*vol.ivol.avg()<<" ("<<g.size()*vol.ivol.avg()<<")"<<endl;
   aam.save("confout.aam", cell.p);            // Save config. for next run
-  xyz.save("confout.xyz", cell.p);
+  pqr.save("confout.pqr", cell.p);
   xtc.close();
 }
 

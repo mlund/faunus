@@ -393,7 +393,6 @@ namespace Faunus {
    * \brief Treats far-away groups as monopoles for faster energy evaluation
    * \author Mikael Lund
    * \date Lund 2009
-   * \note This approximation will naturally cause an energy drift.
    * \warning Be careful when you have non-molecular groups such as salt.
    *
    * This interaction class redefines group-group and group-particle interactions

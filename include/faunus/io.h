@@ -188,7 +188,7 @@ namespace Faunus {
    */
   class ioxtc : public iopart {
     private:
-      vector<particle> load(string) {}
+      vector<particle> load(string);
       rvec x[3300];
       XDRFILE *xd;
       float box[3][3], time, step;

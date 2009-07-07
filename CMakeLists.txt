@@ -42,8 +42,8 @@ mark_as_advanced( EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH
 # ---------------------------
 #   Add source directories
 # ---------------------------
-add_subdirectory(src)
 add_subdirectory(legacy/fortran)
+add_subdirectory(src)
 add_subdirectory(doc EXCLUDE_FROM_ALL)
 if(ENABLE_PYTHON)
   add_subdirectory(misc/python EXCLUDE_FROM_ALL)

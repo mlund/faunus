@@ -41,10 +41,12 @@ int main() {
   mcloop loop(in);                        // Keep track of time and MC loop
   box cell(in);                           // We want a cubic cell
   canonical nvt;                          // Use the canonical ensemble
-#ifndef MONOPOLE
-  interaction<pot_debyehuckelP3> pot(in); // Functions for interactions
-#else
+#ifdef MONOPOLE
   interaction_monopole<pot_debyehuckelP3> pot(in,cell); // Far-away monopole approximation
+#elif defined(FASTDH)
+  interaction_vector<pot_debyehuckelP3> pot(in); // Fast, approximate Debye-Huckel potential
+#else
+  interaction<pot_debyehuckelP3> pot(in); // Functions for interactions
 #endif
   vector<macromolecule> g;                // PROTEIN groups
   io io;

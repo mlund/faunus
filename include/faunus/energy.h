@@ -389,6 +389,54 @@ namespace Faunus {
         }
     };
 
+  template<class T>
+  class interaction_vector : public interaction<T> {
+    private:
+      int len;
+      double infty;
+      double r2[4000], qq[4000];
+    public:
+      interaction_vector(inputfile &in) : interaction<T>(in) {
+        interaction<T>::name+="Vectorized, Full N^2";
+      }
+      double energy(const vector<particle> &p) {
+        len=1;
+        int n=p.size();
+        for (int i=0; i<n-1; i++)
+          for (int j=i+1; j<n; j++) {
+            r2[len]   = interaction<T>::pair.sqdist(p[i],p[j]);
+            qq[len++] = p[i].charge*p[j].charge;
+          }
+        return interaction<T>::pair.VectorEnergy(r2,qq,&len);
+      }
+      double energy(const vector<particle> &p, const group &g) {
+        len=1;
+        int n=g.end+1, psize=p.size();
+        for (int i=g.beg; i<n; ++i) {
+          for (int j=0; j<g.beg; j++) {
+            r2[len]   = interaction<T>::pair.sqdist(p[i],p[j]);
+            qq[len++] = p[i].charge*p[j].charge;
+          }
+          for (int j=n; j<psize; j++) {
+            r2[len]   = interaction<T>::pair.sqdist(p[i],p[j]);
+            qq[len++] = p[i].charge*p[j].charge;
+          }
+        }
+        return interaction<T>::pair.VectorEnergy(r2,qq,&len);
+      }
+      double energy(const vector<particle> &p, const group &g1, const group &g2) {
+        len=1;
+        int ilen=g1.end+1, jlen=g2.end+1;
+//#pragma omp parallel for reduction (+:u)
+        for (int i=g1.beg; i<ilen; i++)
+          for (int j=g2.beg; j<jlen; j++) {
+            r2[len]   = interaction<T>::pair.sqdist(p[i],p[j]);
+            qq[len++]= p[i].charge*p[j].charge;
+          }
+        return interaction<T>::pair.VectorEnergy(r2,qq,&len);
+      }
+  };
+
   /*!
    * \brief Treats far-away groups as monopoles for faster energy evaluation
    * \author Mikael Lund
@@ -456,7 +504,7 @@ namespace Faunus {
           return o.str();
         }
     };
- 
+
   /*!
    * \brief Interaction class that includes image charges outside a spherical cell
    * \todo Not optimized
@@ -495,7 +543,7 @@ namespace Faunus {
         radius2=radius*radius;
         scale=-(epso-epsi)/(epso+epsi)*radius/2*in.getflt("bjerrum", 560.2);  // Friedman 1975, Mol. Phys 29 pp. 1533
       }                                                                 // warning!!! temperature units are given through scale!
-                                                                      
+
       // RE-CALC IMAGE POSITIONS
       inline void updateimg(const particle &a, int i) {
         img[i] = a* (radius2 / a.dot(a)); 
@@ -551,7 +599,7 @@ namespace Faunus {
           uex += impot(ich[t], p[i], img[t] );  //make sure to double count
         for (int u=j; u<=k; u++)
           uin += impot(ich[u], p[i], img[u] );  // internal interactions will be double counted implicitly
-                                                // the self term will not be double counted
+        // the self term will not be double counted
         return p[i].charge*scale*(uex*2+uin); 
       }
       double image(const vector<particle> &p, const group &g1, const group &g2) {

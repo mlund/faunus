@@ -20,6 +20,11 @@ if(ENABLE_BABEL AND OPENBABEL_FOUND)
   add_definitions(-DBABEL)
 endif(ENABLE_BABEL AND OPENBABEL_FOUND)
 
+#----- link with fortran library -----
+if(ENABLE_FORTRAN AND CMAKE_Fortran_COMPILER_WORKS)
+  set(LINKLIBS ${LINKLIBS} fortranfunc)
+endif(ENABLE_FORTRAN AND CMAKE_Fortran_COMPILER_WORKS)
+
 #----- static faunus library -----
 add_library(libfaunus.a STATIC EXCLUDE_FROM_ALL ${objs})
 set_target_properties(libfaunus.a PROPERTIES OUTPUT_NAME faunus)

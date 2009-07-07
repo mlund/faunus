@@ -380,6 +380,10 @@ namespace Faunus {
     setbox(len);
     xd=xdrfile_open("coord.xtc", "w");
   }
+  vector<particle> ioxtc::load(string s) {
+    vector<particle> dummy;
+    return dummy;
+  }
   void ioxtc::setbox(float len) {
     for (char i=0; i<3; i++)
       for (char j=0; j<3; j++)
@@ -398,6 +402,7 @@ namespace Faunus {
       }
       write_xtc(xd,p.size(),step++,time++,box,x,1300.);
     }
+    return true;
   }
   void ioxtc::close() { xdrfile_close(xd); }
 };//namespace

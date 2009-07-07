@@ -1,6 +1,8 @@
 #ifndef FAU_POT_DEBYEHUCKELP3_H
 #define FAU_POT_DEBYEHUCKELP3_H
 #include "faunus/potentials/base.h"
+#include "faunus/fortran.h"
+
 namespace Faunus {
   /*! \brief Debye-Huckel potential for periodic boundry 
    *         conditions in 3D, it is extended to preform 
@@ -42,6 +44,18 @@ namespace Faunus {
       void setvolume(double vol) {
         box=pow(vol, 1./3.);
         halfbox=box/2.;
+      }
+
+      double VectorEnergy( double *r2, double *qq, int *len) {
+        int n=*len;
+        double u=0;
+        for (int i=1; i<n; i++) {
+          double r = sqrt(r2[i]);
+          double w = (4.0/r2[i]);
+          w = w*w*w; //6
+          u += qq[i] / r * exp(-k*r) + eps*(w*w-w);
+        }
+        return f*u;
       }
 
       string info() {

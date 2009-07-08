@@ -35,7 +35,7 @@ scratio=0.1
 headarea=70
 #--- Markov Parameters ---
 macrosteps=10
-microsteps=10
+microsteps=1000
 prot_zdp=30.00        
 prot_rotdp=3.00
 monomer_dp=5.0
@@ -61,17 +61,18 @@ place_dp=20
 #  export OMP_NUM_THREADS=2
 for debyelen in 9.61 #43.0
 do
-  rm confout.aam
-  suffix="test-K${debyelen}"
+#  rm conf.aam
+  suffix="test" #-K${debyelen}"
   mkinput
-  ./memp > eq${suffix}
+  ./memp > ${suffix}
 #  microsteps=200000
 #  mkinput
 #  ./memp > ${suffix}.out
-  mv conf.aam ${suffix}-conf.aam
-  mv conf.pqr ${suffix}-conf.pqr
-  mv coord.xtc ${suffix}-coord.xtc
-  mv rdfw.dat ${suffix}-rdfwp.dat
-  mv end-dist.dat ${suffix}-enddist.dat
+#  mv conf.aam ${suffix}-conf.aam
+#  mv conf.pqr ${suffix}-conf.pqr
+#  mv coord.xtc ${suffix}-coord.xtc
+#  mv rdfw.dat ${suffix}-rdfwp.dat
+#  mv end-dist.dat ${suffix}-enddist.dat
+#  mv dist.dat ${suffix}-dist.dat
 done
 

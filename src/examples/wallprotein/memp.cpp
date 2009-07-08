@@ -23,7 +23,7 @@ int main() {
   mcloop loop(in);
   canonical nvt;
   slit con(in);
-  springinteraction<pot_debyehuckelXY> pot(in);
+  springinteraction<pot_debyehuckelXYcc> pot(in);
 
   // File I/O
   iopqr pqr;
@@ -58,6 +58,7 @@ int main() {
   // Analysis
   radial_profile popsend( 0, con.len/2, 1);
   histogram dfpw(1, 0, con.len);
+  distributions dist(1.0, 0, con.len);
 
   aam.load(con,"conf.aam");
   prot.masscenter(con);
@@ -104,9 +105,11 @@ int main() {
       if (slump.random_one()>0.99 && in.getboo("movie",false)==true)
         xtc.save( "tis", con.p );
 
+        dist.add("Prot-Membrand energy", prot.cm.z+con.len/2., pot.energy(con.p, mem, prot)); 
       }                                   // END of micro loop
       sys.update(pot.uself_popscmem(con.p, mem) 
                 +pot.energy(con.p, mem, prot));
+      dist.write("dist.dat");
       dfpw.write("rdfw.dat");
       cout <<loop.timing(); 
       cout <<"#   Energy    (c, a, d)    = "<<sys.cur<<", "<<sys.uavg.avg()<<", "<<sys.cur-sys.sum<<endl;

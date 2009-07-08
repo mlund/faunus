@@ -56,9 +56,9 @@ int main() {
   r.dp=in.getflt("prot_rotdp", 1);
 
   // Analysis
-  radial_profile popsend( 0, con.len/2, 1);
-  histogram dfpw(1, 0, con.len);
-  distributions dist(1.0, 0, con.len);
+  radial_profile popsend( 0, con.zlen/2, 1);
+  histogram dfpw(1, 0, con.zlen);
+  distributions dist(1.0, 0, con.zlen);
 
   aam.load(con,"conf.aam");
   prot.masscenter(con);
@@ -98,14 +98,14 @@ int main() {
       }
       if(randy<tr+mr && randy > mr) {
         sys+=z.move(prot);
-        dfpw.add(prot.cm.z+con.len/2);
+        dfpw.add(prot.cm.z+con.zlen/2);
       }
       if(randy<tr+mr+rr && randy>tr+mr) 
           sys+=r.move(prot);
       if (slump.random_one()>0.99 && in.getboo("movie",false)==true)
         xtc.save( "tis", con.p );
 
-        dist.add("Prot-Membrand energy", prot.cm.z+con.len/2., pot.energy(con.p, mem, prot)); 
+        dist.add("Prot-Membrand energy", prot.cm.z+con.zlen/2., pot.energy(con.p, mem, prot)); 
       }                                   // END of micro loop
       sys.update(pot.uself_popscmem(con.p, mem) 
                 +pot.energy(con.p, mem, prot));

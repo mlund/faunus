@@ -105,13 +105,20 @@ namespace Faunus {
   }
   //----------- SLIT --------------------------
   slit::slit(inputfile &in) : box(in) {
+    if (in.getflt("zboxlen", 0)>0)
+      zlen=in.getflt("zboxlen");
+    else
+      zlen=in.getflt("boxlen");
+    zlen_half=zlen*0.5;
     xyarea=pow(len, 2.);
+    volume=xyarea*zlen;
   };
   string slit::info() {
     std::ostringstream o;
     o << container::info() 
       << "#   Shape                = Cube - xy periodicity, only" << endl
-      << "#   Side length          = " << len << endl;
+      << "#   XY-Side length          = " << len << endl
+      << "#   Z -Side length          = " << zlen << endl;
     return o.str();
   }
 

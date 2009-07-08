@@ -125,10 +125,13 @@ namespace Faunus {
    *  \date Asljunga, 2008
    */
   class slit : public box {
+    //private 
+      //bool setlen(double);                 //!< Reset box length
     public:
-      double xyarea; //crossecional area
+      double xyarea, zlen, zlen_half; //crossecional area 
       slit(inputfile &);
       string info();
+      //void setvolume(double);
       inline void boundary(point &a) {
         a.x=a.x-len*anint(a.x*len_inv);
         a.y=a.y-len*anint(a.y*len_inv);
@@ -142,6 +145,23 @@ namespace Faunus {
         return dx*dx + dy*dy + dz*dz;
       }
       inline double dist(const point &p1, const point &p2) { return sqrt(sqdist(p1,p2)); }
+      inline point vdist(const point &a, const point &b) {
+        point r;
+        r.x=std::abs(a.x-b.x);
+        r.y=std::abs(a.y-b.y);
+        r.z=a.z-b.z;
+        if (r.x>len_half) r.x-=len;
+        if (r.y>len_half) r.y-=len;
+        return r;
+      }
+      bool collision(const particle &a) {
+        if (std::abs(a.x)>len_half ||
+            std::abs(a.y)>len_half ||
+            std::abs(a.z)>zlen_half ) {
+		return true;
+	}
+        return false;
+      }
   };
 
   /*! \brief "Clutch" like container.

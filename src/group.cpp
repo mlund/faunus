@@ -682,13 +682,13 @@ namespace Faunus {
     Pops.clear(), Popc.clear();
     popc.clear(), pops.clear();
     //Prepare particle vector of popc/s
-    a.radius=3.0, /*a.id='PLG',*/ a.charge=0, a.z=-con.len_half;
+    a.radius=3.0, /*a.id='PLG',*/ a.charge=0, a.z=-con.zlen*0.5;
     Pops.push_back(a), Popc.push_back(a);
-    /*a.id="PL1",*/ a.charge=-1, a.z=-con.len_half+5;
+    /*a.id="PL1",*/ a.charge=-1, a.z=-con.zlen*0.5+5;
     Pops.push_back(a), Popc.push_back(a);
-    /*a.id="PL2",*/ a.charge=1,  a.z=-con.len_half+10;
+    /*a.id="PL2",*/ a.charge=1,  a.z=-con.zlen*0.5+10;
     Pops.push_back(a), Popc.push_back(a);
-    /*a.id="PL1",*/ a.charge=-1, a.z=-con.len_half+15;
+    /*a.id="PL1",*/ a.charge=-1, a.z=-con.zlen*0.5+15;
     Pops.push_back(a);
     //Prepare the membrane and grid
     scratio =in.getflt("scratio",-1);

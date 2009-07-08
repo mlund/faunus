@@ -6,6 +6,7 @@ echo "
 macrosteps            $macrosteps
 microsteps            $microsteps
 boxlen                $boxlen
+zboxlen               $zboxlen
 bjerrum               $bjerrum
 LJeps                 $LJeps
 scratio               $scratio
@@ -30,6 +31,7 @@ movie                 $movie"> memp.conf
 
 #--- System ---
 boxlen=150
+zboxlen=200
 protein="lysozyme100mM75PH.aam"
 scratio=0.1
 headarea=70

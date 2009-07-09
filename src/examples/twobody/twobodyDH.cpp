@@ -8,13 +8,7 @@
  * \todo Maybe use a cylindrical cell?
  * \include twobody.cpp
  */
-
-
 #include "faunus/faunus.h"
-
-#ifdef LIBXTC
-#define GROMACS
-#endif
 
 using namespace Faunus;
 using namespace std;
@@ -29,7 +23,7 @@ int main() {
   interaction<pot_debyehuckel> pot(in);  // Functions for interactions
   ioxyz xyz;                            // xyz output for VMD etc.
   distributions dst;                    // Distance dep. averages
-//  angularcorr  angcorr;                 // Dipole cross-correlation
+  //  angularcorr  angcorr;                 // Dipole cross-correlation
   iopqr pqr;                            // PQR output (pos, charge, radius)
 
   vector<macromolecule> g;              // Group for proteins
@@ -44,14 +38,26 @@ int main() {
     g[1].masscenter(cell);              // ...and recalc mass centers
   }
 
-  
+
   systemenergy sys(pot.energy(cell.p)-pot.internal(cell.p,g[0])-pot.internal(cell.p,g[1])); // System energy analysis
   cout << in.info() << cell.info()
-       << pot.info();                   // Print information to screen
+    << pot.info();                   // Print information to screen
 
-  #ifdef GROMACS
-  ioxtc xtc(cell, cell.r);              // Gromacs xtc output (if installed)
-  #endif
+  ioxtc xtc(cell.r);                    // Gromacs xtc output (if installed)
+
+  // Calculate atom closests to mass center
+  for (int j=0; j<2; j++) {
+    double mindist=10000000.;
+    int iclosest=-1;
+    for (int i=g[j].beg; i<=g[j].end; i++) {
+      double dist = cell.p[i].dist( g[j].cm );
+      if (dist<mindist) {
+        mindist=dist;
+        iclosest=i;
+      }
+    }
+    cout << "# Closest particle to CM" << j << " = " << iclosest << ", " << mindist << endl;
+  }
 
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {
@@ -78,10 +84,8 @@ int main() {
         dst.add("Right protein z-dipcomp", z , g[1].mu.z/l1); 
       }
 
-      #ifdef GROMACS
-      if (slump.random_one()>.95 && macro>1)
+      if (slump.random_one()>.95 && macro>1 && in.getboo("movie", false)==true)
         xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
-      #endif
     } // End of inner loop
 
     sys.update(pot.energy(cell.p)-pot.internal(cell.p, g[0])-pot.internal(cell.p, g[1]));             // Update system energy averages
@@ -91,16 +95,14 @@ int main() {
     dst.write("distributions.dat");             // Write other distributions
     xyz.save("coord.xyz", cell.p);              // Write .xyz coordinate file
     aam.save("confout.aam", cell.p);            // Save config. for next run
-    //pqr.save("confout.pqr", cell.p);            // ...also save a PQR file
+    pqr.save("confout.pqr", cell.p);            // ...also save a PQR file
     cout << loop.timing(macro);                 // Show progress
   } // End of outer loop
 
   cout <<                                       // Final information...
-        mr.info() << dm.info()
-       << sys.info() << g[0].info() << g[1].info() << cell.info();
+    mr.info() << dm.info()
+    << sys.info() << g[0].info() << g[1].info() << cell.info();
 
-  #ifdef GROMACS
   xtc.close();
-  #endif
 }
 

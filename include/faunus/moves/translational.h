@@ -50,6 +50,7 @@ namespace Faunus {
   //---------- TRANSLATE GROUP ----------------
   class translate : public markovmove {
     public: 
+      point dpv;  //!< Displacement vector
       translate( ensemble&, container&, energybase&);
       double move(group &); 
   };

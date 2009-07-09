@@ -63,10 +63,10 @@ int main() {
       }
     }
 
-  aam.save("CG2-"+in.getstr("protein"), p);
+  aam.save("CG2-R"+in.getstr("blobradius")+"-"+in.getstr("protein"), p);
   pqr.save("comb.pqr", con.p);
 
-  cout << con.info()<<endl <<protein.info()<<endl
+  cout << con.info()<<endl <<protein.info()<<in.info()<<endl
        << "#  Original protein radius       = "<< protein.radius(con.p) <<endl
        << "#  Coarse grained protein radius = "<< cgp.radius(p)<<endl
        << "#  Number of shots               = "<< in.getflt("macro")*in.getflt("micro") <<endl

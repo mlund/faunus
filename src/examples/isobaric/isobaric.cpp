@@ -39,7 +39,11 @@ int main() {
   phys.e_r=in.getflt("e_r");
   phys.lB_TO_T(in.getflt("bjerrum"));
   mcloop loop(in);                        // Keep track of time and MC loop
+#ifndef XYPLANE
   box cell(in);                           // We want a cubic cell
+#else
+  xyplane cell(in);                       // ...or a plane!
+#endif
   canonical nvt;                          // Use the canonical ensemble
 #ifdef MONOPOLE
   interaction_monopole<pot_debyehuckelP3> pot(in,cell); // Far-away monopole approximation
@@ -84,6 +88,9 @@ int main() {
   mt.dp =in.getflt("mtdp");
   mr.dp =in.getflt("mrdp");
   ct.dp=in.getflt("ctdp");
+#ifdef XYPLANE
+  mt.dpv.z=0;
+#endif
 
   // Analysis and energy
   double usys=0;

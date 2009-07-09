@@ -164,6 +164,12 @@ namespace Faunus {
       }
   };
 
+  class xyplane : public box {
+    public:
+      xyplane(inputfile &in);
+      void randompos(point &);
+  };
+
   /*! \brief "Clutch" like container.
    *  \author Mikael Lund
    *

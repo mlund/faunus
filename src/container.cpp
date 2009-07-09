@@ -103,6 +103,15 @@ namespace Faunus {
       << len_half <<"," <<len_half <<"," <<len_half <<"> texture {cell}}\n";
     return o.str();
   }
+  //----------- XYPLANE ---------------------
+  xyplane::xyplane(inputfile &in) : box(in) {
+  }
+  void xyplane::randompos(point &p) {
+    p.x = slp.random_half()*len;
+    p.y = slp.random_half()*len;
+    p.z = 0;
+  }
+
   //----------- SLIT --------------------------
   slit::slit(inputfile &in) : box(in) {
     if (in.getflt("zboxlen", 0)>0)

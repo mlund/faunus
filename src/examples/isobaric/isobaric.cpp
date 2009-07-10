@@ -146,11 +146,11 @@ int main() {
         sys+=ct.move(g);                        //   Do the move.
 
       lendist.add(cell.len);
-      if (slump.random_one()>.80 && macro>1)
+      if (slump.random_one()>.9 && in.getboo("movie", false)==true)
         xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
-      if (slump.random_one()>-.99)
+      if (slump.random_one()>.99)
         sys.track();
-      if(slump.random_one()>-.99) {
+      if(slump.random_one()>.9) {
         for (i=0;i<g.size();i++) 
           g[i].masscenter(cell);                // Recalculate mass centers
       

@@ -95,9 +95,9 @@ namespace Faunus {
       double halfbox,box;
     public:
       string name;
-      double k,I,c,c2,rho2;
+      double k,I,c,c2,rho2,scd;
       pot_debyehuckelXYcc( inputfile &in ) : pot_lj(in) {
-        name+="Screened Columb/LJ w. minimum image (XY, only) and cylindrical cutoff";
+        name+="Screened Columb/LJ w. minimum image (XY, only) and cylindrical cutoff\n#            external correction and hyrdophobic interaction ";
         f=in.getflt("bjerrum",7.1);
         box=in.getflt("boxlen");
         halfbox=box/2.;
@@ -108,7 +108,11 @@ namespace Faunus {
           I=in.getflt("ionicstr",0);
           k=sqrt( 4*std::acos(-1)*f*6.022e23/1e27*2*I );
         }
+        scd=0;
         eps=eps/f;
+      }
+      void setchargedens(double s) {
+        scd=s*std::acos(-1)*2*f/k;
       }
       void setvolume(double vol) {
         box=pow(vol, 1./3);
@@ -120,6 +124,9 @@ namespace Faunus {
           return 0;
         double r=sqrt(r2);
         return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
+      }
+      inline double expot(const particle &p) {  //Returns interaction in kT!
+      return p.charge*scd*exp(-k*sqrt(c2+p.z*p.z));
       }
       inline double sqdist(const point &p1, const point &p2, double rho2) {
         double dz=p1.z-p2.z;
@@ -142,6 +149,7 @@ namespace Faunus {
         std::ostringstream o;
         o << "#   Type              = " << name << std::endl
           << "#   Cutoff            = " << c<<std::endl
+          << "#   Surf. Charge Dens.= " <<scd*k/f/2/std::acos(-1)<<std::endl
           << "#   Bjerrum length    = " << f << std::endl
           << "#   Screening length  = " << 1./k << std::endl
           << "#   4*LJ epsilon      = " <<f*eps<<std::endl

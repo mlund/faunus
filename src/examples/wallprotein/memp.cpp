@@ -9,6 +9,7 @@
  */
 #include "faunus/faunus.h"
 #include "faunus/energy/springinteraction.h"
+#include "faunus/energy/springinteractionexfield.h"
 #include "faunus/moves/membrane.h"
 
 using namespace std;
@@ -23,7 +24,7 @@ int main() {
   mcloop loop(in);
   canonical nvt;
   slit con(in);
-  springinteraction<pot_debyehuckelXYcc> pot(in);
+  springinteractionfield<pot_debyehuckelXYcc> pot(in);
 
   // File I/O
   iopqr pqr;
@@ -68,8 +69,11 @@ int main() {
     mem.popc[i].masscenter(con);
   cout << prot.info();
   cout << mem.info();
+  
+  pot.pair.setchargedens(mem.charge(con.p)/con.xyarea);
   systemenergy sys(pot.uself_popscmem(con.p, mem)
-                  +pot.energy(con.p, mem, prot));
+                  +pot.energy(con.p, mem, prot)
+                  +pot.extpot(con.p, prot));
 
   // Input and system info
 
@@ -102,13 +106,16 @@ int main() {
       }
       if(randy<tr+mr+rr && randy>tr+mr) 
           sys+=r.move(prot);
-      if (slump.random_one()>0.99 && in.getboo("movie",false)==true)
+      if (slump.random_one()>0.9 && in.getboo("movie",false)==true)
         xtc.save( "tis", con.p );
 
-        dist.add("Prot-Membrand energy", prot.cm.z+con.zlen/2., pot.energy(con.p, mem, prot)); 
+        dist.add("Prot-Membrane energy", prot.cm.z+con.zlen/2., pot.energy(con.p, mem, prot)); 
+        dist.add("Prot-External Correction", prot.cm.z+con.zlen*0.5, pot.extpot(con.p, prot));
+        dist.add("Prot-Membrane LJ-energy", prot.cm.z+con.zlen*0.5, pot.ljenergy(con.p, prot));
       }                                   // END of micro loop
       sys.update(pot.uself_popscmem(con.p, mem) 
-                +pot.energy(con.p, mem, prot));
+                +pot.energy(con.p, mem, prot)
+                +pot.extpot(con.p, prot));
       dist.write("dist.dat");
       dfpw.write("rdfw.dat");
       cout <<loop.timing(); 

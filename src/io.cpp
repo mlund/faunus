@@ -394,7 +394,7 @@ namespace Faunus {
   };
 
   bool ioxtc::save(string file, vector<particle> &p) {
-    if (p.size()<3300) {
+    if (p.size()<5000) {
       for (unsigned short i=0; i<p.size(); i++) {
         x[i][0]=p[i].x/10;      // AA->nm
         x[i][1]=p[i].y/10;

@@ -93,14 +93,18 @@ namespace Faunus {
   class pot_debyehuckelXYcc : public pot_lj {
     private:
       double halfbox,box;
+      double zbox, zhalfbox;
     public:
       string name;
       double k,I,c,c2,rho2,scd;
+      double hphoba,hphobr, hphobmax;
       pot_debyehuckelXYcc( inputfile &in ) : pot_lj(in) {
         name+="Screened Columb/LJ w. minimum image (XY, only) and cylindrical cutoff\n#            external correction and hyrdophobic interaction ";
         f=in.getflt("bjerrum",7.1);
         box=in.getflt("boxlen");
         halfbox=box/2.;
+        zbox=in.getflt("zboxlen");
+        zhalfbox=zbox*0.5;
         c=in.getflt("c_cut", halfbox);
         c2=c*c;
         k=1./in.getflt("debyelen",1.1e4);
@@ -110,6 +114,8 @@ namespace Faunus {
         }
         scd=0;
         eps=eps/f;
+        hphoba=in.getflt("hydrophobic_amp");
+        hphobr=in.getflt("hydrophobic_range");
       }
       void setchargedens(double s) {
         scd=s*std::acos(-1)*2*f/k;
@@ -126,7 +132,12 @@ namespace Faunus {
         return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
       }
       inline double expot(const particle &p) {  //Returns interaction in kT!
-      return p.charge*scd*exp(-k*sqrt(c2+p.z*p.z));
+        return p.charge*scd*exp(-k*sqrt(c2+p.z*p.z));
+      }
+      inline double hphobpot(const particle &p) { //Returns interaction in kT!
+        if(p.hydrophobic==true)
+          return (p.z+zhalfbox<p.radius*hphobr) ? hphoba : 0.; 
+        return 0.;
       }
       inline double sqdist(const point &p1, const point &p2, double rho2) {
         double dz=p1.z-p2.z;
@@ -150,6 +161,8 @@ namespace Faunus {
         o << "#   Type              = " << name << std::endl
           << "#   Cutoff            = " << c<<std::endl
           << "#   Surf. Charge Dens.= " <<scd*k/f/2/std::acos(-1)<<std::endl
+          << "#   Hydrophobic amp.  = " <<hphoba<<std::endl
+          << "#   Hydrophobic range = " <<hphobr<<" (sigma/2)"<<std::endl
           << "#   Bjerrum length    = " << f << std::endl
           << "#   Screening length  = " << 1./k << std::endl
           << "#   4*LJ epsilon      = " <<f*eps<<std::endl

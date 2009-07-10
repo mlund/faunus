@@ -23,8 +23,10 @@ namespace Faunus {
       // ENERGY WITH EXTERNAL CORRECTION
       double energy(const vector<particle> &p, const group &g ) {
         double u=interaction<pot_debyehuckelXYcc>::energy(p,g);
-        for (int i=g.beg; i<=g.end; i++)
+        for (int i=g.beg; i<=g.end; i++) {
           u += pair.expot(p[i]);
+          u += pair.hphobpot(p[i]);
+        }
         return u;
       }
 /*      double energy(const vector<particle> &p, const group &g1 , const group &g2) {
@@ -36,6 +38,13 @@ namespace Faunus {
         return u;
       }
 */
+     // HYDROPHOBIC POTENTIAL
+      double hydrophobic(const vector<particle> &p, const group &g) {
+        double u=0;
+        for (int i=g.beg; i<=g.end; i++)
+          u+=pair.hphobpot(p[i]);
+        return u;
+      }
       // LJ-ENERGY
       double ljenergy(const vector<particle> &p, const group &g) {
         int s=p.size();
@@ -57,8 +66,7 @@ namespace Faunus {
       }
       string info() {
         std::ostringstream o;
-        o << interaction<pot_debyehuckelXYcc>::info()
-          << pair.info();
+        o << interaction<pot_debyehuckelXYcc>::info()<<std::endl;
         return o.str();
       }
   };

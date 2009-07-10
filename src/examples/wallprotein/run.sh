@@ -53,6 +53,8 @@ debyelen=9.61
 atomfile=../../../misc/faunatoms.dat
 springconstant=0.7
 springeqdist=5.0
+hydrophobic_amp=0.5
+hydrophobic_range=5.0
 #--- Sampling constrictions and penaltyfunction
 maxlen=100
 movie="no"
@@ -60,7 +62,7 @@ place="no"
 place_dp=20
 #--- Variations and execution
 
-#  export OMP_NUM_THREADS=2
+  export OMP_NUM_THREADS=1
 for debyelen in 9.61 #43.0
 do
 #  rm conf.aam

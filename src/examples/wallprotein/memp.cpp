@@ -59,6 +59,7 @@ int main() {
   // Analysis
   radial_profile popsend( 0, con.zlen/2, 1);
   histogram dfpw(1, 0, con.zlen);
+  histogram memz(0.1, 0, con.zlen);
   distributions dist(1.0, 0, con.zlen);
 
   aam.load(con,"conf.aam");
@@ -73,7 +74,8 @@ int main() {
   pot.pair.setchargedens(mem.charge(con.p)/con.xyarea);
   systemenergy sys(pot.uself_popscmem(con.p, mem)
                   +pot.energy(con.p, mem, prot)
-                  +pot.extpot(con.p, prot));
+                  +pot.extpot(con.p, prot)
+                  +pot.hydrophobic(con.p, prot));
 
   // Input and system info
 
@@ -102,24 +104,31 @@ int main() {
       }
       if(randy<tr+mr && randy > mr) {
         sys+=z.move(prot);
-        dfpw.add(prot.cm.z+con.zlen/2);
+        if(prot.cm.z<con.zlen-130)  //avoid sampling the hard wall -> +z
+          dfpw.add(prot.cm.z+con.zlen/2);
       }
       if(randy<tr+mr+rr && randy>tr+mr) 
           sys+=r.move(prot);
       if (slump.random_one()>0.9 && in.getboo("movie",false)==true)
         xtc.save( "tis", con.p );
 
-        dist.add("Prot-Membrane energy", prot.cm.z+con.zlen/2., pot.energy(con.p, mem, prot)); 
+        dist.add("Prot-Membrane energy", prot.cm.z+con.zlen/2., pot.energy(con.p, mem, prot)+pot.extpot(con.p, prot)+pot.hydrophobic(con.p, prot)); 
         dist.add("Prot-External Correction", prot.cm.z+con.zlen*0.5, pot.extpot(con.p, prot));
         dist.add("Prot-Membrane LJ-energy", prot.cm.z+con.zlen*0.5, pot.ljenergy(con.p, prot));
+        dist.add("Prot-Membrane HP-energy", prot.cm.z+con.zlen*0.5, pot.hydrophobic(con.p, prot));
       }                                   // END of micro loop
+
       sys.update(pot.uself_popscmem(con.p, mem) 
                 +pot.energy(con.p, mem, prot)
-                +pot.extpot(con.p, prot));
+                +pot.extpot(con.p, prot)
+                +pot.hydrophobic(con.p, prot));
+
       dist.write("dist.dat");
       dfpw.write("rdfw.dat");
       cout <<loop.timing(); 
       cout <<"#   Energy    (c, a, d)    = "<<sys.cur<<", "<<sys.uavg.avg()<<", "<<sys.cur-sys.sum<<endl;
+      for(int i=mem.beg; i<=mem.end; i++)
+        memz.add(con.p[i].z+con.zlen*0.5);
     }                                     // END of macro loop
 
     // Object 
@@ -129,6 +138,7 @@ int main() {
     aam.save("conf.aam",con.p);
     pqr.save("conf.pqr",con.p);
     popsend.write("end-dist.dat");
+    memz.write("mem-densdist.dat");
                                        // END of simulation
 
 }

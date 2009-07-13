@@ -20,7 +20,7 @@ namespace Faunus {
     public:
       zmove( ensemble&, container&, energybase&);
       double move(macromolecule &);
-      float z;
+      double z, zmax;
   };
 
   //----------------- DUAL MOVE --------------------------

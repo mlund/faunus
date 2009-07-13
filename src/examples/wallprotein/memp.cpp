@@ -45,13 +45,15 @@ int main() {
           aam.load(in.getstr("protein")));
   prot.move(con, -prot.cm);
   prot.accept(con);
+  prot.masscenter(con);
   if (in.getboo("place")==true) {
     point move;
     move.x=0, move.y=0, move.z=in.getflt("place_dp", 0);
     prot.move(con, -move);
     prot.accept(con);
   }
-  translate z(nvt, con, pot);
+  zmove z(nvt, con, pot);
+  z.zmax=100;
   z.dp=in.getflt("prot_zdp",10);
   macrorot r(nvt, con, pot);
   r.dp=in.getflt("prot_rotdp", 1);

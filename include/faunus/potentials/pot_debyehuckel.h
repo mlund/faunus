@@ -132,7 +132,8 @@ namespace Faunus {
         return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
       }
       inline double expot(const particle &p) {  //Returns interaction in kT!
-        return p.charge*scd*exp(-k*sqrt(c2+p.z*p.z));
+        double z=p.z+zhalfbox;
+        return p.charge*scd*exp(-k*sqrt(c2+z*z));
       }
       inline double hphobpot(const particle &p) { //Returns interaction in kT!
         if(p.hydrophobic==true)

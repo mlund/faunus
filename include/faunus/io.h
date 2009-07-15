@@ -4,6 +4,7 @@
 #include "faunus/group.h"
 #include "faunus/container.h"
 #include "faunus/titrate.h"
+//#include <stdio.h>
 
 #ifndef __cplusplus
 #define __cplusplus
@@ -160,12 +161,12 @@ namespace Faunus {
     private:
       string p2s(particle &, int=0) { return string(); }
       void header() {};
-      vector<particle> load(string) { return vector<particle>(); }
       float len;
     public:
       iogro(inputfile &);
       bool save(string, vector<particle> &);
       bool save(string, box &);
+      vector<particle> load(string);
   };
 
   //-----------------------------------------------
@@ -194,6 +195,8 @@ namespace Faunus {
       float box[3][3], time, step;
     public:
       ioxtc(float);
+      bool OpenTrajectory(string);
+      bool LoadFrame(int, vector<particle> &); 
       bool save(string, vector<particle> &);
       void setbox(float);
       void close();

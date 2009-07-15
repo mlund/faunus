@@ -104,12 +104,10 @@ namespace Faunus {
       double energy(const vector<particle> &p, const group &g) {
         int n=g.end+1, psize=p.size();
         double u=0;
+#pragma omp parallel for reduction (+:u)
         for (int i=g.beg; i<n; ++i) {
-          if (g.beg>0)
-#pragma omp parallel for reduction (+:u)
-            for (int j=0; j<g.beg; j++)
-              u += pair.pairpot(p[i],p[j]);
-#pragma omp parallel for reduction (+:u)
+          for (int j=0; j<g.beg; j++)
+            u += pair.pairpot(p[i],p[j]);
           for (int j=n; j<psize; j++)
             u += pair.pairpot(p[i],p[j]);
         }
@@ -272,7 +270,7 @@ namespace Faunus {
         f= -(forward-center)/(2*dr);
         return f;
       }
-;
+      ;
       double u_monomer(const vector<particle> &p, const polymer &g, unsigned int i) {
         return 0;
       }
@@ -323,8 +321,8 @@ namespace Faunus {
         hy.push_back(i);
       else if (p[i].id==0 || p[i].id==1 || p[i].id==3)
         pa.push_back(i);
-      //else if (p[i].id==particle::NA || p[i].id==particle::CL || p[i].id==particle::I)
-      //  pa.push_back(i);
+    //else if (p[i].id==particle::NA || p[i].id==particle::CL || p[i].id==particle::I)
+    //  pa.push_back(i);
   }
 
   template<class T> double int_hydrophobic<T>::hyenergy(const vector<particle> &p) {
@@ -390,52 +388,52 @@ namespace Faunus {
     };
 
   template<class T>
-  class interaction_vector : public interaction<T> {
-    private:
-      int len;
-      double infty;
-      double r2[4000], qq[4000];
-    public:
-      interaction_vector(inputfile &in) : interaction<T>(in) {
-        interaction<T>::name+="Vectorized, Full N^2";
-      }
-      double energy(const vector<particle> &p) {
-        len=1;
-        int n=p.size();
-        for (int i=0; i<n-1; i++)
-          for (int j=i+1; j<n; j++) {
-            r2[len]   = interaction<T>::pair.sqdist(p[i],p[j]);
-            qq[len++] = p[i].charge*p[j].charge;
-          }
-        return interaction<T>::pair.VectorEnergy(r2,qq,&len);
-      }
-      double energy(const vector<particle> &p, const group &g) {
-        len=1;
-        int n=g.end+1, psize=p.size();
-        for (int i=g.beg; i<n; ++i) {
-          for (int j=0; j<g.beg; j++) {
-            r2[len]   = interaction<T>::pair.sqdist(p[i],p[j]);
-            qq[len++] = p[i].charge*p[j].charge;
-          }
-          for (int j=n; j<psize; j++) {
-            r2[len]   = interaction<T>::pair.sqdist(p[i],p[j]);
-            qq[len++] = p[i].charge*p[j].charge;
-          }
+    class interaction_vector : public interaction<T> {
+      private:
+        int len;
+        double infty;
+        double r2[4000], qq[4000];
+      public:
+        interaction_vector(inputfile &in) : interaction<T>(in) {
+          interaction<T>::name+="Vectorized, Full N^2";
         }
-        return interaction<T>::pair.VectorEnergy(r2,qq,&len);
-      }
-      double energy(const vector<particle> &p, const group &g1, const group &g2) {
-        len=1;
-        int ilen=g1.end+1, jlen=g2.end+1;
-//#pragma omp parallel for reduction (+:u)
-        for (int i=g1.beg; i<ilen; i++)
-          for (int j=g2.beg; j<jlen; j++) {
-            r2[len]   = interaction<T>::pair.sqdist(p[i],p[j]);
-            qq[len++]= p[i].charge*p[j].charge;
+        double energy(const vector<particle> &p) {
+          len=1;
+          int n=p.size();
+          for (int i=0; i<n-1; i++)
+            for (int j=i+1; j<n; j++) {
+              r2[len]   = interaction<T>::pair.sqdist(p[i],p[j]);
+              qq[len++] = p[i].charge*p[j].charge;
+            }
+          return interaction<T>::pair.VectorEnergy(r2,qq,&len);
+        }
+        double energy(const vector<particle> &p, const group &g) {
+          len=1;
+          int n=g.end+1, psize=p.size();
+          for (int i=g.beg; i<n; ++i) {
+            for (int j=0; j<g.beg; j++) {
+              r2[len]   = interaction<T>::pair.sqdist(p[i],p[j]);
+              qq[len++] = p[i].charge*p[j].charge;
+            }
+            for (int j=n; j<psize; j++) {
+              r2[len]   = interaction<T>::pair.sqdist(p[i],p[j]);
+              qq[len++] = p[i].charge*p[j].charge;
+            }
           }
-        return interaction<T>::pair.VectorEnergy(r2,qq,&len);
-      }
-  };
+          return interaction<T>::pair.VectorEnergy(r2,qq,&len);
+        }
+        double energy(const vector<particle> &p, const group &g1, const group &g2) {
+          len=1;
+          int ilen=g1.end+1, jlen=g2.end+1;
+          //#pragma omp parallel for reduction (+:u)
+          for (int i=g1.beg; i<ilen; i++)
+            for (int j=g2.beg; j<jlen; j++) {
+              r2[len]   = interaction<T>::pair.sqdist(p[i],p[j]);
+              qq[len++]= p[i].charge*p[j].charge;
+            }
+          return interaction<T>::pair.VectorEnergy(r2,qq,&len);
+        }
+    };
 
   /*!
    * \brief Treats far-away groups as monopoles for faster energy evaluation

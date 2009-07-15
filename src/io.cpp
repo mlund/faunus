@@ -290,6 +290,28 @@ namespace Faunus {
     return writefile(file, o.str());
   }
 
+  vector<particle> iogro::load(string file) {
+    p.clear();
+    v.resize(0);
+    particle tmp;
+    char name[5], name2[5];
+    int cnt, cnt2;
+    double x,y,z;
+
+    if (readfile(file,v)==true) {
+      strip(v,"#");
+      unsigned short n=atoi(v[0].c_str());
+      ostringstream o;
+      for (unsigned short i=1; i<=n; i++) {
+        sscanf( v[i].c_str(), "%5d%5s%5s%5d%f %f %f",
+            &cnt, &name, &name2, &cnt2, &x, &y, &z);
+        cout << v[i] << endl;
+        cout << cnt << " " << name2 << " " << cnt2 << " " << z  << endl;
+        p.push_back(tmp);
+      }
+    }
+    return p;
+  }
 
   //----------------- IOPOV ----------------------
   iopov::iopov(container &c) {
@@ -405,4 +427,25 @@ namespace Faunus {
     return true;
   }
   void ioxtc::close() { xdrfile_close(xd); }
+
+  bool ioxtc::OpenTrajectory(string s) {
+    xd=xdrfile_open(s.c_str(), "r");
+    return (xd==NULL) ? false : true;
+  }
+  /*
+  bool ioxtc::LoadFrame(int i, vector<particle> &p, double boxlen &box) {
+    int rc,natoms_xtc,step_xtc;
+    float time_xtc;
+    matrix box_xtc;
+    rvec *x_xtc;
+    float prec_xtc = 1000.0;
+    while(1)
+    {
+      //rc = read_xtc(xd_read, natoms_xtc, &step_xtc, &time_xtc,box_xtc, x_xtc, &prec_xtc);
+      //if (rc == 0) {
+      //}
+      //else break;
+    }
+  }
+  */
 };//namespace

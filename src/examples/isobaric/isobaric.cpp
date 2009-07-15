@@ -14,14 +14,14 @@
 
 using namespace Faunus;
 using namespace std;
- 
+
 class BadConversion : public std::runtime_error {
-public:
-  BadConversion(const std::string& s)
-    : std::runtime_error(s)
+  public:
+    BadConversion(const std::string& s)
+      : std::runtime_error(s)
     { }
 };
- 
+
 inline std::string stringify(double x)
 {
   std::ostringstream o;
@@ -48,7 +48,7 @@ int main() {
 #ifdef MONOPOLE
   interaction_monopole<pot_debyehuckelP3> pot(in,cell); // Far-away monopole approximation
 #elif defined(FASTDH)
-  interaction_vector<pot_debyehuckelP3> pot(in); // Fast, approximate Debye-Huckel potential
+  interaction_vector<pot_debyehuckelP3Fast> pot(in); // Fast, approximate Debye-Huckel potential
 #else
   interaction<pot_debyehuckelP3> pot(in); // Functions for interactions
 #endif
@@ -64,7 +64,7 @@ int main() {
   if (aam.load(cell,"confout.aam")) {
     for (int i=0;i<g.size();i++) 
       g[i].masscenter(cell);              // Load old config (if present)
-                                          // ...and recalc mass centers
+    // ...and recalc mass centers
   }
 
   // Markovsteps
@@ -81,8 +81,8 @@ int main() {
       int(in.getint("binlen")));          // Set bin length for penalty function  
 
   if ( in.getboo("penalize")==true)       // If penalty.dat is present it will be loaded and used as
-   vol.loadpenaltyfunction("penalty.dat");// bias. Else a penalty function will only be constructed
-                                          // if the penalty != 0.
+    vol.loadpenaltyfunction("penalty.dat");// bias. Else a penalty function will only be constructed
+  // if the penalty != 0.
   // Markovparameters
   vol.dp=in.getflt("voldp");
   mt.dp =in.getflt("mtdp");
@@ -97,7 +97,7 @@ int main() {
   for (int i=0; i<g.size()-1; i++)
     for (int j=i+1; j<g.size(); j++)
       usys+=pot.energy(cell.p, g[i], g[j]);
-  
+
   systemenergy sys(usys);   // System energy analysis
   histogram lendist(in.getflt("binlen",1.) ,in.getflt("minlen"), in.getflt("maxlen"));             
   aggregation agg(cell, g, 1.5);
@@ -140,20 +140,20 @@ int main() {
         for (n=0; n<g.size(); n++) {            //   Loop over all proteins
           i = slump.random_one()*g.size();      //   and pick at random.
           sys+=mt.move(g[i]);                   //   Do the move.
-          }
-      
+        }
+
       if (randy<clt+volr+rr+tr && randy>volr+rr+tr)// Cluster translation
         sys+=ct.move(g);                        //   Do the move.
 
       lendist.add(cell.len);
-      if (slump.random_one()>.9 && in.getboo("movie", false)==true)
+      if (slump.random_one()>.95 && in.getboo("movie", false)==true)
         xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
       if (slump.random_one()>.99)
         sys.track();
       if(slump.random_one()>.9) {
         for (i=0;i<g.size();i++) 
           g[i].masscenter(cell);                // Recalculate mass centers
-      
+
         for (i=0; i<g.size()-1; i++)
           for (j=i+1; j<g.size(); j++) {        //   Analyse g(r)...
             protrdf.update(cell,g[i].cm,g[j].cm);
@@ -179,7 +179,7 @@ int main() {
 
     cout << loop.timing(macro);
     cout << "#   Energy (cur, avg, std)    = "<<sys.cur<<", "<<sys.uavg.avg()<<", "<<sys.uavg.stdev()<<endl
-         << "#   Drift                     = "<<sys.cur-sys.sum<<endl;
+      << "#   Drift                     = "<<sys.cur-sys.sum<<endl;
 
     cell.check_vector();                        // Check sanity of particle vector
     gro.save("confout.gro", cell);              // Write GRO output file
@@ -205,22 +205,23 @@ int main() {
     protrdf22.write("rdfprot22.dat");               // Write g(r)'s
     agg.write("aggregates.dat");
 
+    aam.save("confout.aam", cell.p);            // Save config. for next run
+    pqr.save("confout.pqr", cell.p);
+
   } // End of outer loop
-  
+
   if (in.getboo("penalize")==false) {
     vol.printupdatedpenalty("penalty.dat");
   }
 
   cout << "----------- FINAL INFORMATION -----------" << endl ;
   cout << loop.info() << sys.info() << agg.info() << vol.info()             // Final information...
-       << mr.info() << mt.info() << ct.info();
+    << mr.info() << mt.info() << ct.info();
   cout <<endl << "#   Final      side length  = " <<cell.len<<endl
-       << "#   Ideal     <side length> = " <<pow( double( g.size() )/ in.getflt("pressure" ),1./3.)<<endl
-       << "#   Simulated <side length> = " <<vol.len.avg()<<" ("<<vol.len.stdev()<<")"<<endl
-       << "#   Ideal     <density>     = " <<in.getflt("pressure")<<endl
-       << "#   Simulated <density>     = " <<g.size()*vol.ivol.avg()<<" ("<<g.size()*vol.ivol.avg()<<")"<<endl;
-  aam.save("confout.aam", cell.p);            // Save config. for next run
-  pqr.save("confout.pqr", cell.p);
+    << "#   Ideal     <side length> = " <<pow( double( g.size() )/ in.getflt("pressure" ),1./3.)<<endl
+    << "#   Simulated <side length> = " <<vol.len.avg()<<" ("<<vol.len.stdev()<<")"<<endl
+    << "#   Ideal     <density>     = " <<in.getflt("pressure")<<endl
+    << "#   Simulated <density>     = " <<g.size()*vol.ivol.avg()<<" ("<<g.size()*vol.ivol.avg()<<")"<<endl;
   xtc.close();
 }
 

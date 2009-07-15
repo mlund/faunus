@@ -13,7 +13,7 @@ namespace Faunus {
    *  \todo Remove pot_setop dependency
    */
   class pot_debyehuckelP3 : public pot_lj {
-    private:
+    protected:
       double I,k;
     public:
       double box, halfbox;
@@ -46,12 +46,13 @@ namespace Faunus {
         halfbox=box/2.;
       }
 
-      double VectorEnergy( double *r2, double *qq, int *len) {
+      virtual double VectorEnergy( double *r2, double *qq, int *len) {
         int n=*len;
+        //std::cout << len << " ";
         double u=0;
         for (int i=1; i<n; i++) {
           double r = sqrt(r2[i]);
-          double w = (4.0/r2[i]);
+          double w = 4.0/r2[i];
           w = w*w*w; //6
           u += qq[i] / r * exp(-k*r) + eps*(w*w-w);
         }
@@ -67,6 +68,34 @@ namespace Faunus {
         return o.str();
       }
   };
+
+  class pot_debyehuckelP3Fast : public pot_debyehuckelP3 {
+    private:
+      double r[4000];
+    public:
+      pot_debyehuckelP3Fast( inputfile &in ) : pot_debyehuckelP3(in) {
+        gentab_();
+        name+=" (FAST APPROX.!)";
+      }
+      double VectorEnergy( double *r2, double *qq, int *len) {
+        int n=*len;
+        double u=0, ik2=1/(k*k);
+        // LJ Part
+        //for (int i=1; i<n; i++) {
+        //  double w = 4.0/r2[i];
+        //  w = w*w*w; //6
+        //  u+=eps*(w*w-w);
+        //  r2[i] = r2[i]*ik2;
+        //}
+        // DH part
+        vscoul_(r2,r,r2,len);
+        for (int i=1; i<n; i++) {
+          u += qq[i] * r[i] * k;
+        }
+        return f*u;
+      }
+  };
+
   class pot_debyehuckelP3trunk : public pot_lj_trunk {
     private:
       double I,k;

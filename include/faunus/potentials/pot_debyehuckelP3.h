@@ -30,11 +30,23 @@ namespace Faunus {
         name+="/Debye-Huckel w. minimum image";
       }
 
+      double inline f_exp(double x) {
+        static double e=2.718281828;
+        int tmp = (*(1 + (int *) &e));
+        int tmp2 = (int)(x * (tmp - 1072632447) + 1072632447);
+        double p = 0.0;
+        *(1 + (int * ) &p) = tmp2;
+        return p;
+      }
+
       //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
       //! \return Energy in units of kT/lB
-      inline double pairpot( const particle &p1, const particle &p2 ) const {
-        double r2=p1.sqdist(p2,box,halfbox), r=sqrt(r2);
-        return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
+      inline double pairpot( const particle &p1, const particle &p2 ) {
+        double r2=p1.sqdist(p2,box,halfbox),
+               x=p1.radius+p2.radius, u=x*x/r2,
+               r=sqrt(r2);
+        x=u*u*u;
+        return (x*x-x)*eps + p1.charge * p2.charge / r * exp(-k*r);
       }
 
       inline double sqdist(const point &p1, const point &p2) {

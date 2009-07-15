@@ -146,8 +146,10 @@ int main() {
         sys+=ct.move(g);                        //   Do the move.
 
       lendist.add(cell.len);
-      if (slump.random_one()>.95 && in.getboo("movie", false)==true)
+      if (slump.random_one()>.95 && in.getboo("movie", false)==true) {
+        xtc.setbox(cell.len);
         xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
+      }
       if (slump.random_one()>.99)
         sys.track();
       if(slump.random_one()>.9) {

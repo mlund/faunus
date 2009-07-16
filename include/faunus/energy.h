@@ -92,10 +92,10 @@ namespace Faunus {
         int i,ps=p.size();
         double u=0;
         if (j>0)
-#pragma omp parallel for reduction (+:u)
+#pragma omp parallel for reduction (+:u) schedule (dynamic)
           for (i=0; i<j; i++)
             u+=pair.pairpot( p[i],p[j] );
-#pragma omp parallel for reduction (+:u)
+#pragma omp parallel for reduction (+:u) schedule (dynamic)
         for (i=j+1; i<ps; i++)
           u+=pair.pairpot( p[i],p[j] );
         return pair.f*u;
@@ -155,7 +155,7 @@ namespace Faunus {
       double energy(const vector<particle> &p) {
         double u=0;
         int n = p.size();
-#pragma omp parallel for reduction (+:u)
+#pragma omp parallel for reduction (+:u) schedule (dynamic)
         for (int i=0; i<n-1; ++i)
           for (int j=i+1; j<n; ++j)
             u+=pair.pairpot(p[i], p[j]);
@@ -165,7 +165,7 @@ namespace Faunus {
       double energy(const vector<particle> &p, const group &g1, const group &g2) {
         double u=0;
         int ilen=g1.end+1, jlen=g2.end+1;
-#pragma omp parallel for reduction (+:u)
+//#pragma omp parallel for reduction (+:u) schedule (dynamic)
         for (int i=g1.beg; i<ilen; i++)
           for (int j=g2.beg; j<jlen; j++)
             u += pair.pairpot(p[i],p[j]);
@@ -452,23 +452,19 @@ namespace Faunus {
       private:
         container *cPtr;
         particle monopole(const vector<particle> &p, const group &g) {
-          double zabs,sum=0; // sum of absolute charges
-          unsigned short i,n=g.end+1;
-          particle mp; 
-          point t,o=p[g.beg]; // temporary origo
-          for (i=g.beg; i<n; ++i) {
-            zabs=std::abs(p[i].charge);
-            if (zabs>0.00001) {
-              t=p[i]-o;      // move to origo
-              cPtr->boundary(t);
-              mp+=t*zabs;
-              mp.charge+=p[i].charge;
-              sum+=zabs;
-            }
+          double sum=0;
+          particle cm;
+          point t, o = p[g.beg]; // set origo to first particle
+          for (unsigned short i=g.beg; i<=g.end; i++) {
+            t = p[i]-o;        // translate to origo
+            cPtr->boundary(t);       // periodic boundary (if any)
+            cm += t * p[i].mw;
+            sum += p[i].mw; 
+            cm.charge+=p[i].charge;
           }
-          mp=mp*(1./sum) + o;
-          cPtr->boundary(mp);
-          return mp;
+          cm=cm*(1./sum) + o;
+          cPtr->boundary(cm);
+          return cm;
         }
       public:
         double cut_g2g; //!< Cut-off distance for group-group interactions

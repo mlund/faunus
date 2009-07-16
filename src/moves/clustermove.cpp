@@ -134,8 +134,10 @@ namespace Faunus {
   }
 
   double clustertrans::move(vector<macromolecule> &g) {
-    cnt++;
     du=0;
+    if (slp.runtest(runfraction)==false)
+      return du;
+    cnt++;
     for (int i=0; i<g.size()-1; i++)
       for (int j=i+1; j<g.size(); j++)
         du-=pot->energy(con->p, g[i], g[j]);
@@ -175,9 +177,9 @@ namespace Faunus {
     return du;   
   }
 
-/*/ TRANSLATION
-  clustertranslate::clustertranslate( ensemble &e,
-      container &c, energybase &i, double S ) : markovmove(e,c,i) {
+  /*/ TRANSLATION
+    clustertranslate::clustertranslate( ensemble &e,
+    container &c, energybase &i, double S ) : markovmove(e,c,i) {
     name = "MACROMOLECULAR CLUSTER TRANSLATION";
     runfraction=0.5;
     deltadp=1.;
@@ -185,12 +187,12 @@ namespace Faunus {
     sep=S;
     nacc.assign(30,0);
     ntrial.assign(30,0);
-  }
+    }
 
-  double clustertranslate::move(vector<macromolecule> &g) {
+    double clustertranslate::move(vector<macromolecule> &g) {
     du=0;
     if (slp.runtest(runfraction)==false)
-      return du;
+    return du;
     unew=0;
     uold=0;
     FLOW=0;
@@ -207,45 +209,45 @@ namespace Faunus {
     ntrial[iend]++;
 
     for (short i=0; i<iend; i++)
-      g[cluster[i]].move(*con, p);
+    g[cluster[i]].move(*con, p);
     flowcheck(g);
     for (short i=0; i<iend; i++) {
-      if (con->collision(g[i].cm_trial)==true || FLOW!=0) {
-        rc=HC;
-        dpsqr+=0;
-        for (short i=0; i<iend; i++)
-          g[i].undo(*con);
-        return du;
-      }
+    if (con->collision(g[i].cm_trial)==true || FLOW!=0) {
+    rc=HC;
+    dpsqr+=0;
+    for (short i=0; i<iend; i++)
+    g[i].undo(*con);
+    return du;
+    }
     }
     double Uold;
     double Unew;
     for (short i=0; i<iend; i++)
-      for (short j=0; j<jend; j++) {
-        Uold+= pot->energy( con->p, g[cluster[i]], g[free[j]] );
-        Unew+= pot->energy( con->trial, g[cluster[i]], g[free[j]] );
-      }
+    for (short j=0; j<jend; j++) {
+    Uold+= pot->energy( con->p, g[cluster[i]], g[free[j]] );
+    Unew+= pot->energy( con->trial, g[cluster[i]], g[free[j]] );
+    }
     du = Unew-Uold;
     if (ens->metropolis(du)==true ) {
-      rc=OK;
-      utot+=du;
-      dpsqr+=con->sqdist( g[0].cm, g[0].cm_trial );
-      naccept++;
-      nacc[iend]++;
-      for (short i=0; i<iend; i++)
-        g[cluster[i]].accept(*con);
-      return du;
+    rc=OK;
+    utot+=du;
+    dpsqr+=con->sqdist( g[0].cm, g[0].cm_trial );
+    naccept++;
+    nacc[iend]++;
+    for (short i=0; i<iend; i++)
+    g[cluster[i]].accept(*con);
+    return du;
     } else rc=ENERGY;
     du=0;
     dpsqr+=0;
     for (short i=0; i<iend; i++)
-      g[cluster[i]].undo(*con);
+    g[cluster[i]].undo(*con);
     return du;
-  }
+    }
 
-  bool clustertranslate::decreasing(int i, int j) {
+    bool clustertranslate::decreasing(int i, int j) {
     return (i>j);
-  } 
+    } 
 
   void clustertranslate::flowcheck(vector<macromolecule> &g) {
     short int iend=cluster.size();
@@ -407,48 +409,48 @@ namespace Faunus {
     }
     return o.str();
   }
-*  clusterinv::clusterinv( ensemble &e, container &c, interaction<T_pairpot> &i) : markovmove(e,c,i) {
+  *  clusterinv::clusterinv( ensemble &e, container &c, interaction<T_pairpot> &i) : markovmove(e,c,i) {
     name = "REJECTION FREE INVERTATIONS, Explicitly writen for spce water!!!";
     runfraction=0;
   }
   double clusterinv::move(molecules &m) {
-  udiff=0;
-  remaining.clear();
-  moved.clear();
-  for (int i=0; i<m.size/m.numatom; i++)
-    remaining.push_back(i);
-  int f;
-  f=slp.random_one()*remaining.size();
-  moved.push_back(remaining[f]);
-  remaining.erase(remaining.begin()+int(f-1));    // Pick first index in m to move
+    udiff=0;
+    remaining.clear();
+    moved.clear();
+    for (int i=0; i<m.size/m.numatom; i++)
+      remaining.push_back(i);
+    int f;
+    f=slp.random_one()*remaining.size();
+    moved.push_back(remaining[f]);
+    remaining.erase(remaining.begin()+int(f-1));    // Pick first index in m to move
 
-  for(int i=0; i<moved.size(); i++) {
-    con->p[m[i].beg].x=-con->p[m[i].beg].x
-    con->p[m[i].beg].y=-con->p[m[i].beg].y
-    con->p[m[i].beg].z=-con->p[m[i].beg].z
-    con->p[m[i].beg+1].x=-con->p[m[i].beg+1].x
-    con->p[m[i].beg+1].y=-con->p[m[i].beg+1].y
-    con->p[m[i].beg+1].z=-con->p[m[i].beg+1].z
-    con->p[m[i].beg+2].x=-con->p[m[i].beg+2].x
-    con->p[m[i].beg+2].y=-con->p[m[i].beg+2].y
-    con->p[m[i].beg+2].z=-con->p[m[i].beg+2].z
-    for(int j=0; i<moved.size(); j++) {
-      udiff=pot->energy(con->p, m[i], m[j]) - pot->energy(con->trial, m[i], m[j]);
-      if(slp.random_one() < (1.-exp(-udiff))) {
-        con->p[m[j].beg].x=-con->p[m[j].beg].x
-        con->p[m[j].beg].y=-con->p[m[j].beg].y
-        con->p[m[j].beg].z=-con->p[m[j].beg].z
-        con->p[m[j].beg+1].x=-con->p[m[j].beg+1].x
-        con->p[m[j].beg+1].y=-con->p[m[j].beg+1].y
-        con->p[m[j].beg+1].z=-con->p[m[j].beg+1].z
-        con->p[m[j].beg+2].x=-con->p[m[j].beg+2].x
-        con->p[m[j].beg+2].y=-con->p[m[j].beg+2].y
-        con->p[m[j].beg+2].z=-con->p[m[j].beg+2].z
+    for(int i=0; i<moved.size(); i++) {
+      con->p[m[i].beg].x=-con->p[m[i].beg].x
+        con->p[m[i].beg].y=-con->p[m[i].beg].y
+        con->p[m[i].beg].z=-con->p[m[i].beg].z
+        con->p[m[i].beg+1].x=-con->p[m[i].beg+1].x
+        con->p[m[i].beg+1].y=-con->p[m[i].beg+1].y
+        con->p[m[i].beg+1].z=-con->p[m[i].beg+1].z
+        con->p[m[i].beg+2].x=-con->p[m[i].beg+2].x
+        con->p[m[i].beg+2].y=-con->p[m[i].beg+2].y
+        con->p[m[i].beg+2].z=-con->p[m[i].beg+2].z
+        for(int j=0; i<moved.size(); j++) {
+          udiff=pot->energy(con->p, m[i], m[j]) - pot->energy(con->trial, m[i], m[j]);
+          if(slp.random_one() < (1.-exp(-udiff))) {
+            con->p[m[j].beg].x=-con->p[m[j].beg].x
+              con->p[m[j].beg].y=-con->p[m[j].beg].y
+              con->p[m[j].beg].z=-con->p[m[j].beg].z
+              con->p[m[j].beg+1].x=-con->p[m[j].beg+1].x
+              con->p[m[j].beg+1].y=-con->p[m[j].beg+1].y
+              con->p[m[j].beg+1].z=-con->p[m[j].beg+1].z
+              con->p[m[j].beg+2].x=-con->p[m[j].beg+2].x
+              con->p[m[j].beg+2].y=-con->p[m[j].beg+2].y
+              con->p[m[j].beg+2].z=-con->p[m[j].beg+2].z
 
-        flytta over mellan vektorer...
+              flytta over mellan vektorer...
 
-        } 
-      }
+          } 
+        }
     }
     m[i].accept(*con)
   }*/

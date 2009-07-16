@@ -34,7 +34,7 @@ namespace Faunus {
       bool find(unsigned int) const;        ///< Check if particle is part of the group
       virtual double charge(const vector<particle> &);//!< Calculate total charge
       point masscenter(const vector<particle> &); //!< Calculate center-of-mass
-      point masscenter(container &);        //!< Calc. center-of-mass
+      point masscenter(const container &);        //!< Calc. center-of-mass
       virtual string info();                //!< Print information
       group& operator+=(const group&);
       const group operator+(const group&) const;

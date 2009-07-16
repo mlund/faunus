@@ -180,6 +180,8 @@ namespace Faunus {
 
   double translate::move(group &g) {
     du=0;
+    if (slp.runtest(runfraction)==false)
+      return du;
     cnt++;
     point p;
     p.x=dpv.x*dp*slp.random_half();

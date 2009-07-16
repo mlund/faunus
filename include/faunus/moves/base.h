@@ -21,7 +21,6 @@ namespace Faunus {
   class markovmove {
     protected:
       slump slp;
-      float runfraction;
       double uold, unew, deltadp;
       unsigned long long int cnt, naccept;
       string cite;                        //!< Reference to additional info. (article, url etc.)
@@ -35,6 +34,7 @@ namespace Faunus {
       double dp,                          //!< Displacement parameter
              du,                          //!< Energy change of last move
              utot;                        //!< Sum of energy changes for all moves
+      float runfraction;                  //!< Fractional chance that the move will be performed
       float accepted();                   //!< Return fraction of accepted moves
       bool run(float);                    //!< Probability
       void adjust_dp(float=30, float=40); //!< Adjust displacement parameter

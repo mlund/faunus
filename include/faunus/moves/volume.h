@@ -61,10 +61,10 @@ namespace Faunus {
    * \param i Potential class. Make sure that the T_pairpot::setvolume()
    *        function is appropriate.
    */
-  template<typename T> isobaric<T>::isobaric (
-      ensemble &e,
-      container &c,
-      interaction<T> &i, double pressure, double PEN, double scpen, int maxsize, int minsize, int sc ) : markovmove(e,c,i), trialpot(i) {
+  template<typename T> isobaric<T>::isobaric
+    ( ensemble &e, container &c, interaction<T> &i,
+      double pressure, double PEN, double scpen, int maxsize, int minsize, int sc ) : markovmove(e,c,i), trialpot(i) 
+  {
     name="ISOBARIC";
     cite="none so far";
     P=pressure;
@@ -141,7 +141,7 @@ namespace Faunus {
         }
       }else {
         std::cout    <<"# Loaded penalty function does not fit range" <<endl
-                     <<"# Wrong min/maxlen or scale?"<<endl;  
+          <<"# Wrong min/maxlen or scale?"<<endl;  
         std::ofstream fback("penaltybackup.dat");
         for (int i=0; i<v.size(); i++) {
           fback <<v[i]<<endl;
@@ -202,7 +202,7 @@ namespace Faunus {
   template<typename T> double isobaric<T>::pendiff() {
     double penval;
     penval=penalty[int( pow(newV, 1./3.) - minlen)/scale]
-          -penalty[int( pow(con->getvolume(),1./3.) - minlen)/scale];
+      -penalty[int( pow(con->getvolume(),1./3.) - minlen)/scale];
     return penval;
   }
   template<typename T> int isobaric<T>::penbin() {
@@ -218,15 +218,21 @@ namespace Faunus {
     pen*=scalepen;
   }
   template<typename T> double isobaric<T>::move(vector<macromolecule> &g) {
+    du=0;
+    if (slp.runtest(runfraction)==false)
+      return du;
     cnt++;
-    uold=unew=du=0;
+    double uold=0,unew=0;
     newvolume();                                // Generate new trial volume - prep. trial potential
     if (newV>pow(double(minlen), 3.) && newV<pow(double(maxlen),3.)) {
-      unsigned short i=g.size();
-      for (unsigned short n=0; n<i; n++)          // Loop over macromolecules
+      int i=g.size();
+      //#pragma omp parallel for
+      for (int n=0; n<i; n++)                      // Loop over macromolecules
         g[n].isobaricmove(*con, pow(newV,1./3.));  // ..and scale their mass-centers
-      for (int j=0; j<g.size()-1; j++)
-        for (int k=j+1; k<g.size(); k++) {
+      int n=g.size();
+#pragma omp parallel for reduction (+:uold,unew) schedule (dynamic)
+      for (int j=0; j<n-1; j++)
+        for (int k=j+1; k<n; k++) {
           uold += pot->energy(con->p, g[j], g[k]);         // calc. old energy with original potential class
           unew += trialpot.energy(con->trial, g[j], g[k]); // calc. new energy using a COPY of the potential class
         }

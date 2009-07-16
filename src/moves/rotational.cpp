@@ -16,6 +16,8 @@ namespace Faunus {
    */
   double macrorot::move(macromolecule &g) {
     du=0;
+    if (slp.runtest(runfraction)==false)
+      return du;
     cnt++;
     g.rotate(*con, dp); 
     //insert cell overlap test

@@ -46,7 +46,7 @@ namespace Faunus {
                x=p1.radius+p2.radius, u=x*x/r2,
                r=sqrt(r2);
         x=u*u*u;
-        return (x*x-x)*eps + p1.charge * p2.charge / r * exp(-k*r);
+        return (x*x-x)*eps + p1.charge * p2.charge / r * f_exp(-k*r);
       }
 
       inline double sqdist(const point &p1, const point &p2) {

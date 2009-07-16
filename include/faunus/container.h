@@ -24,7 +24,7 @@ namespace Faunus {
       virtual void randompos(point &)=0;                  //!< Random point within container
       virtual string info();                              //!< Return info string
       virtual string povray();                            //!< POVRAY object representing the cell
-      virtual void boundary(point &){};                   //!< Apply boundary conditions to a point
+      virtual void boundary(point &) const {};            //!< Apply boundary conditions to a point
       virtual void scale(point&, const double&) const {}  //!< Scale point to a new box length
       inline virtual double sqdist(const point &a, const point &b) { 
         return a.sqdist(b); }
@@ -108,9 +108,9 @@ namespace Faunus {
         if (r.z>len_half) r.z-=len;
         return r;
       }
-      inline int anint(double x) { return int(x>0. ? x+.5 : x-.5); }
+      inline int anint(double x) const { return int(x>0. ? x+.5 : x-.5); }
       //! Apply periodic boundary conditions
-      inline void boundary(point &a) {
+      inline void boundary(point &a) const {
         if (std::abs(a.x)>len_half) a.x-=len*anint(a.x/len);
         if (std::abs(a.y)>len_half) a.y-=len*anint(a.y/len);
         if (std::abs(a.z)>len_half) a.z-=len*anint(a.z/len);
@@ -132,7 +132,7 @@ namespace Faunus {
       slit(inputfile &);
       string info();
       //void setvolume(double);
-      inline void boundary(point &a) {
+      inline void boundary(point &a) const {
         a.x=a.x-len*anint(a.x*len_inv);
         a.y=a.y-len*anint(a.y*len_inv);
       }

@@ -69,7 +69,7 @@ namespace Faunus {
   void FAUrdf::update(container &c) {
     int n=c.p.size();
     npart=0;
-#pragma omp for
+#pragma omp parallel for schedule (dynamic)
     for (int i=0; i<n-1; i++)
       for (int j=i+1; j<n; j++) 
         if ( (c.p[i].id==a && c.p[j].id==b)

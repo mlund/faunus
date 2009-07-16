@@ -54,7 +54,6 @@ int main() {
 #endif
   vector<macromolecule> g;                // PROTEIN groups
   io io;
-  iogro gro(in);                          // Gromacs file output for VMD etc.
   iopqr pqr;
   ioaam aam;
   if (in.getboo("lattice")==true)         //   Protein input file format is AAM
@@ -64,7 +63,6 @@ int main() {
   if (aam.load(cell,"confout.aam")) {
     for (int i=0;i<g.size();i++) 
       g[i].masscenter(cell);              // Load old config (if present)
-    // ...and recalc mass centers
   }
 
   // Markovsteps
@@ -80,14 +78,18 @@ int main() {
       int(in.getint("minlen")),           // Set minimum box length
       int(in.getint("binlen")));          // Set bin length for penalty function  
 
-  if ( in.getboo("penalize")==true)       // If penalty.dat is present it will be loaded and used as
-    vol.loadpenaltyfunction("penalty.dat");// bias. Else a penalty function will only be constructed
-  // if the penalty != 0.
-  // Markovparameters
+  if ( in.getboo("penalize")==true)         // If penalty.dat is present it will be loaded and used as
+    vol.loadpenaltyfunction("penalty.dat"); // bias. Else a penalty function will only be constructed
+                                            // if the penalty != 0.
+  // Move details
   vol.dp=in.getflt("voldp");
   mt.dp =in.getflt("mtdp");
   mr.dp =in.getflt("mrdp");
   ct.dp=in.getflt("ctdp");
+  ct.runfraction =in.getflt("clt",-1);
+  mr.runfraction =in.getflt("rr",-1);
+  mt.runfraction =in.getflt("tr",-1);
+  vol.runfraction=in.getflt("volr",-1);
 #ifdef XYPLANE
   mt.dpv.z=0;
 #endif
@@ -107,57 +109,48 @@ int main() {
   FAUrdf protrdf22(0,0,.5,cell.len/2.); // Protein and salt radial distributions
   FAUrdf protrdf12(0,0,.5,cell.len/2.); // Protein and salt radial distributions
 
-  // Switch parameters
-  double sum, volr, tr, rr, clt, randy=-1;
-  volr = in.getflt("volr"), tr=in.getflt("tr"), rr=in.getflt("rr"), clt=in.getflt("clt");
-  sum  = volr+tr+rr+clt, volr/=sum, tr/=sum, rr/=sum, clt/=sum;
-  int switcher=-1;
-
-  // Help variables
-  int eprint, cnt=0;
-  eprint=int(0.001*in.getflt("microsteps")); //loop.macro);
-
   ioxtc xtc(cell.len);                                // Gromacs xtc output (if installed)
 
   cout << cell.info() << pot.info() <<in.info();      // Print information to screen
-
   cout <<endl<< "#  Temperature = "<<phys.T<<" K"<<endl<<endl;
   cout << "---------- RUN-TIME INFORMATION  -----------" << endl;
 
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {
       short i,j,n;
-      cnt++;
-      randy=slump.random_one();
-      if (randy<volr)                           // Pick a random MC move
-        sys+=vol.move(g);                       //   Do the move.
-      if (randy<volr+rr && randy >volr)         // Rotate proteins
-        for (n=0; n<g.size(); n++) {            //   Loop over all proteins
-          i = slump.random_one()*g.size();      //   and pick at random.
-          sys+=mr.move(g[i]);                   //   Do the move.
-        }
-      if (randy<volr+rr+tr && randy>volr+rr)    // Translate proteins
-        for (n=0; n<g.size(); n++) {            //   Loop over all proteins
-          i = slump.random_one()*g.size();      //   and pick at random.
-          sys+=mt.move(g[i]);                   //   Do the move.
-        }
+      double randy=slump.random_one();
 
-      if (randy<clt+volr+rr+tr && randy>volr+rr+tr)// Cluster translation
-        sys+=ct.move(g);                        //   Do the move.
+      switch (rand() % 3) {
+        case 0:            
+          sys+=vol.move(g);
+          break;
+        case 1:
+          for (int n=0; n<2*g.size(); n++) {
+            int i = randy*g.size();
+            if (randy<.5)
+              sys+=mr.move(g[i]);
+            else
+              sys+=mt.move(g[i]);
+          }
+          break;
+        case 2:
+          sys+=ct.move(g);
+          break;
+      }
 
       lendist.add(cell.len);
-      if (slump.random_one()>.95 && in.getboo("movie", false)==true) {
-        xtc.setbox(cell.len);
-        xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
-      }
-      if (slump.random_one()>.99)
+      if (randy>.99)
+        if (in.getboo("movie", false)==true) {
+          xtc.setbox(cell.len);
+          xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
+        }
+      if (randy>.99)
         sys.track();
-      if(slump.random_one()>.9) {
+      if (randy>.9) {
         for (i=0;i<g.size();i++) 
-          g[i].masscenter(cell);                // Recalculate mass centers
-
+          g[i].masscenter(cell);                  // Recalculate mass centers
         for (i=0; i<g.size()-1; i++)
-          for (j=i+1; j<g.size(); j++) {        //   Analyse g(r)...
+          for (j=i+1; j<g.size(); j++) {          //   Analyse g(r)...
             protrdf.update(cell,g[i].cm,g[j].cm);
             if ((i<in.getint("nprot2") && j>=in.getint("nprot2")) || 
                 (i>=in.getint("nprot2") && j<in.getint("nprot2")))
@@ -174,9 +167,11 @@ int main() {
     } // End of inner loop
 
     usys=0;
-    for (int i=0; i<g.size()-1; i++)
+#pragma omp parallel for reduction (+:usys) schedule (dynamic)
+    for (int i=0; i<g.size()-1; i++) {
       for (int j=i+1; j<g.size(); j++)
         usys+=pot.energy(cell.p, g[i], g[j]);
+    }
     sys.update(usys);                           // Update system energy averages
 
     cout << loop.timing(macro);
@@ -184,7 +179,6 @@ int main() {
       << "#   Drift                     = "<<sys.cur-sys.sum<<endl;
 
     cell.check_vector();                        // Check sanity of particle vector
-    gro.save("confout.gro", cell);              // Write GRO output file
     protrdf.write("rdfprot.dat");               // Write g(r)'s
     if (in.getboo("penalize")==true) {
       vol.printpenalty("oldpenalty.dat");       // Print penalty function (used as bias)
@@ -198,13 +192,13 @@ int main() {
     }
     // Update inputfile isobaric.conf and print coordinates
     in.updateval("boxlen", stringify(cell.len));
-    io.writefile("isobaric.conf", in.print());
+    //io.writefile("isobaric.conf", in.print());
     aam.save("confout.aam", cell.p);
 
     protrdf.write("rdfprot.dat");               // Write g(r)'s
-    protrdf11.write("rdfprot11.dat");               // Write g(r)'s
-    protrdf12.write("rdfprot12.dat");               // Write g(r)'s
-    protrdf22.write("rdfprot22.dat");               // Write g(r)'s
+    protrdf11.write("rdfprot11.dat");           // Write g(r)'s
+    protrdf12.write("rdfprot12.dat");           // Write g(r)'s
+    protrdf22.write("rdfprot22.dat");           // Write g(r)'s
     agg.write("aggregates.dat");
 
     aam.save("confout.aam", cell.p);            // Save config. for next run
@@ -212,14 +206,14 @@ int main() {
 
   } // End of outer loop
 
-  if (in.getboo("penalize")==false) {
+  if (in.getboo("penalize")==false)
     vol.printupdatedpenalty("penalty.dat");
-  }
 
   cout << "----------- FINAL INFORMATION -----------" << endl ;
   cout << loop.info() << sys.info() << agg.info() << vol.info()             // Final information...
-    << mr.info() << mt.info() << ct.info();
-  cout <<endl << "#   Final      side length  = " <<cell.len<<endl
+       << mr.info() << mt.info() << ct.info();
+  cout <<endl
+    << "#   Final      side length  = " <<cell.len<<endl
     << "#   Ideal     <side length> = " <<pow( double( g.size() )/ in.getflt("pressure" ),1./3.)<<endl
     << "#   Simulated <side length> = " <<vol.len.avg()<<" ("<<vol.len.stdev()<<")"<<endl
     << "#   Ideal     <density>     = " <<in.getflt("pressure")<<endl

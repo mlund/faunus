@@ -98,7 +98,7 @@ namespace Faunus {
    * \author Mikael Lund
    * \date Dec. 2007, Prague
    */
-  point group::masscenter(container &con) {
+  point group::masscenter(const container &con) {
     double sum=0;
     cm.clear();
     point t, o = con.p[beg]; // set origo to first particle

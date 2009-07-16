@@ -19,7 +19,7 @@ namespace Faunus {
    */
   template<typename T> class isobaric : public markovmove {
     public:
-      isobaric( ensemble&, container&, interaction<T>&, double, double, double, int, int, int);
+      isobaric( ensemble&, container&, T &, double, double, double, int, int, int);
       string info();
       void move(group &, unsigned short);     //!< Scale group mass center and move
       void move(unsigned short, group &,...);
@@ -34,7 +34,7 @@ namespace Faunus {
       void updatepenalty();                   // Add penalty and newpenalty
     private:
       unsigned short N;
-      interaction<T> trialpot;                // Copy of potential class for volume changes
+      T trialpot;                             // Copy of potential class for volume changes
       double P, dV, dh;                       // Pressure, volume difference and hamiltonian difference
       int maxlen, minlen, scale;              // Window parameters
       double newV;                            // New volume
@@ -43,7 +43,7 @@ namespace Faunus {
       bool penalize;                          // Use penalty function
       vector<double> penalty;                 // Initial penalty function
       vector<double> newpenalty;              // New penalty function
-      interaction<T> *pot;                    // Override markovmove pointer.
+      T *pot;                                 // Override markovmove pointer.
       double pendiff();                       // Retruns the penalty potential diff of old and new volume
       int penbin();                           // Retruns the bin pointer of the present volume
   };
@@ -62,7 +62,7 @@ namespace Faunus {
    *        function is appropriate.
    */
   template<typename T> isobaric<T>::isobaric
-    ( ensemble &e, container &c, interaction<T> &i,
+    ( ensemble &e, container &c, T &i,
       double pressure, double PEN, double scpen, int maxsize, int minsize, int sc ) : markovmove(e,c,i), trialpot(i) 
   {
     name="ISOBARIC";

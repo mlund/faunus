@@ -37,6 +37,7 @@ namespace Faunus {
       string info();                         //!< Show info
       string print();                        //!< Print a string of the inputfile
       void updateval(string, string);        //!< Update the inputfile for next run
+      void updateval(string, double);        //!< Update the inputfile for next run
   };
 }
 #endif

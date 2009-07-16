@@ -126,6 +126,13 @@ namespace Faunus {
       matrix[i].val[0]=v;
     }
   }
+
+  void inputfile::updateval(string key, double x) {
+    std::ostringstream o;
+    o << x;
+    updateval(key,o.str());
+  }
+
   string inputfile::print() {
     std::ostringstream o;
     o <<"\n";

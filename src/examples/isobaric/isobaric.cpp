@@ -5,7 +5,6 @@
  *
  * \author Bjorn Persson
  */
-
 #include "faunus/faunus.h"
 #include <iostream>
 #include <sstream>
@@ -15,20 +14,13 @@
 using namespace Faunus;
 using namespace std;
 
-class BadConversion : public std::runtime_error {
-  public:
-    BadConversion(const std::string& s)
-      : std::runtime_error(s)
-    { }
-};
-
-inline std::string stringify(double x)
-{
-  std::ostringstream o;
-  if (!(o << x))
-    throw BadConversion("stringify(double)");
-  return o.str();
-}
+#ifdef MONOPOLE
+  typedef interaction_monopole<pot_debyehuckelP3> Tpot;
+#elif defined(FASTDH)
+  typedef interaction_vector<pot_debyehuckelP3Fast> Tpot;
+#else
+  typedef interaction<pot_debyehuckelP3> Tpot;
+#endif
 
 int main() {
   cout << faunus_splash();
@@ -46,11 +38,9 @@ int main() {
 #endif
   canonical nvt;                          // Use the canonical ensemble
 #ifdef MONOPOLE
-  interaction_monopole<pot_debyehuckelP3> pot(in,cell); // Far-away monopole approximation
-#elif defined(FASTDH)
-  interaction_vector<pot_debyehuckelP3Fast> pot(in); // Fast, approximate Debye-Huckel potential
+  Tpot pot(in,cell);                      // Far-away monopole approximation
 #else
-  interaction<pot_debyehuckelP3> pot(in); // Functions for interactions
+  Tpot pot(in);                           // Fast, approximate Debye-Huckel potential
 #endif
   vector<macromolecule> g;                // PROTEIN groups
   io io;
@@ -69,7 +59,7 @@ int main() {
   macrorot mr(nvt, cell, pot);            //   Class for macromolecule rotation
   translate mt(nvt, cell, pot);           //   Class for macromolecular translation
   clustertrans ct(nvt, cell, pot, g);     //   Class for non-rejective cluster translation
-  isobaric<pot_debyehuckelP3> vol(
+  isobaric< Tpot > vol(
       nvt, cell, pot,
       in.getflt("pressure"),              // Set external pressure (in kT)
       in.getflt("penalty"),               // Set penalty           (in kT)
@@ -111,9 +101,9 @@ int main() {
 
   ioxtc xtc(cell.len);                                // Gromacs xtc output (if installed)
 
-  cout << cell.info() << pot.info() <<in.info();      // Print information to screen
-  cout <<endl<< "#  Temperature = "<<phys.T<<" K"<<endl<<endl;
-  cout << "---------- RUN-TIME INFORMATION  -----------" << endl;
+  cout << cell.info() << pot.info() <<in.info() << endl
+       << "#  Temperature = " << phys.T << " K" << endl << endl
+       << "#---------- RUN-TIME INFORMATION  -----------" << endl;
 
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {
@@ -144,8 +134,7 @@ int main() {
           xtc.setbox(cell.len);
           xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
         }
-      if (randy>.99)
-        sys.track();
+      if (randy>.99) sys.track();
       if (randy>.9) {
         for (i=0;i<g.size();i++) 
           g[i].masscenter(cell);                  // Recalculate mass centers
@@ -174,9 +163,9 @@ int main() {
     }
     sys.update(usys);                           // Update system energy averages
 
-    cout << loop.timing(macro);
-    cout << "#   Energy (cur, avg, std)    = "<<sys.cur<<", "<<sys.uavg.avg()<<", "<<sys.uavg.stdev()<<endl
-      << "#   Drift                     = "<<sys.cur-sys.sum<<endl;
+    cout << loop.timing(macro)
+         << "#   Energy (cur, avg, std)    = "<<sys.cur<<", "<<sys.uavg.avg()<<", "<<sys.uavg.stdev()<<endl
+         << "#   Drift                     = "<<sys.cur-sys.sum<<endl;
 
     cell.check_vector();                        // Check sanity of particle vector
     protrdf.write("rdfprot.dat");               // Write g(r)'s
@@ -191,7 +180,7 @@ int main() {
       cout << "# Penalty function updated"<<endl;
     }
     // Update inputfile isobaric.conf and print coordinates
-    in.updateval("boxlen", stringify(cell.len));
+    in.updateval("boxlen", cell.len);
     //io.writefile("isobaric.conf", in.print());
     aam.save("confout.aam", cell.p);
 
@@ -209,15 +198,14 @@ int main() {
   if (in.getboo("penalize")==false)
     vol.printupdatedpenalty("penalty.dat");
 
-  cout << "----------- FINAL INFORMATION -----------" << endl ;
-  cout << loop.info() << sys.info() << agg.info() << vol.info()             // Final information...
-       << mr.info() << mt.info() << ct.info();
-  cout <<endl
-    << "#   Final      side length  = " <<cell.len<<endl
-    << "#   Ideal     <side length> = " <<pow( double( g.size() )/ in.getflt("pressure" ),1./3.)<<endl
-    << "#   Simulated <side length> = " <<vol.len.avg()<<" ("<<vol.len.stdev()<<")"<<endl
-    << "#   Ideal     <density>     = " <<in.getflt("pressure")<<endl
-    << "#   Simulated <density>     = " <<g.size()*vol.ivol.avg()<<" ("<<g.size()*vol.ivol.avg()<<")"<<endl;
+  cout << "----------- FINAL INFORMATION -----------" << endl
+       << loop.info() << sys.info() << agg.info() << vol.info()
+       << mr.info() << mt.info() << ct.info() << endl
+       << "#   Final      side length  = " << cell.len << endl
+       << "#   Ideal     <side length> = " << pow( double( g.size() )/ in.getflt("pressure" ),1./3.)<<endl
+       << "#   Simulated <side length> = " << vol.len.avg()<<" ("<<vol.len.stdev()<<")"<<endl
+       << "#   Ideal     <density>     = " << in.getflt("pressure")<<endl
+       << "#   Simulated <density>     = " << g.size()*vol.ivol.avg()<<" ("<<g.size()*vol.ivol.avg()<<")"<<endl;
   xtc.close();
 }
 

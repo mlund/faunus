@@ -53,6 +53,7 @@ namespace Faunus {
       virtual void isobaricmove(container &, double){};   //!< Pressure scaling
       virtual unsigned short nummolecules();              //!< Number of molecules
       unsigned short numhydrophobic(vector<particle> &);  //!< Number of hydrophobic particles
+      bool swap(container &, int);                        //!< Move group to a new position
   };
 
   /*!

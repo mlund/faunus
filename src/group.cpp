@@ -246,6 +246,18 @@ namespace Faunus {
     }
   }
 
+  bool group::swap(container &c, int pos) {
+    int oldbeg=beg;
+    if (beg!=pos && size()>0) {
+      std::swap_ranges(c.p.begin()+beg, c.p.begin()+end, c.p.begin()+pos);
+      std::swap_ranges(c.trial.begin()+beg, c.trial.begin()+end, c.trial.begin()+pos);
+      end=pos+size()-1;
+      beg=pos;
+      return true;
+    }
+    return false;
+  }
+
   /*****************************
    *
    *          S A L T
@@ -427,7 +439,7 @@ namespace Faunus {
       par.trial[i].y=e1mcoy*eb+cosang*b.y+sinang*(u.z*b.x - u.x*b.z) + cm.y + q.y;
       par.trial[i].z=e1mcoz*eb+cosang*b.z+sinang*(u.x*b.y - u.y*b.x) + cm.z + q.z;
       par.boundary(par.trial[i]);
-      
+
     }
     cm_trial = cm + q;
     par.boundary(cm_trial);
@@ -484,7 +496,7 @@ namespace Faunus {
    * \warning Anvand bindningsvektorer
    */
   void macromolecule::transrot(container &par, double dr, double angle) {
-   // Let us first translate...
+    // Let us first translate...
     point c;
     c.ranunit(slp); 
     c=c*dr; //random displacement vector
@@ -528,7 +540,7 @@ namespace Faunus {
   void macromolecule::add(container &con, inputfile &in ) { }
 
   /*! \warning Assumes a cubic box!
-   */
+  */
   void macromolecule::isobaricmove(container &con, double newlen) {
     double oldvol=con.getvolume(); // store original volume
     con.scale(cm_trial, newlen);   // scale center of mass (cm)
@@ -634,8 +646,8 @@ namespace Faunus {
 
   //!< is j a neighbor to polymer atom i?
   bool polymer::areneighbors(unsigned short i, unsigned short j) const {
-//    return ( std::find( nb[i-beg].begin(), nb[i-beg].end(), j) != nb[i-end].end() ) ? true : false;
-//    std::cout <<"particel "<<i<<" with "<<nb[i-beg].size()<<"n, looking for "<<j<<std::endl;
+    //    return ( std::find( nb[i-beg].begin(), nb[i-beg].end(), j) != nb[i-end].end() ) ? true : false;
+    //    std::cout <<"particel "<<i<<" with "<<nb[i-beg].size()<<"n, looking for "<<j<<std::endl;
     for (int k=0; k<nb[i-beg].size(); k++)
       if (nb[i-beg][k]==j)
         return true;
@@ -664,7 +676,7 @@ namespace Faunus {
       <<"#   ----------------------------------------"<<std::endl
       <<"#   Area per headgroup        = "<<headarea<<" (A^2) "<<std::endl
       <<"#   POPS:POPC ratio           = "<<pops.size()/double(pops.size()+popc.size())*100.
-         <<":"<<popc.size()/double(popc.size()+pops.size())*100.<<std::endl
+      <<":"<<popc.size()/double(popc.size()+pops.size())*100.<<std::endl
       <<"#   "<<popc.size()+pops.size()<<" lipids ("<<pops.size()<<" POPS and "<<popc.size()<<" POPC)"<<std::endl
       <<std::endl;
     return o.str();
@@ -706,8 +718,8 @@ namespace Faunus {
       Pops[0].x=Pops[1].x=Pops[2].x=Pops[3].x=x+i*gstep;
       Popc[0].x=Popc[1].x=Popc[2].x=x+i*gstep;
       for (int j=0; j<graftp; j++) {
-//        nb.clear();
-//        p.nb.clear();
+        //        nb.clear();
+        //        p.nb.clear();
         ++cnt;
         Pops[0].y=Pops[1].y=Pops[2].y=Pops[3].y=y+j*gstep;
         Popc[0].y=Popc[1].y=Popc[2].y=y+j*gstep;
@@ -746,10 +758,10 @@ namespace Faunus {
         }
       }
     }
-//    for (int i=0; i<popc.size(); i++)
-//      for (int j=0; j<popc[i].nb.size(); j++)
-//        for (int k=0; j<popc[i].nb[j].size(); k++)
-//          std::cout <<popc[i].nb[j][k]<<std::endl;
+    //    for (int i=0; i<popc.size(); i++)
+    //      for (int j=0; j<popc[i].nb.size(); j++)
+    //        for (int k=0; j<popc[i].nb[j].size(); k++)
+    //          std::cout <<popc[i].nb[j][k]<<std::endl;
     beg=bbeg;
     end=con.p.size()-1;
   }

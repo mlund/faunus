@@ -303,8 +303,8 @@ namespace Faunus {
       unsigned short n=atoi(v[0].c_str());
       ostringstream o;
       for (unsigned short i=1; i<=n; i++) {
-        sscanf( v[i].c_str(), "%5d%5s%5s%5d%f %f %f",
-            &cnt, &name, &name2, &cnt2, &x, &y, &z);
+        //sscanf( v[i].c_str(), "%5d%5s%5s%5d%f %f %f",
+        //    &cnt, &name, &name2, &cnt2, &x, &y, &z);
         cout << v[i] << endl;
         cout << cnt << " " << name2 << " " << cnt2 << " " << z  << endl;
         p.push_back(tmp);

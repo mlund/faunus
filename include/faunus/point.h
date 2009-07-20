@@ -123,12 +123,6 @@ namespace Faunus {
     dx=std::abs(x-p.x);
     dy=std::abs(y-p.y);
     dz=std::abs(z-p.z);
-    //dx=x-p.x;
-    //if (dx<0) dx=-dx;
-    //dy=y-p.y;
-    //if (dy<0) dy=-dy;
-    //dz=z-p.z;
-    //if (dz<0) dz=-dz;
     if (dx>halflen) dx-=len;
     if (dy>halflen) dy-=len;
     if (dz>halflen) dz-=len;

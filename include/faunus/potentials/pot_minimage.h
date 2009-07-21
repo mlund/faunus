@@ -29,6 +29,13 @@ namespace Faunus {
       inline double sqdist(const point &p1, const point &p2) {
         return p1.sqdist(p2,box,halfbox);
       }
+      int anint(double x) const { return int(x>0. ? x+.5 : x-.5); }
+      void boundary(point &a) const {
+        if (std::abs(a.x)>halfbox) a.x-=box*anint(a.x/box);
+        if (std::abs(a.y)>halfbox) a.y-=box*anint(a.y/box);
+        if (std::abs(a.z)>halfbox) a.z-=box*anint(a.z/box);
+      }
+
       string info() {
         std::ostringstream o;
         o << pot_lj::info()

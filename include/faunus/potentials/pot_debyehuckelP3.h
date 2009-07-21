@@ -58,6 +58,13 @@ namespace Faunus {
         halfbox=box/2.;
       }
 
+      int anint(double x) const { return int(x>0. ? x+.5 : x-.5); }
+      void boundary(point &a) const {
+        if (std::abs(a.x)>halfbox) a.x-=box*anint(a.x/box);
+        if (std::abs(a.y)>halfbox) a.y-=box*anint(a.y/box);
+        if (std::abs(a.z)>halfbox) a.z-=box*anint(a.z/box);
+      }
+
       virtual double VectorEnergy( double *r2, double *qq, int *len) {
         int n=*len;
         //std::cout << len << " ";

@@ -82,7 +82,9 @@ int main() {
   //cout << con.p.size() << endl;
   //return 0;
   atom.reset_properties(con.p); // set all properties according to faunatoms.dat file!
-  string s;
+  string s,name;
+  name="coord.xtc";
+  //char d = name.c_str();
 
   // OPEN XTC TRAJECTORY FILE
   xd=xdrfile_open("coord.xtc", "r");

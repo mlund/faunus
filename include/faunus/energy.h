@@ -450,23 +450,23 @@ namespace Faunus {
   template<class T>
     class interaction_monopole : public interaction<T> {
       private:
-        container *cPtr;
         particle monopole(const vector<particle> &p, const group &g) {
           double sum=0;
           particle cm;
           point t, o = p[g.beg]; // set origo to first particle
           for (unsigned short i=g.beg; i<=g.end; i++) {
             t = p[i]-o;        // translate to origo
-            cPtr->boundary(t);       // periodic boundary (if any)
+            interaction<T>::pair.boundary(t);       // periodic boundary (if any)
             cm += t * p[i].mw;
             sum += p[i].mw; 
             cm.charge+=p[i].charge;
           }
           cm=cm*(1./sum) + o;
-          cPtr->boundary(cm);
+          interaction<T>::pair.boundary(cm);
           return cm;
         }
       public:
+        container *cPtr;
         double cut_g2g; //!< Cut-off distance for group-group interactions
         double cut_g2p; //!< Cut-off distance for group-particle interactions
         interaction_monopole(inputfile &in, container &con) : interaction<T>(in) {
@@ -478,16 +478,16 @@ namespace Faunus {
         double energy(const vector<particle> &p ) { return interaction<T>::energy(p); } 
         double energy(const vector<particle> &p, const group &g1, const group &g2) {
           particle mp1=monopole(p,g1), mp2=monopole(p,g2);
-          return ( cPtr->dist(mp1, mp2) > cut_g2g ) ?
+          return ( sqrt(interaction<T>::pair.sqdist(mp1, mp2)) > cut_g2g ) ?
             interaction<T>::energy( mp1, mp2 ) : interaction<T>::energy(p, g1, g2);
         }
         double energy(const vector<particle> &p, const group &g) {
           double u=0;
           particle mp=monopole(p,g);
           for (int i=0; i<g.beg; i++)
-            u+= (cPtr->dist(mp,p[i])>cut_g2p) ? interaction<T>::energy(mp,p[i]) : interaction<T>::energy(p,g,i);
+            u+= (sqrt(interaction<T>::pair.sqdist(mp,p[i]))>cut_g2p) ? interaction<T>::energy(mp,p[i]) : interaction<T>::energy(p,g,i);
           for (int i=g.beg+1; i<p.size(); i++)
-            u+= (cPtr->dist(mp,p[i])>cut_g2p) ? interaction<T>::energy(mp,p[i]) : interaction<T>::energy(p,g,i);
+            u+= (sqrt(interaction<T>::pair.sqdist(mp,p[i]))>cut_g2p) ? interaction<T>::energy(mp,p[i]) : interaction<T>::energy(p,g,i);
           return u;
         }
         string info() {

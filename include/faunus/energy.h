@@ -567,6 +567,7 @@ namespace Faunus {
       // IMAGE ENERGY
       double image(const vector<particle> &p) {
         double u=0;
+#pragma omp parallel for reduction (+:u) schedule (dynamic)
         for (int i=0; i<p.size(); ++i)
           u+=image(p,i);
         return u;
@@ -574,6 +575,7 @@ namespace Faunus {
       double image(const vector<particle> &p, int i) {
         double u=0;
         int t=img.size();
+#pragma omp parallel for reduction (+:u) schedule (dynamic)
         for (int j=0; j<t; ++j)
           u += impot(ich[j], p[i], img[j] );
         return p[i].charge*scale*u*2. - p[i].charge*scale*impot(ich[i],p[i],img[i]) ;        //make sure too and not too double count
@@ -587,12 +589,15 @@ namespace Faunus {
       double image(const vector<particle> &p, int i, int j, int k) {
         double uin=0;
         double uex=0;
+#pragma omp parallel for reduction (+:uex) schedule (dynamic)
         for (int s=0; s<j; s++)
           uex += impot(ich[s], p[i], img[s] );  //make sure to double count
+#pragma omp parallel for reduction (+:uex) schedule (dynamic)
         for (int t=k+1; t<p.size(); t++)
           uex += impot(ich[t], p[i], img[t] );  //make sure to double count
         for (int u=j; u<=k; u++)
           uin += impot(ich[u], p[i], img[u] );  // internal interactions will be double counted implicitly
+                                                // not paralleized on purpose
         // the self term will not be double counted
         return p[i].charge*scale*(uex*2+uin); 
       }
@@ -618,6 +623,7 @@ namespace Faunus {
         ur=ui=0;
         updateimg(p[i],i);
         ur=interaction<T>::potential(p,i);
+#pragma omp parallel for reduction (+:ui) schedule (dynamic)
         for (int s=0; s<p.size(); s++)
           ui += impot(ich[s], p[i], img[s] );  
         ui*=2;
@@ -626,6 +632,7 @@ namespace Faunus {
       double potential(const vector<particle> &p, point i) {
         ur=ui=0;
         ur=interaction<T>::potential(p,i);
+#pragma omp parallel for reduction (+:ui) schedule (dynamic)
         for (int s=0; s<p.size(); s++)
           ui += impot(ich[s], i, img[s] );  
         ui*=2;               // Due to the definition of scale

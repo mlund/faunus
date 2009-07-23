@@ -632,7 +632,7 @@ namespace Faunus {
       double potential(vector<particle> &p, point i) {
         ur=ui=0;
         ur=interaction<T>::potential(p,i);
-#pragma omp parallel for reduction (+:ui) schedule (dynamic)
+//#pragma omp parallel for reduction (+:ui) schedule (dynamic)
         for (int s=0; s<p.size(); s++)
           ui += impot(ich[s], i, img[s] );  
         ui*=2;               // Due to the definition of scale

@@ -159,6 +159,7 @@ namespace Faunus {
    */
   class iogro : public iopart {
     private:
+      particle s2p(string &);
       string p2s(particle &, int=0) { return string(); }
       void header() {};
       float len;

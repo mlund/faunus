@@ -21,7 +21,7 @@ namespace Faunus {
         springinteractionfield::name+="SOMETHING!";
       }
       // ENERGY WITH EXTERNAL CORRECTION
-      double energy(const vector<particle> &p, const group &g ) {
+      double energy(vector<particle> &p, const group &g ) {
         double u=interaction<pot_debyehuckelXYcc>::energy(p,g);
         for (int i=g.beg; i<=g.end; i++) {
           u += pair.expot(p[i]);
@@ -29,7 +29,7 @@ namespace Faunus {
         }
         return u;
       }
-/*      double energy(const vector<particle> &p, const group &g1 , const group &g2) {
+/*      double energy(vector<particle> &p, const group &g1 , const group &g2) {
         double u=interaction<pot_debyehyckelXYcc>energy(p,g1,g2);
         for (int i=g1.beg; i<=g1.end; i++)
           u += pair.expot(p[i]);
@@ -39,14 +39,14 @@ namespace Faunus {
       }
 */
      // HYDROPHOBIC POTENTIAL
-      double hydrophobic(const vector<particle> &p, const group &g) {
+      double hydrophobic(vector<particle> &p, const group &g) {
         double u=0;
         for (int i=g.beg; i<=g.end; i++)
           u+=pair.hphobpot(p[i]);
         return u;
       }
       // LJ-ENERGY
-      double ljenergy(const vector<particle> &p, const group &g) {
+      double ljenergy(vector<particle> &p, const group &g) {
         int s=p.size();
         double u=0;
         for (int i =g.beg; i<=g.end; i++) {
@@ -58,7 +58,7 @@ namespace Faunus {
         return u*pair.f;
       }
       // EXTERNAL CORRECTION
-      double extpot(const vector<particle> &p, const group &g) {
+      double extpot(vector<particle> &p, const group &g) {
       double u=0;
       for (int i=g.beg; i<=g.end; i++) 
         u+= pair.expot(p[i]);

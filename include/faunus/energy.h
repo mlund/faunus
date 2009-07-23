@@ -34,24 +34,24 @@ namespace Faunus {
       double tokT;
       energybase(double f) { tokT=f; }
       virtual double energy(const particle &, const particle &)=0;                       //!< particle<->particle (slow!)
-      virtual double energy(const vector<particle> &, const particle &)=0;               //!< all<->external particle
-      virtual double energy(const vector<particle> &, int)=0;                            //!< all<->particle i.
-      virtual double energy(const vector<particle> &, const group &)=0;                  //!< all<->group.
-      virtual double energy(const vector<particle> &)=0;                                 //!< all<->all (System energy).
-      virtual double energy(const vector<particle> &, const group &, const group &)=0;   //!< group<->group.
-      virtual double energy(const vector<particle> &, const group &, int)=0;             //!< group<->particle i.
-      virtual double energy(const vector<particle> &, const group &, const particle &)=0;//!< group<->external particle.
-      virtual double energy(const vector<particle> &, molecules &, vector<int> &)=0;     //!< subset[molecules]<->all
-      virtual double potential(const vector<particle> &, unsigned short)=0;              //!< Electric potential at j'th particle
-      virtual double potential(const vector<particle> &, point)=0;                       //!< Electric potential in point
-      virtual double internal(const vector<particle> &, const group &, int=1)=0;         //!< internal energy in group
-      virtual double pot(const vector<particle> &, const point &)=0;                     //!< Electrostatic potential in a point
+      virtual double energy(vector<particle> &, const particle &)=0;               //!< all<->external particle
+      virtual double energy(vector<particle> &, int)=0;                            //!< all<->particle i.
+      virtual double energy(vector<particle> &, const group &)=0;                  //!< all<->group.
+      virtual double energy(vector<particle> &)=0;                                 //!< all<->all (System energy).
+      virtual double energy(vector<particle> &, const group &, const group &)=0;   //!< group<->group.
+      virtual double energy(vector<particle> &, const group &, int)=0;             //!< group<->particle i.
+      virtual double energy(vector<particle> &, const group &, const particle &)=0;//!< group<->external particle.
+      virtual double energy(vector<particle> &, molecules &, vector<int> &)=0;     //!< subset[molecules]<->all
+      virtual double potential(vector<particle> &, unsigned short)=0;              //!< Electric potential at j'th particle
+      virtual double potential(vector<particle> &, point)=0;                       //!< Electric potential in point
+      virtual double internal(vector<particle> &, const group &, int=1)=0;         //!< internal energy in group
+      virtual double pot(vector<particle> &, const point &)=0;                     //!< Electrostatic potential in a point
       virtual double dipdip(const point &, const point &, double)=0;                     //!< Dipole-dipole energy.
       virtual double iondip(const point &, double, double)=0;                            //!< Ion-dipole energy.
       virtual double force(container &, particle, particle, point, double, double=.5)=0;        //!< Force vector
       virtual void forceall(container &, vector<point> &)=0;
-      virtual double u_monomer(const vector<particle> &, const polymer &, unsigned int)=0; //!< all<->monomer in polymer
-      virtual double uself_polymer(const vector<particle> &, const polymer&)=0;          //!< internal polymer energy
+      virtual double u_monomer(vector<particle> &, const polymer &, unsigned int)=0; //!< all<->monomer in polymer
+      virtual double uself_polymer(vector<particle> &, const polymer&)=0;          //!< internal polymer energy
 
       string info() {
         std::ostringstream o;
@@ -88,20 +88,20 @@ namespace Faunus {
         return pair.pairpot(a,b) * pair.f;
       }
 
-      double energy(const vector<particle> &p, int j) {
-        int i,ps=p.size();
+      double energy(vector<particle> &p, int j) {
+        int n=p.size();
         double u=0;
-        if (j>0)
-#pragma omp parallel for reduction (+:u) schedule (dynamic)
-          for (i=0; i<j; i++)
-            u+=pair.pairpot( p[i],p[j] );
-#pragma omp parallel for reduction (+:u) schedule (dynamic)
-        for (i=j+1; i<ps; i++)
+        particle bak=p[j]; //avoid self interaction
+        p[j].charge=0;     //in a slightly dirty manner!
+        p[j].y=1e9;
+#pragma omp parallel for reduction (+:u)
+        for (int i=0; i<n; ++i)
           u+=pair.pairpot( p[i],p[j] );
+        p[j]=bak;
         return pair.f*u;
       }
 
-      double energy(const vector<particle> &p, const group &g) {
+      double energy(vector<particle> &p, const group &g) {
         int n=g.end+1, psize=p.size();
         double u=0;
 #pragma omp parallel for reduction (+:u)
@@ -114,7 +114,7 @@ namespace Faunus {
         return pair.f*u;
       }
 
-      double energy(const vector<particle> &p, const group &g, int j) {
+      double energy(vector<particle> &p, const group &g, int j) {
         double u=0;
         int len=g.end+1;
         if (g.find(j)==true) {   //avoid self-interaction...
@@ -128,7 +128,7 @@ namespace Faunus {
         return pair.f*u;  
       }
 
-      double energy(const vector<particle> &p, const group &g, const particle &a) {
+      double energy(vector<particle> &p, const group &g, const particle &a) {
         if (g.beg==-1) return 0;
         double u=0;
         int i,n=g.end+1;
@@ -138,7 +138,7 @@ namespace Faunus {
         return pair.f*u;
       }
 
-      double energy(const vector<particle> &p, const vector<macromolecule> &g) {
+      double energy(vector<particle> &p, const vector<macromolecule> &g) {
         double u=0;
         int k,j=g.size(),t=p.size();
         for (int l=0; l<j; l++) {
@@ -152,7 +152,7 @@ namespace Faunus {
         return pair.f*u;
       }
 
-      double energy(const vector<particle> &p) {
+      double energy(vector<particle> &p) {
         double u=0;
         int n = p.size();
 #pragma omp parallel for reduction (+:u) schedule (dynamic)
@@ -162,7 +162,7 @@ namespace Faunus {
         return pair.f*u;
       }
 
-      double energy(const vector<particle> &p, const group &g1, const group &g2) {
+      double energy(vector<particle> &p, const group &g1, const group &g2) {
         double u=0;
         int ilen=g1.end+1, jlen=g2.end+1;
 //#pragma omp parallel for reduction (+:u) schedule (dynamic)
@@ -171,7 +171,7 @@ namespace Faunus {
             u += pair.pairpot(p[i],p[j]);
         return pair.f*u;
       }
-      double energy(const vector<particle> &p, molecules &m, vector<int> &i) {
+      double energy(vector<particle> &p, molecules &m, vector<int> &i) {
         double du=0;
         return du;
       }
@@ -186,7 +186,7 @@ namespace Faunus {
       double iondip(const point &a, double q, double r) { return -pair.f*q*a.z/(r*r); }
 
       // Total electrostatic potential in a point
-      double pot(const vector<particle> &p, const point &a) {
+      double pot(vector<particle> &p, const point &a) {
         double u=0;
         int i,n=p.size();  
         for (i=0; i<n; i++)
@@ -194,7 +194,7 @@ namespace Faunus {
         return pair.f*u;
       }
 
-      virtual double internal(const vector<particle> &p, const group &g, int step=1) {
+      virtual double internal(vector<particle> &p, const group &g, int step=1) {
         if (g.beg==-1) return 0;
         double u=0;
         int n=g.end+1;
@@ -204,7 +204,7 @@ namespace Faunus {
         return pair.f*u;
       }
 
-      double energy(const vector<particle> &p, const particle &a) {
+      double energy(vector<particle> &p, const particle &a) {
         double u=0;
         int i,n=p.size();
         for (i=0; i<n; i++)
@@ -212,25 +212,25 @@ namespace Faunus {
         return pair.f*u;
       }
 
-      /*! \note If the charge of the j'th particle is 0, ZERO will be returned!
+      /*! 
        *  \return \f$ \phi_j = \sum_{i\neq j}^{N} \frac{l_B z_i}{r_{ij}} \f$
        *  \param p Particle vector
        *  \param j The electric potential will be calculated in the point of this particle
-       *  \todo Respect cell boundaries
        */
-      double potential(const vector<particle> &p, unsigned short j) {
-        if (abs(p[j].charge)<1e-6)
-          return 0;
-        double u=0;
-        int i,n=p.size();
-        for (i=0; i<j; ++i)
-          u+=p[i].charge/sqrt(pair.sqdist(p[i],p[j]));
-        for (i=j+1; i<n; ++i)
-          u+=p[i].charge/sqrt(pair.sqdist(p[i],p[j]));
-        return pair.f*u;
+      double potential(vector<particle> &p, unsigned short j) {
+        double phi=0;
+        int n=p.size();
+        particle tmp=p[j]; // avoid self-interaction
+        p[j].charge=0;     // in a slightly dirty manner
+        p[j].y=1e9;        // (for symmetric parallel load)
+#pragma omp parallel for reduction (+:phi)
+        for (int i=0; i<n; ++i)
+          phi+=p[i].charge/sqrt(pair.sqdist(p[i],tmp));
+        p[j]=tmp;
+        return pair.f*phi;
       }
 
-      double potential(const vector<particle> &p, point a) {
+      double potential(vector<particle> &p, point a) {
         double phi=0;
         for (int i=0; i<p.size(); ++i)
           phi+=p[i].charge/sqrt( pair.sqdist(a,p[i]) );
@@ -271,10 +271,10 @@ namespace Faunus {
         return f;
       }
       ;
-      double u_monomer(const vector<particle> &p, const polymer &g, unsigned int i) {
+      double u_monomer(vector<particle> &p, const polymer &g, unsigned int i) {
         return 0;
       }
-      double uself_polymer(const vector<particle> &p, const polymer &g) {
+      double uself_polymer(vector<particle> &p, const polymer &g) {
         return 0;
       }
 
@@ -302,18 +302,18 @@ namespace Faunus {
   template<class T> class int_hydrophobic : public interaction<T> {
     private:
       vector<unsigned short> hy,pa;
-      double hyenergy(const vector<particle> &);
-      double hyenergy(const vector<particle> &, int);
+      double hyenergy(vector<particle> &);
+      double hyenergy(vector<particle> &, int);
     public:
       int_hydrophobic(inputfile &in) : interaction<T>(in) { end_of_protein_one=int(1e7); }
       unsigned int end_of_protein_one;              //!< Last particle in protein one (set if appropriate)
-      void search(const vector<particle> &);        //!< Locate hydrophobic groups and ions
-      double energy(const vector<particle> &p ) { return interaction<T>::energy(p) + hyenergy(p);}
-      double energy(const vector<particle> &p, int i) { return interaction<T>::energy(p,i) + hyenergy(p);}
+      void search(vector<particle> &);        //!< Locate hydrophobic groups and ions
+      double energy(vector<particle> &p ) { return interaction<T>::energy(p) + hyenergy(p);}
+      double energy(vector<particle> &p, int i) { return interaction<T>::energy(p,i) + hyenergy(p);}
       double energy(const  vector<particle> &p, const group &g ) { return interaction<T>::energy(p,g) + hyenergy(p);}
   };
 
-  template<class T> void int_hydrophobic<T>::search(const vector<particle> &p) {
+  template<class T> void int_hydrophobic<T>::search(vector<particle> &p) {
     pa.resize(0);
     hy.resize(0);
     for (int i=0; i<p.size(); i++)
@@ -325,7 +325,7 @@ namespace Faunus {
     //  pa.push_back(i);
   }
 
-  template<class T> double int_hydrophobic<T>::hyenergy(const vector<particle> &p) {
+  template<class T> double int_hydrophobic<T>::hyenergy(vector<particle> &p) {
     double u=0;
     int n=pa.size();
 #pragma omp parallel for reduction (+:u)
@@ -334,7 +334,7 @@ namespace Faunus {
     return u; // in kT
   }
 
-  template<class T> double int_hydrophobic<T>::hyenergy(const vector<particle> &p, int i) {
+  template<class T> double int_hydrophobic<T>::hyenergy(vector<particle> &p, int i) {
     if (p[i].hydrophobic==true) return 0;
     int j,hymin=0;
     double d,dmin=1e7,u=0;
@@ -373,16 +373,16 @@ namespace Faunus {
         double energy(const particle &a, const particle &b) {
           return (a.overlap(b)==true) ? infty  : interaction<T>::energy(a,b);
         }
-        double energy(const vector<particle> &p) {
+        double energy(vector<particle> &p) {
           return interaction<T>::energy(p);
         }
-        double energy(const vector<particle> &p, int i) {
+        double energy(vector<particle> &p, int i) {
           return (overlap(p,i)==true) ? infty : interaction<T>::energy(p,i);
         }
-        double energy(const vector<particle> &p, const particle &a) {
+        double energy(vector<particle> &p, const particle &a) {
           return (overlap(p,a)==true) ? infty : interaction<T>::energy(p,a);
         }
-        double energy(const vector<particle> &p, const group &g) {
+        double energy(vector<particle> &p, const group &g) {
           return (overlap(p,g)==true) ? infty : interaction<T>::energy(p,g);
         }
     };
@@ -397,7 +397,7 @@ namespace Faunus {
         interaction_vector(inputfile &in) : interaction<T>(in) {
           interaction<T>::name+="Vectorized, Full N^2";
         }
-        double energy(const vector<particle> &p) {
+        double energy(vector<particle> &p) {
           len=1;
           int n=p.size();
           for (int i=0; i<n-1; i++)
@@ -407,7 +407,7 @@ namespace Faunus {
             }
           return interaction<T>::pair.VectorEnergy(r2,qq,&len);
         }
-        double energy(const vector<particle> &p, const group &g) {
+        double energy(vector<particle> &p, const group &g) {
           len=1;
           int n=g.end+1, psize=p.size();
           for (int i=g.beg; i<n; ++i) {
@@ -422,7 +422,7 @@ namespace Faunus {
           }
           return interaction<T>::pair.VectorEnergy(r2,qq,&len);
         }
-        double energy(const vector<particle> &p, const group &g1, const group &g2) {
+        double energy(vector<particle> &p, const group &g1, const group &g2) {
           len=1;
           int ilen=g1.end+1, jlen=g2.end+1;
           //#pragma omp parallel for reduction (+:u)
@@ -450,7 +450,7 @@ namespace Faunus {
   template<class T>
     class interaction_monopole : public interaction<T> {
       private:
-        particle monopole(const vector<particle> &p, const group &g) {
+        particle monopole(vector<particle> &p, const group &g) {
           double sum=0;
           particle cm;
           point t, o = p[g.beg]; // set origo to first particle
@@ -475,13 +475,13 @@ namespace Faunus {
           cut_g2g = in.getflt( "threshold_g2g", 1e6 );
           cut_g2p = in.getflt( "threshold_g2p", 1e6 );
         }
-        double energy(const vector<particle> &p ) { return interaction<T>::energy(p); } 
-        double energy(const vector<particle> &p, const group &g1, const group &g2) {
+        double energy(vector<particle> &p ) { return interaction<T>::energy(p); } 
+        double energy(vector<particle> &p, const group &g1, const group &g2) {
           particle mp1=monopole(p,g1), mp2=monopole(p,g2);
           return ( sqrt(interaction<T>::pair.sqdist(mp1, mp2)) > cut_g2g ) ?
             interaction<T>::energy( mp1, mp2 ) : interaction<T>::energy(p, g1, g2);
         }
-        double energy(const vector<particle> &p, const group &g) {
+        double energy(vector<particle> &p, const group &g) {
           double u=0;
           particle mp=monopole(p,g);
           for (int i=0; i<g.beg; i++)
@@ -543,17 +543,17 @@ namespace Faunus {
         img[i] = a* (radius2 / a.dot(a)); 
         ich[i] = a.charge/a.len();
       }
-      void updateimg(const vector<particle> &p) {
+      void updateimg(vector<particle> &p) {
         img.resize( p.size() );
         ich.resize( p.size() );
         for (int i=0; i<img.size(); ++i)
           updateimg(p[i],i);
       }
-      void updateimg(const vector<particle> &p, const group &g) {
+      void updateimg(vector<particle> &p, const group &g) {
         for (int i=g.beg; i<=g.end; ++i)
           updateimg(p[i],i);
       }
-      void updateimg(const vector<particle> &p, molecules &m, vector<int> &n) {
+      void updateimg(vector<particle> &p, molecules &m, vector<int> &n) {
         for (int i=0; i<n.size(); i++) {
           updateimg(p,m[i]);
           updateimg(p,m[n[i]]);
@@ -565,14 +565,14 @@ namespace Faunus {
       }
 
       // IMAGE ENERGY
-      double image(const vector<particle> &p) {
+      double image(vector<particle> &p) {
         double u=0;
 #pragma omp parallel for reduction (+:u) schedule (dynamic)
         for (int i=0; i<p.size(); ++i)
           u+=image(p,i);
         return u;
       }
-      double image(const vector<particle> &p, int i) {
+      double image(vector<particle> &p, int i) {
         double u=0;
         int t=img.size();
 #pragma omp parallel for reduction (+:u) schedule (dynamic)
@@ -580,13 +580,13 @@ namespace Faunus {
           u += impot(ich[j], p[i], img[j] );
         return p[i].charge*scale*u*2. - p[i].charge*scale*impot(ich[i],p[i],img[i]) ;        //make sure too and not too double count
       }
-      double image(const vector<particle> &p, const group &g) {
+      double image(vector<particle> &p, const group &g) {
         double u=0;
         for (int i=g.beg; i<=g.end; ++i)
           u+=image(p, i, g.beg, g.end);
         return u;
       }
-      double image(const vector<particle> &p, int i, int j, int k) {
+      double image(vector<particle> &p, int i, int j, int k) {
         double uin=0;
         double uex=0;
 #pragma omp parallel for reduction (+:uex) schedule (dynamic)
@@ -601,7 +601,7 @@ namespace Faunus {
         // the self term will not be double counted
         return p[i].charge*scale*(uex*2+uin); 
       }
-      double image(const vector<particle> &p, const group &g1, const group &g2) {
+      double image(vector<particle> &p, const group &g1, const group &g2) {
         double u=0;
         for (int i=g1.beg; i<=g1.end; i++)               //Dielectric and g1
           for (int j=g1.beg; j<=g1.end; j++)
@@ -614,12 +614,12 @@ namespace Faunus {
             u += 2*p[i].charge*impot(ich[j], p[i], img[j]);
         return u*scale;
       } 
-      double imageint(const vector<particle> &p, group) {
+      double imageint(vector<particle> &p, group) {
         double u=0;
         return u;
       }
       // TOTAL ENERGY
-      double potential(const vector<particle> &p, int i) {
+      double potential(vector<particle> &p, int i) {
         ur=ui=0;
         updateimg(p[i],i);
         ur=interaction<T>::potential(p,i);
@@ -629,7 +629,7 @@ namespace Faunus {
         ui*=2;
         return ur+ui*scale;  // This is the POTENTIAL, this should not be used to calculate the 
       }                      // interaction since that would 'double' count the self term.
-      double potential(const vector<particle> &p, point i) {
+      double potential(vector<particle> &p, point i) {
         ur=ui=0;
         ur=interaction<T>::potential(p,i);
 #pragma omp parallel for reduction (+:ui) schedule (dynamic)
@@ -638,14 +638,14 @@ namespace Faunus {
         ui*=2;               // Due to the definition of scale
         return ur+ui*scale;  // This is the POTENTIAL in any given point inside the cavity
       }                     
-      double elenergy(const vector<particle> &p, int i) {
+      double elenergy(vector<particle> &p, int i) {
         ur=ui=0;
         updateimg(p[i],i);
         ur=p[i].charge*interaction<T>::potential(p,i);
         ui=image(p,i);
         return ur+ui;        // Returns the electrostatic interaction energy of i with p
       }
-      double elenergy(const vector<particle> &p, const group &g) {
+      double elenergy(vector<particle> &p, const group &g) {
         ur=ui=0;
         updateimg(p,g);
         for (int i=g.beg; i<=g.end; i++) {
@@ -654,34 +654,34 @@ namespace Faunus {
         }
         return ur+ui;        // Returns the electrostatic energy of g with p
       }
-      double energy(const vector<particle> &p ) {
+      double energy(vector<particle> &p ) {
         updateimg(p);
         ur=interaction<T>::energy(p);
         ui=image(p);
         ratio+=std::abs(ui/(ur+ui));
         return ur+ui;
       }
-      double energy(const vector<particle> &p, int i) {
+      double energy(vector<particle> &p, int i) {
         updateimg(p[i],i);
         ur=interaction<T>::energy(p,i);
         ui=image(p,i);
         ratio+=std::abs(ui/(ur+ui));
         return ur+ui;
       }
-      double energy(const vector<particle> &p, const group &g ) {
+      double energy(vector<particle> &p, const group &g ) {
         updateimg(p,g); // update all images in group
         ur=interaction<T>::energy(p,g);
         ui=image(p,g);
         ratio+=std::abs(ui/(ur+ui));
         return ur+ui;
       }
-      double energy(const vector<particle> &p, const group&g1, const group &g2) {
+      double energy(vector<particle> &p, const group&g1, const group &g2) {
         updateimg(p,g1), updateimg(p,g2);
         ur=interaction<T>::energy(p, g1, g2);
         ui=image(p,g1,g2);
         return ur+ui;
       }
-      double energy(const vector<particle> &p, molecules &m, vector<int> &n) {
+      double energy(vector<particle> &p, molecules &m, vector<int> &n) {
         ur=ui=0;
         group g;
         g.beg=m[0].beg;

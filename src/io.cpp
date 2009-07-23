@@ -289,26 +289,25 @@ namespace Faunus {
       o << len << " " << len << " " << len << std::endl;
     return writefile(file, o.str());
   }
-
+  particle iogro::s2p(string &s) {
+    std::stringstream o;
+    string name;
+    double x,y,z;
+    o << s.substr(10,5) << s.substr(20,8) << s.substr(28,8) << s.substr(36,8);
+    o >> name >> x >> y >> z;
+    particle p = atom(name); 
+    p.x=x*10; // nm->angstrom
+    p.y=y*10;
+    p.z=z*10;
+    return p;
+  }
   vector<particle> iogro::load(string file) {
     p.clear();
     v.resize(0);
-    particle tmp;
-    char name[5], name2[5];
-    int cnt, cnt2;
-    double x,y,z;
-
     if (readfile(file,v)==true) {
-      strip(v,"#");
-      unsigned short n=atoi(v[0].c_str());
-      ostringstream o;
-      for (unsigned short i=1; i<=n; i++) {
-        //sscanf( v[i].c_str(), "%5d%5s%5s%5d%f %f %f",
-        //    &cnt, &name, &name2, &cnt2, &x, &y, &z);
-        cout << v[i] << endl;
-        cout << cnt << " " << name2 << " " << cnt2 << " " << z  << endl;
-        p.push_back(tmp);
-      }
+      int last=atoi(v[1].c_str())+1;
+      for (int i=2; i<=last; i++)
+        p.push_back( s2p(v[i]) );
     }
     return p;
   }
@@ -433,19 +432,19 @@ namespace Faunus {
     return (xd==NULL) ? false : true;
   }
   /*
-  bool ioxtc::LoadFrame(int i, vector<particle> &p, double boxlen &box) {
-    int rc,natoms_xtc,step_xtc;
-    float time_xtc;
-    matrix box_xtc;
-    rvec *x_xtc;
-    float prec_xtc = 1000.0;
-    while(1)
-    {
-      //rc = read_xtc(xd_read, natoms_xtc, &step_xtc, &time_xtc,box_xtc, x_xtc, &prec_xtc);
-      //if (rc == 0) {
-      //}
-      //else break;
-    }
+     bool ioxtc::LoadFrame(int i, vector<particle> &p, double boxlen &box) {
+     int rc,natoms_xtc,step_xtc;
+     float time_xtc;
+     matrix box_xtc;
+     rvec *x_xtc;
+     float prec_xtc = 1000.0;
+     while(1)
+     {
+  //rc = read_xtc(xd_read, natoms_xtc, &step_xtc, &time_xtc,box_xtc, x_xtc, &prec_xtc);
+  //if (rc == 0) {
+  //}
+  //else break;
+  }
   }
   */
 };//namespace

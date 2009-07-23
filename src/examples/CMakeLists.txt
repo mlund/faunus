@@ -12,6 +12,18 @@ function( fau_example tname tdir tsrc )
            PATTERN ".svn" EXCLUDE)
 endfunction( fau_example )
 
+#----- function to add a generic C++ example (HYPERSPHERE) -----
+function( fau_hyperexample tname tdir tsrc )
+  add_executable( ${tname} "${tdir}/${tsrc}" )
+  set_source_files_properties( "${tdir}/${tsrc}" PROPERTIES LANGUAGE CXX)
+  set_target_properties(${tname}
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${tdir}/")
+  target_link_libraries(${tname} libhyperfaunus)
+  install (DIRECTORY "${tdir}"
+           DESTINATION "share/faunus/examples"
+           PATTERN ".svn" EXCLUDE)
+endfunction( fau_hyperexample )
+
 #----- add examples to build process -----
 # Arguments: (target directory source)
 fau_example(pka titration pka.cpp)
@@ -42,6 +54,8 @@ fau_example(spceMI spce spce.cpp)
 fau_example(rosenbluth rosenbluth rb.cpp)
 fau_example(membrane membrane mem.cpp)
 fau_example(memp wallprotein memp.cpp)
+
+fau_hyperexample(hyper_dipolarfluid hypersphere dipolarfluid.cpp)
 
 #----- target specific build options -----
 set_target_properties( pkaGC PROPERTIES COMPILE_DEFINITIONS "GCPKA")

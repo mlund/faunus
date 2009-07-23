@@ -5,12 +5,37 @@
 #include "faunus/slump.h"
 
 namespace Faunus {
+
+  /*!
+   * \brief Hypersphere coordinates
+   * \author Martin Trulsson
+   * \date Lund, 2009
+   */
+  class hyperpoint {
+    public:
+      double z1,z2,z3,z4;                     //!< Reduced Coordinates on hypersphere
+      double u,v,w;                           //!< Angles on the hypersphere surface
+      double rho,omega,fi;
+      void hypclear() { z1=z2=z3=z4=u=v=w=rho=omega=fi=0; }
+      hyperpoint() { hypclear(); }
+      inline double hypsqdist(const hyperpoint &p) const {
+        return z1*p.z1+z2*p.z2+z3*p.z3+z4*p.z4;
+      }
+      inline double geodesic(const hyperpoint &p) const {
+        return std::acos(hypsqdist(p));
+      }    
+  };
+
   /*!
    * \brief Cartesian coordinates
    * \author Mikael Lund
    * \date 2002-2007
    */
-  class point {
+  class point
+#ifdef HYPERSPHERE
+    : public hyperpoint
+#endif
+  {
     private:
       inline int anint(double) const;
     public:
@@ -160,6 +185,7 @@ namespace Faunus {
     double r=radius+p.radius;
     return (sqdist(p,len,halflen) < r*r) ? true : false;
   }
+
 
 }//namespace
 #endif

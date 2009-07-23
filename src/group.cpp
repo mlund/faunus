@@ -114,7 +114,6 @@ namespace Faunus {
     return cm;
   }
 
-
   void group::undo(particles &par) {
     cm_trial = cm;
     for (short i=beg; i<=end; i++) {
@@ -765,4 +764,29 @@ namespace Faunus {
     beg=bbeg;
     end=con.p.size()-1;
   }
+
+#ifdef HYPERSPHERE
+  void hypergroup::undo(particles &par) {
+    for (int i=beg; i<=end; i++) { 
+      par.trial[i].u  = par.p[i].u;             
+      par.trial[i].v  = par.p[i].v;             
+      par.trial[i].w  = par.p[i].w;             
+      par.trial[i].z1 = par.p[i].z1;           
+      par.trial[i].z2 = par.p[i].z2;           
+      par.trial[i].z3 = par.p[i].z3;           
+      par.trial[i].z4 = par.p[i].z4;           
+    }
+  }
+  void hypergroup::accept(particles &par) {
+    for (int i=beg; i<=end; i++) {
+      par.p[i].u = par.trial[i].u;
+      par.p[i].v = par.trial[i].v;
+      par.p[i].w = par.trial[i].w;
+      par.trial[i].z1 = par.p[i].z1;    //???
+      par.trial[i].z2 = par.p[i].z2;
+      par.trial[i].z3 = par.p[i].z3;
+      par.trial[i].z4 = par.p[i].z4;
+    }
+  }
+#endif
 }//namespace

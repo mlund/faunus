@@ -186,4 +186,39 @@ namespace Faunus {
       << "cylinder {<0,0,0>,<0,0" << len << ">,0.5 texture {cell}}\n";
     return o.str();
   }     
+
+#ifdef HYPERSPHERE
+  hypersphere::hypersphere(inputfile &in) {
+    r = in.getflt("hyperradius", 100);
+  }
+  hypersphere::hypersphere(double radius) {
+    r=radius;
+  }
+  bool hypersphere::collision(const particle &p) {
+    return false;
+  }
+  void hypersphere::randompos(point &p) {
+    p.rho=sqrt( slp.random_one() );
+    p.omega=slp.random_one()*2.*pi;
+    p.fi=slp.random_one()*2.*pi;
+    p.z1=sqrt(1.-p.rho*p.rho);
+    p.z2=p.z1*cos(p.omega);
+    p.z1=p.z1*sin(p.omega);
+    p.z3=p.rho*sin(p.fi);
+    p.z4=p.rho*cos(p.fi);
+    p.w=acos(p.z4);
+    p.v=acos(p.z3/sin(p.w));
+    p.u=acos(p.z1/sin(p.w)/sin(p.v));
+    if(p.z2 < 0.) p.u=2.*acos(-1.)-p.u;
+  }
+  string hypersphere::info() {
+    std::ostringstream o;
+    o << "INFO!\n";
+    return o.str();
+  }
+  string hypersphere::povray() {
+    return info();
+  }
+#endif
+
 }//namespace

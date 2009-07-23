@@ -31,7 +31,7 @@ namespace Faunus {
         req = in.getflt("springeqdist", 2);
       };
 
-      double u_monomer(const vector<particle> &p, const polymer &g, unsigned int i ) {
+      double u_monomer(vector<particle> &p, const polymer &g, unsigned int i ) {
         // normal energy function if no neighbors
         // isnt this function a bit ambiguous? It either returns the interaction of particle i 
         // with a polymer or it returns the interaction of a monomer in a polymer with the 
@@ -57,7 +57,7 @@ namespace Faunus {
         }
         return u;
       }
-      double uself_polymer(const vector<particle> &p, const polymer &g) {
+      double uself_polymer(vector<particle> &p, const polymer &g) {
         double dr,r,u=0;
         int i,j,n=g.end+1;
         for (i=g.beg; i<n-1; i++)
@@ -71,7 +71,7 @@ namespace Faunus {
             }
         return u;
       }
-      double uself_popscmem(const vector<particle> &p, const popscmembrane &g) {
+      double uself_popscmem(vector<particle> &p, const popscmembrane &g) {
         double u=0;
         int i,j;
         for (i=0; i<g.pops.size(); i++) {

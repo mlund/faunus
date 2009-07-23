@@ -41,6 +41,18 @@ target_link_libraries(libfaunus xdrfile ${LINKLIBS})
 install(TARGETS libfaunus
         LIBRARY DESTINATION lib)
 
+#----- dynamic faunus library - HYPERSPHERE version -----
+set (compdef "__SVN_REV__=${SVNREVISION}" "HYPERSPHERE")
+add_library(libhyperfaunus SHARED ${objs})
+set_target_properties(libhyperfaunus PROPERTIES
+                      OUTPUT_NAME hyperfaunus
+                      COMPILE_DEFINITIONS "HYPERSPHERE"
+                      )
+
+target_link_libraries(libhyperfaunus xdrfile ${LINKLIBS})
+install(TARGETS libhyperfaunus
+        LIBRARY DESTINATION lib)
+
 #----- header install target -----
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/faunus
         DESTINATION include

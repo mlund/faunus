@@ -1,4 +1,5 @@
 #include "faunus/faunus.h"
+#include "faunus/average_vec.h"
 #ifndef __cplusplus
 #define __cplusplus
 #endif
@@ -18,12 +19,13 @@ template<class T> class energy {
     T pair;
     energy(inputfile &in) : pair(in) {};
     double potential(vector<particle> &p, int i) {
+      int n=p.size();
       double phi=0;
       particle tmp=p[i];
       p[i].z=1e9;
       p[i].charge=0;
 #pragma omp parallel for reduction (+:phi)
-      for (int j=0; j<p.size(); j++)
+      for (int j=0; j<n; j++)
         phi+=p[j].charge/sqrt(pair.sqdist(tmp,p[j]));
       p[i]=tmp;
       return pair.f*phi;
@@ -31,94 +33,95 @@ template<class T> class energy {
 };
 
 class chargescale {
+  private:
+    unsigned int cnt;
   public:
-    average<double> expu;
+    average_vec<double> expu, u, mu;
     vector<int> sites;
-    void analyze( container &c, energy<potT> pot, double dz) {
+    chargescale() {
+      cnt=0;
+      mu.maxcnt=1;
+      u.maxcnt=500;
+    }
+    void analyze( container &c, energy<potT> pot, double dq) {
+      cnt++;
       double du=0;
       for (int i=0; i<sites.size(); i++)
-        du+=pot.potential(c.p, sites[i]) * ( (c.p[sites[i]].charge+dz) - c.p[sites[i]].charge );
+        du += pot.potential(c.p, sites[i]) * dq;
       for (int i=0; i<sites.size()-1; i++)
         for (int j=i+1; j<sites.size(); j++) {
-          double r=sqrt( pot.pair.sqdist( c.p[i],c.p[j] ) );
-          du-=c.p[i].charge*c.p[j].charge / r; // double count in pot!
-          du+=dz*dz / r ;
+          double r=sqrt( pot.pair.sqdist( c.p[sites[i]], c.p[sites[j]] ) );
+          du += pot.pair.f * dq*dq/r ;
         }
+      u+=du;
       expu+=exp(-du);
+      if (cnt>100) {
+        mu+=-log(expu.avg());
+        //expu.reset();
+        cnt=0;
+      }
     }
     void info() {
       cout << "# Sites: ";
       for (int i=0; i<sites.size(); i++)
         cout << sites[i] << " ";
-      cout << "\n# Excess chemical potential (kT) = " << -log(expu.avg()) << endl;
+      cout << "\n# Excess chemical potential (kT) = " << mu.avg() << " " << mu.stdev()
+           << "\n# Electrostatic energy (kT)      = " << u.avg() << " " << u.stdev() << endl;
     }
 };
 
 int main() {
   inputfile in("g_widom.conf");
-  double dz = in.getflt("dz",0.1);
+  double dq = in.getflt("dq",0.1);
   XDRFILE *xd;
   int rc,natoms_xtc,step_xtc;
   float time_xtc;
   matrix box_xtc;
   rvec *x_xtc;
   float prec_xtc = 1000.0;
+  string xtcname = in.getstr("xtcfile", "traj.xtc");
 
   box con(100);
   atom.load("faunatoms.dat");
   energy<potT> pot(in);
-  FAUrdf rdf(atom["NA"].id, atom["CL"].id,0.5,20);
   chargescale cs_one;
-  cs_one.sites.push_back(21462);
+  cs_one.sites.push_back(in.getint("site1", 0));
   chargescale cs_two = cs_one;
-  cs_two.sites.push_back(21463);
+  cs_two.sites.push_back(in.getint("site2", 1));
 
   // OPEN PQR FILE FOR NON-POS. INFO.
   iogro gro(in);
-  iopqr pqr;
-  ioaam aam;
-  con.p = aam.load("conf.aam");
-  //con.p = gro.load("conf.gro");
-  //cout << con.p.size() << endl;
-  //return 0;
+  con.p = gro.load( in.getstr("grofile", "conf.gro") );
   atom.reset_properties(con.p); // set all properties according to faunatoms.dat file!
-  string s,name;
-  name="coord.xtc";
-  //char d = name.c_str();
 
-  // OPEN XTC TRAJECTORY FILE
-  xd=xdrfile_open("coord.xtc", "r");
+  // OPEN TRAJECTORY FILE
+  xd=xdrfile_open(&xtcname[0], "r");
   if (xd!=NULL) {
-    // Get length
-    rc = read_xtc_natoms("coord.xtc", &natoms_xtc);
+    cout << "# xtc file opened: " << xtcname << endl;
+    rc = read_xtc_natoms(&xtcname[0], &natoms_xtc);        // get length
     if (rc==exdrOK && natoms_xtc==con.p.size()) {
-      // Allocate memory
-      x_xtc = (rvec*)calloc(natoms_xtc, sizeof(x_xtc[0]));
+      x_xtc = (rvec*)calloc(natoms_xtc, sizeof(x_xtc[0])); // allocate memory
       cout << "# Number of atoms = " << natoms_xtc << endl;
-      // Loop over frames
-      while(1)
-      {
+      while(1) {                                           // loop over frames
         rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc,box_xtc, x_xtc, &prec_xtc);
         if (rc == 0) {
-          con.setvolume( pow(box_xtc[0][0]*10,3) ); // store box size in container (cube assumed)
-          pot.pair.setvolume(pow(con.len,3));       // ...and also in potential class.
+          con.setvolume( pow(box_xtc[0][0]*10,3) );        // store box size in container (cube assumed)
+          pot.pair.setvolume(pow(con.len,3));              // ...and also in potential class.
           cout << "# Frame: " << time_xtc << "  Box = " << con.len << endl;
           for (int i=0; i<con.p.size(); i++) {
-            con.p[i].x = x_xtc[i][0]*10.-con.len_half;  // store pos. in container.
+            con.p[i].x = x_xtc[i][0]*10.-con.len_half;     // store pos. in container.
             con.p[i].y = x_xtc[i][1]*10.-con.len_half;
             con.p[i].z = x_xtc[i][2]*10.-con.len_half;
           }
           // Analyse frame!!
-          cs_one.analyze( con, pot, dz);
-          cs_two.analyze( con, pot, dz);
-          rdf.update(con);
+          cs_one.analyze(con, pot, dq);
+          cs_two.analyze(con, pot, dq);
         }
         else break;
       }
     }
     xdrfile_close(xd);
   }
-  rdf.write("gofr.dat");
   cs_one.info();
   cs_two.info();
 };

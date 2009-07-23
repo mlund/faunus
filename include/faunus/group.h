@@ -43,8 +43,8 @@ namespace Faunus {
       void move(container &, point);                      //!< Translate group
       void invert(vector<particle> &, point &);           //!< Invert a group
       bool overlap(container &);                          //!< Test overlap w all particles
-      void undo(particles &);
-      void accept(particles &);                           //!< Accept a move
+      virtual void undo(particles &);
+      virtual void accept(particles &);                           //!< Accept a move
       void add(container &, vector<particle>, bool=false);//!< Add a particle vector
       void add(container &, unsigned char, short);        //!< Add particles w. collision check
       bool swap(container &, group &);                    //!< Swap location of two groups
@@ -159,6 +159,24 @@ namespace Faunus {
       void load(inputfile &, slit &);  //Scannes for "scratio", "headarea"
       string info();
   };
+
+#ifdef HYPERSPHERE
+  /*! \brief Hypersphere groups
+   *  \author Martin Trulsson
+   *  \date Lund, 2009
+   */
+  class hypergroup : public group {
+    protected:
+      slump slp;
+      string title;
+    public:
+      void undo(particles &);
+      void accept(particles &);
+      //void move(container &, point);                      //!< Translate group
+      //virtual unsigned short displace(container&, point); //!< Displace random particle
+  };
+#endif
+
 }//namespace
 #endif
 

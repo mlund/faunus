@@ -15,12 +15,9 @@ namespace Faunus {
       slump slp;
       double volume;                                      //!< Volume of the container [AA^3]
     public:
-      //atoms atom;
       double getvolume() {return volume;}
-//      container();
-//      container(inputfile &);
       virtual void setvolume(double){}                    //!< Specify new volume
-      virtual bool collision(const particle &)=0;            //!< Check for collision with walls
+      virtual bool collision(const particle &)=0;         //!< Check for collision with walls
       virtual void randompos(point &)=0;                  //!< Random point within container
       virtual string info();                              //!< Return info string
       virtual string povray();                            //!< POVRAY object representing the cell
@@ -216,5 +213,30 @@ namespace Faunus {
       string info(); //!< Cylinder info
       string povray();
   };
-}
+
+#ifdef HYPERSPHERE
+  /*! \brief Hypersphere simulation container
+   *  \author Martin Trulsson
+   *  \date Lund, 2009
+   */
+  class hypersphere : public container {
+    private:
+      static const double pi=3.141592654;
+    public:
+      double r;              //!< Radius
+      hypersphere(inputfile &);
+      hypersphere(double);
+      string povray();
+      string info();
+      void randompos(point &);
+      bool collision(const particle &);
+      inline double dist(const point &a, const point &b) {
+        return sqrt(a.hypsqdist(b));
+      }
+      inline double sqdist(const point &a, const point &b) {
+        return a.hypsqdist(b);
+      }
+  };
+#endif
+}//namespace
 #endif

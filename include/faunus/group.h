@@ -172,8 +172,6 @@ namespace Faunus {
     public:
       void undo(particles &);
       void accept(particles &);
-      //void move(container &, point);                      //!< Translate group
-      //virtual unsigned short displace(container&, point); //!< Displace random particle
   };
 #endif
 

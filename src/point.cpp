@@ -2,6 +2,10 @@
 
 namespace Faunus {
 
+  //-------------HYPERPOINT------------------
+  
+  //-------------POINT------------------
+
   point::point() { clear(); }
   point::point(double xx, double yy, double zz) {
     x=xx;
@@ -95,22 +99,6 @@ namespace Faunus {
     s << x << "," << y << "," << z;
     return "[" + s.str() + "]";
   }
-
-
-  /*
-     void point::random_unitv() {
-     double r=2;
-     while (r > 1.) { //random unit vector
-     x=random_one();
-     y=random_one();
-     z=random_one();
-     r=sqrt(x*x+y*y+z*z);
-     };
-     x=x/r;
-     y=y/r;
-     z=z/r;
-     };
-     */
 
   //------------------ PARTICLE -----------------------
   particle::particle() {

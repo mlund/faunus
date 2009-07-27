@@ -16,14 +16,15 @@ using namespace std;
 int main() {
   cout << faunus_splash();
   slump slump;                            // A random number generator
-  physconst phys;
-  inputfile in("dipolefluid.conf");       // Read input file
-  hypersphere con(in);                    // We want a cubic cell
+  inputfile in("dipolarfluid.conf");      // Read input file
+  hypersphere con(in);                    // We want a hypersphere
   canonical nvt;                          // Use the canonical ensemble
   interaction<pot_coulomb> pot(in);       // 
   mcloop loop(in);                        // Keep track of time and MC loop
 
-  hypergroup solvent;
+  hypergroup solvent;                     // Group for dipoles
+
+  cout << con.info();
 
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {

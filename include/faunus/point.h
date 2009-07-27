@@ -14,9 +14,10 @@ namespace Faunus {
   class hyperpoint {
     public:
       double z1,z2,z3,z4;                     //!< Reduced Coordinates on hypersphere
-      double u,v,w;                           //!< Angles on the hypersphere surface
+      //double u,v,w;                           //!< Angles on the hypersphere surface
       double rho,omega,fi;
-      void hypclear() { z1=z2=z3=z4=u=v=w=rho=omega=fi=0; }
+      double mu;
+      void hypclear() { z1=z2=z3=z4=rho=omega=fi=0; }
       hyperpoint() { hypclear(); }
       inline double hypsqdist(const hyperpoint &p) const {
         return z1*p.z1+z2*p.z2+z3*p.z3+z4*p.z4;

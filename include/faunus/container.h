@@ -219,22 +219,25 @@ namespace Faunus {
    *  \author Martin Trulsson
    *  \date Lund, 2009
    */
-  class hypersphere : public container {
+  class hypersphere : public cell {
     private:
       static const double pi=3.141592654;
     public:
-      double r;              //!< Radius
       hypersphere(inputfile &);
-      hypersphere(double);
-      string povray();
       string info();
       void randompos(point &);
       bool collision(const particle &);
       inline double dist(const point &a, const point &b) {
-        return sqrt(a.hypsqdist(b));
+        return acos(a.hypsqdist(b))*r; // CHECK!!! (virtual=slow!)
       }
       inline double sqdist(const point &a, const point &b) {
-        return a.hypsqdist(b);
+        return a.hypsqdist(b); // !! SHOULD BE REAL DISTANCE CHECK!! (virtual=slow!)
+      }
+      void move(int, double);                       //!< Randomly displace i'th particle
+      void move(point &, double, double, double);   //!< Displace arbitrary particle
+      inline bool overlap(particle &a, particle &b) //!< Check for overlap
+      {
+        return ( acos(a.hypsqdist(b))*r < a.radius+b.radius) ? true : false;
       }
   };
 #endif

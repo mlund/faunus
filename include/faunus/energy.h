@@ -566,9 +566,10 @@ namespace Faunus {
 
       // IMAGE ENERGY
       double image(vector<particle> &p) {
+        int n=p.size();
         double u=0;
 #pragma omp parallel for reduction (+:u) schedule (dynamic)
-        for (int i=0; i<p.size(); ++i)
+        for (int i=0; i<n; ++i)
           u+=image(p,i);
         return u;
       }
@@ -587,13 +588,13 @@ namespace Faunus {
         return u;
       }
       double image(vector<particle> &p, int i, int j, int k) {
-        double uin=0;
-        double uex=0;
+        int n=p.size();
+        double uin=0,uex=0;
 #pragma omp parallel for reduction (+:uex) schedule (dynamic)
         for (int s=0; s<j; s++)
           uex += impot(ich[s], p[i], img[s] );  //make sure to double count
 #pragma omp parallel for reduction (+:uex) schedule (dynamic)
-        for (int t=k+1; t<p.size(); t++)
+        for (int t=k+1; t<n; t++)
           uex += impot(ich[t], p[i], img[t] );  //make sure to double count
         for (int u=j; u<=k; u++)
           uin += impot(ich[u], p[i], img[u] );  // internal interactions will be double counted implicitly
@@ -620,11 +621,12 @@ namespace Faunus {
       }
       // TOTAL ENERGY
       double potential(vector<particle> &p, int i) {
-        ur=ui=0;
+        int n=p.size();
+        double ur=0,ui=0;
         updateimg(p[i],i);
         ur=interaction<T>::potential(p,i);
 #pragma omp parallel for reduction (+:ui) schedule (dynamic)
-        for (int s=0; s<p.size(); s++)
+        for (int s=0; s<n; s++)
           ui += impot(ich[s], p[i], img[s] );  
         ui*=2;
         return ur+ui*scale;  // This is the POTENTIAL, this should not be used to calculate the 

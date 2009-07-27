@@ -51,17 +51,21 @@ namespace Faunus {
       void infos();
   };
 
+  /*! \brief Class to perform proton titration of molecules using implicit salt
+   *  \author Andre, Mikael
+   */
   class titrate_implicit {
     private:
       enum keys {PROTONATED,DEPROTONATED};
       keys recent;                          //!< Store information about the most recent action.
     public:
-      vector<unsigned int> sites;
-      double ph, mu_proton;
+      vector<unsigned int> sites;           //!< Titratable sites
+      double ph,                            //!< Solution pH value
+             mu_proton;                     //!< Bulk excess chemical potential of a proton (kT)
       titrate_implicit(vector<particle> &, double, double);
       int exchange(vector<particle> &, int=-1);
       double energy(vector<particle> &, double, int);
-      unsigned int random();
+      unsigned int random();                //!< Pick a random titratable site
   };
 }
 #endif

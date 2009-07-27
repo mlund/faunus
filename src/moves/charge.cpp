@@ -110,7 +110,7 @@ namespace Faunus {
  DHchargereg::DHchargereg(ensemble &e, container &c, energybase &i, float ph, float muH ) : markovmove(e,c,i), titrate_implicit(c.p,ph,muH)
   {
     name.assign("DH-PROTON TITRATION");
-    cite.assign("Biochem. 2005, 44, 5722-5727.");
+    //cite.assign("...");
     runfraction=0.2;
     con->trial = con->p;
   }

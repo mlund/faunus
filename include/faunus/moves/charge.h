@@ -37,5 +37,16 @@ namespace Faunus {
       string info();
    };
 
+  /*!
+   * \brief (Implicit titration scheme)
+   * \author (Andre Teixeira)
+   */
+  class ATchargereg : public markovmove, public titrate_implicit {
+    public:
+      ATchargereg( ensemble&, container&, energybase&, float, float);
+      double titrateall();
+      string info();
+  };
+
 }//namespace
 #endif

@@ -233,12 +233,6 @@ namespace Faunus {
       inline double sqdist(const point &a, const point &b) {
         return a.hypsqdist(b); // !! SHOULD BE REAL DISTANCE CHECK!! (virtual=slow!)
       }
-      void move(int, double);                       //!< Randomly displace i'th particle
-      void move(point &, double, double, double);   //!< Displace arbitrary particle
-      inline bool overlap(particle &a, particle &b) //!< Check for overlap
-      {
-        return ( acos(a.hypsqdist(b))*r < a.radius+b.radius) ? true : false;
-      }
   };
 #endif
 }//namespace

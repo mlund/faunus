@@ -80,6 +80,8 @@ namespace Faunus {
   };
 
   typedef Faunus::randomDefault slump; // Generator selection!
+  
+  extern slump slp;
 
 }
 #endif

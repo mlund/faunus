@@ -16,8 +16,6 @@ namespace Faunus {
     public:
       vector<particle> p;                   //!< The main particle vector
       vector<particle> trial;               //!< Trial particle vector. 
-      vector<point> pmu;                    //!< Point dipole moment (optional)
-      vector<point> trialmu;                //!< Point dipole moment trial (optional)
 
       int push_back(const particle &);      //!< add particle to both "p" and "trial"
       bool insert(particle, unsigned int);  //!< Insert particle at pos n.

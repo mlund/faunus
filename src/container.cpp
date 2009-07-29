@@ -210,76 +210,14 @@ namespace Faunus {
       << "#   Radius               = " << r << endl;
     return o.str();
   }
+  /*
   void hypersphere::move(int i, double dangle) {
     double nfi=2.*acos(-1.)*slp.random_one();
     double nrho=sqrt((slp.random_one()-1.)*sin(dangle)*sin(dangle)+1.);
     double nomega=(2.*slp.random_one()-1.)*acos(cos(dangle)/nrho);
     move(trial[i],nrho,nomega,nfi);
   }
-  void hypersphere::move(point &p, double du,double dv, double dw) {
-    double nz1,nz2,nz3,nz4;
-    double tz1,tz2,tz3,tz4;
-    p.rho=du;
-    p.omega=dv;
-    p.fi=dw;
-    nz1=sqrt(1.-p.rho*p.rho);
-    nz2=nz1*cos(p.fi);
-    nz1=nz1*sin(p.fi);
-    nz3=p.rho*sin(p.omega);
-    nz4=p.rho*cos(p.omega);
-
-    point e1,e2,e3;
-    point te1,te2,te3;
-    double fact1,fact2,fact3;
-    double nabla_nb,fi_nb;
-
-    nabla_nb=slp.random_one()*2.*acos(-1.);
-    fi_nb=acos( slp.random_one() );
-
-    e1.z1=cos(nabla_nb);
-    e1.z2=sin(nabla_nb);
-    e1.z3=0.;
-    e1.z4=0.;
-
-    e2.z1=-cos(fi_nb)*sin(nabla_nb);
-    e2.z2=cos(fi_nb)*cos(nabla_nb);
-    e2.z3=sin(fi_nb);
-    e2.z4=0.;
-
-    e3.z1=sin(fi_nb)*sin(nabla_nb);
-    e3.z2=-sin(fi_nb)*cos(nabla_nb);
-    e3.z3=cos(fi_nb);
-    e3.z4=0.;
-
-    fact1=e1.z1*p.z1 + e1.z2*p.z2 + e1.z3*p.z3;
-    te1.z1=e1.z1-1./(1.+p.z4)*fact1*p.z1;
-    te1.z2=e1.z2-1./(1.+p.z4)*fact1*p.z2;
-    te1.z3=e1.z3-1./(1.+p.z4)*fact1*p.z3;
-    te1.z4=e1.z4-1./(1.+p.z4)*fact1*(p.z4+1.);
-
-    fact2=e2.z1*p.z1 + e2.z2*p.z2 + e2.z3*p.z3;
-    te2.z1=e2.z1-1./(1.+p.z4)*fact2*p.z1;
-    te2.z2=e2.z2-1./(1.+p.z4)*fact2*p.z2;
-    te2.z3=e2.z3-1./(1.+p.z4)*fact2*p.z3;
-    te2.z4=e2.z4-1./(1.+p.z4)*fact2*(p.z4+1.);
-
-    fact3=e3.z1*p.z1 + e3.z2*p.z2 + e3.z3*p.z3;
-    te3.z1=e3.z1-1./(1.+p.z4)*fact3*p.z1;
-    te3.z2=e3.z2-1./(1.+p.z4)*fact3*p.z2;
-    te3.z3=e3.z3-1./(1.+p.z4)*fact3*p.z3;
-    te3.z4=e3.z4-1./(1.+p.z4)*fact3*(p.z4+1.);
-
-    tz1=nz1*te1.z1+nz2*te2.z1+nz3*te3.z1+nz4*p.z1;
-    tz2=nz1*te1.z2+nz2*te2.z2+nz3*te3.z2+nz4*p.z2;
-    tz3=nz1*te1.z3+nz2*te2.z3+nz3*te3.z3+nz4*p.z3;
-    tz4=nz1*te1.z4+nz2*te2.z4+nz3*te3.z4+nz4*p.z4;
-
-    p.z1=tz1;
-    p.z2=tz2;
-    p.z3=tz3;
-    p.z4=tz4;
-  }
-
+  */
 #endif
 
 }//namespace

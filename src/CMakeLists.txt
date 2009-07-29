@@ -1,7 +1,7 @@
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 #----- object files for libfaunus -----
-set(objs inputfile io titrate point physconst slump container
+set(objs slump physconst inputfile point io titrate container
     hardsphere group particles analysis species widom histogram
     mcloop ensemble faunus
     moves/base moves/translational moves/rotational moves/charge

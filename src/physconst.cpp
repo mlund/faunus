@@ -33,5 +33,4 @@ namespace Faunus {
 
   // GLOBAL
   pc pyc;
-
 }

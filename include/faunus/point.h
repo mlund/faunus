@@ -5,7 +5,6 @@
 #include "faunus/slump.h"
 
 namespace Faunus {
-
   /*!
    * \brief Hypersphere coordinates
    * \author Martin Trulsson
@@ -14,7 +13,6 @@ namespace Faunus {
   class hyperpoint {
     public:
       double z1,z2,z3,z4;                     //!< Reduced Coordinates on hypersphere
-      //double u,v,w;                           //!< Angles on the hypersphere surface
       double rho,omega,fi;
       double mu;
       void hypclear() { z1=z2=z3=z4=rho=omega=fi=0; }
@@ -24,7 +22,7 @@ namespace Faunus {
       }
       inline double geodesic(const hyperpoint &p) const {
         return std::acos(hypsqdist(p));
-      }    
+      } 
   };
 
   /*!
@@ -36,33 +34,33 @@ namespace Faunus {
 #ifdef HYPERSPHERE
     : public hyperpoint
 #endif
-  {
-    private:
-      inline int anint(double) const;
-    public:
-      double x,y,z;                       ///< The coordinates
-      point();                            ///< Constructor, zero data.
-      point(double,double,double);        ///< Constructor, set vector
-      void clear();                       ///< Zero all data.
-      double len() const; 
-      inline double sqdist(const point &) const;      //!< Squared distance to another point
-      inline double sqdist(const point &,             //!< -- / / -- 3D minimum image
-          const double &, const double &) const;
-      inline double dist(const point &) const;        ///< Distance to another point
-      inline double dist(const point &, const double &, const double &) const ; //!< Distance to another point
-      void ranunit(random &);               ///< Generate a random unit vector
-      double dot(const point &) const;      ///< Angle with another point
-      point operator-();                    ///< Sign reversal
-      point operator*(const point);         ///< Multiply two vectors
-      point operator*(double) const;        ///< Scale vector
-      point operator+(const point);         ///< Add two vectors
-      point operator-(const point) const;   ///< Subtract vector
-      point operator+(double);              ///< Displace x,y,z by value
-      point & operator+=(const point&);
-      bool operator==(const point&) const;
-      friend std::ostream &operator<<(std::ostream &, point &); /// Print x,y,z
-      std::string str();
-  };
+    {
+      private:
+        inline int anint(double) const;
+      public:
+        double x,y,z;                       ///< The coordinates
+        point();                            ///< Constructor, zero data.
+        point(double,double,double);        ///< Constructor, set vector
+        void clear();                       ///< Zero all data.
+        double len() const; 
+        inline double sqdist(const point &) const;      //!< Squared distance to another point
+        inline double sqdist(const point &,             //!< -- / / -- 3D minimum image
+            const double &, const double &) const;
+        inline double dist(const point &) const;        ///< Distance to another point
+        inline double dist(const point &, const double &, const double &) const ; //!< Distance to another point
+        void ranunit(random &);               ///< Generate a random unit vector
+        double dot(const point &) const;      ///< Angle with another point
+        point operator-();                    ///< Sign reversal
+        point operator*(const point);         ///< Multiply two vectors
+        point operator*(double) const;        ///< Scale vector
+        point operator+(const point);         ///< Add two vectors
+        point operator-(const point) const;   ///< Subtract vector
+        point operator+(double);              ///< Displace x,y,z by value
+        point & operator+=(const point&);
+        bool operator==(const point&) const;
+        friend std::ostream &operator<<(std::ostream &, point &); /// Print x,y,z
+        std::string str();
+    };
 
   /*!
    * \brief Class for particles
@@ -92,7 +90,12 @@ namespace Faunus {
       double volume() const;                    //!< Return volume of sphere
       double mw2vol(double=1) const;            //!< Estimate volume from weight
       double mw2rad(double=1) const;            //!< Estimate radius from weight
-      particle& operator=(const point&);           //!< Copy coordinates from a point
+      particle& operator=(const point&);        //!< Copy coordinates from a point
+#ifdef HYPERSPHERE
+      double mu;                                //!< Dipole moment scalar
+      hyperpoint dirmu;                         //!< Direction of point dipole
+      void move(double,double,double);          //!< More hyper particle
+#endif
   };
 
   /*! \brief Class for spherical coordinates

@@ -20,6 +20,7 @@
 #define FAUNUS_H
 
 #include "faunus/common.h"
+#include "faunus/slump.h"
 #include "faunus/physconst.h"
 #include "faunus/histogram.h"
 #include "faunus/analysis.h"

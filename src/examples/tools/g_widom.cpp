@@ -14,6 +14,21 @@ using namespace std;
 
 typedef pot_minimage potT;
 
+class gmxenergy {
+  private:
+    io io;
+  public:
+    vector<double> u; // energy in kT
+    gmxenergy(string file) {
+      double kJ_per_kT=pyc.kT2kJ(1.0);
+      vector<string> s;
+      io.readfile(file, s);
+      u.resize(s.size());
+      for (int i=0; i<s.size(); i++)
+        u[i]=atof(s[i].c_str() ) / kJ_per_kT;
+    }
+};
+
 template<class T> class energy {
   public:
     T pair;
@@ -34,12 +49,13 @@ template<class T> class energy {
 
 class chargescale {
   private:
-    unsigned int cnt;
+    unsigned int cnt, ucnt;
   public:
-    average_vec<double> expu, u, mu;
+    average_vec<double> expu, u, mu, a1,a2,a3;
     vector<int> sites;
+    vector<double> uvec;
     chargescale() {
-      cnt=0;
+      cnt=ucnt=0;
       mu.maxcnt=1;
       u.maxcnt=500;
     }
@@ -54,7 +70,15 @@ class chargescale {
           du += pot.pair.f * dq*dq/r ;
         }
       u+=du;
+      //du=du/sites.size();
       expu+=exp(-du);
+      if (ucnt<uvec.size()) {
+        a1+=du*exp(-du);
+        a2+=uvec[ucnt]*exp(-du);
+        a3+=uvec[ucnt];
+        ucnt++;
+        cout << uvec.at(ucnt) << endl;
+      }
       if (cnt>100) {
         mu+=-log(expu.avg());
         //expu.reset();
@@ -66,7 +90,10 @@ class chargescale {
       for (int i=0; i<sites.size(); i++)
         cout << sites[i] << " ";
       cout << "\n# Excess chemical potential (kT) = " << mu.avg() << " " << mu.stdev()
-           << "\n# Electrostatic energy (kT)      = " << u.avg() << " " << u.stdev() << endl;
+           << "\n# Electrostatic energy (kT)      = " << u.avg() << " " << u.stdev()
+           << "\n# Energy (kT)                    = " <<
+           ( a1.avg() + a2.avg() ) / expu.avg() - a3.avg()
+           << endl;
     }
 };
 
@@ -83,8 +110,11 @@ int main() {
 
   box con(100);
   atom.load("faunatoms.dat");
+  gmxenergy gmxu("../energy.dat");
   energy<potT> pot(in);
+
   chargescale cs_one;
+  cs_one.uvec=gmxu.u;
   cs_one.sites.push_back(in.getint("site1", 0));
   chargescale cs_two = cs_one;
   cs_two.sites.push_back(in.getint("site2", 1));

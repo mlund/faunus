@@ -19,7 +19,7 @@ int main() {
   inputfile in("dipolarfluid.conf");      // Read input file
   hypersphere con(in);                    // We want a hypersphere
   canonical nvt;                          // Use the canonical ensemble
-  interaction<pot_coulomb> pot(in);       // 
+  interaction<pot_hypersphere> pot(in);   // 
   mcloop loop(in);                        // Keep track of time and MC loop
 
   hypergroup solvent;                     // Group for dipoles

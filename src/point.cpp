@@ -1,9 +1,8 @@
 #include "faunus/point.h"
 
 namespace Faunus {
-
   //-------------HYPERPOINT------------------
-  
+
   //-------------POINT------------------
 
   point::point() { clear(); }
@@ -21,13 +20,13 @@ namespace Faunus {
     return (l2!=0) ? sqrt(l2) : 0;
   }
 
-  void point::ranunit(random &slp) {
+  void point::ranunit(random &ran) {
     point u;
     double r=2;
     while (r > 1.) { //Generate a random unit vector
-      u.x=2*slp.random_half();
-      u.y=2*slp.random_half();
-      u.z=2*slp.random_half();
+      u.x=2*ran.random_half();
+      u.y=2*ran.random_half();
+      u.z=2*ran.random_half();
       r=sqrt(u.x*u.x+u.y*u.y+u.z*u.z);
     }
     x=u.x/r;
@@ -125,6 +124,84 @@ namespace Faunus {
   double particle::mw2rad(double rho) const {
     return pow( mw2vol(rho)*3./4./M_PI, (1/3.) );
   }
+
+#ifdef HYPERSPHERE
+  void particle::move(double du,double dv, double dw) {
+    double nz1,nz2,nz3,nz4;
+    double tz1,tz2,tz3,tz4;
+    rho=du;
+    omega=dv;
+    fi=dw;
+    nz1=sqrt(1.-rho*rho);
+    nz2=nz1*cos(fi);
+    nz1=nz1*sin(fi);
+    nz3=rho*sin(omega);
+    nz4=rho*cos(omega);
+
+    hyperpoint e1,e2,e3,te1,te2,te3;
+    double fact1,fact2,fact3,nabla_nb,fi_nb;
+    nabla_nb=slp.random_one()*2.*acos(-1.);
+    fi_nb=acos(slp.random_one());
+    e1.z1=cos(nabla_nb);
+    e1.z2=sin(nabla_nb);
+    e1.z3=0.;
+    e1.z4=0.;
+    e2.z1=-cos(fi_nb)*sin(nabla_nb);
+    e2.z2=cos(fi_nb)*cos(nabla_nb);
+    e2.z3=sin(fi_nb);
+    e2.z4=0.;
+    e3.z1=sin(fi_nb)*sin(nabla_nb);
+    e3.z2=-sin(fi_nb)*cos(nabla_nb);
+    e3.z3=cos(fi_nb);
+    e3.z4=0.;
+
+    // First create a random orthonormal basis set at North Pole
+    fact1=e1.z1*z1
+      +e1.z2*z2
+      +e1.z3*z3;
+    te1.z1=e1.z1-1./(1.+z4)*fact1*z1;
+    te1.z2=e1.z2-1./(1.+z4)*fact1*z2;
+    te1.z3=e1.z3-1./(1.+z4)*fact1*z3;
+    te1.z4=e1.z4-1./(1.+z4)*fact1*(z4+1.);
+    fact2=e2.z1*z1
+      +e2.z2*z2
+      +e2.z3*z3;
+    te2.z1=e2.z1-1./(1.+z4)*fact2*z1;
+    te2.z2=e2.z2-1./(1.+z4)*fact2*z2;
+    te2.z3=e2.z3-1./(1.+z4)*fact2*z3;
+    te2.z4=e2.z4-1./(1.+z4)*fact2*(z4+1.);
+    fact3=e3.z1*z1
+      +e3.z2*z2
+      +e3.z3*z3;
+    te3.z1=e3.z1-1./(1.+z4)*fact3*z1;
+    te3.z2=e3.z2-1./(1.+z4)*fact3*z2;
+    te3.z3=e3.z3-1./(1.+z4)*fact3*z3;
+    te3.z4=e3.z4-1./(1.+z4)*fact3*(z4+1.);
+
+    // Then move it to point of z1,z2,z3,z4
+    tz1=nz1*te1.z1+nz2*te2.z1+nz3*te3.z1+nz4*z1;
+    tz2=nz1*te1.z2+nz2*te2.z2+nz3*te3.z2+nz4*z2;
+    tz3=nz1*te1.z3+nz2*te2.z3+nz3*te3.z3+nz4*z3;
+    tz4=nz1*te1.z4+nz2*te2.z4+nz3*te3.z4+nz4*z4;
+
+    // Translate the point to new point using the moved basis set
+    hyperpoint newdir;
+    double factpoi,factmu;
+    factpoi = tz1*z1+tz2*z2+tz3*z3+tz4*z4;
+    factmu = tz1*dirmu.z1+tz2*dirmu.z2+tz3*dirmu.z3+tz4*dirmu.z4;
+    newdir.z1 = dirmu.z1 - 1./(1.+factpoi)*factmu*(tz1+z1);
+    newdir.z2 = dirmu.z2 - 1./(1.+factpoi)*factmu*(tz2+z2);
+    newdir.z3 = dirmu.z3 - 1./(1.+factpoi)*factmu*(tz3+z3);
+    newdir.z4 = dirmu.z4 - 1./(1.+factpoi)*factmu*(tz4+z4);
+
+    // Update the point and dirmu
+    z1=tz1;
+    z2=tz2;
+    z3=tz3;
+    z4=tz4;
+    dirmu=newdir;
+  }
+#endif
 
   std::ostream &operator<<(std::ostream &out, point &p) {
     out << p.str();

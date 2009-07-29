@@ -59,5 +59,6 @@ namespace Faunus {
       iy=iv[0];
     }
   }
-}
+  slump slp;
+}//namespace
 

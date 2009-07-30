@@ -155,5 +155,181 @@ namespace Faunus {
       << "#   Titrateable sites   = " << sites.size() << endl;
     return o.str();
   }
+  
+  
+    // ----------- AT Titration ----------------
+
+
+  ATchargereg::ATchargereg( ensemble& e, container& c, energybase& i, float ph, inputfile& in , pot_debyehuckel& pair)
+  :markovmove(e,c,i), titrate_implicit(c,ph) {
+
+	name.assign("IMPLICIT IONS TITRATION");
+	double sytem_charge = con->charge();
+	pairpot = &pair;
+
+	// Getting config from input
+    protein_conc = in.getflt("ProteinConc", 0.1);
+    double salt1_conc   = in.getflt("Salt1Conc"  , 0.1);
+    double salt2_conc   = in.getflt("Salt2Conc"  , 0.1);
+    double salt1_charge = in.getflt("Salt1Charge", 1.0);
+    double salt2_charge = in.getflt("Salt2Charge", 1.0);
+    float lB = in.getflt("bjerrum"  , 7.12);
+
+    // Evaluating physical quantities
+    ionic_str0 = 0.5 * ( salt1_conc * pow(salt1_charge,2) + salt2_conc * pow(salt2_charge,2) );
+    ionic_str1 = 0.5 * ( protein_conc * abs(ionic_str0) );
+    const_kappa = sqrt( 80 * 3.14159265358979 * 6.02214179e23 * lB )*1e-14;
+    kold = (const_kappa * sqrt(ionic_str0+ionic_str1));
+    set_kappa(kold);
+  };
+
+
+
+
+  double ATchargereg::titrateall( vector<macromolecule>& g ) {
+    du=0;
+    if (slp.runtest(runfraction)==false)
+      return du;
+    double sum=0;
+    int t;
+    short who;
+    for (unsigned short i=0; i<sites.size(); i++) {
+      cnt++;
+      t    = exchange(con->trial);         // Protonate/Deprotonate site
+      who  = who_is_tit(g,t);              // Find which protein is titrating (in case we have many proteins)
+      kold = calc_kappa(g,con->p);         // Update old kappa value
+      knew = calc_kappa(g,con->trial);     // Update new kappa value
+
+      // Evaluate energy variation of the move...
+      uold = pot->potential(con->p,t,g[who],kold) * con->p[t].charge
+           + prot_ion_u(g,con->p,kold);
+      unew = pot->potential(con->trial,t,g[who],knew) * con->trial[t].charge
+           + prot_ion_u(g,con->trial,knew);
+      du = (unew-uold);
+
+      // Accept or not the move...
+      if (ens->metropolis( energy(con->trial, du, t) )==true) {
+        rc=OK;
+        utot+=du;
+        naccept++;
+        con->p[t].charge = con->trial[t].charge;
+        sum+=du;
+        set_kappa(knew);
+      }
+      else {
+        rc=ENERGY;
+        exchange(con->trial, t);
+        set_kappa(kold);
+      };
+      //samplesites(con->p);  // Average charges on all sites
+    };
+    return sum;
+  };
+    
+    
+
+  /*!
+   * \brief Returns information about the titration.
+   * \author Andre Teixeira
+   * \date Jul2009
+   */
+
+  string ATchargereg::info() {
+    std::ostringstream o;
+    o <<  markovmove::info()
+      << "#   pH (concentration)    = " << ph             << endl
+      << "#   Titrateable sites     = " << sites.size()   << endl
+      << "#   Protein concentration = " << protein_conc   << endl
+      << "#   Salt Ionic Strenght   = " << ionic_str0     << endl
+      << "#   Debye Lenght          = " << 1./ (const_kappa * sqrt(ionic_str0+ionic_str1)) << endl;
+    return o.str();   
+  };
+
+
+
+  /*!
+   * \brief Calculates the value of kappa for a given vector of particles.
+   * \author Andre Teixeira
+   * \date Jul 2009
+   */
+
+  double ATchargereg::calc_kappa( vector<macromolecule>& g, vector<particle>& p) {
+    ionic_str1 = 0;
+    float inv_n_proteins = 1./g.size();
+    for (int i=0 ; i<g.size() ; i++)
+      ionic_str1 += g[i].conc * abs(g[i].getcharge( p ));
+    ionic_str1 *= 0.5;
+    return const_kappa * sqrt(ionic_str0+ionic_str1);
+  };
+
+
+
+  /*!
+   * \brief Evaluates the protein-counter ion energy for all proteins for a calculated value of kappa
+   * and a given vector of particles.
+   * \author Andre Teixeira
+   * \date Jul 2009
+   * \todo dynamic bjerrum value
+   */
+
+  double ATchargereg::prot_ion_u( vector<macromolecule>& g, vector<particle>& p) {
+    double u = 0;
+    double k = calc_kappa(g,p);
+    int zp;
+    for (int i=0 ; i<g.size() ; i++) {
+      zp = g[i].getcharge(p);
+      u += pairpot->f * zp*zp * k / ( 1+2*k*g[i].radius(p) );
+    };
+    return -u;
+  };
+  
+  
+  
+  /*!
+   * \brief Evaluate the protein-counter ion energy for all proteins for a given value of kappa
+   * and a given vector of particles.
+   * \author Andre Teixeira
+   * \date Jul 2009
+   * \todo dynamic bjerrum value
+   */
+
+  double ATchargereg::prot_ion_u( vector<macromolecule>& g, vector<particle>& p , double& k) {
+    double u = 0;
+    int zp;
+    for (int i=0 ; i<g.size() ; i++) {
+      zp = g[i].getcharge(p);
+      u += pairpot->f * zp*zp * k / ( 1+2*k*g[i].radius(p) );
+    };
+    return -u;
+  };
+  
+  
+  
+  /*!
+   * \brief Find the macromolecule which the current titrating site belongs.
+   * \author Andre Teixeira
+   * \date Jul 2009
+   */
+
+  int ATchargereg::who_is_tit( vector<macromolecule>& g, int& t) {
+    for (int i=0 ; i<g.size() ; i++)
+      if ( t >= g[i].beg && t <= g[i].end)
+        return i;
+    std::cout << "\n\n#Site not found!!\n\n" << endl;
+	return -1;
+  };
+
+
+
+  /*!
+   * \brief Update kappa value used in intermolecular interactions calculations.
+   * \authot Andre Teixeira
+   * \date Jul 2009
+   */
+
+  void ATchargereg::set_kappa( double& k ) {
+    pairpot->k = k;
+    kold = k;
+  };
 
 }//namespace

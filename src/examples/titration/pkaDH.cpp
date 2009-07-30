@@ -12,19 +12,18 @@ int main(int argc, char* argv[]) {
   cell con(in);                        // Use a spherical simulation container
   canonical nvt;                       // Use the canonical ensemble
   interaction<pot_debyehuckel> pot(in);// Specify pair potential
-  macromolecule protein;               // Group for the protein
+  vector <macromolecule> protein(1);      // Group for the protein
   ioaam aam;                           // Protein input file format is AAM
   iopqr pqr;                           // PQR coordinate output
-  protein.add( con,
+  protein[0].add( con,
       aam.load(in.getstr("protein"))); // Load protein structure
-  protein.move(con, -protein.cm);      // ..translate it to origo (0,0,0)
-  protein.accept(con);                 // ..accept translation
+  protein[0].move(con, -protein[0].cm);      // ..translate it to origo (0,0,0)
+  protein[0].accept(con);                 // ..accept translation
   aam.load(con, "confout.aam");        // Load old config (if present)
 
 #ifdef DHTEIXEIRA
-  //Andre: instantiate you class here!
-  //ATchargereg tit(...);
-  DHchargereg tit(nvt,con,pot,in.getflt("pH", 7.),in.getflt("mu_proton")); // UNCOMMENT THIS!!
+  ATchargereg tit(nvt,con,pot,in.getflt("pH", 7.),in,pot.pair);
+  protein[0].conc = in.getflt("ProteinConc", 0.0001);
 #else
   DHchargereg tit(nvt,con,pot,in.getflt("pH", 7.),in.getflt("mu_proton"));
 #endif  
@@ -35,9 +34,13 @@ int main(int argc, char* argv[]) {
 
   while ( loop.macroCnt() ) {            // Markov chain 
     while ( loop.microCnt() ) {
-      sys+=tit.titrateall();             // Titrate protein sites
-      protein.charge(con.p);             // Re-calc. protein charge
-      protein.dipole(con.p);             // Re-calc. dipole moment
+      #ifdef DHTEIXEIRA
+        sys+=tit.titrateall( protein );
+      #else
+        sys+=tit.titrateall();             // Titrate protein sites
+      #endif
+      protein[0].charge(con.p);             // Re-calc. protein charge
+      protein[0].dipole(con.p);             // Re-calc. dipole moment
     }                                    // END of micro loop
     sys.update(pot.energy(con.p));       // Update system energy
     aam.save("confout.aam", con.p);      // Save config. to disk
@@ -45,6 +48,6 @@ int main(int argc, char* argv[]) {
     cout << loop.timing();               // Show progress
   }                                      // END of macro loop
   cout << sys.info() << tit.info()
-       << protein.info() << loop.info(); // Print final results
+       << protein[0].info() << loop.info(); // Print final results
 }
 

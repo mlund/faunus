@@ -172,13 +172,23 @@ namespace Faunus {
 
   //-------------------------------------------
 
-  titrate_implicit::titrate_implicit(vector<particle> &p, double peeage, double muH) {
+  titrate_implicit::titrate_implicit(vector<particle> &p, double peeage, double muH=0) {
     ph=peeage;
     mu_proton=muH;
     for (int i=0; i<p.size(); i++)    //search for titrateable sites
       if ( atom[p[i].id].pka !=0 ) {
         sites.push_back(i);
         p[i].charge = atom[p[i].id].charge; // deprotonate everything
+      }
+  }
+  
+  titrate_implicit::titrate_implicit(container& c, float& peeage) {
+    ph=peeage;
+    for (int i=0; i<c.p.size(); i++)    //search for titrateable sites
+      if ( atom[c.p[i].id].pka !=0 ) {
+        sites.push_back(i);
+        c.p[i].charge = atom[c.p[i].id].charge; // deprotonate everything
+        c.trial[i].charge = atom[c.p[i].id].charge; // deprotonate everything
       }
   }
 

@@ -382,6 +382,9 @@ namespace Faunus {
     Q2+=z*z;
     return z;
   }
+  double macromolecule::getcharge(const vector<particle> &p) {
+    return group::charge(p);
+  }
   void macromolecule::center(container &con) {
     move(con, -cm);
     accept(con);

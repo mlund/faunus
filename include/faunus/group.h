@@ -76,6 +76,7 @@ namespace Faunus {
     public:
       macromolecule();
       point mu;            //!< Dipole moment
+      float conc;
       average<double> Q;    //!< Total charge. Updated with space::charge()
       average<double> Q2;   //!< Total charge squared.
       average<double> dip;  //!< Dipole moment scalar.
@@ -85,6 +86,7 @@ namespace Faunus {
       string info(container &);                //!< Show more info!
       void center(container &);                //!< Center group in origo (0,0,0)
       double charge(const vector<particle> &);       //!< Calculate total charge
+      double getcharge(const vector<particle> &);    //!< Calculate total charge
       double radius(vector<particle> &);       //!< Calculate radius
       double dipole(vector<particle> &);       //!< Calculate dipole moment
       void zmove(container &, double);         //!< Move in z-direction, only

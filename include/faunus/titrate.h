@@ -63,6 +63,7 @@ namespace Faunus {
       double ph,                            //!< Solution pH value
              mu_proton;                     //!< Bulk excess chemical potential of a proton (kT)
       titrate_implicit(vector<particle> &, double, double);
+      titrate_implicit(container&, float&);
       int exchange(vector<particle> &, int=-1);
       double energy(vector<particle> &, double, int);
       unsigned int random();                //!< Pick a random titratable site

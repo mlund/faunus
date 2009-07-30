@@ -17,7 +17,6 @@
 #include "faunus/potentials/pot_barecoulomb.h"
 #include "faunus/potentials/pot_netz.h"
 #include "faunus/potentials/pot_test.h"
-#include "faunus/potentials/pot_hypersphere.h"
 
 namespace Faunus {
   /*!
@@ -45,12 +44,14 @@ namespace Faunus {
       virtual double energy(vector<particle> &, molecules &, vector<int> &)=0;     //!< subset[molecules]<->all
       virtual double potential(vector<particle> &, unsigned short)=0;              //!< Electric potential at j'th particle
       virtual double potential(vector<particle> &, point)=0;                       //!< Electric potential in point
+      virtual double potential(const vector<particle>&,unsigned short, macromolecule&, double& )=0; //! For the AT titration
       virtual double internal(vector<particle> &, const group &, int=1)=0;         //!< internal energy in group
       virtual double pot(vector<particle> &, const point &)=0;                     //!< Electrostatic potential in a point
       virtual double dipdip(const point &, const point &, double)=0;                     //!< Dipole-dipole energy.
       virtual double iondip(const point &, double, double)=0;                            //!< Ion-dipole energy.
       virtual double force(container &, particle, particle, point, double, double=.5)=0;        //!< Force vector
       virtual void forceall(container &, vector<point> &)=0;
+      //virtual void set_kappa( double& )=0;
       virtual double u_monomer(vector<particle> &, const polymer &, unsigned int)=0; //!< all<->monomer in polymer
       virtual double uself_polymer(vector<particle> &, const polymer&)=0;          //!< internal polymer energy
 
@@ -97,7 +98,7 @@ namespace Faunus {
         p[j].y=1e9;
 #pragma omp parallel for reduction (+:u)
         for (int i=0; i<n; ++i)
-          u+=pair.pairpot( p[i],bak);
+          u+=pair.pairpot( p[i],p[j] );
         p[j]=bak;
         return pair.f*u;
       }
@@ -238,6 +239,37 @@ namespace Faunus {
         return pair.f*phi;
       }
 
+
+    double potential(const vector<particle> &p, unsigned short j, macromolecule& g, double& k) {
+        if (abs(p[j].charge)<1e-6)
+          return 0;
+        double u=0;
+        double r;
+        int i,n=p.size();
+        
+        /* Inside the protein */
+        for (i=g.beg; i<j; ++i)
+          u+=p[i].charge/sqrt(pair.sqdist(p[i],p[j]));
+        for (i=j+1; i<=g.end; ++i)
+          u+=p[i].charge/sqrt(pair.sqdist(p[i],p[j]));
+   
+        
+        /* Outside the protein */
+          if (g.beg>0) {
+            for (int i=0 ; i<g.beg ; i++) {
+              r=sqrt(pair.sqdist(p[i],p[j]));
+              u+=p[i].charge/r*exp(-k*r);
+            };
+          };
+          for (int i=g.end+1; i<n; i++) {
+            r=sqrt(pair.sqdist(p[i],p[j]));
+            u+=p[i].charge/r*exp(-k*r);
+          };
+        
+        return pair.f*u;
+      }
+
+
       void forceall(container &c, vector<point> &f) {
         point r;
         double ff;
@@ -258,6 +290,13 @@ namespace Faunus {
             f[j].z-=ff*r.z;
           }
       }
+      
+      /*
+      void set_kappa( double& kappa) {
+      	try { pair.k = kappa; }
+      	catch (...) {};
+      };
+      */
 
       double force(container &c, particle a, particle b, point rij, double r, double dr) {
         double forward,center,f;
@@ -342,7 +381,7 @@ namespace Faunus {
     for (j=0; j<hy.size(); j++) {     // loop over hydrophobic groups
       if (hy[j]>end_of_protein_one) { // test if we move into second protein
         u=interaction<T>::pair.hypairpot( p[i], p[hymin], sqrt(dmin) );
-        dmin=1e7;                     // reset min. distance
+        dmin=1e7;                     // reset min. distane
       }
       d=p[i].sqdist( p[hy[j]]);       // find min. distance
       if (d<dmin) {

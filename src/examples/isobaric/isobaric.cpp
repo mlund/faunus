@@ -100,6 +100,8 @@ int main() {
   FAUrdf protrdf12(0,0,.5,cell.len/2.); // Protein and salt radial distributions
 
   ioxtc xtc(cell.len);                                // Gromacs xtc output (if installed)
+  for (int i=0; i<g.size(); i++)
+    xtc.g.push_back(&g[i]);
 
   cout << cell.info() << pot.info() <<in.info() << endl
        << "#  Temperature = " << phys.T << " K" << endl << endl
@@ -117,7 +119,7 @@ int main() {
         case 1:
           for (int n=0; n<2*g.size(); n++) {
             int i = randy*g.size();
-            if (randy<.5)
+            if (slump.random_one()<.5)
               sys+=mr.move(g[i]);
             else
               sys+=mt.move(g[i]);
@@ -129,11 +131,8 @@ int main() {
       }
 
       lendist.add(cell.len);
-      if (randy>.99)
-        if (in.getboo("movie", false)==true) {
-          xtc.setbox(cell.len);
-          xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
-        }
+      if (randy>.99 && in.getboo("movie", false)==true)
+        xtc.save("coord.xtc", cell);   // Save trajectory
       if (randy>.99) sys.track();
       if (randy>.9) {
         for (i=0;i<g.size();i++) 

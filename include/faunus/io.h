@@ -174,33 +174,28 @@ namespace Faunus {
   /*! \brief GROMACS xtc compressed trajectory fileformat
    *  \author Mikael Lund
    *  \date June 2007, Prague
-   *  \todo Filename ignored, should be changed. Static box length.
-   *        The XTC format is now included in OpenBabel2. Can we use that?
-   *  \note Distances are stored in nanometers.
    *
-   *  This class is used for output of configurations
-   *  to a GROMACS xtc file, originally designed for MD trajectories albeit
-   *  with no forces included.
-   *  The MC configurations in the xtc file can subsequently be used
-   *  in a number of other programs VMD, for example, as well as analysed
-   *  using a range of tools as part of GROMACS -- distribution
-   *  functions etc.
-   *  It can also be used to store lenghty simulations as commonly
-   *  done in MD.
+   *  Saves simulation frames to a Gromacs xtc trajectory file including
+   *  box information if applicable. Molecules with periodic boundaries
+   *  can be saves as "whole" by adding their groups to the public g-vector
+   *  when saving with save(string,box).
    */
   class ioxtc : public iopart {
     private:
+      vector<particle> p;
       vector<particle> load(string);
-      rvec x[5000];
       XDRFILE *xd;
-      float box[3][3], time, step;
+      matrix xdbox;
+      float time, step, prec_xtc;
     public:
+      vector<group*> g;                        //!< List of PBC groups to be saved as whole
       ioxtc(float);
-      bool OpenTrajectory(string);
-      bool LoadFrame(int, vector<particle> &); 
-      bool save(string, vector<particle> &);
-      void setbox(float);
-      void close();
+      bool OpenTrajectory(string);             //!< Not finished!
+      bool LoadFrame(int, vector<particle> &); //!< Not finished!
+      bool save(string, vector<particle> &);   //!< Save a frame to trj file.
+      bool save(string, box &);                //!< Save a frame to trj file (PBC)
+      void setbox(float);                      //!< Set box size to be saved in frame
+      void close();                            //!< Close trj file
   };
 };//namespace
 #endif

@@ -39,7 +39,7 @@ template<class T> class energy {
       particle tmp=p[i];
       p[i].z=1e9;
       p[i].charge=0;
-#pragma omp parallel for reduction (+:phi)
+//#pragma omp parallel for reduction (+:phi)
       for (int j=0; j<n; j++)
         phi+=p[j].charge/sqrt(pair.sqdist(tmp,p[j]));
       p[i]=tmp;
@@ -114,12 +114,12 @@ int main() {
   energy<potT> pot(in);
 
   chargescale cs_one;
-  cs_one.uvec=gmxu.u;
-  cs_one.sites.push_back(in.getint("site1", 0));
+  cs_one.uvec=gmxu.u; // copy energy from read energy.dat file (gmx generated)
   chargescale cs_two = cs_one;
+  cs_one.sites.push_back(in.getint("site1", 0));
   cs_two.sites.push_back(in.getint("site2", 1));
 
-  // OPEN PQR FILE FOR NON-POS. INFO.
+  // FETCH ATOM NAMES FROM GRO FILE
   iogro gro(in);
   con.p = gro.load( in.getstr("grofile", "conf.gro") );
   atom.reset_properties(con.p); // set all properties according to faunatoms.dat file!
@@ -130,7 +130,8 @@ int main() {
     cout << "# xtc file opened: " << xtcname << endl;
     rc = read_xtc_natoms(&xtcname[0], &natoms_xtc);        // get length
     if (rc==exdrOK && natoms_xtc==con.p.size()) {
-      x_xtc = (rvec*)calloc(natoms_xtc, sizeof(x_xtc[0])); // allocate memory
+      //x_xtc = (rvec*)calloc(natoms_xtc, sizeof(x_xtc[0])); // allocate memory
+      x_xtc = new rvec [natoms_xtc];
       cout << "# Number of atoms = " << natoms_xtc << endl;
       while(1) {                                           // loop over frames
         rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc,box_xtc, x_xtc, &prec_xtc);
@@ -149,6 +150,7 @@ int main() {
         }
         else break;
       }
+      delete x_xtc;
     }
     xdrfile_close(xd);
   }

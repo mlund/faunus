@@ -397,9 +397,10 @@ namespace Faunus {
 
   //----------------- IOXTC ----------------------
   ioxtc::ioxtc(float len) {
+    prec_xtc = 1000.0;
     time=step=0;
     setbox(len);
-    xd=xdrfile_open("coord.xtc", "w");
+    xd=NULL;
   }
   vector<particle> ioxtc::load(string s) {
     vector<particle> dummy;
@@ -408,23 +409,41 @@ namespace Faunus {
   void ioxtc::setbox(float len) {
     for (char i=0; i<3; i++)
       for (char j=0; j<3; j++)
-        box[i][j]=0;
-    box[0][0]=len/10.; // corners of the
-    box[1][1]=len/10.; // rectangular box
-    box[2][2]=len/10.; // (in nanometers!)
-  };
+        xdbox[i][j]=0;
+    xdbox[0][0]=len/10.; // corners of the
+    xdbox[1][1]=len/10.; // rectangular box
+    xdbox[2][2]=len/10.; // (in nanometers!)
+  }
+
+  bool ioxtc::save(string file, box &b) {
+    p=b.p;
+    setbox(b.len);
+    for (int i=0; i<g.size(); i++) {
+      g[i]->move(b,-g[i]->cm);                 // b.trial is moved to origo -> whole!
+      for (int j=g[i]->beg; j<=g[i]->end; j++)
+        p[j]=b.trial[j]+g[i]->cm;              // move back to cm without periodicity
+      g[i]->undo(b);                           // restore to original PBC location
+    }
+    return save(file, p);
+  }
 
   bool ioxtc::save(string file, vector<particle> &p) {
-    if (p.size()<5000) {
-      for (unsigned short i=0; i<p.size(); i++) {
-        x[i][0]=p[i].x/10;      // AA->nm
-        x[i][1]=p[i].y/10;
-        x[i][2]=p[i].z/10;
+    if (xd==NULL)
+      xd=xdrfile_open(&file[0], "w");
+    if (xd!=NULL) {
+      rvec *x = new rvec [p.size()];
+      for (int i=0; i<p.size(); i++) {
+        x[i][0]=p[i].x*0.1;      // AA->nm
+        x[i][1]=p[i].y*0.1;
+        x[i][2]=p[i].z*0.1;
       }
-      write_xtc(xd,p.size(),step++,time++,box,x,1300.);
+      write_xtc(xd,p.size(),step++,time++,xdbox,x,prec_xtc);
+      delete x;
+      return true;
     }
-    return true;
+    return false;
   }
+
   void ioxtc::close() { xdrfile_close(xd); }
 
   bool ioxtc::OpenTrajectory(string s) {

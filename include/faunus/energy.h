@@ -17,6 +17,7 @@
 #include "faunus/potentials/pot_barecoulomb.h"
 #include "faunus/potentials/pot_netz.h"
 #include "faunus/potentials/pot_test.h"
+#include "faunus/potentials/pot_hypersphere.h"
 
 namespace Faunus {
   /*!

@@ -233,7 +233,6 @@ namespace Faunus {
    * \author Andre Teixeira
    * \date Jul2009
    */
-
   string ATchargereg::info() {
     std::ostringstream o;
     o <<  markovmove::info()
@@ -242,7 +241,7 @@ namespace Faunus {
       << "#   Protein concentration = " << protein_conc   << endl
       << "#   Salt Ionic Strenght   = " << ionic_str0     << endl
       << "#   Debye Lenght          = " << 1./ (const_kappa * sqrt(ionic_str0+ionic_str1)) << endl;
-    return o.str();   
+    return o.str();
   };
 
 
@@ -252,12 +251,10 @@ namespace Faunus {
    * \author Andre Teixeira
    * \date Jul 2009
    */
-
   double ATchargereg::calc_kappa( vector<macromolecule>& g, vector<particle>& p) {
     ionic_str1 = 0;
-    float inv_n_proteins = 1./g.size();
     for (int i=0 ; i<g.size() ; i++)
-      ionic_str1 += g[i].conc * abs(g[i].getcharge( p ));
+      ionic_str1 += g[i].conc * abs(g[i].getcharge(p));
     ionic_str1 *= 0.5;
     return const_kappa * sqrt(ionic_str0+ionic_str1);
   };
@@ -269,13 +266,11 @@ namespace Faunus {
    * and a given vector of particles.
    * \author Andre Teixeira
    * \date Jul 2009
-   * \todo dynamic bjerrum value
    */
-
   double ATchargereg::prot_ion_u( vector<macromolecule>& g, vector<particle>& p) {
     double u = 0;
     double k = calc_kappa(g,p);
-    int zp;
+    double zp;
     for (int i=0 ; i<g.size() ; i++) {
       zp = g[i].getcharge(p);
       u += pairpot->f * zp*zp * k / ( 1+2*k*g[i].radius(p) );
@@ -290,12 +285,10 @@ namespace Faunus {
    * and a given vector of particles.
    * \author Andre Teixeira
    * \date Jul 2009
-   * \todo dynamic bjerrum value
    */
-
   double ATchargereg::prot_ion_u( vector<macromolecule>& g, vector<particle>& p , double& k) {
     double u = 0;
-    int zp;
+    double zp;
     for (int i=0 ; i<g.size() ; i++) {
       zp = g[i].getcharge(p);
       u += pairpot->f * zp*zp * k / ( 1+2*k*g[i].radius(p) );
@@ -310,7 +303,6 @@ namespace Faunus {
    * \author Andre Teixeira
    * \date Jul 2009
    */
-
   int ATchargereg::who_is_tit( vector<macromolecule>& g, int& t) {
     for (int i=0 ; i<g.size() ; i++)
       if ( t >= g[i].beg && t <= g[i].end)
@@ -326,7 +318,6 @@ namespace Faunus {
    * \authot Andre Teixeira
    * \date Jul 2009
    */
-
   void ATchargereg::set_kappa( double& k ) {
     pairpot->k = k;
     kold = k;

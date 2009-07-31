@@ -5,7 +5,11 @@ using namespace std;
 
 int main(int argc, char* argv[]) {
   cout << faunus_splash();             // Faunus spam
+#ifdef DHTEIXEIRA
+  string config = "pkaAT.conf";          // Default input (parameter) file
+#else
   string config = "pka.conf";          // Default input (parameter) file
+#endif
   if (argc==2) config = argv[1];       // ..also try to get it from the command line
   inputfile in(config);                // Read input file
   mcloop loop(in);                     // Set Markov chain loop lengths
@@ -26,13 +30,13 @@ int main(int argc, char* argv[]) {
   protein[0].conc = in.getflt("ProteinConc", 0.0001);
 #else
   DHchargereg tit(nvt,con,pot,in.getflt("pH", 7.),in.getflt("mu_proton"));
-#endif  
+#endif
 
   systemenergy sys(pot.energy(con.p)); // System energy analysis
   cout << con.info() << tit.info()     // Some information
        << pot.info() << atom.info();
 
-  while ( loop.macroCnt() ) {            // Markov chain 
+  while ( loop.macroCnt() ) {            // Markov chain
     while ( loop.microCnt() ) {
       #ifdef DHTEIXEIRA
         sys+=tit.titrateall( protein );

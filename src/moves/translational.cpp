@@ -49,8 +49,11 @@ namespace Faunus {
       return du;
   }
 
+  /*!
+   * \todo "gofr" constructor should be called with dynamically loaded values, not fixed ones
+   */
   dualmove::dualmove( ensemble &e,
-      container &c, energybase &i ) : markovmove(e,c,i), gofr(0.1,0.,100.)
+      container &c, energybase &i ) : markovmove(e,c,i), gofr(0.1,0.,1500.)
   {
     name.assign("SYMMETRIC 1D GROUP TRANSLATION");
     cite.assign("Biophys J. 2003, 85, 2940");

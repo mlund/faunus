@@ -1,7 +1,6 @@
 #include "faunus/titrate.h"
 namespace Faunus {
   /*!
-   * \param atom Species class
    * \param peeage pH
    */
   titrate::titrate(double peeage) {

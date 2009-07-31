@@ -27,6 +27,8 @@ namespace Faunus {
         f=1;
       }
       /*!
+       *  \param p1 First particle
+       *  \param p2 Second particle
        *  \param r2 Squared distance between particle p1 and p2.
        *  \returns Interaction energy in units of kT,
        *           \f[ \beta u_{lj} = \epsilon_{lj} \left ( \frac{\sigma}{r^{12}} - \frac{\sigma}{r^6} \right ) \f]

@@ -145,8 +145,8 @@ namespace Faunus {
     return dx*dx + dy*dy + dz*dz;
   }
 
-  //!\note <cmath> has a round() function -- speed?
   inline int point::anint(double a) const { return int(a>0 ? a+.5 : a-.5); }
+
   inline double point::sqdist(const point &p, const double &len, const double &halflen) const {
     double dx,dy,dz;
     dx=std::abs(x-p.x);

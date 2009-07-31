@@ -175,7 +175,6 @@ namespace Faunus {
   /*!
    * \param par Container class
    * \param c ...by adding this vector to all particles
-   * \param k Keyword to specify if the move should be automatically accepted (default no).
    */
   void group::move(container &par, point c) {
     for (unsigned short i=beg; i<=end; i++) {

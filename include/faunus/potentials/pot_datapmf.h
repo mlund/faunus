@@ -38,7 +38,7 @@ namespace Faunus {
           pmfd[i][j].x2y(sqrt(r2));        // ...else use table.
       }
 
-      /*!\param atom Species class.
+      /*!
        * \param id particle type to search for.
        */
       void loadpmf(unsigned char id) {

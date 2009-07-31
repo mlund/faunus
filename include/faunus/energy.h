@@ -544,7 +544,7 @@ namespace Faunus {
    * \brief Interaction class that includes image charges outside a spherical cell
    * \todo Not optimized
    * \warning Untested! (behaves properly but not independently confirmed correct)
-   * \warnign This class is only INTENDED to be used with the potetnential test_pot!
+   *          This class is only INTENDED to be used with the potetnential test_pot!
    * \author Mikael Lund, Bjorn Persson
    * \date Lund 2008-2009
    *

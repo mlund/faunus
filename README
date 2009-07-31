@@ -32,6 +32,7 @@ CONTRIBUTORS:
   Martin Trulsson    <martin.trulsson at teokem.lu.se>
   Ondrej Marsalek    <ondrej.marsalek at uochb.cas.cz>
   Christophe Labbez  <christophe.labbez at u-bourgogne.fr>
+  Andre Teixeira     <andrearteixeira at gmail.com>
 
 CITING FAUNUS:
   Lund, M., Persson, B., Trulsson, M. (2008) Source Code Biol. Med. 3:1
@@ -66,7 +67,7 @@ COMPILING USING CMAKE (RECOMMENDED):
     $ CXX=icpc cmake . -DENABLE_OPENMP=on
     $ make
 
-COMPILING WITHOUT CMAKE:
+COMPILING WITHOUT CMAKE (TO BE UNAVAILABLE):
   $ mv Makefile.nocmake Makefile
   $ make
 

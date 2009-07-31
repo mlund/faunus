@@ -17,7 +17,8 @@ function( fau_hyperexample tname tdir tsrc )
   add_executable( ${tname} "${tdir}/${tsrc}" )
   set_source_files_properties( "${tdir}/${tsrc}" PROPERTIES LANGUAGE CXX)
   set_target_properties(${tname}
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${tdir}/")
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${tdir}/"
+    EXCLUDE_FROM_ALL TRUE )
   target_link_libraries(${tname} libhyperfaunus)
   install (DIRECTORY "${tdir}"
            DESTINATION "share/faunus/examples"

@@ -260,7 +260,6 @@ namespace Faunus {
 
   //----------------- IOGRO ----------------------
   /*!
-   * \param s Species class for particle recognition
    * \param in Inputfile. Keyword "boxlen" is used to specify a cubic box
    */
   iogro::iogro(inputfile &in) {

@@ -59,7 +59,7 @@ namespace Faunus {
    *
    * \param pressure bulk pressure in A^-3
    * \param i Potential class. Make sure that the T_pairpot::setvolume()
-   *        function is appropriate.
+   *          function is appropriate.
    */
   template<typename T> isobaric<T>::isobaric
     ( ensemble &e, container &c, T &i,

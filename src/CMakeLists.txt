@@ -47,11 +47,10 @@ add_library(libhyperfaunus SHARED ${objs})
 set_target_properties(libhyperfaunus PROPERTIES
                       OUTPUT_NAME hyperfaunus
                       COMPILE_DEFINITIONS "HYPERSPHERE"
+                      EXCLUDE_FROM_ALL TRUE
                       )
 
 target_link_libraries(libhyperfaunus xdrfile ${LINKLIBS})
-install(TARGETS libhyperfaunus
-        LIBRARY DESTINATION lib)
 
 #----- header install target -----
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/faunus

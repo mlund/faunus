@@ -16,13 +16,13 @@ typedef pot_minimage potT;
 
 class gmxenergy {
   private:
-    io io;
+    Faunus::io inout;
   public:
     vector<double> u; // energy in kT
     gmxenergy(string file) {
       double kJ_per_kT=pyc.kT2kJ(1.0);
       vector<string> s;
-      io.readfile(file, s);
+      inout.readfile(file, s);
       u.resize(s.size());
       for (int i=0; i<s.size(); i++)
         u[i]=atof(s[i].c_str() ) / kJ_per_kT;

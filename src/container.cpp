@@ -154,8 +154,8 @@ namespace Faunus {
     };
   }
   //------------CYLINDER---------------------------
-  //! \param len  Length of the cylinder
-  //! \param r    Radius of the cylinder
+  //! \param length    Length of the cylinder
+  //! \param radius    Radius of the cylinder
   cylinder::cylinder(double length, double radius) {
     len=length;
     r=radius;

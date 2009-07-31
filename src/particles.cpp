@@ -24,7 +24,7 @@ namespace Faunus {
         q += p[i].charge;
     return q;
   }
-  /*!\param test particle
+  /*!\param a overlapping(?) particle
    */
   bool particles::overlap(const particle &a) {
     for (unsigned short i=0; i<p.size(); i++)

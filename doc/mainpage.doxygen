@@ -44,6 +44,9 @@ to download a tar-ball of any revision.
 The code will compile on most unix-like systems including Linux, MacOS and most likely
 also in a Cygwin environment. Detailed instructions can be found \ref readme "here".
 
+\section support Support
+Support requests, bug reports etc. can be submitted <A HREF="http://sourceforge.net/tracker/?group_id=196168"><B>here</B></A>.
+
 \section dev Credits and Development
 \subsection authors Contributors
 \li Mikael Lund (<A HREF="http://web.mac.com/mlund"><B>homepage</B></A>)

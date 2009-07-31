@@ -11,7 +11,7 @@ then
   then
     echo "Enter blank password when prompted."
     $cvs -d :pserver:anoncvs@www.gccxml.org:/cvsroot/GCC_XML login
-    $cvs -d :pserver:anoncvs@www.gccxml.org:/cvsroot/GCC_XML co gccxml
+    $cvs -d :pserver:anoncvs@www.gccxml.org:/cvsroot/GCC_XML co -D 2007-07-30 gccxml
   fi
 
   # build and install

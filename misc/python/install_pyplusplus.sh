@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # This script will download pygccxml + Py++
-# and install them into "pyplusplus" in the current
-# working directory.
+# and install them into "pyplusplus" in an
+# auxiliary directory.
 
 python_exe=$1
 wget_exe=$2

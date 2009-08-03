@@ -33,6 +33,7 @@ template<class T> class energy {
   public:
     T pair;
     energy(inputfile &in) : pair(in) {};
+
     double potential(vector<particle> &p, int i) {
       int n=p.size();
       double phi=0;
@@ -45,13 +46,23 @@ template<class T> class energy {
       p[i]=tmp;
       return pair.f*phi;
     }
+
+    double system(vector<particle> &p) {
+      int n=p.size();
+      double uu=0;
+#pragma omp parallel for reduction (+:uu) schedule (dynamic)
+      for (int i=0; i<n-1; i++)
+        for (int j=i+1; j<n; j++)
+          uu += p[i].charge*p[j].charge/sqrt(pair.sqdist(p[i],p[j]));
+      return pair.f*uu;
+    }
 };
 
 class chargescale {
   private:
     unsigned int cnt, ucnt;
   public:
-    average_vec<double> expu, u, mu, a1,a2,a3;
+    average_vec<long double> expu, u, mu, a1,a2,a3;
     vector<int> sites;
     vector<double> uvec;
     chargescale() {
@@ -70,14 +81,13 @@ class chargescale {
           du += pot.pair.f * dq*dq/r ;
         }
       u+=du;
-      //du=du/sites.size();
       expu+=exp(-du);
       if (ucnt<uvec.size()) {
         a1+=du*exp(-du);
         a2+=uvec[ucnt]*exp(-du);
         a3+=uvec[ucnt];
+        //cout << "# GMX U = " << uvec[ucnt] << endl;
         ucnt++;
-        cout << uvec.at(ucnt) << endl;
       }
       if (cnt>100) {
         mu+=-log(expu.avg());
@@ -85,15 +95,16 @@ class chargescale {
         cnt=0;
       }
     }
+    double chempot() { return -log(expu.avg()); }
+    double energy() { return ( a1.avg() + a2.avg() ) / expu.avg() - a3.avg(); }
     void info() {
       cout << "# Sites: ";
       for (int i=0; i<sites.size(); i++)
         cout << sites[i] << " ";
-      cout << "\n# Excess chemical potential (kT) = " << mu.avg() << " " << mu.stdev()
-           << "\n# Electrostatic energy (kT)      = " << u.avg() << " " << u.stdev()
-           << "\n# Energy (kT)                    = " <<
-           ( a1.avg() + a2.avg() ) / expu.avg() - a3.avg()
-           << endl;
+      cout << "\n# Excess chemical potential (kT) = " << -log(expu.avg()) << " " << mu.stdev()
+           << "\n# <du> <du*exp(-du)> <Uexp(-du)> = " << u.avg() <<" "<< a1.avg() <<" "<< a2.avg()
+           << "\n# <U> <exp(-du)>                 = " << a3.avg() <<" " << expu.avg()
+           << "\n# Energy (kT)                    = " << energy() << endl;
     }
 };
 
@@ -116,8 +127,11 @@ int main() {
   chargescale cs_one;
   cs_one.uvec=gmxu.u; // copy energy from read energy.dat file (gmx generated)
   chargescale cs_two = cs_one;
+  chargescale cs_both = cs_one;
   cs_one.sites.push_back(in.getint("site1", 0));
   cs_two.sites.push_back(in.getint("site2", 1));
+  cs_both.sites.push_back(in.getint("site1", 0));
+  cs_both.sites.push_back(in.getint("site2", 1));
 
   // FETCH ATOM NAMES FROM GRO FILE
   iogro gro(in);
@@ -145,8 +159,10 @@ int main() {
             con.p[i].z = x_xtc[i][2]*10.-con.len_half;
           }
           // Analyse frame!!
+          //cout << "# Utot = " << pot.system(con.p) << endl;
           cs_one.analyze(con, pot, dq);
           cs_two.analyze(con, pot, dq);
+          cs_both.analyze(con, pot, dq);
         }
         else break;
       }
@@ -156,4 +172,8 @@ int main() {
   }
   cs_one.info();
   cs_two.info();
+  cs_both.info();
+  cout << "#\n-----------------------------------------------" << endl
+       << "# ddA   = " << cs_both.chempot() - cs_one.chempot() - cs_two.chempot() << endl
+       << "# ddE   = " << cs_both.energy() - cs_one.energy() - cs_two.energy() << endl;
 };

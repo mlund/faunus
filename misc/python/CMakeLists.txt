@@ -37,6 +37,7 @@ if(PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND AND Boost_FOUND)
     add_library(python SHARED ${objs})
     target_link_libraries(python libfaunus ${Boost_PYTHON_LIBRARY} ${PYTHON_LIBRARY})
     set_target_properties(python PROPERTIES PREFIX ""
+      LINK_FLAGS "-F/opt/local/Library/Frameworks/"
       OUTPUT_NAME "faunus" SUFFIX ".so")
 
     # Cleanup python bindings

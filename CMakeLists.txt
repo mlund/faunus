@@ -11,12 +11,8 @@ find_package(PythonInterp)
 find_package(Wget)
 find_package(CVS)
 find_package(GSL)
+find_package(PythonLibs)
 include(SVNinfo)
-if (ENABLE_MACPORTS)
-  find_package(PythonLibsNOFRAME)
-else (ENABLE_MACPORTS)
-  find_package(PythonLibs)
-endif(ENABLE_MACPORTS)
 
 # ------------------------------
 #   Default build is "Release"
@@ -32,9 +28,8 @@ endif(NOT CMAKE_BUILD_TYPE)
 # -----------------
 option(ENABLE_BABEL    "Try to use OpenBabel for file I/O" on)
 option(ENABLE_OPENMP   "Try to use OpenMP parallization" off)
-option(ENABLE_PYTHON   "Try to create a python interface" off)
+option(ENABLE_PYTHON   "Try to create a python interface" on)
 option(ENABLE_FORTRAN  "Try to compile legacy fortran code" off)
-option(ENABLE_MACPORTS "Search Macports and Fink directories for Python frameworks" off)
 mark_as_advanced( CLEAR CMAKE_VERBOSE_MAKEFILE CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS_RELEASE )
 mark_as_advanced( EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH
                   CMAKE_OSX_ARCHITECTURES CMAKE_OSX_SYSROOT GCCXML)

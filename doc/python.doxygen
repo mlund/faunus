@@ -4,8 +4,11 @@
 \subsection pyinstall Building
 The python module requires boost python.
 \verbatim
+$ make python-generate
 $ make python
 \endverbatim
+
+(The file misc/python/generate.py specifies the exposed classes.)
 
 \subsection pyusage Usage
 \verbatim
@@ -17,25 +20,6 @@ $ python
 >>> help(faunus)
 \endverbatim
 Have a look at src/examples/widom/widom.py for a full simulation example.
-
-\subsection pyupdate Updating Python Bindings   
-In order to update the python bindings after
-adding C++ code to the faunus library, you will need
-gccxml 0.9, py++ and pygccxml. Download and install
-these locally (in misc/auxiliary) with:
-
-\verbatim
-$ make gccxml_install
-$ make pyplusplus_install
-\endverbatim
-
-The python bindings can now be updated with
-
-\verbatim
-$ make pyplusplus_rerun
-\endverbatim
-
-The file misc/python/generate.py specifies the exposed classes.
 
 \subsection pytrouble Python Crash on MacOS X
 If python crashes upon importing the faunus module,

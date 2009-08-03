@@ -77,6 +77,7 @@ PYTHON SUPPORT (EXPERIMENTAL):
   Classes from Faunus can be accessed via Python, provided that
   the python module is compiled (requires boost python). Build with:
 
+  $ make python-generate
   $ make python
 
   Include misc/python in PYTHONPATH and access Faunus
@@ -85,11 +86,6 @@ PYTHON SUPPORT (EXPERIMENTAL):
   Macports/Fink:
     Force usage of external python frameworks with
     $ cmake . -DENABLE_MACPORTS=on
-
-  Update Python bindings (developers):
-    $ make gccxml_install
-    $ make pyplusplus_install
-    $ make pyplusplus_rerun
 
 DIRECTORY LAYOUT:
   src          Sourcecode and examples

@@ -40,38 +40,31 @@ CITING FAUNUS:
 
 REQUIREMENTS:
   - C++ compiler (gnu, ibm, intel, sun etc.)
+  - cmake 2.6
   Optional:
-  - cmake 2.6 (for cross platform compilation)
   - Boost python (for python module)
   - OpenBabel 2 (numerous molecular formats)
-  - Doxygen (for code manual)
-  - Graphviz (for code manual)
+  - Doxygen and Graphviz (for code manual)
 
-  Tested on Linux, MacOSX.
+  Developed and tested on Linux, MacOS X.
 
-COMPILING USING CMAKE (RECOMMENDED):
-  Curses menu based setup:
+COMPILING:
+  Menu based setup:
   $ ccmake .
   $ make [help]
 
-  Or text based:
+  Text based setup:
   $ cmake . [options]
 
   Options:
     -DENABLE_OPENMP=on|off   Enable OpenMP support
-    -DENABLE_PYTHON=on|off   Enable python support (experimental)
+    -DENABLE_PYTHON=on|off   Enable python support
     -DENABLE_FORTRAN=on|off  Compile legacy fortran programs
     -DENABLE_BABEL=on|off    Use OpenBabel for file I/O
 
   Example for Intel's C++ compiler with OpenMP parallization:
     $ CXX=icpc cmake . -DENABLE_OPENMP=on
     $ make
-
-COMPILING WITHOUT CMAKE (TO BE UNAVAILABLE):
-  $ mv Makefile.nocmake Makefile
-  $ make
-
-  Edit the Makefile to specify compiler, openmp etc.
 
 PYTHON SUPPORT:
   Classes from Faunus can be accessed via Python, provided that
@@ -82,6 +75,11 @@ PYTHON SUPPORT:
 
   Include misc/python in PYTHONPATH and access Faunus
   via "import faunus".
+
+  Non-system python frameworks (MacOS) may be specified the first time
+  cmake is run. For example for MacPorts:
+
+  $ LDFLAGS=-F/opt/local/Library/Frameworks cmake .
 
 DIRECTORY LAYOUT:
   src          Sourcecode and examples

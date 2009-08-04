@@ -14,7 +14,7 @@ namespace Faunus {
       << "#\n"
       << "#  Programmed by:\n"
       << "#     Mikael Lund, Bjorn Persson, Martin Trulsson,\n"
-      << "#     Ondrej Marsalek, Christophe Labbez.\n"
+      << "#     Ondrej Marsalek, Christophe Labbez, Andre Teixeira.\n"
       << "#\n"
       << "#  Reference:\n"
       << "#     Source Code Biol. Med. (2008) 3:1\n"

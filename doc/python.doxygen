@@ -29,7 +29,13 @@ linked against different Python frameworks. Check with:
 $ otool -L library_path/libboost_python-mt.dylib
 $ otool -L misc/python/faunus.so
 \endverbatim
-Is this the case, force the dynamic linker
+Is this the case, re-compile faunus with the same framework as used by boost python. For example,
+\verbatim
+$ make clean
+$ LDFLAGS=-F/opt/local/Library/Frameworks cmake .
+$ make python
+\endverbatim
+Alternatively, force the dynamic linker
 to favor a specific framework directory before starting python. For example:
 \verbatim
 $ export DYLD_LIBRARY_PATH=/opt/local/Library/Frameworks/Python.framework/Versions/2.6/ 

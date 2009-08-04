@@ -4,32 +4,32 @@ if(PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND AND Boost_FOUND)
 
     # GCCXML dl&install target
     add_custom_target( gccxml
-      COMMAND bash install_gccxml.sh ${CVS_EXECUTABLE}
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+      COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/install_gccxml.sh ${CVS_EXECUTABLE}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} )
 
     # Py++ and pygccxml dl&install target
     add_custom_target( pyplusplus
-      COMMAND bash install_pyplusplus.sh ${PYTHON_EXECUTABLE} ${WGET_EXECUTABLE}
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+      COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/install_pyplusplus.sh ${PYTHON_EXECUTABLE} ${WGET_EXECUTABLE}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} )
     add_dependencies( pyplusplus gccxml )
 
     # Target for building boost definitions using pyplusplus and
     # pygccxml
     add_custom_target( python-generate
-      COMMAND ${PYTHON_EXECUTABLE} generate.py
+      COMMAND FAUNUS_BASE=${CMAKE_CURRENT_SOURCE_DIR}/../.. ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/generate.py
       COMMAND touch CMakeLists.txt
-      COMMAND cmake ../../
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+      #COMMAND cmake ../../
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} )
     add_dependencies( python-generate pyplusplus )
 
   endif (CVS_FOUND AND WGET_FOUND)
 
-  if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/generated/" )
+  if (EXISTS "${CMAKE_CURRENT_BINARY_DIR}/generated/" )
     # Target for building the python module
     include_directories( ${CMAKE_SOURCE_DIR}/include
       ${Boost_INCLUDE_DIR}
       ${PYTHON_INCLUDE_PATH}
-      ${CMAKE_CURRENT_SOURCE_DIR}
+      ${CMAKE_CURRENT_BINARY_DIR}
       )
     file(GLOB_RECURSE objs generated/ *.cpp)
     #aux_source_directory("generated/" objs)
@@ -44,8 +44,8 @@ if(PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND AND Boost_FOUND)
     add_custom_target( python-clean
       COMMAND rm -fR generated
       COMMAND cmake ../../
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}  )
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}  )
 
-  endif (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/generated/" )
+  endif (EXISTS "${CMAKE_CURRENT_BINARY_DIR}/generated/" )
 
 endif(PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND AND Boost_FOUND)

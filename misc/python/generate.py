@@ -9,6 +9,8 @@ import sys
 import fnmatch
 from glob import glob
 
+# get the location of the faunus source tree
+faunus_base = os.environ['FAUNUS_BASE']
 
 base = '../auxiliary/lib/python%s'
 for version in ('2.5', '2.6'):
@@ -262,7 +264,7 @@ out.close()
 
 # parse the header file
 mb = module_builder_t(files=['generated/generated_header.h'],
-                      include_paths=['../../include/'],
+                      include_paths=[faunus_base + '/include/'],
                       gccxml_path='../auxiliary/bin/gccxml',
                       indexing_suite_version=1
                      )

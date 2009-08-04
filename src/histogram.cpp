@@ -184,7 +184,7 @@ namespace Faunus {
   }
   radial_profile::radial_profile(float min, float max, float res) :
     xytable<float,unsigned long int>(res,min,max) { cnt=0; }
-  float radial_profile::volume(float x) {return acos(-1)*(pow(x+xres*0.5,2.)-pow(x-xres*0.5,2.));}
+  float radial_profile::volume(float x) {return acos(-1.)*(pow(x+xres*0.5,2.)-pow(x-xres*0.5,2.));}
   float radial_profile::conc(float x) { return ((*this)(x)>0) ? (*this)(x)/(cnt*volume(x)) : 0; }
   void  radial_profile::add(particle &p) { if (p.id==id){cnt++, (*this)(sqrt(pow(p.x-origo.x,2)+pow(p.y-origo.y,2)))++;} }
   void  radial_profile::add(point &o, point &p) { 

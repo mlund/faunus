@@ -348,7 +348,7 @@ namespace Faunus {
         utot+=du;                               // track energy changes
         double d2=con->sqdist(con->p[n],con->trial[n]); // track avg. displacement
         dpsqr+=d2;
-        rsqr+=d2/pow(g.size(),2);               // Track mean square displacement per particle
+        rsqr+=d2/(g.size()*g.size());           // Track mean square displacement per particle
         naccept++;                              // accept counter
         con->p[n] = con->trial[n];              // Accept move
         //std::swap(con->p[n], con->p[0]);
@@ -397,7 +397,7 @@ namespace Faunus {
         utot+=du;                               // track energy changes
         double d2=con->sqdist(con->p[n],con->trial[n]); // track avg. displacement
         dpsqr+=d2;
-        rsqr+=d2/pow(g.size(),2);               // Track mean square displacement per particle
+        rsqr+=d2/(g.size()*g.size());           // Track mean square displacement per particle
         naccept++;                              // accept counter
         con->p[n] = con->trial[n];              // Accept move
         g.masscenter(*con);                     // Recalc mass center

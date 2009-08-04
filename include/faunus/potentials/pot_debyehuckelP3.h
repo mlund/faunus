@@ -22,7 +22,7 @@ namespace Faunus {
         k=1/in.getflt("debyelen",1.1e6);
         if ( 1/k>=1e6) {
           I=in.getflt("ionicstr",0);
-          k=sqrt( 4*std::acos(-1)*f*6.022e23/1e27*2*I );
+          k=sqrt( 4*std::acos(-1.)*f*6.022e23/1e27*2*I );
         }
         box=in.getflt("boxlen");
         halfbox=box/2;
@@ -83,7 +83,7 @@ namespace Faunus {
         o << pot_lj::info()
           << "#   Bjerrum length    = " << f     << endl
           << "#   Debye length      = " << 1./k  << endl
-          << "#   Ionic strength (M)= " << k*k*1e27/(8*std::acos(-1)*f*6.022e23) << endl;
+          << "#   Ionic strength (M)= " << k*k*1e27/(8*std::acos(-1.)*f*6.022e23) << endl;
         return o.str();
       }
   };
@@ -98,7 +98,7 @@ namespace Faunus {
       }
       double VectorEnergy( double *r2, double *qq, int *len) {
         int n=*len;
-        double u=0, ik2=1/(k*k);
+        double u=0;
         // LJ Part
         //for (int i=1; i<n; i++) {
         //  double w = 4.0/r2[i];
@@ -125,7 +125,7 @@ namespace Faunus {
         k=1/in.getflt("debyelen",1.1e6);
         if ( 1/k>=1e6) {
           I=in.getflt("ionicstr",0);
-          k=sqrt( 4*std::acos(-1)*f*6.022e23/1e27*2*I );
+          k=sqrt( 4*std::acos(-1.)*f*6.022e23/1e27*2*I );
         }
         box=in.getflt("boxlen");
         halfbox=box/2;
@@ -154,7 +154,7 @@ namespace Faunus {
         o << pot_lj_trunk::info()
           << "#   Bjerrum length    = " << f     << endl
           << "#   Debye length      = " << 1./k  << endl
-          << "#   Ionic strength (M)= " << k*k*1e27/(8*std::acos(-1)*f*6.022e23) << endl;
+          << "#   Ionic strength (M)= " << k*k*1e27/(8*std::acos(-1.)*f*6.022e23) << endl;
         return o.str();
       }
   };

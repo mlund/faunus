@@ -13,7 +13,7 @@ int main() {
 
   double conc=in.getflt("pmfconc",0);
   double cellvol=1/(conc*1e-27*6.022e23),
-         cellr=pow(3*cellvol/(4*acos(-1)), 1./3);
+         cellr=pow(3*cellvol/(4*acos(-1.)), 1./3);
   in.add("ionicstr",conc);
   in.add("cellradius", cellr );
 

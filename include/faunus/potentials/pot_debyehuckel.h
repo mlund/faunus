@@ -16,7 +16,7 @@ namespace Faunus {
         k=1./in.getflt("debyelen",1.1e4);
         if ( 1/k>=1e4) {
           I=in.getflt("ionicstr",0);
-          k=sqrt( 4*std::acos(-1)*f*6.022e23/1e27*2*I );
+          k=sqrt( 4*std::acos(-1.)*f*6.022e23/1e27*2*I );
         }
         eps=eps/f;
       }
@@ -36,7 +36,7 @@ namespace Faunus {
           << "#   Bjerrum length    = " << f << endl
           << "#   Kappa             = " << k << endl
           << "#   Debye length      = " << 1./k << endl
-          << "#   Ionic strength (M)= " << k*k*1e27/(8*std::acos(-1)*f*6.022e23) << endl;
+          << "#   Ionic strength (M)= " << k*k*1e27/(8*std::acos(-1.)*f*6.022e23) << endl;
         return o.str();
       }
   };
@@ -59,7 +59,7 @@ namespace Faunus {
         k=1./in.getflt("debyelen",1.1e4);
         if ( 1/k>=1e4) {
           I=in.getflt("ionicstr",0);
-          k=sqrt( 4*std::acos(-1)*f*6.022e23/1e27*2*I );
+          k=sqrt( 4*std::acos(-1.)*f*6.022e23/1e27*2*I );
         }
         eps=eps/f;
       }
@@ -110,7 +110,7 @@ namespace Faunus {
         k=1./in.getflt("debyelen",1.1e4);
         if ( 1/k>=1e4) {
           I=in.getflt("ionicstr",0);
-          k=sqrt( 4*std::acos(-1)*f*6.022e23/1e27*2*I );
+          k=sqrt( 4*std::acos(-1.)*f*6.022e23/1e27*2*I );
         }
         scd=0;
         eps=eps/f;
@@ -118,7 +118,7 @@ namespace Faunus {
         hphobr=in.getflt("hydrophobic_range");
       }
       void setchargedens(double s) {
-        scd=s*std::acos(-1)*2*f/k;
+        scd=s*std::acos(-1.)*2*f/k;
       }
       void setvolume(double vol) {
         box=pow(vol, 1./3);
@@ -161,7 +161,7 @@ namespace Faunus {
         std::ostringstream o;
         o << "#   Type              = " << name << std::endl
           << "#   Cutoff            = " << c<<std::endl
-          << "#   Surf. Charge Dens.= " <<scd*k/f/2/std::acos(-1)<<std::endl
+          << "#   Surf. Charge Dens.= " <<scd*k/f/2/std::acos(-1.)<<std::endl
           << "#   Hydrophobic amp.  = " <<hphoba<<std::endl
           << "#   Hydrophobic range = " <<hphobr<<" (sigma/2)"<<std::endl
           << "#   Bjerrum length    = " << f << std::endl

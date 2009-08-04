@@ -1,6 +1,7 @@
 #ifndef FAU_COUNTDOWN_H
 #define FAU_COUNTDOWN_H
 #include <string>
+#include <ctime>
 
 namespace Faunus {
 

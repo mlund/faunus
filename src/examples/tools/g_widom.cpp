@@ -29,10 +29,10 @@ class gmxenergy {
     }
 };
 
-template<class T> class energy {
+template<class T> class myenergy {
   public:
     T pair;
-    energy(inputfile &in) : pair(in) {};
+    myenergy(inputfile &in) : pair(in) {};
 
     double potential(vector<particle> &p, int i) {
       int n=p.size();
@@ -70,7 +70,7 @@ class chargescale {
       mu.maxcnt=1;
       u.maxcnt=500;
     }
-    void analyze( container &c, energy<potT> pot, double dq) {
+    void analyze( container &c, myenergy<potT> pot, double dq) {
       cnt++;
       double du=0;
       for (int i=0; i<sites.size(); i++)
@@ -122,7 +122,7 @@ int main() {
   box con(100);
   atom.load("faunatoms.dat");
   gmxenergy gmxu("../energy.dat");
-  energy<potT> pot(in);
+  myenergy<potT> pot(in);
 
   chargescale cs_one;
   cs_one.uvec=gmxu.u; // copy energy from read energy.dat file (gmx generated)

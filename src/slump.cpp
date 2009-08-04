@@ -15,6 +15,7 @@ namespace Faunus {
   void randomTwister::random_seed(int s) { mt.seed(s); }
 
   // "Ran2" - ran2 from 'Numerical Recipies'
+  const double ran2::EPS=3.0e-16;
   ran2::ran2() {
     AM=1.0/2147483563.0;
     RNMX=1.0-3.0e-16;

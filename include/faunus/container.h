@@ -81,14 +81,14 @@ namespace Faunus {
         return false;
       }
       bool clash(const particle &a, const particle &b) {
-        point p;
-        p.x=std::abs(a.x-b.x);
-        p.y=std::abs(a.y-b.y);
-        p.z=std::abs(a.z-b.z);
-        if (p.x>len_half) p.x-=len;
-        if (p.y>len_half) p.y-=len;
-        if (p.z>len_half) p.z-=len;
-        return (pow(p.len(),2)<pow(a.radius+b.radius, 2))
+        point c;
+        c.x=std::abs(a.x-b.x);
+        c.y=std::abs(a.y-b.y);
+        c.z=std::abs(a.z-b.z);
+        if (c.x>len_half) c.x-=len;
+        if (c.y>len_half) c.y-=len;
+        if (c.z>len_half) c.z-=len;
+        return (pow(c.len(),2)<pow(a.radius+b.radius, 2))
           ? true : false;
       }
       string povray();

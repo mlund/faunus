@@ -67,7 +67,7 @@ namespace Faunus {
       const static int IA1=40014, IA2=40692, IQ1=53668, IQ2=52774;
       const static int IR1=12211, IR2=3791, NTAB=32, IMM1=IM1-1;
       const static int NDIV=1+IMM1/NTAB;
-      const static double EPS=3.0e-16;
+      const static double EPS;//=3.0e-16;
       double AM,RNMX;
       int idum, idum2, iy;
       int iv[32]; 

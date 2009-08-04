@@ -51,7 +51,7 @@ namespace Faunus {
     if (j==-1)                               //if not specified..
       j=random(protons);                     //..pick a random proton
 
-    protons.erase(remove(protons.begin(), protons.end(), j));
+    protons.erase( std::remove(protons.begin(), protons.end(), j) );
 
     p[i].charge+=1;                            //protonate site.
     p[j].charge=0;                             //neutralize proton...
@@ -67,7 +67,7 @@ namespace Faunus {
   titrate::action titrate::moveToBulk(vector<particle> &p, short int i, short int j) {
     if (j==-1)             // if not specified..
       j=random(neutrons);  // ..pick random neutron
-    neutrons.erase(remove(neutrons.begin(), neutrons.end(), j)); //del a neutron
+    neutrons.erase( std::remove(neutrons.begin(), neutrons.end(), j) ); //del a neutron
 
     p[i].charge -= 1;      // deprotonate site.
     p[j].charge  = 1;      // charge up neutron...

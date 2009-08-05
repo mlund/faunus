@@ -257,6 +257,13 @@ namespace Faunus {
       tmp[i].charge = tit.avgcharge(p, i);
     return save(file, tmp);
   }
+  bool iopqr::save(string file, vector<particle> &p, vector<group> &g) {
+    vector<particle> t;
+    for (int i=0; i<g.size(); i++)
+      for (int j=g[i].beg; j<=g[i].end; j++)
+        t.push_back( p[j] );
+    return save(file, t);
+  }
 
   //----------------- IOGRO ----------------------
   /*!
@@ -441,6 +448,14 @@ namespace Faunus {
       return true;
     }
     return false;
+  }
+
+  bool ioxtc::save(string file, vector<particle> &p, vector<group> &g) {
+    vector<particle> t;
+    for (int i=0; i<g.size(); i++)
+      for (int j=g[i].beg; j<=g[i].end; j++)
+        t.push_back( p[j] );
+    return save(file, t);
   }
 
   void ioxtc::close() { xdrfile_close(xd); }

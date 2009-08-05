@@ -149,6 +149,7 @@ namespace Faunus {
       iopqr();
       bool save(string, vector<particle> &);            //!< Save with particle charge
       bool save(string, vector<particle> &, titrate &); //!< Save with average charges
+      bool save(string, vector<particle> &, vector<group> &); //!< Save groups
   };
 
 
@@ -194,6 +195,7 @@ namespace Faunus {
       bool LoadFrame(int, vector<particle> &); //!< Not finished!
       bool save(string, vector<particle> &);   //!< Save a frame to trj file.
       bool save(string, box &);                //!< Save a frame to trj file (PBC)
+      bool save(string, vector<particle> &, vector<group> &); //!< Save groups
       void setbox(float);                      //!< Set box size to be saved in frame
       void close();                            //!< Close trj file
   };

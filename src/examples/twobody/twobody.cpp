@@ -27,8 +27,9 @@ int main() {
   twostatebinding bind(20.);            // Two state binding model
 
   vector<macromolecule> g;              // Group for proteins
-  dualmove dm(nvt, cell, pot);          //   Class for 1D macromolecular translation
-  dm.load( in, g, 40.);                 //   Load proteins and separate them 
+
+  dualmove dm(nvt, cell, pot);          // Class for 1D macromolecular translation
+  dm.load( in, g, 80.);                 // Load proteins and separate them 
   dm.rmax=60;
   salt salt;                            // Group for mobile ions
   salt.add(cell, in);                   //   Add salt particles
@@ -87,7 +88,7 @@ int main() {
       }
 
       if (slp.random_one()>.95 && loop.macro>1)
-        xtc.save("coord.xtc", cell.p);          // Save trajectory
+        xtc.save("coord.xtc", cell.p);            // Save trajectory
     } // End of inner loop
 
     sys.update(
@@ -101,7 +102,7 @@ int main() {
     saltrdf.write("rdfsalt.dat");               // Write salt g(r)
     dst.write("distributions.dat");             // Write other distributions
     aam.save("confout.aam", cell.p);            // Save config. for next run
-    pqr.save("confout.pqr", cell.p);            // ...also save a PQR file
+    pqr.save("confout.pqr", cell.p);            // ...also save a PQR file (no salt)
     cout << loop.timing();                      // Show progress
   } // End of outer loop
 
@@ -111,6 +112,5 @@ int main() {
        << sm.info() << mr.info() << dm.info()
        << sys.info() << g[0].info() << g[1].info() << cell.info()
        << tit.info() << bind.info( 1/cell.getvolume() );
-
 }
 

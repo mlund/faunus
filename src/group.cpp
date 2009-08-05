@@ -323,6 +323,7 @@ namespace Faunus {
     if (dip.cnt>0)
       o << "#    <mu> <mu^2>-<mu>^2    = " << dip.avg()<<" "<<dip2.avg()-pow(dip.avg(),2)<<endl
         << "#    Dipole vector         = " << mu << endl;
+      //o << "#    Radius                = " << cm.radius << endl;
     return o.str();
   }
   string macromolecule::info(container &con) {
@@ -330,7 +331,7 @@ namespace Faunus {
     o << info();
     o << "#   Current charge         = " << charge(con.p) << endl
       << "#   Hydrophobic particles  = " << numhydrophobic(con.p) << endl
-      << "#   Radius                 = " << radius(con.p) << endl;
+      << "#   Radius                 = " << vradius(con.p) << endl;
     return o.str();
   }
   unsigned short macromolecule::nummolecules() { return 1; }
@@ -375,6 +376,27 @@ namespace Faunus {
     cm.radius = max;
     return max;
   } 
+  double macromolecule::gradius(vector<particle> &p) {
+    double r=0;
+    int cnt=0;
+    masscenter(p);
+    for (short i=beg; i<=end; i++) {
+      r+=p[i].dist(cm) + p[i].radius;
+      cnt++;
+    }
+    r/=float(cnt);
+    cm.radius = r;
+    return r;
+  }
+  double macromolecule::vradius(vector<particle> &p) {
+    double v=0,r;
+    for (short i=beg; i<=end; i++) {
+      v+=1.333333*3.14159265*p[i].radius*p[i].radius*p[i].radius;
+    }
+    r=pow( 0.75 / 3.14159265 * v , 1./3.);
+    cm.radius = r;
+    return r;
+  }
   double macromolecule::charge(const vector<particle> &p) {
     double z=group::charge(p);
     Q+=z;

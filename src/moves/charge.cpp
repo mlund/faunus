@@ -273,7 +273,7 @@ namespace Faunus {
     double zp;
     for (int i=0 ; i<g.size() ; i++) {
       zp = g[i].getcharge(p);
-      u += pairpot->f * zp*zp * k / ( 1+2*k*g[i].radius(p) );
+      u += pairpot->f * zp*zp * k / ( 1+2*k*g[i].cm.radius );
     };
     return -u;
   };
@@ -291,7 +291,7 @@ namespace Faunus {
     double zp;
     for (int i=0 ; i<g.size() ; i++) {
       zp = g[i].getcharge(p);
-      u += pairpot->f * zp*zp * k / ( 1+2*k*g[i].radius(p) );
+      u += pairpot->f * zp*zp * k / ( 1+2*k*g[i].cm.radius );
     };
     return -u;
   };

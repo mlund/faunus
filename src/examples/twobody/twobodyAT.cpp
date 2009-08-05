@@ -43,6 +43,8 @@ int main(int argc, char* argv[]) {
   ATchargereg tit(nvt,cell,pot,in.getflt("pH", 7.),in,pot.pair);  // Starting titration
   g[0].conc = in.getflt("ProteinConc", 0.0001) * 0.5;  // Setting concentration of each protein
   g[1].conc = in.getflt("ProteinConc", 0.0001) * 0.5;
+  g[0].cm.radius = g[0].vradius(con.p);
+  g[1].cm.radius = g[1].vradius(con.p);
   
   systemenergy sys(pot.energy(cell.p)-pot.internal(cell.p,g[0])-pot.internal(cell.p,g[1])); // System energy analysis
   cout << in.info()  << cell.info()
@@ -115,7 +117,7 @@ int main(int argc, char* argv[]) {
 
   cout << mr.info()   << dm.info()
        << tit.info()  << sys.info()
-       << g[0].info() << g[1].info()
+       << g[0].info(cell) << g[1].info(cell)
        << cell.info();
 
   xtc.close();

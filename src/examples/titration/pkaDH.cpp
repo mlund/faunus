@@ -28,6 +28,7 @@ int main(int argc, char* argv[]) {
 #ifdef DHTEIXEIRA
   ATchargereg tit(nvt,con,pot,in.getflt("pH", 7.),in,pot.pair);
   protein[0].conc = in.getflt("ProteinConc", 0.0001);
+  protein[0].cm.radius = protein[0].vradius(con.p);
 #else
   DHchargereg tit(nvt,con,pot,in.getflt("pH", 7.),in.getflt("mu_proton"));
 #endif
@@ -52,6 +53,6 @@ int main(int argc, char* argv[]) {
     cout << loop.timing();               // Show progress
   }                                      // END of macro loop
   cout << sys.info() << tit.info()
-       << protein[0].info() << loop.info(); // Print final results
+       << protein[0].info(con) << loop.info(); // Print final results
 }
 

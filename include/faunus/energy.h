@@ -99,7 +99,7 @@ namespace Faunus {
         p[j].y=1e9;
 #pragma omp parallel for reduction (+:u)
         for (int i=0; i<n; ++i)
-          u+=pair.pairpot( p[i],p[j] );
+          u+=pair.pairpot( p[i], bak );
         p[j]=bak;
         return pair.f*u;
       }

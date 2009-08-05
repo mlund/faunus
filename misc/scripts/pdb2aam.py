@@ -84,8 +84,8 @@ def findHetatom(name):
 # ---------- MAIN PROGRAM -----------
 
 # Load PDB file
-model="DUMMY"
-infile="1jb0.pdb"
+model="MESO"
+infile="1BEB.pdb"
 conf = Structure(infile)
 
 # Loop over chains in PDB file

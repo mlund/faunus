@@ -9,27 +9,20 @@
  * \include twobody.cpp
  */
 
-
 #include "faunus/faunus.h"
-
-#ifdef LIBXTC
-#define GROMACS
-#endif
 
 using namespace Faunus;
 using namespace std;
 
 int main() {
   cout << faunus_splash();              // Faunus info
-  slump slump;                          // A random number generator
+  //slp slump;                          // A random number generator
   inputfile in("twobody.conf");         // Read input file
   mcloop loop(in);                      // Set Markov chain loop lengths
   cell cell(in);                        // We want a spherical, hard cell
   canonical nvt;                        // Use the canonical ensemble
   interaction<pot_coulomb> pot(in);     // Functions for interactions
-  ioxyz xyz;                            // xyz output for VMD etc.
   distributions dst;                    // Distance dep. averages
-  iopqr pqr;                            // PQR output (pos, charge, radius)
   FAUrdf saltrdf(atom["NA"].id,atom["CL"].id, .5, cell.r);
   twostatebinding bind(20.);            // Two state binding model
 
@@ -44,6 +37,8 @@ int main() {
   dm.dp=6;                              // Set displacement parameters
   sm.dp=90;                             // Set displacement parameters
 
+  iopqr pqr;                            // PQR output (pos, charge, radius)
+  ioxtc xtc(1000.);                     // Gromacs xtc output
   ioaam aam;                            // Protein input file format is AAM
   if (aam.load(cell,"confout.aam")) {
     g[0].masscenter(cell);              // Load old config (if present)
@@ -52,16 +47,16 @@ int main() {
 
   chargereg tit(nvt,cell,pot,salt,4.0); // Prepare titration.
   
-  systemenergy sys(pot.energy(cell.p)); // System energy analysis
+  systemenergy sys(
+      pot.energy(cell.p, salt, g[0]) +
+      pot.energy(cell.p, salt, g[1]) +
+      pot.energy(cell.p, g[0], g[1]) ); // System energy analysis
+
   cout << in.info() << cell.info()
        << tit.info() << pot.info();     // Print information to screen
 
-  #ifdef GROMACS
-  ioxtc xtc(cell, cell.r);              // Gromacs xtc output (if installed)
-  #endif
-
-  for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
-    for (int micro=1; micro<=loop.micro; micro++) {
+  while ( loop.macroCnt() ) {                   //Markov chain 
+    while (loop.microCnt() ) {
       short i,n;
       switch (rand() % 4) {                     // Pick a random MC move
         case 0:                                 // Displace salt
@@ -86,36 +81,36 @@ int main() {
           }
           break;
       }
-      if (slump.random_one()>.5 && macro>1) {
+      if (slp.random_one()>.5) {
         //saltrdf.update(cell);                   // Analyse salt g(r)
         //bind.update(cell, cell.p[g[0].beg], g[1]);
       }
 
-      #ifdef GROMACS
-      if (slump.random_one()>.95 && macro>1)
-        xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
-      #endif
+      if (slp.random_one()>.95 && loop.macro>1)
+        xtc.save("coord.xtc", cell.p);          // Save trajectory
     } // End of inner loop
 
-    sys.update(pot.energy(cell.p));             // Update system energy averages
+    sys.update(
+      pot.energy(cell.p, salt, g[0]) +
+      pot.energy(cell.p, salt, g[1]) +
+      pot.energy(cell.p, g[0], g[1]) );         // Update system energy
+
     cell.check_vector();                        // Check sanity of particle vector
 
     dm.gofr.write("rdfprot.dat");               // Write interprotein g(r)
     saltrdf.write("rdfsalt.dat");               // Write salt g(r)
     dst.write("distributions.dat");             // Write other distributions
-    xyz.save("coord.xyz", cell.p);              // Write .xyz coordinate file
     aam.save("confout.aam", cell.p);            // Save config. for next run
     pqr.save("confout.pqr", cell.p);            // ...also save a PQR file
-    cout << loop.timing(macro);                 // Show progress
+    cout << loop.timing();                      // Show progress
   } // End of outer loop
+
+  xtc.close();                                  // Close xtc file for writing
 
   cout << salt.info(cell)                       // Final information...
        << sm.info() << mr.info() << dm.info()
        << sys.info() << g[0].info() << g[1].info() << cell.info()
        << tit.info() << bind.info( 1/cell.getvolume() );
 
-  #ifdef GROMACS
-  xtc.close();
-  #endif
 }
 

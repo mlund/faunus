@@ -80,8 +80,9 @@ OBJS=$(CLASSDIR)/space.o \
  $(CLASSDIR)/titrate.o\
  $(CLASSDIR)/peptide.o\
  $(CLASSDIR)/widommod2.o\
- $(CLASSDIR)/vmd/imd.o\
  $(CLASSDIR)/pdbclass.o
+
+ #$(CLASSDIR)/vmd/imd.o\
 
 all:	prot pka pka_chain pka_dielec prot_dh hairy_dh
 

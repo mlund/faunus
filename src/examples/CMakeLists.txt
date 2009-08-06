@@ -28,6 +28,8 @@ endfunction( fau_hyperexample )
 #----- add examples to build process -----
 # Arguments: (target directory source)
 fau_example(pka titration pka.cpp)
+fau_example(glu3 titration glu3pka.cpp)
+fau_example(glu3b titration glu3pka2.cpp)
 fau_example(pkaGC titration pka.cpp)
 fau_example(pkaDH titration pkaDH.cpp)
 fau_example(pkaAT titration pkaDH.cpp)
@@ -56,6 +58,7 @@ fau_example(spceMI spce spce.cpp)
 fau_example(rosenbluth rosenbluth rb.cpp)
 fau_example(membrane membrane mem.cpp)
 fau_example(memp wallprotein memp.cpp)
+fau_example(wp wallprotein wp.cpp)
 
 fau_hyperexample(hyper_dipolarfluid hypersphere dipolarfluid.cpp)
 

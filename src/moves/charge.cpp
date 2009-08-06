@@ -155,11 +155,105 @@ namespace Faunus {
       << "#   Titrateable sites   = " << sites.size() << endl;
     return o.str();
   }
-  
-  
+
+  //GLU3titration constuctor
+  glu3corechargereg::glu3corechargereg(ensemble &e, container &c, energybase &i, inputfile &in, group &g) 
+  : chargereg(e,c,i,g,in.getflt("pH",7)) {
+    name.assign("CHARGEREG / PORPHYRIN DOUBLE-TITRATION");
+    cite.assign("NONE");
+    runfraction=1;
+    con->trial = con->p;
+    porphyrinpKa = in.getflt("pKa_core", 5.0);
+  }
+  //GLU3 info
+  string glu3corechargereg::info(){
+    std::ostringstream o;
+    o << chargereg::info()
+      << "#   pKa of double core    = "<<porphyrinpKa<<endl
+      << "#   Average charges on core"<<endl
+      << "#   P1 = "<<p1.avg()<<" ("<<p1.stdev()<<")"<<endl
+      << "#   P2 = "<<p2.avg()<<" ("<<p2.stdev()<<")"<<endl<<endl;
+    return o.str();
+  }
+  //GLU3 corrected weight
+  double glu3corechargereg::energy(vector<particle> &p,
+      double du, action &a, action &b) {
+//    int i=p[a.site].id;
+    if (p[a.site].charge>0.001)
+      return du+( log(10.)*( 2*ph - porphyrinpKa ) );
+    else
+      return du-( log(10.)*( 2*ph - porphyrinpKa ) );
+  }
+  //GLU3 Markov step
+  double glu3corechargereg::move(glu3 &g) {
+    du=0;
+    if (slp.runtest(runfraction)==false)
+      return du;
+    action t1, t2;
+    double sum=0;
+    cntcore++;
+    if (con->trial[g.beg+4].charge>0.1) {
+      t1=titrate::moveToBulk(con->trial,g.beg+4);
+      t2=titrate::moveToBulk(con->trial,g.beg+13);
+    } else {
+      t1=titrate::takeFromBulk(con->trial,g.beg+4);
+      t2=titrate::takeFromBulk(con->trial,g.beg+13);
+    }  
+    if(t1.proton==t2.proton)
+    std::cout<<"site "<<t1.site<<" and site "<<t2.site<<" shares the same proton, neutron!"<<std::endl;
+    //#pragma omp parallel
+    {
+      //#pragma omp sections
+      {
+        //#pragma omp section
+        {
+          uold = pot->potential( con->p, t1.site ) * con->p[t1.site].charge
+            + pot->potential( con->p, t1.proton ) * con->p[t1.proton].charge
+            - con->p[t1.site].charge * con->p[t2.site].charge * pot->tokT /
+            sqrt( con->sqdist( con->p[t1.site], con->p[t2.site]) )
+            +pot->potential( con->p, t2.site ) * con->p[t2.site].charge
+            + pot->potential( con->p, t2.proton ) * con->p[t2.proton].charge
+            - con->p[t1.proton].charge * con->p[t2.proton].charge * pot->tokT /
+            sqrt( con->sqdist( con->p[t1.proton], con->p[t2.proton]) );
+        }
+        //#pragma omp section
+        {
+          unew = pot->potential( con->trial, t1.site ) * con->trial[t1.site].charge
+            + pot->potential( con->trial, t1.proton ) * con->trial[t1.proton].charge
+            - con->trial[t1.site].charge * con->trial[t2.site].charge * pot->tokT / 
+            sqrt( con->sqdist( con->trial[t1.site], con->trial[t2.site]) )
+            + pot->potential( con->trial, t2.site ) * con->trial[t2.site].charge
+            + pot->potential( con->trial, t2.proton ) * con->trial[t2.proton].charge
+            - con->trial[t1.proton].charge * con->trial[t2.proton].charge * pot->tokT / 
+            sqrt( con->sqdist( con->trial[t1.proton], con->trial[t2.proton]) );
+        }
+      }
+    }
+    du = (unew-uold);
+    if (ens->metropolis( energy(con->trial, du, t1,t2) )==true) {
+      rc=OK;
+      utot+=du;
+      naccept++;
+      con->p[t1.site].charge   = con->trial[t1.site].charge;
+      con->p[t1.proton].charge = con->trial[t1.proton].charge;
+      con->p[t2.site].charge   = con->trial[t2.site].charge;
+      con->p[t2.proton].charge = con->trial[t2.proton].charge;
+      sum+=du;
+    } else {
+      rc=ENERGY;
+      exchange(con->trial, t1);
+      exchange(con->trial, t2);
+      du=0.;
+    }
+    p1+=con->p[g.beg+ 4].charge;
+    p2+=con->p[g.beg+13].charge;
+    
+    return du;
+
+  }
+
+
     // ----------- AT Titration ----------------
-
-
   ATchargereg::ATchargereg( ensemble& e, container& c, energybase& i, float ph, inputfile& in , pot_debyehuckel& pair)
   :markovmove(e,c,i), titrate_implicit(c,ph) {
 

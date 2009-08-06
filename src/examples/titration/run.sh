@@ -21,10 +21,12 @@ pressure   $pressure
 e_r        $e_r
 kappa      $kappa
 atomfile   $atomfile
+polymer    $polymer
 " > pka.conf
 }
 
 #--- Input parameters ---
+polymer="GLU3simp.mol2"
 macrosteps=10
 microsteps=1000
 cellradius=90

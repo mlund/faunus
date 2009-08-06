@@ -96,7 +96,7 @@ namespace Faunus {
     string name=string( OpenBabel::etab.GetSymbol( obatomPtr->GetAtomicNum() ) );
     a.id=atom[name].id;
     a.charge=obatomPtr->GetPartialCharge();
-    std::cout << int(a.id) << " " << name << " " << obatomPtr->GetAtomicNum() << std::endl;
+//    std::cout << int(a.id) << " " << name << " " << obatomPtr->GetAtomicNum() << std::endl;
 
     if (obatomPtr->HasData("Radius")) {
       OpenBabel::OBPairData *gdat = dynamic_cast<OpenBabel::OBPairData *>( obatomPtr->GetData("Radius") );

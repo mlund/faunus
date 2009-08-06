@@ -26,7 +26,9 @@ int main() {
 
   // Handle polymers
   polymer pol;
+#ifdef BABEL
   pol.babeladd( con, in );
+#endif
   monomermove mm(nvt,con,pot,in); // ...rattle
   macrorot mr(nvt, con, pot);     // ...rotate
   translate mt(nvt, con, pot);    // ...translate

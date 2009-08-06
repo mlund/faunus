@@ -789,6 +789,29 @@ namespace Faunus {
     end=con.p.size()-1;
   }
 
+
+  glu3::glu3(container &con, inputfile &in) {
+    name="GLU3 DENDRIMER";
+    chains.babeladd(con, in);
+    beg=chains.beg, end=chains.end;
+    masscenter(con);
+    core.beg=beg, core.end=beg+51;
+    core.name="PORPHYRIN CORE";
+    chains.beg=beg+52;
+    chains.nb.erase(chains.nb.begin(), chains.nb.begin()+52);
+    chains.name="GLUTAMIC CHAINS";
+/*    cout <<chains.nb.size() <<" size of nb, "<<chains.size()<<" size of chains"<<endl
+         <<"glu3 starts and ends at "<<beg<<" "<<end<<" and chains at "<<chains.beg<<" "<<chains.end<<endl
+         <<"porphoryn core starts and ends at "<<core.beg<<" "<<core.end<<endl;
+*/
+  }
+  string glu3::info() {
+    std::ostringstream o;
+    o << macromolecule::info() <<core.info()
+      << chains.info(); 
+    return o.str();
+  }
+
 #ifdef HYPERSPHERE
   void hypergroup::undo(particles &par) {
     group::undo(par);

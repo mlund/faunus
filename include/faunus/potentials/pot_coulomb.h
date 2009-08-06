@@ -70,5 +70,37 @@ namespace Faunus {
         return o.str();
       }
   };
+/*
+  class pot_coulombr12 {
+    public:
+      double f;
+      double e,C;
+      string name;
+      pot_coulombr12(inputfile &in) {
+        f=in.getflt("bjerrum",7.1);
+        name+="Coulomb + r12";
+        e=in.getlft("LJeps", 1.);
+        C=pow(2,1. / 6.);
+      }
+      *! \brief Return Coulomb energy between a pair of particles
+       *  \return Energy in units of \f$kT/l_B\f$ (lB=f). \f[ \beta u/l_B = \frac{z_1 z_2}{r} + \frac{u_{lj}}{l_B} \f]
+       *
+      inline double pairpot(const particle &p1, const particle &p2) {
+        double r2=p1.sqdist(p2), s=p1.radius+p2.radius, a=s*s/r2;
+        s=a*a*a;
+        return s*s/f + p1.charge*p2.charge/sqrt(r2);
+      }
+
+      inline double sqdist(const point &p1, const point &p2) {
+        return p1.sqdist(p2);
+      }
+
+      string info() {
+        std::ostringstream o;
+        o << "#   Name              = " << name << endl
+          << "#   Bjerrum length    = " << f << endl;
+        return o.str();
+      }
+  };*/
 }//namespace
 #endif

@@ -37,6 +37,21 @@ namespace Faunus {
       string info();
    };
 
+   class glu3corechargereg : public chargereg {
+     public:
+       glu3corechargereg(ensemble &, container &, energybase &, inputfile &, group &);
+       string info();
+       double move(glu3 &);
+     private:
+       double energy(vector<particle> &, double, titrate::action &, titrate::action &);
+       double porphyrinpKa;
+       int porph1, porph2;
+       //average_vec<double> p1(20);
+       //average_vec<double> p2(20);
+       average<double> p1, p2;
+       int cntcore;
+   };
+
   /*!
    * \brief Implicit ions titration scheme
    * \author Andre Teixeira

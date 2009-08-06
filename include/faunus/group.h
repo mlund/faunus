@@ -163,6 +163,16 @@ namespace Faunus {
       void load(inputfile &, slit &);  //Scannes for "scratio", "headarea"
       string info();
   };
+/*! \brief Class for porphyrin dendrimer
+ *
+ */
+  class glu3 :public macromolecule {
+    public:
+      polymer chains;  //Glutamic chains
+      macromolecule core;
+      glu3(container &, inputfile &);
+      string info();
+  };
 
 #ifdef HYPERSPHERE
   /*! \brief Hypersphere groups
@@ -178,7 +188,6 @@ namespace Faunus {
       void accept(particles &);
   };
 #endif
-
 }//namespace
 #endif
 

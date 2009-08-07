@@ -180,8 +180,13 @@ namespace Faunus {
       double ref=getflt(name,1e9),
              reldiff = std::abs( (ref-val)/ref );
       if (reldiff>threshold) {
-        std::cerr << "!!! Test failed on variable " << name << " (ref,current,reldiff): "
-          << ref << " " << val << " " << reldiff << " !!!" << std::endl;
+        std::cerr.unsetf( std::ios_base::floatfield );
+        std::cerr << "!!! Test " << std::setw(10) << name << " failed (ref,new,err): "
+          << std::setprecision(4) 
+          << std::setw(8)
+          << ref << " "
+          << std::setw(8) << val << " "
+          << std::setw(8) << reldiff << " !!!" << std::endl;
         rc=false;
       }
     }

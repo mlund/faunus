@@ -32,7 +32,7 @@ namespace Faunus {
     o << "#   Initial energy     = " << u0 << endl
       << "#   Initial + changes  = " << sum << endl
       << "#   Current energy     = " << cur << endl
-      << "#   Absolute drift     = " << std::abs(cur-sum) << endl;
+      << "#   Absolute drift     = " << drift() << endl;
     return o.str();
   }
   string systemenergy::confuout() {
@@ -43,6 +43,7 @@ namespace Faunus {
       o << i+1 << " " << confu[i] << endl;
     return o.str();
   }
+  double systemenergy::drift() { return std::abs(cur-sum); }
 
   //---------------- ANGULAR CORRELATIONS ---------------------------
   angularcorr::angularcorr() {}

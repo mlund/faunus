@@ -83,6 +83,7 @@ namespace Faunus {
       string info();              //!< Info
       void write(); 
       string confuout();
+      double drift();             //!< Measured energy drift
   };
 
   /*!

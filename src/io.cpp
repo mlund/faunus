@@ -16,7 +16,7 @@ namespace Faunus {
       f.close();
       return true;
     }
-    std::cerr << "# WARNING! FILE " << file << " NOT READ!\n";
+    std::cout << "# WARNING! FILE " << file << " NOT READ!\n";
     return false;
   }
   bool io::writefile(string file, string s) {

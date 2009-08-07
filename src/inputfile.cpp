@@ -1,7 +1,15 @@
 #include "faunus/inputfile.h"
 
 namespace Faunus {
+  inputfile::inputfile() { }
+
   inputfile::inputfile(string filename) {
+    load(filename);
+  }
+
+  bool inputfile::load(string filename) {
+    matrix.clear();
+    calls.clear();
     string s;
     char cstr[256];
     file=filename;
@@ -22,9 +30,11 @@ namespace Faunus {
       }
       f.close();
       std::cout << "# Input parameters read from: " << filename << endl;
-    } else {
-      std::cout << "*** Failed to open inputfile ***" << endl;
-      throw;
+      return true;
+    }
+    else {
+      std::cerr << "*** Failed to open inputfile ***" << endl;
+      return false;
     }
   }
 
@@ -141,4 +151,52 @@ namespace Faunus {
     }
     return o.str();
   }
-} //namespace
+
+  //
+  // CHECKVALUE CLASS
+  //
+  //
+  CheckValue::CheckValue(inputfile &in) {
+    stable = in.getboo("testsuite_stable", false);
+    file = in.getstr("testsuite_testfile", "test.stable");
+    if (stable==false)
+      load(file);
+  }
+
+  bool CheckValue::Check(string name, double val, double threshold) {
+    bool rc=true;
+    // Stable: Save value.
+    if (stable==true) {
+      add(name, val);
+      std::ofstream f( file.c_str() );
+      if (f) {
+        for (int i=0; i<matrix.size(); i++)
+          f << matrix[i].name << " " << matrix[i].val[0] << std::endl;
+        f.close();
+      }
+    }
+    else {
+      // Test value
+      double ref=getflt(name,1e9),
+             reldiff = std::abs( (ref-val)/ref );
+      if (reldiff>threshold) {
+        std::cerr << "!!! Test failed on variable " << name << " (ref,current,reldiff): "
+          << ref << " " << val << " " << reldiff << " !!!" << std::endl;
+        rc=false;
+      }
+    }
+    result.push_back(rc); // Save outcome
+    return rc;
+  }
+
+  string CheckValue::Report() {
+    std::ostringstream o;
+    o << "\n# TEST SUITE:\n";
+    if (stable==true)
+      o << "#   Generated reference file: " << file << " with " << matrix.size() << " item(s)." << std::endl;
+    else
+      o << "#   Test performed on " << result.size() << " item(s) with "
+        << std::count( result.begin(), result.end(), false) << " errors." << std::endl;
+    return o.str();
+  }
+}//namespace

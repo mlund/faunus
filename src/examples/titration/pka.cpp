@@ -17,6 +17,7 @@ int main(int argc, char* argv[]) {
   string config = "pka.conf";          // Default input (parameter) file
   if (argc==2) config = argv[1];       // ..also try to get it from the command line
   inputfile in(config);                // Read input file
+  CheckValue tests(in);                // Test output
   mcloop loop(in);                     // Set Markov chain loop lengths
   cell con(in);                        // Use a spherical simulation container
   canonical nvt;                       // Use the canonical ensemble
@@ -70,8 +71,14 @@ int main(int argc, char* argv[]) {
     aam.save("smeared.aam", psmear);
     cout << loop.timing();               // Show progress
   }                                      // END of macro loop
+
+  tests.Check("Energydrift", sys.drift() );
+  tests.Check("Charge", protein.Q.avg() );
+  tests.Check("ExChemPot", wid.muex() );
+
   cout << sys.info() << sm.info() << wid.info()
        << tit.info() << salt.info(con)
-       << protein.info() << loop.info(); // Print final results
+       << protein.info() << loop.info()
+       << tests.Report() ; // Print final results
 }
 

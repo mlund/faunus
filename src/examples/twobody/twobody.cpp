@@ -14,10 +14,12 @@
 using namespace Faunus;
 using namespace std;
 
-int main() {
+int main(int argc, char* argv[]) {
   cout << faunus_splash();              // Faunus info
-  //slp slump;                          // A random number generator
-  inputfile in("twobody.conf");         // Read input file
+  string config = "twobody.conf";       // Default input (parameter) file
+  if (argc==2) config = argv[1];        // ..also try to get it from the command line
+  inputfile in(config);                 // Read input file
+  CheckValue test(in);                  // Test output
   mcloop loop(in);                      // Set Markov chain loop lengths
   cell cell(in);                        // We want a spherical, hard cell
   canonical nvt;                        // Use the canonical ensemble
@@ -41,17 +43,15 @@ int main() {
   iopqr pqr;                            // PQR output (pos, charge, radius)
   ioxtc xtc(1000.);                     // Gromacs xtc output
   ioaam aam;                            // Protein input file format is AAM
-  if (aam.load(cell,"confout.aam")) {
+  //if (aam.load(cell,"confout.aam")) {
+  aam.load(cell,"confout.aam");
     g[0].masscenter(cell);              // Load old config (if present)
     g[1].masscenter(cell);              // ...and recalc mass centers
-  }
+  //}
 
   chargereg tit(nvt,cell,pot,salt,4.0); // Prepare titration.
   
-  systemenergy sys(
-      pot.energy(cell.p, salt, g[0]) +
-      pot.energy(cell.p, salt, g[1]) +
-      pot.energy(cell.p, g[0], g[1]) ); // System energy analysis
+  systemenergy sys(pot.energy(cell.p)); // System energy analysis
 
   cout << in.info() << cell.info()
        << tit.info() << pot.info();     // Print information to screen
@@ -88,14 +88,10 @@ int main() {
       }
 
       if (slp.random_one()>.95 && loop.macro>1)
-        xtc.save("coord.xtc", cell.p);            // Save trajectory
+        xtc.save("coord.xtc", cell.p);          // Save trajectory
     } // End of inner loop
 
-    sys.update(
-      pot.energy(cell.p, salt, g[0]) +
-      pot.energy(cell.p, salt, g[1]) +
-      pot.energy(cell.p, g[0], g[1]) );         // Update system energy
-
+    sys.update(pot.energy(cell.p));             // System energy analysis
     cell.check_vector();                        // Check sanity of particle vector
 
     dm.gofr.write("rdfprot.dat");               // Write interprotein g(r)
@@ -104,7 +100,9 @@ int main() {
     aam.save("confout.aam", cell.p);            // Save config. for next run
     pqr.save("confout.pqr", cell.p);            // ...also save a PQR file (no salt)
     cout << loop.timing();                      // Show progress
+
   } // End of outer loop
+
 
   xtc.close();                                  // Close xtc file for writing
 
@@ -112,5 +110,10 @@ int main() {
        << sm.info() << mr.info() << dm.info()
        << sys.info() << g[0].info() << g[1].info() << cell.info()
        << tit.info() << bind.info( 1/cell.getvolume() );
+
+  test.Check("Energydrift", sys.drift() );
+  test.Check("Protein1_charge", g[0].Q.avg());
+  test.Check("Protein2_charge", g[1].Q.avg());
+  cout << test.Report();
 }
 

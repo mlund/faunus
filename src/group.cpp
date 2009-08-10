@@ -792,7 +792,9 @@ namespace Faunus {
 
   glu3::glu3(container &con, inputfile &in) {
     name="GLU3 DENDRIMER";
+#ifdef BABEL
     chains.babeladd(con, in);
+#endif
     beg=chains.beg, end=chains.end;
     masscenter(con);
     core.beg=beg, core.end=beg+51;

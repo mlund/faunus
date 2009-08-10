@@ -56,7 +56,7 @@ namespace Faunus {
    * \li  testsuite_stable   - Specifies if the system is "stable" or need testing.
    * \li  testsuite_testfile - Name of test file to load (if unstable) or generate (if stable).
    *
-   * To check a value, simply call Check(name,value,threshold). If the stable==true this will generate
+   * To check a value, simply call check(name,value,threshold). If the stable==true this will generate
    * a new reference testfile. If stable==false this will check the given value against the
    * loaded testfile.
    */
@@ -64,11 +64,11 @@ namespace Faunus {
     private:
       vector<bool> result;
     public:
-      bool stable;                       //!< True if test suite is stable (=reference)
-      checkValue(inputfile &);           //!< Read parameters from inputfile
-      bool check(string, double, double=1e-2); //!< Check or store value depending on the stable state.
-      string report();                   //!< Print report.
-      int returnCode();                  //!< Zero if no errors, one otherwise.
+      bool stable;                           //!< True if test suite is stable (=reference)
+      checkValue(inputfile &);               //!< Read parameters from inputfile
+      bool check(string, double, double=0.1);//!< Check or store value depending on the stable state.
+      string report();                       //!< Print report.
+      int returnCode();                      //!< Zero if no errors, one otherwise.
   };
 }
 #endif

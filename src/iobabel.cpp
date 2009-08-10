@@ -1,3 +1,4 @@
+#ifdef BABEL
 #include "faunus/iobabel.h"
 namespace Faunus {
 
@@ -105,4 +106,6 @@ namespace Faunus {
       a.radius=2;
     return a;
   }
-}
+}//namespace
+#endif
+

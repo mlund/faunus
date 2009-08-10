@@ -113,6 +113,7 @@ int main(int argc, char* argv[]) {
   test.check("Energydrift", sys.drift(), 1.0 );
   test.check("Protein1_charge", g[0].Q.avg());
   test.check("Protein2_charge", g[1].Q.avg());
+
   cout << test.report();
 
   return test.returnCode();

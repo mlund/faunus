@@ -1,5 +1,9 @@
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
+#----- test target -----
+add_test( pka titration/test1/test.run )
+add_test( twobody twobody/test1/test.run )
+
 #----- function to add a generic C++ example -----
 function( fau_example tname tdir tsrc )
   add_executable( ${tname} "${tdir}/${tsrc}" )

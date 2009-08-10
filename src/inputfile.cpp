@@ -156,14 +156,14 @@ namespace Faunus {
   // CHECKVALUE CLASS
   //
   //
-  CheckValue::CheckValue(inputfile &in) {
+  checkValue::checkValue(inputfile &in) {
     stable = in.getboo("testsuite_stable", false);
     file = in.getstr("testsuite_testfile", "test.stable");
     if (stable==false)
       load(file);
   }
 
-  bool CheckValue::Check(string name, double val, double threshold) {
+  bool checkValue::check(string name, double val, double threshold) {
     bool rc=true;
     // Stable: Save value.
     if (stable==true) {
@@ -193,8 +193,14 @@ namespace Faunus {
     result.push_back(rc); // Save outcome
     return rc;
   }
+  
+  int checkValue::returnCode() {
+    for (int i=0; i<result.size(); i++)
+      if (result[i]==false) return 1;
+    return 0;
+  }
 
-  string CheckValue::Report() {
+  string checkValue::report() {
     std::ostringstream o;
     o << "\n# TEST SUITE:\n";
     if (stable==true)

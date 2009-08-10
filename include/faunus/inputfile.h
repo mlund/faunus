@@ -60,14 +60,15 @@ namespace Faunus {
    * a new reference testfile. If stable==false this will check the given value against the
    * loaded testfile.
    */
-  class CheckValue : private inputfile {
+  class checkValue : private inputfile {
     private:
       vector<bool> result;
     public:
       bool stable;                       //!< True if test suite is stable (=reference)
-      CheckValue(inputfile &);           //!< Read parameters from inputfile
-      bool Check(string, double, double=1e-3); //!< Check or store value depending on the stable state.
-      string Report();                   //!< Print report.
+      checkValue(inputfile &);           //!< Read parameters from inputfile
+      bool check(string, double, double=1e-2); //!< Check or store value depending on the stable state.
+      string report();                   //!< Print report.
+      int returnCode();                  //!< Zero if no errors, one otherwise.
   };
 }
 #endif

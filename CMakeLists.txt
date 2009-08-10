@@ -13,6 +13,8 @@ find_package(CVS)
 find_package(GSL)
 find_package(PythonLibs)
 include(SVNinfo)
+include(CTest)
+enable_testing()
 
 # ------------------------------
 #   Default build is "Release"

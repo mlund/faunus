@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
   string config = "pka.conf";          // Default input (parameter) file
   if (argc==2) config = argv[1];       // ..also try to get it from the command line
   inputfile in(config);                // Read input file
-  CheckValue tests(in);                // Test output
+  checkValue test(in);                 // Test output
   mcloop loop(in);                     // Set Markov chain loop lengths
   cell con(in);                        // Use a spherical simulation container
   canonical nvt;                       // Use the canonical ensemble
@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
 
   vector<particle> psmear = con.p;
 
-  systemenergy sys(pot.energy(con.p)); // System energy analysis
+  systemenergy sys(pot.energy(con.p));   // System energy analysis
   cout << in.info() << con.info() << tit.info()     // Some information
        << pot.info() << atom.info();
 
@@ -72,13 +72,15 @@ int main(int argc, char* argv[]) {
     cout << loop.timing();               // Show progress
   }                                      // END of macro loop
 
-  tests.Check("Energydrift", sys.drift() );
-  tests.Check("Charge", protein.Q.avg() );
-  tests.Check("ExChemPot", wid.muex() );
+  test.check("Energydrift", sys.drift(), 1.0);
+  test.check("Charge", protein.Q.avg() );
+  test.check("ExChemPot", wid.muex() );
 
   cout << sys.info() << sm.info() << wid.info()
        << tit.info() << salt.info(con)
        << protein.info() << loop.info()
-       << tests.Report() ; // Print final results
+       << test.report();                 // Print final results
+
+  return test.returnCode();
 }
 

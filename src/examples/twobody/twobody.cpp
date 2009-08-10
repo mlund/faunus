@@ -19,7 +19,7 @@ int main(int argc, char* argv[]) {
   string config = "twobody.conf";       // Default input (parameter) file
   if (argc==2) config = argv[1];        // ..also try to get it from the command line
   inputfile in(config);                 // Read input file
-  CheckValue test(in);                  // Test output
+  checkValue test(in);                  // Test output
   mcloop loop(in);                      // Set Markov chain loop lengths
   cell cell(in);                        // We want a spherical, hard cell
   canonical nvt;                        // Use the canonical ensemble
@@ -103,7 +103,6 @@ int main(int argc, char* argv[]) {
 
   } // End of outer loop
 
-
   xtc.close();                                  // Close xtc file for writing
 
   cout << salt.info(cell)                       // Final information...
@@ -111,9 +110,11 @@ int main(int argc, char* argv[]) {
        << sys.info() << g[0].info() << g[1].info() << cell.info()
        << tit.info() << bind.info( 1/cell.getvolume() );
 
-  test.Check("Energydrift", sys.drift() );
-  test.Check("Protein1_charge", g[0].Q.avg());
-  test.Check("Protein2_charge", g[1].Q.avg());
-  cout << test.Report();
+  test.check("Energydrift", sys.drift(), 1.0 );
+  test.check("Protein1_charge", g[0].Q.avg());
+  test.check("Protein2_charge", g[1].Q.avg());
+  cout << test.report();
+
+  return test.returnCode();
 }
 

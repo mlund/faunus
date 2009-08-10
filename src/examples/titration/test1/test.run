@@ -1,0 +1,12 @@
+#!/bin/bash
+cd `dirname $0`
+exe="../pka"
+if [ -x $exe ]; then
+  if [ -e confout.aam ]; then
+    rm confout.aam
+  fi
+  $exe test.conf 1>/dev/null
+  exit
+fi
+exit 1
+

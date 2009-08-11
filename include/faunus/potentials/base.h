@@ -17,7 +17,15 @@ namespace Faunus {
       double eps;  //!< Lennard-Jones interaction parameter (kT)
       double f;    //!< Factor to convert to kT (used after energy summations)
       pot_lj(inputfile &in) {
-        eps=in.getflt("LJeps", 2);
+        eps=in.getflt("LJeps", -1 );          //!< DEPRECATED!! Use "lj_epsilon" instead
+        if ( eps == -1 ) {
+        	/*!< "lj_epsilon" is the new option for "eps" definition.
+        	 *   The value is multiplied by 4 to follow the standard notation
+        	 *   of the LJ potential
+        	 */
+        	eps=in.getflt("lj_epsilon", 0.2 );
+        	eps*=4;
+        }
         name="LJ12-6";
         f=1;
       }

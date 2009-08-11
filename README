@@ -39,12 +39,13 @@ CITING FAUNUS:
   http://www.scfbm.org/content/3/1/1 (free full text)
 
 REQUIREMENTS:
-  - C++ compiler (gnu, ibm, intel, sun etc.)
+  - C++ compiler (gnu, intel, sun, pgi, ibm)
   - cmake 2.6
   Optional:
   - Boost python (for python module)
   - OpenBabel 2 (numerous molecular formats)
   - Doxygen and Graphviz (for code manual)
+  - Xcode (for neat environment on macos x)
 
   Developed and tested on Linux, MacOS X.
 
@@ -65,6 +66,9 @@ COMPILING:
   Example for Intel's C++ compiler with OpenMP parallization:
     $ CXX=icpc cmake . -DENABLE_OPENMP=on
     $ make
+
+  Run test suite:
+    $ make test (or use 'ctest -V' for verbose output)
 
 PYTHON SUPPORT:
   Classes from Faunus can be accessed via Python, provided that

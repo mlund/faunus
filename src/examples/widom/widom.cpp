@@ -71,5 +71,6 @@ int main(int argc, char* argv[]) {
   wid1.check(test);
   virial.check(test);
   cout << test.report();
+  return test.returnCode();
 }
 

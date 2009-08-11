@@ -214,12 +214,19 @@ namespace Faunus {
 
   string checkValue::report() {
     std::ostringstream o;
-    o << "\n# TEST SUITE:\n";
+    unsigned int numerr = 0;
+#ifdef __SUNPRO_CC
+    for (int i=0; i<result.size(); i++)
+      if (result[i]==false) numerr++;
+#else
+    numerr = std::count( result.begin(), result.end(), false);  
+#endif
+    o << std::endl << "# TEST SUITE:" << std::endl;
     if (stable==true)
       o << "#   Generated reference file: " << file << " with " << matrix.size()-1 << " item(s)." << std::endl;
     else
       o << "#   Test performed on " << result.size() << " item(s) with "
-        << std::count( result.begin(), result.end(), false) << " errors." << std::endl;
+        << numerr << " errors." << std::endl;
     return o.str();
   }
 }//namespace

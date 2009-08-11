@@ -1,0 +1,6 @@
+# Stable output generated on Aug 11 2009 15:22:58 using Intel(R) C++ g++ 4.0 mode (SVN revision: 505) ...
+SALTDISPLACEMENTSSAccepted 0.764916
+systemEnergyAverage -7.64147
+systemEnergyDrift 1.29674e-13
+widomExcessChemicalPotential -0.184727
+virialExcessPressure 0.000279164

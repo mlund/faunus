@@ -161,6 +161,18 @@ namespace Faunus {
     file = in.getstr("testsuite_testfile", "test.stable");
     if (stable==false)
       load(file);
+    else {
+      std::ostringstream o;
+      o << "# Stable output generated on " << __DATE__ << " " << __TIME__
+#ifdef __VERSION__
+        << " using " << __VERSION__
+#endif
+#ifdef __SVN_REV__
+        << " (SVN revision: " << __SVN_REV__ << ")"
+#endif
+      ;
+      add( o.str(), "..." );
+    }
   }
 
   bool checkValue::check(string name, double val, double threshold) {
@@ -204,7 +216,7 @@ namespace Faunus {
     std::ostringstream o;
     o << "\n# TEST SUITE:\n";
     if (stable==true)
-      o << "#   Generated reference file: " << file << " with " << matrix.size() << " item(s)." << std::endl;
+      o << "#   Generated reference file: " << file << " with " << matrix.size()-1 << " item(s)." << std::endl;
     else
       o << "#   Test performed on " << result.size() << " item(s) with "
         << std::count( result.begin(), result.end(), false) << " errors." << std::endl;

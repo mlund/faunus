@@ -13,7 +13,7 @@ namespace Faunus {
    * \brief Histogram class
    * \author Mikael Lund
    */
-  class histogram : private xytable<float,unsigned long int> {
+  class histogram : protected xytable<float,unsigned long int> {
     friend class FAUrdf;
     private:
     unsigned long int cnt;

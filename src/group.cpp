@@ -815,6 +815,19 @@ namespace Faunus {
   }
 
 #ifdef HYPERSPHERE
+  unsigned short hypergroup::displace(container &c, double dangle) {
+    unsigned short i=random();
+    double nfi=2.*acos(-1.)*slp.random_one();
+    double nrho=sqrt((slp.random_one()-1.)*sin(dangle)*sin(dangle)+1.);
+    double nomega=(2.*slp.random_one()-1.)*acos(cos(dangle)/nrho);
+    c.trial[i].move(nrho,nomega,nfi);
+    return i;
+  }
+
+  unsigned short hypergroup::displace(container &c, point p) {
+    return displace(c, p.x);
+  }
+
   void hypergroup::undo(particles &par) {
     group::undo(par);
     for (int i=beg; i<=end; i++) { 
@@ -824,6 +837,7 @@ namespace Faunus {
       par.trial[i].z4 = par.p[i].z4;           
     }
   }
+
   void hypergroup::accept(particles &par) {
     group::accept(par);
     for (int i=beg; i<=end; i++) {

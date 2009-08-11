@@ -38,11 +38,10 @@ namespace Faunus {
       float accepted();                   //!< Return fraction of accepted moves
       bool run(float);                    //!< Probability
       void adjust_dp(float=30, float=40); //!< Adjust displacement parameter
+      void check(checkValue &);           //!< Output test
       virtual string info();              //!< Show info about group 
       energybase *pot;
       markovmove(ensemble &, container &, energybase &);
   };
-
-}
-
+}//namespace
 #endif

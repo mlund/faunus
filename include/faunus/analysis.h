@@ -84,6 +84,7 @@ namespace Faunus {
       void write(); 
       string confuout();
       double drift();             //!< Measured energy drift
+      void check(checkValue &);   //!< Output testing
   };
 
   /*!
@@ -263,6 +264,7 @@ namespace Faunus {
       average<double> pex; //!< Excess pressure
       void sample(container &, energybase &);
       void sample(container &, energybase &, vector<macromolecule> &);
+      void check(checkValue &t); //!< Output checking
       string info();
   };
 

@@ -186,6 +186,8 @@ namespace Faunus {
     public:
       void undo(particles &);
       void accept(particles &);
+      unsigned short displace(container &, double); //!< Displace random particle
+      unsigned short displace(container &, point);  //!< Compatibility function
   };
 #endif
 }//namespace

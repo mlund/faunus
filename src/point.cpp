@@ -129,9 +129,9 @@ namespace Faunus {
   void particle::move(double du,double dv, double dw) {
     double nz1,nz2,nz3,nz4;
     double tz1,tz2,tz3,tz4;
-    rho=du;
-    omega=dv;
-    fi=dw;
+    double rho=du;
+    double omega=dv;
+    double fi=dw;
     nz1=sqrt(1.-rho*rho);
     nz2=nz1*cos(fi);
     nz1=nz1*sin(fi);
@@ -184,22 +184,11 @@ namespace Faunus {
     tz3=nz1*te1.z3+nz2*te2.z3+nz3*te3.z3+nz4*z3;
     tz4=nz1*te1.z4+nz2*te2.z4+nz3*te3.z4+nz4*z4;
 
-    // Translate the point to new point using the moved basis set
-    hyperpoint newdir;
-    double factpoi,factmu;
-    factpoi = tz1*z1+tz2*z2+tz3*z3+tz4*z4;
-    factmu = tz1*dirmu.z1+tz2*dirmu.z2+tz3*dirmu.z3+tz4*dirmu.z4;
-    newdir.z1 = dirmu.z1 - 1./(1.+factpoi)*factmu*(tz1+z1);
-    newdir.z2 = dirmu.z2 - 1./(1.+factpoi)*factmu*(tz2+z2);
-    newdir.z3 = dirmu.z3 - 1./(1.+factpoi)*factmu*(tz3+z3);
-    newdir.z4 = dirmu.z4 - 1./(1.+factpoi)*factmu*(tz4+z4);
-
     // Update the point and dirmu
     z1=tz1;
     z2=tz2;
     z3=tz3;
     z4=tz4;
-    dirmu=newdir;
   }
 #endif
 

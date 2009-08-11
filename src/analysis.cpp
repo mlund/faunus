@@ -15,14 +15,25 @@ namespace Faunus {
     cur=energy;
     uavg+=cur;
   }
+  
   void systemenergy::track() {
     confu.push_back(sum);
   }
+  
   void systemenergy::write() {
     if (confu.size())
       fio.writefile("systemenergy.dat", confuout() );
   }
-  void systemenergy::operator+=(double du) { sum+=du; }
+  
+  void systemenergy::operator+=(double du) {
+    sum+=du;
+  }
+  
+  void systemenergy::check(checkValue &test) {
+    test.check("systemEnergyAverage", uavg.avg() );
+    test.check("systemEnergyDrift", drift(), 10.);
+  }
+  
   string systemenergy::info() {
     write();                  //!< Print dynamics of system energy 
     std::ostringstream o;
@@ -35,6 +46,7 @@ namespace Faunus {
       << "#   Absolute drift     = " << drift() << endl;
     return o.str();
   }
+  
   string systemenergy::confuout() {
     int j=confu.size();
     std::ostringstream o;
@@ -283,6 +295,10 @@ namespace Faunus {
           }
       pex+=p*pot.tokT / (3*c.getvolume());  // kT/AA^3
     }
+  }
+  
+  void virial::check(checkValue &test) {
+    test.check("virialExcessPressure", pex.avg() );
   }
 
   string virial::info() {

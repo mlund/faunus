@@ -13,16 +13,17 @@ namespace Faunus {
   class hyperpoint {
     public:
       double z1,z2,z3,z4;                     //!< Reduced Coordinates on hypersphere
-      double rho,omega,fi;
-      double mu;
-      void hypclear() { z1=z2=z3=z4=rho=omega=fi=0; }
+      void hypclear() {
+        z1=z2=z3=0;
+        z4=1;
+      }
       hyperpoint() { hypclear(); }
       inline double hypsqdist(const hyperpoint &p) const {
         return z1*p.z1+z2*p.z2+z3*p.z3+z4*p.z4;
       }
       inline double geodesic(const hyperpoint &p) const {
         return std::acos(hypsqdist(p));
-      } 
+      }
   };
 
   /*!
@@ -92,8 +93,6 @@ namespace Faunus {
       double mw2rad(double=1) const;            //!< Estimate radius from weight
       particle& operator=(const point&);        //!< Copy coordinates from a point
 #ifdef HYPERSPHERE
-      double mu;                                //!< Dipole moment scalar
-      hyperpoint dirmu;                         //!< Direction of point dipole
       void move(double,double,double);          //!< More hyper particle
 #endif
   };

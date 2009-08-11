@@ -221,17 +221,26 @@ namespace Faunus {
    */
   class hypersphere : public cell {
     private:
-      static const double pi=3.141592654;
+      static const double pi;
     public:
       hypersphere(inputfile &);
       string info();
       void randompos(point &);
       bool collision(const particle &);
       inline double dist(const point &a, const point &b) {
-        return acos(a.hypsqdist(b))*r; // CHECK!!! (virtual=slow!)
+        return r*a.geodesic(b); // CHECK!!! (virtual=slow!)
       }
       inline double sqdist(const point &a, const point &b) {
-        return a.hypsqdist(b); // !! SHOULD BE REAL DISTANCE CHECK!! (virtual=slow!)
+        return pow(dist(a,b),2); // !! SHOULD BE REAL DISTANCE CHECK!! (virtual=slow!)
+      }
+      bool overlap(particle &a) {
+        for (int i=0; i<p.size(); i++)
+          if (hyperoverlap(a,p[i])==true)
+            return true;
+        return false;
+      }
+      inline bool hyperoverlap(particle &a, particle &b) {
+        return (r*a.geodesic(b)<a.radius+b.radius);
       }
   };
 #endif

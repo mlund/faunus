@@ -65,31 +65,7 @@ namespace Faunus {
           return true;
         return false;
       }
-
-      inline hyperpoint eldipfield(particle a, hyperpoint &p) {
-        hyperpoint meldipfield, geodir;
-        double chi=a.geodesic(p),
-               invsinchi,invsinchisq,cotchi,scaldirpoint,fact;
-        fact = 1./(pi*r*r*r)*a.mu;
-        invsinchi = 1./sin(chi);
-        invsinchisq = invsinchi*invsinchi;
-        cotchi = 1./tan(chi);
-        scaldirpoint = a.dirmu.hypsqdist(p);
-        geodir.z1 = -invsinchi*a.z1+cotchi*p.z1;
-        geodir.z2 = -invsinchi*a.z2+cotchi*p.z2;
-        geodir.z3 = -invsinchi*a.z3+cotchi*p.z3;
-        geodir.z4 = -invsinchi*a.z4+cotchi*p.z4;
-        meldipfield.z1 = fact*(2.*invsinchi*scaldirpoint*geodir.z1+invsinchi*(cotchi+(pi-chi)*invsinchisq)*(-a.dirmu.z1+scaldirpoint*p.z1
-              +3.*cotchi*scaldirpoint*geodir.z1));
-        meldipfield.z2 = fact*(2.*invsinchi*scaldirpoint*geodir.z2+invsinchi*(cotchi+(pi-chi)*invsinchisq)*(-a.dirmu.z2+scaldirpoint*p.z2
-              +3.*cotchi*scaldirpoint*geodir.z2));
-        meldipfield.z3 = fact*(2.*invsinchi*scaldirpoint*geodir.z3+invsinchi*(cotchi+(pi-chi)*invsinchisq)*(-a.dirmu.z3+scaldirpoint*p.z3
-              +3.*cotchi*scaldirpoint*geodir.z3));
-        meldipfield.z4 = fact*(2.*invsinchi*scaldirpoint*geodir.z4+invsinchi*(cotchi+(pi-chi)*invsinchisq)*(-a.dirmu.z4+scaldirpoint*p.z4
-              +3.*cotchi*scaldirpoint*geodir.z4));
-        return meldipfield; // field in point p!!
-      }
-
+ 
       string info() {
         std::ostringstream o;
         o << "#   Potential type    = " << name << endl

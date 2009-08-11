@@ -110,7 +110,8 @@ int main(int argc, char* argv[]) {
        << sys.info() << g[0].info() << g[1].info() << cell.info()
        << tit.info() << bind.info( 1/cell.getvolume() );
 
-  test.check("Energydrift", sys.drift(), 1.0 );
+  // Output tests
+  sys.check(test);
   test.check("Protein1_charge", g[0].Q.avg());
   test.check("Protein2_charge", g[1].Q.avg());
 

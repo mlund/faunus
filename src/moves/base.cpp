@@ -1,5 +1,4 @@
 #include "faunus/moves/base.h"
-
 #include "faunus/titrate.h"
 #include "faunus/slump.h"
 #include "faunus/io.h"
@@ -52,7 +51,7 @@ namespace Faunus {
    * that the acceptance ration lies within a certain tange. Useful
    * for equilibration runs -- do not use it in production runs!
    * \param max Maximum percentage of accepted moves
-   * \warning This violates the detailed balance criteria!
+   * \warning This violates the detailed balance criteria.
    * \param min Minimum percentage of accepted moves
    * \author Mikael Lund
    * \todo Specify a maxmimum dp
@@ -64,4 +63,10 @@ namespace Faunus {
     if (dp<=0) dp=deltadp;
   }
 
-}
+  void markovmove::check(checkValue &test) {
+    string s = name;
+    std::remove(s.begin(), s.end(), ' ');
+    test.check(s + "Accepted", accepted() );
+  }
+
+}//namespace

@@ -19,11 +19,18 @@ namespace Faunus {
     }
   }
 
-  void widom::add(particle p) { g.push_back(p); }
+  void widom::add(particle p) {
+    g.push_back(p);
+  }
+  
   void widom::add(container &c) {
     vector<unsigned char> id = c.list_of_species();
     for (int i=0; i<id.size(); i++)
       add( atom(id[i]) );
+  }
+  
+  void widom::check(checkValue &test) {
+    test.check("widomExcessChemicalPotential", muex() );
   }
 
   string widom::info() {

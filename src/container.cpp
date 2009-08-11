@@ -188,20 +188,21 @@ namespace Faunus {
   }     
 
 #ifdef HYPERSPHERE
+  const double hypersphere::pi=3.141592654;
   hypersphere::hypersphere(inputfile &in) : cell(in) {
   }
   bool hypersphere::collision(const particle &p) {
     return false;
   }
   void hypersphere::randompos(point &p) {
-    p.rho=sqrt(slp.random_one());
-    p.omega=slp.random_one()*2.*pi;
-    p.fi=slp.random_one()*2.*pi;
-    p.z1=sqrt(1.-p.rho*p.rho);
-    p.z2=p.z1*cos(p.omega);
-    p.z1=p.z1*sin(p.omega);
-    p.z3=p.rho*sin(p.fi);
-    p.z4=p.rho*cos(p.fi);
+    double rho=sqrt(slp.random_one());
+    double omega=slp.random_one()*2.*pi;
+    double fi=slp.random_one()*2.*pi;
+    p.z1=sqrt(1.-rho*rho);
+    p.z2=p.z1*cos(omega);
+    p.z1=p.z1*sin(omega);
+    p.z3=rho*sin(fi);
+    p.z4=rho*cos(fi);
   }
   string hypersphere::info() {
     std::ostringstream o;

@@ -13,11 +13,15 @@
 using namespace std;
 using namespace Faunus;                 // Access to Faunus classes
 
-int main() {
+int main(int argc, char* argv[]) {
   cout << faunus_splash();              // Show Faunus information
-  inputfile in("widom.conf");           // Read input file
+  string config = "widom.conf";         // Default input (parameter) file
+  if (argc==2) config = argv[1];        // ..also try to get it from the command line
+  inputfile in(config);                 // Read input file
   mcloop loop(in);                      // Set Markov chain loop lengths
   canonical nvt;                        // Use the canonical ensemble
+  checkValue test(in);                  // Test output
+
 #ifdef WIDOM_SPHERE
   cell cell(in);                        // We want a spherical simulation container
   interaction<pot_hscoulomb> pot(in);   // ...and a Coulomb + Hard sphere potential
@@ -25,6 +29,7 @@ int main() {
   box cell(in);                         // We want a cubic simulation container
   interaction<pot_hsminimage> pot(in);  // ...and a Coulomb/HS pot. w. minimum image
 #endif
+
   saltmove sm(nvt,cell,pot,in);         // Class for salt movements
   salt salt;                            // Define some groups for mobile ions
   salt.add(cell,in);                    // Insert some ions
@@ -49,7 +54,7 @@ int main() {
       sys+=sm.move(salt);               // Displace salt particles
       wid1.insert(cell,pot);            // Widom particle insertion analysis
       wid2.insert(cell,pot);            // - // -
-      virial.sample(cell,pot);          // Virial sampling (NOT really approprite for this pot.!)
+      virial.sample(cell,pot);          // Virial sampling (NOT really appropriate for this pot.!)
     }                                   // END of micro loop
     sys.update(pot.energy(cell.p));     // Update system energy
     aam.save("widom.aam",cell.p);       // Save particle configuration to disk
@@ -59,5 +64,12 @@ int main() {
   cout << sys.info() << sm.info()
        << wid1.info() << wid2.info()
        << virial.info() << loop.info(); // Final information and results!
+
+  // Now do some testing!
+  sm.check(test);
+  sys.check(test);
+  wid1.check(test);
+  virial.check(test);
+  cout << test.report();
 }
 

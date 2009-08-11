@@ -23,7 +23,7 @@ namespace Faunus {
       double charge();                      //!< Sum all charges in particle vector
       double charge(const point &, double); //!< Sum all charges within a sphere region
       virtual bool clash(const particle &, const particle &); //!< Overlap between two particles
-      bool overlap(const particle &);       //!< Check for overlap w. particle
+      virtual bool overlap(const particle &);       //!< Check for overlap w. particle
       bool overlap(const std::vector<particle> &);
       bool check_vector();                  //!< Check if p and trial are equal!
       int count(unsigned char, const point&,double);//!< Count particles of "type" within a sphere

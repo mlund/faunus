@@ -30,6 +30,7 @@ namespace Faunus {
       void add(particle);                     //!< Add particle to insert
       void add(container &);                  //!< All all species found in the container
       void insert(container &, energybase &); //!< Insert and analyse
+      void check(checkValue &);               //!< Output checking
       double gamma() { return exp(muex()); }  //!< Mean activity coefficient
       double muex() { return -log(expsum.avg())/g.size(); } //!< Mean excess chemical potential
   };

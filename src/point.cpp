@@ -2,18 +2,91 @@
 
 namespace Faunus {
   //-------------HYPERPOINT------------------
+  void hyperpoint::move(double du, double dv, double dw) {
+    double nz1, nz2, nz3, nz4,
+           tz1, tz2, tz3, tz4,
+           rho=du, omega=dv, fi=dw;
+    nz1=sqrt(1.-rho*rho);
+    nz2=nz1*cos(fi);
+    nz1=nz1*sin(fi);
+    nz3=rho*sin(omega);
+    nz4=rho*cos(omega);
+
+    hyperpoint e1,e2,e3,te1,te2,te3;
+    double fact1,fact2,fact3,nabla_nb,fi_nb;
+    nabla_nb=slp.random_one()*2.*acos(-1.);
+    fi_nb=acos(slp.random_one());
+    e1.z1=cos(nabla_nb);
+    e1.z2=sin(nabla_nb);
+    e1.z3=0.;
+    e1.z4=0.;
+    e2.z1=-cos(fi_nb)*sin(nabla_nb);
+    e2.z2=cos(fi_nb)*cos(nabla_nb);
+    e2.z3=sin(fi_nb);
+    e2.z4=0.;
+    e3.z1=sin(fi_nb)*sin(nabla_nb);
+    e3.z2=-sin(fi_nb)*cos(nabla_nb);
+    e3.z3=cos(fi_nb);
+    e3.z4=0.;
+
+    // First create a random orthonormal basis set at North Pole
+    fact1=e1.z1*z1
+      +e1.z2*z2
+      +e1.z3*z3;
+    te1.z1=e1.z1-1./(1.+z4)*fact1*z1;
+    te1.z2=e1.z2-1./(1.+z4)*fact1*z2;
+    te1.z3=e1.z3-1./(1.+z4)*fact1*z3;
+    te1.z4=e1.z4-1./(1.+z4)*fact1*(z4+1.);
+    fact2=e2.z1*z1
+      +e2.z2*z2
+      +e2.z3*z3;
+    te2.z1=e2.z1-1./(1.+z4)*fact2*z1;
+    te2.z2=e2.z2-1./(1.+z4)*fact2*z2;
+    te2.z3=e2.z3-1./(1.+z4)*fact2*z3;
+    te2.z4=e2.z4-1./(1.+z4)*fact2*(z4+1.);
+    fact3=e3.z1*z1
+      +e3.z2*z2
+      +e3.z3*z3;
+    te3.z1=e3.z1-1./(1.+z4)*fact3*z1;
+    te3.z2=e3.z2-1./(1.+z4)*fact3*z2;
+    te3.z3=e3.z3-1./(1.+z4)*fact3*z3;
+    te3.z4=e3.z4-1./(1.+z4)*fact3*(z4+1.);
+
+    // Then move it to point of z1,z2,z3,z4
+    tz1=nz1*te1.z1+nz2*te2.z1+nz3*te3.z1+nz4*z1;
+    tz2=nz1*te1.z2+nz2*te2.z2+nz3*te3.z2+nz4*z2;
+    tz3=nz1*te1.z3+nz2*te2.z3+nz3*te3.z3+nz4*z3;
+    tz4=nz1*te1.z4+nz2*te2.z4+nz3*te3.z4+nz4*z4;
+
+    // Update the point
+    z1=tz1;
+    z2=tz2;
+    z3=tz3;
+    z4=tz4;
+  }
 
   //-------------POINT------------------
 
-  point::point() { clear(); }
+  /*!
+   * Initizalize a new point setting the coordinates to zero.
+   */
+  point::point() {
+    clear();
+  }
+
   point::point(double xx, double yy, double zz) {
     x=xx;
     y=yy;
     z=zz;
   }
 
-  void point::clear() { x=y=z=0; }
-  double point::dot(const point &p) const { return (x*p.x + y*p.y + z*p.z); }
+  void point::clear() {
+    x=y=z=0;
+  }
+
+  double point::dot(const point &p) const {
+    return (x*p.x + y*p.y + z*p.z);
+  }
 
   double point::len() const {
     double l2=x*x+y*y+z*z;
@@ -54,6 +127,7 @@ namespace Faunus {
     o.z = p.z * z;
     return o;
   }
+
   point point::operator*(double s) const {
     point o;
     o.x = x*s;
@@ -69,7 +143,6 @@ namespace Faunus {
     o.z = z+d;
     return o;
   }
-
 
   point point::operator-(const point p) const {
     point o;
@@ -125,72 +198,24 @@ namespace Faunus {
     return pow( mw2vol(rho)*3./4./M_PI, (1/3.) );
   }
 
-#ifdef HYPERSPHERE
-  void particle::move(double du,double dv, double dw) {
-    double nz1,nz2,nz3,nz4;
-    double tz1,tz2,tz3,tz4;
-    double rho=du;
-    double omega=dv;
-    double fi=dw;
-    nz1=sqrt(1.-rho*rho);
-    nz2=nz1*cos(fi);
-    nz1=nz1*sin(fi);
-    nz3=rho*sin(omega);
-    nz4=rho*cos(omega);
-
-    hyperpoint e1,e2,e3,te1,te2,te3;
-    double fact1,fact2,fact3,nabla_nb,fi_nb;
-    nabla_nb=slp.random_one()*2.*acos(-1.);
-    fi_nb=acos(slp.random_one());
-    e1.z1=cos(nabla_nb);
-    e1.z2=sin(nabla_nb);
-    e1.z3=0.;
-    e1.z4=0.;
-    e2.z1=-cos(fi_nb)*sin(nabla_nb);
-    e2.z2=cos(fi_nb)*cos(nabla_nb);
-    e2.z3=sin(fi_nb);
-    e2.z4=0.;
-    e3.z1=sin(fi_nb)*sin(nabla_nb);
-    e3.z2=-sin(fi_nb)*cos(nabla_nb);
-    e3.z3=cos(fi_nb);
-    e3.z4=0.;
-
-    // First create a random orthonormal basis set at North Pole
-    fact1=e1.z1*z1
-      +e1.z2*z2
-      +e1.z3*z3;
-    te1.z1=e1.z1-1./(1.+z4)*fact1*z1;
-    te1.z2=e1.z2-1./(1.+z4)*fact1*z2;
-    te1.z3=e1.z3-1./(1.+z4)*fact1*z3;
-    te1.z4=e1.z4-1./(1.+z4)*fact1*(z4+1.);
-    fact2=e2.z1*z1
-      +e2.z2*z2
-      +e2.z3*z3;
-    te2.z1=e2.z1-1./(1.+z4)*fact2*z1;
-    te2.z2=e2.z2-1./(1.+z4)*fact2*z2;
-    te2.z3=e2.z3-1./(1.+z4)*fact2*z3;
-    te2.z4=e2.z4-1./(1.+z4)*fact2*(z4+1.);
-    fact3=e3.z1*z1
-      +e3.z2*z2
-      +e3.z3*z3;
-    te3.z1=e3.z1-1./(1.+z4)*fact3*z1;
-    te3.z2=e3.z2-1./(1.+z4)*fact3*z2;
-    te3.z3=e3.z3-1./(1.+z4)*fact3*z3;
-    te3.z4=e3.z4-1./(1.+z4)*fact3*(z4+1.);
-
-    // Then move it to point of z1,z2,z3,z4
-    tz1=nz1*te1.z1+nz2*te2.z1+nz3*te3.z1+nz4*z1;
-    tz2=nz1*te1.z2+nz2*te2.z2+nz3*te3.z2+nz4*z2;
-    tz3=nz1*te1.z3+nz2*te2.z3+nz3*te3.z3+nz4*z3;
-    tz4=nz1*te1.z4+nz2*te2.z4+nz3*te3.z4+nz4*z4;
-
-    // Update the point and dirmu
-    z1=tz1;
-    z2=tz2;
-    z3=tz3;
-    z4=tz4;
-  }
+  /*!
+   * This class tries to deactivate a particle so that certain energy
+   * loops does not have to be split. The deactivation is done by
+   * \li Setting the charge to zero (no electrostatics)
+   * \li Moving the particle *very* far away (p.x=1e9)
+   * \li Moving hyperpoints to the opposide side of the sphere (no overlap, but vdW could be a problem)
+   */
+  void particle::deactivate() {
+    charge=0;
+#ifndef HYPERSPHERE
+    x=1e9;
+#else
+    z1*=-0.9999;
+    z2*=-0.9999;
+    z3*=-0.9999;
+    z4*=-0.9999;
 #endif
+  }
 
   std::ostream &operator<<(std::ostream &out, point &p) {
     out << p.str();

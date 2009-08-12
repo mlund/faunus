@@ -233,13 +233,13 @@ namespace Faunus {
       inline double sqdist(const point &a, const point &b) {
         return pow(dist(a,b),2); // !! SHOULD BE REAL DISTANCE CHECK!! (virtual=slow!)
       }
-      bool overlap(particle &a) {
+      bool overlap(const particle &a) {
         for (int i=0; i<p.size(); i++)
           if (hyperoverlap(a,p[i])==true)
             return true;
         return false;
       }
-      inline bool hyperoverlap(particle &a, particle &b) {
+      inline bool hyperoverlap(const particle &a, const particle &b) {
         return (r*a.geodesic(b)<a.radius+b.radius);
       }
   };

@@ -117,18 +117,32 @@ namespace Faunus {
   void group::undo(particles &par) {
     cm_trial = cm;
     for (short i=beg; i<=end; i++) {
+#ifndef HYPERSPHERE
       par.trial[i].x = par.p[i].x;
       par.trial[i].y = par.p[i].y;
       par.trial[i].z = par.p[i].z;
+#else
+      par.trial[i].z1 = par.p[i].z1;
+      par.trial[i].z2 = par.p[i].z2;
+      par.trial[i].z3 = par.p[i].z3;
+      par.trial[i].z4 = par.p[i].z4;
+#endif
     }
   }
   void group::accept(particles &par) {
     cm = cm_trial;
     unsigned short i,ilen=end+1;
     for (i=beg; i<ilen; i++) {
+#ifndef HYPERSPHERE
       par.p[i].x = par.trial[i].x;
       par.p[i].y = par.trial[i].y;
       par.p[i].z = par.trial[i].z;
+#else
+      par.p[i].z1 = par.trial[i].z1;
+      par.p[i].z2 = par.trial[i].z2;
+      par.p[i].z3 = par.trial[i].z3;
+      par.p[i].z4 = par.trial[i].z4;
+#endif
     }
   }
   void group::add(container &par, vector<particle> v, bool collision) {
@@ -165,10 +179,18 @@ namespace Faunus {
 
   unsigned short group::displace(container &c, point dp) {
     unsigned short i=random();
+#ifndef HYPERSPHERE
     c.trial[i].x = c.p[i].x + dp.x*slp.random_half();
     c.trial[i].y = c.p[i].y + dp.y*slp.random_half();
     c.trial[i].z = c.p[i].z + dp.z*slp.random_half();
     c.boundary(c.trial[i]);
+#else
+    double dangle=dp.x;
+    double nfi=2.*acos(-1.)*slp.random_one();
+    double nrho=sqrt((slp.random_one()-1.)*sin(dangle)*sin(dangle)+1.);
+    double nomega=(2.*slp.random_one()-1.)*acos(cos(dangle)/nrho);
+    c.trial[i].move(nrho,nomega,nfi);
+#endif
     return i;
   }
 
@@ -815,37 +837,13 @@ namespace Faunus {
   }
 
 #ifdef HYPERSPHERE
-  unsigned short hypergroup::displace(container &c, double dangle) {
-    unsigned short i=random();
-    double nfi=2.*acos(-1.)*slp.random_one();
-    double nrho=sqrt((slp.random_one()-1.)*sin(dangle)*sin(dangle)+1.);
-    double nomega=(2.*slp.random_one()-1.)*acos(cos(dangle)/nrho);
-    c.trial[i].move(nrho,nomega,nfi);
-    return i;
+  void hypermolecule::add(container &c, vector<particle> v, bool collision) {
   }
 
-  unsigned short hypergroup::displace(container &c, point p) {
-    return displace(c, p.x);
+  void hypermolecule::move(container &c, point p) {
   }
 
-  void hypergroup::undo(particles &par) {
-    group::undo(par);
-    for (int i=beg; i<=end; i++) { 
-      par.trial[i].z1 = par.p[i].z1;           
-      par.trial[i].z2 = par.p[i].z2;           
-      par.trial[i].z3 = par.p[i].z3;           
-      par.trial[i].z4 = par.p[i].z4;           
-    }
-  }
-
-  void hypergroup::accept(particles &par) {
-    group::accept(par);
-    for (int i=beg; i<=end; i++) {
-      par.p[i].z1 = par.trial[i].z1; 
-      par.p[i].z2 = par.trial[i].z2;
-      par.p[i].z3 = par.trial[i].z3;
-      par.p[i].z4 = par.trial[i].z4;
-    }
+  void hypermolecule::rotate(container &c, double drot, double dp) {
   }
 #endif
 }//namespace

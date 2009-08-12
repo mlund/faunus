@@ -22,6 +22,7 @@ namespace Faunus {
       << "# " << name << ":" << endl;
     if (cnt>0) {
       o << "#   Acceptance                = " << accepted()*100 << endl
+        << "#   Displacement parameter    = " << dp << endl
         << "#   Number of trials          = " << cnt << endl
         << "#   Pct. of Markov steps      = " << runfraction*100 << endl
         << "#   Energy change (kT)        = " << utot << " " << utot/cnt << " "

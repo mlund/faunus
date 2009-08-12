@@ -292,28 +292,28 @@
 			isa = PBXContainerItemProxy;
 			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 739C43CF10314D6300A3A5B9 /* hyperfaunus */;
+			remoteGlobalIDString = 739C43CF10314D6300A3A5B9;
 			remoteInfo = hyperfaunus;
 		};
 		739C45231031925800A3A5B9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 739C42091030798400A3A5B9 /* faunus */;
+			remoteGlobalIDString = 739C42091030798400A3A5B9;
 			remoteInfo = faunus;
 		};
 		739C45291031929300A3A5B9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 739C451E1031925300A3A5B9 /* widom_cube */;
+			remoteGlobalIDString = 739C451E1031925300A3A5B9;
 			remoteInfo = widom_cube;
 		};
 		739C452B1031929300A3A5B9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 739C444A10314E8700A3A5B9 /* hyper_dipolarfluid */;
+			remoteGlobalIDString = 739C444A10314E8700A3A5B9;
 			remoteInfo = hyper_dipolarfluid;
 		};
 /* End PBXContainerItemProxy section */
@@ -425,10 +425,10 @@
 		739C42DB10307BF400A3A5B9 /* twobody.conf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = twobody.conf; path = src/examples/twobody/twobody.conf; sourceTree = "<group>"; };
 		739C42DC10307BF400A3A5B9 /* twobody.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = twobody.cpp; path = src/examples/twobody/twobody.cpp; sourceTree = "<group>"; };
 		739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libhyperfaunus.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
-		739C444B10314E8700A3A5B9 /* hyper_dipolarfluid */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = hyper_dipolarfluid; path = build/Debug/hyper_dipolarfluid; sourceTree = "<group>"; };
+		739C444B10314E8700A3A5B9 /* hyper_dipolarfluid */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = hyper_dipolarfluid; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C445710314F2600A3A5B9 /* dipolarfluid.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = dipolarfluid.cpp; path = src/examples/hypersphere/dipolarfluid.cpp; sourceTree = "<group>"; };
 		739C44651031501200A3A5B9 /* dipolarfluid.conf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = dipolarfluid.conf; path = src/examples/hypersphere/dipolarfluid.conf; sourceTree = "<group>"; };
-		739C451F1031925300A3A5B9 /* widom_cube */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = widom_cube; path = build/Debug/widom_cube; sourceTree = "<group>"; };
+		739C451F1031925300A3A5B9 /* widom_cube */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = widom_cube; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C45271031928400A3A5B9 /* widom.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = widom.cpp; path = src/examples/widom/widom.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 

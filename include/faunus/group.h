@@ -29,18 +29,18 @@ namespace Faunus {
       group(int=0);         ///< Constructor, initialize data.
 
       void set(short int,short int);        ///< Set particle range, "beg" and "end".
-      short int size() const;               ///< Number of particles in group
-      virtual short int random();           ///< Picks a random particle within this group
       bool find(unsigned int) const;        ///< Check if particle is part of the group
+      short int size() const;               ///< Number of particles in group
       virtual double charge(const vector<particle> &);//!< Calculate total charge
+      virtual short int random();           ///< Picks a random particle within this group
       point masscenter(const vector<particle> &); //!< Calculate center-of-mass
       point masscenter(const container &);        //!< Calc. center-of-mass
       virtual string info();                //!< Print information
+      bool operator==(const group&) const;
       group& operator+=(const group&);
       const group operator+(const group&) const;
-      bool operator==(const group&) const;
 
-      void move(container &, point);                      //!< Translate group
+      virtual void move(container &, point);              //!< Translate group
       void invert(vector<particle> &, point &);           //!< Invert a group
       bool overlap(container &);                          //!< Test overlap w all particles
       virtual void undo(particles &);
@@ -82,24 +82,24 @@ namespace Faunus {
       average<double> dip;  //!< Dipole moment scalar.
       average<double> dip2; //!< Dipole moment scalar squared.
 
-      string info();                           //!< Show info
-      string info(container &);                //!< Show more info!
-      void center(container &);                //!< Center group in origo (0,0,0)
-      double charge(const vector<particle> &);       //!< Calculate total charge
-      double getcharge(const vector<particle> &);    //!< Calculate total charge
-      double radius(vector<particle> &);       //!< Calculate radius
-      double gradius(vector<particle> &);       //!< Calculate radius of gyration
-      double vradius(vector<particle> &);       //!< Volume based protein radius
-      double dipole(vector<particle> &);       //!< Calculate dipole moment
-      void zmove(container &, double);         //!< Move in z-direction, only
-      void rotate(container &, double, double=0);        //!< Rotate around a point
+      string info();                              //!< Show info
+      string info(container &);                   //!< Show more info!
+      void center(container &);                   //!< Center group in origo (0,0,0)
+      double charge(const vector<particle> &);    //!< Calculate total charge
+      double getcharge(const vector<particle> &); //!< Calculate total charge
+      double radius(vector<particle> &);          //!< Calculate radius
+      double gradius(vector<particle> &);         //!< Calculate radius of gyration
+      double vradius(vector<particle> &);         //!< Volume based protein radius
+      double dipole(vector<particle> &);          //!< Calculate dipole moment
+      void zmove(container &, double);            //!< Move in z-direction, only
+      virtual void rotate(container &, double, double=0); //!< Rotate around a point
       void rotate(container &, point, double, double);
       void rotate(container &, point, point, double); //!< Rotate around arbitrary point
       void transrot(container &, double, double); 
       using group::add;
-      void add(container &, inputfile &);      //!< Add according to inputfile
-      macromolecule& operator=(const group&);  //!< Copy from group
-      virtual void isobaricmove(container &,double);//!< Displace CM with scale difference
+      void add(container &, inputfile &);         //!< Add according to inputfile
+      macromolecule& operator=(const group&);     //!< Copy from group
+      virtual void isobaricmove(container &,double);  //!< Displace CM with scale difference
       virtual unsigned short nummolecules();
   };
 
@@ -179,15 +179,11 @@ namespace Faunus {
    *  \author Martin Trulsson
    *  \date Lund, 2009
    */
-  class hypergroup : public group {
-    protected:
-      slump slp;
-      string title;
+  class hypermolecule : public macromolecule {
     public:
-      void undo(particles &);
-      void accept(particles &);
-      unsigned short displace(container &, double); //!< Displace random particle
-      unsigned short displace(container &, point);  //!< Compatibility function
+      void add(container &, vector<particle>, bool=false);
+      void move(container &, point);
+      void rotate(container &, double, double=0);
   };
 #endif
 }//namespace

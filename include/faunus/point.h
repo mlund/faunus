@@ -18,6 +18,7 @@ namespace Faunus {
         z4=1;
       }
       hyperpoint() { hypclear(); }
+      void move(double,double,double);          //!< Move a hyperpoint
       inline double hypsqdist(const hyperpoint &p) const {
         return z1*p.z1+z2*p.z2+z3*p.z3+z4*p.z4;
       }
@@ -92,9 +93,7 @@ namespace Faunus {
       double mw2vol(double=1) const;            //!< Estimate volume from weight
       double mw2rad(double=1) const;            //!< Estimate radius from weight
       particle& operator=(const point&);        //!< Copy coordinates from a point
-#ifdef HYPERSPHERE
-      void move(double,double,double);          //!< More hyper particle
-#endif
+      void deactivate();                        //!< Deactivate for use w. faster energy loops
   };
 
   /*! \brief Class for spherical coordinates

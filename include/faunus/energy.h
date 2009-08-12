@@ -94,15 +94,25 @@ namespace Faunus {
       double energy(vector<particle> &p, int j) {
         int n=p.size();
         double u=0;
-        particle bak=p[j]; //avoid self interaction
-        p[j].charge=0;     //in a slightly dirty manner!
-        p[j].y=1e9;
+        particle bak=p[j]; // avoid self interaction by moving
+        p[j].deactivate(); // particle far away and setting charge=0.
 #pragma omp parallel for reduction (+:u)
         for (int i=0; i<n; ++i)
           u+=pair.pairpot( p[i], bak );
         p[j]=bak;
         return pair.f*u;
       }
+/*
+      double energy(vector<particle> &p, int j) {
+        int n=p.size();
+        double u=0;
+        for (int i=0; i<j; i++)
+          u+=pair.pairpot(p[j],p[i]);
+        for (int i=j+1; i<n; i++)
+          u+=pair.pairpot(p[j],p[i]);
+        return pair.f*u;
+      }
+*/
 
       double energy(vector<particle> &p, const group &g) {
         int n=g.end+1, psize=p.size();

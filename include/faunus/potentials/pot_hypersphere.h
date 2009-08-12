@@ -45,20 +45,22 @@ namespace Faunus {
        *  \return Energy in units of \f$kT/l_B\f$ (lB=f). \f[ \beta u/l_B = \frac{z_1 z_2}{r} + \frac{u_{lj}}{l_B} \f]
        */
       inline double pairpot(const particle &p1, const particle &p2) {
-        double d=r*p1.geodesic(p2);
-        return LJ(d) + p1.charge*p2.charge / d;  // !!!!!!!!!!
+        if (overlap(p1,p2)==true)
+          return 1e3;
+        double chi = p1.geodesic(p2);
+        return p1.charge * p2.charge / (pi*r) * ((pi-chi) / tan(chi) -0.5);
       }
 
       inline double sqdist(const hyperpoint &p1, const hyperpoint &p2) {
         return p1.hypsqdist(p2)*r;
       }
 
-      inline double elpotential(particle &a, hyperpoint &p) {                                                           
-        double chi=a.geodesic(p);                                                                                            
-        return a.charge / (pi*r) * ((pi-chi) / tan(chi) -0.5);                                                               
-      }    
+      inline double elpotential(particle &a, hyperpoint &p) {
+        double chi=a.geodesic(p);
+        return a.charge / (pi*r) * ((pi-chi) / tan(chi) -0.5);
+      }
 
-      inline bool overlap(particle &a, particle &b) {
+      inline bool overlap(const particle &a, const particle &b) {
         double diameter=a.radius+b.radius;
         double delta=diameter/r;
         if(acos(a.hypsqdist(b)) < delta)

@@ -41,6 +41,7 @@ namespace Faunus {
       atoms();                               //!< Constructor - set UNK atom type (fallback)
       vector<data> list;                     //!< List of atoms
       vector< vector<double> >
+        qq,                                  //!< Charge product between atoms i and j
         eps,                                 //!< LJ epsilon between atoms i and j
         sigma;                               //!< LJ sigma between atoms i and j
       bool load(string);                     //!< Load atom parameter from a file

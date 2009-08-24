@@ -26,6 +26,7 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		730552211042D75300465515 /* hyperbulk.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 730552201042D75300465515 /* hyperbulk.cpp */; };
 		73128AF01030BD4D00950418 /* twobody.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C42DC10307BF400A3A5B9 /* twobody.cpp */; };
 		731297541030C80A00950418 /* base.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297411030C80A00950418 /* base.h */; };
 		731297551030C80A00950418 /* pot_barecoulomb.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297421030C80A00950418 /* pot_barecoulomb.h */; };
@@ -219,7 +220,6 @@
 		739C442C10314D6300A3A5B9 /* histogram.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C42CA10307B8500A3A5B9 /* histogram.cpp */; };
 		739C442E10314D6300A3A5B9 /* libxdrfile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C41EE103078CA00A3A5B9 /* libxdrfile.a */; };
 		739C445210314EC400A3A5B9 /* libhyperfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */; };
-		739C445810314F2600A3A5B9 /* dipolarfluid.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C445710314F2600A3A5B9 /* dipolarfluid.cpp */; };
 		739C45251031925E00A3A5B9 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		739C45281031928400A3A5B9 /* widom.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C45271031928400A3A5B9 /* widom.cpp */; };
 /* End PBXBuildFile section */
@@ -319,6 +319,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		7305521F1042D75300465515 /* hyperbulk.conf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = hyperbulk.conf; path = src/examples/hypersphere/hyperbulk.conf; sourceTree = "<group>"; };
+		730552201042D75300465515 /* hyperbulk.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = hyperbulk.cpp; path = src/examples/hypersphere/hyperbulk.cpp; sourceTree = "<group>"; };
 		731297411030C80A00950418 /* base.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = base.h; sourceTree = "<group>"; };
 		731297421030C80A00950418 /* pot_barecoulomb.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_barecoulomb.h; sourceTree = "<group>"; };
 		731297431030C80A00950418 /* pot_coulomb.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_coulomb.h; sourceTree = "<group>"; };
@@ -426,8 +428,6 @@
 		739C42DC10307BF400A3A5B9 /* twobody.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = twobody.cpp; path = src/examples/twobody/twobody.cpp; sourceTree = "<group>"; };
 		739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libhyperfaunus.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C444B10314E8700A3A5B9 /* hyper_dipolarfluid */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = hyper_dipolarfluid; sourceTree = BUILT_PRODUCTS_DIR; };
-		739C445710314F2600A3A5B9 /* dipolarfluid.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = dipolarfluid.cpp; path = src/examples/hypersphere/dipolarfluid.cpp; sourceTree = "<group>"; };
-		739C44651031501200A3A5B9 /* dipolarfluid.conf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = dipolarfluid.conf; path = src/examples/hypersphere/dipolarfluid.conf; sourceTree = "<group>"; };
 		739C451F1031925300A3A5B9 /* widom_cube */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = widom_cube; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C45271031928400A3A5B9 /* widom.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = widom.cpp; path = src/examples/widom/widom.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -693,9 +693,9 @@
 		739C42D910307BC400A3A5B9 /* examples */ = {
 			isa = PBXGroup;
 			children = (
+				7305521F1042D75300465515 /* hyperbulk.conf */,
+				730552201042D75300465515 /* hyperbulk.cpp */,
 				739C45271031928400A3A5B9 /* widom.cpp */,
-				739C44651031501200A3A5B9 /* dipolarfluid.conf */,
-				739C445710314F2600A3A5B9 /* dipolarfluid.cpp */,
 				739618E710309A7B0051F3E3 /* pka.cpp */,
 				739C42DC10307BF400A3A5B9 /* twobody.cpp */,
 				73961F131030AE5D0051F3E3 /* isobaric.conf */,
@@ -970,9 +970,9 @@
 			productReference = 739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */;
 			productType = "com.apple.product-type.library.dynamic";
 		};
-		739C444A10314E8700A3A5B9 /* hyper_dipolarfluid */ = {
+		739C444A10314E8700A3A5B9 /* hyperbulk */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 739C445110314EB100A3A5B9 /* Build configuration list for PBXNativeTarget "hyper_dipolarfluid" */;
+			buildConfigurationList = 739C445110314EB100A3A5B9 /* Build configuration list for PBXNativeTarget "hyperbulk" */;
 			buildPhases = (
 				739C444810314E8700A3A5B9 /* Sources */,
 				739C444910314E8700A3A5B9 /* Frameworks */,
@@ -982,7 +982,7 @@
 			dependencies = (
 				739C445010314E9300A3A5B9 /* PBXTargetDependency */,
 			);
-			name = hyper_dipolarfluid;
+			name = hyperbulk;
 			productName = hyper_dipolarfluid;
 			productReference = 739C444B10314E8700A3A5B9 /* hyper_dipolarfluid */;
 			productType = "com.apple.product-type.tool";
@@ -1024,7 +1024,7 @@
 				739C42D110307BA900A3A5B9 /* twobody */,
 				739618D910309A010051F3E3 /* pka */,
 				73961ED81030ADE60051F3E3 /* isobaric */,
-				739C444A10314E8700A3A5B9 /* hyper_dipolarfluid */,
+				739C444A10314E8700A3A5B9 /* hyperbulk */,
 				739C451E1031925300A3A5B9 /* widom_cube */,
 			);
 		};
@@ -1137,7 +1137,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				739C445810314F2600A3A5B9 /* dipolarfluid.cpp in Sources */,
+				730552211042D75300465515 /* hyperbulk.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1214,7 +1214,7 @@
 		};
 		739C452C1031929300A3A5B9 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 739C444A10314E8700A3A5B9 /* hyper_dipolarfluid */;
+			target = 739C444A10314E8700A3A5B9 /* hyperbulk */;
 			targetProxy = 739C452B1031929300A3A5B9 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -1601,7 +1601,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		739C445110314EB100A3A5B9 /* Build configuration list for PBXNativeTarget "hyper_dipolarfluid" */ = {
+		739C445110314EB100A3A5B9 /* Build configuration list for PBXNativeTarget "hyperbulk" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				739C444D10314E8700A3A5B9 /* Debug */,

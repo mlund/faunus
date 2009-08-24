@@ -1,7 +1,9 @@
 #include "faunus/container.h"
 
 namespace Faunus {
+
   //----------- CONTAINER -----------------
+
   string container::info() {
     double z=charge();
     std::ostringstream o;
@@ -13,6 +15,7 @@ namespace Faunus {
       << ((abs(z)>1e-7) ? "NO!" : "Yes") << " "  << z << endl;
     return o.str();
   }
+
   string container::povray() {
     return string(
         "#declare cell=texture {\n"
@@ -21,18 +24,70 @@ namespace Faunus {
         "}\n" );
   }
 
+  void container::setvolume(double vol) {
+    volume=vol;
+  }
+
+  bool container::saveToDisk(string file) {
+    std::ofstream f(file.c_str());
+    if (f) {
+      f << p.size() << " " << getvolume() << endl;
+      for (int i=0; i<p.size(); i++)
+        f << p[i] << endl;
+      f.close();
+      return true;
+    }
+    return false;
+  }
+
+  /*!
+   * \param file Filename
+   * \param resize True if the current container should be resized to match file content (default: false)
+   */
+  bool container::loadFromDisk(string file, bool resize) {
+    unsigned int n;
+    double v;
+    std::ifstream f(file.c_str() );
+    if (f) {
+      f >> n >> v;
+      setvolume(v);
+      if (resize==true)
+        p.resize(n);
+      if (n==p.size()) {
+        for (int i=0; i<n; i++)
+          p[i] << f;
+        trial=p;
+        f.close();
+        return true;
+      }
+      f.close();
+    }
+    std::cerr << "# Container data NOT read from file " << file << endl;
+    return false;
+  }
+
   //----------- CELL ----------------------
-  cell::cell(double radius) { setradius(radius); }
+  void cell::setvolume(double vol) {
+    volume=vol;
+    setradius( pow( 3*vol/(4*acos(-1.)), 1/3.) );
+  }
+
+  cell::cell(double radius) {
+    setradius(radius);
+  }
+
   cell::cell(inputfile &in)  {
     atom.load(in);
     setradius(in.getflt("cellradius"));
   }
+
   void cell::setradius(double radius) {
     r = radius; 
     r2 = r*r; 
     diameter = 2*r; 
     volume = (4./3.)*acos(-1.)*r*r*r;
   }
+
   string cell::info() {
     std::ostringstream o;
     o << container::info() 
@@ -40,6 +95,7 @@ namespace Faunus {
       << "#   Radius               = " << r << endl;
     return o.str();
   }
+
   void cell::randompos(point &p) {
     double l=r2+1;
     while (l>r2) {
@@ -49,17 +105,21 @@ namespace Faunus {
       l=p.x*p.x+p.y*p.y+p.z*p.z;
     }
   }
+
   string cell::povray() {
     std::ostringstream o;
     o << "sphere {<0,0,0>," << r << " texture {cell}}\n"
       << "cylinder {<0,0," << -r << ">,<0,0," << r << ">,0.5 texture {cell}}\n";
     return o.str();
   }
+
   //----------- BOX --------------------------
+
   void box::setvolume(double v) {
     len=pow(v, 1./3);
     setlen(len);
   }
+
   bool box::setlen(double l) {
     if (l<=0)
       return false;
@@ -69,7 +129,10 @@ namespace Faunus {
     volume = len*len*len;
     return true;
   }
-  box::box(double l) { setlen(l); }
+
+  box::box(double l) {
+    setlen(l);
+  }
 
   box::box(inputfile &in) {
     atom.load(in);
@@ -84,28 +147,30 @@ namespace Faunus {
       << "#   Side length          = " << len << endl;
     return o.str();
   }
+
   point box::randompos() {
     point p;
     randompos(p);
     return p;
   }
+
   void box::randompos(point &p) {
     p.x = slp.random_half()*len;
     p.y = slp.random_half()*len;
     p.z = slp.random_half()*len;
   }
-  /*void box::randompos(vector<point> &p) {
-    short unsigned size=p.size;
-    }*/
+
   string box::povray() {
     std::ostringstream o;
     o << "box {<" <<-len_half <<"," <<-len_half <<"," <<-len_half <<"> , <"
       << len_half <<"," <<len_half <<"," <<len_half <<"> texture {cell}}\n";
     return o.str();
   }
+
   //----------- XYPLANE ---------------------
-  xyplane::xyplane(inputfile &in) : box(in) {
-  }
+
+  xyplane::xyplane(inputfile &in) : box(in) { }
+
   void xyplane::randompos(point &p) {
     p.x = slp.random_half()*len;
     p.y = slp.random_half()*len;
@@ -212,13 +277,13 @@ namespace Faunus {
     return o.str();
   }
   /*
-  void hypersphere::move(int i, double dangle) {
-    double nfi=2.*acos(-1.)*slp.random_one();
-    double nrho=sqrt((slp.random_one()-1.)*sin(dangle)*sin(dangle)+1.);
-    double nomega=(2.*slp.random_one()-1.)*acos(cos(dangle)/nrho);
-    move(trial[i],nrho,nomega,nfi);
-  }
-  */
+     void hypersphere::move(int i, double dangle) {
+     double nfi=2.*acos(-1.)*slp.random_one();
+     double nrho=sqrt((slp.random_one()-1.)*sin(dangle)*sin(dangle)+1.);
+     double nomega=(2.*slp.random_one()-1.)*acos(cos(dangle)/nrho);
+     move(trial[i],nrho,nomega,nfi);
+     }
+     */
 #endif
 
 }//namespace

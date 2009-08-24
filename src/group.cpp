@@ -1,16 +1,21 @@
 #include <faunus/group.h>
 namespace Faunus {
 
-  //---------------- GROUP -----------------------
+  //
+  // G R O U P
+  //
+
   group::group(int i) {
     set(-1,-1);     //is empty
     title="GROUP";
     name="(noname)";//is nameless
   }
+
   void group::set(short int first, short int last) {
     beg=first;
     end=last;
   }
+
   short int group::size() const { return (beg<0 || end<0) ? 0 : end-beg+1; }
 
   /*! \brief Calculates total charge
@@ -129,6 +134,7 @@ namespace Faunus {
 #endif
     }
   }
+
   void group::accept(particles &par) {
     cm = cm_trial;
     unsigned short i,ilen=end+1;
@@ -145,6 +151,7 @@ namespace Faunus {
 #endif
     }
   }
+
   void group::add(container &par, vector<particle> v, bool collision) {
     beg=par.p.size();
     for (unsigned short i=0; i<v.size(); i++) {
@@ -166,6 +173,7 @@ namespace Faunus {
       }
     }
   }
+
   void group::add(container &con, unsigned char id, short n) {
     particle a=atom(id);
     if (beg<0)
@@ -230,6 +238,7 @@ namespace Faunus {
     }
     return false;
   }
+
   short int group::count(vector<particle> &p, unsigned char id) {
     short int i,n=0;
     for (i=0; i<p.size(); i++)
@@ -237,7 +246,9 @@ namespace Faunus {
         n++;
     return n;
   }
+
   unsigned short group::nummolecules() { return size(); }
+
   unsigned short group::numhydrophobic( vector<particle> &p ) {
     unsigned short n=0;
     for (int i=beg; i<=end; i++)
@@ -258,6 +269,7 @@ namespace Faunus {
     std::swap(end, g.end);
     return true;
   }
+
   void group::invert(vector<particle> &p, point &iv) {
     for (int i=beg; i<=end; i++) {
       p[i].x=-p[i].x+2*iv.x;
@@ -289,6 +301,7 @@ namespace Faunus {
     cation=cat;
     anion=cat;
   }
+
   string salt::info(container &con) {
     std::ostringstream o;
     float c=1./6.022e23/1e-27;
@@ -305,6 +318,7 @@ namespace Faunus {
       << nan << ", " << nan/con.getvolume()*c << endl;
     return o.str();
   }
+
   void salt::isobaricmove(container &con, double newlen) {
     for (unsigned short i=beg; i<=end; i++)
       con.scale(con.trial[i], newlen);
@@ -336,6 +350,7 @@ namespace Faunus {
 
   //--------------- MACROMOLECULE ---------------
   macromolecule::macromolecule() { title="MACROMOLECULE"; }
+
   string macromolecule::info() {
     std::ostringstream o;
     o << group::info();
@@ -348,6 +363,7 @@ namespace Faunus {
       //o << "#    Radius                = " << cm.radius << endl;
     return o.str();
   }
+
   string macromolecule::info(container &con) {
     std::ostringstream o;
     o << info();
@@ -356,6 +372,7 @@ namespace Faunus {
       << "#   Radius                 = " << vradius(con.p) << endl;
     return o.str();
   }
+
   unsigned short macromolecule::nummolecules() { return 1; }
   macromolecule& macromolecule::operator=(const group& g) {
     beg=g.beg;
@@ -365,6 +382,7 @@ namespace Faunus {
     cm_trial=g.cm_trial;
     return (*this);
   }
+
   /*!
    * Recalulates the dipole moment of a
    * group and stores the result in the
@@ -387,6 +405,7 @@ namespace Faunus {
     dip2+=a*a; // avg. scalar squared
     return a;
   }
+
   double macromolecule::radius(vector<particle> &p) {
     double r,max=0;
     masscenter(p);
@@ -398,6 +417,7 @@ namespace Faunus {
     cm.radius = max;
     return max;
   } 
+
   double macromolecule::gradius(vector<particle> &p) {
     double r=0;
     int cnt=0;
@@ -410,6 +430,7 @@ namespace Faunus {
     cm.radius = r;
     return r;
   }
+
   double macromolecule::vradius(vector<particle> &p) {
     double v=0,r;
     for (short i=beg; i<=end; i++) {
@@ -419,19 +440,23 @@ namespace Faunus {
     cm.radius = r;
     return r;
   }
+
   double macromolecule::charge(const vector<particle> &p) {
     double z=group::charge(p);
     Q+=z;
     Q2+=z*z;
     return z;
   }
+
   double macromolecule::getcharge(const vector<particle> &p) {
     return group::charge(p);
   }
+
   void macromolecule::center(container &con) {
     move(con, -cm);
     accept(con);
-  };
+  }
+
   void macromolecule::zmove(container &par, double dz) {
     cm_trial.z = cm.z + dz;
     par.boundary(cm_trial);
@@ -440,6 +465,7 @@ namespace Faunus {
       par.boundary(par.trial[i]);
     };
   }
+
   void macromolecule::rotate(container &par, double drot, double dp) {
     point u;
     double r=2;
@@ -456,10 +482,10 @@ namespace Faunus {
   }
 
   /*!
-   * \param g Group to rotate
+   * \param par Container
    * \param u Vector to rotate around
    * \param angle ..by this many degrees (rad)
-   * \param k Keyword to specify automatic acceptance
+   * \param dr Displacement parameter
    * \toto This could be done more elegant using quaternion parameters (Frenkel p49)
    */
   void macromolecule::rotate(container &par, point u, double angle, double dr) {
@@ -491,13 +517,11 @@ namespace Faunus {
   }
 
   /*!
-   * \param g Group to rotate around arbitrary point 
+   * \param par Container
    * \param cr Center of rotation, center of mass of seed
    * \param u Vector to rotate around
    * \param angle ..by this many degrees (rad)
-   * \param k Keyword to specify automatic acceptance
-   * \warning Ej bijektiv avbildning med periodiska randvilkor
-   * \warning Anvand bindningsvektorer
+   * \warning Ej bijektiv avbildning med periodiska randvilkor. Anvand bindningsvektorer
    */
   void macromolecule::rotate(container &par, point cr, point u, double angle) {
     point b;
@@ -532,13 +556,12 @@ namespace Faunus {
   }
 
   /*!
-   * \param g Consecutice rotation and translation 
-   * \param c displacement vector
-   * \param u Vector to rotate around
+   * Consecutice rotation and translation 
+   *
+   * \param par Container
+   * \param dr Displacement parameter
    * \param angle ..by this many degrees (rad)
-   * \param k Keyword to specify automatic acceptance
-   * \warning Ej bijektiv avbildning med periodiska randvilkor
-   * \warning Anvand bindningsvektorer
+   * \warning Ej bijektiv avbildning med periodiska randvilkor. Anvand bindningsvektorer
    */
   void macromolecule::transrot(container &par, double dr, double angle) {
     // Let us first translate...
@@ -605,14 +628,17 @@ namespace Faunus {
     title="MOLECULAR ARRAY";
     numatom=n;
   }
+
   short int molecules::random() {
     return (group::random()-beg)/numatom;
   }
+
   group molecules::operator[](unsigned short i) {
     sel.beg=beg+i*numatom;
     sel.end=sel.beg+numatom-1;
     return sel;
   }
+
   string molecules::info() {
     std::ostringstream o;
     o << macromolecule::info()
@@ -620,6 +646,7 @@ namespace Faunus {
       << "#   Solvent molecules      = " << size()/double(numatom) << endl; //check!!
     return o.str();
   }
+
   void molecules::add(container &c, vector<particle> &p, short step) {
     bool col;
     beg=end=c.p.size();
@@ -639,6 +666,7 @@ namespace Faunus {
     }
     c.p=c.trial;
   }
+
   vector<int> molecules::pick(int m) {
     vector<int> n;
     n.clear();
@@ -811,7 +839,6 @@ namespace Faunus {
     end=con.p.size()-1;
   }
 
-
   glu3::glu3(container &con, inputfile &in) {
     name="GLU3 DENDRIMER";
 #ifdef BABEL
@@ -837,9 +864,18 @@ namespace Faunus {
   }
 
 #ifdef HYPERSPHERE
+  /*!
+   * \param c Hypersphere container
+   * \param v Vector of particles to add
+   * \param collision True if collision check is needed. (Default = False).
+   */
   void hypermolecule::add(container &c, vector<particle> v, bool collision) {
   }
 
+  /*!
+   * \param c Container
+   * \param p point to add to all coordinates in group
+   */
   void hypermolecule::move(container &c, point p) {
   }
 

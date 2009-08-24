@@ -1,7 +1,16 @@
 #include "faunus/point.h"
 
 namespace Faunus {
-  //-------------HYPERPOINT------------------
+
+  /***********************
+     H Y P E R P O I N T
+   ***********************/
+
+  /*!
+   * \param du test
+   * \param dv test
+   * \param dw test
+   */
   void hyperpoint::move(double du, double dv, double dw) {
     double nz1, nz2, nz3, nz4,
            tz1, tz2, tz3, tz4,
@@ -65,11 +74,20 @@ namespace Faunus {
     z4=tz4;
   }
 
-  //-------------POINT------------------
+  std::ostream & operator<<(std::ostream &o, hyperpoint &p) {
+    o << p.z1 << " " << p.z2 << " " << p.z3 << " " << p.z4;
+    return o;
+  }
 
-  /*!
-   * Initizalize a new point setting the coordinates to zero.
-   */
+  hyperpoint & hyperpoint::operator<<(std::istream &in) {
+    in >> z1 >> z2 >> z3 >> z4;
+    return *this;
+  }
+
+  /********************************
+    C A R T E S I A N  P O I N T
+   ********************************/
+
   point::point() {
     clear();
   }
@@ -172,7 +190,27 @@ namespace Faunus {
     return "[" + s.str() + "]";
   }
 
-  //------------------ PARTICLE -----------------------
+  std::ostream &operator<<(std::ostream &o, point &p) {
+#ifdef HYPERSPHERE
+    hyperpoint hp=p;
+    o << hp << " ";
+#endif
+    o << p.x << " " << p.y << " " << p.z;
+    return o;
+  }
+
+  point & point::operator<<(std::istream &in) {
+#ifdef HYPERSPHERE
+    hyperpoint::operator<<(in);
+#endif
+    in >> x >> y >> z;
+    return *this;
+  }
+
+  /********************
+    P A R T I C L E
+   ********************/
+
   particle::particle() {
     charge=mw=radius=0;
     hydrophobic=false;
@@ -203,7 +241,7 @@ namespace Faunus {
    * loops does not have to be split. The deactivation is done by
    * \li Setting the charge to zero (no electrostatics)
    * \li Moving the particle *very* far away (p.x=1e9)
-   * \li Moving hyperpoints to the opposide side of the sphere (no overlap, but vdW could be a problem)
+   * \li Moving hyperpoints to the opposide side of the sphere (no overlap, minimum vdW)
    */
   void particle::deactivate() {
     charge=0;
@@ -217,9 +255,16 @@ namespace Faunus {
 #endif
   }
 
-  std::ostream &operator<<(std::ostream &out, point &p) {
-    out << p.str();
-    return out;
+  std::ostream &operator<<(std::ostream &o, particle &p) {
+    point b=p;
+    o << b << " " << p.charge << " " << p.radius << " " << p.mw << " " << p.id << " " << p.hydrophobic;
+    return o;
+  }
+
+  particle & particle::operator<<(std::istream &in) {
+    point::operator<<(in);
+    in >> charge >> radius >> mw >> id >> hydrophobic;
+    return *this;
   }
 
   //---------------- SPHERICAL -----------------

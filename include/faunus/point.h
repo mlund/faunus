@@ -9,19 +9,40 @@ namespace Faunus {
    * \brief Hypersphere coordinates
    * \author Martin Trulsson
    * \date Lund, 2009
+   *
+   * This class defines particles on a hypersphere. When the macro definition
+   * HYPERSPHERE is set the normal cartesian point class will inherit from this
+   * class. The build system currently creates a separate dynamic library, linhyperfaunus,
+   * to be used specifically for simulations on a hypersphere.
    */
   class hyperpoint {
     public:
       double z1,z2,z3,z4;                     //!< Reduced Coordinates on hypersphere
+      void move(double,double,double);        //!< Translate a point along the surface of the sphere
+      friend std::ostream &operator<<(std::ostream &, hyperpoint &);
+      hyperpoint &operator<<(std::istream &);
+
       void hypclear() {
         z1=z2=z3=0;
         z4=1;
       }
-      hyperpoint() { hypclear(); }
-      void move(double,double,double);          //!< Move a hyperpoint
+
+      hyperpoint() {
+        hypclear();
+      }
+
+      /*!
+       * \brief Squared distance between two points.
+       * \return \f[ r^2 = z_1z_1' + z_2z_2' + z_3z_3' + z_4z_4' \f]
+       */
       inline double hypsqdist(const hyperpoint &p) const {
         return z1*p.z1+z2*p.z2+z3*p.z3+z4*p.z4;
       }
+
+      /*!
+       * \brief Geodesic distance between two hyperpoints
+       * \return \f[ r_{\mbox{\scriptsize{geod}}} = \arccos{ (r^2) } \f]
+       */
       inline double geodesic(const hyperpoint &p) const {
         return std::acos(hypsqdist(p));
       }
@@ -40,28 +61,29 @@ namespace Faunus {
       private:
         inline int anint(double) const;
       public:
-        double x,y,z;                       ///< The coordinates
-        point();                            ///< Constructor, zero data.
-        point(double,double,double);        ///< Constructor, set vector
-        void clear();                       ///< Zero all data.
+        double x,y,z;                       //!< Cartesian coordinates
+        point();                            //!< Constructor, zero data.
+        point(double,double,double);        //!< Constructor, set vector
+        void clear();                       //!< Zero all data.
         double len() const; 
         inline double sqdist(const point &) const;      //!< Squared distance to another point
-        inline double sqdist(const point &,             //!< -- / / -- 3D minimum image
-            const double &, const double &) const;
-        inline double dist(const point &) const;        ///< Distance to another point
+        inline double sqdist(const point &,
+            const double &, const double &) const;      //!< Squared distance to andother point (3D minimum image)
+        inline double dist(const point &) const;        //!< Distance to another point
         inline double dist(const point &, const double &, const double &) const ; //!< Distance to another point
-        void ranunit(random &);               ///< Generate a random unit vector
-        double dot(const point &) const;      ///< Angle with another point
-        point operator-();                    ///< Sign reversal
-        point operator*(const point);         ///< Multiply two vectors
-        point operator*(double) const;        ///< Scale vector
-        point operator+(const point);         ///< Add two vectors
-        point operator-(const point) const;   ///< Subtract vector
-        point operator+(double);              ///< Displace x,y,z by value
+        void ranunit(random &);               //!< Generate a random unit vector
+        double dot(const point &) const;      //!< Angle with another point
+        point operator-();                    //!< Sign reversal
+        point operator*(const point);         //!< Multiply two vectors
+        point operator*(double) const;        //!< Scale vector
+        point operator+(const point);         //!< Add two vectors
+        point operator-(const point) const;   //!< Subtract vector
+        point operator+(double);              //!< Displace x,y,z by value
         point & operator+=(const point&);
         bool operator==(const point&) const;
-        friend std::ostream &operator<<(std::ostream &, point &); /// Print x,y,z
         std::string str();
+        friend std::ostream &operator<<(std::ostream &, point &); //!< Output information
+        point &operator<<(std::istream &);                        //!< Get information
     };
 
   /*!
@@ -94,11 +116,14 @@ namespace Faunus {
       double mw2rad(double=1) const;            //!< Estimate radius from weight
       particle& operator=(const point&);        //!< Copy coordinates from a point
       void deactivate();                        //!< Deactivate for use w. faster energy loops
-  };
+      friend std::ostream &operator<<(std::ostream &, particle &); //!< Output information
+      particle &operator<<(std::istream &);                        //!< Get information
+   };
 
-  /*! \brief Class for spherical coordinates
-   *  \author Mikael Lund
-   *  \date Canberra, 2005-2006
+  /*! 
+   * \brief Class for spherical coordinates
+   * \author Mikael Lund
+   * \date Canberra, 2005-2006
    */
   class spherical {
     public:
@@ -133,7 +158,7 @@ namespace Faunus {
   }
 
   /*!
-   * \return \f$ |r_{12}|^2 = \Delta x^2 + \Delta y^2 + \Delta z^2 \f$
+   * \return \f$ r_{12}^2 = \Delta x^2 + \Delta y^2 + \Delta z^2 \f$
    */
   inline double point::sqdist(const point &p) const {
     register double dx,dy,dz;
@@ -155,14 +180,9 @@ namespace Faunus {
     if (dz>halflen) dz-=len;
     return dx*dx + dy*dy + dz*dz;
   }
-  /*inline double point::sqdist(point &p, double &len, double &inv_len) {
-    register double dx,dy,dz;
-    dx=x-p.x;
-    dy=y-p.y;
-    dz=z-p.z;
-    return sqdf_(&dx, &dy, &dz, &len, &inv_len);
-    }*/
+
   inline double point::dist(const point &p) const { return sqrt(sqdist(p)); }
+
   inline double point::dist(const point &p, const double &len, const double &halflen) const { 
     return sqrt(sqdist(p, len, halflen)); }
 
@@ -179,15 +199,16 @@ namespace Faunus {
     double r=radius+p.radius;
     return (sqdist(p) < r*r) ? true : false;
   }
+
   inline bool particle::overlap(const particle &p, const double &s) const {
     double r=radius+p.radius+s;
     return (sqdist(p) < r*r) ? true : false;
   }
+
   inline bool particle::overlap(const particle &p, const double &len, const double &halflen) const {
     double r=radius+p.radius;
     return (sqdist(p,len,halflen) < r*r) ? true : false;
   }
-
 
 }//namespace
 #endif

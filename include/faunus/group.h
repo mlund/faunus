@@ -34,7 +34,7 @@ namespace Faunus {
       virtual double charge(const vector<particle> &);//!< Calculate total charge
       virtual short int random();           ///< Picks a random particle within this group
       point masscenter(const vector<particle> &); //!< Calculate center-of-mass
-      point masscenter(const container &);        //!< Calc. center-of-mass
+      point masscenter(const container &);  //!< Calc. center-of-mass
       virtual string info();                //!< Print information
       bool operator==(const group&) const;
       group& operator+=(const group&);
@@ -44,7 +44,7 @@ namespace Faunus {
       void invert(vector<particle> &, point &);           //!< Invert a group
       bool overlap(container &);                          //!< Test overlap w all particles
       virtual void undo(particles &);
-      virtual void accept(particles &);                           //!< Accept a move
+      virtual void accept(particles &);                   //!< Accept a move
       void add(container &, vector<particle>, bool=false);//!< Add a particle vector
       void add(container &, unsigned char, short);        //!< Add particles w. collision check
       bool swap(container &, group &);                    //!< Swap location of two groups
@@ -181,9 +181,9 @@ namespace Faunus {
    */
   class hypermolecule : public macromolecule {
     public:
-      void add(container &, vector<particle>, bool=false);
-      void move(container &, point);
-      void rotate(container &, double, double=0);
+      void add(container &, vector<particle>, bool=false); //!< Add particle vector to group and container
+      void move(container &, point);                       //!< Translate group
+      void rotate(container &, double, double=0);          //!< Rotate group
   };
 #endif
 }//namespace

@@ -30,7 +30,7 @@ namespace Faunus {
   }
   
   void systemenergy::check(checkValue &test) {
-    test.check("systemEnergyAverage", uavg.avg() );
+    test.check("systemEnergyAverage", uavg.avg(), 0.2 );
     test.check("systemEnergyDrift", drift(), 20.);
   }
   

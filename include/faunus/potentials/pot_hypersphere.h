@@ -42,7 +42,9 @@ namespace Faunus {
       }
 
       /*! \brief Return Coulomb energy between a pair of particles
-       *  \return Energy in units of \f$kT/l_B\f$ (lB=f). \f[ \beta u/l_B = \frac{z_1 z_2}{r} + \frac{u_{lj}}{l_B} \f]
+       *  \return Energy in units of \f$kT/l_B\f$ (lB=f).
+       *          \f[ \beta u/l_B = \frac{z_1 z_2 (\pi-r_{\mbox{\scriptsize{geod}}})}{\pi R \tan{(r_{\mbox{\scriptsize{geod}}})}} - 0.5 \f]
+       *          where \f$R\f$ is the cell radius.
        */
       inline double pairpot(const particle &p1, const particle &p2) {
         if (overlap(p1,p2)==true)

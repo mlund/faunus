@@ -3,6 +3,12 @@
 #endif
 
 /*
+ * This program will simulate charged particles on a hypersphere
+ * and calculate excess chemical potentials and radial distribution
+ * functions.
+ *
+ * \author Martin Trulsson and Mikael Lund
+ * \date August 2009, Lund
 */
 #include "faunus/faunus.h"
 #include <iostream>
@@ -32,7 +38,8 @@ class hyperrdf : public FAUrdf {
 int main() {
   cout << faunus_splash();
   slump slump;                            // A random number generator
-  inputfile in("dipolarfluid.conf");      // Read input file
+  inputfile in("hyperbulk.conf");         // Read input file
+  checkValue test(in);                    // Class for output tests
   hypersphere con(in);                    // We want a hypersphere
   canonical nvt;                          // Use the canonical ensemble
   interaction<pot_hypersphere> pot(in);   // 
@@ -50,13 +57,15 @@ int main() {
   vector<particle> spcmodel;             // ...to be loaded with a single water molecule
   mol.add(con, spcmodel, true);          // add a single molecule to the sphere
   
-  salt salt;                             // Group for dipoles
+  salt salt;                             // Group for salt
   salt.add(con,in);                      // Insert salt read from inputfile
   widom wid(10);                         // Widom particle insertion
   wid.add(con);                          // Determine widom particles from what's in the container
+  con.loadFromDisk("hyperbulk.dump");    // Read positions from previous simulation
+
   systemenergy sys(pot.energy(con.p));   // Track system energy
   
-  cout << atom.info() << in.info() << pot.info();
+  cout << atom.info() << in.info() << con.info() << pot.info();
   
   while (loop.macroCnt() ) {//Markov chain 
     while (loop.microCnt() ) {
@@ -80,13 +89,20 @@ int main() {
         wid.insert(con, pot);        
       }
     } // End of inner loop
+
     sys.update(pot.energy(con.p));     // Update system energy
+    con.saveToDisk("hyperbulk.dump");  // Save state of the container (particle positions, volume etc.)
     cout << loop.timing();
+
   } // End of outer loop
 
   rdf_anan.write("rdf_anan.dat");
   rdf_catan.write("rdf_catan.dat");
   rdf_catcat.write("rdf_catcat.dat");
+
+  sys.check(test);
+  wid.check(test);
+  sm.check(test);
   
   cout << sys.info() << sm.info() << wid.info();
 }

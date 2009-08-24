@@ -65,7 +65,7 @@ fau_example(membrane membrane mem.cpp)
 fau_example(memp wallprotein memp.cpp)
 fau_example(wp wallprotein wp.cpp)
 
-fau_hyperexample(hyper_dipolarfluid hypersphere dipolarfluid.cpp)
+fau_hyperexample(hyperbulk hypersphere hyperbulk.cpp)
 
 #----- target specific build options -----
 set_target_properties( pkaGC PROPERTIES COMPILE_DEFINITIONS "GCPKA")

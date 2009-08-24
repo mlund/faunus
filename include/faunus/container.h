@@ -16,13 +16,15 @@ namespace Faunus {
       double volume;                                      //!< Volume of the container [AA^3]
     public:
       double getvolume() {return volume;}
-      virtual void setvolume(double){}                    //!< Specify new volume
+      virtual void setvolume(double);                     //!< Specify new volume
       virtual bool collision(const particle &)=0;         //!< Check for collision with walls
       virtual void randompos(point &)=0;                  //!< Random point within container
       virtual string info();                              //!< Return info string
       virtual string povray();                            //!< POVRAY object representing the cell
       virtual void boundary(point &) const {};            //!< Apply boundary conditions to a point
-      virtual void scale(point&, const double&) const {}  //!< Scale point to a new box length
+      virtual void scale(point&, const double&) const {}  //!< Scale point to a new volume length
+      virtual bool saveToDisk(string);                    //!< Save container date to disk
+      virtual bool loadFromDisk(string,bool=false);       //!< Load container data from disk
       inline virtual double sqdist(const point &a, const point &b) { 
         return a.sqdist(b); }
       inline virtual double dist(const point &a,const point &b) {//!< Calculate distance between points
@@ -43,6 +45,7 @@ namespace Faunus {
       cell(double);
       cell(inputfile &);
       string info();
+      void setvolume(double);
       void randompos(point &);
       string povray();
       bool collision(const particle &a) {
@@ -64,14 +67,16 @@ namespace Faunus {
       bool setlen(double);                 //!< Reset box length
     public:
       double len_half, len_inv, tlen_inv;  //!< tlen is the trial box
-      void setvolume(double);
+      void setvolume(double);              //!< Set volume (and sidelength) of box
       double len;                          //!< Side length
       box(double);
       box(inputfile &);
       string info();
+      string povray();
       void randompos(point &);
       //void randompos(vector<point> &);   // not implemented
       point randompos();
+
       bool collision(const particle &a) {
         if (std::abs(a.x)>len_half ||
             std::abs(a.y)>len_half ||
@@ -80,6 +85,7 @@ namespace Faunus {
 	}
         return false;
       }
+
       bool clash(const particle &a, const particle &b) {
         point c;
         c.x=std::abs(a.x-b.x);
@@ -91,7 +97,7 @@ namespace Faunus {
         return (pow(c.len(),2)<pow(a.radius+b.radius, 2))
           ? true : false;
       }
-      string povray();
+
       //! Calculate distance using the minimum image convention
       inline double dist(const point &a, const point &b) { return a.dist(b, len, len_half); }
       inline double sqdist(const point &a, const point &b) { return a.sqdist(b, len, len_half); }
@@ -105,14 +111,26 @@ namespace Faunus {
         if (r.z>len_half) r.z-=len;
         return r;
       }
-      inline int anint(double x) const { return int(x>0. ? x+.5 : x-.5); }
-      //! Apply periodic boundary conditions
+
+      inline int anint(double x) const {
+        return int(x>0. ? x+.5 : x-.5);
+      }
+
+      /*!
+       * \brief Apply periodic boundary conditions
+       */
       inline void boundary(point &a) const {
         if (std::abs(a.x)>len_half) a.x-=len*anint(a.x/len);
         if (std::abs(a.y)>len_half) a.y-=len*anint(a.y/len);
         if (std::abs(a.z)>len_half) a.z-=len*anint(a.z/len);
       }
-      inline void scale(point &a, const double &newlen) const { a = a*(newlen/len); }
+
+      /*!
+       * \brief Linear scaling of particle position after a volume fluctuation
+       */
+      inline void scale(point &a, const double &newlen) const {
+        a = a*(newlen/len);
+      }
   };
 
   //---------------------------------------------------------
@@ -128,11 +146,12 @@ namespace Faunus {
       double xyarea, zlen, zlen_half; //crossecional area 
       slit(inputfile &);
       string info();
-      //void setvolume(double);
+
       inline void boundary(point &a) const {
         a.x=a.x-len*anint(a.x*len_inv);
         a.y=a.y-len*anint(a.y*len_inv);
       }
+
       inline double sqdist(const point &p1, const point &p2) {
         double dz=p1.z-p2.z,
                dx=std::abs(p1.x-p2.x),
@@ -141,7 +160,11 @@ namespace Faunus {
         if (dy>len_half) dy-=len;
         return dx*dx + dy*dy + dz*dz;
       }
-      inline double dist(const point &p1, const point &p2) { return sqrt(sqdist(p1,p2)); }
+
+      inline double dist(const point &p1, const point &p2) {
+        return sqrt(sqdist(p1,p2));
+      }
+      
       inline point vdist(const point &a, const point &b) {
         point r;
         r.x=std::abs(a.x-b.x);
@@ -151,6 +174,7 @@ namespace Faunus {
         if (r.y>len_half) r.y-=len;
         return r;
       }
+
       bool collision(const particle &a) {
         if (std::abs(a.x)>len_half ||
             std::abs(a.y)>len_half ||
@@ -227,18 +251,22 @@ namespace Faunus {
       string info();
       void randompos(point &);
       bool collision(const particle &);
+
       inline double dist(const point &a, const point &b) {
         return r*a.geodesic(b); // CHECK!!! (virtual=slow!)
       }
+
       inline double sqdist(const point &a, const point &b) {
         return pow(dist(a,b),2); // !! SHOULD BE REAL DISTANCE CHECK!! (virtual=slow!)
       }
+
       bool overlap(const particle &a) {
         for (int i=0; i<p.size(); i++)
           if (hyperoverlap(a,p[i])==true)
             return true;
         return false;
       }
+
       inline bool hyperoverlap(const particle &a, const particle &b) {
         return (r*a.geodesic(b)<a.radius+b.radius);
       }

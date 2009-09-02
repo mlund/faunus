@@ -1,0 +1,19 @@
+# ------------------------------------------------------------
+#   Faunus atom parameters
+#    Format:
+#     name   charge radius eps    Mw     pKa   hydrophobic
+#             (e)    (Å)   (kT)  (g/mol)
+# ------------------------------------------------------------
+
+# Ions
+Atom  NA      +1     1.75    0.2179 1     0.0    no
+Atom  CL      -1     1.7    0.1689 1     0.0    no
+Atom  K       +1     1.5    0.1    1     0.0    no
+Atom  F       -1     1.4    0.1    1     0.0    no
+Atom  I       -1     2.0    0.1    1     0.0    no
+Atom  SO4     -2     1.6    0.1    1     0.0    no
+Atom  PO4     -2     3.5    0.1    1     7.2    no
+Atom  LA      +3     2.0    0.1    1     0.0    no
+Atom  GHOST    0     0.001  0.0    1     0.0    no
+Atom  SPH      0     5.0    0.1    9999  0.0    no
+

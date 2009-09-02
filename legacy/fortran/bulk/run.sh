@@ -73,7 +73,7 @@ do
     setdielectric                   #Set the correct dielectric constant
     echo "T=$T box=$box e=$dielec"  #info on screen
     outfile="$box-$T"               #specify output file
-    random=1 n1=1000 n2=10   n3=10   bulktext >bulk.inp ; ./bulk.run >.temp    #equilibration run (short)
-    random=0 n1=$n1f n2=$n2f n3=$n3f bulktext >bulk.inp ; ./bulk.run >$outfile #final run (longer)
+    random=1 n1=1000 n2=10   n3=10   bulktext >bulk.inp ; ./bulk >.temp    #equilibration run (short)
+    random=0 n1=$n1f n2=$n2f n3=$n3f bulktext >bulk.inp ; ./bulk >$outfile #final run (longer)
   done
 done

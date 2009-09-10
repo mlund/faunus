@@ -87,6 +87,7 @@ c
       READ(mmm,*)
       READ(mmm,*) 
       READ(mmm,*)ink,islu
+      islu = -islu
       READ(mmm,*) 
       READ(mmm,*)
       READ(mmm,*)box
@@ -135,8 +136,8 @@ c  ********************************************************************
       DO 103 i= 1,nspec
         caver(i)=(hion(i,2))/(box**3)
 103   CONTINUE
-      DO 82 i=1,npart
-   82 ei(i)=0.     
+c      DO 82 i=1,npart
+c   82 ei(i)=0.     
       nkonf=ny1*ny2*ny3
       IF(ny3.GT.25) ny3=25
       t = dtemp  
@@ -164,14 +165,14 @@ c  ********************************************************************
       WRITE(jjj,801)(l,INT(hion(l,2)),hion(l,3),hion(l,4),
      *               hion(l,5),caver(l)*1.d27/avno,l=1,nspec)
       WRITE(jjj,802) eps,dtemp,box,ny1,ny2,ny3,nkonf,
-     *               DFLOAT(nkonf/npart),nwtot
+     *               DBLE(nkonf/npart),nwtot
   800 FORMAT (/,'VARIABLES FROM INPUT FILE',/,
      */,' number of particles        =',i10,/,
      */,' species   number   radius    charge   dp   average conc',/)
   801 FORMAT (i6,i10,f10.1,f10.1,f10.2,f10.6)
   802 FORMAT (/,' dielectric constant         =',f10.1,/
      * ,' temperature                 =',f10.1,/
-     * ,' box size (è)                =',f10.1,/
+     * ,' box size (AA)               =',f10.1,/
      * ,' number of configurations    =',i6,' *',i6,' *',i6,' =',i8,/
      * ,' number of conf. per part    =',f10.1,/
      * ,' widom test per species      =',i10,/)
@@ -210,9 +211,9 @@ c  ********************************************************************
             ispec = ispc(il) 
             kntot = kntot + 1
             mtot(ispec) = mtot(ispec) +1
-            tx6 = x6(il) + dp(il) * (rand()-0.5)
-            ty6 = y6(il) + dp(il) * (rand()-0.5)
-            tz6 = z6(il) + dp(il) * (rand()-0.5) 
+            tx6 = x6(il) + dp(il) * (ran2(islu)-0.5)
+            ty6 = y6(il) + dp(il) * (ran2(islu)-0.5)
+            tz6 = z6(il) + dp(il) * (ran2(islu)-0.5) 
             IF (tx6.GT.box2) tx6=tx6 - box
             IF (tx6.LT.-box2) tx6=tx6 + box
             IF (ty6.GT.box2) ty6=ty6 - box
@@ -222,24 +223,26 @@ c  ********************************************************************
             isos=99 
             CALL qin 
             IF(isos.NE.0) GO TO 63
-            deltae=0.            
-            DO 2 j=1,npart
-              deltae=deltae+ei(j)-esa(j,il)
-2           CONTINUE
-            dzxp=abeta*(deltae*ecf)  
+c            deltae=0.            
+c            DO 2 j=1,npart
+c              deltae=deltae+ei(j)-esa(j,il)
+c2           CONTINUE
+c            dzxp=abeta*(deltae*ecf)  
+            dzxp=abeta*(du*ecf)  
             IF(dzxp.LT.-80.) GO TO 64
             IF(dzxp.GT.0.)   GO TO 62
-            IF(EXP(dzxp).LT.rand()) GO TO 64
+            IF(EXP(dzxp).LT.ran2(islu)) GO TO 64
 62          macc(ispec)=macc(ispec)+1
 c   ****    trial config accepted
             x6(il)=tx6 
             y6(il)=ty6
             z6(il)=tz6
-            DO 3 j=1,npart
-              esa(il,j)=ei(j)
-              esa(j,il)=ei(j) 
-3           CONTINUE  
-            xww1   =xww1+deltae 
+c            DO 3 j=1,npart
+c              esa(il,j)=ei(j)
+c              esa(j,il)=ei(j) 
+c3           CONTINUE  
+c            xww1   =xww1+deltae 
+            xww1   = xww1+du
             GO TO 65
 
    63       mhcrj(ispec)= mhcrj(ispec) + 1 
@@ -255,6 +258,7 @@ c   ****    trial config accepted
    67   CONTINUE  
 
         qww1=xww1 
+        qfww1 = 0.d0
         CALL liv
         IF(xww1.NE.0) qww1=(qww1-xww1)/xww1  
         WRITE(kkk,*)
@@ -268,7 +272,7 @@ c   ****    trial config accepted
            CALL collision2   
            CALL widom2      
         ENDIF                                                                     
-        uula(1)=uula(1)/DFLOAT(ny1*ny2)
+        uula(1)=uula(1)/DBLE(ny1*ny2)
         uuta(1)=uuta(1)+uula(1)
         uula(1)=uula(1)*ecf*1.d-3
         suu(my3)=uula(1)
@@ -311,8 +315,8 @@ c  ********************************************************************
       WRITE(jjj,'(/,a,I3,a,/)') 'FINAL RESULTS AFTER ',ny3,
      *          ' MACROSTEPS'
       WRITE(jjj,810)kntot,key,kn2,kn1
-      WRITE(jjj,811) (l,DFLOAT(macc(l))/mtot(l),DFLOAT(menrj(l))
-     *         /mtot(l),DFLOAT(mhcrj(l))/mtot(l),l=1,nspec)
+      WRITE(jjj,811) (l,DBLE(macc(l))/mtot(l),DBLE(menrj(l))
+     *         /mtot(l),DBLE(mhcrj(l))/mtot(l),l=1,nspec)
       WRITE(jjj,'(a,2e12.5)')'Coulomb energy (kj/mol)  =',uuta(1),uuvar
       WRITE(jjj,*)
       IF(nwint.LE.ny1) THEN 
@@ -342,6 +346,7 @@ c  ********************************************************************
       WRITE(jjj,729) 'Collision press      ',pcollav,pcollv
       WRITE(jjj,731)
       WRITE(jjj,729) 'Bulk pressure        ' ,ptot,ptotv
+      write(jjj,729) 'uuta',uuta(1),0.0
 
 729   FORMAT(a,F12.4,F10.4)
 731   FORMAT(70('_'))
@@ -431,9 +436,9 @@ c  ********************************************************************
         WRITE(jjj,*)' too dense system'
         STOP 
       ENDIF
-      x6tt=(rand()-.5)*box 
-      y6tt=(rand()-.5)*box
-      z6tt=(rand()-.5)*box
+      x6tt=(ran2(islu)-.5)*box 
+      y6tt=(ran2(islu)-.5)*box
+      z6tt=(ran2(islu)-.5)*box
       ispec = ispc(k12+1)
       DO 2 i=1,k12 
         ddx=x6tt-x6(i)
@@ -468,24 +473,56 @@ c  ********************************************************************
       IMPLICIT DOUBLE PRECISION (a-h,o-z)
       INCLUDE 'bulk.inc'  
 
-      DO 10 k=1,npart
+      du = 0.d0
+      ttx6 = x6(il)
+      tty6 = y6(il)
+      ttz6 = z6(il)
+      do k = 1,il-1
         ddx= ABS(tx6-x6(k))  
         ddy= ABS(ty6-y6(k)) 
         ddz= ABS(tz6-z6(k))
         IF (ddx.GT.box2) ddx=ddx-box
         IF (ddy.GT.box2) ddy=ddy-box
         IF (ddz.GT.box2) ddz=ddz-box
-        rw2(k)=ddx*ddx+ddy*ddy+ddz*ddz  
-c     *****  cancel out the hard core overlap with itself******
-        rw2(il)= 1000000
-        IF(rw2(k).LT.hc2v(k,ispec)) RETURN 
-   10 CONTINUE                                                                  
-      
+        rt22=ddx*ddx+ddy*ddy+ddz*ddz  
+        IF(rt22.LT.hc2v(k,ispec)) RETURN 
+        un = chv(k)/sqrt(rt22)
+        ddx= ABS(ttx6-x6(k))  
+        ddy= ABS(tty6-y6(k)) 
+        ddz= ABS(ttz6-z6(k))
+        IF (ddx.GT.box2) ddx=ddx-box
+        IF (ddy.GT.box2) ddy=ddy-box
+        IF (ddz.GT.box2) ddz=ddz-box
+        rt22=ddx*ddx+ddy*ddy+ddz*ddz  
+        uo = chv(k)/sqrt(rt22)
+        du = un-uo+du
+      enddo
+      do k = il+1,npart
+        ddx= ABS(tx6-x6(k))  
+        ddy= ABS(ty6-y6(k)) 
+        ddz= ABS(tz6-z6(k))
+        IF (ddx.GT.box2) ddx=ddx-box
+        IF (ddy.GT.box2) ddy=ddy-box
+        IF (ddz.GT.box2) ddz=ddz-box
+        rt22=ddx*ddx+ddy*ddy+ddz*ddz  
+        IF(rt22.LT.hc2v(k,ispec)) RETURN 
+        un = chv(k)/sqrt(rt22)
+        ddx= ABS(ttx6-x6(k))  
+        ddy= ABS(tty6-y6(k)) 
+        ddz= ABS(ttz6-z6(k))
+        IF (ddx.GT.box2) ddx=ddx-box
+        IF (ddy.GT.box2) ddy=ddy-box
+        IF (ddz.GT.box2) ddz=ddz-box
+        rt22=ddx*ddx+ddy*ddy+ddz*ddz  
+        uo = chv(k)/sqrt(rt22)
+        du = un-uo+du
+      enddo
       isos=0   
-      chil=chv(il) 
-      DO 12 k=1,npart
-   12 ei(k)=chil*chv(k)/sqrt(rw2(k)) 
-      ei(il)=0
+c      chil=chv(il) 
+c      DO 12 k=1,npart
+c   12 ei(k)=
+c      ei(il)=0
+      du = chv(il)*du
       RETURN       
       END        
 
@@ -523,16 +560,16 @@ c      DIMENSION rw2(1000),rwi(1000)
       DO 4 k=ip1,npart
         uj1=chv(i)*chv(k)/sqrt(rw2(k))
         xww1=xww1+uj1 
-        esa(i,k)=uj1 
+c        esa(i,k)=uj1 
     4 CONTINUE      
     5 CONTINUE     
-      DO 6 i=1,npart-1 
-      DO 6 k=i+1,npart
-        esa(k,i)=esa(i,k)  
-    6 CONTINUE
-      DO 7 i=1,npart
-      esa(i,i) =0. 
-    7 CONTINUE 
+c      DO 6 i=1,npart-1 
+c      DO 6 k=i+1,npart
+c        esa(k,i)=esa(i,k)  
+c    6 CONTINUE
+c      DO 7 i=1,npart
+c      esa(i,i) =0. 
+c    7 CONTINUE 
       RETURN       
       END         
 
@@ -573,10 +610,10 @@ c     --------------------------------------------------
         DO 140 isp=1,nspec
           nisp = INT(hion(isp,2))
           DO 121 ksp = 1,nspec          
-              nnn  = rand()*nisp + num
+              nnn  = ran2(islu)*nisp + num
               dis  = hion(isp,3) + hion(ksp,3) 
-            aa=(2*rand()-1)*dis 
-            v   = 2 * pi * rand()
+            aa=(2*ran2(islu)-1)*dis 
+            v   = 2 * pi * ran2(islu)
             wz6 = z6(nnn) + aa
             g2  = SQRT(dis * dis - aa*aa)+.00001  
             wx6 = x6(nnn) + g2*COS(v)        
@@ -732,11 +769,11 @@ c  ********************************************************************
       mwcn(my3)=mwcn(my3) + 1 
       DO  127 mp = 0,nfix
         DO 110 i=1,nwins
-          x = box*(rand()-0.5) 
-          y = box*(rand()-0.5)
+          x = box*(ran2(islu)-0.5) 
+          y = box*(ran2(islu)-0.5)
           z = 0 
           IF (mp.LE.1) THEN
-            z = box*(rand()-0.5)  
+            z = box*(ran2(islu)-0.5)  
             IF (mp.EQ.1) z = SIGN(box2,z)
           ENDIF
           DO 120 j=1,npart  
@@ -782,6 +819,10 @@ c          CALL vrsqrt(rw2,rwi,npart)
             wtot3=wtot3 + wsum
  150      CONTINUE  
 c          WRITE(*,*) 'first :nergy',wtot2,wtot3
+
+          uj1 = 0.d0
+
+
           wtot2 = wtot2 + uj1
 c          WRITE(*,*) 'energy',wtot2,wtot3
           DO 160 j=1,nspec 
@@ -826,7 +867,7 @@ c          WRITE(*,*) 'energy',wtot2,wtot3
       nwtot = nwins*INT(ny1/nwint)*ny2
       DO 1020 i=1,ntocp 
         ihc(i)=ihc(i)+ihcall(INT((i-1)/nspec))
-        chhc(my3,i)=-DLOG(DFLOAT(nwtot-ihc(i))/nwtot) 
+        chhc(my3,i)=-DLOG(DBLE(nwtot-ihc(i))/nwtot) 
         chexw(my3,i)=-DLOG(expuw(i)/nwtot)  
         chex(my3,i)=chel(my3,i)+chhc(my3,i)  
         chto(my3,i)=chex(my3,i)+chid(i)  
@@ -911,7 +952,7 @@ c          WRITE(*,*) 'energy',wtot2,wtot3
         WRITE(jjj,2030)(MOD(i-1,nspec)+1,chid(i),chhcav(i),chhcv(i)
      *    ,chelav(i),chelv(i),chexav(i),chexv(i),chtoav(i),chtov(i)
      *    ,chexwa(i) ,chexwv(i),i=j*nspec + 1,nspec*(j+1))
-        WRITE(jjj,2033)( EXP((chexav(i)+chexav(i-1))/2) )
+        WRITE(jjj,2033)( EXP((2*chexav(i-2)+chexav(i-1))/3) )
 2101  CONTINUE
         
 

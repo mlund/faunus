@@ -26,8 +26,14 @@ int main(int argc, char* argv[]) {
   cell cell(in);                        // We want a spherical simulation container
   interaction<pot_hscoulomb> pot(in);   // ...and a Coulomb + Hard sphere potential
 #else
+#ifdef WIDOM_ELHCVDW
+  box cell(in);                         // We want a cubic simulation container
+  interaction<pot_elhcvdw> pot(in);     // ...and a Coulomb/HS/vdW pot. w. minimum image
+  pot.pair.init(atom);
+#else
   box cell(in);                         // We want a cubic simulation container
   interaction<pot_hsminimage> pot(in);  // ...and a Coulomb/HS pot. w. minimum image
+#endif
 #endif
 
   saltmove sm(nvt,cell,pot,in);         // Class for salt movements
@@ -46,8 +52,12 @@ int main(int argc, char* argv[]) {
   systemenergy sys(pot.energy(cell.p)); // Track system energy
 
   cout << cell.info() << atom.info()
-       << pot.info() << salt.info(cell)
-       << in.info();                    // Print initial information
+    << pot.info() << salt.info(cell)
+    << in.info();                    // Print initial information
+
+  wid1.runfraction = in.getflt("widom_pair_runfraction",1.0);
+  wid2.runfraction = in.getflt("widom_single_runfraction",1.0);
+  virial.runfraction = in.getflt("virial_runfraction",1.0);
 
   while ( loop.macroCnt() ) {           // Markov chain 
     while ( loop.microCnt() ) {
@@ -62,8 +72,8 @@ int main(int argc, char* argv[]) {
   }                                     // END of macro loop and simulation
 
   cout << sys.info() << sm.info()
-       << wid1.info() << wid2.info()
-       << virial.info() << loop.info(); // Final information and results!
+    << wid1.info() << wid2.info()
+    << virial.info() << loop.info(); // Final information and results!
 
   // Now do some testing!
   sm.check(test);

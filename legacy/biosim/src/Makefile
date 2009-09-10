@@ -4,13 +4,13 @@
   # Uncomment line to match your system:
 
   #MODEL = pentium
-  MODEL = intel
+  #MODEL = intel
   #MODEL = macg5
   #MODEL = macg4
   #MODEL = ibmxl
   #MODEL = debug
   #MODEL = mac
-  #MODEL = generic
+  MODEL = generic
 
   ##################################################################
 

@@ -3,8 +3,8 @@ if (ENABLE_FORTRAN)
 
   # Function to add a generic fortran target
   function( fortran_target tname tdir tsrc )
-    set_source_files_properties( "${tsrc}" PROPERTIES LANGUAGE Fortran)
-    add_executable( ${tname} "${tsrc}" )
+    set_source_files_properties( ${tsrc} bulk/ran2.f PROPERTIES LANGUAGE Fortran)
+    add_executable( ${tname} ${tsrc} bulk/ran2.f )
     set_target_properties(${tname}
       PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${tdir}/")
     install (DIRECTORY "${tdir}" DESTINATION "share/faunus/examples"
@@ -15,7 +15,7 @@ if (ENABLE_FORTRAN)
 
   if (CMAKE_Fortran_COMPILER_WORKS)
     # Add exe targets
-    fortran_target(bulk bulk "bulk/bulk.f")
+    fortran_target(bulk bulk bulk/bulk.f)
 
     # Add fortran library
     set(fobj functions/vscoul2pc.f functions/gauss.f)

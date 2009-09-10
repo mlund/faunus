@@ -157,7 +157,7 @@ namespace Faunus {
   //
   //
   checkValue::checkValue(inputfile &in) {
-    stable = in.getboo("testsuite_stable", false);
+    stable = in.getboo("testsuite_stable", true);
     file = in.getstr("testsuite_testfile", "test.stable");
     if (stable==false)
       load(file);

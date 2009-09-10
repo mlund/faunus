@@ -11,6 +11,7 @@ namespace Faunus {
     cur=u0;
     confu.clear();
   }
+
   void systemenergy::update(double energy) {
     cur=energy;
     uavg+=cur;
@@ -303,24 +304,26 @@ namespace Faunus {
 
   string virial::info() {
     std::ostringstream o;
-    char w=10;
-    double tokPa=2.487*1e30/6.022e23,
-           toM=2.487*1e30/(8.314*298.15*6.022e23),
-           pid=conc*1e27/6.022e23,
-           ex=pex.avg()*toM;
+    if (runfraction>1e-4) {
+      char w=10;
+      double tokPa=2.487*1e30/6.022e23,
+             toM=2.487*1e30/(8.314*298.15*6.022e23),
+             pid=conc*1e27/6.022e23,
+             ex=pex.avg()*toM;
 
-    o.unsetf( std::ios_base::floatfield );
-    o << "\n# VIRIAL ANALYSIS: (Frenkel & Smith 2nd Ed. p.84 / McQuarrie p.338)\n"
-      << "#   Number of force calculations = " << pex.cnt << "\n"
-      << "#   Differentiation step (AA)    = " << dr << "\n"
-      << "#   Run fraction                 = " << runfraction << "\n"
-      << std::setprecision(4)
-      << "#   Osmotic coefficient          = " << (pid+ex)/pid << "\n"
-      << "#                     "
-      << setw(w) << "ideal" << setw(w) << "excess" << setw(w) << "total" << setw(w+3) << "ex. stddev\n"
-      << "#   Pressure (mol/l): "
-      << setw(w) << pid << setw(w) << ex << setw(w) << pid+ex << setw(w) << pex.stdev()*toM
-      << endl;
+      o.unsetf( std::ios_base::floatfield );
+      o << "\n# VIRIAL ANALYSIS: (Frenkel & Smith 2nd Ed. p.84 / McQuarrie p.338)\n"
+        << "#   Number of force calculations = " << pex.cnt << "\n"
+        << "#   Differentiation step (AA)    = " << dr << "\n"
+        << "#   Run fraction                 = " << runfraction << "\n"
+        << std::setprecision(4)
+        << "#   Osmotic coefficient          = " << (pid+ex)/pid << "\n"
+        << "#                     "
+        << setw(w) << "ideal" << setw(w) << "excess" << setw(w) << "total" << setw(w+3) << "ex. stddev\n"
+        << "#   Pressure (mol/l): "
+          << setw(w) << pid << setw(w) << ex << setw(w) << pid+ex << setw(w) << pex.stdev()*toM
+             << endl;
+    }
     return o.str();
   }
   //----------------------------------------------
@@ -331,6 +334,7 @@ namespace Faunus {
     d.p.x+=slp.random_half()*1e-9; // avoid overlapping particles.
     list.push_back(d);
   }
+
   void pointpotential::sample(container &c, energybase &pot) {
     int n=list.size();
 #pragma omp for
@@ -340,6 +344,7 @@ namespace Faunus {
       list[i].expphi+=exp(-phi);
     }
   }
+
   string pointpotential::info() {
     std::ostringstream o;
     o << endl
@@ -360,6 +365,7 @@ namespace Faunus {
     r2=radius*radius;
     vol=4./3.*acos(-1.)*pow(radius,3);
   }
+
   void twostatebinding::update(container &con, point &site, group &g) {
     unsigned short i,cnt=0;
     for (i=g.beg; i<=g.end; i++)

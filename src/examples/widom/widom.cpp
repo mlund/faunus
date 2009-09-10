@@ -31,8 +31,14 @@ int main(int argc, char* argv[]) {
   interaction<pot_elhcvdw> pot(in);     // ...and a Coulomb/HS/vdW pot. w. minimum image
   pot.pair.init(atom);
 #else
+#ifdef WIDOM_ELLJ
+  box cell(in);                         // We want a cubic simulation container
+  interaction<pot_testminim> pot(in);   // ...and a Coulomb + LJ pot. w. minimum image
+  pot.pair.init(atom);
+#else
   box cell(in);                         // We want a cubic simulation container
   interaction<pot_hsminimage> pot(in);  // ...and a Coulomb/HS pot. w. minimum image
+#endif
 #endif
 #endif
 

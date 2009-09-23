@@ -1,5 +1,5 @@
-# Stable output generated on Aug 11 2009 15:24:40 using 4.0.1 (Apple Inc. build 5490) (SVN revision: 505) ...
-systemEnergyAverage 685332
-systemEnergyDrift 3.55823e-06
-Protein1_charge 2.18517
-Protein2_charge 2.18867
+# Stable output generated on Sep 22 2009 10:59:34 using 4.2.1 (Apple Inc. build 5646) (SVN revision: 513) ...
+systemEnergyAverage 685324
+systemEnergyDrift 2.20933e-06
+Protein1_charge 0.0931323
+Protein2_charge 0.0940698

@@ -29,7 +29,6 @@ namespace Faunus {
     //! \example histogram-test.C
   };
 
-  //-----------------------------------------------------------------
   /*!
    *  \brief Class to calculate the radial distribution between particles.
    *
@@ -56,7 +55,23 @@ namespace Faunus {
       float get(float);                        //!< Get g(x)
   };
 
-  /*!\brief Particle profile base class
+  /*!
+   *  \brief Atomic RDF between two groups
+   *
+   *  \author Mikael Lund
+   *  \date Lund 2009
+   *  \note This function does not include volume weighting and the
+   *        CM's of the two groups should be fixed along one axis
+   *        cf. Faunus::dualmove
+   */
+  class atomicRdf : public histogram {
+    public:
+      atomicRdf(float=.5, float=0);
+      void update(vector<particle> &, group &, group &); //!< Update histogram vector
+  };
+
+  /*!
+   * \brief Particle profile base class
    * \author Mikael Lund
    * \date Canberra, 2008
    *

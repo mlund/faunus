@@ -199,4 +199,12 @@ namespace Faunus {
       o << d << " " << conc(d) << endl;
     return fio.writefile(name,o.str());
   }
+
+  atomicRdf::atomicRdf(float dx, float max) : histogram(dx, 0, max) { }
+
+  void atomicRdf::update(vector<particle> &p, group &g1, group &g2) {
+    for (int i=g1.beg; i<=g1.end; i++)
+      for (int j=g2.beg; j<=g2.end; j++)
+        add( p[i].dist(p[j]) );
+  }
 }//namespace

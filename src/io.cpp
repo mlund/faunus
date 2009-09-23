@@ -408,10 +408,12 @@ namespace Faunus {
     setbox(len);
     xd=NULL;
   }
+
   vector<particle> ioxtc::load(string s) {
     vector<particle> dummy;
     return dummy;
   }
+
   void ioxtc::setbox(float len) {
     for (char i=0; i<3; i++)
       for (char j=0; j<3; j++)
@@ -421,6 +423,13 @@ namespace Faunus {
     xdbox[2][2]=len/10.; // (in nanometers!)
   }
 
+  /*!
+   * Save all particles in box to xtc file. Molecules split by
+   * the periodic boundaries can be made whole by adding pointers
+   * to their groups to ioxtc::g
+   * \param file Name of xtc file
+   * \param b Box container
+   */
   bool ioxtc::save(string file, box &b) {
     p=b.p;
     setbox(b.len);

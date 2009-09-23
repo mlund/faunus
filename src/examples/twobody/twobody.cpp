@@ -26,13 +26,16 @@ int main(int argc, char* argv[]) {
   interaction<pot_coulomb> pot(in);     // Functions for interactions
   distributions dst;                    // Distance dep. averages
   FAUrdf saltrdf(atom["NA"].id,atom["CL"].id, .5, cell.r);
+  atomicRdf gofr_pp(0.5,200);           // Amino acid rdf between the two proteins
   twostatebinding bind(20.);            // Two state binding model
+
+  float gofr_pp_rf=in.getflt("gofr_pp_rf",0);// How often should gofr_pp be sampled?
 
   vector<macromolecule> g;              // Group for proteins
 
   dualmove dm(nvt, cell, pot);          // Class for 1D macromolecular translation
   dm.load( in, g, 80.);                 // Load proteins and separate them 
-  dm.rmax=60;
+  //dm.rmax=60;
   salt salt;                            // Group for mobile ions
   salt.add(cell, in);                   //   Add salt particles
   saltmove sm(nvt, cell, pot);          // Class for salt movements
@@ -49,7 +52,8 @@ int main(int argc, char* argv[]) {
     g[1].masscenter(cell);              // ...and recalc mass centers
   //}
 
-  chargereg tit(nvt,cell,pot,salt,4.0); // Prepare titration.
+  float pH=in.getflt("pH", 7.);         // Specify pH
+  chargereg tit(nvt,cell,pot,salt,pH);  // Prepare titration.
   
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
 
@@ -82,19 +86,24 @@ int main(int argc, char* argv[]) {
           }
           break;
       }
+
+      if (slp.random_one()<gofr_pp_rf)
+        gofr_pp.update( cell.p, g[0], g[1] );
+
       if (slp.random_one()>.5) {
         //saltrdf.update(cell);                   // Analyse salt g(r)
         //bind.update(cell, cell.p[g[0].beg], g[1]);
       }
 
-      if (slp.random_one()>.95 && loop.macro>1)
+      if (slp.random_one()>.98 && loop.macro>1)
         xtc.save("coord.xtc", cell.p);          // Save trajectory
     } // End of inner loop
 
     sys.update(pot.energy(cell.p));             // System energy analysis
     cell.check_vector();                        // Check sanity of particle vector
 
-    dm.gofr.write("rdfprot.dat");               // Write interprotein g(r)
+    gofr_pp.write("rdfatomic.dat");             // Write interprotein g(r) - Atomic
+    dm.gofr.write("rdfprot.dat");               // Write interprotein g(r) - CM
     saltrdf.write("rdfsalt.dat");               // Write salt g(r)
     dst.write("distributions.dat");             // Write other distributions
     aam.save("confout.aam", cell.p);            // Save config. for next run

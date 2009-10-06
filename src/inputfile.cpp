@@ -205,6 +205,16 @@ namespace Faunus {
     result.push_back(rc); // Save outcome
     return rc;
   }
+
+  bool checkValue::smallerThan(string name, double x, double ref) {
+    bool rc=false;
+    if (x<ref)
+      rc=true;
+    else
+      std::cerr << "!!! " << name << " smaller than test failed (" << x << " !< " << ref << ")" << endl;
+    result.push_back(rc);
+    return rc;
+  }
   
   int checkValue::returnCode() {
     for (int i=0; i<result.size(); i++)

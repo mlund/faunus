@@ -61,14 +61,15 @@ namespace Faunus {
    * loaded testfile.
    */
   class checkValue : private inputfile {
-    private:
-      vector<bool> result;
+    protected:
+      vector<bool> result;                     //!< Return codes for all performed tests
     public:
-      bool stable;                           //!< True if test suite is stable (=reference)
-      checkValue(inputfile &);               //!< Read parameters from inputfile
-      bool check(string, double, double=0.1);//!< Check or store value depending on the stable state.
-      string report();                       //!< Print report.
-      int returnCode();                      //!< Zero if no errors, one otherwise.
+      bool stable;                             //!< True if test suite is stable (=reference)
+      checkValue(inputfile &);                 //!< Read parameters from inputfile
+      bool check(string, double, double=0.1);  //!< Check or store value depending on the stable state.
+      bool smallerThan(string, double, double);//|< Check if x is smaller than y
+      string report();                         //!< Print report.
+      int returnCode();                        //!< Zero if no errors, one otherwise.
   };
 }
 #endif

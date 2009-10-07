@@ -54,10 +54,10 @@ int main(int argc, char* argv[]) {
 
 
 
-  for (int i =0; i<con.p.size(); i++) {
+/*  for (int i =0; i<con.p.size(); i++) {
     con.p[i].radius=1.0;
     con.trial[i].radius=1.0;
-  }
+  }*/
   vector<particle> psmear = con.p;
 
   systemenergy sys(pot.energy(con.p, glu3, salt)                           //The total system energy
@@ -116,7 +116,8 @@ int main(int argc, char* argv[]) {
     tit.applycharges(psmear);
     aam.save("smeared.aam", psmear);
     cout << "# ENERGY "<<endl
-         << "# Cur, Avg, Drift       = "<<sys.cur<<" , "<<sys.uavg.avg()<<" ("<<sys.uavg.stdev()<<") , "<<sys.cur-sys.sum<<endl;
+         << "# Cur, Avg, Drift       = "<<sys.cur<<" , "<<sys.uavg.avg()<<" ("<<sys.uavg.stdev()<<") , "<<sys.cur-sys.sum<<endl
+         << "# CHARGES (dendrimer):  Total = "<<glu3.Q.avg()<<"    Core = "<<glu3.core.Q.avg()<<endl;   
     cout << loop.timing();                                                  // Show progress
   }                                                                         // END of macro loop
   cout << sys.info() <<loop.info() <<tit.info()<< sm.info() << mm.info() << wid.info()<<wid2.info()

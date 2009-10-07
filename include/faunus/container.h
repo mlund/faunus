@@ -189,6 +189,7 @@ namespace Faunus {
     public:
       xyplane(inputfile &in);
       void randompos(point &);
+      void randompos(vector<point> &);
   };
 
   /*! \brief "Clutch" like container.

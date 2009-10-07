@@ -281,5 +281,23 @@ namespace Faunus {
       void sample(container &, energybase &);
       string info();
   };
+
+  class diskoverlap : public analysis {
+    private:
+      int s1, s2, s3, i, j, k;
+      vector< average < double > > size;
+      vector< average < double > > asym;
+      vector<double> sscale;
+      vector<double> ascale;
+      vector<double> scnt;
+      vector<double> acnt;
+      double cnt;
+      point origin, dummy;
+    public:
+      diskoverlap(vector<point> &);
+      void check(vector<point> &);
+      void blockavg();
+      string info();
+  };
 }//namespace
 #endif

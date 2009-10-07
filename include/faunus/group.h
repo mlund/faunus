@@ -166,6 +166,7 @@ namespace Faunus {
 /*! \brief Class for porphyrin dendrimer
  *
  */
+#ifdef BABEL
   class glu3 :public macromolecule {
     public:
       polymer chains;  //Glutamic chains
@@ -173,7 +174,7 @@ namespace Faunus {
       glu3(container &, inputfile &);
       string info();
   };
-
+#endif
 #ifdef HYPERSPHERE
   /*! \brief Hypersphere groups
    *  \author Martin Trulsson

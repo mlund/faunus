@@ -24,10 +24,10 @@ pKa_core        $pKa_core
 }
 
 #--- Input parameters ---
-polymer="GLU3simptwostate.mol2"
+polymer="GLU3coarse.mol2"
 macrosteps=10
 microsteps=1000
-cellradius=200
+cellradius=100
 bjerrum=7.12
 LJeps=0.0
 pH=7.5
@@ -38,24 +38,24 @@ tion2="CL"
 protein="calbindin.aam"
 atomfile="faunatoms.dat"
 springconstant=1.0
-springeqdist=1.5
+springeqdist=3.0
 dp_monomer=2
 dp_salt=50
 pKa_core=10
 #
-for salt in 34 100 300 
+for salt in 167 #100 300 900 
 do
-for pH in 4.0 4.5 5.0 5.5 6.0 
+for pH in 4.0 4.5 5.0 5.5 6.0 6.5 7.0 7.5 8.0 
 do
-  suffix="result/50mM/glu3b-salt${salt}-pH${pH}"
+  suffix="result/50mM/glu3b-C4.8-coarse-eff60mM-pH${pH}"
   microsteps=2000
   nion1=$[salt+32]
   nion2=$[salt]
   mkinput
-  ./glu3b > ${suffix}.eq
+  ./glu3c > ${suffix}.eq
   microsteps=10000
   mkinput
-  ./glu3b > ${suffix}.out
+  ./glu3c > ${suffix}.out
   mv smeared.aam ${suffix}.aam
 done
 done

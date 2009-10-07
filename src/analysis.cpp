@@ -404,5 +404,97 @@ namespace Faunus {
         << " (" << -log(conc.avg()/bulkconc) << " kT)" << endl;
     return o.str();
   }
+  diskoverlap::diskoverlap(vector<point> &p) {
+    s1=19, s2=10, s3=p.size(), cnt=0;
+    scnt.resize(19), sscale.resize(19);
+    acnt.resize(10), ascale.resize(10);
+    size.resize(19), asym.resize(10);
+    for (i=0; i<19; i++) {
+      sscale[i]=pow(2.,-9.+double(i));
+      scnt[i]=0;
+    }
+    for (i=0; i<10; i++) {
+      ascale[i]=sqrt(0.1*double(i+1));
+      acnt[i]=0;
+    }
+    origin.x=0, origin.y=0, origin.z=0, dummy.z=0;
+  }
+  void diskoverlap::check(vector<point> &p) {
+    cnt+=1.0;
+    //Convention, major axis x, minor axis y
+    for (i=0; i<s1; i++) //Check size 
+      for (j=0; j<s3; j++) {
+        dummy.x=p[j].x/sscale[i];
+        dummy.y=p[j].y/sscale[i];
+        if( origin.sqdist(dummy) < 1.0) {
+          scnt[i]+=1.0;
+          j=s3; // i=s1; // Break loop
+        }
+      }
+    for (i=0; i<s2; i++) //Check assymetry
+      for (j=0; j<s3; j++) {
+        dummy.x=p[j].x/ascale[i];
+        dummy.y=p[j].y*ascale[i];
+        if( origin.sqdist(dummy) < 1.0) {
+          acnt[i]+=1.0;
+          j=s3; // i=s2; // Break loop
+        }
+      }
+  }
+  void diskoverlap::blockavg() {
+    for (i=0; i<s1; i++){
+      size[i]+=scnt[i]/cnt;
+      scnt[i]=0;
+    }
+    for (i=0; i<s2; i++){
+      asym[i]+=acnt[i]/cnt;
+      acnt[i]=0;
+    }
+    cnt=0;
+  }
+  string diskoverlap::info() {
+    ostringstream o;
+    o << endl << "# HOLE ANALYSIS OF ELLIPSES IN A POINT LATTICE:" << endl
+              << "#   Info: A testprogram for Bernard Carbane. "<< endl
+              << "#   Data is presented as probability of overlaps"<<endl
+              << "#____________________________________________________________"<<endl
+              << "#   Scaled circle radius (Rel. sigma), P_rej, stdev   "<<endl
+              << "#------------------------------------------------------------"<<endl
+              << "#   "<<sscale[ 0]<<"  "<<size[ 0].avg()<<"  "<<size[ 0].stdev()<<" "<<endl
+              << "#   "<<sscale[ 1]<<"  "<<size[ 1].avg()<<"  "<<size[ 1].stdev()<<" "<<endl
+              << "#   "<<sscale[ 2]<<"  "<<size[ 2].avg()<<"  "<<size[ 2].stdev()<<" "<<endl
+              << "#   "<<sscale[ 3]<<"  "<<size[ 3].avg()<<"  "<<size[ 3].stdev()<<" "<<endl
+              << "#   "<<sscale[ 4]<<"  "<<size[ 4].avg()<<"  "<<size[ 4].stdev()<<" "<<endl
+              << "#   "<<sscale[ 5]<<"  "<<size[ 5].avg()<<"  "<<size[ 5].stdev()<<" "<<endl
+              << "#   "<<sscale[ 6]<<"  "<<size[ 6].avg()<<"  "<<size[ 6].stdev()<<" "<<endl
+              << "#   "<<sscale[ 7]<<"  "<<size[ 7].avg()<<"  "<<size[ 7].stdev()<<" "<<endl
+              << "#   "<<sscale[ 8]<<"  "<<size[ 8].avg()<<"  "<<size[ 8].stdev()<<" "<<endl
+              << "#   "<<sscale[ 9]<<"  "<<size[ 9].avg()<<"  "<<size[ 9].stdev()<<" "<<endl
+              << "#   "<<sscale[10]<<"  "<<size[10].avg()<<"  "<<size[10].stdev()<<" "<<endl
+              << "#   "<<sscale[11]<<"  "<<size[11].avg()<<"  "<<size[11].stdev()<<" "<<endl
+              << "#   "<<sscale[12]<<"  "<<size[12].avg()<<"  "<<size[12].stdev()<<" "<<endl
+              << "#   "<<sscale[13]<<"  "<<size[13].avg()<<"  "<<size[13].stdev()<<" "<<endl
+              << "#   "<<sscale[14]<<"  "<<size[14].avg()<<"  "<<size[14].stdev()<<" "<<endl
+              << "#   "<<sscale[15]<<"  "<<size[15].avg()<<"  "<<size[15].stdev()<<" "<<endl
+              << "#   "<<sscale[16]<<"  "<<size[16].avg()<<"  "<<size[16].stdev()<<" "<<endl
+              << "#   "<<sscale[17]<<"  "<<size[17].avg()<<"  "<<size[17].stdev()<<" "<<endl
+              << "#   "<<sscale[18]<<"  "<<size[18].avg()<<"  "<<size[18].stdev()<<" "<<endl
+              << "#____________________________________________________________"<<endl
+              << "#   Assymetry analysis in terms of half-axis quota a/b of a unit ellips"<<endl
+              << "#   a/b, P-rej, stdev "<<endl
+              << "#------------------------------------------------------------"<<endl
+              << "#   0.1   "<<asym[ 0].avg()<<"  "<<asym[ 0].stdev()<<" "<<endl
+              << "#   0.2   "<<asym[ 1].avg()<<"  "<<asym[ 1].stdev()<<" "<<endl
+              << "#   0.3   "<<asym[ 2].avg()<<"  "<<asym[ 2].stdev()<<" "<<endl
+              << "#   0.4   "<<asym[ 3].avg()<<"  "<<asym[ 3].stdev()<<" "<<endl
+              << "#   0.5   "<<asym[ 4].avg()<<"  "<<asym[ 4].stdev()<<" "<<endl
+              << "#   0.6   "<<asym[ 5].avg()<<"  "<<asym[ 5].stdev()<<" "<<endl
+              << "#   0.7   "<<asym[ 6].avg()<<"  "<<asym[ 6].stdev()<<" "<<endl
+              << "#   0.8   "<<asym[ 7].avg()<<"  "<<asym[ 7].stdev()<<" "<<endl
+              << "#   0.9   "<<asym[ 8].avg()<<"  "<<asym[ 8].stdev()<<" "<<endl
+              << "#   1.0   "<<asym[ 9].avg()<<"  "<<asym[ 9].stdev()<<" "<<endl
+              << "#   "<<endl;
+    return o.str();
+  }
 }//namespace
 

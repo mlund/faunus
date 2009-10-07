@@ -176,7 +176,12 @@ namespace Faunus {
     p.y = slp.random_half()*len;
     p.z = 0;
   }
-
+  void xyplane::randompos(vector<point> &p) {
+    int s;
+    s=p.size();
+    for (int i=0; i<s; i++) 
+      randompos(p[i]);
+  }
   //----------- SLIT --------------------------
   slit::slit(inputfile &in) : box(in) {
     if (in.getflt("zboxlen", 0)>0)

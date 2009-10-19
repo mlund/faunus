@@ -71,14 +71,14 @@ Establish an encrypted SSH-tunnel to any computer situated on campus:
 \item For example: \verb+ssh -D 9999 mimer.teokem.lu.se+
 \item In \verb+System Preferences->Network->Advanced->Proxies+ set SOCKS proxy to \verb+localhost+, port 9999.
 \end{enumerate}
-All your web browsing will now appear as if you are situated inside campus. If you have a slow connection, you may want to add ``-C'' in the ssh command to enable compression.  When you close the ssh connection you must again remove the proxy setting in the network preferences to return to ``normal'' browsing.
+All your web browsing will now appear as if you are situated inside campus. If you have a slow connection, you may want to add ``-C'' in the ssh command to enable compression.  When you close the ssh connection you must again remove the proxy setting in the network preferences to return to normal browsing.
 
 \subsection{Automatic SSH login}
 This will allow login/scp to ssh servers without entering your password:
 \begin{enumerate}
 \item Protect your local .ssh dir: \verb"chmod 700 ~/.ssh"
 
-\item If you haven't got one, create a public ssh key.
+\item If you do not have one, create a public ssh key.
 Look at \verb"~/.ssh". If you see a file named id\_dsa.pub then you already have a public key. If not, create one with: \verb"ssh-keygen -t dsa"
 
 \item Transfer your public key to the remote server:\\
@@ -127,9 +127,10 @@ Command              & Action \\\hline
 \textbf{Macports}    & (\url{http://www.macports.org})\\
 \verb"port search keyword" & search for a package\\
 \verb+port variants packagename+ & show \emph{variants} of a package.\\
-\verb"sudo port install packagename" & install a package.\\
-\verb"sudo port install emacs +x11" & install emacs variant with X11 support.\\
+\verb"sudo port install packagename" & install package.\\
+\verb"sudo port install emacs +x11" & install emacs variant using the X11 variant.\\
 \verb"sudo port -d selfupdate" & update entire package system (do this occasionally)\\
+\verb"sudo port upgrade outdated" & update outdated packages\\
 \\
 \textbf{Fink}       & (\url{http://www.finkproject.org})\\
 Search for package  & \verb"apt-cache search package"\\
@@ -138,14 +139,14 @@ Update packages     &  \verb"sudo apt-get update|upgrade"\\
 Install source fink package & \verb"sudo fink install package"\\\hline
 \end{tabular}\end{small}\end{table}
 
-Useful MacPorts packages are: grace gnuplot povray sshfs vim aspell wget gawk tetex findutils xmgr subversion sshfs.
+Useful MacPorts packages are: \emph{grace gnuplot povray sshfs vim wget gawk coreutils findutils xmgr subversion sshfs bash-completion.}
 
 
 \subsection{VMD}
-Or \href{http://www.google.com/search?q=vmd}{Visual Molecular Dynamics} is an impressive program for molecular visualization/analysis and despite the name, it works nicely with MC too. A speciel ``feature'' of the mac version is that the command line tool is buried. Here are two ways to surface it:
+Or \href{http://www.google.com/search?q=vmd}{Visual Molecular Dynamics} is an impressive program for molecular visualization/analysis and despite the name, it works nicely with MC too. A speciel ``feature'' of the mac version is that the command line tool is buried. Here is one way to resurface it:
 \begin{itemize}
-\item[\$] \verb+ alias vmd='/Applications/VMD\ 1.8.6.app/Contents/vmd/vmd_MACOSXX86'+
-\item[\$] \verb+ sudo ln -s /Applications/VMD\ 1.8.6.app/Contents/vmd/vmd_MACOSXX86 /usr/local/bin/vmd+\end{itemize}
+\item[\$] \verb+ alias vmd="/Applications/VMD\ 1.8.7.app/Contents/MacOS/startup.command"+
+\end{itemize}
 
 \subsection{Faunus}
 To fetch the newest revision from the subversion repository, do\\
@@ -213,7 +214,7 @@ Indent all     & =G\\
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\LaTeX{} typesetting}
 \subsection{Installing \LaTeX{}}
-\LaTeX{} is available both via Fink and MacPorts, yet I'd recommend installing \href{http://www.tug.org/mactex}{MacTeX} which also includes the awesome TeXShop program.
+\LaTeX{} is available both via Fink and MacPorts and \href{http://www.tug.org/mactex}{MacTeX} (recommended) which also includes the awesome TeXShop program.
 
 \subsection{Getting started}
 \begin{enumerate}
@@ -273,33 +274,6 @@ Text labels in eps files generated with Xmgr, gnuplot etc. can be replaced with 
 \end{verbatim}
 \item latex/pdflatex with the argument \verb"-shell-escape" to produce either a dvi or pdf file. Note that the \verb"auto-pst-pdf" package automatically converts EPS files to PDF when using pdf\LaTeX{}.
 \end{enumerate}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\section{Specific to Theoretical Chemistry, Lund University}
-\subsection{SSH Options for connections to mimer}
-Add the following to \verb"~/.ssh/config" to allow X tunelling, start a proxy server (see Section~\ref{sec:proxy}) and forward local Subversion traffic to gloin:
-\begin{verbatim}
-Host mimer
-  DynamicForward 9999
-  ForwardX11 yes
-  Compression yes
-  LocalForward 8910 gloin:22
-\end{verbatim}
-
-\subsection{Home directories (outdated?)}
-User home directories are served via NFS by \verb'garm.teokem.lu.se'. Some
-versions of Linux are not entirely compatible with MacOS which can cause
-problems with file locking. This is used in \verb+Mail.app+, \verb+Address Book.app+
-etc. and these programs will NOT work when home is on garm (as of
-writing, Dec. 2006). To circumvent this \verb+~/Library+ can be placed on a
-local disk and a symlink placed in the home directory (ln -s).
-To setup MacOS for NFS to garm I suggest using the free program
-\verb+NFS manager+ by Bresink.
-There you will also find a nice manual on integrating MacOS in NFS
-and NIS environments. When setup, the mount point can be checked in
-\verb+NetInfo Manager+ and should have the following options: \verb+-s,-P,-b+.
-A restart is most likely required for the changes to take effect.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -35,14 +35,15 @@ namespace Faunus {
       countdown<unsigned int> cnt;
       unsigned int cnt_micro, cnt_macro;
     public:
-      unsigned int macro, micro;
       bool eq;
+      unsigned int macro;          //!< Number of macrosteps
+      unsigned int micro;          //!< Number of microsteps
       mcloop(inputfile &);         //!< Setup
-      string info();               //!< Shows setup
+      string info();               //!< Get information
       string timing(unsigned int); //!< Show macrostep middle time and ETA (outdated!)
       string timing();             //!< Show macrostep middle time and ETA.
-      bool macroCnt();             //!< Increase macro loop counter
-      bool microCnt();             //!< Increase micro loop counter
+      bool macroCnt();             //!< Increase and test macro loop counter
+      bool microCnt();             //!< Increase and test micro loop counter
   };
 }
 #endif

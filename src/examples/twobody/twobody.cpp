@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
   mcloop loop(in);                      // Set Markov chain loop lengths
   cell cell(in);                        // We want a spherical, hard cell
   canonical nvt;                        // Use the canonical ensemble
-  interaction<pot_coulomb> pot(in);     // Functions for interactions
+  interaction<pot_hscoulomb> pot(in);     // Functions for interactions
   distributions dst;                    // Distance dep. averages
   FAUrdf saltrdf(atom["NA"].id,atom["CL"].id, .5, cell.r);
   atomicRdf gofr_pp(0.5,200);           // Amino acid rdf between the two proteins
@@ -34,14 +34,12 @@ int main(int argc, char* argv[]) {
   vector<macromolecule> g;              // Group for proteins
 
   dualmove dm(nvt, cell, pot);          // Class for 1D macromolecular translation
+  dm.setup(in);
   dm.load( in, g, 80.);                 // Load proteins and separate them 
-  //dm.rmax=60;
   salt salt;                            // Group for mobile ions
   salt.add(cell, in);                   //   Add salt particles
-  saltmove sm(nvt, cell, pot);          // Class for salt movements
+  saltmove sm(nvt, cell, pot, in);      // Class for salt movements
   macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
-  dm.dp=6;                              // Set displacement parameters
-  sm.dp=90;                             // Set displacement parameters
 
   iopqr pqr;                            // PQR output (pos, charge, radius)
   ioxtc xtc(1000.);                     // Gromacs xtc output
@@ -67,7 +65,7 @@ int main(int argc, char* argv[]) {
         case 0:                                 // Displace salt
           sys+=sm.move(salt);                   //   Do the move.
           break;
-        case 1:                                 // Rotate proteins
+        case 10:                                 // Rotate proteins
           for (n=0; n<2; n++) {                 //   Loop over all proteins
             i = rand() % g.size();              //   and pick at random.
             sys+=mr.move(g[i]);                 //   Do the move.
@@ -76,7 +74,7 @@ int main(int argc, char* argv[]) {
         case 2:                                 // Translate proteins
           sys+=dm.move(g[0], g[1]);             //   Do the move.
           break;
-        case 3:                                 // Fluctuate charges
+        case 30:                                 // Fluctuate charges
           sys+=tit.titrateall();                // Titrate sites on the protein
           if (tit.du!=0) {                      // Average charges and dipoles
             dst.add("Q1",dm.r, g[0].charge(cell.p));
@@ -86,6 +84,8 @@ int main(int argc, char* argv[]) {
           }
           break;
       }
+      if (slp.random_one()>0.8)
+        dst.add("Utot", dm.r, pot.energy(cell.p));
 
       if (slp.random_one()<gofr_pp_rf)
         gofr_pp.update( cell.p, g[0], g[1] );

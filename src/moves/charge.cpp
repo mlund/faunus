@@ -156,6 +156,7 @@ namespace Faunus {
     return o.str();
   }
 
+#ifdef BABEL
   //GLU3titration constuctor
   glu3corechargereg::glu3corechargereg(ensemble &e, container &c, energybase &i, inputfile &in, group &g) 
   : chargereg(e,c,i,g,in.getflt("pH",7)) {
@@ -251,6 +252,7 @@ namespace Faunus {
     return du;
 
   }
+#endif
 
 
     // ----------- AT Titration ----------------

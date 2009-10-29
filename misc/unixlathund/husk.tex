@@ -24,7 +24,7 @@ Last updated \today}
 This is useful for Word documents where correct graphic dimensions/resolution should be maintained \emph{before} importing. A hassle, but here's one way of doing it:
 \begin{enumerate}
 \item Open vector graphics in Preview.app
-\item Create a new paper size in the desired format.
+\item In the print dialogue, create a new paper size in the desired format.
 \item Print to PDF, selecting the new paper format.
 \item Open new PDF in Gimp. You will be prompted for a resolution (DPI).
 \item Save bitmap file to png, tiff etc.
@@ -65,13 +65,13 @@ The package \verb"jpeg2ps" (available on macports) can be used to convert jpeg b
 
 
 \section{Networking}
-\subsection{\label{sec:proxy}Access scientific journals from home}
+\subsection{\label{sec:proxy}Access journals from anywhere}
 Establish an encrypted SSH-tunnel to any computer situated on campus:
 \begin{enumerate}
 \item For example: \verb+ssh -D 9999 mimer.teokem.lu.se+
 \item In \verb+System Preferences->Network->Advanced->Proxies+ set SOCKS proxy to \verb+localhost+, port 9999.
 \end{enumerate}
-All your web browsing will now appear as if you are situated inside campus. If you have a slow connection, you may want to add ``-C'' in the ssh command to enable compression.  When you close the ssh connection you must again remove the proxy setting in the network preferences to return to normal browsing.
+All your web browsing will now appear as if you are situated inside campus. If you have a slow connection, you may want to add ``-C'' to the ssh command to enable compression.  When closing the ssh connection, remove the proxy setting in the network preferences to return to normal browsing.
 
 \subsection{Automatic SSH login}
 This will allow login/scp to ssh servers without entering your password:
@@ -106,13 +106,29 @@ If auto-detection fails, try adding \verb"ServerName servername" to \verb"/etc/c
 
 \subsection{Screen Sharing}
 \subsubsection{MacOS Screen Sharing}
-MacOS has a ``screen sharing'' feature (actually a VNC server) that can be enable in the sharing preferences or via the command:\\
+MacOS has a ``screen sharing'' feature (actually a VNC server) that can be enabled in the sharing preferences or via the command:\\
 
 \verb+$ sudo echo -n enabled > /Library/Preferences/com.apple.ScreenSharing.launchd+.
 
 \subsubsection{NoMachine on Unix}
 A NX server can currently be installed only on Linux machines, while client software is available
 also for Mac and Windows. Despite that NX also tunnels through SSH it is \emph{much} faster than normal X11 forwarding.
+
+\subsection{Security}
+\begin{itemize}
+\item Enable the system firewall and block all incoming connections.
+\item Reduce the number of services to a minimum and allow only users that will need that service.
+\item Disable automatic login and enable screen locking.
+\item Activate the TCP wrapper and allow only essential services:
+\begin{verbatim}
+/etc/hosts.deny:
+  ALL: ALL
+/etc/hosts.allow:
+  ALL: local .mytrusted.domain
+  portmap: ip_of_nfs_server : allow
+\end{verbatim}
+In the case of portmap, the IP is required -- names will not work. This is important for MacOS X servers sharing home directories via NFS and use filelocking.
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -294,7 +310,7 @@ Launch logout-safe job  & \verb"nohup program &" \\
 Be a gentleman, run in low priority & \verb"nice program" (use when exploiting a colleagues computer)\\
 \\
 \textbf{Files and search}\\
-Disk information   & \verb"df -h"\\
+Disk information   & \verb"df -h" (h for \textbf{h}uman readable)\\
 Space used in current directory & \verb"du -h" (or \verb"-csh" for a summary)\\
 Find file           & \verb'find * -iname "*something*.pdf"'\\
 Find large files    & \verb'find * -size +1000k printf "%p %k \n"'\\
@@ -327,7 +343,7 @@ Submit svn changes   & \verb"svn commit"\\
 Add file or directory& \verb"svn add file"\\
 Show log             & \verb"svn log"\\
 Regret and undo modification & \verb"svn revert foo"\\
-Remove conflict files        & \verb"svn resolved"(not need if using revert)\\
+Remove conflict files        & \verb"svn resolved" (not needed if using revert)\\
 \\
 \textbf{Text manipulation etc.}\\
 Print file w. linenumbers & \verb"cat -n file.dat"\\

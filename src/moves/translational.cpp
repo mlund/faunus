@@ -295,7 +295,7 @@ namespace Faunus {
   saltmove::saltmove(
       ensemble &e, container &c, energybase &i, inputfile &in ) : markovmove(e,c,i) {
     init();
-    dp=in.getflt("dp_salt", 30.);
+    dp=in.getflt("dp_salt", 40.);
   }
 
   void saltmove::init() {

@@ -15,6 +15,7 @@ protein2   lysozyme.aam
 atomfile   ../../../misc/faunatoms.dat
 gofr_pp_rf 0.95
 pH         $pH
+dp_salt    90
 testsuite_testfile test.stable
 testsuite_stable   yes
 " > twobody.conf

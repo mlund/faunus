@@ -37,6 +37,7 @@ namespace Faunus {
       string info();
    };
 
+#ifdef BABEL
    class glu3corechargereg : public chargereg {
      public:
        glu3corechargereg(ensemble &, container &, energybase &, inputfile &, group &);
@@ -51,6 +52,7 @@ namespace Faunus {
        average<double> p1, p2;
        int cntcore;
    };
+#endif
 
   /*!
    * \brief Implicit ions titration scheme

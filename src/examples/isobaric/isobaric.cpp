@@ -76,10 +76,13 @@ int main() {
   mt.dp =in.getflt("mtdp");
   mr.dp =in.getflt("mrdp");
   ct.dp=in.getflt("ctdp");
-  ct.runfraction =in.getflt("clt",-1);
-  mr.runfraction =in.getflt("rr",-1);
-  mt.runfraction =in.getflt("tr",-1);
-  vol.runfraction=in.getflt("volr",-1);
+  double cltr,rr,tr,volr,sum;                // If anyone doesnt fancy this way of controlling the
+  cltr=in.getflt("cltr",1);                  // Markov-chain, write a new program, dont remove this. /BearniX
+  rr  =in.getflt("rr",1);
+  tr  =in.getflt("tr",1);
+  volr=in.getflt("volr",1);
+  sum=1./(cltr+rr+tr+volr);
+  cltr*=sum,rr*=sum,tr*=sum,volr*=sum;
 #ifdef XYPLANE
   mt.dpv.z=0;
 #endif
@@ -111,26 +114,18 @@ int main() {
     for (int micro=1; micro<=loop.micro; micro++) {
       short i,j,n;
       double randy=slump.random_one();
-
-      switch (rand() % 3) {
-        case 0:            
+      if(randy<volr)
           sys+=vol.move(g);
-          break;
-        case 1:
-          for (int n=0; n<2*g.size(); n++) {
-            int i = randy*g.size();
-            if (slump.random_one()<.5)
-              sys+=mr.move(g[i]);
-            else
-              sys+=mt.move(g[i]);
-          }
-          break;
-        case 2:
+      if(volr<randy && randy<volr+rr)
+        for (int n=0; n<g.size(); n++) 
+          sys+=mr.move(g[slump.random_one()*g.size()]);
+      if(volr+rr<randy && randy<volr+rr+tr)
+        for (int n=0; n<g.size(); n++) 
+          sys+=mt.move(g[slump.random_one()*g.size()]);
+      if(volr+rr+tr<randy) {
           sys+=ct.move(g);
-          break;
+          lendist.add(cell.len);
       }
-
-      lendist.add(cell.len);
       if (randy>.99 && in.getboo("movie", false)==true)
         xtc.save("coord.xtc", cell);   // Save trajectory
       if (randy>.99) sys.track();

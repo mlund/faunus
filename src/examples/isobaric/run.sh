@@ -15,6 +15,7 @@ protein2      $protein2
 voldp         $voldp
 mrdp          $mrdp
 mtdp          $mtdp
+ctdp          $ctdp
 pressure      $pressure
 e_r           $e_r
 debyelen      $debyelen
@@ -27,6 +28,7 @@ atomfile      $atomfile
 volr          $volr
 tr            $tr
 rr            $rr
+cltr          $cltr
 penaltyupdate $penaltyupdate
 scalepen      $scalepen 
 movie         $movie"> isobaric.conf
@@ -35,19 +37,21 @@ movie         $movie"> isobaric.conf
 #--- Input parameters ---
 macrosteps=10
 microsteps=1
-boxlen=350
+boxlen=384.945
 LJeps=0.2
-nprot1=5
-protein1="../twobody/struct/alphaLa1F6S5mM75PH.aam"
-nprot2=5
-protein2="../twobody/struct/lysozyme5mM75PH.aam"
+nprot1=500
+protein1="p.aam"
+nprot2=500
+protein2="m.aam"
 #--- Markov Parameters ---
-voldp=1.00        
+voldp=0.30        
 mrdp=2.00
-mtdp=10.00
+mtdp=30.00
+ctdp=10.00
 volr=1
-tr=1
-rr=1
+tr=2
+rr=0
+cltr=0
 #--- Interactions and potentials
 bjerrum=7.12
 pressure=0.000001
@@ -59,24 +63,25 @@ LJeps=0.30
 maxlen=1000
 minlen=100
 binlen=1
-penalize="no"
-penalty=0.01
-scalepen=0.5
-penaltyupdate="no"
+penalize="yes"
+penalty=0.005
+scalepen=1.0
+penaltyupdate="yes"
 movie="no"
 #--- Variations and execution
 
-  export OMP_NUM_THREADS=2
+#  export OMP_NUM_THREADS=2
 
-  rm confout.aam
-  suffix="test"
-  mkinput
-  ./isobaric > eq${suffix}
-  boxlen=$(less eq${suffix}| grep "#   Final      side length"|awk '{print $ 6}')
-  microsteps=1
+#  cp ${suffix}-conf.aam confout.aam
+  suffix="test-pm7"
+  microsteps=1000
+#  mkinput
+#  ./isobaric > ${suffix}.out
+  boxlen=$(less ${suffix}.out| grep "#   Final      side length"|awk '{print $ 6}')
+  microsteps=5000
   mkinput
   ./isobaric > ${suffix}.out
-  mv confout.aam ${suffix}-conf.aam
+  cp confout.aam ${suffix}-conf.aam
   mv confout.gro ${suffix}-conf.gro
   mv confout.xyz ${suffix}-conf.xyz
   mv coord.xtc ${suffix}-coord.xtc
@@ -87,7 +92,7 @@ movie="no"
   mv rdfprot12.dat ${suffix}-rdf12.dat
   mv rdfprot22.dat ${suffix}-rdf22.dat
   mv systemenergy.dat ${suffix}-energy.dat
-  mv penalty.dat ${suffix}-pen.dat
+  cp penalty.dat ${suffix}-pen.dat
   mv oldpenalty.dat ${suffix}-oldpen.dat
   mv confout.pqr ${suffix}-conf.pqr
 

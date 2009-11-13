@@ -11,11 +11,13 @@
  */
 
 #include "faunus/faunus.h"
+#include "faunus/potentials/pot_netz.h"
 
 using namespace Faunus;
 using namespace std;
 
 int main() {
+  cout << faunus_splash();
   slump slump;                          // A random number generator
   inputfile in("twobody.conf");         // Read input file
   mcloop loop(in);                      // Set Markov chain loop lengths
@@ -33,7 +35,9 @@ int main() {
 
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
-  sm.dp=90;                             // Set displacement parameters
+  sm.dp=90;                              // Set displacement parameters
+  mr.dp=2;
+  dm.dp=2;
   ioaam aam;                            // Protein input file format is AAM
   if (aam.load(cell,"confout.aam")) {
     g[0].masscenter(cell);              // Load old config (if present)
@@ -41,22 +45,23 @@ int main() {
   }
   pot.search(cell.p);                   // Find hydrophobic particles
   pot.end_of_protein_one=g[0].end;      // Hydrophobic interactions w. BOTH proteins
-  systemenergy sys(pot.energy(cell.p)); // System energy analysis
 
   FAUrdf saltrdf(salt.anion,salt.cation, .5, cell.r);
   cylindric_profile cyl(16,salt.anion,-50,50,.5);
 
   cout << "# ------ INITIAL INFORMATION ------" << endl
-    << sys.info() 
+    << in.info()
     << cell.info() << pot.info()     // Print information to screen
     << loop.info() << endl
     << "# ------ RUNTIME INFORMATION ------" << endl;
 
-#ifdef GROMACS
-  ioxtc xtc(cell.atom, cell.r);                 // Gromacs xtc output (if installed)
-#endif
-  for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
-    for (int micro=1; micro<=loop.micro; micro++) {
+  ioxtc xtc(1000.);                 // Gromacs xtc output
+
+  systemenergy sys(pot.energy(cell.p)); // System energy analysis
+  cout << sys.info();
+
+  while (loop.macroCnt()) {//Markov chain 
+    while (loop.microCnt() ) {
       short i,n;
       switch (rand() % 3) {                     // Pick a random MC move
         case 0:                                 // Displace salt
@@ -72,26 +77,26 @@ int main() {
           sys+=dm.move(g[0], g[1]);             //   Do the move.
           break;
       }
-      if (slump.random_one()>.2 && macro>1) {
+
+      if (slump.random_one()>2) {
         saltrdf.update(cell);                   // Analyse salt g(r)
         cyl.update(cell.p);
       }
 
-#ifdef GROMACS
-      if (slump.random_one()>.95 && macro>1)
-        xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
-#endif
+      if (slp.random_one()>98)
+        xtc.save("coord.xtc", cell.p);          // Save trajectory
+ 
     } // End of inner loop
 
     sys.update(pot.energy(cell.p));             // Update system energy averages
     cell.check_vector();                        // Check sanity of particle vector
     dm.gofr.write("rdfprot.dat");               // Write interprotein g(r)
     cyl.write("cyl.dat");
-    //saltrdf.write("rdfsalt.dat");               // Write salt g(r)
-    //dst.write("distributions.dat");             // Write other distributions
+    //saltrdf.write("rdfsalt.dat");             // Write salt g(r)
+    //dst.write("distributions.dat");           // Write other distributions
     aam.save("confout.aam", cell.p);            // Save config. for next run
     pqr.save("confout.pqr", cell.p);            // ...also save a PQR file
-    cout << loop.timing(macro);                 // Show progres;s
+    cout << loop.timing();                      // Show progres;s
   } // End of outer loop
 
   cout << "# ------ FINAL INFORMATION ------" << endl
@@ -99,9 +104,5 @@ int main() {
     << sm.info() << mr.info() << dm.info()
     << sys.info() << g[0].info(cell) << g[1].info(cell) << cell.info()
     << loop.info();
-
-#ifdef GROMACS
-  xtc.close();
-#endif
 }
 

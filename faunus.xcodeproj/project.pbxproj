@@ -27,6 +27,8 @@
 
 /* Begin PBXBuildFile section */
 		730552211042D75300465515 /* hyperbulk.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 730552201042D75300465515 /* hyperbulk.cpp */; };
+		730BD3FB10ADA31700FC674A /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
+		730BD3FE10ADA33F00FC674A /* twobody-hof.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 730BD3FD10ADA33F00FC674A /* twobody-hof.cpp */; };
 		73128AF01030BD4D00950418 /* twobody.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C42DC10307BF400A3A5B9 /* twobody.cpp */; };
 		731297541030C80A00950418 /* base.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297411030C80A00950418 /* base.h */; };
 		731297551030C80A00950418 /* pot_barecoulomb.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297421030C80A00950418 /* pot_barecoulomb.h */; };
@@ -225,6 +227,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		730BD3F910ADA30900FC674A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 739C42091030798400A3A5B9 /* faunus */;
+			remoteInfo = faunus;
+		};
 		73128B011030BF2000950418 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
@@ -321,6 +330,8 @@
 /* Begin PBXFileReference section */
 		7305521F1042D75300465515 /* hyperbulk.conf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = hyperbulk.conf; path = src/examples/hypersphere/hyperbulk.conf; sourceTree = "<group>"; };
 		730552201042D75300465515 /* hyperbulk.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = hyperbulk.cpp; path = src/examples/hypersphere/hyperbulk.cpp; sourceTree = "<group>"; };
+		730BD3F510ADA2F800FC674A /* twobody-hof */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = "twobody-hof"; path = "build/Debug/twobody-hof"; sourceTree = "<group>"; };
+		730BD3FD10ADA33F00FC674A /* twobody-hof.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "twobody-hof.cpp"; path = "src/examples/twobody-hofmeister/twobody-hof.cpp"; sourceTree = "<group>"; };
 		731297411030C80A00950418 /* base.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = base.h; sourceTree = "<group>"; };
 		731297421030C80A00950418 /* pot_barecoulomb.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_barecoulomb.h; sourceTree = "<group>"; };
 		731297431030C80A00950418 /* pot_coulomb.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_coulomb.h; sourceTree = "<group>"; };
@@ -433,6 +444,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		730BD3F310ADA2F800FC674A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				730BD3FB10ADA31700FC674A /* liblibfaunus.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		739618D810309A010051F3E3 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -528,6 +547,7 @@
 		739C41D7103078A800A3A5B9 = {
 			isa = PBXGroup;
 			children = (
+				730BD3FD10ADA33F00FC674A /* twobody-hof.cpp */,
 				739C42D910307BC400A3A5B9 /* examples */,
 				739C42E310307D1700A3A5B9 /* misc */,
 				739C42011030793B00A3A5B9 /* src */,
@@ -547,6 +567,7 @@
 				739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */,
 				739C444B10314E8700A3A5B9 /* hyper_dipolarfluid */,
 				739C451F1031925300A3A5B9 /* widom_cube */,
+				730BD3F510ADA2F800FC674A /* twobody-hof */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -866,6 +887,23 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
+		730BD3F410ADA2F800FC674A /* twobody-hof */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 730BD3FC10ADA33700FC674A /* Build configuration list for PBXNativeTarget "twobody-hof" */;
+			buildPhases = (
+				730BD3F210ADA2F800FC674A /* Sources */,
+				730BD3F310ADA2F800FC674A /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				730BD3FA10ADA30900FC674A /* PBXTargetDependency */,
+			);
+			name = "twobody-hof";
+			productName = "twobody-hof";
+			productReference = 730BD3F510ADA2F800FC674A /* twobody-hof */;
+			productType = "com.apple.product-type.tool";
+		};
 		739618D910309A010051F3E3 /* pka */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 739618E310309A340051F3E3 /* Build configuration list for PBXNativeTarget "pka" */;
@@ -1021,16 +1059,25 @@
 				739C41ED103078CA00A3A5B9 /* xdrfile */,
 				739C42091030798400A3A5B9 /* faunus */,
 				739C43CF10314D6300A3A5B9 /* hyperfaunus */,
-				739C42D110307BA900A3A5B9 /* twobody */,
 				739618D910309A010051F3E3 /* pka */,
 				73961ED81030ADE60051F3E3 /* isobaric */,
 				739C444A10314E8700A3A5B9 /* hyperbulk */,
 				739C451E1031925300A3A5B9 /* widom_cube */,
+				739C42D110307BA900A3A5B9 /* twobody */,
+				730BD3F410ADA2F800FC674A /* twobody-hof */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
+		730BD3F210ADA2F800FC674A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				730BD3FE10ADA33F00FC674A /* twobody-hof.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		739618D710309A010051F3E3 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1152,6 +1199,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		730BD3FA10ADA30900FC674A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 739C42091030798400A3A5B9 /* faunus */;
+			targetProxy = 730BD3F910ADA30900FC674A /* PBXContainerItemProxy */;
+		};
 		73128B021030BF2000950418 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 739C42091030798400A3A5B9 /* faunus */;
@@ -1220,6 +1272,36 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		730BD3F710ADA2F900FC674A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				INSTALL_PATH = /usr/local/bin;
+				PREBINDING = NO;
+				PRODUCT_NAME = "twobody-hof";
+			};
+			name = Debug;
+		};
+		730BD3F810ADA2F900FC674A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = /usr/local/bin;
+				PREBINDING = NO;
+				PRODUCT_NAME = "twobody-hof";
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
 		73128AFF1030BF1300950418 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1529,6 +1611,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		730BD3FC10ADA33700FC674A /* Build configuration list for PBXNativeTarget "twobody-hof" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				730BD3F710ADA2F900FC674A /* Debug */,
+				730BD3F810ADA2F900FC674A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		73128B0E1030BF7C00950418 /* Build configuration list for PBXAggregateTarget "all" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

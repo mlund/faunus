@@ -320,8 +320,9 @@ namespace Faunus {
     du=sum;
     return du;
   }
+
   double saltmove::move(group &g, int n) {
-    if (g.size()==0)
+    if (g.size()==0 || dp<1e-5)
       return 0;
     du=0;
     cnt++;
@@ -360,9 +361,10 @@ namespace Faunus {
     dpsqr+=0;
     //std::swap(con->p[n], con->p[0]);
     //std::swap(con->trial[n], con->trial[0]);
-    con->trial[n] = con->p[n];
+    con->trial[n] = con->p[n]; // Revert move
     return du;
   }
+
   string saltmove::info() {
     std::ostringstream o;
     o << markovmove::info()

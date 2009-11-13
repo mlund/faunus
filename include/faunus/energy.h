@@ -15,7 +15,6 @@
 #include "faunus/potentials/pot_debyehuckel.h"
 #include "faunus/potentials/pot_debyehuckelP3.h"
 #include "faunus/potentials/pot_barecoulomb.h"
-#include "faunus/potentials/pot_netz.h"
 #include "faunus/potentials/pot_test.h"
 #include "faunus/potentials/pot_elhcvdw.h"
 #include "faunus/potentials/pot_hypersphere.h"
@@ -350,47 +349,73 @@ namespace Faunus {
    * contains a function hypairpot(). If you need the ions to interact with the
    * hydrophobic groups on TWO proteins, you must set the end_of_protein_one variable.
    * In this way the minimum distance search is repeated on the remaining particles.
+   *
+   * \warning Calling an energy() function means that hyenergy() is added more
+   *          than once. Carefully check your MC moves to see if this is the
+   *          case.
    */
   template<class T> class int_hydrophobic : public interaction<T> {
     private:
-      vector<unsigned short> hy,pa;
+      vector<unsigned short> hy; //!< List of hydrophobic particles
+      vector<unsigned short> pa; //!< List of particles with empirical pmf.
       double hyenergy(vector<particle> &);
       double hyenergy(vector<particle> &, int);
+
     public:
-      int_hydrophobic(inputfile &in) : interaction<T>(in) { end_of_protein_one=int(1e7); }
-      unsigned int end_of_protein_one;              //!< Last particle in protein one (set if appropriate)
-      void search(vector<particle> &);        //!< Locate hydrophobic groups and ions
-      double energy(vector<particle> &p ) { return interaction<T>::energy(p) + hyenergy(p);}
-      double energy(vector<particle> &p, int i) { return interaction<T>::energy(p,i) + hyenergy(p);}
-      double energy(const  vector<particle> &p, const group &g ) { return interaction<T>::energy(p,g) + hyenergy(p);}
+      unsigned int end_of_protein_one;     //!< Last particle in protein one (set if appropriate)
+
+      int_hydrophobic(inputfile &in) : interaction<T>(in) {
+        end_of_protein_one=int(1e7);
+      }
+
+      void search(vector<particle> &);     //!< Locate hydrophobic groups and ions
+
+      double energy(vector<particle> &p) {
+        return interaction<T>::energy(p) + hyenergy(p);
+      }
+
+      double energy(vector<particle> &p, int i) {
+        return interaction<T>::energy(p,i) + hyenergy(p,i);
+      }
+      
+      double energy(vector<particle> &p, const group &g ) {
+        return interaction<T>::energy(p,g) + hyenergy(p);
+      }
+
+      double energy(vector<particle> &p, const group &g1, const group &g2 ) {
+        return interaction<T>::energy(p,g1,g2) ;//+ hyenergy(p);
+      }
   };
 
   template<class T> void int_hydrophobic<T>::search(vector<particle> &p) {
-    pa.resize(0);
-    hy.resize(0);
+    pa.clear();
+    hy.clear();
     for (int i=0; i<p.size(); i++)
       if (p[i].hydrophobic==true)
         hy.push_back(i);
-      else if (p[i].id==0 || p[i].id==1 || p[i].id==3)
-        pa.push_back(i);
-    //else if (p[i].id==particle::NA || p[i].id==particle::CL || p[i].id==particle::I)
-    //  pa.push_back(i);
+      else if (p[i].id==atom["NA"].id ||
+          p[i].id==atom["CL"].id ||
+          p[i].id==atom["I"].id) pa.push_back(i);
+
+    cout << "# Hydrophobic sites = " << hy.size() << endl
+         << "# Ions              = " << pa.size() << endl;
   }
 
   template<class T> double int_hydrophobic<T>::hyenergy(vector<particle> &p) {
     double u=0;
     int n=pa.size();
 #pragma omp parallel for reduction (+:u)
-    for (int i=0; i<n; i++)  // loop over ions
-      u+=hyenergy(p, pa[i]);                    // energy with hydrophobic groups
+    for (int i=0; i<n; i++)     // loop over ions
+      u+=hyenergy(p, pa[i]);    // energy with hydrophobic groups
     return u; // in kT
   }
 
   template<class T> double int_hydrophobic<T>::hyenergy(vector<particle> &p, int i) {
-    if (p[i].hydrophobic==true) return 0;
-    int j,hymin=0;
+    if (p[i].hydrophobic==true)
+      return 0;
+    int hymin=0;
     double d,dmin=1e7,u=0;
-    for (j=0; j<hy.size(); j++) {     // loop over hydrophobic groups
+    for (int j=0; j<hy.size(); j++) { // loop over hydrophobic groups
       if (hy[j]>end_of_protein_one) { // test if we move into second protein
         u=interaction<T>::pair.hypairpot( p[i], p[hymin], sqrt(dmin) );
         dmin=1e7;                     // reset min. distane
@@ -650,7 +675,7 @@ namespace Faunus {
           uex += impot(ich[t], p[i], img[t] );  //make sure to double count
         for (int u=j; u<=k; u++)
           uin += impot(ich[u], p[i], img[u] );  // internal interactions will be double counted implicitly
-                                                // not paralleized on purpose
+        // not paralleized on purpose
         // the self term will not be double counted
         return p[i].charge*scale*(uex*2+uin); 
       }
@@ -686,7 +711,7 @@ namespace Faunus {
       double potential(vector<particle> &p, point i) {
         ur=ui=0;
         ur=interaction<T>::potential(p,i);
-//#pragma omp parallel for reduction (+:ui) schedule (dynamic)
+        //#pragma omp parallel for reduction (+:ui) schedule (dynamic)
         for (int s=0; s<p.size(); s++)
           ui += impot(ich[s], i, img[s] );  
         ui*=2;               // Due to the definition of scale

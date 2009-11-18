@@ -46,6 +46,7 @@ do
     microsteps=200
     mkinput
     ./twobody-hof #> sletmig
+    exit
 
     rm rdfprot.dat cyl.dat
     microsteps=5000

@@ -383,7 +383,7 @@ namespace Faunus {
       }
 
       double energy(vector<particle> &p, const group &g1, const group &g2 ) {
-        return interaction<T>::energy(p,g1,g2) ;//+ hyenergy(p);
+        return interaction<T>::energy(p,g1,g2) + hyenergy(p); //
       }
   };
 

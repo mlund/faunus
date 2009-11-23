@@ -85,6 +85,12 @@ PYTHON SUPPORT:
 
   $ LDFLAGS=-F/opt/local/Library/Frameworks cmake .
 
+  Alternatively, force the dynamic linker to favor a specific framework
+  directory before starting python. For example:
+
+  $ export DYLD_LIBRARY_PATH=/opt/local/Library/Frameworks/Python.framework/Versions/2.6
+  $ python
+
 DIRECTORY LAYOUT:
   src          Sourcecode and examples
   include      Header files

@@ -355,11 +355,11 @@ namespace Faunus {
     std::ostringstream o;
     o << group::info();
     if (Q.cnt>0)
-      o << "#  Charge fluctuations:" << endl
-        << "#    <Z> <Z^2>-<Z>^2       = " << Q.avg()<<" "<<Q2.avg()-pow(Q.avg(),2)<<endl;
+      o << "#   Charge and fluctuations:" << endl
+        << "#     <Z> <Z2>-<Z>2        = " << Q.avg()<<" "<<Q2.avg()-pow(Q.avg(),2)<<endl;
     if (dip.cnt>0)
-      o << "#    <mu> <mu^2>-<mu>^2    = " << dip.avg()<<" "<<dip2.avg()-pow(dip.avg(),2)<<endl
-        << "#    Dipole vector         = " << mu << endl;
+      o << "#     <mu> <mu2>-<mu>2     = " << dip.avg()<<" "<<dip2.avg()-pow(dip.avg(),2)<<endl
+        << "#     Dipole vector        = " << mu << endl;
       //o << "#    Radius                = " << cm.radius << endl;
     return o.str();
   }

@@ -162,10 +162,10 @@ namespace Faunus {
     for (unsigned int i=0; i<protons.size(); i++)
       p[protons[i]].charge = q;
 
-    std::cout << "# Charge, Titrateable sites = " << sumsites() << endl
-      << "# Charge, Protons           = " << nprot.avg() << endl
-      << "# Average proton charge     = " << q << endl
-      << "# Total                     = " << sumsites()+nprot.avg() << endl;
+    //std::cout << "# Charge, Titrateable sites = " << sumsites() << endl
+    //  << "# Charge, Protons           = " << nprot.avg() << endl
+    //  << "# Average proton charge     = " << q << endl
+    // << "# Total                     = " << sumsites()+nprot.avg() << endl;
     return sumsites();
   }
 

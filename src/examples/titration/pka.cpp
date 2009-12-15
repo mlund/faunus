@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
   protein.accept(con);                 // ..accept translation
   salt salt;                           // Group for salt and counter ions
   salt.add( con, in );                 //   Insert sodium ions
-  saltmove sm(nvt, con, pot);          // Class for salt movements
+  saltmove sm(nvt, con, pot, in);      // Class for salt movements
   aam.load(con, "confout.aam");        // Load old config (if present)
   widom wid(10);
   wid.add( atom("NA") );

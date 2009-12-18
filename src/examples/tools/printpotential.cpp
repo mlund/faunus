@@ -10,7 +10,7 @@ using namespace std;
 int main() {
   inputfile in("printpotential.conf");
   particle p1,p2,p3;
-  pot_netz netz(in);
+  //pot_netz netz(in);
   pot_coulomb coulomb(in);
   pot_tableMI pmf(in);
 

@@ -6,7 +6,7 @@ set(objs slump physconst inputfile point io titrate container
     mcloop ensemble faunus
     moves/base moves/translational moves/rotational moves/charge
     moves/miscmove moves/rosenbluth moves/saltbath moves/clustermove
-    moves/membrane) 
+    moves/crankshaft moves/membrane) 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 #----- xdrfile static library for gromacs output -----

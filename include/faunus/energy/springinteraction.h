@@ -31,32 +31,35 @@ namespace Faunus {
         req = in.getflt("springeqdist", 2);
       };
 
+      /*!
+       * Bonded and non-bonded energy of monomer i with the rest of the system
+       */
       double u_monomer(vector<particle> &p, const polymer &g, unsigned int i ) {
         // normal energy function if no neighbors
-        // isnt this function a bit ambiguous? It either returns the interaction of particle i 
-        // with a polymer or it returns the interaction of a monomer in a polymer with the 
-        // rest of the system?? or did I get it wrong??
         if ( g.nb[i-g.beg].size()==0 )
-          return interaction<T>::energy(p,g,i);
+          return interaction<T>::energy(p,i);
 
-        // energy w. all particles, skip neighbors (uses stl::find - maybe slow).
+        // non-bonded energy - skip neighbors
         double u=0;
-        for (unsigned int j=0; j<i; j++) 
+        for (int j=0; j<i; j++) 
           if ( g.areneighbors(i,j)==false ) 
             u+=pair.pairpot( p[i], p[j] );
-        for (unsigned int j=i+1; j<p.size(); j++) 
+        for (int j=i+1; j<p.size(); j++) 
           if ( g.areneighbors(i,j)==false )
             u+=pair.pairpot( p[i], p[j] );
         u=u*pair.f;
 
-        // calc. spring and coulomb energy w. neighbors
-        for (unsigned int j=0; j<g.nb[i-g.beg].size(); j++) {
+        // bonded energy w. neighbors
+        for (int j=0; j<g.nb[i-g.beg].size(); j++) {
           double r=sqrt( pair.sqdist( p[i], p[ g.nb[i-g.beg][j] ] ) ),
                  dr = r - req;
-          u+=k*dr*dr + pair.f *pair.pairpot(p[i],p[g.nb[i-g.beg][j] ]); 
+          u += k*dr*dr; // spring potential
+          if (r>0.1) // avoid diverging Coulomb potential
+            u+=pair.f*pair.pairpot(p[i],p[g.nb[i-g.beg][j] ]); 
         }
         return u;
       }
+
       double uself_polymer(vector<particle> &p, const polymer &g) {
         double dr,r,u=0;
         int i,j,n=g.end+1;
@@ -67,10 +70,13 @@ namespace Faunus {
             else {
               r=sqrt( pair.sqdist( p[i], p[j] ) );
               dr = r - req;
-              u+=k*dr*dr + pair.f * pair.pairpot(p[i],p[j]); 
+              u+=k*dr*dr;
+              if (r>0.1)
+                u+=pair.f * pair.pairpot(p[i],p[j]); 
             }
         return u;
       }
+
       double uself_popscmem(vector<particle> &p, const popscmembrane &g) {
         double u=0;
         int i,j;

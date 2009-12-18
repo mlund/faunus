@@ -39,6 +39,7 @@
 #include "faunus/moves/miscmove.h"
 #include "faunus/moves/rosenbluth.h"
 #include "faunus/moves/clustermove.h"
+#include "faunus/moves/crankshaft.h"
 
 namespace Faunus {
   string faunus_splash();

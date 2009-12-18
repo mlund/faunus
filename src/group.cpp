@@ -715,7 +715,9 @@ namespace Faunus {
   }
 #endif
 
-  vector<unsigned short> polymer::neighbors(unsigned short i) const { return nb.at(i-beg); }
+  vector<unsigned short> polymer::neighbors(unsigned short i) const {
+    return nb.at(i-beg);
+  }
 
   //!< is j a neighbor to polymer atom i?
   bool polymer::areneighbors(unsigned short i, unsigned short j) const {

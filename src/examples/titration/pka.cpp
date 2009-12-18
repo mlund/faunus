@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
     cout << loop.timing();               // Show progress
   }                                      // END of macro loop
 
-  test.check("Energydrift", sys.drift(), 10);
+  test.check("Energydrift", sys.drift(), 100);
   test.check("Charge", protein.Q.avg() );
   test.check("ExChemPot", wid.muex() );
 

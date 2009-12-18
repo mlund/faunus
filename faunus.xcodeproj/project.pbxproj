@@ -231,7 +231,7 @@
 			isa = PBXContainerItemProxy;
 			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 739C42091030798400A3A5B9 /* faunus */;
+			remoteGlobalIDString = 739C42091030798400A3A5B9;
 			remoteInfo = faunus;
 		};
 		73128B011030BF2000950418 /* PBXContainerItemProxy */ = {
@@ -330,7 +330,7 @@
 /* Begin PBXFileReference section */
 		7305521F1042D75300465515 /* hyperbulk.conf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = hyperbulk.conf; path = src/examples/hypersphere/hyperbulk.conf; sourceTree = "<group>"; };
 		730552201042D75300465515 /* hyperbulk.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = hyperbulk.cpp; path = src/examples/hypersphere/hyperbulk.cpp; sourceTree = "<group>"; };
-		730BD3F510ADA2F800FC674A /* twobody-hof */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = "twobody-hof"; path = "build/Debug/twobody-hof"; sourceTree = "<group>"; };
+		730BD3F510ADA2F800FC674A /* twobody-hof */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "twobody-hof"; sourceTree = BUILT_PRODUCTS_DIR; };
 		730BD3FD10ADA33F00FC674A /* twobody-hof.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "twobody-hof.cpp"; path = "src/examples/twobody-hofmeister/twobody-hof.cpp"; sourceTree = "<group>"; };
 		731297411030C80A00950418 /* base.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = base.h; sourceTree = "<group>"; };
 		731297421030C80A00950418 /* pot_barecoulomb.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_barecoulomb.h; sourceTree = "<group>"; };

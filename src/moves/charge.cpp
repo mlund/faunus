@@ -6,9 +6,9 @@ namespace Faunus {
   string chargereg::info() {
     std::ostringstream o;
     o <<  markovmove::info()
-      << "#   pH (concentration)  = " << ph << endl
-      << "#   Titrateable sites   = " << sites.size() << endl
-      << "#   Number of protons   = " << protons.size() << endl;
+      << "#   pH (concentration)        = " << ph << endl
+      << "#   Titrateable sites         = " << sites.size() << endl
+      << "#   Number of protons         = " << protons.size() << endl;
     return o.str();
   }
 
@@ -340,8 +340,6 @@ namespace Faunus {
     return o.str();
   };
 
-
-
   /*!
    * \brief Calculates the value of kappa for a given vector of particles.
    * \author Andre Teixeira
@@ -354,8 +352,6 @@ namespace Faunus {
     ionic_str1 *= 0.5;
     return const_kappa * sqrt(ionic_str0+ionic_str1);
   };
-
-
 
   /*!
    * \brief Evaluates the protein-counter ion energy for all proteins for a calculated value of kappa

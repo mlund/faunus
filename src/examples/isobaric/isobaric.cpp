@@ -3,7 +3,7 @@
  * protein molecules in a dielectric solvent with
  * explicit mobile ions.
  *
- * \author Bjorn Persson
+ * \author Bjorn Persson and Anil Kurut
  */
 #include "faunus/faunus.h"
 #include <iostream>

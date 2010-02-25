@@ -7,7 +7,7 @@ namespace Faunus {
     name.assign("COMBINED ROTATION and TRANSLATION");
     runfraction=1.0;
     deltadp=0.1;
-    dp=1.0;
+    dp=0;
     dpt=dpr=0.5;  
   };
   string transrot::info() {

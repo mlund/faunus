@@ -365,11 +365,13 @@ namespace Faunus {
   }
 
   string macromolecule::info(container &con) {
+    if (cm.radius<=0)
+      vradius(con.p);
     std::ostringstream o;
     o << info();
     o << "#   Current charge         = " << charge(con.p) << endl
       << "#   Hydrophobic particles  = " << numhydrophobic(con.p) << endl
-      << "#   Radius                 = " << vradius(con.p) << endl;
+      << "#   Radius                 = " << cm.radius;
     return o.str();
   }
 

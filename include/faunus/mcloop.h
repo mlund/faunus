@@ -33,8 +33,8 @@ namespace Faunus {
   class mcloop {
     private:
       countdown<unsigned int> cnt;
-      unsigned int cnt_micro, cnt_macro;
     public:
+      unsigned int cnt_micro, cnt_macro;
       bool eq;
       unsigned int macro;          //!< Number of macrosteps
       unsigned int micro;          //!< Number of microsteps

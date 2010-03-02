@@ -39,8 +39,8 @@ namespace Faunus {
   class cell : public container {
     private:
       double r2,diameter;
-      void setradius(double);
     public:
+      void setradius(double);
       double r;              //!< Radius
       cell(double);
       cell(inputfile &);

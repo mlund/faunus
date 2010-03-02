@@ -3,7 +3,7 @@
  * protein molecules in a dielectric solvent with
  * explicit mobile ions.
  *
- * \author Bjorn Persson
+ * \author Bjorn Persson and Anil Kurut
  */
 
 #include "faunus/faunus.h"
@@ -15,18 +15,17 @@
 using namespace Faunus;
 using namespace std;
  
-class BadConversion : public std::runtime_error {
-public:
-  BadConversion(const std::string& s)
-    : std::runtime_error(s)
-    { }
-};
- 
-inline std::string stringify(double x)
-{
-  std::ostringstream o;
-  if (!(o << x))
-    throw BadConversion("stringify(double)");
+#ifdef MONOPOLE
+  typedef interaction_monopole<pot_debyehuckelP3> Tpot;
+#elif defined(FASTDH)
+  typedef interaction_vector<pot_debyehuckelP3Fast> Tpot;
+#else
+  typedef interaction<pot_debyehuckelP3> Tpot;
+#endif
+
+string stringify(double x) {
+  stringstream o;
+  o << x;
   return o.str();
 }
 
@@ -47,11 +46,9 @@ int main() {
 #endif
   canonical nvt;                          // Use the canonical ensemble
 #ifdef MONOPOLE
-  interaction_monopole<pot_debyehuckelP3> pot(in,cell); // Far-away monopole approximation
-#elif defined(FASTDH)
-  interaction_vector<pot_debyehuckelP3> pot(in); // Fast, approximate Debye-Huckel potential
+  Tpot pot(in,cell);                      // Far-away monopole approximation
 #else
-  interaction<pot_debyehuckelP3> pot(in); // Functions for interactions
+  Tpot pot(in);                           // Fast, approximate Debye-Huckel potential
 #endif
   vector<macromolecule> g;                // PROTEIN groups
   io io;
@@ -65,16 +62,16 @@ int main() {
   if (aam.load(cell,"confout.aam")) {
     for (int i=0;i<g.size();i++) 
       g[i].masscenter(cell);              // Load old config (if present)
-                                          // ...and recalc mass centers
+    // ...and recalc mass centers
   }
 
   // Markovsteps
- // macrorot mr(nvt, cell, pot);            //   Class for macromolecule rotation
- // translate mt(nvt, cell, pot);           //   Class for macromolecular translation
+  //macrorot mr(nvt, cell, pot);            //   Class for macromolecule rotation
+  //translate mt(nvt, cell, pot);           //   Class for macromolecular translation
   transrot mtr(nvt, cell, pot);           //   Class for simultaneous macromolecular translation and rotation
-  transrot mtrL(nvt, cell, pot);           //   Class for simultaneous macromolecular translation and rotation
+  transrot mtrL(nvt, cell, pot);          //   Class for simultaneous macromolecular translation and rotation
   clustertrans ct(nvt, cell, pot, g);     //   Class for non-rejective cluster translation
-  isobaric<pot_debyehuckelP3> vol(
+  isobaric<Tpot> vol(
       nvt, cell, pot,
       in.getflt("pressure"),              // Set external pressure (in kT)
       in.getflt("penalty"),               // Set penalty           (in kT)
@@ -84,16 +81,16 @@ int main() {
       int(in.getint("binlen")));          // Set bin length for penalty function  
 
   if ( in.getboo("penalize")==true)       // If penalty.dat is present it will be loaded and used as
-   vol.loadpenaltyfunction("penalty.dat");// bias. Else a penalty function will only be constructed
-                                          // if the penalty != 0.
+    vol.loadpenaltyfunction("penalty.dat");// bias. Else a penalty function will only be constructed
+  // if the penalty != 0.
   // Markovparameters
   bool movie=in.getboo("movie",false);
   double dppercent = in.getflt("dppercent", 0.00080);
   vol.dp=in.getflt("voldp");
- // mr.dp =in.getflt("mrdp");
+  // mr.dp =in.getflt("mrdp");
   ct.dp=in.getflt("ctdp");
 #ifdef XYPLANE
- // mt.dpv.z=0;
+  // mt.dpv.z=0;
 #endif
 
   // Analysis and energy
@@ -101,7 +98,7 @@ int main() {
   for (int i=0; i<g.size()-1; i++)
     for (int j=i+1; j<g.size(); j++)
       usys+=pot.energy(cell.p, g[i], g[j]);
-  
+
   systemenergy sys(usys);   // System energy analysis
   histogram lendist(in.getflt("binlen",1.) ,in.getflt("minlen"), in.getflt("maxlen"));             
   aggregation agg(cell, g, 1.5);
@@ -125,10 +122,9 @@ int main() {
   for (int i=0; i<g.size(); i++)
     xtc.g.push_back( &g[i] );
 
-  cout << cell.info() << pot.info() <<in.info();      // Print information to screen
-
-  cout <<endl<< "#  Temperature = "<<phys.T<<" K"<<endl<<endl;
-  cout << "---------- RUN-TIME INFORMATION  -----------" << endl;
+  cout << cell.info() << pot.info() <<in.info() << endl     // Print information to screen
+    << "#  Temperature = " << phys.T << " K" << endl << endl
+    << "---------- RUN-TIME INFORMATION  -----------" << endl;
 
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {
@@ -138,9 +134,9 @@ int main() {
       if (randy<volr)                           // Pick a random MC move
         sys+=vol.move(g);                       //   Do the move.
       // if (randy<volr+rr && randy >volr)         // Rotate proteins
-        // for (n=0; n<g.size(); n++) {            //   Loop over all proteins
-          // i = slump.random_one()*g.size();      //   and pick at random.
-          // sys+=mr.move(g[i]);                   //   Do the move.
+      // for (n=0; n<g.size(); n++) {            //   Loop over all proteins
+      // i = slump.random_one()*g.size();      //   and pick at random.
+      // sys+=mr.move(g[i]);                   //   Do the move.
       // }
       if (randy<volr+rr+tr && randy>volr+rr)    // Translate and rotate proteins simultaneously
         for (n=0; n<g.size(); n++) {            //   Loop over all proteins
@@ -155,19 +151,22 @@ int main() {
             sys+=mtr.move(g[i]);                //  Do the move
           }
         }
-      
+
       if (randy<clt+volr+rr+tr && randy>volr+rr+tr)// Cluster translation
         sys+=ct.move(g);                        //   Do the move.
 
       lendist.add(cell.len);
+
       if (movie==true && slump.random_one()>.99 && macro>1)
         xtc.save("confout.xtc", cell);   // Save trajectory
+
       if (slump.random_one()>-.99)
         sys.track();
+
       if(slump.random_one()>-.99) {
         for (i=0;i<g.size();i++) 
           g[i].masscenter(cell);                // Recalculate mass centers
-      
+
         for (i=0; i<g.size()-1; i++)
           for (j=i+1; j<g.size(); j++) {        //   Analyse g(r)...
             protrdf.update(cell,g[i].cm,g[j].cm);
@@ -192,8 +191,9 @@ int main() {
     sys.update(usys);                           // Update system energy averages
 
     cout << loop.timing(macro);
-    cout << "#   Energy (cur, avg, std)    = "<<sys.cur<<", "<<sys.uavg.avg()<<", "<<sys.uavg.stdev()<<endl
-         << "#   Drift                     = "<<sys.cur-sys.sum<<endl;
+    cout << "#   Energy (cur, avg, std)    = "
+      << sys.cur << ", " << sys.uavg.avg()<<", "<<sys.uavg.stdev()<<endl
+      << "#   Drift                     = " << sys.cur-sys.sum<<endl;
 
     cell.check_vector();                        // Check sanity of particle vector
     gro.save("confout.gro", cell);              // Write GRO output file
@@ -208,35 +208,38 @@ int main() {
       vol.updatepenalty();
       cout << "# Penalty function updated"<<endl;
     }
+
     // Update inputfile isobaric.conf and print coordinates
     in.updateval("boxlen", stringify(cell.len));
     io.writefile("isobaric.conf", in.print());
     aam.save("confout.aam", cell.p);
 
     protrdf.write("rdfprot.dat");               // Write g(r)'s
-    protrdf11.write("rdfprot11.dat");               // Write g(r)'s
-    protrdf12.write("rdfprot12.dat");               // Write g(r)'s
-    protrdf22.write("rdfprot22.dat");               // Write g(r)'s
+    protrdf11.write("rdfprot11.dat");           // Write g(r)'s
+    protrdf12.write("rdfprot12.dat");           // Write g(r)'s
+    protrdf22.write("rdfprot22.dat");           // Write g(r)'s
     agg.write("aggregates.dat");
 
     cout << g[0].info() << endl;
 
-  } // End of outer loop
-  
-  if (in.getboo("penalize")==false) {
-    vol.printupdatedpenalty("penalty.dat");
-  }
+    aam.save("confout.aam", cell.p);            // Save config. for next run
+    pqr.save("confout.pqr", cell.p);
 
-  cout << "----------- FINAL INFORMATION -----------" << endl ;
-  cout << loop.info() << sys.info() << agg.info() << vol.info()             // Final information...
-       << mtr.info() << mtrL.info() << ct.info(); //mt.info() << mr.info()
-  cout <<endl << "#   Final      side length  = " <<cell.len<<endl
-       << "#   Ideal     <side length> = " <<pow( double( g.size() )/ in.getflt("pressure" ),1./3.)<<endl
-       << "#   Simulated <side length> = " <<vol.len.avg()<<" ("<<vol.len.stdev()<<")"<<endl
-       << "#   Ideal     <density>     = " <<in.getflt("pressure")<<endl
-       << "#   Simulated <density>     = " <<g.size()*vol.ivol.avg()<<" ("<<g.size()*vol.ivol.avg()<<")"<<endl;
-  aam.save("confout.aam", cell.p);            // Save config. for next run
-  pqr.save("confout.pqr", cell.p);
+  } // End of outer loop
+
+  if (in.getboo("penalize")==false)
+    vol.printupdatedpenalty("penalty.dat");
+
+  cout << "----------- FINAL INFORMATION -----------" << endl
+    << loop.info() << sys.info() << agg.info() << vol.info()
+    << mtr.info() << mtrL.info() << ct.info() //<< mt.info() << mr.info()
+    << endl
+    << "#   Final      side length  = " << cell.len << endl
+    << "#   Ideal     <side length> = " << pow( double( g.size() ) / in.getflt("pressure" ),1./3.)<<endl
+    << "#   Simulated <side length> = " << vol.len.avg() << " (" << vol.len.stdev() << ")" << endl
+    << "#   Ideal     <density>     = " << in.getflt("pressure") << endl
+    << "#   Simulated <density>     = " << g.size()*vol.ivol.avg() << " (" << g.size()*vol.ivol.avg() << ")" << endl;
+
   xtc.close();
 }
 

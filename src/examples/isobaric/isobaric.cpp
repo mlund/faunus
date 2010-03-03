@@ -95,6 +95,7 @@ int main() {
 
   // Analysis and energy
   double usys=0;
+#pragma omp parallel for reduction (+:usys) schedule (dynamic)
   for (int i=0; i<g.size()-1; i++)
     for (int j=i+1; j<g.size(); j++)
       usys+=pot.energy(cell.p, g[i], g[j]);
@@ -143,17 +144,17 @@ int main() {
           i = slump.random_one()*g.size();      //   and pick at random.
           if (slump.random_one()>0.9) {
             mtrL.dpt = cell.len / 2;
-            sys+=mtrL.move(g[i]);
+            sys+=mtrL.move(g, i);
           }
           else {
             // sys+=mt.move(g[i]);               //  Do the move.
             mtr.dpt = dppercent * cell.len * cell.len;
-            sys+=mtr.move(g[i]);                //  Do the move
+            sys+=mtr.move(g, i);                //  Do the move
           }
         }
 
       if (randy<clt+volr+rr+tr && randy>volr+rr+tr)// Cluster translation
-        sys+=ct.move(g);                        //   Do the move.
+        sys+=ct.move(g);                          //   Do the move.
 
       lendist.add(cell.len);
 
@@ -185,6 +186,7 @@ int main() {
     } // End of inner loop
 
     usys=0;
+#pragma omp parallel for reduction (+:usys) schedule (dynamic)
     for (int i=0; i<g.size()-1; i++)
       for (int j=i+1; j<g.size(); j++)
         usys+=pot.energy(cell.p, g[i], g[j]);
@@ -220,7 +222,7 @@ int main() {
     protrdf22.write("rdfprot22.dat");           // Write g(r)'s
     agg.write("aggregates.dat");
 
-    cout << g[0].info() << endl;
+    //cout << g[0].info() << endl;
 
     aam.save("confout.aam", cell.p);            // Save config. for next run
     pqr.save("confout.pqr", cell.p);

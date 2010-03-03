@@ -9,8 +9,10 @@ namespace Faunus {
   class transrot : public markovmove { 
     public:
       transrot( ensemble&, container&, energybase&);
-      double move(macromolecule &);
-      double dpt, dpr;      // step parameters
+      double move(macromolecule &);                  //!< Translate/rotate one molecule
+      double move(vector<macromolecule> &, int);     //!< Translate/rotate one molecule in vector of molecules
+      double dpt;                                    //!< Translational displacement parameter
+      double dpr;                                    //!< Rotational displacement parameter
       string info();
       
   };

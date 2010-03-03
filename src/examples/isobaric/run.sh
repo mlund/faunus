@@ -31,6 +31,8 @@ rr            $rr
 cltr          $cltr
 penaltyupdate $penaltyupdate
 scalepen      $scalepen 
+threshold_g2g 40
+threshold_g2p 10
 movie         $movie"> isobaric.conf
 }
 
@@ -39,10 +41,10 @@ macrosteps=10
 microsteps=1
 boxlen=384.945
 LJeps=0.2
-nprot1=500
-protein1="p.aam"
-nprot2=500
-protein2="m.aam"
+nprot1=20
+protein1="mrh4a.aam"
+nprot2=20
+protein2="mrh4a.aam"
 #--- Markov Parameters ---
 voldp=0.30        
 mrdp=2.00
@@ -74,9 +76,11 @@ movie="no"
 
 #  cp ${suffix}-conf.aam confout.aam
   suffix="test-pm7"
-  microsteps=1000
-#  mkinput
-#  ./isobaric > ${suffix}.out
+  microsteps=200
+  mkinput
+  export OMP_NUM_THREADS=1
+  ./isobaricMP #> ${suffix}.out
+  exit
   boxlen=$(less ${suffix}.out| grep "#   Final      side length"|awk '{print $ 6}')
   microsteps=5000
   mkinput

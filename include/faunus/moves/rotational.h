@@ -4,7 +4,6 @@
 #include "faunus/moves/base.h"
 
 namespace Faunus {
-  
   /*! \brief Rotate group around its mass-center.
    *  \author Mikael Lund
    *  \date Prague 2007
@@ -13,8 +12,8 @@ namespace Faunus {
     public:
       macrorot( ensemble&, container&, energybase&);
       double move(macromolecule &);
+      double move(vector<macromolecule> &, int);
   };
-
 }
 
 #endif

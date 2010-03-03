@@ -138,9 +138,12 @@ namespace Faunus {
     if (slp.runtest(runfraction)==false)
       return du;
     cnt++;
+    double deltau=0;
+#pragma omp parallel for reduction (+:deltau) schedule (dynamic)
     for (int i=0; i<g.size()-1; i++)
       for (int j=i+1; j<g.size(); j++)
-        du-=pot->energy(con->p, g[i], g[j]);
+        deltau-=pot->energy(con->p, g[i], g[j]);
+    du=deltau;
     point ip;
     ip.x=dp*slp.random_half();
     ip.y=dp*slp.random_half();
@@ -167,9 +170,12 @@ namespace Faunus {
       }
       g[moved[i]].accept(*con);
     }
+    deltau=0;
+#pragma omp parallel for reduction (+:deltau) schedule (dynamic)
     for (int i=0; i<g.size()-1; i++)
       for (int j=i+1; j<g.size(); j++)
-        du+=pot->energy(con->p, g[i], g[j]);
+        deltau+=pot->energy(con->p, g[i], g[j]);
+    du=deltau;
     movefrac+=double(moved.size())/double((moved.size()+remaining.size()));
     rc=OK;
     naccept++;

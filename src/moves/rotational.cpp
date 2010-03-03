@@ -44,4 +44,31 @@ namespace Faunus {
     return du;
   }
 
+  /*!
+   * \todo Cell overlap test missing
+   */
+  double macrorot::move(vector<macromolecule> &g, int n) {
+    du=0;
+    if (slp.runtest(runfraction)==false)
+      return du;
+    cnt++;
+    g[n].rotate(*con, dp); 
+    //insert cell overlap test
+    double deltau=0;
+#pragma omp parallel for reduction (+:deltau) 
+    for (int i=0; i<g.size(); i++)
+      if (i!=n)
+        deltau += pot->energy(con->trial, g[i], g[n]) - pot->energy(con->p, g[i], g[n]);
+    du=deltau;
+    if (ens->metropolis(du)==true) {
+      rc=OK;
+      utot+=du;
+      naccept++;
+      g[n].accept(*con);
+      return du;
+    } else rc=ENERGY;
+    du=0;
+    g[n].undo(*con);
+    return du;
+  }
 }

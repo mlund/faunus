@@ -17,6 +17,7 @@ namespace Faunus {
       << "#   Dp (rotation)         = " <<  dpr << endl;
     return o.str();
   } 
+
   /*!
    * \todo Cell overlap test missing, dp is used both for dr and the angle
    */
@@ -58,6 +59,44 @@ namespace Faunus {
     g.undo(*con);
     return du;
   }
+
+  /*!
+   * \todo Cell overlap test missing, dp is used both for dr and the angle
+   */
+  double transrot::move(vector<macromolecule> &g, int n) {
+    du=0;
+    cnt++;
+    g[n].rotate(*con, dpr, dpt); //dpt in ang, dpr in rad./2
+    //insert cell overlap test
+    for (int i=g[n].beg; i<=g[n].end; i++) { 
+      if (con->collision( con->trial[i] )==true) { 
+        rc=HC;
+        dpsqr+=0.;
+        g[n].undo(*con);
+        return du; 
+      }
+    }
+    double deltau=0;
+#pragma omp parallel for reduction (+:deltau) 
+    for (int i=0; i<g.size(); i++)
+      if (i!=n)
+        deltau += pot->energy(con->trial, g[i], g[n]) - pot->energy(con->p, g[i], g[n]);
+    du=deltau;
+    
+    if (ens->metropolis(du)==true) {
+      rc=OK;
+      utot+=du;
+      naccept++;
+      dpsqr+=con->sqdist(g[n].cm, g[n].cm_trial);
+      g[n].accept(*con);
+      return du;
+    } else rc=ENERGY;
+    du=0;
+    dpsqr+=0.;
+    g[n].undo(*con);
+    return du;
+  }
+
   // Multiple paticle transrot
   multtr::multtr( ensemble &e,
       container &c, energybase &i, int M ) : markovmove(e,c,i)

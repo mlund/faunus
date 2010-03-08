@@ -28,11 +28,11 @@ atomfile      $atomfile
 volr          $volr
 tr            $tr
 rr            $rr
-cltr          $cltr
+clt           $clt 
 penaltyupdate $penaltyupdate
 scalepen      $scalepen 
 threshold_g2g 40
-threshold_g2p 10
+threshold_g2p 10000
 movie         $movie"> isobaric.conf
 }
 
@@ -41,10 +41,10 @@ macrosteps=10
 microsteps=1
 boxlen=384.945
 LJeps=0.2
-nprot1=20
-protein1="mrh4a.aam"
-nprot2=20
-protein2="mrh4a.aam"
+nprot1=50
+protein1="a.aam"
+nprot2=50
+protein2="b.aam"
 #--- Markov Parameters ---
 voldp=0.30        
 mrdp=2.00
@@ -52,8 +52,8 @@ mtdp=30.00
 ctdp=10.00
 volr=1
 tr=2
-rr=0
-cltr=0
+rr=1
+clt=1
 #--- Interactions and potentials
 bjerrum=7.12
 pressure=0.000001
@@ -65,24 +65,22 @@ LJeps=0.30
 maxlen=1000
 minlen=100
 binlen=1
-penalize="yes"
+penalize="no"
 penalty=0.005
 scalepen=1.0
-penaltyupdate="yes"
-movie="no"
+penaltyupdate="no"
+movie="yes"
 #--- Variations and execution
 
 #  export OMP_NUM_THREADS=2
 
 #  cp ${suffix}-conf.aam confout.aam
   suffix="test-pm7"
-  microsteps=200
+  microsteps=100
   mkinput
-  export OMP_NUM_THREADS=1
-  ./isobaricMP #> ${suffix}.out
-  exit
+  ./isobaric > ${suffix}.out
   boxlen=$(less ${suffix}.out| grep "#   Final      side length"|awk '{print $ 6}')
-  microsteps=5000
+  microsteps=500
   mkinput
   ./isobaric > ${suffix}.out
   cp confout.aam ${suffix}-conf.aam

@@ -563,7 +563,7 @@ namespace Faunus {
           particle mp=monopole(p,g);
           for (int i=0; i<g.beg; i++)
             u+= (sqrt(interaction<T>::pair.sqdist(mp,p[i]))>cut_g2p) ? interaction<T>::energy(mp,p[i]) : interaction<T>::energy(p,g,i);
-          for (int i=g.beg+1; i<p.size(); i++)
+          for (int i=g.end+1; i<p.size(); i++)
             u+= (sqrt(interaction<T>::pair.sqdist(mp,p[i]))>cut_g2p) ? interaction<T>::energy(mp,p[i]) : interaction<T>::energy(p,g,i);
           return u;
         }

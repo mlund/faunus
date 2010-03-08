@@ -13,6 +13,12 @@
 using namespace Faunus;
 using namespace std;
 
+#ifdef MONOPOLE
+  typedef interaction_monopole<pot_debyehuckelP3> Tpot;
+#else
+  typedef interaction<pot_debyehuckelP3> Tpot;
+#endif
+
 int main() {
   cout << faunus_splash();              // Faunus info
   slump slump;                          // A random number generator
@@ -20,7 +26,11 @@ int main() {
   mcloop loop(in);                      // Set Markov chain loop lengths
   cell cell(in);                        // We want a spherical, hard cell
   canonical nvt;                        // Use the canonical ensemble
-  interaction<pot_debyehuckel> pot(in);  // Functions for interactions
+#ifdef MONOPOLE
+  Tpot pot(in,cell);                    // Functions for interactions
+#else
+  Tpot pot(in);
+#endif
   ioxyz xyz;                            // xyz output for VMD etc.
   distributions dst;                    // Distance dep. averages
   //  angularcorr  angcorr;                 // Dipole cross-correlation
@@ -39,7 +49,7 @@ int main() {
   }
 
 
-  systemenergy sys(pot.energy(cell.p)-pot.internal(cell.p,g[0])-pot.internal(cell.p,g[1])); // System energy analysis
+  systemenergy sys(pot.energy(cell.p, g[0], g[1])); // System energy analysis
   cout << in.info() << cell.info()
     << pot.info();                   // Print information to screen
 
@@ -66,7 +76,7 @@ int main() {
         case 0:                                 // Rotate proteins
           for (n=0; n<2; n++) {                 //   Loop over all proteins
             i = rand() % g.size();              //   and pick at random.
-            sys+=mr.move(g[i]);                 //   Do the move.
+            sys+=mr.move(g, i);                 //   Do the move.
           }
           break;
         case 1:                                 // Translate proteins
@@ -88,7 +98,7 @@ int main() {
         xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
     } // End of inner loop
 
-    sys.update(pot.energy(cell.p)-pot.internal(cell.p, g[0])-pot.internal(cell.p, g[1]));             // Update system energy averages
+    sys.update(pot.energy(cell.p, g[0], g[1])); // Update system energy averages
     cell.check_vector();                        // Check sanity of particle vector
 
     dm.gofr.write("rdfprot.dat");               // Write interprotein g(r)

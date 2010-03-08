@@ -103,6 +103,7 @@ int main() {
   systemenergy sys(usys);   // System energy analysis
   histogram lendist(in.getflt("binlen",1.) ,in.getflt("minlen"), in.getflt("maxlen"));             
   aggregation agg(cell, g, 1.5);
+  distributions dist(in.getflt("binlen",1.),in.getflt("minlen"), in.getflt("maxlen"));
 
   FAUrdf protrdf(0,0,.5,cell.len/2.);   // Protein and salt radial distributions
   FAUrdf protrdf11(0,0,.5,cell.len/2.); // Protein and salt radial distributions
@@ -139,7 +140,7 @@ int main() {
       // i = slump.random_one()*g.size();      //   and pick at random.
       // sys+=mr.move(g[i]);                   //   Do the move.
       // }
-      if (randy<volr+rr+tr && randy>volr+rr)    // Translate and rotate proteins simultaneously
+      if (randy<volr+rr+tr && randy>volr)       // Translate and rotate proteins simultaneously
         for (n=0; n<g.size(); n++) {            //   Loop over all proteins
           i = slump.random_one()*g.size();      //   and pick at random.
           if (slump.random_one()>0.9) {
@@ -157,6 +158,7 @@ int main() {
         sys+=ct.move(g);                          //   Do the move.
 
       lendist.add(cell.len);
+      dist.add("aveenergy", cell.len, sys.sum);
 
       if (movie==true && slump.random_one()>.99 && macro>1)
         xtc.save("confout.xtc", cell);   // Save trajectory
@@ -221,6 +223,7 @@ int main() {
     protrdf12.write("rdfprot12.dat");           // Write g(r)'s
     protrdf22.write("rdfprot22.dat");           // Write g(r)'s
     agg.write("aggregates.dat");
+    dist.write("aveenergy.dat");
 
     //cout << g[0].info() << endl;
 

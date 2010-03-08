@@ -11,6 +11,7 @@
 			isa = PBXAggregateTarget;
 			buildConfigurationList = 73128B0E1030BF7C00950418 /* Build configuration list for PBXAggregateTarget "all" */;
 			buildPhases = (
+				73280BC2114197240054855E /* ShellScript */,
 			);
 			dependencies = (
 				73128B021030BF2000950418 /* PBXTargetDependency */,
@@ -22,6 +23,18 @@
 			);
 			name = all;
 			productName = all;
+		};
+		732812831141A8DE0054855E /* pka - calbindin test */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 732812881141A9210054855E /* Build configuration list for PBXAggregateTarget "pka - calbindin test" */;
+			buildPhases = (
+				732812821141A8DE0054855E /* ShellScript */,
+			);
+			dependencies = (
+				732812871141A8E50054855E /* PBXTargetDependency */,
+			);
+			name = "pka - calbindin test";
+			productName = "pka - calbindin test";
 		};
 /* End PBXAggregateTarget section */
 
@@ -48,6 +61,8 @@
 		731297631030C80A00950418 /* pot_table2.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297511030C80A00950418 /* pot_table2.h */; };
 		731297641030C80A00950418 /* pot_test.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297521030C80A00950418 /* pot_test.h */; };
 		731297651030C80A00950418 /* pot_test_rf.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297531030C80A00950418 /* pot_test_rf.h */; };
+		73280BD911419B740054855E /* pkaDH.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73280BD811419B640054855E /* pkaDH.cpp */; };
+		73280BE511419D340054855E /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		739618E810309A7B0051F3E3 /* pka.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739618E710309A7B0051F3E3 /* pka.cpp */; };
 		73961ECF1030A6920051F3E3 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		73961EDD1030ADEF0051F3E3 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
@@ -262,6 +277,27 @@
 			remoteGlobalIDString = 73961ED81030ADE60051F3E3;
 			remoteInfo = isobaric;
 		};
+		73280BDB11419C0D0054855E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 739C42091030798400A3A5B9;
+			remoteInfo = faunus;
+		};
+		732812861141A8E50054855E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 739618D910309A010051F3E3 /* pka */;
+			remoteInfo = pka;
+		};
+		7328129B1141AB140054855E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 732812831141A8DE0054855E /* pka - calbindin test */;
+			remoteInfo = "pka - calbindin test";
+		};
 		739618DE10309A090051F3E3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
@@ -350,6 +386,8 @@
 		731297511030C80A00950418 /* pot_table2.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_table2.h; sourceTree = "<group>"; };
 		731297521030C80A00950418 /* pot_test.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_test.h; sourceTree = "<group>"; };
 		731297531030C80A00950418 /* pot_test_rf.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_test_rf.h; sourceTree = "<group>"; };
+		73280BC6114197D60054855E /* pkaDH */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pkaDH; sourceTree = BUILT_PRODUCTS_DIR; };
+		73280BD811419B640054855E /* pkaDH.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pkaDH.cpp; path = src/examples/titration/pkaDH.cpp; sourceTree = "<group>"; };
 		739618DA10309A010051F3E3 /* pka */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pka; sourceTree = BUILT_PRODUCTS_DIR; };
 		739618E710309A7B0051F3E3 /* pka.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pka.cpp; path = src/examples/titration/pka.cpp; sourceTree = "<group>"; };
 		73961ED91030ADE60051F3E3 /* isobaric */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = isobaric; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -452,6 +490,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		73280BC4114197D60054855E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				73280BE511419D340054855E /* liblibfaunus.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		739618D810309A010051F3E3 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -547,7 +593,6 @@
 		739C41D7103078A800A3A5B9 = {
 			isa = PBXGroup;
 			children = (
-				730BD3FD10ADA33F00FC674A /* twobody-hof.cpp */,
 				739C42D910307BC400A3A5B9 /* examples */,
 				739C42E310307D1700A3A5B9 /* misc */,
 				739C42011030793B00A3A5B9 /* src */,
@@ -563,6 +608,7 @@
 				739C420A1030798400A3A5B9 /* liblibfaunus.dylib */,
 				739C42D210307BA900A3A5B9 /* twobody */,
 				739618DA10309A010051F3E3 /* pka */,
+				73280BC6114197D60054855E /* pkaDH */,
 				73961ED91030ADE60051F3E3 /* isobaric */,
 				739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */,
 				739C444B10314E8700A3A5B9 /* hyper_dipolarfluid */,
@@ -718,7 +764,9 @@
 				730552201042D75300465515 /* hyperbulk.cpp */,
 				739C45271031928400A3A5B9 /* widom.cpp */,
 				739618E710309A7B0051F3E3 /* pka.cpp */,
+				73280BD811419B640054855E /* pkaDH.cpp */,
 				739C42DC10307BF400A3A5B9 /* twobody.cpp */,
+				730BD3FD10ADA33F00FC674A /* twobody-hof.cpp */,
 				73961F131030AE5D0051F3E3 /* isobaric.conf */,
 				73961F141030AE5D0051F3E3 /* isobaric.cpp */,
 			);
@@ -904,6 +952,24 @@
 			productReference = 730BD3F510ADA2F800FC674A /* twobody-hof */;
 			productType = "com.apple.product-type.tool";
 		};
+		73280BC5114197D60054855E /* pkaAT */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 73280BCA114197F50054855E /* Build configuration list for PBXNativeTarget "pkaAT" */;
+			buildPhases = (
+				73280BC3114197D60054855E /* Sources */,
+				73280BC4114197D60054855E /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7328129C1141AB140054855E /* PBXTargetDependency */,
+				73280BDC11419C0D0054855E /* PBXTargetDependency */,
+			);
+			name = pkaAT;
+			productName = pkaDH;
+			productReference = 73280BC6114197D60054855E /* pkaDH */;
+			productType = "com.apple.product-type.tool";
+		};
 		739618D910309A010051F3E3 /* pka */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 739618E310309A340051F3E3 /* Build configuration list for PBXNativeTarget "pka" */;
@@ -1060,6 +1126,8 @@
 				739C42091030798400A3A5B9 /* faunus */,
 				739C43CF10314D6300A3A5B9 /* hyperfaunus */,
 				739618D910309A010051F3E3 /* pka */,
+				732812831141A8DE0054855E /* pka - calbindin test */,
+				73280BC5114197D60054855E /* pkaAT */,
 				73961ED81030ADE60051F3E3 /* isobaric */,
 				739C444A10314E8700A3A5B9 /* hyperbulk */,
 				739C451E1031925300A3A5B9 /* widom_cube */,
@@ -1069,12 +1137,49 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		73280BC2114197240054855E /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "";
+		};
+		732812821141A8DE0054855E /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "# shell script goes here\ncd ${PROJECT_DIR}/src/examples/titration\n./calbindin.sh\nexit 0";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		730BD3F210ADA2F800FC674A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				730BD3FE10ADA33F00FC674A /* twobody-hof.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		73280BC3114197D60054855E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				73280BD911419B740054855E /* pkaDH.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1224,6 +1329,21 @@
 			target = 73961ED81030ADE60051F3E3 /* isobaric */;
 			targetProxy = 73128B071030BF2000950418 /* PBXContainerItemProxy */;
 		};
+		73280BDC11419C0D0054855E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 739C42091030798400A3A5B9 /* faunus */;
+			targetProxy = 73280BDB11419C0D0054855E /* PBXContainerItemProxy */;
+		};
+		732812871141A8E50054855E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 739618D910309A010051F3E3 /* pka */;
+			targetProxy = 732812861141A8E50054855E /* PBXContainerItemProxy */;
+		};
+		7328129C1141AB140054855E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 732812831141A8DE0054855E /* pka - calbindin test */;
+			targetProxy = 7328129B1141AB140054855E /* PBXContainerItemProxy */;
+		};
 		739618DF10309A090051F3E3 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 739C42091030798400A3A5B9 /* faunus */;
@@ -1319,6 +1439,58 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				PRODUCT_NAME = all;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		73280BC8114197D70054855E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = DHTEIXEIRA;
+				INSTALL_PATH = /usr/local/bin;
+				PREBINDING = NO;
+				PRODUCT_NAME = pkaDH;
+			};
+			name = Debug;
+		};
+		73280BC9114197D70054855E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = /usr/local/bin;
+				PREBINDING = NO;
+				PRODUCT_NAME = pkaDH;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		732812841141A8DE0054855E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				PRODUCT_NAME = "pka - calbindin test";
+			};
+			name = Debug;
+		};
+		732812851141A8DE0054855E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				PRODUCT_NAME = "pka - calbindin test";
 				ZERO_LINK = NO;
 			};
 			name = Release;
@@ -1625,6 +1797,24 @@
 			buildConfigurations = (
 				73128AFF1030BF1300950418 /* Debug */,
 				73128B001030BF1300950418 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		73280BCA114197F50054855E /* Build configuration list for PBXNativeTarget "pkaAT" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				73280BC8114197D70054855E /* Debug */,
+				73280BC9114197D70054855E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		732812881141A9210054855E /* Build configuration list for PBXAggregateTarget "pka - calbindin test" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				732812841141A8DE0054855E /* Debug */,
+				732812851141A8DE0054855E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -20,7 +20,7 @@ namespace Faunus {
         f.getline(cstr,256);
         std::istringstream i( cstr );
         i >> tmp.name;
-        if (tmp.name.find("#")==string::npos &&
+        if (tmp.name.find("#")==string::npos &&     // strip special signs
             tmp.name.find("[")==string::npos)
         {
           while (i >> s)
@@ -30,7 +30,7 @@ namespace Faunus {
       }
       f.close();
       std::cout << "# Input parameters read from: " << filename << endl;
-      return true;
+      return checkEmptyValues();
     }
     else {
       std::cerr << "*** Failed to open inputfile ***" << endl;
@@ -38,6 +38,16 @@ namespace Faunus {
     }
   }
 
+  bool inputfile::checkEmptyValues() {
+    for (int i=0; i<matrix.size(); i++)
+      if (matrix[i].name.size()>0)
+        if (matrix[i].val.size()==0) {
+          std::cerr << "*** Warning: Keywords with no values in inputfile ***" << endl;
+          return false;
+        }
+    return true;
+  }
+  
   int inputfile::findKey(string &key) {
     record_call(key);
     for (int i=0; i<matrix.size(); i++)
@@ -146,9 +156,8 @@ namespace Faunus {
   string inputfile::print() {
     std::ostringstream o;
     o <<"\n";
-    for (int i=1; i<matrix.size()-1; i++) {
+    for (int i=1; i<matrix.size()-1; i++)
       o <<matrix[i].name<<"   "<<matrix[i].val[0]<<"\n";
-    }
     return o.str();
   }
 
@@ -239,4 +248,5 @@ namespace Faunus {
         << numerr << " errors." << std::endl;
     return o.str();
   }
+  
 }//namespace

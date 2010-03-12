@@ -32,6 +32,7 @@ namespace Faunus {
       void printupdatedpenalty(string);       // Print penalty, old+new
       void printpenalty(string);              // Old penalty
       void updatepenalty();                   // Add penalty and newpenalty
+      void check(checkValue &);               //!< Unit test routine 
     private:
       unsigned short N;
       T trialpot;                             // Copy of potential class for volume changes
@@ -88,6 +89,7 @@ namespace Faunus {
     penalize=false;
     pot=&i;
   }
+
   template<typename T> void isobaric<T>::printupdatedpenalty(string file) {
     std::ofstream f(file.c_str());
     if (f) {
@@ -98,6 +100,7 @@ namespace Faunus {
       f.close();
     }
   }
+
   template<typename T> void isobaric<T>::printpenalty(string file) {
     std::ofstream f(file.c_str());
     if (f) {
@@ -108,6 +111,7 @@ namespace Faunus {
       f.close();
     }
   }
+
   template<typename T> void isobaric<T>::loadpenaltyfunction(string file) {
     //Set up penalty functions based on min,max and scale and enables penalty function updating
     penalize=true;    //Boolean to determine update of newpenalty
@@ -152,6 +156,7 @@ namespace Faunus {
     }
     else std::cout << "# WARNING! Penalty function " << file << " NOT READ!\n";
   }
+
   template<typename T> string isobaric<T>::info() {
     std::ostringstream o;
     o << markovmove::info();
@@ -165,6 +170,12 @@ namespace Faunus {
     }
     return o.str();
   }
+
+  template<typename T> void isobaric<T>::check(checkValue &test) {
+    markovmove::check(test);
+    test.check("ISOBARIC_AvgBoxLen", len.avg() );
+  }
+
   template<typename T> void isobaric<T>::newvolume() {
     newV = exp(log(con->getvolume())  // Random move in ln(V)
         + slp.random_half()*dp);

@@ -100,6 +100,7 @@ namespace Faunus {
 //    distributions dist;
     vector<int> moved;
     vector<int> remaining;
+    void check(checkValue &);  //!< Unit testing
 //    vector<macromolecule> *g;
   };
 }//namespace

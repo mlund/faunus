@@ -1,6 +1,7 @@
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 #----- test target -----
+add_test( isobaric isobaric/unitTestOne/test.run )
 add_test( pka titration/test1/test.run )
 add_test( twobody twobody/test1/test.run )
 add_test( widom_cube widom/testOne/test.run )

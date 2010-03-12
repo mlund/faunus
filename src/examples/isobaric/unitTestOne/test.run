@@ -1,0 +1,11 @@
+#!/bin/bash
+cd `dirname $0`
+exe="../isobaric"
+if [ -x $exe ]; then
+  cp test.conf isobaric.conf
+  cp test.start confout.aam
+  $exe #1>/dev/null
+  exit
+fi
+exit 1
+

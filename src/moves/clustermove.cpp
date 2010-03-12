@@ -3,8 +3,7 @@
 namespace Faunus {
 //  INVERSION  
   clusterinvw::clusterinvw( ensemble &e,
-    container &c, sphericalimage<pot_test> &i 
-    ) : markovmove(e,c,i) {
+    container &c, sphericalimage<pot_test> &i ) : markovmove(e,c,i) {
       name.assign("WATER CLUSTER INVERSION, cite xxx");
       runfraction=1.;
       ipot=&i;
@@ -119,7 +118,8 @@ namespace Faunus {
   clustertrans::clustertrans( ensemble &e,
     container &c, energybase &i , vector<macromolecule> &g
     ) : markovmove(e,c,i) {
-      name.assign("Non-rejective cluster translation, cite xxx");
+      name.assign("REJECTION FREE CLUSTER TRANSLATION");
+      cite.assign("doi:10.1103/PhysRevLett.92.035504");
       runfraction=1.;
 //      g=&G;
 //      distributions d(1., 1., g.size());
@@ -131,6 +131,11 @@ namespace Faunus {
     o << markovmove::info()
       << "#   A fraction of "<<movefrac.avg()<<" of the molecules are moved on avg. ( "<<movefrac.stdev()<<")"<<endl;
     return o.str();
+  }
+
+  void clustertrans::check(checkValue &t) {
+    markovmove::check(t);
+    t.check("clustertrans_movefraction", movefrac.avg() );
   }
 
   double clustertrans::move(vector<macromolecule> &g) {

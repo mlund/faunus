@@ -36,6 +36,7 @@ int main() {
   slump.random_seed(9);
   physconst phys;
   inputfile in("isobaric.conf");          // Read input file
+  checkValue test(in);                    // Class for unit testing
   phys.e_r=in.getflt("e_r");
   phys.lB_TO_T(in.getflt("bjerrum"));
   mcloop loop(in);                        // Keep track of time and MC loop
@@ -215,7 +216,7 @@ int main() {
 
     // Update inputfile isobaric.conf and print coordinates
     in.updateval("boxlen", stringify(cell.len));
-    io.writefile("isobaric.conf", in.print());
+    //io.writefile("isobaric.conf", in.print());
     aam.save("confout.aam", cell.p);
 
     protrdf.write("rdfprot.dat");               // Write g(r)'s
@@ -232,6 +233,8 @@ int main() {
 
   } // End of outer loop
 
+  xtc.close();
+
   if (in.getboo("penalize")==false)
     vol.printupdatedpenalty("penalty.dat");
 
@@ -245,6 +248,12 @@ int main() {
     << "#   Ideal     <density>     = " << in.getflt("pressure") << endl
     << "#   Simulated <density>     = " << g.size()*vol.ivol.avg() << " (" << g.size()*vol.ivol.avg() << ")" << endl;
 
-  xtc.close();
+  // Unit testing
+  ct.check(test);
+  mtr.check(test);
+  vol.check(test);
+  sys.check(test);
+  cout << test.report();
+  return test.returnCode();
 }
 

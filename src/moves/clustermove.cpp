@@ -134,16 +134,14 @@ namespace Faunus {
   }
 
   double clustertrans::move(vector<macromolecule> &g) {
-    du=0;
+    double du=0;
     if (slp.runtest(runfraction)==false)
       return du;
     cnt++;
-    double deltau=0;
-#pragma omp parallel for reduction (+:deltau) schedule (dynamic)
+#pragma omp parallel for reduction (+:du) schedule (dynamic)
     for (int i=0; i<g.size()-1; i++)
       for (int j=i+1; j<g.size(); j++)
-        deltau-=pot->energy(con->p, g[i], g[j]);
-    du=deltau;
+        du-=pot->energy(con->p, g[i], g[j]);
     point ip;
     ip.x=dp*slp.random_half();
     ip.y=dp*slp.random_half();
@@ -170,12 +168,10 @@ namespace Faunus {
       }
       g[moved[i]].accept(*con);
     }
-    deltau=0;
-#pragma omp parallel for reduction (+:deltau) schedule (dynamic)
+#pragma omp parallel for reduction (+:du) schedule (dynamic)
     for (int i=0; i<g.size()-1; i++)
       for (int j=i+1; j<g.size(); j++)
-        deltau+=pot->energy(con->p, g[i], g[j]);
-    du=deltau;
+        du+=pot->energy(con->p, g[i], g[j]);
     movefrac+=double(moved.size())/double((moved.size()+remaining.size()));
     rc=OK;
     naccept++;

@@ -188,14 +188,18 @@ namespace Faunus {
         double du=0;
         return du;
       }
+
       /*!
-       * ...between the two dipoles a and b, separated by the
-       * distance r.
+       * Electrostatic interaction between two dipoles, separated
+       * by the distance r.
        * \f$ \beta u(r) = l_B \frac{a_x b_x + a_y b_y - 2a_z b_z  }{r^3}\f$
+       * \param a Dipole 1 (unit vector)
+       * \param b Dipole 2 (unit vector)
        */
       double dipdip(const point &a, const point &b, double r) {
         return pair.f*( a.x*b.x + a.y*b.y - 2*a.z*b.z )/(r*r*r);
       }
+
       double iondip(const point &a, double q, double r) { return -pair.f*q*a.z/(r*r); }
 
       // Total electrostatic potential in a point
@@ -229,6 +233,7 @@ namespace Faunus {
        *  \return \f$ \phi_j = \sum_{i\neq j}^{N} \frac{l_B z_i}{r_{ij}} \f$
        *  \param p Particle vector
        *  \param j The electric potential will be calculated in the point of this particle
+       *  \note Boundary conditions are respected.
        */
       double potential(vector<particle> &p, unsigned short j) {
         double phi=0;
@@ -576,6 +581,87 @@ namespace Faunus {
         }
     };
 
+  ////////////////////////////
+  template<class T>
+  class interaction_dipole : public interaction<T> {
+  private:
+    struct dipole {
+      particle anion, cation;
+    };
+    
+    dipole mu1, mu2;
+    
+    void calcDipole(vector<particle> &p, const group &g, dipole &a) {
+      point t;
+      a.anion.clear();
+      a.cation.clear();
+      for (int i=g.beg; i<=g.end; i++) {
+        t = p[i]-g.cm;                         // translate to origo
+        interaction<T>::pair.boundary(t);      // periodic boundary (if any)
+        if (p[i].charge>0) {
+          a.cation.charge+=p[i].charge;
+          a.cation += t*p[i].charge;
+        }
+        if (p[i].charge<0) {
+          a.anion.charge+=p[i].charge;
+          a.anion += t*p[i].charge;
+        }
+      }
+      if (a.anion.charge!=0)
+        a.anion = a.anion*(1./a.anion.charge) + g.cm;
+      if (a.cation.charge!=0)
+        a.cation= a.cation*(1./a.cation.charge) + g.cm;
+      interaction<T>::pair.boundary(a.anion);
+      interaction<T>::pair.boundary(a.cation);
+    }
+    
+  public:
+    container *cPtr;
+    double cut_g2g; //!< Cut-off distance for group-group interactions
+    
+    interaction_dipole(inputfile &in, container &con) : interaction<T>(in) {
+      cPtr=&con;
+      interaction<T>::name+=" w. dipole cut-offs";
+      cut_g2g = in.getflt( "threshold_g2g", 1e6 );
+    }
+    
+    double energy(vector<particle> &p ) {
+      return interaction<T>::energy(p);
+    }
+    
+    double energy(vector<particle> &p, const group &g1, const group &g2) {
+      return interaction<T>::energy(p, g1, g2);
+      if ( sqrt(interaction<T>::pair.sqdist(g1.cm, g2.cm)) > cut_g2g ) {
+        return 0.;
+        calcDipole(p,g1,mu1);
+        calcDipole(p,g2,mu2);
+        //cout << "u's: " << interaction<T>::energy( mu1.anion, mu2.anion  ) << " "
+        //<< interaction<T>::energy( mu1.anion, mu2.cation ) << " "
+        //<< interaction<T>::energy( mu1.cation,mu2.anion  ) << " "
+        //<< interaction<T>::energy( mu1.cation,mu2.cation ) << endl;
+        return interaction<T>::energy( mu1.anion, mu2.anion  ) +
+               interaction<T>::energy( mu1.anion, mu2.cation ) +
+               interaction<T>::energy( mu1.cation,mu2.anion  ) +
+               interaction<T>::energy( mu1.cation,mu2.cation );
+      }
+      else {
+          return interaction<T>::energy(p, g1, g2);
+      }
+    }
+    
+    double energy(vector<particle> &p, const group &g) {
+      return interaction<T>::energy(p,g);
+    }
+    
+    string info() {
+      std::ostringstream o;
+      o << interaction<T>::info()
+      << "#   Group-Group threshold    = " << cut_g2g << endl;
+      return o.str();
+    }
+  };
+  
+  
   /*!
    * \brief Interaction class that includes image charges outside a spherical cell
    * \todo Not optimized

@@ -116,6 +116,7 @@ namespace Faunus {
       double mw2rad(double=1) const;            //!< Estimate radius from weight
       particle& operator=(const point&);        //!< Copy coordinates from a point
       void deactivate();                        //!< Deactivate for use w. faster energy loops
+      void clear();                             //!< Clear/reset all data
       friend std::ostream &operator<<(std::ostream &, particle &); //!< Output information
       particle &operator<<(std::istream &);                        //!< Get information
    };

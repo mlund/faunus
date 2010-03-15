@@ -14,7 +14,7 @@ using namespace Faunus;
 using namespace std;
 
 #ifdef MONOPOLE
-  typedef interaction_monopole<pot_debyehuckelP3> Tpot;
+  typedef interaction_dipole<pot_debyehuckelP3> Tpot;
 #else
   typedef interaction<pot_debyehuckelP3> Tpot;
 #endif
@@ -83,6 +83,7 @@ int main() {
           sys+=dm.move(g[0], g[1]);             //   Do the move.
           break;
       }
+      //cout << g[0].cm << endl;
       if (slump.random_one() < .1 ) {
         double z, l0, l1;
         z=g[0].cm.dist(g[1].cm); 

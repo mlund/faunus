@@ -63,6 +63,8 @@
 		731297651030C80A00950418 /* pot_test_rf.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297531030C80A00950418 /* pot_test_rf.h */; };
 		73280BD911419B740054855E /* pkaDH.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73280BD811419B640054855E /* pkaDH.cpp */; };
 		73280BE511419D340054855E /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
+		732812EC1146D45B0054855E /* crankshaft.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 732812EB1146D45B0054855E /* crankshaft.cpp */; };
+		732812EE1146D4ED0054855E /* crankshaft.h in Headers */ = {isa = PBXBuildFile; fileRef = 732812ED1146D4ED0054855E /* crankshaft.h */; };
 		739618E810309A7B0051F3E3 /* pka.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739618E710309A7B0051F3E3 /* pka.cpp */; };
 		73961ECF1030A6920051F3E3 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		73961EDD1030ADEF0051F3E3 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
@@ -288,14 +290,14 @@
 			isa = PBXContainerItemProxy;
 			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 739618D910309A010051F3E3 /* pka */;
+			remoteGlobalIDString = 739618D910309A010051F3E3;
 			remoteInfo = pka;
 		};
 		7328129B1141AB140054855E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 732812831141A8DE0054855E /* pka - calbindin test */;
+			remoteGlobalIDString = 732812831141A8DE0054855E;
 			remoteInfo = "pka - calbindin test";
 		};
 		739618DE10309A090051F3E3 /* PBXContainerItemProxy */ = {
@@ -388,6 +390,8 @@
 		731297531030C80A00950418 /* pot_test_rf.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_test_rf.h; sourceTree = "<group>"; };
 		73280BC6114197D60054855E /* pkaDH */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pkaDH; sourceTree = BUILT_PRODUCTS_DIR; };
 		73280BD811419B640054855E /* pkaDH.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pkaDH.cpp; path = src/examples/titration/pkaDH.cpp; sourceTree = "<group>"; };
+		732812EB1146D45B0054855E /* crankshaft.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = crankshaft.cpp; sourceTree = "<group>"; };
+		732812ED1146D4ED0054855E /* crankshaft.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = crankshaft.h; sourceTree = "<group>"; };
 		739618DA10309A010051F3E3 /* pka */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pka; sourceTree = BUILT_PRODUCTS_DIR; };
 		739618E710309A7B0051F3E3 /* pka.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pka.cpp; path = src/examples/titration/pka.cpp; sourceTree = "<group>"; };
 		73961ED91030ADE60051F3E3 /* isobaric */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = isobaric; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -675,24 +679,24 @@
 			children = (
 				739C421B103079CF00A3A5B9 /* moves */,
 				739C42021030794E00A3A5B9 /* xdrfile */,
-				739C4225103079CF00A3A5B9 /* particles.cpp */,
-				739C42CA10307B8500A3A5B9 /* histogram.cpp */,
-				739C4226103079CF00A3A5B9 /* physconst.cpp */,
-				739C4227103079CF00A3A5B9 /* point.cpp */,
-				739C4228103079CF00A3A5B9 /* slump.cpp */,
-				739C4229103079CF00A3A5B9 /* species.cpp */,
-				739C422A103079CF00A3A5B9 /* titrate.cpp */,
-				739C422B103079CF00A3A5B9 /* widom.cpp */,
 				739C4211103079CF00A3A5B9 /* analysis.cpp */,
 				739C4212103079CF00A3A5B9 /* container.cpp */,
 				739C4213103079CF00A3A5B9 /* ensemble.cpp */,
 				739C4214103079CF00A3A5B9 /* faunus.cpp */,
 				739C4215103079CF00A3A5B9 /* group.cpp */,
 				739C4216103079CF00A3A5B9 /* hardsphere.cpp */,
+				739C42CA10307B8500A3A5B9 /* histogram.cpp */,
 				739C4217103079CF00A3A5B9 /* inputfile.cpp */,
 				739C4218103079CF00A3A5B9 /* io.cpp */,
 				739C4219103079CF00A3A5B9 /* iobabel.cpp */,
 				739C421A103079CF00A3A5B9 /* mcloop.cpp */,
+				739C4225103079CF00A3A5B9 /* particles.cpp */,
+				739C4226103079CF00A3A5B9 /* physconst.cpp */,
+				739C4227103079CF00A3A5B9 /* point.cpp */,
+				739C4228103079CF00A3A5B9 /* slump.cpp */,
+				739C4229103079CF00A3A5B9 /* species.cpp */,
+				739C422A103079CF00A3A5B9 /* titrate.cpp */,
+				739C422B103079CF00A3A5B9 /* widom.cpp */,
 			);
 			indentWidth = 2;
 			name = src;
@@ -716,6 +720,7 @@
 				739C421C103079CF00A3A5B9 /* base.cpp */,
 				739C421D103079CF00A3A5B9 /* charge.cpp */,
 				739C421E103079CF00A3A5B9 /* clustermove.cpp */,
+				732812EB1146D45B0054855E /* crankshaft.cpp */,
 				739C421F103079CF00A3A5B9 /* membrane.cpp */,
 				739C4220103079CF00A3A5B9 /* miscmove.cpp */,
 				739C4221103079CF00A3A5B9 /* rosenbluth.cpp */,
@@ -745,6 +750,7 @@
 				739C426010307A1C00A3A5B9 /* base.h */,
 				739C426110307A1C00A3A5B9 /* charge.h */,
 				739C426210307A1C00A3A5B9 /* clustermove.h */,
+				732812ED1146D4ED0054855E /* crankshaft.h */,
 				739C426310307A1C00A3A5B9 /* membrane.h */,
 				739C426410307A1C00A3A5B9 /* miscmove.h */,
 				739C426510307A1C00A3A5B9 /* rosenbluth.h */,
@@ -860,6 +866,7 @@
 				731297631030C80A00950418 /* pot_table2.h in Headers */,
 				731297641030C80A00950418 /* pot_test.h in Headers */,
 				731297651030C80A00950418 /* pot_test_rf.h in Headers */,
+				732812EE1146D4ED0054855E /* crankshaft.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1240,6 +1247,7 @@
 				739C4244103079CF00A3A5B9 /* titrate.cpp in Sources */,
 				739C4245103079CF00A3A5B9 /* widom.cpp in Sources */,
 				739C42CB10307B8500A3A5B9 /* histogram.cpp in Sources */,
+				732812EC1146D45B0054855E /* crankshaft.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

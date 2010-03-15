@@ -212,6 +212,11 @@ namespace Faunus {
    ********************/
 
   particle::particle() {
+    particle::clear();
+  }
+
+  void particle::clear() {
+    point::clear();
     charge=mw=radius=0;
     hydrophobic=false;
     id=0;

@@ -17,6 +17,9 @@ using namespace std;
  
 #ifdef MONOPOLE
   typedef interaction_monopole<pot_debyehuckelP3> Tpot;
+#elif DIPOLE_CUTOFF
+  typedef interaction_dipole<pot_debyehuckelP3> Tpot;
+  #define MONOPOLE
 #elif defined(FASTDH)
   typedef interaction_vector<pot_debyehuckelP3Fast> Tpot;
 #else
@@ -47,7 +50,7 @@ int main() {
 #endif
   canonical nvt;                          // Use the canonical ensemble
 #ifdef MONOPOLE
-  Tpot pot(in,cell);                      // Far-away monopole approximation
+  Tpot pot(in,cell);                      // Far-away monopole (or dipole) approximation
 #else
   Tpot pot(in);                           // Fast, approximate Debye-Huckel potential
 #endif
@@ -240,7 +243,7 @@ int main() {
 
   cout << "----------- FINAL INFORMATION -----------" << endl
     << loop.info() << sys.info() << agg.info() << vol.info()
-    << mtr.info() << mtrL.info() << ct.info() //<< mt.info() << mr.info()
+    << mtr.info() << mtrL.info() << ct.info() << pot.info() //<< mt.info() << mr.info()
     << endl
     << "#   Final      side length  = " << cell.len << endl
     << "#   Ideal     <side length> = " << pow( double( g.size() ) / in.getflt("pressure" ),1./3.)<<endl

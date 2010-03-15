@@ -581,23 +581,52 @@ namespace Faunus {
         }
     };
 
-  ////////////////////////////
+  /*!
+   * \brief Treats far-away groups as dipoles for faster energy evaluation
+   * \author Mikael Lund
+   * \date Lund 2010
+   * \warning Be careful when you have non-molecular groups such as salt.
+   *
+   * This interaction class redefines group-group interactions so that groups
+   * (i.e. molecules) far away will be seen as dipoles with a cation and an anion centered
+   * at their charge-centers. I.e. the interaction between two charged proteins beyond
+   * some threshold distance will interact as dipoles. To avoid energy drifts it is
+   * important that all energy evaluations are performed on a group-group basis.
+   */
+  
   template<class T>
   class interaction_dipole : public interaction<T> {
   private:
     struct dipole {
+      point cm;
       particle anion, cation;
     };
+    container *cPtr;
+    unsigned long int cnt, cntDip; // # of group-group interactions, # of dipole interactions
+    dipole mu1, mu2; // placeholders for dipoles.
     
-    dipole mu1, mu2;
+    //!< Calculate center of mass.
+    void centerOfMass(const vector<particle> &p, const group &g, point &cm) {
+      point t;
+      double sum=0;
+      cm.clear();
+      for (int i=g.beg; i<=g.end; i++) {
+        t = p[i]-p[g.beg];
+        cPtr->boundary(t);
+        cm += t*p[i].mw;
+        sum+= p[i].mw; 
+      }
+      cm=cm*(1/sum) + p[g.beg];
+      cPtr->boundary(cm);
+    }
     
-    void calcDipole(vector<particle> &p, const group &g, dipole &a) {
+    void calcDipole(const vector<particle> &p, const group &g, dipole &a) {
       point t;
       a.anion.clear();
       a.cation.clear();
       for (int i=g.beg; i<=g.end; i++) {
-        t = p[i]-g.cm;                         // translate to origo
-        interaction<T>::pair.boundary(t);      // periodic boundary (if any)
+        t = p[i]-a.cm;
+        cPtr->boundary(t);
         if (p[i].charge>0) {
           a.cation.charge+=p[i].charge;
           a.cation += t*p[i].charge;
@@ -607,56 +636,47 @@ namespace Faunus {
           a.anion += t*p[i].charge;
         }
       }
-      if (a.anion.charge!=0)
-        a.anion = a.anion*(1./a.anion.charge) + g.cm;
-      if (a.cation.charge!=0)
-        a.cation= a.cation*(1./a.cation.charge) + g.cm;
-      interaction<T>::pair.boundary(a.anion);
-      interaction<T>::pair.boundary(a.cation);
+      if (a.anion.charge!=0)  a.anion = a.anion*(1/a.anion.charge);
+      if (a.cation.charge!=0) a.cation= a.cation*(1/a.cation.charge);
+      a.anion+=a.cm;
+      a.cation+=a.cm;
+      cPtr->boundary(a.anion);
+      cPtr->boundary(a.cation);
     }
     
   public:
-    container *cPtr;
     double cut_g2g; //!< Cut-off distance for group-group interactions
     
     interaction_dipole(inputfile &in, container &con) : interaction<T>(in) {
       cPtr=&con;
       interaction<T>::name+=" w. dipole cut-offs";
       cut_g2g = in.getflt( "threshold_g2g", 1e6 );
-    }
-    
-    double energy(vector<particle> &p ) {
-      return interaction<T>::energy(p);
+      cnt=cntDip=0;
     }
     
     double energy(vector<particle> &p, const group &g1, const group &g2) {
-      return interaction<T>::energy(p, g1, g2);
-      if ( sqrt(interaction<T>::pair.sqdist(g1.cm, g2.cm)) > cut_g2g ) {
-        return 0.;
+      cnt++;
+      centerOfMass(p, g1, mu1.cm);
+      centerOfMass(p, g2, mu2.cm);
+      if ( sqrt(interaction<T>::pair.sqdist(mu1.cm, mu2.cm)) < cut_g2g )
+      	return interaction<T>::energy(p, g1, g2);
+      else {
+        cntDip++;
         calcDipole(p,g1,mu1);
         calcDipole(p,g2,mu2);
-        //cout << "u's: " << interaction<T>::energy( mu1.anion, mu2.anion  ) << " "
-        //<< interaction<T>::energy( mu1.anion, mu2.cation ) << " "
-        //<< interaction<T>::energy( mu1.cation,mu2.anion  ) << " "
-        //<< interaction<T>::energy( mu1.cation,mu2.cation ) << endl;
         return interaction<T>::energy( mu1.anion, mu2.anion  ) +
                interaction<T>::energy( mu1.anion, mu2.cation ) +
                interaction<T>::energy( mu1.cation,mu2.anion  ) +
                interaction<T>::energy( mu1.cation,mu2.cation );
       }
-      else {
-          return interaction<T>::energy(p, g1, g2);
-      }
     }
-    
-    double energy(vector<particle> &p, const group &g) {
-      return interaction<T>::energy(p,g);
-    }
-    
+        
     string info() {
       std::ostringstream o;
       o << interaction<T>::info()
-      << "#   Group-Group threshold    = " << cut_g2g << endl;
+        << "#   Group-Group threshold    = " << cut_g2g << endl;
+      if (cnt>100)
+        o << "#   Cut-off fraction         = " << double(cntDip)/cnt << endl;
       return o.str();
     }
   };

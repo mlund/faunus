@@ -106,7 +106,7 @@ namespace Faunus {
   point group::masscenter(const container &con) {
     double sum=0;
     cm.clear();
-    point t, o = con.p[beg]; // set origo to first particle
+    point t, o = con.p.at(beg); // set origo to first particle
     for (unsigned short i=beg; i<=end; i++) {
       t = con.p[i]-o;        // translate to origo
       con.boundary(t);       // periodic boundary (if any)

@@ -13,21 +13,27 @@
 using namespace Faunus;
 using namespace std;
 
-#ifdef MONOPOLE
+#ifdef DIPOLE_CUTOFF
   typedef interaction_dipole<pot_debyehuckelP3> Tpot;
+#elif MONOPOLE
+  typedef interaction_monopole<pot_debyehuckelP3> Tpot;
 #else
   typedef interaction<pot_debyehuckelP3> Tpot;
 #endif
 
-int main() {
+int main(int argc, char* argv[]) {
   cout << faunus_splash();              // Faunus info
+  string config = "twobodyDH.conf";     // Default input (parameter) file
+  if (argc==2) config = argv[1];        // ..also try to get it from the command line
+  inputfile in(config);                 // Read input file
   slump slump;                          // A random number generator
-  inputfile in("twobodyDH.conf");       // Read input file
   mcloop loop(in);                      // Set Markov chain loop lengths
   cell cell(in);                        // We want a spherical, hard cell
   canonical nvt;                        // Use the canonical ensemble
-#ifdef MONOPOLE
+#ifdef DIPOLE_CUTOFF
   Tpot pot(in,cell);                    // Functions for interactions
+#elif MONOPOLE
+  Tpot pot(in,cell);
 #else
   Tpot pot(in);
 #endif
@@ -47,13 +53,16 @@ int main() {
     g[0].masscenter(cell);              // Load old config (if present)
     g[1].masscenter(cell);              // ...and recalc mass centers
   }
+  ioxtc xtc(cell.r);                    // Gromacs xtc output
 
+  systemenergy sys(
+      pot.energy(cell.p, g[0], g[1]) ); // System energy analysis
 
-  systemenergy sys(pot.energy(cell.p, g[0], g[1])); // System energy analysis
-  cout << in.info() << cell.info()
-    << pot.info();                   // Print information to screen
+  g[0].charge(cell.p);
+  g[1].charge(cell.p);
 
-  ioxtc xtc(cell.r);                    // Gromacs xtc output (if installed)
+  cout << in.info() << cell.info()      // Print info
+       << pot.info() << g[0].info() << g[1].info();
 
   // Calculate atom closests to mass center
   for (int j=0; j<2; j++) {
@@ -83,7 +92,6 @@ int main() {
           sys+=dm.move(g[0], g[1]);             //   Do the move.
           break;
       }
-      //cout << g[0].cm << endl;
       if (slump.random_one() < .1 ) {
         double z, l0, l1;
         z=g[0].cm.dist(g[1].cm); 
@@ -112,7 +120,8 @@ int main() {
 
   cout <<                                       // Final information...
     mr.info() << dm.info()
-    << sys.info() << g[0].info() << g[1].info() << cell.info();
+    << sys.info() << g[0].info() << g[1].info()
+    << cell.info() << pot.info();
 
   xtc.close();
 }

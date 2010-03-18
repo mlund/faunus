@@ -70,7 +70,8 @@ namespace Faunus {
    * The sampling is performed in blocks of length n specified in
    * the constructor.
    *
-   * \f$ c_i = \frac{ <x_0x_i>_{i<n} - <x>^2 }{ <x^2> - <x>^2  } \f$
+   * \f$ c_i = \frac{ \langle x_0x_i\rangle_{i<n} - \langle x\rangle^2 }
+   * { \langle x^2\rangle - \langle x\rangle^2  } \f$
    *
    * Example\n
    * \code
@@ -99,6 +100,9 @@ namespace Faunus {
         unsigned int size();            //!< Get block length
     };
 
+  /*!
+   * \param len Sample length
+   */
   template<class T>
     correlation<T>::correlation(unsigned int len) {
       cnt=0;

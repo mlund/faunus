@@ -37,14 +37,13 @@ int main(int argc, char* argv[]) {
 #else
   Tpot pot(in);
 #endif
-  ioxyz xyz;                            // xyz output for VMD etc.
   distributions dst;                    // Distance dep. averages
   //  angularcorr  angcorr;                 // Dipole cross-correlation
   iopqr pqr;                            // PQR output (pos, charge, radius)
 
   vector<macromolecule> g;              // Group for proteins
   dualmove dm(nvt, cell, pot);          //   Class for 1D macromolecular translation
-  dm.load( in, g, 50.);                 //   Load proteins and separate them 
+  dm.load( in, g );                     //   Load proteins and separate them 
   macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
   dm.setup(in);                         // Set displacement parameters
   mr.dp=in.getflt("rot_dp");            //  ---//---
@@ -112,7 +111,6 @@ int main(int argc, char* argv[]) {
 
     dm.gofr.write("rdfprot.dat");               // Write interprotein g(r)
     dst.write("distributions.dat");             // Write other distributions
-    xyz.save("coord.xyz", cell.p);              // Write .xyz coordinate file
     aam.save("confout.aam", cell.p);            // Save config. for next run
     pqr.save("confout.pqr", cell.p);            // ...also save a PQR file
     cout << loop.timing(macro);                 // Show progress

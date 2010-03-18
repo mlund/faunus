@@ -54,7 +54,7 @@ namespace Faunus {
         } else rc=true;
       }
     if (rc==false)
-      std::cout << "# Fatal error: Particle vectors corrupted!!\n";
+      std::cerr << "# Fatal error: Particle vectors corrupted!!\n";
     return rc;
   }
   int particles::count(unsigned char id, const point &origo, double r) {

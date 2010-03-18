@@ -582,7 +582,7 @@ namespace Faunus {
     };
 
   /*!
-   * \brief Treats far-away groups as dipoles for faster energy evaluation
+   * \brief Treats far-away groups as (charged) dipoles for faster energy evaluation
    * \author Mikael Lund
    * \date Lund 2010
    * \warning Be careful when you have non-molecular groups such as salt.
@@ -592,6 +592,23 @@ namespace Faunus {
    * at their charge-centers. I.e. the interaction between two charged proteins beyond
    * some threshold distance will interact as dipoles. To avoid energy drifts it is
    * important that all energy evaluations are performed on a group-group basis.
+   *
+   * For proteins this procedure potentially moves charges from the surface to
+   * two charges further in. When using Debye-Huckel potentials this leads to
+   * an artifact that must be corrected for by the prefactor:
+   *
+   * \f$ \sinh(\kappa R_1)/\kappa R_1 \cdot \sinh(\kappa R_2)/\kappa R_2 \f$
+   *
+   * where 1/kappa is the screening length and R1 and R2 are the
+   * radii of the two interacting spheres.
+   * Here we have two particles per group and the sizes for each charge
+   * center is calculated according to
+   *
+   * \f$ R_{\pm} = R_p - |\mathbf{R_{cm}R_{\pm}}| \f$
+   *
+   * where Rp is the protein radius, Rcm is the center of mass vector and
+   * R+= is the center of of charge vector.
+   *
    */
   
   template<class T>
@@ -602,10 +619,10 @@ namespace Faunus {
       particle anion, cation;
     };
     container *cPtr;
-    unsigned long int cnt, cntDip; // # of group-group interactions, # of dipole interactions
-    dipole mu1, mu2; // placeholders for dipoles.
+    double kappa;
+    unsigned long int cnt, cntDip; // no. of group-group interactions, no. of dipole interactions
+    dipole mu1, mu2;               // placeholders for dipoles.
     
-    //!< Calculate center of mass.
     void centerOfMass(const vector<particle> &p, const group &g, point &cm) {
       point t;
       double sum=0;
@@ -643,17 +660,27 @@ namespace Faunus {
       cPtr->boundary(a.anion);
       cPtr->boundary(a.cation);
     }
-    
+
+    //!< Calculate Debye-Huckel prefactor
+    double f(particle &p1, particle &p2) {
+      return std::sinh(p1.radius*kappa) * std::sinh(p2.radius*kappa)
+        / (kappa*kappa*p1.radius*p2.radius) ;
+    }
+     
   public:
     double cut_g2g; //!< Cut-off distance for group-group interactions
+    double R1;      //!< Radius of group 1 (used for DH correction)
+    double R2;      //!< Radius of group 2 (used for DH correction)
     
     interaction_dipole(inputfile &in, container &con) : interaction<T>(in) {
       cPtr=&con;
-      interaction<T>::name+=" w. dipole cut-offs";
+      interaction<T>::name="Group-group dipole cut-off";
       cut_g2g = in.getflt( "threshold_g2g", 1e6 );
-      cnt=cntDip=0;
+      kappa = 1/in.getflt("debyelen", 2e4);
+      R1 = in.getflt("groupradius_g2g",20);
+      R2 = R1;
     }
-    
+   
     double energy(vector<particle> &p, const group &g1, const group &g2) {
       cnt++;
       centerOfMass(p, g1, mu1.cm);
@@ -664,24 +691,33 @@ namespace Faunus {
         cntDip++;
         calcDipole(p,g1,mu1);
         calcDipole(p,g2,mu2);
-        return interaction<T>::energy( mu1.anion, mu2.anion  ) +
-               interaction<T>::energy( mu1.anion, mu2.cation ) +
-               interaction<T>::energy( mu1.cation,mu2.anion  ) +
-               interaction<T>::energy( mu1.cation,mu2.cation );
+        mu1.anion.radius =R1-mu1.anion.dist(mu1.cm);
+        mu1.cation.radius=R1-mu1.cation.dist(mu1.cm);
+        mu2.anion.radius =R2-mu2.anion.dist(mu2.cm);
+        mu2.cation.radius=R2-mu2.cation.dist(mu2.cm);
+        return interaction<T>::pair.f * (
+            f(mu1.anion, mu2.anion) * interaction<T>::pair.pairpot(mu1.anion, mu2.anion) +
+            f(mu1.anion, mu2.cation) * interaction<T>::pair.pairpot(mu1.anion, mu2.cation) +
+            f(mu1.cation, mu2.anion) * interaction<T>::pair.pairpot(mu1.cation, mu2.anion) +
+            f(mu1.cation, mu2.cation) * interaction<T>::pair.pairpot(mu1.cation, mu2.cation) );
       }
     }
-        
+
     string info() {
       std::ostringstream o;
       o << interaction<T>::info()
-        << "#   Group-Group threshold    = " << cut_g2g << endl;
+        << "#   Cut-off:" << endl
+        << "#     Group-Group threshold   = " << cut_g2g << endl
+        << "#     Group radii             = " << R1 << " " << R2 << endl
+        << "#     Dipole 1 radii (+,-)    = " << mu1.cation.radius << " " << mu1.anion.radius << endl
+        << "#     Dipole 2 radii (+,-)    = " << mu2.cation.radius << " " << mu2.anion.radius << endl;
       if (cnt>100)
-        o << "#   Cut-off fraction         = " << double(cntDip)/cnt << endl;
+        o << "#     Cut-off fraction        = " << double(cntDip)/cnt << endl;
       return o.str();
     }
   };
-  
-  
+
+
   /*!
    * \brief Interaction class that includes image charges outside a spherical cell
    * \todo Not optimized

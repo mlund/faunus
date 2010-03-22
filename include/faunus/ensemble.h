@@ -30,23 +30,27 @@ namespace Faunus {
 
   /*!
    * Class for handling Grand Canonical steps. This class can dynamically insert and
-   * erase particles while at the same time update the groups in the systems.
-   * \author Mikael Lund
+   * erase particles while at the same time update the groups in the systems. 
+   * \author Mikael Lund, Bjorn Persson
    * \date Lund, 2009
    * \todo A lot.
    */
   class grandcanonical : public ensemble {
     private:
-      int size();  //!< Calculates the number of particles in the specifies groups
-      short findgroup(unsigned int);
+      int           size();  //!< Calculates the number of particles in the specifies groups
+      short         findgroup(unsigned int);
+      bool          meMbeR(unsigned int&, unsigned int&);
     public:
-      vector<group> g;      //!< Groups with fluctuating species
-      void addgroup(group &); 
-      short findgroup(string);
-      void searchsalt(container &, salt &);
-      bool insert(vector<particle> &, unsigned int, particle, unsigned char=1);
-      bool erase(vector<particle> &, unsigned int, unsigned char=1);
-      string info();
+      vector<group*> gp;                           //!< Contains all groups that are effected by changing size of con.p/trial
+      void          addGroupPtr(group &); 
+      short         findgroup(string);
+      bool          insert(container &, particle &); //!< Insert a particle in group w. name 'particle'
+      bool          erase(container &, unsigned int &); //!< Erase --//--     (overload or use virtual?)
+      bool          load(container &, string);      //!< Regenerate groups to fit previus configuration
+      string        print();                        //!< To print info of last configuration
+      string        info();
+      int           gcd(int,int);
+      
   };
 }//namespace
 #endif

@@ -48,6 +48,10 @@ int main() {
       int m=salt.size();
       for (int i=0; i<m; i++){
         sys+=sb.move();                 // Grand Canonical salt move
+  /*      if(cell.charge()!=0) {
+          std::cout<<cell.charge()<<endl;
+          std::cout<<sb.thispair->i<<" "sb.thispiar->j<<endl;
+        } */
       }
       wid.insert(cell,pot);             // Widom particle insertion analysis
           

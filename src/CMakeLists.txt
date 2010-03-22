@@ -5,7 +5,7 @@ set(objs slump physconst inputfile point io titrate container
     hardsphere group particles analysis species widom histogram
     mcloop ensemble faunus
     moves/base moves/translational moves/rotational moves/charge
-    moves/miscmove moves/rosenbluth moves/saltbath moves/clustermove
+    moves/miscmove moves/saltbath moves/clustermove #moves/rosenbluth 
     moves/crankshaft moves/membrane) 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 

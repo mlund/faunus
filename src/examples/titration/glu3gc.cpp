@@ -12,52 +12,43 @@ using namespace std;
 
 int main(int argc, char* argv[]) {
   cout << faunus_splash();             // Faunus spam
-//  random spl;                           // Random numbers
-  string config = "pka.conf";          // Default input (parameter) file
+  string config = "gcglu3pka.conf";    // Default input (parameter) file
   if (argc==2) config = argv[1];       // ..also try to get it from the command line
+  // SYSTEM AND INPUT
   inputfile in(config);                // Read input file
   mcloop loop(in);                     // Set Markov chain loop lengths
   cell con(in);                        // Use a spherical simulation container
-  canonical nvt;                       // Use the canonical ensemble
+  grandcanonical nmt;                  // Use the canonical ensemble
   springinteraction<pot_coulombr12> pot(in);  // Specify pair potential
-  glu3 glu3(con, in);                  // Group for the protein
+  // IO
+  io io;
   ioaam aam;                           // Protein input file format is AAM
   iopqr pqr;                           // PQR coordinate output
+  // PATRICLES
+  glu3 glu3(con, in);                  // Group for the protein
   glu3.move(con, -glu3.cm);            // ..translate it to origo (0,0,0)
   glu3.accept(con);                    // ..accept translation
   salt salt;                           // Group for salt and counter ions
   salt.add( con, in );                 //   Insert sodium ions
-  saltmove sm(nvt, con, pot);          // Class for salt movements
-  sm.dp=in.getflt("dp_salt", 20);
-  monomermove mm(nvt,con,pot,in);      // ...rattle
-  aam.load(con, "confout.aam");        // Load old config (if present)
-  widom wid(30);
+  // MARKOVMOVES
+  saltmove sm(nmt, con, pot, in);      // Class for salt movements
+  saltbath sb(nmt,con, pot ,in, salt); // GC salt reservoir
+  GCglu3corechargereg tit(nmt,con,pot,in);  // GC titration routine (hardcoded for the core)
+  monomermove mm(nmt,con,pot,in);      // ...rattle
+  //crankShaft cs(nmt,con,pot,in);       // Crankshaft
+  // RESTART?
+  if(nmt.load(con, "gcgroup.conf")==true);
+    aam.load(con, "confout.aam");        // Load old config (if present)
   widomSW wid2(30);                    // Class for single particle insertion w. charge scaling
-  wid.add( atom("NA") );
-  wid.add( atom("CL") );
-  wid.runfraction=0.05;
   wid2.add( atom("NA"));
   wid2.add( atom("CA"));
   wid2.add( atom("LA"));
   wid2.add( atom("CL"));
   wid2.add( atom("SO"));
   wid2.runfraction=0.05;
-//  average_vec<double> pot1(100), pot2(100), pot12(100);
-//  double p1,p2,p3;
 
   ioxtc xtc(con.r*2);                  // Gromacs xtc output (if installed)
-//#ifdef GCPKA // "Grand Canonical" titration
-//  HAchargereg tit(nvt,con,pot,salt,in.getflt("pH", 7.),in.getflt("catpot"));
-//#else        // "Normal" titration
-  glu3corechargereg tit(nvt,con,pot,in,salt);
-//#endif
 
-
-
-/*  for (int i =0; i<con.p.size(); i++) {
-    con.p[i].radius=1.0;
-    con.trial[i].radius=1.0;
-  }*/
   vector<particle> psmear = con.p;
 
   systemenergy sys(pot.energy(con.p, glu3, salt)                           //The total system energy
@@ -75,7 +66,7 @@ int main(int argc, char* argv[]) {
 
   while ( loop.macroCnt() ) {                                               // Markov chain 
     while ( loop.microCnt() ) {
-      switch (rand()%4) {                                                 // Randomly chose move
+      switch (rand()%5) {                                                 // Randomly chose move
         case 0:
           sys+=sm.move(salt);                                               // Displace salt particles
           break;
@@ -91,14 +82,15 @@ int main(int argc, char* argv[]) {
         case 2:
           sys+=mm.move(glu3.chains);
           break;
+        case 4:
+          sys+=sb.move();
+          break;
+        case 5:
+          //sys+=cs.move(glu3.chains,in.getint("crankshaft_num",1));
+          break;
       }
-      wid.insert(con,pot);
       wid2.insert(con,pot);
       if(rand()>0.9) {
-//        p1=pot.potential(con.p, 4 );
-//        p1=pot.potential(con.p, 13);
-//      if (slp.random_one()>.99)
-//        xtc.save("ignored-name.xtc", con.p);                                // Save trajectory
     }}                                                                       // END of micro loop
  
     sys.update(pot.energy(con.p, glu3, salt)
@@ -112,15 +104,18 @@ int main(int argc, char* argv[]) {
                   +pot.k*pow(con.p[37].dist(con.p[124])-pot.req,2));
 
     aam.save("confout.aam", con.p);                                         // Save config. to disk
-    pqr.save("confout.pqr", con.p, tit);                                    // Save PQR file to disk - cool in VMD!
-    tit.applycharges(psmear);
+    pqr.save("confout.pqr", con.p);                                    // Save PQR file to disk - cool in VMD!
+    io.writefile("gcgroup.conf", nmt.print());
+
+    //tit.applycharges(psmear);
     aam.save("smeared.aam", psmear);
     cout << "# ENERGY "<<endl
          << "# Cur, Avg, Drift       = "<<sys.cur<<" , "<<sys.uavg.avg()<<" ("<<sys.uavg.stdev()<<") , "<<sys.cur-sys.sum<<endl
          << "# CHARGES (dendrimer):  Total = "<<glu3.Q.avg()<<"    Core = "<<glu3.core.Q.avg()<<endl;   
     cout << loop.timing();                                                  // Show progress
   }                                                                         // END of macro loop
-  cout << sys.info() <<loop.info() <<tit.info()<< sm.info() << mm.info() << wid.info()<<wid2.info()
+  cout << sys.info() << con.info() <<loop.info() <<tit.info()<< sm.info() << sb.info() << mm.info() <<wid2.info()
+      // << cs.info()
        << salt.info(con)
        << glu3.info();                                                      // Print final results
   xtc.close();

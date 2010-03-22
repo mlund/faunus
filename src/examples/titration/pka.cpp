@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
   wid.runfraction=0.05;
 
 #ifdef GCPKA // "Grand Canonical" titration
-  HAchargereg tit(nvt,con,pot,salt,in.getflt("pH", 7.),in.getflt("catpot"));
+  GCchargereg tit(nvt,con,pot,salt,in.getflt("pH", 7.));
 #else        // "Normal" titration
   chargereg tit(nvt,con,pot,salt,in.getflt("pH",7.));
 #endif

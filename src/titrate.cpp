@@ -171,9 +171,8 @@ namespace Faunus {
 
   //-------------------------------------------
 
-  titrate_implicit::titrate_implicit(vector<particle> &p, double peeage, double muH=0) {
+  titrate_implicit::titrate_implicit(vector<particle> &p, double peeage) {
     ph=peeage;
-    mu_proton=muH;
     for (int i=0; i<p.size(); i++)    //search for titrateable sites
       if ( atom[p[i].id].pka !=0 ) {
         sites.push_back(i);
@@ -181,7 +180,7 @@ namespace Faunus {
       }
   }
   
-  titrate_implicit::titrate_implicit(container& c, float& peeage) {
+  titrate_implicit::titrate_implicit(container& c, double peeage) {
     ph=peeage;
     for (int i=0; i<c.p.size(); i++)    //search for titrateable sites
       if ( atom[c.p[i].id].pka !=0 ) {
@@ -212,8 +211,32 @@ namespace Faunus {
   double titrate_implicit::energy(vector<particle> &p, double du, int j) {
     int i=p[j].id;
     if (recent==PROTONATED)
-      return du+( log(10.)*( ph - atom[i].pka ) ) - mu_proton;
+      return du+( log(10.)*( ph - atom[i].pka ) );
     else
-      return du-( log(10.)*( ph - atom[i].pka ) ) + mu_proton;
+      return du-( log(10.)*( ph - atom[i].pka ) );
   }
+// TITRATE_GC
+  titrate_gc::titrate_gc(container &con, inputfile &in, grandcanonical &gc) : titrate_implicit(con,in.getflt("pH", 7.0)) {
+    nameA=in.getstr("protonpartner","NA");
+    gcPtr=&gc;
+  }
+
+  string titrate_gc::info() {
+    std::ostringstream o;
+    o << "# Titrateable sites   = " << sites.size() << endl
+      << "# pH                  = " << ph << endl 
+      << "# Proton partner      = " << nameA <<endl
+      << "#        chem.pot     = " << atom[nameA].chempot <<endl;
+    return o.str();
+  }
+
+  double titrate_gc::energy(container &con, double &du, int &j) {
+    int i=con.p[j].id;
+    nA   =gcPtr->gp[gcPtr->findgroup(nameA)]->size();
+    if (recent==PROTONATED)
+      return du+( log(10.)*( ph - atom[i].pka ) - log((nA)/con.getvolume())   + atom[nameA].chempot );
+    else
+      return du-( log(10.)*( ph - atom[i].pka ) + log((nA+1)/con.getvolume()) - atom[nameA].chempot );
+  }
+
 }//namespace

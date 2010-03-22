@@ -8,6 +8,7 @@
 #include "faunus/point.h"
 #include "faunus/group.h"
 #include "faunus/average.h"
+#include "faunus/ensemble.h"
 
 namespace Faunus {
 
@@ -51,22 +52,38 @@ namespace Faunus {
       void infos();
   };
 
-  /*! \brief Class to perform proton titration of molecules using implicit salt
+  /*! \brief Class to perform proton titration of molecules without PROTON/NEUTRON shuffeling.
    *  \author Andre, Mikael
    */
   class titrate_implicit {
     private:
-      enum keys {PROTONATED,DEPROTONATED};
-      keys recent;                          //!< Store information about the most recent action.
     public:
+      enum keys {PROTONATED,DEPROTONATED};
+      keys recent;                          //!< Attempted change of state in the Markov chain.
       vector<unsigned int> sites;           //!< Titratable sites
-      double ph,                            //!< Solution pH value
-             mu_proton;                     //!< Bulk excess chemical potential of a proton (kT)
-      titrate_implicit(vector<particle> &, double, double);
-      titrate_implicit(container&, float&);
+      double ph;                            //!< Solution pH value
+      titrate_implicit(vector<particle> &, double);
+      titrate_implicit(container&, double);
       int exchange(vector<particle> &, int=-1);
-      double energy(vector<particle> &, double, int);
+      virtual double energy(vector<particle> &, double, int);
       unsigned int random();                //!< Pick a random titratable site
+  };
+
+  /*! \brief Class to perform grand canonical proton titration. The process is couples with 
+             the exchange of a nother ionic pair with known chemical potential. It is assumed 
+             that the charges of the exchanged particles are mono valent.
+
+  */
+  class titrate_gc : public titrate_implicit {
+    private:
+    public:
+      grandcanonical *gcPtr;                //!< Pointer to grandcanonical rotines
+      string          nameA;                //!< Name of ion coupled with proton exchange
+      int             nA;
+      double          energy(container &, double &, int &);
+      titrate_gc(container &, inputfile &, grandcanonical &); //!< Constructor
+      string info();                       //!< Some info
+
   };
 }
 #endif

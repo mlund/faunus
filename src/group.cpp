@@ -300,6 +300,7 @@ namespace Faunus {
     title="MOBILE SALT PARTICLES";
     cation=cat;
     anion=cat;
+    name="MOBILE-SALT";
   }
 
   string salt::info(container &con) {

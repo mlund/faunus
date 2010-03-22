@@ -72,42 +72,75 @@ namespace Faunus {
     return sum;
   }
 
-  //---------- INHERITED GCTITRATE ---------
+  //---------- GCTITRATE ---------
   /*!
    * \param ph pH value
    * \param mu Proton excess chemical potential
    */
-  HAchargereg::HAchargereg(ensemble &e,
+  GCchargereg::GCchargereg(grandcanonical &e,
       container &c,
       energybase &i,
-      group &g, float ph, float mu ) : chargereg(e,c,i,g,ph)
+      inputfile &in) : markovmove(e,c,i), titrate_gc(c,in,e)
   {
     this->name.assign("GC PROTON TITRATION...");
     this->cite.assign("Labbez+Jonsson....");
-    CatPot=mu;
   }
 
-  string HAchargereg::info() {
+  string GCchargereg::info() {
     std::ostringstream o;
-    o << this->chargereg::info();
-    o << "#   Excess chem. pot.   = " << CatPot << endl;
+    o << markovmove::info();
+    o << titrate_gc::info();
     return o.str();
   }
 
-  double HAchargereg::energy( vector<particle> &p, double du, titrate::action &a ) {
-    int i=p[a.site].id;
-    if (a.action==this->PROTONATED)
-      return du+( log(10.)*( this->ph - atom.list[i].pka ) ) + 
-        CatPot - log( this->protons.size() / this->con->getvolume() ) ;
-    else
-      return du-( log(10.)*( this->ph - atom.list[i].pka ) ) -
-        CatPot + log( (this->protons.size()+1) / this->con->getvolume() );
+  double GCchargereg::titrateall() {
+    double sum=0;
+    unsigned int I, s;
+    particle J=atom(nameA);
+    for (int i=0; i<sites.size(); i++) {
+      cnt++;
+      int s=exchange(con->trial);
+      if (recent==PROTONATED) {     //Take ion from bulk        
+        I=gcPtr->gp[gcPtr->findgroup(nameA)]->beg + slp.random_one()*gcPtr->gp[gcPtr->findgroup(nameA)]->size();
+        unew=pot->energy(con->trial, s)- pot->energy(con->trial[s], con->trial[I]);
+        uold=pot->energy(con->p, s)+ pot->energy(con->p, I)
+             -pot->energy(con->p[s], con->p[I]);
+      }
+      if (recent==DEPROTONATED) {                      //Release ion to bulk
+        con->randompos(J);
+        unew=pot->energy(con->trial, s)+ pot->energy(con->trial, J);
+        uold=pot->energy(con->p, s);
+      }
+      du=unew-uold;
+//      if (recent==PROTONATED && gcPtr->gp[gcPtr->findgroup(nameA)]->size()==0)
+
+      if (ens->metropolis( titrate_gc::energy(*con, du, s)) == true ) {
+        rc=OK;
+        utot+=du;
+        sum+=du;
+        naccept++;
+        if(recent==PROTONATED) {
+          if(gcPtr->erase(*con,I)==false)
+            std::cerr<<" Couldn't errase in GCtit!!!"<<endl;
+          con->p[s].charge=con->trial[s].charge;
+        } 
+        if(recent==DEPROTONATED) {
+          if(gcPtr->insert(*con,J)==false)
+            std::cerr<<" Couldn't insert in GCtit!!!"<<endl;
+          con->p[s].charge=con->trial[s].charge;
+        }
+      }else{
+        rc=ENERGY;
+        exchange(con->trial,s);
+      }
+    }    
+    return sum;
   }
 
 
   // ----------- DH Titration ----------------
 
- DHchargereg::DHchargereg(ensemble &e, container &c, energybase &i, float ph, float muH ) : markovmove(e,c,i), titrate_implicit(c.p,ph,muH)
+ DHchargereg::DHchargereg(ensemble &e, container &c, energybase &i, float ph, float muH ) : markovmove(e,c,i), titrate_implicit(c.p,ph)
   {
     name.assign("DH-PROTON TITRATION");
     //cite.assign("...");
@@ -151,7 +184,6 @@ namespace Faunus {
     std::ostringstream o;
     o <<  markovmove::info()
       << "#   pH (concentration)  = " << ph << endl
-      << "#   Proton excess (kT)  = " << mu_proton << endl
       << "#   Titrateable sites   = " << sites.size() << endl;
     return o.str();
   }
@@ -244,6 +276,99 @@ namespace Faunus {
       rc=ENERGY;
       exchange(con->trial, t1);
       exchange(con->trial, t2);
+      du=0.;
+    }
+    p1+=con->p[g.beg+ 4].charge;
+    p2+=con->p[g.beg+13].charge;
+    
+    return du;
+
+  }
+  //GLU3GCtitration constuctor
+  GCglu3corechargereg::GCglu3corechargereg(grandcanonical &e, container &c, energybase &i, inputfile &in) 
+  : GCchargereg(e,c,i,in) {
+    name.assign("GCCHARGEREG / PORPHYRIN DOUBLE-TITRATION");
+    cite.assign("NONE");
+    runfraction=1;
+    con->trial = con->p;
+    porphyrinpKa = in.getflt("pKa_core", 5.0);
+    i1=atom(nameA), i2=atom(nameA);
+  }
+  //GLU3 info
+  string GCglu3corechargereg::info(){
+    std::ostringstream o;
+    o << GCchargereg::info()
+      << "#   pKa of double core    = "<<porphyrinpKa<<endl
+      << "#   Average charges on core"<<endl
+      << "#   P1 = "<<p1.avg()<<" ("<<p1.stdev()<<")"<<endl
+      << "#   P2 = "<<p2.avg()<<" ("<<p2.stdev()<<")"<<endl<<endl;
+    return o.str();
+  }
+  //GLU3 corrected weight
+  double GCglu3corechargereg::energy(vector<particle> &p,
+      double du, int i) {
+    double nA=double(gcPtr->gp[gcPtr->findgroup(nameA)]->size());
+    if (con->trial[i].charge>0.001)  //Did we protonate?
+      return du+( log(10.)*( 2*ph - porphyrinpKa ) ) - log(nA/con->getvolume()*(nA-1.0)/con->getvolume()) + 2*atom[nameA].chempot;
+    else
+      return du-( log(10.)*( 2*ph - porphyrinpKa ) ) + log((nA+2)/con->getvolume()*(nA+1.0)/con->getvolume()) - 2*atom[nameA].chempot;
+  }
+  //GLU3 Markov step
+  double GCglu3corechargereg::move(glu3 &g) {
+    du=0;
+    if (slp.runtest(runfraction)==false)
+      return du;
+    double sum=0;
+    cntcore++;
+    // New configuration
+    if (con->trial[g.beg+4].charge>0.1) {     //Is the core protonated?
+      con->randompos(i1), con->randompos(i2); //DEPROTONATE
+      con->trial[g.beg+4].charge=0.0, con->trial[g.beg+13].charge=0.0;
+      unew = pot->energy(con->trial, g.beg+4) + pot->energy(con->trial, g.beg+13) -
+             pot->energy(con->trial[g.beg+4], con->trial[g.beg+13]) +
+             pot->energy(con->trial, i1) + pot->energy(con->trial, i2)+ pot->energy(i1,i2);
+      uold = pot->energy(con->p, g.beg+4) + pot->energy(con->p, g.beg+13) -
+             pot->energy(con->p[g.beg+4], con->p[g.beg+13]);
+    } else {
+      o1=gcPtr->gp[gcPtr->findgroup(nameA)]->beg+slp.random_one()*gcPtr->gp[gcPtr->findgroup(nameA)]->size();
+      o2=o1;
+      while(o2==o1) //PROTONATE
+        o2=gcPtr->gp[gcPtr->findgroup(nameA)]->beg+slp.random_one()*gcPtr->gp[gcPtr->findgroup(nameA)]->size();
+      con->trial[g.beg+4].charge=1.0, con->trial[g.beg+13].charge=1.0;
+      unew = pot->energy(con->trial, g.beg+4) + pot->energy(con->trial, g.beg+13)-
+             pot->energy(con->trial[g.beg+4], con->trial[g.beg+13]) - pot->energy(con->trial[o1], con->trial[g.beg+4])-
+             pot->energy(con->trial[o1], con->trial[g.beg+13]) - pot->energy(con->trial[o2], con->trial[g.beg+4])-
+             pot->energy(con->trial[o2], con->trial[g.beg+13]);
+
+      uold = pot->energy(con->p,g.beg+4) + pot->energy(con->p,g.beg+13) + pot->energy(con->p,o1)+
+             pot->energy(con->p, o2) - pot->energy(con->p[g.beg+4], con->p[g.beg+13])- pot->energy(con->p[o1], con->p[o2])-
+             pot->energy(con->p[g.beg+4], con->p[o1]) - pot->energy(con->p[g.beg+13], con->p[o1]) - 
+             pot->energy(con->p[g.beg+4], con->p[o2]) - pot->energy(con->p[g.beg+13], con->p[o2]);
+    }  
+    du = (unew-uold);
+    // Weight of new conf.
+    if (ens->metropolis( energy(con->trial, du, g.beg+4) )==true) {
+      rc=OK;
+      utot+=du;
+      naccept++;
+      con->p[g.beg+4].charge  = con->trial[g.beg+4].charge;
+      con->p[g.beg+13].charge = con->trial[g.beg+13].charge;
+      if (con->trial[g.beg+4].charge>0.1) { // Did we protonate?
+        if(o1>o2) {                         // If we begin with the large index we will not
+        gcPtr->erase(*con ,o1);             // have to adjust for the last erase
+        gcPtr->erase(*con ,o2);
+        } else {
+        gcPtr->erase(*con ,o2);
+        gcPtr->erase(*con ,o1);
+        }
+      } else { 
+        gcPtr->insert(*con, i1);
+        gcPtr->insert(*con, i2);
+      }
+    } else {
+      rc=ENERGY;
+      con->trial[g.beg+4].charge  = con->p[g.beg+4].charge;
+      con->trial[g.beg+13].charge = con->p[g.beg+13].charge;
       du=0.;
     }
     p1+=con->p[g.beg+ 4].charge;

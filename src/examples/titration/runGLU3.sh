@@ -20,7 +20,11 @@ dp_monomer      $dp_monomer
 dp_salt         $dp_salt
 pH              $pH
 pKa_core        $pKa_core
-" > pka.conf
+MUs NA -11 CL -11
+crankshaft_dp   $crankshaft_dp
+crankshaft_min  $crankshaft_min
+crankshaft_max  $crankshat_max
+" > gcglu3pka.conf
 }
 
 #--- Input parameters ---
@@ -42,20 +46,25 @@ springeqdist=3.0
 dp_monomer=2
 dp_salt=50
 pKa_core=10
+crankshaft_dp=1.0
+crankshaft_min=1
+crankshaft_max=3
+crankshaft_num=40
 #
 for salt in 167 #100 300 900 
 do
-for pH in 4.0 4.5 5.0 5.5 6.0 6.5 7.0 7.5 8.0 
+for pH in 6.0 #4.5 5.0 5.5 6.0 6.5 7.0 7.5 8.0 
 do
-  suffix="result/50mM/glu3b-C4.8-coarse-eff60mM-pH${pH}"
-  microsteps=2000
+  suffix="test" #result/50mM/glu3b-C4.8-coarse-eff60mM-pH${pH}"
+  microsteps=200 
   nion1=$[salt+32]
   nion2=$[salt]
   mkinput
-  ./glu3c > ${suffix}.eq
-  microsteps=10000
+  ./glu3gc > ${suffix}.eq
+  exit
+  microsteps=100
   mkinput
-  ./glu3c > ${suffix}.out
+  ./glu3gc > ${suffix}.out
   mv smeared.aam ${suffix}.aam
 done
 done

@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 45;
+	objectVersion = 44;
 	objects = {
 
 /* Begin PBXAggregateTarget section */
@@ -238,7 +238,7 @@
 		739C442B10314D6300A3A5B9 /* widom.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C422B103079CF00A3A5B9 /* widom.cpp */; };
 		739C442C10314D6300A3A5B9 /* histogram.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C42CA10307B8500A3A5B9 /* histogram.cpp */; };
 		739C442E10314D6300A3A5B9 /* libxdrfile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C41EE103078CA00A3A5B9 /* libxdrfile.a */; };
-		739C445210314EC400A3A5B9 /* libhyperfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */; };
+		739C445210314EC400A3A5B9 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C443210314D6300A3A5B9 /* liblibfaunus.dylib */; };
 		739C45251031925E00A3A5B9 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		739C45281031928400A3A5B9 /* widom.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C45271031928400A3A5B9 /* widom.cpp */; };
 /* End PBXBuildFile section */
@@ -479,7 +479,7 @@
 		739C42D210307BA900A3A5B9 /* twobody */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = twobody; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C42DB10307BF400A3A5B9 /* twobody.conf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = twobody.conf; path = src/examples/twobody/twobody.conf; sourceTree = "<group>"; };
 		739C42DC10307BF400A3A5B9 /* twobody.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = twobody.cpp; path = src/examples/twobody/twobody.cpp; sourceTree = "<group>"; };
-		739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libhyperfaunus.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		739C443210314D6300A3A5B9 /* liblibfaunus.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = liblibfaunus.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C444B10314E8700A3A5B9 /* hyper_dipolarfluid */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = hyper_dipolarfluid; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C451F1031925300A3A5B9 /* widom_cube */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = widom_cube; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C45271031928400A3A5B9 /* widom.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = widom.cpp; path = src/examples/widom/widom.cpp; sourceTree = "<group>"; };
@@ -553,7 +553,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				739C445210314EC400A3A5B9 /* libhyperfaunus.dylib in Frameworks */,
+				739C445210314EC400A3A5B9 /* liblibfaunus.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -614,7 +614,7 @@
 				739618DA10309A010051F3E3 /* pka */,
 				73280BC6114197D60054855E /* pkaDH */,
 				73961ED91030ADE60051F3E3 /* isobaric */,
-				739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */,
+				739C443210314D6300A3A5B9 /* liblibfaunus.dylib */,
 				739C444B10314E8700A3A5B9 /* hyper_dipolarfluid */,
 				739C451F1031925300A3A5B9 /* widom_cube */,
 				730BD3F510ADA2F800FC674A /* twobody-hof */,
@@ -1078,7 +1078,7 @@
 			);
 			name = hyperfaunus;
 			productName = libfaunus;
-			productReference = 739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */;
+			productReference = 739C443210314D6300A3A5B9 /* liblibfaunus.dylib */;
 			productType = "com.apple.product-type.library.dynamic";
 		};
 		739C444A10314E8700A3A5B9 /* hyperbulk */ = {
@@ -1121,7 +1121,7 @@
 		739C41D9103078A800A3A5B9 /* Project object */ = {
 			isa = PBXProject;
 			buildConfigurationList = 739C41DC103078A800A3A5B9 /* Build configuration list for PBXProject "faunus" */;
-			compatibilityVersion = "Xcode 3.1";
+			compatibilityVersion = "Xcode 3.0";
 			hasScannedForEncodings = 0;
 			mainGroup = 739C41D7103078A800A3A5B9;
 			productRefGroup = 739C41EF103078CA00A3A5B9 /* Products */;

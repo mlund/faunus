@@ -3,6 +3,7 @@
 #--- Write config file ---
 function mkinput() {
 echo "
+pH         $pH
 macrosteps $macrosteps
 microsteps $microsteps
 boxlen     $boxlen
@@ -13,7 +14,7 @@ nion2      $nion2
 tion1      $tion1
 tion2      $tion2
 nprot1     $nprot1
-protein1   $protein1
+protein   $protein
 nprot2     $nprot2
 protein2   $protein2
 voldp      $voldp
@@ -28,12 +29,12 @@ polymer    $polymer
 #--- Input parameters ---
 polymer="GLU3simp.mol2"
 macrosteps=10
-microsteps=1000
+microsteps=100
 cellradius=90
 bjerrum=7.12
-LJeps=0.0
+LJeps=0.2
 pH=7.5
-nion1=30
+nion1=42
 nion2=23
 tion1="NA"
 tion2="CL"
@@ -43,10 +44,9 @@ atomfile="../../../misc/faunatoms.dat"
   suffix="name"
   mkinput
   ./pka > out1
-  microsteps=10000
+  microsteps=100
   mkinput
   ./pka > ${suffix}.out
   mv smeared.aam > ${suffix}.aam
   rm confout.aam 
-done
 

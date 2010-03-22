@@ -2,32 +2,43 @@
 #define FAU_SALTBATH_H
 #include <faunus/moves/base.h>
 namespace Faunus {
-  /*! \brief Rosembluth polymer and salt insertion
-   *  \author Christophe Labbez and Mikael Lund
-   *  \date Dijon / Lund, 2009
-   *  \warning ....
-   *  \todo a lot...
+  /*! \brief Class for handeling a arbitrary salt solution of N components whereof M may 
+   *   may have a fixed chemical potential rather fixed number density.
+   *  \author Bjorn Persson and Mikael Lund
+   *  \date Lund, 2010
+   *  \warning This is some general pice of shit
+   *  
    */
   class saltbath : public markovmove { 
     private:
+      bool locked;              // Is class closed for external modification?
       grandcanonical *gcPtr;    // Pointer to GC class
-      struct data {
-        group* gPtr;            // Pointer to group containing this species
-        unsigned short valency; // Stoechiometry
-        short charge;           // Particle charge
-        vector<string> seq;     // Sequence of particle names
+      salt *sPtr;               // Pointer to Salt class (change to group)
+      struct pair {
+        int i, j;               // Indicies for GC::*g  
+        int ni,nj;              // Stochiometric ratio: ni:nj of a i-j salt
+        average < double >  ai, aj;         // Number averages
+        average < double >  inacc, outacc;  // Acceptances
       };
-      data polymer, counter;    // Store data for "polymer" and counter ions
-      short index;              // Rosembluth index
-      string bondtype;          // Insertion scheme or bond type
-      unsigned int k;           // Rosembluth k-value
-      double mu;                // Chemical potential
-      void insert();
+      vector<pair> pairs;       // All (electro neutral) ion pairs with reservoirs 
+      pair *thispair;           // Choosen pair for a particular step in the Markov chain
+      bool inserting;           // Is it a inserting step?
+      particle I, J;            // Particles to insert
+      vector<particle> trialin, tini, tinj;  // Particle vectors trailin=tini+tinj
+      vector<unsigned int>      trialout, touti, toutj;  // Inicies for attempted extraction
       void remove();
-      vector<unsigned int> ins; // Particles inserted or deleted in last move.
+      void acc_ins();           // Accept insertion
+      void acc_rem();           // Accept extraction
+      void insert();
+      void setChemPot(inputfile &); // Load and set atoms::list.chempot
+      double metropolis();      // returns the full Boltzmann weight, taking mu's and ideal cont. in to account.
+      int gcd(int, int);        // Find the greatest common divider of two integers (external library?)
+
     public:
       // Keep as much as possible private! Easier for the user of the class.
-      saltbath( grandcanonical&, container&, energybase&, inputfile &, int);
+      vector<group> g;          // Vector of salt components (not known externaly, maybe the should?)
+      saltbath( grandcanonical&, container&, energybase&, inputfile &, salt &);
+      void searchsalt( salt&);
       double move();
       string info();
   };

@@ -19,15 +19,18 @@ namespace Faunus {
   /*!
    * \brief Grand Canonical titation of all sites
    * \author Bjoern Persson
-   * \todo Untested, in principle it must be supplemented with grand canonical salt
+   * \todo Untested, must be supplemented with grand canonical salt
+      This is perhaps not the best forum but a detail regarding grand canonical 
+      titration should be mentioned. What ever group that is titrating should
+      be declared BEFORE any fluctuating salt group. If not, titrate::sites will
+      no longer be in sync with con->p.
    */
-  class HAchargereg : public chargereg {
+  class GCchargereg : public markovmove, public titrate_gc {
     public: 
-      HAchargereg( ensemble&, container&, energybase&, group&, float, float);
+      GCchargereg( grandcanonical&, container&, energybase&, inputfile&);
+      double titrateall();
       string info();
     private:
-      double energy(vector<particle> &, double, titrate::action &); //!< New titrate energy function
-      double CatPot;  //!< Chemical potential of coupled cation
   };
 
   class DHchargereg : public markovmove, public titrate_implicit {
@@ -47,10 +50,22 @@ namespace Faunus {
        double energy(vector<particle> &, double, titrate::action &, titrate::action &);
        double porphyrinpKa;
        int porph1, porph2;
-       //average_vec<double> p1(20);
-       //average_vec<double> p2(20);
        average<double> p1, p2;
        int cntcore;
+   };
+   class GCglu3corechargereg : public GCchargereg {
+     public:
+       GCglu3corechargereg(grandcanonical &, container &, energybase &, inputfile &);
+       string info();
+       double move(glu3 &);
+     private:
+       double energy(vector<particle> &, double, int i);
+       double porphyrinpKa;
+       int porph1, porph2;
+       average<double> p1, p2;
+       int cntcore;
+       unsigned int o1,o2;
+       particle i1,i2;
    };
 #endif
 

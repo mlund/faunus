@@ -97,6 +97,8 @@ int main() {
   // mt.dpv.z=0;
 #endif
 
+  cout<<"Ehy!!"<<endl;
+
   // Analysis and energy
   double usys=0;
 #pragma omp parallel for reduction (+:usys) schedule (dynamic)

@@ -33,7 +33,8 @@ namespace Faunus {
                radius,    //!< Radius
                mw,        //!< Weight
                charge,    //!< Charge
-               pka;       //!< pKa value
+               pka,       //!< pKa value
+               chempot;   //!< Chemical potential? How do we do with a protein??
         bool hydrophobic; //!< Are we hydrophobic?
         string name;
         bool operator==(const data &d) const { return (*this==d); }

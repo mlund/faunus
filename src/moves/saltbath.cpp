@@ -122,7 +122,7 @@ namespace Faunus {
         for (int i=0; i<toutj.size(); i++)
           if (jj==trialout[i])
             uniqe=false;
-        if (uniqe=true) {
+        if (uniqe==true) {
           toutj.push_back(jj);
           trialout.push_back(jj);
         }

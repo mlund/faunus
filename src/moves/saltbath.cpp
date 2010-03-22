@@ -108,7 +108,7 @@ namespace Faunus {
         for (int i=0; i<trialout.size(); i++)
           if (ii==trialout[i])
             uniqe=false;
-        if (uniqe=true) {
+        if (uniqe==true) {
           touti.push_back(ii);
           trialout.push_back(ii);
         }

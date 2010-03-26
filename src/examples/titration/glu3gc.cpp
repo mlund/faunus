@@ -80,7 +80,8 @@ int main(int argc, char* argv[]) {
           glu3.core.charge(con.p);                                          // Re-calc. porphoryn charge
           break;
         case 2:
-          sys+=mm.move(glu3.chains);
+          for (int i=0; i<glu3.chains.size(); i++)
+            sys+=mm.move(glu3.chains);
           break;
         case 4:
           sys+=sb.move();

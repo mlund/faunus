@@ -10,7 +10,7 @@ macrosteps 10
 microsteps $microsteps
 boxlen     $boxlen
 cellradius 100
-bjerrum    7.1
+bjerrum    7.13
 atomfile   faunatoms.dat
 nion1      $nion1
 nion2      $nion2
@@ -35,25 +35,25 @@ tion3="K"
 tion4="MG"
 tion5="CA"
 tion6="CL"
-dp_salt=10
+dp_salt=60
 exe="./widom_cube"
-for boxlen in 367.9 255 176.9 122.6 85 
+for boxlen in 792.6 #998.7 1258.2
 do
     rm -f widom.aam
-    nion1=0
+    nion1=640
     nion2=0
     nion3=0
-    nion4=0
-    nion5=50
-    nion6=100
+    nion4=75
+    nion5=0
+    nion6=790
 #    boxlen=129.8
     microsteps=1000
-    outfile="anything1.out"
+    outfile="MGNACL-boxl${boxlen}"
     geninput
-    $exe > t1b 
+    $exe > eq
 #exit
     microsteps=1000
-    outfile="${boxlen}-2-1.out"
+    #outfile="${boxlen}.out"
     geninput
     $exe > $outfile
 done

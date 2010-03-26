@@ -629,12 +629,12 @@ namespace Faunus {
       cm.clear();
       for (int i=g.beg; i<=g.end; i++) {
         t = p[i]-p[g.beg];
-        cPtr->boundary(t);
+        interaction<T>::pair.boundary(t);
         cm += t*p[i].mw;
         sum+= p[i].mw; 
       }
       cm=cm*(1/sum) + p[g.beg];
-      cPtr->boundary(cm);
+      interaction<T>::pair.boundary(cm);
     }
     
     void calcDipole(const vector<particle> &p, const group &g, dipole &a) {
@@ -643,7 +643,7 @@ namespace Faunus {
       a.cation.clear();
       for (int i=g.beg; i<=g.end; i++) {
         t = p[i]-a.cm;
-        cPtr->boundary(t);
+        interaction<T>::pair.boundary(t);
         if (p[i].charge>0) {
           a.cation.charge+=p[i].charge;
           a.cation += t*p[i].charge;
@@ -657,8 +657,8 @@ namespace Faunus {
       if (a.cation.charge!=0) a.cation= a.cation*(1/a.cation.charge);
       a.anion+=a.cm;
       a.cation+=a.cm;
-      cPtr->boundary(a.anion);
-      cPtr->boundary(a.cation);
+        interaction<T>::pair.boundary(a.anion);
+      interaction<T>::pair.boundary(a.cation);
     }
 
     //!< Calculate Debye-Huckel prefactor
@@ -691,10 +691,10 @@ namespace Faunus {
         cntDip++;
         calcDipole(p,g1,mu1);
         calcDipole(p,g2,mu2);
-        mu1.anion.radius =R1-mu1.anion.dist(mu1.cm);
-        mu1.cation.radius=R1-mu1.cation.dist(mu1.cm);
-        mu2.anion.radius =R2-mu2.anion.dist(mu2.cm);
-        mu2.cation.radius=R2-mu2.cation.dist(mu2.cm);
+        mu1.anion.radius =R1-sqrt(interaction<T>::pair.sqdist(mu1.anion, mu1.cm));
+        mu1.cation.radius=R1-sqrt(interaction<T>::pair.sqdist(mu1.cation, mu1.cm));
+        mu2.anion.radius =R2-sqrt(interaction<T>::pair.sqdist(mu2.anion, mu2.cm));
+        mu2.cation.radius=R2-sqrt(interaction<T>::pair.sqdist(mu2.cation, mu2.cm));
         return interaction<T>::pair.f * (
             f(mu1.anion, mu2.anion) * interaction<T>::pair.pairpot(mu1.anion, mu2.anion) +
             f(mu1.anion, mu2.cation) * interaction<T>::pair.pairpot(mu1.anion, mu2.cation) +

@@ -100,7 +100,7 @@ namespace Faunus {
     for (int i=0; i<sites.size(); i++) {
       cnt++;
       int s=exchange(con->trial);
-      if (recent==PROTONATED) {     //Take ion from bulk        
+      if (recent==PROTONATED ) {     //Take ion from bulk        
         I=gcPtr->gp[gcPtr->findgroup(nameA)]->beg + slp.random_one()*gcPtr->gp[gcPtr->findgroup(nameA)]->size();
         unew=pot->energy(con->trial, s)- pot->energy(con->trial[s], con->trial[I]);
         uold=pot->energy(con->p, s)+ pot->energy(con->p, I)
@@ -112,26 +112,30 @@ namespace Faunus {
         uold=pot->energy(con->p, s);
       }
       du=unew-uold;
-//      if (recent==PROTONATED && gcPtr->gp[gcPtr->findgroup(nameA)]->size()==0)
 
-      if (ens->metropolis( titrate_gc::energy(*con, du, s)) == true ) {
-        rc=OK;
-        utot+=du;
-        sum+=du;
-        naccept++;
-        if(recent==PROTONATED) {
-          if(gcPtr->erase(*con,I)==false)
-            std::cerr<<" Couldn't errase in GCtit!!!"<<endl;
-          con->p[s].charge=con->trial[s].charge;
-        } 
-        if(recent==DEPROTONATED) {
-          if(gcPtr->insert(*con,J)==false)
-            std::cerr<<" Couldn't insert in GCtit!!!"<<endl;
-          con->p[s].charge=con->trial[s].charge;
+      if (recent==PROTONATED && gcPtr->gp[gcPtr->findgroup(nameA)]->size()==0) {
+        rc=ENERGY;                                     //Cumbersome way to make sure we don't erase
+        exchange(con->trial,s);                        //what isn't there.
+      } else {
+        if (ens->metropolis( titrate_gc::energy(*con, du, s)) == true ) {
+          rc=OK;
+          utot+=du;
+          sum+=du;
+          naccept++;
+          if(recent==PROTONATED) {
+            if(gcPtr->erase(*con,I)==false)
+              std::cerr<<" Couldn't errase in GCtit!!!"<<endl;
+            con->p[s].charge=con->trial[s].charge;
+          } 
+          if(recent==DEPROTONATED) {
+            if(gcPtr->insert(*con,J)==false)
+              std::cerr<<" Couldn't insert in GCtit!!!"<<endl;
+            con->p[s].charge=con->trial[s].charge;
+          }
+        } else {
+          rc=ENERGY;
+          exchange(con->trial,s);
         }
-      }else{
-        rc=ENERGY;
-        exchange(con->trial,s);
       }
     }    
     return sum;
@@ -346,6 +350,14 @@ namespace Faunus {
              pot->energy(con->p[g.beg+4], con->p[o2]) - pot->energy(con->p[g.beg+13], con->p[o2]);
     }  
     du = (unew-uold);
+    // Check so that there are ions enough!
+    if (con->trial[g.beg+4].charge>0.1 && gcPtr->gp[gcPtr->findgroup(nameA)]->size()<2) {//Did we protonate with insufficent number of ions?
+      rc=ENERGY;
+      con->trial[g.beg+4].charge  = con->p[g.beg+4].charge;
+      con->trial[g.beg+13].charge = con->p[g.beg+13].charge;
+      du=0.;
+      return du;
+    }
     // Weight of new conf.
     if (ens->metropolis( energy(con->trial, du, g.beg+4) )==true) {
       rc=OK;

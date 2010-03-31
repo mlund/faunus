@@ -621,7 +621,6 @@ namespace Faunus {
     container *cPtr;
     double kappa;
     unsigned long int cnt, cntDip; // no. of group-group interactions, no. of dipole interactions
-    dipole mu1, mu2;               // placeholders for dipoles.
     
     void centerOfMass(const vector<particle> &p, const group &g, point &cm) {
       point t;
@@ -679,10 +678,12 @@ namespace Faunus {
       kappa = 1/in.getflt("debyelen", 2e4);
       R1 = in.getflt("groupradius_g2g",20);
       R2 = R1;
+      cnt=cntDip=0;
     }
    
     double energy(vector<particle> &p, const group &g1, const group &g2) {
       cnt++;
+      dipole mu1, mu2;
       centerOfMass(p, g1, mu1.cm);
       centerOfMass(p, g2, mu2.cm);
       if ( sqrt(interaction<T>::pair.sqdist(mu1.cm, mu2.cm)) < cut_g2g )
@@ -708,9 +709,9 @@ namespace Faunus {
       o << interaction<T>::info()
         << "#   Cut-off:" << endl
         << "#     Group-Group threshold   = " << cut_g2g << endl
-        << "#     Group radii             = " << R1 << " " << R2 << endl
-        << "#     Dipole 1 radii (+,-)    = " << mu1.cation.radius << " " << mu1.anion.radius << endl
-        << "#     Dipole 2 radii (+,-)    = " << mu2.cation.radius << " " << mu2.anion.radius << endl;
+        << "#     Group radii             = " << R1 << " " << R2 << endl;
+        //<< "#     Dipole 1 radii (+,-)    = " << mu1.cation.radius << " " << mu1.anion.radius << endl
+        //<< "#     Dipole 2 radii (+,-)    = " << mu2.cation.radius << " " << mu2.anion.radius << endl;
       if (cnt>100)
         o << "#     Cut-off fraction        = " << double(cntDip)/cnt << endl;
       return o.str();

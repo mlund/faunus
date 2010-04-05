@@ -1,5 +1,6 @@
 #include "faunus/faunus.h"
 #include "faunus/average_vec.h"
+#include "faunus/potentials/pot_minimage.h"
 #ifndef __cplusplus
 #define __cplusplus
 #endif

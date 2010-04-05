@@ -12,6 +12,7 @@
 
 #include "faunus/faunus.h"
 #include "faunus/potentials/pot_netz.h"
+#include "faunus/energy/hydrophobic.h"
 
 using namespace Faunus;
 using namespace std;

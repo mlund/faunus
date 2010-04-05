@@ -3,7 +3,7 @@
 
 #include "faunus/common.h"
 #include "faunus/container.h"
-#include "faunus/energy.h"
+#include "faunus/energy/base.h"
 #include "faunus/ensemble.h"
 
 namespace Faunus {

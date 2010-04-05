@@ -232,6 +232,27 @@ namespace Faunus {
       void randompos(vector<point> &);
   };
 
+  
+  /*! \brief Gridded slit box.
+   *  
+   *  \author Mikael Lund
+   *  \date Asljunga, 2010
+   */
+  class gridslit : public slit {
+  private:
+    double l;     //!< Grid spacing
+  public:
+    double ngrid; //!< Number of grids in each dimension
+    gridslit(inputfile &);
+    string info();
+    bool collision(const particle &);
+    void randompos(point &);
+    inline void boundary(point &a) const {
+      slit::boundary(a);
+    }
+  };
+  
+  
   /*! \brief "Clutch" like container.
    *  \author Mikael Lund
    *

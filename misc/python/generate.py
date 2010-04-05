@@ -139,7 +139,7 @@ header_files_list = ['faunus/faunus.h',
                      'faunus/group.h',
                      'faunus/analysis.h',
                      'faunus/widom.h',
-                     'faunus/energy.h',
+                     'faunus/energy/base.h',
                      'faunus/ensemble.h',
                      'faunus/histogram.h',
                      'faunus/xytable.h',
@@ -169,9 +169,9 @@ classes = ['point',                             # point.h
            'ensemble',                          # ensemble.h
            'canonical',
            'grandcanonical',
-           'pot_coulomb',                       # potentials
-           'pot_lj',
-           'energybase',                        # energy.h
+           'pot_coulomb',                       # potentials/pot_coulomb.h
+           'pot_lj',                            # potentials/base.h
+           'energybase',                        # energy/base.h
            'markovmove',                        # moves
            'saltmove',
            'titrate',

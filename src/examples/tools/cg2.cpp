@@ -3,7 +3,7 @@
  *
  */
 #include "faunus/faunus.h"
-#include "faunus/energy.h"
+#include "faunus/energy/base.h"
 #include "faunus/potentials/pot_minimage.h"
 //#include "faunus/moves/markovmove.h"
 

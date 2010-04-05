@@ -27,16 +27,18 @@ namespace Faunus {
       char find(string);            //!< Find atom id from name
       char find(double, double=0.1);//!< Find atom id from molecular weight
       struct data {
-        char id;          //!< id number
-        double sigma,     //!< LJ diameter
-               eps,       //!< LJ epsilon
-               radius,    //!< Radius
-               mw,        //!< Weight
-               charge,    //!< Charge
-               pka,       //!< pKa value
-               chempot;   //!< Chemical potential? How do we do with a protein??
-        bool hydrophobic; //!< Are we hydrophobic?
-        string name;
+        char id;           //!< id number
+        double sigma,      //!< LJ diameter
+               eps,        //!< LJ epsilon
+               radius,     //!< Radius
+               mw,         //!< Weight
+               charge,     //!< Charge
+               pka,        //!< pKa value
+               chempot,    //!< Chemical potential
+               mean,       //!< Mean value... (charge, sasa, etc.)
+               variance;   //!< ...and the spread around it.
+        bool hydrophobic;  //!< Are we hydrophobic?
+        string name;       //!< Name. Avoid spaces.
         bool operator==(const data &d) const { return (*this==d); }
       };
       atoms();                               //!< Constructor - set UNK atom type (fallback)

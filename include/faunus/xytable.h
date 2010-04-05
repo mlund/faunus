@@ -1,10 +1,6 @@
 #ifndef FAU_XYTABLE_H
 #define FAU_XYTABLE_H
 
-#include <vector>
-#include <iostream>
-#include <string>
-
 #include "faunus/common.h"
 
 namespace Faunus {

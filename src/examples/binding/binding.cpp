@@ -4,6 +4,7 @@
  */
 
 #include "faunus/faunus.h"
+#include "faunus/potentials/pot_coulomb.h"
 
 using namespace std;
 using namespace Faunus;

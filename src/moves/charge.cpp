@@ -2,6 +2,53 @@
 #include <faunus/titrate.h>
 
 namespace Faunus {
+  
+  //---------- CHARGE REG GAUSSIAN ---------------------
+  chargeregGaussian::chargeregGaussian(ensemble &e, container &c, energybase &i) : markovmove(e,c,i) {
+    name.assign("Gaussian Charge Fluctuations");
+    cite.assign("ML, unpublished");
+    dp=1.0;
+    data t;
+    for (unsigned int i=0; i<c.p.size(); i++) // search for titratable sites
+      if ( atom[ c.p[i].id ].variance>0 ) {
+        t.n=i;
+        sites.push_back(t);
+      }
+  }
+  
+  string chargeregGaussian::info() {
+    std::ostringstream o;
+    o <<  markovmove::info()
+      << "#   Nr. of titratable sites   = " << sites.size() << endl;
+    return o.str();
+  }
+  
+  double chargeregGaussian::titrateall() {
+    double du, sum=0;
+    for (unsigned int i=0; i<sites.size(); i++) {
+      cnt++;
+      unsigned int j=rand() % sites.size(),         //!< Pick a random site
+                   n=sites.at(j).n;                 //!< Get particle number
+      con->trial[n].charge += dp*slp.random_half(); //!< Displace charge
+      
+      uold = pot->energy(con->p, n) + gaussianEnergy(con->p[n]);
+      unew = pot->energy(con->trial, n) + gaussianEnergy(con->trial[n]);
+      du = unew-uold;
+      
+      if (ens->metropolis(du)==true) {
+        rc=OK;
+        utot+=du;
+        naccept++;
+        con->p[n].charge = con->trial[n].charge;
+        sum+=du;
+      } else {
+        rc=ENERGY;
+        con->trial[n].charge = con->p[n].charge;
+      }
+    }
+    return sum;
+  }
+  
  //---------- CHARGE REG ---------------------
   string chargereg::info() {
     std::ostringstream o;

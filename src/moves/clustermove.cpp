@@ -1,4 +1,4 @@
-#include <faunus/moves/clustermove.h>
+#include "faunus/moves/clustermove.h"
 
 namespace Faunus {
 //  INVERSION  

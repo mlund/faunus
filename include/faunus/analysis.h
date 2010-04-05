@@ -8,7 +8,7 @@
 #include "faunus/io.h"
 #include "faunus/xytable.h"
 #include "faunus/hardsphere.h"
-#include "faunus/energy.h"
+#include "faunus/energy/base.h"
 
 namespace Faunus {
   /*!
@@ -90,6 +90,7 @@ namespace Faunus {
   /*!
    * \brief Calculates free energy pathway
    * \author Mikael Lund
+   * \note Can't really remember what this is good for...ML
    *
    * Starting from some point this class will generate eight
    * other points around it (cubic) and calculate the excess chemical
@@ -282,6 +283,10 @@ namespace Faunus {
       string info();
   };
 
+  /*
+   * \author Bjorn Persson?
+   * \todo Document this class
+   */
   class diskoverlap : public analysis {
     private:
       int s1, s2, s3, i, j, k;

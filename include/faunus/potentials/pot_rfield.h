@@ -1,6 +1,7 @@
 #ifndef FAU_POT_RFIELD_H
 #define FAU_POT_RFIELD_H
 
+#include "faunus/physconst.h"
 #include "faunus/point.h"
 #include "faunus/legendre.h"
 #include "faunus/potentials/base.h"

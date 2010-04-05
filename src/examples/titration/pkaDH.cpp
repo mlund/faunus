@@ -1,12 +1,15 @@
 #include "faunus/faunus.h"
+#include "faunus/potentials/pot_debyehuckel.h"
 
 using namespace Faunus;
 using namespace std;
 
-// A class to measure volume of macromolecules
-// via hit and miss procedure.
-// \author Mikael Lund and Bjorn Persson
-// \date Feb 2010
+/*!
+ * A class to measure volume of macromolecules
+ * via hit and miss procedure.
+ * \author Mikael Lund and Bjorn Persson
+ * \date Feb 2010
+ */
 class measureVolume {
   private:
     unsigned long int hit,cnt;
@@ -44,7 +47,7 @@ class measureVolume {
 int main(int argc, char* argv[]) {
   cout << faunus_splash();             // Faunus spam
 #ifdef DHTEIXEIRA
-  string config = "pkaAT.conf";          // Default input (parameter) file
+  string config = "pkaAT.conf";        // Default input (parameter) file
 #else
   string config = "pka.conf";          // Default input (parameter) file
 #endif

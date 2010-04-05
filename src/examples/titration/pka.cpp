@@ -8,6 +8,7 @@
  * \include pka.cpp
  */
 #include "faunus/faunus.h"
+#include "faunus/potentials/pot_hscoulomb.h"
 
 using namespace Faunus;
 using namespace std;

@@ -9,6 +9,7 @@
  */
 
 #include "faunus/faunus.h"
+#include "faunus/potentials/pot_minimage.h"
 
 using namespace std;
 using namespace Faunus;

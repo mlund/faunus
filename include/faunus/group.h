@@ -24,9 +24,9 @@ namespace Faunus {
       string title;
     public:
       particle cm, cm_trial; 
-      short int beg,end;    ///< Define range in particle vector. [beg;end]
-      string name;          ///< Informative (arbitrary) name
-      group(int=0);         ///< Constructor, initialize data.
+      short int beg,end;    //!< Define range in particle vector. [beg;end]
+      string name;          //!< Informative name. Avoid spaces.
+      group(int=0);         //!< Constructor, initialize data.
 
       void set(short int,short int);        ///< Set particle range, "beg" and "end".
       bool find(unsigned int) const;        ///< Check if particle is part of the group

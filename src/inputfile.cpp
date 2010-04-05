@@ -79,6 +79,8 @@ namespace Faunus {
     return def;
   }
 
+  //! \param key Keyword to look for
+  //! \param def Default value if keyword is not found
   vector<string> inputfile::getvec(string key, string def) {
     int i = findKey(key);
     return (i!=-1) ? matrix[i].val : vector<string>(1,def);

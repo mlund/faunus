@@ -3,8 +3,43 @@
 
 #include <faunus/moves/base.h>
 #include <faunus/titrate.h>
+#include "faunus/potentials/pot_debyehuckel.h"
 
 namespace Faunus {
+  
+  /*! \brief Titrate all titrateable sites using Gaussian fluctuations
+   *  \author Mikael Lund
+   *  \date Asljunga 2010
+   *  \warning Untested
+   *
+   *  Charges are assumed to fluctuate around their mean values via
+   *  a normal distribution. This means that the free energy of displacing
+   *  a charge is, in addition to electrostatic interactions,
+   *  given by a harmonic potential,
+   *  \f$ A(z)/kT = \frac{(\langle z\rangle - z)^2}{2\sigma^2}\f$
+   *  The mean value, \f$\langle z\rangle\f$ and the variance
+   *  \f$\sigma^2\f$ are defined for each species via the species
+   *  class. Particles with non-zero variances are sought out
+   *  by the constructor.
+   */
+  class chargeregGaussian : public markovmove {
+  private:
+    struct data {
+      unsigned int n;        //!< Particle number
+      average<double> charge;//!< Average net-charge
+    };
+     
+    inline double gaussianEnergy(particle &p) {
+      return pow(atom[p.id].mean - p.charge, 2) / (2*atom[p.id].variance);
+    }
+    
+  public:
+    vector<data> sites;   //!< List of titratable sites and their mean charges.
+    chargeregGaussian( ensemble&, container&, energybase&); //!< Initialize and find titratable sites
+    double titrateall(); //!< Attempt to randomly titrate all sites
+    string info();       //!< Info string
+  };
+  
   /*! \brief Titrate all titrateable sites
    *  \author Mikael Lund
    *  \note "titrate" used to be private. Changed because iopqr::save()

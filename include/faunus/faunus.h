@@ -30,7 +30,7 @@
 #include "faunus/container.h"
 #include "faunus/countdown.h"
 #include "faunus/mcloop.h"
-#include "faunus/energy.h"
+#include "faunus/energy/base.h"
 #include "faunus/widom.h"
 #include "faunus/moves/translational.h"
 #include "faunus/moves/rotational.h"

@@ -26,7 +26,7 @@ namespace Faunus {
 
   /*!
    * This will read a molecular file format into the particle
-   * vector. If the structure file contain residue names and
+   * vector. If the structure file contains residue names and
    * if the number of pacticles is equal to the number of
    * residues, the residue name will be used to identify the
    * particle type.

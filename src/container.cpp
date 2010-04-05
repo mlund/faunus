@@ -182,7 +182,9 @@ namespace Faunus {
     for (int i=0; i<s; i++) 
       randompos(p[i]);
   }
+  
   //----------- SLIT --------------------------
+  
   slit::slit(inputfile &in) : box(in) {
     if (in.getflt("zboxlen", 0)>0)
       zlen=in.getflt("zboxlen");
@@ -201,6 +203,29 @@ namespace Faunus {
     return o.str();
   }
 
+  //----------- GRIDSLIT --------------------------
+  
+  gridslit::gridslit(inputfile &in) : slit(in) {
+    ngrid=in.getflt("gridpoints", 5.);
+    l=len/ngrid;
+    zlen=len;
+  }
+  
+  string gridslit::info() {
+    std::ostringstream o;
+    o << "# Grid points    = " << ngrid << endl
+      << "# Grid spacing   = " << l << endl; 
+    return o.str();
+  }
+   
+  bool gridslit::collision(const particle &p) {
+    return false;
+  }
+  
+  void gridslit::randompos(point &p) {
+  }
+  
+  
   //-------------- CLUTCH -------------------------
   //! \param radius Radius of the cell
   //! \param min Beginning of the particle-excluded region

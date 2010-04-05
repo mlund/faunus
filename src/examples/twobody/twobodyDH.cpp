@@ -9,6 +9,8 @@
  * \include twobody.cpp
  */
 #include "faunus/faunus.h"
+#include "faunus/potentials/pot_debyehuckelP3.h"
+#include "faunus/energy/coarsegrain.h"
 
 using namespace Faunus;
 using namespace std;

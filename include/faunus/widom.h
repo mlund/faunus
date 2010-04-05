@@ -1,7 +1,7 @@
 #ifndef FAU_WIDOMMOD_H
 #define FAU_WIDOMMOD_H
 
-#include "faunus/energy.h"
+#include "faunus/energy/base.h"
 #include "faunus/container.h"
 #include "faunus/analysis.h"
 

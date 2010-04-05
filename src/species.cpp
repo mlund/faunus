@@ -4,7 +4,7 @@ namespace Faunus {
 
   atoms::atoms() {
     filename="faunatoms.dat";
-    data a = {0,0,0,0,0.1,0,0,0,false,"UNK"};
+    data a = {0,0,0,0,0.1,0,0,0,0,0,false,"UNK"};
     list.push_back(a);
     init();
   }

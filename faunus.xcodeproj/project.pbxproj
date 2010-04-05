@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 44;
+	objectVersion = 45;
 	objects = {
 
 /* Begin PBXAggregateTarget section */
@@ -11,15 +11,19 @@
 			isa = PBXAggregateTarget;
 			buildConfigurationList = 73128B0E1030BF7C00950418 /* Build configuration list for PBXAggregateTarget "all" */;
 			buildPhases = (
-				73280BC2114197240054855E /* ShellScript */,
 			);
 			dependencies = (
 				73128B021030BF2000950418 /* PBXTargetDependency */,
 				73128B041030BF2000950418 /* PBXTargetDependency */,
-				73128B061030BF2000950418 /* PBXTargetDependency */,
 				73128B081030BF2000950418 /* PBXTargetDependency */,
 				739C452C1031929300A3A5B9 /* PBXTargetDependency */,
 				739C452A1031929300A3A5B9 /* PBXTargetDependency */,
+				733DF81A1166509A008347FA /* PBXTargetDependency */,
+				733DF81C1166509A008347FA /* PBXTargetDependency */,
+				733DF81E1166509A008347FA /* PBXTargetDependency */,
+				733DF8201166509A008347FA /* PBXTargetDependency */,
+				733DF85111665185008347FA /* PBXTargetDependency */,
+				733DF8D9116766F7008347FA /* PBXTargetDependency */,
 			);
 			name = all;
 			productName = all;
@@ -65,6 +69,17 @@
 		73280BE511419D340054855E /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		732812EC1146D45B0054855E /* crankshaft.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 732812EB1146D45B0054855E /* crankshaft.cpp */; };
 		732812EE1146D4ED0054855E /* crankshaft.h in Headers */ = {isa = PBXBuildFile; fileRef = 732812ED1146D4ED0054855E /* crankshaft.h */; };
+		733DF71111661E72008347FA /* coarsegrain.h in Headers */ = {isa = PBXBuildFile; fileRef = 733DF71011661E72008347FA /* coarsegrain.h */; };
+		733DF753116626D5008347FA /* hydrophobic.h in Headers */ = {isa = PBXBuildFile; fileRef = 733DF752116626D5008347FA /* hydrophobic.h */; };
+		733DF76011662820008347FA /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
+		733DF76311662847008347FA /* twobodyDH.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 733DF76111662847008347FA /* twobodyDH.cpp */; };
+		733DF771116647C6008347FA /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
+		733DF77411664811008347FA /* wp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 733DF77311664811008347FA /* wp.cpp */; };
+		733DF7D411664922008347FA /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
+		733DF7D81166498F008347FA /* isobaric.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73961F141030AE5D0051F3E3 /* isobaric.cpp */; settings = {COMPILER_FLAGS = "-D DIPOLE_CUTOFF"; }; };
+		733DF7F111664BEC008347FA /* hardsphere.h in Headers */ = {isa = PBXBuildFile; fileRef = 733DF7F011664BEC008347FA /* hardsphere.h */; };
+		733DF8D0116766B0008347FA /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
+		733DF8D1116766C2008347FA /* pkaDH.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73280BD811419B640054855E /* pkaDH.cpp */; };
 		739618E810309A7B0051F3E3 /* pka.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739618E710309A7B0051F3E3 /* pka.cpp */; };
 		73961ECF1030A6920051F3E3 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		73961EDD1030ADEF0051F3E3 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
@@ -91,7 +106,6 @@
 		739C4238103079CF00A3A5B9 /* clustermove.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C421E103079CF00A3A5B9 /* clustermove.cpp */; };
 		739C4239103079CF00A3A5B9 /* membrane.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C421F103079CF00A3A5B9 /* membrane.cpp */; };
 		739C423A103079CF00A3A5B9 /* miscmove.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C4220103079CF00A3A5B9 /* miscmove.cpp */; };
-		739C423B103079CF00A3A5B9 /* rosenbluth.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C4221103079CF00A3A5B9 /* rosenbluth.cpp */; };
 		739C423C103079CF00A3A5B9 /* rotational.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C4222103079CF00A3A5B9 /* rotational.cpp */; };
 		739C423D103079CF00A3A5B9 /* saltbath.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C4223103079CF00A3A5B9 /* saltbath.cpp */; };
 		739C423E103079CF00A3A5B9 /* translational.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C4224103079CF00A3A5B9 /* translational.cpp */; };
@@ -110,7 +124,6 @@
 		739C427C10307A1C00A3A5B9 /* reactionfield.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424D10307A1C00A3A5B9 /* reactionfield.h */; };
 		739C427D10307A1C00A3A5B9 /* springinteraction.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424E10307A1C00A3A5B9 /* springinteraction.h */; };
 		739C427E10307A1C00A3A5B9 /* springinteractionexfield.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424F10307A1C00A3A5B9 /* springinteractionexfield.h */; };
-		739C427F10307A1C00A3A5B9 /* energy.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425010307A1C00A3A5B9 /* energy.h */; };
 		739C428010307A1C00A3A5B9 /* ensemble.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425110307A1C00A3A5B9 /* ensemble.h */; };
 		739C428110307A1C00A3A5B9 /* faunus.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425210307A1C00A3A5B9 /* faunus.h */; };
 		739C428210307A1C00A3A5B9 /* fortran.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425310307A1C00A3A5B9 /* fortran.h */; };
@@ -156,7 +169,6 @@
 		739C43D810314D6300A3A5B9 /* reactionfield.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424D10307A1C00A3A5B9 /* reactionfield.h */; };
 		739C43D910314D6300A3A5B9 /* springinteraction.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424E10307A1C00A3A5B9 /* springinteraction.h */; };
 		739C43DA10314D6300A3A5B9 /* springinteractionexfield.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424F10307A1C00A3A5B9 /* springinteractionexfield.h */; };
-		739C43DB10314D6300A3A5B9 /* energy.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425010307A1C00A3A5B9 /* energy.h */; };
 		739C43DC10314D6300A3A5B9 /* ensemble.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425110307A1C00A3A5B9 /* ensemble.h */; };
 		739C43DD10314D6300A3A5B9 /* faunus.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425210307A1C00A3A5B9 /* faunus.h */; };
 		739C43DE10314D6300A3A5B9 /* fortran.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425310307A1C00A3A5B9 /* fortran.h */; };
@@ -225,7 +237,6 @@
 		739C441E10314D6300A3A5B9 /* clustermove.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C421E103079CF00A3A5B9 /* clustermove.cpp */; };
 		739C441F10314D6300A3A5B9 /* membrane.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C421F103079CF00A3A5B9 /* membrane.cpp */; };
 		739C442010314D6300A3A5B9 /* miscmove.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C4220103079CF00A3A5B9 /* miscmove.cpp */; };
-		739C442110314D6300A3A5B9 /* rosenbluth.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C4221103079CF00A3A5B9 /* rosenbluth.cpp */; };
 		739C442210314D6300A3A5B9 /* rotational.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C4222103079CF00A3A5B9 /* rotational.cpp */; };
 		739C442310314D6300A3A5B9 /* saltbath.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C4223103079CF00A3A5B9 /* saltbath.cpp */; };
 		739C442410314D6300A3A5B9 /* translational.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C4224103079CF00A3A5B9 /* translational.cpp */; };
@@ -238,7 +249,7 @@
 		739C442B10314D6300A3A5B9 /* widom.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C422B103079CF00A3A5B9 /* widom.cpp */; };
 		739C442C10314D6300A3A5B9 /* histogram.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C42CA10307B8500A3A5B9 /* histogram.cpp */; };
 		739C442E10314D6300A3A5B9 /* libxdrfile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C41EE103078CA00A3A5B9 /* libxdrfile.a */; };
-		739C445210314EC400A3A5B9 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C443210314D6300A3A5B9 /* liblibfaunus.dylib */; };
+		739C445210314EC400A3A5B9 /* libhyperfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */; };
 		739C45251031925E00A3A5B9 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		739C45281031928400A3A5B9 /* widom.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C45271031928400A3A5B9 /* widom.cpp */; };
 /* End PBXBuildFile section */
@@ -264,13 +275,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = 739C42D110307BA900A3A5B9;
 			remoteInfo = twobody;
-		};
-		73128B051030BF2000950418 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 739618D910309A010051F3E3;
-			remoteInfo = pka;
 		};
 		73128B071030BF2000950418 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -299,6 +303,83 @@
 			proxyType = 1;
 			remoteGlobalIDString = 732812831141A8DE0054855E;
 			remoteInfo = "pka - calbindin test";
+		};
+		733DF75E11662817008347FA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 739C42091030798400A3A5B9;
+			remoteInfo = faunus;
+		};
+		733DF76F116647BF008347FA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 739C42091030798400A3A5B9;
+			remoteInfo = faunus;
+		};
+		733DF7D21166491D008347FA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 739C42091030798400A3A5B9;
+			remoteInfo = faunus;
+		};
+		733DF7D611664981008347FA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 733DF7CD11664912008347FA;
+			remoteInfo = isobaricDP;
+		};
+		733DF8191166509A008347FA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 733DF7CD11664912008347FA;
+			remoteInfo = isobaricDP;
+		};
+		733DF81B1166509A008347FA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 730BD3F410ADA2F800FC674A;
+			remoteInfo = "twobody-hof";
+		};
+		733DF81D1166509A008347FA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 733DF758116627EF008347FA;
+			remoteInfo = twobodyDH;
+		};
+		733DF81F1166509A008347FA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 733DF76A116647B3008347FA;
+			remoteInfo = wallprotein;
+		};
+		733DF85011665185008347FA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 739618D910309A010051F3E3;
+			remoteInfo = pka;
+		};
+		733DF8CE116766A6008347FA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 739C42091030798400A3A5B9;
+			remoteInfo = faunus;
+		};
+		733DF8D8116766F7008347FA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 733DF8C81167667C008347FA;
+			remoteInfo = pkaDH;
 		};
 		739618DE10309A090051F3E3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -388,10 +469,18 @@
 		731297511030C80A00950418 /* pot_table2.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_table2.h; sourceTree = "<group>"; };
 		731297521030C80A00950418 /* pot_test.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_test.h; sourceTree = "<group>"; };
 		731297531030C80A00950418 /* pot_test_rf.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_test_rf.h; sourceTree = "<group>"; };
-		73280BC6114197D60054855E /* pkaDH */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pkaDH; sourceTree = BUILT_PRODUCTS_DIR; };
 		73280BD811419B640054855E /* pkaDH.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pkaDH.cpp; path = src/examples/titration/pkaDH.cpp; sourceTree = "<group>"; };
 		732812EB1146D45B0054855E /* crankshaft.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = crankshaft.cpp; sourceTree = "<group>"; };
 		732812ED1146D4ED0054855E /* crankshaft.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = crankshaft.h; sourceTree = "<group>"; };
+		733DF71011661E72008347FA /* coarsegrain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = coarsegrain.h; sourceTree = "<group>"; };
+		733DF752116626D5008347FA /* hydrophobic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = hydrophobic.h; sourceTree = "<group>"; };
+		733DF759116627EF008347FA /* twobodyDH */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = twobodyDH; sourceTree = BUILT_PRODUCTS_DIR; };
+		733DF76111662847008347FA /* twobodyDH.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = twobodyDH.cpp; path = src/examples/twobody/twobodyDH.cpp; sourceTree = "<group>"; };
+		733DF76B116647B3008347FA /* wallprotein */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = wallprotein; sourceTree = BUILT_PRODUCTS_DIR; };
+		733DF77311664811008347FA /* wp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = wp.cpp; path = src/examples/wallprotein/wp.cpp; sourceTree = "<group>"; };
+		733DF7CE11664912008347FA /* isobaricDP */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = isobaricDP; sourceTree = BUILT_PRODUCTS_DIR; };
+		733DF7F011664BEC008347FA /* hardsphere.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = hardsphere.h; sourceTree = "<group>"; };
+		733DF8C91167667C008347FA /* pkaDH */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pkaDH; sourceTree = BUILT_PRODUCTS_DIR; };
 		739618DA10309A010051F3E3 /* pka */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pka; sourceTree = BUILT_PRODUCTS_DIR; };
 		739618E710309A7B0051F3E3 /* pka.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pka.cpp; path = src/examples/titration/pka.cpp; sourceTree = "<group>"; };
 		73961ED91030ADE60051F3E3 /* isobaric */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = isobaric; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -420,7 +509,6 @@
 		739C421E103079CF00A3A5B9 /* clustermove.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = clustermove.cpp; sourceTree = "<group>"; };
 		739C421F103079CF00A3A5B9 /* membrane.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = membrane.cpp; sourceTree = "<group>"; };
 		739C4220103079CF00A3A5B9 /* miscmove.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = miscmove.cpp; sourceTree = "<group>"; };
-		739C4221103079CF00A3A5B9 /* rosenbluth.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = rosenbluth.cpp; sourceTree = "<group>"; };
 		739C4222103079CF00A3A5B9 /* rotational.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = rotational.cpp; sourceTree = "<group>"; };
 		739C4223103079CF00A3A5B9 /* saltbath.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = saltbath.cpp; sourceTree = "<group>"; };
 		739C4224103079CF00A3A5B9 /* translational.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = translational.cpp; sourceTree = "<group>"; };
@@ -439,7 +527,6 @@
 		739C424D10307A1C00A3A5B9 /* reactionfield.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = reactionfield.h; sourceTree = "<group>"; };
 		739C424E10307A1C00A3A5B9 /* springinteraction.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = springinteraction.h; sourceTree = "<group>"; };
 		739C424F10307A1C00A3A5B9 /* springinteractionexfield.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = springinteractionexfield.h; sourceTree = "<group>"; };
-		739C425010307A1C00A3A5B9 /* energy.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = energy.h; path = include/faunus/energy.h; sourceTree = "<group>"; };
 		739C425110307A1C00A3A5B9 /* ensemble.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = ensemble.h; path = include/faunus/ensemble.h; sourceTree = "<group>"; };
 		739C425210307A1C00A3A5B9 /* faunus.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = faunus.h; path = include/faunus/faunus.h; sourceTree = "<group>"; };
 		739C425310307A1C00A3A5B9 /* fortran.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = fortran.h; path = include/faunus/fortran.h; sourceTree = "<group>"; };
@@ -477,12 +564,12 @@
 		739C427510307A1C00A3A5B9 /* xytable.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = xytable.h; path = include/faunus/xytable.h; sourceTree = "<group>"; };
 		739C42CA10307B8500A3A5B9 /* histogram.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = histogram.cpp; path = src/histogram.cpp; sourceTree = "<group>"; };
 		739C42D210307BA900A3A5B9 /* twobody */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = twobody; sourceTree = BUILT_PRODUCTS_DIR; };
-		739C42DB10307BF400A3A5B9 /* twobody.conf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = twobody.conf; path = src/examples/twobody/twobody.conf; sourceTree = "<group>"; };
 		739C42DC10307BF400A3A5B9 /* twobody.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = twobody.cpp; path = src/examples/twobody/twobody.cpp; sourceTree = "<group>"; };
-		739C443210314D6300A3A5B9 /* liblibfaunus.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = liblibfaunus.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libhyperfaunus.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C444B10314E8700A3A5B9 /* hyper_dipolarfluid */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = hyper_dipolarfluid; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C451F1031925300A3A5B9 /* widom_cube */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = widom_cube; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C45271031928400A3A5B9 /* widom.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = widom.cpp; path = src/examples/widom/widom.cpp; sourceTree = "<group>"; };
+		73F1BEA8116932E500985D4B /* pkaDH */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = pkaDH; path = build/Debug/pkaDH; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -499,6 +586,38 @@
 			buildActionMask = 2147483647;
 			files = (
 				73280BE511419D340054855E /* liblibfaunus.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		733DF757116627EF008347FA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				733DF76011662820008347FA /* liblibfaunus.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		733DF769116647B3008347FA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				733DF771116647C6008347FA /* liblibfaunus.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		733DF7CC11664912008347FA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				733DF7D411664922008347FA /* liblibfaunus.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		733DF8C71167667C008347FA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				733DF8D0116766B0008347FA /* liblibfaunus.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -553,7 +672,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				739C445210314EC400A3A5B9 /* liblibfaunus.dylib in Frameworks */,
+				739C445210314EC400A3A5B9 /* libhyperfaunus.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -603,6 +722,7 @@
 				739C42001030793500A3A5B9 /* include */,
 				739C41EF103078CA00A3A5B9 /* Products */,
 			);
+			comments = "  Faunus -- A Framework for Molecular Modelling \n  Copyright (C) 2002-2010 Mikael Lund \n\n  This program is free software; you can redistribute it and/or modify\n  it under the terms of the GNU General Public License as published by\n  the Free Software Foundation; either version 2 of the License, or \n  (at your option) any later version.\n\n  This program is distributed in the hope that it will be useful,\n  but WITHOUT ANY WARRANTY; without even the implied warranty of\n  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n  GNU General Public License for more details.\n\n  You should have received a copy of the GNU General Public License along\n  with this program; if not, write to the Free Software Foundation, Inc.,\n  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.\n";
 			sourceTree = "<group>";
 		};
 		739C41EF103078CA00A3A5B9 /* Products */ = {
@@ -612,12 +732,16 @@
 				739C420A1030798400A3A5B9 /* liblibfaunus.dylib */,
 				739C42D210307BA900A3A5B9 /* twobody */,
 				739618DA10309A010051F3E3 /* pka */,
-				73280BC6114197D60054855E /* pkaDH */,
 				73961ED91030ADE60051F3E3 /* isobaric */,
-				739C443210314D6300A3A5B9 /* liblibfaunus.dylib */,
+				739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */,
 				739C444B10314E8700A3A5B9 /* hyper_dipolarfluid */,
 				739C451F1031925300A3A5B9 /* widom_cube */,
 				730BD3F510ADA2F800FC674A /* twobody-hof */,
+				733DF759116627EF008347FA /* twobodyDH */,
+				733DF76B116647B3008347FA /* wallprotein */,
+				733DF7CE11664912008347FA /* isobaricDP */,
+				733DF8C91167667C008347FA /* pkaDH */,
+				73F1BEA8116932E500985D4B /* pkaDH */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -644,7 +768,6 @@
 				739C424710307A1C00A3A5B9 /* average.h */,
 				739C424810307A1C00A3A5B9 /* common.h */,
 				739C424910307A1C00A3A5B9 /* container.h */,
-				739C425010307A1C00A3A5B9 /* energy.h */,
 				739C425110307A1C00A3A5B9 /* ensemble.h */,
 				739C425210307A1C00A3A5B9 /* faunus.h */,
 				739C425310307A1C00A3A5B9 /* fortran.h */,
@@ -723,7 +846,6 @@
 				732812EB1146D45B0054855E /* crankshaft.cpp */,
 				739C421F103079CF00A3A5B9 /* membrane.cpp */,
 				739C4220103079CF00A3A5B9 /* miscmove.cpp */,
-				739C4221103079CF00A3A5B9 /* rosenbluth.cpp */,
 				739C4222103079CF00A3A5B9 /* rotational.cpp */,
 				739C4223103079CF00A3A5B9 /* saltbath.cpp */,
 				739C4224103079CF00A3A5B9 /* translational.cpp */,
@@ -735,6 +857,9 @@
 		739C424A10307A1C00A3A5B9 /* energy */ = {
 			isa = PBXGroup;
 			children = (
+				733DF7F011664BEC008347FA /* hardsphere.h */,
+				733DF752116626D5008347FA /* hydrophobic.h */,
+				733DF71011661E72008347FA /* coarsegrain.h */,
 				739C424C10307A1C00A3A5B9 /* base.h */,
 				739C424D10307A1C00A3A5B9 /* reactionfield.h */,
 				739C424E10307A1C00A3A5B9 /* springinteraction.h */,
@@ -772,9 +897,11 @@
 				739618E710309A7B0051F3E3 /* pka.cpp */,
 				73280BD811419B640054855E /* pkaDH.cpp */,
 				739C42DC10307BF400A3A5B9 /* twobody.cpp */,
+				733DF76111662847008347FA /* twobodyDH.cpp */,
 				730BD3FD10ADA33F00FC674A /* twobody-hof.cpp */,
 				73961F131030AE5D0051F3E3 /* isobaric.conf */,
 				73961F141030AE5D0051F3E3 /* isobaric.cpp */,
+				733DF77311664811008347FA /* wp.cpp */,
 			);
 			name = examples;
 			sourceTree = "<group>";
@@ -782,7 +909,6 @@
 		739C42E310307D1700A3A5B9 /* misc */ = {
 			isa = PBXGroup;
 			children = (
-				739C42DB10307BF400A3A5B9 /* twobody.conf */,
 			);
 			name = misc;
 			sourceTree = "<group>";
@@ -812,7 +938,6 @@
 				739C427C10307A1C00A3A5B9 /* reactionfield.h in Headers */,
 				739C427D10307A1C00A3A5B9 /* springinteraction.h in Headers */,
 				739C427E10307A1C00A3A5B9 /* springinteractionexfield.h in Headers */,
-				739C427F10307A1C00A3A5B9 /* energy.h in Headers */,
 				739C428010307A1C00A3A5B9 /* ensemble.h in Headers */,
 				739C428110307A1C00A3A5B9 /* faunus.h in Headers */,
 				739C428210307A1C00A3A5B9 /* fortran.h in Headers */,
@@ -867,6 +992,9 @@
 				731297641030C80A00950418 /* pot_test.h in Headers */,
 				731297651030C80A00950418 /* pot_test_rf.h in Headers */,
 				732812EE1146D4ED0054855E /* crankshaft.h in Headers */,
+				733DF71111661E72008347FA /* coarsegrain.h in Headers */,
+				733DF753116626D5008347FA /* hydrophobic.h in Headers */,
+				733DF7F111664BEC008347FA /* hardsphere.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -882,7 +1010,6 @@
 				739C43D810314D6300A3A5B9 /* reactionfield.h in Headers */,
 				739C43D910314D6300A3A5B9 /* springinteraction.h in Headers */,
 				739C43DA10314D6300A3A5B9 /* springinteractionexfield.h in Headers */,
-				739C43DB10314D6300A3A5B9 /* energy.h in Headers */,
 				739C43DC10314D6300A3A5B9 /* ensemble.h in Headers */,
 				739C43DD10314D6300A3A5B9 /* faunus.h in Headers */,
 				739C43DE10314D6300A3A5B9 /* fortran.h in Headers */,
@@ -974,7 +1101,75 @@
 			);
 			name = pkaAT;
 			productName = pkaDH;
-			productReference = 73280BC6114197D60054855E /* pkaDH */;
+			productReference = 73F1BEA8116932E500985D4B /* pkaDH */;
+			productType = "com.apple.product-type.tool";
+		};
+		733DF758116627EF008347FA /* twobodyDH */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 733DF75D1166280E008347FA /* Build configuration list for PBXNativeTarget "twobodyDH" */;
+			buildPhases = (
+				733DF756116627EF008347FA /* Sources */,
+				733DF757116627EF008347FA /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				733DF75F11662817008347FA /* PBXTargetDependency */,
+			);
+			name = twobodyDH;
+			productName = twobodyDH;
+			productReference = 733DF759116627EF008347FA /* twobodyDH */;
+			productType = "com.apple.product-type.tool";
+		};
+		733DF76A116647B3008347FA /* wallprotein */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 733DF772116647E4008347FA /* Build configuration list for PBXNativeTarget "wallprotein" */;
+			buildPhases = (
+				733DF768116647B3008347FA /* Sources */,
+				733DF769116647B3008347FA /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				733DF770116647BF008347FA /* PBXTargetDependency */,
+			);
+			name = wallprotein;
+			productName = wallprotein;
+			productReference = 733DF76B116647B3008347FA /* wallprotein */;
+			productType = "com.apple.product-type.tool";
+		};
+		733DF7CD11664912008347FA /* isobaricDP */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 733DF7D511664941008347FA /* Build configuration list for PBXNativeTarget "isobaricDP" */;
+			buildPhases = (
+				733DF7CB11664912008347FA /* Sources */,
+				733DF7CC11664912008347FA /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				733DF7D31166491D008347FA /* PBXTargetDependency */,
+			);
+			name = isobaricDP;
+			productName = isobaricDP;
+			productReference = 733DF7CE11664912008347FA /* isobaricDP */;
+			productType = "com.apple.product-type.tool";
+		};
+		733DF8C81167667C008347FA /* pkaDH */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 733DF8CD11676683008347FA /* Build configuration list for PBXNativeTarget "pkaDH" */;
+			buildPhases = (
+				733DF8C61167667C008347FA /* Sources */,
+				733DF8C71167667C008347FA /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				733DF8CF116766A6008347FA /* PBXTargetDependency */,
+			);
+			name = pkaDH;
+			productName = pkaDH;
+			productReference = 733DF8C91167667C008347FA /* pkaDH */;
 			productType = "com.apple.product-type.tool";
 		};
 		739618D910309A010051F3E3 /* pka */ = {
@@ -1004,6 +1199,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				733DF7D711664981008347FA /* PBXTargetDependency */,
 				73961EDF1030ADF40051F3E3 /* PBXTargetDependency */,
 			);
 			name = isobaric;
@@ -1078,7 +1274,7 @@
 			);
 			name = hyperfaunus;
 			productName = libfaunus;
-			productReference = 739C443210314D6300A3A5B9 /* liblibfaunus.dylib */;
+			productReference = 739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */;
 			productType = "com.apple.product-type.library.dynamic";
 		};
 		739C444A10314E8700A3A5B9 /* hyperbulk */ = {
@@ -1120,8 +1316,12 @@
 /* Begin PBXProject section */
 		739C41D9103078A800A3A5B9 /* Project object */ = {
 			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				ORGANIZATIONNAME = "Department of Theoretical Chemistry, Lund University";
+			};
 			buildConfigurationList = 739C41DC103078A800A3A5B9 /* Build configuration list for PBXProject "faunus" */;
-			compatibilityVersion = "Xcode 3.0";
+			compatibilityVersion = "Xcode 3.1";
 			hasScannedForEncodings = 0;
 			mainGroup = 739C41D7103078A800A3A5B9;
 			productRefGroup = 739C41EF103078CA00A3A5B9 /* Products */;
@@ -1133,31 +1333,22 @@
 				739C42091030798400A3A5B9 /* faunus */,
 				739C43CF10314D6300A3A5B9 /* hyperfaunus */,
 				739618D910309A010051F3E3 /* pka */,
-				732812831141A8DE0054855E /* pka - calbindin test */,
+				733DF8C81167667C008347FA /* pkaDH */,
 				73280BC5114197D60054855E /* pkaAT */,
+				732812831141A8DE0054855E /* pka - calbindin test */,
 				73961ED81030ADE60051F3E3 /* isobaric */,
+				733DF7CD11664912008347FA /* isobaricDP */,
 				739C444A10314E8700A3A5B9 /* hyperbulk */,
 				739C451E1031925300A3A5B9 /* widom_cube */,
 				739C42D110307BA900A3A5B9 /* twobody */,
 				730BD3F410ADA2F800FC674A /* twobody-hof */,
+				733DF758116627EF008347FA /* twobodyDH */,
+				733DF76A116647B3008347FA /* wallprotein */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		73280BC2114197240054855E /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "";
-		};
 		732812821141A8DE0054855E /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -1169,7 +1360,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "# shell script goes here\ncd ${PROJECT_DIR}/src/examples/titration\n./calbindin.sh\nexit 0";
+			shellScript = "# shell script goes here\ncd ${PROJECT_DIR}/src/examples/titration\n\necho \"\nmacrosteps 10\nmicrosteps 100\ncellradius 90\npH         12\nbjerrum    7.1\nnion1      69\nnion2      50\ntion1      NA\ntion2      CL\nprotein    calbindin.aam\natomfile   ../../../misc/faunatoms.dat\n\" > pka.conf\n\n/Users/mikael/faunus2/build/Debug/pka\nexit 0";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -1187,6 +1378,38 @@
 			buildActionMask = 2147483647;
 			files = (
 				73280BD911419B740054855E /* pkaDH.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		733DF756116627EF008347FA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				733DF76311662847008347FA /* twobodyDH.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		733DF768116647B3008347FA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				733DF77411664811008347FA /* wp.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		733DF7CB11664912008347FA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				733DF7D81166498F008347FA /* isobaric.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		733DF8C61167667C008347FA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				733DF8D1116766C2008347FA /* pkaDH.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1235,7 +1458,6 @@
 				739C4238103079CF00A3A5B9 /* clustermove.cpp in Sources */,
 				739C4239103079CF00A3A5B9 /* membrane.cpp in Sources */,
 				739C423A103079CF00A3A5B9 /* miscmove.cpp in Sources */,
-				739C423B103079CF00A3A5B9 /* rosenbluth.cpp in Sources */,
 				739C423C103079CF00A3A5B9 /* rotational.cpp in Sources */,
 				739C423D103079CF00A3A5B9 /* saltbath.cpp in Sources */,
 				739C423E103079CF00A3A5B9 /* translational.cpp in Sources */,
@@ -1278,7 +1500,6 @@
 				739C441E10314D6300A3A5B9 /* clustermove.cpp in Sources */,
 				739C441F10314D6300A3A5B9 /* membrane.cpp in Sources */,
 				739C442010314D6300A3A5B9 /* miscmove.cpp in Sources */,
-				739C442110314D6300A3A5B9 /* rosenbluth.cpp in Sources */,
 				739C442210314D6300A3A5B9 /* rotational.cpp in Sources */,
 				739C442310314D6300A3A5B9 /* saltbath.cpp in Sources */,
 				739C442410314D6300A3A5B9 /* translational.cpp in Sources */,
@@ -1327,11 +1548,6 @@
 			target = 739C42D110307BA900A3A5B9 /* twobody */;
 			targetProxy = 73128B031030BF2000950418 /* PBXContainerItemProxy */;
 		};
-		73128B061030BF2000950418 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 739618D910309A010051F3E3 /* pka */;
-			targetProxy = 73128B051030BF2000950418 /* PBXContainerItemProxy */;
-		};
 		73128B081030BF2000950418 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 73961ED81030ADE60051F3E3 /* isobaric */;
@@ -1351,6 +1567,61 @@
 			isa = PBXTargetDependency;
 			target = 732812831141A8DE0054855E /* pka - calbindin test */;
 			targetProxy = 7328129B1141AB140054855E /* PBXContainerItemProxy */;
+		};
+		733DF75F11662817008347FA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 739C42091030798400A3A5B9 /* faunus */;
+			targetProxy = 733DF75E11662817008347FA /* PBXContainerItemProxy */;
+		};
+		733DF770116647BF008347FA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 739C42091030798400A3A5B9 /* faunus */;
+			targetProxy = 733DF76F116647BF008347FA /* PBXContainerItemProxy */;
+		};
+		733DF7D31166491D008347FA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 739C42091030798400A3A5B9 /* faunus */;
+			targetProxy = 733DF7D21166491D008347FA /* PBXContainerItemProxy */;
+		};
+		733DF7D711664981008347FA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 733DF7CD11664912008347FA /* isobaricDP */;
+			targetProxy = 733DF7D611664981008347FA /* PBXContainerItemProxy */;
+		};
+		733DF81A1166509A008347FA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 733DF7CD11664912008347FA /* isobaricDP */;
+			targetProxy = 733DF8191166509A008347FA /* PBXContainerItemProxy */;
+		};
+		733DF81C1166509A008347FA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 730BD3F410ADA2F800FC674A /* twobody-hof */;
+			targetProxy = 733DF81B1166509A008347FA /* PBXContainerItemProxy */;
+		};
+		733DF81E1166509A008347FA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 733DF758116627EF008347FA /* twobodyDH */;
+			targetProxy = 733DF81D1166509A008347FA /* PBXContainerItemProxy */;
+		};
+		733DF8201166509A008347FA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 733DF76A116647B3008347FA /* wallprotein */;
+			targetProxy = 733DF81F1166509A008347FA /* PBXContainerItemProxy */;
+		};
+		733DF85111665185008347FA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 739618D910309A010051F3E3 /* pka */;
+			targetProxy = 733DF85011665185008347FA /* PBXContainerItemProxy */;
+		};
+		733DF8CF116766A6008347FA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 739C42091030798400A3A5B9 /* faunus */;
+			targetProxy = 733DF8CE116766A6008347FA /* PBXContainerItemProxy */;
+		};
+		733DF8D9116766F7008347FA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 733DF8C81167667C008347FA /* pkaDH */;
+			targetProxy = 733DF8D8116766F7008347FA /* PBXContainerItemProxy */;
 		};
 		739618DF10309A090051F3E3 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1499,6 +1770,126 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				PRODUCT_NAME = "pka - calbindin test";
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		733DF75B116627F0008347FA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				INSTALL_PATH = /usr/local/bin;
+				PREBINDING = NO;
+				PRODUCT_NAME = twobodyDH;
+			};
+			name = Debug;
+		};
+		733DF75C116627F0008347FA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = /usr/local/bin;
+				PREBINDING = NO;
+				PRODUCT_NAME = twobodyDH;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		733DF76D116647B5008347FA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				INSTALL_PATH = /usr/local/bin;
+				PREBINDING = NO;
+				PRODUCT_NAME = wallprotein;
+			};
+			name = Debug;
+		};
+		733DF76E116647B5008347FA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = /usr/local/bin;
+				PREBINDING = NO;
+				PRODUCT_NAME = wallprotein;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		733DF7D011664913008347FA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				INSTALL_PATH = /usr/local/bin;
+				PREBINDING = NO;
+				PRODUCT_NAME = isobaricDP;
+			};
+			name = Debug;
+		};
+		733DF7D111664913008347FA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = /usr/local/bin;
+				PREBINDING = NO;
+				PRODUCT_NAME = isobaricDP;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		733DF8CB1167667D008347FA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				INSTALL_PATH = /usr/local/bin;
+				PREBINDING = NO;
+				PRODUCT_NAME = pkaDH;
+			};
+			name = Debug;
+		};
+		733DF8CC1167667D008347FA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = /usr/local/bin;
+				PREBINDING = NO;
+				PRODUCT_NAME = pkaDH;
 				ZERO_LINK = NO;
 			};
 			name = Release;
@@ -1823,6 +2214,42 @@
 			buildConfigurations = (
 				732812841141A8DE0054855E /* Debug */,
 				732812851141A8DE0054855E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		733DF75D1166280E008347FA /* Build configuration list for PBXNativeTarget "twobodyDH" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				733DF75B116627F0008347FA /* Debug */,
+				733DF75C116627F0008347FA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		733DF772116647E4008347FA /* Build configuration list for PBXNativeTarget "wallprotein" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				733DF76D116647B5008347FA /* Debug */,
+				733DF76E116647B5008347FA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		733DF7D511664941008347FA /* Build configuration list for PBXNativeTarget "isobaricDP" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				733DF7D011664913008347FA /* Debug */,
+				733DF7D111664913008347FA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		733DF8CD11676683008347FA /* Build configuration list for PBXNativeTarget "pkaDH" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				733DF8CB1167667D008347FA /* Debug */,
+				733DF8CC1167667D008347FA /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -2,6 +2,8 @@
 #define FAU_CLUSTERMOVE_H
 
 #include "faunus/moves/base.h"
+#include "faunus/energy/reactionfield.h"
+#include "faunus/potentials/pot_test.h"
 
 namespace Faunus {
   /*!

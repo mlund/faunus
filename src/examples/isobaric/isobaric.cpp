@@ -7,10 +7,8 @@
  */
 
 #include "faunus/faunus.h"
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <stdexcept>
+#include "faunus/energy/coarsegrain.h"
+#include "faunus/potentials/pot_debyehuckelP3.h"
 
 using namespace Faunus;
 using namespace std;
@@ -37,11 +35,8 @@ int main() {
   cout << "---------- INITIAL PARAMETERS -----------" << endl;
   slump slump;                            // A random number generator
   slump.random_seed(9);
-  physconst phys;
   inputfile in("isobaric.conf");          // Read input file
   checkValue test(in);                    // Class for unit testing
-  phys.e_r=in.getflt("e_r");
-  phys.lB_TO_T(in.getflt("bjerrum"));
   mcloop loop(in);                        // Keep track of time and MC loop
 #ifndef XYPLANE
   box cell(in);                           // We want a cubic cell
@@ -130,9 +125,8 @@ int main() {
   for (int i=0; i<g.size(); i++)
     xtc.g.push_back( &g[i] );
 
-  cout << cell.info() << pot.info() <<in.info() << endl     // Print information to screen
-    << "#  Temperature = " << phys.T << " K" << endl << endl
-    << "---------- RUN-TIME INFORMATION  -----------" << endl;
+  cout << cell.info() << pot.info() <<in.info() << endl << endl // Print information to screen
+       << "---------- RUN-TIME INFORMATION  -----------" << endl;
 
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {

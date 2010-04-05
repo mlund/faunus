@@ -6,6 +6,7 @@
  */
 #include "faunus/faunus.h"
 #include "faunus/energy/springinteraction.h"
+#include "faunus/potentials/pot_coulomb.h"
 
 using namespace Faunus;
 using namespace std;

@@ -11,6 +11,7 @@
  * \date August 2009, Lund
 */
 #include "faunus/faunus.h"
+#include "faunus/potentials/pot_hypersphere.h"
 #include <iostream>
 #include <sstream>
 #include <string>

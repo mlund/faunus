@@ -9,6 +9,7 @@
  * \include saltlab.cpp
  */
 #include "faunus/faunus.h"
+#include "faunus/potentials/pot_hsminimage.h"
 
 using namespace std;
 using namespace Faunus;                 // Access to Faunus classes

@@ -15,34 +15,33 @@ namespace Faunus {
    * \endcode
    */
   class legendre {
-    private:
-      unsigned short n;           //!< Legendre order
-    public:
-      std::vector<double> p;      //!< Legendre terms stored here
-      legendre(unsigned short=0); 
-      void resize(unsigned short);//!< Re-set order
-      //! Evaluate polynomium at x
-      inline void eval(double x) {
-        if (n > 0) {
-          p[1] = x;
-          double di;
-          for( unsigned short i=1; i<n; i++ ) {
-            di=static_cast<double>(i);
-            p[i+1] = (2*di + 1) / (di+1) * x * p[i] - di/(di+1)*p[i-1];
-          }
+  private:
+    unsigned short n;           //!< Legendre order
+  public:
+    std::vector<double> p;      //!< Legendre terms stored here
+    //! Evaluate polynomium at x
+    inline void eval(double x) {
+      if (n > 0) {
+        p[1] = x;
+        double di;
+        for( unsigned short i=1; i<n; i++ ) {
+          di=static_cast<double>(i);
+          p[i+1] = (2*di + 1) / (di+1) * x * p[i] - di/(di+1)*p[i-1];
         }
       }
+    }
+    
+    /*!
+     * \param order Order of the polynomium
+     */
+    legendre(unsigned short order=0) { resize(order); }
+    
+    void resize(unsigned short order) {
+      n=order;
+      p.resize(n+1);
+      p[0]=1.;
+    }
   };
-
-  /*!
-   * \param order Order of the polynomium
-   */
-  legendre::legendre(unsigned short order) { resize(order); }
-  void legendre::resize(unsigned short order) {
-    n=order;
-    p.resize(n+1);
-    p[0]=1.;
-  }
 }//namespace
 #endif
 

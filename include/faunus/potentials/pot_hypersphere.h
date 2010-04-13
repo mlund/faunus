@@ -74,7 +74,8 @@ namespace Faunus {
         std::ostringstream o;
         o << "#   Potential type    = " << name << endl
           << "#   Bjerrum length    = " << f << endl
-          << "#   Cell radius       = " << r << endl;
+          << "#   Cell radius       = " << r << endl
+          << "#   More information:   doi:10.1063/1.460326" << endl;
         return o.str();
       }
   };

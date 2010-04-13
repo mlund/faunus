@@ -45,8 +45,7 @@ int main() {
   canonical nvt;                          // Use the canonical ensemble
   interaction<pot_hypersphere> pot(in);   // 
   mcloop loop(in);                        // Keep track of time and MC loop
-  saltmove sm(nvt,con,pot);               // Salt displacement class
-  sm.dp=0.2;                              // Displacement paramter
+  saltmove sm(nvt,con,pot,in);            // Salt displacement class
 
   hyperrdf rdf_catan(atom["NA"].id, atom["CL"].id, .5, con),
            rdf_anan(atom["CL"].id, atom["CL"].id, .5, con),

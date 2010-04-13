@@ -45,7 +45,7 @@ namespace Faunus {
       bool overlap(container &);                          //!< Test overlap w all particles
       virtual void undo(particles &);
       virtual void accept(particles &);                   //!< Accept a move
-      void add(container &, vector<particle>, bool=false);//!< Add a particle vector
+      void add(container &, vector<particle>, bool=false);//!< Add a particle vector at random position
       void add(container &, unsigned char, short);        //!< Add particles w. collision check
       bool swap(container &, group &);                    //!< Swap location of two groups
       short int count(vector<particle> &, unsigned char); //!< Count number of specific particles

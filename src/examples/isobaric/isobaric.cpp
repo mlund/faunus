@@ -70,7 +70,9 @@ int main() {
   transrot mtr(nvt, cell, pot);           //   Class for simultaneous macromolecular translation and rotation
   transrot mtrL(nvt, cell, pot);          //   Class for simultaneous macromolecular translation and rotation
   clustertrans ct(nvt, cell, pot, g);     //   Class for non-rejective cluster translation
-  isobaric<Tpot> vol(
+  ct.skipEnergyUpdate=in.getboo("skipEnergyUpdate",false);
+
+  isobaricPenalty<Tpot> vol(
       nvt, cell, pot,
       in.getflt("pressure"),              // Set external pressure (in kT)
       in.getflt("penalty"),               // Set penalty           (in kT)
@@ -133,8 +135,10 @@ int main() {
       short i,j,n;
       cnt++;
       randy=slump.random_one();
-      if (randy<volr)                           // Pick a random MC move
-        sys+=vol.move(g);                       //   Do the move.
+      if (randy<volr) {                         // Pick a random MC move
+        sys+=vol.move(g);                       // Volume move
+        lendist.add(cell.len);                  // Update L distribution
+      }
       // if (randy<volr+rr && randy >volr)         // Rotate proteins
       // for (n=0; n<g.size(); n++) {            //   Loop over all proteins
       // i = slump.random_one()*g.size();      //   and pick at random.
@@ -157,32 +161,32 @@ int main() {
       if (randy<clt+volr+rr+tr && randy>volr+rr+tr)// Cluster translation
         sys+=ct.move(g);                          //   Do the move.
 
-      lendist.add(cell.len);
       dist.add("aveenergy", cell.len, sys.sum);
 
       if (movie==true && slump.random_one()>.99 && macro>1)
         xtc.save("confout.xtc", cell);   // Save trajectory
 
-      if (slump.random_one()>-.99)
+      if (slump.random_one()>.95)
         sys.track();
 
-      if(slump.random_one()>-.99) {
+      if(slump.random_one()>.99) {
         for (i=0;i<g.size();i++) 
           g[i].masscenter(cell);                // Recalculate mass centers
 
-        for (i=0; i<g.size()-1; i++)
-          for (j=i+1; j<g.size(); j++) {        //   Analyse g(r)...
-            protrdf.update(cell,g[i].cm,g[j].cm);
-            if ((i<in.getint("nprot2") && j>=in.getint("nprot2")) || 
-                (i>=in.getint("nprot2") && j<in.getint("nprot2")))
-              protrdf12.update(cell,g[i].cm,g[j].cm);
+        for (int i=0; i<g.size()-1; i++) {
+          int nprot2=in.getint("nprot2");
+          for (int j=i+1; j<g.size(); j++) {        //   Analyse g(r)...
+            protrdf.update(cell, g[i].cm, g[j].cm);
+            if ((i<nprot2 && j>=nprot2) || (i>=nprot2 && j<nprot2))
+              protrdf12.update(cell, g[i].cm, g[j].cm);
             else {
-              if(i<in.getint("nprot2"))
-                protrdf11.update(cell,g[i].cm,g[j].cm);
+              if (i<nprot2)
+                protrdf11.update(cell, g[i].cm, g[j].cm);
               else
-                protrdf22.update(cell,g[i].cm,g[j].cm);
+                protrdf22.update(cell, g[i].cm, g[j].cm);
             }
           }
+        }
         agg.count();
       }
     } // End of inner loop

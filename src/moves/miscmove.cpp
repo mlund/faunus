@@ -13,8 +13,8 @@ namespace Faunus {
   string transrot::info() {
     std::ostringstream o;
     o <<  markovmove::info()
-      << "#   Dp (translation)      = " <<  dpt << endl
-      << "#   Dp (rotation)         = " <<  dpr << endl;
+      << "#   Dp (translation)         = " <<  dpt << endl
+      << "#   Dp (rotation)            = " <<  dpr << endl;
     return o.str();
   } 
 

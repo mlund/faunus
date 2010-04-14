@@ -34,76 +34,93 @@ namespace Faunus {
   };
 
   *!
-   * This type of move will attempt to move collective sets of macromolecules that
-   * obeys some criteria (here a hardcore overlap) with a symmetric transition
-   * matrix (no flow through the clusters).
-   * \author Bjoern Persson
-   * \brief Quick and dirty rotational cluster move
-   * \warning This rutine is only compatible for systems containing a set of macromolecules!
-   *
-   *
-  class clusterrotate : public markovmove {
-    public: 
-      clusterrotate( ensemble&, container&, energybase&);
-      double move(vector<macromolecule> &); 
-      vector<int> cluster;    //! Index vector for macromolecule number in cluster
-      vector<int> free;       //! Index vector for 'free' macromolecules
-      vector<int> nacc;
-      vector<int> ntrial ;
-      int np;                 //! Number of particles in config.
-      bool decreasing(int, int);
-      void sort(vector<macromolecule> &);  //function to sort macromolecules in to two classes, cluster and free
-      void flowcheck(vector<macromolecule> &); //ensure detailed balance
-      hardsphere coll;
-      double sep, angle;             // separation parameter
-      int FLOW;               // control variable
-      string info();
-  };*/
+    * This type of move will attempt to move collective sets of macromolecules that
+    * obeys some criteria (here a hardcore overlap) with a symmetric transition
+    * matrix (no flow through the clusters).
+    * \author Bjoern Persson
+    * \brief Quick and dirty rotational cluster move
+    * \warning This rutine is only compatible for systems containing a set of macromolecules!
+    *
+    *
+    class clusterrotate : public markovmove {
+      public: 
+        clusterrotate( ensemble&, container&, energybase&);
+        double move(vector<macromolecule> &); 
+        vector<int> cluster;    //! Index vector for macromolecule number in cluster
+        vector<int> free;       //! Index vector for 'free' macromolecules
+        vector<int> nacc;
+        vector<int> ntrial ;
+        int np;                 //! Number of particles in config.
+        bool decreasing(int, int);
+        void sort(vector<macromolecule> &);  //function to sort macromolecules in to two classes, cluster and free
+        void flowcheck(vector<macromolecule> &); //ensure detailed balance
+        hardsphere coll;
+        double sep, angle;             // separation parameter
+        int FLOW;               // control variable
+        string info();
+    };*/
 
   // Non-rejective cluster inversion. Minor testing suggest that 
   // the algorithm is ok.
 
   class clusterinvw : public markovmove {
-  public :
-    clusterinvw( ensemble&, container&, sphericalimage<pot_test>&);
-    double move(molecules &);
-    string info();
-    average< double > movefrac;
-    vector<int> moved;
-    vector<int> remaining;
-    sphericalimage<pot_test> *ipot;
+    public :
+      clusterinvw( ensemble&, container&, sphericalimage<pot_test>&);
+      double move(molecules &);
+      string info();
+      average< double > movefrac;
+      vector<int> moved;
+      vector<int> remaining;
+      sphericalimage<pot_test> *ipot;
   };
 
   // Non-rejective cluster inversion on a partial volume and meteropolis weigth
   // with the rest. Untested and undone.
 
   class clusterrinvw : public markovmove {
-  public :
-    clusterrinvw( ensemble&, container&, sphericalimage<pot_test>&,
-                  double&, double&);
-    double r;                 // restricted radius
-    double cr,cr2;            // cavity radius
-    double move(molecules &);
-    string info();
-    average< double > movefrac;
-    vector<int> moved;
-    vector<int> remaining;
-    sphericalimage<pot_test> *ipot;
+    public :
+      clusterrinvw( ensemble&, container&, sphericalimage<pot_test>&,
+          double&, double&);
+      double r;                 // restricted radius
+      double cr,cr2;            // cavity radius
+      double move(molecules &);
+      string info();
+      average< double > movefrac;
+      vector<int> moved;
+      vector<int> remaining;
+      sphericalimage<pot_test> *ipot;
   };
 
-  // Non-rejective cluster translation. Undone and untested
-
+  /*!
+   * \brief Non-rejective cluster translation.
+   * \author Bjoern Persson
+   * \date Lund 2009-2010
+   * \brief Quick and dirty translational cluster move
+   * \warning This rutine is only compatible for systems containing a set of macromolecules!
+   *
+   * This type of move will attempt to move collective sets of macromolecules that
+   * obeys some criteria (here a hardcore overlap) with a symmetric transition
+   * matrix (no flow through the clusters).
+   *
+   * Setting the boolen "skipEnergyUpdate" to true (default is false) updates of the
+   * total energy are skipped to speed up the move.
+   * While this has no influence on the Markov chain it will cause an apparent energy
+   * drift. It is recommended that this is enabled only for long production runs after
+   * having properly checked that no drifts occur with skipEnergyUpdate=false.
+   */
   class clustertrans : public markovmove {
-  public :
-    clustertrans( ensemble&, container&, energybase&, vector<macromolecule>&);
-    double move(vector<macromolecule> &);
-    string info();
-    average< double > movefrac;
-//    distributions dist;
-    vector<int> moved;
-    vector<int> remaining;
-    void check(checkValue &);  //!< Unit testing
-//    vector<macromolecule> *g;
+    private:
+      vector<int> moved;
+      vector<int> remaining;
+      //vector<macromolecule> *g;
+      //distributions dist;
+    public:
+      clustertrans( ensemble&, container&, energybase&, vector<macromolecule>&);
+      double move(vector<macromolecule> &);
+      string info();
+      average< double > movefrac; //!< Fraction of particles moved
+      void check(checkValue &);   //!< Unit testing
+      bool skipEnergyUpdate;      //!< True if energy updates should be skipped (faster evaluation!)
   };
 }//namespace
 #endif

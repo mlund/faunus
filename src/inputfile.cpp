@@ -121,9 +121,9 @@ namespace Faunus {
       << "#    Config file = " << file << "\n"
       << "#    Accessed parameters:\n";
     for (int i=1; i<=calls.size(); i++) {
-      if ( i%2!=0) o << "#      ";
-      o << std::setw(15) << std::left << calls[i-1]
-        << std::setw(20) << getstr(calls[i-1], "n/a");
+      if ( i%2!=0) o << "#    ";
+      o << std::setw(19) << std::left << calls[i-1]
+        << std::setw(19) << getstr(calls[i-1], "n/a");
       if ( i%2==0 ) o << endl;
     }
     o << endl;

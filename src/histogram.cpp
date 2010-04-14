@@ -21,7 +21,9 @@ namespace Faunus {
 
   //! Get bin for x value
   //! \return \f$ \frac{N(r)}{N_{tot}}\f$
-  float histogram::get(float x) { return (*this)(x)/float(cnt); }
+  float histogram::get(float x) {
+    return (*this)(x)/float(cnt);
+  }
 
   //! Show results for all x
   void histogram::write(string file) {
@@ -31,8 +33,11 @@ namespace Faunus {
       f.precision(6);
       for (double x=xmin; x<xmax(); x+=xres) {
         g=get(x);
-        if (g!=0.0)
+        if (g!=0.0) {
+          if (x+xres>=xmax() || x==xmin) // double the very
+            g=g*2;                       // first and last points
           f << x << " " << g << "\n";
+        }
       }
       f.close();
     }

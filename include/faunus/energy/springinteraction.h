@@ -1,7 +1,7 @@
 #ifndef FAU_SPRINGENERGY_H
 #define FAU_SPRINGENERGY_H
 
-//#include "faunus/energy/base.h"
+#include "faunus/energy/base.h"
 
 namespace Faunus {
   /*!

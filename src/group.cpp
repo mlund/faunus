@@ -489,7 +489,7 @@ namespace Faunus {
    * \param u Vector to rotate around
    * \param angle ..by this many degrees (rad)
    * \param dr Displacement parameter
-   * \toto This could be done more elegant using quaternion parameters (Frenkel p49)
+   * \todo This could be done more elegant using quaternion parameters (Frenkel p49)
    */
   void macromolecule::rotate(container &par, point u, double angle, double dr) {
     point b, q;

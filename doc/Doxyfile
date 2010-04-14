@@ -566,12 +566,14 @@ WARN_LOGFILE           =
 
 INPUT                  = doc \
                          src \
+                         src/moves \
                          src/examples/twobody \
                          src/examples/manybody \
                          src/examples/widom \
                          src/examples/titration \
                          include/faunus \
                          include/faunus/moves \
+                         include/faunus/energy \
                          include/faunus/potentials
 
 # This tag can be used to specify the character encoding of the source files 

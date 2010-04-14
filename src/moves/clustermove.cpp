@@ -116,20 +116,22 @@ namespace Faunus {
 
 //  CLUSTER TRANSLATION  
   clustertrans::clustertrans( ensemble &e,
-    container &c, energybase &i , vector<macromolecule> &g
-    ) : markovmove(e,c,i) {
+    container &c, energybase &i , vector<macromolecule> &g ) : markovmove(e,c,i) {
       name.assign("REJECTION FREE CLUSTER TRANSLATION");
       cite.assign("doi:10.1103/PhysRevLett.92.035504");
       runfraction=1.;
-//      g=&G;
-//      distributions d(1., 1., g.size());
-//      dist=d;
-     }
+      skipEnergyUpdate=false;
+      //g=&G;
+      //distributions d(1., 1., g.size());
+      //dist=d;
+  }
 
   string clustertrans::info() {
     ostringstream o;
     o << markovmove::info()
-      << "#   A fraction of "<<movefrac.avg()<<" of the molecules are moved on avg. ( "<<movefrac.stdev()<<")"<<endl;
+      << "#   Particle move fraction    = " << movefrac.avg() << " " << movefrac.stdev() << endl
+      << "#   Skip energy updates:        "
+      << ((skipEnergyUpdate==false) ? "no" : "yes (energy drift!)") << endl;
     return o.str();
   }
 
@@ -143,10 +145,11 @@ namespace Faunus {
     if (slp.runtest(runfraction)==false)
       return du;
     cnt++;
+    if (skipEnergyUpdate==false)
 #pragma omp parallel for reduction (+:du) schedule (dynamic)
-    for (int i=0; i<g.size()-1; i++)
-      for (int j=i+1; j<g.size(); j++)
-        du-=pot->energy(con->p, g[i], g[j]);
+      for (int i=0; i<g.size()-1; i++)
+        for (int j=i+1; j<g.size(); j++)
+          du-=pot->energy(con->p, g[i], g[j]);
     point ip;
     ip.x=dp*slp.random_half();
     ip.y=dp*slp.random_half();
@@ -173,10 +176,11 @@ namespace Faunus {
       }
       g[moved[i]].accept(*con);
     }
+    if (skipEnergyUpdate==false)
 #pragma omp parallel for reduction (+:du) schedule (dynamic)
-    for (int i=0; i<g.size()-1; i++)
-      for (int j=i+1; j<g.size(); j++)
-        du+=pot->energy(con->p, g[i], g[j]);
+      for (int i=0; i<g.size()-1; i++)
+        for (int j=i+1; j<g.size(); j++)
+          du+=pot->energy(con->p, g[i], g[j]);
     movefrac+=double(moved.size())/double((moved.size()+remaining.size()));
     rc=OK;
     naccept++;

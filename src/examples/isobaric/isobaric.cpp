@@ -1,9 +1,8 @@
 /*
  * This program will simulate an arbitrary number of
- * protein molecules in a dielectric solvent with
- * explicit mobile ions.
+ * rigid macromolecules in a Debye-Huckel salt solution.
  *
- * \author Bjorn Persson and Anil Kurut
+ * \author Bjorn Persson, Anil Kurut, Mikael Lund
  */
 
 #include "faunus/faunus.h"
@@ -44,29 +43,25 @@ int main() {
   xyplane cell(in);                       // ...or a plane!
 #endif
   canonical nvt;                          // Use the canonical ensemble
-#ifdef MONOPOLE
-  Tpot pot(in,cell);                      // Far-away monopole (or dipole) approximation
-#else
-  Tpot pot(in);                           // Fast, approximate Debye-Huckel potential
-#endif
+  Tpot pot(in);                           // Initialize energy functions
   vector<macromolecule> g;                // PROTEIN groups
   io io;
   iogro gro(in);                          // Gromacs file output for VMD etc.
   iopqr pqr;
   ioaam aam;
-  if (in.getboo("lattice")==true)         //   Protein input file format is AAM
-    aam.loadlattice(cell, in, g);                //   Load and insert proteins
-  else                                    //   Center first protein (will be frozen)
+  if (in.getboo("lattice")==true)         // Protein input file format is AAM
+    aam.loadlattice(cell, in, g);         // Load and insert proteins
+  else                                    // Center first protein (will be frozen)
     aam.load(cell, in, g);
-  if (aam.load(cell,"confout.aam")) {
-    for (int i=0;i<g.size();i++) 
-      g[i].masscenter(cell);              // Load old config (if present)
-    // ...and recalc mass centers
-  }
+  if ( cell.loadFromDisk("confout.dump") ) { // Load old config (if present)
+    for (int i=0;i<g.size();i++)             // ...and recalc mass centers
+      g[i].masscenter(cell);
+    cout << "# Config. is read from confout.dump" << endl;
+  }  
 
   // Markovsteps
-  //macrorot mr(nvt, cell, pot);            //   Class for macromolecule rotation
-  //translate mt(nvt, cell, pot);           //   Class for macromolecular translation
+  macrorot mr(nvt, cell, pot);            //   Class for macromolecule rotation
+  translate mt(nvt, cell, pot);           //   Class for macromolecular translation
   transrot mtr(nvt, cell, pot);           //   Class for simultaneous macromolecular translation and rotation
   transrot mtrL(nvt, cell, pot);          //   Class for simultaneous macromolecular translation and rotation
   clustertrans ct(nvt, cell, pot, g);     //   Class for non-rejective cluster translation
@@ -83,18 +78,16 @@ int main() {
 
   if ( in.getboo("penalize")==true)       // If penalty.dat is present it will be loaded and used as
     vol.loadpenaltyfunction("penalty.dat");// bias. Else a penalty function will only be constructed
-  // if the penalty != 0.
-  // Markovparameters
+
+  // Markov parameters
   bool movie=in.getboo("movie",false);
   double dppercent = in.getflt("dppercent", 0.00080);
   vol.dp=in.getflt("voldp");
-  // mr.dp =in.getflt("mrdp");
+  mr.dp =in.getflt("mrdp");
   ct.dp=in.getflt("ctdp");
 #ifdef XYPLANE
-  // mt.dpv.z=0;
+  mt.dpv.z=0;
 #endif
-
-  cout<<"Ehy!!"<<endl;
 
   // Analysis and energy
   double usys=0;
@@ -102,8 +95,8 @@ int main() {
   for (int i=0; i<g.size()-1; i++)
     for (int j=i+1; j<g.size(); j++)
       usys+=pot.energy(cell.p, g[i], g[j]);
-
   systemenergy sys(usys);   // System energy analysis
+  
   histogram lendist(in.getflt("binlen",1.) ,in.getflt("minlen"), in.getflt("maxlen"));             
   aggregation agg(cell, g, 1.5);
   distributions dist(in.getflt("binlen",1.),in.getflt("minlen"), in.getflt("maxlen"));
@@ -123,7 +116,7 @@ int main() {
   int eprint, cnt=0;
   eprint=int(0.001*in.getflt("microsteps")); //loop.macro);
 
-  ioxtc xtc(cell.len);                                // Gromacs xtc output (if installed)
+  ioxtc xtc(cell.len);                                // Gromacs xtc output
   for (int i=0; i<g.size(); i++)
     xtc.g.push_back( &g[i] );
 
@@ -163,13 +156,13 @@ int main() {
 
       dist.add("aveenergy", cell.len, sys.sum);
 
-      if (movie==true && slump.random_one()>.99 && macro>1)
+      if (movie==true && slump.random_one()>.995 && macro>1)
         xtc.save("confout.xtc", cell);   // Save trajectory
 
       if (slump.random_one()>.95)
         sys.track();
 
-      if(slump.random_one()>.99) {
+      if(slump.random_one()>.95) {
         for (i=0;i<g.size();i++) 
           g[i].masscenter(cell);                // Recalculate mass centers
 
@@ -229,10 +222,8 @@ int main() {
     agg.write("aggregates.dat");
     dist.write("aveenergy.dat");
 
-    //cout << g[0].info() << endl;
-
-    aam.save("confout.aam", cell.p);            // Save config. for next run
     pqr.save("confout.pqr", cell.p);
+    cell.saveToDisk("confout.dump");            // Save container to disk
 
   } // End of outer loop
 

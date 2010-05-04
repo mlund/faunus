@@ -71,7 +71,7 @@ class xytable {
     }
 
     //! Convenient data access
-    TY& operator()(TX val) { return y[ x2i(val) ]; }
+    TY& operator()(TX val) { return y.at( x2i(val) ); }
 
     //! Max x-value in set
     TX xmax() { return y.size()*xres+xmin; }

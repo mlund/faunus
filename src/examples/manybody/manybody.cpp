@@ -25,7 +25,7 @@ int main() {
 #ifndef MONOPOLE
   interaction<pot_minimage> pot(in);    // Functions for interactions
 #else
-  interaction_monopole<pot_minimage> pot(in,cell); // Far-away monopole approximation?
+  interaction_monopole<pot_minimage> pot(in); // Far-away monopole approximation?
 #endif
   iogro gro(in);                        // Gromacs file output for VMD etc.
 

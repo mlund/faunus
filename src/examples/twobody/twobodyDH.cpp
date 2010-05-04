@@ -32,13 +32,7 @@ int main(int argc, char* argv[]) {
   mcloop loop(in);                      // Set Markov chain loop lengths
   cell cell(in);                        // We want a spherical, hard cell
   canonical nvt;                        // Use the canonical ensemble
-#ifdef DIPOLE_CUTOFF
-  Tpot pot(in,cell);                    // Functions for interactions
-#elif MONOPOLE
-  Tpot pot(in,cell);
-#else
-  Tpot pot(in);
-#endif
+  Tpot pot(in);                         // Functions for interactions
   distributions dst;                    // Distance dep. averages
   //  angularcorr  angcorr;                 // Dipole cross-correlation
   iopqr pqr;                            // PQR output (pos, charge, radius)

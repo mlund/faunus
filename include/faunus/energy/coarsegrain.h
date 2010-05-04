@@ -36,11 +36,9 @@ namespace Faunus {
       return cm;
     }
   public:
-    container *cPtr;
     double cut_g2g; //!< Cut-off distance for group-group interactions
     double cut_g2p; //!< Cut-off distance for group-particle interactions
-    interaction_monopole(inputfile &in, container &con) : interaction<T>(in) {
-      cPtr=&con;
+    interaction_monopole(inputfile &in) : interaction<T>(in) {
       interaction<T>::name+=" w. monopole cut-offs";
       cut_g2g = in.getflt( "threshold_g2g", 1e6 );
       cut_g2p = in.getflt( "threshold_g2p", 1e6 );
@@ -106,7 +104,6 @@ namespace Faunus {
       point cm;
       particle anion, cation;
     };
-    container *cPtr;
     double kappa;
     unsigned long int cnt, cntDip; // no. of group-group interactions, no. of dipole interactions
     
@@ -159,8 +156,7 @@ namespace Faunus {
     double R1;      //!< Radius of group 1 (used for DH correction)
     double R2;      //!< Radius of group 2 (used for DH correction)
     
-    interaction_dipole(inputfile &in, container &con) : interaction<T>(in) {
-      cPtr=&con;
+    interaction_dipole(inputfile &in) : interaction<T>(in) {
       interaction<T>::name="Group-group dipole cut-off";
       cut_g2g = in.getflt( "threshold_g2g", 1e6 );
       kappa = 1/in.getflt("debyelen", 2e4);

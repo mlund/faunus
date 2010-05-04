@@ -58,6 +58,7 @@ namespace Faunus {
           p[i] << f;
         trial=p;
         f.close();
+        std::cout << "# Read " << n << " particles from " << file << endl;
         return true;
       }
       f.close();

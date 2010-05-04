@@ -45,7 +45,14 @@
 namespace Faunus {
   string faunus_splash();
 
-  //pc pc(298.15); // Physical constants, temperature
-  //atoms atoms;   // Particle information
+  class textOutput {
+    private:
+      unsigned short width;
+    public:
+      void printTitle(string);
+      template<class T> void printValue(string s, T v) {
+        std::cout << s << " = " << v << std::endl;
+      }
+  };
 }//namespace
 #endif

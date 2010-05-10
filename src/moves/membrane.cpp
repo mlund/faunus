@@ -25,10 +25,10 @@ namespace Faunus {
       <<"#      Graftpoint_dp      = "<<dpgp<<endl
       <<"#      Latticetrans._dp   = "<<dplatt<<endl
       <<"#   Acc. of substeps:"<<endl
-      <<"#      Pops ratteling     = "<<popsacc/popscnt<<endl
-      <<"#      Popc ratteling     = "<<popcacc/popccnt<<endl
-      <<"#      End jumping        = "<<endacc/endcnt<<endl
-      <<"#      Latt. translation  = "<<lattacc/lattcnt<<endl;
+      <<"#      Pops ratteling     = "<<popsacc/popscnt*100.0<<endl
+      <<"#      Popc ratteling     = "<<popcacc/popccnt*100.0<<endl
+      <<"#      End jumping        = "<<endacc/endcnt*100.0<<endl
+      <<"#      Latt. translation  = "<<lattacc/lattcnt*100.0<<endl;
     return o.str();
   }
 
@@ -37,6 +37,8 @@ namespace Faunus {
     int n=-1, pm, pm2, i=0;
     double rand, sum=0;
     point dv;
+//    double backreq;
+//    backreq=pot->req, pot->req=5.0;
     while (i<steps) {
       rand=slp.random_one();
       cnt++;
@@ -211,6 +213,7 @@ namespace Faunus {
         du=0;
       }
     }
+//    pot->req=backreq;
     return utemp;
   }
 }//namespace

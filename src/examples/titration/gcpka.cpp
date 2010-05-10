@@ -16,17 +16,21 @@ using namespace Faunus;                 // Access to Faunus classes
 
 int main() {
   cout << faunus_splash();              // Show Faunus information
-  inputfile in("gcsalt.conf");          // Read input file
+  inputfile in("gcpka.conf");           // Read input file
   mcloop loop(in);                      // Set Markov chain loop lengths
   grandcanonical nmt;                   // Use the canonical ensemble
   canonical nvt;
+#ifdef MI
   box cell(in);                         // We want a cubic simulation container
+#else
+  cell cell(in);
+#endif
   interaction<pot_hsminimage> pot(in);  // ...and a Coulomb/HS pot. w. minimum image
   io io;
   ioaam aam;                            // File I/O class
-  macromolecule protein;               // Group for the protein
+  macromolecule protein;                // Group for the protein
   protein.add( cell,
-      aam.load(in.getstr("protein"))); // Load protein structure
+      aam.load(in.getstr("protein")));  // Load protein structure
   protein.move(cell, -protein.cm);      // ..translate it to origo (0,0,0)
   protein.accept(cell);                 // ..accept translation
   saltmove sm(nmt,cell,pot,in);         // Class for salt movements
@@ -43,7 +47,7 @@ int main() {
   wid2.add( atom("CL") );
 
   if(nmt.load(cell, "gcgroup.conf")==true)
-    aam.load(cell,"rb.aam");           // Read initial config. from disk (if present)
+    aam.load(cell,"confout.aam");       // Read initial config. from disk (if present)
 
   systemenergy sys(pot.energy(cell.p)); // - pot.internal(cell.p, protein)); // Track system energy
 
@@ -65,8 +69,8 @@ int main() {
         protein.dipole(cell.p);         // Re-calc. dipole moment
           
     }                                   // END of micro loop
-    sys.update(pot.energy(cell.p)); //-pot.internal(cell.p, protein));     // Update system energy
-    aam.save("rb.aam",cell.p);          // Save particle configuration to disk
+    sys.update(pot.energy(cell.p));     // Update system energy
+    aam.save("confout.aam",cell.p);     // Save particle configuration to disk
     cout << loop.timing()<<sys.info();  // Show progres
   }                                     // END of macro loop and simulation
 
@@ -75,6 +79,6 @@ int main() {
   cout << cell.info() << sys.info() << sm.info() << sb.info()<<tit.info()
        << loop.info()<<wid2.info()<<protein.info()<<tit.info();
   iopqr pqr;
-  pqr.save("saltbath.pqr", cell.p);
+  pqr.save("confout.pqr", cell.p);
 }
 

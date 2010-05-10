@@ -772,7 +772,7 @@ namespace Faunus {
     Pops.clear(), Popc.clear();
     popc.clear(), pops.clear();
     //Prepare particle vector of popc/s
-    a.radius=3.0, /*a.id='PLG',*/ a.charge=0, a.z=-con.zlen*0.5;
+    a.radius=2.5, /*a.id='PLG',*/ a.charge=0, a.z=-con.zlen*0.5;
     Pops.push_back(a), Popc.push_back(a);
     /*a.id="PL1",*/ a.charge=-1, a.z=-con.zlen*0.5+5;
     Pops.push_back(a), Popc.push_back(a);

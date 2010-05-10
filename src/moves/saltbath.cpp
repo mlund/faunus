@@ -239,7 +239,7 @@ namespace Faunus {
         if (cnt!=0)
           o<<"   [ "<<pairs[i].ai.avg()/con->getvolume()*1660<<" M : "<<pairs[i].aj.avg()/con->getvolume()*1660<<std::setw(9)<<std::left<<" M ] ";
         o << "{"<<g[pairs[i].i].size()<<":"<<g[pairs[i].j].size()<<"}  "<<"<"<<pairs[i].inacc.avg()<<":"<< pairs[i].outacc.avg()<<"> %";
-        o << endl;
+        o << "| Chem.Pot. " << atom[g[pairs[i].i].name].chempot<<" : "<< atom[g[pairs[i].j].name].chempot <<" kT ( -ln(AA^3) )"<<endl;
       }
     }
     return o.str();

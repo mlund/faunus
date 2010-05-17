@@ -117,11 +117,11 @@ namespace Faunus {
   string inputfile::info() {
     std::ostringstream o;
     o << "\n"
-      << "#  INPUT FILE INFORMATION:\n"
-      << "#    Config file = " << file << "\n"
-      << "#    Accessed parameters:\n";
+      << "# INPUT FILE INFORMATION:\n"
+      << "#   Config file = " << file << "\n"
+      << "#   Accessed parameters:\n";
     for (int i=1; i<=calls.size(); i++) {
-      if ( i%2!=0) o << "#    ";
+      if ( i%2!=0) o << "#   ";
       o << std::setw(19) << std::left << calls[i-1]
         << std::setw(19) << getstr(calls[i-1], "n/a");
       if ( i%2==0 ) o << endl;

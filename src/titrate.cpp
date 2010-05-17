@@ -223,10 +223,10 @@ namespace Faunus {
 
   string titrate_gc::info() {
     std::ostringstream o;
-    o << "# Titrateable sites   = " << sites.size() << endl
-      << "# pH                  = " << ph << endl 
-      << "# Proton partner      = " << nameA <<endl
-      << "#        chem.pot     = " << atom[nameA].chempot <<endl;
+    o << "#   Titrateable sites         = " << sites.size() << endl
+      << "#   pH                        = " << ph << endl 
+      << "#   Proton partner            = " << nameA
+      << " (chem.pot = " << atom[nameA].chempot << " )" << endl;
     return o.str();
   }
 

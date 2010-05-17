@@ -1,33 +1,37 @@
 /*! \page test_rosenbluth Rosenbluth
  *
- * This example program calculates the excess chemical
- * potential of NaCl in an aqueous solution using Widom's
- * particle insertion method.
+ * Protein proton titration using grand canonical
+ * salt moves.
  *
- * \author Christophe Labbez and Mikael Lund
- * \date Lund, 2009
- * \include rb.cpp
+ * \author Bjorn Persson and Mikael Lund
+ * \date Lund, 2010
  */
 #include "faunus/faunus.h"
+#include "faunus/potentials/pot_hscoulomb.h"
 #include "faunus/potentials/pot_hsminimage.h"
 
 using namespace std;
 using namespace Faunus;                 // Access to Faunus classes
 
-int main() {
+int main(int argc, char* argv[]) {
   cout << faunus_splash();              // Show Faunus information
-  inputfile in("gcpka.conf");           // Read input file
+  string config = "gcpka.conf";         // Default input (parameter) file
+  if (argc==2) config = argv[1];        // ..also try to get it from the command line
+  inputfile in(config);                 // Read input file
+  checkValue test(in);                  // Enable unittesting
   mcloop loop(in);                      // Set Markov chain loop lengths
   grandcanonical nmt;                   // Use the canonical ensemble
   canonical nvt;
 #ifdef MI
   box cell(in);                         // We want a cubic simulation container
+  interaction<pot_hsminimage> pot(in);  // ...and a plain Coulomb/HS potential
 #else
-  cell cell(in);
+  cell cell(in);                        // We want a spherical simulation container
+  interaction<pot_hscoulomb> pot(in);   // ...and a Coulomb/HS pot. w. minimum image
 #endif
-  interaction<pot_hsminimage> pot(in);  // ...and a Coulomb/HS pot. w. minimum image
-  io io;
-  ioaam aam;                            // File I/O class
+  io io;                                // File i/o
+  iopqr pqr;                            // ...pqr files
+  ioaam aam;                            // ...aam files
   macromolecule protein;                // Group for the protein
   protein.add( cell,
       aam.load(in.getstr("protein")));  // Load protein structure
@@ -47,14 +51,14 @@ int main() {
   wid2.add( atom("CL") );
 
   if(nmt.load(cell, "gcgroup.conf")==true)
-    aam.load(cell,"confout.aam");       // Read initial config. from disk (if present)
+    aam.load(cell,"confout.aam");        // Read initial config. from disk (if present)
 
-  systemenergy sys(pot.energy(cell.p)); // - pot.internal(cell.p, protein)); // Track system energy
+  systemenergy sys(pot.energy(cell.p));  // Track system energy
 
   cout << cell.info() << atom.info()
        << pot.info() << salt.info(cell)
-       << in.info() << sb.info() <<tit.info();       // Print initial information
-
+       << in.info() << tit.info()
+       << endl;                         // Print initial information
 
   while ( loop.macroCnt() ) {           // Markov chain 
     while ( loop.microCnt() ) {
@@ -64,21 +68,29 @@ int main() {
       for (int i=0; i<salt.size(); i++)
         sys+=sb.move();                 // Grand Canonical salt move
       sys+=tit.titrateall();
-        sys.update(pot.energy(cell.p)); // Update system energy
-        protein.charge(cell.p);         // Re-calc. protein charge
-        protein.dipole(cell.p);         // Re-calc. dipole moment
-          
+      sys.update(pot.energy(cell.p));   // Update system energy
+      protein.charge(cell.p);           // Re-calc. protein charge
+      protein.dipole(cell.p);           // Re-calc. dipole moment
     }                                   // END of micro loop
     sys.update(pot.energy(cell.p));     // Update system energy
     aam.save("confout.aam",cell.p);     // Save particle configuration to disk
-    cout << loop.timing()<<sys.info();  // Show progres
+    cout << loop.timing();              // Show progres
   }                                     // END of macro loop and simulation
 
   io.writefile("gcgroup.conf", nmt.print());
-
-  cout << cell.info() << sys.info() << sm.info() << sb.info()<<tit.info()
-       << loop.info()<<wid2.info()<<protein.info()<<tit.info();
-  iopqr pqr;
   pqr.save("confout.pqr", cell.p);
+
+  // Unit testing
+  sm.check(test);
+  sb.check(test);
+  sys.check(test);
+  test.check("ProteinCharge", protein.Q.avg() );
+  test.check("ProteinDipole", protein.dip.avg() );
+
+  cout << cell.info() << sys.info() << sm.info() << sb.info() << tit.info()
+    << loop.info() << wid2.info() << protein.info() << tit.info()
+    << test.report();
+
+  return test.returnCode();
 }
 

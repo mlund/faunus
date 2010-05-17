@@ -4,8 +4,8 @@ namespace Faunus {
   saltbath::saltbath( grandcanonical &gc,
       container &c, energybase &i, inputfile &in, salt &s) : markovmove(gc,c,i)
   {
-    name.assign("Grand canonical salt reservoir");
-    cite.assign("None at the moment");
+    name.assign("GRAND CANONICAL SALT RESERVOIR:");
+    cite.assign("n/a");
     runfraction=1.0;
     deltadp=0;
     dp=0;

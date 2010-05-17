@@ -106,8 +106,8 @@ namespace Faunus {
 
   /*!
    * \brief Implicit ions titration scheme
-   * \author Andre Teixeira
-   * \date Jul 2009
+   * \author Andre Teixeira and Mikael Lund
+   * \date Sau Paulo / Lund, 2009-2010
    * \todo Use templates in order to work with different potential classes.
    */
   class ATchargereg : public markovmove, public titrate_implicit {
@@ -115,6 +115,7 @@ namespace Faunus {
       ATchargereg( ensemble&, container&, energybase&, float, inputfile& , pot_debyehuckel& );
       double titrateall( vector<macromolecule>& );
       string info();
+      double totalenergy(vector<macromolecule> &, vector<particle> &);
       
     private:
       pot_debyehuckel* pairpot;
@@ -128,6 +129,5 @@ namespace Faunus {
 	  inline int who_is_tit( vector<macromolecule>& , int& );
 	  inline void set_kappa( double& );
   };
-
 }//namespace
 #endif

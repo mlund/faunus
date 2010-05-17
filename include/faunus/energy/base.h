@@ -256,22 +256,19 @@ namespace Faunus {
       for (i=j+1; i<=g.end; ++i)
         u+=p[i].charge/sqrt(pair.sqdist(p[i],p[j]));
       
-      
       /* Outside the protein */
       if (g.beg>0) {
         for (int i=0 ; i<g.beg ; i++) {
           r=sqrt(pair.sqdist(p[i],p[j]));
           u+=p[i].charge/r*exp(-k*r);
-        };
-      };
+        }
+      }
       for (int i=g.end+1; i<n; i++) {
         r=sqrt(pair.sqdist(p[i],p[j]));
         u+=p[i].charge/r*exp(-k*r);
-      };
-      
+      }
       return pair.f*u;
     }
-    
     
     void forceall(container &c, vector<point> &f) {
       point r;

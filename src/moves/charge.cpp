@@ -1,5 +1,6 @@
 #include <faunus/moves/charge.h>
 #include <faunus/titrate.h>
+#include <faunus/physconst.h>
 
 namespace Faunus {
   
@@ -129,7 +130,7 @@ namespace Faunus {
       energybase &i,
       inputfile &in) : markovmove(e,c,i), titrate_gc(c,in,e)
   {
-    this->name.assign("GC PROTON TITRATION...");
+    this->name.assign("GRAND CANONICAL PROTON TITRATION");
     this->cite.assign("Labbez+Jonsson....");
   }
 
@@ -438,33 +439,30 @@ namespace Faunus {
   }
 #endif
 
-
-    // ----------- AT Titration ----------------
+  // ----------- AT Titration ----------------
   ATchargereg::ATchargereg( ensemble& e, container& c, energybase& i, float ph, inputfile& in , pot_debyehuckel& pair)
   :markovmove(e,c,i), titrate_implicit(c,ph) {
 
-	name.assign("IMPLICIT IONS TITRATION");
-	double sytem_charge = con->charge();
-	pairpot = &pair;
+    name.assign("IMPLICIT SALT TITRATION");
+    cite.assign("Teixeira, Lund, da Silva - Unpublished.");
+    double sytem_charge = con->charge();
+    pairpot = &pair;
 
-	// Getting config from input
+    // Getting config from input
     protein_conc = in.getflt("ProteinConc", 0.1);
     double salt1_conc   = in.getflt("Salt1Conc"  , 0.1);
     double salt2_conc   = in.getflt("Salt2Conc"  , 0.1);
     double salt1_charge = in.getflt("Salt1Charge", 1.0);
     double salt2_charge = in.getflt("Salt2Charge", 1.0);
-    float lB = in.getflt("bjerrum"  , 7.12);
+    float lB = in.getflt("bjerrum", 7.12);
 
     // Evaluating physical quantities
-    ionic_str0 = 0.5 * ( salt1_conc * pow(salt1_charge,2) + salt2_conc * pow(salt2_charge,2) );
-    ionic_str1 = 0.5 * ( protein_conc * abs(ionic_str0) );
-    const_kappa = sqrt( 80 * 3.14159265358979 * 6.02214179e23 * lB )*1e-14;
+    ionic_str0 = .5 * ( salt1_conc * pow(salt1_charge,2) + salt2_conc * pow(salt2_charge,2) );
+    ionic_str1 = .5 * ( protein_conc * abs(ionic_str0) );
+    const_kappa = sqrt(8*pyc.pi*lB*pyc.Nav/1e27);
     kold = (const_kappa * sqrt(ionic_str0+ionic_str1));
     set_kappa(kold);
-  };
-
-
-
+  }
 
   double ATchargereg::titrateall( vector<macromolecule>& g ) {
     du=0;
@@ -500,13 +498,11 @@ namespace Faunus {
         rc=ENERGY;
         exchange(con->trial, t);
         set_kappa(kold);
-      };
+      }
       //samplesites(con->p);  // Average charges on all sites
-    };
+    }
     return sum;
-  };
-    
-    
+  }
 
   /*!
    * \brief Returns information about the titration.
@@ -516,18 +512,19 @@ namespace Faunus {
   string ATchargereg::info() {
     std::ostringstream o;
     o <<  markovmove::info()
-      << "#   pH (concentration)    = " << ph             << endl
-      << "#   Titrateable sites     = " << sites.size()   << endl
-      << "#   Protein concentration = " << protein_conc   << endl
-      << "#   Salt Ionic Strenght   = " << ionic_str0     << endl
-      << "#   Debye Lenght          = " << 1./ (const_kappa * sqrt(ionic_str0+ionic_str1)) << endl;
+      << "#   pH (activity scale)       = " << ph             << endl
+      << "#   Titrateable sites         = " << sites.size()   << endl
+      << "#   Protein concentration (M) = " << protein_conc   << endl
+      << "#   Ionic strenght (M)        = " << ionic_str0     << endl
+      << "#   Debye lenght (AA)         = " << 1./ (const_kappa * sqrt(ionic_str0+ionic_str1)) << endl;
     return o.str();
-  };
+  }
 
   /*!
    * \brief Calculates the value of kappa for a given vector of particles.
    * \author Andre Teixeira
    * \date Jul 2009
+   * \note Shouldn't the charge be squared?!
    */
   double ATchargereg::calc_kappa( vector<macromolecule>& g, vector<particle>& p) {
     ionic_str1 = 0;
@@ -535,8 +532,17 @@ namespace Faunus {
       ionic_str1 += g[i].conc * abs(g[i].getcharge(p));
     ionic_str1 *= 0.5;
     return const_kappa * sqrt(ionic_str0+ionic_str1);
-  };
+  }
 
+  double ATchargereg::totalenergy(vector<macromolecule> &g, vector<particle> &p ) {
+    double u=0,
+           k=calc_kappa(g,p);
+    for  (int ig=0 ; ig<g.size() ; ig++)
+      for (int ip=g[ig].beg; ip<=g[ig].end; ip++)
+        u+=p[ip].charge * pot->potential( p, ip, g[ig], k );
+    return u/2 + prot_ion_u(g,p,k);
+  }
+  
   /*!
    * \brief Evaluates the protein-counter ion energy for all proteins for a calculated value of kappa
    * and a given vector of particles.
@@ -544,33 +550,24 @@ namespace Faunus {
    * \date Jul 2009
    */
   double ATchargereg::prot_ion_u( vector<macromolecule>& g, vector<particle>& p) {
-    double u = 0;
     double k = calc_kappa(g,p);
-    double zp;
-    for (int i=0 ; i<g.size() ; i++) {
-      zp = g[i].getcharge(p);
-      u += -0.5 * pairpot->f * zp*zp * k / ( 1. + k*g[i].cm.radius );
-    }
-    return u;
-  };
-  
-  
+    return prot_ion_u(g,p,k);
+  }
+
   /*!
    * \brief Evaluate the protein-counter ion energy for all proteins for a given value of kappa
    * and a given vector of particles.
    * \author Andre Teixeira
    * \date Jul 2009
    */
-  double ATchargereg::prot_ion_u( vector<macromolecule>& g, vector<particle>& p , double& k) {
-    double u = 0;
-    double zp;
+  double ATchargereg::prot_ion_u( vector<macromolecule>& g, vector<particle>& p, double& k) {
+    double u=0, zp;
     for (int i=0 ; i<g.size() ; i++) {
       zp = g[i].getcharge(p);
-      u += -0.5 * pairpot->f * zp*zp * k / ( 1. + k*g[i].cm.radius );
+      u += zp*zp / ( 1. + k*g[i].cm.radius );
     }
-    return u;
-  };
- 
+    return -0.5 * pairpot->f * k * u;
+  }
 
   /*!
    * \brief Find the macromolecule which the current titrating site belongs.
@@ -582,10 +579,8 @@ namespace Faunus {
       if ( t >= g[i].beg && t <= g[i].end)
         return i;
     std::cout << "\n\n#Site not found!!\n\n" << endl;
-	return -1;
-  };
-
-
+    return -1;
+  }
 
   /*!
    * \brief Update kappa value used in intermolecular interactions calculations.
@@ -595,6 +590,6 @@ namespace Faunus {
   void ATchargereg::set_kappa( double& k ) {
     pairpot->k = k;
     kold = k;
-  };
+  }
 
 }//namespace

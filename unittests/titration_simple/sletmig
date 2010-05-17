@@ -1,0 +1,7 @@
+!!! Test failed on variable Energydrift (ref,current,reldiff): 3.27418e-11 1.45519e-11 0.555555 !!!
+!!! Test failed on variable Charge (ref,current,reldiff): -1.55287 -1.55487 0.00128606 !!!
+!!! Test failed on variable ExChemPot (ref,current,reldiff): -0.178649 -0.177247 0.00784622 !!!
+
+real	0m5.853s
+user	0m5.715s
+sys	0m0.025s

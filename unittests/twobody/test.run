@@ -1,9 +1,9 @@
 #!/bin/bash
 cd `dirname $0`
-exe="../twobody"
+exe="../../src/examples/twobody/twobody"
 if [ -x $exe ]; then
   cp test.start confout.aam
-  $exe test.conf 1>/dev/null
+  OMP_NUM_THREADS=1 $exe test.conf
   exit
 fi
 exit 1

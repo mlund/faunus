@@ -1,12 +1,5 @@
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-#----- test target -----
-add_test( isobaric isobaric/unitTestOne/test.run )
-add_test( pka titration/test1/test.run )
-add_test( twobody twobody/test1/test.run )
-add_test( widom_cube widom/testOne/test.run )
-#add_test( hyperbulk hypersphere/unittest/1.run )
-
 #----- function to add a generic C++ example -----
 function( fau_example tname tdir tsrc )
   add_executable( ${tname} "${tdir}/${tsrc}" )
@@ -64,10 +57,10 @@ fau_example(cgp1 tools cg1.cpp)
 fau_example(cgp2 tools cg2.cpp)
 fau_example(pmf2muex tools pmf2muex.cpp)
 fau_example(g_widom tools g_widom.cpp)
-fau_example(spce spce spce.cpp)
-fau_example(spcecavity spce spcecavity.cpp)
-fau_example(acid spce spceacid.cpp)
-fau_example(spceMI spce spce.cpp)
+#fau_example(spce spce spce.cpp)
+#fau_example(spcecavity spce spcecavity.cpp)
+#fau_example(acid spce spceacid.cpp)
+#fau_example(spceMI spce spce.cpp)
 fau_example(membrane membrane mem.cpp)
 fau_example(memp wallprotein memp.cpp)
 fau_example(saltsolution widom saltlab.cpp)
@@ -86,7 +79,7 @@ set_target_properties( isobaricPLANE PROPERTIES COMPILE_DEFINITIONS "XYPLANE")
 set_target_properties( widom_sphere PROPERTIES COMPILE_DEFINITIONS "WIDOM_SPHERE")
 set_target_properties( widom_elhcvdw PROPERTIES COMPILE_DEFINITIONS "WIDOM_ELHCVDW")
 set_target_properties( widom_ellj PROPERTIES COMPILE_DEFINITIONS "WIDOM_ELLJ")
-set_target_properties( spceMI PROPERTIES COMPILE_DEFINITIONS "SPCE_MINIMAGE")
+#set_target_properties( spceMI PROPERTIES COMPILE_DEFINITIONS "SPCE_MINIMAGE")
 
 #----- examples where openbabel is needed -----
 if (ENABLE_BABEL AND OPENBABEL_FOUND)

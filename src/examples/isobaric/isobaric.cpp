@@ -120,7 +120,8 @@ int main() {
   for (int i=0; i<g.size(); i++)
     xtc.g.push_back( &g[i] );
 
-  cout << cell.info() << pot.info() <<in.info() << endl << endl // Print information to screen
+  cout << slump.info()
+       << cell.info() << pot.info() <<in.info() << endl << endl // Print information to screen
        << "---------- RUN-TIME INFORMATION  -----------" << endl;
 
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 

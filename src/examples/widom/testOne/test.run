@@ -3,7 +3,7 @@ cd `dirname $0`
 exe="../widom_cube"
 if [ -x $exe ]; then
   cp test.start widom.aam
-  $exe test.conf 1>/dev/null
+  OMP_NUM_THREADS=1 $exe test.conf
   exit
 fi
 exit 1

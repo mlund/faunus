@@ -66,7 +66,7 @@ namespace Faunus {
   double transrot::move(vector<macromolecule> &g, int n) {
     du=0;
     cnt++;
-    g[n].rotate(*con, dpr, dpt); //dpt in ang, dpr in rad./2
+    g.at(n).rotate(*con, dpr, dpt); //dpt in ang, dpr in rad./2
     //insert cell overlap test
     for (int i=g[n].beg; i<=g[n].end; i++) { 
       if (con->collision( con->trial[i] )==true) { 

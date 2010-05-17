@@ -4,19 +4,30 @@ namespace Faunus {
   // Baseclass
   double random::random_half() { return -0.5 + random_one(); }
   bool random::runtest(float f) { return (random_one()<f) ? true : false; }
+  std::string random::info() {
+    std::ostringstream o;
+    o << "# RANDOM NUMBER GENERATOR:" << std::endl
+      << "#   Scheme: " << name << std::endl;
+    return o.str();
+  }
 
   // "slump" - the default generator
-  randomDefault::randomDefault() { rand_max_inv = 1./RAND_MAX; }
+  randomDefault::randomDefault() {
+    name = "C++ build in";
+    rand_max_inv = 1./RAND_MAX;
+  }
   double randomDefault::random_one() { return rand_max_inv*rand(); }
   void randomDefault::random_seed(int s) { (s!=0) ? srand(s) : srand(time(0)); }
 
   // "Twister" - Mersenne Twister generator
+  randomTwister::randomTwister() { name="Mersenne Twister"; }
   double randomTwister::random_one() { return mt.rand(); }
   void randomTwister::random_seed(int s) { mt.seed(s); }
 
   // "Ran2" - ran2 from 'Numerical Recipies'
   const double ran2::EPS=3.0e-16;
   ran2::ran2() {
+    name="Numerical recipes 'ran2' (not thread safe!)";
     AM=1.0/2147483563.0;
     RNMX=1.0-3.0e-16;
     iy=0;
@@ -43,10 +54,10 @@ namespace Faunus {
     else
       return temp;
   }
-  void ran2::random_seed(int s ) {
+  void ran2::random_seed(int s) {
     idum=s;    
     if(idum<=0) {
-      std::cout << "insied seeder!"<<std::endl;
+      //std::cout << "insied seeder!"<<std::endl;
       idum=(idum==0 ? 1: -idum);
       idum2=idum;
       for (j=NTAB+7; j>=0; j--) {

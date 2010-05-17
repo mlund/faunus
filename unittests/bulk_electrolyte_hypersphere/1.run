@@ -1,0 +1,11 @@
+#!/bin/bash
+cd `dirname $0`
+exe="../../src/examples/hypersphere/hyperbulk"
+if [ -x $exe ]; then
+  cp 1.dump hyperbulk.dump
+  cp 1.conf hyperbulk.conf
+  OMP_NUM_THREADS=1 $exe
+  exit
+fi
+exit 1
+

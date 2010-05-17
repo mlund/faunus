@@ -52,7 +52,7 @@ namespace Faunus {
     if (slp.runtest(runfraction)==false)
       return du;
     cnt++;
-    g[n].rotate(*con, dp); 
+    g.at(n).rotate(*con, dp); 
     //insert cell overlap test
     double deltau=0;
 #pragma omp parallel for reduction (+:deltau) 

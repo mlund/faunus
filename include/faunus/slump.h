@@ -1,6 +1,8 @@
 #ifndef FAU_slump_h
 #define FAU_slump_h
 #include <cmath>
+#include <iostream>
+#include <sstream>
 #include <cstdlib>  // Including this SUCKS! Be aware of abs()!
 #include <ctime>
 
@@ -14,17 +16,21 @@
 
 namespace Faunus {
   class random {
+    protected:
+      std::string name;
     public:
       virtual double random_one()=0;              //!< Random number between [0:1[
       virtual void random_seed(int=0)=0;          //!< Seed random generator (globally)
       bool runtest(float=0.5);                    //!< Probability bool
       double random_half();                       //!< Random number between [-0.5:0.5[
+      std::string info();                         //!< Print information string
   };
 
   /*!
    * \brief Default C++ random number generator
    * \author Mikael Lund
    * \date Lund, 2002
+   * \warning random_one sometimes returns 1 (one)!!
    */
   class randomDefault : public random {
     private:
@@ -50,6 +56,7 @@ namespace Faunus {
     private:
       MTRand mt;
     public:
+      randomTwister();
       void random_seed(int=0);
       double random_one();
   };
@@ -60,6 +67,7 @@ namespace Faunus {
   * \author Bjorn Persson
   * \date Lund, 2008
   * \note A class for ran2 from 'Numerical Recipies'.
+  * \warning Not thread safe!
   */
   class ran2: public random {
     private:
@@ -79,7 +87,8 @@ namespace Faunus {
       void   random_seed(int=-7);
   };
 
-  typedef Faunus::randomDefault slump; // Generator selection!
+  //typedef Faunus::randomDefault slump; // Generator selection!
+  typedef Faunus::ran2 slump; // Generator selection!
   
   extern slump slp;
 

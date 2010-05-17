@@ -1,6 +1,6 @@
 #!/bin/bash
 cd `dirname $0`
-exe="../isobaric"
+exe="../../src/examples/isobaric/isobaric"
 if [ -x $exe ]; then
   cp test.conf isobaric.conf
   cp test.dump confout.dump

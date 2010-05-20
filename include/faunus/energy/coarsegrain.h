@@ -166,6 +166,7 @@ namespace Faunus {
     }
     
     double energy(vector<particle> &p, const group &g1, const group &g2) {
+#pragma omp atomic
       cnt++;
       dipole mu1, mu2;
       centerOfMass(p, g1, mu1.cm);
@@ -173,6 +174,7 @@ namespace Faunus {
       if ( sqrt(interaction<T>::pair.sqdist(mu1.cm, mu2.cm)) < cut_g2g )
         return interaction<T>::energy(p, g1, g2);
       else {
+#pragma omp atomic
         cntDip++;
         calcDipole(p,g1,mu1);
         calcDipole(p,g2,mu2);

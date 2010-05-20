@@ -9,12 +9,13 @@ namespace Faunus {
     deltadp=0.1;
     dp=0;
     dpt=dpr=0.5;  
-  };
+  }
+
   string transrot::info() {
     std::ostringstream o;
     o <<  markovmove::info()
-      << "#   Dp (translation)         = " <<  dpt << endl
-      << "#   Dp (rotation)            = " <<  dpr << endl;
+      << "#   Dp (translation)          = " << dpt << endl
+      << "#   Dp (rotation)             = " << dpr << endl;
     return o.str();
   } 
 
@@ -107,7 +108,7 @@ namespace Faunus {
     dp=1.0;
     dpt=dpr=0.5;  
     m=M;
-  };
+  }
 
   string multtr::info() {
     std::ostringstream o;
@@ -117,6 +118,7 @@ namespace Faunus {
       << "#   Dp (rotation)         = " <<  dpr << endl;
     return o.str();
   } 
+
   /*!
    * \todo Cell overlap test missing, dp is used both for dr and the angle
    */

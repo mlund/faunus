@@ -2,8 +2,14 @@
 
 namespace Faunus {
   // Baseclass
-  double random::random_half() { return -0.5 + random_one(); }
-  bool random::runtest(float f) { return (random_one()<f) ? true : false; }
+  double random::random_half() {
+    return -0.5 + random_one();
+  }
+
+  bool random::runtest(float f) {
+    return (random_one()<f) ? true : false;
+  }
+
   std::string random::info() {
     std::ostringstream o;
     o << "# RANDOM NUMBER GENERATOR:" << std::endl
@@ -11,18 +17,38 @@ namespace Faunus {
     return o.str();
   }
 
-  // "slump" - the default generator
+  /*
+   *  Generic C++ generator
+   */
   randomDefault::randomDefault() {
     name = "C++ build in";
-    rand_max_inv = 1./RAND_MAX;
+    rand_max_inv = 1./(RAND_MAX+1);
   }
-  double randomDefault::random_one() { return rand_max_inv*rand(); }
-  void randomDefault::random_seed(int s) { (s!=0) ? srand(s) : srand(time(0)); }
 
-  // "Twister" - Mersenne Twister generator
-  randomTwister::randomTwister() { name="Mersenne Twister"; }
-  double randomTwister::random_one() { return mt.rand(); }
-  void randomTwister::random_seed(int s) { mt.seed(s); }
+  double randomDefault::random_one() {
+    return rand_max_inv*rand();
+  }
+
+  void randomDefault::random_seed(int s) {
+    (s!=0) ? srand(s) : srand(time(0));
+  }
+
+#ifdef HAVETR1
+  /*
+   *  Mersenne Twister generator (STL TR1 build-in)
+   */
+  randomTwister::randomTwister() : dist(0.0,1.0) {
+    name="Mersenne Twister (C++ TR1)";
+  }
+
+  double randomTwister::random_one() {
+    return dist(eng)/(eng.max()+1.);
+  }
+
+  void randomTwister::random_seed(int s) {
+    eng.seed(s);
+  }
+#endif
 
   // "Ran2" - ran2 from 'Numerical Recipies'
   const double ran2::EPS=3.0e-16;

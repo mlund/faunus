@@ -13,7 +13,10 @@ find_package(CVS)
 find_package(PythonLibs)
 include(SVNinfo)
 include(CTest)
+include(CheckIncludeFileCXX)
 enable_testing()
+
+check_include_file_cxx("tr1/random" HAVETR1)
 
 # ------------------------------
 #   Default build is "Release"
@@ -31,6 +34,7 @@ option(ENABLE_BABEL    "Try to use OpenBabel for file I/O" on)
 option(ENABLE_OPENMP   "Try to use OpenMP parallization" off)
 option(ENABLE_PYTHON   "Try to create a python interface" on)
 option(ENABLE_FORTRAN  "Try to compile legacy fortran code" off)
+option(ENABLE_TWISTER  "Enable Mersenne Twister random number generator" off)
 mark_as_advanced( CLEAR CMAKE_VERBOSE_MAKEFILE CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS_RELEASE )
 mark_as_advanced( EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH
                   CMAKE_OSX_ARCHITECTURES CMAKE_OSX_SYSROOT GCCXML)

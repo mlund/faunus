@@ -11,8 +11,9 @@
 #include <stdlib.h>
 #include <time.h>
 #endif
-
-#include "faunus/MersenneTwister.h"
+#ifdef HAVETR1
+#include <tr1/random>
+#endif
 
 namespace Faunus {
   class random {
@@ -41,27 +42,6 @@ namespace Faunus {
       double random_one();
   };
 
-  /*!
-   * \brief Mersenne Twister Random number functions
-   * \author Mikael Lund
-   * \date Prague, 2008
-   * \note Not thread safe
-   * \warning Weird behavior with rotational moves.
-   * \todo Fix weird behavior
-   *
-   * To enable this random number generator -DTWISTER must be
-   * set at compile time.
-   */
-  class randomTwister : public random {
-    private:
-      MTRand mt;
-    public:
-      randomTwister();
-      void random_seed(int=0);
-      double random_one();
-  };
-
-
  /*!
   * \brief Ran2 Random Number Gererator
   * \author Bjorn Persson
@@ -87,10 +67,28 @@ namespace Faunus {
       void   random_seed(int=-7);
   };
 
-  //typedef Faunus::randomDefault slump; // Generator selection!
-  typedef Faunus::ran2 slump; // Generator selection!
-  
-  extern slump slp;
+#ifdef HAVETR1
+  /*!
+   * \brief Mersenne Twister Random number functions (C++ TR1)
+   * \author Mikael Lund
+   * \date Lund, 2010
+   */
+  class randomTwister : public random {
+    private:
+      std::tr1::mt19937 eng;
+      std::tr1::uniform_real<double> dist;
+    public:
+      randomTwister();
+      double random_one();
+      void random_seed(int=0);
+  };
+#endif
 
+#if defined(HAVETR1) && defined(MERSENNETWISTER)
+  typedef Faunus::randomTwister slump;
+#else
+  typedef Faunus::ran2 slump;
+#endif
+  extern slump slp;
 }
 #endif

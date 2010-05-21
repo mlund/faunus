@@ -14,16 +14,16 @@
 			);
 			dependencies = (
 				73128B021030BF2000950418 /* PBXTargetDependency */,
-				73128B041030BF2000950418 /* PBXTargetDependency */,
-				73128B081030BF2000950418 /* PBXTargetDependency */,
 				739C452C1031929300A3A5B9 /* PBXTargetDependency */,
-				739C452A1031929300A3A5B9 /* PBXTargetDependency */,
+				73128B081030BF2000950418 /* PBXTargetDependency */,
 				733DF81A1166509A008347FA /* PBXTargetDependency */,
+				733DF85111665185008347FA /* PBXTargetDependency */,
+				733DF8D9116766F7008347FA /* PBXTargetDependency */,
+				73128B041030BF2000950418 /* PBXTargetDependency */,
 				733DF81C1166509A008347FA /* PBXTargetDependency */,
 				733DF81E1166509A008347FA /* PBXTargetDependency */,
 				733DF8201166509A008347FA /* PBXTargetDependency */,
-				733DF85111665185008347FA /* PBXTargetDependency */,
-				733DF8D9116766F7008347FA /* PBXTargetDependency */,
+				739C452A1031929300A3A5B9 /* PBXTargetDependency */,
 			);
 			name = all;
 			productName = all;
@@ -62,7 +62,6 @@
 		731297601030C80A00950418 /* pot_netz.h in Headers */ = {isa = PBXBuildFile; fileRef = 7312974E1030C80A00950418 /* pot_netz.h */; };
 		731297611030C80A00950418 /* pot_rfield.h in Headers */ = {isa = PBXBuildFile; fileRef = 7312974F1030C80A00950418 /* pot_rfield.h */; };
 		731297621030C80A00950418 /* pot_table.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297501030C80A00950418 /* pot_table.h */; };
-		731297631030C80A00950418 /* pot_table2.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297511030C80A00950418 /* pot_table2.h */; };
 		731297641030C80A00950418 /* pot_test.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297521030C80A00950418 /* pot_test.h */; };
 		731297651030C80A00950418 /* pot_test_rf.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297531030C80A00950418 /* pot_test_rf.h */; };
 		73280BD911419B740054855E /* pkaDH.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73280BD811419B640054855E /* pkaDH.cpp */; };
@@ -219,7 +218,6 @@
 		739C440B10314D6300A3A5B9 /* pot_netz.h in Headers */ = {isa = PBXBuildFile; fileRef = 7312974E1030C80A00950418 /* pot_netz.h */; };
 		739C440C10314D6300A3A5B9 /* pot_rfield.h in Headers */ = {isa = PBXBuildFile; fileRef = 7312974F1030C80A00950418 /* pot_rfield.h */; };
 		739C440D10314D6300A3A5B9 /* pot_table.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297501030C80A00950418 /* pot_table.h */; };
-		739C440E10314D6300A3A5B9 /* pot_table2.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297511030C80A00950418 /* pot_table2.h */; };
 		739C440F10314D6300A3A5B9 /* pot_test.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297521030C80A00950418 /* pot_test.h */; };
 		739C441010314D6300A3A5B9 /* pot_test_rf.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297531030C80A00950418 /* pot_test_rf.h */; };
 		739C441210314D6300A3A5B9 /* analysis.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C4211103079CF00A3A5B9 /* analysis.cpp */; };
@@ -466,7 +464,6 @@
 		7312974E1030C80A00950418 /* pot_netz.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_netz.h; sourceTree = "<group>"; };
 		7312974F1030C80A00950418 /* pot_rfield.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_rfield.h; sourceTree = "<group>"; };
 		731297501030C80A00950418 /* pot_table.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_table.h; sourceTree = "<group>"; };
-		731297511030C80A00950418 /* pot_table2.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_table2.h; sourceTree = "<group>"; };
 		731297521030C80A00950418 /* pot_test.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_test.h; sourceTree = "<group>"; };
 		731297531030C80A00950418 /* pot_test_rf.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_test_rf.h; sourceTree = "<group>"; };
 		73280BD811419B640054855E /* pkaDH.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pkaDH.cpp; path = src/examples/titration/pkaDH.cpp; sourceTree = "<group>"; };
@@ -705,7 +702,6 @@
 				7312974E1030C80A00950418 /* pot_netz.h */,
 				7312974F1030C80A00950418 /* pot_rfield.h */,
 				731297501030C80A00950418 /* pot_table.h */,
-				731297511030C80A00950418 /* pot_table2.h */,
 				731297521030C80A00950418 /* pot_test.h */,
 				731297531030C80A00950418 /* pot_test_rf.h */,
 			);
@@ -988,7 +984,6 @@
 				731297601030C80A00950418 /* pot_netz.h in Headers */,
 				731297611030C80A00950418 /* pot_rfield.h in Headers */,
 				731297621030C80A00950418 /* pot_table.h in Headers */,
-				731297631030C80A00950418 /* pot_table2.h in Headers */,
 				731297641030C80A00950418 /* pot_test.h in Headers */,
 				731297651030C80A00950418 /* pot_test_rf.h in Headers */,
 				732812EE1146D4ED0054855E /* crankshaft.h in Headers */,
@@ -1060,7 +1055,6 @@
 				739C440B10314D6300A3A5B9 /* pot_netz.h in Headers */,
 				739C440C10314D6300A3A5B9 /* pot_rfield.h in Headers */,
 				739C440D10314D6300A3A5B9 /* pot_table.h in Headers */,
-				739C440E10314D6300A3A5B9 /* pot_table2.h in Headers */,
 				739C440F10314D6300A3A5B9 /* pot_test.h in Headers */,
 				739C441010314D6300A3A5B9 /* pot_test_rf.h in Headers */,
 			);

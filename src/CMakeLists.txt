@@ -12,6 +12,13 @@ set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 #----- xdrfile static library for gromacs output -----
 add_subdirectory(xdrfile)
 
+if(HAVETR1)
+  add_definitions(-DHAVETR1)
+  if(ENABLE_TWISTER)
+    add_definitions(-DMERSENNETWISTER)
+  endif(ENABLE_TWISTER)
+endif(HAVETR1)
+
 #----- link with openbabel ------
 if(ENABLE_BABEL AND OPENBABEL_FOUND)
   set(objs ${objs} iobabel)

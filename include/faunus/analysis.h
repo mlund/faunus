@@ -226,23 +226,25 @@ namespace Faunus {
 
   class aggregation :public analysis {
     private:
-      vector<macromolecule*> g;
-      vector<average<double> > RG2;
-      container *con;
-      vector<int> dist;  // Vector to store the histogram
-      vector<macromolecule*> agg;
-      vector<macromolecule*> unagg;
-      double CNT;
-      hardsphere coll;
-      double sep;
-    public:
+      vector<macromolecule*> g;      // Vector of pointers to all macro.mol. in analysis
+      vector<average<double> > RG2;  // Average radius of gyration square of N-particle cluster
+      container *con;                // Pointer to the container
+      vector<int> dist;              // Vector to store the histogram
+      vector<macromolecule*> agg;    // Vector of pointers to molecules in aggregate
+      vector<macromolecule*> unagg;  // --  //  -- to those not yet identified in a aggregate
+      double CNT;                    // Counter
+      hardsphere coll;               // Hardsphere booleans to define aggregates
+      double sep;                    // Cluster definition, every mol. sep. by less than this
+    public:                          // (in between any 'atom') is considered part of an aggregate
       aggregation(container &, vector<macromolecule> &i, double);
-      void count();
-      void write(string);
-      string info() {
+      void count();                  // Update the averages and histogram
+      void write(string);            // Print result to 'string'
+      string info() {                // Info
         std::ostringstream o;
         o << endl
-          << "# AGGREGATION COUNT"<< endl<<endl;
+          << "# AGGREGATION COUNT"<< endl
+          << "#     Cluster definition = "<<sep<<" AA"<<endl
+          << "#     Analysis performed "<<CNT<<" times."<<endl;
         return o.str();
       }
   };

@@ -2,6 +2,7 @@
 #define FAU_CLUSTERMOVE_H
 
 #include "faunus/moves/base.h"
+#include "faunus/hardsphere.h"
 #include "faunus/energy/reactionfield.h"
 #include "faunus/potentials/pot_test.h"
 
@@ -32,8 +33,8 @@ namespace Faunus {
       int FLOW;               // control variable
       string info();
   };
-
-  *!
+*/
+ /*!
     * This type of move will attempt to move collective sets of macromolecules that
     * obeys some criteria (here a hardcore overlap) with a symmetric transition
     * matrix (no flow through the clusters).
@@ -41,24 +42,25 @@ namespace Faunus {
     * \brief Quick and dirty rotational cluster move
     * \warning This rutine is only compatible for systems containing a set of macromolecules!
     *
-    *
+    */
     class clusterrotate : public markovmove {
       public: 
         clusterrotate( ensemble&, container&, energybase&);
         double move(vector<macromolecule> &); 
         vector<int> cluster;    //! Index vector for macromolecule number in cluster
         vector<int> free;       //! Index vector for 'free' macromolecules
-        vector<int> nacc;
-        vector<int> ntrial ;
-        int np;                 //! Number of particles in config.
-        bool decreasing(int, int);
-        void sort(vector<macromolecule> &);  //function to sort macromolecules in to two classes, cluster and free
-        void flowcheck(vector<macromolecule> &); //ensure detailed balance
-        hardsphere coll;
-        double sep, angle;             // separation parameter
-        int FLOW;               // control variable
+        vector<int> nacc;       //! Local acceptance counter
+        vector<int> ntrial ;    //! Local trial counter
+        int np;                                  //! Number of particles in config.
+        bool decreasing(int, int);               
+        void sort(vector<macromolecule> &);      //! function to sort macromolecules in to two classes, cluster and free, from a random seed
+        void flowcheck(vector<macromolecule> &); //! ensure detailed balance, no flux through the cluster
+        hardsphere coll;                         //! used to define clusters
+        double sep, angle;                       //! separation parameter(defines the clustering distance) and angle to rotate around
+        int FLOW;                                //! check parameter
         string info();
-    };*/
+        void print();                            //! Debug-info
+    };
 
   // Non-rejective cluster inversion. Minor testing suggest that 
   // the algorithm is ok.

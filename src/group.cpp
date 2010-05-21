@@ -527,7 +527,7 @@ namespace Faunus {
    * \warning Ej bijektiv avbildning med periodiska randvilkor. Anvand bindningsvektorer
    */
   void macromolecule::rotate(container &par, point cr, point u, double angle) {
-    point b;
+    point b,c;
     double cosang, sinang, eb;
     double e1mcox, e1mcoy, e1mcoz;
 
@@ -536,11 +536,17 @@ namespace Faunus {
     e1mcox=(1.-cosang)*u.x;
     e1mcoy=(1.-cosang)*u.y;
     e1mcoz=(1.-cosang)*u.z;
+//    c=par.vdist(cm,cr);
+//    for (int i=beg; i<=end; i++) {        // Unwrap the boundary conditions 
+  //    par.trial[i]=cm+par.vdist(par.p[i],cm);
+    //}
+
     for (short i=beg; i<=end; i++) {
-      b.x=par.p[i].x - cr.x;              // translate to cr...
-      b.y=par.p[i].y - cr.y;
-      b.z=par.p[i].z - cr.z;
+      b.x=par.trial[i].x - cr.x;              // translate to cr...
+      b.y=par.trial[i].y - cr.y;
+      b.z=par.trial[i].z - cr.z;
       par.boundary(b);                    // Apply boundary conditions
+      // No, wait a second
       eb=u.x*b.x + u.y*b.y + u.z*b.z;
       par.trial[i].x=e1mcox*eb+cosang*b.x+sinang*(u.y*b.z - u.z*b.y) + cr.x;
       par.trial[i].y=e1mcoy*eb+cosang*b.y+sinang*(u.z*b.x - u.x*b.z) + cr.y;

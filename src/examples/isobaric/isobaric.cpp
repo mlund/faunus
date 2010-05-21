@@ -65,6 +65,8 @@ int main() {
   transrot mtr(nvt, cell, pot);           //   Class for simultaneous macromolecular translation and rotation
   transrot mtrL(nvt, cell, pot);          //   Class for simultaneous macromolecular translation and rotation
   clustertrans ct(nvt, cell, pot, g);     //   Class for non-rejective cluster translation
+  clusterrotate cr(nvt, cell, pot);       //   Class for flux-rejective cluster rotation
+  cr.sep=in.getflt("cluster_sep",2.0);    //   Set cluster definition (move to constructor)
   ct.skipEnergyUpdate=in.getboo("skipEnergyUpdate",false);
 
   isobaricPenalty<Tpot> vol(
@@ -85,6 +87,9 @@ int main() {
   vol.dp=in.getflt("voldp");
   mr.dp =in.getflt("mrdp");
   ct.dp=in.getflt("ctdp");
+  cr.dp=in.getflt("crdp");
+  mtr.dpr=mtrL.dpr=in.getflt("mrdp");
+
 #ifdef XYPLANE
   mt.dpv.z=0;
 #endif
@@ -98,18 +103,18 @@ int main() {
   systemenergy sys(usys);   // System energy analysis
   
   histogram lendist(in.getflt("binlen",1.) ,in.getflt("minlen"), in.getflt("maxlen"));             
-  aggregation agg(cell, g, 1.5);
+  aggregation agg(cell, g, in.getflt("aggdef",1.5) );
   distributions dist(in.getflt("binlen",1.),in.getflt("minlen"), in.getflt("maxlen"));
 
-  FAUrdf protrdf(0,0,.5,cell.len/2.);   // Protein and salt radial distributions
+  FAUrdf protrdf(0,0,2.0,cell.len/2.);   // Protein and salt radial distributions
   FAUrdf protrdf11(0,0,.5,cell.len/2.); // Protein and salt radial distributions
   FAUrdf protrdf22(0,0,.5,cell.len/2.); // Protein and salt radial distributions
   FAUrdf protrdf12(0,0,.5,cell.len/2.); // Protein and salt radial distributions
 
   // Switch parameters
-  double sum, volr, tr, rr, clt, randy=-1;
-  volr = in.getflt("volr"), tr=in.getflt("tr"), rr=in.getflt("rr"), clt=in.getflt("clt");
-  sum  = volr+tr+rr+clt, volr/=sum, tr/=sum, rr/=sum, clt/=sum;
+  double sum, volr, tr, rr, clt, clr, randy=-1;
+  volr = in.getflt("volr"), tr=in.getflt("tr"), rr=in.getflt("rr"), clt=in.getflt("clt"), clr=in.getflt("clr");
+  sum  = volr+tr+rr+clt+clr, volr/=sum, tr/=sum, rr/=sum, clt/=sum, clr/=sum;
   int switcher=-1;
 
   // Help variables
@@ -155,6 +160,22 @@ int main() {
       if (randy<clt+volr+rr+tr && randy>volr+rr+tr)// Cluster translation
         sys+=ct.move(g);                          //   Do the move.
 
+      if (randy<clt+volr+rr+tr+clr && randy>volr+rr+tr+clt) {
+        sys+=cr.move(g);                          //  Cluster rotation
+
+      // Debug-code, leave this for a short while, spurius results in connection to clusterrotation
+/*        for (int i=0; i<g.size()-1; i++)
+          for (int j=i+1; j<g.size(); j++)
+            usys+=pot.energy(cell.p, g[i], g[j]);
+        sys.update(usys);                           // Update system energy averages
+        if (abs(sys.sum-sys.cur)>0.0001)
+          cr.print();
+        for (int i=0; i<cr.cluster.size();i++)
+          cout <<" "<<g[cr.cluster[i]].cm;
+        cout <<endl;
+
+      }*/
+      // End debug
       dist.add("aveenergy", cell.len, sys.sum);
 
       if (movie==true && slump.random_one()>.995 && macro>1)
@@ -235,7 +256,7 @@ int main() {
 
   cout << "----------- FINAL INFORMATION -----------" << endl
     << loop.info() << sys.info() << agg.info() << vol.info()
-    << mtr.info() << mtrL.info() << ct.info() << pot.info() //<< mt.info() << mr.info()
+    << mtr.info() << mtrL.info() << ct.info() << cr.info() << pot.info() //<< mt.info() << mr.info()
     << endl
     << "#   Final      side length  = " << cell.len << endl
     << "#   Ideal     <side length> = " << pow( double( g.size() ) / in.getflt("pressure" ),1./3.)<<endl

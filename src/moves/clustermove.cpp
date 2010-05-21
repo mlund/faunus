@@ -305,17 +305,28 @@ namespace Faunus {
     }
     return o.str();
   }
-
+*/
   //---------- ROTATE CLUSTER OF MACROMOLECULE ----------------
   clusterrotate::clusterrotate( ensemble &e,
-      container &c, interaction<T_pairpot> &i ) : markovmove(e,c,i) {
+      container &c, energybase &i ) : markovmove(e,c,i) {
     name = "MACROMOLECULAR CLUSTER ROTATION";
     runfraction=0.8;
     deltadp=1.;
     dp=0.5;
     nacc.assign(30,0);
     ntrial.assign(30,0);
-  };
+  }
+
+  void clusterrotate::print() {
+    std::cout <<" Index's in 'cluster': ";
+    for (int i=0; i<cluster.size(); i++)
+      std::cout <<cluster[i]<<", ";
+    std::cout <<endl;
+    std::cout <<" Index's in 'free': ";
+    for (int i=0; i<free.size(); i++)
+      std::cout <<free[i]<<", ";
+    std::cout <<endl<<endl;
+  }
 
   double clusterrotate::move(vector<macromolecule> &g) {
     du=0;
@@ -334,26 +345,56 @@ namespace Faunus {
 
     ntrial[iend]++;
 
+/*    if (cluster.size()>1) {
+      std::cout <<" Distance between centers of mass before rotation"<<endl;
+      for (short i=0; i<iend-1; i++) {
+        point cmp;
+        for (short j=i+1; j<iend; j++) {
+          std::cout<<con->dist(g[cluster[i]].cm,g[cluster[j]].cm)<<"   ";
+          //std::cout <<cmp<<"   ";
+        }
+      }
+      std::cout<<endl;
+    }*/
+
+
     for (short i=0; i<iend; i++)
       g[cluster[i]].rotate(*con, cr, p, angle );
     flowcheck(g);
     for (short i=0; i<iend; i++) {
-      if (con->collision(g[i].cm_trial)==true || FLOW!=0 || cluster.size()>3) {
+      if (con->collision(g[cluster[i]].cm_trial)==true || FLOW!=0) {  //   || cluster.size()>3) {
         rc=HC;
         dpsqr+=0;
         for (short i=0; i<iend; i++)
-          g[i].undo(*con);
+          g[cluster[i]].undo(*con);
         return du;
       }
     }
-    double Unew, Uold;
-    //  #pragma omp parallel for reduction (+:Uold) reduction (+:Unew) num_threads(4)
+    double Unew, Uold, dUcheck;
+    Unew=Uold=dUcheck=0.0;
     for (short i=0; i<iend; i++)
       for (short j=0; j<jend; j++) {
         Uold+= pot->energy( con->p, g[cluster[i]], g[free[j]] );
         Unew+= pot->energy( con->trial, g[cluster[i]], g[free[j]] );
       }
     du = Unew-Uold;
+/*    if (cluster.size()>1) {
+      std::cout <<" Distance between centers of mass after rotation"<<endl;
+      for (short i=0; i<iend-1; i++) {
+        point cmp;
+        for (short j=i+1; j<iend; j++) {
+          dUcheck+=pot->energy( con->trial, g[cluster[i]], g[cluster[j]] ) - pot->energy( con->p, g[cluster[i]], g[cluster[j]] ) ;
+          std::cout<<con->dist(g[cluster[i]].cm_trial,g[cluster[j]].cm_trial)<<"   ";
+          //std::cout <<cmp<<"   ";
+        }
+      }
+      std::cout<<endl;
+      std::cout <<" Energy difference in cluster = "<<dUcheck<<endl<<endl;
+    }*/
+    
+
+
+
     if (ens->metropolis(du)==true) {
       rc=OK;
       utot+=du;
@@ -375,6 +416,11 @@ namespace Faunus {
     return (i>j);
   } 
 
+/*  bool clusterrotate::reversible(point &p, group &g) {
+    for (int i=g.beg; i<=g.end; i++)
+
+  }*/
+
   void clusterrotate::flowcheck(vector<macromolecule> &g) {
     short int iend=cluster.size();
     short int jend=free.size();
@@ -393,7 +439,7 @@ namespace Faunus {
       free.push_back(i);
     }
 
-    int seed=slp.random_one()*nprot;              //pick seed
+    int seed=slp.random_one()*nprot;            //pick seed
     cluster.push_back(seed);                    //place it in cluster
     free.erase(free.begin() + seed);            //and remove it from the free
     for (short s=0; s<cluster.size(); s++)
@@ -411,7 +457,7 @@ namespace Faunus {
   string clusterrotate::info() {
     ostringstream o;
     o << markovmove::info();
-    o << "#   CLUSTER SIZES "<<endl
+    o << "#   CLUSTER SIZES || Cluster separation is set to "<<sep<<" AA<<endl
       << "# --------------------------------------------------------------" <<endl;
     for (short int i=0; i<30; i++) {
       if (ntrial[i]!=0)
@@ -420,7 +466,7 @@ namespace Faunus {
     }
     return o.str();
   }
-  *  clusterinv::clusterinv( ensemble &e, container &c, interaction<T_pairpot> &i) : markovmove(e,c,i) {
+ /*  clusterinv::clusterinv( ensemble &e, container &c, interaction<T_pairpot> &i) : markovmove(e,c,i) {
     name = "REJECTION FREE INVERTATIONS, Explicitly writen for spce water!!!";
     runfraction=0;
   }

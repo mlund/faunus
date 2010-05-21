@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
   macrorot r(nmt, con, pot);
   r.dp=in.getflt("glu3_rotdp", 1);
   zmove z(nmt, con, pot);
-  z.zmax=100;
+  z.zmax=0;
   z.dp=in.getflt("glu3_zdp",10);
   // RESTART?
   if(nmt.load(con, "gcgroup.conf")==true)

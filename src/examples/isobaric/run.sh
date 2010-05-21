@@ -16,6 +16,7 @@ voldp         $voldp
 mrdp          $mrdp
 mtdp          $mtdp
 ctdp          $ctdp
+crdp          $crdp
 pressure      $pressure
 e_r           $e_r
 debyelen      $debyelen
@@ -29,6 +30,8 @@ volr          $volr
 tr            $tr
 rr            $rr
 clt           $clt 
+clr           $clr
+cluster_sep   $cluster_sep
 penaltyupdate $penaltyupdate
 scalepen      $scalepen 
 threshold_g2g 40
@@ -39,28 +42,31 @@ movie         $movie"> isobaric.conf
 #--- Input parameters ---
 macrosteps=10
 microsteps=1
-boxlen=384.945
-LJeps=0.2
-nprot1=50
-protein1="a.aam"
-nprot2=50
+boxlen=250
+LJeps=0.5
+nprot1=20
+protein1="lysozyme250mM.ph4.5.aam"
+nprot2=0
 protein2="b.aam"
 #--- Markov Parameters ---
 voldp=0.30        
 mrdp=2.00
 mtdp=30.00
 ctdp=10.00
-volr=1
+crdp=1
+cluster_sep=8.0
+volr=0
 tr=2
 rr=1
 clt=1
+clr=1
 #--- Interactions and potentials
 bjerrum=7.12
-pressure=0.000001
+pressure=0.000024155
 debyelen=42.99
 e_r=78.67
 atomfile=../../../misc/faunatoms.dat
-LJeps=0.30
+LJeps=0.50
 #--- Sampling constrictions and penaltyfunction
 maxlen=1000
 minlen=100
@@ -69,18 +75,19 @@ penalize="no"
 penalty=0.005
 scalepen=1.0
 penaltyupdate="no"
-movie="yes"
+movie="no"
 #--- Variations and execution
 
 #  export OMP_NUM_THREADS=2
 
 #  cp ${suffix}-conf.aam confout.aam
-  suffix="test-pm7"
-  microsteps=100
+  suffix="test-max"
+  microsteps=400  
   mkinput
   ./isobaric > ${suffix}.out
+  exit
   boxlen=$(less ${suffix}.out| grep "#   Final      side length"|awk '{print $ 6}')
-  microsteps=500
+  microsteps=10000
   mkinput
   ./isobaric > ${suffix}.out
   cp confout.aam ${suffix}-conf.aam

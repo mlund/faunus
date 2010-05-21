@@ -177,13 +177,12 @@ namespace Faunus {
     return fio.writefile(name, info() );
   }
 
-  //aggregation
+  //AGGREGATION
   aggregation::aggregation(container &C, vector<macromolecule> &G, double s) {
     con=&C;
     g.clear();
     for (int iter=0;iter<G.size();iter++)
       g.push_back(&(G[iter]));
-    //g=&G;
     CNT=0;
     dist.clear();
     dist.resize(g.size(), 0);

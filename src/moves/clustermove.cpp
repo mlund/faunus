@@ -457,7 +457,7 @@ namespace Faunus {
   string clusterrotate::info() {
     ostringstream o;
     o << markovmove::info();
-    o << "#   CLUSTER SIZES || Cluster separation is set to "<<sep<<" AA<<endl
+    o << "#   CLUSTER SIZES || Cluster separation is set to "<<sep<<" AA"<<endl
       << "# --------------------------------------------------------------" <<endl;
     for (short int i=0; i<30; i++) {
       if (ntrial[i]!=0)

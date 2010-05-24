@@ -10,6 +10,7 @@ namespace Faunus {
   }     
 
   double zmove::move(macromolecule &g) {
+    rc=OK;
     du=0;
     if (slp.runtest(runfraction)==false)
       return du;
@@ -17,7 +18,7 @@ namespace Faunus {
     z=2*dp*slp.random_half();
     g.zmove(*con, z);
     for (int i=g.beg; i<(g.size()+g.beg); i++) { 
-      if (con->collision( con->trial[i] )==true || g.cm_trial.z>zmax) 
+      if (con->collision( con->trial[i] )==true || ( g.cm_trial.z>zmax && z>0 ) )
         rc=HC;
     }
     if (rc==HC) {

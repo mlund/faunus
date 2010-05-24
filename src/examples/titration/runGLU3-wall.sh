@@ -25,7 +25,7 @@ dp_monomer      $dp_monomer
 dp_salt         $dp_salt
 pH              $pH
 pKa_core        $pKa_core
-MUs NA -11.075 CL -11.075
+MUs NA -12.075 CL -12.075
 glu3_rotdp      $glu3_rotdp
 glu3_zdp        $glu3_zdp
 crankshaft_dp   $crankshaft_dp
@@ -38,7 +38,7 @@ crankshaft_num  $crankshaft_num
 #--- Input parameters ---
 polymer="GLU3coarse.mol2"
 macrosteps=10
-microsteps=10000
+microsteps=1000
 cellradius=125.6
 boxlen=250
 zboxlen=250
@@ -53,14 +53,14 @@ protein="calbindin.aam"
 atomfile="faunatoms.dat"
 scratio=0
 headarea=70
-offset=25
+offset=45
 springconstant=1.0
 springeqdist=3.0
 dp_monomer=2
 dp_salt=50
 pKa_core=10
 glu3_rotdp=0.5
-glu3_zdp=0.5
+glu3_zdp=25
 crankshaft_dp=1.0
 crankshaft_min=1
 crankshaft_max=1

@@ -162,7 +162,7 @@ int main() {
 
       if (randy<clt+volr+rr+tr+clr && randy>volr+rr+tr+clt) {
         sys+=cr.move(g);                          //  Cluster rotation
-
+      }
       // Debug-code, leave this for a short while, spurius results in connection to clusterrotation
 /*        for (int i=0; i<g.size()-1; i++)
           for (int j=i+1; j<g.size(); j++)

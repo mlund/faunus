@@ -52,7 +52,7 @@ int main() {
            rdf_catcat(atom["NA"].id, atom["NA"].id, .5, con);
  
   macrorot mr(nvt, con, pot);            // Class for molecular rotations
-  translate mt(nvt, con, pot);           // Class for molecular translations
+  translate mt(nvt, con, pot, in);       // Class for molecular translations
   hypermolecule mol;                     // Some molecule on the hypersphere
   vector<particle> spcmodel;             // ...to be loaded with a single water molecule
   mol.add(con, spcmodel, true);          // add a single molecule to the sphere

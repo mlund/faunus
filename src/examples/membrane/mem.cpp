@@ -27,7 +27,7 @@ int main() {
   ioaam aam;                            //   Protein input file format is AAM
   aam.load(cell, in, g);                //   Load and insert proteins
   macrorot mr(nvt, cell, pot);          //   Class for macromolecule rotation
-  translate mt(nvt, cell, pot);         //   Class for macromolecular translation
+  translate mt(nvt, cell, pot, in);     //   Class for macromolecular translation
 
   salt salt;                            // SALT group
   salt.add(cell, in);                   //   Add salt particles

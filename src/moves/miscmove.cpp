@@ -23,8 +23,7 @@ namespace Faunus {
    * \todo Cell overlap test missing, dp is used both for dr and the angle
    */
   double transrot::move(macromolecule &g) {
-    du=0;
-    cnt++;
+    markovmove::move();
     g.rotate(*con, dpr, dpt); //dpt in ang, dpr in rad./2
     //insert cell overlap test
     for (int i=g.beg; i<=g.end; i++) { 
@@ -65,8 +64,7 @@ namespace Faunus {
    * \todo Cell overlap test missing, dp is used both for dr and the angle
    */
   double transrot::move(vector<macromolecule> &g, int n) {
-    du=0;
-    cnt++;
+    markovmove::move();
     g.at(n).rotate(*con, dpr, dpt); //dpt in ang, dpr in rad./2
     //insert cell overlap test
     for (int i=g[n].beg; i<=g[n].end; i++) { 

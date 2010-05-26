@@ -24,12 +24,12 @@ namespace Faunus {
    *  the move. Unsuccessful moves are automatically undone.
    *
    *  <b>Displacement parameter optimization:</b>\n
-   *  If the dp_opt is set to true the displacement parameter, dp, will be optimized
+   *  If dp_opt is set to true the displacement parameter, dp, will be optimized
    *  to give the highest possible mean square displacement (L^2). This is done by
-   *  randomly generating a displacement parameter within some interval [dpmin:dpmax]
-   *  and sample L^2 500 times. The resulting average will be added to a dp/L^2 table.
+   *  randomly generating a displacement parameter within the interval [dpmin:dpmax]
+   *  and sample L^2 100 times. The resulting average will be added to a dp/L^2 table.
    *  When dp_N displacement parameters has been sampled, dp will be set to the value that gave the
-   *  maximum L^2 and the optimization will subsequently be automatically turned off.
+   *  maximum L^2 and the optimization will automatically be turned off.
    */
   class markovmove {
     
@@ -37,9 +37,10 @@ namespace Faunus {
     int dp_cnt;
     int dp_N;                                   //!< Number of displacement parameters to generate
     double dp_width;                            //!< Granularity of the distribution (same units as dp)
-    double dp_min;                              //!< Minimum allowed displacement paramter
-    double dp_max;                              //!< Maximum allowed displacement paramter
+    double dp_min;                              //!< Minimum allowed displacement parameter
+    double dp_max;                              //!< Maximum allowed displacement parameter
     xytable<double,average<double> > dp_dist;   //!< mean sq. displacement as a function of displacement parameter
+    void init();                                //!< Initialization of variables (called from constructor)
     
   protected:
     bool dp_opt;                                //!< True if displacement parameter should be optimized
@@ -49,14 +50,15 @@ namespace Faunus {
     double utot;                                //!< Sum of energy changes for all moves
     unsigned long long int cnt, naccept;
     string cite;                                //!< Reference to additional info. (article, url etc.)
+    string prefix;                              //!< Inputfile keyword prefix
     container *con;
     ensemble *ens;
     bool run(float);                            //!< Probability
-    virtual void getInput(inputfile &, string); //!< Read parameters from inputfile
+    virtual void getInput(inputfile &);         //!< Read parameters from inputfile
     virtual double newdp();                     //!< Generate new displacement parameter between [dp_min:dp_max]
-    double optimaldp();                         //!< Retrieve optimal displacement parameter from DP/L^2 distribution
     
   public:
+    double optimaldp();                         //!< Retrieve optimal displacement parameter from DP/L^2 distribution
     string name;                                //!< Arbitrary name for the move
     enum keys {OK, ENERGY, HC};
     keys rc;                                    //!< Return code from move() functions

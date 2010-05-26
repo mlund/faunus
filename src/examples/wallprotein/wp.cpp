@@ -36,7 +36,7 @@ int main() {
   monomermove mm(nvt,con,pot,in); // Rattle MC move
   crankShaft cs(nvt,con,pot,in);  // ...crankshaft
   macrorot mr(nvt, con, pot);     // ...rotate
-  translate mt(nvt, con, pot);    // ...translate
+  translate mt(nvt, con, pot, in);// ...translate
   cout << pol.info();
 
   // Handle wall particles

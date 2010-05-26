@@ -47,11 +47,11 @@ namespace Faunus {
       string info();
   };
 
-  //---------- TRANSLATE GROUP ----------------
+  //---------- TRANSLATE MOLECULE ----------------
   class translate : public markovmove {
     public: 
       point dpv;  //!< Displacement vector
-      translate( ensemble&, container&, energybase&);
+      translate( ensemble&, container&, energybase&, inputfile&);
       double move(group &); 
   };
 
@@ -59,14 +59,14 @@ namespace Faunus {
   /*! \brief Random move of a macromolecule in a container 
    *  \todo generalize, it is cubix periodic boundry specific
    *  \author Bjoern Persson
-   */
+   *
   class move : public markovmove {
     private:
       box *b;
     public:
       move( ensemble&, container&, energybase &, box &, float);
       bool mOve(macromolecule &);
-  };
+  };*/
 
   //-------------- SALT MOVE ---------------------------------
   /*! \brief Move salt particles

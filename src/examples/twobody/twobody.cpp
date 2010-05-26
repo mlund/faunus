@@ -10,7 +10,7 @@
  */
 
 #include "faunus/faunus.h"
-#include "faunus/potentials/pot_hscoulomb.h"
+#include "faunus/potentials/pot_coulomb.h"
 
 using namespace Faunus;
 using namespace std;
@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
   mcloop loop(in);                      // Set Markov chain loop lengths
   cell cell(in);                        // We want a spherical, hard cell
   canonical nvt;                        // Use the canonical ensemble
-  interaction<pot_hscoulomb> pot(in);     // Functions for interactions
+  interaction<pot_coulomb> pot(in);     // Functions for interactions
   distributions dst;                    // Distance dep. averages
   FAUrdf saltrdf(atom["NA"].id,atom["CL"].id, .5, cell.r);
   atomicRdf gofr_pp(0.5,200);           // Amino acid rdf between the two proteins
@@ -54,19 +54,26 @@ int main(int argc, char* argv[]) {
   float pH=in.getflt("pH", 7.);         // Specify pH
   chargereg tit(nvt,cell,pot,salt,pH);  // Prepare titration.
   
-  systemenergy sys(pot.energy(cell.p)); // System energy analysis
+  systemenergy sys(
+    pot.energy(cell.p, g[0], g[1]) +
+    pot.energy(cell.p, salt) +
+    pot.internalElectrostatic(cell.p, g[0]) +
+    pot.internalElectrostatic(cell.p, g[1]) +
+    pot.internal(cell.p, salt));                // System energy analysis
 
-  cout << in.info() << cell.info()
-       << tit.info() << pot.info();     // Print information to screen
+  cout << "# ---- Initial information ----" << endl
+       << in.info() << cell.info()
+       << tit.info() << pot.info();             // Print information to screen
 
-  while ( loop.macroCnt() ) {                   //Markov chain 
+  cout << "# ---- Runtime output ----" << endl;
+  while ( loop.macroCnt() ) {                   // Markov chain 
     while (loop.microCnt() ) {
       short i,n;
       switch (rand() % 4) {                     // Pick a random MC move
         case 0:                                 // Displace salt
           sys+=sm.move(salt);                   //   Do the move.
           break;
-        case 10:                                 // Rotate proteins
+        case 1:                                 // Rotate proteins
           for (n=0; n<2; n++) {                 //   Loop over all proteins
             i = rand() % g.size();              //   and pick at random.
             sys+=mr.move(g[i]);                 //   Do the move.
@@ -75,7 +82,7 @@ int main(int argc, char* argv[]) {
         case 2:                                 // Translate proteins
           sys+=dm.move(g[0], g[1]);             //   Do the move.
           break;
-        case 30:                                 // Fluctuate charges
+        case 3:                                 // Fluctuate charges
           sys+=tit.titrateall();                // Titrate sites on the protein
           if (tit.du!=0) {                      // Average charges and dipoles
             dst.add("Q1",dm.r, g[0].charge(cell.p));
@@ -99,8 +106,14 @@ int main(int argc, char* argv[]) {
       if (slp.random_one()>.98 && loop.macro>1)
         xtc.save("coord.xtc", cell.p);          // Save trajectory
     } // End of inner loop
-
-    sys.update(pot.energy(cell.p));             // System energy analysis
+    
+    sys.update(
+      pot.energy(cell.p, g[0], g[1]) +
+      pot.energy(cell.p, salt) +
+      pot.internalElectrostatic(cell.p, g[0]) +
+      pot.internalElectrostatic(cell.p, g[1]) +
+      pot.internal(cell.p, salt));              // System energy analysis
+ 
     cell.check_vector();                        // Check sanity of particle vector
 
     gofr_pp.write("rdfatomic.dat");             // Write interprotein g(r) - Atomic
@@ -115,7 +128,8 @@ int main(int argc, char* argv[]) {
 
   xtc.close();                                  // Close xtc file for writing
 
-  cout << salt.info(cell)                       // Final information...
+  cout << "# ---- Final information ----" << endl
+       << salt.info(cell)
        << sm.info() << mr.info() << dm.info()
        << sys.info() << g[0].info() << g[1].info() << cell.info()
        << tit.info() << bind.info( 1/cell.getvolume() );

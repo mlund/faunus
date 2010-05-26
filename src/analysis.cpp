@@ -31,7 +31,7 @@ namespace Faunus {
   }
   
   void systemenergy::check(checkValue &test) {
-    test.check("systemEnergyAverage", uavg.avg(), 0.2 );
+    test.check("systemEnergyAverage", uavg.avg(), 0.3);
     test.check("systemEnergyDrift", drift(), 20.);
   }
   
@@ -40,11 +40,11 @@ namespace Faunus {
     std::ostringstream o;
     o << endl << "# SYSTEM ENERGY (kT):" << endl;
     if (uavg.cnt>0)
-      o << "#   Average <U> s      = " << uavg.avg() << " " << uavg.stdev() << "\n";
-    o << "#   Initial energy     = " << u0 << endl
-      << "#   Initial + changes  = " << sum << endl
-      << "#   Current energy     = " << cur << endl
-      << "#   Absolute drift     = " << drift() << endl;
+      o << "#   Average <U> s      = " << uavg.avg() << " " << uavg.stdev() << "\n"
+        << "#   Initial energy     = " << u0 << endl
+        << "#   Initial + changes  = " << sum << endl
+        << "#   Current energy     = " << cur << endl
+        << "#   Absolute drift     = " << drift() << endl;
     return o.str();
   }
   

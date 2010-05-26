@@ -2,6 +2,7 @@
 #include "faunus/io.h"
 
 namespace Faunus {
+
   zmove::zmove( ensemble &e, container &c, energybase &i) : markovmove(e,c,i) {
     runfraction=1;
     dp=8;
@@ -60,7 +61,7 @@ namespace Faunus {
     cite.assign("Biophys J. 2003, 85, 2940");
     runfraction=1.0;
     deltadp=1.;
-    dp=1.;
+    dp=3.;
     direction(0,0,1); // move only in z direction
     rmin=0;
     rmax=pow(double(c.getvolume()), 1./3)/2.; // rough estimate from volume
@@ -71,9 +72,10 @@ namespace Faunus {
    * (dm_minsep), maximum separation (dm_maxsep)
    */
   void dualmove::setup( inputfile &in ) {
-    dp = in.getflt("dm_dp",dp);
-    rmin = in.getflt("dm_minsep",rmin);
-    rmax = in.getflt("dm_maxsep",rmax);
+    prefix="dm_";
+    markovmove::getInput(in);
+    rmin = in.getflt(prefix+"minsep",rmin);
+    rmax = in.getflt(prefix+"maxsep",rmax);
   }
 
   /*! Specify unit vector that determines which coordinates
@@ -113,13 +115,12 @@ namespace Faunus {
     o <<  markovmove::info()
       << "#   Min/max separation        = " << rmin << " " << rmax << endl;
     return o.str();
-  } 
+  }
 
   double dualmove::move(macromolecule &g1, macromolecule &g2) {
-    du=0;
     if (dp==0)
-      return du;
-    cnt++;
+      return 0;
+    markovmove::move();
     r=con->dist(g1.cm, g2.cm);
     point p;
     group g12=g1+g2;
@@ -170,23 +171,24 @@ namespace Faunus {
     return du;
   }
 
-  //---------- TRANSLATE GROUP ----------------
+  //---------- TRANSLATE MOLECULE ----------------
   translate::translate( ensemble &e,
-      container &c, energybase &i ) : markovmove(e,c,i) {
+      container &c, energybase &i, inputfile &in) : markovmove(e,c,i) {
     name.assign("MOLECULAR TRANSLATION");
+    prefix.assign("moltrans_");
     runfraction=1.0;
     deltadp=1.;
     dp=10.;
     dpv.x=1;
     dpv.y=1;
     dpv.z=1;
-  };
+    markovmove::getInput(in);
+  }
 
   double translate::move(group &g) {
-    du=0;
     if (slp.runtest(runfraction)==false)
-      return du;
-    cnt++;
+      return 0;
+    markovmove::move();
     point p;
     p.x=dpv.x*dp*slp.random_half();
     p.y=dpv.y*dp*slp.random_half();
@@ -231,7 +233,7 @@ namespace Faunus {
   //-----------MOVE----------------------------------------
   /*! \brief Class to prefom a random walk of a macromolecule in space
    *  \note Replaced by translate(?)
-   */
+   *
   move::move(
       ensemble &e, container &c, energybase &i, box &BOX,float rf) : markovmove(e,c,i) {
     runfraction=rf;
@@ -287,22 +289,23 @@ namespace Faunus {
         con->trial[i] = con->p[i];
       return false;
   }
-
+*/
 
   //-------------- SALT MOVE ---------------------------------
-  saltmove::saltmove(
-      ensemble &e, container &c, energybase &i ) : markovmove(e,c,i) { init(); }
-
-  saltmove::saltmove(
-      ensemble &e, container &c, energybase &i, inputfile &in ) : markovmove(e,c,i) {
+  saltmove::saltmove(ensemble &e, container &c, energybase &i ) : markovmove(e,c,i) {
     init();
-    markovmove::getInput(in,"saltmove_");
+  }
+
+  saltmove::saltmove(ensemble &e, container &c, energybase &i, inputfile &in ) : markovmove(e,c,i) {
+    init();
+    markovmove::getInput(in);
     if (dp<1e-5)
-      dp=in.getflt("dp_salt", 40.);
+      dp=in.getflt("dp_salt", 40.);  // Backwards compatibility...
   }
   
   void saltmove::init() {
     name.assign("SALT DISPLACEMENTS");
+    prefix="saltmove_";
     deltadp=2;
     runfraction=1.0;
     rsqr=0;
@@ -378,17 +381,19 @@ namespace Faunus {
   //------------------------------------------------
 
   monomermove::monomermove(
-      ensemble &e, container &c, energybase &i, inputfile &in ) : saltmove(e,c,i,in) {
+      ensemble &e, container &c, energybase &i, inputfile &in ) : saltmove(e,c,i) {
     init();
-    dp=in.getflt("dp_monomer", 3.);
+    prefix.assign("monomer_");
     name.assign("MONOMER DISPLACEMENTS");
+    markovmove::getInput(in);
+    if (dp<1e-5)
+      dp=in.getflt("dp_monomer", 3.); // backwards compatibility...
   }
 
   double monomermove::move(polymer &g) {
-    du=0;
     if (slp.runtest( runfraction )==false || g.size()==0)
-      return du;
-    cnt++;
+      return 0;
+    markovmove::move();
     int n=g.displace(*con, dpv*dp); 
     if (con->collision( con->trial[n] )==true)
       rc=HC;

@@ -61,7 +61,7 @@ int main() {
 
   // Markovsteps
   macrorot mr(nvt, cell, pot);            //   Class for macromolecule rotation
-  translate mt(nvt, cell, pot);           //   Class for macromolecular translation
+  translate mt(nvt, cell, pot, in);       //   Class for macromolecular translation
   transrot mtr(nvt, cell, pot);           //   Class for simultaneous macromolecular translation and rotation
   transrot mtrL(nvt, cell, pot);          //   Class for simultaneous macromolecular translation and rotation
   clustertrans ct(nvt, cell, pot, g);     //   Class for non-rejective cluster translation

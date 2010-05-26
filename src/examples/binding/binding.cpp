@@ -26,7 +26,7 @@ int main() {
   aam.load(cell, in, g);                //   Load and insert proteins
   g[0].center(cell);                    //   Center first protein (will be frozen)
   macrorot mr(nvt, cell, pot);          //   Class for macromolecule rotation
-  translate mt(nvt, cell, pot);         //   Class for macromolecular translation
+  translate mt(nvt, cell, pot, in);     //   Class for macromolecular translation
   salt salt;                            // SALT group
   salt.add(cell, in);                   //   Add salt particles
   saltmove sm(nvt, cell, pot);          //   Class for salt movements

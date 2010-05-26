@@ -1,0 +1,10 @@
+#!/bin/bash
+cd `dirname $0`
+exe="../../src/examples/widom/widom_sphere"
+if [ -x $exe ]; then
+  cp test.start widom.aam
+  OMP_NUM_THREADS=1 $exe test.conf
+  exit
+fi
+exit 1
+

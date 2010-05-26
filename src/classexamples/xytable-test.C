@@ -1,8 +1,10 @@
 #include <iostream>
-#include "../average.h"
-#include "../xytable.h"
+#include <algorithm>
+#include "faunus/average.h"
+#include "faunus/xytable.h"
 
 using namespace std;
+using namespace Faunus;
 
 int main() {
   xytable<float,int> f(0.1, -10);

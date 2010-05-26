@@ -296,9 +296,11 @@ namespace Faunus {
   saltmove::saltmove(
       ensemble &e, container &c, energybase &i, inputfile &in ) : markovmove(e,c,i) {
     init();
-    dp=in.getflt("dp_salt", 40.);
+    markovmove::getInput(in,"saltmove_");
+    if (dp<1e-5)
+      dp=in.getflt("dp_salt", 40.);
   }
-
+  
   void saltmove::init() {
     name.assign("SALT DISPLACEMENTS");
     deltadp=2;
@@ -325,8 +327,7 @@ namespace Faunus {
   double saltmove::move(group &g, int n) {
     if (g.size()==0 || dp<1e-5)
       return 0;
-    du=0;
-    cnt++;
+    markovmove::move();
     n=g.displace(*con, dpv*dp); 
     //std::swap(con->p[n], con->p[0]);
     //std::swap(con->trial[n], con->trial[0]);

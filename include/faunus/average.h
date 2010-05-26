@@ -26,6 +26,7 @@ namespace Faunus {
         average & operator+=(T);        ///< Add value to current set. 
         average operator+(const average &);///< Add two averages
         bool operator==(const average &);  ///< Comparison operator
+        bool operator<(const average &);
         //! Example of average class
         //! \example average-test.C
     };
@@ -56,6 +57,8 @@ namespace Faunus {
     }
   template<class T>
     bool average<T>::operator==(const average &a) { return (*this==a); }
+  template<class T>
+    bool average<T>::operator < (const average &a) { return avg() < a.sum/a.cnt; }
   template<class T>
     T average<T>::rms() { return sqrt(sqsum/cnt); }
   template<class T>

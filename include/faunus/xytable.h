@@ -52,6 +52,7 @@ class xytable {
     }
 
   public:
+    typedef typename std::vector<TY>::iterator yiter;
     std::vector<TY> y; 
     TX xres,            //!< Distance between x values
        xmin;            //!< Minimum x value
@@ -70,6 +71,13 @@ class xytable {
         y.resize( int(std::abs(xmaximum-xminimum)/resolution) );
     }
 
+    //! Returns the x value with the highest y value 
+    TX x_atmax_y() {
+      yiter iter = std::max_element( y.begin(), y.end() );
+      int i=iter-y.begin();  // convert iterator to index integer
+      return i*xres + xmin;
+    }
+    
     //! Convenient data access
     TY& operator()(TX val) { return y.at( x2i(val) ); }
 

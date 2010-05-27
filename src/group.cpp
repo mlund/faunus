@@ -751,6 +751,19 @@ namespace Faunus {
     return o.str();
   }
 
+  string polymer::getVMDBondScript() {
+    std::ostringstream o;
+    for (int i=0; i<nb.size()-1; i++) {
+      o << "set sel [atomselect top \"index " << i+beg << "\"]" << endl
+        << "$sel setbonds [list { ";
+      for (int j=i+1; j<nb[i].size(); j++) {
+        o << nb[i][j] << " ";
+      }
+      o << "}]" << endl;
+    }
+    return o.str(); 
+  }
+
   popscmembrane::popscmembrane() {}
 
   string popscmembrane::info() {

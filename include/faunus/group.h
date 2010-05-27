@@ -143,6 +143,7 @@ namespace Faunus {
       vector<unsigned short> neighbors(unsigned short) const;
       string info();
       bool areneighbors(unsigned short, unsigned short) const;
+      string getVMDBondScript();                 //!< Print TCL script for VMD to create bonds
 #ifdef BABEL
       bool babeladd( container &, inputfile & ); //!< Load molecule from disk using OpenBabel
 #endif

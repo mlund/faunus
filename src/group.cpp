@@ -751,12 +751,21 @@ namespace Faunus {
     return o.str();
   }
 
+  /*!
+   * This will generate a set of VMD commands that will
+   * create bonds between neighboring monomers. This can
+   * conveniently be put into a tcl script file. VMD can
+   * subsequently be started with:\n
+   *
+   * vmd confout.pqr -e vmdbonds.tcl
+   *
+   */
   string polymer::getVMDBondScript() {
     std::ostringstream o;
-    for (int i=0; i<nb.size()-1; i++) {
+    for (int i=0; i<nb.size(); i++) {
       o << "set sel [atomselect top \"index " << i+beg << "\"]" << endl
         << "$sel setbonds [list { ";
-      for (int j=i+1; j<nb[i].size(); j++) {
+      for (int j=0; j<nb[i].size(); j++) {
         o << nb[i][j] << " ";
       }
       o << "}]" << endl;

@@ -1,4 +1,6 @@
 #include <faunus/moves/saltbath.h>
+#include <faunus/physconst.h>
+
 namespace Faunus {
   // Constructor
   saltbath::saltbath( grandcanonical &gc,
@@ -237,9 +239,9 @@ namespace Faunus {
         <<g[pairs[i].i].name <<" : "<< std::setw(8)<<g[pairs[i].j].name
         <<"("<<pairs[i].ni <<":"<<pairs[i].nj<<")";
         if (cnt!=0)
-          o<<"   [ "<<pairs[i].ai.avg()/con->getvolume()*1660<<" M : "<<pairs[i].aj.avg()/con->getvolume()*1660<<std::setw(9)<<std::left<<" M ] ";
+          o<<"   [ "<<pairs[i].ai.avg()/con->getvolume()*1e27/pyc.Nav<<" M : "<<pairs[i].aj.avg()/con->getvolume()*1e27/pyc.Nav<<std::setw(9)<<std::left<<" M ] ";
         o << "{"<<g[pairs[i].i].size()<<":"<<g[pairs[i].j].size()<<"}  "<<"<"<<pairs[i].inacc.avg()<<":"<< pairs[i].outacc.avg()<<"> %";
-        o << "| Chem.Pot. " << atom[g[pairs[i].i].name].chempot<<" : "<< atom[g[pairs[i].j].name].chempot <<" kT ( -ln(AA^3) )"<<endl;
+        o << "| Chem.Pot. " << atom[g[pairs[i].i].name].chempot<<" : "<< atom[g[pairs[i].j].name].chempot <<" [ -kTln(AA^3) ]"<<endl;
       }
     }
     return o.str();

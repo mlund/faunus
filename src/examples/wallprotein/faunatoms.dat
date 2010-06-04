@@ -37,5 +37,6 @@ Atom  GLY      0     3.5    0.1    1     0.0    no
 # Ions
 Atom  NA      +1     1.2    0.2179 1     0.0    no
 Atom  CL      -1     2.17   0.1689 1     0.0    no
+Atom  WNA     +1     1.2    0.2179 1     0.0    no
 
 

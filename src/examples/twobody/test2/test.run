@@ -1,6 +1,6 @@
 #!/bin/bash
 cd `dirname $0`
-exe="../twobodyDHDP"
+exe="../twobodyDH"
 if [ -x $exe ]; then
   cp test.start confout.aam
   rm confout.aam

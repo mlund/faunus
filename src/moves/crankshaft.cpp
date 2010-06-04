@@ -88,8 +88,12 @@ namespace Faunus {
     for (int i=0; i<v.size(); i++)
       con->trial[v[i]] = rot.rotate( con->p[v[i]] );
 
-    for (int i=0; i<v.size(); i++)
-      du += pot->u_monomer(con->trial,g,v[i]) - pot->u_monomer(con->p,g,v[i]);
+    for (int i=0; i<v.size(); i++) {
+      if (con->collision(con->trial[v[i]])==true) {
+        du=1e3;
+        break;
+      } else du += pot->u_monomer(con->trial,g,v[i]) - pot->u_monomer(con->p,g,v[i]);
+    }
 
     if (ens->metropolis(du)==true) {
       rc=OK;
@@ -97,6 +101,7 @@ namespace Faunus {
       naccept++;
       for (int i=0; i<v.size(); i++)
         con->p[v[i]] = con->trial[v[i]];
+      g.masscenter(con->p);
       return du;
     } else rc=ENERGY;
     du=0;

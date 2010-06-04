@@ -36,6 +36,8 @@ namespace Faunus {
       dp_width = in.getflt(prefix+"dpwidth", dp_width);
       dp_N     = in.getint(prefix+"dpsamples", dp_N);
       dp_dist.init(dp_width, dp_min, dp_max);
+      if (dp<dp_min || dp>dp_max)
+        std::cerr << "Warning: " << prefix << "dp is out of range!" << endl;
     }
   }
 

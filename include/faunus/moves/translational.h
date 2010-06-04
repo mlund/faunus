@@ -50,9 +50,10 @@ namespace Faunus {
   //---------- TRANSLATE MOLECULE ----------------
   class translate : public markovmove {
     public: 
-      point dpv;  //!< Displacement vector
+      point dpv;              //!< Displacement vector
       translate( ensemble&, container&, energybase&, inputfile&);
-      double move(group &); 
+      double move(group &);   //!< Translate while group
+      string info();          //!< Info string
   };
 
   //-----------MOVE----------------------------------------
@@ -79,7 +80,7 @@ namespace Faunus {
     public:
       point dpv;                      //!< Displacement direction vector
       saltmove( ensemble &, container&, energybase& );
-      saltmove( ensemble &, container&, energybase&, inputfile &);
+      saltmove( ensemble &, container&, energybase&, inputfile &, string="");
       double move(group &, int);      //!< Move a single particle
       double move(group &);           //!< Loop over group particles (randomly)
       string info();
@@ -91,7 +92,7 @@ namespace Faunus {
    */
   class monomermove : public saltmove {
     public:
-      monomermove(ensemble &, container&, energybase&, inputfile&);
+      monomermove(ensemble &, container&, energybase&, inputfile&, string="");
       double move(polymer &);      //!< Move a single monomer particle
   };
 }//namespace

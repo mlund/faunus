@@ -185,6 +185,13 @@ namespace Faunus {
     markovmove::getInput(in);
   }
 
+  string translate::info() {
+    ostringstream o;
+    o << markovmove::info()
+      << "#   Displacement directions   = " << dpv.x << " " << dpv.y << " " << dpv.z << endl;
+    return o.str();
+  }
+
   double translate::move(group &g) {
     if (slp.runtest(runfraction)==false)
       return 0;
@@ -196,8 +203,10 @@ namespace Faunus {
     g.move(*con, p); 
     bool hc=false;
     for (int i=g.beg; i<=g.end; i++) {
-      if(con->collision(con->trial[i]))
+      if (con->collision(con->trial[i])==true) {
         hc=true;
+        break;
+      }
     }
     if (hc==true) {
       rc=HC;
@@ -292,11 +301,16 @@ namespace Faunus {
 */
 
   //-------------- SALT MOVE ---------------------------------
-  saltmove::saltmove(ensemble &e, container &c, energybase &i ) : markovmove(e,c,i) {
+  saltmove::saltmove(ensemble &e, container &c, energybase &i) : markovmove(e,c,i) {
     init();
   }
 
-  saltmove::saltmove(ensemble &e, container &c, energybase &i, inputfile &in ) : markovmove(e,c,i) {
+  /*!
+   * \param in        Inputfile object
+   * \param p         Prefix for keywords in inputfile
+   */
+  saltmove::saltmove(ensemble &e, container &c, energybase &i, inputfile &in, string p) : markovmove(e,c,i) {
+    prefix=p;
     init();
     markovmove::getInput(in);
     if (dp<1e-5)
@@ -305,7 +319,8 @@ namespace Faunus {
   
   void saltmove::init() {
     name.assign("SALT DISPLACEMENTS");
-    prefix="saltmove_";
+    if (prefix.empty()==true)
+      prefix="saltmove_";
     deltadp=2;
     runfraction=1.0;
     rsqr=0;
@@ -381,9 +396,12 @@ namespace Faunus {
   //------------------------------------------------
 
   monomermove::monomermove(
-      ensemble &e, container &c, energybase &i, inputfile &in ) : saltmove(e,c,i) {
+      ensemble &e, container &c, energybase &i, inputfile &in, string p) : saltmove(e,c,i) {
     init();
-    prefix.assign("monomer_");
+    if (p.empty()==true)
+      prefix.assign("monomer_");
+    else
+      prefix.assign(p);
     name.assign("MONOMER DISPLACEMENTS");
     markovmove::getInput(in);
     if (dp<1e-5)
@@ -398,6 +416,8 @@ namespace Faunus {
     if (con->collision( con->trial[n] )==true)
       rc=HC;
     else {
+      //uold = pot->energy(con->p, g) + pot->uself_polymer(con->p, g);
+      //unew = pot->energy(con->trial, g) + pot->uself_polymer(con->trial, g);
       uold = pot->u_monomer(con->p, g, n);   
       unew = pot->u_monomer(con->trial, g, n);   
       du = unew - uold;

@@ -90,7 +90,7 @@ namespace Faunus {
         return o.str();
       }
   };
-  class pot_debyehuckelXYcc : public pot_lj {
+  class pot_debyehuckelXYcc : public pot_lj, public pot_harmonic {
     private:
       double halfbox,box;
       double zbox, zhalfbox;
@@ -98,7 +98,7 @@ namespace Faunus {
       string name;
       double k,I,c,c2,rho2,scd;
       double hphoba,hphobr, hphobmax;
-      pot_debyehuckelXYcc( inputfile &in ) : pot_lj(in) {
+      pot_debyehuckelXYcc( inputfile &in ) : pot_lj(in), pot_harmonic(in) {
         name+="Screened Columb/LJ w. minimum image (XY, only) and cylindrical cutoff\n#            external correction and hyrdophobic interaction ";
         f=in.getflt("bjerrum",7.1);
         box=in.getflt("boxlen");
@@ -157,6 +157,16 @@ namespace Faunus {
         if (dy>halfbox) dy-=box;
         return dx*dx + dy*dy + dz*dz;
       }
+      inline double bond(particle &p1, particle &p2) {
+        double r=sqrt(sqdist(p1,p2));
+        double u=harmonicbond(p1,p2,r)/f;
+        p1.radius*=0.5;
+        p2.radius*=0.5;
+        u+=pairpot(p1,p2);
+        p1.radius*=2;
+        p2.radius*=2;
+        return u;
+      }
       string info() {
         std::ostringstream o;
         o << "#   Type              = " << name << std::endl
@@ -167,7 +177,8 @@ namespace Faunus {
           << "#   Bjerrum length    = " << f << std::endl
           << "#   Screening length  = " << 1./k << std::endl
           << "#   4*LJ epsilon      = " <<f*eps<<std::endl
-          << "#   Image length      = " << box << std::endl;
+          << "#   Image length      = " << box << std::endl
+          << pot_harmonic::info();
         return o.str();
       }
   };

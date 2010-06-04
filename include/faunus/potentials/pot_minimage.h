@@ -45,27 +45,31 @@ namespace Faunus {
       }
   };
 
-  class pot_r12minimageXY {
+  class pot_r12minimageXY : public pot_harmonic {
     private:
       double halfbox,box;
     public:
-      double f;
+      double f;       //!< Factor to convert to kT
       string name;
-      pot_r12minimageXY( inputfile &in ) {
+
+      pot_r12minimageXY( inputfile &in ) : pot_harmonic(in) {
         name="r12 + Coulomb w. minimum image in XY-directions";
         f=in.getflt("bjerrum",7.1);
         box=in.getflt("zboxlen");
         halfbox=box/2;
       }
+
       void setvolume(double vol) {
         box=pow(vol, 1./3);
         halfbox=box/2;
       }
+
       inline double pairpot(const particle &p1, const particle &p2) {
         double r2=sqdist(p1,p2), s=p1.radius+p2.radius, a=s*s/r2;
         s=a*a*a;
         return s*s/f + p1.charge*p2.charge/sqrt(r2);
       }
+
       inline double sqdist(const point &p1, const point &p2) {
         double dz=p1.z-p2.z;
         double dx=std::abs(p1.x-p2.x);
@@ -74,22 +78,41 @@ namespace Faunus {
         if (dy>halfbox) dy-=box;
         return dx*dx + dy*dy + dz*dz;
       }
+
+      /*!
+       * Calculated the bonded + non-bonded energy between two particles
+       * connected with a harmonic bond. To avoid numerical trouble with
+       * the non-electrostatic, non-bonded interactions, the radii of
+       * the two particles are temporarily reduced.
+       */
+      inline double bond(particle &p1, particle &p2) {
+        double r=sqrt(sqdist(p1,p2));
+        double u=harmonicbond(p1,p2,r)/f;
+        p1.radius*=0.5;
+        p2.radius*=0.5;
+        u+=pairpot(p1,p2);
+        p1.radius*=2;
+        p2.radius*=2;
+        return u;
+      }
+
       string info() {
         std::ostringstream o;
         o << "#   Name              = " << name << endl
           << "#   Bjerrum length    = " << f << endl
-          << "#   Image length (XY) = " << box << endl;
+          << "#   Image length (XY) = " << box << endl
+          << pot_harmonic::info();
         return o.str();
       }
   };
 
-  class pot_r12minimage {
+  class pot_r12minimage : public pot_harmonic {
     private:
       double halfbox,box;
     public:
       double f;
       string name;
-      pot_r12minimage( inputfile &in ) {
+      pot_r12minimage( inputfile &in ) : pot_harmonic(in) {
         name="r12 + Coulomb w. minimum image";
         f=in.getflt("bjerrum",7.1);
         box=in.getflt("boxlen");
@@ -106,6 +129,16 @@ namespace Faunus {
       }
       inline double sqdist(const point &p1, const point &p2) {
         return p1.sqdist(p2,box,halfbox);
+      }
+      inline double bond(particle &p1, particle &p2) {
+        double r=sqrt(sqdist(p1,p2));
+        double u=harmonicbond(p1,p2,r)/f;
+        p1.radius*=0.5;
+        p2.radius*=0.5;
+        u+=pairpot(p1,p2);
+        p1.radius*=2;
+        p2.radius*=2;
+        return u;
       }
       string info() {
         std::ostringstream o;

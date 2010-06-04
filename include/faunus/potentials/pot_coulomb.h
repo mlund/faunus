@@ -42,11 +42,11 @@ namespace Faunus {
       }
   };
 
-  class pot_coulombr12 {
+  class pot_coulombr12 : public pot_harmonic {
     public:
       double f;
       string name;
-      pot_coulombr12(inputfile &in) {
+      pot_coulombr12(inputfile &in) : pot_harmonic(in) {
         f=in.getflt("bjerrum",7.1);
         name+="Coulomb + r12";
       }
@@ -63,10 +63,22 @@ namespace Faunus {
         return p1.sqdist(p2);
       }
 
+      inline double bond(particle &p1, particle &p2) {
+        double r=sqrt(sqdist(p1,p2));
+        double u=harmonicbond(p1,p2,r)/f;
+        p1.radius*=0.5;
+        p2.radius*=0.5;
+        u+=pairpot(p1,p2);
+        p1.radius*=2;
+        p2.radius*=2;
+        return u;
+      }
+
       string info() {
         std::ostringstream o;
         o << "#   Name              = " << name << endl
-          << "#   Bjerrum length    = " << f << endl;
+          << "#   Bjerrum length    = " << f << endl
+          << pot_harmonic::info();
         return o.str();
       }
   };

@@ -11,16 +11,18 @@ namespace Faunus {
     dp=1.0;
   };
 
-  /*!
-   * \todo Cell overlap test missing
-   */
   double macrorot::move(macromolecule &g) {
-    du=0;
     if (slp.runtest(runfraction)==false)
-      return du;
-    cnt++;
+      return 0;
+    markovmove::move();
     g.rotate(*con, dp); 
-    //insert cell overlap test
+    for (int i=g.beg; i<=g.end; i++) {
+      if (con->collision(con->trial[i])==true) {
+        g.undo(*con);
+        dpsqr+=0;
+        return 0;
+      }
+    }
     //#pragma omp parallel
     {
       //#pragma omp sections
@@ -44,16 +46,18 @@ namespace Faunus {
     return du;
   }
 
-  /*!
-   * \todo Cell overlap test missing
-   */
   double macrorot::move(vector<macromolecule> &g, int n) {
-    du=0;
     if (slp.runtest(runfraction)==false)
-      return du;
-    cnt++;
+      return 0;
+    markovmove::move();
     g.at(n).rotate(*con, dp); 
-    //insert cell overlap test
+    for (int i=g[n].beg; i<=g[n].end; i++) {
+      if (con->collision(con->trial[i])==true) {
+        g[n].undo(*con);
+        dpsqr+=0;
+        return 0;
+      }
+    }
     double deltau=0;
 #pragma omp parallel for reduction (+:deltau) 
     for (int i=0; i<g.size(); i++)

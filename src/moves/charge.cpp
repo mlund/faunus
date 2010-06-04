@@ -131,7 +131,7 @@ namespace Faunus {
       inputfile &in) : markovmove(e,c,i), titrate_gc(c,in,e)
   {
     this->name.assign("GRAND CANONICAL PROTON TITRATION");
-    this->cite.assign("Labbez+Jonsson....");
+    this->cite.assign("doi:10.1007/978-3-540-75755-9_8");
   }
 
   string GCchargereg::info() {

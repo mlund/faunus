@@ -5,31 +5,23 @@
 
 namespace Faunus {
   /*!
-   * \brief Implementation of all energy functions
+   * \brief Implementation of energy functions bonded interactions between
+   *        polymers
    * \author Mikael Lund
    *
-   * This is an expression template that constructs the
-   * energy functions of a particular pair potential. All
-   * returned energies are in units of kT.
-   *
-   * \code
-   * inputfile in("input.conf");
-   * interaction<pot_coulomb> pot(in);
-   * pot.energy(...);
-   * \endcode
+   * This template included interactions for harmonic bonds in
+   * bonded polymers. The potential class given must have a function
+   * double bond(particle&, particle&) that calculates the energy
+   * between two neighboing atoms.
    */
   template<class T> class springinteraction : public interaction<T> {
     private:
       vector<unsigned short> l;
     public:
       using interaction<T>::pair;
-      double k; //!< Spring constant
-      double req; //!< Equilibrium distance
       springinteraction(inputfile &in) : interaction<T>(in) {
         interaction<T>::name="Full N^2 w. spring potential";
-        k   = in.getflt("springconstant", 30);
-        req = in.getflt("springeqdist", 2);
-      };
+      }
 
       /*!
        * Bonded and non-bonded energy of monomer i with the rest of the system
@@ -50,30 +42,21 @@ namespace Faunus {
         u=u*pair.f;
 
         // bonded energy w. neighbors
-        for (int j=0; j<g.nb[i-g.beg].size(); j++) {
-          double r=sqrt( pair.sqdist( p[i], p[ g.nb[i-g.beg][j] ] ) ),
-                 dr = r - req;
-          u += k*dr*dr; // spring potential
-          if (r>0.1) // avoid diverging Coulomb potential
-            u+=pair.f*pair.pairpot(p[i],p[g.nb[i-g.beg][j] ]); 
-        }
+        // - decrease non-bonded repulsion
+        for (int j=0; j<g.nb[i-g.beg].size(); j++)
+          u+=pair.f*pair.bond(p[i],p[ g.nb[i-g.beg][j]]);
         return u;
       }
 
       double uself_polymer(vector<particle> &p, const polymer &g) {
-        double dr,r,u=0;
-        int i,j,n=g.end+1;
-        for (i=g.beg; i<n-1; i++)
-          for (j=i+1; j<n; j++)
+        double u=0;
+        int n=g.end+1;
+        for (int i=g.beg; i<n-1; i++)
+          for (int j=i+1; j<n; j++)
             if ( g.areneighbors(i,j)==false )
               u+=pair.f*pair.pairpot(p[i], p[j]);
-            else {
-              r=sqrt( pair.sqdist( p[i], p[j] ) );
-              dr = r - req;
-              u+=k*dr*dr;
-              if (r>0.1)
-                u+=pair.f * pair.pairpot(p[i],p[j]); 
-            }
+            else
+              u+=pair.f*pair.bond(p[i],p[j]);
         return u;
       }
 

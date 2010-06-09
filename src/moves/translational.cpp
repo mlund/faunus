@@ -388,7 +388,7 @@ namespace Faunus {
   string saltmove::info() {
     std::ostringstream o;
     o << markovmove::info()
-      << "#   Mean sq. displ./particle  = " << sqrt(rsqr) << endl
+      << "#   Total displ./particle (A) = " << sqrt(rsqr) << endl
       << "#   Displacement directions   = " << dpv.x << " " << dpv.y << " " << dpv.z << endl;
     return o.str();
   }

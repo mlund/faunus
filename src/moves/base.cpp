@@ -93,18 +93,21 @@ namespace Faunus {
     o << endl
       << "# " << name << ":" << endl;
     if (cnt>0) {
-      o << "#   Acceptance                = " << accepted()*100 << endl
-        << "#   Displacement parameter    = " << dp << endl
-        << "#   Number of trials          = " << cnt << endl
-        << "#   Pct. of Markov steps      = " << runfraction*100 << endl
+      o.precision(2);
+      o << "#   Acceptance                = " << accepted()*100 << " \%" << endl;
+      o.precision(4);
+      o << "#   Number of trials          = " << cnt << endl
+        << "#   Runfraction               = " << runfraction*100 << " \%" << endl
         << "#   Energy change (kT)        = " << utot << " " << utot/cnt << " "
                                               << utot/(accepted()*cnt) << endl;
+      if (dp!=0)
+        o << "#   Displacement parameter    = " << dp << endl;
       if (cite.empty()==false)
         o << "#   More information:           " << cite << endl;
       if (dp!=0)
-        if (dpsqr.sum>0)
+        if (dpsqr.cnt>0)
           o << "#   Average displacement      = " << sqrt(dpsqr.avg()) << endl
-            << "#   Mean square displacement  = " << sqrt(dpsqr.sum) << endl;
+            << "#   Mean square displacement  = " << dpsqr.avg() << endl;
     }
     if (dp_opt==true) {
       o << "#   Displacement Optimization:" << endl

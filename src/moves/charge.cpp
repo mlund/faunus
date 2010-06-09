@@ -136,8 +136,8 @@ namespace Faunus {
 
   string GCchargereg::info() {
     std::ostringstream o;
-    o << markovmove::info();
-    o << titrate_gc::info();
+    o << markovmove::info()
+      << titrate_gc::info(*con);
     return o.str();
   }
 
@@ -186,6 +186,8 @@ namespace Faunus {
         }
       }
     }    
+    for (int i=0; i<sites.size(); i++)
+      zavg.at(i) += con->p.at( sites[i] ).charge;
     return sum;
   }
 

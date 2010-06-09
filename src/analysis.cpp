@@ -10,6 +10,7 @@ namespace Faunus {
     sum=u0;
     cur=u0;
     confu.clear();
+    update(u_init);
   }
 
   void systemenergy::update(double energy) {

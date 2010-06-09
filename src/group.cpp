@@ -377,6 +377,7 @@ namespace Faunus {
   }
 
   unsigned short macromolecule::nummolecules() { return 1; }
+
   macromolecule& macromolecule::operator=(const group& g) {
     beg=g.beg;
     end=g.end;
@@ -740,8 +741,8 @@ namespace Faunus {
 
   string polymer::info() {
     std::ostringstream o;
-    o << group::info();
-    o << "#   Connectivity:" << std::endl;
+    o << macromolecule::info()
+      << "#   Connectivity:" << std::endl;
     for (int i=0; i<nb.size(); i++) {
       o << "#     Atom " << i+beg << ": ";
       for (int j=0; j<nb[i].size(); j++)

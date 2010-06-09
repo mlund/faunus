@@ -37,8 +37,7 @@ namespace Faunus {
       virtual double energy(vector<particle> &, double, action &);
 
     public:
-      double ph;                          //!< System pH
-
+      double ph;                                //!< System pH
       titrate(double);
       titrate(vector<particle> &, group &, double);
       void init(vector<particle> &, group &);   //!< Locate and initialize sites and protons
@@ -56,7 +55,8 @@ namespace Faunus {
    *  \author Andre, Mikael
    */
   class titrate_implicit {
-    private:
+    protected:
+      vector<average <double> > zavg;       //!< Stores the average charges of sites from titrate::sites
     public:
       enum keys {PROTONATED,DEPROTONATED};
       keys recent;                          //!< Attempted change of state in the Markov chain.
@@ -67,13 +67,13 @@ namespace Faunus {
       int exchange(vector<particle> &, int=-1);
       virtual double energy(vector<particle> &, double, int);
       unsigned int random();                //!< Pick a random titratable site
+      string info();                        //!< Returns information string
   };
 
   /*! \brief Class to perform grand canonical proton titration. The process is couples with 
-             the exchange of a nother ionic pair with known chemical potential. It is assumed 
-             that the charges of the exchanged particles are mono valent.
-
-  */
+   * the exchange of a nother ionic pair with known chemical potential. It is assumed 
+   * that the charges of the exchanged particles are mono valent.
+   */
   class titrate_gc : public titrate_implicit {
     private:
     public:
@@ -81,9 +81,9 @@ namespace Faunus {
       string          nameA;                //!< Name of ion coupled with proton exchange
       int             nA;
       double          energy(container &, double &, int &);
-      titrate_gc(container &, inputfile &, grandcanonical &); //!< Constructor
-      string info();                       //!< Some info
-
+      titrate_gc(container&,inputfile&,grandcanonical&); //!< Constructor
+      string info();                        //!< Returns information string
+      string info(container&);              //!< Returns expanded information string
   };
 }
 #endif

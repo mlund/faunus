@@ -143,7 +143,7 @@ namespace Faunus {
           if (p[sites[j]].id==i)
             std::cout << q[j].avg() << " ";
         std::cout << endl;
-      };
+      }
   }
 
   /*!
@@ -178,6 +178,7 @@ namespace Faunus {
         sites.push_back(i);
         p[i].charge = atom[p[i].id].charge; // deprotonate everything
       }
+    zavg.resize( sites.size() ); 
   }
   
   titrate_implicit::titrate_implicit(container& c, double peeage) {
@@ -188,6 +189,7 @@ namespace Faunus {
         c.p[i].charge = atom[c.p[i].id].charge; // deprotonate everything
         c.trial[i].charge = atom[c.p[i].id].charge; // deprotonate everything
       }
+    zavg.resize( sites.size() ); 
   }
 
   int titrate_implicit::exchange(vector<particle> &p, int i) {
@@ -208,6 +210,7 @@ namespace Faunus {
     unsigned int i = rand() % sites.size();
     return sites.at(i);
   }
+
   double titrate_implicit::energy(vector<particle> &p, double du, int j) {
     int i=p[j].id;
     if (recent==PROTONATED)
@@ -215,7 +218,16 @@ namespace Faunus {
     else
       return du-( log(10.)*( ph - atom[i].pka ) );
   }
-// TITRATE_GC
+
+  string titrate_implicit::info() {
+    std::ostringstream o;
+    o << "#   Titrateable sites         = " << sites.size() << endl
+      << "#   pH                        = " << ph << endl; 
+    return o.str();
+  }
+
+  // TITRATE_GC
+ 
   titrate_gc::titrate_gc(container &con, inputfile &in, grandcanonical &gc) : titrate_implicit(con,in.getflt("pH", 7.0)) {
     nameA=in.getstr("protonpartner","NA");
     gcPtr=&gc;
@@ -223,10 +235,30 @@ namespace Faunus {
 
   string titrate_gc::info() {
     std::ostringstream o;
-    o << "#   Titrateable sites         = " << sites.size() << endl
-      << "#   pH                        = " << ph << endl 
+    o << titrate_implicit::info()
       << "#   Proton partner            = " << nameA
       << " (chem.pot = " << atom[nameA].chempot << " )" << endl;
+    return o.str();
+  }
+
+  string titrate_gc::info(container &con) {
+    std::ostringstream o;
+    o << titrate_gc::info();
+    if (zavg.size()>0) {
+      if (zavg[0].cnt>0) {
+        o << "#   Average charges on titratable sites:" << endl;
+        for ( int i=0; i<atom.list.size(); i++ ) {
+          if ( atom[i].pka>0 ) {
+            o << "#     " << atom[i].name << ": " << setiosflags(std::ios::fixed);
+            o.precision(3);
+            for ( int j=0; j<sites.size(); j++ )
+              if ( con.p[sites[j]].id==i )
+                o << zavg[j].avg() << " ";
+            o << endl;
+          }
+        }
+      }
+    }
     return o.str();
   }
 

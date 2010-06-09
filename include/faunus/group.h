@@ -31,7 +31,7 @@ namespace Faunus {
       void set(short int,short int);        ///< Set particle range, "beg" and "end".
       bool find(unsigned int) const;        ///< Check if particle is part of the group
       short int size() const;               ///< Number of particles in group
-      virtual double charge(const vector<particle> &);//!< Calculate total charge
+      double charge(const vector<particle> &);//!< Calculate total charge
       virtual short int random();           ///< Picks a random particle within this group
       point masscenter(const vector<particle> &); //!< Calculate center-of-mass
       point masscenter(const container &);  //!< Calc. center-of-mass

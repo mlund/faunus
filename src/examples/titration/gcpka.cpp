@@ -53,11 +53,14 @@ int main(int argc, char* argv[]) {
   if(nmt.load(cell, "gcgroup.conf")==true)
     aam.load(cell,"confout.aam");        // Read initial config. from disk (if present)
 
-  systemenergy sys(pot.energy(cell.p));  // Track system energy
+  systemenergy sys(
+      pot.energy(cell.p, salt, protein) +
+      pot.internal(cell.p, salt) +
+      pot.internalElectrostatic(cell.p, protein) ); // Track system energy
 
   cout << cell.info() << atom.info()
        << pot.info() << salt.info(cell)
-       << in.info() << tit.info()
+       << in.info() << tit.info() 
        << endl;                         // Print initial information
 
   while ( loop.macroCnt() ) {           // Markov chain 
@@ -68,11 +71,14 @@ int main(int argc, char* argv[]) {
       for (int i=0; i<salt.size(); i++)
         sys+=sb.move();                 // Grand Canonical salt move
       sys+=tit.titrateall();
-      sys.update(pot.energy(cell.p));   // Update system energy
       protein.charge(cell.p);           // Re-calc. protein charge
       protein.dipole(cell.p);           // Re-calc. dipole moment
     }                                   // END of micro loop
-    sys.update(pot.energy(cell.p));     // Update system energy
+    sys.update(
+      pot.energy(cell.p, salt, protein) +
+      pot.internal(cell.p, salt) +
+      pot.internalElectrostatic(cell.p, protein) ); // Update system energy
+
     aam.save("confout.aam",cell.p);     // Save particle configuration to disk
     cout << loop.timing();              // Show progres
   }                                     // END of macro loop and simulation
@@ -80,16 +86,16 @@ int main(int argc, char* argv[]) {
   io.writefile("gcgroup.conf", nmt.print());
   pqr.save("confout.pqr", cell.p);
 
+  cout << cell.info() << sys.info() << sm.info() << sb.info()
+       << loop.info() << wid2.info() << protein.info() << tit.info();
+
   // Unit testing
   sm.check(test);
   sb.check(test);
   sys.check(test);
   test.check("ProteinCharge", protein.Q.avg() );
   test.check("ProteinDipole", protein.dip.avg() );
-
-  cout << cell.info() << sys.info() << sm.info() << sb.info() << tit.info()
-    << loop.info() << wid2.info() << protein.info() << tit.info()
-    << test.report();
+  cout << test.report();
 
   return test.returnCode();
 }

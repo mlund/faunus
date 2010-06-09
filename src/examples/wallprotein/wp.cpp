@@ -15,7 +15,15 @@
 #include "faunus/potentials/pot_coulomb.h"
 
 using namespace std;
-using namespace Faunus;                 // Access to Faunus classes
+using namespace Faunus;
+
+#ifdef NOSLIT
+	typedef pot_r12minimage Tpot;
+	typedef box Tcon;
+#else
+	typedef pot_r12minimageXY Tpot;
+	typedef slit Tcon;
+#endif
 
 int main() {
   // General setup
@@ -23,14 +31,16 @@ int main() {
   inputfile in("wp.conf");
   mcloop loop(in);
   grandcanonical nmt;
-  slit con(in);
-  springinteraction<pot_r12minimageXY> pot(in);
+  Tcon con(in);
+  springinteraction<Tpot> pot(in);
   distributions dst;    // Distance dep. averages
   histogram gofr(0.1,0,con.len);
 
   // Handle polymers
   polymer pol;
+#ifdef BABEL
   pol.babeladd( con, in );
+#endif
   atom.reset_properties(con.p);
   con.trial=con.p;
   pol.move(con, -pol.cm);         // Translate polymer to origo (0,0,0)
@@ -115,6 +125,7 @@ int main() {
           break;
         case 7:
           sys+=tit.titrateall(); // titrate titratable sites
+          pol.charge(con.p);
           break;
       }
 
@@ -153,5 +164,5 @@ int main() {
 
   cout << sys.info() << sm.info() << wm.info() << loop.info()
        << mm.info()  << cs.info() << mr.info() << mt.info()
-       << tit.info() << sb.info();
+       << tit.info() << sb.info() << pol.info();
 }

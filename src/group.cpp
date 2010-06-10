@@ -68,7 +68,7 @@ namespace Faunus {
     std::ostringstream o;
     o << endl
       << "# " << title << ": " << name << endl
-      << "#   Range                  = [" << beg << "," << end << "]" << " " << size() << endl
+      << "#   Number of particles    = " << size() << " [" << beg << "," << end << "]" << endl
       << "#   Mass center            = " << cm << endl;
     return o.str();
   }
@@ -774,18 +774,29 @@ namespace Faunus {
     return o.str(); 
   }
 
-  popscmembrane::popscmembrane() {}
+  popscmembrane::popscmembrane() {
+    name.assign("Mixed Phospholipid Membrane (POPS/C)");
+  }
 
   string popscmembrane::info() {
+    int ns=pops.size(), nc=popc.size(), ntot=ns+nc;
     std::ostringstream o;
-    o << group::info();
-    o <<"#   Phospholipid membrane of POPS:POPC model"<<std::endl
-      <<"#   ----------------------------------------"<<std::endl
-      <<"#   Area per headgroup        = "<<headarea<<" (A^2) "<<std::endl
-      <<"#   POPS:POPC ratio           = "<<pops.size()/double(pops.size()+popc.size())*100.
-      <<":"<<popc.size()/double(popc.size()+pops.size())*100.<<std::endl
-      <<"#   "<<popc.size()+pops.size()<<" lipids ("<<pops.size()<<" POPS and "<<popc.size()<<" POPC)"<<std::endl
-      <<std::endl;
+    o << group::info()
+      << "#   Area per headgroup     = " << headarea<<" A^2" << endl
+      << "#   POPS:POPC ratio        = " << ns*100./ntot << ":" << nc*100./ntot << endl
+      << "#   Number of lipids       = " << ntot
+      << " (" << ns << " pops / " << nc << " popc)" << endl;
+    return o.str();
+  }
+  
+  string popscmembrane::info(slit &c) {
+    double z=charge(c.p);
+    std::ostringstream o;
+    o.precision(4);
+    o << popscmembrane::info()
+      << "#   Total charge           = " << z << endl;
+    if (z!=0)
+      o << "#   Charge density         = " << c.xyarea/z << " A^2/e" << endl;
     return o.str();
   }
 
@@ -873,6 +884,15 @@ namespace Faunus {
     end=con.p.size()-1;
   }
 
+  string popscmembrane::getVMDBondScript() {
+    std::ostringstream o;
+		for (int i=0; i<pops.size(); i++)
+      o << pops[i].getVMDBondScript();
+    for (int i=0; i<popc.size(); i++)
+      o << popc[i].getVMDBondScript();
+    return o.str();
+  }
+ 
 #ifdef BABEL
   glu3::glu3(container &con, inputfile &in) {
     name="GLU3 DENDRIMER";

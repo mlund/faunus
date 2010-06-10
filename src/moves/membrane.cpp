@@ -20,15 +20,17 @@ namespace Faunus {
   string membranemove::info() {
     std::ostringstream o;
     o << markovmove::info()
-      <<"#   Markovparameters"<<endl
-      <<"#      Monomer_dp         = "<<dpmm<<endl
-      <<"#      Graftpoint_dp      = "<<dpgp<<endl
-      <<"#      Latticetrans._dp   = "<<dplatt<<endl
-      <<"#   Acc. of substeps:"<<endl
-      <<"#      Pops ratteling     = "<<popsacc/popscnt*100.0<<endl
-      <<"#      Popc ratteling     = "<<popcacc/popccnt*100.0<<endl
-      <<"#      End jumping        = "<<endacc/endcnt*100.0<<endl
-      <<"#      Latt. translation  = "<<lattacc/lattcnt*100.0<<endl;
+      << "#   Displacement parameters (A):"<<endl
+      << "#      Monomer_dp         = "<<dpmm<<endl
+      << "#      Graftpoint_dp      = "<<dpgp<<endl
+      << "#      Latticetrans._dp   = "<<dplatt<<endl;
+    o.precision(3);
+    o << "#   Acceptance of substeps:"<<endl
+      << "#      Pops rattling      = "<<popsacc/popscnt*100.<< " \%" << endl
+      << "#      Popc rattling      = "<<popcacc/popccnt*100.<< " \%" << endl
+      << "#      End jumping        = "<<endacc/endcnt*100.<< " \%" << endl;
+    if (lattcnt>0)
+      o << "#      Latt. translation  = "<<lattacc/lattcnt*100.<<endl;
     return o.str();
   }
 

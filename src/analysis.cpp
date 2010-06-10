@@ -33,19 +33,21 @@ namespace Faunus {
   
   void systemenergy::check(checkValue &test) {
     test.check("systemEnergyAverage", uavg.avg(), 0.3);
-    test.check("systemEnergyDrift", drift(), 20.);
+    test.check("systemEnergyDrift", std::abs(drift()), 20.);
   }
   
   string systemenergy::info() {
     write();                  //!< Print dynamics of system energy 
     std::ostringstream o;
     o << endl << "# SYSTEM ENERGY (kT):" << endl;
-    if (uavg.cnt>0)
+    if (uavg.cnt>0) {
       o << "#   Average <U> s      = " << uavg.avg() << " " << uavg.stdev() << "\n"
         << "#   Initial energy     = " << u0 << endl
         << "#   Initial + changes  = " << sum << endl
-        << "#   Current energy     = " << cur << endl
-        << "#   Absolute drift     = " << drift() << endl;
+        << "#   Current energy     = " << cur << endl;
+      o.precision(4);
+      o << "#   Total energy drift = " << drift() << " (" << drift()/u0*100. << "\%)" << endl;
+    }
     return o.str();
   }
   
@@ -57,7 +59,10 @@ namespace Faunus {
       o << i+1 << " " << confu[i] << endl;
     return o.str();
   }
-  double systemenergy::drift() { return std::abs(cur-sum); }
+  
+  double systemenergy::drift() {
+    return cur-sum;
+  }
 
   //---------------- ANGULAR CORRELATIONS ---------------------------
   angularcorr::angularcorr() {}
@@ -375,6 +380,7 @@ namespace Faunus {
       }
     conc+=float(cnt)/vol;
   }
+  
   void twostatebinding::update(container &con, point &site, vector<macromolecule> &g, int first) {
     unsigned short i,j,cnt=0;
     for (j=first; j<g.size(); j++)
@@ -385,6 +391,7 @@ namespace Faunus {
         }
     conc+=float(cnt)/vol;
   }
+  
   void twostatebinding::update(container &con, point &site, unsigned char id) {
     unsigned short i,n=con.p.size(),cnt=0;
     for (i=0; i<n; i++)
@@ -392,7 +399,11 @@ namespace Faunus {
         if (con.sqdist(site,con.p[i])<r2) cnt++;
     conc+=float(cnt)/vol;
   }
-  string twostatebinding::info() { return string(0); }
+  
+  string twostatebinding::info() {
+    return string(0);
+  }
+  
   string twostatebinding::info(double bulkconc) {
     std::ostringstream o;
     o << endl << "# TWOSTATE BINDING ANALYSIS:" << endl
@@ -404,6 +415,7 @@ namespace Faunus {
         << " (" << -log(conc.avg()/bulkconc) << " kT)" << endl;
     return o.str();
   }
+  
   diskoverlap::diskoverlap(vector<point> &p) {
     s1=19, s2=10, s3=p.size(), cnt=0;
     scnt.resize(19), sscale.resize(19);

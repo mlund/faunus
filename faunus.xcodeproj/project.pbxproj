@@ -250,6 +250,8 @@
 		739C445210314EC400A3A5B9 /* libhyperfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */; };
 		739C45251031925E00A3A5B9 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		739C45281031928400A3A5B9 /* widom.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C45271031928400A3A5B9 /* widom.cpp */; };
+		73E1A6BF11BFCA23003315DB /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
+		73E1A6C211BFCA79003315DB /* wp_lipid.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73E1A6C111BFCA79003315DB /* wp_lipid.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -442,6 +444,13 @@
 			remoteGlobalIDString = 739C444A10314E8700A3A5B9;
 			remoteInfo = hyper_dipolarfluid;
 		};
+		73E1A6BD11BFCA15003315DB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 739C42091030798400A3A5B9 /* faunus */;
+			remoteInfo = faunus;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
@@ -566,6 +575,8 @@
 		739C444B10314E8700A3A5B9 /* hyper_dipolarfluid */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = hyper_dipolarfluid; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C451F1031925300A3A5B9 /* widom_cube */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = widom_cube; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C45271031928400A3A5B9 /* widom.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = widom.cpp; path = src/examples/widom/widom.cpp; sourceTree = "<group>"; };
+		73E1A6B911BFCA0C003315DB /* wallprotein - lipid membrane */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = "wallprotein - lipid membrane"; path = "build/Debug/wallprotein - lipid membrane"; sourceTree = "<group>"; };
+		73E1A6C111BFCA79003315DB /* wp_lipid.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = wp_lipid.cpp; path = src/examples/wallprotein/wp_lipid.cpp; sourceTree = "<group>"; };
 		73F1BEA8116932E500985D4B /* pkaDH */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pkaDH; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -681,6 +692,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		73E1A6B711BFCA0C003315DB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				73E1A6BF11BFCA23003315DB /* liblibfaunus.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -738,6 +757,7 @@
 				733DF7CE11664912008347FA /* isobaricDP */,
 				733DF8C91167667C008347FA /* pkaDH */,
 				73F1BEA8116932E500985D4B /* pkaDH */,
+				73E1A6B911BFCA0C003315DB /* wallprotein - lipid membrane */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -898,6 +918,7 @@
 				73961F131030AE5D0051F3E3 /* isobaric.conf */,
 				73961F141030AE5D0051F3E3 /* isobaric.cpp */,
 				733DF77311664811008347FA /* wp.cpp */,
+				73E1A6C111BFCA79003315DB /* wp_lipid.cpp */,
 			);
 			name = examples;
 			sourceTree = "<group>";
@@ -1305,6 +1326,23 @@
 			productReference = 739C451F1031925300A3A5B9 /* widom_cube */;
 			productType = "com.apple.product-type.tool";
 		};
+		73E1A6B811BFCA0C003315DB /* wallprotein_lipid */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 73E1A6C011BFCA43003315DB /* Build configuration list for PBXNativeTarget "wallprotein_lipid" */;
+			buildPhases = (
+				73E1A6B611BFCA0C003315DB /* Sources */,
+				73E1A6B711BFCA0C003315DB /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				73E1A6BE11BFCA15003315DB /* PBXTargetDependency */,
+			);
+			name = wallprotein_lipid;
+			productName = "wallprotein - lipid membrane";
+			productReference = 73E1A6B911BFCA0C003315DB /* wallprotein - lipid membrane */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -1338,6 +1376,7 @@
 				730BD3F410ADA2F800FC674A /* twobody-hof */,
 				733DF758116627EF008347FA /* twobodyDH */,
 				733DF76A116647B3008347FA /* wallprotein */,
+				73E1A6B811BFCA0C003315DB /* wallprotein_lipid */,
 			);
 		};
 /* End PBXProject section */
@@ -1524,6 +1563,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		73E1A6B611BFCA0C003315DB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				73E1A6C211BFCA79003315DB /* wp_lipid.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -1661,6 +1708,11 @@
 			isa = PBXTargetDependency;
 			target = 739C444A10314E8700A3A5B9 /* hyperbulk */;
 			targetProxy = 739C452B1031929300A3A5B9 /* PBXContainerItemProxy */;
+		};
+		73E1A6BE11BFCA15003315DB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 739C42091030798400A3A5B9 /* faunus */;
+			targetProxy = 73E1A6BD11BFCA15003315DB /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -2173,6 +2225,36 @@
 			};
 			name = Release;
 		};
+		73E1A6BB11BFCA0C003315DB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				INSTALL_PATH = /usr/local/bin;
+				PREBINDING = NO;
+				PRODUCT_NAME = "wallprotein - lipid membrane";
+			};
+			name = Debug;
+		};
+		73E1A6BC11BFCA0C003315DB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = /usr/local/bin;
+				PREBINDING = NO;
+				PRODUCT_NAME = "wallprotein - lipid membrane";
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -2325,6 +2407,15 @@
 			buildConfigurations = (
 				739C45211031925300A3A5B9 /* Debug */,
 				739C45221031925300A3A5B9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		73E1A6C011BFCA43003315DB /* Build configuration list for PBXNativeTarget "wallprotein_lipid" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				73E1A6BB11BFCA0C003315DB /* Debug */,
+				73E1A6BC11BFCA0C003315DB /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

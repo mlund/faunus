@@ -149,24 +149,29 @@ namespace Faunus {
 #endif
   };
 
-  /*! \brief Class for phospholipid-membrane
-   *  \author Bjoern Persson
-   *  \date Lund 2009
-   *
+  /*!
+   * \brief Class for phospholipid-membrane
+   * \author Bjoern Persson
+   * \date Lund 2009
    */
-  class popscmembrane : public group{
+  class popscmembrane : public group {
+    protected:
+      double scratio;               //!< Ratio of pops in percent
+      double headarea;              //!< Headgroup area (i.e. density)
+
     public:
-      double scratio;          //Ratio of pops in percent
-      double headarea;         //Headgroup area
-      vector<polymer> pops;    //Pops vector
-      vector<polymer> popc;    //Popc vector
+      vector<polymer> pops;         //!< Pops polymers
+      vector<polymer> popc;         //!< Popc polymers
       popscmembrane();
-      void load(inputfile &, slit &);  //Scannes for "scratio", "headarea"
-      string info();
+      void load(inputfile&, slit&); //!< Scanns input object for "scratio", "headarea"
+      string info();                //!< Get info string
+      string info(slit &);          //!< Get expanded info string
+      string getVMDBondScript();    //!< Print TCL script that tells VMD to draw bonds
   };
-/*! \brief Class for porphyrin dendrimer
- *
- */
+  
+  /*!
+   * \brief Class for porphyrin dendrimer
+   */
 #ifdef BABEL
   class glu3 :public macromolecule {
     public:
@@ -176,8 +181,10 @@ namespace Faunus {
       string info();
   };
 #endif
+
 #ifdef HYPERSPHERE
-  /*! \brief Hypersphere groups
+  /*!
+   *  \brief Hypersphere groups
    *  \author Martin Trulsson
    *  \date Lund, 2009
    */

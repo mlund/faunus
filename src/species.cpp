@@ -1,4 +1,6 @@
 #include "faunus/species.h"
+#include "faunus/messagepool.h"
+
 namespace Faunus {
   atoms atom; // Instantiate global copy
 
@@ -84,7 +86,11 @@ namespace Faunus {
       f.close();
       return true;
     }
-    std::cerr << "# WARNING! Parameter file " << filename << " NOT found.\n";
+    string w="Error! Parameter file " + filename + " not NOT found.",
+           id="species";
+    errlog.client[id]+=w;
+    errlog.client[id].fatal=true;
+    std::cerr << "# " << w << endl;
     filename+=" (not found)";
     return false;
   }

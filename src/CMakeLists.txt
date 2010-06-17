@@ -3,7 +3,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 #----- object files for libfaunus -----
 set(objs slump physconst inputfile point io titrate container
     hardsphere group particles analysis species widom histogram
-    mcloop ensemble faunus
+    mcloop ensemble faunus messagepool
     moves/base moves/translational moves/rotational moves/charge
     moves/miscmove moves/saltbath moves/clustermove #moves/rosenbluth 
     moves/crankshaft moves/membrane) 

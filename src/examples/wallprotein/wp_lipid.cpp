@@ -63,7 +63,7 @@ int main() {
   salt salt( atom["NA"].id, atom["CL"].id ); 
   salt.add(con,in);
   saltmove sm(nmt,con,pot,in);
-
+ 
   // File I/O
   io io;
   iopqr pqr;
@@ -90,7 +90,7 @@ int main() {
   cout << con.info() << atom.info() << in.info()
        << pot.info() << salt.info(con)
        << tit.info() << mem.info(con) << pol.info()
-       << endl;
+       << errlog.info() << endl;
 
   while ( loop.macroCnt() ) {
     while ( loop.microCnt() ) {

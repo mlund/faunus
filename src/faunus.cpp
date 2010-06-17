@@ -1,6 +1,7 @@
 #include <faunus/faunus.h>
 
 namespace Faunus {
+  
   string faunus_splash() {
     std::ostringstream o;
     o << "-----------------------------------------------------------------------\n"

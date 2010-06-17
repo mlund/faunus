@@ -252,6 +252,12 @@
 		739C45281031928400A3A5B9 /* widom.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C45271031928400A3A5B9 /* widom.cpp */; };
 		73E1A6BF11BFCA23003315DB /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		73E1A6C211BFCA79003315DB /* wp_lipid.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73E1A6C111BFCA79003315DB /* wp_lipid.cpp */; };
+		73E1A75211C14075003315DB /* messagepool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73E1A75111C14075003315DB /* messagepool.cpp */; };
+		73E1A75311C14075003315DB /* messagepool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73E1A75111C14075003315DB /* messagepool.cpp */; };
+		73E1A75D11C1409C003315DB /* messagepool.h in Headers */ = {isa = PBXBuildFile; fileRef = 73E1A75C11C1409C003315DB /* messagepool.h */; };
+		73E1A75E11C1409C003315DB /* messagepool.h in Headers */ = {isa = PBXBuildFile; fileRef = 73E1A75C11C1409C003315DB /* messagepool.h */; };
+		73E1A78511C23871003315DB /* vectorid.h in Headers */ = {isa = PBXBuildFile; fileRef = 73E1A78411C23871003315DB /* vectorid.h */; };
+		73E1A78611C23871003315DB /* vectorid.h in Headers */ = {isa = PBXBuildFile; fileRef = 73E1A78411C23871003315DB /* vectorid.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -575,8 +581,11 @@
 		739C444B10314E8700A3A5B9 /* hyper_dipolarfluid */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = hyper_dipolarfluid; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C451F1031925300A3A5B9 /* widom_cube */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = widom_cube; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C45271031928400A3A5B9 /* widom.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = widom.cpp; path = src/examples/widom/widom.cpp; sourceTree = "<group>"; };
-		73E1A6B911BFCA0C003315DB /* wallprotein - lipid membrane */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = "wallprotein - lipid membrane"; path = "build/Debug/wallprotein - lipid membrane"; sourceTree = "<group>"; };
+		73E1A6B911BFCA0C003315DB /* wallprotein - lipid membrane */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "wallprotein - lipid membrane"; sourceTree = BUILT_PRODUCTS_DIR; };
 		73E1A6C111BFCA79003315DB /* wp_lipid.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = wp_lipid.cpp; path = src/examples/wallprotein/wp_lipid.cpp; sourceTree = "<group>"; };
+		73E1A75111C14075003315DB /* messagepool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = messagepool.cpp; path = src/messagepool.cpp; sourceTree = "<group>"; };
+		73E1A75C11C1409C003315DB /* messagepool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = messagepool.h; path = include/faunus/messagepool.h; sourceTree = "<group>"; };
+		73E1A78411C23871003315DB /* vectorid.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = vectorid.h; path = include/faunus/vectorid.h; sourceTree = "<group>"; };
 		73F1BEA8116932E500985D4B /* pkaDH */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pkaDH; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -797,6 +806,7 @@
 				739C425C10307A1C00A3A5B9 /* legendre.h */,
 				739C425D10307A1C00A3A5B9 /* matubayashi.h */,
 				739C425E10307A1C00A3A5B9 /* mcloop.h */,
+				73E1A75C11C1409C003315DB /* messagepool.h */,
 				739C426A10307A1C00A3A5B9 /* particles.h */,
 				739C426B10307A1C00A3A5B9 /* physconst.h */,
 				739C426C10307A1C00A3A5B9 /* point.h */,
@@ -806,6 +816,7 @@
 				739C427010307A1C00A3A5B9 /* species.h */,
 				739C427110307A1C00A3A5B9 /* statistics.h */,
 				739C427210307A1C00A3A5B9 /* titrate.h */,
+				73E1A78411C23871003315DB /* vectorid.h */,
 				739C427310307A1C00A3A5B9 /* widom.h */,
 				739C427410307A1C00A3A5B9 /* xydata.h */,
 				739C427510307A1C00A3A5B9 /* xytable.h */,
@@ -829,6 +840,7 @@
 				739C4218103079CF00A3A5B9 /* io.cpp */,
 				739C4219103079CF00A3A5B9 /* iobabel.cpp */,
 				739C421A103079CF00A3A5B9 /* mcloop.cpp */,
+				73E1A75111C14075003315DB /* messagepool.cpp */,
 				739C4225103079CF00A3A5B9 /* particles.cpp */,
 				739C4226103079CF00A3A5B9 /* physconst.cpp */,
 				739C4227103079CF00A3A5B9 /* point.cpp */,
@@ -1011,6 +1023,8 @@
 				733DF71111661E72008347FA /* coarsegrain.h in Headers */,
 				733DF753116626D5008347FA /* hydrophobic.h in Headers */,
 				733DF7F111664BEC008347FA /* hardsphere.h in Headers */,
+				73E1A75D11C1409C003315DB /* messagepool.h in Headers */,
+				73E1A78511C23871003315DB /* vectorid.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1078,6 +1092,8 @@
 				739C440D10314D6300A3A5B9 /* pot_table.h in Headers */,
 				739C440F10314D6300A3A5B9 /* pot_test.h in Headers */,
 				739C441010314D6300A3A5B9 /* pot_test_rf.h in Headers */,
+				73E1A75E11C1409C003315DB /* messagepool.h in Headers */,
+				73E1A78611C23871003315DB /* vectorid.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1476,10 +1492,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				739C422F103079CF00A3A5B9 /* faunus.cpp in Sources */,
 				739C422C103079CF00A3A5B9 /* analysis.cpp in Sources */,
 				739C422D103079CF00A3A5B9 /* container.cpp in Sources */,
 				739C422E103079CF00A3A5B9 /* ensemble.cpp in Sources */,
-				739C422F103079CF00A3A5B9 /* faunus.cpp in Sources */,
 				739C4230103079CF00A3A5B9 /* group.cpp in Sources */,
 				739C4231103079CF00A3A5B9 /* hardsphere.cpp in Sources */,
 				739C4232103079CF00A3A5B9 /* inputfile.cpp in Sources */,
@@ -1503,6 +1519,7 @@
 				739C4245103079CF00A3A5B9 /* widom.cpp in Sources */,
 				739C42CB10307B8500A3A5B9 /* histogram.cpp in Sources */,
 				732812EC1146D45B0054855E /* crankshaft.cpp in Sources */,
+				73E1A75211C14075003315DB /* messagepool.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1544,6 +1561,7 @@
 				739C442A10314D6300A3A5B9 /* titrate.cpp in Sources */,
 				739C442B10314D6300A3A5B9 /* widom.cpp in Sources */,
 				739C442C10314D6300A3A5B9 /* histogram.cpp in Sources */,
+				73E1A75311C14075003315DB /* messagepool.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2058,6 +2076,7 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				HEADER_SEARCH_PATHS = include;
 				INSTALL_PATH = /usr/local/lib;
 				LIBRARY_SEARCH_PATHS = (
@@ -2234,6 +2253,7 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				INSTALL_PATH = /usr/local/bin;
 				PREBINDING = NO;
 				PRODUCT_NAME = "wallprotein - lipid membrane";

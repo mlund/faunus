@@ -63,6 +63,7 @@ fau_example(g_widom tools g_widom.cpp)
 #fau_example(spceMI spce spce.cpp)
 fau_example(membrane membrane mem.cpp)
 fau_example(memp wallprotein memp.cpp)
+fau_example(wp_gaussian wallprotein wp_gaussian.cpp)
 fau_example(saltsolution widom saltlab.cpp)
 fau_hyperexample(hyperbulk hypersphere hyperbulk.cpp)
 

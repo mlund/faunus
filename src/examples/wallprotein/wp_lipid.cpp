@@ -17,13 +17,8 @@
 using namespace std;
 using namespace Faunus;
 
-#ifdef NOSLIT
-	typedef pot_r12minimage Tpot;
-	typedef box Tcon;
-#else
-	typedef pot_r12minimageXY Tpot;
-	typedef slit Tcon;
-#endif
+typedef pot_r12minimageXY Tpot;
+typedef slit Tcon;
 
 int main() {
   // General setup

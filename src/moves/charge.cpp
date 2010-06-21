@@ -8,26 +8,30 @@ namespace Faunus {
   chargeregGaussian::chargeregGaussian(ensemble &e, container &c, energybase &i) : markovmove(e,c,i) {
     name.assign("Gaussian Charge Fluctuations");
     cite.assign("ML, unpublished");
+    prefix="chargereggauss";
     dp=1.0;
     data t;
     for (unsigned int i=0; i<c.p.size(); i++) // search for titratable sites
-      if ( atom[ c.p[i].id ].variance>0 ) {
+      if ( atom[ c.p[i].id ].variance>1e-4) {
         t.n=i;
         sites.push_back(t);
       }
+    if (sites.size()==0)
+      runfraction=0;
   }
   
   string chargeregGaussian::info() {
     std::ostringstream o;
-    o <<  markovmove::info()
-      << "#   Nr. of titratable sites   = " << sites.size() << endl;
+    if (dp>0)
+      o <<  markovmove::info()
+        << "#   Nr. of titratable sites   = " << sites.size() << endl;
     return o.str();
   }
   
   double chargeregGaussian::titrateall() {
-    double du, sum=0;
+    double sum=0;
     for (unsigned int i=0; i<sites.size(); i++) {
-      cnt++;
+      markovmove::move();
       unsigned int j=rand() % sites.size(),         //!< Pick a random site
                    n=sites.at(j).n;                 //!< Get particle number
       con->trial[n].charge += dp*slp.random_half(); //!< Displace charge
@@ -40,14 +44,23 @@ namespace Faunus {
         rc=OK;
         utot+=du;
         naccept++;
+        dpsqr+=pow( con->p[n].charge - con->trial[n].charge,2);
         con->p[n].charge = con->trial[n].charge;
         sum+=du;
       } else {
         rc=ENERGY;
         con->trial[n].charge = con->p[n].charge;
+        dpsqr+=0;
       }
     }
     return sum;
+  }
+  
+  double chargeregGaussian::gaussianEnergyTotal(vector<particle> &p) {
+    double u=0;
+    for (int i=0; i<sites.size(); i++)
+      u+=gaussianEnergy(p.at( sites[i].n ));
+    return u;
   }
   
  //---------- CHARGE REG ---------------------

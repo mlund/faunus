@@ -115,5 +115,7 @@ int main(int argc, char* argv[]) {
     << tit.info() << protein[0].info(con)
     << test.report()
     << endl;                               // Print final results
+
+  return test.returnCode();
 }
 

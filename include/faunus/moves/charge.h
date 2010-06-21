@@ -28,18 +28,19 @@ namespace Faunus {
       unsigned int n;        //!< Particle number
       average<double> charge;//!< Average net-charge
     };
-     
+
     inline double gaussianEnergy(particle &p) {
       return pow(atom[p.id].mean - p.charge, 2) / (2*atom[p.id].variance);
     }
-    
+
   public:
     vector<data> sites;   //!< List of titratable sites and their mean charges.
     chargeregGaussian( ensemble&, container&, energybase&); //!< Initialize and find titratable sites
-    double titrateall(); //!< Attempt to randomly titrate all sites
-    string info();       //!< Info string
+    double titrateall();          //!< Attempt to randomly titrate all sites
+    string info();                //!< Info string
+    double gaussianEnergyTotal(vector<particle> &); //!< Sum of gaussian energies for all sites
   };
-  
+
   /*! \brief Titrate all titrateable sites
    *  \author Mikael Lund
    *  \note "titrate" used to be private. Changed because iopqr::save()

@@ -7,5 +7,3 @@ if [ -x $exe ]; then
   OMP_NUM_THREADS=1 $exe
   exit
 fi
-exit 1
-

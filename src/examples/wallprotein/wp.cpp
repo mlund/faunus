@@ -52,6 +52,11 @@ int main() {
   mt.dpv.x=mt.dpv.y=0;            // ...no need to translate in xy direction
   cout << pol.info();
 
+#ifdef NOSLIT
+  mr.runfraction=0;
+  mr.dp=0;
+#endif
+
   // Handle wall particles
   group wall;
   wall.add(con, atom[in.getstr("wall_tion1")].id, in.getint("wall_nion1") );
@@ -132,9 +137,10 @@ int main() {
       if (slp.random_one()>0.3) {
         pol.masscenter(con);
         dst.add("qtot", con.len_half-pol.cm.z, pol.charge(con.p));
+        dst.add("Rg2", con.len_half-pol.cm.z, pol.sqmassgradius(con));
         for (int i=pol.beg; i<=pol.end; i++) {
           std::ostringstream s; s << "q" << i;
-          dst.add( s.str(), con.len_half-con.p[i].z, con.p[i].charge );
+          dst.add( s.str(), con.len_half-con.p[i].z, con.p[i].charge );	
         }
       }
 
@@ -157,6 +163,7 @@ int main() {
     aam.save("confout.aam",con.p);
     pqr.save("confout.pqr",con.p);
     dst.write("dist.dat");
+    dst.cntwrite("cntdist.dat");
     gofr.write("gofr.dat");
     io.writefile("gcgroup.conf", nmt.print());
 

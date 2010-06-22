@@ -358,6 +358,8 @@ namespace Faunus {
     if (Q.cnt>0)
       o << "#   Charge and fluctuations:" << endl
         << "#     <Z> <Z2>-<Z>2        = " << Q.avg()<<" "<<Q2.avg()-pow(Q.avg(),2)<<endl;
+    if (rg2.cnt>0)
+      o << "#   Radius of gyration     = " << sqrt(rg2.avg()) << endl;
     if (dip.cnt>0)
       o << "#     <mu> <mu2>-<mu>2     = " << dip.avg()<<" "<<dip2.avg()-pow(dip.avg(),2)<<endl
         << "#     Dipole vector        = " << mu << endl;
@@ -433,6 +435,28 @@ namespace Faunus {
     r/=float(cnt);
     cm.radius = r;
     return r;
+  }
+  
+  /*!
+   * This squared radius of gyration routine is mass weighted and obeys periodic boundaries 
+   * (if any) by following the previous defined masscenter method
+   */    
+  double macromolecule::sqmassgradius(container &c) {
+    double x=0;
+    double r2=0;
+    double sum=0;
+    point t;
+    masscenter(c);                      // recalculate center of mass
+    for (int i=beg; i<=end; i++) {
+      t = c.p[i]-cm;                    // vector to center of mass
+      c.boundary(t);                    // periodic boundary (if any)
+      r2 = c.sqdist(t,cm);              // squared distance to cm
+      x += r2 * c.p[i].mw;              // m*r^2
+      sum += c.p[i].mw;                 // total mass
+    }
+    x=x*(1./sum);
+    rg2+=x;                             // add to average squared radius of gyration
+    return x;                           // obtained squared radius of gyration
   }
 
   double macromolecule::vradius(vector<particle> &p) {

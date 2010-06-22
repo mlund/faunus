@@ -81,6 +81,7 @@ namespace Faunus {
       average<double> Q2;   //!< Total charge squared.
       average<double> dip;  //!< Dipole moment scalar.
       average<double> dip2; //!< Dipole moment scalar squared.
+      average<double> rg2;  //!< Radius of gyration squared
 
       string info();                              //!< Show info
       string info(container &);                   //!< Show more info!
@@ -89,6 +90,7 @@ namespace Faunus {
       double getcharge(const vector<particle> &); //!< Calculate total charge
       double radius(vector<particle> &);          //!< Calculate radius
       double gradius(vector<particle> &);         //!< Calculate radius of gyration
+      double sqmassgradius(container &);          //!< Calculate mass weighted squared radius of gyration
       double vradius(vector<particle> &);         //!< Volume based protein radius
       double dipole(vector<particle> &);          //!< Calculate dipole moment
       void zmove(container &, double);            //!< Move in z-direction, only

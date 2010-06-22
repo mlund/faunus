@@ -50,7 +50,9 @@ namespace Faunus {
       distributions(float=0.5, float=0, float=0); //!< Constructor
       bool add(string, float, float);  //!< Add value to distribution
       bool write(string);  //!< Write distributions to a file
+      bool cntwrite(string); //!< Write counter distributions to a file
       string info();       //!< Write distributions to a string
+      string cntinfo();    //!< Write the counter of each averaged value in the distribution to a string
   };
 
   class gfactor : public analysis {

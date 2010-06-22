@@ -182,6 +182,32 @@ namespace Faunus {
   {
     return fio.writefile(name, info() );
   }
+  
+  /*! 
+   * cntinfo and cntwrite print the counter of each averaged 
+   * value in the distribution to a string and write
+   * a distribution function of this
+   */
+  string distributions::cntinfo() {
+    unsigned char i;
+    std::ostringstream o;
+    o << "# DISTRIBUTION FUNCTIONS:\n"
+      << "# 1 = distance" << endl;
+    for (i=0; i<s.size(); i++)
+      o << "# " << i+2 << " = " << s[i] << endl;
+    for (float x=xmin; x<=xmax; x+=dx) {
+      o << x;
+      for (i=0; i<d.size(); i++)
+        o << " " << d[i](x).cnt;
+      o << endl;
+    }
+    return o.str();
+  }
+
+  bool distributions::cntwrite(string name)
+  {
+    return fio.writefile(name, cntinfo() );
+  }
 
   //AGGREGATION
   aggregation::aggregation(container &C, vector<macromolecule> &G, double s) {

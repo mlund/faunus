@@ -1,6 +1,8 @@
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-#----- object files for libfaunus -----
+# -------------------------------
+#   Faunus library object files
+# -------------------------------
 set(objs slump physconst inputfile point io titrate container
     hardsphere group particles analysis species widom histogram
     mcloop ensemble faunus messagepool
@@ -12,51 +14,67 @@ set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 #----- xdrfile static library for gromacs output -----
 add_subdirectory(xdrfile)
 
+# ---=---------------------------------
+#   Mersenne Twister requires C++ TR1
+# ----=--------------------------------
+check_include_file_cxx("tr1/random" HAVETR1)
 if(HAVETR1)
   add_definitions(-DHAVETR1)
   if(ENABLE_TWISTER)
     add_definitions(-DMERSENNETWISTER)
-  endif(ENABLE_TWISTER)
-endif(HAVETR1)
+  endif()
+endif()
 
-#----- link with openbabel ------
+# -------------------------------------
+#   Get subversion revision of source
+# -------------------------------------
+if(Subversion_FOUND)
+  Subversion_WC_INFO(${CMAKE_HOME_DIRECTORY} Faunus ERROR_QUIET)
+  if(Faunus_WC_FOUND)
+    add_definitions("-D__SVN_REV__=${Faunus_WC_REVISION}")
+  endif()
+endif()
+
+# -----------------------
+#   Link with openbabel
+# -----------------------
 if(ENABLE_BABEL AND OPENBABEL_FOUND)
   set(objs ${objs} iobabel)
   include_directories(${OPENBABEL_INCLUDE_DIR})
   set(LINKLIBS ${LINKLIBS} ${OPENBABEL_LIBRARIES})
   add_definitions(-DBABEL)
-endif(ENABLE_BABEL AND OPENBABEL_FOUND)
+endif()
 
-#----- link with fortran library -----
+# -----------------------------
+#   Link with fortran library
+# -----------------------------
 if(ENABLE_FORTRAN AND CMAKE_Fortran_COMPILER_WORKS)
   set(LINKLIBS ${LINKLIBS} fortranfunc)
-endif(ENABLE_FORTRAN AND CMAKE_Fortran_COMPILER_WORKS)
+endif()
 
-#----- static faunus library -----
+# --------------------
+#   Faunus libraries
+# --------------------
+# static
 add_library(libfaunus.a STATIC EXCLUDE_FROM_ALL ${objs})
 set_target_properties(libfaunus.a PROPERTIES OUTPUT_NAME faunus)
 target_link_libraries(libfaunus.a xdrfile ${LINKLIBS})
 
-#----- dynamic faunus library -----
+# dynamic
 add_library(libfaunus SHARED ${objs})
 set_target_properties(libfaunus PROPERTIES
                       OUTPUT_NAME faunus
-                      COMPILE_DEFINITIONS "__SVN_REV__=${SVNREVISION}"
                       )
-
 target_link_libraries(libfaunus xdrfile ${LINKLIBS})
-install(TARGETS libfaunus
-        LIBRARY DESTINATION lib)
+install(TARGETS libfaunus LIBRARY DESTINATION lib)
 
-#----- dynamic faunus library - HYPERSPHERE version -----
-set (compdef "__SVN_REV__=${SVNREVISION}" "HYPERSPHERE")
+# dynamic for hypersphere
 add_library(libhyperfaunus SHARED ${objs})
 set_target_properties(libhyperfaunus PROPERTIES
                       OUTPUT_NAME hyperfaunus
                       COMPILE_DEFINITIONS "HYPERSPHERE"
                       EXCLUDE_FROM_ALL TRUE
                       )
-
 target_link_libraries(libhyperfaunus xdrfile ${LINKLIBS})
 
 #----- header install target -----

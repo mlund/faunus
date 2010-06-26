@@ -60,12 +60,13 @@ COMPILING:
   $ cmake . [options]
 
   Options:
-    -DENABLE_OPENMP=on|off   Enable OpenMP support
-    -DENABLE_PYTHON=on|off   Enable python support
-    -DENABLE_FORTRAN=on|off  Compile legacy fortran programs
-    -DENABLE_BABEL=on|off    Use OpenBabel for file I/O
+    -DENABLE_OPENMP=on|OFF   Enable OpenMP support
+    -DENABLE_PYTHON=ON|off   Enable python support
+    -DENABLE_FORTRAN=on|OFF  Compile legacy fortran programs
+    -DENABLE_BABEL=ON|off    Use OpenBabel for file I/O
+    -DENABLE_TWISTER=on|OFF  Use Mersenne Twister for random numbers
 
-  Example for Intel's C++ compiler with OpenMP parallization:
+  Example for Intel's C++ compiler with OpenMP parallelization:
     $ CXX=icpc cmake . -DENABLE_OPENMP=on
     $ make
 
@@ -97,6 +98,6 @@ DIRECTORY LAYOUT:
   src          Sourcecode and examples
   include      Header files
   legacy       Older programs. FORTRAN programs are also placed here.
-  undone       Unfinished code
   misc         Miscellaneous
   doc          Code documentation (auto generated)
+  unittests    Unittesting of compiled programs (try 'make test')

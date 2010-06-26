@@ -5,18 +5,18 @@ project("Faunus")
 #   Locate external packages
 # ----------------------------
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
+find_package(OpenMP)
 find_package(OpenBabel2)
 find_package(Boost COMPONENTS python)
 find_package(PythonInterp)
-find_package(Wget)
-find_package(CVS)
 find_package(PythonLibs)
-include(SVNinfo)
+find_package(Wget)
+find_package(Subversion-patched)
+find_package(CVS)
 include(CTest)
 include(CheckIncludeFileCXX)
 enable_testing()
 
-check_include_file_cxx("tr1/random" HAVETR1)
 
 # ------------------------------
 #   Default build is "Release"
@@ -24,8 +24,8 @@ check_include_file_cxx("tr1/random" HAVETR1)
 include(OptimizationFlags)
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release
-      CACHE STRING "Build type: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
-endif(NOT CMAKE_BUILD_TYPE)
+    CACHE STRING "Build type: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
+endif()
 
 # -----------------
 #   User options
@@ -35,9 +35,9 @@ option(ENABLE_OPENMP   "Try to use OpenMP parallization" off)
 option(ENABLE_PYTHON   "Try to create a python interface" on)
 option(ENABLE_FORTRAN  "Try to compile legacy fortran code" off)
 option(ENABLE_TWISTER  "Enable Mersenne Twister random number generator" off)
-mark_as_advanced( CLEAR CMAKE_VERBOSE_MAKEFILE CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS_RELEASE )
+mark_as_advanced( CLEAR CMAKE_VERBOSE_MAKEFILE CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS )
 mark_as_advanced( EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH
-                  CMAKE_OSX_ARCHITECTURES CMAKE_OSX_SYSROOT GCCXML)
+                  CMAKE_OSX_ARCHITECTURES CMAKE_OSX_SYSROOT GCCXML DART_TESTING_TIMEOUT)
 
 # ---------------------------
 #   Add source directories
@@ -48,4 +48,4 @@ add_subdirectory(src)
 add_subdirectory(doc EXCLUDE_FROM_ALL)
 if(ENABLE_PYTHON)
   add_subdirectory(misc/python EXCLUDE_FROM_ALL)
-endif(ENABLE_PYTHON)
+endif()

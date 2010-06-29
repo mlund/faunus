@@ -138,6 +138,7 @@ int main() {
         pol.masscenter(con);
         dst.add("qtot", con.len_half-pol.cm.z, pol.charge(con.p));
         dst.add("Rg2", con.len_half-pol.cm.z, pol.sqmassgradius(con));
+        dst.add("Ree", con.len_half-pol.cm.z, con.sqdist( con.p[pol.beg], con.p[pol.end] ));
         for (int i=pol.beg; i<=pol.end; i++) {
           std::ostringstream s; s << "q" << i;
           dst.add( s.str(), con.len_half-con.p[i].z, con.p[i].charge );	

@@ -29,11 +29,20 @@ string stringify(double x) {
   return o.str();
 }
 
+class xyfile {
+private:
+  std::ofstream f;
+  unsigned int cnt;
+public:
+  xyfile(string name) : f(name.c_str()) { cnt=0; }
+  void add(double x, double y) { f << x << " " << y << std::endl; }
+  void close() { f.close(); }
+};
+
 int main() {
   cout << faunus_splash();
   cout << "---------- INITIAL PARAMETERS -----------" << endl;
-  slump slump;                            // A random number generator
-  slump.random_seed(9);
+  slp.random_seed(9);
   inputfile in("isobaric.conf");          // Read input file
   checkValue test(in);                    // Class for unit testing
   mcloop loop(in);                        // Keep track of time and MC loop
@@ -49,6 +58,7 @@ int main() {
   iogro gro(in);                          // Gromacs file output for VMD etc.
   iopqr pqr;
   ioaam aam;
+  xyfile boxlen("boxlen.dat");            // Box length as function of MC step
   if (in.getboo("lattice")==true)         // Protein input file format is AAM
     aam.loadlattice(cell, in, g);         // Load and insert proteins
   else                                    // Center first protein (will be frozen)
@@ -125,28 +135,30 @@ int main() {
   for (int i=0; i<g.size(); i++)
     xtc.g.push_back( &g[i] );
 
-  cout << slump.info()
+  cout << slp.info() << loop.info()
        << cell.info() << pot.info() <<in.info() << endl << endl // Print information to screen
        << "---------- RUN-TIME INFORMATION  -----------" << endl;
 
-  for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
-    for (int micro=1; micro<=loop.micro; micro++) {
+  while ( loop.macroCnt() ) {                     //Markov chain 
+    while ( loop.microCnt() ) {
       short i,j,n;
       cnt++;
-      randy=slump.random_one();
+      randy=slp.random_one();
       if (randy<volr) {                         // Pick a random MC move
         sys+=vol.move(g);                       // Volume move
         lendist.add(cell.len);                  // Update L distribution
+        if (slp.random_one()>0.9)
+	  boxlen.add(loop.count(), cell.len);
       }
       // if (randy<volr+rr && randy >volr)         // Rotate proteins
       // for (n=0; n<g.size(); n++) {            //   Loop over all proteins
-      // i = slump.random_one()*g.size();      //   and pick at random.
+      // i = slp.random_one()*g.size();      //   and pick at random.
       // sys+=mr.move(g[i]);                   //   Do the move.
       // }
       if (randy<volr+rr+tr && randy>volr)       // Translate and rotate proteins simultaneously
         for (n=0; n<g.size(); n++) {            //   Loop over all proteins
-          i = slump.random_one()*g.size();      //   and pick at random.
-          if (slump.random_one()>0.9) {
+          i = slp.random_one()*g.size();      //   and pick at random.
+          if (slp.random_one()>0.9) {
             mtrL.dpt = cell.len / 2;
             sys+=mtrL.move(g, i);
           }
@@ -178,13 +190,13 @@ int main() {
       // End debug
       dist.add("aveenergy", cell.len, sys.sum);
 
-      if (movie==true && slump.random_one()>.995 && macro>1)
+      if (movie==true && slp.random_one()>.995)
         xtc.save("confout.xtc", cell);   // Save trajectory
 
-      if (slump.random_one()>.95)
+      if (slp.random_one()>.95)
         sys.track();
 
-      if(slump.random_one()>.95) {
+      if(slp.random_one()>.95) {
         for (i=0;i<g.size();i++) 
           g[i].masscenter(cell);                // Recalculate mass centers
 
@@ -213,7 +225,7 @@ int main() {
         usys+=pot.energy(cell.p, g[i], g[j]);
     sys.update(usys);                           // Update system energy averages
 
-    cout << loop.timing(macro);
+    cout << loop.timing();
     cout << "#   Energy (cur, avg, std)    = "
       << sys.cur << ", " << sys.uavg.avg()<<", "<<sys.uavg.stdev()<<endl
       << "#   Drift                     = " << sys.cur-sys.sum<<endl;
@@ -246,10 +258,10 @@ int main() {
 
     pqr.save("confout.pqr", cell.p);
     cell.saveToDisk("confout.dump");            // Save container to disk
-
   } // End of outer loop
 
   xtc.close();
+  boxlen.close();
 
   if (in.getboo("penalize")==false)
     vol.printupdatedpenalty("penalty.dat");

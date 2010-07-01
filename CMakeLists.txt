@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
+cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 project("Faunus")
 
 # ----------------------------
@@ -16,7 +16,6 @@ find_package(CVS)
 include(CTest)
 include(CheckIncludeFileCXX)
 enable_testing()
-
 
 # ------------------------------
 #   Default build is "Release"

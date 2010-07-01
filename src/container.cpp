@@ -31,6 +31,7 @@ namespace Faunus {
   bool container::saveToDisk(string file) {
     std::ofstream f(file.c_str());
     if (f) {
+      f.precision(10);
       f << p.size() << " " << getvolume() << endl;
       for (int i=0; i<p.size(); i++)
         f << p[i] << endl;

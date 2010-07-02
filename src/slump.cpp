@@ -22,11 +22,12 @@ namespace Faunus {
    */
   randomDefault::randomDefault() {
     name = "C++ build in";
-    rand_max_inv = 1./(RAND_MAX+1);
+    rand_max_inv = 1./(RAND_MAX);
   }
 
   double randomDefault::random_one() {
-    return rand_max_inv*rand();
+    double r=rand_max_inv*rand();
+    return (r==1) ? r-1e-5 : r;  // we don't like *exactly* 1 !!
   }
 
   void randomDefault::random_seed(int s) {

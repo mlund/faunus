@@ -98,13 +98,13 @@ namespace Faunus {
     return o.str();
   }
 
-  void cell::randompos(point &p) {
+  void cell::randompos(point &m) {
     double l=r2+1;
     while (l>r2) {
-      p.x = slp.random_half()*diameter;
-      p.y = slp.random_half()*diameter;
-      p.z = slp.random_half()*diameter;
-      l=p.x*p.x+p.y*p.y+p.z*p.z;
+      m.x = slp.random_half()*diameter;
+      m.y = slp.random_half()*diameter;
+      m.z = slp.random_half()*diameter;
+      l=m.x*m.x+m.y*m.y+m.z*m.z;
     }
   }
 
@@ -151,15 +151,15 @@ namespace Faunus {
   }
 
   point box::randompos() {
-    point p;
-    randompos(p);
-    return p;
+    point m;
+    randompos(m);
+    return m;
   }
 
-  void box::randompos(point &p) {
-    p.x = slp.random_half()*len;
-    p.y = slp.random_half()*len;
-    p.z = slp.random_half()*len;
+  void box::randompos(point &m) {
+    m.x = slp.random_half()*len;
+    m.y = slp.random_half()*len;
+    m.z = slp.random_half()*len;
   }
 
   string box::povray() {
@@ -173,16 +173,16 @@ namespace Faunus {
 
   xyplane::xyplane(inputfile &in) : box(in) { }
 
-  void xyplane::randompos(point &p) {
-    p.x = slp.random_half()*len;
-    p.y = slp.random_half()*len;
-    p.z = 0;
+  void xyplane::randompos(point &m) {
+    m.x = slp.random_half()*len;
+    m.y = slp.random_half()*len;
+    m.z = 0;
   }
-  void xyplane::randompos(vector<point> &p) {
+  void xyplane::randompos(vector<point> &m) {
     int s;
-    s=p.size();
+    s=m.size();
     for (int i=0; i<s; i++) 
-      randompos(p[i]);
+      randompos(m[i]);
   }
   
   //----------- SLIT --------------------------
@@ -224,7 +224,7 @@ namespace Faunus {
     return false;
   }
   
-  void gridslit::randompos(point &p) {
+  void gridslit::randompos(point &m) {
   }
   
   
@@ -240,14 +240,14 @@ namespace Faunus {
     zmin=min;
     zmax=max;
   }
-  void clutch::randompos(point &p) {
+  void clutch::randompos(point &m) {
     double l=r2+1;
     while (l>r2) {
-      p.x = slp.random_half()*diameter;
-      p.y = slp.random_half()*diameter;
-      p.z = slp.random_half()*diameter;
-      if (p.z>zmax || p.z<zmin)
-        l=p.x*p.x+p.y*p.y+p.z*p.z; //squared distance from origo
+      m.x = slp.random_half()*diameter;
+      m.y = slp.random_half()*diameter;
+      m.z = slp.random_half()*diameter;
+      if (m.z>zmax || m.z<zmin)
+        l=m.x*m.x+m.y*m.y+m.z*m.z; //squared distance from origo
     };
   }
   //------------CYLINDER---------------------------
@@ -260,14 +260,14 @@ namespace Faunus {
     diameter=r*2;
     volume=2*r2*acos(-1.)*len;
   }
-  void cylinder::randompos(point &p) {
+  void cylinder::randompos(point &m) {
     double l=r2+1;
-    p.z = slp.random_one()*len;
+    m.z = slp.random_one()*len;
     while (l>r2) {
-      p.x = slp.random_half()*diameter;
-      p.y = slp.random_half()*diameter;
-      l=p.x*p.x+p.y*p.y;
-    };
+      m.x = slp.random_half()*diameter;
+      m.y = slp.random_half()*diameter;
+      l=m.x*m.x+m.y*m.y;
+    }
   }
   string cylinder::info() {
     std::ostringstream o;
@@ -291,15 +291,15 @@ namespace Faunus {
   bool hypersphere::collision(const particle &p) {
     return false;
   }
-  void hypersphere::randompos(point &p) {
+  void hypersphere::randompos(point &m) {
     double rho=sqrt(slp.random_one());
     double omega=slp.random_one()*2.*pi;
     double fi=slp.random_one()*2.*pi;
-    p.z1=sqrt(1.-rho*rho);
-    p.z2=p.z1*cos(omega);
-    p.z1=p.z1*sin(omega);
-    p.z3=rho*sin(fi);
-    p.z4=rho*cos(fi);
+    m.z1=sqrt(1.-rho*rho);
+    m.z2=m.z1*cos(omega);
+    m.z1=m.z1*sin(omega);
+    m.z3=rho*sin(fi);
+    m.z4=rho*cos(fi);
   }
   string hypersphere::info() {
     std::ostringstream o;

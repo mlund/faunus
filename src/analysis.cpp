@@ -33,7 +33,7 @@ namespace Faunus {
   
   void systemenergy::check(checkValue &test) {
     test.check("systemEnergyAverage", uavg.avg(), 0.3);
-    test.check("systemEnergyDrift", std::abs(drift()), 20.);
+    test.check("systemEnergyDrift", std::abs(drift()), 30.);
   }
   
   string systemenergy::info() {

@@ -52,7 +52,7 @@ namespace Faunus {
       nb=g.neighbors(v[n]);
       if ( nb.size()==2 ) {
         for (int i=0; i<2; i++) {       // only atoms w. two bonds
-          if (find(v.begin(), v.end(), nb[i])==v.end()) {
+          if (std::find(v.begin(), v.end(), nb[i])==v.end()) {
             v.push_back(nb[i]);
             break;
           }

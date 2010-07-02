@@ -40,7 +40,7 @@ class measureVolume {
       }
     }
     double getVolume() { return con.getvolume()*static_cast<double>(hit)/cnt; }
-    double getRadius() { return pow( 3*getVolume() / (4*std::acos(-1)), 1./3.  ); }
+    double getRadius() { return pow( 3*getVolume() / (4*std::acos(-1.)), 1./3.  ); }
 };
 
 

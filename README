@@ -41,8 +41,8 @@ CITING FAUNUS:
   http://www.scfbm.org/content/3/1/1 (free full text)
 
 REQUIREMENTS:
-  - C++ compiler (gnu, intel, sun, pgi, ibm)
-  - cmake 2.6
+  - C/C++ compiler (gnu, intel, sun, pgi, ibm)
+  - cmake 2.8
   Optional:
   - Boost python (for python module)
   - OpenBabel 2 (numerous molecular formats)

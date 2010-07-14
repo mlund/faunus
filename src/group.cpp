@@ -445,12 +445,12 @@ namespace Faunus {
     double x=0;
     double r2=0;
     double sum=0;
-    point t;
+    point t, o;
     masscenter(c);                      // recalculate center of mass
     for (int i=beg; i<=end; i++) {
       t = c.p[i]-cm;                    // vector to center of mass
       c.boundary(t);                    // periodic boundary (if any)
-      r2 = c.sqdist(t,cm);              // squared distance to cm
+      r2 = c.sqdist(t,o);               // squared distance to cm
       x += r2 * c.p[i].mw;              // m*r^2
       sum += c.p[i].mw;                 // total mass
     }

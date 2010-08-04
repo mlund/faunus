@@ -7,7 +7,7 @@ namespace Faunus {
     macro=in.getint("macrosteps",10);
     micro=in.getint("microsteps");
     statefile=in.getstr(prefix+"statefile", "loop.state");
-    loadstateBool = in.getboo(prefix+"loadstate", false);
+    loadstateBool = false; //in.getboo(prefix+"loadstate", false);
     if (loadstateBool)
       loadstate();
     //eq=in.getboo("equilibration", false);

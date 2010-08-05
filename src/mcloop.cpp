@@ -57,7 +57,6 @@ namespace Faunus {
    * As mcloop::macroCnt() but for the microsteps
    */
   bool mcloop::microCnt() {
-    savestate();
     if (cnt_micro++<micro)
       return true;
     cnt_micro=0;

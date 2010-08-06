@@ -195,7 +195,8 @@ namespace Faunus {
     zlen_half=zlen*0.5;
     xyarea=pow(len, 2.);
     volume=xyarea*zlen;
-  };
+  }
+
   string slit::info() {
     std::ostringstream o;
     o << container::info() 
@@ -203,6 +204,12 @@ namespace Faunus {
       << "#   XY-Side length          = " << len << endl
       << "#   Z -Side length          = " << zlen << endl;
     return o.str();
+  }
+
+  void slit::randompos(point &p) {
+    p.x = slp.random_half()*len;
+    p.y = slp.random_half()*len;
+    p.z = slp.random_half()*zlen;
   }
 
   //----------- GRIDSLIT --------------------------

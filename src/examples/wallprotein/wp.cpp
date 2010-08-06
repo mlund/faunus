@@ -19,7 +19,7 @@ using namespace Faunus;
 
 #ifdef NOSLIT
 	typedef pot_r12minimage Tpot;
-	typedef box Tcon;
+	typedef slit Tcon;
 #else
 	typedef pot_r12minimageXY Tpot;
 	typedef slit Tcon;
@@ -34,7 +34,7 @@ int main() {
   Tcon con(in);
   springinteraction<Tpot> pot(in);
   distributions dst;    // Distance dep. averages
-  histogram gofr(0.1,0,con.len);
+  histogram gofr(0.1,0,con.zlen);
 
   // Handle polymers
   polymer pol;
@@ -51,6 +51,7 @@ int main() {
   translate mt(nmt, con, pot, in);// ...translate
   mt.dpv.x=mt.dpv.y=0;            // ...no need to translate in xy direction
   cout << pol.info();
+  
 
 #ifdef NOSLIT
   mr.runfraction=0;
@@ -61,12 +62,16 @@ int main() {
   group wall;
   wall.add(con, atom[in.getstr("wall_tion1")].id, in.getint("wall_nion1") );
   for (int i=wall.beg; i<=wall.end; i++)
-    con.p[i].z=con.len_half; // move all particles to edge
+    con.p[i].z=con.zlen_half; // move all particles to edge
   con.trial=con.p;
   saltmove wm(nmt,con,pot,in,"wall_");
   wm.name="WALL PARTICLE DISPLACEMENTS";
   wm.dpv.z=0; // constrain displacements to the xy-plane
-
+  
+  vector<group> vg;
+  vg.push_back(pol);
+  vg.push_back(wall);
+  
   // Handle salt particles
   salt salt( atom["NA"].id, atom["CL"].id ); 
   salt.add(con,in);
@@ -112,18 +117,18 @@ int main() {
           for (int i=0; i<pol.size(); i++)
             sys+=mm.move(pol);   // move monomers
           pol.masscenter(con);
-          gofr.add(con.len_half-pol.cm.z);
+          gofr.add(con.zlen_half-pol.cm.z);
           break;
         case 3:
           sys+=mt.move(pol);     // translate polymers
-          gofr.add(con.len_half-pol.cm.z);
+          gofr.add(con.zlen_half-pol.cm.z);
           break;
         case 4:
           sys+=mr.move(pol);     // rotate polymers
           break;
         case 5:
           sys+=cs.move(pol);     // crankshaft
-          gofr.add(con.len_half-pol.cm.z);
+          gofr.add(con.zlen_half-pol.cm.z);
           break;
         case 6:
           sys+=sb.move();        // grand canonical salt move
@@ -136,17 +141,18 @@ int main() {
 
       if (slp.random_one()>0.3) {
         pol.masscenter(con);
-        dst.add("qtot", con.len_half-pol.cm.z, pol.charge(con.p));
-        dst.add("Rg2", con.len_half-pol.cm.z, pol.sqmassgradius(con));
-        dst.add("Ree", con.len_half-pol.cm.z, con.sqdist( con.p[pol.beg], con.p[pol.end] ));
+        double z=con.zlen_half-pol.cm.z;
+        dst.add("qtot", z, pol.charge(con.p));
+        dst.add("Rg2", z, pol.sqmassgradius(con));
+        dst.add("Ree2", z, pol.sqend2enddistance(con)); 
         for (int i=pol.beg; i<=pol.end; i++) {
           std::ostringstream s; s << "q" << i;
-          dst.add( s.str(), con.len_half-con.p[i].z, con.p[i].charge );	
+          dst.add( s.str(), con.zlen_half-con.p[i].z, con.p[i].charge );	
         }
       }
 
       if (slp.random_one()>0.95)
-        xtc.save( "traj.xtc", con.p );
+        xtc.save( "traj.xtc", con.p, vg );
     } // END of micro loop
 
     sys.update(
@@ -161,8 +167,9 @@ int main() {
 
     // Write files to disk
     io.writefile("vmdbonds.tcl", pol.getVMDBondScript());
-    aam.save("confout.aam",con.p);
     pqr.save("confout.pqr",con.p);
+    pqr.save("confout-polwalll.pqr",con.p,vg);
+    aam.save("confout.aam", con.p);
     dst.write("dist.dat");
     dst.cntwrite("cntdist.dat");
     gofr.write("gofr.dat");

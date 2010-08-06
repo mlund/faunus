@@ -82,6 +82,7 @@ namespace Faunus {
       average<double> dip;  //!< Dipole moment scalar.
       average<double> dip2; //!< Dipole moment scalar squared.
       average<double> rg2;  //!< Radius of gyration squared
+      average<double> ree2; //!< End-to-end distance squared
 
       string info();                              //!< Show info
       string info(container &);                   //!< Show more info!
@@ -91,6 +92,7 @@ namespace Faunus {
       double radius(vector<particle> &);          //!< Calculate radius
       double gradius(vector<particle> &);         //!< Calculate radius of gyration
       double sqmassgradius(container &);          //!< Calculate mass weighted squared radius of gyration
+      double sqend2enddistance(container &);      //!< Calculate squared end-to-end distance
       double vradius(vector<particle> &);         //!< Volume based protein radius
       double dipole(vector<particle> &);          //!< Calculate dipole moment
       void zmove(container &, double);            //!< Move in z-direction, only

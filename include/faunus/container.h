@@ -186,6 +186,7 @@ namespace Faunus {
       double xyarea, zlen, zlen_half; //crossecional area 
       slit(inputfile &);
       string info();
+      void randompos(point &);
 
       inline void boundary(point &a) const {
         a.x=a.x-len*anint(a.x*len_inv);

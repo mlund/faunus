@@ -55,7 +55,7 @@ namespace Faunus {
       pot_r12minimageXY( inputfile &in ) : pot_harmonic(in) {
         name="r12 + Coulomb w. minimum image in XY-directions";
         f=in.getflt("bjerrum",7.1);
-        box=in.getflt("zboxlen");
+        box=in.getflt("boxlen");
         halfbox=box/2;
       }
 

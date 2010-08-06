@@ -359,7 +359,9 @@ namespace Faunus {
       o << "#   Charge and fluctuations:" << endl
         << "#     <Z> <Z2>-<Z>2        = " << Q.avg()<<" "<<Q2.avg()-pow(Q.avg(),2)<<endl;
     if (rg2.cnt>0)
-      o << "#   Radius of gyration     = " << sqrt(rg2.avg()) << endl;
+      o << "#   Rms radius of gyration = " << sqrt(rg2.avg()) << endl;
+    if (ree2.cnt>0)
+      o << "#   Rms end-to-end distance= " << sqrt(ree2.avg()) << endl;
     if (dip.cnt>0)
       o << "#     <mu> <mu2>-<mu>2     = " << dip.avg()<<" "<<dip2.avg()-pow(dip.avg(),2)<<endl
         << "#     Dipole vector        = " << mu << endl;
@@ -456,6 +458,13 @@ namespace Faunus {
     }
     x=x*(1./sum);
     rg2+=x;                             // add to average squared radius of gyration
+    return x;                           // obtained squared radius of gyration
+  }
+
+  double macromolecule::sqend2enddistance(container &c) {
+    double x=0;
+    x=c.sqdist(c.p[beg], c.p[end]);     // squared distance between begin and end
+    ree2+=x;                            // add to average squared end-to-end distance
     return x;                           // obtained squared radius of gyration
   }
 

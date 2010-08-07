@@ -156,6 +156,8 @@ namespace Faunus {
 
   double GCchargereg::titrateall() {
     double sum=0;
+    if (slp.random_one()>runfraction)
+      return sum;
     unsigned int I, s;
     particle J=atom(nameA);
     for (int i=0; i<sites.size(); i++) {

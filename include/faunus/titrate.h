@@ -68,6 +68,7 @@ namespace Faunus {
       virtual double energy(vector<particle> &, double, int);
       unsigned int random();                //!< Pick a random titratable site
       string info();                        //!< Returns information string
+      void applycharges(vector<particle>&); //!< Copy average charges to particles in the particle vector
   };
 
   /*! \brief Class to perform grand canonical proton titration. The process is couples with 

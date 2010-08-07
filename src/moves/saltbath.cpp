@@ -202,11 +202,11 @@ namespace Faunus {
     if( ens->metropolis(metropolis()+du)==true) {
       if (inserting==true) {
         acc_ins();
-        thispair->inacc+=100.0;
-        }
+        thispair->inacc+=100.;
+      }
       else {
-          acc_rem();
-          thispair->outacc+=100.0;
+        acc_rem();
+        thispair->outacc+=100.;
       }
       rc=OK;
       utot+=du;
@@ -221,30 +221,62 @@ namespace Faunus {
     thispair->ai += double(g[thispair->i].size() );
     thispair->aj += double(g[thispair->j].size() ); 
     if (inserting==true) {
-      thispair->inacc +=0.0;
+      thispair->inacc +=0.;
     } else {
-      thispair->outacc+=0.0; 
+      thispair->outacc+=0.; 
     }
     return du;
   }
   
-
   string saltbath::info() {
     std::ostringstream o;
     if (runfraction>0) {
       o << markovmove::info()
-        << "#   Ion pairs    ( "<<pairs.size()<<" combinations )"<< endl;
+        << "#   Salt pairs -- " << pairs.size() << " combination(s):" << endl
+        << "#     "
+        << setw(5) << std::left << "i" << setw(5) << "j" << setw(7)
+        << "ratio" << setw(9) << "ci/M" << setw(9) << "cj/M"
+        << setw(6) << "ni" << setw(6) << "nj" << setw(5) << "flux"
+        << setw(8) << "mui/kT" << setw(8) << "muj/kT"
+        << endl;
       for (int i=0; i<pairs.size(); i++) {
-       o<< std::setw(15)<<std::left<<"#       "<<"#"<<i+1<<"   " 
-        <<g[pairs[i].i].name <<" : "<< std::setw(8)<<g[pairs[i].j].name
-        <<"("<<pairs[i].ni <<":"<<pairs[i].nj<<")";
-        if (cnt!=0)
-          o<<"   [ "<<pairs[i].ai.avg()/con->getvolume()*1e27/pyc.Nav<<" M : "<<pairs[i].aj.avg()/con->getvolume()*1e27/pyc.Nav<<std::setw(9)<<std::left<<" M ] ";
-        o << "{"<<g[pairs[i].i].size()<<":"<<g[pairs[i].j].size()<<"}  "<<"<"<<pairs[i].inacc.avg()<<":"<< pairs[i].outacc.avg()<<"> %";
-        o << "| Chem.Pot. " << atom[g[pairs[i].i].name].chempot<<" : "<< atom[g[pairs[i].j].name].chempot <<" [ -kTln(AA^3) ]"<<endl;
+        o << "#     "
+          << setw(5) << g[pairs[i].i].name << setw(5) << g[pairs[i].j].name
+          << setw(3) << std::right << pairs[i].ni << ":" << setw(3) << std::left << pairs[i].nj;
+        if (cnt!=0) {
+          double ci=pairs[i].ai.avg()/con->getvolume()*1e27/pyc.Nav;
+          double cj=pairs[i].aj.avg()/con->getvolume()*1e27/pyc.Nav;
+          o << setiosflags(std::ios::fixed);
+          o.precision(5);
+          o << setw(9) << ci << setw(9) << cj;
+        }
+        double muidi=log( pairs[i].ai.avg()/con->getvolume() ),
+               muidj=log( pairs[i].aj.avg()/con->getvolume() ),
+               muexi=atom[ g[ pairs[i].i ].name ].chempot - muidi,
+               muexj=atom[ g[ pairs[i].j ].name ].chempot - muidj;
+        o << setw(6) << g[pairs[i].i].size() << setw(6) << g[pairs[i].j].size();
+        o.precision(1);
+        o << setw(5) << pairs[i].inacc.avg()-pairs[i].outacc.avg();
+        o.precision(3);
+        o << setw(8) << atom[g[pairs[i].i].name].chempot << setw(8) << atom[g[pairs[i].j].name].chempot;
+        o << endl;
       }
     }
     return o.str();
+  }
+
+  void saltbath::check(checkValue &test) {
+    markovmove::check(test);
+    test.check("SALTBATH_numpairs", pairs.size(), 1e-5);
+    for (int i=0; i<pairs.size(); i++) {
+      std::ostringstream o;
+      o << "SALTBATH" << i+1; 
+      test.check(o.str() + "_ni", pairs[i].ai.avg() );
+      test.check(o.str() + "_nj", pairs[i].aj.avg() );
+      double flux=pairs[i].inacc.avg() - pairs[i].outacc.avg();
+      test.check(o.str() + "_flux", flux);
+      test.smallerThan(o.str() + "_flux", flux, 1.);
+    }
   }
 
   int saltbath::gcd(int a, int b) {

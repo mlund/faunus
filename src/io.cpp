@@ -229,12 +229,15 @@ namespace Faunus {
     }else{ std::cout << "# Can't find .coord${jobid} \n";}
     return p;
   }
-  //----------------- IOPQR ----------------------
+
   /*!
-   *
+   * Saves particles as a PQR file. This format is very simular
+   * to PDB but also contains charges and radii of the proteins.
    *
    */
+
   iopqr::iopqr() { }
+
   bool iopqr::save(string file, vector<particle> &p) {
     string name;
     int i, nres=1, natom=1;
@@ -251,12 +254,14 @@ namespace Faunus {
     }
     return writefile(file, o.str());
   }
+
   bool iopqr::save(string file, vector<particle> &p, titrate &tit) {
     vector<particle> tmp = p;
     for (unsigned short i=0; i<p.size(); i++)
       tmp[i].charge = tit.avgcharge(p, i);
     return save(file, tmp);
   }
+
   bool iopqr::save(string file, vector<particle> &p, vector<group> &g) {
     vector<particle> t;
     for (int i=0; i<g.size(); i++)

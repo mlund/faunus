@@ -22,13 +22,6 @@ The input and output formats are quite flexible with support for
 as well as <A HREF="http://www.gromacs.org">Gromacs</A> compressed trajectory files (xtc).
 Recently we have also wrapped Faunus into a \ref python "Python" module.
 
-\subsection cit Citation
-Faunus is released under the GNU Public Licence (\ref gpl "GPL") and can thus be freely used.
-To cite it in a scientific paper, please use the following reference:
-\li Lund, M., Trulsson, M., Persson, B.
-<I>Source Code Biol. Med.</I>, 2008, <B>3</B>:1
-[<A HREF="http://www.scfbm.org/content/3/1/1"><B>free full text</B></A>]
-
 
 \section download Download
 We do not maintain regular releases of Faunus and the code can be accessed
@@ -44,25 +37,44 @@ to download a tar-ball of any revision.
 The code will compile on most unix-like systems including Linux, MacOS and most likely
 also in a Cygwin environment. Detailed instructions can be found \ref readme "here".
 
+\section cit Citing Faunus
+Faunus is released under the GNU Public Licence (\ref gpl "GPL") and can thus be freely used.
+To cite it in a scientific paper, please use the following reference:
+\li Lund, M., Trulsson, M., Persson, B.
+<I>Source Code Biol. Med.</I>, 2008, <B>3</B>:1
+[<A HREF="http://www.scfbm.org/content/3/1/1"><B>free full text</B></A>]
+
+In addition, Faunus has been used in the following scientific papers:
+\li Molecular Evidence of Stereo-Specific Lactoferrin Dimers in Solution.
+    <A HREF="http://dx.doi.org/10.1016/j.bpc.2010.06.005"><I>Biophys. Chem. 2010</I></A>
+\li Reversal of Hofmeister Ordering for Pairing of NH4+ vs Alkylated Ammonium Cations with Halide Anions in Water.
+    <A HREF="http://dx.doi.org/10.1021/jp101393k"><I>J. Phys. Chem. B, 2010</I></A>
+\li Association and Electrostatic Steering of alpha-Lactalbumin-Lysozyme Heterodimers.
+    <A HREF="http://dx.doi.org/10.1039/b909179c"><I>Phys. Chem. Chem. Phys. 2009</I></A>
+\li Enhanced Protein Steering: Cooperative Electrostatic and van der Waals Forces in Antigen-Antibody Complexes.
+    <A HREF="http://dx.doi.org/10.1021/jp904541g"><I>J. Phys. Chem. B, 2009</I></A>
+\li Ion-Speciﬁc Thermodynamics of Multicomponent Electrolytes: A Hybrid HNC/MD Approach.
+    <A HREF="http://dx.doi.org/10.1063/1.3248218"><I>J. Chem. Phys. 2009</I></A>
+\li Ion Specific Protein Assembly and Hydrophobic Surface Forces.
+    <A HREF="http://dx.doi.org/10.1103/PhysRevLett.100.258105"><I>Phys. Rev. Lett. 2008</I></A>
+\li Patchy Proteins, Anions and Hofmeister Series.
+    <A HREF="http://dx.doi.org/10.1088/0953-8984/20/49/494218"><I>J. Phys.: Cond. Matt, 2008</I></A>
+
 \section support Support
 Support requests, bug reports etc. can be submitted <A HREF="http://sourceforge.net/tracker/?group_id=196168"><B>here</B></A>.
 
-\section dev Credits and Development
-\subsection authors Contributors
+\section dev Credits
+First of all, thanks to authors of all the third party projects we rely on - 
+cmake, openbabel, gromacs, doxygen, boost to name a few.
+\subsection authors Contributors in Chronological Order
 \li Mikael Lund (<A HREF="http://web.mac.com/mlund"><B>homepage</B></A>)
 \li Bjorn Persson
 \li Martin Trulsson
 \li Ondrej Marsalek
 \li Christophe Labbez
-\li Thanks to all the authors of the open source technologies that Faunus relies on!
-
-\subsection guide Guidelines for Submitting Code
-\li Make sure "make all" works before submitting
-\li Avoid submitting temporary files (.o, .xyz etc.)
-\li Stride to recycle code via inheritance, virtual functions, templates etc.
-\li Document code using Doxygen keywords
-\li Provide a descriptive comment of changes when issuing "svn commit"
-\li Example applications are most welcome!
+\li Andre Teixeira
+\li Anil Kurut
+\li Chris Evers
 */
 
 /*! \page License

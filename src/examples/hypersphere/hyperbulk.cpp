@@ -67,9 +67,8 @@ int main() {
   
   cout << atom.info() << in.info() << con.info() << pot.info();
   
-  while (loop.macroCnt() ) {//Markov chain 
+  while (loop.macroCnt() ) {             //Markov chain 
     while (loop.microCnt() ) {
-      // mc chain
       switch (rand() % 1) {
         case 0:
           sys += sm.move(salt);
@@ -96,6 +95,8 @@ int main() {
 
   } // End of outer loop
 
+  cout << loop.info() << sys.info() << sm.info() << wid.info();
+
   rdf_anan.write("rdf_anan.dat");
   rdf_catan.write("rdf_catan.dat");
   rdf_catcat.write("rdf_catcat.dat");
@@ -103,7 +104,6 @@ int main() {
   sys.check(test);
   wid.check(test);
   sm.check(test);
-  
-  cout << sys.info() << sm.info() << wid.info();
+  cout << test.report();
+  return test.returnCode();
 }
-

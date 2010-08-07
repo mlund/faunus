@@ -157,15 +157,9 @@ namespace Faunus {
   double titrate::applycharges(vector<particle> &p) {
     for (unsigned int i=0; i<sites.size(); i++)
       p[sites[i]].charge = q[i].avg();
-
     double q = nprot.avg() / protons.size();
     for (unsigned int i=0; i<protons.size(); i++)
       p[protons[i]].charge = q;
-
-    //std::cout << "# Charge, Titrateable sites = " << sumsites() << endl
-    //  << "# Charge, Protons           = " << nprot.avg() << endl
-    //  << "# Average proton charge     = " << q << endl
-    // << "# Total                     = " << sumsites()+nprot.avg() << endl;
     return sumsites();
   }
 
@@ -226,6 +220,16 @@ namespace Faunus {
     return o.str();
   }
 
+  /*!
+   * This function will set the charges of all titratable sites
+   * to their average charge.
+   * \warning This function modifies the given particle vector.
+   */
+  void titrate_implicit::applycharges(vector<particle> &p) {
+    for (unsigned int i=0; i<sites.size(); i++)
+      p[ sites[i] ].charge = zavg[i].avg();
+  }
+
   // TITRATE_GC
  
   titrate_gc::titrate_gc(container &con, inputfile &in, grandcanonical &gc) : titrate_implicit(con,in.getflt("pH", 7.0)) {
@@ -249,11 +253,17 @@ namespace Faunus {
         o << "#   Average charges on titratable sites:" << endl;
         for ( int i=0; i<atom.list.size(); i++ ) {
           if ( atom[i].pka>0 ) {
-            o << "#     " << atom[i].name << ": " << setiosflags(std::ios::fixed);
+            o << "#" << std::setw(10) << std::right << atom[i].name+": " << setiosflags(std::ios::fixed);
             o.precision(3);
+            int cnt=0;
             for ( int j=0; j<sites.size(); j++ )
-              if ( con.p[sites[j]].id==i )
-                o << zavg[j].avg() << " ";
+              if ( con.p[sites[j]].id==i ) {
+                o << std::setw(7) << zavg[j].avg();
+                if (++cnt>9) {
+                  o << endl << "#          ";
+                  cnt=0;
+                }
+              }
             o << endl;
           }
         }

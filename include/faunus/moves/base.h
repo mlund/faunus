@@ -72,6 +72,7 @@ namespace Faunus {
     void adjust_dp(float=30, float=40);         //!< Adjust displacement parameter
     energybase *pot;
     markovmove(ensemble &, container &, energybase &);
+    double zconstrain;                          //!< Constrains the displacement from getting closer than this value from a wall
   };
   
 }//namespace

@@ -88,13 +88,26 @@ namespace Faunus {
     for (int i=0; i<v.size(); i++)
       con->trial[v[i]] = rot.rotate( con->p[v[i]] );
 
+    bool hc=false;
+    particle t;
+    t.x = g.cm_trial.x;
+    t.y = g.cm_trial.y;	
+    t.z = g.cm_trial.z + zconstrain;	
+    if (con->collision(t)==true) 
+      hc=true;
     for (int i=0; i<v.size(); i++) {
       if (con->collision(con->trial[v[i]])==true) {
-        du=1e3;
+        hc=true;
         break;
       } else du += pot->u_monomer(con->trial,g,v[i]) - pot->u_monomer(con->p,g,v[i]);
     }
-
+    if (hc==true) {
+      rc=HC;
+      du=0;
+      for (int i=0; i<v.size(); i++)
+        con->trial[v[i]] = con->p[v[i]];
+      return du;
+    }
     if (ens->metropolis(du)==true) {
       rc=OK;
       utot+=du;

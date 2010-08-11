@@ -202,6 +202,7 @@ namespace Faunus {
     p.z=dpv.z*dp*slp.random_half();
     g.move(*con, p); 
 
+    bool hc=false;
     particle t;
     t.x = g.cm_trial.x;
     t.y = g.cm_trial.y;	

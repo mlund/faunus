@@ -54,6 +54,7 @@ namespace Faunus {
       translate( ensemble&, container&, energybase&, inputfile&);
       double move(group &);   //!< Translate while group
       string info();          //!< Info string
+      float xytrans;          //!< Fractional chance that xy translations occur
   };
 
   //-----------MOVE----------------------------------------

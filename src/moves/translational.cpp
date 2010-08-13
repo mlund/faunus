@@ -201,7 +201,14 @@ namespace Faunus {
     p.y=dpv.y*dp*slp.random_half();
     p.z=dpv.z*dp*slp.random_half();
     g.move(*con, p); 
+    
     bool hc=false;
+    particle t;
+    t.x = g.cm_trial.x;
+    t.y = g.cm_trial.y;	
+    t.z = g.cm_trial.z + zconstrain;	
+    if (con->collision(t)==true) 
+      hc=true;
     for (int i=g.beg; i<=g.end; i++) {
       if (con->collision(con->trial[i])==true) {
         hc=true;
@@ -413,7 +420,17 @@ namespace Faunus {
       return 0;
     markovmove::move();
     int n=g.displace(*con, dpv*dp); 
+
+    bool hc=false;
+    particle t;
+    t.x = g.cm_trial.x;
+    t.y = g.cm_trial.y;	
+    t.z = g.cm_trial.z + zconstrain;	
+    if (con->collision(t)==true) 
+      hc=true;
     if (con->collision( con->trial[n] )==true)
+      hc=true;
+    if (hc==true) 
       rc=HC;
     else {
       //uold = pot->energy(con->p, g) + pot->uself_polymer(con->p, g);

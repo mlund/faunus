@@ -549,7 +549,7 @@ namespace Faunus {
       par.boundary(par.trial[i]);
 
     }
-    cm_trial = cm + q;
+    cm_trial = masscenter(par.trial);
     par.boundary(cm_trial);
   }
 

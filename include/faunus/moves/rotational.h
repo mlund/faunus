@@ -11,6 +11,7 @@ namespace Faunus {
   class macrorot : public markovmove { 
     public:
       macrorot( ensemble&, container&, energybase&);
+      macrorot( ensemble&, container&, energybase&, inputfile&);
       double move(macromolecule &);
       double move(vector<macromolecule> &, int);
   };

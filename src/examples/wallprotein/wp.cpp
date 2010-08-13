@@ -47,7 +47,7 @@ int main() {
   pol.accept(con);                // .. accept translation
   monomermove mm(nmt,con,pot,in); // Rattle MC move
   crankShaft cs(nmt,con,pot,in);  // ...crankshaft
-  macrorot mr(nmt, con, pot);     // ...rotate
+  macrorot mr(nmt, con, pot,in);  // ...rotate
   translate mt(nmt, con, pot, in);// ...translate
   mt.dpv.x=mt.dpv.y=0;            // ...no need to translate in xy direction
   cout << pol.info();

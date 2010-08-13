@@ -68,12 +68,14 @@ namespace Faunus {
 
   crankShaft::crankShaft(ensemble &e, container &c, energybase &i, inputfile &in) : markovmove(e,c,i), rot(c) {
     name.assign("CRANKSHAFT MOVE");
+    prefix.assign("crankshaft_");
     runfraction=1.0;
     deltadp=0.;
     dp=in.getflt("crankshaft_dp", 1.0);
     minMonomers=in.getint("crankshaft_min",1);
     maxMonomers=in.getint("crankshaft_max",10);
     setNumberOfMonomers();
+    markovmove::getInput(in);
   }
 
   double crankShaft::move(polymer &g) {

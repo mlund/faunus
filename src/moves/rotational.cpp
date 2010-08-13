@@ -11,6 +11,20 @@ namespace Faunus {
     dp=1.0;
   };
 
+ /*!
+  * Macromolecular rotation, which loads parameters from inputfile &in
+  */
+  macrorot::macrorot( ensemble &e,
+      container &c, energybase &i, inputfile &in ) : markovmove(e,c,i)
+  {
+    name.assign("MACROMOLECULAR ROTATION");
+    prefix.assign("molrot_");
+    runfraction=1.0;
+    deltadp=0.1;
+    dp=1.0;
+    markovmove::getInput(in);
+  };
+
   double macrorot::move(macromolecule &g) {
     if (slp.runtest(runfraction)==false)
       return 0;

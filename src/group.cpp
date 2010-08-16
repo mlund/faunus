@@ -547,9 +547,9 @@ namespace Faunus {
       par.trial[i].y=e1mcoy*eb+cosang*b.y+sinang*(u.z*b.x - u.x*b.z) + cm.y + q.y;
       par.trial[i].z=e1mcoz*eb+cosang*b.z+sinang*(u.x*b.y - u.y*b.x) + cm.z + q.z;
       par.boundary(par.trial[i]);
-
     }
-    cm_trial = masscenter(par.trial);
+    //cm_trial = masscenter(par.trial); // calling masscenter() is no good in trial move as it sets cm_trial=cm
+    cm_trial = cm + q;
     par.boundary(cm_trial);
   }
 
@@ -599,7 +599,7 @@ namespace Faunus {
   }
 
   /*!
-   * Consecutice rotation and translation 
+   * Simultaneous rotation and translation 
    *
    * \param par Container
    * \param dr Displacement parameter

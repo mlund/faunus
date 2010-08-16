@@ -196,7 +196,8 @@ namespace Faunus {
       bool save(string, vector<particle> &);   //!< Save a frame to trj file.
       bool save(string, box &);                //!< Save a frame to trj file (PBC)
       bool save(string, vector<particle> &, vector<group> &); //!< Save groups
-      void setbox(float);                      //!< Set box size to be saved in frame
+      void setbox(float);                      //!< Set box size to be saved in frame (cubic)
+      void setbox(double,double,double);       //!< Set box size to be saved in frame
       void close();                            //!< Close trj file
   };
 };//namespace

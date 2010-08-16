@@ -428,6 +428,16 @@ namespace Faunus {
     xdbox[2][2]=len/10.; // (in nanometers!)
   }
 
+  void ioxtc::setbox(double x, double y, double z) {
+    double f=0.1;
+    for (char i=0; i<3; i++)
+      for (char j=0; j<3; j++)
+        xdbox[i][j]=0;
+    xdbox[0][0]=f*x; // corners of the
+    xdbox[1][1]=f*y; // rectangular box
+    xdbox[2][2]=f*z; // (in nanometers!)
+  }
+
   /*!
    * Save all particles in box to xtc file. Molecules split by
    * the periodic boundaries can be made whole by adding pointers

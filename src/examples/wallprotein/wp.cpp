@@ -129,6 +129,7 @@ int main() {
           gofr.add(*zhalfPtr-pol.cm.z);
           break;
         case 4:
+          pol.masscenter(con);
           sys+=mr.move(pol);     // rotate polymers
           break;
         case 5:
@@ -156,8 +157,10 @@ int main() {
         }
       }
 
-      if (slp.random_one()>0.95)
+      if (slp.random_one()>0.95) {
+        xtc.setbox(con.len,con.len,(*zhalfPtr)*2);
         xtc.save( "traj.xtc", con.p, vg );
+      }
     } // END of micro loop
 
     sys.update(

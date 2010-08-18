@@ -73,6 +73,15 @@ COMPILING:
   Run test suite:
     $ make test (or use 'ctest -V' for verbose output)
 
+  Libraries in odd locations:
+    Can be specified using environmental variables. For example,
+
+    $ LDFLAGS=-L/sw/lib CPPFLAGS=-I/sw/include/openbabel-2.0 cmake .
+
+  Resetting the build system:
+    $ make clean
+    $ rm CMakeCache.txt
+
 PYTHON SUPPORT:
   Classes from Faunus can be accessed via Python, provided that
   the python module is compiled (requires boost python). Build with:

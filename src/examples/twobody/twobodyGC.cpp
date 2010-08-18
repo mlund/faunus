@@ -1,10 +1,11 @@
 /*!\page test_twobody Twobody
  * This program will simulate two protein molecules
  * in a dielectric solvent with explicit mobile ions.
+ * Includes grand canonical salt and proton titrations
  * The container is SPHERICAL w. hard walls.
  *
  * \author Mikael Lund
- * \date Prague 2007
+ * \date Lund 2010
  * \todo Maybe use a cylindrical cell?
  * \include twobodyGC.cpp
  */
@@ -46,8 +47,8 @@ int main(int argc, char* argv[]) {
   dualmove dm(nmt, cell, pot);          // Class for 1D macromolecular translation
   dm.setup(in);
   dm.load( in, g, 80.);                 // Load proteins and separate them 
-  vector<group> vg;
-  vg.push_back(g[0]);
+  vector<group> vg;                     // Make a vector of just the proteins
+  vg.push_back(g[0]);                   // (used for trajectory output)
   vg.push_back(g[1]);
 
   // Salt setup
@@ -56,9 +57,11 @@ int main(int argc, char* argv[]) {
   saltmove sm(nmt, cell, pot, in);      // Class for salt movements
 
   // Titration and GC moves
-  saltbath sb(nmt,cell,pot,in,salt);    // Class for salt movements
+  if (in.getflt("tit_runfrac", 0.5)<1e-5 ) // Should we disable titration?
+    for (int i=0; i<atom.list.size(); i++) // ...if so set all pKa's to zero.
+      atom.list[i].pka=0;
+  saltbath sb(nmt,cell,pot,in,salt);       // Class for salt insertion
   GCchargereg tit(nmt,cell,pot,in);   
-  tit.runfraction=0.5;
 
   if(nmt.load(cell, "gcgroup.conf")==true) {                  
     aam.load(cell,"confout.aam");       // Read initial config. from disk (if present)
@@ -106,25 +109,24 @@ int main(int argc, char* argv[]) {
           break;
       }
 
-      if (slp.random_one()>0.95)
+      if (slp.random_one()>0.95)                    // Track system energy
         dst.add("Utot", dm.r, pot.energy(cell.p));
 
-      if (slp.random_one()<gofr_pp_rf)
+      if (slp.random_one()<gofr_pp_rf)              // Track protein-protein g(r)
         gofr_pp.update( cell.p, g[0], g[1] );
 
-      if (slp.random_one()>.98 && loop.macro>1)
-        xtc.save("coord.xtc", cell.p, vg);      // Save trajectory
+      if (slp.random_one()>.98 && loop.macro>1)     // Save trajectory of proteins
+        xtc.save("coord.xtc", cell.p, vg);
 
     } // End of inner loop
     
-    sys.update(
+    sys.update(                                 // Update system energy
       pot.energy(cell.p, g[0], g[1]) +
       pot.energy(cell.p, salt) +
       pot.internalElectrostatic(cell.p, g[0]) +
       pot.internalElectrostatic(cell.p, g[1]) +
       pot.internal(cell.p, salt));              // System energy analysis
  
-
     gofr_pp.write("rdfatomic.dat");             // Write interprotein g(r) - Atomic
     dm.gofr.write("rdfprot.dat");               // Write interprotein g(r) - CM
     dst.write("distributions.dat");             // Write other distributions
@@ -133,7 +135,17 @@ int main(int argc, char* argv[]) {
     tit.applycharges(cell.trial);               // Set average charges on all titratable sites
     pqr.save("confout.pqr", cell.trial);        // ... save PQR file
     pqr.save("confout_ns.pqr", cell.trial,vg);  // ... save PQR file (proteis only)
-    cell.trial=cell.p;                          // ... and restore original charges
+    group proteins = g[0]+g[1];
+    double q=0;
+    for (int i=0; i<cell.trial.size(); i++)          // Calculate system charge after smearing
+      q+=cell.trial[i].charge;
+    for (int i=proteins.beg; i<=proteins.end; i++) { // And spread it evenly over both proteins
+      cell.trial[i].charge -= q/proteins.size();     // to restore electroneutrality
+      cell.trial[i].id=atom["UNK"].id;
+    }
+    aam.save("confout_smeared.aam", cell.trial);     // Save AAM file w smeared charges (electroneutral)
+    cell.trial=cell.p;                               // Restore original charges!
+
     io.writefile("gcgroup.conf", nmt.print());
 
     cell.check_vector();                        // Check sanity of particle vector
@@ -149,7 +161,7 @@ int main(int argc, char* argv[]) {
        << sys.info() << g[0].info() << g[1].info() << cell.info()
        << tit.info() << sb.info();
 
-  // Output tests
+  // Unit tests
   sys.check(test);
   sb.check(test);
   dm.check(test);

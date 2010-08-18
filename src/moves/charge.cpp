@@ -75,9 +75,10 @@ namespace Faunus {
 
   chargereg::chargereg(ensemble &e, container &c, energybase &i, group &g, float ph ) : markovmove(e,c,i), titrate(c.p,g,ph)
   {
+    runfraction=0.2;
+    prefix.assign("tit_");
     name.assign("PROTON TITRATION");
     cite.assign("Biochem. 2005, 44, 5722-5727.");
-    runfraction=0.2;
     con->trial = con->p;
   }
 
@@ -143,8 +144,10 @@ namespace Faunus {
       energybase &i,
       inputfile &in) : markovmove(e,c,i), titrate_gc(c,in,e)
   {
+    prefix.assign("tit_");
     this->name.assign("GRAND CANONICAL PROTON TITRATION");
     this->cite.assign("doi:10.1007/978-3-540-75755-9_8");
+    markovmove::getInput(in);
   }
 
   string GCchargereg::info() {

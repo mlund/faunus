@@ -1,4 +1,3 @@
-#!/bin/bash
 function mkinput() {
 echo "macrosteps 10
 microsteps $microsteps
@@ -30,8 +29,10 @@ dm_dpwidth   1
 dm_maxsep    129
 dm_minsep    0
 
-MUs           NA $musalt CL $musalt
-pH            $pH
+tit_runfrac  $titrunfrac
+
+MUs NA $musalt CL $musalt K $musalt
+pH           $pH
 protonpartner NA
 
 testsuite_testfile test.stable
@@ -46,23 +47,34 @@ musalt=-11.08  #  30 mM
 exe="./twobodyGC"
 cellradius=130
 salt=50
+smear=1
 
-for pH in 5 7 9
+export OMP_NUM_THREADS=2
+
+for smear in 1
 do
-  # Equilibrate
-  rm -f confout.aam gcgroup.conf rdf*.dat
-  prefix="poon-poon.30mM.pH${pH}"
-  nion1=$[salt+142]
-  nion2=$[salt]
-  microsteps=2000
-  mkinput
-  $exe > $prefix.eq
+  for pH in 5 7 9
+  do
+    # Equilibrate
+    rm -f confout.aam gcgroup.conf rdf*.dat
+    prefix="poon-poon.30mM.pH${pH}.smear${smear}"
+    nion1=$[salt+142]
+    nion2=$[salt]
+    titrunfrac=0.5
+    microsteps=1000
+    mkinput
+    $exe > $prefix.eq
 
-  # Production run
-  microsteps=300000
-  mkinput
-  $exe > $prefix.out
-  mv rdfprot.dat $prefix.rdf
-  mv distributions.dat $prefix.dist
+    # Production run
+    if [ $smear -eq 1 ]; then
+      cp confout_smeared.aam confout.aam
+      titrunfrac=0
+    fi
+    microsteps=100000
+    mkinput
+    $exe > $prefix.out
+    mv rdfprot.dat $prefix.rdf
+    mv distributions.dat $prefix.dist
+  done
 done
 

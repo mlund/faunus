@@ -2,10 +2,11 @@
 #define FAU_WIDOMMOD_H
 
 #include "faunus/energy/base.h"
-#include "faunus/container.h"
 #include "faunus/analysis.h"
 
 namespace Faunus {
+  class container;
+
   /*! \brief Widom method for excess chemical potentials
    *  \author Mikael Lund
    *

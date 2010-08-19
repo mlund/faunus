@@ -4,6 +4,11 @@
 #include "faunus/moves/base.h"
 
 namespace Faunus {
+  class container;
+  class energybase;
+  class macromolecule;
+  class ensemble;
+
   /*! \brief Rotate group around its mass-center.
    *  \author Mikael Lund
    *  \date Prague 2007

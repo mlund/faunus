@@ -1,4 +1,6 @@
 #include "faunus/moves/rotational.h"
+#include "faunus/energy/base.h"
+#include "faunus/ensemble.h"
 
 namespace Faunus {
 

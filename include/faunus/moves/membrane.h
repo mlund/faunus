@@ -5,6 +5,8 @@
 #include "faunus/histogram.h"
 
 namespace Faunus {
+  class popscmembrane;
+
   class membranemove : public markovmove {
     public:
     int steps;

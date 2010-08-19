@@ -1,4 +1,5 @@
 #include "faunus/moves/base.h"
+#include "faunus/inputfile.h"
 
 namespace Faunus {
    

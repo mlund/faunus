@@ -2,6 +2,7 @@
 #define FAU_ISOBARIC_H
 
 #include "faunus/moves/base.h"
+#include "faunus/ensemble.h"
 
 namespace Faunus {
   /*!

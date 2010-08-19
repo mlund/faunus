@@ -1,4 +1,8 @@
 #include <faunus/ensemble.h>
+#include "faunus/species.h"
+#include "faunus/group.h"
+#include "faunus/point.h"
+#include "faunus/container.h"
 
 namespace Faunus {
 

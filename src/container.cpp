@@ -1,4 +1,6 @@
 #include "faunus/container.h"
+#include "faunus/inputfile.h"
+#include "faunus/species.h"
 
 namespace Faunus {
 
@@ -123,6 +125,7 @@ namespace Faunus {
   }
 
   bool box::setlen(double l) {
+    assert(l>0);
     if (l<=0)
       return false;
     len = l;    // cubic box sidelength

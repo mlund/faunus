@@ -1,4 +1,9 @@
 #include <faunus/group.h>
+#include "faunus/container.h"
+#include "faunus/species.h"
+#include "faunus/iobabel.h"
+#include "faunus/physconst.h"
+
 namespace Faunus {
 
   //
@@ -92,6 +97,8 @@ namespace Faunus {
     }
     cm=cm*(1./sum);
     cm_trial = cm;
+    assert(sum>0);
+    assert(beg<=end);
     return cm;
   }
 
@@ -116,6 +123,7 @@ namespace Faunus {
     cm=cm*(1./sum) + o;
     con.boundary(cm);
     cm_trial = cm;
+    assert(sum>0);
     return cm;
   }
 
@@ -305,7 +313,7 @@ namespace Faunus {
 
   string salt::info(container &con) {
     std::ostringstream o;
-    float c=1./6.022e23/1e-27;
+    float c=1./pyc.Nav/1e-27;
     short nan=count(con.p, anion),
           ncat=count(con.p, cation);
     o << group::info();

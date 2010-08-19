@@ -1,5 +1,8 @@
-#include <faunus/moves/saltbath.h>
 #include <faunus/physconst.h>
+#include "faunus/energy/base.h"
+#include "faunus/species.h"
+#include "faunus/ensemble.h"
+#include "faunus/moves/saltbath.h"
 
 namespace Faunus {
   // Constructor

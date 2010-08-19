@@ -1,8 +1,6 @@
 #ifndef FAU_IO_H
 #define FAU_IO_H
 #include "faunus/common.h"
-#include "faunus/group.h"
-#include "faunus/container.h"
 #include "faunus/titrate.h"
 //#include <stdio.h>
 
@@ -19,6 +17,14 @@
 //#endif GROMACS
 
 namespace Faunus {
+  class container;
+  class inputfile;
+  class box;
+  class group;
+  class macromolecule;
+  class particle;
+  class particles;
+
   //--------------------------------
   //!\brief Basic file I/O routines
   //!\author Mikael Lund

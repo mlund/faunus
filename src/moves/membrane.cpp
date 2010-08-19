@@ -1,5 +1,7 @@
 #include "faunus/moves/membrane.h"
 #include "faunus/io.h"
+#include "faunus/energy/base.h"
+#include "faunus/ensemble.h"
 
 namespace Faunus {
   membranemove::membranemove(ensemble &e, container &c, energybase &i, popscmembrane &m) 

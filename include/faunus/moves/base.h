@@ -2,15 +2,19 @@
 #define FAU_markovmove_h
 
 #include "faunus/common.h"
-#include "faunus/container.h"
-#include "faunus/energy/base.h"
-#include "faunus/ensemble.h"
 #include "faunus/xytable.h"
 #include "faunus/titrate.h"
 #include "faunus/slump.h"
-#include "faunus/io.h"
 
 namespace Faunus {
+  class container;
+  class ensemble;
+  class energybase;
+  class checkValue;
+  class macromolecule;
+  class molecules;
+  class salt;
+  class grandcanonical;
     
   /*! \brief Base class for MC moves
    *  \author Mikael Lund

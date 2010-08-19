@@ -3,10 +3,12 @@
 
 #include <faunus/common.h>
 #include <faunus/slump.h>
-#include <faunus/group.h>
-#include <faunus/container.h>
 
 namespace Faunus {
+  class container;
+  class group;
+  class particle;
+
   /*!
    * Polymorph ensemble class
    * \todo Maybe not really needed...

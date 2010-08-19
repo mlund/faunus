@@ -4,6 +4,7 @@
 #include "faunus/common.h"
 #include "faunus/group.h"
 #include "faunus/inputfile.h"
+#include "faunus/container.h"
 
 namespace Faunus {
   /*!

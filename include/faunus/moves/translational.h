@@ -5,6 +5,9 @@
 #include "faunus/histogram.h"
 
 namespace Faunus {
+  class macromolecule;
+  class group;
+  class polymer;
 
   //-----------Z-MOVE--------------------------------------
   /*! \brief Class to make moves of a single particle along z-axis

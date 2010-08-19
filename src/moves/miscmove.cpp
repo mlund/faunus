@@ -1,4 +1,9 @@
 #include <faunus/moves/miscmove.h>
+#include "faunus/energy/base.h"
+#include "faunus/group.h"
+#include "faunus/ensemble.h"
+#include "faunus/energy/base.h"
+
 namespace Faunus {
   // Combined translation and rotation
   transrot::transrot( ensemble &e,

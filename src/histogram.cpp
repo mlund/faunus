@@ -1,5 +1,9 @@
 #include <faunus/histogram.h>
 #include <faunus/io.h>
+#include "faunus/species.h"
+#include "faunus/point.h"
+#include "faunus/container.h"
+#include "faunus/group.h"
 
 namespace Faunus {
   //! \param res x value resolution

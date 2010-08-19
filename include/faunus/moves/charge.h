@@ -4,8 +4,10 @@
 #include <faunus/moves/base.h>
 #include <faunus/titrate.h>
 #include "faunus/potentials/pot_debyehuckel.h"
+#include "faunus/species.h"
 
 namespace Faunus {
+  class glu3;
   
   /*! \brief Titrate all titrateable sites using Gaussian fluctuations
    *  \author Mikael Lund

@@ -21,11 +21,13 @@ namespace Faunus {
         std::istringstream i( cstr );
         i >> tmp.name;
         if (tmp.name.find("#")==string::npos &&
-            tmp.name.find("[")==string::npos)
+            tmp.name.find("[")==string::npos && tmp.name.empty()==false )
         {
           while (i >> s)
             tmp.val.push_back(s);
           matrix.push_back(tmp);
+          if (tmp.val.size()==0)
+            std::cerr << "*** FATAL ERROR in Inputfile: '" << tmp.name << "' is defined but has no value ***" << endl;
         }
       }
       f.close();
@@ -175,7 +177,7 @@ namespace Faunus {
 #ifdef __SVN_REV__
         << " (SVN revision: " << __SVN_REV__ << ")"
 #endif
-      ;
+        ;
       add( o.str(), "..." );
     }
   }
@@ -200,10 +202,10 @@ namespace Faunus {
         std::cerr.unsetf( std::ios_base::floatfield );
         std::cerr << "!!! Test " << std::setw(10) << name << " failed (ref,new,err): "
           << std::setprecision(4) 
-          << std::setw(8)
-          << ref << " "
-          << std::setw(8) << val << " "
-          << std::setw(8) << reldiff << " !!!" << std::endl;
+             << std::setw(8)
+             << ref << " "
+             << std::setw(8) << val << " "
+             << std::setw(8) << reldiff << " !!!" << std::endl;
         rc=false;
       }
     }
@@ -220,7 +222,7 @@ namespace Faunus {
     result.push_back(rc);
     return rc;
   }
-  
+
   int checkValue::returnCode() {
     for (int i=0; i<result.size(); i++)
       if (result[i]==false) return 1;

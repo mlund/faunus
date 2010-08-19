@@ -9,6 +9,7 @@
 #include <cstdarg>
 #include <cmath>
 #include <algorithm>
+#include <cassert>
 
 namespace Faunus {
   //Keep this at a minimum, please!

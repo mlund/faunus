@@ -4,12 +4,13 @@
 #include "faunus/common.h"
 #include "faunus/average.h"
 #include "faunus/particles.h"
-#include "faunus/container.h"
-#include "faunus/pot_spring.h"
-#include "faunus/inputfile.h"
-#include "faunus/iobabel.h"
+#include "faunus/point.h"
 
 namespace Faunus {
+  class container;
+  class slit;
+  class inputfile;
+
   /*! \brief Groups set of particles, such as molecules, salt etc.
    *  \author Mikael Lund
    *  \date Lund 2004

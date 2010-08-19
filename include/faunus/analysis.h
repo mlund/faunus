@@ -3,7 +3,6 @@
 
 //#include "faunus/histogram.h"
 #include "faunus/average.h"
-#include "faunus/container.h"
 #include "faunus/slump.h"
 #include "faunus/io.h"
 #include "faunus/xytable.h"
@@ -11,6 +10,12 @@
 #include "faunus/energy/base.h"
 
 namespace Faunus {
+  class container;
+  class macromolecule;
+  class point;
+  class particle;
+  class group;
+
   /*!
    * Base class for analysis functions
    * \author Mikael Lund

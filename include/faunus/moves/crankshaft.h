@@ -1,7 +1,7 @@
 #ifndef FAU_CRANKSHAFT_H
 #define FAU_CRANKSHAFT_H
 
-#include "faunus/faunus.h"
+#include "faunus/moves/base.h"
 #include "faunus/energy/springinteraction.h"
 
 namespace Faunus {

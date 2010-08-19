@@ -1,4 +1,6 @@
 #include "faunus/moves/crankshaft.h"
+#include "faunus/energy/base.h"
+#include "faunus/ensemble.h"
 
 namespace Faunus {
   vectorRotation::vectorRotation(container &con) {

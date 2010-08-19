@@ -5,10 +5,11 @@
 #include "faunus/point.h"
 #include "faunus/average.h"
 #include "faunus/xytable.h"
-#include "faunus/container.h"
-#include "faunus/group.h"
 
 namespace Faunus {
+  class group;
+  class container;
+
   /*!
    * \brief Histogram class
    * \author Mikael Lund

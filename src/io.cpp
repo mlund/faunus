@@ -1,4 +1,9 @@
 #include "faunus/io.h"
+#include "faunus/species.h"
+#include "faunus/container.h"
+#include "faunus/point.h"
+#include "faunus/group.h"
+
 namespace Faunus {
   /*!
    * The first line in the AAM file format is the number of

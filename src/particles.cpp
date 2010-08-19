@@ -1,4 +1,6 @@
 #include "faunus/particles.h"
+#include "faunus/point.h"
+
 namespace Faunus {
   //! \return Size of particle vector after addition
   int particles::push_back(const particle &par) {

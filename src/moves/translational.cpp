@@ -1,5 +1,7 @@
 #include "faunus/moves/translational.h"
 #include "faunus/io.h"
+#include "faunus/energy/base.h"
+#include "faunus/ensemble.h"
 
 namespace Faunus {
 

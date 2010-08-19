@@ -1,16 +1,15 @@
 #ifndef FAU_titrate_h
 #define FAU_titrate_h
 
-#include <vector>
-#include <algorithm>
-#include <iostream>
-#include "faunus/species.h"
+#include "faunus/common.h"
 #include "faunus/point.h"
-#include "faunus/group.h"
 #include "faunus/average.h"
-#include "faunus/ensemble.h"
 
 namespace Faunus {
+  class container;
+  class group;
+  class grandcanonical;
+  class inputfile;
 
   /*! \brief Class to perform proton titration of molecules
    *  \author Mikael Lund

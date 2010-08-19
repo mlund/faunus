@@ -1,4 +1,9 @@
 #include "faunus/titrate.h"
+#include "faunus/group.h"
+#include "faunus/species.h"
+#include "faunus/container.h"
+#include "faunus/ensemble.h"
+
 namespace Faunus {
   /*!
    * \param peeage pH

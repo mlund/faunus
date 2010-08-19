@@ -1,6 +1,7 @@
 #ifndef FAU_SALTBATH_H
 #define FAU_SALTBATH_H
-#include <faunus/moves/base.h>
+#include "faunus/moves/base.h"
+
 namespace Faunus {
   /*! \brief Class for Grand Canonical MC
    *  \author Bjorn Persson and Mikael Lund

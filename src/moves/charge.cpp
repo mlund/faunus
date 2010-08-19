@@ -1,6 +1,8 @@
 #include <faunus/moves/charge.h>
 #include <faunus/titrate.h>
 #include <faunus/physconst.h>
+#include "faunus/energy/base.h"
+#include "faunus/ensemble.h"
 
 namespace Faunus {
   

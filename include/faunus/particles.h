@@ -1,10 +1,14 @@
 #ifndef FAU_particles_h
 #define FAU_particles_h
 
+#include "faunus/common.h"
 #include "faunus/slump.h"
-#include "faunus/point.h"
+//#include "faunus/point.h"
 
 namespace Faunus {
+  class point;
+  class particle;
+
   /*!
    * \brief Class the contains the all particles including coordinates, trials etc.
    * \author Mikael Lund

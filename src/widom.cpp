@@ -1,4 +1,6 @@
 #include "faunus/widom.h"
+#include "faunus/species.h"
+
 namespace Faunus {
 
   void widom::insert(container &c, energybase &pot) {

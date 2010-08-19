@@ -2,11 +2,12 @@
 #define FAU_CONTAINER_H
 
 #include "faunus/particles.h"
+#include "faunus/point.h"
 #include "faunus/slump.h"
-#include "faunus/species.h"
-#include "faunus/inputfile.h"
 
 namespace Faunus {
+  class inputfile;
+  class group;
 
    /*!
    * \brief Class for all particles.
@@ -32,7 +33,7 @@ namespace Faunus {
     public:
       vector<particle> p;                   //!< The main particle vector
       vector<particle> trial;               //!< Trial particle vector. 
-      //vector<group*> g;                     //!< Pointer to all groups in the system.
+      vector<group*> g;                     //!< Pointer to all groups in the system.
 
       int push_back(const particle &);      //!< add particle to both "p" and "trial"
       bool insert(particle, unsigned int);  //!< Insert particle at pos n.

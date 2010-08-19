@@ -44,7 +44,11 @@ To cite it in a scientific paper, please use the following reference:
 <I>Source Code Biol. Med.</I>, 2008, <B>3</B>:1
 [<A HREF="http://www.scfbm.org/content/3/1/1"><B>free full text</B></A>]
 
-In addition, Faunus has been used in the following scientific papers:
+In addition, Faunus has been used in the following scientific works:
+\li pKa values for the unfolded state under native conditions explain the pH dependent stability of PGB1.
+    <A HREF="http://dx.doi.org"><I>Biophys. J. 2010</I></A>
+\li Fast Proton Titration Scheme for Multiscale Modeling of Protein Solutions.
+    <A HREF="http://dx.doi.org"><I>J. Chem. Theo. Comp. 2010</I></A>
 \li Molecular Evidence of Stereo-Specific Lactoferrin Dimers in Solution.
     <A HREF="http://dx.doi.org/10.1016/j.bpc.2010.06.005"><I>Biophys. Chem. 2010</I></A>
 \li Reversal of Hofmeister Ordering for Pairing of NH4+ vs Alkylated Ammonium Cations with Halide Anions in Water.

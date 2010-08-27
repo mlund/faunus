@@ -3,6 +3,7 @@
 
 #include "faunus/moves/base.h"
 #include "faunus/ensemble.h"
+#include "faunus/inputfile.h"
 
 namespace Faunus {
   /*!
@@ -21,6 +22,7 @@ namespace Faunus {
   template<typename T> class isobaric : public markovmove {
   public:
     isobaric( ensemble&, container&, T &, double, int, int);
+    isobaric( ensemble&, container&, T &, inputfile &, string="isobar_");
     string info();                          //!< Info string
     double move(vector<macromolecule> &);   //!< Markov move 
     average<double> vol, len, ilen, ivol;   //!< Averages
@@ -33,7 +35,7 @@ namespace Faunus {
     double newV;                            //!< New volume
     void newvolume();                       //!< Calculate new volume
     void accept();                          //!< Update volume and pair potential
-    void updateVars();                      //!< Update averages and variables after an attempted move
+    virtual void updateVars();              //!< Update averages and variables after an attempted move
     virtual double penaltyEnergy();         //!< Penalty energy (if any)
     T *pot;                                 //!< Override markovmove pointer.
   };
@@ -56,17 +58,28 @@ namespace Faunus {
   : markovmove(e,c,i), trialpot(i), minlen(minsize), maxlen(maxsize), P(pressure)  {
     name="ISOBARIC VOLUME MOVE";
     runfraction=1;
-    dp=100; 
+    dp=1; 
     pot=&i;
   }
-  
+
+  template<typename T> isobaric<T>::isobaric
+  ( ensemble &e, container &c, T &i, inputfile &in, string pfx) : markovmove(e,c,i), trialpot(i) {
+    name="ISOBARIC VOLUME MOVE";
+    prefix=pfx;
+    markovmove::getInput(in);
+    minlen=in.getflt(prefix+"minlen",0);
+    maxlen=in.getflt(prefix+"maxlen",1000);
+    P=in.getflt(prefix+"pressure",1);
+    pot=&i;
+  }
+   
   template<typename T> string isobaric<T>::info() {
     std::ostringstream o;
-    o << markovmove::info();
-    o << "#   Min/Max box length        = "<<minlen<<" / "<<maxlen<<endl
-    <<   "#   External pressure         = "<< P <<"(A^-3) = "<<P*1660<<" (M)"<< endl
-    <<   "#   Average volume            = "<< vol.avg() << " ("<<vol.stdev()<<") A^3" << endl
-    <<   "#   Average box length        = "<< len.avg() << " ("<<len.stdev()<<") A^3" << endl;
+    o << markovmove::info()
+      << "#   Min/Max box length        = " << minlen << " / " << maxlen << endl
+      << "#   External pressure         = " << P <<"(A^-3) = " << P*1660 << " (M)" << endl
+      << "#   Average volume            = " << vol.avg() << " (" << vol.stdev() << ") A^3" << endl
+      << "#   Average box length        = " << len.avg() << " (" << len.stdev() << ") A^3" << endl;
     return o.str();
   }
   
@@ -86,7 +99,8 @@ namespace Faunus {
     naccept++;
     rc=OK;
     utot+=du;
-    dpsqr+=pow(newV,1./3.);
+    double dL=pow(newV,1/3.) - pow(con->getvolume(),1/3.);
+    dpsqr+=dL*dL;
     con->setvolume(newV);         // save the trial volume in the container
     pot->pair.setvolume(newV);    // ...AND in the pair-potential function
   }
@@ -99,14 +113,17 @@ namespace Faunus {
     len += l;
     ilen+= 1/l;
   }
-  
-  template<typename T> double isobaric<T>::penaltyEnergy() { return 0; }
+ 
+  // This is a virtual function that will be re-defined in penalty class below
+  template<typename T> double isobaric<T>::penaltyEnergy() {
+    return 0;
+  }
   
   template<typename T> double isobaric<T>::move(vector<macromolecule> &g) {
     du=0;
     if (slp.runtest(runfraction)==false)
       return du;
-    cnt++;
+    markovmove::move();
     double uold=0, unew=0;
     newvolume();                                 // Generate new trial volume - prep. trial potential
     double newL=pow(newV,1./3.);                 // New length
@@ -156,9 +173,9 @@ namespace Faunus {
     using isobaric<T>::minlen;
     using isobaric<T>::newV;
     using isobaric<T>::con;
+    using isobaric<T>::prefix;
   private:
     virtual double penaltyEnergy();         // Penalty energy
-    bool penalize;                          // Use penalty function
     int scale;
     vector<double> penalty;                 // Initial penalty function
     vector<double> newpenalty;              // New penalty function
@@ -167,15 +184,17 @@ namespace Faunus {
     void updateVars();                      // Update averages and variables after an attempted move
     
   public:
+    bool penalize;                          // Use penalty function
     double pen;                             //!< Penalty to update penalty function
     double initpen;
-    double scalepen;
+    double scalepen;                        //!< Scale factor
     void loadpenaltyfunction(string);       //!< Load old penalty function 
     void printupdatedpenalty(string);       //!< Print penalty, old+new
     void printpenalty(string);              //!< Old penalty
     void updatepenalty();                   //!< Add penalty and newpenalty
     string info();
     isobaricPenalty( ensemble&, container&, T &, double, double, double, int, int, int);
+    isobaricPenalty( ensemble&, container&, T &, inputfile &, string="isobar_");
   };
   
   template<typename T> isobaricPenalty<T>::isobaricPenalty
@@ -196,7 +215,24 @@ namespace Faunus {
     newpenalty.resize(penbins, 1.0e-20);
     penalize=false;
   }
-  
+
+  template<typename T> isobaricPenalty<T>::isobaricPenalty
+  ( ensemble &e, container &c, T &i, inputfile &in, string pfx) : isobaric<T>(e,c,i,in,pfx)
+  {
+    // Add new fuction to set penalty fuctions (minlen-maxlen)/scale
+    scale=in.getflt(prefix+"binlen",1.);
+    int penbins=(maxlen-minlen)/scale;
+    if ((maxlen-minlen)%scale!=0)
+      penbins++; //number of bins, add one if range%scale!=0 
+    penalty.clear();
+    penalty.resize(penbins, 1.0e-20);
+    initpen=pen=in.getflt(prefix+"penalty",0);
+    scalepen=in.getflt(prefix+"scalepen");
+    newpenalty.clear();
+    newpenalty.resize(penbins, 1.0e-20);
+    penalize=in.getboo(prefix+"penalize",false);
+  }
+ 
   template<typename T> void isobaricPenalty<T>::printupdatedpenalty(string file) {
     std::ofstream f(file.c_str());
     if (f) {
@@ -297,7 +333,7 @@ namespace Faunus {
   
   template<typename T> void isobaricPenalty<T>::updateVars() {
     isobaric<T>::updateVars();
-    if (pen!=0.)
+    if (penalize==true && pen!=0.)
       newpenalty[penbin()]+=pen;
   }
   

@@ -91,9 +91,9 @@ namespace Faunus {
       string povray();
       bool collision(const particle &a) {
         double x,y,z;
-        x=std::abs(a.x)+a.radius;
-        y=std::abs(a.y)+a.radius;
-        z=std::abs(a.z)+a.radius;
+        x=std::abs(a.x);//+a.radius;
+        y=std::abs(a.y);//+a.radius;
+        z=std::abs(a.z);//+a.radius;
         return ( x*x+y*y+z*z > r2 ) ? true:false;
       }
   };

@@ -79,22 +79,15 @@ int main() {
   cr.sep=in.getflt("cluster_sep",2.0);    //   Set cluster definition (move to constructor)
   ct.skipEnergyUpdate=in.getboo("skipEnergyUpdate",false);
 
-  isobaricPenalty<Tpot> vol(
-      nvt, cell, pot,
-      in.getflt("pressure"),              // Set external pressure (in kT)
-      in.getflt("penalty"),               // Set penalty           (in kT)
-      in.getflt("scalepen"),              // Scale factor
-      int(in.getint("maxlen")),           // Set maximum box length
-      int(in.getint("minlen")),           // Set minimum box length
-      int(in.getint("binlen")));          // Set bin length for penalty function  
+  isobaricPenalty<Tpot> vol(nvt, cell, pot, in);
 
-  if ( in.getboo("penalize")==true)       // If penalty.dat is present it will be loaded and used as
+  if ( vol.penalize==true)                 // If penalty.dat is present it will be loaded and used as
     vol.loadpenaltyfunction("penalty.dat");// bias. Else a penalty function will only be constructed
 
   // Markov parameters
   bool movie=in.getboo("movie",false);
   double dppercent = in.getflt("dppercent", 0.00080);
-  vol.dp=in.getflt("voldp");
+  //vol.dp=in.getflt("voldp");
   mr.dp =in.getflt("mrdp");
   ct.dp=in.getflt("ctdp");
   cr.dp=in.getflt("crdp");
@@ -112,9 +105,9 @@ int main() {
       usys+=pot.energy(cell.p, g[i], g[j]);
   systemenergy sys(usys);   // System energy analysis
   
-  histogram lendist(in.getflt("binlen",1.) ,in.getflt("minlen"), in.getflt("maxlen"));             
+  histogram lendist(in.getflt("isobar_binlen",1.) ,in.getflt("isobar_minlen"), in.getflt("isobar_maxlen"));             
   aggregation agg(cell, g, in.getflt("aggdef",1.5) );
-  distributions dist(in.getflt("binlen",1.),in.getflt("minlen"), in.getflt("maxlen"));
+  distributions dist(in.getflt("isobar_binlen",1.),in.getflt("isobar_minlen"), in.getflt("isobar_maxlen"));
 
   FAUrdf protrdf(0,0,2.0,cell.len/2.);   // Protein and salt radial distributions
   FAUrdf protrdf11(0,0,.5,cell.len/2.); // Protein and salt radial distributions
@@ -233,7 +226,7 @@ int main() {
     cell.check_vector();                        // Check sanity of particle vector
     gro.save("confout.gro", cell);              // Write GRO output file
     protrdf.write("rdfprot.dat");               // Write g(r)'s
-    if (in.getboo("penalize")==true) {
+    if (vol.penalize==true) {
       vol.printpenalty("oldpenalty.dat");       // Print penalty function (used as bias)
       vol.printupdatedpenalty("penalty.dat");   // Print updated penalty function (not used as bias)
     }
@@ -263,7 +256,7 @@ int main() {
   xtc.close();
   boxlen.close();
 
-  if (in.getboo("penalize")==false)
+  if (vol.penalize==true)
     vol.printupdatedpenalty("penalty.dat");
 
   cout << "----------- FINAL INFORMATION -----------" << endl
@@ -271,9 +264,9 @@ int main() {
     << mtr.info() << mtrL.info() << ct.info() << cr.info() << pot.info() //<< mt.info() << mr.info()
     << endl
     << "#   Final      side length  = " << cell.len << endl
-    << "#   Ideal     <side length> = " << pow( double( g.size() ) / in.getflt("pressure" ),1./3.)<<endl
+    << "#   Ideal     <side length> = " << pow( double( g.size() ) / in.getflt("isobar_pressure"),1./3.)<<endl
     << "#   Simulated <side length> = " << vol.len.avg() << " (" << vol.len.stdev() << ")" << endl
-    << "#   Ideal     <density>     = " << in.getflt("pressure") << endl
+    << "#   Ideal     <density>     = " << in.getflt("isobar_pressure") << endl
     << "#   Simulated <density>     = " << g.size()*vol.ivol.avg() << " (" << g.size()*vol.ivol.avg() << ")" << endl;
 
   // Unit testing

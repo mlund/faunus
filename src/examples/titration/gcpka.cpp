@@ -49,6 +49,7 @@ int main(int argc, char* argv[]) {
   wid2.add( atom("CA") );
   wid2.add( atom("LA") );
   wid2.add( atom("CL") );
+  osmoticpressure osm(2.0);             // Osmotic pressure analysis in cell model only
 
   if(nmt.load(cell, "gcgroup.conf")==true)
     aam.load(cell,"confout.aam");        // Read initial config. from disk (if present)
@@ -65,15 +66,28 @@ int main(int argc, char* argv[]) {
 
   while ( loop.macroCnt() ) {           // Markov chain 
     while ( loop.microCnt() ) {
-      sys+=sm.move(salt);               // Displace salt particles
-      wid2.insert(cell,pot);            // - // -
-      int m=salt.size();
-      for (int i=0; i<salt.size(); i++)
-        sys+=sb.move();                 // Grand Canonical salt move
-      sys+=tit.titrateall();
-      protein.charge(cell.p);           // Re-calc. protein charge
-      protein.dipole(cell.p);           // Re-calc. dipole moment
+      switch (rand() % 3) {              // Randomly chose move
+        case 0:
+          sys+=sm.move(salt);               // Displace salt particles
+          break;
+        case 1:
+          for (int i=0; i<salt.size(); i++)
+            sys+=sb.move();                 // Grand Canonical salt move
+          break;
+        case 2:
+          sys+=tit.titrateall();
+          protein.charge(cell.p);           // Re-calc. protein charge
+          protein.dipole(cell.p);           // Re-calc. dipole moment
+          break;
+      }
+      if (slp.random_one()>0.75) {
+        wid2.insert(cell,pot);          // sample activity coefficients
+#ifndef MI
+        osm.sample(cell,salt);          // sample osmotic pressure
+#endif
+      }
     }                                   // END of micro loop
+
     sys.update(
       pot.energy(cell.p, salt, protein) +
       pot.internal(cell.p, salt) +
@@ -87,7 +101,8 @@ int main(int argc, char* argv[]) {
   pqr.save("confout.pqr", cell.p);
 
   cout << cell.info() << sys.info() << sm.info() << sb.info()
-       << loop.info() << wid2.info() << protein.info() << tit.info();
+       << loop.info() << wid2.info() << protein.info() << tit.info()
+       << osm.info();
 
   // Unit testing
   sm.check(test);

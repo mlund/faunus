@@ -313,5 +313,25 @@ namespace Faunus {
       void blockavg();
       string info();
   };
+
+  /*!
+   * Class to measure the osmotic pressure in the cell model.
+   * \author Mikael Lund
+   * \date Lund, 2010
+   *
+   * This class will analyse the concentration of mobile ions at the
+   * boundary of the spherical simulation container. This density is
+   * directly related to the osmotic coefficient.
+   */
+  class osmoticpressure : public analysis {
+    private:
+      double width;                       //!< Width of the cell boundary
+    public:
+      osmoticpressure(double=4.);         //!< Constructor
+      average<double> rho, rhoid;         //!< Average salt concentration at boundary and in bulk
+      void sample(cell &, group &);       //!< Sample concentration at boundary
+      string info();                      //!< Information string
+      void check(checkValue &);           //!< Unit testing
+  };
 }//namespace
 #endif

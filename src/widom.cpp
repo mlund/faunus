@@ -176,10 +176,10 @@ namespace Faunus {
       cnttot=cnt*ghostin;
       o << endl
         << "# SINGLE PARTICLE WIDOM ANALYSIS: (w. charge scaling)" << endl
-        << "#   Reference:             Mol. Phys. 1988, 64, 247-259" << endl
+        << "#   Reference:             doi:10.1080/00268978800100203" << endl
         << "#   Number of Insertions = " << cnttot << endl
         << "#   Excess chemical potentials (kT):" << endl
-                                                     << "#         total   elec.  hs       z     r"<< endl;
+        << "#           total   elec.  hs            z       r"<< endl;
       for(int i=0; i < g.size(); i++) {
         chhc[i]=-log(double(cnttot-ihc[i])/cnttot);
         chexw[i]=-log(expuw[i]);
@@ -187,12 +187,12 @@ namespace Faunus {
         o.unsetf( std::ios_base::floatfield );
         o << "#   [" << i << "] "
           << std::setprecision(4)
-          << std::setw(8) << chex[i]
-          << std::setw(8) << chel[i]
-          << std::setw(8) << chhc[i]
+          << std::setw(9) << chex[i]
+          << std::setw(9) << chel[i]
+          << std::setw(9) << chhc[i]
           << std::setprecision(2) << std::fixed
-          << std::setw(6) << g[i].charge
-          << std::setw(6) << g[i].radius << endl;
+          << std::setw(9) << g[i].charge
+          << std::setw(9) << g[i].radius << endl;
       }
     }
     return o.str();

@@ -1,4 +1,5 @@
 #include "faunus/analysis.h"
+#include "faunus/physconst.h"
 
 namespace Faunus {
 
@@ -534,5 +535,55 @@ namespace Faunus {
               << "#   "<<endl;
     return o.str();
   }
+
+  /*!
+   * \param dR Width (in Angstroms) of the shell to analyse near the boundary. The smaller the more accurate.
+   */
+  osmoticpressure::osmoticpressure(double dR) {
+    width=dR;
+  }
+
+  /*!
+   * \param c Spherical simulation container
+   * \param g Group containing all mobile ions
+   */
+  void osmoticpressure::sample(cell &c, group &g) {
+    int n=0;
+    double rmin=c.r-width;
+    for (int i=g.beg; i<=g.end; i++)
+      if (c.p[i].len()>rmin)
+        n++;
+    rho += n / ( 4/3.*pyc.pi*(c.r*c.r*c.r-rmin*rmin*rmin) );
+    rhoid += g.size() / c.getvolume();
+  }
+
+  string osmoticpressure::info() {
+    char w=11;
+    double toM=1e27/pyc.Nav; // atoms/aa3 to mol/l
+    double toPa=pyc.kB * pyc.T * pyc.Nav; // mol/l to kPa
+    double id=rhoid.avg()*toM,
+           tot=rho.avg()*toM,
+           ex=tot-id;
+    std::ostringstream o;
+    o << endl
+      << "# CELL MODEL PRESSURE ANALYSIS:" << endl
+      << "#   More information:        doi:10.1063/1.443547" << endl
+      << "#   Number of samples      = " << rho.cnt << endl
+      << "#   Width of boundary (AA) = " << width << endl;
+    o.precision(4);
+    if (rho.cnt>0) {
+      o << "#   Osmotic coefficient    = " << rho.avg()/rhoid.avg() << endl << std::left
+        << "#                            " << setw(w) << "ideal" << setw(w) << "excess" << setw(w) << "total"  << endl
+        << "#   Pressure (mM)          = " << setw(w) << id*1000 << setw(w) << ex*1000  << setw(w) << tot*1000 << endl
+        << "#    - / / - (kPa)         = " << setw(w) << id*toPa << setw(w) << ex*toPa  << setw(w) << tot*toPa << endl;
+    }
+    return o.str();
+  }
+
+  void osmoticpressure::check(checkValue &test) {
+    test.check("osmotic_pressure", rho.avg(), 0.1);
+    test.check("osmotic_coefficient", rho.avg()/rhoid.avg(), 0.1);
+  }
+
 }//namespace
 

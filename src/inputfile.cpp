@@ -182,6 +182,11 @@ namespace Faunus {
     }
   }
 
+  /*!
+   * \param name Name of test entry - spaces not allowed.
+   * \param val Value to check (unstable) or save (stable)
+   * \param threshold Maximum allowed absolute relative difference between stable and unstable
+   */
   bool checkValue::check(string name, double val, double threshold) {
     bool rc=true;
     // Stable: Save value.

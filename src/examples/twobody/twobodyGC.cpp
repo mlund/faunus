@@ -109,6 +109,13 @@ int main(int argc, char* argv[]) {
           break;
       }
 
+      if (slp.random_one()>0.9) {
+        g[0].dipole(cell.p);
+        g[1].dipole(cell.p);
+        dst.add("protein1 z-dipcomp", dm.r, g[0].mu.z/g[0].mu.len() ); 
+        dst.add("protein2 z-dipcomp", dm.r, g[1].mu.z/g[1].mu.len() ); 
+      }
+
       if (slp.random_one()>0.95)                    // Track system energy
         dst.add("Utot", dm.r, pot.energy(cell.p));
 
@@ -135,16 +142,8 @@ int main(int argc, char* argv[]) {
     tit.applycharges(cell.trial);               // Set average charges on all titratable sites
     pqr.save("confout.pqr", cell.trial);        // ... save PQR file
     pqr.save("confout_ns.pqr", cell.trial,vg);  // ... save PQR file (proteis only)
-    group proteins = g[0]+g[1];
-    double q=0;
-    for (int i=0; i<cell.trial.size(); i++)          // Calculate system charge after smearing
-      q+=cell.trial[i].charge;
-    for (int i=proteins.beg; i<=proteins.end; i++) { // And spread it evenly over both proteins
-      cell.trial[i].charge -= q/proteins.size();     // to restore electroneutrality
-      cell.trial[i].id=atom["UNK"].id;
-    }
-    aam.save("confout_smeared.aam", cell.trial);     // Save AAM file w smeared charges (electroneutral)
-    cell.trial=cell.p;                               // Restore original charges!
+    aam.save("confout_smeared.aam", cell.trial);
+    cell.trial=cell.p;                          // Restore original charges!
 
     io.writefile("gcgroup.conf", nmt.print());
 

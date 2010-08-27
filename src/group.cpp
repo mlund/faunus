@@ -361,18 +361,20 @@ namespace Faunus {
   macromolecule::macromolecule() { title="MACROMOLECULE"; }
 
   string macromolecule::info() {
+    char w=10;
     std::ostringstream o;
     o << group::info();
+    o << std::left;
     if (Q.cnt>0)
       o << "#   Charge and fluctuations:" << endl
-        << "#     <Z> <Z2>-<Z>2        = " << Q.avg()<<" "<<Q2.avg()-pow(Q.avg(),2)<<endl;
+        << "#     <Z> <Z2>-<Z>2        = " << setw(w) << Q.avg() << setw(w) << Q2.avg()-pow(Q.avg(),2) << endl;
     if (rg2.cnt>0)
-      o << "#   Rms radius of gyration = " << sqrt(rg2.avg()) << endl;
+      o << "#   Rms radius of gyration = " << setw(w) << sqrt(rg2.avg()) << endl;
     if (ree2.cnt>0)
-      o << "#   Rms end-to-end distance= " << sqrt(ree2.avg()) << endl;
+      o << "#   Rms end-to-end distance= " << setw(w) << sqrt(ree2.avg()) << endl;
     if (dip.cnt>0)
-      o << "#     <mu> <mu2>-<mu>2     = " << dip.avg()<<" "<<dip2.avg()-pow(dip.avg(),2)<<endl
-        << "#     Dipole vector        = " << mu << endl;
+      o << "#     <mu> <mu2>-<mu>2     = " << setw(w) << dip.avg() << setw(w) << dip2.avg()-pow(dip.avg(),2) << endl
+        << "#     Dipole vector        = " << setw(w) << mu << endl;
       //o << "#    Radius                = " << cm.radius << endl;
     return o.str();
   }

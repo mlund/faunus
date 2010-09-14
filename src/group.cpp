@@ -160,24 +160,26 @@ namespace Faunus {
     }
   }
 
-  void group::add(container &par, vector<particle> v, bool collision) {
-    beg=par.p.size();
+  void group::add(container &con, vector<particle> v, bool collision) {
+    beg=con.p.size();
     for (unsigned short i=0; i<v.size(); i++) {
-      par.boundary(v[i]);
-      par.push_back(v[i]);
+      con.boundary(v[i]);
+      con.push_back(v[i]);
       end=beg+i;
     }
-    masscenter(par);                // calc. mass center
+    masscenter(con);                // calc. mass center
 
     // test for overlap w. other particles
     if (collision==true) {
-      move(par, -cm);               // translate to origo (0,0,0)
-      accept(par); 
+      move(con, -cm);               // translate to origo (0,0,0)
+      accept(con); 
       point a;
-      while (overlap(par)==true) {  // No overlap allowed
-        par.randompos(a);           // find a random, vacent 
-        move(par, a);               // position.
-        accept(par);
+      while (overlap(con)==true) {  // No overlap allowed
+        con.randompos(a);           // find a random, vacent position
+        a=a-cm;
+        con.boundary(a);
+        move(con,a);
+        accept(con);
       }
     }
   }

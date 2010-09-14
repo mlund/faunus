@@ -181,11 +181,8 @@ namespace Faunus {
     runfraction=1.0;
     deltadp=1.;
     dp=10.;
-    dpv.x=1;
-    dpv.y=1;
-    dpv.z=1;
+    dpv.x=dpv.y=dpv.z=1.;
     markovmove::getInput(in);
-    xytrans = in.getflt(prefix+"xytrans",xytrans);
   }
 
   string translate::info() {
@@ -200,10 +197,8 @@ namespace Faunus {
       return 0;
     markovmove::move();
     point p;
-    if (slp.runtest(xytrans)==true) {
-      p.x=dpv.x*dp*slp.random_half();
-      p.y=dpv.y*dp*slp.random_half();
-    }    
+    p.x=dpv.x*dp*slp.random_half();
+    p.y=dpv.y*dp*slp.random_half();
     p.z=dpv.z*dp*slp.random_half();
     g.move(*con, p); 
     

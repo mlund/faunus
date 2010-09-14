@@ -119,11 +119,12 @@ namespace Faunus {
       point randompos();
 
       bool collision(const particle &a) {
-        if (std::abs(a.x)>len_half ||
-            std::abs(a.y)>len_half ||
-            std::abs(a.z)>len_half ) {
-		return true;
-	}
+        if (std::abs(a.x)>len_half)
+          return true;
+        if (std::abs(a.y)>len_half)
+          return true;
+        if (std::abs(a.z)>len_half)
+          return true;
         return false;
       }
 

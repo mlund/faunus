@@ -28,6 +28,7 @@ int main(int argc, char* argv[]) {
 #else
   cell cell(in);                        // We want a spherical simulation container
   interaction<pot_hscoulomb> pot(in);   // ...and a Coulomb/HS pot. w. minimum image
+  osmoticpressure osm(cell);            // Osmotic pressure analysis in cell model only
 #endif
   io io;                                // File i/o
   iopqr pqr;                            // ...pqr files
@@ -49,7 +50,6 @@ int main(int argc, char* argv[]) {
   wid2.add( atom("CA") );
   wid2.add( atom("LA") );
   wid2.add( atom("CL") );
-  osmoticpressure osm(2.0);             // Osmotic pressure analysis in cell model only
 
   if(nmt.load(cell, "gcgroup.conf")==true)
     aam.load(cell,"confout.aam");        // Read initial config. from disk (if present)
@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
       if (slp.random_one()>0.75) {
         wid2.insert(cell,pot);          // sample activity coefficients
 #ifndef MI
-        osm.sample(cell,salt);          // sample osmotic pressure
+        osm.sample(salt);               // sample osmotic pressure
 #endif
       }
     }                                   // END of micro loop
@@ -94,6 +94,9 @@ int main(int argc, char* argv[]) {
       pot.internalElectrostatic(cell.p, protein) ); // Update system energy
 
     aam.save("confout.aam",cell.p);     // Save particle configuration to disk
+#ifndef MI
+    osm.write("ionprofile.dat");        // Write ion profile to disk
+#endif
     cout << loop.timing();              // Show progres
   }                                     // END of macro loop and simulation
 
@@ -101,8 +104,11 @@ int main(int argc, char* argv[]) {
   pqr.save("confout.pqr", cell.p);
 
   cout << cell.info() << sys.info() << sm.info() << sb.info()
-       << loop.info() << wid2.info() << protein.info() << tit.info()
-       << osm.info();
+       << loop.info() << wid2.info() << protein.info() << tit.info();
+
+#ifndef MI
+  cout <<  osm.info();
+#endif
 
   // Unit testing
   sm.check(test);

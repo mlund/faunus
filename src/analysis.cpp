@@ -1,5 +1,6 @@
 #include "faunus/analysis.h"
 #include "faunus/physconst.h"
+#include "faunus/species.h"
 
 namespace Faunus {
 
@@ -537,24 +538,110 @@ namespace Faunus {
   }
 
   /*!
+   * \param name1 Name of particle 1
+   * \param name2 Name of particle 2
+   * \param threshold Threshold in Angstroms that defines the pair
+   *
+   * The particles names and properties must be defined in the species class (i.e. faunatoms.dat file).
+   */
+  pairing::pairing(string name1, string name2, double threshold) {
+    pid1=atom[name1].id;
+    pid2=atom[name2].id;
+    r2=threshold*threshold;
+    assert(pid1!=pid2);
+  }
+
+  /*!
+   * \param in Inputfile object to search for input keywords
+   *
+   * The following keywords are searched for: "pair_type1", "pair_type2" and "pair_threshold".
+   */
+  pairing::pairing(inputfile &in) {
+    pid1=atom[ in.getstr("pair_type1") ].id;
+    pid2=atom[ in.getstr("pair_type2") ].id;
+    r2=pow( in.getflt("pair_threshold", 10 ), 2);
+    assert(pid1!=pid2);
+  }
+
+  void pairing::sample(container &c) {
+    double v=c.getvolume();
+    int pairs=0,        // number of pairs
+        n1=0,           // number of species 1
+        n2=0,           // number of species 2
+        n=c.p.size();   // number of particles in container
+    
+    // count total number of pairing species (which may fluctuate)
+    for (int i=0; i<n; ++i) {
+      if (c.p[i].id==pid1) n1++;
+      else if (c.p[i].id==pid2) n2++;
+    }
+    // count pairs within threshold
+    for (int i=0; i<n-1; ++i) {
+      for (int j=i; j<n; ++j) {
+        if (c.p[i].id==pid1)
+          if (c.p[j].id==pid2)
+            if (c.sqdist(c.p[i],c.p[j])<r2)
+              pairs++;
+        if (c.p[i].id==pid2)
+          if (c.p[j].id==pid1)
+            if (c.sqdist(c.p[i],c.p[j])<r2)
+              pairs++;
+      }
+    }
+    // average concentrations
+    cpair+=pairs/v;    // pairs
+    c1+=(n1-pairs)/v;  // free species 1
+    c2+=(n2-pairs)/v;  // free species 2
+  }
+  
+  string pairing::info() {
+    std::ostringstream o;
+    if (c1.cnt>0 && c2.cnt>0) {
+      double tomM=1e30/pyc.Nav; // A^-3 -> mmol/l.
+      double AB=tomM*cpair.avg();
+      double A=tomM*c1.avg();
+      double B=tomM*c2.avg();
+      o << endl
+      << "# PAIRING ANALYSIS:\n"
+      << "#   Number of samples           = " << cpair.cnt << endl
+      << "#   Pairing particles           = " << atom[pid1].name << " " << atom[pid2].name << endl
+      << "#   Pair threshold (A)          = " << sqrt(r2) << endl
+      << "#   Concentrations: A B AB (mM) = " << A << " " << B << " " << AB << endl
+      << "#   Association constant (1/mM) = " << AB/(A*B) << endl
+      << "#   Dissociation constant (mM)  = " << A*B/AB << endl;
+    }
+    return o.str();
+  }
+  
+  
+  /*!
    * \param dR Width (in Angstroms) of the shell to analyse near the boundary. The smaller the more accurate.
    */
-  osmoticpressure::osmoticpressure(double dR) {
-    width=dR;
+  osmoticpressure::osmoticpressure(cell &c) {
+    cnt=0;
+    cPtr=&c;
+    hist.resize( int(c.r+.5) );
   }
 
   /*!
    * \param c Spherical simulation container
    * \param g Group containing all mobile ions
    */
-  void osmoticpressure::sample(cell &c, group &g) {
-    int n=0;
-    double rmin=c.r-width;
-    for (int i=g.beg; i<=g.end; i++)
-      if (c.p[i].len()>rmin)
-        n++;
-    rho += n / ( 4/3.*pyc.pi*(c.r*c.r*c.r-rmin*rmin*rmin) );
-    rhoid += g.size() / c.getvolume();
+  void osmoticpressure::sample(group &g) {
+    int k;
+    cnt++;
+    for (int i=g.beg; i<=g.end; i++) {
+      k=cPtr->p.at(i).len()+.5;
+      assert(k<hist.size());
+      hist[k]++;
+    }
+    rhoid += g.size() / cPtr->getvolume();
+  }
+
+  double osmoticpressure::getConc(double r) {
+    assert(int(r+.5) < hist.size() );
+    double v=4/3.*pyc.pi*( pow(r+.5,3) - pow(r-.5,3) );
+    return hist.at( int(r+.5) ) / v / cnt * 1e27/pyc.Nav;
   }
 
   string osmoticpressure::info() {
@@ -562,17 +649,16 @@ namespace Faunus {
     double toM=1e27/pyc.Nav; // atoms/aa3 to mol/l
     double toPa=pyc.kB * pyc.T * pyc.Nav; // mol/l to kPa
     double id=rhoid.avg()*toM,
-           tot=rho.avg()*toM,
+           tot=getConc( hist.size()-1 ), // get last point in histogram
            ex=tot-id;
     std::ostringstream o;
     o << endl
       << "# CELL MODEL PRESSURE ANALYSIS:" << endl
       << "#   More information:        doi:10.1063/1.443547" << endl
-      << "#   Number of samples      = " << rho.cnt << endl
-      << "#   Width of boundary (AA) = " << width << endl;
+      << "#   Number of samples      = " << rhoid.cnt << endl;
     o.precision(4);
-    if (rho.cnt>0) {
-      o << "#   Osmotic coefficient    = " << rho.avg()/rhoid.avg() << endl << std::left
+    if (rhoid.cnt>0) {
+      o << "#   Osmotic coefficient    = " << tot/id << endl << std::left
         << "#                            " << setw(w) << "ideal" << setw(w) << "excess" << setw(w) << "total"  << endl
         << "#   Pressure (mM)          = " << setw(w) << id*1000 << setw(w) << ex*1000  << setw(w) << tot*1000 << endl
         << "#    - / / - (kPa)         = " << setw(w) << id*toPa << setw(w) << ex*toPa  << setw(w) << tot*toPa << endl;
@@ -580,9 +666,24 @@ namespace Faunus {
     return o.str();
   }
 
+  bool osmoticpressure::write(string file) {
+    std::ofstream f(file.c_str());
+    if (f) {
+      f << "# Radial oncentration profile for mobile ions (cell model osm. pressure)\n"
+        << "# x - distance from cell origin\n"
+        << "# y - concentration in mol/l\n";
+      for (int r=0; r<hist.size(); r++)
+        f << r << " " << getConc(r)*1000 << endl;
+      f.close();
+      return true;
+    }
+    return false;
+  }
+
   void osmoticpressure::check(checkValue &test) {
-    test.check("osmotic_pressure", rho.avg(), 0.1);
-    test.check("osmotic_coefficient", rho.avg()/rhoid.avg(), 0.1);
+    double tot=getConc( hist.size()-1 );
+    test.check("osmotic_pressure", tot, 0.1);
+    test.check("osmotic_coefficient", tot/rhoid.avg(), 0.1);
   }
 
 }//namespace

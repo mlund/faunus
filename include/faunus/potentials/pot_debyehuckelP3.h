@@ -22,7 +22,7 @@ namespace Faunus {
         k=1/in.getflt("debyelen",1.1e6);
         if ( 1/k>=1e6) {
           I=in.getflt("ionicstr",0);
-          k=sqrt( 4*std::acos(-1.)*f*6.022e23/1e27*2*I );
+          k=sqrt( 8*pyc.pi*f*pyc.Nav/1e27*I );
         }
         box=in.getflt("boxlen");
         halfbox=box/2;
@@ -83,7 +83,7 @@ namespace Faunus {
         o << pot_lj::info()
           << "#   Bjerrum length    = " << f     << endl
           << "#   Debye length      = " << 1./k  << endl
-          << "#   Ionic strength (M)= " << k*k*1e27/(8*std::acos(-1.)*f*6.022e23) << endl;
+          << "#   Ionic strength    = " << k*k*1e30/(8*std::acos(-1.)*f*pyc.Nav) << " mM" << endl;
         return o.str();
       }
   };

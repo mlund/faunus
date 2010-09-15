@@ -4,7 +4,7 @@
 #include <string>
 namespace Faunus {
   /*!
-   * \brief Vector class template with acess by string id
+   * \brief Vector class template with access by string id
    *
    * This class is similar to STL vector accept that it
    * provides element access via strings (default). The class

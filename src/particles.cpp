@@ -1,5 +1,6 @@
 #include "faunus/particles.h"
 #include "faunus/point.h"
+#include "faunus/group.h"
 
 namespace Faunus {
   //! \return Size of particle vector after addition
@@ -26,6 +27,7 @@ namespace Faunus {
         q += p[i].charge;
     return q;
   }
+
   /*!\param a overlapping(?) particle
    */
   bool particles::overlap(const particle &a) {
@@ -33,6 +35,7 @@ namespace Faunus {
       if ( clash(p[i],a)==true) return true;
     return false;
   }
+
   bool particles::overlap(const vector<particle> &v) {
     unsigned short i = v.size();
     for (unsigned int j=0; j<p.size(); j++) {
@@ -42,6 +45,7 @@ namespace Faunus {
     }
     return false;
   }
+
   bool particles::check_vector() {
     bool rc=false;
     if (p.size()==trial.size())
@@ -59,6 +63,7 @@ namespace Faunus {
       std::cerr << "# Fatal error: Particle vectors corrupted!!\n";
     return rc;
   }
+
   int particles::count(unsigned char id, const point &origo, double r) {
     int i,cnt=0,n=p.size();
     double r2=r*r;
@@ -77,21 +82,41 @@ namespace Faunus {
     return id;
   }
 
+  /*!
+   * \param a Particle to insers
+   * \param i Position in particle vector
+   */
   bool particles::insert(particle a, unsigned int i) {
     if (i>p.size())
       return false;
     p.insert(p.begin()+i, a);
     trial.insert(trial.begin()+i, a);
+
+    for (int j=0; j<g.size(); j++) {  // move and expand groups if appropriate
+      if ( i<g[j]->beg )
+        g[j]->beg++;
+      if ( i<=g[j]->end )
+        g[j]->end++;
+    }
     return true;
-  };
+  }
 
   bool particles::remove(unsigned int i) {
+    if (i>=p.size())
+      return false;
     p.erase( p.begin()+i );
     trial.erase( trial.begin()+i );
+    for (int j=0; j<g.size(); j++) {  // move and reduce groups if appropriate
+      if ( i<g[j]->beg )
+        g[j]->beg--;
+      if (i<=g[j]->end)
+        g[j]->end--;
+    }
     return true;
   }
 
   bool particles::clash(const particle &p1, const particle &p2) {
     return p1.overlap(p2);
   }
+
 }//namespace

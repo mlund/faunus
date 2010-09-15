@@ -466,7 +466,7 @@ namespace Faunus {
   :markovmove(e,c,i), titrate_implicit(c,ph) {
 
     name.assign("IMPLICIT SALT TITRATION");
-    cite.assign("Teixeira, Lund, da Silva - Unpublished.");
+    cite.assign("doi:10.1021/ct1003093");
     double sytem_charge = con->charge();
     pairpot = &pair;
 

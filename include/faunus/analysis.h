@@ -313,6 +313,31 @@ namespace Faunus {
       void blockavg();
       string info();
   };
+	
+
+  /*!
+   * \brief Class to analyse pairing of mobile particles
+   * \author Mikael Lund
+   * \date Asljunga 2010
+   *
+   * This class will look for pairs of designated species and analyse if
+   * they are within a certain threshold. The number of free ions and
+   * pairs are averaged so as to evaluate the thermodynamic 
+   * association constant.
+   */
+  class pairing : public analysis {
+  private:
+    average<double> cpair;  //!< concentration of pairs
+    average<double> c1;     //!< concentration of free type 1
+    average<double> c2;     //!< concentration of free type 2
+    double r2;              //!< threshold squared
+    char pid1, pid2;        //!< pairs to look for
+  public:
+    pairing(inputfile &);            //!< Constructor - input via inputfile class
+    pairing(string, string, double); //!< Constructor - hard coded input
+    void sample(container &);        //!< Look for pairs and free particles
+    string info();                   //!< Information string
+  };
 
   /*!
    * Class to measure the osmotic pressure in the cell model.
@@ -325,13 +350,18 @@ namespace Faunus {
    */
   class osmoticpressure : public analysis {
     private:
+      unsigned int cnt;
       double width;                       //!< Width of the cell boundary
+      vector<unsigned int> hist;          //!< Mobile concentration profile
+      cell* cPtr;
+      double getConc(double);             //!< Get concentration (in M) at radial distance from cell center
     public:
-      osmoticpressure(double=4.);         //!< Constructor
-      average<double> rho, rhoid;         //!< Average salt concentration at boundary and in bulk
-      void sample(cell &, group &);       //!< Sample concentration at boundary
+      osmoticpressure(cell &);            //!< Constructor
+      average<double> rhoid;              //!< Average salt concentration at boundary and in bulk
+      void sample(group &);               //!< Sample concentration profile
       string info();                      //!< Information string
       void check(checkValue &);           //!< Unit testing
+      bool write(string);                 //!< Write concentration profile to disk
   };
 }//namespace
 #endif

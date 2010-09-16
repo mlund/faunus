@@ -1,0 +1,11 @@
+# ------------------------------------------------------------
+#   Faunus atom parameters
+#    Format:
+#     name   charge radius eps    Mw     pKa   hydrophobic
+#             (e)    (Å)   (kT)  (g/mol)
+# ------------------------------------------------------------
+
+Atom  CTR     -1     3.5    0.1    1     3.8    no
+Atom  NTR      0     3.5    0.1    1     7.5    no
+Atom  UNK      0     3.5    0.1    1    12.0    no
+

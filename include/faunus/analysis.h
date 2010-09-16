@@ -83,7 +83,9 @@ namespace Faunus {
       double cur;
       double sum;                 //!< Initial energy + all changes
       average<double> uavg;
+      systemenergy();
       systemenergy(double);
+      void initialize(double);    //!< Initialize all data
       void update(double);        //!< Specify current system energy and recalc averages
       void track();               //!< Add a time element to confu
       void operator+=(double);    //!< Add system energy change

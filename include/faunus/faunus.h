@@ -42,6 +42,8 @@
 #include "faunus/moves/clustermove.h"
 #include "faunus/moves/crankshaft.h"
 #include "faunus/moves/saltbath.h"
+#include "faunus/moves/replicaexchange.h"
+#include "faunus/bottles/base.h"
 
 namespace Faunus {
   string faunus_splash();

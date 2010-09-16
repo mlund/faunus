@@ -6,14 +6,21 @@ namespace Faunus {
 
   bool analysis::runtest() { return (slp.runtest(runfraction)); };
 
-  //! \param u_init Initial total system energy
-  systemenergy::systemenergy(double u_init) {
+  void systemenergy::initialize(double u_init) {
     u0=u_init;
     sum=u0;
     cur=u0;
     confu.clear();
-    update(u_init);
+    uavg.reset();
+    update(u0);
   }
+
+  //! \param u_init Initial total system energy
+  systemenergy::systemenergy(double u_init) {
+    initialize(u_init);
+  }
+
+  systemenergy::systemenergy() {};
 
   void systemenergy::update(double energy) {
     cur=energy;

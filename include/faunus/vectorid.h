@@ -35,16 +35,26 @@ namespace Faunus {
     std::vector<T> v;
   public:
     int size() { return v.size(); }              //!< vector length
+
     T & at(int i) { return v.at(i); }            //!< access by index 
+
     Tid & id(int i) { return idv.at(i); }//!< id of i'th element
+
     T & operator[] (Tid id) {            //!< access by string id
-      for (int i=0; i<idv.size(); i++)
-        if (id==idv[i])
-          return v.at(i);
+      int i=find(id);
+      if (i>=0)
+        return v.at(i);
       T neu;
       v.push_back(neu);
       idv.push_back(id);
       return v.back();
+    }
+
+    int find(Tid id) {
+      for (int i=0; i<idv.size(); i++)
+        if (id==idv[i])
+          return i;
+      return -1;
     }
   };
 }//namespace

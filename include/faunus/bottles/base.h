@@ -23,8 +23,11 @@ namespace Faunus {
       mcloop loop;
 
     public:
-      systemenergy usys;
+      double T;                         //!< Temperature [K]
+      double P;                         //!< Pressure over kT
+      systemenergy usys;                //!< Class for tracking total system energy
       container* cPtr;                  //!< Pointer to the container for this system
+      energybase* pPtr;                 //!< Pointer to interaction class
       string name;                      //!< Name of the system (arbitrary)
       string prefix;                    //!< Prefix for input files, output etc.
       virtual void prepare()=0;         //!< Prepare and setup systems
@@ -34,8 +37,9 @@ namespace Faunus {
       virtual double systemEnergy()=0;  //!< Calculate system energy (of TRIAL particles!)
       virtual string preinfo()=0;       //!< Give initial information string
       virtual string postinfo()=0;      //!< Give final information string
-      simBottle(string pfx) : in(pfx+".conf"), loop(in) {
+      simBottle(string pfx, double betaP=0) : in(pfx+".conf"), loop(in) {
         prefix=pfx;
+        P=betaP;
       }
   };
 

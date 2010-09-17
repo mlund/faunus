@@ -87,6 +87,8 @@ namespace Faunus {
       }
       inline double bond(particle &a, particle&b)
        { return 0.0;}
+
+      void setvolume(double v) {}
   };
 
 }//namespace

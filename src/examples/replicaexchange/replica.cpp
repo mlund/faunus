@@ -13,34 +13,63 @@ using namespace std;
 using namespace Faunus;
 
 typedef interaction<pot_debyehuckelP3> Tpot;
+typedef npt_molecular<box,Tpot> Tbottle;
 
 int main() {
   cout << faunus_splash();
+  inputfile in("replica.conf");
+  io fio;
+  mcloop loop(in);
+  Tbottle a("a"), b("b"), c("c");
+
   replicaexchange temper;
-  npt_molecular<box,Tpot> a("a"), b("b"), c("c");
+  bool temperBool=in.getboo("temper",true);
 
   a.prepare();
   b.prepare();
   c.prepare();
 
-  for (int i=0; i<10; i++) {
-    cout << "m" << i+1 << " " << flush;
-    for (int j=0; j<1e3; j++) {
-      a.microloop();
-      b.microloop();
-      c.microloop();
-      if (slp.random_one()>0.95) {
-        temper.swap(a,b);
-        temper.swap(b,c);
+  cout << in.info();
+
+  while (loop.macroCnt()) {
+    while (loop.microCnt()) {
+      #pragma omp parallel
+      {
+        #pragma omp sections
+        {
+          #pragma omp section
+          { a.microloop(); }
+          #pragma omp section
+          { b.microloop(); }
+          #pragma omp section
+          { c.microloop(); }
+        }
       }
-    }
+      if (temperBool && slp.random_one()>0.9) {
+        switch (rand() % 2) {
+          case 0:
+            temper.swap(a,b);
+            break;
+          case 1:
+            temper.swap(b,c);
+            break;
+        }
+      }
+    } // end of inner loop
     a.macroloop();
     b.macroloop();
     c.macroloop();
-  }
-  a.save();
-  b.save();
-  c.save();
 
-  cout << a.postinfo() << b.postinfo() << temper.info();
+    a.save();
+    b.save();
+    c.save();
+
+    cout << loop.timing();
+  } // end of outer loop
+
+  fio.writefile( "a.out", a.postinfo() );
+  fio.writefile( "b.out", b.postinfo() );
+  fio.writefile( "c.out", c.postinfo() );
+
+  cout << loop.info() << in.info() << temper.info();
 };

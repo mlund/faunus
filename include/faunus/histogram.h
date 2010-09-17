@@ -21,6 +21,7 @@ namespace Faunus {
     float xmaxi,xmini;  // ugly solution!
     public:
     histogram(float, float, float);
+    void reset(float, float, float);    //!< Clear data
     string comment;                     //!< User defined comment
     void add(float);
     void write(string);

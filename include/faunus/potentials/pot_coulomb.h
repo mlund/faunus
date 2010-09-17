@@ -50,6 +50,7 @@ namespace Faunus {
         f=in.getflt("bjerrum",7.1);
         name+="Coulomb + r12";
       }
+    
       /*! \brief Return Coulomb energy between a pair of particles
        *  \return Energy in units of \f$kT/l_B\f$ (lB=f). \f[ \beta u/l_B = \frac{z_1 z_2}{r} + \frac{u_{lj}}{l_B} \f]
        */
@@ -81,6 +82,8 @@ namespace Faunus {
           << pot_harmonic::info();
         return o.str();
       }
+    
+      void setvolume(double V) {}
   };
 /*
   class pot_coulombr12 {

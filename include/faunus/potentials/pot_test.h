@@ -62,12 +62,19 @@ namespace Faunus {
     public:
       string name;
       double f, len, lenh;
+    
+      void setvolume(double v) {
+        len=pow(v,1/3.);
+        lenh=len/2;
+      }
+    
       pot_testminim( inputfile &in ) {
         name+="Coulomb + 4*eij*[(sij/r)^12-(sij/r)^6] minimum image";
         f=in.getflt("bjerrum",7.1);
         len=in.getflt("boxlen", -1);
         lenh=len/2.;
       }
+    
       inline double pairpot(const particle &p1, const particle &p2) {
         register double a=std::abs(p1.x-p2.x),
                         b=std::abs(p1.y-p2.y),
@@ -80,6 +87,7 @@ namespace Faunus {
         c=b*b*b;
         return eps[p1.id][p2.id] * (c*c-c) + p1.charge*p2.charge*sqrt(a);
       }
+    
       inline double sqdist(const point &p1, const point &p2) { return p1.sqdist(p2); }
       string info() {
         std::ostringstream o;

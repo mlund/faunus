@@ -65,6 +65,7 @@ class xytable {
     }
 
   void init(TX resolution=.5, TX xminimum=0, TX xmaximum=0) {
+      y.clear();
       xres=resolution;
       xmin=xminimum;
       if (xmaximum>0)

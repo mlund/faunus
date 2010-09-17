@@ -43,6 +43,7 @@ namespace Faunus {
     //virtual void set_kappa( double& )=0;
     virtual double u_monomer(vector<particle> &, const polymer &, unsigned int)=0; //!< all<->monomer in polymer
     virtual double uself_polymer(vector<particle> &, const polymer&)=0;          //!< internal polymer energy
+    virtual void setvolume(double) {};
     
     string info() {
       std::ostringstream o;
@@ -71,11 +72,16 @@ namespace Faunus {
   template<class T> class interaction : public energybase {
   public:
     T pair; //!< An instance of the pair-potential.
+    
     interaction(inputfile &in) : pair(in), energybase(pair.f) {
       name="Full N^2";
       tokT=pair.f;
-    };
+    }
     
+    void setvolume(double V) {
+      pair.setvolume(V);
+    }
+
     double energy(const particle &a, const particle &b) {
       return pair.pairpot(a,b) * pair.f;
     }

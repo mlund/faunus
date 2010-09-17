@@ -28,10 +28,12 @@ namespace Faunus {
     average<double> vol, len, ilen, ivol;   //!< Averages
     average<double> Nmolecules;             //!< Average number of molecules (updated for each move)
     void check(checkValue &);               //!< Unit test routine
+    double P;                               //!< Pressure over beta
+    histogram Ldist;                        //!< Histogram of length distribution
     
   protected:
     T trialpot;                             //!< Copy of potential class for volume changes
-    double P, dV, dh;                       //!< Pressure, volume difference and hamiltonian difference
+    double dV, dh;                          //!< Pressure, volume difference and hamiltonian difference
     int maxlen, minlen;                     //!< Window parameters
     double newV;                            //!< New volume
     void newvolume();                       //!< Calculate new volume
@@ -56,7 +58,7 @@ namespace Faunus {
    */
   template<typename T> isobaric<T>::isobaric
   ( ensemble &e, container &c, T &i, double pressure, int maxsize, int minsize )
-  : markovmove(e,c,i), trialpot(i), minlen(minsize), maxlen(maxsize), P(pressure)  {
+  : markovmove(e,c,i), trialpot(i), minlen(minsize), maxlen(maxsize), P(pressure), Ldist(0.5,minlen,maxlen) {
     name="ISOBARIC VOLUME MOVE";
     runfraction=1;
     dp=1; 
@@ -64,7 +66,7 @@ namespace Faunus {
   }
 
   template<typename T> isobaric<T>::isobaric
-  ( ensemble &e, container &c, T &i, inputfile &in, string pfx) : markovmove(e,c,i), trialpot(i) {
+  ( ensemble &e, container &c, T &i, inputfile &in, string pfx) : markovmove(e,c,i), trialpot(i),Ldist(0.5,0,1000) {
     name="ISOBARIC VOLUME MOVE";
     prefix=pfx;
     markovmove::getInput(in);
@@ -72,6 +74,7 @@ namespace Faunus {
     maxlen=in.getflt(prefix+"maxlen",1000);
     P=in.getflt(prefix+"pressure",1);
     pot=&i;
+    Ldist.reset( in.getflt(prefix+"binlen",0.5), minlen, maxlen);
   }
    
   template<typename T> string isobaric<T>::info() {
@@ -118,6 +121,7 @@ namespace Faunus {
     ivol+= 1/v;
     len += l;
     ilen+= 1/l;
+    Ldist.add(l);
   }
 
   // This is a virtual function that will be re-defined in penalty class below

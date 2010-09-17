@@ -83,6 +83,20 @@
 		73961ECF1030A6920051F3E3 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		73961EDD1030ADEF0051F3E3 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		73961F151030AE5D0051F3E3 /* isobaric.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73961F141030AE5D0051F3E3 /* isobaric.cpp */; };
+		7397F33012423BEA0019FDCD /* replicaexchange.h in Headers */ = {isa = PBXBuildFile; fileRef = 7397F32F12423BEA0019FDCD /* replicaexchange.h */; };
+		7397F33112423BEA0019FDCD /* replicaexchange.h in Headers */ = {isa = PBXBuildFile; fileRef = 7397F32F12423BEA0019FDCD /* replicaexchange.h */; };
+		7397F33712423C2B0019FDCD /* base.h in Headers */ = {isa = PBXBuildFile; fileRef = 7397F33412423C2B0019FDCD /* base.h */; };
+		7397F33812423C2B0019FDCD /* npt_molecular.h in Headers */ = {isa = PBXBuildFile; fileRef = 7397F33512423C2B0019FDCD /* npt_molecular.h */; };
+		7397F33912423C2B0019FDCD /* nvt_atomic.h in Headers */ = {isa = PBXBuildFile; fileRef = 7397F33612423C2B0019FDCD /* nvt_atomic.h */; };
+		7397F33A12423C2B0019FDCD /* base.h in Headers */ = {isa = PBXBuildFile; fileRef = 7397F33412423C2B0019FDCD /* base.h */; };
+		7397F33B12423C2B0019FDCD /* npt_molecular.h in Headers */ = {isa = PBXBuildFile; fileRef = 7397F33512423C2B0019FDCD /* npt_molecular.h */; };
+		7397F33C12423C2B0019FDCD /* nvt_atomic.h in Headers */ = {isa = PBXBuildFile; fileRef = 7397F33612423C2B0019FDCD /* nvt_atomic.h */; };
+		7397F34112423C550019FDCD /* replicaexchange.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7397F34012423C550019FDCD /* replicaexchange.cpp */; };
+		7397F34212423C550019FDCD /* replicaexchange.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7397F34012423C550019FDCD /* replicaexchange.cpp */; };
+		7397F35412423F2E0019FDCD /* pot_elhcvdw.h in Headers */ = {isa = PBXBuildFile; fileRef = 7397F35312423F2E0019FDCD /* pot_elhcvdw.h */; };
+		7397F35512423F2E0019FDCD /* pot_elhcvdw.h in Headers */ = {isa = PBXBuildFile; fileRef = 7397F35312423F2E0019FDCD /* pot_elhcvdw.h */; };
+		7397F39C124257920019FDCD /* replica.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7397F39B124257920019FDCD /* replica.cpp */; };
+		7397F39F124257B70019FDCD /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		739C41F6103078F400A3A5B9 /* xdrfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 739C41F3103078F400A3A5B9 /* xdrfile.c */; };
 		739C41F7103078F400A3A5B9 /* xdrfile_trr.c in Sources */ = {isa = PBXBuildFile; fileRef = 739C41F4103078F400A3A5B9 /* xdrfile_trr.c */; };
 		739C41F8103078F400A3A5B9 /* xdrfile_xtc.c in Sources */ = {isa = PBXBuildFile; fileRef = 739C41F5103078F400A3A5B9 /* xdrfile_xtc.c */; };
@@ -403,6 +417,13 @@
 			remoteGlobalIDString = 739C42091030798400A3A5B9;
 			remoteInfo = faunus;
 		};
+		7397F39D124257B10019FDCD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 739C42091030798400A3A5B9 /* faunus */;
+			remoteInfo = faunus;
+		};
 		739C420D1030798A00A3A5B9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
@@ -507,6 +528,14 @@
 		73961ED91030ADE60051F3E3 /* isobaric */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = isobaric; sourceTree = BUILT_PRODUCTS_DIR; };
 		73961F131030AE5D0051F3E3 /* isobaric.conf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = isobaric.conf; path = src/examples/isobaric/isobaric.conf; sourceTree = "<group>"; };
 		73961F141030AE5D0051F3E3 /* isobaric.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = isobaric.cpp; path = src/examples/isobaric/isobaric.cpp; sourceTree = "<group>"; };
+		7397F32F12423BEA0019FDCD /* replicaexchange.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = replicaexchange.h; sourceTree = "<group>"; };
+		7397F33412423C2B0019FDCD /* base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = base.h; path = include/faunus/bottles/base.h; sourceTree = "<group>"; };
+		7397F33512423C2B0019FDCD /* npt_molecular.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = npt_molecular.h; path = include/faunus/bottles/npt_molecular.h; sourceTree = "<group>"; };
+		7397F33612423C2B0019FDCD /* nvt_atomic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = nvt_atomic.h; path = include/faunus/bottles/nvt_atomic.h; sourceTree = "<group>"; };
+		7397F34012423C550019FDCD /* replicaexchange.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = replicaexchange.cpp; sourceTree = "<group>"; };
+		7397F35312423F2E0019FDCD /* pot_elhcvdw.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pot_elhcvdw.h; sourceTree = "<group>"; };
+		7397F396124257660019FDCD /* replicaex */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = replicaex; sourceTree = BUILT_PRODUCTS_DIR; };
+		7397F39B124257920019FDCD /* replica.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = replica.cpp; path = src/examples/replicaexchange/replica.cpp; sourceTree = "<group>"; };
 		739C41EE103078CA00A3A5B9 /* libxdrfile.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libxdrfile.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C41F3103078F400A3A5B9 /* xdrfile.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = xdrfile.c; path = src/xdrfile/xdrfile.c; sourceTree = "<group>"; };
 		739C41F4103078F400A3A5B9 /* xdrfile_trr.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = xdrfile_trr.c; path = src/xdrfile/xdrfile_trr.c; sourceTree = "<group>"; };
@@ -666,6 +695,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7397F394124257660019FDCD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7397F39F124257B70019FDCD /* liblibfaunus.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		739C41EC103078CA00A3A5B9 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -736,6 +773,7 @@
 			isa = PBXGroup;
 			children = (
 				731297411030C80A00950418 /* base.h */,
+				7397F35312423F2E0019FDCD /* pot_elhcvdw.h */,
 				731297421030C80A00950418 /* pot_barecoulomb.h */,
 				731297431030C80A00950418 /* pot_coulomb.h */,
 				731297441030C80A00950418 /* pot_datapmf.h */,
@@ -757,9 +795,20 @@
 			path = include/faunus/potentials;
 			sourceTree = "<group>";
 		};
+		7397F33312423C050019FDCD /* bottles */ = {
+			isa = PBXGroup;
+			children = (
+				7397F33412423C2B0019FDCD /* base.h */,
+				7397F33512423C2B0019FDCD /* npt_molecular.h */,
+				7397F33612423C2B0019FDCD /* nvt_atomic.h */,
+			);
+			name = bottles;
+			sourceTree = "<group>";
+		};
 		739C41D7103078A800A3A5B9 = {
 			isa = PBXGroup;
 			children = (
+				7397F39B124257920019FDCD /* replica.cpp */,
 				739C42D910307BC400A3A5B9 /* examples */,
 				739C42E310307D1700A3A5B9 /* misc */,
 				739C42011030793B00A3A5B9 /* src */,
@@ -788,6 +837,7 @@
 				73F1BEA8116932E500985D4B /* pkaDH */,
 				73E1A6B911BFCA0C003315DB /* wallprotein - lipid membrane */,
 				73BB617011CE2D0200E62ADB /* wallprotein - gaussian charges */,
+				7397F396124257660019FDCD /* replicaex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -806,6 +856,7 @@
 		739C42001030793500A3A5B9 /* include */ = {
 			isa = PBXGroup;
 			children = (
+				7397F33312423C050019FDCD /* bottles */,
 				731297401030C80A00950418 /* potentials */,
 				739C424A10307A1C00A3A5B9 /* energy */,
 				739C425F10307A1C00A3A5B9 /* moves */,
@@ -898,6 +949,7 @@
 				739C4222103079CF00A3A5B9 /* rotational.cpp */,
 				739C4223103079CF00A3A5B9 /* saltbath.cpp */,
 				739C4224103079CF00A3A5B9 /* translational.cpp */,
+				7397F34012423C550019FDCD /* replicaexchange.cpp */,
 			);
 			name = moves;
 			path = src/moves;
@@ -906,10 +958,10 @@
 		739C424A10307A1C00A3A5B9 /* energy */ = {
 			isa = PBXGroup;
 			children = (
+				739C424C10307A1C00A3A5B9 /* base.h */,
 				733DF7F011664BEC008347FA /* hardsphere.h */,
 				733DF752116626D5008347FA /* hydrophobic.h */,
 				733DF71011661E72008347FA /* coarsegrain.h */,
-				739C424C10307A1C00A3A5B9 /* base.h */,
 				739C424D10307A1C00A3A5B9 /* reactionfield.h */,
 				739C424E10307A1C00A3A5B9 /* springinteraction.h */,
 				739C424F10307A1C00A3A5B9 /* springinteractionexfield.h */,
@@ -922,6 +974,7 @@
 			isa = PBXGroup;
 			children = (
 				739C426010307A1C00A3A5B9 /* base.h */,
+				7397F32F12423BEA0019FDCD /* replicaexchange.h */,
 				739C426110307A1C00A3A5B9 /* charge.h */,
 				739C426210307A1C00A3A5B9 /* clustermove.h */,
 				732812ED1146D4ED0054855E /* crankshaft.h */,
@@ -1048,6 +1101,11 @@
 				733DF7F111664BEC008347FA /* hardsphere.h in Headers */,
 				73E1A75D11C1409C003315DB /* messagepool.h in Headers */,
 				73E1A78511C23871003315DB /* vectorid.h in Headers */,
+				7397F33012423BEA0019FDCD /* replicaexchange.h in Headers */,
+				7397F33712423C2B0019FDCD /* base.h in Headers */,
+				7397F33812423C2B0019FDCD /* npt_molecular.h in Headers */,
+				7397F33912423C2B0019FDCD /* nvt_atomic.h in Headers */,
+				7397F35412423F2E0019FDCD /* pot_elhcvdw.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1117,6 +1175,11 @@
 				739C441010314D6300A3A5B9 /* pot_test_rf.h in Headers */,
 				73E1A75E11C1409C003315DB /* messagepool.h in Headers */,
 				73E1A78611C23871003315DB /* vectorid.h in Headers */,
+				7397F33112423BEA0019FDCD /* replicaexchange.h in Headers */,
+				7397F33A12423C2B0019FDCD /* base.h in Headers */,
+				7397F33B12423C2B0019FDCD /* npt_molecular.h in Headers */,
+				7397F33C12423C2B0019FDCD /* nvt_atomic.h in Headers */,
+				7397F35512423F2E0019FDCD /* pot_elhcvdw.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1259,6 +1322,23 @@
 			name = isobaric;
 			productName = isobaric;
 			productReference = 73961ED91030ADE60051F3E3 /* isobaric */;
+			productType = "com.apple.product-type.tool";
+		};
+		7397F395124257660019FDCD /* replicaex */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7397F39A124257860019FDCD /* Build configuration list for PBXNativeTarget "replicaex" */;
+			buildPhases = (
+				7397F393124257660019FDCD /* Sources */,
+				7397F394124257660019FDCD /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7397F39E124257B10019FDCD /* PBXTargetDependency */,
+			);
+			name = replicaex;
+			productName = replicaex;
+			productReference = 7397F396124257660019FDCD /* replicaex */;
 			productType = "com.apple.product-type.tool";
 		};
 		739C41ED103078CA00A3A5B9 /* xdrfile */ = {
@@ -1437,6 +1517,7 @@
 				733DF76A116647B3008347FA /* wallprotein */,
 				73E1A6B811BFCA0C003315DB /* wallprotein_lipid */,
 				73BB616F11CE2D0200E62ADB /* wallprotein_gaussian */,
+				7397F395124257660019FDCD /* replicaex */,
 			);
 		};
 /* End PBXProject section */
@@ -1522,6 +1603,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7397F393124257660019FDCD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7397F39C124257920019FDCD /* replica.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		739C41EB103078CA00A3A5B9 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1564,6 +1653,7 @@
 				739C42CB10307B8500A3A5B9 /* histogram.cpp in Sources */,
 				732812EC1146D45B0054855E /* crankshaft.cpp in Sources */,
 				73E1A75211C14075003315DB /* messagepool.cpp in Sources */,
+				7397F34112423C550019FDCD /* replicaexchange.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1606,6 +1696,7 @@
 				739C442B10314D6300A3A5B9 /* widom.cpp in Sources */,
 				739C442C10314D6300A3A5B9 /* histogram.cpp in Sources */,
 				73E1A75311C14075003315DB /* messagepool.cpp in Sources */,
+				7397F34212423C550019FDCD /* replicaexchange.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1743,6 +1834,11 @@
 			isa = PBXTargetDependency;
 			target = 739C42091030798400A3A5B9 /* faunus */;
 			targetProxy = 73961EDE1030ADF40051F3E3 /* PBXContainerItemProxy */;
+		};
+		7397F39E124257B10019FDCD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 739C42091030798400A3A5B9 /* faunus */;
+			targetProxy = 7397F39D124257B10019FDCD /* PBXContainerItemProxy */;
 		};
 		739C420E1030798A00A3A5B9 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -2072,6 +2168,36 @@
 				INSTALL_PATH = /usr/local/bin;
 				PREBINDING = NO;
 				PRODUCT_NAME = isobaric;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		7397F398124257680019FDCD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				INSTALL_PATH = /usr/local/bin;
+				PREBINDING = NO;
+				PRODUCT_NAME = replicaex;
+			};
+			name = Debug;
+		};
+		7397F399124257680019FDCD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = /usr/local/bin;
+				PREBINDING = NO;
+				PRODUCT_NAME = replicaex;
 				ZERO_LINK = NO;
 			};
 			name = Release;
@@ -2464,6 +2590,15 @@
 			buildConfigurations = (
 				73961EDB1030ADE70051F3E3 /* Debug */,
 				73961EDC1030ADE70051F3E3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7397F39A124257860019FDCD /* Build configuration list for PBXNativeTarget "replicaex" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7397F398124257680019FDCD /* Debug */,
+				7397F399124257680019FDCD /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

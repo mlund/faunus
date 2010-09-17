@@ -68,8 +68,7 @@ fau_example(memp wallprotein memp.cpp)
 fau_example(membrane membrane mem.cpp)
 fau_example(wp_gaussian wallprotein wp_gaussian.cpp)
 fau_example(saltsolution widom saltlab.cpp)
-fau_example(saltcluster widom saltcluster.cpp)
-fau_example(replicaex replicaexchange replica.cpp)
+fau_example(replica replicaexchange replica.cpp)
 fau_hyperexample(hyperbulk hypersphere hyperbulk.cpp)
 
 #----- target specific build options -----

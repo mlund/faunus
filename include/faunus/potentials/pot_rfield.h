@@ -31,6 +31,7 @@ namespace Faunus {
       double eo, ei;        // dielectric constants (solvent, inside sphere)
       double f;             //!< Factor to convert to kT
       double a;             // cavity radius
+    
       pot_rfield( inputfile &in ) {
         a  = in.getflt("rfield_cavity");
         eo = in.getflt("rfield_epso",80.);
@@ -38,7 +39,8 @@ namespace Faunus {
         f  = pyc.lB(eo)*eo; // Bjerrum length in vacuum
         steps=in.getint("rfield_steps",50); 
         l.resize(steps);
-      };
+      }
+    
       inline double pairpot(const particle &p1, const particle &p2) {
         return (p2.charge!=0) ? p2.charge * phi(p1, p2) : 0;
       }
@@ -122,6 +124,8 @@ namespace Faunus {
           << "#    Legendre steps               = " << steps << endl;
         return o.str();
       }
+    
+      void setvolume(double V) {}
   };
 }//namespace
 #endif

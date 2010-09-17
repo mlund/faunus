@@ -23,6 +23,7 @@ namespace Faunus {
 
       nvt_atomic(string pfx) : simBottle(pfx), con(in), pot(in) {
         cPtr=&con;
+        pPtr=&pot;
         dumpfile=prefix+"confout.dump";
       }
 

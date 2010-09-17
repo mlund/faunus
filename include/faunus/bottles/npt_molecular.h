@@ -15,8 +15,8 @@ namespace Faunus {
       string dumpfile;  //!< Filename of container dumpfile
     protected:
       canonical nvt;
-      io fileio;
-
+      io fio;
+    
       macrorot *mmRot;
       translate *mmTrans;
       transrot *mmTransrot;
@@ -31,11 +31,13 @@ namespace Faunus {
 
       npt_molecular(string pfx) : simBottle(pfx), con(in), pot(in) {
         cPtr=&con;
+        pPtr=&pot;
         mmVol = new isobaric<Tpot>(nvt,con,pot,in);
         mmRot = new macrorot(nvt,con,pot);
         mmTrans = new translate(nvt,con,pot,in);
         mmTransrot = new transrot(nvt,con,pot);
         dumpfile=prefix+".dump";
+        P=mmVol->P;
       }
 
       void prepare() {
@@ -55,19 +57,30 @@ namespace Faunus {
 
       double systemEnergy() {
         int n=g.size();
+        for (int i=0; i<n; i++)
+          g[i].masscenter(con);
         double u=0;
         for (int i=0; i<n-1; i++)
           for (int j=i+1; j<n; j++)
-            u+=pot.energy(con.trial, g[i], g[j]);
+            u+=pot.energy(con.p, g[i], g[j]);
         return u;
       }
 
       void microloop() {
-        // Combined translation and rotation N times
         int N=g.size();
-        for (int i=0; i<N; i++) {
-          mmTransrot->dpt = 0.008 * pow(con.len,2);
-          usys+=mmTransrot->move( g, N*slp.random_one() );
+        for (int i=0; i<N; i++)
+          g[i].masscenter(con);
+
+        switch (rand() % 2) {
+          case 0: // combined translation and rotation N times
+            for (int i=0; i<N; i++) {
+              mmTransrot->dpt = 0.008 * pow(con.len,2);
+              usys+=mmTransrot->move( g, N*slp.random_one() );
+            }
+            break;
+          case 1: // volume move
+            usys+=mmVol->move(g);
+            break;
         }
       }
 
@@ -76,8 +89,9 @@ namespace Faunus {
       }
 
       void save() {
-        pqr.save(prefix+"confout.pqr", con.p);
-        con.saveToDisk(dumpfile);     
+        pqr.save(prefix+".pqr", con.p);
+        con.saveToDisk(dumpfile);
+        mmVol->Ldist.write(prefix+".lendist.dat");
       }
 
       string preinfo() {
@@ -88,7 +102,7 @@ namespace Faunus {
 
       string postinfo() {
         std::ostringstream o;
-        o << usys.info() << mmTransrot->info();
+        o << usys.info() << mmTransrot->info() << mmVol->info();
         return o.str();
       }
   };

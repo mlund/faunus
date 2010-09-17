@@ -11,10 +11,15 @@ namespace Faunus {
   //! \param max maximum x value
   histogram::histogram(float res, float min, float max)
     : xytable<float,unsigned long int>(res,min,max) {
-      cnt=0;
-      xmaxi=max;
-      xmini=min;
+      reset(res,min,max);
     }
+  
+  void histogram::reset(float res, float min, float max) {
+    cnt=0;
+    xmaxi=max;
+    xmini=min;
+    init(res,min,max);
+  }
 
   //! Increment bin for x value
   void histogram::add(float x) {

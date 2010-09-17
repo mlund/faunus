@@ -19,10 +19,12 @@ namespace Faunus {
       pot_rfield rf;
       string name;
       double f;
+    
       pot_test_rf( inputfile &in ) : rf(in) {
         name+="Reactionfield + 4*eij*[(sij/r)^12-(sij/r)^6]";
         f=rf.f;
       }
+    
       inline double pairpot(const particle &p1, const particle &p2) {
         register double a=p1.x-p2.x,
                         b=p1.y-p2.y,
@@ -33,6 +35,7 @@ namespace Faunus {
         //return eps[p1.id][p2.id] * (c*c-c) + p1.charge*p2.charge*sqrt(a);
         return eps[p1.id][p2.id] * (c*c-c) + rf.pairpot(p1,p2);
       }
+    
       inline double sqdist(const point &p1, const point &p2) { return p1.sqdist(p2); }
       string info() {
         std::ostringstream o;
@@ -41,6 +44,7 @@ namespace Faunus {
           << rf.info();
         return o.str();
       }
+    
       void init(atoms &a) {
         short i,j,n=a.list.size();
         eps.resize(n);
@@ -55,6 +59,9 @@ namespace Faunus {
           }
         }
       }
+  
+      void setvolume(double V) {}
+    
   };
 }//namespace
 #endif

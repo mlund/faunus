@@ -286,4 +286,43 @@ namespace Faunus {
       return du-( log(10.)*( ph - atom[i].pka ) + log((nA+1)/con.getvolume()) - atom[nameA].chempot );
   }
 
+  titrate_switch::titrate_switch(container &c, inputfile &in) {
+    fType1= atom(in.getstr("Type_1", "UNK")).id;
+    fType2= atom(in.getstr("Type_2", "UNK")).id;
+//    fName1= atom(in.getstr("Type_1", "UNK")).name;
+//    fName2= atom(in.getstr("Type_2", "UNK")).name;
+    pc    =in.getflt("pc", 0);
+    pK    =in.getflt("pK", 0);
+    sites.clear();
+    int n=c.p.size();
+    for (int i=0; i<n; i++)
+      if (c.p[i].id==fType1 || c.p[i].id==fType2)
+        sites.push_back(i);
+  }
+
+  void titrate_switch::exchange(vector<particle> &p, int i) {
+    if (i<0) i=random();
+    if ( p[i].id == fType1 ) {
+      p[i].id=fType2;
+//      p[i].name=fName2;
+    }
+    else {  
+      p[i].id=fType1;
+//      p[i].name=fName1;
+    }
+    recent = i;
+  }
+  
+
+  double titrate_switch::energy(container &con, double du) {
+    if (con.p[recent].id==fType1)
+      return du+( log(10.)*( pc - pK )  );
+    else
+      return du-( log(10.)*( pc - pK )  );
+  }
+
+  unsigned int titrate_switch::random() {
+    unsigned int i = rand() % sites.size();
+    return sites.at(i);
+  }
 }//namespace

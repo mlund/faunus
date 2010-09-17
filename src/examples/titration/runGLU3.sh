@@ -6,7 +6,6 @@ echo "
 macrosteps $macrosteps
 microsteps $microsteps
 cellradius $cellradius
-boxlen     $boxlen
 bjerrum    $bjerrum
 LJeps      $LJeps
 nion1      $nion1
@@ -21,20 +20,14 @@ dp_monomer      $dp_monomer
 dp_salt         $dp_salt
 pH              $pH
 pKa_core        $pKa_core
-MUs NA -13 CL -13
-crankshaft_dp   $crankshaft_dp
-crankshaft_min  $crankshaft_min
-crankshaft_max  $crankshaft_max
-crankshaft_num  $crankshaft_num
-" > gcglu3pka.conf
+" > pka.conf
 }
 
 #--- Input parameters ---
 polymer="GLU3coarse.mol2"
 macrosteps=10
-microsteps=30
-cellradius=125.6
-boxlen=100
+microsteps=1000
+cellradius=100
 bjerrum=7.12
 LJeps=0.0
 pH=7.5
@@ -48,29 +41,24 @@ springconstant=1.0
 springeqdist=3.0
 dp_monomer=2
 dp_salt=50
-pKa_core=10
-crankshaft_dp=1.0
-crankshaft_min=1
-crankshaft_max=1
-crankshaft_num=40
+pKa_core=11.0
 #
-for salt in 167 #100 300 900 
+salt=139
+for salt in 139 #100 300 900 
 do
-for pH in 4.0 #4.5 5.0 5.5 6.0 6.5 7.0 7.5 8.0 
+for pH in 4.0 4.5 5.0 5.5 6.0 6.5 7.0 7.5 8.0 
 do
-  rm confout.aam 
-  rm gcgroup.conf
-  suffix="X-4mMNaCL-200mu-ph${pH}" #result/50mM/glu3b-C4.8-coarse-eff60mM-pH${pH}"
-  microsteps=1000  
+  suffix="result/55mM/glu3b-P11.0-C4.8b-pH${pH}"
+  microsteps=3000
   nion1=$[salt+32]
   nion2=$[salt]
   mkinput
-  ./glu3gc > ${suffix}.eq
-  exit
+  ./glu3c > ${suffix}.eq
   microsteps=15000
   mkinput
-  ./glu3gc > ${suffix}.out
+  ./glu3c > ${suffix}.out
   mv smeared.aam ${suffix}.aam
 done
 done
+  rm confout.aam 
 

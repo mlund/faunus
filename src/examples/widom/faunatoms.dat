@@ -7,7 +7,7 @@
 
 # Ions
 Atom  NA      +1     1.80   0.2179 1     0.0    no
-Atom  CL      -1     1.70   0.1689 1     0.0    no
+Atom  CL      -1     2.0    0.1689 1     0.0    no
 Atom  K       +1     1.5    0.1    1     0.0    no
 Atom  CA      +2     1.8    0.1    1     0.0    no
 Atom  MG      +2     3.0    0.1    1     0.0    no
@@ -17,5 +17,5 @@ Atom  CO2H    -1     1.8    0.1    1     0.0    no
 Atom  PO4     -2     3.5    0.1    1     7.2    no
 Atom  LA      +3     2.0    0.1    1     0.0    no
 Atom  GHOST    0     0.001  0.0    1     0.0    no
-Atom  SPH      0     5.0    0.1    9999  0.0    no
+Atom  COL   +382    78.0    0.1    9999  0.0    no
 

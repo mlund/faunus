@@ -1,7 +1,7 @@
 #ifndef FAU_ANALYSIS_H
 #define FAU_ANALYSIS_H
 
-//#include "faunus/histogram.h"
+#include "faunus/histogram.h"
 #include "faunus/average.h"
 #include "faunus/slump.h"
 #include "faunus/io.h"
@@ -15,6 +15,7 @@ namespace Faunus {
   class point;
   class particle;
   class group;
+  class histogram;
 
   /*!
    * Base class for analysis functions
@@ -235,20 +236,25 @@ namespace Faunus {
 
   class aggregation :public analysis {
     private:
-      vector<macromolecule*> g;      // Vector of pointers to all macro.mol. in analysis
-      vector<average<double> > RG2;  // Average radius of gyration square of N-particle cluster
-      container *con;                // Pointer to the container
-      vector<int> dist;              // Vector to store the histogram
-      vector<macromolecule*> agg;    // Vector of pointers to molecules in aggregate
-      vector<macromolecule*> unagg;  // --  //  -- to those not yet identified in a aggregate
-      double CNT;                    // Counter
-      hardsphere coll;               // Hardsphere booleans to define aggregates
-      double sep;                    // Cluster definition, every mol. sep. by less than this
-    public:                          // (in between any 'atom') is considered part of an aggregate
+      vector<macromolecule*> g;        // Vector of pointers to all macro.mol. in analysis
+      vector<int> dist;                // Vector to store number of counts of each aggregate size
+      vector<average<double> > RG2;    // Average radius of gyration square of N-particle cluster
+      vector<average<double> > contact;// Average number of contacts per protein in each cluster size
+      vector<histogram> intdist;       // Internal distribution function on N-particle cluster
+      histogram      avgintdist;       // Internal distribution averaged over all aggregates
+      container *con;                  // Pointer to the container
+      vector<macromolecule*> agg;      // Vector of pointers to molecules in aggregate
+      vector<macromolecule*> unagg;    // --  //  -- to those not included or yet not found
+      vector<macromolecule*> remaining;// --  //  -- to those remaining to be found in each iteration
+      double CNT;                      // Counter
+      hardsphere coll;                 // Hardsphere booleans to define aggregates
+      double sep;                      // Cluster definition, every mol. sep. by less than this
+    public:                            // (in between any 'atom') is considered part of an aggregate
       aggregation(container &, vector<macromolecule> &i, double);
-      void count();                  // Update the averages and histogram
-      void write(string);            // Print result to 'string'
-      string info() {                // Info
+      aggregation(container &, vector<polymer> &i, double);
+      void count();                    // Update the averages and histogram
+      void write(string);              // Print result to 'string'
+      string info() {                  // Info
         std::ostringstream o;
         o << endl
           << "# AGGREGATION COUNT"<< endl

@@ -12,6 +12,8 @@ nprot1        $nprot1
 protein1      $protein1
 nprot2        $nprot2
 protein2      $protein2
+nprot3        $nprot3
+protein3      $protein3
 voldp         $voldp
 mrdp          $mrdp
 mtdp          $mtdp
@@ -42,24 +44,26 @@ movie         $movie"> isobaric.conf
 #--- Input parameters ---
 macrosteps=10
 microsteps=1
-boxlen=250
+boxlen=2500
 LJeps=0.5
-nprot1=20
-protein1="lysozyme250mM.ph4.5.aam"
-nprot2=0
-protein2="b.aam"
+nprot1=32
+protein1="p1.aam"
+nprot2=12224
+protein2="sm.aam"
+nprot3=0
+protein3="sp.aam"
 #--- Markov Parameters ---
 voldp=0.30        
 mrdp=2.00
-mtdp=30.00
+mtdp=300.00
 ctdp=10.00
 crdp=1
 cluster_sep=8.0
 volr=0
-tr=2
-rr=1
+tr=0
+rr=0
 clt=1
-clr=1
+clr=0
 #--- Interactions and potentials
 bjerrum=7.12
 pressure=0.000024155
@@ -82,7 +86,7 @@ movie="no"
 
 #  cp ${suffix}-conf.aam confout.aam
   suffix="test-max"
-  microsteps=400  
+  microsteps=10  
   mkinput
   ./isobaric > ${suffix}.out
   exit

@@ -219,7 +219,7 @@ namespace Faunus {
   }
 
   //AGGREGATION
-  aggregation::aggregation(container &C, vector<macromolecule> &G, double s) {
+  aggregation::aggregation(container &C, vector<macromolecule> &G, double s) : avgintdist(2.0,0.0,600) {
     con=&C;
     g.clear();
     for (int iter=0;iter<G.size();iter++)
@@ -229,10 +229,35 @@ namespace Faunus {
     dist.resize(g.size(), 0);
     RG2.clear();
     average<double> start;
-    for (int i=0;i<g.size();i++)
+    histogram a(2.0,0.0,600);
+  //  avgintdist=a;
+    for (int i=0;i<g.size();i++) {
       RG2.push_back(start);
+      intdist.push_back(a);
+    }
     sep=s;  
   }
+
+  aggregation::aggregation(container &C, vector<polymer> &G, double s) : avgintdist(2.0,0.0,600) {
+    con=&C;
+    g.clear();
+    for (int iter=0;iter<G.size();iter++)
+      g.push_back(&(G[iter]));
+    CNT=0;
+    dist.clear();
+    dist.resize(g.size(), 0);
+    RG2.clear();
+    contact.clear();
+    average<double> start;
+    histogram a(2.0,0.0,600);
+    for (int i=0;i<g.size();i++) {
+      RG2.push_back(start);
+      contact.push_back(start);
+      intdist.push_back(a);
+    }
+    sep=s;  
+  }
+/*
   void aggregation::count() {
     ++CNT;
     for (int k=0; k<g.size();k++) {  //start looking for aggregates around k
@@ -272,16 +297,81 @@ namespace Faunus {
       for (int i=0; i<agg.size();i++) {
         for (int j=agg[i]->beg; j<agg[i]->end+1; j++) {
           RG2[agg.size()-1]+=con->sqdist(con->p[j], CMagg);
+          for (int k=i; k<agg.size(); k++) 
+            for (int l=agg[k]->beg; l<agg[k]->end+1; l++) {
+              intdist[agg.size()-1].add(con->dist(con->p[j], con->p[l]));
+              avgintdist.add(con->dist(con->p[j], con->p[l]));
+            }
         }
       }
     }
+  }*/
+  void aggregation::count() {
+    ++CNT;
+    remaining=g;
+    int found=0;
+    double contcnt;
+    while (remaining.size()>0) { 
+      agg.clear();
+      unagg.clear();
+      if(remaining.size()>1){
+        for (int iter=1;iter<remaining.size();iter++)
+          unagg.push_back(remaining[iter]);
+      }
+      agg.push_back(remaining[0]);
+      for (int i=0; i<agg.size(); i++){
+        for (int j=0; j<unagg.size(); j++)
+          if (coll.overlap(con->p, *agg[i], *unagg[j], sep) ) {   // Find the aggregated
+            agg.push_back(unagg[j]);                              // pairs
+            unagg.erase(unagg.begin()+j);                   // Remove any found from
+          }
+      } 
+      dist[agg.size()-1]+=agg.size();                                     // One aggregate of size
+      found+=agg.size();
+      point CMagg, fix;
+      for (int i=1; i<agg.size(); i++) {
+        fix=agg[i]->cm-agg[0]->cm;
+        CMagg+=fix;
+      }
+      CMagg+=agg[0]->cm;
+      con->boundary(CMagg);
+      for (int i=0; i<agg.size();i++) {
+        for (int j=agg[i]->beg; j<agg[i]->end+1; j++) {
+          RG2[agg.size()-1]+=con->sqdist(con->p[j], CMagg);
+          for (int k=i; k<agg.size(); k++) { 
+            contcnt=0.0;
+            for (int l=agg[k]->beg; l<agg[k]->end+1; l++) {
+              if( (l!=j && k==i) || k!=i) {
+                intdist[agg.size()-1].add(con->dist(con->p[j], con->p[l]));
+                avgintdist.add(con->dist(con->p[j], con->p[l]));
+              }
+              if( k!=i)
+                if( con->dist(con->p[j], con->p[l]) < con->p[j].radius+con->p[l].radius+sep)
+                  contcnt++;
+            }
+            contact[agg.size()-1].add(contcnt);
+          }
+        }
+      }
+      for(int j=remaining.size()-1; j>=0; j--)
+        for(int i=0; i<agg.size(); i++)
+          if(agg[i]==remaining[j])
+            remaining.erase(remaining.begin()+j);                   // Remove any found from
+    }
+    if(found!=g.size())
+      std::cerr<<"Didn't find all! Malfunction in aggregation::count()!!!"<<std::endl;
   }
   void aggregation::write(string file) {
     std::ofstream f(file.c_str());
+    avgintdist.write("aggpofr-avg.dat");
     if (f) {
       for (int i=0;i<g.size();i++) {
-        if (dist[i]!=0)
-          f << i+1 << "  "<<double(dist[i])/CNT/g.size() <<"  " <<RG2[i].avg() <<endl;
+        if (dist[i]!=0){
+          std::ostringstream o;
+          o << "aggpofr-"<<i+1<<".dat";
+          f << i+1 << "  "<<double(dist[i])/CNT/g.size() <<"  " <<pow(RG2[i].avg(),0.5) <<"  "<<contact[i].avg()<<std::endl;
+          intdist[i].write(o.str());
+        }
       }
       f.close();
     }

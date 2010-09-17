@@ -27,7 +27,7 @@ namespace Faunus {
     int f;
     point origin;
     origin.x=0, origin.y=0, origin.z=0;
-    f=slp.random_one()*remaining.size();
+    f=slp.random_one()*32; //remaining.size();
     moved.push_back(remaining[f]);
     remaining.erase(remaining.begin()+f);    // Pick first index in m to move
     for(int i=0; i<moved.size(); i++) {
@@ -53,9 +53,67 @@ namespace Faunus {
     return du;   
   }
 
-//  RESTRICTED INVERSION  
-  clusterrinvw::clusterrinvw( ensemble &e,
-    container &c, sphericalimage<pot_test> &i, double &rad, double &cavrad 
+  clusterinvwsalt::clusterinvwsalt( ensemble &e,
+    container &c, interaction<pot_hsminimage> &i ) : markovmove(e,c,i) {
+      name.assign("SALT CLUSTER INVERSION, cite xxx");
+      runfraction=1.;
+      ipot=&i;
+     }
+
+  string clusterinvwsalt::info() {
+    ostringstream o;
+    o << markovmove::info()
+      << "#   A fraction of "<<movefrac.avg()<<" are moved ( "<<movefrac.stdev()<<")"<<endl;
+    return o.str();
+  }
+
+  double clusterinvwsalt::move(salt &m) {
+    cnt++;
+    du=-pot->internal(con->p, m);
+    double udiff=0, un=0, uo=0;
+      moved.clear(), remaining.clear();
+    for (int i=m.beg; i<m.end+1; i++)
+      remaining.push_back(i);
+    int f;
+    point origin, imgpos;
+    con->randompos(origin);
+    f=slp.random_one()*32; //remaining.size();
+    moved.push_back(remaining[f]);
+    remaining.erase(remaining.begin()+f);    // Pick first index in m to move
+    imgpos.x=dp*slp.random_half();
+    imgpos.y=dp*slp.random_half();
+    imgpos.z=dp*slp.random_half();
+    for(int i=0; i<moved.size(); i++) {
+//#pragma omp parallel for reduction (+:udiff) schedule (dynamic)
+      //imgpos=con->vdist(con->trial[moved[i]], origin);
+      //con->trial[moved[i]]=-imgpos+origin;
+      con->trial[moved[i]]=con->p[moved[i]]+imgpos;
+      con->boundary(con->trial[moved[i]]);
+      for(int j=0; j<remaining.size();j++) {
+        udiff= -ipot->pair.pairpot(    con->p[moved[i]], con->p[remaining[j]])
+               +ipot->pair.pairpot(    con->trial[moved[i]], con->trial[remaining[j]]);
+        //udiff=un-uo;
+        if(slp.random_one() < (1.-exp(-udiff)) ) {
+          moved.push_back(remaining[j]);
+          remaining.erase(remaining.begin()+j);
+          j=j-1;
+          dpsqr+=imgpos.len()*imgpos.len();
+        }
+      }
+      con->p[moved[i]]=con->trial[moved[i]];
+    } 
+    du+=pot->internal(con->p,m);
+    movefrac+=double(moved.size())/double((moved.size()+remaining.size()));
+    rc=OK;
+    naccept++;
+    utot+=du;
+    dpsqr+=0.0;
+    return du;   
+  }
+
+/*  RESTRICTED INVERSION  
+  clusterinvwsaltr::clusterinvwsaltr( ensemble &e,
+    container &c, interaction<pot_hsminimage> &i, inputfile &in 
     ) : markovmove(e,c,i) {
       name.assign("RESTRICTED WATER CLUSTER INVERSION, cite xxx");
       runfraction=1.;
@@ -114,7 +172,7 @@ namespace Faunus {
     utot+=du;
     return du;   
   }
-
+*/
 //  CLUSTER TRANSLATION  
   clustertrans::clustertrans( ensemble &e,
     container &c, energybase &i , vector<macromolecule> &g ) : markovmove(e,c,i) {
@@ -130,6 +188,7 @@ namespace Faunus {
   string clustertrans::info() {
     ostringstream o;
     o << markovmove::info()
+      << "#   dp                        = " << dp <<endl
       << "#   Particle move fraction    = " << movefrac.avg() << " " << movefrac.stdev() << endl
       << "#   Skip energy updates:        "
       << ((skipEnergyUpdate==false) ? "no" : "yes (energy drift!)") << endl;

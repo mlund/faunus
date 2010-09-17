@@ -6,7 +6,7 @@
 
 function geninput() {
 echo "
-macrosteps 10
+macrosteps 10 
 microsteps $microsteps
 boxlen     $boxlen
 cellradius 100
@@ -25,33 +25,35 @@ tion4      $tion4
 tion5      $tion5
 tion6      $tion6
 dp_salt    $dp_salt
+cluster_dp $cluster_dp
 " > widom.conf
 }
 
 microsteps=10
-tion1="NA"
-tion2="CL"
-tion3="K"
+tion2="NA"
+tion3="CL"
+tion1="COL"
 tion4="MG"
 tion5="CA"
 tion6="CL"
-dp_salt=60
-exe="./widom_cube"
-for boxlen in 792.6 #998.7 1258.2
+dp_salt=100
+cluster_dp=25 
+exe="./saltcluster"
+for boxlen in 1020 #998.7 1258.2
 do
-    rm -f widom.aam
-    nion1=640
+#    rm -f widom.aam
+    nion3=12224
     nion2=0
-    nion3=0
-    nion4=75
+    nion1=32
+    nion4=0
     nion5=0
-    nion6=790
+    nion6=0
 #    boxlen=129.8
-    microsteps=1000
-    outfile="MGNACL-boxl${boxlen}"
+    microsteps=10  
+    outfile="JANNE"
     geninput
-    $exe > eq
-#exit
+    $exe > $outfile
+exit
     microsteps=1000
     #outfile="${boxlen}.out"
     geninput

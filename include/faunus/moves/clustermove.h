@@ -5,6 +5,7 @@
 #include "faunus/hardsphere.h"
 #include "faunus/energy/reactionfield.h"
 #include "faunus/potentials/pot_test.h"
+#include "faunus/potentials/pot_hsminimage.h"
 
 namespace Faunus {
   /*!
@@ -76,8 +77,18 @@ namespace Faunus {
       sphericalimage<pot_test> *ipot;
   };
 
+  class clusterinvwsalt : public markovmove {
+    public :
+      clusterinvwsalt( ensemble&, container&, interaction<pot_hsminimage>&);
+      double move(salt &);
+      string info();
+      average< double > movefrac;
+      vector<int> moved;
+      vector<int> remaining;
+      interaction<pot_hsminimage> *ipot;
+  };
   // Non-rejective cluster inversion on a partial volume and meteropolis weigth
-  // with the rest. Untested and undone.
+  /* with the rest. Untested and undone.
 
   class clusterrinvw : public markovmove {
     public :
@@ -91,7 +102,7 @@ namespace Faunus {
       vector<int> moved;
       vector<int> remaining;
       sphericalimage<pot_test> *ipot;
-  };
+  };*/
 
   /*!
    * \brief Non-rejective cluster translation.

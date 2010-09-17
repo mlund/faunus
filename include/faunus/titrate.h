@@ -85,5 +85,25 @@ namespace Faunus {
       string info();                        //!< Returns information string
       string info(container&);              //!< Returns expanded information string
   };
+
+  /*! \brief Class to perform titration of atoms to switch between two types of particles: 
+   *  fType1/fType2. For referece fType1 will be used to designate a 'bound' state.
+   *  \author Bjoern Persson
+   */
+  class titrate_switch {
+    protected:
+      int fType1, fType2;                   //!< Pointer to particle types in atoms.list
+      string fName1, fName2;
+    public:
+      int recent;                           //!< Attempted site to change state type
+      vector<unsigned int> sites;           //!< Titratable sites
+      double pc, pK;                        //!< Solution 'pH' value and binding constant
+      titrate_switch(container&, inputfile &);
+      void exchange(vector<particle> &, int=-1);
+      double energy(container &, double);
+      unsigned int random();                //!< Pick a random titratable site
+      //string info();                        //!< Returns information string
+  };
+
 }
 #endif

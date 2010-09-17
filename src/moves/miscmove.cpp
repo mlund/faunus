@@ -81,7 +81,7 @@ namespace Faunus {
       }
     }
     double deltau=0;
-#pragma omp parallel for reduction (+:deltau) 
+//#pragma omp parallel for reduction (+:deltau) 
     for (int i=0; i<g.size(); i++)
       if (i!=n)
         deltau += pot->energy(con->trial, g[i], g[n]) - pot->energy(con->p, g[i], g[n]);

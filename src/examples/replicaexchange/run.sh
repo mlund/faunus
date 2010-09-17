@@ -5,9 +5,9 @@ echo "boxlen        $box
 temperature   298.15
 bjerrum       $bjerrum
 LJeps         0.30
-nprot1        5
+nprot1        50
 protein1      test.mol1.aam
-nprot2        5
+nprot2        50
 protein2      test.mol2.aam
 mrdp          2
 mtdp          100
@@ -18,8 +18,8 @@ debyelen      100
 moltrans_dp   $tdp
 isobar_pressure      $pressure
 isobar_dp            $voldp
-isobar_maxlen        500
-isobar_minlen        50
+isobar_maxlen        1000
+isobar_minlen        0
 isobar_binlen        1
 isobar_penalize      no
 isobar_penalty       0.5
@@ -49,18 +49,18 @@ pressure=0.000001
 # 1. Generate replica input files
 for id in a b c
 do
-  if [ "$id" == "a" ]; then box=150; bjerrum=12;  tdp=10; voldp=0.7; fi
-  if [ "$id" == "b" ]; then box=200; bjerrum=10;  tdp=100; voldp=1; fi
-  if [ "$id" == "c" ]; then box=250; bjerrum=4;   tdp=200; voldp=2; fi
+  if [ "$id" == "a" ]; then box=150; bjerrum=7;  tdp=10; voldp=0.7; fi
+  if [ "$id" == "b" ]; then box=400; bjerrum=6;  tdp=100; voldp=1; fi
+  if [ "$id" == "c" ]; then box=250; bjerrum=4;  tdp=200; voldp=2; fi
   mkinput
 done
 
-export OMP_NUM_THREADS=1
+#export OMP_NUM_THREADS=1
 
 # 2. Eq run
-rm -f *.dump
+#rm -f *.dump
 macro=10
-micro=10000
+micro=20
 temper="yes"
 mkrepinput
 ./replica

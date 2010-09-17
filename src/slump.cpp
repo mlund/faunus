@@ -62,6 +62,8 @@ namespace Faunus {
   }
 
   double ran2::random_one()  {
+#pragma omp critical
+    {
     random_seed(idum);
     k=idum/IQ1;
     idum=IA1*(idum-k*IQ1)-k*IR1;
@@ -76,6 +78,7 @@ namespace Faunus {
     iv[j]=idum;
     if (iy<1)
       iy+=IMM1;
+    }
     if((temp=AM*iy)>RNMX)
       return RNMX;
     else

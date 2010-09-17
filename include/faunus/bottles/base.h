@@ -31,7 +31,7 @@ namespace Faunus {
       string name;                      //!< Name of the system (arbitrary)
       string prefix;                    //!< Prefix for input files, output etc.
       virtual void prepare()=0;         //!< Prepare and setup systems
-      virtual void microloop()=0;       //!< Things to do in each micro move
+      virtual void microloop(int=1)=0;  //!< Things to do (n times) in each micro move
       virtual void macroloop()=0;       //!< Things to do in each macro move
       virtual void save()=0;            //!< Save data to disk
       virtual double systemEnergy()=0;  //!< Calculate system energy (of TRIAL particles!)

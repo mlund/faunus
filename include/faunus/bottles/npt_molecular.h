@@ -66,21 +66,23 @@ namespace Faunus {
         return u;
       }
 
-      void microloop() {
-        int N=g.size();
-        for (int i=0; i<N; i++)
-          g[i].masscenter(con);
+      void microloop(int ntimes) {
+        while ((ntimes--)>0) {
+          int N=g.size();
+          for (int i=0; i<N; i++)
+            g[i].masscenter(con);
 
-        switch (rand() % 2) {
-          case 0: // combined translation and rotation N times
-            for (int i=0; i<N; i++) {
-              mmTransrot->dpt = 0.008 * pow(con.len,2);
-              usys+=mmTransrot->move( g, N*slp.random_one() );
-            }
-            break;
-          case 1: // volume move
-            usys+=mmVol->move(g);
-            break;
+          switch (rand() % 2) {
+            case 0: // combined translation and rotation N times
+              for (int i=0; i<N; i++) {
+                mmTransrot->dpt = 0.008 * pow(con.len,2);
+                usys+=mmTransrot->move( g, N*slp.random_one() );
+              }
+              break;
+            case 1: // volume move
+              usys+=mmVol->move(g);
+              break;
+          }
         }
       }
 

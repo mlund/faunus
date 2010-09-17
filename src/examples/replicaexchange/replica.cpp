@@ -1,3 +1,5 @@
+#define OPENMP_TEMPER
+
 #include "faunus/faunus.h"
 #include "faunus/potentials/pot_coulomb.h"
 #include "faunus/potentials/pot_debyehuckelP3.h"
@@ -16,7 +18,7 @@ typedef interaction<pot_debyehuckelP3> Tpot;
 typedef npt_molecular<box,Tpot> Tbottle;
 
 int main() {
-  cout << faunus_splash();
+  cout << faunus_splash() << slp.info() << endl;
   inputfile in("replica.conf");
   io fio;
   mcloop loop(in);
@@ -38,14 +40,14 @@ int main() {
         #pragma omp sections
         {
           #pragma omp section
-          { a.microloop(); }
+          a.microloop(100);
           #pragma omp section
-          { b.microloop(); }
+          b.microloop(100);
           #pragma omp section
-          { c.microloop(); }
+          c.microloop(100);
         }
       }
-      if (temperBool && slp.random_one()>0.9) {
+      if (temperBool) {
         switch (rand() % 2) {
           case 0:
             temper.swap(a,b);

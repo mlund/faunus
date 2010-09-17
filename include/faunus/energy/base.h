@@ -6,6 +6,8 @@
 #include "faunus/inputfile.h"
 #include "faunus/container.h"
 
+#define OPENMP_G2G
+
 namespace Faunus {
   /*!
    *  \brief Base class for interactions between particles and groups
@@ -91,7 +93,7 @@ namespace Faunus {
       double u=0;
       particle bak=p[j]; // avoid self interaction by moving
       p[j].deactivate(); // particle far away and setting charge=0.
-#pragma omp parallel for reduction (+:u)
+//#pragma omp parallel for reduction (+:u)
       for (int i=0; i<n; ++i)
         u+=pair.pairpot( p[i], bak );
       p[j]=bak;
@@ -112,7 +114,7 @@ namespace Faunus {
     double energy(vector<particle> &p, const group &g) {
       int n=g.end+1, psize=p.size();
       double u=0;
-#pragma omp parallel for reduction (+:u)
+//#pragma omp parallel for reduction (+:u)
       for (int i=g.beg; i<n; ++i) {
         for (int j=0; j<g.beg; j++)
           u += pair.pairpot(p[i],p[j]);
@@ -163,7 +165,9 @@ namespace Faunus {
     double energy(vector<particle> &p) {
       double u=0;
       int n = p.size();
-#pragma omp parallel for reduction (+:u) schedule (dynamic)
+      #ifndef OPENMP_TEMPER
+      #pragma omp parallel for reduction (+:u) schedule (dynamic)
+      #endif
       for (int i=0; i<n-1; ++i)
         for (int j=i+1; j<n; ++j)
           u+=pair.pairpot(p[i], p[j]);
@@ -173,7 +177,9 @@ namespace Faunus {
     double energy(vector<particle> &p, const group &g1, const group &g2) {
       double u=0;
       int ilen=g1.end+1, jlen=g2.end+1;
-      //#pragma omp parallel for reduction (+:u) schedule (dynamic)
+      #ifndef OPENMP_TEMPER
+      #pragma omp parallel for reduction (+:u) schedule (dynamic)
+      #endif
       for (int i=g1.beg; i<ilen; i++)
         for (int j=g2.beg; j<jlen; j++)
           u += pair.pairpot(p[i],p[j]);
@@ -244,7 +250,7 @@ namespace Faunus {
       particle tmp=p[j]; // avoid self-interaction
       p[j].charge=0;     // in a slightly dirty manner
       p[j].y=1e9;        // (for symmetric parallel load)
-#pragma omp parallel for reduction (+:phi)
+//#pragma omp parallel for reduction (+:phi)
       for (int i=0; i<n; ++i)
         phi+=p[i].charge/sqrt(pair.sqdist(p[i],tmp));
       p[j]=tmp;

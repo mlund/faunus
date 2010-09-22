@@ -36,7 +36,7 @@ int main() {
 
   saltmove sm(nvt, cell, pot);          // Class for salt movements
   macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
-  sm.dp=90;                              // Set displacement parameters
+  sm.dp=90;                             // Set displacement parameters
   mr.dp=2;
   dm.dp=2;
   ioaam aam;                            // Protein input file format is AAM

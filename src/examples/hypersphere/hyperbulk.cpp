@@ -9,7 +9,8 @@
  *
  * \author Martin Trulsson and Mikael Lund
  * \date August 2009, Lund
-*/
+ */
+
 #include "faunus/faunus.h"
 #include "faunus/potentials/pot_hypersphere.h"
 #include <iostream>
@@ -69,7 +70,7 @@ int main() {
   
   while (loop.macroCnt() ) {             //Markov chain 
     while (loop.microCnt() ) {
-      switch (rand() % 1) {
+      switch (slp.rand() % 1) {
         case 0:
           sys += sm.move(salt);
           break;

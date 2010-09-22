@@ -35,16 +35,6 @@ string stringify(double x) {
   return o.str();
 }
 
-class xyfile {
-private:
-  std::ofstream f;
-  unsigned int cnt;
-public:
-  xyfile(string name) : f(name.c_str()) { cnt=0; }
-  void add(double x, double y) { f << x << " " << y << std::endl; }
-  void close() { f.close(); }
-};
-
 int main() {
   cout << faunus_splash();
   cout << "---------- INITIAL PARAMETERS -----------" << endl;

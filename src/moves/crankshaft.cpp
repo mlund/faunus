@@ -43,7 +43,7 @@ namespace Faunus {
   }
 
   void crankShaft::setNumberOfMonomers() {
-    len = minMonomers + (rand() % (maxMonomers-minMonomers+1));
+    len = minMonomers + (slp.rand() % (maxMonomers-minMonomers+1));
   }
 
   bool crankShaft::findEnds(polymer &g) {

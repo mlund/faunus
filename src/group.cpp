@@ -67,7 +67,7 @@ namespace Faunus {
     return (*this == g);
   }
 
-  short int group::random() { return beg + rand() % size(); }
+  short int group::random() { return beg + slp.rand() % size(); }
 
   string group::info() {
     std::ostringstream o;

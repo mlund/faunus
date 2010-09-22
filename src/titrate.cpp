@@ -41,7 +41,7 @@ namespace Faunus {
   //returns number a random, titrateable
   //site in particle vector
   short int titrate::random(vector<short int> &iv) {
-    short int i = rand() % iv.size();     //and pick randomly
+    short int i = slp.rand() % iv.size();     //and pick randomly
     return iv.at(i);
   }
 

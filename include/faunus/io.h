@@ -2,7 +2,6 @@
 #define FAU_IO_H
 #include "faunus/common.h"
 #include "faunus/titrate.h"
-//#include <stdio.h>
 
 #ifndef __cplusplus
 #define __cplusplus
@@ -13,10 +12,8 @@
 #include "xdrfile/xdrfile_trr.h"
 #include "xdrfile/xdrfile_xtc.h"
 
-//#include "xdrfile/xdrfile_trr.h"
-//#endif GROMACS
-
 namespace Faunus {
+  
   class container;
   class inputfile;
   class box;
@@ -25,17 +22,17 @@ namespace Faunus {
   class particle;
   class particles;
 
-  //--------------------------------
-  //!\brief Basic file I/O routines
-  //!\author Mikael Lund
+  /*! \brief Basic file I/O routines
+   *  \author Mikael Lund
+   */
   class io {
     private:
       string s;
     public:
-      bool readfile(string, vector<string>&);      //!< Read entire file to vector
-      bool writefile(string, string);              //!< Save string to file
-      void strip(vector<string> &, string="#");    //!< Remove lines containing pattern
-      void splash(string);                       //!< Splashes the content of a file
+      bool readfile(string, vector<string>&);       //!< Read entire file to vector
+      bool writefile(string, string, std::ios_base::openmode=std::ios_base::out); //!< Save string to file
+      void strip(vector<string> &, string="#");     //!< Remove lines containing pattern
+      void splash(string);                          //!< Splashes the content of a file
   };
 
   class particleIO {
@@ -57,7 +54,6 @@ namespace Faunus {
     bool sabe(container &, string);
   };
 
-  //----------------------------------------
   /*!\brief General class for particle I/O.
    * \author Mikael Lund
    * \todo Unfinished!
@@ -82,7 +78,6 @@ namespace Faunus {
     virtual bool save(string, vector<particle>&)=0;     //!< Save to disk
   };
 
-  //------------------------------------
   /*! \brief Write XYZ structure files, only 
    *  \brief intended for particles.p IO
    *  \author Mikael Lund
@@ -100,11 +95,8 @@ namespace Faunus {
     vector<particle> load(string);
   };
 
-
-  //------------------------------------
   /*! \brief Read/write AAM file format
    *  \author Mikael Lund
-   *  \todo Unfinished!
    */
   class ioaam : public iopart {
     private:
@@ -119,10 +111,8 @@ namespace Faunus {
       bool save(string, vector<particle>&);
   };
 
-  //-----------------------------------------------
   /*! \brief Persistence of Vision Raytracer output
    *  \author Mikael Lund
-   *  \todo Unfinished!
    */
   class iopov : public iopart {
     private:
@@ -158,7 +148,6 @@ namespace Faunus {
       bool save(string, vector<particle> &, vector<group> &); //!< Save groups
   };
 
-
   /*!
    * \brief Gromacs GRO format
    * \date December 2007
@@ -177,7 +166,6 @@ namespace Faunus {
       vector<particle> load(string);
   };
 
-  //-----------------------------------------------
   /*! \brief GROMACS xtc compressed trajectory fileformat
    *  \author Mikael Lund
    *  \date June 2007, Prague
@@ -206,5 +194,16 @@ namespace Faunus {
       void setbox(double,double,double);       //!< Set box size to be saved in frame
       void close();                            //!< Close trj file
   };
+  
+  class xyfile {
+    private:
+      std::ofstream f;
+      unsigned int cnt;
+    public:
+      xyfile(string);
+      void add(double, double);
+      void close();
+  };
+
 };//namespace
 #endif

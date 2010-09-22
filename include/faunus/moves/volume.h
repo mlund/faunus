@@ -6,19 +6,23 @@
 #include "faunus/inputfile.h"
 
 namespace Faunus {
+  
   /*!
-   * \brief Fluctuate the volume against an external pressure 
+   *
+   * \brief  Fluctuate the volume against external pressure 
    * \author Bjoern Persson and Mikael Lund
-   * \todo Should take an arbritray vector of groups and implement a more efficent energy calculation.
-   *       Salt scaling not yet implemented
-   * \note Tested and found valid using debyehuckel_P3 and point charges and ideal systems. 
-   * \note To compare with ideal systems sample the INVERSE of the volume to avoid (N+1)/N error! Intrinis property of the ensemble.
-   * \date Lund/Canberra, Jan-Feb 2008
+   * \todo   Implement salt scaling
+   * \note   Tested and found valid using debyehuckel_P3 and point charges and ideal systems. 
+   *         To compare with ideal systems sample the INVERSE of the volume to avoid (N+1)/N error!
+   *         Intrinic property of the ensemble.
+   * \date   Lund/Canberra, Jan-Feb 2008
    *
    * This move is intended to maintain constant pressure in a canonical
    * Monte Carlo simulation. It will perform volume fluctuations and scale
    * particle positions according to the scaling algorithm specified for the container.
+   *
    */
+  
   template<typename T> class isobaric : public markovmove {
   public:
     isobaric( ensemble&, container&, T &, double, int, int);
@@ -51,7 +55,7 @@ namespace Faunus {
    *       class will instantiate a new (private) interaction class
    *       and in this way allow for two different container sizes.
    *
-   * \param pressure bulk pressure in A^-3
+   * \param pressure bulk pressure in A^-3 (i.e. P/kT which is temperature dependent, mind you)
    * \param i        Potential class. Make sure that the T_pairpot::setvolume() function is appropriate.
    * \param maxsize  Maximum allowed box length (A)
    * \param minsize  Minimum allowed box length (A)
@@ -63,6 +67,8 @@ namespace Faunus {
     runfraction=1;
     dp=1; 
     pot=&i;
+    pot->setvolume( con->getvolume() );
+    trialpot.setvolume( con->getvolume() );
   }
 
   template<typename T> isobaric<T>::isobaric
@@ -75,6 +81,8 @@ namespace Faunus {
     P=in.getflt(prefix+"pressure",1);
     pot=&i;
     Ldist.reset( in.getflt(prefix+"binlen",0.5), minlen, maxlen);
+    pot->setvolume( con->getvolume() );
+    trialpot.setvolume( con->getvolume() );
   }
    
   template<typename T> string isobaric<T>::info() {
@@ -136,13 +144,15 @@ namespace Faunus {
     markovmove::move();
     Nmolecules+=g.size();                        // Keep track of number of molecules
     double uold=0, unew=0;
-    newvolume();                                 // Generate new trial volume - prep. trial potential
+    newvolume();                                 // Generate new trial volume and prepare trial potential
     double newL=pow(newV,1./3.);                 // New length
     if (newL>minlen && newL<maxlen) {            // Test for min/max box length
       int N=g.size();
       for (int i=0; i<N; i++)                    // Loop over macromolecules
         g[i].isobaricmove(*con, newL);           // ...and scale their mass-centers
+#ifndef OPENMP_TEMPER
 #pragma omp parallel for reduction (+:uold,unew) schedule (dynamic)
+#endif
       for (int j=0; j<N-1; j++) {
         for (int k=j+1; k<N; k++) {
           uold += pot->energy(con->p, g[j], g[k]);         // calc. old energy with original potential class
@@ -172,8 +182,6 @@ namespace Faunus {
     updateVars();
     return du;
   } 
-
-  // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
   /*!
    * \brief Fluctuate the volume against an external pressure (with penalty funtion)

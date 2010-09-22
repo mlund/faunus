@@ -4,6 +4,7 @@
 #include "faunus/potentials/pot_coulomb.h"
 #include "faunus/potentials/pot_debyehuckelP3.h"
 #include "faunus/bottles/npt_molecular.h"
+#include "faunus/energy/coarsegrain.h"
 
 /*!
  * \brief Replica exchange program - proof of concept.
@@ -14,7 +15,7 @@
 using namespace std;
 using namespace Faunus;
 
-typedef interaction<pot_debyehuckelP3> Tpot;
+typedef interaction_dipole<pot_debyehuckelP3> Tpot;
 typedef npt_molecular<box,Tpot> Tbottle;
 
 int main() {
@@ -30,6 +31,10 @@ int main() {
   a.prepare();
   b.prepare();
   c.prepare();
+  
+  fio.writefile( "a.out", a.preinfo() );
+  fio.writefile( "b.out", b.preinfo() );
+  fio.writefile( "c.out", c.preinfo() );
 
   cout << in.info();
 
@@ -43,12 +48,12 @@ int main() {
           a.microloop(100);
           #pragma omp section
           b.microloop(100);
-          #pragma omp section
-          c.microloop(100);
+          //#pragma omp section
+          //c.microloop(100);
         }
       }
       if (temperBool) {
-        switch (rand() % 2) {
+        switch (rand() % 1) {
           case 0:
             temper.swap(a,b);
             break;
@@ -62,16 +67,12 @@ int main() {
     b.macroloop();
     c.macroloop();
 
-    a.save();
-    b.save();
-    c.save();
-
     cout << loop.timing();
   } // end of outer loop
 
-  fio.writefile( "a.out", a.postinfo() );
-  fio.writefile( "b.out", b.postinfo() );
-  fio.writefile( "c.out", c.postinfo() );
+  fio.writefile( "a.out", a.postinfo(), std::ios_base::app );
+  fio.writefile( "b.out", b.postinfo(), std::ios_base::app );
+  fio.writefile( "c.out", c.postinfo(), std::ios_base::app );
 
   cout << loop.info() << in.info() << temper.info();
 };

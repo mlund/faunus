@@ -34,7 +34,7 @@ namespace Faunus {
     double sum=0;
     for (unsigned int i=0; i<sites.size(); i++) {
       markovmove::move();
-      unsigned int j=rand() % sites.size(),         //!< Pick a random site
+      unsigned int j=slp.rand() % sites.size(),         //!< Pick a random site
                    n=sites.at(j).n;                 //!< Get particle number
       con->trial[n].charge += dp*slp.random_half(); //!< Displace charge
       

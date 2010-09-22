@@ -8,6 +8,9 @@
 
 #define OPENMP_G2G
 
+//#define GROUP_GT_NCPU
+//#define GROUP_
+
 namespace Faunus {
   /*!
    *  \brief Base class for interactions between particles and groups
@@ -93,7 +96,9 @@ namespace Faunus {
       double u=0;
       particle bak=p[j]; // avoid self interaction by moving
       p[j].deactivate(); // particle far away and setting charge=0.
-//#pragma omp parallel for reduction (+:u)
+      #ifndef OPENMP_TEMPER
+      #pragma omp parallel for reduction (+:u)
+      #endif 
       for (int i=0; i<n; ++i)
         u+=pair.pairpot( p[i], bak );
       p[j]=bak;
@@ -114,7 +119,9 @@ namespace Faunus {
     double energy(vector<particle> &p, const group &g) {
       int n=g.end+1, psize=p.size();
       double u=0;
-//#pragma omp parallel for reduction (+:u)
+      #ifndef OPENMP_TEMPER
+      #pragma omp parallel for reduction (+:u)
+      #endif
       for (int i=g.beg; i<n; ++i) {
         for (int j=0; j<g.beg; j++)
           u += pair.pairpot(p[i],p[j]);
@@ -185,6 +192,7 @@ namespace Faunus {
           u += pair.pairpot(p[i],p[j]);
       return pair.f*u;
     }
+    
     double energy(vector<particle> &p, molecules &m, vector<int> &i) {
       double du=0;
       return du;

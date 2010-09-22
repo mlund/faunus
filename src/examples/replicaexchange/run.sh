@@ -1,6 +1,6 @@
 #!/bin/bash
 
-function mkinput() {
+function bottleInput() {
 echo "boxlen        $box
 temperature   298.15
 bjerrum       $bjerrum
@@ -35,7 +35,7 @@ movie         no
 " > $id.conf
 }
 
-function mkrepinput {
+function controllerInput {
 echo "
 macrosteps $macro
 microsteps $micro
@@ -49,26 +49,26 @@ pressure=0.000001
 # 1. Generate replica input files
 for id in a b c
 do
-  if [ "$id" == "a" ]; then box=150; bjerrum=7;  tdp=10; voldp=0.7; fi
-  if [ "$id" == "b" ]; then box=400; bjerrum=6;  tdp=100; voldp=1; fi
+  if [ "$id" == "a" ]; then box=150; bjerrum=10;  tdp=10; voldp=0.7; fi
+  if [ "$id" == "b" ]; then box=400; bjerrum=1;  tdp=100; voldp=1; fi
   if [ "$id" == "c" ]; then box=250; bjerrum=4;  tdp=200; voldp=2; fi
-  mkinput
+  bottleInput
 done
 
-#export OMP_NUM_THREADS=1
+export OMP_NUM_THREADS=2
 
 # 2. Eq run
-#rm -f *.dump
-macro=10
-micro=20
+rm -f *.dump
+macro=5
+micro=10
 temper="yes"
-mkrepinput
+controllerInput
 ./replica
 exit
 
 # 3. Production
 micro=10000
 temper="yes"
-mkrepinput
+controllerInput
 ./replica
 

@@ -7,7 +7,7 @@
 
 namespace Faunus {
 
-  class simBottle;
+  class bottle;
 
   /*!
    * \brief Move for generic replica exchange
@@ -16,17 +16,17 @@ namespace Faunus {
    * \todo Optimize by swapping only particle coordinates.
    *
    * This class will try to swap configurations between replica
-   * simulations (simBottle base class). Old energies are
+   * simulations (bottle base class). Old energies are
    * taken from the current energy of the replicas, so make sure
    * they are always in sync. New energies are calculated by calling
-   * the systemEnergy() function in simBottle.
+   * the bottle::systemEnergy() function.
    */
   class replicaexchange {
     private:
       canonical nvt;
       vectorid<int> cnt, accepted;
     public:
-      bool swap(simBottle &, simBottle &);
+      bool swap(bottle &, bottle &);
       string info();
   };
 

@@ -6,16 +6,18 @@
 namespace Faunus {
 
   /*!
-   * \brief Simulation system for many molecules in the Npt ensemble
+   * \brief Simulation system for many molecules in the NpT ensemble
    * \author Mikael Lund
    * \date Lund 2010
    */
-  template<typename Tcon, typename Tpot> class npt_molecular : public simBottle {
+  template<typename Tcon, typename Tpot> class npt_molecular : public bottle {
     private:
       string dumpfile;  //!< Filename of container dumpfile
+      unsigned microcnt;
     protected:
       canonical nvt;
       io fio;
+      xyfile boxtrj, energytrj;
     
       macrorot *mmRot;
       translate *mmTrans;
@@ -29,19 +31,12 @@ namespace Faunus {
 
       bool boolTranslate, boolVolume, boolRotate, boolCluster;
 
-      npt_molecular(string pfx) : simBottle(pfx), con(in), pot(in) {
+      npt_molecular(string pfx) : bottle(pfx), con(in), pot(in),
+                    boxtrj(prefix+".boxlen.dat"), energytrj(prefix+".energy.dat") {
         cPtr=&con;
         pPtr=&pot;
-        mmVol = new isobaric<Tpot>(nvt,con,pot,in);
-        mmRot = new macrorot(nvt,con,pot);
-        mmTrans = new translate(nvt,con,pot,in);
-        mmTransrot = new transrot(nvt,con,pot);
-        dumpfile=prefix+".dump";
-        P=mmVol->P;
-      }
 
-      void prepare() {
-        // Load macromolecules
+        // load molecules
         if (in.getboo("lattice")==true)
           aam.loadlattice(con, in, g);
         else
@@ -50,9 +45,31 @@ namespace Faunus {
           for (int i=0; i<g.size(); i++)
             g[i].masscenter(con);
           cout << "# Initial configuration read from " << dumpfile << endl;
-        }  
+        } 
+
+        // prepare move routines
+        mmVol = new isobaric<Tpot>(nvt,con,pot,in);
+        mmRot = new macrorot(nvt,con,pot);
+        mmTrans = new translate(nvt,con,pot,in);
+        mmTransrot = new transrot(nvt,con,pot);
+
+        dumpfile=prefix+".dump";
+        P=mmVol->P;
+        microcnt=0;
 
         usys.initialize( systemEnergy() );
+      }
+    
+      ~npt_molecular() {
+        delete mmRot;
+        delete mmTrans;
+        delete mmTransrot;
+        delete mmVol;
+        boxtrj.close();
+        energytrj.close();
+      }
+
+      void prepare() {
       }
 
       double systemEnergy() {
@@ -66,13 +83,13 @@ namespace Faunus {
         return u;
       }
 
-      void microloop(int ntimes) {
+      void microloop(int ntimes=1) {
+        int N=g.size();
+        for (int i=0; i<N; i++)
+          g[i].masscenter(con);
         while ((ntimes--)>0) {
-          int N=g.size();
-          for (int i=0; i<N; i++)
-            g[i].masscenter(con);
-
-          switch (rand() % 2) {
+          microcnt++;
+          switch (slp.rand() % 2) {
             case 0: // combined translation and rotation N times
               for (int i=0; i<N; i++) {
                 mmTransrot->dpt = 0.008 * pow(con.len,2);
@@ -83,11 +100,16 @@ namespace Faunus {
               usys+=mmVol->move(g);
               break;
           }
+          if (slp.random_one()>0.98) {
+            boxtrj.add(microcnt, con.len);
+            energytrj.add(microcnt, usys.sum);
+          }
         }
       }
 
       void macroloop() {
         usys.update( systemEnergy() );
+        save();
       }
 
       void save() {

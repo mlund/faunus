@@ -3,7 +3,7 @@
 
 namespace Faunus {
   
-  bool replicaexchange::swap(simBottle &i, simBottle &j) {
+  bool replicaexchange::swap(bottle &i, bottle &j) {
     // Register systems
     string id=i.prefix+"<->"+j.prefix;
     if (cnt.find(id)<0) {

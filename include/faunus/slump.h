@@ -25,6 +25,7 @@ namespace Faunus {
       bool runtest(float=0.5);                    //!< Probability bool
       double random_half();                       //!< Random number between [-0.5:0.5[
       std::string info();                         //!< Print information string
+      virtual unsigned int rand()=0;              //!< Random number between 0 and rand_max
   };
 
   /*!
@@ -40,6 +41,7 @@ namespace Faunus {
       randomDefault();
       void random_seed(int=0);
       double random_one();
+      unsigned int rand();
   };
 
  /*!
@@ -65,6 +67,7 @@ namespace Faunus {
       ran2();
       double random_one();
       void   random_seed(int=-7);
+      unsigned int rand();
   };
 
 #ifdef HAVETR1
@@ -75,12 +78,14 @@ namespace Faunus {
    */
   class randomTwister : public random {
     private:
+      double maxinv;
       std::tr1::mt19937 eng;
       std::tr1::uniform_real<double> dist;
     public:
       randomTwister();
       double random_one();
       void random_seed(int=0);
+      unsigned int rand();
   };
 #endif
 

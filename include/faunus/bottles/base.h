@@ -1,11 +1,11 @@
-#ifndef FAU_SIMBOTTLE_H
-#define FAU_SIMBOTTLE_H
+#ifndef FAU_BOTTLE_H
+#define FAU_BOTTLE_H
 
+#include "faunus/common.h"
 #include "faunus/inputfile.h"
 #include "faunus/energy/base.h"
 #include "faunus/ensemble.h"
 #include "faunus/analysis.h"
-#include "faunus/mcloop.h"
 #include "faunus/io.h"
 
 namespace Faunus {
@@ -15,14 +15,14 @@ namespace Faunus {
    * \author Mikael Lund
    * \date Malmo, 2010
    */
-  class simBottle {
+  class bottle {
     protected:
       iopqr pqr;
       ioaam aam;
       inputfile in;
-      mcloop loop;
 
     public:
+      std::ostringstream infostream;     //!< All output information should be streamed here           
       double T;                         //!< Temperature [K]
       double P;                         //!< Pressure over kT
       systemenergy usys;                //!< Class for tracking total system energy
@@ -37,7 +37,7 @@ namespace Faunus {
       virtual double systemEnergy()=0;  //!< Calculate system energy (of TRIAL particles!)
       virtual string preinfo()=0;       //!< Give initial information string
       virtual string postinfo()=0;      //!< Give final information string
-      simBottle(string pfx, double betaP=0) : in(pfx+".conf"), loop(in) {
+      bottle(string pfx, double betaP=0) : in(pfx+".conf") {
         prefix=pfx;
         P=betaP;
       }

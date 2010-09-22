@@ -78,6 +78,8 @@ namespace Faunus {
           << "#   More information:   doi:10.1063/1.460326" << endl;
         return o.str();
       }
+    
+      void setvolume(double v) {}
   };
 }//namespace
 #endif

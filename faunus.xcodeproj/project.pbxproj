@@ -129,8 +129,7 @@
 		739C4243103079CF00A3A5B9 /* species.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C4229103079CF00A3A5B9 /* species.cpp */; };
 		739C4244103079CF00A3A5B9 /* titrate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C422A103079CF00A3A5B9 /* titrate.cpp */; };
 		739C4245103079CF00A3A5B9 /* widom.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C422B103079CF00A3A5B9 /* widom.cpp */; };
-		739C427610307A1C00A3A5B9 /* analysis.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424610307A1C00A3A5B9 /* analysis.h */; };
-		739C427710307A1C00A3A5B9 /* average.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424710307A1C00A3A5B9 /* average.h */; };
+		739C427710307A1C00A3A5B9 /* average.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424710307A1C00A3A5B9 /* average.h */; settings = {ATTRIBUTES = (); }; };
 		739C427810307A1C00A3A5B9 /* common.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424810307A1C00A3A5B9 /* common.h */; };
 		739C427910307A1C00A3A5B9 /* container.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424910307A1C00A3A5B9 /* container.h */; };
 		739C427B10307A1C00A3A5B9 /* base.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424C10307A1C00A3A5B9 /* base.h */; };
@@ -174,8 +173,8 @@
 		739C42A310307A1C00A3A5B9 /* xytable.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C427510307A1C00A3A5B9 /* xytable.h */; };
 		739C42CB10307B8500A3A5B9 /* histogram.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C42CA10307B8500A3A5B9 /* histogram.cpp */; };
 		739C42D810307BB600A3A5B9 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
-		739C43D310314D6300A3A5B9 /* analysis.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424610307A1C00A3A5B9 /* analysis.h */; };
-		739C43D410314D6300A3A5B9 /* average.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424710307A1C00A3A5B9 /* average.h */; };
+		739C43D310314D6300A3A5B9 /* analysis.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424610307A1C00A3A5B9 /* analysis.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		739C43D410314D6300A3A5B9 /* average.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424710307A1C00A3A5B9 /* average.h */; settings = {ATTRIBUTES = (); }; };
 		739C43D510314D6300A3A5B9 /* common.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424810307A1C00A3A5B9 /* common.h */; };
 		739C43D610314D6300A3A5B9 /* container.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424910307A1C00A3A5B9 /* container.h */; };
 		739C43D710314D6300A3A5B9 /* base.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C424C10307A1C00A3A5B9 /* base.h */; };
@@ -266,6 +265,12 @@
 		739C45281031928400A3A5B9 /* widom.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C45271031928400A3A5B9 /* widom.cpp */; };
 		73BB617611CE2D1600E62ADB /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		73BB617711CE2D2A00E62ADB /* wp_gaussian.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73BB616C11CE2CDB00E62ADB /* wp_gaussian.cpp */; };
+		73C7109212494BC600445561 /* test.atoms in CopyFiles */ = {isa = PBXBuildFile; fileRef = 73C7108512494A3B00445561 /* test.atoms */; };
+		73C7109312494BC600445561 /* test.conf in CopyFiles */ = {isa = PBXBuildFile; fileRef = 73C7108612494A3B00445561 /* test.conf */; };
+		73C7109412494BC600445561 /* test.dump in CopyFiles */ = {isa = PBXBuildFile; fileRef = 73C7108712494A3B00445561 /* test.dump */; };
+		73C7109512494BC600445561 /* test.mol1.aam in CopyFiles */ = {isa = PBXBuildFile; fileRef = 73C7108812494A3B00445561 /* test.mol1.aam */; };
+		73C7109612494BC600445561 /* test.mol2.aam in CopyFiles */ = {isa = PBXBuildFile; fileRef = 73C7108912494A3B00445561 /* test.mol2.aam */; };
+		73C7109712494BC600445561 /* test.stable in CopyFiles */ = {isa = PBXBuildFile; fileRef = 73C7108A12494A3B00445561 /* test.stable */; };
 		73E1A6BF11BFCA23003315DB /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		73E1A6C211BFCA79003315DB /* wp_lipid.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73E1A6C111BFCA79003315DB /* wp_lipid.cpp */; };
 		73E1A75211C14075003315DB /* messagepool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73E1A75111C14075003315DB /* messagepool.cpp */; };
@@ -421,7 +426,7 @@
 			isa = PBXContainerItemProxy;
 			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 739C42091030798400A3A5B9 /* faunus */;
+			remoteGlobalIDString = 739C42091030798400A3A5B9;
 			remoteInfo = faunus;
 		};
 		739C420D1030798A00A3A5B9 /* PBXContainerItemProxy */ = {
@@ -489,6 +494,24 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		73C7109112494BAF00445561 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 12;
+			dstPath = "${TARGET_BUILD_DIR}/";
+			dstSubfolderSpec = 0;
+			files = (
+				73C7109212494BC600445561 /* test.atoms in CopyFiles */,
+				73C7109312494BC600445561 /* test.conf in CopyFiles */,
+				73C7109412494BC600445561 /* test.dump in CopyFiles */,
+				73C7109512494BC600445561 /* test.mol1.aam in CopyFiles */,
+				73C7109612494BC600445561 /* test.mol2.aam in CopyFiles */,
+				73C7109712494BC600445561 /* test.stable in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		7305521F1042D75300465515 /* hyperbulk.conf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = hyperbulk.conf; path = src/examples/hypersphere/hyperbulk.conf; sourceTree = "<group>"; };
 		730552201042D75300465515 /* hyperbulk.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = hyperbulk.cpp; path = src/examples/hypersphere/hyperbulk.cpp; sourceTree = "<group>"; };
@@ -544,7 +567,7 @@
 		739C41FB1030792900A3A5B9 /* xdrfile_trr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xdrfile_trr.h; sourceTree = "<group>"; };
 		739C41FC1030792900A3A5B9 /* xdrfile_xtc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xdrfile_xtc.h; sourceTree = "<group>"; };
 		739C420A1030798400A3A5B9 /* liblibfaunus.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = liblibfaunus.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
-		739C4211103079CF00A3A5B9 /* analysis.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = analysis.cpp; path = src/analysis.cpp; sourceTree = "<group>"; };
+		739C4211103079CF00A3A5B9 /* analysis.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = analysis.cpp; path = src/analysis.cpp; sourceTree = "<group>"; };
 		739C4212103079CF00A3A5B9 /* container.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = container.cpp; path = src/container.cpp; sourceTree = "<group>"; };
 		739C4213103079CF00A3A5B9 /* ensemble.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ensemble.cpp; path = src/ensemble.cpp; sourceTree = "<group>"; };
 		739C4214103079CF00A3A5B9 /* faunus.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = faunus.cpp; path = src/faunus.cpp; sourceTree = "<group>"; };
@@ -622,6 +645,12 @@
 		739D1BA011CA607F00AF7BC8 /* README */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README; sourceTree = "<group>"; };
 		73BB616C11CE2CDB00E62ADB /* wp_gaussian.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = wp_gaussian.cpp; path = src/examples/wallprotein/wp_gaussian.cpp; sourceTree = "<group>"; };
 		73BB617011CE2D0200E62ADB /* wallprotein - gaussian charges */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "wallprotein - gaussian charges"; sourceTree = BUILT_PRODUCTS_DIR; };
+		73C7108512494A3B00445561 /* test.atoms */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = test.atoms; path = unittests/isobaric_minimg_rigidmolecules/test.atoms; sourceTree = "<group>"; };
+		73C7108612494A3B00445561 /* test.conf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = test.conf; path = unittests/isobaric_minimg_rigidmolecules/test.conf; sourceTree = "<group>"; };
+		73C7108712494A3B00445561 /* test.dump */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = test.dump; path = unittests/isobaric_minimg_rigidmolecules/test.dump; sourceTree = "<group>"; };
+		73C7108812494A3B00445561 /* test.mol1.aam */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = test.mol1.aam; path = unittests/isobaric_minimg_rigidmolecules/test.mol1.aam; sourceTree = "<group>"; };
+		73C7108912494A3B00445561 /* test.mol2.aam */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = test.mol2.aam; path = unittests/isobaric_minimg_rigidmolecules/test.mol2.aam; sourceTree = "<group>"; };
+		73C7108A12494A3B00445561 /* test.stable */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = test.stable; path = unittests/isobaric_minimg_rigidmolecules/test.stable; sourceTree = "<group>"; };
 		73E1A6B911BFCA0C003315DB /* wallprotein - lipid membrane */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "wallprotein - lipid membrane"; sourceTree = BUILT_PRODUCTS_DIR; };
 		73E1A6C111BFCA79003315DB /* wp_lipid.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = wp_lipid.cpp; path = src/examples/wallprotein/wp_lipid.cpp; sourceTree = "<group>"; };
 		73E1A75111C14075003315DB /* messagepool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = messagepool.cpp; path = src/messagepool.cpp; sourceTree = "<group>"; };
@@ -808,12 +837,12 @@
 		739C41D7103078A800A3A5B9 = {
 			isa = PBXGroup;
 			children = (
-				7397F39B124257920019FDCD /* replica.cpp */,
 				739C42D910307BC400A3A5B9 /* examples */,
 				739C42E310307D1700A3A5B9 /* misc */,
 				739C42011030793B00A3A5B9 /* src */,
 				739C42001030793500A3A5B9 /* include */,
 				739C41EF103078CA00A3A5B9 /* Products */,
+				73C71083124949DC00445561 /* unittests */,
 			);
 			comments = "  Faunus -- A Framework for Molecular Modelling \n  Copyright (C) 2002-2010 Mikael Lund \n\n  This program is free software; you can redistribute it and/or modify\n  it under the terms of the GNU General Public License as published by\n  the Free Software Foundation; either version 2 of the License, or \n  (at your option) any later version.\n\n  This program is distributed in the hope that it will be useful,\n  but WITHOUT ANY WARRANTY; without even the implied warranty of\n  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n  GNU General Public License for more details.\n\n  You should have received a copy of the GNU General Public License along\n  with this program; if not, write to the Free Software Foundation, Inc.,\n  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.\n";
 			sourceTree = "<group>";
@@ -1006,6 +1035,7 @@
 				733DF77311664811008347FA /* wp.cpp */,
 				73E1A6C111BFCA79003315DB /* wp_lipid.cpp */,
 				73BB616C11CE2CDB00E62ADB /* wp_gaussian.cpp */,
+				7397F39B124257920019FDCD /* replica.cpp */,
 			);
 			name = examples;
 			sourceTree = "<group>";
@@ -1016,6 +1046,27 @@
 				739D1BA011CA607F00AF7BC8 /* README */,
 			);
 			name = misc;
+			sourceTree = "<group>";
+		};
+		73C71083124949DC00445561 /* unittests */ = {
+			isa = PBXGroup;
+			children = (
+				73C71084124949F800445561 /* isobaric */,
+			);
+			name = unittests;
+			sourceTree = "<group>";
+		};
+		73C71084124949F800445561 /* isobaric */ = {
+			isa = PBXGroup;
+			children = (
+				73C7108512494A3B00445561 /* test.atoms */,
+				73C7108612494A3B00445561 /* test.conf */,
+				73C7108712494A3B00445561 /* test.dump */,
+				73C7108812494A3B00445561 /* test.mol1.aam */,
+				73C7108912494A3B00445561 /* test.mol2.aam */,
+				73C7108A12494A3B00445561 /* test.stable */,
+			);
+			name = isobaric;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1035,7 +1086,6 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				739C427610307A1C00A3A5B9 /* analysis.h in Headers */,
 				739C427710307A1C00A3A5B9 /* average.h in Headers */,
 				739C427810307A1C00A3A5B9 /* common.h in Headers */,
 				739C427910307A1C00A3A5B9 /* container.h in Headers */,
@@ -1312,6 +1362,8 @@
 			buildPhases = (
 				73961ED61030ADE60051F3E3 /* Sources */,
 				73961ED71030ADE60051F3E3 /* Frameworks */,
+				73C7109112494BAF00445561 /* CopyFiles */,
+				73A4BF3912494F5800E1DC8F /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -1362,8 +1414,8 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 739C4210103079B100A3A5B9 /* Build configuration list for PBXNativeTarget "faunus" */;
 			buildPhases = (
-				739C42061030798400A3A5B9 /* Headers */,
 				739C42071030798400A3A5B9 /* Sources */,
+				739C42061030798400A3A5B9 /* Headers */,
 				739C42081030798400A3A5B9 /* Frameworks */,
 			);
 			buildRules = (
@@ -1490,6 +1542,7 @@
 			};
 			buildConfigurationList = 739C41DC103078A800A3A5B9 /* Build configuration list for PBXProject "faunus" */;
 			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
@@ -1535,6 +1588,19 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
 			shellScript = "# shell script goes here\ncd ${PROJECT_DIR}/src/examples/titration\n\necho \"\nmacrosteps 10\nmicrosteps 100\ncellradius 90\npH         12\nbjerrum    7.1\nnion1      69\nnion2      50\ntion1      NA\ntion2      CL\nprotein    calbindin.aam\natomfile   ../../../misc/faunatoms.dat\n\" > pka.conf\n\n/Users/mikael/faunus2/build/Debug/pka\nexit 0";
+		};
+		73A4BF3912494F5800E1DC8F /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "cd ${TARGET_BUILD_DIR}\ncp test.conf isobaric.conf\ncp test.dump confout.dump\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -2206,10 +2272,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
+				GCC_DEBUGGING_SYMBOLS = default;
+				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				HEADER_SEARCH_PATHS = include;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				SDKROOT = macosx10.6;
-				STRIP_INSTALLED_PRODUCT = NO;
+				STRIP_INSTALLED_PRODUCT = YES;
+				STRIP_STYLE = all;
 			};
 			name = Debug;
 		};
@@ -2217,10 +2287,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
+				GCC_DEBUGGING_SYMBOLS = default;
+				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				HEADER_SEARCH_PATHS = include;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				SDKROOT = macosx10.6;
-				STRIP_INSTALLED_PRODUCT = NO;
+				STRIP_INSTALLED_PRODUCT = YES;
+				STRIP_STYLE = all;
 			};
 			name = Release;
 		};
@@ -2478,7 +2552,7 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_VERSION = "";
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				INSTALL_PATH = /usr/local/bin;
 				PREBINDING = NO;
 				PRODUCT_NAME = "wallprotein - lipid membrane";
@@ -2493,7 +2567,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G5;
-				GCC_VERSION = "";
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				INSTALL_PATH = /usr/local/bin;
 				PREBINDING = NO;
 				PRODUCT_NAME = "wallprotein - lipid membrane";

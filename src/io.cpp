@@ -12,7 +12,6 @@ namespace Faunus {
    *   name num x y z charge weight radius
    */
 
-  //------------------ IO -------------------
   bool io::readfile(string file, vector<string> &v) {
     std::ifstream f(file.c_str() );
     if (f) {
@@ -24,8 +23,14 @@ namespace Faunus {
     std::cout << "# WARNING! FILE " << file << " NOT READ!\n";
     return false;
   }
-  bool io::writefile(string file, string s) {
-    std::ofstream f(file.c_str());
+  
+  /*!
+   * \param file Filename
+   * \param s String to write
+   * \param mode std::ios_base::out (new file, default) or std::ios_base::app (append)
+   */
+  bool io::writefile(string file, string s, std::ios_base::openmode mode) {
+    std::ofstream f(file.c_str(), mode);
     if (f) {
       f << s;
       f.close();
@@ -33,6 +38,7 @@ namespace Faunus {
     }
     return false;
   }
+  
   void io::strip(vector<string> &v, string pat) {
     vector<string>::iterator iter=v.begin();
     while (iter!=v.end())
@@ -40,6 +46,7 @@ namespace Faunus {
         v.erase(iter);
       else iter++;
   }
+  
   void io::splash(string f) {
     vector<string> t;
     t.clear();
@@ -48,13 +55,8 @@ namespace Faunus {
       std::cout << "# "<<t[i]<<endl;
   }
 
-  /*
-     bool io_aam::load(container &c, string file) {
-     return false;
-     }
-     */
-
   //--------------- IOAAM ---------------------
+
   ioaam::ioaam() {}
   string ioaam::p2s(particle &p, int i) {
     std::ostringstream o;
@@ -64,6 +66,7 @@ namespace Faunus {
       << p.charge << " " << p.mw << " " << p.radius << std::endl;
     return o.str();
   }
+  
   particle ioaam::s2p(string &s) {
     particle p;
     std::stringstream o;
@@ -76,6 +79,7 @@ namespace Faunus {
     p.hydrophobic = atom[p.id].hydrophobic;
     return p;
   }
+  
   vector<particle> ioaam::load(string file) {
     vector<string> v;
     vector<particle> p;
@@ -110,15 +114,19 @@ namespace Faunus {
   }
 
   /*!
+   * \brief Load macromolecules using inputfile information
+   * \param con container to load into
+   * \param inputfile Read input keywords and values from this inputfile object
+   * \param Each macromolecule is added to this vector
+   *
    * Searches inputfile object for the following keywords:\n
    *   "nprot#" -- number protein # structures\n
    *   "protein#" -- name of protein # structure file\n
    * The found proteins will be inserted in the particle vector
-   * and for each structure a group will be appended to the
-   * macromolecular vector.
-   *
-   * \author Mikael Lund
+   * and for each structure a macromolecule object will be appended to the
+   * given vector.
    */
+  
   void ioaam::load(container &con, inputfile &in, vector<macromolecule> &g) {
     short cnt=1,nprot;
     do {
@@ -136,6 +144,7 @@ namespace Faunus {
         }
     } while (nprot>0);
   }
+  
   void ioaam::loadlattice(container &con, inputfile &in, vector<macromolecule> &g) {
     std::ostringstream n_prot;
     short pcnt=1, n, N=0, unitclen;
@@ -238,7 +247,6 @@ namespace Faunus {
   /*!
    * Saves particles as a PQR file. This format is very simular
    * to PDB but also contains charges and radii of the proteins.
-   *
    */
 
   iopqr::iopqr() { }
@@ -509,4 +517,17 @@ namespace Faunus {
   }
   }
   */
+  
+  xyfile::xyfile(string name) : f(name.c_str()) {
+    cnt=0;
+  }
+  
+  void xyfile::add(double x, double y) {
+    f << x << " " << y << std::endl;
+  }
+  
+  void xyfile::close() {
+    f.close();
+  }
+
 };//namespace

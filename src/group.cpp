@@ -344,7 +344,7 @@ namespace Faunus {
   void salt::add(container &con, inputfile &in) {
     short n=1, npart;
     unsigned char id;
-    while (n<7) {
+    while (n<15) {
       std::ostringstream nion, tion;
       nion << "nion" << n;
       tion << "tion" << n++;

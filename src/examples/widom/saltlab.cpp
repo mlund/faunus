@@ -16,7 +16,7 @@ using namespace Faunus;                 // Access to Faunus classes
 
 int main(int argc, char* argv[]) {
   cout << faunus_splash();              // Show Faunus information
-  string config = "widom.conf";         // Default input (parameter) file
+  string config = "saltsolution.conf";  // Default input (parameter) file
   if (argc==2) config = argv[1];        // ..also try to get it from the command line
   inputfile in(config);                 // Read input file
   mcloop loop(in);                      // Set Markov chain loop lengths
@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
   salt.add(cell,in);                    // Insert some ions
   
   ioaam aam;                            // File I/O class
-  aam.load(cell,"widom.aam");           // Read initial config. from disk (if present)
+  aam.load(cell,"saltsolution.aam");    // Read initial config. from disk (if present)
 
   virial virial(cell);                  // Virial analysis
   widom wid1(10);                       // Class for multiple particle insertion
@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
       virial.sample(cell,pot);          // Virial sampling (NOT really appropriate for this pot.!)
     }                                   // END of micro loop
     sys.update(pot.energy(cell.p));     // Update system energy
-    aam.save("widom.aam",cell.p);       // Save particle configuration to disk
+    aam.save("saltsolution.aam",cell.p);// Save particle configuration to disk
     cout << loop.timing();              // Show progres
   }                                     // END of macro loop and simulation
 

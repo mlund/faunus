@@ -10,52 +10,55 @@ macrosteps 10
 microsteps $microsteps
 boxlen     $boxlen
 cellradius 100
-bjerrum    7.13
-atomfile   faunatoms.dat
+bjerrum    $bjerrum
+atomfile   saltlabfaunatoms.dat
 nion1      $nion1
 nion2      $nion2
 nion3      $nion3
 nion4      $nion4
 nion5      $nion5
 nion6      $nion6
+nion7      $nion7
+nion8      $nion8
 tion1      $tion1
 tion2      $tion2
 tion3      $tion3
 tion4      $tion4
 tion5      $tion5
 tion6      $tion6
+tion7      $tion7
+tion8      $tion8
 dp_salt    $dp_salt
-cluster_dp $cluster_dp
-" > widom.conf
+" > saltsolution.conf
 }
 
-microsteps=10
-tion2="NA"
-tion3="CL"
-tion1="COL"
+microsteps=100
+tion1="NA"
+tion2="CL"
+tion3="CA"
 tion4="MG"
-tion5="CA"
-tion6="CL"
+tion5="SO4"
+tion6="K"
+tion7="PION"
+tion8="NION"
 dp_salt=100
-cluster_dp=25 
-exe="./saltcluster"
-for boxlen in 1020 #998.7 1258.2
+bjerrum=
+exe="./saltsolution"
+for boxlen in 1020 
 do
-#    rm -f widom.aam
-    nion3=12224
+    rm -f widom.aam
+    nion1=0
     nion2=0
-    nion1=32
+    nion3=0
     nion4=0
     nion5=0
     nion6=0
-#    boxlen=129.8
-    microsteps=10  
-    outfile="JANNE"
+    nion7=100
+    nion8=100
+    outfile="name-of-outputfile"
     geninput
     $exe > $outfile
-exit
-    microsteps=1000
-    #outfile="${boxlen}.out"
+    microsteps=10000
     geninput
     $exe > $outfile
 done

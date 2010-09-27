@@ -2,7 +2,7 @@
 
 #include "faunus/faunus.h"
 #include "faunus/potentials/pot_coulomb.h"
-#include "faunus/potentials/pot_debyehuckelP3.h"
+#include "faunus/potentials/pot_hsdebyehuckelP3.h"
 #include "faunus/bottles/npt_molecular.h"
 #include "faunus/energy/coarsegrain.h"
 
@@ -15,7 +15,7 @@
 using namespace std;
 using namespace Faunus;
 
-typedef interaction_dipole<pot_debyehuckelP3> Tpot;
+typedef interaction<pot_hsdebyehuckelP3> Tpot;
 typedef npt_molecular<box,Tpot> Tbottle;
 
 int main() {
@@ -23,56 +23,51 @@ int main() {
   inputfile in("replica.conf");
   io fio;
   mcloop loop(in);
-  Tbottle a("a"), b("b"), c("c");
-
+  Tbottle a("a"), b("b"), c("c"), d("d"), e("e"), f("f");
+  vector<Tbottle*> bottles;
   replicaexchange temper;
   bool temperBool=in.getboo("temper",true);
 
-  a.prepare();
-  b.prepare();
-  c.prepare();
-  
-  fio.writefile( "a.out", a.preinfo() );
-  fio.writefile( "b.out", b.preinfo() );
-  fio.writefile( "c.out", c.preinfo() );
+  bottles.push_back(&a);
+  bottles.push_back(&b);
+  bottles.push_back(&c);
+  bottles.push_back(&d);
+  bottles.push_back(&e);
+  bottles.push_back(&f);
 
   cout << in.info();
 
   while (loop.macroCnt()) {
     while (loop.microCnt()) {
-      #pragma omp parallel
-      {
-        #pragma omp sections
-        {
-          #pragma omp section
-          a.microloop(100);
-          #pragma omp section
-          b.microloop(100);
-          //#pragma omp section
-          //c.microloop(100);
-        }
-      }
+
+      #pragma omp parallel for
+      for (int i=0; i<bottles.size(); ++i)
+        bottles[i]->microloop(2000);
+
       if (temperBool) {
-        switch (rand() % 1) {
-          case 0:
-            temper.swap(a,b);
-            break;
-          case 1:
-            temper.swap(b,c);
-            break;
-        }
-      }
+        int N=bottles.size()-1;
+        int i=slp.rand() % N;
+        int j=slp.rand() % N;
+        int k=slp.rand() % N;
+        temper.swap(*bottles[i], *bottles[i+1]);
+        if (j!=i)
+          temper.swap(*bottles[j], *bottles[j+1]);
+        if (k!=j && k!=i)
+          temper.swap(*bottles[k], *bottles[k+1]);
+
+        cout << i << " " << j << " " << k << endl;
+     }
+
     } // end of inner loop
-    a.macroloop();
-    b.macroloop();
-    c.macroloop();
+
+    for (int i=0; i<bottles.size(); ++i)
+      bottles[i]->macroloop();
 
     cout << loop.timing();
   } // end of outer loop
 
-  fio.writefile( "a.out", a.postinfo(), std::ios_base::app );
-  fio.writefile( "b.out", b.postinfo(), std::ios_base::app );
-  fio.writefile( "c.out", c.postinfo(), std::ios_base::app );
+  for (int i=0; i<bottles.size(); ++i)
+    bottles[i]->finish();
 
   cout << loop.info() << in.info() << temper.info();
 };

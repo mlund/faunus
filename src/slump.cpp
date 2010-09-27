@@ -50,8 +50,8 @@ namespace Faunus {
   double randomTwister::random_one() {
     double x;
     #pragma omp critical
-    x=dist(eng);
-    return x*maxinv;
+    x=dist(eng)*maxinv;
+    return x;
   }
 
   void randomTwister::random_seed(int s) {

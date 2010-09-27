@@ -13,10 +13,10 @@ namespace Faunus {
   template<typename Tcon, typename Tpot> class npt_molecular : public bottle {
     private:
       string dumpfile;  //!< Filename of container dumpfile
-      unsigned microcnt;
+      unsigned int microcnt, macrocnt;
+      ioxtc xtc;
     protected:
       canonical nvt;
-      io fio;
       xyfile boxtrj, energytrj;
     
       macrorot *mmRot;
@@ -30,21 +30,26 @@ namespace Faunus {
       Tpot pot; //!< Interaction scheme (based on energybase)
 
       bool boolTranslate, boolVolume, boolRotate, boolCluster;
+      bool movie; //!< Set to true if an xtc tracjectory file should be saved
 
       npt_molecular(string pfx) : bottle(pfx), con(in), pot(in),
-                    boxtrj(prefix+".boxlen.dat"), energytrj(prefix+".energy.dat") {
+                    boxtrj(prefix+".boxlen.dat"), energytrj(prefix+".energy.dat"), xtc(con.len) {
         cPtr=&con;
         pPtr=&pot;
+        microcnt=0;
+        macrocnt=0;
+        movie=in.getboo("movie", false);
 
         // load molecules
+        dumpfile=prefix+".dump";
         if (in.getboo("lattice")==true)
           aam.loadlattice(con, in, g);
         else
           aam.load(con, in, g);
         if ( con.loadFromDisk(dumpfile) ) {
-          for (int i=0; i<g.size(); i++)
+          for (int i=0; i<g.size(); ++i)
             g[i].masscenter(con);
-          cout << "# Initial configuration read from " << dumpfile << endl;
+          fout << "# Configuration read from: " << dumpfile << endl;
         } 
 
         // prepare move routines
@@ -52,12 +57,11 @@ namespace Faunus {
         mmRot = new macrorot(nvt,con,pot);
         mmTrans = new translate(nvt,con,pot,in);
         mmTransrot = new transrot(nvt,con,pot);
-
-        dumpfile=prefix+".dump";
         P=mmVol->P;
-        microcnt=0;
 
         usys.initialize( systemEnergy() );
+
+        fout << in.info() << con.info() << pot.info() << std::flush;
       }
     
       ~npt_molecular() {
@@ -69,14 +73,12 @@ namespace Faunus {
         energytrj.close();
       }
 
-      void prepare() {
-      }
-
       double systemEnergy() {
         int n=g.size();
         for (int i=0; i<n; i++)
           g[i].masscenter(con);
         double u=0;
+//#pragma omp parallel for reduction (+:u) schedule (dynamic)
         for (int i=0; i<n-1; i++)
           for (int j=i+1; j<n; j++)
             u+=pot.energy(con.p, g[i], g[j]);
@@ -85,31 +87,37 @@ namespace Faunus {
 
       void microloop(int ntimes=1) {
         int N=g.size();
-        for (int i=0; i<N; i++)
+        for (int i=0; i<N; ++i)
           g[i].masscenter(con);
         while ((ntimes--)>0) {
           microcnt++;
           switch (slp.rand() % 2) {
             case 0: // combined translation and rotation N times
-              for (int i=0; i<N; i++) {
-                mmTransrot->dpt = 0.008 * pow(con.len,2);
+              mmTransrot->dpt = 0.0008 * pow(con.len,2);
+              for (int i=0; i<N; ++i)
                 usys+=mmTransrot->move( g, N*slp.random_one() );
-              }
               break;
             case 1: // volume move
               usys+=mmVol->move(g);
               break;
           }
-          if (slp.random_one()>0.98) {
+          if (slp.random_one()>0.995) {
             boxtrj.add(microcnt, con.len);
             energytrj.add(microcnt, usys.sum);
+            if (movie==true)
+              xtc.save(prefix+".xtc", con);
           }
         }
       }
 
       void macroloop() {
+        macrocnt++;
         usys.update( systemEnergy() );
         save();
+        fout << "# Macroloop " << macrocnt << " completed." << endl
+             << "#   Energy drift = " << usys.drift() << " kT" << endl
+             << "#   Acceptances:   vol=" << mmVol->accepted()*100 << " transrot=" << mmTransrot->accepted()*100 << endl
+             << std::flush;
       }
 
       void save() {
@@ -118,16 +126,8 @@ namespace Faunus {
         mmVol->Ldist.write(prefix+".lendist.dat");
       }
 
-      string preinfo() {
-        std::ostringstream o;
-        o << in.info() << con.info() << pot.info();
-        return o.str();
-      }
-
-      string postinfo() {
-        std::ostringstream o;
-        o << usys.info() << mmTransrot->info() << mmVol->info();
-        return o.str();
+      void finish() {
+        fout << usys.info() << mmTransrot->info() << mmVol->info();
       }
   };
 

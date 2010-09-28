@@ -58,11 +58,6 @@ int main() {
   mt.dpv.x=mt.dpv.y=0;            // ...no need to translate in xy direction
   cout << pol.info();
   
-#ifdef NOSLIT
-  mr.runfraction=0;
-  mr.dp=0;
-#endif
-
   // Handle wall particles
   group wall;
   wall.add(con, atom[in.getstr("wall_tion1")].id, in.getint("wall_nion1") );
@@ -88,6 +83,13 @@ int main() {
   ioaam aam;
   ioxtc xtc(con.len);
 
+  // No titrering?
+  if (in.getflt("tit_runfrac",0.5)<1e-3) {
+    for (int i=0; i<atom.list.size(); i++) {
+      atom[i].pka = 0.;
+    }
+  }
+
   // Grand canonical stuff
   saltbath sb(nmt,con,pot,in,salt);
   GCchargereg tit(nmt,con,pot,in);
@@ -96,6 +98,31 @@ int main() {
   if ( nmt.load(con, "gcgroup.conf")==true )                                       
     aam.load(con, "confout.aam");
 
+  // No titrering?
+  if (in.getflt("tit_runfrac",0.5)<1e-3) {
+    pol.loadCharges("q_pH5.dat", con.p);                  // Load polymer charges from file
+    con.trial=con.p;
+  }
+  
+  // Set system charge to zero
+    double q, qint;
+    q = con.charge();                                 // Total system charge
+    qint = floor(q);                                  // Integer system charge
+//    if (qint < 0) {                                   // Negative charge
+//      salt.group::add(con, atom["NA"].id, -qint );    //   add cations
+//      cout << "# Add " << -qint << " Na-" << endl;
+//   } else  {                                         // Positive charge
+//      salt.group::add(con, atom["CL"].id, qint );     //   add anions
+//      cout << "# Add " << qint << " Cl-" << endl;
+//    }
+    #ifndef NOSLIT
+      q = q-qint; 				      // Noninteger system charge (always positive)
+      q = q/wall.size();                          //   to be smeared out per wall particle
+      for (int i=wall.beg; i<=wall.end; i++) {
+        con.p[i].charge=con.p[i].charge-q;
+      }
+    #endif
+  
   // Calculate initial system energy
   systemenergy sys(
         pot.energy( con.p, wall, salt) +
@@ -183,6 +210,14 @@ int main() {
     gofr.write("gofr.dat");
     io.writefile("gcgroup.conf", nmt.print());
 
+    tit.applycharges(con.trial);                      // Set average charges on all titratable sites
+    pol.saveCharges("q.dat", con.trial);              // Save average charges to disk
+    con.trial=con.p;                                  // Restore original charges
+
+    // Stop if energy drift is to high
+    if (abs(sys.cur - sys.sum) > 10)
+      return(loop.macro);
+      
   } // END of macro loop and simulation
 
   cout << sys.info() << sm.info() << wm.info() << loop.info()

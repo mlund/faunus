@@ -299,6 +299,42 @@ namespace Faunus {
     }
     return false;
   }
+  
+  /*! Save all charges in group to disk
+   */
+  bool group::saveCharges(string filename, vector<particle> &p){
+    io fio;
+    std::ostringstream o;
+    o.precision(12);
+    o << size() << endl;
+    for (int i=beg; i<=end; i++) {
+      string name=atom[p[i].id].name;
+      o << i << "   " << name << "   " << p[i].charge << endl;
+      cout << "writing: " << p[i].charge << endl;
+    }
+    return fio.writefile(filename, o.str());
+  }
+
+  /*! Load charges in group from disk
+   */
+  bool group::loadCharges(string filename, vector<particle> &p){
+    std::ifstream f(filename.c_str());
+    int n,i;
+    double q;
+    string s;
+    if (f) {
+      f >> n;
+      for (int k=0; k<n; k++) {
+        f >> i >> s >> q;
+        p[i].charge=q;
+        cout << q << endl;
+      }
+      f.close();
+      cout << "# Loaded polymer charges from " << filename << endl;
+      return true;
+    } else
+    return false;
+  }
 
   /*****************************
    *

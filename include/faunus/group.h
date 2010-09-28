@@ -55,6 +55,8 @@ namespace Faunus {
       virtual unsigned short nummolecules();              //!< Number of molecules
       unsigned short numhydrophobic(vector<particle> &);  //!< Number of hydrophobic particles
       bool swap(container &, int);                        //!< Move group to a new position
+      bool saveCharges(string filename, vector<particle> &p); //!< Save all charges in group to disk 
+      bool loadCharges(string filename, vector<particle> &p); //!< Load all charges in group from disk 
   };
 
   /*!

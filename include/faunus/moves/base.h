@@ -47,7 +47,6 @@ namespace Faunus {
     void init();                                //!< Initialization of variables (called from constructor)
     
   protected:
-    slump slp;
     bool dp_opt;                                //!< True if displacement parameter should be optimized
     average<double> dpsqr;                      //!< Mean square displacement average
     double uold, unew, deltadp;
@@ -62,6 +61,7 @@ namespace Faunus {
     virtual double newdp();                     //!< Generate new displacement parameter between [dp_min:dp_max]
     
   public:
+    slump slp;
     double optimaldp();                         //!< Retrieve optimal displacement parameter from DP/L^2 distribution
     string name;                                //!< Arbitrary name for the move
     enum keys {OK, ENERGY, HC};

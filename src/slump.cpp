@@ -26,8 +26,9 @@ namespace Faunus {
   }
 
   double randomDefault::random_one() {
+    double r;
     #pragma omp critical
-    double r=rand_max_inv*rand();
+    r=rand_max_inv*rand();
     return (r>=1) ? r-1e-5 : r;  // we don't like *exactly* 1 !!
   }
 
@@ -36,8 +37,9 @@ namespace Faunus {
   }
 
   unsigned int randomDefault::rand() {
+    double x;
     #pragma omp critical
-    double x=rand();
+    x=rand();
     return x;
   }
 

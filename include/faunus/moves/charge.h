@@ -49,7 +49,6 @@ namespace Faunus {
    *  \note "titrate" used to be private. Changed because iopqr::save()
    */
   class chargereg : public markovmove, public titrate {
-    using markovmove::slp;
     public:
       chargereg( ensemble&, container&, energybase&, group&, float);
       double titrateall();

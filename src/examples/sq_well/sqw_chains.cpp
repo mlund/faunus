@@ -20,6 +20,7 @@ using namespace Faunus;
 int main() {
   // General setup
   cout << faunus_splash();
+  slump slp;
   inputfile in("sqw_chains.conf");
   mcloop loop(in);
   canonical nvt;

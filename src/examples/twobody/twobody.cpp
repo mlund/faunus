@@ -16,6 +16,7 @@ using namespace Faunus;
 using namespace std;
 
 int main(int argc, char* argv[]) {
+  slump slp;
   cout << faunus_splash();              // Faunus info
   string config = "twobody.conf";       // Default input (parameter) file
   if (argc==2) config = argv[1];        // ..also try to get it from the command line

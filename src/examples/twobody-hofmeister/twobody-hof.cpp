@@ -19,7 +19,7 @@ using namespace std;
 
 int main() {
   cout << faunus_splash();
-  slump slump;                          // A random number generator
+  slump slp;                            // A random number generator
   inputfile in("twobody.conf");         // Read input file
   mcloop loop(in);                      // Set Markov chain loop lengths
   cell cell(in);                        // We want a spherical, hard cell
@@ -79,7 +79,7 @@ int main() {
           break;
       }
 
-      if (slump.random_one()>2) {
+      if (slp.random_one()>2) {
         saltrdf.update(cell);                   // Analyse salt g(r)
         cyl.update(cell.p);
       }

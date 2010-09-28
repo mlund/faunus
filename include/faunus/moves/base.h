@@ -47,9 +47,9 @@ namespace Faunus {
     void init();                                //!< Initialization of variables (called from constructor)
     
   protected:
+    slump slp;
     bool dp_opt;                                //!< True if displacement parameter should be optimized
     average<double> dpsqr;                      //!< Mean square displacement average
-    slump slp;
     double uold, unew, deltadp;
     double utot;                                //!< Sum of energy changes for all moves
     unsigned long long int cnt, naccept;

@@ -39,7 +39,7 @@ class hyperrdf : public FAUrdf {
 
 int main() {
   cout << faunus_splash();
-  slump slump;                            // A random number generator
+  slump slp;                              // A random number generator
   inputfile in("hyperbulk.conf");         // Read input file
   checkValue test(in);                    // Class for output tests
   hypersphere con(in);                    // We want a hypersphere

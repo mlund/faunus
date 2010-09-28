@@ -4,6 +4,7 @@
 #include "faunus/common.h"
 #include "faunus/point.h"
 #include "faunus/average.h"
+#include "faunus/slump.h"
 
 namespace Faunus {
   class container;
@@ -16,6 +17,8 @@ namespace Faunus {
    *  \todo Too much is public! Documentation is bad.
    */
   class titrate {
+    private:
+      slump slp;
     protected:
       vector<short int> sites, protons, neutrons;
       enum keywords {PROTONATED,DEPROTONATED,ANY,NOACID};
@@ -57,6 +60,7 @@ namespace Faunus {
     protected:
       vector<average <double> > zavg;       //!< Stores the average charges of sites from titrate::sites
     public:
+      slump slp;
       enum keys {PROTONATED,DEPROTONATED};
       keys recent;                          //!< Attempted change of state in the Markov chain.
       vector<unsigned int> sites;           //!< Titratable sites

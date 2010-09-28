@@ -26,6 +26,7 @@ namespace Faunus {
   }
 
   double randomDefault::random_one() {
+    #pragma omp critical
     double r=rand_max_inv*rand();
     return (r>=1) ? r-1e-5 : r;  // we don't like *exactly* 1 !!
   }
@@ -35,7 +36,9 @@ namespace Faunus {
   }
 
   unsigned int randomDefault::rand() {
-    return rand();
+    #pragma omp critical
+    double x=rand();
+    return x;
   }
 
 #ifdef HAVETR1
@@ -55,6 +58,7 @@ namespace Faunus {
   }
 
   void randomTwister::random_seed(int s) {
+    #pragma omp critical
     eng.seed(s);
   }
 
@@ -120,6 +124,6 @@ namespace Faunus {
     return random_one()*RAND_MAX;
   }
 
-  slump slp;
+  slump slp_global;
 }//namespace
 

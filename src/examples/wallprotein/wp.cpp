@@ -28,6 +28,7 @@ using namespace Faunus;
 int main() {
   // General setup
   cout << faunus_splash();
+  slump slp;
   inputfile in("wp.conf");
   mcloop loop(in);
   grandcanonical nmt;

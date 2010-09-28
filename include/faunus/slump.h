@@ -94,6 +94,6 @@ namespace Faunus {
 #else
   typedef Faunus::ran2 slump;
 #endif
-  extern slump slp;
+  extern slump slp_global;
 }
 #endif

@@ -34,9 +34,9 @@ namespace Faunus {
     double sum=0;
     for (unsigned int i=0; i<sites.size(); i++) {
       markovmove::move();
-      unsigned int j=slp.rand() % sites.size(),         //!< Pick a random site
+      unsigned int j=markovmove::slp.rand() % sites.size(),         //!< Pick a random site
                    n=sites.at(j).n;                 //!< Get particle number
-      con->trial[n].charge += dp*slp.random_half(); //!< Displace charge
+      con->trial[n].charge += dp*markovmove::slp.random_half(); //!< Displace charge
       
       uold = pot->energy(con->p, n) + gaussianEnergy(con->p[n]);
       unew = pot->energy(con->trial, n) + gaussianEnergy(con->trial[n]);
@@ -91,7 +91,7 @@ namespace Faunus {
    */
   double chargereg::titrateall() {
     du=0;
-    if (slp.runtest(runfraction)==false)
+    if (markovmove::slp.runtest(runfraction)==false)
       return du;
     action t;
     double sum=0;
@@ -161,7 +161,7 @@ namespace Faunus {
 
   double GCchargereg::titrateall() {
     double sum=0;
-    if (slp.random_one()>runfraction)
+    if (markovmove::slp.random_one()>runfraction)
       return sum;
     unsigned int I, s;
     particle J=atom(nameA);
@@ -169,7 +169,7 @@ namespace Faunus {
       cnt++;
       int s=exchange(con->trial);
       if (recent==PROTONATED ) {     //Take ion from bulk        
-        I=gcPtr->gp[gcPtr->findgroup(nameA)]->beg + slp.random_one()*gcPtr->gp[gcPtr->findgroup(nameA)]->size();
+        I=gcPtr->gp[gcPtr->findgroup(nameA)]->beg + markovmove::slp.random_one()*gcPtr->gp[gcPtr->findgroup(nameA)]->size();
         unew=pot->energy(con->trial, s)- pot->energy(con->trial[s], con->trial[I]);
         uold=pot->energy(con->p, s)+ pot->energy(con->p, I)
              -pot->energy(con->p[s], con->p[I]);
@@ -228,7 +228,7 @@ namespace Faunus {
    */
   double DHchargereg::titrateall() {
     du=0;
-    if (slp.runtest(runfraction)==false)
+    if (markovmove::slp.runtest(runfraction)==false)
       return du;
     double sum=0;
     for (unsigned short i=0; i<sites.size(); i++) {
@@ -294,7 +294,7 @@ namespace Faunus {
   //GLU3 Markov step
   double glu3corechargereg::move(glu3 &g) {
     du=0;
-    if (slp.runtest(runfraction)==false)
+    if (markovmove::slp.runtest(runfraction)==false)
       return du;
     action t1, t2;
     double sum=0;
@@ -390,7 +390,7 @@ namespace Faunus {
   //GLU3 Markov step
   double GCglu3corechargereg::move(glu3 &g) {
     du=0;
-    if (slp.runtest(runfraction)==false)
+    if (markovmove::slp.runtest(runfraction)==false)
       return du;
     double sum=0;
     cntcore++;
@@ -404,10 +404,10 @@ namespace Faunus {
       uold = pot->energy(con->p, g.beg+4) + pot->energy(con->p, g.beg+13) -
              pot->energy(con->p[g.beg+4], con->p[g.beg+13]);
     } else {
-      o1=gcPtr->gp[gcPtr->findgroup(nameA)]->beg+slp.random_one()*gcPtr->gp[gcPtr->findgroup(nameA)]->size();
+      o1=gcPtr->gp[gcPtr->findgroup(nameA)]->beg+markovmove::slp.random_one()*gcPtr->gp[gcPtr->findgroup(nameA)]->size();
       o2=o1;
       while(o2==o1) //PROTONATE
-        o2=gcPtr->gp[gcPtr->findgroup(nameA)]->beg+slp.random_one()*gcPtr->gp[gcPtr->findgroup(nameA)]->size();
+        o2=gcPtr->gp[gcPtr->findgroup(nameA)]->beg+markovmove::slp.random_one()*gcPtr->gp[gcPtr->findgroup(nameA)]->size();
       con->trial[g.beg+4].charge=1.0, con->trial[g.beg+13].charge=1.0;
       unew = pot->energy(con->trial, g.beg+4) + pot->energy(con->trial, g.beg+13)-
              pot->energy(con->trial[g.beg+4], con->trial[g.beg+13]) - pot->energy(con->trial[o1], con->trial[g.beg+4])-
@@ -488,7 +488,7 @@ namespace Faunus {
 
   double ATchargereg::titrateall( vector<macromolecule>& g ) {
     du=0;
-    if (slp.runtest(runfraction)==false)
+    if (markovmove::slp.runtest(runfraction)==false)
       return du;
     double sum=0;
     int t;

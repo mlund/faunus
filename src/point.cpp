@@ -23,8 +23,8 @@ namespace Faunus {
 
     hyperpoint e1,e2,e3,te1,te2,te3;
     double fact1,fact2,fact3,nabla_nb,fi_nb;
-    nabla_nb=slp.random_one()*2.*acos(-1.);
-    fi_nb=acos(slp.random_one());
+    nabla_nb=slp_global.random_one()*2.*acos(-1.);
+    fi_nb=acos(slp_global.random_one());
     e1.z1=cos(nabla_nb);
     e1.z2=sin(nabla_nb);
     e1.z3=0.;

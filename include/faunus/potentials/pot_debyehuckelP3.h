@@ -30,6 +30,12 @@ namespace Faunus {
         name+="/Debye-Huckel w. minimum image";
       }
 
+      /*!
+       * \brief   Fast appoximate exponential function
+       * \warning On certain linux machines (64 bit but perhaps also 32 bit) this
+       *          function returns ZERO when compiled using GCC. The intel compiler
+       *          seem OK, though.
+       */
       double inline f_exp(double x) {
         static double e=2.718281828;
         int tmp = (*(1 + (int *) &e));
@@ -46,7 +52,7 @@ namespace Faunus {
                x=p1.radius+p2.radius, u=x*x/r2,
                r=sqrt(r2);
         x=u*u*u;
-        return (x*x-x)*eps + p1.charge * p2.charge / r * f_exp(-k*r);
+        return (x*x-x)*eps + p1.charge * p2.charge / r * exp(-k*r);
       }
 
       inline double sqdist(const point &p1, const point &p2) {

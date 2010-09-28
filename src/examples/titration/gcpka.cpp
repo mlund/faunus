@@ -15,6 +15,7 @@ using namespace Faunus;                 // Access to Faunus classes
 
 int main(int argc, char* argv[]) {
   cout << faunus_splash();              // Show Faunus information
+  slump slp;
   string config = "gcpka.conf";         // Default input (parameter) file
   if (argc==2) config = argv[1];        // ..also try to get it from the command line
   inputfile in(config);                 // Read input file

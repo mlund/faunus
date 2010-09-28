@@ -34,6 +34,7 @@ namespace Faunus {
       iopqr pqr;
       ioaam aam;
       inputfile in;
+      slump slp;
 
     public:
       std::ofstream fout;               //!< Output file stream - place all file output here.

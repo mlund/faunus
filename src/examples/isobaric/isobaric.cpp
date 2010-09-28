@@ -38,6 +38,7 @@ string stringify(double x) {
 int main() {
   cout << faunus_splash();
   cout << "---------- INITIAL PARAMETERS -----------" << endl;
+  slump slp;
   slp.random_seed(9);
   inputfile in("isobaric.conf");          // Read input file
   checkValue test(in);                    // Class for unit testing

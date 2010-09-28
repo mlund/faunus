@@ -19,6 +19,7 @@ typedef interaction<pot_hsdebyehuckelP3> Tpot;
 typedef npt_molecular<box,Tpot> Tbottle;
 
 int main() {
+  slump slp;
   cout << faunus_splash() << slp.info() << endl;
   inputfile in("replica.conf");
   io fio;

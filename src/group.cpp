@@ -3,6 +3,7 @@
 #include "faunus/species.h"
 #include "faunus/iobabel.h"
 #include "faunus/physconst.h"
+#include "faunus/io.h"
 
 namespace Faunus {
 

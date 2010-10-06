@@ -1,0 +1,158 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+  <head>
+
+    <title>Faunus - A Framework for Molecular Simulation</title>
+
+    <meta http-equiv="content-type" content="application/xhtml+xml; charset=UTF-8" />
+    <meta name="author" content="Mikael Lund - www.teokem.lu.se" />
+    <meta name="description" content="Homepage of Faunus - A C++ Framework for Molecular Simulation" />
+    <meta name="keywords" content="Molecular modeling, Monte Carlo simulation, C++ class library, hypersphere, protein ionization" />
+    <meta name="robots" content="index, follow, noarchive" />
+    <meta name="googlebot" content="noarchive" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="css/screen.css" />
+
+  </head>
+
+  <body>
+
+    <!-- wrap starts here -->
+    <div id="wrap">
+
+      <!--header -->
+      <div id="header">			
+
+        <h1 id="logo-text"><a href="index.html" title="">Faunus</a></h1>	
+        <p id="slogan">A free, object oriented framework for molecular simulation</p>	
+
+        <div  id="nav">
+          <ul>
+            <li class="first"><a href="index.html">Home</a></li>
+            <li><a href="download.html">Download</a></li>
+            <li id="current"><a href="programs.html">Programs</a></li>
+            <li><a href="developer.html">Developer</a></li>
+            <li><a href="help.html">Help</a></li>
+          </ul>		
+        </div>	
+
+        <div id="header-image"></div>
+
+        <!--header ends-->					
+      </div>
+
+      <!-- content -->
+      <div id="content-outer" class="clear"><div id="content-wrap">
+
+          <div id="content">
+
+            <div id="left">			
+
+              <h3>Example Programs</h3>
+
+              <div class="post">
+                <h4><a href="index.html">Bulk Solutions</a></h4>
+                <p><a><img src="images/example_bulk.png" width="120" alt="firefox" class="float-left" /></a>
+                Within a continuum solvent description, the programs "widom" and "hyperbulk" can simulate bulk
+                electrolyte solutions (or any atomic particles) and calculate activity coefficients, pressure,
+                radial distribution functions etc. Normally the primitive model is used but it is easy to use
+                Lennard-Jones, Debye-Huckel or tabulated potentials.
+                Various geometries are possible: <strong>cubic box</strong> with periodicity,
+                the <strong>cell model</strong> and <strong>hyperspherical</strong>.
+                </p>
+              </div>
+
+              <div class="post">
+                <h4><a href="index.html">Protein Titration</a></h4>
+                <p><a><img src="images/example_tit.png" width="120" alt="firefox" class="float-right" /></a>
+                The program in "pka" and variants simulate a single rigid protein in a continuum solvent with or
+                without explicit salt particles. Using grand canonical insertion the ionization state of
+                the acidic and basic residues are calculated according to a given (constant) pH. Net charge, capacitance
+                and dipole moments are evaluated.
+                </p>
+              </div>
+
+              <div class="post">
+                <h4><a href="index.html">Macromolecular Phase Transitions</a></h4>
+                <p><a><img src="images/example_isobar.png" width="120" alt="firefox" class="float-left" /></a>
+                The program "isobaric" and variants can simulate an arbitrary number of rigid macromolecules
+                in the isothermal-isobaric ensemble. This can be used to study structural features of
+                manybody protein aggregation as well as phase-transitions.
+                </p>
+              </div>
+
+
+            </div>
+
+            <div id="right">
+
+              <div class="sidemenu">
+                <h3>Faunus in Science:</h3>
+                <ul>
+                  <li><a href="http://dx.doi.org/">pKa values for the unfolded state under native conditions
+                    explain the pH dependent stability of PGB1<br /></a>
+                  <span><i>Biophys. J. 2010</i></span>
+                  </li>
+                  <li><a href="http://dx.doi.org/10.1021/ct1003093">Fast Proton Titration Scheme for Multiscale Modeling of Protein Solutions<br /></a>
+                  <span><i>J. Chem. Theo. Comp. 2010</i></span>
+                  </li>
+                  <li><a href="http://dx.doi.org/10.1021/jp101393k">Reversal of Hofmeister ordering for pairing of NH4+ vs alkylated ammonium cations with halide anions in water<br /></a>
+                  <span><i>J. Phys. Chem. B., 2010, 114:10843</i></span>
+                  </li>
+                  <li><a href="http://dx.doi.org/10.1016/j.bpc.2010.06.005">Molecular Evidence of Stereo-Specific Lactoferrin Dimers in Solution<br /></a>
+                  <span><i>Biophys. Chem., 2010, 151:187</i></span>
+                  </li>
+                  <li><a href="http://dx.doi.org/10.1039/b909179c">Association and Electrostatic Steering of alpha-Lactalbumin-Lysozyme Heterodimers<br /></a>
+                  <span><i>Phys. Chem. Chem. Phys., 2009, 11:8879</i></span>
+                  </li>
+
+                  <li><a href="http://dx.doi.org/10.1021/jp904541g">Enhanced Protein Steering: Cooperative Electrostatic and van der Waals Forces in Antigen-Antibody Complexes<br /></a>
+                  <span><i>J. Phys. Chem. B, 2009, 113:10459</i></span>
+                  </li>
+                  <li><a href="http://dx.doi.org/10.1063/1.3248218">Ion-Speciﬁc Thermodynamics of Multicomponent Electrolytes: A Hybrid HNC/MD Approach<br /></a>
+                  <span><i>J. Chem. Phys. 2009, 131:154109</i></span>
+                  </li>
+                  <li><a href="http://link.aps.org/abstract/PRL/v100/e258105">Ion Specific Protein Association and Hydrophobic Surface Forces<br /></a>
+                  <span><i>Phys. Rev. Lett. 2008, 100:258105.</i></span>
+                  </li>
+                  <li><a href="http://dx.doi.org/10.1088/0953-8984/20/49/494218">Patchy Proteins, Anions and Hofmeister Series<br /></a>
+                  <span><i>J. Phys.: Cond. Matt. 2008, 20:494218</i></span>
+                  </li>
+
+                </ul>
+              </div>	
+
+            </div>		
+
+          </div>	
+
+          <!-- content end -->	
+      </div></div>
+
+      <!-- footer-bottom starts -->		
+      <div id="footer-bottom">
+        <div class="bottom-left">
+          <p>
+          &copy; 2008-2010 <strong>Copyright The Faunus Team</strong>&nbsp; &nbsp; &nbsp;
+          <a href="http://www.bluewebtemplates.com/" title="Website Templates">website templates</a> by <a href="http://www.styleshout.com/">styleshout</a>
+          </p>
+        </div>
+
+        <div class="bottom-right">
+          <p>		
+          <a href="http://jigsaw.w3.org/css-validator/check/referer">CSS</a> | 
+          <a href="http://validator.w3.org/check/referer">XHTML</a>	|			
+          <a href="index.html">Home</a> |
+          <a href="index.html">Sitemap</a> |
+          </p>
+        </div>
+        <!-- footer-bottom ends -->		
+      </div>
+
+      <!-- wrap ends here -->
+    </div>
+
+  </body>
+</html>

@@ -16,7 +16,7 @@ namespace Faunus {
    */
   template<class T> class springinteraction : public interaction<T> {
     private:
-      vector<unsigned short> l;
+      vector<int> l;
     public:
       using interaction<T>::pair;
       springinteraction(inputfile &in) : interaction<T>(in) {

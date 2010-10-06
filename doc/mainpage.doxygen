@@ -1,94 +1,22 @@
-/*! \mainpage FAUNUS
-\image html faunus-icon.jpg
-<center><i>&quot;...one of the oldest Roman deities, <br>
-a good spirit of the forest, plains, and fields.&quot;</i></center>
-<hr>
-\image html techlogos.jpg
-<hr>
-\section welcome Welcome to Faunus!
-Faunus is an object oriented  C++ framework for creating programs for molecular simulations.
-We currently focus on Metropolis Monte Carlo techniques for studies of charged macro-molecules
-in aqueous solutions.
-A number of (preliminary) example \ref programs "programs" are supplied and at the moment these include tools for:
+/*! \mainpage Faunus Developer Pages
+Here you will find automatically generated documentation for the C++ classes in the framework.
+Being continuously developed, we do not guarantee that the code nor documentation is correct so please
+check your results carefully!
 
-\li Protein-protein interactions in salt solutions (pmf, free energy surfaces, virial coefficients)
-\li Proton fluctuations (pka predictions, charge regulation, ionization states)
-\li Manybody macromolecular simulations
-\li Hofmeister or ion-specific effects
-\li Widom particle insertion techniques
+\section mainclasses Main classes one should know about:
+\subsection doc_container container
+The container class defines the geometry of your simulation (box, sphere, cylinder etc.) and also contains the particle positions. The container knows about the boundary conditions, how to make generate a random position within it and how to calculate distances between particles. Since many functions in container are virtual (and thus slow!) care must be taken not to use these in speed critical inner loops.
 
-The input and output formats are quite flexible with support for
-<A HREF="http://www.openbabel.org">OpenBabel</A>
-as well as <A HREF="http://www.gromacs.org">Gromacs</A> compressed trajectory files (xtc).
-Recently we have also wrapped Faunus into a \ref python "Python" module.
+\subsection doc_group group
+Groups (and derived classes) simply defines a continuous range of particles in the container particle vector.
+The range is defined by [beg:end]. More advanced derived classes also keep track of the mass center of molecules, dipole moments and various averages related to the group.
 
+\subsection doc_inputfile inputfile
+The inputfile class reads input parameters from a file in the format "keyword value". A range of other classes in Faunus expects an inputfile object in the constructor so as to probe user input.
 
-\section download Download
-We do not maintain regular releases of Faunus and the code can be accessed
-only via the subversion repository at Sourceforge. 
-For example, get the most recent code with the command:
+\subsection doc_interaction energybase
+...is a base class for calculating interaction energies in the system. It is typically used as base for a class template that takes a pair potential as a template type. In this way any given potential is efficiently inlined into all energy loops. The pair potential must match the used geometry of the container.
 
-\verbatim svn checkout http://faunus.svn.sourceforge.net/svnroot/faunus faunus
-\endverbatim
-
-Or use the code <A HREF="http://faunus.svn.sourceforge.net/viewvc/faunus/trunk/">browser</A>
-to download a tar-ball of any revision.
-
-The code will compile on most unix-like systems including Linux, MacOS and most likely
-also in a Cygwin environment. Detailed instructions can be found \ref readme "here".
-
-\section cit Citing Faunus
-Faunus is released under the GNU Public Licence (\ref gpl "GPL") and can thus be freely used.
-To cite it in a scientific paper, please use the following reference:
-\li Lund, M., Trulsson, M., Persson, B.
-<I>Source Code Biol. Med.</I>, 2008, <B>3</B>:1
-[<A HREF="http://www.scfbm.org/content/3/1/1"><B>free full text</B></A>]
-
-In addition, Faunus has been used in the following scientific works:
-\li pKa values for the unfolded state under native conditions explain the pH dependent stability of PGB1.
-    <A HREF="http://dx.doi.org"><I>Biophys. J. 2010</I></A>
-\li Fast Proton Titration Scheme for Multiscale Modeling of Protein Solutions.
-    <A HREF="http://dx.doi.org/10.1021/ct1003093"><I>J. Chem. Theo. Comp. 2010</I></A>
-\li Molecular Evidence of Stereo-Specific Lactoferrin Dimers in Solution.
-    <A HREF="http://dx.doi.org/10.1016/j.bpc.2010.06.005"><I>Biophys. Chem. 2010</I></A>
-\li Reversal of Hofmeister Ordering for Pairing of NH4+ vs Alkylated Ammonium Cations with Halide Anions in Water.
-    <A HREF="http://dx.doi.org/10.1021/jp101393k"><I>J. Phys. Chem. B, 2010</I></A>
-\li Association and Electrostatic Steering of alpha-Lactalbumin-Lysozyme Heterodimers.
-    <A HREF="http://dx.doi.org/10.1039/b909179c"><I>Phys. Chem. Chem. Phys. 2009</I></A>
-\li Enhanced Protein Steering: Cooperative Electrostatic and van der Waals Forces in Antigen-Antibody Complexes.
-    <A HREF="http://dx.doi.org/10.1021/jp904541g"><I>J. Phys. Chem. B, 2009</I></A>
-\li Ion-Speciﬁc Thermodynamics of Multicomponent Electrolytes: A Hybrid HNC/MD Approach.
-    <A HREF="http://dx.doi.org/10.1063/1.3248218"><I>J. Chem. Phys. 2009</I></A>
-\li Ion Specific Protein Assembly and Hydrophobic Surface Forces.
-    <A HREF="http://dx.doi.org/10.1103/PhysRevLett.100.258105"><I>Phys. Rev. Lett. 2008</I></A>
-\li Patchy Proteins, Anions and Hofmeister Series.
-    <A HREF="http://dx.doi.org/10.1088/0953-8984/20/49/494218"><I>J. Phys.: Cond. Matt, 2008</I></A>
-
-\section support Support
-Support requests, bug reports etc. can be submitted <A HREF="http://sourceforge.net/tracker/?group_id=196168"><B>here</B></A>.
-
-\section dev Credits
-First of all, thanks to authors of all the third party projects we rely on - 
-cmake, openbabel, gromacs, doxygen, boost to name a few.
-\subsection authors Contributors in Chronological Order
-\li Mikael Lund (<A HREF="http://web.mac.com/mlund"><B>homepage</B></A>)
-\li Bjorn Persson
-\li Martin Trulsson
-\li Ondrej Marsalek
-\li Christophe Labbez
-\li Andre Teixeira
-\li Anil Kurut
-\li Chris Evers
-*/
-
-/*! \page License
-\section gpl License
-\verbinclude "LICENSE"
-*/
-
-/*! \page Readme
-\section readme Readme
-\verbinclude "README"
 */
 
 

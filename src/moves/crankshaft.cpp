@@ -47,7 +47,7 @@ namespace Faunus {
   }
 
   bool crankShaft::findEnds(polymer &g) {
-    vector<unsigned short> nb;
+    vector<int> nb;
     v.clear();
     v.push_back( g.random() );
     for (int n=0; n<len+2; n++) {

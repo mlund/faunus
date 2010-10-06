@@ -35,9 +35,9 @@ namespace Faunus {
     virtual double energy(vector<particle> &, const group &, int)=0;             //!< group<->particle i.
     virtual double energy(vector<particle> &, const group &, const particle &)=0;//!< group<->external particle.
     virtual double energy(vector<particle> &, molecules &, vector<int> &)=0;     //!< subset[molecules]<->all
-    virtual double potential(vector<particle> &, unsigned short)=0;              //!< Electric potential at j'th particle
+    virtual double potential(vector<particle> &, int)=0;                         //!< Electric potential at j'th particle
     virtual double potential(vector<particle> &, point)=0;                       //!< Electric potential in point
-    virtual double potential(const vector<particle>&,unsigned short, macromolecule&, double& )=0; //! For the AT titration
+    virtual double potential(const vector<particle>&,int,macromolecule&, double& )=0; //! For the AT titration
     virtual double internal(vector<particle> &, const group &, int=1)=0;         //!< internal energy in group
     double internalElectrostatic(vector<particle> &p, const group &g);           //!< internal electrostatic energy in group
     virtual double pot(vector<particle> &, const point &)=0;                     //!< Electrostatic potential in a point
@@ -252,7 +252,7 @@ namespace Faunus {
      *  \param j The electric potential will be calculated in the point of this particle
      *  \note Boundary conditions are respected.
      */
-    double potential(vector<particle> &p, unsigned short j) {
+    double potential(vector<particle> &p, int j) {
       double phi=0;
       int n=p.size();
       particle tmp=p[j]; // avoid self-interaction
@@ -273,7 +273,7 @@ namespace Faunus {
     }
     
     
-    double potential(const vector<particle> &p, unsigned short j, macromolecule& g, double& k) {
+    double potential(const vector<particle> &p, int j, macromolecule& g, double& k) {
       if (abs(p[j].charge)<1e-6)
         return 0;
       double u=0;

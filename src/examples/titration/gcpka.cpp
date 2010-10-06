@@ -1,5 +1,4 @@
-/*! \page test_rosenbluth Rosenbluth
- *
+/*!
  * Protein proton titration using grand canonical
  * salt moves.
  *

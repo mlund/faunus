@@ -24,7 +24,7 @@ namespace Faunus {
       double sum=0;
       particle cm;
       point t, o = p[g.beg]; // set origo to first particle
-      for (unsigned short i=g.beg; i<=g.end; i++) {
+      for (int i=g.beg; i<=g.end; i++) {
         t = p[i]-o;        // translate to origo
         interaction<T>::pair.boundary(t);       // periodic boundary (if any)
         cm += t * p[i].mw;

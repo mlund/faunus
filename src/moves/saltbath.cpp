@@ -44,7 +44,7 @@ namespace Faunus {
       }
     w.name=atom[ref.id].name;
     g.push_back(w);
-    for (unsigned short i=0; i<g.size(); i++)    
+    for (int i=0; i<g.size(); i++)    
       gcPtr->gp.push_back(&g[i]);
     gcPtr->gp.push_back(sPtr);
   }

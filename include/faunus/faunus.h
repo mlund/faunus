@@ -19,6 +19,7 @@
 #ifndef FAUNUS_H
 #define FAUNUS_H
 
+#include "faunus/macros.h"
 #include "faunus/common.h"
 #include "faunus/slump.h"
 #include "faunus/physconst.h"

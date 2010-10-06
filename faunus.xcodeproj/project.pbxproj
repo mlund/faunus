@@ -1542,7 +1542,6 @@
 			};
 			buildConfigurationList = 739C41DC103078A800A3A5B9 /* Build configuration list for PBXProject "faunus" */;
 			compatibilityVersion = "Xcode 3.2";
-			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,

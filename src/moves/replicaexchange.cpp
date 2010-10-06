@@ -39,6 +39,10 @@ namespace Faunus {
     jnew = j.systemEnergy();
     iold = i.usys.sum;
     jold = j.usys.sum;
+
+    // Average energy differences
+    dU[id] += jold-iold;
+    expdU[id] += exp( -(jold-iold) ); 
     
     if (nvt.metropolis( (inew+jnew)-(iold+jold) + dPV )==true ) {
       accepted[id]++;
@@ -79,11 +83,15 @@ namespace Faunus {
         << "#   Exchange statistics:" << endl
         << "#     " << std::left << setw(w) << "System"
         << setw(8) << "Trials"
-        << setw(w) << "Acceptance" << endl;
+        << setw(w) << "Acceptance"
+        << setw(w) << "<dU/kT>" << setw(w) << "dA/kT"<< endl;
       for (int i=0; i<cnt.size(); i++) {
         o << "#     " << setw(w) << cnt.id(i)
           << setw(8) << cnt.at(i)
-          << setw(w) << accepted.at(i)*100./cnt.at(i) << endl;
+          << setw(w) << accepted.at(i)*100./cnt.at(i);
+        if (dU.at(i).cnt>0)
+          o << setw(w) << dU.at(i).avg() << setw(w) << -log(expdU.at(i).avg());
+        o << endl;
       }
     }
     return o.str();

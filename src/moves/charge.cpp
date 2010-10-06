@@ -95,7 +95,7 @@ namespace Faunus {
       return du;
     action t;
     double sum=0;
-    for (unsigned short i=0; i<sites.size(); i++) {
+    for (int i=0; i<sites.size(); i++) {
       cnt++;
       t=exchange(con->trial);
       //#pragma omp parallel
@@ -231,7 +231,7 @@ namespace Faunus {
     if (markovmove::slp.runtest(runfraction)==false)
       return du;
     double sum=0;
-    for (unsigned short i=0; i<sites.size(); i++) {
+    for (int i=0; i<sites.size(); i++) {
       cnt++;
       int k=exchange(con->trial);
 
@@ -492,8 +492,8 @@ namespace Faunus {
       return du;
     double sum=0;
     int t;
-    short who;
-    for (unsigned short i=0; i<sites.size(); i++) {
+    int who;
+    for (int i=0; i<sites.size(); i++) {
       cnt++;
       t    = exchange(con->trial);         // Protonate/Deprotonate site
       who  = who_is_tit(g,t);              // Find which protein is titrating (in case we have many proteins)

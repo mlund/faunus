@@ -341,7 +341,7 @@ namespace Faunus {
     if (slp.runtest( runfraction )==false)
       return du;
     double sum=0;
-    for (unsigned short i=0; i<g.size(); i++) {
+    for (int i=0; i<g.size(); i++) {
       move(g, 1);
       sum+=du;
     }

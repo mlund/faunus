@@ -6,7 +6,6 @@
  *
  * \author Christophe Labbez and Mikael Lund
  * \date Lund, 2009
- * \include rb.cpp
  */
 #include "faunus/faunus.h"
 #include "faunus/potentials/pot_hsminimage.h"

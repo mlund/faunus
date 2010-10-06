@@ -25,15 +25,15 @@ namespace Faunus {
       string title;
     public:
       particle cm, cm_trial; 
-      short int beg,end;    //!< Define range in particle vector. [beg;end]
+      int beg,end;    //!< Define range in particle vector. [beg;end]
       string name;          //!< Informative name. Avoid spaces.
       group(int=0);         //!< Constructor, initialize data.
 
-      void set(short int,short int);        ///< Set particle range, "beg" and "end".
-      bool find(unsigned int) const;        ///< Check if particle is part of the group
-      short int size() const;               ///< Number of particles in group
-      double charge(const vector<particle> &);//!< Calculate total charge
-      virtual short int random();           ///< Picks a random particle within this group
+      void set(int, int);                        //!< Set particle range, "beg" and "end".
+      bool find(unsigned int) const;             //!< Check if particle is part of the group
+      int size() const;                          //!< Number of particles in group
+      double charge(const vector<particle> &);   //!< Calculate total charge
+      virtual int random();                      //!< Picks a random particle within this group
       point masscenter(const vector<particle> &); //!< Calculate center-of-mass
       point masscenter(const container &);  //!< Calc. center-of-mass
       virtual string info();                //!< Print information
@@ -47,12 +47,12 @@ namespace Faunus {
       virtual void undo(particles &);
       virtual void accept(particles &);                   //!< Accept a move
       void add(container &, vector<particle>, bool=false);//!< Add a particle vector at random position
-      void add(container &, unsigned char, short);        //!< Add particles w. collision check
+      void add(container &, unsigned char, int);          //!< Add particles w. collision check
       bool swap(container &, group &);                    //!< Swap location of two groups
-      short int count(vector<particle> &, unsigned char); //!< Count number of specific particles
-      virtual unsigned short displace(container&, point); //!< Displace random particle
+      int count(vector<particle> &, unsigned char);       //!< Count number of specific particles
+      virtual int displace(container&, point);            //!< Displace random particle
       virtual void isobaricmove(container &, double){};   //!< Pressure scaling
-      virtual unsigned short nummolecules();              //!< Number of molecules
+      virtual int nummolecules();                         //!< Number of molecules
       unsigned short numhydrophobic(vector<particle> &);  //!< Number of hydrophobic particles
       bool swap(container &, int);                        //!< Move group to a new position
       bool saveCharges(string filename, vector<particle> &p); //!< Save all charges in group to disk 
@@ -107,7 +107,7 @@ namespace Faunus {
       void add(container &, inputfile &);         //!< Add according to inputfile
       macromolecule& operator=(const group&);     //!< Copy from group
       virtual void isobaricmove(container &,double);  //!< Displace CM with scale difference
-      virtual unsigned short nummolecules();
+      virtual int nummolecules();
   };
 
   /*! \brief Group container for an array of molecules
@@ -128,13 +128,13 @@ namespace Faunus {
    */
   class molecules : public macromolecule {
     private:
-      group sel;                //!< A temporary group class
+      group sel;                 //!< A temporary group class
     public:
-      molecules(unsigned short);//!< Constructor. Specify number of atoms in each molecule.
-      unsigned short numatom;   //!< Number of atoms in each molecule
-      short random();           //!< Pick a random molecule (NOT atom)
-      string info();            //!< Show information
-      group operator[](unsigned short); //!< Access n'th molecule
+      molecules(unsigned short); //!< Constructor. Specify number of atoms in each molecule.
+      unsigned short numatom;    //!< Number of atoms in each molecule
+      int random();              //!< Pick a random molecule (NOT atom)
+      string info();             //!< Show information
+      group operator[](int);     //!< Access n'th molecule
       void add(container &, vector<particle> &, short=1);
       vector<int> pick(int );
   };
@@ -145,11 +145,11 @@ namespace Faunus {
    */
   class polymer : public macromolecule {
     public:
-      vector< vector<unsigned short> > nb; //!< Neighbor list
+      vector< vector<int> > nb; //!< Neighbor list
       polymer();
-      vector<unsigned short> neighbors(unsigned short) const;
+      vector<int> neighbors(int) const;
       string info();
-      bool areneighbors(unsigned short, unsigned short) const;
+      bool areneighbors(int, int) const;
       string getVMDBondScript();                 //!< Print TCL script for VMD to create bonds
 #ifdef BABEL
       bool babeladd( container &, inputfile & ); //!< Load molecule from disk using OpenBabel

@@ -49,6 +49,7 @@ int main(int argc, char* argv[]) {
   salt salt;                            // Define some groups for mobile ions
   salt.add(cell,in);                    // Insert some ions
 
+  iopqr pqr;
   ioaam aam;                            // File I/O class
   aam.load(cell,"widom.aam");           // Read initial config. from disk (if present)
 
@@ -77,6 +78,7 @@ int main(int argc, char* argv[]) {
     }                                   // END of micro loop
     sys.update(pot.energy(cell.p));     // Update system energy
     aam.save("widom.aam",cell.p);       // Save particle configuration to disk
+    pqr.save("widom.pqr",cell.p);       // Save particle configuration to disk
     cout << loop.timing();              // Show progres
   }                                     // END of macro loop and simulation
 

@@ -4,8 +4,8 @@ namespace Faunus {
 
   iobabel::iobabel() {
     // Teach Babel some new "elements"!! (see openbabel "data.cpp")
-    unsigned int n = OpenBabel::etab.GetNumberOfElements();
-    for (unsigned int i=0; i<atom.list.size(); i++) {
+    int n = OpenBabel::etab.GetNumberOfElements();
+    for (int i=0; i<atom.list.size(); i++) {
       std::ostringstream o;
       o << n++ << " "              // "atomic" number
         << atom.list[i].name << " "   // symbol
@@ -36,12 +36,12 @@ namespace Faunus {
     obmol.Clear();
     obconv.SetInFormat(obconv.FormatFromExt(filename.c_str()));
     bool notatend = obconv.ReadFile(&obmol,filename.c_str());
-    for (unsigned int i=1; i<=obmol.NumAtoms(); i++)
+    for (int i=1; i<=obmol.NumAtoms(); i++)
       p.push_back(get(i));
 
     // Use residue names for particle recognition
     if ( resnaming==true && obmol.NumResidues() == p.size() ) {
-      unsigned int i=0;
+      int i=0;
       OpenBabel::OBResidue* obres;
       FOR_RESIDUES_OF_MOL(obres, obmol) {
         p[i++].id = atom[ obres->GetName() ].id;
@@ -49,8 +49,8 @@ namespace Faunus {
     }
   }
 
-  vector<unsigned short> iobabel::neighbors(unsigned short i) {
-    vector<unsigned short> nb;
+  vector<int> iobabel::neighbors(int i) {
+    vector<int> nb;
     if (obmol.NumAtoms()>0) {
       OpenBabel::OBAtom* obatomPtr, nbrPtr;
       obatomPtr = obmol.GetAtom(i+1);  // Babel starts at 1; Faunus at 0.
@@ -63,7 +63,7 @@ namespace Faunus {
 
   bool iobabel::write(string filename, const vector<particle> &) {
     obmol.Clear();
-    for (unsigned int i=0; i<p.size(); i++) {
+    for (int i=0; i<p.size(); i++) {
       p2atom(p[i]);
       obmol.AddAtom(obatom);
     }
@@ -86,7 +86,7 @@ namespace Faunus {
    *       particle in the "faunatoms.dat" file. Ugly, we know but
    *       it'll have to do for now.
    */
-  particle iobabel::get(unsigned int i) {
+  particle iobabel::get(int i) {
     obatomPtr = obmol.GetAtom(i);
     v=obatomPtr->GetVector();
     v.Get(c);

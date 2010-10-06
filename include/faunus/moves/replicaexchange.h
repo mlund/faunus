@@ -4,6 +4,7 @@
 #include "faunus/common.h"
 #include "faunus/vectorid.h"
 #include "faunus/ensemble.h"
+#include "faunus/average.h"
 
 namespace Faunus {
 
@@ -25,6 +26,7 @@ namespace Faunus {
     private:
       canonical nvt;
       vectorid<int> cnt, accepted;
+      vectorid< average<double> > dU, expdU;
     public:
       bool swap(bottle &, bottle &);
       string info();

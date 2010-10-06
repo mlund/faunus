@@ -17,12 +17,12 @@ namespace Faunus {
     name="(noname)";//is nameless
   }
 
-  void group::set(short int first, short int last) {
+  void group::set(int first, int last) {
     beg=first;
     end=last;
   }
 
-  short int group::size() const { return (beg<0 || end<0) ? 0 : end-beg+1; }
+  int group::size() const { return (beg<0 || end<0) ? 0 : end-beg+1; }
 
   /*! \brief Calculates total charge
    *  \return Charge number. The charge is also stored in
@@ -30,7 +30,7 @@ namespace Faunus {
    */
   double group::charge(const vector<particle> &p) {
     double z=0;
-    for (short i=beg; i<=end; i++)
+    for (int i=beg; i<=end; i++)
       z+=p[i].charge;
     cm.charge=z;
     return z;
@@ -68,7 +68,7 @@ namespace Faunus {
     return (*this == g);
   }
 
-  short int group::random() { return beg + slp.rand() % size(); }
+  int group::random() { return beg + slp.rand() % size(); }
 
   string group::info() {
     std::ostringstream o;
@@ -92,7 +92,7 @@ namespace Faunus {
   point group::masscenter(const vector<particle> &p) {
     cm.clear();
     double sum=0;
-    for (short i=beg; i<=end; i++) {
+    for (int i=beg; i<=end; i++) {
       cm += p[i] * p[i].mw;
       sum += p[i].mw;
     }
@@ -115,7 +115,7 @@ namespace Faunus {
     double sum=0;
     cm.clear();
     point t, o = con.p.at(beg); // set origo to first particle
-    for (unsigned short i=beg; i<=end; i++) {
+    for (int i=beg; i<=end; i++) {
       t = con.p[i]-o;        // translate to origo
       con.boundary(t);       // periodic boundary (if any)
       cm += t * con.p[i].mw;
@@ -130,7 +130,7 @@ namespace Faunus {
 
   void group::undo(particles &par) {
     cm_trial = cm;
-    for (short i=beg; i<=end; i++) {
+    for (int i=beg; i<=end; i++) {
 #ifndef HYPERSPHERE
       par.trial[i].x = par.p[i].x;
       par.trial[i].y = par.p[i].y;
@@ -146,7 +146,7 @@ namespace Faunus {
 
   void group::accept(particles &par) {
     cm = cm_trial;
-    unsigned short i,ilen=end+1;
+    int i,ilen=end+1;
     for (i=beg; i<ilen; i++) {
 #ifndef HYPERSPHERE
       par.p[i].x = par.trial[i].x;
@@ -163,7 +163,7 @@ namespace Faunus {
 
   void group::add(container &con, vector<particle> v, bool collision) {
     beg=con.p.size();
-    for (unsigned short i=0; i<v.size(); i++) {
+    for (int i=0; i<v.size(); i++) {
       con.boundary(v[i]);
       con.push_back(v[i]);
       end=beg+i;
@@ -185,19 +185,19 @@ namespace Faunus {
     }
   }
 
-  void group::add(container &con, unsigned char id, short n) {
+  void group::add(container &con, unsigned char id, int n) {
     particle a=atom(id);
     if (beg<0)
       beg=con.p.size();
-    for (unsigned short i=0; i<n; i++) {
+    for (int i=0; i<n; i++) {
       do con.randompos(a);
       while (con.overlap(a)==true); 
       end = con.push_back(a)-1;
     }
   }
 
-  unsigned short group::displace(container &c, point dp) {
-    unsigned short i=random();
+  int group::displace(container &c, point dp) {
+    int i=random();
 #ifndef HYPERSPHERE
     c.trial[i].x = c.p[i].x + dp.x*slp.random_half();
     c.trial[i].y = c.p[i].y + dp.y*slp.random_half();
@@ -218,7 +218,7 @@ namespace Faunus {
    * \param c ...by adding this vector to all particles
    */
   void group::move(container &par, point c) {
-    for (unsigned short i=beg; i<=end; i++) {
+    for (int i=beg; i<=end; i++) {
       par.trial[i].x = par.p[i].x + c.x;
       par.trial[i].y = par.p[i].y + c.y;
       par.trial[i].z = par.p[i].z + c.z;
@@ -232,7 +232,7 @@ namespace Faunus {
 
   bool group::overlap(container &c) {
     double s;
-    unsigned short i,j;
+    int i,j;
     for (i=beg; i<=end; i++) {
       if (c.collision(c.p[i])==true)  // check cell collision
         return true;
@@ -250,18 +250,18 @@ namespace Faunus {
     return false;
   }
 
-  short int group::count(vector<particle> &p, unsigned char id) {
-    short int i,n=0;
+  int group::count(vector<particle> &p, unsigned char id) {
+    int i,n=0;
     for (i=0; i<p.size(); i++)
       if (p[i].id==id)
         n++;
     return n;
   }
 
-  unsigned short group::nummolecules() { return size(); }
+  int group::nummolecules() { return size(); }
 
   unsigned short group::numhydrophobic( vector<particle> &p ) {
-    unsigned short n=0;
+    int n=0;
     for (int i=beg; i<=end; i++)
       if (p[i].hydrophobic==true) n++;
     return n;
@@ -353,8 +353,8 @@ namespace Faunus {
   string salt::info(container &con) {
     std::ostringstream o;
     float c=1./pyc.Nav/1e-27;
-    short nan=count(con.p, anion),
-          ncat=count(con.p, cation);
+    int nan=count(con.p, anion),
+        ncat=count(con.p, cation);
     o << group::info();
     o << "#   Cation (id,z,r,N,conc) = "
       << atom[cation].name << ", " << atom[cation].charge << ", "
@@ -368,7 +368,7 @@ namespace Faunus {
   }
 
   void salt::isobaricmove(container &con, double newlen) {
-    for (unsigned short i=beg; i<=end; i++)
+    for (int i=beg; i<=end; i++)
       con.scale(con.trial[i], newlen);
   }
 
@@ -379,7 +379,7 @@ namespace Faunus {
    * positions.
    */
   void salt::add(container &con, inputfile &in) {
-    short n=1, npart;
+    int n=1, npart;
     unsigned char id;
     while (n<15) {
       std::ostringstream nion, tion;
@@ -429,7 +429,7 @@ namespace Faunus {
     return o.str();
   }
 
-  unsigned short macromolecule::nummolecules() { return 1; }
+  int macromolecule::nummolecules() { return 1; }
 
   macromolecule& macromolecule::operator=(const group& g) {
     beg=g.beg;
@@ -452,7 +452,7 @@ namespace Faunus {
   {
     mu.clear();
     double a;
-    for (unsigned short i=beg; i<=end; ++i) {
+    for (int i=beg; i<=end; ++i) {
       mu.x += (p[i].x-cm.x) * p[i].charge;
       mu.y += (p[i].y-cm.y) * p[i].charge;
       mu.z += (p[i].z-cm.z) * p[i].charge;
@@ -466,7 +466,7 @@ namespace Faunus {
   double macromolecule::radius(vector<particle> &p) {
     double r,max=0;
     masscenter(p);
-    for (short i=beg; i<=end; i++) {
+    for (int i=beg; i<=end; i++) {
       r=p[i].dist(cm) + p[i].radius;
       if (r>max)
         max=r;
@@ -479,7 +479,7 @@ namespace Faunus {
     double r=0;
     int cnt=0;
     masscenter(p);
-    for (short i=beg; i<=end; i++) {
+    for (int i=beg; i<=end; i++) {
       r+=p[i].dist(cm) + p[i].radius;
       cnt++;
     }
@@ -519,7 +519,7 @@ namespace Faunus {
 
   double macromolecule::vradius(vector<particle> &p) {
     double v=0,r;
-    for (short i=beg; i<=end; i++) {
+    for (int i=beg; i<=end; i++) {
       v+=1.333333*3.14159265*p[i].radius*p[i].radius*p[i].radius;
     }
     r=pow( 0.75 / 3.14159265 * v , 1./3.);
@@ -546,7 +546,7 @@ namespace Faunus {
   void macromolecule::zmove(container &par, double dz) {
     cm_trial.z = cm.z + dz;
     par.boundary(cm_trial);
-    for (short int i=beg; i<=end; i++) {
+    for (int i=beg; i<=end; i++) {
       par.trial[i].z = par.p[i].z + dz;
       par.boundary(par.trial[i]);
     };
@@ -586,7 +586,7 @@ namespace Faunus {
     e1mcox=(1.-cosang)*u.x;
     e1mcoy=(1.-cosang)*u.y;
     e1mcoz=(1.-cosang)*u.z;
-    for (short i=beg; i<=end; i++) {
+    for (int i=beg; i<=end; i++) {
       b.x=par.p[i].x - cm.x;              // translate to origo...
       b.y=par.p[i].y - cm.y;
       b.z=par.p[i].z - cm.z;
@@ -624,7 +624,7 @@ namespace Faunus {
   //    par.trial[i]=cm+par.vdist(par.p[i],cm);
     //}
 
-    for (short i=beg; i<=end; i++) {
+    for (int i=beg; i<=end; i++) {
       b.x=par.trial[i].x - cr.x;              // translate to cr...
       b.y=par.trial[i].y - cr.y;
       b.z=par.trial[i].z - cr.z;
@@ -660,7 +660,7 @@ namespace Faunus {
     point c;
     c.ranunit(slp); 
     c=c*dr; //random displacement vector
-    for (unsigned short i=beg; i<=end; i++) {
+    for (int i=beg; i<=end; i++) {
       par.trial[i].x = par.p[i].x + c.x;
       par.trial[i].y = par.p[i].y + c.y;
       par.trial[i].z = par.p[i].z + c.z;
@@ -684,7 +684,7 @@ namespace Faunus {
     e1mcox=(1.-cosang)*c.x;
     e1mcoy=(1.-cosang)*c.y;
     e1mcoz=(1.-cosang)*c.z;
-    for (short i=beg; i<=end; i++) {
+    for (int i=beg; i<=end; i++) {
       b.x=par.trial[i].x - cm_trial.x;              // center cm_trial...
       b.y=par.trial[i].y - cm_trial.y;
       b.z=par.trial[i].z - cm_trial.z;
@@ -721,11 +721,11 @@ namespace Faunus {
     numatom=n;
   }
 
-  short int molecules::random() {
+  int molecules::random() {
     return (group::random()-beg)/numatom;
   }
 
-  group molecules::operator[](unsigned short i) {
+  group molecules::operator[](int i) {
     sel.beg=beg+i*numatom;
     sel.end=sel.beg+numatom-1;
     return sel;
@@ -807,12 +807,12 @@ namespace Faunus {
   }
 #endif
 
-  vector<unsigned short> polymer::neighbors(unsigned short i) const {
+  vector<int> polymer::neighbors(int i) const {
     return nb.at(i-beg);
   }
 
   //!< is j a neighbor to polymer atom i?
-  bool polymer::areneighbors(unsigned short i, unsigned short j) const {
+  bool polymer::areneighbors(int i, int j) const {
     //    return ( std::find( nb[i-beg].begin(), nb[i-beg].end(), j) != nb[i-end].end() ) ? true : false;
     //    std::cout <<"particel "<<i<<" with "<<nb[i-beg].size()<<"n, looking for "<<j<<std::endl;
     for (int k=0; k<nb[i-beg].size(); k++)
@@ -913,7 +913,7 @@ namespace Faunus {
     double x,y;
     x=y=-con.len_half;
     int cnt=0;
-    vector<unsigned short> nb;
+    vector<int> nb;
     for (int i=0; i<graftp; i++) {
       Pops[0].x=Pops[1].x=Pops[2].x=Pops[3].x=x+i*gstep;
       Popc[0].x=Popc[1].x=Popc[2].x=x+i*gstep;

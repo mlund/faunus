@@ -155,6 +155,11 @@ namespace Faunus {
         req=in.getflt("harmonic_req", 0);
       }
 
+      double harmonicbond(double r) {
+        double dr=r-req;
+        return k*dr*dr;
+      }
+
       double harmonicbond(particle &p1, particle &p2, double r) {
         double dr=r-req;
         return k*dr*dr;

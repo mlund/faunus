@@ -4,6 +4,8 @@
 namespace Faunus {
   
   bool replicaexchange::swap(bottle &i, bottle &j) {
+
+
     // Register systems
     string id=i.prefix+"<->"+j.prefix;
     if (cnt.find(id)<0) {
@@ -15,13 +17,18 @@ namespace Faunus {
     // Exchange particle positions
     // note: we change "p" not "trial" as usual this is because
     // the systemEnergy() function uses "p".
+    // Due to double conventions, remember to copy both id and radius.
     for (int k=0; k<i.cPtr->p.size(); k++) {
       i.cPtr->p[k].x = j.cPtr->trial[k].x;
       i.cPtr->p[k].y = j.cPtr->trial[k].y;
       i.cPtr->p[k].z = j.cPtr->trial[k].z;
+      i.cPtr->p[k].id = j.cPtr->trial[k].id;
+      i.cPtr->p[k].radius = j.cPtr->trial[k].radius;
       j.cPtr->p[k].x = i.cPtr->trial[k].x;
       j.cPtr->p[k].y = i.cPtr->trial[k].y;
       j.cPtr->p[k].z = i.cPtr->trial[k].z;
+      j.cPtr->p[k].id = i.cPtr->trial[k].id;
+      j.cPtr->p[k].radius = i.cPtr->trial[k].radius;
     }
 
     // Exchange volumes
@@ -50,9 +57,13 @@ namespace Faunus {
         i.cPtr->trial[k].x = i.cPtr->p[k].x;
         i.cPtr->trial[k].y = i.cPtr->p[k].y;
         i.cPtr->trial[k].z = i.cPtr->p[k].z;
+        i.cPtr->trial[k].id = i.cPtr->p[k].id;
+        i.cPtr->trial[k].radius = i.cPtr->p[k].radius;
         j.cPtr->trial[k].x = j.cPtr->p[k].x;
         j.cPtr->trial[k].y = j.cPtr->p[k].y;
         j.cPtr->trial[k].z = j.cPtr->p[k].z;
+        j.cPtr->trial[k].id = j.cPtr->p[k].id;
+        j.cPtr->trial[k].radius = j.cPtr->p[k].radius;
       }
       i.usys+=inew-iold;
       j.usys+=jnew-jold;
@@ -62,9 +73,13 @@ namespace Faunus {
       i.cPtr->p[k].x = i.cPtr->trial[k].x;
       i.cPtr->p[k].y = i.cPtr->trial[k].y;
       i.cPtr->p[k].z = i.cPtr->trial[k].z;
+      i.cPtr->p[k].id = i.cPtr->trial[k].id;
+      i.cPtr->p[k].radius = i.cPtr->trial[k].radius;
       j.cPtr->p[k].x = j.cPtr->trial[k].x;
       j.cPtr->p[k].y = j.cPtr->trial[k].y;
       j.cPtr->p[k].z = j.cPtr->trial[k].z;
+      j.cPtr->p[k].id = j.cPtr->trial[k].id;
+      j.cPtr->p[k].radius = j.cPtr->trial[k].radius;
     }
     i.cPtr->setvolume(Vi);   // Restore volumes
     i.pPtr->setvolume(Vi);   // in containers and potentials

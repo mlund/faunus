@@ -61,6 +61,7 @@ namespace Faunus {
     virtual double newdp();                     //!< Generate new displacement parameter between [dp_min:dp_max]
     
   public:
+    bool full_ham;                              //!< True if Hamiltonian is to reflect the total energy (PV or Nmu work e.g.)
     slump slp;
     double optimaldp();                         //!< Retrieve optimal displacement parameter from DP/L^2 distribution
     string name;                                //!< Arbitrary name for the move

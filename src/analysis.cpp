@@ -329,8 +329,9 @@ namespace Faunus {
       dist[agg.size()-1]+=agg.size();                                     // One aggregate of size
       found+=agg.size();
       point CMagg, fix;
+      CMagg.x=0, CMagg.y=0, CMagg.z=0;
       for (int i=1; i<agg.size(); i++) {
-        fix=agg[i]->cm-agg[0]->cm;
+        fix=con->vdist(agg[i]->cm,agg[0]->cm);
         CMagg+=fix;
       }
       CMagg+=agg[0]->cm;

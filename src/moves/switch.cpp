@@ -34,8 +34,15 @@ namespace Faunus {
    */
   double switch_type::titrateall() {
     du=0;
-//    if (slp.runtest(runfraction)==false)
-//      return du;
+    double dNmu=0;
+    double nT1, nT2;                                 // number of each type in initial config.
+    nT1=nT2=0.0;
+
+    for (unsigned short i=0; i<sites.size(); i++)    // Correction to get a full hamiltonian.
+      if (con->p[sites[i]].id=fType2)
+        nT2++;
+    dNmu+=nT2*log(10)*(pc-pK);                       // The energy of fType1 states are choosen to 0. Subtract inital energy (note sign)
+                                                     // See faunus::titrate_switch 
     double sum=0;
     for (unsigned short i=0; i<sites.size(); i++) {
       cnt++;
@@ -68,7 +75,12 @@ namespace Faunus {
       }
       samplesites(*con);  // Average charges on all sites
     }
-    return sum;
+    for (unsigned short i=0; i<sites.size(); i++)    
+      if (con->p[sites[i]].id=fType2)
+        nT2++;
+    dNmu-=nT2*log(10)*(pc-pK);                    // Add ideal term of final state (note sign)   
+
+    return (full_ham==true ? sum + dNmu : sum);
   }
 
   void switch_type::samplesites(container &c) {

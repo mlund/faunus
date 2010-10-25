@@ -289,8 +289,6 @@ namespace Faunus {
   titrate_switch::titrate_switch(container &c, inputfile &in) {
     fType1= atom(in.getstr("Type_1", "UNK")).id;
     fType2= atom(in.getstr("Type_2", "UNK")).id;
-//    fName1= atom(in.getstr("Type_1", "UNK")).name;
-//    fName2= atom(in.getstr("Type_2", "UNK")).name;
     pc    =in.getflt("pc", 0);
     pK    =in.getflt("pK", 0);
     sites.clear();
@@ -304,18 +302,16 @@ namespace Faunus {
     if (i<0) i=random();
     if ( p[i].id == fType1 ) {
       p[i].id=fType2;
-//      p[i].name=fName2;
     }
     else {  
       p[i].id=fType1;
-//      p[i].name=fName1;
     }
     recent = i;
   }
   
 
   double titrate_switch::energy(container &con, double du) {
-    if (con.p[recent].id==fType1)
+    if (con.trial[recent].id==fType1)
       return du+( log(10.)*( pc - pK )  );
     else
       return du-( log(10.)*( pc - pK )  );

@@ -7,6 +7,7 @@ namespace Faunus {
     du=utot=dp=deltadp=0;
     cnt=naccept=0;
     runfraction=1;
+    full_ham=false;
     dp_opt=false;
     dp_min=0;
     dp_max=10;

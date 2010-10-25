@@ -46,11 +46,11 @@ namespace Faunus {
       void p2atom(particle &); // Convert particle to ObenBabel atom
     public:
       iobabel();
-      vector<particle> p;                         //!< Placeholder for loaded data
-      particle get(int);                          //!< Convert i'th babel atom to a particle
-      void read(string, bool=true);               //!< Read entire file (autodetect format from extension)
+      vector<particle> p;           //!< Placeholder for loaded data
+      particle get(int);   //!< Convert i'th babel atom to a particle
+      void read(string, bool=true); //!< Read entire file (autodetect format from extension)
       bool write(string,const vector<particle> &);//!< Write coordinates (format from extension)
-      vector<int> neighbors(int);                 //!< Get list of neighboring atoms
+      vector<int> neighbors(int);   //!< Get list of neighboring atoms
   };
 }
 #endif

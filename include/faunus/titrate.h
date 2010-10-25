@@ -91,7 +91,9 @@ namespace Faunus {
   };
 
   /*! \brief Class to perform titration of atoms to switch between two types of particles: 
-   *  fType1/fType2. For referece fType1 will be used to designate a 'bound' state.
+   *  fType1/fType2. For referece: fType1 will be used to designate a 'bound' state
+   *  and pK is the negative logaritm (ten base) of the dissociation constant. Equally, pc is
+   *  the negative logarithm (ten base) of our potential determining species.
    *  \author Bjoern Persson
    */
   class titrate_switch {
@@ -101,7 +103,7 @@ namespace Faunus {
     public:
       int recent;                           //!< Attempted site to change state type
       vector<unsigned int> sites;           //!< Titratable sites
-      double pc, pK;                        //!< Solution 'pH' value and binding constant
+      double pc, pK;                        //!< Solution 'pH' value and binding constant (-log scale)
       titrate_switch(container&, inputfile &);
       void exchange(vector<particle> &, int=-1);
       double energy(container &, double);

@@ -61,7 +61,10 @@ namespace Faunus {
 
         usys.initialize( systemEnergy() );
 
-        fout << in.info() << con.info() << pot.info() << std::flush;
+        fout << in.info() << con.info() << pot.info();
+        fout << "# Macromolecular charges and dipole moments:" << endl;
+        fout << "#   First: z=" <<  g[0].charge(con.p) << " mu=" << g[0].dipole(con) << endl;
+        fout << std::flush;
       }
     
       ~npt_molecular() {

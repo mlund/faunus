@@ -55,8 +55,6 @@ int main() {
           temper.swap(*bottles[j], *bottles[j+1]);
         if (k!=j && k!=i)
           temper.swap(*bottles[k], *bottles[k+1]);
-
-        cout << i << " " << j << " " << k << endl;
      }
 
     } // end of inner loop
@@ -64,7 +62,7 @@ int main() {
     for (int i=0; i<bottles.size(); ++i)
       bottles[i]->macroloop();
 
-    cout << loop.timing();
+    cout << loop.timing() << temper.info();
   } // end of outer loop
 
   for (int i=0; i<bottles.size(); ++i)

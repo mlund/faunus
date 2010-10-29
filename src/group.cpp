@@ -463,6 +463,24 @@ namespace Faunus {
     return a;
   }
 
+  double macromolecule::dipole(const container &con) {
+    masscenter(con);
+    particle tmp;
+    mu.clear();
+    for (int i=beg; i<=end; ++i) {
+      tmp=con.p[i];
+      tmp.x = tmp.x - cm.x;
+      tmp.y = tmp.y - cm.y;
+      tmp.z = tmp.z - cm.z;
+      con.boundary(tmp);
+      mu += tmp*tmp.charge;
+    }
+    double a=mu.len();
+    dip+=a;    // avg. scalar
+    dip2+=a*a; // avg. scalar squared
+    return a;
+  }
+
   double macromolecule::radius(vector<particle> &p) {
     double r,max=0;
     masscenter(p);

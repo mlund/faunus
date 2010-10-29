@@ -98,6 +98,7 @@ namespace Faunus {
       double sqend2enddistance(container &);      //!< Calculate squared end-to-end distance
       double vradius(vector<particle> &);         //!< Volume based protein radius
       double dipole(vector<particle> &);          //!< Calculate dipole moment
+      double dipole(const container &);           //!< Calculate dipole moment
       void zmove(container &, double);            //!< Move in z-direction, only
       virtual void rotate(container &, double, double=0); //!< Rotate around a point
       void rotate(container &, point, double, double);

@@ -311,7 +311,7 @@ namespace Faunus {
     for (int i=beg; i<=end; i++) {
       string name=atom[p[i].id].name;
       o << i << "   " << name << "   " << p[i].charge << endl;
-      cout << "writing: " << p[i].charge << endl;
+//      cout << "writing: " << p[i].charge << endl;
     }
     return fio.writefile(filename, o.str());
   }

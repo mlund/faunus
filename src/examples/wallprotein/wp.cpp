@@ -84,11 +84,10 @@ int main() {
   ioaam aam;
   ioxtc xtc(con.len);
 
-  // No titrering?
+  // No titration?
   if (in.getflt("tit_runfrac",0.5)<1e-3) {
-    for (int i=0; i<atom.list.size(); i++) {
+    for (int i=0; i<atom.list.size(); i++) 
       atom[i].pka = 0.;
-    }
   }
 
   // Grand canonical stuff
@@ -99,28 +98,32 @@ int main() {
   if ( nmt.load(con, "gcgroup.conf")==true )                                       
     aam.load(con, "confout.aam");
 
-  // No titrering?
+  // No titration?
   if (in.getflt("tit_runfrac",0.5)<1e-3) {
-    pol.loadCharges("q_pH5.dat", con.p);                  // Load polymer charges from file
+    pol.loadCharges("q.in", con.p);                  // Load polymer charges from file
     con.trial=con.p;
   }
   
-  // Set system charge to zero
+  // Neutralize residual charge with counterions and smearing
     double q, qint;
     q = con.charge();                                 // Total system charge
+      cout << "# Total system charge before counterion addition: " << q  << endl;
     qint = floor(q);                                  // Integer system charge
-//    if (qint < 0) {                                   // Negative charge
-//      salt.group::add(con, atom["NA"].id, -qint );    //   add cations
-//      cout << "# Add " << -qint << " Na-" << endl;
-//   } else  {                                         // Positive charge
-//      salt.group::add(con, atom["CL"].id, qint );     //   add anions
-//      cout << "# Add " << qint << " Cl-" << endl;
-//    }
-    #ifndef NOSLIT
-      q = q-qint; 				      // Noninteger system charge (always positive)
-      q = q/wall.size();                          //   to be smeared out per wall particle
+    if (qint < 0) {                                   // Negative charge
+      salt.group::add(con, atom["NA"].id, -qint );    //   add cations
+      cout << "# Add " << -qint << " Na-" << endl;
+   } else  {                                          // Positive charge
+      salt.group::add(con, atom["CL"].id, qint );     //   add anions
+      cout << "# Add " << qint << " Cl-" << endl;
+    }
+    #ifdef NOSLIT
+      //it does not work
+    #else
+      q = q-qint;                                     // Noninteger system charge (always positive)
+      q = q/wall.size();                              //   to be smeared out per wall particle
       for (int i=wall.beg; i<=wall.end; i++) {
         con.p[i].charge=con.p[i].charge-q;
+        con.trial[i].charge=con.p[i].charge;
       }
     #endif
   
@@ -212,7 +215,7 @@ int main() {
     io.writefile("gcgroup.conf", nmt.print());
 
     tit.applycharges(con.trial);                      // Set average charges on all titratable sites
-    pol.saveCharges("q.dat", con.trial);              // Save average charges to disk
+    pol.saveCharges("q.out", con.trial);              // Save average charges to disk
     con.trial=con.p;                                  // Restore original charges
 
     // Stop if energy drift is to high

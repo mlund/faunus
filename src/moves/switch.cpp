@@ -39,7 +39,7 @@ namespace Faunus {
     nT1=nT2=0.0;
 
     for (unsigned short i=0; i<sites.size(); i++)    // Correction to get a full hamiltonian.
-      if (con->p[sites[i]].id=fType2)
+      if (con->p[sites[i]].id==fType2)
         nT2++;
     dNmu+=nT2*log(10)*(pc-pK);                       // The energy of fType1 states are choosen to 0. Subtract inital energy (note sign)
                                                      // See faunus::titrate_switch 
@@ -76,7 +76,7 @@ namespace Faunus {
       samplesites(*con);  // Average charges on all sites
     }
     for (unsigned short i=0; i<sites.size(); i++)    
-      if (con->p[sites[i]].id=fType2)
+      if (con->p[sites[i]].id==fType2)
         nT2++;
     dNmu-=nT2*log(10)*(pc-pK);                    // Add ideal term of final state (note sign)   
 

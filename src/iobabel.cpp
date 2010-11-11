@@ -3,20 +3,6 @@
 namespace Faunus {
 
   iobabel::iobabel() {
-    // Teach Babel some new "elements"!! (see openbabel "data.cpp")
-    int n = OpenBabel::etab.GetNumberOfElements();
-    for (int i=0; i<atom.list.size(); i++) {
-      std::ostringstream o;
-      o << n++ << " "              // "atomic" number
-        << atom.list[i].name << " "   // symbol
-        << 0 << " "                // AREneg
-        << atom.list[i].radius << " " // radius covalent
-        << atom.list[i].radius << " " // radius vdw
-        << 20 << " "               // max bonds
-        << atom.list[i].mw << " "     // weight
-        << "0 0 0 0 0 0 Faunus";
-      OpenBabel::etab.ParseLine(o.str().c_str());     
-    }
   }
 
   void iobabel::p2atom(particle &p) {
@@ -26,12 +12,11 @@ namespace Faunus {
 
   /*!
    * This will read a molecular file format into the particle
-   * vector. If the structure file contains residue names and
-   * if the number of pacticles is equal to the number of
-   * residues, the residue name will be used to identify the
-   * particle type.
+   * vector. Residue name is used to identify the particle and
+   * one should make sure that the number of residues match the
+   * number of particles.
    */
-  void iobabel::read(string filename, bool resnaming) {
+  void iobabel::read(string filename) {
     p.clear();
     obmol.Clear();
     obconv.SetInFormat(obconv.FormatFromExt(filename.c_str()));
@@ -39,14 +24,9 @@ namespace Faunus {
     for (int i=1; i<=obmol.NumAtoms(); i++)
       p.push_back(get(i));
 
-    // Use residue names for particle recognition
-    if ( resnaming==true && obmol.NumResidues() == p.size() ) {
-      int i=0;
-      OpenBabel::OBResidue* obres;
-      FOR_RESIDUES_OF_MOL(obres, obmol) {
-        p[i++].id = atom[ obres->GetName() ].id;
-      }
-    }
+    // Did number of residues correspond to number of atoms?
+    if (obmol.NumResidues() != p.size() )
+      std::cerr << "# Warning while loading " << filename << " - Number of residues != Number of particles.\n";
   }
 
   vector<int> iobabel::neighbors(int i) {
@@ -73,37 +53,32 @@ namespace Faunus {
 
   /*!
    * This function will convert between a babel atom and the
-   * faunus particle approach. Coordinates and molecular weight
-   * can be obtained from most file formats. Charge and radius
-   * are currently supported only by the PQR format (at least
-   * as far as we know).
-   *
-   * \note Since we cannot fetch the atomname from the original
-   *       structure file, opened by babel, the recognition of
-   *       particles is done via their molecular weight. That is,
-   *       if you want to recognize a non-atomic particle one could
-   *       use an exotic element and assign the same weight to a
-   *       particle in the "faunatoms.dat" file. Ugly, we know but
-   *       it'll have to do for now.
+   * faunus particle approach. In OB atoms are real atoms from
+   * the periodic table which is usually not particularly useful
+   * in Faunus. We therefore use the RESIDUE name to identify the
+   * particle.
    */
   particle iobabel::get(int i) {
-    obatomPtr = obmol.GetAtom(i);
-    v=obatomPtr->GetVector();
+    particle a;
+    double c[3];
+    obatomPtr = obmol.GetAtom(i);        // Get pointer to i'th OB atom
+    obresPtr  = obatomPtr->GetResidue(); // Get residue that i'th OB atom belongs to
+    a=atom( obresPtr->GetName() );       // and use residue name to determine Faunus species type
+    
+    v=obatomPtr->GetVector();            // Get XYZ coordinates
     v.Get(c);
     a.x=c[0]; a.y=c[1]; a.z=c[2];
-    a.mw=obatomPtr->GetAtomicMass();
-    if (a.mw<1e-5)
-      a.mw=1;   //we don't like weightless atoms.
-    string name=string( OpenBabel::etab.GetSymbol( obatomPtr->GetAtomicNum() ) );
-    a.id=atom[name].id;
-    a.charge=obatomPtr->GetPartialCharge();
-//    std::cout << int(a.id) << " " << name << " " << obatomPtr->GetAtomicNum() << std::endl;
-
+    
+    a.charge=obatomPtr->GetPartialCharge(); // Get partial charge
+    
     if (obatomPtr->HasData("Radius")) {
       OpenBabel::OBPairData *gdat = dynamic_cast<OpenBabel::OBPairData *>( obatomPtr->GetData("Radius") );
       a.radius = atof( gdat->GetValue().c_str() );
-    } else
-      a.radius=2;
+    }
+        
+    if (atom[ obresPtr->GetName() ].id==0)
+      std::cerr << "# Warning: OpenBabel atom " << i << " is unknown\n";
+    
     return a;
   }
 }//namespace

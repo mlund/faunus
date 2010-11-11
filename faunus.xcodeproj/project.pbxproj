@@ -79,6 +79,10 @@
 		733DF7F111664BEC008347FA /* hardsphere.h in Headers */ = {isa = PBXBuildFile; fileRef = 733DF7F011664BEC008347FA /* hardsphere.h */; };
 		733DF8D0116766B0008347FA /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		733DF8D1116766C2008347FA /* pkaDH.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73280BD811419B640054855E /* pkaDH.cpp */; };
+		7367E216126C698D00A84F11 /* eqtitrate.h in Headers */ = {isa = PBXBuildFile; fileRef = 7367E215126C698D00A84F11 /* eqtitrate.h */; };
+		7367E217126C698D00A84F11 /* eqtitrate.h in Headers */ = {isa = PBXBuildFile; fileRef = 7367E215126C698D00A84F11 /* eqtitrate.h */; };
+		7367E219126C69C900A84F11 /* eqtitrate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7367E218126C69C900A84F11 /* eqtitrate.cpp */; };
+		7367E21A126C69C900A84F11 /* eqtitrate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7367E218126C69C900A84F11 /* eqtitrate.cpp */; };
 		739618E810309A7B0051F3E3 /* pka.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739618E710309A7B0051F3E3 /* pka.cpp */; };
 		73961ECF1030A6920051F3E3 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		73961EDD1030ADEF0051F3E3 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
@@ -546,6 +550,8 @@
 		733DF7CE11664912008347FA /* isobaricDP */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = isobaricDP; sourceTree = BUILT_PRODUCTS_DIR; };
 		733DF7F011664BEC008347FA /* hardsphere.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = hardsphere.h; sourceTree = "<group>"; };
 		733DF8C91167667C008347FA /* pkaDH */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pkaDH; sourceTree = BUILT_PRODUCTS_DIR; };
+		7367E215126C698D00A84F11 /* eqtitrate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = eqtitrate.h; sourceTree = "<group>"; };
+		7367E218126C69C900A84F11 /* eqtitrate.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = eqtitrate.cpp; sourceTree = "<group>"; };
 		739618DA10309A010051F3E3 /* pka */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pka; sourceTree = BUILT_PRODUCTS_DIR; };
 		739618E710309A7B0051F3E3 /* pka.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pka.cpp; path = src/examples/titration/pka.cpp; sourceTree = "<group>"; };
 		73961ED91030ADE60051F3E3 /* isobaric */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = isobaric; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -973,6 +979,7 @@
 				739C421D103079CF00A3A5B9 /* charge.cpp */,
 				739C421E103079CF00A3A5B9 /* clustermove.cpp */,
 				732812EB1146D45B0054855E /* crankshaft.cpp */,
+				7367E218126C69C900A84F11 /* eqtitrate.cpp */,
 				739C421F103079CF00A3A5B9 /* membrane.cpp */,
 				739C4220103079CF00A3A5B9 /* miscmove.cpp */,
 				739C4222103079CF00A3A5B9 /* rotational.cpp */,
@@ -1003,12 +1010,13 @@
 			isa = PBXGroup;
 			children = (
 				739C426010307A1C00A3A5B9 /* base.h */,
-				7397F32F12423BEA0019FDCD /* replicaexchange.h */,
 				739C426110307A1C00A3A5B9 /* charge.h */,
 				739C426210307A1C00A3A5B9 /* clustermove.h */,
 				732812ED1146D4ED0054855E /* crankshaft.h */,
+				7367E215126C698D00A84F11 /* eqtitrate.h */,
 				739C426310307A1C00A3A5B9 /* membrane.h */,
 				739C426410307A1C00A3A5B9 /* miscmove.h */,
+				7397F32F12423BEA0019FDCD /* replicaexchange.h */,
 				739C426510307A1C00A3A5B9 /* rosenbluth.h */,
 				739C426610307A1C00A3A5B9 /* rotational.h */,
 				739C426710307A1C00A3A5B9 /* saltbath.h */,
@@ -1156,6 +1164,7 @@
 				7397F33812423C2B0019FDCD /* npt_molecular.h in Headers */,
 				7397F33912423C2B0019FDCD /* nvt_atomic.h in Headers */,
 				7397F35412423F2E0019FDCD /* pot_elhcvdw.h in Headers */,
+				7367E216126C698D00A84F11 /* eqtitrate.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1230,6 +1239,7 @@
 				7397F33B12423C2B0019FDCD /* npt_molecular.h in Headers */,
 				7397F33C12423C2B0019FDCD /* nvt_atomic.h in Headers */,
 				7397F35512423F2E0019FDCD /* pot_elhcvdw.h in Headers */,
+				7367E217126C698D00A84F11 /* eqtitrate.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1542,6 +1552,7 @@
 			};
 			buildConfigurationList = 739C41DC103078A800A3A5B9 /* Build configuration list for PBXProject "faunus" */;
 			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
@@ -1599,7 +1610,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "cd ${TARGET_BUILD_DIR}\ncp test.conf isobaric.conf\ncp test.dump confout.dump\n";
+			shellScript = "echo \"Build phase run script!!\"\n#cd ${TARGET_BUILD_DIR}\n#pwd\n#cp test.conf isobaric.conf\n#cp test.dump confout.dump\n#export\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -1719,6 +1730,7 @@
 				732812EC1146D45B0054855E /* crankshaft.cpp in Sources */,
 				73E1A75211C14075003315DB /* messagepool.cpp in Sources */,
 				7397F34112423C550019FDCD /* replicaexchange.cpp in Sources */,
+				7367E219126C69C900A84F11 /* eqtitrate.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1762,6 +1774,7 @@
 				739C442C10314D6300A3A5B9 /* histogram.cpp in Sources */,
 				73E1A75311C14075003315DB /* messagepool.cpp in Sources */,
 				7397F34212423C550019FDCD /* replicaexchange.cpp in Sources */,
+				7367E21A126C69C900A84F11 /* eqtitrate.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

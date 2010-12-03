@@ -1,10 +1,12 @@
 #ifndef FAU_GROUP_H
 #define FAU_GROUP_H
 
+#ifndef SWIG
 #include "faunus/common.h"
 #include "faunus/average.h"
 #include "faunus/particles.h"
 #include "faunus/point.h"
+#endif
 
 namespace Faunus {
   class container;
@@ -105,7 +107,7 @@ namespace Faunus {
       void rotate(container &, point, point, double); //!< Rotate around arbitrary point
       void transrot(container &, double, double); 
       using group::add;
-      void add(container &, inputfile &);         //!< Add according to inputfile
+      //void add(container &, inputfile &);       //!< Add according to inputfile
       macromolecule& operator=(const group&);     //!< Copy from group
       virtual void isobaricmove(container &,double);  //!< Displace CM with scale difference
       virtual int nummolecules();
@@ -150,7 +152,8 @@ namespace Faunus {
       polymer();
       vector<int> neighbors(int) const;
       string info();
-      bool areneighbors(int, int) const;
+      bool addbond(int, int);                    //!< Add bond between two particles
+      bool areneighbors(int, int) const;         //!< True if i and j are bonded to each other
       string getVMDBondScript();                 //!< Print TCL script for VMD to create bonds
 #ifdef BABEL
       bool babeladd( container &, inputfile & ); //!< Load molecule from disk using OpenBabel

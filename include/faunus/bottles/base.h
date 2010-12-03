@@ -1,12 +1,14 @@
 #ifndef FAU_BOTTLE_H
 #define FAU_BOTTLE_H
 
+#ifndef SWIG
 #include "faunus/common.h"
 #include "faunus/inputfile.h"
 #include "faunus/energy/base.h"
 #include "faunus/ensemble.h"
 #include "faunus/analysis.h"
 #include "faunus/io.h"
+#endif
 
 namespace Faunus {
 

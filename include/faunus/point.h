@@ -1,10 +1,12 @@
 #ifndef FAU_POINT_H
 #define FAU_POINT_H
 
+#ifndef SWIG
 #include "faunus/common.h"
-#include "faunus/slump.h"
+#endif
 
 namespace Faunus {
+  class random;
   /*!
    * \brief Hypersphere coordinates
    * \author Martin Trulsson

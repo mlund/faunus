@@ -123,8 +123,8 @@ namespace Faunus {
     public:
       iopov(container &);
       void clear();                       //!< Clear output buffer
-      void box(float);                    //!< Add cubic box
-      void cell(float);                   //!< Add spherical cell
+      //void box(float);                  //!< Add cubic box
+      //void cell(float);                 //!< Add spherical cell
       void light(float);                  //!< Add light source
       void connect(point&, point&, float);//!< Connect two points w. a cylinder
       void camera();                      //!< Specify camera location and viewpoint
@@ -186,7 +186,7 @@ namespace Faunus {
       vector<group*> g;                        //!< List of PBC groups to be saved as whole
       ioxtc(float);
       bool OpenTrajectory(string);             //!< Not finished!
-      bool LoadFrame(int, vector<particle> &); //!< Not finished!
+      //bool LoadFrame(int, vector<particle> &);//!< Not finished!
       bool save(string, vector<particle> &);   //!< Save a frame to trj file.
       bool save(string, box &);                //!< Save a frame to trj file (PBC)
       bool save(string, vector<particle> &, vector<group> &); //!< Save groups

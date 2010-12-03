@@ -26,7 +26,9 @@ namespace Faunus {
 
     // Did number of residues correspond to number of atoms?
     if (obmol.NumResidues() != p.size() )
-      std::cerr << "# Warning while loading " << filename << " - Number of residues != Number of particles.\n";
+      std::cerr << "# Warning while loading " << filename
+        << " - Number of residues (" << obmol.NumResidues() << ") != "
+        << "Number of particles (" << p.size() << ")\n";
   }
 
   vector<int> iobabel::neighbors(int i) {
@@ -77,7 +79,7 @@ namespace Faunus {
     }
         
     if (atom[ obresPtr->GetName() ].id==0)
-      std::cerr << "# Warning: OpenBabel atom " << i << " is unknown\n";
+      std::cerr << "# Warning: OpenBabel atom " << i << " is unknown (" << obresPtr->GetName() << ")\n";
     
     return a;
   }

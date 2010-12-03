@@ -12,12 +12,6 @@ namespace Faunus {
   /*!
    * \param pX  Negative logarithm of the X activity (titrant)
    * \param pKd Negative logarithm of dissociation constant.
-   * 
-   * By default this will set the reference state of AX
-   * to zero. This choice has no effect on the titration
-   * but if the same species enters several processes special
-   * care must be taking to calculate the energy drift in the
-   * system by using.
    */
   void eqtitrate::data::set(double pX, double pKd) {
     ddG = -log(pow(10, -pKd));
@@ -35,6 +29,9 @@ namespace Faunus {
     mu_AX = mu_A + mu_X - ddG;
   }
 
+  /*!
+   * Returns true if the particle either matches AX or A.
+   */
   bool eqtitrate::data::one_of_us(particle &p) {
     if (p.id!=id_AX)
       if (p.id!=id_A)
@@ -42,14 +39,23 @@ namespace Faunus {
     return true;
   }
 
+  /*!
+   * Returns the intrinsic energy of the given particle. Intrinsic
+   * means the energy stemming from the equilibrium expression when
+   * no external interactions are accounted for (activity factors unity).
+   */
   double eqtitrate::data::energy(particle &p) {
     if (p.id==id_AX)
-      return mu_AX; // mu_AX is always the ground state!;
+      return mu_AX;
     if (p.id==id_A)
       return mu_A;
     return 0;
   }
-  
+ 
+  /*!
+   * This will swap the state of given particle from AX<->A and
+   * return the energy change associated with the process.
+   */
   double eqtitrate::data::swap(particle &p) {
     double uold=energy(p);
     point pos=p;           // backup coordinate
@@ -108,7 +114,12 @@ namespace Faunus {
     }
     return true;
   }
-  
+ 
+  /*!
+   * This will go through the specified particle vector and
+   * locate titratable sites. Their indexes will be stored
+   * in the sites vector.
+   */
   void eqtitrate::findSites(vector<particle> &p) {
     sites.clear();
     for (int i=0; i<p.size(); i++)

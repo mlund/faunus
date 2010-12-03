@@ -12,7 +12,7 @@ namespace Faunus {
    * This template included interactions for harmonic bonds in
    * bonded polymers. The potential class given must have a function
    * double bond(particle&, particle&) that calculates the energy
-   * between two neighboing atoms.
+   * between two neighboing, bonded atoms.
    */
   template<class T> class springinteraction : public interaction<T> {
     private:

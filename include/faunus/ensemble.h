@@ -51,7 +51,7 @@ namespace Faunus {
       bool          load(container &, string);      //!< Regenerate groups to fit previus configuration
       string        print();                        //!< To print info of last configuration
       string        info();
-      int           gcd(int,int);
+      //int           gcd(int,int);
       
   };
 }//namespace

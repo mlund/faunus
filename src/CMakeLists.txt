@@ -9,7 +9,7 @@ set(objs slump physconst inputfile point io titrate container
     moves/base moves/translational moves/rotational moves/charge
     moves/miscmove moves/saltbath moves/clustermove #moves/rosenbluth 
     moves/crankshaft moves/membrane moves/reptation moves/switch
-    moves/replicaexchange moves/eqtitrate) 
+    moves/replicaexchange moves/eqtitrate notification) 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 #----- xdrfile static library for gromacs output -----
@@ -34,6 +34,14 @@ if(Subversion_FOUND)
   if(Faunus_WC_FOUND)
     add_definitions("-D__SVN_REV__=${Faunus_WC_REVISION}")
   endif()
+endif()
+
+# -------------------------------------
+#   Growl notification (MacOS X)
+# -------------------------------------
+find_program( GROWLNOTIFYEXE NAMES "growlnotify" HINTS "/usr/local/bin/" )
+if(GROWLNOTIFYEXE)
+  add_definitions(-DGROWLNOTIFYEXE="${GROWLNOTIFYEXE}")
 endif()
 
 # -----------------------

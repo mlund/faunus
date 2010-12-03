@@ -36,8 +36,9 @@ namespace Faunus {
       fio.writefile("systemenergy.dat", confuout() );
   }
   
-  void systemenergy::operator+=(double du) {
+  systemenergy & systemenergy::operator+=(double du) {
     sum+=du;
+    return *this;
   }
   
   void systemenergy::check(checkValue &test) {

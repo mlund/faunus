@@ -89,7 +89,7 @@ namespace Faunus {
       void initialize(double);    //!< Initialize all data
       void update(double);        //!< Specify current system energy and recalc averages
       void track();               //!< Add a time element to confu
-      void operator+=(double);    //!< Add system energy change
+      systemenergy & operator+=(double);    //!< Add system energy change
       string info();              //!< Info
       void write(); 
       string confuout();
@@ -293,8 +293,8 @@ namespace Faunus {
         string name;
         average<double> phi, expphi;
       };
-    public:
       vector<data> list;
+    public:
       void add(point, string);
       void sample(container &, energybase &);
       string info();

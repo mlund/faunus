@@ -40,6 +40,7 @@ namespace Faunus {
     p.mw=list[i].mw;
     p.id=list[i].id;
     p.radius=list[i].radius;
+    p.hydrophobic=list[i].hydrophobic;
     return p;
   }
 

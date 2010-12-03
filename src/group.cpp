@@ -715,7 +715,7 @@ namespace Faunus {
     }
   }
 
-  void macromolecule::add(container &con, inputfile &in ) { }
+  //void macromolecule::add(container &con, inputfile &in ) { }
 
   /*! \warning Assumes a cubic box!
   */
@@ -827,6 +827,19 @@ namespace Faunus {
 
   vector<int> polymer::neighbors(int i) const {
     return nb.at(i-beg);
+  }
+
+  bool polymer::addbond(int i, int j) {
+      if (i>=beg && i<=end)
+        if (j>=beg && j<=end)
+          if (areneighbors(i,j)==false) {
+            if ( (i-beg)<=nb.size() ) nb.resize(i-beg+1);
+            if ( (j-beg)<=nb.size() ) nb.resize(j-beg+1);
+            nb[i-beg].push_back(j);
+            nb[j-beg].push_back(i);
+            return true;
+          }
+    return false;
   }
 
   //!< is j a neighbor to polymer atom i?

@@ -1,4 +1,5 @@
 #include "faunus/point.h"
+#include "faunus/slump.h"
 
 namespace Faunus {
 

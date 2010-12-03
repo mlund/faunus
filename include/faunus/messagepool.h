@@ -27,15 +27,14 @@ namespace Faunus {
    * \author Mikael Lund
    */
   class messagepool {
-  private:
+  public:
     class clientdata {
     public:
       bool fatal;                        //!< True if fatal error encountered
       vector<string> msg;                //!< List of reported messages
       clientdata & operator+=(string);   //!< Convenient addition of new messages
     };
-  public:
-    vectorid<clientdata> client;         //!< Vector of client data
+    vectorid<messagepool::clientdata> client;         //!< Vector of client data
     int fatalerror();                    //!< Return index of first client w. fatal error. Else -1.
     string info();                       //!< Report with all messages grouped per client ID
   };

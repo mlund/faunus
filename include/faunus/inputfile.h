@@ -29,7 +29,7 @@ namespace Faunus {
       inputfile();
       inputfile(string);                     //!< Constructor
       bool load(string);                     //!< Load inputfile from disk
-      bool checkEmptyValues();               //!< Check if loaded values are complete (return true if ok)
+      //bool checkEmptyValues();             //!< Check if loaded values are complete (return true if ok)
       string getstr(string, string="");      //!< Get string value
       double getflt(string, double=0);       //!< Get double value
       int getint(string, int=0);             //!< Get integer value
@@ -41,7 +41,7 @@ namespace Faunus {
       string print();                        //!< Print a string of the inputfile
       void updateval(string, string);        //!< Update the inputfile for next run
       void updateval(string, double);        //!< Update the inputfile for next run
-      bool write();                          //!< Write to input file
+      //bool write();                        //!< Write to input file
   };
 
   /*!

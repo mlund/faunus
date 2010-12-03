@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import sys
-import faunus
+import pyfaunus as faunus
 
 print faunus.faunus_splash(),            # Faunus spam
 config = "pka.conf"                      # Default input (parameter) file
@@ -16,8 +16,10 @@ sm   = faunus.saltmove(nvt,con,pot,inp)  # create object for salt movements
 prot = faunus.macromolecule()
 aam  = faunus.ioaam()                    # load/save configurations from/to disk
 pqr  = faunus.iopqr()                    # load/save configurations from/to disk
-prot.add(con, inp)                       # laod protein
-prot.move(con, -prot.cm);                # ..translate it to origo (0,0,0)
+prot.add( con,
+        aam.load(inp.getstr("protein"))) # load protein structure
+prot.masscenter(con)
+prot.move(con, -prot.cm)                 # ..translate it to origo (0,0,0)
 prot.accept(con)                         # ..accept translation
 salt = faunus.salt()                     # Group for salt and counter ions
 salt.add(con, inp)                       #   Insert sodium ions
@@ -31,7 +33,6 @@ print inp.info(), con.info(), tit.info(), pot.info(),
 while loop.macroCnt():                   # Markov chain 
     while loop.microCnt():
         sys += sm.move(salt)             # Displace salt particles
-
         sys += tit.titrateall()          # Titrate protein sites
         prot.charge(con.p)               # Re-calc. protein charge
         prot.dipole(con.p)               # Re-calc. dipole moment

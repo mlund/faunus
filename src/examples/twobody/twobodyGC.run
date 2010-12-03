@@ -9,10 +9,10 @@ nion2      $nion2
 tion1      NA
 tion2      CL
 nprot1     1
-protein1   struct/poon.aam
+protein1   calbindin.aam
 nprot2     1
-protein2   struct/poon.aam
-atomfile   faunatoms.dat
+protein2   calbindin.aam
+atomfile   ../../../misc/faunatoms.dat
 gofr_pp_rf 0.0
 
 saltmove_dp      240
@@ -61,9 +61,10 @@ do
     nion1=$[salt+142]
     nion2=$[salt]
     titrunfrac=0.5
-    microsteps=1000
+    microsteps=100
     mkinput
-    $exe > $prefix.eq
+    $exe #> $prefix.eq
+    exit
 
     # Production run
     if [ $smear -eq 1 ]; then

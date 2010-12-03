@@ -1,9 +1,10 @@
 #ifndef FAU_particles_h
 #define FAU_particles_h
 
+#ifndef SWIG
 #include "faunus/common.h"
 #include "faunus/slump.h"
-//#include "faunus/point.h"
+#endif
 
 namespace Faunus {
   class point;

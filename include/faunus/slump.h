@@ -1,18 +1,26 @@
 #ifndef FAU_slump_h
 #define FAU_slump_h
-#include <cmath>
-#include <iostream>
-#include <sstream>
-#include <cstdlib>  // Including this SUCKS! Be aware of abs()!
-#include <ctime>
 
-// Needed for sunCC ("__SUNPRO_CC" or "__sun" ?)
-#ifdef __SUNPRO_CC
-#include <stdlib.h>
-#include <time.h>
-#endif
-#ifdef HAVETR1
-#include <tr1/random>
+#ifdef SWIG
+%module pyfaunus
+%{
+#include "faunus/slump.h"
+%}
+#else
+  #include <cmath>
+  #include <iostream>
+  #include <sstream>
+  #include <cstdlib>  // Including this SUCKS! Be aware of abs()!
+  #include <ctime>
+
+  // Needed for sunCC ("__SUNPRO_CC" or "__sun" ?)
+  #ifdef __SUNPRO_CC
+    #include <stdlib.h>
+    #include <time.h>
+  #endif
+  #ifdef HAVETR1
+    #include <tr1/random>
+  #endif
 #endif
 
 namespace Faunus {
@@ -53,11 +61,11 @@ namespace Faunus {
   */
   class ran2: public random {
     private:
-      const static int IM1=2147483563, IM2=2147483399;
-      const static int IA1=40014, IA2=40692, IQ1=53668, IQ2=52774;
-      const static int IR1=12211, IR2=3791, NTAB=32, IMM1=IM1-1;
-      const static int NDIV=1+IMM1/NTAB;
-      const static double EPS;//=3.0e-16;
+      static const int IM1=2147483563, IM2=2147483399;
+      static const int IA1=40014, IA2=40692, IQ1=53668, IQ2=52774;
+      static const int IR1=12211, IR2=3791, NTAB=32, IMM1=IM1-1;
+      static const int NDIV=1+IMM1/NTAB;
+      static const double EPS;//=3.0e-16;
       double AM,RNMX;
       int idum, idum2, iy;
       int iv[32]; 

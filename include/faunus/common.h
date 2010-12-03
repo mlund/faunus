@@ -1,5 +1,7 @@
 #ifndef FAU_COMMON_H
 #define FAU_COMMON_H
+
+#ifndef SWIG
 #include <string>
 #include <vector>
 #include <iostream>
@@ -10,6 +12,7 @@
 #include <cmath>
 #include <algorithm>
 #include <cassert>
+#endif
 
 namespace Faunus {
   //Keep this at a minimum, please!

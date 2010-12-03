@@ -1,7 +1,11 @@
 #ifndef _VECTORID_
 #define _VECTORID_
+
+#ifndef SWIG
 #include <vector>
 #include <string>
+#endif
+
 namespace Faunus {
   /*!
    * \brief Vector class template with access by string id

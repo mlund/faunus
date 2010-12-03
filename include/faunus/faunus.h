@@ -19,6 +19,7 @@
 #ifndef FAUNUS_H
 #define FAUNUS_H
 
+#ifndef SWIG
 #include "faunus/macros.h"
 #include "faunus/common.h"
 #include "faunus/slump.h"
@@ -44,7 +45,9 @@
 #include "faunus/moves/crankshaft.h"
 #include "faunus/moves/saltbath.h"
 #include "faunus/moves/replicaexchange.h"
+#include "faunus/moves/eqtitrate.h"
 #include "faunus/bottles/base.h"
+#endif
 
 namespace Faunus {
   string faunus_splash();
@@ -53,7 +56,7 @@ namespace Faunus {
     private:
       unsigned short width;
     public:
-      void printTitle(string);
+      //void printTitle(string);
       template<class T> void printValue(string s, T v) {
         std::cout << s << " = " << v << std::endl;
       }

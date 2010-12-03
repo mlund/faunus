@@ -11,6 +11,7 @@
  */
 
 #include "faunus/faunus.h"
+#include "faunus/notification.h"
 #include "faunus/potentials/pot_coulomb.h"
 
 using namespace Faunus;
@@ -19,6 +20,7 @@ using namespace std;
 int main(int argc, char* argv[]) {
   cout << faunus_splash();              // Faunus info
   slump slp;
+  notifyUser shout;                     // A class for notifying user about progress
   // Input
   string config = "twobody.conf";       // Default input (parameter) file
   if (argc==2) config = argv[1];        // ..also try to get it from the command line
@@ -170,6 +172,7 @@ int main(int argc, char* argv[]) {
   test.check("Protein2_charge", g[1].Q.avg());
   cout << test.report();
 
+  shout.message("TwobodyGC finished!",true);
   return test.returnCode();
 }
 

@@ -16,7 +16,7 @@ namespace Faunus {
       bool overlap(const vector<particle> &, const group &, const particle &);///< group<>arbitrary (external) particle
       bool overlap(const vector<particle> &, const group &, const group &);   ///< group<->group.
       bool overlap(const vector<particle> &, const group &, const group &, double &); ///< group<->group.
-      bool overlap(vector<particle> &, vector<short int> &, double);          ///< internal collisions within subset
+      //bool overlap(vector<particle> &, vector<short int> &, double);          ///< internal collisions within subset
   };
 }
 #endif

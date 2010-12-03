@@ -1,7 +1,10 @@
 #ifndef FAU_COUNTDOWN_H
 #define FAU_COUNTDOWN_H
+
+#ifndef SWIG
 #include <string>
 #include <ctime>
+#endif
 
 namespace Faunus {
 

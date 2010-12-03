@@ -36,8 +36,9 @@ namespace Faunus {
       return pow(atom[p.id].mean - p.charge, 2) / (2*atom[p.id].variance);
     }
 
-  public:
     vector<data> sites;   //!< List of titratable sites and their mean charges.
+
+  public:
     chargeregGaussian( ensemble&, container&, energybase&); //!< Initialize and find titratable sites
     double titrateall();          //!< Attempt to randomly titrate all sites
     string info();                //!< Info string

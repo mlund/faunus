@@ -7,7 +7,7 @@ namespace Faunus {
   class pc {
     public:
       pc(double temp=298.15) { T=temp; }
-      const static double
+      static const double
         pi,
         e0,                 //!< Permittivity of vacuum [C^2/(J*m)]
         kB,                 //!< Boltzmann's constant [J/K]

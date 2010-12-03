@@ -48,11 +48,11 @@ namespace Faunus {
       }
   };
 
-  class io_aam : public particleIO {
-    bool load(container &, string);
-    bool load(vector<particle> &, string);
-    bool sabe(container &, string);
-  };
+  //class io_aam : public particleIO {
+  //  bool load(container &, string);
+  //  bool load(vector<particle> &, string);
+  //  bool sabe(container &, string);
+  //};
 
   /*!\brief General class for particle I/O.
    * \author Mikael Lund

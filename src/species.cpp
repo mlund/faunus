@@ -44,8 +44,8 @@ namespace Faunus {
     return p;
   }
 
-  atoms::data & atoms::operator[] (char i) { return list[i]; }
-  atoms::data & atoms::operator[] (string s) { return list[ find(s) ]; }
+  Faunus::data & atoms::operator[] (char i) { return list[i]; }
+  Faunus::data & atoms::operator[] (string s) { return list[ find(s) ]; }
   particle atoms::operator() (char i) { return get(i); }
   particle atoms::operator() (string s) { return get(find(s)); }
 

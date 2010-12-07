@@ -44,7 +44,7 @@ REQUIREMENTS:
   - C/C++ compiler (gnu,clang,intel,sun,pgi,ibm)
   - cmake 2.8
   Optional:
-  - Boost python (for python module)
+  - SWIG 2.0+ (for python, ruby, ... modules)
   - OpenBabel 2 (numerous molecular formats)
   - Doxygen and Graphviz (for code manual)
   - Xcode (for neat environment on macos x)
@@ -61,7 +61,7 @@ COMPILING:
 
   Options:
     -DENABLE_OPENMP=on|OFF   Enable OpenMP support
-    -DENABLE_PYTHON=ON|off   Enable python support
+    -DENABLE_SWIG=ON|off     Enable SWIG modules (python, ruby etc.)
     -DENABLE_FORTRAN=on|OFF  Compile legacy fortran programs
     -DENABLE_BABEL=ON|off    Use OpenBabel for file I/O
     -DENABLE_TWISTER=on|OFF  Use Mersenne Twister for random numbers
@@ -83,17 +83,16 @@ COMPILING:
     $ rm CMakeCache.txt
 
 PYTHON SUPPORT:
-  Classes from Faunus can be accessed via Python, provided that
-  the python module is compiled (requires boost python). Build with:
+  Faunus classes can be accessed via Python, provided that
+  the python module is compiled (requires SWIG). Build with:
 
-  $ make python-generate
-  $ make python
+  $ make _pyfaunus
 
-  Include misc/python in PYTHONPATH and access Faunus
-  via "import faunus".
+  Include misc/swig in PYTHONPATH and access Faunus
+  via "import pyfaunus".
 
   Non-system python frameworks (MacOS) may be specified the first time
-  cmake is run. For example for MacPorts:
+  cmake is run. For example, for MacPorts:
 
   $ LDFLAGS=-F/opt/local/Library/Frameworks cmake .
 
@@ -101,7 +100,7 @@ PYTHON SUPPORT:
   directory before starting python. For example:
 
   $ export DYLD_LIBRARY_PATH=/opt/local/Library/Frameworks/Python.framework/Versions/2.6
-  $ python
+  $ ipython
 
 DIRECTORY LAYOUT:
   src          Sourcecode and examples
@@ -110,3 +109,4 @@ DIRECTORY LAYOUT:
   misc         Miscellaneous
   doc          Code documentation (auto generated)
   unittests    Unittesting of compiled programs (try 'make test')
+

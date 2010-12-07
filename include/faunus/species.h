@@ -4,6 +4,23 @@
 #include "faunus/inputfile.h"
 
 namespace Faunus {
+  class data {
+    public:
+      char id;           //!< id number
+      double sigma,      //!< LJ diameter
+             eps,        //!< LJ epsilon
+             radius,     //!< Radius
+             mw,         //!< Weight
+             charge,     //!< Charge
+             pka,        //!< pKa value
+             chempot,    //!< Chemical potential
+             mean,       //!< Mean value... (charge, sasa, etc.)
+             variance;   //!< ...and the spread around it.
+      bool hydrophobic;  //!< Are we hydrophobic?
+      string name;       //!< Name. Avoid spaces.
+      bool operator==(const data &d) const { return (*this==d); }
+  };
+
   /*!
    * Class to load and handle atom types from disk
    * Example:\n
@@ -26,21 +43,6 @@ namespace Faunus {
       particle get(char);           //!< Convert n'th atom to a particle
       char find(string);            //!< Find atom id from name
       char find(double, double=0.1);//!< Find atom id from molecular weight
-      struct data {
-        char id;           //!< id number
-        double sigma,      //!< LJ diameter
-               eps,        //!< LJ epsilon
-               radius,     //!< Radius
-               mw,         //!< Weight
-               charge,     //!< Charge
-               pka,        //!< pKa value
-               chempot,    //!< Chemical potential
-               mean,       //!< Mean value... (charge, sasa, etc.)
-               variance;   //!< ...and the spread around it.
-        bool hydrophobic;  //!< Are we hydrophobic?
-        string name;       //!< Name. Avoid spaces.
-        bool operator==(const data &d) const { return (*this==d); }
-      };
       atoms();                               //!< Constructor - set UNK atom type (fallback)
       vector<data> list;                     //!< List of atoms
       vector< vector<double> >

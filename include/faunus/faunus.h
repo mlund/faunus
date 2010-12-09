@@ -35,6 +35,7 @@
 #include "faunus/energy/base.h"
 #include "faunus/widom.h"
 #include "faunus/messagepool.h"
+#include "faunus/notification.h"
 #include "faunus/moves/translational.h"
 #include "faunus/moves/rotational.h"
 #include "faunus/moves/charge.h"

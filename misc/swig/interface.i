@@ -1,6 +1,7 @@
 %module pyfaunus
 %{
 #include "faunus/faunus.h"
+#include "faunus/potentials/pot_coulomb.h"
 #include "faunus/potentials/pot_hscoulomb.h"
 #include "faunus/potentials/pot_minimage.h"
 #include "faunus/potentials/pot_test_rf.h"
@@ -48,6 +49,7 @@ using namespace std;
 #include "faunus/mcloop.h"
 #include "faunus/titrate.h"
 #include "faunus/histogram.h"
+#include "faunus/notification.h"
 #include "faunus/hardsphere.h"
 #include "faunus/moves/base.h"
 #include "faunus/moves/translational.h"
@@ -59,10 +61,11 @@ using namespace std;
 #include "faunus/moves/crankshaft.h"
 #include "faunus/moves/saltbath.h"
 #include "faunus/moves/eqtitrate.h"
+#include "faunus/moves/replicaexchange.h"
 #include "faunus/energy/base.h"
 #include "faunus/energy/springinteraction.h"
-//#include "faunus/bottles/base.h"
-//#include "faunus/bottles/npt_molecular.h"
+#include "faunus/bottles/base.h"
+#include "faunus/bottles/npt_molecular.h"
 
 /* -----------------------------------
  *        Define some templates
@@ -72,6 +75,7 @@ using namespace std;
 %template(vector_group) std::vector<Faunus::group>;
 %template(vector_polymer) std::vector<Faunus::polymer>;
 %template(vector_particle) std::vector<Faunus::particle>;
+%template(vector_macromolecule) std::vector<Faunus::macromolecule>;
 namespace std {
   %template(vector_int) std::vector<int>;
   %template(vector_dbl) std::vector<double>;
@@ -83,12 +87,16 @@ namespace std {
 %feature("notabstract") interaction;
 %feature("notabstract") springinteraction;
 
+#include "faunus/potentials/pot_coulomb.h"
+%template(interaction_coulomb) Faunus::interaction<Faunus::pot_coulomb>;
+
 #include "faunus/potentials/pot_hscoulomb.h"
 %template(interaction_hscoulomb) Faunus::interaction<Faunus::pot_hscoulomb>;
 
 #include "faunus/potentials/pot_minimage.h"
 %template(interaction_r12minimage) Faunus::interaction<Faunus::pot_r12minimage>;
 %template(springinteraction_r12minimage) Faunus::springinteraction<Faunus::pot_r12minimage>;
+%template(interaction_minimage) Faunus::interaction<Faunus::pot_minimage>;
 
 #include "faunus/potentials/pot_silkspider.h"
 %template(interaction_silkspider) Faunus::interaction<Faunus::pot_silkspider>;

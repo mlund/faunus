@@ -37,9 +37,9 @@ namespace Faunus {
       ioaam aam;
       inputfile in;
       slump slp;
+      std::ofstream fout;               //!< Output file stream - place all file output here.
 
     public:
-      std::ofstream fout;               //!< Output file stream - place all file output here.
       double T;                         //!< Temperature [K] (currently unused))
       double P;                         //!< Pressure over kT
       systemenergy usys;                //!< Class for tracking total system energy

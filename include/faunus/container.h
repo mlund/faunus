@@ -19,6 +19,7 @@ namespace Faunus {
       double getvolume() {return volume;}
       virtual void setvolume(double);                     //!< Specify new volume
       virtual bool collision(const particle &)=0;         //!< Check for collision with walls
+      virtual bool slicecollision(const particle &) { return false; };      //!< Check for collision with the slice borders 
       virtual void randompos(point &)=0;                  //!< Random point within container
       virtual string info();                              //!< Return info string
       virtual string povray();                            //!< POVRAY object representing the cell
@@ -56,6 +57,121 @@ namespace Faunus {
         z=std::abs(a.z);//+a.radius;
         return ( x*x+y*y+z*z > r2 ) ? true:false;
       }
+  };
+
+  //---------------------------------------------------------
+  /*! \brief Cuboid simulation container with periodic boundaries
+   *
+   *  \author Chris Evers
+   *  \date Lund, nov 2010
+   *
+   *  The cuboid simulation container has right angles, rectangular faces 
+   *  and periodic boundaries. A slice can be introduced to constrain the position
+   *  of some of the particles to a part of the cuboid. The function slicecollision
+   *  can be used to make sure particles are positioned within in the slice.
+   */
+  class cuboid : public container {
+    private:
+      bool setlen(point);                      //!< Reset cuboid sidelengths
+      bool setslice(point, point);             //!< Reset slice position
+
+    public:
+      cuboid(inputfile &);                    //!< Read input parameters
+
+      point len;                               //!< Sidelengths
+      point len_half, len_inv;                 //!< Half and inverse sidelengths
+      point slice_min, slice_max;              //!< Position of slice corners
+
+      string info();                           //!< Return info string
+
+      point randompos();                       //!< Get point with random position
+      void randompos(point &);                 //!< Move point to random position
+//    //void randompos(vector<point> &);       //   not implemented
+
+      bool slicecollision(const particle &a);  //!< Check collision with slice edges
+      bool collision(const particle &a) {      //!< Check collision with cuboid edges
+        if (std::abs(a.x) > len_half.x ||
+            std::abs(a.y) > len_half.y ||
+            std::abs(a.z) > len_half.z  )
+          return true;
+        return false;
+      }
+
+      //! Calculate distance using the minimum image convention
+      inline double sqdist(const point &p1, const point &p2) {   //!< Squared distance 
+        double dx=std::abs(p1.x-p2.x),
+               dy=std::abs(p1.y-p2.y),
+               dz=std::abs(p1.z-p2.z);
+        if (dx>len_half.x) dx-=len.x;
+        if (dy>len_half.y) dy-=len.y;
+        if (dz>len_half.z) dz-=len.z;
+        return dx*dx + dy*dy + dz*dz;
+      }
+
+      inline double dist(const point &p1, const point &p2) {     //!< Root squared distance
+        return sqrt(sqdist(p1,p2));
+      }
+
+      inline point vdist(const point &a, const point &b) {       //!< Distance vector
+        point r;
+        r.x=std::abs(a.x-b.x);
+        r.y=std::abs(a.y-b.y);
+        r.z=std::abs(a.z-b.z);
+        if (r.x>len_half.x) r.x-=len.x;
+        if (r.y>len_half.y) r.y-=len.y;
+        if (r.z>len_half.z) r.z-=len.z;
+        return r;
+      }
+
+      inline int anint(double x) const {
+        return int(x>0. ? x+.5 : x-.5);
+      }
+
+      //! Apply periodic boundary conditions
+      inline void boundary(point &a) const {
+        if (std::abs(a.x)>len_half.x) a.x-=len.x*anint(a.x*len_inv.x);
+        if (std::abs(a.y)>len_half.y) a.y-=len.y*anint(a.y*len_inv.y);
+        if (std::abs(a.z)>len_half.z) a.z-=len.z*anint(a.z*len_inv.z);
+      }
+  };
+
+  //---------------------------------------------------------
+  /*! \brief Cuboidslit: cubuid without periodic boundary in the z direction
+   *  
+   *  \author Chris Evers
+   *  \date Lund, nov 2010
+   */
+  class cuboidslit : public cuboid {
+    public:
+      cuboidslit(inputfile &);
+      string info();
+
+      //! Calculate distance using the minimum image convention
+      inline double sqdist(const point &p1, const point &p2) {   //!< Squared distance 
+        double dx=std::abs(p1.x-p2.x),
+               dy=std::abs(p1.y-p2.y),
+               dz=p1.z-p2.z;
+        if (dx>len_half.x) dx-=len.x;
+        if (dy>len_half.y) dy-=len.y;
+        return dx*dx + dy*dy + dz*dz;
+      }
+
+      inline point vdist(const point &a, const point &b) {       //!< Distance vector
+        point r;
+        r.x=std::abs(a.x-b.x);
+        r.y=std::abs(a.y-b.y);
+        r.z=a.z-b.z;
+        if (r.x>len_half.x) r.x-=len.x;
+        if (r.y>len_half.y) r.y-=len.y;
+        return r;
+      }
+
+      //! Apply periodic boundary conditions
+      inline void boundary(point &a) const {
+        if (std::abs(a.x)>len_half.x) a.x-=len.x*anint(a.x*len_inv.x);
+        if (std::abs(a.y)>len_half.y) a.y-=len.y*anint(a.y*len_inv.y);
+      }
+
   };
 
   //---------------------------------------------------------

@@ -38,6 +38,7 @@ namespace Faunus {
       virtual int random();                      //!< Picks a random particle within this group
       point masscenter(const vector<particle> &); //!< Calculate center-of-mass
       point masscenter(const container &);  //!< Calc. center-of-mass
+      point masscenter(const container &, const vector<particle> &p) const;  //!< Calc. center-of-mass without updating cm and cm_trial
       virtual string info();                //!< Print information
       bool operator==(const group&) const;
       group& operator+=(const group&);

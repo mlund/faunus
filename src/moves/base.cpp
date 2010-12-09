@@ -15,7 +15,6 @@ namespace Faunus {
     dp_cnt=0;
     dp_N=1000;
     dp_dist.init(dp_width, dp_min, dp_max);
-    zconstrain=0;
   }
   
   /*!
@@ -28,7 +27,6 @@ namespace Faunus {
    * - prefix_dpmax (maximum dp to sample)
    * - prefix_dpwidth (distance between dp points)
    * - prefix_dpsamples (number of dp parameters to sample)
-   * - zconstrain (Constrains the displacement from getting closer than this value from a wall)
    */
   void markovmove::getInput(inputfile &in) {
     runfraction = in.getflt(prefix+"runfrac",runfraction);
@@ -43,7 +41,6 @@ namespace Faunus {
       if (dp<dp_min || dp>dp_max)
         std::cerr << "Warning: " << prefix << "dp is out of range!" << endl;
     }
-    zconstrain = in.getflt("zconstrain", zconstrain);
   }
 
   double markovmove::newdp() {

@@ -93,11 +93,8 @@ namespace Faunus {
       con->trial[v[i]] = rot.rotate( con->p[v[i]] );
 
     bool hc=false;
-    particle t;
-    t.x = g.cm_trial.x;
-    t.y = g.cm_trial.y;	
-    t.z = g.cm_trial.z + zconstrain;	
-    if (con->collision(t)==true) 
+    g.cm_trial = g.masscenter(*con, con->trial);
+    if (con->slicecollision(g.cm_trial)==true) 
       hc=true;
     for (int i=0; i<v.size(); i++) {
       if (con->collision(con->trial[v[i]])==true) {
@@ -109,6 +106,7 @@ namespace Faunus {
     if (hc==true) {
       rc=HC;
       du=0;
+      g.cm_trial=g.cm;
       for (int i=0; i<v.size(); i++)
         con->trial[v[i]] = con->p[v[i]];
       return du;
@@ -123,6 +121,7 @@ namespace Faunus {
       return du;
     } else rc=ENERGY;
     du=0;
+    g.cm_trial=g.cm;
     for (int i=0; i<v.size(); i++)
       con->trial[v[i]] = con->p[v[i]];
     return du;

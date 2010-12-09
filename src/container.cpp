@@ -117,6 +117,117 @@ namespace Faunus {
     return o.str();
   }
 
+  //----------- CUBOID --------------------------
+
+  cuboid::cuboid(inputfile &in) {
+    atom.load(in);
+    double cubelen=in.getflt("cuboid_len",-1);
+    if (cubelen<=0) {
+      len.x=in.getflt("cuboid_xlen",0);
+      len.y=in.getflt("cuboid_ylen",0);
+      len.z=in.getflt("cuboid_zlen",0);
+    } else {
+      len.x=cubelen;
+      len.y=cubelen;
+      len.z=cubelen;
+    }
+    setlen(len);
+    point min;
+    min.x=in.getflt("cuboid_xmin",0);
+    min.y=in.getflt("cuboid_ymin",0);
+    min.z=in.getflt("cuboid_zmin",0);
+    point max;
+    max.x=in.getflt("cuboid_xmax",len.x);
+    max.y=in.getflt("cuboid_ymax",len.y);
+    max.z=in.getflt("cuboid_zmax",len.z);
+    setslice(min,max);
+  }
+
+  bool cuboid::setlen(point l) {
+    assert(l.x>0);              // debug information
+    assert(l.y>0);              // 
+    assert(l.z>0);              // 
+    if (l.x<=0  ||              // check non-negative value
+        l.y<=0  ||              // 
+        l.z<=0  )               // 
+      return false;             // 
+    len = l;                    // cuboid sidelength
+    len_half=l*0.5;             // half cuboid sidelength
+    len_inv.x=1./len.x;         // inverse cuboid side length
+    len_inv.y=1./len.y;         // 
+    len_inv.z=1./len.z;         // 
+    volume = len.x*len.y*len.z; // cuboid volume
+    return true;
+  }
+
+  bool cuboid::setslice(point min, point max) {
+    assert(min.x=>0);              // debug information
+    assert(min.y=>0);              // 
+    assert(min.z=>0);              // 
+    if (min.x<0  ||                // check non-negative value
+        min.y<0  ||                // 
+        min.z<0  )                 // 
+      return false;                // 
+    assert(max.x<=len.x);          // debug information
+    assert(max.y<=len.y);          // 
+    assert(max.z<=len.z);          // 
+    if (max.x>len.x  ||            // check non-negative value
+        max.y>len.y  ||            // 
+        max.z>len.z  )             // 
+      return false;                // 
+    slice_min = len_half-max;      // set minimum corner (other way around than in input!!)
+    slice_max = len_half-min;      // set maximum corner
+    return true;
+  }
+
+  string cuboid::info() {
+    std::ostringstream o;
+    o << container::info() 
+      << "#   Sidelength           = " << len.x << "x" << len.y << "x" << len.z << endl
+      << "#   Slice position       = " << slice_min.x << "-" << slice_max.x << "x" 
+                                       << slice_min.y << "-" << slice_max.y << "x" 
+                                       << slice_min.z << "-" << slice_max.z << endl;
+    return o.str();
+  }
+
+  point cuboid::randompos() {
+    point m;
+    randompos(m);
+    return m;
+  }
+
+  void cuboid::randompos(point &m) {
+    m.x = slp.random_half()*len.x;
+    m.y = slp.random_half()*len.y;
+    m.z = slp.random_half()*len.z;
+  }
+
+  bool cuboid::slicecollision(const particle &a) {
+    if (std::abs(a.x) > len_half.x  ||
+        std::abs(a.y) > len_half.y  ||
+        std::abs(a.z) > len_half.z  ||
+                 a.x  < slice_min.x ||
+                 a.y  < slice_min.y ||
+                 a.z  < slice_min.z ||
+                 a.x  > slice_max.x ||
+                 a.y  > slice_max.y ||
+                 a.z  > slice_max.z  )
+      return true;
+    return false;
+  }
+
+  //----------- CUBOIDSLIT --------------------------
+
+  cuboidslit::cuboidslit(inputfile &in) : cuboid(in) {
+  }
+  
+  string cuboidslit::info() {
+    std::ostringstream o;
+    o << cuboid::info() 
+      << "#   Periodicity          = slit: xy periodicity only" << endl;
+    return o.str();
+  }
+
   //----------- BOX --------------------------
 
   void box::setvolume(double v) {

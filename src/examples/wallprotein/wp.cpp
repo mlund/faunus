@@ -18,11 +18,19 @@ using namespace std;
 using namespace Faunus;
 
 #ifdef NOSLIT
-	typedef pot_r12minimage Tpot;
-	typedef box Tcon;
+  typedef pot_r12minimage Tpot;
+  #ifndef CUBOID
+    typedef box Tcon;
+  #else
+    typedef cuboid Tcon;
+  #endif
 #else
-	typedef pot_r12minimageXY Tpot;
-	typedef slit Tcon;
+  typedef pot_r12minimageXY Tpot;
+  #ifndef CUBOID
+    typedef slit Tcon;
+  #else
+    typedef cuboidslit Tcon;
+  #endif
 #endif
 
 int main() {
@@ -34,10 +42,14 @@ int main() {
   grandcanonical nmt;
   Tcon con(in);
   double* zhalfPtr;
-#ifdef NOSLIT
-  zhalfPtr=&con.len_half;
+#ifdef CUBOID
+  zhalfPtr=&con.len_half.z;
 #else
-  zhalfPtr=&con.zlen_half;
+  #ifdef NOSLIT
+    zhalfPtr=&con.len_half;
+  #else
+    zhalfPtr=&con.zlen_half;
+  #endif
 #endif
   springinteraction<Tpot> pot(in);
   distributions dst;    // Distance dep. averages
@@ -48,9 +60,14 @@ int main() {
 #ifdef BABEL
   pol.babeladd( con, in );
 #endif
-  atom.reset_properties(con.p);
+//  atom.reset_properties(con.p);  //rudimentary with new babeladd
   con.trial=con.p;
-  pol.move(con, -pol.cm);         // Translate polymer to origo (0,0,0)
+  pol.masscenter(con);
+  #ifdef CUBOID
+    pol.move(con, -pol.cm+(con.slice_min+con.slice_max)*0.5);         // Translate polymer to the middle of the slice or the origo (0,0,0) if no slice defined
+  #else
+    pol.move(con, -pol.cm);         // Translate polymer to origo (0,0,0)
+  #endif
   pol.accept(con);                // .. accept translation
   monomermove mm(nmt,con,pot,in); // Rattle MC move
   crankShaft cs(nmt,con,pot,in);  // ...crankshaft
@@ -82,7 +99,11 @@ int main() {
   io io;
   iopqr pqr;
   ioaam aam;
-  ioxtc xtc(con.len);
+  #ifdef CUBOID
+    ioxtc xtc(con.len.z);
+  #else
+    ioxtc xtc(con.len);
+  #endif
 
   // No titration?
   if (in.getflt("tit_runfrac",0.5)<1e-3) {
@@ -95,37 +116,40 @@ int main() {
   GCchargereg tit(nmt,con,pot,in);
 
   // Load stored configuration?
-  if ( nmt.load(con, "gcgroup.conf")==true )                                       
+  if ( nmt.load(con, "gcgroup.conf")==true ) {
     aam.load(con, "confout.aam");
+    pol.masscenter(con);
+    }
 
   // No titration?
   if (in.getflt("tit_runfrac",0.5)<1e-3) {
-    pol.loadCharges("q.in", con.p);                  // Load polymer charges from file
-    con.trial=con.p;
+    if (pol.loadCharges("q.in", con.p))                   // Load polymer charges from file
+      con.trial=con.p;
+    else {
+      cerr << "!! charge file not loaded !!" << endl;
+      return 0;
+    }
   }
   
   // Neutralize residual charge with counterions and smearing
+    if (con.p[salt.beg].id==atom["ghost"].id)          // If ghost particle
+      con.p[salt.beg].charge=0;                       //   set its charge to zero
     double q, qint;
     q = con.charge();                                 // Total system charge
-      cout << "# Total system charge before counterion addition: " << q  << endl;
     qint = floor(q);                                  // Integer system charge
     if (qint < 0) {                                   // Negative charge
       salt.group::add(con, atom["NA"].id, -qint );    //   add cations
-      cout << "# Add " << -qint << " Na-" << endl;
+      cout << "# Added " << -qint << " Na-";
    } else  {                                          // Positive charge
       salt.group::add(con, atom["CL"].id, qint );     //   add anions
-      cout << "# Add " << qint << " Cl-" << endl;
+      cout << "# Added " << qint << " Cl-";
     }
-    #ifdef NOSLIT
-      //it does not work
-    #else
-      q = q-qint;                                     // Noninteger system charge (always positive)
-      q = q/wall.size();                              //   to be smeared out per wall particle
-      for (int i=wall.beg; i<=wall.end; i++) {
-        con.p[i].charge=con.p[i].charge-q;
-        con.trial[i].charge=con.p[i].charge;
+    if (con.p[salt.beg].id==atom["ghost"].id) {        // If ghost particle
+      q = q-qint;                                     // Noninteger charge (always positive)
+      con.p[salt.beg].charge=-q;                      //   put on ghost particle
+      con.trial[salt.beg].charge=con.p[salt.beg].charge;
+        cout << " and set the ghost particle charge to " << -q << " to obtain electroneutrality" << endl;
       }
-    #endif
   
   // Calculate initial system energy
   systemenergy sys(
@@ -182,6 +206,15 @@ int main() {
         dst.add("qtot", z, pol.charge(con.p));
         dst.add("Rg2", z, pol.sqmassgradius(con));
         dst.add("Ree2", z, pol.sqend2enddistance(con)); 
+       
+        for (int i=salt.beg; i<=salt.end; i++) {
+          if (con.p[i].id==atom["NA"].id) {
+            dst.add("Na", *zhalfPtr-con.p[i].z, *zhalfPtr-con.p[i].z);
+            }
+          if (con.p[i].id==atom["CL"].id) {
+            dst.add("Cl", *zhalfPtr-con.p[i].z, *zhalfPtr-con.p[i].z);
+            }
+        }
         for (int i=pol.beg; i<=pol.end; i++) {
           std::ostringstream s; s << "q" << i;
           dst.add( s.str(), *zhalfPtr-con.p[i].z, con.p[i].charge );	
@@ -189,7 +222,11 @@ int main() {
       }
 
       if (slp.random_one()>0.95) {
-        xtc.setbox(con.len,con.len,(*zhalfPtr)*2);
+        #ifdef CUBOID
+          xtc.setbox(con.len.x,con.len.y,con.len.z);
+        #else
+          xtc.setbox(con.len,con.len,(*zhalfPtr)*2);
+        #endif
         xtc.save( "traj.xtc", con.p, vg );
       }
     } // END of micro loop
@@ -219,8 +256,8 @@ int main() {
     con.trial=con.p;                                  // Restore original charges
 
     // Stop if energy drift is to high
-    if (abs(sys.cur - sys.sum) > 10)
-      return(loop.macro);
+    //if (abs(sys.cur - sys.sum) > 10)
+    //  return(loop.macro);
       
   } // END of macro loop and simulation
 

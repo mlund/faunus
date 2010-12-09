@@ -3,6 +3,7 @@
 namespace Faunus {
 
   iobabel::iobabel() {
+    //OpenBabel::obErrorLog.SetOutputLevel(OpenBabel::obError);  // Supress babel warnings
   }
 
   void iobabel::p2atom(particle &p) {

@@ -34,12 +34,6 @@ namespace Faunus {
     g.rotate(*con, dp); 
     
     bool hc=false;
-    particle t;
-    t.x = g.cm_trial.x;
-    t.y = g.cm_trial.y;	
-    t.z = g.cm_trial.z + zconstrain;
-    if (con->collision(t)==true) 
-      hc=true;
     for (int i=g.beg; i<=g.end; i++) {
       if (con->collision(con->trial[i])==true) {
         hc=true;

@@ -110,6 +110,7 @@ namespace Faunus {
    *
    * \author Mikael Lund
    * \date Dec. 2007, Prague
+   * \todo Use masscenter(con,p) function implemented below.
    */
   point group::masscenter(const container &con) {
     double sum=0;
@@ -126,6 +127,31 @@ namespace Faunus {
     cm_trial = cm;
     assert(sum>0);
     return cm;
+  }
+
+  /*!
+   * This mass-center routine obeys periodic boundaries (if any)
+   * by first centering the first particle in (0,0,0), calc. CM
+   * and moving it back. Note that this function does NOT update the
+   * cm and cm_trial vectors!
+   *
+   * \author Chris Evers
+   * \date Nov. 2010, Lund
+   */
+  point group::masscenter(const container &con, const vector<particle> &p) const {
+    double sum=0;
+    point tcm;               // temporary mass center
+    point t, o = p.at(beg);  // set origo to first particle
+    for (int i=beg; i<=end; i++) {
+      t = p[i]-o;            // translate to origo
+      con.boundary(t);       // periodic boundary (if any)
+      tcm += t * p[i].mw;
+      sum += p[i].mw; 
+    }
+    tcm=tcm*(1./sum) + o;
+    con.boundary(tcm);
+    assert(sum>0);
+    return tcm;
   }
 
   void group::undo(particles &par) {
@@ -311,7 +337,6 @@ namespace Faunus {
     for (int i=beg; i<=end; i++) {
       string name=atom[p[i].id].name;
       o << i << "   " << name << "   " << p[i].charge << endl;
-//      cout << "writing: " << p[i].charge << endl;
     }
     return fio.writefile(filename, o.str());
   }
@@ -328,7 +353,6 @@ namespace Faunus {
       for (int k=0; k<n; k++) {
         f >> i >> s >> q;
         p[i].charge=q;
-        cout << q << endl;
       }
       f.close();
       cout << "# Loaded polymer charges from " << filename << endl;
@@ -515,7 +539,7 @@ namespace Faunus {
     double r2=0;
     double sum=0;
     point t, o;
-    masscenter(c);                      // recalculate center of mass
+//    masscenter(c);                      // recalculate center of mass
     for (int i=beg; i<=end; i++) {
       t = c.p[i]-cm;                    // vector to center of mass
       c.boundary(t);                    // periodic boundary (if any)

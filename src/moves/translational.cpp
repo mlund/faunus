@@ -203,11 +203,8 @@ namespace Faunus {
     g.move(*con, p); 
     
     bool hc=false;
-    particle t;
-    t.x = g.cm_trial.x;
-    t.y = g.cm_trial.y;	
-    t.z = g.cm_trial.z + zconstrain;	
-    if (con->collision(t)==true) 
+    g.cm_trial = g.masscenter(*con, con->trial);
+    if (con->slicecollision(g.cm_trial)==true) 
       hc=true;
     for (int i=g.beg; i<=g.end; i++) {
       if (con->collision(con->trial[i])==true) {
@@ -422,11 +419,8 @@ namespace Faunus {
     int n=g.displace(*con, dpv*dp); 
 
     bool hc=false;
-    particle t;
-    t.x = g.cm_trial.x;
-    t.y = g.cm_trial.y;	
-    t.z = g.cm_trial.z + zconstrain;	
-    if (con->collision(t)==true) 
+    g.cm_trial = g.masscenter(*con, con->trial);
+    if (con->slicecollision(g.cm_trial)==true) 
       hc=true;
     if (con->collision( con->trial[n] )==true)
       hc=true;
@@ -446,13 +440,14 @@ namespace Faunus {
         rsqr+=d2/(g.size()*g.size());           // Track mean square displacement per particle
         naccept++;                              // accept counter
         con->p[n] = con->trial[n];              // Accept move
-        g.masscenter(*con);                     // Recalc mass center
+        g.masscenter(*con);                     // Recalc mass center for cm and cm_trial
         return du;
       } else rc=ENERGY;
     }
     du=0;
     dpsqr+=0;
     con->trial[n] = con->p[n];
+    g.cm_trial=g.cm;
     return du;
   }
 }//namespace

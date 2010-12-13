@@ -42,8 +42,8 @@ namespace Faunus {
     public:
       expot_akesson(inputfile &in) {
         cnt=0;
-        double zmin = -in.getflt("cuboid_zlen",0)/2 - dz;
         dz = in.getflt("akesson_dz", 0.1);
+        double zmin = -in.getflt("cuboid_zlen",0)/2 - dz;
         lB = in.getflt("bjerrum",0);
         rho.init(dz, zmin, -zmin);
         phi.init(dz, zmin, -zmin);
@@ -63,10 +63,11 @@ namespace Faunus {
         return o.str();
       }
 
-      string save(cuboid &c) {
+      void save(cuboid &c) {
         std::ofstream f("akesson.dat");
         for (double z=-c.len_half.z; z<=c.len_half.z; z+=dz)
-          f << z << " " << rho(z).avg() << " " << phi(z) << endl;
+          if (rho(z).cnt>0)
+            f << z << " " << rho(z).avg() << " " << phi(z) << endl;
       }
 
       double energy( const particle &a ) { return a.charge*getPotential(a); }

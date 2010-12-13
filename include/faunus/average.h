@@ -26,8 +26,10 @@ namespace Faunus {
     virtual void add(T);            ///< Add value to current set.
     void reset();                   ///< Clear all data
     average & operator+=(T);        ///< Add value to current set. 
-    average operator+(const average &);///< Add two averages
-    bool operator==(const average &);  ///< Comparison operator
+    T operator*(T) const;           ///< Evaluates average times T
+    T operator+(T) const;           ///< Evaluates average plus T
+    average operator+(const average &);     ///< Add two averages
+    bool operator==(const average &) const; ///< Comparison operator
     bool operator<(const average &);
     //! Example of average class
     //! \example average-test.C
@@ -41,6 +43,10 @@ namespace Faunus {
     sum=sqsum=0;
     cnt=0;
   }
+
+  template<class T> T average<T>::operator*(T x) const { return sum/cnt * x; }
+
+  template<class T> T average<T>::operator+(T x) const { return sum/cnt + x; }
   
   template<class T> average<T> average<T>::operator+(const average &a) {
     average<T> r = *this;
@@ -61,7 +67,7 @@ namespace Faunus {
     cnt++;
   }
   
-  template<class T> bool average<T>::operator==(const average &a) {
+  template<class T> bool average<T>::operator==(const average &a) const {
     return (*this==a);
   }
   

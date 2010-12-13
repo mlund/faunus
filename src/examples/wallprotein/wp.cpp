@@ -10,6 +10,7 @@
  */
 #include "faunus/faunus.h"
 #include "faunus/energy/springinteraction.h"
+#include "faunus/energy/externalpotential.h"
 #include "faunus/potentials/pot_hsminimage.h"
 #include "faunus/potentials/pot_minimage.h"
 #include "faunus/potentials/pot_coulomb.h"
@@ -19,21 +20,14 @@ using namespace Faunus;
 
 #ifdef NOSLIT
   typedef pot_r12minimage Tpot;
-  #ifndef CUBOID
-    typedef box Tcon;
-  #else
-    typedef cuboid Tcon;
-  #endif
+  typedef cuboid Tcon;
 #else
   typedef pot_r12minimageXY Tpot;
-  #ifndef CUBOID
-    typedef slit Tcon;
-  #else
-    typedef cuboidslit Tcon;
-  #endif
+  typedef cuboidslit Tcon;
 #endif
 
 int main() {
+
   // General setup
   cout << faunus_splash();
   slump slp;
@@ -42,32 +36,20 @@ int main() {
   grandcanonical nmt;
   Tcon con(in);
   double* zhalfPtr;
-#ifdef CUBOID
   zhalfPtr=&con.len_half.z;
-#else
-  #ifdef NOSLIT
-    zhalfPtr=&con.len_half;
-  #else
-    zhalfPtr=&con.zlen_half;
-  #endif
-#endif
-  springinteraction<Tpot> pot(in);
+  springinteraction_expot<Tpot, expot_akesson> pot(in);
   distributions dst;    // Distance dep. averages
   histogram gofr(0.1,0, (*zhalfPtr)*2. );
 
   // Handle polymers
   polymer pol;
-#ifdef BABEL
-  pol.babeladd( con, in );
-#endif
-//  atom.reset_properties(con.p);  //rudimentary with new babeladd
+  #ifdef BABEL
+    pol.babeladd( con, in );
+  #endif
+  //  atom.reset_properties(con.p);  //rudimentary with new babeladd
   con.trial=con.p;
   pol.masscenter(con);
-  #ifdef CUBOID
-    pol.move(con, -pol.cm+(con.slice_min+con.slice_max)*0.5);         // Translate polymer to the middle of the slice or the origo (0,0,0) if no slice defined
-  #else
-    pol.move(con, -pol.cm);         // Translate polymer to origo (0,0,0)
-  #endif
+  pol.move(con, -pol.cm+(con.slice_min+con.slice_max)*0.5);         // Translate polymer to the middle of the slice or the origo (0,0,0) if no slice defined
   pol.accept(con);                // .. accept translation
   monomermove mm(nmt,con,pot,in); // Rattle MC move
   crankShaft cs(nmt,con,pot,in);  // ...crankshaft
@@ -99,11 +81,7 @@ int main() {
   io io;
   iopqr pqr;
   ioaam aam;
-  #ifdef CUBOID
-    ioxtc xtc(con.len.z);
-  #else
-    ioxtc xtc(con.len);
-  #endif
+  ioxtc xtc(con.len.z);
 
   // No titration?
   if (in.getflt("tit_runfrac",0.5)<1e-3) {
@@ -130,27 +108,27 @@ int main() {
       return 0;
     }
   }
-  
+
   // Neutralize residual charge with counterions and smearing
-    if (con.p[salt.beg].id==atom["ghost"].id)          // If ghost particle
-      con.p[salt.beg].charge=0;                       //   set its charge to zero
-    double q, qint;
-    q = con.charge();                                 // Total system charge
-    qint = floor(q);                                  // Integer system charge
-    if (qint < 0) {                                   // Negative charge
-      salt.group::add(con, atom["NA"].id, -qint );    //   add cations
-      cout << "# Added " << -qint << " Na-";
-   } else  {                                          // Positive charge
-      salt.group::add(con, atom["CL"].id, qint );     //   add anions
-      cout << "# Added " << qint << " Cl-";
-    }
-    if (con.p[salt.beg].id==atom["ghost"].id) {        // If ghost particle
-      q = q-qint;                                     // Noninteger charge (always positive)
-      con.p[salt.beg].charge=-q;                      //   put on ghost particle
-      con.trial[salt.beg].charge=con.p[salt.beg].charge;
-        cout << " and set the ghost particle charge to " << -q << " to obtain electroneutrality" << endl;
-      }
-  
+  if (con.p[salt.beg].id==atom["ghost"].id)          // If ghost particle
+    con.p[salt.beg].charge=0;                       //   set its charge to zero
+  double q, qint;
+  q = con.charge();                                 // Total system charge
+  qint = floor(q);                                  // Integer system charge
+  if (qint < 0) {                                   // Negative charge
+    salt.group::add(con, atom["NA"].id, -qint );    //   add cations
+    cout << "# Added " << -qint << " Na-";
+  } else  {                                          // Positive charge
+    salt.group::add(con, atom["CL"].id, qint );     //   add anions
+    cout << "# Added " << qint << " Cl-";
+  }
+  if (con.p[salt.beg].id==atom["ghost"].id) {        // If ghost particle
+    q = q-qint;                                     // Noninteger charge (always positive)
+    con.p[salt.beg].charge=-q;                      //   put on ghost particle
+    con.trial[salt.beg].charge=con.p[salt.beg].charge;
+    cout << " and set the ghost particle charge to " << -q << " to obtain electroneutrality" << endl;
+  }
+
   // Calculate initial system energy
   systemenergy sys(
         pot.energy( con.p, wall, salt) +
@@ -221,15 +199,16 @@ int main() {
         }
       }
 
+      if (slp.random_one()>0.8)
+        sys += pot.expot.update(con);
+
       if (slp.random_one()>0.95) {
-        #ifdef CUBOID
-          xtc.setbox(con.len.x,con.len.y,con.len.z);
-        #else
-          xtc.setbox(con.len,con.len,(*zhalfPtr)*2);
-        #endif
+        xtc.setbox(con.len.x,con.len.y,con.len.z);
         xtc.save( "traj.xtc", con.p, vg );
       }
     } // END of micro loop
+
+    pot.expot.save(con);
 
     sys.update(
         pot.energy( con.p, wall, salt) +
@@ -255,13 +234,10 @@ int main() {
     pol.saveCharges("q.out", con.trial);              // Save average charges to disk
     con.trial=con.p;                                  // Restore original charges
 
-    // Stop if energy drift is to high
-    //if (abs(sys.cur - sys.sum) > 10)
-    //  return(loop.macro);
-      
   } // END of macro loop and simulation
 
   cout << sys.info() << sm.info() << wm.info() << loop.info()
-       << mm.info()  << cs.info() << mr.info() << mt.info()
-       << tit.info() << sb.info() << pol.info();
+    << mm.info()  << cs.info() << mr.info() << mt.info()
+    << tit.info() << sb.info() << pol.info()<< sys.info()
+    << pot.info();
 }

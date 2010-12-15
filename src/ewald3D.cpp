@@ -27,7 +27,7 @@ namespace Faunus {
       eiyold[i].resize(2*kmax+1);
       eizold[i].resize(2*kmax+1);
     }
-    initKSpaceEwald()
+    initKSpaceEwald();
   }
 
   string Ewald::info() {

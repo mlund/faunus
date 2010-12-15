@@ -12,12 +12,14 @@
 #include <cmath>
 #include <algorithm>
 #include <cassert>
+#include <complex>
 #endif
 
 namespace Faunus {
   //Keep this at a minimum, please!
   using std::string;
   using std::vector; // Perhaps try boost::vector?
+  using std::complex;
   using std::endl;
   using std::setw;
   using std::abs;    // *very* important if cstdlib.h or algorithm is included!

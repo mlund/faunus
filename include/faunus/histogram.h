@@ -13,6 +13,14 @@ namespace Faunus {
   /*!
    * \brief Histogram class
    * \author Mikael Lund
+   * \code
+   * histogram h(0.1,-5,5);
+   * h.add(-4.9);
+   * h.add(4);
+   * h.add(-5.0);
+   * h.write("sletmig");
+   * float val=h.get(4); // val=0.3333
+   * \endcode
    */
   class histogram : protected xytable<float,unsigned long int> {
     friend class FAUrdf;
@@ -26,9 +34,6 @@ namespace Faunus {
     void add(float);
     void write(string);
     virtual float get(float);
-
-    //! Example of histogram class
-    //! \example histogram-test.C
   };
 
   /*!

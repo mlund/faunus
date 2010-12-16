@@ -2,7 +2,6 @@
  * Proton titration of a GLU3 porphyrin dendrimer in explicit salt.
  *
  * \author Bjorn Persson
- * \include glu3pka.cpp
  */
 #include "faunus/faunus.h"
 #include "faunus/energy/springinteraction.h"

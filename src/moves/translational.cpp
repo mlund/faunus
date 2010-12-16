@@ -244,7 +244,7 @@ namespace Faunus {
   }
 
   //-----------MOVE----------------------------------------
-  /*! \brief Class to prefom a random walk of a macromolecule in space
+  /*  \brief Class to prefom a random walk of a macromolecule in space
    *  \note Replaced by translate(?)
    *
   move::move(
@@ -310,6 +310,9 @@ namespace Faunus {
   }
 
   /*!
+   * \param e         Ensemble class
+   * \param c         Container class
+   * \param i         Interaction energy class
    * \param in        Inputfile object
    * \param p         Prefix for keywords in inputfile
    */

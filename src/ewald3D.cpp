@@ -1,12 +1,19 @@
 #include "faunus/energy/ewald3D.h"
 
 namespace Faunus {
+  const double 
+    Ewald::a1=0.254829592, Ewald::a2=-0.284496736,
+    Ewald::a3=1.421413741, Ewald::a4=-1.453152027,
+    Ewald::a5=1.061405429, Ewald::p1=0.3275911;
+
   Ewald::Ewald(inputfile &in) {
     int size  = in.getint("ewald_size",0);
     kmax      = in.getint("ewald_kmax",5);
     alpha     = in.getflt("ewald_alpha",0.001);
+    Ewapre    = in.getflt("ewald_Ewapre",0.01);
     lB        = in.getflt("bjerrum",7.12591);
     boxlen    = in.getflt("cuboid_xlen",0);
+    f=lB;
     halfboxlen= boxlen/2;
     alphasqrt=sqrt(alpha);
     double pi=std::acos(-1.);
@@ -35,30 +42,6 @@ namespace Faunus {
     o << "# kmax                     = " << kmax << endl
       << "# Number of wavefunctions  = " << totk << endl;
     return o.str();
-  }
-
-  /*********************
-    SYSTEM ENERGY
-   *********************/
-
-  double Ewald::realSpaceEwald(vector<particle> &p) {
-    double u=0;
-    int n = p.size();
-    for (int i=0; i<n-1; i++)
-      for (int j=i+1; j<n; j++)
-        if (p[i].charge * p[j].charge != 0)
-          u += realSpaceEwald( p[i], p[j] );
-    return lB*u;
-  }
-
-  double Ewald::realSpaceEwald(vector<particle> &p, int j) {
-    double u=0.;
-    int n=p.size();
-    for (int i=0; i<j ; i++)
-      u += realSpaceEwald(p[i],p[j]);
-    for (int i=j+1; i<n; i++)
-      u += realSpaceEwald(p[i],p[j]);
-    return lB*u;
   }
 
   void Ewald::calcAlphaEwald(int size, double inewaldpression) {
@@ -213,23 +196,23 @@ namespace Faunus {
   void Ewald::kSpaceEwald(vector<particle> &p, int j) {
     double twopii=twopi/boxlen;
 
-    eix[j][0]=complex<double>(1.0,0.0);
-    eiy[j][kmax]=complex<double>(1.0,0.0);
-    eiz[j][kmax]=complex<double>(1.0,0.0);
+    eix[j][0]    = complex<double>(1.0,0.0);
+    eiy[j][kmax] = complex<double>(1.0,0.0);
+    eiz[j][kmax] = complex<double>(1.0,0.0);
 
-    eix[j][1]= complex<double>(cos(twopii*p[j].x),sin(twopii*p[j].x));
-    eiy[j][kmax+1]= complex<double>(cos(twopii*p[j].y),sin(twopii*p[j].y));
-    eiz[j][kmax+1]= complex<double>(cos(twopii*p[j].z),sin(twopii*p[j].z));
+    eix[j][1]      = complex<double>( cos(twopii*p[j].x), sin(twopii*p[j].x) );
+    eiy[j][kmax+1] = complex<double>( cos(twopii*p[j].y), sin(twopii*p[j].y) );
+    eiz[j][kmax+1] = complex<double>( cos(twopii*p[j].z), sin(twopii*p[j].z) );
 
-    eiy[j][kmax-1]= conj(eiy[j][kmax+1]); //1+kmax = -1   2+kmax = -2 osv.
-    eiz[j][kmax-1]= conj(eiz[j][kmax+1]);
+    eiy[j][kmax-1] = conj( eiy[j][kmax+1] ); //1+kmax = -1   2+kmax = -2 osv.
+    eiz[j][kmax-1] = conj( eiz[j][kmax+1] );
 
-    for(int kk=2;kk<(kmax+1);kk++) {
-      eix[j][kk]=eix[j][kk-1]*eix[j][1];
-      eiy[j][kmax+kk]=eiy[j][kmax+kk-1]*eiy[j][kmax+1];
-      eiy[j][kmax-kk]=conj(eiy[j][kmax+kk]);
-      eiz[j][kmax+kk]=eiz[j][kmax+kk-1]*eiz[j][kmax+1];
-      eiz[j][kmax-kk]=conj(eiz[j][kmax+kk]);
+    for (int kk=2; kk<(kmax+1); kk++) {
+      eix[j][kk]      = eix[j][kk-1] * eix[j][1];
+      eiy[j][kmax+kk] = eiy[j][kmax+kk-1] * eiy[j][kmax+1];
+      eiy[j][kmax-kk] = conj(eiy[j][kmax+kk]);
+      eiz[j][kmax+kk] = eiz[j][kmax+kk-1] * eiz[j][kmax+1];
+      eiz[j][kmax-kk] = conj( eiz[j][kmax+kk] );
     }
   }
 
@@ -237,10 +220,9 @@ namespace Faunus {
     int size=p.size();
     complex<double> sum;
     int ksq;
-    double u=0;
-    double fact;
+    double u=0, fact;
     totk=0;
-    for(int kx=0; kx<(kmax+1);kx++){
+    for (int kx=0; kx<(kmax+1); kx++) {
       if (kx==0)
         fact=1.;
       else

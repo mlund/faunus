@@ -204,6 +204,7 @@ namespace Faunus {
      * \f$ \beta u(r) = l_B \frac{a_x b_x + a_y b_y - 2a_z b_z  }{r^3}\f$
      * \param a Dipole 1 (unit vector)
      * \param b Dipole 2 (unit vector)
+     * \param r Distance between dipoles
      */
     double dipdip(const point &a, const point &b, double r) {
       return pair.f*( a.x*b.x + a.y*b.y - 2*a.z*b.z )/(r*r*r);

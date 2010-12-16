@@ -16,4 +16,6 @@ import pyfaunus
 # run the shell
 # TODO customize it, print intro message
 ipshell = IPShellEmbed()
+print pyfaunus.faunus_splash(),
 ipshell()
+

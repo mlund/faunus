@@ -115,9 +115,9 @@ namespace Faunus {
 
   /*!
    * \brief Load macromolecules using inputfile information
-   * \param con container to load into
-   * \param inputfile Read input keywords and values from this inputfile object
-   * \param Each macromolecule is added to this vector
+   * \param con  container to load into
+   * \param in   Read input keywords and values from this inputfile object
+   * \param g    Each macromolecule is added to this vector
    *
    * Searches inputfile object for the following keywords:\n
    *   "nprot#" -- number protein # structures\n
@@ -481,7 +481,7 @@ namespace Faunus {
         x[i][2]=p[i].z*0.1;
       }
       write_xtc(xd,p.size(),step++,time++,xdbox,x,prec_xtc);
-      delete x;
+      delete[] x;
       return true;
     }
     return false;

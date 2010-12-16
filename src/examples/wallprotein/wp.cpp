@@ -219,7 +219,8 @@ int main() {
         pot.internal( con.p, wall ) +
         pot.internal( con.p, salt ));
 
-    cout << loop.timing() << "Energy drift = " << sys.cur-sys.sum << " kT" << endl;     
+    cout << loop.timing() << "#   Energy drift = " << sys.cur-sys.sum << " kT. "
+         << "System charge = " << con.charge() << endl;
 
     // Write files to disk
     io.writefile("vmdbonds.tcl", pol.getVMDBondScript());

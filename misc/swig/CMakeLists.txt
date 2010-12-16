@@ -8,7 +8,9 @@ if (SWIG_FOUND)
 
   SET_SOURCE_FILES_PROPERTIES("interface.i" PROPERTIES CPLUSPLUS ON)
   SET_SOURCE_FILES_PROPERTIES("interface.i" PROPERTIES SWIG_FLAGS "-includeall")
+
   if(ENABLE_BABEL AND OPENBABEL_FOUND)
+    include_directories(${OPENBABEL_INCLUDE_DIR})
     add_definitions(-DBABEL)
     SET(CMAKE_SWIG_FLAGS "-DBABEL")
   endif()

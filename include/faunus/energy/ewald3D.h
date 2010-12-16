@@ -18,9 +18,7 @@
 namespace Faunus {
   class Ewald {
     private:
-      static const double a1=0.254829592, a2=-0.284496736;
-      static const double a3=1.421413741, a4=-1.453152027;
-      static const double a5=1.061405429, p1=0.3275911;
+      static const double a1, a2, a3, a4, a5, p1;
       double boxlen, halfboxlen;
       double lB; // Bjerrum length (AA)
 
@@ -30,29 +28,25 @@ namespace Faunus {
       double alpha; 
       double alphasqrt;
       double pisqrt;
+      double Ewapre;
       int totk;
       vector<double> kvec;
-      vector<complex<double> > eikr;
-      vector<complex<double> > eikrold;
-      vector< vector< complex<double> > > eix;
-      vector< vector< complex<double> > > eiy;
-      vector< vector< complex<double> > > eiz;
-      vector< vector< complex<double> > > eixold;
-      vector< vector< complex<double> > > eiyold;
-      vector< vector< complex<double> > > eizold;
-      int kmax;
-      int ksqmax;
+      vector<complex<double> > eikr, eikrold;
+      vector< vector< complex<double> > > eix, eiy, eiz, eixold, eiyold, eizold;
+      int kmax, ksqmax;
       inline double erfc(double);                                 //< Error function (comblimentary)
       void initKSpaceEwald();                                     //< initialize k-Space
 
     public:
+      double f;                                                   //!< Factor to convert to kT
       Ewald(inputfile &);
       string info();
 
       // Ewald Summation routines 
-      inline double realSpaceEwald(particle &, particle &);       //< Real-Space Ewald particle<->particle (NOT in kT)
-      double realSpaceEwald(vector<particle> &, int);             //< Real-Space Ewald all<->particle j
-      double realSpaceEwald(vector<particle> &);                  //< Real-Space Ewald all<->all
+      void setvolume(double);
+      inline double pairpot(const particle &, const particle &);  //< particle<->particle (real space)
+      inline double sqdist(const point &, const point &);
+
       void kSpaceEwald(vector<particle> &);                       //< k-Space Ewald all
       void kSpaceEwald(vector<particle> &,int);                   //< k-Space Ewald particle i
       double sumkSpaceEwald(vector<particle> &);
@@ -61,13 +55,24 @@ namespace Faunus {
       void calcAlphaEwald(int, double=0.001);                     //< Optimize alpha
   };
 
-  inline double Ewald::realSpaceEwald(particle &p1, particle &p2) {
+  void Ewald::setvolume(double vol) {
+    boxlen=pow(vol,1/3.);
+    halfboxlen=boxlen/2;
+    initKSpaceEwald();
+  }
+
+  inline double Ewald::sqdist(const point &p1, const point &p2) {
+    return p1.sqdist(p2,boxlen,halfboxlen);
+  }
+
+  inline double Ewald::pairpot(const particle &p1, const particle &p2) {
     double r=p1.sqdist(p2,boxlen,halfboxlen);
     if (r > halfboxlen*halfboxlen)
       return 0.; // redundant?
     r = sqrt(r);
     return p1.charge*p2.charge*erfc(r*alphasqrt)/r;
   }
+
 
   /* \note Reference for this approximation is found in Abramowitz and Stegun,
    *       Handbook of mathematical functions, Eq. 7.1.26
@@ -77,5 +82,42 @@ namespace Faunus {
            tp = t*(a1+t*(a2+t*(a3+t*(a4+t*a5))));
     return tp*exp(-x*x);
   }
+
+  /*
+   * This is the actual interaction class used by MC move classes (these cannot be modified!).
+   *
+   */
+  class interaction_ewald : public interaction<Ewald> {
+    using interaction<Ewald>::pair;
+    public:
+      interaction_ewald(inputfile &in) : interaction<Ewald>(in) {
+        interaction<Ewald>::name+=" with ewald long range correction";
+      }
+
+      double energy(vector<particle> &p) {
+        pair.kSpaceEwald(p); //?
+        return interaction<Ewald>::energy(p) + pair.sumkSpaceEwald(p) + pair.selfEwald(p);
+      }
+
+      // should return TOTAL interaction of i'th particle with the rest of the system (real and imaginary)
+      double energy(vector<particle> &p, int i) {
+        pair.kSpaceEwald(p,i);
+        return interaction<Ewald>::energy(p,i) + pair.sumkSpaceEwald(p,i); 
+      }
+
+      double energy(vector<particle> &p, const group &g) {
+        for (int i=g.beg; i<=g.end; i++)
+          pair.kSpaceEwald( p, i );
+        double u=interaction<Ewald>::energy(p,g); // real space
+        for (int i=g.beg; i<=g.end; i++)
+          u+=pair.sumkSpaceEwald( p, i );         // kspace
+        return u;
+      }
+
+      double energy(vector<particle> &p, const particle &a) {
+        return interaction<Ewald>::energy(p,a) + 0; // kspace energy function missing for external particle
+      }
+
+  };
 } // namespace
 #endif

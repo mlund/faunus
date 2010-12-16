@@ -167,7 +167,7 @@ int main() {
         }
         else break;
       }
-      delete x_xtc;
+      delete[] x_xtc;
     }
     xdrfile_close(xd);
   }

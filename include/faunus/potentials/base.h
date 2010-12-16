@@ -114,8 +114,10 @@ namespace Faunus {
         third2=pow(2.,1./3.);
       }
       /*!
-       *  \param r2 Squared distance between particle p1 and p2.
-       *  \returns Interaction energy in units of kT,
+       * \param p1 First particle
+       * \param p2 Second particle
+       * \param r2 Squared distance between particle p1 and p2.
+       * \returns Interaction energy in units of kT,
        *           \f[ \beta u_{lj} = \epsilon_{lj} \left ( \frac{\sigma}{r^{12}} - \frac{\sigma}{r^6} \right ) \f]
        *           \f[ \sigma = \frac{\sigma_1+\sigma_2}{2}\f]
        */

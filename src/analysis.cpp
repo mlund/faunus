@@ -712,10 +712,6 @@ namespace Faunus {
     return o.str();
   }
   
-  
-  /*!
-   * \param dR Width (in Angstroms) of the shell to analyse near the boundary. The smaller the more accurate.
-   */
   osmoticpressure::osmoticpressure(cell &c) {
     cnt=0;
     cPtr=&c;
@@ -723,7 +719,6 @@ namespace Faunus {
   }
 
   /*!
-   * \param c Spherical simulation container
    * \param g Group containing all mobile ions
    */
   void osmoticpressure::sample(group &g) {

@@ -137,10 +137,6 @@ namespace Faunus {
   }
 
   //---------- GCTITRATE ---------
-  /*!
-   * \param ph pH value
-   * \param mu Proton excess chemical potential
-   */
   GCchargereg::GCchargereg(grandcanonical &e,
       container &c,
       energybase &i,

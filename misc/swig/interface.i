@@ -17,6 +17,8 @@ using namespace std;
 %rename(assign) Faunus::particle::operator=;
 %rename(assign) Faunus::spherical::operator=;
 %rename(assign) Faunus::macromolecule::operator=;
+%rename(__int__) Faunus::average<int>::operator int;
+%rename(__float__) Faunus::average<double>::operator double;
 %rename(_print) Faunus::grandcanonical::print;
 %rename(_print) Faunus::clusterrotate::print;
 %rename(_print) Faunus::inputfile::print;
@@ -44,6 +46,7 @@ using namespace std;
 #include "faunus/xytable.h"
 #include "faunus/ensemble.h"
 #include "faunus/io.h"
+#include "faunus/iobabel.h"
 #include "faunus/analysis.h"
 #include "faunus/widom.h"
 #include "faunus/mcloop.h"
@@ -72,6 +75,7 @@ using namespace std;
  * ----------------------------------- */
 %template(average_int) Faunus::average<int>;
 %template(average_dbl) Faunus::average<double>;
+%template(vector_dblavg) std::vector< Faunus::average<double> >;
 %template(vector_group) std::vector<Faunus::group>;
 %template(vector_polymer) std::vector<Faunus::polymer>;
 %template(vector_particle) std::vector<Faunus::particle>;

@@ -1,8 +1,0 @@
-set term png giant
-set output "sletmig.png"
-set size 0.75,1
-set pm3d map
-set xlabel "x"
-set ylabel "z"
-set cbrange [0.6:1.8]
-splot [-20:20][-20:20] "sletmig" u 1:2:3 t "" with pm3d

@@ -1,3 +1,0 @@
-This is a simple program that uses Faunus. It will be used as a "target" for
-the Python wrapper --- we would like to be able to reimplement main() in
-Python.

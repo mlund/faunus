@@ -161,9 +161,9 @@ namespace Faunus {
   }
 
   bool cuboid::setslice(point min, point max) {
-    assert(min.x=>0);              // debug information
-    assert(min.y=>0);              // 
-    assert(min.z=>0);              // 
+    assert(min.x>=0);              // debug information
+    assert(min.y>=0);              // 
+    assert(min.z>=0);              // 
     if (min.x<0  ||                // check non-negative value
         min.y<0  ||                // 
         min.z<0  )                 // 

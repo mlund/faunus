@@ -28,6 +28,7 @@
 #include "faunus/analysis.h"
 #include "faunus/particles.h"
 #include "faunus/io.h"
+#include "faunus/iobabel.h"
 #include "faunus/inputfile.h"
 #include "faunus/container.h"
 #include "faunus/countdown.h"

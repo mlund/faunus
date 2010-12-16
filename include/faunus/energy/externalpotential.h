@@ -23,6 +23,7 @@ namespace Faunus {
 
   class expot_akesson {
     private:
+      unsigned int phiupdate;                 //!< Only update phi every phiupdate'th time
       unsigned int cnt;                       //!< Number of charge density updates
       bool enabled;                           //!< Set to true to enable potential (default)
       double dz;                              //!< z spacing between slits (A)
@@ -42,6 +43,7 @@ namespace Faunus {
     public:
       expot_akesson(inputfile &in) {
         cnt=0;
+        phiupdate=10;
         dz = in.getflt("akesson_dz", 0.1);
         double zmin = -in.getflt("cuboid_zlen",0)/2 - dz;
         lB = in.getflt("bjerrum",0);
@@ -58,7 +60,7 @@ namespace Faunus {
           o << "#   Akesson external potential:\n"
             << "#     Bjerrum length         = " << lB << " A\n"
             << "#     xy-slit resolution     = " << dz << " A (" << phi.y.size() << " slits)\n"
-            << "#     Number of pot. updates = " << cnt/10 << endl
+            << "#     Number of pot. updates = " << cnt/phiupdate << endl
             << "#     More information:        Mol. Phys. 1996, 87:407\n";
         return o.str();
       }
@@ -105,7 +107,7 @@ namespace Faunus {
           rho(z) += Q / area; 
         }
 
-        if (cnt % 10 == 0) {  // update phi(z) - but not so often
+        if (cnt % phiupdate == 0) {  // update phi(z) - but not so often
           double a=c.len_half.x, uold=energy(c.p);
           for (double z=-c.len_half.z; z<=c.len_half.z; z+=dz) {
             double s=0;

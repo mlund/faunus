@@ -3,8 +3,10 @@
  *  \param a Lower boundary
  *  \param b Upper boundary
  *  \param n Number of steps
- *
- *  \example simpson-example.C
+ *  \code
+ *  double function(double x) { return x*x; }
+ *  simpson<function>(0,3,100)
+ *  \endcode
  */
 template<double f(double)>
 double simpson(double a,double b, int n) {

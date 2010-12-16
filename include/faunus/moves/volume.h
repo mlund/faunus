@@ -59,6 +59,8 @@ namespace Faunus {
    * \param i        Potential class. Make sure that the T_pairpot::setvolume() function is appropriate.
    * \param maxsize  Maximum allowed box length (A)
    * \param minsize  Minimum allowed box length (A)
+   * \param e        Ensemble class
+   * \param c        Container class
    */
   template<typename T> isobaric<T>::isobaric
   ( ensemble &e, container &c, T &i, double pressure, int maxsize, int minsize )

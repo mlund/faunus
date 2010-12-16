@@ -6,7 +6,7 @@ namespace Faunus {
   /*!
    *  \brief Statistical functions for a single dataset
    *
-   *  Can be used as the \link average \endlink class but will store ALL
+   *  Can be used as the Faunus::average class but will store ALL
    *  added data in an internal vector so as to calculate
    *  rms, standard deviation etc.
    *

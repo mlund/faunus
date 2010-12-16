@@ -112,9 +112,10 @@ int main() {
   // Neutralize residual charge with counterions and smearing
   if (con.p[salt.beg].id==atom["ghost"].id)          // If ghost particle
     con.p[salt.beg].charge=0;                       //   set its charge to zero
-  double q, qint;
+  double q;
+  int qint;
   q = con.charge();                                 // Total system charge
-  qint = floor(q);                                  // Integer system charge
+  qint = int(floor(q));                                  // Integer system charge
   if (qint < 0) {                                   // Negative charge
     salt.group::add(con, atom["NA"].id, -qint );    //   add cations
     cout << "# Added " << -qint << " Na-";
@@ -238,6 +239,5 @@ int main() {
 
   cout << sys.info() << sm.info() << wm.info() << loop.info()
     << mm.info()  << cs.info() << mr.info() << mt.info()
-    << tit.info() << sb.info() << pol.info()<< sys.info()
-    << pot.info();
+    << tit.info() << sb.info() << pol.info()<< pot.info();
 }

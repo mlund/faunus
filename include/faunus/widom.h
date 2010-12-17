@@ -20,13 +20,10 @@ namespace Faunus {
       average<double> expsum; //!< Average of the excess chemical potential 
     protected:
       int ghostin;
-      long long int cnt;          //< count test insertions
-      vector<particle> g;  //!< List of ghost particles to insert (simultaneously)
+      long long int cnt;      //!< count test insertions
+      vector<particle> g;     //!< List of ghost particles to insert (simultaneously)
     public:
-      widom(int n=10) {
-        ghostin=n;
-        runfraction=1.0;
-      }
+      widom(int n=10);
       string info();                          //!< Print results of analysis
       void add(particle);                     //!< Add particle to insert
       void add(container &);                  //!< All all species found in the container
@@ -36,7 +33,7 @@ namespace Faunus {
       double muex() { return -log(expsum.avg())/g.size(); } //!< Mean excess chemical potential
   };
 
-  /*|
+  /*!
    * Single particle Widom insertion analysis including
    * charge re-scaling for electrostatics according to
    * Svensson and Woodward, Mol. Phys. 1988, 64(2), 247-259.

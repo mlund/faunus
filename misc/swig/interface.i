@@ -23,7 +23,6 @@ using namespace std;
 %rename(_print) Faunus::clusterrotate::print;
 %rename(_print) Faunus::inputfile::print;
 %rename(__getitem__) Faunus::species::operator[];
-%ignore Faunus::point::operator << (std::ostream &, Faunus::point &);
 
 /* -----------------------------------
  *            Header import
@@ -96,6 +95,9 @@ namespace std {
 
 #include "faunus/potentials/pot_hscoulomb.h"
 %template(interaction_hscoulomb) Faunus::interaction<Faunus::pot_hscoulomb>;
+
+#include "faunus/potentials/pot_hsminimage.h"
+%template(interaction_hsminimage) Faunus::interaction<Faunus::pot_hsminimage>;
 
 #include "faunus/potentials/pot_minimage.h"
 %template(interaction_r12minimage) Faunus::interaction<Faunus::pot_r12minimage>;

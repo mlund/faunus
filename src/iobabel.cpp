@@ -21,7 +21,7 @@ namespace Faunus {
     p.clear();
     obmol.Clear();
     obconv.SetInFormat(obconv.FormatFromExt(filename.c_str()));
-    bool notatend = obconv.ReadFile(&obmol,filename.c_str());
+    obconv.ReadFile(&obmol,filename.c_str());
     for (int i=1; i<=obmol.NumAtoms(); i++)
       p.push_back(get(i));
 
@@ -30,6 +30,9 @@ namespace Faunus {
       std::cerr << "# Warning while loading " << filename
         << " - Number of residues (" << obmol.NumResidues() << ") != "
         << "Number of particles (" << p.size() << ")\n";
+    if (p.size()==0)
+      std::cerr << "# Error while loading " << filename
+        << " - No particles read." << std::endl;
   }
 
   vector<int> iobabel::neighbors(int i) {

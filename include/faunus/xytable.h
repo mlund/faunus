@@ -84,6 +84,15 @@ namespace Faunus {
 
       //! Max x-value in set
       TX xmax() { return y.size()*xres+xmin; }
+
+      std::vector<TY> gety() { return y; }
+
+      std::vector<TX> getx() {
+        std::vector<TX> v;
+        for (int i=0; i<y.size; ++i)
+          v.push_back( i*xres + xmin );
+        return v;
+      }
     };
 }//namespace
 #endif

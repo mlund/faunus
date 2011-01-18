@@ -6,6 +6,8 @@
 
 namespace Faunus {
   /*!
+   * \brief Monte Carlo loop book-keeping
+   *
    * This class keeps track of the outer and inner
    * Markov chain loops. After each macro step an
    * estimated time of the simulations will be evaluated.

@@ -20,7 +20,6 @@
 				733DF85111665185008347FA /* PBXTargetDependency */,
 				733DF8D9116766F7008347FA /* PBXTargetDependency */,
 				73128B041030BF2000950418 /* PBXTargetDependency */,
-				733DF81C1166509A008347FA /* PBXTargetDependency */,
 				733DF81E1166509A008347FA /* PBXTargetDependency */,
 				733DF8201166509A008347FA /* PBXTargetDependency */,
 				739C452A1031929300A3A5B9 /* PBXTargetDependency */,
@@ -44,8 +43,6 @@
 
 /* Begin PBXBuildFile section */
 		730552211042D75300465515 /* hyperbulk.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 730552201042D75300465515 /* hyperbulk.cpp */; };
-		730BD3FB10ADA31700FC674A /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
-		730BD3FE10ADA33F00FC674A /* twobody-hof.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 730BD3FD10ADA33F00FC674A /* twobody-hof.cpp */; };
 		73128AF01030BD4D00950418 /* twobody.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C42DC10307BF400A3A5B9 /* twobody.cpp */; };
 		731297541030C80A00950418 /* base.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297411030C80A00950418 /* base.h */; };
 		731297551030C80A00950418 /* pot_barecoulomb.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297421030C80A00950418 /* pot_barecoulomb.h */; };
@@ -53,7 +50,6 @@
 		731297571030C80A00950418 /* pot_datapmf.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297441030C80A00950418 /* pot_datapmf.h */; };
 		731297581030C80A00950418 /* pot_debyehuckel.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297461030C80A00950418 /* pot_debyehuckel.h */; };
 		731297591030C80A00950418 /* pot_debyehuckelP3.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297471030C80A00950418 /* pot_debyehuckelP3.h */; };
-		7312975A1030C80A00950418 /* pot_ewald.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297481030C80A00950418 /* pot_ewald.h */; };
 		7312975B1030C80A00950418 /* pot_hscoulomb.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297491030C80A00950418 /* pot_hscoulomb.h */; };
 		7312975C1030C80A00950418 /* pot_hsminimage.h in Headers */ = {isa = PBXBuildFile; fileRef = 7312974A1030C80A00950418 /* pot_hsminimage.h */; };
 		7312975D1030C80A00950418 /* pot_hydrophobic.h in Headers */ = {isa = PBXBuildFile; fileRef = 7312974B1030C80A00950418 /* pot_hydrophobic.h */; };
@@ -64,6 +60,7 @@
 		731297621030C80A00950418 /* pot_table.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297501030C80A00950418 /* pot_table.h */; };
 		731297641030C80A00950418 /* pot_test.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297521030C80A00950418 /* pot_test.h */; };
 		731297651030C80A00950418 /* pot_test_rf.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297531030C80A00950418 /* pot_test_rf.h */; };
+		7312CA2B12E645960075CDE5 /* penaltyfunction.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BB41EF12E642D4009414F1 /* penaltyfunction.h */; };
 		73280BD911419B740054855E /* pkaDH.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73280BD811419B640054855E /* pkaDH.cpp */; };
 		73280BE511419D340054855E /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		732812EC1146D45B0054855E /* crankshaft.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 732812EB1146D45B0054855E /* crankshaft.cpp */; };
@@ -79,6 +76,8 @@
 		733DF7F111664BEC008347FA /* hardsphere.h in Headers */ = {isa = PBXBuildFile; fileRef = 733DF7F011664BEC008347FA /* hardsphere.h */; };
 		733DF8D0116766B0008347FA /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		733DF8D1116766C2008347FA /* pkaDH.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73280BD811419B640054855E /* pkaDH.cpp */; };
+		7346BD7D12C8F14800F64392 /* ewald3D.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7346BD7C12C8F14800F64392 /* ewald3D.cpp */; };
+		7346BD7E12C8F14800F64392 /* ewald3D.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7346BD7C12C8F14800F64392 /* ewald3D.cpp */; };
 		7367E216126C698D00A84F11 /* eqtitrate.h in Headers */ = {isa = PBXBuildFile; fileRef = 7367E215126C698D00A84F11 /* eqtitrate.h */; };
 		7367E217126C698D00A84F11 /* eqtitrate.h in Headers */ = {isa = PBXBuildFile; fileRef = 7367E215126C698D00A84F11 /* eqtitrate.h */; };
 		7367E219126C69C900A84F11 /* eqtitrate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7367E218126C69C900A84F11 /* eqtitrate.cpp */; };
@@ -226,7 +225,6 @@
 		739C440210314D6300A3A5B9 /* pot_datapmf.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297441030C80A00950418 /* pot_datapmf.h */; };
 		739C440310314D6300A3A5B9 /* pot_debyehuckel.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297461030C80A00950418 /* pot_debyehuckel.h */; };
 		739C440410314D6300A3A5B9 /* pot_debyehuckelP3.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297471030C80A00950418 /* pot_debyehuckelP3.h */; };
-		739C440510314D6300A3A5B9 /* pot_ewald.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297481030C80A00950418 /* pot_ewald.h */; };
 		739C440610314D6300A3A5B9 /* pot_hscoulomb.h in Headers */ = {isa = PBXBuildFile; fileRef = 731297491030C80A00950418 /* pot_hscoulomb.h */; };
 		739C440710314D6300A3A5B9 /* pot_hsminimage.h in Headers */ = {isa = PBXBuildFile; fileRef = 7312974A1030C80A00950418 /* pot_hsminimage.h */; };
 		739C440810314D6300A3A5B9 /* pot_hydrophobic.h in Headers */ = {isa = PBXBuildFile; fileRef = 7312974B1030C80A00950418 /* pot_hydrophobic.h */; };
@@ -264,9 +262,10 @@
 		739C442B10314D6300A3A5B9 /* widom.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C422B103079CF00A3A5B9 /* widom.cpp */; };
 		739C442C10314D6300A3A5B9 /* histogram.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C42CA10307B8500A3A5B9 /* histogram.cpp */; };
 		739C442E10314D6300A3A5B9 /* libxdrfile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C41EE103078CA00A3A5B9 /* libxdrfile.a */; };
-		739C445210314EC400A3A5B9 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C443210314D6300A3A5B9 /* liblibfaunus.dylib */; };
+		739C445210314EC400A3A5B9 /* libhyperfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */; };
 		739C45251031925E00A3A5B9 /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		739C45281031928400A3A5B9 /* widom.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 739C45271031928400A3A5B9 /* widom.cpp */; };
+		73BB41EE12E64298009414F1 /* penaltyfunction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73BB41ED12E64298009414F1 /* penaltyfunction.cpp */; };
 		73BB617611CE2D1600E62ADB /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		73BB617711CE2D2A00E62ADB /* wp_gaussian.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73BB616C11CE2CDB00E62ADB /* wp_gaussian.cpp */; };
 		73C7109212494BC600445561 /* test.atoms in CopyFiles */ = {isa = PBXBuildFile; fileRef = 73C7108512494A3B00445561 /* test.atoms */; };
@@ -275,6 +274,8 @@
 		73C7109512494BC600445561 /* test.mol1.aam in CopyFiles */ = {isa = PBXBuildFile; fileRef = 73C7108812494A3B00445561 /* test.mol1.aam */; };
 		73C7109612494BC600445561 /* test.mol2.aam in CopyFiles */ = {isa = PBXBuildFile; fileRef = 73C7108912494A3B00445561 /* test.mol2.aam */; };
 		73C7109712494BC600445561 /* test.stable in CopyFiles */ = {isa = PBXBuildFile; fileRef = 73C7108A12494A3B00445561 /* test.stable */; };
+		73DC636312E646F600424927 /* penaltyfunction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73BB41ED12E64298009414F1 /* penaltyfunction.cpp */; };
+		73DC636412E646FA00424927 /* penaltyfunction.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BB41EF12E642D4009414F1 /* penaltyfunction.h */; };
 		73E1A6BF11BFCA23003315DB /* liblibfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 739C420A1030798400A3A5B9 /* liblibfaunus.dylib */; };
 		73E1A6C211BFCA79003315DB /* wp_lipid.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73E1A6C111BFCA79003315DB /* wp_lipid.cpp */; };
 		73E1A75211C14075003315DB /* messagepool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73E1A75111C14075003315DB /* messagepool.cpp */; };
@@ -286,13 +287,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		730BD3F910ADA30900FC674A /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 739C42091030798400A3A5B9;
-			remoteInfo = faunus;
-		};
 		73128B011030BF2000950418 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
@@ -356,26 +350,12 @@
 			remoteGlobalIDString = 739C42091030798400A3A5B9;
 			remoteInfo = faunus;
 		};
-		733DF7D611664981008347FA /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 733DF7CD11664912008347FA;
-			remoteInfo = isobaricDP;
-		};
 		733DF8191166509A008347FA /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 733DF7CD11664912008347FA;
 			remoteInfo = isobaricDP;
-		};
-		733DF81B1166509A008347FA /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 739C41D9103078A800A3A5B9 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 730BD3F410ADA2F800FC674A;
-			remoteInfo = "twobody-hof";
 		};
 		733DF81D1166509A008347FA /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -519,15 +499,12 @@
 /* Begin PBXFileReference section */
 		7305521F1042D75300465515 /* hyperbulk.conf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = hyperbulk.conf; path = src/examples/hypersphere/hyperbulk.conf; sourceTree = "<group>"; };
 		730552201042D75300465515 /* hyperbulk.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = hyperbulk.cpp; path = src/examples/hypersphere/hyperbulk.cpp; sourceTree = "<group>"; };
-		730BD3F510ADA2F800FC674A /* twobody-hof */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "twobody-hof"; sourceTree = BUILT_PRODUCTS_DIR; };
-		730BD3FD10ADA33F00FC674A /* twobody-hof.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "twobody-hof.cpp"; path = "src/examples/twobody-hofmeister/twobody-hof.cpp"; sourceTree = "<group>"; };
 		731297411030C80A00950418 /* base.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = base.h; sourceTree = "<group>"; };
 		731297421030C80A00950418 /* pot_barecoulomb.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_barecoulomb.h; sourceTree = "<group>"; };
 		731297431030C80A00950418 /* pot_coulomb.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_coulomb.h; sourceTree = "<group>"; };
 		731297441030C80A00950418 /* pot_datapmf.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_datapmf.h; sourceTree = "<group>"; };
 		731297461030C80A00950418 /* pot_debyehuckel.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_debyehuckel.h; sourceTree = "<group>"; };
 		731297471030C80A00950418 /* pot_debyehuckelP3.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_debyehuckelP3.h; sourceTree = "<group>"; };
-		731297481030C80A00950418 /* pot_ewald.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_ewald.h; sourceTree = "<group>"; };
 		731297491030C80A00950418 /* pot_hscoulomb.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_hscoulomb.h; sourceTree = "<group>"; };
 		7312974A1030C80A00950418 /* pot_hsminimage.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_hsminimage.h; sourceTree = "<group>"; };
 		7312974B1030C80A00950418 /* pot_hydrophobic.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pot_hydrophobic.h; sourceTree = "<group>"; };
@@ -550,12 +527,14 @@
 		733DF7CE11664912008347FA /* isobaricDP */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = isobaricDP; sourceTree = BUILT_PRODUCTS_DIR; };
 		733DF7F011664BEC008347FA /* hardsphere.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = hardsphere.h; sourceTree = "<group>"; };
 		733DF8C91167667C008347FA /* pkaDH */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pkaDH; sourceTree = BUILT_PRODUCTS_DIR; };
+		7346BD7C12C8F14800F64392 /* ewald3D.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ewald3D.cpp; path = src/ewald3D.cpp; sourceTree = "<group>"; };
+		7346BD7F12C8F16A00F64392 /* ewald3D.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ewald3D.h; sourceTree = "<group>"; };
+		7346BD8012C8F1D200F64392 /* externalpotential.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = externalpotential.h; sourceTree = "<group>"; };
 		7367E215126C698D00A84F11 /* eqtitrate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = eqtitrate.h; sourceTree = "<group>"; };
 		7367E218126C69C900A84F11 /* eqtitrate.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = eqtitrate.cpp; sourceTree = "<group>"; };
 		739618DA10309A010051F3E3 /* pka */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pka; sourceTree = BUILT_PRODUCTS_DIR; };
 		739618E710309A7B0051F3E3 /* pka.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pka.cpp; path = src/examples/titration/pka.cpp; sourceTree = "<group>"; };
 		73961ED91030ADE60051F3E3 /* isobaric */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = isobaric; sourceTree = BUILT_PRODUCTS_DIR; };
-		73961F131030AE5D0051F3E3 /* isobaric.conf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = isobaric.conf; path = src/examples/isobaric/isobaric.conf; sourceTree = "<group>"; };
 		73961F141030AE5D0051F3E3 /* isobaric.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = isobaric.cpp; path = src/examples/isobaric/isobaric.cpp; sourceTree = "<group>"; };
 		7397F32F12423BEA0019FDCD /* replicaexchange.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = replicaexchange.h; sourceTree = "<group>"; };
 		7397F33412423C2B0019FDCD /* base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = base.h; path = include/faunus/bottles/base.h; sourceTree = "<group>"; };
@@ -644,11 +623,13 @@
 		739C42CA10307B8500A3A5B9 /* histogram.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = histogram.cpp; path = src/histogram.cpp; sourceTree = "<group>"; };
 		739C42D210307BA900A3A5B9 /* twobody */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = twobody; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C42DC10307BF400A3A5B9 /* twobody.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = twobody.cpp; path = src/examples/twobody/twobody.cpp; sourceTree = "<group>"; };
-		739C443210314D6300A3A5B9 /* liblibfaunus.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = liblibfaunus.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
-		739C444B10314E8700A3A5B9 /* hyper_dipolarfluid */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = hyper_dipolarfluid; sourceTree = BUILT_PRODUCTS_DIR; };
+		739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libhyperfaunus.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		739C444B10314E8700A3A5B9 /* hyperbulk */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = hyperbulk; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C451F1031925300A3A5B9 /* widom_cube */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = widom_cube; sourceTree = BUILT_PRODUCTS_DIR; };
 		739C45271031928400A3A5B9 /* widom.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = widom.cpp; path = src/examples/widom/widom.cpp; sourceTree = "<group>"; };
 		739D1BA011CA607F00AF7BC8 /* README */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README; sourceTree = "<group>"; };
+		73BB41ED12E64298009414F1 /* penaltyfunction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = penaltyfunction.cpp; path = src/penaltyfunction.cpp; sourceTree = "<group>"; };
+		73BB41EF12E642D4009414F1 /* penaltyfunction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = penaltyfunction.h; sourceTree = "<group>"; };
 		73BB616C11CE2CDB00E62ADB /* wp_gaussian.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = wp_gaussian.cpp; path = src/examples/wallprotein/wp_gaussian.cpp; sourceTree = "<group>"; };
 		73BB617011CE2D0200E62ADB /* wallprotein - gaussian charges */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "wallprotein - gaussian charges"; sourceTree = BUILT_PRODUCTS_DIR; };
 		73C7108512494A3B00445561 /* test.atoms */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = test.atoms; path = unittests/isobaric_minimg_rigidmolecules/test.atoms; sourceTree = "<group>"; };
@@ -666,14 +647,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		730BD3F310ADA2F800FC674A /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				730BD3FB10ADA31700FC674A /* liblibfaunus.dylib in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		73280BC4114197D60054855E /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -773,7 +746,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				739C445210314EC400A3A5B9 /* liblibfaunus.dylib in Frameworks */,
+				739C445210314EC400A3A5B9 /* libhyperfaunus.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -814,7 +787,6 @@
 				731297441030C80A00950418 /* pot_datapmf.h */,
 				731297461030C80A00950418 /* pot_debyehuckel.h */,
 				731297471030C80A00950418 /* pot_debyehuckelP3.h */,
-				731297481030C80A00950418 /* pot_ewald.h */,
 				731297491030C80A00950418 /* pot_hscoulomb.h */,
 				7312974A1030C80A00950418 /* pot_hsminimage.h */,
 				7312974B1030C80A00950418 /* pot_hydrophobic.h */,
@@ -861,10 +833,9 @@
 				739C42D210307BA900A3A5B9 /* twobody */,
 				739618DA10309A010051F3E3 /* pka */,
 				73961ED91030ADE60051F3E3 /* isobaric */,
-				739C443210314D6300A3A5B9 /* liblibfaunus.dylib */,
-				739C444B10314E8700A3A5B9 /* hyper_dipolarfluid */,
+				739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */,
+				739C444B10314E8700A3A5B9 /* hyperbulk */,
 				739C451F1031925300A3A5B9 /* widom_cube */,
-				730BD3F510ADA2F800FC674A /* twobody-hof */,
 				733DF759116627EF008347FA /* twobodyDH */,
 				733DF76B116647B3008347FA /* wallprotein */,
 				733DF7CE11664912008347FA /* isobaricDP */,
@@ -939,6 +910,7 @@
 				739C4211103079CF00A3A5B9 /* analysis.cpp */,
 				739C4212103079CF00A3A5B9 /* container.cpp */,
 				739C4213103079CF00A3A5B9 /* ensemble.cpp */,
+				7346BD7C12C8F14800F64392 /* ewald3D.cpp */,
 				739C4214103079CF00A3A5B9 /* faunus.cpp */,
 				739C4215103079CF00A3A5B9 /* group.cpp */,
 				739C4216103079CF00A3A5B9 /* hardsphere.cpp */,
@@ -949,6 +921,7 @@
 				739C421A103079CF00A3A5B9 /* mcloop.cpp */,
 				73E1A75111C14075003315DB /* messagepool.cpp */,
 				739C4225103079CF00A3A5B9 /* particles.cpp */,
+				73BB41ED12E64298009414F1 /* penaltyfunction.cpp */,
 				739C4226103079CF00A3A5B9 /* physconst.cpp */,
 				739C4227103079CF00A3A5B9 /* point.cpp */,
 				739C4228103079CF00A3A5B9 /* slump.cpp */,
@@ -995,9 +968,12 @@
 			isa = PBXGroup;
 			children = (
 				739C424C10307A1C00A3A5B9 /* base.h */,
+				733DF71011661E72008347FA /* coarsegrain.h */,
+				7346BD8012C8F1D200F64392 /* externalpotential.h */,
+				7346BD7F12C8F16A00F64392 /* ewald3D.h */,
 				733DF7F011664BEC008347FA /* hardsphere.h */,
 				733DF752116626D5008347FA /* hydrophobic.h */,
-				733DF71011661E72008347FA /* coarsegrain.h */,
+				73BB41EF12E642D4009414F1 /* penaltyfunction.h */,
 				739C424D10307A1C00A3A5B9 /* reactionfield.h */,
 				739C424E10307A1C00A3A5B9 /* springinteraction.h */,
 				739C424F10307A1C00A3A5B9 /* springinteractionexfield.h */,
@@ -1037,8 +1013,6 @@
 				73280BD811419B640054855E /* pkaDH.cpp */,
 				739C42DC10307BF400A3A5B9 /* twobody.cpp */,
 				733DF76111662847008347FA /* twobodyDH.cpp */,
-				730BD3FD10ADA33F00FC674A /* twobody-hof.cpp */,
-				73961F131030AE5D0051F3E3 /* isobaric.conf */,
 				73961F141030AE5D0051F3E3 /* isobaric.cpp */,
 				733DF77311664811008347FA /* wp.cpp */,
 				73E1A6C111BFCA79003315DB /* wp_lipid.cpp */,
@@ -1142,7 +1116,6 @@
 				731297571030C80A00950418 /* pot_datapmf.h in Headers */,
 				731297581030C80A00950418 /* pot_debyehuckel.h in Headers */,
 				731297591030C80A00950418 /* pot_debyehuckelP3.h in Headers */,
-				7312975A1030C80A00950418 /* pot_ewald.h in Headers */,
 				7312975B1030C80A00950418 /* pot_hscoulomb.h in Headers */,
 				7312975C1030C80A00950418 /* pot_hsminimage.h in Headers */,
 				7312975D1030C80A00950418 /* pot_hydrophobic.h in Headers */,
@@ -1165,6 +1138,7 @@
 				7397F33912423C2B0019FDCD /* nvt_atomic.h in Headers */,
 				7397F35412423F2E0019FDCD /* pot_elhcvdw.h in Headers */,
 				7367E216126C698D00A84F11 /* eqtitrate.h in Headers */,
+				7312CA2B12E645960075CDE5 /* penaltyfunction.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1221,7 +1195,6 @@
 				739C440210314D6300A3A5B9 /* pot_datapmf.h in Headers */,
 				739C440310314D6300A3A5B9 /* pot_debyehuckel.h in Headers */,
 				739C440410314D6300A3A5B9 /* pot_debyehuckelP3.h in Headers */,
-				739C440510314D6300A3A5B9 /* pot_ewald.h in Headers */,
 				739C440610314D6300A3A5B9 /* pot_hscoulomb.h in Headers */,
 				739C440710314D6300A3A5B9 /* pot_hsminimage.h in Headers */,
 				739C440810314D6300A3A5B9 /* pot_hydrophobic.h in Headers */,
@@ -1240,29 +1213,13 @@
 				7397F33C12423C2B0019FDCD /* nvt_atomic.h in Headers */,
 				7397F35512423F2E0019FDCD /* pot_elhcvdw.h in Headers */,
 				7367E217126C698D00A84F11 /* eqtitrate.h in Headers */,
+				73DC636412E646FA00424927 /* penaltyfunction.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		730BD3F410ADA2F800FC674A /* twobody-hof */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 730BD3FC10ADA33700FC674A /* Build configuration list for PBXNativeTarget "twobody-hof" */;
-			buildPhases = (
-				730BD3F210ADA2F800FC674A /* Sources */,
-				730BD3F310ADA2F800FC674A /* Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				730BD3FA10ADA30900FC674A /* PBXTargetDependency */,
-			);
-			name = "twobody-hof";
-			productName = "twobody-hof";
-			productReference = 730BD3F510ADA2F800FC674A /* twobody-hof */;
-			productType = "com.apple.product-type.tool";
-		};
 		73280BC5114197D60054855E /* pkaAT */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 73280BCA114197F50054855E /* Build configuration list for PBXNativeTarget "pkaAT" */;
@@ -1378,7 +1335,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				733DF7D711664981008347FA /* PBXTargetDependency */,
 				73961EDF1030ADF40051F3E3 /* PBXTargetDependency */,
 			);
 			name = isobaric;
@@ -1470,7 +1426,7 @@
 			);
 			name = hyperfaunus;
 			productName = libfaunus;
-			productReference = 739C443210314D6300A3A5B9 /* liblibfaunus.dylib */;
+			productReference = 739C443210314D6300A3A5B9 /* libhyperfaunus.dylib */;
 			productType = "com.apple.product-type.library.dynamic";
 		};
 		739C444A10314E8700A3A5B9 /* hyperbulk */ = {
@@ -1487,7 +1443,7 @@
 			);
 			name = hyperbulk;
 			productName = hyper_dipolarfluid;
-			productReference = 739C444B10314E8700A3A5B9 /* hyper_dipolarfluid */;
+			productReference = 739C444B10314E8700A3A5B9 /* hyperbulk */;
 			productType = "com.apple.product-type.tool";
 		};
 		739C451E1031925300A3A5B9 /* widom_cube */ = {
@@ -1575,7 +1531,6 @@
 				739C444A10314E8700A3A5B9 /* hyperbulk */,
 				739C451E1031925300A3A5B9 /* widom_cube */,
 				739C42D110307BA900A3A5B9 /* twobody */,
-				730BD3F410ADA2F800FC674A /* twobody-hof */,
 				733DF758116627EF008347FA /* twobodyDH */,
 				733DF76A116647B3008347FA /* wallprotein */,
 				73E1A6B811BFCA0C003315DB /* wallprotein_lipid */,
@@ -1610,19 +1565,11 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "echo \"Build phase run script!!\"\n#cd ${TARGET_BUILD_DIR}\n#pwd\n#cp test.conf isobaric.conf\n#cp test.dump confout.dump\n#export\n";
+			shellScript = "echo \"Build phase run script!!\"\ncd ${TARGET_BUILD_DIR}\npwd\ncp test.conf isobaric.conf\ncp test.dump confout.dump\n#export\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		730BD3F210ADA2F800FC674A /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				730BD3FE10ADA33F00FC674A /* twobody-hof.cpp in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		73280BC3114197D60054855E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1684,6 +1631,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7397F39C124257920019FDCD /* replica.cpp in Sources */,
+				7346BD7E12C8F14800F64392 /* ewald3D.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1731,6 +1679,8 @@
 				73E1A75211C14075003315DB /* messagepool.cpp in Sources */,
 				7397F34112423C550019FDCD /* replicaexchange.cpp in Sources */,
 				7367E219126C69C900A84F11 /* eqtitrate.cpp in Sources */,
+				7346BD7D12C8F14800F64392 /* ewald3D.cpp in Sources */,
+				73BB41EE12E64298009414F1 /* penaltyfunction.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1775,6 +1725,7 @@
 				73E1A75311C14075003315DB /* messagepool.cpp in Sources */,
 				7397F34212423C550019FDCD /* replicaexchange.cpp in Sources */,
 				7367E21A126C69C900A84F11 /* eqtitrate.cpp in Sources */,
+				73DC636312E646F600424927 /* penaltyfunction.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1813,11 +1764,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		730BD3FA10ADA30900FC674A /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 739C42091030798400A3A5B9 /* faunus */;
-			targetProxy = 730BD3F910ADA30900FC674A /* PBXContainerItemProxy */;
-		};
 		73128B021030BF2000950418 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 739C42091030798400A3A5B9 /* faunus */;
@@ -1863,20 +1809,10 @@
 			target = 739C42091030798400A3A5B9 /* faunus */;
 			targetProxy = 733DF7D21166491D008347FA /* PBXContainerItemProxy */;
 		};
-		733DF7D711664981008347FA /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 733DF7CD11664912008347FA /* isobaricDP */;
-			targetProxy = 733DF7D611664981008347FA /* PBXContainerItemProxy */;
-		};
 		733DF81A1166509A008347FA /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 733DF7CD11664912008347FA /* isobaricDP */;
 			targetProxy = 733DF8191166509A008347FA /* PBXContainerItemProxy */;
-		};
-		733DF81C1166509A008347FA /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 730BD3F410ADA2F800FC674A /* twobody-hof */;
-			targetProxy = 733DF81B1166509A008347FA /* PBXContainerItemProxy */;
 		};
 		733DF81E1166509A008347FA /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1966,36 +1902,6 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		730BD3F710ADA2F900FC674A /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				COPY_PHASE_STRIP = NO;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_ENABLE_FIX_AND_CONTINUE = YES;
-				GCC_MODEL_TUNING = G5;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				INSTALL_PATH = /usr/local/bin;
-				PREBINDING = NO;
-				PRODUCT_NAME = "twobody-hof";
-			};
-			name = Debug;
-		};
-		730BD3F810ADA2F900FC674A /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				COPY_PHASE_STRIP = YES;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GCC_MODEL_TUNING = G5;
-				INSTALL_PATH = /usr/local/bin;
-				PREBINDING = NO;
-				PRODUCT_NAME = "twobody-hof";
-				ZERO_LINK = NO;
-			};
-			name = Release;
-		};
 		73128AFF1030BF1300950418 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2227,7 +2133,7 @@
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
-				GCC_MODEL_TUNING = G5;
+				GCC_MODEL_TUNING = "";
 				GCC_OPTIMIZATION_LEVEL = 0;
 				INSTALL_PATH = /usr/local/bin;
 				PREBINDING = NO;
@@ -2242,7 +2148,7 @@
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GCC_MODEL_TUNING = G5;
+				GCC_MODEL_TUNING = "";
 				INSTALL_PATH = /usr/local/bin;
 				PREBINDING = NO;
 				PRODUCT_NAME = isobaric;
@@ -2287,8 +2193,12 @@
 				GCC_DEBUGGING_SYMBOLS = default;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				HEADER_SEARCH_PATHS = include;
+				GCC_WARN_PEDANTIC = NO;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = $PROJECT_DIR/include;
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				OTHER_CFLAGS = "-Wno-long-long";
+				OTHER_CPLUSPLUSFLAGS = "-Wno-long-long";
 				SDKROOT = macosx10.6;
 				STRIP_INSTALLED_PRODUCT = YES;
 				STRIP_STYLE = all;
@@ -2302,8 +2212,12 @@
 				GCC_DEBUGGING_SYMBOLS = default;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				HEADER_SEARCH_PATHS = include;
+				GCC_WARN_PEDANTIC = NO;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = $PROJECT_DIR/include;
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				OTHER_CFLAGS = "-Wno-long-long";
+				OTHER_CPLUSPLUSFLAGS = "-Wno-long-long";
 				SDKROOT = macosx10.6;
 				STRIP_INSTALLED_PRODUCT = YES;
 				STRIP_STYLE = all;
@@ -2441,6 +2355,8 @@
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/build/Debug\"";
 				PREBINDING = NO;
 				PRODUCT_NAME = hyperfaunus;
+				SCAN_ALL_SOURCE_FILES_FOR_INCLUDES = YES;
+				SDKROOT = macosx10.6;
 			};
 			name = Debug;
 		};
@@ -2448,11 +2364,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				COPY_PHASE_STRIP = YES;
+				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				EXECUTABLE_PREFIX = lib;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G5;
+				GCC_PREPROCESSOR_DEFINITIONS = HYPERSPHERE;
 				INSTALL_PATH = /usr/local/lib;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -2460,7 +2377,9 @@
 				);
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/build/Debug\"";
 				PREBINDING = NO;
-				PRODUCT_NAME = libfaunus;
+				PRODUCT_NAME = hyperfaunus;
+				SCAN_ALL_SOURCE_FILES_FOR_INCLUDES = YES;
+				SDKROOT = macosx10.6;
 				ZERO_LINK = NO;
 			};
 			name = Release;
@@ -2474,9 +2393,10 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = HYPERSPHERE;
 				INSTALL_PATH = /usr/local/bin;
 				PREBINDING = NO;
-				PRODUCT_NAME = hyper_dipolarfluid;
+				PRODUCT_NAME = hyperbulk;
 			};
 			name = Debug;
 		};
@@ -2484,13 +2404,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				COPY_PHASE_STRIP = YES;
+				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G5;
+				GCC_PREPROCESSOR_DEFINITIONS = HYPERSPHERE;
 				INSTALL_PATH = /usr/local/bin;
 				PREBINDING = NO;
-				PRODUCT_NAME = hyper_dipolarfluid;
+				PRODUCT_NAME = hyperbulk;
 				ZERO_LINK = NO;
 			};
 			name = Release;
@@ -2590,15 +2511,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		730BD3FC10ADA33700FC674A /* Build configuration list for PBXNativeTarget "twobody-hof" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				730BD3F710ADA2F900FC674A /* Debug */,
-				730BD3F810ADA2F900FC674A /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		73128B0E1030BF7C00950418 /* Build configuration list for PBXAggregateTarget "all" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

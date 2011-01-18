@@ -4,7 +4,7 @@
 
 namespace Faunus {
 
-  bool analysis::runtest() { return (slp.runtest(runfraction)); };
+  bool analysis::runtest() { return (slp.runtest(runfraction)); }
 
   void systemenergy::initialize(double u_init) {
     u0=u_init;
@@ -20,7 +20,7 @@ namespace Faunus {
     initialize(u_init);
   }
 
-  systemenergy::systemenergy() {};
+  systemenergy::systemenergy() {}
 
   void systemenergy::update(double energy) {
     cur=energy;
@@ -418,10 +418,10 @@ namespace Faunus {
         for (int j=i+1; j<n; j++)
           for (int s=g[i].beg; s<=g[i].end; s++) {
             point f,rij;
-            double r;
+  //          double r;
             for (int t=g[j].beg; t<=g[j].end; t++) {
               rij=c.vdist(c.p[s],c.p[t]);
-              r=rij.len();
+  //            r=rij.len();
   //            f = rij * ( pot.force(c,c.p[s],c.p[t],r,dr) / r );
   //            p+= rij.x*f.x + rij.y*f.y + rij.z*f.z;
             }
@@ -438,7 +438,7 @@ namespace Faunus {
     std::ostringstream o;
     if (runfraction>1e-4) {
       char w=10;
-      double tokPa=2.487*1e30/6.022e23,
+      double //tokPa=2.487*1e30/6.022e23,
              toM=2.487*1e30/(8.314*298.15*6.022e23),
              pid=conc*1e27/6.022e23,
              ex=pex.avg()*toM;
@@ -726,8 +726,9 @@ namespace Faunus {
     cnt++;
     for (int i=g.beg; i<=g.end; i++) {
       k=cPtr->p.at(i).len()+.5;
-      assert(k<hist.size());
-      hist[k]++;
+      assert( k < hist.size() );
+      if (k<hist.size())  // something is fishy here!
+        hist.at(k)++;     // - k sometimes outside hist
     }
     rhoid += g.size() / cPtr->getvolume();
   }

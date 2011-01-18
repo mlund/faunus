@@ -39,7 +39,7 @@ namespace Faunus {
   double membranemove::move(popscmembrane &m) {
     utemp=du=0;
     int n=-1, pm, pm2, i=0;
-    double rand, sum=0;
+    double rand;
     point dv;
 //    double backreq;
 //    backreq=pot->req, pot->req=5.0;

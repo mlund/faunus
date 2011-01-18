@@ -54,8 +54,8 @@ namespace Faunus {
     unsigned long long int cnt, naccept;
     string cite;                                //!< Reference to additional info. (article, url etc.)
     string prefix;                              //!< Inputfile keyword prefix
-    container *con;
     ensemble *ens;
+    container *con;
     bool run(float);                            //!< Probability
     virtual void getInput(inputfile &);         //!< Read parameters from inputfile
     virtual double newdp();                     //!< Generate new displacement parameter between [dp_min:dp_max]

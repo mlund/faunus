@@ -8,5 +8,5 @@ namespace Faunus {
     void vscoul_(double*, double*, double*, int* );
     void gentab_();
   }
-};
+}
 #endif

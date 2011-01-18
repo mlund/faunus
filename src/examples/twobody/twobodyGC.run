@@ -3,6 +3,7 @@ echo "macrosteps 10
 microsteps $microsteps
 cellradius $cellradius
 bjerrum    7.1
+boxlen     100
 LJeps      0.3
 nion1      $nion1
 nion2      $nion2

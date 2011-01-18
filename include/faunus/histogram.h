@@ -34,6 +34,8 @@ namespace Faunus {
     void add(float);
     void write(string);
     virtual float get(float);
+    vector<double> xvec();              //!< For python interface
+    vector<double> yvec();              //!< For python interface
   };
 
   /*!
@@ -147,5 +149,5 @@ namespace Faunus {
       bool write(string);             //!< Print distribution
       unsigned char id;
   };
-};//namespace
+}//namespace
 #endif

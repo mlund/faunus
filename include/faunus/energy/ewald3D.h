@@ -68,7 +68,7 @@ namespace Faunus {
   inline double Ewald::pairpot(const particle &p1, const particle &p2) {
     double r=p1.sqdist(p2,boxlen,halfboxlen);
     if (r > halfboxlen*halfboxlen)
-      return 0.; // redundant?
+      return 0.;
     r = sqrt(r);
     return p1.charge*p2.charge*erfc(r*alphasqrt)/r;
   }
@@ -90,13 +90,14 @@ namespace Faunus {
   class interaction_ewald : public interaction<Ewald> {
     using interaction<Ewald>::pair;
     public:
-      interaction_ewald(inputfile &in) : interaction<Ewald>(in) {
+      interaction_ewald(inputfile &in, container &con) : interaction<Ewald>(in) {
         interaction<Ewald>::name+=" with ewald long range correction";
+        pair.selfEwald(con.p); // update for each volume update (or when alpha changes)
       }
 
       double energy(vector<particle> &p) {
         pair.kSpaceEwald(p); //?
-        return interaction<Ewald>::energy(p) + pair.sumkSpaceEwald(p) + pair.selfEwald(p);
+        return interaction<Ewald>::energy(p) + pair.sumkSpaceEwald(p);
       }
 
       // should return TOTAL interaction of i'th particle with the rest of the system (real and imaginary)

@@ -11,10 +11,6 @@ namespace Faunus {
    * \date Lund 2010
    */
   template<typename Tcon, typename Tpot> class npt_molecular : public bottle {
-    private:
-      string dumpfile;  //!< Filename of container dumpfile
-      unsigned int microcnt, macrocnt;
-      ioxtc xtc;
     protected:
       canonical nvt;
       xyfile boxtrj, energytrj;
@@ -24,6 +20,11 @@ namespace Faunus {
       transrot *mmTransrot;
       isobaric<Tpot> *mmVol;
 
+    private:
+      string dumpfile;  //!< Filename of container dumpfile
+      unsigned int microcnt, macrocnt;
+      ioxtc xtc;
+
     public:
       vector<macromolecule> g;
       Tcon con; //!< Container
@@ -32,8 +33,13 @@ namespace Faunus {
       bool boolTranslate, boolVolume, boolRotate, boolCluster;
       bool movie; //!< Set to true if an xtc tracjectory file should be saved
 
-      npt_molecular(string pfx) : bottle(pfx), con(in), pot(in),
-                    boxtrj(prefix+".boxlen.dat"), energytrj(prefix+".energy.dat"), xtc(con.len) {
+      npt_molecular(string pfx) :
+                    bottle(pfx),
+                    boxtrj(prefix+".boxlen.dat"),
+                    energytrj(prefix+".energy.dat"),
+                    xtc(con.len),
+                    con(in),
+                    pot(in) {
         cPtr=&con;
         pPtr=&pot;
         microcnt=0;

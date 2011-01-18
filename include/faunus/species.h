@@ -22,18 +22,18 @@ namespace Faunus {
   };
 
   /*!
-   * Class to load and handle atom types from disk
-   * Example:\n
-   * \code
-   *   atoms atom;
-   *   atom.load("atoms.dat");         // load parameters
-   *   double s=atom["Na"].sigma;      // get LJ sigma for sodium
-   *   particle p=atom("Na");          // Initialize a particle
-   *   std::cout << atom[p.id].charge; // Get charge via particle id
-   * \endcode
-   *
+   * \brief Class to load and handle atom types from disk
    * \author Mikael Lund
    * \date Lund 2008
+   *
+   * Example:\n
+   * \code
+   * atoms atom;
+   * atom.load("atoms.dat");         // load parameters
+   * double s=atom["Na"].sigma;      // get LJ sigma for sodium
+   * particle p=atom("Na");          // Initialize a particle
+   * std::cout << atom[p.id].charge; // Get charge via particle id
+   * \endcode
    */
   class atoms {
     private:

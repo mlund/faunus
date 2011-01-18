@@ -1,6 +1,7 @@
 #include "faunus/energy/ewald3D.h"
 
 namespace Faunus {
+  // constants for erfc()
   const double 
     Ewald::a1=0.254829592, Ewald::a2=-0.284496736,
     Ewald::a3=1.421413741, Ewald::a4=-1.453152027,
@@ -216,6 +217,8 @@ namespace Faunus {
     }
   }
 
+  // implement void Ewald::kSpaceEwald(vector<particle> &p, group &g) {}
+
   double Ewald::sumkSpaceEwald(vector<particle> &p) {
     int size=p.size();
     complex<double> sum;
@@ -270,5 +273,7 @@ namespace Faunus {
     }
     return u*lB;
   }
+
+  // implement double Ewald::sumkSpaceEwald(vector<particle> &p, group &g) { }
 
 }//namespace

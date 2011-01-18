@@ -34,6 +34,20 @@ namespace Faunus {
     return (*this)(x)/float(cnt);
   }
 
+  vector<double> histogram::xvec() {
+    vector<double> v;
+    for (float x=xmin; x<xmax(); x+=xres)
+      v.push_back(x);
+    return v;
+  }
+
+  vector<double> histogram::yvec() {
+    vector<double> v;
+    for (float x=xmin; x<xmax(); x+=xres)
+      v.push_back( get(x) );
+    return v;
+  }
+
   //! Show results for all x
   void histogram::write(string file) {
     float g;
@@ -64,7 +78,7 @@ namespace Faunus {
     a=species1;
     b=species2;
   }
-  FAUrdf::FAUrdf(float resolution, float xmaximum, float xminimum) : histogram(resolution, xminimum, xmaximum) {};
+  FAUrdf::FAUrdf(float resolution, float xmaximum, float xminimum) : histogram(resolution, xminimum, xmaximum) {}
 
   /*!
    * Update histogram between two known points

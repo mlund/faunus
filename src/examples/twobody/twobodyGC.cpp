@@ -17,6 +17,8 @@
 using namespace Faunus;
 using namespace std;
 
+typedef pot_coulomb Tpairpot;
+
 int main(int argc, char* argv[]) {
   cout << faunus_splash();              // Faunus info
   slump slp;
@@ -30,7 +32,9 @@ int main(int argc, char* argv[]) {
   mcloop loop(in);                      // Set Markov chain loop lengths
   cell cell(in);                        // We want a spherical, hard cell
   grandcanonical nmt;
-  interaction<pot_coulomb> pot(in);     // Functions for interactions
+  interaction<Tpairpot> pot(in);        // Functions for interactions
+  if (cell.testpotential<Tpairpot>(pot.pair)==false)
+    return 1;
   distributions dst;                    // Distance dep. averages
   atomicRdf gofr_pp(0.5,200);           // Amino acid rdf between the two proteins
 

@@ -63,7 +63,7 @@ static int xtc_header(XDRFILE *xd,int *natoms,int *step,float *time,cbool bRead)
 static int xtc_coord(XDRFILE *xd,int *natoms,matrix box,rvec *x,float *prec,
 					 cbool bRead)
 {
-	int i,j,result;
+	int result;
     
 	/* box */
 	result = xdrfile_read_float(box[0],DIM*DIM,xd);

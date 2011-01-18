@@ -41,7 +41,7 @@ namespace Faunus {
     for (unsigned short i=0; i<sites.size(); i++)    // Correction to get a full hamiltonian.
       if (con->p[sites[i]].id==fType2)
         nT2++;
-    dNmu+=nT2*log(10)*(pc-pK);                       // The energy of fType1 states are choosen to 0. Subtract inital energy (note sign)
+    dNmu+=nT2*log(10.)*(pc-pK);                       // The energy of fType1 states are choosen to 0. Subtract inital energy (note sign)
                                                      // See faunus::titrate_switch 
     double sum=0;
     for (unsigned short i=0; i<sites.size(); i++) {
@@ -78,7 +78,7 @@ namespace Faunus {
     for (unsigned short i=0; i<sites.size(); i++)    
       if (con->p[sites[i]].id==fType2)
         nT2++;
-    dNmu-=nT2*log(10)*(pc-pK);                    // Add ideal term of final state (note sign)   
+    dNmu-=nT2*log(10.)*(pc-pK);                    // Add ideal term of final state (note sign)   
 
     return (full_ham==true ? sum + dNmu : sum);
   }

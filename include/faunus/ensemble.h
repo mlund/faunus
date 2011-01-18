@@ -31,11 +31,13 @@ namespace Faunus {
   class isobarical : public ensemble { public: isobarical(); };
 
   /*!
-   * Class for handling Grand Canonical steps. This class can dynamically insert and
-   * erase particles while at the same time update the groups in the systems. 
+   * \brief Class for handling Grand Canonical steps.
    * \author Mikael Lund, Bjorn Persson
    * \date Lund, 2009
    * \todo A lot.
+   *
+   * This class can dynamically insert and
+   * erase particles while at the same time update the groups in the systems. 
    */
   class grandcanonical : public ensemble {
     private:

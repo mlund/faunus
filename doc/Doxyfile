@@ -637,8 +637,7 @@ EXCLUDE_SYMBOLS        =
 # directories that contain example code fragments that are included (see 
 # the \include command).
 
-EXAMPLE_PATH           = src/classexamples \
-                         src/examples/twobody \
+EXAMPLE_PATH           = src/examples/twobody \
                          src/examples/manybody \
                          src/examples/widom \
                          src/examples/titration \

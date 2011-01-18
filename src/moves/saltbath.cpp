@@ -253,10 +253,10 @@ namespace Faunus {
           o.precision(5);
           o << setw(9) << ci << setw(9) << cj;
         }
-        double muidi=log( pairs[i].ai.avg()/con->getvolume() ),
-               muidj=log( pairs[i].aj.avg()/con->getvolume() ),
-               muexi=atom[ g[ pairs[i].i ].name ].chempot - muidi,
-               muexj=atom[ g[ pairs[i].j ].name ].chempot - muidj;
+        //double muidi=log( pairs[i].ai.avg()/con->getvolume() ),
+        //       muidj=log( pairs[i].aj.avg()/con->getvolume() );
+        //       muexi=atom[ g[ pairs[i].i ].name ].chempot - muidi,
+        //       muexj=atom[ g[ pairs[i].j ].name ].chempot - muidj;
         o << setw(6) << g[pairs[i].i].size() << setw(6) << g[pairs[i].j].size();
         o.precision(1);
         o << setw(5) << pairs[i].inacc.avg()-pairs[i].outacc.avg();

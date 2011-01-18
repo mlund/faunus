@@ -54,7 +54,7 @@ int main() {
   halfh.write("halfdist.dat"); 
 
   string spur;
-  int i=trace.size();
+  //int i=trace.size();
   std::ostringstream o;
   o << "# Trace of 'slumpclass'::random_one(), first ten thousand numbers" <<endl;
   for (int j=0; j<10000; j++)

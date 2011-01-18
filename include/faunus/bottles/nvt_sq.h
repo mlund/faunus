@@ -89,7 +89,7 @@ namespace Faunus {
              << pot.info()
              << in.info();
        
-        int N=in.getint("N_polymer");
+        //int N=in.getint("N_polymer");
        
         //Parameters for input control of Markov chain
         rot_f=in.getflt("rot_f"), crank_f=in.getflt("crank_f"), rep_f=in.getflt("rep_f"), clt_f=in.getflt("clt_f");

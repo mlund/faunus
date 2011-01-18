@@ -47,11 +47,11 @@ namespace Faunus {
         double r2=p1.sqdist(p2,box,halfbox),
                r=sqrt(r2), 
                x=p1.radius+p2.radius,
-               x2=x*x,
+               //x2=x*x,
                y=p1.radius*p2.radius,
-               y2=y*y,
-               z=p1.radius-p2.radius,
-               z2=z*z,
+               //y2=y*y,
+               //z=p1.radius-p2.radius,
+               //z2=z*z,
                u=p1.charge * p2.charge / r * f_exp(-k*r) - A*y/(6*(r-x+2)*x);
         //u=p1.charge*p2.charge/r*f_exp(-k*r)-A/6*((2*y/(r2-x2+2))+(2*y/(r2-z2))+std::log((r2-x2+2)/(r2-z2)));
 

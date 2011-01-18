@@ -157,7 +157,7 @@ namespace Faunus {
     private:
       particle s2p(string &);
       string p2s(particle &, int=0) { return string(); }
-      void header() {};
+      void header() {}
       float len;
     public:
       iogro(inputfile &);
@@ -205,5 +205,5 @@ namespace Faunus {
       void close();
   };
 
-};//namespace
+}//namespace
 #endif

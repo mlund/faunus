@@ -47,7 +47,7 @@ int main() {
 
   while (loop.macroCnt()) {                     //Markov chain 
     while (loop.microCnt()) {
-      short i,j,n;
+      short i,n;
       switch (rand() % 4) {                     // Pick a random MC move
         case 0:                                 // Displace salt
           sys+=sm_bulk.move(salt);              //   Do the move.

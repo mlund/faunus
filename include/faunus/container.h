@@ -19,11 +19,11 @@ namespace Faunus {
       double getvolume() {return volume;}
       virtual void setvolume(double);                     //!< Specify new volume
       virtual bool collision(const particle &)=0;         //!< Check for collision with walls
-      virtual bool slicecollision(const particle &) { return false; };      //!< Check for collision with the slice borders 
+      virtual bool slicecollision(const particle&);       //!< Check for collision with the slice borders 
       virtual void randompos(point &)=0;                  //!< Random point within container
       virtual string info();                              //!< Return info string
       virtual string povray();                            //!< POVRAY object representing the cell
-      virtual void boundary(point &) const {};            //!< Apply boundary conditions to a point
+      virtual void boundary(point &) const {}             //!< Apply boundary conditions to a point
       virtual void scale(point&, const double&) const {}  //!< Scale point to a new volume length
       virtual bool saveToDisk(string);                    //!< Save container date to disk
       virtual bool loadFromDisk(string,bool=false);       //!< Load container data from disk
@@ -33,6 +33,27 @@ namespace Faunus {
         return a.dist(b);
       }
       inline virtual point vdist(const point &a, const point &b) { return a-b; }
+
+      /*!
+       * \brief Test if given pair potential is compatible with the container (i.e. same boundary conditions)
+       * \returns True if potential is OK - false otherwise.
+       *
+       * Measuring the distance between two randomly placed particles 1000 times using the 
+       * pair potential and the container distance methods it is asserted whether they agree.
+       * The test also fails if the randompos() function generates a point that collides with
+       * the container boundaries.
+       */
+      template<typename Tpairpot> bool testpotential(Tpairpot &pair) {
+        particle a,b;
+        for (int i=0; i<1e3; ++i) {
+          randompos(a);
+          randompos(b);
+          if (collision(a)==true) return false;
+          if (collision(b)==true) return false;
+          if (std::abs(pair.sqdist(a,b)-sqdist(a,b)) > 1e-6) return false;
+        }
+        return true;
+      }
   };
 
   /*! \brief Spherical simulation container
@@ -50,13 +71,7 @@ namespace Faunus {
       void setvolume(double);
       void randompos(point &);
       string povray();
-      bool collision(const particle &a) {
-        double x,y,z;
-        x=std::abs(a.x);//+a.radius;
-        y=std::abs(a.y);//+a.radius;
-        z=std::abs(a.z);//+a.radius;
-        return ( x*x+y*y+z*z > r2 ) ? true:false;
-      }
+      bool collision(const particle &);
   };
 
   //---------------------------------------------------------
@@ -71,15 +86,16 @@ namespace Faunus {
    *  can be used to make sure particles are positioned within in the slice.
    */
   class cuboid : public container {
-    private:
+    protected:
       bool setlen(point);                      //!< Reset cuboid sidelengths
       bool setslice(point, point);             //!< Reset slice position
+      point len_inv;                           //!< Inverse sidelengths
 
     public:
-      cuboid(inputfile &);                    //!< Read input parameters
+      cuboid(inputfile &);                     //!< Read input parameters
 
       point len;                               //!< Sidelengths
-      point len_half, len_inv;                 //!< Half and inverse sidelengths
+      point len_half;                          //!< Half sidelength
       point slice_min, slice_max;              //!< Position of slice corners
 
       string info();                           //!< Return info string
@@ -171,7 +187,6 @@ namespace Faunus {
         if (std::abs(a.x)>len_half.x) a.x-=len.x*anint(a.x*len_inv.x);
         if (std::abs(a.y)>len_half.y) a.y-=len.y*anint(a.y*len_inv.y);
       }
-
   };
 
   //---------------------------------------------------------
@@ -204,17 +219,7 @@ namespace Faunus {
         return false;
       }
 
-      bool clash(const particle &a, const particle &b) {
-        point c;
-        c.x=std::abs(a.x-b.x);
-        c.y=std::abs(a.y-b.y);
-        c.z=std::abs(a.z-b.z);
-        if (c.x>len_half) c.x-=len;
-        if (c.y>len_half) c.y-=len;
-        if (c.z>len_half) c.z-=len;
-        return (pow(c.len(),2)<pow(a.radius+b.radius, 2))
-          ? true : false;
-      }
+      bool clash(const particle &, const particle &);
 
       //! Calculate distance using the minimum image convention
       inline double dist(const point &a, const point &b) { return a.dist(b, len, len_half); }
@@ -350,13 +355,7 @@ namespace Faunus {
       double r,zmin,zmax;
       clutch(double, double, double);
       void randompos(point &);
-      bool collision(const particle &a) {
-        if (a.z<zmax && a.z>zmin)
-          return true;
-        if (a.x*a.x+a.y*a.y+a.z*a.z > r2)
-          return true;
-        return false;
-      }
+      bool collision(const particle &);
   };
 
   /*! \brief Cylindrical simulation container
@@ -369,12 +368,9 @@ namespace Faunus {
       double r;     //!< Cylinder radius
       double r2;    //!< Cylinder radius squared
       double diameter;
-      cylinder(double,double);
+      cylinder(double, double);
       void randompos(point &);
-      bool collision(const particle &a) {
-        return 
-          (a.x*a.x+a.y*a.y>r2 || (a.z<0||a.z>len)) ? true:false;
-      };
+      bool collision(const particle &);
       string info(); //!< Cylinder info
       string povray();
   };

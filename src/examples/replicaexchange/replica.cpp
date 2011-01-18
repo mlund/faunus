@@ -69,4 +69,4 @@ int main() {
     bottles[i]->finish();
 
   cout << loop.info() << in.info() << temper.info();
-};
+}

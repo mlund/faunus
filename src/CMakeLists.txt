@@ -9,7 +9,7 @@ set(objs slump physconst inputfile point io titrate container
     moves/base moves/translational moves/rotational moves/charge
     moves/miscmove moves/saltbath moves/clustermove #moves/rosenbluth 
     moves/crankshaft moves/membrane moves/reptation moves/switch
-    moves/replicaexchange moves/eqtitrate notification ewald3D) 
+    moves/replicaexchange moves/eqtitrate notification ewald3D penaltyfunction) 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 #----- xdrfile static library for gromacs output -----
@@ -24,6 +24,13 @@ if(HAVETR1)
   if(ENABLE_TWISTER)
     add_definitions(-DMERSENNETWISTER)
   endif()
+endif()
+
+# -------------------------------------
+#   Use approximate exp() funtion?
+# -------------------------------------
+if(ENABLE_FAST_EXP)
+  add_definitions(-DFAU_FAST_EXP)
 endif()
 
 # -------------------------------------
@@ -92,6 +99,21 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/faunus
         FILES_MATCHING PATTERN "*.h"
         PATTERN ".svn" EXCLUDE
         PATTERN "CMakeFiles" EXCLUDE)
+
+# -----------------------------------------
+#   Add "cppcheck" static analyzer target
+# -----------------------------------------
+find_program(CPPCHECK_EXE "cppcheck")
+if (CPPCHECK_EXE)
+  add_custom_target(
+    cppcheck
+    COMMAND ${CPPCHECK_EXE}
+    -I ${CMAKE_SOURCE_DIR}/include -j2 --quiet --enable=style
+    ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/moves/*.cpp
+    COMMENT "Running C++ static analyzer..."
+    )
+  set_target_properties(cppcheck PROPERTIES EXCLUDE_FROM_ALL TRUE )
+endif()
 
 #----- Add example programs -----
 add_subdirectory(examples)

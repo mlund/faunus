@@ -204,5 +204,5 @@ namespace Faunus {
     }
   };
   
-};//namespace
+}//namespace
 #endif

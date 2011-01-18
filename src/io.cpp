@@ -433,8 +433,8 @@ namespace Faunus {
   }
 
   void ioxtc::setbox(float len) {
-    for (char i=0; i<3; i++)
-      for (char j=0; j<3; j++)
+    for (short i=0; i<3; i++)
+      for (short j=0; j<3; j++)
         xdbox[i][j]=0;
     xdbox[0][0]=len/10.; // corners of the
     xdbox[1][1]=len/10.; // rectangular box
@@ -443,8 +443,8 @@ namespace Faunus {
 
   void ioxtc::setbox(double x, double y, double z) {
     double f=0.1;
-    for (char i=0; i<3; i++)
-      for (char j=0; j<3; j++)
+    for (short i=0; i<3; i++)
+      for (short j=0; j<3; j++)
         xdbox[i][j]=0;
     xdbox[0][0]=f*x; // corners of the
     xdbox[1][1]=f*y; // rectangular box
@@ -530,4 +530,4 @@ namespace Faunus {
     f.close();
   }
 
-};//namespace
+}  //namespace

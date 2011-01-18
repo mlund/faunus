@@ -64,7 +64,7 @@ namespace Faunus {
    */
   template<typename T> isobaric<T>::isobaric
   ( ensemble &e, container &c, T &i, double pressure, int maxsize, int minsize )
-  : markovmove(e,c,i), trialpot(i), minlen(minsize), maxlen(maxsize), P(pressure), Ldist(0.5,minlen,maxlen) {
+  : markovmove(e,c,i), Ldist(0.5,minlen,maxlen), trialpot(i), minlen(minsize), maxlen(maxsize), P(pressure) {
     name="ISOBARIC VOLUME MOVE";
     runfraction=1;
     dp=1; 
@@ -74,7 +74,7 @@ namespace Faunus {
   }
 
   template<typename T> isobaric<T>::isobaric
-  ( ensemble &e, container &c, T &i, inputfile &in, string pfx) : markovmove(e,c,i), trialpot(i),Ldist(0.5,0,1000) {
+  ( ensemble &e, container &c, T &i, inputfile &in, string pfx) : markovmove(e,c,i), Ldist(0.5,0,1000), trialpot(i) {
     name="ISOBARIC VOLUME MOVE";
     prefix=pfx;
     markovmove::getInput(in);

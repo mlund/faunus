@@ -1,6 +1,7 @@
 #include "faunus/container.h"
 #include "faunus/inputfile.h"
 #include "faunus/species.h"
+#include "faunus/physconst.h"
 
 namespace Faunus {
 
@@ -70,10 +71,22 @@ namespace Faunus {
     return false;
   }
 
+  /*!
+   * In addition to the normal collision() check that checks for
+   * collision with the container boundaries, it is also possible
+   * to check for certain "collisions" inside the container. This
+   * is done with slicecollision(). A typical usage is to restrict
+   * particles or molecules to certain volumes within a simulation
+   * container (window sampling).
+   */
+  bool container::slicecollision(const particle &p) {
+    return false;
+  }
+
   //----------- CELL ----------------------
   void cell::setvolume(double vol) {
     volume=vol;
-    setradius( pow( 3*vol/(4*acos(-1.)), 1/3.) );
+    setradius( pow( 3*vol/(4*pyc.pi), 1/3.) );
   }
 
   cell::cell(double radius) {
@@ -89,7 +102,7 @@ namespace Faunus {
     r = radius; 
     r2 = r*r; 
     diameter = 2*r; 
-    volume = (4./3.)*acos(-1.)*r*r*r;
+    volume = (4./3.)*pyc.pi*r*r*r;
   }
 
   string cell::info() {
@@ -108,6 +121,14 @@ namespace Faunus {
       m.z = slp.random_half()*diameter;
       l=m.x*m.x+m.y*m.y+m.z*m.z;
     }
+  }
+
+  bool cell::collision(const particle &a) {
+    double x,y,z;
+    x=std::abs(a.x);//+a.radius;
+    y=std::abs(a.y);//+a.radius;
+    z=std::abs(a.z);//+a.radius;
+    return ( x*x+y*y+z*z > r2 ) ? true:false;
   }
 
   string cell::povray() {
@@ -185,8 +206,8 @@ namespace Faunus {
     o << container::info() 
       << "#   Sidelength           = " << len.x << "x" << len.y << "x" << len.z << endl
       << "#   Slice position       = " << slice_min.x << "-" << slice_max.x << "x" 
-                                       << slice_min.y << "-" << slice_max.y << "x" 
-                                       << slice_min.z << "-" << slice_max.z << endl;
+      << slice_min.y << "-" << slice_max.y << "x" 
+      << slice_min.z << "-" << slice_max.z << endl;
     return o.str();
   }
 
@@ -206,12 +227,12 @@ namespace Faunus {
     if (std::abs(a.x) > len_half.x  ||
         std::abs(a.y) > len_half.y  ||
         std::abs(a.z) > len_half.z  ||
-                 a.x  < slice_min.x ||
-                 a.y  < slice_min.y ||
-                 a.z  < slice_min.z ||
-                 a.x  > slice_max.x ||
-                 a.y  > slice_max.y ||
-                 a.z  > slice_max.z  )
+        a.x  < slice_min.x ||
+        a.y  < slice_min.y ||
+        a.z  < slice_min.z ||
+        a.x  > slice_max.x ||
+        a.y  > slice_max.y ||
+        a.z  > slice_max.z  )
       return true;
     return false;
   }
@@ -220,7 +241,7 @@ namespace Faunus {
 
   cuboidslit::cuboidslit(inputfile &in) : cuboid(in) {
   }
-  
+
   string cuboidslit::info() {
     std::ostringstream o;
     o << cuboid::info() 
@@ -276,6 +297,18 @@ namespace Faunus {
     m.z = slp.random_half()*len;
   }
 
+  bool box::clash(const particle &a, const particle &b) {
+    point c;
+    c.x=std::abs(a.x-b.x);
+    c.y=std::abs(a.y-b.y);
+    c.z=std::abs(a.z-b.z);
+    if (c.x>len_half) c.x-=len;
+    if (c.y>len_half) c.y-=len;
+    if (c.z>len_half) c.z-=len;
+    return (pow(c.len(),2)<pow(a.radius+b.radius, 2))
+      ? true : false;
+  }
+
   string box::povray() {
     std::ostringstream o;
     o << "box {<" <<-len_half <<"," <<-len_half <<"," <<-len_half <<"> , <"
@@ -298,9 +331,9 @@ namespace Faunus {
     for (int i=0; i<s; i++) 
       randompos(m[i]);
   }
-  
+
   //----------- SLIT --------------------------
-  
+
   slit::slit(inputfile &in) : box(in) {
     if (in.getflt("zboxlen", 0)>0)
       zlen=in.getflt("zboxlen");
@@ -327,28 +360,27 @@ namespace Faunus {
   }
 
   //----------- GRIDSLIT --------------------------
-  
+
   gridslit::gridslit(inputfile &in) : slit(in) {
     ngrid=in.getflt("gridpoints", 5.);
     l=len/ngrid;
     zlen=len;
   }
-  
+
   string gridslit::info() {
     std::ostringstream o;
     o << "# Grid points    = " << ngrid << endl
       << "# Grid spacing   = " << l << endl; 
     return o.str();
   }
-   
+
   bool gridslit::collision(const particle &p) {
     return false;
   }
-  
+
   void gridslit::randompos(point &m) {
   }
-  
-  
+
   //-------------- CLUTCH -------------------------
   //! \param radius Radius of the cell
   //! \param min Beginning of the particle-excluded region
@@ -357,10 +389,11 @@ namespace Faunus {
     r=radius;
     r2=r*r;
     diameter=2*r;
-    volume=(4./3.)*acos(-1.)*r2*r;
+    volume=(4./3.)*pyc.pi*r2*r;
     zmin=min;
     zmax=max;
   }
+
   void clutch::randompos(point &m) {
     double l=r2+1;
     while (l>r2) {
@@ -369,18 +402,29 @@ namespace Faunus {
       m.z = slp.random_half()*diameter;
       if (m.z>zmax || m.z<zmin)
         l=m.x*m.x+m.y*m.y+m.z*m.z; //squared distance from origo
-    };
+    }
   }
-  //------------CYLINDER---------------------------
-  //! \param length    Length of the cylinder
-  //! \param radius    Radius of the cylinder
+
+  bool clutch::collision(const particle &a) {
+    if (a.z<zmax && a.z>zmin)
+      return true;
+    if (a.x*a.x+a.y*a.y+a.z*a.z > r2)
+      return true;
+    return false;
+  }
+
+  /*!
+   * \param length Length of the cylinder
+   * \param radius Radius of the cylinder
+   */
   cylinder::cylinder(double length, double radius) {
     len=length;
     r=radius;
     r2=r*r;
     diameter=r*2;
-    volume=2*r2*acos(-1.)*len;
+    volume=2*r2*pyc.pi*len;
   }
+
   void cylinder::randompos(point &m) {
     double l=r2+1;
     m.z = slp.random_one()*len;
@@ -390,6 +434,12 @@ namespace Faunus {
       l=m.x*m.x+m.y*m.y;
     }
   }
+
+  bool cylinder::collision(const particle &a) {
+    return 
+      (a.x*a.x+a.y*a.y>r2 || (a.z<0||a.z>len)) ? true:false;
+  }
+
   string cylinder::info() {
     std::ostringstream o;
     o << container::info()
@@ -407,11 +457,14 @@ namespace Faunus {
 
 #ifdef HYPERSPHERE
   const double hypersphere::pi=3.141592654;
+
   hypersphere::hypersphere(inputfile &in) : cell(in) {
   }
+
   bool hypersphere::collision(const particle &p) {
     return false;
   }
+
   void hypersphere::randompos(point &m) {
     double rho=sqrt(slp.random_one());
     double omega=slp.random_one()*2.*pi;
@@ -422,6 +475,7 @@ namespace Faunus {
     m.z3=rho*sin(fi);
     m.z4=rho*cos(fi);
   }
+
   string hypersphere::info() {
     std::ostringstream o;
     o << container::info() 
@@ -429,6 +483,7 @@ namespace Faunus {
       << "#   Radius               = " << r << endl;
     return o.str();
   }
+
   /*
      void hypersphere::move(int i, double dangle) {
      double nfi=2.*acos(-1.)*slp.random_one();

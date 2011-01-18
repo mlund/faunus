@@ -7,6 +7,7 @@
 
 #include "faunus/faunus.h"
 #include "faunus/energy/coarsegrain.h"
+#include "faunus/energy/hardsphere.h"
 #include "faunus/potentials/pot_debyehuckelP3.h"
 #include "faunus/potentials/pot_hsdebyehuckelP3.h"
 #include "faunus/potentials/pot_hsHamakerDH.h"
@@ -24,7 +25,8 @@ using namespace std;
   typedef interaction_dipole<pot_debyehuckelP3> Tpot;
   #define MONOPOLE
 #elif defined(FASTDH)
-  typedef interaction_vector<pot_debyehuckelP3Fast> Tpot;
+  #include "faunus/potentials/pot_debyehuckelP3vec.h"
+  typedef interaction_pairwise<pot_debyehuckelP3vec> Tpot;
 #else
   typedef interaction<pot_debyehuckelP3> Tpot;
 #endif
@@ -95,7 +97,7 @@ int main() {
 #ifdef XYPLANE
   mt.dpv.z=0;
 #endif
-
+ 
   // Analysis and energy
   double usys=0;
 #pragma omp parallel for reduction (+:usys) schedule (dynamic)
@@ -117,7 +119,6 @@ int main() {
   double sum, volr, tr, rr, clt, clr, randy=-1;
   volr = in.getflt("volr"), tr=in.getflt("tr"), rr=in.getflt("rr"), clt=in.getflt("clt"), clr=in.getflt("clr");
   sum  = volr+tr+rr+clt+clr, volr/=sum, tr/=sum, rr/=sum, clt/=sum, clr/=sum;
-  int switcher=-1;
 
   ioxtc xtc(cell.len);                                // Gromacs xtc output
   for (int i=0; i<g.size(); i++)

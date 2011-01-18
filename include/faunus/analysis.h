@@ -75,6 +75,10 @@ namespace Faunus {
       string info();
   };
 
+
+  /*!
+   * \brief Tracks total system energy and drifts
+   */
   class systemenergy : public analysis {
     private:
       double u0;
@@ -96,108 +100,6 @@ namespace Faunus {
       double drift();             //!< Measured energy drift
       void check(checkValue &);   //!< Output testing
   };
-
-  /*!
-   * \brief Calculates free energy pathway
-   * \author Mikael Lund
-   * \note Can't really remember what this is good for...ML
-   *
-   * Starting from some point this class will generate eight
-   * other points around it (cubic) and calculate the excess chemical
-   * potential in these eight points. The one with the lowest value
-   * will be the center of a point that will be used as the center
-   * for eight new points etc. This will go on until the path reaches a
-   * target point as specified in the constructor.
-   */
-  template<class T_pairpot> class widompath : public analysis {
-    private:
-      std::ostringstream ostr;
-      bool finished;
-      unsigned short cnt;
-      float r;
-      particle goal;
-      vector<float> trajmu;
-      vector<point> cube, trajpos;
-      vector< average<float> > cubemu;
-      void setcube(point &);
-    public:
-      particle p;                         //!< Particle to insert
-      widompath(particle &, particle &);  //!< Constructor
-      void povpath(iopov&);               //!< Plot trajectory in povray
-      void update(container&, interaction<T_pairpot>&, iopov&);
-      string info();                      //!< Information
-  };
-
-  //! \param beg Particle to insert, including starting position
-  //! \param end Destination particle - Pathway ends here!
-  template<class T_pairpot> widompath<T_pairpot>::widompath(particle &beg, particle &end) {
-    r=5.;
-    runfraction=0.2;
-    finished=false;
-    cnt=100;
-    p=beg;
-    goal=end;
-    setcube(p);
-  }
-  template<class T_pairpot> void widompath<T_pairpot>::update(
-      container &con, interaction<T_pairpot> &pot, iopov &pov) {
-    if (runtest()==false || finished==true)
-      return;
-    unsigned char i,imax;
-    if (cnt>0) {
-      cnt--;
-      for (i=0; i<cube.size(); i++) {
-        p=cube[i]; 
-        cubemu[i] += (con.collision(p)==false) ?
-          exp(-pot.energy(con.p, p)) : exp(-100);
-      }
-    } else {
-      imax=0;
-      for (i=1; i<cube.size(); i++)
-        if (cubemu[i].avg()>cubemu[imax].avg())
-          imax=i;
-      p=cube[imax];
-      trajpos.push_back(p); 
-      trajmu.push_back( -log(cubemu[imax].avg()) );
-      //cout << p << " " << -log(cubemu[imax].avg()) << endl;
-      setcube(p);
-      cnt=100;
-      if (p.dist(goal)<4*p.radius) {
-        finished=true;
-        //povpath(pov);
-      }
-    }
-  }
-  template<class T_pairpot> void widompath<T_pairpot>::povpath(iopov &pov) {
-    for (unsigned short i=0; i<trajpos.size()-1; i++)
-      pov.connect(trajpos[i], trajpos[i+1], 0.5);
-    //pov.connect(trajpos[trajpos.size()-1], goal, 0.5);
-  }
-  template<class T_pairpot> void widompath<T_pairpot>::setcube(point &p) {
-    cube.resize(8);
-    cubemu.resize( cube.size() );
-    for (unsigned char i=0; i<cube.size(); i++) {
-      cubemu[i].reset();
-      cube[i].x = p.x + r*slp.random_half();
-      cube[i].y = p.y + r*slp.random_half();
-      cube[i].z = p.z + r*slp.random_half();
-    } 
-  }
-
-  template<class T_pairpot> string widompath<T_pairpot>::info() {
-    std::ostringstream o;
-    o << "# WIDOMPATH ANALYSIS:" << endl
-      << "#   Ghost particle (z,r) = " << p << " " << p.charge << " " << p.radius << endl
-      << "#   Target position      = " << goal << endl
-      << "#   Points in trajectory = " << trajpos.size() << endl
-      << "#   Target reached       = ";
-    if (finished==true) o << "Yes";
-    else o << "NO!";
-    o << endl;
-    for (int i=0; i<trajpos.size(); i++)
-      o << i << " " << trajmu[i] << " " << trajpos[i] << endl;
-    return o.str();
-  }
 
   /*!
    * This class analyses angular correlations between
@@ -264,11 +166,13 @@ namespace Faunus {
       }
   };
 
-  /* Calculates the virial pressure by calculating the forces between
+  /*!
+   * Calculates the virial pressure by calculating the forces between
    * the particles. The force is calculated by taking the derivative
    * of the pair-potential and does therefore *not* work with
    * hardsphere potentials.
    *
+   * \brief Virial pressure analysis
    * \author Mikael Lund
    * \date Lund, 2008
    */
@@ -324,14 +228,13 @@ namespace Faunus {
 	
 
   /*!
-   * \brief Class to analyse pairing of mobile particles
+   * \brief Analyse pairing of mobile particles
    * \author Mikael Lund
    * \date Asljunga 2010
    *
    * This class will look for pairs of designated species and analyse if
    * they are within a certain threshold. The number of free ions and
-   * pairs are averaged so as to evaluate the thermodynamic 
-   * association constant.
+   * pairs are averaged so as to evaluate the thermodynamic association constant.
    */
   class pairing : public analysis {
   private:

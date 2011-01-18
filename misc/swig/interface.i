@@ -2,6 +2,7 @@
 %{
 #include "faunus/faunus.h"
 #include "faunus/potentials/pot_coulomb.h"
+#include "faunus/potentials/pot_debyehuckelP3.h"
 #include "faunus/potentials/pot_hscoulomb.h"
 #include "faunus/potentials/pot_minimage.h"
 #include "faunus/potentials/pot_test_rf.h"
@@ -19,6 +20,7 @@ using namespace std;
 %rename(assign) Faunus::macromolecule::operator=;
 %rename(__int__) Faunus::average<int>::operator int;
 %rename(__float__) Faunus::average<double>::operator double;
+%rename(__float__) Faunus::average<float>::operator float;
 %rename(_print) Faunus::grandcanonical::print;
 %rename(_print) Faunus::clusterrotate::print;
 %rename(_print) Faunus::inputfile::print;
@@ -74,7 +76,9 @@ using namespace std;
  * ----------------------------------- */
 %template(average_int) Faunus::average<int>;
 %template(average_dbl) Faunus::average<double>;
+%template(average_flt) Faunus::average<float>;
 %template(vector_dblavg) std::vector< Faunus::average<double> >;
+%template(vector_fltavg) std::vector< Faunus::average<float> >;
 %template(vector_group) std::vector<Faunus::group>;
 %template(vector_polymer) std::vector<Faunus::polymer>;
 %template(vector_particle) std::vector<Faunus::particle>;
@@ -82,6 +86,7 @@ using namespace std;
 namespace std {
   %template(vector_int) std::vector<int>;
   %template(vector_dbl) std::vector<double>;
+  %template(vector_str) std::vector<string>;
 }
 
 /* -----------------------------------
@@ -92,6 +97,10 @@ namespace std {
 
 #include "faunus/potentials/pot_coulomb.h"
 %template(interaction_coulomb) Faunus::interaction<Faunus::pot_coulomb>;
+
+#include "faunus/potentials/pot_debyehuckelP3.h"
+%ignore Faunus::pot_debyehuckelP3Fast;
+%ignore pot_debyehuckelP3Fast;
 
 #include "faunus/potentials/pot_hscoulomb.h"
 %template(interaction_hscoulomb) Faunus::interaction<Faunus::pot_hscoulomb>;

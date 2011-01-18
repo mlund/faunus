@@ -316,7 +316,6 @@ namespace Faunus {
   }
 
   bool group::swap(container &c, int pos) {
-    int oldbeg=beg;
     if (beg!=pos && size()>0) {
       std::swap_ranges(c.p.begin()+beg, c.p.begin()+end, c.p.begin()+pos);
       std::swap_ranges(c.trial.begin()+beg, c.trial.begin()+end, c.trial.begin()+pos);
@@ -837,15 +836,18 @@ namespace Faunus {
     nb.clear();
     iobabel ob;
     ob.read(name);
-    add(c,ob.p);
-    move(c,-cm);
-    accept(c);
-    for (int i=beg; i<=end; i++) {
-      nb.push_back( ob.neighbors(i-beg) );
-      for (int j=0; j<nb[i-beg].size(); j++)
-        nb[i-beg][j]+=beg;
+    if (ob.p.size()>0) {
+      add(c,ob.p);
+      move(c,-cm);
+      accept(c);
+      for (int i=beg; i<=end; i++) {
+        nb.push_back( ob.neighbors(i-beg) );
+        for (int j=0; j<nb[i-beg].size(); j++)
+          nb[i-beg][j]+=beg;
+      }
+      return true;
     }
-    return true;
+    return false;
   }
 #endif
 
@@ -854,15 +856,15 @@ namespace Faunus {
   }
 
   bool polymer::addbond(int i, int j) {
-      if (i>=beg && i<=end)
-        if (j>=beg && j<=end)
-          if (areneighbors(i,j)==false) {
-            if ( (i-beg)<=nb.size() ) nb.resize(i-beg+1);
-            if ( (j-beg)<=nb.size() ) nb.resize(j-beg+1);
-            nb[i-beg].push_back(j);
-            nb[j-beg].push_back(i);
-            return true;
-          }
+    if (i>=beg && i<=end)
+      if (j>=beg && j<=end)
+        if (areneighbors(i,j)==false) {
+          if ( (i-beg)<=nb.size() ) nb.resize(i-beg+1);
+          if ( (j-beg)<=nb.size() ) nb.resize(j-beg+1);
+          nb[i-beg].push_back(j);
+          nb[j-beg].push_back(i);
+          return true;
+        }
     return false;
   }
 
@@ -925,7 +927,7 @@ namespace Faunus {
       << " (" << ns << " pops / " << nc << " popc)" << endl;
     return o.str();
   }
-  
+
   string popscmembrane::info(slit &c) {
     double z=charge(c.p);
     std::ostringstream o;
@@ -1023,13 +1025,13 @@ namespace Faunus {
 
   string popscmembrane::getVMDBondScript() {
     std::ostringstream o;
-		for (int i=0; i<pops.size(); i++)
+    for (int i=0; i<pops.size(); i++)
       o << pops[i].getVMDBondScript();
     for (int i=0; i<popc.size(); i++)
       o << popc[i].getVMDBondScript();
     return o.str();
   }
- 
+
 #ifdef BABEL
   glu3::glu3(container &con, inputfile &in) {
     name="GLU3 DENDRIMER";
@@ -1041,10 +1043,10 @@ namespace Faunus {
     chains.beg=beg+52;
     chains.nb.erase(chains.nb.begin(), chains.nb.begin()+52);
     chains.name="GLUTAMIC CHAINS";
-/*    cout <<chains.nb.size() <<" size of nb, "<<chains.size()<<" size of chains"<<endl
-         <<"glu3 starts and ends at "<<beg<<" "<<end<<" and chains at "<<chains.beg<<" "<<chains.end<<endl
-         <<"porphoryn core starts and ends at "<<core.beg<<" "<<core.end<<endl;
-*/
+    /*    cout <<chains.nb.size() <<" size of nb, "<<chains.size()<<" size of chains"<<endl
+          <<"glu3 starts and ends at "<<beg<<" "<<end<<" and chains at "<<chains.beg<<" "<<chains.end<<endl
+          <<"porphoryn core starts and ends at "<<core.beg<<" "<<core.end<<endl;
+          */
   }
   string glu3::info() {
     std::ostringstream o;

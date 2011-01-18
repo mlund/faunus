@@ -13,13 +13,14 @@ namespace Faunus {
   class slit;
   class inputfile;
 
-  /*! \brief Groups set of particles, such as molecules, salt etc.
-   *  \author Mikael Lund
-   *  \date Lund 2004
+  /*!
+   * \brief Groups set of particles, such as molecules, salt etc.
+   * \author Mikael Lund
+   * \date Lund 2004
    *
-   *  A group defines the range of a a protein, the mobile ions,
-   *  a chain or whatever. If is used extensively in MC movements,
-   *  energy calculations and many, many other places.
+   * A group defines the range of a a protein, the mobile ions,
+   * a chain or whatever. If is used extensively in MC movements,
+   * energy calculations and many, many other places.
    */
   class group {
     protected:
@@ -54,7 +55,7 @@ namespace Faunus {
       bool swap(container &, group &);                    //!< Swap location of two groups
       int count(vector<particle> &, unsigned char);       //!< Count number of specific particles
       virtual int displace(container&, point);            //!< Displace random particle
-      virtual void isobaricmove(container &, double){};   //!< Pressure scaling
+      virtual void isobaricmove(container &, double){}    //!< Pressure scaling
       virtual int nummolecules();                         //!< Number of molecules
       unsigned short numhydrophobic(vector<particle> &);  //!< Number of hydrophobic particles
       bool swap(container &, int);                        //!< Move group to a new position
@@ -78,6 +79,9 @@ namespace Faunus {
       virtual void isobaricmove(container &, double);
   };
 
+  /*!
+   * \brief Class for macromolecules such as proteins.
+   */
   class macromolecule : public group {
     public:
       macromolecule();

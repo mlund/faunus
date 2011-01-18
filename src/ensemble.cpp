@@ -10,7 +10,7 @@ namespace Faunus {
   // class ensemble
   //
 
-  ensemble::ensemble() {};
+  ensemble::ensemble() {}
 
   bool ensemble::metropolis(double du)
   {
@@ -24,13 +24,13 @@ namespace Faunus {
   // class canonical
   //
 
-  canonical::canonical() {};
+  canonical::canonical() {}
 
   //
   // class isobarical
   //
 
-  isobarical::isobarical() {};
+  isobarical::isobarical() {}
 
   //
   // class grandcanonical
@@ -65,7 +65,7 @@ namespace Faunus {
     return true;
   }
 
-  int grandcanonical::size() { return 0; };
+  int grandcanonical::size() { return 0; }
 
   short grandcanonical::findgroup(unsigned int i) {
     for (unsigned int n=0; n<gp.size(); n++)

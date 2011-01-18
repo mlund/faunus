@@ -159,7 +159,7 @@ namespace Faunus {
     double sum=0;
     if (markovmove::slp.random_one()>runfraction)
       return sum;
-    unsigned int I, s;
+    unsigned int I;
     particle J=atom(nameA);
     for (int i=0; i<sites.size(); i++) {
       cnt++;
@@ -388,7 +388,6 @@ namespace Faunus {
     du=0;
     if (markovmove::slp.runtest(runfraction)==false)
       return du;
-    double sum=0;
     cntcore++;
     // New configuration
     if (con->trial[g.beg+4].charge>0.1) {     //Is the core protonated?
@@ -463,7 +462,6 @@ namespace Faunus {
 
     name.assign("IMPLICIT SALT TITRATION");
     cite.assign("doi:10.1021/ct1003093");
-    double sytem_charge = con->charge();
     pairpot = &pair;
 
     // Getting config from input

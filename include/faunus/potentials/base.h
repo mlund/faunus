@@ -52,7 +52,7 @@ namespace Faunus {
         s=a*a*a;
         u+=(s*s-s)*eps;
       }
-      virtual void setvolume(double) {}; //!< specify volume for fluctuating periodic boundaries
+      virtual void setvolume(double) {}  //!< specify volume for fluctuating periodic boundaries
       virtual string info() {
         std::ostringstream o;
         o << "#   Type              = " << name << std::endl
@@ -85,7 +85,7 @@ namespace Faunus {
       inline void hs(const particle &p1, const particle &p2, const double &r2, double &u) const {
         u+=hs(p1,p2,r2);
       }*/
-      virtual void setvolume(double) {}; //!< specify volume for fluctuating periodic boundaries
+      virtual void setvolume(double) {}  //!< specify volume for fluctuating periodic boundaries
       virtual string info() {
         std::ostringstream o;
         o << "#   Type              = " << name << std::endl;
@@ -137,7 +137,7 @@ namespace Faunus {
         s=a*a*a;
         u+=(s*s-s)*eps;
       }
-      virtual void setvolume(double) {}; //!< specify volume for fluctuating periodic boundaries
+      virtual void setvolume(double) {}  //!< specify volume for fluctuating periodic boundaries
       virtual string info() {
         std::ostringstream o;
         o << "#   Type              = " << name << std::endl

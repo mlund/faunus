@@ -11,7 +11,7 @@ namespace Faunus {
     runfraction=1.0;
     deltadp=0.1;
     dp=1.0;
-  };
+  }
 
  /*!
   * Macromolecular rotation, which loads parameters from inputfile &in
@@ -25,7 +25,7 @@ namespace Faunus {
     deltadp=0.1;
     dp=1.0;
     markovmove::getInput(in);
-  };
+  }
 
   double macrorot::move(macromolecule &g) {
     if (slp.runtest(runfraction)==false)

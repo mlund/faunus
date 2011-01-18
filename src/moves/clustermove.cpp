@@ -70,7 +70,7 @@ namespace Faunus {
   double clusterinvwsalt::move(salt &m) {
     cnt++;
     du=-pot->internal(con->p, m);
-    double udiff=0, un=0, uo=0;
+    double udiff=0;
       moved.clear(), remaining.clear();
     for (int i=m.beg; i<m.end+1; i++)
       remaining.push_back(i);

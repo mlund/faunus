@@ -26,10 +26,13 @@ namespace Faunus {
   };
 
   /*!
-   * Crankshaft move for polymers
-   *
+   * \brief Crankshaft move for polymers
    * \author Mikael Lund
    * \date Canberra, 2009
+   *
+   * This class will do crank-shaft moves of an arbitrary number of monomers,
+   * spanned by two randomly chosen end points. The reported mean-square displacement
+   * represents the movement of the polymer mass center.
    */
   class crankShaft : public markovmove {
     private:

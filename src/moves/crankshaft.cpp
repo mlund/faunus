@@ -100,27 +100,36 @@ namespace Faunus {
       if (con->collision(con->trial[v[i]])==true) {
         hc=true;
         break;
-      } else du += pot->u_monomer(con->trial,g,v[i]) - pot->u_monomer(con->p,g,v[i]);
+      } //else du += pot->u_monomer(con->trial,g,v[i]) - pot->u_monomer(con->p,g,v[i]);
     }
 
     if (hc==true) {
       rc=HC;
       du=0;
+      dpsqr+=0;
       g.cm_trial=g.cm;
       for (int i=0; i<v.size(); i++)
         con->trial[v[i]] = con->p[v[i]];
       return du;
     }
+
+    uold = pot->energy(con->p, g) + pot->uself_polymer(con->p, g);
+    unew = pot->energy(con->trial, g) + pot->uself_polymer(con->trial, g);
+
+    du = unew-uold;
+    
     if (ens->metropolis(du)==true) {
       rc=OK;
       utot+=du;
       naccept++;
+      dpsqr += con->sqdist( g.cm, g.cm_trial );
       for (int i=0; i<v.size(); i++)
         con->p[v[i]] = con->trial[v[i]];
-      g.masscenter(con->p);
+      g.masscenter(*con);
       return du;
     } else rc=ENERGY;
     du=0;
+    dpsqr+=0;
     g.cm_trial=g.cm;
     for (int i=0; i<v.size(); i++)
       con->trial[v[i]] = con->p[v[i]];

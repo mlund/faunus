@@ -93,6 +93,54 @@ namespace Faunus {
           v.push_back( i*xres + xmin );
         return v;
       }
+      
+      //! Dump table to disk
+      bool dumptodisk(string filename) {
+        std::ofstream f(filename.c_str());
+        if (f) {
+          f.precision(6);
+          f << "% xytable dump: tablesize, xmin, xres; ydata" << endl;
+          f << y.size() << " " << xmin << " " << xres << endl;
+          for (int i=0; i<y.size(); i+=1) {
+            f << y[i] << endl; 
+          }
+          f.close();
+          return true;
+        }         
+        return false;
+      }
+      
+      bool dumptodisk(string file, int num, string ext) {
+        string filename;
+// //        char* strnum;
+//         filename.append(file);
+// //        sprintf(strnum,"%d",num);
+// //        filename.append(strnum);
+//         filename.append(".");
+//         filename.append(ext);
+        std::stringstream buffer;
+        buffer << file << num << "." << ext;
+        filename = buffer.str();
+        return dumptodisk(filename);
+      }
+
+      //! Load table from disk
+      bool loadfromdisk(string filename) {
+        int n;
+        string s;
+        std::ifstream f(filename.c_str());
+        if (f) {
+          getline(f,s);
+          f >> n >> xmin >> xres;
+          y.resize(n);
+          for (int i=0; i<y.size(); i+=1) {
+            f >> y[i];
+          }
+          f.close();
+          return true;
+        }         
+        return false;
+      }
     };
 }//namespace
 #endif

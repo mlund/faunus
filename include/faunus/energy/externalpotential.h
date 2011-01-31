@@ -18,7 +18,7 @@ namespace Faunus {
    * the z-axis by using the method by Torbjorn and CO (Mol. Phys. 1996, 87:407). To avoid
    * energy drifts, update() returns the energy change brought about by updating the charge profile.
    * This class should be used in conjunction with an interaction class (energybase derivative) to
-   * take inte account explicit interactions within the container.
+   * take into account explicit interactions within the container.
    */
 
   class expot_akesson {
@@ -34,7 +34,7 @@ namespace Faunus {
       double getPotential(const point &a) { return phi(a.z); }
 
       //!< This is Eq. 15 of the mol. phys. 1996 paper by Greberg et al.
-      //!< (sign typo in manuscript: phi^infty(z) should be "-2*pi*z" on page 413, middle)
+      //!< (sign typo in paper: phi^infty(z) should be "-2*pi*z" on page 413, middle)
       double phi_ext(double z, double a) {
         return  -2.0*pyc.pi*z-8.0*a*log((sqrt(2.0*a*a+z*z)+a)/sqrt(a*a+z*z))+2.0*z*(pyc.pi/
             2.0+std::asin((a*a*a*a-z*z*z*z-2.0*a*a*z*z)/pow(a*a+z*z,2.0)));
@@ -61,7 +61,7 @@ namespace Faunus {
             << "#     Bjerrum length         = " << lB << " A\n"
             << "#     xy-slit resolution     = " << dz << " A (" << phi.y.size() << " slits)\n"
             << "#     Number of pot. updates = " << cnt/phiupdate << endl
-            << "#     More information:        Mol. Phys. 1996, 87:407\n";
+            << "#     More information:        doi:10.1080/00268979600100271\n";
         return o.str();
       }
 
@@ -157,7 +157,7 @@ namespace Faunus {
         }
 
         double uself_polymer(vector<particle> &p, const polymer &g) {
-          return springinteraction<Tpairpot>::uself_polymer(p,g) + expot.energy(p,g);
+          return springinteraction<Tpairpot>::uself_polymer(p,g);// + expot.energy(p,g);
         }
 
         double internal(vector<particle> &p, const group &g, int step=1) { 

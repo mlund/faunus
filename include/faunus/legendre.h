@@ -3,6 +3,7 @@
 
 namespace Faunus {
   namespace Math {
+#ifdef FAU_FAST_SQRT
     /*!
      * \brief Log Base 2 Approximation for the square root
      * \note http://ilab.usc.edu/wiki/index.php/Fast_Square_Root
@@ -53,9 +54,10 @@ namespace Faunus {
     inline double fastSqrt_Q3(const double x) {
       return x * invSqrt_Q3(x);
     }
+#endif
 
-  } //namespace
-} //namespace
+  } //math namespace
+} //faunus namespace
 
 namespace Faunus {
   /*!

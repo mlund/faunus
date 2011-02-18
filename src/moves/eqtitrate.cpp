@@ -14,8 +14,8 @@ namespace Faunus {
    * \param pKd Negative logarithm of dissociation constant.
    */
   void eqtitrate::data::set(double pX, double pKd) {
-    ddG = -log(pow(10, -pKd));
-    mu_X= -log(pow(10, -pX));
+    ddG = -log(pow(10., -pKd));
+    mu_X= -log(pow(10., -pX));
     set_mu_AX(0);
   }
   

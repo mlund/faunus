@@ -361,14 +361,21 @@ namespace Faunus {
   /*! \brief Cylindrical simulation container
    *  \author Mikael Lund/Bjoern Persson
    *  \todo Needs some testing
+   *
+   *  This is a cylinder container where all walls
+   *  are HARD. The origin is in the middle of the
+   *  cylinder.
    */
   class cylinder : public container {
+    private:
+      double halflen;
+      double r2;    //!< Cylinder radius squared
     public:
       double len;   //!< Cylinder length
       double r;     //!< Cylinder radius
-      double r2;    //!< Cylinder radius squared
       double diameter;
       cylinder(double, double);
+      cylinder(inputfile &);
       void randompos(point &);
       bool collision(const particle &);
       string info(); //!< Cylinder info

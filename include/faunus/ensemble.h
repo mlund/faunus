@@ -10,8 +10,8 @@ namespace Faunus {
   class particle;
 
   /*!
-   * Polymorph ensemble class
-   * \todo Maybe not really needed...
+   * \brief Polymorph ensemble class
+   * \todo Not really needed...
    */
   class ensemble {
     protected:

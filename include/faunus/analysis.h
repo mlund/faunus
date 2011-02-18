@@ -18,7 +18,7 @@ namespace Faunus {
   class histogram;
 
   /*!
-   * Base class for analysis functions
+   * \brief Base class for analysis functions
    * \author Mikael Lund
    * \date Prague, 2007
    */
@@ -41,6 +41,7 @@ namespace Faunus {
    * a function of, say, an intermolecular separation. It is assumed
    * that the x range is identical for all distributions.
    *
+   * \brief Matrix of averages along some coordinate
    * \author Mikael Lund
    * \date December 2007
    */
@@ -251,7 +252,7 @@ namespace Faunus {
   };
 
   /*!
-   * Class to measure the osmotic pressure in the cell model.
+   * \brief Osmotic pressure in the cell model.
    * \author Mikael Lund
    * \date Lund, 2010
    *

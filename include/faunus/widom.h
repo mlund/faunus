@@ -39,12 +39,12 @@ namespace Faunus {
    * Svensson and Woodward, Mol. Phys. 1988, 64(2), 247-259.
    * Currently, the inserted particle is a charged, hard sphere.
    *
+   * \brief Single particle hard sphere Widom insertion with charge scaling
    * \author Martin Trulsson and Mikael Lund
    * \date Lund / Prague 2007-2008.
    * \note This is a direct conversion of the Widom routine found in the bulk.f
    *       program by Bolhuis/Jonsson/Akesson
    */
-
   class widomSW : public analysis {
     private:
       vector<particle> g;         //!< list of test particles

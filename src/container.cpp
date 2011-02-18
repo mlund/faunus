@@ -423,11 +423,22 @@ namespace Faunus {
     r2=r*r;
     diameter=r*2;
     volume=2*r2*pyc.pi*len;
+    halflen=len/2;
+  }
+
+  cylinder::cylinder(inputfile &in) {
+    atom.load(in);
+    len=in.getflt("cylinder_len", 0);
+    r=in.getflt("cylinder_radius", 0);
+    r2=r*r;
+    diameter=r*2;
+    volume=2*r2*pyc.pi*len;
+    halflen=len/2;
   }
 
   void cylinder::randompos(point &m) {
     double l=r2+1;
-    m.z = slp.random_one()*len;
+    m.z = slp.random_half()*len;
     while (l>r2) {
       m.x = slp.random_half()*diameter;
       m.y = slp.random_half()*diameter;
@@ -437,7 +448,7 @@ namespace Faunus {
 
   bool cylinder::collision(const particle &a) {
     return 
-      (a.x*a.x+a.y*a.y>r2 || (a.z<0||a.z>len)) ? true:false;
+      ( a.x*a.x+a.y*a.y>r2 || ( a.z<-halflen || a.z>halflen ) ) ? true:false;
   }
 
   string cylinder::info() {
@@ -448,12 +459,13 @@ namespace Faunus {
       << "#   Radius               = " << r << endl;
     return o.str();
   }
+
   string cylinder::povray() {
     std::ostringstream o;
     o << "cylinder {<0,0,0>,<0,0" << len << ">," << r <<" texture {cell}}\n"
       << "cylinder {<0,0,0>,<0,0" << len << ">,0.5 texture {cell}}\n";
     return o.str();
-  }     
+  }
 
 #ifdef HYPERSPHERE
   const double hypersphere::pi=3.141592654;

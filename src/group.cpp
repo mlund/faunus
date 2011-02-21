@@ -357,6 +357,7 @@ namespace Faunus {
       cout << "# Loaded polymer charges from " << filename << endl;
       return true;
     } else
+      std::cerr << "!! charge file not loaded !!" << endl;
     return false;
   }
 
@@ -428,15 +429,17 @@ namespace Faunus {
     o << group::info();
     o << std::left;
     if (Q.cnt>0)
-      o << "#   Charge and fluctuations:" << endl
-        << "#     <Z> <Z2>-<Z>2        = " << setw(w) << Q.avg() << setw(w) << Q2.avg()-pow(Q.avg(),2) << endl;
+      o << "#   Mean charge              = "  << setw(w) << Q.avg() << endl
+        << "#    Fluctuat. <Z2>-<Z>2     = "  << setw(w) << Q2.avg()-pow(Q.avg(),2) << endl;
     if (rg2.cnt>0)
-      o << "#   Rms radius of gyration = " << setw(w) << sqrt(rg2.avg()) << endl;
+      o << "#   Rms radius of gyration   = " << setw(w) << sqrt(rg2.avg()) << endl
+        << "#    Fluctuat. <Rg2>-<Rg>2   = " << setw(w) << rg2.avg()-pow(rg.avg(),2) << endl;
     if (ree2.cnt>0)
-      o << "#   Rms end-to-end distance= " << setw(w) << sqrt(ree2.avg()) << endl;
+      o << "#   Rms end-to-end distance  = " << setw(w) << sqrt(ree2.avg()) << endl
+        << "#    Fluctuat. <Ree2>-<Ree>2 = " << setw(w) << ree2.avg()-pow(ree.avg(),2) << endl;
     if (dip.cnt>0)
-      o << "#     <mu> <mu2>-<mu>2     = " << setw(w) << dip.avg() << setw(w) << dip2.avg()-pow(dip.avg(),2) << endl
-        << "#     Dipole vector        = " << setw(w) << mu << endl;
+      o << "#     <mu> <mu2>-<mu>2       = " << setw(w) << dip.avg() << setw(w) << dip2.avg()-pow(dip.avg(),2) << endl
+        << "#     Dipole vector          = " << setw(w) << mu << endl;
       //o << "#    Radius                = " << cm.radius << endl;
     return o.str();
   }
@@ -548,6 +551,7 @@ namespace Faunus {
     }
     x=x*(1./sum);
     rg2+=x;                             // add to average squared radius of gyration
+    rg+=sqrt(x);                        // add to average radius of gyration
     return x;                           // obtained squared radius of gyration
   }
 
@@ -555,6 +559,7 @@ namespace Faunus {
     double x=0;
     x=c.sqdist(c.p[beg], c.p[end]);     // squared distance between begin and end
     ree2+=x;                            // add to average squared end-to-end distance
+    ree+=sqrt(x);                       // add to average end-to-end distance
     return x;                           // obtained squared radius of gyration
   }
 
@@ -880,13 +885,15 @@ namespace Faunus {
 
   string polymer::info() {
     std::ostringstream o;
-    o << macromolecule::info()
-      << "#   Connectivity:" << std::endl;
-    for (int i=0; i<nb.size(); i++) {
-      o << "#     Atom " << i+beg << ": ";
-      for (int j=0; j<nb[i].size(); j++)
-        o << nb[i][j] << " ";
-      o << std::endl;
+    o << macromolecule::info();
+    if (nb.size()<100.) {                   // Only print connectivity if the number of bounds < 100
+      o << "#   Connectivity:" << std::endl;
+      for (int i=0; i<nb.size(); i++) {
+        o << "#     Atom " << i+beg << ": ";
+        for (int j=0; j<nb[i].size(); j++)
+          o << nb[i][j] << " ";
+        o << std::endl;
+      }
     }
     return o.str();
   }

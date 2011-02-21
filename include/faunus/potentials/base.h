@@ -150,11 +150,13 @@ namespace Faunus {
 
   class pot_harmonic {
     public:
+      string name;    //!< Arbitrary name
       double k;       //!< Force constant for bonds (if any)
       double req;     //!< Equilibrium distance (in AA)
       pot_harmonic(inputfile &in) {
         k=in.getflt("harmonic_k", 0.3);
         req=in.getflt("harmonic_req", 0);
+        name="Harmonic spring interaction";
       }
 
       double harmonicbond(double r) {
@@ -170,8 +172,8 @@ namespace Faunus {
       string info() {
         std::ostringstream o;
         if (req>0 && k>0)
-          o << "#   Spring const.     = " << k << " kT/AA^2" << endl
-            << "#   Spring eq. dist   = " << req << " AA" << endl;
+          o << "#     Spring const.     = " << k    << " kT/AA^2" << endl
+            << "#     Spring eq. dist   = " << req  << " AA" << endl;
         return o.str();
       }
   };

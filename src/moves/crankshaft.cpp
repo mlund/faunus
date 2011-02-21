@@ -100,7 +100,10 @@ namespace Faunus {
       if (con->collision(con->trial[v[i]])==true) {
         hc=true;
         break;
-      } //else du += pot->u_monomer(con->trial,g,v[i]) - pot->u_monomer(con->p,g,v[i]);
+      }
+#ifndef PENALTY
+      else du += pot->u_monomer(con->trial,g,v[i]) - pot->u_monomer(con->p,g,v[i]);
+#endif
     }
 
     if (hc==true) {
@@ -113,10 +116,12 @@ namespace Faunus {
       return du;
     }
 
-    uold = pot->energy(con->p, g) + pot->uself_polymer(con->p, g);
+#ifdef PENALTY
+    //!Expensive energy calculation necessary for cm.z dependent potentials
+    uold = pot->energy(con->p, g) + pot->uself_polymer(con->p, g);  
     unew = pot->energy(con->trial, g) + pot->uself_polymer(con->trial, g);
-
     du = unew-uold;
+#endif
     
     if (ens->metropolis(du)==true) {
       rc=OK;

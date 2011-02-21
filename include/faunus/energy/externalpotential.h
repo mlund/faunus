@@ -3,6 +3,7 @@
 
 #include "faunus/energy/base.h"
 #include "faunus/energy/springinteraction.h"
+#include <faunus/physconst.h>
 
 namespace Faunus {
   /*!
@@ -123,6 +124,187 @@ namespace Faunus {
       }
   };
 
+  /*!
+   * \brief Tabulated external potential
+   * \author Chris Evers
+   * \date Lund, February 2011
+   * \note Currently works with the cuboid simulation container
+   *
+   * This class is used to introduce a potential in a simulation box which
+   * depends on the z-position of each particle and is stored in a table.
+   * 
+   * This class should be used as a basis for a specific external potential and 
+   * in conjunction with an interaction class (energybase derivative) to
+   * take into account explicit interactions within the container.
+   */
+  class expot_table {
+  private:
+
+  public:
+    bool enabled;                           //!< Set to true to enable potential (default)
+    xytable< double, double > phi;          //!< External potential at z [kT]
+    double dz;                              //!< Table resolution
+    double len_halfz;                       //!< Half cuboid length in z-direction
+    unsigned int cnt;                       //!< Number of potential updates
+    string name;                            //!< Name of external potential
+
+    expot_table(inputfile &in) {
+      enabled = in.getboo("expot_enabled", true);
+      cnt=0;
+      dz = in.getflt("expot_dz", 0.1);
+      len_halfz = in.getflt("cuboid_zlen",0)/2;
+      if (len_halfz<1e-6)
+        len_halfz = in.getflt("cuboid_len",0)/2;
+      double zmin = -len_halfz - dz;
+      phi.init(dz, zmin, -zmin);
+    }
+
+    string info() {
+      std::ostringstream o;
+      if (enabled==true)
+        o << "#   " << name << ":" << endl
+          << "#     Potential resolution   = " << dz   << " A (" << phi.y.size() << " slits)" << endl
+          << "#     Number of pot. updates = " << cnt  << endl;
+        return o.str();
+    }
+
+    void dump(string filename) {
+      phi.dumptodisk(filename);
+    }
+
+    double getPotential(const point &a) { 
+      return phi(a.z); 
+    }
+
+    double energy( const particle &a ) { 
+      return getPotential(a); // in kT
+    }
+
+    double energy( const vector<particle> &p ) {
+      double u=0;
+      for (int i=0; i<p.size(); i++)
+        u += getPotential(p[i]);
+      return u; // in kT
+    }
+
+    double energy( const vector<particle> &p, const group &g ) {
+      double u=0;
+      for (int i=g.beg; i<=g.end; i++)
+        u += getPotential(p[i]);
+      return u; // in kT
+    }
+  };
+
+  /*!
+   * \brief Gouy-Chapman interaction with a planar charged surface
+   * \author Chris Evers
+   * \date Lund, February 2011
+   * \note Currently works with the cuboid simulation container
+   *
+   * This class will calculate the potential in a simulation box due to a charged planar surface
+   * and screend by an electrical double layer with a corresponding Debye screening length.
+   * 
+   * This class is based on expot_table and should be used in conjunction with an interaction class 
+   * (energybase derivative) to take into account explicit interactions within the container.
+   */
+
+  class expot_gouychapman : public expot_table {
+  private:
+    double lB;                              //!< Bjerrum length (A)
+    double k;                               //!< Inverse debye length (A-1)
+    double I;                               //!< Ionic strenght (M)
+    double c0;                              //!< Ion concentration (A-3)
+    double rho;                             //!< Surface charge density (e A-2)
+    double phi0;                            //!< Unitless surface potential \frac{\phi0 e}{kT}
+    double gamma0;                          //!< Gouy-chapman coefficient ()
+
+  public:
+    expot_gouychapman(inputfile &in) : expot_table(in) {
+      name = "Gouy-Chapman external potential";
+
+      lB = in.getflt("bjerrum",0);
+      if (enabled==false)
+        lB=0;
+
+      k=1/in.getflt("debyelen",1.1e6);              // Inverse debye length
+      if ( 1/k<1e6)
+        I=k*k*1e27/(8*pyc.pi*lB*pyc.Nav);
+      else {
+        I=in.getflt("ionicstr",0);
+        k=sqrt( 8*pyc.pi*lB*pyc.Nav/1e27*I );       // k=\sqrt{8 \pi \lambda_B[A] I[A-3]}
+      }
+      c0=I*pyc.Nav/1e27;                            // assuming 1:1 salt, so c0=I
+
+      phi0=in.getflt("expot_phi0",1.1e6);           // Surface potential [V]
+      if ( fabs(phi0)<1e6 ) {
+        phi0=phi0*pyc.e/(pyc.kB*pyc.T);             // Unitless surface potential \frac{\phi_0 e}{kT}
+        rho=sqrt(2*c0/(pyc.pi*lB))*sinh(.5*phi0);   // \rho = \sqrt\frac{2 c_0}{\pi l_B}  \sinh(\frac{\phi0 e}{2kT}) [Evans & Wennerström, 1999, Colloidal Domain p 138-140]
+      }
+      else {
+        rho=in.getflt("expot_rho",0);
+        phi0=2.*asinh(rho * sqrt(.5*lB*pyc.pi/c0 ));// \frac{\phi0 e}{kT}=2arcsinh(\rho \sqrt\frac{{\pi l_B}{2 c_0}}) [Evans..]
+      }
+
+      gamma0=tanh(phi0/4);                          // assuming z=1 \Gamma_0=\tanh{\frac{z\phi_0 e}{4kT}} [Evans..]
+    }
+
+    string info() {
+      std::ostringstream o;
+      if (enabled==true || lB>1e-6)
+        o << expot_table::info()
+          << "#     Bjerrum length         = " << lB   << " A "  << endl
+          << "#     Debye length           = " << 1./k << " A "  << endl
+          << "#     Ionic strenght         = " << I*1e3<< " mM " << endl
+          << "#     Bulk ion concentration = " << c0   << " A-3 " << endl
+          << "#     Surface potential      = " << phi0*pyc.kB*pyc.T/pyc.e << " V  " << endl
+          << "#     Unitless surface pot   = " << phi0 << "   " << endl
+          << "#     Area per surface charge= " << fabs(1/rho)  << " A2 " << endl
+          << "#     Surface charge density = " << rho*pyc.e*1e20  << " C m-2 " << endl
+          << "#     GC-coefficient Gamma_0 = " << gamma0  << "  " << endl;
+        return o.str();
+    }
+
+    double energy( const particle &a ) { 
+      return a.charge*getPotential(a); // in kT
+    }
+
+    double energy( const vector<particle> &p ) {
+      double u=0;
+      for (int i=0; i<p.size(); i++) {
+        if (p[i].charge!=0)
+          u += p[i].charge * getPotential(p[i]);
+      }
+      return u; // in kT
+    }
+
+    double energy( const vector<particle> &p, const group &g ) {
+      double u=0;
+      for (int i=g.beg; i<=g.end; i++) {
+        if (p[i].charge!=0)
+          u += p[i].charge * getPotential(p[i]);
+      }
+      return u; // in kT
+    }
+
+    double update(cuboid &c) {
+      cnt++;
+      if (enabled==true) {
+        double uold=energy(c.p);
+        for (double z=-len_halfz; z<=len_halfz; z+=dz)
+          phi(z)=calcPotential(len_halfz-z);
+        return energy(c.p) - uold;
+      }
+    return 0;
+    }
+
+    double calcPotential(double z) { 
+      double phiz;
+      double exponent=exp(-k*z);        //\exp{-\kappa z}
+      phiz=2 * log((1+gamma0*exponent)/(1-gamma0*exponent));  // \frac{Phi z e}{kT}=2\ln{\frac{1+\Gamma_0 \exp{-\kappa z}}{1-\Gamma_0 \exp{-\kappa z}}}
+      return phiz;
+    }
+  };
+  
   /*!
    * \brief Spring interaction class with arbitrary external potential
    * \author Mikael Lund

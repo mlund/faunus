@@ -91,7 +91,9 @@ namespace Faunus {
       average<double> Q2;   //!< Total charge squared.
       average<double> dip;  //!< Dipole moment scalar.
       average<double> dip2; //!< Dipole moment scalar squared.
+      average<double> rg;   //!< Radius of gyration
       average<double> rg2;  //!< Radius of gyration squared
+      average<double> ree;  //!< End-to-end distance 
       average<double> ree2; //!< End-to-end distance squared
 
       string info();                              //!< Show info

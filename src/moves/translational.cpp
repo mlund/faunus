@@ -430,8 +430,6 @@ namespace Faunus {
     if (hc==true) 
       rc=HC;
     else {
-      //uold = pot->energy(con->p, g) + pot->uself_polymer(con->p, g);
-      //unew = pot->energy(con->trial, g) + pot->uself_polymer(con->trial, g);
       uold = pot->u_monomer(con->p, g, n);   
       unew = pot->u_monomer(con->trial, g, n);   
       du = unew - uold;

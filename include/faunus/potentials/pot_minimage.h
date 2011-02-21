@@ -98,9 +98,9 @@ namespace Faunus {
 
       string info() {
         std::ostringstream o;
-        o << "#   Name              = " << name << endl
-          << "#   Bjerrum length    = " << f << endl
-          << "#   Image length (XY) = " << box << endl
+        o << "#     Name              = " << name << endl
+          << "#     Bjerrum length    = " << f << endl
+          << "#     Image length (XY) = " << box << endl
           << pot_harmonic::info();
         return o.str();
       }

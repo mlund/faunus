@@ -95,16 +95,34 @@ namespace Faunus {
   //       Will not handle groups with endpoints in between endpoints of saltgroups properly.
   bool grandcanonical::insert(container &con, particle &a) {
     short n=findgroup(atom[a.id].name);
-    short i,j;
+    short i,j,n_s;
     i=gp[n]->beg, j=gp[n]->end;
+    n_s=gp[n]->size();
+    //Put all empty groups, not to be inserted in to, bounds to [0:-1] 
+    //in order to leave them outside the book keeping
+    for (unsigned short k=0; k<gp.size(); k++)
+      if (gp[k]->size()==0 ) {
+        gp[k]->beg=0;
+        gp[k]->end=gp[k]->beg-1;
+      }
     if (n>-1) {
+      //Put beginning of n last if it is empty
+      if (n_s==0) {
+        gp[n]->beg=con.p.size();
+        gp[n]->end=con.p.size()-1;
+        i=con.p.size();
+        j=con.p.size();
+      }
       con.insert( a, gp[n]->end+1);
       for (unsigned short k=0; k<gp.size(); k++) {
-        if (i<gp[k]->beg) 
-          gp[k]->beg ++;
-        if (j<=gp[k]->end)
-          gp[k]->end ++;
+        if ( i <  gp[k]->beg ) 
+          gp[k]->beg ++;  
+        if ( j <= gp[k]->end )
+          gp[k]->end ++;  
       }  
+      if (n_s==0) {
+        gp[n]->end=con.p.size()-1;
+      }
       return true;
     }
     return false;

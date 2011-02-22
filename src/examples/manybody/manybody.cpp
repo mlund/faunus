@@ -21,7 +21,7 @@ int main() {
   inputfile in("manybody.conf");        // Read input file
   mcloop loop(in);                      // Keep track of time and MC loop
   box cell(in);                         // We want a cubic cell
-  canonical nvt;                        // Use the canonical ensemble
+  grandcanonical nmt;                        // Use the canonical ensemble
 #ifndef MONOPOLE
   interaction<pot_minimage> pot(in);    // Functions for interactions
 #else
@@ -34,23 +34,41 @@ int main() {
 
   vector<macromolecule> g;              // PROTEIN groups
   ioaam aam;                            //   Protein input file format is AAM
+  iopqr pqr;
+  io io;
   aam.load(cell, in, g);                //   Load and insert proteins
   g[0].center(cell);                    //   Center first protein (will be frozen)
-  macrorot mr(nvt, cell, pot);          //   Class for macromolecule rotation
-  translate mt(nvt, cell, pot, in);     //   Class for macromolecular translation
+  macrorot mr(nmt, cell, pot);          //   Class for macromolecule rotation
+  translate mt(nmt, cell, pot, in);     //   Class for macromolecular translation
   salt salt;                            // SALT group
   salt.add(cell, in);                   //   Add salt particles
-  saltmove sm(nvt, cell, pot);          //   Class for salt movements
+  saltmove sm(nmt, cell, pot);          //   Class for salt movements
+
+
+  saltbath sb(nmt,cell,pot,in,salt);    // Class for salt movements
+  GCchargereg tit(nmt,cell,pot,in);
+  
+  if(nmt.load(cell, "gcgroup.conf")==true)
+    aam.load(cell,"confout.aam");        // Read initial config. from disk (if present)
+
   systemenergy sys(pot.energy(cell.p)); // System energy analysis
 
   cout << cell.info() << pot.info()     // Print information to screen
        << atom.info();
   ioxtc xtc(cell.len);                  // Gromacs xtc output (if installed)
 
+  widomSW wid2(10);                     // Class for single particle insertion w. charge scaling
+  wid2.add( atom("NA") );
+  wid2.add( atom("CA") );
+  wid2.add( atom("LA") );
+  wid2.add( atom("CL") );
+
+
+
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {
       short i,j,n;
-      switch (rand() % 3) {                     // Pick a random MC move
+      switch (rand() % 5) {                     // Pick a random MC move
         case 0:                                 // Displace salt
           sys+=sm.move(salt);                   //   Do the move.
           break;
@@ -71,6 +89,21 @@ int main() {
                 protrdf.update(cell,g[i].cm,g[j].cm);
           }
           break;
+        case 3:
+          int ntry=salt.size();
+          for (int i=0; i<ntry; i++) {
+            sys+=sb.move();                 // Grand Canonical salt move
+            if(cell.charge()!=0) {
+              cout << "Container is charged by saltbath!"<<endl;
+            }
+          }
+          break;
+        case 4:
+          sys+=tit.titrateall();
+          if(cell.charge()!=0) {
+            cout << "Container is charged by gctit!"<<endl;
+          }
+          break;
       }
       if (macro==1 && micro<1e3) {
         mt.adjust_dp(30,40);                    // Adjust displacement
@@ -81,7 +114,8 @@ int main() {
         saltrdf.update(cell);                   // Update salt g(r)
 
       if (slump.random_one()>.96 && macro>1)
-        xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
+        wid2.insert(cell,pot);          // sample activity coefficients
+  //      xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
 
     } // End of inner loop
 
@@ -91,13 +125,16 @@ int main() {
     gro.save("confout.gro", cell.p);            // Write GRO output file
     protrdf.write("rdfprot.dat");               // Write g(r)'s
     saltrdf.write("rdfsalt.dat");               //   -//-
+    aam.save("confout.aam", cell.p); 
+    pqr.save("confout.pqr", cell.p);
 
   } // End of outer loop
 
   cout << "----------- FINAL INFORMATION -----------" << endl ;
-  cout << sys.info() << salt.info(cell)             // Final information...
-       << sm.info() << mr.info() << mt.info();
+  cout << cell.info() << sys.info() << salt.info(cell)             // Final information...
+       << sm.info() << mr.info() << mt.info() << sb.info() << tit.info() << wid2.info();
 
+  io.writefile("gcgroup.conf", nmt.print());
   xtc.close();
 }
 

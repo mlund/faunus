@@ -143,6 +143,10 @@ namespace Faunus {
 
   void saltbath::acc_rem() {
     std::sort(trialout.begin(), trialout.end() );
+//    for (int i=0; i<trialout.size(); i++) {
+//      std::cout << trialout[i]<<endl;
+//    }
+//    std::cout << "finished sorting"<<endl;
     for (int i=0; i<trialout.size(); i++) {
       if (gcPtr->erase(*con, (trialout[i]) ) == false) 
         std::cerr << "GC erase failed!!!"<<endl;

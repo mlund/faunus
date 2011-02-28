@@ -74,8 +74,8 @@ namespace Faunus {
     std::ostringstream o;
     o << endl
       << "# " << title << ": " << name << endl
-      << "#   Number of particles    = " << size() << " [" << beg << "," << end << "]" << endl
-      << "#   Mass center            = " << cm << endl;
+      << "#   Number of particles      = " << size() << " [" << beg << "," << end << "]" << endl
+      << "#   Mass center              = " << cm << endl;
     return o.str();
   }
 

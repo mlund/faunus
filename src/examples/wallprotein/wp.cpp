@@ -187,7 +187,7 @@ int main() {
       pot.energy( con.p, wall, salt) +
       pot.energy( con.p, wall, pol) +
       pot.energy( con.p, salt, pol) +
-      pot.uself_polymer(con.p, pol) + pot.expot.energy(con.p, pol) +
+      pot.uself_polymer(con.p, pol) + pot.expot.energy_group(con.p, pol) +
       pot.internal( con.p, wall ) +
       pot.internal( con.p, salt ) +
       pot.pen.energy(*zhalfPtr-pol.cm.z) );
@@ -271,7 +271,7 @@ int main() {
         pot.energy( con.p, wall, salt) +
         pot.energy( con.p, wall, pol) +
         pot.energy( con.p, salt, pol) +
-        pot.uself_polymer(con.p, pol) + pot.expot.energy(con.p, pol) +
+        pot.uself_polymer(con.p, pol) + pot.expot.energy_group(con.p, pol) +
         pot.internal( con.p, wall ) +
         pot.internal( con.p, salt ) +
         pot.pen.energy(*zhalfPtr-pol.cm.z) );

@@ -75,6 +75,7 @@ namespace Faunus {
     markovmove::getInput(in);
     load(in.getstr("eqtit_processes","eq.in"));
     findSites(c.p);
+    samplesites(con->p);
   }
   
   bool eqtitrate::load(string file) {

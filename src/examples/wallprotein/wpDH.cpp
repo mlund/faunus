@@ -20,24 +20,24 @@ using namespace Faunus;
 
 int main() {
   // General
-  cout << faunus_splash();                  // General setup
-  inputfile in("wp.conf");                  //   read inputfile
-  slump slp;                                //   load random number
-  mcloop loop(in);                          //   define simulation loops
-  canonical nvt;                            //   canonical ensemble
+  cout << faunus_splash();
+  inputfile in("wp.conf");
+  slump slp;                                // load random number generator
+  mcloop loop(in);                          // define simulation loops
+  canonical nvt;                            // canonical ensemble
 
   // Simulation container
 #ifdef NOSLIT                               // If wpDH_noslit
-  cuboid con(in);                           //   load cuboid simulation container
-  springinteraction<pot_r12debyehuckel> pot(in);//springinteractions
+  cuboid con(in);
+  springinteraction<pot_r12debyehuckel> pot(in);
 #else                                       // If wpDH
-  cuboidslit con(in);                       //   load cuboidslit simulation container
-  springinteraction_expot<pot_r12debyehuckelXY, expot_gouychapman> pot(in);//springinteractions with gouychapman interaction
-  pot.expot.update(con);                    //   initialize Gouy-Chapman potential
+  cuboidslit con(in);
+  springinteraction_expot<pot_r12debyehuckelXY, expot_gouychapman> pot(in);
+  pot.expot.update(con);                    // initialize Gouy-Chapman potential
 #endif
-  double* zhalfPtr=&con.len_half.z;         //   half length of container in z-direction
-  distributions dst;                        //   distance dependent averages
-  histogram gofr(0.1,0, (*zhalfPtr)*2. );   //   radial distribution function
+  double* zhalfPtr=&con.len_half.z;         // half length of container in z-direction
+  distributions dst;                        // distance dependent averages
+  histogram gofr(0.1,0, (*zhalfPtr)*2. );   // radial distribution function
 
   // Polymer
   polymer pol;                      // Polymer
@@ -46,27 +46,29 @@ int main() {
   pol.masscenter(con);              //  update masscenter
   pol.move(con, -pol.cm+(con.slice_min+con.slice_max)*0.5);  // translate to the middle of the slice or the origo (0,0,0) if no slice defined
   pol.accept(con);                  //  accept translation
-  cout << pol.info();               //  show information
+  cout << pol.info();
 
   // Moves
-  monomermove mm(nvt,con,pot,in);               //  translate monomers
-  crankShaft cs(nvt,con,pot,in);                //  crankshaft
-  macrorot mr(nvt, con, pot,in);                //  rotate polymer
-  translate mt(nvt, con, pot, in);              //  translate polymer
-  mt.dpv.x=mt.dpv.y=0;                          //    no need to translate in xy direction
-  eqtitrate tit(nvt, con, pot, in, "eqtit_");   //  titrate monomers
-  if (in.getflt("tit_runfrac",0.5)<1e-3) {      //  if notit
-    pol.loadCharges("q.in", con.p);             //    load polymer charges from file
-    con.trial=con.p;                            //    synchronize particle vector
+  monomermove mm(nvt,con,pot,in);
+  crankShaft cs(nvt,con,pot,in);
+  macrorot mr(nvt, con, pot,in);
+  translate mt(nvt, con, pot, in);
+  mt.dpv.x=mt.dpv.y=0;                          // no need to translate in xy direction
+  if (in.getflt("eqtit_runfrac",0.5)<1e-3) {
+    pol.loadCharges(in.getstr("pol_charges","q.in"), con.p); // load residue charges from file
+    con.trial=con.p;
+    cout << "! Loaded polymer charges from disk" << endl;
   }
-
+  eqtitrate tit(nvt, con, pot, in, "eqtit_");
+  
   // Particle input output
-  io io;                            // I/O Files
-  iopqr pqr;                        //   pqr
-  ioxtc xtc(con.len.z);             //   xtc
-  ioaam aam;                        //   aam
+  io io;
+  iopqr pqr;
+  ioxtc xtc(con.len.z);
+  ioaam aam;
   aam.load(con, "confout.aam");     //   load stored configuration
   pol.masscenter(con);              //   update masscenter
+  aam.save("confout_init.aam", con.p);
 
   // Initial system energy
   systemenergy sys(
@@ -81,7 +83,7 @@ int main() {
   // Simulation loop
   while ( loop.macroCnt() ) {
     while ( loop.microCnt() ) {
-      switch (rand() % 5) {
+      switch (rand() % 5) {     // random number between 0 and 4
         case 0:
           for (int i=0; i<pol.size(); i++)
             sys+=mm.move(pol);   // move monomers 
@@ -108,7 +110,7 @@ int main() {
 
       if (slp.random_one()>0.3) {
         pol.masscenter(con);
-        double z=*zhalfPtr-pol.cm.z;
+        double z=*zhalfPtr-pol.cm.z;  // distance between masscenter and wall
         dst.add("qtot", z, pol.charge(con.p));
         dst.add("Rg", z, sqrt(pol.sqmassgradius(con)));
         dst.add("Rg2", z, pol.sqmassgradius(con));

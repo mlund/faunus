@@ -73,9 +73,9 @@ namespace Faunus {
             f << z << " " << rho(z).avg() << " " << phi(z) << endl;
       }
 
-      double energy( const particle &a ) { return a.charge*getPotential(a); }
+      double energy_particle( const particle &a ) { return a.charge*getPotential(a); }
 
-      double energy( const vector<particle> &p ) {
+      double energy_vector( const vector<particle> &p ) {
         double u=0;
         for (int i=0; i<p.size(); i++)
           if (p[i].charge!=0)
@@ -83,7 +83,7 @@ namespace Faunus {
         return u; // in kT
       }
 
-      double energy( const vector<particle> &p, const group &g ) {
+      double energy_group( const vector<particle> &p, const group &g ) {
         double u=0;
         for (int i=g.beg; i<=g.end; i++)
           if (p[i].charge!=0)
@@ -109,7 +109,7 @@ namespace Faunus {
         }
 
         if (cnt % phiupdate == 0) {  // update phi(z) - but not so often
-          double a=c.len_half.x, uold=energy(c.p);
+          double a=c.len_half.x, uold=energy_vector(c.p);
           for (double z=-c.len_half.z; z<=c.len_half.z; z+=dz) {
             double s=0;
             for (double zn=-c.len_half.z; zn<=c.len_half.z; zn+=dz)
@@ -118,7 +118,7 @@ namespace Faunus {
               else s+=0;
             phi(z) = lB*s;
           }
-          return energy(c.p) - uold;
+          return energy_vector(c.p) - uold;
         }
         return 0;
       }
@@ -176,22 +176,37 @@ namespace Faunus {
       return phi(a.z); 
     }
 
-    double energy( const particle &a ) { 
+    virtual double energy_particle( const particle &a ) { 
       return getPotential(a); // in kT
     }
 
-    double energy( const vector<particle> &p ) {
+    double energy_vector( const vector<particle> &p ) {
       double u=0;
       for (int i=0; i<p.size(); i++)
-        u += getPotential(p[i]);
+        u += energy_particle(p[i]);
       return u; // in kT
     }
 
-    double energy( const vector<particle> &p, const group &g ) {
+    double energy_group( const vector<particle> &p, const group &g ) {
       double u=0;
       for (int i=g.beg; i<=g.end; i++)
-        u += getPotential(p[i]);
+        u += energy_particle(p[i]);
       return u; // in kT
+    }
+
+    double update(cuboid &c) {
+      cnt++;
+      if (enabled==true) {
+        double uold=energy_vector(c.p);
+        for (double z=-len_halfz; z<=len_halfz; z+=dz)
+          phi(z)=calcPotential(len_halfz-z);
+        return energy_vector(c.p) - uold;
+      }
+      return 0;
+    }
+
+    virtual double calcPotential(double z) { 
+      return 0;
     }
   };
 
@@ -241,7 +256,9 @@ namespace Faunus {
         rho=sqrt(2*c0/(pyc.pi*lB))*sinh(.5*phi0);   // \rho = \sqrt\frac{2 c_0}{\pi l_B}  \sinh(\frac{\phi0 e}{2kT}) [Evans & Wennerström, 1999, Colloidal Domain p 138-140]
       }
       else {
-        rho=in.getflt("expot_rho",0);
+        rho=1/in.getflt("expot_qarea",0);
+        if (rho>1e20)
+          rho=in.getflt("expot_rho",0);
         phi0=2.*asinh(rho * sqrt(.5*lB*pyc.pi/c0 ));// \frac{\phi0 e}{kT}=2arcsinh(\rho \sqrt\frac{{\pi l_B}{2 c_0}}) [Evans..]
       }
 
@@ -264,37 +281,8 @@ namespace Faunus {
         return o.str();
     }
 
-    double energy( const particle &a ) { 
+    double energy_particle( const particle &a ) { 
       return a.charge*getPotential(a); // in kT
-    }
-
-    double energy( const vector<particle> &p ) {
-      double u=0;
-      for (int i=0; i<p.size(); i++) {
-        if (p[i].charge!=0)
-          u += p[i].charge * getPotential(p[i]);
-      }
-      return u; // in kT
-    }
-
-    double energy( const vector<particle> &p, const group &g ) {
-      double u=0;
-      for (int i=g.beg; i<=g.end; i++) {
-        if (p[i].charge!=0)
-          u += p[i].charge * getPotential(p[i]);
-      }
-      return u; // in kT
-    }
-
-    double update(cuboid &c) {
-      cnt++;
-      if (enabled==true) {
-        double uold=energy(c.p);
-        for (double z=-len_halfz; z<=len_halfz; z+=dz)
-          phi(z)=calcPotential(len_halfz-z);
-        return energy(c.p) - uold;
-      }
-    return 0;
     }
 
     double calcPotential(double z) { 
@@ -331,11 +319,11 @@ namespace Faunus {
         }
 
         double energy(vector<particle> &p, const particle &a) {
-          return springinteraction<Tpairpot>::energy(p,a) + expot.energy(a);
+          return springinteraction<Tpairpot>::energy(p,a) + expot.energy_particle(a);
         }
 
         double u_monomer(vector<particle> &p, const polymer &g, unsigned int i ) {
-          return springinteraction<Tpairpot>::u_monomer(p,g,i) + expot.energy( p[i] );
+          return springinteraction<Tpairpot>::u_monomer(p,g,i) + expot.energy_particle( p[i] );
         }
 
         double uself_polymer(vector<particle> &p, const polymer &g) {
@@ -343,19 +331,19 @@ namespace Faunus {
         }
 
         double internal(vector<particle> &p, const group &g, int step=1) { 
-          return springinteraction<Tpairpot>::internal(p,g,step) + expot.energy(p,g);
+          return springinteraction<Tpairpot>::internal(p,g,step) + expot.energy_group(p,g);
         }
 
         double energy(vector<particle> &p) {
-          return springinteraction<Tpairpot>::energy(p) + expot.energy(p);
+          return springinteraction<Tpairpot>::energy(p) + expot.energy_vector(p);
         }
 
         double energy(vector<particle> &p, int i) {
-          return springinteraction<Tpairpot>::energy(p,i) + expot.energy(p[i]);
+          return springinteraction<Tpairpot>::energy(p,i) + expot.energy_particle(p[i]);
         }
 
         double energy(vector<particle> &p, const group &g) {
-          return springinteraction<Tpairpot>::energy(p,g) + expot.energy(p,g);
+          return springinteraction<Tpairpot>::energy(p,g) + expot.energy_group(p,g);
         }
     };
 

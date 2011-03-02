@@ -33,6 +33,7 @@ namespace Faunus {
     string comment;                     //!< User defined comment
     void add(float);
     void write(string);
+    void dump(string);
     virtual float get(float);
     vector<double> xvec();              //!< For python interface
     vector<double> yvec();              //!< For python interface

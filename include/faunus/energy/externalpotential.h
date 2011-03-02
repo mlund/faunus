@@ -294,6 +294,54 @@ namespace Faunus {
   };
   
   /*!
+   * \brief Hydrophobic interaction with a planar surface
+   * \author Chris Evers
+   * \date Lund, February 2011
+   * \note Currently works with the cuboid simulation container
+   *
+   * This class will calculate the potential in a simulation box due to a hydrophoic planar surface
+   * 
+   * This class is based on expot_table and should be used in conjunction with an interaction class 
+   * (energybase derivative) to take into account explicit interactions within the container.
+   */
+  class expot_hydrophobic : public expot_table {
+  private:
+    double u;                               //!< Hydrophobic energy (kT)
+    double r;                               //!< Hydrophic interaction distance (A)
+  public:
+    expot_hydrophobic(inputfile &in) : expot_table(in) {
+      name = "Hydrophobic external potential";
+      u = in.getflt("expot_u",0);
+      if (enabled==false)
+        u=0;
+      r = in.getflt("expot_r",0);
+    }
+
+    string info() {
+      std::ostringstream o;
+      if (enabled==true)
+        o << expot_table::info()
+          << "#     Interaction strength   = " << u    << " kT " << endl
+          << "#     Interaction length     = " << r    << " A "  << endl;
+        return o.str();
+    }
+
+    double energy_particle( const particle &a ) { 
+      if (a.hydrophobic==true)
+        return getPotential(a); // in kT
+      else
+        return 0;
+    }
+
+    double calcPotential(double z) { 
+      if (z <= r)
+        return u;
+      else 
+        return 0;
+    }
+  };
+
+  /*!
    * \brief Spring interaction class with arbitrary external potential
    * \author Mikael Lund
    * \date Asljunga, December 2010.

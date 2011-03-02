@@ -30,10 +30,14 @@ int main() {
 #ifdef NOSLIT                               // If wpDH_noslit
   cuboid con(in);
   springinteraction<pot_r12debyehuckel> pot(in);
+#elif HYDROPHIC                             // If wpDH_hydrophobic
+  cuboidslit con(in);
+  springinteraction_expot<pot_r12debyehuckelXY, expot_hydrophobic> pot(in); 
+  pot.expot.update(con);
 #else                                       // If wpDH
   cuboidslit con(in);
-  springinteraction_expot<pot_r12debyehuckelXY, expot_gouychapman> pot(in);
-  pot.expot.update(con);                    // initialize Gouy-Chapman potential
+  springinteraction_expot<pot_r12debyehuckelXY, expot_gouychapman> pot(in); 
+  pot.expot.update(con);
 #endif
   double* zhalfPtr=&con.len_half.z;         // half length of container in z-direction
   distributions dst;                        // distance dependent averages
@@ -145,6 +149,7 @@ int main() {
     dst.write("dist.out");
     dst.cntwrite("cntdist.out");
     gofr.write("gofr.out");
+    gofr.dump("gofr.xy");
 #ifndef NOSLIT
     pot.expot.dump("expot.xy");
 #endif

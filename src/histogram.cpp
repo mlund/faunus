@@ -66,6 +66,11 @@ namespace Faunus {
     }
   }
 
+  //! Dump table to disk
+  void histogram::dump(string filename) {
+    dumptodisk(filename);
+  }
+
   /*!
    * \param species1 Particle type 1
    * \param species2 Particle type 2

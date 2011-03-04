@@ -10,7 +10,7 @@ namespace Faunus {
 
   /*!
    * \brief  Class for implicit titration of species with fixed chemical potential.
-   * \author Mikael Lund
+   * \author Mikael Lund and Chris Evers
    * \date   Malmo, October 2010
    *
    * Consider the dissociation process AX=A+X. This class will locate
@@ -44,7 +44,7 @@ namespace Faunus {
         double mu_A;                 //!< chemical potential of A
         double mu_X;                 //!< chemical potential of X (this is the titrant)
         double ddG;                  //!< ddG = mu_A + mu_X - mu_AX
-        int cnt;                       //!< number of sites for this process
+        int cnt;                     //!< number of sites for this process
       public:
         char id_AX, id_A;            //!< Particle id's for AX and A
         bool one_of_us(particle &);  //!< Does the particle belong to this process?
@@ -67,13 +67,13 @@ namespace Faunus {
 
     eqtitrate(ensemble&, container&, energybase&, inputfile&, string="eqtit_");
     string info();                               //!< Get information string
-    string info(vector<particle>&);                     //!< Get extended information string
+    string info(vector<particle>&);              //!< Get extended information string
     double move();                               //!< Perform a swap move of any site
     double intrinsicenergy(vector<particle>&);   //!< Intrinsic energy of all titratable sites
     virtual double energy(vector<particle>&,int);//!< Interaction energy function for i'th particle
     void samplesites(vector<particle> &);        //!< Updates the average charge vector titrate::q
     double applycharges(vector<particle> &);     //!< Copy average charges to particles in the particle vector
-    double avgcharge(vector<particle>&, int&);          //!< Print average charges of process i
+    double avgcharge(vector<particle>&, int&);   //!< Print average charges of process i
   };
   
 }//namespace

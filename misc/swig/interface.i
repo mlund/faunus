@@ -83,7 +83,9 @@ using namespace std;
 %template(vector_polymer) std::vector<Faunus::polymer>;
 %template(vector_particle) std::vector<Faunus::particle>;
 %template(vector_macromolecule) std::vector<Faunus::macromolecule>;
+%template(vector_data) std::vector<Faunus::data>;
 namespace std {
+  %template(vector_uint) std::vector<unsigned int>;
   %template(vector_int) std::vector<int>;
   %template(vector_dbl) std::vector<double>;
   %template(vector_str) std::vector<string>;

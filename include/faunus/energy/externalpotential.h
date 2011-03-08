@@ -3,6 +3,7 @@
 
 #include "faunus/energy/base.h"
 #include "faunus/energy/springinteraction.h"
+#include "faunus/energy/penaltyfunction.h"
 #include <faunus/physconst.h>
 
 namespace Faunus {
@@ -275,7 +276,7 @@ namespace Faunus {
           << "#     Bulk ion concentration = " << c0   << " A-3 " << endl
           << "#     Surface potential      = " << phi0*pyc.kB*pyc.T/pyc.e << " V  " << endl
           << "#     Unitless surface pot   = " << phi0 << "   " << endl
-          << "#     Area per surface charge= " << fabs(1/rho)  << " A2 " << endl
+          << "#     Area per surface charge= " << 1/rho<< " A2 " << endl
           << "#     Surface charge density = " << rho*pyc.e*1e20  << " C m-2 " << endl
           << "#     GC-coefficient Gamma_0 = " << gamma0  << "  " << endl;
         return o.str();
@@ -395,5 +396,60 @@ namespace Faunus {
         }
     };
 
+  /*!
+   * \brief Spring interaction class with arbitrary external potential and penaltyfunction
+   * \author Chris Evers
+   * \date Lund, March 2011.
+   *
+   * In addition to the normal springinteraction class, the particles interact with
+   * an arbitrary external potential and a penaltyfunction. The external potential is
+   * given as a template parameter (Texpot). Texpot is expected to have functions that 
+   * describe how the system, particles and groups interact with the external potential.
+   */
+  template<class Tpairpot, class Texpot>
+  class springinteraction_expot_penalty : public springinteraction_expot<Tpairpot,Texpot> {
+    private:
+      container* conPtr;
+      group* groupPtr;
+      double zlen_half;
+    public:
+      using springinteraction_expot<Tpairpot,Texpot>::energy;
+      penaltyfunction pen;
+
+      springinteraction_expot_penalty(inputfile &in, container &c, polymer &p)
+        : springinteraction_expot<Tpairpot,Texpot>(in),
+        pen( 0, in.getflt("cuboid_zlen",100), 0.25, in.getflt("penalty_energy",.1), in.getflt("penalty_scalingfactor",1)) {
+            zlen_half=.5*in.getflt("cuboid_zlen",100);
+            conPtr=&c;
+            groupPtr=&p;
+            interaction<Tpairpot>::name+=" + penalty function";
+      }
+
+      string info() {
+        std::ostringstream o;
+        o << springinteraction_expot<Tpairpot,Texpot>::info() << pen.info();
+        return o.str();
+      }
+
+      // Energy in momomer and crankshaft functions
+      double u_monomer(vector<particle> &p, const polymer &g, unsigned int i ) {
+        double u=0;
+        if (&g==groupPtr) {
+          point cm = g.masscenter(*conPtr, p);
+          u=pen.energy(zlen_half-cm.z);
+        }
+        return springinteraction_expot<Tpairpot,Texpot>::u_monomer(p,g,i) + u;
+      }
+
+      // Energy in translation function
+      double energy(vector<particle> &p, const group &g) {  
+        double u=0;
+        if (&g==groupPtr) {
+          point cm = g.masscenter(*conPtr, p);
+          u=pen.energy(zlen_half-cm.z);
+        }
+        return springinteraction_expot<Tpairpot,Texpot>::energy(p,g) + u;
+      }
+  };
 }//namespace 
 #endif

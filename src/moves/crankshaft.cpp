@@ -45,6 +45,10 @@ namespace Faunus {
   void crankShaft::setNumberOfMonomers() {
     len = minMonomers + (slp.rand() % (maxMonomers-minMonomers+1));
   }
+  
+  void crankShaft::setNumberOfMonomers(polymer &g) {
+    len = slp.rand() % g.size();
+  }
 
   bool crankShaft::findEnds(polymer &g) {
     vector<int> nb;
@@ -74,18 +78,83 @@ namespace Faunus {
     runfraction=1.0;
     deltadp=0.;
     dp=in.getflt("crankshaft_dp", 1.0);
-    minMonomers=in.getint("crankshaft_min",1);
-    maxMonomers=in.getint("crankshaft_max",10);
-    setNumberOfMonomers();
+    minMonomers=in.getint("crankshaft_min",0);
+    maxMonomers=in.getint("crankshaft_max",0);
+    if ( minMonomers==0 || maxMonomers==0 ) {
+      useMinMaxMonomers=false;
+      setNumberOfMonomers();//do we need this?
+    }
+    else {
+      useMinMaxMonomers=true;
+      setNumberOfMonomers();//do we need this?
+    }
     markovmove::getInput(in);
   }
 
   double crankShaft::move(polymer &g) {
-    du=0;
-    setNumberOfMonomers();
+    if ( useMinMaxMonomers == true ) 
+      setNumberOfMonomers();
+    else
+      setNumberOfMonomers(g);
     if (slp.runtest(runfraction)==false || findEnds(g)==false)
+      return 0;
+    markovmove::move();
+
+    rot.setAxis( con->p[beg], con->p[end], dp*slp.random_half() );
+
+    for (int i=0; i<v.size(); i++)
+      con->trial[v[i]] = rot.rotate( con->p[v[i]] );
+
+    bool hc=false;
+    g.cm_trial = g.masscenter(*con, con->trial);
+    if (con->slicecollision(g.cm_trial)==true) 
+      hc=true;
+    for (int i=0; i<v.size(); i++) {
+      if (con->collision(con->trial[v[i]])==true) {
+        hc=true;
+        break;
+      } else du += pot->u_monomer(con->trial,g,v[i]) - pot->u_monomer(con->p,g,v[i]);
+    }
+
+    if (hc==true) {
+      rc=HC;
+      du=0;
+      dpsqr+=0;
+      g.cm_trial=g.cm;
+      for (int i=0; i<v.size(); i++)
+        con->trial[v[i]] = con->p[v[i]];
       return du;
-    cnt++;
+    }
+
+    if (ens->metropolis(du)==true) {
+      rc=OK;
+      utot+=du;
+      naccept++;
+      dpsqr += con->sqdist( g.cm, g.cm_trial );
+      for (int i=0; i<v.size(); i++)
+        con->p[v[i]] = con->trial[v[i]];
+      g.masscenter(*con);
+      return du;
+    } else rc=ENERGY;
+    du=0;
+    dpsqr+=0;
+    g.cm_trial=g.cm;
+    for (int i=0; i<v.size(); i++)
+      con->trial[v[i]] = con->p[v[i]];
+    return du;
+  }
+
+  /*!
+   * This crankShaft move uses an expensive energy calculation, necessary for cm.z dependent potentials
+   */
+  double crankShaft::penaltymove(polymer &g) {
+    if ( useMinMaxMonomers == true ) 
+      setNumberOfMonomers();
+    else
+      setNumberOfMonomers(g);
+    if (slp.runtest(runfraction)==false || findEnds(g)==false)
+      return 0;
+    markovmove::move();
 
     rot.setAxis( con->p[beg], con->p[end], dp*slp.random_half() );
 
@@ -101,9 +170,6 @@ namespace Faunus {
         hc=true;
         break;
       }
-#ifndef PENALTY
-      else du += pot->u_monomer(con->trial,g,v[i]) - pot->u_monomer(con->p,g,v[i]);
-#endif
     }
 
     if (hc==true) {
@@ -116,13 +182,10 @@ namespace Faunus {
       return du;
     }
 
-#ifdef PENALTY
-    //!Expensive energy calculation necessary for cm.z dependent potentials
     uold = pot->energy(con->p, g) + pot->uself_polymer(con->p, g);  
     unew = pot->energy(con->trial, g) + pot->uself_polymer(con->trial, g);
     du = unew-uold;
-#endif
-    
+
     if (ens->metropolis(du)==true) {
       rc=OK;
       utot+=du;
@@ -156,9 +219,14 @@ namespace Faunus {
   string crankShaft::info() {
     std::ostringstream o;
     if (runfraction>0) {
-      o << markovmove::info()
-        << "#   Min number of monomers    = " << minMonomers << endl
+      o << markovmove::info();
+      if ( useMinMaxMonomers == true ) 
+      o << "#   Min number of monomers    = " << minMonomers << endl
         << "#   Max number of monomers    = " << maxMonomers << endl;
+      else
+      o << "#   Min number of monomers    = " << 1 << endl
+        << "#   Max number of monomers    = " << "polymer length" << endl;
+      
     }
     return o.str();
   }

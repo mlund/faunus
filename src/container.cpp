@@ -205,9 +205,9 @@ namespace Faunus {
     std::ostringstream o;
     o << container::info() 
       << "#   Sidelength           = " << len.x << "x" << len.y << "x" << len.z << endl
-      << "#   Slice position       = " << slice_min.x << "-" << slice_max.x << "x" 
-      << slice_min.y << "-" << slice_max.y << "x" 
-      << slice_min.z << "-" << slice_max.z << endl;
+      << "#   Slice position[x y z]= " << len_half.x-slice_max.x << "-" << len_half.x-slice_min.x << " " 
+      << len_half.y-slice_max.y << "-" << len_half.y-slice_min.y << " "
+      << len_half.z-slice_max.z << "-" << len_half.z-slice_min.z << endl;
     return o.str();
   }
 

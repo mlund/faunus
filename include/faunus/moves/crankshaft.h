@@ -42,7 +42,9 @@ namespace Faunus {
       vector<unsigned short> v;      //!< Particles between beg and end to rotate;
       vectorRotation rot;            //!< Rotation class
       void setNumberOfMonomers();    //!< Randomly set number of monomers to rotate
+      void setNumberOfMonomers(polymer &); //!< Randomly set number of monomers to rotate between 1 and the length of the polymer
       bool findEnds(polymer &);      //!< Find random end points to rotate around
+      bool useMinMaxMonomers;        //!< Use minMonomers and maxMonomers from inputfile
 
     public:
       unsigned short minMonomers;    //!< Minimum number of monomers to move
@@ -50,6 +52,7 @@ namespace Faunus {
 
       crankShaft(ensemble &, container &, energybase &, inputfile &);
       double move(polymer &);        //!< Do crank-shaft move
+      double penaltymove(polymer &); //!< Do crank-shaft move, while taking into account masscenter position dependent potentials
       double move(polymer &, int);   //!< Do crank-shaft move n times
       string info();
   };

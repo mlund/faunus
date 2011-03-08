@@ -13,7 +13,7 @@
 #include "faunus/energy/springinteraction.h"
 #include "faunus/energy/externalpotential.h"
 #include "faunus/potentials/pot_r12debyehuckel.h"
-//#include "faunus/energy/penaltyfunction.h"
+#include "faunus/energy/penaltyfunction.h"
 
 using namespace std;
 using namespace Faunus;
@@ -29,19 +29,17 @@ int main() {
   // Simulation container
 #ifdef NOSLIT                               // If wpDH_noslit
   cuboid con(in);
-  springinteraction<pot_r12debyehuckel> pot(in);
+  typedef pot_r12debyehuckel Tpot;
+  typedef expot_table Texpot;
 #elif HYDROPHIC                             // If wpDH_hydrophobic
   cuboidslit con(in);
-  springinteraction_expot<pot_r12debyehuckelXY, expot_hydrophobic> pot(in); 
-  pot.expot.update(con);
+  typedef pot_r12debyehuckelXY Tpot;
+  typedef expot_hydrophobic Texpot;
 #else                                       // If wpDH
   cuboidslit con(in);
-  springinteraction_expot<pot_r12debyehuckelXY, expot_gouychapman> pot(in); 
-  pot.expot.update(con);
+  typedef pot_r12debyehuckelXY Tpot;
+  typedef expot_gouychapman Texpot;
 #endif
-  double* zhalfPtr=&con.len_half.z;         // half length of container in z-direction
-  distributions dst;                        // distance dependent averages
-  histogram gofr(0.1,0, (*zhalfPtr)*2. );   // radial distribution function
 
   // Polymer
   polymer pol;                      // Polymer
@@ -51,6 +49,20 @@ int main() {
   pol.move(con, -pol.cm+(con.slice_min+con.slice_max)*0.5);  // translate to the middle of the slice or the origo (0,0,0) if no slice defined
   pol.accept(con);                  //  accept translation
   cout << pol.info();
+
+  // Distribution functions
+  double* zhalfPtr=&con.len_half.z;         // half length of container in z-direction
+  distributions dst;                        // distance dependent averages
+  histogram gofr(0.1,0, (*zhalfPtr)*2. );   // radial distribution function
+  histogram q(1,-pol.nb.size(), pol.nb.size()); // polymer charge distribution function
+  histogram rg(.2,0, (*zhalfPtr)*2. );      // radius of gyration distribution function
+  histogram ree(.2,0, (*zhalfPtr)*2. );     // end to end distance distribution function
+
+  // Potentials
+  springinteraction_expot_penalty<Tpot, Texpot> pot(in, con, pol); 
+  pot.expot.update(con);
+  pot.pen.load("penalty.xy");  // Load penaltyfunction from disk 
+  pot.pen.gofrload("gofr.xy"); // Load penaltyfunction from disk 
 
   // Moves
   monomermove mm(nvt,con,pot,in);
@@ -93,18 +105,21 @@ int main() {
             sys+=mm.move(pol);   // move monomers 
           pol.masscenter(con);
           gofr.add(*zhalfPtr-pol.cm.z);
+          sys+=pot.pen.update(*zhalfPtr-pol.cm.z);
           break;
         case 1:
           sys+=mt.move(pol);     // translate polymers
           gofr.add(*zhalfPtr-pol.cm.z);
+          sys+=pot.pen.update(*zhalfPtr-pol.cm.z);
           break;
         case 2:
           pol.masscenter(con);
           sys+=mr.move(pol);     // rotate polymers
           break;
         case 3:
-          sys+=cs.move(pol);     // crankshaft
+          sys+=cs.penaltymove(pol);     // crankshaft
           gofr.add(*zhalfPtr-pol.cm.z);
+          sys+=pot.pen.update(*zhalfPtr-pol.cm.z);
           break;
         case 4:
           sys+=tit.move();       // titrate titratable sites
@@ -115,11 +130,19 @@ int main() {
       if (slp.random_one()>0.3) {
         pol.masscenter(con);
         double z=*zhalfPtr-pol.cm.z;  // distance between masscenter and wall
-        dst.add("qtot", z, pol.charge(con.p));
-        dst.add("Rg", z, sqrt(pol.sqmassgradius(con)));
-        dst.add("Rg2", z, pol.sqmassgradius(con));
-        dst.add("Ree", z, sqrt(pol.sqend2enddistance(con))); 
-        dst.add("Ree2", z, pol.sqend2enddistance(con)); 
+        double charge=pol.charge(con.p);
+        dst.add("qtot", z, charge);
+        q.add(charge);
+
+        double rg2=pol.sqmassgradius(con);
+        dst.add("Rg2", z, rg2);
+        dst.add("Rg", z, sqrt(rg2));
+        rg.add(sqrt(rg2));
+
+        double ree2=pol.sqend2enddistance(con);
+        dst.add("Ree2", z, ree2); 
+        dst.add("Ree", z, sqrt(ree2)); 
+        ree.add(sqrt(ree2));
 
         for (int i=pol.beg; i<=pol.end; i++) {
           std::ostringstream s; s << "q" << i;
@@ -140,7 +163,7 @@ int main() {
 
     cout << loop.timing() << "#   Energy drift = " << sys.cur-sys.sum << " kT. "
       << "System charge = " << con.charge() << ". "
-      << endl;
+      << "Penalty energy = " << pot.pen.scaledu() << endl;
 
     // Write files to disk
     io.writefile("vmdbonds.tcl", pol.getVMDBondScript());
@@ -150,14 +173,16 @@ int main() {
     dst.cntwrite("cntdist.out");
     gofr.write("gofr.out");
     gofr.dump("gofr.xy");
-#ifndef NOSLIT
+    q.dump("q.xy");
+    rg.dump("rg.xy");
+    ree.dump("ree.xy");
     pot.expot.dump("expot.xy");
-#endif
+    pot.pen.dump("penalty", loop.cnt_macro, "xy");
+    pot.pen.gofrdump("gofr", loop.cnt_macro, "xy");
 
     tit.applycharges(con.trial);                      // Set average charges on all titratable sites
     pol.saveCharges("q.out", con.trial);              // Save average charges to disk
     con.trial=con.p;                                  // Restore original charges
-
   } // END of macro loop and simulation
 
 cout << sys.info() << loop.info() << mm.info()

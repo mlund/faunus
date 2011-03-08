@@ -27,53 +27,6 @@ typedef pot_r12minimageXY Tpot;
 typedef cuboidslit Tcon;
 #endif
 
-// Redefine energy function
-template<class Tpairpot, class Texpot>
-class springinteraction_expot_penalty : public springinteraction_expot<Tpot,Texpot> {
-  private:
-    container* conPtr;
-    group* groupPtr;
-    double zlen_half;
-  public:
-    using springinteraction_expot<Tpairpot,Texpot>::energy;
-    penaltyfunction pen;
-
-    springinteraction_expot_penalty(inputfile &in, container &c, polymer &p)
-      : springinteraction_expot<Tpot,Texpot>(in),
-      pen( 0, in.getflt("cuboid_zlen",100), 0.25, in.getflt("penalty_energy",.2), in.getflt("penalty_scalingfactor",1)) {
-          zlen_half=.5*in.getflt("cuboid_zlen",100);
-          conPtr=&c;
-          groupPtr=&p;
-          interaction<Tpairpot>::name+=" + penalty function";
-    }
-
-    string info() {
-      std::ostringstream o;
-      o << springinteraction_expot<Tpot,Texpot>::info() << pen.info();
-      return o.str();
-    }
-
-    // Energy in momomer and crankshaft functions
-    double u_monomer(vector<particle> &p, const polymer &g, unsigned int i ) {
-      double u=0;
-      if (&g==groupPtr) {
-        point cm = g.masscenter(*conPtr, p);
-        u=pen.energy(zlen_half-cm.z);
-      }
-      return springinteraction_expot<Tpairpot,Texpot>::u_monomer(p,g,i) + u;
-    }
-
-    // Energy in translation function
-    double energy(vector<particle> &p, const group &g) {  
-      double u=0;
-      if (&g==groupPtr) {
-        point cm = g.masscenter(*conPtr, p);
-        u=pen.energy(zlen_half-cm.z);
-      }
-      return springinteraction_expot<Tpairpot,Texpot>::energy(p,g) + u;
-    }
-};
-
 int main() {
 
   // General setup
@@ -222,7 +175,7 @@ int main() {
           sys+=mr.move(pol);     // rotate polymers
           break;
         case 5:
-          sys+=cs.move(pol);     // crankshaft
+          sys+=cs.penaltymove(pol);     // crankshaft
           gofr.add(*zhalfPtr-pol.cm.z);
           sys+=pot.pen.update(*zhalfPtr-pol.cm.z);
           break;
@@ -288,6 +241,7 @@ int main() {
     dst.write("dist.dat");
     dst.cntwrite("cntdist.dat");
     gofr.write("gofr.dat");
+    gofr.dump("gofr.xy");
     io.writefile("gcgroup.conf", nmt.print());
     pot.pen.write("penalty.dat");
     pot.pen.dump("penalty", loop.cnt_macro, "xy");

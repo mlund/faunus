@@ -80,9 +80,9 @@ penaltyfunction::penaltyfunction(double xmin, double xmax, double xres, double u
   string penaltyfunction::info() {
     std::ostringstream o;
     o << "#  Penalty function:\n"
-      << "#     penalty energy (kT) = " << du << std::endl
-      << "#     energy scaling factor = " << sf << std::endl
-      << "#     number of updates   = " << number_of_updates << std::endl;
+      << "#     Penalty energy (kT) = " << du << std::endl
+      << "#     Energy scaling factor = " << sf << std::endl
+      << "#     Number of updates   = " << number_of_updates << std::endl;
     return o.str();
   }
 }//namespace

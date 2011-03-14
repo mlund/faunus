@@ -9,7 +9,8 @@ set(objs slump physconst inputfile point io titrate container
     moves/base moves/translational moves/rotational moves/charge
     moves/miscmove moves/saltbath moves/clustermove #moves/rosenbluth 
     moves/crankshaft moves/membrane moves/reptation moves/switch
-    moves/replicaexchange moves/eqtitrate notification ewald3D penaltyfunction) 
+    moves/replicaexchange moves/eqtitrate notification ewald3D penaltyfunction
+    moves/branchrotation) 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 #----- xdrfile static library for gromacs output -----

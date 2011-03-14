@@ -74,6 +74,10 @@ namespace Faunus {
             f << z << " " << rho(z).avg() << " " << phi(z) << endl;
       }
 
+      void dump(string filename) {
+        phi.dumptodisk(filename);
+      }
+
       double energy_particle( const particle &a ) { return a.charge*getPotential(a); }
 
       double energy_vector( const vector<particle> &p ) {
@@ -150,6 +154,7 @@ namespace Faunus {
     string name;                            //!< Name of external potential
 
     expot_table(inputfile &in) {
+      name = "No external potential";
       enabled = in.getboo("expot_enabled", true);
       cnt=0;
       dz = in.getflt("expot_dz", 0.1);

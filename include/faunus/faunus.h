@@ -45,6 +45,7 @@
 #include "faunus/moves/rosenbluth.h"
 #include "faunus/moves/clustermove.h"
 #include "faunus/moves/crankshaft.h"
+#include "faunus/moves/branchrotation.h"
 #include "faunus/moves/saltbath.h"
 #include "faunus/moves/replicaexchange.h"
 #include "faunus/moves/eqtitrate.h"

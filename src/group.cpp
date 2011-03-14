@@ -555,6 +555,27 @@ namespace Faunus {
     return x;                           // obtained squared radius of gyration
   }
 
+  /*!
+   * This squared radius of gyration routine does not update any averages,
+   * is mass weighted and obeys periodic boundaries (if any) 
+   * by following the previous defined masscenter method
+   */
+  double macromolecule::sqmassgradius(container &c, vector<particle> &p) {
+    double x=0;
+    double r2=0;
+    double sum=0;
+    point t, o;
+    for (int i=beg; i<=end; i++) {
+      t = p[i]-cm;                      // vector to center of mass
+      c.boundary(t);                    // periodic boundary (if any)
+      r2 = c.sqdist(t,o);               // squared distance to cm
+      x += r2 * c.p[i].mw;              // m*r^2
+      sum += c.p[i].mw;                 // total mass
+    }
+    x=x*(1./sum);
+    return x;                           // obtained squared radius of gyration
+  }
+
   double macromolecule::sqend2enddistance(container &c) {
     double x=0;
     x=c.sqdist(c.p[beg], c.p[end]);     // squared distance between begin and end

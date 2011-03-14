@@ -42,7 +42,7 @@ int main() {
 #endif
 
   // Polymer
-  polymer pol;                      // Polymer
+  polymer pol;
   pol.babeladd( con, in );          //  add from input
   con.trial=con.p;                  //  synchronize particle vector
   pol.masscenter(con);              //  update masscenter
@@ -67,6 +67,7 @@ int main() {
   // Moves
   monomermove mm(nvt,con,pot,in);
   crankShaft cs(nvt,con,pot,in);
+  branchRotation br(nvt,con,pot,in);
   macrorot mr(nvt, con, pot,in);
   translate mt(nvt, con, pot, in);
   mt.dpv.x=mt.dpv.y=0;                          // no need to translate in xy direction
@@ -76,11 +77,12 @@ int main() {
     cout << "! Loaded polymer charges from disk" << endl;
   }
   eqtitrate tit(nvt, con, pot, in, "eqtit_");
-  
+
   // Particle input output
   io io;
   iopqr pqr;
   ioxtc xtc(con.len.z);
+  xtc.setbox(con.len.x,con.len.y,con.len.z);
   ioaam aam;
   aam.load(con, "confout.aam");     //   load stored configuration
   pol.masscenter(con);              //   update masscenter
@@ -99,7 +101,7 @@ int main() {
   // Simulation loop
   while ( loop.macroCnt() ) {
     while ( loop.microCnt() ) {
-      switch (rand() % 5) {     // random number between 0 and 4
+      switch (rand() % 6) {     // random number between 0 and 5
         case 0:
           for (int i=0; i<pol.size(); i++)
             sys+=mm.move(pol);   // move monomers 
@@ -108,13 +110,13 @@ int main() {
           sys+=pot.pen.update(*zhalfPtr-pol.cm.z);
           break;
         case 1:
-          sys+=mt.move(pol);     // translate polymers
+          sys+=mt.move(pol);     // translate polymer
           gofr.add(*zhalfPtr-pol.cm.z);
           sys+=pot.pen.update(*zhalfPtr-pol.cm.z);
           break;
         case 2:
           pol.masscenter(con);
-          sys+=mr.move(pol);     // rotate polymers
+          sys+=mr.move(pol);     // rotate polymer
           break;
         case 3:
           sys+=cs.penaltymove(pol);     // crankshaft
@@ -122,6 +124,11 @@ int main() {
           sys+=pot.pen.update(*zhalfPtr-pol.cm.z);
           break;
         case 4:
+          sys+=br.penaltymove(pol);     // branch rotation
+          gofr.add(*zhalfPtr-pol.cm.z);
+          sys+=pot.pen.update(*zhalfPtr-pol.cm.z);
+          break;
+        case 5:
           sys+=tit.move();       // titrate titratable sites
           pol.charge(con.p);
           break;
@@ -151,7 +158,6 @@ int main() {
       }
 
       if (slp.random_one()>0.95) {
-        xtc.setbox(con.len.x,con.len.y,con.len.z);
         xtc.save( "traj.xtc", con.p );
       }
     } // END of micro loop
@@ -166,27 +172,33 @@ int main() {
       << "Penalty energy = " << pot.pen.scaledu() << endl;
 
     // Write files to disk
-    io.writefile("vmdbonds.tcl", pol.getVMDBondScript());
-    pqr.save("confout.pqr",con.p);
-    aam.save("confout.aam", con.p);
-    dst.write("dist.out");
-    dst.cntwrite("cntdist.out");
-    gofr.write("gofr.out");
-    gofr.dump("gofr.xy");
-    q.dump("q.xy");
-    rg.dump("rg.xy");
-    ree.dump("ree.xy");
-    pot.expot.dump("expot.xy");
-    pot.pen.dump("penalty", loop.cnt_macro, "xy");
-    pot.pen.gofrdump("gofr", loop.cnt_macro, "xy");
+    if ( in.getboo("write_files",true) ) {
+      io.writefile("vmdbonds.tcl", pol.getVMDBondScript());
+      pqr.save("confout.pqr",con.p);
+      aam.save("confout.aam", con.p);
+      dst.write("dist.out");
+      dst.cntwrite("cntdist.out");
+      gofr.write("gofr.out");
+      gofr.dump("gofr.xy");
 
-    tit.applycharges(con.trial);                      // Set average charges on all titratable sites
-    pol.saveCharges("q.out", con.trial);              // Save average charges to disk
-    con.trial=con.p;                                  // Restore original charges
+      q.dump("q.xy");
+      rg.dump("rg.xy");
+      ree.dump("ree.xy");
+
+      pot.expot.dump("expot.xy");
+      pot.pen.dump("penalty", loop.cnt_macro, "xy");
+      pot.pen.gofrdump("gofr", loop.cnt_macro, "xy");
+
+      tit.applycharges(con.trial);                      // Set average charges on all titratable sites
+      pol.saveCharges("q.out", con.trial);              // Save average charges to disk
+      con.trial=con.p;                                  // Restore original charges
+    }
+
   } // END of macro loop and simulation
 
 cout << sys.info() << loop.info() << mm.info()
-  << cs.info() << mr.info() << mt.info()
-  << tit.info(con.p) << pol.info() << pot.info();
+  << cs.info() << br.info() << mr.info() 
+  << mt.info() << tit.info(con.p) << pol.info() 
+  << pot.info();
 
 }

@@ -104,6 +104,7 @@ namespace Faunus {
       double radius(vector<particle> &);          //!< Calculate radius
       double gradius(vector<particle> &);         //!< Calculate radius of gyration
       double sqmassgradius(container &);          //!< Calculate mass weighted squared radius of gyration
+      double sqmassgradius(container &, vector<particle> &);   //!< Calculate mass weighted squared radius of gyration, without updating averages
       double sqend2enddistance(container &);      //!< Calculate squared end-to-end distance
       double vradius(vector<particle> &);         //!< Volume based protein radius
       double dipole(vector<particle> &);          //!< Calculate dipole moment

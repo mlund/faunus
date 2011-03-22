@@ -135,7 +135,7 @@ namespace Faunus {
         }
     q.resize( sites.size() );
   }
-  
+
   double eqtitrate::move() {
     if (slp.runtest( runfraction )==false)
       return 0;

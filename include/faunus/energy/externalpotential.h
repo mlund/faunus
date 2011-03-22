@@ -179,7 +179,7 @@ namespace Faunus {
     }
 
     double getPotential(const point &a) { 
-      return phi(a.z); 
+      return phi.interpolate(a.z); 
     }
 
     virtual double energy_particle( const particle &a ) { 

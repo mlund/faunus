@@ -139,6 +139,7 @@ namespace Faunus {
         correlation & operator+=(T);    //!< Sample value
         T operator[] (unsigned int);    //!< Get correlation at i
         unsigned int size();            //!< Get block length
+        bool dump(string filename); //!< Dump to disk
     };
 
   /*!
@@ -173,6 +174,23 @@ namespace Faunus {
   template<class T>
     unsigned int correlation<T>::size() {
       return xixj.size();
+    }
+
+  //! Dump to disk
+  template<class T>
+    bool correlation<T>::dump(string filename) {
+      std::ofstream f(filename.c_str());
+      if (f) {
+        f.precision(6);
+        f << "% xytable dump: tablesize, xmin, xres; ydata" << endl;
+        f << size() << " " << 0 << " " << 1 << endl;
+        for (int i=0; i<size(); i+=1) {
+          f << operator[](i) << endl; 
+        }
+        f.close();
+        return true;
+      }
+      return false;
     }
 
 }//namespace

@@ -142,6 +142,72 @@ namespace Faunus {
       }
   };
 
+  /*! \brief Tabulated Debye-Huckel potential with r12 repulsion 
+   *         usuable in cuboid containers
+   *  \author Chris Evers
+   *  \date Kastrup, March 2011
+   */
+  class pot_r12debyehuckel_tab : public pot_r12debyehuckel {
+  private:
+    xytable< double, double > U;            //!< Debye-Huckel potential at r [kT/z^2]
+    double dr2;                             //!< Table resolution
+    double r2min;                           //!< Minimum tabulated potential, below exact
+    double r2max;                           //!< Maximum tabulated potential, higher zero
+
+  public:
+    pot_r12debyehuckel_tab( inputfile &in ) : pot_r12debyehuckel(in) {
+      name += ", interpolated table"; 
+      dr2 = in.getflt("tabpot_dr2", 0.1);
+      r2min = in.getflt("tabpot_r2min", (.5/k)*(.5/k) );   // r2 < .5 \kappa^-1 
+      r2max = in.getflt("tabpot_r2max", 1e3 / k); // r2 > 1000 \kappa^-1 
+      U.init(dr2, dr2, r2max);
+      for (double r2=r2min; r2<=r2max+dr2; r2+=dr2) {
+        U(r2)=calcPotential(r2);
+      }
+    }
+
+    virtual double calcPotential(double r2) { 
+      double r=sqrt(r2);                    // distance between particles
+      return 1 / r * exp(-k*r);
+    }
+
+    //! Define Debye-Huckel energy function
+    //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + eps \frac{sigma^12}{r^12}/f \f$
+    //! \return Energy in units of kT/lB
+    inline double pairpot( const particle &p1, const particle &p2 ) {
+      double r2=sqdist(p1,p2);              // squared distance between particles
+      if ( r2 >= r2max )
+        return 0;
+      double s=p1.radius+p2.radius,         // distance between particles at contact
+             u=s*s/r2;                      // (s/r)^2
+      u=u*u*u;                              // (s/r)^6
+      if ( r2 <= r2min ) {
+        double r=sqrt(r2);
+        return p1.charge * p2.charge / r * exp(-k*r)  + eps*(u*u);
+      }
+      else
+        return p1.charge * p2.charge * getPotential(r2) + eps*(u*u);
+    }
+
+    //! \return Potential in units of kT / (lB z^2)
+    double getPotential(const double &r2) { 
+      return U.interpolate(r2); 
+    }
+
+    string info() {
+      std::ostringstream o;
+      o << pot_r12debyehuckel::info()
+        << "#     Resolution        = " << sqrt(dr2)   << " AA (" << U.y.size() << " slits)" << endl
+        << "#     Exact pot cut off = " << sqrt(r2min) << " AA (" << U(r2min) << " kT/z^2)" << endl
+        << "#     Tab pot cut off   = " << sqrt(r2max) << " AA (" << U(r2max) << " kT/z^2)" << endl;
+      return o.str();
+    }
+
+    void dump(string filename) {
+      U.dumptodisk(filename);
+    }
+  };
+
   /*! \brief Debye-Huckel potential for periodic boundry 
    *         conditions in XY only with r12 repulsion 
    *         usuable in cuboid containers
@@ -151,7 +217,7 @@ namespace Faunus {
   class pot_r12debyehuckelXY : public pot_r12debyehuckel {
     public:
       pot_r12debyehuckelXY( inputfile &in ) : pot_r12debyehuckel(in) {
-      }   
+      }
 
       //! Calculate distance using the minimum image convention
       inline double sqdist(const point &p1, const point &p2) {   //!< Squared distance 
@@ -172,6 +238,42 @@ namespace Faunus {
       string info() {
         std::ostringstream o;
         o << pot_r12debyehuckel::info()
+          << "#     Periodicity       = slit: xy periodicity only" << endl;
+        return o.str();
+      }
+  };
+
+    /*! \brief Debye-Huckel potential for periodic boundry 
+   *         conditions in XY only with r12 repulsion 
+   *         and a tabulated potential, usuable in cuboid 
+   *         containers
+   *  \author Chris Evers
+   *  \date Vierlingsbeek March 2011
+   */
+  class pot_r12debyehuckelXY_tab : public pot_r12debyehuckel_tab {
+    public:
+      pot_r12debyehuckelXY_tab( inputfile &in ) : pot_r12debyehuckel_tab(in) {
+      }
+
+      //! Calculate distance using the minimum image convention
+      inline double sqdist(const point &p1, const point &p2) {   //!< Squared distance 
+        double dx=std::abs(p1.x-p2.x),
+               dy=std::abs(p1.y-p2.y),
+               dz=p1.z-p2.z;
+        if (dx>len_half.x) dx-=len.x;
+        if (dy>len_half.y) dy-=len.y;
+        return dx*dx + dy*dy + dz*dz;
+      }
+
+      //! Apply periodic boundary conditions
+     inline void boundary(point &a) const {
+        if (std::abs(a.x)>len_half.x) a.x-=len.x*anint(a.x*len_inv.x);
+        if (std::abs(a.y)>len_half.y) a.y-=len.y*anint(a.y*len_inv.y);
+      }
+
+      string info() {
+        std::ostringstream o;
+        o << pot_r12debyehuckel_tab::info()
           << "#     Periodicity       = slit: xy periodicity only" << endl;
         return o.str();
       }

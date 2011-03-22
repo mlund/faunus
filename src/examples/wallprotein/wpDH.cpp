@@ -29,15 +29,15 @@ int main() {
   // Simulation container
 #ifdef NOSLIT                               // If wpDH_noslit
   cuboid con(in);
-  typedef pot_r12debyehuckel Tpot;
+  typedef pot_r12debyehuckel_tab Tpot;
   typedef expot_table Texpot;
 #elif HYDROPHIC                             // If wpDH_hydrophobic
   cuboidslit con(in);
-  typedef pot_r12debyehuckelXY Tpot;
+  typedef pot_r12debyehuckelXY_tab Tpot;
   typedef expot_hydrophobic Texpot;
 #else                                       // If wpDH
   cuboidslit con(in);
-  typedef pot_r12debyehuckelXY Tpot;
+  typedef pot_r12debyehuckelXY_tab Tpot;
   typedef expot_gouychapman Texpot;
 #endif
 
@@ -185,6 +185,7 @@ int main() {
       rg.dump("rg.xy");
       ree.dump("ree.xy");
 
+      pot.pair.dump("pairpot.xy");
       pot.expot.dump("expot.xy");
       pot.pen.dump("penalty", loop.cnt_macro, "xy");
       pot.pen.gofrdump("gofr", loop.cnt_macro, "xy");

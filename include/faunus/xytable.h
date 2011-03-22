@@ -51,10 +51,16 @@ namespace Faunus {
         return i;
       }
 
+      //! \todo Test for negative x-values
+      inline int x2ifloor(TX x) {
+        return int( invxres*(x-xmin) );
+      }
+
       public:
       typedef typename std::vector<TY>::iterator yiter;
       std::vector<TY> y; 
       TX xres,            //!< Distance between x values
+         invxres,         //!< Inverse distance between x values
          xmin;            //!< Minimum x value
 
       //! \param resolution Distance between x values
@@ -82,6 +88,21 @@ namespace Faunus {
       //! Convenient data access
       TY& operator()(TX val) { return y.at( x2i(val) ); }
 
+      TX x(int i) { 
+        return i*xres+xmin; 
+      }
+
+      /*! \brief Interpolation
+       *  \todo Test for negative x-values
+       */
+      TY interpolate(TX val) {
+        int i = x2ifloor(val);
+        TY  y_low  = y[i];
+        TX  x_low  = x(i);
+        TY slope = (y[i+1]-y_low) / (x(i+1)-x_low);
+        return y_low + slope * (val-x_low); 
+      }
+
       //! Max x-value in set
       TX xmax() { return y.size()*xres+xmin; }
 
@@ -93,7 +114,7 @@ namespace Faunus {
           v.push_back( i*xres + xmin );
         return v;
       }
-      
+
       //! Dump table to disk
       bool dumptodisk(string filename) {
         std::ofstream f(filename.c_str());
@@ -106,18 +127,12 @@ namespace Faunus {
           }
           f.close();
           return true;
-        }         
+        }
         return false;
       }
-      
+
       bool dumptodisk(string file, int num, string ext) {
         string filename;
-// //        char* strnum;
-//         filename.append(file);
-// //        sprintf(strnum,"%d",num);
-// //        filename.append(strnum);
-//         filename.append(".");
-//         filename.append(ext);
         std::stringstream buffer;
         buffer << file << num << "." << ext;
         filename = buffer.str();

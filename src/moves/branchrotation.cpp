@@ -38,9 +38,9 @@ namespace Faunus {
         }
         T=v.front();
         A=v.back();
-        B=rand() % g.size();        
+        B=g.beg + (rand() % g.size());
         while ( B <= A ) 
-          B=rand() % g.size();
+          B=g.beg + (rand() % g.size());
         v.pop_back();
         return true;
       case 1: 
@@ -59,9 +59,9 @@ namespace Faunus {
         }
         T=v.front();
         A=v.back();
-        B=rand() % g.size();
+        B=g.beg + (rand() % g.size());
         while ( B >= A ) 
-          B=rand() % g.size();
+          B=g.beg + (rand() % g.size());
         v.pop_back();
         return true;
     }
@@ -122,7 +122,7 @@ namespace Faunus {
    */
   double branchRotation::penaltymove(polymer &g) {
     setNumberOfMonomers(g);
-    if (slp.runtest(runfraction)==false || findEnds(g)==false)
+    if (slp.runtest(runfraction)==false || findEnds(g)==false) 
       return 0;
     markovmove::move();
 

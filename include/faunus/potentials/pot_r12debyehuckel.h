@@ -158,10 +158,20 @@ namespace Faunus {
     pot_r12debyehuckel_tab( inputfile &in ) : pot_r12debyehuckel(in) {
       name += ", interpolated table"; 
       dr2 = in.getflt("tabpot_dr2", 0.1);
-      r2min = in.getflt("tabpot_r2min", (.5/k)*(.5/k) );   // r2 < .5 \kappa^-1 
-      r2max = in.getflt("tabpot_r2max", 1e3 / k); // r2 > 1000 \kappa^-1 
-      U.init(dr2, dr2, r2max);
-      for (double r2=r2min; r2<=r2max+dr2; r2+=dr2) {
+      double invdr2 = 1/dr2;
+      double Umax=in.getflt("tabpot_Umax", .1),
+             Umin=in.getflt("tabpot_Umin", 1e-5);
+      for (double r2=0; r2<=len.z*len.z; r2+=dr2) {
+        double Utest=calcPotential(r2);
+        if ( Utest > Umax )
+          r2min = r2;
+        if ( Utest < Umin ) {
+          r2max = r2;
+          break;
+        }
+      }
+      U.init(dr2, r2min-dr2, r2max+dr2);
+      for (double r2=r2min-dr2; r2<=r2max+dr2; r2+=dr2) {
         U(r2)=calcPotential(r2);
       }
     }
@@ -197,9 +207,9 @@ namespace Faunus {
     string info() {
       std::ostringstream o;
       o << pot_r12debyehuckel::info()
-        << "#     Resolution        = " << sqrt(dr2)   << " AA (" << U.y.size() << " slits)" << endl
-        << "#     Exact pot cut off = " << sqrt(r2min) << " AA (" << U(r2min) << " kT/z^2)" << endl
-        << "#     Tab pot cut off   = " << sqrt(r2max) << " AA (" << U(r2max) << " kT/z^2)" << endl;
+        << "#     Table resolution  = " << sqrt(dr2)   << " AA ( " << U.y.size() << " slits )" << endl
+        << "#     Exact pot cut off = " << sqrt(r2min) << " AA ( " << calcPotential(r2min) << " kT/z^2 )" << endl
+        << "#     Tab pot cut off   = " << sqrt(r2max) << " AA ( " << calcPotential(r2max) << " kT/z^2 )" << endl;
       return o.str();
     }
 

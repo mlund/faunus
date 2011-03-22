@@ -51,7 +51,6 @@ namespace Faunus {
         return i;
       }
 
-      //! \todo Test for negative x-values
       inline int x2ifloor(TX x) {
         return int( invxres*(x-xmin) );
       }
@@ -73,6 +72,7 @@ namespace Faunus {
       void init(TX resolution=.5, TX xminimum=0, TX xmaximum=0) {
         y.clear();
         xres=resolution;
+        invxres=1/xres;
         xmin=xminimum;
         if (xmaximum>0)
           y.resize( int(std::abs(xmaximum-xminimum)/resolution) );
@@ -93,7 +93,6 @@ namespace Faunus {
       }
 
       /*! \brief Interpolation
-       *  \todo Test for negative x-values
        */
       TY interpolate(TX val) {
         int i = x2ifloor(val);
@@ -104,7 +103,7 @@ namespace Faunus {
       }
 
       //! Max x-value in set
-      TX xmax() { return y.size()*xres+xmin; }
+      TX xmax() { return (y.size()-1)*xres+xmin; }
 
       std::vector<TY> gety() { return y; }
 

@@ -101,13 +101,13 @@ namespace Faunus {
    */
   void dualmove::load(inputfile &in, vector<macromolecule> &g, float dist) {
     if (dist==0)
-      dist=rmax;
+      dist=(rmax+rmin)*0.5;
     g.clear();
     point a = v*(dist/2.);
     ioaam aam;
     aam.load(*con, in, g); 
-    g[0].move(*con, -( g[0].cm + a ));    // ...around the cell origo
-    g[1].move(*con, -( g[1].cm - a ));    // ...along the z-axis
+    g[0].move(*con, ( -g[0].cm  + a ));    // ...around the cell origo
+    g[1].move(*con, ( -g[1].cm  - a ));    // ...along the z-axis
     g[0].accept(*con);
     g[1].accept(*con);
   }

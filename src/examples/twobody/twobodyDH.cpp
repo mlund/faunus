@@ -9,6 +9,7 @@
  * \include twobody.cpp
  */
 #include "faunus/faunus.h"
+#include "faunus/potentials/pot_LJhydrophobicDH.h"
 #include "faunus/potentials/pot_debyehuckelP3.h"
 #include "faunus/energy/coarsegrain.h"
 
@@ -19,6 +20,8 @@ using namespace std;
   typedef interaction_dipole<pot_debyehuckelP3> Tpot;
 #elif MONOPOLE
   typedef interaction_monopole<pot_debyehuckelP3> Tpot;
+#elif HYDROPHOBIC
+  typedef interaction<pot_LJhydrophobicDH> Tpot;
 #else
   typedef interaction<pot_debyehuckelP3> Tpot;
 #endif
@@ -38,26 +41,26 @@ int main(int argc, char* argv[]) {
   iopqr pqr;                            // PQR output (pos, charge, radius)
 
   vector<macromolecule> g;              // Group for proteins
-  dualmove dm(nvt, cell, pot);          //   Class for 1D macromolecular translation
-  dm.load( in, g );                     //   Load proteins and separate them 
-  macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
-  dm.setup(in);                         // Set displacement parameters
-  mr.dp=in.getflt("rot_dp");            //  ---//---
   ioaam aam;                            // Protein input file format is AAM
+  dualmove dm(nvt, cell, pot);          // Class for 1D macromolecular translation
+  dm.setup(in);                         // Set displacement parameters
+  dm.load( in, g);                      // Load proteins and separate them according to dm parameters
+  macrorot mr(nvt, cell, pot);          // Class for macromolecule rotation
+  mr.dp=in.getflt("rot_dp");            //  ---//---
   if (aam.load(cell,"confout.aam")) {
     g[0].masscenter(cell);              // Load old config (if present)
     g[1].masscenter(cell);              // ...and recalc mass centers
   }
   ioxtc xtc(cell.r);                    // Gromacs xtc output
 
+  cout << in.info() << cell.info()      // Print info
+       << pot.info() << g[0].info() << g[1].info();
+  
   systemenergy sys(
       pot.energy(cell.p, g[0], g[1]) ); // System energy analysis
 
   g[0].charge(cell.p);
   g[1].charge(cell.p);
-
-  cout << in.info() << cell.info()      // Print info
-       << pot.info() << g[0].info() << g[1].info();
 
   // Calculate atom closests to mass center
   for (int j=0; j<2; j++) {
@@ -72,7 +75,6 @@ int main(int argc, char* argv[]) {
     }
     cout << "# Closest particle to CM" << j << " = " << iclosest << ", " << mindist << endl;
   }
-
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {
       short i,n;
@@ -96,6 +98,23 @@ int main(int argc, char* argv[]) {
         g[1].dipole(cell.p);
         dst.add("Left  protein z-dipcomp", z , g[0].mu.z/l0); 
         dst.add("Right protein z-dipcomp", z , g[1].mu.z/l1); 
+    /*******Analysis of hydrophobic interaction in a function of com seperation******/
+        double sticky_u=0;
+        double sticky_r=in.getflt("sticky_r",0);
+        for (int index0=g[0].beg; index0<=g[0].end; index0++){
+          for (int index1=g[1].beg; index1<g[1].end; index1++){
+            if (cell.p[index0].hydrophobic==true) {  // check for hydrophobicity
+               if (cell.p[index1].hydrophobic==true) {
+                 double distance=cell.dist(cell.p[index0], cell.p[index1]); //com distance
+                 if(distance-cell.p[index0].radius-cell.p[index1].radius <= sticky_r){ //surface to surface distance
+                      sticky_u+=in.getflt("sticky_u",0.0); //total hydrophobic u at particular distance
+                  }
+               }
+            }
+          }
+        }
+
+        dst.add("Hydrophobic", z , -1*sticky_u);  
       }
 
       if (slump.random_one()>.95 && macro>1 && in.getboo("movie", false)==true)

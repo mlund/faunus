@@ -317,10 +317,10 @@ namespace Faunus {
   public:
     expot_hydrophobic(inputfile &in) : expot_table(in) {
       name = "Hydrophobic external potential";
-      u = in.getflt("expot_u",0);
+      u = in.getflt("phob_u",0);
       if (enabled==false)
         u=0;
-      r = in.getflt("expot_r",0);
+      r = in.getflt("phob_r",0);
     }
 
     string info() {

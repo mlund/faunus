@@ -61,8 +61,8 @@ namespace Faunus {
           k=sqrt( 8*pyc.pi*f*pyc.Nav/1e27*I );      //   k_D=\sqrt{8 \pi \lambda_B[A] I[A-3]}
         }
         eps=in.getflt("lj_epsilon", 0.2 );          // Interaction parameter
-        eps*=4;                                     //! do we want this?
-        eps=eps/f;                                  //! and this?
+        eps*=4;
+        eps=eps/f;
       }
 
       //! Define Debye-Huckel energy function
@@ -106,7 +106,8 @@ namespace Faunus {
         if (std::abs(a.z)>len_half.z) a.z-=len.z*anint(a.z*len_inv.z);
       }
 
-      virtual double energy(const vector<particle> &p, const vector<int> &pairs) {
+//       virtual double energy(const vector<particle> &p, const vector<int> &pairs) {
+      double energy(const vector<particle> &p, const vector<int> &pairs) {
         int n=pairs.size()/2, l=0;
         double u=0;
         for (int i=0; i<n; i++)
@@ -148,7 +149,7 @@ namespace Faunus {
    *  \date Kastrup, March 2011
    */
   class pot_r12debyehuckel_tab : public pot_r12debyehuckel {
-  private:
+  protected:
     xytable< double, double > U;            //!< Debye-Huckel potential at r [kT/z^2]
     double dr2;                             //!< Table resolution
     double r2min;                           //!< Minimum tabulated potential, below exact
@@ -160,8 +161,10 @@ namespace Faunus {
       dr2 = in.getflt("tabpot_dr2", 0.1);
       double invdr2 = 1/dr2;
       double Umax=in.getflt("tabpot_Umax", .1),
-             Umin=in.getflt("tabpot_Umin", 1e-5);
-      for (double r2=0; r2<=len.z*len.z; r2+=dr2) {
+             Umin=in.getflt("tabpot_Umin", 1e-6);
+      r2min = dr2;
+      r2max = 3.*len.z*len.z;
+      for (double r2=dr2; r2<=3*len.z*len.z; r2+=dr2) {
         double Utest=calcPotential(r2);
         if ( Utest > Umax )
           r2min = r2;
@@ -171,14 +174,17 @@ namespace Faunus {
         }
       }
       U.init(dr2, r2min-dr2, r2max+dr2);
-      for (double r2=r2min-dr2; r2<=r2max+dr2; r2+=dr2) {
+      for (double r2=r2min-dr2; r2<=r2max+dr2; r2+=dr2) 
         U(r2)=calcPotential(r2);
-      }
     }
 
     virtual double calcPotential(double r2) { 
       double r=sqrt(r2);                    // distance between particles
-      return 1 / r * exp(-k*r);
+      double phi=1 / r * exp(-k*r);
+      if ( isinf(phi) )
+        return 1e20;
+      else
+        return phi;
     }
 
     //! Define Debye-Huckel energy function
@@ -195,8 +201,7 @@ namespace Faunus {
         double r=sqrt(r2);
         return p1.charge * p2.charge / r * exp(-k*r)  + eps*(u*u);
       }
-      else
-        return p1.charge * p2.charge * getPotential(r2) + eps*(u*u);
+      return p1.charge * p2.charge * getPotential(r2) + eps*(u*u);
     }
 
     //! \return Potential in units of kT / (lB z^2)
@@ -204,18 +209,124 @@ namespace Faunus {
       return U.interpolate(r2); 
     }
 
+    /*!
+      * Calculated the bonded + non-bonded energy between two particles
+      * connected with a harmonic bond. To avoid numerical trouble with
+      * the non-electrostatic, non-bonded interactions, the radii of
+      * the two particles are temporarily reduced.
+      */
+    inline double bond(particle &p1, particle &p2) {
+      double r=sqrt(sqdist(p1,p2));
+      double u=harmonicbond(p1,p2,r)/f;
+      p1.radius*=0.5;
+      p2.radius*=0.5;
+      u+=pairpot(p1,p2);
+      p1.radius*=2;
+      p2.radius*=2;
+      return u;
+    }
+
+     double energy(const vector<particle> &p, const vector<int> &pairs) {
+        int n=pairs.size()/2, l=0;
+        double u=0;
+        for (int i=0; i<n; i++)
+          u+=pairpot(p[ pairs[l++] ], p[ pairs[l++]] );
+        return f*u;
+      }
+
     string info() {
       std::ostringstream o;
       o << pot_r12debyehuckel::info()
         << "#     Table resolution  = " << sqrt(dr2)   << " AA ( " << U.y.size() << " slits )" << endl
         << "#     Exact pot cut off = " << sqrt(r2min) << " AA ( " << calcPotential(r2min) << " kT/z^2 )" << endl
-        << "#     Tab pot cut off   = " << sqrt(r2max) << " AA ( " << calcPotential(r2max) << " kT/z^2 )" << endl;
+        << "#     Tab pot cut off   = " << sqrt(r2max) << " AA ( " << calcPotential(r2max) << " kT/z^2 )" << endl
+        << "#     Est. max pot error= " << U.interpolate(r2min+.5*dr2) - calcPotential(r2min+.5*dr2) << " kT" 
+                                        << "( at r=" << sqrt(r2min+.5*dr2) << " AA )" << endl;
       return o.str();
     }
 
     void dump(string filename) {
       U.dumptodisk(filename);
     }
+  };
+
+  /*! \brief Tabulated Debye-Huckel potential with r12 repulsion 
+   *         and hydrophobic interactions usuable in cuboid containers
+   *  \author Chris Evers
+   *  \date Lund, April 2011
+   */
+  class pot_r12debyehuckel_hydrophobic_tab : public pot_r12debyehuckel_tab {
+  private:
+    double phobu;                             //!< Hydrophobic interaction energy
+    double phobr;                             //!< Hydrophobic interaction distance
+
+  public:
+    pot_r12debyehuckel_hydrophobic_tab( inputfile &in ) : pot_r12debyehuckel_tab(in) {
+      name += ", hydrophobic interactions"; 
+      phobu = in.getflt("phob_u",-.5);
+      phobr = in.getflt("phob_r",3);
+    }
+
+    //! Define energy function
+    //! If both particles hydrophobic
+    //! \f$ \beta u(r<r_{phob})/f = u_{phob} + eps \frac{sigma^12}{r^12}/f \f$
+    //! Otherwise
+    //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + eps \frac{sigma^12}{r^12}/f \f$
+    //! \return Energy in units of kT/lB
+    inline double pairpot( const particle &p1, const particle &p2 ) {
+      double r2=sqdist(p1,p2);              // squared distance between particles
+      if ( r2 >= r2max )
+        return 0;
+      double s=p1.radius+p2.radius,         // distance between particles at contact
+             r12=s*s/r2;
+      r12=r12*r12*r12;
+      r12=eps*(r12*r12);                    // r12 repulsion
+      if ( p1.hydrophobic==true )
+        if ( p2.hydrophobic==true )
+          if ( sqrt(r2)-s<=phobr )          // distance between particle surfaces < hydrophobic distance
+            return phobu + r12;
+          else 
+            return r12;
+      if ( r2 <= r2min ) {
+        double r=sqrt(r2);
+        return p1.charge * p2.charge / r * exp(-k*r)  + r12;
+      }
+      return p1.charge * p2.charge * getPotential(r2) + r12;
+    }
+
+    /*!
+      * Calculated the bonded + non-bonded energy between two particles
+      * connected with a harmonic bond. To avoid numerical trouble with
+      * the non-electrostatic, non-bonded interactions, the radii of
+      * the two particles are temporarily reduced.
+      */
+    inline double bond(particle &p1, particle &p2) {
+      double r=sqrt(sqdist(p1,p2));
+      double u=harmonicbond(p1,p2,r)/f;
+      p1.radius*=0.5;
+      p2.radius*=0.5;
+      u+=pairpot(p1,p2);
+      p1.radius*=2;
+      p2.radius*=2;
+      return u;
+    }
+
+     double energy(const vector<particle> &p, const vector<int> &pairs) {
+        int n=pairs.size()/2, l=0;
+        double u=0;
+        for (int i=0; i<n; i++)
+          u+=pairpot(p[ pairs[l++] ], p[ pairs[l++]] );
+        return f*u;
+      }
+
+    string info() {
+      std::ostringstream o;
+      o << pot_r12debyehuckel_tab::info()
+        << "#     Hydroph. distance = " << phobr   << " AA " << endl
+        << "#     Hydroph. energy   = " << phobu   << " kT " << endl;
+      return o.str();
+    }
+
   };
 
   /*! \brief Debye-Huckel potential for periodic boundry 
@@ -253,7 +364,7 @@ namespace Faunus {
       }
   };
 
-    /*! \brief Debye-Huckel potential for periodic boundry 
+  /*! \brief Debye-Huckel potential for periodic boundry 
    *         conditions in XY only with r12 repulsion 
    *         and a tabulated potential, usuable in cuboid 
    *         containers
@@ -284,6 +395,42 @@ namespace Faunus {
       string info() {
         std::ostringstream o;
         o << pot_r12debyehuckel_tab::info()
+          << "#     Periodicity       = slit: xy periodicity only" << endl;
+        return o.str();
+      }
+  };
+
+  /*! \brief Debye-Huckel potential for periodic boundry 
+   *         conditions in XY only with r12 repulsion 
+   *         and a tabulated potential, usuable in cuboid 
+   *         containers
+   *  \author Chris Evers
+   *  \date Vierlingsbeek March 2011
+   */
+  class pot_r12debyehuckelXY_hydrophobic_tab : public pot_r12debyehuckel_hydrophobic_tab {
+    public:
+      pot_r12debyehuckelXY_hydrophobic_tab( inputfile &in ) : pot_r12debyehuckel_hydrophobic_tab(in) {
+      }
+
+      //! Calculate distance using the minimum image convention
+      inline double sqdist(const point &p1, const point &p2) {   //!< Squared distance 
+        double dx=std::abs(p1.x-p2.x),
+               dy=std::abs(p1.y-p2.y),
+               dz=p1.z-p2.z;
+        if (dx>len_half.x) dx-=len.x;
+        if (dy>len_half.y) dy-=len.y;
+        return dx*dx + dy*dy + dz*dz;
+      }
+
+      //! Apply periodic boundary conditions
+     inline void boundary(point &a) const {
+        if (std::abs(a.x)>len_half.x) a.x-=len.x*anint(a.x*len_inv.x);
+        if (std::abs(a.y)>len_half.y) a.y-=len.y*anint(a.y*len_inv.y);
+      }
+
+      string info() {
+        std::ostringstream o;
+        o << pot_r12debyehuckel_hydrophobic_tab::info()
           << "#     Periodicity       = slit: xy periodicity only" << endl;
         return o.str();
       }

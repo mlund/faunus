@@ -92,14 +92,14 @@ namespace Faunus {
         return i*xres+xmin; 
       }
 
-      /*! \brief Interpolation
+      /*! \brief Linear interpolation
+       *  \warning If one of the reference values is Inf, nan is returned
        */
       TY interpolate(TX val) {
         int i = x2ifloor(val);
         TY  y_low  = y[i];
-        TX  x_low  = x(i);
-        TY slope = (y[i+1]-y_low) / (x(i+1)-x_low);
-        return y_low + slope * (val-x_low); 
+        TY slope = (y[i+1]-y_low) * invxres;
+        return y_low + slope * (val-x(i)); 
       }
 
       //! Max x-value in set

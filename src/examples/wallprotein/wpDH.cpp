@@ -27,18 +27,25 @@ int main() {
   canonical nvt;                            // canonical ensemble
 
   // Simulation container
-#ifdef NOSLIT                               // If wpDH_noslit
+#ifdef NOSLIT
   cuboid con(in);
-  typedef pot_r12debyehuckel_tab Tpot;
-  typedef expot_table Texpot;
-#elif HYDROPHIC                             // If wpDH_hydrophobic
+  #ifdef NOTAB                              // wpDH_noslit_notab
+    typedef pot_r12debyehuckel Tpot;
+  #else                                     // wpDH_noslit
+    typedef pot_r12debyehuckel_hydrophobic_tab Tpot; 
+  #endif
+#else
   cuboidslit con(in);
-  typedef pot_r12debyehuckelXY_tab Tpot;
-  typedef expot_hydrophobic Texpot;
-#else                                       // If wpDH
-  cuboidslit con(in);
-  typedef pot_r12debyehuckelXY_tab Tpot;
-  typedef expot_gouychapman Texpot;
+  #ifdef NOTAB
+    typedef pot_r12debyehuckelXY Tpot;      // wpDH_notab
+  #else
+    typedef pot_r12debyehuckelXY_hydrophobic_tab Tpot;
+  #endif
+  #ifdef HYDROPHIC                          // wpDH_hydrophobic
+    typedef expot_hydrophobic Texpot;
+  #else                                     // wpDH
+    typedef expot_gouychapman Texpot;
+  #endif
 #endif
 
   // Polymer
@@ -59,17 +66,26 @@ int main() {
   histogram ree(.2,0, (*zhalfPtr)*2. );     // end to end distance distribution function
 
   // Potentials
-  springinteraction_expot_penalty<Tpot, Texpot> pot(in, con, pol); 
-  pot.expot.update(con);
-  pot.pen.load("penalty.xy");  // Load penaltyfunction from disk 
-  pot.pen.gofrload("gofr.xy"); // Load penaltyfunction from disk 
+#ifdef NOSLIT
+  springinteraction<Tpot> pot(in); 
+#else
+  #ifdef PENALTY
+    springinteraction_expot_penalty<Tpot, Texpot> pot(in, con, pol); 
+    pot.pen.load("penalty.xy");  // Load penaltyfunction from disk 
+    pot.pen.gofrload("gofr.xy"); // Load penaltyfunction from disk 
+    pot.expot.update(con);
+  #else
+    springinteraction_expot<Tpot, Texpot> pot(in); 
+    pot.expot.update(con);
+  #endif
+#endif
 
   // Moves
   monomermove mm(nvt,con,pot,in);
   crankShaft cs(nvt,con,pot,in);
   branchRotation br(nvt,con,pot,in);
-  macrorot mr(nvt, con, pot,in);
-  translate mt(nvt, con, pot, in);
+  macrorot mr(nvt,con,pot,in);
+  translate mt(nvt,con,pot,in);
   mt.dpv.x=mt.dpv.y=0;                          // no need to translate in xy direction
   if (in.getflt("eqtit_runfrac",0.5)<1e-3) {
     pol.loadCharges(in.getstr("pol_charges","q.in"), con.p); // load residue charges from file
@@ -86,7 +102,7 @@ int main() {
   ioaam aam;
   aam.load(con, "confout.aam");     //   load stored configuration
   pol.masscenter(con);              //   update masscenter
-  aam.save("confout_init.aam", con.p);
+  aam.save("confin.aam", con.p);
 
   // Initial system energy
   systemenergy sys(
@@ -107,26 +123,38 @@ int main() {
             sys+=mm.move(pol);   // move monomers 
           pol.masscenter(con);
           gofr.add(*zhalfPtr-pol.cm.z);
+#ifdef PENALTY
           sys+=pot.pen.update(*zhalfPtr-pol.cm.z);
+#endif
           break;
         case 1:
           sys+=mt.move(pol);     // translate polymer
           gofr.add(*zhalfPtr-pol.cm.z);
+#ifdef PENALTY
           sys+=pot.pen.update(*zhalfPtr-pol.cm.z);
+#endif
           break;
         case 2:
           pol.masscenter(con);
           sys+=mr.move(pol);     // rotate polymer
           break;
         case 3:
+#ifdef PENALTY
           sys+=cs.penaltymove(pol);     // crankshaft
-          gofr.add(*zhalfPtr-pol.cm.z);
           sys+=pot.pen.update(*zhalfPtr-pol.cm.z);
+#else
+          sys+=cs.move(pol);     // crankshaft
+#endif
+          gofr.add(*zhalfPtr-pol.cm.z);
           break;
         case 4:
+#ifdef PENALTY
           sys+=br.penaltymove(pol);     // branch rotation
-          gofr.add(*zhalfPtr-pol.cm.z);
           sys+=pot.pen.update(*zhalfPtr-pol.cm.z);
+#else
+          sys+=br.move(pol);     // branch rotation
+#endif
+          gofr.add(*zhalfPtr-pol.cm.z);
           break;
         case 5:
           sys+=tit.move();       // titrate titratable sites
@@ -168,14 +196,13 @@ int main() {
       pot.uself_polymer(con.p, pol) );
 
     cout << loop.timing() << "#   Energy drift = " << sys.cur-sys.sum << " kT. "
-      << "System charge = " << con.charge() << ". "
-      << "Penalty energy = " << pot.pen.scaledu() << endl;
+      << "System charge = " << con.charge() << ". " << endl;
 
+    aam.save("confout.aam", con.p);
     // Write files to disk
     if ( in.getboo("write_files",true) ) {
       io.writefile("vmdbonds.tcl", pol.getVMDBondScript());
       pqr.save("confout.pqr",con.p);
-      aam.save("confout.aam", con.p);
       dst.write("dist.out");
       dst.cntwrite("cntdist.out");
       gofr.write("gofr.out");
@@ -185,10 +212,16 @@ int main() {
       rg.dump("rg.xy");
       ree.dump("ree.xy");
 
-      pot.pair.dump("pairpot.xy");
+// #ifndef NOTAB
+//       pot.pair.dump("pairpot.xy");
+// #endif
+#ifndef NOSLIT
       pot.expot.dump("expot.xy");
+#endif
+#ifdef PENALTY
       pot.pen.dump("penalty", loop.cnt_macro, "xy");
       pot.pen.gofrdump("gofr", loop.cnt_macro, "xy");
+#endif
 
       tit.applycharges(con.trial);                      // Set average charges on all titratable sites
       pol.saveCharges("q.out", con.trial);              // Save average charges to disk

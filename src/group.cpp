@@ -871,6 +871,17 @@ namespace Faunus {
         for (int j=0; j<nb[i-beg].size(); j++)
           nb[i-beg][j]+=beg;
       }
+    double d2 = .75 * pow(c.getvolume(),2./3.);  // Squared half box space diagonal
+    for (int k=0; k<c.p.size()-1; k++) 
+      for (int l=1; l<c.p.size(); l++) {
+        double r2 = pow(c.p[k].x-c.p[l].x,2)+pow(c.p[k].y-c.p[l].y,2)+pow(c.p[k].z-c.p[l].z,2); 
+        if ( r2>d2 ) {
+          cout << "! WARNING! Box to small for polymer! " << endl;
+          cout << "! Half box space diagnonal   = " << sqrt(d2) << endl;
+          cout << "! Distance between monomers  = " << sqrt(r2) << endl;
+          return false;
+        }
+      }
       return true;
     }
     return false;

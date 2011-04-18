@@ -245,6 +245,7 @@ int main() {
       io.writefile("vmdbonds.tcl", pol.getVMDBondScript());
       pqr.save("confout.pqr",con.p);
       aam.save("confout.aam", con.p);
+      io.writefile("gcgroup.conf", nmt.print()); 
       dst.write("dist.out");
       dst.cntwrite("cntdist.out");
       gofr.write("gofr.out");

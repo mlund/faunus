@@ -165,6 +165,8 @@ namespace Faunus {
       string getVMDBondScript();                 //!< Print TCL script for VMD to create bonds
 #ifdef BABEL
       bool babeladd( container &, inputfile & ); //!< Load molecule from disk using OpenBabel
+      bool babeladd( container &, inputfile &, string & ); //!< Load molecule string from disk using OpenBabel
+      bool babeladd( container &, inputfile &, int &); //!< Load molecule int from disk using OpenBabel
 #endif
   };
 

@@ -859,6 +859,21 @@ namespace Faunus {
 #ifdef BABEL
   bool polymer::babeladd(container &c, inputfile &in) {
     name=in.getstr("polymer");
+    return babeladd(c, in, name);
+  }
+
+  bool polymer::babeladd(container &c, inputfile &in, int &num) {
+    string parameter;
+    std::stringstream buffer;
+    buffer << "polymer" << num+1;
+    parameter = buffer.str();
+    name=in.getstr(parameter,"none");
+    if ( name == "none" )
+      name=in.getstr("polymer");
+    return babeladd(c, in, name);
+  }
+
+  bool polymer::babeladd(container &c, inputfile &in, string &name) {
     nb.clear();
     iobabel ob;
     ob.read(name);

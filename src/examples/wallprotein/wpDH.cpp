@@ -57,14 +57,6 @@ int main() {
   pol.accept(con);                  //  accept translation
   cout << pol.info();
 
-  // Distribution functions
-  double* zhalfPtr=&con.len_half.z;         // half length of container in z-direction
-  distributions dst;                        // distance dependent averages
-  histogram gofr(0.1,0, (*zhalfPtr)*2. );   // radial distribution function
-  histogram q(1,-pol.nb.size(), pol.nb.size()); // polymer charge distribution function
-  histogram rg(.2,0, (*zhalfPtr)*2. );      // radius of gyration distribution function
-  histogram ree(.2,0, (*zhalfPtr)*2. );     // end to end distance distribution function
-
   // Potentials
 #ifdef NOSLIT
   springinteraction<Tpot> pot(in); 
@@ -79,6 +71,14 @@ int main() {
     pot.expot.update(con);
   #endif
 #endif
+
+  // Distribution functions
+  double* zhalfPtr=&con.len_half.z;         // half length of container in z-direction
+  distributions dst;                        // distance dependent averages
+  histogram gofr(0.1,0, (*zhalfPtr)*2. );   // radial distribution function
+  histogram q(1,-pol.nb.size(), pol.nb.size()); // polymer charge distribution function
+  histogram rg(.2,0, *zhalfPtr );      // radius of gyration distribution function
+  histogram ree(.2,0, *zhalfPtr );     // end to end distance distribution function
 
   // Moves
   monomermove mm(nvt,con,pot,in);

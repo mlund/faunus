@@ -263,8 +263,8 @@ namespace Faunus {
   public:
     pot_r12debyehuckel_hydrophobic_tab( inputfile &in ) : pot_r12debyehuckel_tab(in) {
       name += ", hydrophobic interactions"; 
-      phobu = in.getflt("phob_u",-.5);
-      phobr = in.getflt("phob_r",3);
+      phobu = in.getflt("pairphob_u",-.5)/f;
+      phobr = in.getflt("pairphob_r",3);
     }
 
     //! Define energy function

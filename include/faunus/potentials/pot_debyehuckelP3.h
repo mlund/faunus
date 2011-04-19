@@ -54,8 +54,8 @@ namespace Faunus {
 
       /*!
        * \brief Fast appoximate exponential function
-       * \url http://www.wilmott.com/messageview.cfm?catid=34&threadid=79761&STARTPAGE=1
-       *      http://www.mitpressjournals.org/doi/abs/10.1162/089976699300016467
+       * \note  http://www.wilmott.com/messageview.cfm?catid=34&threadid=79761&STARTPAGE=1
+       * \note  http://www.mitpressjournals.org/doi/abs/10.1162/089976699300016467
        * \warning untested!
        *
        * The relative error in the interval [-10;10] is around 0-2%. Seem to perform better

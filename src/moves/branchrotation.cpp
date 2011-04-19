@@ -65,6 +65,7 @@ namespace Faunus {
         v.pop_back();
         return true;
     }
+    return false;
   }
 
   double branchRotation::move(polymer &g) {

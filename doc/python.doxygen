@@ -2,38 +2,36 @@
 
 \section pyintro Python Module
 \subsection pyinstall Building
-The python module requires boost python.
 \verbatim
-$ make python-generate
-$ make python
+$ cmake -DENABLE_SWIG=ON .
+$ make _pyfaunus
 \endverbatim
 
-(The file misc/python/generate.py specifies the exposed classes.)
+(requires SWIG)
 
 \subsection pyusage Usage
 \verbatim
-$ export PYTHONPATH=misc/python
+$ export PYTHONPATH=misc/swig/
 $ python
->>> import faunus
->>> p = faunus.particle()
+>>> import pyfaunus as f
+>>> p = f.particle()
 >>> p.charge = +1.0
 >>> help(faunus)
 \endverbatim
-Have a look at src/examples/widom/widom.py for a full simulation example.
 
-\subsection pytrouble Python Crash on MacOS X
+\subsection pytrouble Multiple python versions may cause crashes
 If python crashes upon importing the faunus module,
-boost python and the faunus module are most likely
+most likely the _pyfaunus.so and your python interpreter are
 linked against different Python frameworks. Check with:
 \verbatim
-$ otool -L library_path/libboost_python-mt.dylib
-$ otool -L misc/python/faunus.so
+$ otool -L misc/swig/_pyfaunus.so
+$ otool -L `which python`
 \endverbatim
-Is this the case, re-compile faunus with the same framework as used by boost python. For example,
+Is this the case, re-compile faunus with the same framework as used by your interpreter. For example,
 \verbatim
 $ make clean
 $ LDFLAGS=-F/opt/local/Library/Frameworks cmake .
-$ make python
+$ make _pypython
 \endverbatim
 Alternatively, force the dynamic linker
 to favor a specific framework directory before starting python. For example:

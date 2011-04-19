@@ -6,7 +6,7 @@ project("Faunus")
 # ----------------------------
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
 find_package(OpenBabel2)
-find_package(PythonInterp)
+#find_package(PythonInterp)
 find_package(PythonLibs)
 find_package(Subversion-patched)
 include(CTest)

@@ -17,6 +17,7 @@ namespace Faunus {
   class container;
   class inputfile;
   class box;
+  class cuboid;
   class group;
   class macromolecule;
   class particle;
@@ -158,7 +159,7 @@ namespace Faunus {
       particle s2p(string &);
       string p2s(particle &, int=0) { return string(); }
       void header() {}
-      float len;
+      float len; // box dimensions
     public:
       iogro(inputfile &);
       bool save(string, vector<particle> &);
@@ -166,29 +167,30 @@ namespace Faunus {
       vector<particle> load(string);
   };
 
-  /*! \brief GROMACS xtc compressed trajectory fileformat
+  /*! \brief GROMACS xtc compressed trajectory file format
    *  \author Mikael Lund
-   *  \date June 2007, Prague
+   *  \date June 2007-2011, Prague / Malmo
    *
    *  Saves simulation frames to a Gromacs xtc trajectory file including
    *  box information if applicable. Molecules with periodic boundaries
-   *  can be saves as "whole" by adding their groups to the public g-vector
-   *  when saving with save(string,box).
+   *  can be saved as "whole" by adding their groups to the public g-vector.
    */
-  class ioxtc : public iopart {
+  class ioxtc {
     private:
-      vector<particle> p;
-      vector<particle> load(string);
-      XDRFILE *xd;
-      matrix xdbox;
-      float time, step, prec_xtc;
+      vector<particle> p; //!< internal particle vector for temporary data
+      XDRFILE *xd;        //!< file handle
+      matrix xdbox;       //!< box dimensions
+      rvec *x_xtc;        //!< vector of particle coordinates
+      float time_xtc, prec_xtc;
+      int natoms_xtc, step_xtc;
     public:
       vector<group*> g;                        //!< List of PBC groups to be saved as whole
-      ioxtc(float);
-      bool OpenTrajectory(string);             //!< Not finished!
-      //bool LoadFrame(int, vector<particle> &);//!< Not finished!
-      bool save(string, vector<particle> &);   //!< Save a frame to trj file.
+      ioxtc(float);                            //!< Constructor that sets an initially cubic box
+      bool open(string);                       //!< Open xtc file for reading
+      bool loadnextframe(cuboid &);            //!< Load a single frame into cuboid
+      bool save(string, const vector<particle> &);//!< Save a frame to trj file.
       bool save(string, box &);                //!< Save a frame to trj file (PBC)
+      bool save(string, cuboid &);             //!< Save a frame to trj file (PBC)
       bool save(string, vector<particle> &, vector<group> &); //!< Save groups
       void setbox(float);                      //!< Set box size to be saved in frame (cubic)
       void setbox(double,double,double);       //!< Set box size to be saved in frame

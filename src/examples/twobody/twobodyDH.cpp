@@ -20,7 +20,7 @@ using namespace std;
   typedef interaction_dipole<pot_debyehuckelP3> Tpot;
 #elif MONOPOLE
   typedef interaction_monopole<pot_debyehuckelP3> Tpot;
-#elif HYDROPHOBIC
+#elif FAU_HYDROPHOBIC
   typedef interaction<pot_LJhydrophobicDH> Tpot;
 #else
   typedef interaction<pot_debyehuckelP3> Tpot;

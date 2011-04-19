@@ -74,7 +74,7 @@ fau_hyperexample(hyperbulk hypersphere hyperbulk.cpp)
 #----- target specific build options -----
 set_target_properties( twobodyDHMP PROPERTIES COMPILE_DEFINITIONS "MONOPOLE")
 set_target_properties( twobodyDHDP PROPERTIES COMPILE_DEFINITIONS "DIPOLE_CUTOFF")
-set_target_properties( twobodyHYDROPHOBIC PROPERTIES COMPILE_DEFINITIONS "HYDROPHOBIC")
+set_target_properties( twobodyHYDROPHOBIC PROPERTIES COMPILE_DEFINITIONS "FAU_HYDROPHOBIC")
 set_target_properties( pkaAT PROPERTIES COMPILE_DEFINITIONS "DHTEIXEIRA")
 set_target_properties( pkaGC_cube PROPERTIES COMPILE_DEFINITIONS "MI")
 set_target_properties( manybodyMP PROPERTIES COMPILE_DEFINITIONS "MONOPOLE" EXCLUDE_FROM_ALL TRUE)

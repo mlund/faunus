@@ -87,12 +87,12 @@ namespace Faunus {
    */
   class cuboid : public container {
     protected:
-      bool setlen(point);                      //!< Reset cuboid sidelengths
       bool setslice(point, point);             //!< Reset slice position
       point len_inv;                           //!< Inverse sidelengths
 
     public:
       cuboid(inputfile &);                     //!< Read input parameters
+      bool setlen(point);                      //!< Reset cuboid sidelengths
 
       point len;                               //!< Sidelengths
       point len_half;                          //!< Half sidelength

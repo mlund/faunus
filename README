@@ -1,6 +1,6 @@
 ***************************************************************************
   Faunus -- A Framework for Molecular Modelling 
-  Copyright (C) 2002-2010 Mikael Lund 
+  Copyright (C) 2002-2011 Mikael Lund 
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -89,18 +89,24 @@ PYTHON SUPPORT:
   $ make _pyfaunus
 
   Include misc/swig in PYTHONPATH and access Faunus
-  via "import pyfaunus".
+  via "import pyfaunus as fau". For example:
 
-  Non-system python frameworks (MacOS) may be specified the first time
-  cmake is run. For example, for MacPorts:
+  >>> a = fau.particle()
 
-  $ LDFLAGS=-F/opt/local/Library/Frameworks cmake .
+  If you have multiple python versions installed the _pyfaunus library
+  must be linked to the same python library as the interpreter. Force this
+  in the ccmake menu or use tricks as below.
 
-  Alternatively, force the dynamic linker to favor a specific framework
-  directory before starting python. For example:
+  - On MacOS X Non-system python frameworks may be specified the first time
+    cmake is run. For example, for MacPorts:
 
-  $ export DYLD_LIBRARY_PATH=/opt/local/Library/Frameworks/Python.framework/Versions/2.6
-  $ ipython
+    $ LDFLAGS=-F/opt/local/Library/Frameworks cmake .
+
+  - Alternatively, force the dynamic linker to favor a specific framework
+    directory before starting python:
+
+    $ export DYLD_LIBRARY_PATH=/opt/local/Library/Frameworks/Python.framework/Versions/2.6
+    $ ipython
 
 DIRECTORY LAYOUT:
   src          Sourcecode and examples

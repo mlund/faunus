@@ -181,7 +181,7 @@ namespace Faunus {
     virtual double calcPotential(double r2) { 
       double r=sqrt(r2);                    // distance between particles
       double phi=1 / r * exp(-k*r);
-      if ( isinf(phi) )
+      if ( std::isinf(phi) )
         return 1e20;
       else
         return phi;

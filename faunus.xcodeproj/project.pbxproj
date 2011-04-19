@@ -142,7 +142,6 @@
 		739C428010307A1C00A3A5B9 /* ensemble.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425110307A1C00A3A5B9 /* ensemble.h */; };
 		739C428110307A1C00A3A5B9 /* faunus.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425210307A1C00A3A5B9 /* faunus.h */; };
 		739C428210307A1C00A3A5B9 /* fortran.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425310307A1C00A3A5B9 /* fortran.h */; };
-		739C428310307A1C00A3A5B9 /* geometry.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425410307A1C00A3A5B9 /* geometry.h */; };
 		739C428510307A1C00A3A5B9 /* group.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425610307A1C00A3A5B9 /* group.h */; };
 		739C428610307A1C00A3A5B9 /* hardsphere.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425710307A1C00A3A5B9 /* hardsphere.h */; };
 		739C428710307A1C00A3A5B9 /* histogram.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425810307A1C00A3A5B9 /* histogram.h */; };
@@ -187,7 +186,6 @@
 		739C43DC10314D6300A3A5B9 /* ensemble.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425110307A1C00A3A5B9 /* ensemble.h */; };
 		739C43DD10314D6300A3A5B9 /* faunus.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425210307A1C00A3A5B9 /* faunus.h */; };
 		739C43DE10314D6300A3A5B9 /* fortran.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425310307A1C00A3A5B9 /* fortran.h */; };
-		739C43DF10314D6300A3A5B9 /* geometry.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425410307A1C00A3A5B9 /* geometry.h */; };
 		739C43E010314D6300A3A5B9 /* group.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425610307A1C00A3A5B9 /* group.h */; };
 		739C43E110314D6300A3A5B9 /* hardsphere.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425710307A1C00A3A5B9 /* hardsphere.h */; };
 		739C43E210314D6300A3A5B9 /* histogram.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C425810307A1C00A3A5B9 /* histogram.h */; };
@@ -588,7 +586,6 @@
 		739C425110307A1C00A3A5B9 /* ensemble.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = ensemble.h; path = include/faunus/ensemble.h; sourceTree = "<group>"; };
 		739C425210307A1C00A3A5B9 /* faunus.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = faunus.h; path = include/faunus/faunus.h; sourceTree = "<group>"; };
 		739C425310307A1C00A3A5B9 /* fortran.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = fortran.h; path = include/faunus/fortran.h; sourceTree = "<group>"; };
-		739C425410307A1C00A3A5B9 /* geometry.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = geometry.h; path = include/faunus/geometry.h; sourceTree = "<group>"; };
 		739C425610307A1C00A3A5B9 /* group.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = group.h; path = include/faunus/group.h; sourceTree = "<group>"; };
 		739C425710307A1C00A3A5B9 /* hardsphere.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = hardsphere.h; path = include/faunus/hardsphere.h; sourceTree = "<group>"; };
 		739C425810307A1C00A3A5B9 /* histogram.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = histogram.h; path = include/faunus/histogram.h; sourceTree = "<group>"; };
@@ -874,7 +871,6 @@
 				739C425110307A1C00A3A5B9 /* ensemble.h */,
 				739C425210307A1C00A3A5B9 /* faunus.h */,
 				739C425310307A1C00A3A5B9 /* fortran.h */,
-				739C425410307A1C00A3A5B9 /* geometry.h */,
 				739C425610307A1C00A3A5B9 /* group.h */,
 				739C425710307A1C00A3A5B9 /* hardsphere.h */,
 				739C425810307A1C00A3A5B9 /* histogram.h */,
@@ -1078,7 +1074,6 @@
 				739C428010307A1C00A3A5B9 /* ensemble.h in Headers */,
 				739C428110307A1C00A3A5B9 /* faunus.h in Headers */,
 				739C428210307A1C00A3A5B9 /* fortran.h in Headers */,
-				739C428310307A1C00A3A5B9 /* geometry.h in Headers */,
 				739C428510307A1C00A3A5B9 /* group.h in Headers */,
 				739C428610307A1C00A3A5B9 /* hardsphere.h in Headers */,
 				739C428710307A1C00A3A5B9 /* histogram.h in Headers */,
@@ -1157,7 +1152,6 @@
 				739C43DC10314D6300A3A5B9 /* ensemble.h in Headers */,
 				739C43DD10314D6300A3A5B9 /* faunus.h in Headers */,
 				739C43DE10314D6300A3A5B9 /* fortran.h in Headers */,
-				739C43DF10314D6300A3A5B9 /* geometry.h in Headers */,
 				739C43E010314D6300A3A5B9 /* group.h in Headers */,
 				739C43E110314D6300A3A5B9 /* hardsphere.h in Headers */,
 				739C43E210314D6300A3A5B9 /* histogram.h in Headers */,

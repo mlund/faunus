@@ -68,6 +68,7 @@ int main() {
   for (int macro=1; macro<=loop.macro; macro++) {//Markov chain 
     for (int micro=1; micro<=loop.micro; micro++) {
       short i,j,n;
+      int ntry;
       switch (rand() % 5) {                     // Pick a random MC move
         case 0:                                 // Displace salt
           sys+=sm.move(salt);                   //   Do the move.
@@ -90,8 +91,8 @@ int main() {
           }
           break;
         case 3:
-          int ntry=salt.size();
-          for (int i=0; i<ntry; i++) {
+          ntry=salt.size();
+          for (i=0; i<ntry; i++) {
             sys+=sb.move();                 // Grand Canonical salt move
             if(cell.charge()!=0) {
               cout << "Container is charged by saltbath!"<<endl;

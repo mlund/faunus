@@ -15,8 +15,9 @@ namespace Faunus {
    *         conditions in 3D, it is extended to preform 
    *         under conditions of constant pressure.
    *         See class isobaric->markovmove.h
-   *  \author Mikael Lund/Bjoern Persson
+   *  \author Mikael Lund, Bjoern Persson, Anil Kurut
    *  \date Lund/Prag 2008
+   *
    *  Lenard-Jones and Debye Huckel poteintial with
    *  square well hydrophobic interaction.
    *  The debth of the well is defined by sticky_u

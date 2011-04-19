@@ -281,12 +281,13 @@ namespace Faunus {
              r12=s*s/r2;
       r12=r12*r12*r12;
       r12=eps*(r12*r12);                    // r12 repulsion
-      if ( p1.hydrophobic==true )
+      if ( p1.hydrophobic==true ) {
         if ( p2.hydrophobic==true )
           if ( sqrt(r2)-s<=phobr )          // distance between particle surfaces < hydrophobic distance
             return phobu + r12;
-          else 
-            return r12;
+        else 
+          return r12;
+      }
       if ( r2 <= r2min ) {
         double r=sqrt(r2);
         return p1.charge * p2.charge / r * exp(-k*r)  + r12;
@@ -322,8 +323,8 @@ namespace Faunus {
     string info() {
       std::ostringstream o;
       o << pot_r12debyehuckel_tab::info()
-        << "#     Hydroph. distance = " << phobr   << " AA " << endl
-        << "#     Hydroph. energy   = " << phobu   << " kT " << endl;
+        << "#     Hydroph. energy   = " << phobu*f << " kT " << endl
+        << "#     Hydroph. distance = " << phobr   << " AA " << endl;
       return o.str();
     }
 

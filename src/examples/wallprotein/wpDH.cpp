@@ -7,7 +7,7 @@
  *
  * \author Chris Evers
  * \date Lund, 2011
- * \include wp.cpp
+ * \include wpDH.cpp
  */
 #include "faunus/faunus.h"
 #include "faunus/energy/springinteraction.h"
@@ -44,7 +44,8 @@ int main() {
   #ifdef HYDROPHIC                          // wpDH_hydrophobic
     typedef expot_hydrophobic Texpot;
   #else                                     // wpDH
-    typedef expot_gouychapman Texpot;
+//     typedef expot_gouychapman Texpot;
+    typedef expot_gchydrophobic Texpot;
   #endif
 #endif
 

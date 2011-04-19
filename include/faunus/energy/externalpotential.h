@@ -298,7 +298,52 @@ namespace Faunus {
       return phiz;
     }
   };
-  
+
+  /*!
+   * \brief Gouy-Chapman and hydrophobic interactions with a planar surface
+   * \author Chris Evers
+   * \date Lund, April 2011
+   * \note Currently works with the cuboid simulation container
+   *
+   * This class will calculate the potential in a simulation box due to a charged planar surface
+   * and screend by an electrical double layer with a corresponding Debye screening length. 
+   * Futhermore hydrophobic particles will interact with the wall with a squared well potential.
+   * 
+   * This class is based on expot_table and should be used in conjunction with an interaction class 
+   * (energybase derivative) to take into account explicit interactions within the container.
+   */
+  class expot_gchydrophobic : public expot_gouychapman {
+  private:
+    double u;                               //!< Hydrophobic energy (kT)
+    double r;                               //!< Hydrophic interaction boundary (A)
+  public:
+    expot_gchydrophobic(inputfile &in) : expot_gouychapman(in) {
+      name = "Gouy-Chapman and hydrophobic external potential";
+      u = in.getflt("wallphob_u",0);
+      if (enabled==false)
+        u=0;
+      r = len_halfz-in.getflt("wallphob_r",0);
+    }
+
+    string info() {
+      std::ostringstream o;
+      if (enabled==true)
+        o << expot_gouychapman::info()
+          << "#     Hydrophobic energy     = " << u           << " kT " << endl
+          << "#     Hydrophobic distance   = " << len_halfz-r << " A "  << endl;
+        return o.str();
+    }
+
+    double energy_particle( const particle &a ) { 
+      if (a.hydrophobic==true)
+        if (a.z >= r)
+          return u;
+        else
+          return 0;
+      return a.charge*getPotential(a); // in kT
+    }
+  }; 
+
   /*!
    * \brief Hydrophobic interaction with a planar surface
    * \author Chris Evers

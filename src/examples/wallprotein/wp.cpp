@@ -37,6 +37,13 @@ int main() {
 
   // Polymers
   polymer pol;
+//   ioaam aam;
+//   if (in.getstr("polymer")=="aam")          // Protein input file format is AAM
+//     if (in.getboo("lattice")==true)         // Protein input file format is AAM
+//       aam.loadlattice(con, in, pol);         // Load and insert proteins
+//     else                                    // Center first protein (will be frozen)
+//       aam.load(con, in, pol);
+//   else
   pol.babeladd( con, in );                  //  add from input
   con.trial=con.p;                          //  synchronize particle vector
   pol.masscenter(con);                      //  update masscenter
@@ -53,9 +60,19 @@ int main() {
   histogram ree(.2,0, (*zhalfPtr)*2. );     // end to end distance distribution function
 
   // Potentials
-  springinteraction_expot_penalty<Tpot, expot_akesson> pot(in, con, pol);
-  pot.pen.load("penalty.xy");               // Load penaltyfunction from disk 
-  pot.pen.gofrload("gofr.xy");              // Load penaltyfunction from disk 
+#ifdef NOSLIT
+  springinteraction<Tpot> pot(in); 
+#else
+  #ifdef PENALTY
+    springinteraction_expot_penalty<Tpot, expot_akesson> pot(in, con, pol);
+    pot.pen.load("penalty.xy");               // Load penaltyfunction from disk 
+    pot.pen.gofrload("gofr.xy");              // Load penaltyfunction from disk 
+    pot.expot.update(con);
+  #else
+    springinteraction_expot<Tpot, expot_akesson> pot(in); 
+    pot.expot.update(con);
+  #endif
+#endif
 
   // Handle wall particles
   group wall;
@@ -99,6 +116,7 @@ int main() {
   io io;
   iopqr pqr;
   ioxtc xtc(con.len.z);
+  ioqtraj qtraj;
   xtc.setbox(con.len.x,con.len.y,con.len.z);
   vector<group> vg;                         // Particles in xtc-trajectories
   vg.push_back(pol);
@@ -130,15 +148,19 @@ int main() {
   }
 
   // Initial system energy
-  systemenergy sys(
-      pot.energy( con.p, wall, salt) +
+  double utot=pot.energy( con.p, wall, salt) +
       pot.energy( con.p, wall, pol) +
       pot.energy( con.p, salt, pol) +
       pot.uself_polymer(con.p, pol) + 
       pot.internal( con.p, wall ) +
-      pot.internal( con.p, salt ) +
-      pot.expot.energy_group(con.p, pol) +
-      pot.pen.energy(*zhalfPtr-pol.cm.z) );
+      pot.internal( con.p, salt );
+#ifndef NOSLIT
+  utot+=pot.expot.energy_group(con.p, pol);
+#endif
+#ifdef PENALTY
+  utot+=pot.pen.energy(*zhalfPtr-pol.cm.z);
+#endif
+  systemenergy sys(utot);
 
   cout << con.info() << atom.info()
       << pot.info() << salt.info(con)
@@ -159,26 +181,38 @@ int main() {
             sys+=mm.move(pol);          // move monomers
           pol.masscenter(con);
           gofr.add(*zhalfPtr-pol.cm.z);
+#ifdef PENALTY
           sys+=pot.pen.update(*zhalfPtr-pol.cm.z);
+#endif
           break;
         case 3:
           sys+=mt.move(pol);            // translate polymers
           gofr.add(*zhalfPtr-pol.cm.z);
+#ifdef PENALTY
           sys+=pot.pen.update(*zhalfPtr-pol.cm.z);
+#endif
           break;
         case 4:
           pol.masscenter(con);
           sys+=mr.move(pol);            // rotate polymers
           break;
         case 5:
+#ifdef PENALTY
           sys+=cs.penaltymove(pol);     // crankshaft
-          gofr.add(*zhalfPtr-pol.cm.z);
           sys+=pot.pen.update(*zhalfPtr-pol.cm.z);
+#else
+          sys+=cs.move(pol);     // crankshaft
+#endif
+          gofr.add(*zhalfPtr-pol.cm.z);
           break;
         case 6:
+#ifdef PENALTY
           sys+=br.penaltymove(pol);     // crankshaft
-          gofr.add(*zhalfPtr-pol.cm.z);
           sys+=pot.pen.update(*zhalfPtr-pol.cm.z);
+#else
+          sys+=br.move(pol);     // crankshaft
+#endif
+          gofr.add(*zhalfPtr-pol.cm.z);
           break;
         case 7:
           sys+=sb.move();               // grand canonical salt move
@@ -218,32 +252,40 @@ int main() {
             dst.add("Cl", *zhalfPtr-con.p[i].z, *zhalfPtr-con.p[i].z);
       }
 
+#ifndef NOSLIT
       if (slp.random_one()>0.8)
         sys += pot.expot.update(con);
+#endif
 
-      if (slp.random_one()>0.95)
+      if (slp.random_one()<in.getflt("traj_runfrac",0.05) ) {
         xtc.save( "traj.xtc", con.p, vg );
+        qtraj.save( "q.traj", con.p, vg );
+      }
 
     } // END of micro loop
 
-    sys.update(
-        pot.energy( con.p, wall, salt) +
+    utot=pot.energy( con.p, wall, salt) +
         pot.energy( con.p, wall, pol) +
         pot.energy( con.p, salt, pol) +
         pot.uself_polymer(con.p, pol) + 
         pot.internal( con.p, wall ) +
-        pot.internal( con.p, salt ) +
-        pot.expot.energy_group(con.p, pol) +
-        pot.pen.energy(*zhalfPtr-pol.cm.z) );
+        pot.internal( con.p, salt );
+#ifndef NOSLIT
+    utot+=pot.expot.energy_group(con.p, pol);
+#endif
+#ifdef PENALTY
+    utot+=pot.pen.energy(*zhalfPtr-pol.cm.z);
+#endif
+    sys.update(utot);
 
     cout << loop.timing() << "#   Energy drift = " << sys.cur-sys.sum << " kT. "
-        << "System charge = " << con.charge() << ". "
-        << "New penalty energy = " << pot.pen.scaledu() << endl;
+        << "System charge = " << con.charge() << ". " << endl;
 
     // Write files to disk
     if ( in.getboo("write_files",true) ) {
       io.writefile("vmdbonds.tcl", pol.getVMDBondScript());
       pqr.save("confout.pqr",con.p);
+      pqr.save("confout_polwall.pqr",con.p,vg);
       aam.save("confout.aam", con.p);
       io.writefile("gcgroup.conf", nmt.print()); 
       dst.write("dist.out");
@@ -255,10 +297,13 @@ int main() {
       rg.dump("rg.xy");
       ree.dump("ree.xy");
 
+#ifndef NOSLIT
       pot.expot.dump("expot.xy");
+#endif
+#ifdef PENALTY
       pot.pen.dump("penalty", loop.cnt_macro, "xy");
       pot.pen.gofrdump("gofr", loop.cnt_macro, "xy");
-
+#endif
       tit.applycharges(con.trial);                      // Set average charges on all titratable sites
       pol.saveCharges("q.out", con.trial);              // Save average charges to disk
       con.trial=con.p;                                  // Restore original charges

@@ -55,7 +55,6 @@ namespace Faunus {
         void set_mu_A(double);       //!< Set chemical potential of species A  - mu_AX then follows.
       };
 
-      vector<int> sites;                   //!< List of titratable sites
       vector<average <double> > q;         //!< List of average charges per site
       vector<data> process;                //!< Vector of eq. processes.
 
@@ -64,16 +63,16 @@ namespace Faunus {
       double intrinsicenergy(particle&);   //!< Intrinsic energy of particle
 
     public:
-
-    eqtitrate(ensemble&, container&, energybase&, inputfile&, string="eqtit_");
-    string info();                               //!< Get information string
-    string info(vector<particle>&);              //!< Get extended information string
-    double move();                               //!< Perform a swap move of any site
-    double intrinsicenergy(vector<particle>&);   //!< Intrinsic energy of all titratable sites
-    virtual double energy(vector<particle>&,int);//!< Interaction energy function for i'th particle
-    void samplesites(vector<particle> &);        //!< Updates the average charge vector titrate::q
-    double applycharges(vector<particle> &);     //!< Copy average charges to particles in the particle vector
-    double avgcharge(vector<particle>&, int&);   //!< Print average charges of process i
+      vector<int> sites;                           //!< List of titratable sites
+      eqtitrate(ensemble&, container&, energybase&, inputfile&, string="eqtit_");
+      string info();                               //!< Get information string
+      string info(vector<particle>&);              //!< Get extended information string
+      double move();                               //!< Perform a swap move of any site
+      double intrinsicenergy(vector<particle>&);   //!< Intrinsic energy of all titratable sites
+      virtual double energy(vector<particle>&,int);//!< Interaction energy function for i'th particle
+      void samplesites(vector<particle> &);        //!< Updates the average charge vector titrate::q
+      double applycharges(vector<particle> &);     //!< Copy average charges to particles in the particle vector
+      double avgcharge(vector<particle>&, int&);   //!< Print average charges of process i
   };
   
 }//namespace

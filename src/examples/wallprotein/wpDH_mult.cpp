@@ -70,14 +70,20 @@ int main() {
   // Distribution functions
   double* zhalfPtr=&con.len_half.z;         // half length of container in z-direction
   distributions dst;                        // distance dependent averages
+  distributions pairdst;                    // distance dependent averages
   histogram gofr(0.1,0, (*zhalfPtr)*2. );   // radial distribution function
 //   correlation<double> z_cor(200);
-  histogram q(1,-pol[0].nb.size(), pol[0].nb.size()); // polymer charge distribution function
+  histogram qdist(1,-pol[0].nb.size(), pol[0].nb.size()); // polymer charge distribution function
 //   correlation<double> q_cor(100);
-  histogram rg(.2,0, (*zhalfPtr)*2. );      // radius of gyration distribution function
+  histogram rgdist(.2,0, (*zhalfPtr)*2. );  // radius of gyration distribution function
 //   correlation<double> rg_cor(100);
-  histogram ree(.2,0, (*zhalfPtr)*2. );     // end to end distance distribution function
-  histogram pairgofr(0.1,0, .5*sqrt(3)*(*zhalfPtr)*2. );   // radial distribution function
+  histogram reedist(.2,0, (*zhalfPtr)*2. ); // end to end distance distribution function
+#ifdef NOSLIT
+  histogram pairgofr(.2,0, .5*sqrt(3)*(*zhalfPtr)*2. );   // radial distribution function
+#else
+  histogram pairgofr(.2,0, .5*sqrt(3)*(*zhalfPtr)*2. );   // radial distribution function
+//   histogram2D pairgofr2D(.2,0, .5*sqrt(3)*(*zhalfPtr)*2. );   // radial distribution function
+#endif
 
   // Moves
   monomermove mm(nvt,con,pot,in);
@@ -153,33 +159,42 @@ int main() {
         pol[i].masscenter(con);
         double z=*zhalfPtr-pol[i].cm.z;  // distance between masscenter and wall
 //         z_cor += z;
+
+        double charge=pol[i].charge(con.p);
+        dst.add("qtot", z, charge);
+        qdist.add(charge);
+//         q_cor += charge;
+
+        double rg2=pol[i].sqmassgradius(con);
+        double rg=sqrt(rg2);
+        dst.add("Rg2", z, rg2);
+        dst.add("Rg", z, rg);
+        rgdist.add(rg);
+//         rg_cor += sqrt(rg2);
+
+        double ree2=pol[i].sqend2enddistance(con);
+        double ree=sqrt(ree2);
+        dst.add("Ree2", z, ree2); 
+        dst.add("Ree", z, ree); 
+        reedist.add(ree);
+
         if ( pol.size() > 1 ) {
           int j (rand() % pol.size());
           while ( i==j )
             j = (rand() % pol.size());
           pol[j].masscenter(con);
-          pairgofr.add(con.dist(pol[i].cm,pol[j].cm));  // distance between masscenters
+          double r12=con.dist(pol[i].cm,pol[j].cm); // distance between masscenters
+          pairgofr.add(r12);
+          pairdst.add("qtot", r12, charge);
+          pairdst.add("Rg2", r12, rg2);
+          pairdst.add("Rg", r12, rg);
+          pairdst.add("Ree2", r12, ree2);
+          pairdst.add("Ree", r12, ree);
         }
 
-        double charge=pol[i].charge(con.p);
-        dst.add("qtot", z, charge);
-        q.add(charge);
-//         q_cor += charge;
-
-        double rg2=pol[i].sqmassgradius(con);
-        dst.add("Rg2", z, rg2);
-        dst.add("Rg", z, sqrt(rg2));
-        rg.add(sqrt(rg2));
-//         rg_cor += sqrt(rg2);
-
-        double ree2=pol[i].sqend2enddistance(con);
-        dst.add("Ree2", z, ree2); 
-        dst.add("Ree", z, sqrt(ree2)); 
-        ree.add(sqrt(ree2));
-
-        for (int j=pol[i].beg; j<pol[i].end; j++) {
-          std::ostringstream s; s << "q" << i;
-          dst.add( s.str(), *zhalfPtr-con.p[j].z, con.p[j].charge );	
+        for (int j=pol[i].beg; j<=pol[i].end; j++) {
+          std::ostringstream s; s << "q" << j-pol[i].beg;
+          dst.add( s.str(), *zhalfPtr-con.p[i].z, con.p[i].charge );    
         }
       }
 
@@ -207,17 +222,18 @@ int main() {
       io.writefile("vmdbonds.tcl", pol[0].getVMDBondScript());
       pqr.save("confout.pqr",con.p);
       dst.write("dist.out");
+      pairdst.write("pairdist.out");
       dst.cntwrite("cntdist.out");
       gofr.write("gofr.out");
       gofr.dump("gofr.xy");
       pairgofr.dump("pairgofr.xy");
 //       z_cor.dump("z_cor.xy");
 
-      q.dump("q.xy");
+      qdist.dump("q.xy");
 //       q_cor.dump("q_cor.xy");
-      rg.dump("rg.xy");
+      rgdist.dump("rg.xy");
 //       rg_cor.dump("rg_cor.xy");
-      ree.dump("ree.xy");
+      reedist.dump("ree.xy");
 
 //       pot.pair.dump("pairpot.xy");
 #ifndef NOSLIT

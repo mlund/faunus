@@ -14,6 +14,7 @@
 #include "faunus/energy/externalpotential.h"
 #include "faunus/potentials/pot_r12debyehuckel.h"
 #include "faunus/energy/penaltyfunction.h"
+#include "faunus/moves/membrane.h"
 
 using namespace std;
 using namespace Faunus;
@@ -78,8 +79,8 @@ int main() {
   distributions dst;                        // distance dependent averages
   histogram gofr(0.1,0, (*zhalfPtr)*2. );   // radial distribution function
   histogram q(1,-pol.nb.size(), pol.nb.size()); // polymer charge distribution function
-  histogram rg(.2,0, *zhalfPtr );      // radius of gyration distribution function
-  histogram ree(.2,0, *zhalfPtr );     // end to end distance distribution function
+  histogram rg(.2,0, *zhalfPtr );           // radius of gyration distribution function
+  histogram ree(.2,0, *zhalfPtr );          // end to end distance distribution function
 
   // Moves
   monomermove mm(nvt,con,pot,in);
@@ -99,10 +100,15 @@ int main() {
   io io;
   iopqr pqr;
   ioxtc xtc(con.len.z);
+  ioqtraj qtraj;
   xtc.setbox(con.len.x,con.len.y,con.len.z);
   ioaam aam;
-  aam.load(con, "confout.aam");     //   load stored configuration
-  pol.masscenter(con);              //   update masscenter
+  aam.load(con, "confout.aam");      // load stored configuration
+  pol.masscenter(con);               // update masscenter
+  point cm=pol.cm;
+  cm.z=0;
+  pol.move(con, -cm);                // translate to the middle of the xy-plane
+  pol.accept(con);                   // accept translation
   aam.save("confin.aam", con.p);
 
   // Initial system energy
@@ -186,8 +192,9 @@ int main() {
         }
       }
 
-      if (slp.random_one()>0.95) {
+      if (slp.random_one()<in.getflt("traj_runfrac",0.05) ) {
         xtc.save( "traj.xtc", con.p );
+        qtraj.save( "q.traj", con.p );
       }
     } // END of micro loop
 

@@ -71,6 +71,7 @@ namespace Faunus {
     friend class ioxtz;
     friend class iogro;
     friend class iopqr;
+    friend class ioqtraj;
     private:
     vector<string> v; 
     vector<particle> p;
@@ -195,6 +196,22 @@ namespace Faunus {
       void setbox(float);                      //!< Set box size to be saved in frame (cubic)
       void setbox(double,double,double);       //!< Set box size to be saved in frame
       void close();                            //!< Close trj file
+  };
+
+  /*! \brief Trajectory of charges per particle
+   *  \author Chris Evers
+   *  \date May 2011, Lund
+   *
+   *  Saves a trajectory of the charges for all particles in a particle vector
+   */
+  class ioqtraj : public iopart {
+    private:
+      bool append;
+      vector<particle> load(string);
+    public:
+      ioqtraj();
+      bool save(string, vector<particle> &);   //!< Save a frame to trj file.
+      bool save(string, vector<particle> &, vector<group> &); //!< Save groups
   };
   
   class xyfile {

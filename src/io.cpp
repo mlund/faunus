@@ -589,6 +589,39 @@ namespace Faunus {
     return false;
   }
 
+  //----------------- IOQTRAJ ----------------------
+  ioqtraj::ioqtraj() {
+    append=false;
+  }
+
+  vector<particle> ioqtraj::load(string s) {
+    vector<particle> dummy;
+    return dummy;
+  }
+
+  bool ioqtraj::save(string file, vector<particle> &p) {
+      io fio;
+      std::ostringstream o;
+      o.precision(12);
+      for (int i=0; i<p.size(); i++) {
+        o << p[i].charge << " ";
+      }
+      o << endl;
+      if ( append==true )
+        return fio.writefile(file, o.str(), std::ios_base::app);
+      else
+        append=true;
+      return fio.writefile(file, o.str(), std::ios_base::out);
+  }
+
+  bool ioqtraj::save(string file, vector<particle> &p, vector<group> &g) {
+    vector<particle> t;
+    for (int i=0; i<g.size(); i++)
+      for (int j=g[i].beg; j<=g[i].end; j++)
+        t.push_back( p[j] );
+    return save(file, t);
+  }
+
   xyfile::xyfile(string name) : f(name.c_str()) {
     cnt=0;
   }

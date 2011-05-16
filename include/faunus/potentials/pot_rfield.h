@@ -77,7 +77,7 @@ namespace Faunus {
           }
           sum *= (eo-ei) / (eo * a );
           if (self==false)
-            sum += 1/(eo*p.dist(p0));
+            sum += 1/(eo*sqrt(p.sqdist(p0)));
         }
         //charge inside, potential inside
         if (r0<a && r<a) {
@@ -88,7 +88,7 @@ namespace Faunus {
           }
           sum *= (ei-eo) / (ei*a);
           if (self==false)
-            sum += 1/(ei*p.dist(p0));
+            sum += 1 / (ei * sqrt(p.sqdist(p0)) );
         }
 
         //charge inside, potential outside
@@ -109,7 +109,7 @@ namespace Faunus {
               / ( (ei+eo*(1+1/dn))   ) ;
           };
           sum *= (eo-ei) / (eo * r0) ;
-          sum += 1/(eo*p.dist(p0));
+          sum += 1 / (eo * sqrt(p.sqdist(p0)) );
         };
         return sum * p0.charge;
       }

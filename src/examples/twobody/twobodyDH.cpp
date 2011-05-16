@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
     double mindist=10000000.;
     int iclosest=-1;
     for (int i=g[j].beg; i<=g[j].end; i++) {
-      double dist = cell.p[i].dist( g[j].cm );
+      double dist = sqrt( cell.p[i].sqdist( g[j].cm ) );
       if (dist<mindist) {
         mindist=dist;
         iclosest=i;
@@ -91,7 +91,7 @@ int main(int argc, char* argv[]) {
       }
       if (slump.random_one() < .1 ) {
         double z, l0, l1;
-        z=g[0].cm.dist(g[1].cm); 
+        z=sqrt( g[0].cm.sqdist(g[1].cm) ); 
         l0=g[0].mu.len();
         l1=g[1].mu.len();
         g[0].dipole(cell.p);

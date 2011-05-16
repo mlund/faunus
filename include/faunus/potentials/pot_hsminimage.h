@@ -24,11 +24,11 @@ namespace Faunus {
         halfbox=box/2.;
       }
       inline double pairpot(const particle &p1, const particle &p2) {
-        double r=p1.dist(p2,box,halfbox), u=p1.charge*p2.charge/r;
+        double r=sqrt(p1.sqdist_mi_xyz(p2,box,halfbox)), u=p1.charge*p2.charge/r;
         return (r<p1.radius+p2.radius) ? u+200. : u;
       }
       inline double sqdist(const point &p1, const point &p2) {
-        return p1.sqdist(p2,box,halfbox);
+        return p1.sqdist_mi_xyz(p2,box,halfbox);
       }
       string info() {
         std::ostringstream o;

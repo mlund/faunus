@@ -22,7 +22,7 @@ namespace Faunus {
        *  \f[ u_{hs}(r) = \infty \hspace{0.5cm} r_{ij} < \frac{\sigma_i+\sigma_j}{2} \f]
        */
       inline double pairpot(const particle &p1, const particle &p2) {
-        double r=p1.dist(p2), u=p1.charge*p2.charge/r;
+        double r=sqrt(p1.sqdist(p2)), u=p1.charge*p2.charge/r;
         return (r<p1.radius+p2.radius) ? u+500. : u;
       }
     

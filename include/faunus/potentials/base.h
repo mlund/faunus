@@ -3,6 +3,7 @@
 #include "faunus/common.h"
 #include "faunus/point.h"
 #include "faunus/inputfile.h"
+#include "faunus/physconst.h"
 
 namespace Faunus {
   /*!
@@ -177,5 +178,107 @@ namespace Faunus {
         return o.str();
       }
   };
-}
+
+  /*!
+   * \brief Core potentials used to construct pair potentials.
+   *
+   * The following are low level "core" classes or snippets for handling
+   * typical pair interactions. The idea is to combine these to construct
+   * a full pair potential class. The combination should be done not by
+   * inheritance but rather via class members.
+   */
+  namespace CorePotential {
+
+    class base {
+      protected:
+        std::ostringstream pad;
+        void setPad(char width=14, char indent=3) {
+          pad << "#   " << setw(indent) << " " << setw(width);  
+        }
+      public:
+        string name; //!< Short (preferably one-word) description of the core potential
+    };
+
+    class _hardsphere : public base {
+      private:
+        double inf;
+      public:
+        _hardsphere(double infinity=1e9) {
+          name="hardsphere";
+          inf=infinity;
+        }
+        inline double u_hs(const double &r2, double mindist) const {
+          return (mindist*mindist>r2) ? 0 : inf;
+        }
+    };
+
+    class lennardjones : public base {
+      public:
+        double eps;
+        lennardjones(inputfile &in) {
+          name="LJ";
+          eps=in.getflt("LJeps",0.2);
+        }
+        inline double u_r6(const double &r2, double sigma) const {
+          double x=sigma*sigma/r2;  // 2
+          return x*x*x;             // 6
+        }
+        inline double u_r12(const double &r2, double sigma) const {
+          double r6=u_r6(r2,sigma);
+          return r6*r6;
+        }
+        inline double u_lj(const double &r2, double sigma) const {
+          double r6=u_r6(r2,sigma);
+          return r6*r6 - r6;
+        }
+    };
+
+    class squarewell : public base {
+      public:
+        double threshold; //!< Threshold between particle *surface* [A]
+        double depth;     //!< Energy depth [kT]
+        squarewell(inputfile &in, string prefix="squarewell") {
+          name="Square Well";
+          threshold = in.getflt(prefix+"_threshold", 0);
+          depth     = in.getflt(prefix+"_depth", 0);
+        }
+        inline double u_squarewell(const double &r, const double &radius1, const double &radius2) const {
+          return (r-radius1-radius2<threshold) ? depth : 0;
+        }
+    };
+
+    class coulomb : public base {
+      public:
+        double lB; //!< Bjerrum length [A]
+        coulomb(inputfile &in) {
+          name="Coulomb";
+          lB=pyc.lB( in.getflt("epsilon_r",80.) );
+        }
+        inline double u_coulomb(const double &r, const double &z1, const double &z2) const { return z1*z2/r; }
+    };
+
+    class debyehuckel : public coulomb {
+      protected:
+        double c,k;
+      public:
+        debyehuckel(inputfile &in) : coulomb(in) {
+          double I;
+          const double zero=1e-10;
+          name="Debye-Huckel";
+          c=8*lB*pyc.pi*pyc.Nav/1e27;
+          I=in.getflt("ionicstrength",0);  // [mol/l]
+          k=sqrt( I*c );
+          if (k<zero)
+            k=1/in.getflt("debyelength", 1/zero); // [A]
+          k=-k;
+        }
+        double getIonicStrength() const { return k*k/c; } //!< in [mol/l]
+        double getDebyeLength() const { return -1/k; }    //!< in [A]
+        inline double u_dh(const double &r, const double &z1, const double &z2) const {
+          return z1*z2/r * exp(k*r);
+        }
+    };
+  }//namespace
+
+}//namespace
 #endif

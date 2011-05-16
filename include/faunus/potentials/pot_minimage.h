@@ -23,11 +23,11 @@ namespace Faunus {
         halfbox=box/2;
       }
       inline double pairpot(const particle &p1, const particle &p2) {
-        double r2=p1.sqdist(p2,box,halfbox);
+        double r2=p1.sqdist_mi_xyz(p2,box,halfbox);
         return lj(p1,p2,r2) + p1.charge*p2.charge/sqrt(r2);
       }
       inline double sqdist(const point &p1, const point &p2) {
-        return p1.sqdist(p2,box,halfbox);
+        return p1.sqdist_mi_xyz(p2,box,halfbox);
       }
       int anint(double x) const { return int(x>0. ? x+.5 : x-.5); }
       void boundary(point &a) const {
@@ -123,12 +123,12 @@ namespace Faunus {
         halfbox=box/2;
       }
       inline double pairpot(const particle &p1, const particle &p2) {
-        double r2=p1.sqdist(p2,box,halfbox), s=p1.radius+p2.radius, a=s*s/r2;
+        double r2=p1.sqdist_mi_xyz(p2,box,halfbox), s=p1.radius+p2.radius, a=s*s/r2;
         s=a*a*a;
         return s*s/f + p1.charge*p2.charge/sqrt(r2);
       }
       inline double sqdist(const point &p1, const point &p2) {
-        return p1.sqdist(p2,box,halfbox);
+        return p1.sqdist_mi_xyz(p2,box,halfbox);
       }
       inline double bond(particle &p1, particle &p2) {
         double r=sqrt(sqdist(p1,p2));

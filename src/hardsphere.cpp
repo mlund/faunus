@@ -30,7 +30,7 @@ namespace Faunus {
   bool hardsphere::overlap(const vector<particle> &p, const group &g, int j) {
     if (g.beg==-1) return false;
     if (g.cm.radius>0)
-      if ( abs(g.cm.dist(p[j])) > g.cm.radius+p[j].radius)
+      if ( abs( sqrt(g.cm.sqdist(p[j])) ) > g.cm.radius+p[j].radius)
         return false;
     int len=g.end+1;
 
@@ -59,7 +59,7 @@ namespace Faunus {
   bool hardsphere::overlap(const vector<particle> &p, const group &g1, const group &g2) {
     if (g1.beg==-1 || g2.beg==-1) return false;
     if (g1.cm.radius!=0 && g2.cm.radius!=0)
-      if (abs(g1.cm.dist(g2.cm)) > g1.cm.radius+g2.cm.radius)
+      if (abs( sqrt(g1.cm.sqdist(g2.cm)) ) > g1.cm.radius+g2.cm.radius)
         return false;
     int ilen=g1.end+1, jlen=g2.end+1;
     for (int i=g1.beg; i<ilen; i++) {
@@ -73,7 +73,7 @@ namespace Faunus {
   bool hardsphere::overlap(const vector<particle> &p, const group &g1, const group &g2, double &s) {
     if (g1.beg==-1 || g2.beg==-1) return false;
     if (g1.cm.radius!=0 && g2.cm.radius!=0)
-      if (abs(g1.cm.dist(g2.cm)) > g1.cm.radius+g2.cm.radius)
+      if (abs( sqrt(g1.cm.sqdist(g2.cm)) ) > g1.cm.radius+g2.cm.radius)
         return false;
     int ilen=g1.end+1, jlen=g2.end+1;
     for (int i=g1.beg; i<ilen; i++) {

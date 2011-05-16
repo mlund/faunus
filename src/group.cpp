@@ -511,7 +511,7 @@ namespace Faunus {
     double r,max=0;
     masscenter(p);
     for (int i=beg; i<=end; i++) {
-      r=p[i].dist(cm) + p[i].radius;
+      r=sqrt(p[i].sqdist(cm)) + p[i].radius;
       if (r>max)
         max=r;
     }
@@ -524,7 +524,7 @@ namespace Faunus {
     int cnt=0;
     masscenter(p);
     for (int i=beg; i<=end; i++) {
-      r+=p[i].dist(cm) + p[i].radius;
+      r+=sqrt(p[i].sqdist(cm)) + p[i].radius;
       cnt++;
     }
     r/=float(cnt);

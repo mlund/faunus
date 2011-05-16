@@ -101,6 +101,9 @@ namespace std {
 %template(interaction_coulomb) Faunus::interaction<Faunus::pot_coulomb>;
 
 #include "faunus/potentials/pot_debyehuckelP3.h"
+%template(interaction_debyehuckelP3) Faunus::interaction<Faunus::pot_debyehuckelP3>;
+
+#include "faunus/potentials/pot_debyehuckelP3.h"
 %ignore Faunus::pot_debyehuckelP3Fast;
 %ignore pot_debyehuckelP3Fast;
 

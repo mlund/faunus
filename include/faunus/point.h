@@ -68,11 +68,13 @@ namespace Faunus {
         point(double,double,double);        //!< Constructor, set vector
         void clear();                       //!< Zero all data.
         double len() const; 
-        inline double sqdist(const point &) const;      //!< Squared distance to another point
-        inline double sqdist(const point &,
-            const double &, const double &) const;      //!< Squared distance to andother point (3D minimum image)
-        inline double dist(const point &) const;        //!< Distance to another point
-        inline double dist(const point &, const double &, const double &) const ; //!< Distance to another point
+        inline double sqdist(const point &) const;                                        //!< Squared distance to another point
+        inline double sqdist_mi_xyz(const point &, const double &, const double &) const; //!< XYZ cubic minimum image distance  
+        inline double sqdist_mi_xyz(const point&, const point&, const point&) const;      //!< XYZ minimum image distance
+        inline double sqdist_mi_xy(const point&, const point&, const point&) const;
+        inline double sqdist_mi_z(const point&, const double&, const double&) const;
+        //inline double dist(const point &) const;        //!< Distance to another point
+        //inline double dist(const point &, const double &, const double &) const ; //!< Distance to another point
         void ranunit(random &);               //!< Generate a random unit vector
         double dot(const point &) const;      //!< Angle with another point
         point operator-();                    //!< Sign reversal
@@ -172,28 +174,49 @@ namespace Faunus {
   }
 
   inline int point::anint(double a) const { return int(a>0 ? a+.5 : a-.5); }
-
-  inline double point::sqdist(const point &p, const double &len, const double &halflen) const {
-    double dx,dy,dz;
-    dx=std::abs(x-p.x);
-    dy=std::abs(y-p.y);
-    dz=std::abs(z-p.z);
-    if (dx>halflen) dx-=len;
-    if (dy>halflen) dy-=len;
-    if (dz>halflen) dz-=len;
+  
+  inline double point::sqdist_mi_xyz(const point& p, const double& len, const double& len_half) const {
+    double dx=std::abs(x-p.x);
+    double dy=std::abs(y-p.y);
+    double dz=std::abs(z-p.z);
+    if (dx>len_half) dx-=len;
+    if (dy>len_half) dy-=len;
+    if (dz>len_half) dz-=len;
     return dx*dx + dy*dy + dz*dz;
   }
+  
+  inline double point::sqdist_mi_xyz(const point &p, const point& len, const point& len_half) const {   //!< Squared distance 
+    double dx=std::abs(x-p.x);
+    double dy=std::abs(y-p.y);
+    double dz=std::abs(z-p.z);
+    if (dx>len_half.x) dx-=len.x;
+    if (dy>len_half.y) dy-=len.y;
+    if (dz>len_half.z) dz-=len.z;
+    return dx*dx + dy*dy + dz*dz;
+  }                                   
 
-  inline double point::dist(const point &p) const { return sqrt(sqdist(p)); }
-
-  inline double point::dist(const point &p, const double &len, const double &halflen) const { 
-    return sqrt(sqdist(p, len, halflen)); }
+  inline double point::sqdist_mi_xy(const point &p, const point& len, const point& len_half) const {   //!< Squared distance 
+    double dx=std::abs(x-p.x);
+    double dy=std::abs(y-p.y);
+    double dz=z-p.z;
+    if (dx>len_half.x) dx-=len.x;
+    if (dy>len_half.y) dy-=len.y;                                      
+    return dx*dx + dy*dy + dz*dz;
+  }   
+  
+  inline double point::sqdist_mi_z(const point &p, const double& len_z, const double& len_half_z) const {   //!< Squared distance 
+    double dx=x-p.x;
+    double dy=y-p.y;
+    double dz=std::abs(z-p.z);
+    if (dz>len_half_z) dx-=len_z;
+    return dx*dx + dy*dy + dz*dz;
+  }   
 
   /*!
    * \return \f$ \phi = \frac{z}{r_{12}}\f$
    * \note Not multiplied with the Bjerrum length!
    */
-  inline double particle::potential(const point &p) { return charge / dist(p); }
+  inline double particle::potential(const point &p) { return charge / sqrt(sqdist(p)); }
 
   /*!
    * \return True if \f$ r_{12}<(\sigma_1+\sigma_2)/2 \f$ - otherwise false.
@@ -210,7 +233,7 @@ namespace Faunus {
 
   inline bool particle::overlap(const particle &p, const double &len, const double &halflen) const {
     double r=radius+p.radius;
-    return (sqdist(p,len,halflen) < r*r) ? true : false;
+    return ( sqdist_mi_xyz(p,len,halflen) < r*r ) ? true : false;
   }
 
 }//namespace

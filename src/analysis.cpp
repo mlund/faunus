@@ -81,7 +81,7 @@ namespace Faunus {
     if (l1>0 && l2>0 )  {
       m1=g1.mu*(1./l1);
       m2=g1.mu*(1./l2); // unit vectors at origo
-      z=g1.cm.dist(g2.cm);
+      z=sqrt(g1.cm.sqdist(g2.cm));
       d.add("dip_z*z", z, m1.z*m2.z);
       d.add("dip_x*x", z, m1.x*m2.x);
       d.add("dip_y*y", z, m1.y*m2.y);

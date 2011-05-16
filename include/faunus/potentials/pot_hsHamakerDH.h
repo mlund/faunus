@@ -44,7 +44,7 @@ namespace Faunus {
       //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) \f$
       //! \return Energy in units of kT/lB
       inline double pairpot( const particle &p1, const particle &p2 ) {
-        double r2=p1.sqdist(p2,box,halfbox),
+        double r2=p1.sqdist_mi_xyz(p2,box,halfbox),
                r=sqrt(r2), 
                x=p1.radius+p2.radius,
                //x2=x*x,
@@ -62,7 +62,7 @@ namespace Faunus {
       }
 
       inline double sqdist(const point &p1, const point &p2) {
-        return p1.sqdist(p2,box,halfbox);
+        return p1.sqdist_mi_xyz(p2,box,halfbox);
       }
 
       void setvolume(double vol) {

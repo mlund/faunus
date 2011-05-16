@@ -60,7 +60,7 @@ int main() {
   for (float r=2.0; r<40; r+=.1) {
     p1.z=r/2;
     p2.z=-p1.z;
-    cout << p1.dist(p2) << " "
+    cout << sqrt(p1.sqdist(p2)) << " "
       << dh.f*dh.pairpot(p1,p2) << endl;
   }
 }

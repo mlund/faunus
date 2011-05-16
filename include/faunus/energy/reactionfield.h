@@ -114,7 +114,7 @@ namespace Faunus {
     }
     // IMAGE POTENTIAL  (half the potential)
     double impot(double &ich, const point &pr, point &pi) {
-      return ich/pr.dist(pi);
+      return ich / sqrt(pr.sqdist(pi));
     }
     
     // IMAGE ENERGY

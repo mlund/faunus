@@ -62,11 +62,11 @@ namespace Faunus {
   }
 
   inline double Ewald::sqdist(const point &p1, const point &p2) {
-    return p1.sqdist(p2,boxlen,halfboxlen);
+    return p1.sqdist_mi_xyz(p2,boxlen,halfboxlen);
   }
 
   inline double Ewald::pairpot(const particle &p1, const particle &p2) {
-    double r=p1.sqdist(p2,boxlen,halfboxlen);
+    double r=p1.sqdist_mi_xyz(p2,boxlen,halfboxlen);
     if (r > halfboxlen*halfboxlen)
       return 0.;
     r = sqrt(r);

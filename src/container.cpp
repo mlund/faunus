@@ -5,7 +5,15 @@
 
 namespace Faunus {
 
-  //----------- CONTAINER -----------------
+  double container::dist(const point &p1, const point &p2) {
+    return sqrt( sqdist(p1, p2) );
+  }
+
+  point container::vdist(const point&a, const point&b) {
+    return a-b;
+  }
+
+  void container::scale(point &a, const double &s) const {}
 
   string container::info() {
     double z=charge();
@@ -83,7 +91,10 @@ namespace Faunus {
     return false;
   }
 
-  //----------- CELL ----------------------
+  //
+  //--- cell container ---
+  //
+  
   void cell::setvolume(double vol) {
     volume=vol;
     setradius( pow( 3*vol/(4*pyc.pi), 1/3.) );
@@ -123,6 +134,8 @@ namespace Faunus {
     }
   }
 
+  void cell::boundary(point &m) const {}
+
   bool cell::collision(const particle &a) {
     double x,y,z;
     x=std::abs(a.x);//+a.radius;
@@ -138,8 +151,10 @@ namespace Faunus {
     return o.str();
   }
 
-  //----------- CUBOID --------------------------
-
+  //
+  //--- cuboid container ---
+  //
+ 
   cuboid::cuboid(inputfile &in) {
     atom.load(in);
     double cubelen=in.getflt("cuboid_len",-1);
@@ -239,8 +254,7 @@ namespace Faunus {
 
   //----------- CUBOIDSLIT --------------------------
 
-  cuboidslit::cuboidslit(inputfile &in) : cuboid(in) {
-  }
+  cuboidslit::cuboidslit(inputfile &in) : cuboid(in) {}
 
   string cuboidslit::info() {
     std::ostringstream o;

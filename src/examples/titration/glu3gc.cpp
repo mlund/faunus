@@ -64,10 +64,10 @@ int main(int argc, char* argv[]) {
                   +pot.internal(con.p, salt)                               //if the structure of GLU3 is altered
                   +pot.energy(con.p, glu3.core, glu3.chains)               //from that in GLU3coarse.mol2!!!
                   +pot.energy(con.p[4], con.p[13])
-                  +pot.pair.k*pow(con.p[51].dist(con.p[53])-pot.pair.req,2)
-                  +pot.pair.k*pow(con.p[44].dist(con.p[96])-pot.pair.req,2)
-                  +pot.pair.k*pow(con.p[30].dist(con.p[151])-pot.pair.req,2)
-                  +pot.pair.k*pow(con.p[37].dist(con.p[124])-pot.pair.req,2));
+                  +pot.pair.k*pow( sqrt(con.p[51].sqdist(con.p[53]))  - pot.pair.req,2)
+                  +pot.pair.k*pow( sqrt(con.p[44].sqdist(con.p[96]))  - pot.pair.req,2)
+                  +pot.pair.k*pow( sqrt(con.p[30].sqdist(con.p[151])) - pot.pair.req,2)
+                  +pot.pair.k*pow( sqrt(con.p[37].sqdist(con.p[124])) - pot.pair.req,2));
              
 //  cout << "#Self-int = "<<pot.energy(con.p[4], con.p[13])<<endl;
 
@@ -110,10 +110,10 @@ int main(int argc, char* argv[]) {
                   +pot.internal(con.p, salt) 
                   +pot.energy(con.p, glu3.core, glu3.chains)
                   +pot.energy(con.p[4], con.p[13])
-                  +pot.pair.k*pow(con.p[51].dist(con.p[53])-pot.pair.req,2)
-                  +pot.pair.k*pow(con.p[44].dist(con.p[96])-pot.pair.req,2)
-                  +pot.pair.k*pow(con.p[30].dist(con.p[151])-pot.pair.req,2)
-                  +pot.pair.k*pow(con.p[37].dist(con.p[124])-pot.pair.req,2));
+                  +pot.pair.k*pow( sqrt(con.p[51].sqdist(con.p[53]))-pot.pair.req,2)
+                  +pot.pair.k*pow( sqrt(con.p[44].sqdist(con.p[96]))-pot.pair.req,2)
+                  +pot.pair.k*pow( sqrt(con.p[30].sqdist(con.p[151]))-pot.pair.req,2)
+                  +pot.pair.k*pow( sqrt(con.p[37].sqdist(con.p[124]))-pot.pair.req,2));
 
     aam.save("confout.aam", con.p);                                         // Save config. to disk
     pqr.save("confout.pqr", con.p);                                    // Save PQR file to disk - cool in VMD!

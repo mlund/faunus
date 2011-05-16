@@ -26,7 +26,7 @@ namespace Faunus {
       }
 
       inline double pairpot(const particle &p1, const particle &p2) {
-        double r2=p1.sqdist(p2,box,halfbox), s=p1.radius+p2.radius, a=s*s/r2;
+        double r2=p1.sqdist_mi_xyz(p2,box,halfbox), s=p1.radius+p2.radius, a=s*s/r2;
         s=a*a*a;
         double u=s*s/f;
         r2=sqrt(r2);
@@ -38,7 +38,7 @@ namespace Faunus {
       }
 
       inline double sqdist(const point &p1, const point &p2) {
-        return p1.sqdist(p2,box,halfbox);
+        return p1.sqdist_mi_xyz(p2,box,halfbox);
       }
 
       inline double bond(particle &p1, particle &p2) {

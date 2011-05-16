@@ -154,7 +154,7 @@ namespace Faunus {
         if ( (p[i].id==a && p[j].id==b)
             || (p[j].id==a && p[i].id==b) ) {
           npart++;
-          add( p[i].dist(p[j]) );
+          add( sqrt(p[i].sqdist(p[j])) );
         }
   }
 
@@ -196,7 +196,7 @@ namespace Faunus {
       origo=&center;
     }
 
-  void cummsum::add(particle &p) { if (p.id==id) (*this)(origo->dist(p))++; }
+  void cummsum::add(particle &p) { if (p.id==id) (*this)( sqrt(origo->sqdist(p)) )++; }
 
   float cylindric_profile::volume(double z) { return xres*acos(-1.)*r*r; }
 
@@ -238,6 +238,6 @@ namespace Faunus {
   void atomicRdf::update(vector<particle> &p, group &g1, group &g2) {
     for (int i=g1.beg; i<=g1.end; i++)
       for (int j=g2.beg; j<=g2.end; j++)
-        add( p[i].dist(p[j]) );
+        add( sqrt(p[i].sqdist(p[j])) );
   }
 }//namespace

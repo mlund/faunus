@@ -79,13 +79,7 @@ namespace Faunus {
 
       //! Calculate distance using the minimum image convention
       inline double sqdist(const point &p1, const point &p2) {   //!< Squared distance 
-        double dx=std::abs(p1.x-p2.x),
-               dy=std::abs(p1.y-p2.y),
-               dz=std::abs(p1.z-p2.z);
-        if (dx>len_half.x) dx-=len.x;
-        if (dy>len_half.y) dy-=len.y;
-        if (dz>len_half.z) dz-=len.z;
-        return dx*dx + dy*dy + dz*dz;
+        return p1.sqdist_mi_xyz(p2, len, len_half);
       }
 
       void setvolume(double vol) {
@@ -159,7 +153,7 @@ namespace Faunus {
     pot_r12debyehuckel_tab( inputfile &in ) : pot_r12debyehuckel(in) {
       name += ", interpolated table"; 
       dr2 = in.getflt("tabpot_dr2", 0.1);
-      double invdr2 = 1/dr2;
+      //double invdr2 = 1/dr2;
       double Umax=in.getflt("tabpot_Umax", .1),
              Umin=in.getflt("tabpot_Umin", 1e-6);
       r2min = dr2;
@@ -343,12 +337,7 @@ namespace Faunus {
 
       //! Calculate distance using the minimum image convention
       inline double sqdist(const point &p1, const point &p2) {   //!< Squared distance 
-        double dx=std::abs(p1.x-p2.x),
-               dy=std::abs(p1.y-p2.y),
-               dz=p1.z-p2.z;
-        if (dx>len_half.x) dx-=len.x;
-        if (dy>len_half.y) dy-=len.y;
-        return dx*dx + dy*dy + dz*dz;
+        return p1.sqdist_mi_xy(p2, len, len_half);
       }
 
       //! Apply periodic boundary conditions

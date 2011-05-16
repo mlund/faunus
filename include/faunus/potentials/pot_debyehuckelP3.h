@@ -71,14 +71,14 @@ namespace Faunus {
       //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
       //! \return Energy in units of kT/lB
       inline double pairpot( const particle &p1, const particle &p2 ) {
-        double r2=p1.sqdist(p2,box,halfbox),
+        double r2=p1.sqdist_mi_xyz(p2,box,halfbox),
                x=p1.radius+p2.radius, u=x*x/r2, r=sqrt(r2);
         x=u*u*u;
         return (x*x-x)*eps + p1.charge * p2.charge / r * _EXPFUNC(-k*r);
       }
 
       inline double sqdist(const point &p1, const point &p2) {
-        return p1.sqdist(p2,box,halfbox);
+        return p1.sqdist_mi_xyz(p2,box,halfbox);
       }
 
       void setvolume(double vol) {
@@ -176,12 +176,12 @@ class pot_debyehuckelP3trunk : public pot_lj_trunk {
     //! \f$ \beta u/f = \frac{z_1z_2}{r}\exp(-\kappa r) + u_{lj}/f \f$
     //! \return Energy in units of kT/lB
     inline double pairpot( const particle &p1, const particle &p2 ) const {
-      double r2=p1.sqdist(p2,box,halfbox), r=sqrt(r2);
+      double r2=p1.sqdist_mi_xyz(p2,box,halfbox), r=sqrt(r2);
       return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
     }
 
     inline double sqdist(const point &p1, const point &p2) {
-      return p1.sqdist(p2,box,halfbox);
+      return p1.sqdist_mi_xyz(p2,box,halfbox);
     }
 
     void setvolume(double vol) {

@@ -43,7 +43,7 @@ namespace Faunus {
       }
       inline double pairpot(const particle &p1, const particle &p2) {
         register double a;
-        a=p1.sqdist(p2,box,halfbox);
+        a=p1.sqdist_mi_xyz(p2,box,halfbox);
         if(a<iw2[p1.id][p2.id])
           return a<hw2[p1.id][p2.id] ? hce : wd[p1.id][p2.id];
         else 

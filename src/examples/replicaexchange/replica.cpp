@@ -55,7 +55,7 @@ int main() {
           temper.swap(*bottles[j], *bottles[j+1]);
         if (k!=j && k!=i)
           temper.swap(*bottles[k], *bottles[k+1]);
-     }
+      }
 
     } // end of inner loop
 

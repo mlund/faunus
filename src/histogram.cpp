@@ -10,7 +10,7 @@ namespace Faunus {
   //! \param min minimum x value
   //! \param max maximum x value
   histogram::histogram(float res, float min, float max)
-    : xytable<float,unsigned long int>(res,min,max) {
+    : xytable2<float,unsigned long int>(res,min,max) {
       reset(res,min,max);
     }
   

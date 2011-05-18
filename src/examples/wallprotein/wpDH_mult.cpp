@@ -69,7 +69,7 @@ int main() {
 
   // Distribution functions
   double* zhalfPtr=&con.len_half.z;         // half length of container in z-direction
-  distributions dst;                        // distance dependent averages
+  distributions2 dst(0.1,0,(*zhalfPtr)*2.); // distance dependent averages
   distributions pairdst;                    // distance dependent averages
   histogram gofr(0.1,0, (*zhalfPtr)*2. );   // radial distribution function
 //   correlation<double> z_cor(200);

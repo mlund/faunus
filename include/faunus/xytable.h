@@ -2,6 +2,7 @@
 #define FAU_XYTABLE_H
 
 #include "faunus/common.h"
+#include <cmath>
 
 namespace Faunus {
   /*!
@@ -45,7 +46,7 @@ namespace Faunus {
 
       private:
       int x2i(TX x) {
-        int i=int( (x-xmin)/xres+0.5);
+        int i=int( invxres*(x-xmin)+0.5);
         if (i>=y.size())
           y.resize(i+1);
         return i;
@@ -119,8 +120,139 @@ namespace Faunus {
         std::ofstream f(filename.c_str());
         if (f) {
           f.precision(6);
-          f << "% xytable dump: tablesize, xmin, xres; ydata" << endl;
-          f << y.size() << " " << xmin << " " << xres << endl;
+          f << "% xytable dump: tablesize, xmin, xres, xmax; ydata" << endl;
+          f << y.size() << " " << xmin << " " << xres << " " << xmax() << endl;
+          for (int i=0; i<y.size(); i+=1) {
+            f << y[i] << endl; 
+          }
+          f.close();
+          return true;
+        }
+        return false;
+      }
+
+      bool dumptodisk(string file, int num, string ext) {
+        string filename;
+        std::stringstream buffer;
+        buffer << file << num << "." << ext;
+        filename = buffer.str();
+        return dumptodisk(filename);
+      }
+
+      //! Load table from disk
+      bool loadfromdisk(string filename) {
+        int n;
+        string s;
+        std::ifstream f(filename.c_str());
+        if (f) {
+          getline(f,s);
+          f >> n >> xmin >> xres;
+          y.resize(n);
+          for (int i=0; i<y.size(); i+=1) {
+            f >> y[i];
+          }
+          f.close();
+          return true;
+        }         
+        return false;
+      }
+    };
+
+  /*!
+   * \brief Class for a 2D table, XY data, etc. #2
+   * Based on xytable with some modifications, 
+   * here x-values correspond to the lower bound of the slice
+   * for which the value is stored instead of the middle 
+   * of the slice
+   * 
+   * \warning Does not automatically increase table size
+   *          but points to the last slice instead
+   * \warning Function fails if x < xmin
+   * \author Chris Evers, Lund 2011-05-13
+   */
+  template <class TX, class TY>
+    class xytable2 {
+      friend class histogram;
+      friend class rdf;
+      friend class rdfP3;
+
+      private:
+      inline int x2i(TX x) {
+        int i=floor( invxres*(x-xmin));
+        if (i>imax) {                // if x=xmaximum (or larger..), return index of last slice
+          i=imax;
+        }
+        return i;
+      }
+
+      public:
+      typedef typename std::vector<TY>::iterator yiter;
+      std::vector<TY> y; 
+      TX xres,            //!< Distance between x values
+         invxres,         //!< Inverse distance between x values
+         xmin;            //!< Minimum x value
+      int imax;           //!< Index of maximum x value
+
+      //! \param resolution Distance between x values
+      //! \param xminimum Minimum x value (can be smaller than zero)
+      //! \param xmaximum Maximum x value (for better memory optimization)
+      xytable2(TX resolution=.5, TX xminimum=0, TX xmaximum=0) {
+        init(resolution, xminimum, xmaximum);
+      }
+
+      void init(TX resolution=.5, TX xminimum=0, TX xmaximum=0) {
+        y.clear();
+        xres=resolution;
+        invxres=1/resolution;
+        xmin=xminimum;
+        imax=ceil(std::abs(xmaximum-xminimum)/resolution)-1;
+        if (xmaximum>0)
+          y.resize(imax+1); // last one is used if x=xmaximum
+      }
+
+      //! Returns the x value with the highest y value 
+      TX x_atmax_y() {
+        yiter iter = std::max_element( y.begin(), y.end() );
+        int i=iter-y.begin();  // convert iterator to index integer
+        return i*xres + xmin;
+      }
+
+      //! Convenient data access
+      TY& operator()(TX val) { return y.at( x2i(val) ); }
+
+      TX x(int i) { 
+        return i*xres+xmin; 
+      }
+
+      /*! \brief Linear interpolation
+       *  \warning If one of the reference values is Inf, nan is returned
+       */
+      TY interpolate(TX val) {
+        int i = x2i(val);
+        TY  y_low  = y[i];
+        TY slope = (y[i+1]-y_low) * invxres;
+        return y_low + slope * (val-x(i)); 
+      }
+
+      //! Max x-value in set
+      TX xmax() { return imax*xres+xmin; }
+
+      std::vector<TY> gety() { return y; }
+
+      std::vector<TX> getx() {
+        std::vector<TX> v;
+        for (int i=0; i<y.size; ++i)
+          v.push_back( i*xres + xmin );
+        return v;
+      }
+
+      //! Dump table to disk
+      bool dumptodisk(string filename) {
+        std::ofstream f(filename.c_str());
+        if (f) {
+          f.precision(6);
+          f << "% xytable2 dump: tablesize, xmin, xres, xmax; ydata" << endl;
+          f << y.size() << " " << xmin << " " << xres << " " << xmax() << endl;
           for (int i=0; i<y.size(); i+=1) {
             f << y[i] << endl; 
           }

@@ -110,7 +110,10 @@ namespace Faunus {
         if (dpsqr.cnt>0)
           o << "#   Average displacement      = " << sqrt(dpsqr.avg()) << endl
             << "#   Mean square displacement  = " << dpsqr.avg() << endl;
-    }
+    } else
+      o << "#   Number of trials          = " << cnt << endl
+        << "#   Runfraction               = " << runfraction*100 << " \%" << endl;
+
     if (dp_opt==true) {
       o << "#   Displacement Optimization:" << endl
         << "#      Completed                      = " << ((dp_N>0) ? "no" : "yes") << endl

@@ -945,6 +945,14 @@ namespace Faunus {
     return o.str();
   }
 
+  string polymer::info(container &con) {
+    std::ostringstream o;
+    o << info();
+    o << "#   Current charge           = " << charge(con.p) << endl
+      << "#   Hydrophobic particles    = " << numhydrophobic(con.p) << endl;
+    return o.str();
+  }
+
   /*!
    * This will generate a set of VMD commands that will
    * create bonds between neighboring monomers. This can

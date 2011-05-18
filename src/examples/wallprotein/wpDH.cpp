@@ -76,8 +76,8 @@ int main() {
 
   // Distribution functions
   double* zhalfPtr=&con.len_half.z;         // half length of container in z-direction
-  distributions dst;                        // distance dependent averages
-  histogram gofr(0.1,0, (*zhalfPtr)*2. );   // radial distribution function
+  distributions2 dst(0.1,0,(*zhalfPtr)*2.);// distance dependent averages
+  histogram gofr(0.1,0, (*zhalfPtr)*2. );  // radial distribution function
   histogram q(1,-pol.nb.size(), pol.nb.size()); // polymer charge distribution function
   histogram rg(.2,0, *zhalfPtr );           // radius of gyration distribution function
   histogram ree(.2,0, *zhalfPtr );          // end to end distance distribution function
@@ -89,11 +89,6 @@ int main() {
   macrorot mr(nvt,con,pot,in);
   translate mt(nvt,con,pot,in);
   mt.dpv.x=mt.dpv.y=0;                          // no need to translate in xy direction
-  if (in.getflt("eqtit_runfrac",0.5)<1e-3) {
-    pol.loadCharges(in.getstr("pol_charges","q.in"), con.p); // load residue charges from file
-    con.trial=con.p;
-    cout << "! Loaded polymer charges from disk" << endl;
-  }
   eqtitrate tit(nvt, con, pot, in, "eqtit_");
 
   // Particle input output
@@ -109,6 +104,11 @@ int main() {
   cm.z=0;
   pol.move(con, -cm);                // translate to the middle of the xy-plane
   pol.accept(con);                   // accept translation
+  if (in.getflt("eqtit_runfrac",0.5)<1e-3) {
+    pol.loadCharges(in.getstr("pol_charges","q.in"), con.p); // load residue charges from file
+    con.trial=con.p;
+    cout << "! Loaded polymer charges from disk" << endl;
+  }
   aam.save("confin.aam", con.p);
 
   // Initial system energy
@@ -216,9 +216,9 @@ int main() {
       gofr.write("gofr.out");
       gofr.dump("gofr.xy");
 
-      q.dump("q.xy");
-      rg.dump("rg.xy");
-      ree.dump("ree.xy");
+      q.dump("fluctQ.xy");
+      rg.dump("fluctRg.xy");
+      ree.dump("fluctRee.xy");
 
 // #ifndef NOTAB
 //       pot.pair.dump("pairpot.xy");
@@ -240,7 +240,7 @@ int main() {
 
 cout << sys.info() << loop.info() << mm.info()
   << cs.info() << br.info() << mr.info() 
-  << mt.info() << tit.info(con.p) << pol.info() 
+  << mt.info() << tit.info(con.p) << pol.info(con) 
   << pot.info();
 
 }

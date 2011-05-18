@@ -139,6 +139,7 @@ namespace Faunus {
   double eqtitrate::move() {
     if (slp.runtest( runfraction )==false)
       return 0;
+    cnt++;
     double usum=0;
     int n=sites.size();
     while (n-->0) {
@@ -226,14 +227,14 @@ namespace Faunus {
    */  
   double eqtitrate::avgcharge(vector<particle> &p, int &i) {
     double qavg=0;
-    int cnt=0;
+    int n=0;
     for (unsigned int j=0; j<sites.size(); j++) {
       if (process[i].one_of_us(p[sites[j]])) {
-        cnt++;
+        n++;
         qavg+=q[j].avg();
       }
     }
-      return qavg/cnt;
+      return qavg/n;
   }
   
   string eqtitrate::info() {

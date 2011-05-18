@@ -53,7 +53,7 @@ int main() {
 
   // Distribution functions
   double* zhalfPtr=&con.len_half.z;         // half length of container in z-direction
-  distributions dst;                        // distance dependent averages
+  distributions2 dst(0.1,0,(*zhalfPtr)*2.); // distance dependent averages
   histogram gofr(0.1,0, (*zhalfPtr)*2. );   // radial distribution function
   histogram q(1,-pol.nb.size(), pol.nb.size()); // polymer charge distribution function
   histogram rg(.2,0, (*zhalfPtr)*2. );      // radius of gyration distribution function
@@ -201,16 +201,16 @@ int main() {
           sys+=cs.penaltymove(pol);     // crankshaft
           sys+=pot.pen.update(*zhalfPtr-pol.cm.z);
 #else
-          sys+=cs.move(pol);     // crankshaft
+          sys+=cs.move(pol);
 #endif
           gofr.add(*zhalfPtr-pol.cm.z);
           break;
         case 6:
 #ifdef PENALTY
-          sys+=br.penaltymove(pol);     // crankshaft
+          sys+=br.penaltymove(pol);     // branchrot
           sys+=pot.pen.update(*zhalfPtr-pol.cm.z);
 #else
-          sys+=br.move(pol);     // crankshaft
+          sys+=br.move(pol);
 #endif
           gofr.add(*zhalfPtr-pol.cm.z);
           break;
@@ -293,9 +293,9 @@ int main() {
       gofr.write("gofr.out");
       gofr.dump("gofr.xy");
 
-      q.dump("q.xy");
-      rg.dump("rg.xy");
-      ree.dump("ree.xy");
+      q.dump("fluctQ.xy");
+      rg.dump("fluctRg.xy");
+      ree.dump("fluctRee.xy");
 
 #ifndef NOSLIT
       pot.expot.dump("expot.xy");
@@ -311,7 +311,8 @@ int main() {
 
   } // END of macro loop and simulation
 
-  cout << sys.info() << sm.info() << wm.info() << loop.info()
+  cout << sys.info() << sm.info() << wm.info() 
+      << "#   Surf area / charge (AA^2) = " << (con.len.x*con.len.y)/wall.size() << endl 
       << mm.info() << cs.info() << br.info() << mr.info() 
       << mt.info() << tit.info() << sb.info() << pol.info()
       << pot.info();

@@ -22,7 +22,7 @@ namespace Faunus {
    * float val=h.get(4); // val=0.3333
    * \endcode
    */
-  class histogram : protected xytable<float,unsigned long int> {
+  class histogram : protected xytable2<float,unsigned long int> {
     friend class FAUrdf;
     private:
     unsigned long int cnt;

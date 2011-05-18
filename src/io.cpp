@@ -602,7 +602,7 @@ namespace Faunus {
   bool ioqtraj::save(string file, vector<particle> &p) {
       io fio;
       std::ostringstream o;
-      o.precision(12);
+      o.precision(6);
       for (int i=0; i<p.size(); i++) {
         o << p[i].charge << " ";
       }

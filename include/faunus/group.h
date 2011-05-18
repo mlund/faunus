@@ -160,6 +160,7 @@ namespace Faunus {
       polymer();
       vector<int> neighbors(int) const;
       string info();
+      string info(container &);                  //!< Show more info!
       bool addbond(int, int);                    //!< Add bond between two particles
       bool areneighbors(int, int) const;         //!< True if i and j are bonded to each other
       string getVMDBondScript();                 //!< Print TCL script for VMD to create bonds

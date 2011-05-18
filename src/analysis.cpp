@@ -219,6 +219,92 @@ namespace Faunus {
     return fio.writefile(name, cntinfo() );
   }
 
+  //---------------- DISTRIBUTIONS2 ----------------------------------
+  /*!
+   * \param deltax x value resolution
+   * \param min Minimum x value 
+   * \param max Maximum x value 
+   */
+  distributions2::distributions2(double deltax, double min, double max) {
+    dx=deltax;
+    xmin=min;
+    xmax=max;
+  }
+
+  /*! 
+   * Adds a value to the distribution. The y value is automatically
+   * averaged. If "name" is not found in the current distribution,
+   * it will be created and the data point will be added.
+   * 
+   * \param name Name of distribution to add to.
+   * \param x x-value
+   * \param y value (add to average)
+   */
+  bool distributions2::add( string name, float x, float y )
+  {
+    unsigned short i = find(name);
+    d[i](x)+=y;    // add to average
+    return true;
+  }
+
+  unsigned short distributions2::find( string name ) {
+    unsigned short i;
+    for (i=0; i<s.size(); i++) // search name vector
+      if (s[i]==name)
+        return i;
+    s.push_back(name); // if not found, add it!
+    d.resize( d.size()+1,
+        xytable2<float, average<float> >(dx,xmin,xmax));
+    return s.size()-1;
+  }
+
+  string distributions2::info() {
+    unsigned char i;
+    std::ostringstream o;
+    o << "# DISTRIBUTION FUNCTIONS:\n"
+      << "# 1 = distance" << endl;
+    for (i=0; i<s.size(); i++)
+      o << "# " << i+2 << " = " << s[i] << endl;
+    for (double x=xmin; x<=xmax-dx; x+=dx) {
+      o << x;
+      for (i=0; i<d.size(); i++)
+        o << " " << d[i](x).avg();
+      o << endl;
+    }
+    return o.str();
+  }
+
+  bool distributions2::write(string name)
+  {
+    return fio.writefile(name, info() );
+  }
+  
+  /*! 
+   * cntinfo and cntwrite print the counter of each averaged 
+   * value in the distribution to a string and write
+   * a distribution function of this
+   */
+  string distributions2::cntinfo() {
+    unsigned char i;
+    std::ostringstream o;
+    o << "# DISTRIBUTION FUNCTIONS:\n"
+      << "# 1 = distance" << endl;
+    for (i=0; i<s.size(); i++)
+      o << "# " << i+2 << " = " << s[i] << endl;
+    for (double x=xmin; x<=xmax-dx; x+=dx) {
+      o << x;
+      for (i=0; i<d.size(); i++)
+        o << " " << d[i](x).cnt;
+      o << endl;
+    }
+    return o.str();
+  }
+
+  bool distributions2::cntwrite(string name)
+  {
+    return fio.writefile(name, cntinfo() );
+  }
+
   //AGGREGATION
   aggregation::aggregation(container &C, vector<macromolecule> &G, double s) : avgintdist(2.0,0.0,600) {
     con=&C;

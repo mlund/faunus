@@ -62,6 +62,38 @@ namespace Faunus {
       string cntinfo();    //!< Write the counter of each averaged value in the distribution to a string
   };
 
+  /*!
+   * Distribution class based on distributions class by Mikael Lund
+   * and similar in usage, but unlike distributions the first and 
+   * last slits standard have the same width as the slits in between 
+   * and xmin and xmax has to be set in the constructor. Furthermore
+   * the x-values written out refer to the lower bound of the slit, 
+   * instead of the middle of the slit!
+   * 
+   * \warning Does not automatically change size, instead if x > xmax
+   * the value will be add to the last slit.
+   * 
+   * \brief Matrix of averages along some coordinate
+   * \author Chris Evers
+   * \date May 2011
+   */
+  class distributions2 : public analysis {
+    private:
+      double xmax, xmin; // maximum/minimum encountered x value
+      double dx;
+      io fio;
+      vector<string> s;
+      vector< xytable2<float,average<float> > > d;
+      unsigned short find(string);
+    public:
+      distributions2(double, double, double); //!< Constructor
+      bool add(string, float, float);  //!< Add value to distribution
+      bool write(string);  //!< Write distributions to a file
+      bool cntwrite(string); //!< Write counter distributions to a file
+      string info();       //!< Write distributions to a string
+      string cntinfo();    //!< Write the counter of each averaged value in the distribution to a string
+  };
+
   class gfactor : public analysis {
     private:
       average<float> g;

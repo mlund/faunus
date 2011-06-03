@@ -59,6 +59,15 @@ namespace Faunus {
               u+=pair.f*pair.bond(p[i],p[j]);
         return u;
       }
+      
+      double uself_polymer(vector<particle> &p, const macromolecule &g) {
+        double u=0;
+        int n=g.end+1;
+        for (int i=g.beg; i<n-1; i++)
+          for (int j=i+1; j<n; j++)
+            u+=pair.f*pair.pairpot(p[i], p[j]);
+        return u;
+      }
 
       double uself_popscmem(vector<particle> &p, const popscmembrane &g) {
         double u=0;

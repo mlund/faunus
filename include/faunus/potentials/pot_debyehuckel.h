@@ -27,6 +27,7 @@ namespace Faunus {
                r=sqrt(r2);
         return lj(p1,p2,r2) + p1.charge*p2.charge/r*exp(-k*r);
       }
+      
       inline double sqdist(const point &p1, const point &p2) {
         return p1.sqdist(p2);
       }

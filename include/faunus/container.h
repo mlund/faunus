@@ -120,13 +120,19 @@ namespace Faunus {
       }
 
       inline point vdist(const point &a, const point &b) {       //!< Distance vector
-        point r;
-        r.x=std::abs(a.x-b.x);
-        r.y=std::abs(a.y-b.y);
-        r.z=std::abs(a.z-b.z);
-        if (r.x>len_half.x) r.x-=len.x;
-        if (r.y>len_half.y) r.y-=len.y;
-        if (r.z>len_half.z) r.z-=len.z;
+        point r=a-b;
+        if (r.x>len_half.x)
+          r.x-=len.x;
+        else if (r.x<-len_half.x)
+          r.x+=len.x;
+        if (r.y>len_half.y)
+          r.y-=len.y;
+        else if (r.y<-len_half.y)
+          r.y+=len.y;
+        if (r.z>len_half.z)
+          r.z-=len.z;
+        else if (r.z<-len_half.z)
+          r.z+=len.z;
         return r;
       }
 
@@ -159,12 +165,15 @@ namespace Faunus {
       }
 
       inline point vdist(const point &a, const point &b) {       //!< Distance vector
-        point r;
-        r.x=std::abs(a.x-b.x);
-        r.y=std::abs(a.y-b.y);
-        r.z=a.z-b.z;
-        if (r.x>len_half.x) r.x-=len.x;
-        if (r.y>len_half.y) r.y-=len.y;
+        point r=a-b;
+        if (r.x>len_half.x)
+          r.x-=len.x;
+        else if (r.x<-len_half.x)
+          r.x+=len.x;
+        if (r.y>len_half.y)
+          r.y-=len.y;
+        else if (r.y<-len_half.y)
+          r.y+=len.y;
         return r;
       }
 
@@ -212,13 +221,19 @@ namespace Faunus {
       }
 
       inline point vdist(const point &a, const point &b) {
-        point r;
-        r.x=std::abs(a.x-b.x);
-        r.y=std::abs(a.y-b.y);
-        r.z=std::abs(a.z-b.z);
-        if (r.x>len_half) r.x-=len;
-        if (r.y>len_half) r.y-=len;
-        if (r.z>len_half) r.z-=len;
+        point r=a-b;
+        if (r.x>len_half)
+          r.x-=len;
+        else if (r.x<-len_half)
+          r.x+=len;
+        if (r.y>len_half)
+          r.y-=len;
+        else if (r.y<-len_half)
+          r.y+=len;
+        if (r.z>len_half)
+          r.z-=len;
+        else if (r.z<-len_half)
+          r.z+=len;
         return r;
       }
 
@@ -271,12 +286,15 @@ namespace Faunus {
       }
 
       inline point vdist(const point &a, const point &b) {
-        point r;
-        r.x=std::abs(a.x-b.x);
-        r.y=std::abs(a.y-b.y);
-        r.z=a.z-b.z;
-        if (r.x>len_half) r.x-=len;
-        if (r.y>len_half) r.y-=len;
+        point r=a-b;
+        if (r.x>len_half)
+          r.x-=len;
+        else if (r.x<-len_half)
+          r.x+=len;
+        if (r.y>len_half)
+          r.y-=len;
+        else if (r.y<-len_half)
+          r.y+=len;
         return r;
       }
 

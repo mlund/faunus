@@ -7,7 +7,6 @@
 
 #include "faunus/faunus.h"
 #include "faunus/energy/coarsegrain.h"
-#include "faunus/energy/hardsphere.h"
 #include "faunus/potentials/pot_debyehuckelP3.h"
 #include "faunus/potentials/pot_hsdebyehuckelP3.h"
 #include "faunus/potentials/pot_hsHamakerDH.h"
@@ -52,10 +51,10 @@ int main() {
 #endif
   canonical nvt;                          // Use the canonical ensemble
   Tpot pot(in);                           // Initialize energy functions
-  vector<macromolecule> g;                // PROTEIN groups
-  io io;
-  iopqr pqr;
   ioaam aam;
+  io io;
+  vector<macromolecule> g;                // PROTEIN groups
+  iopqr pqr;
   xyfile boxlen("boxlen.dat");            // Box length as function of MC step
   if (in.getboo("lattice")==true)         // Protein input file format is AAM
     aam.loadlattice(cell, in, g);         // Load and insert proteins
@@ -97,7 +96,7 @@ int main() {
 #ifdef XYPLANE
   mt.dpv.z=0;
 #endif
- 
+
   // Analysis and energy
   double usys=0;
 #pragma omp parallel for reduction (+:usys) schedule (dynamic)
@@ -110,6 +109,8 @@ int main() {
   aggregation agg(cell, g, in.getflt("aggdef",1.5) );
   distributions dist(in.getflt("isobar_binlen",0.05),in.getflt("isobar_minlen"), in.getflt("isobar_maxlen"));
 
+  distributions dst(0.5,0,in.getflt("isobar_maxlen")*0.5);
+
   FAUrdf protrdf(0,0,1,cell.len/2.);   // Protein and salt radial distributions
   FAUrdf protrdf11(0,0,1,cell.len/2.); // Protein and salt radial distributions
   FAUrdf protrdf22(0,0,1,cell.len/2.); // Protein and salt radial distributions
@@ -119,6 +120,7 @@ int main() {
   double sum, volr, tr, rr, clt, clr, randy=-1;
   volr = in.getflt("volr"), tr=in.getflt("tr"), rr=in.getflt("rr"), clt=in.getflt("clt"), clr=in.getflt("clr");
   sum  = volr+tr+rr+clt+clr, volr/=sum, tr/=sum, rr/=sum, clt/=sum, clr/=sum;
+  int switcher=-1;
 
   ioxtc xtc(cell.len);                                // Gromacs xtc output
   for (int i=0; i<g.size(); i++)
@@ -173,8 +175,8 @@ int main() {
         if (randy<volr+rr+tr && randy >volr+rr) { //   Translate proteins
           for (int n=0; n<g.size(); n++) {        //   Loop over all proteins
             int i = slp.random_one()*g.size();    //   and pick at random.
-            if (slp.random_one()>0.0) {           //   10 % is long translation
-              mtL.dp = cell.len / 2;
+            if (slp.random_one()>0.90) {           //   10 % is long translation
+              mtL.dp = cell.len / 3;
               sys+=mtL.move(g.at(i));             //   Do the move.
             }
             else {
@@ -221,6 +223,30 @@ int main() {
         }
       //agg.count();
       }
+
+      //Analyse dipole moment alignment of prot1 wrt prot2
+      
+      if (slp.random_one() > 0.5 ) { 
+        int mol=g.size();
+        int mol1=in.getint("nprot1",0);
+        double z=0, l0=0;
+        point r;
+        double dot=0.0;
+        for (int i=0; i<mol; i++)                                                  
+          g[i].masscenter(cell);                       
+        for (int k=0; k<mol1; k++) {
+          for (int j=mol1; j<mol; j++) {
+            r=cell.vdist(g[j].cm, g[k].cm);
+            z=r.len();
+            if (std::abs(z-cell.dist( g[j].cm, g[k].cm  ))>1e-5)
+              cout << "!" << endl;
+            l0=g[k].dipole(cell);
+            dot=r.dot(g[k].mu);
+            dst.add("dipole alignment", z , dot / (l0*z));
+          }
+        }
+      }
+
     } // End of inner loop
 
     usys=0;
@@ -255,6 +281,7 @@ int main() {
     protrdf22.write("rdfprot22.dat");           // Write g(r)'s
     agg.write("aggregates.dat");
     dist.write("aveenergy.dat");
+    dst.write("alignment.dat");
     pqr.save("confout.pqr", cell.p);
     cell.saveToDisk("confout.dump");            // Save container to disk
 

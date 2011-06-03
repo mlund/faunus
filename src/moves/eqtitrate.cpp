@@ -69,11 +69,16 @@ namespace Faunus {
     return energy(p)-uold; // return intrinsic energy change
   }
 
-  eqtitrate::eqtitrate(ensemble &e, container &c, energybase &p, inputfile &in, string pfx) : markovmove(e,c,p) {
+ /*!
+  *    * Constructor must be called after loading particles into container
+  *       */
+
+  eqtitrate::eqtitrate(ensemble &e, container &c, energybase &p, inputfile &in, string pfx) : markovmove(e,c,p) { 
     name.assign("IMPLICIT EQUILIBRIUM AX=A+X TITRATION");
     prefix=pfx;
     markovmove::getInput(in);
     load(in.getstr("eqtit_processes","eq.in"));
+    atom.reset_properties(con->p);   // sets the faunatom particle properties into particle vector
     findSites(c.p);
     samplesites(con->p);
   }

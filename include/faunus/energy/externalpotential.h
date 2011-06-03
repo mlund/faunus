@@ -429,6 +429,10 @@ namespace Faunus {
           return springinteraction<Tpairpot>::uself_polymer(p,g);// + expot.energy(p,g);
         }
 
+        double uself_polymer(vector<particle> &p, const macromolecule &g) {
+          return springinteraction<Tpairpot>::uself_polymer(p,g);
+        }
+
         double internal(vector<particle> &p, const group &g, int step=1) { 
           return springinteraction<Tpairpot>::internal(p,g,step) + expot.energy_group(p,g);
         }

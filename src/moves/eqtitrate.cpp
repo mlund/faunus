@@ -70,15 +70,17 @@ namespace Faunus {
   }
 
  /*!
-  *    * Constructor must be called after loading particles into container
-  *       */
-
+  * Constructor. Should be called when particles have been loaded into the container.
+  * Note that the particle charges, radii, weight etc. (save positions) will be reset
+  * to the default species values defined in the atoms class.
+  */
   eqtitrate::eqtitrate(ensemble &e, container &c, energybase &p, inputfile &in, string pfx) : markovmove(e,c,p) { 
     name.assign("IMPLICIT EQUILIBRIUM AX=A+X TITRATION");
     prefix=pfx;
     markovmove::getInput(in);
     load(in.getstr("eqtit_processes","eq.in"));
-    atom.reset_properties(con->p);   // sets the faunatom particle properties into particle vector
+    atom.reset_properties(con->p); // sets the faunatom particle properties into particle vector
+    con->trial=con->p;
     findSites(c.p);
     samplesites(con->p);
   }

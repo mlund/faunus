@@ -29,9 +29,9 @@ namespace Faunus {
       << "    Source Code Biol. Med. (2008) 3:1\n"
       << "\n"
       << "  Library build details:\n"
-      << "    Compiled on " << __DATE__ << " " << __TIME__ 
+      << "    Compiled on " << __DATE__ << " " << __TIME__
 #ifdef __VERSION__
-      << " using " << __VERSION__
+      << "\n    " << __VERSION__
 #endif
 #ifdef __SVN_REV__
       << "\n    SVN revision: " << __SVN_REV__ << "."

@@ -2,7 +2,6 @@
 #define FAU_XYTABLE_H
 
 #include "faunus/common.h"
-#include <cmath>
 
 namespace Faunus {
   /*!

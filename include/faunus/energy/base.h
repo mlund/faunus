@@ -39,7 +39,7 @@ namespace Faunus {
     virtual double potential(vector<particle> &, point)=0;                       //!< Electric potential in point
     virtual double potential(const vector<particle>&,int,macromolecule&, double& )=0; //! For the AT titration
     virtual double internal(vector<particle> &, const group &, int=1)=0;         //!< internal energy in group
-    double internalElectrostatic(vector<particle> &p, const group &g);           //!< internal electrostatic energy in group
+    virtual double internalElectrostatic(vector<particle> &p, const group &g)=0; //!< internal electrostatic energy in group
     virtual double pot(vector<particle> &, const point &)=0;                     //!< Electrostatic potential in a point
     virtual double dipdip(const point &, const point &, double)=0;                     //!< Dipole-dipole energy.
     virtual double iondip(const point &, double, double)=0;                            //!< Ion-dipole energy.

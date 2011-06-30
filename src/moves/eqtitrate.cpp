@@ -204,6 +204,9 @@ namespace Faunus {
     return pot->energy(p,i);
   }
 
+  /*!
+   * \note Why is this public?
+   */
   void eqtitrate::samplesites(vector<particle> &p) {
     for (unsigned int i=0; i<sites.size(); i++) {
       q[i] += p[sites[i]].charge;

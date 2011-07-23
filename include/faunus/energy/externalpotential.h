@@ -204,7 +204,7 @@ namespace Faunus {
       cnt++;
       if (enabled==true) {
         double uold=energy_vector(c.p);
-        for (double z=-len_halfz; z<=len_halfz; z+=dz)
+        for (double z=-len_halfz-dz; z<=len_halfz+dz; z+=dz)
           phi(z)=calcPotential(len_halfz-z);
         return energy_vector(c.p) - uold;
       }

@@ -181,7 +181,7 @@ namespace Faunus {
       o << "# " << i+2 << " = " << s[i] << endl;
     for (float x=xmin; x<=xmax; x+=dx) {
       o << x;
-      for (i=0; i<d.size(); i++)
+      for (int i=0; i<d.size(); i++)
         o << " " << d[i](x).avg();
       o << endl;
     }

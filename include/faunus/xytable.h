@@ -144,8 +144,9 @@ namespace Faunus {
         string s;
         std::ifstream f(filename.c_str());
         if (f) {
-          getline(f,s);
-          f >> n >> xmin >> xres;
+          getline(f,s);             // ignore first input line
+          f >> n >> xmin >> xres;   // extract number of points, xmin, xres
+          getline(f,s);             // ignore aditional columns
           y.resize(n);
           for (int i=0; i<y.size(); i+=1) {
             f >> y[i];

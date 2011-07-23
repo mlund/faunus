@@ -37,13 +37,6 @@ int main() {
 
   // Polymers
   polymer pol;
-//   ioaam aam;
-//   if (in.getstr("polymer")=="aam")          // Protein input file format is AAM
-//     if (in.getboo("lattice")==true)         // Protein input file format is AAM
-//       aam.loadlattice(con, in, pol);         // Load and insert proteins
-//     else                                    // Center first protein (will be frozen)
-//       aam.load(con, in, pol);
-//   else
   pol.babeladd( con, in );                  //  add from input
   con.trial=con.p;                          //  synchronize particle vector
   pol.masscenter(con);                      //  update masscenter
@@ -52,12 +45,33 @@ int main() {
   cout << pol.info();
 
   // Distribution functions
-  double* zhalfPtr=&con.len_half.z;         // half length of container in z-direction
-  distributions2 dst(0.1,0,(*zhalfPtr)*2.); // distance dependent averages
-  histogram gofr(0.1,0, (*zhalfPtr)*2. );   // radial distribution function
-  histogram q(1,-pol.nb.size(), pol.nb.size()); // polymer charge distribution function
-  histogram rg(.2,0, (*zhalfPtr)*2. );      // radius of gyration distribution function
-  histogram ree(.2,0, (*zhalfPtr)*2. );     // end to end distance distribution function
+  double *zhalfPtr = &con.len_half.z;             // half length of container in z-direction
+  double iRee = pol.calcIdealRee( in.getflt( "harmonic_req", 5 ) ); // calculate ideal end-to-end distance
+  if ( iRee > *zhalfPtr )
+    cout << "! Warning estimated end-to-end distance " << iRee 
+      << " AA is bigger than half cuboid_zlen " << *zhalfPtr << " AA" << endl;
+
+  histogram gofr(0.1, 0, *zhalfPtr*2);  // radial distribution function
+  histogram fQ(1 , -pol.nb.size(), pol.nb.size());  // polymer charge distribution function
+  histogram fRg(   1, 0, 2*iRee    );   // radius of gyration distribution function
+  histogram fRgz2( 1, 0, iRee*iRee );   // radius of gyration distribution function in z-direction
+  histogram fRee(  1, 0, 4*iRee    );   // end-to-end distance distribution function
+  histogram fReez( 1, -4*iRee, 4*iRee); // end-to-end distance distribution function in z-direction
+  int polEnds = in.getint("pol_ends",0);// ends of polymer (for Ree calculations)
+
+#ifdef NOSLIT
+  histogram fzmax(.1,0, con.len.z);            // max(z) distribution function
+  histogram internalGofz(1, -4*iRee, 4*iRee ); // internal g(z)
+  histogram internalGofr(1, -4*iRee, 4*iRee ); // internal g(z)
+#else
+  distributions2 dst(.2, 0, *zhalfPtr*2);        // distance dependent averages
+  histogram saltgofrp(.2,0, (*zhalfPtr)*2. );   // end to end distance distribution function
+  histogram saltgofrn(.2,0, (*zhalfPtr)*2. );   // end to end distance distribution function
+#endif
+// oldstuff
+//   histogram saltpairgofrhomo(.2,0, (*zhalfPtr)*2. );     // end to end distance distribution function
+//   histogram saltpairgofrhetero(.2,0, (*zhalfPtr)*2. );     // end to end distance distribution function
+//   xytable2< double, average<double> > internalPotential(.2, -*zhalfPtr, *zhalfPtr );
 
   // Potentials
 #ifdef NOSLIT
@@ -70,13 +84,16 @@ int main() {
     pot.expot.update(con);
   #else
     springinteraction_expot<Tpot, expot_akesson> pot(in); 
+//     pot.expot.load("expot.xy"); // functionality only available in local version on disk
     pot.expot.update(con);
   #endif
 #endif
 
   // Handle wall particles
   group wall;
+#ifndef NOSLIT
   wall.add(con, atom[in.getstr("wall_tion1")].id, in.getint("wall_nion1") );
+#endif
   for (int i=wall.beg; i<=wall.end; i++)
     con.p[i].z=*zhalfPtr;                   // move all particles to edge
   con.trial=con.p;
@@ -125,7 +142,8 @@ int main() {
   if ( nmt.load(con, "gcgroup.conf")==true ) {
     aam.load(con, "confout.aam");           // Load stored configuration
     pol.masscenter(con);                    // Update masscenter
-    aam.save("confout_init.aam", con.p);
+    aam.save("confin.aam", con.p);
+    pqr.save("confin.pqr", con.p);
   }
 
   // Neutralize system charge
@@ -226,38 +244,121 @@ int main() {
       if (slp.random_one()>0.3) {
         pol.masscenter(con);
         double z=*zhalfPtr-pol.cm.z;  // distance between masscenter and wall
+
         double charge=pol.charge(con.p);
-        dst.add("qtot", z, charge);
-        q.add(charge);
+        fQ.add(charge);
 
-        double rg2=pol.sqmassgradius(con);
-        dst.add("Rg2", z, rg2);
-        dst.add("Rg", z, sqrt(rg2));
-        rg.add(sqrt(rg2));
+        point rg2Point = pol.sqmassgradius3D(con);
+        double rg2 = rg2Point.len();
+        double rg = sqrt(rg2);
+        pol.rg2 += rg2;
+        pol.rg += rg;
+        fRg.add(rg);
+        fRgz2.add(rg2Point.z);
 
-        double ree2=pol.sqend2enddistance(con);
-        dst.add("Ree2", z, ree2); 
-        dst.add("Ree", z, sqrt(ree2)); 
-        ree.add(sqrt(ree2));
+        point reePoint = con.p[pol.beg+polEnds] - con.p[pol.end-polEnds];
+        con.boundary(reePoint);
+        double ree = reePoint.len();
+        pol.ree2 += ree*ree;
+        pol.ree += ree;
+        fRee.add( ree );
+        fReez.add( reePoint.z );
 
-        for (int i=pol.beg; i<=pol.end; i++) {
+#ifdef NOSLIT // wp_noslit
+        point rmax;
+        for ( int i=pol.beg; i<=pol.end; i++ ) 
+        {
+          point t = con.p[i]-pol.cm; // vector to center of mass
+          con.boundary(t); // periodic boundary (if any)
+          if ( t.x > rmax.x )
+            rmax.x=t.x;
+          if ( t.y > rmax.y )
+            rmax.y=t.y;
+          if ( t.z > rmax.z )
+            rmax.z=t.z;
+          internalGofz.add( t.x );
+          internalGofz.add( t.y );
+          internalGofz.add( t.z );
+          internalGofr.add( t.len() );
+        }
+        fzmax.add( rmax.x );
+        fzmax.add( rmax.y );
+        fzmax.add( rmax.z );
+
+#else // wp
+        dst.add("Q", z, charge );
+
+        dst.add("Rg2",  z, rg2 );
+        dst.add("Rg",   z, rg );
+        dst.add("Rg2x", z, rg2Point.x );
+        dst.add("Rg2y", z, rg2Point.y );
+        dst.add("Rg2z", z, rg2Point.z );
+
+        dst.add("Ree2", z, ree*ree );
+        dst.add("Ree",  z, ree );
+        dst.add("Ree2x", z, reePoint.x);
+        dst.add("Ree2y", z, reePoint.y);
+        dst.add("Ree2z", z, reePoint.z);
+
+        for ( int i=pol.beg; i<=pol.end; i++ ) 
+        {
           std::ostringstream s; s << "q" << i;
-          dst.add( s.str(), *zhalfPtr-con.p[i].z, con.p[i].charge );    
+          dst.add( s.str(), *zhalfPtr-con.p[i].z, con.p[i].charge );
         }
 
         for (int i=salt.beg; i<=salt.end; i++) 
           if (con.p[i].id==atom["NA"].id) 
-            dst.add("Na", *zhalfPtr-con.p[i].z, *zhalfPtr-con.p[i].z);
+          {
+//             dst.add("Na", *zhalfPtr-con.p[i].z, *zhalfPtr-con.p[i].z);
+            saltgofrp.add(*zhalfPtr-con.p[i].z);
+          }
           else if (con.p[i].id==atom["CL"].id) 
-            dst.add("Cl", *zhalfPtr-con.p[i].z, *zhalfPtr-con.p[i].z);
-      }
+          {
+//             dst.add("Cl", *zhalfPtr-con.p[i].z, *zhalfPtr-con.p[i].z);
+            saltgofrn.add(*zhalfPtr-con.p[i].z);
+          }
+#endif
+
+// old stuff
+//         for (int i=salt.beg; i<=salt.end-1; i++) {
+//           for (int j=i; j<=salt.end; j++) 
+//             if (con.p[i].id==con.p[j].id) 
+//               saltpairgofrhomo.add(sqrt(con.sqdist(con.p[i],con.p[j])));
+//             else
+//               saltpairgofrhetero.add(sqrt(con.sqdist(con.p[i],con.p[j])));
+//         }
+
+//         point p;
+//         for (double j=-*zhalfPtr; j<=*zhalfPtr; j+=.2) 
+//         {
+//           con.randompos(p);
+//           p.z=j;
+//           double sum=0;
+//           for (int i=0; i<con.p.size(); i++)
+//           {
+//             sum += con.p[i].charge / sqrt( con.sqdist(con.p[i],p) );
+//           }
+//           internalPotential(p.z)=sum*pot.pair.f;
+//         }
+
+//         for (double j=-con.len_half.z; j<=con.len_half.z; j++) {
+//           con.randompos(p);
+//           p.z=j;
+//           double sum=0;
+//           for (int i=0; i<con.p.size(); i++)
+//             sum += con.p[i].charge/sqrt(con.sqdist(con.p[i],p));
+//           dst.add("pot",*zhalfPtr-p.z,sum*pot.pair.f);
+//         }
+
+      } // end analysis
 
 #ifndef NOSLIT
       if (slp.random_one()>0.8)
         sys += pot.expot.update(con);
 #endif
 
-      if (slp.random_one()<in.getflt("traj_runfrac",0.05) ) {
+      if (slp.random_one()<in.getflt("traj_runfrac",0.05) ) 
+      {
         xtc.save( "traj.xtc", con.p, vg );
         qtraj.save( "q.traj", con.p, vg );
       }
@@ -282,38 +383,59 @@ int main() {
         << "System charge = " << con.charge() << ". " << endl;
 
     // Write files to disk
-    if ( in.getboo("write_files",true) ) {
+    aam.save("confout.aam", con.p);
+    if ( in.getboo("write_files",true) ) 
+    {
       io.writefile("vmdbonds.tcl", pol.getVMDBondScript());
+      io.writefile("gcgroup.conf", nmt.print()); 
       pqr.save("confout.pqr",con.p);
       pqr.save("confout_polwall.pqr",con.p,vg);
-      aam.save("confout.aam", con.p);
-      io.writefile("gcgroup.conf", nmt.print()); 
-      dst.write("dist.out");
-      dst.cntwrite("cntdist.out");
+
       gofr.write("gofr.out");
       gofr.dump("gofr.xy");
+      fQ.dump("fluctQ.xy");
+      fRg.dump("fluctRg.xy");
+      fRgz2.dump("fluctRgz2.xy");
+      fRee.dump("fluctRee.xy");
+      fReez.dump("fluctReez.xy");
 
-      q.dump("fluctQ.xy");
-      rg.dump("fluctRg.xy");
-      ree.dump("fluctRee.xy");
+      tit.applycharges(con.trial);         // Set average charges on all titratable sites
+      pol.saveCharges("q.out", con.trial); // Save average charges to disk
+      con.trial=con.p;                     // Restore original charges
 
-#ifndef NOSLIT
+#ifdef NOSLIT
+      fzmax.dump("fluctzmax.xy");
+      internalGofr.dump("internalGofr.xy");
+      internalGofz.dump("internalGofz.xy");
+#else
+      dst.write("dist.out");
+      dst.cntwrite("cntdist.out");
       pot.expot.dump("expot.xy");
+      saltgofrp.dump("saltgofrwallp.xy");
+      saltgofrn.dump("saltgofrwalln.xy");
 #endif
 #ifdef PENALTY
       pot.pen.dump("penalty", loop.cnt_macro, "xy");
       pot.pen.gofrdump("gofr", loop.cnt_macro, "xy");
 #endif
-      tit.applycharges(con.trial);                      // Set average charges on all titratable sites
-      pol.saveCharges("q.out", con.trial);              // Save average charges to disk
-      con.trial=con.p;                                  // Restore original charges
-    }
+
+// oldstuff
+//       saltpairgofrhetero.dump("saltpairgofrhetero.xy");
+//       saltpairgofrhomo.dump("saltpairgofrhomo.xy");
+//       internalPotential.dumptodisk("internalPotential.xy");
+
+    } // end write_files
 
   } // END of macro loop and simulation
 
-  cout << sys.info() << sm.info() << wm.info() 
+  cout << sys.info() 
+      << sm.info() 
+      << wm.info() 
       << "#   Surf area / charge (AA^2) = " << (con.len.x*con.len.y)/wall.size() << endl 
       << mm.info() << cs.info() << br.info() << mr.info() 
-      << mt.info() << tit.info() << sb.info() << pol.info()
+      << mt.info() << tit.info() << sb.info() 
+      << "#   Current # salt particles  = " << salt.size() << endl 
+      << "#   Current salt conc. (M)    = " << salt.size()/2*(pow(10,27))/(6.02*pow(10,23))/(con.len.x*con.len.y*con.len.z) << endl 
+      << pol.info()
       << pot.info();
 }

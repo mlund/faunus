@@ -11,7 +11,7 @@ namespace Faunus {
   {
     name.assign("GRAND CANONICAL SALT RESERVOIR");
     cite.assign("n/a");
-    runfraction=1.0;
+    runfraction=in.getflt("saltbath_runfrac",1.0);
     deltadp=0;
     dp=0;
     g.clear();

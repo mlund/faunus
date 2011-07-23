@@ -1,4 +1,4 @@
-/*! \page test_wallprotein WallproteinDH
+/*! \page test_wallprotein WallproteinDebyeHuckel
  *
  * Simulate a number of flexible and titratable
  * polymers in a salt solution in the presence
@@ -73,22 +73,42 @@ int main() {
     pot.expot.update(con);
   #endif
 #endif
-
   // Distribution functions
-  double* zhalfPtr=&con.len_half.z;         // half length of container in z-direction
-  distributions2 dst(0.1,0,(*zhalfPtr)*2.);// distance dependent averages
-  histogram gofr(0.1,0, (*zhalfPtr)*2. );  // radial distribution function
-  histogram q(1,-pol.nb.size(), pol.nb.size()); // polymer charge distribution function
-  histogram rg(.2,0, *zhalfPtr );           // radius of gyration distribution function
-  histogram ree(.2,0, *zhalfPtr );          // end to end distance distribution function
+  double *zhalfPtr = &con.len_half.z;             // half length of container in z-direction
+  double iRee = pol.calcIdealRee( in.getflt( "harmonic_req", 5 ) ); // calculate ideal end-to-end distance
+  if ( iRee > *zhalfPtr )
+    cout << "! Warning estimated end-to-end distance " << iRee 
+      << " AA is bigger than half cuboid_zlen " << *zhalfPtr << " AA" << endl;
+
+  histogram gofr(0.1, 0, *zhalfPtr*2);  // radial distribution function
+  histogram fQ(1 , -pol.nb.size(), pol.nb.size());  // polymer charge distribution function
+  histogram fRg(   1, 0, 2*iRee    );   // radius of gyration distribution function
+  histogram fRgz2( 1, 0, iRee*iRee );   // radius of gyration distribution function in z-direction
+  histogram fRee(  1, 0, 4*iRee    );   // end-to-end distance distribution function
+  histogram fReez( 1, -4*iRee, 4*iRee); // end-to-end distance distribution function in z-direction
+  int polEnds = in.getint("pol_ends",0);// ends of polymer (for Ree calculations)
+
+#ifdef NOSLIT
+  histogram fzmax(.1,0, con.len.z);             // max(z) distribution function
+  histogram internalGofz(1, -4*iRee, 4*iRee ); // internal g(z)
+  histogram internalGofr(1, -4*iRee, 4*iRee ); // internal g(z)
+#else
+  distributions2 dst(.2, 0, *zhalfPtr*2);        // distance dependent averages
+#endif
+// old stuff
+//   vector<histogram> fInternalGofx(10, histogram(.2, -con.len.z, con.len.z ));          // radius of gyration distribution function
+//   vector<histogram> fInternalGofz(10, histogram(.2, -con.len.z, con.len.z ));           // radius of gyration distribution function
+//   vector<histogram> fInternalGofr(10, histogram(.2, -*zhalfPtr, *zhalfPtr ));          // radius of gyration distribution function
+//   xytable< int, average<double> > rij2(1,1,pol.nb.size()); 
+//   histogram fBondr2(.01,0, 20 );                // bond length distribution function
 
   // Moves
   monomermove mm(nvt,con,pot,in);
+  translate mt(nvt,con,pot,in);
+  mt.dpv.x=mt.dpv.y=0; // no need to translate in xy direction
+  macrorot mr(nvt,con,pot,in);
   crankShaft cs(nvt,con,pot,in);
   branchRotation br(nvt,con,pot,in);
-  macrorot mr(nvt,con,pot,in);
-  translate mt(nvt,con,pot,in);
-  mt.dpv.x=mt.dpv.y=0;                          // no need to translate in xy direction
   eqtitrate tit(nvt, con, pot, in, "eqtit_");
 
   // Particle input output
@@ -98,12 +118,23 @@ int main() {
   ioqtraj qtraj;
   xtc.setbox(con.len.x,con.len.y,con.len.z);
   ioaam aam;
-  aam.load(con, "confout.aam");      // load stored configuration
-  pol.masscenter(con);               // update masscenter
+
+  if ( aam.load(con, "confout.aam") ) // load stored configuration
+  {
+    aam.save("confin.aam", con.p);
+    pqr.save("confin.pqr", con.p);
+  }
+  pol.masscenter(con); // update masscenter
   point cm=pol.cm;
   cm.z=0;
-  pol.move(con, -cm);                // translate to the middle of the xy-plane
-  pol.accept(con);                   // accept translation
+  pol.move(con, -cm); // translate to the middle of the xy-plane
+  if (con.slicecollision(pol.cm)==true) {
+    pol.move(con, -pol.cm+(con.slice_min+con.slice_max)*0.5);  // translate to the middle of the slice or the origo (0,0,0) if no slice defined
+    cout << "! Slice collision" << endl;
+    cout << "# Translated polymer to middle of slice" << endl;
+  }
+  pol.accept(con); // accept translation
+
   if (in.getflt("eqtit_runfrac",0.5)<1e-3) {
     pol.loadCharges(in.getstr("pol_charges","q.in"), con.p); // load residue charges from file
     con.trial=con.p;
@@ -169,30 +200,108 @@ int main() {
           break;
       }
 
-      if (slp.random_one()>0.3) {
+      if (slp.random_one()>0.3) 
+      {
         pol.masscenter(con);
         double z=*zhalfPtr-pol.cm.z;  // distance between masscenter and wall
+
         double charge=pol.charge(con.p);
-        dst.add("qtot", z, charge);
-        q.add(charge);
+        fQ.add(charge);
 
-        double rg2=pol.sqmassgradius(con);
-        dst.add("Rg2", z, rg2);
-        dst.add("Rg", z, sqrt(rg2));
-        rg.add(sqrt(rg2));
+        point rg2Point = pol.sqmassgradius3D(con);
+        double rg2 = rg2Point.len();
+        double rg = sqrt(rg2);
+        pol.rg2 += rg2;
+        pol.rg += rg;
+        fRg.add(rg);
+        fRgz2.add(rg2Point.z);
 
-        double ree2=pol.sqend2enddistance(con);
-        dst.add("Ree2", z, ree2); 
-        dst.add("Ree", z, sqrt(ree2)); 
-        ree.add(sqrt(ree2));
+        point reePoint = con.p[pol.beg+polEnds] - con.p[pol.end-polEnds];
+        con.boundary(reePoint);
+        double ree = reePoint.len();
+        pol.ree2 += ree*ree;
+        pol.ree += ree;
+        fRee.add( ree );
+        fReez.add( reePoint.z );
 
-        for (int i=pol.beg; i<=pol.end; i++) {
-          std::ostringstream s; s << "q" << i;
-          dst.add( s.str(), *zhalfPtr-con.p[i].z, con.p[i].charge );	
+#ifdef NOSLIT // wpDH_noslit
+        point rmax;
+        for ( int i=pol.beg; i<=pol.end; i++ ) 
+        {
+          point t = con.p[i]-pol.cm; // vector to center of mass
+          con.boundary(t); // periodic boundary (if any)
+          if ( t.x > rmax.x )
+            rmax.x=t.x;
+          if ( t.y > rmax.y )
+            rmax.y=t.y;
+          if ( t.z > rmax.z )
+            rmax.z=t.z;
+          internalGofz.add( t.x );
+          internalGofz.add( t.y );
+          internalGofz.add( t.z );
+          internalGofr.add( t.len() );
         }
-      }
+        fzmax.add( rmax.x );
+        fzmax.add( rmax.y );
+        fzmax.add( rmax.z );
 
-      if (slp.random_one()<in.getflt("traj_runfrac",0.05) ) {
+#else // wpDH
+        dst.add("Q", z, charge );
+
+        dst.add("Rg2",  z, rg2 );
+        dst.add("Rg",   z, rg );
+        dst.add("Rg2x", z, rg2Point.x );
+        dst.add("Rg2y", z, rg2Point.y );
+        dst.add("Rg2z", z, rg2Point.z );
+
+        dst.add("Ree2", z, ree*ree );
+        dst.add("Ree",  z, ree );
+        dst.add("Ree2x", z, reePoint.x);
+        dst.add("Ree2y", z, reePoint.y);
+        dst.add("Ree2z", z, reePoint.z);
+
+        for ( int i=pol.beg; i<=pol.end; i++ ) 
+        {
+          std::ostringstream s; s << "q" << i;
+          dst.add( s.str(), *zhalfPtr-con.p[i].z, con.p[i].charge );
+        }
+#endif
+
+// old stuff
+//         // internal Gofr functions
+//         size_t zint = round(z);
+//         size_t zndx = (zint-2)/2; // what happens with negative vaules?
+//         if ( zndx < fInternalGofr.size() && zint%2 == 0 && abs(z - zint) < .2 )
+//         {
+//           for (int i=pol.beg; i<pol.end; i++) 
+//           {
+//             point t = con.p[i] - pol.cm; // vector to center of mass
+//             con.boundary(t); // periodic boundary (if any)
+//             fInternalGofx[zndx].add( t.x );
+//             fInternalGofz[zndx].add( t.z );
+//             fInternalGofr[zndx].add( t.len() );
+//           }
+//         }
+
+//         for (int i=pol.beg; i<=pol.end-1; i++) 
+//         {
+//           fBondr2.add(sqrt(con.sqdist(con.p[i],con.p[i+1]))  );
+//           for (int j=i+1; j<=pol.end; j++) 
+//           {
+//             rij2(j-i) += con.sqdist( con.p[i], con.p[j] );
+//           }
+
+//           point l = con.p[i] - con.p[i+1];
+//           con.boundary(l);
+//           lz.add( l.x * l.x );
+//           lz.add( l.y * l.y );
+//           lz.add( l.z * l.z );
+//         }
+
+      } // end of analysis
+
+      if (slp.random_one()<in.getflt("traj_runfrac",0.05) ) 
+      {
         xtc.save( "traj.xtc", con.p );
         qtraj.save( "q.traj", con.p );
       }
@@ -203,44 +312,70 @@ int main() {
       tit.intrinsicenergy(con.p) +
       pot.uself_polymer(con.p, pol) );
 
-    cout << loop.timing() << "#   Energy drift = " << sys.cur-sys.sum << " kT. "
-      << "System charge = " << con.charge() << ". " << endl;
+    int precision = cout.precision();
+    cout << loop.timing() 
+      << "#   Energy drift = " << sys.cur-sys.sum << " kT "
+      << "(current energy = " << setprecision(3) << sys.cur << setprecision(precision) << " kT;"
+      << " charge = " << con.charge() << ") " << endl;
 
-    aam.save("confout.aam", con.p);
     // Write files to disk
-    if ( in.getboo("write_files",true) ) {
+    aam.save("confout.aam", con.p);
+    if ( in.getboo("write_files",true) ) 
+    {
       io.writefile("vmdbonds.tcl", pol.getVMDBondScript());
       pqr.save("confout.pqr",con.p);
-      dst.write("dist.out");
-      dst.cntwrite("cntdist.out");
+
       gofr.write("gofr.out");
       gofr.dump("gofr.xy");
+      fQ.dump("fluctQ.xy");
+      fRg.dump("fluctRg.xy");
+      fRgz2.dump("fluctRgz2.xy");
+      fRee.dump("fluctRee.xy");
+      fReez.dump("fluctReez.xy");
 
-      q.dump("fluctQ.xy");
-      rg.dump("fluctRg.xy");
-      ree.dump("fluctRee.xy");
+      tit.applycharges(con.trial);         // Set average charges on all titratable sites
+      pol.saveCharges("q.out", con.trial); // Save average charges to disk
+      con.trial=con.p;                     // Restore original charges
 
-// #ifndef NOTAB
-//       pot.pair.dump("pairpot.xy");
-// #endif
-#ifndef NOSLIT
+#ifdef NOSLIT
+      fzmax.dump("fluctzmax.xy");
+      internalGofr.dump("internalGofr.xy");
+      internalGofz.dump("internalGofz.xy");
+#else
+      dst.write("dist.out");
+      dst.cntwrite("cntdist.out");
       pot.expot.dump("expot.xy");
 #endif
 #ifdef PENALTY
       pot.pen.dump("penalty", loop.cnt_macro, "xy");
       pot.pen.gofrdump("gofr", loop.cnt_macro, "xy");
 #endif
+#ifndef NOTAB
+      pot.pair.dump("pairpot.xy");
+#endif
 
-      tit.applycharges(con.trial);                      // Set average charges on all titratable sites
-      pol.saveCharges("q.out", con.trial);              // Save average charges to disk
-      con.trial=con.p;                                  // Restore original charges
-    }
+// old stuff
+//       for ( size_t zndx=0; zndx<fInternalGofr.size(); zndx++)
+//       {
+//         int zint = 2+zndx*2;
+//         ostringstream filename;
+//         filename << "internalGofr" << zint << ".xy";
+//         fInternalGofr[ zndx ].dump( filename.str() );
+//         filename.str("");
+//         filename << "internalGofx" << zint << ".xy";
+//         fInternalGofx[ zndx ].dump( filename.str() );
+//         filename.str("");
+//         filename << "internalGofz" << zint << ".xy";
+//         fInternalGofz[ zndx ].dump( filename.str() );
+//       }
+//       fBondr2.dump("bondr2.xy");
+//       rij2.dumptodisk("rij2.xy");
 
+    } // end of write_files
   } // END of macro loop and simulation
 
 cout << sys.info() << loop.info() << mm.info()
   << cs.info() << br.info() << mr.info() 
   << mt.info() << tit.info(con.p) << pol.info(con) 
   << pot.info();
-
 }

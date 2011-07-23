@@ -104,6 +104,7 @@ namespace Faunus {
       double radius(vector<particle> &);          //!< Calculate radius
       double gradius(vector<particle> &);         //!< Calculate radius of gyration
       double sqmassgradius(container &);          //!< Calculate mass weighted squared radius of gyration
+      point sqmassgradius3D(container &);         //!< Calculate mass weighted squared radius of gyration in each direction
       double sqmassgradius(container &, vector<particle> &);   //!< Calculate mass weighted squared radius of gyration, without updating averages
       double sqend2enddistance(container &);      //!< Calculate squared end-to-end distance
       double vradius(vector<particle> &);         //!< Volume based protein radius
@@ -164,6 +165,7 @@ namespace Faunus {
       bool addbond(int, int);                    //!< Add bond between two particles
       bool areneighbors(int, int) const;         //!< True if i and j are bonded to each other
       string getVMDBondScript();                 //!< Print TCL script for VMD to create bonds
+      double calcIdealRee( double ) const;      //!< Calculate ideal end-to-end distance
 #ifdef BABEL
       bool babeladd( container &, inputfile & ); //!< Load molecule from disk using OpenBabel
       bool babeladd( container &, inputfile &, string & ); //!< Load molecule string from disk using OpenBabel

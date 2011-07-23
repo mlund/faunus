@@ -556,6 +556,28 @@ namespace Faunus {
   }
 
   /*!
+   * This squared radius of gyration routine gives the R_g in three perpendicular
+   * directions. It is mass weighted and obeys periodic boundaries 
+   * (if any) by following the previous defined masscenter method
+   */    
+  point macromolecule::sqmassgradius3D(container &c) {
+    point p;
+    point r;
+    double sum=0;
+    for ( int i=beg; i<=end; i++ ) 
+    {
+      r = c.p[i]-cm;                    // vector to center of mass
+      c.boundary( r );                  // periodic boundary (if any)
+      p.x += c.p[i].mw * r.x * r.x;     // m*r_z^2
+      p.y += c.p[i].mw * r.y * r.y;     // m*r_z^2
+      p.z += c.p[i].mw * r.z * r.z;     // m*r_z^2
+      sum += c.p[i].mw;                 // total mass
+    }
+    p=p*(1./sum);
+    return p;                           // obtained squared radius of gyration
+  }
+
+  /*!
    * This squared radius of gyration routine does not update any averages,
    * is mass weighted and obeys periodic boundaries (if any) 
    * by following the previous defined masscenter method
@@ -973,6 +995,14 @@ namespace Faunus {
       o << "}]" << endl;
     }
     return o.str(); 
+  }  
+  
+  /*!
+   * Calculate the ideal polymer end-to-end distance
+   */
+  double polymer::calcIdealRee( const double bondLenght ) const
+  {
+    return pow( (nb.size()-1), .6 ) * bondLenght;
   }
 
   popscmembrane::popscmembrane() {

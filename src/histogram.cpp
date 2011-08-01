@@ -10,7 +10,7 @@ namespace Faunus {
   //! \param min minimum x value
   //! \param max maximum x value
   histogram::histogram(float res, float min, float max)
-    : xytable2<float,unsigned long int>(res,min,max) {
+    : xytable<float,unsigned long int>(res,min,max) {
       reset(res,min,max);
     }
   
@@ -68,6 +68,71 @@ namespace Faunus {
 
   //! Dump table to disk
   void histogram::dump(string filename) {
+    dumptodisk(filename);
+  }
+
+  //! \param res x value resolution
+  //! \param min minimum x value
+  //! \param max maximum x value
+  histogram2::histogram2(float res, float min, float max)
+    : xytable2<float,unsigned long int>(res,min,max) {
+      reset(res,min,max);
+    }
+  
+  void histogram2::reset(float res, float min, float max) {
+    cnt=0;
+    xmaxi=max;
+    xmini=min;
+    init(res,min,max);
+  }
+
+  //! Increment bin for x value
+  void histogram2::add(float x) {
+    if (x>=xmaxi || x<=xmini) return;
+    (*this)(x)++;
+    cnt++;
+  }
+
+  //! Get bin for x value
+  //! \return \f$ \frac{N(r)}{N_{tot}}\f$
+  float histogram2::get(float x) {
+    return (*this)(x)/float(cnt);
+  }
+
+  vector<double> histogram2::xvec() {
+    vector<double> v;
+    for (float x=xmin; x<xmax(); x+=xres)
+      v.push_back(x);
+    return v;
+  }
+
+  vector<double> histogram2::yvec() {
+    vector<double> v;
+    for (float x=xmin; x<xmax(); x+=xres)
+      v.push_back( get(x) );
+    return v;
+  }
+
+  //! Show results for all x
+  void histogram2::write(string file) {
+    float g;
+    std::ofstream f(file.c_str());
+    if (f) {
+      f.precision(6);
+      for (double x=xmin; x<xmax(); x+=xres) {
+        g=get(x);
+        if (g!=0.0) {
+          if (x+xres>=xmax() || x==xmin) // double the very
+            g=g*2;                       // first and last points
+          f << x << " " << g << "\n";
+        }
+      }
+      f.close();
+    }
+  }
+
+  //! Dump table to disk
+  void histogram2::dump(string filename) {
     dumptodisk(filename);
   }
 

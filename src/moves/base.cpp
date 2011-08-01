@@ -117,14 +117,15 @@ namespace Faunus {
     if (dp_opt==true) {
       o << "#   Displacement Optimization:" << endl
         << "#      Completed                      = " << ((dp_N>0) ? "no" : "yes") << endl
+        << "#      Number of optimization trials  = " << dp_cnt << endl
         << "#      Min/max displacement parameter = " << dp_min << " " << dp_max << " " << dp_width << endl
         << "#      Optimal displacement parameter = " << optimaldp()
         << " (L^2=" << dp_dist(optimaldp()).avg() << ")" << endl;
-      if (cnt>dp_N) {
+//       if (cnt>dp_N) {
         o << "#      DP vs. L^2 distribution:" << endl;
         for (double x=dp_min; x<=dp_max; x+=3*dp_width)
-          o << "#      " << std::setw(4) << x << " " << dp_dist(x).avg() << endl;
-      }
+          o << "#      " << std::setw(4) << x << " " << dp_dist(x).avg() << " (" << dp_dist(x).cnt << " counts)" << endl;
+//       }
     }
     return o.str();
   }

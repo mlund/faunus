@@ -22,13 +22,39 @@ namespace Faunus {
    * float val=h.get(4); // val=0.3333
    * \endcode
    */
-  class histogram : protected xytable2<float,unsigned long int> {
+  class histogram : protected xytable<float,unsigned long int> {
     friend class FAUrdf;
     private:
     unsigned long int cnt;
     float xmaxi,xmini;  // ugly solution!
     public:
     histogram(float, float, float);
+    void reset(float, float, float);    //!< Clear data
+    string comment;                     //!< User defined comment
+    void add(float);
+    void write(string);
+    void dump(string);
+    virtual float get(float);
+    vector<double> xvec();              //!< For python interface
+    vector<double> yvec();              //!< For python interface
+  };
+
+  /*!
+   * \brief Histogram2 class
+   * \author Chris Evers 
+   * 
+   * Histogram2 is based on histogram but x-values 
+   * correspond to the lower bound of the slice
+   * for which the value is stored instead of the middle 
+   * of the slice
+   */
+  class histogram2 : protected xytable2<float,unsigned long int> {
+    friend class FAUrdf;
+    private:
+    unsigned long int cnt;
+    float xmaxi,xmini;  // ugly solution!
+    public:
+    histogram2(float, float, float);
     void reset(float, float, float);    //!< Clear data
     string comment;                     //!< User defined comment
     void add(float);

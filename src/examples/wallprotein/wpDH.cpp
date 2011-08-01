@@ -80,7 +80,7 @@ int main() {
     cout << "! Warning estimated end-to-end distance " << iRee 
       << " AA is bigger than half cuboid_zlen " << *zhalfPtr << " AA" << endl;
 
-  histogram gofr(0.1, 0, *zhalfPtr*2);  // radial distribution function
+  histogram2 gofr(0.1, 0, *zhalfPtr*2);  // radial distribution function
   histogram fQ(1 , -pol.nb.size(), pol.nb.size());  // polymer charge distribution function
   histogram fRg(   1, 0, 2*iRee    );   // radius of gyration distribution function
   histogram fRgz2( 1, 0, iRee*iRee );   // radius of gyration distribution function in z-direction
@@ -89,9 +89,9 @@ int main() {
   int polEnds = in.getint("pol_ends",0);// ends of polymer (for Ree calculations)
 
 #ifdef NOSLIT
-  histogram fzmax(.1,0, con.len.z);             // max(z) distribution function
-  histogram internalGofz(1, -4*iRee, 4*iRee ); // internal g(z)
-  histogram internalGofr(1, -4*iRee, 4*iRee ); // internal g(z)
+  histogram2 fzmax(.1,0, con.len.z);             // max(z) distribution function
+  histogram2 internalGofz(1, -4*iRee, 4*iRee ); // internal g(z)
+  histogram2 internalGofr(1, -4*iRee, 4*iRee ); // internal g(z)
 #else
   distributions2 dst(.2, 0, *zhalfPtr*2);        // distance dependent averages
 #endif
@@ -290,7 +290,7 @@ int main() {
 //           {
 //             rij2(j-i) += con.sqdist( con.p[i], con.p[j] );
 //           }
-
+// 
 //           point l = con.p[i] - con.p[i+1];
 //           con.boundary(l);
 //           lz.add( l.x * l.x );

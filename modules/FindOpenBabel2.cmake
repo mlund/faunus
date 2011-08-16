@@ -1,0 +1,27 @@
+# - Find OpenBabel lib and include files
+#
+#  OPENBABEL_INCLUDE_DIR - where to find include files
+#  OPENBABEL_LIBRARIES   - List of libraries when using openbabel.
+#  OPENBABEL_FOUND       - True if found.
+
+IF (OPENBABEL_INCLUDE_DIR)
+  # Already in cache, be silent
+  SET(OPENBABEL_FIND_QUIETLY TRUE)
+ENDIF (OPENBABEL_INCLUDE_DIR)
+
+FIND_PATH( OPENBABEL_INCLUDE_DIR openbabel
+           HINTS /opt/local /sw /usr/local
+           PATH_SUFFIXES include/openbabel-2.0 )
+
+SET(OPENBABEL_NAMES openbabel)
+FIND_LIBRARY(OPENBABEL_LIBRARY NAMES ${OPENBABEL_NAMES}
+             HINTS /opt/local /sw /usr/local)
+
+INCLUDE(FindPackageHandleStandardArgs)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(OPENBABEL DEFAULT_MSG OPENBABEL_LIBRARY OPENBABEL_INCLUDE_DIR)
+
+IF(OPENBABEL_FOUND)
+  SET( OPENBABEL_LIBRARIES ${OPENBABEL_LIBRARY} )
+ENDIF(OPENBABEL_FOUND)
+
+MARK_AS_ADVANCED( CLEAR OPENBABEL_LIBRARY OPENBABEL_INCLUDE_DIR )

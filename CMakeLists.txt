@@ -28,7 +28,7 @@ endif()
 # -----------------
 #   User options
 # -----------------
-option(ENABLE_BABEL    "Try to use OpenBabel for file I/O" on)
+option(ENABLE_BABEL    "Try to use OpenBabel for file I/O" off)
 option(ENABLE_OPENMP   "Try to use OpenMP parallization" off)
 option(ENABLE_FORTRAN  "Try to compile legacy fortran code" off)
 option(ENABLE_TWISTER  "Enable Mersenne Twister random number generator" off)
@@ -43,30 +43,11 @@ mark_as_advanced( EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH
 # ---------------------------
 #add_subdirectory(unittests)
 #add_subdirectory(legacy/fortran)
-#add_subdirectory(src)
+add_subdirectory(src)
 #add_subdirectory(doc EXCLUDE_FROM_ALL)
 
 #if(ENABLE_SWIG)
 #  add_subdirectory(misc/swig)
 #endif()
 
-set(objs slump physconst inputfile)
-set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
-# -------------------------------------
-#   Get subversion revision of source
-# -------------------------------------
-if(Subversion_FOUND)
-  Subversion_WC_INFO(${CMAKE_HOME_DIRECTORY} Faunus ERROR_QUIET)
-  if(Faunus_WC_FOUND)
-    add_definitions("-D__SVN_REV__=${Faunus_WC_REVISION}")
-  endif()
-endif()
-
-# dynamic
-add_library(libfaunus SHARED ${objs})
-set_target_properties(libfaunus PROPERTIES
-  OUTPUT_NAME faunus
-  )
-target_link_libraries(libfaunus xdrfile ${LINKLIBS})
-install(TARGETS libfaunus LIBRARY DESTINATION lib)

@@ -3,7 +3,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 # -------------------------------
 #   Faunus library object files
 # -------------------------------
-set(objs slump physconst point inputfile species container
+set(objs slump physconst point inputfile species container group
     ) 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 

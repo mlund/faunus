@@ -1,0 +1,404 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		738C133413FB12D20056EF71 /* container.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C132D13FB12D20056EF71 /* container.cpp */; };
+		738C133513FB12D20056EF71 /* group.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C132E13FB12D20056EF71 /* group.cpp */; };
+		738C133613FB12D20056EF71 /* inputfile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C132F13FB12D20056EF71 /* inputfile.cpp */; };
+		738C133713FB12D20056EF71 /* physconst.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C133013FB12D20056EF71 /* physconst.cpp */; };
+		738C133813FB12D20056EF71 /* point.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C133113FB12D20056EF71 /* point.cpp */; };
+		738C133913FB12D20056EF71 /* slump.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C133213FB12D20056EF71 /* slump.cpp */; };
+		738C133A13FB12D20056EF71 /* species.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C133313FB12D20056EF71 /* species.cpp */; };
+		738C134D13FB12DE0056EF71 /* average.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C133D13FB12DE0056EF71 /* average.h */; };
+		738C134E13FB12DE0056EF71 /* common.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C133E13FB12DE0056EF71 /* common.h */; };
+		738C134F13FB12DE0056EF71 /* container.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C133F13FB12DE0056EF71 /* container.h */; };
+		738C135013FB12DE0056EF71 /* energy_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134013FB12DE0056EF71 /* energy_base.h */; };
+		738C135113FB12DE0056EF71 /* group.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134113FB12DE0056EF71 /* group.h */; };
+		738C135213FB12DE0056EF71 /* inputfile.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134213FB12DE0056EF71 /* inputfile.h */; };
+		738C135313FB12DE0056EF71 /* mcmove.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134313FB12DE0056EF71 /* mcmove.h */; };
+		738C135413FB12DE0056EF71 /* physconst.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134413FB12DE0056EF71 /* physconst.h */; };
+		738C135513FB12DE0056EF71 /* point.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134513FB12DE0056EF71 /* point.h */; };
+		738C135613FB12DE0056EF71 /* slump.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134613FB12DE0056EF71 /* slump.h */; };
+		738C135713FB12DE0056EF71 /* space.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134713FB12DE0056EF71 /* space.h */; };
+		738C135813FB12DE0056EF71 /* species.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134813FB12DE0056EF71 /* species.h */; };
+		738C136413FB132C0056EF71 /* xdrfile.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134A13FB12DE0056EF71 /* xdrfile.h */; };
+		738C136513FB132C0056EF71 /* xdrfile_trr.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134B13FB12DE0056EF71 /* xdrfile_trr.h */; };
+		738C136613FB132C0056EF71 /* xdrfile_xtc.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134C13FB12DE0056EF71 /* xdrfile_xtc.h */; };
+		738C138913FB13510056EF71 /* xdrfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 738C137E13FB133A0056EF71 /* xdrfile.c */; };
+		738C138A13FB13510056EF71 /* xdrfile_trr.c in Sources */ = {isa = PBXBuildFile; fileRef = 738C137F13FB133A0056EF71 /* xdrfile_trr.c */; };
+		738C138B13FB13510056EF71 /* xdrfile_xtc.c in Sources */ = {isa = PBXBuildFile; fileRef = 738C138013FB133A0056EF71 /* xdrfile_xtc.c */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		738C132613FB12B30056EF71 /* libfaunus.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libfaunus.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		738C132D13FB12D20056EF71 /* container.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = container.cpp; path = ../../src/container.cpp; sourceTree = "<group>"; };
+		738C132E13FB12D20056EF71 /* group.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = group.cpp; path = ../../src/group.cpp; sourceTree = "<group>"; };
+		738C132F13FB12D20056EF71 /* inputfile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = inputfile.cpp; path = ../../src/inputfile.cpp; sourceTree = "<group>"; };
+		738C133013FB12D20056EF71 /* physconst.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = physconst.cpp; path = ../../src/physconst.cpp; sourceTree = "<group>"; };
+		738C133113FB12D20056EF71 /* point.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = point.cpp; path = ../../src/point.cpp; sourceTree = "<group>"; };
+		738C133213FB12D20056EF71 /* slump.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = slump.cpp; path = ../../src/slump.cpp; sourceTree = "<group>"; };
+		738C133313FB12D20056EF71 /* species.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = species.cpp; path = ../../src/species.cpp; sourceTree = "<group>"; };
+		738C133D13FB12DE0056EF71 /* average.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = average.h; sourceTree = "<group>"; };
+		738C133E13FB12DE0056EF71 /* common.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = common.h; sourceTree = "<group>"; };
+		738C133F13FB12DE0056EF71 /* container.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = container.h; sourceTree = "<group>"; };
+		738C134013FB12DE0056EF71 /* energy_base.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = energy_base.h; sourceTree = "<group>"; };
+		738C134113FB12DE0056EF71 /* group.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = group.h; sourceTree = "<group>"; };
+		738C134213FB12DE0056EF71 /* inputfile.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = inputfile.h; sourceTree = "<group>"; };
+		738C134313FB12DE0056EF71 /* mcmove.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = mcmove.h; sourceTree = "<group>"; };
+		738C134413FB12DE0056EF71 /* physconst.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = physconst.h; sourceTree = "<group>"; };
+		738C134513FB12DE0056EF71 /* point.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = point.h; sourceTree = "<group>"; };
+		738C134613FB12DE0056EF71 /* slump.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = slump.h; sourceTree = "<group>"; };
+		738C134713FB12DE0056EF71 /* space.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = space.h; sourceTree = "<group>"; };
+		738C134813FB12DE0056EF71 /* species.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = species.h; sourceTree = "<group>"; };
+		738C134A13FB12DE0056EF71 /* xdrfile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xdrfile.h; sourceTree = "<group>"; };
+		738C134B13FB12DE0056EF71 /* xdrfile_trr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xdrfile_trr.h; sourceTree = "<group>"; };
+		738C134C13FB12DE0056EF71 /* xdrfile_xtc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xdrfile_xtc.h; sourceTree = "<group>"; };
+		738C136013FB13250056EF71 /* libxdrfile.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libxdrfile.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		738C137E13FB133A0056EF71 /* xdrfile.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xdrfile.c; sourceTree = "<group>"; };
+		738C137F13FB133A0056EF71 /* xdrfile_trr.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xdrfile_trr.c; sourceTree = "<group>"; };
+		738C138013FB133A0056EF71 /* xdrfile_xtc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xdrfile_xtc.c; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		738C132313FB12B30056EF71 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		738C135D13FB13250056EF71 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		738C131B13FB12B30056EF71 = {
+			isa = PBXGroup;
+			children = (
+				738C133B13FB12DE0056EF71 /* include */,
+				738C138C13FB13740056EF71 /* src */,
+				738C132713FB12B30056EF71 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		738C132713FB12B30056EF71 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				738C132613FB12B30056EF71 /* libfaunus.dylib */,
+				738C136013FB13250056EF71 /* libxdrfile.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		738C133B13FB12DE0056EF71 /* include */ = {
+			isa = PBXGroup;
+			children = (
+				738C133C13FB12DE0056EF71 /* faunus */,
+				738C134913FB12DE0056EF71 /* xdrfile */,
+			);
+			name = include;
+			path = ../../include;
+			sourceTree = "<group>";
+		};
+		738C133C13FB12DE0056EF71 /* faunus */ = {
+			isa = PBXGroup;
+			children = (
+				738C133D13FB12DE0056EF71 /* average.h */,
+				738C133E13FB12DE0056EF71 /* common.h */,
+				738C133F13FB12DE0056EF71 /* container.h */,
+				738C134013FB12DE0056EF71 /* energy_base.h */,
+				738C134113FB12DE0056EF71 /* group.h */,
+				738C134213FB12DE0056EF71 /* inputfile.h */,
+				738C134313FB12DE0056EF71 /* mcmove.h */,
+				738C134413FB12DE0056EF71 /* physconst.h */,
+				738C134513FB12DE0056EF71 /* point.h */,
+				738C134613FB12DE0056EF71 /* slump.h */,
+				738C134713FB12DE0056EF71 /* space.h */,
+				738C134813FB12DE0056EF71 /* species.h */,
+			);
+			path = faunus;
+			sourceTree = "<group>";
+		};
+		738C134913FB12DE0056EF71 /* xdrfile */ = {
+			isa = PBXGroup;
+			children = (
+				738C134A13FB12DE0056EF71 /* xdrfile.h */,
+				738C134B13FB12DE0056EF71 /* xdrfile_trr.h */,
+				738C134C13FB12DE0056EF71 /* xdrfile_xtc.h */,
+			);
+			path = xdrfile;
+			sourceTree = "<group>";
+		};
+		738C136713FB133A0056EF71 /* xdrfile */ = {
+			isa = PBXGroup;
+			children = (
+				738C137E13FB133A0056EF71 /* xdrfile.c */,
+				738C137F13FB133A0056EF71 /* xdrfile_trr.c */,
+				738C138013FB133A0056EF71 /* xdrfile_xtc.c */,
+			);
+			name = xdrfile;
+			path = ../../src/xdrfile;
+			sourceTree = "<group>";
+		};
+		738C138C13FB13740056EF71 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				738C136713FB133A0056EF71 /* xdrfile */,
+				738C132E13FB12D20056EF71 /* group.cpp */,
+				738C132D13FB12D20056EF71 /* container.cpp */,
+				738C132F13FB12D20056EF71 /* inputfile.cpp */,
+				738C133013FB12D20056EF71 /* physconst.cpp */,
+				738C133113FB12D20056EF71 /* point.cpp */,
+				738C133213FB12D20056EF71 /* slump.cpp */,
+				738C133313FB12D20056EF71 /* species.cpp */,
+			);
+			name = src;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		738C132413FB12B30056EF71 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				738C134D13FB12DE0056EF71 /* average.h in Headers */,
+				738C134E13FB12DE0056EF71 /* common.h in Headers */,
+				738C134F13FB12DE0056EF71 /* container.h in Headers */,
+				738C135013FB12DE0056EF71 /* energy_base.h in Headers */,
+				738C135113FB12DE0056EF71 /* group.h in Headers */,
+				738C135213FB12DE0056EF71 /* inputfile.h in Headers */,
+				738C135313FB12DE0056EF71 /* mcmove.h in Headers */,
+				738C135413FB12DE0056EF71 /* physconst.h in Headers */,
+				738C135513FB12DE0056EF71 /* point.h in Headers */,
+				738C135613FB12DE0056EF71 /* slump.h in Headers */,
+				738C135713FB12DE0056EF71 /* space.h in Headers */,
+				738C135813FB12DE0056EF71 /* species.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		738C135E13FB13250056EF71 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				738C136413FB132C0056EF71 /* xdrfile.h in Headers */,
+				738C136513FB132C0056EF71 /* xdrfile_trr.h in Headers */,
+				738C136613FB132C0056EF71 /* xdrfile_xtc.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		738C132513FB12B30056EF71 /* faunus */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 738C132A13FB12B30056EF71 /* Build configuration list for PBXNativeTarget "faunus" */;
+			buildPhases = (
+				738C132213FB12B30056EF71 /* Sources */,
+				738C132313FB12B30056EF71 /* Frameworks */,
+				738C132413FB12B30056EF71 /* Headers */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = faunus;
+			productName = faunus;
+			productReference = 738C132613FB12B30056EF71 /* libfaunus.dylib */;
+			productType = "com.apple.product-type.library.dynamic";
+		};
+		738C135F13FB13250056EF71 /* xdrfile */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 738C136113FB13250056EF71 /* Build configuration list for PBXNativeTarget "xdrfile" */;
+			buildPhases = (
+				738C135C13FB13250056EF71 /* Sources */,
+				738C135D13FB13250056EF71 /* Frameworks */,
+				738C135E13FB13250056EF71 /* Headers */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = xdrfile;
+			productName = xdrfile;
+			productReference = 738C136013FB13250056EF71 /* libxdrfile.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		738C131D13FB12B30056EF71 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 738C132013FB12B30056EF71 /* Build configuration list for PBXProject "faunus" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 738C131B13FB12B30056EF71;
+			productRefGroup = 738C132713FB12B30056EF71 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				738C132513FB12B30056EF71 /* faunus */,
+				738C135F13FB13250056EF71 /* xdrfile */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		738C132213FB12B30056EF71 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				738C133413FB12D20056EF71 /* container.cpp in Sources */,
+				738C133513FB12D20056EF71 /* group.cpp in Sources */,
+				738C133613FB12D20056EF71 /* inputfile.cpp in Sources */,
+				738C133713FB12D20056EF71 /* physconst.cpp in Sources */,
+				738C133813FB12D20056EF71 /* point.cpp in Sources */,
+				738C133913FB12D20056EF71 /* slump.cpp in Sources */,
+				738C133A13FB12D20056EF71 /* species.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		738C135C13FB13250056EF71 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				738C138913FB13510056EF71 /* xdrfile.c in Sources */,
+				738C138A13FB13510056EF71 /* xdrfile_trr.c in Sources */,
+				738C138B13FB13510056EF71 /* xdrfile_xtc.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		738C132813FB12B30056EF71 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		738C132913FB12B30056EF71 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		738C132B13FB12B30056EF71 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXECUTABLE_PREFIX = lib;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../../src/xdrfile\"",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		738C132C13FB12B30056EF71 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXECUTABLE_PREFIX = lib;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../../src/xdrfile\"",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		738C136213FB13250056EF71 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXECUTABLE_PREFIX = lib;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		738C136313FB13250056EF71 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXECUTABLE_PREFIX = lib;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		738C132013FB12B30056EF71 /* Build configuration list for PBXProject "faunus" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				738C132813FB12B30056EF71 /* Debug */,
+				738C132913FB12B30056EF71 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		738C132A13FB12B30056EF71 /* Build configuration list for PBXNativeTarget "faunus" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				738C132B13FB12B30056EF71 /* Debug */,
+				738C132C13FB12B30056EF71 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+		738C136113FB13250056EF71 /* Build configuration list for PBXNativeTarget "xdrfile" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				738C136213FB13250056EF71 /* Debug */,
+				738C136313FB13250056EF71 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 738C131D13FB12B30056EF71 /* Project object */;
+}

@@ -5,47 +5,12 @@
 #include "faunus/group.h"
 
 namespace Faunus {
-  //! \return Size of particle vector after addition
-  int space::push_back(const particle &par) {
-    p.push_back(par);
-    trial.push_back(par);
-    return p.size();
-  }
-
-  double space::charge() {
+  
+  double space::charge() const {
     double z=0;
     for (unsigned short i=0; i<p.size(); i++)
       z+=p[i].charge;
     return z;
-  }
-
-  /*!\param origo Center of the spherical region
-   * \param r Radius of the spherical region
-   */
-  double space::charge(const point &origo, double r) {
-    double q=0,r2=r*r;
-    for (int i=0; i<p.size(); i++)
-      if (p[i].sqdist(origo) <= r2)
-        q += p[i].charge;
-    return q;
-  }
-
-  /*!\param a overlapping(?) particle
-  */
-  bool space::overlap(const particle &a) {
-    for (unsigned short i=0; i<p.size(); i++)
-      if ( clash(p[i],a)==true) return true;
-    return false;
-  }
-
-  bool space::overlap(const vector<particle> &v) {
-    unsigned short i = v.size();
-    for (unsigned int j=0; j<p.size(); j++) {
-      for (unsigned int k=0; k<i; k++) {
-        if( clash(p[j],v[k])==true ) return true;
-      }
-    }
-    return false;
   }
 
   bool space::check_vector() {
@@ -64,24 +29,6 @@ namespace Faunus {
     if (rc==false)
       std::cerr << "# Fatal error: Particle vectors corrupted!!\n";
     return rc;
-  }
-
-  int space::count(unsigned char id, const point &origo, double r) {
-    int i,cnt=0,n=p.size();
-    double r2=r*r;
-    for (i=0; i<n; i++)
-      if (p[i].sqdist(origo) < r2) cnt++;
-    return cnt;
-  }
-
-  vector<unsigned char> space::list_of_species() const {
-    vector<unsigned char> id;
-    for (int i=0; i<p.size(); i++) {
-      vector<unsigned char>::iterator iter = std::find(id.begin(), id.end(), p[i].id);
-      if (iter==id.end())
-        id.push_back(p[i].id);
-    }
-    return id;
   }
 
   /*!
@@ -116,9 +63,46 @@ namespace Faunus {
     }
     return true;
   }
-
-  bool space::clash(const particle &p1, const particle &p2) {
-    return p1.overlap(p2);
+  
+  bool space::saveToDisk(string file) {
+    if (!fout)
+      fout.open( file.c_str() );
+    if (fout) {
+      fout.precision(10);
+      fout << p.size() << endl;
+      for (int i=0; i<p.size(); i++)
+        fout << p[i] << endl;
+      for (int i=0; i<g.size(); i++)
+        fout << g[i]->beg << " " << g[i]->end << endl;
+      fout.close();
+      return true;
+    }
+    return false;
+  }
+  
+  /*!
+   * \param file Filename
+   * \param resize True if the current container should be resized to match file content (default: false)
+   */
+  bool space::loadFromDisk(string file, bool resize) {
+    unsigned int n;
+    std::ifstream f(file.c_str() );
+    if (f) {
+      f >> n;
+      if (resize==true)
+        p.resize(n);
+      if (n==p.size()) {
+        for (int i=0; i<n; i++)
+          p[i] << f;
+        trial=p;
+        f.close();
+        std::cout << "# Read " << n << " space from " << file << endl;
+        return true;
+      }
+      f.close();
+    }
+    std::cerr << "# Container data NOT read from file " << file << endl;
+    return false;
   }
 
   double container::dist(const point &p1, const point &p2) {
@@ -129,7 +113,8 @@ namespace Faunus {
     return a-b;
   }
 
-  void container::scale(point &a, const double &s) const {}
+  void container::scale(point &a, const double &s) const {
+  }
 
   string container::info() {
     double z=charge();
@@ -148,14 +133,12 @@ namespace Faunus {
   }
 
   bool container::saveToDisk(string file) {
-    std::ofstream f(file.c_str());
-    if (f) {
-      f.precision(10);
-      f << p.size() << " " << getvolume() << endl;
-      for (int i=0; i<p.size(); i++)
-        f << p[i] << endl;
-      f.close();
-      return true;
+    if (!fout)
+      fout.open( file.c_str() );
+    if (fout) {
+      fout.precision(10);
+      fout << p.size() << " " << getvolume() << endl;
+      return space::saveToDisk(file);
     }
     return false;
   }
@@ -353,9 +336,12 @@ namespace Faunus {
     return false;
   }
 
-  //----------- CUBOIDSLIT --------------------------
-
-  cuboidslit::cuboidslit(inputfile &in) : cuboid(in) {}
+  //
+  //--- cuboid slit container ---
+  //
+  
+  cuboidslit::cuboidslit(inputfile &in) : cuboid(in) {
+  }
 
   string cuboidslit::info() {
     std::ostringstream o;

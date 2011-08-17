@@ -10,7 +10,7 @@ set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 #----- xdrfile static library for gromacs output -----
 add_subdirectory(xdrfile)
 
-# ---=---------------------------------
+# -------------------------------------
 #   Mersenne Twister requires C++ TR1
 # ----=--------------------------------
 check_include_file_cxx("tr1/random" HAVETR1)

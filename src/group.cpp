@@ -88,6 +88,17 @@ namespace Faunus {
     assert(sum>0);
     return cm;
   }
+  
+  point group::dipolemoment(const container &con) const {
+    point d;
+    return d;
+  }
+  
+  void group::rotate(container &con, const point &v, double) {
+  }
+  
+  void group::scale(container &con, double) {
+  }
 
   void group::undo(space &s) {
     for (int i=beg; i<=end; i++) {

@@ -12,7 +12,6 @@ namespace Faunus {
   class space {
   protected:
     std::ifstream fin;
-    std::ofstream fout;
   private:
     slump slp;
   public:

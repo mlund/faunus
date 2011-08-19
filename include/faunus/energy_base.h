@@ -49,7 +49,7 @@ class bonded : public energybase {
   // should we have a class that keeps track of particles,
   // groups, bond lists etc.?? YES!
   public:
-    void set_bondlist(int i, int j);
+    //void set_bondlist(int i, int j);
     double i_internal(const vector<particle> &p, int i) { return 0; }
     double g_internal(const vector<particle> &p, const group &g) { return 0; }
 };

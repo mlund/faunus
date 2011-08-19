@@ -1,6 +1,7 @@
 #ifndef FAUNUS_GROUP_H
 #define FAUNUS_GROUP_H
 
+#include <faunus/common.h>
 #include <faunus/average.h>
 
 namespace Faunus {
@@ -10,6 +11,9 @@ namespace Faunus {
   class container;
 
   class group {
+    protected:
+    virtual std::ostream& write(std::ostream &) const; //!< Write all group data to stream
+    
   public:
     group();
     string info();
@@ -28,23 +32,36 @@ namespace Faunus {
     virtual void scale(container&, double);                    //!< Volume scaling
     virtual void undo(space&);                                 //!< Undo move operation
     virtual void accept(space&);
-    
-    bool operator==(const group&) const;
-    group& operator+=(const group&);
+
+    // Operators
+    bool operator==(const group&) const;                     //!< Compare two groups
+    group& operator+=(const group&);                         //!< Add two groups
     const group operator+(const group&) const;
+    friend std::ostream &operator<<(std::ostream&, group&);  //!< Output group data to stream
+    virtual group &operator<<(std::istream &);               //!< Get group data from stream
+
   };
   
-  class molecular  {
+  class molecular : public group {
   protected:
-    point cm_trial;           //!< mass center vector for trial position
+    std::ostream & write(std::ostream&) const;  //!< Write all group data to stream
+    point cm_trial;                             //!< mass center vector for trial position
+    
   public:
     point cm;                 //!< mass center vector
     average<double> Q;        //!< average net charge
     average<double> mu;       //!< average dipole moment
+    
+    void translate(container&, const point&);
+    void accept(space&);
+
+    molecular &operator<<(std::istream &);                        //!< Get information
   };
   
   class cigar : public molecular {
   public:
+    int id;
+    double patchangle;
     point cap1, cap2, patch;
   };
 

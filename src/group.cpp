@@ -1,3 +1,4 @@
+#include <faunus/point.h>
 #include <faunus/container.h>
 #include <faunus/species.h>
 #include <faunus/physconst.h>
@@ -5,9 +6,9 @@
 
 namespace Faunus {
 
-  //
-  // G R O U P
-  //
+  /* -----------------------------------*
+   *                GROUP
+   * -----------------------------------*/
 
   group::group() {
     beg=end=-1;
@@ -55,10 +56,20 @@ namespace Faunus {
     return o;
   }
 
-  bool group::operator==(const group& g) const {
-    // TODO: perhaps there could even be a real comparison (?)
-    return (*this == g);
+  bool group::operator==(const group& g) const { return (*this == g); }
+  
+  std::ostream& group::write(std::ostream &o) const {
+    o << beg << " " << end;
+    return o;
   }
+
+  std::ostream& operator<<(std::ostream &o, group &g) { return g.write(o); }
+  
+  group & group::operator<<(std::istream &in) {
+    in >> beg >> end;
+    return *this;
+  }
+
 
   string group::info() {
     std::ostringstream o;
@@ -121,12 +132,38 @@ namespace Faunus {
    * \param par Container class
    * \param c ...by adding this vector to all particles
    */
-  void group::translate(container &par, const point &c) {
+  void group::translate(container &con, const point &p) {
     for (int i=beg; i<=end; i++) {
-      par.trial[i].x = par.p[i].x + c.x;
-      par.trial[i].y = par.p[i].y + c.y;
-      par.trial[i].z = par.p[i].z + c.z;
-      par.boundary(par.trial[i]);
+      con.trial[i] = con.p[i] + p;
+      con.boundary( con.trial[i] );
     }
   }
+  
+  /* -----------------------------------*
+   *             MOLECULAR
+   * -----------------------------------*/
+   
+  std::ostream& molecular::write(std::ostream &o) const {
+    group::write(o);
+    o << " " << cm;
+    return o;
+  }
+  
+  molecular& molecular::operator<<(std::istream &in) {
+    group::operator<<(in);
+    cm.operator<<(in);
+    return *this;
+  }
+  
+  void molecular::translate(container &con, const point &p) {
+    group::translate(con, p);
+    cm_trial=cm+p;
+    con.boundary(cm_trial);
+  }
+  
+  void molecular::accept(space &s) {
+    group::accept(s);
+    cm=cm_trial;
+  }
+  
 }//namespace

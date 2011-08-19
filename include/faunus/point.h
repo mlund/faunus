@@ -21,7 +21,7 @@ namespace Faunus {
     public:
       double z1,z2,z3,z4;                     //!< Reduced Coordinates on hypersphere
       void move(double,double,double);        //!< Translate a point along the surface of the sphere
-      friend std::ostream &operator<<(std::ostream &, hyperpoint &);
+      friend std::ostream &operator<<(std::ostream &, const hyperpoint &);
       hyperpoint &operator<<(std::istream &);
 
       void hypclear() {
@@ -84,7 +84,7 @@ namespace Faunus {
         point & operator+=(const point&);
         bool operator==(const point&) const;
         std::string str();
-        friend std::ostream &operator<<(std::ostream &, point &); //!< Output information
+        friend std::ostream &operator<<(std::ostream &, const point &); //!< Output information
         point &operator<<(std::istream &);                        //!< Get information
     };
 
@@ -119,7 +119,7 @@ namespace Faunus {
       particle& operator=(const point&);        //!< Copy coordinates from a point
       void deactivate();                        //!< Deactivate for use w. faster energy loops
       void clear();                             //!< Clear/reset all data
-      friend std::ostream &operator<<(std::ostream &, particle &); //!< Output information
+      friend std::ostream &operator<<(std::ostream &, const particle &); //!< Output information
       particle &operator<<(std::istream &);                        //!< Get information
    };
 

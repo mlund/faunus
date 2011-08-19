@@ -34,6 +34,16 @@
 		738C138B13FB13510056EF71 /* xdrfile_xtc.c in Sources */ = {isa = PBXBuildFile; fileRef = 738C138013FB133A0056EF71 /* xdrfile_xtc.c */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		739E7C1213FE675E00D1D329 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 738C131D13FB12B30056EF71 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 738C135F13FB13250056EF71;
+			remoteInfo = xdrfile;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		738C132613FB12B30056EF71 /* libfaunus.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libfaunus.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		738C132D13FB12D20056EF71 /* container.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = container.cpp; path = ../../src/container.cpp; sourceTree = "<group>"; };
@@ -211,6 +221,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				739E7C1313FE675E00D1D329 /* PBXTargetDependency */,
 			);
 			name = faunus;
 			productName = faunus;
@@ -283,6 +294,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		739E7C1313FE675E00D1D329 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 738C135F13FB13250056EF71 /* xdrfile */;
+			targetProxy = 739E7C1213FE675E00D1D329 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		738C132813FB12B30056EF71 /* Debug */ = {
@@ -389,6 +408,7 @@
 				738C132C13FB12B30056EF71 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		738C136113FB13250056EF71 /* Build configuration list for PBXNativeTarget "xdrfile" */ = {
 			isa = XCConfigurationList;
@@ -397,6 +417,7 @@
 				738C136313FB13250056EF71 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

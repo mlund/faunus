@@ -65,15 +65,15 @@ namespace Faunus {
   }
   
   bool space::saveToDisk(string file) {
-    if (!fout)
-      fout.open( file.c_str() );
+    std::ofstream fout( file.c_str() );
     if (fout) {
       fout.precision(10);
       fout << p.size() << endl;
       for (int i=0; i<p.size(); i++)
         fout << p[i] << endl;
+      fout << g.size() << endl;
       for (int i=0; i<g.size(); i++)
-        fout << g[i]->beg << " " << g[i]->end << endl;
+        fout << *g[i] << endl;
       fout.close();
       return true;
     }
@@ -86,20 +86,24 @@ namespace Faunus {
    */
   bool space::loadFromDisk(string file, bool resize) {
     unsigned int n;
-    std::ifstream f(file.c_str() );
-    if (f) {
-      f >> n;
+    fin.close();
+    fin.open( file.c_str() );
+    if (fin) {
+      fin >> n;
       if (resize==true)
         p.resize(n);
       if (n==p.size()) {
         for (int i=0; i<n; i++)
-          p[i] << f;
+          p[i] << fin;
         trial=p;
-        f.close();
-        std::cout << "# Read " << n << " space from " << file << endl;
-        return true;
+        std::cout << "# Read " << n << " space points from " << file << endl;
+        
+        fin >> n;
+        g.resize(n);
+        for (int i=0; i<g.size(); i++)
+          *g[i] << fin;
+        std::cout << "# Read " << n << " groups from " << file << endl;
       }
-      f.close();
     }
     std::cerr << "# Container data NOT read from file " << file << endl;
     return false;
@@ -133,12 +137,13 @@ namespace Faunus {
   }
 
   bool container::saveToDisk(string file) {
-    if (!fout)
-      fout.open( file.c_str() );
-    if (fout) {
-      fout.precision(10);
-      fout << p.size() << " " << getvolume() << endl;
-      return space::saveToDisk(file);
+    if ( space::saveToDisk(file) ) {
+      std::ofstream fout( file.c_str(), std::ios_base::app);
+      if (fout) {
+        fout.precision(10);
+        fout <<  getvolume() << endl;
+        return true;
+      }
     }
     return false;
   }

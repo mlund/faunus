@@ -75,7 +75,7 @@ namespace Faunus {
     z4=tz4;
   }
 
-  std::ostream & operator<<(std::ostream &o, hyperpoint &p) {
+  std::ostream & operator<<(std::ostream &o, const hyperpoint &p) {
     o << p.z1 << " " << p.z2 << " " << p.z3 << " " << p.z4;
     return o;
   }
@@ -191,7 +191,7 @@ namespace Faunus {
     return "[" + s.str() + "]";
   }
 
-  std::ostream &operator<<(std::ostream &o, point &p) {
+  std::ostream &operator<<(std::ostream &o, const point &p) {
 #ifdef HYPERSPHERE
     hyperpoint hp=p;
     o << hp << " ";
@@ -261,7 +261,7 @@ namespace Faunus {
 #endif
   }
 
-  std::ostream &operator<<(std::ostream &o, particle &p) {
+  std::ostream &operator<<(std::ostream &o, const particle &p) {
     point b=p;
     o << b << " " << p.charge << " " << p.radius << " " << p.mw << " " << (short)p.id << " " << p.hydrophobic;
     return o;

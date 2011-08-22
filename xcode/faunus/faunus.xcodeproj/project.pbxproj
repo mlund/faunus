@@ -20,7 +20,6 @@
 		738C135013FB12DE0056EF71 /* energy_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134013FB12DE0056EF71 /* energy_base.h */; };
 		738C135113FB12DE0056EF71 /* group.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134113FB12DE0056EF71 /* group.h */; };
 		738C135213FB12DE0056EF71 /* inputfile.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134213FB12DE0056EF71 /* inputfile.h */; };
-		738C135313FB12DE0056EF71 /* mcmove.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134313FB12DE0056EF71 /* mcmove.h */; };
 		738C135413FB12DE0056EF71 /* physconst.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134413FB12DE0056EF71 /* physconst.h */; };
 		738C135513FB12DE0056EF71 /* point.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134513FB12DE0056EF71 /* point.h */; };
 		738C135613FB12DE0056EF71 /* slump.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C134613FB12DE0056EF71 /* slump.h */; };
@@ -32,6 +31,9 @@
 		738C138913FB13510056EF71 /* xdrfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 738C137E13FB133A0056EF71 /* xdrfile.c */; };
 		738C138A13FB13510056EF71 /* xdrfile_trr.c in Sources */ = {isa = PBXBuildFile; fileRef = 738C137F13FB133A0056EF71 /* xdrfile_trr.c */; };
 		738C138B13FB13510056EF71 /* xdrfile_xtc.c in Sources */ = {isa = PBXBuildFile; fileRef = 738C138013FB133A0056EF71 /* xdrfile_xtc.c */; };
+		73BA8B6713FEF70A0037B9A7 /* move_translational.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BA8B6613FEF70A0037B9A7 /* move_translational.h */; };
+		73BA8B6A13FEF8AE0037B9A7 /* move_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BA8B6913FEF8AE0037B9A7 /* move_base.h */; };
+		73BA8B6C13FEF8D70037B9A7 /* move_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73BA8B6B13FEF8D70037B9A7 /* move_base.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,7 +61,6 @@
 		738C134013FB12DE0056EF71 /* energy_base.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = energy_base.h; sourceTree = "<group>"; };
 		738C134113FB12DE0056EF71 /* group.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = group.h; sourceTree = "<group>"; };
 		738C134213FB12DE0056EF71 /* inputfile.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = inputfile.h; sourceTree = "<group>"; };
-		738C134313FB12DE0056EF71 /* mcmove.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = mcmove.h; sourceTree = "<group>"; };
 		738C134413FB12DE0056EF71 /* physconst.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = physconst.h; sourceTree = "<group>"; };
 		738C134513FB12DE0056EF71 /* point.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = point.h; sourceTree = "<group>"; };
 		738C134613FB12DE0056EF71 /* slump.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = slump.h; sourceTree = "<group>"; };
@@ -72,6 +73,9 @@
 		738C137E13FB133A0056EF71 /* xdrfile.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xdrfile.c; sourceTree = "<group>"; };
 		738C137F13FB133A0056EF71 /* xdrfile_trr.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xdrfile_trr.c; sourceTree = "<group>"; };
 		738C138013FB133A0056EF71 /* xdrfile_xtc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xdrfile_xtc.c; sourceTree = "<group>"; };
+		73BA8B6613FEF70A0037B9A7 /* move_translational.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = move_translational.h; sourceTree = "<group>"; };
+		73BA8B6913FEF8AE0037B9A7 /* move_base.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = move_base.h; sourceTree = "<group>"; };
+		73BA8B6B13FEF8D70037B9A7 /* move_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = move_base.cpp; path = ../../src/move_base.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -127,9 +131,10 @@
 				738C133E13FB12DE0056EF71 /* common.h */,
 				738C133F13FB12DE0056EF71 /* container.h */,
 				738C134013FB12DE0056EF71 /* energy_base.h */,
+				73BA8B6913FEF8AE0037B9A7 /* move_base.h */,
+				73BA8B6613FEF70A0037B9A7 /* move_translational.h */,
 				738C134113FB12DE0056EF71 /* group.h */,
 				738C134213FB12DE0056EF71 /* inputfile.h */,
-				738C134313FB12DE0056EF71 /* mcmove.h */,
 				738C134413FB12DE0056EF71 /* physconst.h */,
 				738C134513FB12DE0056EF71 /* point.h */,
 				738C134613FB12DE0056EF71 /* slump.h */,
@@ -165,6 +170,7 @@
 			children = (
 				738C136713FB133A0056EF71 /* xdrfile */,
 				738C132E13FB12D20056EF71 /* group.cpp */,
+				73BA8B6B13FEF8D70037B9A7 /* move_base.cpp */,
 				738C132D13FB12D20056EF71 /* container.cpp */,
 				738C132F13FB12D20056EF71 /* inputfile.cpp */,
 				738C133013FB12D20056EF71 /* physconst.cpp */,
@@ -188,12 +194,13 @@
 				738C135013FB12DE0056EF71 /* energy_base.h in Headers */,
 				738C135113FB12DE0056EF71 /* group.h in Headers */,
 				738C135213FB12DE0056EF71 /* inputfile.h in Headers */,
-				738C135313FB12DE0056EF71 /* mcmove.h in Headers */,
 				738C135413FB12DE0056EF71 /* physconst.h in Headers */,
 				738C135513FB12DE0056EF71 /* point.h in Headers */,
 				738C135613FB12DE0056EF71 /* slump.h in Headers */,
 				738C135713FB12DE0056EF71 /* space.h in Headers */,
 				738C135813FB12DE0056EF71 /* species.h in Headers */,
+				73BA8B6713FEF70A0037B9A7 /* move_translational.h in Headers */,
+				73BA8B6A13FEF8AE0037B9A7 /* move_base.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -280,6 +287,7 @@
 				738C133813FB12D20056EF71 /* point.cpp in Sources */,
 				738C133913FB12D20056EF71 /* slump.cpp in Sources */,
 				738C133A13FB12D20056EF71 /* species.cpp in Sources */,
+				73BA8B6C13FEF8D70037B9A7 /* move_base.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

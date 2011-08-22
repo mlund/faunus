@@ -2,6 +2,7 @@
 #define FAUNUS_MCMOVE_H
 
 #include <faunus/common.h>
+#include <faunus/slump.h>
 
 namespace Faunus {
   class average;
@@ -15,16 +16,17 @@ namespace Faunus {
   class displacement_optimizer {
     private:
       double* dpPtr;   //!< Pointer to displacement parameter
-      average<double>* msqPtr; //!< Pointer to mean-square displacement
+      //average<double>* msqPtr; //!< Pointer to mean-square displacement
       double dp_min;
       double dp_max;
 
     public:
-      set_target(double&, average&);
+      //set_target(double&, average&);
   };
 
   class mcmove {
     protected:
+      slump slp;
       string title;                    //!< title of move
       string cite;                     //!< litterature reference, url, DOI etc.
       unsigned long int cnt;           //!< total number of trial moves
@@ -42,7 +44,8 @@ namespace Faunus {
       virtual double move()=0;    //!< Attempt a move and return energy change
       double runfraction;         //!< Fraction of times calling move() should result in an actual move
       string info();              //!< Returns information string
-      void unittest(unittest &);  //!< Perform unit test
+      bool metropolis(double);    //!< Metropolis test
+      //void unittest(unittest &);  //!< Perform unit test
   };
 
   mcmove::mcmove(string pfx) {
@@ -51,9 +54,7 @@ namespace Faunus {
     iw=15;
   }
 
-  void mcmove::unittest(unittest&) {
-
-  }
+//  void mcmove::unittest(unittest&) {  }
 
   string mcmove::info() {
     std::ostringstream p, o;

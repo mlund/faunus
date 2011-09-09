@@ -4,6 +4,7 @@
 #include "faunus/point.h"
 #include "faunus/inputfile.h"
 #include "faunus/physconst.h"
+#include <faunus/container.h>
 
 namespace Faunus {
 
@@ -143,45 +144,27 @@ namespace Faunus {
           }
       };
 
-      class harddistance : public distancebase {
-        public:
-          harddistance(inputfile &in) { name="Hard"; }
-          inline double sqdist(const particle &a, const particle &b) const { return a.sqdist(b); }
-      };
-
-      class minimumimage : public distancebase {
-        protected:
-          point len, len_half;
-        public:
-          minimumimage(inputfile &in) {
-            name="Periodic/MI";
-          }
-          inline double sqdist(const particle &a, const particle &b) const { return a.sqdist_mi_xyz(b,len,len_half);}
-          void setlength(const point &l) {
-            len=l;
-            len_half=l*0.5;
-          }
-      };
-
     } //Core namespace
 
-    template<class Tdist=Core::harddistance>
+    template<class Tgeometry>
       class coulomb_lj {
         public:
           Core::lennardjones lj;
           Core::coulomb el;
-          Tdist dist;
-          coulomb_lj(inputfile &in) : lj(in), el(in), dist(in) {}
+          Tgeometry geo;
+          coulomb_lj(inputfile &in) : lj(in), el(in), geo(in) {}
           inline double pairpot(const particle &a, const particle &b) const {
-            double r2=dist.sqdist(a,b);
+            double r2=geo.sqdist(a,b);
             return el.u_coulomb(sqrt(r2), a.charge*b.charge) + lj.u_lj(r2,a.radius+b.radius);
           }
           string info(char w=20) {
-            return "# " + lj.name +"+" + el.name + ":\n" + dist.info(w) + lj.info(w) + el.info(w);
+            return "\n# PAIR POTENTIAL: " + lj.name +"+" + el.name + "\n"
+              + geo.info(w) + lj.info(w) + el.info(w);
           }
       };
 
-    typedef coulomb_lj<Core::minimumimage> coulomb_lj_mi; //!< Coulomb-Lennard Jones pair portential w. minimum image
+    typedef coulomb_lj<sphere> coulomb_lj_sphere; //!< Coulomb-Lennard Jones pair portential w. minimum image
+    typedef coulomb_lj<cuboid> coulomb_lj_cuboid; //!< Coulomb-Lennard Jones pair portential w. minimum image
 
   } //Potential namespace
 

@@ -278,17 +278,18 @@ namespace Faunus {
    * \param file Name of the output xtc file
    * \param c cuboid container from which particles and box dimensions are read.
    */
-  bool ioxtc::save(string file, cuboid &c) {
+  bool ioxtc::save(string file, space &c) {
+    cuboid* geo = dynamic_cast<cuboid*>(c.geo);
     p=c.p;
-    setbox(c.len.x, c.len.y, c.len.z);
+    setbox(geo->len.x, geo->len.y, geo->len.z);
     for (int i=0; i<g.size(); i++) {
-      g[i]->translate( c, -g[i]->cm );              // b.trial is moved to origo -> whole!
+      g[i]->translate( c, -g[i]->cm );         // b.trial is moved to origo -> whole!
       for (int j = g[i]->beg; j <= g[i]->end; j++)
         p[j] = c.trial[j] + g[i]->cm;          // move back to cm without periodicity
       g[i]->undo(c);                           // restore to original PBC location
     }
     for (int i=0; i<p.size(); i++)
-      p[i]+=c.len_half;                        // gromacs origo is in the corner of the box
+      p[i]+=geo->len_half;                     // gromacs origo is in the corner of the box
     return save(file, p);                      // while in cuboid we use the middle
   }
 
@@ -361,21 +362,23 @@ namespace Faunus {
    *       an error message will be issued and the function will abort.
    * \note You may want to transfer the new box size to the pair potential if periodic boundaries are used.
    */
-  bool ioxtc::loadnextframe(cuboid &c) {
+  bool ioxtc::loadnextframe(space &c) {
     if (xd!=NULL) {
       if (natoms_xtc==c.p.size()) { 
         int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
         if (rc==0) {
+          static double ten=10;
+          cuboid* geo = dynamic_cast<cuboid*>(c.geo);
           point l( xdbox[0][0], xdbox[1][1], xdbox[2][2] );
-          c.setlen(l*10.);
+          geo->setlen(l*ten);
           for (int i=0; i<c.p.size(); i++) {
-            c.p[i].x = x_xtc[i][0]*10.-c.len_half.x;     // store pos. in container.                 
-            c.p[i].y = x_xtc[i][1]*10.-c.len_half.y;
-            c.p[i].z = x_xtc[i][2]*10.-c.len_half.z;
+            c.p[i].x = x_xtc[i][0]*ten - geo->len_half.x;     // store pos. in container.                 
+            c.p[i].y = x_xtc[i][1]*ten - geo->len_half.y;
+            c.p[i].z = x_xtc[i][2]*ten - geo->len_half.z;
             c.trial[i].x=c.p[i].x;
             c.trial[i].y=c.p[i].y;
             c.trial[i].z=c.p[i].z;
-            if ( c.collision(c.p[i]) ) {
+            if ( geo->collision(c.p[i]) ) {
               std::cerr << "# ioxtc load error: particle-container collision!" << endl;
               return false;
             }

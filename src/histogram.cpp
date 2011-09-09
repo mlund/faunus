@@ -152,10 +152,10 @@ namespace Faunus {
 
   /*!
    * Update histogram between two known points
-   * \note Uses the container distance function
+   * \note Uses the space distance function
    */
-  void FAUrdf::update(container &c, point &a, point &b) {
-    add( c.dist(a, b) );
+  void FAUrdf::update(space &s, point &a, point &b) {
+    add( s.geo->dist(a, b) );
   }
 
   /*!
@@ -164,7 +164,7 @@ namespace Faunus {
    *
    * \note Uses the container function to calculate distances
    */
-  void FAUrdf::update(container &c) {
+  void FAUrdf::update(space &c) {
     int n=c.p.size();
     npart=0;
 #pragma omp parallel for schedule (dynamic)
@@ -177,7 +177,7 @@ namespace Faunus {
         }
   }
 
-  void FAUrdf::update(container &c, group &g) {
+  void FAUrdf::update(space &c, group &g) {
     int n=g.end+1;
     npart=0;
     //#pragma omp for
@@ -186,20 +186,20 @@ namespace Faunus {
         if ( (c.p[i].id==a && c.p[j].id==b)
             || (c.p[j].id==a && c.p[i].id==b) ) {
           npart++;
-          add( c.dist(c.p[i], c.p[j]) );
+          add( c.geo->dist(c.p[i], c.p[j]) );
         }
       }
     }
   }
 
-  void FAUrdf::update(container &c, point &p, string name) {
+  void FAUrdf::update(space &c, point &p, string name) {
     int id=atom[name].id, n=c.p.size();
     npart=0;
     //#pragma omp for
     for (int i=0; i<n; ++i)
       if ( c.p[i].id==id ) {
         npart++;
-        add( c.dist(p, c.p[i] ));
+        add( c.geo->dist(p, c.p[i] ));
       }
   }
 

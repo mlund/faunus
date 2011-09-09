@@ -11,21 +11,23 @@ using namespace Faunus;
 int main() {
 
   atom.includefile("atomlist.inp");
-  inputfile in;
-  cuboid con(in);
+  inputfile in("cigar.inp");
 
   particle p;
   p.patchangle=1.0;
   p=atom["NA"];
 
   //hamiltonian
-  Energy::hamiltonian pot;
   Energy::bonded pot_b;
-  Energy::nonbonded<Potential::coulomb_lj_mi> pot_nb(in);
+  Energy::nonbonded<Potential::coulomb_lj_cuboid> pot_nb(in);
+  Energy::hamiltonian pot( &pot_nb.pair.geo ) ;
   pot+=pot_b;
   pot+=pot_nb;
 
-  cout << atom.info() << con.info() << pot_nb.pair.info() << endl;
+  space spc;
+  spc.geo=pot.geo;
+
+  cout << atom.info() << spc.info() << pot_nb.pair.info() << endl;
   cout << p << endl;
 
 }

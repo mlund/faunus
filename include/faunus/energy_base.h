@@ -20,6 +20,8 @@ namespace Faunus {
 
     class energybase {
       public:
+        geometry* geo; //!< Pointer to geometry functions - possibly slow, so avoid in time critical steps
+
         // single particle interactions
         virtual double i2i(const vector<particle> &p, int i, int j) { return 0; }
         virtual double i2g(const vector<particle> &p, const group &g, int i) { return 0; }
@@ -40,6 +42,7 @@ namespace Faunus {
         public:
           T pair;
           nonbonded(inputfile &in) : pair(in) {
+            geo=&pair.geo;
           }
           virtual double i2i(const vector<particle> &p, int i, int j) { return 0; }
           virtual double i2g(const vector<particle> &p, const group &g, int i) { return 0; }
@@ -65,7 +68,12 @@ namespace Faunus {
       private:
         vector<energybase*> base;
       public:
+        hamiltonian(geometry* geoPtr) {
+          geo=geoPtr;
+        }
+
         void operator+=(energybase &b) {
+          b.geo=geo; // force uniform geometry
           base.push_back(&b);
         }
 
@@ -89,6 +97,6 @@ namespace Faunus {
         double g_internal(const vector<particle> &p, const group &g) { return 0; }
         string info() { return "hej";  };
     };
-  }//namespace
-}//namespace
+  }//Energy namespace
+}//Faunus namespace
 #endif

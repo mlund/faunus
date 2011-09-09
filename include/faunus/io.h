@@ -14,8 +14,6 @@
 
 namespace Faunus {
   
-  class container;
-  class cuboid;
   class group;
   class molecular;
   class space;
@@ -97,12 +95,12 @@ namespace Faunus {
       float time_xtc, prec_xtc;
       int natoms_xtc, step_xtc;
     public:
-      vector<molecular*> g;                        //!< List of PBC groups to be saved as whole
+      vector<molecular*> g;                    //!< List of PBC groups to be saved as whole
       ioxtc(float);                            //!< Constructor that sets an initially cubic box
       bool open(string);                       //!< Open xtc file for reading
-      bool loadnextframe(cuboid &);            //!< Load a single frame into cuboid
+      bool loadnextframe(space&);              //!< Load a single frame into cuboid
       bool save(string, const vector<particle> &);//!< Save a frame to trj file.
-      bool save(string, cuboid &);             //!< Save a frame to trj file (PBC)
+      bool save(string, space&);               //!< Save a frame to trj file (PBC)
       bool save(string, vector<particle> &, vector<group> &); //!< Save groups
       void setbox(float);                      //!< Set box size to be saved in frame (cubic)
       void setbox(double,double,double);       //!< Set box size to be saved in frame

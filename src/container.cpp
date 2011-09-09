@@ -5,6 +5,10 @@
 #include "faunus/group.h"
 
 namespace Faunus {
+
+  space::space() {
+    geo=NULL;
+  }
   
   double space::charge() const {
     double z=0;
@@ -82,7 +86,7 @@ namespace Faunus {
   
   /*!
    * \param file Filename
-   * \param resize True if the current container should be resized to match file content (default: false)
+   * \param resize True if the current geometry should be resized to match file content (default: false)
    */
   bool space::load(string file, bool resize) {
     unsigned int n;
@@ -108,107 +112,116 @@ namespace Faunus {
     std::cerr << "# Container data NOT read from file " << file << endl;
     return false;
   }
-
-  double container::dist(const point &p1, const point &p2) {
-    return sqrt( sqdist(p1, p2) );
-  }
-
-  point container::vdist(const point&a, const point&b) {
-    return a-b;
-  }
-
-  void container::scale(point &a, const double &s) const {
-  }
-
-  bool container::collision(const particle &a, collisiontype type) {
-    if (type==MATTER)
-      for (int i=0; i<p.size(); i++)
-        if (&p[i]!=&a) // avoid possible self overlap
-          if ( a.overlap( p[i], sqdist(a,p[i]) )==true )
-            return true;
-    return false;
-  }
-
-  string container::info() {
+  
+  string space::info() {
+    static char w=25;
     double z=charge();
     std::ostringstream o;
     o << endl
-      << "# SIMULATION CONTAINER:" << endl
-      << "#   Number of particles  = " << p.size() << endl
-      << "#   Volume (AA^3)        = " << volume << endl
-      << "#   Electroneutrality    = " 
-      << ((abs(z)>1e-7) ? "NO!" : "Yes") << " "  << z << endl;
+      << "# SIMULATION SPACE:" << endl
+      << geo->info(w);
+    geo->pad(o,w); o << "Number of particles" << p.size() << endl;
+    geo->pad(o,w); o << "Volume (AA^3)" << geo->getvolume() << endl;
+    geo->pad(o,w); o << "Electroneutrality" << ((abs(z)>1e-7) ? "NO!" : "Yes") << " "  << z << endl;
     return o.str();
   }
- 
-  void container::setvolume(double vol) { volume=vol; }
 
-  double container::getvolume() const { return volume; }
+  double geometry::dist(const point &p1, const point &p2) {
+    return sqrt( sqdist(p1, p2) );
+  }
 
-  bool container::save(string file) {
-    if ( space::save(file) ) {
-      std::ofstream fout( file.c_str(), std::ios_base::app);
-      if (fout) {
-        fout.precision(10);
-        fout <<  getvolume() << endl;
-        return true;
-      }
+  point geometry::vdist(const point&a, const point&b) {
+    return a-b;
+  }
+
+  void geometry::scale(point &a, const double &s) const {
+  }
+
+  bool geometry::collision(const particle &a, collisiontype type) {
+    /*
+       if (type==MATTER)
+       for (int i=0; i<p.size(); i++)
+       if (&p[i]!=&a) // avoid possible self overlap
+       if ( a.overlap( p[i], sqdist(a,p[i]) )==true )
+       return true;
+       */
+    return false;
+  }
+
+  void geometry::pad(std::ostringstream& o, char w) {
+    o << "#   " << setw(w) << std::left;
+  }
+
+  string geometry::info(char w) {
+    std::ostringstream o;
+    pad(o,w); o << "Boundary" << name << endl;
+    return o.str();
+  }
+
+  void geometry::setvolume(double vol) { volume=vol; }
+
+  double geometry::getvolume() const { return volume; }
+
+  bool geometry::save(string file) {
+    std::ofstream fout( file.c_str());
+    if (fout) {
+      fout.precision(10);
+      fout <<  getvolume() << endl;
+      return true;
     }
     return false;
   }
 
   /*!
    * \param file Filename
-   * \param resize True if the current container should be resized to match file content (default: false)
+   * \param resize True if the current geometry should be resized to match file content (default: false)
    */
-  bool container::load(string file, bool resize) {
+  bool geometry::load(string file, bool resize) {
     double vol;
-    if ( space::load(file, resize) ) {
-      std::ifstream f( file.c_str() );
-      if (f) {
-        f >> vol;
-        setvolume(vol);
-        f.close();
-        return true;
-      }
+    std::ifstream f( file.c_str() );
+    if (f) {
+      f >> vol;
+      setvolume(vol);
+      f.close();
+      return true;
     }
-    std::cerr << "# Container data NOT read from file " << file << endl;
+    std::cerr << "# Geometry data NOT read from file " << file << endl;
     return false;
   }
 
   //
-  //--- cell container ---
+  //--- sphere geometry ---
   //
 
-  void cell::setvolume(double vol) {
+  void sphere::setvolume(double vol) {
     volume=vol;
     setradius( pow( 3*vol/(4*pyc.pi), 1/3.) );
   }
 
-  cell::cell(double radius) {
+  sphere::sphere(double radius) {
     setradius(radius);
   }
 
-  cell::cell(inputfile &in)  {
-    setradius(in.getflt("cell_radius"));
+  sphere::sphere(inputfile &in)  {
+    setradius(in.getflt("sphere_radius"));
   }
 
-  void cell::setradius(double radius) {
+  void sphere::setradius(double radius) {
+    name="Spherical";
     r = radius; 
     r2 = r*r; 
     diameter = 2*r; 
     volume = (4./3.)*pyc.pi*r*r*r;
   }
 
-  string cell::info() {
+  string sphere::info(char w) {
     std::ostringstream o;
-    o << container::info() 
-      << "#   Shape                = Spherical" << endl
-      << "#   Radius               = " << r << endl;
+    o << geometry::info(w);
+    pad(o,w); o << "Radius" << r << endl;
     return o.str();
   }
 
-  void cell::randompos(point &m) {
+  void sphere::randompos(point &m) {
     double l=r2+1;
     while (l>r2) {
       m.x = slp.random_half()*diameter;
@@ -218,17 +231,18 @@ namespace Faunus {
     }
   }
 
-  void cell::boundary(point &m) const {}
+  void sphere::boundary(point &m) const {}
 
-  bool cell::collision(const particle &a, collisiontype type) {
+  bool sphere::collision(const particle &a, collisiontype type) {
     return (a.x*a.x+a.y*a.y+a.z*a.z > r2) ? true:false;
   }
 
   //
-  //--- cuboid container ---
+  //--- cuboid geometry ---
   //
 
   cuboid::cuboid(inputfile &in) {
+    name="Cuboid";
     double cubelen=in.getflt("cuboid_len",-1);
     if (cubelen<=0) {
       len.x=in.getflt("cuboid_xlen",0);
@@ -288,12 +302,12 @@ namespace Faunus {
     return true;
   }
 
-  string cuboid::info() {
+  string cuboid::info(char w) {
     std::ostringstream o;
-    o << container::info() 
-      << "#   Shape                = Cuboid" << endl
-      << "#   Sidelengths          = " << len.x << " x " << len.y << " x " << len.z << endl
-      << "#   Slice position[x y z]= " << len_half.x-slice_max.x << "-" << len_half.x-slice_min.x << " " 
+    o << geometry::info(w);
+    pad(o,w); o << "Sidelengths" << len.x << " x " << len.y << " x " << len.z << endl;
+    pad(o,w); o << "Slice position [x y z]"
+      << len_half.x-slice_max.x << "-" << len_half.x-slice_min.x << " " 
       << len_half.y-slice_max.y << "-" << len_half.y-slice_min.y << " "
       << len_half.z-slice_max.z << "-" << len_half.z-slice_min.z << endl;
     return o.str();
@@ -313,11 +327,11 @@ namespace Faunus {
 
   bool cuboid::collision(const particle &a, collisiontype type) {
     switch (type) {
-      case (BOUNDARY): // collision with container boundaries
+      case (BOUNDARY): // collision with geometry boundaries
         if (std::abs(a.x) > len_half.x ||
             std::abs(a.y) > len_half.y ||
             std::abs(a.z) > len_half.z  )
-          return true;
+        return true;
         break;
       case (ZONE):     // collision with forbidden zone (slice)
         if (std::abs(a.x) > len_half.x  ||
@@ -331,14 +345,12 @@ namespace Faunus {
             a.z  > slice_max.z  )
         return true;
         break;
-      case (MATTER):
-        return container::collision(a,MATTER);
     }
     return false;
   }
 
   bool cuboid::save(string file) {
-    if ( container::save(file) ) {
+    if ( geometry::save(file) ) {
       std::ofstream fout( file.c_str(), std::ios_base::app);
       if (fout) {
         fout.precision(10);
@@ -351,7 +363,7 @@ namespace Faunus {
 
   bool cuboid::load(string file, bool resize) {
     point l;
-    if ( container::load(file, resize) ) {
+    if ( geometry::load(file, resize) ) {
       std::ifstream f( file.c_str() );
       if (f) {
         f >> l.x >> l.y >> l.z;
@@ -366,36 +378,27 @@ namespace Faunus {
 
 
   //
-  //--- cuboid slit container ---
+  //--- cuboid slit geometry ---
   //
 
   cuboidslit::cuboidslit(inputfile &in) : cuboid(in) {
+    name="Cuboid XY-periodicity";
   }
-
-  string cuboidslit::info() {
-    std::ostringstream o;
-    o << cuboid::info() 
-      << "#   Periodicity          = slit: xy periodicity only" << endl;
-    return o.str();
-  }
-
 
   /*!
    * \param length Length of the cylinder
    * \param radius Radius of the cylinder
    */
-  cylinder::cylinder(double length, double radius) {
-    len=length;
-    r=radius;
-    r2=r*r;
-    diameter=r*2;
-    volume=2*r2*pyc.pi*len;
-    halflen=len/2;
-  }
+  cylinder::cylinder(double length, double radius) { init(length, radius); }
 
   cylinder::cylinder(inputfile &in) {
-    len=in.getflt("cylinder_len", 0);
-    r=in.getflt("cylinder_radius", 0);
+    init( in.getflt("cylinder_len", 0), in.getflt("cylinder_radius", 0) );
+  }
+
+  void cylinder::init(double length, double radius) {
+    name="Cylindrical";
+    len=length;
+    r=radius;
     r2=r*r;
     diameter=r*2;
     volume=2*r2*pyc.pi*len;
@@ -417,19 +420,18 @@ namespace Faunus {
       ( a.x*a.x+a.y*a.y>r2 || ( a.z<-halflen || a.z>halflen ) ) ? true:false;
   }
 
-  string cylinder::info() {
+  string cylinder::info(char w) {
     std::ostringstream o;
-    o << container::info()
-      << "#   Shape                = Cylindrical" << endl
-      << "#   Lenght               = " << len <<endl
-      << "#   Radius               = " << r << endl;
+    o << geometry::info(w);
+    pad(o,w); o << "Length (A)" << len << endl;
+    pad(o,w); o << "Radius (A)" << r << endl;
     return o.str();
   }
 
 #ifdef HYPERSPHERE
   const double hypersphere::pi=3.141592654;
 
-  hypersphere::hypersphere(inputfile &in) : cell(in) {
+  hypersphere::hypersphere(inputfile &in) : sphere(in) {
   }
 
   bool hypersphere::collision(const particle &p) {
@@ -449,7 +451,7 @@ namespace Faunus {
 
   string hypersphere::info() {
     std::ostringstream o;
-    o << container::info() 
+    o << geometry::info() 
       << "#   Shape                = Hyperspherical" << endl
       << "#   Radius               = " << r << endl;
     return o.str();

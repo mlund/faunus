@@ -8,7 +8,7 @@
 
 namespace Faunus {
   class group;
-  class container;
+  class space;
 
   /*!
    * \brief Histogram class
@@ -83,11 +83,11 @@ namespace Faunus {
     public:
       FAUrdf(float=.5, float=0, float=0);
       FAUrdf(short, short, float=.5, float=0); 
-      void update(container &, point &, string);//!< Search around a point
-      void update(container &);                 //!< Update histogram vector
-      void update(container &, group &);        //!< Update histogram vector - search only in group
+      void update(space &, point &, string);//!< Search around a point
+      void update(space &);                 //!< Update histogram vector
+      void update(space &, group &);        //!< Update histogram vector - search only in group
       void update(vector<particle> &);         //!< Update histogram vector
-      void update(container &, point &, point &);//!< Update for two points
+      void update(space &, point &, point &);//!< Update for two points
       float get(float);                        //!< Get g(x)
   };
 

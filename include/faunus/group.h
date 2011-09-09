@@ -8,7 +8,7 @@
 namespace Faunus {
   class point;
   class mcmove;
-  class container;
+  class space;
 
   class group {
     protected:
@@ -26,12 +26,12 @@ namespace Faunus {
     vector<mcmove*> moves;    //!< pointers to move functions
     
     virtual double charge(const vector<particle>&) const;      //!< Calculate total charge
-    virtual point masscenter(const container&) const;          //!< Calculate mass center
-    virtual point dipolemoment(const container&) const;        //!< Calculate dipole moment
+    virtual point masscenter(const space&) const;          //!< Calculate mass center
+    virtual point dipolemoment(const space&) const;        //!< Calculate dipole moment
     
-    virtual void rotate(container&, const point&, double);     //!< Rotate around a vector
-    virtual void translate(container&, const point&);          //!< Translate along a vector
-    virtual void scale(container&, double);                    //!< Volume scaling
+    virtual void rotate(space&, const point&, double);     //!< Rotate around a vector
+    virtual void translate(space&, const point&);          //!< Translate along a vector
+    virtual void scale(space&, double);                    //!< Volume scaling
     virtual void undo(space&);                                 //!< Undo move operation
     virtual void accept(space&);
 
@@ -54,16 +54,12 @@ namespace Faunus {
     average<double> Q;        //!< average net charge
     average<double> mu;       //!< average dipole moment
     
-    void translate(container&, const point&);
+    void translate(space&, const point&);
     void accept(space&);
 
     molecular &operator<<(std::istream &);                        //!< Get information
   };
   
-  class cigar : public molecular {
-  public:
-  };
-
 }//namespace
 
 #endif

@@ -19,17 +19,16 @@ namespace Faunus {
     vector<particle> trial;                         //!< Trial particle vector. 
     vector<group*> g;                               //!< Pointers to all groups in the system.
     
-    virtual bool saveToDisk(string);                    //!< Save container state to disk
-    virtual bool loadFromDisk(string,bool=false);       //!< Load container state from disk
+    virtual bool save(string);                      //!< Save container state to disk
+    virtual bool load(string, bool=false);          //!< Load container state from disk
     
-    void add(particle);
-    bool insert(particle, unsigned int);            //!< Insert particle at pos n.
+    bool insert(particle, unsigned int=-1);         //!< Insert particle at pos n.
     bool remove(unsigned int);                      //!< Remove particle n.
     
     double charge() const;                          //!< Sum all charges in particle vector
     bool check_vector();                            //!< Check if p and trial are equal!
   };
-  
+
   /*!
    * \brief Polymorphic class for simulation containers
    * \author Mikael Lund
@@ -39,22 +38,19 @@ namespace Faunus {
     slump slp;
     double volume;                                      //!< Volume of the container [AA^3]
   public:
-    double getvolume() {return volume;}
+    enum collisiontype {BOUNDARY,ZONE,MATTER};          //!< Types for collision() function
+    double getvolume() const;                           //!< Get volume of container
     virtual void setvolume(double);                     //!< Specify new volume
-    virtual bool collision(const particle&)=0;          //!< Check for collision with walls
-    virtual bool collision_internal(const particle&);   //!< Check for internal collisions - used to define "forbidden" zones
+    virtual bool collision(const particle&, collisiontype=BOUNDARY)=0;//!< Check for collision with boundaries, forbidden zones, matter,..
     virtual void randompos(point &)=0;                  //!< Random point within container
     virtual void boundary(point &) const=0;             //!< Apply boundary conditions to a point
     virtual void scale(point&, const double&) const;    //!< Scale point to a new volume - for Npt ensemble
-
     virtual double sqdist(const point&, const point&)=0;//!< Squared distance between two points
     virtual double dist(const point&,const point&);     //!< Distance between two points
     virtual point vdist(const point&, const point&)=0;
     virtual string info();                              //!< Return info string
- 
-    bool saveToDisk(string);                    //!< Save container state to disk
-    bool loadFromDisk(string,bool=false);       //!< Load container state from disk
-    
+    bool save(string);                                  //!< Save container state to disk
+    bool load(string,bool=false);                       //!< Load container state from disk
     
     /*!
      * \brief Test if given pair potential is compatible with the container (i.e. same boundary conditions)
@@ -96,7 +92,7 @@ namespace Faunus {
     void setvolume(double);
     void randompos(point &);
     void boundary(point &) const;
-    bool collision(const particle &);
+    bool collision(const particle &, collisiontype=BOUNDARY);
     inline double sqdist(const point &p1, const point &p2) { return p1.sqdist(p2); }
   };
   
@@ -119,25 +115,16 @@ namespace Faunus {
   public:
     cuboid(inputfile &);                     //!< Read input parameters
     bool setlen(point);                      //!< Reset cuboid sidelengths
-    
     point len;                               //!< Sidelengths
     point len_half;                          //!< Half sidelength
     point slice_min, slice_max;              //!< Position of slice corners
-    
     string info();                           //!< Return info string
-    
     point randompos();                       //!< Get point with random position
     void randompos(point &);                 //!< Move point to random position
-    
-    bool collision_internal(const particle &a);  //!< Check collision with slice edges
-    bool collision(const particle &a) {      //!< Check collision with cuboid edges
-      if (std::abs(a.x) > len_half.x ||
-          std::abs(a.y) > len_half.y ||
-          std::abs(a.z) > len_half.z  )
-        return true;
-      return false;
-    }
-    
+    bool save(string);                       //!< Save container state to disk
+    bool load(string,bool=false);            //!< Load container state from disk
+    bool collision(const particle&, collisiontype=BOUNDARY);
+   
     //! Calculate distance using the minimum image convention
     inline double sqdist(const point &p1, const point &p2) {   //!< Squared distance 
       return p1.sqdist_mi_xyz(p2, len, len_half);
@@ -226,7 +213,7 @@ namespace Faunus {
     cylinder(double, double);
     cylinder(inputfile &);
     void randompos(point &);
-    bool collision(const particle &);
+    bool collision(const particle&, collisiontype=BOUNDARY);
     string info(); //!< Cylinder info
   };
   
@@ -242,7 +229,7 @@ namespace Faunus {
     hypersphere(inputfile &);
     string info();
     void randompos(point &);
-    bool collision(const particle &);
+    bool collision(const particle &, collisiontype=BOUNDARY);
     
     double dist(const point &a, const point &b) {
       return r*a.geodesic(b); // CHECK!!! (virtual=slow!)

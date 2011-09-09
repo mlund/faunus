@@ -3,7 +3,8 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 # -------------------------------
 #   Faunus library object files
 # -------------------------------
-set(objs slump physconst point inputfile species container group
+set(objs slump physconst point inputfile species container group mcmove
+    mcloop io histogram
     ) 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
@@ -71,6 +72,16 @@ set_target_properties(libfaunus PROPERTIES
 target_link_libraries(libfaunus xdrfile ${LINKLIBS})
 install(TARGETS libfaunus LIBRARY DESTINATION lib)
 
+# dynamic for cigarparticles
+add_library(libcigarfaunus SHARED ${objs})
+set_target_properties(libcigarfaunus PROPERTIES
+                      OUTPUT_NAME cigarfaunus
+                      COMPILE_DEFINITIONS "CIGARPARTICLE"
+                      EXCLUDE_FROM_ALL TRUE
+                      )
+target_link_libraries(libcigarfaunus xdrfile ${LINKLIBS})
+
+
 # dynamic for hypersphere
 add_library(libhyperfaunus SHARED ${objs})
 set_target_properties(libhyperfaunus PROPERTIES
@@ -103,5 +114,5 @@ if (CPPCHECK_EXE)
 endif()
 
 #----- Add example programs -----
-#add_subdirectory(examples)
+add_subdirectory(programs)
 

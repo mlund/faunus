@@ -3,11 +3,11 @@
 
 #include <faunus/common.h>
 #include <faunus/average.h>
+#include <faunus/point.h>
 
 namespace Faunus {
   class point;
   class mcmove;
-  class particle;
   class container;
 
   class group {
@@ -15,6 +15,8 @@ namespace Faunus {
     virtual std::ostream& write(std::ostream &) const; //!< Write all group data to stream
     
   public:
+    enum type {SALT, MOLECULE, CIGAR, HYPER};
+    type id;
     group();
     string info();
     string name;
@@ -60,9 +62,6 @@ namespace Faunus {
   
   class cigar : public molecular {
   public:
-    int id;
-    double patchangle;
-    point cap1, cap2, patch;
   };
 
 }//namespace

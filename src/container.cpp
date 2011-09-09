@@ -64,7 +64,7 @@ namespace Faunus {
     return true;
   }
   
-  bool space::saveToDisk(string file) {
+  bool space::save(string file) {
     std::ofstream fout( file.c_str() );
     if (fout) {
       fout.precision(10);
@@ -84,7 +84,7 @@ namespace Faunus {
    * \param file Filename
    * \param resize True if the current container should be resized to match file content (default: false)
    */
-  bool space::loadFromDisk(string file, bool resize) {
+  bool space::load(string file, bool resize) {
     unsigned int n;
     fin.close();
     fin.open( file.c_str() );
@@ -120,24 +120,33 @@ namespace Faunus {
   void container::scale(point &a, const double &s) const {
   }
 
+  bool container::collision(const particle &a, collisiontype type) {
+    if (type==MATTER)
+      for (int i=0; i<p.size(); i++)
+        if (&p[i]!=&a) // avoid possible self overlap
+          if ( a.overlap( p[i], sqdist(a,p[i]) )==true )
+            return true;
+    return false;
+  }
+
   string container::info() {
     double z=charge();
     std::ostringstream o;
     o << endl
       << "# SIMULATION CONTAINER:" << endl
-      << "#   Number of space  = " << p.size() << endl
+      << "#   Number of particles  = " << p.size() << endl
       << "#   Volume (AA^3)        = " << volume << endl
       << "#   Electroneutrality    = " 
       << ((abs(z)>1e-7) ? "NO!" : "Yes") << " "  << z << endl;
     return o.str();
   }
+ 
+  void container::setvolume(double vol) { volume=vol; }
 
-  void container::setvolume(double vol) {
-    volume=vol;
-  }
+  double container::getvolume() const { return volume; }
 
-  bool container::saveToDisk(string file) {
-    if ( space::saveToDisk(file) ) {
+  bool container::save(string file) {
+    if ( space::save(file) ) {
       std::ofstream fout( file.c_str(), std::ios_base::app);
       if (fout) {
         fout.precision(10);
@@ -152,38 +161,18 @@ namespace Faunus {
    * \param file Filename
    * \param resize True if the current container should be resized to match file content (default: false)
    */
-  bool container::loadFromDisk(string file, bool resize) {
-    unsigned int n;
-    double v;
-    std::ifstream f(file.c_str() );
-    if (f) {
-      f >> n >> v;
-      setvolume(v);
-      if (resize==true)
-        p.resize(n);
-      if (n==p.size()) {
-        for (int i=0; i<n; i++)
-          p[i] << f;
-        trial=p;
+  bool container::load(string file, bool resize) {
+    double vol;
+    if ( space::load(file, resize) ) {
+      std::ifstream f( file.c_str() );
+      if (f) {
+        f >> vol;
+        setvolume(vol);
         f.close();
-        std::cout << "# Read " << n << " space from " << file << endl;
         return true;
       }
-      f.close();
     }
     std::cerr << "# Container data NOT read from file " << file << endl;
-    return false;
-  }
-
-  /*!
-   * In addition to the normal collision() check that checks for
-   * collision with the container boundaries, it is also possible
-   * to check for certain "collisions" inside the container. This
-   * is done with slicecollision(). A typical usage is to restrict
-   * space or molecules to certain volumes within a simulation
-   * container (window sampling).
-   */
-  bool container::collision_internal(const particle &p) {
     return false;
   }
 
@@ -201,8 +190,7 @@ namespace Faunus {
   }
 
   cell::cell(inputfile &in)  {
-    atom.load(in);
-    setradius(in.getflt("cellradius"));
+    setradius(in.getflt("cell_radius"));
   }
 
   void cell::setradius(double radius) {
@@ -232,12 +220,8 @@ namespace Faunus {
 
   void cell::boundary(point &m) const {}
 
-  bool cell::collision(const particle &a) {
-    double x,y,z;
-    x=std::abs(a.x);//+a.radius;
-    y=std::abs(a.y);//+a.radius;
-    z=std::abs(a.z);//+a.radius;
-    return ( x*x+y*y+z*z > r2 ) ? true:false;
+  bool cell::collision(const particle &a, collisiontype type) {
+    return (a.x*a.x+a.y*a.y+a.z*a.z > r2) ? true:false;
   }
 
   //
@@ -245,7 +229,6 @@ namespace Faunus {
   //
 
   cuboid::cuboid(inputfile &in) {
-    atom.load(in);
     double cubelen=in.getflt("cuboid_len",-1);
     if (cubelen<=0) {
       len.x=in.getflt("cuboid_xlen",0);
@@ -308,7 +291,8 @@ namespace Faunus {
   string cuboid::info() {
     std::ostringstream o;
     o << container::info() 
-      << "#   Sidelength           = " << len.x << "x" << len.y << "x" << len.z << endl
+      << "#   Shape                = Cuboid" << endl
+      << "#   Sidelengths          = " << len.x << " x " << len.y << " x " << len.z << endl
       << "#   Slice position[x y z]= " << len_half.x-slice_max.x << "-" << len_half.x-slice_min.x << " " 
       << len_half.y-slice_max.y << "-" << len_half.y-slice_min.y << " "
       << len_half.z-slice_max.z << "-" << len_half.z-slice_min.z << endl;
@@ -327,24 +311,64 @@ namespace Faunus {
     m.z = slp.random_half()*len.z;
   }
 
-  bool cuboid::collision_internal(const particle &a) {
-    if (std::abs(a.x) > len_half.x  ||
-        std::abs(a.y) > len_half.y  ||
-        std::abs(a.z) > len_half.z  ||
-        a.x  < slice_min.x ||
-        a.y  < slice_min.y ||
-        a.z  < slice_min.z ||
-        a.x  > slice_max.x ||
-        a.y  > slice_max.y ||
-        a.z  > slice_max.z  )
-      return true;
+  bool cuboid::collision(const particle &a, collisiontype type) {
+    switch (type) {
+      case (BOUNDARY): // collision with container boundaries
+        if (std::abs(a.x) > len_half.x ||
+            std::abs(a.y) > len_half.y ||
+            std::abs(a.z) > len_half.z  )
+          return true;
+        break;
+      case (ZONE):     // collision with forbidden zone (slice)
+        if (std::abs(a.x) > len_half.x  ||
+            std::abs(a.y) > len_half.y  ||
+            std::abs(a.z) > len_half.z  ||
+            a.x  < slice_min.x ||
+            a.y  < slice_min.y ||
+            a.z  < slice_min.z ||
+            a.x  > slice_max.x ||
+            a.y  > slice_max.y ||
+            a.z  > slice_max.z  )
+        return true;
+        break;
+      case (MATTER):
+        return container::collision(a,MATTER);
+    }
     return false;
   }
+
+  bool cuboid::save(string file) {
+    if ( container::save(file) ) {
+      std::ofstream fout( file.c_str(), std::ios_base::app);
+      if (fout) {
+        fout.precision(10);
+        fout << len.x << " " << len.y << " " << len.z << endl;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool cuboid::load(string file, bool resize) {
+    point l;
+    if ( container::load(file, resize) ) {
+      std::ifstream f( file.c_str() );
+      if (f) {
+        f >> l.x >> l.y >> l.z;
+        setlen(l);
+        f.close();
+        return true;
+      }
+    }
+    std::cerr << "# Container data NOT read from file " << file << endl;
+    return false;
+  }
+
 
   //
   //--- cuboid slit container ---
   //
-  
+
   cuboidslit::cuboidslit(inputfile &in) : cuboid(in) {
   }
 
@@ -370,7 +394,6 @@ namespace Faunus {
   }
 
   cylinder::cylinder(inputfile &in) {
-    atom.load(in);
     len=in.getflt("cylinder_len", 0);
     r=in.getflt("cylinder_radius", 0);
     r2=r*r;
@@ -389,7 +412,7 @@ namespace Faunus {
     }
   }
 
-  bool cylinder::collision(const particle &a) {
+  bool cylinder::collision(const particle &a, collisiontype type) {
     return 
       ( a.x*a.x+a.y*a.y>r2 || ( a.z<-halflen || a.z>halflen ) ) ? true:false;
   }

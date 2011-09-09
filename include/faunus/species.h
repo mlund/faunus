@@ -1,24 +1,28 @@
 #ifndef FAU_species_h
 #define FAU_species_h
-#include "faunus/point.h"
-#include "faunus/inputfile.h"
+
+#include <faunus/common.h>
+#include <faunus/point.h>
+//#include <faunus/inputfile.h>
 
 namespace Faunus {
-  class data {
+  class inputfile;
+
+  class specdata {
+    private:
     public:
-      char id;           //!< id number
+      short  id;         //!< Identification number
       double sigma,      //!< LJ diameter
              eps,        //!< LJ epsilon
              radius,     //!< Radius
              mw,         //!< Weight
              charge,     //!< Charge
-             pka,        //!< pKa value
              chempot,    //!< Chemical potential
              mean,       //!< Mean value... (charge, sasa, etc.)
              variance;   //!< ...and the spread around it.
       bool hydrophobic;  //!< Are we hydrophobic?
       string name;       //!< Name. Avoid spaces.
-      bool operator==(const data &d) const { return (*this==d); }
+      bool operator==(const specdata &d) const { return (*this==d); }
   };
 
   /*!
@@ -29,33 +33,28 @@ namespace Faunus {
    * Example:\n
    * \code
    * atoms atom;
-   * atom.load("atoms.dat");         // load parameters
-   * double s=atom["Na"].sigma;      // get LJ sigma for sodium
-   * particle p=atom("Na");          // Initialize a particle
-   * std::cout << atom[p.id].charge; // Get charge via particle id
+   * atom.load("atoms.dat");          // load parameters
+   * double s=atom["Na"].sigma;       // get LJ sigma for sodium
+   * particle p = atom["Cl"];         // Copy properties to particle
+   * std::cout << atom[p.id].chempot; // Get property via particle id
    * \endcode
    */
   class atoms {
     private:
       void init();                  //!< Recalc eps and sigma vectors
       string filename;
+      vector<specdata> list;                 //!< List of atoms
     public:
-      particle get(char);           //!< Convert n'th atom to a particle
-      char find(string);            //!< Find atom id from name
-      char find(double, double=0.1);//!< Find atom id from molecular weight
       atoms();                               //!< Constructor - set UNK atom type (fallback)
-      vector<data> list;                     //!< List of atoms
       vector< vector<double> >
         qq,                                  //!< Charge product between atoms i and j
         eps,                                 //!< LJ epsilon between atoms i and j
         sigma;                               //!< LJ sigma between atoms i and j
-      bool load(string);                     //!< Load atom parameter from a file
-      bool load(inputfile &);                //!< Load atom parameter from a file
-      particle set(particle &, char);        //!< Set particle properties
-      particle operator() (string);          //!< Name->particle
-      particle operator() (char);            //!< Id->particle
-      data & operator[] (string);            //!< Name->data
-      data & operator[] (char);              //!< Id->data
+
+      bool includefile(string);              //!< Append atom parameters from file
+      bool includefile(inputfile&);          //!< Append atom parameters from file
+      specdata& operator[] (string);         //!< Name->data
+      specdata& operator[] (short);          //!< Id->data
       string info();                         //!< Print info
       void reset_properties(vector<particle> &);//!< Reset particle properties according to particle id
   };

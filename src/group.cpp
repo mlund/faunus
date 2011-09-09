@@ -70,7 +70,6 @@ namespace Faunus {
     return *this;
   }
 
-
   string group::info() {
     std::ostringstream o;
     return o.str();

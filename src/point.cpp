@@ -180,13 +180,13 @@ namespace Faunus {
     C I G A R
    ************/
 
-  void cigarparticle::rotate(container &c, const point &v, double angle) { //!< Rotate around a vector
+  void cigarparticle::rotate(const geometrybase &c, const point &v, double angle) { //!< Rotate around a vector
   }
 
-  void cigarparticle::translate(container &c, const point &v) {             //!< Translate along a vector
+  void cigarparticle::translate(const geometrybase &c, const point &v) {             //!< Translate along a vector
   }
 
-  void cigarparticle::scale(container &c, double v) {                       //!< Volume scaling
+  void cigarparticle::scale(const geometrybase &c, double v) {                       //!< Volume scaling
   }
 
   bool cigarparticle::overlap(const cigarparticle&a, double r2) const {

@@ -1,5 +1,6 @@
 #include <faunus/species.h>
 #include <faunus/inputfile.h>
+#include <faunus/point.h>
 
 namespace Faunus {
   atoms atom; // Instantiate global copy

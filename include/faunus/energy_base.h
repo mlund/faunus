@@ -6,7 +6,8 @@
 #include <string>
 #include <tr1/tuple>
 #include <tr1/array>
-#include <faunus/point.h>
+#include <faunus/common.h>
+#include <faunus/group.h>
 
 // http://publib.boulder.ibm.com/infocenter/iadthelp/v8r0/index.jsp?topic=/com.ibm.xlcpp111.linux.doc/language_ref/variadic_templates.html
 //
@@ -14,13 +15,14 @@
 using namespace std;
 
 namespace Faunus {
-  class group;
 
   namespace Energy {
 
     class energybase {
+      protected:
+        string name;
       public:
-        geometry* geo; //!< Pointer to geometry functions - possibly slow, so avoid in time critical steps
+        static Geometry::geometrybase* geo; //!< Pointer to geometry functions - possibly slow, so avoid in time critical steps
 
         // single particle interactions
         virtual double i2i(const vector<particle> &p, int i, int j) { return 0; }
@@ -30,20 +32,23 @@ namespace Faunus {
         virtual double i_internal(const vector<particle> &p, int i) { return 0; }
 
         // group interactions
-        virtual double g2g(const vector<particle> &p, const group &g1, const group &g2) { return 0; }
+        virtual double g2g(const vector<particle> &p, const group &g1, const group &g2) {
+          //const molecular* m = dynamic_cast<const molecular*>(&g1);
+          return 0;
+        }
         virtual double g2all(const vector<particle> &p, const group &g) { return 0; }
         virtual double g_external(const vector<particle> &p, const group &g) { return 0; }
         virtual double g_internal(const vector<particle> &p, const group &g) { return 0; }
         string info() { return "hej";  };
     };
 
-    template<class T>
+    Geometry::geometrybase* energybase::geo;
+
+    template<class Tpotential>
       class nonbonded : public energybase {
         public:
-          T pair;
-          nonbonded(inputfile &in) : pair(in) {
-            geo=&pair.geo;
-          }
+          Tpotential pair;
+          nonbonded(inputfile &in) : pair(in) {}
           virtual double i2i(const vector<particle> &p, int i, int j) { return 0; }
           virtual double i2g(const vector<particle> &p, const group &g, int i) { return 0; }
           virtual double i2all(const vector<particle> &p, int i) { return 0; }
@@ -68,14 +73,9 @@ namespace Faunus {
       private:
         vector<energybase*> base;
       public:
-        hamiltonian(geometry* geoPtr) {
-          geo=geoPtr;
-        }
+        hamiltonian(Geometry::geometrybase* geoPtr) { geo=geoPtr; }
 
-        void operator+=(energybase &b) {
-          b.geo=geo; // force uniform geometry
-          base.push_back(&b);
-        }
+        void operator+=(energybase &b) { base.push_back(&b); }
 
         // single particle interactions
         double i2i(const vector<particle> &p, int i, int j) {

@@ -3,6 +3,8 @@
 #include <faunus/species.h>
 #include <faunus/physconst.h>
 #include <faunus/group.h>
+#include <faunus/average.h>
+#include <faunus/space.h>
 
 namespace Faunus {
 
@@ -65,7 +67,7 @@ namespace Faunus {
 
   std::ostream& operator<<(std::ostream &o, group &g) { return g.write(o); }
   
-  group & group::operator<<(std::istream &in) {
+  group& group::operator<<(std::istream &in) {
     in >> beg >> end;
     return *this;
   }
@@ -87,13 +89,13 @@ namespace Faunus {
   point group::masscenter(const space &con) const {
     double sum=0;
     point cm,t,o = con.p.at(beg); // set origo to first particle
-    for (int i=beg; i<=end; i++) {
+    for (int i=beg; i<=end; ++i) {
       t = con.p[i]-o;        // translate to origo
       con.geo->boundary(t);       // periodic boundary (if any)
       cm += t * con.p[i].mw;
       sum += con.p[i].mw; 
     }
-    cm=cm*(1./sum) + o;
+    cm=cm*(1/sum) + o;
     con.geo->boundary(cm);
     assert(sum>0);
     return cm;
@@ -111,20 +113,13 @@ namespace Faunus {
   }
 
   void group::undo(space &s) {
-    for (int i=beg; i<=end; i++) {
-      s.trial[i].x = s.p[i].x;
-      s.trial[i].y = s.p[i].y;
-      s.trial[i].z = s.p[i].z;
-    }
+    for (int i=beg; i<=end; ++i)
+      s.trial[i]=s.p[i];
   }
 
   void group::accept(space &s) {
-    int i,ilen=end+1;
-    for (i=beg; i<ilen; i++) {
-      s.p[i].x = s.trial[i].x;
-      s.p[i].y = s.trial[i].y;
-      s.p[i].z = s.trial[i].z;
-    }
+    for (int i=beg; i<=end; ++i)
+      s.p[i] = s.trial[i];
   }
 
   /*!
@@ -132,7 +127,7 @@ namespace Faunus {
    * \param c ...by adding this vector to all particles
    */
   void group::translate(space &con, const point &p) {
-    for (int i=beg; i<=end; i++) {
+    for (int i=beg; i<=end; ++i) {
       con.trial[i] = con.p[i] + p;
       con.geo->boundary( con.trial[i] );
     }

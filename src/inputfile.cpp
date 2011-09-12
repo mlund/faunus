@@ -163,7 +163,7 @@ namespace Faunus {
   // CHECKVALUE CLASS
   //
   //
-  checkValue::checkValue(inputfile &in) {
+  unittest::unittest(inputfile &in) {
     stable = in.getboo("testsuite_stable", true);
     file = in.getstr("testsuite_testfile", "test.stable");
     if (stable==false)
@@ -187,7 +187,7 @@ namespace Faunus {
    * \param val Value to check (unstable) or save (stable)
    * \param threshold Maximum allowed absolute relative difference between stable and unstable
    */
-  bool checkValue::check(string name, double val, double threshold) {
+  bool unittest::check(string name, double val, double threshold) {
     bool rc=true;
     // Stable: Save value.
     if (stable==true) {
@@ -218,7 +218,7 @@ namespace Faunus {
     return rc;
   }
 
-  bool checkValue::smallerThan(string name, double x, double ref) {
+  bool unittest::smallerThan(string name, double x, double ref) {
     bool rc=false;
     if (x<ref)
       rc=true;
@@ -228,13 +228,13 @@ namespace Faunus {
     return rc;
   }
 
-  int checkValue::returnCode() {
+  int unittest::returnCode() {
     for (int i=0; i<result.size(); i++)
       if (result[i]==false) return 1;
     return 0;
   }
 
-  string checkValue::report() {
+  string unittest::report() {
     std::ostringstream o;
     unsigned int numerr = 0;
 #ifdef __SUNPRO_CC

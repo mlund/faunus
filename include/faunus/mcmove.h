@@ -5,7 +5,6 @@
 #include <faunus/point.h>
 
 namespace Faunus {
-  class point;
   //class average;
   class unittest;
   class energybase;

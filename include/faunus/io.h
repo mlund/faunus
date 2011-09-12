@@ -1,7 +1,6 @@
 #ifndef FAU_IO_H
 #define FAU_IO_H
 #include <faunus/common.h>
-#include <faunus/point.h>
 
 #ifndef __cplusplus
 #define __cplusplus
@@ -16,7 +15,6 @@ namespace Faunus {
   
   class group;
   class molecular;
-  class space;
 
   /*! \brief Basic file I/O routines
    *  \author Mikael Lund

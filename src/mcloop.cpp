@@ -1,4 +1,5 @@
 #include <faunus/mcloop.h>
+#include <faunus/inputfile.h>
 
 namespace Faunus {
 

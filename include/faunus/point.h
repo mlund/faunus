@@ -7,7 +7,7 @@
 
 namespace Faunus {
   class random;
-  class container;
+  class geometrybase;
   class specdata;
   /*!
    * \brief Cartesian coordinates
@@ -23,11 +23,6 @@ namespace Faunus {
       point(double,double,double);        //!< Constructor, set vector
       void clear();                       //!< Zero all data.
       double len() const; 
-      inline double sqdist(const point &) const;                                        //!< Squared distance to another point
-      inline double sqdist_mi_xyz(const point &, const double &, const double &) const; //!< XYZ cubic minimum image distance  
-      inline double sqdist_mi_xyz(const point&, const point&, const point&) const;      //!< XYZ minimum image distance
-      inline double sqdist_mi_xy(const point&, const point&, const point&) const;
-      inline double sqdist_mi_z(const point&, const double&, const double&) const;
       void ranunit(random &);               //!< Generate a random unit vector
       double dot(const point &) const;      //!< Angle with another point
       point operator-() const;              //!< Sign reversal
@@ -40,57 +35,14 @@ namespace Faunus {
       std::string str();
       friend std::ostream &operator<<(std::ostream &, const point &); //!< Output information
       point &operator<<(std::istream &);                        //!< Get information
+
+      template<typename Tgeometry> inline double sqdist(const point &b) {
+        return Tgeometry::sqdist(*this,b);
+      }
+
   };
 
-  /*!
-   * \return \f$ r_{12}^2 = \Delta x^2 + \Delta y^2 + \Delta z^2 \f$
-   */
-  inline double point::sqdist(const point &p) const {
-    register double dx,dy,dz;
-    dx=x-p.x;
-    dy=y-p.y;
-    dz=z-p.z;
-    return dx*dx + dy*dy + dz*dz;
-  }
-
   inline int point::anint(double a) const { return int(a>0 ? a+.5 : a-.5); }
-
-  inline double point::sqdist_mi_xyz(const point& p, const double& len, const double& len_half) const {
-    double dx=std::abs(x-p.x);
-    double dy=std::abs(y-p.y);
-    double dz=std::abs(z-p.z);
-    if (dx>len_half) dx-=len;
-    if (dy>len_half) dy-=len;
-    if (dz>len_half) dz-=len;
-    return dx*dx + dy*dy + dz*dz;
-  }
-
-  inline double point::sqdist_mi_xyz(const point &p, const point& len, const point& len_half) const {   //!< Squared distance 
-    double dx=std::abs(x-p.x);
-    double dy=std::abs(y-p.y);
-    double dz=std::abs(z-p.z);
-    if (dx>len_half.x) dx-=len.x;
-    if (dy>len_half.y) dy-=len.y;
-    if (dz>len_half.z) dz-=len.z;
-    return dx*dx + dy*dy + dz*dz;
-  }                                   
-
-  inline double point::sqdist_mi_xy(const point &p, const point& len, const point& len_half) const {   //!< Squared distance 
-    double dx=std::abs(x-p.x);
-    double dy=std::abs(y-p.y);
-    double dz=z-p.z;
-    if (dx>len_half.x) dx-=len.x;
-    if (dy>len_half.y) dy-=len.y;                                      
-    return dx*dx + dy*dy + dz*dz;
-  }   
-
-  inline double point::sqdist_mi_z(const point &p, const double& len_z, const double& len_half_z) const {   //!< Squared distance 
-    double dx=x-p.x;
-    double dy=y-p.y;
-    double dz=std::abs(z-p.z);
-    if (dz>len_half_z) dx-=len_z;
-    return dx*dx + dy*dy + dz*dz;
-  }   
 
   /*!
    * \brief Class for particles
@@ -123,15 +75,15 @@ namespace Faunus {
       pointparticle& operator<<(std::istream &);                              //!< Get information
       pointparticle& operator=(const point&);                                 //!< Copy coordinates from a point
       pointparticle operator=(const specdata&) const;
-   };
+  };
 
   class cigarparticle : public pointparticle {
     public:
       point omega, patch;
       double patchangle, length;
-      void rotate(container&, const point&, double);            //!< Rotate around a vector
-      void translate(container&, const point&);                 //!< Translate along a vector
-      void scale(container&, double);                           //!< Volume scaling
+      void rotate(const geometrybase&, const point&, double);            //!< Rotate around a vector
+      void translate(const geometrybase&, const point&);                 //!< Translate along a vector
+      void scale(const geometrybase&, double);                           //!< Volume scaling
       bool overlap(const cigarparticle&, double) const;     //!< Check for overlap of two particles
       friend std::ostream &operator<<(std::ostream &, const cigarparticle &); //!< Output information
       cigarparticle &operator<<(std::istream &);                              //!< Get information
@@ -139,12 +91,6 @@ namespace Faunus {
       cigarparticle operator=(const specdata&) const;
       cigarparticle& operator=(const pointparticle&);
   };
-
-#ifdef CIGARPARTICLE
-  typedef cigarparticle particle;
-#else
-  typedef pointparticle particle;
-#endif
 
 }//namespace
 #endif

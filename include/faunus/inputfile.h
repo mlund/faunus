@@ -61,12 +61,12 @@ namespace Faunus {
    * a new reference testfile. If stable==false this will check the given value against the
    * loaded testfile.
    */
-  class checkValue : private inputfile {
+  class unittest : private inputfile {
     protected:
       vector<bool> result;                     //!< Return codes for all performed tests
     public:
       bool stable;                             //!< True if test suite is stable (=reference)
-      checkValue(inputfile &);                 //!< Read parameters from inputfile
+      unittest(inputfile &);                 //!< Read parameters from inputfile
       bool check(string, double, double=0.1);  //!< Check or store value depending on the stable state.
       bool smallerThan(string, double, double);//|< Check if x is smaller than y
       string report();                         //!< Print report.

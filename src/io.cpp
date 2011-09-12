@@ -4,6 +4,7 @@
 #include "faunus/point.h"
 #include "faunus/group.h"
 #include "faunus/inputfile.h"
+#include <faunus/space.h>
 
 namespace Faunus {
   /*!
@@ -279,7 +280,7 @@ namespace Faunus {
    * \param c cuboid container from which particles and box dimensions are read.
    */
   bool ioxtc::save(string file, space &c) {
-    cuboid* geo = dynamic_cast<cuboid*>(c.geo);
+    Geometry::cuboid* geo = dynamic_cast<Geometry::cuboid*>(c.geo);
     p=c.p;
     setbox(geo->len.x, geo->len.y, geo->len.z);
     for (int i=0; i<g.size(); i++) {
@@ -368,7 +369,7 @@ namespace Faunus {
         int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
         if (rc==0) {
           static double ten=10;
-          cuboid* geo = dynamic_cast<cuboid*>(c.geo);
+          Geometry::cuboid* geo = dynamic_cast<Geometry::cuboid*>(c.geo);
           point l( xdbox[0][0], xdbox[1][1], xdbox[2][2] );
           geo->setlen(l*ten);
           for (int i=0; i<c.p.size(); i++) {

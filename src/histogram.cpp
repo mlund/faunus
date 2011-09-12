@@ -4,6 +4,7 @@
 #include <faunus/point.h>
 #include <faunus/container.h>
 #include <faunus/group.h>
+#include <faunus/space.h>
 
 namespace Faunus {
   //! \param res x value resolution
@@ -155,7 +156,7 @@ namespace Faunus {
    * \note Uses the space distance function
    */
   void FAUrdf::update(space &s, point &a, point &b) {
-    add( s.geo->dist(a, b) );
+    add( s.geo->_dist(a, b) );
   }
 
   /*!
@@ -186,7 +187,7 @@ namespace Faunus {
         if ( (c.p[i].id==a && c.p[j].id==b)
             || (c.p[j].id==a && c.p[i].id==b) ) {
           npart++;
-          add( c.geo->dist(c.p[i], c.p[j]) );
+          add( c.geo->_dist(c.p[i], c.p[j]) );
         }
       }
     }
@@ -199,28 +200,8 @@ namespace Faunus {
     for (int i=0; i<n; ++i)
       if ( c.p[i].id==id ) {
         npart++;
-        add( c.geo->dist(p, c.p[i] ));
+        add( c.geo->_dist(p, c.p[i] ));
       }
-  }
-
-  /*!
-   * Calculate all distances between between species 1
-   * and 2 and update the histogram.
-   *
-   * \warning This function uses a simple distance function (no min. image)
-   */
-  void FAUrdf::update(vector<particle> &p)
-  {
-    int n=p.size();
-    npart=0;
-    //#pragma omp for
-    for (int i=0; i<n-1; i++)
-      for (int j=i+1; j<n; j++) 
-        if ( (p[i].id==a && p[j].id==b)
-            || (p[j].id==a && p[i].id==b) ) {
-          npart++;
-          add( sqrt(p[i].sqdist(p[j])) );
-        }
   }
 
   /*!
@@ -261,7 +242,7 @@ namespace Faunus {
       origo=&center;
     }
 
-  void cummsum::add(particle &p) { if (p.id==id) (*this)( sqrt(origo->sqdist(p)) )++; }
+  //void cummsum::add(particle &p) { if (p.id==id) (*this)( sqrt(origo->sqdist(p)) )++; }
 
   float cylindric_profile::volume(double z) { return xres*acos(-1.)*r*r; }
 
@@ -300,9 +281,11 @@ namespace Faunus {
 
   atomicRdf::atomicRdf(float dx, float max) : histogram(dx, 0, max) { }
 
+  /*
   void atomicRdf::update(vector<particle> &p, group &g1, group &g2) {
     for (int i=g1.beg; i<=g1.end; i++)
       for (int j=g2.beg; j<=g2.end; j++)
         add( sqrt(p[i].sqdist(p[j])) );
   }
+  */
 }//namespace

@@ -27,5 +27,18 @@ namespace Faunus {
   using std::exp;
   using std::cout;
   using std::ostringstream;
+
+  class mcmove;
+  class space;
+
+  class point;
+  class pointparticle;
+  class cigarparticle;
+#ifdef CIGARPARTICLE
+  typedef cigarparticle particle;
+#else
+  typedef pointparticle particle;
+#endif
+
 }//namespace
 #endif

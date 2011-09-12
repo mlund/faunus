@@ -86,7 +86,6 @@ namespace Faunus {
       void update(space &, point &, string);//!< Search around a point
       void update(space &);                 //!< Update histogram vector
       void update(space &, group &);        //!< Update histogram vector - search only in group
-      void update(vector<particle> &);         //!< Update histogram vector
       void update(space &, point &, point &);//!< Update for two points
       float get(float);                        //!< Get g(x)
   };
@@ -103,7 +102,7 @@ namespace Faunus {
   class atomicRdf : public histogram {
     public:
       atomicRdf(float=.5, float=0);
-      void update(vector<particle> &, group &, group &); //!< Update histogram vector
+      //void update(vector<particle> &, group &, group &); //!< Update histogram vector
   };
 
   /*!
@@ -143,7 +142,7 @@ namespace Faunus {
     public:
       unsigned char id;        //!< Particle type to analyse
       cummsum(unsigned char, particle &, float, float=.5);
-      void add(particle &);
+      //void add(particle &);
   };
 
   /*!\brief Cylindrical particle distribution

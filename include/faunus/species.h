@@ -2,8 +2,6 @@
 #define FAU_species_h
 
 #include <faunus/common.h>
-#include <faunus/point.h>
-//#include <faunus/inputfile.h>
 
 namespace Faunus {
   class inputfile;

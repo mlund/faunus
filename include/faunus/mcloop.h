@@ -1,9 +1,9 @@
 #ifndef FAU_MCLOOP_H
 #define FAU_MCLOOP_H
 #include <faunus/common.h>
-#include <faunus/inputfile.h>
 
 namespace Faunus {
+  class inputfile;
   /*! \brief Estimate speed of a computational process
    *  \author Mikael Lund
    * 

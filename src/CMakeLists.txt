@@ -4,10 +4,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 #   Faunus library object files
 # -------------------------------
 set(objs slump physconst point inputfile species container group mcmove
-  mcloop histogram io)
-#set(objs slump physconst point inputfile species container group mcmove
-#    mcloop io histogram
-#    ) 
+  space mcloop histogram io)
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 #----- xdrfile static library for gromacs output -----

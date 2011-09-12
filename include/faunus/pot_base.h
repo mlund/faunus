@@ -90,7 +90,7 @@ namespace Faunus {
           double lB; //!< Bjerrum length [A]
           coulomb(inputfile &in) {
             name="Coulomb";
-            lB=pyc.lB( in.getflt("epsilon_r",80.) );
+            lB=pc::lB( in.getflt("epsilon_r",80.) );
           }
           inline double u_coulomb(const double &r, const double &zz) const { return zz/r; }
 
@@ -109,7 +109,7 @@ namespace Faunus {
             double I;
             const double zero=1e-10;
             name="Debye-Huckel";
-            c=8*lB*pyc.pi*pyc.Nav/1e27;
+            c=8 * lB * pc::pi * pc::Nav / 1e27;
             I=in.getflt("dh_ionicstrength",0);  // [mol/l]
             k=sqrt( I*c );
             if (k<zero)
@@ -151,20 +151,16 @@ namespace Faunus {
         public:
           Core::lennardjones lj;
           Core::coulomb el;
-          Tgeometry geo;
-          coulomb_lj(inputfile &in) : lj(in), el(in), geo(in) {}
+          coulomb_lj(inputfile &in) : lj(in), el(in) {}
           inline double pairpot(const particle &a, const particle &b) const {
-            double r2=geo.sqdist(a,b);
+            double r2=a.sqdist<Tgeometry>(b);
             return el.u_coulomb(sqrt(r2), a.charge*b.charge) + lj.u_lj(r2,a.radius+b.radius);
           }
           string info(char w=20) {
             return "\n# PAIR POTENTIAL: " + lj.name +"+" + el.name + "\n"
-              + geo.info(w) + lj.info(w) + el.info(w);
+              + lj.info(w) + el.info(w);
           }
       };
-
-    typedef coulomb_lj<sphere> coulomb_lj_sphere; //!< Coulomb-Lennard Jones pair portential w. minimum image
-    typedef coulomb_lj<cuboid> coulomb_lj_cuboid; //!< Coulomb-Lennard Jones pair portential w. minimum image
 
   } //Potential namespace
 

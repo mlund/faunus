@@ -1,5 +1,5 @@
-#ifndef FAU_GEOMETRY_H
-#define FAU_GEOMETRY_H
+#ifndef FAU_CONTAINER_H
+#define FAU_CONTAINER_H
 
 #include "faunus/common.h"
 #include "faunus/point.h"
@@ -10,15 +10,27 @@ namespace Faunus {
   class inputfile;
   class group;
 
-  /*!
-   * \brief Polymorphic class for simulation geometries
-   * \author Mikael Lund
-   */
-  namespace Geo {
+  namespace Geometry {
 
-    class geometry {
+    /*!
+     * \brief Polymorphic class for simulation geometries
+     * \author Mikael Lund
+     *
+     * This is an important polymorph class that handles simulation geometries.
+     * It contains distance calculation functions, boundary conditions, volume
+     * etc.
+     *
+     * \note This class uses dynamic polymorphism, i.e. virtual functions, which
+     *       may have negative impact on performance as function inlining may not be
+     *       possible. This is usually a problem only for inner loop distance calculations
+     *       and to stress this, distance functions are preceeded by underscores - i.e.
+     *       _dist() and _sqdist(). Derived classes should implement a static member function,
+     *       sqdist(), to be used in time critical steps.
+     */
+    class geometrybase {
       protected:
-        double volume;                                      //!< Volume of the container [AA^3]
+        slump slp;
+        static double volume;                               //!< Volume of the container [AA^3]
         string name;                                        //!< Name of the geometry
       public:
         void pad(std::ostringstream&, char);
@@ -29,8 +41,8 @@ namespace Faunus {
         virtual void randompos(point &)=0;                  //!< Random point within container
         virtual void boundary(point &) const=0;             //!< Apply boundary conditions to a point
         virtual void scale(point&, const double&) const;    //!< Scale point to a new volume - for Npt ensemble
-        virtual double sqdist(const point&, const point&) const=0;//!< Squared distance between two points
-        virtual double dist(const point&,const point&);     //!< Distance between two points
+        virtual double _sqdist(const point&, const point&) const=0;//!< Squared distance between two points
+        virtual double _dist(const point&,const point&);     //!< Distance between two points
         virtual point vdist(const point&, const point&)=0;
         virtual string info(char);                          //!< Return info string
         bool save(string);                                  //!< Save container state to disk
@@ -43,9 +55,9 @@ namespace Faunus {
      *
      *  This is a sphere simulation container, surrounded by a hard wall.
      */
-    class sphere : public geometry {
+    class sphere : public geometrybase {
       private:
-        static double r2,diameter;
+        double r2,diameter;
       public:
         void setradius(double);
         double r;              //!< Radius
@@ -56,7 +68,14 @@ namespace Faunus {
         void randompos(point &);
         void boundary(point &) const;
         bool collision(const particle &, collisiontype=BOUNDARY);
-        inline double sqdist(const point &p1, const point &p2) const { return p1.sqdist(p2); }
+        inline double _sqdist(const point &a, const point &b) const { return sqdist(a,b); }
+        inline static double sqdist(const point &a, const point &b) {
+          register double dx,dy,dz;
+          dx=a.x-b.x;
+          dy=a.y-b.y;
+          dz=a.z-b.z;
+          return dx*dx + dy*dy + dz*dz;
+        }
     };
 
     //---------------------------------------------------------
@@ -70,16 +89,16 @@ namespace Faunus {
      *  of some of the space to a part of the cuboid. The function slicecollision
      *  can be used to make sure space are positioned within in the slice.
      */
-    class cuboid : public geometry {
+    class cuboid : public geometrybase {
       protected:
         bool setslice(point, point);             //!< Reset slice position
-        point len_inv;                           //!< Inverse sidelengths
+        static point len_inv;                    //!< Inverse sidelengths
 
       public:
-        cuboid(inputfile &);                     //!< Read input parameters
-        bool setlen(point);                      //!< Reset cuboid sidelengths
-        point len;                               //!< Sidelengths
-        point len_half;                          //!< Half sidelength
+        cuboid(inputfile&);                      //!< Read input parameters
+        static bool setlen(point);               //!< Reset cuboid sidelengths
+        static point len;                        //!< Sidelengths
+        static point len_half;                   //!< Half sidelength
         point slice_min, slice_max;              //!< Position of slice corners
         string info(char);                       //!< Return info string
         point randompos();                       //!< Get point with random position
@@ -88,9 +107,18 @@ namespace Faunus {
         bool load(string,bool=false);            //!< Load container state from disk
         bool collision(const particle&, collisiontype=BOUNDARY);
 
-        //! Calculate distance using the minimum image convention
-        inline double sqdist(const point &p1, const point &p2) const {   //!< Squared distance 
-          return p1.sqdist_mi_xyz(p2, len, len_half);
+        static inline double sqdist(const point &a, const point &b) {
+          double dx=std::abs(a.x-b.x);
+          double dy=std::abs(a.y-b.y);
+          double dz=std::abs(a.z-b.z);
+          if (dx>len_half.x) dx-=len.x;
+          if (dy>len_half.y) dy-=len.y;
+          if (dz>len_half.z) dz-=len.z;
+          return dx*dx + dy*dy + dz*dz;
+        }
+
+        inline double _sqdist(const point &a, const point &b) const {   //!< Squared distance 
+          return sqdist(a,b);
         }
 
         inline point vdist(const point &a, const point &b) {       //!< Distance vector
@@ -132,9 +160,18 @@ namespace Faunus {
         cuboidslit(inputfile &);
 
         //! Calculate distance using the minimum image convention
-        inline double sqdist(const point &p1, const point &p2) const {   //!< Squared distance 
-          return p1.sqdist_mi_xy(p2, len, len_half);
+        inline double _sqdist(const point &a, const point &b) const {   //!< Squared distance 
+          return sqdist(a,b);
         }
+
+        inline static double sqdist(const point &a, const point &b) {   //!< Squared distance 
+          double dx=std::abs(a.x-b.x);
+          double dy=std::abs(a.y-b.y);
+          double dz=a.z-b.z;
+          if (dx>len_half.x) dx-=len.x;
+          if (dy>len_half.y) dy-=len.y;                                      
+          return dx*dx + dy*dy + dz*dz;
+        }   
 
         inline point vdist(const point &a, const point &b) {       //!< Distance vector
           point r=a-b;
@@ -164,7 +201,7 @@ namespace Faunus {
      *  are HARD. The origin is in the middle of the
      *  cylinder.
      */
-    class cylinder : public geometry {
+    class cylinder : public geometrybase {
       private:
         double halflen;
         double r2;    //!< Cylinder radius squared
@@ -178,6 +215,14 @@ namespace Faunus {
         void randompos(point &);
         bool collision(const particle&, collisiontype=BOUNDARY);
         string info(char); //!< Cylinder info
+        inline double _sqdist(const point &a, const point &b) const { return sqdist(a,b); }
+        inline static double sqdist(const point &a, const point &b) {
+          register double dx,dy,dz;
+          dx=a.x-b.x;
+          dy=a.y-b.y;
+          dz=a.z-b.z;
+          return dx*dx + dy*dy + dz*dz;
+        }
     };
 
 #ifdef HYPERSPHERE
@@ -194,11 +239,11 @@ namespace Faunus {
         void randompos(point &);
         bool collision(const particle &, collisiontype=BOUNDARY);
 
-        double dist(const point &a, const point &b) {
+        double _dist(const point &a, const point &b) {
           return r*a.geodesic(b); // CHECK!!! (virtual=slow!)
         }
 
-        inline double sqdist(const point &a, const point &b) const {
+        inline double _sqdist(const point &a, const point &b) const {
           return pow(dist(a,b),2); // !! SHOULD BE REAL DISTANCE CHECK!! (virtual=slow!)
         }
 
@@ -214,6 +259,7 @@ namespace Faunus {
         }
     };
 #endif
-  }//namespace
+  }//namespace Geometry
+
 }//namespace
 #endif

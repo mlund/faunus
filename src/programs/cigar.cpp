@@ -1,6 +1,6 @@
 #include <faunus/common.h>
 #include <faunus/point.h>
-#include <faunus/container.h>
+#include <faunus/geometry.h>
 #include <faunus/species.h>
 #include <faunus/inputfile.h>
 #include <faunus/energy_base.h>

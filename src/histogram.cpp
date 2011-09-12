@@ -2,7 +2,7 @@
 #include <faunus/io.h>
 #include <faunus/species.h>
 #include <faunus/point.h>
-#include <faunus/container.h>
+#include <faunus/geometry.h>
 #include <faunus/group.h>
 #include <faunus/space.h>
 

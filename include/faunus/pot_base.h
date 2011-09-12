@@ -4,7 +4,7 @@
 #include "faunus/point.h"
 #include "faunus/inputfile.h"
 #include "faunus/physconst.h"
-#include <faunus/container.h>
+#include <faunus/geometry.h>
 
 namespace Faunus {
 

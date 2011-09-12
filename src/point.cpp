@@ -1,6 +1,6 @@
 #include "faunus/point.h"
 #include "faunus/slump.h"
-#include <faunus/container.h>
+#include <faunus/geometry.h>
 #include <faunus/species.h>
 
 namespace Faunus {

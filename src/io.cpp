@@ -1,6 +1,6 @@
 #include "faunus/io.h"
 #include "faunus/species.h"
-#include "faunus/container.h"
+#include "faunus/geometry.h"
 #include "faunus/point.h"
 #include "faunus/group.h"
 #include "faunus/inputfile.h"

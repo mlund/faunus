@@ -18,7 +18,7 @@ namespace Faunus {
       int beg;                  //!< index of first particle
       int end;                  //!< index of last particle
       int len() const;          //!< number of particles in group.
-      vector<mcmove*> moves;    //!< pointers to move functions
+      vector<Move::movebase*> moves;    //!< pointers to move functions
 
       virtual double charge(const vector<particle>&) const;      //!< Calculate total charge
       virtual point masscenter(const space&) const;          //!< Calculate mass center

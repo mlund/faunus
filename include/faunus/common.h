@@ -28,9 +28,17 @@ namespace Faunus {
   using std::cout;
   using std::ostringstream;
 
-  class mcmove;
-  class space;
+  namespace Move {
+    class movebase;
+    class translate;
+  }
 
+  namespace Geometry {
+    class geometrybase;
+  }
+
+  class inputfile;
+  class space;
   class point;
   class pointparticle;
   class cigarparticle;

@@ -3,8 +3,8 @@
 #include <faunus/geometry.h>
 #include <faunus/species.h>
 #include <faunus/inputfile.h>
-#include <faunus/energy_base.h>
-#include <faunus/pot_base.h>
+#include <faunus/energy.h>
+#include <faunus/potentials.h>
 #include <faunus/average.h>
 #include <faunus/space.h>
 

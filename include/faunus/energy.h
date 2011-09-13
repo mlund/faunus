@@ -7,7 +7,6 @@
 #include <tr1/tuple>
 #include <tr1/array>
 #include <faunus/common.h>
-#include <faunus/group.h>
 
 // http://publib.boulder.ibm.com/infocenter/iadthelp/v8r0/index.jsp?topic=/com.ibm.xlcpp111.linux.doc/language_ref/variadic_templates.html
 //
@@ -25,24 +24,19 @@ namespace Faunus {
         static Geometry::geometrybase* geo; //!< Pointer to geometry functions - possibly slow, so avoid in time critical steps
 
         // single particle interactions
-        virtual double i2i(const vector<particle> &p, int i, int j) { return 0; }
-        virtual double i2g(const vector<particle> &p, const group &g, int i) { return 0; }
-        virtual double i2all(const vector<particle> &p, int i) { return 0; }
-        virtual double i_external(const vector<particle> &p, int i) { return 0; }
-        virtual double i_internal(const vector<particle> &p, int i) { return 0; }
+        virtual double i2i(const vector<particle> &p, int i, int j);
+        virtual double i2g(const vector<particle> &p, const group &g, int i);
+        virtual double i2all(const vector<particle> &p, int i);
+        virtual double i_external(const vector<particle> &p, int i);
+        virtual double i_internal(const vector<particle> &p, int i);
 
         // group interactions
-        virtual double g2g(const vector<particle> &p, const group &g1, const group &g2) {
-          //const molecular* m = dynamic_cast<const molecular*>(&g1);
-          return 0;
-        }
-        virtual double g2all(const vector<particle> &p, const group &g) { return 0; }
-        virtual double g_external(const vector<particle> &p, const group &g) { return 0; }
-        virtual double g_internal(const vector<particle> &p, const group &g) { return 0; }
-        string info() { return "hej";  };
+        virtual double g2g(const vector<particle> &p, const group &g1, const group &g2);
+        virtual double g2all(const vector<particle> &p, const group &g);
+        virtual double g_external(const vector<particle> &p, const group &g);
+        virtual double g_internal(const vector<particle> &p, const group &g);
+        string info();
     };
-
-    Geometry::geometrybase* energybase::geo;
 
     template<class Tpotential>
       class nonbonded : public energybase {

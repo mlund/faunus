@@ -1,4 +1,9 @@
-cuboid_xlen 100
-cuboid_ylen 100
-cuboid_zlen 100
+cuboid_len 100
+
+epsilon_r  20
+lj_eps     0.05
+
+loop_macrosteps 10
+loop_microsteps 100
+
 

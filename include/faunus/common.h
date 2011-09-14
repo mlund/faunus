@@ -30,13 +30,18 @@ namespace Faunus {
 
   namespace Move {
     class movebase;
-    class translate;
+    class translate_particle;
   }
 
   namespace Geometry {
     class geometrybase;
   }
 
+  namespace Energy {
+    class energybase;
+  }
+
+  class group;
   class inputfile;
   class space;
   class point;

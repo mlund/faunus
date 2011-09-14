@@ -75,12 +75,12 @@ namespace Faunus {
       bool loadstateBool;          //!< load state file if present?
       string statefile;            //!< Default name of state file to load/save
     public:
+      mcloop(inputfile&, string="loop_"); //!< Setup
       unsigned int cnt_micro, cnt_macro;
       bool eq;
       unsigned int macro;          //!< Number of macrosteps
       unsigned int micro;          //!< Number of microsteps
       unsigned int count();        //!< Current number of steps
-      mcloop(inputfile &);         //!< Setup
       string info();               //!< Get information
       string timing(unsigned int); //!< Show macrostep middle time and ETA (outdated!)
       string timing();             //!< Show macrostep middle time and ETA.

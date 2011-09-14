@@ -1,6 +1,7 @@
 #ifndef FAUNUS_SPACE_H
 #define FAUNUS_SPACE_H
 #include <faunus/common.h>
+#include <faunus/slump.h>
 
 namespace Faunus {
   class space {
@@ -9,17 +10,22 @@ namespace Faunus {
     private:
       slump slp;
     public:
+      enum spacekeys {NOOVERLAP};
       Geometry::geometrybase* geo;
       vector<particle> p;                             //!< The main particle vector
       vector<particle> trial;                         //!< Trial particle vector. 
-      vector<group*> g;                               //!< Pointers to all groups in the system.
+      vector<group*> g;                          //!< Pointers to all groups in the system.
 
       space(Geometry::geometrybase&);
       virtual bool save(string);                      //!< Save container state to disk
       virtual bool load(string, bool=false);          //!< Load container state from disk
 
-      bool insert(particle, unsigned int=-1);         //!< Insert particle at pos n.
+      bool insert(particle, int=-1);                  //!< Insert particle at pos n.
+      bool insert(string, int, spacekeys=NOOVERLAP); 
       bool remove(unsigned int);                      //!< Remove particle n.
+      int add(group&);                                //!< Add group pointer to g vector
+
+      bool overlap(const particle&) const;            //!< Check for hardspheres overlap with particle
 
       double charge() const;                          //!< Sum all charges in particle vector
       bool check_vector();                            //!< Check if p and trial are equal!

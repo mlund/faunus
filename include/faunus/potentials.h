@@ -23,6 +23,7 @@ namespace Faunus {
         public:
           void pad(std::ostringstream&, char);
           string name; //!< Short (preferably one-word) description of the core potential
+          double tokT;
       };
 
       class hardsphere : public potbase {

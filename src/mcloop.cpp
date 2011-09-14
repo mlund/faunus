@@ -3,10 +3,10 @@
 
 namespace Faunus {
 
-  mcloop::mcloop(inputfile &in) : cnt( in.getint("macrosteps",10)) {
-    string prefix="loop_";
-    macro=in.getint("macrosteps",10);
-    micro=in.getint("microsteps");
+  mcloop::mcloop(inputfile &in, string pfx) : cnt( in.getint(pfx+"macrosteps",10)) {
+    string prefix=pfx;
+    macro=in.getint(prefix+"macrosteps",10);
+    micro=in.getint(prefix+"microsteps");
     statefile=in.getstr(prefix+"statefile", "loop.state");
     loadstateBool = false; //in.getboo(prefix+"loadstate", false);
     if (loadstateBool)

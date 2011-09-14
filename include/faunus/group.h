@@ -12,12 +12,13 @@ namespace Faunus {
     public:
       enum type {SALT, MOLECULE, CIGAR, HYPER};
       type id;
-      group();
+      group(int=-1, int=-1);
       string info();
       string name;
       int beg;                  //!< index of first particle
       int end;                  //!< index of last particle
-      int len() const;          //!< number of particles in group.
+      int size() const;         //!< number of particles in group.
+      int random() const;
       vector<Move::movebase*> moves;    //!< pointers to move functions
 
       virtual double charge(const vector<particle>&) const;      //!< Calculate total charge

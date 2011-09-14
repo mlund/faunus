@@ -15,6 +15,7 @@ namespace Faunus {
     a.mw=0.1;
     a.charge=0;
     a.chempot=0;
+    a.dp=0;
     a.mean=0;
     a.variance=0;
     a.hydrophobic=0;

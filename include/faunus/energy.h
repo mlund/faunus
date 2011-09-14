@@ -7,6 +7,7 @@
 #include <tr1/tuple>
 #include <tr1/array>
 #include <faunus/common.h>
+#include <faunus/point.h>
 
 // http://publib.boulder.ibm.com/infocenter/iadthelp/v8r0/index.jsp?topic=/com.ibm.xlcpp111.linux.doc/language_ref/variadic_templates.html
 //
@@ -45,13 +46,28 @@ namespace Faunus {
           nonbonded(inputfile &in) : pair(in) {}
           virtual double i2i(const vector<particle> &p, int i, int j) { return 0; }
           virtual double i2g(const vector<particle> &p, const group &g, int i) { return 0; }
-          virtual double i2all(const vector<particle> &p, int i) { return 0; }
+          virtual double i2all(const vector<particle> &p, int i) {
+            double u;
+            for (int k=0; k<i; ++k)
+              u+=0;//=pair.pairpot(p[i],p[k]);
+            for (int k=i+1; k<p.size(); ++k)
+              u+=0;//pair.pairpot(p[i],p[k]);
+            return u;
+          }
           virtual double i_internal(const vector<particle> &p, int i) { return 0; }
 
           virtual double g2g(const vector<particle> &p, const group &g1, const group &g2) { return 0; }
           virtual double g2all(const vector<particle> &p, const group &g) { return 0; }
           virtual double g_internal(const vector<particle> &p, const group &g) { return 0; }
       };
+
+    //or simply add pointer to nonbonded<T>
+    template<class Tpotential>
+      class exclusions : public nonbonded<Tpotential> {
+        exclusions(inputfile &in) : nonbonded<Tpotential>(in) {}
+        virtual double i2i(const vector<particle> &p, int i, int j) { return 0; }
+      };
+
 
     class bonded : public energybase {
       //implement pointer to bond list

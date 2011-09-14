@@ -12,11 +12,14 @@ namespace Faunus {
    *                GROUP
    * -----------------------------------*/
 
-  group::group() {
-    beg=end=-1;
+  group::group(int first, int last) {
+    if (first==-1 || last==-1)
+      beg=end=-1;
+    beg=first;
+    end=last;
   }
 
-  int group::len() const {
+  int group::size() const {
     return (beg<0 || end<0) ? 0 : end-beg+1;
   }
 
@@ -53,7 +56,7 @@ namespace Faunus {
       o.end=end;
     };
     o.name = this->name + " + " + g.name;
-    if (o.len()!=this->len()+g.len())
+    if (o.size()!=this->size()+g.size())
       std::cout << "# Warning: Added groups are not continous!\n";
     return o;
   }
@@ -131,6 +134,10 @@ namespace Faunus {
       con.trial[i] = con.p[i] + p;
       con.geo->boundary( con.trial[i] );
     }
+  }
+
+  int group::random() const {
+    return beg + slp_global.rand() % size();
   }
   
   /* -----------------------------------*

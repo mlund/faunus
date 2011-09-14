@@ -16,6 +16,7 @@ namespace Faunus {
              mw,         //!< Weight
              charge,     //!< Charge
              chempot,    //!< Chemical potential
+             dp,         //!< Displacement parameter
              mean,       //!< Mean value... (charge, sasa, etc.)
              variance;   //!< ...and the spread around it.
       bool hydrophobic;  //!< Are we hydrophobic?

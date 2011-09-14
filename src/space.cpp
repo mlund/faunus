@@ -41,9 +41,9 @@ namespace Faunus {
    * \param a Particle to insers
    * \param i Position in particle vector
    */
-  bool space::insert(particle a, unsigned int i) {
-    if (i>p.size())
-      return false;
+  bool space::insert(particle a, int i) {
+    if ( i==-1 || i>p.size() )
+      i=p.size();
     p.insert(p.begin()+i, a);
     trial.insert(trial.begin()+i, a);
 
@@ -54,6 +54,28 @@ namespace Faunus {
         g[j]->end++;
     }
     return true;
+  }
+
+  bool space::insert(string name, int n, spacekeys key) {
+    particle p;
+    p=atom[name];
+    while (n>0) {
+      geo->randompos(p);
+      if (!overlap(p)) {
+        insert(p,-1);
+        n--;
+      }
+    }
+    return true;
+  }
+
+  bool space::overlap(const particle &a) const {
+    for (int i=0; i<p.size(); i++) {
+      double contact=a.radius+p[i].radius;
+      if (geo->_sqdist(a,p[i]) < contact*contact)
+        return true;
+    }
+    return false;
   }
 
   bool space::remove(unsigned int i) {
@@ -115,6 +137,14 @@ namespace Faunus {
     return false;
   }
 
+  int space::add(group &newgroup) {
+    for (int i=0; i<g.size(); i++)
+      if (g[i]==&newgroup)
+        return i;
+    g.push_back(&newgroup);
+    return g.size()-1; //return position if added group
+  }
+
   string space::info() {
     static char w=25;
     double z=charge();
@@ -123,6 +153,10 @@ namespace Faunus {
       << "# SIMULATION SPACE:" << endl
       << geo->info(w);
     geo->pad(o,w); o << "Number of particles" << p.size() << endl;
+    geo->pad(o,w); o << "Number of groups" << g.size() << endl;
+    for (int i=0; i<g.size(); i++) {
+      geo->pad(o,w); o << "" << setw(5) << i << g[i]->name << endl;
+    }
     geo->pad(o,w); o << "Volume (AA^3)" << geo->getvolume() << endl;
     geo->pad(o,w); o << "Electroneutrality" << ((abs(z)>1e-7) ? "NO!" : "Yes") << " "  << z << endl;
     return o.str();

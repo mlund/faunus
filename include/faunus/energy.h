@@ -47,12 +47,12 @@ namespace Faunus {
           virtual double i2i(const vector<particle> &p, int i, int j) { return 0; }
           virtual double i2g(const vector<particle> &p, const group &g, int i) { return 0; }
           virtual double i2all(const vector<particle> &p, int i) {
-            double u;
+            double u=0;
             for (int k=0; k<i; ++k)
-              u+=0;//=pair.pairpot(p[i],p[k]);
+              u+=pair.pairpot(p[i],p[k]);
             for (int k=i+1; k<p.size(); ++k)
-              u+=0;//pair.pairpot(p[i],p[k]);
-            return u;
+              u+=pair.pairpot(p[i],p[k]);
+            return u*pair.tokT;
           }
           virtual double i_internal(const vector<particle> &p, int i) { return 0; }
 

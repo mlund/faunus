@@ -167,13 +167,13 @@ namespace Faunus {
     return (r2<s*s) ? true:false;
   }
 
-  pointparticle pointparticle::operator=(const specdata &d) const {
-    pointparticle p;
-    p.charge=d.charge;
-    p.radius=d.radius;
-    p.mw=d.mw;
-    p.hydrophobic=d.hydrophobic;
-    return p;
+  pointparticle& pointparticle::operator=(const specdata &d) {
+    id=d.id;
+    charge=d.charge;
+    radius=d.radius;
+    mw=d.mw;
+    hydrophobic=d.hydrophobic;
+    return *this;
   }
 
   /************
@@ -205,7 +205,7 @@ namespace Faunus {
     return *this;
   }
 
-  cigarparticle cigarparticle::operator=(const specdata &d) const {
+  cigarparticle& cigarparticle::operator=(const specdata &d) {
     pointparticle::operator=(d);
     return *this;
   }

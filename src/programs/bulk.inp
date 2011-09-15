@@ -1,6 +1,6 @@
-cuboid_len 100
+cuboid_len 50
 
-epsilon_r  20
+epsilon_r  80
 lj_eps     0.05
 
 loop_macrosteps 10

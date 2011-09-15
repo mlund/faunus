@@ -74,7 +74,7 @@ namespace Faunus {
       friend std::ostream &operator<<(std::ostream &, const pointparticle &); //!< Output information
       pointparticle& operator<<(std::istream &);                              //!< Get information
       pointparticle& operator=(const point&);                                 //!< Copy coordinates from a point
-      pointparticle operator=(const specdata&) const;
+      pointparticle& operator=(const specdata&);
   };
 
   class cigarparticle : public pointparticle {
@@ -88,7 +88,7 @@ namespace Faunus {
       friend std::ostream &operator<<(std::ostream &, const cigarparticle &); //!< Output information
       cigarparticle &operator<<(std::istream &);                              //!< Get information
       cigarparticle operator+(const point&) const;         //!< Add two vectors
-      cigarparticle operator=(const specdata&) const;
+      cigarparticle& operator=(const specdata&);
       cigarparticle& operator=(const pointparticle&);
   };
 

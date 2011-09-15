@@ -11,7 +11,7 @@ namespace Faunus {
 
   namespace Move {
 
-    movebase::movebase(Energy::energybase &e, space &s, string pfx) {
+    movebase::movebase(Energy::energybase &e, space &s, string pfx) : infty(1e15) {
       pot=&e;
       spc=&s;
       prefix=pfx;
@@ -31,11 +31,14 @@ namespace Faunus {
     double movebase::move() {
       trialmove();
       double du=energychange();
-      if ( metropolis(du) )
-        acceptmove();
-      else
+      if ( !metropolis(du) ) {
         rejectmove();
-      dusum+=du;
+        du=0;
+      }
+      else {
+        acceptmove();
+        dusum+=du;
+      }
       return du;
     }
 
@@ -63,7 +66,7 @@ namespace Faunus {
       pad(o); o << "Runfraction" << runfraction << endl;
       if (cnt>0) {
         pad(o); o << "Number of trials" << cnt << endl;
-        pad(o); o << "Acceptance" << double(cnt_accepted)/cnt << endl;
+        pad(o); o << "Acceptance" << double(cnt_accepted)/cnt*100 << " percent" << endl;
         pad(o); o << "Total energy change" << dusum << " kT" << endl;
       }
       return o.str();
@@ -123,16 +126,25 @@ namespace Faunus {
 
     void translate_particle::acceptmove() {
       movebase::acceptmove();
+      double r2=spc->geo->_sqdist( spc->p[iparticle], spc->trial[iparticle] );
+      sqrmap[ spc->p[iparticle].id ] += r2;
+      accmap[ spc->p[iparticle].id ] += 1;
       spc->p[iparticle] = spc->trial[iparticle];
     }
 
     void translate_particle::rejectmove() {
       spc->trial[iparticle] = spc->p[iparticle];
+      sqrmap[ spc->p[iparticle].id ] += 0;
+      accmap[ spc->p[iparticle].id ] += 0;
     }
 
     double translate_particle::energychange() {
-      if (iparticle>-1)
-        return pot->i2all(spc->trial, iparticle) - pot->i2all(spc->p, iparticle);
+      if (iparticle>-1) {
+        if ( spc->geo->collision( spc->trial[iparticle] ) )
+          return infty;
+        else
+          return pot->i2all(spc->trial, iparticle) - pot->i2all(spc->p, iparticle);
+      }
       return 0;
     }
 
@@ -140,8 +152,10 @@ namespace Faunus {
       if (!run()) return 0;
       if (igroup>-1) {
         double du=0;
-        for (int i=0; i<spc->g[igroup]->size(); i++)
+        for (int i=0; i<spc->g[igroup]->size(); i++) {
+          iparticle = spc->g[igroup]->random();
           du+=movebase::move();
+        }
         iparticle=-1;
         return du;
       } else return movebase::move();
@@ -151,6 +165,14 @@ namespace Faunus {
       std::ostringstream o;
       o << movebase::info();
       pad(o); o << "Displacement directions" << dir << endl;
+      pad(o); o << "Mean-square displacement:" << endl;
+      for (mapiter it=sqrmap.begin(); it!=sqrmap.end(); ++it) {
+        pad(o); o << "" << atom[it->first].name << " " << it->second << endl;
+      }
+      pad(o); o << "Particle acceptance:" << endl;
+      for (mapiter it=accmap.begin(); it!=accmap.end(); ++it) {
+        pad(o); o << "" << atom[it->first].name << " " << it->second << endl;
+      }
       return o.str();
     }
 

@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cassert>
 #include <complex>
+#include <map>
 #endif
 
 namespace Faunus {

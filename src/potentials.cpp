@@ -31,14 +31,13 @@ namespace Faunus {
         inf=infinity;
       }
 
-      lennardjones::lennardjones(inputfile &in) {
+      lennardjones::lennardjones() {
         name="Lennard-Jones";
-        eps=4*in.getflt("lj_eps",0.04);
+        tokT=1;
       }
 
       string lennardjones::info(char w) {
         std::ostringstream o;
-        pad(o,w); o << "LJ epsilon (kT)" << eps << endl;
         return o.str();
       }
 

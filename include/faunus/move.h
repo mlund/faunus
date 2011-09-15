@@ -3,6 +3,7 @@
 
 #include <faunus/common.h>
 #include <faunus/point.h>
+#include <faunus/average.h>
 
 namespace Faunus {
   //class average;
@@ -50,6 +51,7 @@ namespace Faunus {
         unsigned long int cnt_accepted;  //!< number of accepted moves
         char iw;                         //!< width of first column of info string
         double dusum;                    //!< Sum of all energy changes made by this move
+        const double infty;              //!< Large value to represent infinity
 
         virtual void trialmove()=0;      //!< Do a trial move
         virtual void acceptmove()=0;     //!< Accept move, store new coordinates etc.
@@ -92,6 +94,11 @@ namespace Faunus {
      * point igroup to the appropriate group in the space class g vector.
      */
     class translate_particle : public movebase {
+      private:
+        typedef std::map<short, average<double> > map_type;
+        typedef map_type::const_iterator mapiter;
+        map_type accmap; //!< Single particle acceptance map
+        map_type sqrmap; //!< Single particle mean square displacement map
       protected:
         void trialmove();
         void acceptmove();

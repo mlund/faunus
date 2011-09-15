@@ -57,12 +57,12 @@ namespace Faunus {
   }
 
   bool space::insert(string name, int n, spacekeys key) {
-    particle p;
-    p=atom[name];
+    particle a;
+    a=atom[name];
     while (n>0) {
-      geo->randompos(p);
-      if (!overlap(p)) {
-        insert(p,-1);
+      geo->randompos(a);
+      if (!overlap(a)) {
+        insert(a,-1);
         n--;
       }
     }

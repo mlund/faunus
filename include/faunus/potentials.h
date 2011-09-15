@@ -37,22 +37,21 @@ namespace Faunus {
       };
 
       class lennardjones : public potbase {
-        public:
+        protected:
           double eps;
-          lennardjones(inputfile &);
-          inline double u_r6(const double &r2, const double &sigma) const {
+        public:
+          lennardjones();
+          inline double r6(const double &r2, const double &sigma) const {
             double x=sigma*sigma/r2;  // 2
             return x*x*x;             // 6
           }
-
-          inline double u_r12(const double &r2, const double &sigma) const {
-            double r6=u_r6(r2,sigma);
-            return r6*r6;
+          inline double r12(const double &r2, const double &sigma) const {
+            double x=r6(r2,sigma);
+            return x*x;               // 12
           }
-
-          inline double u_lj(const double &r2, const double &sigma) const {
-            double r6=u_r6(r2,sigma);
-            return r6*r6 - r6;
+          inline double u_lj(const double &r2, const double &sigma, const double &eps) const {
+            double x=r6(r2,sigma);
+            return eps*(x*x - x);
           }
           string info(char);
       };
@@ -70,8 +69,9 @@ namespace Faunus {
       };
 
       class coulomb : public potbase {
-        public:
+        protected:
           double lB; //!< Bjerrum length [A]
+        public:
           coulomb(inputfile &);
           inline double u_coulomb(const double &r, const double &zz) const { return zz/r; }
           string info(char);
@@ -81,7 +81,7 @@ namespace Faunus {
         protected:
           double c,k;
         public:
-          debyehuckel(inputfile &);
+          debyehuckel(inputfile&);
           double ionic_strength() const;
           double debye_length() const;
           inline double u_dh(const double &r, const double &zz) const {
@@ -94,17 +94,25 @@ namespace Faunus {
 
     template<class Tgeometry>
       class coulomb_lj {
-        public:
+        protected:
           Core::lennardjones lj;
           Core::coulomb el;
-          coulomb_lj(inputfile &in) : lj(in), el(in) {}
+          const double eps;
+        public:
+          double tokT;
+          coulomb_lj(inputfile &in) : el(in), eps(4*in.getflt("lj_eps",0.04)/el.tokT) {
+            tokT=el.tokT;
+          }
           inline double pairpot(const particle &a, const particle &b) const {
-            double r2=a.sqdist<Tgeometry>(b);
-            return el.u_coulomb(sqrt(r2), a.charge*b.charge) + lj.u_lj(r2,a.radius+b.radius);
+            double r2=Tgeometry::sqdist(a,b);
+            return el.u_coulomb(sqrt(r2), a.charge*b.charge)
+              + lj.u_lj(r2, a.radius+b.radius, eps);
           }
           string info(char w=20) {
-            return "\n# PAIR POTENTIAL: " + lj.name +"+" + el.name + "\n"
-              + lj.info(w) + el.info(w);
+            std::ostringstream o;
+            o << "\n# PAIR POTENTIAL: " << lj.name << "+" << el.name << "\n" << el.info(w);
+            el.pad(o,w); o << "LJ epsilon" << eps*tokT << endl;
+            return o.str();
           }
       };
 

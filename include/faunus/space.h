@@ -23,7 +23,7 @@ namespace Faunus {
       bool insert(particle, int=-1);                  //!< Insert particle at pos n.
       bool insert(string, int, spacekeys=NOOVERLAP); 
       bool remove(unsigned int);                      //!< Remove particle n.
-      int add(group&);                                //!< Add group pointer to g vector
+      int enroll(group&);                             //!< Add group pointer to g vector
 
       bool overlap(const particle&) const;            //!< Check for hardspheres overlap with particle
 

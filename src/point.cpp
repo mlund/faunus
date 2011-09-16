@@ -75,10 +75,10 @@ namespace Faunus {
     return *this;
   }
 
-  point point::operator*(double s) const {
+  const point point::operator*(double s) const {
     point o=*this;
     o*=s;
-    return *this;
+    return o;
   }
 
   bool point::operator==(const point& p) const {

@@ -4,8 +4,8 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <tr1/tuple>
-#include <tr1/array>
+#include <tuple>
+#include <array>
 #include <faunus/common.h>
 #include <faunus/point.h>
 
@@ -25,6 +25,7 @@ namespace Faunus {
         static Geometry::geometrybase* geo; //!< Pointer to geometry functions - possibly slow, so avoid in time critical steps
 
         // single particle interactions
+        virtual double all2all(const vector<particle> &p);
         virtual double i2i(const vector<particle> &p, int i, int j);
         virtual double i2g(const vector<particle> &p, const group &g, int i);
         virtual double i2all(const vector<particle> &p, int i);
@@ -42,16 +43,25 @@ namespace Faunus {
     template<class Tpotential>
       class nonbonded : public energybase {
         public:
+          typedef std::vector<particle>::const_iterator pviter;
           Tpotential pair;
           nonbonded(inputfile &in) : pair(in) {}
+          virtual double all2all(const vector<particle> &p) {
+            int n=p.size();
+            double u=0;
+            for (int i=0; i<n-1; ++i)
+              for (int j=i+1; j<n; ++j)
+                u+=pair.pairpot( p[i],p[j] );
+            return u*pair.tokT;
+          }
           virtual double i2i(const vector<particle> &p, int i, int j) { return 0; }
           virtual double i2g(const vector<particle> &p, const group &g, int i) { return 0; }
           virtual double i2all(const vector<particle> &p, int i) {
             double u=0;
-            for (int k=0; k<i; ++k)
-              u+=pair.pairpot(p[i],p[k]);
-            for (int k=i+1; k<p.size(); ++k)
-              u+=pair.pairpot(p[i],p[k]);
+            for (int j=0; j<i; ++j)
+              u+=pair.pairpot( p[i], p[j] );
+            for (int j=i+1; j<p.size(); ++j)
+              u+=pair.pairpot( p[i], p[j] );
             return u*pair.tokT;
           }
           virtual double i_internal(const vector<particle> &p, int i) { return 0; }

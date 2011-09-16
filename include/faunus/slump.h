@@ -19,7 +19,7 @@
     #include <time.h>
   #endif
   #ifdef HAVETR1
-    #include <tr1/random>
+    #include <random>
   #endif
 #endif
 
@@ -87,8 +87,8 @@ namespace Faunus {
   class randomTwister : public random {
     private:
       double maxinv;
-      std::tr1::mt19937 eng;
-      std::tr1::uniform_real<double> dist;
+      std::mt19937 eng;
+      std::uniform_real_distribution<double> dist;
     public:
       randomTwister();
       double random_one();

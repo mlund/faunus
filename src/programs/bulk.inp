@@ -1,9 +1,11 @@
-cuboid_len 50
+cuboid_len    50
+sphere_radius 62.035
 
-epsilon_r  80
-lj_eps     0.05
+temperature 298.15
+epsilon_r   79
+lj_eps      0.05
 
 loop_macrosteps 10
-loop_microsteps 100
+loop_microsteps 1000
 
 

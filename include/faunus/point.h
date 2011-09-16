@@ -26,7 +26,7 @@ namespace Faunus {
       void ranunit(random &);               //!< Generate a random unit vector
       double dot(const point &) const;      //!< Angle with another point
       point operator-() const;              //!< Sign reversal
-      point operator*(double) const;        //!< Scale vector
+      const point operator*(double) const;  //!< Scale vector
       point operator+(const point&) const;  //!< Add two vectors
       point operator-(const point&) const;  //!< Subtract vector
       point & operator+=(const point&);     //!< Vector addition

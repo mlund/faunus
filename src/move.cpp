@@ -66,7 +66,7 @@ namespace Faunus {
       pad(o); o << "Runfraction" << runfraction << endl;
       if (cnt>0) {
         pad(o); o << "Number of trials" << cnt << endl;
-        pad(o); o << "Acceptance" << double(cnt_accepted)/cnt*100 << " percent" << endl;
+        pad(o); o << "Acceptance" << double(cnt_accepted)/cnt*100 << "\ufe6a" << endl;
         pad(o); o << "Total energy change" << dusum << " kT" << endl;
       }
       return o.str();
@@ -140,8 +140,10 @@ namespace Faunus {
 
     double translate_particle::energychange() {
       if (iparticle>-1) {
-        if ( spc->geo->collision( spc->trial[iparticle] ) )
+        if ( spc->geo->collision( spc->trial[iparticle], Geometry::geometrybase::BOUNDARY ) ) {
+          //cout << "!";
           return infty;
+        }
         else
           return pot->i2all(spc->trial, iparticle) - pot->i2all(spc->p, iparticle);
       }
@@ -171,7 +173,7 @@ namespace Faunus {
       }
       pad(o); o << "Particle acceptance:" << endl;
       for (mapiter it=accmap.begin(); it!=accmap.end(); ++it) {
-        pad(o); o << "" << atom[it->first].name << " " << it->second << endl;
+        pad(o); o << "" << atom[it->first].name << " " << (it->second).avg()*100 << "\ufe6a" << endl;
       }
       return o.str();
     }

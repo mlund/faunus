@@ -56,6 +56,7 @@ namespace Faunus {
 
       coulomb::coulomb(inputfile &in) {
         name="Coulomb";
+        pc::T=in.getflt("temperature", 298.15);
         lB=pc::lB( in.getflt("epsilon_r",80.) );
         tokT=lB;
       }
@@ -90,7 +91,7 @@ namespace Faunus {
         std::ostringstream o;
         o << coulomb::info(w);
         pad(o,w); o << "Ionic strength (M)" << ionic_strength() << endl;
-        pad(o,w); o << "Debye length (A)" << ionic_strength() << endl;
+        pad(o,w); o << "Debye length, 1/\u03BA (A)" << ionic_strength() << endl;
         return o.str();
       }
 

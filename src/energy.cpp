@@ -9,6 +9,7 @@ namespace Faunus {
     Geometry::geometrybase* energybase::geo;
 
     // single particle interactions
+    double energybase::all2all(const vector<particle> &p) {return 0;}
     double energybase::i2i(const vector<particle> &p, int i, int j) {return 0;}
     double energybase::i2g(const vector<particle> &p, const group &g, int i) {return 0;}
     double energybase::i2all(const vector<particle> &p, int i) {return 0;}

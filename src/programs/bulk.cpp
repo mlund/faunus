@@ -16,48 +16,44 @@
 
 using namespace Faunus;
 
-typedef Geometry::cuboid Tgeometry;                // select simulation geometry
+typedef Geometry::sphere Tgeometry;                // select simulation geometry
 typedef Potential::coulomb_lj<Tgeometry> Tpairpot; // select particle-particle pairpotential
 
 int main() {
-  atom.includefile("atomlist.inp"); // load atom properties
-  inputfile in("bulk.inp");         // read user input
-  mcloop loop(in);
-  iopqr pqr;
+  atom.includefile("atomlist.inp");    // load atom properties
+  inputfile in("bulk.inp");            // read user input
+  mcloop loop(in);                     // class for handling mc loops
+  iopqr pqr;                           // PQR structure file I/O
+  energydrift sys;                     // class for tracking system energy drifts
 
-  Tgeometry geo(in); // simulation geometry
-  space spc(geo);    // generate simulation space
-  Energy::nonbonded<Tpairpot> pot(in);
+  Tgeometry geo(in);                   // simulation geometry
+  space spc(geo);                      // generate simulation space
+  Energy::nonbonded<Tpairpot> pot(in); // energy calculation class
 
-  atom["NA"].dp=40.;
-  atom["CL"].dp=800.;
-
-  spc.insert("NA",100);
+  // Handle particles
+  atom["NA"].dp=80.;                   // Displacement parameter
+  atom["CL"].dp=80.;
+  spc.insert("NA",100);                // Insert particles into space
   spc.insert("CL",100);
-  group salt(0,199);
+  group salt(0,199);                   // Define salt range
   salt.name="Salt particles";
-  Move::translate_particle mv(in, pot, spc);
-  mv.igroup = spc.add(salt);
+  Move::translate_particle mv(in, pot, spc);  // Particle move class
+  mv.igroup = spc.enroll(salt);               // Enroll salt in space and select it for particle moves
 
-  pqr.save("init.pqr", spc.p);
+  spc.load("confout.spc");
+  sys.init( pot.all2all(spc.p) );
 
-  cout << pot.pair.info();
+  cout << atom.info() << spc.info() << pot.info() << mv.info() << pot.pair.info() << endl;
 
-  cout << atom.info() << spc.info() << pot.info() << mv.info() << in.info() << endl;
-
-  double du=0;
-  while ( loop.macroCnt() ) {           // Markov chain 
+  while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      du+=mv.move();
+      sys+=mv.move();
     }
+    sys.checkdrift( pot.all2all(spc.p) );
     cout << loop.timing();
   }
 
-  for (int i=0; i<spc.p.size(); i++)
-    if ( geo.collision(spc.trial[i])==true )
-      cout << "!" << endl;
-
   pqr.save("confout.pqr", spc.p);
-
-  cout << mv.info();
+  spc.save("confout.spc");
+  cout << mv.info() << sys.info();
 }

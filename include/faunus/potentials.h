@@ -30,8 +30,8 @@ namespace Faunus {
         private:
           double inf;
         public:
-          hardsphere(double=1e9);
-          inline double u_hs(const double &r2, double mindist) const {
+          hardsphere(double=1e14);
+          inline double u_hs(const double &r2, const double &mindist) const {
             return (mindist*mindist>r2) ? 0 : inf;
           }
       };
@@ -73,7 +73,7 @@ namespace Faunus {
           double lB; //!< Bjerrum length [A]
         public:
           coulomb(inputfile &);
-          inline double u_coulomb(const double &r, const double &zz) const { return zz/r; }
+          inline double u(const double &r, const double &zz) const { return zz/r; }
           string info(char);
       };
 
@@ -84,7 +84,7 @@ namespace Faunus {
           debyehuckel(inputfile&);
           double ionic_strength() const;
           double debye_length() const;
-          inline double u_dh(const double &r, const double &zz) const {
+          inline double u(const double &r, const double &zz) const {
             return zz/r * exp(k*r);
           }
           string info(char);
@@ -92,11 +92,11 @@ namespace Faunus {
 
     } //end of Core namespace
 
-    template<class Tgeometry>
+    template<class Tgeometry, class Tcoulomb=Core::coulomb>
       class coulomb_lj {
         protected:
           Core::lennardjones lj;
-          Core::coulomb el;
+          Tcoulomb el;
           const double eps;
         public:
           double tokT;
@@ -105,13 +105,33 @@ namespace Faunus {
           }
           inline double pairpot(const particle &a, const particle &b) const {
             double r2=Tgeometry::sqdist(a,b);
-            return el.u_coulomb(sqrt(r2), a.charge*b.charge)
-              + lj.u_lj(r2, a.radius+b.radius, eps);
+            return el.u(sqrt(r2), a.charge*b.charge) + lj.u_lj(r2, a.radius+b.radius, eps);
           }
           string info(char w=20) {
             std::ostringstream o;
             o << "\n# PAIR POTENTIAL: " << lj.name << "+" << el.name << "\n" << el.info(w);
             el.pad(o,w); o << "LJ epsilon" << eps*tokT << endl;
+            return o.str();
+          }
+      };
+
+    template<class Tgeometry, class Tcoulomb=Core::coulomb>
+      class coulomb_hs {
+        protected:
+          Tcoulomb el;
+        public:
+          const double infty;
+          double tokT;
+          coulomb_hs(inputfile &in) : el(in), infty(1e10) { tokT=el.tokT; }
+          inline double pairpot(const particle &a, const particle &b) const {
+            double r2=Tgeometry::sqdist(a,b), s=a.radius+b.radius;
+            if (r2<s*s)
+              return infty;
+            return el.u(sqrt(r2), a.charge*b.charge);
+          }
+          string info(char w=20) {
+            std::ostringstream o;
+            o << "\n# PAIR POTENTIAL: Hardsphere + " << el.name << "\n" << el.info(w);
             return o.str();
           }
       };

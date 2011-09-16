@@ -131,13 +131,14 @@ namespace Faunus {
         for (int i=0; i<g.size(); i++)
           *g[i] << fin;
         std::cout << "# Read " << n << " groups from " << file << endl;
+        return true;
       }
     }
-    std::cerr << "# Container data NOT read from file " << file << endl;
+    std::cerr << "# Space data NOT read from file " << file << endl;
     return false;
   }
 
-  int space::add(group &newgroup) {
+  int space::enroll(group &newgroup) {
     for (int i=0; i<g.size(); i++)
       if (g[i]==&newgroup)
         return i;
@@ -155,7 +156,10 @@ namespace Faunus {
     geo->pad(o,w); o << "Number of particles" << p.size() << endl;
     geo->pad(o,w); o << "Number of groups" << g.size() << endl;
     for (int i=0; i<g.size(); i++) {
-      geo->pad(o,w); o << "" << setw(5) << i << g[i]->name << endl;
+      geo->pad(o,w);
+      o << "" << std::left << setw(4) << i << setw(20) << g[i]->name
+        << "[" << g[i]->beg << "-" << g[i]->end << "]"
+        << endl;
     }
     geo->pad(o,w); o << "Volume (AA^3)" << geo->getvolume() << endl;
     geo->pad(o,w); o << "Electroneutrality" << ((abs(z)>1e-7) ? "NO!" : "Yes") << " "  << z << endl;

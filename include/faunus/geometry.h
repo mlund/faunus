@@ -76,6 +76,7 @@ namespace Faunus {
           dz=a.z-b.z;
           return dx*dx + dy*dy + dz*dz;
         }
+        point vdist(const point&, const point&);
     };
 
     //---------------------------------------------------------

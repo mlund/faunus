@@ -241,7 +241,9 @@ namespace Faunus {
     for (int i=0; i<result.size(); i++)
       if (result[i]==false) numerr++;
 #else
-    numerr = std::count( result.begin(), result.end(), false);  
+    for (int i=0; i<result.size(); i++)
+      if (result[i]==false) numerr++;
+    //numerr = std::count( result.begin(), result.end(), false);  
 #endif
     o << std::endl << "# TEST SUITE:" << std::endl;
     if (stable==true)

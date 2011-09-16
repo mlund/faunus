@@ -8,20 +8,16 @@
 namespace Faunus {
   namespace Geometry {
 
-    double Geometry::geometrybase::volume;
+    double geometrybase::volume;
 
-    double Geometry::geometrybase::_dist(const point &p1, const point &p2) {
+    double geometrybase::_dist(const point &p1, const point &p2) {
       return sqrt( _sqdist(p1, p2) );
     }
 
-    point Geometry::geometrybase::vdist(const point&a, const point&b) {
-      return a-b;
+    void geometrybase::scale(point &a, const double &s) const {
     }
 
-    void Geometry::geometrybase::scale(point &a, const double &s) const {
-    }
-
-    bool Geometry::geometrybase::collision(const particle &a, collisiontype type) {
+    bool geometrybase::collision(const particle &a, collisiontype type) {
       /*
          if (type==MATTER)
          for (int i=0; i<p.size(); i++)
@@ -32,25 +28,25 @@ namespace Faunus {
       return false;
     }
 
-    void Geometry::geometrybase::pad(std::ostringstream& o, char w) {
+    void geometrybase::pad(std::ostringstream& o, char w) {
       o << "#   " << setw(w) << std::left;
     }
 
-    string Geometry::geometrybase::info(char w) {
+    string geometrybase::info(char w) {
       std::ostringstream o;
       pad(o,w); o << "Boundary" << name << endl;
       return o.str();
     }
 
-    void Geometry::geometrybase::setvolume(double vol) {
+    void geometrybase::setvolume(double vol) {
       volume=vol;
     }
 
-    double Geometry::geometrybase::getvolume() const {
+    double geometrybase::getvolume() const {
       return volume;
     }
 
-    bool Geometry::geometrybase::save(string file) {
+    bool geometrybase::save(string file) {
       std::ofstream fout( file.c_str());
       if (fout) {
         fout.precision(10);
@@ -64,7 +60,7 @@ namespace Faunus {
      * \param file Filename
      * \param resize True if the current geometry should be resized to match file content (default: false)
      */
-    bool Geometry::geometrybase::load(string file, bool resize) {
+    bool geometrybase::load(string file, bool resize) {
       double vol;
       std::ifstream f( file.c_str() );
       if (f) {
@@ -118,6 +114,11 @@ namespace Faunus {
         l=m.x*m.x+m.y*m.y+m.z*m.z;
       }
     }
+
+    point sphere::vdist(const point&a, const point&b) {
+      return a-b;
+    }
+
 
     void sphere::boundary(point &m) const {}
 
@@ -222,8 +223,7 @@ namespace Faunus {
         case (BOUNDARY): // collision with geometry boundaries
           if (std::abs(a.x) > len_half.x ||
               std::abs(a.y) > len_half.y ||
-              std::abs(a.z) > len_half.z  )
-          return true;
+              std::abs(a.z) > len_half.z  ) return true;
           break;
         case (ZONE):     // collision with forbidden zone (slice)
           if (std::abs(a.x) > len_half.x  ||

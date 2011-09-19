@@ -21,7 +21,7 @@ namespace Faunus {
       int random() const;
       vector<Move::movebase*> moves;    //!< pointers to move functions
 
-      virtual double charge(const vector<particle>&) const;      //!< Calculate total charge
+      virtual double charge(const p_vec&) const;      //!< Calculate total charge
       virtual point masscenter(const space&) const;          //!< Calculate mass center
       virtual point dipolemoment(const space&) const;        //!< Calculate dipole moment
 

@@ -93,7 +93,7 @@ namespace Faunus {
     return false;
   }
 
-  bool ioaam::save(string file, vector<particle> &p) {
+  bool ioaam::save(string file, p_vec &p) {
     std::ostringstream o;
     o << p.size() << std::endl;
     for (unsigned int i=0; i<p.size(); i++)
@@ -115,7 +115,7 @@ namespace Faunus {
     return p;
   }
 
-  bool ioxyz::save(string file, vector<particle> &p) {
+  bool ioxyz::save(string file, p_vec &p) {
     std::ostringstream o;
     o << p.size() << std::endl << std::endl;
     for (unsigned short i=0; i<p.size(); i++)
@@ -125,7 +125,7 @@ namespace Faunus {
     return writefile(file, o.str());
   }
 
-  vector<particle> ioxyz::load(string file) {
+  p_vec ioxyz::load(string file) {
     v.resize(0);
     particle dummy;
 
@@ -156,7 +156,7 @@ namespace Faunus {
    */
   iopqr::iopqr() { }
 
-  bool iopqr::save(string file, vector<particle> &p) {
+  bool iopqr::save(string file, p_vec &p) {
     string name;
     int i, nres=1, natom=1;
     char buf[100];
@@ -174,15 +174,15 @@ namespace Faunus {
   }
 
   /*
-  bool iopqr::save(string file, vector<particle> &p, titrate &tit) {
-    vector<particle> tmp = p;
+  bool iopqr::save(string file, p_vec &p, titrate &tit) {
+    p_vec tmp = p;
     for (unsigned short i=0; i<p.size(); i++)
       tmp[i].charge = tit.avgcharge(p, i);
     return save(file, tmp);
   }
 
-  bool iopqr::save(string file, vector<particle> &p, vector<group> &g) {
-    vector<particle> t;
+  bool iopqr::save(string file, p_vec &p, vector<group> &g) {
+    p_vec t;
     for (int i=0; i<g.size(); i++)
       for (int j=g[i].beg; j<=g[i].end; j++)
         t.push_back( p[j] );
@@ -190,7 +190,7 @@ namespace Faunus {
   }
   */
 
-  bool iogro::save(string file, vector<particle> &p) {
+  bool iogro::save(string file, p_vec &p) {
     string name;
     int i, nres=1, natom=1;
     char buf[79];
@@ -300,7 +300,7 @@ namespace Faunus {
    * from aangstom to nanometers. The box dimensions for the frame must be manually
    * set by the ioxtc::setbox() function before calling this.
    */
-  bool ioxtc::save(string file, const vector<particle> &p) {
+  bool ioxtc::save(string file, const p_vec &p) {
     if (xd==NULL)
       xd=xdrfile_open(&file[0], "w");
     if (xd!=NULL) {
@@ -317,8 +317,8 @@ namespace Faunus {
     return false;
   }
 
-  bool ioxtc::save(string file, vector<particle> &p, vector<group> &g) {
-    vector<particle> t;
+  bool ioxtc::save(string file, p_vec &p, vector<group> &g) {
+    p_vec t;
     for (int i=0; i<g.size(); i++)
       for (int j=g[i].beg; j<=g[i].end; j++)
         t.push_back( p[j] );
@@ -398,12 +398,12 @@ namespace Faunus {
     append=false;
   }
 
-  vector<particle> ioqtraj::load(string s) {
-    vector<particle> dummy;
+  p_vec ioqtraj::load(string s) {
+    p_vec dummy;
     return dummy;
   }
 
-  bool ioqtraj::save(string file, vector<particle> &p) {
+  bool ioqtraj::save(string file, p_vec &p) {
       io fio;
       std::ostringstream o;
       o.precision(6);
@@ -418,8 +418,8 @@ namespace Faunus {
       return fio.writefile(file, o.str(), std::ios_base::out);
   }
 
-  bool ioqtraj::save(string file, vector<particle> &p, vector<group> &g) {
-    vector<particle> t;
+  bool ioqtraj::save(string file, p_vec &p, vector<group> &g) {
+    p_vec t;
     for (int i=0; i<g.size(); i++)
       for (int j=g[i].beg; j<=g[i].end; j++)
         t.push_back( p[j] );

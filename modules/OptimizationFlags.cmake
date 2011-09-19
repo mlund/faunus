@@ -6,7 +6,7 @@
 unset(CMAKE_CXX_FLAGS)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  set(CMAKE_CXX_FLAGS "-funroll-loops -W -Wno-sign-compare -Wno-conversion")
+  set(CMAKE_CXX_FLAGS "-stdlib=libc++ -funroll-loops -W -Wno-sign-compare -Wno-conversion")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
   set(CMAKE_CXX_FLAGS "-w1 -Wno-unknown-pragmas")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")

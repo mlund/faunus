@@ -13,8 +13,8 @@ include(CheckIncludeFileCXX)
 include(CheckCXXSourceCompiles)
 enable_testing()
 
-set(UNSIGNED_LONG_LONG_INT)
-CHECK_CXX_SOURCE_COMPILES("int main() { unsigned long long int i; }" UNSIGNED_LONG_LONG_INT)
+CHECK_CXX_SOURCE_COMPILES("int main() { unsigned long long int i; }" unsigned_long_long_int)
+CHECK_CXX_SOURCE_COMPILES("int main() { long double f; }" long_double)
 
 # ------------------------------
 #   Default build is "Release"

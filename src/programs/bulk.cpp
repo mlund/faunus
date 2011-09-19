@@ -1,25 +1,28 @@
-#include <faunus/common.h>
-#include <faunus/point.h>
-#include <faunus/geometry.h>
-#include <faunus/species.h>
-#include <faunus/inputfile.h>
-#include <faunus/energy.h>
-#include <faunus/potentials.h>
-#include <faunus/average.h>
-#include <faunus/space.h>
-#include <faunus/move.h>
-#include <faunus/mcloop.h>
-#include <faunus/group.h>
-#include <faunus/io.h>
-
-#include <typeinfo>
+#include <faunus/faunus.h>
 
 using namespace Faunus;
 
-typedef Geometry::sphere Tgeometry;                // select simulation geometry
+typedef Geometry::cuboid Tgeometry;                // select simulation geometry
 typedef Potential::coulomb_lj<Tgeometry> Tpairpot; // select particle-particle pairpotential
 
+template<class T>
+class distributions {
+  private:
+    typedef xytable<double,T> Ttable;
+    typedef std::map<string,Ttable> Tmap;
+    double xmin, xmax, dx;
+    Tmap dmap;
+  public:
+    distributions(double min, double max, double delta) {
+    }
+    void add(string name, double val) {
+      dmap[name]+=val;
+    }
+};
+
 int main() {
+  distributions<double> dst(0,100,0.5);
+  //dst.add("Utot",0);
   atom.includefile("atomlist.inp");    // load atom properties
   inputfile in("bulk.inp");            // read user input
   mcloop loop(in);                     // class for handling mc loops
@@ -40,7 +43,7 @@ int main() {
   Move::translate_particle mv(in, pot, spc);  // Particle move class
   mv.igroup = spc.enroll(salt);               // Enroll salt in space and select it for particle moves
 
-  spc.load("confout.spc");
+  spc.load("space.state");
   sys.init( pot.all2all(spc.p) );
 
   cout << atom.info() << spc.info() << pot.info() << mv.info() << pot.pair.info() << endl;
@@ -54,6 +57,6 @@ int main() {
   }
 
   pqr.save("confout.pqr", spc.p);
-  spc.save("confout.spc");
+  spc.save("space.state");
   cout << mv.info() << sys.info();
 }

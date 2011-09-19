@@ -3,20 +3,28 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 # -------------------------------
 #   Faunus library object files
 # -------------------------------
-set(objs slump physconst point inputfile species space group move
-  energy potentials geometry mcloop histogram io)
+set(objs
+  drift energy faunus geometry group histogram inputfile io mcloop move
+  physconst point potentials slump space species)
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 #----- xdrfile static library for gromacs output -----
 add_subdirectory(xdrfile)
 
 # -------------------------------------
-#   Mersenne Twister requires C++ TR1
+#   Check for C++11
+# -------------------------------------
+check_include_file_cxx("tuple" TUPLE)
+if (NOT TUPLE)
+  message(FATAL_ERROR "Compiler does support C++11")
+endif()
+
+# -------------------------------------
+#   Mersenne Twister requires
 # ----=--------------------------------
-check_include_file_cxx("tr1/random" HAVETR1)
-if(HAVETR1)
-  add_definitions(-DHAVETR1)
-  if(ENABLE_TWISTER)
+if(ENABLE_TWISTER)
+  check_include_file_cxx("random" HAVERANDOM)
+  if(HAVERANDOM)
     add_definitions(-DMERSENNETWISTER)
   endif()
 endif()

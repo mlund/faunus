@@ -48,11 +48,13 @@ namespace Faunus {
   class point;
   class pointparticle;
   class cigarparticle;
+
 #ifdef CIGARPARTICLE
   typedef cigarparticle particle;
 #else
   typedef pointparticle particle;
 #endif
+  typedef vector<particle> p_vec;
 
 }//namespace
 #endif

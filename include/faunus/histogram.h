@@ -10,6 +10,22 @@ namespace Faunus {
   class group;
   class space;
 
+  /*
+     class xi_convert {
+     private:
+     double dxhalf;
+     public:
+     bool interpolate;
+     double xmin, xmax, dx;
+     xi_convert(double min, double max, double delta, bool intp=false) {
+     }
+     int x2i(const double &x) { return std::floor( (x-xmin)/dx); }
+
+     double i2x(const int &i) {
+     }
+     };
+     */
+
   /*!
    * \brief Histogram class
    * \author Mikael Lund
@@ -23,46 +39,19 @@ namespace Faunus {
    * \endcode
    */
   class histogram : protected xytable<float,unsigned long int> {
-    friend class FAUrdf;
-    private:
-    unsigned long int cnt;
-    float xmaxi,xmini;  // ugly solution!
+    protected:
+      unsigned long int cnt;
+      float xmaxi,xmini;  // ugly solution!
     public:
-    histogram(float, float, float);
-    void reset(float, float, float);    //!< Clear data
-    string comment;                     //!< User defined comment
-    void add(float);
-    void write(string);
-    void dump(string);
-    virtual float get(float);
-    vector<double> xvec();              //!< For python interface
-    vector<double> yvec();              //!< For python interface
-  };
-
-  /*!
-   * \brief Histogram2 class
-   * \author Chris Evers 
-   * 
-   * Histogram2 is based on histogram but x-values 
-   * correspond to the lower bound of the slice
-   * for which the value is stored instead of the middle 
-   * of the slice
-   */
-  class histogram2 : protected xytable2<float,unsigned long int> {
-    friend class FAUrdf;
-    private:
-    unsigned long int cnt;
-    float xmaxi,xmini;  // ugly solution!
-    public:
-    histogram2(float, float, float);
-    void reset(float, float, float);    //!< Clear data
-    string comment;                     //!< User defined comment
-    void add(float);
-    void write(string);
-    void dump(string);
-    virtual float get(float);
-    vector<double> xvec();              //!< For python interface
-    vector<double> yvec();              //!< For python interface
+      histogram(float, float, float);
+      void reset(float, float, float);    //!< Clear data
+      string comment;                     //!< User defined comment
+      void add(float);
+      void write(string);
+      void save(string);
+      virtual float get(float);
+      vector<double> xvec();              //!< For python interface
+      vector<double> yvec();              //!< For python interface
   };
 
   /*!
@@ -75,14 +64,14 @@ namespace Faunus {
    *  \todo Needs testing!
    *
    */
-  class FAUrdf : public histogram {
+  class rdf : public histogram {
     private:
       short a,b;                   //!< Particle types to investigate
       float volume(float);         //!< Volume of shell r->r+xres
       unsigned int npart;
     public:
-      FAUrdf(float=.5, float=0, float=0);
-      FAUrdf(short, short, float=.5, float=0); 
+      rdf(float=.5, float=0, float=0);
+      rdf(short, short, float=.5, float=0); 
       void update(space &, point &, string);//!< Search around a point
       void update(space &);                 //!< Update histogram vector
       void update(space &, group &);        //!< Update histogram vector - search only in group

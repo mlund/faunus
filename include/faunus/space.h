@@ -12,8 +12,8 @@ namespace Faunus {
     public:
       enum spacekeys {NOOVERLAP};
       Geometry::geometrybase* geo;
-      vector<particle> p;                             //!< The main particle vector
-      vector<particle> trial;                         //!< Trial particle vector. 
+      p_vec p;                                   //!< The main particle vector
+      p_vec trial;                               //!< Trial particle vector. 
       vector<group*> g;                          //!< Pointers to all groups in the system.
 
       space(Geometry::geometrybase&);

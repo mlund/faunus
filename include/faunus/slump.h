@@ -12,14 +12,12 @@
   #include <sstream>
   #include <cstdlib>  // Including this SUCKS! Be aware of abs()!
   #include <ctime>
+  #include <random>
 
   // Needed for sunCC ("__SUNPRO_CC" or "__sun" ?)
   #ifdef __SUNPRO_CC
     #include <stdlib.h>
     #include <time.h>
-  #endif
-  #ifdef HAVETR1
-    #include <random>
   #endif
 #endif
 
@@ -78,7 +76,6 @@ namespace Faunus {
       unsigned int rand();
   };
 
-#ifdef HAVETR1
   /*!
    * \brief Mersenne Twister Random number functions (C++ TR1)
    * \author Mikael Lund
@@ -95,9 +92,8 @@ namespace Faunus {
       void random_seed(int=0);
       unsigned int rand();
   };
-#endif
 
-#if defined(HAVETR1) && defined(MERSENNETWISTER)
+#if defined(MERSENNETWISTER)
   typedef Faunus::randomTwister slump;
 #else
   typedef Faunus::ran2 slump;

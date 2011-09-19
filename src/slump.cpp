@@ -43,7 +43,6 @@ namespace Faunus {
     return x;
   }
 
-#ifdef HAVETR1
   /*
    *  Mersenne Twister generator (STL TR1 build-in)
    */
@@ -67,8 +66,6 @@ namespace Faunus {
   unsigned int randomTwister::rand() {
     return dist(eng);
   }
-
-#endif
 
   // "Ran2" - ran2 from 'Numerical Recipies'
   const double ran2::EPS=3.0e-16;

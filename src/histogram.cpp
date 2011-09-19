@@ -68,73 +68,8 @@ namespace Faunus {
   }
 
   //! Dump table to disk
-  void histogram::dump(string filename) {
-    dumptodisk(filename);
-  }
-
-  //! \param res x value resolution
-  //! \param min minimum x value
-  //! \param max maximum x value
-  histogram2::histogram2(float res, float min, float max)
-    : xytable2<float,unsigned long int>(res,min,max) {
-      reset(res,min,max);
-    }
-  
-  void histogram2::reset(float res, float min, float max) {
-    cnt=0;
-    xmaxi=max;
-    xmini=min;
-    init(res,min,max);
-  }
-
-  //! Increment bin for x value
-  void histogram2::add(float x) {
-    if (x>=xmaxi || x<=xmini) return;
-    (*this)(x)++;
-    cnt++;
-  }
-
-  //! Get bin for x value
-  //! \return \f$ \frac{N(r)}{N_{tot}}\f$
-  float histogram2::get(float x) {
-    return (*this)(x)/float(cnt);
-  }
-
-  vector<double> histogram2::xvec() {
-    vector<double> v;
-    for (float x=xmin; x<xmax(); x+=xres)
-      v.push_back(x);
-    return v;
-  }
-
-  vector<double> histogram2::yvec() {
-    vector<double> v;
-    for (float x=xmin; x<xmax(); x+=xres)
-      v.push_back( get(x) );
-    return v;
-  }
-
-  //! Show results for all x
-  void histogram2::write(string file) {
-    float g;
-    std::ofstream f(file.c_str());
-    if (f) {
-      f.precision(6);
-      for (double x=xmin; x<xmax(); x+=xres) {
-        g=get(x);
-        if (g!=0.0) {
-          if (x+xres>=xmax() || x==xmin) // double the very
-            g=g*2;                       // first and last points
-          f << x << " " << g << "\n";
-        }
-      }
-      f.close();
-    }
-  }
-
-  //! Dump table to disk
-  void histogram2::dump(string filename) {
-    dumptodisk(filename);
+  void histogram::save(string filename) {
+    xytable<float,unsigned long int>::save(filename);
   }
 
   /*!
@@ -143,19 +78,19 @@ namespace Faunus {
    * \param resolution Histogram resolution (binwidth)
    * \param xmaximum Maximum x value (used for better memory utilisation)
    */
-  FAUrdf::FAUrdf(short species1, short species2, float resolution, float xmaximum) :
+  rdf::rdf(short species1, short species2, float resolution, float xmaximum) :
     histogram(resolution, 0, xmaximum)
   {
     a=species1;
     b=species2;
   }
-  FAUrdf::FAUrdf(float resolution, float xmaximum, float xminimum) : histogram(resolution, xminimum, xmaximum) {}
+  rdf::rdf(float resolution, float xmaximum, float xminimum) : histogram(resolution, xminimum, xmaximum) {}
 
   /*!
    * Update histogram between two known points
    * \note Uses the space distance function
    */
-  void FAUrdf::update(space &s, point &a, point &b) {
+  void rdf::update(space &s, point &a, point &b) {
     add( s.geo->_dist(a, b) );
   }
 
@@ -165,7 +100,7 @@ namespace Faunus {
    *
    * \note Uses the container function to calculate distances
    */
-  void FAUrdf::update(space &c) {
+  void rdf::update(space &c) {
     int n=c.p.size();
     npart=0;
 #pragma omp parallel for schedule (dynamic)
@@ -178,7 +113,7 @@ namespace Faunus {
         }
   }
 
-  void FAUrdf::update(space &c, group &g) {
+  void rdf::update(space &c, group &g) {
     int n=g.end+1;
     npart=0;
     //#pragma omp for
@@ -193,7 +128,7 @@ namespace Faunus {
     }
   }
 
-  void FAUrdf::update(space &c, point &p, string name) {
+  void rdf::update(space &c, point &p, string name) {
     int id=atom[name].id, n=c.p.size();
     npart=0;
     //#pragma omp for
@@ -207,12 +142,12 @@ namespace Faunus {
   /*!
    * Calculate shell volume at x
    */
-  float FAUrdf::volume(float x) { return 4./3.*acos(-1.)*( pow(x+0.5*xres,3)-pow(x-0.5*xres,3) ); }
+  float rdf::volume(float x) { return 4./3.*acos(-1.)*( pow(x+0.5*xres,3)-pow(x-0.5*xres,3) ); }
   /*!
    *  Get g(x) from histogram according to
    *    \f$ g(x) = \frac{N(r)}{N_{tot}} \frac{ 3 } { 4\pi\left [ (x+xres)^3 - x^3 \right ] }\f$
    */
-  float FAUrdf::get(float x) {
+  float rdf::get(float x) {
     return (*this)(x)/(cnt*volume(x)) * 1660.57;
   }
 
@@ -224,7 +159,7 @@ namespace Faunus {
   profile::profile(float min, float max, float res) :
     xytable<float,unsigned long int>(res,min,max) { cnt=0; }
   float profile::conc(float x) { return ((*this)(x)>0) ? (*this)(x)/(cnt*volume(x)) : 0; }
-  void profile::update(vector<particle> &p) { for (int i=0; i<p.size(); i++) add(p[i]); }
+  void profile::update(p_vec &p) { for (int i=0; i<p.size(); i++) add(p[i]); }
   bool profile::write(string name) {
     io fio;
     std::ostringstream o;
@@ -270,7 +205,7 @@ namespace Faunus {
     cnt++ ;
     (*this)(sqrt(pow(p.x-o.x,2)+pow(p.y-o.y,2)))++; 
   }
-  void  radial_profile::update(vector<particle> &p) { for (int i=0; i<p.size(); i++) add(p[i]); }
+  void  radial_profile::update(p_vec &p) { for (int i=0; i<p.size(); i++) add(p[i]); }
   bool  radial_profile::write(string name) {
     io fio;
     std::ostringstream o;
@@ -282,7 +217,7 @@ namespace Faunus {
   atomicRdf::atomicRdf(float dx, float max) : histogram(dx, 0, max) { }
 
   /*
-  void atomicRdf::update(vector<particle> &p, group &g1, group &g2) {
+  void atomicRdf::update(p_vec &p, group &g1, group &g2) {
     for (int i=g1.beg; i<=g1.end; i++)
       for (int j=g2.beg; j<=g2.end; j++)
         add( sqrt(p[i].sqdist(p[j])) );

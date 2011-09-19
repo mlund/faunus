@@ -17,17 +17,6 @@ namespace Faunus {
     void geometrybase::scale(point &a, const double &s) const {
     }
 
-    bool geometrybase::collision(const particle &a, collisiontype type) {
-      /*
-         if (type==MATTER)
-         for (int i=0; i<p.size(); i++)
-         if (&p[i]!=&a) // avoid possible self overlap
-         if ( a.overlap( p[i], _sqdist(a,p[i]) )==true )
-         return true;
-         */
-      return false;
-    }
-
     void geometrybase::pad(std::ostringstream& o, char w) {
       o << "#   " << setw(w) << std::left;
     }
@@ -100,7 +89,7 @@ namespace Faunus {
 
     string sphere::info(char w) {
       std::ostringstream o;
-      o << Geometry::geometrybase::info(w);
+      o << geometrybase::info(w);
       pad(o,w); o << "Radius" << r << endl;
       return o.str();
     }
@@ -197,7 +186,7 @@ namespace Faunus {
 
     string cuboid::info(char w) {
       std::ostringstream o;
-      o << Geometry::geometrybase::info(w);
+      o << geometrybase::info(w);
       pad(o,w); o << "Sidelengths" << len.x << " x " << len.y << " x " << len.z << endl;
       pad(o,w); o << "Slice position [x y z]"
         << len_half.x-slice_max.x << "-" << len_half.x-slice_min.x << " " 
@@ -242,7 +231,7 @@ namespace Faunus {
     }
 
     bool cuboid::save(string file) {
-      if ( Geometry::geometrybase::save(file) ) {
+      if ( geometrybase::save(file) ) {
         std::ofstream fout( file.c_str(), std::ios_base::app);
         if (fout) {
           fout.precision(10);
@@ -255,7 +244,7 @@ namespace Faunus {
 
     bool cuboid::load(string file, bool resize) {
       point l;
-      if ( Geometry::geometrybase::load(file, resize) ) {
+      if ( geometrybase::load(file, resize) ) {
         std::ifstream f( file.c_str() );
         if (f) {
           f >> l.x >> l.y >> l.z;
@@ -316,7 +305,7 @@ namespace Faunus {
 
     string cylinder::info(char w) {
       std::ostringstream o;
-      o << Geometry::geometrybase::info(w);
+      o << geometrybase::info(w);
       pad(o,w); o << "Length (A)" << len << endl;
       pad(o,w); o << "Radius (A)" << r << endl;
       return o.str();
@@ -345,7 +334,7 @@ namespace Faunus {
 
     string hypersphere::info() {
       std::ostringstream o;
-      o << Geometry::geometrybase::info() 
+      o << geometrybase::info() 
         << "#   Shape                = Hyperspherical" << endl
         << "#   Radius               = " << r << endl;
       return o.str();

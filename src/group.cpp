@@ -27,7 +27,7 @@ namespace Faunus {
    *  \return Charge number. The charge is also stored in
    *          cm.charge.
    */
-  double group::charge(const vector<particle> &p) const {
+  double group::charge(const p_vec &p) const {
     double z=0;
     for (int i=beg; i<=end; ++i)
       z+=p[i].charge;

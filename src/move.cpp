@@ -140,18 +140,16 @@ namespace Faunus {
 
     double translate_particle::energychange() {
       if (iparticle>-1) {
-        if ( spc->geo->collision( spc->trial[iparticle], Geometry::geometrybase::BOUNDARY ) ) {
-          //cout << "!";
+        if ( spc->geo->collision( spc->trial[iparticle], Geometry::geometrybase::BOUNDARY ) )
           return infty;
-        }
-        else
-          return pot->i2all(spc->trial, iparticle) - pot->i2all(spc->p, iparticle);
+        return pot->i2all(spc->trial, iparticle) - pot->i2all(spc->p, iparticle);
       }
       return 0;
     }
 
     double translate_particle::move() {
-      if (!run()) return 0;
+      if (!run())
+        return 0;
       if (igroup>-1) {
         double du=0;
         for (int i=0; i<spc->g[igroup]->size(); i++) {

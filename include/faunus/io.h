@@ -39,9 +39,9 @@ namespace Faunus {
       io fio;
     public:
       ioaam();
-      vector<particle> p;
+      p_vec p;
       bool load(string);
-      bool save(string, vector<particle>&);
+      bool save(string, p_vec&);
   };
 
   /*!
@@ -54,8 +54,8 @@ namespace Faunus {
       io fio;
     public:
       iopqr();
-      vector<particle> p;                   //!< Placeholder for loaded data
-      bool save(string, vector<particle> &); //!< Save with particle charge
+      p_vec p;                   //!< Placeholder for loaded data
+      bool save(string, p_vec&); //!< Save with particle charge
   };
 
   /*!
@@ -71,9 +71,9 @@ namespace Faunus {
       io fio;
     public:
       double len;            //!< Box side length (cubic so far)
-      vector<particle> p;
+      p_vec p;
       bool load(string);
-      bool save(string, vector<particle>&);
+      bool save(string, p_vec&);
   };
 
   /*! \brief GROMACS xtc compressed trajectory file format
@@ -86,7 +86,7 @@ namespace Faunus {
    */
   class ioxtc {
     private:
-      vector<particle> p; //!< internal particle vector for temporary data
+      p_vec p; //!< internal particle vector for temporary data
       XDRFILE *xd;        //!< file handle
       matrix xdbox;       //!< box dimensions
       rvec *x_xtc;        //!< vector of particle coordinates
@@ -97,9 +97,9 @@ namespace Faunus {
       ioxtc(float);                            //!< Constructor that sets an initially cubic box
       bool open(string);                       //!< Open xtc file for reading
       bool loadnextframe(space&);              //!< Load a single frame into cuboid
-      bool save(string, const vector<particle> &);//!< Save a frame to trj file.
+      bool save(string, const p_vec&);         //!< Save a frame to trj file.
       bool save(string, space&);               //!< Save a frame to trj file (PBC)
-      bool save(string, vector<particle> &, vector<group> &); //!< Save groups
+      bool save(string, p_vec&, vector<group>&);//!< Save groups
       void setbox(float);                      //!< Set box size to be saved in frame (cubic)
       void setbox(double,double,double);       //!< Set box size to be saved in frame
       void close();                            //!< Close trj file
@@ -114,11 +114,11 @@ namespace Faunus {
   class ioqtraj {
     private:
       bool append;
-      vector<particle> load(string);
+      p_vec load(string);
     public:
       ioqtraj();
-      bool save(string, vector<particle> &);   //!< Save a frame to trj file.
-      bool save(string, vector<particle> &, vector<group> &); //!< Save groups
+      bool save(string, p_vec&);   //!< Save a frame to trj file.
+      bool save(string, p_vec&, vector<group> &); //!< Save groups
   };
   
   class xyfile {

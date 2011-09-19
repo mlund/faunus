@@ -9,18 +9,18 @@ namespace Faunus {
     Geometry::geometrybase* energybase::geo;
 
     // single particle interactions
-    double energybase::all2all(const vector<particle> &p) {return 0;}
-    double energybase::i2i(const vector<particle> &p, int i, int j) {return 0;}
-    double energybase::i2g(const vector<particle> &p, const group &g, int i) {return 0;}
-    double energybase::i2all(const vector<particle> &p, int i) {return 0;}
-    double energybase::i_external(const vector<particle> &p, int i) {return 0;}
-    double energybase::i_internal(const vector<particle> &p, int i) {return 0;}
+    double energybase::all2all(const p_vec &p) {return 0;}
+    double energybase::i2i(const p_vec &p, int i, int j) {return 0;}
+    double energybase::i2g(const p_vec &p, const group &g, int i) {return 0;}
+    double energybase::i2all(const p_vec &p, int i) {return 0;}
+    double energybase::i_external(const p_vec &p, int i) {return 0;}
+    double energybase::i_internal(const p_vec &p, int i) {return 0;}
 
     // group interactions
-    double energybase::g2g(const vector<particle> &p, const group &g1, const group &g2) {return 0;}
-    double energybase::g2all(const vector<particle> &p, const group &g) {return 0;}
-    double energybase::g_external(const vector<particle> &p, const group &g) {return 0;}
-    double energybase::g_internal(const vector<particle> &p, const group &g) {return 0;}
+    double energybase::g2g(const p_vec &p, const group &g1, const group &g2) {return 0;}
+    double energybase::g2all(const p_vec &p, const group &g) {return 0;}
+    double energybase::g_external(const p_vec &p, const group &g) {return 0;}
+    double energybase::g_internal(const p_vec &p, const group &g) {return 0;}
     string energybase::info() {
       std::ostringstream o;
       return o.str();

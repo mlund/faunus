@@ -42,9 +42,9 @@ namespace Faunus {
     private:
       void init();                  //!< Recalc eps and sigma vectors
       string filename;
-      vector<specdata> list;                 //!< List of atoms
     public:
       atoms();                               //!< Constructor - set UNK atom type (fallback)
+      vector<specdata> list;                 //!< List of atoms
       vector< vector<double> >
         qq,                                  //!< Charge product between atoms i and j
         eps,                                 //!< LJ epsilon between atoms i and j

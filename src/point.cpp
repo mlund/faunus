@@ -2,6 +2,7 @@
 #include "faunus/slump.h"
 #include <faunus/geometry.h>
 #include <faunus/species.h>
+#include <faunus/physconst.h>
 
 namespace Faunus {
 
@@ -126,7 +127,7 @@ namespace Faunus {
   }
 
   double pointparticle::volume() const {
-    return (4./3.)*M_PI*radius*radius*radius;
+    return (4./3.)*pc::pi*radius*radius*radius;
   }
 
   double pointparticle::mw2vol(double rho) const {
@@ -134,7 +135,7 @@ namespace Faunus {
   }
 
   double pointparticle::mw2rad(double rho) const {
-    return pow( mw2vol(rho)*3./4./M_PI, (1/3.) );
+    return pow( mw2vol(rho)*3./4./pc::pi, (1/3.) );
   }
 
   /*!

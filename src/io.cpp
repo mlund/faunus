@@ -53,8 +53,8 @@ namespace Faunus {
     vector<string> t;
     t.clear();
     readfile(f,t);
-    for (int i=0; i<t.size(); i++)
-      std::cout << "# "<<t[i]<<endl;
+    for (auto t_i : t)
+      std::cout << "# " << t_i <<endl;
   }
 
   //--------------- IOAAM ---------------------
@@ -158,17 +158,17 @@ namespace Faunus {
 
   bool iopqr::save(string file, p_vec &p) {
     string name;
-    int i, nres=1, natom=1;
+    int nres=1, natom=1;
     char buf[100];
     std::ostringstream o;
-    for (i=0; i<p.size(); i++) {
-      // index, atom->name, atom->resname, atom->resid,x, y, z, atom->charge, atom->radius
-      name=atom[p[i].id].name;
+    // index, atom->name, atom->resname, atom->resid,x, y, z, atom->charge, atom->radius
+    for (auto &p_i : p) {
+      name=atom[p_i.id].name;
       sprintf(buf, "ATOM  %5d %-4s %s %5d    %8.3f %8.3f %8.3f %.3f %.3f\n",
           natom++, name.c_str(), name.c_str(), nres,
-          p[i].x, p[i].y, p[i].z, p[i].charge, p[i].radius );
+          p_i.x, p_i.y, p_i.z, p_i.charge, p_i.radius );
       o << buf;
-      if ( atom[p[i].id].name=="CTR" ) nres++;
+      if ( atom[p_i.id].name=="CTR" ) nres++;
     }
     return fio.writefile(file, o.str());
   }
@@ -404,18 +404,18 @@ namespace Faunus {
   }
 
   bool ioqtraj::save(string file, p_vec &p) {
-      io fio;
-      std::ostringstream o;
-      o.precision(6);
-      for (int i=0; i<p.size(); i++) {
-        o << p[i].charge << " ";
-      }
-      o << endl;
-      if ( append==true )
-        return fio.writefile(file, o.str(), std::ios_base::app);
-      else
-        append=true;
-      return fio.writefile(file, o.str(), std::ios_base::out);
+    io fio;
+    std::ostringstream o;
+    o.precision(6);
+    for (int i=0; i<p.size(); i++) {
+      o << p[i].charge << " ";
+    }
+    o << endl;
+    if ( append==true )
+      return fio.writefile(file, o.str(), std::ios_base::app);
+    else
+      append=true;
+    return fio.writefile(file, o.str(), std::ios_base::out);
   }
 
   bool ioqtraj::save(string file, p_vec &p, vector<group> &g) {

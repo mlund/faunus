@@ -10,6 +10,7 @@
 #include <faunus/point.h>
 #include <faunus/group.h>
 #include <faunus/species.h>
+#include <faunus/titrate.h>
 
 // http://publib.boulder.ibm.com/infocenter/iadthelp/v8r0/index.jsp?topic=/com.ibm.xlcpp111.linux.doc/language_ref/variadic_templates.html
 //
@@ -150,8 +151,8 @@ namespace Faunus {
         // single particle interactions
         double i2i(const p_vec &p, int i, int j) {
           double u=0;
-          for (int k=0; k<base.size(); ++k)
-            u+=base[k]->i2i(p,i,j);
+          for (auto b : base)
+            u += b->i2i( p,i,j );
           return u;
         }
 
@@ -193,37 +194,15 @@ namespace Faunus {
 
     class eqenergy : public energybase {
       protected:
-        class processdata {
-          friend class eqenergy;
-          protected:
-          double mu_AX;                //!< chemical potential of AX
-          double mu_A;                 //!< chemical potential of A
-          double mu_X;                 //!< chemical potential of X (this is the titrant)
-          double ddG;                  //!< ddG = mu_A + mu_X - mu_AX
-          int cnt;                     //!< number of sites for this process
-          public:
-          short id_AX, id_A;           //!< Particle id's for AX and A
-          bool one_of_us(const short&);//!< Does the particle belong to this process?
-          double energy(const short&); //!< Returns intrinsic energy of particle
-          double swap(particle &);     //!< Swap AX<->A and return intrinsic energy change
-          void set(double,double);     //!< Set activity of X and the pKd value
-          void set_mu_AX(double);      //!< Set chemical potential of species AX - mu_A then follows.
-          void set_mu_A(double);       //!< Set chemical potential of species A  - mu_AX then follows.
-        };
         typedef std::map<short, double> Tmap;
         typedef Tmap::iterator mapiter;
         Tmap energymap;                //!< Map of intrinsic energy for titratable sites
       public:
-        vector<processdata> process;
-        eqenergy() {
-          //find titratable sites and build map of their
-          //intrinsic energies
-          for (int i=0; i<atom.list.size(); ++i) {
-            short id=atom[i].id;
-            for (int k=0; k<process.size(); ++k)
-              if ( process[k].one_of_us( id ) )
-                energymap[id] = process[k].energy( id );
-          }
+        eqenergy(equilibria &eq) {
+          for (auto &s : atom.list )
+            for (auto &process : eq.process )
+              if ( process.one_of_us( s.id ) )
+                energymap[s.id] = process.energy( s.id );
         }
         double i_internal(const p_vec &p, int i) {
           if (energymap.find( p[i].id )!=energymap.end())

@@ -153,7 +153,7 @@ namespace Faunus {
       if (igroup>-1) {
         double du=0;
         for (int i=0; i<spc->g[igroup]->size(); i++) {
-          iparticle = spc->g[igroup]->random();
+          iparticle = spc->g[igroup]->random(); // set random particle for trialmove()
           du+=movebase::move();
         }
         iparticle=-1;
@@ -166,11 +166,11 @@ namespace Faunus {
       o << movebase::info();
       pad(o); o << "Displacement directions" << dir << endl;
       pad(o); o << "Mean-square displacement:" << endl;
-      for (mapiter it=sqrmap.begin(); it!=sqrmap.end(); ++it) {
+      for (auto it=sqrmap.begin(); it!=sqrmap.end(); ++it) {
         pad(o); o << "" << atom[it->first].name << " " << it->second << endl;
       }
       pad(o); o << "Particle acceptance:" << endl;
-      for (mapiter it=accmap.begin(); it!=accmap.end(); ++it) {
+      for (auto it=accmap.begin(); it!=accmap.end(); ++it) {
         pad(o); o << "" << atom[it->first].name << " " << (it->second).avg()*100 << "\ufe6a" << endl;
       }
       return o.str();

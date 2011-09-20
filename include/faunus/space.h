@@ -2,6 +2,7 @@
 #define FAUNUS_SPACE_H
 #include <faunus/common.h>
 #include <faunus/slump.h>
+//extern template class std::vector<Faunus::particle>;
 
 namespace Faunus {
   class space {

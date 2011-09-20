@@ -13,9 +13,6 @@ include(CheckIncludeFileCXX)
 include(CheckCXXSourceCompiles)
 enable_testing()
 
-CHECK_CXX_SOURCE_COMPILES("int main() { unsigned long long int i; }" unsigned_long_long_int)
-CHECK_CXX_SOURCE_COMPILES("int main() { long double f; }" long_double)
-
 # ------------------------------
 #   Default build is "Release"
 # ------------------------------
@@ -37,6 +34,18 @@ option(ENABLE_FAST_EXP "Approximate e^x function for certain pair potentials." o
 mark_as_advanced( CLEAR CMAKE_VERBOSE_MAKEFILE CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS )
 mark_as_advanced( EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH
                   CMAKE_OSX_ARCHITECTURES CMAKE_OSX_SYSROOT GCCXML DART_TESTING_TIMEOUT)
+
+# -------------------------------
+#   Check C/C++ code generation
+# -------------------------------
+CHECK_CXX_SOURCE_COMPILES("int main() { unsigned long long int i; }" unsigned_long_long_int)
+CHECK_CXX_SOURCE_COMPILES("int main() { long double f; }" long_double)
+CHECK_CXX_SOURCE_COMPILES("int main() { int a[0]; for (int &i:a) i++; }" range_based_for_loop)
+CHECK_CXX_SOURCE_COMPILES("int main() { auto i=0; }" auto_type_inference)
+
+if(NOT (auto_type_inference AND unsigned_long_long_int AND long_double AND range_based_for_loop) )
+  message(FATAL_ERROR "Compiler does not seem to support C++11")
+endif()
 
 # ---------------------------
 #   Add source directories

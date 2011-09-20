@@ -14,8 +14,8 @@ namespace Faunus {
 
   double space::charge() const {
     double z=0;
-    for (unsigned short i=0; i<p.size(); i++)
-      z+=p[i].charge;
+    for (auto &p_i : p)
+      z+=p_i.charge;
     return z;
   }
 
@@ -47,11 +47,11 @@ namespace Faunus {
     p.insert(p.begin()+i, a);
     trial.insert(trial.begin()+i, a);
 
-    for (int j=0; j<g.size(); j++) {  // move and expand groups if appropriate
-      if ( i<g[j]->beg )
-        g[j]->beg++;
-      if ( i<=g[j]->end )
-        g[j]->end++;
+    for (auto g_j : g) {
+      if ( i < g_j->beg )
+        g_j->beg++;
+      if ( i <= g_j->end )
+        g_j->end++;
     }
     return true;
   }
@@ -70,9 +70,9 @@ namespace Faunus {
   }
 
   bool space::overlap(const particle &a) const {
-    for (int i=0; i<p.size(); i++) {
-      double contact=a.radius+p[i].radius;
-      if (geo->_sqdist(a,p[i]) < contact*contact)
+    for (auto &p_i : p) {
+      double contact = a.radius + p_i.radius;
+      if (geo->_sqdist(a,p_i) < contact*contact)
         return true;
     }
     return false;
@@ -97,11 +97,11 @@ namespace Faunus {
     if (fout) {
       fout.precision(10);
       fout << p.size() << endl;
-      for (int i=0; i<p.size(); i++)
-        fout << p[i] << endl;
+      for (auto p_i : p)
+        fout << p_i << endl;
       fout << g.size() << endl;
-      for (int i=0; i<g.size(); i++)
-        fout << *g[i] << endl;
+      for (auto g_i : g)
+        fout << *g_i << endl;
       fout.close();
       return true;
     }
@@ -128,8 +128,8 @@ namespace Faunus {
 
         fin >> n;
         g.resize(n);
-        for (int i=0; i<g.size(); i++)
-          *g[i] << fin;
+        for (auto g_i : g)
+          *g_i << fin;
         std::cout << "# Read " << n << " groups from " << file << endl;
         return true;
       }
@@ -139,7 +139,7 @@ namespace Faunus {
   }
 
   int space::enroll(group &newgroup) {
-    for (int i=0; i<g.size(); i++)
+    for (int i=0; i<g.size(); ++i)
       if (g[i]==&newgroup)
         return i;
     g.push_back(&newgroup);

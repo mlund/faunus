@@ -44,9 +44,9 @@ namespace Faunus {
   specdata & atoms::operator[] (short i) { return list[i]; }
 
   specdata & atoms::operator[] (string s) {
-    for (short i=0; i<list.size(); i++)
-      if (s==list[i].name)
-        return list[i];
+    for (auto &l_i : list)
+      if (s==l_i.name)
+        return l_i;
     return list[0];
   }
 
@@ -97,8 +97,8 @@ namespace Faunus {
   }
 
   void atoms::reset_properties(vector<particle> &p) {
-    for (int i=0; i<p.size(); i++)
-      p[i] = list.at(p[i].id);
+    for (auto &p_i : p )
+      p_i = list[p_i.id];
   }
 
 }//namespace

@@ -34,8 +34,9 @@ namespace Faunus {
    * file before initializing this class.
    */
   class equilibria {
-    private:
-      class data {
+    public:
+      friend class eqenergy;
+      class processdata {
         friend class equilibria;
         private:
         double mu_AX;                //!< chemical potential of AX
@@ -44,9 +45,9 @@ namespace Faunus {
         double ddG;                  //!< ddG = mu_A + mu_X - mu_AX
         int cnt;                     //!< number of sites for this process
         public:
-        char id_AX, id_A;            //!< Particle id's for AX and A
-        bool one_of_us(const short&);  //!< Does the particle belong to this process?
-        double energy(const short&);   //!< Returns intrinsic energy of particle
+        short id_AX, id_A;            //!< Particle id's for AX and A
+        bool one_of_us(const short&);//!< Does the particle belong to this process?
+        double energy(const short&); //!< Returns intrinsic energy of particle id
         double swap(particle &);     //!< Swap AX<->A and return intrinsic energy change
         void set(double,double);     //!< Set activity of X and the pKd value
         void set_mu_AX(double);      //!< Set chemical potential of species AX - mu_A then follows.
@@ -54,22 +55,22 @@ namespace Faunus {
       };
 
       vector<average <double> > q;         //!< List of average charges per site
-      vector<data> process;                //!< Vector of eq. processes.
+      vector<processdata> process;                //!< Vector of processes.
 
-      bool load(string);                   //!< Read equilibrium processes from file
-      void findSites(p_vec &);  //!< Locate all titratable sites
-      double intrinsicenergy(const short&);   //!< Intrinsic energy of particle
+      equilibria(space&, inputfile&, string="equilibria_");
+      bool includefile(string);                //!< Read equilibrium processes from file
+      void findsites(const p_vec&);            //!< Locate all titratable sites
+      double intrinsicenergy(const short&);    //!< Intrinsic energy of particle id (kT)
+      string info();                           //!< Get information string
+      string info(const p_vec&);               //!< Get information string
+      processdata& random(const p_vec&, int&); //!< Random titratable particle and assiciated random process
 
-    public:
-      vector<int> sites;                           //!< List of titratable sites
-      equilibria(space&, inputfile&, string="eqtit_");
-      string info();                               //!< Get information string
-      string info(p_vec&);              //!< Get extended information string
-      double intrinsicenergy(p_vec&);   //!< Intrinsic energy of all titratable sites
-      void samplesites(p_vec &);        //!< Updates the average charge vector titrate::q
-      double applycharges(p_vec &);     //!< Copy average charges to particles in the particle vector
-      double avgcharge(p_vec&, int&);   //!< Print average charges of process i
-  };
+      vector<int> sites;                       //!< List of titratable sites
+
+      void samplecharge(const p_vec&);         //!< Updates the average charge vector titrate::q
+      double applycharges(p_vec &);            //!< Copy average charges to particles in the particle vector
+      double avgcharge(const p_vec&, int&);    //!< Print average charges of process i
+   };
 
 }//namespace
 

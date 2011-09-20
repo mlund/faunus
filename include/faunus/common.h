@@ -40,6 +40,7 @@ namespace Faunus {
 
   namespace Energy {
     class energybase;
+    class eqenergy;
   }
 
   class group;

@@ -12,18 +12,18 @@ namespace Faunus {
    * \param pX  Negative logarithm of the X activity (titrant)
    * \param pKd Negative logarithm of dissociation constant.
    */
-  void equilibria::data::set(double pX, double pKd) {
+  void equilibria::processdata::set(double pX, double pKd) {
     ddG = -log(pow(10., -pKd));
     mu_X= -log(pow(10., -pX));
     set_mu_AX(0);
   }
 
-  void equilibria::data::set_mu_AX(double mu) {
+  void equilibria::processdata::set_mu_AX(double mu) {
     mu_AX = mu;
     mu_A = ddG  + mu_AX - mu_X;
   }
 
-  void equilibria::data::set_mu_A(double mu) {
+  void equilibria::processdata::set_mu_A(double mu) {
     mu_A = mu;
     mu_AX = mu_A + mu_X - ddG;
   }
@@ -31,7 +31,7 @@ namespace Faunus {
   /*!
    * Returns true if the particle either matches AX or A.
    */
-  bool equilibria::data::one_of_us(const short &id) {
+  bool equilibria::processdata::one_of_us(const short &id) {
     if (id!=id_AX)
       if (id!=id_A)
         return false;
@@ -43,7 +43,7 @@ namespace Faunus {
    * means the energy stemming from the equilibrium expression when
    * no external interactions are accounted for (activity factors unity).
    */
-  double equilibria::data::energy(const short &id) {
+  double equilibria::processdata::energy(const short &id) {
     if (id==id_AX)
       return mu_AX;
     if (id==id_A)
@@ -55,7 +55,7 @@ namespace Faunus {
    * This will swap the state of given particle from AX<->A and
    * return the energy change associated with the process.
    */
-  double equilibria::data::swap(particle &p) {
+  double equilibria::processdata::swap(particle &p) {
     double uold=energy(p.id);
     point pos=p;           // backup coordinate
     if (p.id==id_AX) {
@@ -75,17 +75,16 @@ namespace Faunus {
    */
   equilibria::equilibria(space &s, inputfile &in, string pfx) { 
     string prefix=pfx;
-    load(in.getstr("eqtit_processes","eq.in"));
+    includefile( in.getstr(prefix+"processfile","eq.process"));
     //atom.reset_properties(spc->p); // sets the faunatom particle properties into particle vector
     //s.trial=s.p;
-    findSites(s.p);
-    samplesites(s.p);
+    findsites(s.p);
+    samplecharge(s.p);
   }
 
-  bool equilibria::load(string file) {
-    process.clear();
+  bool equilibria::includefile(string file) {
     string t;
-    data d;
+    processdata d;
     std::ifstream f(file.c_str());
     if (!f)
       return false;
@@ -105,7 +104,7 @@ namespace Faunus {
     f.close();
 
     // update reference states
-    char i_AX,i_A, j_AX, j_A;
+    short i_AX,i_A, j_AX, j_A;
     for (int i=0; i<process.size()-1; i++) {
       for (int j=i+1; j<process.size(); j++) {
         i_AX = process[i].id_AX;
@@ -126,7 +125,7 @@ namespace Faunus {
    * locate titratable sites. Their indexes will be stored
    * in the sites vector.
    */
-  void equilibria::findSites(p_vec &p) {
+  void equilibria::findsites(const p_vec &p) {
     sites.clear();
     for (int j=0; j<process.size(); j++)
       process[j].cnt=0;
@@ -152,23 +151,9 @@ namespace Faunus {
     return 0;
   }
 
-  /*!
-   * Calls intrinsicenergy(particle) on all particles.
-   */
-  double equilibria::intrinsicenergy(p_vec &p) {
-    double u=0;
-    for (int i=0; i<sites.size(); i++)
-      u+=intrinsicenergy( p[sites[i]].id );
-    return u;
-  }
-
-  /*!
-   * \note Why is this public?
-   */
-  void equilibria::samplesites(p_vec &p) {
-    for (unsigned int i=0; i<sites.size(); i++) {
-      q[i] += p[sites[i]].charge;
-    }
+  void equilibria::samplecharge(const p_vec &p) {
+    for (int &i : sites)
+      q[i] += p[i].charge;
   }
 
   /*!
@@ -180,7 +165,7 @@ namespace Faunus {
    */
   double equilibria::applycharges(p_vec &p) {
     double qtot=0;
-    for (unsigned int i=0; i<sites.size(); i++) {
+    for (int i=0; i<sites.size(); i++) {
       p[sites[i]].charge = q[i].avg();
       qtot += q[i].avg();
     }
@@ -191,7 +176,7 @@ namespace Faunus {
    * This function gives the average charge for all particles which 
    * are titrated by process i, or -nan if no particles are part of process i
    */  
-  double equilibria::avgcharge(p_vec &p, int &i) {
+  double equilibria::avgcharge(const p_vec &p, int &i) {
     double qavg=0;
     int n=0;
     for (unsigned int j=0; j<sites.size(); j++) {
@@ -201,6 +186,14 @@ namespace Faunus {
       }
     }
     return qavg/n;
+  }
+ 
+  equilibria::processdata& equilibria::random(const p_vec &p, int &j) {
+    int k,i=slp_global.rand() % sites.size();   // pick random titratable site
+    j=sites[i];                                 // corresponding particle
+    do k=slp_global.rand() % process.size();    // pick random process..
+    while (!process[k].one_of_us( p[j].id ));   // ..that involves particle j
+    return process[k];
   }
 
   string equilibria::info() {
@@ -229,7 +222,7 @@ namespace Faunus {
     return o.str();
   }
 
-  string equilibria::info(p_vec &p) {
+  string equilibria::info(const p_vec &p) {
     char w=8;
     std::ostringstream o;
     o << "#   Number of sites           = " << sites.size() << endl;

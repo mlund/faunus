@@ -7,6 +7,7 @@
 #include <faunus/potentials.h>
 #include <faunus/average.h>
 #include <faunus/space.h>
+#include <faunus/faunus.h>
 
 #include <typeinfo>
 
@@ -14,6 +15,7 @@ using namespace Faunus;
 using namespace Faunus::Geometry;
 
 int main() {
+  cout << faunus_splash();
   atom.includefile("atomlist.inp");
   inputfile in("cigar.inp");
 

@@ -1,4 +1,5 @@
 #include "faunus/faunus.h"
+#include <faunus/common.h>
 
 namespace Faunus {
   
@@ -21,9 +22,9 @@ namespace Faunus {
       << "        \\/         \\/             \\/               \\/\n"
       << "\n"
       << "  Programmed by:\n"
-      << "    Mikael Lund, Bjorn Persson, Martin Trulsson,\n"
-      << "    Ondrej Marsalek, Christophe Labbez, Andre Teixeira,\n"
-      << "    Anil Kurut, Chris Evers\n"
+      << "    Mikael Lund, Bj\u00F6rn Persson, Martin Trulsson,\n"
+      << "    Ond\u0159ej Mar\u0161\u00E1lek, Christophe Labbez, Andre Teixeira,\n"
+      << "    An\u0131l Kurut, Chris Evers, Robert V\u00E1cha\n"
       << "\n"
       << "  Reference:\n"
       << "    Source Code Biol. Med. (2008) 3:1\n"
@@ -40,4 +41,18 @@ namespace Faunus {
       << "----------------------------------------------------------------------\n" << std::endl;
     return o.str();
   }
+
+  string header(const string &s) {
+    int l=s.size()+4;
+    return "\n" + std::string(l,'=') + "\n  " + s + "  \n" + string(l,'=') + "\n";
+  }
+
+  string indent(indentlevel level) { return std::string(level, ' '); }
+
+  string pad(const string &s, char width, indentlevel level) {
+    std::ostringstream o;
+    o << indent(level) << std::left << std::setw(width) << s;
+    return o.str();
+  }
+
 }//namespace

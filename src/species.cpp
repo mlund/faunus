@@ -1,6 +1,7 @@
 #include <faunus/species.h>
 #include <faunus/inputfile.h>
 #include <faunus/point.h>
+#include <faunus/faunus.h>
 
 namespace Faunus {
   atoms atom; // Instantiate global copy
@@ -82,15 +83,16 @@ namespace Faunus {
   }
 
   string atoms::info() {
+    char w=25;
     std::ostringstream o;
-    o << endl
-      << "# ATOM PARAMETERS:\n"
-      << "#   Number of species     = " << list.size() << endl
-      << "#   Parameter file        = " << filename << endl
-      << "#   Species found:";
+    o << header("Atomic Species")
+      << pad("Number of species",w,SUB) << list.size() << endl
+      << pad("Parameter file",w,SUB) << filename << endl
+      << indent(SUB) << "Species:";
     for (int i=0; i<list.size(); i++) {
-      if (i%10==0) o << endl << "#     ";
-      o << setw(6) << std::left << list[i].name;
+      if (i%10==0)
+        o << endl << indent(SUBSUB);
+      o << setw(SUBSUB) << std::left << list[i].name;
     }
     o << endl;
     return o.str();

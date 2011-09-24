@@ -33,7 +33,6 @@ namespace Faunus {
         static double volume;                               //!< Volume of the container [AA^3]
         string name;                                        //!< Name of the geometry
       public:
-        void pad(std::ostringstream&, char);
         enum collisiontype {BOUNDARY,ZONE};                 //!< Types for collision() function
         double getvolume() const;                           //!< Get volume of container
         virtual void setvolume(double);                     //!< Specify new volume

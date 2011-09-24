@@ -15,9 +15,30 @@
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-***************************************************************************/
+ ***************************************************************************/
 #ifndef FAUNUS_H
 #define FAUNUS_H
+
+#ifndef SWIG
+#include <faunus/common.h>
+#endif
+
+namespace Faunus {
+  enum indentlevel {TITLE=0,SUB=2,SUBSUB=4};
+  string faunus_splash();
+  string header(const string&);
+  string indent(indentlevel);
+  string pad(const string&, char, indentlevel);
+
+  class textOutput {
+    private:
+      unsigned short width;
+    public:
+      template<class T> void printValue(string s, T v) {
+        std::cout << s << " = " << v << std::endl;
+      }
+  };
+}//namespace
 
 #ifndef SWIG
 #include <faunus/common.h>
@@ -37,16 +58,4 @@
 #include <faunus/xytable.h>
 #endif
 
-namespace Faunus {
-  string faunus_splash();
-
-  class textOutput {
-    private:
-      unsigned short width;
-    public:
-      template<class T> void printValue(string s, T v) {
-        std::cout << s << " = " << v << std::endl;
-      }
-  };
-}//namespace
 #endif

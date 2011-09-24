@@ -41,15 +41,14 @@ namespace Faunus {
 
     class movebase {
       protected:
-        void pad(std::ostringstream&);   //!< Text padding for info() function
-        Energy::energybase* pot;                 //!< Pointer to energy functions
+        Energy::energybase* pot;         //!< Pointer to energy functions
         space* spc;
         string title;                    //!< title of move
         string cite;                     //!< litterature reference, url, DOI etc.
         string prefix;                   //!< inputfile prefix
         unsigned long int cnt;           //!< total number of trial moves
         unsigned long int cnt_accepted;  //!< number of accepted moves
-        char iw;                         //!< width of first column of info string
+        char w;                          //!< width of first column of info string
         double dusum;                    //!< Sum of all energy changes made by this move
         const double infty;              //!< Large value to represent infinity
 

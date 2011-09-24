@@ -175,9 +175,9 @@ namespace Faunus {
     return *this;
   }
 
-  /************
-    C I G A R
-   ************/
+  /*****************************
+    S P H E R O C Y L I N D E R
+   *****************************/
 
   void cigarparticle::rotate(const geometrybase &c, const point &v, double angle) { //!< Rotate around a vector
   }

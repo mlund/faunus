@@ -4,6 +4,7 @@
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/geometry.h>
+#include <faunus/faunus.h>
 
 namespace Faunus {
 
@@ -21,7 +22,6 @@ namespace Faunus {
 
       class potbase {
         public:
-          void pad(std::ostringstream&, char);
           string name; //!< Short (preferably one-word) description of the core potential
           double tokT;
       };
@@ -109,8 +109,9 @@ namespace Faunus {
           }
           string info(char w=20) {
             std::ostringstream o;
-            o << "\n# PAIR POTENTIAL: " << lj.name << "+" << el.name << "\n" << el.info(w);
-            el.pad(o,w); o << "LJ epsilon" << eps*tokT << endl;
+            o << header("Pair Potential: " + lj.name + "+" + el.name)
+              << el.info(w)
+              << pad("LJ epsilon",w,SUB) << eps*tokT << endl;
             return o.str();
           }
       };
@@ -131,7 +132,8 @@ namespace Faunus {
           }
           string info(char w=20) {
             std::ostringstream o;
-            o << "\n# PAIR POTENTIAL: Hardsphere + " << el.name << "\n" << el.info(w);
+            o << header("Pair potential: Hardsphere + " + el.name )
+              << el.info(w);
             return o.str();
           }
       };

@@ -5,6 +5,7 @@
 #include "faunus/group.h"
 #include "faunus/point.h"
 #include <faunus/space.h>
+#include <faunus/faunus.h>
 
 namespace Faunus {
 
@@ -150,19 +151,18 @@ namespace Faunus {
     static char w=25;
     double z=charge();
     std::ostringstream o;
-    o << endl
-      << "# SIMULATION SPACE:" << endl
+    o << header("Simulation Space and Geometry") 
       << geo->info(w);
-    geo->pad(o,w); o << "Number of particles" << p.size() << endl;
-    geo->pad(o,w); o << "Number of groups" << g.size() << endl;
+    o << pad("Number of particles",w,SUB) << p.size() << endl;
+    o << pad("Number of groups",w,SUB) << g.size() << endl;
     for (int i=0; i<g.size(); i++) {
-      geo->pad(o,w);
+      o << std::left << std::setw(w);
       o << "" << std::left << setw(4) << i << setw(20) << g[i]->name
         << "[" << g[i]->beg << "-" << g[i]->end << "]"
         << endl;
     }
-    geo->pad(o,w); o << "Volume (AA^3)" << geo->getvolume() << endl;
-    geo->pad(o,w); o << "Electroneutrality" << ((abs(z)>1e-7) ? "NO!" : "Yes") << " "  << z << endl;
+    o << pad("Volume (AA^3)",w,SUB) << geo->getvolume() << endl;
+    o << pad("Electroneutrality",w,SUB) << ((abs(z)>1e-7) ? "NO!" : "Yes") << " "  << z << endl;
     return o.str();
   }
 }//namespace

@@ -22,10 +22,6 @@ namespace Faunus {
      */
     namespace Core {
 
-      void potbase::pad(std::ostringstream& o, char width) {
-        o << "#   " << setw(width) << std::left;
-      }
-
       hardsphere::hardsphere(double infinity) {
         name="hardsphere";
         inf=infinity;
@@ -49,8 +45,8 @@ namespace Faunus {
 
       string squarewell::info(char w) {
         std::ostringstream o;
-        pad(o,w); o << "Threshold (A)" << threshold << endl;
-        pad(o,w); o << "Depth (kT)" << depth << endl;
+        o << pad("Threshold (A)",w,SUB) << threshold << endl;
+        o << pad("Depth (kT)",w,SUB) << depth << endl;
         return o.str();
       }
 
@@ -63,7 +59,7 @@ namespace Faunus {
 
       string coulomb::info(char w) {
         std::ostringstream o;
-        pad(o,w); o << "Bjerrum length (A)" << lB << endl;
+        o << pad("Bjerrum length (A)",w,SUB) << lB << endl;
         return o.str();
       }
 
@@ -90,8 +86,8 @@ namespace Faunus {
       string debyehuckel::info(char w) {
         std::ostringstream o;
         o << coulomb::info(w);
-        pad(o,w); o << "Ionic strength (M)" << ionic_strength() << endl;
-        pad(o,w); o << "Debye length, 1/\u03BA (A)" << ionic_strength() << endl;
+        o << pad("Ionic strength (M)",w,SUB) << ionic_strength() << endl;
+        o << pad("Debye length, 1/\u03BA (A)",w,SUB) << ionic_strength() << endl;
         return o.str();
       }
 

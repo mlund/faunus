@@ -1,5 +1,4 @@
 #include <faunus/faunus.h>
-
 using namespace Faunus;
 
 typedef Geometry::cuboid Tgeometry;                // select simulation geometry
@@ -21,6 +20,7 @@ class distributions {
 };
 
 int main() {
+  cout << faunus_splash();
   distributions<double> dst(0,100,0.5);
   //dst.add("Utot",0);
   atom.includefile("atomlist.inp");    // load atom properties
@@ -34,7 +34,7 @@ int main() {
   Energy::nonbonded<Tpairpot> pot(in); // energy calculation class
 
   // Handle particles
-  atom["NA"].dp=80.;                   // Displacement parameter
+  atom["NA"].dp=20.;                   // Displacement parameter
   atom["CL"].dp=80.;
   spc.insert("NA",100);                // Insert particles into space
   spc.insert("CL",100);

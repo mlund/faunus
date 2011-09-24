@@ -29,7 +29,7 @@ option(ENABLE_BABEL    "Try to use OpenBabel for file I/O" off)
 option(ENABLE_OPENMP   "Try to use OpenMP parallization" off)
 option(ENABLE_FORTRAN  "Try to compile legacy fortran code" off)
 option(ENABLE_TWISTER  "Enable Mersenne Twister random number generator" off)
-option(ENABLE_SWIG     "Try to create SWIG modules for python, tcl, ruby etc." on)
+option(ENABLE_SWIG     "Try to create SWIG modules for python, tcl, ruby etc." off)
 option(ENABLE_FAST_EXP "Approximate e^x function for certain pair potentials." off)
 mark_as_advanced( CLEAR CMAKE_VERBOSE_MAKEFILE CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS )
 mark_as_advanced( EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH

@@ -1,4 +1,5 @@
 #include <faunus/drift.h>
+#include <faunus/faunus.h>
 namespace Faunus {
   energydrift::energydrift() {
     delta=initial=drift=0;
@@ -27,14 +28,15 @@ namespace Faunus {
   }
 
   string energydrift::info() {
+    char w=25;
     std::ostringstream o;
-    o << endl << "# SYSTEM ENERGY (kT):" << endl;
+    o << header("System Energy (kT)");
     if (avg.cnt>0) {
-      o << "#   Average <U> s      = " << avg.avg() << " " << avg.stdev() << "\n"
-        << "#   Initial energy     = " << initial << endl
-        << "#   Initial + changes  = " << current() << endl;
+      o << pad("Average <U> s",w,SUB) << avg.avg() << " " << avg.stdev() << "\n"
+        << pad("Initial energy",w,SUB) << initial << endl
+        << pad("Initial + changes",w,SUB) << current() << endl;
       o.precision(4);
-      o << "#   Total energy drift = " << drift << " (" << drift/current()*100. << "\ufe6a)" << endl;
+      o << pad("Total energy drift",w,SUB) << drift << " (" << drift/current()*100. << "\ufe6a)" << endl;
     }
     return o.str();
   }

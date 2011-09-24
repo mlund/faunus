@@ -65,18 +65,13 @@ namespace Faunus {
     //
     //--- sphere geometry ---
     //
-
-    void sphere::setvolume(double vol) {
-      volume=vol;
-      setradius( pow( 3*vol/(4*pc::pi), 1/3.) );
-    }
-
+    //
     sphere::sphere(double radius) {
       setradius(radius);
     }
 
     sphere::sphere(inputfile &in)  {
-      setradius(in.getflt("sphere_radius"));
+      sphere( in.getflt("sphere_radius") );
     }
 
     void sphere::setradius(double radius) {
@@ -85,6 +80,11 @@ namespace Faunus {
       r2 = r*r; 
       diameter = 2*r; 
       volume = (4./3.)*pc::pi*r*r*r;
+    }
+
+    void sphere::setvolume(double vol) {
+      volume=vol;
+      setradius( pow( 3*vol/(4*pc::pi), 1/3.) );
     }
 
     string sphere::info(char w) {
@@ -107,7 +107,6 @@ namespace Faunus {
     point sphere::vdist(const point&a, const point&b) {
       return a-b;
     }
-
 
     void sphere::boundary(point &m) const {}
 

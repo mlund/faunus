@@ -37,7 +37,7 @@ namespace Faunus {
       const group operator+(const group&) const;
       friend std::ostream &operator<<(std::ostream&, group&);  //!< Output group data to stream
       virtual group &operator<<(std::istream &);               //!< Get group data from stream
-
+      virtual ~group() {};
   };
 
   class molecular : public group {

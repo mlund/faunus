@@ -47,6 +47,7 @@ namespace Faunus {
         virtual string info(char);                          //!< Return info string
         bool save(string);                                  //!< Save container state to disk
         bool load(string,bool=false);                       //!< Load container state from disk
+        virtual ~geometrybase() {};
     };
 
     /*! \brief Spherical geometry

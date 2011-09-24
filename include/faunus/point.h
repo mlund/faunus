@@ -88,6 +88,7 @@ namespace Faunus {
       friend std::ostream &operator<<(std::ostream &, const cigarparticle &); //!< Output information
       cigarparticle &operator<<(std::istream &);                              //!< Get information
       cigarparticle operator+(const point&) const;         //!< Add two vectors
+      cigarparticle& operator=(const point&);
       cigarparticle& operator=(const specdata&);
       cigarparticle& operator=(const pointparticle&);
   };

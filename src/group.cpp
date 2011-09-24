@@ -12,12 +12,7 @@ namespace Faunus {
    *                GROUP
    * -----------------------------------*/
 
-  group::group(int first, int last) {
-    if (first==-1 || last==-1)
-      beg=end=-1;
-    beg=first;
-    end=last;
-  }
+  group::group(int first, int last) : beg(first), end(last) {}
 
   int group::size() const {
     return (beg<0 || end<0) ? 0 : end-beg+1;

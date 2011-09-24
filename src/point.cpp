@@ -10,7 +10,7 @@ namespace Faunus {
     C A R T E S I A N  P O I N T
    ********************************/
 
-  point::point() { clear(); }
+  point::point() : x(0), y(0), z(0) {}
 
   void point::clear() { x=y=z=0; }
 
@@ -108,9 +108,7 @@ namespace Faunus {
     P A R T I C L E
    ********************/
 
-  pointparticle::pointparticle() {
-    pointparticle::clear();
-  }
+  pointparticle::pointparticle() : charge(0), radius(0), mw(0), id(0), hydrophobic(false) {}
 
   void pointparticle::clear() {
     point::clear();
@@ -203,6 +201,11 @@ namespace Faunus {
   }
 
   cigarparticle cigarparticle::operator+(const point &p) const {
+    return *this;
+  }
+
+  cigarparticle& cigarparticle::operator=(const point &p ) {
+    pointparticle::operator=(p);
     return *this;
   }
 

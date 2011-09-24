@@ -18,6 +18,7 @@ namespace Faunus {
       vector<group*> g;                          //!< Pointers to all groups in the system.
 
       space(Geometry::geometrybase&);
+      virtual ~space() {};
       virtual bool save(string);                      //!< Save container state to disk
       virtual bool load(string, bool=false);          //!< Load container state from disk
 

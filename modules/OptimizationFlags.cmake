@@ -6,11 +6,11 @@
 unset(CMAKE_CXX_FLAGS)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  set(CMAKE_CXX_FLAGS "-std=c++0x -funroll-loops -W -Wno-sign-compare -Wno-conversion")
+  set(CMAKE_CXX_FLAGS "-std=c++0x -funroll-loops -Wall -Wno-sign-compare -Wno-conversion")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
   set(CMAKE_CXX_FLAGS "-w1 -Wno-unknown-pragmas")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  set(CMAKE_CXX_FLAGS "-pedantic -Wall -stdlib=libc++ -Wno-long-long -Wno-unknown-pragmas -Wno-c++0x-extensions")
+  set(CMAKE_CXX_FLAGS "-W -pedantic -stdlib=libc++ -Wno-long-long -Wno-unused-parameter -Wno-sign-compare -Wno-unknown-pragmas -Wno-c++0x-extensions")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Sun")
   set(CMAKE_CXX_FLAGS "-erroff=wvarhidemem,hidevf,badstring,largeshift -errtags=yes")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "PGI")

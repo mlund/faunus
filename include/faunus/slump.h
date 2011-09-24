@@ -26,6 +26,7 @@ namespace Faunus {
     protected:
       std::string name;
     public:
+      virtual ~random() {}
       virtual double random_one()=0;              //!< Random number between [0:1[
       virtual void random_seed(int=0)=0;          //!< Seed random generator (globally)
       bool runtest(float=0.5);                    //!< Probability bool

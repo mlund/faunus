@@ -62,6 +62,7 @@ namespace Faunus {
 
       public:
         movebase(Energy::energybase&, space&, string);             //!< Constructor
+        virtual ~movebase() {};
         virtual double move()=0;    //!< Attempt a move and return energy change
         double runfraction;         //!< Fraction of times calling move() should result in an actual move
         string info();              //!< Returns information string

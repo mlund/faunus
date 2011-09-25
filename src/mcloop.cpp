@@ -1,5 +1,6 @@
 #include <faunus/mcloop.h>
 #include <faunus/inputfile.h>
+#include <faunus/textio.h>
 
 namespace Faunus {
 
@@ -16,16 +17,18 @@ namespace Faunus {
   }
 
   string mcloop::info() {
+    using namespace textio;
+    char w=25;
     std::ostringstream o;
-    o << endl << "# STEP AND TIME DETAILS:" << endl
-      << "#   Steps (macro micro tot)= " << macro << " x " << micro << " = " << macro*micro << endl
-      << "#   Remaining steps        = " << macro*micro - count() << endl;
+    o << header("MC Steps and Time")
+      << pad("Steps (macro micro tot)",w,SUB) << macro << "\u2219" << micro << " = " << macro*micro << endl
+      << pad("Remaining steps",w,SUB) << macro*micro - count() << endl;
     if (loadstateBool)
       o << "#   Load state from disk   = yes" << endl;
     int t=cnt.elapsed();
     if (t>5) {
-      o << "#   Time elapsed (hours)   = " << t/(3600.) << endl
-        << "#   Steps/minute           = " << macro*micro/(t/60.) << endl;
+      o << pad("Time elapsed",w,SUB) << t/(3600.) << " h" << endl
+        << pad("Steps/minute",w,SUB) << macro*micro/(t/60.) << endl;
     }
     return o.str();
   }
@@ -38,8 +41,9 @@ namespace Faunus {
    * \note This will try to flush the output stream buffer.
    */
   string mcloop::timing(unsigned int mac) {
+    using namespace textio;
     std::ostringstream o;
-    o << "# Macrostep " << mac << " completed. ETA: "
+    o << indent(SUB) << "Macrostep " << std::left << std::setw(4) << mac << "ETA: "
       << cnt.eta(mac) << std::flush;
     return o.str();
   }

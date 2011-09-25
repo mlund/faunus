@@ -1,6 +1,7 @@
 #ifndef FAU_MCLOOP_H
 #define FAU_MCLOOP_H
 #include <faunus/common.h>
+#include <faunus/textio.h>
 
 namespace Faunus {
   class inputfile;

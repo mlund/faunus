@@ -4,11 +4,14 @@
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/geometry.h>
-#include <faunus/faunus.h>
+#include <faunus/textio.h>
+
 
 namespace Faunus {
 
   namespace Potential {
+
+    using namespace Faunus::textio;
 
     /*!
      * \brief Core potentials used to construct pair potentials.

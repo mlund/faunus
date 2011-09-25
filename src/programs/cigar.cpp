@@ -15,7 +15,7 @@ using namespace Faunus;
 using namespace Faunus::Geometry;
 
 int main() {
-  cout << faunus_splash();
+  cout << textio::splash();
   atom.includefile("atomlist.inp");
   inputfile in("cigar.inp");
 

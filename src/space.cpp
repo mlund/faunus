@@ -148,6 +148,7 @@ namespace Faunus {
   }
 
   string space::info() {
+    using namespace textio;
     static char w=25;
     double z=charge();
     std::ostringstream o;

@@ -21,27 +21,8 @@
 
 #ifndef SWIG
 #include <faunus/common.h>
-#endif
-
-namespace Faunus {
-  enum indentlevel {TITLE=0,SUB=2,SUBSUB=4};
-  string faunus_splash();
-  string header(const string&);
-  string indent(indentlevel);
-  string pad(const string&, char, indentlevel);
-
-  class textOutput {
-    private:
-      unsigned short width;
-    public:
-      template<class T> void printValue(string s, T v) {
-        std::cout << s << " = " << v << std::endl;
-      }
-  };
-}//namespace
-
-#ifndef SWIG
 #include <faunus/common.h>
+#include <faunus/textio.h>
 #include <faunus/point.h>
 #include <faunus/geometry.h>
 #include <faunus/species.h>
@@ -57,5 +38,16 @@ namespace Faunus {
 #include <faunus/drift.h>
 #include <faunus/xytable.h>
 #endif
+
+namespace Faunus {
+  class textOutput {
+    private:
+      unsigned short width;
+    public:
+      template<class T> void printValue(string s, T v) {
+        std::cout << s << " = " << v << std::endl;
+      }
+  };
+}//namespace
 
 #endif

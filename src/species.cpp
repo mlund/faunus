@@ -83,6 +83,7 @@ namespace Faunus {
   }
 
   string atoms::info() {
+    using namespace textio;
     char w=25;
     std::ostringstream o;
     o << header("Atomic Species")

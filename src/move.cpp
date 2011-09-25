@@ -7,10 +7,13 @@
 #include <faunus/inputfile.h>
 #include <faunus/geometry.h>
 #include <faunus/faunus.h>
+#include <faunus/textio.h>
 
 namespace Faunus {
 
   namespace Move {
+
+    using namespace textio;
 
     movebase::movebase(Energy::energybase &e, space &s, string pfx) : infty(1e15) {
       pot=&e;
@@ -62,11 +65,11 @@ namespace Faunus {
       if (!cite.empty()) {
         o << pad("More information:",w,SUB) << cite << endl;
       }
-      o << pad("Runfraction",w,SUB) << runfraction*100 << "\ufe6a" << endl;
+      o << pad("Runfraction",w,SUB) << runfraction*100 << percent << endl;
       if (cnt>0) {
         o << pad("Number of trials",w,SUB) << cnt << endl;
-        o << pad("Acceptance",w,SUB) << double(cnt_accepted)/cnt*100 << "\ufe6a" << endl;
-        o << pad("Total energy change",w,SUB) << dusum << " kT" << endl;
+        o << pad("Acceptance",w,SUB) << double(cnt_accepted)/cnt*100 << percent << endl;
+        o << pad("Total energy change",w,SUB) << dusum << kT << endl;
       }
       return o.str();
     }
@@ -170,14 +173,17 @@ namespace Faunus {
           << indent(SUB) << "Individual particle movement:" << endl << endl
           << indent(SUBSUB) << std::left << string(5,' ')
           << setw(l-6) << "dp"
-          << setw(l+1) << "Acc. \ufe6a"
-          << setw(l) << "\u27e8\u0394r\u00b2\u27e9" << endl;
+          << setw(l+1) << "Acc. "+percent
+          << setw(l+5) << bracket("r"+squared) // "\u27e8\u0394r\u00b2\u27e9" 
+          << rootof+bracket("r"+squared) << endl; //"\u221a\u27e8\u0394r\u00b2\u27e9" << endl;
         for (auto it=sqrmap.begin(); it!=sqrmap.end(); ++it) {
           int id=it->first;
           o << indent(SUBSUB) << std::left << setw(5) << atom[id].name
-            << setw(l-6) << atom[id].dp
-            << setw(l) << accmap[id].avg()*100
-            << setw(l) << sqrmap[id].avg() << endl;
+            << setw(l-6) << atom[id].dp;
+          o.precision(3);
+          o << setw(l) << accmap[id].avg()*100
+            << setw(l) << sqrmap[id].avg()
+            << setw(l) << sqrt(sqrmap[id].avg()) << endl;
         }
       }
       return o.str();

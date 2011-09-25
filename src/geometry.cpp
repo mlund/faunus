@@ -9,6 +9,8 @@
 namespace Faunus {
   namespace Geometry {
 
+    using namespace Faunus::textio;
+
     double geometrybase::volume;
 
     double geometrybase::_dist(const point &p1, const point &p2) {

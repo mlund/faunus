@@ -20,7 +20,7 @@ class distributions {
 };
 
 int main() {
-  cout << faunus_splash();
+  cout << textio::splash();
   distributions<double> dst(0,100,0.5);
   //dst.add("Utot",0);
   atom.includefile("atomlist.inp");    // load atom properties
@@ -48,6 +48,8 @@ int main() {
 
   cout << atom.info() << spc.info() << pot.info() << mv.info() << pot.pair.info() << endl;
 
+  cout << textio::header("MC Simulation Begins!");
+
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
       sys+=mv.move();
@@ -58,5 +60,5 @@ int main() {
 
   pqr.save("confout.pqr", spc.p);
   spc.save("space.state");
-  cout << mv.info() << sys.info();
+  cout << mv.info() << sys.info() << loop.info();
 }

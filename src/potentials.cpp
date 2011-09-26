@@ -46,8 +46,8 @@ namespace Faunus {
 
       string squarewell::info(char w) {
         std::ostringstream o;
-        o << pad("Threshold",w,SUB) << threshold << " "+angstrom << endl;
-        o << pad("Depth",w,SUB) << depth << kT << endl;
+        o << pad(SUB,w,"Threshold") << threshold << " "+angstrom << endl;
+        o << pad(SUB,w,"Depth") << depth << kT << endl;
         return o.str();
       }
 
@@ -60,7 +60,7 @@ namespace Faunus {
 
       string coulomb::info(char w) {
         std::ostringstream o;
-        o << pad("Bjerrum length",w,SUB) << lB << " "+angstrom << endl;
+        o << pad(SUB,w,"Bjerrum length") << lB << " "+angstrom << endl;
         return o.str();
       }
 
@@ -87,8 +87,8 @@ namespace Faunus {
       string debyehuckel::info(char w) {
         std::ostringstream o;
         o << coulomb::info(w);
-        o << pad("Ionic strength",w,SUB) << ionic_strength() << " mol/l" << endl;
-        o << pad("Debye length, 1/\u03BA",w,SUB) << debye_length() << " "+angstrom << endl;
+        o << pad(SUB,w,"Ionic strength") << ionic_strength() << " mol/l" << endl;
+        o << pad(SUB,w,"Debye length, 1/\u03BA") << debye_length() << " "+angstrom << endl;
         return o.str();
       }
 

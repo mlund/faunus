@@ -9,6 +9,7 @@ namespace Faunus {
 
     const string percent="\ufe6a";
     const string angstrom="\u00c5";
+    const string _angstrom=" \u00c5";
     const string squared="\u00b2";
     const string rootof="\u221a";
     const string sigma="\u03c3";
@@ -18,7 +19,8 @@ namespace Faunus {
     string bracket(const string&);
     string header(const string&);
     string indent(indentlevel);
-    string pad(const string&, char, indentlevel);
+    string pad(indentlevel, char, const string&);
+
   }
 
 }//namespace

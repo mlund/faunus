@@ -21,14 +21,14 @@ namespace Faunus {
     char w=25;
     std::ostringstream o;
     o << header("MC Steps and Time")
-      << pad("Steps (macro micro tot)",w,SUB) << macro << "\u2219" << micro << " = " << macro*micro << endl
-      << pad("Remaining steps",w,SUB) << macro*micro - count() << endl;
+      << pad(SUB,w,"Steps (macro micro tot)") << macro << "\u2219" << micro << " = " << macro*micro << endl
+      << pad(SUB,w,"Remaining steps") << macro*micro - count() << endl;
     if (loadstateBool)
       o << "#   Load state from disk   = yes" << endl;
     int t=cnt.elapsed();
     if (t>5) {
-      o << pad("Time elapsed",w,SUB) << t/(3600.) << " h" << endl
-        << pad("Steps/minute",w,SUB) << macro*micro/(t/60.) << endl;
+      o << pad(SUB,w,"Time elapsed") << t/(3600.) << " h" << endl
+        << pad(SUB,w,"Steps/minute") << macro*micro/(t/60.) << endl;
     }
     return o.str();
   }

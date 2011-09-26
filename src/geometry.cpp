@@ -22,7 +22,7 @@ namespace Faunus {
 
     string geometrybase::info(char w) {
       std::ostringstream o;
-      o << pad("Boundary",w,SUB) << name << endl;
+      o << pad(SUB,w, "Boundary") << name << endl;
       return o.str();
     }
 
@@ -88,7 +88,7 @@ namespace Faunus {
 
     string sphere::info(char w) {
       std::ostringstream o;
-      o << geometrybase::info(w) << pad("Radius",w,SUB) << r << endl;
+      o << geometrybase::info(w) << pad(SUB,w,"Radius") << r << endl;
       return o.str();
     }
 
@@ -184,8 +184,8 @@ namespace Faunus {
     string cuboid::info(char w) {
       std::ostringstream o;
       o << geometrybase::info(w);
-      o << pad("Sidelengths",w,SUB) << len.x << " x " << len.y << " x " << len.z << endl;
-      o << pad("Slice position [x y z]",w,SUB)
+      o << pad(SUB,w, "Sidelengths") << len.x << " x " << len.y << " x " << len.z << endl;
+      o << pad(SUB,w, "Slice position [x y z]")
         << len_half.x-slice_max.x << "-" << len_half.x-slice_min.x << " " 
         << len_half.y-slice_max.y << "-" << len_half.y-slice_min.y << " "
         << len_half.z-slice_max.z << "-" << len_half.z-slice_min.z << endl;
@@ -303,8 +303,8 @@ namespace Faunus {
     string cylinder::info(char w) {
       std::ostringstream o;
       o << geometrybase::info(w);
-      o << pad("Length (A)",w,SUB) << len << endl;
-      o << pad("Radius (A)",w,SUB) << r << endl;
+      o << pad(SUB,w, "Length (A)") << len << endl;
+      o << pad(SUB,w, "Radius (A)") << r << endl;
       return o.str();
     }
 

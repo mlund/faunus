@@ -15,15 +15,15 @@ namespace Faunus {
     return std::string(level, ' ');
   }
 
-  string textio::pad(const string &s, char width, indentlevel level) {
-    std::ostringstream o;
+  string textio::pad(indentlevel level, char width, const string &s) {
+    std::stringstream o;
     o << indent(level) << std::left << std::setw(width) << s;
     return o.str();
   }
 
   string textio::splash() {
     std::ostringstream o;
-    o << "-----------------------------------------------------------------------\n"
+    o << std::string(71,'=') << endl
       << "  Welcome to FAUNUS - A Framework for Molecule Simulation.\n"
       << "  Copyright (C) 2002-2011 Mikael Lund\n"
       << "\n"
@@ -46,6 +46,7 @@ namespace Faunus {
       << "\n"
       << "  Reference:\n"
       << "    Source Code Biol. Med. (2008) 3:1\n"
+      << "    doi:10.1186/1751-0473-3-1\n"
       << "\n"
       << "  Library build details:\n"
       << "    Compiled on " << __DATE__ << " " << __TIME__
@@ -55,8 +56,7 @@ namespace Faunus {
 #ifdef __SVN_REV__
       << "\n    SVN revision: " << __SVN_REV__ << "."
 #endif
-      << "\n"
-      << "----------------------------------------------------------------------\n" << std::endl;
+      << "\n" << string(71,'=') << endl;
     return o.str();
   }
 

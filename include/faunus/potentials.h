@@ -114,7 +114,7 @@ namespace Faunus {
             std::ostringstream o;
             o << header("Pair Potential: " + lj.name + "+" + el.name)
               << el.info(w)
-              << pad("LJ epsilon",w,SUB) << eps*tokT << endl;
+              << pad(SUB,w,"LJ epsilon") << eps*tokT << endl;
             return o.str();
           }
       };

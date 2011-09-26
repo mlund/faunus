@@ -1,6 +1,8 @@
 #include <faunus/drift.h>
 #include <faunus/textio.h>
+
 namespace Faunus {
+
   energydrift::energydrift() {
     delta=initial=drift=0;
   }
@@ -33,11 +35,11 @@ namespace Faunus {
     std::ostringstream o;
     o << header("System Energy and Drift");
     if (avg.cnt>0) {
-      o << textio::pad("Average",w,SUB) << avg.avg() << " kT, \u03C3=" << avg.stdev() << endl
-        << textio::pad("Initial energy",w,SUB) << initial << " kT" << endl
-        << textio::pad("Initial + changes",w,SUB) << current() << " kT" << endl;
+      o << textio::pad(SUB,w, "Average") << avg.avg() << kT << ", \u03C3=" << avg.stdev() << endl
+        << textio::pad(SUB,w, "Initial energy") << initial << kT << endl
+        << textio::pad(SUB,w, "Initial + changes") << current() << kT << endl;
       o.precision(4);
-      o << pad("Total energy drift",w,SUB) << drift << " kT (" << drift/current()*100. << "\ufe6a)" << endl;
+      o << pad(SUB,w, "Total energy drift") << drift << kT << " (" << drift/current()*100. << "\ufe6a)" << endl;
     }
     return o.str();
   }

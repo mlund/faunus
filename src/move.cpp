@@ -63,13 +63,13 @@ namespace Faunus {
       std::ostringstream o;
       o << header("Markov Move: " + title);
       if (!cite.empty()) {
-        o << pad("More information:",w,SUB) << cite << endl;
+        o << pad(SUB,w,"More information:") << cite << endl;
       }
-      o << pad("Runfraction",w,SUB) << runfraction*100 << percent << endl;
+      o << pad(SUB,w,"Runfraction") << runfraction*100 << percent << endl;
       if (cnt>0) {
-        o << pad("Number of trials",w,SUB) << cnt << endl;
-        o << pad("Acceptance",w,SUB) << double(cnt_accepted)/cnt*100 << percent << endl;
-        o << pad("Total energy change",w,SUB) << dusum << kT << endl;
+        o << pad(SUB,w,"Number of trials") << cnt << endl;
+        o << pad(SUB,w,"Acceptance") << double(cnt_accepted)/cnt*100 << percent << endl;
+        o << pad(SUB,w,"Total energy change") << dusum << kT << endl;
       }
       return o.str();
     }
@@ -167,7 +167,7 @@ namespace Faunus {
       char l=12;
       std::ostringstream o;
       o << movebase::info()
-        << pad("Displacement vector",w,SUB) << dir << endl;
+        << pad(SUB,w,"Displacement vector") << dir << endl;
       if (cnt>0) {
         o << endl
           << indent(SUB) << "Individual particle movement:" << endl << endl

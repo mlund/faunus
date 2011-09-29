@@ -62,7 +62,7 @@ namespace Faunus {
         void setradius(double);
         double r;              //!< Radius
         sphere(double);
-        sphere(inputfile &);
+        sphere(inputfile&);
         string info(char);
         void setvolume(double);
         void randompos(point &);

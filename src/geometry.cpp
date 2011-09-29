@@ -75,6 +75,7 @@ namespace Faunus {
 
     void sphere::setradius(double radius) {
       name="Spherical";
+      assert(radius>0);
       r = radius; 
       r2 = r*r; 
       diameter = 2*r; 
@@ -277,6 +278,8 @@ namespace Faunus {
 
     void cylinder::init(double length, double radius) {
       name="Cylindrical";
+      assert(length>0);
+      assert(length>0);
       len=length;
       r=radius;
       r2=r*r;

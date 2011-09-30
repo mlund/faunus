@@ -30,7 +30,7 @@ namespace Faunus {
     class geometrybase {
       protected:
         slump slp;
-        static double volume;                               //!< Volume of the container [AA^3]
+        double volume;                               //!< Volume of the container [AA^3]
         string name;                                        //!< Name of the geometry
       public:
         enum collisiontype {BOUNDARY,ZONE};                 //!< Types for collision() function
@@ -69,7 +69,7 @@ namespace Faunus {
         void boundary(point &) const;
         bool collision(const particle &, collisiontype=BOUNDARY);
         inline double _sqdist(const point &a, const point &b) const { return sqdist(a,b); }
-        inline static double sqdist(const point &a, const point &b) {
+        inline double sqdist(const point &a, const point &b) {
           register double dx,dy,dz;
           dx=a.x-b.x;
           dy=a.y-b.y;
@@ -93,13 +93,13 @@ namespace Faunus {
     class cuboid : public geometrybase {
       protected:
         bool setslice(point, point);             //!< Reset slice position
-        static point len_inv;                    //!< Inverse sidelengths
+        point len_inv;                    //!< Inverse sidelengths
 
       public:
         cuboid(inputfile&);                      //!< Read input parameters
-        static bool setlen(point);               //!< Reset cuboid sidelengths
-        static point len;                        //!< Sidelengths
-        static point len_half;                   //!< Half sidelength
+        bool setlen(point);               //!< Reset cuboid sidelengths
+        point len;                        //!< Sidelengths
+        point len_half;                   //!< Half sidelength
         point slice_min, slice_max;              //!< Position of slice corners
         string info(char);                       //!< Return info string
         point randompos();                       //!< Get point with random position
@@ -108,7 +108,7 @@ namespace Faunus {
         bool load(string,bool=false);            //!< Load container state from disk
         bool collision(const particle&, collisiontype=BOUNDARY);
 
-        static inline double sqdist(const point &a, const point &b) {
+        inline double sqdist(const point &a, const point &b) {
           double dx=std::abs(a.x-b.x);
           double dy=std::abs(a.y-b.y);
           double dz=std::abs(a.z-b.z);
@@ -165,7 +165,7 @@ namespace Faunus {
           return sqdist(a,b);
         }
 
-        inline static double sqdist(const point &a, const point &b) {   //!< Squared distance 
+        inline double sqdist(const point &a, const point &b) {   //!< Squared distance 
           double dx=std::abs(a.x-b.x);
           double dy=std::abs(a.y-b.y);
           double dz=a.z-b.z;
@@ -217,7 +217,7 @@ namespace Faunus {
         bool collision(const particle&, collisiontype=BOUNDARY);
         string info(char); //!< Cylinder info
         inline double _sqdist(const point &a, const point &b) const { return sqdist(a,b); }
-        inline static double sqdist(const point &a, const point &b) {
+        inline double sqdist(const point &a, const point &b) {
           register double dx,dy,dz;
           dx=a.x-b.x;
           dy=a.y-b.y;
@@ -233,7 +233,7 @@ namespace Faunus {
      */
     class hypersphere : public sphere {
       private:
-        static const double pi;
+        const double pi;
       public:
         hypersphere(inputfile &);
         string info(char);

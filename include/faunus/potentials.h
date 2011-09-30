@@ -102,12 +102,13 @@ namespace Faunus {
           Tcoulomb el;
           const double eps;
         public:
+          Tgeometry geo;
           double tokT;
-          coulomb_lj(inputfile &in) : el(in), eps(4*in.getflt("lj_eps",0.04)/el.tokT) {
+          coulomb_lj(inputfile &in) : el(in), eps(4*in.getflt("lj_eps",0.04)/el.tokT), geo(in) {
             tokT=el.tokT;
           }
           inline double pairpot(const particle &a, const particle &b) const {
-            double r2=Tgeometry::sqdist(a,b);
+            double r2=geo.sqdist(a,b);
             return el.u(sqrt(r2), a.charge*b.charge) + lj.u_lj(r2, a.radius+b.radius, eps);
           }
           string info(char w=20) {

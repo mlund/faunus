@@ -31,7 +31,7 @@ int main() {
   //hamiltonian
   Energy::nonbonded< Potential::coulomb_lj<cuboid> > pot_nb(in);
   Energy::hamiltonian pot( &geo ) ;
-  pot+=pot_nb;
+  pot.add(pot_nb);
 
   cout << atom.info() << spc.info() << pot_nb.pair.info() << endl;
   cout << p << endl;

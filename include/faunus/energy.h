@@ -25,7 +25,7 @@ namespace Faunus {
       protected:
         string name;
       public:
-        static Geometry::geometrybase* geo; //!< Pointer to geometry functions - possibly slow, so avoid in time critical steps
+        Geometry::geometrybase* geo; //!< Pointer to geometry functions
 
         // single particle interactions
         virtual double all2all(const p_vec &p);
@@ -49,7 +49,9 @@ namespace Faunus {
           typedef p_vec::const_iterator pviter;
         public:
           Tpotential pair;
-          nonbonded(inputfile &in) : pair(in) {}
+          nonbonded(inputfile &in) : pair(in) {
+            geo=&pair.geo;
+          }
 
           double all2all(const p_vec &p) {
             int n=p.size();
@@ -140,13 +142,21 @@ namespace Faunus {
           double g_internal(const p_vec &p, const group &g) { return 0; }
       };
 
+    /*!
+     * \brief Collection of energybases that when summed gives the Hamiltonian
+     * \author Mikael Lund
+     * \date Lund, 2011
+     */
     class hamiltonian : public energybase {
       private:
         vector<energybase*> base;
       public:
         hamiltonian(Geometry::geometrybase* geoPtr) { geo=geoPtr; }
 
-        void operator+=(energybase &b) { base.push_back(&b); }
+        void add(energybase &b) {
+          b.geo=geo;
+          base.push_back(&b);
+        }
 
         // single particle interactions
         double i2i(const p_vec &p, int i, int j) {

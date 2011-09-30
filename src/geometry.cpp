@@ -11,8 +11,6 @@ namespace Faunus {
 
     using namespace Faunus::textio;
 
-    double geometrybase::volume;
-
     double geometrybase::_dist(const point &p1, const point &p2) {
       return sqrt( _sqdist(p1, p2) );
     }
@@ -116,10 +114,6 @@ namespace Faunus {
     //
     //--- cuboid geometry ---
     //
-
-    point cuboid::len;
-    point cuboid::len_half;
-    point cuboid::len_inv;
 
     cuboid::cuboid(inputfile &in) {
       name="Cuboid";

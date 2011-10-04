@@ -576,7 +576,8 @@ namespace Faunus {
             c.trial[i].y=c.p[i].y;
             c.trial[i].z=c.p[i].z;
             if ( c.collision(c.p[i]) ) {
-              std::cerr << "# ioxtc load error: particle-container collision!" << endl;
+              std::cerr << "# ioxtc load error: particle-container collision!" << endl
+                        << "# Have you applied atom periodic boundaries using trjconv?" << endl;
               return false;
             }
           } 

@@ -5,20 +5,20 @@
 //extern template class std::vector<Faunus::particle>;
 
 namespace Faunus {
-  class space {
+  class Space {
     protected:
       std::ifstream fin;
     private:
       slump slp;
     public:
       enum spacekeys {NOOVERLAP};
-      Geometry::geometrybase* geo;
+      Geometry::Geometrybase* geo;
       p_vec p;                                   //!< The main particle vector
       p_vec trial;                               //!< Trial particle vector. 
       vector<group*> g;                          //!< Pointers to all groups in the system.
 
-      space(Geometry::geometrybase&);
-      virtual ~space() {};
+      Space(Geometry::Geometrybase&);
+      virtual ~Space() {};
       virtual bool save(string);                      //!< Save container state to disk
       virtual bool load(string, bool=false);          //!< Load container state from disk
 

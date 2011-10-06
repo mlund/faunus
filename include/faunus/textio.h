@@ -20,9 +20,7 @@ namespace Faunus {
     string header(const string&);
     string indent(indentlevel);
     string pad(indentlevel, char, const string&);
-
-  }
-
+  }//namespace
 }//namespace
 #endif
 

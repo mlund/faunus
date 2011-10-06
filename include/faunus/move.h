@@ -8,7 +8,7 @@
 namespace Faunus {
   //class average;
   class unittest;
-  class energybase;
+  class Energybase;
 
   namespace Move {
 
@@ -39,29 +39,29 @@ namespace Faunus {
      * information to move automatically.
      */
 
-    class movebase {
+    class Movebase {
       protected:
-        Energy::energybase* pot;         //!< Pointer to energy functions
-        space* spc;
+        Energy::Energybase* pot;         //!< Pointer to energy functions
+        Space* spc;
         string title;                    //!< title of move
         string cite;                     //!< litterature reference, url, DOI etc.
-        string prefix;                   //!< inputfile prefix
+        string prefix;                   //!< inputmap prefix
         unsigned long int cnt;           //!< total number of trial moves
         unsigned long int cnt_accepted;  //!< number of accepted moves
-        char w;                          //!< width of first column of info string
+        char w;                          //!< info string text width
         double dusum;                    //!< Sum of all energy changes made by this move
         const double infty;              //!< Large value to represent infinity
 
-        virtual void trialmove()=0;      //!< Do a trial move
-        virtual void acceptmove()=0;     //!< Accept move, store new coordinates etc.
-        virtual void rejectmove()=0;     //!< Reject move, revert to old coordinates etc.
-        virtual double energychange()=0; //!< Returns energy change of trialmove
+        virtual void trialMove()=0;      //!< Do a trial move
+        virtual void acceptMove()=0;     //!< Accept move, store new coordinates etc.
+        virtual void rejectMove()=0;     //!< Reject move, revert to old coordinates etc.
+        virtual double energyChange()=0; //!< Returns energy change of trialMove
         bool run() const;                //!< Runfraction test
-        bool metropolis(const double &) const;
+        bool metropolis(const double &) const; //!< Metropolis criteria
 
       public:
-        movebase(Energy::energybase&, space&, string);             //!< Constructor
-        virtual ~movebase() {};
+        Movebase(Energy::Energybase&, Space&, string);             //!< Constructor
+        virtual ~Movebase() {};
         virtual double move()=0;    //!< Attempt a move and return energy change
         double runfraction;         //!< Fraction of times calling move() should result in an actual move
         string info();              //!< Returns information string
@@ -69,14 +69,14 @@ namespace Faunus {
     };
 
     /*
-    class translate : public movebase {
+    class translate : public Movebase {
       protected:
-        void trialmove();
-        void acceptmove();
+        void trialMove();
+        void acceptMove();
         void rejectmove();
         double energychange();
       public:
-        translate(string="translate_", energybase&, space&);
+        translate(string="translate_", Energybase&, space&);
         unsigned int group;
         point dp;                   //!< Displacement vector
         double move();
@@ -93,25 +93,34 @@ namespace Faunus {
      * in iparticle. For randomly moving all particles in a group (typically salt),
      * point igroup to the appropriate group in the space class g vector.
      */
-    class translate_particle : public movebase {
+    class ParticleTranslation : public Movebase {
       private:
         typedef std::map<short, average<double> > map_type;
-        typedef map_type::const_iterator mapiter;
+        //typedef map_type::const_iterator mapiter;
         map_type accmap; //!< Single particle acceptance map
         map_type sqrmap; //!< Single particle mean square displacement map
+        group* igroup;   //!< Group pointer in which particles are moved randomly (NULL if none, default)
+        int iparticle;   //!< Select single particle to move (-1 if none, default)
       protected:
-        void trialmove();
-        void acceptmove();
-        void rejectmove();
-        double energychange();
+        void trialMove();
+        void acceptMove();
+        void rejectMove();
+        double energyChange();
       public:
-        int igroup;     //!< Group in which particles are moved randomly (-1 if no group, default)
-        int iparticle;  //!< Select single particle to move (-1 if none, default)
-        point dir;      //!< Displacement directions (default: x=y=z=1)
-        translate_particle(inputfile &in, Energy::energybase&, space&, string="mv_particle");
-        double move();  //!< Move iparticle once or n times in igroup of length n
+        ParticleTranslation(InputMap&, Energy::Energybase&, Space&, string="mv_particle");
+        void setGroup(group&); //!< Select group in which to randomly pick particles from
+        void setParticle(int); //!< Select single particle in p_vec to move
+        double move();         //!< Move selected particle once or n times in selected group of length n
+        point dir;             //!< Displacement directions (default: x=y=z=1)
         string info();
     };
+
+    class MoleculeTranslation : public Movebase {
+    };
+
+    class MoleculeRotation : public Movebase {
+    };
+
 
   }//namespace
 }//namespace

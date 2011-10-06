@@ -1,7 +1,9 @@
 #include <faunus/faunus.h>
+#include <faunus/widom.h>
+
 using namespace Faunus;
 
-typedef Geometry::cuboid Tgeometry;                // select simulation geometry
+typedef Geometry::Cuboid Tgeometry;                // select simulation geometry
 typedef Potential::coulomb_lj<Tgeometry> Tpairpot; // select particle-particle pairpotential
 
 template<class T>
@@ -10,12 +12,12 @@ class distributions {
     typedef xytable<double,T> Ttable;
     typedef std::map<string,Ttable> Tmap;
     double xmin, xmax, dx;
-    Tmap dmap;
+    Tmap map;
   public:
     distributions(double min, double max, double delta) {
     }
     void add(string name, double val) {
-      dmap[name]+=val;
+      map[name]+=val;
     }
 };
 
@@ -24,14 +26,13 @@ int main() {
   distributions<double> dst(0,100,0.5);
   //dst.add("Utot",0);
   atom.includefile("atomlist.inp");    // load atom properties
-  inputfile in("bulk.inp");            // read user input
-  mcloop loop(in);                     // class for handling mc loops
+  InputMap mcp("bulk.inp");
+  MCLoop loop(mcp);                    // class for handling mc loops
   iopqr pqr;                           // PQR structure file I/O
   energydrift sys;                     // class for tracking system energy drifts
 
-  Tgeometry geo(in);                   // simulation geometry
-  space spc(geo);                      // generate simulation space
-  Energy::nonbonded<Tpairpot> pot(in); // energy calculation class
+  Energy::Nonbonded<Tpairpot> pot(mcp); // energy calculation class
+  Space spc( pot.getGeometry() );
 
   // Handle particles
   atom["NA"].dp=20.;                   // Displacement parameter
@@ -40,19 +41,25 @@ int main() {
   spc.insert("CL",100);
   group salt(0,199);                   // Define salt range
   salt.name="Salt particles";
-  Move::translate_particle mv(in, pot, spc);  // Particle move class
-  mv.igroup = spc.enroll(salt);               // Enroll salt in space and select it for particle moves
+  spc.enroll(salt);
+  Move::ParticleTranslation mv(mcp, pot, spc);  // Particle move class
+  mv.setGroup(salt);
 
   spc.load("space.state");
   sys.init( pot.all2all(spc.p) );
 
-  cout << atom.info() << spc.info() << pot.info() << mv.info() << pot.pair.info() << endl;
+  Widom wid(spc, pot);
+  wid.addGhost(spc);
+
+
+  cout << atom.info() << spc.info() << pot.info() << mv.info() << endl;
 
   cout << textio::header("MC Simulation Begins!");
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
       sys+=mv.move();
+      wid.sample();
     }
     sys.checkdrift( pot.all2all(spc.p) );
     cout << loop.timing();
@@ -60,5 +67,5 @@ int main() {
 
   pqr.save("confout.pqr", spc.p);
   spc.save("space.state");
-  cout << mv.info() << sys.info() << loop.info();
+  cout << mv.info() << sys.info() << loop.info() << wid.info();
 }

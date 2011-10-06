@@ -1,16 +1,12 @@
 #ifndef faunus_energy_base_h
 #define faunus_energy_base_h
 
-#include <iostream>
-#include <vector>
-#include <string>
-#include <tuple>
-#include <array>
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/group.h>
 #include <faunus/species.h>
 #include <faunus/titrate.h>
+#include <faunus/textio.h>
 
 // http://publib.boulder.ibm.com/infocenter/iadthelp/v8r0/index.jsp?topic=/com.ibm.xlcpp111.linux.doc/language_ref/variadic_templates.html
 //
@@ -21,36 +17,58 @@ namespace Faunus {
 
   namespace Energy {
 
-    class energybase {
+    class Energybase {
       protected:
-        string name;
+        Geometry::Geometrybase* geo; //!< Pointer to geometry used to calculate interactions
       public:
-        Geometry::geometrybase* geo; //!< Pointer to geometry functions
+        string name;
+
+        Energybase();
+        virtual ~Energybase();
+
+        Geometry::Geometrybase& getGeometry(); //!< Return reference to Geometrybase used for interactions
+
+        // interaction with external particle
+        virtual double p2p(const particle&, const particle&);
+        virtual double all2p(const p_vec&, const particle&);
 
         // single particle interactions
-        virtual double all2all(const p_vec &p);
-        virtual double i2i(const p_vec &p, int i, int j);
-        virtual double i2g(const p_vec &p, const group &g, int i);
-        virtual double i2all(const p_vec &p, int i);
-        virtual double i_external(const p_vec &p, int i);
-        virtual double i_internal(const p_vec &p, int i);
+        virtual double all2all(const p_vec&);
+        virtual double i2i(const p_vec&, int, int);
+        virtual double i2g(const p_vec&, const group &, int);
+        virtual double i2all(const p_vec&, int);
+        virtual double i_external(const p_vec&, int);
+        virtual double i_internal(const p_vec&, int);
 
         // group interactions
-        virtual double g2g(const p_vec &p, const group &g1, const group &g2);
-        virtual double g2all(const p_vec &p, const group &g);
-        virtual double g_external(const p_vec &p, const group &g);
-        virtual double g_internal(const p_vec &p, const group &g);
+        virtual double g2g(const p_vec&, const group&, const group&);
+        virtual double g2all(const p_vec&, const group&);
+        virtual double g_external(const p_vec&, const group&);
+        virtual double g_internal(const p_vec&, const group&);
+
         string info();
     };
 
     template<class Tpotential>
-      class nonbonded : public energybase {
+      class Nonbonded : public Energybase {
         private:
           typedef p_vec::const_iterator pviter;
         public:
           Tpotential pair;
-          nonbonded(inputfile &in) : pair(in) {
+          Nonbonded(InputMap &in) : pair(in) {
+            name="Nonbonded N" + textio::squared + " - " + pair.name;
             geo=&pair.geo;
+          }
+
+          inline double p2p(const particle &a, const particle &b) {
+            return pair.pairpot(a,b)*pair.tokT;
+          }
+
+          double all2p(const p_vec &p, const particle &a) {
+            double u=0;
+            for (auto &b : p)
+              u+=pair.pairpot(a,b);
+            return u*pair.tokT;
           }
 
           double all2all(const p_vec &p) {
@@ -122,17 +140,24 @@ namespace Faunus {
                 u+=pair.pairpot(p[i],p[j]);
             return pair.tokT*u;
           }
+
+          string info() {
+            using namespace textio;
+            std::ostringstream o;
+            o << header(name) << pair.info(25);
+            return o.str();
+          }
       };
 
     //or simply add pointer to nonbonded<T>
     template<class Tpotential>
-      class exclusions : public nonbonded<Tpotential> {
-        exclusions(inputfile &in) : nonbonded<Tpotential>(in) {}
+      class Exclusions : public Nonbonded<Tpotential> {
+        Exclusions(InputMap &in) : Nonbonded<Tpotential>(in) {}
         virtual double i2i(const p_vec &p, int i, int j) { return 0; }
       };
 
     template<class Tbondpot>
-      class bonded : public energybase {
+      class Bonded : public Energybase {
         //implement pointer to bond list
         // should we have a class that keeps track of particles,
         // groups, bond lists etc.?? YES!
@@ -143,25 +168,26 @@ namespace Faunus {
       };
 
     /*!
-     * \brief Collection of energybases that when summed gives the Hamiltonian
+     * \brief Collection of Energybases that when summed gives the Hamiltonian
      * \author Mikael Lund
      * \date Lund, 2011
      */
-    class hamiltonian : public energybase {
-      private:
-        vector<energybase*> base;
-      public:
-        hamiltonian(Geometry::geometrybase* geoPtr) { geo=geoPtr; }
+    class Hamiltonian : public Energybase {
+      protected:
+        vector<Energybase*> baselist;
 
-        void add(energybase &b) {
-          b.geo=geo;
-          base.push_back(&b);
+      public:
+
+        void add(Energybase &e) {
+          assert(&e!=NULL);
+          geo=&e.getGeometry();
+          baselist.push_back(&e);
         }
 
         // single particle interactions
         double i2i(const p_vec &p, int i, int j) {
           double u=0;
-          for (auto b : base)
+          for (auto b : baselist)
             u += b->i2i( p,i,j );
           return u;
         }
@@ -176,9 +202,18 @@ namespace Faunus {
         double g2all(const p_vec &p, const group &g) { return 0; }
         double g_external(const p_vec &p, const group &g) { return 0; }
         double g_internal(const p_vec &p, const group &g) { return 0; }
-        string info() { return "hej";  };
-    };
 
+        string info() {
+          using namespace textio;
+          char w=25;
+          std::ostringstream o;
+          o << header("Hamiltonian");
+          o << pad(SUB,w,"Number of energybases") << baselist.size() << endl;
+          for (auto e : baselist)
+            o << pad(SUB,w,e->name) << endl;
+          return o.str();
+        }
+    };
 
     class bondlist {
       public:
@@ -202,7 +237,7 @@ namespace Faunus {
         vector<bond> v;
     };
 
-    class eqenergy : public energybase {
+    class eqenergy : public Energybase {
       protected:
         typedef std::map<short, double> Tmap;
         typedef Tmap::iterator mapiter;

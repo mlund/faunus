@@ -4,9 +4,45 @@
 #include <faunus/common.h>
 
 namespace Faunus {
+
   /*!
    * \brief Retrieve parameters from a formatted input file
    * \author Mikael Lund
+   *
+   * The input file is expected to have the following
+   * format:
+   * \li  KEYWORD VALUE (space separated)
+   *
+   * Blank lines or lines containing [ or # are ignored.
+   */
+  class InputMap {
+    private:
+      std::map<string,string> map;
+      vector<string> usedkeys;
+      vector<string> incfiles;
+    public:
+      InputMap();
+      InputMap(string);
+      bool include(string);
+      void info();
+      template<typename T> void add(const string &key, T value) {
+        std::ostringstream o;
+        o << value;
+        map[key]=o.str();
+      }
+      template<typename T> T get(const string &key, T fallback) {
+        if ( map.find(key)!=map.end() ) {
+          std::istringstream i( map[key] );
+          i >> fallback;
+        }
+        return fallback;
+      }
+  };
+
+  /*!
+   * \brief Retrieve parameters from a formatted input file
+   * \author Mikael Lund
+   * \note Deprecated - replaced by InputMap
    *
    * The input file is expected to have the following
    * format:
@@ -41,6 +77,10 @@ namespace Faunus {
       string print();                        //!< Print a string of the inputfile
       void updateval(string, string);        //!< Update the inputfile for next run
       void updateval(string, double);        //!< Update the inputfile for next run
+      template<typename T> T hej() {
+        T a;
+        return a;
+      }
       //bool write();                        //!< Write to input file
   };
 
@@ -61,12 +101,12 @@ namespace Faunus {
    * a new reference testfile. If stable==false this will check the given value against the
    * loaded testfile.
    */
-  class unittest : private inputfile {
+  class UnitTest : private inputfile {
     protected:
       vector<bool> result;                     //!< Return codes for all performed tests
     public:
       bool stable;                             //!< True if test suite is stable (=reference)
-      unittest(inputfile &);                 //!< Read parameters from inputfile
+      UnitTest(inputfile &);                 //!< Read parameters from inputfile
       bool check(string, double, double=0.1);  //!< Check or store value depending on the stable state.
       bool smallerThan(string, double, double);//|< Check if x is smaller than y
       string report();                         //!< Print report.

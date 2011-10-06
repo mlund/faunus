@@ -84,7 +84,7 @@ namespace Faunus {
    * \date Dec. 2007, Prague
    * \todo Use masscenter(con,p) function implemented below.
    */
-  point group::masscenter(const space &con) const {
+  point group::masscenter(const Space &con) const {
     double sum=0;
     point cm,t,o = con.p.at(beg); // set origo to first particle
     for (int i=beg; i<=end; ++i) {
@@ -99,23 +99,23 @@ namespace Faunus {
     return cm;
   }
   
-  point group::dipolemoment(const space &con) const {
+  point group::dipolemoment(const Space &con) const {
     point d;
     return d;
   }
   
-  void group::rotate(space &con, const point &v, double) {
+  void group::rotate(Space &con, const point &v, double) {
   }
   
-  void group::scale(space &con, double) {
+  void group::scale(Space &con, double) {
   }
 
-  void group::undo(space &s) {
+  void group::undo(Space &s) {
     for (int i=beg; i<=end; ++i)
       s.trial[i]=s.p[i];
   }
 
-  void group::accept(space &s) {
+  void group::accept(Space &s) {
     for (int i=beg; i<=end; ++i)
       s.p[i] = s.trial[i];
   }
@@ -124,7 +124,7 @@ namespace Faunus {
    * \param par Container class
    * \param c ...by adding this vector to all particles
    */
-  void group::translate(space &con, const point &p) {
+  void group::translate(Space &con, const point &p) {
     for (int i=beg; i<=end; ++i) {
       con.trial[i] = con.p[i] + p;
       con.geo->boundary( con.trial[i] );
@@ -139,25 +139,25 @@ namespace Faunus {
    *             MOLECULAR
    * -----------------------------------*/
    
-  std::ostream& molecular::write(std::ostream &o) const {
+  std::ostream& Molecular::write(std::ostream &o) const {
     group::write(o);
     o << " " << cm;
     return o;
   }
   
-  molecular& molecular::operator<<(std::istream &in) {
+  Molecular& Molecular::operator<<(std::istream &in) {
     group::operator<<(in);
     cm.operator<<(in);
     return *this;
   }
   
-  void molecular::translate(space &con, const point &p) {
+  void Molecular::translate(Space &con, const point &p) {
     group::translate(con, p);
     cm_trial=cm+p;
     con.geo->boundary(cm_trial);
   }
   
-  void molecular::accept(space &s) {
+  void Molecular::accept(Space &s) {
     group::accept(s);
     cm=cm_trial;
   }

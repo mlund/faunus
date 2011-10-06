@@ -14,25 +14,28 @@
 using namespace Faunus;
 using namespace Faunus::Geometry;
 
+typedef Geometry::Cuboid Tgeometry;
+typedef Potential::coulomb_lj<Tgeometry> Tpairpot;
+
 int main() {
   cout << textio::splash();
   atom.includefile("atomlist.inp");
-  inputfile in("cigar.inp");
+  InputMap in("cigar.inp");
 
   particle p,q;
   p.patchangle=1.0;
   p=atom["NA"];
 
-  cuboid geo(in); // simulation geometry
-  space spc(geo); // generate space (geometry+particle pool)
-
-  p.sqdist<cuboid>(q);
 
   //hamiltonian
-  Energy::nonbonded< Potential::coulomb_lj<cuboid> > pot_nb(in);
-  Energy::hamiltonian pot( &geo ) ;
+  Energy::Nonbonded<Tpairpot> pot_nb(in);
+  Energy::Hamiltonian pot;
   pot.add(pot_nb);
 
-  cout << atom.info() << spc.info() << pot_nb.pair.info() << endl;
+  Space spc( pot.getGeometry() ); // generate space (geometry+particle pool)
+
+  cout << pot.info();
+
+  //cout << atom.info() << spc.info() << pot_nb.pair.info() << endl;
   cout << p << endl;
 }

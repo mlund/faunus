@@ -30,22 +30,23 @@ namespace Faunus {
   using std::ostringstream;
 
   namespace Move {
-    class movebase;
-    class translate_particle;
+    class Movebase;
   }
 
   namespace Geometry {
-    class geometrybase;
+    class Geometrybase;
   }
 
   namespace Energy {
-    class energybase;
+    class Energybase;
     class eqenergy;
   }
 
   class group;
   class inputfile;
-  class space;
+  class InputMap;
+  class UnitTest;
+  class Space;
   class point;
   class pointparticle;
   class cigarparticle;

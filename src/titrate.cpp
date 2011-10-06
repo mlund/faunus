@@ -73,7 +73,7 @@ namespace Faunus {
    * Note that the particle charges, radii, weight etc. (save positions) will be reset
    * to the default species values defined in the atoms class.
    */
-  equilibria::equilibria(space &s, inputfile &in, string pfx) { 
+  equilibria::equilibria(Space &s, inputfile &in, string pfx) { 
     string prefix=pfx;
     includefile( in.getstr(prefix+"processfile","eq.process"));
     //atom.reset_properties(spc->p); // sets the faunatom particle properties into particle vector

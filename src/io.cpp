@@ -271,16 +271,16 @@ namespace Faunus {
   }
 
   /*!
-   * Save all particles in cuboid to xtc file. Molecules added to the ioxtc::g
+   * Save all particles in Cuboid to xtc file. Molecules added to the ioxtc::g
    * vector will be made whole (periodic boundaries are temporarily undone). Box
-   * dimensions are taken from the cuboid class and the particles are shifted so
+   * dimensions are taken from the Cuboid class and the particles are shifted so
    * that origin is in the corner of the box (Gromacs practice)
    *
    * \param file Name of the output xtc file
-   * \param c cuboid container from which particles and box dimensions are read.
+   * \param c Cuboid container from which particles and box dimensions are read.
    */
-  bool ioxtc::save(string file, space &c) {
-    Geometry::cuboid* geo = dynamic_cast<Geometry::cuboid*>(c.geo);
+  bool ioxtc::save(string file, Space &c) {
+    Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(c.geo);
     p=c.p;
     setbox(geo->len.x, geo->len.y, geo->len.z);
     for (int i=0; i<g.size(); i++) {
@@ -291,7 +291,7 @@ namespace Faunus {
     }
     for (int i=0; i<p.size(); i++)
       p[i]+=geo->len_half;                     // gromacs origo is in the corner of the box
-    return save(file, p);                      // while in cuboid we use the middle
+    return save(file, p);                      // while in Cuboid we use the middle
   }
 
   /*!
@@ -352,24 +352,24 @@ namespace Faunus {
 
   /*!
    * This will read a single frame from the xtc file (must be open) into
-   * a cuboid container. The box dimensions are retrieved for the frame and transfered
+   * a Cuboid container. The box dimensions are retrieved for the frame and transfered
    * to the container. Coordinates are copied into both the particle vector "p" and the
    * "trial" vector. In doing so, positions are converted from nm to angstroms and the
    * coordinate system is shifted so that origin is on the middle of the box. As a safefy
-   * measure we do a container collision check to see if all particles are within the cuboid
+   * measure we do a container collision check to see if all particles are within the Cuboid
    * boundaries.
    *
    * \note The container particle vector *must* match the number of particles in the xtc file. If not
    *       an error message will be issued and the function will abort.
    * \note You may want to transfer the new box size to the pair potential if periodic boundaries are used.
    */
-  bool ioxtc::loadnextframe(space &c) {
+  bool ioxtc::loadnextframe(Space &c) {
     if (xd!=NULL) {
       if (natoms_xtc==c.p.size()) { 
         int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
         if (rc==0) {
           static double ten=10;
-          Geometry::cuboid* geo = dynamic_cast<Geometry::cuboid*>(c.geo);
+          Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(c.geo);
           point l( xdbox[0][0], xdbox[1][1], xdbox[2][2] );
           geo->setlen(l*ten);
           for (int i=0; i<c.p.size(); i++) {

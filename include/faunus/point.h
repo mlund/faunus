@@ -36,10 +36,6 @@ namespace Faunus {
       friend std::ostream &operator<<(std::ostream &, const point &); //!< Output information
       point &operator<<(std::istream &);                        //!< Get information
 
-      template<typename Tgeometry> inline double sqdist(const point &b) {
-        return Tgeometry::sqdist(*this,b);
-      }
-
   };
 
   inline int point::anint(double a) const { return int(a>0 ? a+.5 : a-.5); }

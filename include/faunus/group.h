@@ -19,17 +19,17 @@ namespace Faunus {
       int end;                  //!< index of last particle
       int size() const;         //!< number of particles in group.
       int random() const;
-      vector<Move::movebase*> moves;    //!< pointers to move functions
+      vector<Move::Movebase*> moves;    //!< pointers to move functions
 
       virtual double charge(const p_vec&) const;      //!< Calculate total charge
-      virtual point masscenter(const space&) const;          //!< Calculate mass center
-      virtual point dipolemoment(const space&) const;        //!< Calculate dipole moment
+      virtual point masscenter(const Space&) const;          //!< Calculate mass center
+      virtual point dipolemoment(const Space&) const;        //!< Calculate dipole moment
 
-      virtual void rotate(space&, const point&, double);     //!< Rotate around a vector
-      virtual void translate(space&, const point&);          //!< Translate along a vector
-      virtual void scale(space&, double);                    //!< Volume scaling
-      virtual void undo(space&);                                 //!< Undo move operation
-      virtual void accept(space&);
+      virtual void rotate(Space&, const point&, double);     //!< Rotate around a vector
+      virtual void translate(Space&, const point&);          //!< Translate along a vector
+      virtual void scale(Space&, double);                    //!< Volume scaling
+      virtual void undo(Space&);                                 //!< Undo move operation
+      virtual void accept(Space&);
 
       // Operators
       bool operator==(const group&) const;                     //!< Compare two groups
@@ -40,7 +40,10 @@ namespace Faunus {
       virtual ~group() {};
   };
 
-  class molecular : public group {
+  class Atomic : public group {
+  };
+
+  class Molecular : public group {
     protected:
       std::ostream & write(std::ostream&) const;  //!< Write all group data to stream
       point cm_trial;                             //!< mass center vector for trial position
@@ -50,10 +53,10 @@ namespace Faunus {
       average<double> Q;        //!< average net charge
       average<double> mu;       //!< average dipole moment
 
-      void translate(space&, const point&);
-      void accept(space&);
+      void translate(Space&, const point&);
+      void accept(Space&);
 
-      molecular &operator<<(std::istream &);                        //!< Get information
+      Molecular &operator<<(std::istream &);                        //!< Get information
   };
 
 }//namespace

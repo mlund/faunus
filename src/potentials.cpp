@@ -38,10 +38,10 @@ namespace Faunus {
         return o.str();
       }
 
-      squarewell::squarewell(inputfile &in, string prefix) {
+      squarewell::squarewell(InputMap &in, string prefix) {
         name="Square Well";
-        threshold = in.getflt(prefix+"_threshold", 0);
-        depth     = in.getflt(prefix+"_depth", 0);
+        threshold = in.get<double>(prefix+"_threshold", 0);
+        depth     = in.get<double>(prefix+"_depth", 0);
       }
 
       string squarewell::info(char w) {
@@ -51,10 +51,10 @@ namespace Faunus {
         return o.str();
       }
 
-      coulomb::coulomb(inputfile &in) {
+      coulomb::coulomb(InputMap &in) {
         name="Coulomb";
-        pc::T=in.getflt("temperature", 298.15);
-        lB=pc::lB( in.getflt("epsilon_r",80.) );
+        pc::T=in.get<double>("temperature", 298.15);
+        lB=pc::lB( in.get<double>("epsilon_r",80.) );
         tokT=lB;
       }
 
@@ -64,15 +64,15 @@ namespace Faunus {
         return o.str();
       }
 
-      debyehuckel::debyehuckel(inputfile &in) : coulomb(in) {
+      debyehuckel::debyehuckel(InputMap &in) : coulomb(in) {
         double I;
         const double zero=1e-10;
         name="Debye-Huckel";
         c=8 * lB * pc::pi * pc::Nav / 1e27;
-        I=in.getflt("dh_ionicstrength",0);  // [mol/l]
+        I=in.get<double>("dh_ionicstrength",0);  // [mol/l]
         k=sqrt( I*c );
         if (k<zero)
-          k=1/in.getflt("dh_debyelength", 1/zero); // [A]
+          k=1/in.get<double>("dh_debyelength", 1/zero); // [A]
         k=-k;
       }
 

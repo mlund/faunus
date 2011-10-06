@@ -9,18 +9,21 @@
 
 namespace Faunus {
 
-  space::space(Geometry::geometrybase &geoPtr) {
+  Space::Space(Geometry::Geometrybase &geoPtr) {
     geo=&geoPtr;
+    assert(geo!=NULL);
   }
 
-  double space::charge() const {
+  double Space::charge() const {
     double z=0;
     for (auto &p_i : p)
       z+=p_i.charge;
     return z;
   }
 
-  bool space::check_vector() {
+  bool Space::check_vector() {
+    assert(p.size()==trial.size());
+    assert(p==trial);
     bool rc=false;
     if (p.size()==trial.size())
       for (unsigned short i=0; i<p.size(); i++) {
@@ -42,7 +45,7 @@ namespace Faunus {
    * \param a Particle to insers
    * \param i Position in particle vector
    */
-  bool space::insert(particle a, int i) {
+  bool Space::insert(particle a, int i) {
     if ( i==-1 || i>p.size() )
       i=p.size();
     p.insert(p.begin()+i, a);
@@ -57,7 +60,7 @@ namespace Faunus {
     return true;
   }
 
-  bool space::insert(string name, int n, spacekeys key) {
+  bool Space::insert(string name, int n, spacekeys key) {
     particle a;
     a=atom[name];
     while (n>0) {
@@ -70,16 +73,16 @@ namespace Faunus {
     return true;
   }
 
-  bool space::overlap(const particle &a) const {
+  bool Space::overlap(const particle &a) const {
     for (auto &p_i : p) {
       double contact = a.radius + p_i.radius;
-      if (geo->_sqdist(a,p_i) < contact*contact)
+      if (geo->sqdist(a,p_i) < contact*contact)
         return true;
     }
     return false;
   }
 
-  bool space::remove(unsigned int i) {
+  bool Space::remove(unsigned int i) {
     if (i>=p.size())
       return false;
     p.erase( p.begin()+i );
@@ -93,7 +96,7 @@ namespace Faunus {
     return true;
   }
 
-  bool space::save(string file) {
+  bool Space::save(string file) {
     std::ofstream fout( file.c_str() );
     if (fout) {
       fout.precision(10);
@@ -113,7 +116,7 @@ namespace Faunus {
    * \param file Filename
    * \param resize True if the current geometry should be resized to match file content (default: false)
    */
-  bool space::load(string file, bool resize) {
+  bool Space::load(string file, bool resize) {
     unsigned int n;
     fin.close();
     fin.open( file.c_str() );
@@ -139,7 +142,7 @@ namespace Faunus {
     return false;
   }
 
-  int space::enroll(group &newgroup) {
+  int Space::enroll(group &newgroup) {
     for (int i=0; i<g.size(); ++i)
       if (g[i]==&newgroup)
         return i;
@@ -147,7 +150,7 @@ namespace Faunus {
     return g.size()-1; //return position if added group
   }
 
-  string space::info() {
+  string Space::info() {
     using namespace textio;
     static char w=25;
     double z=charge();

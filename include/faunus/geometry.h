@@ -1,5 +1,5 @@
-#ifndef FAU_CONTAINER_H
-#define FAU_CONTAINER_H
+#ifndef FAU_GEOMETRY_H
+#define FAU_GEOMETRY_H
 
 #include "faunus/common.h"
 #include "faunus/point.h"
@@ -7,7 +7,7 @@
 
 namespace Faunus {
 
-  class inputfile;
+  class InputMap;
   class group;
 
   namespace Geometry {
@@ -22,12 +22,11 @@ namespace Faunus {
      *
      * \note This class uses dynamic polymorphism, i.e. virtual functions, which
      *       may have negative impact on performance as function inlining may not be
-     *       possible. This is usually a problem only for inner loop distance calculations
-     *       and to stress this, distance functions are preceeded by underscores - i.e.
-     *       _dist() and _sqdist(). Derived classes should implement a static member function,
-     *       sqdist(), to be used in time critical steps.
+     *       possible. This is usually a problem only for inner loop distance calculations.
+     *       To get optimum performance in inner loops use a derived class directly and do
+     *       static compile-time polymorphism.
      */
-    class geometrybase {
+    class Geometrybase {
       protected:
         slump slp;
         double volume;                               //!< Volume of the container [AA^3]
@@ -37,38 +36,37 @@ namespace Faunus {
         double getvolume() const;                           //!< Get volume of container
         virtual void setvolume(double);                     //!< Specify new volume
         virtual bool collision(const particle&, collisiontype=BOUNDARY)=0;//!< Check for collision with boundaries, forbidden zones, matter,..
-        virtual void randompos(point &)=0;                  //!< Random point within container
-        virtual void boundary(point &) const=0;             //!< Apply boundary conditions to a point
-        virtual void scale(point&, const double&) const;    //!< Scale point to a new volume - for Npt ensemble
-        virtual double _sqdist(const point&, const point&) const=0;//!< Squared distance between two points
-        virtual double _dist(const point&,const point&);     //!< Distance between two points
+        virtual void randompos(point &)=0;                   //!< Random point within container
+        virtual void boundary(point &) const=0;              //!< Apply boundary conditions to a point
+        virtual void scale(point&, const double&) const;     //!< Scale point to a new volume - for NPT ensemble
+        virtual double dist(const point&,const point&);      //!< Distance between two points
+        virtual double sqdist(const point &a, const point &b)=0;
         virtual point vdist(const point&, const point&)=0;
         virtual string info(char);                          //!< Return info string
         bool save(string);                                  //!< Save container state to disk
         bool load(string,bool=false);                       //!< Load container state from disk
-        virtual ~geometrybase() {};
+        virtual ~Geometrybase() {};
     };
 
     /*! \brief Spherical geometry
      *  \author Mikael Lund
      *  \todo Implement space scaling for isobaric ensemble
      *
-     *  This is a sphere simulation container, surrounded by a hard wall.
+     *  This is a Sphere simulation container, surrounded by a hard wall.
      */
-    class sphere : public geometrybase {
+    class Sphere : public Geometrybase {
       private:
         double r2,diameter;
       public:
         void setradius(double);
         double r;              //!< Radius
-        sphere(double);
-        sphere(inputfile&);
+        Sphere(double);
+        Sphere(InputMap&);
         string info(char);
         void setvolume(double);
         void randompos(point &);
         void boundary(point &) const;
         bool collision(const particle &, collisiontype=BOUNDARY);
-        inline double _sqdist(const point &a, const point &b) const { return sqdist(a,b); }
         inline double sqdist(const point &a, const point &b) {
           register double dx,dy,dz;
           dx=a.x-b.x;
@@ -85,19 +83,19 @@ namespace Faunus {
      *  \author Chris Evers
      *  \date Lund, nov 2010
      *
-     *  The cuboid simulation container has right angles, rectangular faces 
+     *  The Cuboid simulation container has right angles, rectangular faces 
      *  and periodic boundaries. A slice can be introduced to constrain the position
-     *  of some of the space to a part of the cuboid. The function slicecollision
+     *  of some of the space to a part of the Cuboid. The function slicecollision
      *  can be used to make sure space are positioned within in the slice.
      */
-    class cuboid : public geometrybase {
+    class Cuboid : public Geometrybase {
       protected:
         bool setslice(point, point);             //!< Reset slice position
         point len_inv;                    //!< Inverse sidelengths
 
       public:
-        cuboid(inputfile&);                      //!< Read input parameters
-        bool setlen(point);               //!< Reset cuboid sidelengths
+        Cuboid(InputMap&);                      //!< Read input parameters
+        bool setlen(point);               //!< Reset Cuboid sidelengths
         point len;                        //!< Sidelengths
         point len_half;                   //!< Half sidelength
         point slice_min, slice_max;              //!< Position of slice corners
@@ -116,10 +114,6 @@ namespace Faunus {
           if (dy>len_half.y) dy-=len.y;
           if (dz>len_half.z) dz-=len.z;
           return dx*dx + dy*dy + dz*dz;
-        }
-
-        inline double _sqdist(const point &a, const point &b) const {   //!< Squared distance 
-          return sqdist(a,b);
         }
 
         inline point vdist(const point &a, const point &b) {       //!< Distance vector
@@ -156,15 +150,11 @@ namespace Faunus {
      * \author Chris Evers
      * \date Lund, nov 2010
      */
-    class cuboidslit : public cuboid {
+    class Cuboidslit : public Cuboid {
       public:
-        cuboidslit(inputfile &);
+        Cuboidslit(InputMap &);
 
         //! Calculate distance using the minimum image convention
-        inline double _sqdist(const point &a, const point &b) const {   //!< Squared distance 
-          return sqdist(a,b);
-        }
-
         inline double sqdist(const point &a, const point &b) {   //!< Squared distance 
           double dx=std::abs(a.x-b.x);
           double dy=std::abs(a.y-b.y);
@@ -198,11 +188,11 @@ namespace Faunus {
      *  \author Mikael Lund/Bjoern Persson
      *  \todo Needs some testing
      *
-     *  This is a cylinder container where all walls
+     *  This is a Cylinder container where all walls
      *  are HARD. The origin is in the middle of the
-     *  cylinder.
+     *  Cylinder.
      */
-    class cylinder : public geometrybase {
+    class Cylinder : public Geometrybase {
       private:
         double halflen;
         double r2;    //!< Cylinder radius squared
@@ -211,12 +201,11 @@ namespace Faunus {
         double len;   //!< Cylinder length
         double r;     //!< Cylinder radius
         double diameter;
-        cylinder(double, double);
-        cylinder(inputfile &);
+        Cylinder(double, double);
+        Cylinder(InputMap &);
         void randompos(point &);
         bool collision(const particle&, collisiontype=BOUNDARY);
         string info(char); //!< Cylinder info
-        inline double _sqdist(const point &a, const point &b) const { return sqdist(a,b); }
         inline double sqdist(const point &a, const point &b) {
           register double dx,dy,dz;
           dx=a.x-b.x;
@@ -227,24 +216,24 @@ namespace Faunus {
     };
 
 #ifdef HYPERSPHERE
-    /*! \brief Hypersphere simulation container
+    /*! \brief HyperSphere simulation container
      *  \author Martin Trulsson
      *  \date Lund, 2009
      */
-    class hypersphere : public sphere {
+    class hyperSphere : public Sphere {
       private:
         const double pi;
       public:
-        hypersphere(inputfile &);
+        hyperSphere(InputMap&);
         string info(char);
         void randompos(point &);
         bool collision(const particle &, collisiontype=BOUNDARY);
 
-        double _dist(const point &a, const point &b) {
+        double dist(const point &a, const point &b) {
           return r*a.geodesic(b); // CHECK!!! (virtual=slow!)
         }
 
-        inline double _sqdist(const point &a, const point &b) const {
+        inline double sqdist(const point &a, const point &b) const {
           return pow(dist(a,b),2); // !! SHOULD BE REAL DISTANCE CHECK!! (virtual=slow!)
         }
 
@@ -259,7 +248,29 @@ namespace Faunus {
           return (r*a.geodesic(b)<a.radius+b.radius);
         }
     };
+
 #endif
+
+    class GeometryList {
+      private:
+        vector<Geometrybase*> base;
+      public:
+        void add(Geometrybase &g) {
+          if (&g!=NULL)
+            if ( std::find(base.begin(), base.end(), &g)==base.end() )
+              base.push_back(&g);
+        }
+
+        template<typename Tgeo> void deepCopy(const Geometry::Geometrybase& source) {
+          assert(&source!=NULL);
+          const Tgeo* src=dynamic_cast<const Tgeo*>(&source); //get dereved class pointer to source
+          for (auto *g : base) {
+            Tgeo* target=dynamic_cast<Tgeo*>(g); // derived class pointer to target
+            (*target)=(*src);                    // copy data from source to target
+          }
+        }
+
+    };
   }//namespace Geometry
 
 }//namespace

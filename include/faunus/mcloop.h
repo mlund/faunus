@@ -50,14 +50,14 @@ namespace Faunus {
    * Markov chain loops. After each macro step an
    * estimated time of the simulations will be evaluated.
    *
-   * The constructor will search the passed Faunus::inputfile object for the
+   * The constructor will search the passed Faunus::InputMap object for the
    * keywords:
    * \li "macrosteps" - corresponding to the number of steps in the outer loop
    * \li "microsteps" - ...and the steps in the inner loop
    *
    * A typical usage is as follows\n
    * \code
-   * mcloop(in) mc;
+   * MCLoop(in) mc;
    * while (mc.macroCnt()) {
    *   while (mc.microCnt()) {
    *     //inner loop code
@@ -70,13 +70,13 @@ namespace Faunus {
    * \author Mikael Lund
    * \date 2007
    */
-  class mcloop {
+  class MCLoop {
     private:
       countdown<unsigned int> cnt;
       bool loadstateBool;          //!< load state file if present?
       string statefile;            //!< Default name of state file to load/save
     public:
-      mcloop(inputfile&, string="loop_"); //!< Setup
+      MCLoop(InputMap&, string="loop_"); //!< Setup
       unsigned int cnt_micro, cnt_macro;
       bool eq;
       unsigned int macro;          //!< Number of macrosteps

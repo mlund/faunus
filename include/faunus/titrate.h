@@ -57,7 +57,7 @@ namespace Faunus {
       vector<average <double> > q;         //!< List of average charges per site
       vector<processdata> process;                //!< Vector of processes.
 
-      equilibria(space&, inputfile&, string="equilibria_");
+      equilibria(Space&, inputfile&, string="equilibria_");
       bool includefile(string);                //!< Read equilibrium processes from file
       void findsites(const p_vec&);            //!< Locate all titratable sites
       double intrinsicenergy(const short&);    //!< Intrinsic energy of particle id (kT)

@@ -6,7 +6,6 @@
 #include <faunus/geometry.h>
 #include <faunus/textio.h>
 
-
 namespace Faunus {
 
   namespace Potential {
@@ -63,7 +62,7 @@ namespace Faunus {
         public:
           double threshold; //!< Threshold between particle *surface* [A]
           double depth;     //!< Energy depth [kT]
-          squarewell(inputfile &, string="squarewell");
+          squarewell(InputMap&, string="squarewell");
           inline double u_squarewell(const double &r, const double &radius1, const double &radius2) const {
             return (r-radius1-radius2<threshold) ? depth : 0;
           }
@@ -75,7 +74,7 @@ namespace Faunus {
         protected:
           double lB; //!< Bjerrum length [A]
         public:
-          coulomb(inputfile &);
+          coulomb(InputMap &);
           inline double u(const double &r, const double &zz) const { return zz/r; }
           string info(char);
       };
@@ -84,7 +83,7 @@ namespace Faunus {
         protected:
           double c,k;
         public:
-          debyehuckel(inputfile&);
+          debyehuckel(InputMap&);
           double ionic_strength() const;
           double debye_length() const;
           inline double u(const double &r, const double &zz) const {
@@ -102,20 +101,22 @@ namespace Faunus {
           Tcoulomb el;
           const double eps;
         public:
+          string name; //!< Single line describing the potential
           Tgeometry geo;
           double tokT;
-          coulomb_lj(inputfile &in) : el(in), eps(4*in.getflt("lj_eps",0.04)/el.tokT), geo(in) {
+          coulomb_lj(InputMap &in) : el(in), eps(4*in.get<double>("lj_eps",0.04)/el.tokT), geo(in) {
             tokT=el.tokT;
+            name=lj.name+"+"+el.name;
           }
-          inline double pairpot(const particle &a, const particle &b) const {
+          inline double pairpot(const particle &a, const particle &b) {
             double r2=geo.sqdist(a,b);
             return el.u(sqrt(r2), a.charge*b.charge) + lj.u_lj(r2, a.radius+b.radius, eps);
           }
           string info(char w=20) {
             std::ostringstream o;
-            o << header("Pair Potential: " + lj.name + "+" + el.name)
+            o << pad(SUB,w,"Pair potential:") << name << endl
               << el.info(w)
-              << pad(SUB,w,"LJ epsilon") << eps*tokT << endl;
+              << pad(SUB,w,"LJ epsilon") << eps*tokT << kT << endl;
             return o.str();
           }
       };
@@ -125,10 +126,14 @@ namespace Faunus {
         protected:
           Tcoulomb el;
         public:
+          string name; //!< Single line describing the potential
           const double infty;
           double tokT;
-          coulomb_hs(inputfile &in) : el(in), infty(1e10) { tokT=el.tokT; }
-          inline double pairpot(const particle &a, const particle &b) const {
+          coulomb_hs(InputMap &in) : el(in), infty(1e10) {
+            name="Hardsphere + " + el.name;
+            tokT=el.tokT;
+          }
+          inline double pairpot(const particle &a, const particle &b) {
             double r2=Tgeometry::sqdist(a,b), s=a.radius+b.radius;
             if (r2<s*s)
               return infty;
@@ -136,7 +141,7 @@ namespace Faunus {
           }
           string info(char w=20) {
             std::ostringstream o;
-            o << header("Pair potential: Hardsphere + " + el.name )
+            o << pad(SUB,w,"Pair potential:") << name << endl
               << el.info(w);
             return o.str();
           }

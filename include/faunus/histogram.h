@@ -72,10 +72,10 @@ namespace Faunus {
     public:
       rdf(float=.5, float=0, float=0);
       rdf(short, short, float=.5, float=0); 
-      void update(space &, point &, string);//!< Search around a point
-      void update(space &);                 //!< Update histogram vector
-      void update(space &, group &);        //!< Update histogram vector - search only in group
-      void update(space &, point &, point &);//!< Update for two points
+      void update(Space &, point &, string);//!< Search around a point
+      void update(Space &);                 //!< Update histogram vector
+      void update(Space &, group &);        //!< Update histogram vector - search only in group
+      void update(Space &, point &, point &);//!< Update for two points
       float get(float);                        //!< Get g(x)
   };
 

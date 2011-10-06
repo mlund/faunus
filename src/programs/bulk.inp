@@ -8,4 +8,7 @@ lj_eps      0.05
 loop_macrosteps 10
 loop_microsteps 10
 
+somebool yes
+somestring hejsa
+
 

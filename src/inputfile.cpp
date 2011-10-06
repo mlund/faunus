@@ -1,6 +1,72 @@
 #include "faunus/inputfile.h"
+#include <faunus/textio.h>
 
 namespace Faunus {
+
+  InputMap::InputMap() {}
+
+  InputMap::InputMap(string filename) {
+    include(filename);
+  }
+
+  /*
+  bool InputMap::include(string filename) {
+    const short maxline=256;
+    char cstr[maxline];
+    string key,val;
+    std::ifstream f( filename.c_str() );
+    if (f) {
+      while (!f.eof()) {
+        f.getline(cstr,maxline);
+        std::istringstream i(cstr);
+        i >> key >> val;
+        if (!key.empty() && !val.empty() )
+          if (key.find("#")==string::npos) {
+            if (val=="yes") val="1";
+            if (val=="no") val="0";
+            map[key]=val;
+          }
+      }
+      incfiles.push_back(filename);
+      return true;
+    }
+    return false;
+  }
+  */
+
+  bool InputMap::include(string filename) {
+    const short maxline=256;
+    char cstr[maxline];
+    string line,key,val;
+    std::ifstream f( filename.c_str() );
+    if (f) {
+      incfiles.push_back(filename);
+      while (std::getline(f,line)) {
+        std::istringstream i(line);
+        i >> key >> val;
+        if (!key.empty() && !val.empty() ) {
+          if (key.find("#")==string::npos) {
+            if (val=="yes") val="1";
+            if (val=="no") val="0";
+            map[key]=val;
+          }
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+
+  void InputMap::info() {
+    short w=25;
+    using namespace Faunus::textio;
+    std::ostringstream o;
+    o << header("User Input Parameters (InputMap)");
+    o << pad(SUB,w,"Number of parameters") << map.size() << endl;
+    for (auto m : map)
+      cout << std::left << setw(25) << m.first << m.second << endl;
+  }
+
   inputfile::inputfile() { }
 
   inputfile::inputfile(string filename) {
@@ -163,7 +229,7 @@ namespace Faunus {
   // CHECKVALUE CLASS
   //
   //
-  unittest::unittest(inputfile &in) {
+  UnitTest::UnitTest(inputfile &in) {
     stable = in.getboo("testsuite_stable", true);
     file = in.getstr("testsuite_testfile", "test.stable");
     if (stable==false)
@@ -187,7 +253,7 @@ namespace Faunus {
    * \param val Value to check (unstable) or save (stable)
    * \param threshold Maximum allowed absolute relative difference between stable and unstable
    */
-  bool unittest::check(string name, double val, double threshold) {
+  bool UnitTest::check(string name, double val, double threshold) {
     bool rc=true;
     // Stable: Save value.
     if (stable==true) {
@@ -218,7 +284,7 @@ namespace Faunus {
     return rc;
   }
 
-  bool unittest::smallerThan(string name, double x, double ref) {
+  bool UnitTest::smallerThan(string name, double x, double ref) {
     bool rc=false;
     if (x<ref)
       rc=true;
@@ -228,13 +294,13 @@ namespace Faunus {
     return rc;
   }
 
-  int unittest::returnCode() {
+  int UnitTest::returnCode() {
     for (int i=0; i<result.size(); i++)
       if (result[i]==false) return 1;
     return 0;
   }
 
-  string unittest::report() {
+  string UnitTest::report() {
     std::ostringstream o;
     unsigned int numerr = 0;
 #ifdef __SUNPRO_CC

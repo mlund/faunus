@@ -11,17 +11,16 @@ Atom  HW1   0.4238   0.0    0      1       no
 Atom  HW2   0.4238   0.0    0      1       no
 
 # Ions
-Atom  NA      +1     1.8    0.2179 1       no
-Atom  CL      -1     1.7    0.1689 1       no
+Atom  Na      +1     1.8    0.2179 1       no
+Atom  Cl      -1     1.7    0.1689 1       no
 Atom  K       +1     1.5    0.1    1       no
 Atom  F       -1     1.4    0.1    1       no
 Atom  I       -1     2.0    0.1    1       no
 Atom  SO4     -2     1.6    0.1    1       no
 Atom  PO4     -2     3.5    0.1    1       no
-Atom  LA      +3     2.0    0.1    1       no
-Atom  CA      +2     2.8    0.1    1       no
-Atom  MG      +2     3.0    0.1    1       no
-Atom  SPH      0     5.0    0.1    9999    no
+Atom  La      +3     2.0    0.1    1       no
+Atom  Ca      +2     2.8    0.1    1       no
+Atom  Mg      +2     3.0    0.1    1       no
 
 # Titratable residues
 # (charges represent the deprotonated states)

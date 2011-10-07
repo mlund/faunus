@@ -25,7 +25,7 @@ namespace Faunus {
 
   string textio::splash() {
     std::ostringstream o;
-    o << std::string(71,'=') << endl
+    o << std::string(71,'.') << endl
       << "  Welcome to FAUNUS - A Framework for Molecule Simulation.\n"
       << "  Copyright (C) 2002-2011 Mikael Lund\n"
       << "\n"
@@ -58,7 +58,7 @@ namespace Faunus {
 #ifdef __SVN_REV__
       << "\n    SVN revision: " << __SVN_REV__ << "."
 #endif
-      << "\n" << string(71,'=') << endl;
+      << "\n" << string(71,'*') << endl;
     return o.str();
   }
 

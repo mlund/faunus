@@ -24,7 +24,7 @@ int main() {
 
   particle p,q;
   p.patchangle=1.0;
-  p=atom["NA"];
+  p=atom["Na"];
 
 
   //hamiltonian

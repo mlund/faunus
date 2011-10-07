@@ -41,6 +41,12 @@ namespace Faunus {
   };
 
   class Atomic : public group {
+    public:
+      Atomic();
+      Atomic(Space&, InputMap&);
+      Atomic &operator<<(std::istream&);
+      void add(Space&, InputMap&);
+      void scale(Space&, double);
   };
 
   class Molecular : public group {
@@ -55,8 +61,9 @@ namespace Faunus {
 
       void translate(Space&, const point&);
       void accept(Space&);
+      void scale(Space&, double);
 
-      Molecular &operator<<(std::istream &);                        //!< Get information
+      Molecular &operator<<(std::istream&);                        //!< Get information
   };
 
 }//namespace

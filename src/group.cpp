@@ -5,6 +5,7 @@
 #include <faunus/group.h>
 #include <faunus/average.h>
 #include <faunus/space.h>
+#include <faunus/inputfile.h>
 
 namespace Faunus {
 
@@ -134,32 +135,78 @@ namespace Faunus {
   int group::random() const {
     return beg + slp_global.rand() % size();
   }
-  
+
+  /* -----------------------------------*
+   *             ATOMIC
+   * -----------------------------------*/
+
+  Atomic::Atomic() {}
+
+  Atomic::Atomic(Space &spc, InputMap &in) {
+    add(spc,in);
+  }
+
+  void Atomic::add(Space &spc, InputMap &in) {
+    beg=spc.p.size();
+    end=beg-1;
+    int n=1, npart;
+    do {
+      std::ostringstream nion("nion"), tion("tion"), dpion("dpion");
+      nion << "nion" << n;
+      tion << "tion" << n;
+      dpion<< "dpion"<< n++;
+      npart = in.get<int>(nion.str(), 0);
+      if (npart>0) {
+        short id = atom[ in.get<string>(tion.str(), "UNK") ].id;
+        atom[id].dp = in.get<double>(dpion.str(), 0);
+        spc.insert( atom[id].name, npart);
+        end+=npart;
+      } else break;
+    } while (npart>0);
+    if (beg>end)
+      beg=end=-1;
+    else
+      spc.enroll(*this);
+  }
+
+  Atomic& Atomic::operator<<(std::istream &in) {
+    group::operator<<(in);
+    return *this;
+  }
+
+  void Atomic::scale(Space&, double) {
+  }
+
+
   /* -----------------------------------*
    *             MOLECULAR
    * -----------------------------------*/
-   
+
   std::ostream& Molecular::write(std::ostream &o) const {
     group::write(o);
     o << " " << cm;
     return o;
   }
-  
+
   Molecular& Molecular::operator<<(std::istream &in) {
     group::operator<<(in);
     cm.operator<<(in);
     return *this;
   }
-  
+
   void Molecular::translate(Space &con, const point &p) {
     group::translate(con, p);
     cm_trial=cm+p;
     con.geo->boundary(cm_trial);
   }
-  
+
   void Molecular::accept(Space &s) {
     group::accept(s);
     cm=cm_trial;
   }
-  
+
+  void Molecular::scale(Space&, double) {
+  }
+
+
 }//namespace

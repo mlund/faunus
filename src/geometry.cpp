@@ -69,7 +69,7 @@ namespace Faunus {
     }
 
     Sphere::Sphere(InputMap &in)  {
-      Sphere( in.get<double>("Sphere_radius", 0) );
+      setradius( in.get<double>("Sphere_radius", 0) );
     }
 
     void Sphere::setradius(double radius) {
@@ -253,6 +253,11 @@ namespace Faunus {
       return false;
     }
 
+    void Cuboid::scale(point &a, const double &newvolume) const {
+      assert(volume>0);
+      assert(newvolume>0);
+      a = a * pow( newvolume/volume, 1/3.);
+    }
 
     //
     //--- Cuboid slit geometry ---

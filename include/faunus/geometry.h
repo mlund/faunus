@@ -143,6 +143,7 @@ namespace Faunus {
           if (std::abs(a.y)>len_half.y) a.y-=len.y*anint(a.y*len_inv.y);
           if (std::abs(a.z)>len_half.z) a.z-=len.z*anint(a.z*len_inv.z);
         }
+        virtual void scale(point&, const double&) const; //!< Scale point to a new volume - for NPT ensemble
     };
 
     /*!

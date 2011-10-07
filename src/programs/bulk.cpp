@@ -24,7 +24,6 @@ class distributions {
 int main() {
   cout << textio::splash();
   distributions<double> dst(0,100,0.5);
-  //dst.add("Utot",0);
   atom.includefile("atomlist.inp");    // load atom properties
   InputMap mcp("bulk.inp");
   MCLoop loop(mcp);                    // class for handling mc loops
@@ -35,31 +34,25 @@ int main() {
   Space spc( pot.getGeometry() );
 
   // Handle particles
-  atom["NA"].dp=20.;                   // Displacement parameter
-  atom["CL"].dp=80.;
-  spc.insert("NA",100);                // Insert particles into space
-  spc.insert("CL",100);
-  group salt(0,199);                   // Define salt range
+  Atomic salt(spc, mcp);
   salt.name="Salt particles";
-  spc.enroll(salt);
   Move::ParticleTranslation mv(mcp, pot, spc);  // Particle move class
   mv.setGroup(salt);
 
   spc.load("space.state");
   sys.init( pot.all2all(spc.p) );
 
-  Widom wid(spc, pot);
-  wid.addGhost(spc);
+  Analysis::Widom widom(spc, pot);
+  widom.addGhost(spc);
 
-
-  cout << atom.info() << spc.info() << pot.info() << mv.info() << endl;
-
-  cout << textio::header("MC Simulation Begins!");
+  cout << atom.info() << spc.info() << pot.info() << mv.info()
+       << textio::header("MC Simulation Begins!");
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
       sys+=mv.move();
-      wid.sample();
+      if (slp_global.random_one()>0.9)
+        widom.sample();
     }
     sys.checkdrift( pot.all2all(spc.p) );
     cout << loop.timing();
@@ -67,5 +60,5 @@ int main() {
 
   pqr.save("confout.pqr", spc.p);
   spc.save("space.state");
-  cout << mv.info() << sys.info() << loop.info() << wid.info();
+  cout << mv.info() << sys.info() << loop.info() << widom.info();
 }

@@ -1,14 +1,22 @@
 cuboid_len    50
-sphere_radius 62.035
+Sphere_radius 62.035
 
 temperature 298.15
 epsilon_r   79
 lj_eps      0.05
 
 loop_macrosteps 10
-loop_microsteps 10
+loop_microsteps 100
 
 somebool yes
 somestring hejsa
+
+tion1  Na
+nion1  100
+dpion1 20
+tion2  Cl
+nion2  100
+dpion2 200
+
 
 

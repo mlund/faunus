@@ -1,5 +1,4 @@
 #include <faunus/faunus.h>
-#include <faunus/widom.h>
 
 using namespace Faunus;
 
@@ -30,7 +29,10 @@ int main() {
   iopqr pqr;                           // PQR structure file I/O
   energydrift sys;                     // class for tracking system energy drifts
 
-  Energy::Nonbonded<Tpairpot> pot(mcp); // energy calculation class
+  Energy::Nonbonded<Tpairpot> nb(mcp); // non-bonded energy
+  Energy::Hamiltonian pot;
+  pot.add(nb);
+
   Space spc( pot.getGeometry() );
 
   // Handle particles
@@ -38,12 +40,16 @@ int main() {
   salt.name="Salt particles";
   Move::ParticleTranslation mv(mcp, pot, spc);  // Particle move class
   mv.setGroup(salt);
-
   spc.load("space.state");
-  sys.init( pot.all2all(spc.p) );
 
+  // Particle titration
+  Move::SwapMove tit(mcp,pot,spc);
+
+  // Widom particle insertion
   Analysis::Widom widom(spc, pot);
   widom.addGhost(spc);
+
+  sys.init( mv.totalEnergy() + tit.totalEnergy() );
 
   cout << atom.info() << spc.info() << pot.info() << mv.info()
        << textio::header("MC Simulation Begins!");
@@ -53,12 +59,14 @@ int main() {
       sys+=mv.move();
       if (slp_global.random_one()>0.9)
         widom.sample();
+      sys+=tit.move();
     }
-    sys.checkdrift( pot.all2all(spc.p) );
+    sys.checkdrift( mv.totalEnergy() + tit.totalEnergy()  );
     cout << loop.timing();
   }
 
   pqr.save("confout.pqr", spc.p);
   spc.save("space.state");
   cout << mv.info() << sys.info() << loop.info() << widom.info();
+  cout << tit.info();
 }

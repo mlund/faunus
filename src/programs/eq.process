@@ -1,0 +1,14 @@
+## Implicit titration processes
+Process   HASP   ASP   4.0    6.00
+Process   HCTR   CTR   2.6    6.00
+Process   HGLU   GLU   4.4    6.00
+Process   HHIS   HIS   6.3    6.00
+Process   HNTR   NTR   7.5    6.00
+Process   HTYR   TYR   9.6    6.00
+Process   HLYS   LYS   10.4   6.00
+Process   HCYS   CYS   10.8   6.00
+Process   HARG   ARG   12.0   6.00
+Process   H3PO4  H2PO4 2.12      2
+Process   H2PO4  HPO4  7.21      2
+Process   HPO4   PO4   12.67     2
+

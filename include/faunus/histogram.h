@@ -7,9 +7,6 @@
 #include <faunus/xytable.h>
 
 namespace Faunus {
-  class group;
-  class space;
-
   /*
      class xi_convert {
      private:
@@ -74,7 +71,7 @@ namespace Faunus {
       rdf(short, short, float=.5, float=0); 
       void update(Space &, point &, string);//!< Search around a point
       void update(Space &);                 //!< Update histogram vector
-      void update(Space &, group &);        //!< Update histogram vector - search only in group
+      void update(Space &, Group &);        //!< Update histogram vector - search only in group
       void update(Space &, point &, point &);//!< Update for two points
       float get(float);                        //!< Get g(x)
   };

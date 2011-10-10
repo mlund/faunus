@@ -5,19 +5,19 @@
 #include <faunus/average.h>
 
 namespace Faunus {
-  class group {
+  class Group {
     protected:
-      virtual std::ostream& write(std::ostream &) const; //!< Write all group data to stream
+      virtual std::ostream& write(std::ostream &) const; //!< Write all Group data to stream
 
     public:
       enum type {SALT, MOLECULE, CIGAR, HYPER};
       type id;
-      group(int=-1, int=-1);
+      Group(int=-1, int=-1);
       string info();
       string name;
       int beg;                  //!< index of first particle
       int end;                  //!< index of last particle
-      int size() const;         //!< number of particles in group.
+      int size() const;         //!< number of particles in Group.
       int random() const;
       vector<Move::Movebase*> moves;    //!< pointers to move functions
 
@@ -32,26 +32,29 @@ namespace Faunus {
       virtual void accept(Space&);
 
       // Operators
-      bool operator==(const group&) const;                     //!< Compare two groups
-      group& operator+=(const group&);                         //!< Add two groups
-      const group operator+(const group&) const;
-      friend std::ostream &operator<<(std::ostream&, group&);  //!< Output group data to stream
-      virtual group &operator<<(std::istream &);               //!< Get group data from stream
-      virtual ~group() {};
+      bool operator==(const Group&) const;                     //!< Compare two Groups
+      Group& operator+=(const Group&);                         //!< Add two Groups
+      const Group operator+(const Group&) const;
+      friend std::ostream &operator<<(std::ostream&, Group&);  //!< Output Group data to stream
+      virtual Group &operator<<(std::istream &);               //!< Get Group data from stream
+      virtual ~Group() {};
   };
 
-  class Atomic : public group {
+  /*!
+   * \brief Group class for atomic species - for example salt particles.
+   */
+  class Atomic : public Group {
     public:
       Atomic();
-      Atomic(Space&, InputMap&);
+      Atomic(Space&, InputMap&);        //!< Construct and call add()
       Atomic &operator<<(std::istream&);
-      void add(Space&, InputMap&);
-      void scale(Space&, double);
+      void add(Space&, InputMap&);      //!< Add atomic particles via InputMap paramters
+      void scale(Space&, double);       //!< Scale all atomic particles in Group to new volume
   };
 
-  class Molecular : public group {
+  class Molecular : public Group {
     protected:
-      std::ostream & write(std::ostream&) const;  //!< Write all group data to stream
+      std::ostream & write(std::ostream&) const;  //!< Write all Group data to stream
       point cm_trial;                             //!< mass center vector for trial position
 
     public:

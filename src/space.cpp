@@ -10,8 +10,8 @@
 namespace Faunus {
 
   Space::Space(Geometry::Geometrybase &geoPtr) {
+    assert(&geoPtr!=NULL);
     geo=&geoPtr;
-    assert(geo!=NULL);
   }
 
   double Space::charge() const {
@@ -142,7 +142,7 @@ namespace Faunus {
     return false;
   }
 
-  int Space::enroll(group &newgroup) {
+  int Space::enroll(Group &newgroup) {
     for (int i=0; i<g.size(); ++i)
       if (g[i]==&newgroup)
         return i;
@@ -158,11 +158,14 @@ namespace Faunus {
     o << header("Simulation Space and Geometry") 
       << geo->info(w);
     o << pad(SUB,w,"Number of particles") << p.size() << endl;
-    o << pad(SUB,w,"Number of groups") << g.size() << endl;
-    for (int i=0; i<g.size(); i++) {
-      o << "  " << std::left << std::setw(w);
-      o << "" << std::left << setw(4) << i << setw(20) << g[i]->name
-        << "[" << g[i]->beg << "-" << g[i]->end << "]"
+    o << indent(SUB) << "Groups:" << endl;
+    for (size_t i=0; i<g.size(); i++) {
+      std::ostringstream range;
+      range << "[" << g[i]->beg << "-" << g[i]->end << "]";
+      o << indent(SUBSUB) << std::left
+        << setw(6) << i+1
+        << setw(17) << range.str()
+        << setw(20) << g[i]->name
         << endl;
     }
     o << pad(SUB,w,"Volume") << geo->getvolume() << _angstrom << cubed << endl;

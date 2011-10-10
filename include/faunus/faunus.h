@@ -37,6 +37,7 @@
 #include <faunus/io.h>
 #include <faunus/drift.h>
 #include <faunus/xytable.h>
+#include <faunus/titrate.h>
 #include <faunus/widom.h>
 #endif
 

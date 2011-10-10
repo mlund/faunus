@@ -317,7 +317,7 @@ namespace Faunus {
     return false;
   }
 
-  bool ioxtc::save(string file, p_vec &p, vector<group> &g) {
+  bool ioxtc::save(string file, p_vec &p, vector<Group> &g) {
     p_vec t;
     for (int i=0; i<g.size(); i++)
       for (int j=g[i].beg; j<=g[i].end; j++)
@@ -418,7 +418,7 @@ namespace Faunus {
     return fio.writefile(file, o.str(), std::ios_base::out);
   }
 
-  bool ioqtraj::save(string file, p_vec &p, vector<group> &g) {
+  bool ioqtraj::save(string file, p_vec &p, vector<Group> &g) {
     p_vec t;
     for (int i=0; i<g.size(); i++)
       for (int j=g[i].beg; j<=g[i].end; j++)

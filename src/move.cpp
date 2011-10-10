@@ -62,6 +62,10 @@ namespace Faunus {
       return false;
     }
 
+    double Movebase::totalEnergy(){
+      return 0;
+    }
+
     string Movebase::info() {
       std::ostringstream o;
       o << header("Markov Move: " + title);
@@ -117,7 +121,7 @@ namespace Faunus {
       in.get<double>(prefix+"runfraction",1);
     }
 
-    void ParticleTranslation::setGroup(group &g) {
+    void ParticleTranslation::setGroup(Group &g) {
       igroup=&g;
       iparticle=-1;
     }
@@ -170,11 +174,24 @@ namespace Faunus {
         double du=0;
         for (int i=0; i<igroup->size(); i++) {
           iparticle = igroup->random(); // set random particle for trialmove()
-          du+=Movebase::move();
+          if ( atom[spc->p[iparticle].id].dp > 1e-5 )
+            du+=Movebase::move();
         }
         iparticle=-1;
         return du;
       } else return Movebase::move();
+    }
+
+    double ParticleTranslation::totalEnergy() {
+      if (iparticle>-1)
+        return pot->i_total(spc->p, iparticle);
+      double u;
+      if (igroup!=NULL) {
+        u = pot->g2all(spc->p, *igroup) + pot->g_internal(spc->p, *igroup);
+        for (int i=igroup->beg; i<=igroup->end; ++i)
+          u += pot->i_external(spc->p, i);
+      }
+      return u;
     }
 
     string ParticleTranslation::info() {
@@ -185,14 +202,14 @@ namespace Faunus {
       if (cnt>0) {
         o << endl
           << indent(SUB) << "Individual particle movement:" << endl << endl
-          << indent(SUBSUB) << std::left << string(5,' ')
+          << indent(SUBSUB) << std::left << string(7,' ')
           << setw(l-6) << "dp"
           << setw(l+1) << "Acc. "+percent
           << setw(l+5) << bracket("r"+squared) // "\u27e8\u0394r\u00b2\u27e9" 
           << rootof+bracket("r"+squared) << endl; //"\u221a\u27e8\u0394r\u00b2\u27e9" << endl;
         for (auto m : sqrmap) {
           short id=m.first;
-          o << indent(SUBSUB) << std::left << setw(5) << atom[id].name
+          o << indent(SUBSUB) << std::left << setw(7) << atom[id].name
             << setw(l-6) << atom[id].dp;
           o.precision(3);
           o << setw(l) << accmap[id].avg()*100

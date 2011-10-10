@@ -5,7 +5,6 @@
 #include <faunus/point.h>
 #include <faunus/group.h>
 #include <faunus/species.h>
-#include <faunus/titrate.h>
 #include <faunus/textio.h>
 
 // http://publib.boulder.ibm.com/infocenter/iadthelp/v8r0/index.jsp?topic=/com.ibm.xlcpp111.linux.doc/language_ref/variadic_templates.html
@@ -35,18 +34,19 @@ namespace Faunus {
         // single particle interactions
         virtual double all2all(const p_vec&);
         virtual double i2i(const p_vec&, int, int);
-        virtual double i2g(const p_vec&, const group &, int);
+        virtual double i2g(const p_vec&, const Group &, int);
         virtual double i2all(const p_vec&, int);
         virtual double i_external(const p_vec&, int);
         virtual double i_internal(const p_vec&, int);
+        virtual double i_total(const p_vec&, int);
 
-        // group interactions
-        virtual double g2g(const p_vec&, const group&, const group&);
-        virtual double g2all(const p_vec&, const group&);
-        virtual double g_external(const p_vec&, const group&);
-        virtual double g_internal(const p_vec&, const group&);
+        // Group interactions
+        virtual double g2g(const p_vec&, const Group&, const Group&);
+        virtual double g2all(const p_vec&, const Group&);
+        virtual double g_external(const p_vec&, const Group&);
+        virtual double g_internal(const p_vec&, const Group&);
 
-        string info();
+        virtual string info();
     };
 
     template<class Tpotential>
@@ -84,7 +84,7 @@ namespace Faunus {
             return pair.pairpot(p[i],p[j]);
           }
 
-          double i2g(const p_vec &p, const group &g, int j) {
+          double i2g(const p_vec &p, const Group &g, int j) {
             double u=0;
             int len=g.end+1;
             if (j>=g.beg && j<=g.end) {   //j is inside g - avoid self interaction
@@ -108,7 +108,7 @@ namespace Faunus {
           }
           double i_internal(const p_vec &p, int i) { return 0; }
 
-          double g2g(const p_vec &p, const group &g1, const group &g2) {
+          double g2g(const p_vec &p, const Group &g1, const Group &g2) {
             double u=0;
             int ilen=g1.end+1, jlen=g2.end+1;
 #pragma omp parallel for reduction (+:u) schedule (dynamic)
@@ -118,7 +118,7 @@ namespace Faunus {
             return pair.tokT*u;
           }
 
-          double g2all(const p_vec &p, const group &g) {
+          double g2all(const p_vec &p, const Group &g) {
             int ng=g.end+1, np=p.size();
             double u=0;
 #pragma omp parallel for reduction (+:u)
@@ -131,7 +131,7 @@ namespace Faunus {
             return u*pair.tokT;
           }
 
-          double g_internal(const p_vec &p, const group &g) { 
+          double g_internal(const p_vec &p, const Group &g) { 
             if (g.beg==-1) return 0;
             double u=0;
             int step=1,n=g.end+1;
@@ -142,9 +142,8 @@ namespace Faunus {
           }
 
           string info() {
-            using namespace textio;
             std::ostringstream o;
-            o << header(name) << pair.info(25);
+            o << Energybase::info() << pair.info(25);
             return o.str();
           }
       };
@@ -160,11 +159,11 @@ namespace Faunus {
       class Bonded : public Energybase {
         //implement pointer to bond list
         // should we have a class that keeps track of particles,
-        // groups, bond lists etc.?? YES!
+        // Groups, bond lists etc.?? YES!
         public:
           //void set_bondlist(int i, int j);
           double i_internal(const p_vec &p, int i) { return 0; }
-          double g_internal(const p_vec &p, const group &g) { return 0; }
+          double g_internal(const p_vec &p, const Group &g) { return 0; }
       };
 
     /*!
@@ -177,42 +176,20 @@ namespace Faunus {
         vector<Energybase*> baselist;
 
       public:
-
-        void add(Energybase &e) {
-          assert(&e!=NULL);
-          geo=&e.getGeometry();
-          baselist.push_back(&e);
-        }
-
-        // single particle interactions
-        double i2i(const p_vec &p, int i, int j) {
-          double u=0;
-          for (auto b : baselist)
-            u += b->i2i( p,i,j );
-          return u;
-        }
-
-        double i2g(const p_vec &p, const group &g, int i) { return 0; }
-        double i2all(const p_vec &p, int i) { return 0; }
-        double i_external(const p_vec &p, int i) { return 0; }
-        double i_internal(const p_vec &p, int i) { return 0; }
-
-        // group interactions
-        double g2g(const p_vec &p, const group &g1, const group &g2) { return 0; }
-        double g2all(const p_vec &p, const group &g) { return 0; }
-        double g_external(const p_vec &p, const group &g) { return 0; }
-        double g_internal(const p_vec &p, const group &g) { return 0; }
-
-        string info() {
-          using namespace textio;
-          char w=25;
-          std::ostringstream o;
-          o << header("Hamiltonian");
-          o << pad(SUB,w,"Number of energybases") << baselist.size() << endl;
-          for (auto e : baselist)
-            o << pad(SUB,w,e->name) << endl;
-          return o.str();
-        }
+        void add(Energybase&);
+        double p2p(const particle&, const particle&);
+        double all2p(const p_vec&, const particle&);
+        double all2all(const p_vec&);
+        double i2i(const p_vec&, int, int);
+        double i2g(const p_vec&, const Group&, int);
+        double i2all(const p_vec&, int);
+        double i_external(const p_vec&, int);
+        double i_internal(const p_vec&, int);
+        double g2g(const p_vec&, const Group&, const Group&);
+        double g2all(const p_vec&, const Group&);
+        double g_external(const p_vec&, const Group&);
+        double g_internal(const p_vec&, const Group&);
+        string info();
     };
 
     class bondlist {
@@ -235,25 +212,6 @@ namespace Faunus {
         }
       private:
         vector<bond> v;
-    };
-
-    class eqenergy : public Energybase {
-      protected:
-        typedef std::map<short, double> Tmap;
-        typedef Tmap::iterator mapiter;
-        Tmap energymap;                //!< Map of intrinsic energy for titratable sites
-      public:
-        eqenergy(equilibria &eq) {
-          for (auto &s : atom.list )
-            for (auto &process : eq.process )
-              if ( process.one_of_us( s.id ) )
-                energymap[s.id] = process.energy( s.id );
-        }
-        double i_internal(const p_vec &p, int i) {
-          if (energymap.find( p[i].id )!=energymap.end())
-            return energymap[ p[i].id ];
-          return 0;
-        }
     };
 
   }//Energy namespace

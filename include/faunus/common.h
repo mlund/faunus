@@ -39,10 +39,10 @@ namespace Faunus {
 
   namespace Energy {
     class Energybase;
-    class eqenergy;
+    class EqEnergy;
   }
 
-  class group;
+  class Group;
   class inputfile;
   class InputMap;
   class UnitTest;

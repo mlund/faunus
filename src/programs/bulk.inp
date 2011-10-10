@@ -1,3 +1,5 @@
+processfile eq.process
+
 cuboid_len    50
 Sphere_radius 62.035
 
@@ -6,17 +8,27 @@ epsilon_r   79
 lj_eps      0.05
 
 loop_macrosteps 10
-loop_microsteps 100
+loop_microsteps 1000
 
 somebool yes
 somestring hejsa
 
-tion1  Na
-nion1  100
-dpion1 20
-tion2  Cl
-nion2  100
-dpion2 200
+tion1  H2PO4
+nion1  1
+dpion1 200
+
+tion2  Na
+nion2  0
+dpion3 20
+
+tion3  HPO4
+nion3  0
+dpion3 200
+
+tion4  H3PO4
+nion4  0
+dpion4 200
+
 
 
 

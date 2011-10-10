@@ -15,7 +15,7 @@ namespace Faunus {
       Geometry::Geometrybase* geo;
       p_vec p;                                   //!< The main particle vector
       p_vec trial;                               //!< Trial particle vector. 
-      vector<group*> g;                          //!< Pointers to all groups in the system.
+      vector<Group*> g;                          //!< Pointers to all groups in the system.
 
       Space(Geometry::Geometrybase&);
       virtual ~Space() {};
@@ -25,7 +25,7 @@ namespace Faunus {
       bool insert(particle, int=-1);                  //!< Insert particle at pos n.
       bool insert(string, int, spacekeys=NOOVERLAP); 
       bool remove(unsigned int);                      //!< Remove particle n.
-      int enroll(group&);                             //!< Add group pointer to g vector
+      int enroll(Group&);                             //!< Add group pointer to g vector
 
       bool overlap(const particle&) const;            //!< Check for hardspheres overlap with particle
 

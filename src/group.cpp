@@ -13,9 +13,9 @@ namespace Faunus {
    *                GROUP
    * -----------------------------------*/
 
-  group::group(int first, int last) : beg(first), end(last) {}
+  Group::Group(int first, int last) : beg(first), end(last) {}
 
-  int group::size() const {
+  int Group::size() const {
     return (beg<0 || end<0) ? 0 : end-beg+1;
   }
 
@@ -23,15 +23,15 @@ namespace Faunus {
    *  \return Charge number. The charge is also stored in
    *          cm.charge.
    */
-  double group::charge(const p_vec &p) const {
+  double Group::charge(const p_vec &p) const {
     double z=0;
     for (int i=beg; i<=end; ++i)
       z+=p[i].charge;
     return z;
   }
 
-  group& group::operator+=(const group& g) {
-    if (g.beg==-1 && g.end==-1)   // if added group is empty
+  Group& Group::operator+=(const Group& g) {
+    if (g.beg==-1 && g.end==-1)   // if added Group is empty
       return (*this);
     if (beg==-1 && end==-1)       // if this is empty
       beg=g.beg;
@@ -39,11 +39,11 @@ namespace Faunus {
     return (*this);
   }
 
-  const group group::operator+(const group& g) const {
+  const Group Group::operator+(const Group& g) const {
     // TODO: this should probably be done using operator += like this:
-    // return group(*this) += g;
+    // return Group(*this) += g;
     // (move extra functionality to +=)
-    group o;
+    Group o;
     if (beg<g.beg) {
       o.beg=beg;
       o.end=g.end;
@@ -53,25 +53,29 @@ namespace Faunus {
     };
     o.name = this->name + " + " + g.name;
     if (o.size()!=this->size()+g.size())
-      std::cout << "# Warning: Added groups are not continous!\n";
+      std::cout << "# Warning: Added Groups are not continous!\n";
     return o;
   }
 
-  bool group::operator==(const group& g) const { return (*this == g); }
+  bool Group::operator==(const Group& g) const {
+    return (*this == g);
+  }
   
-  std::ostream& group::write(std::ostream &o) const {
+  std::ostream& Group::write(std::ostream &o) const {
     o << beg << " " << end;
     return o;
   }
 
-  std::ostream& operator<<(std::ostream &o, group &g) { return g.write(o); }
+  std::ostream& operator<<(std::ostream &o, Group &g) {
+    return g.write(o);
+  }
   
-  group& group::operator<<(std::istream &in) {
+  Group& Group::operator<<(std::istream &in) {
     in >> beg >> end;
     return *this;
   }
 
-  string group::info() {
+  string Group::info() {
     std::ostringstream o;
     return o.str();
   }
@@ -85,7 +89,7 @@ namespace Faunus {
    * \date Dec. 2007, Prague
    * \todo Use masscenter(con,p) function implemented below.
    */
-  point group::masscenter(const Space &con) const {
+  point Group::masscenter(const Space &con) const {
     double sum=0;
     point cm,t,o = con.p.at(beg); // set origo to first particle
     for (int i=beg; i<=end; ++i) {
@@ -100,23 +104,23 @@ namespace Faunus {
     return cm;
   }
   
-  point group::dipolemoment(const Space &con) const {
+  point Group::dipolemoment(const Space &con) const {
     point d;
     return d;
   }
   
-  void group::rotate(Space &con, const point &v, double) {
+  void Group::rotate(Space &con, const point &v, double) {
   }
   
-  void group::scale(Space &con, double) {
+  void Group::scale(Space &con, double) {
   }
 
-  void group::undo(Space &s) {
+  void Group::undo(Space &s) {
     for (int i=beg; i<=end; ++i)
       s.trial[i]=s.p[i];
   }
 
-  void group::accept(Space &s) {
+  void Group::accept(Space &s) {
     for (int i=beg; i<=end; ++i)
       s.p[i] = s.trial[i];
   }
@@ -125,14 +129,14 @@ namespace Faunus {
    * \param par Container class
    * \param c ...by adding this vector to all particles
    */
-  void group::translate(Space &con, const point &p) {
+  void Group::translate(Space &con, const point &p) {
     for (int i=beg; i<=end; ++i) {
       con.trial[i] = con.p[i] + p;
       con.geo->boundary( con.trial[i] );
     }
   }
 
-  int group::random() const {
+  int Group::random() const {
     return beg + slp_global.rand() % size();
   }
 
@@ -170,7 +174,7 @@ namespace Faunus {
   }
 
   Atomic& Atomic::operator<<(std::istream &in) {
-    group::operator<<(in);
+    Group::operator<<(in);
     return *this;
   }
 
@@ -183,25 +187,25 @@ namespace Faunus {
    * -----------------------------------*/
 
   std::ostream& Molecular::write(std::ostream &o) const {
-    group::write(o);
+    Group::write(o);
     o << " " << cm;
     return o;
   }
 
   Molecular& Molecular::operator<<(std::istream &in) {
-    group::operator<<(in);
+    Group::operator<<(in);
     cm.operator<<(in);
     return *this;
   }
 
   void Molecular::translate(Space &con, const point &p) {
-    group::translate(con, p);
+    Group::translate(con, p);
     cm_trial=cm+p;
     con.geo->boundary(cm_trial);
   }
 
   void Molecular::accept(Space &s) {
-    group::accept(s);
+    Group::accept(s);
     cm=cm_trial;
   }
 

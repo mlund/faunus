@@ -113,7 +113,7 @@ namespace Faunus {
         }
   }
 
-  void rdf::update(Space &c, group &g) {
+  void rdf::update(Space &c, Group &g) {
     int n=g.end+1;
     npart=0;
     //#pragma omp for

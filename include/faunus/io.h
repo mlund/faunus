@@ -13,7 +13,7 @@
 
 namespace Faunus {
   
-  class group;
+  class Group;
   class Molecular;
 
   /*! \brief Basic file I/O routines
@@ -99,7 +99,7 @@ namespace Faunus {
       bool loadnextframe(Space&);              //!< Load a single frame into cuboid
       bool save(string, const p_vec&);         //!< Save a frame to trj file.
       bool save(string, Space&);               //!< Save a frame to trj file (PBC)
-      bool save(string, p_vec&, vector<group>&);//!< Save groups
+      bool save(string, p_vec&, vector<Group>&);//!< Save groups
       void setbox(float);                      //!< Set box size to be saved in frame (cubic)
       void setbox(double,double,double);       //!< Set box size to be saved in frame
       void close();                            //!< Close trj file
@@ -118,7 +118,7 @@ namespace Faunus {
     public:
       ioqtraj();
       bool save(string, p_vec&);   //!< Save a frame to trj file.
-      bool save(string, p_vec&, vector<group> &); //!< Save groups
+      bool save(string, p_vec&, vector<Group> &); //!< Save groups
   };
   
   class xyfile {

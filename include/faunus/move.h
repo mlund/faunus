@@ -62,10 +62,11 @@ namespace Faunus {
       public:
         Movebase(Energy::Energybase&, Space&, string);             //!< Constructor
         virtual ~Movebase() {};
-        virtual double move()=0;    //!< Attempt a move and return energy change
-        double runfraction;         //!< Fraction of times calling move() should result in an actual move
-        string info();              //!< Returns information string
-        //void unittest(unittest&);   //!< Perform unit test
+        virtual double move()=0;     //!< Attempt a move and return energy change
+        double runfraction;          //!< Fraction of times calling move() should result in an actual move
+        string info();               //!< Returns information string
+        virtual double totalEnergy();//!< Total energy relevant for energy drift tracking
+        //void unittest(unittest&);  //!< Perform unit test
     };
 
     /*
@@ -96,10 +97,9 @@ namespace Faunus {
     class ParticleTranslation : public Movebase {
       private:
         typedef std::map<short, average<double> > map_type;
-        //typedef map_type::const_iterator mapiter;
         map_type accmap; //!< Single particle acceptance map
         map_type sqrmap; //!< Single particle mean square displacement map
-        group* igroup;   //!< Group pointer in which particles are moved randomly (NULL if none, default)
+        Group* igroup;   //!< Group pointer in which particles are moved randomly (NULL if none, default)
         int iparticle;   //!< Select single particle to move (-1 if none, default)
       protected:
         void trialMove();
@@ -108,11 +108,12 @@ namespace Faunus {
         double energyChange();
       public:
         ParticleTranslation(InputMap&, Energy::Energybase&, Space&, string="mv_particle");
-        void setGroup(group&); //!< Select group in which to randomly pick particles from
+        void setGroup(Group&); //!< Select group in which to randomly pick particles from
         void setParticle(int); //!< Select single particle in p_vec to move
         double move();         //!< Move selected particle once or n times in selected group of length n
         point dir;             //!< Displacement directions (default: x=y=z=1)
         string info();
+        double totalEnergy();  //!< Total energy for drift tracking
     };
 
     class MoleculeTranslation : public Movebase {

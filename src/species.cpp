@@ -4,22 +4,27 @@
 #include <faunus/textio.h>
 
 namespace Faunus {
+
+  specdata::specdata() {
+    sigma=0;      
+    eps=0;
+    radius=0;
+    mw=0.1;
+    charge=0;
+    chempot=0;
+    dp=0;
+    mean=0;
+    variance=0;
+    hydrophobic=0;
+    name="UNK";
+  }
+
   atoms atom; // Instantiate global copy
 
   atoms::atoms() {
     filename="atomlist.inp";
     specdata a;
     a.id=list.size();
-    a.sigma=0;      
-    a.eps=0;
-    a.radius=0;
-    a.mw=0.1;
-    a.charge=0;
-    a.chempot=0;
-    a.dp=0;
-    a.mean=0;
-    a.variance=0;
-    a.hydrophobic=0;
     a.name="UNK";
     list.push_back(a);
     init();

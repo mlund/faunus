@@ -38,7 +38,8 @@ namespace Faunus {
         virtual double i2all(const p_vec&, int);
         virtual double i_external(const p_vec&, int);
         virtual double i_internal(const p_vec&, int);
-        virtual double i_total(const p_vec&, int);
+        virtual double p_external(const particle&);
+        double i_total(const p_vec&, int); //!< total energy of i'th particle (i2all+i_external+i_internal)
 
         // Group interactions
         virtual double g2g(const p_vec&, const Group&, const Group&);
@@ -46,13 +47,13 @@ namespace Faunus {
         virtual double g_external(const p_vec&, const Group&);
         virtual double g_internal(const p_vec&, const Group&);
 
+        virtual double v2v(const p_vec&, const p_vec&);
+
         virtual string info();
     };
 
     template<class Tpotential>
       class Nonbonded : public Energybase {
-        private:
-          typedef p_vec::const_iterator pviter;
         public:
           Tpotential pair;
           Nonbonded(InputMap &in) : pair(in) {
@@ -148,11 +149,37 @@ namespace Faunus {
           }
       };
 
+    template<class Tpotential>
+      class Nonbonded_CG : public Nonbonded<Tpotential> {
+        using Nonbonded<Tpotential>::geo;
+        using Nonbonded<Tpotential>::name;
+        public:
+          double cut;
+          Nonbonded_CG(InputMap &in) : Nonbonded<Tpotential>(in) {
+            name+="(Molecular Group CG)";
+          }
+
+          double g2g(const p_vec &p, const Group &g1, const Group &g2) {
+            if (g1.id==Group::MOLECULAR) {
+              if (g2.id==Group::MOLECULAR) {
+                if ( geo->sqdist(g1.cm_trial, g2.cm_trial) > cut*cut ) {
+                  const Molecular& m1 = static_cast<const Molecular&>(g1);
+                  const Molecular& m2 = static_cast<const Molecular&>(g2);
+                  return 0; // v2v(m1.cg, m2.cg)
+                }
+              }
+            }
+            return Nonbonded<Tpotential>::g2g(p,g1,g2);
+          }
+      };
+
     //or simply add pointer to nonbonded<T>
     template<class Tpotential>
       class Exclusions : public Nonbonded<Tpotential> {
-        Exclusions(InputMap &in) : Nonbonded<Tpotential>(in) {}
-        virtual double i2i(const p_vec &p, int i, int j) { return 0; }
+        public:
+          vector< std::pair<int,int> > pairs;
+          Exclusions(InputMap &in) : Nonbonded<Tpotential>(in) {}
+          virtual double i2i(const p_vec &p, int i, int j) { return 0; }
       };
 
     template<class Tbondpot>

@@ -10,19 +10,16 @@ lj_eps      0.05
 loop_macrosteps 10
 loop_microsteps 1000
 
-somebool yes
-somestring hejsa
-
 tion1  H2PO4
-nion1  1
+nion1  2
 dpion1 200
 
 tion2  Na
-nion2  0
-dpion3 20
+nion2  10
+dpion3 200
 
-tion3  HPO4
-nion3  0
+tion3  Cl
+nion3  10
 dpion3 200
 
 tion4  H3PO4

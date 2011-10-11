@@ -13,7 +13,9 @@ namespace Faunus {
    *                GROUP
    * -----------------------------------*/
 
-  Group::Group(int first, int last) : beg(first), end(last) {}
+  Group::Group(int first, int last) : beg(first), end(last) {
+    id=GROUP;
+  }
 
   int Group::size() const {
     return (beg<0 || end<0) ? 0 : end-beg+1;
@@ -144,7 +146,9 @@ namespace Faunus {
    *             ATOMIC
    * -----------------------------------*/
 
-  Atomic::Atomic() {}
+  Atomic::Atomic() {
+    id=ATOMIC;
+  }
 
   Atomic::Atomic(Space &spc, InputMap &in) {
     add(spc,in);
@@ -185,6 +189,9 @@ namespace Faunus {
   /* -----------------------------------*
    *             MOLECULAR
    * -----------------------------------*/
+  Molecular::Molecular() {
+    id=MOLECULAR;
+  }
 
   std::ostream& Molecular::write(std::ostream &o) const {
     Group::write(o);

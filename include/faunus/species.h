@@ -7,8 +7,8 @@ namespace Faunus {
   class inputfile;
 
   class specdata {
-    private:
     public:
+      specdata();
       short  id;         //!< Identification number
       double sigma,      //!< LJ diameter
              eps,        //!< LJ epsilon

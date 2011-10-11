@@ -10,11 +10,13 @@ namespace Faunus {
       virtual std::ostream& write(std::ostream &) const; //!< Write all Group data to stream
 
     public:
-      enum type {SALT, MOLECULE, CIGAR, HYPER};
+      enum type {GROUP,ATOMIC,MOLECULAR,CIGAR,HYPER};
       type id;
       Group(int=-1, int=-1);
       string info();
       string name;
+      point cm_trial;           //!< mass center vector for trial position
+      point cm;                 //!< mass center vector
       int beg;                  //!< index of first particle
       int end;                  //!< index of last particle
       int size() const;         //!< number of particles in Group.
@@ -55,13 +57,12 @@ namespace Faunus {
   class Molecular : public Group {
     protected:
       std::ostream & write(std::ostream&) const;  //!< Write all Group data to stream
-      point cm_trial;                             //!< mass center vector for trial position
 
     public:
-      point cm;                 //!< mass center vector
       average<double> Q;        //!< average net charge
       average<double> mu;       //!< average dipole moment
 
+      Molecular();
       void translate(Space&, const point&);
       void accept(Space&);
       void scale(Space&, double);

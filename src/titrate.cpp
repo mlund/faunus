@@ -122,6 +122,7 @@ namespace Faunus {
      * in the sites vector.
      */
     void EquilibriumController::findSites(const p_vec &p) {
+      q.clear();
       sites.clear();
       for (int j=0; j<process.size(); j++)
         process[j].cnt=0;
@@ -132,7 +133,6 @@ namespace Faunus {
             process[j].cnt++;
             break; // no double counting of sites
           }
-      q.resize( sites.size() );
     }
 
     /*!
@@ -148,7 +148,7 @@ namespace Faunus {
     }
 
     void EquilibriumController::sampleCharge(const p_vec &p) {
-      for (auto &i : sites)
+      for (auto i : sites)
         q[i] += p[i].charge;
     }
 
@@ -161,8 +161,8 @@ namespace Faunus {
      */
     double EquilibriumController::applycharges(p_vec &p) {
       double qtot=0;
-      for (size_t i=0; i<sites.size(); i++) {
-        p[ sites[i] ].charge = q[i].avg();
+      for (auto i : sites) {
+        p[i].charge = q[i].avg();
         qtot += q[i].avg();
       }
       return qtot;
@@ -172,27 +172,25 @@ namespace Faunus {
      * This function gives the average charge for all particles which 
      * are titrated by process i, or -nan if no particles are part of process i
      */  
-    double EquilibriumController::avgcharge(const p_vec &p, int &i) {
-      double qavg=0;
-      int n=0;
-      for (unsigned int j=0; j<sites.size(); j++) {
-        if (process[i].one_of_us( p[sites[j]].id )) {
-          n++;
-          qavg+=q[j].avg();
-        }
-      }
-      return qavg/n;
+    double EquilibriumController::avgcharge(const p_vec &p, int &k) {
+      average<double> qavg;
+      for (auto i : sites)
+        if (process[k].one_of_us( p[i].id ))
+          qavg+=q[i].avg();
+      return qavg.avg();
     }
 
     EquilibriumController::processdata& EquilibriumController::random(const p_vec &p, int &j) {
-      int k,i=slp_global.rand() % sites.size();   // pick random titratable site
+      int i=slp_global.rand() % sites.size();     // pick random titratable site
       j=sites[i];                                 // corresponding particle
-      do k=slp_global.rand() % process.size();    // pick random process..
+      int k;
+      do
+        k=slp_global.rand() % process.size();     // pick random process..
       while (!process[k].one_of_us( p[j].id ));   // ..that involves particle j
       return process[k];
     }
 
-    string EquilibriumController::info(const p_vec &p, char w) {
+    string EquilibriumController::info(char w) {
       using namespace Faunus::textio;
       std::ostringstream o;
       o << pad(SUB,w,"Number of sites") << sites.size() << endl
@@ -217,8 +215,6 @@ namespace Faunus {
           << setw(w) << -log10(exp(-process[i].mu_AX))
           << setw(w) << -log10(exp(-process[i].mu_A))
           << setw(w) << process[i].cnt;
-        if (process[i].cnt>0)
-          o << setw(12) << avgcharge(p,i) << std::setprecision (4);
         o << endl;
       }
       return o.str();
@@ -239,9 +235,14 @@ namespace Faunus {
     }
 
     double EquilibriumEnergy::i_internal(const p_vec &p, int i) {
-      if (energymap.find( p[i].id )!=energymap.end())
-        return energymap[ p[i].id ];
-      return 0;
+      return eq.intrinsicEnergy( p[i].id );
+      //if (energymap.find( p[i].id )!=energymap.end())
+      //  return energymap[ p[i].id ];
+      //return 0;
+    }
+
+    string EquilibriumEnergy::info() {
+      return Energybase::info() + eq.info();
     }
 
   }//namespace Energy
@@ -261,6 +262,7 @@ namespace Faunus {
     }
 
     int SwapMove::findSites(const p_vec &p) {
+      accmap.clear();
       return eqpot.findSites(p);
     }
 
@@ -281,10 +283,12 @@ namespace Faunus {
 
     void SwapMove::acceptMove() {
       Movebase::acceptMove();
+      accmap[ipart] += 1;
       spc->p[ipart] = spc->trial[ipart];
     }
 
     void SwapMove::rejectMove() {
+      accmap[ipart] += 0;
       spc->trial[ipart] = spc->p[ipart];
     }
 
@@ -294,6 +298,7 @@ namespace Faunus {
       double du=0;
       for (auto &n : eqpot.eq.sites )
         du+=Movebase::move();
+      eqpot.eq.sampleCharge(spc->p);
       return du;
     }
 
@@ -305,8 +310,22 @@ namespace Faunus {
     }
 
     string SwapMove::info() {
+      using namespace textio;
       std::ostringstream o;
-      o << Movebase::info() << eqpot.eq.info(spc->p);
+      o << Movebase::info() 
+        << indent(SUB) << "Site statistics:" << endl
+        << indent(SUBSUB) << std::left
+        << setw(15) << "Site"
+        << setw(14) << bracket("z")
+        << "Acceptance" << endl;
+      for (auto i : eqpot.eq.sites) {
+        std::ostringstream a;
+        a << atom[ spc->p[i].id ].name << " " << i;
+        o << pad(SUBSUB,15, a.str())
+          << setw(10) << eqpot.eq.q[i].avg()
+          << accmap[i].avg()*100. << percent
+          << endl;
+      }
       return o.str();
     }
   }//Move namespace

@@ -20,7 +20,7 @@
 #define FAUNUS_H
 
 #ifndef SWIG
-#include <faunus/common.h>
+#include <faunus/bonded.h>
 #include <faunus/common.h>
 #include <faunus/textio.h>
 #include <faunus/point.h>

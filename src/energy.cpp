@@ -17,12 +17,13 @@ namespace Faunus {
     }
 
     // external particle interactions
-    double Energybase::all2p(const p_vec &p, const particle &a) {return 0;}
-    double Energybase::p2p(const particle &a, const particle &b) {return 0;}
-
-    double Energybase::all2all(const p_vec &p) {return 0;}
+    double Energybase::all2p(const p_vec &p, const particle &a) { return 0; }
+    double Energybase::p2p(const particle &a, const particle &b) { return 0; }
+    double Energybase::v2v(const p_vec &v1, const p_vec &v2) { return 0; }
+    double Energybase::p_external(const particle &a) { return 0; }
 
     // single particle interactions
+    double Energybase::all2all(const p_vec &p) {return 0;}
     double Energybase::i2i(const p_vec &p, int i, int j) {return 0;}
     double Energybase::i2g(const p_vec &p, const Group &g, int i) {return 0;}
     double Energybase::i2all(const p_vec &p, int i) {return 0;}

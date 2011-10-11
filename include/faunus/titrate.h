@@ -60,14 +60,14 @@ namespace Faunus {
           void set_mu_A(double);       //!< Set chemical potential of species A  - mu_AX then follows.
         };
 
-        vector<average <double> > q;         //!< List of average charges per site
-        vector<processdata> process;         //!< Vector of processes.
+        std::map<int, average<double> > q;       //!< Map of average charges per site
+        vector<processdata> process;             //!< Vector of processes.
 
         EquilibriumController(InputMap&, string="eq_");
         bool include(string);                    //!< Read equilibrium processes from file
         void findSites(const p_vec&);            //!< Locate all titratable sites
         double intrinsicEnergy(const short&);    //!< Intrinsic energy of particle id (kT)
-        string info(const p_vec&,char=25);       //!< Get information string
+        string info(char=25);                    //!< Get information string
         processdata& random(const p_vec&, int&); //!< Random titratable particle and assiciated random process
 
         vector<int> sites;                       //!< List of titratable sites
@@ -85,6 +85,7 @@ namespace Faunus {
         EquilibriumEnergy(InputMap&);
         double i_internal(const p_vec&, int);
         int findSites(const p_vec&);
+        string info();
     };
 
   }//Energy namespace 
@@ -92,8 +93,10 @@ namespace Faunus {
   namespace Move {
 
     class SwapMove : public Movebase {
+      private:
+        std::map<int, average<double> > accmap; //!< Site acceptance map
+        int ipart;                              //!< Particle to be swapped
       protected:
-        int ipart;  //!< Particle to be swapped
         void trialMove();
         double energyChange();
         void acceptMove();

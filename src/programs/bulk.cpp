@@ -35,17 +35,6 @@ int main() {
 
   Space spc( pot.getGeometry() );
 
-  //Energy::ParticleBonds<Energy::HarmonicBond> pb;
-  Energy::ParticleBonds<Energy::HarmonicBond> pb;
-  pb.add(0,1, Energy::HarmonicBond(0.1, 5.0) );
-  pb.add(3,2, Energy::HarmonicBond(0.01, 4.0) );
-  pb.add(2,1, Energy::HarmonicBond(0.1, 3.0) );
-  pb.add(3,1, Energy::HarmonicBond(0.1, 2.0) );
-  Energy::HarmonicBond a=pb(10,1);
-  cout << pb.info() << pb(0,1).req << endl << pb(1,0).req << endl;
-  return 0;
-
-
   // Handle particles
   Atomic salt(spc, mcp);
   salt.name="Salt particles";

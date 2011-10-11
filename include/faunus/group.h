@@ -3,6 +3,7 @@
 
 #include <faunus/common.h>
 #include <faunus/average.h>
+#include <faunus/bonded.h>
 
 namespace Faunus {
   class Group {
@@ -22,6 +23,7 @@ namespace Faunus {
       int size() const;         //!< number of particles in Group.
       int random() const;
       vector<Move::Movebase*> moves;    //!< pointers to move functions
+      Energy::ParticleBonds bonds;
 
       virtual double charge(const p_vec&) const;      //!< Calculate total charge
       virtual point masscenter(const Space&) const;          //!< Calculate mass center

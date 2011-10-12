@@ -22,8 +22,8 @@ namespace Faunus {
       int end;                  //!< index of last particle
       int size() const;         //!< number of particles in Group.
       int random() const;
+      bool find(int) const;     //!< Check if index is part of group
       vector<Move::Movebase*> moves;    //!< pointers to move functions
-      Energy::ParticleBonds bonds;
 
       virtual double charge(const p_vec&) const;      //!< Calculate total charge
       virtual point masscenter(const Space&) const;          //!< Calculate mass center

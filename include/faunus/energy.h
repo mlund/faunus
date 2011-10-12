@@ -1,11 +1,12 @@
-#ifndef faunus_energy_base_h
-#define faunus_energy_base_h
+#ifndef faunus_energy_h
+#define faunus_energy_h
 
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/group.h>
 #include <faunus/species.h>
 #include <faunus/textio.h>
+#include <faunus/bonded.h>
 
 // http://publib.boulder.ibm.com/infocenter/iadthelp/v8r0/index.jsp?topic=/com.ibm.xlcpp111.linux.doc/language_ref/variadic_templates.html
 //
@@ -26,6 +27,7 @@ namespace Faunus {
         virtual ~Energybase();
 
         Geometry::Geometrybase& getGeometry(); //!< Return reference to Geometrybase used for interactions
+        void setGeometry( Geometry::Geometrybase& ); //!< Set Geometrybase
 
         // interaction with external particle
         virtual double p2p(const particle&, const particle&);
@@ -34,7 +36,7 @@ namespace Faunus {
         // single particle interactions
         virtual double all2all(const p_vec&);
         virtual double i2i(const p_vec&, int, int);
-        virtual double i2g(const p_vec&, const Group &, int);
+        virtual double i2g(const p_vec&, Group &, int);
         virtual double i2all(const p_vec&, int);
         virtual double i_external(const p_vec&, int);
         virtual double i_internal(const p_vec&, int);
@@ -42,10 +44,10 @@ namespace Faunus {
         double i_total(const p_vec&, int); //!< total energy of i'th particle (i2all+i_external+i_internal)
 
         // Group interactions
-        virtual double g2g(const p_vec&, const Group&, const Group&);
-        virtual double g2all(const p_vec&, const Group&);
-        virtual double g_external(const p_vec&, const Group&);
-        virtual double g_internal(const p_vec&, const Group&);
+        virtual double g2g(const p_vec&, Group&, Group&);
+        virtual double g2all(const p_vec&, Group&);
+        virtual double g_external(const p_vec&, Group&);
+        virtual double g_internal(const p_vec&, Group&);
 
         virtual double v2v(const p_vec&, const p_vec&);
 
@@ -85,7 +87,7 @@ namespace Faunus {
             return pair.pairpot(p[i],p[j]);
           }
 
-          double i2g(const p_vec &p, const Group &g, int j) {
+          double i2g(const p_vec &p, Group &g, int j) {
             double u=0;
             int len=g.end+1;
             if (j>=g.beg && j<=g.end) {   //j is inside g - avoid self interaction
@@ -107,9 +109,10 @@ namespace Faunus {
               u+=pair.pairpot( p[i], p[j] );
             return u*pair.tokT;
           }
+
           double i_internal(const p_vec &p, int i) { return 0; }
 
-          double g2g(const p_vec &p, const Group &g1, const Group &g2) {
+          double g2g(const p_vec &p, Group &g1, Group &g2) {
             double u=0;
             int ilen=g1.end+1, jlen=g2.end+1;
 #pragma omp parallel for reduction (+:u) schedule (dynamic)
@@ -119,7 +122,7 @@ namespace Faunus {
             return pair.tokT*u;
           }
 
-          double g2all(const p_vec &p, const Group &g) {
+          double g2all(const p_vec &p, Group &g) {
             int ng=g.end+1, np=p.size();
             double u=0;
 #pragma omp parallel for reduction (+:u)
@@ -132,7 +135,7 @@ namespace Faunus {
             return u*pair.tokT;
           }
 
-          double g_internal(const p_vec &p, const Group &g) { 
+          double g_internal(const p_vec &p, Group &g) { 
             if (g.beg==-1) return 0;
             double u=0;
             int step=1,n=g.end+1;
@@ -159,7 +162,7 @@ namespace Faunus {
             name+="(Molecular Group CG)";
           }
 
-          double g2g(const p_vec &p, const Group &g1, const Group &g2) {
+          double g2g(const p_vec &p, Group &g1, Group &g2) {
             if (g1.id==Group::MOLECULAR) {
               if (g2.id==Group::MOLECULAR) {
                 if ( geo->sqdist(g1.cm_trial, g2.cm_trial) > cut*cut ) {
@@ -182,16 +185,14 @@ namespace Faunus {
           virtual double i2i(const p_vec &p, int i, int j) { return 0; }
       };
 
-    template<class Tbondpot>
-      class Bonded : public Energybase {
-        //implement pointer to bond list
-        // should we have a class that keeps track of particles,
-        // Groups, bond lists etc.?? YES!
-        public:
-          //void set_bondlist(int i, int j);
-          double i_internal(const p_vec &p, int i) { return 0; }
-          double g_internal(const p_vec &p, const Group &g) { return 0; }
-      };
+    class Bonded : public Energy::Energybase {
+      public:
+        Bonded();
+        Bonded(Geometry::Geometrybase&);
+        Faunus::Energy::ParticleBonds bonds;
+        double i_internal(const p_vec &p, int i);
+        double g_internal(const p_vec &p, Group &g);
+    };
 
     /*!
      * \brief Collection of Energybases that when summed gives the Hamiltonian
@@ -203,19 +204,24 @@ namespace Faunus {
         vector<Energybase*> baselist;
 
       public:
+        template<typename T> T* create(T p) {
+          auto t=new T(p);
+          add(*t);
+          return t;
+        }
         void add(Energybase&);
         double p2p(const particle&, const particle&);
         double all2p(const p_vec&, const particle&);
         double all2all(const p_vec&);
         double i2i(const p_vec&, int, int);
-        double i2g(const p_vec&, const Group&, int);
+        double i2g(const p_vec&, Group&, int);
         double i2all(const p_vec&, int);
         double i_external(const p_vec&, int);
         double i_internal(const p_vec&, int);
-        double g2g(const p_vec&, const Group&, const Group&);
-        double g2all(const p_vec&, const Group&);
-        double g_external(const p_vec&, const Group&);
-        double g_internal(const p_vec&, const Group&);
+        double g2g(const p_vec&, Group&, Group&);
+        double g2all(const p_vec&, Group&);
+        double g_external(const p_vec&, Group&);
+        double g_internal(const p_vec&, Group&);
         string info();
     };
 

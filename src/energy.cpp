@@ -12,6 +12,10 @@ namespace Faunus {
 
     Energybase::~Energybase() {}
 
+    void Energybase::setGeometry(Geometry::Geometrybase &g) {
+      geo=&g;
+    }
+
     Geometry::Geometrybase& Energybase::getGeometry() {
       return *geo;
     }
@@ -25,7 +29,7 @@ namespace Faunus {
     // single particle interactions
     double Energybase::all2all(const p_vec &p) {return 0;}
     double Energybase::i2i(const p_vec &p, int i, int j) {return 0;}
-    double Energybase::i2g(const p_vec &p, const Group &g, int i) {return 0;}
+    double Energybase::i2g(const p_vec &p, Group &g, int i) {return 0;}
     double Energybase::i2all(const p_vec &p, int i) {return 0;}
     double Energybase::i_external(const p_vec &p, int i) {return 0;}
     double Energybase::i_internal(const p_vec &p, int i) {return 0;}
@@ -34,10 +38,10 @@ namespace Faunus {
     }
 
     // Group interactions
-    double Energybase::g2g(const p_vec &p, const Group &g1, const Group &g2) {return 0;}
-    double Energybase::g2all(const p_vec &p, const Group &g) {return 0;}
-    double Energybase::g_external(const p_vec &p, const Group &g) {return 0;}
-    double Energybase::g_internal(const p_vec &p, const Group &g) {return 0;}
+    double Energybase::g2g(const p_vec &p, Group &g1, Group &g2) {return 0;}
+    double Energybase::g2all(const p_vec &p, Group &g) {return 0;}
+    double Energybase::g_external(const p_vec &p, Group &g) {return 0;}
+    double Energybase::g_internal(const p_vec &p, Group &g) {return 0;}
 
     string Energybase::info() {
       using namespace textio;
@@ -46,10 +50,37 @@ namespace Faunus {
       return o.str();
     }
 
+    Bonded::Bonded() {
+      name="Bonded";
+      geo=NULL;
+    }
+
+    Bonded::Bonded(Geometry::Geometrybase &g) {
+      name="Bonded";
+      geo=&g;
+    }
+
+    double Bonded::i_internal(const p_vec &p, int i) {
+      return bonds.totalEnergy(*geo, p, i);
+    }
+
+    double Bonded::g_internal(const p_vec &p, Group &g) {
+      return bonds.totalEnergy(*geo, p, g);
+    }
+
+
+    /*!
+     * This adds an Energybase class to the Hamiltonian. If the geometry of the
+     * added class is undefined it will get the current geometry of the Hamiltonian.
+     * If the geometry of the added energybase is defined, this geometry is copied to
+     * the Hamiltonian.
+     */
     void Hamiltonian::add(Energybase &e) {
       assert(&e!=NULL);
       if (&e.getGeometry()!=NULL)
         geo=&e.getGeometry();
+      else
+        e.setGeometry(*geo);
       baselist.push_back(&e);
     }
 
@@ -82,7 +113,7 @@ namespace Faunus {
       return u;
     }
 
-    double Hamiltonian::i2g(const p_vec &p, const Group &g, int i) {
+    double Hamiltonian::i2g(const p_vec &p, Group &g, int i) {
       double u=0;
       for (auto &b : baselist)
         u += b->i2g(p,g,i);
@@ -110,28 +141,28 @@ namespace Faunus {
     }
 
     // Group interactions
-    double Hamiltonian::g2g(const p_vec &p, const Group &g1, const Group &g2) {
+    double Hamiltonian::g2g(const p_vec &p, Group &g1, Group &g2) {
       double u=0;
       for (auto &b : baselist)
         u += b->g2g(p,g1,g2);
       return u;
     }
 
-    double Hamiltonian::g2all(const p_vec &p, const Group &g) {
+    double Hamiltonian::g2all(const p_vec &p, Group &g) {
       double u=0;
       for (auto &b : baselist)
         u += b->g2all(p,g);
       return u;
     }
 
-    double Hamiltonian::g_external(const p_vec &p, const Group &g) {
+    double Hamiltonian::g_external(const p_vec &p, Group &g) {
       double u=0;
       for (auto &b : baselist)
         u += b->g_external(p,g);
       return u;
     }
 
-    double Hamiltonian::g_internal(const p_vec &p, const Group &g) {
+    double Hamiltonian::g_internal(const p_vec &p, Group &g) {
       double u=0;
       for (auto &b : baselist)
         u += b->g_internal(p,g);

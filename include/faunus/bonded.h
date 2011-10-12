@@ -1,5 +1,5 @@
-#ifndef FAU_BONDED
-#define FAU_BONDED
+#ifndef FAU_BONDED_H
+#define FAU_BONDED_H
 
 #include <faunus/common.h>
 #include <faunus/textio.h>
@@ -10,28 +10,48 @@ namespace Faunus {
     /*!
      * \brief General class for handling pairs of particles
      * \date Lund, October 2011
+     *
+     * This is a general class for handling properties for pairs. One example is bonds between
+     * particles, identified through their particle index. Properties are added through to
+     * add() template function which can also handle derived classes of Tpairprop. Upon adding
+     * new properties, space is dynamically allocated inside the class for each property object.
+     * This memory is freed upon destruction or when calling clear().
      */
-    template<class Tpairtype>
+    template<class Tpairprop, typename Tij=int>
       class ParticlePairs {
+        private:
+          vector<Tpairprop*> newPtr;
         protected:
-          std::map<int, std::map<int, Tpairtype*> > list;
+          std::map<Tij, std::map<Tij, Tpairprop*> > list;
           string name;
         public:
-          void add(int i, int j, Tpairtype *p) {
-            assert(i!=j);   //debug only
-            assert(p!=NULL);
-            if (i!=j) {
-              list[i][j]=p;
-              list[j][i]=p;
+          ~ParticlePairs() {
+            clear();
+          }
+
+          void clear() {
+            for (auto &ptr : newPtr)
+              delete(ptr);
+            newPtr.clear();
+            list.clear();
+          }
+
+          template<typename Tderived>
+            void add(Tij i, Tij j, Tderived p) {
+              assert(i!=j); //debug
+              if (i!=j) {
+                newPtr.push_back( new Tderived(p) ); 
+                list[i][j]=newPtr.back();
+                list[j][i]=newPtr.back();
+              }
             }
-          } 
-          //!< \brief Retrieve bond via (i,j) operator
-          //!< \warning Avoid using this to modify bond properties as both (i,j) and (j,i) need to be set.
-          //!< \todo Should we rather return copy instead of reference (safer, slower)
-          Tpairtype& operator() (int i, int j) {
-            assert( list[i][j]!=NULL );
+
+          //!< \brief Retrieve reference to bond via (i,j) operator
+          Tpairprop& operator() (Tij i, Tij j) {
+            assert( list[i][j]!=NULL ); //debug
             return *list[i][j];
           }
+
           string info() {
             using namespace Faunus::textio;
             std::ostringstream o;
@@ -48,6 +68,7 @@ namespace Faunus {
 
     class Bondbase {
       public:
+        virtual ~Bondbase();
         virtual double energy(double) const=0;
         virtual string info() const=0;
     };
@@ -79,12 +100,18 @@ namespace Faunus {
      *    double u = bonds(i,j).energy( rij ); // i j bond energy
      * \endcode
      */
-    class ParticleBonds : public ParticlePairs<Bondbase> {
+    class ParticleBonds : public ParticlePairs<Bondbase,int> {
       typedef ParticlePairs<Bondbase> pairs;
       public:
       ParticleBonds();
+
       //!< Returns total bond energy of i'th particle (kT)
-      double bondEnergy(Geometry::Geometrybase&, const p_vec&, int);
+      double totalEnergy(Geometry::Geometrybase&, const p_vec&, int);
+
+      double totalEnergy(Geometry::Geometrybase&, const p_vec&, const Group&);
+
+      //!< Returns total bond energy of all bonds (kT)
+      double totalEnergy(Geometry::Geometrybase&, const p_vec&);
     };
 
   } // namespace

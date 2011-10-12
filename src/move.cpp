@@ -118,7 +118,7 @@ namespace Faunus {
       igroup=NULL;
       dir.x=dir.y=dir.z=1;
       w=25;
-      in.get<double>(prefix+"runfraction",1);
+      in.get(prefix+"runfraction",0.0);
     }
 
     void ParticleTranslation::setGroup(Group &g) {
@@ -162,7 +162,9 @@ namespace Faunus {
       if (iparticle>-1) {
         if ( spc->geo->collision( spc->trial[iparticle], Geometry::Geometrybase::BOUNDARY ) )
           return infty;
-        return pot->i2all(spc->trial, iparticle) - pot->i2all(spc->p, iparticle);
+        return
+          pot->i_total(spc->trial, iparticle) - pot->i_total(spc->p, iparticle);
+          //pot->i2all(spc->trial, iparticle) - pot->i2all(spc->p, iparticle);
       }
       return 0;
     }

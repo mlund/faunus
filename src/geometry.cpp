@@ -69,7 +69,7 @@ namespace Faunus {
     }
 
     Sphere::Sphere(InputMap &in)  {
-      setradius( in.get<double>("Sphere_radius", 0) );
+      setradius( in.get("Sphere_radius", 0.0) );
     }
 
     void Sphere::setradius(double radius) {

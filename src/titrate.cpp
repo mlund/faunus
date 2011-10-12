@@ -241,6 +241,13 @@ namespace Faunus {
       //return 0;
     }
 
+    double EquilibriumEnergy::g_internal(const p_vec &p, Group &g) {
+      double u=0;
+      for (int i=g.beg; i<=g.end; ++i)
+        u+=EquilibriumEnergy::i_internal(p, i);
+      return u;
+    }
+
     string EquilibriumEnergy::info() {
       return Energybase::info() + eq.info();
     }

@@ -21,6 +21,10 @@ namespace Faunus {
     return (beg<0 || end<0) ? 0 : end-beg+1;
   }
 
+  bool Group::find(int i) const {
+    return (i>=beg && i<=end) ? true : false;
+  }
+
   /*! \brief Calculates total charge
    *  \return Charge number. The charge is also stored in
    *          cm.charge.
@@ -163,10 +167,10 @@ namespace Faunus {
       nion << "nion" << n;
       tion << "tion" << n;
       dpion<< "dpion"<< n++;
-      npart = in.get<int>(nion.str(), 0);
+      npart = in.get(nion.str(), 0);
       if (npart>0) {
         short id = atom[ in.get<string>(tion.str(), "UNK") ].id;
-        atom[id].dp = in.get<double>(dpion.str(), 0);
+        atom[id].dp = in.get(dpion.str(), 0.);
         spc.insert( atom[id].name, npart);
         end+=npart;
       } else break;

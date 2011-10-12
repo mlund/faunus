@@ -29,9 +29,12 @@ int main() {
   iopqr pqr;                           // PQR structure file I/O
   energydrift sys;                     // class for tracking system energy drifts
 
-  Energy::Nonbonded_CG<Tpairpot> nb(mcp); // non-bonded energy
+  Energy::Nonbonded<Tpairpot> nb(mcp); // non-bonded energy
+  Energy::Bonded bonded;
   Energy::Hamiltonian pot;
   pot.add(nb);
+  pot.create( Energy::Bonded() );
+  //pot.add(bonded);
 
   Space spc( pot.getGeometry() );
 
@@ -42,6 +45,8 @@ int main() {
   mv.setGroup(salt);
   spc.load("space.state");
 
+  bonded.bonds.add(0,1, Energy::HarmonicBond(0.5, 10.0));
+
   // Particle titration
   Move::SwapMove tit(mcp,pot,spc);
 
@@ -49,7 +54,8 @@ int main() {
   Analysis::Widom widom(spc, pot);
   widom.addGhost(spc);
 
-  sys.init( mv.totalEnergy() + tit.totalEnergy() );
+  #define UTOTAL pot.g_internal(spc.p, salt) 
+  sys.init( UTOTAL );
 
   cout << atom.info() << spc.info() << pot.info() << mv.info()
     << textio::header("MC Simulation Begins!");
@@ -61,7 +67,7 @@ int main() {
         widom.sample();
       sys+=tit.move();
     }
-    sys.checkdrift( mv.totalEnergy() + tit.totalEnergy()  );
+    sys.checkdrift( UTOTAL );
     cout << loop.timing();
   }
 

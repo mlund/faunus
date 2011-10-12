@@ -84,6 +84,7 @@ namespace Faunus {
         EquilibriumController eq;                //!< Process controller
         EquilibriumEnergy(InputMap&);
         double i_internal(const p_vec&, int);
+        double g_internal(const p_vec&, Group&);
         int findSites(const p_vec&);
         string info();
     };

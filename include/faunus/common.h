@@ -14,6 +14,7 @@
 #include <cassert>
 #include <complex>
 #include <map>
+#include <set>
 #endif
 
 namespace Faunus {
@@ -40,7 +41,6 @@ namespace Faunus {
   namespace Energy {
     class Energybase;
     class EqEnergy;
-    class ParticleBonds;
     class Bondbase;
     class HarmonicBond;
   }

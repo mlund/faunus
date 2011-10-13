@@ -55,12 +55,12 @@ namespace Faunus {
           string info() {
             using namespace Faunus::textio;
             std::ostringstream o;
-            o << header(name) << indent(SUB) << std::left
+            o << indent(SUBSUB) << std::left
               << setw(7) << "i" << setw(7) << "j" << endl;
             for (auto i : list)
               for (auto j : list[i.first])
                 if (i.first < j.first)
-                  o << indent(SUB) << std::left << setw(7) << i.first
+                  o << indent(SUBSUB) << std::left << setw(7) << i.first
                     << setw(7) << j.first << j.second->info() << endl;
             return o.str();
           }

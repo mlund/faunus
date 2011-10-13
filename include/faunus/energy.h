@@ -4,7 +4,6 @@
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/group.h>
-#include <faunus/species.h>
 #include <faunus/textio.h>
 #include <faunus/bonded.h>
 
@@ -26,8 +25,8 @@ namespace Faunus {
         Energybase();
         virtual ~Energybase();
 
-        Geometry::Geometrybase& getGeometry(); //!< Return reference to Geometrybase used for interactions
-        void setGeometry( Geometry::Geometrybase& ); //!< Set Geometrybase
+        virtual Geometry::Geometrybase& getGeometry(); //!< Return reference to Geometrybase used for interactions
+        bool setGeometry( Geometry::Geometrybase& ); //!< Set Geometrybase
 
         // interaction with external particle
         virtual double p2p(const particle&, const particle&);
@@ -52,7 +51,7 @@ namespace Faunus {
         virtual double v2v(const p_vec&, const p_vec&);
 
         virtual string info();
-    };
+     };
 
     template<class Tpotential>
       class Nonbonded : public Energybase {
@@ -61,6 +60,11 @@ namespace Faunus {
           Nonbonded(InputMap &in) : pair(in) {
             name="Nonbonded N" + textio::squared + " - " + pair.name;
             geo=&pair.geo;
+          }
+
+          Geometry::Geometrybase& getGeometry() {
+            geo=&pair.geo;
+            return Energybase::getGeometry();
           }
 
           inline double p2p(const particle &a, const particle &b) {
@@ -157,23 +161,23 @@ namespace Faunus {
         using Nonbonded<Tpotential>::geo;
         using Nonbonded<Tpotential>::name;
         public:
-          double cut;
-          Nonbonded_CG(InputMap &in) : Nonbonded<Tpotential>(in) {
-            name+="(Molecular Group CG)";
-          }
+        double cut;
+        Nonbonded_CG(InputMap &in) : Nonbonded<Tpotential>(in) {
+          name+="(Molecular Group CG)";
+        }
 
-          double g2g(const p_vec &p, Group &g1, Group &g2) {
-            if (g1.id==Group::MOLECULAR) {
-              if (g2.id==Group::MOLECULAR) {
-                if ( geo->sqdist(g1.cm_trial, g2.cm_trial) > cut*cut ) {
-                  const Molecular& m1 = static_cast<const Molecular&>(g1);
-                  const Molecular& m2 = static_cast<const Molecular&>(g2);
-                  return 0; // v2v(m1.cg, m2.cg)
-                }
+        double g2g(const p_vec &p, Group &g1, Group &g2) {
+          if (g1.id==Group::MOLECULAR) {
+            if (g2.id==Group::MOLECULAR) {
+              if ( geo->sqdist(g1.cm_trial, g2.cm_trial) > cut*cut ) {
+                const Molecular& m1 = static_cast<const Molecular&>(g1);
+                const Molecular& m2 = static_cast<const Molecular&>(g2);
+                return 0; // v2v(m1.cg, m2.cg)
               }
             }
-            return Nonbonded<Tpotential>::g2g(p,g1,g2);
           }
+          return Nonbonded<Tpotential>::g2g(p,g1,g2);
+        }
       };
 
     //or simply add pointer to nonbonded<T>
@@ -192,6 +196,7 @@ namespace Faunus {
         Faunus::Energy::ParticleBonds bonds;
         double i_internal(const p_vec &p, int i);
         double g_internal(const p_vec &p, Group &g);
+        string info();
     };
 
     /*!
@@ -200,12 +205,15 @@ namespace Faunus {
      * \date Lund, 2011
      */
     class Hamiltonian : public Energybase {
-      protected:
-        vector<Energybase*> baselist;
-
+      private:
+        vector<Energybase*> created; //!< track created energy classes for later destruction
       public:
+        vector<Energybase*> baselist;
+        ~Hamiltonian();
+        void clear();
         template<typename T> T* create(T p) {
-          auto t=new T(p);
+          T* t = new T(p);
+          created.push_back(t);
           add(*t);
           return t;
         }

@@ -3,7 +3,6 @@
 
 #include <faunus/common.h>
 #include <faunus/average.h>
-#include <faunus/bonded.h>
 
 namespace Faunus {
   class Group {

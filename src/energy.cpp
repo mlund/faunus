@@ -1,6 +1,6 @@
 #include <faunus/common.h>
 #include <faunus/point.h>
-#include <faunus/group.h>
+//#include <faunus/group.h>
 #include <faunus/energy.h>
 #include <faunus/textio.h>
 
@@ -12,8 +12,9 @@ namespace Faunus {
 
     Energybase::~Energybase() {}
 
-    void Energybase::setGeometry(Geometry::Geometrybase &g) {
+    bool Energybase::setGeometry(Geometry::Geometrybase &g) {
       geo=&g;
+      return true;
     }
 
     Geometry::Geometrybase& Energybase::getGeometry() {
@@ -51,7 +52,7 @@ namespace Faunus {
     }
 
     Bonded::Bonded() {
-      name="Bonded";
+      name="Bonded Particles";
       geo=NULL;
     }
 
@@ -68,19 +69,39 @@ namespace Faunus {
       return bonds.totalEnergy(*geo, p, g);
     }
 
+    string Bonded::info() {
+      std::ostringstream o;
+      o << Energybase::info() << bonds.info();
+      return o.str();
+    }
+
+    Hamiltonian::~Hamiltonian() {
+      clear();
+    }
+
+    void Hamiltonian::clear() {
+      for (auto &bPtr : created)
+        delete bPtr;
+      created.clear();
+      baselist.clear();
+    }
 
     /*!
      * This adds an Energybase class to the Hamiltonian. If the geometry of the
      * added class is undefined it will get the current geometry of the Hamiltonian.
-     * If the geometry of the added energybase is defined, this geometry is copied to
-     * the Hamiltonian.
+     * If the geometry of the added energybase is defined, and the Hamiltonian is empty, the added
+     * geometry is copied to the Hamiltonian.
      */
     void Hamiltonian::add(Energybase &e) {
-      assert(&e!=NULL);
-      if (&e.getGeometry()!=NULL)
-        geo=&e.getGeometry();
-      else
+      if (&e.getGeometry()==NULL) {
+        if (baselist.empty()) {
+          cerr << "Error! First energybase class must have a well defined geometry!\n";
+          return;
+        }
         e.setGeometry(*geo);
+      }
+      else if (geo==NULL)
+        geo = &e.getGeometry();
       baselist.push_back(&e);
     }
 

@@ -35,8 +35,6 @@ namespace Faunus {
   */
 
   bool InputMap::include(string filename) {
-    const short maxline=256;
-    char cstr[maxline];
     string line,key,val;
     std::ifstream f( filename.c_str() );
     if (f) {
@@ -108,7 +106,7 @@ namespace Faunus {
 
   int inputfile::findKey(string &key) {
     record_call(key);
-    for (int i=0; i<matrix.size(); i++)
+    for (size_t i=0; i<matrix.size(); i++)
       if (matrix[i].name.compare(key)==0) return i;
     return -1;
   }
@@ -173,8 +171,8 @@ namespace Faunus {
 
   void inputfile::record_call(string key) {
     bool newcall=true;
-    for (int i=0; i<calls.size(); i++)
-      if (calls[i].compare(key)==0) {
+    for (auto &ci : calls)
+      if (ci.compare(key)==0) {
         newcall=false;
         break;
       }
@@ -188,7 +186,7 @@ namespace Faunus {
       << "# INPUT FILE INFORMATION:\n"
       << "#   Config file = " << file << "\n"
       << "#   Accessed parameters:\n";
-    for (int i=1; i<=calls.size(); i++) {
+    for (size_t i=1; i<=calls.size(); i++) {
       if ( i%2!=0) o << "#   ";
       o << std::setw(19) << std::left << calls[i-1]
         << std::setw(19) << getstr(calls[i-1], "n/a");
@@ -216,9 +214,9 @@ namespace Faunus {
   string inputfile::print() {
     std::ostringstream o;
     //o <<"\n";
-    for (int i=0; i<matrix.size(); i++) {
+    for (size_t i=0; i<matrix.size(); i++) {
       o <<matrix[i].name;
-      for (int j=0; j<matrix[i].val.size(); j++)
+      for (size_t j=0; j<matrix[i].val.size(); j++)
         o <<"   "<<matrix[i].val[j];
       o <<"\n";
     }
@@ -260,7 +258,7 @@ namespace Faunus {
       add(name, val);
       std::ofstream f( file.c_str() );
       if (f) {
-        for (int i=0; i<matrix.size(); i++)
+        for (size_t i=0; i<matrix.size(); i++)
           f << matrix[i].name << " " << matrix[i].val[0] << std::endl;
         f.close();
       }
@@ -295,7 +293,7 @@ namespace Faunus {
   }
 
   int UnitTest::returnCode() {
-    for (int i=0; i<result.size(); i++)
+    for (size_t i=0; i<result.size(); i++)
       if (result[i]==false) return 1;
     return 0;
   }
@@ -304,10 +302,10 @@ namespace Faunus {
     std::ostringstream o;
     unsigned int numerr = 0;
 #ifdef __SUNPRO_CC
-    for (int i=0; i<result.size(); i++)
+    for (size_t i=0; i<result.size(); i++)
       if (result[i]==false) numerr++;
 #else
-    for (int i=0; i<result.size(); i++)
+    for (size_t i=0; i<result.size(); i++)
       if (result[i]==false) numerr++;
     //numerr = std::count( result.begin(), result.end(), false);  
 #endif

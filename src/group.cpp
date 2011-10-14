@@ -13,6 +13,8 @@ namespace Faunus {
    *                GROUP
    * -----------------------------------*/
 
+  Group::~Group() {}
+
   Group::Group(int first, int last) : beg(first), end(last) {
     id=GROUP;
   }

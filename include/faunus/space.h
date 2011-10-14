@@ -18,13 +18,14 @@ namespace Faunus {
       vector<Group*> g;                          //!< Pointers to all groups in the system.
 
       Space(Geometry::Geometrybase&);
-      virtual ~Space() {};
+      virtual ~Space();
+
       virtual bool save(string);                      //!< Save container state to disk
       virtual bool load(string, bool=false);          //!< Load container state from disk
 
       bool insert(particle, int=-1);                  //!< Insert particle at pos n.
       bool insert(string, int, spacekeys=NOOVERLAP); 
-      bool remove(unsigned int);                      //!< Remove particle n.
+      bool remove(int);                               //!< Remove particle n.
       int enroll(Group&);                             //!< Add group pointer to g vector
 
       bool overlap(const particle&) const;            //!< Check for hardspheres overlap with particle

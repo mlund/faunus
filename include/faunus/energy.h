@@ -13,7 +13,6 @@
 using namespace std;
 
 namespace Faunus {
-
   namespace Energy {
 
     class Energybase {
@@ -24,7 +23,6 @@ namespace Faunus {
 
         Energybase();
         virtual ~Energybase();
-
         virtual Geometry::Geometrybase& getGeometry(); //!< Return reference to Geometrybase used for interactions
         bool setGeometry( Geometry::Geometrybase& ); //!< Set Geometrybase
 
@@ -40,7 +38,7 @@ namespace Faunus {
         virtual double i_external(const p_vec&, int);
         virtual double i_internal(const p_vec&, int);
         virtual double p_external(const particle&);
-        double i_total(const p_vec&, int); //!< total energy of i'th particle (i2all+i_external+i_internal)
+        double i_total(const p_vec&, int); //!< Total energy = i2all + i_external + i_internal
 
         // Group interactions
         virtual double g2g(const p_vec&, Group&, Group&);
@@ -107,9 +105,10 @@ namespace Faunus {
 
           double i2all(const p_vec &p, int i) {
             double u=0;
+            int n=(int)p.size();
             for (int j=0; j<i; ++j)
               u+=pair.pairpot( p[i], p[j] );
-            for (int j=i+1; j<p.size(); ++j)
+            for (int j=i+1; j<n; ++j)
               u+=pair.pairpot( p[i], p[j] );
             return u*pair.tokT;
           }

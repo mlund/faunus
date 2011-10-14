@@ -14,6 +14,8 @@ namespace Faunus {
     geo=&geoPtr;
   }
 
+  Space::~Space() {}
+
   double Space::charge() const {
     double z=0;
     for (auto &p_i : p)
@@ -26,7 +28,7 @@ namespace Faunus {
     assert(p==trial);
     bool rc=false;
     if (p.size()==trial.size())
-      for (unsigned short i=0; i<p.size(); i++) {
+      for (size_t i=0; i<p.size(); i++) {
         if (p[i].x!=trial[i].x ||
             p[i].y!=trial[i].y ||
             p[i].z!=trial[i].z ||
@@ -46,7 +48,7 @@ namespace Faunus {
    * \param i Position in particle vector
    */
   bool Space::insert(particle a, int i) {
-    if ( i==-1 || i>p.size() )
+    if ( i==-1 || i>(int)p.size() )
       i=p.size();
     p.insert(p.begin()+i, a);
     trial.insert(trial.begin()+i, a);
@@ -82,16 +84,16 @@ namespace Faunus {
     return false;
   }
 
-  bool Space::remove(unsigned int i) {
-    if (i>=p.size())
+  bool Space::remove(int i) {
+    if (i>=(int)p.size())
       return false;
     p.erase( p.begin()+i );
     trial.erase( trial.begin()+i );
-    for (int j=0; j<g.size(); j++) {  // move and reduce groups if appropriate
-      if ( i<g[j]->beg )
-        g[j]->beg--;
-      if (i<=g[j]->end)
-        g[j]->end--;
+    for (auto gj : g) { //for size_t j=0; j<g.size(); j++) {  // move and reduce groups if appropriate
+      if ( i<gj->beg )
+        gj->beg--;
+      if (i<=gj->end)
+        gj->end--;
     }
     return true;
   }
@@ -117,14 +119,14 @@ namespace Faunus {
    * \param resize True if the current geometry should be resized to match file content (default: false)
    */
   bool Space::load(string file, bool resize) {
-    unsigned int n;
+    int n;
     fin.close();
     fin.open( file.c_str() );
     if (fin) {
       fin >> n;
       if (resize==true)
         p.resize(n);
-      if (n==p.size()) {
+      if (n == (int)p.size() ) {
         for (int i=0; i<n; i++)
           p[i] << fin;
         trial=p;
@@ -143,7 +145,7 @@ namespace Faunus {
   }
 
   int Space::enroll(Group &newgroup) {
-    for (int i=0; i<g.size(); ++i)
+    for (size_t i=0; i<g.size(); ++i)
       if (g[i]==&newgroup)
         return i;
     g.push_back(&newgroup);

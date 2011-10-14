@@ -25,11 +25,14 @@ namespace Faunus {
      *       possible. This is usually a problem only for inner loop distance calculations.
      *       To get optimum performance in inner loops use a derived class directly and do
      *       static compile-time polymorphism.
+     * \todo Migrate to NVI (Nonvirtual Interface) pattern -- see "C++ Coding Standards", p.68
      */
     class Geometrybase {
+      private:
+        virtual string _info(char)=0;
       protected:
         slump slp;
-        double volume;                               //!< Volume of the container [AA^3]
+        double volume;                                      //!< Volume of the container [AA^3]
         string name;                                        //!< Name of the geometry
       public:
         enum collisiontype {BOUNDARY,ZONE};                 //!< Types for collision() function
@@ -39,13 +42,13 @@ namespace Faunus {
         virtual void randompos(point &)=0;                   //!< Random point within container
         virtual void boundary(point &) const=0;              //!< Apply boundary conditions to a point
         virtual void scale(point&, const double&) const;     //!< Scale point to a new volume - for NPT ensemble
-        virtual double dist(const point&,const point&);      //!< Distance between two points
+        double dist(const point&,const point&);      //!< Distance between two points
         virtual double sqdist(const point &a, const point &b)=0;
         virtual point vdist(const point&, const point&)=0;
-        virtual string info(char);                          //!< Return info string
+        string info(char=20);                               //!< Return info string
         bool save(string);                                  //!< Save container state to disk
         bool load(string,bool=false);                       //!< Load container state from disk
-        virtual ~Geometrybase() {};
+        virtual ~Geometrybase();
     };
 
     /*! \brief Spherical geometry
@@ -62,7 +65,7 @@ namespace Faunus {
         double r;              //!< Radius
         Sphere(double);
         Sphere(InputMap&);
-        string info(char);
+        string _info(char);
         void setvolume(double);
         void randompos(point &);
         void boundary(point &) const;
@@ -89,6 +92,8 @@ namespace Faunus {
      *  can be used to make sure space are positioned within in the slice.
      */
     class Cuboid : public Geometrybase {
+      private:
+        string _info(char);                       //!< Return info string
       protected:
         bool setslice(point, point);             //!< Reset slice position
         point len_inv;                    //!< Inverse sidelengths
@@ -99,7 +104,6 @@ namespace Faunus {
         point len;                        //!< Sidelengths
         point len_half;                   //!< Half sidelength
         point slice_min, slice_max;              //!< Position of slice corners
-        string info(char);                       //!< Return info string
         point randompos();                       //!< Get point with random position
         void randompos(point &);                 //!< Move point to random position
         bool save(string);                       //!< Save container state to disk
@@ -195,6 +199,7 @@ namespace Faunus {
      */
     class Cylinder : public Geometrybase {
       private:
+        string _info(char); //!< Cylinder info
         double halflen;
         double r2;    //!< Cylinder radius squared
         void init(double,double);
@@ -206,7 +211,6 @@ namespace Faunus {
         Cylinder(InputMap &);
         void randompos(point &);
         bool collision(const particle&, collisiontype=BOUNDARY);
-        string info(char); //!< Cylinder info
         inline double sqdist(const point &a, const point &b) {
           register double dx,dy,dz;
           dx=a.x-b.x;
@@ -224,9 +228,9 @@ namespace Faunus {
     class hyperSphere : public Sphere {
       private:
         const double pi;
+        string _info(char);
       public:
         hyperSphere(InputMap&);
-        string info(char);
         void randompos(point &);
         bool collision(const particle &, collisiontype=BOUNDARY);
 

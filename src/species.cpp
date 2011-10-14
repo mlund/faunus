@@ -95,7 +95,7 @@ namespace Faunus {
       << pad(SUB,w,"Number of species") << list.size() << endl
       << pad(SUB,w,"Parameter file") << filename << endl
       << indent(SUB) << "Species:";
-    for (int i=0; i<list.size(); i++) {
+    for (size_t i=0; i<list.size(); i++) {
       if (i%10==0)
         o << endl << indent(SUBSUB);
       o << setw(SUBSUB) << std::left << list[i].name;

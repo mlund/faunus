@@ -192,7 +192,6 @@ namespace Faunus {
 
     string Hamiltonian::info() {
       using namespace textio;
-      char w=25;
       std::ostringstream o;
       o << Energybase::info();
       o << indent(SUB) << "Registered Energy Functions:"<< endl;

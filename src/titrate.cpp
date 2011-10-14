@@ -101,8 +101,8 @@ namespace Faunus {
 
       // update reference states
       short i_AX,i_A, j_AX, j_A;
-      for (int i=0; i<process.size()-1; i++) {
-        for (int j=i+1; j<process.size(); j++) {
+      for (size_t i=0; i<process.size()-1; i++) {
+        for (size_t j=i+1; j<process.size(); j++) {
           i_AX = process[i].id_AX;
           i_A  = process[i].id_A;
           j_AX = process[j].id_AX;
@@ -124,10 +124,10 @@ namespace Faunus {
     void EquilibriumController::findSites(const p_vec &p) {
       q.clear();
       sites.clear();
-      for (int j=0; j<process.size(); j++)
+      for (size_t j=0; j<process.size(); j++)
         process[j].cnt=0;
-      for (int i=0; i<p.size(); i++)
-        for (int j=0; j<process.size(); j++)
+      for (size_t i=0; i<p.size(); i++)
+        for (size_t j=0; j<process.size(); j++)
           if ( process[j].one_of_us( p[i].id )) {
             sites.push_back(i);
             process[j].cnt++;
@@ -205,7 +205,7 @@ namespace Faunus {
         << setw(w) << "N"
         << setw(12) << bracket("Z") << endl
         << indent(SUB) << string(70,'-') << endl;
-      for (int i=0; i<process.size(); i++) {
+      for (size_t i=0; i<process.size(); i++) {
         o << indent(SUB)
           << setw(5) << atom[process[i].id_AX].name
           << setw(5) << "<-> " << setw(5) << std::left
@@ -299,6 +299,8 @@ namespace Faunus {
       spc->trial[ipart] = spc->p[ipart];
     }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
     double SwapMove::move() {
       if (!run())
         return 0;
@@ -308,6 +310,7 @@ namespace Faunus {
       eqpot.eq.sampleCharge(spc->p);
       return du;
     }
+#pragma GCC diagnostic pop
 
     double SwapMove::totalEnergy() {
       double u=0;

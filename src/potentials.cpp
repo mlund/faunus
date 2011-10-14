@@ -23,48 +23,48 @@ namespace Faunus {
      */
     namespace Core {
 
-      hardsphere::hardsphere(double infinity) {
-        name="hardsphere";
+      HardSphere::HardSphere(double infinity) {
+        name="Hardsphere";
         inf=infinity;
       }
 
-      lennardjones::lennardjones() {
+      LennardJones::LennardJones() {
         name="Lennard-Jones";
         tokT=1;
       }
 
-      string lennardjones::info(char w) {
+      string LennardJones::info(char w) {
         std::ostringstream o;
         return o.str();
       }
 
-      squarewell::squarewell(InputMap &in, string prefix) {
+      SquareWell::SquareWell(InputMap &in, string prefix) {
         name="Square Well";
         threshold = in.get<double>(prefix+"_threshold", 0);
         depth     = in.get<double>(prefix+"_depth", 0);
       }
 
-      string squarewell::info(char w) {
+      string SquareWell::info(char w) {
         std::ostringstream o;
         o << pad(SUB,w,"Threshold") << threshold << " "+angstrom << endl;
         o << pad(SUB,w,"Depth") << depth << kT << endl;
         return o.str();
       }
 
-      coulomb::coulomb(InputMap &in) {
+      Coulomb::Coulomb(InputMap &in) {
         name="Coulomb";
         pc::T=in.get<double>("temperature", 298.15);
         lB=pc::lB( in.get<double>("epsilon_r",80.) );
         tokT=lB;
       }
 
-      string coulomb::info(char w) {
+      string Coulomb::info(char w) {
         std::ostringstream o;
         o << pad(SUB,w,"Bjerrum length") << lB << " "+angstrom << endl;
         return o.str();
       }
 
-      debyehuckel::debyehuckel(InputMap &in) : coulomb(in) {
+      DebyeHuckel::DebyeHuckel(InputMap &in) : Coulomb(in) {
         double I;
         const double zero=1e-10;
         name="Debye-Huckel";
@@ -76,19 +76,19 @@ namespace Faunus {
         k=-k;
       }
 
-      double debyehuckel::ionic_strength() const {
+      double DebyeHuckel::ionicStrength() const {
         return k*k/c;
       } //!< in [mol/l]
 
-      double debyehuckel::debye_length() const {
+      double DebyeHuckel::debyeLength() const {
         return -1/k;
       } //!< in [A]
 
-      string debyehuckel::info(char w) {
+      string DebyeHuckel::info(char w) {
         std::ostringstream o;
-        o << coulomb::info(w);
-        o << pad(SUB,w,"Ionic strength") << ionic_strength() << " mol/l" << endl;
-        o << pad(SUB,w,"Debye length, 1/\u03BA") << debye_length() << " "+angstrom << endl;
+        o << Coulomb::info(w);
+        o << pad(SUB,w,"Ionic strength") << ionicStrength() << " mol/l" << endl;
+        o << pad(SUB,w,"Debye length, 1/\u03BA") << debyeLength() << " "+angstrom << endl;
         return o.str();
       }
 

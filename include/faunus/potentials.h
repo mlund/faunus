@@ -28,21 +28,21 @@ namespace Faunus {
           double tokT;
       };
 
-      class hardsphere : public potbase {
+      class HardSphere : public potbase {
         private:
           double inf;
         public:
-          hardsphere(double=1e14);
+          HardSphere(double=1e14);
           inline double u_hs(const double &r2, const double &mindist) const {
             return (mindist*mindist>r2) ? 0 : inf;
           }
       };
 
-      class lennardjones : public potbase {
+      class LennardJones : public potbase {
         protected:
           double eps;
         public:
-          lennardjones();
+          LennardJones();
           inline double r6(const double &r2, const double &sigma) const {
             double x=sigma*sigma/r2;  // 2
             return x*x*x;             // 6
@@ -58,53 +58,51 @@ namespace Faunus {
           string info(char);
       };
 
-      class squarewell : public potbase {
+      class SquareWell : public potbase {
         public:
           double threshold; //!< Threshold between particle *surface* [A]
           double depth;     //!< Energy depth [kT]
-          squarewell(InputMap&, string="squarewell");
-          inline double u_squarewell(const double &r, const double &radius1, const double &radius2) const {
+          SquareWell(InputMap&, string="SquareWell");
+          inline double u(const double &r, const double &radius1, const double &radius2) const {
             return (r-radius1-radius2<threshold) ? depth : 0;
           }
 
           string info(char);
       };
 
-      class coulomb : public potbase {
+      class Coulomb : public potbase {
         protected:
           double lB; //!< Bjerrum length [A]
         public:
-          coulomb(InputMap &);
+          Coulomb(InputMap &);
           inline double u(const double &r, const double &zz) const { return zz/r; }
           string info(char);
       };
 
-      class debyehuckel : public coulomb {
+      class DebyeHuckel : public Coulomb {
         protected:
           double c,k;
         public:
-          debyehuckel(InputMap&);
-          double ionic_strength() const;
-          double debye_length() const;
-          inline double u(const double &r, const double &zz) const {
-            return zz/r * exp(k*r);
-          }
+          DebyeHuckel(InputMap&);
+          double ionicStrength() const;
+          double debyeLength() const;
+          inline double u(const double &r, const double &zz) const { return zz/r * exp(k*r); }
           string info(char);
       };
 
     } //end of Core namespace
 
-    template<class Tgeometry, class Tcoulomb=Core::coulomb>
-      class coulomb_lj {
+    template<class Tgeometry, class Tcoulomb=Core::Coulomb>
+      class CoulombLJ {
         protected:
-          Core::lennardjones lj;
+          Core::LennardJones lj;
           Tcoulomb el;
           const double eps;
         public:
           string name; //!< Single line describing the potential
           Tgeometry geo;
           double tokT;
-          coulomb_lj(InputMap &in) : el(in), eps(4*in.get<double>("lj_eps",0.04)/el.tokT), geo(in) {
+          CoulombLJ(InputMap &in) : el(in), eps(4*in.get<double>("lj_eps",0.04)/el.tokT), geo(in) { 
             tokT=el.tokT;
             name=lj.name+"+"+el.name;
           }
@@ -121,15 +119,15 @@ namespace Faunus {
           }
       };
 
-    template<class Tgeometry, class Tcoulomb=Core::coulomb>
-      class coulomb_hs {
+    template<class Tgeometry, class Tcoulomb=Core::Coulomb>
+      class CoulombHS {
         protected:
           Tcoulomb el;
         public:
           string name; //!< Single line describing the potential
           const double infty;
           double tokT;
-          coulomb_hs(InputMap &in) : el(in), infty(1e10) {
+          CoulombHS(InputMap &in) : el(in), infty(1e10) {
             name="Hardsphere + " + el.name;
             tokT=el.tokT;
           }

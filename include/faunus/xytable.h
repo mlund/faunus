@@ -239,7 +239,7 @@ namespace Faunus {
             f.precision(6);
             f << "% xytable2 dump: tablesize, xmin, xres, xmax; ydata" << endl;
             f << y.size() << " " << xmin << " " << xres << " " << xmax() << endl;
-            for (int i=0; i<y.size(); i+=1) {
+            for (size_t i=0; i<y.size(); i+=1) {
               f << y[i] << endl; 
             }
             f.close();
@@ -264,7 +264,7 @@ namespace Faunus {
             getline(f,s);
             f >> n >> xmin >> xres;
             y.resize(n);
-            for (int i=0; i<y.size(); i+=1) {
+            for (size_t i=0; i<y.size(); i+=1) {
               f >> y[i];
             }
             f.close();

@@ -11,6 +11,8 @@ namespace Faunus {
 
     using namespace Faunus::textio;
 
+    Geometrybase::~Geometrybase() {}
+
     double Geometrybase::dist(const point &p1, const point &p2) {
       return sqrt(sqdist(p1,p2));
     }
@@ -20,7 +22,8 @@ namespace Faunus {
 
     string Geometrybase::info(char w) {
       std::ostringstream o;
-      o << pad(SUB,w, "Boundary") << name << endl;
+      o << pad(SUB,w, "Boundary") << name << endl
+        << _info(w);
       return o.str();
     }
 
@@ -86,9 +89,9 @@ namespace Faunus {
       setradius( pow( 3*vol/(4*pc::pi), 1/3.) );
     }
 
-    string Sphere::info(char w) {
+    string Sphere::_info(char w) {
       std::ostringstream o;
-      o << Geometrybase::info(w) << pad(SUB,w,"Radius") << r << endl;
+      o << pad(SUB,w,"Radius") << r << endl;
       return o.str();
     }
 
@@ -180,10 +183,9 @@ namespace Faunus {
       return true;
     }
 
-    string Cuboid::info(char w) {
+    string Cuboid::_info(char w) {
       std::ostringstream o;
-      o << Geometrybase::info(w)
-        << pad(SUB,w, "Sidelengths") << len.x << " x " << len.y << " x " << len.z << endl
+      o << pad(SUB,w, "Sidelengths") << len.x << " x " << len.y << " x " << len.z << endl
         << pad(SUB,w, "Slice position [x y z]")
         << len_half.x-slice_max.x << "-" << len_half.x-slice_min.x << " " 
         << len_half.y-slice_max.y << "-" << len_half.y-slice_min.y << " "
@@ -306,11 +308,10 @@ namespace Faunus {
         ( a.x*a.x+a.y*a.y>r2 || ( a.z<-halflen || a.z>halflen ) ) ? true:false;
     }
 
-    string Cylinder::info(char w) {
+    string Cylinder::_info(char w) {
       std::ostringstream o;
-      o << Geometrybase::info(w);
-      o << pad(SUB,w, "Length (A)") << len << endl;
-      o << pad(SUB,w, "Radius (A)") << r << endl;
+      o << pad(SUB,w, "Length (A)") << len << endl
+        << pad(SUB,w, "Radius (A)") << r << endl;
       return o.str();
     }
 
@@ -335,10 +336,9 @@ namespace Faunus {
       m.z4=rho*cos(fi);
     }
 
-    string hyperSphere::info() {
+    string hyperSphere::_info() {
       std::ostringstream o;
-      o << Geometrybase::info() 
-        << "#   Shape                = Hyperspherical" << endl
+      o << "#   Shape                = Hyperspherical" << endl
         << "#   Radius               = " << r << endl;
       return o.str();
     }

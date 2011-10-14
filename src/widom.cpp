@@ -139,23 +139,23 @@ namespace Faunus {
       for(int i=0; i < ghostin; i++) {
         c.geo->randompos(ghost);
         int goverlap=0;
-        for(int k=0; k < g.size(); k++) {
+        for(size_t k=0; k < g.size(); k++) {
           ghost.radius = g[k].radius;
           irej[k]=0;
           int j=0;
-          while(!overlap(ghost,c.p[j],c) && j<c.p.size())
+          while(!overlap(ghost,c.p[j],c) && j<(int)c.p.size())
             j++;
-          if(j != c.p.size()) {
+          if( j != (int)c.p.size()) {
             ihc[k]++;
             irej[k]=1;
             goverlap++;
           }
         }
 
-        if(goverlap!=g.size()) {
+        if ( goverlap != (int)g.size() ) {
           cu=0.;
           u=0.;  //el. potential
-          for(int l=0; l < c.p.size(); l++) {
+          for (size_t l=0; l < c.p.size(); l++) {
             double invdi=1./c.geo->dist(ghost,c.p[l]);
             cu+=invdi;
             u+=invdi*c.p[l].charge;
@@ -163,7 +163,7 @@ namespace Faunus {
           cu=cu*lB;
           u=u*lB;
           double ew,ewla,ewd;
-          for(int k=0; k < g.size(); k++) {
+          for(size_t k=0; k < g.size(); k++) {
             if(irej[k]==0) {
               expuw[k]+=exp(-u*g[k].charge);
               for(int cint=0; cint<11; cint++) {
@@ -182,7 +182,7 @@ namespace Faunus {
     string WidomScaled::info() {
       std::ostringstream o;
       double aint4,aint2,aint1;
-      for(int i=0; i<g.size(); i++) {
+      for(size_t i=0; i<g.size(); i++) {
         for(int cint=0; cint<11; cint++) {
           if(ewden[i][cint]==0)
             std::cout << "# WARNING: Widom denominator equals zero" << endl;
@@ -203,7 +203,7 @@ namespace Faunus {
         << "#   Number of Insertions = " << cnttot << endl
         << "#   Excess chemical potentials (kT):" << endl
                                                      << "#           total   elec.  hs            z       r"<< endl;
-      for(int i=0; i < g.size(); i++) {
+      for (size_t i=0; i < g.size(); i++) {
         chhc[i]=-log(double(cnttot-ihc[i])/cnttot);
         chexw[i]=-log(expuw[i]);
         chex[i]=chhc[i]+chel[i];

@@ -40,7 +40,7 @@ namespace Faunus {
       const Group operator+(const Group&) const;
       friend std::ostream &operator<<(std::ostream&, Group&);  //!< Output Group data to stream
       virtual Group &operator<<(std::istream &);               //!< Get Group data from stream
-      virtual ~Group() {};
+      virtual ~Group();
   };
 
   /*!

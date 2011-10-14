@@ -187,7 +187,7 @@ namespace Faunus {
     double ParticleTranslation::totalEnergy() {
       if (iparticle>-1)
         return pot->i_total(spc->p, iparticle);
-      double u;
+      double u=0;
       if (igroup!=NULL) {
         u = pot->g2all(spc->p, *igroup) + pot->g_internal(spc->p, *igroup);
         for (int i=igroup->beg; i<=igroup->end; ++i)

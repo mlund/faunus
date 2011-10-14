@@ -3,7 +3,7 @@
 using namespace Faunus;
 
 typedef Geometry::Cuboid Tgeometry;                // select simulation geometry
-typedef Potential::coulomb_lj<Tgeometry> Tpairpot; // select particle-particle pairpotential
+typedef Potential::CoulombLJ<Tgeometry> Tpairpot; // select particle-particle pairpotential
 
 template<class T>
 class distributions {

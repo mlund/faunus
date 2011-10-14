@@ -101,11 +101,11 @@ namespace Faunus {
    * \note Uses the container function to calculate distances
    */
   void rdf::update(Space &c) {
-    int n=c.p.size();
+    size_t n=c.p.size();
     npart=0;
 #pragma omp parallel for schedule (dynamic)
-    for (int i=0; i<n-1; i++)
-      for (int j=i+1; j<n; j++) 
+    for (size_t i=0; i<n-1; i++)
+      for (size_t j=i+1; j<n; j++) 
         if ( (c.p[i].id==a && c.p[j].id==b)
             || (c.p[j].id==a && c.p[i].id==b) ) {
           npart++;
@@ -157,9 +157,19 @@ namespace Faunus {
    */
 
   profile::profile(float min, float max, float res) :
-    xytable<float,unsigned long int>(res,min,max) { cnt=0; }
-  float profile::conc(float x) { return ((*this)(x)>0) ? (*this)(x)/(cnt*volume(x)) : 0; }
-  void profile::update(p_vec &p) { for (int i=0; i<p.size(); i++) add(p[i]); }
+    xytable<float,unsigned long int>(res,min,max) {
+      cnt=0;
+    }
+
+  float profile::conc(float x) {
+    return ((*this)(x)>0) ? (*this)(x)/(cnt*volume(x)) : 0;
+  }
+
+  void profile::update(p_vec &p) {
+    for (auto &pi : p) 
+      add(pi);
+  }
+
   bool profile::write(string name) {
     io fio;
     std::ostringstream o;
@@ -205,7 +215,11 @@ namespace Faunus {
     cnt++ ;
     (*this)(sqrt(pow(p.x-o.x,2)+pow(p.y-o.y,2)))++; 
   }
-  void  radial_profile::update(p_vec &p) { for (int i=0; i<p.size(); i++) add(p[i]); }
+  void  radial_profile::update(p_vec &p) {
+    for (auto &pi : p)
+      add(pi);
+  }
+
   bool  radial_profile::write(string name) {
     io fio;
     std::ostringstream o;

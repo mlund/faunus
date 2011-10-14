@@ -78,8 +78,8 @@ namespace Faunus {
      */
     class HarmonicBond : public Bondbase {
       public:
-        double req; //!< Equilibrium distance (AA)
         double k;   //!< Force constant (kT/AA^2)
+        double req; //!< Equilibrium distance (AA)
         HarmonicBond(double=0, double=0);
         double energy(double) const;
         string info() const;

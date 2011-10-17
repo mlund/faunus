@@ -97,7 +97,7 @@ namespace Faunus {
    * \date Dec. 2007, Prague
    * \todo Use masscenter(con,p) function implemented below.
    */
-  point Group::masscenter(const Space &con) const {
+  point Group::_massCenter(const Space &con) const {
     double sum=0;
     point cm,t,o = con.p.at(beg); // set origo to first particle
     for (int i=beg; i<=end; ++i) {
@@ -110,6 +110,10 @@ namespace Faunus {
     con.geo->boundary(cm);
     assert(sum>0);
     return cm;
+  }
+
+  point Group::massCenter(const Space &con) const {
+    return _massCenter(con);
   }
   
   point Group::dipolemoment(const Space &con) const {

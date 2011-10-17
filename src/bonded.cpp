@@ -27,8 +27,8 @@ namespace Faunus {
     }
 
     double ParticleBonds::totalEnergy(Geometry::Geometrybase &geo, const p_vec &p, int i) {
-      assert(&geo!=NULL);  //debug
-      assert(i<p.size()); //debug
+      assert( &geo!=NULL );  //debug
+      assert( i<(int)p.size() ); //debug
       double u=0;
       for (auto &m2 : pairs::list[i])
         u+=m2.second->energy( geo.dist( p[i], p[m2.first] ) );
@@ -43,8 +43,8 @@ namespace Faunus {
       for (auto &m1 : pairs::list) {
         for (auto &m2 : m1.second ) {
           if ( done.find(m2.first)==done.end() ) {
-            assert(m1.first<p.size()); //debug
-            assert(m2.first<p.size()); //debug
+            assert(m1.first<(int)p.size()); //debug
+            assert(m2.first<(int)p.size()); //debug
             u += m2.second->energy( geo.dist( p[m1.first], p[m2.first] ) );
           }
         }

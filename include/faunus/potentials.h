@@ -71,6 +71,8 @@ namespace Faunus {
       };
 
       class Coulomb : public potbase {
+        private:
+          double temp, epsilon_r;
         protected:
           double lB; //!< Bjerrum length [A]
         public:

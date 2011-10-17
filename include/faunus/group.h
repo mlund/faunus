@@ -8,9 +8,11 @@ namespace Faunus {
   class Group {
     protected:
       virtual std::ostream& write(std::ostream &) const; //!< Write all Group data to stream
+      virtual point _massCenter(const Space&) const;
 
     public:
       enum type {GROUP,ATOMIC,MOLECULAR,CIGAR,HYPER};
+      enum prop {PVEC, TRIALVEC, RECALC};
       type id;
       Group(int=-1, int=-1);
       string info();
@@ -24,8 +26,11 @@ namespace Faunus {
       bool find(int) const;     //!< Check if index is part of group
       vector<Move::Movebase*> moves;    //!< pointers to move functions
 
-      virtual double charge(const p_vec&) const;      //!< Calculate total charge
-      virtual point masscenter(const Space&) const;          //!< Calculate mass center
+      virtual double charge(const p_vec&) const;             //!< Calculate total charge
+
+      point massCenter(const Space&) const;                  //!< Calculate mass center
+      //point getMassCenter(const Space&) const;                  //!< Calculate mass center
+
       virtual point dipolemoment(const Space&) const;        //!< Calculate dipole moment
 
       virtual void rotate(Space&, const point&, double);     //!< Rotate around a vector

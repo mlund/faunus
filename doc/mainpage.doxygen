@@ -1,0 +1,22 @@
+/*! \mainpage Faunus Developer Pages
+Here you will find automatically generated documentation for the C++ classes in the framework.
+Being continuously developed, we do not guarantee that the code nor documentation is correct so please
+check your results carefully!
+
+\section mainclasses Main classes one should know about:
+\subsection doc_container container
+The container class defines the geometry of your simulation (box, sphere, cylinder etc.) and also contains the particle positions. The container knows about the boundary conditions, how to make generate a random position within it and how to calculate distances between particles. Since many functions in container are virtual (and thus slow!) care must be taken not to use these in speed critical inner loops.
+
+\subsection doc_group group
+Groups (and derived classes) simply defines a continuous range of particles in the container particle vector.
+The range is defined by [beg:end]. More advanced derived classes also keep track of the mass center of molecules, dipole moments and various averages related to the group.
+
+\subsection doc_inputfile inputfile
+The inputfile class reads input parameters from a file in the format "keyword value". A range of other classes in Faunus expects an inputfile object in the constructor so as to probe user input.
+
+\subsection doc_interaction energybase
+...is a base class for calculating interaction energies in the system. It is typically used as base for a class template that takes a pair potential as a template type. In this way any given potential is efficiently inlined into all energy loops. The pair potential must match the used geometry of the container.
+
+*/
+
+

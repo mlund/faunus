@@ -13,6 +13,10 @@
 using namespace std;
 
 namespace Faunus {
+
+  /*!
+   * \brief Classes related to energy evaluation, pair potentials, bonds etc.
+   */
   namespace Energy {
 
     class Energybase {
@@ -113,8 +117,6 @@ namespace Faunus {
             return u*pair.tokT;
           }
 
-          double i_internal(const p_vec &p, int i) { return 0; }
-
           double g2g(const p_vec &p, Group &g1, Group &g2) {
             double u=0;
             int ilen=g1.end+1, jlen=g2.end+1;
@@ -185,7 +187,7 @@ namespace Faunus {
         public:
           vector< std::pair<int,int> > pairs;
           Exclusions(InputMap &in) : Nonbonded<Tpotential>(in) {}
-          virtual double i2i(const p_vec &p, int i, int j) { return 0; }
+          //virtual double i2i(const p_vec &p, int i, int j) { return 0; }
       };
 
     class Bonded : public Energy::Energybase {
@@ -210,13 +212,17 @@ namespace Faunus {
         vector<Energybase*> baselist;
         ~Hamiltonian();
         void clear();
-        template<typename T> T* create(T p) {
-          T* t = new T(p);
+
+        template<typename Tenergybase> Tenergybase* create(Tenergybase p) {
+          //! Create energybase and add it to list. Will be destroyed by ~Hamiltonian().
+          Tenergybase* t = new Tenergybase(p);
+          t->getGeometry(); // not pretty...need to update geo pointer for i.e. nonbonded class
           created.push_back(t);
           add(*t);
           return t;
         }
-        void add(Energybase&);
+
+        void add(Energybase&); //!< Add existing energybase to list
         double p2p(const particle&, const particle&);
         double all2p(const p_vec&, const particle&);
         double all2all(const p_vec&);

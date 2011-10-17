@@ -10,6 +10,9 @@ namespace Faunus {
   class InputMap;
   class group;
 
+  /*!
+   * \brief Contain geometry related classes for describing simulation cells
+   */
   namespace Geometry {
 
     /*!
@@ -39,10 +42,10 @@ namespace Faunus {
         double getvolume() const;                           //!< Get volume of container
         virtual void setvolume(double);                     //!< Specify new volume
         virtual bool collision(const particle&, collisiontype=BOUNDARY)=0;//!< Check for collision with boundaries, forbidden zones, matter,..
-        virtual void randompos(point &)=0;                   //!< Random point within container
-        virtual void boundary(point &) const=0;              //!< Apply boundary conditions to a point
-        virtual void scale(point&, const double&) const;     //!< Scale point to a new volume - for NPT ensemble
-        double dist(const point&,const point&);      //!< Distance between two points
+        virtual void randompos(point &)=0;                  //!< Random point within container
+        virtual void boundary(point &) const=0;             //!< Apply boundary conditions to a point
+        virtual void scale(point&, const double&) const;    //!< Scale point to a new volume - for NPT ensemble
+        double dist(const point&,const point&);             //!< Distance between two points
         virtual double sqdist(const point &a, const point &b)=0;
         virtual point vdist(const point&, const point&)=0;
         string info(char=20);                               //!< Return info string
@@ -55,7 +58,7 @@ namespace Faunus {
      *  \author Mikael Lund
      *  \todo Implement space scaling for isobaric ensemble
      *
-     *  This is a Sphere simulation container, surrounded by a hard wall.
+     *  This is a spherical simulation container, surrounded by a hard wall.
      */
     class Sphere : public Geometrybase {
       private:
@@ -93,16 +96,16 @@ namespace Faunus {
      */
     class Cuboid : public Geometrybase {
       private:
-        string _info(char);                       //!< Return info string
+        string _info(char);                      //!< Return info string
       protected:
         bool setslice(point, point);             //!< Reset slice position
-        point len_inv;                    //!< Inverse sidelengths
+        point len_inv;                           //!< Inverse sidelengths
 
       public:
-        Cuboid(InputMap&);                      //!< Read input parameters
-        bool setlen(point);               //!< Reset Cuboid sidelengths
-        point len;                        //!< Sidelengths
-        point len_half;                   //!< Half sidelength
+        Cuboid(InputMap&);                       //!< Read input parameters
+        bool setlen(point);                      //!< Reset Cuboid sidelengths
+        point len;                               //!< Sidelengths
+        point len_half;                          //!< Half sidelength
         point slice_min, slice_max;              //!< Position of slice corners
         point randompos();                       //!< Get point with random position
         void randompos(point &);                 //!< Move point to random position
@@ -190,7 +193,7 @@ namespace Faunus {
     };
 
     /*! \brief Cylindrical simulation container
-     *  \author Mikael Lund/Bjoern Persson
+     *  \author Mikael Lund & Bjoern Persson
      *  \todo Needs some testing
      *
      *  This is a Cylinder container where all walls

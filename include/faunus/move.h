@@ -10,6 +10,9 @@ namespace Faunus {
   class unittest;
   class Energybase;
 
+  /*!
+   * \brief Monte Carlo move related classes
+   */
   namespace Move {
 
     /*!

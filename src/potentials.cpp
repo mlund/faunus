@@ -53,14 +53,18 @@ namespace Faunus {
 
       Coulomb::Coulomb(InputMap &in) {
         name="Coulomb";
-        pc::T=in.get<double>("temperature", 298.15);
-        lB=pc::lB( in.get<double>("epsilon_r",80.) );
+        temp=in.get("temperature", 298.15);
+        epsilon_r=in.get("epsilon_r",80.);
+        pc::T = temp;
+        lB=pc::lB( epsilon_r );
         tokT=lB;
       }
 
       string Coulomb::info(char w) {
         std::ostringstream o;
-        o << pad(SUB,w,"Bjerrum length") << lB << " "+angstrom << endl;
+        o << pad(SUB,w,"Temperature") << temp << " K" << endl
+          << pad(SUB,w,"Dielectric constant") << epsilon_r << endl
+          << pad(SUB,w,"Bjerrum length") << lB << " "+angstrom << endl;
         return o.str();
       }
 

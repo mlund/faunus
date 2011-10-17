@@ -53,7 +53,7 @@ endif()
 #add_subdirectory(unittests)
 #add_subdirectory(legacy/fortran)
 add_subdirectory(src)
-#add_subdirectory(doc EXCLUDE_FROM_ALL)
+add_subdirectory(doc EXCLUDE_FROM_ALL)
 
 #if(ENABLE_SWIG)
 #  add_subdirectory(misc/swig)

@@ -5,6 +5,7 @@
 #include <faunus/group.h>
 #include <faunus/inputfile.h>
 #include <faunus/space.h>
+#include <faunus/bonded.h>
 
 namespace Faunus {
   /*!
@@ -439,5 +440,58 @@ namespace Faunus {
 
   void xyfile::close() {
     f.close();
+  }
+
+  FastaSequence::FastaSequence(double harmonic_k, double harmonic_req) : bond(harmonic_k, harmonic_req) {
+    map['A']="ALA";
+    map['R']="ARG";
+    map['N']="ASN";
+    map['D']="ASP";
+    map['C']="CYS";
+    map['E']="GLU";
+    map['Q']="GLN";
+    map['G']="GLY";
+    map['H']="HIS";
+    map['I']="ILE";
+    map['L']="LEU";
+    map['K']="LYS";
+    map['M']="MET";
+    map['F']="PHE";
+    map['P']="PRO";
+    map['S']="SER";
+    map['T']="THR";
+    map['W']="TRP";
+    map['Y']="TYR";
+    map['V']="VAL";
+  }
+
+  p_vec FastaSequence::interpret(string seq) {
+    p_vec p;
+    particle a;
+    for (auto c : seq) {
+      if (map.find(c)!=map.end() ) {
+        a=atom[ map[c] ];
+        p.push_back(a);
+      }
+    }
+    return p;
+  }
+
+  Group FastaSequence::insert(string fasta, Space &spc, Energy::ParticleBonds &b) {
+    p_vec p = interpret(fasta);
+    Group g;
+    if (p.size()>0) {
+      g.beg=spc.p.size();
+      g.end=g.beg-1;
+      for (auto &a : p)
+        if ( spc.insert(a) )
+          g.end++;
+      for (int i=g.beg; i<g.end; i++)
+        b.add(i, i+1, bond );
+    }
+    return g;
+  }
+
+  Group FastaSequence::include(string file, Space &spc, Energy::ParticleBonds &b) {
   }
 }  //namespace

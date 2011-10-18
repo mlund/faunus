@@ -1,6 +1,7 @@
 #ifndef FAU_IO_H
 #define FAU_IO_H
 #include <faunus/common.h>
+#include <faunus/bonded.h>
 
 #ifndef __cplusplus
 #define __cplusplus
@@ -130,6 +131,17 @@ namespace Faunus {
       xyfile(string);
       void add(double, double);
       void close();
+  };
+
+  class FastaSequence {
+    private:
+      std::map<char,string> map; //!< Map one letter code (char) to three letter code (string)
+      Energy::HarmonicBond bond;
+    public:
+      p_vec interpret(string);
+      FastaSequence(double=0.76, double=4.9);
+      Group insert(string, Space&, Energy::ParticleBonds&);
+      Group include(string, Space&, Energy::ParticleBonds&);
   };
 }//namespace
 #endif

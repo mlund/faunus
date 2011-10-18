@@ -51,11 +51,15 @@ int main() {
   Analysis::Widom widom(spc, pot);
   widom.addGhost(spc);
 
+  FastaSequence fasta;
+  Group protein1 = fasta.insert( "AAK", spc, bonded->bonds );
+
   #define UTOTAL pot.g_internal(spc.p, salt) 
   sys.init( UTOTAL );
 
   cout << atom.info() << spc.info() << pot.info() << mv.info()
        << textio::header("MC Simulation Begins!");
+  //return 0;
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {

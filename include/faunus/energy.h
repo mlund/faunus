@@ -19,6 +19,15 @@ namespace Faunus {
    */
   namespace Energy {
 
+    /*!
+     *  \brief Base class for energy evaluation
+     *
+     *  This base class defines functions for evaluating interactions between particles,
+     *  groups, external potentials etc. By default all energy functions returns ZERO
+     *  and derived classes are expected only to implement functions relevant for certain
+     *  properties. I.e. a derived class for non-bonded interactions are not expected to
+     *  implement i_internal(), for example.
+     */
     class Energybase {
       protected:
         Geometry::Geometrybase* geo; //!< Pointer to geometry used to calculate interactions
@@ -39,7 +48,7 @@ namespace Faunus {
         virtual double i2i(const p_vec&, int, int);
         virtual double i2g(const p_vec&, Group &, int);
         virtual double i2all(const p_vec&, int);
-        virtual double i_external(const p_vec&, int);
+        virtual double i_external(const p_vec&, int); //!< Internal energy of i'th particle
         virtual double i_internal(const p_vec&, int);
         virtual double p_external(const particle&);
         double i_total(const p_vec&, int); //!< Total energy = i2all + i_external + i_internal
@@ -204,6 +213,15 @@ namespace Faunus {
      * \brief Collection of Energybases that when summed gives the Hamiltonian
      * \author Mikael Lund
      * \date Lund, 2011
+     *
+     * This class is used to collect several Energybase derivatives into a full hamiltonian.
+     * The following example demonstrated how one can generate a Hamiltonian for bonded as
+     * well as non-bonded interactions:
+     * \code
+     *   Energy::Hamiltonian pot;
+     *   pot.create( Energy::Nonbonded<Tpairpot>(in) );
+     *   pot.create( Energy::Bonded() );
+     * \endcode
      */
     class Hamiltonian : public Energybase {
       private:

@@ -22,7 +22,7 @@ namespace Faunus {
       private:
         Space* spcPtr;
         Energy::Energybase* potPtr;
-        average<double> expsum; //!< Average of the excess chemical potential 
+        Average<double> expsum; //!< Average of the excess chemical potential 
       protected:
         long unsigned int cnt;  //!< count test insertions
         p_vec g;                //!< List of ghost particles to insert (simultaneously)

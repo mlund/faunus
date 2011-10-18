@@ -6,39 +6,39 @@
 #endif
 
 namespace Faunus {
-  class random;
+  class RandomBase;
   class geometrybase;
-  class specdata;
+  class AtomData;
   /*!
    * \brief Cartesian coordinates
    * \author Mikael Lund
    * \date 2002-2007
    */
-  class point {
+  class Point {
     private:
       inline int anint(double) const;
     public:
       double x,y,z;                       //!< Cartesian coordinates
-      point();                            //!< Constructor, zero data.
-      point(double,double,double);        //!< Constructor, set vector
+      Point();                            //!< Constructor, zero data.
+      Point(double,double,double);        //!< Constructor, set vector
       void clear();                       //!< Zero all data.
       double len() const; 
-      void ranunit(random &);               //!< Generate a random unit vector
-      double dot(const point &) const;      //!< Angle with another point
-      point operator-() const;              //!< Sign reversal
-      const point operator*(double) const;  //!< Scale vector
-      point operator+(const point&) const;  //!< Add two vectors
-      point operator-(const point&) const;  //!< Subtract vector
-      point & operator+=(const point&);     //!< Vector addition
-      point & operator*=(const double);     //!< Scaling vector
-      bool operator==(const point&) const;
+      void ranunit(RandomBase &);               //!< Generate a random unit vector
+      double dot(const Point &) const;      //!< Angle with another point
+      Point operator-() const;              //!< Sign reversal
+      const Point operator*(double) const;  //!< Scale vector
+      Point operator+(const Point&) const;  //!< Add two vectors
+      Point operator-(const Point&) const;  //!< Subtract vector
+      Point & operator+=(const Point&);     //!< Vector addition
+      Point & operator*=(const double);     //!< Scaling vector
+      bool operator==(const Point&) const;
       std::string str();
-      friend std::ostream &operator<<(std::ostream &, const point &); //!< Output information
-      point &operator<<(std::istream &);                        //!< Get information
+      friend std::ostream &operator<<(std::ostream &, const Point &); //!< Output information
+      Point &operator<<(std::istream &);                        //!< Get information
 
   };
 
-  inline int point::anint(double a) const { return int(a>0 ? a+.5 : a-.5); }
+  inline int Point::anint(double a) const { return int(a>0 ? a+.5 : a-.5); }
 
   /*!
    * \brief Class for particles
@@ -53,9 +53,9 @@ namespace Faunus {
    * p[0].overlap( p[1] ); --> false
    * \endcode
    */
-  class pointparticle : public point {
+  class PointParticle : public Point {
     public:
-      pointparticle();
+      PointParticle();
       double charge;                            //!< Charge number
       double radius;                            //!< Radius
       float mw;                                 //!< Molecular weight
@@ -66,27 +66,27 @@ namespace Faunus {
       double mw2rad(double=1) const;            //!< Estimate radius from weight
       void deactivate();                        //!< Deactivate for use w. faster energy loops
       void clear();                             //!< Clear/reset all data
-      bool overlap(const pointparticle&, double) const;                       //!< Check for overlap of two particles
-      friend std::ostream &operator<<(std::ostream &, const pointparticle &); //!< Output information
-      pointparticle& operator<<(std::istream &);                              //!< Get information
-      pointparticle& operator=(const point&);                                 //!< Copy coordinates from a point
-      pointparticle& operator=(const specdata&);
+      bool overlap(const PointParticle&, double) const;                       //!< Check for overlap of two particles
+      friend std::ostream &operator<<(std::ostream &, const PointParticle &); //!< Output information
+      PointParticle& operator<<(std::istream &);                              //!< Get information
+      PointParticle& operator=(const Point&);                                 //!< Copy coordinates from a point
+      PointParticle& operator=(const AtomData&);
   };
 
-  class cigarparticle : public pointparticle {
+  class CigarParticle : public PointParticle {
     public:
-      point omega, patch;
+      Point omega, patch;
       double patchangle, length;
-      void rotate(const geometrybase&, const point&, double);            //!< Rotate around a vector
-      void translate(const geometrybase&, const point&);                 //!< Translate along a vector
+      void rotate(const geometrybase&, const Point&, double);            //!< Rotate around a vector
+      void translate(const geometrybase&, const Point&);                 //!< Translate along a vector
       void scale(const geometrybase&, double);                           //!< Volume scaling
-      bool overlap(const cigarparticle&, double) const;     //!< Check for overlap of two particles
-      friend std::ostream &operator<<(std::ostream &, const cigarparticle &); //!< Output information
-      cigarparticle &operator<<(std::istream &);                              //!< Get information
-      cigarparticle operator+(const point&) const;         //!< Add two vectors
-      cigarparticle& operator=(const point&);
-      cigarparticle& operator=(const specdata&);
-      cigarparticle& operator=(const pointparticle&);
+      bool overlap(const CigarParticle&, double) const;     //!< Check for overlap of two particles
+      friend std::ostream &operator<<(std::ostream &, const CigarParticle &); //!< Output information
+      CigarParticle &operator<<(std::istream &);                              //!< Get information
+      CigarParticle operator+(const Point&) const;         //!< Add two vectors
+      CigarParticle& operator=(const Point&);
+      CigarParticle& operator=(const AtomData&);
+      CigarParticle& operator=(const PointParticle&);
   };
 
 }//namespace

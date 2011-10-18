@@ -6,9 +6,9 @@
 namespace Faunus {
   class inputfile;
 
-  class specdata {
+  class AtomData {
     public:
-      specdata();
+      AtomData();
       short  id;         //!< Identification number
       double sigma,      //!< LJ diameter
              eps,        //!< LJ epsilon
@@ -21,7 +21,7 @@ namespace Faunus {
              variance;   //!< ...and the spread around it.
       bool hydrophobic;  //!< Are we hydrophobic?
       string name;       //!< Name. Avoid spaces.
-      bool operator==(const specdata &d) const { return (*this==d); }
+      bool operator==(const AtomData &d) const { return (*this==d); }
   };
 
   /*!
@@ -38,13 +38,13 @@ namespace Faunus {
    * std::cout << atom[p.id].chempot; // Get property via particle id
    * \endcode
    */
-  class atoms {
+  class AtomTypes {
     private:
       void init();                  //!< Recalc eps and sigma vectors
       string filename;
     public:
-      atoms();                               //!< Constructor - set UNK atom type (fallback)
-      vector<specdata> list;                 //!< List of atoms
+      AtomTypes();                               //!< Constructor - set UNK atom type (fallback)
+      vector<AtomData> list;                 //!< List of atoms
       vector< vector<double> >
         qq,                                  //!< Charge product between atoms i and j
         eps,                                 //!< LJ epsilon between atoms i and j
@@ -52,12 +52,12 @@ namespace Faunus {
 
       bool includefile(string);              //!< Append atom parameters from file
       bool includefile(inputfile&);          //!< Append atom parameters from file
-      specdata& operator[] (string);         //!< Name->data
-      specdata& operator[] (short);          //!< Id->data
+      AtomData& operator[] (string);         //!< Name->data
+      AtomData& operator[] (short);          //!< Id->data
       string info();                         //!< Print info
       void reset_properties(vector<particle> &);//!< Reset particle properties according to particle id
   };
 
-  extern atoms atom; // GLOBAL SCOPE
+  extern AtomTypes atom; // GLOBAL SCOPE
 }//namespace
 #endif

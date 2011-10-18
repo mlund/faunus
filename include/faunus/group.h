@@ -8,7 +8,7 @@ namespace Faunus {
   class Group {
     protected:
       virtual std::ostream& write(std::ostream &) const; //!< Write all Group data to stream
-      virtual point _massCenter(const Space&) const;
+      virtual Point _massCenter(const Space&) const;
 
     public:
       enum type {GROUP,ATOMIC,MOLECULAR,CIGAR,HYPER};
@@ -17,8 +17,8 @@ namespace Faunus {
       Group(int=-1, int=-1);
       string info();
       string name;
-      point cm_trial;           //!< mass center vector for trial position
-      point cm;                 //!< mass center vector
+      Point cm_trial;           //!< mass center vector for trial position
+      Point cm;                 //!< mass center vector
       int beg;                  //!< index of first particle
       int end;                  //!< index of last particle
       int size() const;         //!< number of particles in Group.
@@ -28,13 +28,13 @@ namespace Faunus {
 
       virtual double charge(const p_vec&) const;             //!< Calculate total charge
 
-      point massCenter(const Space&) const;                  //!< Calculate mass center
+      Point massCenter(const Space&) const;                  //!< Calculate mass center
       //point getMassCenter(const Space&) const;                  //!< Calculate mass center
 
-      virtual point dipolemoment(const Space&) const;        //!< Calculate dipole moment
+      virtual Point dipolemoment(const Space&) const;        //!< Calculate dipole moment
 
-      virtual void rotate(Space&, const point&, double);     //!< Rotate around a vector
-      virtual void translate(Space&, const point&);          //!< Translate along a vector
+      virtual void rotate(Space&, const Point&, double);     //!< Rotate around a vector
+      virtual void translate(Space&, const Point&);          //!< Translate along a vector
       virtual void scale(Space&, double);                    //!< Volume scaling
       virtual void undo(Space&);                                 //!< Undo move operation
       virtual void accept(Space&);
@@ -65,11 +65,11 @@ namespace Faunus {
       std::ostream & write(std::ostream&) const;  //!< Write all Group data to stream
 
     public:
-      average<double> Q;        //!< average net charge
-      average<double> mu;       //!< average dipole moment
+      Average<double> Q;        //!< average net charge
+      Average<double> mu;       //!< average dipole moment
 
       Molecular();
-      void translate(Space&, const point&);
+      void translate(Space&, const Point&);
       void accept(Space&);
       void scale(Space&, double);
 

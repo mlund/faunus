@@ -51,13 +51,13 @@ namespace Faunus {
 
     bool Movebase::metropolis(const double &du) const {
       if (du>0)
-        if ( slp_global.random_one()>std::exp(-du) )
+        if ( slp_global.randOne()>std::exp(-du) )
           return false;
       return true;
     }
 
     bool Movebase::run() const {
-      if (slp_global.random_one() < runfraction)
+      if (slp_global.randOne() < runfraction)
         return true;
       return false;
     }
@@ -137,9 +137,9 @@ namespace Faunus {
         iparticle=igroup->random();
       if (iparticle>-1) {
         double dp = atom[ spc->p[iparticle].id ].dp;
-        spc->trial[iparticle].x += dir.x * dp * slp_global.random_half();
-        spc->trial[iparticle].y += dir.y * dp * slp_global.random_half();
-        spc->trial[iparticle].z += dir.z * dp * slp_global.random_half();
+        spc->trial[iparticle].x += dir.x * dp * slp_global.randHalf();
+        spc->trial[iparticle].y += dir.y * dp * slp_global.randHalf();
+        spc->trial[iparticle].z += dir.z * dp * slp_global.randHalf();
         spc->geo->boundary( spc->trial[iparticle] );
       }
     }

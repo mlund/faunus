@@ -5,7 +5,7 @@
 
 namespace Faunus {
 
-  specdata::specdata() {
+  AtomData::AtomData() {
     sigma=0;      
     eps=0;
     radius=0;
@@ -19,18 +19,18 @@ namespace Faunus {
     name="UNK";
   }
 
-  atoms atom; // Instantiate global copy
+  AtomTypes atom; // Instantiate global copy
 
-  atoms::atoms() {
+  AtomTypes::AtomTypes() {
     filename="atomlist.inp";
-    specdata a;
+    AtomData a;
     a.id=list.size();
     a.name="UNK";
     list.push_back(a);
     init();
   }
 
-  void atoms::init() {
+  void AtomTypes::init() {
     int n=list.size();
     qq.resize(n);
     eps.resize(n);
@@ -47,21 +47,21 @@ namespace Faunus {
     }
   }
 
-  specdata & atoms::operator[] (short i) { return list[i]; }
+  AtomData & AtomTypes::operator[] (short i) { return list[i]; }
 
-  specdata & atoms::operator[] (string s) {
+  AtomData & AtomTypes::operator[] (string s) {
     for (auto &l_i : list)
       if (s==l_i.name)
         return l_i;
     return list[0];
   }
 
-  bool atoms::includefile(inputfile &in) {
+  bool AtomTypes::includefile(inputfile &in) {
     return includefile(in.getstr("atomfile",filename));
   }
 
-  bool atoms::includefile(string file) {
-    specdata a;
+  bool AtomTypes::includefile(string file) {
+    AtomData a;
     string t;
     filename=file;
     std::ifstream f(filename.c_str());
@@ -87,7 +87,7 @@ namespace Faunus {
     return false;
   }
 
-  string atoms::info() {
+  string AtomTypes::info() {
     using namespace textio;
     char w=25;
     std::ostringstream o;
@@ -104,7 +104,7 @@ namespace Faunus {
     return o.str();
   }
 
-  void atoms::reset_properties(vector<particle> &p) {
+  void AtomTypes::reset_properties(vector<particle> &p) {
     for (auto &p_i : p )
       p_i = list[p_i.id];
   }

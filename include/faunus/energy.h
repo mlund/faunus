@@ -256,28 +256,6 @@ namespace Faunus {
         string info();
     };
 
-    class bondlist {
-      public:
-        enum bondtype {HARMONIC};
-        class bond {
-          public:
-            int first,second;
-            double req;
-            double k;
-            bool contain(const int &i) const { return (i==first||i==second) ? true:false; } 
-        };
-        bond& operator[](const int &i) {return v.at(i);}
-        int size() const { return v.size(); }
-        void add(int first, int second, double req, double k) {
-          if (first>second)
-            std::swap(second,first);
-          bond b={first,second,req,k};
-          v.push_back(b);
-        }
-      private:
-        vector<bond> v;
-    };
-
   }//Energy namespace
 }//Faunus namespace
 #endif

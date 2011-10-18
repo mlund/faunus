@@ -59,7 +59,7 @@ namespace Faunus {
      */
     double EquilibriumController::processdata::swap(particle &p) {
       double uold=energy(p.id);
-      point pos=p;           // backup coordinate
+      Point pos=p;           // backup coordinate
       if (p.id==id_AX)
         p=atom[id_A];
       else if (p.id==id_A)
@@ -173,7 +173,7 @@ namespace Faunus {
      * are titrated by process i, or -nan if no particles are part of process i
      */  
     double EquilibriumController::avgcharge(const p_vec &p, int &k) {
-      average<double> qavg;
+      Average<double> qavg;
       for (auto i : sites)
         if (process[k].one_of_us( p[i].id ))
           qavg+=q[i].avg();

@@ -3,33 +3,33 @@
 
 namespace Faunus {
 
-  energydrift::energydrift() {
+  EnergyDrift::EnergyDrift() {
     delta=initial=drift=0;
   }
 
-  void energydrift::init(const double &u0) {
+  void EnergyDrift::init(const double &u0) {
     avg.reset();
     delta=drift=0;
     initial=u0;
     avg+=u0;
   }
 
-  double energydrift::current() const {
+  double EnergyDrift::current() const {
     return initial + delta;
   }
 
-  energydrift& energydrift::operator+=(const double &du) {
+  EnergyDrift& EnergyDrift::operator+=(const double &du) {
     delta+=du;
     avg+=current();
     return *this;
   }
 
-  double energydrift::checkdrift(const double &snapshot) {
+  double EnergyDrift::checkDrift(const double &snapshot) {
     drift = snapshot-current();
     return drift;
   }
 
-  string energydrift::info() {
+  string EnergyDrift::info() {
     char w=25;
     using namespace Faunus::textio;
     std::ostringstream o;

@@ -20,7 +20,7 @@ namespace Faunus {
      * \date Lund, 2011
      * \author Mikael Lund
      */
-    class displacement_optimizer {
+    class DisplacementOptimizer {
       private:
         double* dpPtr;   //!< Pointer to displacement parameter
         //average<double>* msqPtr; //!< Pointer to mean-square displacement
@@ -99,7 +99,7 @@ namespace Faunus {
      */
     class ParticleTranslation : public Movebase {
       private:
-        typedef std::map<short, average<double> > map_type;
+        typedef std::map<short, Average<double> > map_type;
         map_type accmap; //!< Single particle acceptance map
         map_type sqrmap; //!< Single particle mean square displacement map
         Group* igroup;   //!< Group pointer in which particles are moved randomly (NULL if none, default)
@@ -114,7 +114,7 @@ namespace Faunus {
         void setGroup(Group&); //!< Select group in which to randomly pick particles from
         void setParticle(int); //!< Select single particle in p_vec to move
         double move();         //!< Move selected particle once or n times in selected group of length n
-        point dir;             //!< Displacement directions (default: x=y=z=1)
+        Point dir;             //!< Displacement directions (default: x=y=z=1)
         string info();
         double totalEnergy();  //!< Total energy for drift tracking
     };

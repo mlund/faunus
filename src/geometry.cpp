@@ -13,11 +13,11 @@ namespace Faunus {
 
     Geometrybase::~Geometrybase() {}
 
-    double Geometrybase::dist(const point &p1, const point &p2) {
+    double Geometrybase::dist(const Point &p1, const Point &p2) {
       return sqrt(sqdist(p1,p2));
     }
 
-    void Geometrybase::scale(point &a, const double &s) const {
+    void Geometrybase::scale(Point &a, const double &s) const {
     }
 
     string Geometrybase::info(char w) {
@@ -27,7 +27,7 @@ namespace Faunus {
       return o.str();
     }
 
-    void Geometrybase::setvolume(double vol) {
+    void Geometrybase::setVolume(double vol) {
       assert(vol>0);
       volume=vol;
     }
@@ -55,7 +55,7 @@ namespace Faunus {
       std::ifstream f( file.c_str() );
       if (f) {
         f >> vol;
-        setvolume(vol);
+        setVolume(vol);
         f.close();
         return true;
       }
@@ -84,7 +84,7 @@ namespace Faunus {
       volume = (4./3.)*pc::pi*r*r*r;
     }
 
-    void Sphere::setvolume(double vol) {
+    void Sphere::setVolume(double vol) {
       volume=vol;
       setradius( pow( 3*vol/(4*pc::pi), 1/3.) );
     }
@@ -95,21 +95,21 @@ namespace Faunus {
       return o.str();
     }
 
-    void Sphere::randompos(point &m) {
+    void Sphere::randompos(Point &m) {
       double l=r2+1;
       while (l>r2) {
-        m.x = slp.random_half()*diameter;
-        m.y = slp.random_half()*diameter;
-        m.z = slp.random_half()*diameter;
+        m.x = slp.randHalf()*diameter;
+        m.y = slp.randHalf()*diameter;
+        m.z = slp.randHalf()*diameter;
         l=m.x*m.x+m.y*m.y+m.z*m.z;
       }
     }
 
-    point Sphere::vdist(const point&a, const point&b) {
+    Point Sphere::vdist(const Point&a, const Point&b) {
       return a-b;
     }
 
-    void Sphere::boundary(point &m) const {}
+    void Sphere::boundary(Point &m) const {}
 
     bool Sphere::collision(const particle &a, collisiontype type) {
       return (a.x*a.x+a.y*a.y+a.z*a.z > r2) ? true:false;
@@ -132,18 +132,18 @@ namespace Faunus {
         len.z=cubelen;
       }
       setlen(len);
-      point min;
+      Point min;
       min.x=in.get<double>("cuboid_xmin",0);
       min.y=in.get<double>("cuboid_ymin",0);
       min.z=in.get<double>("cuboid_zmin",0);
-      point max;
+      Point max;
       max.x=in.get<double>("cuboid_xmax",len.x);
       max.y=in.get<double>("cuboid_ymax",len.y);
       max.z=in.get<double>("cuboid_zmax",len.z);
       setslice(min,max);
     }
 
-    bool Cuboid::setlen(point l) {
+    bool Cuboid::setlen(Point l) {
       assert(l.x>0);              // debug information
       assert(l.y>0);              // 
       assert(l.z>0);              // 
@@ -159,7 +159,7 @@ namespace Faunus {
       return true;
     }
 
-    bool Cuboid::setslice(point min, point max) {
+    bool Cuboid::setslice(Point min, Point max) {
       assert(min.x>=0);              // debug information
       assert(min.y>=0);              // 
       assert(min.z>=0);              // 
@@ -193,16 +193,16 @@ namespace Faunus {
       return o.str();
     }
 
-    point Cuboid::randompos() {
-      point m;
+    Point Cuboid::randompos() {
+      Point m;
       randompos(m);
       return m;
     }
 
-    void Cuboid::randompos(point &m) {
-      m.x = slp.random_half()*len.x;
-      m.y = slp.random_half()*len.y;
-      m.z = slp.random_half()*len.z;
+    void Cuboid::randompos(Point &m) {
+      m.x = slp.randHalf()*len.x;
+      m.y = slp.randHalf()*len.y;
+      m.z = slp.randHalf()*len.z;
     }
 
     bool Cuboid::collision(const particle &a, collisiontype type) {
@@ -241,7 +241,7 @@ namespace Faunus {
     }
 
     bool Cuboid::load(string file, bool resize) {
-      point l;
+      Point l;
       if ( Geometrybase::load(file, resize) ) {
         std::ifstream f( file.c_str() );
         if (f) {
@@ -255,7 +255,7 @@ namespace Faunus {
       return false;
     }
 
-    void Cuboid::scale(point &a, const double &newvolume) const {
+    void Cuboid::scale(Point &a, const double &newvolume) const {
       assert(volume>0);
       assert(newvolume>0);
       a = a * pow( newvolume/volume, 1/3.);
@@ -293,12 +293,12 @@ namespace Faunus {
       halflen=len/2;
     }
 
-    void Cylinder::randompos(point &m) {
+    void Cylinder::randompos(Point &m) {
       double l=r2+1;
-      m.z = slp.random_half()*len;
+      m.z = slp.randHalf()*len;
       while (l>r2) {
-        m.x = slp.random_half()*diameter;
-        m.y = slp.random_half()*diameter;
+        m.x = slp.randHalf()*diameter;
+        m.y = slp.randHalf()*diameter;
         l=m.x*m.x+m.y*m.y;
       }
     }

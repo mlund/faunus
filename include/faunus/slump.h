@@ -22,32 +22,32 @@
 #endif
 
 namespace Faunus {
-  class random {
+  class RandomBase {
     protected:
       std::string name;
     public:
-      virtual ~random() {}
-      virtual double random_one()=0;              //!< Random number between [0:1[
-      virtual void random_seed(int=0)=0;          //!< Seed random generator (globally)
-      bool runtest(float=0.5);                    //!< Probability bool
-      double random_half();                       //!< Random number between [-0.5:0.5[
-      std::string info();                         //!< Print information string
-      virtual unsigned int rand()=0;              //!< Random number between 0 and rand_max
+      virtual ~RandomBase() {}
+      virtual double randOne()=0;          //!< Random number between [0:1[
+      virtual void seed(int=0)=0;          //!< Seed random generator (globally)
+      bool runtest(float=0.5);             //!< Probability bool
+      double randHalf();                   //!< Random number between [-0.5:0.5[
+      std::string info();                  //!< Print information string
+      virtual unsigned int rand()=0;       //!< Random number between 0 and rand_max
   };
 
   /*!
    * \brief Default C++ random number generator
    * \author Mikael Lund
    * \date Lund, 2002
-   * \warning random_one sometimes returns 1 (one)!!
+   * \warning randOne sometimes returns 1 (one)!!
    */
-  class randomDefault : public random {
+  class RandomDefault : public RandomBase {
     private:
       double rand_max_inv;
     public:
-      randomDefault();
-      void random_seed(int=0);
-      double random_one();
+      RandomDefault();
+      void seed(int=0);
+      double randOne();
       unsigned int rand();
   };
 
@@ -58,7 +58,7 @@ namespace Faunus {
   * \note A class for ran2 from 'Numerical Recipies'.
   * \warning Not thread safe!
   */
-  class ran2: public random {
+  class RandomRan2: public RandomBase {
     private:
       static const int IM1=2147483563, IM2=2147483399;
       static const int IA1=40014, IA2=40692, IQ1=53668, IQ2=52774;
@@ -71,33 +71,33 @@ namespace Faunus {
       int j,k;
       double temp;
     public:
-      ran2();
-      double random_one();
-      void   random_seed(int=-7);
+      RandomRan2();
+      double randOne();
+      void   seed(int=-7);
       unsigned int rand();
   };
 
   /*!
-   * \brief Mersenne Twister Random number functions (C++ TR1)
+   * \brief Mersenne Twister Random number functions (C++11)
    * \author Mikael Lund
    * \date Lund, 2010
    */
-  class randomTwister : public random {
+  class RandomTwister : public RandomBase {
     private:
       double maxinv;
       std::mt19937 eng;
       std::uniform_real_distribution<double> dist;
     public:
-      randomTwister();
-      double random_one();
-      void random_seed(int=0);
+      RandomTwister();
+      double randOne();
+      void seed(int=0);
       unsigned int rand();
   };
 
 #if defined(MERSENNETWISTER)
-  typedef Faunus::randomTwister slump;
+  typedef Faunus::RandomTwister slump;
 #else
-  typedef Faunus::ran2 slump;
+  typedef Faunus::RandomRan2 slump;
 #endif
   extern slump slp_global;
 }

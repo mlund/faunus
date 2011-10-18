@@ -2,15 +2,15 @@
 
 namespace Faunus {
   // Baseclass
-  double random::random_half() {
-    return -0.5 + random_one();
+  double RandomBase::randHalf() {
+    return -0.5 + randOne();
   }
 
-  bool random::runtest(float f) {
-    return (random_one()<f) ? true : false;
+  bool RandomBase::runtest(float f) {
+    return ( randOne()<f) ? true : false;
   }
 
-  std::string random::info() {
+  std::string RandomBase::info() {
     std::ostringstream o;
     o << "# RANDOM NUMBER GENERATOR:" << std::endl
       << "#   Scheme: " << name << std::endl;
@@ -20,23 +20,23 @@ namespace Faunus {
   /*
    *  Generic C++ generator
    */
-  randomDefault::randomDefault() {
+  RandomDefault::RandomDefault() {
     name = "C++ build in";
     rand_max_inv = 1./(RAND_MAX);
   }
 
-  double randomDefault::random_one() {
+  double RandomDefault::randOne() {
     double r;
     #pragma omp critical
     r=rand_max_inv*rand();
     return (r>=1) ? r-1e-5 : r;  // we don't like *exactly* 1 !!
   }
 
-  void randomDefault::random_seed(int s) {
+  void RandomDefault::seed(int s) {
     (s!=0) ? srand(s) : srand(time(0));
   }
 
-  unsigned int randomDefault::rand() {
+  unsigned int RandomDefault::rand() {
     double x;
     #pragma omp critical
     x=rand();
@@ -46,30 +46,30 @@ namespace Faunus {
   /*
    *  Mersenne Twister generator (STL TR1 build-in)
    */
-  randomTwister::randomTwister() : dist(0.0,1.0) {
+  RandomTwister::RandomTwister() : dist(0.0,1.0) {
     name="Mersenne Twister (C++ TR1)";
     maxinv=1./(eng.max()+1.);
   }
 
-  double randomTwister::random_one() {
+  double RandomTwister::randOne() {
     double x;
     #pragma omp critical
     x=dist(eng)*maxinv;
     return x;
   }
 
-  void randomTwister::random_seed(int s) {
+  void RandomTwister::seed(int s) {
     #pragma omp critical
     eng.seed(s);
   }
 
-  unsigned int randomTwister::rand() {
+  unsigned int RandomTwister::rand() {
     return dist(eng);
   }
 
   // "Ran2" - ran2 from 'Numerical Recipies'
-  const double ran2::EPS=3.0e-16;
-  ran2::ran2() {
+  const double RandomRan2::EPS=3.0e-16;
+  RandomRan2::RandomRan2() {
     name="Numerical recipes 'ran2' (not thread safe!)";
     AM=1.0/2147483563.0;
     RNMX=1.0-3.0e-16;
@@ -77,10 +77,10 @@ namespace Faunus {
     idum2=123456789;
   }
 
-  double ran2::random_one()  {
+  double RandomRan2::randOne()  {
     #pragma omp critical
     {
-      random_seed(idum);
+      seed(idum);
       k=idum/IQ1;
       idum=IA1*(idum-k*IQ1)-k*IR1;
       if (idum<0)
@@ -102,7 +102,7 @@ namespace Faunus {
       return temp;
   }
 
-  void ran2::random_seed(int s) {
+  void RandomRan2::seed(int s) {
     idum=s;    
     if(idum<=0) {
       idum=(idum==0 ? 1: -idum);
@@ -119,8 +119,8 @@ namespace Faunus {
     }
   }
 
-  unsigned int ran2::rand() {
-    return random_one()*RAND_MAX;
+  unsigned int RandomRan2::rand() {
+    return randOne()*RAND_MAX;
   }
 
   slump slp_global;

@@ -61,18 +61,18 @@ namespace Faunus {
    *  \todo Needs testing!
    *
    */
-  class rdf : public histogram {
+  class RadialDistribution : public histogram {
     private:
       short a,b;                   //!< Particle types to investigate
       float volume(float);         //!< Volume of shell r->r+xres
       unsigned int npart;
     public:
-      rdf(float=.5, float=0, float=0);
-      rdf(short, short, float=.5, float=0); 
-      void update(Space &, point &, string);//!< Search around a point
+      RadialDistribution(float=.5, float=0, float=0);
+      RadialDistribution(short, short, float=.5, float=0); 
+      void update(Space &, Point &, string);//!< Search around a point
       void update(Space &);                 //!< Update histogram vector
       void update(Space &, Group &);        //!< Update histogram vector - search only in group
-      void update(Space &, point &, point &);//!< Update for two points
+      void update(Space &, Point &, Point &);//!< Update for two points
       float get(float);                        //!< Get g(x)
   };
 
@@ -151,11 +151,11 @@ namespace Faunus {
     protected:
       unsigned int cnt;
       float volume(float);            //!< Get area at coordinate
-      point origo;
+      Point origo;
     public:
       radial_profile( float, float, float=.5);
       void add(particle &);           //!< Add a particle
-      void add(point &, point &);              //!< Add a particle
+      void add(Point &, Point &);              //!< Add a particle
       void update(vector<particle> &);//!< Search for and add particles
       float conc(float);              //!< Get concentration at coordinate
       bool write(string);             //!< Print distribution

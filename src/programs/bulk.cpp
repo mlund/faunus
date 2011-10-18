@@ -27,7 +27,7 @@ int main() {
   InputMap mcp("bulk.inp");
   MCLoop loop(mcp);                    // class for handling mc loops
   iopqr pqr;                           // PQR structure file I/O
-  energydrift sys;                     // class for tracking system energy drifts
+  EnergyDrift sys;                     // class for tracking system energy drifts
 
   Energy::Hamiltonian pot;
   auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot>(mcp) );
@@ -64,11 +64,11 @@ int main() {
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
       sys+=mv.move();
-      if (slp_global.random_one()>0.9)
+      if (slp_global.randOne()>0.9)
         widom.sample();
       sys+=tit.move();
     }
-    sys.checkdrift( UTOTAL );
+    sys.checkDrift( UTOTAL );
     cout << loop.timing();
   }
 

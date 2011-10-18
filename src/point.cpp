@@ -10,30 +10,33 @@ namespace Faunus {
     C A R T E S I A N  P O I N T
    ********************************/
 
-  point::point() : x(0), y(0), z(0) {}
+  Point::Point() : x(0), y(0), z(0) {}
 
-  void point::clear() { x=y=z=0; }
+  void Point::clear() { x=y=z=0; }
 
-  point::point(double xx, double yy, double zz) {
+  Point::Point(double xx, double yy, double zz) {
     x=xx;
     y=yy;
     z=zz;
   }
 
-  double point::dot(const point &p) const { return (x*p.x + y*p.y + z*p.z); }
+  double Point::dot(const Point &p) const { return (x*p.x + y*p.y + z*p.z); }
 
-  double point::len() const {
+  double Point::len() const {
     double l2=x*x+y*y+z*z;
     return (l2!=0) ? sqrt(l2) : 0;
   }
 
-  void point::ranunit(random &ran) {
-    point u;
+  void Point::ranunit(RandomBase &ran) {
+    Point u;
     double r=2;
     while (r > 1.) { //Generate a random unit vector
-      u.x=2*ran.random_half();
-      u.y=2*ran.random_half();
-      u.z=2*ran.random_half();
+      u.x=2*ran.randHalf
+();
+      u.y=2*ran.randHalf
+();
+      u.z=2*ran.randHalf
+();
       r=sqrt(u.x*u.x+u.y*u.y+u.z*u.z);
     }
     x=u.x/r;
@@ -41,27 +44,27 @@ namespace Faunus {
     z=u.z/r;
   }
 
-  point point::operator-() const {
-    point o=*this;
+  Point Point::operator-() const {
+    Point o=*this;
     o.x=-x; o.y=-y; o.z=-z;
     return o;
   }
 
-  point & point::operator+=(const point &p) {
+  Point & Point::operator+=(const Point &p) {
     x+=p.x;
     y+=p.y;
     z+=p.z;
     return *this;
   }
 
-  point point::operator+(const point &p) const {
-    point o=*this;
+  Point Point::operator+(const Point &p) const {
+    Point o=*this;
     o+=p;
     return o;
   }
 
-  point point::operator-(const point &p) const {
-    point o=*this;
+  Point Point::operator-(const Point &p) const {
+    Point o=*this;
     o+=-p;
     //o.x=-o.x;
     //o.y=-o.y;
@@ -69,24 +72,24 @@ namespace Faunus {
     return o;
   }
 
-  point& point::operator*=(double s) {
+  Point& Point::operator*=(double s) {
     x*=s;
     y*=s;
     z*=s;
     return *this;
   }
 
-  const point point::operator*(double s) const {
-    point o=*this;
+  const Point Point::operator*(double s) const {
+    Point o=*this;
     o*=s;
     return o;
   }
 
-  bool point::operator==(const point& p) const {
+  bool Point::operator==(const Point& p) const {
     return (*this == p);
   }
 
-  string point::str() {
+  string Point::str() {
     std::stringstream s;
     s.setf(std::ios::fixed);
     s.precision(2);
@@ -94,12 +97,12 @@ namespace Faunus {
     return "[" + s.str() + "]";
   }
 
-  std::ostream &operator<<(std::ostream &o, const point &p) {
+  std::ostream &operator<<(std::ostream &o, const Point &p) {
     o << p.x << " " << p.y << " " << p.z;
     return o;
   }
 
-  point & point::operator<<(std::istream &in) {
+  Point & Point::operator<<(std::istream &in) {
     in >> x >> y >> z;
     return *this;
   }
@@ -108,31 +111,31 @@ namespace Faunus {
     P A R T I C L E
    ********************/
 
-  pointparticle::pointparticle() : charge(0), radius(0), mw(0), id(0), hydrophobic(false) {}
+  PointParticle::PointParticle() : charge(0), radius(0), mw(0), id(0), hydrophobic(false) {}
 
-  void pointparticle::clear() {
-    point::clear();
+  void PointParticle::clear() {
+    Point::clear();
     charge=mw=radius=0;
     hydrophobic=false;
     id=0;
   }
 
-  pointparticle& pointparticle::operator=(const point &p ) {
+  PointParticle& PointParticle::operator=(const Point &p ) {
     x=p.x;
     y=p.y;
     z=p.z;
     return *this;  // return a reference to myself
   }
 
-  double pointparticle::volume() const {
+  double PointParticle::volume() const {
     return (4./3.)*pc::pi*radius*radius*radius;
   }
 
-  double pointparticle::mw2vol(double rho) const {
+  double PointParticle::mw2vol(double rho) const {
     return 1.6606*rho*mw;
   }
 
-  double pointparticle::mw2rad(double rho) const {
+  double PointParticle::mw2rad(double rho) const {
     return pow( mw2vol(rho)*3./4./pc::pi, (1/3.) );
   }
 
@@ -142,31 +145,32 @@ namespace Faunus {
    * \li Setting the charge to zero (no electrostatics)
    * \li Moving the pointparticle *very* far away (p.x=1e9)
    */
-  void pointparticle::deactivate() {
+  void PointParticle::deactivate() {
     charge=0;
     x=1e9;
   }
 
-  std::ostream &operator<<(std::ostream &o, const pointparticle &p) {
-    point b=p;
+  std::ostream &operator<<(std::ostream &o, const PointParticle &p) {
+    Point b=p;
     o << b << " " << p.charge << " " << p.radius << " " << p.mw << " " << (short)p.id << " " << p.hydrophobic;
     return o;
   }
 
-  pointparticle & pointparticle::operator<<(std::istream &in) {
+  PointParticle & PointParticle::operator<<(std::istream &in) {
     short tmp;
-    point::operator<<(in);
+    Point::operator<<(in);
     in >> charge >> radius >> mw >> tmp >> hydrophobic;
     id = (unsigned char)tmp;
     return *this;
   }
 
-  bool pointparticle::overlap(const pointparticle&a, double r2) const {
+  bool PointParticle::overlap(const PointParticle&a, double r2) const {
     double s=radius+a.radius;
     return (r2<s*s) ? true:false;
   }
 
-  pointparticle& pointparticle::operator=(const specdata &d) {
+  PointParticle& PointParticle::operator=(const AtomData
+ &d) {
     id=d.id;
     charge=d.charge;
     radius=d.radius;
@@ -179,48 +183,49 @@ namespace Faunus {
     S P H E R O C Y L I N D E R
    *****************************/
 
-  void cigarparticle::rotate(const geometrybase &c, const point &v, double angle) { //!< Rotate around a vector
+  void CigarParticle::rotate(const geometrybase &c, const Point &v, double angle) { //!< Rotate around a vector
   }
 
-  void cigarparticle::translate(const geometrybase &c, const point &v) {             //!< Translate along a vector
+  void CigarParticle::translate(const geometrybase &c, const Point &v) {             //!< Translate along a vector
   }
 
-  void cigarparticle::scale(const geometrybase &c, double v) {                       //!< Volume scaling
+  void CigarParticle::scale(const geometrybase &c, double v) {                       //!< Volume scaling
   }
 
-  bool cigarparticle::overlap(const cigarparticle&a, double r2) const {
+  bool CigarParticle::overlap(const CigarParticle&a, double r2) const {
     return false;
   }
 
-  cigarparticle & cigarparticle::operator<<(std::istream &in) {
-    pointparticle::operator<<(in);
+  CigarParticle & CigarParticle::operator<<(std::istream &in) {
+    PointParticle::operator<<(in);
     omega.operator<<(in);
     patch.operator<<(in);
     in >> patchangle >> length;
     return *this;
   }
 
-  cigarparticle cigarparticle::operator+(const point &p) const {
+  CigarParticle CigarParticle::operator+(const Point &p) const {
     return *this;
   }
 
-  cigarparticle& cigarparticle::operator=(const point &p ) {
-    pointparticle::operator=(p);
+  CigarParticle& CigarParticle::operator=(const Point &p ) {
+    PointParticle::operator=(p);
     return *this;
   }
 
-  cigarparticle& cigarparticle::operator=(const specdata &d) {
-    pointparticle::operator=(d);
+  CigarParticle& CigarParticle::operator=(const AtomData
+ &d) {
+    PointParticle::operator=(d);
     return *this;
   }
 
-  cigarparticle& cigarparticle::operator=(const pointparticle &p ) {
-    pointparticle::operator=(p);
+  CigarParticle& CigarParticle::operator=(const PointParticle &p ) {
+    PointParticle::operator=(p);
     return *this;
   }
 
-  std::ostream &operator<<(std::ostream &o, const cigarparticle &p) {
-    o << pointparticle(p)
+  std::ostream &operator<<(std::ostream &o, const CigarParticle &p) {
+    o << PointParticle(p)
       << " " << p.omega << " " << p.patch
       << " " << p.patchangle << " " << p.length;
     return o;

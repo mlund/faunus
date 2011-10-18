@@ -4,9 +4,9 @@
 namespace Faunus {
   /*! \brief Physical constants and parameters.
    */
-  class physical_const {
+  class PhysicalConstants {
     public:
-      physical_const(double temp=298.15);
+      PhysicalConstants(double temp=298.15);
       static const double
         pi,
         e0,                          //!< Permittivity of vacuum [C^2/(J*m)]
@@ -19,7 +19,7 @@ namespace Faunus {
       static double kT2kJ(double);   //!< kT/molecule -> kJ/mol
   };
 
-  typedef physical_const pc;
+  typedef PhysicalConstants pc;
   
 } // namespace
 #endif

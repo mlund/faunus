@@ -4,18 +4,18 @@
 #include <faunus/average.h>
 
 namespace Faunus {
-  class energydrift {
+  class EnergyDrift {
     private:
       double delta;
       double initial;
-      average<double> avg;
+      Average<double> avg;
     public:
       double drift;
-      energydrift();
+      EnergyDrift();
       void init(const double&);
       double current() const;
-      energydrift& operator+=(const double&);
-      double checkdrift(const double&);
+      EnergyDrift& operator+=(const double&);
+      double checkDrift(const double&);
       string info();
   };
 }//namespace

@@ -60,7 +60,7 @@ namespace Faunus {
           void set_mu_A(double);       //!< Set chemical potential of species A  - mu_AX then follows.
         };
 
-        std::map<int, average<double> > q;       //!< Map of average charges per site
+        std::map<int, Average<double> > q;       //!< Map of average charges per site
         vector<processdata> process;             //!< Vector of processes.
 
         EquilibriumController(InputMap&, string="eq_");
@@ -95,7 +95,7 @@ namespace Faunus {
 
     class SwapMove : public Movebase {
       private:
-        std::map<int, average<double> > accmap; //!< Site acceptance map
+        std::map<int, Average<double> > accmap; //!< Site acceptance map
         int ipart;                              //!< Particle to be swapped
       protected:
         void trialMove();

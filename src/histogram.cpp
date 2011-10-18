@@ -78,19 +78,19 @@ namespace Faunus {
    * \param resolution Histogram resolution (binwidth)
    * \param xmaximum Maximum x value (used for better memory utilisation)
    */
-  rdf::rdf(short species1, short species2, float resolution, float xmaximum) :
+  RadialDistribution::RadialDistribution(short species1, short species2, float resolution, float xmaximum) :
     histogram(resolution, 0, xmaximum)
   {
     a=species1;
     b=species2;
   }
-  rdf::rdf(float resolution, float xmaximum, float xminimum) : histogram(resolution, xminimum, xmaximum) {}
+  RadialDistribution::RadialDistribution(float resolution, float xmaximum, float xminimum) : histogram(resolution, xminimum, xmaximum) {}
 
   /*!
    * Update histogram between two known points
    * \note Uses the space distance function
    */
-  void rdf::update(Space &s, point &a, point &b) {
+  void RadialDistribution::update(Space &s, Point &a, Point &b) {
     add( s.geo->dist(a, b) );
   }
 
@@ -100,7 +100,7 @@ namespace Faunus {
    *
    * \note Uses the container function to calculate distances
    */
-  void rdf::update(Space &c) {
+  void RadialDistribution::update(Space &c) {
     size_t n=c.p.size();
     npart=0;
 #pragma omp parallel for schedule (dynamic)
@@ -113,7 +113,7 @@ namespace Faunus {
         }
   }
 
-  void rdf::update(Space &c, Group &g) {
+  void RadialDistribution::update(Space &c, Group &g) {
     int n=g.end+1;
     npart=0;
     //#pragma omp for
@@ -128,7 +128,7 @@ namespace Faunus {
     }
   }
 
-  void rdf::update(Space &c, point &p, string name) {
+  void RadialDistribution::update(Space &c, Point &p, string name) {
     int id=atom[name].id, n=c.p.size();
     npart=0;
     //#pragma omp for
@@ -142,12 +142,12 @@ namespace Faunus {
   /*!
    * Calculate shell volume at x
    */
-  float rdf::volume(float x) { return 4./3.*acos(-1.)*( pow(x+0.5*xres,3)-pow(x-0.5*xres,3) ); }
+  float RadialDistribution::volume(float x) { return 4./3.*acos(-1.)*( pow(x+0.5*xres,3)-pow(x-0.5*xres,3) ); }
   /*!
    *  Get g(x) from histogram according to
    *    \f$ g(x) = \frac{N(r)}{N_{tot}} \frac{ 3 } { 4\pi\left [ (x+xres)^3 - x^3 \right ] }\f$
    */
-  float rdf::get(float x) {
+  float RadialDistribution::get(float x) {
     return (*this)(x)/(cnt*volume(x)) * 1660.57;
   }
 
@@ -211,7 +211,7 @@ namespace Faunus {
   float radial_profile::volume(float x) {return acos(-1.)*(pow(x+xres*0.5,2.)-pow(x-xres*0.5,2.));}
   float radial_profile::conc(float x) { return ((*this)(x)>0) ? (*this)(x)/(cnt*volume(x)) : 0; }
   void  radial_profile::add(particle &p) { if (p.id==id){cnt++, (*this)(sqrt(pow(p.x-origo.x,2)+pow(p.y-origo.y,2)))++;} }
-  void  radial_profile::add(point &o, point &p) { 
+  void  radial_profile::add(Point &o, Point &p) { 
     cnt++ ;
     (*this)(sqrt(pow(p.x-o.x,2)+pow(p.y-o.y,2)))++; 
   }

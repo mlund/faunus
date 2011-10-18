@@ -374,7 +374,7 @@ namespace Faunus {
         if (rc==0) {
           static double ten=10;
           Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(c.geo);
-          point l( xdbox[0][0], xdbox[1][1], xdbox[2][2] );
+          Point l( xdbox[0][0], xdbox[1][1], xdbox[2][2] );
           geo->setlen(l*ten);
           for (size_t i=0; i<c.p.size(); i++) {
             c.p[i].x = x_xtc[i][0]*ten - geo->len_half.x;     // store pos. in container.                 

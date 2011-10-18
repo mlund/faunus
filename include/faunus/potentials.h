@@ -22,13 +22,13 @@ namespace Faunus {
      */
     namespace Core {
 
-      class potbase {
+      class Potbase {
         public:
           string name; //!< Short (preferably one-word) description of the core potential
           double tokT;
       };
 
-      class HardSphere : public potbase {
+      class HardSphere : public Potbase {
         private:
           double inf;
         public:
@@ -38,7 +38,7 @@ namespace Faunus {
           }
       };
 
-      class LennardJones : public potbase {
+      class LennardJones : public Potbase {
         protected:
           double eps;
         public:
@@ -58,7 +58,7 @@ namespace Faunus {
           string info(char);
       };
 
-      class SquareWell : public potbase {
+      class SquareWell : public Potbase {
         public:
           double threshold; //!< Threshold between particle *surface* [A]
           double depth;     //!< Energy depth [kT]
@@ -70,7 +70,7 @@ namespace Faunus {
           string info(char);
       };
 
-      class Coulomb : public potbase {
+      class Coulomb : public Potbase {
         private:
           double temp, epsilon_r;
         protected:

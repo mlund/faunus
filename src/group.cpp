@@ -97,9 +97,9 @@ namespace Faunus {
    * \date Dec. 2007, Prague
    * \todo Use masscenter(con,p) function implemented below.
    */
-  point Group::_massCenter(const Space &con) const {
+  Point Group::_massCenter(const Space &con) const {
     double sum=0;
-    point cm,t,o = con.p.at(beg); // set origo to first particle
+    Point cm,t,o = con.p.at(beg); // set origo to first particle
     for (int i=beg; i<=end; ++i) {
       t = con.p[i]-o;        // translate to origo
       con.geo->boundary(t);       // periodic boundary (if any)
@@ -112,16 +112,16 @@ namespace Faunus {
     return cm;
   }
 
-  point Group::massCenter(const Space &con) const {
+  Point Group::massCenter(const Space &con) const {
     return _massCenter(con);
   }
   
-  point Group::dipolemoment(const Space &con) const {
-    point d;
+  Point Group::dipolemoment(const Space &con) const {
+    Point d;
     return d;
   }
   
-  void Group::rotate(Space &con, const point &v, double) {
+  void Group::rotate(Space &con, const Point &v, double) {
   }
   
   void Group::scale(Space &con, double) {
@@ -141,7 +141,7 @@ namespace Faunus {
    * \param par Container class
    * \param c ...by adding this vector to all particles
    */
-  void Group::translate(Space &con, const point &p) {
+  void Group::translate(Space &con, const Point &p) {
     for (int i=beg; i<=end; ++i) {
       con.trial[i] = con.p[i] + p;
       con.geo->boundary( con.trial[i] );
@@ -215,7 +215,7 @@ namespace Faunus {
     return *this;
   }
 
-  void Molecular::translate(Space &con, const point &p) {
+  void Molecular::translate(Space &con, const Point &p) {
     Group::translate(con, p);
     cm_trial=cm+p;
     con.geo->boundary(cm_trial);

@@ -40,14 +40,14 @@ namespace Faunus {
       public:
         enum collisiontype {BOUNDARY,ZONE};                 //!< Types for collision() function
         double getvolume() const;                           //!< Get volume of container
-        virtual void setvolume(double);                     //!< Specify new volume
+        virtual void setVolume(double);                     //!< Specify new volume
         virtual bool collision(const particle&, collisiontype=BOUNDARY)=0;//!< Check for collision with boundaries, forbidden zones, matter,..
-        virtual void randompos(point &)=0;                  //!< Random point within container
-        virtual void boundary(point &) const=0;             //!< Apply boundary conditions to a point
-        virtual void scale(point&, const double&) const;    //!< Scale point to a new volume - for NPT ensemble
-        double dist(const point&,const point&);             //!< Distance between two points
-        virtual double sqdist(const point &a, const point &b)=0;
-        virtual point vdist(const point&, const point&)=0;
+        virtual void randompos(Point &)=0;                  //!< Random point within container
+        virtual void boundary(Point &) const=0;             //!< Apply boundary conditions to a point
+        virtual void scale(Point&, const double&) const;    //!< Scale point to a new volume - for NPT ensemble
+        double dist(const Point&,const Point&);             //!< Distance between two points
+        virtual double sqdist(const Point &a, const Point &b)=0;
+        virtual Point vdist(const Point&, const Point&)=0;
         string info(char=20);                               //!< Return info string
         bool save(string);                                  //!< Save container state to disk
         bool load(string,bool=false);                       //!< Load container state from disk
@@ -69,18 +69,18 @@ namespace Faunus {
         Sphere(double);
         Sphere(InputMap&);
         string _info(char);
-        void setvolume(double);
-        void randompos(point &);
-        void boundary(point &) const;
+        void setVolume(double);
+        void randompos(Point &);
+        void boundary(Point &) const;
         bool collision(const particle &, collisiontype=BOUNDARY);
-        inline double sqdist(const point &a, const point &b) {
+        inline double sqdist(const Point &a, const Point &b) {
           register double dx,dy,dz;
           dx=a.x-b.x;
           dy=a.y-b.y;
           dz=a.z-b.z;
           return dx*dx + dy*dy + dz*dz;
         }
-        point vdist(const point&, const point&);
+        Point vdist(const Point&, const Point&);
     };
 
     //---------------------------------------------------------
@@ -98,22 +98,22 @@ namespace Faunus {
       private:
         string _info(char);                      //!< Return info string
       protected:
-        bool setslice(point, point);             //!< Reset slice position
-        point len_inv;                           //!< Inverse sidelengths
+        bool setslice(Point, Point);             //!< Reset slice position
+        Point len_inv;                           //!< Inverse sidelengths
 
       public:
         Cuboid(InputMap&);                       //!< Read input parameters
-        bool setlen(point);                      //!< Reset Cuboid sidelengths
-        point len;                               //!< Sidelengths
-        point len_half;                          //!< Half sidelength
-        point slice_min, slice_max;              //!< Position of slice corners
-        point randompos();                       //!< Get point with random position
-        void randompos(point &);                 //!< Move point to random position
+        bool setlen(Point);                      //!< Reset Cuboid sidelengths
+        Point len;                               //!< Sidelengths
+        Point len_half;                          //!< Half sidelength
+        Point slice_min, slice_max;              //!< Position of slice corners
+        Point randompos();                       //!< Get point with random position
+        void randompos(Point &);                 //!< Move point to random position
         bool save(string);                       //!< Save container state to disk
         bool load(string,bool=false);            //!< Load container state from disk
         bool collision(const particle&, collisiontype=BOUNDARY);
 
-        inline double sqdist(const point &a, const point &b) {
+        inline double sqdist(const Point &a, const Point &b) {
           double dx=std::abs(a.x-b.x);
           double dy=std::abs(a.y-b.y);
           double dz=std::abs(a.z-b.z);
@@ -123,8 +123,8 @@ namespace Faunus {
           return dx*dx + dy*dy + dz*dz;
         }
 
-        inline point vdist(const point &a, const point &b) {       //!< Distance vector
-          point r=a-b;
+        inline Point vdist(const Point &a, const Point &b) {       //!< Distance vector
+          Point r=a-b;
           if (r.x>len_half.x)
             r.x-=len.x;
           else if (r.x<-len_half.x)
@@ -145,12 +145,12 @@ namespace Faunus {
         }
 
         //! Apply periodic boundary conditions
-        inline void boundary(point &a) const {
+        inline void boundary(Point &a) const {
           if (std::abs(a.x)>len_half.x) a.x-=len.x*anint(a.x*len_inv.x);
           if (std::abs(a.y)>len_half.y) a.y-=len.y*anint(a.y*len_inv.y);
           if (std::abs(a.z)>len_half.z) a.z-=len.z*anint(a.z*len_inv.z);
         }
-        virtual void scale(point&, const double&) const; //!< Scale point to a new volume - for NPT ensemble
+        virtual void scale(Point&, const double&) const; //!< Scale point to a new volume - for NPT ensemble
     };
 
     /*!
@@ -163,7 +163,7 @@ namespace Faunus {
         Cuboidslit(InputMap &);
 
         //! Calculate distance using the minimum image convention
-        inline double sqdist(const point &a, const point &b) {   //!< Squared distance 
+        inline double sqdist(const Point &a, const Point &b) {   //!< Squared distance 
           double dx=std::abs(a.x-b.x);
           double dy=std::abs(a.y-b.y);
           double dz=a.z-b.z;
@@ -172,8 +172,8 @@ namespace Faunus {
           return dx*dx + dy*dy + dz*dz;
         }   
 
-        inline point vdist(const point &a, const point &b) {       //!< Distance vector
-          point r=a-b;
+        inline Point vdist(const Point &a, const Point &b) {       //!< Distance vector
+          Point r=a-b;
           if (r.x>len_half.x)
             r.x-=len.x;
           else if (r.x<-len_half.x)
@@ -186,7 +186,7 @@ namespace Faunus {
         }
 
         //! Apply periodic boundary conditions
-        inline void boundary(point &a) const {
+        inline void boundary(Point &a) const {
           if (std::abs(a.x)>len_half.x) a.x-=len.x*anint(a.x*len_inv.x);
           if (std::abs(a.y)>len_half.y) a.y-=len.y*anint(a.y*len_inv.y);
         }
@@ -212,9 +212,9 @@ namespace Faunus {
         double diameter;
         Cylinder(double, double);
         Cylinder(InputMap &);
-        void randompos(point &);
+        void randompos(Point &);
         bool collision(const particle&, collisiontype=BOUNDARY);
-        inline double sqdist(const point &a, const point &b) {
+        inline double sqdist(const Point &a, const Point &b) {
           register double dx,dy,dz;
           dx=a.x-b.x;
           dy=a.y-b.y;

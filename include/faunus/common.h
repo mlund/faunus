@@ -51,14 +51,14 @@ namespace Faunus {
   class InputMap;
   class UnitTest;
   class Space;
-  class point;
-  class pointparticle;
-  class cigarparticle;
+  class Point;
+  class PointParticle;
+  class CigarParticle;
 
 #ifdef CIGARPARTICLE
   typedef cigarparticle particle;
 #else
-  typedef pointparticle particle;
+  typedef PointParticle particle;
 #endif
   typedef vector<particle> p_vec;
 

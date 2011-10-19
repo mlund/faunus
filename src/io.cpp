@@ -493,5 +493,7 @@ namespace Faunus {
   }
 
   Group FastaSequence::include(string file, Space &spc, Energy::ParticleBonds &b) {
+    Group g;
+    return g;
   }
 }  //namespace

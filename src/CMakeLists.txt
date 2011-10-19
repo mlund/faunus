@@ -17,7 +17,7 @@ add_subdirectory(xdrfile)
 # -------------------------------------
 check_include_file_cxx("tuple" TUPLE)
 if (NOT TUPLE)
-  message(FATAL_ERROR "Compiler does not seem to support C++11")
+  message(FATAL_ERROR "Compiler does not support C++11 tuples")
 endif()
 
 # -------------------------------------

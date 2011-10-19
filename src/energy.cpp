@@ -75,17 +75,6 @@ namespace Faunus {
       return o.str();
     }
 
-    Hamiltonian::~Hamiltonian() {
-      clear();
-    }
-
-    void Hamiltonian::clear() {
-      for (auto &bPtr : created)
-        delete bPtr;
-      created.clear();
-      baselist.clear();
-    }
-
     /*!
      * This adds an Energybase class to the Hamiltonian. If the geometry of the
      * added class is undefined it will get the current geometry of the Hamiltonian.
@@ -102,7 +91,7 @@ namespace Faunus {
       }
       else if (geo==NULL)
         geo = &e.getGeometry();
-      baselist.push_back(&e);
+      baselist.push_back( &e );
     }
 
     double Hamiltonian::all2all(const p_vec &p) {

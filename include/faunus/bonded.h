@@ -12,37 +12,26 @@ namespace Faunus {
      * \date Lund, October 2011
      *
      * This is a general class for handling properties for pairs. One example is bonds between
-     * particles, identified through their particle index. Properties are added through to
+     * particles, identified through the two particle index. Properties are added through to
      * add() template function which can also handle derived classes of Tpairprop. Upon adding
      * new properties, space is dynamically allocated inside the class for each property object.
-     * This memory is freed upon destruction or when calling clear().
      */
     template<class Tpairprop, typename Tij=int>
       class ParticlePairs {
+        typedef shared_ptr<Tpairprop> PropPtr;
         private:
-          vector<Tpairprop*> newPtr;
+          vector<PropPtr> created; //!< list of allocated pair properties
         protected:
-          std::map<Tij, std::map<Tij, Tpairprop*> > list;
+          std::map<Tij, std::map<Tij, PropPtr> > list;
           string name;
         public:
-          ~ParticlePairs() {
-            clear();
-          }
-
-          void clear() {
-            for (auto &ptr : newPtr)
-              delete(ptr);
-            newPtr.clear();
-            list.clear();
-          }
-
           template<typename Tderived>
             void add(Tij i, Tij j, Tderived p) {
               assert(i!=j); //debug
               if (i!=j) {
-                newPtr.push_back( new Tderived(p) ); 
-                list[i][j]=newPtr.back();
-                list[j][i]=newPtr.back();
+                created.push_back( shared_ptr<Tderived>(new Tderived(p)) ); 
+                list[i][j]=created.back();
+                list[j][i]=created.back();
               }
             }
 

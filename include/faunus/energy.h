@@ -79,13 +79,13 @@ namespace Faunus {
           }
 
           inline double p2p(const particle &a, const particle &b) {
-            return pair.pairpot(a,b)*pair.tokT;
+            return pair.energy(a,b)*pair.tokT;
           }
 
           double all2p(const p_vec &p, const particle &a) {
             double u=0;
             for (auto &b : p)
-              u+=pair.pairpot(a,b);
+              u+=pair.energy(a,b);
             return u*pair.tokT;
           }
 
@@ -94,12 +94,12 @@ namespace Faunus {
             double u=0;
             for (int i=0; i<n-1; ++i)
               for (int j=i+1; j<n; ++j)
-                u+=pair.pairpot( p[i],p[j] );
+                u+=pair.energy( p[i],p[j] );
             return u*pair.tokT;
           }
 
           double i2i(const p_vec &p, int i, int j) {
-            return pair.pairpot(p[i],p[j]);
+            return pair.energy(p[i],p[j]);
           }
 
           double i2g(const p_vec &p, Group &g, int j) {
@@ -107,12 +107,12 @@ namespace Faunus {
             int len=g.end+1;
             if (j>=g.beg && j<=g.end) {   //j is inside g - avoid self interaction
               for (int i=g.beg; i<j; i++)
-                u+=pair.pairpot(p[i],p[j]);
+                u+=pair.energy(p[i],p[j]);
               for (int i=j+1; i<len; i++)
-                u+=pair.pairpot(p[i],p[j]);
+                u+=pair.energy(p[i],p[j]);
             } else                        //simple - j not in g
               for (int i=g.beg; i<len; i++)
-                u+=pair.pairpot(p[i],p[j]);
+                u+=pair.energy(p[i],p[j]);
             return pair.tokT*u;  
           }
 
@@ -120,9 +120,9 @@ namespace Faunus {
             double u=0;
             int n=(int)p.size();
             for (int j=0; j<i; ++j)
-              u+=pair.pairpot( p[i], p[j] );
+              u+=pair.energy( p[i], p[j] );
             for (int j=i+1; j<n; ++j)
-              u+=pair.pairpot( p[i], p[j] );
+              u+=pair.energy( p[i], p[j] );
             return u*pair.tokT;
           }
 
@@ -132,7 +132,7 @@ namespace Faunus {
 #pragma omp parallel for reduction (+:u) schedule (dynamic)
             for (int i=g1.beg; i<ilen; ++i)
               for (int j=g2.beg; j<jlen; ++j)
-                u+=pair.pairpot(p[i],p[j]);
+                u+=pair.energy(p[i],p[j]);
             return pair.tokT*u;
           }
 
@@ -142,9 +142,9 @@ namespace Faunus {
 #pragma omp parallel for reduction (+:u)
             for (int i=g.beg; i<ng; ++i) {
               for (int j=0; j<g.beg; j++)
-                u += pair.pairpot(p[i],p[j]);
+                u += pair.energy(p[i],p[j]);
               for (int j=ng; j<np; j++)
-                u += pair.pairpot(p[i],p[j]);
+                u += pair.energy(p[i],p[j]);
             }
             return u*pair.tokT;
           }
@@ -155,7 +155,7 @@ namespace Faunus {
             int step=1,n=g.end+1;
             for (int i=g.beg; i<n-step; i++)
               for (int j=g.beg+step*((i-g.beg)/step+1); j<n; j++)
-                u+=pair.pairpot(p[i],p[j]);
+                u+=pair.energy(p[i],p[j]);
             return pair.tokT*u;
           }
 
@@ -224,36 +224,35 @@ namespace Faunus {
      * \endcode
      */
     class Hamiltonian : public Energybase {
+      typedef shared_ptr<Energybase> baseptr;
       private:
-        vector<Energybase*> created; //!< track created energy classes for later destruction
+      vector<baseptr> created;      //!< smart pointer list of created energy children
       public:
-        vector<Energybase*> baselist;
-        ~Hamiltonian();
-        void clear();
+      vector<Energybase*> baselist; //!< pointer list to energy children to be summed
 
-        template<typename Tenergybase> Tenergybase* create(Tenergybase p) {
-          //! Create energybase and add it to list. Will be destroyed by ~Hamiltonian().
-          Tenergybase* t = new Tenergybase(p);
-          t->getGeometry(); // not pretty...need to update geo pointer for i.e. nonbonded class
-          created.push_back(t);
-          add(*t);
-          return t;
-        }
+      template<typename Tenergychild> shared_ptr<Tenergychild> create(Tenergychild c) {
+        shared_ptr<Tenergychild> childptr( new Tenergychild(c) );
+        childptr->getGeometry(); // not pretty...need to update geo pointer for i.e. nonbonded class
+        created.push_back(childptr);
+        add(*childptr);
+        return childptr;
+      }
 
-        void add(Energybase&); //!< Add existing energybase to list
-        double p2p(const particle&, const particle&);
-        double all2p(const p_vec&, const particle&);
-        double all2all(const p_vec&);
-        double i2i(const p_vec&, int, int);
-        double i2g(const p_vec&, Group&, int);
-        double i2all(const p_vec&, int);
-        double i_external(const p_vec&, int);
-        double i_internal(const p_vec&, int);
-        double g2g(const p_vec&, Group&, Group&);
-        double g2all(const p_vec&, Group&);
-        double g_external(const p_vec&, Group&);
-        double g_internal(const p_vec&, Group&);
-        string info();
+      void add(Energybase&); //!< Add existing energybase to list
+
+      double p2p(const particle&, const particle&);
+      double all2p(const p_vec&, const particle&);
+      double all2all(const p_vec&);
+      double i2i(const p_vec&, int, int);
+      double i2g(const p_vec&, Group&, int);
+      double i2all(const p_vec&, int);
+      double i_external(const p_vec&, int);
+      double i_internal(const p_vec&, int);
+      double g2g(const p_vec&, Group&, Group&);
+      double g2all(const p_vec&, Group&);
+      double g_external(const p_vec&, Group&);
+      double g_internal(const p_vec&, Group&);
+      string info();
     };
 
   }//Energy namespace

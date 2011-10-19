@@ -42,9 +42,10 @@ CHECK_CXX_SOURCE_COMPILES("int main() { unsigned long long int i; }" unsigned_lo
 CHECK_CXX_SOURCE_COMPILES("int main() { long double f; }" long_double)
 CHECK_CXX_SOURCE_COMPILES("int main() { int a[0]; for (int &i:a) i++; }" range_based_for_loop)
 CHECK_CXX_SOURCE_COMPILES("int main() { auto i=0; }" auto_type_inference)
+CHECK_CXX_SOURCE_COMPILES("#include<memory>\nint main() {std::shared_ptr<int> i;}" smart_pointers)
 
-if(NOT (auto_type_inference AND unsigned_long_long_int AND long_double AND range_based_for_loop) )
-  message(FATAL_ERROR "Compiler does not seem to support C++11")
+if(NOT (auto_type_inference AND unsigned_long_long_int AND long_double AND range_based_for_loop AND smart_pointers) )
+  message(FATAL_ERROR "Required C++11 unsupported by compiler.")
 endif()
 
 # ---------------------------

@@ -77,7 +77,7 @@ namespace Faunus {
           double lB; //!< Bjerrum length [A]
         public:
           Coulomb(InputMap &);
-          inline double u(const double &r, const double &zz) const { return zz/r; }
+          inline double u(double r, double zz) const { return zz/r; }
           string info(char);
       };
 
@@ -88,7 +88,7 @@ namespace Faunus {
           DebyeHuckel(InputMap&);
           double ionicStrength() const;
           double debyeLength() const;
-          inline double u(const double &r, const double &zz) const { return zz/r * exp(k*r); }
+          inline double u(double r, double zz) const { return zz/r * exp(k*r); }
           string info(char);
       };
 
@@ -104,14 +104,20 @@ namespace Faunus {
           string name; //!< Single line describing the potential
           Tgeometry geo;
           double tokT;
-          CoulombLJ(InputMap &in) : el(in), eps(4*in.get<double>("lj_eps",0.04)/el.tokT), geo(in) { 
+          CoulombLJ(InputMap &in) : el(in), eps(4*in.get("lj_eps",0.04)/el.tokT), geo(in) { 
             tokT=el.tokT;
             name=lj.name+"+"+el.name;
           }
-          inline double pairpot(const particle &a, const particle &b) {
+          inline double energy(const particle &a, const particle &b) {
             double r2=geo.sqdist(a,b);
             return el.u(sqrt(r2), a.charge*b.charge) + lj.u_lj(r2, a.radius+b.radius, eps);
           }
+
+          inline double exclusionEnergy(const particle &a, const particle &b) {
+            double r2=geo.sqdist(a,b);
+            return lj.u_lj(r2, a.radius+b.radius, eps);
+          }
+
           string info(char w=20) {
             std::ostringstream o;
             o << pad(SUB,w,"Pair potential:") << name << endl
@@ -133,11 +139,17 @@ namespace Faunus {
             name="Hardsphere + " + el.name;
             tokT=el.tokT;
           }
-          inline double pairpot(const particle &a, const particle &b) {
+          inline double energy(const particle &a, const particle &b) {
             double r2=Tgeometry::sqdist(a,b), s=a.radius+b.radius;
             if (r2<s*s)
               return infty;
             return el.u(sqrt(r2), a.charge*b.charge);
+          }
+          inline double exclusionEnergy(const particle &a, const particle &b) {
+            double r2=Tgeometry::sqdist(a,b), s=a.radius+b.radius;
+            if (r2<s*s)
+              return infty;
+            return 0;
           }
           string info(char w=20) {
             std::ostringstream o;

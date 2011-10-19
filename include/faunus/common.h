@@ -15,6 +15,7 @@
 #include <complex>
 #include <map>
 #include <set>
+#include <memory>
 #endif
 
 namespace Faunus {
@@ -29,6 +30,7 @@ namespace Faunus {
   using std::exp;
   using std::cout;
   using std::ostringstream;
+  using std::shared_ptr;
 
   namespace Move {
     class Movebase;

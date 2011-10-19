@@ -46,7 +46,7 @@ namespace Faunus {
         virtual void boundary(Point &) const=0;             //!< Apply boundary conditions to a point
         virtual void scale(Point&, const double&) const;    //!< Scale point to a new volume - for NPT ensemble
         double dist(const Point&,const Point&);             //!< Distance between two points
-        virtual double sqdist(const Point &a, const Point &b)=0;
+        virtual double sqdist(const Point &a, const Point &b) const=0;
         virtual Point vdist(const Point&, const Point&)=0;
         string info(char=20);                               //!< Return info string
         bool save(string);                                  //!< Save container state to disk
@@ -73,7 +73,7 @@ namespace Faunus {
         void randompos(Point &);
         void boundary(Point &) const;
         bool collision(const particle &, collisiontype=BOUNDARY);
-        inline double sqdist(const Point &a, const Point &b) {
+        inline double sqdist(const Point &a, const Point &b) const {
           register double dx,dy,dz;
           dx=a.x-b.x;
           dy=a.y-b.y;
@@ -113,7 +113,7 @@ namespace Faunus {
         bool load(string,bool=false);            //!< Load container state from disk
         bool collision(const particle&, collisiontype=BOUNDARY);
 
-        inline double sqdist(const Point &a, const Point &b) {
+        inline double sqdist(const Point &a, const Point &b) const {
           double dx=std::abs(a.x-b.x);
           double dy=std::abs(a.y-b.y);
           double dz=std::abs(a.z-b.z);
@@ -163,7 +163,7 @@ namespace Faunus {
         Cuboidslit(InputMap &);
 
         //! Calculate distance using the minimum image convention
-        inline double sqdist(const Point &a, const Point &b) {   //!< Squared distance 
+        inline double sqdist(const Point &a, const Point &b) const {   //!< Squared distance 
           double dx=std::abs(a.x-b.x);
           double dy=std::abs(a.y-b.y);
           double dz=a.z-b.z;
@@ -214,7 +214,7 @@ namespace Faunus {
         Cylinder(InputMap &);
         void randompos(Point &);
         bool collision(const particle&, collisiontype=BOUNDARY);
-        inline double sqdist(const Point &a, const Point &b) {
+        inline double sqdist(const Point &a, const Point &b) const {
           register double dx,dy,dz;
           dx=a.x-b.x;
           dy=a.y-b.y;

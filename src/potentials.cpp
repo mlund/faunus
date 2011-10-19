@@ -23,6 +23,37 @@ namespace Faunus {
      */
     namespace Core {
 
+      Potbase::Potbase() { setScale(1.0); }
+      void Potbase::setScale(double s)  { _setScale(s); }
+      void Potbase::_setScale(double s) { tokT=s; }
+      double Potbase::scale() { return tokT; }
+
+      string Potbase::brief() {
+        return _brief();
+      }
+      string Potbase::_brief() {
+        return string("This is potential base!");
+      }
+
+      Harmonic::Harmonic(double forceconst, double eqdist) : k(forceconst), req(eqdist) {}
+
+      void Harmonic::_setScale(double s) {
+        tokT=s;
+        k=k/tokT;
+      }
+
+      double Harmonic::energy(const particle &a, const particle &b, double r2) const {
+        double d=sqrt(r2)-req;
+        return k*d*d;
+      }
+
+      string Harmonic::_brief() {
+        using namespace Faunus::textio;
+        std::ostringstream o;
+        o << "Harmonic: k=" << k*tokT << kT << "/" << angstrom << squared << " req=" << req << _angstrom; 
+        return o.str();
+      }
+
       HardSphere::HardSphere(double infinity) {
         name="Hardsphere";
         inf=infinity;

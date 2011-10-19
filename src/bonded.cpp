@@ -2,6 +2,7 @@
 #include <faunus/geometry.h>
 #include <faunus/textio.h>
 #include <faunus/group.h>
+#include <faunus/potentials.h>
 
 namespace Faunus {
   namespace Energy {
@@ -31,7 +32,7 @@ namespace Faunus {
       assert( i<(int)p.size() ); //debug
       double u=0;
       for (auto &m2 : pairs::list[i])
-        u+=m2.second->energy( geo.dist( p[i], p[m2.first] ) );
+        u+=m2.second->energy( p[i], p[m2.first], geo.sqdist( p[i], p[m2.first] ) );
       return u;
     }
 
@@ -45,7 +46,7 @@ namespace Faunus {
           if ( done.find(m2.first)==done.end() ) {
             assert(m1.first<(int)p.size()); //debug
             assert(m2.first<(int)p.size()); //debug
-            u += m2.second->energy( geo.dist( p[m1.first], p[m2.first] ) );
+            u += m2.second->energy( p[m1.first], p[m2.first], geo.sqdist( p[m1.first], p[m2.first] ) );
           }
         }
         done.insert(m1.first); // exclude index from subsequent loops
@@ -60,7 +61,7 @@ namespace Faunus {
       for (auto i=g.beg; i<=g.end; i++) {
         for (auto &m2 : pairs::list[i]) {
           if ( done.find(m2.first)==done.end() ) {
-            u += m2.second->energy( geo.dist( p[i], p[m2.first] ) );
+            u += m2.second->energy( p[i], p[m2.first], geo.sqdist( p[i], p[m2.first] ) );
           }
         }
         done.insert(i);

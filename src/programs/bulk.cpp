@@ -41,8 +41,8 @@ int main() {
   mv.setGroup(salt);
   spc.load("space.state");
 
-  bonded->bonds.add(0,1, Energy::HarmonicBond(0.5, 10.0));
-  bonded->bonds.add(1,2, Energy::HarmonicBond(0.5,  5.0));
+  bonded->bonds.add(0,1, Potential::Core::Harmonic(0.2, 10.0));
+  bonded->bonds.add(1,2, Potential::Core::Harmonic(0.3,  5.0));
 
   // Particle titration
   Move::SwapMove tit(mcp,pot,spc);
@@ -51,8 +51,8 @@ int main() {
   Analysis::Widom widom(spc, pot);
   widom.addGhost(spc);
 
-  FastaSequence fasta;
-  Group protein1 = fasta.insert( "AAK", spc, bonded->bonds );
+  //FastaSequence fasta;
+  //Group protein1 = fasta.insert( "AAK", spc, bonded->bonds );
 
   #define UTOTAL pot.g_internal(spc.p, salt) 
   sys.init( UTOTAL );

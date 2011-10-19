@@ -136,7 +136,7 @@ namespace Faunus {
   class FastaSequence {
     private:
       std::map<char,string> map; //!< Map one letter code (char) to three letter code (string)
-      Energy::HarmonicBond bond;
+      Potential::Core::Harmonic bond;
     public:
       p_vec interpret(string);
       FastaSequence(double=0.76, double=4.9);

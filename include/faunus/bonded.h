@@ -3,6 +3,7 @@
 
 #include <faunus/common.h>
 #include <faunus/textio.h>
+#include <faunus/potentials.h>
 
 namespace Faunus {
   namespace Energy {
@@ -50,7 +51,7 @@ namespace Faunus {
               for (auto j : list[i.first])
                 if (i.first < j.first)
                   o << indent(SUBSUB) << std::left << setw(7) << i.first
-                    << setw(7) << j.first << j.second->info() << endl;
+                    << setw(7) << j.first << j.second->brief() << endl;
             return o.str();
           }
       };
@@ -89,8 +90,8 @@ namespace Faunus {
      *    double u = bonds(i,j).energy( rij ); // i j bond energy
      * \endcode
      */
-    class ParticleBonds : public ParticlePairs<Bondbase,int> {
-      typedef ParticlePairs<Bondbase> pairs;
+    class ParticleBonds : public ParticlePairs<Potential::Core::Potbase,int> {
+      typedef ParticlePairs<Potential::Core::Potbase> pairs;
       public:
       ParticleBonds();
 

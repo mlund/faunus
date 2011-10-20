@@ -20,6 +20,84 @@ namespace Faunus {
   namespace Energy {
 
     /*!
+     * \brief General class for handling pairs of particles
+     * \date Lund, October 2011
+     *
+     * This is a general class for handling properties for pairs. One example is bonds between
+     * particles, identified through the two particle index. Properties are added through to
+     * add() template function which can also handle derived classes of Tpairprop. Upon adding
+     * new properties, space is dynamically allocated inside the class for each property object.
+     */
+    template<class Tpairprop, typename Tij=int>
+      class ParticlePairs {
+        typedef shared_ptr<Tpairprop> PropPtr;
+        private:
+        vector<PropPtr> created; //!< list of allocated pair properties
+        protected:
+        std::map<Tij, std::map<Tij, PropPtr> > list;
+        string name;
+        public:
+        template<typename Tderived>
+          void add(Tij i, Tij j, Tderived p) {
+            assert(i!=j); //debug
+            if (i!=j) {
+              created.push_back( shared_ptr<Tderived>(new Tderived(p)) ); 
+              list[i][j]=created.back();
+              list[j][i]=created.back();
+            }
+          }
+
+        //!< \brief Retrieve reference to bond via (i,j) operator
+        Tpairprop& operator() (Tij i, Tij j) {
+          assert( list[i][j]!=NULL ); //debug
+          return *list[i][j];
+        }
+
+        string info() {
+          using namespace Faunus::textio;
+          std::ostringstream o;
+          o << indent(SUBSUB) << std::left
+            << setw(7) << "i" << setw(7) << "j" << endl;
+          for (auto i : list)
+            for (auto j : list[i.first])
+              if (i.first < j.first)
+                o << indent(SUBSUB) << std::left << setw(7) << i.first
+                  << setw(7) << j.first << j.second->brief() << endl;
+          return o.str();
+        }
+      };
+
+    /*!
+     * \brief Class for handling bond pairs
+     * \date Lund, October 2011
+     * \author Mikael Lund
+     *
+     * Example:
+     * \code
+     *    vector<particle> p(...);            // particle vector
+     *    int i=10, j=11;                     // particle index
+     *    Energy::ParticleBonds bonds;
+     *    bonds.add(i, j, Potential::Harmonic(0.1,5.0) );
+     *    std::cout << bonds.info();
+     *    double rij2 = ... ;                 // squared distance between i and j
+     *    double u = bonds(i,j).energy( p[i], p[j], rij2 ); // i j bond energy
+     * \endcode
+     */
+
+    class ParticleBonds : public ParticlePairs<Potential::PairPotentialBase,int> {
+      typedef ParticlePairs<Potential::PairPotentialBase> pairs;
+      public:
+      ParticleBonds();
+
+      //!< Returns total bond energy of i'th particle (kT)
+      double totalEnergy(Geometry::Geometrybase&, const p_vec&, int);
+
+      double totalEnergy(Geometry::Geometrybase&, const p_vec&, const Group&);
+
+      //!< Returns total bond energy of all bonds (kT)
+      double totalEnergy(Geometry::Geometrybase&, const p_vec&);
+    };
+    /*!
      *  \brief Base class for energy evaluation
      *
      *  This base class defines functions for evaluating interactions between particles,
@@ -62,7 +140,7 @@ namespace Faunus {
         virtual double v2v(const p_vec&, const p_vec&);
 
         virtual string info();
-     };
+    };
 
     template<class Tpotential>
       class Nonbonded : public Energybase {
@@ -79,14 +157,14 @@ namespace Faunus {
           }
 
           inline double p2p(const particle &a, const particle &b) {
-            return pair.energy(a,b)*pair.tokT;
+            return pair.energy(a,b)*pair.tokT();
           }
 
           double all2p(const p_vec &p, const particle &a) {
             double u=0;
             for (auto &b : p)
               u+=pair.energy(a,b);
-            return u*pair.tokT;
+            return u*pair.tokT();
           }
 
           double all2all(const p_vec &p) {
@@ -95,7 +173,7 @@ namespace Faunus {
             for (int i=0; i<n-1; ++i)
               for (int j=i+1; j<n; ++j)
                 u+=pair.energy( p[i],p[j] );
-            return u*pair.tokT;
+            return u*pair.tokT();
           }
 
           double i2i(const p_vec &p, int i, int j) {
@@ -113,7 +191,7 @@ namespace Faunus {
             } else                        //simple - j not in g
               for (int i=g.beg; i<len; i++)
                 u+=pair.energy(p[i],p[j]);
-            return pair.tokT*u;  
+            return pair.tokT()*u;  
           }
 
           double i2all(const p_vec &p, int i) {
@@ -123,7 +201,7 @@ namespace Faunus {
               u+=pair.energy( p[i], p[j] );
             for (int j=i+1; j<n; ++j)
               u+=pair.energy( p[i], p[j] );
-            return u*pair.tokT;
+            return u*pair.tokT();
           }
 
           double g2g(const p_vec &p, Group &g1, Group &g2) {
@@ -133,7 +211,7 @@ namespace Faunus {
             for (int i=g1.beg; i<ilen; ++i)
               for (int j=g2.beg; j<jlen; ++j)
                 u+=pair.energy(p[i],p[j]);
-            return pair.tokT*u;
+            return pair.tokT()*u;
           }
 
           double g2all(const p_vec &p, Group &g) {
@@ -146,7 +224,7 @@ namespace Faunus {
               for (int j=ng; j<np; j++)
                 u += pair.energy(p[i],p[j]);
             }
-            return u*pair.tokT;
+            return u*pair.tokT();
           }
 
           double g_internal(const p_vec &p, Group &g) { 
@@ -156,7 +234,7 @@ namespace Faunus {
             for (int i=g.beg; i<n-step; i++)
               for (int j=g.beg+step*((i-g.beg)/step+1); j<n; j++)
                 u+=pair.energy(p[i],p[j]);
-            return pair.tokT*u;
+            return pair.tokT()*u;
           }
 
           string info() {
@@ -203,7 +281,7 @@ namespace Faunus {
       public:
         Bonded();
         Bonded(Geometry::Geometrybase&);
-        Faunus::Energy::ParticleBonds bonds;
+        ParticleBonds bonds;
         double i_internal(const p_vec &p, int i);
         double g_internal(const p_vec &p, Group &g);
         string info();
@@ -254,6 +332,8 @@ namespace Faunus {
       double g_internal(const p_vec&, Group&);
       string info();
     };
+
+
 
   }//Energy namespace
 }//Faunus namespace

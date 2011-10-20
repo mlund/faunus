@@ -5,7 +5,7 @@
 #include <faunus/group.h>
 #include <faunus/inputfile.h>
 #include <faunus/space.h>
-#include <faunus/bonded.h>
+#include <faunus/energy.h>
 
 namespace Faunus {
   /*!

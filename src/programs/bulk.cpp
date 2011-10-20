@@ -41,8 +41,8 @@ int main() {
   mv.setGroup(salt);
   spc.load("space.state");
 
-  bonded->bonds.add(0,1, Potential::Core::Harmonic(0.2, 10.0));
-  bonded->bonds.add(1,2, Potential::Core::Harmonic(0.3,  5.0));
+  bonded->bonds.add(0,1, Potential::Harmonic(0.2, 10.0));
+  bonded->bonds.add(1,2, Potential::Harmonic(0.3,  5.0));
 
   // Particle titration
   Move::SwapMove tit(mcp,pot,spc);

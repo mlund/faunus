@@ -43,6 +43,12 @@ namespace Faunus {
      */
 
     class Movebase {
+      private:
+        virtual string _info()=0;         //!< Specific info for derived moves
+        virtual void _trialMove()=0;      //!< Do a trial move
+        virtual void _acceptMove()=0;     //!< Accept move, store new coordinates etc.
+        virtual void _rejectMove()=0;     //!< Reject move, revert to old coordinates etc.
+        virtual double _energyChange()=0; //!< Returns energy change of trialMove
       protected:
         Energy::Energybase* pot;         //!< Pointer to energy functions
         Space* spc;
@@ -55,38 +61,22 @@ namespace Faunus {
         double dusum;                    //!< Sum of all energy changes made by this move
         const double infty;              //!< Large value to represent infinity
 
-        virtual void trialMove()=0;      //!< Do a trial move
-        virtual void acceptMove()=0;     //!< Accept move, store new coordinates etc.
-        virtual void rejectMove()=0;     //!< Reject move, revert to old coordinates etc.
-        virtual double energyChange()=0; //!< Returns energy change of trialMove
+        void trialMove();                //!< Do a trial move
+        void acceptMove();               //!< Accept move, store new coordinates etc.
+        void rejectMove();               //!< Reject move, revert to old coordinates etc.
+        double energyChange();           //!< Returns energy change of trialMove
         bool run() const;                //!< Runfraction test
         bool metropolis(const double &) const; //!< Metropolis criteria
 
       public:
         Movebase(Energy::Energybase&, Space&, string);             //!< Constructor
         virtual ~Movebase() {};
-        virtual double move()=0;     //!< Attempt a move and return energy change
+        virtual double move();       //!< Attempt a move and return energy change
         double runfraction;          //!< Fraction of times calling move() should result in an actual move
         string info();               //!< Returns information string
         virtual double totalEnergy();//!< Total energy relevant for energy drift tracking
         //void unittest(unittest&);  //!< Perform unit test
     };
-
-    /*
-    class translate : public Movebase {
-      protected:
-        void trialMove();
-        void acceptMove();
-        void rejectmove();
-        double energychange();
-      public:
-        translate(string="translate_", Energybase&, space&);
-        unsigned int group;
-        point dp;                   //!< Displacement vector
-        double move();
-        string info();
-    };
-    */
 
     /*!
      * \brief Translation of single particles or single particles in a group
@@ -104,27 +94,39 @@ namespace Faunus {
         map_type sqrmap; //!< Single particle mean square displacement map
         Group* igroup;   //!< Group pointer in which particles are moved randomly (NULL if none, default)
         int iparticle;   //!< Select single particle to move (-1 if none, default)
-      protected:
-        void trialMove();
-        void acceptMove();
-        void rejectMove();
-        double energyChange();
+        
+        string _info();
+        void _trialMove();
+        void _acceptMove();
+        void _rejectMove();
+        double _energyChange();
       public:
         ParticleTranslation(InputMap&, Energy::Energybase&, Space&, string="mv_particle");
         void setGroup(Group&); //!< Select group in which to randomly pick particles from
         void setParticle(int); //!< Select single particle in p_vec to move
         double move();         //!< Move selected particle once or n times in selected group of length n
         Point dir;             //!< Displacement directions (default: x=y=z=1)
-        string info();
         double totalEnergy();  //!< Total energy for drift tracking
     };
 
     class MoleculeTranslation : public Movebase {
+      
     };
 
-    class MoleculeRotation : public Movebase {
+    class RotateGroup : public Movebase {
+      private:
+        void _trialMove();
+        void _acceptMove();
+        void _rejectMove();
+        double _energyChange();
+	string _info();
+        Group* igroup;
+	double rotdp;  //!< Rotational displament parameter
+      public:
+        RotateGroup(InputMap&, Energy::Energybase&, Space&, string="rotate_grp");
+        void setGroup(Group&); //!< Select Group to move
+	bool groupWiseEnergy;  //!< Attempt to evaluate energy over groups from vector in Space (default=false)
     };
-
 
   }//namespace
 }//namespace

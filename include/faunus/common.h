@@ -49,7 +49,7 @@ namespace Faunus {
   }
 
   class Group;
-  class inputfile;
+  class _inputfile;
   class InputMap;
   class UnitTest;
   class Space;

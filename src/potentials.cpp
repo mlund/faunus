@@ -54,13 +54,22 @@ namespace Faunus {
       return o.str();
     }
 
-    HardSphere::HardSphere(double infinity) {
+    HardSphere::HardSphere() {
+      infty=std::numeric_limits<double>::infinity();
       name="Hardsphere";
-      inf=infinity;
     }
-    
+
+    HardSphere::HardSphere(InputMap& in) {
+      infty=std::numeric_limits<double>::infinity();
+      name="Hardsphere";
+    }
+   
     string HardSphere::_brief() {
       return name;
+    }
+
+    string HardSphere::info(char w) {
+      return textio::indent(SUB)+name+"\n";
     }
 
     LennardJones::LennardJones() {
@@ -74,7 +83,7 @@ namespace Faunus {
     
     string LennardJones::_brief() {
       std::ostringstream o;
-      o << "eps=" << eps*tokT() << textio::kT;
+      o << textio::epsilon+"(LJ)" << eps*tokT()/4 << textio::kT;
       return o.str();
     }
     
@@ -85,6 +94,7 @@ namespace Faunus {
 
     string LennardJones::info(char w) {
       std::ostringstream o;
+      o << textio::pad(SUB,w+1,textio::epsilon+"(LJ)") << eps*tokT()/4 << textio::kT << endl;
       return o.str();
     }
 

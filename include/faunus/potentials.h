@@ -43,16 +43,18 @@ namespace Faunus {
 
     class HardSphere : public PairPotentialBase {
       private:
-        double inf;
+        double infty;
         string _brief();
       public:
-        HardSphere(double=1e14);
+        HardSphere();
+        HardSphere(InputMap&);
         inline double energy(const particle &a, const particle &b, double r2) const {
           double mindist=a.radius+b.radius;
-          if (mindist*mindist<r2)
-            return inf;
+          if (r2<mindist*mindist)
+            return infty;
           return 0;
         }
+        string info(char w);
     };
 
     class LennardJones : public PairPotentialBase {
@@ -132,7 +134,7 @@ namespace Faunus {
 
 
     template<class Tgeometry, class Tcoulomb=Coulomb, class Tshortranged=LennardJones>
-      class CoulombLJ : public PairPotentialBase {
+      class CoulombSR : public PairPotentialBase {
         private:
           string _brief() { return name; };
         protected:
@@ -140,52 +142,25 @@ namespace Faunus {
           Tcoulomb el;
         public:
           Tgeometry geo;
-          CoulombLJ(InputMap &in) : sr(in), el(in), geo(in) {
+          CoulombSR(InputMap &in) : sr(in), el(in), geo(in) {
             setScale( el.tokT() );
             sr.setScale( el.tokT() );
             name=sr.name+"+"+el.name;
           }
           inline double energy(const particle &a, const particle &b) const {
             double r2=geo.sqdist(a,b);
-            return el.energy(a.charge*b.charge,sqrt(r2)) + sr.energy(a.radius+b.radius, r2);
+            return el.energy(a.charge*b.charge,sqrt(r2)) + sr.energy(a,b,r2);
           }
           inline double energy(const particle &a, const particle &b, double r2) const {
-            return el.energy(a.charge*b.charge,sqrt(r2)) + sr.energy(a.radius+b.radius, r2);
+            return el.energy(a.charge*b.charge,sqrt(r2)) + sr.energy(a,b,r2);
           }
           string info(char w=20) {
             std::ostringstream o;
-            o << pad(SUB,w,"Pair potential:") << name << endl
-              << el.info(w)
-              << pad(SUB,w,"LJ epsilon") << sr.brief() << endl;
+	    o << el.info(w) << sr.info(w);
             return o.str();
           }
       };
-
-    template<class Tgeometry, class Tcoulomb=Coulomb>
-      class CoulombHS {
-        protected:
-          Tcoulomb el;
-        public:
-          string name; //!< Single line describing the potential
-          const double infty;
-          double tokT;
-          CoulombHS(InputMap &in) : el(in), infty(1e10) {
-            name="Hardsphere + " + el.name;
-            tokT=el.tokT;
-          }
-          inline double energy(const particle &a, const particle &b) {
-            double r2=Tgeometry::sqdist(a,b), s=a.radius+b.radius;
-            if (r2<s*s)
-              return infty;
-            return el.energy( a.charge*b.charge, sqrt(r2) );
-          }
-          string info(char w=20) {
-            std::ostringstream o;
-            o << pad(SUB,w,"Pair potential:") << name << endl
-              << el.info(w);
-            return o.str();
-          }
-      };
+      
   } //end of potential namespace
 
 } //end of Faunus namespace

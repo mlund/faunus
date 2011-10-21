@@ -3,8 +3,10 @@
 
 #include <faunus/common.h>
 #include <faunus/average.h>
+#include <faunus/geometry.h>
 
 namespace Faunus {
+  
   class Group {
     protected:
       virtual std::ostream& write(std::ostream &) const; //!< Write all Group data to stream
@@ -51,16 +53,18 @@ namespace Faunus {
   /*!
    * \brief Group class for atomic species - for example salt particles.
    */
-  class Atomic : public Group {
+  class GroupAtomic : public Group {
     public:
-      Atomic();
-      Atomic(Space&, InputMap&);        //!< Construct and call add()
-      Atomic &operator<<(std::istream&);
+      GroupAtomic();
+      GroupAtomic(Space&, InputMap&);        //!< Construct and call add()
+      GroupAtomic &operator<<(std::istream&);
       void add(Space&, InputMap&);      //!< Add atomic particles via InputMap paramters
       void scale(Space&, double);       //!< Scale all atomic particles in Group to new volume
   };
 
-  class Molecular : public Group {
+  class GroupMolecular : public Group {
+    private:
+      Geometry::VectorRotate vrot;
     protected:
       std::ostream & write(std::ostream&) const;  //!< Write all Group data to stream
 
@@ -68,12 +72,13 @@ namespace Faunus {
       Average<double> Q;        //!< average net charge
       Average<double> mu;       //!< average dipole moment
 
-      Molecular();
+      GroupMolecular();
+      void rotate(Space&, const Point&, double);
       void translate(Space&, const Point&);
       void accept(Space&);
       void scale(Space&, double);
 
-      Molecular &operator<<(std::istream&);                        //!< Get information
+      GroupMolecular &operator<<(std::istream&);                        //!< Get information
   };
 
 }//namespace

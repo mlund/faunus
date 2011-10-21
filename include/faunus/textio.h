@@ -10,6 +10,7 @@ namespace Faunus {
     const string percent="\ufe6a";
     const string angstrom="\u00c5";
     const string _angstrom=" \u00c5";
+    const string epsilon="\u03f5";
     const string squared="\u00b2";
     const string cubed="\u00b3";
     const string rootof="\u221a";

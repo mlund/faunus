@@ -4,7 +4,7 @@
 #include <faunus/textio.h>
 
 namespace Faunus {
-  class inputfile;
+  class _inputfile;
   /*! \brief Estimate speed of a computational process
    *  \author Mikael Lund
    * 
@@ -12,36 +12,36 @@ namespace Faunus {
    *  process will finish. The current resolution is seconds.
    */
   template<class T>
-    class countdown {
+    class CountDown {
       private:
         T max;
         int time_i;              //!< Starting time in seconds
         time_t rawtime; 
         struct tm *timeinfo;
       public:
-        countdown(T);
+        CountDown(T);
         float speed(T);          //!< Calculate speed
         int elapsed();           //!< Time elapsed in seconds
         std::string eta(T);      //!< Estimate time of arrival
     };
   /*! \param maxvalue Value at arrival
   */
-  template<class T> countdown<T>::countdown(T maxvalue) {
+  template<class T> CountDown<T>::CountDown(T maxvalue) {
     time_i=time(0);
     max=maxvalue;
   }
-  template<class T> float countdown<T>::speed(T midvalue) {
+  template<class T> float CountDown<T>::speed(T midvalue) {
     return float(time(0)-time_i) / midvalue;
   }
   /*! \param midvalue Value somewhere between start and arrival
    *  \return String with estimated time and date of arrival
    */
-  template<class T> std::string countdown<T>::eta(T midvalue) {
+  template<class T> std::string CountDown<T>::eta(T midvalue) {
     rawtime = time(NULL) + int( speed(midvalue) * (max-midvalue)  );
     timeinfo = localtime(&rawtime);
     return asctime(timeinfo);
   }
-  template<class T> int countdown<T>::elapsed() { return time(0)-time_i; }
+  template<class T> int CountDown<T>::elapsed() { return time(0)-time_i; }
 
   /*!
    * \brief Monte Carlo loop book-keeping
@@ -72,7 +72,7 @@ namespace Faunus {
    */
   class MCLoop {
     private:
-      countdown<unsigned int> cnt;
+      CountDown<unsigned int> cnt;
       bool loadstateBool;          //!< load state file if present?
       string statefile;            //!< Default name of state file to load/save
     public:

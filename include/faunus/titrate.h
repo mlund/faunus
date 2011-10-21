@@ -97,18 +97,17 @@ namespace Faunus {
       private:
         std::map<int, Average<double> > accmap; //!< Site acceptance map
         int ipart;                              //!< Particle to be swapped
-      protected:
-        void trialMove();
-        double energyChange();
-        void acceptMove();
-        void rejectMove();
+        string _info();
+        void _trialMove();
+        void _acceptMove();
+        void _rejectMove();
+        double _energyChange();
         Energy::EquilibriumEnergy eqpot;
       public:
         SwapMove(InputMap&, Energy::Hamiltonian&, Space&, string="swapmv_");
         int findSites(const p_vec&);
         double move();
         double totalEnergy();
-        string info();
     };
 
   }// Move namespace

@@ -273,8 +273,7 @@ namespace Faunus {
       return eqpot.findSites(p);
     }
 
-    void SwapMove::trialMove() {
-      Movebase::trialMove();
+    void SwapMove::_trialMove() {
       int i=slp_global.rand() % eqpot.eq.sites.size();     // pick random titratable site
       ipart=eqpot.eq.sites.at(i);                          // corresponding particle
       int k;
@@ -284,17 +283,16 @@ namespace Faunus {
       eqpot.eq.process[k].swap( spc->trial[ipart] );       // change state and get intrinsic energy change
     }
 
-    double SwapMove::energyChange() {
+    double SwapMove::_energyChange() {
       return pot->i_total(spc->trial,ipart) - pot->i_total(spc->p,ipart);
     }
 
-    void SwapMove::acceptMove() {
-      Movebase::acceptMove();
+    void SwapMove::_acceptMove() {
       accmap[ipart] += 1;
       spc->p[ipart] = spc->trial[ipart];
     }
 
-    void SwapMove::rejectMove() {
+    void SwapMove::_rejectMove() {
       accmap[ipart] += 0;
       spc->trial[ipart] = spc->p[ipart];
     }
@@ -319,11 +317,10 @@ namespace Faunus {
       return u;
     }
 
-    string SwapMove::info() {
+    string SwapMove::_info() {
       using namespace textio;
       std::ostringstream o;
-      o << Movebase::info() 
-        << indent(SUB) << "Site statistics:" << endl
+      o << indent(SUB) << "Site statistics:" << endl
         << indent(SUBSUB) << std::left
         << setw(15) << "Site"
         << setw(14) << bracket("z")

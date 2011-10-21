@@ -352,6 +352,43 @@ namespace Faunus {
        }
        */
 #endif
+
+    /*!
+     * \param beg Starting point of line to rotate around
+     * \param end Ending point of line to rotate around
+     * \param angle How many degrees to rotate
+     */
+    void VectorRotate::setAxis(Geometrybase &geo, const Point &beg, const Point &end, double angle) {
+      assert(&geo!=NULL);
+      origin=beg;
+      u=end-beg;
+      geo.boundary(u);
+      u=u*(1/geo.dist(beg,end));
+      cosang=cos(angle);
+      sinang=sin(angle);
+      e1mcox=(1.-cosang)*u.x;
+      e1mcoy=(1.-cosang)*u.y;
+      e1mcoz=(1.-cosang)*u.z;
+    }
+
+    /*!
+     * Rotate point around axis specified above.
+     * \param p Particle to rotate
+     */
+    Point VectorRotate::rotate(const Geometrybase &geo, Point p) const {
+      assert(&geo!=NULL);
+      Point b=p-origin;
+      //b.x=p.x-origin.x;              // translate to origo...
+      //b.y=p.y-origin.y;
+      //b.z=p.z-origin.z;
+      geo.boundary(b);           // Apply boundary conditions
+      double eb=u.x*b.x + u.y*b.y + u.z*b.z;
+      p.x=e1mcox*eb+cosang*b.x+sinang*(u.y*b.z - u.z*b.y) + origin.x;
+      p.y=e1mcoy*eb+cosang*b.y+sinang*(u.z*b.x - u.x*b.z) + origin.y;
+      p.z=e1mcoz*eb+cosang*b.z+sinang*(u.x*b.y - u.y*b.x) + origin.z;
+      geo.boundary(p);
+      return p;
+    }
   }//namespace geometry
 
 }//namespace

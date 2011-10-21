@@ -4,7 +4,7 @@
 #include <faunus/common.h>
 
 namespace Faunus {
-  class inputfile;
+  class _inputfile;
 
   class AtomData {
     public:
@@ -51,7 +51,7 @@ namespace Faunus {
         sigma;                               //!< LJ sigma between atoms i and j
 
       bool includefile(string);              //!< Append atom parameters from file
-      bool includefile(inputfile&);          //!< Append atom parameters from file
+      bool includefile(_inputfile&);          //!< Append atom parameters from file
       AtomData& operator[] (string);         //!< Name->data
       AtomData& operator[] (short);          //!< Id->data
       string info();                         //!< Print info

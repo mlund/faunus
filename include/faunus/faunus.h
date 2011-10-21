@@ -42,14 +42,6 @@
 #endif
 
 namespace Faunus {
-  class textOutput {
-    private:
-      unsigned short width;
-    public:
-      template<class T> void printValue(string s, T v) {
-        std::cout << s << " = " << v << std::endl;
-      }
-  };
 }//namespace
 
 #endif

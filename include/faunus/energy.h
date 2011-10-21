@@ -5,7 +5,7 @@
 #include <faunus/point.h>
 #include <faunus/group.h>
 #include <faunus/textio.h>
-#include <faunus/bonded.h>
+#include <faunus/potentials.h>
 
 // http://publib.boulder.ibm.com/infocenter/iadthelp/v8r0/index.jsp?topic=/com.ibm.xlcpp111.linux.doc/language_ref/variadic_templates.html
 //
@@ -258,8 +258,8 @@ namespace Faunus {
           if (g1.id==Group::MOLECULAR) {
             if (g2.id==Group::MOLECULAR) {
               if ( geo->sqdist(g1.cm_trial, g2.cm_trial) > cut*cut ) {
-                const Molecular& m1 = static_cast<const Molecular&>(g1);
-                const Molecular& m2 = static_cast<const Molecular&>(g2);
+                const GroupMolecular& m1 = static_cast<const GroupMolecular&>(g1);
+                const GroupMolecular& m2 = static_cast<const GroupMolecular&>(g2);
                 return 0; // v2v(m1.cg, m2.cg)
               }
             }

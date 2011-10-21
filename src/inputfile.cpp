@@ -65,13 +65,13 @@ namespace Faunus {
       cout << std::left << setw(25) << m.first << m.second << endl;
   }
 
-  inputfile::inputfile() { }
+  _inputfile::_inputfile() { }
 
-  inputfile::inputfile(string filename) {
+  _inputfile::_inputfile(string filename) {
     load(filename);
   }
 
-  bool inputfile::load(string filename) {
+  bool _inputfile::load(string filename) {
     matrix.clear();
     calls.clear();
     string s;
@@ -104,7 +104,7 @@ namespace Faunus {
     }
   }
 
-  int inputfile::findKey(string &key) {
+  int _inputfile::findKey(string &key) {
     record_call(key);
     for (size_t i=0; i<matrix.size(); i++)
       if (matrix[i].name.compare(key)==0) return i;
@@ -113,28 +113,28 @@ namespace Faunus {
 
   //! \param key Keyword to look for
   //! \param def Default value if keyword is not found
-  string inputfile::getstr(string key, string def) {
+  string _inputfile::getstr(string key, string def) {
     int i = findKey(key);
     return (i!=-1) ? matrix[i].val[0] : def;
   }
 
   //! \param key Keyword to look for
   //! \param def Default value if keyword is not found
-  double inputfile::getflt(string key, double def) {
+  double _inputfile::getflt(string key, double def) {
     int i = findKey(key);
     return (i!=-1) ? atof(matrix[i].val[0].c_str()) : def;
   }
 
   //! \param key Keyword to look for
   //! \param def Default value if keyword is not found
-  int inputfile::getint(string key, int def) {
+  int _inputfile::getint(string key, int def) {
     int i = findKey(key);
     return (i!=-1) ? atoi(matrix[i].val[0].c_str()) : def;
   }
 
   //! \param key Keyword to look for
   //! \param def Default value if keyword is not found
-  bool inputfile::getboo(string key, bool def) {
+  bool _inputfile::getboo(string key, bool def) {
     int i = findKey(key);
     if (i!=-1) {
       if (matrix[i].val[0].compare("yes")==0)
@@ -147,14 +147,14 @@ namespace Faunus {
 
   //! \param key Keyword to look for
   //! \param def Default value if keyword is not found
-  vector<string> inputfile::getvec(string key, string def) {
+  vector<string> _inputfile::getvec(string key, string def) {
     int i = findKey(key);
     return (i!=-1) ? matrix[i].val : vector<string>(1,def);
   }
 
   //! \param key Name of the new keyword
   //! \param val String value
-  void inputfile::add(string key, string val) {
+  void _inputfile::add(string key, string val) {
     dataformat tmp;
     tmp.name=key;
     tmp.val.push_back(val);
@@ -163,13 +163,13 @@ namespace Faunus {
 
   //! \param key Name of the new keyword
   //! \param val Floating point number
-  void inputfile::add(string key, double val) {
+  void _inputfile::add(string key, double val) {
     std::ostringstream o;
     o << val;
     add(key, o.str());
   }
 
-  void inputfile::record_call(string key) {
+  void _inputfile::record_call(string key) {
     bool newcall=true;
     for (auto &ci : calls)
       if (ci.compare(key)==0) {
@@ -180,7 +180,7 @@ namespace Faunus {
       calls.push_back(key);
   }
 
-  string inputfile::info() {
+  string _inputfile::info() {
     std::ostringstream o;
     o << "\n"
       << "# INPUT FILE INFORMATION:\n"
@@ -196,7 +196,7 @@ namespace Faunus {
     return o.str();
   }
 
-  void inputfile::updateval(string key, string v) {
+  void _inputfile::updateval(string key, string v) {
     int i=findKey( key);
     if (i<0) {
       std::cerr <<"# Could not find "<<key<<" during update!!!"<<endl;
@@ -205,13 +205,13 @@ namespace Faunus {
     }
   }
 
-  void inputfile::updateval(string key, double x) {
+  void _inputfile::updateval(string key, double x) {
     std::ostringstream o;
     o << x;
     updateval(key,o.str());
   }
 
-  string inputfile::print() {
+  string _inputfile::print() {
     std::ostringstream o;
     //o <<"\n";
     for (size_t i=0; i<matrix.size(); i++) {
@@ -227,7 +227,7 @@ namespace Faunus {
   // CHECKVALUE CLASS
   //
   //
-  UnitTest::UnitTest(inputfile &in) {
+  UnitTest::UnitTest(_inputfile &in) {
     stable = in.getboo("testsuite_stable", true);
     file = in.getstr("testsuite_testfile", "test.stable");
     if (stable==false)

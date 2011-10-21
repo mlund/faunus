@@ -7,8 +7,6 @@
 namespace Faunus {
   namespace Energy {
 
- 
-
   }//namespace
 }//namespace
 

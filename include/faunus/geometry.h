@@ -8,7 +8,6 @@
 namespace Faunus {
 
   class InputMap;
-  class group;
 
   /*!
    * \brief Contain geometry related classes for describing simulation cells
@@ -279,6 +278,25 @@ namespace Faunus {
         }
 
     };
+
+    /*!
+     * \brief Vector rotation routines
+     * \note Boundary condition are respected.
+     * \author Mikael Lund
+     * \date Canberra, 2009
+     */
+    class VectorRotate {
+      private:
+        Point origin, u;
+        double cosang, sinang;
+        double e1mcox, e1mcoy, e1mcoz;
+        Geometrybase* geoPtr;
+      public:
+        void setAxis(Geometrybase&, const Point&, const Point&, double);  //!< Set axis of rotation and degrees to rotate
+        Point rotate(const Geometrybase&, Point) const;                   //!< Rotate point around axis
+    };
+
+
   }//namespace Geometry
 
 }//namespace

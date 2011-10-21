@@ -60,9 +60,9 @@ namespace Faunus {
 
   //--------------- IOAAM ---------------------
 
-  ioaam::ioaam() {}
+  FormatAAM::FormatAAM() {}
 
-  string ioaam::p2s(particle &p, int i) {
+  string FormatAAM::p2s(particle &p, int i) {
     std::ostringstream o;
     o.precision(5);
     o << atom[p.id].name << " " << i+1 << " " << p.x << " " << p.y <<" "<< p.z << " "
@@ -70,7 +70,7 @@ namespace Faunus {
     return o.str();
   }
   
-  particle ioaam::s2p(string &s) {
+  particle FormatAAM::s2p(string &s) {
     particle p;
     std::stringstream o;
     string name, num;
@@ -81,7 +81,7 @@ namespace Faunus {
     return p;
   }
   
-  bool ioaam::load(string file) {
+  bool FormatAAM::load(string file) {
     vector<string> v;
     p.clear();
     if (fio.readfile(file,v)==true) {
@@ -94,7 +94,7 @@ namespace Faunus {
     return false;
   }
 
-  bool ioaam::save(string file, p_vec &p) {
+  bool FormatAAM::save(string file, p_vec &p) {
     std::ostringstream o;
     o << p.size() << std::endl;
     for (size_t i=0; i<p.size(); i++)
@@ -155,9 +155,9 @@ namespace Faunus {
    * Saves particles as a PQR file. This format is very simular
    * to PDB but also contains charges and radii of the proteins.
    */
-  iopqr::iopqr() { }
+  FormatPQR::FormatPQR() { }
 
-  bool iopqr::save(string file, p_vec &p) {
+  bool FormatPQR::save(string file, p_vec &p) {
     string name;
     int nres=1, natom=1;
     char buf[100];
@@ -191,7 +191,7 @@ namespace Faunus {
   }
   */
 
-  bool iogro::save(string file, p_vec &p) {
+  bool FormatGRO::save(string file, p_vec &p) {
     string name;
     int nres=1, natom=1;
     char buf[79];
@@ -213,7 +213,7 @@ namespace Faunus {
     return fio.writefile(file, o.str());
   }
 
-  particle iogro::s2p(string &s) {
+  particle FormatGRO::s2p(string &s) {
     std::stringstream o;
     string name;
     double x,y,z;
@@ -227,7 +227,7 @@ namespace Faunus {
     return p;
   }
   
-  bool iogro::load(string file) {
+  bool FormatGRO::load(string file) {
     p.clear();
     v.resize(0);
     if (fio.readfile(file,v)==true) {
@@ -246,7 +246,7 @@ namespace Faunus {
 
   //----------------- IOXTC ----------------------
 
-  ioxtc::ioxtc(float len) {
+  FormatXTC::FormatXTC(float len) {
     prec_xtc = 1000.;
     time_xtc=step_xtc=0;
     setbox(len);
@@ -254,7 +254,7 @@ namespace Faunus {
     x_xtc=NULL;
   }
 
-  void ioxtc::setbox(float len) {
+  void FormatXTC::setbox(float len) {
     for (short i=0; i<3; i++)
       for (short j=0; j<3; j++)
         xdbox[i][j]=0;
@@ -263,7 +263,7 @@ namespace Faunus {
     xdbox[2][2]=0.1*len; // in nanometers
   }
 
-  void ioxtc::setbox(double x, double y, double z) {
+  void FormatXTC::setbox(double x, double y, double z) {
     for (short i=0; i<3; i++)
       for (short j=0; j<3; j++)
         xdbox[i][j]=0;
@@ -281,7 +281,7 @@ namespace Faunus {
    * \param file Name of the output xtc file
    * \param c Cuboid container from which particles and box dimensions are read.
    */
-  bool ioxtc::save(string file, Space &c) {
+  bool FormatXTC::save(string file, Space &c) {
     Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(c.geo);
     p=c.p;
     setbox(geo->len.x, geo->len.y, geo->len.z);
@@ -302,7 +302,7 @@ namespace Faunus {
    * from aangstom to nanometers. The box dimensions for the frame must be manually
    * set by the ioxtc::setbox() function before calling this.
    */
-  bool ioxtc::save(string file, const p_vec &p) {
+  bool FormatXTC::save(string file, const p_vec &p) {
     if (xd==NULL)
       xd=xdrfile_open(&file[0], "w");
     if (xd!=NULL) {
@@ -321,7 +321,7 @@ namespace Faunus {
     return false;
   }
 
-  bool ioxtc::save(string file, p_vec &p, vector<Group> &g) {
+  bool FormatXTC::save(string file, p_vec &p, vector<Group> &g) {
     p_vec t;
     for (auto &gi : g)
       for (int j=gi.beg; j<=gi.end; j++)
@@ -329,7 +329,7 @@ namespace Faunus {
     return save(file, t);
   }
 
-  void ioxtc::close() {
+  void FormatXTC::close() {
     xdrfile_close(xd);
     xd=NULL;
     delete[] x_xtc;
@@ -339,7 +339,7 @@ namespace Faunus {
    * This will open an xtc file for reading. The number of atoms in each frame
    * is saved and memory for the coordinate array is allocated.
    */
-  bool ioxtc::open(string s) {
+  bool FormatXTC::open(string s) {
     if (xd!=NULL)
       close();
     xd = xdrfile_open(&s[0], "r");
@@ -367,7 +367,7 @@ namespace Faunus {
    *       an error message will be issued and the function will abort.
    * \note You may want to transfer the new box size to the pair potential if periodic boundaries are used.
    */
-  bool ioxtc::loadnextframe(Space &c) {
+  bool FormatXTC::loadnextframe(Space &c) {
     if (xd!=NULL) {
       if (natoms_xtc==(int)c.p.size()) { 
         int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
@@ -398,16 +398,16 @@ namespace Faunus {
   }
 
   //----------------- IOQTRAJ ----------------------
-  ioqtraj::ioqtraj() {
+  FormatQtraj::FormatQtraj() {
     append=false;
   }
 
-  p_vec ioqtraj::load(string s) {
+  p_vec FormatQtraj::load(string s) {
     p_vec dummy;
     return dummy;
   }
 
-  bool ioqtraj::save(string file, p_vec &p) {
+  bool FormatQtraj::save(string file, p_vec &p) {
     io fio;
     std::ostringstream o;
     o.precision(6);
@@ -422,7 +422,7 @@ namespace Faunus {
     return fio.writefile(file, o.str(), std::ios_base::out);
   }
 
-  bool ioqtraj::save(string file, p_vec &p, vector<Group> &g) {
+  bool FormatQtraj::save(string file, p_vec &p, vector<Group> &g) {
     p_vec t;
     for (size_t i=0; i<g.size(); i++)
       for (int j=g[i].beg; j<=g[i].end; j++)
@@ -442,7 +442,7 @@ namespace Faunus {
     f.close();
   }
 
-  FastaSequence::FastaSequence(double harmonic_k, double harmonic_req) : bond(harmonic_k, harmonic_req) {
+  FormatFastaSequence::FormatFastaSequence(double harmonic_k, double harmonic_req) : bond(harmonic_k, harmonic_req) {
     map['A']="ALA";
     map['R']="ARG";
     map['N']="ASN";
@@ -465,7 +465,7 @@ namespace Faunus {
     map['V']="VAL";
   }
 
-  p_vec FastaSequence::interpret(string seq) {
+  p_vec FormatFastaSequence::interpret(string seq) {
     p_vec p;
     particle a;
     for (auto c : seq) {
@@ -477,7 +477,7 @@ namespace Faunus {
     return p;
   }
 
-  Group FastaSequence::insert(string fasta, Space &spc, Energy::ParticleBonds &b) {
+  Group FormatFastaSequence::insert(string fasta, Space &spc, Energy::ParticleBonds &b) {
     p_vec p = interpret(fasta);
     Group g;
     if (p.size()>0) {
@@ -492,7 +492,7 @@ namespace Faunus {
     return g;
   }
 
-  Group FastaSequence::include(string file, Space &spc, Energy::ParticleBonds &b) {
+  Group FormatFastaSequence::include(string file, Space &spc, Energy::ParticleBonds &b) {
     Group g;
     return g;
   }

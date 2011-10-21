@@ -35,12 +35,12 @@ namespace Faunus {
    * float val=h.get(4); // val=0.3333
    * \endcode
    */
-  class histogram : protected xytable<float,unsigned long int> {
+  class Histogram : protected xytable<float,unsigned long int> {
     protected:
       unsigned long int cnt;
       float xmaxi,xmini;  // ugly solution!
     public:
-      histogram(float, float, float);
+      Histogram(float, float, float);
       void reset(float, float, float);    //!< Clear data
       string comment;                     //!< User defined comment
       void add(float);
@@ -61,7 +61,7 @@ namespace Faunus {
    *  \todo Needs testing!
    *
    */
-  class RadialDistribution : public histogram {
+  class RadialDistribution : public Histogram {
     private:
       short a,b;                   //!< Particle types to investigate
       float volume(float);         //!< Volume of shell r->r+xres
@@ -85,7 +85,7 @@ namespace Faunus {
    *        CM's of the two groups should be fixed along one axis
    *        cf. Faunus::dualmove
    */
-  class atomicRdf : public histogram {
+  class atomicRdf : public Histogram {
     public:
       atomicRdf(float=.5, float=0);
       //void update(vector<particle> &, group &, group &); //!< Update histogram vector
@@ -121,13 +121,13 @@ namespace Faunus {
    *          reallocated. Hence, do NOT modify the particle vector after
    *          having called the constructor.
    */
-  class cummsum : public profile {
+  class CummulativeSum : public profile {
     protected:
       particle *origo;         //!< Central particle (coordinate origo)
       float volume(double);
     public:
       unsigned char id;        //!< Particle type to analyse
-      cummsum(unsigned char, particle &, float, float=.5);
+      CummulativeSum(unsigned char, particle &, float, float=.5);
       //void add(particle &);
   };
 

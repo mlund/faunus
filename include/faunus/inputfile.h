@@ -42,7 +42,7 @@ namespace Faunus {
   /*!
    * \brief Retrieve parameters from a formatted input file
    * \author Mikael Lund
-   * \note Deprecated - replaced by InputMap
+   * \note Obsolete - replaced by InputMap
    *
    * The input file is expected to have the following
    * format:
@@ -50,7 +50,7 @@ namespace Faunus {
    *
    * Blank lines or lines containing [ or # are ignored.
    */
-  class inputfile {
+  class _inputfile {
     protected:
       struct dataformat {
         string name;
@@ -62,8 +62,8 @@ namespace Faunus {
       void record_call(string);
       string file;
     public:
-      inputfile();
-      inputfile(string);                     //!< Constructor
+      _inputfile();
+      _inputfile(string);                     //!< Constructor
       bool load(string);                     //!< Load inputfile from disk
       //bool checkEmptyValues();             //!< Check if loaded values are complete (return true if ok)
       string getstr(string, string="");      //!< Get string value
@@ -101,12 +101,12 @@ namespace Faunus {
    * a new reference testfile. If stable==false this will check the given value against the
    * loaded testfile.
    */
-  class UnitTest : private inputfile {
+  class UnitTest : private _inputfile {
     protected:
       vector<bool> result;                     //!< Return codes for all performed tests
     public:
       bool stable;                             //!< True if test suite is stable (=reference)
-      UnitTest(inputfile &);                 //!< Read parameters from inputfile
+      UnitTest(_inputfile &);                 //!< Read parameters from inputfile
       bool check(string, double, double=0.1);  //!< Check or store value depending on the stable state.
       bool smallerThan(string, double, double);//|< Check if x is smaller than y
       string report();                         //!< Print report.

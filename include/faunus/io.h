@@ -15,7 +15,7 @@
 namespace Faunus {
   
   class Group;
-  class Molecular;
+  class GroupMolecular;
 
   /*! \brief Basic file I/O routines
    *  \author Mikael Lund
@@ -33,13 +33,13 @@ namespace Faunus {
   /*! \brief Read/write AAM file format
    *  \author Mikael Lund
    */
-  class ioaam {
+  class FormatAAM {
     private:
       string p2s(particle &, int);
       particle s2p(string &);
       io fio;
     public:
-      ioaam();
+      FormatAAM();
       p_vec p;
       bool load(string);
       bool save(string, p_vec&);
@@ -50,11 +50,11 @@ namespace Faunus {
    * \date December 2007
    * \author Mikael Lund
    */
-  class iopqr {
+  class FormatPQR {
     private:
       io fio;
     public:
-      iopqr();
+      FormatPQR();
       p_vec p;                   //!< Placeholder for loaded data
       bool save(string, p_vec&); //!< Save with particle charge
   };
@@ -65,7 +65,7 @@ namespace Faunus {
    * \author Mikael Lund
    * \todo Non cubic dimensions
    */
-  class iogro {
+  class FormatGRO {
     private:
       vector<string> v;
       particle s2p(string &);
@@ -85,7 +85,7 @@ namespace Faunus {
    *  box information if applicable. Molecules with periodic boundaries
    *  can be saved as "whole" by adding their groups to the public g-vector.
    */
-  class ioxtc {
+  class FormatXTC {
     private:
       p_vec p; //!< internal particle vector for temporary data
       XDRFILE *xd;        //!< file handle
@@ -94,8 +94,8 @@ namespace Faunus {
       float time_xtc, prec_xtc;
       int natoms_xtc, step_xtc;
     public:
-      vector<Molecular*> g;                    //!< List of PBC groups to be saved as whole
-      ioxtc(float);                            //!< Constructor that sets an initially cubic box
+      vector<GroupMolecular*> g;                    //!< List of PBC groups to be saved as whole
+      FormatXTC(float);                            //!< Constructor that sets an initially cubic box
       bool open(string);                       //!< Open xtc file for reading
       bool loadnextframe(Space&);              //!< Load a single frame into cuboid
       bool save(string, const p_vec&);         //!< Save a frame to trj file.
@@ -112,12 +112,12 @@ namespace Faunus {
    *
    *  Saves a trajectory of the charges for all particles in a particle vector
    */
-  class ioqtraj {
+  class FormatQtraj {
     private:
       bool append;
       p_vec load(string);
     public:
-      ioqtraj();
+      FormatQtraj();
       bool save(string, p_vec&);   //!< Save a frame to trj file.
       bool save(string, p_vec&, vector<Group> &); //!< Save groups
   };
@@ -133,13 +133,13 @@ namespace Faunus {
       void close();
   };
 
-  class FastaSequence {
+  class FormatFastaSequence {
     private:
       std::map<char,string> map; //!< Map one letter code (char) to three letter code (string)
       Potential::Harmonic bond;
     public:
       p_vec interpret(string);
-      FastaSequence(double=0.76, double=4.9);
+      FormatFastaSequence(double=0.76, double=4.9);
       Group insert(string, Space&, Energy::ParticleBonds&);
       Group include(string, Space&, Energy::ParticleBonds&);
   };

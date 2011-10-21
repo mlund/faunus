@@ -31,10 +31,22 @@ namespace Faunus {
     void Movebase::trialMove() {
       assert(spc->geo!=NULL); // space geometry MUST be set before moving!
       cnt++;
+      _trialMove();
     }
 
-    void Movebase::acceptMove() { cnt_accepted++; }
-
+    void Movebase::acceptMove() {
+      cnt_accepted++;
+      _acceptMove();
+    }
+    
+    void Movebase::rejectMove() {
+      _rejectMove();
+    }
+    
+    double Movebase::energyChange() {
+      return _energyChange();
+    }
+    
     double Movebase::move() {
       trialMove();
       double du=energyChange();
@@ -78,39 +90,11 @@ namespace Faunus {
         o << pad(SUB,w,"Acceptance") << double(cnt_accepted)/cnt*100 << percent << endl;
         o << pad(SUB,w,"Total energy change") << dusum << kT << endl;
       }
+      o << _info();
       return o.str();
     }
 
     // TRANSLATE
-
-    /*
-       translate::translate(string pfx, Energybase &e, space &s) : Energybase(pfx,e,s) {
-       title="Molecular Translation";
-       }
-
-       void translate::trialmove() {
-       }
-
-       void translate::acceptMove() {
-       cnt_accepted++;
-       }
-
-       void translate::rejectmove() {
-       }
-
-       double translate::energychange() {return 0;}
-
-       double translate::move() {
-       return 0;
-       }
-
-       string translate::info() {
-       std::ostringstream o;
-       o << Movebase::info();
-       pad(o); o << "Displacement vector" << dp << endl; 
-       return o.str();
-       }
-       */
 
     ParticleTranslation::ParticleTranslation(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Single Particle Translation";
@@ -131,8 +115,7 @@ namespace Faunus {
       igroup=NULL;
     }
 
-    void ParticleTranslation::trialMove() {
-      Movebase::trialMove();
+    void ParticleTranslation::_trialMove() {
       if (igroup!=NULL)
         iparticle=igroup->random();
       if (iparticle>-1) {
@@ -144,21 +127,20 @@ namespace Faunus {
       }
     }
 
-    void ParticleTranslation::acceptMove() {
-      Movebase::acceptMove();
+    void ParticleTranslation::_acceptMove() {
       double r2=spc->geo->sqdist( spc->p[iparticle], spc->trial[iparticle] );
       sqrmap[ spc->p[iparticle].id ] += r2;
       accmap[ spc->p[iparticle].id ] += 1;
       spc->p[iparticle] = spc->trial[iparticle];
     }
 
-    void ParticleTranslation::rejectMove() {
+    void ParticleTranslation::_rejectMove() {
       spc->trial[iparticle] = spc->p[iparticle];
       sqrmap[ spc->p[iparticle].id ] += 0;
       accmap[ spc->p[iparticle].id ] += 0;
     }
 
-    double ParticleTranslation::energyChange() {
+    double ParticleTranslation::_energyChange() {
       if (iparticle>-1) {
         if ( spc->geo->collision( spc->trial[iparticle], Geometry::Geometrybase::BOUNDARY ) )
           return infty;
@@ -196,11 +178,10 @@ namespace Faunus {
       return u;
     }
 
-    string ParticleTranslation::info() {
+    string ParticleTranslation::_info() {
       char l=12;
       std::ostringstream o;
-      o << Movebase::info()
-        << pad(SUB,w,"Displacement vector") << dir << endl;
+      o << pad(SUB,w,"Displacement vector") << dir << endl;
       if (cnt>0) {
         o << endl
           << indent(SUB) << "Individual particle movement:" << endl << endl
@@ -222,5 +203,47 @@ namespace Faunus {
       return o.str();
     }
 
+    RotateGroup::RotateGroup(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
+      title="Group Rotation";
+      igroup=NULL;
+      w=30;
+      groupWiseEnergy=false;
+      in.get<double>(prefix+"_runfraction",0.0);
+      in.get<double>(prefix+"_dp", 0.0);
+    }
+    
+    void RotateGroup::setGroup(Group &g) {
+      assert(&g!=NULL);
+      igroup=&g;
+    }
+
+    void RotateGroup::_trialMove() {
+      assert(igroup!=NULL);
+      Point p;
+      spc->geo->randompos(p);
+      double angle=0;
+      igroup->rotate(*spc, p, angle);
+    }
+
+    void RotateGroup::_acceptMove() {
+      igroup->accept(*spc);
+    }
+
+    void RotateGroup::_rejectMove() {
+      igroup->undo(*spc);
+    }
+
+    double RotateGroup::_energyChange() {
+      double uold = pot->g2all(spc->p, *igroup) + pot->g_external(spc->p, *igroup);
+      double unew = pot->g2all(spc->trial, *igroup) + pot->g_external(spc->trial, *igroup);
+      return unew-uold;
+    }
+
+    string RotateGroup::_info() {
+      std::ostringstream o;
+      o << pad(SUB,w,"Rotational displacement parameter") << rotdp << " rad" << endl;
+      return o.str();
+    }
+    
   }//namespace
 }//namespace

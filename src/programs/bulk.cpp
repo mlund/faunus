@@ -2,8 +2,9 @@
 
 using namespace Faunus;
 
-typedef Geometry::Cuboid Tgeometry;                // select simulation geometry
-typedef Potential::CoulombLJ<Tgeometry> Tpairpot; // select particle-particle pairpotential
+typedef Geometry::Sphere Tgeometry;                // select simulation geometry
+//typedef Potential::CoulombSR<Tgeometry, Potential::Coulomb, Potential::LennardJones> Tpairpot;
+typedef Potential::CoulombSR<Tgeometry, Potential::Coulomb, Potential::HardSphere> Tpairpot;
 
 template<class T>
 class distributions {
@@ -26,7 +27,7 @@ int main() {
   atom.includefile("atomlist.inp");    // load atom properties
   InputMap mcp("bulk.inp");
   MCLoop loop(mcp);                    // class for handling mc loops
-  iopqr pqr;                           // PQR structure file I/O
+  FormatPQR pqr;                           // PQR structure file I/O
   EnergyDrift sys;                     // class for tracking system energy drifts
 
   Energy::Hamiltonian pot;
@@ -35,14 +36,14 @@ int main() {
   Space spc( pot.getGeometry() );
 
   // Handle particles
-  Atomic salt(spc, mcp);
+  GroupAtomic salt(spc, mcp);
   salt.name="Salt particles";
   Move::ParticleTranslation mv(mcp, pot, spc);  // Particle move class
   mv.setGroup(salt);
   spc.load("space.state");
 
-  bonded->bonds.add(0,1, Potential::Harmonic(0.2, 10.0));
-  bonded->bonds.add(1,2, Potential::Harmonic(0.3,  5.0));
+  //bonded->bonds.add(0,1, Potential::Harmonic(0.2, 10.0));
+  //bonded->bonds.add(1,2, Potential::Harmonic(0.3,  5.0));
 
   // Particle titration
   Move::SwapMove tit(mcp,pot,spc);

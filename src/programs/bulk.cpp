@@ -37,16 +37,24 @@ int main() {
 
   // Handle particles
   GroupAtomic salt(spc, mcp);
-  salt.name="Salt particles";
+  salt.name="Salt";
   Move::ParticleTranslation mv(mcp, pot, spc);  // Particle move class
   mv.setGroup(salt);
   spc.load("space.state");
+
+  Group test;
+  test.beg=5;
+  test.end=15;
+  test.name="Test";
 
   //bonded->bonds.add(0,1, Potential::Harmonic(0.2, 10.0));
   //bonded->bonds.add(1,2, Potential::Harmonic(0.3,  5.0));
 
   // Particle titration
   Move::SwapMove tit(mcp,pot,spc);
+
+  Move::RotateGroup gmv(mcp,pot,spc);
+  gmv.setGroup(salt);
 
   // Widom particle insertion
   Analysis::Widom widom(spc, pot);
@@ -68,6 +76,10 @@ int main() {
       if (slp_global.randOne()>0.9)
         widom.sample();
       sys+=tit.move();
+      gmv.setGroup(salt);
+      sys+=gmv.move();
+      gmv.setGroup(test);
+      sys+=gmv.move();
     }
     sys.checkDrift( UTOTAL );
     cout << loop.timing();
@@ -77,5 +89,5 @@ int main() {
   spc.save("space.state");
 
   cout << mv.info() << sys.info() << loop.info() << widom.info()
-       << tit.info();
+       << tit.info() << gmv.info();
 }

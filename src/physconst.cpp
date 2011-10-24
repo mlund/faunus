@@ -1,6 +1,7 @@
 #include "faunus/physconst.h"
 namespace Faunus {
   const double PhysicalConstants::pi=std::acos(-1.);
+  const double PhysicalConstants::infty=std::numeric_limits<double>::infinity();
   const double PhysicalConstants::e0=8.85419e-12;
   const double PhysicalConstants::e=1.602177e-19;
   const double PhysicalConstants::kB=1.380658e-23;

@@ -55,12 +55,10 @@ namespace Faunus {
     }
 
     HardSphere::HardSphere() {
-      infty=std::numeric_limits<double>::infinity();
       name="Hardsphere";
     }
 
     HardSphere::HardSphere(InputMap& in) {
-      infty=std::numeric_limits<double>::infinity();
       name="Hardsphere";
     }
    

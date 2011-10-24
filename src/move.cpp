@@ -8,6 +8,7 @@
 #include <faunus/geometry.h>
 #include <faunus/faunus.h>
 #include <faunus/textio.h>
+#include <faunus/physconst.h>
 
 namespace Faunus {
 
@@ -15,7 +16,7 @@ namespace Faunus {
 
     using namespace textio;
 
-    Movebase::Movebase(Energy::Energybase &e, Space &s, string pfx) : infty(1e15) {
+    Movebase::Movebase(Energy::Energybase &e, Space &s, string pfx) {
       pot=&e;
       spc=&s;
       prefix=pfx;
@@ -23,6 +24,9 @@ namespace Faunus {
       dusum=0;
       w=22;
       runfraction=1;
+    }
+
+    Movebase::~Movebase() {
     }
 
     //void move::unittest(unittest&) {
@@ -72,10 +76,6 @@ namespace Faunus {
       if (slp_global.randOne() < runfraction)
         return true;
       return false;
-    }
-
-    double Movebase::totalEnergy(){
-      return 0;
     }
 
     string Movebase::info() {
@@ -143,7 +143,7 @@ namespace Faunus {
     double ParticleTranslation::_energyChange() {
       if (iparticle>-1) {
         if ( spc->geo->collision( spc->trial[iparticle], Geometry::Geometrybase::BOUNDARY ) )
-          return infty;
+          return pc::infty;
         return
           pot->i_total(spc->trial, iparticle) - pot->i_total(spc->p, iparticle);
           //pot->i2all(spc->trial, iparticle) - pot->i2all(spc->p, iparticle);
@@ -164,18 +164,6 @@ namespace Faunus {
         iparticle=-1;
         return du;
       } else return Movebase::move();
-    }
-
-    double ParticleTranslation::totalEnergy() {
-      if (iparticle>-1)
-        return pot->i_total(spc->p, iparticle);
-      double u=0;
-      if (igroup!=NULL) {
-        u = pot->g2all(spc->p, *igroup) + pot->g_internal(spc->p, *igroup);
-        for (int i=igroup->beg; i<=igroup->end; ++i)
-          u += pot->i_external(spc->p, i);
-      }
-      return u;
     }
 
     string ParticleTranslation::_info() {
@@ -204,12 +192,16 @@ namespace Faunus {
     }
 
     RotateGroup::RotateGroup(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
-      title="Group Rotation";
+      title="Group Rotation/Translation";
       igroup=NULL;
       w=30;
+      dir.x=dir.y=dir.z=1;
       groupWiseEnergy=false;
-      in.get<double>(prefix+"_runfraction",0.0);
-      in.get<double>(prefix+"_dp", 0.0);
+      runfraction = in.get<double>(prefix+"_runfraction",1.0);
+      dp_trans = in.get<double>(prefix+"_transdp", 2);
+      dp_rot   = in.get<double>(prefix+"_rotdp", 100);
+      if (dp_rot>4*pc::pi) // no need to rotate more than
+        dp_rot=4*pc::pi;   // +/- 2 pi.
     }
     
     void RotateGroup::setGroup(Group &g) {
@@ -219,31 +211,64 @@ namespace Faunus {
 
     void RotateGroup::_trialMove() {
       assert(igroup!=NULL);
+      angle=dp_rot*slp_global.randHalf();
       Point p;
       spc->geo->randompos(p);
-      double angle=0;
       igroup->rotate(*spc, p, angle);
+      p.x=dir.x * dp_trans * slp_global.randHalf();
+      p.y=dir.y * dp_trans * slp_global.randHalf();
+      p.z=dir.z * dp_trans * slp_global.randHalf();
+      igroup->translate(*spc, p);
     }
 
     void RotateGroup::_acceptMove() {
+      double r2 = spc->geo->sqdist( igroup->cm, igroup->cm_trial );
+      sqrmap_t[ igroup->name ] += r2;
+      sqrmap_r[ igroup->name ] += angle*angle;
+      accmap[ igroup->name ] += 1;
       igroup->accept(*spc);
     }
 
     void RotateGroup::_rejectMove() {
+      sqrmap_t[ igroup->name ] += 0;
+      sqrmap_r[ igroup->name ] += 0;
+      accmap[ igroup->name ] += 0;
       igroup->undo(*spc);
-    }
+     }
 
     double RotateGroup::_energyChange() {
+      for (int i=(*igroup).beg; i<=(*igroup).end; i++)
+        if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
+          return pc::infty;
       double uold = pot->g2all(spc->p, *igroup) + pot->g_external(spc->p, *igroup);
       double unew = pot->g2all(spc->trial, *igroup) + pot->g_external(spc->trial, *igroup);
       return unew-uold;
     }
 
     string RotateGroup::_info() {
+      char l=12;
       std::ostringstream o;
-      o << pad(SUB,w,"Rotational displacement parameter") << rotdp << " rad" << endl;
+      o << pad(SUB,w,"Displacement vector") << dir << endl
+        << pad(SUB,w,"Max. translation") << pm << dp_trans/2 << textio::_angstrom << endl
+        << pad(SUB,w,"Max. rotation") << pm << dp_rot/2*180/pc::pi << textio::degrees << endl;
+      if (cnt>0) {
+        o << endl
+          << indent(SUB) << "Move Statistics:" << endl << endl
+          << indent(SUBSUB) << std::left << setw(20) << "Group name" //<< string(20,' ')
+          << setw(l+1) << "Acc. "+percent
+          << setw(l+7) << rootof+bracket("dR"+squared)
+          << setw(l+5) << rootof+bracket("d"+theta+squared) << endl;
+        for (auto m : accmap) {
+          string id=m.first;
+          o << indent(SUBSUB) << std::left << setw(20) << id;
+          o.precision(3);
+          o << setw(l) << accmap[id].avg()*100
+            << setw(l) << sqrt(sqrmap_t[id].avg())
+            << setw(l) << sqrt(sqrmap_r[id].avg()) << endl;
+        }
+      }
       return o.str();
     }
-    
+
   }//namespace
 }//namespace

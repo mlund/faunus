@@ -310,13 +310,6 @@ namespace Faunus {
     }
 #pragma GCC diagnostic pop
 
-    double SwapMove::totalEnergy() {
-      double u=0;
-      for (auto i : eqpot.eq.sites)
-        u+=pot->i_internal(spc->p, i);
-      return u;
-    }
-
     string SwapMove::_info() {
       using namespace textio;
       std::ostringstream o;

@@ -144,9 +144,11 @@ namespace Faunus {
    */
   void Group::translate(Space &con, const Point &p) {
     for (int i=beg; i<=end; ++i) {
-      con.trial[i] = con.p[i] + p;
+      con.trial[i] += p;
       con.geo->boundary( con.trial[i] );
     }
+    cm_trial += p;
+    con.geo->boundary( cm_trial );
   }
 
   int Group::random() const {
@@ -220,7 +222,7 @@ namespace Faunus {
     assert( spc.geo->dist(cm, cm_trial)<1e-9 );   // debug. Is trial mass center in sync?
     vrot.setAxis(*spc.geo, cm, endpoint, angle);  // rotate around line between mass center and point
     for (int i=beg; i<=end; i++)
-      spc.trial[i] = vrot.rotate( *spc.geo, spc.p[i] ); // boundary conditions already taken care of
+      spc.trial[i] = vrot.rotate( *spc.geo, spc.trial[i] ); // boundary conditions already taken care of
   }
   
   void GroupMolecular::translate(Space &spc, const Point &p) {

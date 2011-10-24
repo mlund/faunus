@@ -107,7 +107,6 @@ namespace Faunus {
         SwapMove(InputMap&, Energy::Hamiltonian&, Space&, string="swapmv_");
         int findSites(const p_vec&);
         double move();
-        double totalEnergy();
     };
 
   }// Move namespace

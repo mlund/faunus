@@ -6,6 +6,7 @@
 #include <faunus/geometry.h>
 #include <faunus/textio.h>
 #include <faunus/inputfile.h>
+#include <faunus/physconst.h>
 
 namespace Faunus {
 
@@ -43,7 +44,6 @@ namespace Faunus {
 
     class HardSphere : public PairPotentialBase {
       private:
-        double infty;
         string _brief();
       public:
         HardSphere();
@@ -51,7 +51,7 @@ namespace Faunus {
         inline double energy(const particle &a, const particle &b, double r2) const {
           double mindist=a.radius+b.radius;
           if (r2<mindist*mindist)
-            return infty;
+            return pc::infty;
           return 0;
         }
         string info(char w);

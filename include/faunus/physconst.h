@@ -9,6 +9,7 @@ namespace Faunus {
       PhysicalConstants(double temp=298.15);
       static const double
         pi,
+        infty,                       //!< Infinity
         e0,                          //!< Permittivity of vacuum [C^2/(J*m)]
         kB,                          //!< Boltzmann's constant [J/K]
         e,                           //!< Electronic charge [C] 

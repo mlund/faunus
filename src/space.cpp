@@ -10,7 +10,7 @@
 namespace Faunus {
 
   Space::Space(Geometry::Geometrybase &geoPtr) {
-    assert(&geoPtr!=NULL);
+    assert(&geoPtr!=nullptr);
     geo=&geoPtr;
   }
 
@@ -62,9 +62,9 @@ namespace Faunus {
     return true;
   }
 
-  bool Space::insert(string name, int n, spacekeys key) {
+  bool Space::insert(string atomname, int n, spacekeys key) {
     particle a;
-    a=atom[name];
+    a=atom[atomname];
     while (n>0) {
       geo->randompos(a);
       if (!overlap(a)) {
@@ -149,6 +149,7 @@ namespace Faunus {
       if (g[i]==&newgroup)
         return i;
     g.push_back(&newgroup);
+    trial=p;
     return g.size()-1; //return position if added group
   }
 

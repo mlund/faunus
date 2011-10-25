@@ -33,7 +33,7 @@ namespace Faunus {
     //}
 
     void Movebase::trialMove() {
-      assert(spc->geo!=NULL); // space geometry MUST be set before moving!
+      assert(spc->geo!=nullptr); // space geometry MUST be set before moving!
       cnt++;
       _trialMove();
     }
@@ -99,10 +99,10 @@ namespace Faunus {
     ParticleTranslation::ParticleTranslation(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Single Particle Translation";
       iparticle=-1;
-      igroup=NULL;
+      igroup=nullptr;
       dir.x=dir.y=dir.z=1;
       w=25;
-      in.get(prefix+"runfraction",0.0);
+      in.get(prefix+"_runfraction",0.0);
     }
 
     void ParticleTranslation::setGroup(Group &g) {
@@ -112,11 +112,11 @@ namespace Faunus {
 
     void ParticleTranslation::setParticle(int i) {
       iparticle=i;
-      igroup=NULL;
+      igroup=nullptr;
     }
 
     void ParticleTranslation::_trialMove() {
-      if (igroup!=NULL)
+      if (igroup!=nullptr)
         iparticle=igroup->random();
       if (iparticle>-1) {
         double dp = atom[ spc->p[iparticle].id ].dp;
@@ -154,7 +154,7 @@ namespace Faunus {
     double ParticleTranslation::move() {
       if (!run())
         return 0;
-      if (igroup!=NULL) {
+      if (igroup!=nullptr) {
         double du=0;
         for (int i=0; i<igroup->size(); i++) {
           iparticle = igroup->random(); // set random particle for trialmove()
@@ -193,7 +193,7 @@ namespace Faunus {
 
     RotateGroup::RotateGroup(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Group Rotation/Translation";
-      igroup=NULL;
+      igroup=nullptr;
       w=30;
       dir.x=dir.y=dir.z=1;
       groupWiseEnergy=false;
@@ -205,12 +205,13 @@ namespace Faunus {
     }
     
     void RotateGroup::setGroup(Group &g) {
-      assert(&g!=NULL);
+      assert(&g!=nullptr);
       igroup=&g;
     }
 
+    //!< \todo Check random angle generation!
     void RotateGroup::_trialMove() {
-      assert(igroup!=NULL);
+      assert(igroup!=nullptr);
       angle=dp_rot*slp_global.randHalf();
       Point p;
       spc->geo->randompos(p);
@@ -224,7 +225,7 @@ namespace Faunus {
     void RotateGroup::_acceptMove() {
       double r2 = spc->geo->sqdist( igroup->cm, igroup->cm_trial );
       sqrmap_t[ igroup->name ] += r2;
-      sqrmap_r[ igroup->name ] += angle*angle;
+      sqrmap_r[ igroup->name ] += pow(angle*180/pc::pi, 2);
       accmap[ igroup->name ] += 1;
       igroup->accept(*spc);
     }
@@ -268,6 +269,87 @@ namespace Faunus {
         }
       }
       return o.str();
+    }
+
+    Isobaric::Isobaric(InputMap &in, Energy::Hamiltonian &e, Space &s, string pfx) : Movebase(e,s,pfx) {
+      title="Isobaric Volume Fluctuations";
+      w=30;
+      dV = in.get(prefix+"_dV", 0.0);
+      P = in.get(prefix+"_P", 0.0); //pressure
+      runfraction = in.get(prefix+"_runfraction",1.0);
+      hamiltonian = &e;
+      e.create( Energy::ExternalPressure( e.getGeometry(), P ) );
+    }
+
+    string Isobaric::_info() {
+      using namespace textio;
+      std::ostringstream o;
+      const double tomM=1e30/pc::Nav;
+      int N=0;
+      for (auto g : spc->g)
+        if (g->id==Group::ATOMIC)
+          N+=g->size();
+        else
+          N++;
+      o << pad(SUB,w, "Displacement parameter") << dV << endl
+        << pad(SUB,w, "Mean displacement") << sqrt(sqrV.avg()) << _angstrom << cubed << endl
+        << pad(SUB,w, "Average volume") << V.avg() << _angstrom << cubed << endl
+        << pad(SUB,w, "Average length") << pow(V.avg(),1/3.) << _angstrom << endl
+        << pad(SUB,w, "Average concentration") << N/V.avg()*tomM << " mM" << endl
+        << pad(SUB,w, "Ideal concentration") << P*tomM << " mM" << endl
+        << pad(SUB,w, "Osmotic coefficient") << P / (N/V.avg()) << endl;
+      return o.str();
+    }
+
+    void Isobaric::_setVolume(double V) {
+      for (auto ebase : hamiltonian->baselist )
+        if (&ebase->getGeometry()!=nullptr)
+          ebase->getGeometry().setVolume(V);
+    }
+
+    void Isobaric::_trialMove() {
+      oldV = spc->geo->getvolume();
+      newV = exp( log(oldV) + slp_global.randHalf()*dV );
+      for (auto g : spc->g)
+        g->scale(*spc, newV);
+    }
+
+    void Isobaric::_acceptMove() {
+      V += newV;
+      sqrV += pow( oldV-newV, 2 );
+      _setVolume(newV);
+      for (auto g : spc->g )
+        g->accept(*spc);
+    }
+
+    void Isobaric::_rejectMove() {
+      sqrV += 0;
+      V += oldV;
+      _setVolume(oldV);
+      for (auto g : spc->g )
+        g->undo(*spc);
+    }
+
+    double Isobaric::_energy(const p_vec &p) {
+      double u=0;
+      for (size_t i=0; i<spc->g.size()-1; ++i)      // group-group
+        for (size_t j=i+1; j<spc->g.size(); ++j)
+          u += pot->g2g(p, *spc->g[i], *spc->g[j]);
+      for (auto g : spc->g) {
+        u += pot->g_external(p, *g);
+        if (g->id==Group::ATOMIC)
+          u+=pot->g_internal(p, *g);
+      }
+      return u + pot->external();
+    }
+
+    double Isobaric::_energyChange() {
+      double uold,unew;
+      _setVolume( oldV );
+      uold = _energy(spc->p);
+      _setVolume( newV );
+      unew = _energy(spc->trial);
+      return unew-uold;
     }
 
   }//namespace

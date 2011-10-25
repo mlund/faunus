@@ -49,7 +49,7 @@ namespace Faunus {
 
         //!< \brief Retrieve reference to bond via (i,j) operator
         Tpairprop& operator() (Tij i, Tij j) {
-          assert( list[i][j]!=NULL ); //debug
+          assert( list[i][j]!=nullptr ); //debug
           return *list[i][j];
         }
 
@@ -107,6 +107,9 @@ namespace Faunus {
      *  implement i_internal(), for example.
      */
     class Energybase {
+      private:
+        char w; //!< Width of info output
+        virtual string _info()=0;
       protected:
         Geometry::Geometrybase* geo; //!< Pointer to geometry used to calculate interactions
       public:
@@ -138,12 +141,17 @@ namespace Faunus {
         virtual double g_internal(const p_vec&, Group&);
 
         virtual double v2v(const p_vec&, const p_vec&);
+        virtual double external(); //!< External energy - typically pressure.
 
-        virtual string info();
+        string info();
     };
 
     template<class Tpotential>
       class Nonbonded : public Energybase {
+        private:
+          string _info() {
+            return pair.info(25);
+          }
         public:
           Tpotential pair;
           Nonbonded(InputMap &in) : pair(in) {
@@ -237,11 +245,6 @@ namespace Faunus {
             return pair.tokT()*u;
           }
 
-          string info() {
-            std::ostringstream o;
-            o << Energybase::info() << pair.info(25);
-            return o.str();
-          }
       };
 
     template<class Tpotential>
@@ -278,17 +281,42 @@ namespace Faunus {
       };
 
     class Bonded : public Energy::Energybase {
+      private:
+        string _info();
       public:
         Bonded();
         Bonded(Geometry::Geometrybase&);
         ParticleBonds bonds;
         double i_internal(const p_vec &p, int i);
         double g_internal(const p_vec &p, Group &g);
-        string info();
     };
 
     /*!
-     * \brief Collection of Energybases that when summed gives the Hamiltonian
+     * \brief Energy from external pressure for use in the NPT-ensemble.
+     * \author Mikael Lund
+     * \date Lund, 2011
+     *
+     * The system energy is
+     *
+     * \f$\beta u = \beta pV - \ln V - N\ln V\f$.
+     *
+     * The two first terms are returned by external() while the last
+     * term is obtained by summing g_external() over molecular groups.
+     * If applied on an atomic group, N will be set to the number of
+     * particles in the group.
+     */
+    class ExternalPressure : public Energy::Energybase {
+      private:
+        double P; //!< Pressure, p/kT
+        string _info();
+      public:
+        ExternalPressure(Geometry::Geometrybase&, double);
+        double external();  //!< External energy working on system. pV/kT-lnV
+        double g_external(const p_vec&, Group&); //!< External energy working on group
+    };
+
+    /*!
+     * \brief Collection of Energybases that when summed give the Hamiltonian
      * \author Mikael Lund
      * \date Lund, 2011
      *
@@ -305,8 +333,10 @@ namespace Faunus {
       typedef shared_ptr<Energybase> baseptr;
       private:
       vector<baseptr> created;      //!< smart pointer list of created energy children
+      string _info();
       public:
       vector<Energybase*> baselist; //!< pointer list to energy children to be summed
+      //Geometry::GeometryList geolist; //!< Geometry pointer list. Can be used to sync these (think NPT ensemble)
 
       template<typename Tenergychild> shared_ptr<Tenergychild> create(Tenergychild c) {
         shared_ptr<Tenergychild> childptr( new Tenergychild(c) );
@@ -330,10 +360,8 @@ namespace Faunus {
       double g2all(const p_vec&, Group&);
       double g_external(const p_vec&, Group&);
       double g_internal(const p_vec&, Group&);
-      string info();
+      double external();
     };
-
-
 
   }//Energy namespace
 }//Faunus namespace

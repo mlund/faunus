@@ -18,6 +18,7 @@ namespace Faunus {
     }
 
     void Geometrybase::scale(Point &a, const double &s) const {
+      assert(!"Volume scaling function unimplemented.");
     }
 
     string Geometrybase::info(char w) {
@@ -359,7 +360,7 @@ namespace Faunus {
      * \param angle How many degrees to rotate
      */
     void VectorRotate::setAxis(Geometrybase &geo, const Point &beg, const Point &end, double angle) {
-      assert(&geo!=NULL);
+      assert(&geo!=nullptr);
       origin=beg;
       u=end-beg;
       geo.boundary(u);
@@ -376,8 +377,9 @@ namespace Faunus {
      * \param p Particle to rotate
      */
     Point VectorRotate::rotate(const Geometrybase &geo, Point p) const {
-      assert(&geo!=NULL);
+      assert(&geo!=nullptr);
       Point b=p-origin;
+      //Point b;
       //b.x=p.x-origin.x;              // translate to origo...
       //b.y=p.y-origin.y;
       //b.z=p.z-origin.z;

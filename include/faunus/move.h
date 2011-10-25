@@ -4,6 +4,7 @@
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/average.h>
+#include <faunus/energy.h>
 
 namespace Faunus {
   //class average;
@@ -127,11 +128,32 @@ namespace Faunus {
         double dp_trans;   //!< Translational displacement parameter
         double angle;      //!< Temporary storage for current angle
       public:
-        RotateGroup(InputMap&, Energy::Energybase&, Space&, string="transrot_");
+        RotateGroup(InputMap&, Energy::Energybase&, Space&, string="transrot");
         void setGroup(Group&); //!< Select Group to move
         Point dir;             //!< Translation directions (default: x=y=z=1)
         bool groupWiseEnergy;  //!< Attempt to evaluate energy over groups from vector in Space (default=false)
     };
+
+    class Isobaric : public Movebase {
+      private:
+        Energy::Hamiltonian* hamiltonian;
+        string _info();
+        void _setVolume(double);
+        void _trialMove();
+        void _acceptMove();
+        void _rejectMove();
+        double _energy(const p_vec&);
+        double _energyChange();
+        double dV; //!< Volume displacement parameter
+        double oldV;
+        double newV;
+        double P; //!< Pressure
+        Average<double> sqrV;       //!< Mean squared volume displacement
+        Average<double> V;          //!< Average volume
+      public:
+        Isobaric(InputMap&, Energy::Hamiltonian&, Space&, string="npt");
+    };
+
 
   }//namespace
 }//namespace

@@ -13,7 +13,9 @@ namespace Faunus {
    *                GROUP
    * -----------------------------------*/
 
-  Group::~Group() {}
+  Group::~Group() {
+    id=GROUP;
+  }
 
   Group::Group(int first, int last) : beg(first), end(last) {
     id=GROUP;
@@ -71,7 +73,7 @@ namespace Faunus {
   }
   
   std::ostream& Group::write(std::ostream &o) const {
-    o << beg << " " << end;
+    o << beg << " " << end << " " << cm;
     return o;
   }
 
@@ -81,6 +83,7 @@ namespace Faunus {
   
   Group& Group::operator<<(std::istream &in) {
     in >> beg >> end;
+    cm.operator<<(in);
     return *this;
   }
 
@@ -100,42 +103,59 @@ namespace Faunus {
    */
   Point Group::_massCenter(const Space &spc) const {
     double sum=0;
-    Point cm,t,o = spc.p.at(beg); // set origo to first particle
+    Point cm,t,o = spc.p.at(beg);  // set origo to first particle
     for (int i=beg; i<=end; ++i) {
-      t = spc.p[i]-o;        // translate to origo
-      spc.geo->boundary(t);       // periodic boundary (if any)
+      t = spc.p[i]-o;              // translate to origo
+      spc.geo->boundary(t);        // periodic boundary (if any)
       cm += t * spc.p[i].mw;
       sum += spc.p[i].mw;
     }
-    assert(sum>0); // Masses must be assigned!
+    assert(sum>0 && "Group has zero mass. Did you forget to assign atom weights?");
     cm=cm*(1/sum) + o;
     spc.geo->boundary(cm);
     return cm;
   }
 
+  Point Group::setMassCenter(const Space &spc) {
+    cm=massCenter(spc);
+    cm_trial=cm;
+    return cm;
+  }
+
   Point Group::massCenter(const Space &spc) const {
+    assert( &spc!=NULL );
+    assert( size()>0 );
+    assert( end < (int)spc.p.size() );
     return _massCenter(spc);
   }
   
   Point Group::dipolemoment(const Space &con) const {
+    assert(!"Unimplemented!");
     Point d;
     return d;
   }
   
-  void Group::rotate(Space &con, const Point &v, double) {
+  void Group::rotate(Space &spc, const Point &endpoint, double angle) {
+    assert(!"Unimplemented!");
   }
   
-  void Group::scale(Space &con, double) {
+  void Group::scale(Space &s, double newvol) {
+    cm_trial=cm;
+    s.geo->scale(cm_trial, newvol);
+    for (int i=beg; i<=end; ++i)
+      s.geo->scale( s.trial[i], newvol);
   }
 
   void Group::undo(Space &s) {
     for (int i=beg; i<=end; ++i)
       s.trial[i]=s.p[i];
+    cm_trial=cm;
   }
 
   void Group::accept(Space &s) {
     for (int i=beg; i<=end; ++i)
       s.p[i] = s.trial[i];
+    cm=cm_trial;
   }
 
   /*!
@@ -147,7 +167,7 @@ namespace Faunus {
       con.trial[i] += p;
       con.geo->boundary( con.trial[i] );
     }
-    cm_trial += p;
+    cm_trial = cm + p;
     con.geo->boundary( cm_trial );
   }
 
@@ -164,6 +184,7 @@ namespace Faunus {
   }
 
   GroupAtomic::GroupAtomic(Space &spc, InputMap &in) {
+    id=ATOMIC;
     add(spc,in);
   }
 
@@ -195,10 +216,6 @@ namespace Faunus {
     return *this;
   }
 
-  void GroupAtomic::scale(Space&, double) {
-  }
-
-
   /* -----------------------------------*
    *             MOLECULAR
    * -----------------------------------*/
@@ -208,36 +225,51 @@ namespace Faunus {
 
   std::ostream& GroupMolecular::write(std::ostream &o) const {
     Group::write(o);
-    o << " " << cm;
+    //o << " " << cm;
     return o;
   }
 
   GroupMolecular& GroupMolecular::operator<<(std::istream &in) {
     Group::operator<<(in);
-    cm.operator<<(in);
+    //cm.operator<<(in);
     return *this;
   }
   
-  void GroupMolecular::rotate(Space &spc, const Point &endpoint, double angle) {
-    assert( spc.geo->dist(cm, cm_trial)<1e-9 );   // debug. Is trial mass center in sync?
-    vrot.setAxis(*spc.geo, cm, endpoint, angle);  // rotate around line between mass center and point
-    for (int i=beg; i<=end; i++)
-      spc.trial[i] = vrot.rotate( *spc.geo, spc.trial[i] ); // boundary conditions already taken care of
-  }
-  
   void GroupMolecular::translate(Space &spc, const Point &p) {
-    assert( spc.geo->dist(cm,cm_trial)<1e-9 );   // debug. Is trial mass center in sync?
+    assert( spc.geo->dist(cm,massCenter(spc))<1e-9 );   // debug. Is trial mass center in sync?
     Group::translate(spc, p);
     cm_trial=cm+p;
     spc.geo->boundary(cm_trial);
   }
 
-  void GroupMolecular::accept(Space &s) {
-    Group::accept(s);
-    cm=cm_trial;
+  void GroupMolecular::rotate(Space &spc, const Point &endpoint, double angle) {
+    assert( spc.geo->dist(cm,massCenter(spc) )<1e-9 );      // debug. Is mass center in sync?
+
+    cm_trial = cm;
+    vrot.setAxis(*spc.geo, cm, endpoint, angle);            // rotate around line between mass center and point
+    for (int i=beg; i<=end; i++)
+      spc.trial[i] = vrot.rotate( *spc.geo, spc.trial[i] ); // boundary conditions already taken care of
+
+    assert( spc.geo->dist(cm_trial, massCenter(spc))<1e-9 && "Rotation messed up mass center. Is the box too small?");
   }
 
-  void GroupMolecular::scale(Space&, double) {
+  void GroupMolecular::scale(Space &s, double newvol) {
+    assert( s.geo->dist(cm, massCenter(s))<1e-9);
+    assert( s.geo->dist(cm, cm_trial)<1e-9);
+
+    Point newcm=cm;
+    s.geo->scale(newcm, newvol);      // scale cm to newcm
+    translate(s,-cm);                 // move to origo
+
+    double oldvol=s.geo->getvolume(); // store original volume
+    s.geo->setVolume(newvol);         // apply trial volume
+
+    for (int i=beg; i<=end; i++) {
+      s.trial[i] += newcm;            // move all particles to new cm
+      s.geo->boundary( s.trial[i] );  // respect boundary conditions
+    }
+    cm_trial=newcm;
+    s.geo->setVolume(oldvol);         // restore original volume
   }
 
 }//namespace

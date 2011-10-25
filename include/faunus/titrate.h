@@ -78,6 +78,8 @@ namespace Faunus {
     };
 
     class EquilibriumEnergy : public Energybase {
+      private:
+        string _info();
       protected:
         std::map<short, double> energymap;       //!< Map of intrinsic energy for titratable sites
       public:
@@ -86,7 +88,6 @@ namespace Faunus {
         double i_internal(const p_vec&, int);
         double g_internal(const p_vec&, Group&);
         int findSites(const p_vec&);
-        string info();
     };
 
   }//Energy namespace 

@@ -248,8 +248,8 @@ namespace Faunus {
       return u;
     }
 
-    string EquilibriumEnergy::info() {
-      return Energybase::info() + eq.info();
+    string EquilibriumEnergy::_info() {
+      return eq.info();
     }
 
   }//namespace Energy

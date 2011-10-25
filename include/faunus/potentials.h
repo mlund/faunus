@@ -26,9 +26,9 @@ namespace Faunus {
         string name; //!< Short (preferably one-word) description of the core potential
         PairPotentialBase();
         string brief();
-        virtual double energy(const particle&, const particle&, double) const=0;
         void setScale(double=1);
         double tokT();
+        virtual double operator() (const particle&, const particle&, double) const=0;
     };
 
     class Harmonic : public PairPotentialBase {
@@ -39,7 +39,7 @@ namespace Faunus {
         double k;   //!< Force constant (kT/AA^2)
         double req; //!< Equilibrium distance (AA)
         Harmonic(double=0, double=0);
-        double energy(const particle&, const particle&, double) const; //!< Pair interaction energy (kT)
+        double operator() (const particle&, const particle&, double) const; //!< Pair interaction energy (kT)
     };
 
     class HardSphere : public PairPotentialBase {
@@ -48,7 +48,7 @@ namespace Faunus {
       public:
         HardSphere();
         HardSphere(InputMap&);
-        inline double energy(const particle &a, const particle &b, double r2) const {
+        inline double operator() (const particle &a, const particle &b, double r2) const {
           double mindist=a.radius+b.radius;
           if (r2<mindist*mindist)
             return pc::infty;
@@ -78,7 +78,7 @@ namespace Faunus {
           double x=r6(sigma,r2);
           return eps*(x*x - x);
         }
-        inline double energy(const particle &a, const particle &b, double r2) const {
+        inline double operator() (const particle &a, const particle &b, double r2) const {
           return energy(a.radius+b.radius, r2);
         }
         string info(char);
@@ -92,7 +92,7 @@ namespace Faunus {
         double threshold; //!< Threshold between particle *surface* [A]
         double depth;     //!< Energy depth [kT]
         SquareWell(InputMap&, string="SquareWell");
-        inline double energy(const particle &a, const particle &b, double r2) const {
+        inline double operator() (const particle &a, const particle &b, double r2) const {
           return ( sqrt(r2)-a.radius-b.radius<threshold ) ? depth : 0;
         }
         string info(char);
@@ -109,7 +109,7 @@ namespace Faunus {
       public:
       Coulomb(InputMap &);
       inline double energy(double zz, double r) const { return zz/r; } 
-      inline double energy(const particle &a, const particle &b, double r2) const {
+      inline double operator() (const particle &a, const particle &b, double r2) const {
         return energy( a.charge*b.charge, sqrt(r2) );
       }
       string info(char);
@@ -125,7 +125,7 @@ namespace Faunus {
         double ionicStrength() const;
         double debyeLength() const;
         inline double energy(double zz, double r) const { return zz/r * exp(k*r); }
-        inline double energy(const particle &a, const particle &b, double r2) const {
+        inline double operator() (const particle &a, const particle &b, double r2) const {
           r2=sqrt(r2);
           return a.charge*b.charge/r2 * exp(k*r2);
         }
@@ -149,10 +149,10 @@ namespace Faunus {
           }
           inline double energy(const particle &a, const particle &b) const {
             double r2=geo.sqdist(a,b);
-            return el.energy(a.charge*b.charge,sqrt(r2)) + sr.energy(a,b,r2);
+            return el.energy( a.charge*b.charge, sqrt(r2) ) + sr(a,b,r2);
           }
-          inline double energy(const particle &a, const particle &b, double r2) const {
-            return el.energy(a.charge*b.charge,sqrt(r2)) + sr.energy(a,b,r2);
+          inline double operator() (const particle &a, const particle &b, double r2) const {
+            return el.energy( a.charge*b.charge, sqrt(r2) ) + sr(a,b,r2);
           }
           string info(char w=20) {
             std::ostringstream o;

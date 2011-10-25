@@ -258,27 +258,6 @@ namespace Faunus {
 
 #endif
 
-    class GeometryList {
-      private:
-        vector<Geometrybase*> base;
-      public:
-        void add(Geometrybase &g) {
-          if (&g!=NULL)
-            if ( std::find(base.begin(), base.end(), &g)==base.end() )
-              base.push_back(&g);
-        }
-
-        template<typename Tgeo> void deepCopy(const Geometry::Geometrybase& source) {
-          assert(&source!=NULL);
-          const Tgeo* src=dynamic_cast<const Tgeo*>(&source); //get dereved class pointer to source
-          for (auto *g : base) {
-            Tgeo* target=dynamic_cast<Tgeo*>(g); // derived class pointer to target
-            (*target)=(*src);                    // copy data from source to target
-          }
-        }
-
-    };
-
     /*!
      * \brief Vector rotation routines
      * \note Boundary condition are respected.
@@ -296,8 +275,33 @@ namespace Faunus {
         Point rotate(const Geometrybase&, Point) const;                   //!< Rotate point around axis
     };
 
-
   }//namespace Geometry
+
+  template<typename Tbase>
+    class BasePointerList {
+      private:
+        vector<Tbase*> base;
+      public:
+        void insert(Tbase &g) {
+          if (&g!=nullptr)
+            if ( std::find(base.begin(), base.end(), &g)==base.end() )
+              base.push_back(&g);
+        }
+
+        template<typename Tderived> void sync(const Tbase& source) {
+          assert(&source!=nullptr);
+          const Tderived* src=dynamic_cast<const Tderived*>(&source); //get dereved class pointer to source
+          for (auto b : base) {
+            Tderived* target=dynamic_cast<Tderived*>(b); // derived class pointer to target
+            if ( src != target )
+              (*target)=(*src);                    // copy data from source to target
+          }
+        }
+    };
+
+  namespace Geometry {
+    typedef BasePointerList<Geometrybase> GeometryList;
+  }
 
 }//namespace
 #endif

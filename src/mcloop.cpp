@@ -54,7 +54,7 @@ namespace Faunus {
    * this function saves a state file to disk
    */
   bool MCLoop::macroCnt() {
-    savestate();
+    //savestate();
     return (++cnt_macro>macro) ? false : true;
   }
 

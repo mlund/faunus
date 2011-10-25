@@ -8,7 +8,7 @@ epsilon_r   79
 lj_eps      0.05
 
 loop_macrosteps 10
-loop_microsteps 100
+loop_microsteps 1000
 
 tion1  Na
 nion1  20
@@ -17,3 +17,10 @@ dpion1 110
 tion2  Cl
 nion2  20
 dpion2 110
+
+transrot_transdp  100
+transrot_rotdp    5
+
+npt_dV 10
+npt_P  1e-4
+

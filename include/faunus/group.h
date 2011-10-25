@@ -30,15 +30,14 @@ namespace Faunus {
 
       virtual double charge(const p_vec&) const;             //!< Calculate total charge
 
-      Point massCenter(const Space&) const;                  //!< Calculate mass center
-      //point getMassCenter(const Space&) const;                  //!< Calculate mass center
-
+      Point massCenter(const Space&) const;                  //!< Calculate mass center - does not set touch group!
+      Point setMassCenter(const Space &);                    //!< Calculate and Set mass center (cm and cm_trial)
       virtual Point dipolemoment(const Space&) const;        //!< Calculate dipole moment
 
       virtual void rotate(Space&, const Point&, double);     //!< Rotate around a vector
       virtual void translate(Space&, const Point&);          //!< Translate along a vector
       virtual void scale(Space&, double);                    //!< Volume scaling
-      virtual void undo(Space&);                                 //!< Undo move operation
+      virtual void undo(Space&);                             //!< Undo move operation
       virtual void accept(Space&);
 
       // Operators
@@ -59,7 +58,6 @@ namespace Faunus {
       GroupAtomic(Space&, InputMap&);        //!< Construct and call add()
       GroupAtomic &operator<<(std::istream&);
       void add(Space&, InputMap&);      //!< Add atomic particles via InputMap paramters
-      void scale(Space&, double);       //!< Scale all atomic particles in Group to new volume
   };
 
   class GroupMolecular : public Group {
@@ -73,9 +71,8 @@ namespace Faunus {
       Average<double> mu;       //!< average dipole moment
 
       GroupMolecular();
-      void rotate(Space&, const Point&, double);
       void translate(Space&, const Point&);
-      void accept(Space&);
+      void rotate(Space&, const Point&, double);     //!< Rotate around a vector
       void scale(Space&, double);
 
       GroupMolecular &operator<<(std::istream&);                        //!< Get information

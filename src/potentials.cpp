@@ -42,7 +42,7 @@ namespace Faunus {
       k=k/_tokT;
     }
 
-    double Harmonic::energy(const particle &a, const particle &b, double r2) const {
+    double Harmonic::operator() (const particle &a, const particle &b, double r2) const {
       double d=sqrt(r2)-req;
       return k*d*d;
     }

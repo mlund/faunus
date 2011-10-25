@@ -5,11 +5,13 @@
 
 namespace Faunus {
   namespace Energy {
-    Energybase::Energybase() : geo(NULL) {
+    Energybase::Energybase() : geo(nullptr) {
+      w=25;
       name="Hamiltonian";
     }
 
-    Energybase::~Energybase() {}
+    Energybase::~Energybase() {
+    }
 
     bool Energybase::setGeometry(Geometry::Geometrybase &g) {
       geo=&g;
@@ -43,16 +45,18 @@ namespace Faunus {
     double Energybase::g_external(const p_vec &p, Group &g) {return 0;}
     double Energybase::g_internal(const p_vec &p, Group &g) {return 0;}
 
+    double Energybase::external() {return 0;}
+
     string Energybase::info() {
-      using namespace textio;
       std::ostringstream o;
-      o << header("Energy: " + name); 
+      o << textio::header("Energy: " + name)
+        << _info();
       return o.str();
     }
 
     Bonded::Bonded() {
       name="Bonded Particles";
-      geo=NULL;
+      geo=nullptr;
     }
 
     Bonded::Bonded(Geometry::Geometrybase &g) {
@@ -68,11 +72,35 @@ namespace Faunus {
       return bonds.totalEnergy(*geo, p, g);
     }
 
-    string Bonded::info() {
-      std::ostringstream o;
-      o << Energybase::info() << bonds.info();
-      return o.str();
+    string Bonded::_info() {
+      return bonds.info();
     }
+
+    ExternalPressure::ExternalPressure(Geometry::Geometrybase &e, double pressure) {
+      assert(&e!=nullptr);
+      name="External Pressure";
+      setGeometry(e);
+      P=pressure;
+    }
+
+    double ExternalPressure::external() {
+      double V=geo->getvolume();
+      assert(V!=0 && P!=0 && "Pressure and/or volume is zero");
+      return P*V - log(V); 
+    }
+
+    double ExternalPressure::g_external(const p_vec &p, Group &g) {
+      double N=1,
+             V=geo->getvolume();
+      if (g.id==Group::ATOMIC)
+        N=g.size();
+      return -N*log(V);
+    }
+
+    string ExternalPressure::_info() {
+      return "Pressure";
+    }
+
 
     /*!
      * This adds an Energybase class to the Hamiltonian. If the geometry of the
@@ -81,16 +109,17 @@ namespace Faunus {
      * geometry is copied to the Hamiltonian.
      */
     void Hamiltonian::add(Energybase &e) {
-      if (&e.getGeometry()==NULL) {
+      if (&e.getGeometry()==nullptr) {
         if (baselist.empty()) {
           cerr << "Error! First energybase class must have a well defined geometry!\n";
           return;
         }
         e.setGeometry(*geo);
       }
-      else if (geo==NULL)
+      else if (geo==nullptr)
         geo = &e.getGeometry();
       baselist.push_back( &e );
+      //geolist.insert( e.getGeometry() );
     }
 
     double Hamiltonian::all2all(const p_vec &p) {
@@ -178,10 +207,16 @@ namespace Faunus {
       return u;
     }
 
-    string Hamiltonian::info() {
+    double Hamiltonian::external() {
+      double u=0;
+      for (auto &b : baselist)
+        u += b->external();
+      return u;
+     }
+
+    string Hamiltonian::_info() {
       using namespace textio;
       std::ostringstream o;
-      o << Energybase::info();
       o << indent(SUB) << "Registered Energy Functions:"<< endl;
       int i=1;
       for (auto e : baselist)
@@ -196,17 +231,17 @@ namespace Faunus {
     }
 
     double ParticleBonds::totalEnergy(Geometry::Geometrybase &geo, const p_vec &p, int i) {
-      assert( &geo!=NULL );  //debug
+      assert( &geo!=nullptr );  //debug
       assert( i<(int)p.size() ); //debug
       double u=0;
       for (auto &m2 : pairs::list[i])
-        u+=m2.second->tokT() * m2.second->energy( p[i], p[m2.first], geo.sqdist( p[i], p[m2.first] ) );
+        u+=m2.second->tokT() * m2.second->operator()( p[i], p[m2.first], geo.sqdist( p[i], p[m2.first] ) );
       return u;
     }
 
     //!< Return the total bond energy by considering each bond pair exactly once (kT)
     double ParticleBonds::totalEnergy(Geometry::Geometrybase &geo, const p_vec &p) {
-      assert(&geo!=NULL);  //debug
+      assert(&geo!=nullptr);  //debug
       std::set<int> done;
       double u=0;
       for (auto &m1 : pairs::list) {
@@ -214,7 +249,7 @@ namespace Faunus {
           if ( done.find(m2.first)==done.end() ) {
             assert(m1.first<(int)p.size()); //debug
             assert(m2.first<(int)p.size()); //debug
-            u += m2.second->tokT() * m2.second->energy( p[m1.first], p[m2.first], geo.sqdist( p[m1.first], p[m2.first] ) );
+            u += m2.second->tokT() * m2.second->operator()( p[m1.first], p[m2.first], geo.sqdist( p[m1.first], p[m2.first] ) );
           }
         }
         done.insert(m1.first); // exclude index from subsequent loops
@@ -223,13 +258,13 @@ namespace Faunus {
     }
 
     double ParticleBonds::totalEnergy(Geometry::Geometrybase &geo, const p_vec &p, const Group &g) {
-      assert(&geo!=NULL);  //debug
+      assert(&geo!=nullptr);  //debug
       std::set<int> done;
       double u=0;
       for (auto i=g.beg; i<=g.end; i++) {
         for (auto &m2 : pairs::list[i]) {
           if ( done.find(m2.first)==done.end() ) {
-            u += m2.second->tokT() * m2.second->energy( p[i], p[m2.first], geo.sqdist( p[i], p[m2.first] ) );
+            u += m2.second->tokT() * m2.second->operator()( p[i], p[m2.first], geo.sqdist( p[i], p[m2.first] ) );
           }
         }
         done.insert(i);

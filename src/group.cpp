@@ -209,6 +209,7 @@ namespace Faunus {
       beg=end=-1;
     else
       spc.enroll(*this);
+    setMassCenter(spc);
   }
 
   GroupAtomic& GroupAtomic::operator<<(std::istream &in) {
@@ -254,8 +255,8 @@ namespace Faunus {
   }
 
   void GroupMolecular::scale(Space &s, double newvol) {
-    assert( s.geo->dist(cm, massCenter(s))<1e-9);
-    assert( s.geo->dist(cm, cm_trial)<1e-9);
+    assert( s.geo->dist(cm, massCenter(s))<1e-7);
+    assert( s.geo->dist(cm, cm_trial)<1e-7);
 
     Point newcm=cm;
     s.geo->scale(newcm, newvol);      // scale cm to newcm

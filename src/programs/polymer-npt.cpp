@@ -8,7 +8,7 @@ typedef Potential::CoulombSR<Tgeometry, Potential::Coulomb, Potential::LennardJo
 int main() {
   cout << textio::splash();
   atom.includefile("atomlist.inp");    // load atom properties
-  InputMap mcp("bulk.inp");
+  InputMap mcp("polymer-npt.input");
   MCLoop loop(mcp);                    // class for handling mc loops
   FormatPQR pqr;                       // PQR structure file I/O
   FormatAAM aam;                       // AAM structure file I/O
@@ -23,65 +23,74 @@ int main() {
   Move::RotateGroup gmv(mcp,pot,spc);
   Move::ParticleTranslation mv(mcp, pot, spc);
 
-  // Add particles
+  // Add salt
   GroupAtomic salt(spc, mcp);
   salt.name="Salt";
-  mv.setGroup(salt);
 
   // Add polymers
-  vector<Group> pol( mcp.get("Npolymers",0));
-  for (auto &g : pol) {
-    g = spc.insert( aam.p );
+  vector<GroupMolecular> pol( mcp.get("Npolymer",0));
+  string polyfile = mcp.get<string>("polymerfile", "");
+  Potential::Harmonic harmonic(0.2, 10.0);
+  atom["MM"].dp=10.;
+  int i=1;
+  for (auto &g : pol) {                    // load polymers
+    aam.load(polyfile);
+    g = spc.insert( aam.p );               // insert into space
+    std::ostringstream o;
+    o << "Polymer" << i++;
+    g.name=o.str();
+     spc.enroll(g);
+    for (int i=g.beg; i<g.end; i++)
+      bonded->bonds.add(i, i+1, harmonic); // add bonds
   }
-
-  GroupMolecular test;
-  test.beg=spc.p.size();
-  spc.insert("Na", 2);
-  test.end=spc.p.size()-1;
-  test.name="Test";
-  spc.p[test.beg].x=0;
-  spc.p[test.beg].y=0;
-  spc.p[test.beg].z=0;
-  spc.p[test.end].x=2;
-  spc.p[test.end].y=2;
-  spc.p[test.end].z=2;
-  spc.trial=spc.p;
-  spc.enroll(test);
+  Group allpol( pol.front().beg, pol.back().end   );
 
   spc.load("space.state");
-  salt.setMassCenter(spc);
-  test.setMassCenter(spc);
-
-  //bonded->bonds.add(0,1, Potential::Harmonic(0.2, 10.0));
-  //bonded->bonds.add(1,2, Potential::Harmonic(0.3,  5.0));
-
-  #define UTOTAL \
-      pot.g_external(spc.p, test)\
-    + pot.g_internal(spc.p, salt)  + pot.g_external(spc.p, salt)\
-    + pot.g2g(spc.p,salt,test) + pot.external()
-
-  sys.init( UTOTAL );
+  
+  double utot=pot.external();
+  utot += pot.g_internal(spc.p, salt) + pot.g_external(spc.p, salt)
+    + pot.g2g(spc.p, salt, allpol) + pot.g_internal(spc.p, allpol);
+  for (auto &g : pol)
+    utot += pot.g_external(spc.p, g);
+  sys.init( utot );
 
   cout << atom.info() << spc.info() << pot.info() << mv.info()
-       << textio::header("MC Simulation Begins!");
+    << textio::header("MC Simulation Begins!");
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int i=rand() % 3;
+      int k,i=rand() % 4;
       switch (i) {
         case 0:
+          mv.setGroup(salt);
           sys+=mv.move();
           break;
         case 1:
-          gmv.setGroup(test);
-          sys+=gmv.move();
+          mv.setGroup(allpol);
+          sys+=mv.move();
+          for (auto &g : pol)
+            g.setMassCenter(spc);
           break;
         case 2:
+          k=pol.size();
+          while (k-->0) {
+            gmv.setGroup( pol[ rand() % pol.size() ] );
+            sys+=gmv.move();
+          }
+          break;
+        case 3:
           sys+=iso.move();
           break;
       }
     } // end of micro loop
-    sys.checkDrift( UTOTAL );
+
+    double utot=pot.external();
+    utot += pot.g_internal(spc.p, salt) + pot.g_external(spc.p, salt)
+      + pot.g2g(spc.p, salt, allpol) + pot.g_internal(spc.p, allpol);
+    for (auto &g : pol)
+      utot += pot.g_external(spc.p, g);
+    sys.checkDrift( utot );
+
     cout << loop.timing();
   } // end of macro loop
 

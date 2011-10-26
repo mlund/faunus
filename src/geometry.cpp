@@ -34,7 +34,7 @@ namespace Faunus {
     void Geometrybase::setVolume(double volume) {
       assert( volume>0 && "Zero geometry volume not allowed!");
       _setVolume( volume );
-      assert( std::abs(volume-getVolume())<1e-6 && "setVolume() and/or getVolume() seem broken!" );
+      assert( std::abs( (volume-getVolume())/volume )<1e-9 && "setVolume() and/or getVolume() seem broken!" );
     }
 
     double Geometrybase::getVolume() const {

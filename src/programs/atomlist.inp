@@ -21,6 +21,8 @@ Atom  La      +3     2.0    0.1    1       no
 Atom  Ca      +2     2.8    0.1    1       no
 Atom  Mg      +2     3.0    0.1    1       no
 
+Atom  MM      +1     2.0    0.1    1       no
+
 Atom  PO4     -3     2.0    0.1    1       no
 Atom  HPO4    -2     2.0    0.1    1       no
 Atom  H2PO4   -1     2.0    0.1    1       no

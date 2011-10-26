@@ -45,19 +45,33 @@ namespace Faunus {
     return rc;
   }
 
-  Group Space::insert(const p_vec &pin, int i) {
+  GroupMolecular Space::insert(const p_vec &pin, int i) {
     assert(i==-1 && "Vector insertion at random position unimplemented.");
-    i=p.size();
-    Group g;
-    if (!pin.empty()) {
-      g.beg=i;
-      g.end=i-1;
-      for (auto &i : pin) {
+    assert(overlap()==false && "Particle overlap not allowed before inserting.");
+
+    GroupMolecular g;
+    if ( !pin.empty() ) {
+      g.beg=p.size();
+      g.end=g.beg-1;
+      for (auto i : pin) {
+        geo->boundary(i);
         p.push_back(i);
         trial.push_back(i);
         g.end++;
       }
+      g.setMassCenter(*this);
+      g.translate(*this, -g.cm);
+      g.accept(*this); 
+      Point a;
+      while ( overlap()==true ) {
+        geo->randompos(a);
+        a=a-g.cm;
+        geo->boundary(a);
+        g.translate(*this,a);
+        g.accept(*this);
+      }
     }
+    g.setMassCenter(*this);
     return g;
   }
 
@@ -93,6 +107,16 @@ namespace Faunus {
     return true;
   }
 
+  bool Space::overlap() const {
+    for (auto i=p.begin(); i!=p.end()-1; ++i)
+      for (auto j=i+1; j!=p.end(); ++j) {
+        double s=i->radius + j->radius;
+        if (geo->sqdist(*i,*j)<s*s)
+          return true;
+      }
+    return false;
+  }
+
   bool Space::overlap(const particle &a) const {
     for (auto &p_i : p) {
       double contact = a.radius + p_i.radius;
@@ -114,83 +138,85 @@ namespace Faunus {
         gj->end--;
     }
     return true;
-  }
-
-  bool Space::save(string file) {
-    std::ofstream fout( file.c_str() );
-    if (fout) {
-      fout.precision(10);
-      fout << p.size() << endl;
-      for (auto p_i : p)
-        fout << p_i << endl;
-      fout << g.size() << endl;
-      for (auto g_i : g)
-        fout << *g_i << endl;
-      fout.close();
-      return true;
     }
-    return false;
-  }
 
-  /*!
-   * \param file Filename
-   * \param resize True if the current geometry should be resized to match file content (default: false)
-   */
-  bool Space::load(string file, bool resize) {
-    using namespace textio;
-    int n;
-    fin.close();
-    fin.open( file.c_str() );
-    if (fin) {
-      fin >> n;
-      if (resize==true)
-        p.resize(n);
-      if (n == (int)p.size() ) {
-        for (int i=0; i<n; i++)
-          p[i] << fin;
-        trial=p;
-        cout << indent(SUB) << "Read " << n << " space points from " << file << endl;
-
-        fin >> n;
-        g.resize(n);
+    bool Space::save(string file) {
+      std::ofstream fout( file.c_str() );
+      if (fout) {
+        fout.precision(10);
+        fout << p.size() << endl;
+        for (auto p_i : p)
+          fout << p_i << endl;
+        fout << g.size() << endl;
         for (auto g_i : g)
-          *g_i << fin;
-        cout << indent(SUB) << "Read " << n << " groups from " << file << endl;
+          fout << *g_i << endl;
+        fout.close();
         return true;
       }
+      return false;
     }
-    cout << indent(SUB) << "Space data NOT read from file " << file << endl;
-    return false;
-  }
 
-  int Space::enroll(Group &newgroup) {
-    for (size_t i=0; i<g.size(); ++i)
-      if (g[i]==&newgroup)
-        return i;
-    g.push_back(&newgroup);
-    trial=p;
-    return g.size()-1; //return position if added group
-  }
-
-  string Space::info() {
-    using namespace textio;
-    static char w=25;
-    double z=charge();
-    std::ostringstream o;
-    o << header("Simulation Space and Geometry") 
-      << geo->info(w);
-    o << pad(SUB,w,"Number of particles") << p.size() << endl;
-    o << indent(SUB) << "Groups:" << endl;
-    for (size_t i=0; i<g.size(); i++) {
-      std::ostringstream range;
-      range << "[" << g[i]->beg << "-" << g[i]->end << "]";
-      o << indent(SUBSUB) << std::left
-        << setw(6) << i+1
-        << setw(17) << range.str()
-        << setw(20) << g[i]->name
-        << endl;
+    /*!
+     * \param file Filename
+     * \param resize True if the current geometry should be resized to match file content (default: false)
+     */
+    bool Space::load(string file, bool resize) {
+      using namespace textio;
+      int n;
+      fin.close();
+      fin.open( file.c_str() );
+      if (fin) {
+        fin >> n;
+        if (resize==true)
+          p.resize(n);
+        if (n == (int)p.size() ) {
+          for (int i=0; i<n; i++)
+            p[i] << fin;
+          trial=p;
+          cout << indent(SUB) << "Read " << n << " space points from " << file << endl;
+          fin >> n;
+          if (n==(int)g.size()) {
+            for (auto g_i : g) {
+              *g_i << fin;
+              g_i->setMassCenter(*this);
+            }
+            cout << indent(SUB) << "Read " << n << " groups from " << file << endl;
+            return true;
+          }
+        }
+      }
+      cout << indent(SUB) << "Space data NOT read from file " << file << endl;
+      return false;
     }
-    o << pad(SUB,w,"Electroneutrality") << ((abs(z)>1e-7) ? "NO!" : "Yes") << " "  << z << endl;
-    return o.str();
-  }
-}//namespace
+
+    int Space::enroll(Group &newgroup) {
+      for (size_t i=0; i<g.size(); ++i)
+        if (g[i]==&newgroup)
+          return i;
+      g.push_back(&newgroup);
+      trial=p;
+      return g.size()-1; //return position if added group
+    }
+
+    string Space::info() {
+      using namespace textio;
+      static char w=25;
+      double z=charge();
+      std::ostringstream o;
+      o << header("Simulation Space and Geometry") 
+        << geo->info(w)
+        << pad(SUB,w,"Number of particles") << p.size() << endl
+        << pad(SUB,w,"Electroneutrality") << ((abs(z)>1e-7) ? "NO!" : "Yes") << " "  << z << endl
+        << indent(SUB) << "Groups:" << endl;
+      for (size_t i=0; i<g.size(); i++) {
+        std::ostringstream range;
+        range << "[" << g[i]->beg << "-" << g[i]->end << "]";
+        o << indent(SUBSUB) << std::left
+          << setw(6) << i+1
+          << setw(17) << range.str()
+          << setw(20) << g[i]->name
+          << endl;
+      }
+      return o.str();
+    }
+  }//namespace

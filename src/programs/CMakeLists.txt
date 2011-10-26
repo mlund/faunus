@@ -29,6 +29,7 @@ endfunction( fau_cigarexample )
 #----- add examples to build process -----
 # Arguments: (target directory source)
 fau_example(bulk "./" bulk.cpp)
+fau_example(polymer-npt "./" polymer-npt.cpp)
 fau_cigarexample(cigar "./" cigar.cpp)
 
 #----- target specific build options -----

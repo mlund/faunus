@@ -108,8 +108,8 @@ namespace Faunus {
      */
     class Energybase {
       private:
-        char w; //!< Width of info output
         virtual string _info()=0;
+        char w; //!< Width of info output
       protected:
         Geometry::Geometrybase* geo; //!< Pointer to geometry used to calculate interactions
       public:

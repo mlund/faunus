@@ -18,7 +18,7 @@ enable_testing()
 # ------------------------------
 include(OptimizationFlags)
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release
+  set(CMAKE_BUILD_TYPE Debug
     CACHE STRING "Build type: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
 endif()
 
@@ -42,9 +42,10 @@ CHECK_CXX_SOURCE_COMPILES("int main() { unsigned long long int i; }" unsigned_lo
 CHECK_CXX_SOURCE_COMPILES("int main() { long double f; }" long_double)
 CHECK_CXX_SOURCE_COMPILES("int main() { int a[0]; for (int &i:a) i++; }" range_based_for_loop)
 CHECK_CXX_SOURCE_COMPILES("int main() { auto i=0; }" auto_type_inference)
+CHECK_CXX_SOURCE_COMPILES("int main() { nullptr; }" nullptr)
 CHECK_CXX_SOURCE_COMPILES("#include<memory>\nint main() {std::shared_ptr<int> i;}" smart_pointers)
 
-if(NOT (auto_type_inference AND unsigned_long_long_int AND long_double AND range_based_for_loop AND smart_pointers) )
+if(NOT (auto_type_inference AND unsigned_long_long_int AND long_double AND range_based_for_loop AND nullptr AND smart_pointers) )
   message(FATAL_ERROR "Required C++11 unsupported by compiler.")
 endif()
 
@@ -59,5 +60,25 @@ add_subdirectory(doc EXCLUDE_FROM_ALL)
 #if(ENABLE_SWIG)
 #  add_subdirectory(misc/swig)
 #endif()
+
+if (CMAKE_BUILD_TYPE MATCHES "Debug")
+  message(
+    "..........................................................................\n"
+    "  By default, Faunus is compiled in Debug mode to enable checks and\n"
+    "  assertions HIGHLY recommended when developing and testing simulation\n"
+    "  setups. For production runs, switch to Release to optimize performance:\n\n"
+    "  -DCMAKE_BUILD_TYPE=Release\n"
+    "**************************************************************************\n")
+endif()
+if (CMAKE_BUILD_TYPE MATCHES "Release")
+  message(
+    "......................................................................\n"
+    "  Faunus is running in Release mode recommended for production runs.\n"
+    "  For setting up simulations it is HIGHLY recommended to use Debug\n"
+    "  mode to enable run-time checks and assertions:\n\n"
+    "  -DCMAKE_BUILD_TYPE=Debug\n"
+    "**********************************************************************\n")
+endif()
+
 
 

@@ -38,9 +38,27 @@ namespace Faunus {
           break;
         } else rc=true;
       }
-    if (rc==false)
+    if (rc==false) {
+      assert(!"Particle vectors corrupted");
       std::cerr << "# Fatal error: Particle vectors corrupted!!\n";
+    }
     return rc;
+  }
+
+  Group Space::insert(const p_vec &pin, int i) {
+    assert(i==-1 && "Vector insertion at random position unimplemented.");
+    i=p.size();
+    Group g;
+    if (!pin.empty()) {
+      g.beg=i;
+      g.end=i-1;
+      for (auto &i : pin) {
+        p.push_back(i);
+        trial.push_back(i);
+        g.end++;
+      }
+    }
+    return g;
   }
 
   /*!
@@ -119,6 +137,7 @@ namespace Faunus {
    * \param resize True if the current geometry should be resized to match file content (default: false)
    */
   bool Space::load(string file, bool resize) {
+    using namespace textio;
     int n;
     fin.close();
     fin.open( file.c_str() );
@@ -130,17 +149,17 @@ namespace Faunus {
         for (int i=0; i<n; i++)
           p[i] << fin;
         trial=p;
-        std::cout << "# Read " << n << " space points from " << file << endl;
+        cout << indent(SUB) << "Read " << n << " space points from " << file << endl;
 
         fin >> n;
         g.resize(n);
         for (auto g_i : g)
           *g_i << fin;
-        std::cout << "# Read " << n << " groups from " << file << endl;
+        cout << indent(SUB) << "Read " << n << " groups from " << file << endl;
         return true;
       }
     }
-    std::cerr << "# Space data NOT read from file " << file << endl;
+    cout << indent(SUB) << "Space data NOT read from file " << file << endl;
     return false;
   }
 
@@ -171,7 +190,6 @@ namespace Faunus {
         << setw(20) << g[i]->name
         << endl;
     }
-    o << pad(SUB,w,"Volume") << geo->getvolume() << _angstrom << cubed << endl;
     o << pad(SUB,w,"Electroneutrality") << ((abs(z)>1e-7) ? "NO!" : "Yes") << " "  << z << endl;
     return o.str();
   }

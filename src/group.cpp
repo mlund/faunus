@@ -261,7 +261,7 @@ namespace Faunus {
     s.geo->scale(newcm, newvol);      // scale cm to newcm
     translate(s,-cm);                 // move to origo
 
-    double oldvol=s.geo->getvolume(); // store original volume
+    double oldvol=s.geo->getVolume(); // store original volume
     s.geo->setVolume(newvol);         // apply trial volume
 
     for (int i=beg; i<=end; i++) {

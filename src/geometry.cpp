@@ -22,26 +22,30 @@ namespace Faunus {
     }
 
     string Geometrybase::info(char w) {
+      using namespace textio;
       std::ostringstream o;
       o << pad(SUB,w, "Boundary") << name << endl
+        << pad(SUB,w, "Volume") << getVolume() << _angstrom << cubed
+        << " = " << getVolume()*1e27 << " liters" << endl
         << _info(w);
       return o.str();
     }
 
-    void Geometrybase::setVolume(double vol) {
-      assert(vol>0);
-      volume=vol;
+    void Geometrybase::setVolume(double volume) {
+      assert( volume>0 && "Zero geometry volume not allowed!");
+      _setVolume( volume );
+      assert( std::abs(volume-getVolume())<1e-6 && "setVolume() and/or getVolume() seem broken!" );
     }
 
-    double Geometrybase::getvolume() const {
-      return volume;
+    double Geometrybase::getVolume() const {
+      return _getVolume();
     }
 
     bool Geometrybase::save(string file) {
       std::ofstream fout( file.c_str());
       if (fout) {
         fout.precision(10);
-        fout <<  getvolume() << endl;
+        fout <<  getVolume() << endl;
         return true;
       }
       return false;
@@ -82,17 +86,19 @@ namespace Faunus {
       r = radius; 
       r2 = r*r; 
       diameter = 2*r; 
-      volume = (4./3.)*pc::pi*r*r*r;
     }
 
-    void Sphere::setVolume(double vol) {
-      volume=vol;
+    double Sphere::_getVolume() const {
+      return 4/3.*pc::pi*std::pow(r,3);
+    }
+
+    void Sphere::_setVolume(double vol) {
       setradius( pow( 3*vol/(4*pc::pi), 1/3.) );
     }
 
     string Sphere::_info(char w) {
       std::ostringstream o;
-      o << pad(SUB,w,"Radius") << r << endl;
+      o << pad(SUB,w,"Radius") << r << textio::_angstrom << endl;
       return o.str();
     }
 
@@ -156,7 +162,6 @@ namespace Faunus {
       len_inv.x=1./len.x;         // inverse Cuboid side length
       len_inv.y=1./len.y;         // 
       len_inv.z=1./len.z;         // 
-      volume = len.x*len.y*len.z; // Cuboid volume
       return true;
     }
 
@@ -184,9 +189,18 @@ namespace Faunus {
       return true;
     }
 
+    void Cuboid::_setVolume(double newV) {
+      scale(len,newV);
+      setlen(len);
+    }
+
+    double Cuboid::_getVolume() const {
+      return len.x*len.y*len.z;
+    }
+
     string Cuboid::_info(char w) {
       std::ostringstream o;
-      o << pad(SUB,w, "Sidelengths") << len.x << " x " << len.y << " x " << len.z << endl
+      o << pad(SUB,w, "Sidelengths") << len.x << " x " << len.y << " x " << len.z << " ("+textio::angstrom+")" << endl
         << pad(SUB,w, "Slice position [x y z]")
         << len_half.x-slice_max.x << "-" << len_half.x-slice_min.x << " " 
         << len_half.y-slice_max.y << "-" << len_half.y-slice_min.y << " "
@@ -257,9 +271,9 @@ namespace Faunus {
     }
 
     void Cuboid::scale(Point &a, const double &newvolume) const {
-      assert(volume>0);
-      assert(newvolume>0);
-      a = a * pow( newvolume/volume, 1/3.);
+      assert( getVolume()>0 );
+      assert( newvolume>0 );
+      a = a * pow( newvolume/getVolume(), 1/3.);
     }
 
     //
@@ -290,8 +304,15 @@ namespace Faunus {
       r=radius;
       r2=r*r;
       diameter=r*2;
-      volume=2*r2*pc::pi*len;
       halflen=len/2;
+    }
+
+    void Cylinder::_setVolume(double newV) {
+      assert(!"Cylindrical volume scaling unimplemented.");
+    }
+
+    double Cylinder::_getVolume() const {
+      return 2*r2*pc::pi*len;
     }
 
     void Cylinder::randompos(Point &m) {

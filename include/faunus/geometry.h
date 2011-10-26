@@ -32,14 +32,15 @@ namespace Faunus {
     class Geometrybase {
       private:
         virtual string _info(char)=0;
+        virtual void _setVolume(double)=0;
+        virtual double _getVolume() const=0;
       protected:
         slump slp;
-        double volume;                                      //!< Volume of the container [AA^3]
         string name;                                        //!< Name of the geometry
       public:
         enum collisiontype {BOUNDARY,ZONE};                 //!< Types for collision() function
-        double getvolume() const;                           //!< Get volume of container
-        virtual void setVolume(double);                     //!< Specify new volume
+        double getVolume() const;                           //!< Get volume of container
+        void setVolume(double);                             //!< Specify new volume
         virtual bool collision(const particle&, collisiontype=BOUNDARY)=0;//!< Check for collision with boundaries, forbidden zones, matter,..
         virtual void randompos(Point &)=0;                  //!< Random point within container
         virtual void boundary(Point &) const=0;             //!< Apply boundary conditions to a point
@@ -62,13 +63,14 @@ namespace Faunus {
     class Sphere : public Geometrybase {
       private:
         double r2,diameter;
+        void _setVolume(double);
+        double _getVolume() const;
       public:
         void setradius(double);
         double r;              //!< Radius
         Sphere(double);
         Sphere(InputMap&);
         string _info(char);
-        void setVolume(double);
         void randompos(Point &);
         void boundary(Point &) const;
         bool collision(const particle &, collisiontype=BOUNDARY);
@@ -96,6 +98,8 @@ namespace Faunus {
     class Cuboid : public Geometrybase {
       private:
         string _info(char);                      //!< Return info string
+        void _setVolume(double);
+        double _getVolume() const;
       protected:
         bool setslice(Point, Point);             //!< Reset slice position
         Point len_inv;                           //!< Inverse sidelengths
@@ -202,6 +206,8 @@ namespace Faunus {
     class Cylinder : public Geometrybase {
       private:
         string _info(char); //!< Cylinder info
+        void _setVolume(double);
+        double _getVolume() const;
         double halflen;
         double r2;    //!< Cylinder radius squared
         void init(double,double);

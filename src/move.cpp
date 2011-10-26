@@ -102,7 +102,7 @@ namespace Faunus {
       igroup=nullptr;
       dir.x=dir.y=dir.z=1;
       w=25;
-      in.get(prefix+"_runfraction",0.0);
+      in.get(prefix+"_runfraction",0.);
     }
 
     void ParticleTranslation::setGroup(Group &g) {
@@ -274,8 +274,8 @@ namespace Faunus {
     Isobaric::Isobaric(InputMap &in, Energy::Hamiltonian &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Isobaric Volume Fluctuations";
       w=30;
-      dV = in.get(prefix+"_dV", 0.0);
-      P = in.get(prefix+"_P", 0.0); //pressure
+      dV = in.get<double>(prefix+"_dV", 0.);
+      P = in.get<double>(prefix+"_P", 0.)/1e30*pc::Nav; //pressure mM -> 1/A^3
       runfraction = in.get(prefix+"_runfraction",1.0);
       hamiltonian = &e;
       e.create( Energy::ExternalPressure( e.getGeometry(), P ) );
@@ -291,13 +291,23 @@ namespace Faunus {
           N+=g->size();
         else
           N++;
+      double Pascal = P*pc::kB*pc::T*1e30;
       o << pad(SUB,w, "Displacement parameter") << dV << endl
-        << pad(SUB,w, "Mean displacement") << sqrt(sqrV.avg()) << _angstrom << cubed << endl
-        << pad(SUB,w, "Average volume") << V.avg() << _angstrom << cubed << endl
-        << pad(SUB,w, "Average length") << pow(V.avg(),1/3.) << _angstrom << endl
-        << pad(SUB,w, "Average concentration") << N/V.avg()*tomM << " mM" << endl
-        << pad(SUB,w, "Ideal concentration") << P*tomM << " mM" << endl
-        << pad(SUB,w, "Osmotic coefficient") << P / (N/V.avg()) << endl;
+        << pad(SUB,w, "Pressure") << P*tomM << " mM" << " = " << Pascal << " Pa = " << Pascal/0.980665e5 << " atm" << endl;
+      if (cnt>0) {
+        char l=15;
+        o << pad(SUB,w, "Mean displacement") << sqrt(sqrV.avg()) << _angstrom << cubed << endl
+          << pad(SUB,w, "Osmotic coefficient") << P / (N/V.avg()) << endl
+          << endl
+          << indent(SUBSUB) << std::right << setw(10) << ""
+          << setw(l+5) << bracket("V")
+          << setw(l+6) << bracket("l")
+          << setw(l+8) << bracket("N/V") << endl
+          << indent(SUB) << setw(10) << "Averages"
+          << setw(l) << V.avg() << _angstrom << cubed
+          << setw(l) << pow(V.avg(),1/3.) << _angstrom
+          << setw(l) << N/V.avg()*tomM << " mM" << endl;
+      }
       return o.str();
     }
 
@@ -308,7 +318,8 @@ namespace Faunus {
     }
 
     void Isobaric::_trialMove() {
-      oldV = spc->geo->getvolume();
+      assert(spc->g.size()>0 && "Space has empty group vector - NPT move not possible.");
+      oldV = spc->geo->getVolume();
       newV = exp( log(oldV) + slp_global.randHalf()*dV );
       for (auto g : spc->g)
         g->scale(*spc, newV);

@@ -84,21 +84,25 @@ namespace Faunus {
     }
 
     double ExternalPressure::external() {
-      double V=geo->getvolume();
+      double V=geo->getVolume();
       assert(V!=0 && P!=0 && "Pressure and/or volume is zero");
       return P*V - log(V); 
     }
 
     double ExternalPressure::g_external(const p_vec &p, Group &g) {
       double N=1,
-             V=geo->getvolume();
+             V=geo->getVolume();
       if (g.id==Group::ATOMIC)
         N=g.size();
       return -N*log(V);
     }
 
     string ExternalPressure::_info() {
-      return "Pressure";
+      char w=15;
+      using namespace textio;
+      std::ostringstream o;
+      o << pad(SUB,w,"Pressure") << P*1e30/pc::Nav << " mM = " << P*pc::kB*pc::T*1e30 << " Pa" << endl;
+      return o.str();
     }
 
 

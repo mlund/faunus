@@ -2,6 +2,7 @@
 #define FAUNUS_SPACE_H
 #include <faunus/common.h>
 #include <faunus/slump.h>
+#include <faunus/group.h>
 //extern template class std::vector<Faunus::particle>;
 
 namespace Faunus {
@@ -23,6 +24,7 @@ namespace Faunus {
       virtual bool save(string);                      //!< Save container state to disk
       virtual bool load(string, bool=false);          //!< Load container state from disk
 
+      Group insert(const p_vec&, int=-1);
       bool insert(particle, int=-1);                  //!< Insert particle at pos n.
       bool insert(string, int, spacekeys=NOOVERLAP); 
       bool remove(int);                               //!< Remove particle n.

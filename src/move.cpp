@@ -296,7 +296,7 @@ namespace Faunus {
         << pad(SUB,w, "Pressure") << P*tomM << " mM" << " = " << Pascal << " Pa = " << Pascal/0.980665e5 << " atm" << endl;
       if (cnt>0) {
         char l=15;
-        o << pad(SUB,w, "Mean displacement") << sqrt(sqrV.avg()) << _angstrom << cubed << endl
+        o << pad(SUB,w, "Mean displacement") << bracket("l") << " = " << pow(sqrV.avg(), 1/6.) << _angstrom << endl
           << pad(SUB,w, "Osmotic coefficient") << P / (N/V.avg()) << endl
           << endl
           << indent(SUBSUB) << std::right << setw(10) << ""

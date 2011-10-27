@@ -271,6 +271,43 @@ namespace Faunus {
         }
       };
 
+    template<class Tgeometry>
+      class HardSphereOverlap : public Energybase {
+        private:
+          Tgeometry geo;
+          Potential::HardSphere hs;
+        public:
+          HardSphereOverlap(InputMap &mcp) : geo(mcp) {};
+          inline double i2i(const p_vec &p, int i, int j) {
+            return hs(p[i], p[j], geo.sqdist(p[i], p[j]) );
+          }
+          double all2all(const p_vec &p) {
+            for (auto i=p.begin(); i!=p.end()-1; ++i)
+              for (auto j=i+1; j!=p.end(); ++j)
+                if ( hs(*i,*j, geo.sqdist(*i,&j) )==pc::infty )
+                  return pc::infty;
+            return 0;
+          }
+          double g2all(const p_vec &p, const Group &g) {
+            for (int i=g.beg; i<=g.end; i++) {
+              for (int j=0; j<g.beg; j++)
+                if ( i2i(p,i,j)==pc::infty )
+                  return pc::infty;
+              for (int j=g.end+1; j<(int)p.size(); j++)
+                if ( i2i(p,i,j)==pc::infty )
+                  return pc::infty;
+              return 0;
+            }
+          }
+          double g2g(const p_vec &p, const Group &g1, const Group &g2) {
+            for (int i=g1.beg; i<=g1.end; ++i)
+              for (int j=g2.beg; j<=g2.end; ++j)
+                if ( i2i(p,i,j)==pc::infty )
+                  return pc::infty;
+            return 0;
+          }
+      };
+
     //or simply add pointer to nonbonded<T>
     template<class Tpotential>
       class Exclusions : public Nonbonded<Tpotential> {

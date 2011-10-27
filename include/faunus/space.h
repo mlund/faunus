@@ -24,12 +24,13 @@ namespace Faunus {
       virtual bool save(string);                      //!< Save container state to disk
       virtual bool load(string, bool=false);          //!< Load container state from disk
 
-      Group insert(const p_vec&, int=-1);
+      GroupMolecular insert(const p_vec&, int=-1);
       bool insert(particle, int=-1);                  //!< Insert particle at pos n.
       bool insert(string, int, spacekeys=NOOVERLAP); 
       bool remove(int);                               //!< Remove particle n.
       int enroll(Group&);                             //!< Add group pointer to g vector
 
+      bool overlap() const;
       bool overlap(const particle&) const;            //!< Check for hardspheres overlap with particle
 
       double charge() const;                          //!< Sum all charges in particle vector

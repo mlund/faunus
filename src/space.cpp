@@ -193,6 +193,7 @@ namespace Faunus {
       for (size_t i=0; i<g.size(); ++i)
         if (g[i]==&newgroup)
           return i;
+      newgroup.setMassCenter(*this);
       g.push_back(&newgroup);
       trial=p;
       return g.size()-1; //return position if added group
@@ -219,4 +220,5 @@ namespace Faunus {
       }
       return o.str();
     }
+
   }//namespace

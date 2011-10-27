@@ -1,27 +1,30 @@
-loop_macrosteps   10
-loop_microsteps   20000
-cuboid_len        50      # Box side length Angstrom
+loop_macrosteps    10
+loop_microsteps    10000
+cuboid_len         50      # Box side length Angstrom
 
 # Energy field
-temperature       298.15  # Kelvin
-epsilon_r         79      # Water dielectric const
-lj_eps            0.05    # kT
-npt_P             15      # mM
-npt_dV            2      # log(dV)
+temperature        298.15  # Kelvin
+epsilon_r          79      # Water dielectric const
+lj_eps             0.05    # kT
+npt_P              30      # mM
+npt_dV             0      # log(dV)
+                
+# Polymers      
+polymer_N          2
+polymer_file       monomer.aam
+polymer_eqdist     6
+polymer_forceconst 0.5
 
-# Polymers
-Npolymer          5
-polymerfile       monomer.aam
-transrot_transdp  100
-transrot_rotdp    5
+transrot_transdp   100
+transrot_rotdp     0
 
 # Salt and counter ions
-tion1             Cl
-nion1             10
-dpion1            110
-
-tion2             Na 
-nion2             0
-dpion2            110
+tion1              Cl
+nion1              12
+dpion1             110
+           
+tion2              Na 
+nion2              0
+dpion2             110
 
 

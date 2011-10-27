@@ -22,15 +22,18 @@ int main() {
   Move::Isobaric iso(mcp,pot,spc);
   Move::RotateGroup gmv(mcp,pot,spc);
   Move::ParticleTranslation mv(mcp, pot, spc);
+  Analysis::PolymerShape shape;
 
   // Add salt
   GroupAtomic salt(spc, mcp);
   salt.name="Salt";
 
   // Add polymers
-  vector<GroupMolecular> pol( mcp.get("Npolymer",0));
-  string polyfile = mcp.get<string>("polymerfile", "");
-  Potential::Harmonic harmonic(0.2, 10.0);
+  vector<GroupMolecular> pol( mcp.get("polymer_N",0));
+  string polyfile = mcp.get<string>("polymer_file", "");
+  double req = mcp.get<double>("polymer_eqdist", 0);
+  double k   = mcp.get<double>("polymer_forceconst", 0);
+  Potential::Harmonic harmonic(k, req);
   atom["MM"].dp=10.;
   int i=1;
   for (auto &g : pol) {                    // load polymers
@@ -68,8 +71,10 @@ int main() {
         case 1:
           mv.setGroup(allpol);
           sys+=mv.move();
-          for (auto &g : pol)
+          for (auto &g : pol) {
             g.setMassCenter(spc);
+            shape.sample(g,spc);
+          }
           break;
         case 2:
           k=pol.size();
@@ -97,5 +102,5 @@ int main() {
   pqr.save("confout.pqr", spc.p);
   spc.save("space.state");
 
-  cout << loop.info() << sys.info() << mv.info() << gmv.info() << iso.info();
+  cout << loop.info() << sys.info() << mv.info() << gmv.info() << iso.info() << shape.info();
 }

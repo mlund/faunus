@@ -176,8 +176,8 @@ namespace Faunus {
           << indent(SUBSUB) << std::left << string(7,' ')
           << setw(l-6) << "dp"
           << setw(l+1) << "Acc. "+percent
-          << setw(l+5) << bracket("r"+squared) // "\u27e8\u0394r\u00b2\u27e9" 
-          << rootof+bracket("r"+squared) << endl; //"\u221a\u27e8\u0394r\u00b2\u27e9" << endl;
+          << setw(l+7) << bracket("r"+squared)+"/"+angstrom+squared
+          << rootof+bracket("r"+squared)+"/"+angstrom << endl;
         for (auto m : sqrmap) {
           short id=m.first;
           o << indent(SUBSUB) << std::left << setw(7) << atom[id].name
@@ -257,8 +257,8 @@ namespace Faunus {
           << indent(SUB) << "Move Statistics:" << endl << endl
           << indent(SUBSUB) << std::left << setw(20) << "Group name" //<< string(20,' ')
           << setw(l+1) << "Acc. "+percent
-          << setw(l+7) << rootof+bracket("dR"+squared)
-          << setw(l+5) << rootof+bracket("d"+theta+squared) << endl;
+          << setw(l+9) << rootof+bracket("dR"+squared)+"/"+angstrom+squared
+          << setw(l+5) << rootof+bracket("d"+theta+squared)+"/"+degrees << endl;
         for (auto m : accmap) {
           string id=m.first;
           o << indent(SUBSUB) << std::left << setw(20) << id;
@@ -285,23 +285,26 @@ namespace Faunus {
       using namespace textio;
       std::ostringstream o;
       const double tomM=1e30/pc::Nav;
-      int N=0;
+      int N,Natom=0, Nmol=0;
       for (auto g : spc->g)
         if (g->id==Group::ATOMIC)
-          N+=g->size();
+          Natom += g->size();
         else
-          N++;
+          Nmol++;
+      N = Natom + Nmol;
       double Pascal = P*pc::kB*pc::T*1e30;
       o << pad(SUB,w, "Displacement parameter") << dV << endl
-        << pad(SUB,w, "Pressure") << P*tomM << " mM" << " = " << Pascal << " Pa = " << Pascal/0.980665e5 << " atm" << endl;
+        << pad(SUB,w, "Number of molecules") <<N<< " (" <<Nmol<< " molecular + " <<Natom<< " atomic)" << endl 
+        << pad(SUB,w, "Pressure") << P*tomM << " mM" << " = " << Pascal << " Pa = " << Pascal/0.980665e5 << " atm" << endl
+        << pad(SUB,w, "Temperature") << pc::T << " K" << endl;
       if (cnt>0) {
-        char l=15;
-        o << pad(SUB,w, "Mean displacement") << bracket("l") << " = " << pow(sqrV.avg(), 1/6.) << _angstrom << endl
+        char l=14;
+        o << pad(SUB,w, "Mean displacement") << "\u221b"+rootof+bracket("dV"+squared) << " = " << pow(sqrV.avg(), 1/6.) << _angstrom << endl
           << pad(SUB,w, "Osmotic coefficient") << P / (N/V.avg()) << endl
           << endl
           << indent(SUBSUB) << std::right << setw(10) << ""
           << setw(l+5) << bracket("V")
-          << setw(l+6) << bracket("l")
+          << setw(l+8) << "\u221b"+bracket("V")
           << setw(l+8) << bracket("N/V") << endl
           << indent(SUB) << setw(10) << "Averages"
           << setw(l) << V.avg() << _angstrom << cubed

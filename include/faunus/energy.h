@@ -80,23 +80,18 @@ namespace Faunus {
      *    bonds.add(i, j, Potential::Harmonic(0.1,5.0) );
      *    std::cout << bonds.info();
      *    double rij2 = ... ;                 // squared distance between i and j
-     *    double u = bonds(i,j).energy( p[i], p[j], rij2 ); // i j bond energy
+     *    double u = bonds(i,j)( p[i], p[j], rij2 ); // i j bond energy
      * \endcode
      */
-
     class ParticleBonds : public ParticlePairs<Potential::PairPotentialBase,int> {
       typedef ParticlePairs<Potential::PairPotentialBase> pairs;
       public:
       ParticleBonds();
-
-      //!< Returns total bond energy of i'th particle (kT)
-      double totalEnergy(Geometry::Geometrybase&, const p_vec&, int);
-
-      double totalEnergy(Geometry::Geometrybase&, const p_vec&, const Group&);
-
-      //!< Returns total bond energy of all bonds (kT)
-      double totalEnergy(Geometry::Geometrybase&, const p_vec&);
+      double totalEnergy(Geometry::Geometrybase&, const p_vec&, int); //!< Bond energy of i'th particle (kT)
+      double totalEnergy(Geometry::Geometrybase&, const p_vec&, const Group&); //!< Bond energy of group (kT)
+      double totalEnergy(Geometry::Geometrybase&, const p_vec&); //!< Total bond energy of all bonds (kT)
     };
+
     /*!
      *  \brief Base class for energy evaluation
      *
@@ -113,37 +108,28 @@ namespace Faunus {
       protected:
         Geometry::Geometrybase* geo; //!< Pointer to geometry used to calculate interactions
       public:
-        string name;
-
         Energybase();
         virtual ~Energybase();
-        virtual Geometry::Geometrybase& getGeometry(); //!< Return reference to Geometrybase used for interactions
-        bool setGeometry( Geometry::Geometrybase& ); //!< Set Geometrybase
-
-        // interaction with external particle
-        virtual double p2p(const particle&, const particle&);
-        virtual double all2p(const p_vec&, const particle&);
-
-        // single particle interactions
-        virtual double all2all(const p_vec&);
-        virtual double i2i(const p_vec&, int, int);
-        virtual double i2g(const p_vec&, Group &, int);
-        virtual double i2all(const p_vec&, int);
-        virtual double i_external(const p_vec&, int); //!< Internal energy of i'th particle
-        virtual double i_internal(const p_vec&, int);
-        virtual double p_external(const particle&);
-        double i_total(const p_vec&, int); //!< Total energy = i2all + i_external + i_internal
-
-        // Group interactions
-        virtual double g2g(const p_vec&, Group&, Group&);
-        virtual double g2all(const p_vec&, Group&);
-        virtual double g_external(const p_vec&, Group&);
-        virtual double g_internal(const p_vec&, Group&);
-
-        virtual double v2v(const p_vec&, const p_vec&);
-        virtual double external(); //!< External energy - typically pressure.
-
-        string info();
+        virtual Geometry::Geometrybase& getGeometry();        //!< Get ref. to Geometrybase used for interactions
+        string name;
+        bool setGeometry( Geometry::Geometrybase& );          //!< Set Geometrybase
+        virtual double p2p(const particle&, const particle&); //!< particle-particle energy
+        virtual double all2p(const p_vec&, const particle&);  //!< pvec<->particle
+        virtual double all2all(const p_vec&);                 //!< all with all (N^2)
+        virtual double i2i(const p_vec&, int, int);           //!< index i'th with j'th
+        virtual double i2g(const p_vec&, Group &, int);       //!< i'th with group
+        virtual double i2all(const p_vec&, int);              //!< i'th with all
+        virtual double i_external(const p_vec&, int);         //!< internal energy of i'th particle
+        virtual double i_internal(const p_vec&, int);         //!< external energy of i'th particle
+        virtual double p_external(const particle&);           //!< external energy of particle
+        double i_total(const p_vec&, int);                    //!< i'th total = i2all + i_external + i_internal
+        virtual double g2g(const p_vec&, Group&, Group&);     //!< group<->group
+        virtual double g2all(const p_vec&, Group&);           //!< group<->all
+        virtual double g_external(const p_vec&, Group&);      //!< external energy of group
+        virtual double g_internal(const p_vec&, Group&);      //!< internal energy of group
+        virtual double v2v(const p_vec&, const p_vec&);       //!< pvec<->pvec
+        virtual double external();                            //!< external energy - typically pressure.
+        string info();                                        //!< information
     };
 
     template<class Tpotential>
@@ -384,7 +370,6 @@ namespace Faunus {
       }
 
       void add(Energybase&); //!< Add existing energybase to list
-
       double p2p(const particle&, const particle&);
       double all2p(const p_vec&, const particle&);
       double all2all(const p_vec&);

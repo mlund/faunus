@@ -9,6 +9,46 @@
 namespace Faunus {
 
   namespace Analysis {
+    double PolymerShape::gyrationRadiusSquared(const Group &pol, const Space &spc) {
+      assert( spc.geo->dist(pol.cm, pol.massCenter(spc))<1e-9 && "Mass center must be in sync.");
+      double x=0, r2=0, sum=0;
+      Point t, o;
+      for (int i=pol.beg; i<=pol.end; i++) {
+        t = spc.p[i]-pol.cm;                // vector to center of mass
+        spc.geo->boundary(t);               // periodic boundary (if any)
+        r2 = spc.geo->sqdist(t,o);          // squared distance to cm
+        x += r2 * spc.p[i].mw;              // m*r^2
+        sum += spc.p[i].mw;                 // total mass
+      }
+      assert(sum>0 && "Zero molecular weight not allowed.");
+      return x*(1./sum);
+    }
+
+    void PolymerShape::sample(const Group &pol, const Space &spc) {
+      assert( pol.beg!=pol.end && "Polymer must have at least two particles.");
+      double r2=gyrationRadiusSquared(pol,spc);
+      Rg2[pol.name]+=r2;
+      Rg[pol.name]+=sqrt(r2);
+      Re2[pol.name] += spc.geo->sqdist( spc.p[pol.beg], spc.p[pol.end] ); //end-2-end squared
+    }
+
+    string PolymerShape::info() {
+      char w=13;
+      using namespace textio;
+      std::ostringstream o;
+      o << header("Polymer Shape");
+      o << indent(SUBSUB) << std::left << setw(w) << "Polymer"
+        << setw(w+5) << bracket("Rg"+squared)
+        << setw(w+5) << bracket("Rg")+squared
+        << setw(w+7) << rootof+bracket("Re"+squared)
+        << setw(w) << bracket("Re"+squared)+"/"+bracket("Rg"+squared) << endl;
+      for (auto &m : Rg2)
+        o << indent(SUBSUB) << std::left << setw(w) << m.first << setw(w) << m.second.avg()
+          << setw(w) << pow( Rg[m.first].avg(),2 )
+          << setw(w) << sqrt(Re2[m.first].avg())
+          << setw(w) << Re2[m.first].avg() / Rg2[m.first].avg() << endl;
+      return o.str();
+    }
 
     Widom::Widom(Space &spc, Energy::Energybase &pot) {
       spcPtr=&spc;
@@ -202,7 +242,7 @@ namespace Faunus {
         << "#   Reference:             doi:10.1080/00268978800100203" << endl
         << "#   Number of Insertions = " << cnttot << endl
         << "#   Excess chemical potentials (kT):" << endl
-                                                     << "#           total   elec.  hs            z       r"<< endl;
+        << "#           total   elec.  hs            z       r"<< endl;
       for (size_t i=0; i < g.size(); i++) {
         chhc[i]=-log(double(cnttot-ihc[i])/cnttot);
         chexw[i]=-log(expuw[i]);

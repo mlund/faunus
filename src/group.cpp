@@ -244,7 +244,7 @@ namespace Faunus {
   }
 
   void GroupMolecular::rotate(Space &spc, const Point &endpoint, double angle) {
-    assert( spc.geo->dist(cm,massCenter(spc) )<1e-9 );      // debug. Is mass center in sync?
+    assert( spc.geo->dist(cm,massCenter(spc) )<1e-6 );      // debug. Is mass center in sync?
 
     cm_trial = cm;
     vrot.setAxis(*spc.geo, cm, endpoint, angle);            // rotate around line between mass center and point
@@ -255,7 +255,7 @@ namespace Faunus {
   }
 
   void GroupMolecular::scale(Space &s, double newvol) {
-    assert( s.geo->dist(cm, massCenter(s))<1e-7);
+    assert( s.geo->dist(cm, massCenter(s))<1e-6);
     assert( s.geo->dist(cm, cm_trial)<1e-7);
 
     Point newcm=cm;

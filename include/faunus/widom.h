@@ -10,6 +10,15 @@ namespace Faunus {
 
   namespace Analysis {
 
+    class PolymerShape {
+      private:
+        std::map< string, Average<double> > Rg2, Rg, Re2;
+        double gyrationRadiusSquared(const Group&, const Space &);
+      public:
+        void sample(const Group&, const Space &);
+        string info();
+    };
+
     /*! \brief Widom method for excess chemical potentials
      *  \author Mikael Lund
      *

@@ -141,9 +141,10 @@ namespace Faunus {
     }
 
     bool Space::save(string file) {
+      using std::numeric_limits;
       std::ofstream fout( file.c_str() );
       if (fout) {
-        fout.precision(10);
+        fout.precision( numeric_limits<double>::digits10 + 1 );
         fout << p.size() << endl;
         for (auto p_i : p)
           fout << p_i << endl;

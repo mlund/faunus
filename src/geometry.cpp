@@ -26,7 +26,7 @@ namespace Faunus {
       std::ostringstream o;
       o << pad(SUB,w, "Boundary") << name << endl
         << pad(SUB,w, "Volume") << getVolume() << _angstrom << cubed
-        << " = " << getVolume()*1e27 << " liters" << endl
+        << " = " << getVolume()/1e27 << " liters" << endl
         << _info(w);
       return o.str();
     }
@@ -159,9 +159,9 @@ namespace Faunus {
         return false;
       len = l;                    // Cuboid sidelength
       len_half=l*0.5;             // half Cuboid sidelength
-      len_inv.x=1./len.x;         // inverse Cuboid side length
-      len_inv.y=1./len.y;         // 
-      len_inv.z=1./len.z;         // 
+      len_inv.x=1/len.x;          // inverse Cuboid side length
+      len_inv.y=1/len.y;
+      len_inv.z=1/len.z;
       return true;
     }
 
@@ -273,7 +273,7 @@ namespace Faunus {
     void Cuboid::scale(Point &a, const double &newvolume) const {
       assert( getVolume()>0 );
       assert( newvolume>0 );
-      a = a * pow( newvolume/getVolume(), 1/3.);
+      a = a * std::pow( newvolume/getVolume(), 1/3.);
     }
 
     //
@@ -376,7 +376,7 @@ namespace Faunus {
 #endif
 
     /*!
-     * \param beg Starting point of line to rotate around
+     * \param beg Starting point of line to rotate around - typically a molecular mass center
      * \param end Ending point of line to rotate around
      * \param angle How many degrees to rotate
      */
@@ -400,10 +400,6 @@ namespace Faunus {
     Point VectorRotate::rotate(const Geometrybase &geo, Point p) const {
       assert(&geo!=nullptr);
       Point b=p-origin;
-      //Point b;
-      //b.x=p.x-origin.x;              // translate to origo...
-      //b.y=p.y-origin.y;
-      //b.z=p.z-origin.z;
       geo.boundary(b);           // Apply boundary conditions
       double eb=u.x*b.x + u.y*b.y + u.z*b.z;
       p.x=e1mcox*eb+cosang*b.x+sinang*(u.y*b.z - u.z*b.y) + origin.x;

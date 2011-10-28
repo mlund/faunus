@@ -93,17 +93,18 @@ namespace Faunus {
   }
 
   /*!
-   * This mass-center routine obeys periodic boundaries (if only)
-   * by first centering the first particle in (0,0,0), calc. CM
+   * This mass-center routine obeys periodic boundaries (if any)
+   * by first centering the middle particle in (0,0,0), calc. CM
    * and move it back.
    *
    * \author Mikael Lund
    * \date Dec. 2007, Prague
-   * \todo Use masscenter(con,p) function implemented below.
+   * \warning Intra-molecular distances must not exceed half the box size for cubouid geometry.
+   * \todo Implement assertion to catch failure when molecule is bigger than half the box size.
    */
   Point Group::_massCenter(const Space &spc) const {
     double sum=0;
-    Point cm,t,o = spc.p.at(beg);  // set origo to first particle
+    Point cm,t,o = spc.p.at(beg+(end-beg)/2);  // set origo to middle particle
     for (int i=beg; i<=end; ++i) {
       t = spc.p[i]-o;              // translate to origo
       spc.geo->boundary(t);        // periodic boundary (if any)
@@ -244,6 +245,7 @@ namespace Faunus {
   }
 
   void GroupMolecular::rotate(Space &spc, const Point &endpoint, double angle) {
+    //cout << spc.geo->dist(cm,massCenter(spc)) << endl;
     assert( spc.geo->dist(cm,massCenter(spc) )<1e-6 );      // debug. Is mass center in sync?
 
     cm_trial = cm;

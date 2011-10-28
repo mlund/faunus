@@ -3,7 +3,7 @@
 using namespace Faunus;
 
 typedef Geometry::Cuboid Tgeometry;    // select simulation geometry
-typedef Potential::CoulombSR<Tgeometry, Potential::Coulomb, Potential::LennardJones> Tpairpot;
+typedef Potential::CoulombSR<Tgeometry, Potential::Coulomb, Potential::HardSphere> Tpairpot;
 
 int main() {
   cout << textio::splash();
@@ -12,6 +12,7 @@ int main() {
   MCLoop loop(mcp);                    // class for handling mc loops
   FormatPQR pqr;                       // PQR structure file I/O
   FormatAAM aam;                       // AAM structure file I/O
+  FormatXTC xtc(1000);                 // XTC gromacs trajectory format
   EnergyDrift sys;                     // class for tracking system energy drifts
 
   Energy::Hamiltonian pot;
@@ -42,14 +43,14 @@ int main() {
     std::ostringstream o;
     o << "Polymer" << i++;
     g.name=o.str();
-     spc.enroll(g);
+    spc.enroll(g);
     for (int i=g.beg; i<g.end; i++)
       bonded->bonds.add(i, i+1, harmonic); // add bonds
   }
   Group allpol( pol.front().beg, pol.back().end   );
 
   spc.load("space.state");
-  
+
   double utot=pot.external();
   utot += pot.g_internal(spc.p, salt) + pot.g_external(spc.p, salt)
     + pot.g2g(spc.p, salt, allpol) + pot.g_internal(spc.p, allpol);
@@ -87,6 +88,9 @@ int main() {
           sys+=iso.move();
           break;
       }
+      if ( slp_global.runtest(0.01) ) // 1% chance
+        xtc.save("traj.xtc", spc);
+
     } // end of micro loop
 
     double utot=pot.external();

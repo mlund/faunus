@@ -106,6 +106,15 @@ namespace Faunus {
       void close();                            //!< Close trj file
   };
 
+  class FormatTopology {
+    public:
+      bool open(string);                         //!< Open file for writing
+      void writeDefaults();
+      void writeAtomTypes(const Space&);
+      void writeMoleculeType(const Group&, Energy::ParticleBonds&, const Space&);
+
+  };
+
   /*! \brief Trajectory of charges per particle
    *  \author Chris Evers
    *  \date May 2011, Lund
@@ -121,7 +130,7 @@ namespace Faunus {
       bool save(string, p_vec&);   //!< Save a frame to trj file.
       bool save(string, p_vec&, vector<Group> &); //!< Save groups
   };
-  
+
   class xyfile {
     private:
       io fio;

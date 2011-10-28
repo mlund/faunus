@@ -52,6 +52,8 @@ namespace Faunus {
     }
     
     double Movebase::move() {
+      if (!run())
+        return 0;
       trialMove();
       double du=energyChange();
       if ( !metropolis(du) ) {
@@ -202,6 +204,8 @@ namespace Faunus {
       dp_rot   = in.get<double>(prefix+"_rotdp", 100);
       if (dp_rot>4*pc::pi) // no need to rotate more than
         dp_rot=4*pc::pi;   // +/- 2 pi.
+      if (dp_rot<1e-6 && dp_trans<1e-6)
+        runfraction=0;
     }
     
     void RotateGroup::setGroup(Group &g) {
@@ -209,12 +213,18 @@ namespace Faunus {
       igroup=&g;
     }
 
-    //!< \todo Check random angle generation!
     void RotateGroup::_trialMove() {
       assert(igroup!=nullptr);
       angle=dp_rot*slp_global.randHalf();
       Point p;
-      spc->geo->randompos(p);
+      double r=2;
+      while (r>1) {
+        p.x=2*slp_global.randHalf(); // random vector
+        p.y=2*slp_global.randHalf(); // inside a sphere
+        p.z=2*slp_global.randHalf();
+        r=sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
+      }
+      p=igroup->cm+p; // set endpoint for rotation 
       igroup->rotate(*spc, p, angle);
       p.x=dir.x * dp_trans * slp_global.randHalf();
       p.y=dir.y * dp_trans * slp_global.randHalf();
@@ -277,6 +287,8 @@ namespace Faunus {
       dV = in.get<double>(prefix+"_dV", 0.);
       P = in.get<double>(prefix+"_P", 0.)/1e30*pc::Nav; //pressure mM -> 1/A^3
       runfraction = in.get(prefix+"_runfraction",1.0);
+      if (dV<1e-6)
+        runfraction=0;
       hamiltonian = &e;
       e.create( Energy::ExternalPressure( e.getGeometry(), P ) );
     }
@@ -323,7 +335,7 @@ namespace Faunus {
     void Isobaric::_trialMove() {
       assert(spc->g.size()>0 && "Space has empty group vector - NPT move not possible.");
       oldV = spc->geo->getVolume();
-      newV = exp( log(oldV) + slp_global.randHalf()*dV );
+      newV = std::exp( std::log(oldV) + slp_global.randHalf()*dV );
       for (auto g : spc->g)
         g->scale(*spc, newV);
     }
@@ -359,7 +371,7 @@ namespace Faunus {
 
     double Isobaric::_energyChange() {
       double uold,unew;
-      _setVolume( oldV );
+      //_setVolume( oldV );
       uold = _energy(spc->p);
       _setVolume( newV );
       unew = _energy(spc->trial);

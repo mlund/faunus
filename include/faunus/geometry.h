@@ -65,12 +65,12 @@ namespace Faunus {
         double r2,diameter;
         void _setVolume(double);
         double _getVolume() const;
+        string _info(char);
       public:
         void setradius(double);
         double r;              //!< Radius
         Sphere(double);
         Sphere(InputMap&);
-        string _info(char);
         void randompos(Point &);
         void boundary(Point &) const;
         bool collision(const particle &, collisiontype=BOUNDARY);
@@ -111,7 +111,7 @@ namespace Faunus {
         Point len_half;                          //!< Half sidelength
         Point slice_min, slice_max;              //!< Position of slice corners
         Point randompos();                       //!< Get point with random position
-        void randompos(Point &);                 //!< Move point to random position
+        void randompos(Point&);                  //!< Move point to random position
         bool save(string);                       //!< Save container state to disk
         bool load(string,bool=false);            //!< Load container state from disk
         bool collision(const particle&, collisiontype=BOUNDARY);

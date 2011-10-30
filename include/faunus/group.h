@@ -7,10 +7,19 @@
 
 namespace Faunus {
   
+  /*!
+   * \brief Defines a continuous range of particles in the Space particle vector.
+   * \todo Implement iterator and empty() function
+   *
+   * This class defines a range, [beg:end], in the particle vector vector and knows how to
+   * perform geometric operations on it - rotate, translate etc.
+   *
+   */
   class Group {
     protected:
       virtual std::ostream& write(std::ostream &) const; //!< Write all Group data to stream
       virtual Point _massCenter(const Space&) const;
+      vector<Move::Movebase*> moves;    //!< pointers to move functions
 
     public:
       enum type {GROUP,ATOMIC,MOLECULAR,CIGAR,HYPER};
@@ -26,7 +35,6 @@ namespace Faunus {
       int size() const;         //!< number of particles in Group.
       int random() const;
       bool find(int) const;     //!< Check if index is part of group
-      vector<Move::Movebase*> moves;    //!< pointers to move functions
 
       virtual double charge(const p_vec&) const;             //!< Calculate total charge
 
@@ -40,7 +48,6 @@ namespace Faunus {
       virtual void undo(Space&);                             //!< Undo move operation
       virtual void accept(Space&);
 
-      // Operators
       bool operator==(const Group&) const;                     //!< Compare two Groups
       Group& operator+=(const Group&);                         //!< Add two Groups
       const Group operator+(const Group&) const;
@@ -60,6 +67,9 @@ namespace Faunus {
       void add(Space&, InputMap&);      //!< Add atomic particles via InputMap paramters
   };
 
+  /*!
+   * \brief Class for molecular groups - proteins, polymers etc.
+   */
   class GroupMolecular : public Group {
     private:
       Geometry::VectorRotate vrot;

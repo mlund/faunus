@@ -108,10 +108,6 @@ namespace Faunus {
         Point dir;             //!< Displacement directions (default: x=y=z=1)
     };
 
-    class MoleculeTranslation : public Movebase {
-
-    };
-
     class RotateGroup : public Movebase {
       private:
         void _trialMove();
@@ -134,11 +130,35 @@ namespace Faunus {
         bool groupWiseEnergy;  //!< Attempt to evaluate energy over groups from vector in Space (default=false)
     };
 
+    /*!
+     * \brief Isobaric volume move
+     *
+     * This class will perform a volume displacement and scale atomic as well as molecular
+     * groups as long as these are known to Space -- see Space.enroll().
+     * The constructor will automatically add an instance of Energy::ExternalPressure
+     * to the Hamiltonian. The InputMap class is scanned for the following keys:
+     * \li \c npt_P (pressure)
+     * \li \c npt_dV (volume displacement parameter)
+     *
+     * Note that the volume displacement is done by:
+     *
+     * \f$ V^{\prime} = \exp\left ( \log V \pm \delta dV \right ) \f$ where \f$\delta\f$ is a random number
+     * between zero and one half.
+     *
+     * Example:
+     * \code
+     * Energy::Hamiltonian pot;        // we need a hamiltonian
+     * ...                             // insert interactions...
+     * Space spc( pot.getGeometry() ); // ...and a space
+     * spc.enroll( myprotein );        // register some groups
+     * spc.enroll( mysolvent );
+     * Move::Isobaric(in, pot, spc);   // setup and add pressure to hamiltonian
+     * \endcode
+     */
     class Isobaric : public Movebase {
       private:
         Energy::Hamiltonian* hamiltonian;
         string _info();
-        void _setVolume(double);
         void _trialMove();
         void _acceptMove();
         void _rejectMove();
@@ -153,7 +173,6 @@ namespace Faunus {
       public:
         Isobaric(InputMap&, Energy::Hamiltonian&, Space&, string="npt");
     };
-
 
   }//namespace
 }//namespace

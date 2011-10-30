@@ -326,12 +326,6 @@ namespace Faunus {
       return o.str();
     }
 
-    void Isobaric::_setVolume(double V) {
-      for (auto ebase : hamiltonian->baselist )
-        if (&ebase->getGeometry()!=nullptr)
-          ebase->getGeometry().setVolume(V);
-    }
-
     void Isobaric::_trialMove() {
       assert(spc->g.size()>0 && "Space has empty group vector - NPT move not possible.");
       oldV = spc->geo->getVolume();
@@ -343,7 +337,7 @@ namespace Faunus {
     void Isobaric::_acceptMove() {
       V += newV;
       sqrV += pow( oldV-newV, 2 );
-      _setVolume(newV);
+      hamiltonian->setVolume(newV);
       for (auto g : spc->g )
         g->accept(*spc);
     }
@@ -351,7 +345,7 @@ namespace Faunus {
     void Isobaric::_rejectMove() {
       sqrV += 0;
       V += oldV;
-      _setVolume(oldV);
+      hamiltonian->setVolume(oldV);
       for (auto g : spc->g )
         g->undo(*spc);
     }
@@ -371,9 +365,9 @@ namespace Faunus {
 
     double Isobaric::_energyChange() {
       double uold,unew;
-      //_setVolume( oldV );
+      //hamiltonian->setVolume( oldV );
       uold = _energy(spc->p);
-      _setVolume( newV );
+      hamiltonian->setVolume( newV );
       unew = _energy(spc->trial);
       return unew-uold;
     }

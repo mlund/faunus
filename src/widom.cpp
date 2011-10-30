@@ -9,6 +9,34 @@
 namespace Faunus {
 
   namespace Analysis {
+    AnalysisBase::AnalysisBase() : w(30), cnt(0), runfraction(1.0) {
+    }
+
+    bool AnalysisBase::run() {
+      if (slp_global.randOne() > runfraction)
+        return false;
+      cnt++;
+      return true;
+    }
+
+    string AnalysisBase::info() {
+      assert(!name.empty() && "Please name analysis.");
+      using namespace textio;
+      std::ostringstream o;
+      o << header("Analysis: "+name);
+      if (!cite.empty())
+        o << pad(SUB,w,"Reference:") << cite << endl;
+      o << pad(SUB,w,"Runfraction") << runfraction*100 << percent << endl;
+      if (cnt>0)
+        o << pad(SUB,w,"Number of samples") << cnt << endl
+          << _info();
+      return o.str();
+    }
+
+    PolymerShape::PolymerShape() {
+      name="Polymer Shape";
+    }
+
     double PolymerShape::gyrationRadiusSquared(const Group &pol, const Space &spc) {
       assert( spc.geo->dist(pol.cm, pol.massCenter(spc))<1e-9 && "Mass center must be in sync.");
       double x=0, r2=0, sum=0;
@@ -25,6 +53,8 @@ namespace Faunus {
     }
 
     void PolymerShape::sample(const Group &pol, const Space &spc) {
+      if (!run())
+        return;
       assert( pol.beg!=pol.end && "Polymer must have at least two particles.");
       double r2=gyrationRadiusSquared(pol,spc);
       Rg2[pol.name]+=r2;
@@ -32,12 +62,11 @@ namespace Faunus {
       Re2[pol.name] += spc.geo->sqdist( spc.p[pol.beg], spc.p[pol.end] ); //end-2-end squared
     }
 
-    string PolymerShape::info() {
+    string PolymerShape::_info() {
       char w=13;
       using namespace textio;
       std::ostringstream o;
-      o << header("Polymer Shape");
-      o << indent(SUBSUB) << std::left << setw(w) << "Polymer"
+      o << endl << indent(SUBSUB) << std::left << setw(w) << "Polymer"
         << setw(w+5) << bracket("Rg"+squared)
         << setw(w+5) << bracket("Rg")+squared
         << setw(w+7) << rootof+bracket("Re"+squared)
@@ -51,11 +80,14 @@ namespace Faunus {
     }
 
     Widom::Widom(Space &spc, Energy::Energybase &pot) {
+      name="Multi Particle Widom Analysis";
       spcPtr=&spc;
       potPtr=&pot;
     }
 
     void Widom::sample(int ghostin) {
+      if (!run())
+        return;
       assert(spcPtr->geo!=NULL);
       int n=g.size();
       for (int k=0; k<ghostin; k++) {     // insert ghostin times
@@ -90,12 +122,10 @@ namespace Faunus {
       test.check("widomExcessChemicalPotential", muex() );
     }
 
-    string Widom::info() {
+    string Widom::_info() {
       using namespace Faunus::textio;
-      char w=30;
       std::ostringstream o;
-      o << header("Multi Particle Widom Analysis")
-        << pad(SUB,w, "Number of insertions") << expsum.cnt << endl
+      o << pad(SUB,w, "Number of insertions") << expsum.cnt << endl
         << pad(SUB,w, "Excess chemical pot.") << muex() << kT << endl
         << pad(SUB,w, "Mean activity coefficient") << gamma() << endl
         << pad(SUB,w, "Ghost particles");
@@ -116,7 +146,8 @@ namespace Faunus {
     //--------------------------------------------------------------------------------
 
     WidomScaled::WidomScaled(int insertions){
-      cnt=0;
+      name="Single particle Widom insertion w. charge scaling"; 
+      cite="doi:10.1080/00268978800100203"; 
       ghostin = insertions;
     }
 
@@ -173,9 +204,10 @@ namespace Faunus {
     }
 
     void WidomScaled::insert(Space &c, double lB) {
+      if (!run())
+        return;
       particle ghost;
       double u,cu;
-      cnt++;
       for(int i=0; i < ghostin; i++) {
         c.geo->randompos(ghost);
         int goverlap=0;
@@ -219,7 +251,8 @@ namespace Faunus {
       }
     }
 
-    string WidomScaled::info() {
+    string WidomScaled::_info() {
+      using namespace textio;
       std::ostringstream o;
       double aint4,aint2,aint1;
       for(size_t i=0; i<g.size(); i++) {
@@ -237,18 +270,15 @@ namespace Faunus {
 
       double cnttot;
       cnttot=cnt*ghostin;
-      o << endl
-        << "# SINGLE PARTICLE WIDOM ANALYSIS: (w. charge scaling)" << endl
-        << "#   Reference:             doi:10.1080/00268978800100203" << endl
-        << "#   Number of Insertions = " << cnttot << endl
-        << "#   Excess chemical potentials (kT):" << endl
-        << "#           total   elec.  hs            z       r"<< endl;
+      o << pad(SUB,w,"Number of Insertions") << cnttot << endl
+        << pad(SUB,w,"Excess chemical potentials (kT)") << endl
+        << "            total   elec.  hs            z       r"<< endl;
       for (size_t i=0; i < g.size(); i++) {
         chhc[i]=-log(double(cnttot-ihc[i])/cnttot);
         chexw[i]=-log(expuw[i]);
         chex[i]=chhc[i]+chel[i];
         o.unsetf( std::ios_base::floatfield );
-        o << "#   [" << i << "] "
+        o << "    [" << i << "] "
           << std::setprecision(4)
           << std::setw(9) << chex[i]
           << std::setw(9) << chel[i]

@@ -107,7 +107,7 @@ namespace Faunus {
 
 
     /*!
-     * This adds an Energybase class to the Hamiltonian. If the geometry of the
+     * This adds an existing Energybase child to the Hamiltonian. If the geometry of the
      * added class is undefined it will get the current geometry of the Hamiltonian.
      * If the geometry of the added energybase is defined, and the Hamiltonian is empty, the added
      * geometry is copied to the Hamiltonian.
@@ -115,7 +115,9 @@ namespace Faunus {
     void Hamiltonian::add(Energybase &e) {
       if (&e.getGeometry()==nullptr) {
         if (baselist.empty()) {
-          cerr << "Error! First energybase class must have a well defined geometry!\n";
+          string s="Error! First Energybase class must have a well defined geometry!\n";
+          assert(!"Error!");
+          cerr << s;
           return;
         }
         e.setGeometry(*geo);
@@ -123,26 +125,31 @@ namespace Faunus {
       else if (geo==nullptr)
         geo = &e.getGeometry();
       baselist.push_back( &e );
-      //geolist.insert( e.getGeometry() );
+    }
+
+    void Hamiltonian::setVolume(double V) {
+      for (auto b : baselist )
+        if ( &b->getGeometry() != nullptr )
+          b->getGeometry().setVolume(V);
     }
 
     double Hamiltonian::all2all(const p_vec &p) {
       double u=0;
-      for (auto &b : baselist)
+      for (auto b : baselist)
         u += b->all2all(p);
       return u;
     }
 
     double Hamiltonian::p2p(const particle &p1, const particle &p2) {
       double u=0;
-      for (auto &b : baselist)
+      for (auto b : baselist)
         u += b->p2p( p1,p2 );
       return u;
     }
 
     double Hamiltonian::all2p(const p_vec &p, const particle &a) {
       double u=0;
-      for (auto &b : baselist)
+      for (auto b : baselist)
         u += b->all2p( p,a );
       return u;
     }
@@ -150,34 +157,34 @@ namespace Faunus {
     // single particle interactions
     double Hamiltonian::i2i(const p_vec &p, int i, int j) {
       double u=0;
-      for (auto &b : baselist)
+      for (auto b : baselist)
         u += b->i2i( p,i,j );
       return u;
     }
 
     double Hamiltonian::i2g(const p_vec &p, Group &g, int i) {
       double u=0;
-      for (auto &b : baselist)
+      for (auto b : baselist)
         u += b->i2g(p,g,i);
       return u;
     }
 
     double Hamiltonian::i2all(const p_vec &p, int i) {
       double u=0;
-      for (auto &b : baselist)
+      for (auto b : baselist)
         u += b->i2all(p,i);
       return u;
     }
 
     double Hamiltonian::i_external(const p_vec &p, int i) {
       double u=0;
-      for (auto &b : baselist)
+      for (auto b : baselist)
         u += b->i_external(p,i);
       return u;
     }
     double Hamiltonian::i_internal(const p_vec &p, int i) {
       double u=0;
-      for (auto &b : baselist)
+      for (auto b : baselist)
         u += b->i_internal(p,i);
       return u;
     }
@@ -185,35 +192,35 @@ namespace Faunus {
     // Group interactions
     double Hamiltonian::g2g(const p_vec &p, Group &g1, Group &g2) {
       double u=0;
-      for (auto &b : baselist)
+      for (auto b : baselist)
         u += b->g2g(p,g1,g2);
       return u;
     }
 
     double Hamiltonian::g2all(const p_vec &p, Group &g) {
       double u=0;
-      for (auto &b : baselist)
+      for (auto b : baselist)
         u += b->g2all(p,g);
       return u;
     }
 
     double Hamiltonian::g_external(const p_vec &p, Group &g) {
       double u=0;
-      for (auto &b : baselist)
+      for (auto b : baselist)
         u += b->g_external(p,g);
       return u;
     }
 
     double Hamiltonian::g_internal(const p_vec &p, Group &g) {
       double u=0;
-      for (auto &b : baselist)
+      for (auto b : baselist)
         u += b->g_internal(p,g);
       return u;
     }
 
     double Hamiltonian::external() {
       double u=0;
-      for (auto &b : baselist)
+      for (auto b : baselist)
         u += b->external();
       return u;
      }

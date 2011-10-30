@@ -10,7 +10,7 @@ namespace Faunus {
   class InputMap;
 
   /*!
-   * \brief Contain geometry related classes for describing simulation cells
+   * \brief Namespace for geometric operations.
    */
   namespace Geometry {
 

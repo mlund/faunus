@@ -66,9 +66,14 @@ COMPILING:
     -DENABLE_BABEL=ON|off    Use OpenBabel for file I/O
     -DENABLE_TWISTER=on|OFF  Use Mersenne Twister for random numbers
 
+    -DCMAKE_BUILD_TYPE=debug|release  Default: Debug
+
   Example for Intel's C++ compiler with OpenMP parallelization:
-    $ CXX=icpc cmake . -DENABLE_OPENMP=on
+    $ CXX=icpc cmake . -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=Release
     $ make
+
+  Example for Clang:
+    $  CXX=clang++ cmake . -DCMAKE_BUILD_TYPE=Debug
 
   Run test suite:
     $ make test (or use 'ctest -V' for verbose output)

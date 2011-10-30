@@ -10,12 +10,21 @@
 
 namespace Faunus {
 
+  /*!
+   * \brief Namespace for various potentials - pair potentials, external potentials etc.
+   */
   namespace Potential {
 
     class DebyeHuckel;
 
     using namespace Faunus::textio;
 
+    /*!
+     * \brief Base class for pair potential classes
+     *
+     * This is a base class for pair potentials which must implement the function operator so
+     * that the potential can work as a class function.
+     */
     class PairPotentialBase {
       private:
         virtual string _brief()=0;
@@ -26,8 +35,8 @@ namespace Faunus {
         string name; //!< Short (preferably one-word) description of the core potential
         PairPotentialBase();
         string brief();
-        void setScale(double=1);
-        double tokT();
+        void setScale(double=1); //!< Set scaling factor to convert energy to kT
+        double tokT(); //!< Convert returned energy to kT.
         virtual double operator() (const particle&, const particle&, double) const=0;
     };
 

@@ -132,6 +132,15 @@ namespace Faunus {
         string info();                                        //!< information
     };
 
+    /*!
+     * \brief Energy class for non-bonded interactions.
+     *
+     * Tpotential is expected to be a pair potential with the following
+     * properties:
+     * \li pair(const InputMap&);
+     * \li double pair.energy(const particle&, const particle&);
+     * \li double pait.tokT();
+     */
     template<class Tpotential>
       class Nonbonded : public Energybase {
         private:
@@ -257,6 +266,9 @@ namespace Faunus {
         }
       };
 
+    /*!
+     * \brief Energy class for hard-sphere overlap.
+     */
     template<class Tgeometry>
       class HardSphereOverlap : public Energybase {
         private:
@@ -303,6 +315,17 @@ namespace Faunus {
           //virtual double i2i(const p_vec &p, int i, int j) { return 0; }
       };
 
+    /*!
+     * \brief Energy class for bonded interactions
+     *
+     * Takes care of bonded interactions and can handle mixed bond types.
+     * Example:
+     * \code
+     * Energy::Bonded b(myGeometry);
+     * Potential::Harmonic h(k, req);
+     * b.bonds.add(10,12,h); // bond particle 10 and 12 
+     * \endcode
+     */
     class Bonded : public Energy::Energybase {
       private:
         string _info();
@@ -319,7 +342,7 @@ namespace Faunus {
      * \author Mikael Lund
      * \date Lund, 2011
      *
-     * The system energy is
+     * The system energy is:
      *
      * \f$\beta u = \beta pV - \ln V - N\ln V\f$.
      *
@@ -350,7 +373,11 @@ namespace Faunus {
      *   Energy::Hamiltonian pot;
      *   pot.create( Energy::Nonbonded<Tpairpot>(in) );
      *   pot.create( Energy::Bonded() );
+     *   cout << pot.info();
      * \endcode
+     *
+     * Notice that we do not need to specify a Geometry for the Bonded energy class as this information
+     * is simply passed on from the first added potential.
      */
     class Hamiltonian : public Energybase {
       typedef shared_ptr<Energybase> baseptr;
@@ -359,8 +386,9 @@ namespace Faunus {
       string _info();
       public:
       vector<Energybase*> baselist; //!< pointer list to energy children to be summed
-      //Geometry::GeometryList geolist; //!< Geometry pointer list. Can be used to sync these (think NPT ensemble)
+      void setVolume(double);
 
+      //!< Create a derived Energybase class
       template<typename Tenergychild> shared_ptr<Tenergychild> create(Tenergychild c) {
         shared_ptr<Tenergychild> childptr( new Tenergychild(c) );
         childptr->getGeometry(); // not pretty...need to update geo pointer for i.e. nonbonded class
@@ -369,7 +397,7 @@ namespace Faunus {
         return childptr;
       }
 
-      void add(Energybase&); //!< Add existing energybase to list
+      void add(Energybase&); //!< Add existing Energybase to list
       double p2p(const particle&, const particle&);
       double all2p(const p_vec&, const particle&);
       double all2all(const p_vec&);

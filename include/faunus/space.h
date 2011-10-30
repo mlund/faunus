@@ -6,6 +6,19 @@
 //extern template class std::vector<Faunus::particle>;
 
 namespace Faunus {
+
+
+  /*!
+   * \brief Contains the particle vector and takes care of particle insertion and deletion.
+   * \todo Take care of bonds too?
+   *
+   * Every simulation must have a Space instance as this contains the particles. While instantiating
+   * Space you must provide a valid Geometry which will be stored as a pointer. Typically the Geometrybase
+   * is owned by some Energybase.
+   * Space also bookkeeps groups in the system and this information can be requested by classes that needs
+   * to know about all possible groups -- two such examples are NmuT and NPT simulations that need to
+   * insert and re-scale mass centra, for example.
+   */
   class Space {
     protected:
       std::ifstream fin;
@@ -13,7 +26,7 @@ namespace Faunus {
       slump slp;
     public:
       enum spacekeys {NOOVERLAP};
-      Geometry::Geometrybase* geo;
+      Geometry::Geometrybase* geo;               //!< Pointer to a valid Geometry (!=nullptr)
       p_vec p;                                   //!< The main particle vector
       p_vec trial;                               //!< Trial particle vector. 
       vector<Group*> g;                          //!< Pointers to all groups in the system.

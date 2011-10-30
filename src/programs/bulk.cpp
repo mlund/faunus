@@ -90,8 +90,8 @@ int main() {
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
       sys+=mv.move();
-      //if (slp_global.randOne()>0.9)
-      //  widom.sample();
+      if (slp_global.randOne()>0.9)
+        widom.sample();
       sys+=tit.move();
       gmv.setGroup(test);
       sys+=gmv.move();

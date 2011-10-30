@@ -46,7 +46,7 @@ CHECK_CXX_SOURCE_COMPILES("int main() { nullptr; }" nullptr)
 CHECK_CXX_SOURCE_COMPILES("#include<memory>\nint main() {std::shared_ptr<int> i;}" smart_pointers)
 
 if(NOT (auto_type_inference AND unsigned_long_long_int AND long_double AND range_based_for_loop AND nullptr AND smart_pointers) )
-  message(FATAL_ERROR "Required C++11 unsupported by compiler.")
+  message(FATAL_ERROR "Required C++11 features unsupported by compiler.")
 endif()
 
 # ---------------------------

@@ -29,9 +29,6 @@ namespace Faunus {
     Movebase::~Movebase() {
     }
 
-    //void move::unittest(unittest&) {
-    //}
-
     void Movebase::trialMove() {
       assert(spc->geo!=nullptr); // space geometry MUST be set before moving!
       cnt++;
@@ -78,6 +75,16 @@ namespace Faunus {
       if (slp_global.randOne() < runfraction)
         return true;
       return false;
+    }
+
+    void Movebase::test(UnitTest &t) {
+      //string t=name; //trimmed name
+      //t.erase(std::remove_if(t.begin(), t.end(), std::isspace), t.end());
+      t(prefix+"_acceptance", double(cnt_accepted)/cnt*100 );
+      _test(t);
+    }
+
+    void Movebase::_test(UnitTest&) {
     }
 
     string Movebase::info() {
@@ -148,7 +155,7 @@ namespace Faunus {
           return pc::infty;
         return
           pot->i_total(spc->trial, iparticle) - pot->i_total(spc->p, iparticle);
-          //pot->i2all(spc->trial, iparticle) - pot->i2all(spc->p, iparticle);
+        //pot->i2all(spc->trial, iparticle) - pot->i2all(spc->p, iparticle);
       }
       return 0;
     }
@@ -207,7 +214,7 @@ namespace Faunus {
       if (dp_rot<1e-6 && dp_trans<1e-6)
         runfraction=0;
     }
-    
+
     void RotateGroup::setGroup(Group &g) {
       assert(&g!=nullptr);
       igroup=&g;
@@ -245,7 +252,7 @@ namespace Faunus {
       sqrmap_r[ igroup->name ] += 0;
       accmap[ igroup->name ] += 0;
       igroup->undo(*spc);
-     }
+    }
 
     double RotateGroup::_energyChange() {
       for (int i=(*igroup).beg; i<=(*igroup).end; i++)
@@ -267,7 +274,7 @@ namespace Faunus {
           << indent(SUB) << "Move Statistics:" << endl << endl
           << indent(SUBSUB) << std::left << setw(20) << "Group name" //<< string(20,' ')
           << setw(l+1) << "Acc. "+percent
-          << setw(l+9) << rootof+bracket("dR"+squared)+"/"+angstrom+squared
+          << setw(l+9) << rootof+bracket("dR"+squared)+"/"+angstrom
           << setw(l+5) << rootof+bracket("d"+theta+squared)+"/"+degrees << endl;
         for (auto m : accmap) {
           string id=m.first;
@@ -279,6 +286,16 @@ namespace Faunus {
         }
       }
       return o.str();
+    }
+
+    void RotateGroup::_test(UnitTest &t) {
+      for (auto m : accmap) {                                                                                   
+        string id=m.first,
+               idtrim="_"+textio::trim(id)+"_";
+        t(prefix+idtrim+"acceptance", accmap[id].avg()*100);
+        t(prefix+idtrim+"dRot", sqrt(sqrmap_r[id].avg()));
+        t(prefix+idtrim+"dTrans", sqrt(sqrmap_t[id].avg()));
+      }
     }
 
     Isobaric::Isobaric(InputMap &in, Energy::Hamiltonian &e, Space &s, string pfx) : Movebase(e,s,pfx) {
@@ -324,6 +341,11 @@ namespace Faunus {
           << setw(l) << N/V.avg()*tomM << " mM" << endl;
       }
       return o.str();
+    }
+
+    void Isobaric::_test(UnitTest &t) {
+      t(prefix+"_averageSideLength", pow( V.avg(), 1/3.) );
+      t(prefix+"_MSQDisplacement", pow(sqrV.avg(), 1/6.) );
     }
 
     void Isobaric::_trialMove() {

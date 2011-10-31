@@ -45,6 +45,7 @@ namespace Faunus {
 
     class Movebase {
       private:
+        virtual void _test(UnitTest&);    //!< Unit testing
         virtual string _info()=0;         //!< Specific info for derived moves
         virtual void _trialMove()=0;      //!< Do a trial move
         virtual void _acceptMove()=0;     //!< Accept move, store new coordinates.
@@ -75,7 +76,7 @@ namespace Faunus {
         virtual double move();       //!< Attempt a move and return energy change
         double runfraction;          //!< Fraction of times calling move() should result in an actual move
         string info();               //!< Returns information string
-        //void unittest(unittest&);  //!< Perform unit test
+        void test(UnitTest&);        //!< Perform unit test
     };
 
     /*!
@@ -110,6 +111,7 @@ namespace Faunus {
 
     class RotateGroup : public Movebase {
       private:
+        void _test(UnitTest&);
         void _trialMove();
         void _acceptMove();
         void _rejectMove();
@@ -159,6 +161,7 @@ namespace Faunus {
       private:
         Energy::Hamiltonian* hamiltonian;
         string _info();
+        void _test(UnitTest&);
         void _trialMove();
         void _acceptMove();
         void _rejectMove();

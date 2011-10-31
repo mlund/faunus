@@ -75,20 +75,20 @@ namespace Faunus {
       CountDown<unsigned int> cnt;
       bool loadstateBool;          //!< load state file if present?
       string statefile;            //!< Default name of state file to load/save
-    public:
-      MCLoop(InputMap&, string="loop_"); //!< Setup
-      unsigned int cnt_micro, cnt_macro;
-      bool eq;
+      bool savestate(string="");   //!< Save loop state to disk
+      bool loadstate(string="");   //!< Load loop state from disk
       unsigned int macro;          //!< Number of macrosteps
       unsigned int micro;          //!< Number of microsteps
+      unsigned int cnt_micro, cnt_macro;
+      bool eq;
+      string timing(unsigned int); //!< Show macrostep middle time and ETA (outdated!)
+    public:
+      MCLoop(InputMap&, string="loop_"); //!< Setup
       unsigned int count();        //!< Current number of steps
       string info();               //!< Get information
-      string timing(unsigned int); //!< Show macrostep middle time and ETA (outdated!)
       string timing();             //!< Show macrostep middle time and ETA.
       bool macroCnt();             //!< Increase and test macro loop counter
       bool microCnt();             //!< Increase and test micro loop counter
-      bool savestate(string="");   //!< Save loop state to disk
-      bool loadstate(string="");   //!< Load loop state from disk
   };
 }
 #endif

@@ -77,6 +77,9 @@ namespace Faunus {
         double avgcharge(const p_vec&, int&);    //!< Print average charges of process i
     };
 
+    /*!
+     * \brief Energy class for implicit titration of species to be used with Move::SwapMove.
+     */
     class EquilibriumEnergy : public Energybase {
       private:
         string _info();
@@ -94,6 +97,12 @@ namespace Faunus {
 
   namespace Move {
 
+    /*!
+     * \brief Move for swapping species types - i.e. implicit titration
+     *
+     * Upon construction this class will add an instance of Energy::EquilibriumEnergy
+     * to the Hamiltonian. For details about the titration procedure see Energy::EquilibriumController.
+     */
     class SwapMove : public Movebase {
       private:
         std::map<int, Average<double> > accmap; //!< Site acceptance map

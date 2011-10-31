@@ -40,10 +40,10 @@ namespace Faunus {
    */
   class AtomTypes {
     private:
-      void init();                  //!< Recalc eps and sigma vectors
+      void init();                           //!< Recalc eps and sigma vectors
       string filename;
     public:
-      AtomTypes();                               //!< Constructor - set UNK atom type (fallback)
+      AtomTypes();                           //!< Constructor - set UNK atom type (fallback)
       vector<AtomData> list;                 //!< List of atoms
       vector< vector<double> >
         qq,                                  //!< Charge product between atoms i and j
@@ -51,7 +51,7 @@ namespace Faunus {
         sigma;                               //!< LJ sigma between atoms i and j
 
       bool includefile(string);              //!< Append atom parameters from file
-      bool includefile(_inputfile&);          //!< Append atom parameters from file
+      bool includefile(InputMap&);           //!< Append atom parameters from file
       AtomData& operator[] (string);         //!< Name->data
       AtomData& operator[] (short);          //!< Id->data
       string info();                         //!< Print info

@@ -376,6 +376,7 @@ namespace Faunus {
 #endif
 
     /*!
+     * \param geo Simulation geometry
      * \param beg Starting point of line to rotate around - typically a molecular mass center
      * \param end Ending point of line to rotate around
      * \param angle How many degrees to rotate
@@ -395,7 +396,8 @@ namespace Faunus {
 
     /*!
      * Rotate point around axis specified above.
-     * \param p Particle to rotate
+     * \param geo Geometry
+     * \param p Point to rotate
      */
     Point VectorRotate::rotate(const Geometrybase &geo, Point p) const {
       assert(&geo!=nullptr);

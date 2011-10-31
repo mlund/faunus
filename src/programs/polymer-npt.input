@@ -27,4 +27,6 @@ tion2                  Na
 nion2                  0
 dpion2                 110
 
+test_stable            yes
+test_file              unittest.dat
 

@@ -87,6 +87,7 @@ namespace Faunus {
       typedef ParticlePairs<Potential::PairPotentialBase> pairs;
       public:
       ParticleBonds();
+      double i2i(Geometry::Geometrybase&, const p_vec&, int, int);    //!< Bond energy of i'th particle with j'th
       double totalEnergy(Geometry::Geometrybase&, const p_vec&, int); //!< Bond energy of i'th particle (kT)
       double totalEnergy(Geometry::Geometrybase&, const p_vec&, const Group&); //!< Bond energy of group (kT)
       double totalEnergy(Geometry::Geometrybase&, const p_vec&); //!< Total bond energy of all bonds (kT)
@@ -333,8 +334,10 @@ namespace Faunus {
         Bonded();
         Bonded(Geometry::Geometrybase&);
         ParticleBonds bonds;
-        double i_internal(const p_vec &p, int i);
-        double g_internal(const p_vec &p, Group &g);
+        //double i2i(const p_vec&, int, int);
+        //double i2g(const p_vec&, Group&, int);
+        double i2all(const p_vec&, int);
+        double g_internal(const p_vec&, Group &);
     };
 
     /*!

@@ -23,17 +23,17 @@ namespace Faunus {
      */
     class AnalysisBase {
       private:
-        virtual string _info()=0; // info all classes must provide
+        virtual string _info()=0; //!< info all classes must provide
       protected:
-        unsigned long int cnt;    // number of samples - increased for every run()==true.
-        char w;              // width of info
-        string name;         // descriptive name
-        string cite;         // reference, url, doi etc. describing the analysis
-        bool run();          // true if we should run, false of not (based on runfraction)
+        unsigned long int cnt;//!< number of samples - increased for every run()==true.
+        char w;               //!< width of info
+        string name;          //!< descriptive name
+        string cite;          //!< reference, url, doi etc. describing the analysis
+        bool run();           //!< true if we should run, false of not (based on runfraction)
       public:
         AnalysisBase();
-        string info();       // Print info and results
-        double runfraction;  // Chance that analysis should be run (default 1.0 = 100%)
+        string info();       //!< Print info and results
+        double runfraction;  //!< Chance that analysis should be run (default 1.0 = 100%)
     };
 
     /*!
@@ -52,7 +52,7 @@ namespace Faunus {
         string _info();
       public:
         PolymerShape();
-        void sample(const Group&, const Space&);
+        void sample(const Group&, const Space&); //!< Sample properties of Group (identified by group name)
     };
 
     /*! \brief Widom method for excess chemical potentials

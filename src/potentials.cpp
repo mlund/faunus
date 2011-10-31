@@ -73,7 +73,10 @@ namespace Faunus {
     LennardJones::LennardJones() {
       name="Lennard-Jones";
     }
-    
+   
+    /*!
+     * \param in InputMap is scanned for the keyword \c lj_eps
+     */
     LennardJones::LennardJones(InputMap &in) {
       name="Lennard-Jones";
       eps = 4*in.get<double>( "lj_eps", 0.04 );
@@ -96,6 +99,10 @@ namespace Faunus {
       return o.str();
     }
 
+    /*!
+     * \param in is scanned for the keywords \c prefix_threshold (angstrom) and \c prefix_depth (kT).
+     * \param prefix InputMap keyword prefix. Default is "SquareWell"
+     */
     SquareWell::SquareWell(InputMap &in, string prefix) {
       name="Square Well";
       threshold = in.get<double>(prefix+"_threshold", 0);

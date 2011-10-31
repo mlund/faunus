@@ -56,8 +56,8 @@ namespace Faunus {
     return list[0];
   }
 
-  bool AtomTypes::includefile(_inputfile &in) {
-    return includefile(in.getstr("atomfile",filename));
+  bool AtomTypes::includefile(InputMap &in) {
+    return includefile(in.get<string>("atomfile",filename));
   }
 
   bool AtomTypes::includefile(string file) {

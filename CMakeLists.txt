@@ -63,12 +63,12 @@ add_subdirectory(doc EXCLUDE_FROM_ALL)
 
 if (CMAKE_BUILD_TYPE MATCHES "Debug")
   message(
-    "..........................................................................\n"
-    "  By default, Faunus is compiled in Debug mode to enable checks and\n"
-    "  assertions HIGHLY recommended when developing and testing simulation\n"
-    "  setups. For production runs, switch to Release to optimize performance:\n\n"
+    "...............................................................\n"
+    "  Faunus is compiled in Debug mode to enable checks and\n"
+    "  assertions HIGHLY recommended when developing and testing\n"
+    "  For production, switch to Release for optimal performance:\n\n"
     "  -DCMAKE_BUILD_TYPE=Release\n"
-    "**************************************************************************\n")
+    "***************************************************************\n")
 endif()
 if (CMAKE_BUILD_TYPE MATCHES "Release")
   message(

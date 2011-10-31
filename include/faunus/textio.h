@@ -26,6 +26,7 @@ namespace Faunus {
     string header(const string&);
     string indent(indentlevel);
     string pad(indentlevel, char, const string&);
+    string trim(string); //!< Remove white space from string
   }//namespace
 }//namespace
 #endif

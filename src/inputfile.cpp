@@ -55,266 +55,81 @@ namespace Faunus {
     return false;
   }
 
-  void InputMap::info() {
+  string InputMap::info() {
     short w=25;
     using namespace Faunus::textio;
     std::ostringstream o;
     o << header("User Input Parameters (InputMap)");
     o << pad(SUB,w,"Number of parameters") << map.size() << endl;
-    for (auto m : map)
-      cout << std::left << setw(25) << m.first << m.second << endl;
+    for (auto &m : map)
+      o << std::left << setw(25) << m.first << m.second << endl;
+    return o.str();
   }
 
-  _inputfile::_inputfile() { }
-
-  _inputfile::_inputfile(string filename) {
-    load(filename);
-  }
-
-  bool _inputfile::load(string filename) {
-    matrix.clear();
-    calls.clear();
-    string s;
-    char cstr[256];
-    file=filename;
-    std::ifstream f( filename.c_str() );
+  bool InputMap::save(string file) {
+    std::ofstream f(file);
     if (f) {
-      while (!f.eof()) {
-        dataformat tmp;
-        f.getline(cstr,256);
-        std::istringstream i( cstr );
-        i >> tmp.name;
-        if (tmp.name.find("#")==string::npos &&
-            tmp.name.find("[")==string::npos && tmp.name.empty()==false )
-        {
-          while (i >> s)
-            tmp.val.push_back(s);
-          matrix.push_back(tmp);
-          if (tmp.val.size()==0)
-            std::cerr << "*** FATAL ERROR in Inputfile: '" << tmp.name << "' is defined but has no value ***" << endl;
-        }
-      }
-      f.close();
-      std::cout << "# Input parameters read from: " << filename << endl;
-      return true;
-    }
-    else {
-      std::cerr << "*** Failed to open inputfile ***" << endl;
-      return false;
-    }
-  }
-
-  int _inputfile::findKey(string &key) {
-    record_call(key);
-    for (size_t i=0; i<matrix.size(); i++)
-      if (matrix[i].name.compare(key)==0) return i;
-    return -1;
-  }
-
-  //! \param key Keyword to look for
-  //! \param def Default value if keyword is not found
-  string _inputfile::getstr(string key, string def) {
-    int i = findKey(key);
-    return (i!=-1) ? matrix[i].val[0] : def;
-  }
-
-  //! \param key Keyword to look for
-  //! \param def Default value if keyword is not found
-  double _inputfile::getflt(string key, double def) {
-    int i = findKey(key);
-    return (i!=-1) ? atof(matrix[i].val[0].c_str()) : def;
-  }
-
-  //! \param key Keyword to look for
-  //! \param def Default value if keyword is not found
-  int _inputfile::getint(string key, int def) {
-    int i = findKey(key);
-    return (i!=-1) ? atoi(matrix[i].val[0].c_str()) : def;
-  }
-
-  //! \param key Keyword to look for
-  //! \param def Default value if keyword is not found
-  bool _inputfile::getboo(string key, bool def) {
-    int i = findKey(key);
-    if (i!=-1) {
-      if (matrix[i].val[0].compare("yes")==0)
-        return true;
-      else
-        return false;
-    }
-    return def;
-  }
-
-  //! \param key Keyword to look for
-  //! \param def Default value if keyword is not found
-  vector<string> _inputfile::getvec(string key, string def) {
-    int i = findKey(key);
-    return (i!=-1) ? matrix[i].val : vector<string>(1,def);
-  }
-
-  //! \param key Name of the new keyword
-  //! \param val String value
-  void _inputfile::add(string key, string val) {
-    dataformat tmp;
-    tmp.name=key;
-    tmp.val.push_back(val);
-    matrix.push_back(tmp);
-  }
-
-  //! \param key Name of the new keyword
-  //! \param val Floating point number
-  void _inputfile::add(string key, double val) {
-    std::ostringstream o;
-    o << val;
-    add(key, o.str());
-  }
-
-  void _inputfile::record_call(string key) {
-    bool newcall=true;
-    for (auto &ci : calls)
-      if (ci.compare(key)==0) {
-        newcall=false;
-        break;
-      }
-    if (newcall==true)
-      calls.push_back(key);
-  }
-
-  string _inputfile::info() {
-    std::ostringstream o;
-    o << "\n"
-      << "# INPUT FILE INFORMATION:\n"
-      << "#   Config file = " << file << "\n"
-      << "#   Accessed parameters:\n";
-    for (size_t i=1; i<=calls.size(); i++) {
-      if ( i%2!=0) o << "#   ";
-      o << std::setw(19) << std::left << calls[i-1]
-        << std::setw(19) << getstr(calls[i-1], "n/a");
-      if ( i%2==0 ) o << endl;
-    }
-    o << endl;
-    return o.str();
-  }
-
-  void _inputfile::updateval(string key, string v) {
-    int i=findKey( key);
-    if (i<0) {
-      std::cerr <<"# Could not find "<<key<<" during update!!!"<<endl;
-    } else {
-      matrix[i].val[0]=v;
-    }
-  }
-
-  void _inputfile::updateval(string key, double x) {
-    std::ostringstream o;
-    o << x;
-    updateval(key,o.str());
-  }
-
-  string _inputfile::print() {
-    std::ostringstream o;
-    //o <<"\n";
-    for (size_t i=0; i<matrix.size(); i++) {
-      o <<matrix[i].name;
-      for (size_t j=0; j<matrix[i].val.size(); j++)
-        o <<"   "<<matrix[i].val[j];
-      o <<"\n";
-    }
-    return o.str();
-  }
-
-  //
-  // CHECKVALUE CLASS
-  //
-  //
-  UnitTest::UnitTest(_inputfile &in) {
-    stable = in.getboo("testsuite_stable", true);
-    file = in.getstr("testsuite_testfile", "test.stable");
-    if (stable==false)
-      load(file);
-    else {
-      std::ostringstream o;
-      o << "# Stable output generated on " << __DATE__ << " " << __TIME__
+      f << "# Generated on " << __DATE__ << " " << __TIME__
 #ifdef __VERSION__
         << " using " << __VERSION__
 #endif
 #ifdef __SVN_REV__
-        << " (SVN revision: " << __SVN_REV__ << ")"
+        << " (SVN revision: " << __SVN_REV__ << ")" << endl
 #endif
-        ;
-      add( o.str(), "..." );
+      ;
+      for (auto &m : map)
+        f << std::left << setw(30) << m.first << m.second << endl;
+      return true;
     }
+    return false;
   }
 
-  /*!
-   * \param name Name of test entry - spaces not allowed.
-   * \param val Value to check (unstable) or save (stable)
-   * \param threshold Maximum allowed absolute relative difference between stable and unstable
-   */
-  bool UnitTest::check(string name, double val, double threshold) {
-    bool rc=true;
-    // Stable: Save value.
+  UnitTest::UnitTest(string testfile, bool state) : stable(state), cnt(0), InputMap(testfile) {
+    file=testfile;
+  }
+
+  UnitTest::UnitTest(InputMap &in) : cnt(0), file(in.get<string>("test_file","")), InputMap(in.get<string>("test_file","")) {
+    stable=in.get<bool>("test_stable", true);
+  }
+
+  bool UnitTest::operator()(const string &key, double value, double precision) {
+    cnt++;
     if (stable==true) {
-      add(name, val);
-      std::ofstream f( file.c_str() );
-      if (f) {
-        for (size_t i=0; i<matrix.size(); i++)
-          f << matrix[i].name << " " << matrix[i].val[0] << std::endl;
-        f.close();
+      add(key,value);
+      save(file);
+    } else {
+      double ref = get<double>(key, 0.);
+      double diff = std::abs( (ref-value)/ref );
+      if (diff>precision) {
+        failed[key] = std::pair<double,double>(ref, value);
+        return false;
       }
     }
-    else {
-      // Test value
-      double ref=getflt(name,1e9),
-             reldiff = std::abs( (ref-val)/ref );
-      if (reldiff>threshold) {
-        std::cerr.unsetf( std::ios_base::floatfield );
-        std::cerr << "!!! Test " << std::setw(10) << name << " failed (ref,new,err): "
-          << std::setprecision(4) 
-             << std::setw(8)
-             << ref << " "
-             << std::setw(8) << val << " "
-             << std::setw(8) << reldiff << " !!!" << std::endl;
-        rc=false;
-      }
-    }
-    result.push_back(rc); // Save outcome
-    return rc;
+    return true;
   }
 
-  bool UnitTest::smallerThan(string name, double x, double ref) {
-    bool rc=false;
-    if (x<ref)
-      rc=true;
-    else
-      std::cerr << "!!! " << name << " smaller than test failed (" << x << " !< " << ref << ")" << endl;
-    result.push_back(rc);
-    return rc;
-  }
-
-  int UnitTest::returnCode() {
-    for (size_t i=0; i<result.size(); i++)
-      if (result[i]==false) return 1;
-    return 0;
-  }
-
-  string UnitTest::report() {
+  string UnitTest::info() {
+    short w=37;
+    using namespace Faunus::textio;
     std::ostringstream o;
-    unsigned int numerr = 0;
-#ifdef __SUNPRO_CC
-    for (size_t i=0; i<result.size(); i++)
-      if (result[i]==false) numerr++;
-#else
-    for (size_t i=0; i<result.size(); i++)
-      if (result[i]==false) numerr++;
-    //numerr = std::count( result.begin(), result.end(), false);  
-#endif
-    o << std::endl << "# TEST SUITE:" << std::endl;
-    if (stable==true)
-      o << "#   Generated reference file: " << file << " with " << matrix.size()-1 << " item(s)." << std::endl;
-    else
-      o << "#   Test performed on " << result.size() << " item(s) with "
-        << numerr << " errors." << std::endl;
+    o << header("Unittests")
+      << pad(SUB,w,"Unittest state") << ( (stable==true) ? "stable" : "unstable") << endl
+      << pad(SUB,w,"Test file") << file << ( (stable==true) ? " (created)" : " (read)") << endl
+      << pad(SUB,w,"Number of tests") << cnt << endl;
+    if (stable==false) {
+      o << pad(SUB,w,"Number of failed tests") << failed.size() << endl;
+      if (!failed.empty()) {
+        o << endl << std::left << setw(w+2) << "" << setw(12) << "Stable" << setw(12) << "Current" << "Difference" << endl;
+        for (auto &m : failed) {
+          double current=m.second.first;
+          double ref=m.second.second;
+          o << indent(SUBSUB) << std::left << setw(w-2) << m.first
+            << setw(12) << m.second.first << setw(12) << m.second.second 
+            << std::abs( (ref-current)/ref*100 ) << percent << endl;
+        }
+      }
+    }
     return o.str();
   }
+
 }//namespace

@@ -60,13 +60,12 @@ COMPILING:
   $ cmake . [options]
 
   Options:
-    -DENABLE_OPENMP=on|OFF   Enable OpenMP support
-    -DENABLE_SWIG=ON|off     Enable SWIG modules (python, ruby etc.)
-    -DENABLE_FORTRAN=on|OFF  Compile legacy fortran programs
-    -DENABLE_BABEL=ON|off    Use OpenBabel for file I/O
-    -DENABLE_TWISTER=on|OFF  Use Mersenne Twister for random numbers
-
-    -DCMAKE_BUILD_TYPE=debug|release  Default: Debug
+    -DENABLE_OPENMP=on|OFF            Enable OpenMP support
+    -DENABLE_SWIG=ON|off              Enable SWIG modules (python, ruby etc.)
+    -DENABLE_FORTRAN=on|OFF           Compile legacy fortran programs
+    -DENABLE_BABEL=ON|off             Use OpenBabel for file I/O
+    -DENABLE_TWISTER=on|OFF           Use Mersenne Twister for random numbers
+    -DCMAKE_BUILD_TYPE=Debug|Release  Debug (default) or Release (for production) mode.
 
   Example for Intel's C++ compiler with OpenMP parallelization:
     $ CXX=icpc cmake . -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=Release

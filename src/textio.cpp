@@ -2,6 +2,11 @@
 
 namespace Faunus {
 
+  string textio::trim(string s) {
+    s.erase( std::remove_if(s.begin(), s.end(), isspace), s.end());
+    return s;
+  }
+
   string textio::bracket(const string &s) {
     return "\u27e8"+s+"\u27e9";
   }

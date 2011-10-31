@@ -17,6 +17,7 @@ namespace Faunus {
       EnergyDrift& operator+=(const double&);
       double checkDrift(const double&);
       string info();
+      void test(UnitTest&);
   };
 }//namespace
 #endif

@@ -17,8 +17,9 @@ namespace Faunus {
   class Group;
   class GroupMolecular;
 
-  /*! \brief Basic file I/O routines
-   *  \author Mikael Lund
+  /*
+   * \brief Basic file I/O routines
+   * \author Mikael Lund
    */
   class io {
     private:
@@ -30,8 +31,9 @@ namespace Faunus {
       void splash(string);                          //!< Splashes the content of a file
   };
 
-  /*! \brief Read/write AAM file format
-   *  \author Mikael Lund
+  /*!
+   * \brief Read/write AAM file format
+   * \author Mikael Lund
    */
   class FormatAAM {
     private:
@@ -142,6 +144,9 @@ namespace Faunus {
       void close();
   };
 
+  /*!
+   * \brief File IO for faste protein sequences
+   */
   class FormatFastaSequence {
     private:
       std::map<char,string> map; //!< Map one letter code (char) to three letter code (string)

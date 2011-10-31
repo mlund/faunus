@@ -46,7 +46,7 @@ namespace Faunus {
       virtual void translate(Space&, const Point&);          //!< Translate along a vector
       virtual void scale(Space&, double);                    //!< Volume scaling
       virtual void undo(Space&);                             //!< Undo move operation
-      virtual void accept(Space&);
+      virtual void accept(Space&);                           //!< Accept a trial move
 
       bool operator==(const Group&) const;                     //!< Compare two Groups
       Group& operator+=(const Group&);                         //!< Add two Groups
@@ -82,7 +82,7 @@ namespace Faunus {
 
       GroupMolecular();
       void translate(Space&, const Point&);
-      void rotate(Space&, const Point&, double);     //!< Rotate around a vector
+      void rotate(Space&, const Point&, double);
       void scale(Space&, double);
 
       GroupMolecular &operator<<(std::istream&);                        //!< Get information

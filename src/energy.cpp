@@ -64,7 +64,7 @@ namespace Faunus {
       geo=&g;
     }
 
-    double Bonded::i_internal(const p_vec &p, int i) {
+    double Bonded::i2all(const p_vec &p, int i) {
       return bonds.totalEnergy(*geo, p, i);
     }
 
@@ -239,6 +239,11 @@ namespace Faunus {
 
     ParticleBonds::ParticleBonds() {
       pairs::name+="Particle Bonds";
+    }
+
+    double ParticleBonds::i2i(Geometry::Geometrybase &geo, const p_vec &p, int i, int j) {
+      assert(!"unimplemented!");
+      return 0;
     }
 
     double ParticleBonds::totalEnergy(Geometry::Geometrybase &geo, const p_vec &p, int i) {

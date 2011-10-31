@@ -14,22 +14,33 @@ namespace Faunus {
    * \li  KEYWORD VALUE (space separated)
    *
    * Blank lines or lines containing [ or # are ignored.
+   *
+   * Example:
+   * \code
+   * InputMap in("myinput.in");
+   * double T = in.get<double>("temperature", 298.15);
+   * \endcode
    */
   class InputMap {
     private:
       std::map<string,string> map;
       vector<string> usedkeys;
       vector<string> incfiles;
+    protected:
+      bool save(string);     //!< Save map to disk
     public:
       InputMap();
-      InputMap(string);
-      bool include(string);
-      void info();
+      InputMap(string);      //!< Construct and include input file.
+      bool include(string);  //!< Include keyword/value file.
+      string info();         //!< Information string about read files and keywords
+      //!< Add a keyword and an associated value
       template<typename T> void add(const string &key, T value) {
         std::ostringstream o;
         o << value;
         map[key]=o.str();
       }
+
+      //!< Get value associated with keyword
       template<typename T> T get(const string &key, T fallback) {
         if ( map.find(key)!=map.end() ) {
           std::istringstream i( map[key] );
@@ -37,51 +48,6 @@ namespace Faunus {
         }
         return fallback;
       }
-  };
-
-  /*!
-   * \brief Retrieve parameters from a formatted input file
-   * \author Mikael Lund
-   * \note Obsolete - replaced by InputMap
-   *
-   * The input file is expected to have the following
-   * format:
-   * \li  KEYWORD VALUE (space separated)
-   *
-   * Blank lines or lines containing [ or # are ignored.
-   */
-  class _inputfile {
-    protected:
-      struct dataformat {
-        string name;
-        vector<string> val;
-      };
-      vector<dataformat> matrix;
-      vector<string> calls;
-      int findKey(string &);
-      void record_call(string);
-      string file;
-    public:
-      _inputfile();
-      _inputfile(string);                     //!< Constructor
-      bool load(string);                     //!< Load inputfile from disk
-      //bool checkEmptyValues();             //!< Check if loaded values are complete (return true if ok)
-      string getstr(string, string="");      //!< Get string value
-      double getflt(string, double=0);       //!< Get double value
-      int getint(string, int=0);             //!< Get integer value
-      bool getboo(string, bool=false);       //!< Get boolean value
-      vector<string> getvec(string,string);  //!< Get vector of strings
-      void add(string,string);               //!< Add an entry to the loaded list
-      void add(string,double);               //!< Add an entry to the loaded list
-      string info();                         //!< Show info
-      string print();                        //!< Print a string of the inputfile
-      void updateval(string, string);        //!< Update the inputfile for next run
-      void updateval(string, double);        //!< Update the inputfile for next run
-      template<typename T> T hej() {
-        T a;
-        return a;
-      }
-      //bool write();                        //!< Write to input file
   };
 
   /*!
@@ -94,24 +60,26 @@ namespace Faunus {
    * The input file passed to the constructor is expected to have the following
    * keywords:
    * format:
-   * \li  testsuite_stable   - Specifies if the system is "stable" or need testing.
-   * \li  testsuite_testfile - Name of test file to load (if unstable) or generate (if stable).
+   * \li \c test_stable - Specifies if the system is "stable" or need testing.
+   * \li \c test_file   - Name of test file to load (if unstable) or generate (if stable).
    *
-   * To check a value, simply call check(name,value,threshold). If the stable==true this will generate
+   * To check a value, simply call unittest(name,value,precision%). If stable==true this will generate
    * a new reference testfile. If stable==false this will check the given value against the
    * loaded testfile.
    */
-  class UnitTest : private _inputfile {
-    protected:
-      vector<bool> result;                     //!< Return codes for all performed tests
+  class UnitTest : private InputMap {
+    private:
+      std::map<string, std::pair<double, double> > failed;
+      int cnt;
+      string file; // test file
+      bool stable; //!< True if passed value is OK to be saved to disk
     public:
-      bool stable;                             //!< True if test suite is stable (=reference)
-      UnitTest(_inputfile &);                 //!< Read parameters from inputfile
-      bool check(string, double, double=0.1);  //!< Check or store value depending on the stable state.
-      bool smallerThan(string, double, double);//|< Check if x is smaller than y
-      string report();                         //!< Print report.
-      int returnCode();                        //!< Zero if no errors, one otherwise.
+      UnitTest(string, bool=true);  //!< Constructor
+      UnitTest(InputMap&);          //!< Constructor using InputMap
+      bool operator()(const string&, double, double=0.1); //!< Check or set value
+      string info(); //!< Information about passed and failed tests
   };
-}
+
+}//namespace
 #endif
 

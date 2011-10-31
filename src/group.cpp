@@ -160,16 +160,16 @@ namespace Faunus {
   }
 
   /*!
-   * \param par Container class
-   * \param c ...by adding this vector to all particles
+   * \param spc Simulation Space
+   * \param p Vector to translate with
    */
-  void Group::translate(Space &con, const Point &p) {
+  void Group::translate(Space &spc, const Point &p) {
     for (int i=beg; i<=end; ++i) {
-      con.trial[i] += p;
-      con.geo->boundary( con.trial[i] );
+      spc.trial[i] += p;
+      spc.geo->boundary( spc.trial[i] );
     }
     cm_trial = cm + p;
-    con.geo->boundary( cm_trial );
+    spc.geo->boundary( cm_trial );
   }
 
   int Group::random() const {

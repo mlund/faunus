@@ -2,7 +2,8 @@
 #define FAU_PHYSCONST_H
 #include "faunus/common.h"
 namespace Faunus {
-  /*! \brief Physical constants and parameters.
+  /*!
+   * \brief Physical constants and parameters.
    */
   class PhysicalConstants {
     public:

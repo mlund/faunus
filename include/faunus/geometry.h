@@ -283,6 +283,7 @@ namespace Faunus {
 
   }//namespace Geometry
 
+  /*
   template<typename Tbase>
     class BasePointerList {
       private:
@@ -308,6 +309,7 @@ namespace Faunus {
   namespace Geometry {
     typedef BasePointerList<Geometrybase> GeometryList;
   }
+  */
 
 }//namespace
 #endif

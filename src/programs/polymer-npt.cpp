@@ -14,6 +14,7 @@ int main() {
   FormatAAM aam;                       // AAM structure file I/O
   FormatXTC xtc(1000);                 // XTC gromacs trajectory format
   EnergyDrift sys;                     // class for tracking system energy drifts
+  UnitTest test(mcp);
 
   Energy::Hamiltonian pot;
   auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot>(mcp) );
@@ -58,8 +59,7 @@ int main() {
     utot += pot.g_external(spc.p, g);
   sys.init( utot );
 
-  cout << atom.info() << spc.info() << pot.info() << mv.info()
-    << textio::header("MC Simulation Begins!");
+  cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
@@ -106,5 +106,13 @@ int main() {
   pqr.save("confout.pqr", spc.p);
   spc.save("space.state");
 
-  cout << loop.info() << sys.info() << mv.info() << gmv.info() << iso.info() << shape.info();
+  iso.test(test);
+  gmv.test(test);
+  mv.test(test);
+  sys.test(test);
+
+  cout << loop.info() << sys.info() << mv.info() << gmv.info() << iso.info() << shape.info()
+    << test.info();
+
+
 }

@@ -119,7 +119,7 @@ namespace Faunus {
     }
 
     void Widom::check(UnitTest &test) {
-      test.check("widomExcessChemicalPotential", muex() );
+      test("widom_muex", muex() );
     }
 
     string Widom::_info() {

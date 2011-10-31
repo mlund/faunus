@@ -32,14 +32,17 @@ namespace Faunus {
       protected:
         double _tokT;
       public:  
-        string name; //!< Short (preferably one-word) description of the core potential
         PairPotentialBase();
-        string brief();
-        void setScale(double=1); //!< Set scaling factor to convert energy to kT
-        double tokT(); //!< Convert returned energy to kT.
-        virtual double operator() (const particle&, const particle&, double) const=0;
+        string name;             //!< Short (preferably one-word) description of the core potential
+        string brief();          //!< Brief, one-lined information string
+        void setScale(double=1); //!< Set scaling factor
+        double tokT();           //!< Convert returned energy to kT.
+        virtual double operator() (const particle&, const particle&, double) const=0; //!< Return energy from particles and squared distance between them.
     };
 
+    /*!
+     * \brief Harmonic pair potential
+     */
     class Harmonic : public PairPotentialBase {
       private:
         string _brief();
@@ -51,6 +54,9 @@ namespace Faunus {
         double operator() (const particle&, const particle&, double) const; //!< Pair interaction energy (kT)
     };
 
+    /*!
+     * \brief Hard sphere pair potential
+     */
     class HardSphere : public PairPotentialBase {
       private:
         string _brief();
@@ -66,6 +72,9 @@ namespace Faunus {
         string info(char w);
     };
 
+    /*!
+     * \brief Lennard-Jones (12-6) pair potential
+     */
     class LennardJones : public PairPotentialBase {
       private:
         string _brief();
@@ -93,20 +102,26 @@ namespace Faunus {
         string info(char);
     };
 
+    /*!
+     * \brief Square well pair potential
+     */
     class SquareWell : public PairPotentialBase {
       private:
         string _brief();
         void _setScale(double);
       public:
-        double threshold; //!< Threshold between particle *surface* [A]
-        double depth;     //!< Energy depth [kT]
-        SquareWell(InputMap&, string="SquareWell");
+        double threshold;                           //!< Threshold between particle *surface* [A]
+        double depth;                               //!< Energy depth [kT]
+        SquareWell(InputMap&, string="SquareWell"); //!< Constructor
         inline double operator() (const particle &a, const particle &b, double r2) const {
           return ( sqrt(r2)-a.radius-b.radius<threshold ) ? depth : 0;
         }
         string info(char);
     };
 
+    /*!
+     * \brief Coulomb pair potential
+     */
     class Coulomb : public PairPotentialBase {
       friend class DebyeHuckel;
       private:
@@ -124,6 +139,9 @@ namespace Faunus {
       string info(char);
     };
 
+    /*!
+     * \brief Debye-Huckel pair potential
+     */
     class DebyeHuckel : public Coulomb {
       private:
         string _brief();
@@ -142,6 +160,9 @@ namespace Faunus {
     };
 
 
+    /*!
+     * \brief Combined electrostatic/short ranged pair potential
+     */
     template<class Tgeometry, class Tcoulomb=Coulomb, class Tshortranged=LennardJones>
       class CoulombSR : public PairPotentialBase {
         private:

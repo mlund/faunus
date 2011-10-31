@@ -1,5 +1,6 @@
 #include <faunus/drift.h>
 #include <faunus/textio.h>
+#include <faunus/inputfile.h>
 
 namespace Faunus {
 
@@ -42,5 +43,10 @@ namespace Faunus {
       o << pad(SUB,w, "Total energy drift") << drift << kT << " (" << drift/current()*100. << "\ufe6a)" << endl;
     }
     return o.str();
+  }
+
+  void EnergyDrift::test(UnitTest &t) {
+    t("energyAverage", avg.avg() );                                                           
+    t("relativeEnergyDrift", std::abs(drift/current()), 2.0 ); // allow 200% deviation    
   }
 }//namespace

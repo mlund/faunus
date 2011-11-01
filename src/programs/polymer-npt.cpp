@@ -52,6 +52,10 @@ int main() {
 
   spc.load("space.state");
 
+  //FormatTopology top;
+  //cout << top.save("topol.top", spc, bonded->bonds) << endl;
+  //return 0;
+
   double utot=pot.external();
   utot += pot.g_internal(spc.p, salt) + pot.g_external(spc.p, salt)
     + pot.g2g(spc.p, salt, allpol) + pot.g_internal(spc.p, allpol);
@@ -111,8 +115,5 @@ int main() {
   mv.test(test);
   sys.test(test);
 
-  cout << loop.info() << sys.info() << mv.info() << gmv.info() << iso.info() << shape.info()
-    << test.info();
-
-
+  cout << loop.info() << sys.info() << mv.info() << gmv.info() << iso.info() << shape.info() << test.info();
 }

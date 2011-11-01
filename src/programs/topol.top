@@ -8,3 +8,7 @@
 [ atoms ] 
 
 [ bonds ]
+
+
+@pair 1 2   Harmonic   0.5 10
+

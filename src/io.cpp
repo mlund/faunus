@@ -496,4 +496,61 @@ namespace Faunus {
     Group g;
     return g;
   }
+
+  FormatTopology::FormatTopology() : rescnt(0) {}
+  //bool FormatTopology::open(string);                         //!< Open file for writing
+  //void FormatTopology::writeDefaults();
+  //
+  //name     mass        charge    ptype         sigma           epsilon
+  string FormatTopology::writeAtomTypes(const Space &spc) {
+    char w=8;
+    std::ostringstream o;
+    o.precision(6);
+    o << endl << "[ atomtypes ]" << endl;
+    std::set<short> ids; // found particle id's in Space
+    for (auto &p : spc.p)
+      ids.insert( p.id );
+    for (auto i : ids) {
+      o << std::right << setw(w) << atom[i].name << setw(w) << atom[i].mw 
+        << setw(w) << atom[i].charge << setw(w) << "A" << setw(w) << 2*atom[i].radius/10
+        << setw(w) << atom[i].eps << endl;
+    }
+    return o.str();
+  }
+
+  string FormatTopology::writeMoleculeType(const Group &g, const Space &spc, Energy::ParticleBonds &b) {
+    if (g.size()==0 || g.id==Group::ATOMIC)
+      return "";
+    rescnt++;
+    std::map<short, short> idcnt;
+    char w=10;
+    std::ostringstream o;
+    o.precision(6);
+    o << endl << "[ moleculetype ]" << endl << g.name << "      1" << endl;
+    o << endl << "[ atoms ]" << endl;
+    o << ";   nr     type     resnr   residue   atom         cgnr      charge    mass" << endl;
+    for (int i=g.beg; i<=g.end; i++) {
+      short id=spc.p[i].id;
+      idcnt[id]++;
+      o << setw(w-5) << i-g.beg+1 << setw(w) << atom[id].name << setw(w) << rescnt
+        << setw(w) << g.name << setw(5) << atom[id].name
+        << std::left << setw(3) << idcnt[id] << std::right << setw(w) << "1"
+        << setw(w) << spc.p[i].charge << setw(w) << spc.p[i].mw << endl;
+    }
+    return o.str();
+  }
+
+  string FormatTopology::save(string topfile, const Space &spc, Energy::ParticleBonds &bonds) {
+    std::set<string> done;
+    std::ostringstream o;
+    o << writeAtomTypes(spc);
+    for (auto g : spc.g) {
+      if ( done.find(g->name)==done.end() ) {
+        o << writeMoleculeType(*g, spc, bonds);
+        done.insert(g->name);
+      }
+    }
+    return o.str();
+  }
+
 }  //namespace

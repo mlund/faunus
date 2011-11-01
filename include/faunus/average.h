@@ -115,19 +115,18 @@ namespace Faunus {
    * \f$ c_i = \frac{ \langle x_0x_i\rangle_{i<n} - \langle x\rangle^2 }
    * { \langle x^2\rangle - \langle x\rangle^2  } \f$
    *
-   * Example\n
+   * Example:
    * \code
-   * correlation<double> ci(50); // energy correlation
-   * ci += uinit + du;           // place in MC loop
+   * BlockCorrelation ci(50); // energy correlation
+   * ci += uinit + du;        // place in MC loop
    * ...
-   * for (int i=0; i<ci.size(); i++)
+   * for (size_t i=0; i<ci.size(); i++)
    *   cout << i << " " << ci[i] << end;
    * \endcode
    * ci will eventually fall off from one (full correlation) to
    * zero (uncorrelated).
    */
-
-  template<class T>
+  template<class T=double>
     class BlockCorrelation {
       private:
         unsigned int n,            //!< Length of each correlation measurement
@@ -147,10 +146,8 @@ namespace Faunus {
    * \param len Sample length
    */
   template<class T>
-    BlockCorrelation<T>::BlockCorrelation(unsigned int len) {
-      cnt=0;
-      n = len; 
-      xixj.resize(n);
+    BlockCorrelation<T>::BlockCorrelation(unsigned int len) : cnt(0), n(len) {
+      xixj.resize(len);
     }
 
   template<class T>
@@ -183,12 +180,8 @@ namespace Faunus {
       std::ofstream f(filename.c_str());
       if (f) {
         f.precision(6);
-        f << "% xytable dump: tablesize, xmin, xres; ydata" << endl;
-        f << size() << " " << 0 << " " << 1 << endl;
-        for (int i=0; i<size(); i+=1) {
+        for (int i=0; i<size(); i++)
           f << operator[](i) << endl; 
-        }
-        f.close();
         return true;
       }
       return false;

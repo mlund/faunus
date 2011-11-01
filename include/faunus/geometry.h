@@ -41,16 +41,17 @@ namespace Faunus {
         enum collisiontype {BOUNDARY,ZONE};                 //!< Types for collision() function
         double getVolume() const;                           //!< Get volume of container
         void setVolume(double);                             //!< Specify new volume
+        double dist(const Point&,const Point&);             //!< Distance between two points
+        string info(char=20);                               //!< Return info string
+        bool save(string);                                  //!< Save container state to disk
+        bool load(string,bool=false);                       //!< Load container state from disk
+
         virtual bool collision(const particle&, collisiontype=BOUNDARY)=0;//!< Check for collision with boundaries, forbidden zones, matter,..
         virtual void randompos(Point &)=0;                  //!< Random point within container
         virtual void boundary(Point &) const=0;             //!< Apply boundary conditions to a point
         virtual void scale(Point&, const double&) const;    //!< Scale point to a new volume - for NPT ensemble
-        double dist(const Point&,const Point&);             //!< Distance between two points
         virtual double sqdist(const Point &a, const Point &b) const=0;
-        virtual Point vdist(const Point&, const Point&)=0;
-        string info(char=20);                               //!< Return info string
-        bool save(string);                                  //!< Save container state to disk
-        bool load(string,bool=false);                       //!< Load container state from disk
+        virtual Point vdist(const Point&, const Point&)=0;  //!< Distance in vector form
         virtual ~Geometrybase();
     };
 
@@ -62,15 +63,14 @@ namespace Faunus {
      */
     class Sphere : public Geometrybase {
       private:
-        double r2,diameter;
+        double r,r2,diameter;
         void _setVolume(double);
         double _getVolume() const;
         string _info(char);
       public:
-        void setradius(double);
-        double r;              //!< Radius
-        Sphere(double);
-        Sphere(InputMap&);
+        void setradius(double);                 //!< Set radius (angstrom)
+        Sphere(double);                         //!< Construct from radius (angstrom)
+        Sphere(InputMap&, string="Sphere");     //!< Construct from InputMap key \c prefix_radius
         void randompos(Point &);
         void boundary(Point &) const;
         bool collision(const particle &, collisiontype=BOUNDARY);
@@ -103,17 +103,20 @@ namespace Faunus {
       protected:
         bool setslice(Point, Point);             //!< Reset slice position
         Point len_inv;                           //!< Inverse sidelengths
-
+        inline int anint(double x) const {
+          return int(x>0. ? x+.5 : x-.5);
+        }
+        Point slice_min, slice_max;              //!< Position of slice corners
+ 
       public:
         Cuboid(InputMap&);                       //!< Read input parameters
         bool setlen(Point);                      //!< Reset Cuboid sidelengths
         Point len;                               //!< Sidelengths
         Point len_half;                          //!< Half sidelength
-        Point slice_min, slice_max;              //!< Position of slice corners
-        Point randompos();                       //!< Get point with random position
-        void randompos(Point&);                  //!< Move point to random position
-        bool save(string);                       //!< Save container state to disk
-        bool load(string,bool=false);            //!< Load container state from disk
+        Point randompos();           
+        void randompos(Point&);      
+        bool save(string);           
+        bool load(string,bool=false);
         bool collision(const particle&, collisiontype=BOUNDARY);
 
         inline double sqdist(const Point &a, const Point &b) const {
@@ -126,7 +129,7 @@ namespace Faunus {
           return dx*dx + dy*dy + dz*dz;
         }
 
-        inline Point vdist(const Point &a, const Point &b) {       //!< Distance vector
+        inline Point vdist(const Point &a, const Point &b) {
           Point r=a-b;
           if (r.x>len_half.x)
             r.x-=len.x;
@@ -143,21 +146,17 @@ namespace Faunus {
           return r;
         }
 
-        inline int anint(double x) const {
-          return int(x>0. ? x+.5 : x-.5);
-        }
-
-        //! Apply periodic boundary conditions
         inline void boundary(Point &a) const {
           if (std::abs(a.x)>len_half.x) a.x-=len.x*anint(a.x*len_inv.x);
           if (std::abs(a.y)>len_half.y) a.y-=len.y*anint(a.y*len_inv.y);
           if (std::abs(a.z)>len_half.z) a.z-=len.z*anint(a.z*len_inv.z);
         }
-        virtual void scale(Point&, const double&) const; //!< Scale point to a new volume - for NPT ensemble
+
+        virtual void scale(Point&, const double&) const;
     };
 
     /*!
-     * \brief Cuboidslit: cubuid without periodic boundary in the z direction
+     * \brief Cubuid with no periodic boundaries in z direction
      * \author Chris Evers
      * \date Lund, nov 2010
      */
@@ -165,8 +164,7 @@ namespace Faunus {
       public:
         Cuboidslit(InputMap &);
 
-        //! Calculate distance using the minimum image convention
-        inline double sqdist(const Point &a, const Point &b) const {   //!< Squared distance 
+        inline double sqdist(const Point &a, const Point &b) const {
           double dx=std::abs(a.x-b.x);
           double dy=std::abs(a.y-b.y);
           double dz=a.z-b.z;
@@ -175,7 +173,7 @@ namespace Faunus {
           return dx*dx + dy*dy + dz*dz;
         }   
 
-        inline Point vdist(const Point &a, const Point &b) {       //!< Distance vector
+        inline Point vdist(const Point &a, const Point &b) {
           Point r=a-b;
           if (r.x>len_half.x)
             r.x-=len.x;
@@ -188,7 +186,6 @@ namespace Faunus {
           return r;
         }
 
-        //! Apply periodic boundary conditions
         inline void boundary(Point &a) const {
           if (std::abs(a.x)>len_half.x) a.x-=len.x*anint(a.x*len_inv.x);
           if (std::abs(a.y)>len_half.y) a.y-=len.y*anint(a.y*len_inv.y);
@@ -211,10 +208,10 @@ namespace Faunus {
         double halflen;
         double r2;    //!< Cylinder radius squared
         void init(double,double);
-      public:
         double len;   //!< Cylinder length
         double r;     //!< Cylinder radius
         double diameter;
+      public:
         Cylinder(double, double);
         Cylinder(InputMap &);
         void randompos(Point &);
@@ -284,32 +281,32 @@ namespace Faunus {
   }//namespace Geometry
 
   /*
-  template<typename Tbase>
-    class BasePointerList {
-      private:
-        vector<Tbase*> base;
-      public:
-        void insert(Tbase &g) {
-          if (&g!=nullptr)
-            if ( std::find(base.begin(), base.end(), &g)==base.end() )
-              base.push_back(&g);
-        }
+     template<typename Tbase>
+     class BasePointerList {
+     private:
+     vector<Tbase*> base;
+     public:
+     void insert(Tbase &g) {
+     if (&g!=nullptr)
+     if ( std::find(base.begin(), base.end(), &g)==base.end() )
+     base.push_back(&g);
+     }
 
-        template<typename Tderived> void sync(const Tbase& source) {
-          assert(&source!=nullptr);
-          const Tderived* src=dynamic_cast<const Tderived*>(&source); //get dereved class pointer to source
-          for (auto b : base) {
-            Tderived* target=dynamic_cast<Tderived*>(b); // derived class pointer to target
-            if ( src != target )
-              (*target)=(*src);                    // copy data from source to target
-          }
-        }
-    };
+     template<typename Tderived> void sync(const Tbase& source) {
+     assert(&source!=nullptr);
+     const Tderived* src=dynamic_cast<const Tderived*>(&source); //get dereved class pointer to source
+     for (auto b : base) {
+     Tderived* target=dynamic_cast<Tderived*>(b); // derived class pointer to target
+     if ( src != target )
+     (*target)=(*src);                    // copy data from source to target
+     }
+     }
+     };
 
-  namespace Geometry {
-    typedef BasePointerList<Geometrybase> GeometryList;
-  }
-  */
+     namespace Geometry {
+     typedef BasePointerList<Geometrybase> GeometryList;
+     }
+     */
 
 }//namespace
 #endif

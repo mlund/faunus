@@ -75,7 +75,7 @@ namespace Faunus {
     }
    
     /*!
-     * \param in InputMap is scanned for the keyword \c lj_eps
+     * \param in InputMap is scanned for the keyword \c lj_eps and should be in units of kT
      */
     LennardJones::LennardJones(InputMap &in) {
       name="Lennard-Jones";
@@ -89,7 +89,7 @@ namespace Faunus {
     }
     
     void LennardJones::_setScale(double s) {
-      _tokT=1;
+      _tokT=s;
       eps=eps/_tokT;
     }
 
@@ -173,11 +173,11 @@ namespace Faunus {
 
     double DebyeHuckel::ionicStrength() const {
       return k*k/c;
-    } //!< in [mol/l]
+    }
 
     double DebyeHuckel::debyeLength() const {
       return -1/k;
-    } //!< in [A]
+    }
 
     string DebyeHuckel::info(char w) {
       std::ostringstream o;

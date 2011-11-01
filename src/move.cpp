@@ -47,7 +47,8 @@ namespace Faunus {
     double Movebase::energyChange() {
       return _energyChange();
     }
-    
+   
+    /*! \note Please try not to overload */
     double Movebase::move() {
       if (!run())
         return 0;
@@ -78,8 +79,6 @@ namespace Faunus {
     }
 
     void Movebase::test(UnitTest &t) {
-      //string t=name; //trimmed name
-      //t.erase(std::remove_if(t.begin(), t.end(), std::isspace), t.end());
       t(prefix+"_acceptance", double(cnt_accepted)/cnt*100 );
       _test(t);
     }
@@ -88,6 +87,7 @@ namespace Faunus {
     }
 
     string Movebase::info() {
+      assert(!title.empty() && "Markov Moves must have a title");
       std::ostringstream o;
       o << header("Markov Move: " + title);
       if (!cite.empty()) {
@@ -151,6 +151,7 @@ namespace Faunus {
 
     double ParticleTranslation::_energyChange() {
       if (iparticle>-1) {
+        assert( spc->geo->collision(spc->p[iparticle])==false && "An accepted particle collides with simulation container.");
         if ( spc->geo->collision( spc->trial[iparticle], Geometry::Geometrybase::BOUNDARY ) )
           return pc::infty;
         return
@@ -255,7 +256,7 @@ namespace Faunus {
     }
 
     double RotateGroup::_energyChange() {
-      for (int i=(*igroup).beg; i<=(*igroup).end; i++)
+      for (int i=(*igroup).beg; i<=(*igroup).end; i++)  // check for container collision
         if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
           return pc::infty;
       double uold = pot->g2all(spc->p, *igroup) + pot->g_external(spc->p, *igroup);
@@ -387,7 +388,6 @@ namespace Faunus {
 
     double Isobaric::_energyChange() {
       double uold,unew;
-      //hamiltonian->setVolume( oldV );
       uold = _energy(spc->p);
       hamiltonian->setVolume( newV );
       unew = _energy(spc->trial);

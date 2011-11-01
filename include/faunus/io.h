@@ -109,12 +109,13 @@ namespace Faunus {
   };
 
   class FormatTopology {
+    private:
+      int rescnt;
+      string writeAtomTypes(const Space&);
+      string writeMoleculeType(const Group&, const Space &, Energy::ParticleBonds&);
     public:
-      bool open(string);                         //!< Open file for writing
-      void writeDefaults();
-      void writeAtomTypes(const Space&);
-      void writeMoleculeType(const Group&, Energy::ParticleBonds&, const Space&);
-
+      FormatTopology();
+      string save(string, const Space&, Energy::ParticleBonds&); //!< Generate topology from Space
   };
 
   /*! \brief Trajectory of charges per particle

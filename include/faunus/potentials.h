@@ -37,19 +37,29 @@ namespace Faunus {
         string brief();          //!< Brief, one-lined information string
         void setScale(double=1); //!< Set scaling factor
         double tokT();           //!< Convert returned energy to kT.
-        virtual double operator() (const particle&, const particle&, double) const=0; //!< Return energy from particles and squared distance between them.
+
+        /*!
+         * \brief Particle-particle energy divided by tokT()
+         * \param a First particle
+         * \param b Second particle
+         * \param r2 Squared distance between them (angstrom squared)
+         */
+        virtual double operator() (const particle &a, const particle&b, double r2) const=0;
     };
 
     /*!
      * \brief Harmonic pair potential
+     *
+     * The harmonic potential has the form \f$ \beta u_{ij} = k(r_{ij}-r_{eq})^2 \f$ where k is the force constant
+     * (kT/angstrom^2) and req is the equilibrium distance (angstrom).
      */
     class Harmonic : public PairPotentialBase {
       private:
         string _brief();
         void _setScale(double);
       public:
-        double k;   //!< Force constant (kT/AA^2)
-        double req; //!< Equilibrium distance (AA)
+        double k;   //!< Force constant (kT/angstrom squared)
+        double req; //!< Equilibrium distance (angstrom)
         Harmonic(double=0, double=0);
         double operator() (const particle&, const particle&, double) const; //!< Pair interaction energy (kT)
     };
@@ -74,6 +84,12 @@ namespace Faunus {
 
     /*!
      * \brief Lennard-Jones (12-6) pair potential
+     *
+     * The Lennard-Jones potential has the form:
+     *
+     * \f$ \beta u = 4\epsilon_{lj} \left (  (\sigma_{ij}/r_{ij})^12 - (\sigma_{ij}/r_{ij})^6    \right ) \f$
+     *
+     * where \f$\sigma_{ij} = (\sigma_i+\sigma_j)/2\f$ and \f$\epsilon_{lj}\f$ is fixed for this class.
      */
     class LennardJones : public PairPotentialBase {
       private:
@@ -121,6 +137,13 @@ namespace Faunus {
 
     /*!
      * \brief Coulomb pair potential
+     * 
+     * The Coulomb potential has the form:
+     * \f[ \beta u_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rkT} \frac{z_i z_j}{r_{ij}} \f]
+     * where the first factor is the Bjerrum length, \f$l_B\f$. By default the scaling is set
+     * to the Bjerrum length - i.e. returned energies are divided by \f$l_B\f$ and to get the energy
+     * in kT simply multiply with tokT(). This to increase performance when summing over many
+     * particles.
      */
     class Coulomb : public PairPotentialBase {
       friend class DebyeHuckel;
@@ -129,10 +152,21 @@ namespace Faunus {
       void _setScale(double);
       double temp, epsilon_r;
       protected:
-      double lB; //!< Bjerrum length [A]
+      double lB; //!< Bjerrum length (angstrom)
       public:
-      Coulomb(InputMap &);
-      inline double energy(double zz, double r) const { return zz/r; } 
+      Coulomb(InputMap&);
+
+      /*!
+       * \brief Particle-particle energy
+       * \param zz Charge number product i.e. \f$z_az_b = q_aq_b/e^2\f$
+       * \param r Distance between charges (angstrom) 
+       * \returns \f$\beta u/l_B\f$
+       */
+      inline double energy(double zz, double r) const {
+        return zz/r;
+      }
+
+      /*! \returns \f$\beta u/l_B\f$ */
       inline double operator() (const particle &a, const particle &b, double r2) const {
         return energy( a.charge*b.charge, sqrt(r2) );
       }
@@ -141,6 +175,10 @@ namespace Faunus {
 
     /*!
      * \brief Debye-Huckel pair potential
+     *
+     * This potential is similar to the plain Coulomb potential but with an extra exponential term to described salt screening:
+     * \f[ \beta u_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rkT} \frac{z_i z_j}{r_{ij}} \exp(-\kappa r_{ij}) \f]
+     * where \f$\kappa=1/D\f$ is the inverse Debye screening length.
      */
     class DebyeHuckel : public Coulomb {
       private:
@@ -149,12 +187,12 @@ namespace Faunus {
         double c,k;
       public:
         DebyeHuckel(InputMap&);
-        double ionicStrength() const;
-        double debyeLength() const;
+        double ionicStrength() const; //!< Returns the ionic strength (mol/l)
+        double debyeLength() const;   //!< Returns the Debye screening length (angstrom)
         inline double energy(double zz, double r) const { return zz/r * exp(k*r); }
         inline double operator() (const particle &a, const particle &b, double r2) const {
           r2=sqrt(r2);
-          return a.charge*b.charge/r2 * exp(k*r2);
+          return a.charge*b.charge/r2 * exp(k*r2); //note that k=-kappa
         }
         string info(char);
     };
@@ -186,11 +224,11 @@ namespace Faunus {
           }
           string info(char w=20) {
             std::ostringstream o;
-	    o << el.info(w) << sr.info(w);
+            o << el.info(w) << sr.info(w);
             return o.str();
           }
       };
-      
+
   } //end of potential namespace
 
 } //end of Faunus namespace

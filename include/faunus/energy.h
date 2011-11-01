@@ -95,6 +95,7 @@ namespace Faunus {
 
     /*!
      *  \brief Base class for energy evaluation
+     *  \note All energy functions are expected to return energies in units of kT.
      *
      *  This base class defines functions for evaluating interactions between particles,
      *  groups, external potentials etc. By default all energy functions returns ZERO
@@ -109,28 +110,28 @@ namespace Faunus {
       protected:
         Geometry::Geometrybase* geo; //!< Pointer to geometry used to calculate interactions
       public:
+        string name;                                          //!< Short informative name
         Energybase();
         virtual ~Energybase();
-        virtual Geometry::Geometrybase& getGeometry();        //!< Get ref. to Geometrybase used for interactions
-        string name;
+        virtual Geometry::Geometrybase& getGeometry();        //!< Reference to geometry used for interactions
         bool setGeometry( Geometry::Geometrybase& );          //!< Set Geometrybase
-        virtual double p2p(const particle&, const particle&); //!< particle-particle energy
-        virtual double all2p(const p_vec&, const particle&);  //!< pvec<->particle
-        virtual double all2all(const p_vec&);                 //!< all with all (N^2)
-        virtual double i2i(const p_vec&, int, int);           //!< index i'th with j'th
-        virtual double i2g(const p_vec&, Group &, int);       //!< i'th with group
-        virtual double i2all(const p_vec&, int);              //!< i'th with all
+        virtual double p2p(const particle&, const particle&); //!< Particle-particle energy
+        virtual double all2p(const p_vec&, const particle&);  //!< Particle-Particle vector energy
+        virtual double all2all(const p_vec&);                 //!< All inter-particle energies (N^2)
+        virtual double i2i(const p_vec&, int, int);           //!< i'th particle with j'th particle
+        virtual double i2g(const p_vec&, Group &, int);       //!< i'th particle with group
+        virtual double i2all(const p_vec&, int);              //!< i'th particle with all other particles
         virtual double i_external(const p_vec&, int);         //!< internal energy of i'th particle
-        virtual double i_internal(const p_vec&, int);         //!< external energy of i'th particle
-        virtual double p_external(const particle&);           //!< external energy of particle
-        double i_total(const p_vec&, int);                    //!< i'th total = i2all + i_external + i_internal
-        virtual double g2g(const p_vec&, Group&, Group&);     //!< group<->group
-        virtual double g2all(const p_vec&, Group&);           //!< group<->all
-        virtual double g_external(const p_vec&, Group&);      //!< external energy of group
-        virtual double g_internal(const p_vec&, Group&);      //!< internal energy of group
-        virtual double v2v(const p_vec&, const p_vec&);       //!< pvec<->pvec
-        virtual double external();                            //!< external energy - typically pressure.
-        string info();                                        //!< information
+        virtual double i_internal(const p_vec&, int);         //!< External energy of i'th particle
+        virtual double p_external(const particle&);           //!< External energy of particle
+        double i_total(const p_vec&, int);                    //!< Total energy of i'th particle = i2all + i_external + i_internal
+        virtual double g2g(const p_vec&, Group&, Group&);     //!< Group-Group energy
+        virtual double g2all(const p_vec&, Group&);           //!< Energy of Group with all other particles
+        virtual double g_external(const p_vec&, Group&);      //!< External energy of group
+        virtual double g_internal(const p_vec&, Group&);      //!< Internal energy of group
+        virtual double v2v(const p_vec&, const p_vec&);       //!< Particle vector-Particle vector energy
+        virtual double external();                            //!< External energy - pressure, for example.
+        string info();                                        //!< Information
     };
 
     /*!
@@ -385,13 +386,13 @@ namespace Faunus {
     class Hamiltonian : public Energybase {
       typedef shared_ptr<Energybase> baseptr;
       private:
-      vector<baseptr> created;      //!< smart pointer list of created energy children
+      vector<baseptr> created;      //!< smart pointer list of *created* energy classes
       string _info();
+      vector<Energybase*> baselist; //!< Pointer list to energy classes to be summed
       public:
-      vector<Energybase*> baselist; //!< pointer list to energy children to be summed
-      void setVolume(double);
+      void setVolume(double);       //!< Set volume of all contained energy classes
 
-      //!< Create a derived Energybase class
+      //!< \brief Create and add an energy class to energy list
       template<typename Tenergychild> shared_ptr<Tenergychild> create(Tenergychild c) {
         shared_ptr<Tenergychild> childptr( new Tenergychild(c) );
         childptr->getGeometry(); // not pretty...need to update geo pointer for i.e. nonbonded class
@@ -400,7 +401,7 @@ namespace Faunus {
         return childptr;
       }
 
-      void add(Energybase&); //!< Add existing Energybase to list
+      void add(Energybase&); //!< Add existing energy class to list
       double p2p(const particle&, const particle&);
       double all2p(const p_vec&, const particle&);
       double all2all(const p_vec&);

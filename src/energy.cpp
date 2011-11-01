@@ -48,6 +48,7 @@ namespace Faunus {
     double Energybase::external() {return 0;}
 
     string Energybase::info() {
+      assert(!name.empty() && "Assign a name to energy class!");
       std::ostringstream o;
       o << textio::header("Energy: " + name)
         << _info();
@@ -247,7 +248,7 @@ namespace Faunus {
     }
 
     double ParticleBonds::totalEnergy(Geometry::Geometrybase &geo, const p_vec &p, int i) {
-      assert( &geo!=nullptr );  //debug
+      assert( &geo!=nullptr );   //debug
       assert( i<(int)p.size() ); //debug
       double u=0;
       for (auto &m2 : pairs::list[i])
@@ -290,8 +291,4 @@ namespace Faunus {
 
   }//namespace
 }//namespace
-
-//dynamic cast of Group->derive class
-//const molecular* m = dynamic_cast<const molecular*>(&g1);
-
 

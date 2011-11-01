@@ -3,7 +3,9 @@ Here you will find automatically generated documentation for the C++ classes in 
 Being continuously developed, we do not guarantee that the code nor documentation is correct so please
 check your results carefully!
 
-\section mainclasses Main classes one should know about:
+\section mainclasses Important Classes:
+A good place to start is to understand the following classes. Also, for a more grouped overview do have
+a look at the Namespace list.
 
 \li Faunus::InputMap reads input parameters from a file in the format "keyword value". This class is frequently
 used in the constuctor arguments for other Faunus classes.
@@ -18,6 +20,12 @@ useful for defining molecules, salt groups etc.
 
 \li Faunus::Energy::Hamiltonian can sum interaction energies from multiple origins - bonded, non-bonded,
 external etc.
+
+\section miniexample Minimal Example
+Below is a minimal example that performs a Metropolis Monte Carlo simulation of charged Lennard-Jones particles.
+A cubic simulation geometry with periodic boundaries and the minimum image convention is used. Statistics about
+sampling, acceptance and mean square displacemets are printed at the end of the simulation.
+\include minimalmc.cpp
 
 */
 

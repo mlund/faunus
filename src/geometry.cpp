@@ -13,14 +13,16 @@ namespace Faunus {
 
     Geometrybase::~Geometrybase() {}
 
+    /*! \note Do not overload! */
     double Geometrybase::dist(const Point &p1, const Point &p2) {
       return sqrt(sqdist(p1,p2));
     }
 
     void Geometrybase::scale(Point &a, const double &s) const {
-      assert(!"Volume scaling function unimplemented.");
+      assert(!"Volume scaling function unimplemented for this geometry");
     }
 
+    /*! \note Do not overload! */
     string Geometrybase::info(char w) {
       using namespace textio;
       std::ostringstream o;
@@ -31,12 +33,14 @@ namespace Faunus {
       return o.str();
     }
 
+    /*! \note Do not overload! */
     void Geometrybase::setVolume(double volume) {
       assert( volume>0 && "Zero geometry volume not allowed!");
       _setVolume( volume );
       assert( std::abs( (volume-getVolume())/volume )<1e-9 && "setVolume() and/or getVolume() seem broken!" );
     }
 
+    /*! \note Do not overload! */
     double Geometrybase::getVolume() const {
       return _getVolume();
     }
@@ -68,19 +72,16 @@ namespace Faunus {
       return false;
     }
 
-    //
-    //--- Sphere geometry ---
-    //
-    //
     Sphere::Sphere(double radius) {
       setradius(radius);
     }
 
-    Sphere::Sphere(InputMap &in)  {
-      setradius( in.get("Sphere_radius", 0.0) );
+    Sphere::Sphere(InputMap &in, string prefix)  {
+      setradius( in.get(prefix+"_radius", 0.0) );
     }
 
     void Sphere::setradius(double radius) {
+      assert(radius>0 && "Radius must be larger than zero.");
       name="Spherical";
       assert(radius>0);
       r = radius; 
@@ -285,8 +286,8 @@ namespace Faunus {
     }
 
     /*!
-     * \param length Length of the Cylinder
-     * \param radius Radius of the Cylinder
+     * \param length Length of the Cylinder (angstrom)
+     * \param radius Radius of the Cylinder (angstrom)
      */
     Cylinder::Cylinder(double length, double radius) {
       init(length, radius);
@@ -298,8 +299,7 @@ namespace Faunus {
 
     void Cylinder::init(double length, double radius) {
       name="Cylindrical";
-      assert(length>0);
-      assert(radius>0);
+      assert(length>0 && radius>0 && "Cylinder length and radius must be bigger than zero.");
       len=length;
       r=radius;
       r2=r*r;

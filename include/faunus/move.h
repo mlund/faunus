@@ -52,6 +52,7 @@ namespace Faunus {
         virtual void _rejectMove()=0;     //!< Reject move, revert to old coordinates.
         virtual double _energyChange()=0; //!< Returns energy change of trialMove
         unsigned long int cnt_accepted;   //!< number of accepted moves
+        double dusum;                     //!< Sum of all energy changes made by this move
       protected:
         Energy::Energybase* pot;         //!< Pointer to energy functions
         Space* spc;
@@ -59,7 +60,6 @@ namespace Faunus {
         string cite;                     //!< litterature reference, url, DOI etc.
         string prefix;                   //!< inputmap prefix
         char w;                          //!< info string text width
-        double dusum;                    //!< Sum of all energy changes made by this move
         //const double infty;              //!< Large value to represent infinity
         unsigned long int cnt;           //!< total number of trial moves
 
@@ -80,13 +80,17 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Translation of single particles or single particles in a group
+     * \brief Translation of atomic particles
      * \author Mikael Lund
      * \date Lund, 2011
      *
+     * This Markov move can work in two modes:
+     * \li Move a single particle
+     * \li Move single particles randomly selected in a Group.
+     *
      * To move a single particle, specify its position in the space particle vector
      * in iparticle. For randomly moving all particles in a group (typically salt),
-     * point igroup to the appropriate group in the space class g vector.
+     * point igroup to the appropriate Group in the space class g vector.
      */
     class ParticleTranslation : public Movebase {
       private:

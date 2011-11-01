@@ -284,6 +284,9 @@ namespace Faunus {
     }
 
     double SwapMove::_energyChange() {
+      assert( spc->geo->collision(spc->p[ipart])==false && "An accepted particle collides with simulation container.");
+      if (spc->geo->collision(spc->trial[ipart]))  // trial<->container collision?
+        return pc::infty;
       return pot->i_total(spc->trial,ipart) - pot->i_total(spc->p,ipart);
     }
 

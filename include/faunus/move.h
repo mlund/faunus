@@ -181,6 +181,22 @@ namespace Faunus {
         Isobaric(InputMap&, Energy::Hamiltonian&, Space&, string="npt");
     };
 
+    class SaltBath : public Movebase {
+      private:
+        struct iondata {
+          Group *g;
+          double z;          //!< Valency
+        };
+        std::map<short,iondata> anions, cations; //!< List of GC ion id's and their absolute valence
+        void _trialMove() {};
+        void _acceptMove() {};
+        void _rejectMove() {};
+        double _energyChange();
+      public:
+        SaltBath(InputMap&, Energy::Hamiltonian&, Space&, string="saltbath");
+        void add(short, const Group&); // search for salt
+    };
+
   }//namespace
 }//namespace
 #endif

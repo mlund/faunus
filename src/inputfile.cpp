@@ -9,31 +9,6 @@ namespace Faunus {
     include(filename);
   }
 
-  /*
-  bool InputMap::include(string filename) {
-    const short maxline=256;
-    char cstr[maxline];
-    string key,val;
-    std::ifstream f( filename.c_str() );
-    if (f) {
-      while (!f.eof()) {
-        f.getline(cstr,maxline);
-        std::istringstream i(cstr);
-        i >> key >> val;
-        if (!key.empty() && !val.empty() )
-          if (key.find("#")==string::npos) {
-            if (val=="yes") val="1";
-            if (val=="no") val="0";
-            map[key]=val;
-          }
-      }
-      incfiles.push_back(filename);
-      return true;
-    }
-    return false;
-  }
-  */
-
   bool InputMap::include(string filename) {
     string line,key,val;
     std::ifstream f( filename.c_str() );
@@ -84,11 +59,15 @@ namespace Faunus {
     return false;
   }
 
-  UnitTest::UnitTest(string testfile, bool state) : stable(state), cnt(0), InputMap(testfile) {
+  UnitTest::UnitTest(string testfile, bool state) : InputMap(testfile) {
+    cnt=0;
+    stable=state;
     file=testfile;
   }
 
-  UnitTest::UnitTest(InputMap &in) : cnt(0), file(in.get<string>("test_file","")), InputMap(in.get<string>("test_file","")) {
+  UnitTest::UnitTest(InputMap &in) : InputMap(in.get<string>("test_file","")) {
+    cnt=0;
+    file=in.get<string>("test_file","");
     stable=in.get<bool>("test_stable", true);
   }
 

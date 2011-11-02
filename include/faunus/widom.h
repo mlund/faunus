@@ -25,8 +25,8 @@ namespace Faunus {
       private:
         virtual string _info()=0; //!< info all classes must provide
       protected:
-        unsigned long int cnt;//!< number of samples - increased for every run()==true.
         char w;               //!< width of info
+        unsigned long int cnt;//!< number of samples - increased for every run()==true.
         string name;          //!< descriptive name
         string cite;          //!< reference, url, doi etc. describing the analysis
         bool run();           //!< true if we should run, false of not (based on runfraction)

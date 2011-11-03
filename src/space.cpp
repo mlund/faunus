@@ -127,6 +127,7 @@ namespace Faunus {
   }
 
   bool Space::remove(int i) {
+    assert( !p.empty() && i<(int)p.size() && "Tried to delete non-existing particle or particle vector empty!" );
     if (i>=(int)p.size())
       return false;
     p.erase( p.begin()+i );

@@ -2,7 +2,7 @@
 
 using namespace Faunus;
 
-typedef Geometry::Cuboid Tgeometry;    // select simulation geometry
+typedef Geometry::Sphere Tgeometry;    // select simulation geometry
 typedef Potential::CoulombSR<Tgeometry, Potential::Coulomb, Potential::HardSphere> Tpairpot;
 
 int main() {
@@ -42,7 +42,7 @@ int main() {
     aam.load(polyfile);
     g = spc.insert( aam.p );               // insert into space
     std::ostringstream o;
-    o << "Polymer" << i++;
+    o << "Polymer" ; //<< i++;
     g.name=o.str();
     spc.enroll(g);
     for (int i=g.beg; i<g.end; i++)
@@ -92,8 +92,8 @@ int main() {
           sys+=iso.move();
           break;
       }
-      if ( slp_global.runtest(0.01) ) // 1% chance
-        xtc.save("traj.xtc", spc);
+      //if ( slp_global.runtest(0.01) ) // 1% chance
+      //  xtc.save("traj.xtc", spc);
 
     } // end of micro loop
 

@@ -22,8 +22,9 @@ namespace Faunus {
       vector<Move::Movebase*> moves;    //!< pointers to move functions
 
     public:
-      enum type {GROUP,ATOMIC,MOLECULAR,CIGAR,HYPER};
-      enum prop {PVEC, TRIALVEC, RECALC};
+      enum type {GROUP,ATOMIC,MOLECULAR,CIGAR,RIGID,ISOBARIC};
+      std::set<type> property;
+      //enum prop {PVEC, TRIALVEC, RECALC};
       type id;
       Group(int=-1, int=-1);
       string info();

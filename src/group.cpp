@@ -182,6 +182,7 @@ namespace Faunus {
 
   GroupAtomic::GroupAtomic() {
     id=ATOMIC;
+    property.insert(ATOMIC);
   }
 
   GroupAtomic::GroupAtomic(Space &spc, InputMap &in) {
@@ -223,6 +224,7 @@ namespace Faunus {
    * -----------------------------------*/
   GroupMolecular::GroupMolecular() {
     id=MOLECULAR;
+    property.insert(MOLECULAR);
   }
 
   std::ostream& GroupMolecular::write(std::ostream &o) const {

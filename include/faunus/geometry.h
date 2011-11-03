@@ -82,6 +82,7 @@ namespace Faunus {
           return dx*dx + dy*dy + dz*dz;
         }
         Point vdist(const Point&, const Point&);
+        void scale(Point&, const double&) const;
     };
 
     //---------------------------------------------------------
@@ -152,7 +153,7 @@ namespace Faunus {
           if (std::abs(a.z)>len_half.z) a.z-=len.z*anint(a.z*len_inv.z);
         }
 
-        virtual void scale(Point&, const double&) const;
+        void scale(Point&, const double&) const;
     };
 
     /*!

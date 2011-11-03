@@ -100,7 +100,7 @@ namespace Faunus {
     unsigned long k;
     do { k = std::rand() / divisor; } while (k >= n);
     return *std::advance(begin, k);
-  };
+  }
 
 #if defined(MERSENNETWISTER)
   typedef Faunus::RandomTwister slump;

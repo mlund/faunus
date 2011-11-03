@@ -181,28 +181,27 @@ namespace Faunus {
         Isobaric(InputMap&, Energy::Hamiltonian&, Space&, string="npt");
     };
 
-    class SaltBath : public Movebase {
+    class bath : public Movebase {
       private:
-	bool insert;                     //!< True if we are doing an insert move. False otherwise.
-	vector<short> anions,cations;    //!< Ids of the GC cations and anions
-	vector<int> trial_del;           //!< Salt particle index to delete
-	p_vec trial_ins;                 //!< Salt particle to insert
+        bool action;
         struct iondata {
-	  int random();
-          int first, last;               //!< Position in salt group
-          unsigned short z;              //!< Absolute valency, |z|.
+          vector<int> pos;  // positions in particle vector
+          unsigned short z; // absolute charge number, |z|
         };
-	void insertTrial();              //!< fill trial vector with new salt pair
-	void deleteTrial();
-	Group* salt;                     //!< pointer to Group containing salt
-        std::map<short,iondata> data;    //!< List of GC ion id's and their absolute valence
+        std::map<short, iondata> cations, anions;
+        void remove(int);       //!< Remove particle from ion lists and from Space
+        void insert();          //!< Insert trial vector into Space
+
+	p_vec trial_ins;        //!< Salt particle to be inserted
+        vector<int> trial_del;  //!< Particle index to deleted
+ 
         void _trialMove();
-        void _acceptMove() {};
-        void _rejectMove() {};
+        void _acceptMove();
+        void _rejectMove() {}
         double _energyChange();
       public:
-        SaltBath(InputMap&, Energy::Hamiltonian&, Space&, string="saltbath");
-        void add(short, const Group&); // search for salt
+        bath(InputMap&, Energy::Hamiltonian&, Space&, string="saltbath");
+        void add(Group&);
     };
 
   }//namespace

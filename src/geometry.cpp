@@ -97,6 +97,13 @@ namespace Faunus {
       setradius( pow( 3*vol/(4*pc::pi), 1/3.) );
     }
 
+    void Sphere::scale(Point &a, const double &newvolume) const {
+      assert( getVolume()>0 );
+      assert( newvolume>0 );
+      double newradius = pow( 3*newvolume/(4*pc::pi), 1/3.);
+      a = a * (newradius/r);
+    }
+
     string Sphere::_info(char w) {
       std::ostringstream o;
       o << pad(SUB,w,"Radius") << r << textio::_angstrom << endl;

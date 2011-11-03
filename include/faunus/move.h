@@ -183,12 +183,20 @@ namespace Faunus {
 
     class SaltBath : public Movebase {
       private:
+	bool insert;                     //!< True if we are doing an insert move. False otherwise.
+	vector<short> anions,cations;    //!< Ids of the GC cations and anions
+	vector<int> trial_del;           //!< Salt particle index to delete
+	p_vec trial_ins;                 //!< Salt particle to insert
         struct iondata {
-          Group *g;
-          double z;          //!< Valency
+	  int random();
+          int first, last;               //!< Position in salt group
+          unsigned short z;              //!< Absolute valency, |z|.
         };
-        std::map<short,iondata> anions, cations; //!< List of GC ion id's and their absolute valence
-        void _trialMove() {};
+	void insertTrial();              //!< fill trial vector with new salt pair
+	void deleteTrial();
+	Group* salt;                     //!< pointer to Group containing salt
+        std::map<short,iondata> data;    //!< List of GC ion id's and their absolute valence
+        void _trialMove();
         void _acceptMove() {};
         void _rejectMove() {};
         double _energyChange();

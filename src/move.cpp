@@ -393,6 +393,89 @@ namespace Faunus {
       unew = _energy(spc->trial);
       return unew-uold;
     }
+    
+    int SaltBath::iondata::random() {
+      return first + slp_global.rand() % (last-first+1);
+    }
+    
+    /*!
+     * \todo Implement check to see if range is continuous
+     */
+    void SaltBath::add(short id, const Group& g) {
+      std::set<int> range;
+      double charge = atom[id].charge;
+      if ( (int)std::abs(charge)==0 )    // neutral particles not allowed
+	return;
+      for (int i=g.beg; i<=g.end; i++)
+	if (spc->p[i].id==id)
+	  range.insert(i);
+	
+      data[id].first=*range.begin();
+      data[id].last=*(range.end()--);
+      data[id].z=(int)std::abs(charge);
+      
+      if (charge>0) cations.push_back(id);
+      if (charge<0) anions.push_back(id);
+    }
+    
+    void SaltBath::insertTrial() {
+      insert=true;
+      trial_ins.clear();
+      particle pa, pb;
+      std::random_shuffle( cations.begin(), cations.end());
+      std::random_shuffle( anions.begin(), anions.end());
+      short ida = *cations.begin(); // random cation id
+      short idb = *anions.begin();  // random anion id
+      unsigned short Na = data[idb].z;
+      unsigned short Nb = data[ida].z;
+      pa = atom[ida];
+      pb = atom[idb];
+      do { trial_ins.push_back(pa); } while (Na-->0);
+      do { trial_ins.push_back(pb); } while (Nb-->0);
+      for (auto &p : trial_ins)
+	spc->geo->randompos(p);
+    }
+
+    void SaltBath::deleteTrial() {
+      insert=false;
+      trial_del.clear();
+      std::random_shuffle( cations.begin(), cations.end());
+      std::random_shuffle( anions.begin(), anions.end());
+      short ida = *cations.begin(); // random cation id
+      short idb = *anions.begin();  // random anion id
+      unsigned short Na = data[idb].z;
+      unsigned short Nb = data[ida].z;
+      do { trial_del.push_back( data[ida].random() ); } while (Na-->0);
+      do { trial_del.push_back( data[idb].random() ); } while (Nb-->0);
+    }
+    
+    void SaltBath::_trialMove() {
+      assert( !cations.empty() && !anions.empty() && "Cations and anions for generating salt are not specified.");
+      if (slp_global.randOne()>0.5)
+	deleteTrial();
+      else
+	insertTrial();
+    }
+    
+    double SaltBath::_energyChange() {
+      double u=0;
+      if (insert) {
+	u+=pot->v2v(spc->p, trial_ins);
+	for (auto i=trial_ins.begin(); i!=trial_ins.end()-1; i++)
+	  for (auto j=i+1; j!=trial_ins.end(); j++)
+	    u+=pot->p2p(*i,*j);
+	for (auto i=trial_ins.begin(); i!=trial_ins.end(); i++)
+	  u+=pot->p_external(*i);
+      }
+      else {
+	for (auto i=trial_del.begin(); i!=trial_del.end(); i++)
+	  u+=pot->i_total(spc->p, *i);
+        for (auto i=trial_del.begin(); i!=trial_del.end()-1; i++)
+	  for (auto j=i+1; j!=trial_del.end(); j++)
+	    u-=pot->i2i(spc->p, *i, *j);
+      }
+      return u;
+    }
 
   }//namespace
 }//namespace

@@ -121,7 +121,6 @@ int main() {
 
   Energy::Hamiltonian pot;
   auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot>(mcp) );
-  auto bonded    = pot.create( Energy::Bonded() );
   Space spc( pot.getGeometry() );
 
   // Handle particles
@@ -130,31 +129,17 @@ int main() {
   Move::ParticleTranslation mv(mcp, pot, spc);  // Particle move class
   mv.setGroup(salt);
 
-  GroupMolecular test;
-  test.beg=spc.p.size();
-  spc.insert("Na", 2);
-  test.end=spc.p.size()-1;
-  test.name="Test";
-  spc.p[test.beg].x=0;
-  spc.p[test.beg].y=0;
-  spc.p[test.beg].z=0;
-  spc.p[test.end].x=2;
-  spc.p[test.end].y=2;
-  spc.p[test.end].z=2;
-  spc.trial=spc.p;
-  spc.enroll(test);
-
   spc.load("space.state");
   salt.setMassCenter(spc);
-  test.setMassCenter(spc);
 
-  //bonded->bonds.add(0,1, Potential::Harmonic(0.2, 10.0));
-  //bonded->bonds.add(1,2, Potential::Harmonic(0.3,  5.0));
+  Move::bath gc(mcp,pot,spc);
+  atom["Mg"].activity = 0.05;
+  atom["Na"].activity = 0.1;
+  atom["Cl"].activity = 0.1;
+  gc.add(salt);
 
   // Particle titration
-  Move::SwapMove tit(mcp,pot,spc);
-  Move::Isobaric iso(mcp,pot,spc);
-  Move::RotateGroup gmv(mcp,pot,spc);
+  //Move::SwapMove tit(mcp,pot,spc);
 
   // Widom particle insertion
   Analysis::Widom widom(spc, pot);
@@ -164,9 +149,8 @@ int main() {
   //Group protein1 = fasta.insert( "AAK", spc, bonded->bonds );
 
 #define UTOTAL \
-  pot.g_external(spc.p, test)\
   + pot.g_internal(spc.p, salt)  + pot.g_external(spc.p, salt)\
-  + pot.g2g(spc.p,salt,test) + pot.external()
+  + pot.external()
 
   //#define UTOTAL pot.g_internal(spc.p, salt)  + pot.g_external(spc.p, salt) + pot.external()
 
@@ -177,13 +161,11 @@ int main() {
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      sys+=mv.move();
-      if (slp_global.randOne()>0.9)
-        widom.sample();
-      sys+=tit.move();
-      gmv.setGroup(test);
-      sys+=gmv.move();
-      sys+=iso.move();
+      //sys+=mv.move();
+      sys+=gc.move();
+      //if (slp_global.randOne()>0.9)
+      //  widom.sample();
+      //sys+=tit.move();
     }
     sys.checkDrift( UTOTAL );
     cout << loop.timing();
@@ -192,6 +174,5 @@ int main() {
   pqr.save("confout.pqr", spc.p);
   spc.save("space.state");
 
-  cout << mv.info() << sys.info() << loop.info() << widom.info()
-    << tit.info() << gmv.info() << iso.info();
+  cout << mv.info() << sys.info() << loop.info() << widom.info();
 }

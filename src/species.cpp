@@ -11,7 +11,7 @@ namespace Faunus {
     radius=0;
     mw=0.1;
     charge=0;
-    chempot=0;
+    activity=0;
     dp=0;
     mean=0;
     variance=0;

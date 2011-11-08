@@ -15,7 +15,7 @@ namespace Faunus {
              radius,     //!< Radius
              mw,         //!< Weight
              charge,     //!< Charge
-             chempot,    //!< Chemical potential
+             activity,   //!< Chemical activity "(mol/l)"
              dp,         //!< Displacement parameter
              mean,       //!< Mean value... (charge, sasa, etc.)
              variance;   //!< ...and the spread around it.
@@ -32,10 +32,10 @@ namespace Faunus {
    * Example:\n
    * \code
    * atoms atom;
-   * atom.load("atoms.dat");          // load parameters
-   * double s=atom["Na"].sigma;       // get LJ sigma for sodium
-   * particle p = atom["Cl"];         // Copy properties to particle
-   * std::cout << atom[p.id].chempot; // Get property via particle id
+   * atom.load("atoms.dat");           // load parameters
+   * double s=atom["Na"].sigma;        // get LJ sigma for sodium
+   * particle p = atom["Cl"];          // Copy properties to particle
+   * std::cout << atom[p.id].activity; // Get property via particle id
    * \endcode
    */
   class AtomTypes {

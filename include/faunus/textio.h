@@ -12,6 +12,7 @@ namespace Faunus {
     const string cubed="\u00b3";
     const string degrees="\u00b0";
     const string epsilon="\u03f5";
+    const string gamma="\u0263";
     const string kT=" kT";
     const string percent="\ufe6a";
     const string pm="\u00b1";

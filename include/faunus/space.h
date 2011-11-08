@@ -38,7 +38,7 @@ namespace Faunus {
       virtual bool load(string, bool=false);          //!< Load container state from disk
 
       GroupMolecular insert(const p_vec&, int=-1);
-      bool insert(particle, int=-1);                  //!< Insert particle at pos n.
+      bool insert(const particle&, int=-1);           //!< Insert particle at pos n.
       bool insert(string, int, spacekeys=NOOVERLAP); 
       bool remove(int);                               //!< Remove particle n.
       int enroll(Group&);                             //!< Add group pointer to g vector

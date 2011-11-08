@@ -242,6 +242,13 @@ namespace Faunus {
             return pair.tokT()*u;
           }
 
+          double v2v(const p_vec &p1, const p_vec &p2) {
+            double u=0;
+            for (auto &i : p1)
+              for (auto &j : p2)
+                u+=p2p(i,j);
+            return u;
+          }
       };
 
     template<class Tpotential>

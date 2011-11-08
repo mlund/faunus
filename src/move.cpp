@@ -398,23 +398,49 @@ namespace Faunus {
       return unew-uold;
     }
 
+    bath::bath(InputMap &in, Energy::Hamiltonian &e, Space &s, string pfx) : Movebase(e,s,pfx) {
+      title="Grand Canonical Salt";
+      w=30;
+      runfraction = in.get(prefix+"_runfraction",1.0);
+    }
+
     void bath::add(Group &g) {
+      if (g.property.find(Group::ATOMIC)==g.property.end() ) {
+        assert( !"Salt group must be atomic" );
+        return;
+      }
       iondata d;
+      g.property.insert(Group::GRANDCANONICAL);  // mark given group as grand canonical
       for (auto &a : atom.list)
-        if (a.chempot!=0) {
+        if (a.activity!=0) {
           d.pos.clear();
+          d.p=a;
+          d.chempot=log(a.activity*pc::Nav*1e-27); // mol/l -> log(1/A^3)
           for (int i=g.beg; i<=g.end; i++)
             if (spc->p[i].id==a.id)
               d.pos.push_back(i);
           if (!d.pos.empty()) {
             d.z=(unsigned short)std::abs(a.charge);
-            if (a.charge>0)
-              cations[a.id]=d;
-            if (a.charge<0)
-              anions[a.id]=d;
+            if (a.charge>0) cations[a.id]=d;
+            if (a.charge<0) anions[a.id]=d;
           }
         }
       assert(!cations.empty() && !anions.empty() && "No GC ions found!");
+    }
+
+    bool bath::sanityCheck() {
+      int cnt=0;
+      for (auto &m : cations) {
+        cnt+=m.second.pos.size();
+        for (auto i : m.second.pos)
+          if (m.second.p.id != spc->p[i].id) return false;
+      }
+      for (auto &m : anions) {
+        cnt+=m.second.pos.size();
+        for (auto i : m.second.pos)
+          if (m.second.p.id != spc->p[i].id) return false;
+      }
+      return true;
     }
 
     /*!
@@ -423,15 +449,18 @@ namespace Faunus {
      * are larger than j.
      */
     void bath::remove(int j) {
+      assert( sanityCheck()  );
       for (auto &m : cations) {
-        if ( std::find(m.second.pos.begin(), m.second.pos.end(), j) != m.second.pos.end() )
-            m.second.pos.erase( m.second.pos.begin()+j );
+        auto del = std::find(m.second.pos.begin(), m.second.pos.end(), j);
+        if ( del != m.second.pos.end() )
+          m.second.pos.erase(del);
         for (auto &i : m.second.pos)
           if (i>j) i--;
       }
       for (auto &m : anions) {
-        if ( std::find(m.second.pos.begin(), m.second.pos.end(), j) != m.second.pos.end() )
-            m.second.pos.erase( m.second.pos.begin()+j );
+        auto del = std::find(m.second.pos.begin(), m.second.pos.end(), j);
+        if ( del != m.second.pos.end() )
+          m.second.pos.erase(del);
         for (auto &i : m.second.pos)
           if (i>j) i--;
       }
@@ -439,66 +468,138 @@ namespace Faunus {
     }
 
     /*!
-     * Insert trial vector of particles into Space and add their new index to
+     * Insert trial vector of particles into *end* of Space and add their new index to
      * the ion lists.
      */
-    void bath::insert() {
-      assert( !trial_ins.empty() && "Cannot insert empty salt pair!");
-      int cnt=spc->p.size();
-      for (auto &t : trial_ins) {
-        spc->insert(t);
-        if (t.charge>0) cations[t.id].pos.push_back(cnt++);
-        if (t.charge<0) anions[t.id].pos.push_back(cnt++);
+    void bath::insert(const p_vec &tvec) {
+      assert( !tvec.empty() && "Cannot insert empty salt pair!");
+      int cnt=spc->p.size(); // = index of first inserted particle
+      for (auto &p : tvec) {
+        spc->insert(p,-1);
+        if (p.charge>0) cations[p.id].pos.push_back(cnt++);
+        if (p.charge<0) anions[p.id].pos.push_back(cnt++);
       }
+    }
+
+    bath::iondata* bath::randomIon(Tmap &map) {
+      vector<short> keys;
+      keys.reserve( cations.size() );
+      for (auto &m : map)
+        keys.push_back(m.first);
+      std::random_shuffle( keys.begin(), keys.end() );
+      return &map[ keys.front() ];
     }
 
     void bath::_trialMove() {
-      trial_ins.clear();
-      trial_del.clear();
-      particle pa, pb;
-      short ida; //pick by random
-      short idb; 
-      short Na=cations[ida].z;
-      short Nb=anions[idb].z;
-      std::random_shuffle( cations[ida].pos.begin(), cations[ida].pos.end());
-      std::random_shuffle( anions[idb].pos.begin(), anions[idb].pos.end());
-      pa=atom[ida];
-      pb=atom[idb];
-
-      //insert -- fill trial vector
-      do { trial_ins.push_back(pa); } while (Na-->0);
-      do { trial_ins.push_back(pb); } while (Nb-->0);
-      for (auto &p : trial_ins)
-        spc->geo->randompos(p);
+      iona = randomIon(cations);
+      ionb = randomIon(anions);
+      short Na=ionb->z; // set stoichiometry
+      short Nb=iona->z; // -//-
+      std::random_shuffle( iona->pos.begin(), iona->pos.end()); // randomize 
+      std::random_shuffle( ionb->pos.begin(), ionb->pos.end()); // ion lists
+      switch ( rand() % 2) {
+        case 0: //create salt to insert
+          insertbool=true;
+          trial_ins.clear();
+          do { trial_ins.push_back( iona->p ); } while (--Na>0);
+          do { trial_ins.push_back( ionb->p ); } while (--Nb>0);
+          for (auto &p : trial_ins)
+            spc->geo->randompos(p);
+          assert( trial_ins.front().charge*trial_ins.back().charge<0 && "Check for opposite charges");
+          break;
+        case 1: //select salt to remove
+          insertbool=false;
+          trial_del.clear();
+          for (auto i=iona->pos.rbegin(); i!=iona->pos.rbegin()+Na; i++)
+            trial_del.push_back(*i);
+          for (auto i=ionb->pos.rbegin(); i!=ionb->pos.rbegin()+Nb; i++)
+            trial_del.push_back(*i);
+#ifndef NDEBUG
+          for (auto &i : trial_del)
+            assert(i<(int)spc->p.size() && "Salt pair to delete is outside range!");
+          assert( (short)trial_del.size()==Na+Nb );
+#endif
+          break;
+      }
     }
 
     void bath::_acceptMove() {
-      // if insertion
-      insert();
+      if (insertbool) {
+        insert(trial_ins);
+        flux+=1;
+      }
+      else {
+        std::sort(trial_del.rbegin(), trial_del.rend()); // reverse sort so that we delete from end
+        for (auto i : trial_del) {
+          remove(i);
+        }
+        flux+=-1;
+      }
+      iona->rho += iona->pos.size() / spc->geo->getVolume();
+      ionb->rho += ionb->pos.size() / spc->geo->getVolume();
+      assert( sanityCheck() );
+      assert( spc->p.size() == spc->trial.size() );
+    }
 
-      // if delete
-      for (auto i : trial_del)
-        remove(i);
+    void bath::_rejectMove() {
+      iona->rho += iona->pos.size() / spc->geo->getVolume();
+      ionb->rho += ionb->pos.size() / spc->geo->getVolume();
+      assert( sanityCheck() );
     }
 
     double bath::_energyChange() {
-      double u=0;
-      if (action) {
-        u+=pot->v2v(spc->p, trial_ins);
+      int Na=0, Nb=0; // number of added or deleted ions
+      double uold=0, unew=0, V=spc->geo->getVolume();
+      if (insertbool==true) {
+        for (auto &t : trial_ins)     // count added ions
+          if (t.id==iona->p.id) Na++;
+          else Nb++;
+        unew = -log( V/(Na+iona->pos.size()) ) - log( V/(Nb+ionb->pos.size()) )
+          - Na*iona->chempot - Nb*ionb->chempot
+          + 0;//pot->v2v(spc->p, trial_ins);
         for (auto i=trial_ins.begin(); i!=trial_ins.end()-1; i++)
           for (auto j=i+1; j!=trial_ins.end(); j++)
-            u+=pot->p2p(*i,*j);
+            unew+=pot->p2p(*i,*j);
         for (auto i=trial_ins.begin(); i!=trial_ins.end(); i++)
-          u+=pot->p_external(*i);
+          unew+=pot->p_external(*i);
       }
       else {
-        for (auto i=trial_del.begin(); i!=trial_del.end(); i++)
-          u+=pot->i_total(spc->p, *i);
+        for (auto i : trial_del)
+          if (spc->p[i].id==iona->p.id) Na++; // cations deleted
+          else Nb++;                  // anions deleted
+        unew = log( V/iona->pos.size() ) + log( V/ionb->pos.size() )
+          + Na*iona->chempot + Nb*ionb->chempot;
+        for (auto &i : trial_del)
+          uold+=pot->i_total(spc->p, i);
         for (auto i=trial_del.begin(); i!=trial_del.end()-1; i++)
           for (auto j=i+1; j!=trial_del.end(); j++)
-            u-=pot->i2i(spc->p, *i, *j);
+            uold-=pot->i2i(spc->p, *i, *j);
       }
-      return u;
+      //cout << unew-uold << endl;
+      return unew-uold;
+      //cout << unew-uold << " " << spc->p.size() << endl;
+    }
+
+    string bath::_info() {
+      char s=10;
+      using namespace textio;
+      std::ostringstream o;
+      o << pad(SUB,w,"Number of GC species") << cations.size() + anions.size()
+        << endl << endl;
+      o << setw(4) << "" << std::left << setw(s) << "Ion" << setw(s)
+        << "activity" << setw(s+4) << bracket("c/M") << setw(s) << textio::gamma << endl;
+      vector<Tmap*> ions(2);
+      ions[0]=&cations;
+      ions[1]=&anions;
+      for (auto i : ions)
+        for (auto m : *i) {
+          short id=m.first;
+          o << setw(4) << "" << setw(s) << atom[id].name
+            << setw(s) << atom[id].activity << setw(s) << m.second.rho.avg()/pc::Nav/1e-27
+            << setw(s) << atom[id].activity / (m.second.rho.avg()/pc::Nav/1e-27)
+            << endl;
+        }
+      return o.str();
     }
 
   }//namespace

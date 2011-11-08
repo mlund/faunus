@@ -1,6 +1,6 @@
 processfile eq.process
 
-cuboid_len    50
+cuboid_len    150
 Sphere_radius 100
 
 temperature 298.15
@@ -8,15 +8,23 @@ epsilon_r   79
 lj_eps      0.05
 
 loop_macrosteps 10
-loop_microsteps 1000
+loop_microsteps 100
 
-tion1  Na
-nion1  20
+tion1  Mg
+nion1  50
 dpion1 110
 
 tion2  Cl
-nion2  20
+nion2  100
 dpion2 110
+
+#tion3  F
+#nion3  10
+#dpion2 110
+
+#tion4  Na
+#nion4  10
+#dpion4 110
 
 transrot_transdp  100
 transrot_rotdp    5

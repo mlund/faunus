@@ -187,6 +187,7 @@ namespace Faunus {
 
   GroupAtomic::GroupAtomic(Space &spc, InputMap &in) {
     id=ATOMIC;
+    property.insert(ATOMIC);
     add(spc,in);
   }
 

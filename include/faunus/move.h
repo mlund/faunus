@@ -183,22 +183,35 @@ namespace Faunus {
 
     class bath : public Movebase {
       private:
-        bool action;
+        bool sanityCheck();
+        unsigned long int cnt_insert;
+        unsigned long int cnt_remove;
+        Average<double> flux;
+        bool insertbool;
         struct iondata {
-          vector<int> pos;  // positions in particle vector
-          unsigned short z; // absolute charge number, |z|
+          double chempot;     // chemical potential (1/A^3)
+          particle p;         // particle type
+          vector<int> pos;    // positions in particle vector
+          Average<double> rho;// Average concentration (1/A^3)
+          unsigned short z;   // absolute charge number, |z|
         };
-        std::map<short, iondata> cations, anions;
+        iondata* iona;      // pointer to current cation data
+        iondata* ionb;      // pointer to current anion data
+        typedef std::map<short, iondata> Tmap;
+        Tmap cations;
+        Tmap anions;
+        iondata* randomIon(Tmap&);
         void remove(int);       //!< Remove particle from ion lists and from Space
-        void insert();          //!< Insert trial vector into Space
+        void insert(const p_vec&); //!< Insert trial vector into Space
 
 	p_vec trial_ins;        //!< Salt particle to be inserted
         vector<int> trial_del;  //!< Particle index to deleted
  
         void _trialMove();
         void _acceptMove();
-        void _rejectMove() {}
+        void _rejectMove();
         double _energyChange();
+        string _info();
       public:
         bath(InputMap&, Energy::Hamiltonian&, Space&, string="saltbath");
         void add(Group&);

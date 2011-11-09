@@ -1,5 +1,5 @@
 loop_macrosteps        10
-loop_microsteps        100000
+loop_microsteps        1000
 cuboid_len             200      # Box side length Angstrom
 Sphere_radius          80
                       
@@ -12,7 +12,7 @@ npt_dV                 2       # log(dV)
                       
 # Polymers            
 polymer_N              8
-polymer_file           tetramer.aam
+polymer_file           monomer.aam
 polymer_eqdist         0
 polymer_forceconst     0.0557     # kT/A^2
                       

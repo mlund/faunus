@@ -47,22 +47,28 @@ namespace Faunus {
     double Movebase::energyChange() {
       return _energyChange();
     }
-   
-    /*! \note Please try not to overload */
-    double Movebase::move() {
+  
+    /*!
+     * \param n Perform move \c n times
+     */
+    double Movebase::move(int n) {
       if (!run())
         return 0;
-      trialMove();
-      double du=energyChange();
-      if ( !metropolis(du) ) {
-        rejectMove();
-        du=0;
+      double utot=0;
+      while (n-->0) {
+        trialMove();
+        double du=energyChange();
+        if ( !metropolis(du) ) {
+          rejectMove();
+          du=0;
+        }
+        else {
+          acceptMove();
+          dusum+=du;
+          utot+=du;
+        }
       }
-      else {
-        acceptMove();
-        dusum+=du;
-      }
-      return du;
+      return utot;
     }
 
     bool Movebase::metropolis(const double &du) const {
@@ -129,6 +135,8 @@ namespace Faunus {
         iparticle=igroup->random();
       if (iparticle>-1) {
         double dp = atom[ spc->p[iparticle].id ].dp;
+        assert(iparticle<(int)spc->p.size() && "Trial particle out of range");
+        assert(dp>1e-9 && "Atomic displacement parameter seems to be zero");
         spc->trial[iparticle].x += dir.x * dp * slp_global.randHalf();
         spc->trial[iparticle].y += dir.y * dp * slp_global.randHalf();
         spc->trial[iparticle].z += dir.z * dp * slp_global.randHalf();
@@ -159,21 +167,6 @@ namespace Faunus {
         //pot->i2all(spc->trial, iparticle) - pot->i2all(spc->p, iparticle);
       }
       return 0;
-    }
-
-    double ParticleTranslation::move() {
-      if (!run())
-        return 0;
-      if (igroup!=nullptr) {
-        double du=0;
-        for (int i=0; i<igroup->size(); i++) {
-          iparticle = igroup->random(); // set random particle for trialmove()
-          if ( atom[spc->p[iparticle].id].dp > 1e-5 )
-            du+=Movebase::move();
-        }
-        iparticle=-1;
-        return du;
-      } else return Movebase::move();
     }
 
     string ParticleTranslation::_info() {
@@ -394,7 +387,7 @@ namespace Faunus {
         for (int i=g->beg; i<=g->end; i++)
           if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
-       unew = _energy(spc->trial);
+      unew = _energy(spc->trial);
       return unew-uold;
     }
 

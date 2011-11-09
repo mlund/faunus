@@ -73,7 +73,7 @@ namespace Faunus {
       public:
         Movebase(Energy::Energybase&, Space&, string);             //!< Constructor
         virtual ~Movebase();
-        virtual double move();       //!< Attempt a move and return energy change
+        double move(int=1);          //!< Attempt \c n moves and return energy change
         double runfraction;          //!< Fraction of times calling move() should result in an actual move
         string info();               //!< Returns information string
         void test(UnitTest&);        //!< Perform unit test
@@ -109,7 +109,6 @@ namespace Faunus {
         ParticleTranslation(InputMap&, Energy::Energybase&, Space&, string="mv_particle");
         void setGroup(Group&); //!< Select group in which to randomly pick particles from
         void setParticle(int); //!< Select single particle in p_vec to move
-        double move();         //!< Move selected particle once or n times in selected group of length n
         Point dir;             //!< Displacement directions (default: x=y=z=1)
     };
 

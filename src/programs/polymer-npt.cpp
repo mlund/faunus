@@ -42,7 +42,7 @@ int main() {
     aam.load(polyfile);
     g = spc.insert( aam.p );               // insert into space
     std::ostringstream o;
-    o << "Polymer" ; //<< i++;
+    o << "Polymer" << i++;
     g.name=o.str();
     spc.enroll(g);
     for (int i=g.beg; i<g.end; i++)

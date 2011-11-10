@@ -91,7 +91,7 @@ namespace Faunus {
       //void update(vector<particle> &, group &, group &); //!< Update histogram vector
   };
 
-  /*!
+  /*
    * \brief Particle profile base class
    * \author Mikael Lund
    * \date Canberra, 2008
@@ -131,7 +131,8 @@ namespace Faunus {
       //void add(particle &);
   };
 
-  /*!\brief Cylindrical particle distribution
+  /*
+   * \brief Cylindrical particle distribution
    * \author Mikael Lund
    * \date Canberra, 2008
    *
@@ -147,6 +148,7 @@ namespace Faunus {
       cylindric_profile(float, unsigned char, float, float, float=.5);
       void add(particle &);
   };
+
   class radial_profile : protected xytable<float,unsigned long int>{
     protected:
       unsigned int cnt;

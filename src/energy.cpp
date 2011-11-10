@@ -7,7 +7,6 @@ namespace Faunus {
   namespace Energy {
     Energybase::Energybase() : geo(nullptr) {
       w=25;
-      name="Hamiltonian";
     }
 
     Energybase::~Energybase() {
@@ -50,8 +49,9 @@ namespace Faunus {
     string Energybase::info() {
       assert(!name.empty() && "Assign a name to energy class!");
       std::ostringstream o;
-      o << textio::header("Energy: " + name)
-        << _info();
+      if (!_info().empty())
+        o << textio::header("Energy: " + name)
+          << _info();
       return o.str();
     }
 
@@ -106,6 +106,9 @@ namespace Faunus {
       return o.str();
     }
 
+    Hamiltonian::Hamiltonian() {
+      name="Hamiltonian";
+    }
 
     /*!
      * This adds an existing Energybase child to the Hamiltonian. If the geometry of the
@@ -145,6 +148,7 @@ namespace Faunus {
       double u=0;
       for (auto b : baselist)
         u += b->p2p( p1,p2 );
+      assert(u!=0);
       return u;
     }
 
@@ -224,7 +228,14 @@ namespace Faunus {
       for (auto b : baselist)
         u += b->external();
       return u;
-     }
+    }
+
+    double Hamiltonian::v2v(const p_vec &v1, const p_vec &v2) {
+      double u=0;
+      for (auto b : baselist)
+        u += b->v2v(v1,v2);
+      return u;
+    }
 
     string Hamiltonian::_info() {
       using namespace textio;
@@ -288,6 +299,16 @@ namespace Faunus {
       }
       return u;
     }
+
+    EnergyRest::EnergyRest() {
+      usum=0;
+      name="Dummy energy (drift calc. aid)";
+    }
+    void EnergyRest::add(double du) { usum+=du; }
+    double EnergyRest::external() {
+      return usum;
+    }
+    string EnergyRest::_info(){ return ""; }
 
   }//namespace
 }//namespace

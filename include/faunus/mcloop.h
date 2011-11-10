@@ -5,11 +5,12 @@
 
 namespace Faunus {
   class _inputfile;
-  /*! \brief Estimate speed of a computational process
-   *  \author Mikael Lund
+  /*
+   * \brief Estimate speed of a computational process
+   * \author Mikael Lund
    * 
-   *  This class can be used to estimate when a computational
-   *  process will finish. The current resolution is seconds.
+   * This class can be used to estimate when a computational
+   * process will finish. The current resolution is seconds.
    */
   template<class T>
     class CountDown {

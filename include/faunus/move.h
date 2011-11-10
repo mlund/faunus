@@ -45,14 +45,21 @@ namespace Faunus {
 
     class Movebase {
       private:
-        virtual void _test(UnitTest&);    //!< Unit testing
-        virtual string _info()=0;         //!< Specific info for derived moves
-        virtual void _trialMove()=0;      //!< Do a trial move
-        virtual void _acceptMove()=0;     //!< Accept move, store new coordinates.
-        virtual void _rejectMove()=0;     //!< Reject move, revert to old coordinates.
-        virtual double _energyChange()=0; //!< Returns energy change of trialMove
-        unsigned long int cnt_accepted;   //!< number of accepted moves
-        double dusum;                     //!< Sum of all energy changes made by this move
+        unsigned long int cnt_accepted;        //!< number of accepted moves
+        double dusum;                          //!< Sum of all energy changes made by this move
+                                              
+        virtual void _test(UnitTest&);         //!< Unit testing
+        virtual string _info()=0;              //!< Specific info for derived moves
+        virtual void _trialMove()=0;           //!< Do a trial move
+        virtual void _acceptMove()=0;          //!< Accept move, store new coordinates.
+        virtual void _rejectMove()=0;          //!< Reject move, revert to old coordinates.
+        virtual double _energyChange()=0;      //!< Returns energy change of trialMove
+        virtual void trialMove() final;        //!< Do a trial move (wrapper)
+        virtual void acceptMove() final;       //!< Accept move, store new coordinates etc. (wrapper)
+        virtual void rejectMove() final;       //!< Reject move, revert to old coordinates etc. (wrapper)
+        virtual double energyChange() final;   //!< Returns energy change of trialMove (wrapper)
+        bool metropolis(const double&) const;  //!< Metropolis criteria
+
       protected:
         Energy::Energybase* pot;         //!< Pointer to energy functions
         Space* spc;
@@ -60,15 +67,8 @@ namespace Faunus {
         string cite;                     //!< litterature reference, url, DOI etc.
         string prefix;                   //!< inputmap prefix
         char w;                          //!< info string text width
-        //const double infty;              //!< Large value to represent infinity
         unsigned long int cnt;           //!< total number of trial moves
-
         bool run() const;                //!< Runfraction test
-        void trialMove();                //!< Do a trial move
-        void acceptMove();               //!< Accept move, store new coordinates etc.
-        void rejectMove();               //!< Reject move, revert to old coordinates etc.
-        double energyChange();           //!< Returns energy change of trialMove
-        bool metropolis(const double &) const; //!< Metropolis criteria
 
       public:
         Movebase(Energy::Energybase&, Space&, string);             //!< Constructor
@@ -112,6 +112,10 @@ namespace Faunus {
         Point dir;             //!< Displacement directions (default: x=y=z=1)
     };
 
+    /*!
+     * \brief Combined rotation and rotation of groups
+     * \author Mikael Lund
+     */
     class RotateGroup : public Movebase {
       private:
         void _test(UnitTest&);
@@ -142,8 +146,9 @@ namespace Faunus {
      * groups as long as these are known to Space -- see Space.enroll().
      * The constructor will automatically add an instance of Energy::ExternalPressure
      * to the Hamiltonian. The InputMap class is scanned for the following keys:
-     * \li \c npt_P (pressure)
-     * \li \c npt_dV (volume displacement parameter)
+     * \li \c npt_dV \n Volume displacement parameter
+     * \li \c npt_P \n Pressure
+     * \li \c npt_Punit \n Pressure unit: mM [default] or 1/A3
      *
      * Note that the volume displacement is done by:
      *
@@ -180,41 +185,79 @@ namespace Faunus {
         Isobaric(InputMap&, Energy::Hamiltonian&, Space&, string="npt");
     };
 
-    class bath : public Movebase {
+    /*!
+     * \brief Auxillary class for tracking atomic species
+     * \author Mikael Lund
+     * \date Malmo 2011
+     *
+     * This class keeps track of individual particle positions based on particle type (id).
+     * It contains functions to insert and erase particles while automatically moving particles
+     * above the deletion or insertion point in sync.
+     *
+     * Example:
+     * \code
+     * AtomTracker track(myspace);
+     * track.insert( myparticle );
+     * ...
+     * int i=track[ myparticle.id ].random();
+     * \endcode
+     */
+    class AtomTracker {
       private:
-        bool sanityCheck();
-        unsigned long int cnt_insert;
-        unsigned long int cnt_remove;
-        Average<double> flux;
-        bool insertbool;
-        struct iondata {
-          double chempot;     // chemical potential (1/A^3)
-          particle p;         // particle type
-          vector<int> pos;    // positions in particle vector
-          Average<double> rho;// Average concentration (1/A^3)
-          unsigned short z;   // absolute charge number, |z|
+        typedef short Tid;  // particle id type
+        typedef int Tindex; // particle index type
+        Space* spc;
+        class data {
+          public:
+            vector<Tindex> index;
+            Tindex random();   //!< Pick random particle index
         };
-        iondata* iona;      // pointer to current cation data
-        iondata* ionb;      // pointer to current anion data
-        typedef std::map<short, iondata> Tmap;
-        Tmap cations;
-        Tmap anions;
-        iondata* randomIon(Tmap&);
-        void remove(int);       //!< Remove particle from ion lists and from Space
-        void insert(const p_vec&); //!< Insert trial vector into Space
+        std::map<Tid,data> map; 
+      public:
+        AtomTracker(Space&);
+        Tid randomAtomType() const;   //!< Select a random atomtype from the list
+        bool insert(const particle&); //!< Insert particle into END OF(!) Space and track position
+        bool erase(Tindex);           //!< Delete particle from Space at specific particle index
+        data& operator[] (Tid);       //!< Access operator to atomtype data
+        void clear();
+        bool empty();
+    };
 
-	p_vec trial_ins;        //!< Salt particle to be inserted
-        vector<int> trial_del;  //!< Particle index to deleted
- 
+    /*!
+     * \brief Grand Canonical insertion of arbitrary M:X salt pairs
+     * \author Bjorn Persson and Mikael Lund
+     * \date Lund 2010-2011
+     * \todo GC salt must be at end of particle. Remedy this.
+     */
+    class gcbath : public Movebase {
+      private:
+        string _info();
         void _trialMove();
         void _acceptMove();
         void _rejectMove();
         double _energyChange();
-        string _info();
+        void add(Group&);       // add salt group and scan for ions with non-zero activities
+
+        AtomTracker tracker;
+        struct ionprop {
+          particle p;
+          double chempot;
+          Average<double> rho;
+        };
+        std::map<short,ionprop> map;
+        void randomIonPair(short&,short&);
+        p_vec trial_insert;
+        vector<int> trial_delete;
+        short ida, idb;
+
+        Energy::EnergyRest Urest;
+        double du_rest;
+        Group* saltPtr;  //!< GC ions *must* be in this group
+
       public:
-        bath(InputMap&, Energy::Hamiltonian&, Space&, string="saltbath");
-        void add(Group&);
+        gcbath(InputMap&, Energy::Hamiltonian&, Space&, Group&, string="saltbath");
     };
+
 
   }//namespace
 }//namespace

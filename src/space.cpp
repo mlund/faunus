@@ -90,8 +90,9 @@ namespace Faunus {
       trial.insert(trial.begin()+i, a);
     }
     for (auto gj : g) {
+      assert( i==gj->end+1 );
       if ( i < gj->beg ) gj->beg++;
-      if ( i <= gj->end+1 ) gj->end++;
+      if ( i <= gj->end+1 ) gj->end++; // +1 is a special case for adding to the end of p-vector
     }
     return true;
   }

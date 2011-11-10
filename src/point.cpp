@@ -86,7 +86,12 @@ namespace Faunus {
   }
 
   bool Point::operator==(const Point& p) const {
-    return (*this == p);
+    if (&p==&(*this))
+      return true;
+    if (p.x!=x) return false;
+    if (p.y!=y) return false;
+    if (p.z!=z) return false;
+    return true;
   }
 
   string Point::str() {

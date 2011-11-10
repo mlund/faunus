@@ -182,7 +182,7 @@ namespace Faunus {
           }
 
           double i2i(const p_vec &p, int i, int j) {
-            return pair.energy(p[i],p[j]);
+            return pair.tokT()*pair.energy(p[i],p[j]);
           }
 
           double i2g(const p_vec &p, Group &g, int j) {
@@ -358,9 +358,10 @@ namespace Faunus {
      * \f$\beta u = \beta pV - \ln V - N\ln V\f$.
      *
      * The two first terms are returned by external() while the last
-     * term is obtained by summing g_external() over molecular groups.
-     * If applied on an atomic group, N will be set to the number of
-     * particles in the group.
+     * term is obtained by summing g_external() over molecular
+     * and or atomic groups.
+     * If applied on an atomic group, \e N will be set to the number of
+     * atoms in the group, while for a molecular group \e N =1.
      */
     class ExternalPressure : public Energy::Energybase {
       private:
@@ -397,6 +398,7 @@ namespace Faunus {
       string _info();
       vector<Energybase*> baselist; //!< Pointer list to energy classes to be summed
       public:
+      Hamiltonian();
       void setVolume(double);       //!< Set volume of all contained energy classes
 
       //!< \brief Create and add an energy class to energy list
@@ -422,6 +424,17 @@ namespace Faunus {
       double g_external(const p_vec&, Group&);
       double g_internal(const p_vec&, Group&);
       double external();
+      double v2v(const p_vec&, const p_vec&);
+    };
+
+    class EnergyRest : public Energy::Energybase {
+      private:
+        double usum;
+      public:
+        EnergyRest();
+        void add(double du);
+        double external();
+        string _info();
     };
 
   }//Energy namespace

@@ -50,6 +50,17 @@ int main() {
   atom["F"].activity = 0.05;
   Move::gcbath gc(mcp,pot,spc,salt);
 
+  Group trams;
+  trams.beg=salt.end+1;
+  trams.end=trams.beg+2;
+  for (int i=trams.beg; i<=trams.end; i++) {
+    particle a;
+    a=atom["F"];
+    spc.geo->randompos(a);
+    spc.insert(a);
+  }
+  spc.enroll(trams);
+
   // Particle titration
   //Move::SwapMove tit(mcp,pot,spc);
 
@@ -67,11 +78,16 @@ int main() {
 
   cout << atom.info() << spc.info() << pot.info() << mv.info()
     << textio::header("MC Simulation Begins!");
+    cout << trams.beg << " " << trams.end << " " << trams.size() << endl;
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
       sys+=mv.move();
       sys+=gc.move();
+      //cout << salt << " " << salt.size() << endl;
+      //cout << trams << " " << trams.size() << endl;
+      //cout << spc.p.size()-salt.size()-trams.size() << endl << endl;
+      assert (spc.p.size()-salt.size()-trams.size()==0);
       //if (slp_global.randOne()>0.9)
       //  widom.sample();
       //sys+=tit.move();

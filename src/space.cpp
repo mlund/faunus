@@ -87,13 +87,15 @@ namespace Faunus {
       trial.push_back(a);
     } else {
       p.insert(p.begin()+i, a);
-      trial.insert(trial.begin()+i, a);
+      trial.insert(trial.begin()+i+1, a);
     }
     for (auto gj : g) {
-      assert( i==gj->end+1 );
-      if ( i < gj->beg ) gj->beg++;
-      if ( i <= gj->end+1 ) gj->end++; // +1 is a special case for adding to the end of p-vector
+      if ( i <  gj->beg ) gj->beg++;
+      if ( i <= gj->end ) gj->end++; // +1 is a special case for adding to the end of p-vector
     }
+    cout << "!=" << i << endl;
+    for (auto gj : g)
+      cout << *gj << "     " << gj->size() << endl;
     return true;
   }
 

@@ -8,7 +8,7 @@ epsilon_r   79
 lj_eps      0.05
 
 loop_macrosteps 10
-loop_microsteps 10000
+loop_microsteps 10
 
 tion1  Mg
 nion1  50

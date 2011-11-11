@@ -210,15 +210,15 @@ namespace Faunus {
         class data {
           public:
             vector<Tindex> index;
-            Tindex random();   //!< Pick random particle index
+            Tindex random();                  //!< Pick random particle index
         };
         std::map<Tid,data> map; 
       public:
         AtomTracker(Space&);
-        Tid randomAtomType() const;   //!< Select a random atomtype from the list
-        bool insert(const particle&); //!< Insert particle into END OF(!) Space and track position
-        bool erase(Tindex);           //!< Delete particle from Space at specific particle index
-        data& operator[] (Tid);       //!< Access operator to atomtype data
+        Tid randomAtomType() const;           //!< Select a random atomtype from the list
+        bool insert(const particle&, Tindex); //!< Insert particle into END OF(!) Space and track position
+        bool erase(Tindex);                   //!< Delete particle from Space at specific particle index
+        data& operator[] (Tid);               //!< Access operator to atomtype data
         void clear();
         bool empty();
     };

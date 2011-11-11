@@ -418,13 +418,9 @@ namespace Faunus {
 
     AtomTracker::data& AtomTracker::operator[](AtomTracker::Tid id) { return map[id]; }
 
-    /*!
-     * \warning Assumes Space inserts in the back of vector
-     */
-    bool AtomTracker::insert(const particle &a) {
-      spc->insert(a);
-      Tindex index=(Tindex)spc->p.size()-1; // !!!!
-      assert( a.id == spc->p[ map[a.id].index.back() ].id );
+    bool AtomTracker::insert(const particle &a, Tindex index) {
+      spc->insert(a, index);
+      assert( a.id == spc->p[ map[a.id].index.back() ].id && "Id mismatch");
       map[a.id].index.push_back(index);
       for (auto &m : map)
         for (auto &i : m.second.index)
@@ -469,12 +465,13 @@ namespace Faunus {
       }
 
     void gcbath::add(Group &g) {
-      assert(g.end==(int)spc->p.size()-1 && "Salt group must be at end of particle vector");
+      //assert(g.end==(int)spc->p.size()-1 && "Salt group must be at end of particle vector");
       if (g.property.find(Group::ATOMIC)==g.property.end() ) {
         assert( !"Salt group must be atomic" );
         return;
       }
       g.property.insert(Group::GRANDCANONICAL);  // mark given group as grand canonical
+      spc->enroll(g);
       tracker.clear();
       for (int i=g.beg; i<=g.end; i++) {
         short id=spc->p[i].id;
@@ -501,7 +498,7 @@ namespace Faunus {
       assert(ida>0 && idb>0 && "Ion pair id is zero (UNK). Is this really what you want?");
       int Na = abs(map[idb].p.charge);
       int Nb = abs(map[ida].p.charge);
-      switch ( rand() % 2) {
+      switch ( rand() % 1) {
         case 0:
           trial_insert.reserve(Na+Nb);
           do trial_insert.push_back( map[ida].p ); while (--Na>0);
@@ -529,6 +526,7 @@ namespace Faunus {
     }
 
     double gcbath::_energyChange() {
+      trial_delete.clear();
       du_rest=0;
       int Na=0, Nb=0;                     // number of added or deleted ions
       double idfactor=1;
@@ -580,7 +578,7 @@ namespace Faunus {
       if ( !trial_insert.empty() ) {
         int cnt=spc->p.size(); // = index of first inserted particle
         for (auto &p : trial_insert)
-          tracker.insert(p);
+          tracker.insert(p, saltPtr->end);
       }
       else if ( !trial_delete.empty() ) {
         std::sort(trial_delete.rbegin(), trial_delete.rend()); //reverse sort

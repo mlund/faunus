@@ -28,7 +28,7 @@ namespace Faunus {
         o << pad(SUB,w,"Reference:") << cite << endl;
       o << pad(SUB,w,"Runfraction") << runfraction*100 << percent << endl;
       if (cnt>0)
-        o << pad(SUB,w,"Number of samples") << cnt << endl
+        o << pad(SUB,w,"Number of sample events") << cnt << endl
           << _info();
       return o.str();
     }

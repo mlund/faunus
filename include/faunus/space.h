@@ -47,7 +47,7 @@ namespace Faunus {
       bool overlap(const particle&) const;            //!< Check for hardspheres overlap with particle
 
       double charge() const;                          //!< Sum all charges in particle vector
-      bool check_vector();                            //!< Check if p and trial are equal!
+      bool checkSanity();                             //!< Do a number of check to see if eveything is OK
       string info();
   };
 } //namespace

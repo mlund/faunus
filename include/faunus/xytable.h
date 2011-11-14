@@ -237,11 +237,10 @@ namespace Faunus {
           std::ofstream f(filename.c_str());
           if (f) {
             f.precision(6);
-            f << "% xytable2 dump: tablesize, xmin, xres, xmax; ydata" << endl;
-            f << y.size() << " " << xmin << " " << xres << " " << xmax() << endl;
-            for (size_t i=0; i<y.size(); i+=1) {
-              f << y[i] << endl; 
-            }
+            f << "% xytable2 dump: tablesize, xmin, xres, xmax; ydata" << endl
+              << y.size() << " " << xmin << " " << xres << " " << xmax() << endl;
+            for (auto y_i : y)
+              f << y_i << endl; 
             f.close();
             return true;
           }
@@ -264,9 +263,8 @@ namespace Faunus {
             getline(f,s);
             f >> n >> xmin >> xres;
             y.resize(n);
-            for (size_t i=0; i<y.size(); i+=1) {
-              f >> y[i];
-            }
+            for (auto y_i : y)
+              f >> y_i;
             f.close();
             return true;
           }         

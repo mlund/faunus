@@ -196,14 +196,16 @@ namespace Faunus {
     end=beg-1;
     int n=1, npart;
     do {
-      std::ostringstream nion("nion"), tion("tion"), dpion("dpion");
+      std::ostringstream nion("nion"), tion("tion"), dpion("dpion"), aion("aion");
       nion << "nion" << n;
       tion << "tion" << n;
-      dpion<< "dpion"<< n++;
+      dpion<< "dpion"<< n;
+      aion << "aion" << n++; //activity
       npart = in.get(nion.str(), 0);
       if (npart>0) {
         short id = atom[ in.get<string>(tion.str(), "UNK") ].id;
         atom[id].dp = in.get(dpion.str(), 0.);
+        atom[id].activity = in.get(aion.str(), 0.);
         spc.insert( atom[id].name, npart);
         end+=npart;
       } else break;

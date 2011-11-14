@@ -61,8 +61,6 @@ COMPILING:
 
   Options:
     -DENABLE_OPENMP=on|OFF            Enable OpenMP support
-    -DENABLE_SWIG=ON|off              Enable SWIG modules (python, ruby etc.)
-    -DENABLE_FORTRAN=on|OFF           Compile legacy fortran programs
     -DENABLE_BABEL=ON|off             Use OpenBabel for file I/O
     -DENABLE_TWISTER=on|OFF           Use Mersenne Twister for random numbers
     -DCMAKE_BUILD_TYPE=Debug|Release  Debug (default) or Release (for production) mode.
@@ -86,36 +84,9 @@ COMPILING:
     $ make clean
     $ rm CMakeCache.txt
 
-PYTHON SUPPORT:
-  Faunus classes can be accessed via Python, provided that
-  the python module is compiled (requires SWIG). Build with:
-
-  $ make _pyfaunus
-
-  Include misc/swig in PYTHONPATH and access Faunus
-  via "import pyfaunus as fau". For example:
-
-  >>> a = fau.particle()
-
-  If you have multiple python versions installed the _pyfaunus library
-  must be linked to the same python library as the interpreter. Force this
-  in the ccmake menu or use tricks as below.
-
-  - On MacOS X Non-system python frameworks may be specified the first time
-    cmake is run. For example, for MacPorts:
-
-    $ LDFLAGS=-F/opt/local/Library/Frameworks cmake .
-
-  - Alternatively, force the dynamic linker to favor a specific framework
-    directory before starting python:
-
-    $ export DYLD_LIBRARY_PATH=/opt/local/Library/Frameworks/Python.framework/Versions/2.6
-    $ ipython
-
 DIRECTORY LAYOUT:
   src          Sourcecode and examples
   include      Header files
-  legacy       Older programs. FORTRAN programs are also placed here.
   misc         Miscellaneous
   doc          Code documentation (auto generated)
   unittests    Unittesting of compiled programs (try 'make test')

@@ -23,12 +23,16 @@ namespace Faunus {
     return z;
   }
 
-  bool Space::check_vector() {
+  bool Space::checkSanity() {
     assert(p.size()==trial.size() && "Trial/P vector mismatch!");
     assert(p==trial);
     bool rc=false;
     if (p.size()==trial.size())
       for (size_t i=0; i<p.size(); i++) {
+        if ( geo->collision(p[i]) ) {
+          rc=false;
+          break;
+        }
         if (p[i].x!=trial[i].x ||
             p[i].y!=trial[i].y ||
             p[i].z!=trial[i].z ||
@@ -38,9 +42,17 @@ namespace Faunus {
           break;
         } else rc=true;
       }
+    size_t cnt=0;
+    for (auto gi : g)
+      cnt+=gi->size();
+    if (cnt!=p.size()) {
+      assert(!"Sum enrolled group sizes does not match particle vector");
+      rc=false;
+    }
+
     if (rc==false) {
-      assert(!"Particle vectors corrupted");
-      std::cerr << "# Fatal error: Particle vectors corrupted!!\n";
+      assert(!"Space sanity check failed. This is serious!");
+      std::cerr << "Space sanity check failed. This is serious!";
     }
     return rc;
   }
@@ -87,15 +99,15 @@ namespace Faunus {
       trial.push_back(a);
     } else {
       p.insert(p.begin()+i, a);
-      trial.insert(trial.begin()+i+1, a);
+      trial.insert(trial.begin()+i, a);
     }
     for (auto gj : g) {
-      if ( i <  gj->beg ) gj->beg++;
-      if ( i <= gj->end ) gj->end++; // +1 is a special case for adding to the end of p-vector
+      if ( gj->beg > i ) gj->beg++;
+      if ( gj->end >= i ) gj->end++; // +1 is a special case for adding to the end of p-vector
     }
-    cout << "!=" << i << endl;
-    for (auto gj : g)
-      cout << *gj << "     " << gj->size() << endl;
+    //cout << "!=" << i << endl;
+    //for (auto gj : g)
+    //  cout << *gj << "     " << gj->size() << endl;
     return true;
   }
 
@@ -151,17 +163,20 @@ namespace Faunus {
 
   bool Space::save(string file) {
     using std::numeric_limits;
-    std::ofstream fout( file.c_str() );
-    if (fout) {
-      fout.precision( numeric_limits<double>::digits10 + 1 );
-      fout << p.size() << endl;
-      for (auto p_i : p)
-        fout << p_i << endl;
-      fout << g.size() << endl;
-      for (auto g_i : g)
-        fout << *g_i << endl;
-      fout.close();
-      return true;
+    if (checkSanity()) {
+      std::ofstream fout( file.c_str() );
+      if (fout) {
+        fout.precision( numeric_limits<double>::digits10 + 1 );
+        fout << geo->getVolume() << endl
+          << p.size() << endl;
+        for (auto p_i : p)
+          fout << p_i << endl;
+        fout << g.size() << endl;
+        for (auto g_i : g)
+          fout << *g_i << endl;
+        fout.close();
+        return true;
+      }
     }
     return false;
   }
@@ -172,30 +187,38 @@ namespace Faunus {
    */
   bool Space::load(string file, bool resize) {
     using namespace textio;
+    double vol;
     int n;
-    fin.close();
-    fin.open( file.c_str() );
-    if (fin) {
-      fin >> n;
-      if (resize==true)
-        p.resize(n);
-      if (n == (int)p.size() ) {
-        for (int i=0; i<n; i++)
-          p[i] << fin;
-        trial=p;
-        cout << indent(SUB) << "Read " << n << " space points from " << file << endl;
-        fin >> n;
-        if (n==(int)g.size()) {
-          for (auto g_i : g) {
-            *g_i << fin;
-            g_i->setMassCenter(*this);
+    if (checkSanity()) {
+      fin.close();
+      fin.open( file.c_str() );
+      if (fin) {
+        fin >> vol >> n;
+        geo->setVolume(vol);
+        if (resize==true)
+          p.resize(n);
+        if (n == (int)p.size() ) {
+          for (int i=0; i<n; i++)
+            p[i] << fin;
+          trial=p;
+          cout << indent(SUB) << "Read " << n << " space point(s) from " << file << endl;
+          fin >> n;
+          if (n==(int)g.size()) {
+            for (auto g_i : g) {
+              *g_i << fin;
+              g_i->setMassCenter(*this);
+            }
+            cout << indent(SUB) << "Read " << n << " group(s) from " << file << endl;
+            return true;
+          } else {
+            std::cerr << indent(SUB) << "Space groups do not match." << endl;
+            return false;
           }
-          cout << indent(SUB) << "Read " << n << " groups from " << file << endl;
-          return true;
         }
+        return true;
       }
     }
-    cout << indent(SUB) << "Space data NOT read from file " << file << endl;
+    std::cerr << indent(SUB) << "Space data NOT read from file " << file << endl;
     return false;
   }
 

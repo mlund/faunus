@@ -122,5 +122,5 @@ if (CPPCHECK_EXE)
 endif()
 
 #----- Add example programs -----
-add_subdirectory(programs)
+add_subdirectory(tools)
 

@@ -65,7 +65,7 @@ if (CMAKE_BUILD_TYPE MATCHES "Debug")
   message(
     "...............................................................\n"
     "  Faunus is compiled in Debug mode to enable checks and\n"
-    "  assertions HIGHLY recommended when developing and testing\n"
+    "  assertions highly recommended when developing and testing.\n"
     "  For production, switch to Release for optimal performance:\n\n"
     "  -DCMAKE_BUILD_TYPE=Release\n"
     "***************************************************************\n")
@@ -79,6 +79,4 @@ if (CMAKE_BUILD_TYPE MATCHES "Release")
     "  -DCMAKE_BUILD_TYPE=Debug\n"
     "**********************************************************************\n")
 endif()
-
-
 

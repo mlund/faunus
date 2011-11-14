@@ -116,7 +116,7 @@ namespace Faunus {
       iparticle=-1;
       igroup=nullptr;
       dir.x=dir.y=dir.z=1;
-      w=25;
+      w=30; //width of output
       in.get(prefix+"_runfraction",0.);
     }
 
@@ -131,8 +131,10 @@ namespace Faunus {
     }
 
     void ParticleTranslation::_trialMove() {
-      if (igroup!=nullptr)
+      if (igroup!=nullptr) {
         iparticle=igroup->random();
+        gsize += igroup->size();
+      }
       if (iparticle>-1) {
         double dp = atom[ spc->p[iparticle].id ].dp;
         assert(iparticle<(int)spc->p.size() && "Trial particle out of range");
@@ -172,6 +174,8 @@ namespace Faunus {
     string ParticleTranslation::_info() {
       char l=12;
       std::ostringstream o;
+      if (gsize.cnt>0)
+        o << pad(SUB,w,"Average moves/particle") << cnt / gsize.avg() << endl;
       o << pad(SUB,w,"Displacement vector") << dir << endl;
       if (cnt>0) {
         o << endl
@@ -419,12 +423,12 @@ namespace Faunus {
     AtomTracker::data& AtomTracker::operator[](AtomTracker::Tid id) { return map[id]; }
 
     bool AtomTracker::insert(const particle &a, Tindex index) {
-      spc->insert(a, index);
       assert( a.id == spc->p[ map[a.id].index.back() ].id && "Id mismatch");
-      map[a.id].index.push_back(index);
+      spc->insert(a, index);
       for (auto &m : map)
         for (auto &i : m.second.index)
-          if (i>index) i++;
+          if (i>=index) i++;
+      map[a.id].index.push_back(index);
       return true;
     }
 
@@ -498,7 +502,7 @@ namespace Faunus {
       assert(ida>0 && idb>0 && "Ion pair id is zero (UNK). Is this really what you want?");
       int Na = abs(map[idb].p.charge);
       int Nb = abs(map[ida].p.charge);
-      switch ( rand() % 1) {
+      switch ( rand() % 2) {
         case 0:
           trial_insert.reserve(Na+Nb);
           do trial_insert.push_back( map[ida].p ); while (--Na>0);
@@ -526,7 +530,7 @@ namespace Faunus {
     }
 
     double gcbath::_energyChange() {
-      trial_delete.clear();
+      //trial_delete.clear();
       du_rest=0;
       int Na=0, Nb=0;                     // number of added or deleted ions
       double idfactor=1;
@@ -604,9 +608,11 @@ namespace Faunus {
       o << pad(SUB,w,"Number of GC species") 
         << endl << endl;
       o << setw(4) << "" << std::left << setw(s) << "Ion" << setw(s)
-        << "activity" << setw(s+4) << bracket("c/M") << setw(s) << textio::gamma << endl;
+        << "activity" << setw(s+4) << bracket("c/M") << setw(s)
+        << bracket( gamma+pm ) << endl;
       for (auto &m : map) {
         short id=m.first;
+        o.precision(5);
         o << setw(4) << "" << setw(s) << atom[id].name
           << setw(s) << atom[id].activity << setw(s) << m.second.rho.avg()/pc::Nav/1e-27
           << setw(s) << atom[id].activity / (m.second.rho.avg()/pc::Nav/1e-27)

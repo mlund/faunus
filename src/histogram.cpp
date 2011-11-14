@@ -14,7 +14,7 @@ namespace Faunus {
     : xytable<float,unsigned long int>(res,min,max) {
       reset(res,min,max);
     }
-  
+
   void Histogram::reset(float res, float min, float max) {
     cnt=0;
     xmaxi=max;
@@ -72,84 +72,89 @@ namespace Faunus {
     xytable<float,unsigned long int>::save(filename);
   }
 
-  /*!
-   * \param species1 Particle type 1
-   * \param species2 Particle type 2
-   * \param resolution Histogram resolution (binwidth)
-   * \param xmaximum Maximum x value (used for better memory utilisation)
-   */
-  RadialDistribution::RadialDistribution(short species1, short species2, float resolution, float xmaximum) :
-    Histogram(resolution, 0, xmaximum)
-  {
-    a=species1;
-    b=species2;
-  }
-  RadialDistribution::RadialDistribution(float resolution, float xmaximum, float xminimum) : Histogram(resolution, xminimum, xmaximum) {}
+  namespace Analysis {
+    /*!
+     * \param species1 Particle type 1
+     * \param species2 Particle type 2
+     * \param resolution Histogram resolution (binwidth)
+     * \param xmaximum Maximum x value (used for better memory utilisation)
+     */
+    RadialDistribution::RadialDistribution(short species1, short species2, float resolution, float xmaximum) :
+      Histogram(resolution, 0, xmaximum)
+    {
+      a=species1;
+      b=species2;
+    }
+    RadialDistribution::RadialDistribution(float resolution, float xmaximum, float xminimum) : Histogram(resolution, xminimum, xmaximum) {}
 
-  /*!
-   * Update histogram between two known points
-   * \note Uses the space distance function
-   */
-  void RadialDistribution::update(Space &s, Point &a, Point &b) {
-    add( s.geo->dist(a, b) );
-  }
+    /*!
+     * Update histogram between two known points
+     * \note Uses the space distance function
+     */
+    void RadialDistribution::update(Space &s, Point &a, Point &b) {
+      add( s.geo->dist(a, b) );
+    }
 
-  /*!
-   * Calculate all distances between between species 1
-   * and 2 and update the histogram.
-   *
-   * \note Uses the container function to calculate distances
-   */
-  void RadialDistribution::update(Space &c) {
-    size_t n=c.p.size();
-    npart=0;
+    /*!
+     * Calculate all distances between between species 1
+     * and 2 and update the histogram.
+     *
+     * \note Uses the container function to calculate distances
+     */
+    void RadialDistribution::update(Space &c) {
+      size_t n=c.p.size();
+      npart=0;
 #pragma omp parallel for schedule (dynamic)
-    for (size_t i=0; i<n-1; i++)
-      for (size_t j=i+1; j<n; j++) 
-        if ( (c.p[i].id==a && c.p[j].id==b)
-            || (c.p[j].id==a && c.p[i].id==b) ) {
-          npart++;
-          update( c, c.p[i], c.p[j] );
-        }
-  }
+      for (size_t i=0; i<n-1; i++)
+        for (size_t j=i+1; j<n; j++) 
+          if ( (c.p[i].id==a && c.p[j].id==b)
+              || (c.p[j].id==a && c.p[i].id==b) ) {
+            npart++;
+            update( c, c.p[i], c.p[j] );
+          }
+    }
 
-  void RadialDistribution::update(Space &c, Group &g) {
-    int n=g.end+1;
-    npart=0;
-    //#pragma omp for
-    for (int i=g.beg; i<n-1; i++) {
-      for (int j=i+1; j<n; j++) { 
-        if ( (c.p[i].id==a && c.p[j].id==b)
-            || (c.p[j].id==a && c.p[i].id==b) ) {
-          npart++;
-          add( c.geo->dist(c.p[i], c.p[j]) );
+    void RadialDistribution::update(Space &c, Group &g) {
+      int n=g.end+1;
+      npart=0;
+      //#pragma omp for
+      for (int i=g.beg; i<n-1; i++) {
+        for (int j=i+1; j<n; j++) { 
+          if ( (c.p[i].id==a && c.p[j].id==b)
+              || (c.p[j].id==a && c.p[i].id==b) ) {
+            npart++;
+            add( c.geo->dist(c.p[i], c.p[j]) );
+          }
         }
       }
     }
-  }
 
-  void RadialDistribution::update(Space &c, Point &p, string name) {
-    int id=atom[name].id, n=c.p.size();
-    npart=0;
-    //#pragma omp for
-    for (int i=0; i<n; ++i)
-      if ( c.p[i].id==id ) {
-        npart++;
-        add( c.geo->dist(p, c.p[i] ));
-      }
-  }
+    void RadialDistribution::update(Space &c, Point &p, string name) {
+      int id=atom[name].id, n=c.p.size();
+      npart=0;
+      //#pragma omp for
+      for (int i=0; i<n; ++i)
+        if ( c.p[i].id==id ) {
+          npart++;
+          add( c.geo->dist(p, c.p[i] ));
+        }
+    }
 
-  /*!
-   * Calculate shell volume at x
-   */
-  float RadialDistribution::volume(float x) { return 4./3.*acos(-1.)*( pow(x+0.5*xres,3)-pow(x-0.5*xres,3) ); }
-  /*!
-   *  Get g(x) from histogram according to
-   *    \f$ g(x) = \frac{N(r)}{N_{tot}} \frac{ 3 } { 4\pi\left [ (x+xres)^3 - x^3 \right ] }\f$
-   */
-  float RadialDistribution::get(float x) {
-    return (*this)(x)/(cnt*volume(x)) * 1660.57;
-  }
+    /*!
+     * Calculate shell volume at x
+     */
+    float RadialDistribution::volume(float x) {
+      return 4./3.*pc::pi*( pow(x+0.5*xres,3) - pow(x-0.5*xres,3) );
+    }
+
+    /*!
+     *  Get g(x) from histogram according to
+     *    \f$ g(x) = \frac{N(r)}{N_{tot}} \frac{ 3 } { 4\pi\left [ (x+xres)^3 - x^3 \right ] }\f$
+     */
+    float RadialDistribution::get(float x) {
+      return (*this)(x)/(cnt*volume(x)) * 1660.57;
+    }
+  }//namespace
 
   /*!
    *  Get g(x) from histogram according to
@@ -231,10 +236,10 @@ namespace Faunus {
   atomicRdf::atomicRdf(float dx, float max) : Histogram(dx, 0, max) { }
 
   /*
-  void atomicRdf::update(p_vec &p, group &g1, group &g2) {
-    for (int i=g1.beg; i<=g1.end; i++)
-      for (int j=g2.beg; j<=g2.end; j++)
-        add( sqrt(p[i].sqdist(p[j])) );
-  }
-  */
+     void atomicRdf::update(p_vec &p, group &g1, group &g2) {
+     for (int i=g1.beg; i<=g1.end; i++)
+     for (int j=g2.beg; j<=g2.end; j++)
+     add( sqrt(p[i].sqdist(p[j])) );
+     }
+     */
 }//namespace

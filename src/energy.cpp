@@ -289,7 +289,7 @@ namespace Faunus {
       assert(&geo!=nullptr);  //debug
       std::set<int> done;
       double u=0;
-      for (auto i=g.beg; i<=g.end; i++) {
+      for (auto i=g.beg; i<=g.last; i++) {
         for (auto &m2 : pairs::list[i]) {
           if ( done.find(m2.first)==done.end() ) {
             u += m2.second->tokT() * m2.second->operator()( p[i], p[m2.first], geo.sqdist( p[i], p[m2.first] ) );

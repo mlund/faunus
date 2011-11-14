@@ -59,8 +59,6 @@ namespace Faunus {
      *  maximum x valued can be specified so as to utilize memory more efficiently.
      *  \author Mikael Lund
      *  \date Prague, April 2007
-     *  \todo Needs testing!
-     *
      */
     class RadialDistribution : public Histogram {
       private:

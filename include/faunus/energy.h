@@ -187,8 +187,8 @@ namespace Faunus {
 
           double i2g(const p_vec &p, Group &g, int j) {
             double u=0;
-            int len=g.end+1;
-            if (j>=g.beg && j<=g.end) {   //j is inside g - avoid self interaction
+            int len=g.last+1;
+            if (j>=g.beg && j<=g.last) {   //j is inside g - avoid self interaction
               for (int i=g.beg; i<j; i++)
                 u+=pair.energy(p[i],p[j]);
               for (int i=j+1; i<len; i++)
@@ -211,7 +211,7 @@ namespace Faunus {
 
           double g2g(const p_vec &p, Group &g1, Group &g2) {
             double u=0;
-            int ilen=g1.end+1, jlen=g2.end+1;
+            int ilen=g1.last+1, jlen=g2.last+1;
 #pragma omp parallel for reduction (+:u) schedule (dynamic)
             for (int i=g1.beg; i<ilen; ++i)
               for (int j=g2.beg; j<jlen; ++j)
@@ -220,7 +220,7 @@ namespace Faunus {
           }
 
           double g2all(const p_vec &p, Group &g) {
-            int ng=g.end+1, np=p.size();
+            int ng=g.last+1, np=p.size();
             double u=0;
 #pragma omp parallel for reduction (+:u)
             for (int i=g.beg; i<ng; ++i) {
@@ -235,7 +235,7 @@ namespace Faunus {
           double g_internal(const p_vec &p, Group &g) { 
             if (g.beg==-1) return 0;
             double u=0;
-            int step=1,n=g.end+1;
+            int step=1,n=g.last+1;
             for (int i=g.beg; i<n-step; i++)
               for (int j=g.beg+step*((i-g.beg)/step+1); j<n; j++)
                 u+=pair.energy(p[i],p[j]);
@@ -296,19 +296,19 @@ namespace Faunus {
             return 0;
           }
           double g2all(const p_vec &p, const Group &g) {
-            for (int i=g.beg; i<=g.end; i++) {
+            for (int i=g.beg; i<=g.last; i++) {
               for (int j=0; j<g.beg; j++)
                 if ( i2i(p,i,j)==pc::infty )
                   return pc::infty;
-              for (int j=g.end+1; j<(int)p.size(); j++)
+              for (int j=g.last+1; j<(int)p.size(); j++)
                 if ( i2i(p,i,j)==pc::infty )
                   return pc::infty;
               return 0;
             }
           }
           double g2g(const p_vec &p, const Group &g1, const Group &g2) {
-            for (int i=g1.beg; i<=g1.end; ++i)
-              for (int j=g2.beg; j<=g2.end; ++j)
+            for (int i=g1.beg; i<=g1.last; ++i)
+              for (int j=g2.beg; j<=g2.last; ++j)
                 if ( i2i(p,i,j)==pc::infty )
                   return pc::infty;
             return 0;

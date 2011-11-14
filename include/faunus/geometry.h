@@ -27,7 +27,6 @@ namespace Faunus {
      *       possible. This is usually a problem only for inner loop distance calculations.
      *       To get optimum performance in inner loops use a derived class directly and do
      *       static compile-time polymorphism.
-     * \todo Migrate to NVI (Nonvirtual Interface) pattern -- see "C++ Coding Standards", p.68
      */
     class Geometrybase {
       private:
@@ -57,7 +56,6 @@ namespace Faunus {
 
     /*! \brief Spherical geometry
      *  \author Mikael Lund
-     *  \todo Implement space scaling for isobaric ensemble
      *
      *  This is a spherical simulation container, surrounded by a hard wall.
      */
@@ -82,7 +80,7 @@ namespace Faunus {
           return dx*dx + dy*dy + dz*dz;
         }
         Point vdist(const Point&, const Point&);
-        void scale(Point&, const double&) const;
+        void scale(Point&, const double&) const; //!< Linear scaling of point along radius of sphere (NPT ensemble)
     };
 
     //---------------------------------------------------------
@@ -194,8 +192,7 @@ namespace Faunus {
     };
 
     /*! \brief Cylindrical simulation container
-     *  \author Mikael Lund & Bjoern Persson
-     *  \todo Needs some testing
+     *  \author Mikael Lund & Bjorn Persson
      *
      *  This is a Cylinder container where all walls
      *  are HARD. The origin is in the middle of the

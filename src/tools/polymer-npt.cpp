@@ -22,8 +22,8 @@ int main() {
   Space spc( pot.getGeometry() );
 
   Move::Isobaric iso(mcp,pot,spc);
-  Move::RotateGroup gmv(mcp,pot,spc);
-  Move::ParticleTranslation mv(mcp, pot, spc);
+  Move::TranslateRotate gmv(mcp,pot,spc);
+  Move::AtomicTranslation mv(mcp, pot, spc);
   Analysis::PolymerShape shape;
 
   // Add salt
@@ -42,10 +42,10 @@ int main() {
     g = spc.insert( aam.p );               // insert into space
     g.name="Polymer";
     spc.enroll(g);
-    for (int i=g.beg; i<g.end; i++)
+    for (int i=g.beg; i<g.last; i++)
       bonded->bonds.add(i, i+1, harmonic); // add bonds
   }
-  Group allpol( pol.front().beg, pol.back().end   );
+  Group allpol( pol.front().beg, pol.back().last   );
 
   spc.load("space.state");
 

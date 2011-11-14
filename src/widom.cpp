@@ -41,7 +41,7 @@ namespace Faunus {
       assert( spc.geo->dist(pol.cm, pol.massCenter(spc))<1e-9 && "Mass center must be in sync.");
       double x=0, r2=0, sum=0;
       Point t, o;
-      for (int i=pol.beg; i<=pol.end; i++) {
+      for (int i=pol.beg; i<=pol.last; i++) {
         t = spc.p[i]-pol.cm;                // vector to center of mass
         spc.geo->boundary(t);               // periodic boundary (if any)
         r2 = spc.geo->sqdist(t,o);          // squared distance to cm
@@ -55,11 +55,11 @@ namespace Faunus {
     void PolymerShape::sample(const Group &pol, const Space &spc) {
       if (!run())
         return;
-      assert( pol.beg!=pol.end && "Polymer must have at least two particles.");
+      assert( pol.beg!=pol.last && "Polymer must have at least two particles.");
       double r2=gyrationRadiusSquared(pol,spc);
       Rg2[pol.name]+=r2;
       Rg[pol.name]+=sqrt(r2);
-      Re2[pol.name] += spc.geo->sqdist( spc.p[pol.beg], spc.p[pol.end] ); //end-2-end squared
+      Re2[pol.name] += spc.geo->sqdist( spc.p[pol.beg], spc.p[pol.last] ); //end-2-end squared
     }
 
     string PolymerShape::_info() {

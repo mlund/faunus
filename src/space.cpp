@@ -10,7 +10,7 @@
 namespace Faunus {
 
   Space::Space(Geometry::Geometrybase &geoPtr) {
-    assert(&geoPtr!=nullptr);
+    assert(&geoPtr!=nullptr && "Space must have a well-defined geometry!");
     geo=&geoPtr;
   }
 
@@ -24,6 +24,7 @@ namespace Faunus {
   }
 
   bool Space::checkSanity() {
+    assert(geo!=nullptr && "Space must have a well-defined geometry!");
     assert(p.size()==trial.size() && "Trial/P vector mismatch!");
     assert(p==trial);
     bool rc=false;
@@ -59,6 +60,11 @@ namespace Faunus {
     return rc;
   }
 
+  /*!
+   * \param pin Vector to insert
+   * \param i Insert position (IGNORED). Default = -1 which means end of current vector
+   * \todo Implement insertion at random position
+   */
   GroupMolecular Space::insert(const p_vec &pin, int i) {
     assert(i==-1 && "Vector insertion at random position unimplemented.");
     assert(overlap()==false && "Particle overlap not allowed before inserting.");
@@ -66,12 +72,12 @@ namespace Faunus {
     GroupMolecular g;
     if ( !pin.empty() ) {
       g.beg=p.size();
-      g.end=g.beg-1;
+      g.last=g.beg-1;
       for (auto i : pin) {
         geo->boundary(i);
         p.push_back(i);
         trial.push_back(i);
-        g.end++;
+        g.last++;
       }
       g.setMassCenter(*this);
       g.translate(*this, -g.cm);
@@ -91,8 +97,9 @@ namespace Faunus {
 
   /*!
    * \param a Particle to insert
-   * \param i Position in particle vector. If -1, place at end of vectors
-   * \todo Check group expansion -- seems to work for GC but i<=gj->end+1 is suspicious
+   * \param i Insert position in particle vector. Old i will be pushed forward. Default is -1 = end of vector.
+   *
+   * This will insert a particle in both \c p and \c trial vectors and expand or push forward any enrolled groups.
    */
   bool Space::insert(const particle &a, int i) {
     if ( i==-1 || i>(int)p.size() ) {
@@ -105,7 +112,7 @@ namespace Faunus {
     }
     for (auto gj : g) {
       if ( gj->beg > i ) gj->beg++;
-      if ( gj->end >= i ) gj->end++; // +1 is a special case for adding to the end of p-vector
+      if ( gj->last >= i ) gj->last++; // +1 is a special case for adding to the end of p-vector
     }
     //cout << "!=" << i << endl;
     //for (auto gj : g)
@@ -113,7 +120,12 @@ namespace Faunus {
     return true;
   }
 
-  bool Space::insert(string atomname, int n, spacekeys key) {
+  /*!
+   * \param atomname Name if atom to intert
+   * \param n Number of atoms to insert
+   * \param key Ignored for now -- overlap check is always performed
+   */
+  bool Space::insert(string atomname, int n, keys key) {
     particle a;
     a=atom[atomname];
     while (n>0) {
@@ -126,10 +138,7 @@ namespace Faunus {
     return true;
   }
 
-  /*!
-   * \todo Rename to erase
-   */
-  bool Space::remove(int i) {
+  bool Space::erase(int i) {
     assert( !p.empty() && i<(int)p.size() && "Tried to delete non-existing particle or particle vector empty!" );
     if (i>=(int)p.size())
       return false;
@@ -137,8 +146,8 @@ namespace Faunus {
     trial.erase( trial.begin()+i );
     for (auto gj : g) {
       if ( i<gj->beg ) gj->beg--;
-      if ( i<=gj->end ) gj->end--;
-      assert( gj->end>=0 && "Particle removal resulted in empty Group");
+      if ( i<=gj->last ) gj->last--;
+      assert( gj->last>=0 && "Particle removal resulted in empty Group");
     }
     return true;
   }
@@ -188,9 +197,9 @@ namespace Faunus {
 
   /*!
    * \param file Filename
-   * \param resize True if the current geometry should be resized to match file content (default: false)
+   * \param key If set to RESIZE the \c p and \c trial will be expanded if they do not match the file (for Grand Canonical MC)
    */
-  bool Space::load(string file, bool resize) {
+  bool Space::load(string file, keys key) {
     using namespace textio;
     double vol;
     int n;
@@ -200,7 +209,7 @@ namespace Faunus {
       if (fin) {
         fin >> vol >> n;
         geo->setVolume(vol);
-        if (resize==true)
+        if (key==RESIZE)
           p.resize(n);
         if (n == (int)p.size() ) {
           for (int i=0; i<n; i++)
@@ -234,7 +243,7 @@ namespace Faunus {
     newgroup.setMassCenter(*this);
     g.push_back(&newgroup);
     trial=p;
-    return g.size()-1; //return position if added group
+    return g.size()-1; //return position of added group
   }
 
   string Space::info() {
@@ -246,16 +255,18 @@ namespace Faunus {
       << geo->info(w)
       << pad(SUB,w,"Number of particles") << p.size() << endl
       << pad(SUB,w,"Electroneutrality") << ((abs(z)>1e-7) ? "NO!" : "Yes") << " "  << z << endl
+      << pad(SUB,w,"System sanity check") << (checkSanity() ? "Passed" : "Failed") << endl
       << indent(SUB) << "Groups:" << endl;
     for (size_t i=0; i<g.size(); i++) {
       std::ostringstream range;
-      range << "[" << g[i]->beg << "-" << g[i]->end << "]";
+      range << "[" << g[i]->beg << "-" << g[i]->last << "]";
       o << indent(SUBSUB) << std::left
         << setw(6) << i+1
         << setw(17) << range.str()
         << setw(20) << g[i]->name
         << endl;
     }
+    
     return o.str();
   }
 

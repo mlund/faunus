@@ -115,7 +115,7 @@ namespace Faunus {
     }
 
     void RadialDistribution::update(Space &c, Group &g) {
-      int n=g.end+1;
+      int n=g.last+1;
       npart=0;
       //#pragma omp for
       for (int i=g.beg; i<n-1; i++) {

@@ -351,20 +351,20 @@ int main() {
   // Handle particles
   GroupAtomic salt(spc, mcp);
   salt.name="Salt";
-  Move::ParticleTranslation mv(mcp, pot, spc);  // Particle move class
+  Move::AtomicTranslation mv(mcp, pot, spc);  // Particle move class
   mv.setGroup(salt);
 
   GroupMolecular test;
   test.beg=spc.p.size();
   spc.insert("Na", 2);
-  test.end=spc.p.size()-1;
+  test.last=spc.p.size()-1;
   test.name="Test";
   spc.p[test.beg].x=0;
   spc.p[test.beg].y=0;
   spc.p[test.beg].z=0;
-  spc.p[test.end].x=2;
-  spc.p[test.end].y=2;
-  spc.p[test.end].z=2;
+  spc.p[test.last].x=2;
+  spc.p[test.last].y=2;
+  spc.p[test.last].z=2;
   spc.trial=spc.p;
   spc.enroll(test);
 
@@ -378,7 +378,7 @@ int main() {
   // Particle titration
   Move::SwapMove tit(mcp,pot,spc);
   Move::Isobaric iso(mcp,pot,spc);
-  Move::RotateGroup gmv(mcp,pot,spc);
+  Move::TranslateRotate gmv(mcp,pot,spc);
 
   // Widom particle insertion
   Analysis::Widom widom(spc, pot);

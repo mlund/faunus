@@ -695,7 +695,7 @@ EXCLUDE_SYMBOLS        =
 # directories that contain example code fragments that are included (see
 # the \include command).
 
-EXAMPLE_PATH           = src/programs \
+EXAMPLE_PATH           = src/tools \
                          doc \
                          doc/examples \
                          ./

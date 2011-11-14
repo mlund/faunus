@@ -111,7 +111,7 @@ namespace Faunus {
 
     // TRANSLATE
 
-    ParticleTranslation::ParticleTranslation(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
+    AtomicTranslation::AtomicTranslation(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Single Particle Translation";
       iparticle=-1;
       igroup=nullptr;
@@ -120,17 +120,17 @@ namespace Faunus {
       in.get(prefix+"_runfraction",0.);
     }
 
-    void ParticleTranslation::setGroup(Group &g) {
+    void AtomicTranslation::setGroup(Group &g) {
       igroup=&g;
       iparticle=-1;
     }
 
-    void ParticleTranslation::setParticle(int i) {
+    void AtomicTranslation::setParticle(int i) {
       iparticle=i;
       igroup=nullptr;
     }
 
-    void ParticleTranslation::_trialMove() {
+    void AtomicTranslation::_trialMove() {
       if (igroup!=nullptr) {
         iparticle=igroup->random();
         gsize += igroup->size();
@@ -146,20 +146,20 @@ namespace Faunus {
       }
     }
 
-    void ParticleTranslation::_acceptMove() {
+    void AtomicTranslation::_acceptMove() {
       double r2=spc->geo->sqdist( spc->p[iparticle], spc->trial[iparticle] );
       sqrmap[ spc->p[iparticle].id ] += r2;
       accmap[ spc->p[iparticle].id ] += 1;
       spc->p[iparticle] = spc->trial[iparticle];
     }
 
-    void ParticleTranslation::_rejectMove() {
+    void AtomicTranslation::_rejectMove() {
       spc->trial[iparticle] = spc->p[iparticle];
       sqrmap[ spc->p[iparticle].id ] += 0;
       accmap[ spc->p[iparticle].id ] += 0;
     }
 
-    double ParticleTranslation::_energyChange() {
+    double AtomicTranslation::_energyChange() {
       if (iparticle>-1) {
         assert( spc->geo->collision(spc->p[iparticle])==false && "An accepted particle collides with simulation container.");
         if ( spc->geo->collision( spc->trial[iparticle], Geometry::Geometrybase::BOUNDARY ) )
@@ -171,7 +171,7 @@ namespace Faunus {
       return 0;
     }
 
-    string ParticleTranslation::_info() {
+    string AtomicTranslation::_info() {
       char l=12;
       std::ostringstream o;
       if (gsize.cnt>0)
@@ -198,7 +198,7 @@ namespace Faunus {
       return o.str();
     }
 
-    RotateGroup::RotateGroup(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
+    TranslateRotate::TranslateRotate(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Group Rotation/Translation";
       igroup=nullptr;
       w=30;
@@ -213,12 +213,12 @@ namespace Faunus {
         runfraction=0;
     }
 
-    void RotateGroup::setGroup(Group &g) {
+    void TranslateRotate::setGroup(Group &g) {
       assert(&g!=nullptr);
       igroup=&g;
     }
 
-    void RotateGroup::_trialMove() {
+    void TranslateRotate::_trialMove() {
       assert(igroup!=nullptr);
       angle=dp_rot*slp_global.randHalf();
       Point p;
@@ -237,7 +237,7 @@ namespace Faunus {
       igroup->translate(*spc, p);
     }
 
-    void RotateGroup::_acceptMove() {
+    void TranslateRotate::_acceptMove() {
       double r2 = spc->geo->sqdist( igroup->cm, igroup->cm_trial );
       sqrmap_t[ igroup->name ] += r2;
       sqrmap_r[ igroup->name ] += pow(angle*180/pc::pi, 2);
@@ -245,15 +245,15 @@ namespace Faunus {
       igroup->accept(*spc);
     }
 
-    void RotateGroup::_rejectMove() {
+    void TranslateRotate::_rejectMove() {
       sqrmap_t[ igroup->name ] += 0;
       sqrmap_r[ igroup->name ] += 0;
       accmap[ igroup->name ] += 0;
       igroup->undo(*spc);
     }
 
-    double RotateGroup::_energyChange() {
-      for (int i=(*igroup).beg; i<=(*igroup).end; i++)  // check for container collision
+    double TranslateRotate::_energyChange() {
+      for (int i=(*igroup).beg; i<=(*igroup).last; i++)  // check for container collision
         if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
           return pc::infty;
       double uold = pot->g2all(spc->p, *igroup) + pot->g_external(spc->p, *igroup);
@@ -261,7 +261,7 @@ namespace Faunus {
       return unew-uold;
     }
 
-    string RotateGroup::_info() {
+    string TranslateRotate::_info() {
       char l=12;
       std::ostringstream o;
       o << pad(SUB,w,"Displacement vector") << dir << endl
@@ -286,7 +286,7 @@ namespace Faunus {
       return o.str();
     }
 
-    void RotateGroup::_test(UnitTest &t) {
+    void TranslateRotate::_test(UnitTest &t) {
       for (auto m : accmap) {                                                                                   
         string id=m.first,
                idtrim="_"+textio::trim(id)+"_";
@@ -387,8 +387,8 @@ namespace Faunus {
       double uold,unew;
       uold = _energy(spc->p);
       hamiltonian->setVolume( newV );
-      for (auto g : spc->g) // In spherical geometries molecules may collide with cell boundary upon scling mass center.
-        for (int i=g->beg; i<=g->end; i++)
+      for (auto g : spc->g) // In spherical geometries molecules may collide with cell boundary upon scaling mass center.
+        for (int i=g->beg; i<=g->last; i++)
           if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
       unew = _energy(spc->trial);
@@ -433,7 +433,7 @@ namespace Faunus {
     }
 
     bool AtomTracker::erase(AtomTracker::Tindex index) {
-      spc->remove(index);
+      spc->erase(index);
       bool deleted=false;
       for (auto &m : map) {
         auto f=std::find(m.second.index.begin(), m.second.index.end(), index);
@@ -458,7 +458,7 @@ namespace Faunus {
       return deleted;
     }
 
-    gcbath::gcbath(InputMap &in, Energy::Hamiltonian &e, Space &s, Group &g, string pfx) :
+    GrandCanonicalSalt::GrandCanonicalSalt(InputMap &in, Energy::Hamiltonian &e, Space &s, Group &g, string pfx) :
       Movebase(e,s,pfx), tracker(s) {
         title="Grand Canonical Salt";
         w=30;
@@ -468,8 +468,7 @@ namespace Faunus {
         add(*saltPtr);
       }
 
-    void gcbath::add(Group &g) {
-      //assert(g.end==(int)spc->p.size()-1 && "Salt group must be at end of particle vector");
+    void GrandCanonicalSalt::add(Group &g) {
       if (g.property.find(Group::ATOMIC)==g.property.end() ) {
         assert( !"Salt group must be atomic" );
         return;
@@ -477,7 +476,7 @@ namespace Faunus {
       g.property.insert(Group::GRANDCANONICAL);  // mark given group as grand canonical
       spc->enroll(g);
       tracker.clear();
-      for (int i=g.beg; i<=g.end; i++) {
+      for (int i=g.beg; i<=g.last; i++) {
         short id=spc->p[i].id;
         if ( atom[id].activity>1e-10 && abs(atom[id].charge)>1e-10 ) {
           map[id].p=atom[id];
@@ -488,14 +487,14 @@ namespace Faunus {
       assert(!tracker.empty() && "No GC ions found!");
     }
 
-    void gcbath::randomIonPair(short &id_cation, short &id_anion) {
+    void GrandCanonicalSalt::randomIonPair(short &id_cation, short &id_anion) {
       do id_anion  = tracker.randomAtomType(); while ( map[id_anion].p.charge>=0);
       do id_cation = tracker.randomAtomType(); while ( map[id_cation].p.charge<=0  );
       assert( !tracker[id_anion].index.empty() && "Ion list is empty");
       assert( !tracker[id_cation].index.empty() && "Ion list is empty");
     }
 
-    void gcbath::_trialMove() {
+    void GrandCanonicalSalt::_trialMove() {
       trial_insert.clear();
       trial_delete.clear();
       randomIonPair(ida, idb);
@@ -529,8 +528,7 @@ namespace Faunus {
       }
     }
 
-    double gcbath::_energyChange() {
-      //trial_delete.clear();
+    double GrandCanonicalSalt::_energyChange() {
       du_rest=0;
       int Na=0, Nb=0;                     // number of added or deleted ions
       double idfactor=1;
@@ -578,11 +576,10 @@ namespace Faunus {
       return unew-uold;
     }
 
-    void gcbath::_acceptMove() {
+    void GrandCanonicalSalt::_acceptMove() {
       if ( !trial_insert.empty() ) {
-        int cnt=spc->p.size(); // = index of first inserted particle
         for (auto &p : trial_insert)
-          tracker.insert(p, saltPtr->end);
+          tracker.insert(p, saltPtr->last);
       }
       else if ( !trial_delete.empty() ) {
         std::sort(trial_delete.rbegin(), trial_delete.rend()); //reverse sort
@@ -595,13 +592,13 @@ namespace Faunus {
       map[idb].rho += tracker[idb].index.size() / V;
     }
 
-    void gcbath::_rejectMove() {
+    void GrandCanonicalSalt::_rejectMove() {
       double V = spc->geo->getVolume();
       map[ida].rho += tracker[ida].index.size() / V;
       map[idb].rho += tracker[idb].index.size() / V;
     }
 
-    string gcbath::_info() {
+    string GrandCanonicalSalt::_info() {
       char s=10;
       using namespace textio;
       std::ostringstream o;
@@ -620,7 +617,6 @@ namespace Faunus {
       }
       return o.str();
     }
-
 
   }//namespace
 }//namespace

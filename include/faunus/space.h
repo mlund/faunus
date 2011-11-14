@@ -24,31 +24,31 @@ namespace Faunus {
       std::ifstream fin;
     private:
       slump slp;
+      bool overlap() const;
+      bool overlap(const particle&) const;            //!< Check for hardspheres overlap with particle
+      bool checkSanity();                             //!< Do a number of checks to see if eveything is OK
+
     public:
-      enum spacekeys {NOOVERLAP};
+      enum keys {OVERLAP,NOOVERLAP,RESIZE,NORESIZE};
       Geometry::Geometrybase* geo;               //!< Pointer to a valid Geometry (!=nullptr)
       p_vec p;                                   //!< The main particle vector
       p_vec trial;                               //!< Trial particle vector. 
-      vector<Group*> g;                          //!< Pointers to all groups in the system.
+      vector<Group*> g;                          //!< Pointers to all groups in the system (sum must match particle size!)
 
       Space(Geometry::Geometrybase&);
       virtual ~Space();
 
       virtual bool save(string);                      //!< Save container state to disk
-      virtual bool load(string, bool=false);          //!< Load container state from disk
+      virtual bool load(string, keys=NORESIZE);       //!< Load container state from disk
 
       GroupMolecular insert(const p_vec&, int=-1);
-      bool insert(const particle&, int=-1);           //!< Insert particle at pos n.
-      bool insert(string, int, spacekeys=NOOVERLAP); 
-      bool remove(int);                               //!< Remove particle n.
+      bool insert(const particle&, int=-1);           //!< Insert particle at pos n (old n will be pushed forward).
+      bool insert(string, int, keys=NOOVERLAP); 
+      bool erase(int);                               //!< Remove n'th particle
       int enroll(Group&);                             //!< Add group pointer to g vector
 
-      bool overlap() const;
-      bool overlap(const particle&) const;            //!< Check for hardspheres overlap with particle
-
       double charge() const;                          //!< Sum all charges in particle vector
-      bool checkSanity();                             //!< Do a number of check to see if eveything is OK
-      string info();
+      string info();                                  //!< Print information string
   };
 } //namespace
 #endif

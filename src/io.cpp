@@ -287,7 +287,7 @@ namespace Faunus {
     setbox(geo->len.x, geo->len.y, geo->len.z);
     for (auto gi : g) {
       gi->translate( c, -gi->cm );             // b.trial is moved to origo -> whole!
-      for (int j = gi->beg; j <= gi->end; j++)
+      for (int j = gi->beg; j <= gi->last; j++)
         p[j] = c.trial[j] + gi->cm;            // move back to cm without periodicity
       gi->undo(c);                             // restore to original PBC location
     }
@@ -324,7 +324,7 @@ namespace Faunus {
   bool FormatXTC::save(string file, p_vec &p, vector<Group> &g) {
     p_vec t;
     for (auto &gi : g)
-      for (int j=gi.beg; j<=gi.end; j++)
+      for (int j=gi.beg; j<=gi.last; j++)
         t.push_back( p[j] );
     return save(file, t);
   }
@@ -425,7 +425,7 @@ namespace Faunus {
   bool FormatQtraj::save(string file, p_vec &p, vector<Group> &g) {
     p_vec t;
     for (size_t i=0; i<g.size(); i++)
-      for (int j=g[i].beg; j<=g[i].end; j++)
+      for (int j=g[i].beg; j<=g[i].last; j++)
         t.push_back( p[j] );
     return save(file, t);
   }
@@ -482,11 +482,11 @@ namespace Faunus {
     Group g;
     if (p.size()>0) {
       g.beg=spc.p.size();
-      g.end=g.beg-1;
+      g.last=g.beg-1;
       for (auto &a : p)
         if ( spc.insert(a) )
-          g.end++;
-      for (int i=g.beg; i<g.end; i++)
+          g.last++;
+      for (int i=g.beg; i<g.last; i++)
         b.add(i, i+1, bond );
     }
     return g;
@@ -529,7 +529,7 @@ namespace Faunus {
     o << endl << "[ moleculetype ]" << endl << g.name << "      1" << endl;
     o << endl << "[ atoms ]" << endl;
     o << ";   nr     type     resnr   residue   atom         cgnr      charge    mass" << endl;
-    for (int i=g.beg; i<=g.end; i++) {
+    for (int i=g.beg; i<=g.last; i++) {
       short id=spc.p[i].id;
       idcnt[id]++;
       o << setw(w-5) << i-g.beg+1 << setw(w) << atom[id].name << setw(w) << rescnt

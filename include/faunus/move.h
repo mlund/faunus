@@ -54,10 +54,10 @@ namespace Faunus {
         virtual void _acceptMove()=0;          //!< Accept move, store new coordinates.
         virtual void _rejectMove()=0;          //!< Reject move, revert to old coordinates.
         virtual double _energyChange()=0;      //!< Returns energy change of trialMove
-        virtual void trialMove() final;        //!< Do a trial move (wrapper)
-        virtual void acceptMove() final;       //!< Accept move, store new coordinates etc. (wrapper)
-        virtual void rejectMove() final;       //!< Reject move, revert to old coordinates etc. (wrapper)
-        virtual double energyChange() final;   //!< Returns energy change of trialMove (wrapper)
+        virtual void trialMove();// final;        //!< Do a trial move (wrapper)
+        virtual void acceptMove();// final;       //!< Accept move, store new coordinates etc. (wrapper)
+        virtual void rejectMove();// final;       //!< Reject move, revert to old coordinates etc. (wrapper)
+        virtual double energyChange();// final;   //!< Returns energy change of trialMove (wrapper)
         bool metropolis(const double&) const;  //!< Metropolis criteria
 
       protected:
@@ -74,7 +74,7 @@ namespace Faunus {
         Movebase(Energy::Energybase&, Space&, string);             //!< Constructor
         virtual ~Movebase();
         double move(int=1);          //!< Attempt \c n moves and return energy change
-        double runfraction;          //!< Fraction of times calling move() should result in an actual move
+        double runfraction;          //!< Fraction of times calling move() should result in an actual move. 0=never, 1=always.
         string info();               //!< Returns information string
         void test(UnitTest&);        //!< Perform unit test
     };
@@ -92,7 +92,7 @@ namespace Faunus {
      * in iparticle. For randomly moving all particles in a group (typically salt),
      * point igroup to the appropriate Group in the space class g vector.
      */
-    class ParticleTranslation : public Movebase {
+    class AtomicTranslation : public Movebase {
       private:
         typedef std::map<short, Average<double> > map_type;
         map_type accmap; //!< Single particle acceptance map
@@ -107,17 +107,17 @@ namespace Faunus {
         void _rejectMove();
         double _energyChange();
       public:
-        ParticleTranslation(InputMap&, Energy::Energybase&, Space&, string="mv_particle");
+        AtomicTranslation(InputMap&, Energy::Energybase&, Space&, string="mv_particle");
         void setGroup(Group&); //!< Select group in which to randomly pick particles from
-        void setParticle(int); //!< Select single particle in p_vec to move
-        Point dir;             //!< Displacement directions (default: x=y=z=1)
+        void setParticle(int); //!< Select single particle in Space::p to move
+        Point dir;             //!< Translation directions (default: x=y=z=1)
     };
 
     /*!
      * \brief Combined rotation and rotation of groups
      * \author Mikael Lund
      */
-    class RotateGroup : public Movebase {
+    class TranslateRotate : public Movebase {
       private:
         void _test(UnitTest&);
         void _trialMove();
@@ -134,7 +134,7 @@ namespace Faunus {
         double dp_trans;   //!< Translational displacement parameter
         double angle;      //!< Temporary storage for current angle
       public:
-        RotateGroup(InputMap&, Energy::Energybase&, Space&, string="transrot");
+        TranslateRotate(InputMap&, Energy::Energybase&, Space&, string="transrot");
         void setGroup(Group&); //!< Select Group to move
         Point dir;             //!< Translation directions (default: x=y=z=1)
         bool groupWiseEnergy;  //!< Attempt to evaluate energy over groups from vector in Space (default=false)
@@ -198,7 +198,7 @@ namespace Faunus {
      * Example:
      * \code
      * AtomTracker track(myspace);
-     * track.insert( myparticle );
+     * track.insert( myparticle, 20 );
      * ...
      * int i=track[ myparticle.id ].random();
      * \endcode
@@ -217,20 +217,19 @@ namespace Faunus {
       public:
         AtomTracker(Space&);
         Tid randomAtomType() const;           //!< Select a random atomtype from the list
-        bool insert(const particle&, Tindex); //!< Insert particle into END OF(!) Space and track position
+        bool insert(const particle&, Tindex); //!< Insert particle into Space and track position
         bool erase(Tindex);                   //!< Delete particle from Space at specific particle index
         data& operator[] (Tid);               //!< Access operator to atomtype data
-        void clear();
-        bool empty();
+        void clear();                         //!< Clear all atom lists (does not touch Space)
+        bool empty();                         //!< Test if atom list is empty
     };
 
     /*!
      * \brief Grand Canonical insertion of arbitrary M:X salt pairs
      * \author Bjorn Persson and Mikael Lund
      * \date Lund 2010-2011
-     * \todo GC salt must be at end of particle. Remedy this.
      */
-    class gcbath : public Movebase {
+    class GrandCanonicalSalt : public Movebase {
       private:
         string _info();
         void _trialMove();
@@ -242,23 +241,22 @@ namespace Faunus {
         AtomTracker tracker;
         struct ionprop {
           particle p;
-          double chempot;
-          Average<double> rho;
+          double chempot;       // chemical potential log(1/A3)
+          Average<double> rho;  // average density
         };
         std::map<short,ionprop> map;
-        void randomIonPair(short&,short&);
+        void randomIonPair(short&,short&);  // Generate random ion pair
         p_vec trial_insert;
         vector<int> trial_delete;
-        short ida, idb;
+        short ida, idb;                    // particle id's of current salt pair (a=cation, b=anion)
 
-        Energy::EnergyRest Urest;
+        Energy::EnergyRest Urest;   // store non-Hamiltonian energy here to correctly calculate energy drift
         double du_rest;
-        Group* saltPtr;  //!< GC ions *must* be in this group
+        Group* saltPtr;  // GC ions *must* be in this group
 
       public:
-        gcbath(InputMap&, Energy::Hamiltonian&, Space&, Group&, string="saltbath");
+        GrandCanonicalSalt(InputMap&, Energy::Hamiltonian&, Space&, Group&, string="saltbath");
     };
-
 
   }//namespace
 }//namespace

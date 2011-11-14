@@ -13,20 +13,27 @@ namespace Faunus {
    *                GROUP
    * -----------------------------------*/
 
-  Group::~Group() {
+  Group::Group(int first, int last) : beg(first), last(last) {
     id=GROUP;
+    if (!empty())
+      set(first, last+1);
   }
 
-  Group::Group(int first, int last) : beg(first), end(last) {
-    id=GROUP;
-  }
+  Group::~Group() {}
 
   int Group::size() const {
-    return (beg<0 || end<0) ? 0 : end-beg+1;
+    return (beg<0 || last<0) ? 0 : last-beg+1;
+  }
+  
+  bool Group::empty() const {
+    if (beg>=0)
+      if (last>=beg)
+	return false;
+    return true;
   }
 
   bool Group::find(int i) const {
-    return (i>=beg && i<=end) ? true : false;
+    return (i>=beg && i<=last) ? true : false;
   }
 
   /*! \brief Calculates total charge
@@ -35,17 +42,17 @@ namespace Faunus {
    */
   double Group::charge(const p_vec &p) const {
     double z=0;
-    for (int i=beg; i<=end; ++i)
+    for (int i=beg; i<=last; ++i)
       z+=p[i].charge;
     return z;
   }
 
   Group& Group::operator+=(const Group& g) {
-    if (g.beg==-1 && g.end==-1)   // if added Group is empty
+    if (g.beg==-1 && g.last==-1)   // if added Group is empty
       return (*this);
-    if (beg==-1 && end==-1)       // if this is empty
+    if (beg==-1 && last==-1)       // if this is empty
       beg=g.beg;
-    end=g.end;
+    last=g.last;
     return (*this);
   }
 
@@ -56,10 +63,10 @@ namespace Faunus {
     Group o;
     if (beg<g.beg) {
       o.beg=beg;
-      o.end=g.end;
+      o.last=g.last;
     } else {
       o.beg=g.beg;
-      o.end=end;
+      o.last=last;
     };
     o.name = this->name + " + " + g.name;
     assert( o.size()==this->size()+g.size() ); // debug
@@ -73,7 +80,7 @@ namespace Faunus {
   }
   
   std::ostream& Group::write(std::ostream &o) const {
-    o << beg << " " << end << " " << cm;
+    o << beg << " " << last << " " << cm;
     return o;
   }
 
@@ -82,7 +89,7 @@ namespace Faunus {
   }
   
   Group& Group::operator<<(std::istream &in) {
-    in >> beg >> end;
+    in >> beg >> last;
     cm.operator<<(in);
     return *this;
   }
@@ -104,8 +111,8 @@ namespace Faunus {
    */
   Point Group::_massCenter(const Space &spc) const {
     double sum=0;
-    Point cm,t,o = spc.p.at(beg+(end-beg)/2);  // set origo to middle particle
-    for (int i=beg; i<=end; ++i) {
+    Point cm,t,o = spc.p.at(beg+(last-beg)/2);  // set origo to middle particle
+    for (int i=beg; i<=last; ++i) {
       t = spc.p[i]-o;              // translate to origo
       spc.geo->boundary(t);        // periodic boundary (if any)
       cm += t * spc.p[i].mw;
@@ -126,7 +133,7 @@ namespace Faunus {
   Point Group::massCenter(const Space &spc) const {
     assert( &spc!=NULL );
     assert( size()>0 );
-    assert( end < (int)spc.p.size() );
+    assert( last < (int)spc.p.size() );
     return _massCenter(spc);
   }
   
@@ -143,18 +150,18 @@ namespace Faunus {
   void Group::scale(Space &s, double newvol) {
     cm_trial=cm;
     s.geo->scale(cm_trial, newvol);
-    for (int i=beg; i<=end; ++i)
+    for (int i=beg; i<=last; ++i)
       s.geo->scale( s.trial[i], newvol);
   }
 
   void Group::undo(Space &s) {
-    for (int i=beg; i<=end; ++i)
+    for (int i=beg; i<=last; ++i)
       s.trial[i]=s.p[i];
     cm_trial=cm;
   }
 
   void Group::accept(Space &s) {
-    for (int i=beg; i<=end; ++i)
+    for (int i=beg; i<=last; ++i)
       s.p[i] = s.trial[i];
     cm=cm_trial;
   }
@@ -164,7 +171,7 @@ namespace Faunus {
    * \param p Vector to translate with
    */
   void Group::translate(Space &spc, const Point &p) {
-    for (int i=beg; i<=end; ++i) {
+    for (int i=beg; i<=last; ++i) {
       spc.trial[i] += p;
       spc.geo->boundary( spc.trial[i] );
     }
@@ -193,7 +200,7 @@ namespace Faunus {
 
   void GroupAtomic::add(Space &spc, InputMap &in) {
     beg=spc.p.size();
-    end=beg-1;
+    last=beg-1;
     int n=1, npart;
     do {
       std::ostringstream nion("nion"), tion("tion"), dpion("dpion"), aion("aion");
@@ -207,11 +214,11 @@ namespace Faunus {
         atom[id].dp = in.get(dpion.str(), 0.);
         atom[id].activity = in.get(aion.str(), 0.);
         spc.insert( atom[id].name, npart);
-        end+=npart;
+        last+=npart;
       } else break;
     } while (npart>0);
-    if (beg>end)
-      beg=end=-1;
+    if (beg>last)
+      beg=last=-1;
     else
       spc.enroll(*this);
     setMassCenter(spc);
@@ -255,7 +262,7 @@ namespace Faunus {
 
     cm_trial = cm;
     vrot.setAxis(*spc.geo, cm, endpoint, angle);            // rotate around line between mass center and point
-    for (int i=beg; i<=end; i++)
+    for (int i=beg; i<=last; i++)
       spc.trial[i] = vrot.rotate( *spc.geo, spc.trial[i] ); // boundary conditions already taken care of
 
     assert( spc.geo->dist(cm_trial, massCenter(spc))<1e-9 && "Rotation messed up mass center. Is the box too small?");
@@ -272,7 +279,7 @@ namespace Faunus {
     double oldvol=s.geo->getVolume(); // store original volume
     s.geo->setVolume(newvol);         // apply trial volume
 
-    for (int i=beg; i<=end; i++) {
+    for (int i=beg; i<=last; i++) {
       s.trial[i] += newcm;            // move all particles to new cm
       s.geo->boundary( s.trial[i] );  // respect boundary conditions
     }

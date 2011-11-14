@@ -1,4 +1,5 @@
 #include <faunus/faunus.h>
+//#include "range.hpp"
 
 using namespace Faunus;
 
@@ -69,10 +70,23 @@ int main() {
   // Handle particles
   GroupAtomic salt(spc, mcp);
   salt.name="Salt";
-  spc.load("space.state", true);
+  spc.load("space.state", Space::RESIZE);
 
-  Move::gcbath gc(mcp,pot,spc,salt);
-  Move::ParticleTranslation mv(mcp, pot, spc);  // Particle move class
+  /*
+  salt.resize( 0 );
+  cout << salt.beg << " " << salt.last << endl;
+  cout << salt.front() << " " << salt.back() << endl;
+  return 0;
+  for (auto i=salt.begin(); i!=salt.end()-1; i++)
+    for (auto j=i+1; j!=salt.end(); j++)
+        cout << *i << " " << *j << endl;
+  cout << endl;
+
+  return 0;
+*/
+
+  Move::GrandCanonicalSalt gc(mcp,pot,spc,salt);
+  Move::AtomicTranslation mv(mcp, pot, spc);  // Particle move class
   mv.setGroup(salt);
 
   // Widom particle insertion

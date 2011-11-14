@@ -37,13 +37,10 @@ int main() {
   double k   = mcp.get<double>("polymer_forceconst", 0);
   Potential::Harmonic harmonic(k, req);
   atom["MM"].dp=10.;
-  int i=1;
   for (auto &g : pol) {                    // load polymers
     aam.load(polyfile);
     g = spc.insert( aam.p );               // insert into space
-    std::ostringstream o;
-    o << "Polymer" << i++;
-    g.name=o.str();
+    g.name="Polymer";
     spc.enroll(g);
     for (int i=g.beg; i<g.end; i++)
       bonded->bonds.add(i, i+1, harmonic); // add bonds

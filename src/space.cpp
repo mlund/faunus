@@ -31,6 +31,7 @@ namespace Faunus {
       for (size_t i=0; i<p.size(); i++) {
         if ( geo->collision(p[i]) ) {
           rc=false;
+          assert(!"Particle/container collision!");
           break;
         }
         if (p[i].x!=trial[i].x ||
@@ -39,6 +40,7 @@ namespace Faunus {
             p[i].charge!=trial[i].charge)
         {
           rc=false;
+          assert(!"Trial/P vector mismatch!");
           break;
         } else rc=true;
       }
@@ -143,6 +145,9 @@ namespace Faunus {
 
 
   bool Space::overlap() const {
+    for (auto &i : p)
+      if (geo->collision(i))
+        return true;
     for (auto i=p.begin(); i!=p.end()-1; ++i)
       for (auto j=i+1; j!=p.end(); ++j) {
         double s=i->radius + j->radius;

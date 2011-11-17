@@ -52,7 +52,7 @@ endif()
 # ---------------------------
 #   Add source directories
 # ---------------------------
-#add_subdirectory(unittests)
+add_subdirectory(tests)
 #add_subdirectory(legacy/fortran)
 add_subdirectory(src)
 add_subdirectory(doc EXCLUDE_FROM_ALL)

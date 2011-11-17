@@ -1,13 +1,17 @@
 #include <faunus/faunus.h>
+#include <tclap/CmdLine.h>
 
 using namespace Faunus;
 
-typedef Geometry::Cuboid Tgeometry;    // select simulation geometry
+#ifdef CUBOID
+typedef Geometry::Cuboid Tgeometry;
+#else
+typedef Geometry::Sphere Tgeometry;
+#endif
 typedef Potential::CoulombSR<Tgeometry, Potential::Coulomb, Potential::HardSphere> Tpairpot;
 
 int main() {
   cout << textio::splash();
-  atom.includefile("atomlist.inp");    // load atom properties
   InputMap mcp("polymer-npt.input");
   MCLoop loop(mcp);                    // class for handling mc loops
   FormatGRO gro;                       // PQR structure file I/O
@@ -30,7 +34,7 @@ int main() {
   // Add salt
   GroupAtomic salt(spc, mcp);
   salt.name="Salt";
- 
+
   // Add polymers
   vector<GroupMolecular> pol( mcp.get("polymer_N",0));
   string polyfile = mcp.get<string>("polymer_file", "");
@@ -49,10 +53,6 @@ int main() {
   Group allpol( pol.front().front(), pol.back().back() );
 
   spc.load("space.state");
-
-  //FormatTopology top;
-  //cout << top.save("topol.top", spc, bonded->bonds) << endl;
-  //return 0;
 
   double utot=pot.external();
   utot += pot.g_internal(spc.p, salt) + pot.g_external(spc.p, salt)

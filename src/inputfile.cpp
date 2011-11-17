@@ -1,5 +1,6 @@
-#include "faunus/inputfile.h"
+#include <faunus/inputfile.h>
 #include <faunus/textio.h>
+#include <faunus/species.h>
 
 namespace Faunus {
 
@@ -25,6 +26,9 @@ namespace Faunus {
           }
         }
       }
+      string atomfile = get<string>("atomlist", "");
+      if (!atomfile.empty())
+        atom.includefile(atomfile);
       return true;
     }
     return false;

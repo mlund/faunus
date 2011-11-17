@@ -30,10 +30,12 @@ endfunction( fau_cigarexample )
 # Arguments: (target directory source)
 #fau_example(gc "./" gc.cpp)
 fau_example(bulk "./" bulk.cpp)
-fau_example(polymer-npt "./" polymer-npt.cpp)
+fau_example(polymer-npt-sphere "./" polymer-npt.cpp)
+fau_example(polymer-npt-cuboid "./" polymer-npt.cpp)
 fau_cigarexample(cigar "./" cigar.cpp)
 
 #----- target specific build options -----
+set_target_properties( polymer-npt-cuboid PROPERTIES COMPILE_DEFINITIONS "CUBOID")
 set_target_properties( cigar PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE" EXCLUDE_FROM_ALL TRUE)
 
 #----- examples where openbabel is needed -----

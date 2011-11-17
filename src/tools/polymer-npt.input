@@ -1,3 +1,4 @@
+atomlist               atomlist.inp
 loop_macrosteps        10
 loop_microsteps        1000
 cuboid_len             200      # Box side length Angstrom

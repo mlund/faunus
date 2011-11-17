@@ -18,15 +18,16 @@ namespace Faunus {
      * \brief Polymorphic class for simulation geometries
      * \author Mikael Lund
      *
-     * This is an important polymorph class that handles simulation geometries.
+     * This is a polymorph class that handles simulation geometries.
      * It contains distance calculation functions, boundary conditions, volume
-     * etc.
+     * etc. A number of functions are defined as pure virtual (=0) meaning
+     * that these MUST be defined in derived classes.
      *
      * \note This class uses dynamic polymorphism, i.e. virtual functions, which
      *       may have negative impact on performance as function inlining may not be
      *       possible. This is usually a problem only for inner loop distance calculations.
      *       To get optimum performance in inner loops use a derived class directly and do
-     *       static compile-time polymorphism.
+     *       static, compile-time polymorphism (templates).
      */
     class Geometrybase {
       private:
@@ -38,12 +39,12 @@ namespace Faunus {
         string name;                                        //!< Name of the geometry
       public:
         enum collisiontype {BOUNDARY,ZONE};                 //!< Types for collision() function
-        double getVolume() const;                           //!< Get volume of container
-        void setVolume(double);                             //!< Specify new volume
-        double dist(const Point&,const Point&);             //!< Distance between two points
+        double getVolume() const;                           //!< Get volume of container (A^3)
+        void setVolume(double);                             //!< Specify new volume (A^3)
+        double dist(const Point&,const Point&);             //!< Distance between two points (A)
         string info(char=20);                               //!< Return info string
-        bool save(string);                                  //!< Save container state to disk
-        bool load(string,bool=false);                       //!< Load container state from disk
+        bool save(string);                                  //!< Save geometry state to disk
+        bool load(string,bool=false);                       //!< Load geometry state from disk
 
         virtual bool collision(const particle&, collisiontype=BOUNDARY)=0;//!< Check for collision with boundaries, forbidden zones, matter,..
         virtual void randompos(Point &)=0;                  //!< Random point within container
@@ -54,10 +55,11 @@ namespace Faunus {
         virtual ~Geometrybase();
     };
 
-    /*! \brief Spherical geometry
-     *  \author Mikael Lund
+    /*!
+     * \brief Spherical geometry
+     * \author Mikael Lund
      *
-     *  This is a spherical simulation container, surrounded by a hard wall.
+     * This is a spherical simulation container, surrounded by a hard wall.
      */
     class Sphere : public Geometrybase {
       private:
@@ -80,10 +82,9 @@ namespace Faunus {
           return dx*dx + dy*dy + dz*dz;
         }
         Point vdist(const Point&, const Point&);
-        void scale(Point&, const double&) const; //!< Linear scaling of point along radius of sphere (NPT ensemble)
+        void scale(Point&, const double&) const; //!< Linear scaling along radius (NPT ensemble)
     };
 
-    //---------------------------------------------------------
     /*! \brief Cuboid geometry with periodic boundaries
      *
      *  \author Chris Evers
@@ -191,12 +192,13 @@ namespace Faunus {
         }
     };
 
-    /*! \brief Cylindrical simulation container
-     *  \author Mikael Lund & Bjorn Persson
+    /*!
+     * \brief Cylindrical simulation container
+     * \author Mikael Lund & Bjorn Persson
+     * \todo Periodic ends seems more useful - any particular reason for having hard ends?
      *
-     *  This is a Cylinder container where all walls
-     *  are HARD. The origin is in the middle of the
-     *  Cylinder.
+     * This is a cylindrical simulation container where all walls
+     * are HARD. The origin is in the middle of the cylinder.
      */
     class Cylinder : public Geometrybase {
       private:
@@ -277,34 +279,5 @@ namespace Faunus {
     };
 
   }//namespace Geometry
-
-  /*
-     template<typename Tbase>
-     class BasePointerList {
-     private:
-     vector<Tbase*> base;
-     public:
-     void insert(Tbase &g) {
-     if (&g!=nullptr)
-     if ( std::find(base.begin(), base.end(), &g)==base.end() )
-     base.push_back(&g);
-     }
-
-     template<typename Tderived> void sync(const Tbase& source) {
-     assert(&source!=nullptr);
-     const Tderived* src=dynamic_cast<const Tderived*>(&source); //get dereved class pointer to source
-     for (auto b : base) {
-     Tderived* target=dynamic_cast<Tderived*>(b); // derived class pointer to target
-     if ( src != target )
-     (*target)=(*src);                    // copy data from source to target
-     }
-     }
-     };
-
-     namespace Geometry {
-     typedef BasePointerList<Geometrybase> GeometryList;
-     }
-     */
-
-}//namespace
+}//namespace Faunus
 #endif

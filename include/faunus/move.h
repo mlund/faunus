@@ -16,7 +16,7 @@ namespace Faunus {
    */
   namespace Move {
 
-    /*!
+    /*
      * \brief Optimize Monte Carlo displacement parameters for optimal mean square displament
      * \date Lund, 2011
      * \author Mikael Lund

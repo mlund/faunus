@@ -13,7 +13,6 @@ namespace Faunus {
 
     Geometrybase::~Geometrybase() {}
 
-    /*! \note Do not overload! */
     double Geometrybase::dist(const Point &p1, const Point &p2) {
       return sqrt(sqdist(p1,p2));
     }
@@ -22,7 +21,6 @@ namespace Faunus {
       assert(!"Volume scaling function unimplemented for this geometry");
     }
 
-    /*! \note Do not overload! */
     string Geometrybase::info(char w) {
       using namespace textio;
       std::ostringstream o;
@@ -33,14 +31,12 @@ namespace Faunus {
       return o.str();
     }
 
-    /*! \note Do not overload! */
     void Geometrybase::setVolume(double volume) {
-      assert( volume>0 && "Zero geometry volume not allowed!");
+      assert( volume>0 && "Zero volume not allowed!");
       _setVolume( volume );
-      assert( std::abs( (volume-getVolume())/volume )<1e-9 && "setVolume() and/or getVolume() seem broken!" );
+      assert( std::abs( (volume-getVolume())/volume )<1e-9 && "setVolume() and/or getVolume() is broken!" );
     }
 
-    /*! \note Do not overload! */
     double Geometrybase::getVolume() const {
       return _getVolume();
     }
@@ -68,7 +64,7 @@ namespace Faunus {
         f.close();
         return true;
       }
-      std::cerr << "# Geometry data NOT read from file " << file << endl;
+      std::cerr << "!! Geometry data NOT read from file " << file << endl;
       return false;
     }
 
@@ -77,13 +73,12 @@ namespace Faunus {
     }
 
     Sphere::Sphere(InputMap &in, string prefix)  {
-      setradius( in.get(prefix+"_radius", 0.0) );
+      setradius( in.get<double>(prefix+"_radius", -1.0) );
     }
 
     void Sphere::setradius(double radius) {
       assert(radius>0 && "Radius must be larger than zero.");
       name="Spherical";
-      assert(radius>0);
       r = radius; 
       r2 = r*r; 
       diameter = 2*r; 
@@ -98,8 +93,7 @@ namespace Faunus {
     }
 
     void Sphere::scale(Point &a, const double &newvolume) const {
-      assert( getVolume()>0 );
-      assert( newvolume>0 );
+      assert( getVolume()>0 && newvolume>0 );
       double newradius = pow( 3*newvolume/(4*pc::pi), 1/3.);
       a = a * (newradius/r);
     }
@@ -159,10 +153,7 @@ namespace Faunus {
     }
 
     bool Cuboid::setlen(Point l) {
-      assert(l.x>0);              // debug information
-      assert(l.y>0);              // 
-      assert(l.z>0);              // 
-
+      assert(l.x>0 && l.y>0 && l.z>0);
       if (l.x<=0||l.y<=0||l.z<=0) 
         return false;
       len = l;                    // Cuboid sidelength
@@ -174,9 +165,7 @@ namespace Faunus {
     }
 
     bool Cuboid::setslice(Point min, Point max) {
-      assert(min.x>=0);              // debug information
-      assert(min.y>=0);              // 
-      assert(min.z>=0);              // 
+      assert(min.x>=0 && min.y>=0 && min.z>=0);
       assert(max.x<=len.x);          // debug information
       assert(max.y<=len.y);          // 
       assert(max.z<=len.z);          // 
@@ -190,10 +179,8 @@ namespace Faunus {
           max.y>len.y  ||            // 
           max.z>len.z  )             // 
         return false;                // 
-
       slice_min = len_half-max;      // set minimum corner (other way around than in input!!)
       slice_max = len_half-min;      // set maximum corner
-
       return true;
     }
 
@@ -279,14 +266,9 @@ namespace Faunus {
     }
 
     void Cuboid::scale(Point &a, const double &newvolume) const {
-      assert( getVolume()>0 );
-      assert( newvolume>0 );
+      assert( getVolume()>0 && newvolume>0 );
       a = a * std::pow( newvolume/getVolume(), 1/3.);
     }
-
-    //
-    //--- Cuboid slit geometry ---
-    //
 
     Cuboidslit::Cuboidslit(InputMap &in) : Cuboid(in) {
       name="Cuboid XY-periodicity";
@@ -305,17 +287,17 @@ namespace Faunus {
     }
 
     void Cylinder::init(double length, double radius) {
-      name="Cylindrical";
+      name="Cylindrical (Hard ends)";
       assert(length>0 && radius>0 && "Cylinder length and radius must be bigger than zero.");
       len=length;
-      r=radius;
-      r2=r*r;
-      diameter=r*2;
-      halflen=len/2;
+      setVolume( 2*pc::pi*radius*radius*len );
     }
 
     void Cylinder::_setVolume(double newV) {
-      assert(!"Cylindrical volume scaling unimplemented.");
+      r2=newV/(2*pc::pi*len);
+      r=sqrt(r2);
+      diameter=2*r;
+      halflen=len/2;
     }
 
     double Cylinder::_getVolume() const {
@@ -339,8 +321,8 @@ namespace Faunus {
 
     string Cylinder::_info(char w) {
       std::ostringstream o;
-      o << pad(SUB,w, "Length (A)") << len << endl
-        << pad(SUB,w, "Radius (A)") << r << endl;
+      o << pad(SUB,w, "Length") << len << textio::_angstrom << endl
+        << pad(SUB,w, "Radius") << r << textio::_angstrom << endl;
       return o.str();
     }
 

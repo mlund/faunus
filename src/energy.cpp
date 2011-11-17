@@ -78,7 +78,8 @@ namespace Faunus {
     }
 
     ExternalPressure::ExternalPressure(Geometry::Geometrybase &e, double pressure) {
-      assert(&e!=nullptr);
+      assert(&e!=nullptr && "Geometry must be defined for this energy term");
+      assert(pressure>=0 && "Specify non-negative pressure");
       name="External Pressure";
       setGeometry(e);
       P=pressure;
@@ -289,7 +290,7 @@ namespace Faunus {
       assert(&geo!=nullptr);  //debug
       std::set<int> done;
       double u=0;
-      for (auto i=g.beg; i<=g.last; i++) {
+      for (auto i=g.front(); i<=g.back(); i++) {
         for (auto &m2 : pairs::list[i]) {
           if ( done.find(m2.first)==done.end() ) {
             u += m2.second->tokT() * m2.second->operator()( p[i], p[m2.first], geo.sqdist( p[i], p[m2.first] ) );

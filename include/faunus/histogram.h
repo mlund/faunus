@@ -51,31 +51,6 @@ namespace Faunus {
       vector<double> yvec();              //!< For python interface
   };
 
-  namespace Analysis {
-    /*!
-     *  \brief Class to calculate the radial distribution between particles.
-     *
-     *  The internal histogram vector will be automatically expanded but an initial
-     *  maximum x valued can be specified so as to utilize memory more efficiently.
-     *  \author Mikael Lund
-     *  \date Prague, April 2007
-     */
-    class RadialDistribution : public Histogram {
-      private:
-        short a,b;                   //!< Particle types to investigate
-        float volume(float);         //!< Volume of shell r->r+xres
-        unsigned int npart;
-      public:
-        RadialDistribution(float=.5, float=0, float=0);
-        RadialDistribution(short, short, float=.5, float=0); 
-        void update(Space &, Point &, string);//!< Search around a point
-        void update(Space &);                 //!< Update histogram vector
-        void update(Space &, Group &);        //!< Update histogram vector - search only in group
-        void update(Space &, Point &, Point &);//!< Update for two points
-        float get(float);                        //!< Get g(x)
-    };
-  }//namespace
-
   /*!
    *  \brief Atomic RDF between two groups
    *

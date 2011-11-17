@@ -71,13 +71,13 @@ namespace Faunus {
 
     GroupMolecular g;
     if ( !pin.empty() ) {
-      g.beg=p.size();
-      g.last=g.beg-1;
+      g.setrange( p.size(), -1);
+      assert(g.size()==0 && "Group range broken!");
       for (auto i : pin) {
         geo->boundary(i);
         p.push_back(i);
         trial.push_back(i);
-        g.last++;
+        g.resize( g.size()+1 );
       }
       g.setMassCenter(*this);
       g.translate(*this, -g.cm);
@@ -111,8 +111,8 @@ namespace Faunus {
       trial.insert(trial.begin()+i, a);
     }
     for (auto gj : g) {
-      if ( gj->beg > i ) gj->beg++;
-      if ( gj->last >= i ) gj->last++; // +1 is a special case for adding to the end of p-vector
+      if ( gj->front() > i ) gj->setfront( gj->front()+1  ); // gj->beg++;
+      if ( gj->back() >= i ) gj->setback( gj->back()+1 );    //gj->last++; // +1 is a special case for adding to the end of p-vector
     }
     //cout << "!=" << i << endl;
     //for (auto gj : g)
@@ -145,9 +145,9 @@ namespace Faunus {
     p.erase( p.begin()+i );
     trial.erase( trial.begin()+i );
     for (auto gj : g) {
-      if ( i<gj->beg ) gj->beg--;
-      if ( i<=gj->last ) gj->last--;
-      assert( gj->last>=0 && "Particle removal resulted in empty Group");
+      if ( i<gj->front() ) gj->setfront( gj->front()-1  ); // gj->beg--;
+      if ( i<=gj->back() ) gj->setback( gj->back()-1);     //gj->last--;
+      assert( gj->back()>=0 && "Particle removal resulted in empty Group");
     }
     return true;
   }
@@ -259,7 +259,7 @@ namespace Faunus {
       << indent(SUB) << "Groups:" << endl;
     for (size_t i=0; i<g.size(); i++) {
       std::ostringstream range;
-      range << "[" << g[i]->beg << "-" << g[i]->last << "]";
+      range << "[" << g[i]->front() << "-" << g[i]->back() << "]";
       o << indent(SUBSUB) << std::left
         << setw(6) << i+1
         << setw(17) << range.str()

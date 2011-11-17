@@ -187,14 +187,14 @@ namespace Faunus {
 
           double i2g(const p_vec &p, Group &g, int j) {
             double u=0;
-            int len=g.last+1;
-            if (j>=g.beg && j<=g.last) {   //j is inside g - avoid self interaction
-              for (int i=g.beg; i<j; i++)
+            int len=g.back()+1;
+            if (j>=g.front() && j<=g.back()) {   //j is inside g - avoid self interaction
+              for (int i=g.front(); i<j; i++)
                 u+=pair.energy(p[i],p[j]);
               for (int i=j+1; i<len; i++)
                 u+=pair.energy(p[i],p[j]);
             } else                        //simple - j not in g
-              for (int i=g.beg; i<len; i++)
+              for (int i=g.front(); i<len; i++)
                 u+=pair.energy(p[i],p[j]);
             return pair.tokT()*u;  
           }
@@ -211,20 +211,20 @@ namespace Faunus {
 
           double g2g(const p_vec &p, Group &g1, Group &g2) {
             double u=0;
-            int ilen=g1.last+1, jlen=g2.last+1;
+            int ilen=g1.back()+1, jlen=g2.back()+1;
 #pragma omp parallel for reduction (+:u) schedule (dynamic)
-            for (int i=g1.beg; i<ilen; ++i)
-              for (int j=g2.beg; j<jlen; ++j)
+            for (int i=g1.front(); i<ilen; ++i)
+              for (int j=g2.front(); j<jlen; ++j)
                 u+=pair.energy(p[i],p[j]);
             return pair.tokT()*u;
           }
 
           double g2all(const p_vec &p, Group &g) {
-            int ng=g.last+1, np=p.size();
+            int ng=g.back()+1, np=p.size();
             double u=0;
 #pragma omp parallel for reduction (+:u)
-            for (int i=g.beg; i<ng; ++i) {
-              for (int j=0; j<g.beg; j++)
+            for (int i=g.front(); i<ng; ++i) {
+              for (int j=0; j<g.front(); j++)
                 u += pair.energy(p[i],p[j]);
               for (int j=ng; j<np; j++)
                 u += pair.energy(p[i],p[j]);
@@ -233,11 +233,11 @@ namespace Faunus {
           }
 
           double g_internal(const p_vec &p, Group &g) { 
-            if (g.beg==-1) return 0;
+            if (g.front()==-1) return 0;
             double u=0;
-            int step=1,n=g.last+1;
-            for (int i=g.beg; i<n-step; i++)
-              for (int j=g.beg+step*((i-g.beg)/step+1); j<n; j++)
+            int step=1,n=g.back()+1;
+            for (int i=g.front(); i<n-step; i++)
+              for (int j=g.front()+step*((i-g.front())/step+1); j<n; j++)
                 u+=pair.energy(p[i],p[j]);
             return pair.tokT()*u;
           }
@@ -296,19 +296,19 @@ namespace Faunus {
             return 0;
           }
           double g2all(const p_vec &p, const Group &g) {
-            for (int i=g.beg; i<=g.last; i++) {
-              for (int j=0; j<g.beg; j++)
+            for (int i=g.front(); i<=g.back(); i++) {
+              for (int j=0; j<g.front(); j++)
                 if ( i2i(p,i,j)==pc::infty )
                   return pc::infty;
-              for (int j=g.last+1; j<(int)p.size(); j++)
+              for (int j=g.back()+1; j<(int)p.size(); j++)
                 if ( i2i(p,i,j)==pc::infty )
                   return pc::infty;
               return 0;
             }
           }
           double g2g(const p_vec &p, const Group &g1, const Group &g2) {
-            for (int i=g1.beg; i<=g1.last; ++i)
-              for (int j=g2.beg; j<=g2.last; ++j)
+            for (int i=g1.front(); i<=g1.back(); ++i)
+              for (int j=g2.front(); j<=g2.back(); ++j)
                 if ( i2i(p,i,j)==pc::infty )
                   return pc::infty;
             return 0;

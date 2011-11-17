@@ -287,7 +287,7 @@ namespace Faunus {
     setbox(geo->len.x, geo->len.y, geo->len.z);
     for (auto gi : g) {
       gi->translate( c, -gi->cm );             // b.trial is moved to origo -> whole!
-      for (int j = gi->beg; j <= gi->last; j++)
+      for (auto j : *gi)
         p[j] = c.trial[j] + gi->cm;            // move back to cm without periodicity
       gi->undo(c);                             // restore to original PBC location
     }
@@ -324,7 +324,7 @@ namespace Faunus {
   bool FormatXTC::save(string file, p_vec &p, vector<Group> &g) {
     p_vec t;
     for (auto &gi : g)
-      for (int j=gi.beg; j<=gi.last; j++)
+      for (auto j : gi)
         t.push_back( p[j] );
     return save(file, t);
   }
@@ -425,7 +425,7 @@ namespace Faunus {
   bool FormatQtraj::save(string file, p_vec &p, vector<Group> &g) {
     p_vec t;
     for (size_t i=0; i<g.size(); i++)
-      for (int j=g[i].beg; j<=g[i].last; j++)
+      for (auto j : g[i])
         t.push_back( p[j] );
     return save(file, t);
   }
@@ -477,16 +477,17 @@ namespace Faunus {
     return p;
   }
 
+  /*!
+   * Inserts at end of particle vector
+   */
   Group FormatFastaSequence::insert(string fasta, Space &spc, Energy::ParticleBonds &b) {
     p_vec p = interpret(fasta);
-    Group g;
+    Group g( p.size() );
     if (p.size()>0) {
-      g.beg=spc.p.size();
-      g.last=g.beg-1;
       for (auto &a : p)
         if ( spc.insert(a) )
-          g.last++;
-      for (int i=g.beg; i<g.last; i++)
+          g.resize( g.size()+1 );
+      for (int i=g.front(); i<g.back(); i++)
         b.add(i, i+1, bond );
     }
     return g;
@@ -518,6 +519,13 @@ namespace Faunus {
     return o.str();
   }
 
+  /*
+  string FormatTopology::writeAtomicGroup(const Group &g, const Space &spc) {
+    std::ostringstream o;
+    o.precision(6);
+   }
+   */
+
   string FormatTopology::writeMoleculeType(const Group &g, const Space &spc, Energy::ParticleBonds &b) {
     if (g.size()==0 || g.id==Group::ATOMIC)
       return "";
@@ -529,10 +537,10 @@ namespace Faunus {
     o << endl << "[ moleculetype ]" << endl << g.name << "      1" << endl;
     o << endl << "[ atoms ]" << endl;
     o << ";   nr     type     resnr   residue   atom         cgnr      charge    mass" << endl;
-    for (int i=g.beg; i<=g.last; i++) {
+    for (auto i : g) {
       short id=spc.p[i].id;
       idcnt[id]++;
-      o << setw(w-5) << i-g.beg+1 << setw(w) << atom[id].name << setw(w) << rescnt
+      o << setw(w-5) << i-g.front()+1 << setw(w) << atom[id].name << setw(w) << rescnt
         << setw(w) << g.name << setw(5) << atom[id].name
         << std::left << setw(3) << idcnt[id] << std::right << setw(w) << "1"
         << setw(w) << spc.p[i].charge << setw(w) << spc.p[i].mw << endl;
@@ -540,17 +548,20 @@ namespace Faunus {
     return o.str();
   }
 
-  string FormatTopology::save(string topfile, const Space &spc, Energy::ParticleBonds &bonds) {
+  bool FormatTopology::save(string topfile, const Space &spc, Energy::ParticleBonds &bonds) {
     std::set<string> done;
-    std::ostringstream o;
-    o << writeAtomTypes(spc);
-    for (auto g : spc.g) {
-      if ( done.find(g->name)==done.end() ) {
-        o << writeMoleculeType(*g, spc, bonds);
-        done.insert(g->name);
+    std::ofstream f(topfile.c_str());
+    if (f) {
+      f << writeAtomTypes(spc);
+      for (auto g : spc.g) {
+        if ( done.find(g->name)==done.end() ) {
+          f << writeMoleculeType(*g, spc, bonds);
+          done.insert(g->name);
+        }
       }
+      return true;
     }
-    return o.str();
+    return false;
   }
 
 }  //namespace

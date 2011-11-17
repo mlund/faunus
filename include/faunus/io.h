@@ -115,7 +115,7 @@ namespace Faunus {
       string writeMoleculeType(const Group&, const Space &, Energy::ParticleBonds&);
     public:
       FormatTopology();
-      string save(string, const Space&, Energy::ParticleBonds&); //!< Generate topology from Space
+      bool save(string, const Space&, Energy::ParticleBonds&); //!< Generate topology from Space
   };
 
   /*! \brief Trajectory of charges per particle

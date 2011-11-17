@@ -7,8 +7,12 @@
 
 namespace Faunus {
 
-  //http://stackoverflow.com/questions/7185437/is-there-a-range-class-in-c0x-aka-c11-for-use-with-range-based-for-loops
-  //https://bitbucket.org/AraK/range/wiki/Home
+
+  /* 
+   * \brief Range iterator class for continuous ranges
+   * \todo Replace with https://bitbucket.org/AraK/range/wiki/Home ??
+   * \comment http://stackoverflow.com/questions/7185437/is-there-a-range-class-in-c0x-aka-c11-for-use-with-range-based-for-loops
+   */
   template<class Tint=int>
   class myrange {
     public:
@@ -28,17 +32,21 @@ namespace Faunus {
         Tint i_;
       };
       iterator begin() const { return begin_; }   //!< Iterator to beginning
-      iterator end() const { return end_; }       //!< Iterator to end
+      iterator end() const { return end_; }       //!< Iterator to end (end points to last element + 1)
       Tint front() const { return begin_.i_; }    //!< Get first value in range
       Tint back() const { return end_.i_-1; }     //!< Get last value in range
-      void resize(unsigned int size) { end_.i_=begin_.i_+size; } //!< Resize range, keeping same beginning
-      void operator++() { end_.i_++; }
-      void operator--() { if (end_.i_>=0) end_.i_--; }
-      myrange(Tint begin=0, Tint end=0) : begin_(begin), end_(end) {}
-      void set(Tint begin, Tint end) {
-        begin_.i_=begin;
-        end_.i_=end;
+      bool empty() const { return (end_.i_<=begin_.i_) ? true : false; } //!< Determines if range is empty.
+      void resize(unsigned int size) { end_.i_ = begin_.i_ + size; } //!< Resize range, keeping same beginning
+      Tint size() const { return end_.i_-begin_.i_; }  //!< Size of range
+      void setfront(Tint front) { begin_.i_=front; }   //!< Set first element
+      void setback(Tint back) { end_.i_=back+1; }      //!< Set last element
+      void setrange(Tint front, Tint back=-1) {        //!< Set range [front:back]
+        setfront(front);
+        if (back!=-1)
+          setback(back);
+        else setback(front-1);
       }
+      myrange(Tint first=0, Tint size=0) : begin_(first), end_(first+size) {}
     private:
       iterator begin_;
       iterator end_;
@@ -47,12 +55,21 @@ namespace Faunus {
   /*!
    * \brief Defines a continuous range of particles in the Space particle vector.
    * \todo Implement iterator
-   *
-   * This class defines a range, [beg:end], in the particle vector vector and knows how to
-   * perform geometric operations on it - rotate, translate etc.
-   *
    * \note http://stackoverflow.com/questions/7185437/is-there-a-range-class-in-c0x-aka-c11-for-use-with-range-based-for-loops
    *
+   * This class defines a range, \c [front:back], in the particle vector and behaves much like a standard
+   * STL container. Groups know how to perform geometric operations on it - rotate, translate etc. 
+   *
+   * Example:
+   * \code
+   *   Group g(2,5);           // beginning, size
+   *   for (auto i : g)        // iterator access
+   *     cout << i;            // -> 23456
+   *   g.front();              // -> 2
+   *   g.back();               // -> 6
+   *   g.size();               // -> 5
+   *   g.resize( g.size()+1 ); // -> size=6, back=7.
+   * \endcode
    */
   class Group : public myrange<int> {
     protected:
@@ -70,10 +87,10 @@ namespace Faunus {
       string name;
       Point cm_trial;           //!< mass center vector for trial position
       Point cm;                 //!< mass center vector
-      int beg;                  //!< index of first particle
-      int last;                 //!< index of last particle
-      int size() const;         //!< number of particles in Group.
-      bool empty() const;       //!< True if group is empty.
+      //int beg;                  //!< index of first particle
+      //int last;                 //!< index of last particle
+      //int size() const;         //!< number of particles in Group.
+      //bool empty() const;       //!< True if group is empty.
       int random() const;
       bool find(int) const;     //!< Check if index is part of group
 

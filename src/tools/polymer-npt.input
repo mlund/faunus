@@ -12,7 +12,7 @@ npt_dV                 2       # log(dV)
                       
 # Polymers            
 polymer_N              8
-polymer_file           monomer.aam
+polymer_file           tetramer.aam
 polymer_eqdist         0
 polymer_forceconst     0.0557     # kT/A^2
                       
@@ -28,6 +28,6 @@ tion2                  Na
 nion2                  0
 dpion2                 110
 
-test_stable            no
+test_stable            yes
 test_file              unittest.dat
 

@@ -13,14 +13,13 @@ namespace Faunus {
    *                GROUP
    * -----------------------------------*/
 
-  Group::Group(int first, int last) : beg(first), last(last) {
+  Group::Group(int front, int back) : myrange(front,back-front+1) {
     id=GROUP;
-    if (!empty())
-      set(first, last+1);
   }
 
   Group::~Group() {}
 
+  /*
   int Group::size() const {
     return (beg<0 || last<0) ? 0 : last-beg+1;
   }
@@ -31,9 +30,9 @@ namespace Faunus {
 	return false;
     return true;
   }
-
+*/
   bool Group::find(int i) const {
-    return (i>=beg && i<=last) ? true : false;
+    return (i>=front() && i<=back()) ? true : false;
   }
 
   /*! \brief Calculates total charge
@@ -42,17 +41,20 @@ namespace Faunus {
    */
   double Group::charge(const p_vec &p) const {
     double z=0;
-    for (int i=beg; i<=last; ++i)
+    for (auto i : *this)
       z+=p[i].charge;
     return z;
   }
 
   Group& Group::operator+=(const Group& g) {
+    assert(!"Unimplemented!");
+    /*
     if (g.beg==-1 && g.last==-1)   // if added Group is empty
       return (*this);
     if (beg==-1 && last==-1)       // if this is empty
       beg=g.beg;
     last=g.last;
+    */
     return (*this);
   }
 
@@ -60,7 +62,9 @@ namespace Faunus {
     // TODO: this should probably be done using operator += like this:
     // return Group(*this) += g;
     // (move extra functionality to +=)
+    assert(!"Unimplemented!");
     Group o;
+    /*
     if (beg<g.beg) {
       o.beg=beg;
       o.last=g.last;
@@ -72,6 +76,7 @@ namespace Faunus {
     assert( o.size()==this->size()+g.size() ); // debug
     if (o.size()!=this->size()+g.size())
       std::cout << "# Warning: Added Groups are not continous!\n";
+      */
     return o;
   }
 
@@ -80,7 +85,7 @@ namespace Faunus {
   }
   
   std::ostream& Group::write(std::ostream &o) const {
-    o << beg << " " << last << " " << cm;
+    o << front() << " " << back() << " " << cm;
     return o;
   }
 
@@ -89,7 +94,11 @@ namespace Faunus {
   }
   
   Group& Group::operator<<(std::istream &in) {
-    in >> beg >> last;
+    int front;
+    int back;
+    in >> front >> back;
+    setrange(front,back);
+    assert( size()==back-front+1 && "Problem with Group range");
     cm.operator<<(in);
     return *this;
   }
@@ -111,8 +120,8 @@ namespace Faunus {
    */
   Point Group::_massCenter(const Space &spc) const {
     double sum=0;
-    Point cm,t,o = spc.p.at(beg+(last-beg)/2);  // set origo to middle particle
-    for (int i=beg; i<=last; ++i) {
+    Point cm,t,o = spc.p.at(front()+(back()-front())/2);  // set origo to middle particle
+    for (auto i : *this) {
       t = spc.p[i]-o;              // translate to origo
       spc.geo->boundary(t);        // periodic boundary (if any)
       cm += t * spc.p[i].mw;
@@ -133,7 +142,7 @@ namespace Faunus {
   Point Group::massCenter(const Space &spc) const {
     assert( &spc!=NULL );
     assert( size()>0 );
-    assert( last < (int)spc.p.size() );
+    assert( back() < (int)spc.p.size() );
     return _massCenter(spc);
   }
   
@@ -150,18 +159,18 @@ namespace Faunus {
   void Group::scale(Space &s, double newvol) {
     cm_trial=cm;
     s.geo->scale(cm_trial, newvol);
-    for (int i=beg; i<=last; ++i)
+    for (auto i : *this)
       s.geo->scale( s.trial[i], newvol);
   }
 
   void Group::undo(Space &s) {
-    for (int i=beg; i<=last; ++i)
+    for (auto i : *this)
       s.trial[i]=s.p[i];
     cm_trial=cm;
   }
 
   void Group::accept(Space &s) {
-    for (int i=beg; i<=last; ++i)
+    for (auto i : *this)
       s.p[i] = s.trial[i];
     cm=cm_trial;
   }
@@ -171,7 +180,7 @@ namespace Faunus {
    * \param p Vector to translate with
    */
   void Group::translate(Space &spc, const Point &p) {
-    for (int i=beg; i<=last; ++i) {
+    for (auto i : *this) {
       spc.trial[i] += p;
       spc.geo->boundary( spc.trial[i] );
     }
@@ -180,7 +189,9 @@ namespace Faunus {
   }
 
   int Group::random() const {
-    return beg + slp_global.rand() % size();
+    int i = front() + slp_global.rand() % size();
+    assert(i>=front() && i<=back() && "Generated random element out of range!");
+    return i;
   }
 
   /* -----------------------------------*
@@ -199,8 +210,8 @@ namespace Faunus {
   }
 
   void GroupAtomic::add(Space &spc, InputMap &in) {
-    beg=spc.p.size();
-    last=beg-1;
+    setfront( spc.p.size() );
+    int size=0;
     int n=1, npart;
     do {
       std::ostringstream nion("nion"), tion("tion"), dpion("dpion"), aion("aion");
@@ -214,14 +225,14 @@ namespace Faunus {
         atom[id].dp = in.get(dpion.str(), 0.);
         atom[id].activity = in.get(aion.str(), 0.);
         spc.insert( atom[id].name, npart);
-        last+=npart;
+        size+=npart;
       } else break;
     } while (npart>0);
-    if (beg>last)
-      beg=last=-1;
-    else
+    if (size>0) {
+      resize(size);
       spc.enroll(*this);
-    setMassCenter(spc);
+      setMassCenter(spc);
+    }
   }
 
   GroupAtomic& GroupAtomic::operator<<(std::istream &in) {
@@ -257,12 +268,11 @@ namespace Faunus {
   }
 
   void GroupMolecular::rotate(Space &spc, const Point &endpoint, double angle) {
-    //cout << spc.geo->dist(cm,massCenter(spc)) << endl;
     assert( spc.geo->dist(cm,massCenter(spc) )<1e-6 );      // debug. Is mass center in sync?
 
     cm_trial = cm;
     vrot.setAxis(*spc.geo, cm, endpoint, angle);            // rotate around line between mass center and point
-    for (int i=beg; i<=last; i++)
+    for (auto i : *this)
       spc.trial[i] = vrot.rotate( *spc.geo, spc.trial[i] ); // boundary conditions already taken care of
 
     assert( spc.geo->dist(cm_trial, massCenter(spc))<1e-9 && "Rotation messed up mass center. Is the box too small?");
@@ -279,7 +289,7 @@ namespace Faunus {
     double oldvol=s.geo->getVolume(); // store original volume
     s.geo->setVolume(newvol);         // apply trial volume
 
-    for (int i=beg; i<=last; i++) {
+    for (auto i : *this) {
       s.trial[i] += newcm;            // move all particles to new cm
       s.geo->boundary( s.trial[i] );  // respect boundary conditions
     }

@@ -3,6 +3,10 @@
 
 #include <faunus/common.h>
 #include <faunus/average.h>
+#include <faunus/physconst.h>
+#include <faunus/group.h>
+#include <faunus/space.h>
+
 
 namespace Faunus {
   class checkValue;
@@ -35,6 +39,115 @@ namespace Faunus {
         string info();       //!< Print info and results
         double runfraction;  //!< Chance that analysis should be run (default 1.0 = 100%)
     };
+
+    /*!
+     * \brief General class for handling 2D tables - xy date, for example.
+     * \author Mikael Lund
+     * \date Lund 2011
+     * \note Tx is used as the std::map key and which may be problematic due to direct floating
+     *       point comparison (== operator). We have not experienced any issues with this, though.
+     */
+    template<typename Tx, typename Ty>
+      class Table2D {
+        protected:
+          typedef std::map<Tx,Ty> Tmap;
+          Ty count() {
+            Ty cnt=0;
+            for (auto &m : map)
+              cnt+=m.second;
+            return cnt;
+          }
+          Tx dx;
+          virtual ~Table2D() {}
+          Tmap map;
+        private:
+          Tx virtual round(Tx x) { return (x>=0) ? int( x/dx+0.5 )*dx : int( x/dx-0.5 )*dx; }
+          virtual double get(Tx x) { return operator()(x); }
+        public:
+          /*!
+           * \brief Constructor
+           * \param resolution Resolution of the x axis
+           */
+          Table2D(Tx resolution=0.2) {
+            dx=resolution;
+          }
+
+          /*! \brief Access operator - returns reference to y(x) */
+          Ty& operator() (Tx x) {
+            return map[ round(x) ];
+          }
+          /*! \brief Save table to disk */
+          void save(string filename) {
+            map.begin()->second*=2;
+            (--map.end())->second*=2;
+            std::ofstream f(filename.c_str());
+            f.precision(10);
+            if (f)
+              for (auto m : map)
+                f << m.first << " " << get( m.first ) << endl;
+          }
+      };
+
+    /*!
+     * \brief Radial distribution analysis
+     * \author Mikael Lund
+     * \date Lund 2011
+     *
+     * This radial distribution is defined as \f$ g(r) = \rho(r) / \rho(\infty) \f$ where \f$ \rho \f$ are
+     * the particle densities in volume element \c rdr and in the bulk, respectively.
+     *
+     * Example:
+     * \code
+     * short cation = atom["Na"].id;
+     * short anion = atom["Cl"].id;
+     * Analysis::RadialDistribution<float,int> rdf(0.2); // 0.2 Å resolution
+     * rdf.sample( myspace, mygroup, cation, anion );
+     * rdf.save("rdf.dat");
+     * \endcode
+     */
+    template<typename Tx=double, typename Ty=int>
+      class RadialDistribution : public Table2D<Tx,Ty> {
+        private:
+          double volume(Tx x) {
+            return 4./3.*pc::pi*( pow(x+0.5*this->dx,3) - pow(x-0.5*this->dx,3) );
+          }
+          double get(Tx x) {
+            if (bulkconc.cnt==0) bulkconc+=1;
+            return (double)this->operator()(x) / volume(x) / (double)this->count() / bulkconc.avg()
+              * this->map.size() * this->dx;
+          }
+          Average<double> bulkconc; //!< Average bulk concentration
+        public:
+          Tx maxdist; //!< Pairs with distances above this value will be skipped (default: infinity)
+
+          /*!
+           * \param res Resolution of X axis
+           */
+          RadialDistribution(Tx res=0.2) : Table2D<Tx,Ty>(res) {
+            maxdist=pc::infty;
+          }
+          /*!
+           * \brief Sample radial distibution of two atom types
+           * \param spc Simulation space
+           * \param g Group to search
+           * \param ida Atom id of first particle
+           * \param idb Atom id of second particle
+           */
+          void sample(Space &spc, Group &g, short ida, short idb) {
+            for (auto i=g.begin(); i!=g.end()-1; i++)
+              for (auto j=i+1; j!=g.end(); j++)
+                if ( (spc.p[*i].id==ida && spc.p[*j].id==idb) || (spc.p[*i].id==idb && spc.p[*j].id==ida) ) {
+		  Tx r=spc.geo->dist(spc.p[*i], spc.p[*j]);
+		  if (r<=maxdist)
+                    this->operator() (r)++; 
+		}
+            double bulk=0;
+            for (auto i : g)
+              if (spc.p[i].id==ida || spc.p[i].id==idb)
+                bulk++;
+            bulkconc += bulk / spc.geo->getVolume();
+          }
+      };
 
     /*!
      * \brief Analysis of polymer shape - radius of gyration, shape factor etc.

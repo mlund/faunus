@@ -109,8 +109,6 @@ namespace Faunus {
       return o.str();
     }
 
-    // TRANSLATE
-
     AtomicTranslation::AtomicTranslation(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Single Particle Translation";
       iparticle=-1;
@@ -161,12 +159,11 @@ namespace Faunus {
 
     double AtomicTranslation::_energyChange() {
       if (iparticle>-1) {
-        assert( spc->geo->collision(spc->p[iparticle])==false && "An accepted particle collides with simulation container.");
+        assert( spc->geo->collision(spc->p[iparticle])==false && "An untouched particle collides with simulation container.");
         if ( spc->geo->collision( spc->trial[iparticle], Geometry::Geometrybase::BOUNDARY ) )
           return pc::infty;
         return
           pot->i_total(spc->trial, iparticle) - pot->i_total(spc->p, iparticle);
-        //pot->i2all(spc->trial, iparticle) - pot->i2all(spc->p, iparticle);
       }
       return 0;
     }
@@ -253,7 +250,7 @@ namespace Faunus {
     }
 
     double TranslateRotate::_energyChange() {
-      for (int i=(*igroup).beg; i<=(*igroup).last; i++)  // check for container collision
+      for (auto i : *igroup)
         if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
           return pc::infty;
       double uold = pot->g2all(spc->p, *igroup) + pot->g_external(spc->p, *igroup);
@@ -388,7 +385,7 @@ namespace Faunus {
       uold = _energy(spc->p);
       hamiltonian->setVolume( newV );
       for (auto g : spc->g) // In spherical geometries molecules may collide with cell boundary upon scaling mass center.
-        for (int i=g->beg; i<=g->last; i++)
+        for (auto i : *g)
           if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
       unew = _energy(spc->trial);
@@ -476,7 +473,7 @@ namespace Faunus {
       g.property.insert(Group::GRANDCANONICAL);  // mark given group as grand canonical
       spc->enroll(g);
       tracker.clear();
-      for (int i=g.beg; i<=g.last; i++) {
+      for (auto i : g) {
         short id=spc->p[i].id;
         if ( atom[id].activity>1e-10 && abs(atom[id].charge)>1e-10 ) {
           map[id].p=atom[id];
@@ -570,8 +567,8 @@ namespace Faunus {
           for (auto j=i+1; j!=trial_delete.end(); j++)
             uold-=pot->i2i(spc->p, *i, *j);
       } else {
-        assert(!"No salt to insert of delete!");
-        cerr << "!! No salt to insert of delete !!";
+        assert(!"No salt to insert or delete!");
+        cerr << "!! No salt to insert or delete !!";
       }
       return unew-uold;
     }
@@ -579,7 +576,7 @@ namespace Faunus {
     void GrandCanonicalSalt::_acceptMove() {
       if ( !trial_insert.empty() ) {
         for (auto &p : trial_insert)
-          tracker.insert(p, saltPtr->last);
+          tracker.insert(p, saltPtr->back());
       }
       else if ( !trial_delete.empty() ) {
         std::sort(trial_delete.rbegin(), trial_delete.rend()); //reverse sort

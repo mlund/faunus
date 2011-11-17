@@ -2,7 +2,7 @@
 
 using namespace Faunus;
 
-typedef Geometry::Sphere Tgeometry;    // select simulation geometry
+typedef Geometry::Cuboid Tgeometry;    // select simulation geometry
 typedef Potential::CoulombSR<Tgeometry, Potential::Coulomb, Potential::HardSphere> Tpairpot;
 
 int main() {
@@ -10,8 +10,9 @@ int main() {
   atom.includefile("atomlist.inp");    // load atom properties
   InputMap mcp("polymer-npt.input");
   MCLoop loop(mcp);                    // class for handling mc loops
-  FormatPQR pqr;                       // PQR structure file I/O
+  FormatGRO gro;                       // PQR structure file I/O
   FormatAAM aam;                       // AAM structure file I/O
+  FormatTopology top;
   FormatXTC xtc(1000);                 // XTC gromacs trajectory format
   EnergyDrift sys;                     // class for tracking system energy drifts
   UnitTest test(mcp);
@@ -29,7 +30,7 @@ int main() {
   // Add salt
   GroupAtomic salt(spc, mcp);
   salt.name="Salt";
-
+ 
   // Add polymers
   vector<GroupMolecular> pol( mcp.get("polymer_N",0));
   string polyfile = mcp.get<string>("polymer_file", "");
@@ -42,10 +43,10 @@ int main() {
     g = spc.insert( aam.p );               // insert into space
     g.name="Polymer";
     spc.enroll(g);
-    for (int i=g.beg; i<g.last; i++)
+    for (int i=g.front(); i<g.back(); i++)
       bonded->bonds.add(i, i+1, harmonic); // add bonds
   }
-  Group allpol( pol.front().beg, pol.back().last   );
+  Group allpol( pol.front().front(), pol.back().back() );
 
   spc.load("space.state");
 
@@ -104,7 +105,8 @@ int main() {
     cout << loop.timing();
   } // end of macro loop
 
-  pqr.save("confout.pqr", spc.p);
+  gro.save("confout.gro", spc.p);
+  top.save("mytopol.top", spc, bonded->bonds);
   spc.save("space.state");
 
   iso.test(test);

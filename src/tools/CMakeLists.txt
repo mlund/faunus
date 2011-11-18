@@ -35,7 +35,7 @@ fau_example(polymer-npt-cuboid "./" polymer-npt.cpp)
 fau_cigarexample(cigar "./" cigar.cpp)
 
 #----- target specific build options -----
-set_target_properties( polymer-npt-cuboid PROPERTIES COMPILE_DEFINITIONS "CUBOID")
+set_target_properties( polymer-npt-cuboid PROPERTIES COMPILE_DEFINITIONS "CUBOID" EXCLUDE_FROM_ALL TRUE)
 set_target_properties( cigar PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE" EXCLUDE_FROM_ALL TRUE)
 
 #----- examples where openbabel is needed -----

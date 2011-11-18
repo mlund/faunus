@@ -215,7 +215,7 @@ namespace Faunus {
           for (int i=0; i<n; i++)
             p[i] << fin;
           trial=p;
-          cout << indent(SUB) << "Read " << n << " space point(s) from " << file << endl;
+          cout << indent(SUB) << "Read " << n << " particle(s) from " << file << endl;
           fin >> n;
           if (n==(int)g.size()) {
             for (auto g_i : g) {

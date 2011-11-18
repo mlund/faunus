@@ -52,12 +52,9 @@ REQUIREMENTS:
   Developed and tested on Linux and MacOS X.
 
 COMPILING:
-  Menu based setup:
-  $ ccmake .
-  $ make [help]
-
   Text based setup:
-  $ cmake . [options]
+    $ cmake . [options]
+    $ make [help]
 
   Options:
     -DENABLE_OPENMP=on|OFF            Enable OpenMP support
@@ -65,15 +62,15 @@ COMPILING:
     -DENABLE_TWISTER=on|OFF           Use Mersenne Twister for random numbers
     -DCMAKE_BUILD_TYPE=Debug|Release  Debug (default) or Release (for production) mode.
 
+  Run test suite:
+    $ make test (or use 'ctest -V' for verbose output)
+
   Example for Intel's C++ compiler with OpenMP parallelization:
     $ CXX=icpc cmake . -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=Release
     $ make
 
-  Example for Clang:
+  Example for LLVM Clang:
     $  CXX=clang++ cmake . -DCMAKE_BUILD_TYPE=Debug
-
-  Run test suite:
-    $ make test (or use 'ctest -V' for verbose output)
 
   Libraries in odd locations:
     Can be specified using environmental variables. For example,
@@ -89,5 +86,5 @@ DIRECTORY LAYOUT:
   include      Header files
   misc         Miscellaneous
   doc          Code documentation (auto generated)
-  unittests    Unittesting of compiled programs (try 'make test')
+  tests        Unit tests of compiled programs (try 'make test')
 

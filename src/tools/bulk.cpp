@@ -56,7 +56,7 @@ int main() {
     while ( loop.microCnt() ) {
       sys+=mv.move( salt.size() );
       sys+=gc.move( salt.size()/2 );
-      if (slp_global.randOne()>0.1) {
+      if (slp_global.randOne()>0.9) {
         widom.sample();
         rdf.sample(spc,salt,atom["Na"].id, atom["Cl"].id);
       }

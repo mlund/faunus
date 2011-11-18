@@ -123,4 +123,5 @@ endif()
 
 #----- Add example programs -----
 add_subdirectory(tools)
+add_subdirectory(playground EXCLUDE_FROM_ALL)
 

@@ -2,6 +2,7 @@
 #include <tclap/CmdLine.h>
 
 using namespace Faunus;
+using namespace TCLAP;
 
 #ifdef CUBOID
 typedef Geometry::Cuboid Tgeometry;
@@ -10,9 +11,27 @@ typedef Geometry::Sphere Tgeometry;
 #endif
 typedef Potential::CoulombSR<Tgeometry, Potential::Coulomb, Potential::HardSphere> Tpairpot;
 
-int main() {
-  cout << textio::splash();
-  InputMap mcp("polymer-npt.input");
+int main(int argc, char** argv) {
+  string inputfile,istate,ostate;
+  try {
+    cout << textio::splash();
+    CmdLine cmd("NPT Monte Carlo simulation of bead-chain polymers in explicit salt", ' ', "0.1");
+    ValueArg<string> inputArg("i","inputfile","InputMap key/value file",true,"","inputfile");
+    ValueArg<string> istateArg("c","instate","Name of input statefile",false,"state","instate");
+    ValueArg<string> ostateArg("o","outstate","Name of output statefile",false,"state","outstate");
+    cmd.add( inputArg );
+    cmd.add( istateArg );
+    cmd.add( ostateArg );
+    cmd.parse( argc, argv );
+    inputfile = inputArg.getValue();
+    istate = istateArg.getValue();
+    ostate = ostateArg.getValue();
+  }
+  catch (ArgException &e)  {
+    cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
+  }
+
+  InputMap mcp(inputfile);
   MCLoop loop(mcp);                    // class for handling mc loops
   FormatGRO gro;                       // PQR structure file I/O
   FormatAAM aam;                       // AAM structure file I/O
@@ -40,7 +59,6 @@ int main() {
   string polyfile = mcp.get<string>("polymer_file", "");
   double req = mcp.get<double>("polymer_eqdist", 0);
   double k   = mcp.get<double>("polymer_forceconst", 0);
-  Potential::Harmonic harmonic(k, req);
   atom["MM"].dp=10.;
   for (auto &g : pol) {                    // load polymers
     aam.load(polyfile);
@@ -48,11 +66,11 @@ int main() {
     g.name="Polymer";
     spc.enroll(g);
     for (int i=g.front(); i<g.back(); i++)
-      bonded->bonds.add(i, i+1, harmonic); // add bonds
+      bonded->bonds.add(i, i+1, Potential::Harmonic(k,req)); // add bonds
   }
   Group allpol( pol.front().front(), pol.back().back() );
 
-  spc.load("space.state");
+  spc.load(istate);
 
   double utot=pot.external();
   utot += pot.g_internal(spc.p, salt) + pot.g_external(spc.p, salt)
@@ -69,11 +87,11 @@ int main() {
       switch (i) {
         case 0:
           mv.setGroup(salt);
-          sys+=mv.move();
+          sys+=mv.move( salt.size() );
           break;
         case 1:
           mv.setGroup(allpol);
-          sys+=mv.move();
+          sys+=mv.move( allpol.size() );
           for (auto &g : pol) {
             g.setMassCenter(spc);
             shape.sample(g,spc);
@@ -107,7 +125,7 @@ int main() {
 
   gro.save("confout.gro", spc.p);
   top.save("mytopol.top", spc, bonded->bonds);
-  spc.save("space.state");
+  spc.save(ostate);
 
   iso.test(test);
   gmv.test(test);

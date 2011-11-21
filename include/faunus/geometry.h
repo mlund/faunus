@@ -226,7 +226,7 @@ namespace Faunus {
     };
 
 #ifdef HYPERSPHERE
-    /*! \brief HyperSphere simulation container
+    /*  \brief HyperSphere simulation container
      *  \author Martin Trulsson
      *  \date Lund, 2009
      */

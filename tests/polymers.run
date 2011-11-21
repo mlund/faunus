@@ -21,7 +21,7 @@ Atom  MM      +1     3.0    0.1    1       no
 echo "
 atomlist               $base.atoms
 loop_macrosteps        10
-loop_microsteps        10000
+loop_microsteps        20000
 cuboid_len             200     # Box side length Angstrom
 Sphere_radius          100
 temperature            298     # Kelvin

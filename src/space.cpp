@@ -65,9 +65,11 @@ namespace Faunus {
    * \param i Insert position (IGNORED). Default = -1 which means end of current vector
    * \todo Implement insertion at random position
    */
-  GroupMolecular Space::insert(const p_vec &pin, int i) {
+  GroupMolecular Space::insert(const p_vec &pin, int i, keys k) {
     assert(i==-1 && "Vector insertion at random position unimplemented.");
-    assert(overlap()==false && "Particle overlap not allowed before inserting.");
+    if (k==NOOVERLAP) {
+      assert(overlap()==false && "Particle overlap not allowed before inserting.");
+    }
 
     GroupMolecular g;
     if ( !pin.empty() ) {
@@ -80,15 +82,21 @@ namespace Faunus {
         g.resize( g.size()+1 );
       }
       g.setMassCenter(*this);
-      g.translate(*this, -g.cm);
+      Point dp;
+      geo->randompos(dp);
+      dp=-g.cm+dp;
+      geo->boundary(dp);
+      g.translate(*this, dp);
       g.accept(*this); 
-      Point a;
-      while ( overlap()==true ) {
-        geo->randompos(a);
-        a=a-g.cm;
-        geo->boundary(a);
-        g.translate(*this,a);
-        g.accept(*this);
+      if (k==NOOVERLAP) {
+        Point a;
+        while ( overlap()==true ) {
+          geo->randompos(a);
+          a=a-g.cm;
+          geo->boundary(a);
+          g.translate(*this,a);
+          g.accept(*this);
+        }
       }
     }
     g.setMassCenter(*this);
@@ -266,7 +274,7 @@ namespace Faunus {
         << setw(20) << g[i]->name
         << endl;
     }
-    
+
     return o.str();
   }
 

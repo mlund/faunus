@@ -1,0 +1,11 @@
+# Generated on Nov 18 2011 09:57:19 using 4.2.1 Compatible Clang 3.0 (trunk 143537) (SVN revision: 736)
+energyAverage                 -425.458
+mv_particle_acceptance        18.5633
+npt_MSQDisplacement           32.8972
+npt_acceptance                15.1469
+npt_averageSideLength         80.0563
+relativeEnergyDrift           1.54048e-12
+transrot_Polymer_acceptance   14.3432
+transrot_Polymer_dRot         37.4935
+transrot_Polymer_dTrans       8.2042
+transrot_acceptance           14.3432

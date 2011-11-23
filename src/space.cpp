@@ -88,8 +88,15 @@ namespace Faunus {
       geo->boundary(dp);
       g.translate(*this, dp);
       g.accept(*this); 
+      Point a;
+      while ( overlap_container()==true ) {
+        geo->randompos(a);
+        a=a-g.cm;
+        geo->boundary(a);
+        g.translate(*this,a);
+        g.accept(*this);
+      }
       if (k==NOOVERLAP) {
-        Point a;
         while ( overlap()==true ) {
           geo->randompos(a);
           a=a-g.cm;
@@ -160,6 +167,12 @@ namespace Faunus {
     return true;
   }
 
+  bool Space::overlap_container() const {
+    for (auto &i : p)
+      if (geo->collision(i))
+        return true;
+    return false;
+  }
 
   bool Space::overlap() const {
     for (auto &i : p)

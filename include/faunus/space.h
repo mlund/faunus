@@ -24,6 +24,7 @@ namespace Faunus {
       std::ifstream fin;
     private:
       slump slp;
+      bool overlap_container() const;
       bool overlap() const;
       bool overlap(const particle&) const;            //!< Check for hardspheres overlap with particle
       bool checkSanity();                             //!< Do a number of checks to see if eveything is OK

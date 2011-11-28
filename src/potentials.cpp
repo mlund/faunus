@@ -122,7 +122,7 @@ namespace Faunus {
 
     string SquareWell::info(char w) {
       std::ostringstream o;
-      o << pad(SUB,w,"Threshold") << threshold*tokT() << " "+angstrom << endl;
+      o << pad(SUB,w,"Threshold") << threshold*tokT() << " "+angstrom+" (surface-surface)" << endl;
       o << pad(SUB,w,"Depth") << depth*tokT() << kT << endl;
       return o.str();
     }
@@ -183,7 +183,7 @@ namespace Faunus {
       std::ostringstream o;
       o << Coulomb::info(w);
       o << pad(SUB,w,"Ionic strength") << ionicStrength() << " mol/l" << endl;
-      o << pad(SUB,w,"Debye length, 1/\u03BA ") << debyeLength() << " "+angstrom << endl;
+      o << pad(SUB,w+1,"Debye length, 1/\u03BA") << debyeLength() << " "+angstrom << endl;
       return o.str();
     }
 

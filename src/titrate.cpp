@@ -56,15 +56,18 @@ namespace Faunus {
     /*!
      * This will swap the state of given particle from AX<->A and
      * return the energy change associated with the process.
+     * \note This will NOT swap particle radii!
      */
     double EquilibriumController::processdata::swap(particle &p) {
       double uold=energy(p.id);
+      double oldradius=p.radius;
       Point pos=p;           // backup coordinate
       if (p.id==id_AX)
         p=atom[id_A];
       else if (p.id==id_A)
         p=atom[id_AX];
       p=pos;                    // apply old coordinates
+      p.radius=oldradius;       // apply old radius
       return energy(p.id)-uold; // return intrinsic energy change
     }
 

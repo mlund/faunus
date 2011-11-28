@@ -77,6 +77,7 @@ namespace Faunus {
       p_vec p;
       bool load(string);
       bool save(string, p_vec&);
+      bool save(string, Space&);
   };
 
   /*! \brief GROMACS xtc compressed trajectory file format
@@ -112,10 +113,10 @@ namespace Faunus {
     private:
       int rescnt;
       string writeAtomTypes(const Space&);
-      string writeMoleculeType(const Group&, const Space &, Energy::ParticleBonds&);
+      string writeMoleculeType(const Group&, const Space&);
     public:
       FormatTopology();
-      bool save(string, const Space&, Energy::ParticleBonds&); //!< Generate topology from Space
+      bool save(string, const Space&); //!< Generate topology from Space
   };
 
   /*! \brief Trajectory of charges per particle

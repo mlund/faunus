@@ -110,27 +110,27 @@ namespace Faunus {
       protected:
         Geometry::Geometrybase* geo; //!< Pointer to geometry used to calculate interactions
       public:
-        string name;                                          //!< Short informative name
+        string name;                                          // Short informative name
         Energybase();
         virtual ~Energybase();
-        virtual Geometry::Geometrybase& getGeometry();        //!< Reference to geometry used for interactions
-        bool setGeometry( Geometry::Geometrybase& );          //!< Set Geometrybase
-        virtual double p2p(const particle&, const particle&); //!< Particle-particle energy
-        virtual double all2p(const p_vec&, const particle&);  //!< Particle-Particle vector energy
-        virtual double all2all(const p_vec&);                 //!< All inter-particle energies (N^2)
-        virtual double i2i(const p_vec&, int, int);           //!< i'th particle with j'th particle
-        virtual double i2g(const p_vec&, Group &, int);       //!< i'th particle with group
-        virtual double i2all(const p_vec&, int);              //!< i'th particle with all other particles
-        virtual double i_external(const p_vec&, int);         //!< internal energy of i'th particle
-        virtual double i_internal(const p_vec&, int);         //!< External energy of i'th particle
-        virtual double p_external(const particle&);           //!< External energy of particle
-        double i_total(const p_vec&, int);                    //!< Total energy of i'th particle = i2all + i_external + i_internal
-        virtual double g2g(const p_vec&, Group&, Group&);     //!< Group-Group energy
-        virtual double g2all(const p_vec&, Group&);           //!< Energy of Group with all other particles
-        virtual double g_external(const p_vec&, Group&);      //!< External energy of group
-        virtual double g_internal(const p_vec&, Group&);      //!< Internal energy of group
-        virtual double v2v(const p_vec&, const p_vec&);       //!< Particle vector-Particle vector energy
-        virtual double external();                            //!< External energy - pressure, for example.
+        virtual Geometry::Geometrybase& getGeometry();        // Reference to geometry used for interactions
+        bool setGeometry( Geometry::Geometrybase& );          // Set Geometrybase
+        virtual double p2p(const particle&, const particle&); // Particle-particle energy
+        virtual double all2p(const p_vec&, const particle&);  // Particle-Particle vector energy
+        virtual double all2all(const p_vec&);                 // All inter-particle energies (N^2)
+        virtual double i2i(const p_vec&, int, int);           // i'th particle with j'th particle
+        virtual double i2g(const p_vec&, Group &, int);       // i'th particle with group
+        virtual double i2all(const p_vec&, int);              // i'th particle with all other particles
+        virtual double i_external(const p_vec&, int);         // internal energy of i'th particle
+        virtual double i_internal(const p_vec&, int);         // External energy of i'th particle
+        virtual double p_external(const particle&);           // External energy of particle
+        double i_total(const p_vec&, int);                    // Total energy of i'th particle = i2all + i_external + i_internal
+        virtual double g2g(const p_vec&, Group&, Group&);     // Group-Group energy
+        virtual double g2all(const p_vec&, Group&);           // Energy of Group with all other particles
+        virtual double g_external(const p_vec&, Group&);      // External energy of group
+        virtual double g_internal(const p_vec&, Group&);      // Internal energy of group
+        virtual double v2v(const p_vec&, const p_vec&);       // Particle vector-Particle vector energy
+        virtual double external();                            // External energy - pressure, for example.
         string info();                                        //!< Information
     };
 
@@ -161,6 +161,7 @@ namespace Faunus {
             return Energybase::getGeometry();
           }
 
+          //!< Particle-particle energy (kT)
           inline double p2p(const particle &a, const particle &b) {
             return pair.energy(a,b)*pair.tokT();
           }

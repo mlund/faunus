@@ -230,8 +230,10 @@ namespace Faunus {
       if (fin) {
         fin >> vol >> n;
         geo->setVolume(vol);
-        if (key==RESIZE)
+        if (key==RESIZE && n!=(int)p.size()) {
+          cout << "Resizing particle vector from " << p.size() << " --> " << n << ".\n";
           p.resize(n);
+        }
         if (n == (int)p.size() ) {
           for (int i=0; i<n; i++)
             p[i] << fin;

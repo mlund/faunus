@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
 
   InputMap mcp(inputfile);
   MCLoop loop(mcp);                    // class for handling mc loops
-  FormatGRO gro;                       // PQR structure file I/O
+  FormatPQR pqr;                       // PQR structure file I/O
   FormatAAM aam;                       // AAM structure file I/O
   FormatTopology top;
   FormatXTC xtc(1000);                 // XTC gromacs trajectory format
@@ -49,6 +49,7 @@ int main(int argc, char** argv) {
   Move::TranslateRotate gmv(mcp,pot,spc);
   Move::AtomicTranslation mv(mcp, pot, spc);
   Analysis::PolymerShape shape;
+  Analysis::RadialDistribution<float,int> rdf(0.2);
 
   // Add salt
   GroupAtomic salt(spc, mcp);
@@ -108,9 +109,12 @@ int main(int argc, char** argv) {
           sys+=iso.move();
           break;
       }
-      //if ( slp_global.runtest(0.01) ) // 1% chance
-      //  xtc.save("traj.xtc", spc);
-
+      for (auto i=pol.begin(); i!=pol.end()-1; i++)
+        for (auto j=i+1; j!=pol.end(); j++)
+          rdf( spc.geo->dist(i->cm,j->cm) )++;
+      if ( slp_global.runtest(0.1) ) {
+        //xtc.save("traj.xtc", spc);
+      }
     } // end of micro loop
 
     double utot=pot.external();
@@ -123,8 +127,9 @@ int main(int argc, char** argv) {
     cout << loop.timing();
   } // end of macro loop
 
-  gro.save("confout.gro", spc.p);
-  top.save("mytopol.top", spc, bonded->bonds);
+  rdf.save("rdf_p2p.dat");
+  pqr.save("confout.pqr", spc.p);
+  top.save("mytopol.top", spc);
   spc.save(ostate);
 
   iso.test(test);

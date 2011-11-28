@@ -49,6 +49,14 @@ if(NOT (auto_type_inference AND unsigned_long_long_int AND long_double AND range
   message(FATAL_ERROR "Required C++11 features unsupported by compiler.")
 endif()
 
+# --------------------------------
+#   Add Revision control targets
+# --------------------------------
+if(Subversion_FOUND)
+  add_custom_target(rccommit svn commit)
+
+endif()
+ 
 # ---------------------------
 #   Add source directories
 # ---------------------------

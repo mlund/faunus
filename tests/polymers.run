@@ -2,12 +2,6 @@
 
 exe=../src/tools/polymer-npt-sphere
 base="polymers"
-config=$base.input
-polymer=$base.aam
-atomfile=$base.atoms
-testfile=$base.test
-instate="polymers.state"
-outstate=outstate
 
 #-----------------------------------------------------------
 
@@ -32,7 +26,7 @@ npt_dV                 2       # log(dV)
 polymer_N              8
 polymer_file           $base.aam
 polymer_eqdist         0
-polymer_forceconst     0.0557     # kT/A^2
+polymer_forceconst     0.557   # kT/A^2
 transrot_transdp       50
 transrot_rotdp         6
 tion1                  Cl
@@ -52,6 +46,6 @@ echo "4
 
 #-----------------------------------------------------------
 
-$exe -i $base.input -c $instate
+$exe -i $base.input -c $base.state
 
 rm -f confout.gro $base.input $base.aam $base.atoms

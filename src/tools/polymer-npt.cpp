@@ -58,9 +58,9 @@ int main(int argc, char** argv) {
   // Add polymers
   vector<GroupMolecular> pol( mcp.get("polymer_N",0));
   string polyfile = mcp.get<string>("polymer_file", "");
-  double req = mcp.get<double>("polymer_eqdist", 0);
-  double k   = mcp.get<double>("polymer_forceconst", 0);
-  atom["MM"].dp=10.;
+  double req    = mcp.get<double>("polymer_eqdist", 0);
+  double k      = mcp.get<double>("polymer_forceconst", 0);
+  atom["MM"].dp = 10.;
   for (auto &g : pol) {                    // load polymers
     aam.load(polyfile);
     g = spc.insert( aam.p );               // insert into space

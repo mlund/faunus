@@ -73,6 +73,7 @@ namespace Faunus {
 
     GroupMolecular g;
     if ( !pin.empty() ) {
+      cout << "Inserting molecule.\n";
       g.setrange( p.size(), -1);
       assert(g.size()==0 && "Group range broken!");
       for (auto i : pin) {
@@ -90,6 +91,7 @@ namespace Faunus {
       g.accept(*this); 
       Point a;
       while ( overlap_container()==true ) {
+        cout << ".";
         geo->randompos(a);
         a=a-g.cm;
         geo->boundary(a);

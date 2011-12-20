@@ -22,7 +22,7 @@ namespace Faunus {
   AtomTypes atom; // Instantiate global copy
 
   AtomTypes::AtomTypes() {
-    filename="atomlist.inp";
+    filename="";
     AtomData a;
     a.id=list.size();
     a.name="UNK";
@@ -66,6 +66,7 @@ namespace Faunus {
     filename=file;
     std::ifstream f(filename.c_str());
     if (f) {
+      cout << "Reading atom data from " << filename << "\n";
       while (!f.eof()) {
         f >> t;
         if (t=="Atom") {
@@ -90,6 +91,8 @@ namespace Faunus {
   string AtomTypes::info() {
     using namespace textio;
     char w=25;
+    if (filename.empty())
+      filename="(undefined)";
     std::ostringstream o;
     o << header("Atomic Species")
       << pad(SUB,w,"Number of species") << list.size() << endl

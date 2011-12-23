@@ -293,6 +293,119 @@ namespace Faunus {
       }
     }
 
+    TranslateRotateCluster::TranslateRotateCluster(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : TranslateRotate(in,e,s,pfx) {
+      title="Cluster "+title;
+      threshold = in.get<double>(prefix+"_threshold",0);
+      gmobile=nullptr;
+    }
+
+    void TranslateRotateCluster::setMobile(Group &g) {
+      assert(&g!=nullptr);
+      gmobile=&g;
+    }
+
+    string TranslateRotateCluster::_info() {
+      using namespace textio;
+      std::ostringstream o;
+      o << TranslateRotate::_info() << endl;
+      o << pad(SUB,w,"Cluster threshold") << threshold << endl 
+        << pad(SUB,w,"Average cluster size") << avgsize.avg() << endl
+        << pad(SUB,w,"Average bias") << avgbias.avg() << " (0=reject, 1=accept)" << endl; 
+      return o.str();
+    }
+
+    void TranslateRotateCluster::_trialMove() {
+      assert(gmobile!=nullptr && "Cluster group not defined");
+      assert(igroup!=nullptr && "Group to move not defined");
+
+      // find clustered particles
+      cindex.clear();
+      for (auto i : *gmobile)
+        if (ClusterProbability(spc->p, i) > slp_global.randOne() )
+          cindex.push_back(i); // generate cluster list
+      avgsize += cindex.size();
+
+      // rotation
+      angle=dp_rot*slp_global.randHalf();
+      Point p;
+      double r=2;
+      while (r>1) {
+        p.x=2*slp_global.randHalf(); // random vector
+        p.y=2*slp_global.randHalf(); // inside a sphere
+        p.z=2*slp_global.randHalf();
+        r=sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
+      }
+      p=igroup->cm+p; // set endpoint for rotation 
+      igroup->rotate(*spc, p, angle);
+      vrot.setAxis(*spc->geo, igroup->cm, p, angle); // rot. around line between CM and point
+      for (auto i : cindex)
+        spc->trial[i] = vrot.rotate( *spc->geo, spc->p[i] ); // (boundaries are accounted for)
+
+      // translation
+      p.x=dir.x * dp_trans * slp_global.randHalf();
+      p.y=dir.y * dp_trans * slp_global.randHalf();
+      p.z=dir.z * dp_trans * slp_global.randHalf();
+      igroup->translate(*spc, p);
+      for (auto i : cindex) {
+        spc->trial[i] += p;
+        spc->geo->boundary(spc->trial[i]);
+      }
+    }
+
+    void TranslateRotateCluster::_acceptMove() {
+      TranslateRotate::_acceptMove();
+      for (auto i : cindex)
+        spc->p[i] = spc->trial[i];
+    }
+
+    void TranslateRotateCluster::_rejectMove() {
+      TranslateRotate::_rejectMove();
+      for (auto i : cindex)
+        spc->trial[i] = spc->p[i];
+    }
+
+    double TranslateRotateCluster::_energyChange() {
+      double bias=1;             // cluster bias -- see Frenkel 2nd ed, p.405
+      vector<int> imoved=cindex; // index of moved particles
+      for (auto l : *gmobile)
+        if (std::find(cindex.begin(), cindex.end(), l)==cindex.end())
+          bias *= ( 1-ClusterProbability(spc->trial, l) ) / ( 1-ClusterProbability(spc->p, l) );
+      avgbias += bias;
+      if (bias<1e-7)
+        return pc::infty;        // don't bother to continue with energy calculation
+
+      for (auto i : *igroup)     // create vector of ALL moved particles
+        imoved.push_back(i);
+
+      for (auto i : imoved)      // check for boundary collision
+        if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
+          return pc::infty;
+
+      double uold = pot->g_external(spc->p, *igroup);
+      double unew = pot->g_external(spc->trial, *igroup);
+      for (auto i : cindex) {
+        uold += pot->i_external(spc->p, i);
+        unew += pot->i_external(spc->trial, i);
+      }
+      for (auto i : imoved)
+        for (int j=0; j<(int)spc->p.size(); j++)
+          if (i!=j) {
+            uold += pot->i2i(spc->p, i, j);
+            unew += pot->i2i(spc->trial, i, j);
+          }
+
+      return unew - uold - log(bias);
+    }
+
+    double TranslateRotateCluster::ClusterProbability(p_vec &p, int i) {
+      double r2=threshold*threshold;
+      for (auto j : *igroup)
+        if (i!=j)
+          if (spc->geo->sqdist(p[i],p[j])<r2 )
+            return 1;
+      return 0;
+    }
+
     Isobaric::Isobaric(InputMap &in, Energy::Hamiltonian &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Isobaric Volume Fluctuations";
       w=30;

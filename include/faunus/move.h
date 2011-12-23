@@ -118,7 +118,7 @@ namespace Faunus {
      * \author Mikael Lund
      */
     class TranslateRotate : public Movebase {
-      private:
+      protected:
         void _test(UnitTest&);
         void _trialMove();
         void _acceptMove();
@@ -138,6 +138,34 @@ namespace Faunus {
         void setGroup(Group&); //!< Select Group to move
         Point dir;             //!< Translation directions (default: x=y=z=1)
         bool groupWiseEnergy;  //!< Attempt to evaluate energy over groups from vector in Space (default=false)
+    };
+
+    /*!
+     * \brief Combined rotation and rotation of groups and mobile species around it
+     * \author Mikael Lund
+     *
+     * This class will do a combined translational and rotational move of a group along with
+     * particles surrounding it. To specify where to look for clustered particles, use
+     * the setMobile() function. Whether particles are considered part of the cluster is
+     * determined by the virtual function ClusterProbability().
+     */
+     class TranslateRotateCluster : public TranslateRotate {
+      private:
+        Geometry::VectorRotate vrot;
+        vector<int> cindex; //!< index of mobile ions to move with group
+        void _trialMove();
+        void _acceptMove();
+        void _rejectMove();
+        double _energyChange();
+        string _info();
+        Average<double> avgsize; //!< Average number of ions in cluster
+        Average<double> avgbias; //!< Average bias
+        Group* gmobile;       //!< Pointer to group with potential cluster particles
+        virtual double ClusterProbability(p_vec&,int); //!< Probability that particle index belongs to cluster
+      public:
+        TranslateRotateCluster(InputMap&, Energy::Energybase&, Space&, string="transrot");
+        void setMobile(Group&); //!< Select atomic species to move with the main group
+        double threshold;  //!< Distance between particles to define a cluster
     };
 
     /*!

@@ -1,0 +1,19 @@
+
+atomlist               cluster.atoms
+loop_macrosteps        10
+loop_microsteps        20000
+cuboid_len             150     # Box side length Angstrom
+Sphere_radius          100
+temperature            298     # Kelvin
+epsilon_r              78.7    # Water dielectric const
+lj_eps                 0.05    # kT
+polymer_N              2
+polymer_file           cluster.aam
+transrot_transdp       15
+transrot_rotdp         3
+transrot_threshold     35
+
+tion1                  La
+nion1                  40
+dpion1                 10
+

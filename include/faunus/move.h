@@ -37,17 +37,27 @@ namespace Faunus {
      * \author Mikael Lund
      * \date Lund, 2007-2011
      *
-     * The is a base class and derived classes MUST implement a number of
-     * functions. Importanty, it is important to have an argumentfree move()
-     * function as this can be attached to groups so that these have the
-     * information to move automatically.
+     * The is a base class that handles Monte Carlo moves and derived classes
+     * are required to implement the following pure virtual (and private)
+     * functions:
+     *
+     * \li \c _trialMove()
+     * \li \c _energyChange()
+     * \li \c _acceptMove()
+     * \li \c _rejectMove()
+     * \li \c _info()
+     *
+     * These functions should be pretty self-explanatory and are - via wrapper
+     * functions - called by the move(). It is important that the _energyChange() function
+     * returns the full energy associated with the move. For example, for NPT
+     * moves the pV term should be included and so on.
      */
 
     class Movebase {
       private:
         unsigned long int cnt_accepted;        //!< number of accepted moves
         double dusum;                          //!< Sum of all energy changes made by this move
-                                              
+
         virtual void _test(UnitTest&);         //!< Unit testing
         virtual string _info()=0;              //!< Specific info for derived moves
         virtual void _trialMove()=0;           //!< Do a trial move
@@ -99,7 +109,7 @@ namespace Faunus {
         map_type sqrmap; //!< Single particle mean square displacement map
         Group* igroup;   //!< Group pointer in which particles are moved randomly (NULL if none, default)
         int iparticle;   //!< Select single particle to move (-1 if none, default)
-        Average<unsigned int> gsize; //!< Average size of igroup;
+        Average<unsigned long long int> gsize; //!< Average size of igroup;
 
         string _info();
         void _trialMove();
@@ -145,9 +155,13 @@ namespace Faunus {
      * \author Mikael Lund
      *
      * This class will do a combined translational and rotational move of a group along with
-     * particles surrounding it. To specify where to look for clustered particles, use
+     * atomic particles surrounding it. To specify where to look for clustered particles, use
      * the setMobile() function. Whether particles are considered part of the cluster is
-     * determined by the virtual function ClusterProbability().
+     * determined by the private virtual function ClusterProbability(). By default this is a simple
+     * step function with P=1 when an atomic particle in the group set by setMobile is closer
+     * than a certain threshold to a particle in the main group; P=0 otherwise.
+     * The implemented cluster algorithm is general - see Frenkel and Smith, 2nd ed, p405 - and derived classes
+     * can re-implement ClusterProbability() for arbitrary probability functions.
      */
      class TranslateRotateCluster : public TranslateRotate {
       private:
@@ -160,7 +174,7 @@ namespace Faunus {
         string _info();
         Average<double> avgsize; //!< Average number of ions in cluster
         Average<double> avgbias; //!< Average bias
-        Group* gmobile;       //!< Pointer to group with potential cluster particles
+        Group* gmobile;          //!< Pointer to group with potential cluster particles
         virtual double ClusterProbability(p_vec&,int); //!< Probability that particle index belongs to cluster
       public:
         TranslateRotateCluster(InputMap&, Energy::Energybase&, Space&, string="transrot");

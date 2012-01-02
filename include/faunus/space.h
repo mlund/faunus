@@ -7,7 +7,6 @@
 
 namespace Faunus {
 
-
   /*!
    * \brief Contains the particle vector and takes care of particle insertion and deletion.
    * \todo Take care of bonds too?
@@ -42,7 +41,7 @@ namespace Faunus {
       virtual bool save(string);                      //!< Save container state to disk
       virtual bool load(string, keys=NORESIZE);       //!< Load container state from disk
 
-      GroupMolecular insert(const p_vec&,int=-1, keys=NOOVERLAP);
+      GroupMolecular insert(const p_vec&, int=-1);
       bool insert(const particle&, int=-1);           //!< Insert particle at pos n (old n will be pushed forward).
       bool insert(string, int, keys=NOOVERLAP); 
       bool erase(int);                               //!< Remove n'th particle

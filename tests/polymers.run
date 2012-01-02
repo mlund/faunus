@@ -17,7 +17,7 @@ atomlist               $base.atoms
 loop_macrosteps        10
 loop_microsteps        20000
 cuboid_len             200     # Box side length Angstrom
-Sphere_radius          100
+sphere_radius          100
 temperature            298     # Kelvin
 epsilon_r              78.7    # Water dielectric const
 lj_eps                 0.05    # kT

@@ -1,9 +1,11 @@
 
 atomlist               cluster.atoms
 loop_macrosteps        10
-loop_microsteps        20000
-cuboid_len             150     # Box side length Angstrom
-Sphere_radius          100
+loop_microsteps        10000
+#cuboid_len             150     # Box side length Angstrom
+#Sphere_radius          100
+cylinder_radius        100
+cylinder_len           200
 temperature            298     # Kelvin
 epsilon_r              78.7    # Water dielectric const
 lj_eps                 0.05    # kT

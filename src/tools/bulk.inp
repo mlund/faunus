@@ -1,7 +1,7 @@
 processfile eq.process
 
 cuboid_len    100
-Sphere_radius 100
+sphere_radius 100
 
 temperature 298.15
 epsilon_r   79

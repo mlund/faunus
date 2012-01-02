@@ -61,54 +61,27 @@ namespace Faunus {
   }
 
   /*!
-   * \param pin Vector to insert
-   * \param i Insert position (IGNORED). Default = -1 which means end of current vector
+   * This will insert a particle vector into the current space. No overlap checks are performed; this should
+   * be done prior to insertion by for example the Geometry::FindSpace class.
+   *
+   * \param pin Particle vector to insert
+   * \param i Insert position (PRESENTLY IGNORED). Default = -1 which means end of current vector
+   *
    * \todo Implement insertion at random position
    */
-  GroupMolecular Space::insert(const p_vec &pin, int i, keys k) {
+  GroupMolecular Space::insert(const p_vec &pin, int i) {
     assert(i==-1 && "Vector insertion at random position unimplemented.");
-    if (k==NOOVERLAP) {
-      assert(overlap()==false && "Particle overlap not allowed before inserting.");
-    }
-
     GroupMolecular g;
     if ( !pin.empty() ) {
-      cout << "Inserting molecule.\n";
       g.setrange( p.size(), -1);
       assert(g.size()==0 && "Group range broken!");
-      for (auto i : pin) {
-        geo->boundary(i);
+      for (auto &i : pin) {
         p.push_back(i);
         trial.push_back(i);
         g.resize( g.size()+1 );
       }
       g.setMassCenter(*this);
-      Point dp;
-      geo->randompos(dp);
-      dp=-g.cm+dp;
-      geo->boundary(dp);
-      g.translate(*this, dp);
-      g.accept(*this); 
-      Point a;
-      while ( overlap_container()==true ) {
-        cout << ".";
-        geo->randompos(a);
-        a=a-g.cm;
-        geo->boundary(a);
-        g.translate(*this,a);
-        g.accept(*this);
-      }
-      if (k==NOOVERLAP) {
-        while ( overlap()==true ) {
-          geo->randompos(a);
-          a=a-g.cm;
-          geo->boundary(a);
-          g.translate(*this,a);
-          g.accept(*this);
-        }
-      }
     }
-    g.setMassCenter(*this);
     return g;
   }
 

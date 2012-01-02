@@ -30,7 +30,7 @@ namespace Faunus {
     }
 
     void Movebase::trialMove() {
-      assert(spc->geo!=nullptr); // space geometry MUST be set before moving!
+      assert(spc->geo!=nullptr && "Space geometry MUST be set before moving!");
       cnt++;
       _trialMove();
     }
@@ -43,12 +43,21 @@ namespace Faunus {
     void Movebase::rejectMove() {
       _rejectMove();
     }
-    
+   
+    /*! \return Energy change in units of kT */
     double Movebase::energyChange() {
       return _energyChange();
     }
   
     /*!
+     * This function will perform a trial move and accept/reject using the standard
+     * Metropolis criteria. That is, it will
+     * perform the following actions \c n times:
+     * \li Perform a trial move with \c _trialMove()
+     * \li Calulate the energy change, \f$\beta\Delta U\f$ with \c _energyChange()
+     * \li Accept with probability \f$ \min(1,e^{-\beta\Delta U}) \f$
+     * \li Call either \c _acceptMove() or \c _rejectMove()
+     *
      * \param n Perform move \c n times
      */
     double Movebase::move(int n) {
@@ -92,6 +101,17 @@ namespace Faunus {
     void Movebase::_test(UnitTest&) {
     }
 
+    /*!
+     * This will return a formatted multi-line information string about the move and
+     * will as a minimum contain:
+     * \li Name of move
+     * \li Runfraction
+     * \li Number of times the move has been called
+     * \li Acceptance
+     * \li Total energy change
+     *
+     * Typically additional information will be provided as well.
+     */
     string Movebase::info() {
       assert(!title.empty() && "Markov Moves must have a title");
       std::ostringstream o;

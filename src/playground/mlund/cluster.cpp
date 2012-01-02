@@ -4,7 +4,7 @@
 using namespace Faunus;
 using namespace TCLAP;
 
-typedef Geometry::Sphere Tgeometry;
+typedef Geometry::PeriodicCylinder Tgeometry;
 typedef Potential::CoulombSR<Tgeometry, Potential::Coulomb, Potential::HardSphere> Tpairpot;
 
 int main(int argc, char** argv) {
@@ -26,7 +26,11 @@ int main(int argc, char** argv) {
   string polyfile = mcp.get<string>("polymer_file", "");
   for (auto &g : pol) {
     aam.load(polyfile);
-    g = spc.insert( aam.p,-1,Space::OVERLAP );
+    Geometry::FindSpace f;
+    f.dir.x=0;
+    f.dir.y=0;
+    f.find(*spc.geo, spc.p, aam.p );
+    g = spc.insert( aam.p );
     g.name="Protein";
     spc.enroll(g);
   }
@@ -38,13 +42,16 @@ int main(int argc, char** argv) {
   spc.load("state", Space::RESIZE);
 
   Analysis::RadialDistribution<float,int> rdf(0.2);
-  rdf.maxdist=pow( spc.geo->getVolume(), 1/3.)/2;   // sample half box length
+  //rdf.maxdist=pow( spc.geo->getVolume(), 1/3.)/2;   // sample half box length
 
   Move::TranslateRotateCluster gmv(mcp,pot,spc);
+  gmv.setMobile(salt);
+  gmv.dir.x=0;
+  gmv.dir.y=0;
+
   Move::AtomicTranslation mv(mcp, pot, spc);
   mv.setGroup(salt);
-  gmv.setMobile(salt);
-
+ 
   double utot=pot.external() + pot.g_internal(spc.p, salt);
   for (auto &p : pol)
     utot+=pot.g2g(spc.p, salt, p);

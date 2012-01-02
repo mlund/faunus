@@ -8,6 +8,7 @@
 namespace Faunus {
 
   class InputMap;
+  class Group;
 
   /*!
    * \brief Namespace for geometric operations.
@@ -37,6 +38,9 @@ namespace Faunus {
       protected:
         slump slp;
         string name;                                        //!< Name of the geometry
+        inline int anint(double x) const {
+          return int(x>0. ? x+.5 : x-.5);
+        }
       public:
         enum collisiontype {BOUNDARY,ZONE};                 //!< Types for collision() function
         double getVolume() const;                           //!< Get volume of container (A^3)
@@ -46,8 +50,8 @@ namespace Faunus {
         bool save(string);                                  //!< Save geometry state to disk
         bool load(string,bool=false);                       //!< Load geometry state from disk
 
-        virtual bool collision(const particle&, collisiontype=BOUNDARY)=0;//!< Check for collision with boundaries, forbidden zones, matter,..
-        virtual void randompos(Point &)=0;                  //!< Random point within container
+        virtual bool collision(const particle&, collisiontype=BOUNDARY) const=0;//!< Check for collision with boundaries, forbidden zones, matter,..
+        virtual void randompos(Point &)=0;              //!< Random point within container
         virtual void boundary(Point &) const=0;             //!< Apply boundary conditions to a point
         virtual void scale(Point&, const double&) const;    //!< Scale point to a new volume - for NPT ensemble
         virtual double sqdist(const Point &a, const Point &b) const=0;
@@ -70,10 +74,10 @@ namespace Faunus {
       public:
         void setradius(double);                 //!< Set radius (angstrom)
         Sphere(double);                         //!< Construct from radius (angstrom)
-        Sphere(InputMap&, string="Sphere");     //!< Construct from InputMap key \c prefix_radius
+        Sphere(InputMap&, string="sphere");     //!< Construct from InputMap key \c prefix_radius
         void randompos(Point &);
         void boundary(Point &) const;
-        bool collision(const particle &, collisiontype=BOUNDARY);
+        bool collision(const particle &, collisiontype=BOUNDARY) const;
         inline double sqdist(const Point &a, const Point &b) const {
           register double dx,dy,dz;
           dx=a.x-b.x;
@@ -103,9 +107,6 @@ namespace Faunus {
       protected:
         bool setslice(Point, Point);             //!< Reset slice position
         Point len_inv;                           //!< Inverse sidelengths
-        inline int anint(double x) const {
-          return int(x>0. ? x+.5 : x-.5);
-        }
         Point slice_min, slice_max;              //!< Position of slice corners
  
       public:
@@ -117,7 +118,7 @@ namespace Faunus {
         void randompos(Point&);      
         bool save(string);           
         bool load(string,bool=false);
-        bool collision(const particle&, collisiontype=BOUNDARY);
+        bool collision(const particle&, collisiontype=BOUNDARY) const;
 
         inline double sqdist(const Point &a, const Point &b) const {
           double dx=std::abs(a.x-b.x);
@@ -194,8 +195,7 @@ namespace Faunus {
 
     /*!
      * \brief Cylindrical simulation container
-     * \author Mikael Lund & Bjorn Persson
-     * \todo Periodic ends seems more useful - any particular reason for having hard ends?
+     * \author Mikael Lund and Bjorn Persson
      *
      * This is a cylindrical simulation container where all walls
      * are HARD. The origin is in the middle of the cylinder.
@@ -205,23 +205,55 @@ namespace Faunus {
         string _info(char); //!< Cylinder info
         void _setVolume(double);
         double _getVolume() const;
-        double halflen;
         double r2;    //!< Cylinder radius squared
         void init(double,double);
-        double len;   //!< Cylinder length
         double r;     //!< Cylinder radius
         double diameter;
+      protected:
+        double len;   //!< Cylinder length
+        double halflen;
       public:
-        Cylinder(double, double);
-        Cylinder(InputMap &);
+        Cylinder(double, double);      //!< Construct from length and radius
+        Cylinder(InputMap &);          //!< Construct from inputmap
         void randompos(Point &);
-        bool collision(const particle&, collisiontype=BOUNDARY);
+        void boundary(Point &) const;
+        bool collision(const particle&, collisiontype=BOUNDARY) const;
         inline double sqdist(const Point &a, const Point &b) const {
           register double dx,dy,dz;
           dx=a.x-b.x;
           dy=a.y-b.y;
           dz=a.z-b.z;
           return dx*dx + dy*dy + dz*dz;
+        }
+        inline Point vdist(const Point &a, const Point &b) {
+          return a-b;
+        }
+    };
+
+    /*!
+     * \brief Cylinder with periodic boundaries in the z direction
+     * \author Mikael Lund
+     */
+    class PeriodicCylinder : public Cylinder {
+      public:
+        PeriodicCylinder(double, double);                                                                   
+        PeriodicCylinder(InputMap &);  
+        void boundary(Point &) const;
+        inline double sqdist(const Point &a, const Point &b) const {
+          double dx=a.x-b.x;
+          double dy=a.y-b.y;
+          double dz=std::abs(a.z-b.z);
+          if (dz>halflen)
+            dz-=len;
+          return dx*dx + dy*dy + dz*dz;
+        }
+        inline Point vdist(const Point &a, const Point &b) {
+          Point r=a-b;
+          if (r.z>halflen)
+            r.z-=len;
+          else if (r.z<-halflen)
+            r.z+=len;
+          return r;
         }
     };
 
@@ -236,8 +268,8 @@ namespace Faunus {
         string _info(char);
       public:
         hyperSphere(InputMap&);
-        void randompos(point &);
-        bool collision(const particle &, collisiontype=BOUNDARY);
+        void randompos(point&);
+        bool collision(const particle &, collisiontype=BOUNDARY) const;
 
         double dist(const point &a, const point &b) {
           return r*a.geodesic(b); // CHECK!!! (virtual=slow!)
@@ -260,6 +292,28 @@ namespace Faunus {
     };
 
 #endif
+
+    Point massCenter(const Geometrybase&, const p_vec&); //!< Calculate mass center of a particle vector
+    void translate(const Geometrybase&, p_vec&, Point); //!< Translate a particle vector by a vector
+
+    /*!
+     * \brief Find an empty space for a particle vector in a space of other particles
+     * \author Mikael Lund
+     * \date Asljunga 2011
+     * \todo Implement random rotation in addition to current translation scheme.
+     *
+     */
+    class FindSpace {
+      private:
+        bool containerOverlap(const Geometrybase&, const p_vec&);
+        bool matterOverlap(const Geometrybase&, const p_vec&, const p_vec&);
+      public:
+        FindSpace();
+        Point dir;                  //!< default = [1,1,1]
+        bool allowContainerOverlap; //!< default = false;
+        bool allowMatterOverlap;    //!< default = false;
+        bool find(Geometrybase&, const p_vec&, p_vec&, unsigned int=1000);
+    };
 
     /*!
      * \brief Vector rotation routines

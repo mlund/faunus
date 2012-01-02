@@ -120,7 +120,7 @@ namespace Faunus {
 
     void Sphere::boundary(Point &m) const {}
 
-    bool Sphere::collision(const particle &a, collisiontype type) {
+    bool Sphere::collision(const particle &a, collisiontype type) const {
       return (a.x*a.x+a.y*a.y+a.z*a.z > r2) ? true:false;
     }
 
@@ -215,7 +215,7 @@ namespace Faunus {
       m.z = slp.randHalf()*len.z;
     }
 
-    bool Cuboid::collision(const particle &a, collisiontype type) {
+    bool Cuboid::collision(const particle &a, collisiontype type) const {
       switch (type) {
         case (BOUNDARY): // collision with geometry boundaries
           if (std::abs(a.x) > len_half.x ||
@@ -282,8 +282,13 @@ namespace Faunus {
       init(length, radius);
     }
 
+    /*!
+     * The inputmap is searched for the keywords:
+     * \li \c cylinder_len (along z) [A]
+     * \li \c cylinder_radius [A]
+     */
     Cylinder::Cylinder(InputMap &in) {
-      init( in.get<double>("Cylinder_len", 0), in.get<double>("Cylinder_radius", 0) );
+      init( in.get<double>("cylinder_len", 0), in.get<double>("cylinder_radius", 0) );
     }
 
     void Cylinder::init(double length, double radius) {
@@ -304,6 +309,8 @@ namespace Faunus {
       return 2*r2*pc::pi*len;
     }
 
+    void Cylinder::boundary(Point &p ) const {}
+
     void Cylinder::randompos(Point &m) {
       double l=r2+1;
       m.z = slp.randHalf()*len;
@@ -314,7 +321,7 @@ namespace Faunus {
       }
     }
 
-    bool Cylinder::collision(const particle &a, collisiontype type) {
+    bool Cylinder::collision(const particle &a, collisiontype type) const {
       return 
         ( a.x*a.x+a.y*a.y>r2 || ( a.z<-halflen || a.z>halflen ) ) ? true:false;
     }
@@ -326,13 +333,26 @@ namespace Faunus {
       return o.str();
     }
 
+    PeriodicCylinder::PeriodicCylinder(double length, double radius) : Cylinder(length,radius) {
+      name="Cylindrical (periodic ends)";
+    }
+
+    PeriodicCylinder::PeriodicCylinder(InputMap &in) : Cylinder(in) {
+      name="Cylindrical (periodic ends)";
+    }
+
+    void PeriodicCylinder::boundary(Point &a) const {
+      if (std::abs(a.z)>halflen)
+        a.z-=len*anint(a.z/len);
+    }
+
 #ifdef HYPERSPHERE
     const double hyperSphere::pi=pc::pi;
 
     hyperSphere::hyperSphere(InputMap &in) : Sphere(in) {
     }
 
-    bool hyperSphere::collision(const particle &p) {
+    bool hyperSphere::collision(const particle &p) const {
       return false;
     }
 
@@ -363,6 +383,82 @@ namespace Faunus {
        }
        */
 #endif
+
+    Point massCenter(const Geometrybase &geo, const p_vec &p) {
+      double sum=0;
+      Point cm,t,o = p.at( p.size()/2 );  // set origo to middle particle
+      for (auto &pi : p) {
+        t = pi-o;              // translate to origo
+        geo.boundary(t);        // periodic boundary (if any)
+        cm += t * pi.mw;
+        sum += pi.mw;
+      }
+      assert(sum>0 && "Zero mass no good in CM calculation! Did you forget to assign atom weights?");
+      cm=cm*(1/sum) + o;
+      geo.boundary(cm);
+      return cm;
+    }
+
+    void translate(const Geometrybase &geo, p_vec &p, Point d) {
+      for (auto &pi : p) {
+        pi += d;
+        geo.boundary(pi);
+      }
+    }
+
+    FindSpace::FindSpace() {
+      dir.x=1;
+      dir.y=1;
+      dir.z=1;
+      allowContainerOverlap=false;
+      allowMatterOverlap=false;   
+    }
+
+    bool FindSpace::matterOverlap(const Geometrybase &geo, const p_vec &p1, const p_vec &p2) {
+      if (allowMatterOverlap==false)
+        for (auto &i : p1)
+          for (auto &j : p2) {
+            double max=i.radius+j.radius;
+            if ( geo.sqdist(i,j)<max*max )
+              return true;
+          }
+      return false;
+    }
+
+    bool FindSpace::containerOverlap(const Geometrybase &geo, const p_vec &p) {
+      if (allowContainerOverlap==false)
+        for (auto &i : p)
+          if (geo.collision(i)) return true;
+      return false;
+    }
+
+    /*!
+     * \param dst Destination particle vector (will not be touched!)
+     * \param p Particle vector to find space for. Coordinates will be changed.
+     * \param maxtrials Number of times to try before timeout.
+     */
+    bool FindSpace::find(Geometrybase &geo, const p_vec &dst, p_vec &p, unsigned int maxtrials) {
+      using namespace textio;
+      cout << indent(SUB) << "Trying to insert " << p.size() << " particle(s)";
+      Point cm,v;
+      do {
+        cout << ".";
+        maxtrials--;
+        cm = massCenter(geo, p);
+        geo.randompos(v);
+        v.x*=dir.x;
+        v.y*=dir.y;
+        v.z*=dir.z;
+        translate(geo, p, -cm+v);
+      } while (maxtrials>0 && (containerOverlap(geo,p)==true || matterOverlap(geo,p,dst)==true));
+      if (maxtrials>0) {
+        cout << " OK!\n";
+        return true;
+      }
+      cout << " timeout!\n";
+      assert(!"Timeout - found no space for particle(s).");
+      return false;
+    }
 
     /*!
      * \param geo Simulation geometry

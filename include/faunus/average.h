@@ -47,7 +47,7 @@ namespace Faunus {
   
   template<class T> Average<T>::Average() { reset(); }
   
-  template<class T> T Average<T>::avg() const { return sum/cnt; }
+  template<class T> T Average<T>::avg() const { return double(sum)/cnt; }
 
   template<class T> void Average<T>::reset() {
     sum=sqsum=0;

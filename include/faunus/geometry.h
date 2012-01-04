@@ -233,12 +233,13 @@ namespace Faunus {
     /*!
      * \brief Cylinder with periodic boundaries in the z direction
      * \author Mikael Lund
+     * \warning something seems rotten...
      */
     class PeriodicCylinder : public Cylinder {
       public:
-        PeriodicCylinder(double, double);                                                                   
-        PeriodicCylinder(InputMap &);  
-        void boundary(Point &) const;
+        PeriodicCylinder(double, double);
+        PeriodicCylinder(InputMap&);
+        void boundary(Point&) const;
         inline double sqdist(const Point &a, const Point &b) const {
           double dx=a.x-b.x;
           double dy=a.y-b.y;

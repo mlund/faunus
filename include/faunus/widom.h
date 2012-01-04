@@ -58,7 +58,7 @@ namespace Faunus {
             return cnt;
           }
           Tx dx;
-          virtual ~Table2D() {}
+          //virtual ~Table2D() {}
           Tmap map;
         private:
           Tx virtual round(Tx x) { return (x>=0) ? int( x/dx+0.5 )*dx : int( x/dx-0.5 )*dx; }

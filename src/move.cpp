@@ -237,21 +237,25 @@ namespace Faunus {
 
     void TranslateRotate::_trialMove() {
       assert(igroup!=nullptr);
-      angle=dp_rot*slp_global.randHalf();
       Point p;
-      double r=2;
-      while (r>1) {
-        p.x=2*slp_global.randHalf(); // random vector
-        p.y=2*slp_global.randHalf(); // inside a sphere
-        p.z=2*slp_global.randHalf();
-        r=sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
+      if (dp_rot>1e-6) {
+        angle=dp_rot*slp_global.randHalf();
+        double r=2;
+        while (r>1) {
+          p.x=2*slp_global.randHalf(); // random vector
+          p.y=2*slp_global.randHalf(); // inside a sphere
+          p.z=2*slp_global.randHalf();
+          r=sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
+        }
+        p=igroup->cm+p; // set endpoint for rotation 
+        igroup->rotate(*spc, p, angle);
       }
-      p=igroup->cm+p; // set endpoint for rotation 
-      igroup->rotate(*spc, p, angle);
-      p.x=dir.x * dp_trans * slp_global.randHalf();
-      p.y=dir.y * dp_trans * slp_global.randHalf();
-      p.z=dir.z * dp_trans * slp_global.randHalf();
-      igroup->translate(*spc, p);
+      if (dp_trans>1e-6) {
+        p.x=dir.x * dp_trans * slp_global.randHalf();
+        p.y=dir.y * dp_trans * slp_global.randHalf();
+        p.z=dir.z * dp_trans * slp_global.randHalf();
+        igroup->translate(*spc, p);
+      }
     }
 
     void TranslateRotate::_acceptMove() {
@@ -270,6 +274,9 @@ namespace Faunus {
     }
 
     double TranslateRotate::_energyChange() {
+      if (dp_rot<1e-6 && dp_trans<1e-6)
+        return 0;
+
       for (auto i : *igroup)
         if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
           return pc::infty;
@@ -313,9 +320,14 @@ namespace Faunus {
       }
     }
 
+    /*!
+     * The cluster threshold is set with the InputMap keyword \c transrot_clustersize and
+     * gives specifies the SURFACE distance between macromolecular particles and atomic particles
+     * to be clustered.
+     */
     TranslateRotateCluster::TranslateRotateCluster(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : TranslateRotate(in,e,s,pfx) {
       title="Cluster "+title;
-      threshold = in.get<double>(prefix+"_threshold",0);
+      threshold = in.get<double>(prefix+"_clustersize",0);
       gmobile=nullptr;
     }
 
@@ -328,7 +340,7 @@ namespace Faunus {
       using namespace textio;
       std::ostringstream o;
       o << TranslateRotate::_info() << endl;
-      o << pad(SUB,w,"Cluster threshold") << threshold << endl 
+      o << pad(SUB,w,"Cluster threshold") << threshold << _angstrom << endl 
         << pad(SUB,w,"Average cluster size") << avgsize.avg() << endl
         << pad(SUB,w,"Average bias") << avgbias.avg() << " (0=reject, 1=accept)" << endl; 
       return o.str();
@@ -337,6 +349,7 @@ namespace Faunus {
     void TranslateRotateCluster::_trialMove() {
       assert(gmobile!=nullptr && "Cluster group not defined");
       assert(igroup!=nullptr && "Group to move not defined");
+      Point p;
 
       // find clustered particles
       cindex.clear();
@@ -346,29 +359,32 @@ namespace Faunus {
       avgsize += cindex.size();
 
       // rotation
-      angle=dp_rot*slp_global.randHalf();
-      Point p;
-      double r=2;
-      while (r>1) {
-        p.x=2*slp_global.randHalf(); // random vector
-        p.y=2*slp_global.randHalf(); // inside a sphere
-        p.z=2*slp_global.randHalf();
-        r=sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
+      if (dp_rot>1e-6) {
+        angle=dp_rot*slp_global.randHalf();
+        double r=2;
+        while (r>1) {
+          p.x=2*slp_global.randHalf(); // random vector
+          p.y=2*slp_global.randHalf(); // inside a sphere
+          p.z=2*slp_global.randHalf();
+          r=sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
+        }
+        p=igroup->cm+p; // set endpoint for rotation 
+        igroup->rotate(*spc, p, angle);
+        vrot.setAxis(*spc->geo, igroup->cm, p, angle); // rot. around line between CM and point
+        for (auto i : cindex)
+          spc->trial[i] = vrot.rotate( *spc->geo, spc->p[i] ); // (boundaries are accounted for)
       }
-      p=igroup->cm+p; // set endpoint for rotation 
-      igroup->rotate(*spc, p, angle);
-      vrot.setAxis(*spc->geo, igroup->cm, p, angle); // rot. around line between CM and point
-      for (auto i : cindex)
-        spc->trial[i] = vrot.rotate( *spc->geo, spc->p[i] ); // (boundaries are accounted for)
 
       // translation
-      p.x=dir.x * dp_trans * slp_global.randHalf();
-      p.y=dir.y * dp_trans * slp_global.randHalf();
-      p.z=dir.z * dp_trans * slp_global.randHalf();
-      igroup->translate(*spc, p);
-      for (auto i : cindex) {
-        spc->trial[i] += p;
-        spc->geo->boundary(spc->trial[i]);
+      if (dp_trans>1e-6) {
+        p.x=dir.x * dp_trans * slp_global.randHalf();
+        p.y=dir.y * dp_trans * slp_global.randHalf();
+        p.z=dir.z * dp_trans * slp_global.randHalf();
+        igroup->translate(*spc, p);
+        for (auto i : cindex) {
+          spc->trial[i] += p;
+          spc->geo->boundary(spc->trial[i]);
+        }
       }
     }
 
@@ -394,35 +410,44 @@ namespace Faunus {
       if (bias<1e-7)
         return pc::infty;        // don't bother to continue with energy calculation
 
-      for (auto i : *igroup)     // create vector of ALL moved particles
+      if (dp_rot<1e-6 && dp_trans<1e-6)
+        return 0;
+
+      for (auto i : *igroup)     // Add macromolecule to list of moved particle index
         imoved.push_back(i);
 
-      for (auto i : imoved)      // check for boundary collision
+      // container boundary collision?
+      for (auto i : imoved)
         if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
           return pc::infty;
 
+      // external potential on macromolecule
       double uold = pot->g_external(spc->p, *igroup);
       double unew = pot->g_external(spc->trial, *igroup);
+
+      // external potentia on clustered atomic species
       for (auto i : cindex) {
         uold += pot->i_external(spc->p, i);
         unew += pot->i_external(spc->trial, i);
       }
-      for (auto i : imoved)
-        for (int j=0; j<(int)spc->p.size(); j++)
-          if (i!=j) {
-            uold += pot->i2i(spc->p, i, j);
-            unew += pot->i2i(spc->trial, i, j);
-          }
 
-      return unew - uold - log(bias);
+      // pair energy between static and moved particles
+      double du=0;
+#pragma omp parallel for reduction (+:du)
+      for (int j=0; j<(int)spc->p.size(); j++)
+        if ( std::find(imoved.begin(), imoved.end(), j )==imoved.end() )
+          for (auto i : imoved)
+            du += pot->i2i(spc->trial, i, j) - pot->i2i(spc->p, i, j);
+      return unew - uold + du - log(bias);
     }
 
     double TranslateRotateCluster::ClusterProbability(p_vec &p, int i) {
-      double r2=threshold*threshold;
       for (auto j : *igroup)
-        if (i!=j)
-          if (spc->geo->sqdist(p[i],p[j])<r2 )
+        if (i!=j) {
+          double r=threshold+p[i].radius+p[j].radius;
+          if (spc->geo->sqdist(p[i],p[j])<r*r )
             return 1;
+        }
       return 0;
     }
 

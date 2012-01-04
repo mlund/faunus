@@ -4,7 +4,8 @@
 using namespace Faunus;
 using namespace TCLAP;
 
-typedef Geometry::PeriodicCylinder Tgeometry;
+//typedef Geometry::PeriodicCylinder Tgeometry;
+typedef Geometry::Cylinder Tgeometry;
 typedef Potential::CoulombSR<Tgeometry, Potential::Coulomb, Potential::HardSphere> Tpairpot;
 
 int main(int argc, char** argv) {
@@ -39,10 +40,9 @@ int main(int argc, char** argv) {
   GroupAtomic salt(spc, mcp);
   salt.name="Salt";
   spc.enroll(salt);
-  spc.load("state", Space::RESIZE);
+  spc.load("state");
 
-  Analysis::RadialDistribution<float,int> rdf(0.2);
-  //rdf.maxdist=pow( spc.geo->getVolume(), 1/3.)/2;   // sample half box length
+  Analysis::Table2D<float,unsigned long int> rdf(0.2);
 
   Move::TranslateRotateCluster gmv(mcp,pot,spc);
   gmv.setMobile(salt);

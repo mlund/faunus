@@ -292,7 +292,7 @@ namespace Faunus {
     }
 
     void Cylinder::init(double length, double radius) {
-      name="Cylindrical (Hard ends)";
+      name="Cylindrical (hard ends)";
       assert(length>0 && radius>0 && "Cylinder length and radius must be bigger than zero.");
       len=length;
       setVolume( 2*pc::pi*radius*radius*len );
@@ -322,6 +322,7 @@ namespace Faunus {
     }
 
     bool Cylinder::collision(const particle &a, collisiontype type) const {
+      assert( (halflen-len/2)<1e-9 && "Cylinder length initialization problems" );
       return 
         ( a.x*a.x+a.y*a.y>r2 || ( a.z<-halflen || a.z>halflen ) ) ? true:false;
     }

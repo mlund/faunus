@@ -47,7 +47,10 @@ namespace Faunus {
   
   template<class T> Average<T>::Average() { reset(); }
   
-  template<class T> T Average<T>::avg() const { return double(sum)/cnt; }
+  template<class T> T Average<T>::avg() const {
+    assert(cnt>0 && "Average counter is zero");
+    return double(sum)/cnt;
+  }
 
   template<class T> void Average<T>::reset() {
     sum=sqsum=0;
@@ -62,9 +65,9 @@ namespace Faunus {
 
   template<class T> Average<T>::operator T() const { return avg(); }
 
-  template<class T> T Average<T>::operator*(T x) const { return sum/cnt * x; }
+  template<class T> T Average<T>::operator*(T x) const { return avg() * x; }
 
-  template<class T> T Average<T>::operator+(T x) const { return sum/cnt + x; }
+  template<class T> T Average<T>::operator+(T x) const { return avg() + x; }
   
   template<class T> const Average<T> Average<T>::operator+(const Average &a) const {
     Average<T> r = *this;
@@ -80,29 +83,33 @@ namespace Faunus {
   }
   
   template<class T> void Average<T>::add(T x) {
-    sum+=x;
-    sqsum+=x*x;
-    cnt++;
+    assert( cnt+1>0 && "Counter has rotated to zero!");
+    if (cnt+1<=0)
+      std::cerr << "Numeric limits reached in average class!\n";
+    else {
+      sum+=x;
+      sqsum+=x*x;
+      cnt++;
+    }
   }
-  
+
   template<class T> bool Average<T>::operator==(const Average &a) const {
     return (*this==a);
   }
-  
+
   template<class T> bool Average<T>::operator < (const Average &a) const {
     //if (cnt==0)
     //  return true;
-    return avg() < a.sum/a.cnt;
+    return avg() < a.avg();
   }
-  
+
   template<class T> T Average<T>::rms() {
     return sqrt(sqsum/cnt);
   }
-  
+
   template<class T> T Average<T>::stdev() {
     return sqrt( sqsum/cnt - pow(sum/cnt,2) );
   }
-
 
   /*!
    * \brief Class to keep track of block correlations

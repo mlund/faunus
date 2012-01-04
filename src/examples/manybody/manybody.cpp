@@ -76,8 +76,7 @@ int main() {
         case 1:                                 // Rotate proteins
           for (n=0; n<g.size(); n++) {          //   Loop over all proteins
             i = rand() % g.size();              //   and pick at random.
-            //if (i>0)                            //   (freeze 1st molecule)
-              sys+=mr.move(g[i]);               //   Do the move.
+            sys+=mr.move(g[i]);                 //   Do the move.
           }
           break;
         case 2:                                 // Translate proteins
@@ -116,7 +115,7 @@ int main() {
 
       if (slump.random_one()>.96 && macro>1)
         wid2.insert(cell,pot);          // sample activity coefficients
-  //      xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
+      //      xtc.save("ignored-name.xtc", cell.p);   // Save trajectory
 
     } // End of inner loop
 
@@ -133,7 +132,7 @@ int main() {
 
   cout << "----------- FINAL INFORMATION -----------" << endl ;
   cout << cell.info() << sys.info() << salt.info(cell)             // Final information...
-       << sm.info() << mr.info() << mt.info() << sb.info() << tit.info() << wid2.info();
+    << sm.info() << mr.info() << mt.info() << sb.info() << tit.info() << wid2.info();
 
   io.writefile("gcgroup.conf", nmt.print());
   xtc.close();

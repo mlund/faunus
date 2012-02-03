@@ -375,6 +375,40 @@ namespace Faunus {
     };
 
     /*!
+     * \brief External energy that will keep specific groups in a sub-volume of the system
+     * \author Mikael Lund
+     * \date Lund, 2012
+     *
+     * This energy class will check if particles in specific groups are located within a
+     * rectangular box, spanned by two vector points, \c upper and \c lower. If outside
+     * an infinite energy is returned. This is useful for constraining molecules in specific
+     * parts of the simulation container.
+     * Derived classes can re-implement the virtual
+     * outside() function which should return \c true if a given point falls outside the
+     * allowed region. Note that the current implementation can be problematic with
+     * containers with periodic boundaries as the outside() function uses absolute positions.
+     *
+     * Example:
+     * \code
+     *   Energy::Hamiltonian pot;
+     *   ...
+     *   auto restricted = pot.create( Energy::RestrictedVolume(imap) );
+     *   restricted->groups.push_back( &mygroup );
+     * \endcode
+     */
+    class RestrictedVolume : public Energy::Energybase {
+      private:
+        Point upper, lower;
+        string _info();
+      protected:
+        virtual bool outside(const Point&); //!< Determines if particle is outside allowed region
+      public:
+        std::vector<Group*> groups;              //!< List of groups to restrict
+        RestrictedVolume(InputMap&);
+        double g_external(const p_vec&, Group&); //!< External energy working on group
+    };
+
+    /*!
      * \brief Collection of Energybases that when summed give the Hamiltonian
      * \author Mikael Lund
      * \date Lund, 2011

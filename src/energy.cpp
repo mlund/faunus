@@ -305,11 +305,74 @@ namespace Faunus {
       usum=0;
       name="Dummy energy (drift calc. aid)";
     }
+
     void EnergyRest::add(double du) { usum+=du; }
+
     double EnergyRest::external() {
       return usum;
     }
+
     string EnergyRest::_info(){ return ""; }
+
+    /*!
+     * The InputMap is search for the following keywords that defines the two points
+     * that spans the allowed region:
+     *
+     * \li \c constrain_upper.x
+     * \li \c constrain_upper.y
+     * \li \c constrain_upper.z
+     * \li \c constrain_lower.x
+     * \li \c constrain_lower.y
+     * \li \c constrain_lower.z
+     *
+     * The values in the upper point must be higher than those in the lower point. The default
+     * values are +infinity for the upper point and -infinity for the lower, meaning that all
+     * space is available.
+     */
+    RestrictedVolume::RestrictedVolume(InputMap &in) {
+      name="Restricted Volume";
+      lower.x = in.get<double>("constrain_lower.x", -pc::infty);
+      lower.y = in.get<double>("constrain_lower.y", -pc::infty);
+      lower.z = in.get<double>("constrain_lower.z", -pc::infty);
+      upper.x = in.get<double>("constrain_upper.x", pc::infty);
+      upper.y = in.get<double>("constrain_upper.y", pc::infty);
+      upper.z = in.get<double>("constrain_upper.z", pc::infty);
+      assert(upper.x>lower.x && "Upper bound must be bigger than lower bound!");
+      assert(upper.y>lower.y && "Upper bound must be bigger than lower bound!");
+      assert(upper.z>lower.z && "Upper bound must be bigger than lower bound!");
+    }
+
+    string RestrictedVolume::_info() {
+      using namespace textio;
+      char w=15;
+      string d=" x ";
+      std::ostringstream o;
+      o << indent(SUB) << "Allowed Rectangular Region Spanned by:" << endl
+        << pad(SUB,w, "  Upper") << upper.x << d << upper.y << d << upper.z << endl
+        << pad(SUB,w, "  Lower") << lower.x << d << lower.y << d << lower.z << endl;
+      o << indent(SUB) << "Registered Groups:" << endl;
+      for (auto g : groups)
+        o << indent(SUB) << "  " << g->name << endl;
+      return o.str();
+    }
+
+    bool RestrictedVolume::outside(const Point &a) {
+      if (a.z<lower.z) return true;
+      if (a.z>upper.z) return true;
+      if (a.x<lower.x) return true;
+      if (a.x>upper.x) return true;
+      if (a.y<lower.y) return true;
+      if (a.y>upper.y) return true;
+      return false;
+    }
+
+    double RestrictedVolume::g_external(const p_vec &p, Group &g) {
+      if (std::find(groups.begin(), groups.end(), &g)!=groups.end())
+        for (auto i : g)
+          if ( outside( p[i]) )
+            return pc::infty;
+      return 0;
+    }
 
   }//namespace
 }//namespace

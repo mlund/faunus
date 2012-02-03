@@ -4,6 +4,9 @@
 #include <faunus/common.h>
 
 namespace Faunus {
+  /*!
+   * \brief Namespace for text related operations: formatting, special characters etc.
+   */
   namespace textio {
     enum indentlevel {TITLE=0,SUB=2,SUBSUB=4};
 

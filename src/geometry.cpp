@@ -295,18 +295,18 @@ namespace Faunus {
       name="Cylindrical (hard ends)";
       assert(length>0 && radius>0 && "Cylinder length and radius must be bigger than zero.");
       len=length;
-      setVolume( 2*pc::pi*radius*radius*len );
+      setVolume( pc::pi*radius*radius*len );
     }
 
     void Cylinder::_setVolume(double newV) {
-      r2=newV/(2*pc::pi*len);
+      r2=newV/(pc::pi*len);
       r=sqrt(r2);
       diameter=2*r;
       halflen=len/2;
     }
 
     double Cylinder::_getVolume() const {
-      return 2*r2*pc::pi*len;
+      return r2*pc::pi*len;
     }
 
     void Cylinder::boundary(Point &p ) const {}

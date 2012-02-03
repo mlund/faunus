@@ -240,9 +240,9 @@ namespace Faunus {
      * Example:
      * \code
      * AtomTracker track(myspace);
-     * track.insert( myparticle, 20 );
+     * track.insert( myparticle, 20 );        // insert particle into Space at position 20
      * ...
-     * int i=track[ myparticle.id ].random();
+     * int i=track[ myparticle.id ].random(); // pick a random particle of type myparticle.id
      * \endcode
      */
     class AtomTracker {

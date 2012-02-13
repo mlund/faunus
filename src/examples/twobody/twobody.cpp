@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
         //bind.update(cell, cell.p[g[0].beg], g[1]);
       }
 
-      if (slp.random_one()>.98 && loop.macro>1)
+      if (slp.random_one()>.995 && loop.macro>1)
         xtc.save("coord.xtc", cell.p);          // Save trajectory
     } // End of inner loop
     

@@ -85,21 +85,28 @@ int main(int argc, char* argv[]) {
           break;
         case 3:                                 // Fluctuate charges
           sys+=tit.titrateall();                // Titrate sites on the protein
-          if (tit.du!=0) {                      // Average charges and dipoles
-            dst.add("Q1",dm.r, g[0].charge(cell.p));
-            dst.add("Q2",dm.r, g[1].charge(cell.p));
-            dst.add("MU1",dm.r,g[0].dipole(cell.p));
-            dst.add("MU2",dm.r,g[1].dipole(cell.p));
-          }
           break;
       }
-      if (slp.random_one()>0.8)
+      if (slp.random_one()>0.9) {
         dst.add("Utot", dm.r, pot.energy(cell.p));
+      }
 
       if (slp.random_one()<gofr_pp_rf)
         gofr_pp.update( cell.p, g[0], g[1] );
 
-      if (slp.random_one()>.5) {
+      if (slp.random_one()>0) {
+        dst.add("Q1",dm.r, g[0].charge(cell.p));
+        dst.add("Q2",dm.r, g[1].charge(cell.p));
+        dst.add("MU1",dm.r,g[0].dipole(cell.p));
+        dst.add("MU2",dm.r,g[1].dipole(cell.p));
+        double len0 = g[0].mu.len();
+        double len1 = g[1].mu.len();
+        if (len0>0)
+          dst.add("MU1z",dm.r, g[0].mu.z / len0 ); 
+        if (len1>0)
+          dst.add("MU2z",dm.r, g[1].mu.z / len1 ); 
+        if (len0*len1>0)
+          dst.add("MUz1z2",dm.r, g[0].mu.z/len0 * g[1].mu.z/len1 ); 
         //saltrdf.update(cell);                   // Analyse salt g(r)
         //bind.update(cell, cell.p[g[0].beg], g[1]);
       }
@@ -107,14 +114,14 @@ int main(int argc, char* argv[]) {
       if (slp.random_one()>.995 && loop.macro>1)
         xtc.save("coord.xtc", cell.p);          // Save trajectory
     } // End of inner loop
-    
+
     sys.update(
-      pot.energy(cell.p, g[0], g[1]) +
-      pot.energy(cell.p, salt) +
-      pot.internalElectrostatic(cell.p, g[0]) +
-      pot.internalElectrostatic(cell.p, g[1]) +
-      pot.internal(cell.p, salt));              // System energy analysis
- 
+        pot.energy(cell.p, g[0], g[1]) +
+        pot.energy(cell.p, salt) +
+        pot.internalElectrostatic(cell.p, g[0]) +
+        pot.internalElectrostatic(cell.p, g[1]) +
+        pot.internal(cell.p, salt));              // System energy analysis
+
     cell.check_vector();                        // Check sanity of particle vector
 
     gofr_pp.write("rdfatomic.dat");             // Write interprotein g(r) - Atomic
@@ -130,10 +137,10 @@ int main(int argc, char* argv[]) {
   xtc.close();                                  // Close xtc file for writing
 
   cout << "# ---- Final information ----" << endl
-       << salt.info(cell)
-       << sm.info() << mr.info() << dm.info()
-       << sys.info() << g[0].info() << g[1].info() << cell.info()
-       << tit.info() << bind.info( 1/cell.getvolume() );
+    << salt.info(cell)
+    << sm.info() << mr.info() << dm.info()
+    << sys.info() << g[0].info() << g[1].info() << cell.info()
+    << tit.info() << bind.info( 1/cell.getvolume() );
 
   // Output tests
   sys.check(test);

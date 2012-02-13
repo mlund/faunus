@@ -101,7 +101,7 @@ namespace Faunus {
     for (size_t i=0; i<list.size(); i++) {
       if (i%10==0)
         o << endl << indent(SUBSUB);
-      o << setw(SUBSUB) << std::left << list[i].name;
+      o << setw(SUBSUB+1) << std::left << list[i].name;
     }
     o << endl;
     return o.str();

@@ -230,7 +230,7 @@ namespace Faunus {
         return true;
       }
     }
-    std::cerr << indent(SUB) << "Space data NOT read from file " << file << endl;
+    std::cerr << "Space data NOT read from file " << file << endl;
     return false;
   }
 

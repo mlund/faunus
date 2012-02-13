@@ -127,6 +127,13 @@ namespace Faunus {
       return o.str();
     }
 
+    /*!
+     * The following input keywords are searched searched:
+     * \li \c temperature [Kelvin, default = 298.15]
+     * \li \c epsilon_r - relative dielectric constant. Default is 80.
+     * \warning T and epsilon_r will be passed on to the global instance of
+     * PhysicalConstants. This is not the nicest solution.
+     */
     Coulomb::Coulomb(InputMap &in) {
       name="Coulomb";
       temp=in.get("temperature", 298.15);
@@ -135,10 +142,10 @@ namespace Faunus {
       lB=pc::lB( epsilon_r );
       setScale(lB);
     }
-    
+
     void Coulomb::_setScale(double s) {
     }
-    
+
     string Coulomb::_brief() {
       std::ostringstream o;
       o << "lB=" << lB << " eps_r=" << epsilon_r << " T=" << temp;
@@ -153,6 +160,11 @@ namespace Faunus {
       return o.str();
     }
 
+    /*!
+     * The following input keywords will be searched:
+     * \li \c dh_ionicstrength [mol/l] 
+     * \li \c dh_debyelength [angstrom] (only if I=0, default)
+     */
     DebyeHuckel::DebyeHuckel(InputMap &in) : Coulomb(in) {
       double I;
       const double zero=1e-10;
@@ -164,7 +176,7 @@ namespace Faunus {
         k=1/in.get<double>("dh_debyelength", 1/zero); // [A]
       k=-k;
     }
-    
+
     string DebyeHuckel::_brief() {
       std::ostringstream o;
       o << Coulomb::_brief() << " I=" << ionicStrength();

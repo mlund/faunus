@@ -57,7 +57,7 @@ namespace Faunus {
 #endif
       ;
       for (auto &m : map)
-        f << std::left << setw(30) << m.first << m.second << endl;
+        f << std::left << setw(35) << m.first << m.second << endl;
       return true;
     }
     return false;

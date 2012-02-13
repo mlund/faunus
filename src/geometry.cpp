@@ -440,7 +440,7 @@ namespace Faunus {
      */
     bool FindSpace::find(Geometrybase &geo, const p_vec &dst, p_vec &p, unsigned int maxtrials) {
       using namespace textio;
-      cout << indent(SUB) << "Trying to insert " << p.size() << " particle(s)";
+      cout << "Trying to insert " << p.size() << " particle(s)";
       Point cm,v;
       do {
         cout << ".";

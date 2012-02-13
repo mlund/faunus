@@ -198,7 +198,7 @@ namespace Faunus {
    *             ATOMIC
    * -----------------------------------*/
 
-  GroupAtomic::GroupAtomic() {
+  GroupAtomic::GroupAtomic(int front, int back) : Group(front, back) {
     id=ATOMIC;
     property.insert(ATOMIC);
   }
@@ -243,7 +243,7 @@ namespace Faunus {
   /* -----------------------------------*
    *             MOLECULAR
    * -----------------------------------*/
-  GroupMolecular::GroupMolecular() {
+  GroupMolecular::GroupMolecular(int front, int back) : Group(front, back) {
     id=MOLECULAR;
     property.insert(MOLECULAR);
   }

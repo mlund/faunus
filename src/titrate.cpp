@@ -56,11 +56,12 @@ namespace Faunus {
     /*!
      * This will swap the state of given particle from AX<->A and
      * return the energy change associated with the process.
-     * \note This will NOT swap particle radii!
+     * \note This will NOT swap particle radii nor masses!
      */
     double EquilibriumController::processdata::swap(particle &p) {
       double uold=energy(p.id);
       double oldradius=p.radius;
+      double oldmw=p.mw;
       Point pos=p;           // backup coordinate
       if (p.id==id_AX)
         p=atom[id_A];
@@ -68,6 +69,7 @@ namespace Faunus {
         p=atom[id_AX];
       p=pos;                    // apply old coordinates
       p.radius=oldradius;       // apply old radius
+      p.mw=oldmw;
       return energy(p.id)-uold; // return intrinsic energy change
     }
 
@@ -82,11 +84,16 @@ namespace Faunus {
     }
 
     bool EquilibriumController::include(string file) {
+      using namespace textio;
       string t;
       processdata d;
       std::ifstream f(file.c_str());
-      if (!f)
+      cout << "Reading titration process data from '" << file << "'. ";
+      if (!f) {
+        cout << "Failed!\n";
         return false;
+      }
+      cout << "OK!\n";
       while (!f.eof()) {
         t.clear();
         f >> t;
@@ -94,10 +101,14 @@ namespace Faunus {
           string a,ax;
           double pkd, pX;
           f >> ax >> a >> pkd >> pX;
-          d.id_AX=atom[ax].id;
-          d.id_A=atom[a].id;
-          d.set(pX, pkd);
-          process.push_back(d);
+          if (atom[ax].id==0 || atom[a].id==0) {
+            cout << indent(SUB) << "Warning: species " << ax << " or " << a << " are unknown and will be ignored." << endl;
+          } else {
+            d.id_AX=atom[ax].id;
+            d.id_A=atom[a].id;
+            d.set(pX, pkd);
+            process.push_back(d);
+          }
         }
       }
       f.close();
@@ -319,18 +330,20 @@ namespace Faunus {
     string SwapMove::_info() {
       using namespace textio;
       std::ostringstream o;
-      o << indent(SUB) << "Site statistics:" << endl
-        << indent(SUBSUB) << std::left
-        << setw(15) << "Site"
-        << setw(14) << bracket("z")
-        << "Acceptance" << endl;
-      for (auto i : eqpot.eq.sites) {
-        std::ostringstream a;
-        a << atom[ spc->p[i].id ].name << " " << i;
-        o << pad(SUBSUB,15, a.str())
-          << setw(10) << eqpot.eq.q[i].avg()
-          << accmap[i].avg()*100. << percent
-          << endl;
+      if (cnt>0) {
+        o << indent(SUB) << "Site statistics:" << endl
+          << indent(SUBSUB) << std::left
+          << setw(15) << "Site"
+          << setw(14) << bracket("z")
+          << "Acceptance" << endl;
+        for (auto i : eqpot.eq.sites) {
+          std::ostringstream a;
+          a << atom[ spc->p[i].id ].name << " " << i;
+          o << pad(SUBSUB,15, a.str())
+            << setw(10) << eqpot.eq.q[i].avg()
+            << accmap[i].avg()*100. << percent
+            << endl;
+        }
       }
       return o.str();
     }

@@ -119,7 +119,7 @@ namespace Faunus {
    */
   class GroupAtomic : public Group {
     public:
-      GroupAtomic();
+      GroupAtomic(int=-1, int=-1);
       GroupAtomic(Space&, InputMap&);        //!< Construct and call add()
       GroupAtomic &operator<<(std::istream&);
       void add(Space&, InputMap&);      //!< Add atomic particles via InputMap paramters
@@ -138,7 +138,7 @@ namespace Faunus {
       Average<double> Q;        //!< average net charge
       Average<double> mu;       //!< average dipole moment
 
-      GroupMolecular();
+      GroupMolecular(int=-1, int=-1);
       void translate(Space&, const Point&);
       void rotate(Space&, const Point&, double);
       void scale(Space&, double);

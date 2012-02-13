@@ -152,9 +152,9 @@ namespace Faunus {
       void _setScale(double);
       double temp, epsilon_r;
       protected:
-      double lB; //!< Bjerrum length (angstrom)
+      double lB;          //!< Bjerrum length (angstrom)
       public:
-      Coulomb(InputMap&);
+      Coulomb(InputMap&); //!< Construction from InputMap
 
       /*!
        * \brief Particle-particle energy
@@ -186,7 +186,7 @@ namespace Faunus {
       protected:
         double c,k;
       public:
-        DebyeHuckel(InputMap&);
+        DebyeHuckel(InputMap&);       //!< Construction from InputMap
         double ionicStrength() const; //!< Returns the ionic strength (mol/l)
         double debyeLength() const;   //!< Returns the Debye screening length (angstrom)
         inline double energy(double zz, double r) const { return zz/r * exp(k*r); }

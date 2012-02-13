@@ -94,6 +94,8 @@ namespace Faunus {
     }
 
     void Movebase::test(UnitTest &t) {
+      if (runfraction<1e-6 || cnt==0)
+        return;
       t(prefix+"_acceptance", double(cnt_accepted)/cnt*100 );
       _test(t);
     }
@@ -115,16 +117,16 @@ namespace Faunus {
     string Movebase::info() {
       assert(!title.empty() && "Markov Moves must have a title");
       std::ostringstream o;
+      if (runfraction<1e-10)
+        return o.str();
       o << header("Markov Move: " + title);
-      if (!cite.empty()) {
+      if (!cite.empty())
         o << pad(SUB,w,"More information:") << cite << endl;
-      }
       o << pad(SUB,w,"Runfraction") << runfraction*100 << percent << endl;
-      if (cnt>0) {
-        o << pad(SUB,w,"Number of trials") << cnt << endl;
-        o << pad(SUB,w,"Acceptance") << double(cnt_accepted)/cnt*100 << percent << endl;
-        o << pad(SUB,w,"Total energy change") << dusum << kT << endl;
-      }
+      if (cnt>0)
+        o << pad(SUB,w,"Number of trials") << cnt << endl
+          << pad(SUB,w,"Acceptance") << double(cnt_accepted)/cnt*100 << percent << endl
+          << pad(SUB,w,"Total energy change") << dusum << kT << endl;
       o << _info();
       return o.str();
     }

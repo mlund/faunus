@@ -106,18 +106,35 @@ namespace Faunus {
     class SwapMove : public Movebase {
       private:
         std::map<int, Average<double> > accmap; //!< Site acceptance map
-        int ipart;                              //!< Particle to be swapped
         string _info();
         void _trialMove();
         void _acceptMove();
         void _rejectMove();
         double _energyChange();
+      protected:
+        int ipart;                              //!< Particle to be swapped
         Energy::EquilibriumEnergy eqpot;
       public:
         SwapMove(InputMap&, Energy::Hamiltonian&, Space&, string="swapmv_");
         int findSites(const p_vec&);
         double move();
     };
+
+    /*!
+     * \brief As SwapMove but minimizes short ranged interactions within a molecule upon swapping
+     *
+     * Before calculating the energy change of an attempted swapmove, particle radii on particles
+     * on the same group as the swapped particle will be set to zero. After the energy calculation,
+     * the modified radii will be restored.
+     * To determine in which group a given particle belong, the group vector in the Space class
+     * will be used.
+     */
+    class SwapMoveMinShortRange : public SwapMove {
+      private:
+        double _energyChange();
+      public:
+        SwapMoveMinShortRange(InputMap&, Energy::Hamiltonian&, Space&, string="swapmv_");
+     };
 
   }// Move namespace
 }//Faunus namespace

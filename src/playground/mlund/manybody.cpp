@@ -5,7 +5,9 @@ using namespace Faunus;
 using namespace TCLAP;
 
 typedef Geometry::Cuboid Tgeometry;
-typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, Potential::HardSphere> Tpairpot;
+typedef Potential::CombinedPairPotential<Potential::LennardJones, Potential::SquareWellHydrophobic> SRpot;
+typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, SRpot> Tpairpot;
+//typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, Potential::HardSphere> Tpairpot;
 
 int main(int argc, char** argv) {
   string inputfile,istate,ostate;
@@ -85,6 +87,9 @@ int main(int argc, char** argv) {
             gmv.setGroup( pol[ rand() % pol.size() ] );
             sys+=gmv.move();
           }
+          for (auto i=pol.begin(); i!=pol.end()-1; i++)
+            for (auto j=i+1; j!=pol.end(); j++)
+              rdf( spc.geo->dist(i->cm,j->cm) )++;
           break;
         case 1:
           sys+=iso.move();
@@ -93,11 +98,9 @@ int main(int argc, char** argv) {
           sys+=tit.move();
           break;
       }
-      for (auto i=pol.begin(); i!=pol.end()-1; i++)
-        for (auto j=i+1; j!=pol.end(); j++)
-          rdf( spc.geo->dist(i->cm,j->cm) )++;
-      if ( slp_global.runtest(0.1) ) {
-        //xtc.save("traj.xtc", spc);
+      if ( slp_global.runtest(0.0001) ) {
+        xtc.setbox( nonbonded->pair.geo.len );
+        xtc.save("traj.xtc", spc);
       }
     } // end of micro loop
 

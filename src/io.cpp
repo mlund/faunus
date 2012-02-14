@@ -279,16 +279,8 @@ namespace Faunus {
     x_xtc=NULL;
   }
 
-  void FormatXTC::setbox(float len) {
-    for (short i=0; i<3; i++)
-      for (short j=0; j<3; j++)
-        xdbox[i][j]=0;
-    xdbox[0][0]=0.1*len; // corners of the
-    xdbox[1][1]=0.1*len; // rectangular box
-    xdbox[2][2]=0.1*len; // in nanometers
-  }
-
   void FormatXTC::setbox(double x, double y, double z) {
+    assert(x>0 && y>0 && z>0);
     for (short i=0; i<3; i++)
       for (short j=0; j<3; j++)
         xdbox[i][j]=0;
@@ -296,6 +288,10 @@ namespace Faunus {
     xdbox[1][1]=0.1*y; // rectangular box
     xdbox[2][2]=0.1*z; // in nanometers!
   }
+
+  void FormatXTC::setbox(float len) { setbox(len,len,len); }
+
+  void FormatXTC::setbox(const Point &p) { setbox(p.x, p.y, p.z); }
 
   /*!
    * Save all particles in Cuboid to xtc file. Molecules added to the ioxtc::g

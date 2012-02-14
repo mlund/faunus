@@ -29,9 +29,9 @@ namespace Faunus {
       virtual ~RandomBase() {}
       virtual double randOne()=0;          //!< Random number between [0:1[
       virtual void seed(int=0)=0;          //!< Seed random generator (globally)
-      bool runtest(float=0.5);             //!< Probability bool
+      bool runtest(float);                 //!< Probability bool - float between 0 (don't run) and 1 (run always)
       double randHalf();                   //!< Random number between [-0.5:0.5[
-      std::string info();                  //!< Print information string
+      std::string info();                  //!< Information string
       virtual unsigned int rand()=0;       //!< Random number between 0 and rand_max
   };
 

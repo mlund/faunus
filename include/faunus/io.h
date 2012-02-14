@@ -104,8 +104,9 @@ namespace Faunus {
       bool save(string, const p_vec&);         //!< Save a frame to trj file.
       bool save(string, Space&);               //!< Save a frame to trj file (PBC)
       bool save(string, p_vec&, vector<Group>&);//!< Save groups
-      void setbox(float);                      //!< Set box size to be saved in frame (cubic)
-      void setbox(double,double,double);       //!< Set box size to be saved in frame
+      void setbox(float);                      //!< Set box length - cubic
+      void setbox(double,double,double);       //!< Set box length - xyz
+      void setbox(const Point&);               //!< Set box length - xyz from vector
       void close();                            //!< Close trj file
   };
 

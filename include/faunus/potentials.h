@@ -100,7 +100,7 @@ namespace Faunus {
       public:
         LennardJones();
         LennardJones(InputMap&);
-        inline double r6(double &sigma, double r2) const {
+        inline double r6(double sigma, double r2) const {
           double x=sigma*sigma/r2;  // 2
           return x*x*x;             // 6
         }
@@ -128,11 +128,22 @@ namespace Faunus {
       public:
         double threshold;                           //!< Threshold between particle *surface* [A]
         double depth;                               //!< Energy depth [kT]
-        SquareWell(InputMap&, string="SquareWell"); //!< Constructor
+        SquareWell(InputMap&, string="squarewell"); //!< Constructor
         inline double operator() (const particle &a, const particle &b, double r2) const {
           return ( sqrt(r2)-a.radius-b.radius<threshold ) ? depth : 0;
         }
         string info(char);
+    };
+
+    class SquareWellHydrophobic : public SquareWell {
+      public:
+        SquareWellHydrophobic(InputMap&, string="squarewell"); //!< Constructor
+        inline double operator() (const particle &a, const particle &b, double r2) const {
+          if (a.hydrophobic)
+            if (b.hydrophobic)
+              SquareWell::operator()(a,b,r2);
+          return 0;
+        }
     };
 
     /*!
@@ -197,9 +208,54 @@ namespace Faunus {
         string info(char);
     };
 
+    /*!
+     * \brief Combines two PairPotentialBases
+     * \date Lund, 2012
+     * \author Mikael Lund
+     *
+     * This simply combines two PairPotentialBases -- typically short-ranged such as
+     * Lennard-Jones and SquareWell, for example. This can then be mixed with electrostatics
+     * using the CoulombSR template
+     * \code
+     *   using namespace Potential;
+     *   typedef CombinedPairPotential< LennardJones, SquareWell > srpot;
+     * \endcode
+     */
+    template<class T1, class T2>
+      class CombinedPairPotential : public PairPotentialBase {
+        protected:
+          T1 sr1;
+          T2 sr2;
+        private:
+          string _brief() { return name; };
+          void _setScale(double s) {
+            sr1.setScale(s);
+            sr2.setScale(s);
+          }
+        public:
+          CombinedPairPotential(InputMap &in) : sr1(in), sr2(in) {
+            name=sr1.name+"+"+sr2.name;
+          }
+          inline double operator() (const particle &a, const particle &b, double r2) const {
+            return sr1(a,b,r2) + sr2(a,b,r2);
+          }
+          string info(char w=20) {
+            std::ostringstream o;
+            o << sr1.info(w) << sr2.info(w);
+            return o.str();
+          }
+      };
 
     /*!
      * \brief Combined electrostatic/short ranged pair potential
+     *
+     * PairPotentialBase classes do not need to implement distance calculation functions
+     * as the operator() takes the squared distance as input. For nonbonded interactions we
+     * typically want to call functions of the type energy(particle1, particle2) and
+     * therefore need to calculate distances explicitly. This is handled by templates
+     * that explicitly handles the simulation Geometry. Note that the surrounding energy
+     * loops in the Energy namespace should point to this Geometry so as to handle volume
+     * fluctuations etc.
      */
     template<class Tgeometry, class Tcoulomb=Coulomb, class Tshortranged=LennardJones>
       class CoulombSR : public PairPotentialBase {

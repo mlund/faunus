@@ -338,6 +338,7 @@ namespace Faunus {
           << "Acceptance" << endl;
         for (auto i : eqpot.eq.sites) {
           std::ostringstream a;
+          o.precision(4);
           a << atom[ spc->p[i].id ].name << " " << i;
           o << pad(SUBSUB,15, a.str())
             << setw(10) << eqpot.eq.q[i].avg()
@@ -347,6 +348,20 @@ namespace Faunus {
       }
       return o.str();
     }
+
+    SwapMoveMinShortRange::SwapMoveMinShortRange(
+        InputMap &in, Energy::Hamiltonian &ham, Space &spc, string pfx) : SwapMove(in,ham,spc,pfx) {
+      title+=" (min. shortrange)";
+    }
+
+    double SwapMoveMinShortRange::_energyChange() {
+      assert( spc->geo->collision(spc->p[ipart])==false && "An accepted particle collides with simulation container.");
+      if (spc->geo->collision(spc->trial[ipart]))  // trial<->container collision?
+        return pc::infty;
+      return pot->i_total(spc->trial,ipart) - pot->i_total(spc->p,ipart);
+    }
+
+
   }//Move namespace
 }//Faunus namespace
 

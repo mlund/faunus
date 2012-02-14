@@ -101,7 +101,7 @@ namespace Faunus {
 
     /*!
      * \param in is scanned for the keywords \c prefix_threshold (angstrom) and \c prefix_depth (kT).
-     * \param prefix InputMap keyword prefix. Default is "SquareWell"
+     * \param prefix InputMap keyword prefix. Default is "squareWell"
      */
     SquareWell::SquareWell(InputMap &in, string prefix) {
       name="Square Well";
@@ -111,7 +111,7 @@ namespace Faunus {
     
     void SquareWell::_setScale(double s) {
       _tokT=s;
-      threshold=threshold/_tokT;
+      depth=depth/_tokT;
     }
     
     string SquareWell::_brief() {
@@ -122,11 +122,15 @@ namespace Faunus {
 
     string SquareWell::info(char w) {
       std::ostringstream o;
-      o << pad(SUB,w,"Threshold") << threshold*tokT() << " "+angstrom+" (surface-surface)" << endl;
+      o << pad(SUB,w,"Threshold") << threshold << " "+angstrom+" (surface-surface)" << endl;
       o << pad(SUB,w,"Depth") << depth*tokT() << kT << endl;
       return o.str();
     }
 
+    SquareWellHydrophobic::SquareWellHydrophobic(InputMap &in, string prefix) : SquareWell(in,prefix) {
+      name="Hydrophobic " + name;
+    }
+ 
     /*!
      * The following input keywords are searched searched:
      * \li \c temperature [Kelvin, default = 298.15]

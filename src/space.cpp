@@ -50,6 +50,7 @@ namespace Faunus {
       cnt+=gi->size();
     if (cnt!=p.size()) {
       assert(!"Sum enrolled group sizes does not match particle vector");
+      std::cerr << "Space sanity check failed. This is serious!";
       rc=false;
     }
 
@@ -199,38 +200,40 @@ namespace Faunus {
     using namespace textio;
     double vol;
     int n;
+    cout << "Reading space state file '" << file << "'. ";
     if (checkSanity()) {
       fin.close();
       fin.open( file.c_str() );
       if (fin) {
+        cout << "OK!\n";
         fin >> vol >> n;
         geo->setVolume(vol);
         if (key==RESIZE && n!=(int)p.size()) {
-          cout << "Resizing particle vector from " << p.size() << " --> " << n << ".\n";
+          cout << indent(SUB) << "Resizing particle vector from " << p.size() << " --> " << n << ".\n";
           p.resize(n);
         }
         if (n == (int)p.size() ) {
           for (int i=0; i<n; i++)
             p[i] << fin;
           trial=p;
-          cout << indent(SUB) << "Read " << n << " particle(s) from " << file << endl;
+          cout << indent(SUB) << "Read " << n << " particle(s)." << endl;
           fin >> n;
           if (n==(int)g.size()) {
             for (auto g_i : g) {
               *g_i << fin;
               g_i->setMassCenter(*this);
             }
-            cout << indent(SUB) << "Read " << n << " group(s) from " << file << endl;
+            cout << indent(SUB) << "Read " << n << " group(s)." << endl;
             return true;
           } else {
-            std::cerr << indent(SUB) << "Space groups do not match." << endl;
+            cout << "FAILED! (space groups do not match).\n";
             return false;
           }
         }
         return true;
       }
     }
-    std::cerr << "Space data NOT read from file " << file << endl;
+    cout << "FAILED!\n";
     return false;
   }
 

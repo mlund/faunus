@@ -32,7 +32,10 @@ namespace Faunus {
   }
 */
   bool Group::find(int i) const {
-    return (i>=front() && i<=back()) ? true : false;
+    if (i>=front())
+      if (i<=back())
+        return true;
+    return false;
   }
 
   /*! \brief Calculates total charge

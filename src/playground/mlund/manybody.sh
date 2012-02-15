@@ -85,18 +85,18 @@ temperature            298     # Kelvin
 epsilon_r              78.7    # Water dielectric const
 dh_ionicstrength       0.010   # mol/l
 lj_eps                 0.05    # kT
-squarewell_depth       0.5     # kT
-squarewell_threshold   1.5     # kT
+squarewell_depth       0.0     # kT
+squarewell_threshold   1.5     # angstrom
 
 cuboid_len             $boxlen # Box side length Angstrom
 npt_P                  113.2   # mM
 npt_dV                 0       # log(dV)
-transrot_transdp       50
+transrot_transdp       180
 transrot_rotdp         6
 
 molecule_N1            2
 molecule_file1         $base.aam
-molecule_N2            2
+molecule_N2            0
 molecule_file2         $base.aam
 
 test_stable            yes
@@ -104,22 +104,33 @@ test_file              $base.test
 " > $base.input
 }
 
-#-----------------------------------------------------------
+# ----------------------------------
+#   GENERATE INPUT MOLECULE
+# ----------------------------------
+function mkstruct() {
 echo "2
- HIS  0   0.00   0.00   0.00    1.0   1  3.0
- VAL  1   7.60   0.00   0.00    0.0   1  3.0
-" > $base.aam
+ HIS  0   0.00   0.00   0.00    0.0   1  3.0
+ VAL  0   2.00   0.00   0.00    0.0   1  3.0
+" > ${base}.aam
+}
 
-#-----------------------------------------------------------
-
-boxlen=100
-pH=6.3
-micro=1000
-
-mktit
 mkatoms
-mkinput
+mkstruct
+boxlen=50
 
-$exe -i $base.input -c $base.state
+for pH in 6.3
+do
+  # equilibration
+  rm -fR $base.state
+  micro=1000
+  mktit
+  mkinput
+  $exe -i $base.input -c $base.state -o $base.state > eq
 
-#rm -f confout.gro $base.input $base.aam $base.atoms
+  # production
+  micro=10000
+  mktit
+  mkinput
+  $exe -i $base.input -c $base.state -o $base.state > out
+done
+

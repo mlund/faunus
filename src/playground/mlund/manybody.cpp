@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
   string inputfile,istate,ostate;
   try {
     cout << textio::splash();
-    CmdLine cmd("NPT Monte Carlo simulation of rigid bodies in continuum medium", ' ', "0.1");
+    CmdLine cmd("NPT Monte Carlo simulation of rigid bodies in continuum", ' ', "0.1");
     ValueArg<string> inputArg("i","inputfile","InputMap key/value file",true,"","inputfile");
     ValueArg<string> istateArg("c","instate","Name of input statefile",false,"state","instate");
     ValueArg<string> ostateArg("o","outstate","Name of output statefile",false,"state","outstate");
@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
 
   Move::Isobaric iso(mcp,pot,spc);
   Move::TranslateRotate gmv(mcp,pot,spc);
-  Move::SwapMove tit(mcp,pot,spc);
+  Move::SwapMoveMSR tit(mcp,pot,spc);
   Analysis::RadialDistribution<float,int> rdf(0.25);
 
   // Add molecules
@@ -110,6 +110,7 @@ int main(int argc, char** argv) {
     sys.checkDrift( utot );
 
     cout << loop.timing();
+
   } // end of macro loop
 
   rdf.save("rdf_p2p.dat");
@@ -117,9 +118,11 @@ int main(int argc, char** argv) {
   top.save("mytopol.top", spc);
   spc.save(ostate);
 
+  /*
   iso.test(test);
   gmv.test(test);
   sys.test(test);
+  */
 
-  cout << loop.info() << sys.info() << gmv.info() << iso.info() << tit.info() << test.info();
+  cout << loop.info() << sys.info() << gmv.info() << iso.info() << tit.info();
 }

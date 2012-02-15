@@ -90,7 +90,7 @@ namespace Faunus {
       std::ifstream f(file.c_str());
       cout << "Reading titration process data from '" << file << "'. ";
       if (!f) {
-        cout << "Failed!\n";
+        cout << "FAILED!\n";
         return false;
       }
       cout << "OK!\n";
@@ -349,18 +349,35 @@ namespace Faunus {
       return o.str();
     }
 
-    SwapMoveMinShortRange::SwapMoveMinShortRange(
+    SwapMoveMSR::SwapMoveMSR(
         InputMap &in, Energy::Hamiltonian &ham, Space &spc, string pfx) : SwapMove(in,ham,spc,pfx) {
       title+=" (min. shortrange)";
     }
 
-    double SwapMoveMinShortRange::_energyChange() {
-      assert( spc->geo->collision(spc->p[ipart])==false && "An accepted particle collides with simulation container.");
-      if (spc->geo->collision(spc->trial[ipart]))  // trial<->container collision?
-        return pc::infty;
-      return pot->i_total(spc->trial,ipart) - pot->i_total(spc->p,ipart);
+    void SwapMoveMSR::modify() {
+      radiusbak.clear();
+      for (auto g : spc->g )   // loop over all groups
+        if (g->find(ipart)) {  //   is ipart part of a group?
+          for (auto i : *g)    //     if so, loop over that group
+            if (i!=ipart) {    //       and ignore ipart
+              radiusbak[i]     = spc->trial[i].radius;
+              spc->p[i].radius = spc->trial[i].radius = -radiusbak[i];
+            }
+          return; // a particle can be part of a single group, only
+        }
     }
 
+    void SwapMoveMSR::restore() {
+      for (auto &m : radiusbak)
+        spc->p[m.first].radius = spc->trial[m.first].radius = m.second;
+     }
+
+    double SwapMoveMSR::_energyChange() {
+      modify();
+      double du = SwapMove::_energyChange();
+      restore();
+      return du;
+    }
 
   }//Move namespace
 }//Faunus namespace

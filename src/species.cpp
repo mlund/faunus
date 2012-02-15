@@ -65,8 +65,9 @@ namespace Faunus {
     string t;
     filename=file;
     std::ifstream f(filename.c_str());
+    cout << "Reading atom data from '" << filename << "'. ";
     if (f) {
-      cout << "Reading atom data from " << filename << "\n";
+      cout << "OK!\n";
       while (!f.eof()) {
         f >> t;
         if (t=="Atom") {
@@ -81,10 +82,8 @@ namespace Faunus {
       f.close();
       return true;
     }
-    string w="Error! Parameter file " + filename + " not NOT found.",
-           id="species";
-    std::cerr << "# " << w << endl;
-    filename+=" (not found)";
+    cout << "FAILED!\n";
+    filename+=" (n/a)";
     return false;
   }
 

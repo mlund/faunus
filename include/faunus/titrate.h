@@ -110,8 +110,8 @@ namespace Faunus {
         void _trialMove();
         void _acceptMove();
         void _rejectMove();
-        double _energyChange();
       protected:
+        double _energyChange();
         int ipart;                              //!< Particle to be swapped
         Energy::EquilibriumEnergy eqpot;
       public:
@@ -121,19 +121,23 @@ namespace Faunus {
     };
 
     /*!
-     * \brief As SwapMove but minimizes short ranged interactions within a molecule upon swapping
+     * \brief As SwapMove but Minimizes Short Ranged interactions within a molecule upon swapping
      *
-     * Before calculating the energy change of an attempted swapmove, particle radii on particles
-     * on the same group as the swapped particle will be set to zero. After the energy calculation,
-     * the modified radii will be restored.
-     * To determine in which group a given particle belong, the group vector in the Space class
-     * will be used.
+     * Before calculating dU of attempted swap move, radii on particles within the SAME group are
+     * set to minus radius of the swapped particle. This to minimize large interactions in molecules
+     * with overlapping particles - i.e LJ will be zero.
+     * If can also be used to avoid internal hydrophobic interactions in rigid groups upon swapping
+     * between hydrophobic and non-hydrophobic species.
+     * Group information is found in Space::g.
      */
-    class SwapMoveMinShortRange : public SwapMove {
+    class SwapMoveMSR : public SwapMove {
       private:
+        std::map<int, double> radiusbak;
         double _energyChange();
+        void modify();
+        void restore();
       public:
-        SwapMoveMinShortRange(InputMap&, Energy::Hamiltonian&, Space&, string="swapmv_");
+        SwapMoveMSR(InputMap&, Energy::Hamiltonian&, Space&, string="swapmv_");
      };
 
   }// Move namespace

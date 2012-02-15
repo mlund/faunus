@@ -315,7 +315,7 @@ namespace Faunus {
     string EnergyRest::_info(){ return ""; }
 
     /*!
-     * The InputMap is search for the following keywords that defines the two points
+     * The InputMap is searched for the following keywords that defines the two points
      * that spans the allowed region:
      *
      * \li \c constrain_upper.x

@@ -82,7 +82,7 @@ namespace Faunus {
 
     bool Movebase::metropolis(const double &du) const {
       if (du>0)
-        if ( slp_global.randOne()>std::exp(-du) )
+        if ( slp_global.randOne()>std::exp(-du) ) // core of MC!
           return false;
       return true;
     }

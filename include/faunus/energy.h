@@ -436,7 +436,9 @@ namespace Faunus {
       Hamiltonian();
       void setVolume(double);       //!< Set volume of all contained energy classes
 
-      //!< \brief Create and add an energy class to energy list
+      /*!
+       * \brief Create and add an energy class to energy list
+       */
       template<typename Tenergychild> shared_ptr<Tenergychild> create(Tenergychild c) {
         shared_ptr<Tenergychild> childptr( new Tenergychild(c) );
         childptr->getGeometry(); // not pretty...need to update geo pointer for i.e. nonbonded class
@@ -462,12 +464,20 @@ namespace Faunus {
       double v2v(const p_vec&, const p_vec&);
     };
 
+    /*!
+     * \brief Dummy energy class that sums missed energy changes to avoid energy drifts
+     * \author Mikael Lund
+     *
+     * This energy function is designed to be used with Move::Movebase classes that returns energy changes
+     * not detectable in the energy drift checkup routines. The idea is simply to sum the energy change
+     * discrepancy and treat this as an external potential. Use together with Energy::Hamiltonian.
+     */
     class EnergyRest : public Energy::Energybase {
       private:
         double usum;
       public:
         EnergyRest();
-        void add(double du);
+        void add(double du); //!< Add energy change disrepancy, dU = U(metropolis) - U(as in drift calculation)
         double external();
         string _info();
     };

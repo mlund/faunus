@@ -168,6 +168,9 @@ namespace Faunus {
         void sample(const Group&, const Space&); //!< Sample properties of Group (identified by group name)
     };
 
+    //class ChargeMultipole : public AnalysisBase {
+    //};
+
     /*! \brief Widom method for excess chemical potentials
      *  \author Mikael Lund
      *

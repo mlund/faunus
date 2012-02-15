@@ -124,15 +124,18 @@ namespace Faunus {
      * \brief As SwapMove but Minimizes Short Ranged interactions within a molecule upon swapping
      *
      * Before calculating dU of attempted swap move, radii on particles within the SAME group are
-     * set to minus radius of the swapped particle. This to minimize large interactions in molecules
-     * with overlapping particles - i.e LJ will be zero.
+     * set to minus radius of the swapped particle and hydrophobicity is set to false.
+     * This to minimize large interactions in molecules with overlapping particles - i.e LJ will be zero.
      * If can also be used to avoid internal hydrophobic interactions in rigid groups upon swapping
      * between hydrophobic and non-hydrophobic species.
-     * Group information is found in Space::g.
+     * Group information is found in Space::g and to avoid energy drifts by ignoring hydrophobic interactions
+     * internally in groups the Energy::EnergyRest is used to collect the missing contribution to dU.
      */
     class SwapMoveMSR : public SwapMove {
       private:
         std::map<int, double> radiusbak;
+        std::map<int, bool> hydrophobicbak;
+        Energy::EnergyRest potrest; // dummy energy class for storing missing contributions to dU in energy drift calc.
         double _energyChange();
         void modify();
         void restore();

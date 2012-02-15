@@ -130,7 +130,9 @@ namespace Faunus {
         double depth;                               //!< Energy depth [kT]
         SquareWell(InputMap&, string="squarewell"); //!< Constructor
         inline double operator() (const particle &a, const particle &b, double r2) const {
-          return ( sqrt(r2)-a.radius-b.radius<threshold ) ? depth : 0;
+          if ( sqrt(r2)-a.radius-b.radius<threshold )
+            return -depth;
+          return 0;
         }
         string info(char);
     };
@@ -141,7 +143,7 @@ namespace Faunus {
         inline double operator() (const particle &a, const particle &b, double r2) const {
           if (a.hydrophobic)
             if (b.hydrophobic)
-              SquareWell::operator()(a,b,r2);
+              return SquareWell::operator()(a,b,r2);
           return 0;
         }
     };

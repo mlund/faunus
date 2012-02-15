@@ -434,6 +434,7 @@ namespace Faunus {
     }
 
     /*!
+     * \param geo Geometry to use
      * \param dst Destination particle vector (will not be touched!)
      * \param p Particle vector to find space for. Coordinates will be changed.
      * \param maxtrials Number of times to try before timeout.

@@ -352,16 +352,20 @@ namespace Faunus {
     SwapMoveMSR::SwapMoveMSR(
         InputMap &in, Energy::Hamiltonian &ham, Space &spc, string pfx) : SwapMove(in,ham,spc,pfx) {
       title+=" (min. shortrange)";
+      ham.add( potrest );
     }
 
     void SwapMoveMSR::modify() {
       radiusbak.clear();
+      hydrophobicbak.clear();
       for (auto g : spc->g )   // loop over all groups
         if (g->find(ipart)) {  //   is ipart part of a group?
           for (auto i : *g)    //     if so, loop over that group
             if (i!=ipart) {    //       and ignore ipart
-              radiusbak[i]     = spc->trial[i].radius;
-              spc->p[i].radius = spc->trial[i].radius = -radiusbak[i];
+              radiusbak[i]     = spc->p[i].radius;
+              spc->p[i].radius = spc->trial[i].radius = -spc->p[ipart].radius;
+              hydrophobicbak[i] = spc->trial[i].hydrophobic;
+              spc->p[i].hydrophobic = spc->trial[i].hydrophobic = false;
             }
           return; // a particle can be part of a single group, only
         }
@@ -370,12 +374,16 @@ namespace Faunus {
     void SwapMoveMSR::restore() {
       for (auto &m : radiusbak)
         spc->p[m.first].radius = spc->trial[m.first].radius = m.second;
+      for (auto &m : radiusbak)
+        spc->p[m.first].hydrophobic = spc->trial[m.first].hydrophobic = m.second;
      }
 
     double SwapMoveMSR::_energyChange() {
+      double du_orig = SwapMove::_energyChange();
       modify();
       double du = SwapMove::_energyChange();
       restore();
+      potrest.add( du-du_orig );
       return du;
     }
 

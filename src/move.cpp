@@ -122,10 +122,10 @@ namespace Faunus {
       o << header("Markov Move: " + title);
       if (!cite.empty())
         o << pad(SUB,w,"More information:") << cite << endl;
-      o << pad(SUB,w,"Runfraction") << runfraction*100 << percent << endl;
       if (cnt>0)
         o << pad(SUB,w,"Number of trials") << cnt << endl
           << pad(SUB,w,"Acceptance") << double(cnt_accepted)/cnt*100 << percent << endl
+          << pad(SUB,w,"Runfraction") << runfraction*100 << percent << endl
           << pad(SUB,w,"Total energy change") << dusum << kT << endl;
       o << _info();
       return o.str();

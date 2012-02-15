@@ -5,7 +5,7 @@ using namespace Faunus;
 using namespace TCLAP;
 
 typedef Geometry::Cuboid Tgeometry;
-typedef Potential::CombinedPairPotential<Potential::LennardJones, Potential::SquareWellHydrophobic> SRpot;
+typedef Potential::CombinedPairPotential<Potential::SquareWellHydrophobic, Potential::LennardJones> SRpot;
 typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, SRpot> Tpairpot;
 //typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, Potential::HardSphere> Tpairpot;
 
@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
     while ( loop.microCnt() ) {
       int k,i=rand() % 3;
       switch (i) {
-        case 0:
+        case 10:
           k=pol.size();
           while (k-->0) {
             gmv.setGroup( pol[ rand() % pol.size() ] );
@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
             for (auto j=i+1; j!=pol.end(); j++)
               rdf( spc.geo->dist(i->cm,j->cm) )++;
           break;
-        case 1:
+        case 11:
           sys+=iso.move();
           break;
         case 2:

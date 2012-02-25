@@ -34,11 +34,14 @@ namespace Faunus {
    */
   bool io::writefile(string file, string s, std::ios_base::openmode mode) {
     std::ofstream f(file.c_str(), mode);
+    cout << "Writing to file '" << file << "'. ";
     if (f) {
       f << s;
       f.close();
+      cout << "OK!\n";
       return true;
     }
+    cout << "FAILED!\n";
     return false;
   }
   

@@ -176,7 +176,8 @@ namespace Faunus {
     double EquilibriumController::applycharges(p_vec &p) {
       double qtot=0;
       for (auto i : sites) {
-        p[i].charge = q[i].avg();
+        if (q[i].cnt>0)
+          p[i].charge = q[i].avg();
         qtot += q[i].avg();
       }
       return qtot;

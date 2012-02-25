@@ -175,6 +175,7 @@ namespace Faunus {
   bool Space::save(string file) {
     using std::numeric_limits;
     if (checkSanity()) {
+      cout << "Writing space state file '" << file << "'. ";
       std::ofstream fout( file.c_str() );
       if (fout) {
         fout.precision( numeric_limits<double>::digits10 + 1 );
@@ -186,9 +187,11 @@ namespace Faunus {
         for (auto g_i : g)
           fout << *g_i << endl;
         fout.close();
+        cout << "OK!\n";
         return true;
       }
     }
+    cout << "FAILED!\n";
     return false;
   }
 

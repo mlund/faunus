@@ -75,13 +75,14 @@ int main(int argc, char** argv) {
     utot += pot.g_external(spc.p, g);
   sys.init( utot );
 
-  cout << atom.info() << spc.info() << pot.info() << tit.info() << textio::header("MC Simulation Begins!");
+  cout << atom.info() << spc.info() << pot.info() << tit.info()
+    << textio::header("MC Simulation Begins!");
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
       int k,i=rand() % 3;
       switch (i) {
-        case 10:
+        case 0:
           k=pol.size();
           while (k-->0) {
             gmv.setGroup( pol[ rand() % pol.size() ] );
@@ -91,7 +92,7 @@ int main(int argc, char** argv) {
             for (auto j=i+1; j!=pol.end(); j++)
               rdf( spc.geo->dist(i->cm,j->cm) )++;
           break;
-        case 11:
+        case 1:
           sys+=iso.move();
           break;
         case 2:
@@ -113,11 +114,6 @@ int main(int argc, char** argv) {
 
   } // end of macro loop
 
-  rdf.save("rdf_p2p.dat");
-  pqr.save("confout.pqr", spc.p);
-  top.save("mytopol.top", spc);
-  spc.save(ostate);
-
   /*
   iso.test(test);
   gmv.test(test);
@@ -125,4 +121,9 @@ int main(int argc, char** argv) {
   */
 
   cout << loop.info() << sys.info() << gmv.info() << iso.info() << tit.info();
+
+  rdf.save("rdf_p2p.dat");
+  pqr.save("confout.pqr", spc.p);
+  top.save("mytopol.top", spc);
+  spc.save(ostate);
 }

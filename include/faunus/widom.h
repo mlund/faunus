@@ -20,10 +20,14 @@ namespace Faunus {
     /*!
      * \brief Base class for analysis routines.
      *
-     * Derived classes are expected to provide a name and _info()
-     * function. It is recommended that derived classes also implement
-     * a sample(...) function that uses the run() function to check if the
-     * analysis should be run or not.
+     * This is the base class for analysis routines. Derived class must implement:
+     * \li a descriptive name
+     * \li the _info() function - i.e. do NOT override the public info() function!
+     *
+     * It is recommended that derived classes implement:
+     * \li a sample(...) function that uses run() to check if the
+     *     analysis should be run or not.
+     * \li the cite string to provide external information
      */
     class AnalysisBase {
       private:
@@ -77,15 +81,18 @@ namespace Faunus {
           Ty& operator() (Tx x) {
             return map[ round(x) ];
           }
+
           /*! \brief Save table to disk */
           void save(string filename) {
-            map.begin()->second*=2;
-            (--map.end())->second*=2;
-            std::ofstream f(filename.c_str());
-            f.precision(10);
-            if (f)
-              for (auto m : map)
-                f << m.first << " " << get( m.first ) << endl;
+            if ( map.size()>0 ) {
+              map.begin()->second*=2;
+              (--map.end())->second*=2;
+              std::ofstream f(filename.c_str());
+              f.precision(10);
+              if (f)
+                for (auto m : map)
+                  f << m.first << " " << get( m.first ) << endl;
+            }
           }
       };
 
@@ -140,10 +147,10 @@ namespace Faunus {
             for (auto i=g.begin(); i!=g.end()-1; i++)
               for (auto j=i+1; j!=g.end(); j++)
                 if ( (spc.p[*i].id==ida && spc.p[*j].id==idb) || (spc.p[*i].id==idb && spc.p[*j].id==ida) ) {
-		  Tx r=spc.geo->dist(spc.p[*i], spc.p[*j]);
-		  if (r<=maxdist)
+                  Tx r=spc.geo->dist(spc.p[*i], spc.p[*j]);
+                  if (r<=maxdist)
                     this->operator() (r)++; 
-		}
+                }
             double bulk=0;
             for (auto i : g)
               if (spc.p[i].id==ida || spc.p[i].id==idb)

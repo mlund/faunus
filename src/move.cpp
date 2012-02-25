@@ -342,9 +342,10 @@ namespace Faunus {
       using namespace textio;
       std::ostringstream o;
       o << TranslateRotate::_info() << endl;
-      o << pad(SUB,w,"Cluster threshold") << threshold << _angstrom << endl 
-        << pad(SUB,w,"Average cluster size") << avgsize.avg() << endl
-        << pad(SUB,w,"Average bias") << avgbias.avg() << " (0=reject, 1=accept)" << endl; 
+      o << pad(SUB,w,"Cluster threshold") << threshold << _angstrom << endl;
+      if (cnt>0)
+        o << pad(SUB,w,"Average cluster size") << avgsize.avg() << endl
+          << pad(SUB,w,"Average bias") << avgbias.avg() << " (0=reject, 1=accept)" << endl; 
       return o.str();
     }
 

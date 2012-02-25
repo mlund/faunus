@@ -1,4 +1,4 @@
-#include <faunus/widom.h>
+#include <faunus/analysis.h>
 #include <faunus/species.h>
 #include <faunus/energy.h>
 #include <faunus/space.h>

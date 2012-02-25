@@ -1,5 +1,5 @@
-#ifndef FAUNUS_WIDOM_H
-#define FAUNUS_WIDOM_H
+#ifndef FAUNUS_ANALYSIS_H
+#define FAUNUS_ANALYSIS_H
 
 #include <faunus/common.h>
 #include <faunus/average.h>

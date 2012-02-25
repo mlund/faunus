@@ -87,7 +87,7 @@ namespace Faunus {
      *
      * The Lennard-Jones potential has the form:
      *
-     * \f$ \beta u = 4\epsilon_{lj} \left (  (\sigma_{ij}/r_{ij})^12 - (\sigma_{ij}/r_{ij})^6    \right ) \f$
+     * \f$ \beta u = 4\epsilon_{lj} \left (  (\sigma_{ij}/r_{ij})^{12} - (\sigma_{ij}/r_{ij})^6    \right ) \f$
      *
      * where \f$\sigma_{ij} = (\sigma_i+\sigma_j)/2\f$ and \f$\epsilon_{lj}\f$ is fixed for this class.
      */
@@ -286,6 +286,14 @@ namespace Faunus {
             return o.str();
           }
       };
+
+    class MultipoleEnergy {
+      public:
+        double lB;
+        double ionion(double, double, double);
+        double iondip(double, const Point&, double);
+        double dipdip(const Point&, const Point&, double);
+    };
 
   } //end of potential namespace
 

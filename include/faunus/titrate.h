@@ -133,8 +133,8 @@ namespace Faunus {
      */
     class SwapMoveMSR : public SwapMove {
       private:
-        std::map<int, double> radiusbak;
-        std::map<int, bool> hydrophobicbak;
+        std::map<int, double> radiusbak;    // backup for radii
+        std::map<int, bool> hydrophobicbak; // backup for hydrophobic state
         Energy::EnergyRest potrest; // dummy energy class for storing missing contributions to dU in energy drift calc.
         double _energyChange();
         void modify();

@@ -69,6 +69,7 @@ namespace Faunus {
            * \param resolution Resolution of the x axis
            */
           Table2D(Tx resolution=0.2) {
+            assert( resolution>0 );
             dx=resolution;
           }
 
@@ -112,6 +113,8 @@ namespace Faunus {
             return 4./3.*pc::pi*( pow(x+0.5*this->dx,3) - pow(x-0.5*this->dx,3) );
           }
           double get(Tx x) {
+            assert( volume(x)>0 );
+            assert( this->count()>0 );
             if (bulkconc.cnt==0) bulkconc+=1;
             return (double)this->operator()(x) / volume(x) / (double)this->count() / bulkconc.avg()
               * this->map.size() * this->dx;

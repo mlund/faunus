@@ -2,13 +2,14 @@
 #include <tclap/CmdLine.h>
 
 using namespace Faunus;
-using namespace TCLAP;
 
 //typedef Geometry::PeriodicCylinder Tgeometry;
-typedef Geometry::Cylinder Tgeometry;
-typedef Potential::CoulombSR<Tgeometry, Potential::Coulomb, Potential::HardSphere> Tpairpot;
+typedef Geometry::Cuboid Tgeometry;
+//typedef Geometry::Cylinder Tgeometry;
+typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, Potential::SoftRepulsion> Tpairpot;
 
 int main(int argc, char** argv) {
+  cout << textio::splash();
   InputMap mcp("cluster.input");
   MCLoop loop(mcp);                    // class for handling mc loops
   FormatPQR pqr;                       // PQR structure file I/O
@@ -28,12 +29,14 @@ int main(int argc, char** argv) {
   for (auto &g : pol) {
     aam.load(polyfile);
     Geometry::FindSpace f;
-    f.dir.x=0;
-    f.dir.y=0;
-    f.find(*spc.geo, spc.p, aam.p );
-    g = spc.insert( aam.p );
-    g.name="Protein";
-    spc.enroll(g);
+    f.dir.x=0; // put mass center
+    f.dir.y=0; // at x,y,z=0,0,random
+    if (f.find(*spc.geo, spc.p, aam.p )) {
+      g = spc.insert( aam.p );
+      g.name="Protein";
+      spc.enroll(g);
+    } else
+      return 1;
   }
 
   // Add salt
@@ -42,16 +45,18 @@ int main(int argc, char** argv) {
   spc.enroll(salt);
   spc.load("state");
 
-  Analysis::Table2D<float,unsigned long int> rdf(0.2);
+  Analysis::LineDistribution<float,unsigned long int> rdf(0.25);
+  //Analysis::RadialDistribution<float,int> rdf(0.2);
 
-  Move::TranslateRotateCluster gmv(mcp,pot,spc);
-  gmv.setMobile(salt);
-  gmv.dir.x=0;
-  gmv.dir.y=0;
+  //Move::TranslateRotateCluster gmv(mcp,pot,spc);
+  Move::TranslateRotate gmv(mcp,pot,spc);
+  //gmv.setMobile(salt); // specify where to look for clustered ions
+  //gmv.dir.x=0; // do not move in x
+  //gmv.dir.y=0; // and y direction
 
   Move::AtomicTranslation mv(mcp, pot, spc);
   mv.setGroup(salt);
- 
+
   double utot=pot.external() + pot.g_internal(spc.p, salt);
   for (auto &p : pol)
     utot+=pot.g2g(spc.p, salt, p);

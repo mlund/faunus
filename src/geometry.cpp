@@ -309,7 +309,7 @@ namespace Faunus {
       return r2*pc::pi*len;
     }
 
-    void Cylinder::boundary(Point &p ) const {}
+    void Cylinder::boundary(Point &p) const {}
 
     void Cylinder::randompos(Point &m) {
       double l=r2+1;

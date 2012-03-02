@@ -205,8 +205,8 @@ namespace Faunus {
         string _info(char); //!< Cylinder info
         void _setVolume(double);
         double _getVolume() const;
-        double r2;    //!< Cylinder radius squared
         void init(double,double);
+        double r2;    //!< Cylinder radius squared
         double r;     //!< Cylinder radius
         double diameter;
       protected:

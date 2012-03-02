@@ -130,6 +130,31 @@ namespace Faunus {
     SquareWellHydrophobic::SquareWellHydrophobic(InputMap &in, string prefix) : SquareWell(in,prefix) {
       name="Hydrophobic " + name;
     }
+
+    /*!
+     * \param in InputMap is scanned for the keyword \c softrep_sigma which should be in angstrom
+     */
+    SoftRepulsion::SoftRepulsion(InputMap &in) {
+      name="Repulsive r6";
+      sigma6 = pow( in.get<double>( "softrep_sigma", 5 ), 6);
+    }
+    
+    string SoftRepulsion::_brief() {
+      std::ostringstream o;
+      o << textio::sigma  << pow(sigma6*tokT(),1/6.) << textio::_angstrom;
+      return o.str();
+    }
+    
+    void SoftRepulsion::_setScale(double s) {
+      _tokT=s;
+      sigma6=sigma6/_tokT;
+    }
+
+    string SoftRepulsion::info(char w) {
+      std::ostringstream o;
+      o << textio::pad(SUB,w+1,textio::sigma) << pow(sigma6*tokT(),1/6.) << textio::_angstrom << endl;
+      return o.str();
+    }
  
     /*!
      * The following input keywords are searched searched:
@@ -178,7 +203,6 @@ namespace Faunus {
       k=sqrt( I*c );
       if (k<zero)
         k=1/in.get<double>("dh_debyelength", 1/zero); // [A]
-      k=-k;
     }
 
     string DebyeHuckel::_brief() {
@@ -192,7 +216,7 @@ namespace Faunus {
     }
 
     double DebyeHuckel::debyeLength() const {
-      return -1/k;
+      return 1/k;
     }
 
     string DebyeHuckel::info(char w) {

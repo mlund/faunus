@@ -147,6 +147,25 @@ namespace Faunus {
           return 0;
         }
     };
+    
+    /*!
+     * \brief Soft repulsion of the form \f$ \beta u = \sigma^6 / (r_{ij}-r_i-r_j)^6
+     * \todo This applies sqrt() and thus may be slow
+     */
+    class SoftRepulsion : public PairPotentialBase {
+      private:
+        string _brief();
+        void _setScale(double);
+        double sigma6;
+      public:
+        SoftRepulsion(InputMap&);
+        inline double operator() (const particle &a, const particle &b, double r2) const {
+          double x=sqrt(r2)-a.radius-b.radius;
+          x=x*x; //2
+          return sigma6 / (x*x*x);
+        }
+        string info(char);
+    };
 
     /*!
      * \brief Coulomb pair potential
@@ -202,10 +221,10 @@ namespace Faunus {
         DebyeHuckel(InputMap&);       //!< Construction from InputMap
         double ionicStrength() const; //!< Returns the ionic strength (mol/l)
         double debyeLength() const;   //!< Returns the Debye screening length (angstrom)
-        inline double energy(double zz, double r) const { return zz/r * exp(k*r); }
+        inline double energy(double zz, double r) const { return zz/r * exp(-k*r); }
         inline double operator() (const particle &a, const particle &b, double r2) const {
           r2=sqrt(r2);
-          return a.charge*b.charge/r2 * exp(k*r2); //note that k=-kappa
+          return a.charge*b.charge/r2 * exp(-k*r2); //note that k=-kappa
         }
         string info(char);
     };

@@ -102,7 +102,7 @@ namespace Faunus {
      * \date Lund 2011
      *
      * This radial distribution is defined as \f$ g(r) = \rho(r) / \rho(\infty) \f$ where \f$ \rho \f$ are
-     * the particle densities in volume element \c rdr and in the bulk, respectively.
+     * the particle densities in spherical volume element \c rdr and in the bulk, respectively.
      *
      * Example:
      * \code
@@ -116,7 +116,7 @@ namespace Faunus {
     template<typename Tx=double, typename Ty=int>
       class RadialDistribution : public Table2D<Tx,Ty> {
         private:
-          double volume(Tx x) {
+          virtual double volume(Tx x) {
             return 4./3.*pc::pi*( pow(x+0.5*this->dx,3) - pow(x-0.5*this->dx,3) );
           }
           double get(Tx x) {
@@ -157,6 +157,14 @@ namespace Faunus {
                 bulk++;
             bulkconc += bulk / spc.geo->getVolume();
           }
+      };
+
+    template<typename Tx=double, typename Ty=int>
+      class LineDistribution : public RadialDistribution<Tx,Ty> {
+        private:
+          virtual double volume(Tx x) { return 1; }
+        public:
+          LineDistribution(Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {}
       };
 
     /*!

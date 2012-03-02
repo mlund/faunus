@@ -6,9 +6,18 @@ using namespace Faunus;
 //typedef Geometry::PeriodicCylinder Tgeometry;
 typedef Geometry::Cuboid Tgeometry;
 //typedef Geometry::Cylinder Tgeometry;
-typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, Potential::SoftRepulsion> Tpairpot;
+typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, Potential::HardSphere> Tpairpot;
 
 int main(int argc, char** argv) {
+  /*
+  double x = pc::infty;
+  x=x/x;
+  cout << x << endl;
+  if (x==pc::infty)
+    cout << "infinity!\n";
+  return 0;
+  */
+
   cout << textio::splash();
   InputMap mcp("cluster.input");
   MCLoop loop(mcp);                    // class for handling mc loops
@@ -21,6 +30,7 @@ int main(int argc, char** argv) {
 
   Energy::Hamiltonian pot;
   auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot>(mcp) );
+  auto constrain = pot.create( Energy::MassCenterConstrain(pot.getGeometry()) );
   Space spc( pot.getGeometry() );
 
   // Add polymers
@@ -39,18 +49,21 @@ int main(int argc, char** argv) {
       return 1;
   }
 
+  constrain->addPair(pol[0], pol[1], 0, 115);
+
   // Add salt
   GroupAtomic salt(spc, mcp);
   salt.name="Salt";
   spc.enroll(salt);
   spc.load("state");
 
-  Analysis::LineDistribution<float,unsigned long int> rdf(0.25);
-  //Analysis::RadialDistribution<float,int> rdf(0.2);
+  //Analysis::LineDistribution<float,unsigned long int> rdf(0.25);
+  Analysis::RadialDistribution<float,int> rdf(0.2);
+  rdf.maxdist=115.;
 
-  //Move::TranslateRotateCluster gmv(mcp,pot,spc);
-  Move::TranslateRotate gmv(mcp,pot,spc);
-  //gmv.setMobile(salt); // specify where to look for clustered ions
+  Move::TranslateRotateCluster gmv(mcp,pot,spc);
+  //Move::TranslateRotate gmv(mcp,pot,spc);
+  gmv.setMobile(salt); // specify where to look for clustered ions
   //gmv.dir.x=0; // do not move in x
   //gmv.dir.y=0; // and y direction
 
@@ -82,8 +95,12 @@ int main(int argc, char** argv) {
             sys+=gmv.move();
           }
           for (auto i=pol.begin(); i!=pol.end()-1; i++)
-            for (auto j=i+1; j!=pol.end(); j++)
-              rdf( spc.geo->dist(i->cm,j->cm) )++;
+            for (auto j=i+1; j!=pol.end(); j++) {
+              double r=spc.geo->dist(i->cm,j->cm);
+              if (r<rdf.maxdist) {
+                rdf(r)++;
+              }
+            }
           break;
       }
     } // end of micro loop

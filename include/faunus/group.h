@@ -62,7 +62,7 @@ namespace Faunus {
    *
    * Example:
    * \code
-   *   Group g(2,5);           // beginning, size
+   *   Group g(2,5);           // first, last particle
    *   for (auto i : g)        // iterator access
    *     cout << i;            // -> 23456
    *   g.front();              // -> 2

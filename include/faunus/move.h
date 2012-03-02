@@ -87,6 +87,7 @@ namespace Faunus {
         double runfraction;          //!< Fraction of times calling move() should result in an actual move. 0=never, 1=always.
         string info();               //!< Returns information string
         void test(UnitTest&);        //!< Perform unit test
+        double getAcceptance();      //!< Get acceptance [0:1]
     };
 
     /*!

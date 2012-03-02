@@ -103,6 +103,12 @@ namespace Faunus {
     void Movebase::_test(UnitTest&) {
     }
 
+    double Movebase::getAcceptance() {
+      if (cnt>0)
+        return double(cnt_accepted) / cnt;
+      return 0;
+    }
+
     /*!
      * This will return a formatted multi-line information string about the move and
      * will as a minimum contain:
@@ -124,7 +130,7 @@ namespace Faunus {
         o << pad(SUB,w,"More information:") << cite << endl;
       if (cnt>0)
         o << pad(SUB,w,"Number of trials") << cnt << endl
-          << pad(SUB,w,"Acceptance") << double(cnt_accepted)/cnt*100 << percent << endl
+          << pad(SUB,w,"Acceptance") << getAcceptance()*100 << percent << endl
           << pad(SUB,w,"Runfraction") << runfraction*100 << percent << endl
           << pad(SUB,w,"Total energy change") << dusum << kT << endl;
       o << _info();
@@ -282,8 +288,11 @@ namespace Faunus {
       for (auto i : *igroup)
         if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
           return pc::infty;
+      double unew = pot->g_external(spc->trial, *igroup);
+      if (unew==pc::infty)
+        return pc::infty;   // early rejection!
+      unew += pot->g2all(spc->trial, *igroup);
       double uold = pot->g2all(spc->p, *igroup) + pot->g_external(spc->p, *igroup);
-      double unew = pot->g2all(spc->trial, *igroup) + pot->g_external(spc->trial, *igroup);
       return unew-uold;
     }
 
@@ -425,8 +434,10 @@ namespace Faunus {
           return pc::infty;
 
       // external potential on macromolecule
-      double uold = pot->g_external(spc->p, *igroup);
       double unew = pot->g_external(spc->trial, *igroup);
+      if (unew==pc::infty)
+        return pc::infty; //early rejection!
+      double uold = pot->g_external(spc->p, *igroup);
 
       // external potentia on clustered atomic species
       for (auto i : cindex) {

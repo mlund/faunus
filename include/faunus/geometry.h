@@ -295,6 +295,7 @@ namespace Faunus {
 #endif
 
     Point massCenter(const Geometrybase&, const p_vec&); //!< Calculate mass center of a particle vector
+    Point massCenter(const Geometrybase&, const p_vec&, const Group&); //!< Calculate mass center of a group
     void translate(const Geometrybase&, p_vec&, Point); //!< Translate a particle vector by a vector
 
     /*!

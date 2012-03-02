@@ -34,15 +34,15 @@ lj_eps                 0.05    # kT
 softrep_sigma          5
 polymer_N              2
 polymer_file           cluster.aam
-transrot_transdp       10
+transrot_transdp       20
 transrot_rotdp         0
-transrot_clustersize   2
+transrot_clustersize   4
 #dh_ionicstrength       0.0075
 dh_debyelength         31.1432066
 
 tion1                  La
 nion1                  $nion1
-dpion1                 10
+dpion1                 30
  
 #tion1                  Na
 #nion1                  2
@@ -55,12 +55,12 @@ mkstruct
 
 for nion1 in 38
 do
-  rm state
-  micro=1000
+  #rm state
+  micro=5000
   mkinput
   $exe
 
-  micro=10000
+  micro=4000000
   mkinput
   $exe
 done

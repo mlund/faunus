@@ -112,28 +112,11 @@ namespace Faunus {
   }
 
   /*!
-   * This mass-center routine obeys periodic boundaries (if any)
-   * by first centering the middle particle in (0,0,0), calc. CM
-   * and move it back.
-   *
-   * \author Mikael Lund
-   * \date Dec. 2007, Prague
    * \warning Intra-molecular distances must not exceed half the box size for cubouid geometry.
    * \todo Implement assertion to catch failure when molecule is bigger than half the box size.
    */
   Point Group::_massCenter(const Space &spc) const {
-    double sum=0;
-    Point cm,t,o = spc.p.at(front()+(back()-front())/2);  // set origo to middle particle
-    for (auto i : *this) {
-      t = spc.p[i]-o;              // translate to origo
-      spc.geo->boundary(t);        // periodic boundary (if any)
-      cm += t * spc.p[i].mw;
-      sum += spc.p[i].mw;
-    }
-    assert(sum>0 && "Group has zero mass. Did you forget to assign atom weights?");
-    cm=cm*(1/sum) + o;
-    spc.geo->boundary(cm);
-    return cm;
+    return Geometry::massCenter(*spc.geo, spc.p, *this);
   }
 
   Point Group::setMassCenter(const Space &spc) {

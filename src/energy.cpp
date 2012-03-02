@@ -374,6 +374,46 @@ namespace Faunus {
       return 0;
     }
 
+    void MassCenterConstrain::addPair(Group &a, Group &b, double mindist, double maxdist) {
+      data d = {mindist, maxdist};
+      mypair<Group*> p(&a, &b);
+      gmap[p] = d;
+    }
+
+    MassCenterConstrain::MassCenterConstrain(Geometry::Geometrybase &geo) {
+      name="Group Mass Center Distance Constraints";
+      setGeometry(geo);
+    }
+
+    double MassCenterConstrain::g_external(const p_vec &p, Group &g1) {
+      for (auto m : gmap)              // scan through pair map
+        if (m.first.find(&g1)) {       // and look for group g1
+          Group *g2ptr;                // pointer to constrained partner
+          if (&g1 == m.first.first)
+            g2ptr = m.first.second;
+          else
+            g2ptr = m.first.first;
+          Point cma = Geometry::massCenter(*geo, p, g1);
+          Point cmb = Geometry::massCenter(*geo, p, *g2ptr);
+          double r2 = geo->sqdist(cma,cmb);
+          double min = m.second.mindist;
+          double max = m.second.maxdist;
+          if (r2<min*min || r2>max*max) 
+            return pc::infty;
+        }
+      return 0;
+    }
+
+    string MassCenterConstrain::_info() {
+      using namespace Faunus::textio;
+      std::ostringstream o;
+      o << indent(SUB) << "The following groups have mass center constraints:\n";
+      for (auto m : gmap)
+        o << indent(SUBSUB) << m.first.first->name << " " << m.first.second->name
+          << " " << m.second.mindist << "-" << m.second.maxdist << _angstrom << endl;
+      return o.str();
+    }
+
   }//namespace
 }//namespace
 

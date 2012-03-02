@@ -149,7 +149,7 @@ namespace Faunus {
     };
     
     /*!
-     * \brief Soft repulsion of the form \f$ \beta u = \sigma^6 / (r_{ij}-r_i-r_j)^6
+     * \brief Soft repulsion of the form \f$ \beta u = \sigma^6 / (r_{ij}-r_i-r_j)^6 \f$
      * \todo This applies sqrt() and thus may be slow
      */
     class SoftRepulsion : public PairPotentialBase {

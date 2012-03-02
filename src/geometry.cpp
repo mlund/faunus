@@ -386,15 +386,23 @@ namespace Faunus {
 #endif
 
     Point massCenter(const Geometrybase &geo, const p_vec &p) {
+      Group g(0, p.size()-1);
+      return massCenter(geo,p,g);
+    }
+
+    Point massCenter(const Geometrybase &geo, const p_vec &p, const Group &g) {
+      assert(~g.empty());
+      assert(~p.empty());
+      assert(&geo!=NULL);
       double sum=0;
-      Point cm,t,o = p.at( p.size()/2 );  // set origo to middle particle
-      for (auto &pi : p) {
-        t = pi-o;              // translate to origo
+      Point cm,t,o = p.at( g.front()+(g.back()-g.front())/2 );  // set origo to middle particle
+      for (auto i : g) {
+        t = p[i]-o;              // translate to origo
         geo.boundary(t);        // periodic boundary (if any)
-        cm += t * pi.mw;
-        sum += pi.mw;
+        cm += t * p[i].mw;
+        sum += p[i].mw;
       }
-      assert(sum>0 && "Zero mass no good in CM calculation! Did you forget to assign atom weights?");
+      assert(sum>0 && "Group has zero mass. Did you forget to assign atom weights?");
       cm=cm*(1/sum) + o;
       geo.boundary(cm);
       return cm;

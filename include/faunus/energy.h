@@ -262,6 +262,9 @@ namespace Faunus {
           name+="(Molecular Group CG)";
         }
 
+        /*!
+         * \warning Why sqdist to trial??
+         */
         double g2g(const p_vec &p, Group &g1, Group &g2) {
           if (g1.id==Group::MOLECULAR) {
             if (g2.id==Group::MOLECULAR) {
@@ -462,6 +465,56 @@ namespace Faunus {
       double g_internal(const p_vec&, Group&);
       double external();
       double v2v(const p_vec&, const p_vec&);
+    };
+
+    /*!
+     * \brief Constrain two group mass centra within a certain distance interval [mindist:maxdist]
+     * \author Mikael Lund
+     * \date Lund, 2012
+     * \todo Prettify output
+     *
+     * This energy class will constrain the mass center separation between selected groups to a certain
+     * interval. This can be useful to sample rare events and the constraint is implemented as an external
+     * groups energy that return infinity if the mass center separation are outside the defined range.
+     * An arbitrary number of group pairs can be added with the addPair() command. In the following example,
+     * the distance between mygroup1 and mygroup2 are constrained to the range [10:50] angstrom:
+     * \code
+     * Energy::Hamiltonian pot;
+     * auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot>(mcp) );
+     * auto constrain = pot.create( Energy::MassCenterConstrain(pot.getGeometry()) );
+     * constrain->addPair( mygroup1, mygroup2, 10, 50); 
+     * \endcode
+     */
+    class MassCenterConstrain : public Energy::Energybase {
+      private:
+        string _info();
+        struct data {
+          double mindist, maxdist;
+        };
+        template<class T> class mypair {
+          public:
+            T first;
+            T second;
+            mypair() {}
+            mypair(T a, T b) {
+              first = a;
+              second = b;
+              if (a<b)
+                std::swap(a,b);
+            }
+            bool operator==(const mypair<T> &a) const {
+              if (a.first==first && a.second==second) return true;
+              if (a.first==second && a.second==first) return true;
+              return false;
+            }
+            bool operator<(const mypair<T> &a) const { return (a.first < first) ? true : false; }
+            bool find(const T &a) const { return (a==first || a==second) ? true : false; }
+        };
+        std::map< mypair<Faunus::Group*>, data> gmap;
+      public:
+        void addPair(Group&, Group&, double, double);
+        MassCenterConstrain(Geometry::Geometrybase&);
+        double g_external(const p_vec&, Group&);
     };
 
     /*!

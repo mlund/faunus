@@ -79,6 +79,80 @@ namespace Faunus {
       return o.str();
     }
 
+    ChargeMultipole::ChargeMultipole(){
+      name="Multipole";
+    }
+
+    /*!
+     * \param g Group to calculate charge for
+       \param spc Space
+     */
+    double ChargeMultipole::charge(const Group &g,const Space &spc) {
+      double x=0;
+      for (auto i : g){
+        if (exclude(spc.p[i])==false)
+          x+=spc.p[i].charge;
+      }
+      return x;
+    }
+
+    double ChargeMultipole::dipole(const Group &g, const Space &spc){
+      assert( spc.geo->dist(g.cm, g.massCenter(spc))<1e-9 && "Mass center must be in sync.");
+      double x=0, r2=0;
+      Point t, o;
+      for (auto i : g) {
+        if (exclude(spc.p[i])==false){
+          t = spc.p[i]-g.cm;                // vector to center of mass
+          spc.geo->boundary(t);               // periodic boundary (if any)
+          r2 = spc.geo->sqdist(t,o);          // squared distance to cm
+          x+=spc.p[i].charge*r2;
+        }
+      }
+      return x;
+    }
+
+    bool ChargeMultipole::exclude(const particle &p){
+      if (exclusionlist.find(atom[p.id].name)==exclusionlist.end())
+        return false;
+      return true;
+    }
+
+    void ChargeMultipole::sample(const vector<GroupMolecular> &gvec, const Space &spc){
+      if (!run())
+        return;
+      for (auto g : gvec){
+        std::cout << g.name  << endl;
+        double z=charge(g, spc);
+        Z[g.name]+=z;
+        Z2[g.name]+=pow(z,2);
+        double dip=dipole(g,spc);
+        mu[g.name]+=dip;
+        mu2[g.name]+=pow(dip,2);
+      }
+    }
+    
+    string ChargeMultipole::_info(){
+      using namespace textio;
+      char k=13;
+      std::ostringstream o;
+      if (~exclusionlist.empty()) {
+        o << pad(SUB,w, "Exclusion list");
+        for (auto i : exclusionlist)
+          o << i << " ";
+      }
+      o << endl << indent(SUB) << std::left << setw(w) << "Macromolecule  "
+        << setw(k+4) << bracket("Z")
+        << setw(k+5) << bracket("Z"+squared)
+        << setw(k+5) << bracket(textio::mu)
+        << setw(k+5) << bracket(textio::mu+squared) << endl;
+      for (auto &m : Z)
+        o << indent(SUB) << std::left << setw(w) << m.first << setw(k) << m.second.avg()
+          << setw(k) << Z2[m.first].avg()
+          << setw(k) << mu[m.first].avg()
+          << setw(k) << mu2[m.first].avg() << endl;
+      return o.str();
+    }
+
     Widom::Widom(Space &spc, Energy::Energybase &pot) {
       name="Multi Particle Widom Analysis";
       spcPtr=&spc;

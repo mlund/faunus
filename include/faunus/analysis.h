@@ -188,8 +188,26 @@ namespace Faunus {
         void sample(const Group&, const Space&); //!< Sample properties of Group (identified by group name)
     };
 
-    //class ChargeMultipole : public AnalysisBase {
-    //};
+    class ChargeMultipole : public AnalysisBase {
+        private:
+        std::map< string, Average<double> > Z, Z2, mu, mu2;
+        double charge(const Group&, const Space&);
+        double dipole(const Group&, const Space&);
+        virtual bool exclude(const particle&);  //!< Determines particle should be excluded from analysis
+        string _info();
+      public:
+        ChargeMultipole();
+        void sample(const vector<GroupMolecular>&, const Space&); //!< Sample properties of Group (identified by group name)
+        std::set<string> exclusionlist;
+    };
+
+    class VectorAlignment : public AnalysisBase {
+      private:
+        virtual Point convert(const Group&, const Space&); // Returns points calculated from group properties
+      public:
+        void sample(const Group&, const Group&, const Space&);
+    
+    };
 
     /*! \brief Widom method for excess chemical potentials
      *  \author Mikael Lund

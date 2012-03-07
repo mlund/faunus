@@ -136,6 +136,22 @@ namespace Faunus {
         }
         string info(char);
     };
+    /*!
+     * \brief Hydrophobic pair potential based on SASA and surface tension
+     *
+     * The potential is not zero iff the distance between hydrophobic particles is smaller than size of solvent molecule (2*Rs)  
+     *
+     * Potential has the form:
+     *
+     * \f$ u = Surface tension * (\Delta SASA_i + \Delta SASA_j) \f$
+     *
+     * Surface area which is not accesible for solvent \f$ \Delta SASA_i = (SASA_i(r_{ij})-SASA_i(\inf)) \f$ is calculated based on surface of a sphere cap
+     *
+     * \f$ SA_{cap,i}=2\pi(R_i+R_s)h_i \f$ where h is dependent on distance between the particles as 
+     *
+     * \f$ h_i=(R_i+R_s)*(\frac{(R_i+R_s)^2-(R_j+R_s)^2)+r_{ij}^2}{2r_{ij}(R_i+R_s)}\f$
+     *
+     */
 
     class SquareWellHydrophobic : public SquareWell {
       public:

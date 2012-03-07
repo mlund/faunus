@@ -17,6 +17,7 @@ namespace Faunus {
     const string epsilon="\u03f5";    //!< Greek epsilon
     const string gamma="\u0263";      //!< Greek gamma
     const string kT=" kT";            //!< kT (energy) with space in front
+    const string mu="\u03bc";         //!< Greek mu
     const string percent="\ufe6a";    //!< Percent sign
     const string pm="\u00b1";         //!< Plus minus sign
     const string rho="\u03C1";        //!< Greek rho

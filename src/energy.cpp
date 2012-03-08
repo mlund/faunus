@@ -87,7 +87,7 @@ namespace Faunus {
 
     double ExternalPressure::external() {
       double V=geo->getVolume();
-      assert(V!=0 && P!=0 && "Pressure and/or volume is zero");
+      assert(V>1e-9 && "Volume must be non-zero!");
       return P*V - log(V); 
     }
 

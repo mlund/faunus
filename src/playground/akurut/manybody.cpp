@@ -47,8 +47,12 @@ int main(int argc, char** argv) {
   //Move::SwapMove tit(mcp,pot,spc);
   Move::SwapMoveMSR tit(mcp,pot,spc);
   Analysis::RadialDistribution<float,int> rdf(0.25);
-  Analysis::ChargeMultipole pole;
-  pole.exclusionlist={"IVAL","HHIS"};
+  Analysis::ChargeMultipole poleTotal;
+  Analysis::ChargeMultipole poleIonic;
+  Analysis::ChargeMultipole poleProton;
+  string X=mcp.get<string>("anion", "");
+  poleProton.exclusionlist={X+"ALA",X+"ILE",X+"LEU", X+"MET", X+"PHE", X+"PRO", X+"TRP", X+"VAL", X+"bck", X+"bcks"};
+  poleIonic.exclusionlist={"ASP", "CTR", "GLU", "HHIS", "HNTR", "TYR", "HLYS", "CYS", "HARG"};
 
   // Add molecules
   int N1 = mcp.get("molecule_N1",0);
@@ -78,6 +82,7 @@ int main(int argc, char** argv) {
     utot += pot.g_external(spc.p, g);
   sys.init( utot );
 
+  pqr.save("initial.pqr",spc.p);
   cout << atom.info() << spc.info() << pot.info() << tit.info()
     << textio::header("MC Simulation Begins!");
 
@@ -100,7 +105,9 @@ int main(int argc, char** argv) {
           break;
         case 2:
           sys+=tit.move();
-          pole.sample(pol, spc);
+          poleProton.sample(pol, spc);
+          poleTotal.sample(pol,spc);
+          poleIonic.sample(pol,spc);
           break;
       }
       if ( slp_global.runtest(0.0001) ) {
@@ -113,7 +120,6 @@ int main(int argc, char** argv) {
     for (auto &g : pol)
       utot += pot.g_external(spc.p, g);
     sys.checkDrift( utot );
-
     cout << loop.timing();
 
   } // end of macro loop
@@ -124,7 +130,10 @@ int main(int argc, char** argv) {
   sys.test(test);
   */
 
-  cout << loop.info() << sys.info() << gmv.info() << iso.info() << tit.info() << pole.info();
+  cout << loop.info() << sys.info() << gmv.info() << iso.info() << tit.info()<< endl 
+       << " Total Charge Analysis " << poleTotal.info() 
+       << " Charge Analysis w/only protons " << poleProton.info() 
+       << " Charge Analysis w/only anions " << poleIonic.info();
 
   rdf.save("rdf_p2p.dat");
   pqr.save("confout.pqr", spc.p);

@@ -46,7 +46,7 @@ namespace Faunus {
       << "    \\___  /   (____  /|____/ |___|  /|____//_______  /\n"
       << "        \\/         \\/             \\/               \\/\n"
       << "\n"
-      << "  Programmed by:\n"
+      << "  Developed by:\n"
       << "    Mikael Lund, Bj\u00F6rn Persson, Martin Trulsson,\n"
       << "    Ond\u0159ej Mar\u0161\u00E1lek, Christophe Labbez, Andre Teixeira,\n"
       << "    An\u0131l Kurut, Chris Evers, Robert V\u00E1cha\n"

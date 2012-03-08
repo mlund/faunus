@@ -131,7 +131,7 @@ namespace Faunus {
         virtual double g_internal(const p_vec&, Group&);      // Internal energy of group
         virtual double v2v(const p_vec&, const p_vec&);       // Particle vector-Particle vector energy
         virtual double external();                            // External energy - pressure, for example.
-        string info();                                        //!< Information
+        virtual string info() final;                          //!< Information
     };
 
     /*!
@@ -162,18 +162,18 @@ namespace Faunus {
           }
 
           //!< Particle-particle energy (kT)
-          inline double p2p(const particle &a, const particle &b) {
+          inline double p2p(const particle &a, const particle &b) override {
             return pair.energy(a,b)*pair.tokT();
           }
 
-          double all2p(const p_vec &p, const particle &a) {
+          double all2p(const p_vec &p, const particle &a) override {
             double u=0;
             for (auto &b : p)
               u+=pair.energy(a,b);
             return u*pair.tokT();
           }
 
-          double all2all(const p_vec &p) {
+          double all2all(const p_vec &p) override {
             int n=p.size();
             double u=0;
             for (int i=0; i<n-1; ++i)
@@ -182,11 +182,11 @@ namespace Faunus {
             return u*pair.tokT();
           }
 
-          double i2i(const p_vec &p, int i, int j) {
+          double i2i(const p_vec &p, int i, int j) override {
             return pair.tokT()*pair.energy(p[i],p[j]);
           }
 
-          double i2g(const p_vec &p, Group &g, int j) {
+          double i2g(const p_vec &p, Group &g, int j) override {
             double u=0;
             int len=g.back()+1;
             if (j>=g.front() && j<=g.back()) {   //j is inside g - avoid self interaction
@@ -200,7 +200,7 @@ namespace Faunus {
             return pair.tokT()*u;  
           }
 
-          double i2all(const p_vec &p, int i) {
+          double i2all(const p_vec &p, int i) override {
             double u=0;
             int n=(int)p.size();
             for (int j=0; j<i; ++j)
@@ -210,7 +210,7 @@ namespace Faunus {
             return u*pair.tokT();
           }
 
-          double g2g(const p_vec &p, Group &g1, Group &g2) {
+          double g2g(const p_vec &p, Group &g1, Group &g2) override {
             double u=0;
             int ilen=g1.back()+1, jlen=g2.back()+1;
 #pragma omp parallel for reduction (+:u) schedule (dynamic)
@@ -220,7 +220,7 @@ namespace Faunus {
             return pair.tokT()*u;
           }
 
-          double g2all(const p_vec &p, Group &g) {
+          double g2all(const p_vec &p, Group &g) override {
             int ng=g.back()+1, np=p.size();
             double u=0;
 #pragma omp parallel for reduction (+:u)
@@ -233,7 +233,7 @@ namespace Faunus {
             return u*pair.tokT();
           }
 
-          double g_internal(const p_vec &p, Group &g) { 
+          double g_internal(const p_vec &p, Group &g) override { 
             if (g.front()==-1) return 0;
             double u=0;
             int step=1,n=g.back()+1;
@@ -243,7 +243,7 @@ namespace Faunus {
             return pair.tokT()*u;
           }
 
-          double v2v(const p_vec &p1, const p_vec &p2) {
+          double v2v(const p_vec &p1, const p_vec &p2) override {
             double u=0;
             for (auto &i : p1)
               for (auto &j : p2)
@@ -263,7 +263,7 @@ namespace Faunus {
         }
 
         /*!
-         * \warning Why sqdist to trial??
+         * \warning Why sqdist to trial?? Are we sure this g2g is called? (the override keyword is not working!)
          */
         double g2g(const p_vec &p, Group &g1, Group &g2) {
           if (g1.id==Group::MOLECULAR) {
@@ -289,17 +289,17 @@ namespace Faunus {
           Potential::HardSphere hs;
         public:
           HardSphereOverlap(InputMap &mcp) : geo(mcp) {};
-          inline double i2i(const p_vec &p, int i, int j) {
+          inline double i2i(const p_vec &p, int i, int j) override {
             return hs(p[i], p[j], geo.sqdist(p[i], p[j]) );
           }
-          double all2all(const p_vec &p) {
+          double all2all(const p_vec &p) override {
             for (auto i=p.begin(); i!=p.end()-1; ++i)
               for (auto j=i+1; j!=p.end(); ++j)
                 if ( hs(*i,*j, geo.sqdist(*i,&j) )==pc::infty )
                   return pc::infty;
             return 0;
           }
-          double g2all(const p_vec &p, const Group &g) {
+          double g2all(const p_vec &p, Group &g) override {
             for (int i=g.front(); i<=g.back(); i++) {
               for (int j=0; j<g.front(); j++)
                 if ( i2i(p,i,j)==pc::infty )
@@ -310,7 +310,7 @@ namespace Faunus {
               return 0;
             }
           }
-          double g2g(const p_vec &p, const Group &g1, const Group &g2) {
+          double g2g(const p_vec &p, Group &g1, Group &g2) override {
             for (int i=g1.front(); i<=g1.back(); ++i)
               for (int j=g2.front(); j<=g2.back(); ++j)
                 if ( i2i(p,i,j)==pc::infty )
@@ -348,8 +348,8 @@ namespace Faunus {
         ParticleBonds bonds;
         //double i2i(const p_vec&, int, int);
         //double i2g(const p_vec&, Group&, int);
-        double i2all(const p_vec&, int);
-        double g_internal(const p_vec&, Group &);
+        double i2all(const p_vec&, int) override;
+        double g_internal(const p_vec&, Group &) override;
     };
 
     /*!
@@ -373,8 +373,8 @@ namespace Faunus {
         string _info();
       public:
         ExternalPressure(Geometry::Geometrybase&, double);
-        double external();  //!< External energy working on system. pV/kT-lnV
-        double g_external(const p_vec&, Group&); //!< External energy working on group
+        double external() override;  //!< External energy working on system. pV/kT-lnV
+        double g_external(const p_vec&, Group&) override; //!< External energy working on group
     };
 
     /*!
@@ -408,7 +408,7 @@ namespace Faunus {
       public:
         std::vector<Group*> groups;              //!< List of groups to restrict
         RestrictedVolume(InputMap&);
-        double g_external(const p_vec&, Group&); //!< External energy working on group
+        double g_external(const p_vec&, Group&) override; //!< External energy working on group
     };
 
     /*!
@@ -451,20 +451,20 @@ namespace Faunus {
       }
 
       void add(Energybase&); //!< Add existing energy class to list
-      double p2p(const particle&, const particle&);
-      double all2p(const p_vec&, const particle&);
-      double all2all(const p_vec&);
-      double i2i(const p_vec&, int, int);
-      double i2g(const p_vec&, Group&, int);
-      double i2all(const p_vec&, int);
-      double i_external(const p_vec&, int);
-      double i_internal(const p_vec&, int);
-      double g2g(const p_vec&, Group&, Group&);
-      double g2all(const p_vec&, Group&);
-      double g_external(const p_vec&, Group&);
-      double g_internal(const p_vec&, Group&);
-      double external();
-      double v2v(const p_vec&, const p_vec&);
+      double p2p(const particle&, const particle&) override;
+      double all2p(const p_vec&, const particle&) override;
+      double all2all(const p_vec&) override;
+      double i2i(const p_vec&, int, int) override;
+      double i2g(const p_vec&, Group&, int) override;
+      double i2all(const p_vec&, int) override;
+      double i_external(const p_vec&, int) override;
+      double i_internal(const p_vec&, int) override;
+      double g2g(const p_vec&, Group&, Group&) override;
+      double g2all(const p_vec&, Group&) override;
+      double g_external(const p_vec&, Group&) override;
+      double g_internal(const p_vec&, Group&) override;
+      double external() override;
+      double v2v(const p_vec&, const p_vec&) override;
     };
 
     /*!
@@ -491,10 +491,14 @@ namespace Faunus {
         struct data {
           double mindist, maxdist;
         };
+        /*!
+         * This is a template for storing unordered pairs of data T.
+         * That is (a,b)==(b,a). The < operator is implemented so the pairtype
+         * can be used in STL maps etc.
+         */
         template<class T> class mypair {
           public:
-            T first;
-            T second;
+            T first, second;
             mypair() {}
             mypair(T a, T b) {
               first = a;
@@ -514,7 +518,7 @@ namespace Faunus {
       public:
         void addPair(Group&, Group&, double, double);
         MassCenterConstrain(Geometry::Geometrybase&);
-        double g_external(const p_vec&, Group&);
+        double g_external(const p_vec&, Group&) override;
     };
 
     /*!
@@ -528,11 +532,11 @@ namespace Faunus {
     class EnergyRest : public Energy::Energybase {
       private:
         double usum;
+        string _info();
       public:
         EnergyRest();
         void add(double du); //!< Add energy change disrepancy, dU = U(metropolis) - U(as in drift calculation)
-        double external();
-        string _info();
+        double external() override;
     };
 
   }//Energy namespace

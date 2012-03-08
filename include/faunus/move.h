@@ -50,7 +50,8 @@ namespace Faunus {
      * These functions should be pretty self-explanatory and are - via wrapper
      * functions - called by the move(). It is important that the _energyChange() function
      * returns the full energy associated with the move. For example, for NPT
-     * moves the pV term should be included and so on.
+     * moves the pV term should be included and so on. Please do stride not try override
+     * the move() function as this should be generic to all MC moves.
      */
 
     class Movebase {
@@ -64,10 +65,11 @@ namespace Faunus {
         virtual void _acceptMove()=0;          //!< Accept move, store new coordinates.
         virtual void _rejectMove()=0;          //!< Reject move, revert to old coordinates.
         virtual double _energyChange()=0;      //!< Returns energy change of trialMove
-        virtual void trialMove();// final;        //!< Do a trial move (wrapper)
-        virtual void acceptMove();// final;       //!< Accept move, store new coordinates etc. (wrapper)
-        virtual void rejectMove();// final;       //!< Reject move, revert to old coordinates etc. (wrapper)
-        virtual double energyChange();// final;   //!< Returns energy change of trialMove (wrapper)
+
+        void trialMove();                      //!< Do a trial move (wrapper)
+        void acceptMove();                     //!< Accept move, store new coordinates etc. (wrapper)
+        void rejectMove();                     //!< Reject move, revert to old coordinates etc. (wrapper)
+        double energyChange();                 //!< Returns energy change of trialMove (wrapper)
         bool metropolis(const double&) const;  //!< Metropolis criteria
 
       protected:
@@ -81,13 +83,13 @@ namespace Faunus {
         bool run() const;                //!< Runfraction test
 
       public:
-        Movebase(Energy::Energybase&, Space&, string);             //!< Constructor
+        Movebase(Energy::Energybase&, Space&, string);//!< Constructor
         virtual ~Movebase();
-        double move(int=1);          //!< Attempt \c n moves and return energy change
-        double runfraction;          //!< Fraction of times calling move() should result in an actual move. 0=never, 1=always.
-        string info();               //!< Returns information string
-        void test(UnitTest&);        //!< Perform unit test
-        double getAcceptance();      //!< Get acceptance [0:1]
+        double runfraction;                //!< Fraction of times calling move() should result in an actual move. 0=never, 1=always.
+        virtual double move(int=1) final;  //!< Attempt \c n moves and return energy change
+        virtual string info() final;       //!< Returns information string (wrapper)
+        virtual void test(UnitTest&) final;//!< Perform unit test
+        double getAcceptance();            //!< Get acceptance [0:1]
     };
 
     /*!
@@ -96,12 +98,11 @@ namespace Faunus {
      * \date Lund, 2011
      *
      * This Markov move can work in two modes:
-     * \li Move a single particle
-     * \li Move single particles randomly selected in a Group.
+     * \li Move a single particle in space set by setParticle()
+     * \li Move single particles randomly selected in a Group set by setGroup().
      *
-     * To move a single particle, specify its position in the space particle vector
-     * in iparticle. For randomly moving all particles in a group (typically salt),
-     * point igroup to the appropriate Group in the space class g vector.
+     * The move directions can be controlled with the dir vector - for instance if you wish
+     * to translate only in the \c z direction, set \c dir.x=dir.y=0.
      */
     class AtomicTranslation : public Movebase {
       private:

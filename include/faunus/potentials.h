@@ -44,7 +44,7 @@ namespace Faunus {
          * \param b Second particle
          * \param r2 Squared distance between them (angstrom squared)
          */
-        virtual double operator() (const particle &a, const particle&b, double r2) const=0;
+        virtual double operator() (const particle &a, const particle &b, double r2) const=0;
     };
 
     /*!
@@ -61,7 +61,7 @@ namespace Faunus {
         double k;   //!< Force constant (kT/angstrom squared)
         double req; //!< Equilibrium distance (angstrom)
         Harmonic(double=0, double=0);
-        double operator() (const particle&, const particle&, double) const; //!< Pair interaction energy (kT)
+        double operator() (const particle&, const particle&, double) const override; //!< Pair interaction energy (kT)
     };
 
     /*!
@@ -73,7 +73,7 @@ namespace Faunus {
       public:
         HardSphere();
         HardSphere(InputMap&);
-        inline double operator() (const particle &a, const particle &b, double r2) const {
+        inline double operator() (const particle &a, const particle &b, double r2) const override {
           double mindist=a.radius+b.radius;
           if (r2<mindist*mindist)
             return pc::infty;
@@ -112,7 +112,7 @@ namespace Faunus {
           double x=r6(sigma,r2);
           return eps*(x*x - x);
         }
-        inline double operator() (const particle &a, const particle &b, double r2) const {
+        inline double operator() (const particle &a, const particle &b, double r2) const override {
           return energy(a.radius+b.radius, r2);
         }
         string info(char);
@@ -129,7 +129,7 @@ namespace Faunus {
         double threshold;                           //!< Threshold between particle *surface* [A]
         double depth;                               //!< Energy depth [kT]
         SquareWell(InputMap&, string="squarewell"); //!< Constructor
-        inline double operator() (const particle &a, const particle &b, double r2) const {
+        inline double operator() (const particle &a, const particle &b, double r2) const override {
           if ( sqrt(r2)-a.radius-b.radius<threshold )
             return -depth;
           return 0;
@@ -156,7 +156,7 @@ namespace Faunus {
     class SquareWellHydrophobic : public SquareWell {
       public:
         SquareWellHydrophobic(InputMap&, string="squarewell"); //!< Constructor
-        inline double operator() (const particle &a, const particle &b, double r2) const {
+        inline double operator() (const particle &a, const particle &b, double r2) const override {
           if (a.hydrophobic)
             if (b.hydrophobic)
               return SquareWell::operator()(a,b,r2);
@@ -175,7 +175,7 @@ namespace Faunus {
         double sigma6;
       public:
         SoftRepulsion(InputMap&);
-        inline double operator() (const particle &a, const particle &b, double r2) const {
+        inline double operator() (const particle &a, const particle &b, double r2) const override {
           double x=sqrt(r2)-a.radius-b.radius;
           x=x*x; //2
           return sigma6 / (x*x*x);
@@ -215,7 +215,7 @@ namespace Faunus {
       }
 
       /*! \returns \f$\beta u/l_B\f$ */
-      inline double operator() (const particle &a, const particle &b, double r2) const {
+      inline double operator() (const particle &a, const particle &b, double r2) const override {
         return energy( a.charge*b.charge, sqrt(r2) );
       }
       string info(char);
@@ -238,9 +238,8 @@ namespace Faunus {
         double ionicStrength() const; //!< Returns the ionic strength (mol/l)
         double debyeLength() const;   //!< Returns the Debye screening length (angstrom)
         inline double energy(double zz, double r) const { return zz/r * exp(-k*r); }
-        inline double operator() (const particle &a, const particle &b, double r2) const {
-          r2=sqrt(r2);
-          return a.charge*b.charge/r2 * exp(-k*r2); //note that k=-kappa
+        inline double operator() (const particle &a, const particle &b, double r2) const override {
+          return energy(a.charge*b.charge, sqrt(r2));
         }
         string info(char);
     };
@@ -273,7 +272,7 @@ namespace Faunus {
           CombinedPairPotential(InputMap &in) : sr1(in), sr2(in) {
             name=sr1.name+"+"+sr2.name;
           }
-          inline double operator() (const particle &a, const particle &b, double r2) const {
+          inline double operator() (const particle &a, const particle &b, double r2) const override {
             return sr1(a,b,r2) + sr2(a,b,r2);
           }
           string info(char w=20) {
@@ -312,7 +311,7 @@ namespace Faunus {
             double r2=geo.sqdist(a,b);
             return el.energy( a.charge*b.charge, sqrt(r2) ) + sr(a,b,r2);
           }
-          inline double operator() (const particle &a, const particle &b, double r2) const {
+          inline double operator() (const particle &a, const particle &b, double r2) const override {
             return el.energy( a.charge*b.charge, sqrt(r2) ) + sr(a,b,r2);
           }
           string info(char w=20) {

@@ -22,11 +22,10 @@ namespace Faunus {
      *
      * This is the base class for analysis routines. Derived class must implement:
      * \li a descriptive name
-     * \li the _info() function - i.e. do NOT override the public info() function!
+     * \li _info()
      *
-     * It is recommended that derived classes implement:
-     * \li a sample(...) function that uses run() to check if the
-     *     analysis should be run or not.
+     * It is strongly recommended that derived classes implement:
+     * \li a sample(...) function that uses run() to check if the analysis should be run or not.
      * \li the cite string to provide external information
      */
     class AnalysisBase {

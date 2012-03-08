@@ -210,11 +210,22 @@ namespace Faunus {
       return u;
     }
 
+    /*
+     * For early rejection we do a reverse loop over energy
+     * classes to test if the energy is infinity. Reverse
+     * because constraining energy classes are often added
+     * last.
+     */
     double Hamiltonian::g_external(const p_vec &p, Group &g) {
       double u=0;
-      for (auto b : baselist)
-        u += b->g_external(p,g);
+      for (auto b=baselist.rbegin(); b!=baselist.rend(); ++b) {
+        u += (*b)->g_external(p,g);
+        if (u>=pc::infty)
+          break;
+      }
       return u;
+      //for (auto b : baselist)
+      //  u += b->g_external(p,g);
     }
 
     double Hamiltonian::g_internal(const p_vec &p, Group &g) {

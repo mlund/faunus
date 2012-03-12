@@ -1,6 +1,6 @@
 #!/bin/bash
 
-faunus=$HOME/faunus/branches/ny/
+faunus=$HOME/nyfaunus
 exe=$faunus/src/playground/mlund/mlund-manybody
 base="manybody"
 
@@ -110,7 +110,7 @@ test_file              $base.test
 function mkstruct() {
 echo "2
  HIS  0   0.00   0.00   0.00    0.0   1  3.0
- VAL  0   6.00   0.00   0.00    0.0   1  3.0
+ VAL  0   6.00   0.00   0.00    1.0   1  3.0
 " > ${base}.aam
 }
 

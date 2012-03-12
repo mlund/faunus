@@ -363,21 +363,31 @@ namespace Faunus {
         if (g->find(ipart)) {  //   is ipart part of a group?
           for (auto i : *g)    //     if so, loop over that group
             if (i!=ipart) {    //       and ignore ipart
-              radiusbak[i]     = spc->p[i].radius;
-              spc->p[i].radius = spc->trial[i].radius = -spc->p[ipart].radius;
-              hydrophobicbak[i] = spc->trial[i].hydrophobic;
-              spc->p[i].hydrophobic = spc->trial[i].hydrophobic = false;
+              assert( abs(spc->p[i].radius-spc->trial[i].radius)<1e-9 && "Untouched radii must be in sync!" );
+              assert( spc->p[i].hydrophobic==spc->trial[i].hydrophobic && "Untouched particles changed.");
+
+              //radiusbak[i]         = spc->p[i].radius;
+              //spc->p[i].radius     = -spc->p[ipart].radius;
+              //spc->trial[i].radius = -spc->p[ipart].radius;
+
+              hydrophobicbak[i]         = spc->p[i].hydrophobic;
+              spc->p[i].hydrophobic     = false;
+              spc->trial[i].hydrophobic = false;
             }
           return; // a particle can be part of a single group, only
         }
     }
 
     void SwapMoveMSR::restore() {
-      for (auto &m : radiusbak)
-        spc->p[m.first].radius = spc->trial[m.first].radius = m.second;
-      for (auto &m : radiusbak)
-        spc->p[m.first].hydrophobic = spc->trial[m.first].hydrophobic = m.second;
-     }
+      for (auto &m : radiusbak) {
+        spc->p[m.first].radius = m.second;
+        spc->trial[m.first].radius = m.second;
+      }
+      for (auto &m : hydrophobicbak) {
+        spc->p[m.first].hydrophobic = m.second;
+        spc->trial[m.first].hydrophobic = m.second;
+      }
+    }
 
     double SwapMoveMSR::_energyChange() {
       double du_orig = SwapMove::_energyChange();

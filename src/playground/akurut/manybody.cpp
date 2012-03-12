@@ -40,23 +40,65 @@ int main(int argc, char** argv) {
 
   Energy::Hamiltonian pot;
   auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot>(mcp) );
+  auto constrain = pot.create( Energy::MassCenterConstrain(pot.getGeometry()) );
   Space spc( pot.getGeometry() );
 
-  Move::Isobaric iso(mcp,pot,spc);
+  //Move::Isobaric iso(mcp,pot,spc);
   Move::TranslateRotate gmv(mcp,pot,spc);
-  //Move::SwapMove tit(mcp,pot,spc);
-  Move::SwapMoveMSR tit(mcp,pot,spc);
+  Move::SwapMove tit(mcp,pot,spc);
+  //Move::SwapMoveMSR tit(mcp,pot,spc);
   Analysis::RadialDistribution<float,int> rdf(0.25);
   Analysis::ChargeMultipole poleTotal;
   Analysis::ChargeMultipole poleIonic;
   Analysis::ChargeMultipole poleProton;
   string X=mcp.get<string>("anion", "");
-  poleProton.exclusionlist={X+"ALA",X+"ILE",X+"LEU", X+"MET", X+"PHE", X+"PRO", X+"TRP", X+"VAL", X+"bck", X+"bcks"};
+  poleProton.exclusionlist={X+"ALA",X+"ILE",X+"LEU", X+"MET", X+"PHE", X+"PRO", X+"TRP", X+"VAL", X+"Bbs", X+"Bbw"};
   poleIonic.exclusionlist={"ASP", "CTR", "GLU", "HHIS", "HNTR", "TYR", "HLYS", "CYS", "HARG"};
+  
+  //Rename buried titratable groups determined by their solvent accessible surface area 
+  io fio;
+  vector<string> v_sasa;
+
+  int N1 = mcp.get("molecule_N1",0);                                                                          
+  int N2 = mcp.get("molecule_N2",0);
+  double threshold = mcp.get("sasa_threshold",25);
+
+  string aamfile = "gammacryst-back-side.aam";
+  string file_sasa = "sasa.txt";
+  
+  std::ostringstream of;
+  of << threshold << "gammacryst-buried.aam";
+  string outfile = of.str();
+  
+  std::istringstream stm;
+  aam.load(aamfile);
+  fio.readfile(file_sasa, v_sasa);
+  assert (v_sasa.size()==aam.p.size() &&  "Sasa must be defined for each residue in aam file");
+  
+  for (unsigned int i=0; i < v_sasa.size(); i++){
+    double sa = atof (v_sasa[i].c_str() );
+    if (i < v_sasa.size()/2) {                         // Make sure that back bone particles come first in the aam file
+      if (sa < threshold) {
+        aam.p[i].id=atom["BBb"].id;                    // BBb = Buried Backbone 
+      }
+      else {
+        if ((aam.p[i].id==atom["GLY"].id) || 
+            (aam.p[i].id==atom["PRO"].id)){            // Anions show strong binding to PRO and GLY
+          aam.p[i].id=atom["Bbs"].id;                  // Bbs = Backbone with strong binding
+        }
+        else { 
+          aam.p[i].id=atom["Bbw"].id;                  // Bbw = Backbone with weak binding
+        }
+      }
+    }
+    else {
+      if (sa < threshold)
+        aam.p[i].id=atom["BSc"].id;                    // BSc = Buried Sidechain
+    }
+  }
+  aam.save(outfile, aam.p);
 
   // Add molecules
-  int N1 = mcp.get("molecule_N1",0);
-  int N2 = mcp.get("molecule_N2",0);
   string file;
   vector<GroupMolecular> pol(N1+N2);
   for (int i=0; i<N1+N2; i++) {
@@ -72,6 +114,9 @@ int main(int argc, char** argv) {
     pol[i].name=file;
     spc.enroll( pol[i] );
   }
+  if (pol.size()>1)
+    constrain->addPair(pol[0], pol[1], 0, 90);
+
   Group allpol( pol.front().front(), pol.back().back() );
 
   tit.findSites(spc.p);  // search for titratable sites
@@ -85,10 +130,9 @@ int main(int argc, char** argv) {
   pqr.save("initial.pqr",spc.p);
   cout << atom.info() << spc.info() << pot.info() << tit.info()
     << textio::header("MC Simulation Begins!");
-
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int k,i=rand() % 3;
+      int k,i=rand() % 2;
       switch (i) {
         case 0:
           k=pol.size();
@@ -100,10 +144,10 @@ int main(int argc, char** argv) {
             for (auto j=i+1; j!=pol.end(); j++)
               rdf( spc.geo->dist(i->cm,j->cm) )++;
           break;
-        case 1:
-          sys+=iso.move();
+        case 10:
+          //sys+=iso.move();
           break;
-        case 2:
+        case 1:
           sys+=tit.move();
           poleProton.sample(pol, spc);
           poleTotal.sample(pol,spc);
@@ -130,7 +174,7 @@ int main(int argc, char** argv) {
   sys.test(test);
   */
 
-  cout << loop.info() << sys.info() << gmv.info() << iso.info() << tit.info()<< endl 
+  cout << loop.info() << sys.info() << gmv.info() << tit.info()<< endl 
        << " Total Charge Analysis " << poleTotal.info() 
        << " Charge Analysis w/only protons " << poleProton.info() 
        << " Charge Analysis w/only anions " << poleIonic.info();

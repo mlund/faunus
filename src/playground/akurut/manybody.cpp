@@ -63,8 +63,8 @@ int main(int argc, char** argv) {
   int N2 = mcp.get("molecule_N2",0);
   double threshold = mcp.get("sasa_threshold",25);
 
-  string aamfile = "gammacryst-back-side.aam";
-  string file_sasa = "sasa.txt";
+  string aamfile = mcp.get<string>("back_side1", "");
+  string file_sasa = mcp.get<string>("sasa1", "");
   
   std::ostringstream of;
   of << threshold << "gammacryst-buried.aam";
@@ -74,12 +74,14 @@ int main(int argc, char** argv) {
   aam.load(aamfile);
   fio.readfile(file_sasa, v_sasa);
   assert (v_sasa.size()==aam.p.size() &&  "Sasa must be defined for each residue in aam file");
-  
+  int cnt_buried=0;
+
   for (unsigned int i=0; i < v_sasa.size(); i++){
     double sa = atof (v_sasa[i].c_str() );
     if (i < v_sasa.size()/2) {                         // Make sure that back bone particles come first in the aam file
       if (sa < threshold) {
         aam.p[i].id=atom["BBb"].id;                    // BBb = Buried Backbone 
+        cnt_buried+=1;
       }
       else {
         if ((aam.p[i].id==atom["GLY"].id) || 
@@ -92,8 +94,10 @@ int main(int argc, char** argv) {
       }
     }
     else {
-      if (sa < threshold)
-        aam.p[i].id=atom["BSc"].id;                    // BSc = Buried Sidechain
+      if (sa < threshold){
+        cnt_buried+=1;
+        aam.p[i].id=atom["BSc"].id;                  // BSc = Buried Sidechain
+      }
     }
   }
   aam.save(outfile, aam.p);
@@ -154,10 +158,11 @@ int main(int argc, char** argv) {
           poleIonic.sample(pol,spc);
           break;
       }
-      if ( slp_global.runtest(0.0001) ) {
-        xtc.setbox( nonbonded->pair.geo.len );
-        xtc.save("traj.xtc", spc);
-      }
+      if (mcp.get<bool>("xtc_write","no"))
+        if ( slp_global.runtest(0.0001) ) {
+          xtc.setbox( nonbonded->pair.geo.len );
+          xtc.save("traj.xtc", spc);
+        }
     } // end of micro loop
 
     double utot=pot.external() + pot.g_internal(spc.p, allpol);
@@ -175,9 +180,10 @@ int main(int argc, char** argv) {
   */
 
   cout << loop.info() << sys.info() << gmv.info() << tit.info()<< endl 
-       << " Total Charge Analysis " << poleTotal.info() 
-       << " Charge Analysis w/only protons " << poleProton.info() 
-       << " Charge Analysis w/only anions " << poleIonic.info();
+       << textio::header("Total Charge Analysis") << poleTotal.info() 
+       << textio::header("Charge Analysis w/only protons") << poleProton.info()
+       << textio::header("Charge Analysis w/only anions") << poleIonic.info() << endl
+       << "  Number of buried residues      "<< cnt_buried << endl;
 
   rdf.save("rdf_p2p.dat");
   pqr.save("confout.pqr", spc.p);

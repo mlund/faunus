@@ -166,7 +166,7 @@ namespace Faunus {
     
     /*!
      * \brief Soft repulsion of the form \f$ \beta u = \sigma^6 / (r_{ij}-r_i-r_j)^6 \f$
-     * \todo This applies sqrt() and thus may be slow
+     * \todo This applies sqrt() and thus may be slow. Also remove floating point comparison.
      */
     class SoftRepulsion : public PairPotentialBase {
       private:
@@ -176,9 +176,12 @@ namespace Faunus {
       public:
         SoftRepulsion(InputMap&);
         inline double operator() (const particle &a, const particle &b, double r2) const override {
-          double x=sqrt(r2)-a.radius-b.radius;
-          x=x*x; //2
-          return sigma6 / (x*x*x);
+          double d=a.radius+b.radius;
+          if (r2<=d*d) //fp comparison!
+            return pc::infty;
+          d = sqrt(r2)-d;
+          d=d*d; //d^2
+          return sigma6 / (d*d*d); // s^6/d^6
         }
         string info(char);
     };

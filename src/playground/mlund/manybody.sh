@@ -125,7 +125,8 @@ do
   micro=1000
   mktit
   mkinput
-  $exe -i $base.input -c $base.state -o $base.state > eq
+  $exe -i $base.input -c $base.state -o $base.state #> eq
+  exit
 
   # production
   micro=10000

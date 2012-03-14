@@ -83,17 +83,19 @@ namespace Faunus {
 
           /*! \brief Save table to disk */
           void save(string filename) {
-            auto mapbak = map;
-            if ( mapbak.size()>0 ) {
-              mapbak.begin()->second*=2; //compensate for half bin width
-              if (mapbak.size()>1)
-                (--mapbak.end())->second*=2; // -//-
+            if (map.size()>0) map.begin()->second*=2;   // compensate for half bin width
+            if (map.size()>1) (--map.end())->second*=2; // -//-
+
+            if (~map.empty()) {
               std::ofstream f(filename.c_str());
               f.precision(10);
               if (f)
-                for (auto m : mapbak)
+                for (auto m : map)
                   f << m.first << " " << get( m.first ) << endl;
             }
+
+            if (map.size()>0) map.begin()->second/=2;   // restore half bin width
+            if (map.size()>1) (--map.end())->second/=2; // -//-
           }
       };
 
@@ -188,7 +190,7 @@ namespace Faunus {
     };
 
     class ChargeMultipole : public AnalysisBase {
-        private:
+      private:
         std::map< string, Average<double> > Z, Z2, mu, mu2;
         double charge(const Group&, const Space&);
         double dipole(const Group&, const Space&);
@@ -205,7 +207,7 @@ namespace Faunus {
         virtual Point convert(const Group&, const Space&); // Returns points calculated from group properties
       public:
         void sample(const Group&, const Group&, const Space&);
-    
+
     };
 
     /*! \brief Widom method for excess chemical potentials

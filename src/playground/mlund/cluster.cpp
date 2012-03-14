@@ -3,10 +3,11 @@
 
 using namespace Faunus;
 
-//typedef Geometry::PeriodicCylinder Tgeometry;
-typedef Geometry::Cuboid Tgeometry;
+typedef Geometry::PeriodicCylinder Tgeometry;
+//typedef Geometry::Cuboid Tgeometry;
 //typedef Geometry::Cylinder Tgeometry;
-typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, Potential::HardSphere> Tpairpot;
+//typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, Potential::HardSphere> Tpairpot;
+typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, Potential::SoftRepulsion> Tpairpot;
 
 int main(int argc, char** argv) {
   /*
@@ -49,7 +50,7 @@ int main(int argc, char** argv) {
       return 1;
   }
 
-  constrain->addPair(pol[0], pol[1], 0, 115);
+  constrain->addPair(pol[0], pol[1], 36, 80);
 
   // Add salt
   GroupAtomic salt(spc, mcp);
@@ -57,15 +58,15 @@ int main(int argc, char** argv) {
   spc.enroll(salt);
   spc.load("state");
 
-  //Analysis::LineDistribution<float,unsigned long int> rdf(0.25);
-  Analysis::RadialDistribution<float,int> rdf(0.2);
-  rdf.maxdist=115.;
+  Analysis::LineDistribution<float,unsigned long int> rdf(0.25);
+  //Analysis::RadialDistribution<float,int> rdf(0.25);
+  rdf.maxdist=80;
 
   Move::TranslateRotateCluster gmv(mcp,pot,spc);
   //Move::TranslateRotate gmv(mcp,pot,spc);
   gmv.setMobile(salt); // specify where to look for clustered ions
-  //gmv.dir.x=0; // do not move in x
-  //gmv.dir.y=0; // and y direction
+  gmv.dir.x=0; // do not move in x
+  gmv.dir.y=0; // nor y direction
 
   Move::AtomicTranslation mv(mcp, pot, spc);
   mv.setGroup(salt);

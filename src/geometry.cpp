@@ -26,6 +26,7 @@ namespace Faunus {
       std::ostringstream o;
       o << pad(SUB,w, "Boundary") << name << endl
         << pad(SUB,w, "Volume") << getVolume() << _angstrom << cubed
+        << " = " << getVolume()/1e3 << " nm" << cubed
         << " = " << getVolume()/1e27 << " liters" << endl
         << _info(w);
       return o.str();
@@ -329,8 +330,8 @@ namespace Faunus {
 
     string Cylinder::_info(char w) {
       std::ostringstream o;
-      o << pad(SUB,w, "Length") << len << textio::_angstrom << endl
-        << pad(SUB,w, "Radius") << r << textio::_angstrom << endl;
+      o << pad(SUB,w, "Length") << halflen*2 << textio::_angstrom << endl
+        << pad(SUB,w, "Radius") << sqrt(r2) << textio::_angstrom << endl;
       return o.str();
     }
 

@@ -122,7 +122,12 @@ int main(int argc, char** argv) {
     constrain->addPair(pol[0], pol[1], 0, 90);
 
   Group allpol( pol.front().front(), pol.back().back() );
-
+  
+  for(unsigned int i=0; i < spc.p.size(); i++){
+    spc.p[i].charge=atom[spc.p[i].id].charge;
+    spc.trial[i].charge=spc.p[i].charge;
+  }
+  
   tit.findSites(spc.p);  // search for titratable sites
   spc.load(istate);
 

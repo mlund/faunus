@@ -98,17 +98,18 @@ namespace Faunus {
 
     double ChargeMultipole::dipole(const Group &g, const Space &spc){
       assert( spc.geo->dist(g.cm, g.massCenter(spc))<1e-9 && "Mass center must be in sync.");
-      double x=0, r2=0;
-      Point t, o;
+      Point t, mu;
+      mu.clear();
       for (auto i : g) {
         if (exclude(spc.p[i])==false){
           t = spc.p[i]-g.cm;                // vector to center of mass
           spc.geo->boundary(t);               // periodic boundary (if any)
-          r2 = spc.geo->sqdist(t,o);          // squared distance to cm
-          x+=spc.p[i].charge*r2;
+          mu.x+=spc.p[i].charge * t.x;
+          mu.y+=spc.p[i].charge * t.y;
+          mu.z+=spc.p[i].charge * t.z;
         }
       }
-      return x;
+      return mu.len();
     }
 
     bool ChargeMultipole::exclude(const particle &p){

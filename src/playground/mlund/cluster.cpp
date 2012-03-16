@@ -3,22 +3,16 @@
 
 using namespace Faunus;
 
+#define CYLINDER
+
+#ifdef CYLINDER
 typedef Geometry::PeriodicCylinder Tgeometry;
-//typedef Geometry::Cuboid Tgeometry;
-//typedef Geometry::Cylinder Tgeometry;
-//typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, Potential::HardSphere> Tpairpot;
+#else
+typedef Geometry::Cuboid Tgeometry;
+#endif
 typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, Potential::SoftRepulsion> Tpairpot;
 
 int main(int argc, char** argv) {
-  /*
-  double x = pc::infty;
-  x=x/x;
-  cout << x << endl;
-  if (x==pc::infty)
-    cout << "infinity!\n";
-  return 0;
-  */
-
   cout << textio::splash();
   InputMap mcp("cluster.input");
   MCLoop loop(mcp);                    // class for handling mc loops
@@ -34,14 +28,14 @@ int main(int argc, char** argv) {
   auto constrain = pot.create( Energy::MassCenterConstrain(pot.getGeometry()) );
   Space spc( pot.getGeometry() );
 
-  // Add polymers
+  // Add molecular species
   vector<GroupMolecular> pol( mcp.get("polymer_N",0));
   string polyfile = mcp.get<string>("polymer_file", "");
   for (auto &g : pol) {
     aam.load(polyfile);
     Geometry::FindSpace f;
     f.dir.x=0; // put mass center
-    f.dir.y=0; // at x,y,z=0,0,random
+    f.dir.y=0; //   at [x,y,z] = [0,0,random]
     if (f.find(*spc.geo, spc.p, aam.p )) {
       g = spc.insert( aam.p );
       g.name="Protein";
@@ -50,7 +44,7 @@ int main(int argc, char** argv) {
       return 1;
   }
 
-  constrain->addPair(pol[0], pol[1], 36, 80);
+  constrain->addPair(pol[0], pol[1], 20, 80);
 
   // Add salt
   GroupAtomic salt(spc, mcp);
@@ -58,18 +52,19 @@ int main(int argc, char** argv) {
   spc.enroll(salt);
   spc.load("state");
 
-  Analysis::LineDistribution<float,unsigned long int> rdf(0.25);
-  //Analysis::RadialDistribution<float,int> rdf(0.25);
-  rdf.maxdist=80;
-
   Move::TranslateRotateCluster gmv(mcp,pot,spc);
-  //Move::TranslateRotate gmv(mcp,pot,spc);
+  Move::AtomicTranslation mv(mcp, pot, spc);
   gmv.setMobile(salt); // specify where to look for clustered ions
+  mv.setGroup(salt);   // specify atomic particles to be moved
+
+#ifdef CYLINDER
   gmv.dir.x=0; // do not move in x
   gmv.dir.y=0; // nor y direction
-
-  Move::AtomicTranslation mv(mcp, pot, spc);
-  mv.setGroup(salt);
+  Analysis::LineDistribution<float,unsigned long int> rdf(0.25);
+#else
+  Analysis::RadialDistribution<float,int> rdf(0.25);
+#endif
+  rdf.maxdist=80;
 
   double utot=pot.external() + pot.g_internal(spc.p, salt);
   for (auto &p : pol)

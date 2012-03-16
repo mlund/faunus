@@ -35,8 +35,8 @@ softrep_sigma          5
 polymer_N              2
 polymer_file           cluster.aam
 transrot_transdp       $transdp
-transrot_rotdp         0 #0
-transrot_clustersize   0 #10
+transrot_rotdp         3 #0
+transrot_clustersize   10
 #dh_ionicstrength       0.0075
 dh_debyelength         31.1432066
 
@@ -62,7 +62,7 @@ do
   mkinput
   $exe
 
-  micro=200000000
+  micro=1000000
   transdp=15 #30
   mkinput
   $exe

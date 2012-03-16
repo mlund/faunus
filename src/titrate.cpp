@@ -143,6 +143,10 @@ namespace Faunus {
       for (size_t i=0; i<p.size(); i++)
         for (size_t j=0; j<process.size(); j++)
           if ( process[j].one_of_us( p[i].id )) {
+            if (  abs(p[i].charge-atom[p[i].id].charge)>1e-9  ) {
+              assert(1>2 && "Charge mismatch while searching for titratable sites.");
+              cout << "Error! Charge on titratable site does not match atom table\n";
+            }
             sites.push_back(i);
             process[j].cnt++;
             break; // no double counting of sites

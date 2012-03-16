@@ -44,8 +44,9 @@ int main(int argc, char** argv) {
 
   Move::Isobaric iso(mcp,pot,spc);
   Move::TranslateRotate gmv(mcp,pot,spc);
-  Move::SwapMoveMSR tit(mcp,pot,spc);
+  Move::SwapMove tit(mcp,pot,spc);
   Analysis::RadialDistribution<float,int> rdf(0.25);
+  Analysis::ChargeMultipole mpol;
 
   // Add molecules
   int N1 = mcp.get("molecule_N1",0);
@@ -67,8 +68,12 @@ int main(int argc, char** argv) {
   }
   Group allpol( pol.front().front(), pol.back().back() );
 
-  tit.findSites(spc.p);  // search for titratable sites
   spc.load(istate);
+  for (size_t i=0; i<spc.p.size(); i++) {
+    spc.p[i].charge = atom[ spc.p[i].id ].charge;
+    spc.trial[i] = spc.p[i];
+  }
+  tit.findSites(spc.p);  // search for titratable sites
 
   double utot=pot.external() + pot.g_internal(spc.p, allpol);
   for (auto &g : pol)
@@ -97,6 +102,7 @@ int main(int argc, char** argv) {
           break;
         case 2:
           sys+=tit.move();
+          mpol.sample(pol,spc);
           break;
       }
       if ( slp_global.runtest(0.0001) ) {
@@ -120,7 +126,8 @@ int main(int argc, char** argv) {
   sys.test(test);
   */
 
-  cout << loop.info() << sys.info() << gmv.info() << iso.info() << tit.info();
+  cout << loop.info() << sys.info() << gmv.info() << iso.info() << tit.info()
+    << mpol.info();
 
   rdf.save("rdf_p2p.dat");
   pqr.save("confout.pqr", spc.p);

@@ -63,6 +63,7 @@ namespace Faunus {
           Tx dx;
           //virtual ~Table2D() {}
           Tmap map;
+          string name;
         private:
           Tx virtual round(Tx x) { return (x>=0) ? int( x/dx+0.5 )*dx : int( x/dx-0.5 )*dx; }
           virtual double get(Tx x) { return operator()(x); }
@@ -74,6 +75,7 @@ namespace Faunus {
           Table2D(Tx resolution=0.2) {
             assert( resolution>0 );
             dx=resolution;
+            name.clear();
           }
 
           /*! \brief Access operator - returns reference to y(x) */
@@ -89,9 +91,12 @@ namespace Faunus {
             if (~map.empty()) {
               std::ofstream f(filename.c_str());
               f.precision(10);
-              if (f)
+              if (f) {
+                if (~name.empty())
+                  f << "# Faunus 2D table: " << name << endl;
                 for (auto m : map)
                   f << m.first << " " << get( m.first ) << endl;
+              }
             }
 
             if (map.size()>0) map.begin()->second/=2;   // restore half bin width
@@ -137,6 +142,7 @@ namespace Faunus {
            * \param res Resolution of X axis
            */
           RadialDistribution(Tx res=0.2) : Table2D<Tx,Ty>(res) {
+            this->name="Radial Distribution Function";
             maxdist=pc::infty;
           }
           /*!
@@ -167,7 +173,9 @@ namespace Faunus {
         private:
           virtual double volume(Tx x) { return 1; }
         public:
-          LineDistribution(Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {}
+          LineDistribution(Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {
+            this->name="Line Distribution";
+          }
       };
 
     /*!

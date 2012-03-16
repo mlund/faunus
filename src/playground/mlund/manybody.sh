@@ -1,6 +1,6 @@
 #!/bin/bash
 
-faunus=$HOME/nyfaunus
+faunus=../../../
 exe=$faunus/src/playground/mlund/mlund-manybody
 base="manybody"
 
@@ -41,7 +41,7 @@ Atom  CTR     -1     2.0    0.1    16      no
 Atom  HCTR     0     2.0    0.1    16      no
 Atom  GLU     -1     3.8    0.1    122     no
 Atom  HGLU     0     3.8    0.1    122     no
-Atom  HIS      0     3.9    0.1    130     yes
+Atom  HIS      0     3.9    0.1    130     no
 Atom  HHIS     1     3.9    0.1    130     no
 Atom  NTR      0     2.0    0.1    14      no
 Atom  HNTR     1     2.0    0.1    14      no
@@ -82,20 +82,20 @@ loop_macrosteps        10
 loop_microsteps        $micro
 
 temperature            298     # Kelvin
-epsilon_r              78.7    # Water dielectric const
-dh_ionicstrength       0.010   # mol/l
-lj_eps                 0.05    # kT
-squarewell_depth       1.0     # kT
+epsilon_r              780.7    # Water dielectric const
+dh_ionicstrength       9.010   # mol/l
+lj_eps                 0.00    # kT
+squarewell_depth       0.0     # kT
 squarewell_threshold   1.5     # angstrom
 
 cuboid_len             $boxlen # Box side length Angstrom
 npt_P                  113.2   # mM
 npt_dV                 0       # log(dV)
-transrot_transdp       180
-transrot_rotdp         6
+transrot_transdp       50 #180
+transrot_rotdp         2 #6
 
 molecule_N1            1
-molecule_file1         $base.aam
+molecule_file1         protein.aam #$base.aam
 molecule_N2            0
 molecule_file2         $base.aam
 
@@ -108,30 +108,30 @@ test_file              $base.test
 #   GENERATE INPUT MOLECULE
 # ----------------------------------
 function mkstruct() {
-echo "2
- HIS  0   0.00   0.00   0.00    0.0   1  3.0
- VAL  0   6.00   0.00   0.00    1.0   1  3.0
+echo "1
+ ASP  0   0.00   0.00   0.00    -1   1  3.0
 " > ${base}.aam
 }
 
 mkatoms
 mkstruct
-boxlen=50
+boxlen=100
 
-for pH in 6.3
+for pH in 6 7 8 9 #10 11 12 13 14
 do
   # equilibration
   rm -fR $base.state
+  micro=500
+  mktit
+  mkinput
+  $exe -i $base.input -c $base.state -o $base.state > eq
+
+  # production
   micro=1000
   mktit
   mkinput
-  $exe -i $base.input -c $base.state -o $base.state #> eq
-  exit
-
-  # production
-  micro=10000
-  mktit
-  mkinput
   $exe -i $base.input -c $base.state -o $base.state > out
+  z=`tail out | grep protein.aam | gawk '{print $2}'`
+  echo $pH $z
 done
 

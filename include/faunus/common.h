@@ -4,6 +4,7 @@
 #ifndef SWIG
 #include <string>
 #include <vector>
+#include <list>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -16,6 +17,7 @@
 #include <map>
 #include <set>
 #include <memory>
+#include <numeric>
 #endif
 
 namespace Faunus {

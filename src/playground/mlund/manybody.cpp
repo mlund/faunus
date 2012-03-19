@@ -42,12 +42,6 @@ int main(int argc, char** argv) {
   auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot>(mcp) );
   Space spc( pot.getGeometry() );
 
-  Move::Isobaric iso(mcp,pot,spc);
-  Move::TranslateRotate gmv(mcp,pot,spc);
-  Move::SwapMove tit(mcp,pot,spc);
-  Analysis::RadialDistribution<float,int> rdf(0.25);
-  Analysis::ChargeMultipole mpol;
-
   // Add molecules
   int N1 = mcp.get("molecule_N1",0);
   int N2 = mcp.get("molecule_N2",0);
@@ -69,11 +63,13 @@ int main(int argc, char** argv) {
   Group allpol( pol.front().front(), pol.back().back() );
 
   spc.load(istate);
-  for (size_t i=0; i<spc.p.size(); i++) {
-    spc.p[i].charge = atom[ spc.p[i].id ].charge;
-    spc.trial[i] = spc.p[i];
-  }
-  tit.findSites(spc.p);  // search for titratable sites
+
+  Move::Isobaric iso(mcp,pot,spc);
+  Move::TranslateRotate gmv(mcp,pot,spc);
+  Move::SwapMoveMSR tit(mcp,pot,spc);
+  return 0;
+  Analysis::RadialDistribution<float,int> rdf(0.25);
+  Analysis::ChargeMultipole mpol;
 
   double utot=pot.external() + pot.g_internal(spc.p, allpol);
   for (auto &g : pol)

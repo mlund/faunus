@@ -143,10 +143,8 @@ namespace Faunus {
       for (size_t i=0; i<p.size(); i++)
         for (size_t j=0; j<process.size(); j++)
           if ( process[j].one_of_us( p[i].id )) {
-            if (  abs(p[i].charge-atom[p[i].id].charge)>1e-9  ) {
-              assert(1>2 && "Charge mismatch while searching for titratable sites.");
-              cout << "Error! Charge on titratable site does not match atom table\n";
-            }
+            if ( abs(p[i].charge-atom[p[i].id].charge)>1e-9 )
+              cout << "Warning: Charge mismatch while searching for titratable sites - this can be serious.\n";
             sites.push_back(i);
             process[j].cnt++;
             break; // no double counting of sites
@@ -275,6 +273,12 @@ namespace Faunus {
 
   namespace Move {
 
+    /*!
+     * This will set up the swap move routines and the particles in the space are automatically
+     * searched for titratable sites. Before starting the titration the charge of titratable
+     * particles must match that loaded into Faunus::atoms -- this is also handled by the
+     * constructor.
+     */
     SwapMove::SwapMove(
         InputMap &in,
         Energy::Hamiltonian &ham,
@@ -285,6 +289,8 @@ namespace Faunus {
       ham.add(eqpot);
       ipart=-1;
       findSites(spc.p);
+      for (auto &i : eqpot.eq.sites ) // make sure charges are in sync w. atom list
+        spc.p[i].charge = spc.trial[i].charge = atom[ spc.p[i].id ].charge;
     }
 
     int SwapMove::findSites(const p_vec &p) {

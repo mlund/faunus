@@ -33,7 +33,7 @@ namespace Faunus {
     T avg() const;                                ///< Return average
     T rms();                                      ///< Root-mean-square
     T stdev();                                    ///< Standard deviation
-    virtual void add(T);                          ///< Add value to current set.
+    void add(T);                                  ///< Add value to current set.
     void reset();                                 ///< Clear all data
     Average & operator=(T);                       ///< Assign value to current set. 
     Average & operator+=(T);                      ///< Add value to current set. 
@@ -110,6 +110,52 @@ namespace Faunus {
   template<class T> T Average<T>::stdev() {
     return sqrt( sqsum/cnt - pow(sum/cnt,2) );
   }
+
+  template<class T> class AverageExt {
+    private:
+      long unsigned int nmax, cnt;
+      std::list<T> v;
+    public:
+      AverageExt(unsigned int maxNumberOfSamples=1e9) : v(1) {
+        nmax = maxNumberOfSamples;
+        v.back()=0;
+        cnt=0;
+      }
+      AverageExt& operator+=(T x) {
+        cnt++;
+        v.back()+=x;
+        if (cnt==nmax) {
+          v.back() /= nmax;
+          v.push_back(0);
+          cnt=0;
+        }
+        return *this;
+      }
+
+      T avg() const {
+        if (v.size()>1)
+          return std::accumulate(v.begin(),v.end(),0.) / v.size();
+        return (cnt==0) ? 0 : v.back()/cnt;
+      }
+
+      T stddev() const {
+        if (v.size()>1) {
+          T sum=0, vav=avg();
+          for (auto i : v)
+            sum+=pow( i-vav, 2 );
+          return sqrt( sum / (v.size()-1) );
+        }
+        return 0;
+      }
+
+      friend std::ostream &operator<<(std::ostream &o, const AverageExt<T> &a) {
+        double s=a.stddev();
+        o << a.avg();
+        if (s>1e-15)
+          o << " " << s;
+        return o;
+      };
+  };
 
   /*!
    * \brief Class to keep track of block correlations

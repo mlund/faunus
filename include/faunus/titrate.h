@@ -115,8 +115,8 @@ namespace Faunus {
         int ipart;                              //!< Particle to be swapped
         Energy::EquilibriumEnergy eqpot;
       public:
-        SwapMove(InputMap&, Energy::Hamiltonian&, Space&, string="swapmv_");
-        int findSites(const p_vec&);
+        SwapMove(InputMap&, Energy::Hamiltonian&, Space&, string="swapmv_"); //!< Constructor
+        int findSites(const p_vec&); //!< Search for titratable sites (old ones are discarded)
         double move();
     };
 

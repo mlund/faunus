@@ -95,7 +95,7 @@ transrot_transdp       50 #180
 transrot_rotdp         2 #6
 
 molecule_N1            1
-molecule_file1         protein.aam #$base.aam
+molecule_file1         $base.aam
 molecule_N2            0
 molecule_file2         $base.aam
 
@@ -109,7 +109,7 @@ test_file              $base.test
 # ----------------------------------
 function mkstruct() {
 echo "1
- ASP  0   0.00   0.00   0.00    -1   1  3.0
+ ASP  0   0.00   0.00   0.00    -0   1  3.0
 " > ${base}.aam
 }
 
@@ -117,21 +117,22 @@ mkatoms
 mkstruct
 boxlen=100
 
-for pH in 6 7 8 9 #10 11 12 13 14
+for pH in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
 do
   # equilibration
   rm -fR $base.state
   micro=500
   mktit
   mkinput
-  $exe -i $base.input -c $base.state -o $base.state > eq
+  $exe -i $base.input -c $base.state -o $base.state #> eq
+  exit
 
   # production
   micro=1000
   mktit
   mkinput
   $exe -i $base.input -c $base.state -o $base.state > out
-  z=`tail out | grep protein.aam | gawk '{print $2}'`
+  z=`tail out | grep $base.aam | gawk '{print $2}'`
   echo $pH $z
 done
 

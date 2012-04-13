@@ -23,6 +23,8 @@
 // Use explicit virtual override and final keywords (C++11)
 #ifndef NO_EXPLICIT_OVERRIDE
   #define FOVERRIDE override
+#else
+  #define FOVERRIDE
 #endif
 
 namespace Faunus {

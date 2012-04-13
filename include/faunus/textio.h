@@ -10,6 +10,23 @@ namespace Faunus {
   namespace textio {
     enum indentlevel {TITLE=0,SUB=2,SUBSUB=4};
 
+#ifdef AVOID_UNICODE
+    const string angstrom="AA";
+    const string _angstrom=" AA";
+    const string cubed="^3";
+    const string degrees="deg";
+    const string epsilon="eps";
+    const string gamma="gamma";
+    const string kT=" kT";
+    const string mu="mu";
+    const string percent="%";
+    const string pm="+-";
+    const string rho="rho";
+    const string rootof="sqrt";
+    const string squared="^2";
+    const string sigma="sigma";
+    const string theta="theta";
+#else
     const string angstrom="\u00c5";   //!< Angstrom symbol
     const string _angstrom=" \u00c5"; //!< Angstrom symbol with space in front
     const string cubed="\u00b3";      //!< Superscript 3
@@ -25,6 +42,7 @@ namespace Faunus {
     const string squared="\u00b2";    //!< Superscript 2
     const string sigma="\u03c3";      //!< Greek sigma
     const string theta="\u03b8";      //!< Greek theta
+#endif
 
     string splash();                              //!< Show Faunus welcome text, version etc.
     string bracket(const string&);                //!< Put angular brackets around string

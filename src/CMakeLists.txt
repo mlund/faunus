@@ -20,6 +20,9 @@ if (NOT TUPLE)
   message(FATAL_ERROR "Compiler does not support C++11 tuples")
 endif()
 
+if(NOT ENABLE_UNICODE)
+  add_definitions(-DAVOID_UNICODE)
+endif()
 # -------------------------------------
 #   Mersenne Twister requires
 # ----=--------------------------------

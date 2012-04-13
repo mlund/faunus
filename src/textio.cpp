@@ -8,7 +8,11 @@ namespace Faunus {
   }
 
   string textio::bracket(const string &s) {
+#ifdef AVOID_UNICODE
+    return "<"+s+">";
+#else
     return "\u27e8"+s+"\u27e9";
+#endif
   }
 
   string textio::header(const string &s) {

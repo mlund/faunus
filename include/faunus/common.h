@@ -20,6 +20,11 @@
 #include <numeric>
 #endif
 
+// Use explicit virtual override and final keywords (C++11)
+#ifndef NO_EXPLICIT_OVERRIDE
+  #define FOVERRIDE override
+#endif
+
 namespace Faunus {
   //Keep this at a minimum, please!
   using std::string;

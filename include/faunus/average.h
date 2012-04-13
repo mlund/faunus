@@ -37,6 +37,8 @@ namespace Faunus {
     void reset();                                 ///< Clear all data
     Average & operator=(T);                       ///< Assign value to current set. 
     Average & operator+=(T);                      ///< Add value to current set. 
+    Average & operator*=(T);                      ///< Scale current set
+    Average & operator/=(T);                      ///< Scale current set
     operator T() const;                           ///< Static cast operator
     T operator*(T) const;                         ///< Evaluates average times T
     T operator+(T) const;                         ///< Evaluates average plus T
@@ -76,7 +78,23 @@ namespace Faunus {
     r.sqsum+=a.sqsum;
     return r;
   }
-  
+
+  /*!
+   * \note sqsum is not scaled.
+   */
+  template<class T> Average<T> & Average<T>::operator*=(T x) {
+    sum*=x;
+    return *this;
+  }
+
+  /*!
+   * \note sqsum is not scaled.
+   */
+  template<class T> Average<T> & Average<T>::operator/=(T x) {
+    sum/=x;
+    return *this;
+  }
+ 
   template<class T> Average<T> & Average<T>::operator+=(T x) {
     add(x);
     return *this;

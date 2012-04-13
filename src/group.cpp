@@ -132,16 +132,20 @@ namespace Faunus {
     return _massCenter(spc);
   }
   
-  Point Group::dipolemoment(const Space &con) const {
-    assert(!"Unimplemented!");
-    Point d;
-    return d;
+  Point Group::dipolemoment(const Space &s) const {
+    Point t, mu;
+    for (auto i : *this) {
+      t=s.p[i] - cm;
+      s.geo->boundary(t);
+      mu += t*s.p[i].charge;
+    }
+    return mu;
   }
-  
+
   void Group::rotate(Space &spc, const Point &endpoint, double angle) {
     assert(!"Unimplemented!");
   }
-  
+
   void Group::scale(Space &s, double newvol) {
     cm_trial=cm;
     s.geo->scale(cm_trial, newvol);
@@ -245,7 +249,7 @@ namespace Faunus {
     //cm.operator<<(in);
     return *this;
   }
-  
+
   void GroupMolecular::translate(Space &spc, const Point &p) {
     assert( spc.geo->dist(cm,massCenter(spc))<1e-9 );   // debug. Is trial mass center in sync?
     Group::translate(spc, p);

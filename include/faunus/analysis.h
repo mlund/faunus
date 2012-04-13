@@ -68,15 +68,19 @@ namespace Faunus {
           Tx virtual round(Tx x) { return (x>=0) ? int( x/dx+0.5 )*dx : int( x/dx-0.5 )*dx; }
           virtual double get(Tx x) { return operator()(x); }
         public:
+          enum type {HISTOGRAM, XYDATA};
+          type tabletype;
           /*!
            * \brief Constructor
            * \param resolution Resolution of the x axis
            */
-          Table2D(Tx resolution=0.2) {
+          Table2D(Tx resolution=0.2, type key=HISTOGRAM) {
             assert( resolution>0 );
             dx=resolution;
             name.clear();
+            tabletype=key;
           }
+
 
           /*! \brief Access operator - returns reference to y(x) */
           Ty& operator() (Tx x) {
@@ -85,8 +89,10 @@ namespace Faunus {
 
           /*! \brief Save table to disk */
           void save(string filename) {
-            if (map.size()>0) map.begin()->second*=2;   // compensate for half bin width
-            if (map.size()>1) (--map.end())->second*=2; // -//-
+            if (tabletype==HISTOGRAM) {
+              if (map.size()>0) map.begin()->second*=2;   // compensate for half bin width
+              if (map.size()>1) (--map.end())->second*=2; // -//-
+            }
 
             if (~map.empty()) {
               std::ofstream f(filename.c_str());
@@ -99,8 +105,10 @@ namespace Faunus {
               }
             }
 
-            if (map.size()>0) map.begin()->second/=2;   // restore half bin width
-            if (map.size()>1) (--map.end())->second/=2; // -//-
+            if (tabletype==HISTOGRAM) {
+              if (map.size()>0) map.begin()->second/=2;   // restore half bin width
+              if (map.size()>1) (--map.end())->second/=2; // -//-
+            }
           }
       };
 

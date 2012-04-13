@@ -86,9 +86,9 @@ namespace Faunus {
         Movebase(Energy::Energybase&, Space&, string);//!< Constructor
         virtual ~Movebase();
         double runfraction;                //!< Fraction of times calling move() should result in an actual move. 0=never, 1=always.
-        virtual double move(int=1) final;  //!< Attempt \c n moves and return energy change
-        virtual string info() final;       //!< Returns information string (wrapper)
-        virtual void test(UnitTest&) final;//!< Perform unit test
+        virtual double move(int=1);        //!< Attempt \c n moves and return energy change
+        virtual string info();             //!< Returns information string (wrapper)
+        virtual void test(UnitTest&);      //!< Perform unit test
         double getAcceptance();            //!< Get acceptance [0:1]
     };
 

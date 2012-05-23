@@ -307,8 +307,11 @@ namespace Faunus {
    */
   bool FormatXTC::save(string file, Space &c) {
     Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(c.geo);
-    p=c.p;
+    assert(geo!=nullptr && "Only Cuboid geometries classes allowed.");
+    if (geo==nullptr)
+      return false;
     setbox(geo->len.x, geo->len.y, geo->len.z);
+    p=c.p;
     for (auto gi : g) {
       gi->translate( c, -gi->cm );             // b.trial is moved to origo -> whole!
       for (auto j : *gi)

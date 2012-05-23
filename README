@@ -28,7 +28,7 @@ WELCOME TO FAUNUS:
   $ svn co http://faunus.svn.sourceforge.net/svnroot/faunus faunus
 
 REQUIREMENTS:
-  - C/C++11 compiler (clang3+, gcc4.7+, ...)
+  - C/C++11 compiler (clang3+, gcc4.6+, ...)
   - cmake 2.8+
   Optional:
   - SWIG 2.0+ (for python, ruby, ... modules)

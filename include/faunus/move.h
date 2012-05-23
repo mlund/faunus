@@ -184,6 +184,27 @@ namespace Faunus {
         double threshold;  //!< Distance between particles to define a cluster
     };
 
+    class CrankShaft : public Movebase {
+      private:
+        Group* gPtr;          //!< Pointer to group where move is to be performed. Set by setGroup().
+        Geometry::VectorRotate vrot;
+        double dp;         //!< Rotational displament parameter
+        double angle;      //!< Current rotation angle
+        vector<int> index; //!< Index of particles to rotate
+        void _trialMove();
+        void _acceptMove();
+        void _rejectMove();
+        double _energyChange();
+        string _info();
+      protected:
+        virtual bool findParticles(); //!< This will set the end points and find particles to rotate
+      public:
+        CrankShaft(InputMap&, Energy::Energybase&, Space&, string="crank");
+        void setGroup(Group&); //!< Select Group to move
+        int minlen;            //!< Minimum number of particles to rotate (default = 1)
+        int maxlen;            //!< Maximin number of particles to rotate (default = 10)
+    };
+
     /*!
      * \brief Isobaric volume move
      *

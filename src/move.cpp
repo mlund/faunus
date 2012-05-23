@@ -467,6 +467,78 @@ namespace Faunus {
       return 0;
     }
 
+    CrankShaft::CrankShaft(InputMap &in, Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
+      title="CrankShaft";
+      gPtr=nullptr;
+      minlen = in.get<int>(prefix+"_minlen", 1);
+      maxlen = in.get<int>(prefix+"_maxlen", 10);
+      dp=in.get<double>(prefix+"_dp", 0.);
+      runfraction = in.get<double>(prefix+"_runfraction",1.);
+      if (dp<1e-6)
+        runfraction=0;
+    }
+
+    void CrankShaft::_trialMove() {
+      assert(gPtr!=nullptr && "Oops! You didn't specify any group to perform crankshaft on.");
+      findParticles();
+      assert(!index.empty() && "Oops! Didn't find any particles to rotate.");
+      for (auto i : index)
+        spc->trial[i] = vrot.rotate( *spc->geo, spc->p[i] ); // (boundaries are accounted for)
+    }
+
+    void CrankShaft::_acceptMove() {}
+
+    void CrankShaft::_rejectMove() {}
+
+    double CrankShaft::_energyChange() {
+      for (auto i : index)
+        if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
+          return pc::infty;
+
+      double du=0;
+      for (auto i : index) {
+        du += pot->i_external(spc->trial, i) - pot->i_external(spc->p, i);
+        du += pot->i2all(spc->trial, i) - pot->i2all(spc->p, i);
+      }
+      // not finished...
+      //for (int i=0; i<index.size()-1; i++ )
+      //  for (int j=i+1; j<index.size(); j++ )
+      //    du -= 0;
+      return du;
+    }
+
+    bool CrankShaft::findParticles() {
+      angle = dp*slp_global.randHalf();  // random angle
+      int beg,end,len;
+      do {
+        beg=gPtr->random();
+        end=gPtr->random();
+        len = std::abs(beg-end) - 1;
+      } while ( len >= minlen && len <= maxlen  );
+      if (beg>end)
+        std::swap(beg,end);
+      vrot.setAxis(*spc->geo, spc->p[beg], spc->p[end], angle );
+      index.clear();
+      for (int i=beg+1; i<end; i++)
+        index.push_back(i);
+      assert(index.size()==size_t(len));
+      return true;
+    }
+
+    void CrankShaft::setGroup(Group &g) {
+      gPtr=&g;
+    }
+
+    string CrankShaft::_info() {
+      using namespace textio;
+      std::ostringstream o;
+      o << pad(SUB,w, "Displacement parameter") << dp << endl;
+      if (cnt>0) {
+      }
+      return o.str();
+    }
+
+
     Isobaric::Isobaric(InputMap &in, Energy::Hamiltonian &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Isobaric Volume Fluctuations";
       w=30;

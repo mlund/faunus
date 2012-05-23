@@ -199,6 +199,13 @@ namespace Faunus {
     add(spc,in);
   }
 
+  /*!
+   * The InputMap is scanned for the following keywords, starting with X=1:
+   * \li \c tionX  Type of ion X
+   * \li \c nionX  Number of type X ions
+   * \li \c dpionX Displacement parameter of ion type X
+   * \li \c aionX  Activity of ion X (molar scale)
+   */
   void GroupAtomic::add(Space &spc, InputMap &in) {
     setfront( spc.p.size() );
     int size=0;

@@ -122,7 +122,7 @@ namespace Faunus {
       GroupAtomic(int=-1, int=-1);
       GroupAtomic(Space&, InputMap&);        //!< Construct and call add()
       GroupAtomic &operator<<(std::istream&);
-      void add(Space&, InputMap&);      //!< Add atomic particles via InputMap paramters
+      void add(Space&, InputMap&);      //!< Add atomic particles via InputMap parameters
   };
 
   /*!

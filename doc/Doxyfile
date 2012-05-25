@@ -631,7 +631,7 @@ WARN_LOGFILE           =
 
 INPUT                  = doc \
                          src \
-                         src/programs \
+                         src/tools \
                          include/faunus
 
 # This tag can be used to specify the character encoding of the source files

@@ -20,6 +20,7 @@ namespace Faunus {
     const string kT=" kT";
     const string mu="mu";
     const string percent="%";
+    const string partial="d";
     const string pm="+-";
     const string rho="rho";
     const string rootof="sqrt";
@@ -35,6 +36,7 @@ namespace Faunus {
     const string gamma="\u0263";      //!< Greek gamma
     const string kT=" kT";            //!< kT (energy) with space in front
     const string mu="\u03bc";         //!< Greek mu
+    const string partial="\u2202";    //!< Partial derivative
     const string percent="\ufe6a";    //!< Percent sign
     const string pm="\u00b1";         //!< Plus minus sign
     const string rho="\u03C1";        //!< Greek rho

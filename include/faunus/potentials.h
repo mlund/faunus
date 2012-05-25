@@ -190,7 +190,7 @@ namespace Faunus {
      * \brief Coulomb pair potential
      * 
      * The Coulomb potential has the form:
-     * \f[ \beta u_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rkT} \frac{z_i z_j}{r_{ij}} \f]
+     * \f[ \beta u_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT} \frac{z_i z_j}{r_{ij}} \f]
      * where the first factor is the Bjerrum length, \f$l_B\f$. By default the scaling is set
      * to the Bjerrum length - i.e. returned energies are divided by \f$l_B\f$ and to get the energy
      * in kT simply multiply with tokT(). This to increase performance when summing over many
@@ -203,6 +203,7 @@ namespace Faunus {
       void _setScale(double);
       double temp, epsilon_r;
       protected:
+      double depsdt;      //!< \f$ T\partial \epsilon_r / \epsilon_r \partial T = -1.37 \f$
       double lB;          //!< Bjerrum length (angstrom)
       public:
       Coulomb(InputMap&); //!< Construction from InputMap
@@ -228,7 +229,7 @@ namespace Faunus {
      * \brief Debye-Huckel pair potential
      *
      * This potential is similar to the plain Coulomb potential but with an extra exponential term to described salt screening:
-     * \f[ \beta u_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rkT} \frac{z_i z_j}{r_{ij}} \exp(-\kappa r_{ij}) \f]
+     * \f[ \beta w_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT} \frac{z_i z_j}{r_{ij}} \exp(-\kappa r_{ij}) \f]
      * where \f$\kappa=1/D\f$ is the inverse Debye screening length.
      */
     class DebyeHuckel : public Coulomb {
@@ -240,7 +241,9 @@ namespace Faunus {
         DebyeHuckel(InputMap&);       //!< Construction from InputMap
         double ionicStrength() const; //!< Returns the ionic strength (mol/l)
         double debyeLength() const;   //!< Returns the Debye screening length (angstrom)
+        double entropy(double, double) const;//!< Returns the interaction entropy 
         inline double energy(double zz, double r) const { return zz/r * exp(-k*r); }
+        /*! \returns \f$\beta w/l_B\f$ */
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
           return energy(a.charge*b.charge, sqrt(r2));
         }

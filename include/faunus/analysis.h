@@ -73,6 +73,7 @@ namespace Faunus {
           /*!
            * \brief Constructor
            * \param resolution Resolution of the x axis
+           * \param key Table type: HISTOGRAM or XYDATA
            */
           Table2D(Tx resolution=0.2, type key=HISTOGRAM) {
             assert( resolution>0 );

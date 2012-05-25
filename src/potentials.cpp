@@ -16,21 +16,29 @@ namespace Faunus {
     PairPotentialBase::PairPotentialBase() {
       setScale(1);
     }
-    
+   
+    /*!
+     * This functions sets the energy scaling as returned by tokT().
+     */
     void PairPotentialBase::setScale(double s)  {
+      assert(s!=0 && "Energy scaling should be non-zero.");
       _tokT=s;
       _setScale(_tokT);  
     }
     
     void PairPotentialBase::_setScale(double s) {}
-    
+   
+    /*!
+     * To optimize certain potentials, the returned energy is not required to be
+     * in units of kT. Instead, unit scaling can be done after energy summations,
+     * thereby reducing computational time. Therefore, to convert energy to kT,
+     * multiply with the scaling factor returned by this function.
+     */
     double PairPotentialBase::tokT() { return _tokT; }
 
     string PairPotentialBase::brief() {
+      assert(!name.empty() && "Potential must have a name.");
       return name + ": " + _brief();
-    }
-    string PairPotentialBase::_brief() {
-      return string("This is potential base!");
     }
 
     Harmonic::Harmonic(double forceconst, double eqdist) : k(forceconst), req(eqdist) {
@@ -160,13 +168,15 @@ namespace Faunus {
      * The following input keywords are searched searched:
      * \li \c temperature [Kelvin, default = 298.15]
      * \li \c epsilon_r - relative dielectric constant. Default is 80.
+     * \li \c depsdt - temperature dependence of dielectric constant, \f$ \partial\epsilon_r/\partial T\approx-0.368\f$ for water.
      * \warning T and epsilon_r will be passed on to the global instance of
      * PhysicalConstants. This is not the nicest solution.
      */
     Coulomb::Coulomb(InputMap &in) {
       name="Coulomb";
-      temp=in.get("temperature", 298.15);
-      epsilon_r=in.get("epsilon_r",80.);
+      temp=in.get<double>("temperature", 298.15);
+      epsilon_r=in.get<double>("epsilon_r",80.);
+      depsdt=in.get<double>("depsdt", -0.368) * temp / epsilon_r;
       pc::T = temp;
       lB=pc::lB( epsilon_r );
       setScale(lB);
@@ -182,15 +192,18 @@ namespace Faunus {
     }
 
     string Coulomb::info(char w) {
+      using namespace textio;
       std::ostringstream o;
       o << pad(SUB,w,"Temperature") << temp << " K" << endl
         << pad(SUB,w,"Dielectric constant") << epsilon_r << endl
+        << pad(SUB,w+6,"T"+partial+epsilon+"/"+epsilon+partial+"T") << depsdt << endl
         << pad(SUB,w,"Bjerrum length") << lB << " "+angstrom << endl;
+
       return o.str();
     }
 
     /*!
-     * The following input keywords will be searched:
+     * In addition to the keywords from Potential::Coulomb, InputMap is searched for:
      * \li \c dh_ionicstrength [mol/l] 
      * \li \c dh_debyelength [angstrom] (only if I=0, default)
      */
@@ -217,6 +230,28 @@ namespace Faunus {
 
     double DebyeHuckel::debyeLength() const {
       return 1/k;
+    }
+
+    /*!
+     * The Debye-Huckel potential is temperature dependent and contains entropy
+     * contributions from both solvent and salt degrees of freedom.
+     * This function return the entropy of interaction between a pair of
+     * particles interacting with an effective Debye-Huckel potential. This is done by
+     * taking the temperature derivate of w(R):
+     * \f[
+     * S(r_{ij})/k_B = -\frac{ \partial w(r_{ij},T) } {k_B \partial T} = \beta w_{ij}\left [ \alpha - \frac{\kappa r_{ij}(\alpha+1)}{2}\right ]
+     * \f]
+     * where \f$ \alpha=T \partial \epsilon_r/\epsilon_r\partial T\f$
+     * is determined experimentally for pure water. To get the entropy from salt ions
+     * only, set \f$\alpha=0\f$ via the InputMap.
+     *
+     * \param  betaw    Inter particle free energy, \f$\beta w\f$, in units of kT.
+     * \param  r        Inter particle distance
+     * \return Interaction entropy \f$ S(r_{ij})/k_B = \beta TS(r_{ij})\f$
+     * \todo   Optimize
+     */
+    double DebyeHuckel::entropy(double betaw, double r) const {
+      return betaw * (depsdt - 0.5*k*r*(depsdt+1));
     }
 
     string DebyeHuckel::info(char w) {

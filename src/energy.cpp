@@ -340,14 +340,14 @@ namespace Faunus {
      * values are +infinity for the upper point and -infinity for the lower, meaning that all
      * space is available.
      */
-    RestrictedVolume::RestrictedVolume(InputMap &in) {
+    RestrictedVolume::RestrictedVolume(InputMap &in, string prefix) {
       name="Restricted Volume";
-      lower.x = in.get<double>("constrain_lower.x", -pc::infty);
-      lower.y = in.get<double>("constrain_lower.y", -pc::infty);
-      lower.z = in.get<double>("constrain_lower.z", -pc::infty);
-      upper.x = in.get<double>("constrain_upper.x", pc::infty);
-      upper.y = in.get<double>("constrain_upper.y", pc::infty);
-      upper.z = in.get<double>("constrain_upper.z", pc::infty);
+      lower.x = in.get<double>(prefix+"_lower.x", -pc::infty);
+      lower.y = in.get<double>(prefix+"_lower.y", -pc::infty);
+      lower.z = in.get<double>(prefix+"_lower.z", -pc::infty);
+      upper.x = in.get<double>(prefix+"_upper.x", pc::infty);
+      upper.y = in.get<double>(prefix+"_upper.y", pc::infty);
+      upper.z = in.get<double>(prefix+"_upper.z", pc::infty);
       assert(upper.x>lower.x && "Upper bound must be bigger than lower bound!");
       assert(upper.y>lower.y && "Upper bound must be bigger than lower bound!");
       assert(upper.z>lower.z && "Upper bound must be bigger than lower bound!");
@@ -355,7 +355,7 @@ namespace Faunus {
 
     string RestrictedVolume::_info() {
       using namespace textio;
-      char w=15;
+      char w=20;
       string d=" x ";
       std::ostringstream o;
       o << indent(SUB) << "Allowed Rectangular Region Spanned by:" << endl
@@ -368,12 +368,12 @@ namespace Faunus {
     }
 
     bool RestrictedVolume::outside(const Point &a) {
-      if (a.z<lower.z) return true;
-      if (a.z>upper.z) return true;
       if (a.x<lower.x) return true;
-      if (a.x>upper.x) return true;
       if (a.y<lower.y) return true;
+      if (a.z<lower.z) return true;
+      if (a.x>upper.x) return true;
       if (a.y>upper.y) return true;
+      if (a.z>upper.z) return true;
       return false;
     }
 
@@ -382,6 +382,18 @@ namespace Faunus {
         for (auto i : g)
           if ( outside( p[i]) )
             return pc::infty;
+      return 0;
+    }
+
+    RestrictedVolumeCM::RestrictedVolumeCM(InputMap &in, string prefix) : RestrictedVolume(in,prefix) {
+      name+=" (mass center)";
+    }
+ 
+    double RestrictedVolumeCM::g_external(const p_vec &p, Group &g) {
+      if (std::find(groups.begin(), groups.end(), &g)!=groups.end())
+        if ( outside( Geometry::massCenter(*geo, p, g) ) ) {
+          return pc::infty;
+        }
       return 0;
     }
 

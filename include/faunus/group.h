@@ -76,6 +76,8 @@ namespace Faunus {
       virtual std::ostream& write(std::ostream &) const; //!< Write all Group data to stream
       virtual Point _massCenter(const Space&) const;
       vector<Move::Movebase*> moves;    //!< pointers to move functions
+      virtual string _info();
+      char w;                           //!< Text padding for info() functions
 
     public:
       enum type {GROUP,ATOMIC,MOLECULAR,CIGAR,RIGID,ISOBARIC,GRANDCANONICAL};
@@ -133,6 +135,7 @@ namespace Faunus {
       Geometry::VectorRotate vrot;
     protected:
       std::ostream & write(std::ostream&) const;  //!< Write all Group data to stream
+      virtual string _info();
 
     public:
       Average<double> Q;        //!< average net charge

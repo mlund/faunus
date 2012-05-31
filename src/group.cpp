@@ -6,6 +6,7 @@
 #include <faunus/average.h>
 #include <faunus/space.h>
 #include <faunus/inputfile.h>
+#include <faunus/textio.h>
 
 namespace Faunus {
 
@@ -15,6 +16,7 @@ namespace Faunus {
 
   Group::Group(int front, int back) : myrange(front,back-front+1) {
     id=GROUP;
+    w=15;
   }
 
   Group::~Group() {}
@@ -106,9 +108,19 @@ namespace Faunus {
     return *this;
   }
 
-  string Group::info() {
+  string Group::_info() {
     std::ostringstream o;
     return o.str();
+  }
+
+  string Group::info() {
+    using namespace textio;
+    std::ostringstream o;
+    o << header("Group: " + name)
+      << pad(SUB,w,"Size") << size() << endl
+      << pad(SUB,w,"Range") << "[" << front() << "-" << back() << "]" << endl
+      << pad(SUB,w,"Mass center") << cm.x << " " << cm.y << " " << cm.z << endl;
+    return o.str() + _info();
   }
 
   /*!
@@ -170,6 +182,7 @@ namespace Faunus {
    * \param p Vector to translate with
    */
   void Group::translate(Space &spc, const Point &p) {
+    assert( spc.geo->sqdist(cm,massCenter(spc))<1e-6  && "Mass center out of sync.");
     for (auto i : *this) {
       spc.trial[i] += p;
       spc.geo->boundary( spc.trial[i] );
@@ -293,5 +306,16 @@ namespace Faunus {
     cm_trial=newcm;
     s.geo->setVolume(oldvol);         // restore original volume
   }
+
+  string GroupMolecular::_info() {
+    using namespace textio;
+    std::ostringstream o;
+    if (Q.cnt>0)
+      o << pad(SUB,w,"Average charge") << Q.avg() << endl;
+    if (mu.cnt>0)
+      o << pad(SUB,w,"Average dipole moment") << mu.avg() << endl;
+    return o.str();
+  }
+
 
 }//namespace

@@ -407,7 +407,17 @@ namespace Faunus {
         virtual bool outside(const Point&); //!< Determines if particle is outside allowed region
       public:
         std::vector<Group*> groups;              //!< List of groups to restrict
-        RestrictedVolume(InputMap&);
+        RestrictedVolume(InputMap&, string="vconstrain");
+        double g_external(const p_vec&, Group&) FOVERRIDE; //!< External energy working on group
+    };
+
+    /*!
+     * \brief As Energy::RestrictedVolume but restrictions are applied only on the mass center
+     * instead of all particles in group.
+     */
+    class RestrictedVolumeCM : public Energy::RestrictedVolume {
+      public:
+        RestrictedVolumeCM(InputMap&, string="vconstrain");
         double g_external(const p_vec&, Group&) FOVERRIDE; //!< External energy working on group
     };
 

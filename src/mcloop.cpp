@@ -30,6 +30,7 @@ namespace Faunus {
       o << pad(SUB,w,"Time elapsed") << t/(3600.) << " h" << endl
         << pad(SUB,w,"Steps/minute") << macro*micro/(t/60.) << endl;
     }
+    o << std::flush;
     return o.str();
   }
 

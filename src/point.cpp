@@ -10,15 +10,14 @@ namespace Faunus {
     C A R T E S I A N  P O I N T
    ********************************/
 
+  /*!
+   * Upon construction x,y,z are set to zero
+   */
   Point::Point() : x(0), y(0), z(0) {}
 
-  void Point::clear() { x=y=z=0; }
+  Point::Point(double xx, double yy, double zz) : x(xx), y(yy), z(zz) {}
 
-  Point::Point(double xx, double yy, double zz) {
-    x=xx;
-    y=yy;
-    z=zz;
-  }
+  void Point::clear() { x=y=z=0; }
 
   double Point::dot(const Point &p) const { return (x*p.x + y*p.y + z*p.z); }
 
@@ -31,12 +30,9 @@ namespace Faunus {
     Point u;
     double r=2;
     while (r > 1.) { //Generate a random unit vector
-      u.x=2*ran.randHalf
-();
-      u.y=2*ran.randHalf
-();
-      u.z=2*ran.randHalf
-();
+      u.x=2*ran.randHalf();
+      u.y=2*ran.randHalf();
+      u.z=2*ran.randHalf();
       r=sqrt(u.x*u.x+u.y*u.y+u.z*u.z);
     }
     x=u.x/r;
@@ -116,6 +112,9 @@ namespace Faunus {
     P A R T I C L E
    ********************/
 
+  /*!
+   * Upon construction data is zeroed.
+   */
   PointParticle::PointParticle() : charge(0), radius(0), mw(0), id(0), hydrophobic(false) {}
 
   void PointParticle::clear() {
@@ -125,7 +124,7 @@ namespace Faunus {
     id=0;
   }
 
-  PointParticle& PointParticle::operator=(const Point &p ) {
+  PointParticle& PointParticle::operator=(const Point &p) {
     x=p.x;
     y=p.y;
     z=p.z;
@@ -174,8 +173,7 @@ namespace Faunus {
     return (r2<s*s) ? true:false;
   }
 
-  PointParticle& PointParticle::operator=(const AtomData
- &d) {
+  PointParticle& PointParticle::operator=(const AtomData &d) {
     id=d.id;
     charge=d.charge;
     radius=d.radius;
@@ -213,18 +211,17 @@ namespace Faunus {
     return *this;
   }
 
-  CigarParticle& CigarParticle::operator=(const Point &p ) {
+  CigarParticle& CigarParticle::operator=(const Point &p) {
     PointParticle::operator=(p);
     return *this;
   }
 
-  CigarParticle& CigarParticle::operator=(const AtomData
- &d) {
+  CigarParticle& CigarParticle::operator=(const AtomData &d) {
     PointParticle::operator=(d);
     return *this;
   }
 
-  CigarParticle& CigarParticle::operator=(const PointParticle &p ) {
+  CigarParticle& CigarParticle::operator=(const PointParticle &p) {
     PointParticle::operator=(p);
     return *this;
   }

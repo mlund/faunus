@@ -78,7 +78,7 @@ namespace Faunus {
         string title;                    //!< title of move
         string cite;                     //!< litterature reference, url, DOI etc.
         string prefix;                   //!< inputmap prefix
-        char w;                          //!< info string text width
+        char w;                          //!< info string text width. Adjust this in constructor if needed.
         unsigned long int cnt;           //!< total number of trial moves
         bool run() const;                //!< Runfraction test
 

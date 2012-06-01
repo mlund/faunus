@@ -479,16 +479,26 @@ namespace Faunus {
     }
 
     void CrankShaft::_trialMove() {
-      assert(gPtr!=nullptr && "Oops! You didn't specify any group to perform crankshaft on.");
+      assert(gPtr!=nullptr && "No group to perform crankshaft on.");
+      index.clear();   // clear previous particle list to rotate
       findParticles();
-      assert(!index.empty() && "Oops! Didn't find any particles to rotate.");
+      assert(!index.empty() && "No particles to rotate.");
       for (auto i : index)
         spc->trial[i] = vrot.rotate( *spc->geo, spc->p[i] ); // (boundaries are accounted for)
+      gPtr->cm_trial = Geometry::massCenter( *spc->geo, spc->trial, *gPtr);
     }
 
-    void CrankShaft::_acceptMove() {}
+    void CrankShaft::_acceptMove() {
+      for (auto i : index)
+        spc->trial[i] = spc->p[i];
+      gPtr->cm_trial = gPtr->cm;
+    }
 
-    void CrankShaft::_rejectMove() {}
+    void CrankShaft::_rejectMove() {
+      for (auto i : index)
+        spc->p[i] = spc->trial[i];
+      gPtr->cm = gPtr->cm_trial;
+    }
 
     double CrankShaft::_energyChange() {
       for (auto i : index)
@@ -507,32 +517,36 @@ namespace Faunus {
       return du;
     }
 
+    /*!
+     * This will define the particles to be rotated (stored in index vector) and
+     * also set the axis to rotate around, defined by two points. 
+     */
     bool CrankShaft::findParticles() {
       angle = dp*slp_global.randHalf();  // random angle
       int beg,end,len;
       do {
-        beg=gPtr->random();
-        end=gPtr->random();
-        len = std::abs(beg-end) - 1;
+        beg=gPtr->random();             // generate random vector to
+        end=gPtr->random();             // rotate around
+        len = std::abs(beg-end) - 1;    // number of particles between end points
       } while ( len >= minlen && len <= maxlen  );
       if (beg>end)
         std::swap(beg,end);
       vrot.setAxis(*spc->geo, spc->p[beg], spc->p[end], angle );
       index.clear();
       for (int i=beg+1; i<end; i++)
-        index.push_back(i);
+        index.push_back(i);             // store particle index to rotate
       assert(index.size()==size_t(len));
       return true;
     }
 
-    void CrankShaft::setGroup(Group &g) {
-      gPtr=&g;
-    }
+    void CrankShaft::setGroup(Group &g) { gPtr=&g; }
 
     string CrankShaft::_info() {
       using namespace textio;
       std::ostringstream o;
-      o << pad(SUB,w, "Displacement parameter") << dp << endl;
+      o << pad(SUB,w, "Displacement parameter") << dp << endl
+        << pad(SUB,w, "Min/max length to move") << minlen << " " << maxlen << endl
+        << endl;
       if (cnt>0) {
       }
       return o.str();

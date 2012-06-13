@@ -416,6 +416,10 @@ namespace Faunus {
       }
     }
 
+    void cm2origo(const Geometrybase &geo, p_vec &p) {
+      translate(geo, p, -massCenter(geo, p) );
+    }
+
     FindSpace::FindSpace() {
       dir.x=1;
       dir.y=1;

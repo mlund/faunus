@@ -206,6 +206,16 @@ namespace Faunus {
         void sample(const Group&, const Space&); //!< Sample properties of Group (identified by group name)
     };
 
+    /*!
+     * \brief Anylyse charge multipoles and their fluctuations of groups
+     * \author Anil Kurut
+     * \date 2012
+     *
+     * This analysis class will analyse selected groups and calculate their net-charge, dipole moment as well
+     * as their variances. It is possible to exclude certain atom types by added their names to an exclusionlist.
+     * Several groups may be analysed - the sample() function will automatically identify different groups via
+     * their names. The dipole moment is calculated with respect to the mass center.
+     */
     class ChargeMultipole : public AnalysisBase {
       private:
         std::map< string, Average<double> > Z, Z2, mu, mu2;
@@ -217,7 +227,7 @@ namespace Faunus {
         ChargeMultipole();
         void sample(const Group&, const Space&); //!< Sample properties of Group (identified by group name)
         void sample(const vector<GroupMolecular>&, const Space&); //!< Sample properties of Group (identified by group name)
-        std::set<string> exclusionlist;
+        std::set<string> exclusionlist; //!< Atom names listed here will be excluded from the analysis.
     };
 
     class VectorAlignment : public AnalysisBase {
@@ -225,7 +235,6 @@ namespace Faunus {
         virtual Point convert(const Group&, const Space&); // Returns points calculated from group properties
       public:
         void sample(const Group&, const Group&, const Space&);
-
     };
 
     /*! \brief Widom method for excess chemical potentials

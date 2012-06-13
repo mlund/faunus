@@ -118,7 +118,10 @@ namespace Faunus {
      * \li Acceptance
      * \li Total energy change
      *
-     * Typically additional information will be provided as well.
+     * Typically, additional information will be provided as well.
+     *
+     * \note Developers are encouraged to leave this function untouched and instead expand the
+     *       _info() virtual functions in derived classes.
      */
     string Movebase::info() {
       assert(!title.empty() && "Markov Moves must have a title");
@@ -240,7 +243,12 @@ namespace Faunus {
 
     void TranslateRotate::setGroup(Group &g) {
       assert(&g!=nullptr);
+      assert(!g.name.empty() && "Group should have a name.");
       igroup=&g;
+      if ( directions.find(g.name) != directions.end() )
+        dir = directions[g.name];
+      else
+        dir.x = dir.y = dir.z = 1;
     }
 
     void TranslateRotate::_trialMove() {

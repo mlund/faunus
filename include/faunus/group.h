@@ -104,7 +104,7 @@ namespace Faunus {
 
       virtual void rotate(Space&, const Point&, double);     //!< Rotate around a vector
       virtual void translate(Space&, const Point&);          //!< Translate along a vector
-      virtual void scale(Space&, double);                    //!< Volume scaling
+      virtual void scale(Space&, double);                    //!< Volume scaling for NPT ensemble
       virtual void undo(Space&);                             //!< Undo move operation
       virtual void accept(Space&);                           //!< Accept a trial move
 

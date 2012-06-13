@@ -297,6 +297,7 @@ namespace Faunus {
     Point massCenter(const Geometrybase&, const p_vec&); //!< Calculate mass center of a particle vector
     Point massCenter(const Geometrybase&, const p_vec&, const Group&); //!< Calculate mass center of a group
     void translate(const Geometrybase&, p_vec&, Point); //!< Translate a particle vector by a vector
+    void cm2origo(const Geometrybase&, p_vec&); //!< Translate a particle vector so mass center is in (0,0,0)
 
     /*!
      * \brief Find an empty space for a particle vector in a space of other particles
@@ -308,7 +309,7 @@ namespace Faunus {
     class FindSpace {
       private:
         bool containerOverlap(const Geometrybase&, const p_vec&);
-        bool matterOverlap(const Geometrybase&, const p_vec&, const p_vec&);
+        virtual bool matterOverlap(const Geometrybase&, const p_vec&, const p_vec&);
       public:
         FindSpace();
         Point dir;                  //!< default = [1,1,1]

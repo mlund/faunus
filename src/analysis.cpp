@@ -119,7 +119,7 @@ namespace Faunus {
     }
 
     void ChargeMultipole::sample(const Group &g, const Space &spc) {
-      assert(!g.name.empty() && "Group should have a name!");
+      assert(!g.name.empty() && "All Groups should have a name!");
       if (!run())
         return;
       double z=charge(g, spc);
@@ -133,7 +133,7 @@ namespace Faunus {
     void ChargeMultipole::sample(const vector<GroupMolecular> &gvec, const Space &spc){
       if (!run())
         return;
-      for (auto g : gvec)
+      for (auto &g : gvec)
         sample(g, spc);
     }
 

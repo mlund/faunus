@@ -48,7 +48,7 @@ namespace Faunus {
      * \li \c _info()
      *
      * These functions should be pretty self-explanatory and are - via wrapper
-     * functions - called by the move(). It is important that the _energyChange() function
+     * functions - called by move(). It is important that the _energyChange() function
      * returns the full energy associated with the move. For example, for NPT
      * moves the pV term should be included and so on. Please do stride not try override
      * the move() function as this should be generic to all MC moves.
@@ -87,7 +87,7 @@ namespace Faunus {
         virtual ~Movebase();
         double runfraction;                //!< Fraction of times calling move() should result in an actual move. 0=never, 1=always.
         virtual double move(int=1);        //!< Attempt \c n moves and return energy change
-        virtual string info();             //!< Returns information string (wrapper)
+        string info();                     //!< Returns information string
         virtual void test(UnitTest&);      //!< Perform unit test
         double getAcceptance();            //!< Get acceptance [0:1]
     };
@@ -128,6 +128,17 @@ namespace Faunus {
     /*!
      * \brief Combined rotation and rotation of groups
      * \author Mikael Lund
+     *
+     * This will translate and rotate groups and collect averages based on group name.
+     * \code
+     * ...
+     * Group g;
+     * g.name="mygroup";
+     * Move::TranslateRotate tr(in, pot, spc);
+     * tr.direction[g.name].z=0; // move only on xy plane - do this only once and before calling setGroup()
+     * tr.setGroup(g);           // specify which group to move
+     * tr.move();                // do the move
+     * \endcode
      */
     class TranslateRotate : public Movebase {
       protected:
@@ -145,11 +156,12 @@ namespace Faunus {
         double dp_rot;     //!< Rotational displament parameter
         double dp_trans;   //!< Translational displacement parameter
         double angle;      //!< Temporary storage for current angle
+        Point dir;         //!< Translation directions (default: x=y=z=1). This will be set by setGroup()
       public:
         TranslateRotate(InputMap&, Energy::Energybase&, Space&, string="transrot");
         void setGroup(Group&); //!< Select Group to move
-        Point dir;             //!< Translation directions (default: x=y=z=1)
         bool groupWiseEnergy;  //!< Attempt to evaluate energy over groups from vector in Space (default=false)
+        std::map<string,Point> directions; //!< Specify special group translation directions (default: x=y=z=1)
     };
 
     /*!

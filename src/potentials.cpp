@@ -66,6 +66,9 @@ namespace Faunus {
       name="Hardsphere";
     }
 
+    /*!
+     * This is a compatibility constructor - no data is read from the InputMap.
+     */
     HardSphere::HardSphere(InputMap& in) {
       name="Hardsphere";
     }

@@ -215,6 +215,7 @@ namespace Faunus {
         string _info();
       public:
         ChargeMultipole();
+        void sample(const Group&, const Space&); //!< Sample properties of Group (identified by group name)
         void sample(const vector<GroupMolecular>&, const Space&); //!< Sample properties of Group (identified by group name)
         std::set<string> exclusionlist;
     };

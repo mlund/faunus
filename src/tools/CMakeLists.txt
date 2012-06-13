@@ -32,6 +32,7 @@ endfunction( fau_cigarexample )
 fau_example(bulk "./" bulk.cpp)
 fau_example(polymer-npt-sphere "./" polymer-npt.cpp)
 fau_example(polymer-npt-cuboid "./" polymer-npt.cpp)
+fau_example(titrate_implicit "./" pka_implicit.cpp)
 fau_cigarexample(cigar "./" cigar.cpp)
 
 #----- target specific build options -----

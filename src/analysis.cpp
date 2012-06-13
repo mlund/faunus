@@ -118,19 +118,25 @@ namespace Faunus {
       return true;
     }
 
+    void ChargeMultipole::sample(const Group &g, const Space &spc) {
+      assert(!g.name.empty() && "Group should have a name!");
+      if (!run())
+        return;
+      double z=charge(g, spc);
+      Z[g.name]+=z;
+      Z2[g.name]+=pow(z,2);
+      double dip=dipole(g,spc);
+      mu[g.name]+=dip;
+      mu2[g.name]+=pow(dip,2);
+    }
+
     void ChargeMultipole::sample(const vector<GroupMolecular> &gvec, const Space &spc){
       if (!run())
         return;
-      for (auto g : gvec){
-        double z=charge(g, spc);
-        Z[g.name]+=z;
-        Z2[g.name]+=pow(z,2);
-        double dip=dipole(g,spc);
-        mu[g.name]+=dip;
-        mu2[g.name]+=pow(dip,2);
-      }
+      for (auto g : gvec)
+        sample(g, spc);
     }
-    
+
     string ChargeMultipole::_info(){
       using namespace textio;
       char k=13;
@@ -142,17 +148,13 @@ namespace Faunus {
       }
       o << endl << indent(SUB) << std::left << setw(w) << "Macromolecule  "
         << setw(k+4) << bracket("Z")
-        << setw(k+5) << bracket("Z"+squared)
         << setw(k+11) << bracket("Z"+squared)+"-"+bracket("Z")+squared
         << setw(k+5) << bracket(textio::mu)
-        << setw(k+5) << bracket(textio::mu+squared) 
         << setw(k+5) << bracket(textio::mu+squared)+"-"+bracket(textio::mu)+squared << endl;
       for (auto &m : Z)
         o << indent(SUB) << std::left << setw(w) << m.first << setw(k) << m.second.avg()
-          << setw(k) << Z2[m.first].avg()
           << setw(k) << Z2[m.first].avg()-pow(m.second.avg(),2)
           << setw(k) << mu[m.first].avg()
-          << setw(k) << mu2[m.first].avg() 
           << setw(k) << mu2[m.first].avg()-pow(mu[m.first].avg(),2)<< endl;
       return o.str();
     }

@@ -34,6 +34,23 @@ namespace Faunus {
   /*!
    * \brief Read/write AAM file format
    * \author Mikael Lund
+   *
+   * The AAM format is a simple format for loading particle positions, charges, radii and
+   * molecular weights. The structure is as follows:
+   * \li Lines beginning with # are ignored and can be placed anywhere
+   * \li The first non-# line gives the number of particles
+   * \li Every subsequent line gives atom information in the format: name, number, x, y, z, charge number, weight, radius
+   * \li Positions and radii should be in angstroms
+   * \li Currently, data in the number field is ignored.
+   * \li No particular spacing is required.
+   *
+   * \code
+   * # information
+   * # more information
+   * 2
+   * Na    1     10.234 5.4454 -2.345  +1    22.0   1.7
+   * Cl    2    5.011     1.054  20.02   -1   35.0   2.0
+   * \endcode
    */
   class FormatAAM {
     private:

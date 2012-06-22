@@ -307,12 +307,15 @@ namespace Faunus {
     string TranslateRotate::_info() {
       char l=12;
       std::ostringstream o;
-      o << pad(SUB,w,"Displacement vector") << dir << endl
-        << pad(SUB,w,"Max. translation") << pm << dp_trans/2 << textio::_angstrom << endl
+      o << pad(SUB,w,"Max. translation") << pm << dp_trans/2 << textio::_angstrom << endl
         << pad(SUB,w,"Max. rotation") << pm << dp_rot/2*180/pc::pi << textio::degrees << endl;
+      if ( !directions.empty() ) {
+        o << indent(SUB) << "Group Move directions:" << endl;
+        for (auto &m : directions)
+          o << pad(SUBSUB,w-2,m.first) << m.second << endl;
+      }
       if (cnt>0) {
-        o << endl
-          << indent(SUB) << "Move Statistics:" << endl << endl
+        o << indent(SUB) << "Move Statistics:" << endl
           << indent(SUBSUB) << std::left << setw(20) << "Group name" //<< string(20,' ')
           << setw(l+1) << "Acc. "+percent
           << setw(l+9) << rootof+bracket("dR"+squared)+"/"+angstrom

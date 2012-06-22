@@ -135,7 +135,7 @@ namespace Faunus {
      * Group g;
      * g.name="mygroup";
      * Move::TranslateRotate tr(in, pot, spc);
-     * tr.direction[g.name].z=0; // move only on xy plane - do this only once and before calling setGroup()
+     * tr.directions[g.name].z=0; // move only on xy plane - do this only once and before calling setGroup()
      * tr.setGroup(g);           // specify which group to move
      * tr.move();                // do the move
      * \endcode

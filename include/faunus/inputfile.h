@@ -23,25 +23,28 @@ namespace Faunus {
    */
   class InputMap {
     private:
-      std::map<string,string> map;
+      std::map<string,string> map, keyinfo;
       vector<string> usedkeys;
       vector<string> incfiles;
-    protected:
-      bool save(string);     //!< Save map to disk
     public:
       InputMap();
       InputMap(string);      //!< Construct and include input file.
       bool include(string);  //!< Include keyword/value file.
+      bool save(string);     //!< Save map to disk
       string info();         //!< Information string about read files and keywords
       //!< Add a keyword and an associated value
-      template<typename T> void add(const string &key, T value) {
+      template<typename T> void add(const string &key, T value, string infostring="") {
         std::ostringstream o;
         o << value;
         map[key]=o.str();
+        if (!infostring.empty())
+          map[key]=infostring;
       }
 
       //!< Get value associated with keyword
-      template<typename T> T get(const string &key, T fallback) {
+      template<typename T> T get(const string &key, T fallback, string infostring="") {
+        if (!infostring.empty())
+          keyinfo[key]=infostring;               // save information string (in any)
         if ( map.find(key)!=map.end() ) {
           std::istringstream i( map[key] );
           i >> fallback;

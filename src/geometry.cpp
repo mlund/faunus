@@ -74,7 +74,7 @@ namespace Faunus {
     }
 
     Sphere::Sphere(InputMap &in, string prefix)  {
-      setradius( in.get<double>(prefix+"_radius", -1.0) );
+      setradius( in.get<double>(prefix+"_radius", -1.0, "Spherical container radius (A)") );
     }
 
     void Sphere::setradius(double radius) {
@@ -131,7 +131,7 @@ namespace Faunus {
 
     Cuboid::Cuboid(InputMap &in) {
       name="Cuboid";
-      double cubelen=in.get<double>("cuboid_len",-1);
+      double cubelen=in.get<double>("cuboid_len",-1, name+" sidelength (AA)");
       if (cubelen<=0) {
         len.x=in.get<double>("cuboid_xlen",0);
         len.y=in.get<double>("cuboid_ylen",0);

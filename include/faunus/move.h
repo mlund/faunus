@@ -80,7 +80,7 @@ namespace Faunus {
         string prefix;                   //!< inputmap prefix
         char w;                          //!< info string text width. Adjust this in constructor if needed.
         unsigned long int cnt;           //!< total number of trial moves
-        bool run() const;                //!< Runfraction test
+        virtual bool run() const;                //!< Runfraction test
 
       public:
         Movebase(Energy::Energybase&, Space&, string);//!< Constructor
@@ -118,6 +118,7 @@ namespace Faunus {
         void _acceptMove();
         void _rejectMove();
         double _energyChange();
+        bool run() const;                //!< Runfraction test
       public:
         AtomicTranslation(InputMap&, Energy::Energybase&, Space&, string="mv_particle");
         void setGroup(Group&); //!< Select group in which to randomly pick particles from

@@ -159,6 +159,12 @@ namespace Faunus {
       igroup=nullptr;
     }
 
+    bool AtomicTranslation::run() const {
+      if ( igroup->empty() )
+        return false;
+      return Movebase::run();
+    }
+
     void AtomicTranslation::_trialMove() {
       if (igroup!=nullptr) {
         iparticle=igroup->random();
@@ -233,8 +239,8 @@ namespace Faunus {
       dir.x=dir.y=dir.z=1;
       groupWiseEnergy=false;
       runfraction = in.get<double>(prefix+"_runfraction",1.0);
-      dp_trans = in.get<double>(prefix+"_transdp", 2);
-      dp_rot   = in.get<double>(prefix+"_rotdp", 100);
+      dp_trans = in.get<double>(prefix+"_transdp", 2, "Group translationsal displacement (AA)");
+      dp_rot   = in.get<double>(prefix+"_rotdp", 100, "Group rotational displacement (deg)");
       if (dp_rot>4*pc::pi) // no need to rotate more than
         dp_rot=4*pc::pi;   // +/- 2 pi.
       if (dp_rot<1e-6 && dp_trans<1e-6)
@@ -567,8 +573,8 @@ namespace Faunus {
     Isobaric::Isobaric(InputMap &in, Energy::Hamiltonian &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Isobaric Volume Fluctuations";
       w=30;
-      dV = in.get<double>(prefix+"_dV", 0.);
-      P = in.get<double>(prefix+"_P", 0.)/1e30*pc::Nav; //pressure mM -> 1/A^3
+      dV = in.get<double>(prefix+"_dV", 0., "Volume displacement parameter");
+      P = in.get<double>(prefix+"_P", 0., "External pressure (see doc)")/1e30*pc::Nav; //pressure mM -> 1/A^3
       runfraction = in.get(prefix+"_runfraction",1.0);
       if (dV<1e-6)
         runfraction=0;

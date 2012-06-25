@@ -159,10 +159,12 @@ namespace Faunus {
   }
 
   void Group::scale(Space &s, double newvol) {
-    cm_trial=cm;
-    s.geo->scale(cm_trial, newvol);
-    for (auto i : *this)
-      s.geo->scale( s.trial[i], newvol);
+    if (!empty()) {
+      cm_trial=cm;
+      s.geo->scale(cm_trial, newvol);
+      for (auto i : *this)
+        s.geo->scale( s.trial[i], newvol);
+    }
   }
 
   void Group::undo(Space &s) {
@@ -192,6 +194,8 @@ namespace Faunus {
   }
 
   int Group::random() const {
+    if (empty())
+      return -1;
     int i = front() + slp_global.rand() % size();
     assert(i>=front() && i<=back() && "Generated random element out of range!");
     return i;

@@ -10,6 +10,9 @@ namespace Faunus {
     include(filename);
   }
 
+  /*!
+   * \todo Remove ugly atom loader.
+   */
   bool InputMap::include(string filename) {
     string line,key,val;
     std::ifstream f( filename.c_str() );
@@ -56,8 +59,12 @@ namespace Faunus {
         << " (SVN revision: " << __SVN_REV__ << ")" << endl
 #endif
       ;
-      for (auto &m : map)
-        f << std::left << setw(35) << m.first << m.second << endl;
+      for (auto &m : map) {
+        f << std::left << setw(35) << m.first << setw(20) << m.second;
+        if ( !keyinfo[m.first].empty() )
+          f << "# " << keyinfo[m.first];
+        f << endl;
+      }
       return true;
     }
     return false;

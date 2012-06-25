@@ -90,7 +90,7 @@ namespace Faunus {
      */
     LennardJones::LennardJones(InputMap &in) {
       name="Lennard-Jones";
-      eps = 4*in.get<double>( "lj_eps", 0.04 );
+      eps = 4*in.get<double>( "lj_eps", 0.04, name+" epsilon (kT)" );
     }
     
     string LennardJones::_brief() {
@@ -116,8 +116,8 @@ namespace Faunus {
      */
     SquareWell::SquareWell(InputMap &in, string prefix) {
       name="Square Well";
-      threshold = in.get<double>(prefix+"_threshold", 0);
-      depth     = in.get<double>(prefix+"_depth", 0);
+      threshold = in.get<double>(prefix+"_threshold", 0, name+" upper threshold (AA)");
+      depth     = in.get<double>(prefix+"_depth", 0, name+" depth (kT)");
     }
     
     void SquareWell::_setScale(double s) {
@@ -177,9 +177,9 @@ namespace Faunus {
      */
     Coulomb::Coulomb(InputMap &in) {
       name="Coulomb";
-      temp=in.get<double>("temperature", 298.15);
-      epsilon_r=in.get<double>("epsilon_r",80.);
-      depsdt=in.get<double>("depsdt", -0.368) * temp / epsilon_r;
+      temp=in.get<double>("temperature", 298.15, "Absolute temperature (K)");
+      epsilon_r=in.get<double>("epsilon_r",80., "Dielectric constant");
+      depsdt=in.get<double>("depsdt", -0.368, "See documentation") * temp / epsilon_r;
       pc::T = temp;
       lB=pc::lB( epsilon_r );
       setScale(lB);
@@ -215,10 +215,10 @@ namespace Faunus {
       const double zero=1e-10;
       name="Debye-Huckel";
       c=8 * lB * pc::pi * pc::Nav / 1e27;
-      I=in.get<double>("dh_ionicstrength",0);  // [mol/l]
+      I=in.get<double>("dh_ionicstrength",0, "Ionic strength (mol/l)");  // [mol/l]
       k=sqrt( I*c );
       if (k<zero)
-        k=1/in.get<double>("dh_debyelength", 1/zero); // [A]
+        k=1/in.get<double>("dh_debyelength", 1/zero, "Debye length (AA)"); // [A]
     }
 
     string DebyeHuckel::_brief() {

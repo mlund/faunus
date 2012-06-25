@@ -187,6 +187,8 @@ namespace Faunus {
           }
 
           double i2g(const p_vec &p, Group &g, int j) FOVERRIDE {
+            if (g.empty())
+              return 0;
             double u=0;
             int len=g.back()+1;
             if (j>=g.front() && j<=g.back()) {   //j is inside g - avoid self interaction
@@ -212,6 +214,8 @@ namespace Faunus {
 
           double g2g(const p_vec &p, Group &g1, Group &g2) FOVERRIDE {
             double u=0;
+            if (g1.empty() || g2.empty())
+              return u;
             int ilen=g1.back()+1, jlen=g2.back()+1;
 #pragma omp parallel for reduction (+:u) schedule (dynamic)
             for (int i=g1.front(); i<ilen; ++i)
@@ -221,8 +225,10 @@ namespace Faunus {
           }
 
           double g2all(const p_vec &p, Group &g) FOVERRIDE {
-            int ng=g.back()+1, np=p.size();
             double u=0;
+            if (g.empty())
+              return u;
+            int ng=g.back()+1, np=p.size();
 #pragma omp parallel for reduction (+:u)
             for (int i=g.front(); i<ng; ++i) {
               for (int j=0; j<g.front(); j++)
@@ -234,7 +240,8 @@ namespace Faunus {
           }
 
           double g_internal(const p_vec &p, Group &g) FOVERRIDE { 
-            if (g.front()==-1) return 0;
+            if (g.empty())
+              return 0;
             double u=0;
             int step=1,n=g.back()+1;
             for (int i=g.front(); i<n-step; i++)
@@ -300,6 +307,8 @@ namespace Faunus {
             return 0;
           }
           double g2all(const p_vec &p, Group &g) FOVERRIDE {
+            if (g.empty())
+              return 0;
             for (int i=g.front(); i<=g.back(); i++) {
               for (int j=0; j<g.front(); j++)
                 if ( i2i(p,i,j)==pc::infty )

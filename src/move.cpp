@@ -573,8 +573,8 @@ namespace Faunus {
     Isobaric::Isobaric(InputMap &in, Energy::Hamiltonian &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Isobaric Volume Fluctuations";
       w=30;
-      dV = in.get<double>(prefix+"_dV", 0., "Volume displacement parameter");
-      P = in.get<double>(prefix+"_P", 0., "External pressure (see doc)")/1e30*pc::Nav; //pressure mM -> 1/A^3
+      dV = in.get<double>(prefix+"_dV", 0., "NPT volume displacement parameter");
+      P = in.get<double>(prefix+"_P", 0., "NPT external pressure P/kT (mM)")/1e30*pc::Nav; //pressure mM -> 1/A^3
       runfraction = in.get(prefix+"_runfraction",1.0);
       if (dV<1e-6)
         runfraction=0;
@@ -600,12 +600,12 @@ namespace Faunus {
         << pad(SUB,w, "Temperature") << pc::T << " K" << endl;
       if (cnt>0) {
         char l=14;
-        o << pad(SUB,w, "Mean displacement") << "\u221b"+rootof+bracket("dV"+squared) << " = " << pow(sqrV.avg(), 1/6.) << _angstrom << endl
+        o << pad(SUB,w, "Mean displacement") << cuberoot+rootof+bracket("dV"+squared) << " = " << pow(sqrV.avg(), 1/6.) << _angstrom << endl
           << pad(SUB,w, "Osmotic coefficient") << P / (N/V.avg()) << endl
           << endl
           << indent(SUBSUB) << std::right << setw(10) << ""
           << setw(l+5) << bracket("V")
-          << setw(l+8) << "\u221b"+bracket("V")
+          << setw(l+8) << cuberoot+bracket("V")
           << setw(l+8) << bracket("N/V") << endl
           << indent(SUB) << setw(10) << "Averages"
           << setw(l) << V.avg() << _angstrom << cubed
@@ -625,7 +625,7 @@ namespace Faunus {
       oldV = spc->geo->getVolume();
       newV = std::exp( std::log(oldV) + slp_global.randHalf()*dV );
       for (auto g : spc->g)
-        g->scale(*spc, newV);
+        g->scale(*spc, newV); // scale trial coordinates to new volume
     }
 
     void Isobaric::_acceptMove() {
@@ -644,6 +644,10 @@ namespace Faunus {
         g->undo(*spc);
     }
 
+    /*!
+     * This will calculate the total energy of the configuration
+     * associated with the current Hamiltonian volume
+     */
     double Isobaric::_energy(const p_vec &p) {
       double u=0;
       for (size_t i=0; i<spc->g.size()-1; ++i)      // group-group
@@ -657,6 +661,9 @@ namespace Faunus {
       return u + pot->external();
     }
 
+    /*!
+     * \todo Early rejection could be implemented - not relevant for geometries with periodicity, though.
+     */
     double Isobaric::_energyChange() {
       double uold,unew;
       uold = _energy(spc->p);

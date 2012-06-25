@@ -32,6 +32,9 @@ namespace Faunus {
     return o.str();
   }
 
+  /*!
+   * \note See http://patorjk.com/software/taag for ASCII art generation
+   */
   string textio::splash() {
     std::ostringstream o;
     o << std::string(71,'.') << endl

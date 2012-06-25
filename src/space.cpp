@@ -47,7 +47,9 @@ namespace Faunus {
       }
     size_t cnt=0;
     for (auto gi : g)
-      cnt+=gi->size();
+      if (!gi->empty())
+        cnt+=gi->size();
+
     if (cnt!=p.size()) {
       assert(!"Sum enrolled group sizes does not match particle vector");
       std::cerr << "Space sanity check failed. This is serious!";

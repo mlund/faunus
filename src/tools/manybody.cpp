@@ -5,9 +5,7 @@ using namespace Faunus;
 using namespace TCLAP;
 
 typedef Geometry::Cuboid Tgeometry;
-typedef Potential::CombinedPairPotential<Potential::SquareWellHydrophobic, Potential::LennardJones> SRpot;
-typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, SRpot> Tpairpot;
-//typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, Potential::HardSphere> Tpairpot;
+typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, Potential::LennardJones> Tpairpot;
 
 int main(int argc, char** argv) {
   string inputfile,istate,ostate;
@@ -67,8 +65,6 @@ int main(int argc, char** argv) {
   salt.name="Atomic Species";
   spc.enroll(salt);
 
-  spc.load(istate);
-
   Move::Isobaric iso(mcp,pot,spc);
   Move::TranslateRotate gmv(mcp,pot,spc);
   Move::AtomicTranslation mv(mcp, pot, spc);
@@ -77,9 +73,11 @@ int main(int argc, char** argv) {
   Analysis::RadialDistribution<float,int> rdf(0.25);
   Analysis::ChargeMultipole mpol;
 
-  double utot=pot.all2all(spc.p) + pot.external() + pot.g_external(spc.p, salt);
-  for (auto &g : pol)
-    utot += pot.g_external(spc.p, g);
+  spc.load(istate);
+
+  double utot=pot.all2all(spc.p) + pot.external();
+  for (auto g : spc.g)
+    utot+=pot.g_external(spc.p, *g);
   sys.init( utot );
 
   cout << atom.info() << spc.info() << pot.info() << tit.info()
@@ -121,9 +119,9 @@ int main(int argc, char** argv) {
       }
     } // end of micro loop
 
-    double utot=pot.all2all(spc.p) + pot.external() + pot.g_external(spc.p, salt);
-    for (auto &g : pol)
-      utot += pot.g_external(spc.p, g);
+    double utot=pot.all2all(spc.p) + pot.external();
+    for (auto g : spc.g)
+      utot+=pot.g_external(spc.p, *g);
     sys.checkDrift( utot );
 
     cout << loop.timing();
@@ -131,10 +129,10 @@ int main(int argc, char** argv) {
   } // end of macro loop
 
   /*
-  iso.test(test);
-  gmv.test(test);
-  sys.test(test);
-  */
+     iso.test(test);
+     gmv.test(test);
+     sys.test(test);
+     */
 
   cout << loop.info() << sys.info() << gmv.info() << mv.info() << iso.info() << tit.info()
     << mpol.info();

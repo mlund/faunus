@@ -144,7 +144,8 @@ namespace Faunus {
         for (size_t j=0; j<process.size(); j++)
           if ( process[j].one_of_us( p[i].id )) {
             if ( abs(p[i].charge-atom[p[i].id].charge)>1e-9 )
-              cout << "Warning: Charge mismatch while searching for titratable sites - this can be serious.\n";
+              cout << "Warning: Charge mismatch while searching for titratable sites ("
+                << atom[p[i].id].name << " " << i << ")" << endl;
             sites.push_back(i);
             process[j].cnt++;
             break; // no double counting of sites
@@ -289,8 +290,15 @@ namespace Faunus {
       ham.add(eqpot);
       ipart=-1;
       findSites(spc.p);
-      for (auto &i : eqpot.eq.sites ) // make sure charges are in sync w. atom list
-        spc.p[i].charge = spc.trial[i].charge = atom[ spc.p[i].id ].charge;
+      for (auto &i : eqpot.eq.sites ) { // make sure charges are in sync w. atom list
+        double newz=atom[ spc.p[i].id ].charge;
+        double oldz=spc.p[i].charge;
+        if ( abs(newz-oldz)>1e-6 ) {
+          cout << "SwapMove: Resetting charge on " << atom[ spc.p[i].id ].name << " " << i
+            << " from " << oldz << " to " << newz << endl;
+          spc.p[i].charge = spc.trial[i].charge = newz;
+        }
+      }
     }
 
     int SwapMove::findSites(const p_vec &p) {

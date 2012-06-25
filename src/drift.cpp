@@ -36,11 +36,12 @@ namespace Faunus {
     std::ostringstream o;
     o << header("System Energy and Drift");
     if (avg.cnt>0) {
-      o << textio::pad(SUB,w, "Average") << avg.avg() << kT << ", \u03C3=" << avg.stdev() << endl
+      o << textio::pad(SUB,w, "Average") << avg.avg() << kT << ", " << sigma << "=" << avg.stdev() << endl
         << textio::pad(SUB,w, "Initial energy") << initial << kT << endl
         << textio::pad(SUB,w, "Initial + changes") << current() << kT << endl;
       o.precision(4);
-      o << pad(SUB,w, "Total energy drift") << drift << kT << " (" << drift/current()*100. << "\ufe6a)" << endl;
+      o << pad(SUB,w, "Total energy drift") << drift << kT << " (" << drift/current()*100.
+        << percent << ")" << endl;
     }
     return o.str();
   }

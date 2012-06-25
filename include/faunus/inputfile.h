@@ -8,6 +8,7 @@ namespace Faunus {
   /*!
    * \brief Retrieve parameters from a formatted input file
    * \author Mikael Lund
+   * \todo How about "yes"/"no" strings for boolean parameters?
    *
    * The input file is expected to have the following
    * format:
@@ -38,14 +39,16 @@ namespace Faunus {
         o << value;
         map[key]=o.str();
         if (!infostring.empty())
-          map[key]=infostring;
+          keyinfo[key]=infostring;
       }
 
       //!< Get value associated with keyword
       template<typename T> T get(const string &key, T fallback, string infostring="") {
         if (!infostring.empty())
           keyinfo[key]=infostring;               // save information string (in any)
-        if ( map.find(key)!=map.end() ) {
+        if ( map.find(key)==map.end() )
+          add<T>(key, fallback, infostring);
+        else {
           std::istringstream i( map[key] );
           i >> fallback;
         }

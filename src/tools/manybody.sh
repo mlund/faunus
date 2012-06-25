@@ -102,7 +102,7 @@ molecule_file2         $base.aam
 
 # Atomic species - add up to ten.
 tion1                  Cl      # atom type
-nion1                  2       # number of atoms
+nion1                  0       # number of atoms
 dpion1                 10      # diplacement parameter
 
 test_stable            yes
@@ -128,17 +128,16 @@ for pH in 7
 do
   # equilibration
   rm -fR $base.state
-  micro=1000
+  micro=100
   mktit
   mkinput
-  $exe -i $base.input -c $base.state -o $base.state #> eq
+  $exe -i $base.input -c $base.state -o $base.state > eq
+  exit
 
   # production
   micro=2000
   mktit
   mkinput
   $exe -i $base.input -c $base.state -o $base.state #> out
-  z=`tail out | grep $base.aam | gawk '{print $2}'`
-  echo $pH $z
 done
 

@@ -227,7 +227,7 @@ namespace Faunus {
      * to the Hamiltonian. The InputMap class is scanned for the following keys:
      * \li \c npt_dV \n Volume displacement parameter
      * \li \c npt_P \n Pressure
-     * \li \c npt_Punit \n Pressure unit: mM [default] or 1/A3
+     * \li \c npt_Punit \n Pressure unit: mM [default] or 1/A3 (not implemented, yet!)
      *
      * Note that the volume displacement is done by:
      *

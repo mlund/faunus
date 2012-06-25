@@ -392,8 +392,10 @@ namespace Faunus {
     }
 
     Point massCenter(const Geometrybase &geo, const p_vec &p, const Group &g) {
-      assert(~g.empty());
-      assert(~p.empty());
+      if (g.empty())
+        return Point();
+      assert(!p.empty());
+      assert(g.back() < (int)p.size());
       assert(&geo!=NULL);
       double sum=0;
       Point cm,t,o = p.at( g.front()+(g.back()-g.front())/2 );  // set origo to middle particle

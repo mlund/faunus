@@ -15,6 +15,8 @@ namespace Faunus {
    * -----------------------------------*/
 
   Group::Group(int front, int back) : myrange(front,back-front+1) {
+    if (front<0 || back<0)
+      resize(0);
     id=GROUP;
     w=15;
   }
@@ -34,8 +36,8 @@ namespace Faunus {
   }
 */
   bool Group::find(int i) const {
-    if (i>=front())
-      if (i<=back())
+    if (i<=back())
+      if (i>=front())
         return true;
     return false;
   }
@@ -54,12 +56,12 @@ namespace Faunus {
   Group& Group::operator+=(const Group& g) {
     assert(!"Unimplemented!");
     /*
-    if (g.beg==-1 && g.last==-1)   // if added Group is empty
-      return (*this);
-    if (beg==-1 && last==-1)       // if this is empty
-      beg=g.beg;
-    last=g.last;
-    */
+       if (g.beg==-1 && g.last==-1)   // if added Group is empty
+       return (*this);
+       if (beg==-1 && last==-1)       // if this is empty
+       beg=g.beg;
+       last=g.last;
+       */
     return (*this);
   }
 
@@ -70,25 +72,25 @@ namespace Faunus {
     assert(!"Unimplemented!");
     Group o;
     /*
-    if (beg<g.beg) {
-      o.beg=beg;
-      o.last=g.last;
-    } else {
-      o.beg=g.beg;
-      o.last=last;
-    };
-    o.name = this->name + " + " + g.name;
-    assert( o.size()==this->size()+g.size() ); // debug
-    if (o.size()!=this->size()+g.size())
-      std::cout << "# Warning: Added Groups are not continous!\n";
-      */
+       if (beg<g.beg) {
+       o.beg=beg;
+       o.last=g.last;
+       } else {
+       o.beg=g.beg;
+       o.last=last;
+       };
+       o.name = this->name + " + " + g.name;
+       assert( o.size()==this->size()+g.size() ); // debug
+       if (o.size()!=this->size()+g.size())
+       std::cout << "# Warning: Added Groups are not continous!\n";
+       */
     return o;
   }
 
   bool Group::operator==(const Group& g) const {
     return (*this == g);
   }
-  
+
   std::ostream& Group::write(std::ostream &o) const {
     o << front() << " " << back() << " " << cm;
     return o;
@@ -97,7 +99,7 @@ namespace Faunus {
   std::ostream& operator<<(std::ostream &o, Group &g) {
     return g.write(o);
   }
-  
+
   Group& Group::operator<<(std::istream &in) {
     int front;
     int back;
@@ -139,11 +141,9 @@ namespace Faunus {
 
   Point Group::massCenter(const Space &spc) const {
     assert( &spc!=NULL );
-    assert( size()>0 );
-    assert( back() < (int)spc.p.size() );
     return _massCenter(spc);
   }
-  
+
   Point Group::dipolemoment(const Space &s) const {
     Point t, mu;
     for (auto i : *this) {
@@ -242,11 +242,12 @@ namespace Faunus {
         size+=npart;
       } else break;
     } while (npart>0);
-    if (size>0) {
+    if (size>0)
       resize(size);
-      spc.enroll(*this);
-      setMassCenter(spc);
-    }
+    else
+      resize(0);
+    setMassCenter(spc);
+    spc.enroll(*this);
   }
 
   GroupAtomic& GroupAtomic::operator<<(std::istream &in) {

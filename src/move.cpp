@@ -899,5 +899,57 @@ namespace Faunus {
       return o.str();
     }
 
+#ifdef ENABLE_MPI
+    ParallelTempering::ParallelTempering(
+        Energy::Energybase &e, Space &s, Faunus::MPI::MPIController &mpi, string pfx) :
+      Movebase(e,s,pfx), mpiPtr(&mpi) {
+        title="Parallel Tempering";
+        partner=-1;
+      }
+
+    void ParallelTempering::findPartner() {
+      //initiall we could make it simple and just send up and down...
+    }
+
+    string ParallelTempering::_info() {
+      std::ostringstream o;
+      o << pad(SUB,w,"Process rank") << mpiPtr->rank << endl
+        << pad(SUB,w,"Number of replicas") << mpiPtr->nproc << endl
+        << endl;
+      return o.str();
+    }
+
+    void ParallelTempering::_trialMove() {
+      mt.recv(*mpiPtr, partner, spc->trial);
+      mt.send(*mpiPtr, spc->p, partner);
+      mt.waitrecv();
+      mt.waitsend();
+      assert(spc->p.size() == spc->trial.size());
+    }
+
+    void ParallelTempering::_acceptMove(){
+      for (size_t i=0; i<spc->p.size(); i++)
+        spc->trial[i] = spc->p[i];
+    } 
+
+    void ParallelTempering::_rejectMove() {
+      for (size_t i=0; i<spc->p.size(); i++)
+        spc->p[i] = spc->trial[i];
+    }
+
+    double ParallelTempering::_energyChange() {
+      double du=0;
+      for (auto gi : spc->g) {
+        du += pot->g_external(spc->trial,*gi) - pot->g_external(spc->p,*gi);
+        du += pot->g_internal(spc->trial,*gi) - pot->g_internal(spc->p,*gi);
+        for (auto gj : spc->g)
+          if (gi!=gj)
+            du+=pot->g2g(spc->trial,*gi,*gj) - pot->g2g(spc->p,*gi,*gj);
+      }
+      // ups now we need to get the replica energy!!
+      return du;
+    }
+#endif
+
   }//namespace
 }//namespace

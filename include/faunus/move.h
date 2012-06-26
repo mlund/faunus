@@ -6,6 +6,10 @@
 #include <faunus/average.h>
 #include <faunus/energy.h>
 
+#ifdef ENABLE_MPI
+#include <faunus/mpi.h>
+#endif
+
 namespace Faunus {
   //class average;
   class unittest;
@@ -335,6 +339,25 @@ namespace Faunus {
       public:
         GrandCanonicalSalt(InputMap&, Energy::Hamiltonian&, Space&, Group&, string="saltbath");
     };
+
+#ifdef ENABLE_MPI
+    class ParallelTempering : public Movebase {
+      private:
+        int partner;            //!< Other replica (partner) to exchange with
+        void findPartner();     //!< Find which replica to exchange with
+
+        string _info();
+        void _trialMove();
+        void _acceptMove();
+        void _rejectMove();
+        double _energyChange();
+        Faunus::MPI::MPIController *mpiPtr;
+        Faunus::MPI::ParticleTransmitter mt;
+      public:
+        ParallelTempering(Energy::Energybase&, Space&, Faunus::MPI::MPIController &mpi, string="temper_");
+    };
+
+#endif
 
   }//namespace
 }//namespace

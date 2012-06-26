@@ -6,7 +6,8 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 set(objs
   titrate
   drift energy faunus geometry group histogram inputfile io mcloop move
-  physconst point potentials slump space species textio analysis)
+  physconst point potentials slump space species textio analysis
+  mpi)
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 #----- xdrfile static library for gromacs output -----
@@ -58,6 +59,17 @@ if(ENABLE_BABEL AND OPENBABEL_FOUND)
   include_directories(${OPENBABEL_INCLUDE_DIR})
   set(LINKLIBS ${LINKLIBS} ${OPENBABEL_LIBRARIES})
   add_definitions(-DBABEL)
+endif()
+
+# -----------------------
+#   Link with MPI
+# -----------------------
+if(ENABLE_MPI AND MPI_CXX_FOUND)
+  set(CMAKE_CXX_COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_CXX_COMPILE_FLAGS})
+  set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS})
+  set(LINKLIBS ${LINKLIBS} ${MPI_CXX_LIBRARIES})
+  include_directories(MPI_CXX_INCLUDE_PATH)
+  add_definitions(-DENABLE_MPI)
 endif()
 
 # -----------------------------

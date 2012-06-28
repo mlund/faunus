@@ -9,6 +9,9 @@ namespace Faunus {
       MPI_Init(NULL,NULL);
       MPI_Comm_size(comm, &nproc);
       MPI_Comm_rank(comm, &rank);    
+      std::ostringstream o;
+      o << rank;
+      id = o.str();
     }
 
     MPIController::~MPIController() {
@@ -19,8 +22,27 @@ namespace Faunus {
       return (rank==master);
     }
 
-    ParticleTransmitter::ParticleTransmitter() {
+    FloatTransmitter::FloatTransmitter() {
       tag=0;
+    }
+
+    void FloatTransmitter::sendf(MPIController &mpi, vector<float> &src, int dst) {
+      MPI_Issend(&src[0], src.size(), MPI_FLOAT, dst, tag, mpi.comm, &sendReq);
+    }
+
+    void FloatTransmitter::waitsend() {
+      MPI_Wait(&sendReq, &sendStat);
+    } 
+
+    void FloatTransmitter::recvf(MPIController &mpi, int src, vector<float> &dst) {
+      MPI_Irecv(&dst[0], dst.size(), MPI_FLOAT, src, tag, mpi.comm, &recvReq);
+    }
+
+    void FloatTransmitter::waitrecv() {
+      MPI_Wait(&recvReq, &recvStat);
+    }
+
+    ParticleTransmitter::ParticleTransmitter() {
       format=XYZQ;
     }
 
@@ -32,7 +54,7 @@ namespace Faunus {
     void ParticleTransmitter::send(MPIController &mpi, const p_vec &src, int dst) {
       assert(dst<mpi.nproc && "Invalid MPI destination");
       pvec2buf(src);
-      MPI_Issend(&sendBuf[0], sendBuf.size(), MPI_FLOAT, dst, tag, mpi.comm, &sendReq);
+      FloatTransmitter::sendf(mpi, sendBuf, dst);
     }
 
     void ParticleTransmitter::pvec2buf(const p_vec &src) {
@@ -46,10 +68,6 @@ namespace Faunus {
       }
       for (auto i : sendExtra)
         sendBuf.push_back(i);
-    }
-
-    void ParticleTransmitter::waitsend() {
-      MPI_Wait(&sendReq, &sendStat);
     }
 
     /*!
@@ -69,11 +87,11 @@ namespace Faunus {
       recvExtra.resize( sendExtra.size() );
       recvBuf.resize( recvBuf.size() + recvExtra.size() );
 
-      MPI_Irecv(&recvBuf[0], recvBuf.size(), MPI_FLOAT, src, tag, mpi.comm, &recvReq);
+      FloatTransmitter::recvf(mpi, src, recvBuf);
     }
 
     void ParticleTransmitter::waitrecv() {
-      MPI_Wait(&recvReq, &recvStat);
+      FloatTransmitter::waitrecv();
       buf2pvec(*dstPtr);
     }
 

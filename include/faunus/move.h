@@ -342,9 +342,15 @@ namespace Faunus {
 
 #ifdef ENABLE_MPI
     class ParallelTempering : public Movebase {
-      private:
+      //private:
+      public:
+        typedef std::map<string, Average<double> > map_type;
+        map_type accmap;        //!< Acceptance map
         int partner;            //!< Other replica (partner) to exchange with
         void findPartner();     //!< Find which replica to exchange with
+        bool goodPartner();     //!< Detemine if found partner is valid
+        float exchangeEnergy(float); //!< Exchange energy with partner
+        string id();            //!< Get unique string to identify set of partners
 
         string _info();
         void _trialMove();
@@ -352,9 +358,11 @@ namespace Faunus {
         void _rejectMove();
         double _energyChange();
         Faunus::MPI::MPIController *mpiPtr;
-        Faunus::MPI::ParticleTransmitter mt;
+        Faunus::MPI::FloatTransmitter ft;
+        Faunus::MPI::ParticleTransmitter pt;
       public:
-        ParallelTempering(Energy::Energybase&, Space&, Faunus::MPI::MPIController &mpi, string="temper_");
+        double uoldSelf;        //!< Buffer to store self energy before tempering move
+        ParallelTempering(InputMap&, Energy::Energybase&, Space&, Faunus::MPI::MPIController &mpi, string="temper_");
     };
 
 #endif

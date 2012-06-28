@@ -1,7 +1,7 @@
 #!/bin/bash
 
 faunus=../../
-exe=$faunus/src/tools/manybody
+exe=$faunus/src/tools/manybodyMPI
 base="manybody"
 
 # ----------------------------------
@@ -90,7 +90,7 @@ squarewell_threshold   1.5     # angstrom
 
 cuboid_len             $boxlen # Box side length Angstrom
 npt_P                  113.2   # mM
-npt_dV                 3       # log(dV)
+npt_dV                 0       # log(dV)
 transrot_transdp       50      # Molecular translation parameter
 transrot_rotdp         2       # Molecular rotation parameter
 
@@ -131,7 +131,7 @@ do
   micro=100
   mktit
   mkinput
-  $exe -i $base.input -c $base.state -o $base.state > eq
+  mpiexec -np 6 $exe -i $base.input -c $base.state -o $base.state 
   exit
 
   # production

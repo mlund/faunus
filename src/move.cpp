@@ -901,14 +901,36 @@ namespace Faunus {
 
 #ifdef ENABLE_MPI
     ParallelTempering::ParallelTempering(
-        Energy::Energybase &e, Space &s, Faunus::MPI::MPIController &mpi, string pfx) :
-      Movebase(e,s,pfx), mpiPtr(&mpi) {
-        title="Parallel Tempering";
-        partner=-1;
-      }
+        InputMap &in,
+        Energy::Energybase &e,
+        Space &s,
+        Faunus::MPI::MPIController &mpi,
+        string pfx) : Movebase(e,s,pfx), mpiPtr(&mpi) {
+      title="Parallel Tempering";
+      partner=-1;
+      uoldSelf=0;
+    }
 
     void ParallelTempering::findPartner() {
-      //initiall we could make it simple and just send up and down...
+      int dr=0;
+      partner = mpiPtr->rank;
+      if (mpiPtr->random.randOne()>0.5)
+        dr++;
+      else
+        dr--;
+      if (mpiPtr->rank % 2 == 0)
+        partner+=dr;
+      else
+        partner-=dr;
+    }
+
+    bool ParallelTempering::goodPartner() {
+      assert(partner!=mpiPtr->rank);
+      if (partner>=0)
+        if (partner<mpiPtr->nproc)
+          if (partner!=mpiPtr->rank)
+            return true;
+      return false;
     }
 
     string ParallelTempering::_info() {
@@ -916,39 +938,79 @@ namespace Faunus {
       o << pad(SUB,w,"Process rank") << mpiPtr->rank << endl
         << pad(SUB,w,"Number of replicas") << mpiPtr->nproc << endl
         << endl;
+      for (auto &m : accmap)
+        o << "pair_" << m.first << " " << m.second.avg() << endl;
       return o.str();
     }
 
     void ParallelTempering::_trialMove() {
-      mt.recv(*mpiPtr, partner, spc->trial);
-      mt.send(*mpiPtr, spc->p, partner);
-      mt.waitrecv();
-      mt.waitsend();
-      assert(spc->p.size() == spc->trial.size());
-    }
+      findPartner();
+      if (goodPartner()) { 
+        pt.recv(*mpiPtr, partner, spc->trial);
+        pt.send(*mpiPtr, spc->p, partner);
+        pt.waitrecv();
+        pt.waitsend();
 
-    void ParallelTempering::_acceptMove(){
-      for (size_t i=0; i<spc->p.size(); i++)
-        spc->trial[i] = spc->p[i];
-    } 
-
-    void ParallelTempering::_rejectMove() {
-      for (size_t i=0; i<spc->p.size(); i++)
-        spc->p[i] = spc->trial[i];
+        assert(spc->p.size() == spc->trial.size() && "Particle vectors messed up by MPI");
+      }
     }
 
     double ParallelTempering::_energyChange() {
-      double du=0;
+      // old faunus: if (nvt.metropolis( (inew+jnew)-(iold+jold) + dPV )==true )
+      //assert( abs(uoldSelf)>1e-6 && "No initial self energy specified!");
+
+      if ( !goodPartner() )
+        return 0;
+      double duSelf=0, duPartner;
+
       for (auto gi : spc->g) {
-        du += pot->g_external(spc->trial,*gi) - pot->g_external(spc->p,*gi);
-        du += pot->g_internal(spc->trial,*gi) - pot->g_internal(spc->p,*gi);
+        duSelf += pot->g_external(spc->trial,*gi) - pot->g_external(spc->p,*gi);
+        duSelf += pot->g_internal(spc->trial,*gi) - pot->g_internal(spc->p,*gi);
         for (auto gj : spc->g)
           if (gi!=gj)
-            du+=pot->g2g(spc->trial,*gi,*gj) - pot->g2g(spc->p,*gi,*gj);
+            duSelf+=pot->g2g(spc->trial,*gi,*gj) - pot->g2g(spc->p,*gi,*gj);
       }
-      // ups now we need to get the replica energy!!
-      return du;
+
+      duPartner = exchangeEnergy(duSelf); // Exchange dU with partner over MPI
+
+      return duSelf-duPartner;         // final Metropolis trial energy
     }
+
+    float ParallelTempering::exchangeEnergy(float mydu) {
+      vector<float> duSelf(1), duPartner(1);
+      duSelf[0]=mydu;
+      ft.recvf(*mpiPtr, partner, duPartner); // get partner's dU
+      ft.sendf(*mpiPtr, duSelf, partner);    // send our dU to partner
+      ft.waitrecv();                         // patiently...
+      ft.waitsend();                         // ...wait for transaction
+      return duPartner[1];
+    }
+
+    string ParallelTempering::id() {
+      std::ostringstream o;
+      if (mpiPtr->rank < partner)
+        o << mpiPtr->rank << "-" << partner;
+      else
+        o << partner << "-" << mpiPtr->rank;
+      return o.str();
+    }
+
+    void ParallelTempering::_acceptMove(){
+      if ( goodPartner() ) {
+        accmap[ id() ] += 1;
+        for (size_t i=0; i<spc->p.size(); i++)
+          spc->trial[i] = spc->p[i];
+      }
+    } 
+
+    void ParallelTempering::_rejectMove() {
+      if ( goodPartner() ) {
+        accmap[ id() ] += 0;
+        for (size_t i=0; i<spc->p.size(); i++)
+          spc->p[i] = spc->trial[i];
+      }
+    }
+
 #endif
 
   }//namespace

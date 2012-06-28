@@ -5,6 +5,7 @@
 
 #include <faunus/common.h>
 #include <faunus/point.h>
+#include <faunus/slump.h>
 #include <mpi.h>
 
 namespace Faunus {
@@ -26,6 +27,24 @@ namespace Faunus {
         int rank;         //!< Rank of process
         int master;       //!< Rank number of the master
         bool isMaster();  //!< Test if current process is master
+        slump random;     //!< Random number generator for MPI calls
+        string id;        //!< Unique name associated with current rank
+    };
+
+    /*!
+     * \brief Class for transmitting floating point arrays over MPI
+     */
+    class FloatTransmitter {
+      private:
+        MPI_Request sendReq, recvReq;                                                                
+        MPI_Status sendStat, recvStat;         
+        int tag;
+      public:
+        FloatTransmitter();
+        void sendf(MPIController&, vector<float>&, int);
+        void recvf(MPIController&, int, vector<float>&); 
+        void waitsend();                                                                             
+        void waitrecv(); 
     };
 
     /*!
@@ -58,7 +77,7 @@ namespace Faunus {
      *   pt.waitsend();
      * \endcode
      */
-    class ParticleTransmitter {
+    class ParticleTransmitter : public FloatTransmitter {
       public:
         enum dataformat {XYZ, XYZQ};
         dataformat format;                            //!< Data format to send/receive - default is XYZQ
@@ -68,17 +87,11 @@ namespace Faunus {
         ParticleTransmitter();
         void send(MPIController&, const p_vec&, int); //!< Send particle vector to another node 
         void recv(MPIController&, int, p_vec&);       //!< Receive particle vector from another node
-        void waitsend();
         void waitrecv();
 
       private:
         vector<float> sendBuf, recvBuf;
-        int tag;        //!< so far unused (zero)
         p_vec *dstPtr;  //!< pointer to receiving particle vector
-
-        MPI_Request sendReq, recvReq;
-        MPI_Status sendStat, recvStat;
-
         void pvec2buf(const p_vec&); //!< Copy source particle vector to send buffer
         void buf2pvec(p_vec&);       //!< Copy receive buffer to target particle vector
     };

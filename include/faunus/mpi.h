@@ -6,6 +6,7 @@
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/slump.h>
+#include <faunus/textio.h>
 #include <mpi.h>
 
 namespace Faunus {
@@ -19,6 +20,7 @@ namespace Faunus {
      * \brief Main controller for MPI calls
      */
     class MPIController {
+      private:
       public:
         MPIController(MPI_Comm=MPI_COMM_WORLD); //!< Constructor
         ~MPIController(); //!< End of all MPI calls!
@@ -29,6 +31,7 @@ namespace Faunus {
         bool isMaster();  //!< Test if current process is master
         slump random;     //!< Random number generator for MPI calls
         string id;        //!< Unique name associated with current rank
+        std::ofstream cout; //!< Redirect stdout to here for rank-based file output
     };
 
     /*!

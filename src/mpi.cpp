@@ -12,6 +12,7 @@ namespace Faunus {
       std::ostringstream o;
       o << rank;
       id = o.str();
+      cout.open("stdout."+id);
     }
 
     MPIController::~MPIController() {

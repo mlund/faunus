@@ -86,6 +86,9 @@ namespace Faunus {
         unsigned long int cnt;           //!< total number of trial moves
         virtual bool run() const;                //!< Runfraction test
 
+        bool useAlternateReturnEnergy;   //!< Return a different energy than returned by _energyChange(). [false]
+        double alternateReturnEnergy;    //!< Alternate return energy.
+
       public:
         Movebase(Energy::Energybase&, Space&, string);//!< Constructor
         virtual ~Movebase();

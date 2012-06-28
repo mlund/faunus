@@ -1,6 +1,17 @@
 #include <faunus/textio.h>
 
 namespace Faunus {
+  /*!
+   * Please direct all output to stdout here. By default this is exactly the same
+   * as using std::cout but by using this alias it is possible to redirect all output as
+   * needed in for example MPI code.
+   */
+  std::ostream& textio::fcout = std::cout;
+
+  /*!
+   * As textio::fcout but for standard error.
+   */
+  std::ostream& textio::fcerr = std::cerr;
 
   string textio::trim(string s) {
     s.erase( std::remove_if(s.begin(), s.end(), isspace), s.end());

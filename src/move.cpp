@@ -24,6 +24,7 @@ namespace Faunus {
       dusum=0;
       w=22;
       runfraction=1;
+      useAlternateReturnEnergy=false; //this has no influence on metropolis sampling!
     }
 
     Movebase::~Movebase() {
@@ -77,6 +78,8 @@ namespace Faunus {
           utot+=du;
         }
       }
+      if (useAlternateReturnEnergy)
+        return alternateReturnEnergy;
       return utot;
     }
 
@@ -507,13 +510,13 @@ namespace Faunus {
 
     void CrankShaft::_acceptMove() {
       for (auto i : index)
-        spc->trial[i] = spc->p[i];
+        spc->p[i] = spc->trial[i];
       gPtr->cm_trial = gPtr->cm;
     }
 
     void CrankShaft::_rejectMove() {
       for (auto i : index)
-        spc->p[i] = spc->trial[i];
+        spc->trial[i] = spc->p[i];
       gPtr->cm = gPtr->cm_trial;
     }
 
@@ -909,6 +912,7 @@ namespace Faunus {
       title="Parallel Tempering";
       partner=-1;
       uoldSelf=0;
+      useAlternateReturnEnergy=true; //we don't want to return dU from partner replica (=drift)
     }
 
     void ParallelTempering::findPartner() {
@@ -937,9 +941,14 @@ namespace Faunus {
       std::ostringstream o;
       o << pad(SUB,w,"Process rank") << mpiPtr->rank << endl
         << pad(SUB,w,"Number of replicas") << mpiPtr->nproc << endl
+        << indent(SUB) << "Acceptance:" 
         << endl;
-      for (auto &m : accmap)
-        o << "pair_" << m.first << " " << m.second.avg() << endl;
+      if (cnt>0) {
+        o.precision(3);
+        for (auto &m : accmap)
+          o << indent(SUBSUB) << std::left << setw(12)
+            << m.first << setw(8) << m.second.cnt << m.second.avg()*100 << percent << endl;
+      }
       return o.str();
     }
 
@@ -959,8 +968,10 @@ namespace Faunus {
       // old faunus: if (nvt.metropolis( (inew+jnew)-(iold+jold) + dPV )==true )
       //assert( abs(uoldSelf)>1e-6 && "No initial self energy specified!");
 
-      if ( !goodPartner() )
+      if ( !goodPartner() ) {
+        alternateReturnEnergy=0;
         return 0;
+      }
       double duSelf=0, duPartner;
 
       for (auto gi : spc->g) {
@@ -973,25 +984,27 @@ namespace Faunus {
 
       duPartner = exchangeEnergy(duSelf); // Exchange dU with partner over MPI
 
+      alternateReturnEnergy=duSelf;    // Avoid energy drift when summing changes (no effect on sampling!)
+
       return duSelf-duPartner;         // final Metropolis trial energy
     }
 
     float ParallelTempering::exchangeEnergy(float mydu) {
       vector<float> duSelf(1), duPartner(1);
       duSelf[0]=mydu;
-      ft.recvf(*mpiPtr, partner, duPartner); // get partner's dU
+      ft.recvf(*mpiPtr, partner, duPartner); // ask for partner's dU
       ft.sendf(*mpiPtr, duSelf, partner);    // send our dU to partner
-      ft.waitrecv();                         // patiently...
-      ft.waitsend();                         // ...wait for transaction
-      return duPartner[1];
+      ft.waitrecv();                         // and patiently...
+      ft.waitsend();                         // ...wait for transaction to finish
+      return duPartner[1];                   // return partner energy change
     }
 
     string ParallelTempering::id() {
       std::ostringstream o;
       if (mpiPtr->rank < partner)
-        o << mpiPtr->rank << "-" << partner;
+        o << mpiPtr->rank << " <-> " << partner;
       else
-        o << partner << "-" << mpiPtr->rank;
+        o << partner << " <-> " << mpiPtr->rank;
       return o.str();
     }
 
@@ -999,7 +1012,9 @@ namespace Faunus {
       if ( goodPartner() ) {
         accmap[ id() ] += 1;
         for (size_t i=0; i<spc->p.size(); i++)
-          spc->trial[i] = spc->p[i];
+          spc->p[i] = spc->trial[i];  // copy new configuration
+        for (auto g : spc->g)
+          g->setMassCenter(*spc); // update mass centra if swap is accepter
       }
     } 
 
@@ -1007,7 +1022,7 @@ namespace Faunus {
       if ( goodPartner() ) {
         accmap[ id() ] += 0;
         for (size_t i=0; i<spc->p.size(); i++)
-          spc->p[i] = spc->trial[i];
+          spc->trial[i] = spc->p[i];   // restore old configuration
       }
     }
 

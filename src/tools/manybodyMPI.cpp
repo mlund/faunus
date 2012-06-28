@@ -11,8 +11,9 @@ int main(int argc, char** argv) {
   Faunus::MPI::MPIController mpi;
 
   string inputfile,istate,ostate;
+
   try {
-    cout << textio::splash();
+    mpi.cout << textio::splash();
     CmdLine cmd("NPT Monte Carlo simulation of rigid bodies in continuum", ' ', "0.1");
     ValueArg<string> inputArg("i","inputfile","InputMap key/value file",true,"","inputfile");
     ValueArg<string> istateArg("c","instate","Name of input statefile",false,"state","instate");
@@ -83,7 +84,7 @@ int main(int argc, char** argv) {
     utot+=pot.g_external(spc.p, *g);
   sys.init( utot );
 
-  cout << atom.info() << spc.info() << pot.info() << tit.info()
+  mpi.cout << atom.info() << spc.info() << pot.info() << tit.info()
     << textio::header("MC Simulation Begins!");
 
   while ( loop.macroCnt() ) {  // Markov chain 
@@ -101,11 +102,11 @@ int main(int argc, char** argv) {
             for (auto j=i+1; j!=pol.end(); j++)
               rdf( spc.geo->dist(i->cm,j->cm) )++;
           break;
-        case 1:
+        case 10:
           // volume move
           sys+=iso.move();
           break;
-        case 2:
+        case 20:
           // titration move
           sys+=tit.move();
           mpol.sample(pol,spc);
@@ -117,8 +118,6 @@ int main(int argc, char** argv) {
           break;
         case 4:
           sys+=temper.move();
-          for (auto g : spc.g)
-            g->setMassCenter(spc);
           break;
       }
       if ( slp_global.runtest(0.0001) ) {
@@ -132,7 +131,7 @@ int main(int argc, char** argv) {
       utot+=pot.g_external(spc.p, *g);
     sys.checkDrift( utot );
 
-    cout << loop.timing();
+    mpi.cout << loop.timing();
 
   } // end of macro loop
 
@@ -142,12 +141,12 @@ int main(int argc, char** argv) {
      sys.test(test);
      */
 
-  cout << loop.info() << sys.info() << gmv.info() << mv.info() << iso.info() << tit.info()
+  mpi.cout << loop.info() << sys.info() << gmv.info() << mv.info() << iso.info() << tit.info()
     << mpol.info() << temper.info();
 
-  rdf.save("rdf_p2p.dat"+mpi.id);
-  pqr.save("confout.pqr"+mpi.id, spc.p);
-  top.save("mytopol.top"+mpi.id, spc);
-  spc.save(ostate+mpi.id);
-  mcp.save("mdout.mdp"+mpi.id);
+  //rdf.save("rdf_p2p.dat"+mpi.id);
+  //pqr.save("confout.pqr"+mpi.id, spc.p);
+  //top.save("mytopol.top"+mpi.id, spc);
+  //spc.save(ostate+mpi.id);
+  //mcp.save("mdout.mdp"+mpi.id);
 }

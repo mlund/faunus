@@ -132,12 +132,13 @@ do
   mktit
   mkinput
   mpiexec -np 6 $exe -i $base.input -c $base.state -o $base.state 
+  cp $base.input0 $base.input
   exit
 
   # production
-  micro=2000
+  micro=10000
   mktit
   mkinput
-  $exe -i $base.input -c $base.state -o $base.state #> out
+  mpiexec -np 2 $exe -i $base.input -c $base.state -o $base.state #> out
 done
 

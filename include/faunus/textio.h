@@ -60,7 +60,11 @@ namespace Faunus {
     string indent(indentlevel);                   //!< Indent text
     string pad(indentlevel, char, const string&); //!< Pad and indent text
     string trim(string);                          //!< Remove white space from string
-  }//namespace
-}//namespace
+
+    extern std::ostream &fcout;                   //!< Alias for standard output (can be redirected)
+    extern std::ostream &fcerr;                   //!< Alias for standard error (can be redirected)
+
+  }//end of textio namespace
+}// end of Faunus namespace
 #endif
 

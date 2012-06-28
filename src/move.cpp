@@ -173,7 +173,7 @@ namespace Faunus {
       if (iparticle>-1) {
         double dp = atom[ spc->p[iparticle].id ].dp;
         assert(iparticle<(int)spc->p.size() && "Trial particle out of range");
-        assert(dp>1e-9 && "Atomic displacement parameter seems to be zero");
+        //assert(dp>1e-9 && "Atomic displacement parameter seems to be zero");
         spc->trial[iparticle].x += dir.x * dp * slp_global.randHalf();
         spc->trial[iparticle].y += dir.y * dp * slp_global.randHalf();
         spc->trial[iparticle].z += dir.z * dp * slp_global.randHalf();

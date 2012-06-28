@@ -35,6 +35,19 @@ namespace Faunus {
       MPI_Issend(&sendBuf[0], sendBuf.size(), MPI_FLOAT, dst, tag, mpi.comm, &sendReq);
     }
 
+    void ParticleTransmitter::pvec2buf(const p_vec &src) {
+      sendBuf.clear();
+      for (auto &p : src) {
+        sendBuf.push_back(p.x);
+        sendBuf.push_back(p.y);
+        sendBuf.push_back(p.z);
+        if (format==XYZQ)
+          sendBuf.push_back(p.charge);
+      }
+      for (auto i : sendExtra)
+        sendBuf.push_back(i);
+    }
+
     void ParticleTransmitter::waitsend() {
       MPI_Wait(&sendReq, &sendStat);
     }
@@ -51,23 +64,17 @@ namespace Faunus {
         recvBuf.resize( 3*dst.size() );
       if (format==XYZQ)
         recvBuf.resize( 4*dst.size() );
+
+      // resize to fit extra data (if any)
+      recvExtra.resize( sendExtra.size() );
+      recvBuf.resize( recvBuf.size() + recvExtra.size() );
+
       MPI_Irecv(&recvBuf[0], recvBuf.size(), MPI_FLOAT, src, tag, mpi.comm, &recvReq);
     }
 
     void ParticleTransmitter::waitrecv() {
       MPI_Wait(&recvReq, &recvStat);
       buf2pvec(*dstPtr);
-    }
-
-    void ParticleTransmitter::pvec2buf(const p_vec &src) {
-      sendBuf.clear();
-      for (auto &i : src) {
-        sendBuf.push_back(i.x);
-        sendBuf.push_back(i.y);
-        sendBuf.push_back(i.z);
-        if (format==XYZQ)
-          sendBuf.push_back(i.charge);
-      }
     }
 
     void ParticleTransmitter::buf2pvec(p_vec &dst) {
@@ -79,7 +86,9 @@ namespace Faunus {
         if (format==XYZQ)
           p.charge=recvBuf[i++];
       }
-      assert((size_t)i==recvBuf.size());
+      for (auto &x : recvExtra)
+        x=recvBuf[i++];
+      assert( (size_t)i==recvBuf.size() );
     }
 
   } //end of mpi namespace

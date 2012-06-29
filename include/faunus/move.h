@@ -352,7 +352,7 @@ namespace Faunus {
         int partner;            //!< Other replica (partner) to exchange with
         void findPartner();     //!< Find which replica to exchange with
         bool goodPartner();     //!< Detemine if found partner is valid
-        float exchangeEnergy(float); //!< Exchange energy with partner
+        double exchangeEnergy(double); //!< Exchange energy with partner
         string id();            //!< Get unique string to identify set of partners
 
         string _info();
@@ -365,7 +365,7 @@ namespace Faunus {
         Faunus::MPI::ParticleTransmitter pt;
       public:
         double uoldSelf;        //!< Buffer to store self energy before tempering move
-        ParallelTempering(InputMap&, Energy::Energybase&, Space&, Faunus::MPI::MPIController &mpi, string="temper_");
+        ParallelTempering(InputMap&, Energy::Energybase&, Space&, Faunus::MPI::MPIController &mpi, string="temper");
     };
 
 #endif

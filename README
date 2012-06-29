@@ -47,7 +47,8 @@ COMPILING:
   Options:
     -DENABLE_OPENMP=on|OFF            Enable OpenMP support
     -DENABLE_BABEL=ON|off             Use OpenBabel for file I/O
-    -DENABLE_TWISTER=on|OFF           Use Mersenne Twister for random numbers
+    -DENABLE_MPI=on|OFF               Build MPI programs (parallel tempering etc.)
+    -DENABLE_TWISTER=on|OFF           Use Mersenne Twister for random numbers (experimental)
     -DCMAKE_BUILD_TYPE=Debug|Release  Debug (default) or Release (faster) mode
     -DCMAKE_CXX_FLAGS_RELEASE="..."   Extra compiler options for Release mode
     -DCMAKE_CXX_FLAGS_DEBUG="..."     Extra compiler options for Debug mode

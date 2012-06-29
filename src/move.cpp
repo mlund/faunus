@@ -75,11 +75,12 @@ namespace Faunus {
         else {
           acceptMove();
           dusum+=du;
-          utot+=du;
+          if (useAlternateReturnEnergy)
+            utot+=alternateReturnEnergy;
+          else
+            utot+=du;
         }
       }
-      if (useAlternateReturnEnergy)
-        return alternateReturnEnergy;
       return utot;
     }
 
@@ -913,6 +914,7 @@ namespace Faunus {
       partner=-1;
       uoldSelf=0;
       useAlternateReturnEnergy=true; //we don't want to return dU from partner replica (=drift)
+      runfraction = in.get<double>(prefix+"_runfraction",1);
     }
 
     void ParallelTempering::findPartner() {
@@ -967,13 +969,17 @@ namespace Faunus {
     double ParallelTempering::_energyChange() {
       // old faunus: if (nvt.metropolis( (inew+jnew)-(iold+jold) + dPV )==true )
       //assert( abs(uoldSelf)>1e-6 && "No initial self energy specified!");
-
+      alternateReturnEnergy=0;
       if ( !goodPartner() ) {
-        alternateReturnEnergy=0;
         return 0;
       }
       double duSelf=0, duPartner;
 
+      duSelf=pot->all2all(spc->trial) - pot->all2all(spc->p) ; //+ pot.external();
+      for (auto g : spc->g)
+        duSelf+=pot->g_external(spc->trial, *g) - pot->g_external(spc->p, *g);
+
+      /*
       for (auto gi : spc->g) {
         duSelf += pot->g_external(spc->trial,*gi) - pot->g_external(spc->p,*gi);
         duSelf += pot->g_internal(spc->trial,*gi) - pot->g_internal(spc->p,*gi);
@@ -981,6 +987,7 @@ namespace Faunus {
           if (gi!=gj)
             duSelf+=pot->g2g(spc->trial,*gi,*gj) - pot->g2g(spc->p,*gi,*gj);
       }
+      */
 
       duPartner = exchangeEnergy(duSelf); // Exchange dU with partner over MPI
 
@@ -989,8 +996,8 @@ namespace Faunus {
       return duSelf-duPartner;         // final Metropolis trial energy
     }
 
-    float ParallelTempering::exchangeEnergy(float mydu) {
-      vector<float> duSelf(1), duPartner(1);
+    double ParallelTempering::exchangeEnergy(double mydu) {
+      vector<MPI::FloatTransmitter::floatp> duSelf(1), duPartner(1);
       duSelf[0]=mydu;
       ft.recvf(*mpiPtr, partner, duPartner); // ask for partner's dU
       ft.sendf(*mpiPtr, duSelf, partner);    // send our dU to partner

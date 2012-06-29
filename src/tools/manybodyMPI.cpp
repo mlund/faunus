@@ -1,36 +1,15 @@
 #include <faunus/faunus.h>
-#include <tclap/CmdLine.h>
 
 using namespace Faunus;
-using namespace TCLAP;
 
 typedef Geometry::Cuboid Tgeometry;
 typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, Potential::LennardJones> Tpairpot;
 
 int main(int argc, char** argv) {
   Faunus::MPI::MPIController mpi;
+  mpi.cout << textio::splash();
 
-  string inputfile,istate,ostate;
-
-  try {
-    mpi.cout << textio::splash();
-    CmdLine cmd("NPT Monte Carlo simulation of rigid bodies in continuum", ' ', "0.1");
-    ValueArg<string> inputArg("i","inputfile","InputMap key/value file",true,"","inputfile");
-    ValueArg<string> istateArg("c","instate","Name of input statefile",false,"state","instate");
-    ValueArg<string> ostateArg("o","outstate","Name of output statefile",false,"state","outstate");
-    cmd.add( inputArg );
-    cmd.add( istateArg );
-    cmd.add( ostateArg );
-    cmd.parse( argc, argv );
-    inputfile = inputArg.getValue();
-    istate = istateArg.getValue();
-    ostate = ostateArg.getValue();
-  }
-  catch (ArgException &e)  {
-    cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
-  }
-
-  InputMap mcp(inputfile);
+  InputMap mcp(mpi.prefix+"manybody.input");
   MCLoop loop(mcp);                    // class for handling mc loops
   FormatPQR pqr;                       // PQR structure file I/O
   FormatAAM aam;                       // AAM structure file I/O
@@ -77,7 +56,7 @@ int main(int argc, char** argv) {
   Analysis::RadialDistribution<float,int> rdf(0.25);
   Analysis::ChargeMultipole mpol;
 
-  spc.load(istate);
+  spc.load(mpi.prefix+"state");
 
   double utot=pot.all2all(spc.p) + pot.external();
   for (auto g : spc.g)
@@ -89,7 +68,7 @@ int main(int argc, char** argv) {
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int k,i=rand() % 5;
+      int k,i=rand() % 4;
       switch (i) {
         case 0:
           // translate and rotate molecules
@@ -106,7 +85,7 @@ int main(int argc, char** argv) {
           // volume move
           sys+=iso.move();
           break;
-        case 20:
+        case 2:
           // titration move
           sys+=tit.move();
           mpol.sample(pol,spc);
@@ -116,15 +95,15 @@ int main(int argc, char** argv) {
           mv.setGroup(salt);
           sys+=mv.move();
           break;
-        case 4:
-          sys+=temper.move();
-          break;
       }
+
       if ( slp_global.runtest(0.0001) ) {
         xtc.setbox( nonbonded->pair.geo.len );
-        xtc.save("traj.xtc"+mpi.id, spc);
+        xtc.save(mpi.prefix+"traj.xtc", spc);
       }
     } // end of micro loop
+
+    sys+=temper.move();
 
     double utot=pot.all2all(spc.p) + pot.external();
     for (auto g : spc.g)
@@ -144,9 +123,9 @@ int main(int argc, char** argv) {
   mpi.cout << loop.info() << sys.info() << gmv.info() << mv.info() << iso.info() << tit.info()
     << mpol.info() << temper.info();
 
-  //rdf.save("rdf_p2p.dat"+mpi.id);
-  //pqr.save("confout.pqr"+mpi.id, spc.p);
-  //top.save("mytopol.top"+mpi.id, spc);
-  //spc.save(ostate+mpi.id);
-  //mcp.save("mdout.mdp"+mpi.id);
+  rdf.save(mpi.prefix+"rdf_p2p.dat");
+  pqr.save(mpi.prefix+"confout.pqr", spc.p);
+  //top.save(mpi.prefix+"mytopol.top", spc);
+  mcp.save(mpi.prefix+"mdout.mdp");
+  spc.save(mpi.prefix+"state");
 }

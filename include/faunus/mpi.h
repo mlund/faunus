@@ -31,6 +31,7 @@ namespace Faunus {
         bool isMaster();  //!< Test if current process is master
         slump random;     //!< Random number generator for MPI calls
         string id;        //!< Unique name associated with current rank
+        string prefix;    //!< Unique file prefix associated with current rank
         std::ofstream cout; //!< Redirect stdout to here for rank-based file output
     };
 
@@ -39,13 +40,14 @@ namespace Faunus {
      */
     class FloatTransmitter {
       private:
-        MPI_Request sendReq, recvReq;                                                                
-        MPI_Status sendStat, recvStat;         
+        MPI_Request sendReq, recvReq;
+        MPI_Status sendStat, recvStat;
         int tag;
       public:
+        typedef double floatp;   //!< Transmission precision
         FloatTransmitter();
-        void sendf(MPIController&, vector<float>&, int);
-        void recvf(MPIController&, int, vector<float>&); 
+        void sendf(MPIController&, vector<floatp>&, int);
+        void recvf(MPIController&, int, vector<floatp>&); 
         void waitsend();                                                                             
         void waitrecv(); 
     };
@@ -67,7 +69,7 @@ namespace Faunus {
      *
      * \code
      *   int dst_rank = 1;
-     *   float extra1 = 2.34, extra2 = -1.23
+     *   floatp extra1 = 2.34, extra2 = -1.23
      *   p_vec myparticles(200); // we have 200 particles
      *
      *   Faunus::MPI::MPIController mpi;
@@ -83,9 +85,9 @@ namespace Faunus {
     class ParticleTransmitter : public FloatTransmitter {
       public:
         enum dataformat {XYZ, XYZQ};
-        dataformat format;                            //!< Data format to send/receive - default is XYZQ
-        vector<float> sendExtra;                      //!< Put extra data to send here.
-        vector<float> recvExtra;                      //!< Received extra data will be stored here
+        dataformat format;                              //!< Data format to send/receive - default is XYZQ
+        vector<floatp> sendExtra;                      //!< Put extra data to send here.
+        vector<floatp> recvExtra;                      //!< Received extra data will be stored here
 
         ParticleTransmitter();
         void send(MPIController&, const p_vec&, int); //!< Send particle vector to another node 
@@ -93,7 +95,7 @@ namespace Faunus {
         void waitrecv();
 
       private:
-        vector<float> sendBuf, recvBuf;
+        vector<floatp> sendBuf, recvBuf;
         p_vec *dstPtr;  //!< pointer to receiving particle vector
         void pvec2buf(const p_vec&); //!< Copy source particle vector to send buffer
         void buf2pvec(p_vec&);       //!< Copy receive buffer to target particle vector

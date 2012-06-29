@@ -1,6 +1,27 @@
 #!/bin/bash
 
-faunus=../../
+# Submit with sbatch command
+
+#SBATCH -t 00:00:04
+#SBATCH -J mytest
+#c__SBATCH --mail-user=mikael.lund@teokem.lu.se
+#c__SBATCH --mail-type=END
+
+# - Get exclusive access to whole node (16 cores on alarik)
+#SBATCH --exclusive
+
+# - Number of cores
+#SBATCH -n 16
+
+# - Number of nodes
+#BATCH -N 1
+
+module add openmpi/gcc
+
+# change to the execution directory
+cd $SNIC_TMP
+
+faunus=$HOME/faunus/
 exe=$faunus/src/tools/manybodyMPI
 base="manybody"
 
@@ -74,16 +95,24 @@ Atom  GLY      0     2.9    0.1    54      no
 #   GENERATE MAIN INPUT PARAMETERS
 # ----------------------------------
 function mkinput() {
+#for proc in {1..${SLURM_NPROCS}}
+for proc in {0..15}
+do
+epsilon_r=60
+if [ "$proc" == "0" ]; then epsilon_r=100; fi 
+if [ "$proc" == "1" ]; then epsilon_r=90; fi 
+if [ "$proc" == "2" ]; then epsilon_r=80; fi 
+if [ "$proc" == "3" ]; then epsilon_r=70; fi 
 echo "
 atomlist               $base.atoms
 eq_processfile         $base.titration
 
-loop_macrosteps        10
+loop_macrosteps        $macro
 loop_microsteps        $micro
 
 temperature            298     # Kelvin
-epsilon_r              78.7    # Water dielectric const
-dh_ionicstrength       0.010   # mol/l
+epsilon_r              $epsilon_r    # Water dielectric const
+dh_ionicstrength       0.00010   # mol/l
 lj_eps                 0.05    # kT
 squarewell_depth       0.0     # kT
 squarewell_threshold   1.5     # angstrom
@@ -95,10 +124,12 @@ transrot_transdp       50      # Molecular translation parameter
 transrot_rotdp         2       # Molecular rotation parameter
 
 # Molecular species - currently only two different kinds
-molecule_N1            1
+molecule_N1            2
 molecule_file1         $base.aam
-molecule_N2            1
+molecule_N2            2
 molecule_file2         $base.aam
+
+temper_runfraction     1
 
 # Atomic species - add up to ten.
 tion1                  Cl      # atom type
@@ -107,16 +138,17 @@ dpion1                 10      # diplacement parameter
 
 test_stable            yes
 test_file              $base.test
-" > $base.input
+" > n$proc.$base.input
+done
 }
 
 # ----------------------------------
 #   GENERATE INPUT MOLECULE
 # ----------------------------------
 function mkstruct() {
-echo "1
- HIS  0   0.00   0.00   0.00    -0   1  3.0
- GLY  0   2.00   0.00   1.00     0   1  2.0
+echo "2
+ UNK  0   0.00   0.00  -0.00    -3   1  2.0
+ UNK  0   5.00   0.00   0.00    +3   1  2.0
 " > ${base}.aam
 }
 
@@ -124,21 +156,27 @@ mkatoms
 mkstruct
 boxlen=100
 
+#for proc in {1..$SLURM_NPROCS}
+#do
+#done
+
 for pH in 7
 do
   # equilibration
-  rm -fR $base.state
+  rm -fR *state
+  macro=100
   micro=1000
   mktit
   mkinput
-  $exe -i $base.input -c $base.state -o $base.state 
-  #cp $base.input0 $base.input
+  mpirun -bind-to-core $exe
+  cp -p *stdout* $SLURM_SUBMIT_DIR
+  cp -p *mdout.mdp $SLURM_SUBMIT_DIR
   exit
 
   # production
   micro=10000
   mktit
   mkinput
-  mpiexec -np 2 $exe -i $base.input -c $base.state -o $base.state #> out
+  mpirun -bind-to-core $exe -i $base.input -c $base.state -o $base.state #> out
 done
 

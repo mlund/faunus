@@ -12,11 +12,13 @@ namespace Faunus {
       std::ostringstream o;
       o << rank;
       id = o.str();
-      cout.open("stdout."+id);
+      prefix = "n" + id + ".";
+      cout.open(prefix+"stdout");
     }
 
     MPIController::~MPIController() {
       MPI_Finalize();
+      //cout.close();
     }
 
     bool MPIController::isMaster() {
@@ -27,16 +29,16 @@ namespace Faunus {
       tag=0;
     }
 
-    void FloatTransmitter::sendf(MPIController &mpi, vector<float> &src, int dst) {
-      MPI_Issend(&src[0], src.size(), MPI_FLOAT, dst, tag, mpi.comm, &sendReq);
+    void FloatTransmitter::sendf(MPIController &mpi, vector<floatp> &src, int dst) {
+      MPI_Issend(&src[0], src.size(), MPI_DOUBLE, dst, tag, mpi.comm, &sendReq);
     }
 
     void FloatTransmitter::waitsend() {
       MPI_Wait(&sendReq, &sendStat);
     } 
 
-    void FloatTransmitter::recvf(MPIController &mpi, int src, vector<float> &dst) {
-      MPI_Irecv(&dst[0], dst.size(), MPI_FLOAT, src, tag, mpi.comm, &recvReq);
+    void FloatTransmitter::recvf(MPIController &mpi, int src, vector<floatp> &dst) {
+      MPI_Irecv(&dst[0], dst.size(), MPI_DOUBLE, src, tag, mpi.comm, &recvReq);
     }
 
     void FloatTransmitter::waitrecv() {

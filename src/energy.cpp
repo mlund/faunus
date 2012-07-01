@@ -2,6 +2,7 @@
 #include <faunus/point.h>
 #include <faunus/energy.h>
 #include <faunus/textio.h>
+#include <faunus/space.h>
 
 namespace Faunus {
   namespace Energy {
@@ -435,6 +436,16 @@ namespace Faunus {
         o << indent(SUBSUB) << m.first.first->name << " " << m.first.second->name
           << " " << m.second.mindist << "-" << m.second.maxdist << _angstrom << endl;
       return o.str();
+    }
+
+    double systemEnergy(Space &spc, Energy::Energybase &pot, const p_vec &p) {
+      double u = pot.external();
+      for (auto g : spc.g)
+        u += pot.g_external(p, *g) + pot.g_internal(p, *g);
+      for (size_t i=0; i<spc.g.size()-1; i++)
+        for (size_t j=i+1; j<spc.g.size(); j++)
+          u += pot.g2g(p, *spc.g[i], *spc.g[j]);
+      return u;
     }
 
   }//namespace

@@ -131,7 +131,7 @@ do
   micro=1000
   mktit
   mkinput
-  $exe -i $base.input -c $base.state -o $base.state 
+  mpiexec -np 4 $exe -i $base.input -c $base.state -o $base.state 
   #cp $base.input0 $base.input
   exit
 

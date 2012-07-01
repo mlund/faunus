@@ -59,6 +59,7 @@ namespace Faunus {
      * \li Accept with probability \f$ \min(1,e^{-\beta\Delta U}) \f$
      * \li Call either \c _acceptMove() or \c _rejectMove()
      *
+     * \note Try not to re-implement this!
      * \param n Perform move \c n times
      */
     double Movebase::move(int n) {
@@ -85,9 +86,8 @@ namespace Faunus {
     }
 
     bool Movebase::metropolis(const double &du) const {
-      if (du>0)
-        if ( slp_global.randOne()>std::exp(-du) ) // core of MC!
-          return false;
+      if ( slp_global.randOne()>std::exp(-du) ) // core of MC!
+        return false;
       return true;
     }
 
@@ -906,15 +906,19 @@ namespace Faunus {
 #ifdef ENABLE_MPI
     ParallelTempering::ParallelTempering(
         InputMap &in,
-        Energy::Energybase &e,
+        Energy::Hamiltonian &e,
         Space &s,
         Faunus::MPI::MPIController &mpi,
         string pfx) : Movebase(e,s,pfx), mpiPtr(&mpi) {
       title="Parallel Tempering";
       partner=-1;
-      uoldSelf=0;
       useAlternateReturnEnergy=true; //we don't want to return dU from partner replica (=drift)
       runfraction = in.get<double>(prefix+"_runfraction",1);
+      hamiltonian = &e;
+      pt.recvExtra.resize(1);
+      pt.sendExtra.resize(1);
+      usys=Energy::systemEnergy;
+      haveCurrentEnergy=false;
     }
 
     void ParallelTempering::findPartner() {
@@ -957,53 +961,60 @@ namespace Faunus {
     void ParallelTempering::_trialMove() {
       findPartner();
       if (goodPartner()) { 
-        pt.recv(*mpiPtr, partner, spc->trial);
-        pt.send(*mpiPtr, spc->p, partner);
+
+        pt.sendExtra[VOLUME]=spc->geo->getVolume();  // copy current volume for sending
+
+        pt.recv(*mpiPtr, partner, spc->trial); // receive particles
+        pt.send(*mpiPtr, spc->p, partner);     // send everything
         pt.waitrecv();
         pt.waitsend();
 
+        assert(pt.recvExtra[VOLUME]>1e-6 && "Invalid partner volume received.");
         assert(spc->p.size() == spc->trial.size() && "Particle vectors messed up by MPI");
       }
     }
 
-    double ParallelTempering::_energyChange() {
-      // old faunus: if (nvt.metropolis( (inew+jnew)-(iold+jold) + dPV )==true )
-      //assert( abs(uoldSelf)>1e-6 && "No initial self energy specified!");
-      alternateReturnEnergy=0;
-      if ( !goodPartner() ) {
-        return 0;
-      }
-      double duSelf=0, duPartner;
-
-      duSelf=pot->all2all(spc->trial) - pot->all2all(spc->p) ; //+ pot.external();
-      for (auto g : spc->g)
-        duSelf+=pot->g_external(spc->trial, *g) - pot->g_external(spc->p, *g);
-
-      /*
-      for (auto gi : spc->g) {
-        duSelf += pot->g_external(spc->trial,*gi) - pot->g_external(spc->p,*gi);
-        duSelf += pot->g_internal(spc->trial,*gi) - pot->g_internal(spc->p,*gi);
-        for (auto gj : spc->g)
-          if (gi!=gj)
-            duSelf+=pot->g2g(spc->trial,*gi,*gj) - pot->g2g(spc->p,*gi,*gj);
-      }
-      */
-
-      duPartner = exchangeEnergy(duSelf); // Exchange dU with partner over MPI
-
-      alternateReturnEnergy=duSelf;    // Avoid energy drift when summing changes (no effect on sampling!)
-
-      return duSelf-duPartner;         // final Metropolis trial energy
+    /*!
+     * If the system energy is already known it may be specified with this
+     * function to speed up the calculation. If not set, it will be calculated.
+     */
+    void ParallelTempering::setCurrentEnergy(double uold) {
+      currentEnergy=uold;
+      haveCurrentEnergy=true;
     }
 
+    double ParallelTempering::_energyChange() {
+      alternateReturnEnergy=0;
+      if ( !goodPartner() ) 
+        return 0;
+      double uold, du_partner;
+
+      if (haveCurrentEnergy)   // do we already know the energy?
+        uold = currentEnergy;
+      else
+        uold = usys(*spc,*pot,spc->p);
+
+      hamiltonian->setVolume( pt.recvExtra[VOLUME] ); // set new volume
+
+      double unew = usys(*spc,*pot,spc->trial);
+
+      du_partner = exchangeEnergy(unew-uold); // Exchange dU with partner (MPI)
+
+      haveCurrentEnergy=false;                // Make sure user call serCurrentEnergy() before next move
+      alternateReturnEnergy=unew-uold;        // Avoid energy drift (no effect on sampling!)
+      return (unew-uold)+du_partner;          // final Metropolis trial energy
+    }
+
+    /*!
+     * This will exchange energies with replica partner
+     * \todo Use FloatTransmitter::swapf() instead.
+     *       Use C++11 initializer list for vectors, i.e. vector<floatp> v={mydu};
+     */
     double ParallelTempering::exchangeEnergy(double mydu) {
-      vector<MPI::FloatTransmitter::floatp> duSelf(1), duPartner(1);
+      vector<MPI::FloatTransmitter::floatp> duSelf(1), duPartner;
       duSelf[0]=mydu;
-      ft.recvf(*mpiPtr, partner, duPartner); // ask for partner's dU
-      ft.sendf(*mpiPtr, duSelf, partner);    // send our dU to partner
-      ft.waitrecv();                         // and patiently...
-      ft.waitsend();                         // ...wait for transaction to finish
-      return duPartner[1];                   // return partner energy change
+      duPartner = ft.swapf(*mpiPtr, duSelf, partner);
+      return duPartner.at(0);               // return partner energy change
     }
 
     string ParallelTempering::id() {
@@ -1027,6 +1038,7 @@ namespace Faunus {
 
     void ParallelTempering::_rejectMove() {
       if ( goodPartner() ) {
+        hamiltonian->setVolume( pt.sendExtra[VOLUME] ); // restore old volume
         accmap[ id() ] += 0;
         for (size_t i=0; i<spc->p.size(); i++)
           spc->trial[i] = spc->p[i];   // restore old configuration

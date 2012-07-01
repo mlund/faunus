@@ -58,10 +58,7 @@ int main(int argc, char** argv) {
 
   spc.load(mpi.prefix+"state");
 
-  double utot=pot.all2all(spc.p) + pot.external();
-  for (auto g : spc.g)
-    utot+=pot.g_external(spc.p, *g);
-  sys.init( utot );
+  sys.init( Energy::systemEnergy(spc,pot,spc.p) );
 
   mpi.cout << atom.info() << spc.info() << pot.info() << tit.info()
     << textio::header("MC Simulation Begins!");
@@ -81,7 +78,7 @@ int main(int argc, char** argv) {
             for (auto j=i+1; j!=pol.end(); j++)
               rdf( spc.geo->dist(i->cm,j->cm) )++;
           break;
-        case 10:
+        case 1:
           // volume move
           sys+=iso.move();
           break;
@@ -103,12 +100,10 @@ int main(int argc, char** argv) {
       }
     } // end of micro loop
 
+    temper.setCurrentEnergy( sys.current() );
     sys+=temper.move();
 
-    double utot=pot.all2all(spc.p) + pot.external();
-    for (auto g : spc.g)
-      utot+=pot.g_external(spc.p, *g);
-    sys.checkDrift( utot );
+    sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) );
 
     mpi.cout << loop.timing();
 

@@ -87,7 +87,7 @@ namespace Faunus {
         virtual bool run() const;                //!< Runfraction test
 
         bool useAlternateReturnEnergy;   //!< Return a different energy than returned by _energyChange(). [false]
-        double alternateReturnEnergy;    //!< Alternate return energy.
+        double alternateReturnEnergy;    //!< Alternative return energy.
 
       public:
         Movebase(Energy::Energybase&, Space&, string);//!< Constructor
@@ -344,28 +344,56 @@ namespace Faunus {
     };
 
 #ifdef ENABLE_MPI
+    /*!
+     * \brief Class for parallel tempering (aka replica exchange) using MPI
+     * \author Mikael Lund
+     * \date Lund 2012
+     *
+     * This will perform replica exchange moves by the following steps:
+     * \li Randomly find an exchange partner with rank above/under current rank
+     * \li Exchange full particle configuration with partner
+     * \li Calculate energy change using Energy::systemEnergy. Note that this
+     *     energy function can be replaced by simply setting the ParallelTempering::usys
+     *     variable to another function with the same signature (functor wrapper).
+     * \li Send/receive energy change to/from partner
+     * \li Accept or reject based on total energy change
+     *
+     * Although not completely correct, the recommended way of performing a temper move
+     * is to do N Monte Carlo passes with regular moves and then do a tempering move.
+     * This is because the MPI nodes must be in sync and if you have a system where
+     * the random number generator calls is influenced by the Hamiltonian we could 
+     * end up in a deadlock.
+     */
     class ParallelTempering : public Movebase {
       //private:
-      public:
+      private:
+        enum extradata {VOLUME=0}; //!< Indicates structure of extra data to send
         typedef std::map<string, Average<double> > map_type;
         map_type accmap;        //!< Acceptance map
         int partner;            //!< Other replica (partner) to exchange with
-        void findPartner();     //!< Find which replica to exchange with
+        virtual void findPartner();     //!< Find which replica to exchange with
         bool goodPartner();     //!< Detemine if found partner is valid
         double exchangeEnergy(double); //!< Exchange energy with partner
         string id();            //!< Get unique string to identify set of partners
+
+        double currentEnergy;   //!< Energy of configuration before move (uold)
+        bool haveCurrentEnergy; //!< True if currentEnergy has been set
 
         string _info();
         void _trialMove();
         void _acceptMove();
         void _rejectMove();
         double _energyChange();
-        Faunus::MPI::MPIController *mpiPtr;
-        Faunus::MPI::FloatTransmitter ft;
-        Faunus::MPI::ParticleTransmitter pt;
+
+        Energy::Hamiltonian* hamiltonian;   //!< Hamiltonian class needed for volume displacement
+        Faunus::MPI::MPIController *mpiPtr; //!< Controller class for MPI calls
+        Faunus::MPI::FloatTransmitter ft;   //!< Class for transmitting floats over MPI
+        Faunus::MPI::ParticleTransmitter pt;//!< Class for transmitting particles over MPI
+
       public:
-        double uoldSelf;        //!< Buffer to store self energy before tempering move
-        ParallelTempering(InputMap&, Energy::Energybase&, Space&, Faunus::MPI::MPIController &mpi, string="temper");
+        ParallelTempering(InputMap&, Energy::Hamiltonian&, Space&, Faunus::MPI::MPIController &mpi, string="temper");
+        void setCurrentEnergy(double); //!< Set energy of configuration before move (for increased speed)
+        std::function<double (Space&, Energy::Energybase&, const p_vec&)> usys; //!< Defaults to Energy::systemEnergy but can be replaced!
     };
 
 #endif

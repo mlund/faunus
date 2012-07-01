@@ -558,6 +558,17 @@ namespace Faunus {
         double external() FOVERRIDE;
     };
 
+    /*!
+     * \brief Calculates the total system energy
+     *
+     * For a given particle vector, space, and energy class we try to calculate the
+     * total energy taking into account inter- and intra-molecular interactions as well
+     * as external potentials. While this may not work for all systems if may be a useful
+     * first guess. This is the default energy routine for Move::ParallelTempering and may
+     * also be used for checking energy drifts.
+     */
+    double systemEnergy(Space&, Energy::Energybase&, const p_vec&);
+
   }//Energy namespace
 }//Faunus namespace
 #endif

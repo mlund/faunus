@@ -16,12 +16,12 @@
 # - Number of nodes
 #BATCH -N 1
 
-module add openmpi/gcc
+#module add openmpi/gcc
 
 # change to the execution directory
-cd $SNIC_TMP
+#cd $SNIC_TMP
 
-faunus=$HOME/faunus/
+faunus=$HOME/faunus/branches/ny
 exe=$faunus/src/tools/manybodyMPI
 base="manybody"
 
@@ -95,7 +95,7 @@ Atom  GLY      0     2.9    0.1    54      no
 #   GENERATE MAIN INPUT PARAMETERS
 # ----------------------------------
 function mkinput() {
-#for proc in {1..${SLURM_NPROCS}}
+#for proc in `seq 0 $SLURM_NPROCS`
 for proc in {0..15}
 do
 epsilon_r=60
@@ -119,7 +119,7 @@ squarewell_threshold   1.5     # angstrom
 
 cuboid_len             $boxlen # Box side length Angstrom
 npt_P                  113.2   # mM
-npt_dV                 0       # log(dV)
+npt_dV                 3       # log(dV)
 transrot_transdp       50      # Molecular translation parameter
 transrot_rotdp         2       # Molecular rotation parameter
 
@@ -148,7 +148,7 @@ done
 function mkstruct() {
 echo "2
  UNK  0   0.00   0.00  -0.00    -3   1  2.0
- UNK  0   5.00   0.00   0.00    +3   1  2.0
+ HIS  0   6.00   0.00   0.00     0   1  2.0
 " > ${base}.aam
 }
 
@@ -168,15 +168,15 @@ do
   micro=1000
   mktit
   mkinput
-  mpirun -bind-to-core $exe
-  cp -p *stdout* $SLURM_SUBMIT_DIR
-  cp -p *mdout.mdp $SLURM_SUBMIT_DIR
+  mpiexec -np 4 $exe
+  #cp -p *stdout* $SLURM_SUBMIT_DIR
+  #cp -p *mdout.mdp $SLURM_SUBMIT_DIR
   exit
 
-  # production
   micro=10000
   mktit
   mkinput
-  mpirun -bind-to-core $exe -i $base.input -c $base.state -o $base.state #> out
+  mpiexec -np 4 $exe
+
 done
 

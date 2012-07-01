@@ -45,9 +45,24 @@ namespace Faunus {
       MPI_Wait(&recvReq, &recvStat);
     }
 
+    /*!
+     * \param mpi MPI controller to use
+     * \param src Vector to send
+     * \param dst Node to send/receive to/from
+     */
+    vector<FloatTransmitter::floatp> FloatTransmitter::swapf(MPIController &mpi, vector<floatp> &src, int dst) {
+      vector<floatp> v( src.size() );
+      recvf(mpi, dst, v);
+      sendf(mpi, src, dst);
+      waitsend();
+      waitrecv();
+      return v;
+    }
+
     ParticleTransmitter::ParticleTransmitter() {
       format=XYZQ;
     }
+
 
     /*!
      * \param mpi MPI controller to use

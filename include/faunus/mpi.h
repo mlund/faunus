@@ -46,10 +46,11 @@ namespace Faunus {
       public:
         typedef double floatp;   //!< Transmission precision
         FloatTransmitter();
-        void sendf(MPIController&, vector<floatp>&, int);
-        void recvf(MPIController&, int, vector<floatp>&); 
-        void waitsend();                                                                             
-        void waitrecv(); 
+        vector<floatp> swapf(MPIController&, vector<floatp>&, int); //!< Swap data with another process
+        void sendf(MPIController&, vector<floatp>&, int); //!< Send vector of floats
+        void recvf(MPIController&, int, vector<floatp>&); //!< Receive vector of floats
+        void waitsend(); //!< Wait for send to finish              
+        void waitrecv(); //!< Wait for reception to finish
     };
 
     /*!

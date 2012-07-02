@@ -295,7 +295,7 @@ namespace Faunus {
           Tgeometry geo;
           Potential::HardSphere hs;
         public:
-          HardSphereOverlap(InputMap &mcp) : geo(mcp) {};
+          HardSphereOverlap(InputMap &mcp) : geo(mcp) {} 
           inline double i2i(const p_vec &p, int i, int j) FOVERRIDE {
             return hs(p[i], p[j], geo.sqdist(p[i], p[j]) );
           }

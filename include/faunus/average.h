@@ -27,7 +27,7 @@ namespace Faunus {
   public:
     T sqsum;                                      ///< Square sum
     Average();                                 
-    virtual ~Average() {};
+    virtual ~Average() {} 
     T sum;                                        ///< Sum of all values
     unsigned long long int cnt;                   ///< Number of values
     T avg() const;                                ///< Return average
@@ -172,7 +172,7 @@ namespace Faunus {
         if (s>1e-15)
           o << " " << s;
         return o;
-      };
+      } 
   };
 
   /*!

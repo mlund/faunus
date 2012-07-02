@@ -71,16 +71,11 @@ int main(int argc, char** argv) {
     for (int i=g.front(); i<g.back(); i++)
       bonded->bonds.add(i, i+1, Potential::Harmonic(k,req)); // add bonds
   }
-  Group allpol( pol.front().front(), pol.back().back() );
+  Group allpol( pol.front().front(), pol.back().back() ); // make group w. all polymers
 
-  spc.load(istate);
+  spc.load(istate); // load old configuration from disk (if any)
 
-  double utot=pot.external();
-  utot += pot.g_internal(spc.p, salt) + pot.g_external(spc.p, salt)
-    + pot.g2g(spc.p, salt, allpol) + pot.g_internal(spc.p, allpol);
-  for (auto &g : pol)
-    utot += pot.g_external(spc.p, g);
-  sys.init( utot );
+  sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store initial total system energy
 
   cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
 
@@ -90,11 +85,11 @@ int main(int argc, char** argv) {
       switch (i) {
         case 0:
           mv.setGroup(salt);
-          sys+=mv.move( salt.size() );
+          sys+=mv.move( salt.size() ); // translate salt
           break;
         case 1:
           mv.setGroup(allpol);
-          sys+=mv.move( allpol.size() );
+          sys+=mv.move( allpol.size() ); // translate monomers
           for (auto &g : pol) {
             g.setMassCenter(spc);
             shape.sample(g,spc);
@@ -104,11 +99,11 @@ int main(int argc, char** argv) {
           k=pol.size();
           while (k-->0) {
             gmv.setGroup( pol[ rand() % pol.size() ] );
-            sys+=gmv.move();
+            sys+=gmv.move(); // translate/rotate polymers
           }
           break;
         case 3:
-          sys+=iso.move();
+          sys+=iso.move(); // isobaric volume move
           break;
       }
       for (auto i=pol.begin(); i!=pol.end()-1; i++)
@@ -119,12 +114,7 @@ int main(int argc, char** argv) {
       }
     } // end of micro loop
 
-    double utot=pot.external();
-    utot += pot.g_internal(spc.p, salt) + pot.g_external(spc.p, salt)
-      + pot.g2g(spc.p, salt, allpol) + pot.g_internal(spc.p, allpol);
-    for (auto &g : pol)
-      utot += pot.g_external(spc.p, g);
-    sys.checkDrift( utot );
+    sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p)  ); // compare energy sum with current total
 
     cout << loop.timing();
   } // end of macro loop

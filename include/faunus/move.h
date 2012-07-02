@@ -204,6 +204,13 @@ namespace Faunus {
         double threshold;  //!< Distance between particles to define a cluster
     };
 
+     /*!
+      * \brief Crank shaft move
+      * \author Kurut, Henriques, Lund ???
+      * \date Lund 2012
+      *
+      * Explain what this move does and how to use it...
+      */
     class CrankShaft : public Movebase {
       private:
         Group* gPtr;          //!< Pointer to group where move is to be performed. Set by setGroup().

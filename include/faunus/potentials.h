@@ -269,7 +269,7 @@ namespace Faunus {
           T1 sr1;
           T2 sr2;
         private:
-          string _brief() { return name; };
+          string _brief() { return name; }
           void _setScale(double s) {
             sr1.setScale(s);
             sr2.setScale(s);
@@ -302,7 +302,7 @@ namespace Faunus {
     template<class Tgeometry, class Tcoulomb=Coulomb, class Tshortranged=LennardJones>
       class CoulombSR : public PairPotentialBase {
         private:
-          string _brief() { return name; };
+          string _brief() { return name; }
         protected:
           Tshortranged sr;
           Tcoulomb el;

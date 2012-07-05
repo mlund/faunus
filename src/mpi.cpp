@@ -5,6 +5,12 @@
 namespace Faunus {
   namespace MPI {
 
+    /*!
+     * Besides initiating MPI, the current rank will be added to the global
+     * file I/O prefix, textio::prefix which is useful for saving rank specific
+     * data (parallel tempering, for example). The prefix format is
+     * \li \c "prefix + mpi%r." where \c \%r is the rank number.
+     */
     MPIController::MPIController(MPI_Comm c) : comm(c), master(0) {
       MPI_Init(NULL,NULL);
       MPI_Comm_size(comm, &nproc);
@@ -12,13 +18,13 @@ namespace Faunus {
       std::ostringstream o;
       o << rank;
       id = o.str();
-      prefix = "n" + id + ".";
-      cout.open(prefix+"stdout");
+      textio::prefix += "mpi" + id + ".";
+      cout.open(textio::prefix+"stdout");
     }
 
     MPIController::~MPIController() {
       MPI_Finalize();
-      //cout.close();
+      cout.close();
     }
 
     bool MPIController::isMaster() {
@@ -46,9 +52,14 @@ namespace Faunus {
     }
 
     /*!
+     * This will send a vector of floats and at the same time wait for the destination process
+     * to send back another vector of the same size.
+     * 
      * \param mpi MPI controller to use
      * \param src Vector to send
      * \param dst Node to send/receive to/from
+     *
+     * \todo Use MPI_Sendrecv( sendbuf, sendcount, sendtype, dest, sendtag, recvbuf, recvcount, recvtype, source, recvtag, comm, &status);
      */
     vector<FloatTransmitter::floatp> FloatTransmitter::swapf(MPIController &mpi, vector<floatp> &src, int dst) {
       vector<floatp> v( src.size() );

@@ -18,9 +18,18 @@ namespace Faunus {
 
     /*!
      * \brief Main controller for MPI calls
+     * \author Mikael Lund
+     * \date Lund 2012
+     *
+     * \code
+     * MPIController() mpi; // call this very first thing in your program
+     * cout << "I'm rank " << mpi.rank << " out of " << mpi.nproc;
+     * mpi.cout << "This will go to a file called n%j.stdout where %j is my rank"
+     * if (mpi.isMaster())
+     *   cout << "I'm the master!";
+     * \endcode
      */
     class MPIController {
-      private:
       public:
         MPIController(MPI_Comm=MPI_COMM_WORLD); //!< Constructor
         ~MPIController(); //!< End of all MPI calls!
@@ -31,12 +40,13 @@ namespace Faunus {
         bool isMaster();  //!< Test if current process is master
         slump random;     //!< Random number generator for MPI calls
         string id;        //!< Unique name associated with current rank
-        string prefix;    //!< Unique file prefix associated with current rank
         std::ofstream cout; //!< Redirect stdout to here for rank-based file output
     };
 
     /*!
      * \brief Class for transmitting floating point arrays over MPI
+     * \note If you change the floatp typedef, remember also to change to change to/from
+     *       MPI_FLOAT or MPI_DOUBLE.
      */
     class FloatTransmitter {
       private:
@@ -57,7 +67,6 @@ namespace Faunus {
      * \brief Class for sending/receiving particle vectors over MPI.
      * \date Lund 2012
      * \author Mikael Lund
-     * \note Data is passed in single floating point precision (MPI_FLOAT).
      *
      * This will take a particle vector and send selected information though MPI. It is
      * possible to send only coordinates using the dataformat XYZ or, if charges should be

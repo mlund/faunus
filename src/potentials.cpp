@@ -23,7 +23,7 @@ namespace Faunus {
     void PairPotentialBase::setScale(double s)  {
       assert(s!=0 && "Energy scaling should be non-zero.");
       _tokT=s;
-      _setScale(_tokT);  
+      _setScale(_tokT);
     }
     
     void PairPotentialBase::_setScale(double s) {}
@@ -34,7 +34,7 @@ namespace Faunus {
      * thereby reducing computational time. Therefore, to convert energy to kT,
      * multiply with the scaling factor returned by this function.
      */
-    double PairPotentialBase::tokT() { return _tokT; }
+    double PairPotentialBase::tokT() const { return _tokT; }
 
     string PairPotentialBase::brief() {
       assert(!name.empty() && "Potential must have a name.");

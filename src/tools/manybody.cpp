@@ -5,7 +5,7 @@ using namespace Faunus;
 using namespace TCLAP;
 
 typedef Geometry::Cuboid Tgeometry;
-typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, Potential::LennardJones> Tpairpot;
+typedef Potential::CombinedPairPotential<Potential::DebyeHuckel, Potential::LennardJones> Tpairpot;
 
 int main(int argc, char** argv) {
   string inputfile,istate,ostate;
@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
   UnitTest test(mcp);
 
   Energy::Hamiltonian pot;
-  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot>(mcp) );
+  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
   Space spc( pot.getGeometry() );
 
   // Add molecules
@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
           break;
       }
       if ( slp_global.runtest(0.0001) ) {
-        xtc.setbox( nonbonded->pair.geo.len );
+        xtc.setbox( nonbonded->geometry.len );
         xtc.save("traj.xtc", spc);
       }
     } // end of micro loop

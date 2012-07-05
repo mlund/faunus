@@ -3,13 +3,13 @@
 using namespace Faunus;
 
 typedef Geometry::Cuboid Tgeometry;
-typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, Potential::LennardJones> Tpairpot;
+typedef Potential::CombinedPairPotential<Potential::DebyeHuckel, Potential::LennardJones> Tpairpot;
 
 int main(int argc, char** argv) {
   Faunus::MPI::MPIController mpi;
   mpi.cout << textio::splash();
 
-  InputMap mcp(mpi.prefix+"manybody.input");
+  InputMap mcp(textio::prefix+"manybody.input");
   MCLoop loop(mcp);                    // class for handling mc loops
   FormatPQR pqr;                       // PQR structure file I/O
   FormatAAM aam;                       // AAM structure file I/O
@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
   UnitTest test(mcp);
 
   Energy::Hamiltonian pot;
-  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot>(mcp) );
+  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
   Space spc( pot.getGeometry() );
 
   // Add molecules
@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
   Analysis::RadialDistribution<float,int> rdf(0.25);
   Analysis::ChargeMultipole mpol;
 
-  spc.load(mpi.prefix+"state");
+  spc.load(textio::prefix+"state");
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );
 
@@ -95,8 +95,8 @@ int main(int argc, char** argv) {
       }
 
       if ( slp_global.runtest(0.0001) ) {
-        xtc.setbox( nonbonded->pair.geo.len );
-        xtc.save(mpi.prefix+"traj.xtc", spc);
+        xtc.setbox( nonbonded->geometry.len );
+        xtc.save(textio::prefix+"traj.xtc", spc);
       }
     } // end of micro loop
 
@@ -118,9 +118,9 @@ int main(int argc, char** argv) {
   mpi.cout << loop.info() << sys.info() << gmv.info() << mv.info() << iso.info() << tit.info()
     << mpol.info() << temper.info();
 
-  rdf.save(mpi.prefix+"rdf_p2p.dat");
-  pqr.save(mpi.prefix+"confout.pqr", spc.p);
-  //top.save(mpi.prefix+"mytopol.top", spc);
-  mcp.save(mpi.prefix+"mdout.mdp");
-  spc.save(mpi.prefix+"state");
+  rdf.save(textio::prefix+"rdf_p2p.dat");
+  pqr.save(textio::prefix+"confout.pqr", spc.p);
+  //top.save(textio::prefix+"mytopol.top", spc);
+  mcp.save(textio::prefix+"mdout.mdp");
+  spc.save(textio::prefix+"state");
 }

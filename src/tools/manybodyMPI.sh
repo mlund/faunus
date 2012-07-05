@@ -138,7 +138,7 @@ dpion1                 10      # diplacement parameter
 
 test_stable            yes
 test_file              $base.test
-" > n$proc.$base.input
+" > mpi$proc.$base.input
 done
 }
 

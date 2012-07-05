@@ -4,7 +4,7 @@
 using namespace Faunus;
 
 typedef Geometry::Cuboid Tgeometry;                // select simulation geometry
-typedef Potential::CoulombSR<Tgeometry, Potential::Coulomb, Potential::HardSphere> Tpairpot;
+typedef Potential::CombinedPairPotential<Potential::Coulomb, Potential::HardSphere> Tpairpot;
 
 int main() {
   Group g(100,1);
@@ -23,7 +23,7 @@ int main() {
   EnergyDrift sys;                     // class for tracking system energy drifts
 
   Energy::Hamiltonian pot;
-  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot>(mcp) );
+  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
   Space spc( pot.getGeometry() );
 
   // Handle particles

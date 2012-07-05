@@ -9,7 +9,7 @@ typedef Geometry::Cuboid Tgeometry;
 #else
 typedef Geometry::Sphere Tgeometry;
 #endif
-typedef Potential::CoulombSR<Tgeometry, Potential::Coulomb, Potential::HardSphere> Tpairpot;
+typedef Potential::CombinedPairPotential<Potential::Coulomb, Potential::HardSphere> Tpairpot;
 
 int main(int argc, char** argv) {
   string inputfile,istate,ostate;
@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
   UnitTest test(mcp);
 
   Energy::Hamiltonian pot;
-  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot>(mcp) );
+  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
   auto bonded    = pot.create( Energy::Bonded() );
   Space spc( pot.getGeometry() );
 

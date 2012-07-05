@@ -22,8 +22,15 @@ namespace Faunus {
     /*!
      * \brief Base class for pair potential classes
      *
-     * This is a base class for pair potentials which must implement the function operator so
-     * that the potential can work as a class function.
+     * This is a base class for all pair potentials which must implement the function operator so
+     * that the potential can work as a class function. To make a new pair potential you must
+     * implement 1) a function that takes two particles as arguments as well as the squared distance
+     * between them (i.e. the function operator), and 2)
+     * a brief information string (both are pure virtual). The unit of the
+     * returned energy is arbitrary but you *must* ensure that when multiplied by tokT() that
+     * it is converted to kT units (thermal energy). By default _tokT=1 and it is a good policy
+     * to return energies in kT. Several pair potentials can be combined by the class template
+     * Potential::CombinedPairPotential.
      */
     class PairPotentialBase {
       private:
@@ -36,7 +43,7 @@ namespace Faunus {
         string name;             //!< Short (preferably one-word) description of the core potential
         string brief();          //!< Brief, one-lined information string
         void setScale(double=1); //!< Set scaling factor
-        double tokT();           //!< Convert returned energy to kT.
+        double tokT() const;     //!< Convert returned energy to kT.
 
         /*!
          * \brief Particle-particle energy divided by tokT()
@@ -49,6 +56,7 @@ namespace Faunus {
 
     /*!
      * \brief Harmonic pair potential
+     * \note We do not multiply with 1/2 which must be included in the supplied force constant, k
      *
      * The harmonic potential has the form \f$ \beta u_{ij} = k(r_{ij}-r_{eq})^2 \f$ where k is the force constant
      * (kT/angstrom^2) and req is the equilibrium distance (angstrom).
@@ -58,7 +66,7 @@ namespace Faunus {
         string _brief();
         void _setScale(double);
       public:
-        double k;   //!< Force constant (kT/angstrom squared)
+        double k;   //!< Force constant (kT/A^2) - Did you rember to divide by two? See note.
         double req; //!< Equilibrium distance (angstrom)
         Harmonic(double=0, double=0);
         double operator() (const particle&, const particle&, double) const FOVERRIDE; //!< Pair interaction energy (kT)
@@ -127,10 +135,11 @@ namespace Faunus {
         void _setScale(double);
       public:
         double threshold;                           //!< Threshold between particle *surface* [A]
-        double depth;                               //!< Energy depth [kT]
+        double depth;                               //!< Energy depth [kT] (positive number)
         SquareWell(InputMap&, string="squarewell"); //!< Constructor
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          if ( sqrt(r2)-a.radius-b.radius<threshold )
+          double d=a.radius+b.radius+threshold;
+          if ( r2 < d*d )
             return -depth;
           return 0;
         }
@@ -152,7 +161,6 @@ namespace Faunus {
      * \f$ h_i=(R_i+R_s)*(\frac{(R_i+R_s)^2-(R_j+R_s)^2)+r_{ij}^2}{2r_{ij}(R_i+R_s)}\f$
      *
      */
-
     class SquareWellHydrophobic : public SquareWell {
       public:
         SquareWellHydrophobic(InputMap&, string="squarewell"); //!< Constructor
@@ -205,9 +213,6 @@ namespace Faunus {
       protected:
       double depsdt;      //!< \f$ T\partial \epsilon_r / \epsilon_r \partial T = -1.37 \f$
       double lB;          //!< Bjerrum length (angstrom)
-      public:
-      Coulomb(InputMap&); //!< Construction from InputMap
-
       /*!
        * \brief Particle-particle energy
        * \param zz Charge number product i.e. \f$z_az_b = q_aq_b/e^2\f$
@@ -217,6 +222,9 @@ namespace Faunus {
       inline double energy(double zz, double r) const {
         return zz/r;
       }
+
+      public:
+      Coulomb(InputMap&); //!< Construction from InputMap
 
       /*! \returns \f$\beta u/l_B\f$ */
       inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
@@ -237,12 +245,12 @@ namespace Faunus {
         string _brief();
       protected:
         double c,k;
+        inline double energy(double zz, double r) const { return zz/r * exp(-k*r); }
       public:
         DebyeHuckel(InputMap&);       //!< Construction from InputMap
         double ionicStrength() const; //!< Returns the ionic strength (mol/l)
         double debyeLength() const;   //!< Returns the Debye screening length (angstrom)
         double entropy(double, double) const;//!< Returns the interaction entropy 
-        inline double energy(double zz, double r) const { return zz/r * exp(-k*r); }
         /*! \returns \f$\beta w/l_B\f$ */
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
           return energy(a.charge*b.charge, sqrt(r2));
@@ -254,13 +262,19 @@ namespace Faunus {
      * \brief Combines two PairPotentialBases
      * \date Lund, 2012
      * \author Mikael Lund
+     * \todo Optimize setScale
      *
-     * This simply combines two PairPotentialBases -- typically short-ranged such as
-     * Lennard-Jones and SquareWell, for example. This can then be mixed with electrostatics
-     * using the CoulombSR template
+     * This simply combines two PairPotentialBases. The combined potential can subsequently
+     * be used as a normal pair potential and even be combined with a third potential and
+     * so forth.
+     *
      * \code
+     *   // mix two and three pair potentials
      *   using namespace Potential;
-     *   typedef CombinedPairPotential< LennardJones, SquareWell > srpot;
+     *   typedef CombinedPairPotential< LennardJones, SquareWell > Tpairpot1;
+     *   typedef CombinedPairPotential< Tpairpot1, Coulomb > Tpairpot2;
+     *   Tpairpot2 mypairpot;
+     *   std::cout << mypairpot.info();
      * \endcode
      */
     template<class T1, class T2>
@@ -271,15 +285,15 @@ namespace Faunus {
         private:
           string _brief() { return name; }
           void _setScale(double s) {
-            sr1.setScale(s);
-            sr2.setScale(s);
+            //sr2.setScale( s*sr1.tokT() );
+            //sr1.setScale( s );
           }
         public:
           CombinedPairPotential(InputMap &in) : sr1(in), sr2(in) {
             name=sr1.name+"+"+sr2.name;
           }
           inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-            return sr1(a,b,r2) + sr2(a,b,r2);
+            return sr1.tokT()*sr1(a,b,r2) + sr2.tokT()*sr2(a,b,r2);
           }
           string info(char w=20) {
             std::ostringstream o;
@@ -288,8 +302,9 @@ namespace Faunus {
           }
       };
 
-    /*!
+    /*
      * \brief Combined electrostatic/short ranged pair potential
+     * \note OUTDATED
      *
      * PairPotentialBase classes do not need to implement distance calculation functions
      * as the operator() takes the squared distance as input. For nonbonded interactions we
@@ -298,7 +313,6 @@ namespace Faunus {
      * that explicitly handles the simulation Geometry. Note that the surrounding energy
      * loops in the Energy namespace should point to this Geometry so as to handle volume
      * fluctuations etc.
-     */
     template<class Tgeometry, class Tcoulomb=Coulomb, class Tshortranged=LennardJones>
       class CoulombSR : public PairPotentialBase {
         private:
@@ -326,6 +340,7 @@ namespace Faunus {
             return o.str();
           }
       };
+     */
 
     class MultipoleEnergy {
       public:

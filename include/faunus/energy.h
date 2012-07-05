@@ -140,37 +140,38 @@ namespace Faunus {
      * Tpotential is expected to be a pair potential with the following
      * properties:
      * \li pair(const InputMap&);
-     * \li double pair.energy(const particle&, const particle&);
+     * \li double pairpotconst particle&, const particle&, double sqdist);
      * \li double pait.tokT();
      */
-    template<class Tpotential>
+    template<class Tpairpot, class Tgeometry>
       class Nonbonded : public Energybase {
         private:
           string _info() {
-            return pair.info(25);
+            return pairpot.info(25);
           }
         public:
-          Tpotential pair;
-          Nonbonded(InputMap &in) : pair(in) {
-            name="Nonbonded N" + textio::squared + " - " + pair.name;
-            geo=&pair.geo;
+          Tgeometry geometry;
+          Tpairpot pairpot;
+          Nonbonded(InputMap &in) : geometry(in), pairpot(in) {
+            name="Nonbonded N" + textio::squared + " - " + pairpot.name;
+            geo=&geometry;
           }
 
           Geometry::Geometrybase& getGeometry() {
-            geo=&pair.geo;
+            geo=&geometry;
             return Energybase::getGeometry();
           }
 
           //!< Particle-particle energy (kT)
           inline double p2p(const particle &a, const particle &b) FOVERRIDE {
-            return pair.energy(a,b)*pair.tokT();
+            return pairpot( a,b,geometry.sqdist(a,b))*pairpot.tokT();
           }
 
           double all2p(const p_vec &p, const particle &a) FOVERRIDE {
             double u=0;
             for (auto &b : p)
-              u+=pair.energy(a,b);
-            return u*pair.tokT();
+              u+=pairpot(a,b,geometry.sqdist(a,b));
+            return u*pairpot.tokT();
           }
 
           double all2all(const p_vec &p) FOVERRIDE {
@@ -178,12 +179,12 @@ namespace Faunus {
             double u=0;
             for (int i=0; i<n-1; ++i)
               for (int j=i+1; j<n; ++j)
-                u+=pair.energy( p[i],p[j] );
-            return u*pair.tokT();
+                u+=pairpot( p[i],p[j],geometry.sqdist(p[i],p[j]) );
+            return u*pairpot.tokT();
           }
 
           double i2i(const p_vec &p, int i, int j) FOVERRIDE {
-            return pair.tokT()*pair.energy(p[i],p[j]);
+            return pairpot.tokT()*pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
           }
 
           double i2g(const p_vec &p, Group &g, int j) FOVERRIDE {
@@ -193,23 +194,23 @@ namespace Faunus {
             int len=g.back()+1;
             if (j>=g.front() && j<=g.back()) {   //j is inside g - avoid self interaction
               for (int i=g.front(); i<j; i++)
-                u+=pair.energy(p[i],p[j]);
+                u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
               for (int i=j+1; i<len; i++)
-                u+=pair.energy(p[i],p[j]);
+                u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
             } else                        //simple - j not in g
               for (int i=g.front(); i<len; i++)
-                u+=pair.energy(p[i],p[j]);
-            return pair.tokT()*u;  
+                u+=pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]));
+            return pairpot.tokT()*u;  
           }
 
           double i2all(const p_vec &p, int i) FOVERRIDE {
             double u=0;
             int n=(int)p.size();
             for (int j=0; j<i; ++j)
-              u+=pair.energy( p[i], p[j] );
+              u+=pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]) );
             for (int j=i+1; j<n; ++j)
-              u+=pair.energy( p[i], p[j] );
-            return u*pair.tokT();
+              u+=pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]) );
+            return u*pairpot.tokT();
           }
 
           double g2g(const p_vec &p, Group &g1, Group &g2) FOVERRIDE {
@@ -220,8 +221,8 @@ namespace Faunus {
 #pragma omp parallel for reduction (+:u) schedule (dynamic)
             for (int i=g1.front(); i<ilen; ++i)
               for (int j=g2.front(); j<jlen; ++j)
-                u+=pair.energy(p[i],p[j]);
-            return pair.tokT()*u;
+                u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
+            return pairpot.tokT()*u;
           }
 
           double g2all(const p_vec &p, Group &g) FOVERRIDE {
@@ -232,11 +233,11 @@ namespace Faunus {
 #pragma omp parallel for reduction (+:u)
             for (int i=g.front(); i<ng; ++i) {
               for (int j=0; j<g.front(); j++)
-                u += pair.energy(p[i],p[j]);
+                u += pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]) );
               for (int j=ng; j<np; j++)
-                u += pair.energy(p[i],p[j]);
+                u += pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]) );
             }
-            return u*pair.tokT();
+            return u*pairpot.tokT();
           }
 
           double g_internal(const p_vec &p, Group &g) FOVERRIDE { 
@@ -246,8 +247,8 @@ namespace Faunus {
             int step=1,n=g.back()+1;
             for (int i=g.front(); i<n-step; i++)
               for (int j=g.front()+step*((i-g.front())/step+1); j<n; j++)
-                u+=pair.energy(p[i],p[j]);
-            return pair.tokT()*u;
+                u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
+            return pairpot.tokT()*u;
           }
 
           double v2v(const p_vec &p1, const p_vec &p2) FOVERRIDE {
@@ -259,13 +260,13 @@ namespace Faunus {
           }
       };
 
-    template<class Tpotential>
-      class Nonbonded_CG : public Nonbonded<Tpotential> {
-        using Nonbonded<Tpotential>::geo;
-        using Nonbonded<Tpotential>::name;
+    template<class Tpairpot, class Tgeometry>
+      class Nonbonded_CG : public Nonbonded<Tpairpot, Tgeometry> {
+        using Nonbonded<Tpairpot,Tgeometry>::geo;
+        using Nonbonded<Tpairpot,Tgeometry>::name;
         public:
         double cut;
-        Nonbonded_CG(InputMap &in) : Nonbonded<Tpotential>(in) {
+        Nonbonded_CG(InputMap &in) : Nonbonded<Tpairpot, Tgeometry>(in) {
           name+="(Molecular Group CG)";
         }
 
@@ -282,7 +283,7 @@ namespace Faunus {
               }
             }
           }
-          return Nonbonded<Tpotential>::g2g(p,g1,g2);
+          return Nonbonded<Tpairpot, Tgeometry>::g2g(p,g1,g2);
         }
       };
 
@@ -329,11 +330,11 @@ namespace Faunus {
       };
 
     //or simply add pointer to nonbonded<T>
-    template<class Tpotential>
-      class Exclusions : public Nonbonded<Tpotential> {
+    template<class Tpairpot, class Tgeometry>
+      class Exclusions : public Nonbonded<Tpairpot,Tgeometry> {
         public:
           vector< std::pair<int,int> > pairs;
-          Exclusions(InputMap &in) : Nonbonded<Tpotential>(in) {}
+          Exclusions(InputMap &in) : Nonbonded<Tpairpot,Tgeometry>(in) {}
           //virtual double i2i(const p_vec &p, int i, int j) { return 0; }
       };
 

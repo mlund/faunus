@@ -7,9 +7,8 @@ namespace Faunus {
   /*!
    * \brief Namespace for text related operations: formatting, special characters etc.
    *
-   * Unless using the macro definition AVOID_UNIVODE, Faunus will use UTF-16 unicode
-   * output to print fancy output with mathematical symbols, greek letters
-   * etc.
+   * Unless using the macro definition AVOID_UNICODE, Faunus will use UTF-16 unicode
+   * output to print fancy output with mathematical symbols, greek letters etc.
    */
   namespace textio {
     enum indentlevel {TITLE=0,SUB=2,SUBSUB=4};
@@ -60,6 +59,8 @@ namespace Faunus {
     string indent(indentlevel);                   //!< Indent text
     string pad(indentlevel, char, const string&); //!< Pad and indent text
     string trim(string);                          //!< Remove white space from string
+
+    static std::string prefix;                    //!< Unique prefix for current job. Use for file I/O.
 
     extern std::ostream &fcout;                   //!< Alias for standard output (can be redirected)
     extern std::ostream &fcerr;                   //!< Alias for standard error (can be redirected)

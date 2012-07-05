@@ -3,7 +3,7 @@
 using namespace Faunus;
 
 typedef Geometry::Sphere Tgeometry;
-typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, Potential::LennardJones> Tpairpot;
+typedef Potential::CombinedPairPotential<Potential::DebyeHuckel, Potential::LennardJones> Tpairpot;
 
 int main() {
   InputMap mcp("input");
@@ -14,7 +14,7 @@ int main() {
   UnitTest test(mcp);
 
   Energy::Hamiltonian pot;
-  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot>(mcp) );
+  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
   Space spc( pot.getGeometry() );
 
   Move::SwapMove tit(mcp,pot,spc);

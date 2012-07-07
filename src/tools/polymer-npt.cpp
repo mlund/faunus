@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
     g.name="Polymer";
     spc.enroll(g);
     for (int i=g.front(); i<g.back(); i++)
-      bonded->bonds.add(i, i+1, Potential::Harmonic(k,req)); // add bonds
+      bonded->add(i, i+1, Potential::Harmonic(k,req)); // add bonds
   }
   Group allpol( pol.front().front(), pol.back().back() ); // make group w. all polymers
 

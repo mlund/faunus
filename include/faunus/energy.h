@@ -6,6 +6,7 @@
 #include <faunus/group.h>
 #include <faunus/textio.h>
 #include <faunus/potentials.h>
+#include <faunus/auxiliary.h>
 
 // http://publib.boulder.ibm.com/infocenter/iadthelp/v8r0/index.jsp?topic=/com.ibm.xlcpp111.linux.doc/language_ref/variadic_templates.html
 //
@@ -19,89 +20,21 @@ namespace Faunus {
    */
   namespace Energy {
 
-    /*!
-     * \brief General class for handling pairs of particles
-     * \date Lund, October 2011
-     *
-     * This is a general class for handling properties for pairs. One example is bonds between
-     * particles, identified through the two particle index. Properties are added through to
-     * add() template function which can also handle derived classes of Tpairprop. Upon adding
-     * new properties, space is dynamically allocated inside the class for each property object.
-     */
-    template<class Tpairprop, typename Tij=int>
-      class ParticlePairs {
-        typedef shared_ptr<Tpairprop> PropPtr;
-        private:
-        vector<PropPtr> created; //!< list of allocated pair properties
-        protected:
-        std::map<Tij, std::map<Tij, PropPtr> > list;
-        string name;
-        public:
-        template<typename Tderived>
-          void add(Tij i, Tij j, Tderived p) {
-            assert(i!=j); //debug
-            if (i!=j) {
-              created.push_back( shared_ptr<Tderived>(new Tderived(p)) ); 
-              list[i][j]=created.back();
-              list[j][i]=created.back();
-            }
-          }
-
-        //!< \brief Retrieve reference to bond via (i,j) operator
-        Tpairprop& operator() (Tij i, Tij j) {
-          assert( list[i][j]!=nullptr ); //debug
-          return *list[i][j];
-        }
-
-        string info() {
-          using namespace Faunus::textio;
-          std::ostringstream o;
-          o << indent(SUBSUB) << std::left
-            << setw(7) << "i" << setw(7) << "j" << endl;
-          for (auto i : list)
-            for (auto j : list[i.first])
-              if (i.first < j.first)
-                o << indent(SUBSUB) << std::left << setw(7) << i.first
-                  << setw(7) << j.first << j.second->brief() << endl;
-          return o.str();
-        }
-      };
-
-    /*!
-     * \brief Class for handling bond pairs
-     * \date Lund, October 2011
-     * \author Mikael Lund
-     *
-     * Example:
-     * \code
-     *    vector<particle> p(...);            // particle vector
-     *    int i=10, j=11;                     // particle index
-     *    Energy::ParticleBonds bonds;
-     *    bonds.add(i, j, Potential::Harmonic(0.1,5.0) );
-     *    std::cout << bonds.info();
-     *    double rij2 = ... ;                 // squared distance between i and j
-     *    double u = bonds(i,j)( p[i], p[j], rij2 ); // i j bond energy
-     * \endcode
-     */
-    class ParticleBonds : public ParticlePairs<Potential::PairPotentialBase,int> {
-      typedef ParticlePairs<Potential::PairPotentialBase> pairs;
-      public:
-      ParticleBonds();
-      double i2i(Geometry::Geometrybase&, const p_vec&, int, int);    //!< Bond energy of i'th particle with j'th
-      double totalEnergy(Geometry::Geometrybase&, const p_vec&, int); //!< Bond energy of i'th particle (kT)
-      double totalEnergy(Geometry::Geometrybase&, const p_vec&, const Group&); //!< Bond energy of group (kT)
-      double totalEnergy(Geometry::Geometrybase&, const p_vec&); //!< Total bond energy of all bonds (kT)
-    };
 
     /*!
      *  \brief Base class for energy evaluation
-     *  \note All energy functions are expected to return energies in units of kT.
      *
      *  This base class defines functions for evaluating interactions between particles,
-     *  groups, external potentials etc. By default all energy functions returns ZERO
+     *  groups, external potentials etc. By default all energy functions return ZERO
      *  and derived classes are expected only to implement functions relevant for certain
      *  properties. I.e. a derived class for non-bonded interactions are not expected to
      *  implement i_internal(), for example.
+     *
+     *  \note All energy functions are expected to return energies in units of kT.
+     *  \todo Add setVolume() function such that each derived class may have it's own
+     *        Geometry instance (if needed). This will significantly simplify the
+     *        Hamiltonian class and increase performance by avoiding calling
+     *        distance functions via the "geo" pointer.
      */
     class Energybase {
       private:
@@ -115,6 +48,7 @@ namespace Faunus {
         virtual ~Energybase();
         virtual Geometry::Geometrybase& getGeometry();        // Reference to geometry used for interactions
         bool setGeometry( Geometry::Geometrybase& );          // Set Geometrybase
+        virtual void setVolume(double);                       //!< Set volume of used Geometry
         virtual double p2p(const particle&, const particle&); // Particle-particle energy
         virtual double all2p(const p_vec&, const particle&);  // Particle-Particle vector energy
         virtual double all2all(const p_vec&);                 // All inter-particle energies (N^2)
@@ -339,27 +273,31 @@ namespace Faunus {
       };
 
     /*!
-     * \brief Energy class for bonded interactions
+     * \brief Class for handling bond pairs
+     * \date Lund, 2011-2012
+     * \author Mikael Lund
      *
      * Takes care of bonded interactions and can handle mixed bond types.
      * Example:
      * \code
-     * Energy::Bonded b(myGeometry);
-     * Potential::Harmonic h(k, req);
-     * b.bonds.add(10,12,h); // bond particle 10 and 12 
+     *    vector<particle> p(...);            // particle vector
+     *    int i=10, j=11;                     // particle index
+     *    Energy::Bonded b;
+     *    b.add(i, j, Potential::Harmonic(0.1,5.0) );
+     *    std::cout << b.info();
+     *    double rij2 = ... ;                 // squared distance between i and j
+     *    double u = b(i,j)( p[i], p[j], rij2 ); // i j bond energy in kT
      * \endcode
      */
-    class Bonded : public Energy::Energybase {
+    class Bonded : public Energybase, public pair_list<Potential::PairPotentialBase> {
       private:
         string _info();
       public:
         Bonded();
         Bonded(Geometry::Geometrybase&);
-        ParticleBonds bonds;
-        //double i2i(const p_vec&, int, int);
-        //double i2g(const p_vec&, Group&, int);
         double i2all(const p_vec&, int) FOVERRIDE;
-        double g_internal(const p_vec&, Group &) FOVERRIDE;
+        double g_internal(const p_vec&, Group&) FOVERRIDE;
+        double total(const p_vec&);
     };
 
     /*!
@@ -495,12 +433,14 @@ namespace Faunus {
      *
      * This energy class will constrain the mass center separation between selected groups to a certain
      * interval. This can be useful to sample rare events and the constraint is implemented as an external
-     * groups energy that return infinity if the mass center separation are outside the defined range.
-     * An arbitrary number of group pairs can be added with the addPair() command. In the following example,
-     * the distance between mygroup1 and mygroup2 are constrained to the range [10:50] angstrom:
+     * group energy that return infinity if the mass center separation are outside the defined range.
+     * An arbitrary number of group pairs can be added with the addPair() command, although one would
+     * rarely want to have more than one.
+     * In the following example,
+     * the distance between \c mygroup1 and \c mygroup2 are constrained to the range \c [10:50] angstrom:
      * \code
      * Energy::Hamiltonian pot;
-     * auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot>(mcp) );
+     * auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
      * auto constrain = pot.create( Energy::MassCenterConstrain(pot.getGeometry()) );
      * constrain->addPair( mygroup1, mygroup2, 10, 50); 
      * \endcode
@@ -511,30 +451,7 @@ namespace Faunus {
         struct data {
           double mindist, maxdist;
         };
-        /*!
-         * This is a template for storing unordered pairs of data T.
-         * That is (a,b)==(b,a). The < operator is implemented so the pairtype
-         * can be used in STL maps etc.
-         */
-        template<class T> class mypair {
-          public:
-            T first, second;
-            mypair() {}
-            mypair(T a, T b) {
-              first = a;
-              second = b;
-              if (a<b)
-                std::swap(a,b);
-            }
-            bool operator==(const mypair<T> &a) const {
-              if (a.first==first && a.second==second) return true;
-              if (a.first==second && a.second==first) return true;
-              return false;
-            }
-            bool operator<(const mypair<T> &a) const { return (a.first < first) ? true : false; }
-            bool find(const T &a) const { return (a==first || a==second) ? true : false; }
-        };
-        std::map< mypair<Faunus::Group*>, data> gmap;
+        std::map< pair_permutable<Faunus::Group*>, data> gmap;
       public:
         void addPair(Group&, Group&, double, double);
         MassCenterConstrain(Geometry::Geometrybase&);
@@ -564,7 +481,7 @@ namespace Faunus {
      *
      * For a given particle vector, space, and energy class we try to calculate the
      * total energy taking into account inter- and intra-molecular interactions as well
-     * as external potentials. While this may not work for all systems if may be a useful
+     * as external potentials. While this may not work for all systems it may be a useful
      * first guess. This is the default energy routine for Move::ParallelTempering and may
      * also be used for checking energy drifts.
      */

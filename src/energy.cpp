@@ -22,6 +22,16 @@ namespace Faunus {
       return *geo;
     }
 
+    /*!
+     * This function sets the volume of the Geometry used for the energy calculations.
+     * Currently this is accessed through the geo pointer, but in the future each Energybase
+     * derivative who needs a Geometry should have it's own instance of a Geometry.
+     */
+    void Energybase::setVolume(double vol) {
+      if (geo!=nullptr)
+        geo->setVolume(vol);
+    }
+
     // external particle interactions
     double Energybase::all2p(const p_vec &p, const particle &a) { return 0; }
     double Energybase::p2p(const particle &a, const particle &b) { return 0; }
@@ -54,28 +64,6 @@ namespace Faunus {
         o << textio::header("Energy: " + name)
           << _info();
       return o.str();
-    }
-
-    Bonded::Bonded() {
-      name="Bonded Particles";
-      geo=nullptr;
-    }
-
-    Bonded::Bonded(Geometry::Geometrybase &g) {
-      name="Bonded";
-      geo=&g;
-    }
-
-    double Bonded::i2all(const p_vec &p, int i) {
-      return bonds.totalEnergy(*geo, p, i);
-    }
-
-    double Bonded::g_internal(const p_vec &p, Group &g) {
-      return bonds.totalEnergy(*geo, p, g);
-    }
-
-    string Bonded::_info() {
-      return bonds.info();
     }
 
     ExternalPressure::ExternalPressure(Geometry::Geometrybase &e, double pressure) {
@@ -133,10 +121,9 @@ namespace Faunus {
       baselist.push_back( &e );
     }
 
-    void Hamiltonian::setVolume(double V) {
-      for (auto b : baselist )
-        if ( &b->getGeometry() != nullptr )
-          b->getGeometry().setVolume(V);
+    void Hamiltonian::setVolume(double vol) {
+      for (auto e : baselist )
+        e->setVolume(vol);
     }
 
     double Hamiltonian::all2all(const p_vec &p) {
@@ -262,53 +249,62 @@ namespace Faunus {
       return o.str();
     }
 
-    ParticleBonds::ParticleBonds() {
-      pairs::name+="Particle Bonds";
+    Bonded::Bonded() {
+      name="Bonded particles";
+      geo=nullptr;
     }
 
-    double ParticleBonds::i2i(Geometry::Geometrybase &geo, const p_vec &p, int i, int j) {
-      assert(!"unimplemented!");
-      return 0;
+    Bonded::Bonded(Geometry::Geometrybase &g) {
+      name="Bonded particles";
+      geo=&g;
     }
 
-    double ParticleBonds::totalEnergy(Geometry::Geometrybase &geo, const p_vec &p, int i) {
-      assert( &geo!=nullptr );   //debug
+    string Bonded::_info() {
+      using namespace Faunus::textio;
+      std::ostringstream o;
+      o << indent(SUBSUB) << std::left
+        << setw(7) << "i" << setw(7) << "j" << endl;
+      for (auto &m : list)
+        o << indent(SUBSUB) << std::left << setw(7) << m.first.first
+          << setw(7) << m.first.second << m.second->brief() << endl;
+      return o.str();
+    }
+
+    double Bonded::i2all(const p_vec &p, int i) {
+      assert(geo!=nullptr);  //debug
       assert( i<(int)p.size() ); //debug
-      double u=0;
-      for (auto &m2 : pairs::list[i])
-        u+=m2.second->tokT() * m2.second->operator()( p[i], p[m2.first], geo.sqdist( p[i], p[m2.first] ) );
-      return u;
-    }
 
-    //!< Return the total bond energy by considering each bond pair exactly once (kT)
-    double ParticleBonds::totalEnergy(Geometry::Geometrybase &geo, const p_vec &p) {
-      assert(&geo!=nullptr);  //debug
-      std::set<int> done;
       double u=0;
-      for (auto &m1 : pairs::list) {
-        for (auto &m2 : m1.second ) {
-          if ( done.find(m2.first)==done.end() ) {
-            assert(m1.first<(int)p.size()); //debug
-            assert(m2.first<(int)p.size()); //debug
-            u += m2.second->tokT() * m2.second->operator()( p[m1.first], p[m2.first], geo.sqdist( p[m1.first], p[m2.first] ) );
-          }
-        }
-        done.insert(m1.first); // exclude index from subsequent loops
+      for (auto &m : list) {
+        int j=m.first.first;
+        int k=m.first.second;
+        if (i==j || i==k)
+          u+=m.second->tokT() * m.second->operator()( p[j], p[k], geo->sqdist( p[j], p[k] ) );
       }
       return u;
     }
 
-    double ParticleBonds::totalEnergy(Geometry::Geometrybase &geo, const p_vec &p, const Group &g) {
+    double Bonded::total(const p_vec &p) {
       assert(&geo!=nullptr);  //debug
-      std::set<int> done;
       double u=0;
-      for (auto i=g.front(); i<=g.back(); i++) {
-        for (auto &m2 : pairs::list[i]) {
-          if ( done.find(m2.first)==done.end() ) {
-            u += m2.second->tokT() * m2.second->operator()( p[i], p[m2.first], geo.sqdist( p[i], p[m2.first] ) );
-          }
-        }
-        done.insert(i);
+      for (auto &m : list) {
+        int i=m.first.first;
+        int j=m.first.second;
+        assert(i>=0 && i<(int)p.size() && j>=0 && j<(int)p.size()); //debug
+        u += m.second->tokT() * m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+      }
+      return u;
+    }
+
+    double Bonded::g_internal(const p_vec &p, Group &g) {
+      assert(geo!=nullptr);  //debug
+      double u=0;
+      for (auto &m : list) {
+        int i=m.first.first;
+        int j=m.first.second;
+        assert(i>=0 && i<(int)p.size() && j>=0 && j<(int)p.size()); //debug
+        if (g.find(i) || g.find(j))
+          u += m.second->tokT() * m.second->operator()( p[i],p[j],geo->sqdist( p[i],p[j] ) );
       }
       return u;
     }
@@ -389,7 +385,7 @@ namespace Faunus {
     RestrictedVolumeCM::RestrictedVolumeCM(InputMap &in, string prefix) : RestrictedVolume(in,prefix) {
       name+=" (mass center)";
     }
- 
+
     double RestrictedVolumeCM::g_external(const p_vec &p, Group &g) {
       if (std::find(groups.begin(), groups.end(), &g)!=groups.end())
         if ( outside( Geometry::massCenter(*geo, p, g) ) ) {
@@ -400,7 +396,7 @@ namespace Faunus {
 
     void MassCenterConstrain::addPair(Group &a, Group &b, double mindist, double maxdist) {
       data d = {mindist, maxdist};
-      mypair<Group*> p(&a, &b);
+      pair_permutable<Group*> p(&a, &b);
       gmap[p] = d;
     }
 

@@ -507,7 +507,7 @@ namespace Faunus {
   /*!
    * Inserts at end of particle vector
    */
-  Group FormatFastaSequence::insert(string fasta, Space &spc, Energy::ParticleBonds &b) {
+  Group FormatFastaSequence::insert(string fasta, Space &spc, Energy::Bonded &b) {
     p_vec p = interpret(fasta);
     Group g( p.size() );
     if (p.size()>0) {
@@ -520,7 +520,7 @@ namespace Faunus {
     return g;
   }
 
-  Group FormatFastaSequence::include(string file, Space &spc, Energy::ParticleBonds &b) {
+  Group FormatFastaSequence::include(string file, Space &spc, Energy::Bonded &b) {
     Group g;
     return g;
   }

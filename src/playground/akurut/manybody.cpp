@@ -6,7 +6,7 @@ using namespace TCLAP;
 
 typedef Geometry::Cuboid Tgeometry;
 typedef Potential::CombinedPairPotential<Potential::SquareWellHydrophobic, Potential::LennardJones> SRpot;
-typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, SRpot> Tpairpot;
+typedef Potential::CombinedPairPotential<Potential::DebyeHuckel, SRpot> Tpairpot;
 //typedef Potential::CoulombSR<Tgeometry, Potential::DebyeHuckel, Potential::HardSphere> Tpairpot;
 
 int main(int argc, char** argv) {
@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
   UnitTest test(mcp);
 
   Energy::Hamiltonian pot;
-  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot>(mcp) );
+  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
   auto constrain = pot.create( Energy::MassCenterConstrain(pot.getGeometry()) );
   Space spc( pot.getGeometry() );
 
@@ -165,7 +165,7 @@ int main(int argc, char** argv) {
       }
       if (mcp.get<bool>("xtc_write","no"))
         if ( slp_global.runtest(0.0001) ) {
-          xtc.setbox( nonbonded->pair.geo.len );
+          //xtc.setbox( nonbonded->geo->len );
           xtc.save("traj.xtc", spc);
         }
     } // end of micro loop

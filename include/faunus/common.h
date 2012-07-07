@@ -53,9 +53,7 @@ namespace Faunus {
     class Energybase;
     class Hamiltonian;
     class EqEnergy;
-    class Bondbase;
     class HarmonicBond;
-    class ParticleBonds;
   }
 
   class Group;

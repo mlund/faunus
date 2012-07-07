@@ -1,7 +1,7 @@
 #ifndef FAU_IO_H
 #define FAU_IO_H
 #include <faunus/common.h>
-#include <faunus/bonded.h>
+#include <faunus/energy.h>
 
 #ifndef __cplusplus
 #define __cplusplus
@@ -174,8 +174,8 @@ namespace Faunus {
     public:
       p_vec interpret(string);
       FormatFastaSequence(double=0.76, double=4.9);
-      Group insert(string, Space&, Energy::ParticleBonds&);
-      Group include(string, Space&, Energy::ParticleBonds&);
+      Group insert(string, Space&, Energy::Bonded&);
+      Group include(string, Space&, Energy::Bonded&);
   };
 }//namespace
 #endif

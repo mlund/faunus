@@ -32,6 +32,10 @@ namespace Faunus {
         geo->setVolume(vol);
     }
 
+    void Energybase::setTemperature(double) {
+      assert(!"Not yet implemented!");
+    }
+
     // external particle interactions
     double Energybase::all2p(const p_vec &p, const particle &a) { return 0; }
     double Energybase::p2p(const particle &a, const particle &b) { return 0; }
@@ -124,6 +128,11 @@ namespace Faunus {
     void Hamiltonian::setVolume(double vol) {
       for (auto e : baselist )
         e->setVolume(vol);
+    }
+
+    void Hamiltonian::setTemperature(double T) {
+      for (auto e : baselist )
+        e->setTemperature(T);
     }
 
     double Hamiltonian::all2all(const p_vec &p) {
@@ -270,9 +279,19 @@ namespace Faunus {
       return o.str();
     }
 
+    /*!
+     * \todo Optimize by using iterator directly as returned by find.
+     */
+    double Bonded::i2i(const p_vec &p, int i, int j) {
+      auto f=list.find( pair_permutable<int>(i,j) );
+      if (f!=list.end())
+        return f->second->tokT() * f->second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+      return 0;
+    }
+
     double Bonded::i2all(const p_vec &p, int i) {
       assert(geo!=nullptr);  //debug
-      assert( i<(int)p.size() ); //debug
+      assert( i>=0 && i<(int)p.size() ); //debug
 
       double u=0;
       for (auto &m : list) {
@@ -296,6 +315,25 @@ namespace Faunus {
       return u;
     }
 
+    double Bonded::g2g(const p_vec &p, Group &g1, Group &g2) {
+      double u=0;
+      for (auto &m : list) {
+        int i=m.first.first;
+        int j=m.first.second;
+        if (g1.find(i))
+          if (g2.find(j))
+            u+=m.second->tokT() * m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+        if (g1.find(j))
+          if (g2.find(i))
+            u+=m.second->tokT() * m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+      }
+      return u;
+    }
+
+    /*!
+     * Accounts for bonds between particles within a group. Bonds with external
+     * particles are skipped and should be accounted for by the g2g() energy function.
+     */
     double Bonded::g_internal(const p_vec &p, Group &g) {
       assert(geo!=nullptr);  //debug
       double u=0;
@@ -303,8 +341,9 @@ namespace Faunus {
         int i=m.first.first;
         int j=m.first.second;
         assert(i>=0 && i<(int)p.size() && j>=0 && j<(int)p.size()); //debug
-        if (g.find(i) || g.find(j))
-          u += m.second->tokT() * m.second->operator()( p[i],p[j],geo->sqdist( p[i],p[j] ) );
+        if (g.find(i))
+          if (g.find(j))
+            u += m.second->tokT() * m.second->operator()( p[i],p[j],geo->sqdist( p[i],p[j] ) );
       }
       return u;
     }

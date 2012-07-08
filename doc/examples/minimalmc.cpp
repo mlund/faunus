@@ -1,13 +1,13 @@
 #include <faunus/faunus.h>
 using namespace Faunus;                               // use Faunus namespace
-typedef Geometry::Cuboid Tgeometry;                   // select simulation geometry and pair potential
-typedef Potential::CoulombSR<Tgeometry,Potential::Coulomb,Potential::LennardJones> pairpot;
+typedef Geometry::Cuboid Tgeo;                        // select simulation geometry and pair potential
+typedef Potential::CombinedPairPotential<Potential::Coulomb, Potential::LennardJones> Tpair;
 
 int main() {
   atom.includefile("atomlist.in");                    // load atom properties
   InputMap in("parameters.in");                       // open parameter file for user input
   Energy::Hamiltonian pot;                            // Hamiltonian - defines the energy field
-  pot.create( Energy::Nonbonded<pairpot>(in) );       // add energy term for non-bonded interactions
+  pot.create( Energy::Nonbonded<Tpair,Tgeo>(in) );    // add energy term for non-bonded interactions
   Space spc( pot.getGeometry() );                     // create simulation space, particles etc.
   GroupAtomic salt(spc, in);                          // group for salt particles
   Move::AtomicTranslation mv(in, pot, spc);           // particle move class

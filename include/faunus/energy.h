@@ -48,6 +48,7 @@ namespace Faunus {
         virtual ~Energybase();
         virtual Geometry::Geometrybase& getGeometry();        // Reference to geometry used for interactions
         bool setGeometry( Geometry::Geometrybase& );          // Set Geometrybase
+        virtual void setTemperature(double);                  //!< Set temperature for interactions
         virtual void setVolume(double);                       //!< Set volume of used Geometry
         virtual double p2p(const particle&, const particle&); // Particle-particle energy
         virtual double all2p(const p_vec&, const particle&);  // Particle-Particle vector energy
@@ -118,7 +119,7 @@ namespace Faunus {
           }
 
           double i2i(const p_vec &p, int i, int j) FOVERRIDE {
-            return pairpot.tokT()*pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
+            return pairpot.tokT() * pairpot( p[i], p[j], geometry.sqdist( p[i], p[j]) );
           }
 
           double i2g(const p_vec &p, Group &g, int j) FOVERRIDE {
@@ -295,8 +296,10 @@ namespace Faunus {
       public:
         Bonded();
         Bonded(Geometry::Geometrybase&);
-        double i2all(const p_vec&, int) FOVERRIDE;
-        double g_internal(const p_vec&, Group&) FOVERRIDE;
+        double i2i(const p_vec&, int, int) FOVERRIDE;      //!< Bond energy i with j
+        double i2all(const p_vec&, int) FOVERRIDE;         //!< All bonds w. i'th particle
+        double g_internal(const p_vec&, Group&) FOVERRIDE; //!< Internal bonds in Group, only
+        double g2g(const p_vec&, Group&, Group&) FOVERRIDE;//!< Bonds between groups
         double total(const p_vec&);
     };
 
@@ -396,6 +399,7 @@ namespace Faunus {
       public:
       Hamiltonian();
       void setVolume(double);       //!< Set volume of all contained energy classes
+      void setTemperature(double);  //!< Set temperature of all contained energy classes
 
       /*!
        * \brief Create and add an energy class to energy list

@@ -48,6 +48,7 @@ int main(int argc, char** argv) {
   Move::Isobaric iso(mcp,pot,spc);
   Move::TranslateRotate gmv(mcp,pot,spc);
   Move::AtomicTranslation mv(mcp, pot, spc);
+  Move::CrankShaft crank(mcp, pot, spc);
   Analysis::PolymerShape shape;
   Analysis::RadialDistribution<float,int> rdf(0.2);
 
@@ -81,7 +82,7 @@ int main(int argc, char** argv) {
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int k,i=rand() % 4;
+      int k,i=rand() % 5;
       switch (i) {
         case 0:
           mv.setGroup(salt);
@@ -104,6 +105,13 @@ int main(int argc, char** argv) {
           break;
         case 3:
           sys+=iso.move(); // isobaric volume move
+          break;
+        case 4:
+          k=pol.size();
+          while (k-->0) {
+            crank.setGroup( pol[ rand() % pol.size() ] );
+            sys+=crank.move();
+          }
           break;
       }
       for (auto i=pol.begin(); i!=pol.end()-1; i++)
@@ -129,5 +137,6 @@ int main(int argc, char** argv) {
   mv.test(test);
   sys.test(test);
 
-  cout << loop.info() << sys.info() << mv.info() << gmv.info() << iso.info() << shape.info() << test.info();
+  cout << loop.info() << sys.info() << mv.info() << gmv.info() << crank.info()
+    << iso.info() << shape.info() << test.info();
 }

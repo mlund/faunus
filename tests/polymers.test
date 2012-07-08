@@ -1,12 +1,12 @@
-# Generated on Jul  2 2012 10:58:58 using 4.2.1 Compatible Clang 3.2 (trunk 159509) (SVN revision: 786)
-atomlist                                               
-energyAverage                      6.24133             
-mv_particle_acceptance             9.14515             
-npt_MSQDisplacement                32.5902             
-npt_acceptance                     15.0833             
-npt_averageSideLength              79.3342             
-relativeEnergyDrift                5.20919e-10         
-transrot_Polymer_acceptance        14.1941             
-transrot_Polymer_dRot              37.4873             
-transrot_Polymer_dTrans            8.17867             
-transrot_acceptance                14.1941             
+# Generated on Jul  8 2012 20:17:13 using 4.2.1 Compatible Clang 3.2 (trunk 159509) (SVN revision: 790)
+atomlist                           Generated           
+energyAverage                      5.47251             
+mv_particle_acceptance             9.18501             
+npt_MSQDisplacement                32.1123             
+npt_acceptance                     14.6868             
+npt_averageSideLength              79.4164             
+relativeEnergyDrift                5.89051e-11         
+transrot_Polymer_acceptance        14.2004             
+transrot_Polymer_dRot              37.2064             
+transrot_Polymer_dTrans            8.18691             
+transrot_acceptance                14.2004             

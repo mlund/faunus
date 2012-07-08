@@ -490,10 +490,11 @@ namespace Faunus {
 
     CrankShaft::CrankShaft(InputMap &in, Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="CrankShaft";
+      w=30;
       gPtr=nullptr;
-      minlen = in.get<int>(prefix+"_minlen", 1);
-      maxlen = in.get<int>(prefix+"_maxlen", 10);
-      dp=in.get<double>(prefix+"_dp", 0.);
+      minlen = in.get<int>(prefix+"_minlen", 1, "Minimum number of particles to totate");
+      maxlen = in.get<int>(prefix+"_maxlen", 4, "Maximum number of particle to rotate");
+      dp=in.get<double>(prefix+"_dp", 3.);
       runfraction = in.get<double>(prefix+"_runfraction",1.);
       if (dp<1e-6)
         runfraction=0;
@@ -510,31 +511,37 @@ namespace Faunus {
     }
 
     void CrankShaft::_acceptMove() {
-      for (auto i : index)
+      double msq=0;
+      for (auto i : index) {
+        msq+=spc->geo->sqdist( spc->p[i], spc->trial[i] );
         spc->p[i] = spc->trial[i];
-      gPtr->cm_trial = gPtr->cm;
-    }
-
-    void CrankShaft::_rejectMove() {
-      for (auto i : index)
-        spc->trial[i] = spc->p[i];
+      }
+      accmap.accept(gPtr->name, msq/index.size() ) ;
       gPtr->cm = gPtr->cm_trial;
     }
 
+    void CrankShaft::_rejectMove() {
+      accmap.reject(gPtr->name);
+      for (auto i : index)
+        spc->trial[i] = spc->p[i];
+      gPtr->cm_trial = gPtr->cm;
+    }
+
     double CrankShaft::_energyChange() {
+      double du=0;
       for (auto i : index)
         if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
           return pc::infty;
-
-      double du=0;
-      for (auto i : index) {
-        du += pot->i_external(spc->trial, i) - pot->i_external(spc->p, i);
-        du += pot->i2all(spc->trial, i) - pot->i2all(spc->p, i);
-      }
-      // not finished...
-      //for (int i=0; i<index.size()-1; i++ )
-      //  for (int j=i+1; j<index.size(); j++ )
-      //    du -= 0;
+      for (auto i : index)
+        du += pot->i_external(spc->trial, i) - pot->i_external(spc->p, i)
+          + pot->i2all(spc->trial, i) - pot->i2all(spc->p, i);
+      /* not needed!!
+      int n=(int)index.size();
+      for (int i=0; i<n-1; i++)
+        for (int j=i+1; j<n; j++)
+          du -= pot->i2i( spc->trial, index[i], index[j] )
+            - pot->i2i( spc->p, index[i], index[j] );
+            */
       return du;
     }
 
@@ -545,11 +552,12 @@ namespace Faunus {
     bool CrankShaft::findParticles() {
       angle = dp*slp_global.randHalf();  // random angle
       int beg,end,len;
+      assert( minlen <= gPtr->size()-2 && "Minlen too big for molecule!");
       do {
         beg=gPtr->random();             // generate random vector to
         end=gPtr->random();             // rotate around
         len = std::abs(beg-end) - 1;    // number of particles between end points
-      } while ( len >= minlen && len <= maxlen  );
+      } while ( len<minlen || len>maxlen  );
       if (beg>end)
         std::swap(beg,end);
       vrot.setAxis(*spc->geo, spc->p[beg], spc->p[end], angle );
@@ -566,9 +574,10 @@ namespace Faunus {
       using namespace textio;
       std::ostringstream o;
       o << pad(SUB,w, "Displacement parameter") << dp << endl
-        << pad(SUB,w, "Min/max length to move") << minlen << " " << maxlen << endl
+        << pad(SUB,w, "Min/max length to move") << minlen << " " << maxlen
         << endl;
       if (cnt>0) {
+        o << accmap.info();
       }
       return o.str();
     }

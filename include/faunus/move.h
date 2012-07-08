@@ -36,6 +36,38 @@ namespace Faunus {
         //void set_target(double&, average&);
     };
 
+    template<typename Tkey=std::string>
+      class AcceptanceMap {
+        private:
+          typedef std::map<Tkey, Average<double> > map_type;
+          map_type accmap;   //!< move acceptance ratio
+          map_type sqrmap;   //!< mean square displacement map
+        public:
+          void accept(Tkey k, double msq) {
+            accmap[k]+=1;
+            sqrmap[k]+=msq;
+          }
+          void reject(Tkey k) {
+            accmap[k]+=0;
+          }
+          string info(char l=10) {
+            using namespace textio;
+            std::ostringstream o;
+            o << indent(SUB) << "Move Statistics:" << endl
+              << indent(SUBSUB) << std::left << setw(20) << "Id"
+              << setw(l+1) << "Acc. "+percent
+              << setw(l+9) << rootof+bracket("msq"+squared)+"/"+angstrom << endl;
+            for (auto m : accmap) {
+              string id=m.first;
+              o << indent(SUBSUB) << std::left << setw(20) << id;
+              o.precision(3);
+              o << setw(l) << accmap[id].avg()*100
+                << setw(l) << sqrt(sqrmap[id].avg()) << endl;
+            }
+            return o.str();
+          }
+      };
+
     /*!
      * \brief Base class for Monte Carlo moves
      * \author Mikael Lund
@@ -185,7 +217,7 @@ namespace Faunus {
      * The implemented cluster algorithm is general - see Frenkel and Smith, 2nd ed, p405 - and derived classes
      * can re-implement ClusterProbability() for arbitrary probability functions.
      */
-     class TranslateRotateCluster : public TranslateRotate {
+    class TranslateRotateCluster : public TranslateRotate {
       private:
         Geometry::VectorRotate vrot;
         vector<int> cindex; //!< index of mobile ions to move with group
@@ -204,13 +236,13 @@ namespace Faunus {
         double threshold;  //!< Distance between particles to define a cluster
     };
 
-     /*!
-      * \brief Crank shaft move
-      * \author Kurut, Henriques, Lund ???
-      * \date Lund 2012
-      *
-      * Explain what this move does and how to use it...
-      */
+    /*!
+     * \brief Crank shaft move
+     * \author Kurut, Henriques, Lund ???
+     * \date Lund 2012
+     *
+     * Explain what this move does and how to use it...
+     */
     class CrankShaft : public Movebase {
       private:
         Group* gPtr;          //!< Pointer to group where move is to be performed. Set by setGroup().
@@ -223,6 +255,7 @@ namespace Faunus {
         void _rejectMove();
         double _energyChange();
         string _info();
+        AcceptanceMap<string> accmap;
       protected:
         virtual bool findParticles(); //!< This will set the end points and find particles to rotate
       public:

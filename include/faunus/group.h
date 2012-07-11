@@ -1,224 +1,155 @@
-#ifndef FAU_GROUP_H
-#define FAU_GROUP_H
+#ifndef FAUNUS_GROUP_H
+#define FAUNUS_GROUP_H
 
-#ifndef SWIG
-#include "faunus/common.h"
-#include "faunus/average.h"
-#include "faunus/particles.h"
-#include "faunus/point.h"
-#endif
+#include <faunus/common.h>
+#include <faunus/average.h>
+#include <faunus/geometry.h>
 
 namespace Faunus {
-  class container;
-  class slit;
-  class inputfile;
 
-  /*!
-   * \brief Groups set of particles, such as molecules, salt etc.
-   * \author Mikael Lund
-   * \date Lund 2004
-   *
-   * A group defines the range of a a protein, the mobile ions,
-   * a chain or whatever. If is used extensively in MC movements,
-   * energy calculations and many, many other places.
+
+  /* 
+   * \brief Range iterator class for continuous ranges
+   * \todo Replace with https://bitbucket.org/AraK/range/wiki/Home ??
+   * \comment http://stackoverflow.com/questions/7185437/is-there-a-range-class-in-c0x-aka-c11-for-use-with-range-based-for-loops
    */
-  class group {
-    protected:
-      slump slp;
-      string title;
+  template<class Tint=int>
+  class myrange {
     public:
-      particle cm, cm_trial; 
-      int beg,end;    //!< Define range in particle vector. [beg;end]
-      string name;          //!< Informative name. Avoid spaces.
-      group(int=0);         //!< Constructor, initialize data.
-
-      void set(int, int);                        //!< Set particle range, "beg" and "end".
-      bool find(unsigned int) const;             //!< Check if particle is part of the group
-      int size() const;                          //!< Number of particles in group
-      double charge(const vector<particle> &);   //!< Calculate total charge
-      virtual int random();                      //!< Picks a random particle within this group
-      point masscenter(const vector<particle> &); //!< Calculate center-of-mass
-      point masscenter(const container &);  //!< Calc. center-of-mass
-      point masscenter(const container &, const vector<particle> &p) const;  //!< Calc. center-of-mass without updating cm and cm_trial
-      virtual string info();                //!< Print information
-      bool operator==(const group&) const;
-      group& operator+=(const group&);
-      const group operator+(const group&) const;
-
-      virtual void move(container &, point);              //!< Translate group
-      void invert(vector<particle> &, point &);           //!< Invert a group
-      bool overlap(container &);                          //!< Test overlap w all particles
-      virtual void undo(particles &);
-      virtual void accept(particles &);                   //!< Accept a move
-      void add(container &, vector<particle>, bool=false);//!< Add a particle vector at random position
-      void add(container &, unsigned char, int);          //!< Add particles w. collision check
-      bool swap(container &, group &);                    //!< Swap location of two groups
-      int count(vector<particle> &, unsigned char);       //!< Count number of specific particles
-      virtual int displace(container&, point);            //!< Displace random particle
-      virtual void isobaricmove(container &, double){}    //!< Pressure scaling
-      virtual int nummolecules();                         //!< Number of molecules
-      unsigned short numhydrophobic(vector<particle> &);  //!< Number of hydrophobic particles
-      bool swap(container &, int);                        //!< Move group to a new position
-      bool saveCharges(string filename, vector<particle> &p); //!< Save all charges in group to disk 
-      bool loadCharges(string filename, vector<particle> &p); //!< Load all charges in group from disk 
-  };
-
-  /*!
-   * \brief Group for handling salt particles
-   */
-  class salt : public group {
+      class iterator {
+        friend class myrange;
+        public:
+        Tint operator *() const { return i_; }
+        const iterator &operator ++() { ++i_; return *this; }
+        iterator operator ++(int) { iterator copy(*this); ++i_; return copy; }
+        iterator operator +(int i) { iterator copy(*this); copy.i_+=i; return copy; }
+        iterator operator -(int i) { iterator copy(*this); copy.i_-=i; return copy; }
+        bool operator ==(const iterator &other) const { return i_ == other.i_; }
+        bool operator !=(const iterator &other) const { return i_ != other.i_; }
+        protected:
+        iterator(Tint start) : i_ (start) { }
+        private:
+        Tint i_;
+      };
+      iterator begin() const { return begin_; }   //!< Iterator to beginning
+      iterator end() const { return end_; }       //!< Iterator to end (end points to last element + 1)
+      Tint front() const { return begin_.i_; }    //!< Get first value in range
+      Tint back() const { return end_.i_-1; }     //!< Get last value in range
+      bool empty() const { return (end_.i_<=begin_.i_) ? true : false; } //!< Determines if range is empty.
+      void resize(unsigned int size) { end_.i_ = begin_.i_ + size; } //!< Resize range, keeping same beginning
+      Tint size() const { return end_.i_-begin_.i_; }  //!< Size of range
+      void setfront(Tint front) { begin_.i_=front; }   //!< Set first element
+      void setback(Tint back) { end_.i_=back+1; }      //!< Set last element
+      void setrange(Tint front, Tint back=-1) {        //!< Set range [front:back]
+        setfront(front);
+        if (back!=-1)
+          setback(back);
+        else setback(front-1);
+      }
+      myrange(Tint first=0, Tint size=0) : begin_(first), end_(first+size) {}
     private:
-      short nanion, ncation;
-    public:
-      using group::info;
-      salt(unsigned char=0, unsigned char=0);
-      unsigned char anion, cation;  //!< Anion and cation types
-      double muex;                  //!< Excess chemical potential
-      void add(container &, inputfile &);                 //!< Add salt as specified in config file
-      string info(container &);     //!< Show info
-      virtual void isobaricmove(container &, double);
+      iterator begin_;
+      iterator end_;
   };
 
   /*!
-   * \brief Class for macromolecules such as proteins.
-   */
-  class macromolecule : public group {
-    public:
-      macromolecule();
-      point mu;            //!< Dipole moment
-      float conc;
-      average<double> Q;    //!< Total charge. Updated with space::charge()
-      average<double> Q2;   //!< Total charge squared.
-      average<double> dip;  //!< Dipole moment scalar.
-      average<double> dip2; //!< Dipole moment scalar squared.
-      average<double> rg;   //!< Radius of gyration
-      average<double> rg2;  //!< Radius of gyration squared
-      average<double> ree;  //!< End-to-end distance 
-      average<double> ree2; //!< End-to-end distance squared
-
-      string info();                              //!< Show info
-      string info(container &);                   //!< Show more info!
-      void center(container &);                   //!< Center group in origo (0,0,0)
-      double charge(const vector<particle> &);    //!< Calculate total charge
-      double getcharge(const vector<particle> &); //!< Calculate total charge
-      double radius(vector<particle> &);          //!< Calculate radius
-      double gradius(vector<particle> &);         //!< Calculate radius of gyration
-      double sqmassgradius(container &);          //!< Calculate mass weighted squared radius of gyration
-      point sqmassgradius3D(container &);         //!< Calculate mass weighted squared radius of gyration in each direction
-      double sqmassgradius(container &, vector<particle> &);   //!< Calculate mass weighted squared radius of gyration, without updating averages
-      double sqend2enddistance(container &);      //!< Calculate squared end-to-end distance
-      double vradius(vector<particle> &);         //!< Volume based protein radius
-      double dipole(vector<particle> &);          //!< Calculate dipole moment
-      double dipole(const container &);           //!< Calculate dipole moment
-      void zmove(container &, double);            //!< Move in z-direction, only
-      virtual void rotate(container &, double, double=0); //!< Rotate around a point
-      void rotate(container &, point, double, double);
-      void rotate(container &, point, point, double); //!< Rotate around arbitrary point
-      void transrot(container &, double, double); 
-      using group::add;
-      //void add(container &, inputfile &);       //!< Add according to inputfile
-      macromolecule& operator=(const group&);     //!< Copy from group
-      virtual void isobaricmove(container &,double);  //!< Displace CM with scale difference
-      virtual int nummolecules();
-  };
-
-  /*! \brief Group container for an array of molecules
-   *  \author Mikael Lund
-   *  \date Asljunga 2008
+   * \brief Defines a continuous range of particles in the Space particle vector.
+   * \todo Implement iterator
+   * \note http://stackoverflow.com/questions/7185437/is-there-a-range-class-in-c0x-aka-c11-for-use-with-range-based-for-loops
    *
-   * This group derivative is for handling an atom collection of
-   * molecules in the particle vector. A [] operator is
-   * implemented for convenient access to individual molecules.
-   * Note that the group::random() function is redefined to point to a
-   * random molecule instead of an atom.\n
-   * Example:\n
+   * This class defines a range, \c [front:back], in the particle vector and behaves much like a standard
+   * STL container. Groups know how to perform geometric operations on it - rotate, translate etc. 
+   *
+   * Example:
    * \code
-   * int i = spc.random(); // pick random molecule
-   * group w = spc[i];     // ..and return it as a group
-   * w.beg; // --> first atom of i'th molecule
+   *   Group g(2,5);           // first, last particle
+   *   for (auto i : g)        // iterator access
+   *     cout << i;            // -> 23456
+   *   g.front();              // -> 2
+   *   g.back();               // -> 6
+   *   g.size();               // -> 5
+   *   g.resize( g.size()+1 ); // -> size=6, back=7.
    * \endcode
    */
-  class molecules : public macromolecule {
-    private:
-      group sel;                 //!< A temporary group class
-    public:
-      molecules(unsigned short); //!< Constructor. Specify number of atoms in each molecule.
-      unsigned short numatom;    //!< Number of atoms in each molecule
-      int random();              //!< Pick a random molecule (NOT atom)
-      string info();             //!< Show information
-      group operator[](int);     //!< Access n'th molecule
-      void add(container &, vector<particle> &, short=1);
-      vector<int> pick(int );
-  };
-
-  /*! \brief Class for polymer molecules
-   *  \author Mikael Lund
-   *  \date Lund 2009
-   */
-  class polymer : public macromolecule {
-    public:
-      vector< vector<int> > nb; //!< Neighbor list
-      polymer();
-      vector<int> neighbors(int) const;
-      string info();
-      string info(container &);                  //!< Show more info!
-      bool addbond(int, int);                    //!< Add bond between two particles
-      bool areneighbors(int, int) const;         //!< True if i and j are bonded to each other
-      string getVMDBondScript();                 //!< Print TCL script for VMD to create bonds
-      double calcIdealRee( double ) const;      //!< Calculate ideal end-to-end distance
-#ifdef BABEL
-      bool babeladd( container &, inputfile & ); //!< Load molecule from disk using OpenBabel
-      bool babeladd( container &, inputfile &, string & ); //!< Load molecule string from disk using OpenBabel
-      bool babeladd( container &, inputfile &, int &); //!< Load molecule int from disk using OpenBabel
-#endif
-  };
-
-  /*!
-   * \brief Class for phospholipid-membrane
-   * \author Bjoern Persson
-   * \date Lund 2009
-   */
-  class popscmembrane : public group {
+  class Group : public myrange<int> {
     protected:
-      double scratio;               //!< Ratio of pops in percent
-      double headarea;              //!< Headgroup area (i.e. density)
+      virtual std::ostream& write(std::ostream &) const; //!< Write all Group data to stream
+      virtual Point _massCenter(const Space&) const;
+      vector<Move::Movebase*> moves;    //!< pointers to move functions
+      virtual string _info();
+      char w;                           //!< Text padding for info() functions
 
     public:
-      vector<polymer> pops;         //!< Pops polymers
-      vector<polymer> popc;         //!< Popc polymers
-      popscmembrane();
-      void load(inputfile&, slit&); //!< Scanns input object for "scratio", "headarea"
-      string info();                //!< Get info string
-      string info(slit &);          //!< Get expanded info string
-      string getVMDBondScript();    //!< Print TCL script that tells VMD to draw bonds
-  };
-  
-  /*!
-   * \brief Class for porphyrin dendrimer
-   */
-#ifdef BABEL
-  class glu3 :public macromolecule {
-    public:
-      polymer chains;  //Glutamic chains
-      macromolecule core;
-      glu3(container &, inputfile &);
+      enum type {GROUP,ATOMIC,MOLECULAR,CIGAR,RIGID,ISOBARIC,GRANDCANONICAL};
+      std::set<type> property;
+      //enum prop {PVEC, TRIALVEC, RECALC};
+      type id;
+      Group(int=-1, int=-1);
       string info();
-  };
-#endif
+      string name;
+      Point cm_trial;           //!< mass center vector for trial position
+      Point cm;                 //!< mass center vector
+      //int beg;                  //!< index of first particle
+      //int last;                 //!< index of last particle
+      //int size() const;         //!< number of particles in Group.
+      //bool empty() const;       //!< True if group is empty.
+      int random() const;
+      bool find(int) const;     //!< Check if index is part of group
 
-#ifdef HYPERSPHERE
-  /*!
-   *  \brief Hypersphere groups
-   *  \author Martin Trulsson
-   *  \date Lund, 2009
-   */
-  class hypermolecule : public macromolecule {
-    public:
-      void add(container &, vector<particle>, bool=false); //!< Add particle vector to group and container
-      void move(container &, point);                       //!< Translate group
-      void rotate(container &, double, double=0);          //!< Rotate group
+      virtual double charge(const p_vec&) const;             //!< Calculate total charge
+
+      Point massCenter(const Space&) const;                  //!< Calculate mass center - does not set touch group!
+      Point setMassCenter(const Space &);                    //!< Calculate and Set mass center (cm and cm_trial)
+      virtual Point dipolemoment(const Space&) const;        //!< Calculate dipole moment
+
+      virtual void rotate(Space&, const Point&, double);     //!< Rotate around a vector
+      virtual void translate(Space&, const Point&);          //!< Translate along a vector
+      virtual void scale(Space&, double);                    //!< Volume scaling for NPT ensemble
+      virtual void undo(Space&);                             //!< Undo move operation
+      virtual void accept(Space&);                           //!< Accept a trial move
+
+      bool operator==(const Group&) const;                     //!< Compare two Groups
+      Group& operator+=(const Group&);                         //!< Add two Groups
+      const Group operator+(const Group&) const;
+      friend std::ostream &operator<<(std::ostream&, Group&);  //!< Output Group data to stream
+      virtual Group &operator<<(std::istream &);               //!< Get Group data from stream
+      virtual ~Group();
   };
-#endif
+
+  /*!
+   * \brief Group class for atomic species - for example salt particles.
+   */
+  class GroupAtomic : public Group {
+    public:
+      GroupAtomic(int=-1, int=-1);
+      GroupAtomic(Space&, InputMap&);        //!< Construct and call add()
+      GroupAtomic &operator<<(std::istream&);
+      void add(Space&, InputMap&);      //!< Add atomic particles via InputMap parameters
+  };
+
+  /*!
+   * \brief Class for molecular groups - proteins, polymers etc.
+   */
+  class GroupMolecular : public Group {
+    private:
+      Geometry::VectorRotate vrot;
+    protected:
+      std::ostream & write(std::ostream&) const;  //!< Write all Group data to stream
+      virtual string _info();
+
+    public:
+      Average<double> Q;        //!< average net charge
+      Average<double> mu;       //!< average dipole moment
+
+      GroupMolecular(int=-1, int=-1);
+      void translate(Space&, const Point&);
+      void rotate(Space&, const Point&, double);
+      void scale(Space&, double);
+
+      GroupMolecular &operator<<(std::istream&);                        //!< Get information
+  };
+
 }//namespace
+
 #endif
 

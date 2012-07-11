@@ -12,43 +12,42 @@
   #include <sstream>
   #include <cstdlib>  // Including this SUCKS! Be aware of abs()!
   #include <ctime>
+  #include <random>
 
   // Needed for sunCC ("__SUNPRO_CC" or "__sun" ?)
   #ifdef __SUNPRO_CC
     #include <stdlib.h>
     #include <time.h>
   #endif
-  #ifdef HAVETR1
-    #include <tr1/random>
-  #endif
 #endif
 
 namespace Faunus {
-  class random {
+  class RandomBase {
     protected:
       std::string name;
     public:
-      virtual double random_one()=0;              //!< Random number between [0:1[
-      virtual void random_seed(int=0)=0;          //!< Seed random generator (globally)
-      bool runtest(float=0.5);                    //!< Probability bool
-      double random_half();                       //!< Random number between [-0.5:0.5[
-      std::string info();                         //!< Print information string
-      virtual unsigned int rand()=0;              //!< Random number between 0 and rand_max
+      virtual ~RandomBase() {}
+      virtual double randOne()=0;          //!< Random number between [0:1[
+      virtual void seed(int=0)=0;          //!< Seed random generator (globally)
+      bool runtest(float);                 //!< Probability bool - float between 0 (don't run) and 1 (run always)
+      double randHalf();                   //!< Random number between [-0.5:0.5[
+      std::string info();                  //!< Information string
+      virtual unsigned int rand()=0;       //!< Random number between 0 and rand_max
   };
 
   /*!
    * \brief Default C++ random number generator
    * \author Mikael Lund
    * \date Lund, 2002
-   * \warning random_one sometimes returns 1 (one)!!
+   * \warning randOne sometimes returns 1 (one)!!
    */
-  class randomDefault : public random {
+  class RandomDefault : public RandomBase {
     private:
       double rand_max_inv;
     public:
-      randomDefault();
-      void random_seed(int=0);
-      double random_one();
+      RandomDefault();
+      void seed(int=0);
+      double randOne();
       unsigned int rand();
   };
 
@@ -59,7 +58,7 @@ namespace Faunus {
   * \note A class for ran2 from 'Numerical Recipies'.
   * \warning Not thread safe!
   */
-  class ran2: public random {
+  class RandomRan2: public RandomBase {
     private:
       static const int IM1=2147483563, IM2=2147483399;
       static const int IA1=40014, IA2=40692, IQ1=53668, IQ2=52774;
@@ -72,35 +71,41 @@ namespace Faunus {
       int j,k;
       double temp;
     public:
-      ran2();
-      double random_one();
-      void   random_seed(int=-7);
+      RandomRan2();
+      double randOne();
+      void   seed(int=-7);
       unsigned int rand();
   };
 
-#ifdef HAVETR1
   /*!
-   * \brief Mersenne Twister Random number functions (C++ TR1)
+   * \brief Mersenne Twister Random number functions (C++11)
    * \author Mikael Lund
    * \date Lund, 2010
    */
-  class randomTwister : public random {
+  class RandomTwister : public RandomBase {
     private:
       double maxinv;
-      std::tr1::mt19937 eng;
-      std::tr1::uniform_real<double> dist;
+      std::mt19937 eng;
+      std::uniform_real_distribution<double> dist;
     public:
-      randomTwister();
-      double random_one();
-      void random_seed(int=0);
+      RandomTwister();
+      double randOne();
+      void seed(int=0);
       unsigned int rand();
   };
-#endif
+  
+  template <typename I> I random_element(I begin, I end) {
+    const unsigned long n = std::distance(begin, end);
+    const unsigned long divisor = RAND_MAX/n ; //(RAND_MAX + 1) / n;
+    unsigned long k;
+    do { k = std::rand() / divisor; } while (k >= n);
+    return *std::advance(begin, k);
+  }
 
-#if defined(HAVETR1) && defined(MERSENNETWISTER)
-  typedef Faunus::randomTwister slump;
+#if defined(MERSENNETWISTER)
+  typedef Faunus::RandomTwister slump;
 #else
-  typedef Faunus::ran2 slump;
+  typedef Faunus::RandomRan2 slump;
 #endif
   extern slump slp_global;
 }

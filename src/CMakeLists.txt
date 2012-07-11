@@ -3,26 +3,33 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 # -------------------------------
 #   Faunus library object files
 # -------------------------------
-set(objs slump physconst inputfile point io titrate container
-    hardsphere group particles analysis species widom histogram
-    mcloop ensemble faunus messagepool
-    moves/base moves/translational moves/rotational moves/charge
-    moves/miscmove moves/saltbath moves/clustermove #moves/rosenbluth 
-    moves/crankshaft moves/membrane moves/reptation moves/switch
-    moves/replicaexchange moves/eqtitrate notification ewald3D penaltyfunction
-    moves/branchrotation) 
+set(objs
+  titrate
+  drift energy faunus geometry group histogram inputfile io mcloop move
+  physconst point potentials slump space species textio analysis
+  mpi)
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 #----- xdrfile static library for gromacs output -----
 add_subdirectory(xdrfile)
 
-# ---=---------------------------------
-#   Mersenne Twister requires C++ TR1
+# -------------------------------------
+#   Check for C++11
+# -------------------------------------
+check_include_file_cxx("tuple" TUPLE)
+if (NOT TUPLE)
+  message(FATAL_ERROR "Compiler does not support C++11 tuples")
+endif()
+
+if(NOT ENABLE_UNICODE)
+  add_definitions(-DAVOID_UNICODE)
+endif()
+# -------------------------------------
+#   Mersenne Twister requires
 # ----=--------------------------------
-check_include_file_cxx("tr1/random" HAVETR1)
-if(HAVETR1)
-  add_definitions(-DHAVETR1)
-  if(ENABLE_TWISTER)
+if(ENABLE_TWISTER)
+  check_include_file_cxx("random" HAVERANDOM)
+  if(HAVERANDOM)
     add_definitions(-DMERSENNETWISTER)
   endif()
 endif()
@@ -44,14 +51,6 @@ if(Subversion_FOUND)
   endif()
 endif()
 
-# -------------------------------------
-#   Growl notification (MacOS X)
-# -------------------------------------
-find_program( GROWLNOTIFYEXE NAMES "growlnotify" HINTS "/usr/local/bin/" )
-if(GROWLNOTIFYEXE)
-  add_definitions(-DGROWLNOTIFYEXE="${GROWLNOTIFYEXE}")
-endif()
-
 # -----------------------
 #   Link with openbabel
 # -----------------------
@@ -60,6 +59,17 @@ if(ENABLE_BABEL AND OPENBABEL_FOUND)
   include_directories(${OPENBABEL_INCLUDE_DIR})
   set(LINKLIBS ${LINKLIBS} ${OPENBABEL_LIBRARIES})
   add_definitions(-DBABEL)
+endif()
+
+# -----------------------
+#   Link with MPI
+# -----------------------
+if(ENABLE_MPI AND MPI_CXX_FOUND)
+  set(CMAKE_CXX_COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_CXX_COMPILE_FLAGS})
+  set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS})
+  set(LINKLIBS ${LINKLIBS} ${MPI_CXX_LIBRARIES})
+  include_directories(${MPI_CXX_INCLUDE_PATH})
+  add_definitions(-DENABLE_MPI)
 endif()
 
 # -----------------------------
@@ -84,6 +94,16 @@ set_target_properties(libfaunus PROPERTIES
                       )
 target_link_libraries(libfaunus xdrfile ${LINKLIBS})
 install(TARGETS libfaunus LIBRARY DESTINATION lib)
+
+# dynamic for cigarparticles
+add_library(libcigarfaunus SHARED ${objs})
+set_target_properties(libcigarfaunus PROPERTIES
+                      OUTPUT_NAME cigarfaunus
+                      COMPILE_DEFINITIONS "CIGARPARTICLE"
+                      EXCLUDE_FROM_ALL TRUE
+                      )
+target_link_libraries(libcigarfaunus xdrfile ${LINKLIBS})
+
 
 # dynamic for hypersphere
 add_library(libhyperfaunus SHARED ${objs})
@@ -117,5 +137,6 @@ if (CPPCHECK_EXE)
 endif()
 
 #----- Add example programs -----
-add_subdirectory(examples)
+add_subdirectory(tools)
+add_subdirectory(playground EXCLUDE_FROM_ALL)
 

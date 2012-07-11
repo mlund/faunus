@@ -1,311 +1,307 @@
-#ifndef FAU_ANALYSIS_H
-#define FAU_ANALYSIS_H
+#ifndef FAUNUS_ANALYSIS_H
+#define FAUNUS_ANALYSIS_H
 
-#include "faunus/histogram.h"
-#include "faunus/average.h"
-#include "faunus/slump.h"
-#include "faunus/io.h"
-#include "faunus/xytable.h"
-#include "faunus/hardsphere.h"
-#include "faunus/energy/base.h"
+#include <faunus/common.h>
+#include <faunus/average.h>
+#include <faunus/physconst.h>
+#include <faunus/group.h>
+#include <faunus/space.h>
+
 
 namespace Faunus {
-  class container;
-  class macromolecule;
-  class point;
-  class particle;
-  class group;
-  class histogram;
+  class checkValue;
+  class Space;
 
   /*!
-   * \brief Base class for analysis functions
-   * \author Mikael Lund
-   * \date Prague, 2007
+   * \brief Namespace for analysis routines
    */
-  class analysis {
-    protected:
-      slump slp;
-      bool runtest();             //!< True if we should run, false if not.
-    public:
-      float runfraction;          //!< Fraction of times analysis should be run
-      virtual string info()=0;    //!< Information/results
-      analysis() { runfraction=1; }
-  };
+  namespace Analysis {
 
-  /*!
-   * This class can encompass several distributions
-   * of average values (y) as a function of some variable (x)
-   * Each distribution is automatically identified by specifying
-   * an arbitrary name while adding to it.
-   * This will typically be used to average a certain property as
-   * a function of, say, an intermolecular separation. It is assumed
-   * that the x range is identical for all distributions.
-   *
-   * \brief Matrix of averages along some coordinate
-   * \author Mikael Lund
-   * \date December 2007
-   */
-  class distributions : public analysis {
-    private:
-      float xmax, xmin; // maximum/minimum encountered x value
-      float xmax_set, xmin_set, dx;
-      io fio;
-      vector<string> s;
-      vector< xytable<float,average<float> > > d;
-      unsigned short find(string);
-    public:
-      distributions(float=0.5, float=0, float=0); //!< Constructor
-      bool add(string, float, float);  //!< Add value to distribution
-      bool write(string);  //!< Write distributions to a file
-      bool cntwrite(string); //!< Write counter distributions to a file
-      string info();       //!< Write distributions to a string
-      string cntinfo();    //!< Write the counter of each averaged value in the distribution to a string
-  };
+    /*!
+     * \brief Base class for analysis routines.
+     *
+     * This is the base class for analysis routines. Derived class must implement:
+     * \li a descriptive name
+     * \li _info()
+     *
+     * It is strongly recommended that derived classes implement:
+     * \li a sample(...) function that uses run() to check if the analysis should be run or not.
+     * \li the cite string to provide external information
+     */
+    class AnalysisBase {
+      private:
+        virtual string _info()=0; //!< info all classes must provide
+      protected:
+        char w;               //!< width of info
+        unsigned long int cnt;//!< number of samples - increased for every run()==true.
+        string name;          //!< descriptive name
+        string cite;          //!< reference, url, doi etc. describing the analysis
+        bool run();           //!< true if we should run, false of not (based on runfraction)
+      public:
+        AnalysisBase();
+        string info();       //!< Print info and results
+        double runfraction;  //!< Chance that analysis should be run (default 1.0 = 100%)
+    };
 
-  /*!
-   * Distribution class based on distributions class by Mikael Lund
-   * and similar in usage, but unlike distributions the first and 
-   * last slits standard have the same width as the slits in between 
-   * and xmin and xmax has to be set in the constructor. Furthermore
-   * the x-values written out refer to the lower bound of the slit, 
-   * instead of the middle of the slit!
-   * 
-   * \warning Does not automatically change size, instead if x > xmax
-   * the value will be add to the last slit.
-   * 
-   * \brief Matrix of averages along some coordinate
-   * \author Chris Evers
-   * \date May 2011
-   */
-  class distributions2 : public analysis {
-    private:
-      double xmax, xmin; // maximum/minimum encountered x value
-      double dx;
-      io fio;
-      vector<string> s;
-      vector< xytable2<float,average<float> > > d;
-      unsigned short find(string);
-    public:
-      distributions2(double, double, double); //!< Constructor
-      bool add(string, float, float);  //!< Add value to distribution
-      bool write(string);  //!< Write distributions to a file
-      bool cntwrite(string); //!< Write counter distributions to a file
-      string info();       //!< Write distributions to a string
-      string cntinfo();    //!< Write the counter of each averaged value in the distribution to a string
-  };
-
-  class gfactor : public analysis {
-    private:
-      average<float> g;
-      double N,V,mu2,MU2;
-      macromolecule mol;
-      double gamma;
-      double gscale;
-  //    histogram h;
-    public:
-      gfactor(container &, molecules &) ;//: h(float(0.1), float(0.), float(40.));
-      double add(vector<particle> &, molecules &);
-      string info();
-  };
+    /*!
+     * \brief General class for handling 2D tables - xy date, for example.
+     * \author Mikael Lund
+     * \date Lund 2011
+     * \note Tx is used as the std::map key and which may be problematic due to direct floating
+     *       point comparison (== operator). We have not experienced any issues with this, though.
+     */
+    template<typename Tx, typename Ty>
+      class Table2D {
+        protected:
+          typedef std::map<Tx,Ty> Tmap;
+          Ty count() {
+            Ty cnt=0;
+            for (auto &m : map)
+              cnt+=m.second;
+            return cnt;
+          }
+          Tx dx;
+          //virtual ~Table2D() {}
+          Tmap map;
+          string name;
+        private:
+          Tx virtual round(Tx x) { return (x>=0) ? int( x/dx+0.5 )*dx : int( x/dx-0.5 )*dx; }
+          virtual double get(Tx x) { return operator()(x); }
+        public:
+          enum type {HISTOGRAM, XYDATA};
+          type tabletype;
+          /*!
+           * \brief Constructor
+           * \param resolution Resolution of the x axis
+           * \param key Table type: HISTOGRAM or XYDATA
+           */
+          Table2D(Tx resolution=0.2, type key=HISTOGRAM) {
+            assert( resolution>0 );
+            dx=resolution;
+            name.clear();
+            tabletype=key;
+          }
 
 
-  /*!
-   * \brief Tracks total system energy and drifts
-   */
-  class systemenergy : public analysis {
-    private:
-      double u0;
-      vector<double> confu;        //!< Vector to track system energy in time
-      io fio;
-    public:
-      double cur;
-      double sum;                 //!< Initial energy + all changes
-      average<double> uavg;
-      systemenergy();
-      systemenergy(double);
-      void initialize(double);    //!< Initialize all data
-      void update(double);        //!< Specify current system energy and recalc averages
-      void track();               //!< Add a time element to confu
-      systemenergy & operator+=(double);    //!< Add system energy change
-      string info();              //!< Info
-      void write(); 
-      string confuout();
-      double drift();             //!< Measured energy drift
-      void check(checkValue &);   //!< Output testing
-  };
+          /*! \brief Access operator - returns reference to y(x) */
+          Ty& operator() (Tx x) {
+            return map[ round(x) ];
+          }
 
-  /*!
-   * This class analyses angular correlations between
-   * any two macromolecules.
-   * \author Mikael Lund
-   * \date ADFA, 2008
-   */
-  class angularcorr : public analysis {
-    private:
-      point m1,m2;
-    public:
-      angularcorr();
-      void update(macromolecule &, macromolecule &, distributions &);
-  };
+          /*! \brief Save table to disk */
+          void save(string filename) {
+            if (tabletype==HISTOGRAM) {
+              if (map.size()>0) map.begin()->second*=2;   // compensate for half bin width
+              if (map.size()>1) (--map.end())->second*=2; // -//-
+            }
 
-  /*!
-   * This will analyse the avg. concentration of a particle
-   * type or group in a spherical shell around a central particle
-   * (binding site)
-   *
-   * \author Mikael Lund
-   * \date ADFA, 2008
-   */
-  class twostatebinding : public analysis {
-    private:
-      float r2, vol;
-    public:
-      average<float> conc; //!< Local or "bound" concentration
-      twostatebinding(double);
-      void update(container &, point &, group &);
-      void update(container &, point &, vector<macromolecule> &, int=0);
-      void update(container &c, point &, unsigned char);
-      string info();
-      string info(double);
-  };
+            if (~map.empty()) {
+              std::ofstream f(filename.c_str());
+              f.precision(10);
+              if (f) {
+                if (~name.empty())
+                  f << "# Faunus 2D table: " << name << endl;
+                for (auto m : map)
+                  f << m.first << " " << get( m.first ) << endl;
+              }
+            }
 
-  class aggregation :public analysis {
-    private:
-      vector<macromolecule*> g;        // Vector of pointers to all macro.mol. in analysis
-      vector<int> dist;                // Vector to store number of counts of each aggregate size
-      vector<average<double> > RG2;    // Average radius of gyration square of N-particle cluster
-      vector<average<double> > contact;// Average number of contacts per protein in each cluster size
-      vector<histogram> intdist;       // Internal distribution function on N-particle cluster
-      histogram      avgintdist;       // Internal distribution averaged over all aggregates
-      container *con;                  // Pointer to the container
-      vector<macromolecule*> agg;      // Vector of pointers to molecules in aggregate
-      vector<macromolecule*> unagg;    // --  //  -- to those not included or yet not found
-      vector<macromolecule*> remaining;// --  //  -- to those remaining to be found in each iteration
-      double CNT;                      // Counter
-      hardsphere coll;                 // Hardsphere booleans to define aggregates
-      double sep;                      // Cluster definition, every mol. sep. by less than this
-    public:                            // (in between any 'atom') is considered part of an aggregate
-      aggregation(container &, vector<macromolecule> &i, double);
-      aggregation(container &, vector<polymer> &i, double);
-      void count();                    // Update the averages and histogram
-      void write(string);              // Print result to 'string'
-      string info() {                  // Info
-        std::ostringstream o;
-        o << endl
-          << "# AGGREGATION COUNT"<< endl
-          << "#     Cluster definition = "<<sep<<" AA"<<endl
-          << "#     Analysis performed "<<CNT<<" times."<<endl;
-        return o.str();
-      }
-  };
-
-  /*!
-   * Calculates the virial pressure by calculating the forces between
-   * the particles. The force is calculated by taking the derivative
-   * of the pair-potential and does therefore *not* work with
-   * hardsphere potentials.
-   *
-   * \brief Virial pressure analysis
-   * \author Mikael Lund
-   * \date Lund, 2008
-   */
-  class virial : public analysis {
-    private:
-      double conc;
-    public:
-      double dr; //!< r-step when taking the derivative of the pair potential.
-      virial(container &);
-      virial(container &, vector<macromolecule> &);
-      average<double> pex; //!< Excess pressure
-      void sample(container &, energybase &);
-      void sample(container &, energybase &, vector<macromolecule> &);
-      void check(checkValue &t); //!< Output checking
-      string info();
-  };
-
-  class pointpotential : public analysis {
-    private:
-      struct data {
-        point p;
-        string name;
-        average<double> phi, expphi;
+            if (tabletype==HISTOGRAM) {
+              if (map.size()>0) map.begin()->second/=2;   // restore half bin width
+              if (map.size()>1) (--map.end())->second/=2; // -//-
+            }
+          }
       };
-      vector<data> list;
-    public:
-      void add(point, string);
-      void sample(container &, energybase &);
-      string info();
-  };
 
-  /*
-   * \author Bjorn Persson?
-   * \todo Document this class
-   */
-  class diskoverlap : public analysis {
-    private:
-      int s1, s2, s3, i, j, k;
-      vector< average < double > > size;
-      vector< average < double > > asym;
-      vector<double> sscale;
-      vector<double> ascale;
-      vector<double> scnt;
-      vector<double> acnt;
-      double cnt;
-      point origin, dummy;
-    public:
-      diskoverlap(vector<point> &);
-      void check(vector<point> &);
-      void blockavg();
-      string info();
-  };
-	
+    /*!
+     * \brief Radial distribution analysis
+     * \author Mikael Lund
+     * \date Lund 2011
+     *
+     * This radial distribution is defined as \f$ g(r) = \rho(r) / \rho(\infty) \f$ where \f$ \rho \f$ are
+     * the particle densities in spherical volume element \c rdr and in the bulk, respectively.
+     *
+     * Example:
+     * \code
+     * short cation = atom["Na"].id;
+     * short anion = atom["Cl"].id;
+     * Analysis::RadialDistribution<float,int> rdf(0.2); // 0.2 Å resolution
+     * rdf.sample( myspace, mygroup, cation, anion );
+     * rdf.save("rdf.dat");
+     * \endcode
+     */
+    template<typename Tx=double, typename Ty=int>
+      class RadialDistribution : public Table2D<Tx,Ty> {
+        private:
+          virtual double volume(Tx x) {
+            return 4./3.*pc::pi*( pow(x+0.5*this->dx,3) - pow(x-0.5*this->dx,3) );
+          }
+          double get(Tx x) {
+            assert( volume(x)>0 );
+            assert( this->count()>0 );
+            if (bulkconc.cnt==0) bulkconc+=1;
+            return (double)this->operator()(x) / volume(x) / (double)this->count() / bulkconc.avg()
+              * this->map.size() * this->dx;
+          }
+          Average<double> bulkconc; //!< Average bulk concentration
+        public:
+          Tx maxdist; //!< Pairs with distances above this value will be skipped (default: infinity)
 
-  /*!
-   * \brief Analyse pairing of mobile particles
-   * \author Mikael Lund
-   * \date Asljunga 2010
-   *
-   * This class will look for pairs of designated species and analyse if
-   * they are within a certain threshold. The number of free ions and
-   * pairs are averaged so as to evaluate the thermodynamic association constant.
-   */
-  class pairing : public analysis {
-  private:
-    average<double> cpair;  //!< concentration of pairs
-    average<double> c1;     //!< concentration of free type 1
-    average<double> c2;     //!< concentration of free type 2
-    double r2;              //!< threshold squared
-    char pid1, pid2;        //!< pairs to look for
-  public:
-    pairing(inputfile &);            //!< Constructor - input via inputfile class
-    pairing(string, string, double); //!< Constructor - hard coded input
-    void sample(container &);        //!< Look for pairs and free particles
-    string info();                   //!< Information string
-  };
+          /*!
+           * \param res Resolution of X axis
+           */
+          RadialDistribution(Tx res=0.2) : Table2D<Tx,Ty>(res) {
+            this->name="Radial Distribution Function";
+            maxdist=pc::infty;
+          }
+          /*!
+           * \brief Sample radial distibution of two atom types
+           * \param spc Simulation space
+           * \param g Group to search
+           * \param ida Atom id of first particle
+           * \param idb Atom id of second particle
+           */
+          void sample(Space &spc, Group &g, short ida, short idb) {
+            for (auto i=g.begin(); i!=g.end()-1; i++)
+              for (auto j=i+1; j!=g.end(); j++)
+                if ( (spc.p[*i].id==ida && spc.p[*j].id==idb) || (spc.p[*i].id==idb && spc.p[*j].id==ida) ) {
+                  Tx r=spc.geo->dist(spc.p[*i], spc.p[*j]);
+                  if (r<=maxdist)
+                    this->operator() (r)++; 
+                }
+            double bulk=0;
+            for (auto i : g)
+              if (spc.p[i].id==ida || spc.p[i].id==idb)
+                bulk++;
+            bulkconc += bulk / spc.geo->getVolume();
+          }
+      };
 
-  /*!
-   * \brief Osmotic pressure in the cell model.
-   * \author Mikael Lund
-   * \date Lund, 2010
-   *
-   * This class will analyse the concentration of mobile ions at the
-   * boundary of the spherical simulation container. This density is
-   * directly related to the osmotic coefficient.
-   */
-  class osmoticpressure : public analysis {
-    private:
-      unsigned int cnt;
-      double width;                       //!< Width of the cell boundary
-      vector<unsigned int> hist;          //!< Mobile concentration profile
-      cell* cPtr;
-      double getConc(double);             //!< Get concentration (in M) at radial distance from cell center
-    public:
-      osmoticpressure(cell &);            //!< Constructor
-      average<double> rhoid;              //!< Average salt concentration at boundary and in bulk
-      void sample(group &);               //!< Sample concentration profile
-      string info();                      //!< Information string
-      void check(checkValue &);           //!< Unit testing
-      bool write(string);                 //!< Write concentration profile to disk
-  };
+    template<typename Tx=double, typename Ty=int>
+      class LineDistribution : public RadialDistribution<Tx,Ty> {
+        private:
+          virtual double volume(Tx x) { return 1; }
+        public:
+          LineDistribution(Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {
+            this->name="Line Distribution";
+          }
+      };
+
+    /*!
+     * \brief Analysis of polymer shape - radius of gyration, shape factor etc.
+     * \author Mikael Lund
+     * \date November, 2011
+     *
+     * This will analyse polymer Groups and calculate Rg, Re and the shape factor. If
+     * sample() is called with different groups these will be distinguished by their
+     * *name* and sampled individually.
+     */
+    class PolymerShape : public AnalysisBase {
+      private:
+        std::map< string, Average<double> > Rg2, Rg, Re2;
+        double gyrationRadiusSquared(const Group&, const Space &);
+        string _info();
+      public:
+        PolymerShape();
+        void sample(const Group&, const Space&); //!< Sample properties of Group (identified by group name)
+    };
+
+    /*!
+     * \brief Anylyse charge multipoles and their fluctuations of groups
+     * \author Anil Kurut
+     * \date 2012
+     *
+     * This analysis class will analyse selected groups and calculate their net-charge, dipole moment as well
+     * as their variances. It is possible to exclude certain atom types by added their names to an exclusionlist.
+     * Several groups may be analysed - the sample() function will automatically identify different groups via
+     * their names. The dipole moment is calculated with respect to the mass center.
+     */
+    class ChargeMultipole : public AnalysisBase {
+      private:
+        std::map< string, Average<double> > Z, Z2, mu, mu2;
+        double charge(const Group&, const Space&);
+        double dipole(const Group&, const Space&);
+        virtual bool exclude(const particle&);  //!< Determines particle should be excluded from analysis
+        string _info();
+      public:
+        ChargeMultipole();
+        void sample(const Group&, const Space&); //!< Sample properties of Group (identified by group name)
+        void sample(const vector<GroupMolecular>&, const Space&); //!< Sample properties of Group (identified by group name)
+        std::set<string> exclusionlist; //!< Atom names listed here will be excluded from the analysis.
+    };
+
+    class VectorAlignment : public AnalysisBase {
+      private:
+        virtual Point convert(const Group&, const Space&); // Returns points calculated from group properties
+      public:
+        void sample(const Group&, const Group&, const Space&);
+    };
+
+    /*! \brief Widom method for excess chemical potentials
+     *  \author Mikael Lund
+     *
+     *  This class will use the ghost particle insertion technique
+     *  to insert a collection of particles which, when summed, should
+     *  have no net charge. This is used to calculate the mean excess
+     *  chemical potential and activity coefficient.
+     */
+    class Widom : public AnalysisBase {
+      private:
+        Space* spcPtr;
+        Energy::Energybase* potPtr;
+        Average<double> expsum; //!< Average of the excess chemical potential 
+        string _info();         //!< Print results of analysis
+      protected:
+        p_vec g;                //!< List of ghost particles to insert (simultaneously)
+      public:
+        Widom(Space&, Energy::Energybase&);
+        void addGhost(particle);                 //!< Add particle to insert
+        void addGhost(Space&);                   //!< All all species found in the container
+        void sample(int=10);                     //!< Insert and analyse
+        void check(UnitTest&);                   //!< Output checking
+        double gamma();                          //!< Mean activity coefficient
+        double muex();                           //!< Mean excess chemical potential
+    };
+
+    /*!
+     * Single particle Widom insertion analysis including
+     * charge re-scaling for electrostatics according to
+     * Svensson and Woodward, Mol. Phys. 1988, 64(2), 247-259.
+     * Currently, the inserted particle is a charged, hard sphere.
+     *
+     * \brief Single particle hard sphere Widom insertion with charge scaling
+     * \author Martin Trulsson and Mikael Lund
+     * \date Lund / Prague 2007-2008.
+     * \note This is a direct conversion of the Widom routine found in the bulk.f
+     *       program by Bolhuis/Jonsson/Akesson
+     */
+    class WidomScaled : public AnalysisBase {
+      private:
+        string _info();   //!< Get results
+        p_vec g;         //!< list of test particles
+        vector<double> chel;        //!< electrostatic
+        vector<double> chhc;        //!< hard collision
+        vector<double> chex;        //!< excess
+        vector<double> chexw;       //!< excess
+        vector<double> chtot;       //!< total
+        vector< vector<double> > ewden;     //!< charging denominator
+        vector< vector<double> > ewnom;     //!< charging nominator
+        vector< vector<double> > chint;     //!< charging integrand
+        vector<double> chid;                //!< ideal term
+        vector<double> expuw;
+        vector<int> ihc,irej;
+        long long int cnt;          //< count test insertions
+        int ghostin;                //< ghost insertions
+        void init();
+        bool overlap(particle&, particle&, Space&); //!< Particle overlap test
+
+      public:
+        WidomScaled(int=10);        //!< Constructor, number of test insertions
+        void add(particle);     //!< Add test particle
+        void add(Space&);
+        void insert(Space&, double=7.1); //!< Ghost insertion
+        //void insert(container &, energybase &, vector<point> &); //!< Ghost insertion in a set of points
+    };
+  }//namespace
 }//namespace
 #endif

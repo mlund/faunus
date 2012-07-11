@@ -1,17 +1,36 @@
-#include "faunus/species.h"
-#include "faunus/messagepool.h"
+#include <faunus/species.h>
+#include <faunus/inputfile.h>
+#include <faunus/point.h>
+#include <faunus/textio.h>
 
 namespace Faunus {
-  atoms atom; // Instantiate global copy
 
-  atoms::atoms() {
-    filename="faunatoms.dat";
-    data a = {0,0,0,0,0.1,0,0,0,0,0,false,"UNK"};
+  AtomData::AtomData() {
+    sigma=0;      
+    eps=0;
+    radius=0;
+    mw=0.1;
+    charge=0;
+    activity=0;
+    dp=0;
+    mean=0;
+    variance=0;
+    hydrophobic=0;
+    name="UNK";
+  }
+
+  AtomTypes atom; // Instantiate global copy
+
+  AtomTypes::AtomTypes() {
+    filename.clear();
+    AtomData a;
+    a.id=list.size();
+    a.name="UNK";
     list.push_back(a);
     init();
   }
 
-  void atoms::init() {
+  void AtomTypes::init() {
     int n=list.size();
     qq.resize(n);
     eps.resize(n);
@@ -21,62 +40,38 @@ namespace Faunus {
       eps[i].resize(n);
       sigma[i].resize(n);
       for (int j=0; j<n; j++) {
-        qq[i][j]=list[i].charge*list[j].charge;
-        eps[i][j]=sqrt(list[i].eps*list[j].eps);
-        sigma[i][j]=(list[i].sigma+list[j].sigma)/2;
+        qq[i][j]    = list[i].charge * list[j].charge;
+        eps[i][j]   = sqrt(list[i].eps * list[j].eps);
+        sigma[i][j] = ( list[i].sigma + list[j].sigma ) / 2;
       }
     }
   }
 
-  // Get atom of type i
-  particle atoms::get(char i) {
-    particle a;
-    return set(a,i);
+  AtomData & AtomTypes::operator[] (short i) { return list[i]; }
+
+  AtomData & AtomTypes::operator[] (string s) {
+    for (auto &l_i : list)
+      if (s==l_i.name)
+        return l_i;
+    return list[0];
   }
 
-  // Set p to atom i
-  particle atoms::set(particle &p, char i) {
-    p.charge=list[i].charge;
-    p.mw=list[i].mw;
-    p.id=list[i].id;
-    p.radius=list[i].radius;
-    p.hydrophobic=list[i].hydrophobic;
-    return p;
+  bool AtomTypes::includefile(InputMap &in) {
+    return includefile( in.get<string>("atomlist",filename) );
   }
 
-  Faunus::data & atoms::operator[] (char i) { return list[i]; }
-  Faunus::data & atoms::operator[] (string s) { return list[ find(s) ]; }
-  particle atoms::operator() (char i) { return get(i); }
-  particle atoms::operator() (string s) { return get(find(s)); }
-
-  char atoms::find(string s) {
-    for (char i=0; i<list.size(); i++)
-      if (s==list[i].name)
-        return list[i].id;
-    return 0;
-  }
-
-  char atoms::find(double mw, double tol) {
-    for (char i=0; i<list.size(); i++)
-      if ( std::abs(mw-list[i].mw)<tol )
-        return list[i].id;
-    return 0;
-  }
-
-  bool atoms::load(inputfile &in) {
-    return load(in.getstr("atomfile",filename));
-  }
-
-  bool atoms::load(string file) {
-    data a;
+  bool AtomTypes::includefile(string file) {
+    AtomData a;
     string t;
     filename=file;
     std::ifstream f(filename.c_str());
+    cout << "Reading atom data from '" << filename << "'. ";
     if (f) {
+      cout << "OK!\n";
       while (!f.eof()) {
         f >> t;
         if (t=="Atom") {
-          f >> a.name >> a.charge >> a.radius >> a.eps >> a.mw >> a.pka >> t;
+          f >> a.name >> a.charge >> a.radius >> a.eps >> a.mw >> t;
           a.sigma=2*a.radius;
           a.hydrophobic = (t=="yes") ? true : false;
           a.id=list.size();
@@ -87,32 +82,33 @@ namespace Faunus {
       f.close();
       return true;
     }
-    string w="Error! Parameter file " + filename + " not NOT found.",
-           id="species";
-    errlog.client[id]+=w;
-    errlog.client[id].fatal=true;
-    std::cerr << "# " << w << endl;
-    filename+=" (not found)";
+    cout << "FAILED!\n";
+    filename+=" (n/a)";
     return false;
   }
 
-  string atoms::info() {
+  string AtomTypes::info() {
+    using namespace textio;
+    char w=25;
+    if (filename.empty())
+      filename="(undefined)";
     std::ostringstream o;
-    o << endl
-      << "# ATOM PARAMETERS:\n"
-      << "#   Number of species     = " << list.size() << endl
-      << "#   Parameter file        = " << filename << endl
-      << "#   Species found:";
-    for (int i=0; i<list.size(); i++) {
-      if (i%10==0) o << endl << "#     ";
-      o << setw(6) << std::left << list[i].name;
+    o << header("Atomic Species")
+      << pad(SUB,w,"Number of species") << list.size() << endl
+      << pad(SUB,w,"Parameter file") << filename << endl
+      << indent(SUB) << "Species:";
+    for (size_t i=0; i<list.size(); i++) {
+      if (i%10==0)
+        o << endl << indent(SUBSUB);
+      o << setw(SUBSUB+1) << std::left << list[i].name;
     }
     o << endl;
     return o.str();
   }
 
-  void atoms::reset_properties(vector<particle> &p) {
-    for (int i=0; i<p.size(); i++)
-      set(p[i],p[i].id);
+  void AtomTypes::reset_properties(vector<particle> &p) {
+    for (auto &p_i : p )
+      p_i = list[p_i.id];
   }
+
 }//namespace

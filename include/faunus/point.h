@@ -1,94 +1,44 @@
-#ifndef FAU_POINT_H
-#define FAU_POINT_H
+#ifndef FAUNUS_POINT_H
+#define FAUNUS_POINT_H
 
 #ifndef SWIG
 #include "faunus/common.h"
 #endif
 
 namespace Faunus {
-  class random;
-  /*!
-   * \brief Hypersphere coordinates
-   * \author Martin Trulsson
-   * \date Lund, 2009
-   *
-   * This class defines particles on a hypersphere. When the macro definition
-   * HYPERSPHERE is set the normal cartesian point class will inherit from this
-   * class. The build system currently creates a separate dynamic library, linhyperfaunus,
-   * to be used specifically for simulations on a hypersphere.
-   */
-  class hyperpoint {
-    public:
-      double z1,z2,z3,z4;                     //!< Reduced Coordinates on hypersphere
-      void move(double,double,double);        //!< Translate a point along the surface of the sphere
-      friend std::ostream &operator<<(std::ostream &, hyperpoint &);
-      hyperpoint &operator<<(std::istream &);
-
-      void hypclear() {
-        z1=z2=z3=0;
-        z4=1;
-      }
-
-      hyperpoint() {
-        hypclear();
-      }
-
-      /*!
-       * \brief Squared distance between two points.
-       * \return \f[ r^2 = z_1z_1' + z_2z_2' + z_3z_3' + z_4z_4' \f]
-       */
-      inline double hypsqdist(const hyperpoint &p) const {
-        return z1*p.z1+z2*p.z2+z3*p.z3+z4*p.z4;
-      }
-
-      /*!
-       * \brief Geodesic distance between two hyperpoints
-       * \return \f[ r_{\mbox{\scriptsize{geod}}} = \arccos{ (r^2) } \f]
-       */
-      inline double geodesic(const hyperpoint &p) const {
-        return std::acos(hypsqdist(p));
-      }
-  };
-
+  class RandomBase;
+  class Geometrybase;
+  class AtomData;
   /*!
    * \brief Cartesian coordinates
    * \author Mikael Lund
    * \date 2002-2007
    */
-  class point
-#ifdef HYPERSPHERE
-    : public hyperpoint
-#endif
-    {
-      private:
-        inline int anint(double) const;
-      public:
-        double x,y,z;                       //!< Cartesian coordinates
-        point();                            //!< Constructor, zero data.
-        point(double,double,double);        //!< Constructor, set vector
-        void clear();                       //!< Zero all data.
-        double len() const; 
-        inline double sqdist(const point &) const;                                        //!< Squared distance to another point
-        inline double sqdist_mi_xyz(const point &, const double &, const double &) const; //!< XYZ cubic minimum image distance  
-        inline double sqdist_mi_xyz(const point&, const point&, const point&) const;      //!< XYZ minimum image distance
-        inline double sqdist_mi_xy(const point&, const point&, const point&) const;
-        inline double sqdist_mi_z(const point&, const double&, const double&) const;
-        //inline double dist(const point &) const;        //!< Distance to another point
-        //inline double dist(const point &, const double &, const double &) const ; //!< Distance to another point
-        void ranunit(random &);               //!< Generate a random unit vector
-        double dot(const point &) const;      //!< Angle with another point
-        point operator-();                    //!< Sign reversal
-        point operator*(const point);         //!< Multiply two vectors
-        point operator*(double) const;        //!< Scale vector
-        point operator+(const point);         //!< Add two vectors
-        point operator-(const point) const;   //!< Subtract vector
-        point operator+(double);              //!< Displace x,y,z by value
-        point & operator+=(const point&);
-        bool operator==(const point&) const;
-        std::string str();
-        friend std::ostream &operator<<(std::ostream &, point &); //!< Output information
-        point &operator<<(std::istream &);                        //!< Get information
-    };
+  class Point {
+    private:
+      inline int anint(double) const;
+    public:
+      double x,y,z;                       //!< Cartesian coordinates
+      Point();                            //!< Constructor, zero data.
+      Point(double,double,double);        //!< Constructor, set vector
+      void clear();                       //!< Zero all data.
+      double len() const; 
+      void ranunit(RandomBase &);               //!< Generate a random unit vector
+      double dot(const Point &) const;      //!< Angle with another point
+      Point operator-() const;              //!< Sign reversal
+      const Point operator*(double) const;  //!< Scale vector
+      Point operator+(const Point&) const;  //!< Add two vectors
+      Point operator-(const Point&) const;  //!< Subtract vector
+      Point & operator+=(const Point&);     //!< Vector addition
+      Point & operator*=(const double);     //!< Scaling vector
+      bool operator==(const Point&) const;
+      std::string str();
+      friend std::ostream &operator<<(std::ostream &, const Point &); //!< Output information
+      Point &operator<<(std::istream &);                        //!< Get information
+
+  };
+
+  inline int Point::anint(double a) const { return int(a>0 ? a+.5 : a-.5); }
 
   /*!
    * \brief Class for particles
@@ -103,138 +53,41 @@ namespace Faunus {
    * p[0].overlap( p[1] ); --> false
    * \endcode
    */
-  class particle : public point {
+  class PointParticle : public Point {
     public:
-      particle();
-      double charge;                         //!< Charge number
-      double radius;                         //!< Radius
-      float mw;                              //!< Molecular weight
-      unsigned char id;                      //!< Particle identifier
-      bool hydrophobic;                      //!< Hydrophobic flag
-      inline bool overlap(const particle &) const; //!< Hardsphere overlap test
-      inline bool overlap(const particle &, const double &) const;
-      inline bool overlap(const particle &, const double &, const double &) const;
-      inline double potential(const point &);   //!< Electric potential in point
+      PointParticle();
+      double charge;                            //!< Charge number
+      double radius;                            //!< Radius
+      float mw;                                 //!< Molecular weight
+      unsigned char id;                         //!< Particle identifier
+      bool hydrophobic;                         //!< Hydrophobic flag
       double volume() const;                    //!< Return volume of sphere
       double mw2vol(double=1) const;            //!< Estimate volume from weight
       double mw2rad(double=1) const;            //!< Estimate radius from weight
-      particle& operator=(const point&);        //!< Copy coordinates from a point
       void deactivate();                        //!< Deactivate for use w. faster energy loops
       void clear();                             //!< Clear/reset all data
-      friend std::ostream &operator<<(std::ostream &, particle &); //!< Output information
-      particle &operator<<(std::istream &);                        //!< Get information
-   };
-
-  /*! 
-   * \brief Class for spherical coordinates
-   * \author Mikael Lund
-   * \date Canberra, 2005-2006
-   */
-  class spherical {
-    public:
-      double r,     //!< Radial
-             theta, //!< Zenith angle \f$[0:\pi]\f$
-             phi;   //!< Azimuthal angle \f$[0:2\pi]\f$
-      spherical(double=0,double=0,double=0);
-      point cartesian();                            //!< Convert to cartesian coordinates
-      void operator=(point &);                      //!< Convert from cartesian coordinates
-      void random_angles();                         //!< Randomize angles
+      bool overlap(const PointParticle&, double) const;                       //!< Check for overlap of two particles
+      friend std::ostream &operator<<(std::ostream &, const PointParticle &); //!< Output information
+      PointParticle& operator<<(std::istream &);                              //!< Get information
+      PointParticle& operator=(const Point&);                                 //!< Copy coordinates from a point
+      PointParticle& operator=(const AtomData&);
   };
 
-  inline void spherical::operator=(point &p) {
-    r=p.len();
-    theta=acos(p.z/r);
-    phi=asin( p.y/sqrt(p.x*p.x+p.y*p.y) );
-    if (p.x<0)
-      phi=acos(-1.) - phi;
-  }
-
-  inline point spherical::cartesian() {
-    point p;
-    p.x=r*sin(theta)*cos(phi);
-    p.y=r*sin(theta)*sin(phi);
-    p.z=r*cos(theta);
-    return p;
-  }
-
-  //! \todo This function is not completed
-  inline void spherical::random_angles() {
-    r=1.0 ;
-  }
-
-  /*!
-   * \return \f$ r_{12}^2 = \Delta x^2 + \Delta y^2 + \Delta z^2 \f$
-   */
-  inline double point::sqdist(const point &p) const {
-    register double dx,dy,dz;
-    dx=x-p.x;
-    dy=y-p.y;
-    dz=z-p.z;
-    return dx*dx + dy*dy + dz*dz;
-  }
-
-  inline int point::anint(double a) const { return int(a>0 ? a+.5 : a-.5); }
-  
-  inline double point::sqdist_mi_xyz(const point& p, const double& len, const double& len_half) const {
-    double dx=std::abs(x-p.x);
-    double dy=std::abs(y-p.y);
-    double dz=std::abs(z-p.z);
-    if (dx>len_half) dx-=len;
-    if (dy>len_half) dy-=len;
-    if (dz>len_half) dz-=len;
-    return dx*dx + dy*dy + dz*dz;
-  }
-  
-  inline double point::sqdist_mi_xyz(const point &p, const point& len, const point& len_half) const {   //!< Squared distance 
-    double dx=std::abs(x-p.x);
-    double dy=std::abs(y-p.y);
-    double dz=std::abs(z-p.z);
-    if (dx>len_half.x) dx-=len.x;
-    if (dy>len_half.y) dy-=len.y;
-    if (dz>len_half.z) dz-=len.z;
-    return dx*dx + dy*dy + dz*dz;
-  }                                   
-
-  inline double point::sqdist_mi_xy(const point &p, const point& len, const point& len_half) const {   //!< Squared distance 
-    double dx=std::abs(x-p.x);
-    double dy=std::abs(y-p.y);
-    double dz=z-p.z;
-    if (dx>len_half.x) dx-=len.x;
-    if (dy>len_half.y) dy-=len.y;                                      
-    return dx*dx + dy*dy + dz*dz;
-  }   
-  
-  inline double point::sqdist_mi_z(const point &p, const double& len_z, const double& len_half_z) const {   //!< Squared distance 
-    double dx=x-p.x;
-    double dy=y-p.y;
-    double dz=std::abs(z-p.z);
-    if (dz>len_half_z) dx-=len_z;
-    return dx*dx + dy*dy + dz*dz;
-  }   
-
-  /*!
-   * \return \f$ \phi = \frac{z}{r_{12}}\f$
-   * \note Not multiplied with the Bjerrum length!
-   */
-  inline double particle::potential(const point &p) { return charge / sqrt(sqdist(p)); }
-
-  /*!
-   * \return True if \f$ r_{12}<(\sigma_1+\sigma_2)/2 \f$ - otherwise false.
-   */
-  inline bool particle::overlap(const particle &p) const {
-    double r=radius+p.radius;
-    return (sqdist(p) < r*r) ? true : false;
-  }
-
-  inline bool particle::overlap(const particle &p, const double &s) const {
-    double r=radius+p.radius+s;
-    return (sqdist(p) < r*r) ? true : false;
-  }
-
-  inline bool particle::overlap(const particle &p, const double &len, const double &halflen) const {
-    double r=radius+p.radius;
-    return ( sqdist_mi_xyz(p,len,halflen) < r*r ) ? true : false;
-  }
+  class CigarParticle : public PointParticle {
+    public:
+      Point omega, patch;
+      double patchangle, length;
+      void rotate(const Geometrybase&, const Point&, double);            //!< Rotate around a vector
+      void translate(const Geometrybase&, const Point&);                 //!< Translate along a vector
+      void scale(const Geometrybase&, double);                           //!< Volume scaling
+      bool overlap(const CigarParticle&, double) const;     //!< Check for overlap of two particles
+      friend std::ostream &operator<<(std::ostream &, const CigarParticle &); //!< Output information
+      CigarParticle &operator<<(std::istream &);                              //!< Get information
+      CigarParticle operator+(const Point&) const;         //!< Add two vectors
+      CigarParticle& operator=(const Point&);
+      CigarParticle& operator=(const AtomData&);
+      CigarParticle& operator=(const PointParticle&);
+  };
 
 }//namespace
 #endif

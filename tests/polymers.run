@@ -1,0 +1,57 @@
+#!/bin/bash
+
+exe=../src/tools/polymer-npt-sphere
+base="polymers"
+
+#-----------------------------------------------------------
+
+echo "
+Atom  Na      +1     2.0    0.1    1       no
+Atom  Cl      -1     2.0    0.1    1       no
+Atom  MM      +1     3.0    0.1    1       no
+" > $base.atoms
+
+#-----------------------------------------------------------
+echo "
+atomlist               $base.atoms
+loop_macrosteps        10
+loop_microsteps        20000
+cuboid_len             200     # Box side length Angstrom
+sphere_radius          100
+temperature            298     # Kelvin
+epsilon_r              78.7    # Water dielectric const
+lj_eps                 0.05    # kT
+npt_P                  113.2   # mM
+npt_dV                 2       # log(dV)
+polymer_N              8
+polymer_file           $base.aam
+polymer_eqdist         0
+polymer_forceconst     0.557   # kT/A^2
+crank_dp               6.3
+crank_minlen           2
+crank_maxlen           10
+pivot_dp               6.3
+pivot_minlen           1
+pivot_maxlen           1000
+transrot_transdp       50
+transrot_rotdp         6
+tion1                  Cl
+nion1                  32
+dpion1                 110
+test_stable            no
+test_file              $base.test
+" > $base.input
+
+#-----------------------------------------------------------
+echo "4
+ MM  0   0.00   0.00   0.00    1.0   1  3.0
+ MM  1   7.60   0.00   0.00    1.0   1  3.0
+ MM  0   0.00   7.60   0.00    1.0   1  3.0
+ MM  1   7.60   7.60   0.00    1.0   1  3.0
+" > $base.aam
+
+#-----------------------------------------------------------
+
+$exe -i $base.input -c $base.state
+
+rm -f confout.gro $base.input $base.aam $base.atoms

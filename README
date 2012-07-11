@@ -1,6 +1,6 @@
 ***************************************************************************
   Faunus -- A Framework for Molecular Modelling 
-  Copyright (C) 2002-2011 Mikael Lund 
+  Copyright (C) 2002-2012 Mikael Lund 
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -21,13 +21,56 @@ WELCOME TO FAUNUS:
   Faunus is a C++ class library for creating programs
   for Monte Carlo simulation of molecular systems.
 
-  Get the latest code resivions via SVN from sourceforge.net:
-  $ svn co http://faunus.svn.sourceforge.net/svnroot/faunus/trunk faunus
-
   Website: http://faunus.sourceforge.net
+  Support: http://sourceforge.net/projects/faunus/support
+
+  Get the latest code resivions via SVN from sourceforge.net:
+  $ svn co http://faunus.svn.sourceforge.net/svnroot/faunus faunus
+
+REQUIREMENTS:
+  - C/C++11 compiler (clang3+, gcc4.6+, ...)
+  - cmake 2.8+
+  Optional:
+  - SWIG 2.0+ (for python, ruby, ... modules)
+  - OpenBabel 2 (numerous molecular formats)
+  - Doxygen and Graphviz (for code manual)
+  - Xcode (for neat environment on macos x)
+
+  Developed and tested on Linux and MacOS X.
+
+COMPILING:
+  Text based setup:
+    $ cmake . [options]
+    $ make [help]
+    $ make test (or use 'ctest -V' for verbose test output)
+
+  Options:
+    -DENABLE_OPENMP=on|OFF            Enable OpenMP support
+    -DENABLE_BABEL=ON|off             Use OpenBabel for file I/O
+    -DENABLE_MPI=on|OFF               Build MPI programs (parallel tempering etc.)
+    -DENABLE_TWISTER=on|OFF           Use Mersenne Twister for random numbers (experimental)
+    -DCMAKE_BUILD_TYPE=Debug|Release  Debug (default) or Release (faster) mode
+    -DCMAKE_CXX_FLAGS_RELEASE="..."   Extra compiler options for Release mode
+    -DCMAKE_CXX_FLAGS_DEBUG="..."     Extra compiler options for Debug mode
+
+  Example for Intel's C++ compiler with OpenMP parallelization:
+    $ CXX=icpc cmake . -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=Release
+    $ make
+
+  Example for LLVM Clang:
+    $ CXX=clang++ CC=clang cmake .
+
+  Libraries in odd locations:
+    Can be specified using environmental variables. For example,
+
+    $ LDFLAGS=-L/sw/lib CPPFLAGS=-I/sw/include/openbabel-2.0 cmake .
+
+  Resetting the build system:
+    $ make clean
+    $ rm CMakeCache.txt
 
 DEVELOPERS:
-  Mikael Lund        <mikael.lund at teokem.lu.se> - http://web.mac.com/mlund
+  Mikael Lund        <mikael.lund at teokem.lu.se> - http://www.teokem.lu.se/~mikael
   Bjorn Persson      <bjorn.persson at teokem.lu.se>
   Martin Trulsson    <martin.trulsson at teokem.lu.se>
   Ondrej Marsalek    <ondrej.marsalek at uochb.cas.cz>
@@ -39,80 +82,4 @@ DEVELOPERS:
 CITING FAUNUS:
   Lund, M., Persson, B., Trulsson, M. (2008) Source Code Biol. Med. 3:1
   http://www.scfbm.org/content/3/1/1 (free full text)
-
-REQUIREMENTS:
-  - C/C++ compiler (gnu,clang,intel,sun,pgi,ibm)
-  - cmake 2.8
-  Optional:
-  - SWIG 2.0+ (for python, ruby, ... modules)
-  - OpenBabel 2 (numerous molecular formats)
-  - Doxygen and Graphviz (for code manual)
-  - Xcode (for neat environment on macos x)
-
-  Developed and tested on Linux, MacOS X.
-
-COMPILING:
-  Menu based setup:
-  $ ccmake .
-  $ make [help]
-
-  Text based setup:
-  $ cmake . [options]
-
-  Options:
-    -DENABLE_OPENMP=on|OFF   Enable OpenMP support
-    -DENABLE_SWIG=ON|off     Enable SWIG modules (python, ruby etc.)
-    -DENABLE_FORTRAN=on|OFF  Compile legacy fortran programs
-    -DENABLE_BABEL=ON|off    Use OpenBabel for file I/O
-    -DENABLE_TWISTER=on|OFF  Use Mersenne Twister for random numbers
-
-  Example for Intel's C++ compiler with OpenMP parallelization:
-    $ CXX=icpc cmake . -DENABLE_OPENMP=on
-    $ make
-
-  Run test suite:
-    $ make test (or use 'ctest -V' for verbose output)
-
-  Libraries in odd locations:
-    Can be specified using environmental variables. For example,
-
-    $ LDFLAGS=-L/sw/lib CPPFLAGS=-I/sw/include/openbabel-2.0 cmake .
-
-  Resetting the build system:
-    $ make clean
-    $ rm CMakeCache.txt
-
-PYTHON SUPPORT:
-  Faunus classes can be accessed via Python, provided that
-  the python module is compiled (requires SWIG). Build with:
-
-  $ make _pyfaunus
-
-  Include misc/swig in PYTHONPATH and access Faunus
-  via "import pyfaunus as fau". For example:
-
-  >>> a = fau.particle()
-
-  If you have multiple python versions installed the _pyfaunus library
-  must be linked to the same python library as the interpreter. Force this
-  in the ccmake menu or use tricks as below.
-
-  - On MacOS X Non-system python frameworks may be specified the first time
-    cmake is run. For example, for MacPorts:
-
-    $ LDFLAGS=-F/opt/local/Library/Frameworks cmake .
-
-  - Alternatively, force the dynamic linker to favor a specific framework
-    directory before starting python:
-
-    $ export DYLD_LIBRARY_PATH=/opt/local/Library/Frameworks/Python.framework/Versions/2.6
-    $ ipython
-
-DIRECTORY LAYOUT:
-  src          Sourcecode and examples
-  include      Header files
-  legacy       Older programs. FORTRAN programs are also placed here.
-  misc         Miscellaneous
-  doc          Code documentation (auto generated)
-  unittests    Unittesting of compiled programs (try 'make test')
 

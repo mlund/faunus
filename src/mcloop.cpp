@@ -1,44 +1,50 @@
 #include <faunus/mcloop.h>
+#include <faunus/inputfile.h>
+#include <faunus/textio.h>
 
 namespace Faunus {
 
-  mcloop::mcloop(inputfile &in) : cnt( in.getint("macrosteps",10)) {
-    string prefix="loop_";
-    macro=in.getint("macrosteps",10);
-    micro=in.getint("microsteps");
-    statefile=in.getstr(prefix+"statefile", "loop.state");
-    loadstateBool = false; //in.getboo(prefix+"loadstate", false);
+  MCLoop::MCLoop(InputMap &in, string pfx) : cnt( in.get<int>(pfx+"macrosteps",10)) {
+    string prefix=pfx;
+    macro=in.get<int>(prefix+"macrosteps",10);
+    micro=in.get<int>(prefix+"microsteps",0);
+    statefile=in.get<string>(prefix+"statefile", "loop.state");
+    loadstateBool = false; //in.get<bool>(prefix+"loadstate", false);
     if (loadstateBool)
       loadstate();
-    //eq=in.getboo("equilibration", false);
+    //eq=in.get<bool>("equilibration", false);
     cnt_micro=cnt_macro=0;
   }
 
-  string mcloop::info() {
+  string MCLoop::info() {
+    using namespace textio;
+    char w=25;
     std::ostringstream o;
-    o << endl << "# STEP AND TIME DETAILS:" << endl
-      << "#   Steps (macro micro tot)= " << macro << " x " << micro << " = " << macro*micro << endl
-      << "#   Remaining steps        = " << macro*micro - count() << endl;
+    o << header("MC Steps and Time")
+      << pad(SUB,w,"Steps (macro micro tot)") << macro << "\u2219" << micro << " = " << macro*micro << endl
+      << pad(SUB,w,"Remaining steps") << macro*micro - count() << endl;
     if (loadstateBool)
       o << "#   Load state from disk   = yes" << endl;
     int t=cnt.elapsed();
     if (t>5) {
-      o << "#   Time elapsed (hours)   = " << t/(3600.) << endl
-        << "#   Steps/minute           = " << macro*micro/(t/60.) << endl;
+      o << pad(SUB,w,"Time elapsed") << t/(3600.) << " h" << endl
+        << pad(SUB,w,"Steps/minute") << macro*micro/(t/60.) << endl;
     }
+    o << std::flush;
     return o.str();
   }
 
-  string mcloop::timing() {
+  string MCLoop::timing() {
     return timing(cnt_macro);
   }
 
   /*!
    * \note This will try to flush the output stream buffer.
    */
-  string mcloop::timing(unsigned int mac) {
+  string MCLoop::timing(unsigned int mac) {
+    using namespace textio;
     std::ostringstream o;
-    o << "# Macrostep " << mac << " completed. ETA: "
+    o << indent(SUB) << "Macrostep " << std::left << std::setw(4) << mac << "ETA: "
       << cnt.eta(mac) << std::flush;
     return o.str();
   }
@@ -48,15 +54,15 @@ namespace Faunus {
    * maximum value has been reached. Whenever called
    * this function saves a state file to disk
    */
-  bool mcloop::macroCnt() {
-    savestate();
+  bool MCLoop::macroCnt() {
+    //savestate();
     return (++cnt_macro>macro) ? false : true;
   }
 
   /*!
-   * As mcloop::macroCnt() but for the microsteps
+   * As MCLoop::macroCnt() but for the microsteps
    */
-  bool mcloop::microCnt() {
+  bool MCLoop::microCnt() {
     if (cnt_micro++<micro)
       return true;
     cnt_micro=0;
@@ -66,11 +72,11 @@ namespace Faunus {
   /*!
    * Returns the number of completed steps
    */
-  unsigned int mcloop::count() {
+  unsigned int MCLoop::count() {
     return (cnt_macro-1)*micro + cnt_micro;
   }
 
-  bool mcloop::savestate(string name) {
+  bool MCLoop::savestate(string name) {
     if (name.empty())
       name=statefile;
     std::ofstream f(name.c_str());
@@ -82,7 +88,7 @@ namespace Faunus {
     return false;
   }
 
-  bool mcloop::loadstate(string name) {
+  bool MCLoop::loadstate(string name) {
     unsigned int _macro, _micro, _cnt_macro, _cnt_micro, _cnt;
     if (loadstateBool) {
       if (name.empty())

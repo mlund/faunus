@@ -1,7 +1,7 @@
 #ifndef FAU_IO_H
 #define FAU_IO_H
-#include "faunus/common.h"
-#include "faunus/titrate.h"
+#include <faunus/common.h>
+#include <faunus/energy.h>
 
 #ifndef __cplusplus
 #define __cplusplus
@@ -14,17 +14,12 @@
 
 namespace Faunus {
   
-  class container;
-  class inputfile;
-  class box;
-  class cuboid;
-  class group;
-  class macromolecule;
-  class particle;
-  class particles;
+  class Group;
+  class GroupMolecular;
 
-  /*! \brief Basic file I/O routines
-   *  \author Mikael Lund
+  /*
+   * \brief Basic file I/O routines
+   * \author Mikael Lund
    */
   class io {
     private:
@@ -36,101 +31,37 @@ namespace Faunus {
       void splash(string);                          //!< Splashes the content of a file
   };
 
-  class particleIO {
-    protected:
-      string warning();
-      string format;
-    public:
-      virtual bool save(container &, string)=0;
-      virtual bool load(container &, string)=0;
-      virtual bool load(vector<particle> &, string)=0;
-      virtual string info() {
-        return "";
-      }
-  };
-
-  //class io_aam : public particleIO {
-  //  bool load(container &, string);
-  //  bool load(vector<particle> &, string);
-  //  bool sabe(container &, string);
-  //};
-
-  /*!\brief General class for particle I/O.
+  /*!
+   * \brief Read/write AAM file format
    * \author Mikael Lund
-   * \todo Unfinished!
-   * \todo move transformations s2p p2s to iopart
    *
-   * The purpose of this class is to provide general read/write
-   * routines for particle I/O. This can be used to load/save
-   * structures, coordinate space, pdb files, povray etc.
+   * The AAM format is a simple format for loading particle positions, charges, radii and
+   * molecular weights. The structure is as follows:
+   * \li Lines beginning with # are ignored and can be placed anywhere
+   * \li The first non-# line gives the number of particles
+   * \li Every subsequent line gives atom information in the format: name, number, x, y, z, charge number, weight, radius
+   * \li Positions and radii should be in angstroms
+   * \li Currently, data in the number field is ignored.
+   * \li No particular spacing is required.
+   *
+   * \code
+   * # information
+   * # more information
+   * 2
+   * Na    1     10.234 5.4454 -2.345  +1    22.0   1.7
+   * Cl    2    5.011     1.054  20.02   -1   35.0   2.0
+   * \endcode
    */
-  class iopart : private io {
-    friend class ioaam;
-    friend class iopov;
-    friend class ioxyz;
-    friend class ioxtz;
-    friend class iogro;
-    friend class iopqr;
-    friend class ioqtraj;
+  class FormatAAM {
     private:
-    vector<string> v; 
-    vector<particle> p;
+      string p2s(particle &, int);
+      particle s2p(string &);
+      io fio;
     public:
-    virtual vector<particle> load(string)=0;            //!< Load from disk
-    virtual bool save(string, vector<particle>&)=0;     //!< Save to disk
-  };
-
-  /*! \brief Write XYZ structure files, only 
-   *  \brief intended for particles.p IO
-   *  \author Mikael Lund
-   */
-  class ioxyz : public iopart {
-    friend class particles;
-
-    private:
-    particle s2p(string &);
-    particles *sys;
-
-    public:
-    ioxyz();
-    bool save(string, vector<particle>&);
-    vector<particle> load(string);
-  };
-
-  /*! \brief Read/write AAM file format
-   *  \author Mikael Lund
-   */
-  class ioaam : public iopart {
-    private:
-      string p2s(particle &, int=0); 
-      particle s2p(string &); 
-    public:
-      ioaam();
-      vector<particle> load(string);
-      void load(container&,inputfile&,vector<macromolecule>&);//!< Read proteins from disk
-      void loadlattice(container&,inputfile&,vector<macromolecule>&);//!< Read proteins from disk on to a lattice
-      bool load(container &, string); //!< Reads a configuration from disk
-      bool save(string, vector<particle>&);
-  };
-
-  /*! \brief Persistence of Vision Raytracer output
-   *  \author Mikael Lund
-   */
-  class iopov : public iopart {
-    private:
-      std::ostringstream o;
-      string p2s(particle &, int=0);
-      void header();
-      vector<particle> load(string);
-    public:
-      iopov(container &);
-      void clear();                       //!< Clear output buffer
-      //void box(float);                  //!< Add cubic box
-      //void cell(float);                 //!< Add spherical cell
-      void light(float);                  //!< Add light source
-      void connect(point&, point&, float);//!< Connect two points w. a cylinder
-      void camera();                      //!< Specify camera location and viewpoint
-      bool save(string, vector<particle>&);
+      FormatAAM();
+      p_vec p;
+      bool load(string);
+      bool save(string, p_vec&);
   };
 
   /*!
@@ -138,34 +69,32 @@ namespace Faunus {
    * \date December 2007
    * \author Mikael Lund
    */
-  class iopqr : public iopart {
+  class FormatPQR {
     private:
-      string p2s(particle &, int=0) { return string(); }
-      void header() {}
-      vector<particle> load(string) { return vector<particle>(); }
+      io fio;
     public:
-      iopqr();
-      bool save(string, vector<particle> &);            //!< Save with particle charge
-      bool save(string, vector<particle> &, titrate &); //!< Save with average charges
-      bool save(string, vector<particle> &, vector<group> &); //!< Save groups
+      FormatPQR();
+      p_vec p;                   //!< Placeholder for loaded data
+      bool save(string, p_vec&); //!< Save with particle charge
   };
 
   /*!
    * \brief Gromacs GRO format
    * \date December 2007
    * \author Mikael Lund
+   * \todo Non cubic dimensions
    */
-  class iogro : public iopart {
+  class FormatGRO {
     private:
+      vector<string> v;
       particle s2p(string &);
-      string p2s(particle &, int=0) { return string(); }
-      void header() {}
-      float len; // box dimensions
+      io fio;
     public:
-      iogro(inputfile &);
-      bool save(string, vector<particle> &);
-      bool save(string, box &);
-      vector<particle> load(string);
+      double len;            //!< Box side length (cubic so far)
+      p_vec p;
+      bool load(string);
+      bool save(string, p_vec&);
+      bool save(string, Space&);
   };
 
   /*! \brief GROMACS xtc compressed trajectory file format
@@ -176,26 +105,36 @@ namespace Faunus {
    *  box information if applicable. Molecules with periodic boundaries
    *  can be saved as "whole" by adding their groups to the public g-vector.
    */
-  class ioxtc {
+  class FormatXTC {
     private:
-      vector<particle> p; //!< internal particle vector for temporary data
+      p_vec p; //!< internal particle vector for temporary data
       XDRFILE *xd;        //!< file handle
       matrix xdbox;       //!< box dimensions
       rvec *x_xtc;        //!< vector of particle coordinates
       float time_xtc, prec_xtc;
       int natoms_xtc, step_xtc;
     public:
-      vector<group*> g;                        //!< List of PBC groups to be saved as whole
-      ioxtc(float);                            //!< Constructor that sets an initially cubic box
+      vector<GroupMolecular*> g;                    //!< List of PBC groups to be saved as whole
+      FormatXTC(float);                            //!< Constructor that sets an initially cubic box
       bool open(string);                       //!< Open xtc file for reading
-      bool loadnextframe(cuboid &);            //!< Load a single frame into cuboid
-      bool save(string, const vector<particle> &);//!< Save a frame to trj file.
-      bool save(string, box &);                //!< Save a frame to trj file (PBC)
-      bool save(string, cuboid &);             //!< Save a frame to trj file (PBC)
-      bool save(string, vector<particle> &, vector<group> &); //!< Save groups
-      void setbox(float);                      //!< Set box size to be saved in frame (cubic)
-      void setbox(double,double,double);       //!< Set box size to be saved in frame
+      bool loadnextframe(Space&);              //!< Load a single frame into cuboid
+      bool save(string, const p_vec&);         //!< Save a frame to trj file.
+      bool save(string, Space&);               //!< Save a frame to trj file (PBC)
+      bool save(string, p_vec&, vector<Group>&);//!< Save groups
+      void setbox(float);                      //!< Set box length - cubic
+      void setbox(double,double,double);       //!< Set box length - xyz
+      void setbox(const Point&);               //!< Set box length - xyz from vector
       void close();                            //!< Close trj file
+  };
+
+  class FormatTopology {
+    private:
+      int rescnt;
+      string writeAtomTypes(const Space&);
+      string writeMoleculeType(const Group&, const Space&);
+    public:
+      FormatTopology();
+      bool save(string, const Space&); //!< Generate topology from Space
   };
 
   /*! \brief Trajectory of charges per particle
@@ -204,18 +143,19 @@ namespace Faunus {
    *
    *  Saves a trajectory of the charges for all particles in a particle vector
    */
-  class ioqtraj : public iopart {
+  class FormatQtraj {
     private:
       bool append;
-      vector<particle> load(string);
+      p_vec load(string);
     public:
-      ioqtraj();
-      bool save(string, vector<particle> &);   //!< Save a frame to trj file.
-      bool save(string, vector<particle> &, vector<group> &); //!< Save groups
+      FormatQtraj();
+      bool save(string, p_vec&);   //!< Save a frame to trj file.
+      bool save(string, p_vec&, vector<Group> &); //!< Save groups
   };
-  
+
   class xyfile {
     private:
+      io fio;
       std::ofstream f;
       unsigned int cnt;
     public:
@@ -224,5 +164,18 @@ namespace Faunus {
       void close();
   };
 
+  /*!
+   * \brief File IO for faste protein sequences
+   */
+  class FormatFastaSequence {
+    private:
+      std::map<char,string> map; //!< Map one letter code (char) to three letter code (string)
+      Potential::Harmonic bond;
+    public:
+      p_vec interpret(string);
+      FormatFastaSequence(double=0.76, double=4.9);
+      Group insert(string, Space&, Energy::Bonded&);
+      Group include(string, Space&, Energy::Bonded&);
+  };
 }//namespace
 #endif

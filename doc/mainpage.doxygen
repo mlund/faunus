@@ -1,21 +1,31 @@
-/*! \mainpage Faunus Developer Pages
+/*! \mainpage Welcome to Faunus!
 Here you will find automatically generated documentation for the C++ classes in the framework.
 Being continuously developed, we do not guarantee that the code nor documentation is correct so please
 check your results carefully!
 
-\section mainclasses Main classes one should know about:
-\subsection doc_container container
-The container class defines the geometry of your simulation (box, sphere, cylinder etc.) and also contains the particle positions. The container knows about the boundary conditions, how to make generate a random position within it and how to calculate distances between particles. Since many functions in container are virtual (and thus slow!) care must be taken not to use these in speed critical inner loops.
+\section mainclasses Important Classes:
+A good place to start is to understand the following classes. Also, for a more grouped overview do have
+a look at the Namespace list.
 
-\subsection doc_group group
-Groups (and derived classes) simply defines a continuous range of particles in the container particle vector.
-The range is defined by [beg:end]. More advanced derived classes also keep track of the mass center of molecules, dipole moments and various averages related to the group.
+\li Faunus::InputMap reads input parameters from a file in the format "keyword value". This class is frequently
+used in the constuctor arguments for other Faunus classes.
 
-\subsection doc_inputfile inputfile
-The inputfile class reads input parameters from a file in the format "keyword value". A range of other classes in Faunus expects an inputfile object in the constructor so as to probe user input.
+\li Faunus::Geometry::Geometrybase defines the geometry of your simulation (box, sphere, cylinder etc.). Usually
+this is instantiated by Faunus::Energy::Energybase classes and you often need not handle this yourself.
 
-\subsection doc_interaction energybase
-...is a base class for calculating interaction energies in the system. It is typically used as base for a class template that takes a pair potential as a template type. In this way any given potential is efficiently inlined into all energy loops. The pair potential must match the used geometry of the container.
+\li Faunus::Space contains all particles and handles particle insertion and removal. Every simulation needs a Space!
+
+\li Faunus::Group and derived classes simply define a continuous range of particles in the container particle vector,
+useful for defining molecules, salt groups etc.
+
+\li Faunus::Energy::Hamiltonian can sum interaction energies from multiple origins - bonded, non-bonded,
+external etc.
+
+\section miniexample Minimal Example
+Below is a minimal example that performs a Metropolis Monte Carlo simulation of charged Lennard-Jones particles.
+A cubic simulation geometry with periodic boundaries and the minimum image convention is used. Statistics about
+sampling, acceptance and mean square displacemets are printed at the end of the simulation.
+\include minimalmc.cpp
 
 */
 

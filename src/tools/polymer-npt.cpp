@@ -1,3 +1,18 @@
+/*
+ 
+ This will simulate an arbitrary number of linear polymers in an an NPT simulation
+ container with explicit salt particles and implicit solvent (dielectric continuum).
+ We include the following Monte Carlo move:
+ 
+ 1) salt translation
+ 2) polymer translation and rotation
+ 3) polymer crankshaft rotation
+ 4) polymer pivot rotation
+ 5) monomer translation
+ 6) isobaric volume move (NPT ensemble)
+
+*/
+
 #include <faunus/faunus.h>
 #include <tclap/CmdLine.h>
 
@@ -49,6 +64,7 @@ int main(int argc, char** argv) {
   Move::TranslateRotate gmv(mcp,pot,spc);
   Move::AtomicTranslation mv(mcp, pot, spc);
   Move::CrankShaft crank(mcp, pot, spc);
+  Move::Pivot pivot(mcp, pot, spc);
   Analysis::PolymerShape shape;
   Analysis::RadialDistribution<float,int> rdf(0.2);
 
@@ -82,7 +98,7 @@ int main(int argc, char** argv) {
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int k,i=rand() % 5;
+      int k,i=rand() % 6;
       switch (i) {
         case 0:
           mv.setGroup(salt);
@@ -113,6 +129,13 @@ int main(int argc, char** argv) {
             sys+=crank.move();
           }
           break;
+        case 5:
+          k=pol.size();
+          while (k-->0) {
+            pivot.setGroup( pol[ rand() % pol.size() ] );
+            sys+=pivot.move();
+          }
+          break;
       }
       for (auto i=pol.begin(); i!=pol.end()-1; i++)
         for (auto j=i+1; j!=pol.end(); j++)
@@ -138,5 +161,5 @@ int main(int argc, char** argv) {
   sys.test(test);
 
   cout << loop.info() << sys.info() << mv.info() << gmv.info() << crank.info()
-    << iso.info() << shape.info() << test.info();
+    << pivot.info() << iso.info() << shape.info() << test.info();
 }

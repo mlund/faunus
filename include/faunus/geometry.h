@@ -54,7 +54,7 @@ namespace Faunus {
         virtual void randompos(Point &)=0;              //!< Random point within container
         virtual void boundary(Point &) const=0;             //!< Apply boundary conditions to a point
         virtual void scale(Point&, const double&) const;    //!< Scale point to a new volume - for NPT ensemble
-        virtual double sqdist(const Point &a, const Point &b) const=0;
+        virtual double sqdist(const Point &a, const Point &b) const=0; //!< Squared distance between two points
         virtual Point vdist(const Point&, const Point&)=0;  //!< Distance in vector form
         virtual ~Geometrybase();
     };
@@ -211,7 +211,7 @@ namespace Faunus {
         double diameter;
       protected:
         double len;   //!< Cylinder length
-        double halflen;
+        double halflen; //!< Cylinder half length
       public:
         Cylinder(double, double);      //!< Construct from length and radius
         Cylinder(InputMap &);          //!< Construct from inputmap

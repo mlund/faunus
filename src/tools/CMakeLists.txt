@@ -39,7 +39,9 @@ fau_cigarexample(cigar "./" cigar.cpp)
 
 if(ENABLE_MPI AND MPI_CXX_FOUND)
   fau_example(manybodyMPI "./" manybodyMPI.cpp)
-  endif()
+  fau_example(manybodyMPI_slit "./" manybodyMPI.cpp)
+  set_target_properties( manybodyMPI_slit PROPERTIES COMPILE_DEFINITIONS "SLIT" EXCLUDE_FROM_ALL TRUE)
+endif()
 
 #----- target specific build options -----
 set_target_properties( polymer-npt-cuboid PROPERTIES COMPILE_DEFINITIONS "CUBOID" EXCLUDE_FROM_ALL TRUE)

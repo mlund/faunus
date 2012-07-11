@@ -331,8 +331,8 @@ namespace Faunus {
     }
 
     /*!
-     * Accounts for bonds between particles within a group. Bonds with external
-     * particles are skipped and should be accounted for by the g2g() energy function.
+     * Accounts for bonds between particles within a group. Bonds with particles
+     * outside the group are skipped and should be accounted for by the g2g() energy function.
      */
     double Bonded::g_internal(const p_vec &p, Group &g) {
       assert(geo!=nullptr);  //debug
@@ -471,6 +471,108 @@ namespace Faunus {
         o << indent(SUBSUB) << m.first.first->name << " " << m.first.second->name
           << " " << m.second.mindist << "-" << m.second.maxdist << _angstrom << endl;
       return o.str();
+    }
+
+    /*!
+     * The InputMap is searched for the following keywords:
+     * \li \c dh_ionicstrength - via Potential::DebyeHuckel
+     * \li \c gouychapman_phi0 - surface potential [V]
+     * \li \c gouychapman_qarea - surface charge density (if phi0 not defined)
+     * \li \c gouychapman_rho - surface charge density [1/A^2] (if qarea not defined)
+     *
+     * Equations:
+     * \f[ \rho = \sqrt\frac{2 c_0}{\pi l_B}  \sinh( \beta \phi_0 e / 2 ) \f]
+     * \f[ \beta \phi_0 e = 2\mbox{~asinh} \left ( \rho \sqrt\frac{\pi l_B} {2 c_0} \right ) \f]
+     * \f[ \Gamma_0=\tanh{ \beta \phi_0 z e / 4 } \f]
+     * where \f$ lB \f$ is the Bjerrum length, \f$\kappa\f$ the inverse Debye length, and \f$c_0\f$ the
+     * bulk salt concentration.
+     */
+    GouyChapman::GouyChapman(InputMap &in) : dh(in) {
+      name = "Gouy-Chapman External Potential";
+      string prefix="gouychapman_";
+      zposPtr=nullptr;
+      c0=dh.ionicStrength() * pc::Nav / 1e27;     // assuming 1:1 salt, so c0=I
+      lB=dh.bjerrumLength();
+      kappa=1/dh.debyeLength();
+
+      phi0=in.get<double>(prefix+"phi0",1.1e6);     // Surface potential [V]
+      if ( fabs(phi0)<1e6 ) {
+        phi0=phi0*pc::e/(pc::kB*pc::T);             // Unitless surface potential \frac{\phi_0 e}{kT}
+        rho=sqrt(2*c0/(pc::pi*lB))*sinh(.5*phi0);   // [Evans & Wennerström, 1999, Colloidal Domain p 138-140]
+      }
+      else {
+        rho=1/in.get<double>(prefix+"qarea",0);
+        if (rho>1e20)
+          rho=in.get<double>(prefix+"rho",0);
+        phi0=2.*asinh(rho * sqrt(.5*lB*pc::pi/c0 ));//  [Evans..]
+      }
+
+      gamma0=tanh(phi0/4);                          // assuming z=1  [Evans..]
+    }
+
+    string GouyChapman::_info() {
+      using namespace textio;
+      char w=30;
+      std::ostringstream o;
+      o << pad(SUB,w,"Surface z-position") << *zposPtr << _angstrom << endl
+        << pad(SUB,w,"Bjerrum length") << lB << _angstrom << endl
+        << pad(SUB,w,"Debye length") << 1./kappa << _angstrom  << endl
+        << pad(SUB,w,"Ionic strenght") << dh.ionicStrength()*1e3<< " mM" << endl
+        << pad(SUB,w,"Bulk 1:1 salt concentration") << c0 << _angstrom+cubed << endl
+        << pad(SUB,w,"Surface potential") << phi0*pc::kB*pc::T/pc::e << " J/C=volts" << endl
+        << pad(SUB,w,"Unitless surface potential") << phi0 << endl
+        << pad(SUB,w,"Area per surface charge") << 1/rho << _angstrom+squared << endl
+        << pad(SUB,w,"Surface charge density") << rho*pc::e*1e20  << " C/m" + squared << endl
+        << pad(SUB,w,"GC-coefficient Gamma_0") << gamma0  << "  " << endl;
+      return o.str();
+    }
+
+    /*!
+     * Here, give a reference to the z-position of the Gouy-Chapman surface. A
+     * typical usage would be to use len_half.z from Geometry::Cuboidslit which will
+     * place the surface at the edge of the cuboid container. By using a reference
+     * (pointer) we ensure that the position will follow possible volume fluctuations
+     * when in the NPT ensemble (although Poisson-Boltzmann electrostatics may require
+     * further considerations when using constant pressure).
+     */
+    void GouyChapman::setPosition(double &zposition) {
+      zposPtr=&zposition;
+    }
+
+    /*!
+     * Note that this function is virtual and can be replaced in derived classes to
+     * customize the position of the surface.
+     */
+    double GouyChapman::dist2surf(const Point &a) {
+      assert(zposPtr!=nullptr && "Did you forget to call setPosition()?");
+      return std::abs(*zposPtr - a.z);
+    }
+
+    double GouyChapman::p_external(const particle &a) {
+      if ( a.charge!=0)
+        return a.charge * potential(a);
+      return 0;
+    }
+
+    double GouyChapman::i_external(const p_vec &p, int i) {
+      return p_external(p[i]);
+    }
+
+    double GouyChapman::g_external(const p_vec &p, Group &g) {
+      double u=0;
+      for (auto i : g)
+        u+=p_external(p[i]);
+      return u;
+    }
+
+    /*!
+     * \f[
+     * \beta \Phi z e = 2\ln{\frac{1+\Gamma_0 \exp{(-\kappa z)}}{1-\Gamma_0 \exp{(-\kappa z)}}}
+     * \f]
+     */
+    double GouyChapman::potential(const Point &a) { 
+      double exponent=exp(-kappa*dist2surf(a));        //\exp{-\kappa z}
+      return 2 * log((1+gamma0*exponent)/(1-gamma0*exponent));
     }
 
     double systemEnergy(Space &spc, Energy::Energybase &pot, const p_vec &p) {

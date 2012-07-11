@@ -194,6 +194,10 @@ namespace Faunus {
       return o.str();
     }
 
+    double Coulomb::bjerrumLength() const {
+      return lB;
+    }
+
     string Coulomb::info(char w) {
       using namespace textio;
       std::ostringstream o;

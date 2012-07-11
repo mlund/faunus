@@ -54,6 +54,7 @@ namespace Faunus {
     class Hamiltonian;
     class EqEnergy;
     class HarmonicBond;
+    class GouyChapman;
   }
 
   class Group;
@@ -66,7 +67,7 @@ namespace Faunus {
   class CigarParticle;
 
 #ifdef CIGARPARTICLE
-  typedef cigarparticle particle;
+  typedef CigarParticle particle;
 #else
   typedef PointParticle particle;
 #endif

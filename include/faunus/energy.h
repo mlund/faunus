@@ -43,11 +43,11 @@ namespace Faunus {
       protected:
         Geometry::Geometrybase* geo; //!< Pointer to geometry used to calculate interactions
       public:
-        string name;                                          // Short informative name
-        Energybase();
-        virtual ~Energybase();
-        virtual Geometry::Geometrybase& getGeometry();        // Reference to geometry used for interactions
-        bool setGeometry( Geometry::Geometrybase& );          // Set Geometrybase
+        string name;                                          //!< Short informative name
+        Energybase();                                         //!< Constructor
+        virtual ~Energybase();                                //!< Destructor
+        virtual Geometry::Geometrybase& getGeometry();        //!< Reference to geometry used for interactions
+        bool setGeometry( Geometry::Geometrybase& );          //!< Set Geometrybase
         virtual void setTemperature(double);                  //!< Set temperature for interactions
         virtual void setVolume(double);                       //!< Set volume of used Geometry
         virtual double p2p(const particle&, const particle&); // Particle-particle energy
@@ -300,7 +300,7 @@ namespace Faunus {
         double i2all(const p_vec&, int) FOVERRIDE;         //!< All bonds w. i'th particle
         double g_internal(const p_vec&, Group&) FOVERRIDE; //!< Internal bonds in Group, only
         double g2g(const p_vec&, Group&, Group&) FOVERRIDE;//!< Bonds between groups
-        double total(const p_vec&);
+        double total(const p_vec&);                        //!< Sum all known bond energies
     };
 
     /*!
@@ -358,7 +358,7 @@ namespace Faunus {
         virtual bool outside(const Point&); //!< Determines if particle is outside allowed region
       public:
         std::vector<Group*> groups;              //!< List of groups to restrict
-        RestrictedVolume(InputMap&, string="vconstrain");
+        RestrictedVolume(InputMap&, string="vconstrain"); //!< Constructor
         double g_external(const p_vec&, Group&) FOVERRIDE; //!< External energy working on group
     };
 
@@ -368,7 +368,7 @@ namespace Faunus {
      */
     class RestrictedVolumeCM : public Energy::RestrictedVolume {
       public:
-        RestrictedVolumeCM(InputMap&, string="vconstrain");
+        RestrictedVolumeCM(InputMap&, string="vconstrain"); //!< Constructor
         double g_external(const p_vec&, Group&) FOVERRIDE; //!< External energy working on group
     };
 
@@ -457,9 +457,9 @@ namespace Faunus {
         };
         std::map< pair_permutable<Faunus::Group*>, data> gmap;
       public:
-        void addPair(Group&, Group&, double, double);
-        MassCenterConstrain(Geometry::Geometrybase&);
-        double g_external(const p_vec&, Group&) FOVERRIDE;
+        MassCenterConstrain(Geometry::Geometrybase&);      //!< Constructor
+        void addPair(Group&, Group&, double, double);      //!< Add constraint between two groups
+        double g_external(const p_vec&, Group&) FOVERRIDE; //!< Constrain treated as external potential
     };
 
     /*!
@@ -477,7 +477,50 @@ namespace Faunus {
       public:
         EnergyRest();
         void add(double du); //!< Add energy change disrepancy, dU = U(metropolis) - U(as in drift calculation)
-        double external() FOVERRIDE;
+        double external() FOVERRIDE;  //!< Dumme rest treated as external potential to whole system
+    };
+
+    /*!
+     * \brief Charged Gouy-Chapman surface in XY plane
+     * \warning Untested in this branch of faunus!
+     * \author Chris Evers / Mikael Lund
+     * \date Lund/Asljunga, 2011-2012
+     * \note Salt is assumed monovalent!
+     * \todo Add assertions
+     *
+     * This is an external potential due to a charged Gouy-Chapman surface (XY-plane) placed somewhere
+     * on the z-axis as specified by setPosition(). It is recommended that this is used in conjunction with a
+     * Geometry::Cuboidslit simulation container. For example:
+     *
+     * \code
+     * typedef Geometry::Cuboidslit Tgeometry;
+     * typedef Potential::CombinedPairPotential<Potential::DebyeHuckel, Potential::LennardJones> Tpairpot;
+     * InputMap mcp("input");                                            // read input parameters
+     * Energy::Hamiltonian pot;                                          // sum energies below:
+     * auto nb = pot.create(Energy::Nonbonded<Tpairpot,Tgeometry>(mcp)); // add nonbonded interactions
+     * auto gc = pot.create(Energy::GouyChapman(mcp));                   // add GC surface
+     * gc->zposPtr = &(nb->geometry.len_half.z);                         // place GC surface at edge of cuboid
+     * \endcode
+     */
+    class GouyChapman : public Energy::Energybase {
+      private:
+        Potential::DebyeHuckel dh;
+        double c0;                              //!< Ion concentration (A-3)
+        double rho;                             //!< Surface charge density (e A-2)
+        double phi0;                            //!< Unitless surface potential \frac{\phi0 e}{kT}
+        double gamma0;                          //!< Gouy-chapman coefficient ()
+        double lB;
+        double kappa;
+        double *zposPtr;                        //!< Pointer to z position of Gouy-Chapman surface (xy plane)
+        string _info();
+      public:
+        GouyChapman(InputMap &);                //!< Constructor - read input parameters
+        void setPosition(double&);              //!< Set pointer to z position of surface
+        virtual double dist2surf(const Point&); //!< Point-to-surface distance [AA]
+        double p_external(const particle&);     //!< Particle energy in GC potential
+        double i_external(const p_vec&, int);   //!< i'th particle energy in GC potential
+        double g_external(const p_vec&, Group&);//!< Group energy in GC potential
+        double potential(const Point&);         //!< Gouy-Chapman (GC) potential in point
     };
 
     /*!

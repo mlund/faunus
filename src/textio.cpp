@@ -28,9 +28,7 @@ namespace Faunus {
 
   string textio::header(const string &s) {
     int l=s.size()+2;
-    //string a="\u25e6";
     return "\n " + std::string(l,'.') + "\n  " + s + "  \n " + string(l,'*') + "\n";
-    //return "\n" + std::string(l,'=') + "\n" + s + "  \n" + string(l,'=') + "\n";
   }
 
   string textio::indent(indentlevel level) {

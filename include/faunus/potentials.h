@@ -206,6 +206,7 @@ namespace Faunus {
      */
     class Coulomb : public PairPotentialBase {
       friend class DebyeHuckel;
+      friend class Energy::GouyChapman;
       private:
       string _brief();
       void _setScale(double);
@@ -225,6 +226,7 @@ namespace Faunus {
 
       public:
       Coulomb(InputMap&); //!< Construction from InputMap
+      double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
 
       /*! \returns \f$\beta u/l_B\f$ */
       inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {

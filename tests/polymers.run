@@ -30,6 +30,9 @@ polymer_forceconst     0.557   # kT/A^2
 crank_dp               6.3
 crank_minlen           2
 crank_maxlen           10
+pivot_dp               6.3
+pivot_minlen           1
+pivot_maxlen           1000
 transrot_transdp       50
 transrot_rotdp         6
 tion1                  Cl

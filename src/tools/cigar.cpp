@@ -15,7 +15,7 @@ using namespace Faunus;
 using namespace Faunus::Geometry;
 
 typedef Geometry::Cuboid Tgeometry;
-typedef Potential::coulomb_lj<Tgeometry> Tpairpot;
+typedef Potential::DebyeHuckel Tpairpot;
 
 int main() {
   cout << textio::splash();
@@ -28,9 +28,8 @@ int main() {
 
 
   //hamiltonian
-  Energy::Nonbonded<Tpairpot> pot_nb(in);
   Energy::Hamiltonian pot;
-  pot.add(pot_nb);
+  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(in) );
 
   Space spc( pot.getGeometry() ); // generate space (geometry+particle pool)
 

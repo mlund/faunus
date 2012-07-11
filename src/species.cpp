@@ -22,7 +22,7 @@ namespace Faunus {
   AtomTypes atom; // Instantiate global copy
 
   AtomTypes::AtomTypes() {
-    filename="";
+    filename.clear();
     AtomData a;
     a.id=list.size();
     a.name="UNK";
@@ -57,7 +57,7 @@ namespace Faunus {
   }
 
   bool AtomTypes::includefile(InputMap &in) {
-    return includefile(in.get<string>("atomfile",filename));
+    return includefile( in.get<string>("atomlist",filename) );
   }
 
   bool AtomTypes::includefile(string file) {

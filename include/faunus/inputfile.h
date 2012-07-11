@@ -44,14 +44,14 @@ namespace Faunus {
 
       //!< Get value associated with keyword
       template<typename T> T get(const string &key, T fallback, string infostring="") {
-        if (!infostring.empty())
-          keyinfo[key]=infostring;               // save information string (in any)
-        if ( map.find(key)==map.end() )
-          add<T>(key, fallback, infostring);
-        else {
+        if ( !infostring.empty() )
+          keyinfo[key] = infostring;               // save information string (if any)
+        if ( map.find(key) != map.end() ) {
           std::istringstream i( map[key] );
           i >> fallback;
         }
+        //else 
+        //  add<T>(key, fallback, infostring);
         return fallback;
       }
   };

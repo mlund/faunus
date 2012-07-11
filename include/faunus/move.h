@@ -237,7 +237,7 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Crank shaft move
+     * \brief Crank shaft move of linear polymers
      * \author Kurut, Henriques, Lund ???
      * \date Lund 2012
      *
@@ -245,24 +245,42 @@ namespace Faunus {
      */
     class CrankShaft : public Movebase {
       private:
-        Group* gPtr;          //!< Pointer to group where move is to be performed. Set by setGroup().
-        Geometry::VectorRotate vrot;
-        double dp;         //!< Rotational displament parameter
-        double angle;      //!< Current rotation angle
-        vector<int> index; //!< Index of particles to rotate
         void _trialMove();
         void _acceptMove();
         void _rejectMove();
         double _energyChange();
         string _info();
-        AcceptanceMap<string> accmap;
-      protected:
         virtual bool findParticles(); //!< This will set the end points and find particles to rotate
+      protected:
+        Group* gPtr;       //!< Pointer to group where move is to be performed. Set by setGroup().
+        double dp;         //!< Rotational displacement parameter
+        double angle;      //!< Current rotation angle
+        vector<int> index; //!< Index of particles to rotate
+        Geometry::VectorRotate vrot;
+        AcceptanceMap<string> accmap;
       public:
         CrankShaft(InputMap&, Energy::Energybase&, Space&, string="crank");
         void setGroup(Group&); //!< Select Group to move
         int minlen;            //!< Minimum number of particles to rotate (default = 1)
         int maxlen;            //!< Maximin number of particles to rotate (default = 10)
+    };
+
+    /*!
+     * \brief Pivot move for linear polymers
+     *
+     * This will perform a pivot rotation of a linear polymer by the following steps:
+     * \li Select rotation axis by two random monomers, spanning \c minlen to \c maxlen bonds
+     * \li Rotate trailing monomers around and after the above axis
+     *
+     * \author Mikael Lund
+     * \date Asljunga 2012
+     * \todo Is there a bias when always rotating trailing particles?
+     */
+    class Pivot : public CrankShaft {
+      private:
+        bool findParticles();
+      public:
+        Pivot(InputMap&, Energy::Energybase&, Space&, string="pivot");
     };
 
     /*!

@@ -7,7 +7,7 @@
 
 namespace Faunus {
   class RandomBase;
-  class geometrybase;
+  class Geometrybase;
   class AtomData;
   /*!
    * \brief Cartesian coordinates
@@ -77,9 +77,9 @@ namespace Faunus {
     public:
       Point omega, patch;
       double patchangle, length;
-      void rotate(const geometrybase&, const Point&, double);            //!< Rotate around a vector
-      void translate(const geometrybase&, const Point&);                 //!< Translate along a vector
-      void scale(const geometrybase&, double);                           //!< Volume scaling
+      void rotate(const Geometrybase&, const Point&, double);            //!< Rotate around a vector
+      void translate(const Geometrybase&, const Point&);                 //!< Translate along a vector
+      void scale(const Geometrybase&, double);                           //!< Volume scaling
       bool overlap(const CigarParticle&, double) const;     //!< Check for overlap of two particles
       friend std::ostream &operator<<(std::ostream &, const CigarParticle &); //!< Output information
       CigarParticle &operator<<(std::istream &);                              //!< Get information

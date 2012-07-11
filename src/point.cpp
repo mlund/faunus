@@ -186,13 +186,13 @@ namespace Faunus {
     S P H E R O C Y L I N D E R
    *****************************/
 
-  void CigarParticle::rotate(const geometrybase &c, const Point &v, double angle) { //!< Rotate around a vector
+  void CigarParticle::rotate(const Geometrybase &c, const Point &v, double angle) { //!< Rotate around a vector
   }
 
-  void CigarParticle::translate(const geometrybase &c, const Point &v) {             //!< Translate along a vector
+  void CigarParticle::translate(const Geometrybase &c, const Point &v) {             //!< Translate along a vector
   }
 
-  void CigarParticle::scale(const geometrybase &c, double v) {                       //!< Volume scaling
+  void CigarParticle::scale(const Geometrybase &c, double v) {                       //!< Volume scaling
   }
 
   bool CigarParticle::overlap(const CigarParticle&a, double r2) const {

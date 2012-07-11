@@ -1,8 +1,29 @@
+/*
+ * manybodyMPI.cpp
+ *
+ * This will simulate a mix of rigid molecules and atomic species in a cubic simulation
+ * container. The default Hamiltonian is:
+ * - Debye-Huckel electrostatics
+ * - Lennard-Jones interactions
+ * - Gouy-Chapman electrostatics (for slit containers)
+ *
+ * The following Monte Carlo Moves are implemented:
+ * 1) Translation of atomic species and rigid molecules
+ * 2) Rotation of rigid molecules
+ * 3) Particle swap moves (proton titration etc.)
+ * 4) Isobaric volume moves (NPT ensemble)
+ * 5) Parallel Tempering using MPI
+ */
+
 #include <faunus/faunus.h>
 
 using namespace Faunus;
 
+#ifdef SLIT
+typedef Geometry::Cuboidslit Tgeometry;
+#else
 typedef Geometry::Cuboid Tgeometry;
+#endif
 typedef Potential::CombinedPairPotential<Potential::DebyeHuckel, Potential::LennardJones> Tpairpot;
 
 int main(int argc, char** argv) {
@@ -20,6 +41,10 @@ int main(int argc, char** argv) {
 
   Energy::Hamiltonian pot;
   auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
+#ifdef SLIT
+  auto gouy = pot.create( Energy::GouyChapman(mcp) );
+  gouy->setPosition( nonbonded->geometry.len_half.z );
+#endif
   Space spc( pot.getGeometry() );
 
   // Add molecules
@@ -67,8 +92,7 @@ int main(int argc, char** argv) {
     while ( loop.microCnt() ) {
       int k,i=rand() % 4;
       switch (i) {
-        case 0:
-          // translate and rotate molecules
+        case 0: // translate and rotate molecules
           k=pol.size();
           while (k-->0) {
             gmv.setGroup( pol[ rand() % pol.size() ] );
@@ -78,17 +102,14 @@ int main(int argc, char** argv) {
             for (auto j=i+1; j!=pol.end(); j++)
               rdf( spc.geo->dist(i->cm,j->cm) )++;
           break;
-        case 1:
-          // volume move
+        case 1: // volume move
           sys+=iso.move();
           break;
-        case 2:
-          // titration move
+        case 2: // titration move
           sys+=tit.move();
           mpol.sample(pol,spc);
           break;
-        case 3:
-          // translate atomic species
+        case 3: // translate atomic species
           mv.setGroup(salt);
           sys+=mv.move();
           break;
@@ -109,11 +130,9 @@ int main(int argc, char** argv) {
 
   } // end of macro loop
 
-  /*
-     iso.test(test);
-     gmv.test(test);
-     sys.test(test);
-     */
+  //iso.test(test);
+  //gmv.test(test);
+  //sys.test(test);
 
   mpi.cout << loop.info() << sys.info() << gmv.info() << mv.info() << iso.info() << tit.info()
     << mpol.info() << temper.info();

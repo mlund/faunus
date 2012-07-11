@@ -516,7 +516,7 @@ namespace Faunus {
         msq+=spc->geo->sqdist( spc->p[i], spc->trial[i] );
         spc->p[i] = spc->trial[i];
       }
-      accmap.accept(gPtr->name, msq/index.size() ) ;
+      accmap.accept(gPtr->name, msq ) ;
       gPtr->cm = gPtr->cm_trial;
     }
 
@@ -574,14 +574,36 @@ namespace Faunus {
       using namespace textio;
       std::ostringstream o;
       o << pad(SUB,w, "Displacement parameter") << dp << endl
-        << pad(SUB,w, "Min/max length to move") << minlen << " " << maxlen
-        << endl;
-      if (cnt>0) {
+        << pad(SUB,w, "Min/max length to move") << minlen << " " << maxlen << endl;
+      if (cnt>0)
         o << accmap.info();
-      }
       return o.str();
     }
 
+    Pivot::Pivot(InputMap &in, Energy::Energybase &e, Space &s, string pfx) : CrankShaft(in,e,s,pfx) {
+      title="Polymer Pivot Move";
+      minlen=1; // minimum bond length to rotate around
+    }
+
+    bool Pivot::findParticles() {
+      int beg,end,len;
+      index.clear();
+      while (index.empty()) {
+        do {
+          beg = gPtr->random(); // define the
+          end = gPtr->random(); // axis to rotate around
+          len = std::abs(beg-end);
+        } while ( len<minlen || len>maxlen );
+        if (beg>end)
+          swap(beg,end);
+
+        for (int i=end+1; i<=gPtr->back(); i++)
+          index.push_back(i);
+      }
+      angle = dp*slp_global.randHalf();
+      vrot.setAxis(*spc->geo, spc->p[beg], spc->p[end], angle );
+      return true;
+    }
 
     Isobaric::Isobaric(InputMap &in, Energy::Hamiltonian &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Isobaric Volume Fluctuations";

@@ -11,3 +11,8 @@ endif()
 
 # Anil's playground
 fau_example(akurut-manybody "./akurut" manybody.cpp)
+
+# Robert's playground
+fau_cigarexample(cigar "./vacha" cigar.cpp)
+set_target_properties( cigar PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE" EXCLUDE_FROM_ALL TRUE)
+

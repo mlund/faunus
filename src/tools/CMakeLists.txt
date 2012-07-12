@@ -35,7 +35,6 @@ fau_example(polymer-npt-cuboid "./" polymer-npt.cpp)
 fau_example(titrate_implicit "./" pka_implicit.cpp)
 fau_example(manybody "./" manybody.cpp)
 fau_example(minimal_example "../../doc/examples/" minimalmc.cpp)
-fau_cigarexample(cigar "./" cigar.cpp)
 
 if(ENABLE_MPI AND MPI_CXX_FOUND)
   fau_example(manybodyMPI "./" manybodyMPI.cpp)
@@ -45,7 +44,6 @@ endif()
 
 #----- target specific build options -----
 set_target_properties( polymer-npt-cuboid PROPERTIES COMPILE_DEFINITIONS "CUBOID" EXCLUDE_FROM_ALL TRUE)
-set_target_properties( cigar PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE" EXCLUDE_FROM_ALL TRUE)
 
 #----- examples where openbabel is needed -----
 if (ENABLE_BABEL AND OPENBABEL_FOUND)

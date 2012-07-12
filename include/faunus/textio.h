@@ -60,7 +60,7 @@ namespace Faunus {
     string pad(indentlevel, char, const string&); //!< Pad and indent text
     string trim(string);                          //!< Remove white space from string
 
-    static std::string prefix;                    //!< Unique prefix for current job. Use for file I/O.
+    extern std::string prefix;                    //!< Unique prefix for current job. Use for file I/O.
 
     extern std::ostream &fcout;                   //!< Alias for standard output (can be redirected)
     extern std::ostream &fcerr;                   //!< Alias for standard error (can be redirected)

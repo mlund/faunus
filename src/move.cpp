@@ -75,11 +75,10 @@ namespace Faunus {
         }
         else {
           acceptMove();
-          dusum+=du;
           if (useAlternateReturnEnergy)
-            utot+=alternateReturnEnergy;
-          else
-            utot+=du;
+            du=alternateReturnEnergy;
+          dusum+=du;
+          utot+=du;
         }
       }
       return utot;
@@ -950,6 +949,7 @@ namespace Faunus {
       pt.sendExtra.resize(1);
       usys=Energy::systemEnergy;
       haveCurrentEnergy=false;
+      temperPath.open(textio::prefix+"temperpath.dat");
     }
 
     void ParallelTempering::findPartner() {
@@ -966,7 +966,7 @@ namespace Faunus {
     }
 
     bool ParallelTempering::goodPartner() {
-      assert(partner!=mpiPtr->rank);
+      assert(partner!=mpiPtr->rank && "Selfpartner! This is not supposed to happen.");
       if (partner>=0)
         if (partner<mpiPtr->nproc)
           if (partner!=mpiPtr->rank)
@@ -1000,8 +1000,13 @@ namespace Faunus {
         pt.waitrecv();
         pt.waitsend();
 
+        // debug assertions
         assert(pt.recvExtra[VOLUME]>1e-6 && "Invalid partner volume received.");
         assert(spc->p.size() == spc->trial.size() && "Particle vectors messed up by MPI");
+
+        // release assertions
+        if (pt.recvExtra[VOLUME]<1e-6 || spc->p.size() != spc->trial.size())
+          MPI_Abort(mpiPtr->comm, 1);
       }
     }
 
@@ -1031,7 +1036,7 @@ namespace Faunus {
 
       du_partner = exchangeEnergy(unew-uold); // Exchange dU with partner (MPI)
 
-      haveCurrentEnergy=false;                // Make sure user call serCurrentEnergy() before next move
+      haveCurrentEnergy=false;                // Make sure user call setCurrentEnergy() before next move
       alternateReturnEnergy=unew-uold;        // Avoid energy drift (no effect on sampling!)
       return (unew-uold)+du_partner;          // final Metropolis trial energy
     }
@@ -1059,11 +1064,12 @@ namespace Faunus {
 
     void ParallelTempering::_acceptMove(){
       if ( goodPartner() ) {
+        //temperPath << cnt << " " << partner << endl; 
         accmap[ id() ] += 1;
         for (size_t i=0; i<spc->p.size(); i++)
           spc->p[i] = spc->trial[i];  // copy new configuration
         for (auto g : spc->g)
-          g->setMassCenter(*spc); // update mass centra if swap is accepter
+          g->setMassCenter(*spc); // update mass centra if swap is accepted
       }
     } 
 

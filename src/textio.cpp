@@ -13,6 +13,8 @@ namespace Faunus {
    */
   std::ostream& textio::fcerr = std::cerr;
 
+  std::string textio::prefix = "";
+
   string textio::trim(string s) {
     s.erase( std::remove_if(s.begin(), s.end(), isspace), s.end());
     return s;

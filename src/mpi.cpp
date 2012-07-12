@@ -65,8 +65,8 @@ namespace Faunus {
       vector<floatp> v( src.size() );
       recvf(mpi, dst, v);
       sendf(mpi, src, dst);
-      waitsend();
       waitrecv();
+      waitsend();
       return v;
     }
 
@@ -81,7 +81,7 @@ namespace Faunus {
      * \param dst Destination node
      */
     void ParticleTransmitter::send(MPIController &mpi, const p_vec &src, int dst) {
-      assert(dst<mpi.nproc && "Invalid MPI destination");
+      assert(dst>=0 && dst<mpi.nproc && "Invalid MPI destination");
       pvec2buf(src);
       FloatTransmitter::sendf(mpi, sendBuf, dst);
     }
@@ -105,7 +105,7 @@ namespace Faunus {
      * \param dst Destination particle vector
      */
     void ParticleTransmitter::recv(MPIController &mpi, int src, p_vec &dst) {
-      assert(src<mpi.nproc && "Invalid MPI source");
+      assert(src>=0 && src<mpi.nproc && "Invalid MPI source");
       dstPtr=&dst;   // save a pointer to the destination particle vector
       if (format==XYZ)
         recvBuf.resize( 3*dst.size() );
@@ -136,6 +136,8 @@ namespace Faunus {
       for (auto &x : recvExtra)
         x=recvBuf[i++];
       assert( (size_t)i==recvBuf.size() );
+      if ( (size_t)i!=recvBuf.size() )
+        cout << "!!!!!!!!!!!\n";
     }
 
   } //end of mpi namespace

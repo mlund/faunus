@@ -442,6 +442,7 @@ namespace Faunus {
         void _acceptMove();
         void _rejectMove();
         double _energyChange();
+        std::ofstream temperPath;
 
         Energy::Hamiltonian* hamiltonian;   //!< Hamiltonian class needed for volume displacement
         Faunus::MPI::MPIController *mpiPtr; //!< Controller class for MPI calls

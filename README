@@ -25,7 +25,7 @@ WELCOME TO FAUNUS:
   Support: http://sourceforge.net/projects/faunus/support
 
   Get the latest code resivions via SVN from sourceforge.net:
-  $ svn co http://faunus.svn.sourceforge.net/svnroot/faunus faunus
+  $ svn co http://svn.code.sf.net/p/faunus/code/trunk faunus
 
 REQUIREMENTS:
   - C/C++11 compiler (clang3+, gcc4.6+, ...)

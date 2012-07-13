@@ -243,7 +243,7 @@ namespace Faunus {
       groupWiseEnergy=false;
       runfraction = in.get<double>(prefix+"_runfraction",1.0);
       dp_trans = in.get<double>(prefix+"_transdp", 2, "Group translationsal displacement (AA)");
-      dp_rot   = in.get<double>(prefix+"_rotdp", 100, "Group rotational displacement (deg)");
+      dp_rot   = in.get<double>(prefix+"_rotdp", 3, "Group rotational displacement (rad)");
       if (dp_rot>4*pc::pi) // no need to rotate more than
         dp_rot=4*pc::pi;   // +/- 2 pi.
       if (dp_rot<1e-6 && dp_trans<1e-6)

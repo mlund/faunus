@@ -11,6 +11,8 @@ endif()
 
 # Anil's playground
 fau_example(akurut-manybody "./akurut" manybody.cpp)
+fau_example(akurut-gouychapman "./akurut" gouychapman.cpp)
+set_target_properties( akurut-gouychapman PROPERTIES COMPILE_DEFINITIONS "SLIT")
 
 # Robert's playground
 fau_cigarexample(cigar "./vacha" cigar.cpp)

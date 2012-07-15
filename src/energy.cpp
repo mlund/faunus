@@ -3,6 +3,7 @@
 #include <faunus/energy.h>
 #include <faunus/textio.h>
 #include <faunus/space.h>
+#include <faunus/species.h>
 
 namespace Faunus {
   namespace Energy {
@@ -96,7 +97,7 @@ namespace Faunus {
       char w=15;
       using namespace textio;
       std::ostringstream o;
-      o << pad(SUB,w,"Pressure") << P*1e30/pc::Nav << " mM = " << P*pc::kB*pc::T*1e30 << " Pa" << endl;
+      o << pad(SUB,w,"Pressure") << P*1e30/pc::Nav << " mM = " << P*pc::kB*pc::T()*1e30 << " Pa" << endl;
       return o.str();
     }
 
@@ -283,6 +284,7 @@ namespace Faunus {
      * \todo Optimize by using iterator directly as returned by find.
      */
     double Bonded::i2i(const p_vec &p, int i, int j) {
+      assert(i!=j);
       auto f=list.find( pair_permutable<int>(i,j) );
       if (f!=list.end())
         return f->second->tokT() * f->second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
@@ -297,6 +299,7 @@ namespace Faunus {
       for (auto &m : list) {
         int j=m.first.first;
         int k=m.first.second;
+        assert(j!=k && "Pairs between identical atom index not allowed.");
         if (i==j || i==k)
           u+=m.second->tokT() * m.second->operator()( p[j], p[k], geo->sqdist( p[j], p[k] ) );
       }
@@ -309,6 +312,7 @@ namespace Faunus {
       for (auto &m : list) {
         int i=m.first.first;
         int j=m.first.second;
+        assert(i!=j && "Pairs between identical atom index not allowed.");
         assert(i>=0 && i<(int)p.size() && j>=0 && j<(int)p.size()); //debug
         u += m.second->tokT() * m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
       }
@@ -320,6 +324,7 @@ namespace Faunus {
       for (auto &m : list) {
         int i=m.first.first;
         int j=m.first.second;
+        assert(i!=j && "Pairs between identical atom index not allowed.");
         if (g1.find(i))
           if (g2.find(j))
             u+=m.second->tokT() * m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
@@ -340,6 +345,7 @@ namespace Faunus {
       for (auto &m : list) {
         int i=m.first.first;
         int j=m.first.second;
+        assert(i!=j && "Pairs between identical atom index not allowed.");
         assert(i>=0 && i<(int)p.size() && j>=0 && j<(int)p.size()); //debug
         if (g.find(i))
           if (g.find(j))
@@ -497,7 +503,7 @@ namespace Faunus {
 
       phi0=in.get<double>(prefix+"phi0",1.1e6);     // Surface potential [V]
       if ( fabs(phi0)<1e6 ) {
-        phi0=phi0*pc::e/(pc::kB*pc::T);             // Unitless surface potential \frac{\phi_0 e}{kT}
+        phi0=phi0*pc::e/(pc::kB*pc::T());             // Unitless surface potential \frac{\phi_0 e}{kT}
         rho=sqrt(2*c0/(pc::pi*lB))*sinh(.5*phi0);   // [Evans & Wennerström, 1999, Colloidal Domain p 138-140]
       }
       else {
@@ -519,7 +525,7 @@ namespace Faunus {
         << pad(SUB,w,"Debye length") << 1./kappa << _angstrom  << endl
         << pad(SUB,w,"Ionic strenght") << dh.ionicStrength()*1e3<< " mM" << endl
         << pad(SUB,w,"Bulk 1:1 salt concentration") << c0 << _angstrom+cubed << endl
-        << pad(SUB,w,"Surface potential") << phi0*pc::kB*pc::T/pc::e << " J/C=volts" << endl
+        << pad(SUB,w,"Surface potential") << phi0*pc::kB*pc::T()/pc::e << " J/C=volts" << endl
         << pad(SUB,w,"Unitless surface potential") << phi0 << endl
         << pad(SUB,w,"Area per surface charge") << 1/rho << _angstrom+squared << endl
         << pad(SUB,w,"Surface charge density") << rho*pc::e*1e20  << " C/m" + squared << endl
@@ -575,13 +581,61 @@ namespace Faunus {
       return 2 * log((1+gamma0*exponent)/(1-gamma0*exponent));
     }
 
+    /*
+    pair_permutable<particle::Thydrophobic> createPairHydrophobic(const particle &a, const particle &b) {
+      return pair_permutable<particle::Thydrophobic>(a.hydrophobic, b.hydrophobic);
+    }
+    */
+
+    PairListID::PairListID() : GeneralPairList(makepair) {
+      name+=" (particle id's)";
+    }
+
+    pair_permutable<particle::Tid> PairListID::makepair(const particle &a, const particle &b) {
+      return pair_permutable<particle::Tid>(a.id, b.id);
+    }
+
+    string PairListID::_info() {
+      using namespace Faunus::textio;
+      std::ostringstream o;
+      o << indent(SUBSUB) << std::left
+        << setw(7) << "i" << setw(7) << "j" << endl;
+      for (auto &m : list)
+        o << indent(SUBSUB) << std::left << setw(7) << atom[m.first.first].name
+          << setw(7) << atom[m.first.second].name << m.second->brief() << endl;
+      return o.str();
+    }
+
+    PairListHydrophobic::PairListHydrophobic() : GeneralPairList(makepair) {
+      name+=" (hydrophobic particles)";
+    }
+
+    pair_permutable<particle::Thydrophobic> PairListHydrophobic::makepair(const particle &a, const particle &b) {
+      return pair_permutable<particle::Thydrophobic>(a.hydrophobic, b.hydrophobic);
+    }
+
+    string PairListHydrophobic::_info() {
+      using namespace Faunus::textio;
+      std::ostringstream o;
+      o << indent(SUBSUB) << std::left
+        << setw(7) << "i" << setw(7) << "j" << endl;
+      for (auto &m : list)
+        o << indent(SUBSUB) << std::left << setw(7) << ((m.first.first==true) ? "true":"false")
+          << setw(7) << ((m.first.second==true) ? "true":"false") << m.second->brief() << endl;
+      return o.str();
+    }
+
+    //pair_permutable<particle::Tradius> createPairRadius(const particle &a, const particle &b) {
+    //  return pair_permutable<particle::Tradius>(a.radius, b.radius);
+    // }
+
     double systemEnergy(Space &spc, Energy::Energybase &pot, const p_vec &p) {
       double u = pot.external();
-      for (auto g : spc.g)
+      for (auto g : spc.groupList())
         u += pot.g_external(p, *g) + pot.g_internal(p, *g);
-      for (size_t i=0; i<spc.g.size()-1; i++)
-        for (size_t j=i+1; j<spc.g.size(); j++)
-          u += pot.g2g(p, *spc.g[i], *spc.g[j]);
+      for (size_t i=0; i<spc.groupList().size()-1; i++)
+        for (size_t j=i+1; j<spc.groupList().size(); j++)
+          u += pot.g2g(p, *spc.groupList()[i], *spc.groupList()[j]);
       return u;
     }
 

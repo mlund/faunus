@@ -31,7 +31,7 @@ REQUIREMENTS:
   - C/C++11 compiler (clang3+, gcc4.6+, ...)
   - cmake 2.8+
   Optional:
-  - SWIG 2.0+ (for python, ruby, ... modules)
+  - SWIG 2.0+ (for python, ruby, ... modules) [ON HOLD!]
   - OpenBabel 2 (numerous molecular formats)
   - Doxygen and Graphviz (for code manual)
   - Xcode (for neat environment on macos x)

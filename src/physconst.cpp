@@ -8,8 +8,17 @@ namespace Faunus {
   const double PhysicalConstants::Nav=6.022137e23;
   const double PhysicalConstants::R=kB*Nav;
 
-  PhysicalConstants::PhysicalConstants(double temp) { T=temp; }
-  double PhysicalConstants::T=298.15;
-  double PhysicalConstants::lB(double e_r) { return e*e / (4*pi*e0*e_r*1e-10*kB*T); }
-  double PhysicalConstants::kT2kJ(double u) { return u*kB*T*Nav*1e-3; }
+  double PhysicalConstants::_T=298.15;
+
+  PhysicalConstants::PhysicalConstants(double temp) {
+    setT(temp);
+  }
+
+  void PhysicalConstants::setT(double temp) { _T=temp; }
+
+  double PhysicalConstants::T() { return _T; }
+
+  double PhysicalConstants::lB(double e_r) { return e*e / (4*pi*e0*e_r*1e-10*kB*_T); }
+
+  double PhysicalConstants::kT2kJ(double u) { return u*kB*_T*Nav*1e-3; }
 }

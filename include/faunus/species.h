@@ -2,6 +2,7 @@
 #define FAU_species_h
 
 #include <faunus/common.h>
+#include <faunus/point.h>
 
 namespace Faunus {
   class _inputfile;
@@ -9,7 +10,7 @@ namespace Faunus {
   class AtomData {
     public:
       AtomData();
-      short  id;         //!< Identification number
+      particle::Tid id;  //!< Identification number
       double sigma,      //!< LJ diameter
              eps,        //!< LJ epsilon
              radius,     //!< Radius
@@ -19,7 +20,7 @@ namespace Faunus {
              dp,         //!< Displacement parameter
              mean,       //!< Mean value... (charge, sasa, etc.)
              variance;   //!< ...and the spread around it.
-      bool hydrophobic;  //!< Are we hydrophobic?
+      particle::Thydrophobic hydrophobic;  //!< Are we hydrophobic?
       string name;       //!< Name. Avoid spaces.
       bool operator==(const AtomData &d) const { return (*this==d); }
   };
@@ -53,7 +54,7 @@ namespace Faunus {
       bool includefile(string);              //!< Append atom parameters from file
       bool includefile(InputMap&);           //!< Append atom parameters from file
       AtomData& operator[] (string);         //!< Name->data
-      AtomData& operator[] (short);          //!< Id->data
+      AtomData& operator[] (particle::Tid);  //!< Id->data
       string info();                         //!< Print info
       void reset_properties(vector<particle> &);//!< Reset particle properties according to particle id
   };

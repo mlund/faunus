@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
   spc.load(istate);
 
   double utot=pot.all2all(spc.p) + pot.external();
-  for (auto g : spc.g)
+  for (auto g : spc.groupList())
     utot+=pot.g_external(spc.p, *g);
   sys.init( utot );
 
@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
     } // end of micro loop
 
     double utot=pot.all2all(spc.p) + pot.external();
-    for (auto g : spc.g)
+    for (auto g : spc.groupList())
       utot+=pot.g_external(spc.p, *g);
     sys.checkDrift( utot );
 

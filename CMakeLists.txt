@@ -1,12 +1,13 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 project("Faunus")
+set(CMAKE_LEGACY_CYGWIN_WIN32 0) # Remove when CMake >= 2.8.4 is required
 
 # ----------------------------
 #   Locate external packages
 # ----------------------------
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/modules)
 find_package(OpenBabel2)
-find_package(PythonLibs)
+#find_package(PythonLibs)
 find_package(Subversion-patched)
 find_package(MPI)
 include(CTest)
@@ -31,7 +32,7 @@ option(ENABLE_OPENMP   "Try to use OpenMP parallization" off)
 option(ENABLE_FORTRAN  "Try to compile legacy fortran code" off)
 option(ENABLE_MPI      "Enable MPI parallel code (experimental!)" off)
 option(ENABLE_TWISTER  "Enable Mersenne Twister random number generator" off)
-option(ENABLE_SWIG     "Try to create SWIG modules for python, tcl, ruby etc." off)
+#option(ENABLE_SWIG     "Try to create SWIG modules for python, tcl, ruby etc. (experimental!)" off)
 option(ENABLE_FAST_EXP "Approximate e^x function for certain pair potentials." off)
 option(ENABLE_UNICODE  "Use unicode characters in output" on)
 mark_as_advanced( CLEAR CMAKE_VERBOSE_MAKEFILE CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS )

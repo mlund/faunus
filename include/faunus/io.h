@@ -134,7 +134,7 @@ namespace Faunus {
       string writeMoleculeType(const Group&, const Space&);
     public:
       FormatTopology();
-      bool save(string, const Space&); //!< Generate topology from Space
+      bool save(string, Space&); //!< Generate topology from Space
   };
 
   /*! \brief Trajectory of charges per particle

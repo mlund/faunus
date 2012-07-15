@@ -55,12 +55,18 @@ namespace Faunus {
    */
   class PointParticle : public Point {
     public:
+      typedef unsigned char Tid;
+      typedef double Tradius;
+      typedef double Tcharge;
+      typedef float Tmw;
+      typedef bool Thydrophobic;
+
       PointParticle();
-      double charge;                            //!< Charge number
-      double radius;                            //!< Radius
-      float mw;                                 //!< Molecular weight
-      unsigned char id;                         //!< Particle identifier
-      bool hydrophobic;                         //!< Hydrophobic flag
+      Tcharge charge;                           //!< Charge number
+      Tradius radius;                           //!< Radius
+      Tmw mw;                                   //!< Molecular weight
+      Tid id;                                   //!< Particle identifier
+      Thydrophobic hydrophobic;                 //!< Hydrophobic flag
       double volume() const;                    //!< Return volume of sphere
       double mw2vol(double=1) const;            //!< Estimate volume from weight
       double mw2rad(double=1) const;            //!< Estimate radius from weight

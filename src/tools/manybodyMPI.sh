@@ -21,7 +21,7 @@
 # change to the execution directory
 #cd $SNIC_TMP
 
-faunus=$HOME/faunus/branches/ny
+faunus=../../
 exe=$faunus/src/tools/manybodyMPI
 base="manybody"
 
@@ -96,7 +96,7 @@ Atom  GLY      0     2.9    0.1    54      no
 # ----------------------------------
 function mkinput() {
 #for proc in `seq 0 $SLURM_NPROCS`
-for proc in {0..15}
+for proc in {0..3}
 do
 epsilon_r=60
 if [ "$proc" == "0" ]; then epsilon_r=100; fi 

@@ -172,15 +172,12 @@ namespace Faunus {
      * \li \c temperature [Kelvin, default = 298.15]
      * \li \c epsilon_r - relative dielectric constant. Default is 80.
      * \li \c depsdt - temperature dependence of dielectric constant, \f$ \partial\epsilon_r/\partial T\approx-0.368\f$ for water.
-     * \warning T and epsilon_r will be passed on to the global instance of
-     * PhysicalConstants. This is not the nicest solution.
      */
     Coulomb::Coulomb(InputMap &in) {
       name="Coulomb";
-      temp=in.get<double>("temperature", 298.15, "Absolute temperature (K)");
-      epsilon_r=in.get<double>("epsilon_r",80., "Dielectric constant");
-      depsdt=in.get<double>("depsdt", -0.368, "See documentation") * temp / epsilon_r;
-      pc::T = temp;
+      pc::setT ( in.get<double>("temperature", 298.15, "Absolute temperature (K)") );
+      epsilon_r = in.get<double>("epsilon_r",80., "Dielectric constant");
+      depsdt = in.get<double>("depsdt", -0.368, "See documentation") * pc::T() / epsilon_r;
       lB=pc::lB( epsilon_r );
       setScale(lB);
     }
@@ -190,7 +187,7 @@ namespace Faunus {
 
     string Coulomb::_brief() {
       std::ostringstream o;
-      o << "lB=" << lB << " eps_r=" << epsilon_r << " T=" << temp;
+      o << "lB=" << lB << " eps_r=" << epsilon_r << " T=" << pc::T();
       return o.str();
     }
 
@@ -201,7 +198,7 @@ namespace Faunus {
     string Coulomb::info(char w) {
       using namespace textio;
       std::ostringstream o;
-      o << pad(SUB,w,"Temperature") << temp << " K" << endl
+      o << pad(SUB,w,"Temperature") << pc::T() << " K" << endl
         << pad(SUB,w,"Dielectric constant") << epsilon_r << endl
         << pad(SUB,w+6,"T"+partial+epsilon+"/"+epsilon+partial+"T") << depsdt << endl
         << pad(SUB,w,"Bjerrum length") << lB << " "+angstrom << endl;

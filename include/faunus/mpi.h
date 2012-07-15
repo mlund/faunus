@@ -30,13 +30,17 @@ namespace Faunus {
      * \endcode
      */
     class MPIController {
+      private:
+        int _nproc;        //!< Number of processors in communicator
+        int _rank;         //!< Rank of process
+        int _master;       //!< Rank number of the master
       public:
         MPIController(MPI_Comm=MPI_COMM_WORLD); //!< Constructor
         ~MPIController(); //!< End of all MPI calls!
         MPI_Comm comm;    //!< Communicator (Default: MPI_COMM_WORLD)
-        int nproc;        //!< Number of processors in communicator
-        int rank;         //!< Rank of process
-        int master;       //!< Rank number of the master
+        int nproc();      //!< Number of processors in communicator
+        int rank();       //!< Rank of process
+        int rankMaster(); //!< Rank number of the master
         bool isMaster();  //!< Test if current process is master
         slump random;     //!< Random number generator for MPI calls
         string id;        //!< Unique name associated with current rank
@@ -94,8 +98,8 @@ namespace Faunus {
      */
     class ParticleTransmitter : public FloatTransmitter {
       public:
-        enum dataformat {XYZ, XYZQ};
-        dataformat format;                              //!< Data format to send/receive - default is XYZQ
+        enum dataformat {XYZ, XYZQ, XYZQI};
+        dataformat format;                             //!< Data format to send/receive - default is XYZQ
         vector<floatp> sendExtra;                      //!< Put extra data to send here.
         vector<floatp> recvExtra;                      //!< Received extra data will be stored here
 

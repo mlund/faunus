@@ -11,12 +11,12 @@ namespace Faunus {
      * data (parallel tempering, for example). The prefix format is
      * \li \c "prefix + mpi%r." where \c \%r is the rank number.
      */
-    MPIController::MPIController(MPI_Comm c) : comm(c), master(0) {
+    MPIController::MPIController(MPI_Comm c) : comm(c), _master(0) {
       MPI_Init(NULL,NULL);
-      MPI_Comm_size(comm, &nproc);
-      MPI_Comm_rank(comm, &rank);    
+      MPI_Comm_size(comm, &_nproc);
+      MPI_Comm_rank(comm, &_rank);    
       std::ostringstream o;
-      o << rank;
+      o << _rank;
       id = o.str();
       textio::prefix += "mpi" + id + ".";
       cout.open(textio::prefix+"stdout");
@@ -27,9 +27,13 @@ namespace Faunus {
       cout.close();
     }
 
-    bool MPIController::isMaster() {
-      return (rank==master);
-    }
+    int MPIController::nproc() { return _nproc; }
+
+    int MPIController::rank() { return _rank; }
+
+    int MPIController::rankMaster() { return _master; }
+
+    bool MPIController::isMaster() { return (_rank==_master); }
 
     FloatTransmitter::FloatTransmitter() {
       tag=0;
@@ -71,7 +75,7 @@ namespace Faunus {
     }
 
     ParticleTransmitter::ParticleTransmitter() {
-      format=XYZQ;
+      format=XYZQI;
     }
 
 
@@ -81,7 +85,7 @@ namespace Faunus {
      * \param dst Destination node
      */
     void ParticleTransmitter::send(MPIController &mpi, const p_vec &src, int dst) {
-      assert(dst>=0 && dst<mpi.nproc && "Invalid MPI destination");
+      assert(dst>=0 && dst<mpi.nproc() && "Invalid MPI destination");
       pvec2buf(src);
       FloatTransmitter::sendf(mpi, sendBuf, dst);
     }
@@ -94,6 +98,10 @@ namespace Faunus {
         sendBuf.push_back(p.z);
         if (format==XYZQ)
           sendBuf.push_back(p.charge);
+        if (format==XYZQI) {
+          sendBuf.push_back(p.charge);
+          sendBuf.push_back( (floatp)p.id );
+        }
       }
       for (auto i : sendExtra)
         sendBuf.push_back(i);
@@ -105,12 +113,14 @@ namespace Faunus {
      * \param dst Destination particle vector
      */
     void ParticleTransmitter::recv(MPIController &mpi, int src, p_vec &dst) {
-      assert(src>=0 && src<mpi.nproc && "Invalid MPI source");
+      assert(src>=0 && src<mpi.nproc() && "Invalid MPI source");
       dstPtr=&dst;   // save a pointer to the destination particle vector
       if (format==XYZ)
         recvBuf.resize( 3*dst.size() );
       if (format==XYZQ)
         recvBuf.resize( 4*dst.size() );
+      if (format==XYZQI)
+        recvBuf.resize( 5*dst.size() );
 
       // resize to fit extra data (if any)
       recvExtra.resize( sendExtra.size() );
@@ -132,6 +142,10 @@ namespace Faunus {
         p.z=recvBuf[i++];
         if (format==XYZQ)
           p.charge=recvBuf[i++];
+        if (format==XYZQI) {
+          p.charge=recvBuf[i++];
+          p.id=(particle::Tid)recvBuf[i++];
+        }
       }
       for (auto &x : recvExtra)
         x=recvBuf[i++];

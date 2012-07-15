@@ -210,7 +210,7 @@ namespace Faunus {
       private:
       string _brief();
       void _setScale(double);
-      double temp, epsilon_r;
+      double epsilon_r;
       protected:
       double depsdt;      //!< \f$ T\partial \epsilon_r / \epsilon_r \partial T = -1.37 \f$
       double lB;          //!< Bjerrum length (angstrom)

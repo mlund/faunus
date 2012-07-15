@@ -116,7 +116,7 @@ namespace Faunus {
         string prefix;                   //!< inputmap prefix
         char w;                          //!< info string text width. Adjust this in constructor if needed.
         unsigned long int cnt;           //!< total number of trial moves
-        virtual bool run() const;                //!< Runfraction test
+        virtual bool run() const;        //!< Runfraction test
 
         bool useAlternateReturnEnergy;   //!< Return a different energy than returned by _energyChange(). [false]
         double alternateReturnEnergy;    //!< Alternative return energy.
@@ -448,11 +448,12 @@ namespace Faunus {
         Faunus::MPI::MPIController *mpiPtr; //!< Controller class for MPI calls
         Faunus::MPI::FloatTransmitter ft;   //!< Class for transmitting floats over MPI
         Faunus::MPI::ParticleTransmitter pt;//!< Class for transmitting particles over MPI
+        std::function<double (Space&, Energy::Energybase&, const p_vec&)> usys; //!< Defaults to Energy::systemEnergy but can be replaced!
 
       public:
         ParallelTempering(InputMap&, Energy::Hamiltonian&, Space&, Faunus::MPI::MPIController &mpi, string="temper");
         void setCurrentEnergy(double); //!< Set energy of configuration before move (for increased speed)
-        std::function<double (Space&, Energy::Energybase&, const p_vec&)> usys; //!< Defaults to Energy::systemEnergy but can be replaced!
+        void setEnergyFunction( std::function<double (Space&,Energy::Energybase&,const p_vec&)> );
     };
 
 #endif

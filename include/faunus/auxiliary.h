@@ -27,6 +27,9 @@ namespace Faunus {
         if (first>second)
           std::swap(first,second);
       }
+
+      // NOT USED BY stl::map.find()
+      // see http://www.velocityreviews.com/forums/t290085-std-map-mystring-mystring-comparison-operator.html
       bool operator==(const pair_permutable<T> &a) const {
         if (a.first==first)
           if (a.second==second)
@@ -36,8 +39,14 @@ namespace Faunus {
             return true;
         return false;
       }
+
       bool operator<(const pair_permutable<T> &a) const {
-        return (a.first > first) ? true : false;
+        if (first<a.first)
+          return true;
+        if (first==a.first)
+          if (second<a.second)
+            return true;
+        return false;
       }
       bool find(const T &a) const {
         if (a!=first)
@@ -52,20 +61,17 @@ namespace Faunus {
    * from the base Tbase. When adding data with the add() function, a copy of the data
    * is created and stored internally.
    */
-  template<class Tbase, typename Tij=int, typename Tpair=pair_permutable<int> >
+  template<class Tbase, typename Tij=int, typename Tpair=pair_permutable< Tij > >
     class pair_list {
       protected:
         std::map< Tpair, std::shared_ptr<Tbase> > list;
       public:
         template<typename Tderived>
           void add(Tij i, Tij j, Tderived data) {
-            assert( i!=j );
-            if (i!=j)
-              list[ Tpair(i,j) ] = std::shared_ptr<Tderived>( new Tderived(data) ); 
+            list[ Tpair(i,j) ] = std::shared_ptr<Tderived>( new Tderived(data) ); 
           }
         Tbase& operator() (Tij i, Tij j) {
           Tpair pair(i,j);
-          assert( i!=j );
           assert( list[pair] != nullptr ); //debug
           return *list[pair];
         }

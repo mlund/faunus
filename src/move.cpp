@@ -621,17 +621,17 @@ namespace Faunus {
       std::ostringstream o;
       const double tomM=1e30/pc::Nav;
       int N,Natom=0, Nmol=0;
-      for (auto g : spc->g)
+      for (auto g : spc->groupList())
         if (g->id==Group::ATOMIC)
           Natom += g->size();
         else
           Nmol++;
       N = Natom + Nmol;
-      double Pascal = P*pc::kB*pc::T*1e30;
+      double Pascal = P*pc::kB*pc::T()*1e30;
       o << pad(SUB,w, "Displacement parameter") << dV << endl
         << pad(SUB,w, "Number of molecules") <<N<< " (" <<Nmol<< " molecular + " <<Natom<< " atomic)" << endl 
         << pad(SUB,w, "Pressure") << P*tomM << " mM" << " = " << Pascal << " Pa = " << Pascal/0.980665e5 << " atm" << endl
-        << pad(SUB,w, "Temperature") << pc::T << " K" << endl;
+        << pad(SUB,w, "Temperature") << pc::T() << " K" << endl;
       if (cnt>0) {
         char l=14;
         o << pad(SUB,w, "Mean displacement") << cuberoot+rootof+bracket("dV"+squared) << " = " << pow(sqrV.avg(), 1/6.) << _angstrom << endl
@@ -655,10 +655,10 @@ namespace Faunus {
     }
 
     void Isobaric::_trialMove() {
-      assert(spc->g.size()>0 && "Space has empty group vector - NPT move not possible.");
+      assert(spc->groupList().size()>0 && "Space has empty group vector - NPT move not possible.");
       oldV = spc->geo->getVolume();
       newV = std::exp( std::log(oldV) + slp_global.randHalf()*dV );
-      for (auto g : spc->g)
+      for (auto g : spc->groupList())
         g->scale(*spc, newV); // scale trial coordinates to new volume
     }
 
@@ -666,7 +666,7 @@ namespace Faunus {
       V += newV;
       sqrV += pow( oldV-newV, 2 );
       hamiltonian->setVolume(newV);
-      for (auto g : spc->g )
+      for (auto g : spc->groupList() )
         g->accept(*spc);
     }
 
@@ -674,7 +674,7 @@ namespace Faunus {
       sqrV += 0;
       V += oldV;
       hamiltonian->setVolume(oldV);
-      for (auto g : spc->g )
+      for (auto g : spc->groupList() )
         g->undo(*spc);
     }
 
@@ -684,10 +684,11 @@ namespace Faunus {
      */
     double Isobaric::_energy(const p_vec &p) {
       double u=0;
-      for (size_t i=0; i<spc->g.size()-1; ++i)      // group-group
-        for (size_t j=i+1; j<spc->g.size(); ++j)
-          u += pot->g2g(p, *spc->g[i], *spc->g[j]);
-      for (auto g : spc->g) {
+      size_t n=spc->groupList().size();  // number of groups
+      for (size_t i=0; i<n-1; ++i)      // group-group
+        for (size_t j=i+1; j<n; ++j)
+          u += pot->g2g(p, *spc->groupList()[i], *spc->groupList()[j]);
+      for (auto g : spc->groupList()) {
         u += pot->g_external(p, *g);
         if (g->id==Group::ATOMIC)
           u+=pot->g_internal(p, *g);
@@ -702,7 +703,7 @@ namespace Faunus {
       double uold,unew;
       uold = _energy(spc->p);
       hamiltonian->setVolume( newV );
-      for (auto g : spc->g) // In spherical geometries molecules may collide with cell boundary upon scaling mass center.
+      for (auto g : spc->groupList()) // In spherical geometries molecules may collide with cell boundary upon scaling mass center.
         for (auto i : *g)
           if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
@@ -947,37 +948,41 @@ namespace Faunus {
       hamiltonian = &e;
       pt.recvExtra.resize(1);
       pt.sendExtra.resize(1);
-      usys=Energy::systemEnergy;
+      setEnergyFunction( Energy::systemEnergy );
       haveCurrentEnergy=false;
       temperPath.open(textio::prefix+"temperpath.dat");
     }
 
+    void ParallelTempering::setEnergyFunction( std::function<double (Space&,Energy::Energybase&,const p_vec&)> f ) {
+      usys = f;
+    }
+
     void ParallelTempering::findPartner() {
       int dr=0;
-      partner = mpiPtr->rank;
+      partner = mpiPtr->rank();
       if (mpiPtr->random.randOne()>0.5)
         dr++;
       else
         dr--;
-      if (mpiPtr->rank % 2 == 0)
+      if (mpiPtr->rank() % 2 == 0)
         partner+=dr;
       else
         partner-=dr;
     }
 
     bool ParallelTempering::goodPartner() {
-      assert(partner!=mpiPtr->rank && "Selfpartner! This is not supposed to happen.");
+      assert(partner!=mpiPtr->rank() && "Selfpartner! This is not supposed to happen.");
       if (partner>=0)
-        if (partner<mpiPtr->nproc)
-          if (partner!=mpiPtr->rank)
+        if ( partner<mpiPtr->nproc() )
+          if ( partner!=mpiPtr->rank() )
             return true;
       return false;
     }
 
     string ParallelTempering::_info() {
       std::ostringstream o;
-      o << pad(SUB,w,"Process rank") << mpiPtr->rank << endl
-        << pad(SUB,w,"Number of replicas") << mpiPtr->nproc << endl
+      o << pad(SUB,w,"Process rank") << mpiPtr->rank() << endl
+        << pad(SUB,w,"Number of replicas") << mpiPtr->nproc() << endl
         << indent(SUB) << "Acceptance:" 
         << endl;
       if (cnt>0) {
@@ -1055,10 +1060,10 @@ namespace Faunus {
 
     string ParallelTempering::id() {
       std::ostringstream o;
-      if (mpiPtr->rank < partner)
-        o << mpiPtr->rank << " <-> " << partner;
+      if (mpiPtr->rank() < partner)
+        o << mpiPtr->rank() << " <-> " << partner;
       else
-        o << partner << " <-> " << mpiPtr->rank;
+        o << partner << " <-> " << mpiPtr->rank();
       return o.str();
     }
 
@@ -1068,7 +1073,7 @@ namespace Faunus {
         accmap[ id() ] += 1;
         for (size_t i=0; i<spc->p.size(); i++)
           spc->p[i] = spc->trial[i];  // copy new configuration
-        for (auto g : spc->g)
+        for (auto g : spc->groupList())
           g->setMassCenter(*spc); // update mass centra if swap is accepted
       }
     } 

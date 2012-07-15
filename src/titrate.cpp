@@ -377,7 +377,7 @@ namespace Faunus {
     void SwapMoveMSR::modify() {
       radiusbak.clear();
       hydrophobicbak.clear();
-      for (auto g : spc->g )   // loop over all groups
+      for (auto g : spc->groupList() )   // loop over all groups
         if (g->find(ipart)) {  //   is ipart part of a group?
           for (auto i : *g)    //     if so, loop over that group
             if (i!=ipart) {    //       and ignore ipart

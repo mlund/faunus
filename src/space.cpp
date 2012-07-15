@@ -16,6 +16,10 @@ namespace Faunus {
 
   Space::~Space() {}
 
+  vector<Group*>& Space::groupList() {
+    return g;
+  }
+
   double Space::charge() const {
     double z=0;
     for (auto &p_i : p)
@@ -242,6 +246,15 @@ namespace Faunus {
     return false;
   }
 
+  /*!
+   * This will register a new group in the Space. If already found, nothing is added. In addition, the
+   * following is performed each time a new group is enroller:
+   * \li The group mass center is re-calculated and set.
+   * \li Trial vector is synched with the main (p) particle vector.
+   *
+   * \param newgroup Group to enroll (pointer is saved)
+   * \returns Position of the newgroup in the group list.
+   */
   int Space::enroll(Group &newgroup) {
     for (size_t i=0; i<g.size(); ++i)
       if (g[i]==&newgroup)

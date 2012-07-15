@@ -156,15 +156,15 @@ namespace Faunus {
 
   std::ostream &operator<<(std::ostream &o, const PointParticle &p) {
     Point b=p;
-    o << b << " " << p.charge << " " << p.radius << " " << p.mw << " " << (short)p.id << " " << p.hydrophobic;
+    o << b << " " << p.charge << " " << p.radius << " " << p.mw << " " << (PointParticle::Tid)p.id << " " << p.hydrophobic;
     return o;
   }
 
   PointParticle & PointParticle::operator<<(std::istream &in) {
-    short tmp;
+    int tmp; // avoid char text output
     Point::operator<<(in);
     in >> charge >> radius >> mw >> tmp >> hydrophobic;
-    id = (unsigned char)tmp;
+    id = (Tid)tmp;
     return *this;
   }
 

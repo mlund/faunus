@@ -35,11 +35,11 @@ namespace Faunus {
     qq.resize(n);
     eps.resize(n);
     sigma.resize(n);
-    for (int i=0; i<n; i++) {
+    for (auto i=0; i<n; i++) {
       qq[i].resize(n);
       eps[i].resize(n);
       sigma[i].resize(n);
-      for (int j=0; j<n; j++) {
+      for (auto j=0; j<n; j++) {
         qq[i][j]    = list[i].charge * list[j].charge;
         eps[i][j]   = sqrt(list[i].eps * list[j].eps);
         sigma[i][j] = ( list[i].sigma + list[j].sigma ) / 2;
@@ -47,13 +47,13 @@ namespace Faunus {
     }
   }
 
-  AtomData & AtomTypes::operator[] (short i) { return list[i]; }
+  AtomData & AtomTypes::operator[] (particle::Tid i) { return list.at(i); }
 
   AtomData & AtomTypes::operator[] (string s) {
     for (auto &l_i : list)
       if (s==l_i.name)
         return l_i;
-    return list[0];
+    return list.at(0);
   }
 
   bool AtomTypes::includefile(InputMap &in) {
@@ -108,7 +108,7 @@ namespace Faunus {
 
   void AtomTypes::reset_properties(vector<particle> &p) {
     for (auto &p_i : p )
-      p_i = list[p_i.id];
+      p_i = list.at( p_i.id );
   }
 
 }//namespace

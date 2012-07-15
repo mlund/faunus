@@ -6,6 +6,8 @@ namespace Faunus {
    * \brief Physical constants and parameters.
    */
   class PhysicalConstants {
+    private:
+      static double _T;               //!< Temperature [K]
     public:
       PhysicalConstants(double temp=298.15);
       static const double
@@ -16,13 +18,14 @@ namespace Faunus {
         e,                           //!< Electronic charge [C] 
         R,                           //!< Molar gas constant [J/(K*mol)]
         Nav;                         //!< Avogadro's number [1/mol]
-      static double T;               //!< Temperature [K]
       static double lB(double=78.5); //!< Bjerrum length [Aangstrom]
       static double kT2kJ(double);   //!< kT/molecule -> kJ/mol
+      static double T();             //!< Return temperature [K]
+      static void setT(double);      //!< Set temperature [K]
   };
 
   typedef PhysicalConstants pc;
-  
+
 } // namespace
 #endif
 

@@ -725,9 +725,9 @@ namespace Faunus {
       return map.empty();
     }
 
-    AtomTracker::Tid AtomTracker::randomAtomType() const {
+    particle::Tid AtomTracker::randomAtomType() const {
       assert(!map.empty() && "No atom types have been added yet");
-      vector<Tid> vid;
+      vector<particle::Tid> vid;
       vid.reserve( map.size() );
       for (auto &m : map) 
         vid.push_back(m.first);
@@ -746,7 +746,7 @@ namespace Faunus {
       return index.back();
     }
 
-    AtomTracker::data& AtomTracker::operator[](AtomTracker::Tid id) { return map[id]; }
+    AtomTracker::data& AtomTracker::operator[](particle::Tid id) { return map[id]; }
 
     bool AtomTracker::insert(const particle &a, Tindex index) {
       assert( a.id == spc->p[ map[a.id].index.back() ].id && "Id mismatch");

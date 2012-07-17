@@ -1,7 +1,9 @@
 #ifndef FAU_XYTABLE_H
 #define FAU_XYTABLE_H
 
+#ifndef SWIG
 #include <faunus/common.h>
+#endif
 
 namespace Faunus {
   /*!

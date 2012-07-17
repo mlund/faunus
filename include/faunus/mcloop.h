@@ -1,7 +1,10 @@
 #ifndef FAU_MCLOOP_H
 #define FAU_MCLOOP_H
+
+#ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/textio.h>
+#endif
 
 namespace Faunus {
   class _inputfile;

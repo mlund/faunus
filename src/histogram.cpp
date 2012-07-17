@@ -15,6 +15,8 @@ namespace Faunus {
       reset(res,min,max);
     }
 
+  Histogram::~Histogram() {}
+
   void Histogram::reset(float res, float min, float max) {
     cnt=0;
     xmaxi=max;
@@ -81,6 +83,8 @@ namespace Faunus {
     xytable<float,unsigned long int>(res,min,max) {
       cnt=0;
     }
+
+  profile::~profile() {}
 
   float profile::conc(float x) {
     return ((*this)(x)>0) ? (*this)(x)/(cnt*volume(x)) : 0;

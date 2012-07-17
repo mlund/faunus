@@ -1,11 +1,13 @@
 #ifndef FAU_species_h
 #define FAU_species_h
 
+#ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/point.h>
+#endif
 
 namespace Faunus {
-  class _inputfile;
+  //class _inputfile;
 
   class AtomData {
     public:
@@ -45,8 +47,8 @@ namespace Faunus {
       string filename;
     public:
       AtomTypes();                           //!< Constructor - set UNK atom type (fallback)
-      vector<AtomData> list;                 //!< List of atoms
-      vector< vector<double> >
+      std::vector<AtomData> list;            //!< List of atoms
+      std::vector< std::vector<double> >
         qq,                                  //!< Charge product between atoms i and j
         eps,                                 //!< LJ epsilon between atoms i and j
         sigma;                               //!< LJ sigma between atoms i and j
@@ -56,7 +58,7 @@ namespace Faunus {
       AtomData& operator[] (string);         //!< Name->data
       AtomData& operator[] (particle::Tid);  //!< Id->data
       string info();                         //!< Print info
-      void reset_properties(vector<particle> &);//!< Reset particle properties according to particle id
+      void reset_properties(p_vec&);         //!< Reset particle properties according to particle id
   };
 
   extern AtomTypes atom; // GLOBAL SCOPE

@@ -12,6 +12,9 @@ namespace Faunus {
     AnalysisBase::AnalysisBase() : w(30), cnt(0), runfraction(1.0) {
     }
 
+    AnalysisBase::~AnalysisBase() {}
+
+
     bool AnalysisBase::run() {
       if (slp_global.randOne() > runfraction)
         return false;

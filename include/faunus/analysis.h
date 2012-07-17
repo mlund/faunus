@@ -1,12 +1,13 @@
 #ifndef FAUNUS_ANALYSIS_H
 #define FAUNUS_ANALYSIS_H
 
+#ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/average.h>
 #include <faunus/physconst.h>
 #include <faunus/group.h>
 #include <faunus/space.h>
-
+#endif
 
 namespace Faunus {
   class checkValue;
@@ -39,6 +40,7 @@ namespace Faunus {
         bool run();           //!< true if we should run, false of not (based on runfraction)
       public:
         AnalysisBase();
+        virtual ~AnalysisBase();
         string info();       //!< Print info and results
         double runfraction;  //!< Chance that analysis should be run (default 1.0 = 100%)
     };
@@ -49,6 +51,7 @@ namespace Faunus {
      * \date Lund 2011
      * \note Tx is used as the std::map key and which may be problematic due to direct floating
      *       point comparison (== operator). We have not experienced any issues with this, though.
+     * \todo Ups! Seems as if template member round() is virtual...
      */
     template<typename Tx, typename Ty>
       class Table2D {
@@ -65,7 +68,8 @@ namespace Faunus {
           Tmap map;
           string name;
         private:
-          Tx virtual round(Tx x) { return (x>=0) ? int( x/dx+0.5 )*dx : int( x/dx-0.5 )*dx; }
+          //Tx virtual round(Tx x) { return (x>=0) ? int( x/dx+0.5 )*dx : int( x/dx-0.5 )*dx; }
+          Tx round(Tx x) { return (x>=0) ? int( x/dx+0.5 )*dx : int( x/dx-0.5 )*dx; }
           virtual double get(Tx x) { return operator()(x); }
         public:
           enum type {HISTOGRAM, XYDATA};
@@ -230,12 +234,14 @@ namespace Faunus {
         std::set<string> exclusionlist; //!< Atom names listed here will be excluded from the analysis.
     };
 
+    /*
     class VectorAlignment : public AnalysisBase {
       private:
         virtual Point convert(const Group&, const Space&); // Returns points calculated from group properties
       public:
         void sample(const Group&, const Group&, const Space&);
     };
+    */
 
     /*! \brief Widom method for excess chemical potentials
      *  \author Mikael Lund

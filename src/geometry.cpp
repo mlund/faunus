@@ -430,6 +430,8 @@ namespace Faunus {
       allowMatterOverlap=false;   
     }
 
+    FindSpace::~FindSpace() {}
+
     bool FindSpace::matterOverlap(const Geometrybase &geo, const p_vec &p1, const p_vec &p2) {
       if (allowMatterOverlap==false)
         for (auto &i : p1)

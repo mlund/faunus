@@ -1,6 +1,7 @@
 #ifndef FAUNUS_MCMOVE_H
 #define FAUNUS_MCMOVE_H
 
+#ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/average.h>
@@ -8,6 +9,8 @@
 
 #ifdef ENABLE_MPI
 #include <faunus/mpi.h>
+#endif
+
 #endif
 
 namespace Faunus {
@@ -349,22 +352,22 @@ namespace Faunus {
      * \endcode
      */
     class AtomTracker {
-      private:
-        typedef short Tid;  // particle id type
+      public:
         typedef int Tindex; // particle index type
+       private:
         Space* spc;
         class data {
           public:
             vector<Tindex> index;
             Tindex random();                  //!< Pick random particle index
         };
-        std::map<Tid,data> map; 
+        std::map<particle::Tid,data> map; 
       public:
         AtomTracker(Space&);
-        Tid randomAtomType() const;           //!< Select a random atomtype from the list
+        particle::Tid randomAtomType() const;           //!< Select a random atomtype from the list
         bool insert(const particle&, Tindex); //!< Insert particle into Space and track position
         bool erase(Tindex);                   //!< Delete particle from Space at specific particle index
-        data& operator[] (Tid);               //!< Access operator to atomtype data
+        data& operator[] (particle::Tid);     //!< Access operator to atomtype data
         void clear();                         //!< Clear all atom lists (does not touch Space)
         bool empty();                         //!< Test if atom list is empty
     };

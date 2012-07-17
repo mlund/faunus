@@ -1,7 +1,10 @@
 #ifndef FAU_DRIFT_H
 #define FAU_DRIFT_H
+
+#ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/average.h>
+#endif
 
 namespace Faunus {
   class EnergyDrift {

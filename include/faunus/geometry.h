@@ -1,9 +1,11 @@
 #ifndef FAU_GEOMETRY_H
 #define FAU_GEOMETRY_H
 
+#ifndef SWIG
 #include "faunus/common.h"
 #include "faunus/point.h"
 #include "faunus/slump.h"
+#endif
 
 namespace Faunus {
 
@@ -312,6 +314,7 @@ namespace Faunus {
         virtual bool matterOverlap(const Geometrybase&, const p_vec&, const p_vec&);
       public:
         FindSpace();
+        virtual ~FindSpace();
         Point dir;                  //!< default = [1,1,1]
         bool allowContainerOverlap; //!< default = false;
         bool allowMatterOverlap;    //!< default = false;

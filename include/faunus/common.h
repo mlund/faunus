@@ -20,6 +20,7 @@
 #include <numeric>
 #endif
 
+
 // Use explicit virtual override and final keywords (C++11)
 #ifdef NO_EXPLICIT_OVERRIDE
   #define FOVERRIDE
@@ -58,7 +59,7 @@ namespace Faunus {
   }
 
   class Group;
-  class _inputfile;
+  class GroupMolecular;
   class InputMap;
   class UnitTest;
   class Space;
@@ -71,7 +72,8 @@ namespace Faunus {
 #else
   typedef PointParticle particle;
 #endif
-  typedef vector<particle> p_vec;
+  typedef std::vector<particle> p_vec;
 
 }//namespace
+
 #endif

@@ -1,6 +1,10 @@
 #ifndef FAU_PHYSCONST_H
 #define FAU_PHYSCONST_H
+
+#ifndef SWIG
 #include "faunus/common.h"
+#endif
+
 namespace Faunus {
   /*!
    * \brief Physical constants and parameters.

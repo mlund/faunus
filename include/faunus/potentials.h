@@ -1,12 +1,14 @@
 #ifndef FAU_POTENTIAL_H
 #define FAU_POTENTIAL_H
 
+#ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/geometry.h>
 #include <faunus/textio.h>
 #include <faunus/inputfile.h>
 #include <faunus/physconst.h>
+#endif
 
 namespace Faunus {
 
@@ -40,6 +42,7 @@ namespace Faunus {
         double _tokT;
       public:  
         PairPotentialBase();
+        virtual ~PairPotentialBase();
         string name;             //!< Short (preferably one-word) description of the core potential
         string brief();          //!< Brief, one-lined information string
         void setScale(double=1); //!< Set scaling factor

@@ -1,7 +1,9 @@
 #ifndef FAU_INPUTFILE_H
 #define FAU_INPUTFILE_H
 
+#ifndef SWIG
 #include <faunus/common.h>
+#endif
 
 namespace Faunus {
 

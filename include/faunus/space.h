@@ -1,8 +1,12 @@
 #ifndef FAUNUS_SPACE_H
 #define FAUNUS_SPACE_H
+
+#ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/slump.h>
 #include <faunus/group.h>
+#endif
+
 //extern template class std::vector<Faunus::particle>;
 
 namespace Faunus {
@@ -27,14 +31,14 @@ namespace Faunus {
       bool overlap() const;
       bool overlap(const particle&) const;            //!< Check for hardspheres overlap with particle
       bool checkSanity();                             //!< Do a number of checks to see if eveything is OK
-      vector<Group*> g;                               //!< Pointers to all groups in the system (sum must match particle size!)
+      std::vector<Group*> g;                          //!< Pointers to all groups in the system (sum must match particle size!)
 
     public:
       enum keys {OVERLAP,NOOVERLAP,RESIZE,NORESIZE};
       Geometry::Geometrybase* geo;               //!< Pointer to a valid Geometry (!=nullptr)
       p_vec p;                                   //!< The main particle vector
       p_vec trial;                               //!< Trial particle vector. 
-      vector<Group*>& groupList();               //!< Return vector with pointers to all Groups
+      std::vector<Group*>& groupList();          //!< Return vector with pointers to all Groups
 
       Space(Geometry::Geometrybase&);
       virtual ~Space();

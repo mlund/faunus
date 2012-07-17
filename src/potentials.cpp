@@ -16,7 +16,9 @@ namespace Faunus {
     PairPotentialBase::PairPotentialBase() {
       setScale(1);
     }
-   
+
+    PairPotentialBase::~PairPotentialBase() { }
+    
     /*!
      * This functions sets the energy scaling as returned by tokT().
      */

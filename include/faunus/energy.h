@@ -1,12 +1,14 @@
 #ifndef faunus_energy_h
 #define faunus_energy_h
 
+#ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/group.h>
 #include <faunus/textio.h>
 #include <faunus/potentials.h>
 #include <faunus/auxiliary.h>
+#endif
 
 // http://publib.boulder.ibm.com/infocenter/iadthelp/v8r0/index.jsp?topic=/com.ibm.xlcpp111.linux.doc/language_ref/variadic_templates.html
 //

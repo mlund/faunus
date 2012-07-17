@@ -1,11 +1,13 @@
 #ifndef FAU_TITRATE_H
 #define FAU_TITRATE_H
 
+#ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/move.h>
 #include <faunus/average.h>
 #include <faunus/energy.h>
 #include <faunus/move.h>
+#endif
 
 namespace Faunus {
 

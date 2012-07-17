@@ -1,10 +1,12 @@
 #ifndef FAU_HISTOGRAM_H
 #define FAU_HISTOGRAM_H
 
+#ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/average.h>
 #include <faunus/xytable.h>
+#endif
 
 namespace Faunus {
   /*
@@ -41,6 +43,7 @@ namespace Faunus {
       float xmaxi,xmini;  // ugly solution!
     public:
       Histogram(float, float, float);
+      virtual ~Histogram();
       void reset(float, float, float);    //!< Clear data
       string comment;                     //!< User defined comment
       void add(float);
@@ -82,6 +85,7 @@ namespace Faunus {
       virtual float volume(double)=0; //!< Get volume at coordinate
     public:
       profile(float, float, float=.5);
+      virtual ~profile();
       virtual void add(particle &)=0; //!< Add a particle
       void update(vector<particle> &);//!< Search for and add particles
       float conc(float);              //!< Get concentration at coordinate

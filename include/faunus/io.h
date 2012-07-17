@@ -1,5 +1,7 @@
 #ifndef FAU_IO_H
 #define FAU_IO_H
+
+#ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/energy.h>
 
@@ -11,6 +13,8 @@
 #endif
 #include "xdrfile/xdrfile_trr.h"
 #include "xdrfile/xdrfile_xtc.h"
+
+#endif
 
 namespace Faunus {
   

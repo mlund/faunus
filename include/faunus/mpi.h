@@ -3,11 +3,13 @@
 #ifndef FAU_MPI_H
 #define FAU_MPI_H
 
+#ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/slump.h>
 #include <faunus/textio.h>
 #include <mpi.h>
+#endif
 
 namespace Faunus {
 

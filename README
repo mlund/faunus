@@ -31,7 +31,7 @@ REQUIREMENTS:
   - C/C++11 compiler (clang3+, gcc4.6+, ...)
   - cmake 2.8+
   Optional:
-  - SWIG 2.0+ (for python, ruby, ... modules) [ON HOLD!]
+  - SWIG 2.0+ (for python, ruby, ... modules)
   - OpenBabel 2 (numerous molecular formats)
   - Doxygen and Graphviz (for code manual)
   - Xcode (for neat environment on macos x)
@@ -45,9 +45,10 @@ COMPILING:
     $ make test (or use 'ctest -V' for verbose test output)
 
   Options:
-    -DENABLE_OPENMP=on|OFF            Enable OpenMP support
     -DENABLE_BABEL=ON|off             Use OpenBabel for file I/O
     -DENABLE_MPI=on|OFF               Build MPI programs (parallel tempering etc.)
+    -DENABLE_OPENMP=on|OFF            Enable OpenMP support
+    -DENABLE_SWIG=on|OFF              Build python, ruby, tcl etc. modules (experimental)
     -DENABLE_TWISTER=on|OFF           Use Mersenne Twister for random numbers (experimental)
     -DCMAKE_BUILD_TYPE=Debug|Release  Debug (default) or Release (faster) mode
     -DCMAKE_CXX_FLAGS_RELEASE="..."   Extra compiler options for Release mode

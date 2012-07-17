@@ -1,7 +1,9 @@
 #ifndef FAUNUS_TEXTIO_H
 #define FAUNUS_TEXTIO_H
 
+#ifndef SWIG
 #include <faunus/common.h>
+#endif
 
 namespace Faunus {
   /*!
@@ -61,9 +63,10 @@ namespace Faunus {
     string trim(string);                          //!< Remove white space from string
 
     extern std::string prefix;                    //!< Unique prefix for current job. Use for file I/O.
-
+#ifndef SWIG
     extern std::ostream &fcout;                   //!< Alias for standard output (can be redirected)
     extern std::ostream &fcerr;                   //!< Alias for standard error (can be redirected)
+#endif
 
   }//end of textio namespace
 }// end of Faunus namespace

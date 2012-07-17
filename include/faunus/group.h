@@ -1,12 +1,13 @@
 #ifndef FAUNUS_GROUP_H
 #define FAUNUS_GROUP_H
 
+#ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/average.h>
 #include <faunus/geometry.h>
+#endif
 
 namespace Faunus {
-
 
   /* 
    * \brief Range iterator class for continuous ranges

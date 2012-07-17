@@ -1,7 +1,9 @@
 #ifndef FAU_auxiliary
 #define FAU_auxiliary
 
+#ifndef SWIG
 #include <utility>
+#endif
 
 namespace Faunus {
 

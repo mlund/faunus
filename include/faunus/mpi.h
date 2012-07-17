@@ -30,10 +30,6 @@ namespace Faunus {
      * \endcode
      */
     class MPIController {
-      private:
-        int _nproc;        //!< Number of processors in communicator
-        int _rank;         //!< Rank of process
-        int _master;       //!< Rank number of the master
       public:
         MPIController(MPI_Comm=MPI_COMM_WORLD); //!< Constructor
         ~MPIController(); //!< End of all MPI calls!
@@ -45,6 +41,10 @@ namespace Faunus {
         slump random;     //!< Random number generator for MPI calls
         string id;        //!< Unique name associated with current rank
         std::ofstream cout; //!< Redirect stdout to here for rank-based file output
+      private:
+        int _nproc;        //!< Number of processors in communicator
+        int _rank;         //!< Rank of process
+        int _master;       //!< Rank number of the master
     };
 
     /*!
@@ -98,8 +98,7 @@ namespace Faunus {
      */
     class ParticleTransmitter : public FloatTransmitter {
       public:
-        enum dataformat {XYZ, XYZQ, XYZQI};
-        dataformat format;                             //!< Data format to send/receive - default is XYZQ
+        enum dataformat {XYZ=3, XYZQ=4, XYZQI=5};
         vector<floatp> sendExtra;                      //!< Put extra data to send here.
         vector<floatp> recvExtra;                      //!< Received extra data will be stored here
 
@@ -107,8 +106,12 @@ namespace Faunus {
         void send(MPIController&, const p_vec&, int); //!< Send particle vector to another node 
         void recv(MPIController&, int, p_vec&);       //!< Receive particle vector from another node
         void waitrecv();
+        void setFormat(dataformat);
+        void setFormat(string);
+        dataformat getFormat();
 
       private:
+        dataformat format;                             //!< Data format to send/receive - default is XYZQ
         vector<floatp> sendBuf, recvBuf;
         p_vec *dstPtr;  //!< pointer to receiving particle vector
         void pvec2buf(const p_vec&); //!< Copy source particle vector to send buffer

@@ -586,7 +586,6 @@ namespace Faunus {
 
           double i2all(const p_vec &p, int i) FOVERRIDE {
             double u=0;
-            int n = (int)p.size();
             for (int j=0; j<i; j++)
               u+=i2i(p,i,j);
             for (int j=i+1; j<(int)p.size(); j++)

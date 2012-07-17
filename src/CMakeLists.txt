@@ -66,7 +66,11 @@ endif()
 # -----------------------
 if(ENABLE_MPI AND MPI_CXX_FOUND)
   set(CMAKE_CXX_COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_CXX_COMPILE_FLAGS})
-  set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS})
+  if (APPLE)
+    set(CMAKE_CXX_LINK_FLAGS ${MPI_CXX_LINK_FLAGS})
+  else()
+    set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS})
+  endif()
   set(LINKLIBS ${LINKLIBS} ${MPI_CXX_LIBRARIES})
   include_directories(${MPI_CXX_INCLUDE_PATH})
   add_definitions(-DENABLE_MPI)
@@ -90,36 +94,36 @@ target_link_libraries(libfaunus.a xdrfile ${LINKLIBS})
 # dynamic
 add_library(libfaunus SHARED ${objs})
 set_target_properties(libfaunus PROPERTIES
-                      OUTPUT_NAME faunus
-                      )
+  OUTPUT_NAME faunus
+  )
 target_link_libraries(libfaunus xdrfile ${LINKLIBS})
 install(TARGETS libfaunus LIBRARY DESTINATION lib)
 
 # dynamic for cigarparticles
 add_library(libcigarfaunus SHARED ${objs})
 set_target_properties(libcigarfaunus PROPERTIES
-                      OUTPUT_NAME cigarfaunus
-                      COMPILE_DEFINITIONS "CIGARPARTICLE"
-                      EXCLUDE_FROM_ALL TRUE
-                      )
+  OUTPUT_NAME cigarfaunus
+  COMPILE_DEFINITIONS "CIGARPARTICLE"
+  EXCLUDE_FROM_ALL TRUE
+  )
 target_link_libraries(libcigarfaunus xdrfile ${LINKLIBS})
 
 
 # dynamic for hypersphere
 add_library(libhyperfaunus SHARED ${objs})
 set_target_properties(libhyperfaunus PROPERTIES
-                      OUTPUT_NAME hyperfaunus
-                      COMPILE_DEFINITIONS "HYPERSPHERE"
-                      EXCLUDE_FROM_ALL TRUE
-                      )
+  OUTPUT_NAME hyperfaunus
+  COMPILE_DEFINITIONS "HYPERSPHERE"
+  EXCLUDE_FROM_ALL TRUE
+  )
 target_link_libraries(libhyperfaunus xdrfile ${LINKLIBS})
 
 #----- header install target -----
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/faunus
-        DESTINATION include
-        FILES_MATCHING PATTERN "*.h"
-        PATTERN ".svn" EXCLUDE
-        PATTERN "CMakeFiles" EXCLUDE)
+  DESTINATION include
+  FILES_MATCHING PATTERN "*.h"
+  PATTERN ".svn" EXCLUDE
+  PATTERN "CMakeFiles" EXCLUDE)
 
 # -----------------------------------------
 #   Add "cppcheck" static analyzer target

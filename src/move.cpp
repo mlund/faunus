@@ -948,6 +948,7 @@ namespace Faunus {
       hamiltonian = &e;
       pt.recvExtra.resize(1);
       pt.sendExtra.resize(1);
+      pt.setFormat( in.get<string>(prefix+"_format", "XYZQI") );
       setEnergyFunction( Energy::systemEnergy );
       haveCurrentEnergy=false;
       temperPath.open(textio::prefix+"temperpath.dat");
@@ -983,6 +984,7 @@ namespace Faunus {
       std::ostringstream o;
       o << pad(SUB,w,"Process rank") << mpiPtr->rank() << endl
         << pad(SUB,w,"Number of replicas") << mpiPtr->nproc() << endl
+        << pad(SUB,w,"Data size format") << short(pt.getFormat()) << endl
         << indent(SUB) << "Acceptance:" 
         << endl;
       if (cnt>0) {

@@ -75,9 +75,20 @@ namespace Faunus {
     }
 
     ParticleTransmitter::ParticleTransmitter() {
-      format=XYZQI;
+      setFormat(XYZQI);
     }
 
+    void ParticleTransmitter::setFormat(dataformat d) { format = d; }
+
+    void ParticleTransmitter::setFormat(string s) {
+      setFormat(XYZQI);
+      if (s=="XYZQ")
+        setFormat(XYZQ);
+      if (s=="XYZ")
+        setFormat(XYZ);
+    }
+
+    ParticleTransmitter::dataformat ParticleTransmitter::getFormat() { return format; }
 
     /*!
      * \param mpi MPI controller to use

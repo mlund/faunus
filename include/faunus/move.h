@@ -151,6 +151,7 @@ namespace Faunus {
         Group* igroup;   //!< Group pointer in which particles are moved randomly (NULL if none, default)
         int iparticle;   //!< Select single particle to move (-1 if none, default)
         Average<unsigned long long int> gsize; //!< Average size of igroup;
+        double genericdp;//!< Generic atom displacement parameter - ignores individual dps
 
         string _info();
         void _trialMove();
@@ -162,6 +163,7 @@ namespace Faunus {
         AtomicTranslation(InputMap&, Energy::Energybase&, Space&, string="mv_particle");
         void setGroup(Group&); //!< Select group in which to randomly pick particles from
         void setParticle(int); //!< Select single particle in Space::p to move
+	void setGenericDisplacement(double); //!< Set single displacement for all atoms
         Point dir;             //!< Translation directions (default: x=y=z=1)
     };
 

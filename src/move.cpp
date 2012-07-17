@@ -150,6 +150,11 @@ namespace Faunus {
       dir.x=dir.y=dir.z=1;
       w=30; //width of output
       in.get(prefix+"_runfraction",0.);
+      setGenericDisplacement( in.get<double>(prefix+"_genericdp",0) );
+    }
+
+    void AtomicTranslation::setGenericDisplacement(double dp) {
+      genericdp=dp;
     }
 
     void AtomicTranslation::setGroup(Group &g) {
@@ -173,8 +178,13 @@ namespace Faunus {
         iparticle=igroup->random();
         gsize += igroup->size();
       }
+      double dp;
       if (iparticle>-1) {
-        double dp = atom[ spc->p[iparticle].id ].dp;
+        if (genericdp<1e-6)
+          dp = atom[ spc->p[iparticle].id ].dp;
+        else
+          dp = genericdp;
+          
         assert(iparticle<(int)spc->p.size() && "Trial particle out of range");
         //assert(dp>1e-9 && "Atomic displacement parameter seems to be zero");
         spc->trial[iparticle].x += dir.x * dp * slp_global.randHalf();

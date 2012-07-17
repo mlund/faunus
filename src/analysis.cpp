@@ -69,11 +69,13 @@ namespace Faunus {
       o << endl << indent(SUBSUB) << std::left << setw(w) << "Polymer"
         << setw(w+5) << bracket("Rg"+squared)
         << setw(w+5) << bracket("Rg")+squared
+        << setw(w+7) << rootof+bracket("Rg"+squared)
         << setw(w+7) << rootof+bracket("Re"+squared)
         << setw(w) << bracket("Re"+squared)+"/"+bracket("Rg"+squared) << endl;
       for (auto &m : Rg2)
         o << indent(SUBSUB) << std::left << setw(w) << m.first << setw(w) << m.second.avg()
           << setw(w) << pow( Rg[m.first].avg(),2 )
+          << setw(w) << sqrt( m.second.avg() )
           << setw(w) << sqrt(Re2[m.first].avg())
           << setw(w) << Re2[m.first].avg() / Rg2[m.first].avg() << endl;
       return o.str();

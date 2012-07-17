@@ -64,15 +64,25 @@ int main(int argc, char** argv) {
       bonded->add(i, i+1, Potential::Harmonic(k,req)); // add bonds
   }
   Group allpol( pol.front().front(), pol.back().back() ); // make group w. all polymers
+  atom["NTR"].dp = 10.;
+  atom["CTR"].dp = 10.;
+  atom["HIS"].dp = 10.;
+  atom["HNTR"].dp = 10.;
+  atom["HCTR"].dp = 10.;
+  atom["HHIS"].dp = 10.;
 
   Move::Isobaric iso(mcp,pot,spc);
   Move::TranslateRotate gmv(mcp,pot,spc);
+  Move::AtomicTranslation mv(mcp, pot, spc);
   Move::SwapMove tit(mcp,pot,spc);
+  Move::CrankShaft crank(mcp, pot, spc);
+  Move::Pivot pivot(mcp, pot, spc);
   Move::ParallelTempering temper(mcp,pot,spc,mpi);
 
   Analysis::RadialDistribution<float,int> rdf(0.25);
   Analysis::LineDistribution<float,int> surfdist(0.25);
   Analysis::ChargeMultipole mpol;
+  Analysis::PolymerShape shape;
 
   spc.load(textio::prefix+"state");
 
@@ -83,7 +93,7 @@ int main(int argc, char** argv) {
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int k,i=rand() % 3;
+      int k,i=rand() % 6;
       switch (i) {
         case 0: // translate and rotate molecules
           k=pol.size();
@@ -91,18 +101,50 @@ int main(int argc, char** argv) {
             gmv.setGroup( pol[ rand() % pol.size() ] );
             sys+=gmv.move();
           }
+#ifdef SLIT
           for (auto &g : pol)
             surfdist( gouy->dist2surf(g.cm) )++;   // polymer mass center to GC surface histogram
+#endif
           for (auto i=pol.begin(); i!=pol.end()-1; i++)
             for (auto j=i+1; j!=pol.end(); j++)
               rdf( spc.geo->dist(i->cm,j->cm) )++; // sample polymer-polymer rdf
           break;
-        case 1: // volume move
+        case 1:
+          mv.setGroup(allpol);
+          sys+=mv.move( allpol.size() ); // translate monomers
+          for (auto &g : pol) {
+            g.setMassCenter(spc);
+            shape.sample(g,spc);
+          }
+          break;
+        case 2: // volume move
           sys+=iso.move();
           break;
-        case 2: // titration move
+        case 3: // titration move
           sys+=tit.move();
           mpol.sample(pol,spc);
+          break;
+        case 4:
+          k=pol.size();
+          while (k-->0) {
+            crank.setGroup( pol[ rand() % pol.size() ] );
+            sys+=crank.move();
+          }
+          for (auto &g : pol) {
+            g.setMassCenter(spc);
+            shape.sample(g,spc);
+          }
+          break;
+        case 5:
+          k=pol.size();
+          while (k-->0) {
+            pivot.setGroup( pol[ rand() % pol.size() ] );
+            sys+=pivot.move();
+          }
+          for (auto &g : pol) {
+            g.setMassCenter(spc);
+            shape.sample(g,spc);
+          }
           break;
         }
 
@@ -118,11 +160,12 @@ int main(int argc, char** argv) {
     sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) );
 
     mpi.cout << loop.timing();
+    //cout << loop.timing();
 
   } // end of macro loop
 
   mpi.cout << loop.info() << sys.info() << gmv.info() << iso.info() << tit.info()
-    << mpol.info() << temper.info();
+    << mpol.info() << temper.info() << shape.info() << mv.info() << crank.info() << pivot.info();
 
   rdf.save(textio::prefix+"rdf_p2p.dat");
   surfdist.save(textio::prefix+"surfdist.dat");

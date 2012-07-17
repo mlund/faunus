@@ -2,16 +2,16 @@
 
 # Submit with sbatch command
 
-#SBATCH -t 00:00:04
+#SBATCH -t 00:01:00
 #SBATCH -J mytest
-#c__SBATCH --mail-user=mikael.lund@teokem.lu.se
+#c__SBATCH --mail-user=anil.kurut@teokem.lu.se
 #c__SBATCH --mail-type=END
 
 # - Get exclusive access to whole node (16 cores on alarik)
 #SBATCH --exclusive
 
 # - Number of cores
-#SBATCH -n 4
+#SBATCH -n 1
 
 # - Number of nodes
 #BATCH -N 1
@@ -22,7 +22,7 @@ then
   cd $SLURM_SUBMIT_DIR
 fi
 
-faunus=$HOME/faunus
+faunus=/lunarc/nobackup/users/anil/nyfaunus
 exe=$faunus/src/playground/akurut/akurut-gouychapman
 base="manybody"
 
@@ -98,9 +98,9 @@ Atom  GLY      0     2.9    0.1    54      no
 # ----------------------------------
 function mkinput() {
 #for proc in `seq 0 $SLURM_NPROCS`
-for proc in {0..3}
+for proc in {0..0}
 do
-salt=0.160
+salt=0.160 # Molar
 if [ "$proc" == "0" ]; then salt=0.001; fi 
 if [ "$proc" == "1" ]; then salt=0.100; fi 
 if [ "$proc" == "2" ]; then salt=0.200; fi 
@@ -161,13 +161,14 @@ do
   micro=1000
   mktit
   mkinput
-  mpiexec -np 4 $exe
-  exit
+  #mpiexec -np 1 $exe
+  $exe > temper.eq
 
   micro=10000
   mktit
   mkinput
-  mpiexec -np 4 $exe
+  #mpiexec -np 1 $exe
+  $exe > temper.out
 
 done
 

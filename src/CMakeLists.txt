@@ -86,18 +86,14 @@ endif()
 # --------------------
 #   Faunus libraries
 # --------------------
-# static
-add_library(libfaunus.a STATIC EXCLUDE_FROM_ALL ${objs})
-set_target_properties(libfaunus.a PROPERTIES OUTPUT_NAME faunus)
-target_link_libraries(libfaunus.a xdrfile ${LINKLIBS})
-
-# dynamic
-add_library(libfaunus SHARED ${objs})
-set_target_properties(libfaunus PROPERTIES
-  OUTPUT_NAME faunus
-  )
+if (ENABLE_STATIC)
+  add_library(libfaunus STATIC ${objs})
+else()
+  add_library(libfaunus SHARED ${objs})
+endif()
+set_target_properties(libfaunus PROPERTIES OUTPUT_NAME faunus)
 target_link_libraries(libfaunus xdrfile ${LINKLIBS})
-install(TARGETS libfaunus LIBRARY DESTINATION lib)
+#install(TARGETS libfaunus LIBRARY DESTINATION lib)
 
 # dynamic for cigarparticles
 add_library(libcigarfaunus SHARED ${objs})

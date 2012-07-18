@@ -39,8 +39,10 @@ REQUIREMENTS:
   Developed and tested on Linux and MacOS X.
 
 COMPILING:
-  Text based setup:
-    $ cmake . [options]
+    $ svn co http://svn.code.sf.net/p/faunus/code/trunk faunus
+    $ mkdir build
+    $ cd build/
+    $ cmake ../faunus/ [options]
     $ make [help]
     $ make test (or use 'ctest -V' for verbose test output)
 
@@ -48,17 +50,19 @@ COMPILING:
     -DENABLE_BABEL=ON|off             Use OpenBabel for file I/O
     -DENABLE_MPI=on|OFF               Build MPI programs (parallel tempering etc.)
     -DENABLE_OPENMP=on|OFF            Enable OpenMP support
+    -DENABLE_STATIC=on|OFF            Static linkage of faunus as opposed to default dynamic linkage
     -DENABLE_SWIG=on|OFF              Build python, ruby, tcl etc. modules (experimental)
     -DENABLE_TWISTER=on|OFF           Use Mersenne Twister for random numbers (experimental)
+
     -DCMAKE_BUILD_TYPE=Debug|Release  Debug (default) or Release (faster) mode
     -DCMAKE_CXX_FLAGS_RELEASE="..."   Extra compiler options for Release mode
     -DCMAKE_CXX_FLAGS_DEBUG="..."     Extra compiler options for Debug mode
 
-  Example for Intel's C++ compiler with OpenMP parallelization:
+  Example: Intel's C++ compiler with OpenMP parallelization:
     $ CXX=icpc cmake . -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=Release
     $ make
 
-  Example for LLVM Clang:
+  Example: LLVM Clang:
     $ CXX=clang++ CC=clang cmake .
 
   Libraries in odd locations:

@@ -83,10 +83,12 @@
                 file, here is a short version:
                 </p>
                 <p><code>
-                  $ cd faunus/trunk <br />
-                  $ cmake . [options] <br />
-                  $ make <br />
-                  $ make test <br />
+                  $ svn co http://svn.code.sf.net/p/faunus/code faunus<br/>
+                  $ mkdir build<br/>
+                  $ cd build/<br/>
+                  $ cmake ../faunus/trunk/ [options]<br/>
+                  $ make [help]<br/>
+                  $ make test (or use 'ctest -V' for verbose test output)<br/>
                 </code></p>
  
               </div>			

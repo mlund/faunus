@@ -1,5 +1,5 @@
 #!/bin/bash
-
+source_tests_dir="`dirname $0`"
 exe=../src/tools/polymer-npt-sphere
 base="polymers"
 
@@ -39,7 +39,7 @@ tion1                  Cl
 nion1                  32
 dpion1                 110
 test_stable            no
-test_file              $base.test
+test_file              ${source_tests_dir}/$base.test
 " > $base.input
 
 #-----------------------------------------------------------
@@ -52,6 +52,6 @@ echo "4
 
 #-----------------------------------------------------------
 
-$exe -i $base.input -c $base.state
+$exe -i $base.input -c ${source_tests_dir}/$base.state
 
 rm -f confout.gro $base.input $base.aam $base.atoms

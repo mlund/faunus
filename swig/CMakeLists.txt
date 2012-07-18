@@ -18,10 +18,19 @@ if (SWIG_FOUND)
   endif()
 
   find_package(PythonLibs)
+  find_package(PythonInterp)
+
   if(PYTHONLIBS_FOUND)
+
     INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_PATH})
     SWIG_ADD_MODULE(pyfaunus python "interface.i")
     SWIG_LINK_LIBRARIES(pyfaunus libfaunus ${PYTHON_LIBRARIES})
+
+    if (PYTHONINTERP_FOUND)
+      add_test(SWIG_python_module ${PYTHON_EXECUTABLE} "-c" "import pyfaunus")
+      set_tests_properties(SWIG_python_module PROPERTIES WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/swig")
+    endif()
+
   endif()
 
   #find_package(Ruby)

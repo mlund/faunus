@@ -355,7 +355,15 @@ namespace Faunus {
         double dipdip(const Point&, const Point&, double);
     };
 
-  } //end of potential namespace
+    typedef CombinedPairPotential<Coulomb, HardSphere> CoulombHS;
+
+    typedef CombinedPairPotential<Coulomb, LennardJones> CoulombLJ;
+
+    typedef CombinedPairPotential<DebyeHuckel, HardSphere> DebyeHuckelHS;
+
+    typedef CombinedPairPotential<DebyeHuckel, LennardJones> DebyeHuckelLJ;
+
+  } //end of Potential namespace
 
 } //end of Faunus namespace
 #endif

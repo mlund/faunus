@@ -32,8 +32,6 @@
 %rename(__float__) Faunus::Average<double>::operator double;
 %rename(__float__) Faunus::Average<float>::operator float;
 %rename(__getitem__) Faunus::AtomTypes::operator[];
-%rename(myinsert) Faunus::Space::insert;
-%rename(myerase) Faunus::Space::erase;
 
 %ignore *::operator<<(std::istream&);
 %ignore *::operator<<(std::ostream&, const Faunus::Point&);
@@ -78,4 +76,10 @@
 %template(vector_particle) std::vector< Faunus::particle >;
 %template(vector_group) std::vector<Faunus::Group>;
 %template(vector_groupmoleculer) std::vector<Faunus::GroupMolecular>;
+
+%template(Energy_Nonbonded_DebyeHuckelLJ_Cuboid)
+Faunus::Energy::Nonbonded<Faunus::Potential::DebyeHuckelLJ, Faunus::Geometry::Cuboid>;
+
+%template(Energy_Nonbonded_CoulombLJ_Cuboid)
+Faunus::Energy::Nonbonded<Faunus::Potential::CoulombLJ, Faunus::Geometry::Cuboid>;
 

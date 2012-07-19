@@ -3,7 +3,7 @@
 using namespace Faunus;
 
 typedef Geometry::Sphere Tgeometry;
-typedef Potential::CombinedPairPotential<Potential::DebyeHuckel, Potential::LennardJones> Tpairpot;
+typedef Potential::DebyeHuckelLJ Tpairpot;
 
 int main() {
   InputMap mcp("input");

@@ -4,7 +4,7 @@
 using namespace Faunus;
 
 typedef Geometry::Cuboid Tgeometry;                // select simulation geometry
-typedef Potential::CombinedPairPotential<Potential::Coulomb, Potential::HardSphere> Tpairpot;
+typedef Potential::CoulombHS Tpairpot;
 
 int main() {
   Group g(100,1);

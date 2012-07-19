@@ -24,7 +24,7 @@ typedef Geometry::Cuboidslit Tgeometry;
 #else
 typedef Geometry::Cuboid Tgeometry;
 #endif
-typedef Potential::CombinedPairPotential<Potential::DebyeHuckel, Potential::LennardJones> Tpairpot;
+typedef Potential::DebyeHuckelLJ Tpairpot;
 
 int main(int argc, char** argv) {
   Faunus::MPI::MPIController mpi;

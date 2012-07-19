@@ -47,6 +47,7 @@ namespace Faunus {
         string brief();          //!< Brief, one-lined information string
         void setScale(double=1); //!< Set scaling factor
         double tokT() const;     //!< Convert returned energy to kT.
+        virtual void setTemperature(double); //!< Set temperature [K]
 
         /*!
          * \brief Particle-particle energy divided by tokT()
@@ -106,11 +107,6 @@ namespace Faunus {
       private:
         string _brief();
         void _setScale(double);
-      protected:
-        double eps;
-      public:
-        LennardJones();
-        LennardJones(InputMap&);
         inline double r6(double sigma, double r2) const {
           double x=sigma*sigma/r2;  // 2
           return x*x*x;             // 6
@@ -123,6 +119,11 @@ namespace Faunus {
           double x=r6(sigma,r2);
           return eps*(x*x - x);
         }
+      protected:
+        double eps;
+      public:
+        LennardJones();
+        LennardJones(InputMap&);
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
           return energy(a.radius+b.radius, r2);
         }
@@ -174,7 +175,7 @@ namespace Faunus {
           return 0;
         }
     };
-    
+
     /*!
      * \brief Soft repulsion of the form \f$ \beta u = \sigma^6 / (r_{ij}-r_i-r_j)^6 \f$
      * \todo This applies sqrt() and thus may be slow. Also remove floating point comparison.
@@ -271,7 +272,7 @@ namespace Faunus {
      *
      * This simply combines two PairPotentialBases. The combined potential can subsequently
      * be used as a normal pair potential and even be combined with a third potential and
-     * so forth.
+     * so forth. A number of typedefs such as Potential::CoulombHS is aliasing this.
      *
      * \code
      *   // mix two and three pair potentials
@@ -307,46 +308,6 @@ namespace Faunus {
           }
       };
 
-    /*
-     * \brief Combined electrostatic/short ranged pair potential
-     * \note OUTDATED
-     *
-     * PairPotentialBase classes do not need to implement distance calculation functions
-     * as the operator() takes the squared distance as input. For nonbonded interactions we
-     * typically want to call functions of the type energy(particle1, particle2) and
-     * therefore need to calculate distances explicitly. This is handled by templates
-     * that explicitly handles the simulation Geometry. Note that the surrounding energy
-     * loops in the Energy namespace should point to this Geometry so as to handle volume
-     * fluctuations etc.
-    template<class Tgeometry, class Tcoulomb=Coulomb, class Tshortranged=LennardJones>
-      class CoulombSR : public PairPotentialBase {
-        private:
-          string _brief() { return name; }
-        protected:
-          Tshortranged sr;
-          Tcoulomb el;
-        public:
-          Tgeometry geo;
-          CoulombSR(InputMap &in) : sr(in), el(in), geo(in) {
-            setScale( el.tokT() );
-            sr.setScale( el.tokT() );
-            name=sr.name+"+"+el.name;
-          }
-          inline double energy(const particle &a, const particle &b) const {
-            double r2=geo.sqdist(a,b);
-            return el.energy( a.charge*b.charge, sqrt(r2) ) + sr(a,b,r2);
-          }
-          inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-            return el.energy( a.charge*b.charge, sqrt(r2) ) + sr(a,b,r2);
-          }
-          string info(char w=20) {
-            std::ostringstream o;
-            o << el.info(w) << sr.info(w);
-            return o.str();
-          }
-      };
-     */
-
     class MultipoleEnergy {
       public:
         double lB;
@@ -355,12 +316,24 @@ namespace Faunus {
         double dipdip(const Point&, const Point&, double);
     };
 
+    /*!
+     * \brief Combined Coulomb / HardSphere potential
+     */
     typedef CombinedPairPotential<Coulomb, HardSphere> CoulombHS;
 
+    /*!
+     * \brief Combined Coulomb / LennardJones potential
+     */
     typedef CombinedPairPotential<Coulomb, LennardJones> CoulombLJ;
 
+    /*!
+     * \brief Combined DebyeHuckel / HardSphere potential
+     */
     typedef CombinedPairPotential<DebyeHuckel, HardSphere> DebyeHuckelHS;
 
+    /*!
+     * \brief Combined DebyeHuckel / LennardJones potential
+     */
     typedef CombinedPairPotential<DebyeHuckel, LennardJones> DebyeHuckelLJ;
 
   } //end of Potential namespace

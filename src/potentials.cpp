@@ -38,6 +38,15 @@ namespace Faunus {
      */
     double PairPotentialBase::tokT() const { return _tokT; }
 
+    /*!
+     * This will reset the temperature to the specified value. By default this function
+     * does nothing, although in Debug mode it will throw an exception if derived classes
+     * does not implement it (and is called).
+     */
+    void PairPotentialBase::setTemperature(double) {
+      assert(!"Not implemented.");
+    }
+
     string PairPotentialBase::brief() {
       assert(!name.empty() && "Potential must have a name.");
       return name + ": " + _brief();

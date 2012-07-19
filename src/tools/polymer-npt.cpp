@@ -24,7 +24,7 @@ typedef Geometry::Cuboid Tgeometry;
 #else
 typedef Geometry::Sphere Tgeometry;
 #endif
-typedef Potential::CombinedPairPotential<Potential::Coulomb, Potential::HardSphere> Tpairpot;
+typedef Potential::CoulombHS Tpairpot;
 
 int main(int argc, char** argv) {
   string inputfile,istate,ostate;

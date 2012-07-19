@@ -1,4 +1,4 @@
-%module pyfaunus
+%module (docstring="A Molecular Framework for Moleculer Simulation") pyfaunus
 %{
 #include "faunus/common.h"
 #include "faunus/point.h"
@@ -20,7 +20,7 @@
 #include "faunus/mcloop.h"
 #include "faunus/histogram.h"
 #include "faunus/io.h"
-#include "faunus/mpi.h"
+//#include "faunus/mpi.h"
 %}
 
 /* -----------------------------------
@@ -41,10 +41,10 @@
 
 %include "std_vector.i"
 %include "std_string.i"
-%include "std_iostream.i"
-%include "std_streambuf.i"
-%include "std_common.i"
-%include "std_map.i"
+//%include "std_iostream.i"
+//%include "std_streambuf.i"
+//%include "std_common.i"
+//%include "std_map.i"
 %include "faunus/common.h"
 %include "faunus/point.h"
 %include "faunus/average.h"
@@ -65,21 +65,38 @@
 %include "faunus/mcloop.h"
 %include "faunus/histogram.h"
 %include "faunus/io.h"
-%include "faunus/mpi.h"
+//%include "faunus/mpi.h"
 
-%template(average_int) Faunus::Average<int>;
-%template(average_dbl) Faunus::Average<double>;
-%template(average_flt) Faunus::Average<float>;
-%template(vector_int) std::vector< Faunus::Average<int> >;
-%template(vector_dblavg) std::vector< Faunus::Average<double> >;
-%template(vector_fltavg) std::vector< Faunus::Average<float> >;
-%template(vector_particle) std::vector< Faunus::particle >;
-%template(vector_group) std::vector<Faunus::Group>;
-%template(vector_groupmoleculer) std::vector<Faunus::GroupMolecular>;
+/* -----------------------------------
+ *              Templates
+ * ----------------------------------- */
+%template(Average_int) Faunus::Average<int>;
+%template(Average_dbl) Faunus::Average<double>;
+%template(Average_flt) Faunus::Average<float>;
+%template(vecAverage_int) std::vector< Faunus::Average<int> >;
+%template(vecAverage_dbl) std::vector< Faunus::Average<double> >;
+%template(vecAverage_flt) std::vector< Faunus::Average<float> >;
+%template(vecParticle) std::vector< Faunus::particle >;
+%template(vecGroup) std::vector<Faunus::Group>;
+%template(vecGroupMoleculer) std::vector<Faunus::GroupMolecular>;
+%template(vecGroupAtomic) std::vector<Faunus::GroupAtomic>;
 
+/* Energy classes */
 %template(Energy_Nonbonded_DebyeHuckelLJ_Cuboid)
 Faunus::Energy::Nonbonded<Faunus::Potential::DebyeHuckelLJ, Faunus::Geometry::Cuboid>;
+%template(Energy_Nonbonded_DebyeHuckelLJ_Sphere)
+Faunus::Energy::Nonbonded<Faunus::Potential::DebyeHuckelLJ, Faunus::Geometry::Sphere>;
 
 %template(Energy_Nonbonded_CoulombLJ_Cuboid)
 Faunus::Energy::Nonbonded<Faunus::Potential::CoulombLJ, Faunus::Geometry::Cuboid>;
+%template(Energy_Nonbonded_CoulombLJ_Sphere)
+Faunus::Energy::Nonbonded<Faunus::Potential::CoulombLJ, Faunus::Geometry::Sphere>;
+
+%template(Energy_Nonbonded_CoulombHS_Sphere)
+Faunus::Energy::Nonbonded<Faunus::Potential::CoulombHS, Faunus::Geometry::Sphere>;
+
+/* Simulate typedefs */
+//%pythoncode { particle = PointParticle }
+//%pythoncode { p_vec = vecParticle }
+
 

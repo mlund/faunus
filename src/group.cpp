@@ -119,9 +119,10 @@ namespace Faunus {
     using namespace textio;
     std::ostringstream o;
     o << header("Group: " + name)
-      << pad(SUB,w,"Size") << size() << endl
-      << pad(SUB,w,"Range") << "[" << front() << "-" << back() << "]" << endl
-      << pad(SUB,w,"Mass center") << cm.x << " " << cm.y << " " << cm.z << endl;
+      << pad(SUB,w,"Size") << size() << endl;
+    if (!empty())
+      o << pad(SUB,w,"Range") << "[" << front() << "-" << back() << "]" << endl;
+    o << pad(SUB,w,"Mass center") << cm.x << " " << cm.y << " " << cm.z << endl;
     return o.str() + _info();
   }
 

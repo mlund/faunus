@@ -5,7 +5,7 @@ using namespace Faunus;
 using namespace TCLAP;
 
 typedef Geometry::Cuboid Tgeometry;
-typedef Potential::CombinedPairPotential<Potential::DebyeHuckel, Potential::LennardJones> Tpairpot;
+typedef Potential::DebyeHuckelLJ Tpairpot;
 
 int main(int argc, char** argv) {
   string inputfile,istate,ostate;

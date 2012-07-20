@@ -224,6 +224,8 @@ namespace Faunus {
       if (gsize.cnt>0)
         o << pad(SUB,w,"Average moves/particle") << cnt / gsize.avg() << endl;
       o << pad(SUB,w,"Displacement vector") << dir << endl;
+      if (genericdp>1e-6)
+	o << pad(SUB,w,"Generic displacement") << genericdp << _angstrom << endl;
       if (cnt>0) {
         o << endl
           << indent(SUB) << "Individual particle movement:" << endl << endl
@@ -235,7 +237,7 @@ namespace Faunus {
         for (auto m : sqrmap) {
           short id=m.first;
           o << indent(SUBSUB) << std::left << setw(7) << atom[id].name
-            << setw(l-6) << atom[id].dp;
+            << setw(l-6) << ((genericdp>1e-6) ? genericdp : atom[id].dp);
           o.precision(3);
           o << setw(l) << accmap[id].avg()*100
             << setw(l) << sqrmap[id].avg()

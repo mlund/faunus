@@ -19,8 +19,6 @@ namespace Faunus {
 
     class DebyeHuckel;
 
-    using namespace Faunus::textio;
-
     /*!
      * \brief Base class for pair potential classes
      *
@@ -73,6 +71,7 @@ namespace Faunus {
         double k;   //!< Force constant (kT/A^2) - Did you rember to divide by two? See note.
         double req; //!< Equilibrium distance (angstrom)
         Harmonic(double=0, double=0);
+        Harmonic(InputMap&, string="harmonic_");
         double operator() (const particle&, const particle&, double) const FOVERRIDE; //!< Pair interaction energy (kT)
     };
 
@@ -123,7 +122,7 @@ namespace Faunus {
         double eps;
       public:
         LennardJones();
-        LennardJones(InputMap&);
+        LennardJones(InputMap&, string="lj_");
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
           return energy(a.radius+b.radius, r2);
         }
@@ -289,7 +288,8 @@ namespace Faunus {
           T1 sr1;
           T2 sr2;
         private:
-          string _brief() { return name; }
+          string _brief() { return sr1.brief() + " " + sr2.brief(); }
+
           void _setScale(double s) {
             //sr2.setScale( s*sr1.tokT() );
             //sr1.setScale( s );
@@ -298,7 +298,10 @@ namespace Faunus {
           CombinedPairPotential(InputMap &in) : sr1(in), sr2(in) {
             name=sr1.name+"+"+sr2.name;
           }
-          inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+          CombinedPairPotential(InputMap &in, string pfx1, string pfx2) : sr1(in,pfx1), sr2(in,pfx2) {
+            name=sr1.name+"+"+sr2.name;
+          }
+	  inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
             return sr1.tokT()*sr1(a,b,r2) + sr2.tokT()*sr2(a,b,r2);
           }
           string info(char w=20) {

@@ -49,11 +49,17 @@ namespace Faunus {
 
     string PairPotentialBase::brief() {
       assert(!name.empty() && "Potential must have a name.");
-      return name + ": " + _brief();
+      return _brief();
     }
 
     Harmonic::Harmonic(double forceconst, double eqdist) : k(forceconst), req(eqdist) {
       name="Harmonic";
+    }
+
+    Harmonic::Harmonic(InputMap &in, string pfx) {
+      name="Harmonic";
+      k  = in.get<double>( pfx+"forceconst", 0);
+      req = in.get<double>( pfx+"eqdist", 0);
     }
 
     void Harmonic::_setScale(double s) {
@@ -69,7 +75,7 @@ namespace Faunus {
     string Harmonic::_brief() {
       using namespace Faunus::textio;
       std::ostringstream o;
-      o << "k=" << k*tokT() << kT << "/" << angstrom << squared << " req=" << req << _angstrom; 
+      o << name << ": k=" << k*tokT() << kT << "/" << angstrom << squared << " req=" << req << _angstrom; 
       return o.str();
     }
 
@@ -89,6 +95,7 @@ namespace Faunus {
     }
 
     string HardSphere::info(char w) {
+      using namespace Faunus::textio;
       return textio::indent(SUB)+name+"\n";
     }
 
@@ -99,14 +106,14 @@ namespace Faunus {
     /*!
      * \param in InputMap is scanned for the keyword \c lj_eps and should be in units of kT
      */
-    LennardJones::LennardJones(InputMap &in) {
+    LennardJones::LennardJones(InputMap &in, string pfx) {
       name="Lennard-Jones";
-      eps = 4*in.get<double>( "lj_eps", 0.04, name+" epsilon (kT)" );
+      eps = 4*in.get<double>( pfx+"eps", 0.04, name+" epsilon (kT)" );
     }
     
     string LennardJones::_brief() {
       std::ostringstream o;
-      o << textio::epsilon+"(LJ)" << eps*tokT()/4 << textio::kT;
+      o << name << ": " << textio::epsilon+"(LJ)=" << eps*tokT()/4 << textio::kT;
       return o.str();
     }
     
@@ -116,8 +123,9 @@ namespace Faunus {
     }
 
     string LennardJones::info(char w) {
+      using namespace Faunus::textio;
       std::ostringstream o;
-      o << textio::pad(SUB,w+1,textio::epsilon+"(LJ)") << eps*tokT()/4 << textio::kT << endl;
+      o << pad(SUB,w+1,epsilon+"(LJ)") << eps*tokT()/4 << kT << endl;
       return o.str();
     }
 
@@ -138,11 +146,12 @@ namespace Faunus {
     
     string SquareWell::_brief() {
       std::ostringstream o;
-      o << "u=" << depth*tokT() << textio::kT << " r=" << threshold;
+      o << name << ": u=" << depth*tokT() << textio::kT << " r=" << threshold;
       return o.str();
     }
 
     string SquareWell::info(char w) {
+      using namespace Faunus::textio;
       std::ostringstream o;
       o << pad(SUB,w,"Threshold") << threshold << " "+angstrom+" (surface-surface)" << endl;
       o << pad(SUB,w,"Depth") << depth*tokT() << kT << endl;
@@ -163,7 +172,7 @@ namespace Faunus {
     
     string SoftRepulsion::_brief() {
       std::ostringstream o;
-      o << textio::sigma  << pow(sigma6*tokT(),1/6.) << textio::_angstrom;
+      o << name << ": " << textio::sigma  << pow(sigma6*tokT(),1/6.) << textio::_angstrom;
       return o.str();
     }
     
@@ -173,6 +182,7 @@ namespace Faunus {
     }
 
     string SoftRepulsion::info(char w) {
+      using namespace Faunus::textio;
       std::ostringstream o;
       o << textio::pad(SUB,w+1,textio::sigma) << pow(sigma6*tokT(),1/6.) << textio::_angstrom << endl;
       return o.str();
@@ -198,7 +208,7 @@ namespace Faunus {
 
     string Coulomb::_brief() {
       std::ostringstream o;
-      o << "lB=" << lB << " eps_r=" << epsilon_r << " T=" << pc::T();
+      o << name << ": lB=" << lB << " eps_r=" << epsilon_r << " T=" << pc::T();
       return o.str();
     }
 
@@ -270,6 +280,7 @@ namespace Faunus {
     }
 
     string DebyeHuckel::info(char w) {
+      using namespace Faunus::textio;
       std::ostringstream o;
       o << Coulomb::info(w);
       o << pad(SUB,w,"Ionic strength") << ionicStrength() << " mol/l" << endl;

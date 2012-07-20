@@ -21,9 +21,11 @@ using namespace Faunus;
 #ifdef SLIT
 typedef Geometry::Cuboidslit Tgeometry;
 #else
+//typedef Geometry::Sphere Tgeometry;
 typedef Geometry::Cuboid Tgeometry;
 #endif
-typedef Potential::CombinedPairPotential<Potential::DebyeHuckel, Potential::LennardJones> Tpairpot;
+typedef Potential::CombinedPairPotential<Potential::Harmonic, Potential::LennardJones> Tbondpot;
+typedef Potential::DebyeHuckelLJ Tpairpot;
 
 int main(int argc, char** argv) {
   Faunus::MPI::MPIController mpi;
@@ -34,7 +36,7 @@ int main(int argc, char** argv) {
   FormatPQR pqr;                       // PQR structure file I/O
   FormatAAM aam;                       // AAM structure file I/O
   FormatTopology top;
-  FormatXTC xtc(1000);                 // XTC gromacs trajectory format
+  FormatXTC xtc(1000);                 // XTC gromacs trajectory format for only cuboid geomtries
   EnergyDrift sys;                     // class for tracking system energy drifts
   UnitTest test(mcp);
 
@@ -50,9 +52,7 @@ int main(int argc, char** argv) {
   // Add polymers
   vector<GroupMolecular> pol( mcp.get("polymer_N",0));
   string polyfile = mcp.get<string>("polymer_file", "");
-  double req    = mcp.get<double>("polymer_eqdist", 0);
-  double k      = mcp.get<double>("polymer_forceconst", 0);
-  atom["MM"].dp = 10.;
+  atom["MM"].dp = 0.;
   for (auto &g : pol) {                    // load polymers
     aam.load(polyfile);
     Geometry::FindSpace f;
@@ -61,17 +61,17 @@ int main(int argc, char** argv) {
     g.name="Polymer";
     spc.enroll(g);
     for (int i=g.front(); i<g.back(); i++)
-      bonded->add(i, i+1, Potential::Harmonic(k,req)); // add bonds
+      bonded->add(i, i+1, Tbondpot(mcp, "polymer_", "minuslj_")); // add bonds
   }
   Group allpol( pol.front().front(), pol.back().back() ); // make group w. all polymers
-  atom["NTR"].dp = 10.;
-  atom["CTR"].dp = 10.;
-  atom["HIS"].dp = 10.;
-  atom["HNTR"].dp = 10.;
-  atom["HCTR"].dp = 10.;
-  atom["HHIS"].dp = 10.;
+  // atom["NTR"].dp = 10.;
+  // atom["CTR"].dp = 10.;
+  // atom["HIS"].dp = 10.;
+  // atom["HNTR"].dp = 10.;
+  // atom["HCTR"].dp = 10.;
+  // atom["HHIS"].dp = 10.;
 
-  Move::Isobaric iso(mcp,pot,spc);
+  //Move::Isobaric iso(mcp,pot,spc);
   Move::TranslateRotate gmv(mcp,pot,spc);
   Move::AtomicTranslation mv(mcp, pot, spc);
   Move::SwapMove tit(mcp,pot,spc);
@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );
 
-  mpi.cout << atom.info() << spc.info() << pot.info() << tit.info()
+  mpi.cout << atom.info() << spc.info() << pot.info() //<< tit.info()
     << textio::header("MC Simulation Begins!");
 
   while ( loop.macroCnt() ) {  // Markov chain 
@@ -117,8 +117,8 @@ int main(int argc, char** argv) {
             shape.sample(g,spc);
           }
           break;
-        case 2: // volume move
-          sys+=iso.move();
+        case 8: // volume move
+          //sys+=iso.move();
           break;
         case 3: // titration move
           sys+=tit.move();
@@ -164,8 +164,9 @@ int main(int argc, char** argv) {
 
   } // end of macro loop
 
-  mpi.cout << loop.info() << sys.info() << gmv.info() << iso.info() << tit.info()
-    << mpol.info() << temper.info() << shape.info() << mv.info() << crank.info() << pivot.info();
+  mpi.cout << loop.info() << sys.info() << gmv.info() << tit.info() << mv.info() 
+    << crank.info() << pivot.info() << temper.info() //<< iso.info()
+    << mpol.info()  << shape.info();   
 
   rdf.save(textio::prefix+"rdf_p2p.dat");
   surfdist.save(textio::prefix+"surfdist.dat");

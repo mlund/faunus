@@ -332,10 +332,12 @@ namespace Faunus {
         Point origin, u;
         double cosang, sinang;
         double e1mcox, e1mcoy, e1mcoz;
-        Geometrybase* geoPtr;
+        Geometrybase *geoPtr;
       public:
-        void setAxis(Geometrybase&, const Point&, const Point&, double);  //!< Set axis of rotation and degrees to rotate
-        Point rotate(const Geometrybase&, Point) const;                   //!< Rotate point around axis
+        void setAxis(Geometrybase&, const Point&, const Point&, double);  //!< Set rotation axis and degrees
+        double getAngle() const;                                          //!< Get set rotation angle
+        Point rotate(Point) const;                                        //!< Rotate point around axis
+        Point rotate(const Geometrybase&, Point) const;                   //!< Rotate point around axis (to be removed)
     };
 
   }//namespace Geometry

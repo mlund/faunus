@@ -211,8 +211,8 @@ namespace Faunus {
          * \warning Why sqdist to trial?? Are we sure this g2g is called? (the override keyword is not working!)
          */
         double g2g(const p_vec &p, Group &g1, Group &g2) {
-          if (g1.id==Group::MOLECULAR) {
-            if (g2.id==Group::MOLECULAR) {
+          if (g1.isMolecular()) {
+            if (g2.isMolecular()) {
               if ( geo->sqdist(g1.cm_trial, g2.cm_trial) > cut*cut ) {
                 const GroupMolecular& m1 = static_cast<const GroupMolecular&>(g1);
                 const GroupMolecular& m2 = static_cast<const GroupMolecular&>(g2);

@@ -398,7 +398,9 @@ namespace Faunus {
       assert(g.back() < (int)p.size());
       assert(&geo!=NULL);
       double sum=0;
-      Point cm,t,o = p.at( g.front()+(g.back()-g.front())/2 );  // set origo to middle particle
+      Point cm(0,0,0);
+      Point t;
+      Point o = p.at( g.front()+(g.back()-g.front())/2 );  // set origo to middle particle
       for (auto i : g) {
         t = p[i]-o;              // translate to origo
         geo.boundary(t);        // periodic boundary (if any)
@@ -487,6 +489,7 @@ namespace Faunus {
      */
     void VectorRotate::setAxis(Geometrybase &geo, const Point &beg, const Point &end, double angle) {
       assert(&geo!=nullptr);
+      geoPtr=&geo;
       origin=beg;
       u=end-beg;
       geo.boundary(u);
@@ -498,20 +501,29 @@ namespace Faunus {
       e1mcoz=(1.-cosang)*u.z;
     }
 
+    double VectorRotate::getAngle() const { return std::acos(cosang); }
+
     /*!
-     * Rotate point around axis specified above.
-     * \param geo Geometry
-     * \param p Point to rotate
+     * \brief Same as rotate(const Point) but kept for compatibility
+     * \todo remove
      */
     Point VectorRotate::rotate(const Geometrybase &geo, Point p) const {
-      assert(&geo!=nullptr);
+      return rotate(p);
+    }
+
+    /*!
+     * Rotate point around axis specified above.
+     * \param p Vector to rotate
+     */
+    Point VectorRotate::rotate(Point p) const {
+      assert(&geoPtr!=nullptr);
       Point b=p-origin;
-      geo.boundary(b);           // Apply boundary conditions
+      geoPtr->boundary(b);           // Apply boundary conditions
       double eb=u.x*b.x + u.y*b.y + u.z*b.z;
       p.x=e1mcox*eb+cosang*b.x+sinang*(u.y*b.z - u.z*b.y) + origin.x;
       p.y=e1mcoy*eb+cosang*b.y+sinang*(u.z*b.x - u.x*b.z) + origin.y;
       p.z=e1mcoz*eb+cosang*b.z+sinang*(u.x*b.y - u.y*b.x) + origin.z;
-      geo.boundary(p);
+      geoPtr->boundary(p);
       return p;
     }
   }//namespace geometry

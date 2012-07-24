@@ -17,24 +17,12 @@ namespace Faunus {
   Group::Group(int front, int back) : myrange(front,back-front+1) {
     if (front<0 || back<0)
       resize(0);
-    id=GROUP;
+    //id=GROUP;
     w=15;
   }
 
   Group::~Group() {}
 
-  /*
-  int Group::size() const {
-    return (beg<0 || last<0) ? 0 : last-beg+1;
-  }
-  
-  bool Group::empty() const {
-    if (beg>=0)
-      if (last>=beg)
-	return false;
-    return true;
-  }
-*/
   bool Group::find(int i) const {
     if (i<=back())
       if (i>=front())
@@ -53,15 +41,9 @@ namespace Faunus {
     return z;
   }
 
+  /*
   Group& Group::operator+=(const Group& g) {
     assert(!"Unimplemented!");
-    /*
-       if (g.beg==-1 && g.last==-1)   // if added Group is empty
-       return (*this);
-       if (beg==-1 && last==-1)       // if this is empty
-       beg=g.beg;
-       last=g.last;
-       */
     return (*this);
   }
 
@@ -70,22 +52,9 @@ namespace Faunus {
     // return Group(*this) += g;
     // (move extra functionality to +=)
     assert(!"Unimplemented!");
-    Group o;
-    /*
-       if (beg<g.beg) {
-       o.beg=beg;
-       o.last=g.last;
-       } else {
-       o.beg=g.beg;
-       o.last=last;
-       };
-       o.name = this->name + " + " + g.name;
-       assert( o.size()==this->size()+g.size() ); // debug
-       if (o.size()!=this->size()+g.size())
-       std::cout << "# Warning: Added Groups are not continous!\n";
-       */
-    return o;
+    return g;
   }
+  */
 
   bool Group::operator==(const Group& g) const {
     return (*this == g);
@@ -146,7 +115,7 @@ namespace Faunus {
   }
 
   Point Group::dipolemoment(const Space &s) const {
-    Point t, mu;
+    Point t, mu(0,0,0);
     for (auto i : *this) {
       t=s.p[i] - cm;
       s.geo->boundary(t);
@@ -156,15 +125,20 @@ namespace Faunus {
   }
 
   void Group::rotate(Space &spc, const Point &endpoint, double angle) {
-    assert(!"Unimplemented!");
+    assert( spc.geo->dist(cm,massCenter(spc) )<1e-6 );      // debug. Is mass center in sync?
+    cm_trial = cm;
+    vrot.setAxis(*spc.geo, cm, endpoint, angle);            // rotate around line between mass center and point
+    for (auto i : *this)
+      spc.trial[i].rotate(vrot);
+    assert( spc.geo->dist(cm_trial, massCenter(spc))<1e-9 && "Rotation messed up mass center. Is the box too small?");
   }
 
   void Group::scale(Space &s, double newvol) {
     if (!empty()) {
       cm_trial=cm;
-      s.geo->scale(cm_trial, newvol);
+      cm_trial.scale(*s.geo, newvol);
       for (auto i : *this)
-        s.geo->scale( s.trial[i], newvol);
+        s.trial[i].scale(*s.geo, newvol);
     }
   }
 
@@ -186,12 +160,9 @@ namespace Faunus {
    */
   void Group::translate(Space &spc, const Point &p) {
     assert( spc.geo->sqdist(cm,massCenter(spc))<1e-6  && "Mass center out of sync.");
-    for (auto i : *this) {
-      spc.trial[i] += p;
-      spc.geo->boundary( spc.trial[i] );
-    }
-    cm_trial = cm + p;
-    spc.geo->boundary( cm_trial );
+    for (auto i : *this)
+      spc.trial[i].translate(*spc.geo, p);
+    cm_trial.translate(*spc.geo, p);
   }
 
   int Group::random() const {
@@ -202,20 +173,26 @@ namespace Faunus {
     return i;
   }
 
+  bool Group::isAtomic() const { return false; }
+
+  bool Group::isMolecular() const { return false; }
+
   /* -----------------------------------*
    *             ATOMIC
    * -----------------------------------*/
 
   GroupAtomic::GroupAtomic(int front, int back) : Group(front, back) {
-    id=ATOMIC;
-    property.insert(ATOMIC);
+    //id=ATOMIC;
+    //property.insert(ATOMIC);
   }
 
   GroupAtomic::GroupAtomic(Space &spc, InputMap &in) {
-    id=ATOMIC;
-    property.insert(ATOMIC);
+    //id=ATOMIC;
+    //property.insert(ATOMIC);
     add(spc,in);
   }
+
+  bool GroupAtomic::isAtomic() const { return true; }
 
   /*!
    * The InputMap is scanned for the following keywords, starting with X=1:
@@ -251,55 +228,22 @@ namespace Faunus {
     spc.enroll(*this);
   }
 
-  GroupAtomic& GroupAtomic::operator<<(std::istream &in) {
-    Group::operator<<(in);
-    return *this;
-  }
-
   /* -----------------------------------*
    *             MOLECULAR
    * -----------------------------------*/
   GroupMolecular::GroupMolecular(int front, int back) : Group(front, back) {
-    id=MOLECULAR;
-    property.insert(MOLECULAR);
+    //id=MOLECULAR;
+    //property.insert(MOLECULAR);
   }
 
-  std::ostream& GroupMolecular::write(std::ostream &o) const {
-    Group::write(o);
-    //o << " " << cm;
-    return o;
-  }
-
-  GroupMolecular& GroupMolecular::operator<<(std::istream &in) {
-    Group::operator<<(in);
-    //cm.operator<<(in);
-    return *this;
-  }
-
-  void GroupMolecular::translate(Space &spc, const Point &p) {
-    assert( spc.geo->dist(cm,massCenter(spc))<1e-9 );   // debug. Is trial mass center in sync?
-    Group::translate(spc, p);
-    cm_trial=cm+p;
-    spc.geo->boundary(cm_trial);
-  }
-
-  void GroupMolecular::rotate(Space &spc, const Point &endpoint, double angle) {
-    assert( spc.geo->dist(cm,massCenter(spc) )<1e-6 );      // debug. Is mass center in sync?
-
-    cm_trial = cm;
-    vrot.setAxis(*spc.geo, cm, endpoint, angle);            // rotate around line between mass center and point
-    for (auto i : *this)
-      spc.trial[i] = vrot.rotate( *spc.geo, spc.trial[i] ); // boundary conditions already taken care of
-
-    assert( spc.geo->dist(cm_trial, massCenter(spc))<1e-9 && "Rotation messed up mass center. Is the box too small?");
-  }
+  bool GroupMolecular::isMolecular() const { return true; }
 
   void GroupMolecular::scale(Space &s, double newvol) {
     assert( s.geo->dist(cm, massCenter(s))<1e-6);
     assert( s.geo->dist(cm, cm_trial)<1e-7);
 
     Point newcm=cm;
-    s.geo->scale(newcm, newvol);      // scale cm to newcm
+    newcm.scale(*s.geo, newvol);
     translate(s,-cm);                 // move to origo
 
     double oldvol=s.geo->getVolume(); // store original volume
@@ -322,6 +266,5 @@ namespace Faunus {
       o << pad(SUB,w,"Average dipole moment") << mu.avg() << endl;
     return o.str();
   }
-
 
 }//namespace

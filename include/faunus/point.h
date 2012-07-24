@@ -6,39 +6,47 @@
 #endif
 
 namespace Faunus {
-  class RandomBase;
-  class Geometrybase;
-  class AtomData;
   /*!
    * \brief Cartesian coordinates
    * \author Mikael Lund
    * \date 2002-2007
    */
   class Point {
-    private:
-      inline int anint(double) const;
     public:
-      double x,y,z;                       //!< Cartesian coordinates
-      Point();                            //!< Constructor, zero data.
-      Point(double,double,double);        //!< Constructor, set vector
-      void clear();                       //!< Zero all data.
-      double len() const; 
-      void ranunit(RandomBase &);               //!< Generate a random unit vector
-      double dot(const Point &) const;      //!< Angle with another point
-      Point operator-() const;              //!< Sign reversal
-      const Point operator*(double) const;  //!< Scale vector
-      Point operator+(const Point&) const;  //!< Add two vectors
-      Point operator-(const Point&) const;  //!< Subtract vector
-      Point & operator+=(const Point&);     //!< Vector addition
-      Point & operator*=(const double);     //!< Scaling vector
-      bool operator==(const Point&) const;
-      std::string str();
-      friend std::ostream &operator<<(std::ostream &, const Point &); //!< Output information
-      Point &operator<<(std::istream &);                        //!< Get information
+      typedef double Tcoord;                       //!< Floating point type for Point coordinates
+      Tcoord x,y,z;                                //!< Cartesian coordinates
+      Point();                                     //!< Constructor, zero data.
+      Point(Tcoord,Tcoord,Tcoord);                 //!< Constructor, set vector
+      virtual ~Point();                         
+      void clear();                                //!< Zero all data.
+      Tcoord len() const;                          //!< Get scalar
+      Tcoord dot(const Point&) const;              //!< Angle with another point
+      void ranunit(RandomBase&);                   //!< Generate a random unit vector
 
+      virtual void rotate(Geometry::VectorRotate&);//!< Rotate around vector
+      virtual void translate(const Geometry::Geometrybase&, const Point&);//!< Translate along a vector
+      virtual void scale(const Geometry::Geometrybase&, double);          //!< NPT volume scaling
+
+      Point operator-() const;                     //!< Sign reversal
+      const Point operator*(Tcoord) const;         //!< Scale vector
+      bool operator==(const Point&) const;         //!< Equality operator
+      Point operator+(const Point&) const;         //!< Add two vectors
+      Point operator-(const Point&) const;         //!< Subtract vector
+      Point& operator+=(const Point&);             //!< Vector addition
+      Point& operator*=(const Tcoord);             //!< Scaling vector
+      Point& operator<<(std::istream&);            //!< Read from stream
+      friend std::ostream &operator<<(std::ostream&, const Point&);//!< Write to stream
+
+      /*
+         enum vecFmt {XYZ,XYZQ,XYZQI,ALL};
+         virtual void toVector(std::vector<double>&, vecFmt) const; //!< Write data to vector
+         virtual int fromVector(const std::vector<double>&, int, vecFmt); //!< Read data from vector
+         */
+    private:
+      inline int anint(Tcoord) const;              //!< Ala fortran function
   };
 
-  inline int Point::anint(double a) const { return int(a>0 ? a+.5 : a-.5); }
+  inline int Point::anint(Tcoord a) const { return int(a>0 ? a+.5 : a-.5); }
 
   /*!
    * \brief Class for particles
@@ -47,10 +55,10 @@ namespace Faunus {
    *
    * Example\n
    * \code
-   * vector<particle> p(2);
+   * std::vector<PointParticle> p(2);
    * p[0].radius = 2.0;
    * p[1].z = 10;
-   * p[0].overlap( p[1] ); --> false
+   * std::cout << p[0];
    * \endcode
    */
   class PointParticle : public Point {
@@ -61,38 +69,44 @@ namespace Faunus {
       typedef float Tmw;
       typedef bool Thydrophobic;
 
-      PointParticle();
       Tcharge charge;                           //!< Charge number
       Tradius radius;                           //!< Radius
       Tmw mw;                                   //!< Molecular weight
       Tid id;                                   //!< Particle identifier
       Thydrophobic hydrophobic;                 //!< Hydrophobic flag
-      double volume() const;                    //!< Return volume of sphere
-      double mw2vol(double=1) const;            //!< Estimate volume from weight
-      double mw2rad(double=1) const;            //!< Estimate radius from weight
+
+      PointParticle();
+      double volume() const;                    //!< Return volume
       void deactivate();                        //!< Deactivate for use w. faster energy loops
-      void clear();                             //!< Clear/reset all data
-      bool overlap(const PointParticle&, double) const;                       //!< Check for overlap of two particles
-      friend std::ostream &operator<<(std::ostream &, const PointParticle &); //!< Output information
-      PointParticle& operator<<(std::istream &);                              //!< Get information
-      PointParticle& operator=(const Point&);                                 //!< Copy coordinates from a point
-      PointParticle& operator=(const AtomData&);
+      void clear();                             //!< Zero all data
+      PointParticle& operator=(const Point&);   //!< Copy coordinates from a point
+      PointParticle& operator=(const AtomData&);//!< Copy data from AtomData
+      PointParticle& operator<<(std::istream&); //!< Copy data from stream
+      friend std::ostream &operator<<(std::ostream&, const PointParticle&);//!< Write to stream
   };
 
+  /*!
+   * \brief Sphero-cylindrical particle
+   * \author ...
+   * \date ...
+   *
+   * detailed information here...
+   */
   class CigarParticle : public PointParticle {
     public:
       Point omega, patch;
       double patchangle, length;
-      void rotate(const Geometrybase&, const Point&, double);            //!< Rotate around a vector
-      void translate(const Geometrybase&, const Point&);                 //!< Translate along a vector
-      void scale(const Geometrybase&, double);                           //!< Volume scaling
-      bool overlap(const CigarParticle&, double) const;     //!< Check for overlap of two particles
-      friend std::ostream &operator<<(std::ostream &, const CigarParticle &); //!< Output information
-      CigarParticle &operator<<(std::istream &);                              //!< Get information
-      CigarParticle operator+(const Point&) const;         //!< Add two vectors
+
+      void rotate(Geometry::VectorRotate&);
+      void translate(const Geometry::Geometrybase&, const Point&);
+      void scale(const Geometry::Geometrybase&, double);
+
+      CigarParticle operator+(const Point&) const;
       CigarParticle& operator=(const Point&);
       CigarParticle& operator=(const AtomData&);
       CigarParticle& operator=(const PointParticle&);
+      CigarParticle &operator<<(std::istream&);
+      friend std::ostream &operator<<(std::ostream &, const CigarParticle&); //!< Output information
   };
 
 }//namespace

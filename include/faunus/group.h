@@ -73,34 +73,31 @@ namespace Faunus {
    * \endcode
    */
   class Group : public myrange<int> {
+    private:
+      Geometry::VectorRotate vrot;
+      virtual Point _massCenter(const Space&) const;
     protected:
       virtual std::ostream& write(std::ostream &) const; //!< Write all Group data to stream
-      virtual Point _massCenter(const Space&) const;
       vector<Move::Movebase*> moves;    //!< pointers to move functions
       virtual string _info();
       char w;                           //!< Text padding for info() functions
 
     public:
-      enum type {GROUP,ATOMIC,MOLECULAR,CIGAR,RIGID,ISOBARIC,GRANDCANONICAL};
-      std::set<type> property;
-      //enum prop {PVEC, TRIALVEC, RECALC};
-      type id;
+      //enum type {GROUP,ATOMIC,MOLECULAR,CIGAR,RIGID,ISOBARIC,GRANDCANONICAL};
+      //std::set<type> property;
+      //type id;
       Group(int=-1, int=-1);
-      string info();
-      string name;
-      Point cm_trial;           //!< mass center vector for trial position
-      Point cm;                 //!< mass center vector
-      //int beg;                  //!< index of first particle
-      //int last;                 //!< index of last particle
-      //int size() const;         //!< number of particles in Group.
-      //bool empty() const;       //!< True if group is empty.
-      int random() const;
-      bool find(int) const;     //!< Check if index is part of group
+      string info();                                         //!< Information string
+      string name;                                           //!< Information time (and short) name
+      Point cm_trial;                                        //!< mass center vector for trial position
+      Point cm;                                              //!< mass center vector
+      int random() const;                                    //!< Pick random particle index in Group
+      bool find(int) const;                                  //!< Check if index is part of group
 
       virtual double charge(const p_vec&) const;             //!< Calculate total charge
 
       Point massCenter(const Space&) const;                  //!< Calculate mass center - does not set touch group!
-      Point setMassCenter(const Space &);                    //!< Calculate and Set mass center (cm and cm_trial)
+      Point setMassCenter(const Space &);                    //!< Calculate AND set mass center (cm and cm_trial)
       virtual Point dipolemoment(const Space&) const;        //!< Calculate dipole moment
 
       virtual void rotate(Space&, const Point&, double);     //!< Rotate around a vector
@@ -109,23 +106,24 @@ namespace Faunus {
       virtual void undo(Space&);                             //!< Undo move operation
       virtual void accept(Space&);                           //!< Accept a trial move
 
-      bool operator==(const Group&) const;                     //!< Compare two Groups
-      Group& operator+=(const Group&);                         //!< Add two Groups
-      const Group operator+(const Group&) const;
-      friend std::ostream &operator<<(std::ostream&, Group&);  //!< Output Group data to stream
-      virtual Group &operator<<(std::istream &);               //!< Get Group data from stream
+      virtual bool isMolecular() const;                      //!< True if group represents a molecule
+      virtual bool isAtomic() const;                         //!< True if group represents atomic species
+
+      bool operator==(const Group&) const;                   //!< Compare two Groups
+      friend std::ostream &operator<<(std::ostream&, Group&);//!< Output Group data to stream
+      virtual Group &operator<<(std::istream&);              //!< Get Group data from stream
       virtual ~Group();
   };
 
   /*!
-   * \brief Group class for atomic species - for example salt particles.
+   * \brief Group class for atomic species, typically salt
    */
   class GroupAtomic : public Group {
     public:
       GroupAtomic(int=-1, int=-1);
       GroupAtomic(Space&, InputMap&);        //!< Construct and call add()
-      GroupAtomic &operator<<(std::istream&);
-      void add(Space&, InputMap&);      //!< Add atomic particles via InputMap parameters
+      void add(Space&, InputMap&);           //!< Add atomic particles via InputMap parameters
+      bool isAtomic() const;                 //!< Always true for GroupAtomic
   };
 
   /*!
@@ -133,24 +131,16 @@ namespace Faunus {
    */
   class GroupMolecular : public Group {
     private:
-      Geometry::VectorRotate vrot;
-    protected:
-      std::ostream & write(std::ostream&) const;  //!< Write all Group data to stream
-      virtual string _info();
-
+      string _info();
     public:
-      Average<double> Q;        //!< average net charge
-      Average<double> mu;       //!< average dipole moment
+      Average<double> Q;                        //!< average net charge
+      Average<double> mu;                       //!< average dipole moment
 
       GroupMolecular(int=-1, int=-1);
-      void translate(Space&, const Point&);
-      void rotate(Space&, const Point&, double);
-      void scale(Space&, double);
-
-      GroupMolecular &operator<<(std::istream&);                        //!< Get information
+      void scale(Space&, double);               //!< Mass-center volume scale
+      bool isMolecular() const;                 //!< Always true for GroupMolecular
   };
 
 }//namespace
-
 #endif
 

@@ -3,7 +3,7 @@
 
 #ifndef SWIG
 #include <faunus/common.h>
-#include <faunus/energy.h>
+#include <faunus/potentials.h>
 
 #ifndef __cplusplus
 #define __cplusplus
@@ -18,9 +18,6 @@
 
 namespace Faunus {
   
-  class Group;
-  class GroupMolecular;
-
   /*
    * \brief Basic file I/O routines
    * \author Mikael Lund

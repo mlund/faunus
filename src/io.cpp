@@ -554,7 +554,7 @@ namespace Faunus {
      */
 
   string FormatTopology::writeMoleculeType(const Group &g, const Space &spc) {
-    if (g.size()==0 || g.id==Group::ATOMIC)
+    if (g.empty() || g.isAtomic())
       return "";
     rescnt++;
     std::map<particle::Tid, unsigned short> idcnt;

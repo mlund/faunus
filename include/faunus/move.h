@@ -5,6 +5,8 @@
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/average.h>
+#include <faunus/textio.h>
+#include <faunus/geometry.h>
 #include <faunus/energy.h>
 
 #ifdef ENABLE_MPI
@@ -14,10 +16,6 @@
 #endif
 
 namespace Faunus {
-  //class average;
-  class unittest;
-  class Energybase;
-
   /*!
    * \brief Monte Carlo move related classes
    */
@@ -68,6 +66,13 @@ namespace Faunus {
                 << setw(l) << sqrt(sqrmap[id].avg()) << endl;
             }
             return o.str();
+          }
+          void _test(UnitTest &t, const string &prefix) {
+            for (auto &m : accmap)  {
+              std::ostringstream o;
+              o << m.first;
+              t(prefix+"_Acceptance"+o.str(), m.second.avg());
+            }
           }
       };
 
@@ -166,7 +171,7 @@ namespace Faunus {
         AtomicTranslation(InputMap&, Energy::Energybase&, Space&, string="mv_particle");
         void setGroup(Group&); //!< Select group in which to randomly pick particles from
         void setParticle(int); //!< Select single particle in Space::p to move
-	void setGenericDisplacement(double); //!< Set single displacement for all atoms
+        void setGenericDisplacement(double); //!< Set single displacement for all atoms
         Point dir;             //!< Translation directions (default: x=y=z=1)
     };
 
@@ -250,6 +255,7 @@ namespace Faunus {
      */
     class CrankShaft : public Movebase {
       private:
+        void _test(UnitTest&);
         void _trialMove();
         void _acceptMove();
         void _rejectMove();
@@ -354,7 +360,7 @@ namespace Faunus {
     class AtomTracker {
       public:
         typedef int Tindex; // particle index type
-       private:
+      private:
         Space* spc;
         class data {
           public:

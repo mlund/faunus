@@ -1,4 +1,5 @@
 #include <faunus/common.h>
+#include <faunus/inputfile.h>
 #include <faunus/point.h>
 #include <faunus/energy.h>
 #include <faunus/textio.h>
@@ -88,7 +89,7 @@ namespace Faunus {
     double ExternalPressure::g_external(const p_vec &p, Group &g) {
       double N=1,
              V=geo->getVolume();
-      if (g.id==Group::ATOMIC)
+      if (g.isAtomic())
         N=g.size();
       return -N*log(V);
     }

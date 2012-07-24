@@ -48,21 +48,32 @@ namespace Faunus {
 
   namespace Geometry {
     class Geometrybase;
+    class VectorRotate;
   }
 
   namespace Energy {
+    class Bonded;
     class Energybase;
     class Hamiltonian;
     class EqEnergy;
     class HarmonicBond;
     class GouyChapman;
+    class EnergyRest;
   }
 
+  namespace Potential {
+    class PairPotentialBase;
+    class HardSphere;
+  }
+
+  class AtomData;
   class Group;
   class GroupMolecular;
   class InputMap;
   class UnitTest;
+  class RandomBase;
   class Space;
+
   class Point;
   class PointParticle;
   class CigarParticle;

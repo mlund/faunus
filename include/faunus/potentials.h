@@ -4,9 +4,8 @@
 #ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/point.h>
-#include <faunus/geometry.h>
 #include <faunus/textio.h>
-#include <faunus/inputfile.h>
+//#include <faunus/inputfile.h>
 #include <faunus/physconst.h>
 #endif
 

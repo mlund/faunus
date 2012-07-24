@@ -5,8 +5,6 @@
 #include <faunus/common.h>
 #include <faunus/move.h>
 #include <faunus/average.h>
-#include <faunus/energy.h>
-#include <faunus/move.h>
 #endif
 
 namespace Faunus {

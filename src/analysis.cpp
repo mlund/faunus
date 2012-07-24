@@ -43,7 +43,7 @@ namespace Faunus {
     double PolymerShape::gyrationRadiusSquared(const Group &pol, const Space &spc) {
       assert( spc.geo->dist(pol.cm, pol.massCenter(spc))<1e-9 && "Mass center must be in sync.");
       double x=0, r2=0, sum=0;
-      Point t, o;
+      Point t, o(0,0,0);
       for (auto i : pol) {
         t = spc.p[i]-pol.cm;                // vector to center of mass
         spc.geo->boundary(t);               // periodic boundary (if any)
@@ -103,8 +103,7 @@ namespace Faunus {
 
     double ChargeMultipole::dipole(const Group &g, const Space &spc){
       assert( spc.geo->dist(g.cm, g.massCenter(spc))<1e-9 && "Mass center must be in sync.");
-      Point t, mu;
-      mu.clear();
+      Point t, mu(0,0,0);
       for (auto i : g) {
         if (exclude(spc.p[i])==false){
           t = spc.p[i]-g.cm;                // vector to center of mass

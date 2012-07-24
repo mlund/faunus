@@ -184,13 +184,12 @@ namespace Faunus {
           dp = atom[ spc->p[iparticle].id ].dp;
         else
           dp = genericdp;
-          
         assert(iparticle<(int)spc->p.size() && "Trial particle out of range");
-        //assert(dp>1e-9 && "Atomic displacement parameter seems to be zero");
-        spc->trial[iparticle].x += dir.x * dp * slp_global.randHalf();
-        spc->trial[iparticle].y += dir.y * dp * slp_global.randHalf();
-        spc->trial[iparticle].z += dir.z * dp * slp_global.randHalf();
-        spc->geo->boundary( spc->trial[iparticle] );
+        Point t = dir*dp;
+        t.x *= slp_global.randHalf();
+        t.y *= slp_global.randHalf();
+        t.z *= slp_global.randHalf();
+        spc->trial[iparticle].translate(*spc->geo, t);
       }
     }
 
@@ -418,7 +417,7 @@ namespace Faunus {
         igroup->rotate(*spc, p, angle);
         vrot.setAxis(*spc->geo, igroup->cm, p, angle); // rot. around line between CM and point
         for (auto i : cindex)
-          spc->trial[i] = vrot.rotate( *spc->geo, spc->p[i] ); // (boundaries are accounted for)
+          spc->trial[i].rotate(vrot); // rotate
       }
 
       // translation
@@ -427,10 +426,8 @@ namespace Faunus {
         p.y=dir.y * dp_trans * slp_global.randHalf();
         p.z=dir.z * dp_trans * slp_global.randHalf();
         igroup->translate(*spc, p);
-        for (auto i : cindex) {
-          spc->trial[i] += p;
-          spc->geo->boundary(spc->trial[i]);
-        }
+        for (auto i : cindex)
+          spc->trial[i].translate(*spc->geo,p);
       }
     }
 
@@ -591,6 +588,10 @@ namespace Faunus {
       return o.str();
     }
 
+    void CrankShaft::_test(UnitTest &t) {
+      accmap._test(t, prefix);
+    }
+
     Pivot::Pivot(InputMap &in, Energy::Energybase &e, Space &s, string pfx) : CrankShaft(in,e,s,pfx) {
       title="Polymer Pivot Move";
       minlen=1; // minimum bond length to rotate around
@@ -634,7 +635,7 @@ namespace Faunus {
       const double tomM=1e30/pc::Nav;
       int N,Natom=0, Nmol=0;
       for (auto g : spc->groupList())
-        if (g->id==Group::ATOMIC)
+        if (g->isAtomic())
           Natom += g->size();
         else
           Nmol++;
@@ -702,7 +703,7 @@ namespace Faunus {
           u += pot->g2g(p, *spc->groupList()[i], *spc->groupList()[j]);
       for (auto g : spc->groupList()) {
         u += pot->g_external(p, *g);
-        if (g->id==Group::ATOMIC)
+        if (g->isAtomic())
           u+=pot->g_internal(p, *g);
       }
       return u + pot->external();
@@ -797,11 +798,8 @@ namespace Faunus {
       }
 
     void GrandCanonicalSalt::add(Group &g) {
-      if (g.property.find(Group::ATOMIC)==g.property.end() ) {
-        assert( !"Salt group must be atomic" );
-        return;
-      }
-      g.property.insert(Group::GRANDCANONICAL);  // mark given group as grand canonical
+      assert( g.isAtomic() && "Salt group must be atomic" );
+      //g.property.insert(Group::GRANDCANONICAL);  // mark given group as grand canonical
       spc->enroll(g);
       tracker.clear();
       for (auto i : g) {

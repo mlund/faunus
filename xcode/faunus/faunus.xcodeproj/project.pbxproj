@@ -19,6 +19,16 @@
 		73011C691423E30100509B7B /* topology.h in Headers */ = {isa = PBXBuildFile; fileRef = 73011C5E1423E30100509B7B /* topology.h */; };
 		73011C6A1423E30100509B7B /* xytable.h in Headers */ = {isa = PBXBuildFile; fileRef = 73011C5F1423E30100509B7B /* xytable.h */; };
 		73011C6C1423E93E00509B7B /* faunus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73011C6B1423E93E00509B7B /* faunus.cpp */; };
+		7316FA2D15C546A30024F084 /* textio.h in Headers */ = {isa = PBXBuildFile; fileRef = 7316FA2C15C546A30024F084 /* textio.h */; };
+		7316FA3015C546B20024F084 /* mpi.h in Headers */ = {isa = PBXBuildFile; fileRef = 7316FA2F15C546B20024F084 /* mpi.h */; };
+		7316FA3315C546E90024F084 /* mpi.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7316FA3115C546E90024F084 /* mpi.cpp */; };
+		7316FA3415C546E90024F084 /* textio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7316FA3215C546E90024F084 /* textio.cpp */; };
+		7316FA3515C548D00024F084 /* libxdrfile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 738C136013FB13250056EF71 /* libxdrfile.a */; };
+		7316FA4D15C569E30024F084 /* Polymer_NPT.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = 7316FA4C15C569E30024F084 /* Polymer_NPT.1 */; };
+		7316FA5115C56A030024F084 /* polymer-npt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7316FA4015C5697E0024F084 /* polymer-npt.cpp */; };
+		7316FA5415C56B7B0024F084 /* libfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 738C132613FB12B30056EF71 /* libfaunus.dylib */; };
+		7316FA5615C56BA20024F084 /* analysis.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7316FA5515C56BA10024F084 /* analysis.cpp */; };
+		7316FA5815C56BC10024F084 /* analysis.h in Headers */ = {isa = PBXBuildFile; fileRef = 7316FA5715C56BC10024F084 /* analysis.h */; };
 		738C133513FB12D20056EF71 /* group.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C132E13FB12D20056EF71 /* group.cpp */; };
 		738C133613FB12D20056EF71 /* inputfile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C132F13FB12D20056EF71 /* inputfile.cpp */; };
 		738C133713FB12D20056EF71 /* physconst.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C133013FB12D20056EF71 /* physconst.cpp */; };
@@ -52,6 +62,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		7316FA5215C56A220024F084 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 738C131D13FB12B30056EF71 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 738C132513FB12B30056EF71;
+			remoteInfo = faunus;
+		};
 		739E7C1213FE675E00D1D329 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 738C131D13FB12B30056EF71 /* Project object */;
@@ -60,6 +77,19 @@
 			remoteInfo = xdrfile;
 		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		7316FA4515C569E30024F084 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+				7316FA4D15C569E30024F084 /* Polymer_NPT.1 in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		73011C551423E30100509B7B /* drift.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = drift.h; sourceTree = "<group>"; };
@@ -74,7 +104,20 @@
 		73011C5E1423E30100509B7B /* topology.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = topology.h; sourceTree = "<group>"; };
 		73011C5F1423E30100509B7B /* xytable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xytable.h; sourceTree = "<group>"; };
 		73011C6B1423E93E00509B7B /* faunus.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = faunus.cpp; path = ../../src/faunus.cpp; sourceTree = "<group>"; };
-		73011C6D1423E96E00509B7B /* bulk.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = bulk.cpp; path = ../../src/programs/bulk.cpp; sourceTree = "<group>"; };
+		7316FA2C15C546A30024F084 /* textio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = textio.h; sourceTree = "<group>"; };
+		7316FA2F15C546B20024F084 /* mpi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mpi.h; sourceTree = "<group>"; };
+		7316FA3115C546E90024F084 /* mpi.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mpi.cpp; path = ../../src/mpi.cpp; sourceTree = "<group>"; };
+		7316FA3215C546E90024F084 /* textio.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = textio.cpp; path = ../../src/textio.cpp; sourceTree = "<group>"; };
+		7316FA3915C55A540024F084 /* developer.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; name = developer.html; path = ../../doc/homepage/developer.html; sourceTree = "<group>"; };
+		7316FA3A15C55A540024F084 /* download.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; name = download.html; path = ../../doc/homepage/download.html; sourceTree = "<group>"; };
+		7316FA3B15C55A540024F084 /* help.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; name = help.html; path = ../../doc/homepage/help.html; sourceTree = "<group>"; };
+		7316FA3C15C55A540024F084 /* index.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; name = index.html; path = ../../doc/homepage/index.html; sourceTree = "<group>"; };
+		7316FA3D15C55A550024F084 /* programs.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; name = programs.html; path = ../../doc/homepage/programs.html; sourceTree = "<group>"; };
+		7316FA4015C5697E0024F084 /* polymer-npt.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "polymer-npt.cpp"; path = "../../../src/tools/polymer-npt.cpp"; sourceTree = "<group>"; };
+		7316FA4715C569E30024F084 /* Polymer NPT */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Polymer NPT"; sourceTree = BUILT_PRODUCTS_DIR; };
+		7316FA4C15C569E30024F084 /* Polymer_NPT.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = Polymer_NPT.1; sourceTree = "<group>"; };
+		7316FA5515C56BA10024F084 /* analysis.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = analysis.cpp; path = ../../src/analysis.cpp; sourceTree = "<group>"; };
+		7316FA5715C56BC10024F084 /* analysis.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = analysis.h; sourceTree = "<group>"; };
 		738C132613FB12B30056EF71 /* libfaunus.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libfaunus.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		738C132E13FB12D20056EF71 /* group.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = group.cpp; path = ../../src/group.cpp; sourceTree = "<group>"; };
 		738C132F13FB12D20056EF71 /* inputfile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = inputfile.cpp; path = ../../src/inputfile.cpp; sourceTree = "<group>"; };
@@ -110,10 +153,19 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		7316FA4415C569E30024F084 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7316FA5415C56B7B0024F084 /* libfaunus.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		738C132313FB12B30056EF71 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7316FA3515C548D00024F084 /* libxdrfile.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -127,11 +179,42 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		7316FA3E15C55A640024F084 /* homepage */ = {
+			isa = PBXGroup;
+			children = (
+				7316FA3915C55A540024F084 /* developer.html */,
+				7316FA3A15C55A540024F084 /* download.html */,
+				7316FA3B15C55A540024F084 /* help.html */,
+				7316FA3C15C55A540024F084 /* index.html */,
+				7316FA3D15C55A550024F084 /* programs.html */,
+			);
+			name = homepage;
+			sourceTree = "<group>";
+		};
+		7316FA3F15C55A760024F084 /* doc */ = {
+			isa = PBXGroup;
+			children = (
+				7316FA3E15C55A640024F084 /* homepage */,
+			);
+			name = doc;
+			sourceTree = "<group>";
+		};
+		7316FA4915C569E30024F084 /* Polymer NPT */ = {
+			isa = PBXGroup;
+			children = (
+				7316FA4015C5697E0024F084 /* polymer-npt.cpp */,
+				7316FA4C15C569E30024F084 /* Polymer_NPT.1 */,
+			);
+			path = "Polymer NPT";
+			sourceTree = "<group>";
+		};
 		738C131B13FB12B30056EF71 = {
 			isa = PBXGroup;
 			children = (
+				7316FA3F15C55A760024F084 /* doc */,
 				738C133B13FB12DE0056EF71 /* include */,
 				738C138C13FB13740056EF71 /* src */,
+				7316FA4915C569E30024F084 /* Polymer NPT */,
 				738C132713FB12B30056EF71 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -141,6 +224,7 @@
 			children = (
 				738C132613FB12B30056EF71 /* libfaunus.dylib */,
 				738C136013FB13250056EF71 /* libxdrfile.a */,
+				7316FA4715C569E30024F084 /* Polymer NPT */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -158,26 +242,29 @@
 		738C133C13FB12DE0056EF71 /* faunus */ = {
 			isa = PBXGroup;
 			children = (
+				7316FA5715C56BC10024F084 /* analysis.h */,
+				738C133D13FB12DE0056EF71 /* average.h */,
+				738C133E13FB12DE0056EF71 /* common.h */,
 				73011C551423E30100509B7B /* drift.h */,
 				73011C561423E30100509B7B /* energy.h */,
+				73011C591423E30100509B7B /* histogram.h */,
+				738C134213FB12DE0056EF71 /* inputfile.h */,
+				73011C5A1423E30100509B7B /* io.h */,
+				738C134113FB12DE0056EF71 /* group.h */,
+				73011C5B1423E30100509B7B /* mcloop.h */,
+				7316FA2F15C546B20024F084 /* mpi.h */,
+				7316FA2C15C546A30024F084 /* textio.h */,
 				73011C571423E30100509B7B /* faunus.h */,
 				73011C581423E30100509B7B /* geometry.h */,
-				73011C591423E30100509B7B /* histogram.h */,
-				73011C5A1423E30100509B7B /* io.h */,
-				73011C5B1423E30100509B7B /* mcloop.h */,
 				73011C5C1423E30100509B7B /* move.h */,
 				73011C5D1423E30100509B7B /* potentials.h */,
 				73011C5E1423E30100509B7B /* topology.h */,
-				73011C5F1423E30100509B7B /* xytable.h */,
-				738C133D13FB12DE0056EF71 /* average.h */,
-				738C133E13FB12DE0056EF71 /* common.h */,
-				738C134113FB12DE0056EF71 /* group.h */,
-				738C134213FB12DE0056EF71 /* inputfile.h */,
 				738C134413FB12DE0056EF71 /* physconst.h */,
 				738C134513FB12DE0056EF71 /* point.h */,
 				738C134613FB12DE0056EF71 /* slump.h */,
 				738C134713FB12DE0056EF71 /* space.h */,
 				738C134813FB12DE0056EF71 /* species.h */,
+				73011C5F1423E30100509B7B /* xytable.h */,
 			);
 			path = faunus;
 			sourceTree = "<group>";
@@ -206,24 +293,26 @@
 		738C138C13FB13740056EF71 /* src */ = {
 			isa = PBXGroup;
 			children = (
-				73011C6D1423E96E00509B7B /* bulk.cpp */,
-				73011C6B1423E93E00509B7B /* faunus.cpp */,
 				738C136713FB133A0056EF71 /* xdrfile */,
-				738C132E13FB12D20056EF71 /* group.cpp */,
-				738C132F13FB12D20056EF71 /* inputfile.cpp */,
-				738C133013FB12D20056EF71 /* physconst.cpp */,
-				738C133113FB12D20056EF71 /* point.cpp */,
-				738C133213FB12D20056EF71 /* slump.cpp */,
-				738C133313FB12D20056EF71 /* species.cpp */,
+				7316FA5515C56BA10024F084 /* analysis.cpp */,
 				73B67CD21423E28E00E44DD9 /* drift.cpp */,
 				73B67CD31423E28E00E44DD9 /* energy.cpp */,
+				73011C6B1423E93E00509B7B /* faunus.cpp */,
 				73B67CD41423E28E00E44DD9 /* geometry.cpp */,
+				738C132E13FB12D20056EF71 /* group.cpp */,
 				73B67CD51423E28E00E44DD9 /* histogram.cpp */,
+				738C132F13FB12D20056EF71 /* inputfile.cpp */,
 				73B67CD61423E28E00E44DD9 /* io.cpp */,
 				73B67CD71423E28E00E44DD9 /* mcloop.cpp */,
 				73B67CD81423E28E00E44DD9 /* move.cpp */,
+				7316FA3115C546E90024F084 /* mpi.cpp */,
+				738C133013FB12D20056EF71 /* physconst.cpp */,
+				738C133113FB12D20056EF71 /* point.cpp */,
 				73B67CD91423E28E00E44DD9 /* potentials.cpp */,
+				738C133213FB12D20056EF71 /* slump.cpp */,
 				73B67CDA1423E28E00E44DD9 /* space.cpp */,
+				738C133313FB12D20056EF71 /* species.cpp */,
+				7316FA3215C546E90024F084 /* textio.cpp */,
 			);
 			name = src;
 			sourceTree = "<group>";
@@ -255,6 +344,9 @@
 				73011C681423E30100509B7B /* potentials.h in Headers */,
 				73011C691423E30100509B7B /* topology.h in Headers */,
 				73011C6A1423E30100509B7B /* xytable.h in Headers */,
+				7316FA2D15C546A30024F084 /* textio.h in Headers */,
+				7316FA3015C546B20024F084 /* mpi.h in Headers */,
+				7316FA5815C56BC10024F084 /* analysis.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -271,6 +363,24 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
+		7316FA4615C569E30024F084 /* Polymer NPT */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7316FA4E15C569E30024F084 /* Build configuration list for PBXNativeTarget "Polymer NPT" */;
+			buildPhases = (
+				7316FA4315C569E30024F084 /* Sources */,
+				7316FA4415C569E30024F084 /* Frameworks */,
+				7316FA4515C569E30024F084 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7316FA5315C56A220024F084 /* PBXTargetDependency */,
+			);
+			name = "Polymer NPT";
+			productName = "Polymer NPT";
+			productReference = 7316FA4715C569E30024F084 /* Polymer NPT */;
+			productType = "com.apple.product-type.tool";
+		};
 		738C132513FB12B30056EF71 /* faunus */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 738C132A13FB12B30056EF71 /* Build configuration list for PBXNativeTarget "faunus" */;
@@ -311,6 +421,9 @@
 /* Begin PBXProject section */
 		738C131D13FB12B30056EF71 /* Project object */ = {
 			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0440;
+			};
 			buildConfigurationList = 738C132013FB12B30056EF71 /* Build configuration list for PBXProject "faunus" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
@@ -325,11 +438,20 @@
 			targets = (
 				738C132513FB12B30056EF71 /* faunus */,
 				738C135F13FB13250056EF71 /* xdrfile */,
+				7316FA4615C569E30024F084 /* Polymer NPT */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
+		7316FA4315C569E30024F084 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7316FA5115C56A030024F084 /* polymer-npt.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		738C132213FB12B30056EF71 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -350,6 +472,9 @@
 				73B67CE21423E28E00E44DD9 /* potentials.cpp in Sources */,
 				73B67CE31423E28E00E44DD9 /* space.cpp in Sources */,
 				73011C6C1423E93E00509B7B /* faunus.cpp in Sources */,
+				7316FA3315C546E90024F084 /* mpi.cpp in Sources */,
+				7316FA3415C546E90024F084 /* textio.cpp in Sources */,
+				7316FA5615C56BA20024F084 /* analysis.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -366,6 +491,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		7316FA5315C56A220024F084 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 738C132513FB12B30056EF71 /* faunus */;
+			targetProxy = 7316FA5215C56A220024F084 /* PBXContainerItemProxy */;
+		};
 		739E7C1313FE675E00D1D329 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 738C135F13FB13250056EF71 /* xdrfile */;
@@ -374,11 +504,47 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		7316FA4F15C569E30024F084 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				HEADER_SEARCH_PATHS = (
+					"include/**",
+					"../../include/**",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		7316FA5015C569E30024F084 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				HEADER_SEARCH_PATHS = (
+					"include/**",
+					"../../include/**",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 		738C132813FB12B30056EF71 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "compiler-default";
 				COPY_PHASE_STRIP = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -390,11 +556,17 @@
 				);
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_HIDDEN_VIRTUAL_FUNCTIONS = YES;
+				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
+				GCC_WARN_PEDANTIC = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "include/**";
+				HEADER_SEARCH_PATHS = (
+					"include/**",
+					"../../include/**",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CPLUSPLUSFLAGS = (
@@ -403,7 +575,7 @@
 				);
 				SCAN_ALL_SOURCE_FILES_FOR_INCLUDES = NO;
 				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = "include/**";
+				USER_HEADER_SEARCH_PATHS = "include/** ../../include/**";
 			};
 			name = Debug;
 		};
@@ -412,61 +584,113 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "compiler-default";
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_HIDDEN_VIRTUAL_FUNCTIONS = YES;
+				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
+				GCC_WARN_PEDANTIC = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "include/**";
+				HEADER_SEARCH_PATHS = (
+					"include/**",
+					"../../include/**",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CPLUSPLUSFLAGS = (
 					"-stdlib=libc++",
 					"$(OTHER_CFLAGS)",
 				);
 				SCAN_ALL_SOURCE_FILES_FOR_INCLUDES = NO;
 				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = "include/**";
+				USER_HEADER_SEARCH_PATHS = "include/** ../../include/**";
 			};
 			name = Release;
 		};
 		738C132B13FB12B30056EF71 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = NO;
+				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = NO;
+				CLANG_WARN__EXIT_TIME_DESTRUCTORS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
 				EXECUTABLE_PREFIX = lib;
+				GCC_TREAT_IMPLICIT_FUNCTION_DECLARATIONS_AS_ERRORS = YES;
+				GCC_TREAT_INCOMPATIBLE_POINTER_TYPE_WARNINGS_AS_ERRORS = YES;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
-				INCLUDED_RECURSIVE_SEARCH_PATH_SUBDIRECTORIES = "";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SRCROOT)/../../src/xdrfile\"",
+				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
+				GCC_WARN_FOUR_CHARACTER_CONSTANTS = YES;
+				GCC_WARN_HIDDEN_VIRTUAL_FUNCTIONS = YES;
+				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
+				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
+				GCC_WARN_PEDANTIC = YES;
+				GCC_WARN_SHADOW = NO;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				HEADER_SEARCH_PATHS = (
+					../../include/,
+					include,
+					"../include/**",
 				);
+				INCLUDED_RECURSIVE_SEARCH_PATH_SUBDIRECTORIES = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				USER_HEADER_SEARCH_PATHS = "/Users/mikael/nyfaunus/include/**";
+				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Debug;
 		};
 		738C132C13FB12B30056EF71 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = NO;
+				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = NO;
+				CLANG_WARN__EXIT_TIME_DESTRUCTORS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
 				EXECUTABLE_PREFIX = lib;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_PREPROCESSOR_DEFINITIONS = "NDEBUG=1";
+				GCC_TREAT_IMPLICIT_FUNCTION_DECLARATIONS_AS_ERRORS = YES;
+				GCC_TREAT_INCOMPATIBLE_POINTER_TYPE_WARNINGS_AS_ERRORS = YES;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
-				INCLUDED_RECURSIVE_SEARCH_PATH_SUBDIRECTORIES = "";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SRCROOT)/../../src/xdrfile\"",
+				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
+				GCC_WARN_FOUR_CHARACTER_CONSTANTS = YES;
+				GCC_WARN_HIDDEN_VIRTUAL_FUNCTIONS = YES;
+				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
+				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
+				GCC_WARN_PEDANTIC = YES;
+				GCC_WARN_SHADOW = NO;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				HEADER_SEARCH_PATHS = (
+					../../include/,
+					include,
+					"../include/**",
 				);
+				INCLUDED_RECURSIVE_SEARCH_PATH_SUBDIRECTORIES = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				USER_HEADER_SEARCH_PATHS = "/Users/mikael/nyfaunus/include/**";
+				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Release;
 		};
 		738C136213FB13250056EF71 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
 				EXECUTABLE_PREFIX = lib;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = NO;
 				HEADER_SEARCH_PATHS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "";
@@ -476,7 +700,10 @@
 		738C136313FB13250056EF71 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
 				EXECUTABLE_PREFIX = lib;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = NO;
 				HEADER_SEARCH_PATHS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "";
@@ -486,6 +713,14 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		7316FA4E15C569E30024F084 /* Build configuration list for PBXNativeTarget "Polymer NPT" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7316FA4F15C569E30024F084 /* Debug */,
+				7316FA5015C569E30024F084 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
 		738C132013FB12B30056EF71 /* Build configuration list for PBXProject "faunus" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

@@ -53,8 +53,8 @@ int main(int argc, char** argv) {
       file = mcp.get<string>("molecule_file1", "");
     aam.load(file);
     Geometry::FindSpace f;
-    f.find(*spc.geo, spc.p, aam.p);        // find empty spot in particle vector
-    pol[i] = spc.insert( aam.p );          // insert into space
+    f.find(*spc.geo, spc.p, aam.particles());// find empty spot in particle vector
+    pol[i] = spc.insert( aam.particles() );// insert into space
     pol[i].name=file;
     spc.enroll( pol[i] );
   }

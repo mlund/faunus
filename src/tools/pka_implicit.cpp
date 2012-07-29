@@ -23,9 +23,9 @@ int main() {
   // Add molecule to middle of simulation container
   string file = mcp.get<string>("molecule", "in.aam");
   aam.load(file);
-  Point cm = Geometry::massCenter(*spc.geo, aam.p);
-  Geometry::translate(*spc.geo, aam.p, -cm); // place in origo
-  GroupMolecular g = spc.insert(aam.p);
+  Point cm = Geometry::massCenter(*spc.geo, aam.particles() );
+  Geometry::translate(*spc.geo, aam.particles(), -cm); // place in origo
+  GroupMolecular g = spc.insert(aam.particles());
   g.name=file;
   spc.enroll(g);
 

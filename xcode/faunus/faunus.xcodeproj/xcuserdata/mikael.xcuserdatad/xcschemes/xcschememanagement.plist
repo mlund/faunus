@@ -4,6 +4,11 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
+		<key>Polymer NPT.xcscheme</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>2</integer>
+		</dict>
 		<key>faunus.xcscheme</key>
 		<dict>
 			<key>orderHint</key>
@@ -17,6 +22,11 @@
 	</dict>
 	<key>SuppressBuildableAutocreation</key>
 	<dict>
+		<key>7316FA4615C569E30024F084</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
 		<key>738C132513FB12B30056EF71</key>
 		<dict>
 			<key>primary</key>

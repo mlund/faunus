@@ -63,22 +63,20 @@ namespace Faunus {
      * \param n Perform move \c n times
      */
     double Movebase::move(int n) {
-      if (!run())
-        return 0;
       double utot=0;
-      while (n-->0) {
-        trialMove();
-        double du=energyChange();
-        if ( !metropolis(du) ) {
-          rejectMove();
-          du=0;
-        }
-        else {
-          acceptMove();
-          if (useAlternateReturnEnergy)
-            du=alternateReturnEnergy;
-          dusum+=du;
-          utot+=du;
+      if (run()) {
+        while (n-->0) {
+          trialMove();
+          double du=energyChange();
+          if ( !metropolis(du) )
+            rejectMove();
+          else {
+            acceptMove();
+            if (useAlternateReturnEnergy)
+              du=alternateReturnEnergy;
+            dusum+=du;
+            utot+=du;
+          }
         }
       }
       return utot;

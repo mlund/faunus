@@ -105,6 +105,7 @@ namespace Faunus {
    
     /*!
      * \param in InputMap is scanned for the keyword \c lj_eps and should be in units of kT
+     * \param pfx Prefix for InputMap - default is "ls_"
      */
     LennardJones::LennardJones(InputMap &in, string pfx) {
       name="Lennard-Jones";
@@ -279,6 +280,24 @@ namespace Faunus {
       return betaw * (depsdt - 0.5*k*r*(depsdt+1));
     }
 
+    /*!
+     * \return \f$\beta \mu_{\mbox{\scriptsize{excess}}} = -\frac{l_Bz^2\kappa}{2(1+\kappa a)}\f$
+     * \param z Charge number
+     * \param a Particle diameter (angstrom)
+     */
+    double DebyeHuckel::excessChemPot(double z, double a) const {
+      return -lB*z*z*k / ( 2 * (1+k*a) );
+    }
+
+    /*!
+     * \return \f$\exp {(\beta\mu_{\mbox{\scriptsize{excess}}})}\f$
+     * \param z Charge number
+     * \param a Particle diameter (angstrom)
+     */
+    double DebyeHuckel::activityCoeff(double z, double a) const {
+      return exp( excessChemPot(z,a) );
+    }
+
     string DebyeHuckel::info(char w) {
       using namespace Faunus::textio;
       std::ostringstream o;
@@ -291,14 +310,14 @@ namespace Faunus {
     /*!
      * \f$ \beta u(r) = l_B \frac{ z_1 z_2 }{r}\f$
      */
-     double MultipoleEnergy::ionion(double z1, double z2, double r) {
+    double MultipoleEnergy::ionion(double z1, double z2, double r) {
       return lB*z1*z2/r;
     }
 
     /*!
      * \f$ \beta u(r) = -l_B \frac{ z a_z }{r^2}\f$
      */
-     double MultipoleEnergy::iondip(double z, const Point &a, double r) {
+    double MultipoleEnergy::iondip(double z, const Point &a, double r) {
       return -lB*z*a.z/(r*r);
     }
 

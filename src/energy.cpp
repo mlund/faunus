@@ -626,9 +626,26 @@ namespace Faunus {
       return o.str();
     }
 
-    //pair_permutable<particle::Tradius> createPairRadius(const particle &a, const particle &b) {
-    //  return pair_permutable<particle::Tradius>(a.radius, b.radius);
-    // }
+    DebyeHuckelActivity::DebyeHuckelActivity(InputMap &in) : dh(in) {
+      name="Debye-Huckel Activity Coefficients";
+    }
+
+    string DebyeHuckelActivity::_info() { return dh.brief(); }
+
+    double DebyeHuckelActivity::p_external(const particle &p) {
+      return dh.excessChemPot(p.charge, 2*p.radius);
+    }
+
+    double DebyeHuckelActivity::i_external(const p_vec &p, int i) {
+      return p_external(p[i]);
+    }
+
+    double DebyeHuckelActivity::g_external(const p_vec &p, Group &g) {
+      double u=0;
+      for (auto i : g)
+        u+=p_external(p[i]);
+      return u;
+    }
 
     double systemEnergy(Space &spc, Energy::Energybase &pot, const p_vec &p) {
       double u = pot.external();

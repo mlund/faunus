@@ -207,7 +207,7 @@ namespace Faunus {
      * particles.
      */
     class Coulomb : public PairPotentialBase {
-      friend class DebyeHuckel;
+      friend class Potential::DebyeHuckel;
       friend class Energy::GouyChapman;
       private:
       string _brief();
@@ -251,14 +251,16 @@ namespace Faunus {
         double c,k;
         inline double energy(double zz, double r) const { return zz/r * exp(-k*r); }
       public:
-        DebyeHuckel(InputMap&);       //!< Construction from InputMap
-        double ionicStrength() const; //!< Returns the ionic strength (mol/l)
-        double debyeLength() const;   //!< Returns the Debye screening length (angstrom)
-        double entropy(double, double) const;//!< Returns the interaction entropy 
+        DebyeHuckel(InputMap&);                       //!< Construction from InputMap
         /*! \returns \f$\beta w/l_B\f$ */
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
           return energy(a.charge*b.charge, sqrt(r2));
         }
+        double entropy(double, double) const;         //!< Returns the interaction entropy 
+        double ionicStrength() const;                 //!< Returns the ionic strength (mol/l)
+        double debyeLength() const;                   //!< Returns the Debye screening length (angstrom)
+        double excessChemPot(double, double=0) const; //!< Single ion excess chemical potential (kT)
+        double activityCoeff(double, double=0) const; //!< Single ion activity coefficient (molar scale) 
         string info(char);
     };
 
@@ -300,7 +302,7 @@ namespace Faunus {
           CombinedPairPotential(InputMap &in, string pfx1, string pfx2) : sr1(in,pfx1), sr2(in,pfx2) {
             name=sr1.name+"+"+sr2.name;
           }
-	  inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+          inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
             return sr1.tokT()*sr1(a,b,r2) + sr2.tokT()*sr2(a,b,r2);
           }
           string info(char w=20) {

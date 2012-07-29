@@ -65,23 +65,27 @@ namespace Faunus {
 
   FormatAAM::FormatAAM() {}
 
-  string FormatAAM::p2s(particle &p, int i) {
+  p_vec& FormatAAM::particles() {
+    return p;
+  }
+
+  string FormatAAM::p2s(particle &a, int i) {
     std::ostringstream o;
     o.precision(5);
-    o << atom[p.id].name << " " << i+1 << " " << p.x << " " << p.y <<" "<< p.z << " "
-      << p.charge << " " << p.mw << " " << p.radius << std::endl;
+    o << atom[a.id].name << " " << i+1 << " " << a.x << " " << a.y <<" "<< a.z << " "
+      << a.charge << " " << a.mw << " " << a.radius << std::endl;
     return o.str();
   }
   
   particle FormatAAM::s2p(string &s) {
-    particle p;
+    particle a;
     std::stringstream o;
     string name, num;
     o << s;
-    o >> name >> num >> p.x >> p.y >> p.z >> p.charge >> p.mw >> p.radius;
-    p.id = atom[name].id;
-    p.hydrophobic = atom[p.id].hydrophobic;
-    return p;
+    o >> name >> num >> a.x >> a.y >> a.z >> a.charge >> a.mw >> a.radius;
+    a.id = atom[name].id;
+    a.hydrophobic = atom[a.id].hydrophobic;
+    return a;
   }
   
   bool FormatAAM::load(string file) {
@@ -97,11 +101,11 @@ namespace Faunus {
     return false;
   }
 
-  bool FormatAAM::save(string file, p_vec &p) {
+  bool FormatAAM::save(string file, p_vec &pv) {
     std::ostringstream o;
-    o << p.size() << std::endl;
-    for (size_t i=0; i<p.size(); i++)
-      o << p2s(p[i], i);
+    o << pv.size() << std::endl;
+    for (size_t i=0; i<pv.size(); i++)
+      o << p2s(pv[i], i);
     return fio.writefile(file, o.str());
   }
 
@@ -160,6 +164,10 @@ namespace Faunus {
    */
   FormatPQR::FormatPQR() { }
 
+  p_vec& FormatPQR::particles() {
+    return p;
+  }
+  
   bool FormatPQR::save(string file, p_vec &p) {
     string name;
     int nres=1, natom=1;

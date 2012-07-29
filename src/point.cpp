@@ -11,9 +11,10 @@ namespace Faunus {
    ********************************/
 
   /*!
-   * Data is NOT zeroed upon construction!
+   * \note Data IS zeroed upon construction, but don't
+   * count on it in the future!
    */
-  Point::Point() {}
+  Point::Point() : x(0), y(0), z(0) {}
 
   Point::Point(Tcoord xx, Tcoord yy, Tcoord zz) : x(xx), y(yy), z(zz) {}
 
@@ -98,7 +99,7 @@ namespace Faunus {
   }
 
   /*!
-   * \param rot Rotation class where the axis, angle and geometry are expected to be set
+   * \param vrot Rotation class where the axis, angle and geometry are expected to be set
    */
   void Point::rotate(Geometry::VectorRotate &vrot) {
     vrot.rotate(*this);

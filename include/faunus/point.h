@@ -105,7 +105,7 @@ namespace Faunus {
       CigarParticle& operator=(const Point&);
       CigarParticle& operator=(const AtomData&);
       CigarParticle& operator=(const PointParticle&);
-      CigarParticle &operator<<(std::istream&);
+      CigarParticle& operator<<(std::istream&);
       friend std::ostream &operator<<(std::ostream &, const CigarParticle&); //!< Output information
   };
 

@@ -11,8 +11,8 @@
 #ifndef CPLUSPLUS
 #define CPLUSPLUS
 #endif
-#include "xdrfile/xdrfile_trr.h"
-#include "xdrfile/xdrfile_xtc.h"
+#include <xdrfile/xdrfile_trr.h>
+#include <xdrfile/xdrfile_xtc.h>
 
 #endif
 
@@ -35,6 +35,7 @@ namespace Faunus {
   /*!
    * \brief Read/write AAM file format
    * \author Mikael Lund
+   * \todo Make "p" vector private.
    *
    * The AAM format is a simple format for loading particle positions, charges, radii and
    * molecular weights. The structure is as follows:
@@ -59,8 +60,9 @@ namespace Faunus {
       particle s2p(string &);
       io fio;
     public:
+      p_vec p; //!< Placeholder for loaded data
       FormatAAM();
-      p_vec p;
+      p_vec& particles();
       bool load(string);
       bool save(string, p_vec&);
   };
@@ -73,9 +75,10 @@ namespace Faunus {
   class FormatPQR {
     private:
       io fio;
+      p_vec p;                   //!< Placeholder for loaded data
     public:
       FormatPQR();
-      p_vec p;                   //!< Placeholder for loaded data
+      p_vec& particles();
       bool save(string, p_vec&); //!< Save with particle charge
   };
 

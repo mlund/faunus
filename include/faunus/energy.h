@@ -214,8 +214,8 @@ namespace Faunus {
           if (g1.isMolecular()) {
             if (g2.isMolecular()) {
               if ( geo->sqdist(g1.cm_trial, g2.cm_trial) > cut*cut ) {
-                const GroupMolecular& m1 = static_cast<const GroupMolecular&>(g1);
-                const GroupMolecular& m2 = static_cast<const GroupMolecular&>(g2);
+                //const GroupMolecular& m1 = static_cast<const GroupMolecular&>(g1);
+                //const GroupMolecular& m2 = static_cast<const GroupMolecular&>(g2);
                 return 0; // v2v(m1.cg, m2.cg)
               }
             }
@@ -508,22 +508,22 @@ namespace Faunus {
     class GouyChapman : public Energy::Energybase {
       private:
         Potential::DebyeHuckel dh;
-        double c0;                              //!< Ion concentration (A-3)
-        double rho;                             //!< Surface charge density (e A-2)
-        double phi0;                            //!< Unitless surface potential \frac{\phi0 e}{kT}
-        double gamma0;                          //!< Gouy-chapman coefficient ()
+        double c0;                                        //!< Ion concentration (A-3)
+        double rho;                                       //!< Surface charge density (e A-2)
+        double phi0;                                      //!< Unitless surface potential \frac{\phi0 e}{kT}
+        double gamma0;                                    //!< Gouy-chapman coefficient ()
         double lB;
         double kappa;
-        double *zposPtr;                        //!< Pointer to z position of Gouy-Chapman surface (xy plane)
-        string _info();
-      public:
-        GouyChapman(InputMap &);                //!< Constructor - read input parameters
-        void setPosition(double&);              //!< Set pointer to z position of surface
-        virtual double dist2surf(const Point&); //!< Point-to-surface distance [AA]
-        double p_external(const particle&);     //!< Particle energy in GC potential
-        double i_external(const p_vec&, int);   //!< i'th particle energy in GC potential
-        double g_external(const p_vec&, Group&);//!< Group energy in GC potential
-        double potential(const Point&);         //!< Gouy-Chapman (GC) potential in point
+        double *zposPtr;                                  //!< Pointer to z position of GC plane (xy dir)
+        string _info();                                  
+      public:                                            
+        GouyChapman(InputMap &);                          //!< Constructor - read input parameters
+        void setPosition(double&);                        //!< Set pointer to z position of surface
+        virtual double dist2surf(const Point&);           //!< Point-to-surface distance [AA]
+        double p_external(const particle&) FOVERRIDE;     //!< Particle energy in GC potential
+        double i_external(const p_vec&, int) FOVERRIDE;   //!< i'th particle energy in GC potential
+        double g_external(const p_vec&, Group&) FOVERRIDE;//!< Group energy in GC potential
+        double potential(const Point&);                   //!< Gouy-Chapman (GC) potential in point
     };
 
     /*!
@@ -692,6 +692,21 @@ namespace Faunus {
          string _info();
        public:
          PairListHydrophobic();
+     };
+
+     /*!
+      * \brief Excess chemical potential of charged particles, based on Debye-Huckel theory
+      * \warning Untested
+      */
+     class DebyeHuckelActivity : public Energybase {
+       private:
+         string _info();
+         Potential::DebyeHuckel dh;
+       public:
+         DebyeHuckelActivity(InputMap&);                    //!< Constructor - read input parameters
+         double i_external(const p_vec&, int) FOVERRIDE;
+         double g_external(const p_vec&, Group&) FOVERRIDE;
+         double p_external(const particle&) FOVERRIDE;
      };
 
      /*!

@@ -81,8 +81,8 @@ int main(int argc, char** argv) {
   for (auto &g : pol) {                    // load polymers
     aam.load(polyfile);
     Geometry::FindSpace f;
-    f.find(*spc.geo, spc.p, aam.p);        // find empty spot in particle vector
-    g = spc.insert( aam.p );               // insert into space
+    f.find(*spc.geo, spc.p, aam.particles() );       // find empty spot in particle vector
+    g = spc.insert( aam.particles() );               // insert into space
     g.name="Polymer";
     spc.enroll(g);
     for (int i=g.front(); i<g.back(); i++)

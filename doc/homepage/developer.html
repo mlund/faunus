@@ -46,20 +46,61 @@
       <!-- content -->
       <div id="content-outer" class="clear"><div id="content-wrap">
 
-
           <div id="content">
+
+            <div id="left">			
+
+              <div class="post">
+
+                <h3><a href="developer.html">Developer Information</a></h3>
+                <p>
+                The source code is <a href="Doxyhtml/index.html">documented</a> using Doxygen and is available from the sidebar.
+                Code additions are welcome: short contributions should be submitted to the <a href="http://sourceforge.net/tracker/?group_id=196168&atid=956374">ticket system</a>
+                (see link to the right), while if you want to become a regular contributer you may apply for repository
+                write access.
+                </p>
+                <p>
+                <h4>Guidelines</h4>
+                </p>
+                <p><ul>
+                  <li>Document code using Doxygen tags</li>
+                  <li>Recycle code with object oriented designs</li>
+                  <li>Generously use C++'s <a href="http://www.cplusplus.com/reference/clibrary/cassert/assert/">assert()</a> for debugging</li>
+                  <li>Hide data and functions as much as possible (i.e. private)</li>
+                  <li>Treat compiler warnings as errors</li>
+                  <li>Use white space indentation of two when editing</li>
+                  <li>Before submitting to repository, make sure nothing is broken:
+                    <code>
+                      make all <br />
+                      make test
+                    </code>
+                    You should also make you the SWIG modules compile:
+                    <code>
+                      cmake -DENABLE_SWIG=on <br />
+                      make _pyfaunus
+                    </code>
+                  </li>
+                </ul></p>
+
+              </div>			
+
+            </div>
+
+            <div id="right">
+
+              <div class="sidemenu">
+                <h3>Resources:</h3>
+                <p><ul>
+                <li><a href="Doxyhtml/index.html">Code documentation</a></li>
+                <li><a href="http://sourceforge.net/tracker/?group_id=196168&atid=956374">Developer ticket system</a></li>
+                </ul></p>
+              </div>	
+            </div>		
+
+          </div>	
 
           <!-- content end -->	
       </div></div>
-
-      <!-- footer starts here -->	
-      <div id="footer-outer" class="clear">
-        <div id="footer-wrap">
-          <object width=800 height=600 type="text/html" data="doxyhtml/index.html">
-            <p>backup content</p>
-          </object>
-        </div>
-      </div>
 
       <!-- footer-bottom starts -->		
       <div id="footer-bottom">

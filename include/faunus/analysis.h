@@ -51,7 +51,7 @@ namespace Faunus {
      * \date Lund 2011
      * \note Tx is used as the std::map key and which may be problematic due to direct floating
      *       point comparison (== operator). We have not experienced any issues with this, though.
-     * \todo Ups! Seems as if template member round() is virtual...
+     * \todo We get correct behavior, but is it really OK to have virtual functions in class templates??
      */
     template<typename Tx, typename Ty>
       class Table2D {
@@ -64,7 +64,7 @@ namespace Faunus {
             return cnt;
           }
           Tx dx;
-          //virtual ~Table2D() {}
+          virtual ~Table2D() {}
           Tmap map;
           string name;
         private:
@@ -184,7 +184,7 @@ namespace Faunus {
     template<typename Tx=double, typename Ty=int>
       class LineDistribution : public RadialDistribution<Tx,Ty> {
         private:
-          virtual double volume(Tx x) { return 1; }
+          double volume(Tx x) { return 1; }
         public:
           LineDistribution(Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {
             this->name="Line Distribution";

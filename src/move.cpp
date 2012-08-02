@@ -232,7 +232,7 @@ namespace Faunus {
           << setw(l+7) << bracket("r"+squared)+"/"+angstrom+squared
           << rootof+bracket("r"+squared)+"/"+angstrom << endl;
         for (auto m : sqrmap) {
-          short id=m.first;
+          particle::Tid id=m.first;
           o << indent(SUBSUB) << std::left << setw(7) << atom[id].name
             << setw(l-6) << ((genericdp>1e-6) ? genericdp : atom[id].dp);
           o.precision(3);
@@ -749,13 +749,17 @@ namespace Faunus {
 
     AtomTracker::data& AtomTracker::operator[](particle::Tid id) { return map[id]; }
 
+    /*!
+     * This will insert a particle into Space and at the same time make sure
+     * that all other particles are correctly tracked.
+     */
     bool AtomTracker::insert(const particle &a, Tindex index) {
       assert( a.id == spc->p[ map[a.id].index.back() ].id && "Id mismatch");
-      spc->insert(a, index);
-      for (auto &m : map)
-        for (auto &i : m.second.index)
-          if (i>=index) i++;
-      map[a.id].index.push_back(index);
+      spc->insert(a, index); // insert into Space
+      for (auto &m : map)    // loop over all maps
+        for (auto &i : m.second.index) // and their particle index
+          if (i>=index) i++; // push forward particles beyond inserted particle
+      map[a.id].index.push_back(index); // finally, add particle to appripriate map
       return true;
     }
 
@@ -801,7 +805,7 @@ namespace Faunus {
       spc->enroll(g);
       tracker.clear();
       for (auto i : g) {
-        short id=spc->p[i].id;
+        auto id=spc->p[i].id;
         if ( atom[id].activity>1e-10 && abs(atom[id].charge)>1e-10 ) {
           map[id].p=atom[id];
           map[id].chempot=log( atom[id].activity*pc::Nav*1e-27); // beta mu
@@ -811,7 +815,7 @@ namespace Faunus {
       assert(!tracker.empty() && "No GC ions found!");
     }
 
-    void GrandCanonicalSalt::randomIonPair(short &id_cation, short &id_anion) {
+    void GrandCanonicalSalt::randomIonPair(particle::Tid &id_cation, particle::Tid &id_anion) {
       do id_anion  = tracker.randomAtomType(); while ( map[id_anion].p.charge>=0);
       do id_cation = tracker.randomAtomType(); while ( map[id_cation].p.charge<=0  );
       assert( !tracker[id_anion].index.empty() && "Ion list is empty");
@@ -823,8 +827,8 @@ namespace Faunus {
       trial_delete.clear();
       randomIonPair(ida, idb);
       assert(ida>0 && idb>0 && "Ion pair id is zero (UNK). Is this really what you want?");
-      int Na = abs(map[idb].p.charge);
-      int Nb = abs(map[ida].p.charge);
+      int Na = (int)abs(map[idb].p.charge);
+      int Nb = (int)abs(map[ida].p.charge);
       switch ( rand() % 2) {
         case 0:
           trial_insert.reserve(Na+Nb);
@@ -932,7 +936,7 @@ namespace Faunus {
         << "activity" << setw(s+4) << bracket("c/M") << setw(s)
         << bracket( gamma+pm ) << endl;
       for (auto &m : map) {
-        short id=m.first;
+        particle::Tid id=m.first;
         o.precision(5);
         o << setw(4) << "" << setw(s) << atom[id].name
           << setw(s) << atom[id].activity << setw(s) << m.second.rho.avg()/pc::Nav/1e-27

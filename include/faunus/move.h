@@ -367,10 +367,10 @@ namespace Faunus {
             vector<Tindex> index;
             Tindex random();                  //!< Pick random particle index
         };
-        std::map<particle::Tid,data> map; 
+        std::map<particle::Tid,data> map;
       public:
         AtomTracker(Space&);
-        particle::Tid randomAtomType() const;           //!< Select a random atomtype from the list
+        particle::Tid randomAtomType() const; //!< Select a random atomtype from the list
         bool insert(const particle&, Tindex); //!< Insert particle into Space and track position
         bool erase(Tindex);                   //!< Delete particle from Space at specific particle index
         data& operator[] (particle::Tid);     //!< Access operator to atomtype data
@@ -382,6 +382,7 @@ namespace Faunus {
      * \brief Grand Canonical insertion of arbitrary M:X salt pairs
      * \author Bjorn Persson and Mikael Lund
      * \date Lund 2010-2011
+     * \warning Untested in this branch
      */
     class GrandCanonicalSalt : public Movebase {
       private:
@@ -398,11 +399,11 @@ namespace Faunus {
           double chempot;       // chemical potential log(1/A3)
           Average<double> rho;  // average density
         };
-        std::map<short,ionprop> map;
-        void randomIonPair(short&,short&);  // Generate random ion pair
+        std::map<particle::Tid,ionprop> map;
+        void randomIonPair(particle::Tid&, particle::Tid&);  // Generate random ion pair
         p_vec trial_insert;
         vector<int> trial_delete;
-        short ida, idb;                    // particle id's of current salt pair (a=cation, b=anion)
+        particle::Tid ida, idb;     // particle id's of current salt pair (a=cation, b=anion)
 
         Energy::EnergyRest Urest;   // store non-Hamiltonian energy here to correctly calculate energy drift
         double du_rest;
@@ -434,19 +435,18 @@ namespace Faunus {
      * end up in a deadlock.
      */
     class ParallelTempering : public Movebase {
-      //private:
       private:
-        enum extradata {VOLUME=0}; //!< Indicates structure of extra data to send
+        enum extradata {VOLUME=0};    //!< Indicates structure of extra data to send
         typedef std::map<string, Average<double> > map_type;
-        map_type accmap;        //!< Acceptance map
-        int partner;            //!< Other replica (partner) to exchange with
-        virtual void findPartner();     //!< Find which replica to exchange with
-        bool goodPartner();     //!< Detemine if found partner is valid
-        double exchangeEnergy(double); //!< Exchange energy with partner
-        string id();            //!< Get unique string to identify set of partners
+        map_type accmap;              //!< Acceptance map
+        int partner;                  //!< Other replica (partner) to exchange with
+        virtual void findPartner();   //!< Find which replica to exchange with
+        bool goodPartner();           //!< Detemine if found partner is valid
+        double exchangeEnergy(double);//!< Exchange energy with partner
+        string id();                  //!< Get unique string to identify set of partners
 
-        double currentEnergy;   //!< Energy of configuration before move (uold)
-        bool haveCurrentEnergy; //!< True if currentEnergy has been set
+        double currentEnergy;         //!< Energy of configuration before move (uold)
+        bool haveCurrentEnergy;       //!< True if currentEnergy has been set
 
         string _info();
         void _trialMove();

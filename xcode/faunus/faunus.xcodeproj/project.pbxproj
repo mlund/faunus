@@ -247,23 +247,23 @@
 				738C133E13FB12DE0056EF71 /* common.h */,
 				73011C551423E30100509B7B /* drift.h */,
 				73011C561423E30100509B7B /* energy.h */,
+				73011C571423E30100509B7B /* faunus.h */,
+				73011C581423E30100509B7B /* geometry.h */,
+				738C134113FB12DE0056EF71 /* group.h */,
 				73011C591423E30100509B7B /* histogram.h */,
 				738C134213FB12DE0056EF71 /* inputfile.h */,
 				73011C5A1423E30100509B7B /* io.h */,
-				738C134113FB12DE0056EF71 /* group.h */,
 				73011C5B1423E30100509B7B /* mcloop.h */,
-				7316FA2F15C546B20024F084 /* mpi.h */,
-				7316FA2C15C546A30024F084 /* textio.h */,
-				73011C571423E30100509B7B /* faunus.h */,
-				73011C581423E30100509B7B /* geometry.h */,
 				73011C5C1423E30100509B7B /* move.h */,
-				73011C5D1423E30100509B7B /* potentials.h */,
-				73011C5E1423E30100509B7B /* topology.h */,
+				7316FA2F15C546B20024F084 /* mpi.h */,
 				738C134413FB12DE0056EF71 /* physconst.h */,
 				738C134513FB12DE0056EF71 /* point.h */,
+				73011C5D1423E30100509B7B /* potentials.h */,
 				738C134613FB12DE0056EF71 /* slump.h */,
 				738C134713FB12DE0056EF71 /* space.h */,
 				738C134813FB12DE0056EF71 /* species.h */,
+				7316FA2C15C546A30024F084 /* textio.h */,
+				73011C5E1423E30100509B7B /* topology.h */,
 				73011C5F1423E30100509B7B /* xytable.h */,
 			);
 			path = faunus;
@@ -720,6 +720,7 @@
 				7316FA5015C569E30024F084 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		738C132013FB12B30056EF71 /* Build configuration list for PBXProject "faunus" */ = {
 			isa = XCConfigurationList;

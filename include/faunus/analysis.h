@@ -32,6 +32,7 @@ namespace Faunus {
     class AnalysisBase {
       private:
         virtual string _info()=0; //!< info all classes must provide
+        virtual void _test(UnitTest&);
       protected:
         char w;               //!< width of info
         unsigned long int cnt;//!< number of samples - increased for every run()==true.
@@ -43,6 +44,7 @@ namespace Faunus {
         virtual ~AnalysisBase();
         string info();       //!< Print info and results
         double runfraction;  //!< Chance that analysis should be run (default 1.0 = 100%)
+        void test(UnitTest&);//!< Perform unit test
     };
 
     /*!
@@ -204,6 +206,7 @@ namespace Faunus {
       private:
         std::map< string, Average<double> > Rg2, Rg, Re2;
         double gyrationRadiusSquared(const Group&, const Space &);
+        void _test(UnitTest&);
         string _info();
       public:
         PolymerShape();

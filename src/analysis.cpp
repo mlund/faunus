@@ -22,6 +22,12 @@ namespace Faunus {
       return true;
     }
 
+    void AnalysisBase::_test(UnitTest &t) {}
+
+    void AnalysisBase::test(UnitTest &t) {
+      _test(t);
+    }
+
     string AnalysisBase::info() {
       assert(!name.empty() && "Please name analysis.");
       using namespace textio;
@@ -82,6 +88,9 @@ namespace Faunus {
           << setw(w) << sqrt(Re2[m.first].avg())
           << setw(w) << Re2[m.first].avg() / Rg2[m.first].avg() << endl;
       return o.str();
+    }
+
+    void PolymerShape::_test(UnitTest &t) {
     }
 
     ChargeMultipole::ChargeMultipole(){

@@ -25,7 +25,7 @@ external etc.
 Below is a minimal example that performs a Metropolis Monte Carlo simulation of charged Lennard-Jones particles.
 A cubic simulation geometry with periodic boundaries and the minimum image convention is used. Statistics about
 sampling, acceptance and mean square displacemets are printed at the end of the simulation.
-\include minimalmc.cpp
+\include minimal.cpp
 
 */
 

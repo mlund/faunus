@@ -54,9 +54,9 @@ COMPILING:
     -DENABLE_SWIG=on|OFF              Build python, ruby, tcl etc. modules (experimental)
     -DENABLE_TWISTER=on|OFF           Use Mersenne Twister for random numbers (experimental)
 
-    -DCMAKE_BUILD_TYPE=Debug|Release  Debug (default) or Release (faster) mode
-    -DCMAKE_CXX_FLAGS_RELEASE="..."   Extra compiler options for Release mode
-    -DCMAKE_CXX_FLAGS_DEBUG="..."     Extra compiler options for Debug mode
+    -DCMAKE_BUILD_TYPE=Debug|Release  Debug (default, safer) or Release (faster) mode
+    -DCMAKE_CXX_FLAGS_RELEASE="..."   Compiler options for Release mode
+    -DCMAKE_CXX_FLAGS_DEBUG="..."     Compiler options for Debug mode
 
   Example: Intel's C++ compiler with OpenMP parallelization:
     $ CXX=icpc cmake . -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=Release

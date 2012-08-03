@@ -136,7 +136,23 @@ if (CPPCHECK_EXE)
   set_target_properties(cppcheck PROPERTIES EXCLUDE_FROM_ALL TRUE )
 endif()
 
+# -----------------------------------------
+#   Function to add a generic C++ example
+# -----------------------------------------
+function( fau_example tname tdir tsrc )
+  add_executable( ${tname} "${tdir}/${tsrc}" )
+  set_source_files_properties( "${tdir}/${tsrc}" PROPERTIES LANGUAGE CXX)
+  set_target_properties(${tname}
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${tdir}/")
+  target_link_libraries(${tname} libfaunus)
+  install (DIRECTORY "${tdir}"
+           DESTINATION "share/faunus/examples"
+           PATTERN ".svn" EXCLUDE)
+endfunction( fau_example )
+
+
 #----- Add example programs -----
 add_subdirectory(tools)
+add_subdirectory(examples)
 add_subdirectory(playground EXCLUDE_FROM_ALL)
 

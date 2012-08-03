@@ -24,6 +24,7 @@ Pressure       Calculated from concentrations at cell boundaries
 Salt           None - counter ions only (monovalent)
 Temperature    298 K
 Diel. const.   78.7
+Ree            End-to-end distance
 Rmm = Rion     3.0 A (hard spheres)
 Rmm_eq         0 A (monomer-monomer eq. dist)
 Spring const.  0.0557 kT/A^2 (from du/dr = -lB/r^2 + 2kr = 0 with r=4 A)

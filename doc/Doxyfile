@@ -724,6 +724,7 @@ EXCLUDE_SYMBOLS        =
 
 EXAMPLE_PATH           = src/tools \
                          doc \
+                         src/examples \
                          doc/examples \
                          ./
 

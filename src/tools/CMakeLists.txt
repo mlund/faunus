@@ -1,17 +1,5 @@
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-#----- function to add a generic C++ example -----
-function( fau_example tname tdir tsrc )
-  add_executable( ${tname} "${tdir}/${tsrc}" )
-  set_source_files_properties( "${tdir}/${tsrc}" PROPERTIES LANGUAGE CXX)
-  set_target_properties(${tname}
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${tdir}/")
-  target_link_libraries(${tname} libfaunus)
-  install (DIRECTORY "${tdir}"
-           DESTINATION "share/faunus/examples"
-           PATTERN ".svn" EXCLUDE)
-endfunction( fau_example )
-
 #----- function to add a generic C++ example (CIGARPARTICLES) -----
 function( fau_cigarexample tname tdir tsrc )
   add_executable( ${tname} "${tdir}/${tsrc}" )
@@ -34,7 +22,6 @@ fau_example(polymer-npt-sphere "./" polymer-npt.cpp)
 fau_example(polymer-npt-cuboid "./" polymer-npt.cpp)
 fau_example(titrate_implicit "./" pka_implicit.cpp)
 fau_example(manybody "./" manybody.cpp)
-fau_example(minimal_example "../../doc/examples/" minimalmc.cpp)
 
 if(ENABLE_MPI AND MPI_CXX_FOUND)
   fau_example(manybodyMPI "./" manybodyMPI.cpp)

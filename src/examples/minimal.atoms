@@ -1,0 +1,4 @@
+#     name  charge radius epsilon weight  hydrophobic?
+Atom  Na      +1     2.0    0.1    1       no
+Atom  Cl      -1     2.0    0.1    1       no
+

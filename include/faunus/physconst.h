@@ -2,7 +2,7 @@
 #define FAU_PHYSCONST_H
 
 #ifndef SWIG
-#include "faunus/common.h"
+#include <faunus/common.h>
 #endif
 
 namespace Faunus {

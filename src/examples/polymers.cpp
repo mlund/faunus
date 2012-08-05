@@ -9,7 +9,7 @@
    4) polymer pivot rotation
    5) monomer translation
    6) isobaric volume move (NPT ensemble)
-   */
+*/
 
 #include <faunus/faunus.h>
 
@@ -23,6 +23,8 @@ typedef Geometry::Sphere Tgeometry;   // here a sphere with hard boundaries
 typedef Potential::CoulombHS Tpairpot;// particle pair potential
 
 int main() {
+  cout << textio::splash();            // show faunus banner and credits
+  
   InputMap mcp("polymers.input");      // open user input file
   MCLoop loop(mcp);                    // class for handling mc loops
   FormatPQR pqr;                       // PQR structure file I/O

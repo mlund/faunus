@@ -2,15 +2,12 @@
 #define FAU_GEOMETRY_H
 
 #ifndef SWIG
-#include "faunus/common.h"
-#include "faunus/point.h"
-#include "faunus/slump.h"
+#include <faunus/common.h>
+#include <faunus/point.h>
+#include <faunus/slump.h>
 #endif
 
 namespace Faunus {
-
-  class InputMap;
-  class Group;
 
   /*!
    * \brief Namespace for geometric operations.

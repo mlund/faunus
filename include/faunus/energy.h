@@ -11,9 +11,6 @@
 #endif
 
 // http://publib.boulder.ibm.com/infocenter/iadthelp/v8r0/index.jsp?topic=/com.ibm.xlcpp111.linux.doc/language_ref/variadic_templates.html
-//
-//
-using namespace std;
 
 namespace Faunus {
 
@@ -264,15 +261,6 @@ namespace Faunus {
                   return pc::infty;
             return 0;
           }
-      };
-
-    //or simply add pointer to nonbonded<T>
-    template<class Tpairpot, class Tgeometry>
-      class Exclusions : public Nonbonded<Tpairpot,Tgeometry> {
-        public:
-          vector< std::pair<int,int> > pairs;
-          Exclusions(InputMap &in) : Nonbonded<Tpairpot,Tgeometry>(in) {}
-          //virtual double i2i(const p_vec &p, int i, int j) { return 0; }
       };
 
     /*!

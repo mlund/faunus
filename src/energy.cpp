@@ -117,7 +117,7 @@ namespace Faunus {
         if (baselist.empty()) {
           string s="Error! First Energybase class must have a well defined geometry!\n";
           assert(!"Error!");
-          cerr << s;
+          std::cerr << s;
           return;
         }
         e.setGeometry(*geo);

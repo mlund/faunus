@@ -1,5 +1,5 @@
-#include "faunus/point.h"
-#include "faunus/slump.h"
+#include <faunus/point.h>
+#include <faunus/slump.h>
 #include <faunus/geometry.h>
 #include <faunus/species.h>
 #include <faunus/physconst.h>

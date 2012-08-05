@@ -4,7 +4,7 @@
 #ifdef SWIG
 %module pyfaunus
 %{
-#include "faunus/slump.h"
+#include <faunus/slump.h>
 %}
 #else
   #include <cmath>
@@ -26,7 +26,7 @@ namespace Faunus {
     protected:
       std::string name;
     public:
-      virtual ~RandomBase() {}
+      virtual ~RandomBase();
       virtual double randOne()=0;          //!< Random number between [0:1[
       virtual void seed(int=0)=0;          //!< Seed random generator (globally)
       bool runtest(float);                 //!< Probability bool - float between 0 (don't run) and 1 (run always)

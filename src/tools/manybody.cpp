@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
     ostate = ostateArg.getValue();
   }
   catch (ArgException &e)  {
-    cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
+    std::cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
   }
 
   InputMap mcp(inputfile);

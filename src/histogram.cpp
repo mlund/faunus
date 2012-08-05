@@ -1,7 +1,6 @@
 #include <faunus/histogram.h>
 #include <faunus/io.h>
 #include <faunus/species.h>
-#include <faunus/point.h>
 #include <faunus/geometry.h>
 #include <faunus/group.h>
 #include <faunus/space.h>

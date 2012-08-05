@@ -1,10 +1,9 @@
-#include "faunus/geometry.h"
-#include "faunus/inputfile.h"
-#include "faunus/species.h"
-#include "faunus/physconst.h"
-#include "faunus/group.h"
-#include "faunus/point.h"
-#include <faunus/faunus.h>
+#include <faunus/geometry.h>
+#include <faunus/inputfile.h>
+#include <faunus/species.h>
+#include <faunus/physconst.h>
+#include <faunus/textio.h>
+#include <faunus/group.h>
 
 namespace Faunus {
   namespace Geometry {

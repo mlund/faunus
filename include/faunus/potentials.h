@@ -5,7 +5,6 @@
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/textio.h>
-//#include <faunus/inputfile.h>
 #include <faunus/physconst.h>
 #endif
 
@@ -71,7 +70,10 @@ namespace Faunus {
         double req; //!< Equilibrium distance (angstrom)
         Harmonic(double=0, double=0);
         Harmonic(InputMap&, string="harmonic_");
-        double operator() (const particle&, const particle&, double) const FOVERRIDE; //!< Pair interaction energy (kT)
+        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+          double d=sqrt(r2)-req;
+          return k*d*d;
+        }
     };
 
     /*!
@@ -113,17 +115,14 @@ namespace Faunus {
           double x=r6(sigma,r2);
           return x*x;               // 12
         }
-        inline double energy(double sigma, double r2) const {
-          double x=r6(sigma,r2);
-          return eps*(x*x - x);
-        }
       protected:
         double eps;
       public:
         LennardJones();
         LennardJones(InputMap&, string="lj_");
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          return energy(a.radius+b.radius, r2);
+          double x=r6(a.radius+b.radius,r2);
+          return eps*(x*x - x);
         }
         string info(char);
     };
@@ -210,31 +209,22 @@ namespace Faunus {
       friend class Potential::DebyeHuckel;
       friend class Energy::GouyChapman;
       private:
-      string _brief();
-      void _setScale(double);
-      double epsilon_r;
+        string _brief();
+        void _setScale(double);
+        double epsilon_r;
       protected:
-      double depsdt;      //!< \f$ T\partial \epsilon_r / \epsilon_r \partial T = -1.37 \f$
-      double lB;          //!< Bjerrum length (angstrom)
-      /*!
-       * \brief Particle-particle energy
-       * \param zz Charge number product i.e. \f$z_az_b = q_aq_b/e^2\f$
-       * \param r Distance between charges (angstrom) 
-       * \returns \f$\beta u/l_B\f$
-       */
-      inline double energy(double zz, double r) const {
-        return zz/r;
-      }
+        double depsdt;      //!< \f$ T\partial \epsilon_r / \epsilon_r \partial T = -1.37 \f$
+        double lB;          //!< Bjerrum length (angstrom)
 
       public:
-      Coulomb(InputMap&); //!< Construction from InputMap
-      double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
+        Coulomb(InputMap&); //!< Construction from InputMap
+        double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
 
-      /*! \returns \f$\beta u/l_B\f$ */
-      inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-        return energy( a.charge*b.charge, sqrt(r2) );
-      }
-      string info(char);
+        /*! \returns \f$\beta u/l_B\f$ */
+        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+          return a.charge*b.charge / sqrt(r2);
+        }
+        string info(char);
     };
 
     /*!
@@ -249,12 +239,12 @@ namespace Faunus {
         string _brief();
       protected:
         double c,k;
-        inline double energy(double zz, double r) const { return zz/r * exp(-k*r); }
       public:
         DebyeHuckel(InputMap&);                       //!< Construction from InputMap
         /*! \returns \f$\beta w/l_B\f$ */
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          return energy(a.charge*b.charge, sqrt(r2));
+          double r=sqrt(r2);
+          return a.charge*b.charge / r * exp(-k*r);
         }
         double entropy(double, double) const;         //!< Returns the interaction entropy 
         double ionicStrength() const;                 //!< Returns the ionic strength (mol/l)

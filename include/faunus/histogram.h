@@ -3,9 +3,9 @@
 
 #ifndef SWIG
 #include <faunus/common.h>
-#include <faunus/point.h>
 #include <faunus/average.h>
 #include <faunus/xytable.h>
+#include <faunus/point.h>
 #endif
 
 namespace Faunus {

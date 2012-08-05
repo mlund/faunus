@@ -67,11 +67,6 @@ namespace Faunus {
       k=k/_tokT;
     }
 
-    double Harmonic::operator() (const particle &a, const particle &b, double r2) const {
-      double d=sqrt(r2)-req;
-      return k*d*d;
-    }
-
     string Harmonic::_brief() {
       using namespace Faunus::textio;
       std::ostringstream o;
@@ -99,7 +94,7 @@ namespace Faunus {
       return textio::indent(SUB)+name+"\n";
     }
 
-    LennardJones::LennardJones() {
+    LennardJones::LennardJones() : eps(0) {
       name="Lennard-Jones";
     }
    
@@ -109,7 +104,10 @@ namespace Faunus {
      */
     LennardJones::LennardJones(InputMap &in, string pfx) {
       name="Lennard-Jones";
-      eps = 4*in.get<double>( pfx+"eps", 0.04, name+" epsilon (kT)" );
+      eps = 4*in.get<double>( pfx+"eps", 0);
+      string unit = in.get<string>(pfx+"unit", "kT");
+      if (unit=="kJ/mol")
+        eps=eps/pc::kT2kJ(1.);
     }
     
     string LennardJones::_brief() {
@@ -126,7 +124,8 @@ namespace Faunus {
     string LennardJones::info(char w) {
       using namespace Faunus::textio;
       std::ostringstream o;
-      o << pad(SUB,w+1,epsilon+"(LJ)") << eps*tokT()/4 << kT << endl;
+      o << pad(SUB,w+1,epsilon+"(LJ)") << eps*tokT()/4 << kT
+        << " = " << pc::kT2kJ(eps*tokT()/4) << " kJ/mol" << endl;
       return o.str();
     }
 
@@ -303,7 +302,7 @@ namespace Faunus {
       std::ostringstream o;
       o << Coulomb::info(w);
       o << pad(SUB,w,"Ionic strength") << ionicStrength() << " mol/l" << endl;
-      o << pad(SUB,w+1,"Debye length, 1/\u03BA") << debyeLength() << " "+angstrom << endl;
+      o << pad(SUB,w+1,"Debye length, 1/"+textio::kappa) << debyeLength() << " "+angstrom << endl;
       return o.str();
     }
 

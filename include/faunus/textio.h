@@ -23,6 +23,7 @@ namespace Faunus {
     const string degrees="deg";
     const string epsilon="eps";
     const string gamma="gamma";
+    const string kappa="k";
     const string kT=" kT";
     const string mu="mu";
     const string percent="%";
@@ -42,6 +43,7 @@ namespace Faunus {
     const string degrees="\u00b0";    //!< Degrees
     const string epsilon="\u03f5";    //!< Greek epsilon
     const string gamma="\u0263";      //!< Greek gamma
+    const string kappa="\u03ba";      //!< Greek kappa
     const string kT=" kT";            //!< kT (energy) with space in front
     const string mu="\u03bc";         //!< Greek mu
     const string partial="\u2202";    //!< Partial derivative

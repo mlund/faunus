@@ -371,6 +371,8 @@ namespace Faunus {
       gmobile=nullptr;
     }
 
+    TranslateRotateCluster::~TranslateRotateCluster() {}
+    
     void TranslateRotateCluster::setMobile(Group &g) {
       assert(&g!=nullptr);
       gmobile=&g;
@@ -505,6 +507,8 @@ namespace Faunus {
       if (dp<1e-6)
         runfraction=0;
     }
+    
+    CrankShaft::~CrankShaft() {}
 
     void CrankShaft::_trialMove() {
       assert(gPtr!=nullptr && "No group to perform crankshaft on.");
@@ -605,7 +609,7 @@ namespace Faunus {
           len = std::abs(beg-end);
         } while ( len<minlen || len>maxlen );
         if (beg>end)
-          swap(beg,end);
+          std::swap(beg,end);
 
         for (int i=end+1; i<=gPtr->back(); i++)
           index.push_back(i);
@@ -899,7 +903,7 @@ namespace Faunus {
             uold-=pot->i2i(spc->p, *i, *j);
       } else {
         assert(!"No salt to insert or delete!");
-        cerr << "!! No salt to insert or delete !!";
+        std::cerr << "!! No salt to insert or delete !!";
       }
       return unew-uold;
     }
@@ -965,6 +969,8 @@ namespace Faunus {
       haveCurrentEnergy=false;
       temperPath.open(textio::prefix+"temperpath.dat");
     }
+    
+    ParallelTempering::~ParallelTempering() {}
 
     void ParallelTempering::setEnergyFunction( std::function<double (Space&,Energy::Energybase&,const p_vec&)> f ) {
       usys = f;

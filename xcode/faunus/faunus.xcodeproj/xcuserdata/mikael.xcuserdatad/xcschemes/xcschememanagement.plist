@@ -4,15 +4,15 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
-		<key>Polymer NPT.xcscheme</key>
-		<dict>
-			<key>orderHint</key>
-			<integer>2</integer>
-		</dict>
 		<key>faunus.xcscheme</key>
 		<dict>
 			<key>orderHint</key>
 			<integer>0</integer>
+		</dict>
+		<key>polymers.xcscheme</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>2</integer>
 		</dict>
 		<key>xdrfile.xcscheme</key>
 		<dict>
@@ -33,6 +33,21 @@
 			<true/>
 		</dict>
 		<key>738C135F13FB13250056EF71</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>73C4131E15CC61D600FF0D1F</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>73C4133015CC688100FF0D1F</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>73E9C83A15CC6B1D001D5654</key>
 		<dict>
 			<key>primary</key>
 			<true/>

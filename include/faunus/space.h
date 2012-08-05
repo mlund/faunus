@@ -4,10 +4,7 @@
 #ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/slump.h>
-#include <faunus/group.h>
 #endif
-
-//extern template class std::vector<Faunus::particle>;
 
 namespace Faunus {
 

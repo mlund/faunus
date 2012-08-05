@@ -242,6 +242,7 @@ namespace Faunus {
         virtual double ClusterProbability(p_vec&,int); //!< Probability that particle index belongs to cluster
       public:
         TranslateRotateCluster(InputMap&, Energy::Energybase&, Space&, string="transrot");
+        virtual ~TranslateRotateCluster();
         void setMobile(Group&); //!< Select atomic species to move with the main group
         double threshold;  //!< Distance between particles to define a cluster
     };
@@ -271,6 +272,7 @@ namespace Faunus {
         AcceptanceMap<string> accmap;
       public:
         CrankShaft(InputMap&, Energy::Energybase&, Space&, string="crank");
+        virtual ~CrankShaft();
         void setGroup(Group&); //!< Select Group to move
         int minlen;            //!< Minimum number of particles to rotate (default = 1)
         int maxlen;            //!< Maximin number of particles to rotate (default = 10)
@@ -463,6 +465,7 @@ namespace Faunus {
 
       public:
         ParallelTempering(InputMap&, Energy::Hamiltonian&, Space&, Faunus::MPI::MPIController &mpi, string="temper");
+        virtual ~ParallelTempering();
         void setCurrentEnergy(double); //!< Set energy of configuration before move (for increased speed)
         void setEnergyFunction( std::function<double (Space&,Energy::Energybase&,const p_vec&)> );
     };

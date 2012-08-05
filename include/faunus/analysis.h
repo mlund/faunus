@@ -9,6 +9,8 @@
 #include <faunus/space.h>
 #endif
 
+using std::vector;
+
 namespace Faunus {
   class checkValue;
   class Space;

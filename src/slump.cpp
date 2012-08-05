@@ -1,7 +1,8 @@
-#include "faunus/slump.h"
+#include <faunus/slump.h>
 
 namespace Faunus {
-  // Baseclass
+  RandomBase::~RandomBase() {}
+  
   double RandomBase::randHalf() {
     return -0.5 + randOne();
   }

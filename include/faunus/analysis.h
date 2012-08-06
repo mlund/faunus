@@ -216,7 +216,7 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Anylyse charge multipoles and their fluctuations of groups
+     * \brief Analyse charge multipoles and their fluctuations of groups
      * \author Anil Kurut
      * \date 2012
      *

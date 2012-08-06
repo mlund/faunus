@@ -196,6 +196,36 @@ namespace Faunus {
     };
 
     /*!
+     * \brief r12-Repulsion of the form
+     *
+     * \f$ \beta u = 4\epsilon_{lj} \left (  (\sigma_{ij}/r_{ij})^{12}  \right ) \f$
+     *
+     * where \f$\sigma_{ij} = (\sigma_i+\sigma_j)/2\f$ and \f$\epsilon_{lj}\f$ is fixed for this class.
+     */
+    class R12Repulsion : public PairPotentialBase {
+      private:
+        string _brief();
+        void _setScale(double);
+        inline double r6(double sigma, double r2) const {
+          double x=sigma*sigma/r2;  // 2
+          return x*x*x;             // 6
+        }
+        inline double energy(double sigma, double r2) const {
+          double x=r6(sigma,r2);
+          return eps*(x*x);
+        }
+      protected:
+        double eps;
+      public:
+        R12Repulsion();
+        R12Repulsion(InputMap&, string="r12rep_");
+        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+          return energy(a.radius+b.radius, r2);
+        }
+        string info(char);
+    };
+
+    /*!
      * \brief Coulomb pair potential
      * 
      * The Coulomb potential has the form:
@@ -329,6 +359,11 @@ namespace Faunus {
      * \brief Combined DebyeHuckel / LennardJones potential
      */
     typedef CombinedPairPotential<DebyeHuckel, LennardJones> DebyeHuckelLJ;
+
+    /*!
+     * \brief Combined DebyeHuckel / R12Repulsion potential
+     */
+    typedef CombinedPairPotential<DebyeHuckel, R12Repulsion> DebyeHuckelr12;
 
   } //end of Potential namespace
 

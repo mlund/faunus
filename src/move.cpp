@@ -611,8 +611,14 @@ namespace Faunus {
         if (beg>end)
           std::swap(beg,end);
 
-        for (int i=end+1; i<=gPtr->back(); i++)
-          index.push_back(i);
+        if (slp_global.randHalf() > 0){
+          for (int i=end+1; i<=gPtr->back(); i++)
+            index.push_back(i);
+        }
+        else {
+          for (int i=gPtr->front(); i<=end; i++)
+            index.push_back(i);
+        }
       }
       angle = dp*slp_global.randHalf();
       vrot.setAxis(*spc->geo, spc->p[beg], spc->p[end], angle );

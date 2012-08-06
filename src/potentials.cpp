@@ -187,6 +187,36 @@ namespace Faunus {
       o << textio::pad(SUB,w+1,textio::sigma) << pow(sigma6*tokT(),1/6.) << textio::_angstrom << endl;
       return o.str();
     }
+
+    R12Repulsion::R12Repulsion() {
+      name="r12-Repulsion";
+    }
+   
+    /*!
+     * \param in InputMap is scanned for the keyword \c lj_eps and should be in units of kT
+     */
+    R12Repulsion::R12Repulsion(InputMap &in, string pfx) {
+      name="r12-Repulsion";
+      eps = 4*in.get<double>( pfx+"eps", 0.05, name+" epsilon (kT)" );
+    }
+    
+    string R12Repulsion::_brief() {
+      std::ostringstream o;
+      o << name << ": " << textio::epsilon+"(LJ)=" << eps*tokT()/4 << textio::kT;
+      return o.str();
+    }
+    
+    void R12Repulsion::_setScale(double s) {
+      _tokT=s;
+      eps=eps/_tokT;
+    }
+
+    string R12Repulsion::info(char w) {
+      using namespace Faunus::textio;
+      std::ostringstream o;
+      o << pad(SUB,w+1,epsilon+"(r12_rep)") << eps*tokT()/4 << kT << endl;
+      return o.str();
+    }
  
     /*!
      * The following input keywords are searched searched:

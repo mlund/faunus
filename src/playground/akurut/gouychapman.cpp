@@ -24,8 +24,9 @@ typedef Geometry::Cuboidslit Tgeometry;
 //typedef Geometry::Sphere Tgeometry;
 typedef Geometry::Cuboid Tgeometry;
 #endif
-typedef Potential::CombinedPairPotential<Potential::Harmonic, Potential::LennardJones> Tbondpot;
-typedef Potential::DebyeHuckelLJ Tpairpot;
+typedef Potential::CombinedPairPotential<Potential::Harmonic, Potential::R12Repulsion> Tbondpot;
+//typedef Potential::DebyeHuckelLJ Tpairpot;
+typedef Potential::DebyeHuckelr12 Tpairpot;
 
 int main(int argc, char** argv) {
   Faunus::MPI::MPIController mpi;
@@ -86,14 +87,18 @@ int main(int argc, char** argv) {
 
   spc.load(textio::prefix+"state");
 
+  for (int i=0; i<pol[0].size()-1; i++)
+    mpi.cout << spc.geo->dist( spc.p[i], spc.p[i+1]) << endl;
+
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );
 
   mpi.cout << atom.info() << spc.info() << pot.info() //<< tit.info()
     << textio::header("MC Simulation Begins!");
 
+  pqr.save(textio::prefix+"initial.pqr", spc.p);
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int k,i=rand() % 6;
+      int k,i=rand() % 5;
       switch (i) {
         case 0: // translate and rotate molecules
           k=pol.size();
@@ -117,14 +122,11 @@ int main(int argc, char** argv) {
             shape.sample(g,spc);
           }
           break;
-        case 8: // volume move
-          //sys+=iso.move();
-          break;
-        case 3: // titration move
+        case 2: // titration move
           sys+=tit.move();
           mpol.sample(pol,spc);
           break;
-        case 4:
+        case 3:
           k=pol.size();
           while (k-->0) {
             crank.setGroup( pol[ rand() % pol.size() ] );
@@ -135,7 +137,7 @@ int main(int argc, char** argv) {
             shape.sample(g,spc);
           }
           break;
-        case 5:
+        case 4:
           k=pol.size();
           while (k-->0) {
             pivot.setGroup( pol[ rand() % pol.size() ] );
@@ -145,6 +147,9 @@ int main(int argc, char** argv) {
             g.setMassCenter(spc);
             shape.sample(g,spc);
           }
+          break;
+        case 5: // volume move
+          //sys+=iso.move();
           break;
         }
 

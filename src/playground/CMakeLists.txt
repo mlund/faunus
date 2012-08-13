@@ -16,6 +16,8 @@ fau_example(akurut-gouychapman-slit "./akurut" gouychapman.cpp)
 set_target_properties( akurut-gouychapman-slit PROPERTIES COMPILE_DEFINITIONS "SLIT")
 
 # Robert's playground
+fau_example(vacha-gouychapman "./vacha" gouychapman.cpp)
+
 fau_cigarexample(cigar "./vacha" cigar.cpp)
-set_target_properties( cigar PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE" EXCLUDE_FROM_ALL TRUE)
+set_target_properties( cigar PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
 

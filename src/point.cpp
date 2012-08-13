@@ -102,7 +102,7 @@ namespace Faunus {
    * \param vrot Rotation class where the axis, angle and geometry are expected to be set
    */
   void Point::rotate(Geometry::VectorRotate &vrot) {
-    vrot.rotate(*this);
+    *this = vrot.rotate(*this);
   }
 
   /*!

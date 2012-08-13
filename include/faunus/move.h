@@ -283,11 +283,10 @@ namespace Faunus {
      *
      * This will perform a pivot rotation of a linear polymer by the following steps:
      * \li Select rotation axis by two random monomers, spanning \c minlen to \c maxlen bonds
-     * \li Rotate trailing monomers around and after the above axis
+     * \li Rotate monomers before or after end points of the above axis
      *
      * \author Mikael Lund
      * \date Asljunga 2012
-     * \todo Is there a bias when always rotating trailing particles?
      */
     class Pivot : public CrankShaft {
       private:

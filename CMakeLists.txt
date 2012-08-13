@@ -68,6 +68,7 @@ endif()
 #   Add source directories
 # ---------------------------
 add_subdirectory(src)
+add_subdirectory(xcode)
 add_subdirectory(doc EXCLUDE_FROM_ALL)
 
 if(ENABLE_SWIG)

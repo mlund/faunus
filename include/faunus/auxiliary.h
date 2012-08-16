@@ -25,10 +25,13 @@ namespace Faunus {
     public:
       T first, second;
       pair_permutable() {}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-overflow"
       pair_permutable(T a, T b) : first(a), second(b) {
         if (first>second)
           std::swap(first,second);
       }
+#pragma GCC diagnostic pop
 
       // NOT USED BY stl::map.find()
       // see http://www.velocityreviews.com/forums/t290085-std-map-mystring-mystring-comparison-operator.html

@@ -107,15 +107,11 @@ namespace Faunus {
       private:
         string _brief();
         void _setScale(double);
+      protected:
         inline double r6(double sigma, double r2) const {
           double x=sigma*sigma/r2;  // 2
           return x*x*x;             // 6
         }
-        inline double r12(double sigma, double r2) const {
-          double x=r6(sigma,r2);
-          return x*x;               // 12
-        }
-      protected:
         double eps;
       public:
         LennardJones();
@@ -125,6 +121,18 @@ namespace Faunus {
           return eps*(x*x - x);
         }
         string info(char);
+    };
+
+    /*!
+     * \brief As LennardJones but only the repulsive R12 part.
+     */
+    class LennardJonesR12 : public LennardJones {
+      public:
+        LennardJonesR12(InputMap&, string="r12rep_");
+        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+          double x=r6(a.radius+b.radius,r2);
+          return eps*x*x;
+        }
     };
 
     /*!
@@ -201,6 +209,7 @@ namespace Faunus {
      * \f$ \beta u = 4\epsilon_{lj} \left (  (\sigma_{ij}/r_{ij})^{12}  \right ) \f$
      *
      * where \f$\sigma_{ij} = (\sigma_i+\sigma_j)/2\f$ and \f$\epsilon_{lj}\f$ is fixed for this class.
+     * \todo Inherit from Potential::LennardJones
      */
     class R12Repulsion : public PairPotentialBase {
       private:

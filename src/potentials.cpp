@@ -129,6 +129,10 @@ namespace Faunus {
       return o.str();
     }
 
+    LennardJonesR12::LennardJonesR12(InputMap &in, string pfx) : LennardJones(in,pfx) {
+      name+="R12";
+    }
+ 
     /*!
      * \param in is scanned for the keywords \c prefix_threshold (angstrom) and \c prefix_depth (kT).
      * \param prefix InputMap keyword prefix. Default is "squareWell"

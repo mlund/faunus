@@ -8,9 +8,11 @@
 #include <faunus/faunus.h>
 
 using namespace Faunus;
+using namespace Faunus::Potential;
 
 typedef Geometry::Cuboidslit Tgeometry;
-typedef Potential::DebyeHuckelHS Tpairpot;
+//typedef Potential::DebyeHuckelr12 Tpairpot;
+typedef CombinedPairPotential<DebyeHuckelr12,SquareWellHydrophobic> Tpairpot;
 
 int main(int argc, char** argv) {
 
@@ -27,6 +29,8 @@ int main(int argc, char** argv) {
   auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
   auto gouy      = pot.create( Energy::GouyChapman(mcp) );
   gouy->setPosition( nonbonded->geometry.len_half.z );
+  //auto bonded    = pot.create( Energy::PairListHydrophobic() );
+  //bonded->add(true, true, SquareWellHydrophobic(mcp) );
 
   Space spc( pot.getGeometry() );
 
@@ -85,12 +89,13 @@ int main(int argc, char** argv) {
 
     cout << loop.timing();
 
+    rdf.save(textio::prefix+"rdf_p2p.dat");
+    surfdist.save(textio::prefix+"surfdist.dat");
+    pqr.save(textio::prefix+"confout.pqr", spc.p);
+    spc.save(textio::prefix+"state");
+
   } // end of macro loop
 
   cout << loop.info() << sys.info() << gmv.info();   
 
-  rdf.save(textio::prefix+"rdf_p2p.dat");
-  surfdist.save(textio::prefix+"surfdist.dat");
-  pqr.save(textio::prefix+"confout.pqr", spc.p);
-  spc.save(textio::prefix+"state");
 }

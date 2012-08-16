@@ -8,7 +8,7 @@
 #c__SBATCH --mail-type=END
 
 # - Get exclusive access to whole node (16 cores on alarik)
-#SBATCH --exclusive
+#c__SBATCH --exclusive
 
 # - Number of cores
 #SBATCH -n 1
@@ -31,8 +31,8 @@ base="gouychapman"
 # ----------------------------------
 function mkatoms() {
 echo "
-Atom  MM      +1     3.0    0.1    1       no
-Atom  GLY      0     2.9    0.1    54      no
+Atom  FIL      +0     10.0    0.1    1      no
+Atom  FOB      +0     10.9    0.1    1      yes
 " > $base.atoms
 }
 
@@ -51,12 +51,14 @@ epsilon_r              80      # Water dielectric const
 dh_ionicstrength       $salt   # mol/l
 lj_eps                 0.05    # kT
 gouychapman_rho        0.0033333
+squarewell_threshold   2.5     # surface distance in angstrom
+squarewell_depth       2.0     # kT
 
 cuboid_len             $boxlen # Box side length Angstrom
-transrot_transdp       100     # Molecular translation parameter
-transrot_rotdp         6       # Molecular rotation parameter
+transrot_transdp       $tdp    # Molecular translation parameter
+transrot_rotdp         1       # Molecular rotation parameter
 
-polymer_N              2
+polymer_N              20
 polymer_file           $base.aam
 
 " > $base.input
@@ -66,29 +68,39 @@ polymer_file           $base.aam
 #   GENERATE INPUT MOLECULE
 # ----------------------------------
 function mkstruct() {
-echo "3
-UNK  0   0.00   0.00   0.00    +0.5   1  1.999
-UNK  0   4.00   0.00   0.00    +0.5   1  1.999
-UNK  0   8.00   0.00   0.00    +0.5   1  1.999
+echo "12
+FIL  1   10.00   0.00   0.00    +0.0   1  10.
+FIL  2   20.00   0.00   0.00    +0.0   1  10.
+FIL  3   30.00   0.00   0.00    +0.0   1  10.
+FIL  4   40.00   0.00   0.00    +0.0   1  10.
+FIL  5   50.00   0.00   0.00    +0.0   1  10.
+FIL  6   60.00   0.00   0.00    +0.0   1  10.
+FOB  7   10.00  10.00   0.00    +0.0   1  10.
+FOB  8   20.00  10.00   0.00    +0.0   1  10.
+FOB  9   30.00  10.00   0.00    +0.0   1  10.
+FOB 10   40.00  10.00   0.00    +0.0   1  10.
+FOB 11   50.00  10.00   0.00    +0.0   1  10.
+FOB 12   60.00  10.00   0.00    +0.0   1  10.
 " > ${base}.aam
 }
 
 mkatoms
 mkstruct
-boxlen=100
+boxlen=300
 macro=10
 
 for salt in 0.050
 do
-  # equilibration
+  echo "equilibration"
   rm -fR *state
-  micro=5000
+  micro=4000
+  tdp=10
   mkinput
-  $exe
-  exit
+  $exe > eq
 
-  # run
-  micro=10000
+  echo "run"
+  micro=40000
+  tdp=3   # translational displacement
   mkinput
   $exe > out
 done

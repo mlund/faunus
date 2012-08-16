@@ -68,7 +68,7 @@ namespace Faunus {
       return rg2.x+rg2.y+rg2.z;
     }
 
-    Point vectorEnd2end(const Group &pol, const Space &spc){  //There is somthing not working in this calculation
+    Point PolymerShape::vectorEnd2end(const Group &pol, const Space &spc){  //There is somthing not working in this calculation
       Point re;
       re = spc.p[pol.front()] - spc.p[pol.back()];
       return re;

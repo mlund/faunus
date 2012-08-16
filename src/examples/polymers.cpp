@@ -77,7 +77,7 @@ int main() {
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int k,i=rand() % 6;
+      int k,i=slp_global.rand() % 6;
       switch (i) {
         case 0:
           mv.setGroup(salt);
@@ -94,7 +94,7 @@ int main() {
         case 2:
           k=pol.size();
           while (k-->0) {
-            gmv.setGroup( pol[ rand() % pol.size() ] );
+            gmv.setGroup( pol[ slp_global.rand() % pol.size() ] );
             sys+=gmv.move(); // translate/rotate polymers
           }
           break;
@@ -104,14 +104,14 @@ int main() {
         case 4:
           k=pol.size();
           while (k-->0) {
-            crank.setGroup( pol[ rand() % pol.size() ] );
+            crank.setGroup( pol[ slp_global.rand() % pol.size() ] );
             sys+=crank.move(); // crank shaft move
           }
           break;
         case 5:
           k=pol.size();
           while (k-->0) {
-            pivot.setGroup( pol[ rand() % pol.size() ] );
+            pivot.setGroup( pol[ slp_global.rand() % pol.size() ] );
             sys+=pivot.move(); // pivot move
           }
           break;

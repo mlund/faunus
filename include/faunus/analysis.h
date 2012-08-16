@@ -7,6 +7,7 @@
 #include <faunus/physconst.h>
 #include <faunus/group.h>
 #include <faunus/space.h>
+#include <faunus/point.h>
 #endif
 
 using std::vector;
@@ -206,8 +207,10 @@ namespace Faunus {
      */
     class PolymerShape : public AnalysisBase {
       private:
-        std::map< string, Average<double> > Rg2, Rg, Re2;
+        std::map< string, Average<double> > Rg2, Rg, Re2, Rs, Rs2, Rg2x, Rg2y, Rg2z;
         double gyrationRadiusSquared(const Group&, const Space &);
+        Point vectorgyrationRadiusSquared(const Group&, const Space &);
+        Point vectorEnd2end(const Group&, const Space &);
         void _test(UnitTest&);
         string _info();
       public:

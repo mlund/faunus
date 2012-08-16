@@ -203,7 +203,7 @@ namespace Faunus {
     
     string R12Repulsion::_brief() {
       std::ostringstream o;
-      o << name << ": " << textio::epsilon+"(LJ)=" << eps*tokT()/4 << textio::kT;
+      o << name << ": " << textio::epsilon+"(r12)=" << eps*tokT()/4 << textio::kT;
       return o.str();
     }
     

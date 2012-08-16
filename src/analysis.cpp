@@ -46,29 +46,53 @@ namespace Faunus {
       name="Polymer Shape";
     }
 
-    double PolymerShape::gyrationRadiusSquared(const Group &pol, const Space &spc) {
+    Point PolymerShape::vectorgyrationRadiusSquared(const Group &pol, const Space &spc) {
       assert( spc.geo->dist(pol.cm, pol.massCenter(spc))<1e-9 && "Mass center must be in sync.");
-      double x=0, r2=0, sum=0;
-      Point t, o(0,0,0);
+      double sum=0;
+      Point t, r2;
       for (auto i : pol) {
         t = spc.p[i]-pol.cm;                // vector to center of mass
         spc.geo->boundary(t);               // periodic boundary (if any)
-        r2 = spc.geo->sqdist(t,o);          // squared distance to cm
-        x += r2 * spc.p[i].mw;              // m*r^2
+        r2.x += spc.p[i].mw * t.x * t.x;
+        r2.y += spc.p[i].mw * t.y * t.y;
+        r2.z += spc.p[i].mw * t.z * t.z;
         sum += spc.p[i].mw;                 // total mass
       }
       assert(sum>0 && "Zero molecular weight not allowed.");
-      return x*(1./sum);
+      return r2*(1./sum);
+    }
+
+    double PolymerShape::gyrationRadiusSquared(const Group &pol, const Space &spc) {
+      assert( spc.geo->dist(pol.cm, pol.massCenter(spc))<1e-9 && "Mass center must be in sync.");
+      Point rg2=vectorgyrationRadiusSquared(pol,spc);
+      return rg2.x+rg2.y+rg2.z;
+    }
+
+    Point vectorEnd2end(const Group &pol, const Space &spc){  //There is somthing not working in this calculation
+      Point re;
+      re = spc.p[pol.front()] - spc.p[pol.back()];
+      return re;
     }
 
     void PolymerShape::sample(const Group &pol, const Space &spc) {
       if (!run())
         return;
       assert( pol.front()!=pol.back() && "Polymer must have at least two particles.");
-      double r2=gyrationRadiusSquared(pol,spc);
-      Rg2[pol.name]+=r2;
-      Rg[pol.name]+=sqrt(r2);
-      Re2[pol.name] += spc.geo->sqdist( spc.p[pol.front()], spc.p[pol.back()] ); //end-2-end squared
+      Point r2 = vectorgyrationRadiusSquared(pol,spc);
+      double rg2 = r2.x+r2.y+r2.z; 
+      double re2 = spc.geo->sqdist( spc.p[pol.front()], spc.p[pol.back()] );
+      Rg2[pol.name]  += rg2;
+      Rg2x[pol.name] += r2.x;
+      Rg2y[pol.name] += r2.y;
+      Rg2z[pol.name] += r2.z;
+      Rg[pol.name]   += sqrt(r2.x+r2.y+r2.z);
+      Re2[pol.name]  += re2; //end-2-end squared
+      double rs = Re2[pol.name].avg()/Rg2[pol.name].avg(); // fluctuations in shape factor
+      Rs[pol.name]   += rs;
+      Rs2[pol.name]  += rs*rs;
+      
+      //Point re = vectorEnd2end(pol,spc);
+      //Re2[pol.name] += pow(re.len(), 2);
     }
 
     string PolymerShape::_info() {
@@ -77,16 +101,22 @@ namespace Faunus {
       std::ostringstream o;
       o << endl << indent(SUBSUB) << std::left << setw(w) << "Polymer"
         << setw(w+5) << bracket("Rg"+squared)
-        << setw(w+5) << bracket("Rg")+squared
+        << setw(w+12) << bracket("Rg"+squared)+"-"+bracket("Rg")+squared
         << setw(w+7) << rootof+bracket("Rg"+squared)
+        << setw(w+7) << rootof+bracket("Rgx"+squared)
+        << setw(w+6) << rootof+bracket("Rgy"+squared)
+        << setw(w+6) << rootof+bracket("Rgz"+squared)
         << setw(w+7) << rootof+bracket("Re"+squared)
-        << setw(w) << bracket("Re"+squared)+"/"+bracket("Rg"+squared) << endl;
+        << setw(w+7) << bracket("Re"+squared)+"/"+bracket("Rg"+squared) << endl; 
       for (auto &m : Rg2)
         o << indent(SUBSUB) << std::left << setw(w) << m.first << setw(w) << m.second.avg()
-          << setw(w) << pow( Rg[m.first].avg(),2 )
+          << setw(w) << m.second.avg() - pow( Rg[m.first].avg(),2 )
           << setw(w) << sqrt( m.second.avg() )
+          << setw(w) << sqrt(Rg2x[m.first].avg())
+          << setw(w) << sqrt(Rg2y[m.first].avg())
+          << setw(w) << sqrt(Rg2z[m.first].avg())
           << setw(w) << sqrt(Re2[m.first].avg())
-          << setw(w) << Re2[m.first].avg() / Rg2[m.first].avg() << endl;
+          << setw(w) << Re2[m.first].avg() / Rg2[m.first].avg() << endl; 
       return o.str();
     }
 

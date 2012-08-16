@@ -24,9 +24,9 @@ typedef Geometry::Cuboidslit Tgeometry;
 //typedef Geometry::Sphere Tgeometry;
 typedef Geometry::Cuboid Tgeometry;
 #endif
-typedef Potential::CombinedPairPotential<Potential::Harmonic, Potential::R12Repulsion> Tbondpot;
-//typedef Potential::DebyeHuckelLJ Tpairpot;
-typedef Potential::DebyeHuckelr12 Tpairpot;
+typedef Potential::CombinedPairPotential<Potential::Harmonic, Potential::LennardJones> Tbondpot;
+typedef Potential::DebyeHuckelLJ Tpairpot;
+//typedef Potential::DebyeHuckelr12 Tpairpot;
 
 int main(int argc, char** argv) {
   Faunus::MPI::MPIController mpi;
@@ -51,20 +51,30 @@ int main(int argc, char** argv) {
   Space spc( pot.getGeometry() );
 
   // Add polymers
-  vector<GroupMolecular> pol( mcp.get("polymer_N",0));
+  vector<GroupMolecular> pol( mcp.get("polymer_N",0) );
   string polyfile = mcp.get<string>("polymer_file", "");
   atom["MM"].dp = 0.;
+  int ii=1;
+  mpi.cout << "Number of polymers: " << pol.size() << endl;
   for (auto &g : pol) {                    // load polymers
     aam.load(polyfile);
     Geometry::FindSpace f;
-    f.find(*spc.geo, spc.p, aam.p);        // find empty spot in particle vector
-    g = spc.insert( aam.p );               // insert into space
-    g.name="Polymer";
+    f.find(*spc.geo, spc.p, aam.particles());        // find empty spot in particle vector
+    g = spc.insert( aam.particles() );   // insert into space
+    ostringstream o;
+    o << "Polymer" << ii++;
+    g.name=o.str();
     spc.enroll(g);
     for (int i=g.front(); i<g.back(); i++)
       bonded->add(i, i+1, Tbondpot(mcp, "polymer_", "minuslj_")); // add bonds
   }
   Group allpol( pol.front().front(), pol.back().back() ); // make group w. all polymers
+  
+  // Add salt
+  GroupAtomic ball(spc, mcp);
+  ball.name="ball";
+  mpi.cout << "Number of balls: " << ball.size() << endl;
+
   // atom["NTR"].dp = 10.;
   // atom["CTR"].dp = 10.;
   // atom["HIS"].dp = 10.;
@@ -75,6 +85,7 @@ int main(int argc, char** argv) {
   //Move::Isobaric iso(mcp,pot,spc);
   Move::TranslateRotate gmv(mcp,pot,spc);
   Move::AtomicTranslation mv(mcp, pot, spc);
+  Move::AtomicTranslation mv2(mcp, pot, spc, "ball");
   Move::SwapMove tit(mcp,pot,spc);
   Move::CrankShaft crank(mcp, pot, spc);
   Move::Pivot pivot(mcp, pot, spc);
@@ -84,11 +95,9 @@ int main(int argc, char** argv) {
   Analysis::LineDistribution<float,int> surfdist(0.25);
   Analysis::ChargeMultipole mpol;
   Analysis::PolymerShape shape;
+  std::map< string , Analysis::LineDistribution<float,int> > surfmap;
 
   spc.load(textio::prefix+"state");
-
-  for (int i=0; i<pol[0].size()-1; i++)
-    mpi.cout << spc.geo->dist( spc.p[i], spc.p[i+1]) << endl;
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );
 
@@ -101,14 +110,23 @@ int main(int argc, char** argv) {
       int k,i=rand() % 5;
       switch (i) {
         case 0: // translate and rotate molecules
-          k=pol.size();
+          k=pol.size();//+ball.size();
           while (k-->0) {
-            gmv.setGroup( pol[ rand() % pol.size() ] );
-            sys+=gmv.move();
+            int s=rand()%2;
+            if (s==1) {
+              gmv.setGroup( pol.at( rand() % pol.size() ) );
+              sys+=gmv.move(); 
+            }
+            else {
+              mv2.setGroup(ball); //atomic translate move
+              sys+=mv2.move(1); 
+            }
           }
 #ifdef SLIT
-          for (auto &g : pol)
-            surfdist( gouy->dist2surf(g.cm) )++;   // polymer mass center to GC surface histogram
+          for (auto &g : pol) {
+            surfmap[g.name]( gouy->dist2surf(g.cm) )++;
+            surfdist( gouy->dist2surf(g.cm) )++; // polymer mass center to GC surface histogram
+          }
 #endif
           for (auto i=pol.begin(); i!=pol.end()-1; i++)
             for (auto j=i+1; j!=pol.end(); j++)
@@ -126,7 +144,7 @@ int main(int argc, char** argv) {
           sys+=tit.move();
           mpol.sample(pol,spc);
           break;
-        case 3:
+        case 3: // crankshaft move
           k=pol.size();
           while (k-->0) {
             crank.setGroup( pol[ rand() % pol.size() ] );
@@ -137,7 +155,7 @@ int main(int argc, char** argv) {
             shape.sample(g,spc);
           }
           break;
-        case 4:
+        case 4: //pivot move
           k=pol.size();
           while (k-->0) {
             pivot.setGroup( pol[ rand() % pol.size() ] );
@@ -157,6 +175,12 @@ int main(int argc, char** argv) {
         xtc.setbox( nonbonded->geometry.len );
         xtc.save(textio::prefix+"traj.xtc", spc);
       }
+#ifdef SLIT
+      if ( slp_global.runtest(0.0001) ) {
+        
+
+      }
+#endif
     } // end of micro loop
 
     temper.setCurrentEnergy( sys.current() );
@@ -169,7 +193,7 @@ int main(int argc, char** argv) {
 
   } // end of macro loop
 
-  mpi.cout << loop.info() << sys.info() << gmv.info() << tit.info() << mv.info() 
+  mpi.cout << loop.info() << sys.info() << gmv.info() << tit.info() << mv.info() << mv2.info() 
     << crank.info() << pivot.info() << temper.info() //<< iso.info()
     << mpol.info()  << shape.info();   
 
@@ -178,4 +202,6 @@ int main(int argc, char** argv) {
   pqr.save(textio::prefix+"confout.pqr", spc.p);
   mcp.save(textio::prefix+"mdout.mdp");
   spc.save(textio::prefix+"state");
+  for (auto &g : pol) 
+    surfmap[g.name].save(textio::prefix+g.name+"surfdist.dat");
 }

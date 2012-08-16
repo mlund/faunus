@@ -253,6 +253,7 @@ namespace Faunus {
      * \date Lund 2012
      *
      * Explain what this move does and how to use it...
+     * \image html polymerdisplacements.jpg "Polymer Moves"
      */
     class CrankShaft : public Movebase {
       private:
@@ -284,6 +285,7 @@ namespace Faunus {
      * This will perform a pivot rotation of a linear polymer by the following steps:
      * \li Select rotation axis by two random monomers, spanning \c minlen to \c maxlen bonds
      * \li Rotate monomers before or after end points of the above axis
+     * \image html polymerdisplacements.jpg "Polymer Moves"
      *
      * \author Mikael Lund
      * \date Asljunga 2012

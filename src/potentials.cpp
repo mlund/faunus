@@ -194,6 +194,7 @@ namespace Faunus {
    
     /*!
      * \param in InputMap is scanned for the keyword \c lj_eps and should be in units of kT
+     * \param pfx InputMap prefix
      */
     R12Repulsion::R12Repulsion(InputMap &in, string pfx) {
       name="r12-Repulsion";

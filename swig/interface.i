@@ -82,17 +82,17 @@
 %template(vecGroupAtomic) std::vector<Faunus::GroupAtomic>;
 
 /* Energy classes */
-%template(Energy_Nonbonded_DebyeHuckelLJ_Cuboid)
+%template(Nonbonded_DebyeHuckelLJ_Cuboid)
 Faunus::Energy::Nonbonded<Faunus::Potential::DebyeHuckelLJ, Faunus::Geometry::Cuboid>;
-%template(Energy_Nonbonded_DebyeHuckelLJ_Sphere)
+%template(Nonbonded_DebyeHuckelLJ_Sphere)
 Faunus::Energy::Nonbonded<Faunus::Potential::DebyeHuckelLJ, Faunus::Geometry::Sphere>;
 
-%template(Energy_Nonbonded_CoulombLJ_Cuboid)
+%template(Nonbonded_CoulombLJ_Cuboid)
 Faunus::Energy::Nonbonded<Faunus::Potential::CoulombLJ, Faunus::Geometry::Cuboid>;
-%template(Energy_Nonbonded_CoulombLJ_Sphere)
+%template(Nonbonded_CoulombLJ_Sphere)
 Faunus::Energy::Nonbonded<Faunus::Potential::CoulombLJ, Faunus::Geometry::Sphere>;
 
-%template(Energy_Nonbonded_CoulombHS_Sphere)
+%template(Nonbonded_CoulombHS_Sphere)
 Faunus::Energy::Nonbonded<Faunus::Potential::CoulombHS, Faunus::Geometry::Sphere>;
 
 /* Simulate typedefs */

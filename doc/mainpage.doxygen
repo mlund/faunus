@@ -3,7 +3,7 @@ Here you will find automatically generated documentation for the C++ classes in 
 Being continuously developed, we do not guarantee that the code nor documentation is correct so please
 check your results carefully!
 
-\section mainclasses Important Classes:
+\section mainclasses Important Classes
 A good place to start is to understand the following classes. Also, for a more grouped overview do have
 a look at the Namespace list.
 
@@ -26,7 +26,11 @@ Below is a minimal example that performs a Metropolis Monte Carlo simulation of 
 A cubic simulation geometry with periodic boundaries and the minimum image convention is used. Statistics about
 sampling, acceptance and mean square displacemets are printed at the end of the simulation.
 \include minimal.cpp
-
+Or if you prefer python,
+\include minimal.py
+The two input files, \c minimal.atoms and \c minimal.input look like this:
+\include minimal.atoms
+\include minimal.input
 */
 
 

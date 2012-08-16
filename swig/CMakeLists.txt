@@ -27,8 +27,13 @@ if (SWIG_FOUND)
     SWIG_LINK_LIBRARIES(pyfaunus libfaunus ${PYTHON_LIBRARIES})
 
     if (PYTHONINTERP_FOUND)
-      add_test(SWIG_python_module ${PYTHON_EXECUTABLE} "-c" "import pyfaunus as f; print f.splash(); help(f)")
+      add_test(SWIG_python_module ${PYTHON_EXECUTABLE} "-c" "import pyfaunus as f; print f.splash()")
       set_tests_properties(SWIG_python_module PROPERTIES WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/swig")
+
+      add_test(SWIG_minimal_python ${PYTHON_EXECUTABLE} "minimal.py")
+      set_tests_properties(SWIG_minimal_python PROPERTIES
+        ENVIRONMENT PYTHONPATH=${CMAKE_BINARY_DIR}/swig/
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/src/examples/" )
     endif()
 
   endif()

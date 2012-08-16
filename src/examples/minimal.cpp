@@ -2,7 +2,6 @@
 using namespace Faunus;                               // use Faunus namespace
 typedef Geometry::Cuboid Tgeo;                        // select simulation geometry and pair potential
 typedef Potential::CombinedPairPotential<Potential::Coulomb, Potential::LennardJones> Tpair;
-
 int main() {
   atom.includefile("minimal.atoms");                  // load atom properties
   InputMap in("minimal.input");                       // open parameter file for user input

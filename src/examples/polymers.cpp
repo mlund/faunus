@@ -143,4 +143,6 @@ int main() {
   // print information
   cout << loop.info() << sys.info() << mv.info() << gmv.info() << crank.info()
     << pivot.info() << iso.info() << shape.info() << test.info();
+
+  return test.numFailed();
 }

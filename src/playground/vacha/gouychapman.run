@@ -53,6 +53,7 @@ lj_eps                 0.05    # kT
 gouychapman_rho        0.0033333
 squarewell_threshold   2.5     # surface distance in angstrom
 squarewell_depth       2.0     # kT
+g2g_cufoff             20      # angstrom
 
 cuboid_len             $boxlen # Box side length Angstrom
 transrot_transdp       $tdp    # Molecular translation parameter

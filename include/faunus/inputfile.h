@@ -86,6 +86,7 @@ namespace Faunus {
       UnitTest(InputMap&);          //!< Constructor using InputMap
       bool operator()(const string&, double, double=0.1); //!< Check or set value
       string info(); //!< Information about passed and failed tests
+      int numFailed() const; //!< Return number of failed tests - i.e. zero if flawless
   };
 
 }//namespace

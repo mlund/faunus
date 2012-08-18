@@ -5,6 +5,8 @@
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/group.h>
+#include <faunus/inputfile.h>
+#include <faunus/space.h>
 #include <faunus/textio.h>
 #include <faunus/potentials.h>
 #include <faunus/auxiliary.h>
@@ -79,7 +81,7 @@ namespace Faunus {
      */
     template<class Tpairpot, class Tgeometry>
       class Nonbonded : public Energybase {
-        private:
+        protected:
           string _info() {
             return pairpot.info(25);
           }
@@ -194,30 +196,62 @@ namespace Faunus {
           }
       };
 
+    /*!
+     * \brief Nonbonded interactions with group-group cutoff
+     *
+     * This class re-implements the g2g energy function (group to group)
+     * and checks of the mass center distance is larger than a certain
+     * cut-off. If so zero is returned - otherwise the usual g2g function
+     * from the parent class. The cut-off is observed only between groups
+     * where isMolecular() is true.
+     */
     template<class Tpairpot, class Tgeometry>
-      class Nonbonded_CG : public Nonbonded<Tpairpot, Tgeometry> {
+      class NonbondedCut : public Nonbonded<Tpairpot, Tgeometry> {
         using Nonbonded<Tpairpot,Tgeometry>::geo;
         using Nonbonded<Tpairpot,Tgeometry>::name;
+        private:
+        Space* spcPtr;
+        unsigned int cnt, cntfull;
+        double sqcut; //!< Squared cut-off mass-center distance
+        string _info() {
+          char w=25;
+          using namespace textio;
+          std::ostringstream o;
+          o << Nonbonded<Tpairpot, Tgeometry>::_info()
+            << pad(SUB,w,"Group-Group cut-off") << sqrt(sqcut) << _angstrom << "\n";
+          if (cnt>0)
+            o << pad(SUB,w,"Cut-off fraction") << 1-cntfull/double(cnt) << "\n";
+          return o.str();
+        }
         public:
-        double cut;
-        Nonbonded_CG(InputMap &in) : Nonbonded<Tpairpot, Tgeometry>(in) {
-          name+="(Molecular Group CG)";
+        NonbondedCut(InputMap &in) : Nonbonded<Tpairpot, Tgeometry>(in) {
+          sqcut = pow( in.get<double>("g2g_cutoff",pc::infty), 2);
+          name+="(Molecular Group Cutoff)";
+          spcPtr=nullptr;
+          cnt=cntfull=0;
         }
 
         /*!
-         * \warning Why sqdist to trial?? Are we sure this g2g is called? (the override keyword is not working!)
+         * \brief Specify simulation Space. Needed to distinguish trial configurations
+         *        from old ones.
          */
+        void setSpace(Space &spc) { spcPtr=&spc; }
+
         double g2g(const p_vec &p, Group &g1, Group &g2) {
-          if (g1.isMolecular()) {
-            if (g2.isMolecular()) {
-              if ( geo->sqdist(g1.cm_trial, g2.cm_trial) > cut*cut ) {
-                //const GroupMolecular& m1 = static_cast<const GroupMolecular&>(g1);
-                //const GroupMolecular& m2 = static_cast<const GroupMolecular&>(g2);
-                return 0; // v2v(m1.cg, m2.cg)
-              }
+          cnt++;
+          assert(spcPtr!=nullptr && "You forgot to set Space.");
+          if (g1.isMolecular()) {         // only between molecular groups
+            if (g2.isMolecular()) {       // -//-
+              if ( &p==&spcPtr->trial ) { // new or old particle vector?
+                if ( geo->sqdist(g1.cm_trial, g2.cm_trial) > sqcut )
+                  return 0;
+              } else
+                if ( geo->sqdist(g1.cm, g2.cm) > sqcut )
+                  return 0;
             }
           }
-          return Nonbonded<Tpairpot, Tgeometry>::g2g(p,g1,g2);
+          cntfull++;
+          return Nonbonded<Tpairpot, Tgeometry>::g2g(p,g1,g2); // full energy
         }
       };
 
@@ -657,7 +691,7 @@ namespace Faunus {
      * pot.add( atom["Na"].id, atom["Na"].id, Potential::Coulomb(...) );
      * \endcode
      */
-     class PairListID : public GeneralPairList<particle::Tid> {
+    class PairListID : public GeneralPairList<particle::Tid> {
       private:
         static pair_permutable<particle::Tid> makepair(const particle&, const particle&);
         string _info();
@@ -665,48 +699,48 @@ namespace Faunus {
         PairListID();
     };
 
-     /*!
-      * \brief Custom potential based on hydrophobic tag 
-      *
-      * \code
-      * Energy::PairListHydrophobic pot;
-      * pot.add(true, true, Potential::SquareWell(...) ); // square well between hydrophobic particles
-      * pot.add(false,false,Potential::Coulomb(...) );    // coulomb if not...
-      * \endcode
-      */
-     class PairListHydrophobic : public GeneralPairList<particle::Thydrophobic> {
-       private:
-         static pair_permutable<particle::Thydrophobic> makepair(const particle&, const particle&);
-         string _info();
-       public:
-         PairListHydrophobic();
-     };
+    /*!
+     * \brief Custom potential based on hydrophobic tag 
+     *
+     * \code
+     * Energy::PairListHydrophobic pot;
+     * pot.add(true, true, Potential::SquareWell(...) ); // square well between hydrophobic particles
+     * pot.add(false,false,Potential::Coulomb(...) );    // coulomb if not...
+     * \endcode
+     */
+    class PairListHydrophobic : public GeneralPairList<particle::Thydrophobic> {
+      private:
+        static pair_permutable<particle::Thydrophobic> makepair(const particle&, const particle&);
+        string _info();
+      public:
+        PairListHydrophobic();
+    };
 
-     /*!
-      * \brief Excess chemical potential of charged particles, based on Debye-Huckel theory
-      * \warning Untested
-      */
-     class DebyeHuckelActivity : public Energybase {
-       private:
-         string _info();
-         Potential::DebyeHuckel dh;
-       public:
-         DebyeHuckelActivity(InputMap&);                    //!< Constructor - read input parameters
-         double i_external(const p_vec&, int) FOVERRIDE;
-         double g_external(const p_vec&, Group&) FOVERRIDE;
-         double p_external(const particle&) FOVERRIDE;
-     };
+    /*!
+     * \brief Excess chemical potential of charged particles, based on Debye-Huckel theory
+     * \warning Untested
+     */
+    class DebyeHuckelActivity : public Energybase {
+      private:
+        string _info();
+        Potential::DebyeHuckel dh;
+      public:
+        DebyeHuckelActivity(InputMap&);                    //!< Constructor - read input parameters
+        double i_external(const p_vec&, int) FOVERRIDE;
+        double g_external(const p_vec&, Group&) FOVERRIDE;
+        double p_external(const particle&) FOVERRIDE;
+    };
 
-     /*!
-      * \brief Calculates the total system energy
-      *
-      * For a given particle vector, space, and energy class we try to calculate the
-      * total energy taking into account inter- and intra-molecular interactions as well
-      * as external potentials. While this may not work for all systems it may be a useful
-      * first guess. This is the default energy routine for Move::ParallelTempering and may
-      * also be used for checking energy drifts.
-      */
-     double systemEnergy(Space&, Energy::Energybase&, const p_vec&);
+    /*!
+     * \brief Calculates the total system energy
+     *
+     * For a given particle vector, space, and energy class we try to calculate the
+     * total energy taking into account inter- and intra-molecular interactions as well
+     * as external potentials. While this may not work for all systems it may be a useful
+     * first guess. This is the default energy routine for Move::ParallelTempering and may
+     * also be used for checking energy drifts.
+     */
+    double systemEnergy(Space&, Energy::Energybase&, const p_vec&);
 
   }//Energy namespace
 }//Faunus namespace

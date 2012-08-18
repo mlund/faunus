@@ -26,13 +26,15 @@ int main(int argc, char** argv) {
   EnergyDrift sys;                     // class for tracking system energy drifts
 
   Energy::Hamiltonian pot;
-  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
+  auto nonbonded = pot.create( Energy::NonbondedCut<Tpairpot,Tgeometry>(mcp) );
   auto gouy      = pot.create( Energy::GouyChapman(mcp) );
   gouy->setPosition( nonbonded->geometry.len_half.z );
   //auto bonded    = pot.create( Energy::PairListHydrophobic() );
   //bonded->add(true, true, SquareWellHydrophobic(mcp) );
 
   Space spc( pot.getGeometry() );
+
+  nonbonded->setSpace(spc);
 
   // Add rigid molecules
   vector<GroupMolecular> pol( mcp.get("polymer_N",0));
@@ -96,6 +98,5 @@ int main(int argc, char** argv) {
 
   } // end of macro loop
 
-  cout << loop.info() << sys.info() << gmv.info();   
-
+  cout << loop.info() << nonbonded->info() << sys.info() << gmv.info();   
 }

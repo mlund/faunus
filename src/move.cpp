@@ -314,11 +314,20 @@ namespace Faunus {
       for (auto i : *igroup)
         if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
           return pc::infty;
+
       double unew = pot->g_external(spc->trial, *igroup);
       if (unew==pc::infty)
-        return pc::infty;   // early rejection!
-      unew += pot->g2all(spc->trial, *igroup);
-      double uold = pot->g2all(spc->p, *igroup) + pot->g_external(spc->p, *igroup);
+        return pc::infty;       // early rejection
+      double uold = pot->g_external(spc->p, *igroup);
+
+      for (auto g : spc->groupList()) {
+        if (g!=igroup) {
+          unew += pot->g2g(spc->trial, *g, *igroup);
+          if (unew==pc::infty)
+            return pc::infty;   // early rejection
+          uold += pot->g2g(spc->p, *g, *igroup);
+        }
+      }
       return unew-uold;
     }
 
@@ -372,7 +381,7 @@ namespace Faunus {
     }
 
     TranslateRotateCluster::~TranslateRotateCluster() {}
-    
+
     void TranslateRotateCluster::setMobile(Group &g) {
       assert(&g!=nullptr);
       gmobile=&g;
@@ -507,7 +516,7 @@ namespace Faunus {
       if (dp<1e-6)
         runfraction=0;
     }
-    
+
     CrankShaft::~CrankShaft() {}
 
     void CrankShaft::_trialMove() {
@@ -546,12 +555,12 @@ namespace Faunus {
         du += pot->i_external(spc->trial, i) - pot->i_external(spc->p, i)
           + pot->i2all(spc->trial, i) - pot->i2all(spc->p, i);
       /* not needed!!
-      int n=(int)index.size();
-      for (int i=0; i<n-1; i++)
-        for (int j=i+1; j<n; j++)
-          du -= pot->i2i( spc->trial, index[i], index[j] )
-            - pot->i2i( spc->p, index[i], index[j] );
-            */
+         int n=(int)index.size();
+         for (int i=0; i<n-1; i++)
+         for (int j=i+1; j<n; j++)
+         du -= pot->i2i( spc->trial, index[i], index[j] )
+         - pot->i2i( spc->p, index[i], index[j] );
+         */
       return du;
     }
 
@@ -975,7 +984,7 @@ namespace Faunus {
       haveCurrentEnergy=false;
       temperPath.open(textio::prefix+"temperpath.dat");
     }
-    
+
     ParallelTempering::~ParallelTempering() {}
 
     void ParallelTempering::setEnergyFunction( std::function<double (Space&,Energy::Energybase&,const p_vec&)> f ) {

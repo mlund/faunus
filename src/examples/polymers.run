@@ -63,7 +63,12 @@ echo "4
 #-----------------------------------------------------------
 # Run simulation
 #-----------------------------------------------------------
-./polymers
-
-rm -f confout.gro polymers.input polymers.aam polymers.atoms
+exe=./polymers
+if [ -x $exe ]; then
+  $exe
+  rc=$?
+  rm -f confout.gro polymers.input polymers.aam polymers.atoms
+  exit $rc
+fi
+exit 1
 

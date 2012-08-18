@@ -98,6 +98,8 @@ namespace Faunus {
     return true;
   }
 
+  int UnitTest::numFailed() const { return (int)failed.size(); }
+
   string UnitTest::info() {
     short w=37;
     using namespace Faunus::textio;

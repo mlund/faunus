@@ -70,12 +70,12 @@ int main(int argc, char** argv) {
 
   while ( loop.macroCnt() ) {                      // Markov chain 
     while ( loop.microCnt() ) {
-      int k,i=rand() % 1;
+      int k,i=slp_global.rand() % 1;
       switch (i) {
         case 0:                                    // translate and rotate molecules
           k=pol.size();
           while (k-->0) {
-            gmv.setGroup( pol[ rand() % pol.size() ] );
+            gmv.setGroup( pol[ slp_global.rand() % pol.size() ] );
             sys+=gmv.move();
           }
 
@@ -103,13 +103,12 @@ int main(int argc, char** argv) {
 
     cout << loop.timing();
 
+    rdf.save(textio::prefix+"rdf_p2p.dat");
+    surfdist.save(textio::prefix+"surfdist.dat");
+    pqr.save(textio::prefix+"confout.pqr", spc.p);
+    spc.save(textio::prefix+"state");
+
   } // end of macro loop
-
-  rdf.save(textio::prefix+"rdf_p2p.dat");
-  surfdist.save(textio::prefix+"surfdist.dat");
-  pqr.save(textio::prefix+"confout.pqr", spc.p);
-  spc.save(textio::prefix+"state");
-
 
   cout << loop.info() << nonbonded->info() << sys.info() << gmv.info();   
 #ifdef TEMPER

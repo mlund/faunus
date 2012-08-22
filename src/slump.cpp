@@ -76,6 +76,7 @@ namespace Faunus {
     RNMX=1.0-3.0e-16;
     iy=0;
     idum2=123456789;
+    seed(-13);
   }
 
   double RandomRan2::randOne()  {

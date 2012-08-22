@@ -18,6 +18,10 @@ set_target_properties( akurut-gouychapman-slit PROPERTIES COMPILE_DEFINITIONS "S
 # Robert's playground
 fau_example(vacha-gouychapman "./vacha" gouychapman.cpp)
 
+fau_example(vacha-gouychapman-temper "./vacha" gouychapman.cpp)
+set_target_properties( vacha-gouychapman-temper
+  PROPERTIES COMPILE_DEFINITIONS "TEMPER")
+
 fau_cigarexample(cigar "./vacha" cigar.cpp)
 set_target_properties( cigar PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
 

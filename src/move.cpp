@@ -1040,6 +1040,11 @@ namespace Faunus {
         pt.waitrecv();
         pt.waitsend();
 
+        // update group trial mass-centers. Needed if energy calc. uses
+        // cm_trial for cut-offs, for example
+        for (auto g : spc->groupList())
+          g->cm_trial = Geometry::massCenter(*spc->geo, spc->trial, *g);
+
         // debug assertions
         assert(pt.recvExtra[VOLUME]>1e-6 && "Invalid partner volume received.");
         assert(spc->p.size() == spc->trial.size() && "Particle vectors messed up by MPI");
@@ -1109,7 +1114,7 @@ namespace Faunus {
         for (size_t i=0; i<spc->p.size(); i++)
           spc->p[i] = spc->trial[i];  // copy new configuration
         for (auto g : spc->groupList())
-          g->setMassCenter(*spc); // update mass centra if swap is accepted
+          g->cm = g->cm_trial;
       }
     } 
 
@@ -1119,6 +1124,8 @@ namespace Faunus {
         accmap[ id() ] += 0;
         for (size_t i=0; i<spc->p.size(); i++)
           spc->trial[i] = spc->p[i];   // restore old configuration
+        for (auto g : spc->groupList())
+          g->cm_trial = g->cm;
       }
     }
 

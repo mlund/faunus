@@ -16,6 +16,11 @@ typedef CombinedPairPotential<DebyeHuckelr12,SquareWellHydrophobic> Tpairpot;
 
 int main(int argc, char** argv) {
 
+#ifdef TEMPER
+  #define cout mpi.cout
+  Faunus::MPI::MPIController mpi;
+#endif
+
   cout << textio::splash();
 
   InputMap mcp(textio::prefix+"gouychapman.input");
@@ -49,6 +54,9 @@ int main(int argc, char** argv) {
   }
 
   Move::TranslateRotate gmv(mcp,pot,spc);
+#ifdef TEMPER
+  Move::ParallelTempering temper(mcp,pot,spc,mpi);
+#endif
 
   Analysis::RadialDistribution<float,int> rdf(0.25);
   Analysis::LineDistribution<float,int> surfdist(0.25);
@@ -86,17 +94,25 @@ int main(int argc, char** argv) {
         xtc.save(textio::prefix+"traj.xtc", spc);  // gromacs xtc file output
       }
     } // end of micro loop
+#ifdef TEMPER
+    temper.setCurrentEnergy( sys.current() );
+    sys+=temper.move();
+#endif
 
     sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) );
 
     cout << loop.timing();
 
-    rdf.save(textio::prefix+"rdf_p2p.dat");
-    surfdist.save(textio::prefix+"surfdist.dat");
-    pqr.save(textio::prefix+"confout.pqr", spc.p);
-    spc.save(textio::prefix+"state");
-
   } // end of macro loop
 
+  rdf.save(textio::prefix+"rdf_p2p.dat");
+  surfdist.save(textio::prefix+"surfdist.dat");
+  pqr.save(textio::prefix+"confout.pqr", spc.p);
+  spc.save(textio::prefix+"state");
+
+
   cout << loop.info() << nonbonded->info() << sys.info() << gmv.info();   
+#ifdef TEMPER
+  cout << temper.info();
+#endif
 }

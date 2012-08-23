@@ -222,7 +222,7 @@ namespace Faunus {
         o << pad(SUB,w,"Average moves/particle") << cnt / gsize.avg() << endl;
       o << pad(SUB,w,"Displacement vector") << dir << endl;
       if (genericdp>1e-6)
-	o << pad(SUB,w,"Generic displacement") << genericdp << _angstrom << endl;
+        o << pad(SUB,w,"Generic displacement") << genericdp << _angstrom << endl;
       if (cnt>0) {
         o << endl
           << indent(SUB) << "Individual particle movement:" << endl << endl
@@ -455,7 +455,7 @@ namespace Faunus {
     double TranslateRotateCluster::_energyChange() {
       double bias=1;             // cluster bias -- see Frenkel 2nd ed, p.405
       vector<int> imoved=cindex; // index of moved particles
-      for (auto l : *gmobile)
+      for (auto l : *gmobile)    // mobile index, "l", NOT in cluster (Frenkel's "k" is the main group)
         if (std::find(cindex.begin(), cindex.end(), l)==cindex.end())
           bias *= ( 1-ClusterProbability(spc->trial, l) ) / ( 1-ClusterProbability(spc->p, l) );
       avgbias += bias;
@@ -492,7 +492,7 @@ namespace Faunus {
         if ( std::find(imoved.begin(), imoved.end(), j )==imoved.end() )
           for (auto i : imoved)
             du += pot->i2i(spc->trial, i, j) - pot->i2i(spc->p, i, j);
-      return unew - uold + du - log(bias);
+      return unew - uold + du - log(bias); // exp[ -( dU-log(bias) ) ] = exp(-dU)*bias
     }
 
     double TranslateRotateCluster::ClusterProbability(p_vec &p, int i) {

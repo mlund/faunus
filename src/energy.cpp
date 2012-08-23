@@ -116,7 +116,7 @@ namespace Faunus {
       if (&e.getGeometry()==nullptr) {
         if (baselist.empty()) {
           string s="Error! First Energybase class must have a well defined geometry!\n";
-          assert(!"Error!");
+          assert(!"error");
           std::cerr << s;
           return;
         }
@@ -209,7 +209,7 @@ namespace Faunus {
       return u;
     }
 
-    /*
+    /*!
      * For early rejection we do a reverse loop over energy
      * classes to test if the energy is infinity. Reverse
      * because constraining energy classes are often added

@@ -224,7 +224,7 @@ namespace Faunus {
      * determined by the private virtual function ClusterProbability(). By default this is a simple
      * step function with P=1 when an atomic particle in the group set by setMobile is closer
      * than a certain threshold to a particle in the main group; P=0 otherwise.
-     * The implemented cluster algorithm is general - see Frenkel and Smith, 2nd ed, p405 - and derived classes
+     * The implemented cluster algorithm is general - see Frenkel&Smith, 2nd ed, p405 - and derived classes
      * can re-implement ClusterProbability() for arbitrary probability functions.
      */
     class TranslateRotateCluster : public TranslateRotate {

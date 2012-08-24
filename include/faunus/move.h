@@ -248,6 +248,42 @@ namespace Faunus {
     };
 
     /*!
+     * \brief Non-rejective cluster translation.
+     *
+     * This type of move will attempt to move collective sets of macromolecules that
+     * obeys some criteria (here a hardcore overlap(?)) with a symmetric transition
+     * matrix (no flow through the clusters).
+     *
+     * Setting the boolen "skipEnergyUpdate" to true (default is false) updates of the
+     * total energy are skipped to speed up the move.
+     * While this has no influence on the Markov chain it will cause an apparent energy
+     * drift. It is recommended that this is enabled only for long production runs after
+     * having properly checked that no drifts occur with skipEnergyUpdate=false.
+     *
+     * \author Bjoern Persson
+     * \date Lund 2009-2010
+     * \note Requirements for usage:
+     * \li Compatible only with purely molecular systems
+     * \li Works only with periodic containers
+     * \li External potentials are ignored
+     */
+    class ClusterTranslateNR : public Movebase {
+      private:
+        vector<int> moved, remaining;
+        void _trialMove();
+        void _acceptMove();
+        void _rejectMove();
+        double _energyChange();
+        string _info();
+        Average<double> movefrac; //!< Fraction of particles moved
+        double dp;                //!< Displacement parameter [aa]
+        vector<Group*> g;         //!< Group of molecules to move. Currently this needs to be ALL groups in the system!!
+      public:
+        ClusterTranslateNR(InputMap&, Energy::Energybase&, Space&, string="ctransnr");
+        bool skipEnergyUpdate;    //!< True if energy updates should be skipped (faster evaluation!)
+    };
+
+    /*!
      * \brief Crank shaft move of linear polymers
      * \author Kurut, Henriques, Lund ???
      * \date Lund 2012

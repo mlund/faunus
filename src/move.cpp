@@ -505,6 +505,77 @@ namespace Faunus {
       return 0;
     }
 
+    ClusterTranslateNR::ClusterTranslateNR(InputMap &in, Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
+      title="Rejection Free Cluster Translation";
+      cite="doi:10.1103/PhysRevLett.92.035504";
+      useAlternateReturnEnergy=true;
+      dp=in.get<double>("ctransnr_dp", 0);
+      skipEnergyUpdate=in.get<bool>("ctransnr_skipenergy", false);
+      g=spc->groupList(); // currently ALL groups in the system will be moved!
+    }
+
+    string ClusterTranslateNR::_info() {
+      std::ostringstream o;
+      o << pad(SUB,w,"Displacement") << dp << _angstrom << endl
+        << pad(SUB,w,"Skip energy update") << ((skipEnergyUpdate==false) ? "no" : "yes (energy drift!)") << endl;
+      if (movefrac.cnt>0)
+        o << pad(SUB,w,"Move fraction") << movefrac.avg() << endl;
+      return o.str();
+    }
+
+    void ClusterTranslateNR::_trialMove() {
+      double du=0;
+      moved.clear();
+      remaining.clear();
+
+      if (skipEnergyUpdate==false)
+#pragma omp parallel for reduction (+:du) schedule (dynamic)
+        for (size_t i=0; i<g.size()-1; i++)
+          for (size_t j=i+1; j<g.size(); j++)
+            du-=pot->g2g(spc->p, *g[i], *g[j]);
+
+      Point ip(dp,dp,dp);
+      ip.x*=slp_global.randHalf();
+      ip.y*=slp_global.randHalf();
+      ip.z*=slp_global.randHalf();
+
+      for (size_t i=0; i<g.size(); i++)
+        remaining.push_back(i);
+      int f=slp_global.randOne()*remaining.size();
+      moved.push_back(remaining[f]);
+      remaining.erase(remaining.begin()+f);    // Pick first index in m to move
+
+      for (size_t i=0; i<moved.size(); i++) {
+        g[moved[i]]->translate(*spc, ip);
+        for (size_t j=0; j<remaining.size(); j++) {
+          double uo=pot->g2g(spc->p,     *g[moved[i]], *g[remaining[j]]);
+          double un=pot->g2g(spc->trial, *g[moved[i]], *g[remaining[j]]);
+          double udiff=un-uo;
+          if (slp_global.randOne() < (1.-std::exp(-udiff)) ) {
+            moved.push_back(remaining[j]);
+            remaining.erase(remaining.begin()+j);
+            j=j-1;
+          }
+        }
+        g[moved[i]]->accept(*spc);
+      }
+
+      if (skipEnergyUpdate==false)
+#pragma omp parallel for reduction (+:du) schedule (dynamic)
+        for (size_t i=0; i<g.size()-1; i++)
+          for (size_t j=i+1; j<g.size(); j++)
+            du+=pot->g2g(spc->p, *g[i], *g[j]);
+
+      alternateReturnEnergy=du;
+      movefrac+=double(moved.size()) / double((moved.size()+remaining.size()));
+    }
+
+    double ClusterTranslateNR::_energyChange() { return 0; }
+
+    void ClusterTranslateNR::_acceptMove() {}
+
+    void ClusterTranslateNR::_rejectMove() {}
+
     CrankShaft::CrankShaft(InputMap &in, Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="CrankShaft";
       w=30;

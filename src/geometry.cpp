@@ -406,7 +406,7 @@ namespace Faunus {
         cm += t * p[i].mw;
         sum += p[i].mw;
       }
-      assert(sum>0 && "Group has zero mass. Did you forget to assign atom weights?");
+      if (sum<1e-6) sum=1;
       cm=cm*(1/sum) + o;
       geo.boundary(cm);
       return cm;

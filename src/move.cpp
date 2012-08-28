@@ -1039,7 +1039,7 @@ namespace Faunus {
 #ifdef ENABLE_MPI
     ParallelTempering::ParallelTempering(
         InputMap &in,
-        Energy::Hamiltonian &e,
+        Energy::Energybase &e,
         Space &s,
         Faunus::MPI::MPIController &mpi,
         string pfx) : Movebase(e,s,pfx), mpiPtr(&mpi) {
@@ -1053,7 +1053,7 @@ namespace Faunus {
       pt.setFormat( in.get<string>(prefix+"_format", "XYZQI") );
       setEnergyFunction( Energy::systemEnergy );
       haveCurrentEnergy=false;
-      temperPath.open(textio::prefix+"temperpath.dat");
+      //temperPath.open(textio::prefix+"temperpath.dat");
     }
 
     ParallelTempering::~ParallelTempering() {}

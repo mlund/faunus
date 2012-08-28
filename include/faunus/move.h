@@ -494,14 +494,14 @@ namespace Faunus {
         double _energyChange();
         std::ofstream temperPath;
 
-        Energy::Hamiltonian* hamiltonian;   //!< Hamiltonian class needed for volume displacement
+        Energy::Energybase* hamiltonian;   //!< Hamiltonian class needed for volume displacement
         Faunus::MPI::MPIController *mpiPtr; //!< Controller class for MPI calls
         Faunus::MPI::FloatTransmitter ft;   //!< Class for transmitting floats over MPI
         Faunus::MPI::ParticleTransmitter pt;//!< Class for transmitting particles over MPI
         std::function<double (Space&, Energy::Energybase&, const p_vec&)> usys; //!< Defaults to Energy::systemEnergy but can be replaced!
 
       public:
-        ParallelTempering(InputMap&, Energy::Hamiltonian&, Space&, Faunus::MPI::MPIController &mpi, string="temper");
+        ParallelTempering(InputMap&, Energy::Energybase&, Space&, Faunus::MPI::MPIController &mpi, string="temper");
         virtual ~ParallelTempering();
         void setCurrentEnergy(double); //!< Set energy of configuration before move (for increased speed)
         void setEnergyFunction( std::function<double (Space&,Energy::Energybase&,const p_vec&)> );

@@ -51,7 +51,7 @@ namespace Faunus {
          * \param b Second particle
          * \param r2 Squared distance between them (angstrom squared)
          */
-        virtual double operator() (const particle &a, const particle &b, double r2) const=0;
+        virtual double operator() (const particle&, const particle&, double) const=0;
     };
 
     /*!

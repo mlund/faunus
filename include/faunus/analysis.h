@@ -69,7 +69,6 @@ namespace Faunus {
             return cnt;
           }
           Tx dx;
-          virtual ~Table2D() {}
           Tmap map;
           string name;
         private:
@@ -91,6 +90,7 @@ namespace Faunus {
             tabletype=key;
           }
 
+          virtual ~Table2D() {}
 
           /*! \brief Access operator - returns reference to y(x) */
           Ty& operator() (Tx x) {

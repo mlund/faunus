@@ -44,7 +44,7 @@ namespace Faunus {
   string MCLoop::timing(unsigned int mac) {
     using namespace textio;
     std::ostringstream o;
-    o << indent(SUB) << "Macrostep " << std::left << std::setw(4) << mac << "ETA: "
+    o << indent(SUB) << "Macrostep " << std::left << std::setw(5) << mac << "ETA: "
       << cnt.eta(mac) << std::flush;
     return o.str();
   }

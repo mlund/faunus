@@ -8,4 +8,8 @@ fau_example(example_polymers "./" polymers.cpp)
 set_target_properties(example_polymers PROPERTIES OUTPUT_NAME "polymers")
 add_test( example_polymers ${CMAKE_CURRENT_SOURCE_DIR}/polymers.run )
 
+if(ENABLE_MPI AND MPI_CXX_FOUND)
+  fau_example(example_temper "./" temper.cpp)
+  set_target_properties(example_temper PROPERTIES OUTPUT_NAME "temper")
+endif()
 

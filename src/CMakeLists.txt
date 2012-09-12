@@ -35,10 +35,10 @@ if(ENABLE_TWISTER)
 endif()
 
 # -------------------------------------
-#   Use approximate exp() funtion?
+#   Use approximate math funtion?
 # -------------------------------------
-if(ENABLE_FAST_EXP)
-  add_definitions(-DFAU_FAST_EXP)
+if(ENABLE_APPROXMATH)
+  add_definitions(-DFAU_APPROXMATH)
 endif()
 
 # -------------------------------------

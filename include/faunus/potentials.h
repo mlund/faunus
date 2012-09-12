@@ -6,6 +6,7 @@
 #include <faunus/point.h>
 #include <faunus/textio.h>
 #include <faunus/physconst.h>
+#include <faunus/auxiliary.h>
 #endif
 
 namespace Faunus {
@@ -42,7 +43,10 @@ namespace Faunus {
         string name;             //!< Short (preferably one-word) description of the core potential
         string brief();          //!< Brief, one-lined information string
         void setScale(double=1); //!< Set scaling factor
-        double tokT() const;     //!< Convert returned energy to kT.
+        /*! \brief Convert returned energy to kT.*/
+        inline double tokT() const {
+          return _tokT;
+        }
         virtual void setTemperature(double); //!< Set temperature [K]
 
         /*!
@@ -51,7 +55,7 @@ namespace Faunus {
          * \param b Second particle
          * \param r2 Squared distance between them (angstrom squared)
          */
-        virtual double operator() (const particle&, const particle&, double) const=0;
+        virtual double operator() (const particle &a, const particle &b, double r2) const=0;
     };
 
     /*!
@@ -261,7 +265,11 @@ namespace Faunus {
 
         /*! \returns \f$\beta u/l_B\f$ */
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+#ifdef FAU_APPROXMATH
+          return a.charge*b.charge * invsqrtQuake(r2);
+#else
           return a.charge*b.charge / sqrt(r2);
+#endif
         }
         string info(char);
     };
@@ -282,8 +290,13 @@ namespace Faunus {
         DebyeHuckel(InputMap&);                       //!< Construction from InputMap
         /*! \returns \f$\beta w/l_B\f$ */
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+#ifdef FAU_APPROXMATH
+          double rinv = invsqrtQuake(r2);
+          return a.charge * b.charge * rinv * exp_cawley(-k/rinv);
+#else
           double r=sqrt(r2);
-          return a.charge*b.charge / r * exp(-k*r);
+          return a.charge * b.charge / r * exp(-k*r);
+#endif
         }
         double entropy(double, double) const;         //!< Returns the interaction entropy 
         double ionicStrength() const;                 //!< Returns the ionic strength (mol/l)

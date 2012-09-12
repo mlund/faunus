@@ -31,14 +31,6 @@ namespace Faunus {
     void PairPotentialBase::_setScale(double s) {}
    
     /*!
-     * To optimize certain potentials, the returned energy is not required to be
-     * in units of kT. Instead, unit scaling can be done after energy summations,
-     * thereby reducing computational time. Therefore, to convert energy to kT,
-     * multiply with the scaling factor returned by this function.
-     */
-    double PairPotentialBase::tokT() const { return _tokT; }
-
-    /*!
      * This will reset the temperature to the specified value. By default this function
      * does nothing, although in Debug mode it will throw an exception if derived classes
      * does not implement it (and is called).

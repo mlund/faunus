@@ -85,5 +85,45 @@ namespace Faunus {
         }
     };
 
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+  /*!
+   * \brief Quake inverse square root approximation
+   */
+  inline float invsqrtQuake(float number) {
+    assert(sizeof(int)==4 && "Integer size must be 4 bytes for quake invsqrt. Are you using a 32bit system?");
+    const float threehalfs = 1.5F;
+    float x2 = number * 0.5F;
+    float y  = number;
+    int i  = * ( int * ) &y;
+    i  = 0x5f3759df - ( i >> 1 );
+    y  = * ( float * ) &i;
+    y  = y * ( threehalfs - ( x2 * y * y ) );   // 1st iteration
+    //      y  = y * ( threehalfs - ( x2 * y * y ) );   // 2nd iteration, this can be removed
+    return y;
+  }
+#pragma GCC diagnostic pop
+
+//#define EXPA (1048576/0.693147180559945309417)
+//#define EXPC 60801
+  /*!
+   * \brief Approximate exp() function
+   * \note see Cawley 2000; doi:10.1162/089976600300015033
+   * \warning Does not work in big endian systems!
+   */
+  inline double exp_cawley(double y) {
+    static double EXPA=1048576/std::log(2);
+    static double EXPC=60801;
+    union {
+      double d;
+      struct { int j, i; } n;  // little endian
+      //struct { int i, j; } n;  // bin endian
+    } eco;
+    eco.n.i = (int) (EXPA*(y)) + (1072693248 - EXPC);
+    eco.n.j = 0;
+    return eco.d;
+  }
+
 } // end of namespace
 #endif

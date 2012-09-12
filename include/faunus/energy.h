@@ -557,10 +557,9 @@ namespace Faunus {
      * simply a collection of two particle properties. Pairs are created by a function with
      * the signature GeneralPairList::Tpaircreator and one such function must be specified
      * in the constructor. Usually you would want to provide this information though a derived
-     * class.
-     * that contain the pair creation functions.
+     * class that contain the pair creation functions.
      *
-     * \warning Not particularly fast.
+     * \note Not particularly fast.
      * \author Mikael Lund
      * \date Malmo 2012
      */
@@ -663,10 +662,6 @@ namespace Faunus {
             return u;
           }
 
-          /*!
-           * Accounts for bonds between particles within a group. Bonds with particles
-           * outside the group are skipped and should be accounted for by the g2g() energy function.
-           */
           double g_internal(const p_vec &p, Group &g) FOVERRIDE {
             double u=0;
             if ( !g.empty() ) 

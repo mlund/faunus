@@ -1,3 +1,22 @@
+/*!
+ * \page example_minimal Example: Minimal
+ * This is a minimal example of how to set up a simulation within the faunus
+ * framework. Here we simulate charged Lennard-Jones particles in a cubic simulation
+ * box with periodic boundaries and the minimum image convention.
+ * Two input/data files are required and we here show the implementation in both C++
+ * and Python.
+ * \section minimal_cpp minimal.cpp
+ * \include minimal.cpp
+ * \section minimal_py minimal.py
+ * \include minimal.py
+ * \section minimal_input Input
+ * \subsection minimal_atoms minimal.atoms
+ * \include minimal.atoms
+ * \subsection minimal_inputfile minimal.input
+ * \include minimal.input
+ * \section minimal_out Output
+ * \include examples/minimal.out
+ */
 #include <faunus/faunus.h>
 using namespace Faunus;                               // use Faunus namespace
 typedef Geometry::Cuboid Tgeo;                        // select simulation geometry and pair potential

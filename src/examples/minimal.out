@@ -1,0 +1,45 @@
+Reading atom data from 'minimal.atoms'. OK!
+
+ ...............................
+  Simulation Space and Geometry  
+ *******************************
+  Boundary                 Cuboid
+  Volume                   1e+06 Å³ = 1000 nm³ = 1e-21 liters
+  Sidelengths              100 x 100 x 100 (Å)
+  Slice position [x y z]   0-100 0-100 0-100
+  Number of particles      20
+  Electroneutrality        Yes 0
+  System sanity check      Passed
+  Groups:
+    1     [0-19]                               
+
+ .....................
+  Energy: Hamiltonian  
+ *********************
+  Registered Energy Functions:
+    1   Nonbonded N² - Coulomb+Lennard-Jones
+
+ ...............................................
+  Energy: Nonbonded N² - Coulomb+Lennard-Jones  
+ ***********************************************
+  Temperature              298 K
+  Dielectric constant      78.7
+  T∂ϵ/ϵ∂T                  -1.39344
+  Bjerrum length           7.12501 Å
+  ϵ(LJ)                    0.05 kT = 0.123886 kJ/mol
+
+ ..........................................
+  Markov Move: Single Particle Translation  
+ ******************************************
+  Number of trials              100000
+  Acceptance                    81.319﹪
+  Runfraction                   100﹪
+  Total energy change           -1.36031 kT
+  Average moves/particle        5000
+  Displacement vector           1 1 1
+
+  Individual particle movement:
+
+           dp    Acc. ﹪     ⟨r²⟩/Å²     √⟨r²⟩/Å
+    Na     200   81.4        2e+03       44.8        
+    Cl     200   81.2        2.01e+03    44.9        

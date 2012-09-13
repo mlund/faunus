@@ -1,36 +1,37 @@
-/*
-   This will simulate an arbitrary number of linear polymers in an an NPT simulation
-   container with explicit salt particles and implicit solvent (dielectric continuum).
-   We include the following Monte Carlo move:
+/*! \page example_polymers Example: Polymers
+ This will simulate an arbitrary number of linear polymers in an an NPT simulation
+ container with explicit salt particles and implicit solvent (dielectric continuum).
+ We include the following Monte Carlo move:
+ \li salt translation
+ \li polymer translation and rotation
+ \li polymer crankshaft rotation
+ \li polymer pivot rotation
+ \li monomer translation
+ \li isobaric volume move (NPT ensemble)
 
-   1) salt translation
-   2) polymer translation and rotation
-   3) polymer crankshaft rotation
-   4) polymer pivot rotation
-   5) monomer translation
-   6) isobaric volume move (NPT ensemble)
+ Information about the input file can be found in \c polymers.run in the \c src/examples
+ directory.
+ \include examples/polymers.cpp
 */
-
 #include <faunus/faunus.h>
-
 using namespace Faunus;
 
 #ifdef CUBOID
-typedef Geometry::Cuboid Tgeometry;   // specify geometry - here a cube with periodic boundaries
+typedef Geometry::Cuboid Tgeometry;   // specify geometry - here cube w. periodic boundaries
 #else
-typedef Geometry::Sphere Tgeometry;   // here a sphere with hard boundaries
+typedef Geometry::Sphere Tgeometry;   // sphere with hard boundaries
 #endif
-typedef Potential::CoulombHS Tpairpot;// particle pair potential
+typedef Potential::CoulombHS Tpairpot;// particle pair potential: primitive model
 
 int main() {
-  cout << textio::splash();            // show faunus banner and credits
+  cout << textio::splash();           // show faunus banner and credits
   
-  InputMap mcp("polymers.input");      // open user input file
-  MCLoop loop(mcp);                    // class for handling mc loops
-  FormatPQR pqr;                       // PQR structure file I/O
-  FormatAAM aam;                       // AAM structure file I/O
-  EnergyDrift sys;                     // class for tracking system energy drifts
-  UnitTest test(mcp);                  // class for unit testing
+  InputMap mcp("polymers.input");     // open user input file
+  MCLoop loop(mcp);                   // class for handling mc loops
+  FormatPQR pqr;                      // PQR structure file I/O
+  FormatAAM aam;                      // AAM structure file I/O
+  EnergyDrift sys;                    // class for tracking system energy drifts
+  UnitTest test(mcp);                 // class for unit testing
 
   // Energy functions and space
   Energy::Hamiltonian pot;
@@ -52,26 +53,26 @@ int main() {
   salt.name="Salt";
 
   // Add polymers
-  vector<GroupMolecular> pol( mcp.get("polymer_N",0));    // vector of polymers
+  vector<GroupMolecular> pol( mcp.get("polymer_N",0));   // vector of polymers
   string polyfile = mcp.get<string>("polymer_file", "");
   double req    = mcp.get<double>("polymer_eqdist", 0);
   double k      = mcp.get<double>("polymer_forceconst", 0);
   atom["MM"].dp = 10.;
-  for (auto &g : pol) {                                   // load polymers
+  for (auto &g : pol) {                                  // load polymers
     aam.load(polyfile);
     Geometry::FindSpace f;
-    f.find(*spc.geo, spc.p, aam.particles() );            // find empty spot in particle vector
-    g = spc.insert( aam.particles() );                    // insert into space
+    f.find(*spc.geo, spc.p, aam.particles() );           // find empty spot in particle vector
+    g = spc.insert( aam.particles() );                   // insert into space
     g.name="Polymer";
     spc.enroll(g);
     for (int i=g.front(); i<g.back(); i++)
-      bonded->add(i, i+1, Potential::Harmonic(k,req));    // add bonds
+      bonded->add(i, i+1, Potential::Harmonic(k,req));   // add bonds
   }
-  Group allpol( pol.front().front(), pol.back().back() ); // make group w. all polymers
+  Group allpol( pol.front().front(), pol.back().back() );// make group w. all polymers
 
-  spc.load("state");                                      // load old configuration from disk (if any)
+  spc.load("state");                                     // load old config. from disk (if any)
 
-  sys.init( Energy::systemEnergy(spc,pot,spc.p)  );       // store initial total system energy
+  sys.init( Energy::systemEnergy(spc,pot,spc.p)  );      // store initial total system energy
 
   cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
 
@@ -81,49 +82,49 @@ int main() {
       switch (i) {
         case 0:
           mv.setGroup(salt);
-          sys+=mv.move( salt.size() ); // translate salt
+          sys+=mv.move( salt.size() );  // translate salt
           break;
         case 1:
           mv.setGroup(allpol);
-          sys+=mv.move( allpol.size() ); // translate monomers
+          sys+=mv.move( allpol.size() );// translate monomers
           for (auto &g : pol) {
             g.setMassCenter(spc);
-            shape.sample(g,spc);
+            shape.sample(g,spc);        // sample gyration radii etc.
           }
           break;
         case 2:
           k=pol.size();
           while (k-->0) {
             gmv.setGroup( pol[ slp_global.rand() % pol.size() ] );
-            sys+=gmv.move(); // translate/rotate polymers
+            sys+=gmv.move();            // translate/rotate polymers
           }
           break;
         case 3:
-          sys+=iso.move(); // isobaric volume move
+          sys+=iso.move();              // isobaric volume move
           break;
         case 4:
           k=pol.size();
           while (k-->0) {
             crank.setGroup( pol[ slp_global.rand() % pol.size() ] );
-            sys+=crank.move(); // crank shaft move
+            sys+=crank.move();          // crank shaft move
           }
           break;
         case 5:
           k=pol.size();
           while (k-->0) {
             pivot.setGroup( pol[ slp_global.rand() % pol.size() ] );
-            sys+=pivot.move(); // pivot move
+            sys+=pivot.move();          // pivot move
           }
           break;
       }
 
       for (auto i=pol.begin(); i!=pol.end()-1; i++)
         for (auto j=i+1; j!=pol.end(); j++)
-          rdf( spc.geo->dist(i->cm,j->cm) )++;              // polymer mass-center distribution function
+          rdf( spc.geo->dist(i->cm,j->cm) )++;// polymer mass-center distribution function
 
     } // end of micro loop
 
-    sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p)  ); // compare energy sum with current total
+    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
 
     cout << loop.timing();
 

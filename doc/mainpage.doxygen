@@ -21,16 +21,11 @@ useful for defining molecules, salt groups etc.
 \li Faunus::Energy::Hamiltonian can sum interaction energies from multiple origins - bonded, non-bonded,
 external etc.
 
-\section miniexample Minimal Example
-Below is a minimal example that performs a Metropolis Monte Carlo simulation of charged Lennard-Jones particles.
-A cubic simulation geometry with periodic boundaries and the minimum image convention is used. Statistics about
-sampling, acceptance and mean square displacemets are printed at the end of the simulation.
-\include minimal.cpp
-Or if you prefer python,
-\include minimal.py
-The two input files, \c minimal.atoms and \c minimal.input look like this:
-\include minimal.atoms
-\include minimal.input
+\section examples Program Examples
+Below is a list of coding examples you may use to get started.
+\li \ref example_minimal - a minimal example of how to set up a MC simulation (C++/Python)
+\li \ref example_temper - Parallel tempering example using MPI
+\li \ref example_polymers - A linear polymer solution in the NPT ensemble
 */
 
 

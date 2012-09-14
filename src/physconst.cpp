@@ -3,7 +3,11 @@
 namespace Faunus {
 
   const double PhysicalConstants::pi=std::acos(-1.);
+#ifdef __INTEL_COMPILER
+  const double PhysicalConstants::infty=-std::log(0); // needed due to constexpr bug in intel13 compiler. Fixed?
+#else
   const double PhysicalConstants::infty=std::numeric_limits<double>::infinity();
+#endif
   const double PhysicalConstants::e0=8.85419e-12;
   const double PhysicalConstants::e=1.602177e-19;
   const double PhysicalConstants::kB=1.380658e-23;

@@ -7,6 +7,9 @@ if(ENABLE_MPI AND MPI_CXX_FOUND)
 endif()
 
 #----- add examples to build process -----
+fau_example(unittests "./" unittests.cpp)
+add_test( unittests ${CMAKE_BINARY_DIR}/src/examples/unittests )
+
 fau_example(example_minimal "./" minimal.cpp)
 set_target_properties(example_minimal PROPERTIES OUTPUT_NAME "minimal")
 

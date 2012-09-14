@@ -588,7 +588,7 @@ namespace Faunus {
     }
     */
 
-    PairListID::PairListID() : GeneralPairList(makepair) {
+    PairListID::PairListID() : GeneralPairList<particle::Tid>(makepair) {
       name+=" (particle id's)";
     }
 
@@ -607,7 +607,7 @@ namespace Faunus {
       return o.str();
     }
 
-    PairListHydrophobic::PairListHydrophobic() : GeneralPairList(makepair) {
+    PairListHydrophobic::PairListHydrophobic() : GeneralPairList<particle::Thydrophobic>(makepair) {
       name+=" (hydrophobic particles)";
     }
 

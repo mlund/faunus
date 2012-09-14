@@ -28,7 +28,7 @@ WELCOME TO FAUNUS:
   $ svn co http://svn.code.sf.net/p/faunus/code/trunk faunus
 
 REQUIREMENTS:
-  - C/C++11 compiler (clang3+, gcc4.6+, ...)
+  - C/C++11 compiler (clang3+, gcc4.6+, intel13+, ...)
   - cmake 2.8+
   Optional:
   - SWIG 2.0+ (for python, ruby, ... modules)
@@ -59,7 +59,7 @@ COMPILING:
     -DCMAKE_CXX_FLAGS_DEBUG="..."     Compiler options for Debug mode
 
   Example: Intel's C++ compiler with OpenMP parallelization:
-    $ CXX=icpc cmake . -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=Release
+    $ CXX=icpc CC=icc cmake . -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=Release
     $ make
 
   Example: LLVM Clang:

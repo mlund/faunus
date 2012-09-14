@@ -14,7 +14,7 @@ namespace Faunus {
    *                GROUP
    * -----------------------------------*/
 
-  Group::Group(int front, int back) : myrange(front,back-front+1) {
+  Group::Group(int front, int back) : myrange<int>(front,back-front+1) {
     if (front<0 || back<0)
       resize(0);
     //id=GROUP;

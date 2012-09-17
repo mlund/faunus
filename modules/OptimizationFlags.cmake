@@ -2,13 +2,12 @@
 # - Set ENABLE_OPENMP to enable OpenMP support
 # $Mikael Lund, 2008
 # See http://fedetft.wordpress.com/2009/12/21/cmake-part-2-compiler-flags/
-#set(CMAKE_CXX_FLAGS "-pedantic -Wall -stdlib=libc++ -Wno-long-long -Wno-unknown-pragmas -Wc++0x-extensions")
 unset(CMAKE_CXX_FLAGS)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   set(CMAKE_CXX_FLAGS "-std=c++0x -funroll-loops -Wall -Wno-unknown-pragmas -Wextra -Wno-unused-parameter")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
-  set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wno-unknown-pragmas")
+  set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wcheck -wd2259,981,869,383 -Wno-unknown-pragmas")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set(CMAKE_CXX_FLAGS "-W -pedantic -stdlib=libc++ -Wno-long-long -Wno-unused-parameter -Wno-unknown-pragmas -Wno-c++0x-extensions")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Sun")

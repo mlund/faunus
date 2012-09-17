@@ -407,7 +407,7 @@ namespace Faunus {
      * well as non-bonded interactions:
      * \code
      *   Energy::Hamiltonian pot;
-     *   auto nbPtr = pot.create( Energy::Nonbonded<Tpairpot>(in) );
+     *   auto nbPtr = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(in) );
      *   auto bPtr = pot.create( Energy::Bonded() );
      *   cout << pot.info();
      * \endcode

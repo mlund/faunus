@@ -48,6 +48,7 @@ namespace Faunus {
         else setback(front-1);
       }
       myrange(Tint first=0, Tint size=0) : begin_(first), end_(first+size) {}
+      virtual ~myrange() {}
     private:
       iterator begin_;
       iterator end_;

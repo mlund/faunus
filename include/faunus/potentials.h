@@ -7,6 +7,8 @@
 #include <faunus/textio.h>
 #include <faunus/physconst.h>
 #include <faunus/auxiliary.h>
+#include <faunus/inputfile.h>
+#include <faunus/species.h>
 #endif
 
 namespace Faunus {
@@ -44,7 +46,7 @@ namespace Faunus {
         string brief();          //!< Brief, one-lined information string
         void setScale(double=1); //!< Set scaling factor
         /*! \brief Convert returned energy to kT.*/
-        inline double tokT() const {
+        inline double tokT() {
           return _tokT;
         }
         virtual void setTemperature(double); //!< Set temperature [K]
@@ -56,6 +58,8 @@ namespace Faunus {
          * \param r2 Squared distance between them (angstrom squared)
          */
         virtual double operator() (const particle &a, const particle &b, double r2) const=0;
+
+        bool save(string, particle::Tid, particle::Tid); //!< Save table of pair potential to disk
     };
 
     /*!
@@ -252,26 +256,26 @@ namespace Faunus {
       friend class Potential::DebyeHuckel;
       friend class Energy::GouyChapman;
       private:
-        string _brief();
-        void _setScale(double);
-        double epsilon_r;
+      string _brief();
+      void _setScale(double);
+      double epsilon_r;
       protected:
-        double depsdt;      //!< \f$ T\partial \epsilon_r / \epsilon_r \partial T = -1.37 \f$
-        double lB;          //!< Bjerrum length (angstrom)
+      double depsdt;      //!< \f$ T\partial \epsilon_r / \epsilon_r \partial T = -1.37 \f$
+      double lB;          //!< Bjerrum length (angstrom)
 
       public:
-        Coulomb(InputMap&); //!< Construction from InputMap
-        double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
+      Coulomb(InputMap&); //!< Construction from InputMap
+      double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
 
-        /*! \returns \f$\beta u/l_B\f$ */
-        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+      /*! \returns \f$\beta u/l_B\f$ */
+      inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
 #ifdef FAU_APPROXMATH
-          return a.charge*b.charge * invsqrtQuake(r2);
+        return lB*a.charge*b.charge * invsqrtQuake(r2);
 #else
-          return a.charge*b.charge / sqrt(r2);
+        return lB*a.charge*b.charge / sqrt(r2);
 #endif
-        }
-        string info(char);
+      }
+      string info(char);
     };
 
     /*!
@@ -292,10 +296,10 @@ namespace Faunus {
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
 #ifdef FAU_APPROXMATH
           double rinv = invsqrtQuake(r2);
-          return a.charge * b.charge * rinv * exp_cawley(-k/rinv);
+          return lB * a.charge * b.charge * rinv * exp_cawley(-k/rinv);
 #else
           double r=sqrt(r2);
-          return a.charge * b.charge / r * exp(-k*r);
+          return lB * a.charge * b.charge / r * exp(-k*r);
 #endif
         }
         double entropy(double, double) const;         //!< Returns the interaction entropy 
@@ -307,10 +311,33 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Combines two PairPotentialBases
+     * \brief as DebyeHuckel but shifted to reaach zero at a user specified cut-off distance
+     *
+     * The cut-off distance is read from the InputMap with the following keyword:
+     * \li \c pairpot_cutoff Spherical cut-off in angstroms
+     */
+    class DebyeHuckelShift : public DebyeHuckel {
+      private:
+        double shift;
+      public:
+        DebyeHuckelShift(InputMap&);                       //!< Construction from InputMap
+        inline double operator() (const particle &a, const particle &b, double r2) const {
+#ifdef FAU_APPROXMATH
+          double rinv = invsqrtQuake(r2);
+          return lB * a.charge * b.charge * ( exp_cawley(-k/rinv)*rinv - shift );
+#else
+          double r=sqrt(r2);
+          return lB * a.charge * b.charge * ( exp(-k*r)/r - shift );
+#endif
+        }
+    };
+
+    /*!
+     * \brief Combines two pair potentials
      * \date Lund, 2012
      * \author Mikael Lund
-     * \todo Optimize setScale
+     * \note tokT() functions are *ignored* and the two pair potentials must return
+     *       energies in kT directly. The plan is to remove tokT() permanently.
      *
      * This simply combines two PairPotentialBases. The combined potential can subsequently
      * be used as a normal pair potential and even be combined with a third potential and
@@ -345,11 +372,44 @@ namespace Faunus {
             name=sr1.name+"+"+sr2.name;
           }
           inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-            return sr1.tokT()*sr1(a,b,r2) + sr2.tokT()*sr2(a,b,r2);
+            return sr1(a,b,r2) + sr2(a,b,r2);
           }
           string info(char w=20) {
             std::ostringstream o;
             o << sr1.info(w) << sr2.info(w);
+            return o.str();
+          }
+      };
+
+    /*!
+     * \brief As CombinedPairPotential but with a spherical cut-off
+     *
+     * The following keywords are read from the InputMap:
+     * \li \c pairpot_cutoff Spherical cut-off distance (Default: infinity)
+     */
+    template<class T1, class T2>
+      class CombinedPairPotentialCutoff : public CombinedPairPotential<T1,T2> {
+        private:
+          typedef CombinedPairPotential<T1,T2> Tbase;
+          double cutoff2; // squared, spherical cutoff
+          void getin(InputMap &in) {
+            cutoff2 = pow(in.get<double>("pairpot_cutoff",pc::infty),2);
+          }
+        public:
+          CombinedPairPotentialCutoff(InputMap &in) : Tbase(in) { getin(in); }
+
+          CombinedPairPotentialCutoff(InputMap &in, string pfx1, string pfx2) : Tbase(in,pfx1,pfx2) {
+            getin(in);
+          }
+
+          inline double operator() (const particle &a, const particle &b, double r2) const {
+            return (r2>cutoff2) ? 0 : Tbase::operator()(a,b,r2);
+          }
+
+          string info(char w=20) {
+            std::ostringstream o;
+            o << Tbase::info(w)
+              << textio::pad(textio::SUB,w,"Pair potential cutoff") << sqrt(cutoff2) << textio::_angstrom << endl;
             return o.str();
           }
       };

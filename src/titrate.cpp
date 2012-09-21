@@ -287,6 +287,7 @@ namespace Faunus {
         string pfx) : Movebase(ham,spc,pfx), eqpot(in) {
 
       title="Site Titration - Swap Move";
+      runfraction=in.get<double>(pfx+"runfraction",1);
       ham.add(eqpot);
       ipart=-1;
       findSites(spc.p);

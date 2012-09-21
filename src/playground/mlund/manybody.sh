@@ -83,8 +83,9 @@ loop_microsteps        $micro
 
 temperature            298     # Kelvin
 epsilon_r              780.7    # Water dielectric const
-dh_ionicstrength       9.010   # mol/l
-lj_eps                 0.00    # kT
+dh_ionicstrength       0.010   # mol/l
+lj_eps                 0.05    # kT
+pairpot_cutoff         30
 squarewell_depth       0.0     # kT
 squarewell_threshold   1.5     # angstrom
 
@@ -94,9 +95,9 @@ npt_dV                 0       # log(dV)
 transrot_transdp       50 #180
 transrot_rotdp         2 #6
 
-molecule_N1            1
+molecule_N1            100
 molecule_file1         $base.aam
-molecule_N2            0
+molecule_N2            100
 molecule_file2         $base.aam
 
 test_stable            yes
@@ -108,8 +109,10 @@ test_file              $base.test
 #   GENERATE INPUT MOLECULE
 # ----------------------------------
 function mkstruct() {
-echo "1
+echo "3
  ASP  0   0.00   0.00   0.00    -0   1  3.0
+ UNK  0   3.00   0.00   0.00    -0   1  3.0
+ HIS  0   6.00   0.00   0.00    -0   1  3.0
 " > ${base}.aam
 }
 
@@ -117,11 +120,11 @@ mkatoms
 mkstruct
 boxlen=100
 
-for pH in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
+for pH in 4 
 do
   # equilibration
   rm -fR $base.state
-  micro=500
+  micro=100
   mktit
   mkinput
   $exe -i $base.input -c $base.state -o $base.state #> eq

@@ -134,9 +134,6 @@ namespace Faunus {
     private:
       string _info();
     public:
-      Average<double> Q;                        //!< average net charge
-      Average<double> mu;                       //!< average dipole moment
-
       GroupMolecular(int=-1, int=-1);
       void scale(Space&, double);               //!< Mass-center volume scale
       bool isMolecular() const;                 //!< Always true for GroupMolecular

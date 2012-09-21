@@ -38,6 +38,7 @@
 #include <faunus/xytable.h>
 #include <faunus/titrate.h>
 #include <faunus/analysis.h>
+#include <faunus/scatter.h>
 #endif
 
 namespace Faunus {

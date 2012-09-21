@@ -260,10 +260,6 @@ namespace Faunus {
   string GroupMolecular::_info() {
     using namespace textio;
     std::ostringstream o;
-    if (Q.cnt>0)
-      o << pad(SUB,w,"Average charge") << Q.avg() << endl;
-    if (mu.cnt>0)
-      o << pad(SUB,w,"Average dipole moment") << mu.avg() << endl;
     return o.str();
   }
 

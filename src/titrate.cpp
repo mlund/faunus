@@ -357,13 +357,15 @@ namespace Faunus {
           << setw(14) << bracket("z")
           << "Acceptance" << endl;
         for (auto i : eqpot.eq.sites) {
-          std::ostringstream a;
-          o.precision(4);
-          a << atom[ spc->p[i].id ].name << " " << i;
-          o << pad(SUBSUB,15, a.str())
-            << setw(10) << eqpot.eq.q[i].avg()
-            << accmap[i].avg()*100. << percent
-            << endl;
+          if (accmap[i].cnt>0) {
+            std::ostringstream a;
+            o.precision(4);
+            a << atom[ spc->p[i].id ].name << " " << i;
+            o << pad(SUBSUB,15, a.str())
+              << setw(10) << eqpot.eq.q[i].avg()
+              << accmap[i].avg()*100. << percent
+              << endl;
+          }
         }
       }
       return o.str();

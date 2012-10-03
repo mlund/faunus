@@ -31,6 +31,7 @@ namespace Faunus {
          * \f$ I(q) = \left [\frac{3}{(qR)^3} \left ( \sin{qR} - qR\cos{qR} \right ) \right ]^2\f$
          */
         inline Tfloat operator()(Tfloat q, const particle &a) const {
+          assert(q>0 && a.radius>0 && "Particle radius and q must be positive");
           Tfloat qR=q*a.radius;
           qR = 3. / (qR*qR*qR) * ( sin(qR) - qR*cos(qR) );
           return qR*qR;
@@ -57,6 +58,7 @@ namespace Faunus {
         }
     };
 
+    // see also http://www.lsinstruments.ch/technology/static_light_scattering_sls/structure_factor/
     template<typename Tgeometry, typename Tformfactor> class DebyeFormula {
       private:
         Tformfactor F; // scattering from a single particle
@@ -66,7 +68,14 @@ namespace Faunus {
 
         DebyeFormula(InputMap &in) : geo(in) {}
 
+        /*!
+         * \param p Particle vector
+         * \param qmin Minimum q-value to sample (1/A)
+         * \param qmax Maximum q-value to sample (1/A)
+         * \param dq q spacing (1/A)
+         */
         void sample(const p_vec &p, float qmin, float qmax, float dq) {
+          if (qmin<1e-6) qmin=dq;  // assure q>0
           std::map<float,float> _I;
           int n=(int)p.size();
 #pragma omp parallel for reduction (+:I) schedule (dynamic)
@@ -80,8 +89,19 @@ namespace Faunus {
               }
             }
           }
+          float rho = n/geo.getVolume();
           for (auto &i : _I)
-            I(i.first)+=2*i.second; // add to average I(q)
+            I[i.first]+=2*rho*i.second; // add to average I(q)
+        }
+
+        void save(string filename) {
+          if (!I.empty()) {
+            std::ofstream f(filename.c_str());
+            if (f) {
+              for (auto &i : I)
+                f << std::left << std::setw(10) << i.first << i.second << "\n";
+            }
+          }
         }
     };
 

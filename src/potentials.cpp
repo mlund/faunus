@@ -58,7 +58,7 @@ namespace Faunus {
         return true;
       }
       return false;
-    };
+    }
 
     Harmonic::Harmonic(double forceconst, double eqdist) : k(forceconst), req(eqdist) {
       name="Harmonic";

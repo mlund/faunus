@@ -55,6 +55,8 @@ int main(int argc, char** argv) {
   Analysis::RadialDistribution<float,int> rdf(0.25);
   Analysis::ChargeMultipole mpol;
 
+  Scatter::DebyeFormula<Tgeometry,Scatter::FormFactorSphere> debye(mcp);
+
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );
 
   cout << atom.info() << spc.info() << pot.info() << tit.info()
@@ -88,6 +90,9 @@ int main(int argc, char** argv) {
       }
     } // end of micro loop
 
+    double qmin = 2*pc::pi / nonbonded->geometry.len_half.x;
+    debye.sample(spc.p, qmin, 0.75, 0.005);
+
     sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) );
 
     cout << loop.timing();
@@ -108,6 +113,7 @@ int main(int argc, char** argv) {
   gro.len = nonbonded->geometry.len.x;
   gro.save("confout.gro", spc);
   top.save("mytopol.top", spc);
+  debye.save("I_of_q.dat");
 
   nonbonded->pairpot.save("pairpot-NaCl.dat", atom["Na"].id, atom["Cl"].id);
   Tpairpot2 pot2(mcp);

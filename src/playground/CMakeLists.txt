@@ -15,6 +15,9 @@ fau_example(akurut-gouychapman "./akurut" gouychapman.cpp)
 fau_example(akurut-gouychapman-slit "./akurut" gouychapman.cpp)
 set_target_properties( akurut-gouychapman-slit PROPERTIES COMPILE_DEFINITIONS "SLIT")
 
+# Cedric's playground
+fau_example(cedric-polymers "./cedric" polymers.cpp)
+
 # Robert's playground
 fau_example(vacha-gouychapman "./vacha" gouychapman.cpp)
 

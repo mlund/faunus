@@ -395,6 +395,7 @@ namespace Faunus {
       public:
         RestrictedVolumeCM(InputMap&, string="vconstrain"); //!< Constructor
         double g_external(const p_vec&, Group&) FOVERRIDE; //!< External energy working on group
+        double i_external(const p_vec&, int);              //!< External energy working on single particle
     };
 
     /*!
@@ -681,7 +682,7 @@ namespace Faunus {
      * \code
      * // Harmonic potential between all "Na" and "Cl" particles, plus
      * // Coulomb potential between "Na" atoms
-     * Energy::PairListID pot;
+     * Energy::PairListID() pot;
      * pot.add( atom["Na"].id, atom["Cl"].id, Potential::Harmonic(...) );
      * pot.add( atom["Na"].id, atom["Na"].id, Potential::Coulomb(...) );
      * \endcode

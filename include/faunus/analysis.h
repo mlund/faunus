@@ -72,7 +72,6 @@ namespace Faunus {
           Tmap map;
           string name;
         private:
-          //Tx virtual round(Tx x) { return (x>=0) ? int( x/dx+0.5 )*dx : int( x/dx-0.5 )*dx; }
           Tx round(Tx x) { return (x>=0) ? int( x/dx+0.5 )*dx : int( x/dx-0.5 )*dx; }
           virtual double get(Tx x) { return operator()(x); }
         public:
@@ -142,6 +141,7 @@ namespace Faunus {
     template<typename Tx=double, typename Ty=int>
       class RadialDistribution : public Table2D<Tx,Ty> {
         private:
+          typedef Table2D<Tx,Ty> Ttable;
           virtual double volume(Tx x) {
             return 4./3.*pc::pi*( pow(x+0.5*this->dx,3) - pow(x-0.5*this->dx,3) );
           }
@@ -159,7 +159,7 @@ namespace Faunus {
           /*!
            * \param res Resolution of X axis
            */
-          RadialDistribution(Tx res=0.2) : Table2D<Tx,Ty>(res) {
+          RadialDistribution(Tx res=0.2) : Ttable(res,Ttable::HISTOGRAM) {
             this->name="Radial Distribution Function";
             maxdist=pc::infty;
           }
@@ -209,12 +209,12 @@ namespace Faunus {
       private:
         std::map< string, Average<double> > Rg2, Rg, Re2, Rs, Rs2, Rg2x, Rg2y, Rg2z;
         double gyrationRadiusSquared(const Group&, const Space &);
-        Point vectorgyrationRadiusSquared(const Group&, const Space &);
         Point vectorEnd2end(const Group&, const Space &);
         void _test(UnitTest&);
         string _info();
       public:
         PolymerShape();
+        Point vectorgyrationRadiusSquared(const Group&, const Space &);
         void sample(const Group&, const Space&); //!< Sample properties of Group (identified by group name)
     };
 

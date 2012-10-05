@@ -162,6 +162,25 @@ namespace Faunus {
         }
         string info(char);
     };
+
+    /*!
+     * \brief Square well pair potential
+     * \author Anil Kurut
+     */
+    class SquareWellShifted : public SquareWell {
+      private:
+        string _brief();
+      public:
+        double threshold_lower;
+        SquareWellShifted(InputMap&, string="squarewell"); //!< Constructor
+        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+          double d=a.radius+b.radius+threshold_lower;
+          if ( r2 > d*d )
+            return SquareWell::operator()(a,b,r2);
+          return 0;
+        }
+        string info(char);
+    };
     /*!
      * \brief Hydrophobic pair potential based on SASA and surface tension
      *

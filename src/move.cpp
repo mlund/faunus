@@ -622,9 +622,9 @@ namespace Faunus {
       for (auto i : index)
         if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
           return pc::infty;
+      du+=pot->g_external(spc->trial, *gPtr) - pot->g_external(spc->p, *gPtr);
       for (auto i : index)
-        du += pot->i_external(spc->trial, i) - pot->i_external(spc->p, i)
-          + pot->i2all(spc->trial, i) - pot->i2all(spc->p, i);
+        du += pot->i2all(spc->trial, i) - pot->i2all(spc->p, i);
       /* not needed!!
          int n=(int)index.size();
          for (int i=0; i<n-1; i++)

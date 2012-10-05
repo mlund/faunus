@@ -170,6 +170,31 @@ namespace Faunus {
       return o.str();
     }
 
+    /*!
+     * In addition to the keywords from Potential::SquareWell the InputMap is
+     * searcher for:
+     * \li \c prefix_threshold_lower
+     */
+    SquareWellShifted::SquareWellShifted(InputMap &in, string prefix): SquareWell(in,prefix) {
+      name=name + " Shifted";
+      threshold_lower = in.get<double>(prefix+"_threshold_lower", 0, name+" lower threshold (AA)");
+    }
+
+    string SquareWellShifted::_brief() {
+      std::ostringstream o;
+      o << name << ": u=" << depth*tokT() << textio::kT << " range=" << threshold_lower << "-" << threshold;
+      return o.str();
+    }
+    
+    string SquareWellShifted::info(char w) {
+      using namespace Faunus::textio;
+      std::ostringstream o;
+      o << SquareWell::info(w)
+        << pad(SUB,w,"Threshold_lower") << threshold_lower << _angstrom
+        << " (surface-surface)" << endl;
+      return o.str();
+    }
+
     SquareWellHydrophobic::SquareWellHydrophobic(InputMap &in, string prefix) : SquareWell(in,prefix) {
       name="Hydrophobic " + name;
     }

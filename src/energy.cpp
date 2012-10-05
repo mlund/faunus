@@ -432,12 +432,31 @@ namespace Faunus {
       name+=" (mass center)";
     }
 
+    /*!
+     * This will calculate the mass center of the groups based on the
+     * given particle vector. If Outside the allowed region, infinity
+     * is returned - zero otherwise.
+     * \note The Group object is not changed - i.e. cm/cm_trial remain
+     * intact.
+     */
     double RestrictedVolumeCM::g_external(const p_vec &p, Group &g) {
       if (std::find(groups.begin(), groups.end(), &g)!=groups.end())
-        if ( outside( Geometry::massCenter(*geo, p, g) ) ) {
+        if ( outside( Geometry::massCenter(*geo, p, g) ) )
           return pc::infty;
-        }
       return 0;
+    }
+
+    /*!
+     * If a single particle is moved, this function will check if
+     * that particle is within a constrained groups. If so, the
+     * above g_external() is called.
+     */
+    double RestrictedVolumeCM::i_external(const p_vec &p, int i) {
+      double u=0;
+      for (auto g : groups)     // loop over all groups in space
+        if (g->find(i))         // does i belong to one of them?
+          u+=g_external(p, *g); // if so, check mass center constraint
+      return u;
     }
 
     void MassCenterConstrain::addPair(Group &a, Group &b, double mindist, double maxdist) {

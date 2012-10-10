@@ -592,6 +592,8 @@ namespace Faunus {
 
     void CrankShaft::_trialMove() {
       assert(gPtr!=nullptr && "No group to perform crankshaft on.");
+      if (gPtr->size()<3)
+        return;
       index.clear();   // clear previous particle list to rotate
       findParticles();
       assert(!index.empty() && "No particles to rotate.");

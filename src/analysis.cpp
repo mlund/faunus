@@ -73,9 +73,8 @@ namespace Faunus {
     }
 
     void PolymerShape::sample(const Group &pol, const Space &spc) {
-      if (!run())
+      if (!run() || pol.front()==pol.back())
         return;
-      assert( pol.front()!=pol.back() && "Polymer must have at least two particles.");
       Point r2 = vectorgyrationRadiusSquared(pol,spc);
       double rg2 = r2.x+r2.y+r2.z; 
       double re2 = spc.geo->sqdist( spc.p[pol.front()], spc.p[pol.back()] );

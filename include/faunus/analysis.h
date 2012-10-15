@@ -119,6 +119,11 @@ namespace Faunus {
             }
           }
 
+          /*!
+           * \brief Load table from disk
+           * \note The first line - used for comments - is ignored.
+           * \todo Implement end bin compensation as in the save() function when loading HISTOGRAMs
+           */
           bool load(string filename) {
             std::ifstream f(filename.c_str());
             if (f) {

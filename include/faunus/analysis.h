@@ -107,8 +107,7 @@ namespace Faunus {
               std::ofstream f(filename.c_str());
               f.precision(10);
               if (f) {
-                if (~name.empty())
-                  f << "# Faunus 2D table: " << name << endl;
+                f << "# Faunus 2D table: " << name << endl;
                 for (auto m : map)
                   f << m.first << " " << get( m.first ) << endl;
               }
@@ -118,6 +117,22 @@ namespace Faunus {
               if (map.size()>0) map.begin()->second/=2;   // restore half bin width
               if (map.size()>1) (--map.end())->second/=2; // -//-
             }
+          }
+
+          bool load(string filename) {
+            std::ifstream f(filename.c_str());
+            if (f) {
+              map.clear();
+              f.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); // ignore first line
+              while (!f.eof()) {
+                Tx x;
+                Ty y;
+                f >> x >> y;
+                operator()(x)=y;
+              }
+              return true;
+            }
+            return false;
           }
       };
 
@@ -243,13 +258,13 @@ namespace Faunus {
     };
 
     /*
-    class VectorAlignment : public AnalysisBase {
-      private:
-        virtual Point convert(const Group&, const Space&); // Returns points calculated from group properties
-      public:
-        void sample(const Group&, const Group&, const Space&);
-    };
-    */
+       class VectorAlignment : public AnalysisBase {
+       private:
+       virtual Point convert(const Group&, const Space&); // Returns points calculated from group properties
+       public:
+       void sample(const Group&, const Group&, const Space&);
+       };
+       */
 
     /*! \brief Widom method for excess chemical potentials
      *  \author Mikael Lund

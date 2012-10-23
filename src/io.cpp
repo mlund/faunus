@@ -95,7 +95,7 @@ namespace Faunus {
       fio.strip(v,"#");
       unsigned int n=atoi(v[0].c_str());
       for (unsigned int i=1; i<=n; i++)
-        p.push_back( s2p(v[i]) );
+        p.push_back( s2p(v.at(i)) );
       return true;
     }
     return false;

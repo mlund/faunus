@@ -118,6 +118,8 @@ namespace Faunus {
     }
 
     void PolymerShape::_test(UnitTest &t) {
+      for (auto &m : Rg2)
+        t("PolymerShape_Rg"+m.first, Rg[m.first].avg() );
     }
 
     ChargeMultipole::ChargeMultipole(){

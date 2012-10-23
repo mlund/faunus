@@ -333,6 +333,22 @@ namespace Faunus {
         Pivot(InputMap&, Energy::Energybase&, Space&, string="pivot");
     };
 
+    class Reptation : public Movebase {
+      private:
+        AcceptanceMap<string> accmap;
+        void _test(UnitTest&);
+        void _trialMove();
+        void _acceptMove();
+        void _rejectMove();
+        double _energyChange();
+        string _info();
+        Group* gPtr;
+        double bondlength; //!< Reptation length used when generating new head group position
+      public:
+        Reptation(InputMap&, Energy::Energybase&, Space&, string="reptation");
+        void setGroup(Group&); //!< Select Group to move
+    };
+
     /*!
      * \brief Isobaric volume move
      *

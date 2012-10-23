@@ -124,22 +124,23 @@ namespace Faunus {
           }
 
           double i2g(const p_vec &p, Group &g, int j) FOVERRIDE {
-            if (g.empty())
-              return 0;
             double u=0;
-            int len=g.back()+1;
-            if (j>=g.front() && j<=g.back()) {   //j is inside g - avoid self interaction
-              for (int i=g.front(); i<j; i++)
-                u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
-              for (int i=j+1; i<len; i++)
-                u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
-            } else                        //simple - j not in g
-              for (int i=g.front(); i<len; i++)
-                u+=pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]));
+            if ( !g.empty() ) {
+              int len=g.back()+1;
+              if ( g.find(j) ) {   //j is inside g - avoid self interaction
+                for (int i=g.front(); i<j; i++)
+                  u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
+                for (int i=j+1; i<len; i++)
+                  u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
+              } else              //simple - j not in g
+                for (int i=g.front(); i<len; i++)
+                  u+=pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]));
+            }
             return pairpot.tokT()*u;  
           }
 
           double i2all(const p_vec &p, int i) FOVERRIDE {
+            assert(i>=0 && i<int(p.size()) && "index i outside particle vector");
             double u=0;
             int n=(int)p.size();
             for (int j=0; j<i; ++j)
@@ -151,39 +152,40 @@ namespace Faunus {
 
           double g2g(const p_vec &p, Group &g1, Group &g2) FOVERRIDE {
             double u=0;
-            if (g1.empty() || g2.empty())
-              return u;
-            int ilen=g1.back()+1, jlen=g2.back()+1;
+            if (!g1.empty())
+              if (!g2.empty()) {
+                int ilen=g1.back()+1, jlen=g2.back()+1;
 #pragma omp parallel for reduction (+:u) schedule (dynamic)
-            for (int i=g1.front(); i<ilen; ++i)
-              for (int j=g2.front(); j<jlen; ++j)
-                u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
+                for (int i=g1.front(); i<ilen; ++i)
+                  for (int j=g2.front(); j<jlen; ++j)
+                    u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
+              }
             return pairpot.tokT()*u;
           }
 
           double g2all(const p_vec &p, Group &g) FOVERRIDE {
             double u=0;
-            if (g.empty())
-              return u;
-            int ng=g.back()+1, np=p.size();
+            if (!g.empty()) {
+              int ng=g.back()+1, np=p.size();
 #pragma omp parallel for reduction (+:u)
-            for (int i=g.front(); i<ng; ++i) {
-              for (int j=0; j<g.front(); j++)
-                u += pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]) );
-              for (int j=ng; j<np; j++)
-                u += pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]) );
+              for (int i=g.front(); i<ng; ++i) {
+                for (int j=0; j<g.front(); j++)
+                  u += pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]) );
+                for (int j=ng; j<np; j++)
+                  u += pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]) );
+              }
             }
             return u*pairpot.tokT();
           }
 
           double g_internal(const p_vec &p, Group &g) FOVERRIDE { 
-            if (g.empty())
-              return 0;
             double u=0;
-            int step=1,n=g.back()+1;
-            for (int i=g.front(); i<n-step; i++)
-              for (int j=g.front()+step*((i-g.front())/step+1); j<n; j++)
-                u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
+            if (!g.empty()) {
+              int step=1,n=g.back()+1;
+              for (int i=g.front(); i<n-step; i++)
+                for (int j=g.front()+step*((i-g.front())/step+1); j<n; j++)
+                  u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
+            }
             return pairpot.tokT()*u;
           }
 
@@ -539,14 +541,43 @@ namespace Faunus {
         double kappa;
         double *zposPtr;                                  //!< Pointer to z position of GC plane (xy dir)
         string _info();                                  
+        bool linearize;                                   //!< Use linearized PB?
       public:                                            
         GouyChapman(InputMap &);                          //!< Constructor - read input parameters
         void setPosition(double&);                        //!< Set pointer to z position of surface
-        virtual double dist2surf(const Point&);           //!< Point-to-surface distance [AA]
-        double p_external(const particle&) FOVERRIDE;     //!< Particle energy in GC potential
         double i_external(const p_vec&, int) FOVERRIDE;   //!< i'th particle energy in GC potential
         double g_external(const p_vec&, Group&) FOVERRIDE;//!< Group energy in GC potential
-        double potential(const Point&);                   //!< Gouy-Chapman (GC) potential in point
+
+        /*!
+         * \brief Point-to-surface distance [AA]
+         * Note that this function is virtual and can be replaced in derived classes to
+         * customize the position of the surface.
+         */
+        double dist2surf(const Point &a) {
+          assert(zposPtr!=nullptr && "Did you forget to call setPosition()?");
+          return std::abs(*zposPtr - a.z);
+        }
+
+        /*!
+         * \brief Particle energy in GC potential
+         * \f[
+         * \beta e \Phi(z) = 2\ln{\frac{1+\Gamma_0 \exp{(-\kappa z)}}{1-\Gamma_0 \exp{(-\kappa z)}}}
+         * \f]
+         * or if linearized:
+         * \f[
+         * \beta e \Phi(z) = \beta e \phi_0 \exp{(-\kappa z)}
+         * \f]
+         */
+        double p_external(const particle &p) FOVERRIDE {
+          if (p.charge!=0) {
+            double x=exp(-kappa*dist2surf(p));
+            if (linearize)
+              return p.charge * phi0 * x;
+            else
+              return p.charge * 2 * log((1+gamma0*x)/(1-gamma0*x));
+          }
+          return 0;
+        }
     };
 
     /*!

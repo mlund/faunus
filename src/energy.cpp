@@ -505,6 +505,7 @@ namespace Faunus {
      * \li \c gouychapman_phi0 - surface potential [V]
      * \li \c gouychapman_qarea - surface charge density (if phi0 not defined)
      * \li \c gouychapman_rho - surface charge density [1/A^2] (if qarea not defined)
+     * \li \c gouychapman_linearize - set to yes for linearized PB (default: no)
      *
      * Equations:
      * \f[ \rho = \sqrt\frac{2 c_0}{\pi l_B}  \sinh( \beta \phi_0 e / 2 ) \f]
@@ -521,9 +522,10 @@ namespace Faunus {
       lB=dh.bjerrumLength();
       kappa=1/dh.debyeLength();
 
-      phi0=in.get<double>(prefix+"phi0",1.1e6);     // Surface potential [V]
-      if ( fabs(phi0)<1e6 ) {
-        phi0=phi0*pc::e/(pc::kB*pc::T());             // Unitless surface potential \frac{\phi_0 e}{kT}
+      linearize = in.get<bool>(prefix+"linearize",false);
+
+      phi0=in.get<double>(prefix+"phi0",0);     // Surface potential [unitless] = beta * e * phi0
+      if ( std::abs(phi0)>1e-6 ) {
         rho=sqrt(2*c0/(pc::pi*lB))*sinh(.5*phi0);   // [Evans & Wennerström, 1999, Colloidal Domain p 138-140]
       }
       else {
@@ -549,7 +551,8 @@ namespace Faunus {
         << pad(SUB,w,"Unitless surface potential") << phi0 << endl
         << pad(SUB,w,"Area per surface charge") << 1/rho << _angstrom+squared << endl
         << pad(SUB,w,"Surface charge density") << rho*pc::e*1e20  << " C/m" + squared << endl
-        << pad(SUB,w,"GC-coefficient Gamma_0") << gamma0  << "  " << endl;
+        << pad(SUB,w,"GC-coefficient Gamma_0") << gamma0  << "  " << endl
+        << pad(SUB,w,"Linearized PB") << ((linearize) ? "yes" : "no") << endl;
       return o.str();
     }
 
@@ -565,21 +568,6 @@ namespace Faunus {
       zposPtr=&zposition;
     }
 
-    /*!
-     * Note that this function is virtual and can be replaced in derived classes to
-     * customize the position of the surface.
-     */
-    double GouyChapman::dist2surf(const Point &a) {
-      assert(zposPtr!=nullptr && "Did you forget to call setPosition()?");
-      return std::abs(*zposPtr - a.z);
-    }
-
-    double GouyChapman::p_external(const particle &a) {
-      if ( a.charge!=0)
-        return a.charge * potential(a);
-      return 0;
-    }
-
     double GouyChapman::i_external(const p_vec &p, int i) {
       return p_external(p[i]);
     }
@@ -591,21 +579,11 @@ namespace Faunus {
       return u;
     }
 
-    /*!
-     * \f[
-     * \beta \Phi z e = 2\ln{\frac{1+\Gamma_0 \exp{(-\kappa z)}}{1-\Gamma_0 \exp{(-\kappa z)}}}
-     * \f]
-     */
-    double GouyChapman::potential(const Point &a) { 
-      double exponent=exp(-kappa*dist2surf(a));        //\exp{-\kappa z}
-      return 2 * log((1+gamma0*exponent)/(1-gamma0*exponent));
-    }
-
     /*
-    pair_permutable<particle::Thydrophobic> createPairHydrophobic(const particle &a, const particle &b) {
-      return pair_permutable<particle::Thydrophobic>(a.hydrophobic, b.hydrophobic);
-    }
-    */
+       pair_permutable<particle::Thydrophobic> createPairHydrophobic(const particle &a, const particle &b) {
+       return pair_permutable<particle::Thydrophobic>(a.hydrophobic, b.hydrophobic);
+       }
+       */
 
     PairListID::PairListID() : GeneralPairList<particle::Tid>(makepair) {
       name+=" (particle id's)";

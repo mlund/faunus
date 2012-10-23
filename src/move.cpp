@@ -147,7 +147,7 @@ namespace Faunus {
       igroup=nullptr;
       dir.x=dir.y=dir.z=1;
       w=30; //width of output
-      in.get(prefix+"_runfraction",0.);
+      in.get<double>(prefix+"_runfraction",0.);
       setGenericDisplacement( in.get<double>(prefix+"_genericdp",0) );
     }
 
@@ -582,6 +582,7 @@ namespace Faunus {
       gPtr=nullptr;
       minlen = in.get<int>(prefix+"_minlen", 1, "Minimum number of particles to totate");
       maxlen = in.get<int>(prefix+"_maxlen", 4, "Maximum number of particle to rotate");
+      assert(minlen<=maxlen);
       dp=in.get<double>(prefix+"_dp", 3.);
       runfraction = in.get<double>(prefix+"_runfraction",1.);
       if (dp<1e-6)
@@ -650,10 +651,10 @@ namespace Faunus {
         end=gPtr->random();             // rotate around
         len = std::abs(beg-end) - 1;    // number of particles between end points
       } while ( len<minlen || len>maxlen  );
-      if (beg>end)
-        std::swap(beg,end);
       vrot.setAxis(*spc->geo, spc->p[beg], spc->p[end], angle );
       index.clear();
+      if (beg>end)
+        std::swap(beg,end);
       for (int i=beg+1; i<end; i++)
         index.push_back(i);             // store particle index to rotate
       assert(index.size()==size_t(len));
@@ -690,21 +691,109 @@ namespace Faunus {
           end = gPtr->random(); // axis to rotate around
           len = std::abs(beg-end);
         } while ( len<minlen || len>maxlen );
-        if (beg>end)
-          std::swap(beg,end);
 
-        if (slp_global.randHalf() > 0){
+        if (slp_global.randHalf() > 0)
           for (int i=end+1; i<=gPtr->back(); i++)
             index.push_back(i);
-        }
-        else {
-          for (int i=gPtr->front(); i<=end; i++)
+        else
+          for (int i=gPtr->front(); i<end; i++)
             index.push_back(i);
-        }
       }
       angle = dp*slp_global.randHalf();
       vrot.setAxis(*spc->geo, spc->p[beg], spc->p[end], angle );
       return true;
+    }
+
+    Reptation::Reptation(InputMap &in, Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
+      title="Linear Polymer Reptation";
+      runfraction = in.get<double>(prefix+"_runfraction",1.0);
+      bondlength = in.get<double>(prefix+"_bondlength", -1);
+      gPtr=nullptr;
+    }
+
+    void Reptation::setGroup(Group &g) { gPtr=&g; }
+
+    void Reptation::_test(UnitTest &t) {
+      accmap._test(t, prefix);
+    }
+
+    void Reptation::_trialMove() {
+      assert(gPtr!=nullptr && "Did you forget to call setGroup?");
+      if (gPtr->size()<2)
+        return;
+
+      int first, second; // "first" is end point, "second" is the neighbor
+      if (slp_global.randHalf()>0) {
+        first=gPtr->front();
+        second=first+1;
+      } else {
+        first=gPtr->back();
+        second=first-1;
+      }
+
+      double bond;
+      if (bondlength>0)
+        bond=bondlength;
+      else
+        bond=spc->geo->dist(spc->p[first], spc->p[second]); // bond length of first or last particle
+
+      // shift particles up or down
+      for (int i=gPtr->front(); i<gPtr->back(); i++)
+        if (first<second)
+          spc->trial[i+1]=Point( spc->p[i] );
+        else
+          spc->trial[i]=Point( spc->p[i+1] );
+
+      // generate new position for end point ("first")
+      Point u;
+      u.ranunit(slp_global);                          // generate random unit vector
+      spc->trial[first].translate(*spc->geo, u*bond); // translate first w. scaled unit vector
+      assert( std::abs( spc->geo->dist(spc->p[first],spc->trial[first])-bond ) < 1e-7  );
+
+      for (auto i : *gPtr)
+        spc->geo->boundary( spc->trial[i] );  // respect boundary conditions
+
+      gPtr->cm_trial = Geometry::massCenter( *spc->geo, spc->trial, *gPtr);
+    }
+
+    void Reptation::_acceptMove() {
+      accmap.accept(gPtr->name, spc->geo->sqdist(gPtr->cm, gPtr->cm_trial) );
+      gPtr->accept(*spc);
+    }
+
+    void Reptation::_rejectMove() {
+      accmap.reject(gPtr->name);
+      gPtr->undo(*spc);
+    }
+
+    double Reptation::_energyChange() {
+      for (auto i : *gPtr)
+        if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
+          return pc::infty;
+
+      double unew = pot->g_external(spc->trial, *gPtr) + pot->g_internal(spc->trial, *gPtr);
+      if (unew==pc::infty)
+        return pc::infty;       // early rejection
+      double uold = pot->g_external(spc->p, *gPtr) + pot->g_internal(spc->p, *gPtr);
+
+      for (auto g : spc->groupList()) {
+        if (g!=gPtr) {
+          unew += pot->g2g(spc->trial, *g, *gPtr);
+          if (unew==pc::infty)
+            return pc::infty;   // early rejection
+          uold += pot->g2g(spc->p, *g, *gPtr);
+        }
+      }
+      return unew-uold;
+    }
+
+    string Reptation::_info() {
+      using namespace textio;
+      std::ostringstream o;
+      o << pad(SUB,w, "Bondlength") << bondlength << _angstrom + " (-1 = automatic)" << endl;
+      if (cnt>0)
+        o << accmap.info();
+      return o.str();
     }
 
     Isobaric::Isobaric(InputMap &in, Energy::Hamiltonian &e, Space &s, string pfx) : Movebase(e,s,pfx) {
@@ -712,7 +801,7 @@ namespace Faunus {
       w=30;
       dV = in.get<double>(prefix+"_dV", 0., "NPT volume displacement parameter");
       P = in.get<double>(prefix+"_P", 0., "NPT external pressure P/kT (mM)")/1e30*pc::Nav; //pressure mM -> 1/A^3
-      runfraction = in.get(prefix+"_runfraction",1.0);
+      runfraction = in.get<double>(prefix+"_runfraction",1.0);
       if (dV<1e-6)
         runfraction=0;
       hamiltonian = &e;
@@ -885,7 +974,7 @@ namespace Faunus {
       Movebase(e,s,pfx), tracker(s) {
         title="Grand Canonical Salt";
         w=30;
-        runfraction = in.get(prefix+"_runfraction",1.0);
+        runfraction = in.get<double>(prefix+"_runfraction",1.0);
         e.add(Urest);
         saltPtr=&g;
         add(*saltPtr);

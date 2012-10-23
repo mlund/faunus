@@ -7,18 +7,33 @@ bool eq(double a, double b, double tol=1e-6) { return (std::abs(a-b)<tol) ? true
 
 int main() {
 
+  // check infinity
   assert( pc::infty == -std::log(0) && "Problem with infinity" );
 
+  // check approximate exp()
   assert( eq( exp_cawley(1),std::exp(1),1e-1 ) && "Problem with approximate exp() function" );
 
+  // check approximate 1/sqrt()
+  assert( eq( invsqrtQuake(20.), 1/std::sqrt(20.), 1e-1) && "Problem w. inverse Quake sqrt.");
+
   // check geometries
-  Geometry::Sphere geoSphere(1000);
-  Geometry::Cylinder geoCylinder(1000,1000);
+  Geometry::Sphere geoSph(1000);
+  Geometry::Cylinder geoCyl(1000,1000);
   Point a( 0,0,sqrt(16)), b(0,sqrt(64),0);
-  double x = geoSphere.sqdist(a,b);
-  double y = geoCylinder.sqdist(a,b);
+  double x = geoSph.sqdist(a,b);
+  double y = geoCyl.sqdist(a,b);
   assert( x==16+64 && y==16+64 );
   assert( eq(x,y) && "No good distance calculation");
+
+  // check vector rotation
+  Geometry::VectorRotate vrot;
+  a.clear();
+  a.x=1.;
+  vrot.setAxis( geoCyl, Point(0,0,0), Point(0,1,0), pc::pi/2); // rotate around y-axis
+  a = vrot.rotate(a); // rot. 90 deg.
+  assert( eq(a.x,0,1e-8) && "Vector rotation failed");
+  a = vrot.rotate(a); // rot. 90 deg.
+  assert( eq(a.x,-1,1e-8) && "Vector rotation failed");
 
   // check table of averages
   typedef Analysis::Table2D<float,Average<float> > Ttable;

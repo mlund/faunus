@@ -31,14 +31,15 @@ namespace Faunus {
 
   void Point::ranunit(RandomBase &ran) {
     Point u;
-    Tcoord r=2;
-    while (r>1) { //Generate a random unit vector
+    Tcoord r;
+    do {
       u.x=2*ran.randHalf();
       u.y=2*ran.randHalf();
       u.z=2*ran.randHalf();
       r=sqrt(u.x*u.x+u.y*u.y+u.z*u.z);
-    }
+    } while (r>1);
     *this = u*(1/r);
+    assert(std::abs(this->len()-1)<1e-7); // is it really a unit vector?
   }
 
   Point Point::operator-() const {

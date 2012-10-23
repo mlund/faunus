@@ -337,10 +337,13 @@ namespace Faunus {
      */
     class DebyeHuckelShift : public DebyeHuckel {
       private:
-        double shift;
+        double shift;    // offset at cutoff distance
+        double sqcutoff; // squared cutoff distance
       public:
         DebyeHuckelShift(InputMap&);                       //!< Construction from InputMap
         inline double operator() (const particle &a, const particle &b, double r2) const {
+          if (r2>sqcutoff)
+            return 0;
 #ifdef FAU_APPROXMATH
           double rinv = invsqrtQuake(r2);
           return lB * a.charge * b.charge * ( exp_cawley(-k/rinv)*rinv - shift );

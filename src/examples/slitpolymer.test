@@ -1,0 +1,14 @@
+# Generated on Oct 23 2012 14:31:40 using 4.7.2 (SVN revision: 836)
+PolymerShape_Rgpolymer             6.08065             
+crank_Acceptancepolymer            0.962583            
+crank_acceptance                   96.2583             
+energyAverage                      -0.907744           
+pivot_Acceptancepolymer            0.913474            
+pivot_acceptance                   91.3474             
+relativeEnergyDrift                1.89669e-11         
+reptation_Acceptancepolymer        0.909231            
+reptation_acceptance               90.9231             
+transrot_acceptance                71.9381             
+transrot_polymer_acceptance        71.9381             
+transrot_polymer_dRot              83.8136             
+transrot_polymer_dTrans            12.5157             

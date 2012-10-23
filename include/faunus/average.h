@@ -50,7 +50,10 @@ namespace Faunus {
   template<class T> Average<T>::Average() { reset(); }
   
   template<class T> T Average<T>::avg() const {
-    assert(cnt>0 && "Average counter is zero");
+    if (cnt<=0) {
+      std::cerr << "Warning average counter is empty.\n";
+      return 0;
+    }
     return double(sum)/cnt;
   }
 

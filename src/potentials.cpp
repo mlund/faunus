@@ -376,6 +376,7 @@ namespace Faunus {
 
     DebyeHuckelShift::DebyeHuckelShift(InputMap &in) : DebyeHuckel(in) {
       double rc=in.get<double>("pairpot_cutoff",pc::infty);
+      sqcutoff=rc*rc;
       shift = exp(-rc*k)/rc;
       std::ostringstream o;
       o << " (shifted, rcut=" << rc << textio::_angstrom << ")";

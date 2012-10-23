@@ -141,6 +141,13 @@ namespace Faunus {
       return o.str();
     }
 
+    /*!
+     * The InputMap is searched for the following keywords:
+     * \li \c prefix_runfraction
+     * \li \c prefix_genericdp This will be used if no specific displacement parameter
+     *     is specified for an ion.
+     * The standard prefix is \c mv_particle.
+     */
     AtomicTranslation::AtomicTranslation(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Single Particle Translation";
       iparticle=-1;
@@ -151,6 +158,10 @@ namespace Faunus {
       setGenericDisplacement( in.get<double>(prefix+"_genericdp",0) );
     }
 
+    /*!
+     * The generic displacement parameter will be used only if the specific
+     * atomic dp is zero.
+     */
     void AtomicTranslation::setGenericDisplacement(double dp) {
       genericdp=dp;
     }
@@ -178,9 +189,8 @@ namespace Faunus {
       }
       double dp;
       if (iparticle>-1) {
-        if (genericdp<1e-6)
-          dp = atom[ spc->p[iparticle].id ].dp;
-        else
+        dp = atom[ spc->p[iparticle].id ].dp;
+        if (dp<1e-6)
           dp = genericdp;
         assert(iparticle<(int)spc->p.size() && "Trial particle out of range");
         Point t = dir*dp;

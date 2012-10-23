@@ -58,17 +58,21 @@ namespace Faunus {
         }
     };
 
-    // see also http://www.lsinstruments.ch/technology/static_light_scattering_sls/structure_factor/
+    // See also http://www.lsinstruments.ch/technology/static_light_scattering_sls/structure_factor/
+    /*!
+     * \brief Calculates scattering intensity, I(q) using the Debye formula
+     */
     template<typename Tgeometry, typename Tformfactor> class DebyeFormula {
       private:
         Tformfactor F; // scattering from a single particle
         Tgeometry geo; // geometry to use for distance calculations
       public:
-        std::map<float,Average<float> > I; // Average I(q)
+        std::map<float,Average<float> > I; //!< Sampled, average I(q)
 
         DebyeFormula(InputMap &in) : geo(in) {}
 
         /*!
+         * \brief Sample I(q) and add to average
          * \param p Particle vector
          * \param qmin Minimum q-value to sample (1/A)
          * \param qmax Maximum q-value to sample (1/A)

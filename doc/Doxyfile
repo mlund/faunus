@@ -1,4 +1,4 @@
-# Doxyfile 1.8.1.1
+# Doxyfile 1.8.0
 
 # This file describes the settings to be used by the documentation system
 # doxygen (www.doxygen.org) for a project.
@@ -100,7 +100,7 @@ REPEAT_BRIEF           = YES
 # "The $name file" "is" "provides" "specifies" "contains"
 # "represents" "a" "an" "the"
 
-ABBREVIATE_BRIEF       =
+ABBREVIATE_BRIEF       = NO
 
 # If the ALWAYS_DETAILED_SEC and REPEAT_BRIEF tags are both set to YES then
 # Doxygen will generate a detailed section even if there is only a brief
@@ -578,12 +578,12 @@ FILE_VERSION_FILTER    = "/bin/sh doc/versionfilter.sh"
 
 # The LAYOUT_FILE tag can be used to specify a layout file which will be parsed
 # by doxygen. The layout file controls the global structure of the generated
-# output files in an output format independent way. To create the layout file
+# output files in an output format independent way. The create the layout file
 # that represents doxygen's defaults, run doxygen with the -l option.
 # You can optionally specify a file name after the option, if omitted
 # DoxygenLayout.xml will be used as the name of the layout file.
 
-LAYOUT_FILE            =
+LAYOUT_FILE            = doc/DoxygenLayout.xml
 
 # The CITE_BIB_FILES tag can be used to specify one or more bib files
 # containing the references data. This must be a list of .bib files. The
@@ -728,7 +728,6 @@ EXCLUDE_SYMBOLS        =
 EXAMPLE_PATH           = src/tools \
                          doc \
                          src/examples \
-                         doc/examples \
                          ./
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the
@@ -805,7 +804,7 @@ INLINE_SOURCES         = NO
 
 # Setting the STRIP_CODE_COMMENTS tag to YES (the default) will instruct
 # doxygen to hide any special comment blocks from generated source code
-# fragments. Normal C, C++ and Fortran comments will always remain visible.
+# fragments. Normal C and C++ comments will always remain visible.
 
 STRIP_CODE_COMMENTS    = YES
 
@@ -957,20 +956,11 @@ HTML_TIMESTAMP         = YES
 
 # If the HTML_DYNAMIC_SECTIONS tag is set to YES then the generated HTML
 # documentation will contain sections that can be hidden and shown after the
-# page has loaded.
+# page has loaded. For this to work a browser that supports
+# JavaScript and DHTML is required (for instance Mozilla 1.0+, Firefox
+# Netscape 6.0+, Internet explorer 5.0+, Konqueror, or Safari).
 
 HTML_DYNAMIC_SECTIONS  = YES
-
-# With HTML_INDEX_NUM_ENTRIES one can control the preferred number of
-# entries shown in the various tree structured indices initially; the user
-# can expand and collapse entries dynamically later on. Doxygen will expand
-# the tree to such a level that at most the specified number of entries are
-# visible (unless a fully collapsed tree already exceeds this amount).
-# So setting the number of entries 1 will produce a full collapsed tree by
-# default. 0 is a special value representing an infinite number of entries
-# and will result in a full expanded tree by default.
-
-HTML_INDEX_NUM_ENTRIES = 100
 
 # If the GENERATE_DOCSET tag is set to YES, additional index files
 # will be generated that can be used as input for Apple's Xcode 3
@@ -1721,7 +1711,7 @@ CALLER_GRAPH           = NO
 
 GRAPHICAL_HIERARCHY    = YES
 
-# If the DIRECTORY_GRAPH and HAVE_DOT tags are set to YES
+# If the DIRECTORY_GRAPH, SHOW_DIRECTORIES and HAVE_DOT tags are set to YES
 # then doxygen will show the dependencies a directory has on other directories
 # in a graphical way. The dependency relations are determined by the #include
 # relations between the files in the directories.

@@ -109,5 +109,44 @@ namespace Faunus {
       friend std::ostream &operator<<(std::ostream &, const CigarParticle&); //!< Output information
   };
 
+#ifdef HYPERSPHERE
+  /*!
+   * \brief Hypersphere particle
+   * \author Martin Trulsson
+   * \date Lund, 2009
+   * \warning Unfinished - need to transfer from jurassic branch
+   */
+  class Hyperpoint : public PointParticle {
+    public:
+      double z1,z2,z3,z4;                     //!< Reduced Coordinates on hypersphere
+      translate(const Geometry::Geometrybase&, const Point&);
+      friend std::ostream &operator<<(std::ostream&, Hyperpoint&);
+      Hyperpoint &operator<<(std::istream&);
+
+      void clear() {
+        z1=z2=z3=0;
+        z4=1;
+      }
+
+      Hyperpoint() { clear(); }
+
+      /*!
+       * \brief Squared distance between two points.
+       * \return \f[ r^2 = z_1z_1' + z_2z_2' + z_3z_3' + z_4z_4' \f]
+       */
+      inline double sqdist(const Hyperpoint &p) const {
+        return z1*p.z1+z2*p.z2+z3*p.z3+z4*p.z4;
+      }
+
+      /*!
+       * \brief Geodesic distance between two hyperpoints
+       * \return \f[ r_{\mbox{\scriptsize{geod}}} = \arccos{ (r^2) } \f]
+       */
+      inline double geodesic(const Hyperpoint &p) const {
+        return std::acos(sqdist(p));
+      }
+  };
+#endif
+
 }//namespace
 #endif

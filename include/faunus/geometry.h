@@ -11,6 +11,13 @@ namespace Faunus {
 
   /*!
    * \brief Namespace for geometric operations.
+   *
+   * This namespace contains classes for handling various simulation geometries
+   * such as cubes, spheres, cylinder, slits etc. The geometry of a simulation
+   * is handled by the base class Geometry::Geometrybase that gives all geometries
+   * a common interfaces to handle distance calculations, boundary conditions,
+   * volume calculation and so forth. In this way, the geometry of a simulation may be
+   * changed without any code changes in for example energy calculations.
    */
   namespace Geometry {
 
@@ -90,24 +97,19 @@ namespace Faunus {
 
     /*! \brief Cuboid geometry with periodic boundaries
      *
+     *  The Cuboid simulation container has right angles, rectangular faces 
+     *  and periodic boundaries.
+     *
      *  \author Chris Evers
      *  \date Lund, nov 2010
-     *
-     *  The Cuboid simulation container has right angles, rectangular faces 
-     *  and periodic boundaries. A slice can be introduced to constrain the position
-     *  of some of the space to a part of the Cuboid. The function slicecollision
-     *  can be used to make sure space are positioned within in the slice.
-     */
+      */
     class Cuboid : public Geometrybase {
       private:
         string _info(char);                      //!< Return info string
         void _setVolume(double);
         double _getVolume() const;
       protected:
-        bool setslice(Point, Point);             //!< Reset slice position
         Point len_inv;                           //!< Inverse sidelengths
-        Point slice_min, slice_max;              //!< Position of slice corners
- 
       public:
         Cuboid(InputMap&);                       //!< Read input parameters
         bool setlen(Point);                      //!< Reset Cuboid sidelengths
@@ -268,15 +270,16 @@ namespace Faunus {
         string _info(char);
       public:
         hyperSphere(InputMap&);
-        void randompos(point&);
-        bool collision(const particle &, collisiontype=BOUNDARY) const;
+        void randompos(Point&);
+        bool collision(const particle&, collisiontype=BOUNDARY) const;
 
-        double dist(const point &a, const point &b) {
-          return r*a.geodesic(b); // CHECK!!! (virtual=slow!)
+        // dist() is not virtual...
+        double dist(const Point &a, const Point &b) {
+          return r*a.geodesic(b);
         }
 
-        inline double sqdist(const point &a, const point &b) const {
-          return pow(dist(a,b),2); // !! SHOULD BE REAL DISTANCE CHECK!! (virtual=slow!)
+        inline double sqdist(const Point &a, const Point &b) const FOVERRIDE {
+          return pow(dist(a,b),2);
         }
 
         bool overlap(const particle &a) {

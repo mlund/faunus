@@ -14,7 +14,14 @@
 namespace Faunus {
 
   /*!
-   * \brief Namespace for various potentials - pair potentials, external potentials etc.
+   * \brief Namespace for pair potentials
+   *
+   * This namespace contains classes and templates that calculates the
+   * pair potential between particles. The majority of these classes/templates
+   * are derived from the base class Potential::PairPotentialBase and thus
+   * have a common interface. Several pair potentials can be combined into
+   * one by the template Potential::CombinedPairPotential and a number of
+   * common combinations are already defined as typedefs.
    */
   namespace Potential {
 
@@ -23,15 +30,17 @@ namespace Faunus {
     /*!
      * \brief Base class for pair potential classes
      *
-     * This is a base class for all pair potentials which must implement the function operator so
-     * that the potential can work as a class function. To make a new pair potential you must
-     * implement 1) a function that takes two particles as arguments as well as the squared distance
-     * between them (i.e. the function operator), and 2)
-     * a brief information string (both are pure virtual). The unit of the
-     * returned energy is arbitrary but you *must* ensure that when multiplied by tokT() that
-     * it is converted to kT units (thermal energy). By default _tokT=1 and it is a good policy
-     * to return energies in kT. Several pair potentials can be combined by the class template
-     * Potential::CombinedPairPotential.
+     * This is a base class for all pair potentials which must implement the function
+     * operator so that the potential can work as a class function.
+     * To make a new pair potential you must implement
+     * 1) a function that takes two particles as arguments as well as the
+     *    squared distance between them (i.e. the function operator), and
+     * 2) a brief information string.
+     * The unit of the returned energy is arbitrary but you *must* ensure that
+     * when multiplied by tokT() that it is converted to kT units (thermal energy).
+     * By default _tokT=1 and it is a good policy to return energies in kT.
+     *
+     * \todo remove tokT() function
      */
     class PairPotentialBase {
       private:
@@ -183,6 +192,7 @@ namespace Faunus {
     };
     /*!
      * \brief Hydrophobic pair potential based on SASA and surface tension
+     * \todo This description needs to be updated.
      *
      * The potential is not zero iff the distance between hydrophobic particles is smaller than size of solvent molecule (2*Rs)  
      *
@@ -242,21 +252,16 @@ namespace Faunus {
       private:
         string _brief();
         void _setScale(double);
-        inline double r6(double sigma, double r2) const {
-          double x=sigma*sigma/r2;  // 2
-          return x*x*x;             // 6
-        }
-        inline double energy(double sigma, double r2) const {
-          double x=r6(sigma,r2);
-          return eps*(x*x);
-        }
       protected:
         double eps;
       public:
         R12Repulsion();
         R12Repulsion(InputMap&, string="r12rep_");
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          return energy(a.radius+b.radius, r2);
+          double x=(a.radius+b.radius);
+          x=x*x/r2; // r2
+          x=x*x*x; // r6
+          return eps*x*x;
         }
         string info(char);
     };
@@ -298,7 +303,7 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Debye-Huckel pair potential
+     * \brief Debye-Huckel/Yokawa pair potential
      *
      * This potential is similar to the plain Coulomb potential but with an extra exponential term to described salt screening:
      * \f[ \beta w_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT} \frac{z_i z_j}{r_{ij}} \exp(-\kappa r_{ij}) \f]

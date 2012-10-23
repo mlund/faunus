@@ -17,7 +17,15 @@
 namespace Faunus {
 
   /*!
-   * \brief Classes related to energy evaluation, pair potentials, bonds etc.
+   * \brief Classes/templates that calculate the energy of particles, groups, system.
+   *
+   * This namespace containes classes and templates for calculating energies of the
+   * system. This can be pair interactions, external potentials, long range corrections,
+   * constraints etc.
+   * All energy calculation classes inherit from the base class Energy::Energybase and
+   * thus have a common interface. Of special significance is the class
+   * Energy::Hamiltonian that can sum the energies from an arbitrary number of base
+   * classes and thus act as a true Hamiltonian.
    */
   namespace Energy {
 
@@ -402,22 +410,23 @@ namespace Faunus {
 
     /*!
      * \brief Collection of Energybases that when summed give the Hamiltonian
-     * \author Mikael Lund
-     * \date Lund, 2011
-     *
+    *
      * This class is used to collect several Energybase derivatives into a full hamiltonian.
      * The following example demonstrated how one can generate a Hamiltonian for bonded as
      * well as non-bonded interactions:
      * \code
-     *   Energy::Hamiltonian pot;
-     *   auto nbPtr = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(in) );
-     *   auto bPtr = pot.create( Energy::Bonded() );
-     *   cout << pot.info();
+     * Energy::Hamiltonian pot;
+     * auto nbPtr = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(in) );
+     * auto bPtr = pot.create( Energy::Bonded() );
+     * cout << pot.info();
      * \endcode
      *
      * Notice that we do not need to specify a Geometry for the Bonded energy class as this information
      * is simply passed on from the first added potential.
-     */
+     *
+     * \author Mikael Lund
+     * \date Lund, 2011
+      */
     class Hamiltonian : public Energybase {
       typedef shared_ptr<Energybase> baseptr;
       private:

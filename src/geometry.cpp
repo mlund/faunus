@@ -141,15 +141,6 @@ namespace Faunus {
         len.z=cubelen;
       }
       setlen(len);
-      Point min;
-      min.x=in.get<double>("cuboid_xmin",0);
-      min.y=in.get<double>("cuboid_ymin",0);
-      min.z=in.get<double>("cuboid_zmin",0);
-      Point max;
-      max.x=in.get<double>("cuboid_xmax",len.x);
-      max.y=in.get<double>("cuboid_ymax",len.y);
-      max.z=in.get<double>("cuboid_zmax",len.z);
-      setslice(min,max);
     }
 
     bool Cuboid::setlen(Point l) {
@@ -164,26 +155,6 @@ namespace Faunus {
       return true;
     }
 
-    bool Cuboid::setslice(Point min, Point max) {
-      assert(min.x>=0 && min.y>=0 && min.z>=0);
-      assert(max.x<=len.x);          // debug information
-      assert(max.y<=len.y);          // 
-      assert(max.z<=len.z);          // 
-
-      if (min.x<0  ||                // check non-negative value
-          min.y<0  ||                // 
-          min.z<0  )                 // 
-        return false;                // 
-
-      if (max.x>len.x  ||            // check non-negative value
-          max.y>len.y  ||            // 
-          max.z>len.z  )             // 
-        return false;                // 
-      slice_min = len_half-max;      // set minimum corner (other way around than in input!!)
-      slice_max = len_half-min;      // set maximum corner
-      return true;
-    }
-
     void Cuboid::_setVolume(double newV) {
       scale(len,newV);
       setlen(len);
@@ -195,11 +166,8 @@ namespace Faunus {
 
     string Cuboid::_info(char w) {
       std::ostringstream o;
-      o << pad(SUB,w, "Sidelengths") << len.x << " x " << len.y << " x " << len.z << " ("+textio::angstrom+")" << endl
-        << pad(SUB,w, "Slice position [x y z]")
-        << len_half.x-slice_max.x << "-" << len_half.x-slice_min.x << " " 
-        << len_half.y-slice_max.y << "-" << len_half.y-slice_min.y << " "
-        << len_half.z-slice_max.z << "-" << len_half.z-slice_min.z << endl;
+      o << pad(SUB,w, "Sidelengths")
+        << len.x << " x " << len.y << " x " << len.z << " ("+textio::angstrom+")" << endl;
       return o.str();
     }
 
@@ -216,25 +184,9 @@ namespace Faunus {
     }
 
     bool Cuboid::collision(const particle &a, collisiontype type) const {
-      switch (type) {
-        case (BOUNDARY): // collision with geometry boundaries
-          if (std::abs(a.x) > len_half.x ||
-              std::abs(a.y) > len_half.y ||
-              std::abs(a.z) > len_half.z  ) return true;
-          break;
-        case (ZONE):     // collision with forbidden zone (slice)
-          if (std::abs(a.x) > len_half.x  ||
-              std::abs(a.y) > len_half.y  ||
-              std::abs(a.z) > len_half.z  ||
-              a.x  < slice_min.x ||
-              a.y  < slice_min.y ||
-              a.z  < slice_min.z ||
-              a.x  > slice_max.x ||
-              a.y  > slice_max.y ||
-              a.z  > slice_max.z  )
-          return true;
-          break;
-      }
+      if (std::abs(a.x)>len_half.x) return true;
+      if (std::abs(a.y)>len_half.y) return true;
+      if (std::abs(a.z)>len_half.z) return true;
       return false;
     }
 
@@ -484,7 +436,7 @@ namespace Faunus {
      * \param geo Simulation geometry
      * \param beg Starting point of line to rotate around - typically a molecular mass center
      * \param end Ending point of line to rotate around
-     * \param angle How many degrees to rotate
+     * \param angle Rotation angle [rad]
      */
     void VectorRotate::setAxis(Geometrybase &geo, const Point &beg, const Point &end, double angle) {
       assert(&geo!=nullptr);

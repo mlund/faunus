@@ -82,11 +82,15 @@ namespace Faunus {
            * \param resolution Resolution of the x axis
            * \param key Table type: HISTOGRAM or XYDATA
            */
-          Table2D(Tx resolution=0.2, type key=HISTOGRAM) {
+          Table2D(Tx resolution=0.2, type key=XYDATA) {
+            tabletype=key;
+            setResolution(resolution);
+          }
+
+          void setResolution(Tx resolution) {
             assert( resolution>0 );
             dx=resolution;
-            name.clear();
-            tabletype=key;
+            map.clear();
           }
 
           virtual ~Table2D() {}
@@ -131,7 +135,7 @@ namespace Faunus {
               f.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); // ignore first line
               while (!f.eof()) {
                 Tx x;
-                Ty y;
+                double y;
                 f >> x >> y;
                 operator()(x)=y;
               }
@@ -141,6 +145,12 @@ namespace Faunus {
           }
       };
 
+    template<typename Tx, typename Ty=unsigned long int>
+      class Histogram : public Table2D<Tx,Ty> {
+        public:
+          Histogram(Tx resolution=0.2) : Table2D<Tx,Ty>(resolution, Table2D<Tx,Ty>::HISTOGRAM) {}
+      };
+ 
     /*!
      * \brief Radial distribution analysis
      * \author Mikael Lund

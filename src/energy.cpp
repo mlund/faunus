@@ -579,6 +579,57 @@ namespace Faunus {
       return u;
     }
 
+    MeanFieldCorrection::MeanFieldCorrection(InputMap& in)
+      : bin(in.get<double>("mfc_binsize", 2)), 
+        dh(in),
+        qdensity(bin,Ttable::XYDATA) {
+      name = "Mean Field Correction";  
+      threshold=in.get<double>("cylinder_radius",pc::infty);
+      loadfromdisk=in.get<bool>("mfc_load", false);
+      filename=textio::prefix+"mfc_qdensity";
+      prefactor=std::exp(-threshold/dh.debyeLength())*dh.bjerrumLength()*pc::pi*2*bin*dh.debyeLength();
+      if (loadfromdisk)
+        qdensity.load(filename);
+    }
+
+    double MeanFieldCorrection::i_external(const p_vec& p, int i) {
+      return p[i].charge*qdensity(p[i].z)*prefactor;
+    }
+
+    double MeanFieldCorrection::g_external(const p_vec& p, Group& g) {
+      double u=0;
+      for (auto i : g)  //i will be the index of the group
+        u+=i_external(p, i);
+      return u;
+    }
+
+    /*!
+     * Sampling is done only when \c loadfromdisk is set to false. After each sampling event, the charge
+     * density table is saved to disk.
+     */
+    void MeanFieldCorrection::sample(const p_vec& p, double zmin, double zmax){
+      if (!loadfromdisk) {
+        typedef Analysis::Table2D<double,double> T;
+        T qsum(bin,T::XYDATA);  // summed charge in each bin
+        double dV=pc::pi*pow(threshold, 2)*bin; // volume of each bin
+        for (auto &i : p)
+          qsum(i.z)+=i.charge;
+        for (double z=zmin; z<=zmax; z+=bin)
+          qdensity(z)+=qsum(z)/dV;
+        qdensity.save(filename);
+      }
+    }
+
+    string MeanFieldCorrection::_info(){
+      using namespace textio;
+      char w=30;
+      std::ostringstream o;
+      o << pad(SUB,w,"Mean Field hole radius") << threshold << _angstrom << endl
+        << pad(SUB,w,"Mean Field bin width") << bin << _angstrom << endl
+        << pad(SUB,w,"Prefactor") << prefactor << _angstrom+cubed << endl;
+      return o.str();
+    }
+    
     /*
        pair_permutable<particle::Thydrophobic> createPairHydrophobic(const particle &a, const particle &b) {
        return pair_permutable<particle::Thydrophobic>(a.hydrophobic, b.hydrophobic);

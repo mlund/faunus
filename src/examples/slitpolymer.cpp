@@ -23,12 +23,9 @@ int main() {
 
   // Set up energy field
   Geometry::Cuboidslit geo(mcp);
-  Energy::Hamiltonian pot;
-  Energy::GouyChapman gouy(mcp);
+  Energy::GouyChapman pot(mcp);
   pot.setGeometry(geo);
-  gouy.setGeometry(geo);
-  pot.add( gouy );
-  gouy.setPosition( geo.len_half.z ); // Surface in xy plane at +z direction
+  pot.setPosition( geo.len_half.z ); // Surface in xy plane at +z direction
   Space spc( pot.getGeometry() );
 
   // Add polymer
@@ -79,7 +76,7 @@ int main() {
       pol.setMassCenter(spc);
       shape.sample(pol,spc);
       for (int i=pol.front(); i<=pol.back(); i++)
-        surfmapall( gouy.dist2surf( spc.p.at(i) ) )++;
+        surfmapall( pot.dist2surf( spc.p.at(i) ) )++;
 
     } // end of micro loop
 

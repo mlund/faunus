@@ -59,7 +59,7 @@ namespace Faunus {
      * \li Accept with probability \f$ \min(1,e^{-\beta\Delta U}) \f$
      * \li Call either \c _acceptMove() or \c _rejectMove()
      *
-     * \note Try not to re-implement this!
+     * \note Do not override this function in derived classes.
      * \param n Perform move \c n times
      */
     double Movebase::move(int n) {
@@ -121,8 +121,7 @@ namespace Faunus {
      *
      * Typically, additional information will be provided as well.
      *
-     * \note Developers are encouraged to leave this function untouched and instead expand the
-     *       _info() virtual functions in derived classes.
+     * \note Do not override in derived classes - use _info().
      */
     string Movebase::info() {
       assert(!title.empty() && "Markov Moves must have a title");

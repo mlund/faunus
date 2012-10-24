@@ -113,10 +113,10 @@ namespace Faunus {
       if (!failed.empty()) {
         o << endl << std::left << setw(w+2) << "" << setw(12) << "Stable" << setw(12) << "Current" << "Difference" << endl;
         for (auto &m : failed) {
-          double current=m.second.first;
-          double ref=m.second.second;
+          double current=m.second.second;
+          double ref=m.second.first;
           o << indent(SUBSUB) << std::left << setw(w-2) << m.first
-            << setw(12) << m.second.first << setw(12) << m.second.second 
+            << setw(12) << ref << setw(12) << current
             << std::abs( (ref-current)/ref*100 ) << percent << endl;
         }
       }

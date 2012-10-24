@@ -333,7 +333,18 @@ namespace Faunus {
         Pivot(InputMap&, Energy::Energybase&, Space&, string="pivot");
     };
 
-    class Reptation : public Movebase {
+    /*!
+     * \brief Reptation move for linear polymers
+     *
+     * This will perform a reptation move of a linear, non-uniform polymer chain.
+     * During construction, the InputMap is searched for the following keywords:
+     * \li \c reptation_runfraction - Probability to perform a move - defaults to 1.0 = 100%
+     * \li \c reptation_bondlength - The bond length while moving head groups. Use -1 to use existing bondlength.
+     *
+     * \author Mikael Lund
+     * \date Lund 2012
+     */
+     class Reptation : public Movebase {
       private:
         AcceptanceMap<string> accmap;
         void _test(UnitTest&);

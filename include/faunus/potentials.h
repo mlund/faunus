@@ -190,6 +190,7 @@ namespace Faunus {
         }
         string info(char);
     };
+
     /*!
      * \brief Hydrophobic pair potential based on SASA and surface tension
      * \todo This description needs to be updated.

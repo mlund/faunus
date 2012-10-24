@@ -10,6 +10,7 @@
 #include <faunus/textio.h>
 #include <faunus/potentials.h>
 #include <faunus/auxiliary.h>
+#include <faunus/analysis.h>
 #endif
 
 // http://publib.boulder.ibm.com/infocenter/iadthelp/v8r0/index.jsp?topic=/com.ibm.xlcpp111.linux.doc/language_ref/variadic_templates.html
@@ -337,7 +338,6 @@ namespace Faunus {
         double total(const p_vec&);                        //!< Sum all known bond energies
     };
 
-
     /*!
      * \brief Energy from external pressure for use in the NPT-ensemble.
      * \author Mikael Lund
@@ -365,8 +365,6 @@ namespace Faunus {
 
     /*!
      * \brief External energy that will keep specific groups in a sub-volume of the system
-     * \author Mikael Lund
-     * \date Lund, 2012
      *
      * This energy class will check if particles in specific groups are located within a
      * rectangular box, spanned by two vector points, \c upper and \c lower. If outside
@@ -384,6 +382,9 @@ namespace Faunus {
      *   auto restricted = pot.create( Energy::RestrictedVolume(imap) );
      *   restricted->groups.push_back( &mygroup );
      * \endcode
+     *
+     * \author Mikael Lund
+     * \date Lund, 2012
      */
     class RestrictedVolume : public Energy::Energybase {
       private:
@@ -579,7 +580,11 @@ namespace Faunus {
          */
         double p_external(const particle &p) FOVERRIDE {
           if (p.charge!=0) {
+#ifdef FAU_APPROXMATH
+            double x=exp_cawley(-kappa*dist2surf(p));
+#else
             double x=exp(-kappa*dist2surf(p));
+#endif
             if (linearize)
               return p.charge * phi0 * x;
             else
@@ -587,6 +592,29 @@ namespace Faunus {
           }
           return 0;
         }
+    };
+
+    /*!
+     * \brief Mean field correction
+     * \author Anil Kurut
+     * \warning unfinished!
+     */
+    class MeanFieldCorrection : public Energy::Energybase {
+      private:
+        string filename;                                  //!< Filename of charge density file
+        double threshold;                                 //!< Threshold for the mean field approximation, must be equal to radius of cylinderical container
+        double bin;                                       //!< Resolution for the container slices 
+        Potential::DebyeHuckel dh;  
+        typedef Analysis::Table2D<double, Average<double> > Ttable;
+        Ttable qdensity;                                  //!< Tabulated charge desity for each slice of the container.
+        bool loadfromdisk;                                //!< Yes: Load from disk, No: Sample charge density as self consistent manner 
+        double prefactor;                                 //!< exp(-kappa*threshold)
+        string _info();
+      public:
+        MeanFieldCorrection(InputMap&);//!< Constructor - reads input parameters and needs Debye H\"uckel potential
+        double i_external(const p_vec&, int) FOVERRIDE;         //!< i'th particle energy in mean field correction
+        double g_external(const p_vec&, Group&) FOVERRIDE;      //!< Group energy in mean field correction
+        void sample(const p_vec&, double, double);              //!< Sample the charge density in all slices (Accepted configurations)
     };
 
     /*!

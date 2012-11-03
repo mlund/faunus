@@ -126,7 +126,7 @@ namespace Faunus {
         void _setScale(double);
       protected:
         inline double r6(double sigma, double r2) const {
-          double x=sigma*sigma/r2;  // 2
+          double x(sigma*sigma/r2);  // 2
           return x*x*x;             // 6
         }
         double eps;
@@ -134,11 +134,67 @@ namespace Faunus {
         LennardJones();
         LennardJones(InputMap&, string="lj_");
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          double x=r6(a.radius+b.radius,r2);
+          double x(r6(a.radius+b.radius,r2));
           return eps*(x*x - x);
         }
         string info(char);
     };
+
+    /*! \brief Lorentz-Berthelot Mixing Rule for Lennard-Jones parameters
+     */
+    class LorentzBerthelot {
+      public:
+        string name;
+        LorentzBerthelot();
+        double mixSigma(double,double) const;
+        double mixEpsilon(double,double) const;
+    };
+
+    /*! \brief Lennard-Jones potential with arbitrary mixing rules between particle types
+     */
+    template<class Tmixingrule>
+      class LennardJonesMixed : public PairPotentialBase {
+        private:
+          Tmixingrule mixer; // mixing rule class for sigma and epsilon
+          string _brief() { return name + " w. " + mixer.name; }
+        protected:
+          vector< vector<double> > s2, eps;
+        public:
+          LennardJonesMixed() {
+            name="Lennard-Jones";
+            int n=(int)atom.list.size(); // number of atom types
+            eps.resize(n);
+            s2.resize(n);
+            for (int i=0; i<n; i++) {    // loop over atom types
+              eps[i].resize(n);
+              s2[i].resize(n);
+              for (int j=0; j<n; j++) {
+                eps[i][j] = 4*mixer.mixEpsilon( atom.list[i].eps, atom.list[j].eps );
+                s2[i][j] = pow( mixer.mixSigma( atom.list[i].sigma, atom.list[j].sigma), 2);
+              }
+            }
+          }
+
+          inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+            double x( s2[a.id][b.id] / r2 ); //s2/r2
+            x=x*x*x; // s6/r6
+            return eps[a.id][b.id] * (x*x - x);
+          }
+
+          string info(char w=0) {
+            using namespace Faunus::textio;
+            std::ostringstream o;
+            o << indent(SUB) << "Pair parameters:\n";
+            int n=(int)atom.list.size();
+            for (int i=0; i<n-1; i++)
+              for (int j=i+1; j<n; j++)
+                o << indent(SUBSUB) << setw(12) << atom[i].name+"<->"+atom[j].name
+                  << indent(SUB) << sigma+" = " << sqrt( s2[i][j] ) << _angstrom
+                  << indent(SUB) << epsilon+" = " << eps[i][j]/4 << kT+" = " << pc::kT2kJ(eps[i][j]/4) << " kJ/mol"
+                  << endl;
+            return o.str();
+          }
+      };
 
     /*!
      * \brief As LennardJones but only the repulsive R12 part.
@@ -304,6 +360,36 @@ namespace Faunus {
     };
 
     /*!
+     * \brief Coulomb pair potential shifted according to Wolf
+     * 
+     * The Coulomb potential has the form:
+     * \f[
+     * \beta u_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT}
+     * z_i z_j \left (
+     * \frac{1}{r} - \frac{1}{R_c} + \frac{r-R_c}{R_c^2}
+     * \right )
+     * \f]
+     */
+    class CoulombWolf : public Coulomb {
+      private:
+        double Rc2, Rcinv;
+      public:
+        CoulombWolf(InputMap&); //!< Construction from InputMap
+        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+          if (r2>Rc2)
+            return 0;
+#ifdef FAU_APPROXMATH
+          r2=invsqrtQuake(r2);  // 1/r
+          return lB * a.charge * b.charge * (r2 - Rcinv + (Rcinv/r2-1)*Rcinv );
+#else
+          r2=sqrt(r2); // r
+          return lB * a.charge * b.charge * (1/r2 - Rcinv + (r2*Rcinv-1)*Rcinv );
+#endif
+        }
+        string info(char);
+    };
+
+    /*!
      * \brief Debye-Huckel/Yokawa pair potential
      *
      * This potential is similar to the plain Coulomb potential but with an extra exponential term to described salt screening:
@@ -451,6 +537,11 @@ namespace Faunus {
     };
 
     /*!
+     * \brief Lennard-Jones potential with Lorentz-Berthelot mixing rule
+     */
+    typedef LennardJonesMixed<LorentzBerthelot> LennardJonesLB;
+
+    /*!
      * \brief Combined Coulomb / HardSphere potential
      */
     typedef CombinedPairPotential<Coulomb, HardSphere> CoulombHS;
@@ -459,6 +550,11 @@ namespace Faunus {
      * \brief Combined Coulomb / LennardJones potential
      */
     typedef CombinedPairPotential<Coulomb, LennardJones> CoulombLJ;
+
+    /*!
+     * \brief Combined Coulomb / LennardJones potential
+     */
+    typedef CombinedPairPotential<CoulombWolf, LennardJones> CoulombWolfLJ;
 
     /*!
      * \brief Combined DebyeHuckel / HardSphere potential

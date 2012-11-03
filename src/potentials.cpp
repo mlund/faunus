@@ -137,6 +137,12 @@ namespace Faunus {
       return o.str();
     }
 
+    LorentzBerthelot::LorentzBerthelot() : name("Lorentz-Berthelot Mixing Rule") {}
+
+    double LorentzBerthelot::mixSigma(double sigma1, double sigma2) const { return 0.5*(sigma1+sigma2); }
+
+    double LorentzBerthelot::mixEpsilon(double eps1, double eps2) const { return sqrt(eps1*eps2); }
+
     LennardJonesR12::LennardJonesR12(InputMap &in, string pfx) : LennardJones(in,pfx) {
       name+="R12";
     }
@@ -185,7 +191,7 @@ namespace Faunus {
       o << name << ": u=" << depth*tokT() << textio::kT << " range=" << threshold_lower << "-" << threshold;
       return o.str();
     }
-    
+
     string SquareWellShifted::info(char w) {
       using namespace Faunus::textio;
       std::ostringstream o;
@@ -292,6 +298,21 @@ namespace Faunus {
         << pad(SUB,w+6,"T"+partial+epsilon+"/"+epsilon+partial+"T") << depsdt << endl
         << pad(SUB,w,"Bjerrum length") << lB << " "+angstrom << endl;
 
+      return o.str();
+    }
+
+    CoulombWolf::CoulombWolf(InputMap &in) : Coulomb(in) {
+      double Rc=in.get<double>("coulomb_cut", 10.);
+      Rcinv=1/Rc;
+      Rc2=Rc*Rc;
+      name+="Wolf";
+    }
+
+    string CoulombWolf::info(char w) {
+      using namespace textio;
+      std::ostringstream o;
+      o << Coulomb::info(w)
+        << pad(SUB,w,"Cut-off") << 1/Rcinv << _angstrom << endl;
       return o.str();
     }
 

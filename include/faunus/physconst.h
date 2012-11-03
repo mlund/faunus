@@ -22,7 +22,7 @@ namespace Faunus {
         e,                           //!< Electronic charge [C] 
         R,                           //!< Molar gas constant [J/(K*mol)]
         Nav;                         //!< Avogadro's number [1/mol]
-      static double lB(double=78.5); //!< Bjerrum length [Aangstrom]
+      static double lB(double);      //!< Bjerrum length [Aangstrom]
       static double kT2kJ(double);   //!< kT/molecule -> kJ/mol
       static double T();             //!< Return temperature [K]
       static void setT(double);      //!< Set temperature [K]

@@ -85,10 +85,7 @@ namespace Faunus {
         void boundary(Point &) const;
         bool collision(const particle &, collisiontype=BOUNDARY) const;
         inline double sqdist(const Point &a, const Point &b) const {
-          register double dx,dy,dz;
-          dx=a.x-b.x;
-          dy=a.y-b.y;
-          dz=a.z-b.z;
+          register double dx(a.x-b.x), dy(a.y-b.y), dz(a.z-b.z);
           return dx*dx + dy*dy + dz*dz;
         }
         Point vdist(const Point&, const Point&);
@@ -122,9 +119,9 @@ namespace Faunus {
         bool collision(const particle&, collisiontype=BOUNDARY) const;
 
         inline double sqdist(const Point &a, const Point &b) const {
-          double dx=std::abs(a.x-b.x);
-          double dy=std::abs(a.y-b.y);
-          double dz=std::abs(a.z-b.z);
+          double dx( std::abs(a.x-b.x) );
+          double dy( std::abs(a.y-b.y) );
+          double dz( std::abs(a.z-b.z) );
           if (dx>len_half.x) dx-=len.x;
           if (dy>len_half.y) dy-=len.y;
           if (dz>len_half.z) dz-=len.z;
@@ -132,7 +129,7 @@ namespace Faunus {
         }
 
         inline Point vdist(const Point &a, const Point &b) {
-          Point r=a-b;
+          Point r(a-b);
           if (r.x>len_half.x)
             r.x-=len.x;
           else if (r.x<-len_half.x)
@@ -176,7 +173,7 @@ namespace Faunus {
         }   
 
         inline Point vdist(const Point &a, const Point &b) {
-          Point r=a-b;
+          Point r(a-b);
           if (r.x>len_half.x)
             r.x-=len.x;
           else if (r.x<-len_half.x)

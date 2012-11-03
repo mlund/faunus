@@ -17,6 +17,11 @@ fau_example(example_polymers "./" polymers.cpp)
 set_target_properties(example_polymers PROPERTIES OUTPUT_NAME "polymers")
 add_test( example_polymers ${CMAKE_CURRENT_SOURCE_DIR}/polymers.run )
 
+fau_example(example_bulk "./" bulk.cpp)
+set_target_properties(example_bulk PROPERTIES OUTPUT_NAME "bulk")
+#add_test( example_polymers ${CMAKE_CURRENT_SOURCE_DIR}/polymers.run )
+
+
 fau_example(example_slitpolymer "./" slitpolymer.cpp)
 set_target_properties(example_slitpolymer PROPERTIES OUTPUT_NAME "slitpolymer")
 add_test( example_slitpolymer ${CMAKE_CURRENT_SOURCE_DIR}/slitpolymer.run )

@@ -13,7 +13,8 @@
  \image latex temper.png "Particle distribution function in an oscillating field. Output from the program below." width=10cm
 
  The tempering routine in Faunus is general and implemented in
- MPI where each replica has its own rank. Input files,
+ MPI where each replica has its own rank. The temper parameter(s) is given simply
+ by giving different input files for each replica. The input files,
  \c mpi$rank.temper.input, for this example look like this:
  \verbatim
  loop_macrosteps       2000 # number of temper moves

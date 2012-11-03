@@ -27,24 +27,6 @@ namespace Faunus {
     a.id=list.size();
     a.name="UNK";
     list.push_back(a);
-    init();
-  }
-
-  void AtomTypes::init() {
-    int n=list.size();
-    qq.resize(n);
-    eps.resize(n);
-    sigma.resize(n);
-    for (auto i=0; i<n; i++) {
-      qq[i].resize(n);
-      eps[i].resize(n);
-      sigma[i].resize(n);
-      for (auto j=0; j<n; j++) {
-        qq[i][j]    = list[i].charge * list[j].charge;
-        eps[i][j]   = sqrt(list[i].eps * list[j].eps);
-        sigma[i][j] = ( list[i].sigma + list[j].sigma ) / 2;
-      }
-    }
   }
 
   AtomData & AtomTypes::operator[] (particle::Tid i) { return list.at(i); }
@@ -78,7 +60,6 @@ namespace Faunus {
           list.push_back(a);
         }
       }
-      init();
       f.close();
       return true;
     }

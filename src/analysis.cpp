@@ -325,6 +325,10 @@ namespace Faunus {
       }
     }
 
+    /*!
+     * \param c Simulation space to insert into
+     * \param lB Bjerrum length [angstrom]
+     */
     void WidomScaled::insert(Space &c, double lB) {
       if (!run())
         return;

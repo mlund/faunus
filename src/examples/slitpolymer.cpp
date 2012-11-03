@@ -4,7 +4,8 @@
  * 1) monomer-surface: Gouy-Chapman electrostatics
  * 2) monomer-monomer: stiff bonds - i.e. ideal chain
  *
- * This is of course an unphysical system to match exact polymer DFT theory.
+ * This is of course an unphysical system but can be calculated exactly
+ * using polymer DFT theory -- see slitpolymer.agr xmgrace plot.
  */
 
 #include <faunus/faunus.h>
@@ -12,42 +13,43 @@
 using namespace Faunus;
 
 int main() {
-  cout << textio::splash();
+  cout << textio::splash();          // show spam...
 
-  InputMap mcp("slitpolymer.input");
-  MCLoop loop(mcp);      // class for handling mc loops
-  FormatPQR pqr;         // PQR structure file I/O
-  FormatAAM aam;         // AAM structure file I/O
-  EnergyDrift sys;       // class for tracking system energy drifts
-  UnitTest test(mcp);
+  InputMap mcp("slitpolymer.input"); // open input parameter file
+  MCLoop loop(mcp);                  // class for handling mc loops
+  FormatPQR pqr;                     // PQR structure file I/O
+  FormatAAM aam;                     // AAM structure file I/O
+  EnergyDrift sys;                   // class for tracking system energy drifts
+  UnitTest test(mcp);                // class for unit testing (used only for Faunus integrity checks)
 
   // Set up energy field
-  Geometry::Cuboidslit geo(mcp);
-  Energy::GouyChapman pot(mcp);
-  pot.setGeometry(geo);
-  pot.setPosition( geo.len_half.z ); // Surface in xy plane at +z direction
-  Space spc( pot.getGeometry() );
+  Geometry::Cuboidslit geo(mcp);     // Rectangular slit simulation container w. XY periodicity
+  Energy::GouyChapman pot(mcp);      // Gouy-Chapman electrostatics from charged surface
+  pot.setGeometry(geo);              // Pass on geometry to potential
+  pot.setPosition( geo.len_half.z ); // z position of charged surface
+  Space spc( pot.getGeometry() );    // Simulation space (contains all particles and info about groups)
 
-  // Add polymer
+  // Load and add polymer to Space
   string polyfile = mcp.get<string>("polymer_file", "");
-  aam.load(polyfile);
-  Geometry::FindSpace f;
-  f.find(*spc.geo, spc.p, aam.particles()); // find empty spot
-  GroupMolecular pol = spc.insert( aam.particles() );  // insert into space
-  pol.name="polymer";
-  spc.enroll(pol);
+  aam.load(polyfile);                                 // load polymer structure into aam class
+  Geometry::FindSpace f;                              // class for finding empty space in container
+  f.find(*spc.geo, spc.p, aam.particles());           // find empty spot
+  GroupMolecular pol = spc.insert( aam.particles() ); // Insert particles into Space and return matching group
+  pol.name="polymer";                                 // Give the polymer an arbitrary name
+  spc.enroll(pol);                                    // All groups need to be enrolled in the Space
 
+  // MC moves
   Move::TranslateRotate gmv(mcp,pot,spc);
   Move::AtomicTranslation mv(mcp,pot,spc);
   Move::CrankShaft crank(mcp,pot,spc);
   Move::Pivot pivot(mcp,pot,spc);
   Move::Reptation rep(mcp,pot,spc);
 
-  Analysis::PolymerShape shape;
-  Analysis::LineDistribution<float,int> surfmapall;
+  Analysis::PolymerShape shape;                       // class for sampling the polymer shape
+  Analysis::LineDistribution<float,int> surfmapall;   // histogram for monomer-surface distribution
 
-  spc.load("state");
-  sys.init( Energy::systemEnergy(spc,pot,spc.p) );
+  spc.load("state");                                  // Load start configuration, if any
+  sys.init( Energy::systemEnergy(spc,pot,spc.p) );    // Calculate initial, total system energy
 
   cout << spc.info() << pot.info() << pol.info() << textio::header("MC Simulation Begins!");
 
@@ -73,22 +75,22 @@ int main() {
           break;
       }
 
-      pol.setMassCenter(spc);
-      shape.sample(pol,spc);
-      for (int i=pol.front(); i<=pol.back(); i++)
-        surfmapall( pot.dist2surf( spc.p.at(i) ) )++;
+      shape.sample(pol,spc);   // sample polymer shape - gyration radius etc.
+      for (auto i : pol)       // update monomer-surface histogram
+        surfmapall( pot.dist2surf( spc.p.at(i) ) )++; 
 
     } // end of micro loop
 
-    sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) );
-    cout << loop.timing();
+    sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) ); // re-calc system energy and detect drift
+    cout << loop.timing();                                 // print timing and ETA information
 
   } // end of macro loop
 
-  pqr.save("confout.pqr", spc.p);
-  spc.save("state");
-  surfmapall.save("surfall.dat");
+  pqr.save("confout.pqr", spc.p);  // save PQR file
+  spc.save("state");               // save final state of simulation (positions etc)
+  surfmapall.save("surfall.dat");  // save monomer-surface distribution
 
+  // Perform unit tests (only for faunus integrity)
   gmv.test(test);
   mv.test(test);
   sys.test(test);

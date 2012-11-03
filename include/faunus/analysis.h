@@ -308,12 +308,14 @@ namespace Faunus {
     };
 
     /*!
+     * \brief Single particle hard sphere Widom insertion with charge scaling
+     *
      * Single particle Widom insertion analysis including
      * charge re-scaling for electrostatics according to
      * Svensson and Woodward, Mol. Phys. 1988, 64(2), 247-259.
-     * Currently, the inserted particle is a charged, hard sphere.
+     * Currently works only for the primitive model of electrolytes, i.e.
+     * hard, charged spheres interacting with a Coulomb potential.
      *
-     * \brief Single particle hard sphere Widom insertion with charge scaling
      * \author Martin Trulsson and Mikael Lund
      * \date Lund / Prague 2007-2008.
      * \note This is a direct conversion of the Widom routine found in the bulk.f
@@ -340,11 +342,10 @@ namespace Faunus {
         bool overlap(particle&, particle&, Space&); //!< Particle overlap test
 
       public:
-        WidomScaled(int=10);        //!< Constructor, number of test insertions
-        void add(particle);     //!< Add test particle
-        void add(Space&);
-        void insert(Space&, double=7.1); //!< Ghost insertion
-        //void insert(container &, energybase &, vector<point> &); //!< Ghost insertion in a set of points
+        WidomScaled(int=10);         //!< Constructor, number of test insertions per insert() call
+        void add(particle);          //!< Add test particle type
+        void add(Space&);            //!< Add all particles types present in Space
+        void insert(Space&, double); //!< Do a test insertion and sample excess chemical potential
     };
   }//namespace
 }//namespace

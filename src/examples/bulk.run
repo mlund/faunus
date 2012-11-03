@@ -1,0 +1,36 @@
+#!/bin/bash
+echo "
+Atom  Na      +1     2.0    0.1    1       no
+Atom  Cl      -1     2.0    0.1    1       no
+" > bulk.atoms
+
+function mkinput() {
+echo "
+atomlist      bulk.atoms
+cuboid_len    80
+
+temperature 1100
+epsilon_r   1
+coulomb_cut 14.
+lj_eps      0.05
+
+loop_macrosteps 10
+loop_microsteps 100
+
+tion1  Na
+nion1  2304
+dpion1 0.8
+
+tion2  Cl
+nion2  2304
+dpion2 0.8
+
+npt_dV 0.04
+npt_P  11. # mM
+" > bulk.input
+}
+
+mkinput
+#rm -fR state
+./bulk
+

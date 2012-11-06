@@ -95,6 +95,63 @@ namespace Faunus {
     };
 
     /*!
+     * \brief Cosine attraction ala Cooke and Deserno
+     * \details This is an attractive potential used for coarse grained lipids
+     * and has the form:
+     * \f[
+     *     \beta u(r) = -\epsilon \cos^2 [ \pi(r-r_c)/2w_c ]
+     * \f]
+     * for \f$r_c\leq r \leq r_c+w_c\f$. For \f$r<r_c\f$, \f$\beta u=-\epsilon\f$, while
+     * zero for \f$r>r_c+w_c\f$.
+     * The InputMap parameters are:
+     * \li \c cosattract_depth  Depth, \f$\epsilon\f$ [kT]
+     * \li \c cosattract_width  Width, r_c [angstrom]
+     * \li \c cosattract_decay  Decay range, w_c [angstrom]
+     *
+     * \warning Untested!
+     */
+    class CosAttract : public PairPotentialBase {
+      private:
+        double eps, wc, rc, rc2, c, rcwc2;
+        string _brief();
+      public:
+        CosAttract(InputMap&, string="cosattract_");
+        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+          if (r2<rc2)
+            return -eps;
+          if (r2>rcwc2)
+            return 0;
+          double x=cos( c*( sqrt(r2)-rc ) );
+          return -eps*x*x;
+        }
+        string info(char); // More verbose information
+    };
+
+    /*!
+     * \brief Finite Extensible nonlinear elastic (FENE) potential
+     * \details This is an anharmonic bonding potential with the form:
+     * \f[
+     *     \beta u(r) = -\frac{k r_0^2}{2}\ln \left [ 1-(r/r_0)^2 \right ]
+     * \f]
+     * for $r<r_0$, otherwise infinity. The input parameters read by InputMap
+     * are as follows:
+     * \li \c fene_stiffness Bond stiffness, k [kT]
+     * \li \c fene_maxsep Maximum separation, r_0 [angstrom]
+     *
+     * \warning Untested!
+     */
+    class FENE : public PairPotentialBase {
+      private:
+        double k,r02,r02inv;
+        string _brief();
+      public:
+        FENE(InputMap&, string="fene_");
+        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+          return (r2>r02) ? pc::infty : -0.5*r02*std::log(1-r2*r02inv);
+        }
+    };
+
+    /*!
      * \brief Hard sphere pair potential
      */
     class HardSphere : public PairPotentialBase {
@@ -139,6 +196,34 @@ namespace Faunus {
           return eps*(x*x - x);
         }
         string info(char);
+    };
+
+    /*!
+     * \brief Weeks-Chandler-Andersen 12-6 pair potential
+     * \details This is a Lennard-Jones type potential, cut and shifted to zero
+     * at \f$r_c=2^{1/6}\sigma\f$. More info can be found in DOI: 10.1063/1.1674820
+     * and the functional form is:
+     * \f[
+     * \beta u = 4 \epsilon \left ( (\sigma/r)^{12} - (\sigma/r)^6 + \frac{1}{4} \right )
+     * \f]
+     * The InputMap keyword is inherited from LennardJones:
+     * \li \c wca_eps Depth, epsilon [kT]
+     *
+     * \warning Untested!
+     */
+    class WeeksChandlerAndersen : public LennardJones {
+      protected:
+        double onefourth, twototwosixth;
+      public:
+        WeeksChandlerAndersen(InputMap&, string="wch_");
+        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+          double x=a.radius+b.radius;
+          x*=x; //sigma^2
+          if (r2>x*twototwosixth)
+            return 0;
+          x=x*x*x;//sigma^6
+          return eps*(x*x - x + onefourth);
+        }
     };
 
     /*! \brief Lorentz-Berthelot Mixing Rule for Lennard-Jones parameters

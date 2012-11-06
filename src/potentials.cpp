@@ -82,6 +82,48 @@ namespace Faunus {
       return o.str();
     }
 
+    FENE::FENE(InputMap &in, string pfx) {
+      name="FENE";
+      k  = in.get<double>( pfx+"stiffness", 0);
+      r02 = pow( in.get<double>( pfx+"maxsep", 0), 2);
+      r02inv = 1/r02;
+    }
+
+    string FENE::_brief() {
+      using namespace Faunus::textio;
+      std::ostringstream o;
+      o << name+": k=" << k << kT+"/"+angstrom+squared+" r0=" << sqrt(r02) << _angstrom; 
+      return o.str();
+    }
+
+    CosAttract::CosAttract(InputMap &in, string pfx) {
+      name="CosAttract";
+      eps = in.get<double>( pfx+"depth", 0);
+      rc  = in.get<double>( pfx+"width", 0);
+      wc  = in.get<double>( pfx+"decay", 0);
+      rc2=rc*rc;
+      c=pc::pi/2/wc;
+      rcwc2=pow((rc+wc),2);
+    }
+
+    string CosAttract::_brief() {
+      using namespace Faunus::textio;
+      std::ostringstream o;
+      o << name+": "+epsilon+"=" << eps << kT+" rc=" << rc << _angstrom
+        << " wc=" << wc << _angstrom;
+      return o.str();
+    }
+
+    string CosAttract::info(char w) {
+      using namespace textio;
+      std::ostringstream o;
+      o << pad(SUB,w,"Depth") << eps << kT << endl
+        << pad(SUB,w,"Decay length") << wc << _angstrom << endl
+        << pad(SUB,w,"Width") << rc << _angstrom << endl
+        << pad(SUB,w,"More info") << "DOI: 10.1063/1.2135785" << endl;
+      return o.str();
+    }
+
     HardSphere::HardSphere() {
       name="Hardsphere";
     }
@@ -135,6 +177,12 @@ namespace Faunus {
       o << pad(SUB,w+1,epsilon+"(LJ)") << eps*tokT()/4 << kT
         << " = " << pc::kT2kJ(eps*tokT()/4) << " kJ/mol" << endl;
       return o.str();
+    }
+
+    WeeksChandlerAndersen::WeeksChandlerAndersen(InputMap &in, string pfx) : LennardJones(in,pfx) {
+      name="WeeksChandlerAnderson";
+      twototwosixth = pow(2,2/6.); // ( 2^(1/6) )^2
+      onefourth=1/4.;
     }
 
     LorentzBerthelot::LorentzBerthelot() : name("Lorentz-Berthelot Mixing Rule") {}

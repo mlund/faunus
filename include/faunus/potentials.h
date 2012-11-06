@@ -53,15 +53,16 @@ namespace Faunus {
         virtual ~PairPotentialBase();
         string name;             //!< Short (preferably one-word) description of the core potential
         string brief();          //!< Brief, one-lined information string
-        void setScale(double=1); //!< Set scaling factor
+        void setScale(double=1) __attribute__ ((deprecated)); //!< Set scaling factor
         /*! \brief Convert returned energy to kT.*/
         inline double tokT() {
+//        inline double tokT() __attribute__ ((deprecated)) {
           return _tokT;
         }
         virtual void setTemperature(double); //!< Set temperature [K]
 
         /*!
-         * \brief Particle-particle energy divided by tokT()
+         * \brief Particle-particle energy in units of \c kT
          * \param a First particle
          * \param b Second particle
          * \param r2 Squared distance between them (angstrom squared)
@@ -115,10 +116,10 @@ namespace Faunus {
      * \brief Lennard-Jones (12-6) pair potential
      *
      * The Lennard-Jones potential has the form:
-     *
-     * \f$ \beta u = 4\epsilon_{lj} \left (  (\sigma_{ij}/r_{ij})^{12} - (\sigma_{ij}/r_{ij})^6    \right ) \f$
-     *
-     * where \f$\sigma_{ij} = (\sigma_i+\sigma_j)/2\f$ and \f$\epsilon_{lj}\f$ is fixed for this class.
+     * \f$
+     * \beta u = 4\epsilon_{lj} \left (  (\sigma_{ij}/r_{ij})^{12} - (\sigma_{ij}/r_{ij})^6    \right )
+     * \f$
+     * where \f$\sigma_{ij} = (\sigma_i+\sigma_j)/2\f$ and \f$\epsilon_{lj}=\epsilon\f$ is the same for all pairs in this class.
      */
     class LennardJones : public PairPotentialBase {
       private:
@@ -229,7 +230,7 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Square well pair potential
+     * \brief Square well pair potential shifted
      * \author Anil Kurut
      */
     class SquareWellShifted : public SquareWell {
@@ -249,7 +250,7 @@ namespace Faunus {
 
     /*!
      * \brief Hydrophobic pair potential based on SASA and surface tension
-     * \todo This description needs to be updated.
+     * \todo This description is incorrect.
      *
      * The potential is not zero iff the distance between hydrophobic particles is smaller than size of solvent molecule (2*Rs)  
      *
@@ -324,14 +325,13 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Coulomb pair potential
-     * 
-     * The Coulomb potential has the form:
-     * \f[ \beta u_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT} \frac{z_i z_j}{r_{ij}} \f]
-     * where the first factor is the Bjerrum length, \f$l_B\f$. By default the scaling is set
-     * to the Bjerrum length - i.e. returned energies are divided by \f$l_B\f$ and to get the energy
-     * in kT simply multiply with tokT(). This to increase performance when summing over many
-     * particles.
+     * \brief Coulomb pair potential between charges in a dielectric medium.
+     * \details The Coulomb potential has the form
+     * \f[
+     * \beta u_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT} \frac{z_i z_j}{r_{ij}}
+     *              = \lambda_B \frac{z_i z_j}{r_{ij}}
+     * \f]
+     * where \f$\lambda_B\f$ is the Bjerrum length and \c z are the valencies.
      */
     class Coulomb : public PairPotentialBase {
       friend class Potential::DebyeHuckel;
@@ -348,7 +348,6 @@ namespace Faunus {
       Coulomb(InputMap&); //!< Construction from InputMap
       double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
 
-      /*! \returns \f$\beta u/l_B\f$ */
       inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
 #ifdef FAU_APPROXMATH
         return lB*a.charge*b.charge * invsqrtQuake(r2);
@@ -403,7 +402,6 @@ namespace Faunus {
         double c,k;
       public:
         DebyeHuckel(InputMap&);                       //!< Construction from InputMap
-        /*! \returns \f$\beta w/l_B\f$ */
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
 #ifdef FAU_APPROXMATH
           double rinv = invsqrtQuake(r2);
@@ -473,11 +471,7 @@ namespace Faunus {
           T2 sr2;
         private:
           string _brief() { return sr1.brief() + " " + sr2.brief(); }
-
-          void _setScale(double s) {
-            //sr2.setScale( s*sr1.tokT() );
-            //sr1.setScale( s );
-          }
+          void _setScale(double s) {}
         public:
           CombinedPairPotential(InputMap &in) : sr1(in), sr2(in) {
             name=sr1.name+"+"+sr2.name;
@@ -489,9 +483,7 @@ namespace Faunus {
             return sr1(a,b,r2) + sr2(a,b,r2);
           }
           string info(char w=20) {
-            std::ostringstream o;
-            o << sr1.info(w) << sr2.info(w);
-            return o.str();
+            return sr1.info(w) + sr2.info(w);
           }
       };
 

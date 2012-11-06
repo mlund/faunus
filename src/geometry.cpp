@@ -275,8 +275,10 @@ namespace Faunus {
 
     bool Cylinder::collision(const particle &a, collisiontype type) const {
       assert( (halflen-len/2)<1e-9 && "Cylinder length initialization problems" );
-      return 
-        ( a.x*a.x+a.y*a.y>r2 || ( a.z<-halflen || a.z>halflen ) ) ? true:false;
+      if ( a.z<-halflen ) return true;
+      if ( a.z>halflen ) return true;
+      if ( a.x*a.x+a.y*a.y>r2 ) return true;
+      return false;
     }
 
     string Cylinder::_info(char w) {
@@ -468,7 +470,7 @@ namespace Faunus {
      */
     Point VectorRotate::rotate(Point p) const {
       assert(&geoPtr!=nullptr);
-      Point b=p-origin;
+      Point b(p-origin);
       geoPtr->boundary(b);           // Apply boundary conditions
       double eb=u.x*b.x + u.y*b.y + u.z*b.z;
       p.x=e1mcox*eb+cosang*b.x+sinang*(u.y*b.z - u.z*b.y) + origin.x;

@@ -41,4 +41,12 @@ int main() {
   table(2.1)+=1;
   table(2.1)+=3;
   assert( eq( table(2.1), 2 ) && "Bad average or 2D table");
+
+  // check vector operations
+  {
+    Point a(2,3,5);
+    assert( eq(a.len(), sqrt(4+9+25), 1e-8) && "Bad len() calculation");
+    a*=2;
+  }
+
 }

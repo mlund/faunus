@@ -19,7 +19,7 @@ enable_testing()
 # ------------------------------
 include(OptimizationFlags)
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Debug
+  set(CMAKE_BUILD_TYPE RelWithDebInfo
     CACHE STRING "Build type: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
 endif()
 
@@ -76,7 +76,7 @@ if(ENABLE_SWIG)
 endif()
 
 
-if (CMAKE_BUILD_TYPE MATCHES "Debug")
+if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
   message(
     "...............................................................\n"
     "  Faunus is compiled in Debug mode to enable checks and\n"
@@ -91,7 +91,7 @@ if (CMAKE_BUILD_TYPE MATCHES "Release")
     "  Faunus is running in Release mode recommended for production runs.\n"
     "  For setting up simulations it is HIGHLY recommended to use Debug\n"
     "  mode to enable run-time checks and assertions:\n\n"
-    "  -DCMAKE_BUILD_TYPE=Debug\n"
+    "  -DCMAKE_BUILD_TYPE=RelWithDebInfo\n"
     "**********************************************************************\n")
 endif()
 

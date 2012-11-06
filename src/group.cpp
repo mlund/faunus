@@ -124,6 +124,11 @@ namespace Faunus {
     return mu;
   }
 
+  /*!
+   * \param spc Simulation space
+   * \param endpoint End point of rotation axis, starting from the mass center
+   * \param angle [rad]
+   */
   void Group::rotate(Space &spc, const Point &endpoint, double angle) {
     assert( spc.geo->dist(cm,massCenter(spc) )<1e-6 );      // debug. Is mass center in sync?
     cm_trial = cm;

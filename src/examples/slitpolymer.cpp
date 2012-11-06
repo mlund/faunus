@@ -75,6 +75,12 @@ int main() {
           break;
       }
 
+      if (slp_global.randOne()>0.95)
+        shape.sample(pol,spc);
+      if (slp_global.randOne()>0.5)
+        for (auto i : pol)
+          surfmapall( pot.dist2surf( spc.p.at(i) ) )++;
+
       shape.sample(pol,spc);   // sample polymer shape - gyration radius etc.
       for (auto i : pol)       // update monomer-surface histogram
         surfmapall( pot.dist2surf( spc.p.at(i) ) )++; 

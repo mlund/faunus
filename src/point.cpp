@@ -29,16 +29,19 @@ namespace Faunus {
     return (r2>0) ? sqrt(r2) : 0;
   }
 
+  /*!
+   * This uses the von Neumann method described in Allen and Tildesley page 349.
+   */
   void Point::ranunit(RandomBase &ran) {
     Point u;
-    Tcoord r;
+    Tcoord r2;
     do {
       u.x=2*ran.randHalf();
       u.y=2*ran.randHalf();
       u.z=2*ran.randHalf();
-      r=sqrt(u.x*u.x+u.y*u.y+u.z*u.z);
-    } while (r>1);
-    *this = u*(1/r);
+      r2=u.x*u.x+u.y*u.y+u.z*u.z;
+    } while (r2>1);
+    *this = u*(1/sqrt(r2));
     assert(std::abs(this->len()-1)<1e-7); // is it really a unit vector?
   }
 

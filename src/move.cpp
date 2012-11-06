@@ -282,15 +282,9 @@ namespace Faunus {
       assert(igroup!=nullptr);
       Point p;
       if (dp_rot>1e-6) {
+        p.ranunit(slp_global);             // random unit vector
+        p=igroup->cm+p;                    // set endpoint for rotation 
         angle=dp_rot*slp_global.randHalf();
-        double r=2;
-        while (r>1) {
-          p.x=2*slp_global.randHalf(); // random vector
-          p.y=2*slp_global.randHalf(); // inside a sphere
-          p.z=2*slp_global.randHalf();
-          r=sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
-        }
-        p=igroup->cm+p; // set endpoint for rotation 
         igroup->rotate(*spc, p, angle);
       }
       if (dp_trans>1e-6) {
@@ -424,13 +418,7 @@ namespace Faunus {
       // rotation
       if (dp_rot>1e-6) {
         angle=dp_rot*slp_global.randHalf();
-        double r=2;
-        while (r>1) {
-          p.x=2*slp_global.randHalf(); // random vector
-          p.y=2*slp_global.randHalf(); // inside a sphere
-          p.z=2*slp_global.randHalf();
-          r=sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
-        }
+        p.ranunit(slp_global);
         p=igroup->cm+p; // set endpoint for rotation 
         igroup->rotate(*spc, p, angle);
         vrot.setAxis(*spc->geo, igroup->cm, p, angle); // rot. around line between CM and point
@@ -652,21 +640,25 @@ namespace Faunus {
      * also set the axis to rotate around, defined by two points. 
      */
     bool CrankShaft::findParticles() {
-      angle = dp*slp_global.randHalf();  // random angle
-      int beg,end,len;
       assert( minlen <= gPtr->size()-2 && "Minlen too big for molecule!");
+
+      int beg,end,len;
       do {
         beg=gPtr->random();             // generate random vector to
         end=gPtr->random();             // rotate around
         len = std::abs(beg-end) - 1;    // number of particles between end points
       } while ( len<minlen || len>maxlen  );
+
+      angle = dp*slp_global.randHalf();  // random angle
       vrot.setAxis(*spc->geo, spc->p[beg], spc->p[end], angle );
+
       index.clear();
       if (beg>end)
         std::swap(beg,end);
       for (int i=beg+1; i<end; i++)
         index.push_back(i);             // store particle index to rotate
       assert(index.size()==size_t(len));
+
       return true;
     }
 
@@ -901,14 +893,13 @@ namespace Faunus {
      * \todo Early rejection could be implemented - not relevant for geometries with periodicity, though.
      */
     double Isobaric::_energyChange() {
-      double uold,unew;
-      uold = _energy(spc->p);
+      double uold = _energy(spc->p);
       hamiltonian->setVolume( newV );
       for (auto g : spc->groupList()) // In spherical geometries molecules may collide with cell boundary upon scaling mass center.
         for (auto i : *g)
           if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
-      unew = _energy(spc->trial);
+      double unew = _energy(spc->trial);
       return unew-uold;
     }
 

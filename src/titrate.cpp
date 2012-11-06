@@ -347,6 +347,10 @@ namespace Faunus {
     }
 #pragma GCC diagnostic pop
 
+    void SwapMove::applycharges(p_vec &p){
+      eqpot.eq.applycharges(p);
+    }
+
     string SwapMove::_info() {
       using namespace textio;
       std::ostringstream o;

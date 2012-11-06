@@ -118,6 +118,7 @@ namespace Faunus {
         SwapMove(InputMap&, Energy::Hamiltonian&, Space&, string="swapmv_"); //!< Constructor
         int findSites(const p_vec&); //!< Search for titratable sites (old ones are discarded)
         double move();
+        void applycharges(p_vec &); 
     };
 
     /*!

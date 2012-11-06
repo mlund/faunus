@@ -282,7 +282,10 @@ namespace Faunus {
       o << indent(SUBSUB) << std::left
         << setw(6) << i+1
         << setw(17) << range.str()
-        << setw(20) << g[i]->name
+        << setw(15) << g[i]->name
+        << setw(5)  << "Conc(monomer):"
+        << setw(5) << g[i]->size()/geo->getVolume() << "  1/" << _angstrom << cubed
+        << " = "<< g[i]->size()/geo->getVolume()*1e4/6.02*1000 << " mM" 
         << endl;
     }
 

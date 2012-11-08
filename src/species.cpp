@@ -2,6 +2,7 @@
 #include <faunus/inputfile.h>
 #include <faunus/point.h>
 #include <faunus/textio.h>
+#include <faunus/physconst.h>
 
 namespace Faunus {
 

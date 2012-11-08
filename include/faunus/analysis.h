@@ -153,8 +153,6 @@ namespace Faunus {
  
     /*!
      * \brief Radial distribution analysis
-     * \author Mikael Lund
-     * \date Lund 2011
      *
      * This radial distribution is defined as \f$ g(r) = \rho(r) / \rho(\infty) \f$ where \f$ \rho \f$ are
      * the particle densities in spherical volume element \c rdr and in the bulk, respectively.
@@ -163,12 +161,15 @@ namespace Faunus {
      * \code
      * short cation = atom["Na"].id;
      * short anion = atom["Cl"].id;
-     * Analysis::RadialDistribution<float,int> rdf(0.2); // 0.2 Å resolution
+     * Analysis::RadialDistribution<float,unsigned int> rdf(0.2); // 0.2 Å resolution
      * rdf.sample( myspace, mygroup, cation, anion );
      * rdf.save("rdf.dat");
      * \endcode
+     *
+     * \author Mikael Lund
+     * \date Lund 2011
      */
-    template<typename Tx=double, typename Ty=int>
+    template<typename Tx=float, typename Ty=unsigned long long int>
       class RadialDistribution : public Table2D<Tx,Ty> {
         private:
           typedef Table2D<Tx,Ty> Ttable;

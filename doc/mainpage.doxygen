@@ -24,6 +24,7 @@ external etc.
 \section examples Program Examples
 Below is a list of coding examples you may use to get started.
 \li \ref example_minimal - a minimal example of how to set up a MC simulation (C++/Python)
+\li \ref example_bulk - A melted NaCl crystal using a shifted Coulomb potential (NVT/NPT)
 \li \ref example_temper - Parallel tempering example using MPI
 \li \ref example_polymers - A linear polymer solution in the NPT ensemble
 */

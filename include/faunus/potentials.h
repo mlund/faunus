@@ -53,7 +53,7 @@ namespace Faunus {
         virtual ~PairPotentialBase();
         string name;             //!< Short (preferably one-word) description of the core potential
         string brief();          //!< Brief, one-lined information string
-        void setScale(double=1) __attribute__ ((deprecated)); //!< Set scaling factor
+        void setScale(double=1);
         /*! \brief Convert returned energy to kT.*/
         inline double tokT() {
 //        inline double tokT() __attribute__ ((deprecated)) {
@@ -68,16 +68,16 @@ namespace Faunus {
          * \param r2 Squared distance between them (angstrom squared)
          */
         virtual double operator() (const particle &a, const particle &b, double r2) const=0;
-
         bool save(string, particle::Tid, particle::Tid); //!< Save table of pair potential to disk
+        virtual void test(UnitTest&);                    //!< Perform unit test
     };
 
     /*!
      * \brief Harmonic pair potential
-     * \note We do not multiply with 1/2 which must be included in the supplied force constant, k
-     *
-     * The harmonic potential has the form \f$ \beta u_{ij} = k(r_{ij}-r_{eq})^2 \f$ where k is the force constant
+     * \details The harmonic potential has the form
+     * \f$ \beta u_{ij} = k(r_{ij}-r_{eq})^2 \f$ where k is the force constant
      * (kT/angstrom^2) and req is the equilibrium distance (angstrom).
+     * \note We do not multiply with 1/2 which must be included in the supplied force constant, k
      */
     class Harmonic : public PairPotentialBase {
       private:
@@ -104,9 +104,9 @@ namespace Faunus {
      * for \f$r_c\leq r \leq r_c+w_c\f$. For \f$r<r_c\f$, \f$\beta u=-\epsilon\f$, while
      * zero for \f$r>r_c+w_c\f$.
      * The InputMap parameters are:
-     * \li \c cosattract_depth  Depth, \f$\epsilon\f$ [kT]
-     * \li \c cosattract_width  Width, r_c [angstrom]
-     * \li \c cosattract_decay  Decay range, w_c [angstrom]
+     * \li \c cosattract_eps  Depth, \f$\epsilon\f$ [kT]
+     * \li \c cosattract_rc   Width, r_c [angstrom]
+     * \li \c cosattract_wc   Decay range, w_c [angstrom]
      *
      * \warning Untested!
      */
@@ -145,9 +145,10 @@ namespace Faunus {
         double k,r02,r02inv;
         string _brief();
       public:
-        FENE(InputMap&, string="fene_");
+        FENE(double,double); // Constructor
+        FENE(InputMap&, string="fene_"); // Constructor
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          return (r2>r02) ? pc::infty : -0.5*r02*std::log(1-r2*r02inv);
+          return (r2>r02) ? pc::infty : -0.5*k*r02*std::log(1-r2*r02inv);
         }
     };
 
@@ -171,8 +172,7 @@ namespace Faunus {
 
     /*!
      * \brief Lennard-Jones (12-6) pair potential
-     *
-     * The Lennard-Jones potential has the form:
+     * \details The Lennard-Jones potential has the form:
      * \f$
      * \beta u = 4\epsilon_{lj} \left (  (\sigma_{ij}/r_{ij})^{12} - (\sigma_{ij}/r_{ij})^6    \right )
      * \f$
@@ -198,34 +198,6 @@ namespace Faunus {
         string info(char);
     };
 
-    /*!
-     * \brief Weeks-Chandler-Andersen 12-6 pair potential
-     * \details This is a Lennard-Jones type potential, cut and shifted to zero
-     * at \f$r_c=2^{1/6}\sigma\f$. More info can be found in DOI: 10.1063/1.1674820
-     * and the functional form is:
-     * \f[
-     * \beta u = 4 \epsilon \left ( (\sigma/r)^{12} - (\sigma/r)^6 + \frac{1}{4} \right )
-     * \f]
-     * The InputMap keyword is inherited from LennardJones:
-     * \li \c wca_eps Depth, epsilon [kT]
-     *
-     * \warning Untested!
-     */
-    class WeeksChandlerAndersen : public LennardJones {
-      protected:
-        double onefourth, twototwosixth;
-      public:
-        WeeksChandlerAndersen(InputMap&, string="wch_");
-        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          double x=a.radius+b.radius;
-          x*=x; //sigma^2
-          if (r2>x*twototwosixth)
-            return 0;
-          x=x*x*x;//sigma^6
-          return eps*(x*x - x + onefourth);
-        }
-    };
-
     /*! \brief Lorentz-Berthelot Mixing Rule for Lennard-Jones parameters
      */
     class LorentzBerthelot {
@@ -236,7 +208,21 @@ namespace Faunus {
         double mixEpsilon(double,double) const;
     };
 
-    /*! \brief Lennard-Jones potential with arbitrary mixing rules between particle types
+    /*!
+     * \brief Lennard-Jones potential with arbitrary mixing rules between particle types
+     * \details This is a template for Lennard-Jones pair interactions where the template parameter
+     * must be a class for the epsilon and sigma mixed rules. The atomic values for 
+     * sigma and epsilon are taken from the AtomTypes class via the global instance
+     * \c atom. In your InputMap configuration file you would typically set the atom list file using
+     * the keyword \c atomlist. Note that sigma for each atom is set to two times the radius found in
+     * AtomTypes.
+     *
+     * For example:
+     * \code
+     * InputMap mcp("myconfig");
+     * LennardJonesMixed<LorentzBerthelot> lj(mcp);
+     * \endcode
+     * \todo Prettify output
      */
     template<class Tmixingrule>
       class LennardJonesMixed : public PairPotentialBase {
@@ -244,9 +230,9 @@ namespace Faunus {
           Tmixingrule mixer; // mixing rule class for sigma and epsilon
           string _brief() { return name + " w. " + mixer.name; }
         protected:
-          vector< vector<double> > s2, eps;
+          vector< vector<double> > s2, eps; // lookup tables for the mixed parameter
         public:
-          LennardJonesMixed() {
+          LennardJonesMixed(InputMap &in) {
             name="Lennard-Jones";
             int n=(int)atom.list.size(); // number of atom types
             eps.resize(n);
@@ -255,8 +241,9 @@ namespace Faunus {
               eps[i].resize(n);
               s2[i].resize(n);
               for (int j=0; j<n; j++) {
-                eps[i][j] = 4*mixer.mixEpsilon( atom.list[i].eps, atom.list[j].eps );
                 s2[i][j] = pow( mixer.mixSigma( atom.list[i].sigma, atom.list[j].sigma), 2);
+                eps[i][j] = 4*mixer.mixEpsilon( atom.list[i].eps, atom.list[j].eps );
+                eps[i][j] = pc::kJ2kT(eps[i][j]); // convert to kT
               }
             }
           }
@@ -267,30 +254,63 @@ namespace Faunus {
             return eps[a.id][b.id] * (x*x - x);
           }
 
+          /*!
+           * \brief This will set a custom epsilon for a pair of particles
+           * \param i Particle id of first particle
+           * \param j Particle id of second particle
+           * \param eps_kT epsilon in units of kT
+           */
+          void customEpsilon(particle::Tid i, particle::Tid j, double eps_kT) {
+            eps[i][j]=4*eps_kT;
+            eps[j][i]=eps[i][j];
+          }
+
+          void customSigma(particle::Tid i, particle::Tid j, double sigma) {
+            s2[i][j]=sigma*sigma;
+            s2[j][i]=s2[i][j];
+          }
+
           string info(char w=0) {
             using namespace Faunus::textio;
             std::ostringstream o;
-            o << indent(SUB) << "Pair parameters:\n";
+            o << indent(SUB) << name+" pair parameters:\n";
             int n=(int)atom.list.size();
-            for (int i=0; i<n-1; i++)
-              for (int j=i+1; j<n; j++)
-                o << indent(SUBSUB) << setw(12) << atom[i].name+"<->"+atom[j].name
-                  << indent(SUB) << sigma+" = " << sqrt( s2[i][j] ) << _angstrom
-                  << indent(SUB) << epsilon+" = " << eps[i][j]/4 << kT+" = " << pc::kT2kJ(eps[i][j]/4) << " kJ/mol"
-                  << endl;
+            for (int i=0; i<n; i++)
+              for (int j=0; j<n; j++)
+                if (i>=j)
+                  o << indent(SUBSUB) << setw(12) << atom[i].name+"<->"+atom[j].name
+                    << indent(SUB) << sigma+" = " << sqrt( s2[i][j] ) << _angstrom
+                    << indent(SUB) << epsilon+" = " << eps[i][j]/4 << kT+" = " << pc::kT2kJ(eps[i][j]/4) << " kJ/mol"
+                    << endl;
             return o.str();
           }
       };
 
     /*!
-     * \brief As LennardJones but only the repulsive R12 part.
+     * \brief Weeks-Chandler-Andersen pair potential
+     * \details This is a Lennard-Jones type potential, cut and shifted to zero
+     * at \f$r_c=2^{1/6}\sigma\f$. More info can be found in DOI: 10.1063/1.1674820
+     * and the functional form is:
+     * \f[
+     * \beta u = 4 \epsilon \left ( (b/r)^{12} - (b/r)^6 + \frac{1}{4} \right )
+     * \f]
+     * where sigma, epsilon per default are set from using Lorentz-Berthelot mixing rules.
+     *
+     * \warning Untested!
      */
-    class LennardJonesR12 : public LennardJones {
+    class WeeksChandlerAndersen : public LennardJonesMixed<LorentzBerthelot> {
+      private:
+        typedef LennardJonesMixed<LorentzBerthelot> Tbase;
+        double onefourth, twototwosixth;
       public:
-        LennardJonesR12(InputMap&, string="r12rep_");
+        WeeksChandlerAndersen(InputMap&);
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          double x=r6(a.radius+b.radius,r2);
-          return eps*x*x;
+          double x=s2[a.id][b.id]; // s^2
+          if (r2>x*twototwosixth)
+            return 0;
+          x=x/r2;  // (s/r)^2
+          x=x*x*x;// (s/r)^6
+          return eps[a.id][b.id]*(x*x - x + onefourth);
         }
     };
 
@@ -335,10 +355,9 @@ namespace Faunus {
 
     /*!
      * \brief Hydrophobic pair potential based on SASA and surface tension
-     * \todo This description is incorrect.
-     *
-     * The potential is not zero iff the distance between hydrophobic particles is smaller than size of solvent molecule (2*Rs)  
-     *
+     * \todo Documentation is incorrect.
+     * \details The potential is not zero if the distance between hydrophobic particles
+     * is smaller than size of solvent molecule (2*Rs)  
      * Potential has the form:
      *
      * \f$ u = Surface tension * (\Delta SASA_i + \Delta SASA_j) \f$
@@ -385,11 +404,9 @@ namespace Faunus {
 
     /*!
      * \brief r12-Repulsion of the form
-     *
-     * \f$ \beta u = 4\epsilon_{lj} \left (  (\sigma_{ij}/r_{ij})^{12}  \right ) \f$
-     *
+     * \details \f$ \beta u = 4\epsilon_{lj} \left (  (\sigma_{ij}/r_{ij})^{12}  \right ) \f$
      * where \f$\sigma_{ij} = (\sigma_i+\sigma_j)/2\f$ and \f$\epsilon_{lj}\f$ is fixed for this class.
-     * \todo Inherit from Potential::LennardJones
+     * \todo Same as LennardJonesR12. Remove?
      */
     class R12Repulsion : public PairPotentialBase {
       private:
@@ -398,8 +415,8 @@ namespace Faunus {
       protected:
         double eps;
       public:
-        R12Repulsion();
-        R12Repulsion(InputMap&, string="r12rep_");
+        R12Repulsion() __attribute__ ((deprecated));
+        R12Repulsion(InputMap&, string="r12rep_") __attribute__ ((deprecated));
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
           double x=(a.radius+b.radius);
           x=x*x/r2; // r2
@@ -408,6 +425,19 @@ namespace Faunus {
         }
         string info(char);
     };
+
+    /*!
+     * \brief As LennardJones but only the repulsive R12 part.
+     */
+    class LennardJonesR12 : public LennardJones {
+      public:
+        LennardJonesR12(InputMap&, string="r12rep_");
+        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+          double x=r6(a.radius+b.radius,r2);
+          return eps*x*x;
+        }
+    };
+
 
     /*!
      * \brief Coulomb pair potential between charges in a dielectric medium.
@@ -441,12 +471,12 @@ namespace Faunus {
 #endif
       }
       string info(char);
+      void test(UnitTest&); //!< Perform unit test
     };
 
     /*!
-     * \brief Coulomb pair potential shifted according to Wolf
-     * 
-     * The Coulomb potential has the form:
+     * \brief Coulomb pair potential shifted according to Wolf/Yonezawaa -- doi:10.1063/1.4729748
+     * \details The Coulomb potential has the form:
      * \f[
      * \beta u_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT}
      * z_i z_j \left (
@@ -474,9 +504,8 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Debye-Huckel/Yokawa pair potential
-     *
-     * This potential is similar to the plain Coulomb potential but with an extra exponential term to described salt screening:
+     * \brief Debye-Huckel/Yukawa pair potential
+     * \details This potential is similar to the plain Coulomb potential but with an extra exponential term to described salt screening:
      * \f[ \beta w_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT} \frac{z_i z_j}{r_{ij}} \exp(-\kappa r_{ij}) \f]
      * where \f$\kappa=1/D\f$ is the inverse Debye screening length.
      */
@@ -506,8 +535,7 @@ namespace Faunus {
 
     /*!
      * \brief as DebyeHuckel but shifted to reaach zero at a user specified cut-off distance
-     *
-     * The cut-off distance is read from the InputMap with the following keyword:
+     * \details The cut-off distance is read from the InputMap with the following keyword:
      * \li \c pairpot_cutoff Spherical cut-off in angstroms
      */
     class DebyeHuckelShift : public DebyeHuckel {
@@ -531,12 +559,7 @@ namespace Faunus {
 
     /*!
      * \brief Combines two pair potentials
-     * \date Lund, 2012
-     * \author Mikael Lund
-     * \note tokT() functions are *ignored* and the two pair potentials must return
-     *       energies in kT directly. The plan is to remove tokT() permanently.
-     *
-     * This simply combines two PairPotentialBases. The combined potential can subsequently
+     * \details This combines two PairPotentialBases. The combined potential can subsequently
      * be used as a normal pair potential and even be combined with a third potential and
      * so forth. A number of typedefs such as Potential::CoulombHS is aliasing this.
      *
@@ -548,27 +571,33 @@ namespace Faunus {
      *   Tpairpot2 mypairpot;
      *   std::cout << mypairpot.info();
      * \endcode
+     *
+     * \note tokT() functions are *ignored* and the two pair potentials must return
+     *       energies in kT directly. The plan is to remove tokT() permanently.
+     * \date Lund, 2012
+     * \author Mikael Lund
      */
     template<class T1, class T2>
       class CombinedPairPotential : public PairPotentialBase {
-        protected:
-          T1 sr1;
-          T2 sr2;
         private:
-          string _brief() { return sr1.brief() + " " + sr2.brief(); }
-          void _setScale(double s) {}
+          string _brief() { return first.brief() + " " + second.brief(); }
+          //void _setScale(double s) {}
         public:
-          CombinedPairPotential(InputMap &in) : sr1(in), sr2(in) {
-            name=sr1.name+"+"+sr2.name;
+          T1 first;  //!< First pair potential of type T1
+          T2 second; //!< Second pair potential of type T2
+          CombinedPairPotential(InputMap &in) : first(in), second(in) {
+            name=first.name+"+"+second.name;
           }
-          CombinedPairPotential(InputMap &in, string pfx1, string pfx2) : sr1(in,pfx1), sr2(in,pfx2) {
-            name=sr1.name+"+"+sr2.name;
+          CombinedPairPotential(InputMap &in, string pfx1, string pfx2) : first(in,pfx1), second(in,pfx2) {
+            name=first.name+"+"+second.name;
           }
           inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-            return sr1(a,b,r2) + sr2(a,b,r2);
+            return first(a,b,r2) + second(a,b,r2);
           }
-          string info(char w=20) {
-            return sr1.info(w) + sr2.info(w);
+          string info(char w=20) { return first.info(w) + second.info(w); }
+          void test(UnitTest &t) {
+            first.test(t);
+            second.test(t);
           }
       };
 
@@ -648,7 +677,7 @@ namespace Faunus {
      */
     typedef CombinedPairPotential<DebyeHuckel, R12Repulsion> DebyeHuckelr12;
 
-  } //end of Potential namespace
+    } //end of Potential namespace
 
-} //end of Faunus namespace
+  } //end of Faunus namespace
 #endif

@@ -24,6 +24,7 @@ namespace Faunus {
         Nav;                         //!< Avogadro's number [1/mol]
       static double lB(double);      //!< Bjerrum length [Aangstrom]
       static double kT2kJ(double);   //!< kT/molecule -> kJ/mol
+      static double kJ2kT(double);   //!< kJ/mol -> kT/molecule
       static double T();             //!< Return temperature [K]
       static void setT(double);      //!< Set temperature [K]
   };

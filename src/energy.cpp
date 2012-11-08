@@ -502,16 +502,16 @@ namespace Faunus {
     /*!
      * The InputMap is searched for the following keywords:
      * \li \c dh_ionicstrength - via Potential::DebyeHuckel
-     * \li \c gouychapman_phi0 - surface potential [V]
+     * \li \c gouychapman_phi0 - surface potential [unitless, i.e. phi_0*e/kT]
      * \li \c gouychapman_qarea - surface charge density (if phi0 not defined)
      * \li \c gouychapman_rho - surface charge density [1/A^2] (if qarea not defined)
      * \li \c gouychapman_linearize - set to yes for linearized PB (default: no)
      *
      * Equations:
      * \f[ \rho = \sqrt\frac{2 c_0}{\pi l_B}  \sinh( \beta \phi_0 e / 2 ) \f]
-     * \f[ \beta \phi_0 e = 2\mbox{~asinh} \left ( \rho \sqrt\frac{\pi l_B} {2 c_0} \right ) \f]
+     * \f[ \beta e \phi_0 = 2\mbox{~asinh} \left ( \rho \sqrt\frac{\pi \lambda_B} {2 c_0} \right ) \f]
      * \f[ \Gamma_0=\tanh{ \beta \phi_0 z e / 4 } \f]
-     * where \f$ lB \f$ is the Bjerrum length, \f$\kappa\f$ the inverse Debye length, and \f$c_0\f$ the
+     * where \f$\lambda_B\f$ is the Bjerrum length, \f$\kappa\f$ the inverse Debye length, and \f$c_0\f$ the
      * bulk salt concentration.
      */
     GouyChapman::GouyChapman(InputMap &in) : dh(in) {
@@ -544,15 +544,15 @@ namespace Faunus {
       std::ostringstream o;
       o << pad(SUB,w,"Surface z-position") << *zposPtr << _angstrom << endl
         << pad(SUB,w,"Bjerrum length") << lB << _angstrom << endl
-        << pad(SUB,w,"Debye length") << 1./kappa << _angstrom  << endl
-        << pad(SUB,w,"Ionic strenght") << dh.ionicStrength()*1e3<< " mM" << endl
+        << pad(SUB,w,"Debye length") << 1./kappa << _angstrom << endl
+        << pad(SUB,w,"Ionic strenght") << dh.ionicStrength()*1e3 << " mM" << endl
         << pad(SUB,w,"Bulk 1:1 salt concentration") << c0 << _angstrom+cubed << endl
-        << pad(SUB,w,"Surface potential") << phi0*pc::kB*pc::T()/pc::e << " J/C=volts" << endl
-        << pad(SUB,w,"Unitless surface potential") << phi0 << endl
-        << pad(SUB,w,"Area per surface charge") << 1/rho << _angstrom+squared << endl
-        << pad(SUB,w,"Surface charge density") << rho*pc::e*1e20  << " C/m" + squared << endl
-        << pad(SUB,w,"GC-coefficient Gamma_0") << gamma0  << "  " << endl
-        << pad(SUB,w,"Linearized PB") << ((linearize) ? "yes" : "no") << endl;
+        << pad(SUB,w,"Surface potential") << phi0 << kT+"/e = "
+        << phi0*pc::kB*pc::T()/pc::e << " V=J/C" << endl
+        << pad(SUB,w,"Surface charge density") << rho*pc::e*1e20 << " C/m"+squared << endl
+        << pad(SUB,w,"Area per charge") << 1/rho << _angstrom+squared << endl
+        << pad(SUB,w,"GC-coefficient Gamma_0") << gamma0 << endl
+        << pad(SUB,w,"Linearize") << ((linearize) ? "yes" : "no") << endl;
       return o.str();
     }
 

@@ -334,7 +334,7 @@ namespace Faunus {
         void setAxis(Geometrybase&, const Point&, const Point&, double);  //!< Set rotation axis and degrees
         double getAngle() const;                                          //!< Get set rotation angle
         Point rotate(Point) const;                                        //!< Rotate point around axis
-        Point rotate(const Geometrybase&, Point) const __attribute__ ((deprecated)); //!< Rotate point around axis (to be removed)
+        Point rotate(const Geometrybase&, Point) const;                   //!< Rotate point around axis (to be removed)
     };
 
   }//namespace Geometry

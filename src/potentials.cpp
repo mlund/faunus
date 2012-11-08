@@ -19,9 +19,6 @@ namespace Faunus {
 
     PairPotentialBase::~PairPotentialBase() { }
     
-    /*!
-     * This functions sets the energy scaling as returned by tokT().
-     */
     void PairPotentialBase::setScale(double s)  {
       assert(s!=0 && "Energy scaling should be non-zero.");
       _tokT=s;
@@ -33,7 +30,7 @@ namespace Faunus {
     /*!
      * This will reset the temperature to the specified value. By default this function
      * does nothing, although in Debug mode it will throw an exception if derived classes
-     * does not implement it (and is called).
+     * do not implement it (and is called).
      */
     void PairPotentialBase::setTemperature(double) {
       assert(!"Not implemented.");
@@ -60,6 +57,8 @@ namespace Faunus {
       return false;
     }
 
+    void PairPotentialBase::test(UnitTest&) {}
+
     Harmonic::Harmonic(double forceconst, double eqdist) : k(forceconst), req(eqdist) {
       name="Harmonic";
     }
@@ -82,6 +81,16 @@ namespace Faunus {
       return o.str();
     }
 
+    /*!
+     * \param k_kT   Stiffness or bond strength [kT]
+     * \param rmax_A Maximum length after which the energy goes to infinity [angstrom]
+     */
+    FENE::FENE(double k_kT, double rmax_A) : k(k_kT) {
+      name="FENE";
+      r02=rmax_A*rmax_A;
+      r02inv=1/r02;
+    }
+
     FENE::FENE(InputMap &in, string pfx) {
       name="FENE";
       k  = in.get<double>( pfx+"stiffness", 0);
@@ -98,9 +107,9 @@ namespace Faunus {
 
     CosAttract::CosAttract(InputMap &in, string pfx) {
       name="CosAttract";
-      eps = in.get<double>( pfx+"depth", 0);
-      rc  = in.get<double>( pfx+"width", 0);
-      wc  = in.get<double>( pfx+"decay", 0);
+      eps = in.get<double>( pfx+"eps", 0);
+      rc  = in.get<double>( pfx+"rc", 0);
+      wc  = in.get<double>( pfx+"wc", 0);
       rc2=rc*rc;
       c=pc::pi/2/wc;
       rcwc2=pow((rc+wc),2);
@@ -179,7 +188,7 @@ namespace Faunus {
       return o.str();
     }
 
-    WeeksChandlerAndersen::WeeksChandlerAndersen(InputMap &in, string pfx) : LennardJones(in,pfx) {
+    WeeksChandlerAndersen::WeeksChandlerAndersen(InputMap &in) : Tbase(in) {
       name="WeeksChandlerAnderson";
       twototwosixth = pow(2,2/6.); // ( 2^(1/6) )^2
       onefourth=1/4.;
@@ -349,18 +358,23 @@ namespace Faunus {
       return o.str();
     }
 
+    void Coulomb::test(UnitTest &t) {
+      t("bjerrum", bjerrumLength(), 1e-6);
+    }
+    
     CoulombWolf::CoulombWolf(InputMap &in) : Coulomb(in) {
       double Rc=in.get<double>("coulomb_cut", 10.);
       Rcinv=1/Rc;
       Rc2=Rc*Rc;
-      name+="Wolf";
+      name+="Wolf/Yonezawa";
     }
 
     string CoulombWolf::info(char w) {
       using namespace textio;
       std::ostringstream o;
       o << Coulomb::info(w)
-        << pad(SUB,w,"Cut-off") << 1/Rcinv << _angstrom << endl;
+        << pad(SUB,w,"More info") << "doi:10.1063/1.4729748\n"
+        << pad(SUB,w,"Cut-off") << 1/Rcinv << _angstrom+"\n";
       return o.str();
     }
 
@@ -395,11 +409,12 @@ namespace Faunus {
     }
 
     /*!
-     * The Debye-Huckel potential is temperature dependent and contains entropy
+     * \details The Debye-Huckel potential is temperature dependent and contains entropy
      * contributions from both solvent and salt degrees of freedom.
      * This function return the entropy of interaction between a pair of
      * particles interacting with an effective Debye-Huckel potential. This is done by
      * taking the temperature derivate of w(R):
+     *
      * \f[
      * S(r_{ij})/k_B = -\frac{ \partial w(r_{ij},T) } {k_B \partial T} = \beta w_{ij}\left [ \alpha - \frac{\kappa r_{ij}(\alpha+1)}{2}\right ]
      * \f]

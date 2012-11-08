@@ -188,10 +188,10 @@ namespace Faunus {
         fout << geo->getVolume() << endl
           << p.size() << endl;
         for (auto p_i : p)
-          fout << p_i << endl;
-        fout << g.size() << endl;
+          fout << p_i << "\n";
+        fout << g.size() << "\n";
         for (auto g_i : g)
-          fout << *g_i << endl;
+          fout << *g_i << "\n";
         fout.close();
         cout << "OK!\n";
         return true;
@@ -282,10 +282,9 @@ namespace Faunus {
       o << indent(SUBSUB) << std::left
         << setw(6) << i+1
         << setw(17) << range.str()
-        << setw(15) << g[i]->name
-        << setw(5)  << "Conc(monomer):"
-        << setw(5) << g[i]->size()/geo->getVolume() << "  1/" << _angstrom << cubed
-        << " = "<< g[i]->size()/geo->getVolume()*1e4/6.02*1000 << " mM" 
+        << "N/V = " << setw(6) << g[i]->size()/geo->getVolume() << _angstrom+superminus+cubed
+        << " = "  << setw(6) << g[i]->size()/geo->getVolume()*1e30/pc::Nav << " mM  " 
+        << g[i]->name
         << endl;
     }
 

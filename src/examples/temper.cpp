@@ -1,8 +1,7 @@
 /*! \page example_temper Example: Parallel Tempering
  This is an example of parallel tempering taken from the book
  "Understanding Molecular Simulation" by Frenkel and Smit, 2nd edition.
- See page 391 - Case Study 21 "Parallel Tempering of a Single Particle"
-
+ See page 391 - Case Study 21 "Parallel Tempering of a Single Particle".
  We simulate a single particle in an oscillating
  potential and use tempering in temperature (you may use any
  parameter in the Hamiltonian) to overcome energy barriers.

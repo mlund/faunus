@@ -13,11 +13,11 @@ namespace Faunus {
     public:
       AtomData();
       particle::Tid id;  //!< Identification number
-      double sigma,      //!< LJ diameter
-             eps,        //!< LJ epsilon
-             radius,     //!< Radius
-             mw,         //!< Weight
-             charge,     //!< Charge
+      double sigma,      //!< LJ diameter [A]
+             eps,        //!< LJ epsilon [kJ/mol]
+             radius,     //!< Radius [A]
+             mw,         //!< Weight [g/mol]
+             charge,     //!< Charge [valency]
              activity,   //!< Chemical activity "(mol/l)"
              dp,         //!< Displacement parameter
              mean,       //!< Mean value... (charge, sasa, etc.)
@@ -40,6 +40,15 @@ namespace Faunus {
    * particle p = atom["Cl"];          // Copy properties to particle
    * std::cout << atom[p.id].activity; // Get property via particle id
    * \endcode
+   *
+   * The file format of the atom list is as follows -- note that atom sizes
+   * are given as the radius, i.e. sigma/2:
+   \verbatim
+       #     name    charge  radius     epsilon      Mw       hydrophobic?
+       #             (e)     (angstrom) (kJ/mol)     (g/mol)  (yes/no)
+       Atom  Na      +1      1.665      0.01158968   22       no
+       Atom  Cl      -1      2.200      0.4184       36       no
+   \endverbatim
    */
   class AtomTypes {
     private:

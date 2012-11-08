@@ -28,4 +28,6 @@ namespace Faunus {
 
   double PhysicalConstants::kT2kJ(double u) { return u*kB*_T*Nav*1e-3; }
 
+  double PhysicalConstants::kJ2kT(double u) { return u/kT2kJ(1); }
+
 }

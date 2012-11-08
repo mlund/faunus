@@ -1,10 +1,21 @@
 #!/bin/bash
-echo "
-Atom  Na      +1     2.0    0.1    1       no
-Atom  Cl      -1     2.0    0.1    1       no
-" > bulk.atoms
+
+# THIS RUN SCRIPT IS USED AS A UNIT TEST SO PLEASE
+# DO NOT UPLOAD ANY MODIFIED VERSIONS TO SVN UNLESS
+# TO UPDATE THE TEST.
+
+source_tests_dir="`dirname $0`"
+cp -f $source_tests_dir/bulk.test . 2> /dev/null
+cp -f $source_tests_dir/bulk.state state 2> /dev/null
 
 function mkinput() {
+echo "
+#     name    charge radius     epsilon       Mw      hydrophobic?
+#                    (angstrom) (kJ/mol)      (g/mol) (yes/no)
+Atom  Na      +1     1.665      0.01158968    1       no
+Atom  Cl      -1     2.200      0.4184        1       no
+" > bulk.atoms
+
 echo "
 atomlist      bulk.atoms
 cuboid_len    80
@@ -12,25 +23,32 @@ cuboid_len    80
 temperature 1100
 epsilon_r   1
 coulomb_cut 14.
-lj_eps      0.05
 
 loop_macrosteps 10
-loop_microsteps 100
+loop_microsteps $micro
 
 tion1  Na
-nion1  2304
-dpion1 0.8
-
+nion1  1152
+dpion1 1.0
 tion2  Cl
-nion2  2304
-dpion2 0.8
+nion2  1152
+dpion2 1.0
 
-npt_dV 0.04
-npt_P  11. # mM
+npt_dV 0   #0.04 (0=no volume displacement=NVT)
+npt_P  11. #mM
+
+test_stable        no
+test_file          bulk.test
 " > bulk.input
 }
 
-mkinput
-#rm -fR state
-./bulk
+exe=./bulk
+if [ -x $exe ]; then
+ micro=100
+ mkinput
+ $exe
+ rc=$?
+ exit $rc
+fi
+exit 1
 

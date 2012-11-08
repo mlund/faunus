@@ -1,6 +1,7 @@
 #include <faunus/inputfile.h>
 #include <faunus/textio.h>
 #include <faunus/species.h>
+#include <faunus/physconst.h>
 
 namespace Faunus {
 
@@ -30,6 +31,7 @@ namespace Faunus {
         }
       }
       string atomfile = get<string>("atomlist", "");
+      pc::setT( get<double>("temperature", 298.15) );
       if (!atomfile.empty())
         atom.includefile(atomfile);
       return true;

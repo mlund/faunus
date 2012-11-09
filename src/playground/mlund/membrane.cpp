@@ -1,4 +1,6 @@
 #include <faunus/faunus.h>
+#include <faunus/membrane.h>
+
 using namespace Faunus;
 using namespace Faunus::Potential;
 
@@ -20,8 +22,9 @@ class CustPairPot : public CombinedPairPotential<T1,T2> {
 };
 
 typedef Geometry::Cuboid Tgeometry;   // specify geometry - here cube w. periodic boundaries
-//typedef CombinedPairPotential<DebyeHuckel,WeeksChandlerAndersen> Tdhwca;
-typedef CustPairPot<WeeksChandlerAndersen,CosAttract> Tpairpot;
+//typedef CustPairPot<WeeksChandlerAndersen,CosAttract> Tpairpot;
+typedef CombinedPairPotential<DebyeHuckel,WeeksChandlerAndersen> Tdhwca;
+typedef CustPairPot<Tdhwca,CosAttract> Tpairpot;
 
 int main() {
   cout << textio::splash();           // show faunus banner and credits
@@ -50,22 +53,26 @@ int main() {
   // Lipid energyfield
   double sigma = mcp.get<double>("lipid_sigma", 10);
   double epsilon = mcp.get<double>("lipid_epsilon", 1);
+  double rho = 1 / mcp.get<double>("lipid_areapercharge",0);
   double headtail_k=0.5*10*epsilon/(sigma*sigma);
   double headtail_req=4*sigma;
   double fene_k=30*epsilon/(sigma*sigma);
   double fene_rmax=1.5*sigma;
+  std::shared_ptr<Potential::Harmonic> headtailpot( new Potential::Harmonic(headtail_k,headtail_req) );
+  std::shared_ptr<Potential::FENE> fenepot( new Potential::FENE(fene_k, fene_rmax) );
 
   // Custom Weeks-Chandler-Andersen parameters
-  nonbonded->pairpot.first.customSigma(atom["HD"].id, atom["HD"].id, 0.95*sigma);
-  nonbonded->pairpot.first.customSigma(atom["HD"].id, atom["TL"].id, 0.95*sigma);
-  nonbonded->pairpot.first.customSigma(atom["TL"].id, atom["TL"].id, sigma);
-  nonbonded->pairpot.first.customEpsilon(atom["HD"].id, atom["HD"].id, epsilon);
-  nonbonded->pairpot.first.customEpsilon(atom["HD"].id, atom["TL"].id, epsilon);
-  nonbonded->pairpot.first.customEpsilon(atom["TL"].id, atom["TL"].id, epsilon);
+  nonbonded->pairpot.first.second.customSigma(atom["HD"].id, atom["HD"].id, 0.95*sigma);
+  nonbonded->pairpot.first.second.customSigma(atom["HD"].id, atom["TL"].id, 0.95*sigma);
+  nonbonded->pairpot.first.second.customSigma(atom["TL"].id, atom["TL"].id, sigma);
+  nonbonded->pairpot.first.second.customEpsilon(atom["HD"].id, atom["HD"].id, epsilon);
+  nonbonded->pairpot.first.second.customEpsilon(atom["HD"].id, atom["TL"].id, epsilon);
+  nonbonded->pairpot.first.second.customEpsilon(atom["TL"].id, atom["TL"].id, epsilon);
 
   // Add lipids
-  vector<GroupMolecular> pol( mcp.get("polymer_N",0));   // vector of polymers
-  string polyfile = mcp.get<string>("polymer_file", "");
+  int N=mcp.get("lipid_N",0);
+  vector<GroupMolecular> pol(N);   // vector of polymers
+  string polyfile = mcp.get<string>("lipid_file", "");
   for (auto &g : pol) {                                  // load polymers
     aam.load(polyfile);
     Geometry::FindSpace f;
@@ -73,14 +80,25 @@ int main() {
     g = spc.insert( aam.particles() );                   // insert into space
     g.name="lipid";
     spc.enroll(g);
-    bonded->add(g.front(), g.front()+1, Potential::FENE(fene_k, fene_rmax));
-    bonded->add(g.front()+1, g.front()+2, Potential::FENE(fene_k, fene_rmax));
-    bonded->add(g.front(), g.front()+2, Potential::Harmonic(headtail_k,headtail_req));
+    bonded->add(g.front(), g.front()+1, fenepot);
+    bonded->add(g.front()+1, g.front()+2, fenepot);
+    bonded->add(g.front(), g.front()+2, headtailpot);
+
+    // dope head groups w. charge
+    cout << "# Surface charge density: " << 1/rho << " A^2/charge\n";
+    double area=2 * nonbonded->geometry.len.x * nonbonded->geometry.len.y;
+    double p = rho*area/N;
+    if (slp_global.randOne()<p) {
+      spc.p[ g.front() ].charge=-1;
+      spc.trial[ g.front() ].charge=-1;
+    }
   }
 
   Group allpol( pol.front().front(), pol.back().back() );// make group w. all polymers
 
   spc.load("state");                                     // load old config. from disk (if any)
+  pqr.save("initial.pqr", spc.p);
+
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );      // store initial total system energy
 
   cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
@@ -92,6 +110,8 @@ int main() {
         case 0:
           mv.setGroup(allpol);
           sys+=mv.move( allpol.size() ); // translate lipid monomers
+          for (auto &g : pol)
+            g.setMassCenter(spc);
           break;
         case 1:
           k=pol.size();

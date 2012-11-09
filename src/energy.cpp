@@ -263,10 +263,12 @@ namespace Faunus {
     Bonded::Bonded() {
       name="Bonded particles";
       geo=nullptr;
+      CrossGroupBonds=false;
     }
 
     Bonded::Bonded(Geometry::Geometrybase &g) {
       name="Bonded particles";
+      CrossGroupBonds=false;
       geo=&g;
     }
 
@@ -320,19 +322,25 @@ namespace Faunus {
       return u;
     }
 
+    /*!
+     * Group-to-group bonds are disabled by default as these are rarely used and the current
+     * implementation s rather slow for large systems (but very general). To
+     * activate g2g(), set \c CrossGroupBonds to \c true.
+     */
     double Bonded::g2g(const p_vec &p, Group &g1, Group &g2) {
       double u=0;
-      for (auto &m : list) {
-        int i=m.first.first;
-        int j=m.first.second;
-        assert(i!=j && "Pairs between identical atom index not allowed.");
-        if (g1.find(i))
-          if (g2.find(j))
-            u+=m.second->tokT() * m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
-        if (g1.find(j))
-          if (g2.find(i))
-            u+=m.second->tokT() * m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
-      }
+      if (CrossGroupBonds)
+        for (auto &m : list) {
+          int i=m.first.first;
+          int j=m.first.second;
+          assert(i!=j && "Pairs between identical atom index not allowed.");
+          if (g1.find(i))
+            if (g2.find(j))
+              u+=m.second->tokT() * m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+          if (g1.find(j))
+            if (g2.find(i))
+              u+=m.second->tokT() * m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+        }
       return u;
     }
 
@@ -581,16 +589,16 @@ namespace Faunus {
 
     MeanFieldCorrection::MeanFieldCorrection(InputMap& in)
       : bin(in.get<double>("mfc_binsize", 2)), 
-        dh(in),
-        qdensity(bin,Ttable::XYDATA) {
-      name = "Mean Field Correction";  
-      threshold=in.get<double>("cylinder_radius",pc::infty);
-      loadfromdisk=in.get<bool>("mfc_load", false);
-      filename=textio::prefix+"mfc_qdensity";
-      prefactor=std::exp(-threshold/dh.debyeLength())*dh.bjerrumLength()*pc::pi*2*bin*dh.debyeLength();
-      if (loadfromdisk)
-        qdensity.load(filename);
-    }
+      dh(in),
+      qdensity(bin,Ttable::XYDATA) {
+        name = "Mean Field Correction";  
+        threshold=in.get<double>("cylinder_radius",pc::infty);
+        loadfromdisk=in.get<bool>("mfc_load", false);
+        filename=textio::prefix+"mfc_qdensity";
+        prefactor=std::exp(-threshold/dh.debyeLength())*dh.bjerrumLength()*pc::pi*2*bin*dh.debyeLength();
+        if (loadfromdisk)
+          qdensity.load(filename);
+      }
 
     double MeanFieldCorrection::i_external(const p_vec& p, int i) {
       return p[i].charge*qdensity(p[i].z)*prefactor;
@@ -629,7 +637,7 @@ namespace Faunus {
         << pad(SUB,w,"Prefactor") << prefactor << _angstrom+cubed << endl;
       return o.str();
     }
-    
+
     /*
        pair_permutable<particle::Thydrophobic> createPairHydrophobic(const particle &a, const particle &b) {
        return pair_permutable<particle::Thydrophobic>(a.hydrophobic, b.hydrophobic);

@@ -24,10 +24,9 @@ namespace Faunus {
   Group::~Group() {}
 
   bool Group::find(int i) const {
-    if (i<=back())
-      if (i>=front())
-        return true;
-    return false;
+    if (i>back()) return false;
+    if (i<front()) return false;
+    return true;
   }
 
   /*! \brief Calculates total charge
@@ -266,6 +265,48 @@ namespace Faunus {
     using namespace textio;
     std::ostringstream o;
     return o.str();
+  }
+
+  GroupArray::GroupArray(int AtomsPerMolecule) : N(AtomsPerMolecule) {}
+
+  int GroupArray::randomMol() const {
+    int i=(random()-front())/N;
+    assert(find(i) && "Out of range!");
+    return i;
+  }
+
+  int GroupArray::sizeMol() const {
+    assert( size()&N==0 );
+    return size()/N;
+  }
+
+  /*!
+   * \warning You must manually update the mass center of the returned group
+   */
+  GroupMolecular& GroupArray::operator[](int i) {
+    sel.setfront( front()+i*N );
+    sel.setback( sel.front()+N-1 );
+    assert( find(sel.front()) && find(sel.back()) );
+    return sel;
+  }
+
+  string GroupArray::_info() {
+    using namespace textio;
+    std::ostringstream o;
+    o << pad(SUB,w,"Mol size") << N << endl
+      << pad(SUB,w,"Molecules") << sizeMol() << endl;
+    return o.str();
+  }
+
+  void GroupArray::add(const GroupMolecular &g) {
+    if (g.size()==N) {
+      if (empty()) {
+        setfront(g.front());
+        setback(g.back());
+      } else if (g.front()==back()+1)
+        setback(g.back());
+    }
+    assert( size()&N==0 );
   }
 
 }//namespace

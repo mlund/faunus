@@ -313,7 +313,9 @@ namespace Faunus {
      * \date Lund, 2011-2012
      * \author Mikael Lund
      *
-     * Takes care of bonded interactions and can handle mixed bond types.
+     * Takes care of bonded interactions and can handle mixed bond types. If you create bond BETWEEN
+     * groups, make sure to set the \c CrossGroupBonds to \c true.
+     *
      * Example:
      * \code
      *    vector<particle> p(...);            // particle vector
@@ -336,6 +338,7 @@ namespace Faunus {
         double g_internal(const p_vec&, Group&) FOVERRIDE; //!< Internal bonds in Group, only
         double g2g(const p_vec&, Group&, Group&) FOVERRIDE;//!< Bonds between groups
         double total(const p_vec&);                        //!< Sum all known bond energies
+        bool CrossGroupBonds;                              //!< Set to true if there are bonds across groups (slower!). Default: false
     };
 
     /*!

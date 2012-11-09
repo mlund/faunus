@@ -139,6 +139,22 @@ namespace Faunus {
       bool isMolecular() const;                 //!< Always true for GroupMolecular
   };
 
+  /*!
+   * \brief Class for an array of multiatom molecules - solvent, lipids etc.
+   */
+  class GroupArray : public GroupMolecular {
+    private:
+      GroupMolecular sel;             //!< A temporary group class
+      string _info();                 //!< Show information
+    public:
+      int N;                          //!< Number of atoms in each molecule
+      GroupArray(int);                //!< Constructor. Specify number of atoms in each molecule.
+      int sizeMol() const;            //!< Number of molecules
+      int randomMol() const;          //!< Pick a random molecule
+      GroupMolecular& operator[](int);//!< Access i'th molecule
+      void add(const GroupMolecular&);//!< Add a molecule to the array - range must be continuous
+  };
+
 }//namespace
 #endif
 

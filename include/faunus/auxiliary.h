@@ -33,18 +33,6 @@ namespace Faunus {
       }
 #pragma GCC diagnostic pop
 
-      // NOT USED BY stl::map.find()
-      // see http://www.velocityreviews.com/forums/t290085-std-map-mystring-mystring-comparison-operator.html
-      bool operator==(const pair_permutable<T> &a) const {
-        if (a.first==first)
-          if (a.second==second)
-            return true;
-        if (a.first==second)
-          if (a.second==first)
-            return true;
-        return false;
-      }
-
       bool operator<(const pair_permutable<T> &a) const {
         if (first<a.first)
           return true;
@@ -53,6 +41,7 @@ namespace Faunus {
             return true;
         return false;
       }
+
       bool find(const T &a) const {
         if (a!=first)
           if (a!=second)
@@ -71,18 +60,37 @@ namespace Faunus {
       protected:
         std::map< Tpair, std::shared_ptr<Tbase> > list;
       public:
+        /*!
+         * \brief Associate data with a pair using an internal copy.
+         *
+         * Data is added by making an internal COPY of the given Tderived object.
+         * For large lists, consider adding a pointer instead using the alternative
+         * add() function.
+         */
         template<typename Tderived>
           void add(Tij i, Tij j, Tderived data) {
             list[ Tpair(i,j) ] = std::shared_ptr<Tderived>( new Tderived(data) ); 
           }
+
+        /*!
+         * \brief Associate data with a pair using pointers.
+         */
+        template<typename Tderived>
+          void add(Tij i, Tij j, std::shared_ptr<Tderived>& sptr) {
+            list[ Tpair(i,j) ] = sptr; 
+          }
+
+        /*!
+         * \brief Access data of a pair
+         */
         Tbase& operator() (Tij i, Tij j) {
           Tpair pair(i,j);
           assert( list[pair] != nullptr ); //debug
           return *list[pair];
         }
-        void clear() {
-          list.clear();
-        }
+
+        /*! \brief Clears all data */
+        void clear() { list.clear(); }
     };
 
 

@@ -163,6 +163,31 @@ namespace Faunus {
             double u=0;
             if (!g1.empty())
               if (!g2.empty()) {
+                // IN CASE ONE GROUP IS A SUBGROUP OF THE OTHER
+                if (g1.find(g2.front()))
+                  if (g1.find(g2.back())) {  // g2 is a subgroup of g1
+                    assert(g1.size()>=g2.size());
+                    for (int i=g1.front(); i<g2.front(); i++)
+                      for (auto j : g2)
+                        u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
+                    for (int i=g2.back()+1; i<=g1.back(); i++)
+                      for (auto j : g2)
+                        u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
+                    return pairpot.tokT()*u;
+                  }
+                if (g2.find(g1.front()))
+                  if (g2.find(g1.back())) {  // g1 is a subgroup of g2
+                    assert(g2.size()>=g1.size());
+                    for (int i=g2.front(); i<g1.front(); i++)
+                      for (auto j : g1)
+                        u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
+                    for (int i=g1.back()+1; i<=g2.back(); i++)
+                      for (auto j : g1)
+                        u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
+                    return pairpot.tokT()*u;
+                  }
+
+                // IN CASE BOTH GROUPS ARE INDEPENDENT (DEFAULT)
                 int ilen=g1.back()+1, jlen=g2.back()+1;
 #pragma omp parallel for reduction (+:u) schedule (dynamic)
                 for (int i=g1.front(); i<ilen; ++i)
@@ -414,7 +439,7 @@ namespace Faunus {
 
     /*!
      * \brief Collection of Energybases that when summed give the Hamiltonian
-    *
+     *
      * This class is used to collect several Energybase derivatives into a full hamiltonian.
      * The following example demonstrated how one can generate a Hamiltonian for bonded as
      * well as non-bonded interactions:
@@ -430,7 +455,7 @@ namespace Faunus {
      *
      * \author Mikael Lund
      * \date Lund, 2011
-      */
+     */
     class Hamiltonian : public Energybase {
       typedef shared_ptr<Energybase> baseptr;
       private:

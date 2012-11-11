@@ -1,6 +1,6 @@
 #!/usr/local/bin/vmd
 # VMD script written by save_state $Revision: 1.44 $
-# VMD version: 1.9.1
+# VMD version: 1.9.1beta2
 set viewplist {}
 set fixedlist {}
 proc vmdrestoremymaterials {} {
@@ -295,8 +295,8 @@ display cuedensity 0.320000
 display cuemode    Exp2
 mol new confout.pqr type pqr first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
 mol delrep 0 top
-mol representation vdw
-mol color ColorID 0
+mol representation VDW 1.000000 12.000000
+mol color ColorID 4
 mol selection {resname HD}
 mol material Opaque
 mol addrep top
@@ -329,8 +329,8 @@ mol clipplane center 5 0 top {0.0 0.0 0.0}
 mol clipplane color  5 0 top {0.5 0.5 0.5 }
 mol clipplane normal 5 0 top {0.0 0.0 1.0}
 mol clipplane status 5 0 top {0}
-mol representation VDW 1.000000 12.000000
-mol color ColorID 4
+mol representation VDW
+mol color Charge
 mol selection {resname TL}
 mol material Opaque
 mol addrep top
@@ -364,7 +364,7 @@ mol clipplane color  5 1 top {0.5 0.5 0.5 }
 mol clipplane normal 5 1 top {0.0 0.0 1.0}
 mol clipplane status 5 1 top {0}
 mol rename top confout.pqr
-set viewpoints([molinfo top]) {{{1 0 0 10.6579} {0 1 0 1.60232} {0 0 1 -1.68863} {0 0 0 1}} {{-0.139778 -0.986713 -0.0827866 0} {0.989076 -0.135185 -0.0587432 0} {0.0467707 -0.0900934 0.994832 0} {0 0 0 1}} {{0.0129774 0 0 0} {0 0.0129774 0 0} {0 0 0.0129774 0} {0 0 0 1}} {{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}}}
+set viewpoints([molinfo top]) {{{1 0 0 10.6579} {0 1 0 1.60232} {0 0 1 -1.68863} {0 0 0 1}} {{-0.793761 0.391429 -0.465535 0} {0.462893 -0.107737 -0.879839 0} {-0.39455 -0.913876 -0.0956719 0} {0 0 0 1}} {{0.0129774 0 0 0} {0 0.0129774 0 0} {0 0 0.0129774 0} {0 0 0 1}} {{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}}}
 lappend viewplist [molinfo top]
 set topmol [molinfo top]
 # done with molecule 0
@@ -514,6 +514,7 @@ color scale colors WBlk {1.0 1.0 1.0} {0.5 0.5 0.5} {0.0 0.0 0.0}
     {color Segname {} blue}
     {color Conformation {all} blue}
     {color Molecule {0} blue}
+    {color Molecule {confout.pqr} blue}
     {color Structure {3_10_Helix} blue}
     {color Surface {Grasp} gray}
     {color Labels {Springs} orange}

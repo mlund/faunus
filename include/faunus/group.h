@@ -75,31 +75,25 @@ namespace Faunus {
    */
   class Group : public myrange<int> {
     private:
-      Geometry::VectorRotate vrot;
       virtual Point _massCenter(const Space&) const;
     protected:
       virtual std::ostream& write(std::ostream &) const; //!< Write all Group data to stream
-      vector<Move::Movebase*> moves;    //!< pointers to move functions
+      //vector<Move::Movebase*> moves;    //!< pointers to move functions
       virtual string _info();
       char w;                           //!< Text padding for info() functions
-
     public:
-      //enum type {GROUP,ATOMIC,MOLECULAR,CIGAR,RIGID,ISOBARIC,GRANDCANONICAL};
-      //std::set<type> property;
-      //type id;
       Group(int=-1, int=-1);
       string info();                                         //!< Information string
       string name;                                           //!< Information time (and short) name
       Point cm_trial;                                        //!< mass center vector for trial position
       Point cm;                                              //!< mass center vector
       int random() const;                                    //!< Pick random particle index in Group
-      bool find(int) const;                                  //!< Check if index is part of group
 
-      virtual double charge(const p_vec&) const;             //!< Calculate total charge
+      double charge(const p_vec&) const;                     //!< Calculates total charge
 
-      Point massCenter(const Space&) const;                  //!< Calculate mass center - does not set touch group!
+      Point massCenter(const Space&) const;                  //!< Calculates mass center - does not set touch group!
       Point setMassCenter(const Space &);                    //!< Calculate AND set mass center (cm and cm_trial)
-      virtual Point dipolemoment(const Space&) const;        //!< Calculate dipole moment
+      Point dipolemoment(const Space&) const;                //!< Calculates dipole moment
 
       virtual void rotate(Space&, const Point&, double);     //!< Rotate around a vector
       virtual void translate(Space&, const Point&);          //!< Translate along a vector
@@ -114,6 +108,12 @@ namespace Faunus {
       friend std::ostream &operator<<(std::ostream&, Group&);//!< Output Group data to stream
       virtual Group &operator<<(std::istream&);              //!< Get Group data from stream
       virtual ~Group();
+      inline bool find(int i) const                          //!< Check if index is part of group
+      {
+        if (i>back()) return false;
+        if (i<front()) return false;
+        return true;
+      }
   };
 
   /*!

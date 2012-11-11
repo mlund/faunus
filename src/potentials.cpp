@@ -188,10 +188,9 @@ namespace Faunus {
       return o.str();
     }
 
-    WeeksChandlerAndersen::WeeksChandlerAndersen(InputMap &in) : Tbase(in) {
+    WeeksChandlerAndersen::WeeksChandlerAndersen(InputMap &in) :
+      Tbase(in), twototwosixth(std::pow(2,2/6.)), onefourth(1/4.) {
       name="WeeksChandlerAnderson";
-      twototwosixth = pow(2,2/6.); // ( 2^(1/6) )^2
-      onefourth=1/4.;
     }
 
     LorentzBerthelot::LorentzBerthelot() : name("Lorentz-Berthelot Mixing Rule") {}

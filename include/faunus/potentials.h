@@ -301,7 +301,7 @@ namespace Faunus {
     class WeeksChandlerAndersen : public LennardJonesMixed<LorentzBerthelot> {
       private:
         typedef LennardJonesMixed<LorentzBerthelot> Tbase;
-        double onefourth, twototwosixth;
+        const double onefourth, twototwosixth;
       public:
         WeeksChandlerAndersen(InputMap&);
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {

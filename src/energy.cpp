@@ -275,7 +275,9 @@ namespace Faunus {
     string Bonded::_info() {
       using namespace Faunus::textio;
       std::ostringstream o;
-      o << indent(SUBSUB) << std::left
+      o << pad(SUB,30,"Look for group-group bonds:")
+        << (CrossGroupBonds ? "yes (slow)" : "no (faster)") << endl << endl
+        << indent(SUBSUB) << std::left
         << setw(7) << "i" << setw(7) << "j" << endl;
       for (auto &m : list)
         o << indent(SUBSUB) << std::left << setw(7) << m.first.first
@@ -290,21 +292,20 @@ namespace Faunus {
       assert(i!=j);
       auto f=list.find( pair_permutable<int>(i,j) );
       if (f!=list.end())
-        return f->second->tokT() * f->second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+        return f->second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
       return 0;
     }
 
     double Bonded::i2all(const p_vec &p, int i) {
       assert(geo!=nullptr);  //debug
       assert( i>=0 && i<(int)p.size() ); //debug
-
       double u=0;
       for (auto &m : list) {
         int j=m.first.first;
         int k=m.first.second;
         assert(j!=k && "Pairs between identical atom index not allowed.");
         if (i==j || i==k)
-          u+=m.second->tokT() * m.second->operator()( p[j], p[k], geo->sqdist( p[j], p[k] ) );
+          u+=m.second->operator()( p[j], p[k], geo->sqdist( p[j], p[k] ) );
       }
       return u;
     }
@@ -317,14 +318,14 @@ namespace Faunus {
         int j=m.first.second;
         assert(i!=j && "Pairs between identical atom index not allowed.");
         assert(i>=0 && i<(int)p.size() && j>=0 && j<(int)p.size()); //debug
-        u += m.second->tokT() * m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+        u += m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
       }
       return u;
     }
 
     /*!
      * Group-to-group bonds are disabled by default as these are rarely used and the current
-     * implementation s rather slow for large systems (but very general). To
+     * implementation is rather slow for systems with *many* groups (but very general). To
      * activate g2g(), set \c CrossGroupBonds to \c true.
      */
     double Bonded::g2g(const p_vec &p, Group &g1, Group &g2) {
@@ -336,10 +337,10 @@ namespace Faunus {
           assert(i!=j && "Pairs between identical atom index not allowed.");
           if (g1.find(i))
             if (g2.find(j))
-              u+=m.second->tokT() * m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+              u+=m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
           if (g1.find(j))
             if (g2.find(i))
-              u+=m.second->tokT() * m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+              u+=m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
         }
       return u;
     }
@@ -358,7 +359,7 @@ namespace Faunus {
         assert(i>=0 && i<(int)p.size() && j>=0 && j<(int)p.size()); //debug
         if (g.find(i))
           if (g.find(j))
-            u += m.second->tokT() * m.second->operator()( p[i],p[j],geo->sqdist( p[i],p[j] ) );
+            u += m.second->operator()( p[i],p[j],geo->sqdist( p[i],p[j] ) );
       }
       return u;
     }

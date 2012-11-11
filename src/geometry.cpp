@@ -340,6 +340,8 @@ namespace Faunus {
 #endif
 
     Point massCenter(const Geometrybase &geo, const p_vec &p) {
+      if (p.empty())
+        return Point();
       Group g(0, p.size()-1);
       return massCenter(geo,p,g);
     }

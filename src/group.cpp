@@ -23,11 +23,13 @@ namespace Faunus {
 
   Group::~Group() {}
 
+  /*
   bool Group::find(int i) const {
     if (i>back()) return false;
     if (i<front()) return false;
     return true;
   }
+  */
 
   /*! \brief Calculates total charge
    *  \return Charge number. The charge is also stored in
@@ -129,6 +131,7 @@ namespace Faunus {
    * \param angle [rad]
    */
   void Group::rotate(Space &spc, const Point &endpoint, double angle) {
+    Geometry::VectorRotate vrot;
     assert( spc.geo->dist(cm,massCenter(spc) )<1e-6 );      // debug. Is mass center in sync?
     cm_trial = cm;
     vrot.setAxis(*spc.geo, cm, endpoint, angle);            // rotate around line between mass center and point
@@ -267,7 +270,9 @@ namespace Faunus {
     return o.str();
   }
 
-  GroupArray::GroupArray(int AtomsPerMolecule) : N(AtomsPerMolecule) {}
+  GroupArray::GroupArray(int AtomsPerMolecule) : N(AtomsPerMolecule) {
+    assert(N>0 && "Molecular size must be larger than zero");
+  }
 
   int GroupArray::randomMol() const {
     int i=(random()-front())/N;
@@ -276,7 +281,7 @@ namespace Faunus {
   }
 
   int GroupArray::sizeMol() const {
-    assert( size()&N==0 );
+    assert( (size()%N)==0 );
     return size()/N;
   }
 
@@ -299,14 +304,13 @@ namespace Faunus {
   }
 
   void GroupArray::add(const GroupMolecular &g) {
-    if (g.size()==N) {
-      if (empty()) {
-        setfront(g.front());
-        setback(g.back());
-      } else if (g.front()==back()+1)
+    if ((g.size()%N)==0) {
+      if (empty())
+        setrange(g.front(), g.back());
+      else if (g.front()==back()+1)
         setback(g.back());
     }
-    assert( size()&N==0 );
+    assert( (size()%N)==0 && "GroupArray not a multiple of N");
   }
 
 }//namespace

@@ -17,7 +17,7 @@ echo "3
 
 echo "
 atomlist               membrane.atoms
-loop_macrosteps        10
+loop_macrosteps        5
 loop_microsteps        $micro
 cuboid_len             -1        # Box side length Angstrom
 cuboid_xlen            $box
@@ -53,7 +53,7 @@ radius=`python -c "print 0.5*$sigma"`
 Nlipid=100
 box=`python -c "print ( ($Nlipid/1000.)*25**2 )**(1/2.)*$sigma"`
 #rm -f state
-micro=100
+micro=500
 mkinput
 $exe
 

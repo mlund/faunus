@@ -828,16 +828,18 @@ namespace Faunus {
       if (cnt>0) {
         char l=14;
         o << pad(SUB,w, "Mean displacement") << cuberoot+rootof+bracket("dV"+squared) << " = " << pow(sqrV.avg(), 1/6.) << _angstrom << endl
-          << pad(SUB,w, "Osmotic coefficient") << P / (N/V.avg()) << endl
+          << pad(SUB,w, "Osmotic coefficient") << P / (N*rV.avg()) << endl
           << endl
           << indent(SUBSUB) << std::right << setw(10) << ""
           << setw(l+5) << bracket("V")
           << setw(l+8) << cuberoot+bracket("V")
+          << setw(l+8) << bracket("1/V")
           << setw(l+8) << bracket("N/V") << endl
           << indent(SUB) << setw(10) << "Averages"
           << setw(l) << V.avg() << _angstrom << cubed
           << setw(l) << pow(V.avg(),1/3.) << _angstrom
-          << setw(l) << N/V.avg()*tomM << " mM" << endl;
+          << setw(l) << rV.avg() << " 1/" << _angstrom << cubed
+          << setw(l) << N*rV.avg()*tomM << " mM" << endl;
       }
       return o.str();
     }
@@ -858,6 +860,7 @@ namespace Faunus {
     void Isobaric::_acceptMove() {
       V += newV;
       sqrV += pow( oldV-newV, 2 );
+      rV += 1./newV;
       hamiltonian->setVolume(newV);
       for (auto g : spc->groupList() )
         g->accept(*spc);
@@ -866,6 +869,7 @@ namespace Faunus {
     void Isobaric::_rejectMove() {
       sqrV += 0;
       V += oldV;
+      rV += 1./oldV;
       hamiltonian->setVolume(oldV);
       for (auto g : spc->groupList() )
         g->undo(*spc);

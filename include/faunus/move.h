@@ -402,6 +402,7 @@ namespace Faunus {
         double P; //!< Pressure
         Average<double> sqrV;       //!< Mean squared volume displacement
         Average<double> V;          //!< Average volume
+        Average<double> rV;         //!< Average 1/volume
       public:
         Isobaric(InputMap&, Energy::Hamiltonian&, Space&, string="npt");
     };

@@ -247,6 +247,18 @@ namespace Faunus {
   }
 
   /*!
+   * Call to this function is optional and may provide better handling of memory in cases
+   * where the maximum number of particles in the system is known. This is done by reserving
+   * the required amount of memory so that dynamic reallocation is avoided upon vector expansion.
+   * Calls to this function is best made immediately after Space construction, but can be safely
+   * called at any time.
+   */
+  void Space::reserve(int MaxNumberOfParticles) {
+    p.reserve(MaxNumberOfParticles);
+    trial.reserve(MaxNumberOfParticles);
+  }
+
+  /*!
    * This will register a new group in the Space. If already found, nothing is added. In addition, the
    * following is performed each time a new group is enroller:
    * \li The group mass center is re-calculated and set.
@@ -275,6 +287,7 @@ namespace Faunus {
       << pad(SUB,w,"Number of particles") << p.size() << endl
       << pad(SUB,w,"Electroneutrality") << ((abs(z)>1e-7) ? "NO!" : "Yes") << " "  << z << endl
       << pad(SUB,w,"System sanity check") << (checkSanity() ? "Passed" : "Failed") << endl
+      << pad(SUB,w,"Reserved Particle Space") << p.capacity() << " (p), " << trial.capacity() << " (trial)\n"
       << indent(SUB) << "Groups:" << endl;
     for (size_t i=0; i<g.size(); i++) {
       std::ostringstream range;

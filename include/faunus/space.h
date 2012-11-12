@@ -46,8 +46,9 @@ namespace Faunus {
       GroupMolecular insert(const p_vec&, int=-1);
       bool insert(const particle&, int=-1);           //!< Insert particle at pos n (old n will be pushed forward).
       bool insert(string, int, keys=NOOVERLAP); 
-      bool erase(int);                               //!< Remove n'th particle
+      bool erase(int);                                //!< Remove n'th particle
       int enroll(Group&);                             //!< Add group pointer to g vector
+      void reserve(int);                              //!< Reserve space for particles for better memory efficiency
 
       double charge() const;                          //!< Sum all charges in particle vector
       string info();                                  //!< Print information string

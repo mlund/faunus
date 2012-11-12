@@ -152,6 +152,7 @@ namespace Faunus {
             lipids.add(g);                    // add inserted lipid to "lipids" group
           }
           spc.enroll( lipids );               // Space needs to know about ALL groups
+          cout << "Capacity = " << spc.p.capacity() << endl;
         }
     };
 }//namespace

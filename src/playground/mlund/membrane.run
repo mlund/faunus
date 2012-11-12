@@ -7,6 +7,7 @@ function mkinput() {
 echo "
 Atom  HD      +0     $radius    $epsilon    1       no
 Atom  TL      -0     $radius    $epsilon    1       no
+Atom  PEP      0     $radius    $epsilon    1       no
 " > membrane.atoms
 
 echo "3
@@ -14,6 +15,13 @@ echo "3
  TL  1   4.00   0.00   0.00    0.0   1  $radius
  TL  2   8.00   0.00   0.00    0.0   1  $radius
 " > lipid.aam
+
+echo "4
+ PEP  0   0.00   0.00   0.00    0.0   1  $radius
+ PEP  1  10.00   0.00   0.00    0.0   1  $radius
+ PEP  2  10.00  10.00   0.00    0.0   1  $radius
+ PEP  3  10.00   0.00  10.00    0.0   1  $radius
+" > peptide.aam
 
 echo "
 atomlist               membrane.atoms
@@ -32,6 +40,10 @@ lipid_sigma            $sigma    # Å
 lipid_areapercharge    300
 lipid_N                $Nlipid
 lipid_file             lipid.aam
+
+polymer_forceconst     0.05
+polymer_eqdist         $sigma
+polymer_file           peptide.aam
 
 cosattract_eps         $epsilon
 cosattract_wc          "`python -c "print $sigma*1.4"`"

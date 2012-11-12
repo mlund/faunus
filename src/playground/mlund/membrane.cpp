@@ -5,8 +5,7 @@ using namespace Faunus;
 using namespace Faunus::Potential;
 
 typedef Geometry::Cuboid Tgeometry;   // specify geometry - here cube w. periodic boundaries
-//typedef CosbinedPairPotential<DebyeHuckel,WeeksChandlerAndersen> Tdhwca;
-//typedef CosAttractCombi<Tdhwca,CosAttract> Tpairpot;
+//typedef CosbinedPairPotential<WeeksChandlerAndersen, DebyeHuckel> Tdhwca;
 typedef CosAttractCombi<WeeksChandlerAndersen> Tpairpot;
 
 int main() {
@@ -15,6 +14,7 @@ int main() {
   InputMap mcp("membrane.input");     // open user input file
   MCLoop loop(mcp);                   // class for handling mc loops
   FormatPQR pqr;                      // PQR structure file I/O
+  FormatAAM aam;
   FormatXTC xtc(1000);                // XTC gromacs trajectory format
   EnergyDrift sys;                    // class for tracking system energy drifts
   UnitTest test(mcp);                 // class for unit testing
@@ -22,7 +22,7 @@ int main() {
   // Energy functions and space
   Energy::Hamiltonian pot;
   auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
-  //auto bonded    = pot.create( Energy::Bonded() );
+  auto bonded    = pot.create( Energy::Bonded() );
   Space spc( pot.getGeometry() );
 
   // Markov moves and analysis
@@ -30,10 +30,25 @@ int main() {
   Move::AtomicTranslation mv(mcp, pot, spc);
   Move::Pivot pivot(mcp, pot, spc);
   Move::Reptation rep(mcp, pot, spc);
+  Move::CrankShaft crank(mcp, pot, spc);
   Analysis::PolymerShape shape;
   Analysis::RadialDistribution<> rdf(0.2);
 
+  // Load membrane
   DesernoMembrane<Tgeometry> mem(mcp,pot,spc, nonbonded->pairpot.first, nonbonded->pairpot.second);
+
+  // Load peptide
+  string polyfile = mcp.get<string>("polymer_file", "");
+  double req    = mcp.get<double>("polymer_eqdist", 0);
+  double k      = mcp.get<double>("polymer_forceconst", 0);
+  aam.load(polyfile);                                 // load polymer structure into aam class
+  Geometry::FindSpace f;                              // class for finding empty space in container
+  f.find(*spc.geo, spc.p, aam.particles());           // find empty spot
+  GroupMolecular pol = spc.insert( aam.particles() ); // Insert particles into Space and return matching group
+  pol.name="peptide";                                 // Give the polymer an arbitrary name
+  spc.enroll(pol);                                    // All groups need to be enrolled in the Space
+  //for (int i=pol.front(); i<pol.back(); i++)
+  //  bonded->add(i, i+1, Potential::Harmonic(k,req));   // add bonds
 
   spc.load("state");                                     // load old config. from disk (if any)
   pqr.save("initial.pqr", spc.p);
@@ -45,7 +60,7 @@ int main() {
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
       int k=mem.lipids.sizeMol(); //number of lipids
-      int i=slp_global.rand() % 2;
+      int i=slp_global.rand() % 3;
       Group g;
       switch (i) {
         case 0:
@@ -62,6 +77,9 @@ int main() {
             sys+=gmv.move();            // translate/rotate polymers
           }
           break;
+        case 2:
+          gmv.setGroup(pol);
+          gmv.move();
       }
       if ( slp_global.runtest(0.1) )
         xtc.save("traj.xtc", spc);

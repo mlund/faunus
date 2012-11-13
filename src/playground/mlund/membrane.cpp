@@ -26,11 +26,12 @@ int main() {
   Space spc( pot.getGeometry() );
 
   // Markov moves and analysis
-  Move::TranslateRotate gmv(mcp,pot,spc);
   Move::AtomicTranslation mv(mcp, pot, spc);
+  Move::TranslateRotate gmv(mcp,pot,spc), gmvpol(mcp,pot,spc,"polymer");
   Move::Pivot pivot(mcp, pot, spc);
   Move::Reptation rep(mcp, pot, spc);
   Move::CrankShaft crank(mcp, pot, spc);
+  Move::SwapMove tit(mcp,pot,spc);
   Analysis::PolymerShape shape;
   Analysis::RadialDistribution<> rdf(0.2);
 
@@ -47,9 +48,15 @@ int main() {
   GroupMolecular pol = spc.insert( aam.particles() ); // Insert particles into Space and return matching group
   pol.name="peptide";                                 // Give the polymer an arbitrary name
   spc.enroll(pol);                                    // All groups need to be enrolled in the Space
-  //for (int i=pol.front(); i<pol.back(); i++)
-  //  bonded->add(i, i+1, Potential::Harmonic(k,req));   // add bonds
-
+  for (int i=pol.front(); i<pol.back(); i++)
+    bonded->add(i, i+1, Potential::Harmonic(k,req));   // add bonds
+ 
+  //for (size_t i=0; i<spc.p.size(); i++){
+  //  spc.p[i].charge=atom[spc.p[i].id].charge;
+  //  spc.trial[i].charge=spc.p[i].charge;
+  //}
+  tit.findSites(spc.p);  // search for titratable sites
+ 
   spc.load("state");                                     // load old config. from disk (if any)
   pqr.save("initial.pqr", spc.p);
 
@@ -60,16 +67,21 @@ int main() {
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
       int k=mem.lipids.sizeMol(); //number of lipids
-      int i=slp_global.rand() % 3;
+      int i=slp_global.rand() % 4;
       Group g;
       switch (i) {
         case 0:
-          mv.setGroup(mem.lipids);
-          sys+=mv.move( mem.lipids.size() ); // translate lipid monomers
+          if (slp_global.randOne()>0.5) {
+            mv.setGroup(mem.lipids);
+            sys+=mv.move( mem.lipids.size() ); // translate lipid monomers
+          } else {
+            mv.setGroup(pol);
+            sys+=mv.move( pol.size() )       ; // translate peptide monomers
+          }
           break;
         case 1:
           while (k-->0) {
-            i=mem.lipids.randomMol(); // pick random lipid molecule
+            i=mem.lipids.randomMol();   // pick random lipid molecule
             g=mem.lipids[i];
             g.name="subgrouplipid";
             g.setMassCenter(spc);       // mass center needed for rotation
@@ -78,10 +90,19 @@ int main() {
           }
           break;
         case 2:
-          gmv.setGroup(pol);
-          gmv.move();
+          if (slp_global.randOne()>0.5) {
+            gmvpol.setGroup(pol);
+            sys+=gmvpol.move();
+          } else {
+            crank.setGroup(pol);
+            sys+=crank.move();
+          }
+          break;
+        case 3:
+          sys+=tit.move();
+          break;
       }
-      if ( slp_global.runtest(0.1) )
+      if ( slp_global.randOne()<0.1 )
         xtc.save("traj.xtc", spc);
 
     } // end of micro loop
@@ -103,8 +124,8 @@ int main() {
   sys.test(test);
 
   // print information
-  cout << loop.info() << sys.info() << mv.info() << gmv.info() << rep.info()
-    << pivot.info() << shape.info() << test.info() << spc.info();
+  cout << loop.info() << sys.info() << mv.info() << gmv.info() << gmvpol.info() << rep.info()
+    << crank.info() << shape.info() << test.info() << spc.info() << tit.info();
 
   return test.numFailed();
 }

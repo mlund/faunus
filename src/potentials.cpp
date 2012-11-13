@@ -189,7 +189,7 @@ namespace Faunus {
     }
 
     WeeksChandlerAndersen::WeeksChandlerAndersen(InputMap &in) :
-      Tbase(in), twototwosixth(std::pow(2,2/6.)), onefourth(1/4.) {
+      Tbase(in), onefourth(1/4.), twototwosixth(std::pow(2,2/6.))  {
       name="WeeksChandlerAnderson";
     }
 

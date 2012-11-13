@@ -18,11 +18,11 @@ echo "3
  TL  2   8.00   0.00   0.00    0.0   1  $radius
 " > lipid.aam
 
-echo "4
+echo "1
  HIS  0  10.00   0.00   0.00    0.0   1  3.9
- HIS  1  20.00   0.00   0.00    0.0   1  3.9
- HIS  2  10.00  10.00   0.00    0.0   1  3.9
- HIS  3  20.00  10.00   0.00    0.0   1  3.9
+# HIS  1  20.00   0.00   0.00    0.0   1  3.9
+# HIS  2  10.00  10.00   0.00    0.0   1  3.9
+# HIS  3  20.00  10.00   0.00    0.0   1  3.9
 " > peptide.aam
 
 echo "
@@ -84,7 +84,7 @@ radius=`python -c "print 0.5*$sigma"`
 Nlipid=100
 box=`python -c "print ( ($Nlipid/1000.)*25**2 )**(1/2.)*$sigma"`
 #rm -f state
-micro=300
+micro=3000
 mkinput
 $exe
 

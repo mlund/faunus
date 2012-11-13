@@ -34,6 +34,7 @@ int main() {
   Move::SwapMove tit(mcp,pot,spc);
   Analysis::PolymerShape shape;
   Analysis::RadialDistribution<> rdf(0.2);
+  Analysis::LineDistribution<> hist_pepmem(0.2);
 
   // Load membrane
   DesernoMembrane<Tgeometry> mem(mcp,pot,spc, nonbonded->pairpot.first, nonbonded->pairpot.second);
@@ -77,6 +78,7 @@ int main() {
           } else {
             mv.setGroup(pol);
             sys+=mv.move( pol.size() )       ; // translate peptide monomers
+            pol.setMassCenter(spc);
           }
           break;
         case 1:
@@ -102,6 +104,11 @@ int main() {
           sys+=tit.move();
           break;
       }
+
+      // peptide-membrane distribution
+      hist_pepmem( std::abs( pol.cm.z - mem.lipids.massCenter(spc).z ) )++;
+
+      // gromacs trajectory
       if ( slp_global.randOne()<0.1 )
         xtc.save("traj.xtc", spc);
 
@@ -113,6 +120,7 @@ int main() {
     rdf.save("rdf.dat");
     pqr.save("confout.pqr", spc.p);
     spc.save("state");
+    hist_pepmem.save("pepmem.dat");
 
     cout << loop.timing();
 

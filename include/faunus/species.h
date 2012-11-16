@@ -19,7 +19,8 @@ namespace Faunus {
              mw,         //!< Weight [g/mol]
              charge,     //!< Charge [valency]
              activity,   //!< Chemical activity "(mol/l)"
-             dp,         //!< Displacement parameter
+             dp,         //!< Translational displacement parameter
+             dprot,      //!< Rotational displacement parameter
              mean,       //!< Mean value... (charge, sasa, etc.)
              variance;   //!< ...and the spread around it.
       particle::Thydrophobic hydrophobic;  //!< Are we hydrophobic?

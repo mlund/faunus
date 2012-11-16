@@ -325,17 +325,43 @@ namespace Faunus {
      * \date Canberra, 2009
      */
     class VectorRotate {
-      private:
+      protected:
         Point origin, u;
         double cosang, sinang;
         double e1mcox, e1mcoy, e1mcoz;
         Geometrybase *geoPtr;
       public:
-        void setAxis(Geometrybase&, const Point&, const Point&, double);  //!< Set rotation axis and degrees
-        double getAngle() const;                                          //!< Get set rotation angle
-        Point rotate(Point) const;                                        //!< Rotate point around axis
-        Point rotate(const Geometrybase&, Point) const;                   //!< Rotate point around axis (to be removed)
+        virtual void setAxis(Geometrybase&, const Point&, const Point&, double);  //!< Set rotation axis and degrees
+        double getAngle() const;                                                  //!< Get set rotation angle
+        virtual Point rotate(Point) const;                                        //!< Rotate point around axis
+        virtual Point rotate(const Geometrybase&, Point) const;                   //!< Rotate point around axis (to be removed)
     };
+
+    class QuaternionRotate : public VectorRotate {
+      private:
+        double d1, d2, d3, d4, d5, d6, d7, d8, d9 ;
+      public:
+        struct quat {             /* Define a quaternion structure */
+          double w,x,y,z;
+        };
+        quat q;
+        void setAxis(Geometrybase&, const Point&, const Point&, double);  //!< Set rotation axis and degrees
+        Point rotate(Point) const;                                        //!< Rotate point around axis
+    };
+
+    /*! \brief Calculate minimum distance between two line segments
+     *
+     * Find closest distance between line segments and return its vector
+     * gets orientations and lengths of line segments and the vector connecting
+     * their center os masses (from vec1 to vec2)
+     * Copyright 2001, softSurfer (www.softsurfer.com)
+     * This code may be freely used and modified for any purpose
+     * providing that this copyright notice is included with it.
+     * SoftSurfer makes no warranty for this code, and cannot be held
+     * liable for any real or imagined damage resulting from its use.
+     * Users of this code must verify correctness for their application.
+     */
+    Point mindist_segments(Point, double, Point, double, Point);
 
   }//namespace Geometry
 }//namespace Faunus

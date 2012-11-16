@@ -156,10 +156,6 @@ namespace Faunus {
         typedef std::map<short, Average<double> > map_type;
         map_type accmap; //!< Single particle acceptance map
         map_type sqrmap; //!< Single particle mean square displacement map
-        Group* igroup;   //!< Group pointer in which particles are moved randomly (NULL if none, default)
-        int iparticle;   //!< Select single particle to move (-1 if none, default)
-        Average<unsigned long long int> gsize; //!< Average size of igroup;
-        double genericdp;//!< Generic atom displacement parameter - ignores individual dps
 
         string _info();
         void _trialMove();
@@ -167,12 +163,29 @@ namespace Faunus {
         void _rejectMove();
         double _energyChange();
         bool run() const;                //!< Runfraction test
+      protected:
+        int iparticle;   //!< Select single particle to move (-1 if none, default)
+        Group* igroup;   //!< Group pointer in which particles are moved randomly (NULL if none, default)
+        double genericdp;//!< Generic atom displacement parameter - ignores individual dps
+        Average<unsigned long long int> gsize; //!< Average size of igroup;
+
       public:
         AtomicTranslation(InputMap&, Energy::Energybase&, Space&, string="mv_particle");
         void setGroup(Group&); //!< Select group in which to randomly pick particles from
         void setParticle(int); //!< Select single particle in Space::p to move
         void setGenericDisplacement(double); //!< Set single displacement for all atoms
         Point dir;             //!< Translation directions (default: x=y=z=1)
+    };
+   
+    /*!
+     * \brief Rotate single particles
+     */
+    class AtomicRotation : public AtomicTranslation {
+      private:
+        void _trialMove();
+        Geometry::QuaternionRotate rot;
+      public:
+        AtomicRotation(InputMap&, Energy::Energybase&, Space&, string="rot_particle");
     };
 
     /*!
@@ -344,7 +357,7 @@ namespace Faunus {
      * \author Mikael Lund
      * \date Lund 2012
      */
-     class Reptation : public Movebase {
+    class Reptation : public Movebase {
       private:
         AcceptanceMap<string> accmap;
         void _test(UnitTest&);

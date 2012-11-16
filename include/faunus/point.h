@@ -94,12 +94,11 @@ namespace Faunus {
    */
   class CigarParticle : public PointParticle {
     public:
-      Point omega, patch;
+      Point dir;
+      Point patchdir, patchsides[2], chdir;
       double patchangle, length;
 
       void rotate(Geometry::VectorRotate&);
-      void translate(const Geometry::Geometrybase&, const Point&);
-      void scale(const Geometry::Geometrybase&, double);
 
       CigarParticle operator+(const Point&) const;
       CigarParticle& operator=(const Point&);

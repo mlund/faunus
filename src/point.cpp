@@ -215,16 +215,12 @@ namespace Faunus {
     S P H E R O C Y L I N D E R
    *****************************/
 
-  void CigarParticle::rotate(Geometry::VectorRotate &rot) {
-    assert(!"Unimplemented");
-  }
-
-  void CigarParticle::translate(const Geometry::Geometrybase &geo, const Point &a) {
-    assert(!"Unimplemented");
-  }
-
-  void CigarParticle::scale(const Geometry::Geometrybase &geo, double newvol) {
-    assert(!"Unimplemented");
+  void CigarParticle::rotate(Geometry::VectorRotate &rot) {    
+    rot.rotate(dir);
+    rot.rotate(patchdir);
+    rot.rotate(patchsides[0]);
+    rot.rotate(patchsides[1]);
+    rot.rotate(chdir);
   }
 
   CigarParticle CigarParticle::operator+(const Point &p) const {
@@ -250,17 +246,15 @@ namespace Faunus {
   // remember to write ALL data members to stream!
   std::ostream &operator<<(std::ostream &o, const CigarParticle &p) {
     o << PointParticle(p)
-      << " " << p.omega << " " << p.patch
-      << " " << p.patchangle << " " << p.length;
+      << " " << p.dir << " " << p.patchdir;
     return o;
   }
 
   // remember to read ALL data members from stream - and in same order as written!
   CigarParticle& CigarParticle::operator<<(std::istream &in) {
     PointParticle::operator<<(in);
-    omega.operator<<(in);
-    patch.operator<<(in);
-    in >> patchangle >> length;
+    dir.operator<<(in);
+    patchdir.operator<<(in);
     return *this;
   }
 

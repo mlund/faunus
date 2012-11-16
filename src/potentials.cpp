@@ -153,6 +153,15 @@ namespace Faunus {
       return textio::indent(SUB)+name+"\n";
     }
 
+    HardSpheroCylinder::HardSpheroCylinder(InputMap& in) { name="HardspheroCylinder"; }
+
+    string HardSpheroCylinder::_brief() { return name; }
+
+    string HardSpheroCylinder::info(char w) {
+      using namespace Faunus::textio;
+      return textio::indent(SUB)+name+"\n";
+    }
+
     LennardJones::LennardJones() : eps(0) {
       name="Lennard-Jones";
     }
@@ -190,8 +199,8 @@ namespace Faunus {
 
     WeeksChandlerAndersen::WeeksChandlerAndersen(InputMap &in) :
       Tbase(in), onefourth(1/4.), twototwosixth(std::pow(2,2/6.))  {
-      name="WeeksChandlerAnderson";
-    }
+        name="WeeksChandlerAnderson";
+      }
 
     LorentzBerthelot::LorentzBerthelot() : name("Lorentz-Berthelot Mixing Rule") {}
 
@@ -360,7 +369,7 @@ namespace Faunus {
     void Coulomb::test(UnitTest &t) {
       t("bjerrum", bjerrumLength(), 1e-6);
     }
-    
+
     CoulombWolf::CoulombWolf(InputMap &in) : Coulomb(in) {
       double Rc=in.get<double>("coulomb_cut", 10.);
       Rcinv=1/Rc;

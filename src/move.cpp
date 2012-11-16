@@ -252,6 +252,28 @@ namespace Faunus {
       }
       return o.str();
     }
+    
+    AtomicRotation::AtomicRotation(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : AtomicTranslation(in,e,s,pfx) {
+      title="Single Particle Rotation";
+    }
+
+    void AtomicRotation::_trialMove() {
+      if (igroup!=nullptr) {
+        iparticle=igroup->random();
+        gsize += igroup->size();
+      }
+      if (iparticle>-1) {
+        double dprot = atom[ spc->p[iparticle].id ].dprot;
+        if (dprot<1e-6)
+          dprot = genericdp;
+        assert(iparticle<(int)spc->p.size() && "Trial particle out of range");
+
+        Point u;
+        u.ranunit(slp_global);
+        rot.setAxis( *spc->geo, Point(0,0,0), u, dprot*slp_global.randHalf() );
+        spc->trial[iparticle].rotate(rot);
+      }
+    }
 
     TranslateRotate::TranslateRotate(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Group Rotation/Translation";

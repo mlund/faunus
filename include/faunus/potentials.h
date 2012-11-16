@@ -9,6 +9,7 @@
 #include <faunus/auxiliary.h>
 #include <faunus/inputfile.h>
 #include <faunus/species.h>
+#include <faunus/geometry.h>
 #endif
 
 namespace Faunus {
@@ -171,6 +172,32 @@ namespace Faunus {
     };
 
     /*!
+     * \brief Hard pair potential for spherocylinders
+     */
+    class HardSpheroCylinder : public PairPotentialBase {
+      private:
+        string _brief();
+        Geometry::Geometrybase *geoPtr;
+      public:
+        struct prop {
+          double halfl;
+        };
+
+        std::map<particle::Tid, prop> m;
+
+        HardSpheroCylinder(InputMap&);
+        inline double operator() (const CigarParticle &p1, const CigarParticle &p2, double r2) {
+          Point r_cm = geoPtr->vdist(p1,p2);
+          Point distvec = Geometry::mindist_segments(p1.dir, m[p1.id].halfl, p2.dir, m[p2.id].halfl, r_cm );
+          double mindist=p1.radius+p2.radius;
+          if ( distvec.dot(distvec) < mindist*mindist)
+            return pc::infty;
+          return 0;		
+        }
+        string info(char w);
+    };
+
+    /*!
      * \brief Lennard-Jones (12-6) pair potential
      * \details The Lennard-Jones potential has the form:
      * \f$
@@ -199,7 +226,7 @@ namespace Faunus {
     };
 
     /*! \brief Lorentz-Berthelot Mixing Rule for Lennard-Jones parameters
-     */
+    */
     class LorentzBerthelot {
       public:
         string name;

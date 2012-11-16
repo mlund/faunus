@@ -14,6 +14,7 @@ namespace Faunus {
     charge=0;
     activity=0;
     dp=0;
+    dprot=0;
     mean=0;
     variance=0;
     hydrophobic=0;

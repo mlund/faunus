@@ -138,10 +138,10 @@ namespace Faunus {
 
         //! Load table from disk
         bool load(string filename) {
-          int n;
-          string s;
           std::ifstream f(filename.c_str());
           if (f) {
+            int n;
+            string s;
             getline(f,s);             // ignore first input line
             f >> n >> xmin >> xres;   // extract number of points, xmin, xres
             getline(f,s);             // ignore aditional columns
@@ -258,10 +258,10 @@ namespace Faunus {
         }
 
         bool load(string filename) {
-          int n;
-          string s;
           std::ifstream f(filename.c_str());
           if (f) {
+            int n;
+            string s;
             getline(f,s);
             f >> n >> xmin >> xres;
             y.resize(n);

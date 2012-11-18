@@ -186,9 +186,8 @@ namespace Faunus {
         iparticle=igroup->random();
         gsize += igroup->size();
       }
-      double dp;
       if (iparticle>-1) {
-        dp = atom[ spc->p[iparticle].id ].dp;
+        double dp = atom[ spc->p[iparticle].id ].dp;
         if (dp<1e-6)
           dp = genericdp;
         assert(iparticle<(int)spc->p.size() && "Trial particle out of range");
@@ -225,7 +224,6 @@ namespace Faunus {
     }
 
     string AtomicTranslation::_info() {
-      char l=12;
       std::ostringstream o;
       if (gsize.cnt>0)
         o << pad(SUB,w,"Average moves/particle") << cnt / gsize.avg() << endl;
@@ -233,6 +231,7 @@ namespace Faunus {
       if (genericdp>1e-6)
         o << pad(SUB,w,"Generic displacement") << genericdp << _angstrom << endl;
       if (cnt>0) {
+        char l=12;
         o << endl
           << indent(SUB) << "Individual particle movement:" << endl << endl
           << indent(SUBSUB) << std::left << string(7,' ')
@@ -357,7 +356,6 @@ namespace Faunus {
     }
 
     string TranslateRotate::_info() {
-      char l=12;
       std::ostringstream o;
       o << pad(SUB,w,"Max. translation") << pm << dp_trans/2 << textio::_angstrom << endl
         << pad(SUB,w,"Max. rotation") << pm << dp_rot/2*180/pc::pi << textio::degrees << endl;
@@ -367,6 +365,7 @@ namespace Faunus {
           o << pad(SUBSUB,w-2,m.first) << m.second << endl;
       }
       if (cnt>0) {
+        char l=12;
         o << indent(SUB) << "Move Statistics:" << endl
           << indent(SUBSUB) << std::left << setw(20) << "Group name" //<< string(20,' ')
           << setw(l+1) << "Acc. "+percent

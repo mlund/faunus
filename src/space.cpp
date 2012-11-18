@@ -207,13 +207,13 @@ namespace Faunus {
    */
   bool Space::load(string file, keys key) {
     using namespace textio;
-    double vol;
-    int n;
     cout << "Reading space state file '" << file << "'. ";
     if (checkSanity()) {
       fin.close();
       fin.open( file.c_str() );
       if (fin) {
+        int n;
+        double vol;
         cout << "OK!\n";
         fin >> vol >> n;
         geo->setVolume(vol);

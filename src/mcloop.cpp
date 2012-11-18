@@ -89,12 +89,12 @@ namespace Faunus {
   }
 
   bool MCLoop::loadstate(string name) {
-    unsigned int _macro, _micro, _cnt_macro, _cnt_micro, _cnt;
     if (loadstateBool) {
       if (name.empty())
         name=statefile;
       std::ifstream f(name.c_str());
       if (f) {
+        unsigned int _macro, _micro, _cnt_macro, _cnt_micro, _cnt;
         f >> _macro >> _micro >> _cnt_macro >> _cnt_micro >> _cnt;
         f.close();
         // Simple extension if micro/macro unchanged

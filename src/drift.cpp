@@ -31,11 +31,11 @@ namespace Faunus {
   }
 
   string EnergyDrift::info() {
-    char w=25;
     using namespace Faunus::textio;
     std::ostringstream o;
     o << header("System Energy and Drift");
     if (avg.cnt>0) {
+      char w=25;
       o << textio::pad(SUB,w, "Average") << avg.avg() << kT << ", " << sigma << "=" << avg.stdev() << endl
         << textio::pad(SUB,w, "Initial energy") << initial << kT << endl
         << textio::pad(SUB,w, "Initial + changes") << current() << kT << endl;

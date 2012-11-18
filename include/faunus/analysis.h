@@ -103,11 +103,11 @@ namespace Faunus {
           /*! \brief Save table to disk */
           void save(string filename) {
             if (tabletype==HISTOGRAM) {
-              if (map.size()>0) map.begin()->second*=2;   // compensate for half bin width
+              if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
               if (map.size()>1) (--map.end())->second*=2; // -//-
             }
 
-            if (~map.empty()) {
+            if (!map.empty()) {
               std::ofstream f(filename.c_str());
               f.precision(10);
               if (f) {
@@ -118,7 +118,7 @@ namespace Faunus {
             }
 
             if (tabletype==HISTOGRAM) {
-              if (map.size()>0) map.begin()->second/=2;   // restore half bin width
+              if (!map.empty()) map.begin()->second/=2;   // restore half bin width
               if (map.size()>1) (--map.end())->second/=2; // -//-
             }
           }

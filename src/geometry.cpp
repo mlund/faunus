@@ -56,9 +56,9 @@ namespace Faunus {
      * \param resize True if the current geometry should be resized to match file content (default: false)
      */
     bool Geometrybase::load(string file, bool resize) {
-      double vol;
       std::ifstream f( file.c_str() );
       if (f) {
+        double vol;
         f >> vol;
         setVolume(vol);
         f.close();

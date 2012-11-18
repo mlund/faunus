@@ -50,7 +50,7 @@ namespace Faunus {
     while (iter!=v.end())
       if ((*iter).find(pat)!=string::npos)
         v.erase(iter);
-      else iter++;
+      else ++iter;
   }
   
   void io::splash(string f) {

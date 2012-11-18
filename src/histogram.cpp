@@ -52,12 +52,11 @@ namespace Faunus {
 
   //! Show results for all x
   void Histogram::write(string file) {
-    float g;
     std::ofstream f(file.c_str());
     if (f) {
       f.precision(6);
       for (double x=xmin; x<xmax(); x+=xres) {
-        g=get(x);
+        float g=get(x);
         if (g!=0.0) {
           if (x+xres>=xmax() || x==xmin) // double the very
             g=g*2;                       // first and last points

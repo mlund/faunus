@@ -489,30 +489,21 @@ namespace Faunus {
       assert(&geo!=nullptr);
       assert( abs(end.len()-1)<1e-7 && "Unit vector required!!");
       geoPtr=&geo;
-      /*origin=beg;           //we get as argument beginning at zero (0,0,0) and end point is a unit vector otherwise uncomment
-        u=end-beg;
-        geo.boundary(u);
-        u=u*(1/geo.dist(beg,end));*/
-      u=end;
-      /*half angles*/
-      double cosanghalf=cos(angle*0.5);
-      double sinanghalf=sin(angle*0.5);
-      /*quaternion*/
-      q.w=cosanghalf;
-      q.x=u.x*sinanghalf;
-      q.y=u.y*sinanghalf;
-      q.z=u.z*sinanghalf;
+      double sinanghalf = sin(angle*0.5);
+      q.x=end.x*sinanghalf;
+      q.y=end.y*sinanghalf;
+      q.z=end.z*sinanghalf;
+      q.w=cos(angle*0.5);
       /*generate quaternion variables for rotation*/
-      double t2, t3, t4, t5, t6, t7, t8, t9, t10;
-      t2 =  q.w * q.x;
-      t3 =  q.w * q.y;
-      t4 =  q.w * q.z;
-      t5 = -q.x * q.x;
-      t6 =  q.x * q.y;
-      t7 =  q.x * q.z;
-      t8 = -q.y * q.y;
-      t9 =  q.y * q.z;
-      t10 = -q.z * q.z;
+      double t2 =  q.w * q.x;
+      double t3 =  q.w * q.y;
+      double t4 =  q.w * q.z;
+      double t5 = -q.x * q.x;
+      double t6 =  q.x * q.y;
+      double t7 =  q.x * q.z;
+      double t8 = -q.y * q.y;
+      double t9 =  q.y * q.z;
+      double t10 = -q.z * q.z;
 
       d1 = t8 + t10;
       d2 = t6 - t4;
@@ -526,37 +517,40 @@ namespace Faunus {
     }
 
     Point QuaternionRotate::rotate(Point p) const {
-      double newx, newy, newz; 
-      newx = 2.0 * ( d1*p.x + d2*p.y + d3*p.z ) + p.x;
-      newy = 2.0 * ( d4*p.x + d5*p.y + d6*p.z ) + p.y;
-      newz = 2.0 * ( d7*p.x + d8*p.y + d9*p.z ) + p.z;
+      double newx = 2.0 * ( d1*p.x + d2*p.y + d3*p.z ) + p.x;
+      double newy = 2.0 * ( d4*p.x + d5*p.y + d6*p.z ) + p.y;
+      double newz = 2.0 * ( d7*p.x + d8*p.y + d9*p.z ) + p.z;
       p.x = newx;
       p.y = newy;
       p.z = newz;
       return p;
     }
 
-    Point mindist_segments(Point dir1, double halfl1, Point dir2, double halfl2, Point r_cm) {
-      Point u,v,w,vec;
-      double a,b,c,d,e,D,sc,sN,sD,tc,tN,tD;
-
-      u = dir1 * (halfl1*2); //S1.P1 - S1.P0;
-      v = dir2 * (halfl2*2); //S2.P1 - S2.P0;
-      w.x = dir2.x*halfl2 - dir1.x*halfl1 - r_cm.x;
-      w.y = dir2.y*halfl2 - dir1.y*halfl1 - r_cm.y;
-      w.z = dir2.z*halfl2 - dir1.z*halfl1 - r_cm.z; //S1.P0 - S2.P0;
-      a = u.dot(u);        // always >= 0
-      b = u.dot(v);
-      c = v.dot(v);        // always >= 0
-      d = u.dot(w);
-      e = v.dot(w);
-      D = a*c - b*b;       // always >= 0
-      sc = D;
-      sN = D;
-      sD = D;      // sc = sN / sD, default sD = D >= 0
-      tc = D;
-      tN = D;
-      tD = D;      // tc = tN / tD, default tD = D >= 0
+    /*!
+     * \param dir1 Direction of first segment
+     * \param halfl1 Half length of first segment
+     * \param dir2 Direction of second segment
+     * \param halfl2 Half length of second segment
+     * \param r_cm Distance vector between the middle of the two segments
+     */
+    Point mindist_segments(const Point &dir1, double halfl1,
+        const Point &dir2, double halfl2, const Point &r_cm)
+    {
+      Point u = dir1 * (halfl1*2); //S1.P1 - S1.P0;
+      Point v = dir2 * (halfl2*2); //S2.P1 - S2.P0;
+      Point w = dir2*halfl2 - dir1*halfl1 - r_cm; //S1.P0-S2.P0
+      double a = u.dot(u);        // always >= 0
+      double b = u.dot(v);
+      double c = v.dot(v);        // always >= 0
+      double d = u.dot(w);
+      double e = v.dot(w);
+      double D = a*c - b*b;       // always >= 0
+      double sc = D;
+      double sN = D;
+      double sD = D;      // sc = sN / sD, default sD = D >= 0
+      double tc = D;
+      double tN = D;
+      double tD = D;      // tc = tN / tD, default tD = D >= 0
 
       // compute the line parameters of the two closest points
       if (D < 0.00000001) { // the lines are almost parallel
@@ -605,18 +599,17 @@ namespace Faunus {
         }
       }
       // finally do the division to get sc and tc
-      if (fabs(sN) < 0.00000001) sc = 0.0 ;
+      if (std::abs(sN) < 0.00000001) sc = 0.0 ;
       else sc = sN / sD;
-      if (fabs(tN) < 0.00000001) tc = 0.0 ;
+      if (std::abs(tN) < 0.00000001) tc = 0.0 ;
       else tc = tN / tD;
 
       // get the difference of the two closest points
       //Vector = w + (sc * u) - (tc * v);  // = S1(sc) - S2(tc)
-      vec.x = u.x*sc + w.x - v.x*tc;
-      vec.y = u.y*sc + w.y - v.y*tc;
-      vec.z = u.z*sc + w.z - v.z*tc;
-
-      return vec;
+      //vec.x = u.x*sc + w.x - v.x*tc;
+      //vec.y = u.y*sc + w.y - v.y*tc;
+      //vec.z = u.z*sc + w.z - v.z*tc;
+      return u*sc + w - v*tc;
     }    
 
   }//namespace geometry

@@ -26,14 +26,28 @@ int main() {
   assert( eq(x,y) && "No good distance calculation");
 
   // check vector rotation
-  Geometry::VectorRotate vrot;
-  a.clear();
-  a.x=1.;
-  vrot.setAxis( geoCyl, Point(0,0,0), Point(0,1,0), pc::pi/2); // rotate around y-axis
-  a = vrot.rotate(a); // rot. 90 deg.
-  assert( eq(a.x,0,1e-8) && "Vector rotation failed");
-  a = vrot.rotate(a); // rot. 90 deg.
-  assert( eq(a.x,-1,1e-8) && "Vector rotation failed");
+  {
+    Geometry::VectorRotate vrot;
+    a.clear();
+    a.x=1.;
+    vrot.setAxis( geoCyl, Point(0,0,0), Point(0,1,0), pc::pi/2); // rotate around y-axis
+    a = vrot.rotate(a); // rot. 90 deg.
+    assert( eq(a.x,0,1e-8) && "Vector rotation failed");
+    a = vrot.rotate(a); // rot. 90 deg.
+    assert( eq(a.x,-1,1e-8) && "Vector rotation failed");
+  }
+
+  {
+    Geometry::QuaternionRotate qrot;
+    a.clear();
+    a.x=1.;
+    qrot.setAxis( geoCyl, Point(0,0,0), Point(0,1,0), pc::pi/2); // rotate around y-axis
+    a = qrot.rotate(a); // rot. 90 deg.
+    assert( eq(a.x,0,1e-8) && "Vector rotation failed");
+    a = qrot.rotate(a); // rot. 90 deg.
+    assert( eq(a.x,-1,1e-8) && "Vector rotation failed");
+  }
+
 
   // check table of averages
   typedef Analysis::Table2D<float,Average<float> > Ttable;

@@ -88,13 +88,13 @@ namespace Faunus {
   /*!
    * \brief Sphero-cylindrical particle
    * \author ...
-   * \date ...
+   * \date Brno, November 2012
    *
    * detailed information here...
    */
   class CigarParticle : public PointParticle {
     public:
-      Point dir;
+      Point dir; //!< Direction of sphero cylinder (unit vector)
       Point patchdir, patchsides[2], chdir;
       double patchangle, length;
 

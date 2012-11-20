@@ -326,7 +326,7 @@ namespace Faunus {
      * \warning Untested!
      */
     class WeeksChandlerAndersen : public LennardJonesMixed<LorentzBerthelot> {
-      private:
+      protected:
         typedef LennardJonesMixed<LorentzBerthelot> Tbase;
         const double onefourth, twototwosixth;
       public:
@@ -530,6 +530,34 @@ namespace Faunus {
         string info(char);
     };
 
+    /*!
+     * \brief Charge-nonpolar pair interaction
+     * \details This accounts for polarization of
+     * \f[
+     * \beta u_{ij} = -\frac{\lambda_B z_i^2 \delta a_j^3}{2r_{ij}^4}
+     * \f]
+     * where a is the radius of the nonpolar particle. Note that this version requires that one of the particles
+     * is charged, while the other is neutral. Delta is a unitless scaling parameter of the excess
+     * polarizability. For non-polar particles in a polar medium, this is a negative number. For more information, see
+     * Israelachvili, Chapter 5. The InputMap is scanned for
+     * \li The parameters from Potential::Coulomb
+     * \li \c excess_polarization for the delta value
+     */
+    class ChargeNonpolar : public Coulomb {
+    private:
+      double c;
+    public:
+      ChargeNonpolar(InputMap&); //!< Construction from InputMap
+      inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+        if ( abs(a.charge)>1e-6 )
+          return -c * a.charge * a.charge / (r2*r2) * (b.radius*b.radius*b.radius);
+        else if ( abs(b.charge)>1e-6 )
+          return -c * b.charge * b.charge / (r2*r2) * (a.radius*a.radius*a.radius);
+        return 0;
+      }
+      string info(char);
+    };
+    
     /*!
      * \brief Debye-Huckel/Yukawa pair potential
      * \details This potential is similar to the plain Coulomb potential but with an extra exponential term to described salt screening:

@@ -435,6 +435,8 @@ namespace Faunus {
       assert(!"Timeout - found no space for particle(s).");
       return false;
     }
+    
+    VectorRotate::~VectorRotate() {}
 
     /*!
      * \param geo Simulation geometry

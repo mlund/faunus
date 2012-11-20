@@ -41,6 +41,15 @@ namespace Faunus {
             return true;
         return false;
       }
+    
+      bool operator==(const pair_permutable<T> &a) const {
+        assert(first<=second && "first must be smaller than or equal to second");
+        assert(a.first<=a.second && "first must be smaller than or equal to second");
+        if (first==a.first)
+          if (second==a.second)
+            return true;
+        return false;
+      }
 
       bool find(const T &a) const {
         if (a!=first)

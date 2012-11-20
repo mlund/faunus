@@ -49,11 +49,12 @@ cuboid_ylen            $box
 cuboid_zlen            "`python -c "print $box*2"`"
 
 temperature            298       # Kelvin
-epsilon_r              8000     # Water dielectric const
-dh_ionicstrength       9000.1       # mol/l
+epsilon_r              80        # Water dielectric const
+dh_ionicstrength       0.050     # mol/l
+excess_polarization    $excesspol
 lipid_epsilon          $epsilon  # kT
 lipid_sigma            $sigma    # Å
-lipid_areapercharge    300
+lipid_chargefraction   0.3
 lipid_N                $Nlipid
 lipid_file             lipid.aam
 
@@ -67,7 +68,7 @@ cosattract_eps         $epsilon
 cosattract_wc          "`python -c "print $sigma*1.4"`"
 cosattract_rc          "`python -c "print $sigma*2**(1/6.)"`"
 
-mv_particle_genericdp  3.
+mv_particle_genericdp  10.
 transrot_transdp       3
 transrot_rotdp         0.5
 " > membrane.input
@@ -84,7 +85,20 @@ radius=`python -c "print 0.5*$sigma"`
 Nlipid=100
 box=`python -c "print ( ($Nlipid/1000.)*25**2 )**(1/2.)*$sigma"`
 #rm -f state
-micro=3000
-mkinput
-$exe
 
+for excesspol in -0 -4 -2 -16 -8 -32
+do
+  out="pol${excesspol}_N${Nlipid}"
+  rm state
+  micro=800
+  mkinput
+  $exe #> $out.eq
+
+  micro=500000 #50000
+  mkinput
+  $exe > $out.run
+  mv pepmem.dat $out.dat
+  mv confout.pqr $out.pqr
+  mv traj.xtc $out.xtc
+  mv zpepmem.dat $out.z.dat
+done

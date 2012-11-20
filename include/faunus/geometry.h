@@ -331,6 +331,7 @@ namespace Faunus {
         double e1mcox, e1mcoy, e1mcoz;
         Geometrybase *geoPtr;
       public:
+        virtual ~VectorRotate();
         virtual void setAxis(Geometrybase&, const Point&, const Point&, double);  //!< Set rotation axis and degrees
         double getAngle() const;                                                  //!< Get set rotation angle
         virtual Point rotate(Point) const;                                        //!< Rotate point around axis
@@ -361,7 +362,7 @@ namespace Faunus {
      * liable for any real or imagined damage resulting from its use.
      * Users of this code must verify correctness for their application.
      */
-    Point mindist_segments(Point, double, Point, double, Point);
+    Point mindist_segments(const Point&, double, const Point&, double, const Point&);
 
   }//namespace Geometry
 }//namespace Faunus

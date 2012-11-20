@@ -63,6 +63,9 @@ namespace Faunus {
 
               idHead=atom["HD"].id;
               idTail=atom["TL"].id;
+              atom["HD"].dp=4.0;
+              atom["TL"].dp=3.0;
+
               name="Deserno 3 bead lipid hamiltonian";
               sigma   = in.get<double>("lipid_sigma", 10);
               epsilon = in.get<double>("lipid_epsilon", 1);
@@ -146,7 +149,7 @@ namespace Faunus {
             for (auto &i : p) {
               i.x=u.x;
               i.y=u.y;
-              i.z*=u.z;
+              i.z*=u.z; // flip 50% of the peptides (see above)
             }
             GroupMolecular g = spc.insert(p); // insert lipid into simulation space (no overlap check!)
             lipids.add(g);                    // add inserted lipid to "lipids" group

@@ -4,9 +4,47 @@
 using namespace Faunus;
 using namespace Faunus::Potential;
 
+namespace Faunus {
+  namespace Potential {
+    // custom pair potential that uses CosAttrac/WCA for lipid and Lennard-Jones for the rest
+    class LJWCA : public WeeksChandlerAndersen {
+      private:
+        particle::Tid tailid, headid, hhisid;
+        typedef pair_permutable<particle::Tid> Tpair;
+        Tpair _tailPair, _headPair, _headtailPair;
+      public:
+        CosAttract cosattract;
+        ChargeNonpolar qnop;
+        LJWCA(InputMap &in) : WeeksChandlerAndersen(in), cosattract(in), qnop(in) {
+          name="Lipids: WCA+CosAttract, HHIS-Tail: ChargeNonpolar, Rest: LJ";
+          tailid=atom["TL"].id;
+          headid=atom["HD"].id;
+          hhisid=atom["HHIS"].id;
+          _tailPair=Tpair(tailid,tailid);
+          _headPair=Tpair(headid,headid);
+          _headtailPair=Tpair(headid,tailid);
+        }
+        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+          Tpair p(a.id,b.id);
+          if (p==_tailPair) // two tails
+            return cosattract(a,b,r2) + WeeksChandlerAndersen::operator()(a,b,r2);
+          if (p==_headPair) // two heads
+            return WeeksChandlerAndersen::operator()(a,b,r2);
+          if (p==_headtailPair) { // head-tail (head could be charged)
+            return WeeksChandlerAndersen::operator()(a,b,r2) + qnop(a,b,r2);
+          }
+          double u=WeeksChandlerAndersen::Tbase::operator()(a,b,r2); // default, base=LJ
+          if (a.id==tailid || b.id==tailid) // if either a or b is tail, add possible non-polar repulsion
+            u+=qnop(a,b,r2);
+          return u;
+        }
+    };
+  }
+}
+
 typedef Geometry::Cuboid Tgeometry;   // specify geometry - here cube w. periodic boundaries
-//typedef CosbinedPairPotential<WeeksChandlerAndersen, DebyeHuckel> Tdhwca;
-typedef CosAttractCombi<WeeksChandlerAndersen> Tpairpot;
+typedef CombinedPairPotential<LJWCA, DebyeHuckel> Tpairpot;
+//typedef LJWCA Tpairpot;
 
 int main() {
   cout << textio::splash();           // show faunus banner and credits
@@ -35,9 +73,10 @@ int main() {
   Analysis::PolymerShape shape;
   Analysis::RadialDistribution<> rdf(0.2);
   Analysis::LineDistribution<> hist_pepmem(0.2);
+  Analysis::Table2D<float, Average<double> > z_pepmem(0.2);
 
   // Load membrane
-  DesernoMembrane<Tgeometry> mem(mcp,pot,spc, nonbonded->pairpot.first, nonbonded->pairpot.second);
+  DesernoMembrane<Tgeometry> mem(mcp,pot,spc, nonbonded->pairpot.first, nonbonded->pairpot.first.cosattract);
 
   // Load peptide
   string polyfile = mcp.get<string>("polymer_file", "");
@@ -51,13 +90,13 @@ int main() {
   spc.enroll(pol);                                    // All groups need to be enrolled in the Space
   for (int i=pol.front(); i<pol.back(); i++)
     bonded->add(i, i+1, Potential::Harmonic(k,req));   // add bonds
- 
+
   //for (size_t i=0; i<spc.p.size(); i++){
   //  spc.p[i].charge=atom[spc.p[i].id].charge;
   //  spc.trial[i].charge=spc.p[i].charge;
   //}
   tit.findSites(spc.p);  // search for titratable sites
- 
+
   spc.load("state");                                     // load old config. from disk (if any)
   pqr.save("initial.pqr", spc.p);
 
@@ -91,7 +130,7 @@ int main() {
             sys+=gmv.move();            // translate/rotate polymers
           }
           break;
-        case 2:
+        case 20:
           if (slp_global.randOne()>0.5) {
             gmvpol.setGroup(pol);
             sys+=gmvpol.move();
@@ -106,10 +145,12 @@ int main() {
       }
 
       // peptide-membrane distribution
-      hist_pepmem( std::abs( pol.cm.z - mem.lipids.massCenter(spc).z ) )++;
+      Point d = spc.geo->vdist(pol.cm, mem.lipids.massCenter(spc));
+      hist_pepmem( abs(d.z) )++;
+      z_pepmem( abs(d.z) ) += pol.charge(spc.p);
 
       // gromacs trajectory
-      if ( slp_global.randOne()<0.1 )
+      if ( slp_global.randOne()<0.01 )
         xtc.save("traj.xtc", spc);
 
     } // end of micro loop
@@ -121,6 +162,7 @@ int main() {
     pqr.save("confout.pqr", spc.p);
     spc.save("state");
     hist_pepmem.save("pepmem.dat");
+    z_pepmem.save("zpepmem.dat");
 
     cout << loop.timing();
 

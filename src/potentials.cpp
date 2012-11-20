@@ -385,7 +385,19 @@ namespace Faunus {
         << pad(SUB,w,"Cut-off") << 1/Rcinv << _angstrom+"\n";
       return o.str();
     }
-
+    
+    ChargeNonpolar::ChargeNonpolar(InputMap &in) : Coulomb(in) {
+      name="Charge-Nonpolar";
+      c=bjerrumLength()/2*in.get<double>("excess_polarization", -1);
+    }
+    
+    string ChargeNonpolar::info(char w) {
+      std::ostringstream o;
+      o << Coulomb::info(w)
+        << textio::pad(textio::SUB,w,"Excess polarization") << 2*c*bjerrumLength() << endl;
+      return o.str();
+    }
+    
     /*!
      * In addition to the keywords from Potential::Coulomb, InputMap is searched for:
      * \li \c dh_ionicstrength [mol/l] 

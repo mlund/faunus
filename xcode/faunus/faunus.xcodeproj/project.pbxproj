@@ -58,6 +58,7 @@
 		73B67CE31423E28E00E44DD9 /* space.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CDA1423E28E00E44DD9 /* space.cpp */; };
 		73E9C84515CC6B32001D5654 /* polymers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73E9C83515CC6A70001D5654 /* polymers.cpp */; };
 		73E9C84815CC6B6A001D5654 /* libfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 738C132613FB12B30056EF71 /* libfaunus.dylib */; };
+		8BE1FA9F165A9780001073CC /* auxiliary.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BE1FA9E165A9780001073CC /* auxiliary.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -78,20 +79,20 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		73011C551423E30100509B7B /* drift.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = drift.h; sourceTree = "<group>"; };
-		73011C561423E30100509B7B /* energy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = energy.h; sourceTree = "<group>"; };
-		73011C571423E30100509B7B /* faunus.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = faunus.h; sourceTree = "<group>"; };
-		73011C581423E30100509B7B /* geometry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = geometry.h; sourceTree = "<group>"; };
-		73011C591423E30100509B7B /* histogram.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = histogram.h; sourceTree = "<group>"; };
-		73011C5A1423E30100509B7B /* io.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = io.h; sourceTree = "<group>"; };
-		73011C5B1423E30100509B7B /* mcloop.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mcloop.h; sourceTree = "<group>"; };
-		73011C5C1423E30100509B7B /* move.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = move.h; sourceTree = "<group>"; };
-		73011C5D1423E30100509B7B /* potentials.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = potentials.h; sourceTree = "<group>"; };
-		73011C5E1423E30100509B7B /* topology.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = topology.h; sourceTree = "<group>"; };
-		73011C5F1423E30100509B7B /* xytable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xytable.h; sourceTree = "<group>"; };
+		73011C551423E30100509B7B /* drift.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = drift.h; sourceTree = "<group>"; };
+		73011C561423E30100509B7B /* energy.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = energy.h; sourceTree = "<group>"; };
+		73011C571423E30100509B7B /* faunus.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = faunus.h; sourceTree = "<group>"; };
+		73011C581423E30100509B7B /* geometry.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = geometry.h; sourceTree = "<group>"; };
+		73011C591423E30100509B7B /* histogram.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = histogram.h; sourceTree = "<group>"; };
+		73011C5A1423E30100509B7B /* io.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = io.h; sourceTree = "<group>"; };
+		73011C5B1423E30100509B7B /* mcloop.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = mcloop.h; sourceTree = "<group>"; };
+		73011C5C1423E30100509B7B /* move.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = move.h; sourceTree = "<group>"; };
+		73011C5D1423E30100509B7B /* potentials.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = potentials.h; sourceTree = "<group>"; };
+		73011C5E1423E30100509B7B /* topology.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = topology.h; sourceTree = "<group>"; };
+		73011C5F1423E30100509B7B /* xytable.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = xytable.h; sourceTree = "<group>"; };
 		73011C6B1423E93E00509B7B /* faunus.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = faunus.cpp; path = ../../src/faunus.cpp; sourceTree = "<group>"; };
-		7316FA2C15C546A30024F084 /* textio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = textio.h; sourceTree = "<group>"; };
-		7316FA2F15C546B20024F084 /* mpi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mpi.h; sourceTree = "<group>"; };
+		7316FA2C15C546A30024F084 /* textio.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = textio.h; sourceTree = "<group>"; };
+		7316FA2F15C546B20024F084 /* mpi.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = mpi.h; sourceTree = "<group>"; };
 		7316FA3115C546E90024F084 /* mpi.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mpi.cpp; path = ../../src/mpi.cpp; sourceTree = "<group>"; };
 		7316FA3215C546E90024F084 /* textio.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = textio.cpp; path = ../../src/textio.cpp; sourceTree = "<group>"; };
 		7316FA3915C55A540024F084 /* developer.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; name = developer.html; path = ../../doc/homepage/developer.html; sourceTree = "<group>"; };
@@ -100,7 +101,7 @@
 		7316FA3C15C55A540024F084 /* index.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; name = index.html; path = ../../doc/homepage/index.html; sourceTree = "<group>"; };
 		7316FA3D15C55A550024F084 /* programs.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; name = programs.html; path = ../../doc/homepage/programs.html; sourceTree = "<group>"; };
 		7316FA5515C56BA10024F084 /* analysis.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = analysis.cpp; path = ../../src/analysis.cpp; sourceTree = "<group>"; };
-		7316FA5715C56BC10024F084 /* analysis.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = analysis.h; sourceTree = "<group>"; };
+		7316FA5715C56BC10024F084 /* analysis.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = analysis.h; sourceTree = "<group>"; };
 		738C132613FB12B30056EF71 /* libfaunus.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libfaunus.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		738C132E13FB12D20056EF71 /* group.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = group.cpp; path = ../../src/group.cpp; sourceTree = "<group>"; };
 		738C132F13FB12D20056EF71 /* inputfile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = inputfile.cpp; path = ../../src/inputfile.cpp; sourceTree = "<group>"; };
@@ -136,6 +137,7 @@
 		73E9C83515CC6A70001D5654 /* polymers.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = polymers.cpp; path = ../../../src/examples/polymers.cpp; sourceTree = "<group>"; };
 		73E9C83B15CC6B1D001D5654 /* polymers */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = polymers; sourceTree = BUILT_PRODUCTS_DIR; };
 		73E9C84915CDDAD5001D5654 /* README */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = README; path = ../../README; sourceTree = "<group>"; };
+		8BE1FA9E165A9780001073CC /* auxiliary.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = auxiliary.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -222,6 +224,7 @@
 			children = (
 				7316FA5715C56BC10024F084 /* analysis.h */,
 				738C133D13FB12DE0056EF71 /* average.h */,
+				8BE1FA9E165A9780001073CC /* auxiliary.h */,
 				738C133E13FB12DE0056EF71 /* common.h */,
 				73011C551423E30100509B7B /* drift.h */,
 				73011C561423E30100509B7B /* energy.h */,
@@ -333,6 +336,7 @@
 				7316FA2D15C546A30024F084 /* textio.h in Headers */,
 				7316FA3015C546B20024F084 /* mpi.h in Headers */,
 				7316FA5815C56BC10024F084 /* analysis.h in Headers */,
+				8BE1FA9F165A9780001073CC /* auxiliary.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -728,6 +732,7 @@
 				73E9C84415CC6B1D001D5654 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

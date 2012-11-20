@@ -242,7 +242,7 @@ namespace Faunus {
         for (auto m : sqrmap) {
           particle::Tid id=m.first;
           o << indent(SUBSUB) << std::left << setw(7) << atom[id].name
-            << setw(l-6) << ((genericdp>1e-6) ? genericdp : atom[id].dp);
+            << setw(l-6) << ( (atom[id].dp<1e-6) ? genericdp : atom[id].dp);
           o.precision(3);
           o << setw(l) << accmap[id].avg()*100
             << setw(l) << sqrmap[id].avg()
@@ -705,7 +705,7 @@ namespace Faunus {
     }
 
     bool Pivot::findParticles() {
-      int beg,end,len;
+      int beg(0),end(0),len;
       index.clear();
       while (index.empty()) {
         do {

@@ -34,6 +34,7 @@ namespace Faunus {
 #pragma GCC diagnostic pop
 
       bool operator<(const pair_permutable<T> &a) const {
+        assert(first<=second && a.first<=a.second);
         if (first<a.first)
           return true;
         if (first==a.first)
@@ -43,8 +44,7 @@ namespace Faunus {
       }
     
       bool operator==(const pair_permutable<T> &a) const {
-        assert(first<=second && "first must be smaller than or equal to second");
-        assert(a.first<=a.second && "first must be smaller than or equal to second");
+        assert(first<=second && a.first<=a.second);
         if (first==a.first)
           if (second==a.second)
             return true;

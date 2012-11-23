@@ -4,6 +4,58 @@
 using namespace Faunus;
 using namespace Faunus::Potential;
 
+class PenaltyEnergyBase : public Energy::Energybase {
+  private:
+    string _info() { return "penalty\n"; }
+    double* _trialcoord, _coord;
+    Space* spcPtr;
+    Group *g1Ptr, *g2Ptr;
+  public:
+    Analysis::PenaltyFunction<double> f;
+    void setCoord(Group *g1, Group *g2) {
+      assert(g1!=nullptr && g2!=nullptr);
+      g1Ptr=g1;
+      g2Ptr=g2;
+    }
+    PenaltyEnergyBase(InputMap &in, Space &s, string pfx="penalty_") : f(0.1) { //!< Constructor - read input parameters
+      name="Group-group mass center penalty";
+      spcPtr=&s;
+    }
+    double i2all(const p_vec &p, int i) {
+      if (g1Ptr->find(i) || g2Ptr->find(i)) {
+        double r;
+        if (&p==&spcPtr->trial) {   // p is trial
+          g1Ptr->cm_trial = Geometry::massCenter(*spcPtr->geo,p,*g1Ptr); // if GroupArray, keep mass center up2date
+          g2Ptr->cm_trial = Geometry::massCenter(*spcPtr->geo,p,*g2Ptr); // if GroupArray, keep mass center up2date
+          r = abs(  spcPtr->geo->vdist(g1Ptr->cm_trial, g2Ptr->cm_trial).z  );
+        } else { 
+          g1Ptr->cm = Geometry::massCenter(*spcPtr->geo,p,*g1Ptr); // if GroupArray, keep mass center up2date
+          g2Ptr->cm = Geometry::massCenter(*spcPtr->geo,p,*g2Ptr); // if GroupArray, keep mass center up2date
+          r = abs(  spcPtr->geo->vdist(g1Ptr->cm, g2Ptr->cm).z  );
+        }
+        return f(r);
+      }
+      return 0;
+    }
+    double g2g(const p_vec &p, Group &g1, Group &g2) FOVERRIDE {
+      if ( ( g1Ptr->find(g1.front()) && g2Ptr->find(g2.front()) )
+          || ( g1Ptr->find(g2.front()) && g2Ptr->find(g1.front()) ) ) {
+        double r;
+        if (&p==&spcPtr->trial) {   // p is trial
+          g1Ptr->cm_trial = Geometry::massCenter(*spcPtr->geo,p,*g1Ptr); // if GroupArray, keep mass center up2date
+          g2Ptr->cm_trial = Geometry::massCenter(*spcPtr->geo,p,*g2Ptr); // if GroupArray, keep mass center up2date
+          r = abs(  spcPtr->geo->vdist(g1Ptr->cm_trial, g2Ptr->cm_trial).z  );
+        } else {
+          g1Ptr->cm = Geometry::massCenter(*spcPtr->geo,p,*g1Ptr);
+          g2Ptr->cm = Geometry::massCenter(*spcPtr->geo,p,*g2Ptr);
+          r = abs(  spcPtr->geo->vdist(g1Ptr->cm, g2Ptr->cm).z  );
+        }
+        return f(r);
+      }
+      return 0;
+    }
+};
+
 namespace Faunus {
   namespace Potential {
     // custom pair potential that uses CosAttrac/WCA for lipid and Lennard-Jones for the rest
@@ -62,6 +114,7 @@ int main() {
   auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
   auto bonded    = pot.create( Energy::Bonded() );
   Space spc( pot.getGeometry() );
+  auto penalty   = pot.create( PenaltyEnergyBase(mcp,spc) );
 
   // Markov moves and analysis
   Move::AtomicTranslation mv(mcp, pot, spc);
@@ -91,6 +144,8 @@ int main() {
   for (int i=pol.front(); i<pol.back(); i++)
     bonded->add(i, i+1, Potential::Harmonic(k,req));   // add bonds
 
+  penalty->setCoord(&mem.lipids, &pol);
+
   //for (size_t i=0; i<spc.p.size(); i++){
   //  spc.p[i].charge=atom[spc.p[i].id].charge;
   //  spc.trial[i].charge=spc.p[i].charge;
@@ -99,6 +154,7 @@ int main() {
 
   spc.load("state");                                     // load old config. from disk (if any)
   pqr.save("initial.pqr", spc.p);
+  penalty->f.load("penalty.dat");
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );      // store initial total system energy
 
@@ -136,7 +192,7 @@ int main() {
             sys+=gmvpol.move();
           } else {
             crank.setGroup(pol);
-            sys+=crank.move();
+            //sys+=crank.move();
           }
           break;
         case 3:
@@ -148,6 +204,7 @@ int main() {
       Point d = spc.geo->vdist(pol.cm, mem.lipids.massCenter(spc));
       hist_pepmem( abs(d.z) )++;
       z_pepmem( abs(d.z) ) += pol.charge(spc.p);
+      sys+=penalty->f.update( abs(d.z) );
 
       // gromacs trajectory
       if ( slp_global.randOne()<0.01 )
@@ -165,6 +222,8 @@ int main() {
     z_pepmem.save("zpepmem.dat");
 
     cout << loop.timing();
+
+    penalty->f.save("penalty.dat");
 
   } // end of macro loop
 

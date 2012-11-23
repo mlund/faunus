@@ -196,6 +196,12 @@ namespace Faunus {
         t.y *= slp_global.randHalf();
         t.z *= slp_global.randHalf();
         spc->trial[iparticle].translate(*spc->geo, t);
+
+        // make sure trial mass center is updated for molecular groups
+        // (certain energy functions may rely on up-to-date mass centra)
+        if (igroup!=nullptr)
+          if (igroup->isMolecular())
+            igroup->cm_trial = Geometry::massCenter(*spc->geo, spc->trial, *igroup);
       }
     }
 
@@ -204,12 +210,18 @@ namespace Faunus {
       sqrmap[ spc->p[iparticle].id ] += r2;
       accmap[ spc->p[iparticle].id ] += 1;
       spc->p[iparticle] = spc->trial[iparticle];
+      if (igroup!=nullptr)
+        if (igroup->isMolecular())
+          igroup->cm=igroup->cm_trial;
     }
 
     void AtomicTranslation::_rejectMove() {
       spc->trial[iparticle] = spc->p[iparticle];
       sqrmap[ spc->p[iparticle].id ] += 0;
       accmap[ spc->p[iparticle].id ] += 0;
+      if (igroup!=nullptr)
+        if (igroup->isMolecular())
+          igroup->cm_trial = igroup->cm;
     }
 
     double AtomicTranslation::_energyChange() {
@@ -638,21 +650,23 @@ namespace Faunus {
       gPtr->cm_trial = gPtr->cm;
     }
 
+    /*!
+     * \todo g_internal is not really needed - index<->g would be faster
+     */
     double CrankShaft::_energyChange() {
       double du=0;
       for (auto i : index)
         if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
           return pc::infty;
-      du+=pot->g_external(spc->trial, *gPtr) - pot->g_external(spc->p, *gPtr);
+      du=pot->g_internal(spc->trial, *gPtr) - pot->g_internal(spc->p, *gPtr);
       for (auto i : index)
-        du += pot->i2all(spc->trial, i) - pot->i2all(spc->p, i);
-      /* not needed!!
-         int n=(int)index.size();
-         for (int i=0; i<n-1; i++)
-         for (int j=i+1; j<n; j++)
-         du -= pot->i2i( spc->trial, index[i], index[j] )
-         - pot->i2i( spc->p, index[i], index[j] );
-         */
+        du+=pot->i_external(spc->trial,i) - pot->i_external(spc->p,i);
+      for (auto g : spc->groupList())
+        if (g!=gPtr)
+          du+=pot->g2g(spc->trial, *g, *gPtr) - pot->g2g(spc->p, *g, *gPtr);
+
+      //for (auto i : index)
+      //  du += pot->i2all(spc->trial, i) - pot->i2all(spc->p, i);
       return du;
     }
 

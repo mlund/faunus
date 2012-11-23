@@ -153,6 +153,7 @@ namespace Faunus {
             }
             GroupMolecular g = spc.insert(p); // insert lipid into simulation space (no overlap check!)
             lipids.add(g);                    // add inserted lipid to "lipids" group
+            lipids.setMassCenter(spc);
           }
           spc.enroll( lipids );               // Space needs to know about ALL groups
           cout << "Capacity = " << spc.p.capacity() << endl;

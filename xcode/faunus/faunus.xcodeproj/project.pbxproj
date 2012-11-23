@@ -59,6 +59,7 @@
 		73E9C84515CC6B32001D5654 /* polymers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73E9C83515CC6A70001D5654 /* polymers.cpp */; };
 		73E9C84815CC6B6A001D5654 /* libfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 738C132613FB12B30056EF71 /* libfaunus.dylib */; };
 		8BE1FA9F165A9780001073CC /* auxiliary.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BE1FA9E165A9780001073CC /* auxiliary.h */; };
+		8BE1FAA2165FDAA2001073CC /* membrane.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BE1FAA1165FDAA2001073CC /* membrane.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -138,6 +139,7 @@
 		73E9C83B15CC6B1D001D5654 /* polymers */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = polymers; sourceTree = BUILT_PRODUCTS_DIR; };
 		73E9C84915CDDAD5001D5654 /* README */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = README; path = ../../README; sourceTree = "<group>"; };
 		8BE1FA9E165A9780001073CC /* auxiliary.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = auxiliary.h; sourceTree = "<group>"; };
+		8BE1FAA1165FDAA2001073CC /* membrane.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = membrane.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -235,6 +237,7 @@
 				738C134213FB12DE0056EF71 /* inputfile.h */,
 				73011C5A1423E30100509B7B /* io.h */,
 				73011C5B1423E30100509B7B /* mcloop.h */,
+				8BE1FAA1165FDAA2001073CC /* membrane.h */,
 				73011C5C1423E30100509B7B /* move.h */,
 				7316FA2F15C546B20024F084 /* mpi.h */,
 				738C134413FB12DE0056EF71 /* physconst.h */,
@@ -337,6 +340,7 @@
 				7316FA3015C546B20024F084 /* mpi.h in Headers */,
 				7316FA5815C56BC10024F084 /* analysis.h in Headers */,
 				8BE1FA9F165A9780001073CC /* auxiliary.h in Headers */,
+				8BE1FAA2165FDAA2001073CC /* membrane.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

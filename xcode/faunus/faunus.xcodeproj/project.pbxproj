@@ -11,13 +11,11 @@
 		73011C611423E30100509B7B /* energy.h in Headers */ = {isa = PBXBuildFile; fileRef = 73011C561423E30100509B7B /* energy.h */; };
 		73011C621423E30100509B7B /* faunus.h in Headers */ = {isa = PBXBuildFile; fileRef = 73011C571423E30100509B7B /* faunus.h */; };
 		73011C631423E30100509B7B /* geometry.h in Headers */ = {isa = PBXBuildFile; fileRef = 73011C581423E30100509B7B /* geometry.h */; };
-		73011C641423E30100509B7B /* histogram.h in Headers */ = {isa = PBXBuildFile; fileRef = 73011C591423E30100509B7B /* histogram.h */; };
 		73011C651423E30100509B7B /* io.h in Headers */ = {isa = PBXBuildFile; fileRef = 73011C5A1423E30100509B7B /* io.h */; };
 		73011C661423E30100509B7B /* mcloop.h in Headers */ = {isa = PBXBuildFile; fileRef = 73011C5B1423E30100509B7B /* mcloop.h */; };
 		73011C671423E30100509B7B /* move.h in Headers */ = {isa = PBXBuildFile; fileRef = 73011C5C1423E30100509B7B /* move.h */; };
 		73011C681423E30100509B7B /* potentials.h in Headers */ = {isa = PBXBuildFile; fileRef = 73011C5D1423E30100509B7B /* potentials.h */; };
 		73011C691423E30100509B7B /* topology.h in Headers */ = {isa = PBXBuildFile; fileRef = 73011C5E1423E30100509B7B /* topology.h */; };
-		73011C6A1423E30100509B7B /* xytable.h in Headers */ = {isa = PBXBuildFile; fileRef = 73011C5F1423E30100509B7B /* xytable.h */; };
 		73011C6C1423E93E00509B7B /* faunus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73011C6B1423E93E00509B7B /* faunus.cpp */; };
 		7316FA2D15C546A30024F084 /* textio.h in Headers */ = {isa = PBXBuildFile; fileRef = 7316FA2C15C546A30024F084 /* textio.h */; };
 		7316FA3015C546B20024F084 /* mpi.h in Headers */ = {isa = PBXBuildFile; fileRef = 7316FA2F15C546B20024F084 /* mpi.h */; };
@@ -50,7 +48,6 @@
 		73B67CDB1423E28E00E44DD9 /* drift.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD21423E28E00E44DD9 /* drift.cpp */; };
 		73B67CDC1423E28E00E44DD9 /* energy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD31423E28E00E44DD9 /* energy.cpp */; };
 		73B67CDD1423E28E00E44DD9 /* geometry.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD41423E28E00E44DD9 /* geometry.cpp */; };
-		73B67CDE1423E28E00E44DD9 /* histogram.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD51423E28E00E44DD9 /* histogram.cpp */; };
 		73B67CDF1423E28E00E44DD9 /* io.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD61423E28E00E44DD9 /* io.cpp */; };
 		73B67CE01423E28E00E44DD9 /* mcloop.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD71423E28E00E44DD9 /* mcloop.cpp */; };
 		73B67CE11423E28E00E44DD9 /* move.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD81423E28E00E44DD9 /* move.cpp */; };
@@ -84,13 +81,11 @@
 		73011C561423E30100509B7B /* energy.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = energy.h; sourceTree = "<group>"; };
 		73011C571423E30100509B7B /* faunus.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = faunus.h; sourceTree = "<group>"; };
 		73011C581423E30100509B7B /* geometry.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = geometry.h; sourceTree = "<group>"; };
-		73011C591423E30100509B7B /* histogram.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = histogram.h; sourceTree = "<group>"; };
 		73011C5A1423E30100509B7B /* io.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = io.h; sourceTree = "<group>"; };
 		73011C5B1423E30100509B7B /* mcloop.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = mcloop.h; sourceTree = "<group>"; };
 		73011C5C1423E30100509B7B /* move.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = move.h; sourceTree = "<group>"; };
 		73011C5D1423E30100509B7B /* potentials.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = potentials.h; sourceTree = "<group>"; };
 		73011C5E1423E30100509B7B /* topology.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = topology.h; sourceTree = "<group>"; };
-		73011C5F1423E30100509B7B /* xytable.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = xytable.h; sourceTree = "<group>"; };
 		73011C6B1423E93E00509B7B /* faunus.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = faunus.cpp; path = ../../src/faunus.cpp; sourceTree = "<group>"; };
 		7316FA2C15C546A30024F084 /* textio.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = textio.h; sourceTree = "<group>"; };
 		7316FA2F15C546B20024F084 /* mpi.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = mpi.h; sourceTree = "<group>"; };
@@ -129,7 +124,6 @@
 		73B67CD21423E28E00E44DD9 /* drift.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = drift.cpp; path = ../../src/drift.cpp; sourceTree = "<group>"; };
 		73B67CD31423E28E00E44DD9 /* energy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = energy.cpp; path = ../../src/energy.cpp; sourceTree = "<group>"; };
 		73B67CD41423E28E00E44DD9 /* geometry.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = geometry.cpp; path = ../../src/geometry.cpp; sourceTree = "<group>"; };
-		73B67CD51423E28E00E44DD9 /* histogram.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = histogram.cpp; path = ../../src/histogram.cpp; sourceTree = "<group>"; };
 		73B67CD61423E28E00E44DD9 /* io.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = io.cpp; path = ../../src/io.cpp; sourceTree = "<group>"; };
 		73B67CD71423E28E00E44DD9 /* mcloop.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mcloop.cpp; path = ../../src/mcloop.cpp; sourceTree = "<group>"; };
 		73B67CD81423E28E00E44DD9 /* move.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = move.cpp; path = ../../src/move.cpp; sourceTree = "<group>"; };
@@ -233,7 +227,6 @@
 				73011C571423E30100509B7B /* faunus.h */,
 				73011C581423E30100509B7B /* geometry.h */,
 				738C134113FB12DE0056EF71 /* group.h */,
-				73011C591423E30100509B7B /* histogram.h */,
 				738C134213FB12DE0056EF71 /* inputfile.h */,
 				73011C5A1423E30100509B7B /* io.h */,
 				73011C5B1423E30100509B7B /* mcloop.h */,
@@ -248,7 +241,6 @@
 				738C134813FB12DE0056EF71 /* species.h */,
 				7316FA2C15C546A30024F084 /* textio.h */,
 				73011C5E1423E30100509B7B /* topology.h */,
-				73011C5F1423E30100509B7B /* xytable.h */,
 			);
 			path = faunus;
 			sourceTree = "<group>";
@@ -284,7 +276,6 @@
 				73011C6B1423E93E00509B7B /* faunus.cpp */,
 				73B67CD41423E28E00E44DD9 /* geometry.cpp */,
 				738C132E13FB12D20056EF71 /* group.cpp */,
-				73B67CD51423E28E00E44DD9 /* histogram.cpp */,
 				738C132F13FB12D20056EF71 /* inputfile.cpp */,
 				73B67CD61423E28E00E44DD9 /* io.cpp */,
 				73B67CD71423E28E00E44DD9 /* mcloop.cpp */,
@@ -329,13 +320,11 @@
 				73011C611423E30100509B7B /* energy.h in Headers */,
 				73011C621423E30100509B7B /* faunus.h in Headers */,
 				73011C631423E30100509B7B /* geometry.h in Headers */,
-				73011C641423E30100509B7B /* histogram.h in Headers */,
 				73011C651423E30100509B7B /* io.h in Headers */,
 				73011C661423E30100509B7B /* mcloop.h in Headers */,
 				73011C671423E30100509B7B /* move.h in Headers */,
 				73011C681423E30100509B7B /* potentials.h in Headers */,
 				73011C691423E30100509B7B /* topology.h in Headers */,
-				73011C6A1423E30100509B7B /* xytable.h in Headers */,
 				7316FA2D15C546A30024F084 /* textio.h in Headers */,
 				7316FA3015C546B20024F084 /* mpi.h in Headers */,
 				7316FA5815C56BC10024F084 /* analysis.h in Headers */,
@@ -451,7 +440,6 @@
 				73B67CDB1423E28E00E44DD9 /* drift.cpp in Sources */,
 				73B67CDC1423E28E00E44DD9 /* energy.cpp in Sources */,
 				73B67CDD1423E28E00E44DD9 /* geometry.cpp in Sources */,
-				73B67CDE1423E28E00E44DD9 /* histogram.cpp in Sources */,
 				73B67CE01423E28E00E44DD9 /* mcloop.cpp in Sources */,
 				73B67CE11423E28E00E44DD9 /* move.cpp in Sources */,
 				73B67CE21423E28E00E44DD9 /* potentials.cpp in Sources */,

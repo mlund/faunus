@@ -123,6 +123,32 @@ namespace Faunus {
             }
           }
 
+          /*! Returns x at minumum y */
+          Tx miny() {
+            assert(!map.empty());
+            Ty min=pc::infty;
+            Tx x;
+            for (auto &m : map)
+              if (m.first<min) {
+                min=m.first;
+                x=m.second;
+              }
+            return x;
+          }
+
+          /*! Returns x at minumum y */
+          Tx maxy() {
+            assert(!map.empty());
+            Ty max=-pc::infty;
+            Tx x;
+            for (auto &m : map)
+              if (m.first>max) {
+                max=m.first;
+                x=m.second;
+              }
+            return x;
+          }
+
           /*!
            * \brief Load table from disk
            * \note The first line - used for comments - is ignored.
@@ -157,52 +183,69 @@ namespace Faunus {
       sampling.
       Example usage:
       \code
-      PenaltyFunction<double> f(0.1,1000,0.99); // 0.1 kT penalty
+      PenaltyFunction<double> f(0.1,1000,6.0); // 0.1 kT penalty
       Point masscenter;               // some 3D coordinate...
       ...
       f.update(masscenter.z);         // update penalty energy for z component
       double u = f(masscenter.z);     // get accumulated penalty at coordinate (kT)
       f.save("penalty.dat");          // save to disk
       \endcode
-      In the above example, the penalty energy will be scaled by 0.99 at every 1000th call
-      to update().
+      In the above example, the penalty energy will be scaled by 0.5 if the sampling along the
+      coordinate is less than 6 kT between the least and most likely position. This threshold check
+      is carried out every 1000th call to update(). Note also that when the penalty energy is scaled,
+      so is the threshold (also by a factor of 0.5).
       */
     template<typename Tcoord=float>
       class PenaltyFunction : public Table2D<Tcoord,double> {
         private:
           unsigned long long _cnt;
-          int _Nscale;
-          double _scale;
+          int _Ncheck;
+          double _kTthreshold;
           typedef Table2D<Tcoord,double> Tbase;
+          typedef Table2D<Tcoord,unsigned long long int> Thist;
+          Thist hist;
           Tcoord _du; //!< penalty energy
         public:
           /*!
            * \brief Constructor
            * \param penalty Penalty energy for each update (kT)
-           * \param Nscale Scale penalty energy every Nscale'th step (put large number for no scaling, default)
-           * \param scale Scaling factor (put 1.0 if no scaling, default)
+           * \param Ncheck Check histogram every Nscale'th step (put large number for no scaling, default)
+           * \param kTthreshold Half penalty energy once this threshold in distribution has been reached
            * \param res Resolution of the penalty function (default 0.1)
            */
-          PenaltyFunction(double penalty, int Nscale=1e9, double scale=1.0, Tcoord res=0.1)
-            : Tbase(res, Tbase::XYDATA) {
-            Tbase::name="penalty";
-            _cnt=0;
-            _Nscale=Nscale;
-            _scale=scale;
-            _du=penalty;
-            assert(scale<=1.0 && "Scale with a number smaller than one");
-            assert(Nscale>0);
-          }
+          PenaltyFunction(double penalty, int Ncheck=1e20, double kTthreshold=5, Tcoord res=0.1)
+            : Tbase(res, Tbase::XYDATA), hist(res, Thist::HISTOGRAM) {
+              Tbase::name="penalty";
+              _cnt=0;
+              _Ncheck=Ncheck;
+              _kTthreshold=kTthreshold;
+              _du=penalty;
+              assert(Ncheck>0);
+            }
           /*! \brief Update penalty for coordinate */
           double update(Tcoord coordinate) {
             _cnt++;
-            if ((_cnt%_Nscale)==0)
-              scale(_scale);
+            if ((_cnt%_Ncheck)==0) {
+              double deltakT=log( hist(hist.maxy()) / double(hist(hist.miny())) );
+              assert(deltakT>0);
+              if (deltakT<_kTthreshold) {
+                _kTthreshold*=0.5;
+                scale(0.5);
+              }
+            }
             Tbase::operator()(coordinate)+=_du;
+            hist(coordinate)++;
             return _du;
           }
           /*! \brief Manually scale penalty energy */
           void scale(double s) { _du*=s; }
+
+          /*! \brief Save table to disk */
+          void save(string filename) {
+            Tbase::save(filename);
+            hist.save(filename+".dist");
+          }
+
       };
 
     template<typename Tx, typename Ty=unsigned long int>
@@ -210,7 +253,7 @@ namespace Faunus {
         public:
           Histogram(Tx resolution=0.2) : Table2D<Tx,Ty>(resolution, Table2D<Tx,Ty>::HISTOGRAM) {}
       };
- 
+
     /*!
      * \brief Radial distribution analysis
      *

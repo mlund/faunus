@@ -204,7 +204,7 @@ int main() {
       Point d = spc.geo->vdist(pol.cm, mem.lipids.massCenter(spc));
       hist_pepmem( abs(d.z) )++;
       z_pepmem( abs(d.z) ) += pol.charge(spc.p);
-      sys+=penalty->f.update( abs(d.z) );
+      //sys+=penalty->f.update( abs(d.z) );
 
       // gromacs trajectory
       if ( slp_global.randOne()<0.01 )

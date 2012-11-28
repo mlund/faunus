@@ -29,23 +29,23 @@ int main() {
   {
     Geometry::VectorRotate vrot;
     a.clear();
-    a.x=1.;
+    a.x()=1.;
     vrot.setAxis( geoCyl, Point(0,0,0), Point(0,1,0), pc::pi/2); // rotate around y-axis
     a = vrot.rotate(a); // rot. 90 deg.
-    assert( eq(a.x,0,1e-8) && "Vector rotation failed");
+    assert( eq(a.x(),0,1e-8) && "Vector rotation failed");
     a = vrot.rotate(a); // rot. 90 deg.
-    assert( eq(a.x,-1,1e-8) && "Vector rotation failed");
+    assert( eq(a.x(),-1,1e-8) && "Vector rotation failed");
   }
 
   {
     Geometry::QuaternionRotate qrot;
     a.clear();
-    a.x=1.;
+    a.x()=1.;
     qrot.setAxis( geoCyl, Point(0,0,0), Point(0,1,0), pc::pi/2); // rotate around y-axis
     a = qrot.rotate(a); // rot. 90 deg.
-    assert( eq(a.x,0,1e-8) && "Vector rotation failed");
+    assert( eq(a.x(),0,1e-8) && "Vector rotation failed");
     a = qrot.rotate(a); // rot. 90 deg.
-    assert( eq(a.x,-1,1e-8) && "Vector rotation failed");
+    assert( eq(a.x(),-1,1e-8) && "Vector rotation failed");
   }
 
 

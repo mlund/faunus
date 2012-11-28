@@ -26,7 +26,7 @@ int main() {
   Geometry::Cuboidslit geo(mcp);     // Rectangular slit simulation container w. XY periodicity
   Energy::GouyChapman pot(mcp);      // Gouy-Chapman electrostatics from charged surface
   pot.setGeometry(geo);              // Pass on geometry to potential
-  pot.setPosition( geo.len_half.z ); // z position of charged surface
+  pot.setPosition( geo.len_half.z() ); // z position of charged surface
   Space spc( pot.getGeometry() );    // Simulation space (contains all particles and info about groups)
 
   // Load and add polymer to Space

@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
   swpair->add( atom["ZNHIS"].id, atom["HIS"].id, Potential::SquareWellShifted(mcp, "squarewell_ZNHIS") );  //add square-well poteintial between ZNHIS and HIS resiues
 #ifdef SLIT
   auto gouy = pot.create( Energy::GouyChapman(mcp) );
-  gouy->setPosition( nonbonded->geometry.len_half.z ); // Place the surface xy plane at +z direction
+  gouy->setPosition( nonbonded->geometry.len_half.z() ); // Place the surface xy plane at +z direction
   auto restricted = pot.create( Energy::RestrictedVolumeCM(mcp) );
 #endif
   Space spc( pot.getGeometry() );
@@ -213,9 +213,9 @@ int main(int argc, char** argv) {
            double d = gouy->dist2surf(g.cm);
            dst_map["Q"]( d )+=g.charge(spc.p);
            Point p=shape.vectorgyrationRadiusSquared(g, spc);
-           dst_map["Rg2"]( d )+=p.x+p.y+p.z;
-           dst_map["Rg2x"]( d )+=p.x;
-           dst_map["Rg2z"]( d )+=p.z;
+           dst_map["Rg2"]( d )+=p.x()+p.y()+p.z();
+           dst_map["Rg2x"]( d )+=p.x();
+           dst_map["Rg2z"]( d )+=p.z();
            dst_map["Ree2"]( d )+=spc.geo->sqdist( spc.p[g.front()], spc.p[g.back()] );
            //dst_map["<Energy>"]( d )+=sys.current();
            for (int i=g.front(); i<=g.back(); i++){
@@ -255,7 +255,7 @@ int main(int argc, char** argv) {
       f2.precision(7);
       if (f && f1 && f2) {
         //f << "#g(z) of each residue from 1 to " << g.size() << endl;
-        for (double d=0; d<=nonbonded->geometry.len.z; d+=0.25){
+        for (double d=0; d<=nonbonded->geometry.len.z(); d+=0.25){
           f1 << d; 
           if (dst_map["Rg2"](d).cnt > 0) f1 << "\t" << dst_map["Rg2"](d); //If counter is empty, then it prints shit lot of warning
           else f1 << "\t0";

@@ -39,9 +39,9 @@ namespace Faunus {
           assert(!"Particle/container collision!");
           break;
         }
-        if (p[i].x!=trial[i].x ||
-            p[i].y!=trial[i].y ||
-            p[i].z!=trial[i].z ||
+        if (p[i].x()!=trial[i].x() ||
+            p[i].y()!=trial[i].y() ||
+            p[i].z()!=trial[i].z() ||
             p[i].charge!=trial[i].charge)
         {
           rc=false;

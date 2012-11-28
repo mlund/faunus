@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
   Energy::Hamiltonian pot;
   auto nonbonded = pot.create( Energy::NonbondedCut<Tpairpot,Tgeometry>(mcp) );
   auto gouy      = pot.create( Energy::GouyChapman(mcp) );
-  gouy->setPosition( nonbonded->geometry.len_half.z );
+  gouy->setPosition( nonbonded->geometry.len_half.z() );
   //auto bonded    = pot.create( Energy::PairListHydrophobic() );
   //bonded->add(true, true, SquareWellHydrophobic(mcp) );
 

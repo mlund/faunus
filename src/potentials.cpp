@@ -498,14 +498,14 @@ namespace Faunus {
      * \f$ \beta u(r) = -l_B \frac{ z a_z }{r^2}\f$
      */
     double MultipoleEnergy::iondip(double z, const Point &a, double r) {
-      return -lB*z*a.z/(r*r);
+      return -lB*z*a.z()/(r*r);
     }
 
     /*!
      * \f$ \beta u(r) = l_B \frac{a_x b_x + a_y b_y - 2a_z b_z  }{r^3}\f$
      */
     double MultipoleEnergy::dipdip(const Point &a, const Point &b, double r) {
-      return lB*( a.x*b.x + a.y*b.y - 2*a.z*b.z ) / (r*r*r);
+      return lB*( a.x()*b.x() + a.y()*b.y() - 2*a.z()*b.z() ) / (r*r*r);
     }
 
   } //Potential namespace

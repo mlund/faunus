@@ -34,8 +34,8 @@ int main(int argc, char** argv) {
   for (auto &g : pol) {
     aam.load(polyfile);
     Geometry::FindSpace f;
-    f.dir.x=0; // put mass center
-    f.dir.y=0; //   at [x,y,z] = [0,0,random]
+    f.dir.x()=0; // put mass center
+    f.dir.y()=0; //   at [x,y,z] = [0,0,random]
     if (f.find(*spc.geo, spc.p, aam.p )) {
       g = spc.insert( aam.p );
       g.name="Protein";
@@ -58,8 +58,8 @@ int main(int argc, char** argv) {
   mv.setGroup(salt);   // specify atomic particles to be moved
 
 #ifdef CYLINDER
-  gmv.dir.x=0; // do not move in x
-  gmv.dir.y=0; // nor y direction
+  gmv.dir.x()=0; // do not move in x
+  gmv.dir.y()=0; // nor y direction
   Analysis::LineDistribution<float,unsigned long int> rdf(0.25);
 #else
   Analysis::RadialDistribution<float,int> rdf(0.25);

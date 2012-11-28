@@ -27,11 +27,11 @@ class PenaltyEnergyBase : public Energy::Energybase {
         if (&p==&spcPtr->trial) {   // p is trial
           g1Ptr->cm_trial = Geometry::massCenter(*spcPtr->geo,p,*g1Ptr); // if GroupArray, keep mass center up2date
           g2Ptr->cm_trial = Geometry::massCenter(*spcPtr->geo,p,*g2Ptr); // if GroupArray, keep mass center up2date
-          r = abs(  spcPtr->geo->vdist(g1Ptr->cm_trial, g2Ptr->cm_trial).z  );
+          r = abs(  spcPtr->geo->vdist(g1Ptr->cm_trial, g2Ptr->cm_trial).z()  );
         } else { 
           g1Ptr->cm = Geometry::massCenter(*spcPtr->geo,p,*g1Ptr); // if GroupArray, keep mass center up2date
           g2Ptr->cm = Geometry::massCenter(*spcPtr->geo,p,*g2Ptr); // if GroupArray, keep mass center up2date
-          r = abs(  spcPtr->geo->vdist(g1Ptr->cm, g2Ptr->cm).z  );
+          r = abs(  spcPtr->geo->vdist(g1Ptr->cm, g2Ptr->cm).z()  );
         }
         return f(r);
       }
@@ -44,11 +44,11 @@ class PenaltyEnergyBase : public Energy::Energybase {
         if (&p==&spcPtr->trial) {   // p is trial
           g1Ptr->cm_trial = Geometry::massCenter(*spcPtr->geo,p,*g1Ptr); // if GroupArray, keep mass center up2date
           g2Ptr->cm_trial = Geometry::massCenter(*spcPtr->geo,p,*g2Ptr); // if GroupArray, keep mass center up2date
-          r = abs(  spcPtr->geo->vdist(g1Ptr->cm_trial, g2Ptr->cm_trial).z  );
+          r = abs(  spcPtr->geo->vdist(g1Ptr->cm_trial, g2Ptr->cm_trial).z()  );
         } else {
           g1Ptr->cm = Geometry::massCenter(*spcPtr->geo,p,*g1Ptr);
           g2Ptr->cm = Geometry::massCenter(*spcPtr->geo,p,*g2Ptr);
-          r = abs(  spcPtr->geo->vdist(g1Ptr->cm, g2Ptr->cm).z  );
+          r = abs(  spcPtr->geo->vdist(g1Ptr->cm, g2Ptr->cm).z()  );
         }
         return f(r);
       }
@@ -202,8 +202,8 @@ int main() {
 
       // peptide-membrane distribution
       Point d = spc.geo->vdist(pol.cm, mem.lipids.massCenter(spc));
-      hist_pepmem( abs(d.z) )++;
-      z_pepmem( abs(d.z) ) += pol.charge(spc.p);
+      hist_pepmem( abs(d.z()) )++;
+      z_pepmem( abs(d.z()) ) += pol.charge(spc.p);
       //sys+=penalty->f.update( abs(d.z) );
 
       // gromacs trajectory

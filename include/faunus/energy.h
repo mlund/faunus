@@ -593,7 +593,7 @@ namespace Faunus {
          */
         double dist2surf(const Point &a) {
           assert(zposPtr!=nullptr && "Did you forget to call setPosition()?");
-          return std::abs(*zposPtr - a.z);
+          return std::abs(*zposPtr - a.z());
         }
 
         /*!

@@ -123,9 +123,9 @@ namespace Faunus {
 
   void cylindric_profile::add(particle &p) {
     if (p.id==id)
-      if (p.z>=xmin && p.z<=xmax())
-        if (p.x*p.x+p.y*p.y<=r*r) {
-          (*this)(p.z)++;
+      if (p.z()>=xmin && p.z()<=xmax())
+        if (p.x()*p.x()+p.y()*p.y()<=r*r) {
+          (*this)(p.z())++;
           cnt++;
         }
   }
@@ -142,12 +142,12 @@ namespace Faunus {
   }
 
   void radial_profile::add(particle &p) {
-    if (p.id==id){cnt++, (*this)(sqrt(pow(p.x-origo.x,2)+pow(p.y-origo.y,2)))++;}
+    if (p.id==id){cnt++, (*this)(sqrt(pow(p.x()-origo.x,2)+pow(p.y()-origo.y,2)))++;}
   }
 
   void radial_profile::add(Point &o, Point &p) {
     cnt++;
-    (*this)(sqrt(pow(p.x-o.x,2)+pow(p.y-o.y,2)))++; 
+    (*this)(sqrt(pow(p.x()-o.x(),2)+pow(p.y()-o.y(),2)))++; 
   }
 
   void radial_profile::update(p_vec &p) {

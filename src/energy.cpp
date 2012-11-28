@@ -394,15 +394,15 @@ namespace Faunus {
      */
     RestrictedVolume::RestrictedVolume(InputMap &in, string prefix) {
       name="Restricted Volume";
-      lower.x = in.get<double>(prefix+"_lower.x", -pc::infty);
-      lower.y = in.get<double>(prefix+"_lower.y", -pc::infty);
-      lower.z = in.get<double>(prefix+"_lower.z", -pc::infty);
-      upper.x = in.get<double>(prefix+"_upper.x", pc::infty);
-      upper.y = in.get<double>(prefix+"_upper.y", pc::infty);
-      upper.z = in.get<double>(prefix+"_upper.z", pc::infty);
-      assert(upper.x>lower.x && "Upper bound must be bigger than lower bound!");
-      assert(upper.y>lower.y && "Upper bound must be bigger than lower bound!");
-      assert(upper.z>lower.z && "Upper bound must be bigger than lower bound!");
+      lower.x() = in.get<double>(prefix+"_lower.x", -pc::infty);
+      lower.y() = in.get<double>(prefix+"_lower.y", -pc::infty);
+      lower.z() = in.get<double>(prefix+"_lower.z", -pc::infty);
+      upper.x() = in.get<double>(prefix+"_upper.x", pc::infty);
+      upper.y() = in.get<double>(prefix+"_upper.y", pc::infty);
+      upper.z() = in.get<double>(prefix+"_upper.z", pc::infty);
+      assert(upper.x()>lower.x() && "Upper bound must be bigger than lower bound!");
+      assert(upper.y()>lower.y() && "Upper bound must be bigger than lower bound!");
+      assert(upper.z()>lower.z() && "Upper bound must be bigger than lower bound!");
     }
 
     string RestrictedVolume::_info() {
@@ -411,8 +411,8 @@ namespace Faunus {
       string d=" x ";
       std::ostringstream o;
       o << indent(SUB) << "Allowed Rectangular Region Spanned by:" << endl
-        << pad(SUB,w, "  Upper") << upper.x << d << upper.y << d << upper.z << endl
-        << pad(SUB,w, "  Lower") << lower.x << d << lower.y << d << lower.z << endl;
+        << pad(SUB,w, "  Upper") << upper.x() << d << upper.y() << d << upper.z() << endl
+        << pad(SUB,w, "  Lower") << lower.x() << d << lower.y() << d << lower.z() << endl;
       o << indent(SUB) << "Registered Groups:" << endl;
       for (auto g : groups)
         o << indent(SUB) << "  " << g->name << endl;
@@ -420,12 +420,12 @@ namespace Faunus {
     }
 
     bool RestrictedVolume::outside(const Point &a) {
-      if (a.x<lower.x) return true;
-      if (a.y<lower.y) return true;
-      if (a.z<lower.z) return true;
-      if (a.x>upper.x) return true;
-      if (a.y>upper.y) return true;
-      if (a.z>upper.z) return true;
+      if (a.x()<lower.x()) return true;
+      if (a.y()<lower.y()) return true;
+      if (a.z()<lower.z()) return true;
+      if (a.x()>upper.x()) return true;
+      if (a.y()>upper.y()) return true;
+      if (a.z()>upper.z()) return true;
       return false;
     }
 
@@ -602,7 +602,7 @@ namespace Faunus {
       }
 
     double MeanFieldCorrection::i_external(const p_vec& p, int i) {
-      return p[i].charge*qdensity(p[i].z)*prefactor;
+      return p[i].charge*qdensity(p[i].z())*prefactor;
     }
 
     double MeanFieldCorrection::g_external(const p_vec& p, Group& g) {
@@ -622,7 +622,7 @@ namespace Faunus {
         T qsum(bin,T::XYDATA);  // summed charge in each bin
         double dV=pc::pi*pow(threshold, 2)*bin; // volume of each bin
         for (auto &i : p)
-          qsum(i.z)+=i.charge;
+          qsum(i.z())+=i.charge;
         for (double z=zmin; z<=zmax; z+=bin)
           qdensity(z)+=qsum(z)/dV;
         qdensity.save(filename);

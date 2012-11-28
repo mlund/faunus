@@ -72,7 +72,7 @@ namespace Faunus {
   string FormatAAM::p2s(particle &a, int i) {
     std::ostringstream o;
     o.precision(5);
-    o << atom[a.id].name << " " << i+1 << " " << a.x << " " << a.y <<" "<< a.z << " "
+    o << atom[a.id].name << " " << i+1 << " " << a.x() << " " << a.y() <<" "<< a.z() << " "
       << a.charge << " " << a.mw << " " << a.radius << std::endl;
     return o.str();
   }
@@ -82,7 +82,7 @@ namespace Faunus {
     std::stringstream o;
     string name, num;
     o << s;
-    o >> name >> num >> a.x >> a.y >> a.z >> a.charge >> a.mw >> a.radius;
+    o >> name >> num >> a.x() >> a.y() >> a.z() >> a.charge >> a.mw >> a.radius;
     a.id = atom[name].id;
     a.hydrophobic = atom[a.id].hydrophobic;
     return a;
@@ -178,7 +178,7 @@ namespace Faunus {
       name=atom[p_i.id].name;
       sprintf(buf, "ATOM  %5d %-4s %-4s%5d    %8.3f %8.3f %8.3f %.3f %.3f\n",
           natom++, name.c_str(), name.c_str(), nres,
-          p_i.x, p_i.y, p_i.z, p_i.charge, p_i.radius );
+          p_i.x(), p_i.y(), p_i.z(), p_i.charge, p_i.radius );
       o << buf;
       if ( atom[p_i.id].name=="CTR" ) nres++;
     }
@@ -214,7 +214,7 @@ namespace Faunus {
       name=atom[pi.id].name;
       sprintf(buf, "%5d%5s%5s%5d%8.3f%8.3f%8.3f\n",
           nres,name.c_str(),name.c_str(),natom++,
-          pi.x/10+halflen, pi.y/10+halflen, pi.z/10+halflen );
+          pi.x()/10+halflen, pi.y()/10+halflen, pi.z()/10+halflen );
       o << buf;
       if ( atom[pi.id].name=="CTR" )
         nres++;
@@ -238,7 +238,7 @@ namespace Faunus {
         name=atom[ spc.p[i].id ].name;
         sprintf(buf, "%5d%5s%5s%5d%8.3f%8.3f%8.3f\n",
             nres,name.c_str(),name.c_str(),natom++,
-            spc.p[i].x/10+halflen, spc.p[i].y/10+halflen, spc.p[i].z/10+halflen );
+            spc.p[i].x()/10+halflen, spc.p[i].y()/10+halflen, spc.p[i].z()/10+halflen );
         o << buf;
       }
       nres++;
@@ -257,9 +257,9 @@ namespace Faunus {
     o >> name >> x >> y >> z;
     particle p;
     p=atom[name]; 
-    p.x=x*10; // nm->angstrom
-    p.y=y*10;
-    p.z=z*10;
+    p.x()=x*10; // nm->angstrom
+    p.y()=y*10;
+    p.z()=z*10;
     return p;
   }
 
@@ -302,7 +302,7 @@ namespace Faunus {
 
   void FormatXTC::setbox(float len) { setbox(len,len,len); }
 
-  void FormatXTC::setbox(const Point &p) { setbox(p.x, p.y, p.z); }
+  void FormatXTC::setbox(const Point &p) { setbox(p.x(), p.y(), p.z()); }
 
   /*!
    * Save all particles in Cuboid to xtc file. Molecules added to the ioxtc::g
@@ -318,7 +318,7 @@ namespace Faunus {
     assert(geo!=nullptr && "Only Cuboid geometries classes allowed.");
     if (geo==nullptr)
       return false;
-    setbox(geo->len.x, geo->len.y, geo->len.z);
+    setbox(geo->len.x(), geo->len.y(), geo->len.z());
     p=c.p;
     for (auto gi : g) {
       gi->translate( c, -gi->cm );             // b.trial is moved to origo -> whole!
@@ -344,9 +344,9 @@ namespace Faunus {
       rvec *x = new rvec [p.size()];
       int i=0;
       for (auto &pi : p) {
-        x[i][0] = (pi.x ) * 0.1;      // AA->nm
-        x[i][1] = (pi.y ) * 0.1;
-        x[i][2] = (pi.z ) * 0.1;
+        x[i][0] = (pi.x() ) * 0.1;      // AA->nm
+        x[i][1] = (pi.y() ) * 0.1;
+        x[i][2] = (pi.z() ) * 0.1;
         i++;
       }
       write_xtc(xd,p.size(),step_xtc++,time_xtc++,xdbox,x,prec_xtc);
@@ -412,12 +412,12 @@ namespace Faunus {
           Point l( xdbox[0][0], xdbox[1][1], xdbox[2][2] );
           geo->setlen(l*ten);
           for (size_t i=0; i<c.p.size(); i++) {
-            c.p[i].x = x_xtc[i][0]*ten - geo->len_half.x;     // store pos. in container.                 
-            c.p[i].y = x_xtc[i][1]*ten - geo->len_half.y;
-            c.p[i].z = x_xtc[i][2]*ten - geo->len_half.z;
-            c.trial[i].x=c.p[i].x;
-            c.trial[i].y=c.p[i].y;
-            c.trial[i].z=c.p[i].z;
+            c.p[i].x() = x_xtc[i][0]*ten - geo->len_half.x();     // store pos. in container.                 
+            c.p[i].y() = x_xtc[i][1]*ten - geo->len_half.y();
+            c.p[i].z() = x_xtc[i][2]*ten - geo->len_half.z();
+            c.trial[i].x()=c.p[i].x();
+            c.trial[i].y()=c.p[i].y();
+            c.trial[i].z()=c.p[i].z();
             if ( geo->collision(c.p[i]) ) {
               std::cerr << "# ioxtc load error: particle-container collision!" << endl;
               return false;

@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
       }
     } // end of micro loop
 
-    double qmin = 2*pc::pi / nonbonded->geometry.len_half.x;
+    double qmin = 2*pc::pi / nonbonded->geometry.len_half.x();
     debye.sample(spc.p, qmin, 0.75, 0.005);
 
     sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) );
@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
 
   rdf.save("rdf_p2p.dat");
   pqr.save("confout.pqr", spc.p);
-  gro.len = nonbonded->geometry.len.x;
+  gro.len = nonbonded->geometry.len.x();
   gro.save("confout.gro", spc);
   top.save("mytopol.top", spc);
   debye.save("I_of_q.dat");

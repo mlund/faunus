@@ -151,7 +151,7 @@ namespace Faunus {
       title="Single Particle Translation";
       iparticle=-1;
       igroup=nullptr;
-      dir.x=dir.y=dir.z=1;
+      dir.x()=dir.y()=dir.z()=1;
       w=30; //width of output
       in.get<double>(prefix+"_runfraction",0.);
       setGenericDisplacement( in.get<double>(prefix+"_genericdp",0) );
@@ -192,9 +192,9 @@ namespace Faunus {
           dp = genericdp;
         assert(iparticle<(int)spc->p.size() && "Trial particle out of range");
         Point t = dir*dp;
-        t.x *= slp_global.randHalf();
-        t.y *= slp_global.randHalf();
-        t.z *= slp_global.randHalf();
+        t.x() *= slp_global.randHalf();
+        t.y() *= slp_global.randHalf();
+        t.z() *= slp_global.randHalf();
         spc->trial[iparticle].translate(*spc->geo, t);
 
         // make sure trial mass center is updated for molecular groups
@@ -290,7 +290,7 @@ namespace Faunus {
       title="Group Rotation/Translation";
       igroup=nullptr;
       w=30;
-      dir.x=dir.y=dir.z=1;
+      dir.x()=dir.y()=dir.z()=1;
       groupWiseEnergy=false;
       runfraction = in.get<double>(prefix+"_runfraction",1.0);
       dp_trans = in.get<double>(prefix+"_transdp", 2, "Group translationsal displacement (AA)");
@@ -308,7 +308,7 @@ namespace Faunus {
       if ( directions.find(g.name) != directions.end() )
         dir = directions[g.name];
       else
-        dir.x = dir.y = dir.z = 1;
+        dir.x() = dir.y() = dir.z() = 1;
     }
 
     void TranslateRotate::_trialMove() {
@@ -321,9 +321,9 @@ namespace Faunus {
         igroup->rotate(*spc, p, angle);
       }
       if (dp_trans>1e-6) {
-        p.x=dir.x * dp_trans * slp_global.randHalf();
-        p.y=dir.y * dp_trans * slp_global.randHalf();
-        p.z=dir.z * dp_trans * slp_global.randHalf();
+        p.x()=dir.x() * dp_trans * slp_global.randHalf();
+        p.y()=dir.y() * dp_trans * slp_global.randHalf();
+        p.z()=dir.z() * dp_trans * slp_global.randHalf();
         igroup->translate(*spc, p);
       }
     }
@@ -461,9 +461,9 @@ namespace Faunus {
 
       // translation
       if (dp_trans>1e-6) {
-        p.x=dir.x * dp_trans * slp_global.randHalf();
-        p.y=dir.y * dp_trans * slp_global.randHalf();
-        p.z=dir.z * dp_trans * slp_global.randHalf();
+        p.x()=dir.x() * dp_trans * slp_global.randHalf();
+        p.y()=dir.y() * dp_trans * slp_global.randHalf();
+        p.z()=dir.z() * dp_trans * slp_global.randHalf();
         igroup->translate(*spc, p);
         for (auto i : cindex)
           spc->trial[i].translate(*spc->geo,p);
@@ -565,9 +565,9 @@ namespace Faunus {
             du-=pot->g2g(spc->p, *g[i], *g[j]);
 
       Point ip(dp,dp,dp);
-      ip.x*=slp_global.randHalf();
-      ip.y*=slp_global.randHalf();
-      ip.z*=slp_global.randHalf();
+      ip.x()*=slp_global.randHalf();
+      ip.y()*=slp_global.randHalf();
+      ip.z()*=slp_global.randHalf();
 
       for (size_t i=0; i<g.size(); i++)
         remaining.push_back(i);

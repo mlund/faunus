@@ -3,6 +3,7 @@
 
 #ifndef SWIG
 #include "faunus/common.h"
+#include <Eigen/Eigen>
 #endif
 
 namespace Faunus {
@@ -11,32 +12,32 @@ namespace Faunus {
    * \author Mikael Lund
    * \date 2002-2007
    */
-  class Point {
+  class Point : public Eigen::Vector3d {
     public:
       typedef double Tcoord;                       //!< Floating point type for Point coordinates
-      Tcoord x,y,z;                                //!< Cartesian coordinates
+      typedef Eigen::Vector3d Tvec;                //!< 3D vector from Eigen
       Point();                                     //!< Constructor, zero data.
-      Point(Tcoord,Tcoord,Tcoord);                 //!< Constructor, set vector
+      Point(Tcoord,Tcoord,Tcoord);                 //!< Constructor
+
+      template<typename OtherDerived>
+      Point(const Eigen::MatrixBase<OtherDerived>& other) : Tvec(other) {}
+
+      template<typename OtherDerived>
+      Point& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
+	Tvec::operator=(other);
+	return *this;
+      }
       virtual ~Point();                         
       void clear();                                //!< Zero all data.
-      Tcoord len() const;                          //!< Get scalar
-      Tcoord dot(const Point&) const;              //!< Angle with another point
+      Tcoord len() const;                          //!< Get scalar (TO BE REMOVED)
       void ranunit(RandomBase&);                   //!< Generate a random unit vector
 
       virtual void rotate(Geometry::VectorRotate&);//!< Rotate around vector
       virtual void translate(const Geometry::Geometrybase&, const Point&);//!< Translate along a vector
       virtual void scale(const Geometry::Geometrybase&, double);          //!< NPT volume scaling
 
-      Point operator-() const;                     //!< Sign reversal
-      const Point operator*(Tcoord) const;         //!< Scale vector
-      bool operator==(const Point&) const;         //!< Equality operator
-      Point operator+(const Point&) const;         //!< Add two vectors
-      Point operator-(const Point&) const;         //!< Subtract vector
-      Point& operator+=(const Point&);             //!< Vector addition
-      Point& operator*=(const Tcoord);             //!< Scaling vector
       Point& operator<<(std::istream&);            //!< Read from stream
-      friend std::ostream &operator<<(std::ostream&, const Point&);//!< Write to stream
-
+      
       /*
          enum vecFmt {XYZ,XYZQ,XYZQI,ALL};
          virtual void toVector(std::vector<double>&, vecFmt) const; //!< Write data to vector

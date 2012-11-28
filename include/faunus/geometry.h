@@ -85,10 +85,9 @@ namespace Faunus {
         void boundary(Point &) const;
         bool collision(const particle &, collisiontype=BOUNDARY) const;
         inline double sqdist(const Point &a, const Point &b) const {
-          register double dx(a.x-b.x), dy(a.y-b.y), dz(a.z-b.z);
-          return dx*dx + dy*dy + dz*dz;
+          return (a-b).squaredNorm();
         }
-        Point vdist(const Point&, const Point&);
+        inline Point vdist(const Point &a, const Point &b) { return a-b; }
         void scale(Point&, const double&) const; //!< Linear scaling along radius (NPT ensemble)
     };
 
@@ -119,36 +118,37 @@ namespace Faunus {
         bool collision(const particle&, collisiontype=BOUNDARY) const;
 
         inline double sqdist(const Point &a, const Point &b) const {
-          double dx( std::abs(a.x-b.x) );
-          double dy( std::abs(a.y-b.y) );
-          double dz( std::abs(a.z-b.z) );
-          if (dx>len_half.x) dx-=len.x;
-          if (dy>len_half.y) dy-=len.y;
-          if (dz>len_half.z) dz-=len.z;
+          double dx( std::abs(a.x()-b.x()) );
+          double dy( std::abs(a.y()-b.y()) );
+          double dz( std::abs(a.z()-b.z()) );
+          if (dx>len_half.x()) dx-=len.x();
+          if (dy>len_half.y()) dy-=len.y();
+          if (dz>len_half.z()) dz-=len.z();
           return dx*dx + dy*dy + dz*dz;
         }
 
         inline Point vdist(const Point &a, const Point &b) {
-          Point r(a-b);
-          if (r.x>len_half.x)
-            r.x-=len.x;
-          else if (r.x<-len_half.x)
-            r.x+=len.x;
-          if (r.y>len_half.y)
-            r.y-=len.y;
-          else if (r.y<-len_half.y)
-            r.y+=len.y;
-          if (r.z>len_half.z)
-            r.z-=len.z;
-          else if (r.z<-len_half.z)
-            r.z+=len.z;
+          Point r;
+	  r=a-b;
+          if (r.x()>len_half.x())
+            r.x()-=len.x();
+          else if (r.x()<-len_half.x())
+            r.x()+=len.x();
+          if (r.y()>len_half.y())
+            r.y()-=len.y();
+          else if (r.y()<-len_half.y())
+            r.y()+=len.y();
+          if (r.z()>len_half.z())
+            r.z()-=len.z();
+          else if (r.z()<-len_half.z())
+            r.z()+=len.z();
           return r;
         }
 
         inline void boundary(Point &a) const {
-          if (std::abs(a.x)>len_half.x) a.x-=len.x*anint(a.x*len_inv.x);
-          if (std::abs(a.y)>len_half.y) a.y-=len.y*anint(a.y*len_inv.y);
-          if (std::abs(a.z)>len_half.z) a.z-=len.z*anint(a.z*len_inv.z);
+          if (std::abs(a.x())>len_half.x()) a.x()-=len.x()*anint(a.x()*len_inv.x());
+          if (std::abs(a.y())>len_half.y()) a.y()-=len.y()*anint(a.y()*len_inv.y());
+          if (std::abs(a.z())>len_half.z()) a.z()-=len.z()*anint(a.z()*len_inv.z());
         }
 
         void scale(Point&, const double&) const;
@@ -164,30 +164,30 @@ namespace Faunus {
         Cuboidslit(InputMap &);
 
         inline double sqdist(const Point &a, const Point &b) const {
-          double dx=std::abs(a.x-b.x);
-          double dy=std::abs(a.y-b.y);
-          double dz=a.z-b.z;
-          if (dx>len_half.x) dx-=len.x;
-          if (dy>len_half.y) dy-=len.y;                                      
+          double dx=std::abs(a.x()-b.x());
+          double dy=std::abs(a.y()-b.y());
+          double dz=a.z()-b.z();
+          if (dx>len_half.x()) dx-=len.x();
+          if (dy>len_half.y()) dy-=len.y();                                      
           return dx*dx + dy*dy + dz*dz;
         }   
 
         inline Point vdist(const Point &a, const Point &b) {
           Point r(a-b);
-          if (r.x>len_half.x)
-            r.x-=len.x;
-          else if (r.x<-len_half.x)
-            r.x+=len.x;
-          if (r.y>len_half.y)
-            r.y-=len.y;
-          else if (r.y<-len_half.y)
-            r.y+=len.y;
+          if (r.x()>len_half.x())
+            r.x()-=len.x();
+          else if (r.x()<-len_half.x())
+            r.x()+=len.x();
+          if (r.y()>len_half.y())
+            r.y()-=len.y();
+          else if (r.y()<-len_half.y())
+            r.y()+=len.y();
           return r;
         }
 
         inline void boundary(Point &a) const {
-          if (std::abs(a.x)>len_half.x) a.x-=len.x*anint(a.x*len_inv.x);
-          if (std::abs(a.y)>len_half.y) a.y-=len.y*anint(a.y*len_inv.y);
+          if (std::abs(a.x())>len_half.x()) a.x()-=len.x()*anint(a.x()*len_inv.x());
+          if (std::abs(a.y())>len_half.y()) a.y()-=len.y()*anint(a.y()*len_inv.y());
         }
     };
 
@@ -217,15 +217,9 @@ namespace Faunus {
         void boundary(Point &) const;
         bool collision(const particle&, collisiontype=BOUNDARY) const;
         inline double sqdist(const Point &a, const Point &b) const {
-          register double dx,dy,dz;
-          dx=a.x-b.x;
-          dy=a.y-b.y;
-          dz=a.z-b.z;
-          return dx*dx + dy*dy + dz*dz;
+          return (a-b).squaredNorm();
         }
-        inline Point vdist(const Point &a, const Point &b) {
-          return a-b;
-        }
+        inline Point vdist(const Point &a, const Point &b) { return a-b; }
     };
 
     /*!
@@ -239,19 +233,19 @@ namespace Faunus {
         PeriodicCylinder(InputMap&);
         void boundary(Point&) const;
         inline double sqdist(const Point &a, const Point &b) const {
-          double dx=a.x-b.x;
-          double dy=a.y-b.y;
-          double dz=std::abs(a.z-b.z);
+          double dx=a.x()-b.x();
+          double dy=a.y()-b.y();
+          double dz=std::abs(a.z()-b.z());
           if (dz>halflen)
             dz-=len;
           return dx*dx + dy*dy + dz*dz;
         }
         inline Point vdist(const Point &a, const Point &b) {
           Point r=a-b;
-          if (r.z>halflen)
-            r.z-=len;
-          else if (r.z<-halflen)
-            r.z+=len;
+          if (r.z()>halflen)
+            r.z()-=len;
+          else if (r.z()<-halflen)
+            r.z()+=len;
           return r;
         }
     };

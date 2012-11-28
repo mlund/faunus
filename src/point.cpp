@@ -14,19 +14,18 @@ namespace Faunus {
    * \note Data IS zeroed upon construction, but don't
    * count on it in the future!
    */
-  Point::Point() : x(0), y(0), z(0) {}
+  Point::Point() : Tvec(0,0,0) {}
 
-  Point::Point(Tcoord xx, Tcoord yy, Tcoord zz) : x(xx), y(yy), z(zz) {}
-
+  Point::Point(Tcoord xx, Tcoord yy, Tcoord zz) : Tvec(xx,yy,zz) {}
+    
   Point::~Point() {}
 
-  void Point::clear() { x=y=z=0; }
-
-  Point::Tcoord Point::dot(const Point &p) const { return (x*p.x + y*p.y + z*p.z); }
+  void Point::clear() { setZero(); }
 
   Point::Tcoord Point::len() const {
     auto r2 = dot(*this);
-    return (r2>0) ? sqrt(r2) : 0;
+    assert( r2==squaredNorm() );
+    return (r2>0) ? std::sqrt(r2) : 0;
   }
 
   /*!
@@ -36,69 +35,17 @@ namespace Faunus {
     Point u;
     Tcoord r2;
     do {
-      u.x=2*ran.randHalf();
-      u.y=2*ran.randHalf();
-      u.z=2*ran.randHalf();
-      r2=u.x*u.x+u.y*u.y+u.z*u.z;
+      u.x()=2*ran.randHalf();
+      u.y()=2*ran.randHalf();
+      u.z()=2*ran.randHalf();
+      r2=u.squaredNorm();
     } while (r2>1);
-    *this = u*(1/sqrt(r2));
+    *this = u*(1/std::sqrt(r2));
     assert(std::abs(this->len()-1)<1e-7); // is it really a unit vector?
   }
 
-  Point Point::operator-() const {
-    Point o=*this;
-    o.x=-x; o.y=-y; o.z=-z;
-    return o;
-  }
-
-  Point & Point::operator+=(const Point &p) {
-    x+=p.x;
-    y+=p.y;
-    z+=p.z;
-    return *this;
-  }
-
-  Point Point::operator+(const Point &p) const {
-    Point o=*this;
-    o+=p;
-    return o;
-  }
-
-  Point Point::operator-(const Point &p) const {
-    Point o=*this;
-    o+=-p;
-    return o;
-  }
-
-  Point& Point::operator*=(Tcoord s) {
-    x*=s;
-    y*=s;
-    z*=s;
-    return *this;
-  }
-
-  const Point Point::operator*(Tcoord s) const {
-    Point o=*this;
-    o*=s;
-    return o;
-  }
-
-  bool Point::operator==(const Point& p) const {
-    if (&p==&(*this))
-      return true;
-    if (p.x!=x) return false;
-    if (p.y!=y) return false;
-    if (p.z!=z) return false;
-    return true;
-  }
-
-  std::ostream &operator<<(std::ostream &o, const Point &p) {
-    o << p.x << " " << p.y << " " << p.z;
-    return o;
-  }
-
   Point & Point::operator<<(std::istream &in) {
-    in >> x >> y >> z;
+    in >> x() >> y() >> z();
     return *this;
   }
 
@@ -128,13 +75,6 @@ namespace Faunus {
     geo.scale(*this, newvol);
   }
 
-  /*
-  void Point::vectoriz(vector<double> &v, vectorizeFmt fmt) const {
-    v.push_back(x);
-    v.push_back(y);
-    v.push_back(z);
-  }*/
-
   /********************
     P A R T I C L E
    ********************/
@@ -154,9 +94,9 @@ namespace Faunus {
   }
 
   PointParticle& PointParticle::operator=(const Point &p) {
-    x=p.x;
-    y=p.y;
-    z=p.z;
+    x()=p.x();
+    y()=p.y();
+    z()=p.z();
     return *this;  // return a reference to myself
   }
 
@@ -174,7 +114,7 @@ namespace Faunus {
   void PointParticle::deactivate() {
     hydrophobic=false;
     charge=0;
-    x=y=z=pc::infty;
+    x()=y()=z()=pc::infty;
   }
 
   /*!

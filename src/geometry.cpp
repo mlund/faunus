@@ -107,21 +107,17 @@ namespace Faunus {
     void Sphere::randompos(Point &m) {
       double l=r2+1;
       while (l>r2) {
-        m.x = slp.randHalf()*diameter;
-        m.y = slp.randHalf()*diameter;
-        m.z = slp.randHalf()*diameter;
-        l=m.x*m.x+m.y*m.y+m.z*m.z;
+        m.x() = slp.randHalf()*diameter;
+        m.y() = slp.randHalf()*diameter;
+        m.z() = slp.randHalf()*diameter;
+        l=m.x()*m.x()+m.y()*m.y()+m.z()*m.z();
       }
-    }
-
-    Point Sphere::vdist(const Point&a, const Point&b) {
-      return a-b;
     }
 
     void Sphere::boundary(Point &m) const {}
 
     bool Sphere::collision(const particle &a, collisiontype type) const {
-      return (a.x*a.x+a.y*a.y+a.z*a.z > r2) ? true:false;
+      return (a.x()*a.x()+a.y()*a.y()+a.z()*a.z() > r2) ? true:false;
     }
 
     //
@@ -132,26 +128,26 @@ namespace Faunus {
       name="Cuboid";
       double cubelen=in.get<double>("cuboid_len",-1, name+" sidelength (AA)");
       if (cubelen<=0) {
-        len.x=in.get<double>("cuboid_xlen",0);
-        len.y=in.get<double>("cuboid_ylen",0);
-        len.z=in.get<double>("cuboid_zlen",0);
+        len.x()=in.get<double>("cuboid_xlen",0);
+        len.y()=in.get<double>("cuboid_ylen",0);
+        len.z()=in.get<double>("cuboid_zlen",0);
       } else {
-        len.x=cubelen;
-        len.y=cubelen;
-        len.z=cubelen;
+        len.x()=cubelen;
+        len.y()=cubelen;
+        len.z()=cubelen;
       }
       setlen(len);
     }
 
     bool Cuboid::setlen(Point l) {
-      assert(l.x>0 && l.y>0 && l.z>0);
-      if (l.x<=0||l.y<=0||l.z<=0) 
+      assert(l.x()>0 && l.y()>0 && l.z()>0);
+      if (l.x()<=0||l.y()<=0||l.z()<=0) 
         return false;
       len = l;                    // Cuboid sidelength
       len_half=l*0.5;             // half Cuboid sidelength
-      len_inv.x=1/len.x;          // inverse Cuboid side length
-      len_inv.y=1/len.y;
-      len_inv.z=1/len.z;
+      len_inv.x()=1/len.x();          // inverse Cuboid side length
+      len_inv.y()=1/len.y();
+      len_inv.z()=1/len.z();
       return true;
     }
 
@@ -161,13 +157,13 @@ namespace Faunus {
     }
 
     double Cuboid::_getVolume() const {
-      return len.x*len.y*len.z;
+      return len.x()*len.y()*len.z();
     }
 
     string Cuboid::_info(char w) {
       std::ostringstream o;
       o << pad(SUB,w, "Sidelengths")
-        << len.x << " x " << len.y << " x " << len.z << " ("+textio::angstrom+")" << endl;
+        << len.x() << " x " << len.y() << " x " << len.z() << " ("+textio::angstrom+")" << endl;
       return o.str();
     }
 
@@ -178,15 +174,15 @@ namespace Faunus {
     }
 
     void Cuboid::randompos(Point &m) {
-      m.x = slp.randHalf()*len.x;
-      m.y = slp.randHalf()*len.y;
-      m.z = slp.randHalf()*len.z;
+      m.x() = slp.randHalf()*len.x();
+      m.y() = slp.randHalf()*len.y();
+      m.z() = slp.randHalf()*len.z();
     }
 
     bool Cuboid::collision(const particle &a, collisiontype type) const {
-      if (std::abs(a.x)>len_half.x) return true;
-      if (std::abs(a.y)>len_half.y) return true;
-      if (std::abs(a.z)>len_half.z) return true;
+      if (std::abs(a.x())>len_half.x()) return true;
+      if (std::abs(a.y())>len_half.y()) return true;
+      if (std::abs(a.z())>len_half.z()) return true;
       return false;
     }
 
@@ -195,7 +191,7 @@ namespace Faunus {
         std::ofstream fout( file.c_str(), std::ios_base::app);
         if (fout) {
           fout.precision(10);
-          fout << len.x << " " << len.y << " " << len.z << endl;
+          fout << len.x() << " " << len.y() << " " << len.z() << endl;
           return true;
         }
       }
@@ -207,7 +203,7 @@ namespace Faunus {
       if ( Geometrybase::load(file, resize) ) {
         std::ifstream f( file.c_str() );
         if (f) {
-          f >> l.x >> l.y >> l.z;
+          f >> l.x() >> l.y() >> l.z();
           setlen(l);
           f.close();
           return true;
@@ -265,19 +261,19 @@ namespace Faunus {
 
     void Cylinder::randompos(Point &m) {
       double l=r2+1;
-      m.z = slp.randHalf()*len;
+      m.z() = slp.randHalf()*len;
       while (l>r2) {
-        m.x = slp.randHalf()*diameter;
-        m.y = slp.randHalf()*diameter;
-        l=m.x*m.x+m.y*m.y;
+        m.x() = slp.randHalf()*diameter;
+        m.y() = slp.randHalf()*diameter;
+        l=m.x()*m.x()+m.y()*m.y();
       }
     }
 
     bool Cylinder::collision(const particle &a, collisiontype type) const {
       assert( (halflen-len/2)<1e-9 && "Cylinder length initialization problems" );
-      if ( a.z<-halflen ) return true;
-      if ( a.z>halflen ) return true;
-      if ( a.x*a.x+a.y*a.y>r2 ) return true;
+      if ( a.z()<-halflen ) return true;
+      if ( a.z()>halflen ) return true;
+      if ( a.x()*a.x()+a.y()*a.y()>r2 ) return true;
       return false;
     }
 
@@ -297,8 +293,8 @@ namespace Faunus {
     }
 
     void PeriodicCylinder::boundary(Point &a) const {
-      if (std::abs(a.z)>halflen)
-        a.z-=len*anint(a.z/len);
+      if (std::abs(a.z())>halflen)
+        a.z()-=len*anint(a.z()/len);
     }
 
 #ifdef HYPERSPHERE
@@ -380,9 +376,9 @@ namespace Faunus {
     }
 
     FindSpace::FindSpace() {
-      dir.x=1;
-      dir.y=1;
-      dir.z=1;
+      dir.x()=1;
+      dir.y()=1;
+      dir.z()=1;
       allowContainerOverlap=false;
       allowMatterOverlap=false;   
     }
@@ -422,9 +418,9 @@ namespace Faunus {
         maxtrials--;
         cm = massCenter(geo, p);
         geo.randompos(v);
-        v.x*=dir.x;
-        v.y*=dir.y;
-        v.z*=dir.z;
+        v.x()*=dir.x();
+        v.y()*=dir.y();
+        v.z()*=dir.z();
         translate(geo, p, -cm+v);
       } while (maxtrials>0 && (containerOverlap(geo,p)==true || matterOverlap(geo,p,dst)==true));
       if (maxtrials>0) {
@@ -453,9 +449,9 @@ namespace Faunus {
       u=u*(1/geo.dist(beg,end));
       cosang=cos(angle);
       sinang=sin(angle);
-      e1mcox=(1.-cosang)*u.x;
-      e1mcoy=(1.-cosang)*u.y;
-      e1mcoz=(1.-cosang)*u.z;
+      e1mcox=(1.-cosang)*u.x();
+      e1mcoy=(1.-cosang)*u.y();
+      e1mcoz=(1.-cosang)*u.z();
     }
 
     double VectorRotate::getAngle() const { return std::acos(cosang); }
@@ -476,10 +472,10 @@ namespace Faunus {
       assert(&geoPtr!=nullptr);
       Point b(p-origin);
       geoPtr->boundary(b);           // Apply boundary conditions
-      double eb=u.x*b.x + u.y*b.y + u.z*b.z;
-      p.x=e1mcox*eb+cosang*b.x+sinang*(u.y*b.z - u.z*b.y) + origin.x;
-      p.y=e1mcoy*eb+cosang*b.y+sinang*(u.z*b.x - u.x*b.z) + origin.y;
-      p.z=e1mcoz*eb+cosang*b.z+sinang*(u.x*b.y - u.y*b.x) + origin.z;
+      double eb=u.x()*b.x() + u.y()*b.y() + u.z()*b.z();
+      p.x()=e1mcox*eb+cosang*b.x()+sinang*(u.y()*b.z() - u.z()*b.y()) + origin.x();
+      p.y()=e1mcoy*eb+cosang*b.y()+sinang*(u.z()*b.x() - u.x()*b.z()) + origin.y();
+      p.z()=e1mcoz*eb+cosang*b.z()+sinang*(u.x()*b.y() - u.y()*b.x()) + origin.z();
       geoPtr->boundary(p);
       return p;
     }
@@ -492,9 +488,9 @@ namespace Faunus {
       assert( abs(end.len()-1)<1e-7 && "Unit vector required!!");
       geoPtr=&geo;
       double sinanghalf = sin(angle*0.5);
-      q.x=end.x*sinanghalf;
-      q.y=end.y*sinanghalf;
-      q.z=end.z*sinanghalf;
+      q.x=end.x()*sinanghalf;
+      q.y=end.y()*sinanghalf;
+      q.z=end.z()*sinanghalf;
       q.w=cos(angle*0.5);
       /*generate quaternion variables for rotation*/
       double t2 =  q.w * q.x;
@@ -519,12 +515,12 @@ namespace Faunus {
     }
 
     Point QuaternionRotate::rotate(Point p) const {
-      double newx = 2.0 * ( d1*p.x + d2*p.y + d3*p.z ) + p.x;
-      double newy = 2.0 * ( d4*p.x + d5*p.y + d6*p.z ) + p.y;
-      double newz = 2.0 * ( d7*p.x + d8*p.y + d9*p.z ) + p.z;
-      p.x = newx;
-      p.y = newy;
-      p.z = newz;
+      double newx = 2.0 * ( d1*p.x() + d2*p.y() + d3*p.z() ) + p.x();
+      double newy = 2.0 * ( d4*p.x() + d5*p.y() + d6*p.z() ) + p.y();
+      double newz = 2.0 * ( d7*p.x() + d8*p.y() + d9*p.z() ) + p.z();
+      p.x() = newx;
+      p.y() = newy;
+      p.z() = newz;
       return p;
     }
 

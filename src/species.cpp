@@ -89,7 +89,7 @@ namespace Faunus {
     return o.str();
   }
 
-  void AtomTypes::reset_properties(vector<particle> &p) {
+  void AtomTypes::reset_properties(p_vec &p) {
     for (auto &p_i : p )
       p_i = list.at( p_i.id );
   }

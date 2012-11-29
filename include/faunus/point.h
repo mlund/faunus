@@ -16,39 +16,36 @@ namespace Faunus {
     public:
       typedef double Tcoord;                       //!< Floating point type for Point coordinates
       typedef Eigen::Vector3d Tvec;                //!< 3D vector from Eigen
-      Point();                                     //!< Constructor, zero data.
-      Point(Tcoord,Tcoord,Tcoord);                 //!< Constructor
+
+      inline Point();                              //!< Constructor, zero data.
+      inline Point(Tcoord,Tcoord,Tcoord);          //!< Constructor
+      template<typename OtherDerived>
+        Point(const Eigen::MatrixBase<OtherDerived>& other) : Tvec(other) {}
 
       template<typename OtherDerived>
-      Point(const Eigen::MatrixBase<OtherDerived>& other) : Tvec(other) {}
+        Point& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
+          Tvec::operator=(other);
+          return *this;
+        }
 
-      template<typename OtherDerived>
-      Point& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
-	Tvec::operator=(other);
-	return *this;
-      }
-      virtual ~Point();                         
+      virtual ~Point() {};                         //!< Destructor
       void clear();                                //!< Zero all data.
       Tcoord len() const;                          //!< Get scalar (TO BE REMOVED)
       void ranunit(RandomBase&);                   //!< Generate a random unit vector
-
       virtual void rotate(Geometry::VectorRotate&);//!< Rotate around vector
       virtual void translate(const Geometry::Geometrybase&, const Point&);//!< Translate along a vector
       virtual void scale(const Geometry::Geometrybase&, double);          //!< NPT volume scaling
-
       Point& operator<<(std::istream&);            //!< Read from stream
-      
-      /*
-         enum vecFmt {XYZ,XYZQ,XYZQI,ALL};
-         virtual void toVector(std::vector<double>&, vecFmt) const; //!< Write data to vector
-         virtual int fromVector(const std::vector<double>&, int, vecFmt); //!< Read data from vector
-         */
-    private:
-      inline int anint(Tcoord) const;              //!< Ala fortran function
   };
 
-  inline int Point::anint(Tcoord a) const { return int(a>0 ? a+.5 : a-.5); }
+  /*!
+   * \note Data IS zeroed upon construction, but don't
+   * count on it in the future!
+   */
+  Point::Point() : Tvec(0,0,0) {}
 
+  Point::Point(Tcoord xx, Tcoord yy, Tcoord zz) : Tvec(xx,yy,zz) {}
+ 
   /*!
    * \brief Class for particles
    * \author Mikael Lund
@@ -64,10 +61,10 @@ namespace Faunus {
    */
   class PointParticle : public Point {
     public:
+      typedef Point::Tcoord Tradius;
+      typedef Point::Tcoord Tcharge;
+      typedef Point::Tcoord Tmw;
       typedef unsigned char Tid;
-      typedef double Tradius;
-      typedef double Tcharge;
-      typedef float Tmw;
       typedef bool Thydrophobic;
 
       Tcharge charge;                           //!< Charge number
@@ -76,11 +73,22 @@ namespace Faunus {
       Tid id;                                   //!< Particle identifier
       Thydrophobic hydrophobic;                 //!< Hydrophobic flag
 
-      PointParticle();
+      PointParticle();                          //!< Constructor
+
+      template<typename OtherDerived>
+        PointParticle(const Eigen::MatrixBase<OtherDerived>& other) : Tvec(other) {}
+
       double volume() const;                    //!< Return volume
       void deactivate();                        //!< Deactivate for use w. faster energy loops
       void clear();                             //!< Zero all data
-      PointParticle& operator=(const Point&);   //!< Copy coordinates from a point
+
+      /*! \brief Copy coordinates from a point */
+      template<typename OtherDerived>
+        PointParticle& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
+          Tvec::operator=(other);
+          return *this;
+        }
+
       PointParticle& operator=(const AtomData&);//!< Copy data from AtomData
       PointParticle& operator<<(std::istream&); //!< Copy data from stream
       friend std::ostream &operator<<(std::ostream&, const PointParticle&);//!< Write to stream

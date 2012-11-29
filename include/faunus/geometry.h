@@ -128,8 +128,7 @@ namespace Faunus {
         }
 
         inline Point vdist(const Point &a, const Point &b) {
-          Point r;
-	  r=a-b;
+          Point r=a-b;
           if (r.x()>len_half.x())
             r.x()-=len.x();
           else if (r.x()<-len_half.x())

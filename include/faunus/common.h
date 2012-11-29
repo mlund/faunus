@@ -2,8 +2,8 @@
 #define FAUNUS_COMMON_H
 
 #ifndef SWIG
+#include <Eigen/StdVector>
 #include <string>
-#include <vector>
 #include <list>
 #include <iostream>
 #include <iomanip>
@@ -83,7 +83,7 @@ namespace Faunus {
 #else
   typedef PointParticle particle;
 #endif
-  typedef std::vector<particle> p_vec;
+  typedef std::vector< particle, Eigen::aligned_allocator<particle> > p_vec;
 
 }//namespace
 

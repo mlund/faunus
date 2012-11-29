@@ -9,17 +9,7 @@ namespace Faunus {
   /********************************
     C A R T E S I A N  P O I N T
    ********************************/
-
-  /*!
-   * \note Data IS zeroed upon construction, but don't
-   * count on it in the future!
-   */
-  Point::Point() : Tvec(0,0,0) {}
-
-  Point::Point(Tcoord xx, Tcoord yy, Tcoord zz) : Tvec(xx,yy,zz) {}
-    
-  Point::~Point() {}
-
+   
   void Point::clear() { setZero(); }
 
   Point::Tcoord Point::len() const {
@@ -40,7 +30,7 @@ namespace Faunus {
       u.z()=2*ran.randHalf();
       r2=u.squaredNorm();
     } while (r2>1);
-    *this = u*(1/std::sqrt(r2));
+    *this = u/std::sqrt(r2);
     assert(std::abs(this->len()-1)<1e-7); // is it really a unit vector?
   }
 
@@ -91,13 +81,6 @@ namespace Faunus {
     charge=mw=radius=0;
     hydrophobic=false;
     id=0;
-  }
-
-  PointParticle& PointParticle::operator=(const Point &p) {
-    x()=p.x();
-    y()=p.y();
-    z()=p.z();
-    return *this;  // return a reference to myself
   }
 
   double PointParticle::volume() const {

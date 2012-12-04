@@ -239,7 +239,8 @@ namespace Faunus {
       std::ostringstream o;
       if (gsize.cnt>0)
         o << pad(SUB,w,"Average moves/particle") << cnt / gsize.avg() << endl;
-      o << pad(SUB,w,"Displacement vector") << dir << endl;
+      o << pad(SUB,w,"Displacement vector")
+        << dir.x() << " " << dir.y() << " " << dir.z() << endl;
       if (genericdp>1e-6)
         o << pad(SUB,w,"Generic displacement") << genericdp << _angstrom << endl;
       if (cnt>0) {
@@ -374,7 +375,8 @@ namespace Faunus {
       if ( !directions.empty() ) {
         o << indent(SUB) << "Group Move directions:" << endl;
         for (auto &m : directions)
-          o << pad(SUBSUB,w-2,m.first) << m.second << endl;
+          o << pad(SUBSUB,w-2,m.first)
+            << m.second.x() << " " << m.second.y() << " " << m.second.z() << endl;
       }
       if (cnt>0) {
         char l=12;
@@ -1268,7 +1270,7 @@ namespace Faunus {
     double ParallelTempering::_energyChange() {
       alternateReturnEnergy=0;
       if ( !goodPartner() ) 
-        return 0;
+        return pc::infty;
       double uold, du_partner;
 
       if (haveCurrentEnergy)   // do we already know the energy?

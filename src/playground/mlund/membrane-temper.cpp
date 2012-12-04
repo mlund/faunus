@@ -4,60 +4,6 @@
 using namespace Faunus;
 using namespace Faunus::Potential;
 
-class PenaltyEnergyBase : public Energy::Energybase {
-  private:
-    string _info() { return "penalty\n"; }
-    double* _trialcoord, _coord;
-    Space* spcPtr;
-    Group *g1Ptr, *g2Ptr;
-  public:
-    Analysis::PenaltyFunction<double> f;
-    void setCoord(Group *g1, Group *g2) {
-      assert(g1!=nullptr && g2!=nullptr);
-      g1Ptr=g1;
-      g2Ptr=g2;
-    }
-    PenaltyEnergyBase(InputMap &in, Space &s, string pfx="penalty_") :
-      f(in.get<double>(pfx+"du",0),1e5,4,0.5) { //!< Constructor - read input parameters
-      name="Group-group mass center penalty";
-      spcPtr=&s;
-    }
-    double i2all(const p_vec &p, int i) {
-      if (g1Ptr->find(i) || g2Ptr->find(i)) {
-        double r;
-        if (&p==&spcPtr->trial) {   // p is trial
-          g1Ptr->cm_trial = Geometry::massCenter(*spcPtr->geo,p,*g1Ptr); // if GroupArray, keep mass center up2date
-          g2Ptr->cm_trial = Geometry::massCenter(*spcPtr->geo,p,*g2Ptr); // if GroupArray, keep mass center up2date
-          r = abs(  spcPtr->geo->vdist(g1Ptr->cm_trial, g2Ptr->cm_trial).z()  );
-        } else { 
-          g1Ptr->cm = Geometry::massCenter(*spcPtr->geo,p,*g1Ptr); // if GroupArray, keep mass center up2date
-          g2Ptr->cm = Geometry::massCenter(*spcPtr->geo,p,*g2Ptr); // if GroupArray, keep mass center up2date
-          r = abs(  spcPtr->geo->vdist(g1Ptr->cm, g2Ptr->cm).z()  );
-        }
-        return f(r);
-      }
-      return 0;
-    }
-    double g2g(const p_vec &p, Group &g1, Group &g2) FOVERRIDE {
-      // test if g1 AND g2 are part of the penalized groups
-      if ( ( g1Ptr->find(g1.front()) && g2Ptr->find(g2.front()) )
-          || ( g1Ptr->find(g2.front()) && g2Ptr->find(g1.front()) ) ) {
-        double r;
-        if (&p==&spcPtr->trial) {   // p is trial
-          g1Ptr->cm_trial = Geometry::massCenter(*spcPtr->geo,p,*g1Ptr); // if GroupArray, keep mass center up2date
-          g2Ptr->cm_trial = Geometry::massCenter(*spcPtr->geo,p,*g2Ptr); // if GroupArray, keep mass center up2date
-          r = abs(  spcPtr->geo->vdist(g1Ptr->cm_trial, g2Ptr->cm_trial).z()  );
-        } else {
-          g1Ptr->cm = Geometry::massCenter(*spcPtr->geo,p,*g1Ptr);
-          g2Ptr->cm = Geometry::massCenter(*spcPtr->geo,p,*g2Ptr);
-          r = abs(  spcPtr->geo->vdist(g1Ptr->cm, g2Ptr->cm).z()  );
-        }
-        return f(r);
-      }
-      return 0;
-    }
-};
-
 namespace Faunus {
   namespace Potential {
     // custom pair potential that uses CosAttrac/WCA for lipid and Lennard-Jones for the rest
@@ -101,9 +47,9 @@ typedef CombinedPairPotential<LJWCA, DebyeHuckel> Tpairpot;
 //typedef LJWCA Tpairpot;
 
 int main() {
-
-  cout << textio::splash();           // show faunus banner and credits
-  InputMap mcp("membrane.input");   //read input file
+  Faunus::MPI::MPIController mpi;                //init MPI
+  InputMap mcp(textio::prefix+"membrane.input"); 
+  mpi.cout << textio::splash();           // show faunus banner and credits
 
   MCLoop loop(mcp);                   // class for handling mc loops
   FormatPQR pqr;                      // PQR structure file I/O
@@ -117,10 +63,9 @@ int main() {
   auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
   auto bonded    = pot.create( Energy::Bonded() );
   Space spc( pot.getGeometry() );
-#ifdef PENALTY
-  auto penalty   = pot.create( PenaltyEnergyBase(mcp,spc) );
-  //Analysis::Table2D<float, Analysis::PenaltyFunction<double> > mik;
-#endif
+
+  double custeps = mcp.get<double>("custeps", 0);
+  nonbonded->pairpot.first.customEpsilon(atom["TL"].id, atom["ARG"].id, custeps);
 
   // Markov moves and analysis
   Move::AtomicTranslation mv(mcp, pot, spc);
@@ -129,6 +74,7 @@ int main() {
   Move::Reptation rep(mcp, pot, spc);
   Move::CrankShaft crank(mcp, pot, spc);
   Move::SwapMove tit(mcp,pot,spc);
+  Move::ParallelTempering pt(mcp,pot,spc,mpi);   //temper move
   Analysis::PolymerShape shape;
   Analysis::RadialDistribution<> rdf(0.5);
   Analysis::LineDistribution<> hist_pepmem(0.5);
@@ -150,26 +96,19 @@ int main() {
   for (int i=pol.front(); i<pol.back(); i++)
     bonded->add(i, i+1, Potential::Harmonic(k,req));   // add bonds
 
-#ifdef PENALTY
-  penalty->setCoord(&mem.lipids, &pol);
-#endif
-
   //for (size_t i=0; i<spc.p.size(); i++){
   //  spc.p[i].charge=atom[spc.p[i].id].charge;
   //  spc.trial[i].charge=spc.p[i].charge;
   //}
   tit.findSites(spc.p);  // search for titratable sites
 
-  spc.load("state");                                     // load old config. from disk (if any)
-  pqr.save("initial.pqr", spc.p);
-#ifdef PENALTY
-  penalty->f.load("penalty.dat");
-  penalty->f.save("penalty_initial.dat");
-#endif
-
+  spc.load(textio::prefix+"state");                                     // load old config. from disk (if any)
+  pqr.save(textio::prefix+"initial.pqr", spc.p);
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );      // store initial total system energy
 
-  cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
+  mpi.cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
+
+  std::ofstream distfile(textio::prefix+"dist.dat", std::ios_base::app);
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
@@ -206,54 +145,45 @@ int main() {
             //sys+=crank.move();
           }
           break;
-        case 30:
-          if (slp_global.randOne()>0.9)
-            sys+=tit.move();
+        case 3:
+          if (slp_global.randOne()>0.99)
+            sys+=pt.move();
+          //  sys+=tit.move();
           break;
       }
 
       // peptide-membrane distribution
       double d = spc.geo->vdist(pol.cm, mem.lipids.massCenter(spc)).z();
-      d=abs(d);
+      //d=abs(d);
       hist_pepmem(d)++;
       z_pepmem(d) += pol.charge(spc.p);
       end2end(d) += spc.geo->dist( spc.p[pol.front()], spc.p[pol.back()] );
-#ifdef PENALTY
-      sys+=penalty->f.update(d);
-#endif
 
       // gromacs trajectory
-      if ( slp_global.randOne()<0.01 )
-        xtc.save("traj.xtc", spc);
+      if ( slp_global.randOne()<0.01 ) {
+        distfile << d << "\n";
+        xtc.save(textio::prefix+"traj.xtc", spc);
+      }
 
     } // end of micro loop
 
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
 
     // save to disk
-    rdf.save("rdf.dat");
-    pqr.save("confout.pqr", spc.p);
-    spc.save("state");
-    hist_pepmem.save("pepmem.dat");
-    z_pepmem.save("zpepmem.dat");
-    end2end.save("end2end.dat");
+    rdf.save(textio::prefix+"rdf.dat");
+    pqr.save(textio::prefix+"confout.pqr", spc.p);
+    spc.save(textio::prefix+"state");
+    hist_pepmem.save(textio::prefix+"pepmem.dat");
+    z_pepmem.save(textio::prefix+"zpepmem.dat");
+    end2end.save(textio::prefix+"end2end.dat");
 
-    cout << loop.timing();
+    mpi.cout << loop.timing();
 
-#ifdef PENALTY
-    penalty->f.save("penalty.dat");
-    cout << penalty->f.info();
-#endif
   } // end of macro loop
 
-  // perform unit tests
-  gmv.test(test);
-  mv.test(test);
-  sys.test(test);
-
   // print information
-  cout << loop.info() << sys.info() << mv.info() << gmv.info() << gmvpol.info() << rep.info()
-    << crank.info() << shape.info() << test.info() << spc.info() << tit.info();
+  mpi.cout << loop.info() << sys.info() << mv.info() << gmv.info() << gmvpol.info() << rep.info()
+    << crank.info() << shape.info() << test.info() << spc.info() << tit.info() << pt.info();
 
   return test.numFailed();
 }

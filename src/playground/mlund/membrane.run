@@ -113,7 +113,7 @@ box=`python -c "print ( ($Nlipid/1000.)*25**2 )**(1/2.)*$sigma"`
 for excesspol in -0 -4 -2 -16 -8 -32
 do
   out="pol${excesspol}_N${Nlipid}"
-  rm -fR state 
+  rm -fR *state 
   micro=1000
   mkinput
   $exe > $out.eq

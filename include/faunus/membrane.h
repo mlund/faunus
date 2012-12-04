@@ -130,10 +130,10 @@ namespace Faunus {
           // Create a lipid molecule
           p_vec p(3);
           p[0] = atom[ ePtr->idHead ];
-          p[0].z=-2.5*ePtr->sigma;
+          p[0].z()=-2.5*ePtr->sigma;
           for (int i=1; i<3; i++) {
             p[i] = atom[ ePtr->idTail ];
-            p[i].z = p[i-1].z + ePtr->sigma;
+            p[i].z() = p[i-1].z() + ePtr->sigma;
           }
 
           // Create a bilayer in XY plane and insert info space
@@ -141,22 +141,21 @@ namespace Faunus {
           double qfrac=in.get<double>("lipid_chargefraction", 0);          // head group ionization?
           int N=in.get<int>("lipid_N",0);                                  // # of lipids
           while (N-->0) {
-            u.x()=slp_global.randHalf() * ePtr->geometry.len.x;              // random xy position
-            u.y()=slp_global.randHalf() * ePtr->geometry.len.y;
+            u.x()=slp_global.randHalf() * ePtr->geometry.len.x();          // random xy position
+            u.y()=slp_global.randHalf() * ePtr->geometry.len.y();
             ePtr->geometry.boundary(u);                                    // respect periodicity
             (slp_global.randOne()>0.5) ? u.z()=1 : u.z()=-1;                   // 50% inverted lipids
             (slp_global.randOne()<qfrac) ? p[0].charge=-1 : p[0].charge=0; // dope w. charge
             for (auto &i : p) {
-              i.x=u.x();
-              i.y=u.y();
-              i.z*=u.z(); // flip 50% of the peptides (see above)
+              i.x()=u.x();
+              i.y()=u.y();
+              i.z()*=u.z(); // flip 50% of the peptides (see above)
             }
             GroupMolecular g = spc.insert(p); // insert lipid into simulation space (no overlap check!)
             lipids.add(g);                    // add inserted lipid to "lipids" group
             lipids.setMassCenter(spc);
           }
           spc.enroll( lipids );               // Space needs to know about ALL groups
-          cout << "Capacity = " << spc.p.capacity() << endl;
         }
     };
 }//namespace

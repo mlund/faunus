@@ -26,9 +26,14 @@ namespace Faunus {
      * \code
      * MPIController() mpi; // call this very first thing in your program
      * cout << "I'm rank " << mpi.rank << " out of " << mpi.nproc;
-     * mpi.cout << "This will go to a file called n%j.stdout where %j is my rank"
+     * mpi.cout << "This will go to a file called mpi%j.stdout where %j is my rank"
      * if (mpi.isMaster())
      *   cout << "I'm the master!";
+     * \endcode
+     * When MPIController is instantiated the textio::prefix variable is automatically
+     * set to \c mpi%j. which can be used to prefix input and output files. For example:
+     * \code
+     * InputMap mcp(textio::prefix+"input"); // tries to load "mpi%j.input" where %j is the rank
      * \endcode
      */
     class MPIController {

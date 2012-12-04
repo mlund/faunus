@@ -3,7 +3,7 @@
 
 #ifndef SWIG
 #include "faunus/common.h"
-#include <Eigen/Eigen>
+#include <Eigen/Core>
 #endif
 
 namespace Faunus {

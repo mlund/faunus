@@ -3,6 +3,10 @@
 
 #ifndef SWIG
 #include <utility>
+#ifdef FAU_HASHTABLE
+#include <unordered_map>
+#include <functional>
+#endif
 #endif
 
 namespace Faunus {
@@ -58,7 +62,25 @@ namespace Faunus {
         return true;
       }
   };
+}//namespace
 
+/*
+ * The following is an extension to std::hash in order to construct hash tables,
+ * for example std::unordered_map, using Faunus::pair_permutable<> as keys.
+ * See more at: http://en.wikipedia.org/wiki/Unordered_associative_containers_(C%2B%2B)#Usage_example
+ */
+#ifdef FAU_HASHTABLE
+namespace std {
+  template<typename T>
+    struct hash< Faunus::pair_permutable<T> > {
+      size_t operator()(const Faunus::pair_permutable<T> &x) const {
+        return hash<T>()(x.first) ^ hash<T>()(x.second);
+      }
+    };
+}//namespace
+#endif
+
+namespace Faunus {
   /*!
    * This is a list of pairs with associated data where the latter should de derived
    * from the base Tbase. When adding data with the add() function, a copy of the data
@@ -67,7 +89,12 @@ namespace Faunus {
   template<class Tbase, typename Tij=int, typename Tpair=pair_permutable< Tij > >
     class pair_list {
       protected:
-        std::map< Tpair, std::shared_ptr<Tbase> > list;
+#ifdef FAU_HASHTABLE
+        typedef std::unordered_map< Tpair, std::shared_ptr<Tbase> > Tlist;
+#else
+        typedef std::map< Tpair, std::shared_ptr<Tbase> > Tlist;
+#endif
+        Tlist list;
       public:
         /*!
          * \brief Associate data with a pair using an internal copy.

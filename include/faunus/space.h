@@ -52,6 +52,7 @@ namespace Faunus {
 
       double charge() const;                          //!< Sum all charges in particle vector
       string info();                                  //!< Print information string
+      void displace(const Point&);                    //!< Displace whole system by a vector
   };
 } //namespace
 #endif

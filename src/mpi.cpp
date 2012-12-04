@@ -104,9 +104,9 @@ namespace Faunus {
     void ParticleTransmitter::pvec2buf(const p_vec &src) {
       sendBuf.clear();
       for (auto &p : src) {
-        sendBuf.push_back(p.x);
-        sendBuf.push_back(p.y);
-        sendBuf.push_back(p.z);
+        sendBuf.push_back(p.x());
+        sendBuf.push_back(p.y());
+        sendBuf.push_back(p.z());
         if (format==XYZQ)
           sendBuf.push_back(p.charge);
         if (format==XYZQI) {
@@ -148,9 +148,9 @@ namespace Faunus {
     void ParticleTransmitter::buf2pvec(p_vec &dst) {
       int i=0;
       for (auto &p : dst) {
-        p.x=recvBuf[i++];
-        p.y=recvBuf[i++];
-        p.z=recvBuf[i++];
+        p.x()=recvBuf[i++];
+        p.y()=recvBuf[i++];
+        p.z()=recvBuf[i++];
         if (format==XYZQ)
           p.charge=recvBuf[i++];
         if (format==XYZQI) {

@@ -303,5 +303,20 @@ namespace Faunus {
 
     return o.str();
   }
+  
+  /*!
+   This will displace the whole system by a vector while respecting boundary conditions of the
+   simulation container. Group mass centers are also updated and the routine can be used to
+   keep certain groups at a particular, absolute position. Applying this function usually does not
+   cause an energy change unless the Hamiltonian depends on absolute positions (for example
+   electric potentials from planar surfaces).
+   */
+  void Space::displace(const Point &v) {
+    for (auto i : g) {
+      i->translate(*this, v);
+      i->accept(*this);
+      assert( geo->sqdist(i->cm, i->cm_trial) < 1e-6 );
+    }
+  }
 
 }//namespace

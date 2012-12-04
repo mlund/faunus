@@ -33,6 +33,7 @@ option(ENABLE_TWISTER  "Enable Mersenne Twister random number generator" off)
 option(ENABLE_STATIC   "Use static instead of dynamic linkage of faunus library" off)
 option(ENABLE_SWIG     "Try to create SWIG modules for python, tcl, ruby etc. (experimental!)" off)
 option(ENABLE_APPROXMATH "Use approximate math (Quake inverse sqrt, fast exponentials etc.)" off)
+option(ENABLE_HASHTABLE "Use hash tables for bond bookkeeping - may be faster for big systems" off)
 option(ENABLE_UNICODE  "Use unicode characters in output" on)
 mark_as_advanced( CLEAR CMAKE_VERBOSE_MAKEFILE CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS )
 mark_as_advanced( EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH

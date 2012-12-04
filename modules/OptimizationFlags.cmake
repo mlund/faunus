@@ -5,7 +5,7 @@
 unset(CMAKE_CXX_FLAGS)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  set(CMAKE_CXX_FLAGS "-std=c++0x -funroll-loops -Wall -Wno-unknown-pragmas -Wextra -Wno-unused-parameter")
+  set(CMAKE_CXX_FLAGS "-std=c++0x -funroll-loops -Wall -Wno-unknown-pragmas -Wextra -Wno-unused-parameter -Wno-unused-local-typedefs")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
   set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wcheck -wd2259,981,869,383 -Wno-unknown-pragmas")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")

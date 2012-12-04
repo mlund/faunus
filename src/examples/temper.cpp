@@ -40,12 +40,12 @@ class myenergy : public Energy::Energybase {     //custom energy class
   public:
     double Tscale;                               //reduced temperature
     double i_external(const p_vec &p, int i)  {  //pot. on single particle
-      double s=( 1+std::sin(2*pc::pi*p[i].x) ) / Tscale;
-      if (p[i].x>=-2 && p[i].x<=-1.25) return 1*s;
-      if (p[i].x>=-1.25 && p[i].x<=-0.25) return 2*s;
-      if (p[i].x>=-0.25 && p[i].x<=0.75) return 3*s;
-      if (p[i].x>=0.75 && p[i].x<=1.75) return 4*s;
-      if (p[i].x>=1.75 && p[i].x<=2) return 5*s;
+      double s=( 1+std::sin(2*pc::pi*p[i].x()) ) / Tscale;
+      if (p[i].x()>=-2 && p[i].x()<=-1.25) return 1*s;
+      if (p[i].x()>=-1.25 && p[i].x()<=-0.25) return 2*s;
+      if (p[i].x()>=-0.25 && p[i].x()<=0.75) return 3*s;
+      if (p[i].x()>=0.75 && p[i].x()<=1.75) return 4*s;
+      if (p[i].x()>=1.75 && p[i].x()<=2) return 5*s;
       return pc::infty;
     }
     double g_external(const p_vec &p, Group &g) {//pot. on group of particles
@@ -79,7 +79,7 @@ int main() {
   while ( loop.macroCnt() ) {                    //start markov chain
     while ( loop.microCnt() ) {
       trans.move();                              //translate particle
-      dst(spc.p[0].x)++;                         //update histogram
+      dst(spc.p[0].x())++;                       //update histogram
     }
     pt.move();                                   //do temper move
     mpi.cout << loop.timing();                   //print progress

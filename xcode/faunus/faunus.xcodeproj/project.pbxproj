@@ -55,6 +55,10 @@
 		73B67CE31423E28E00E44DD9 /* space.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CDA1423E28E00E44DD9 /* space.cpp */; };
 		73E9C84515CC6B32001D5654 /* polymers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73E9C83515CC6A70001D5654 /* polymers.cpp */; };
 		73E9C84815CC6B6A001D5654 /* libfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 738C132613FB12B30056EF71 /* libfaunus.dylib */; };
+		8B9D16DB166CA20E00E7C7D4 /* titrate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8B9D16DA166CA20E00E7C7D4 /* titrate.cpp */; };
+		8B9D16DD166CA22A00E7C7D4 /* titrate.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B9D16DC166CA22A00E7C7D4 /* titrate.h */; };
+		8BABBCCB166C9F8900C223CC /* libfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 738C132613FB12B30056EF71 /* libfaunus.dylib */; };
+		8BABBCD1166C9FA500C223CC /* membrane.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8BABBCC1166C9EA300C223CC /* membrane.cpp */; };
 		8BE1FA9F165A9780001073CC /* auxiliary.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BE1FA9E165A9780001073CC /* auxiliary.h */; };
 		8BE1FAA2165FDAA2001073CC /* membrane.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BE1FAA1165FDAA2001073CC /* membrane.h */; };
 /* End PBXBuildFile section */
@@ -68,6 +72,13 @@
 			remoteInfo = xdrfile;
 		};
 		73E9C84615CC6B60001D5654 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 738C131D13FB12B30056EF71 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 738C132513FB12B30056EF71;
+			remoteInfo = faunus;
+		};
+		8BABBCC7166C9F8900C223CC /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 738C131D13FB12B30056EF71 /* Project object */;
 			proxyType = 1;
@@ -132,6 +143,11 @@
 		73E9C83515CC6A70001D5654 /* polymers.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = polymers.cpp; path = ../../../src/examples/polymers.cpp; sourceTree = "<group>"; };
 		73E9C83B15CC6B1D001D5654 /* polymers */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = polymers; sourceTree = BUILT_PRODUCTS_DIR; };
 		73E9C84915CDDAD5001D5654 /* README */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = README; path = ../../README; sourceTree = "<group>"; };
+		8B969DDA166CDA09004248C1 /* membrane-temper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = "membrane-temper.cpp"; path = "../../src/playground/mlund/membrane-temper.cpp"; sourceTree = "<group>"; };
+		8B9D16DA166CA20E00E7C7D4 /* titrate.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = titrate.cpp; path = ../../src/titrate.cpp; sourceTree = "<group>"; };
+		8B9D16DC166CA22A00E7C7D4 /* titrate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = titrate.h; sourceTree = "<group>"; };
+		8BABBCC1166C9EA300C223CC /* membrane.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = membrane.cpp; path = ../../src/playground/mlund/membrane.cpp; sourceTree = "<group>"; };
+		8BABBCCF166C9F8900C223CC /* mlund-membrane */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "mlund-membrane"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8BE1FA9E165A9780001073CC /* auxiliary.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = auxiliary.h; sourceTree = "<group>"; };
 		8BE1FAA1165FDAA2001073CC /* membrane.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = membrane.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -157,6 +173,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				73E9C84815CC6B6A001D5654 /* libfaunus.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8BABBCCA166C9F8900C223CC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8BABBCCB166C9F8900C223CC /* libfaunus.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -191,6 +215,7 @@
 				738C133B13FB12DE0056EF71 /* include */,
 				738C138C13FB13740056EF71 /* src */,
 				73E9C83D15CC6B1D001D5654 /* polymers */,
+				8BABBCC4166C9EAB00C223CC /* playground-mlund */,
 				738C132713FB12B30056EF71 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -201,6 +226,7 @@
 				738C132613FB12B30056EF71 /* libfaunus.dylib */,
 				738C136013FB13250056EF71 /* libxdrfile.a */,
 				73E9C83B15CC6B1D001D5654 /* polymers */,
+				8BABBCCF166C9F8900C223CC /* mlund-membrane */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -240,6 +266,7 @@
 				738C134713FB12DE0056EF71 /* space.h */,
 				738C134813FB12DE0056EF71 /* species.h */,
 				7316FA2C15C546A30024F084 /* textio.h */,
+				8B9D16DC166CA22A00E7C7D4 /* titrate.h */,
 				73011C5E1423E30100509B7B /* topology.h */,
 			);
 			path = faunus;
@@ -288,6 +315,7 @@
 				73B67CDA1423E28E00E44DD9 /* space.cpp */,
 				738C133313FB12D20056EF71 /* species.cpp */,
 				7316FA3215C546E90024F084 /* textio.cpp */,
+				8B9D16DA166CA20E00E7C7D4 /* titrate.cpp */,
 			);
 			name = src;
 			sourceTree = "<group>";
@@ -298,6 +326,15 @@
 				73E9C83515CC6A70001D5654 /* polymers.cpp */,
 			);
 			path = polymers;
+			sourceTree = "<group>";
+		};
+		8BABBCC4166C9EAB00C223CC /* playground-mlund */ = {
+			isa = PBXGroup;
+			children = (
+				8B969DDA166CDA09004248C1 /* membrane-temper.cpp */,
+				8BABBCC1166C9EA300C223CC /* membrane.cpp */,
+			);
+			name = "playground-mlund";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -330,6 +367,7 @@
 				7316FA5815C56BC10024F084 /* analysis.h in Headers */,
 				8BE1FA9F165A9780001073CC /* auxiliary.h in Headers */,
 				8BE1FAA2165FDAA2001073CC /* membrane.h in Headers */,
+				8B9D16DD166CA22A00E7C7D4 /* titrate.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -398,6 +436,23 @@
 			productReference = 73E9C83B15CC6B1D001D5654 /* polymers */;
 			productType = "com.apple.product-type.tool";
 		};
+		8BABBCC5166C9F8900C223CC /* mlund-membrane */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8BABBCCC166C9F8900C223CC /* Build configuration list for PBXNativeTarget "mlund-membrane" */;
+			buildPhases = (
+				8BABBCC8166C9F8900C223CC /* Sources */,
+				8BABBCCA166C9F8900C223CC /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				8BABBCC6166C9F8900C223CC /* PBXTargetDependency */,
+			);
+			name = "mlund-membrane";
+			productName = polymers;
+			productReference = 8BABBCCF166C9F8900C223CC /* mlund-membrane */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -421,6 +476,7 @@
 				738C132513FB12B30056EF71 /* faunus */,
 				738C135F13FB13250056EF71 /* xdrfile */,
 				73E9C83A15CC6B1D001D5654 /* polymers */,
+				8BABBCC5166C9F8900C223CC /* mlund-membrane */,
 			);
 		};
 /* End PBXProject section */
@@ -448,6 +504,7 @@
 				7316FA3315C546E90024F084 /* mpi.cpp in Sources */,
 				7316FA3415C546E90024F084 /* textio.cpp in Sources */,
 				7316FA5615C56BA20024F084 /* analysis.cpp in Sources */,
+				8B9D16DB166CA20E00E7C7D4 /* titrate.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -469,6 +526,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		8BABBCC8166C9F8900C223CC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8BABBCD1166C9FA500C223CC /* membrane.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -481,6 +546,11 @@
 			isa = PBXTargetDependency;
 			target = 738C132513FB12B30056EF71 /* faunus */;
 			targetProxy = 73E9C84615CC6B60001D5654 /* PBXContainerItemProxy */;
+		};
+		8BABBCC6166C9F8900C223CC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 738C132513FB12B30056EF71 /* faunus */;
+			targetProxy = 8BABBCC7166C9F8900C223CC /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -502,7 +572,7 @@
 					"$(inherited)",
 				);
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_VERSION = "";
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
@@ -537,7 +607,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_VERSION = "";
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
@@ -687,6 +757,40 @@
 			};
 			name = Release;
 		};
+		8BABBCCD166C9F8900C223CC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"GCC_PREPROCESSOR_DEFINITIONS[arch=*]" = PENALTY;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				GCC_VERSION = "";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				PRODUCT_NAME = "mlund-membrane";
+			};
+			name = Debug;
+		};
+		8BABBCCE166C9F8900C223CC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"GCC_PREPROCESSOR_DEFINITIONS[arch=*]" = PENALTY;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				GCC_VERSION = "";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				PRODUCT_NAME = "mlund-membrane";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -722,6 +826,15 @@
 			buildConfigurations = (
 				73E9C84315CC6B1D001D5654 /* Debug */,
 				73E9C84415CC6B1D001D5654 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8BABBCCC166C9F8900C223CC /* Build configuration list for PBXNativeTarget "mlund-membrane" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8BABBCCD166C9F8900C223CC /* Debug */,
+				8BABBCCE166C9F8900C223CC /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

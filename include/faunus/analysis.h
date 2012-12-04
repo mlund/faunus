@@ -87,6 +87,8 @@ namespace Faunus {
             setResolution(resolution);
           }
 
+          void clear() { map.clear(); }
+
           void setResolution(Tx resolution) {
             assert( resolution>0 );
             dx=resolution;
@@ -126,12 +128,12 @@ namespace Faunus {
           /*! Returns x at minumum y */
           Tx miny() {
             assert(!map.empty());
-            Ty min=pc::infty;
-            Tx x;
+            Ty min=std::numeric_limits<Ty>::max();
+            Tx x=0;
             for (auto &m : map)
-              if (m.first<min) {
-                min=m.first;
-                x=m.second;
+              if (m.second<min) {
+                min=m.second;
+                x=m.first;
               }
             return x;
           }
@@ -139,12 +141,12 @@ namespace Faunus {
           /*! Returns x at minumum y */
           Tx maxy() {
             assert(!map.empty());
-            Ty max=-pc::infty;
-            Tx x;
+            Ty max=std::numeric_limits<Ty>::min();
+            Tx x=0;
             for (auto &m : map)
-              if (m.first>max) {
-                max=m.first;
-                x=m.second;
+              if (m.second>max) {
+                max=m.second;
+                x=m.first;
               }
             return x;
           }
@@ -205,6 +207,7 @@ namespace Faunus {
           typedef Table2D<Tcoord,unsigned long long int> Thist;
           Thist hist;
           Tcoord _du; //!< penalty energy
+          std::string _log;
         public:
           /*!
            * \brief Constructor
@@ -221,20 +224,26 @@ namespace Faunus {
               _kTthreshold=kTthreshold;
               _du=penalty;
               assert(Ncheck>0);
+              _log="#   initial penalty energy = "+std::to_string(_du)+"\n";
             }
+
           /*! \brief Update penalty for coordinate */
           double update(Tcoord coordinate) {
             _cnt++;
-            if ((_cnt%_Ncheck)==0) {
+            Tbase::operator()(coordinate)+=_du;  // penalize coordinate
+            hist(coordinate)++;                  // increment internal histogram
+            if ((_cnt%_Ncheck)==0) {             // if Ncheck'th time
               double deltakT=log( hist(hist.maxy()) / double(hist(hist.miny())) );
               assert(deltakT>0);
-              if (deltakT<_kTthreshold) {
-                _kTthreshold*=0.5;
-                scale(0.5);
+              std::ostringstream o;
+              o << "#   n=" << _cnt << " dkT=" << deltakT;
+              if (deltakT<_kTthreshold) {   // if histogram diff. is smaller than threshold
+                _kTthreshold*=0.5;          // ...downscale threshold
+                scale(0.5);                 // ...and penalty energy
+                o << " update: du=" << _du << " threshold=" << _kTthreshold;
               }
+              _log += o.str() + "\n";       // save info to log
             }
-            Tbase::operator()(coordinate)+=_du;
-            hist(coordinate)++;
             return _du;
           }
           /*! \brief Manually scale penalty energy */
@@ -245,7 +254,10 @@ namespace Faunus {
             Tbase::save(filename);
             hist.save(filename+".dist");
           }
-
+        
+          string info() {
+            return "# Penalty function log:\n" + _log;
+          }
       };
 
     template<typename Tx, typename Ty=unsigned long int>

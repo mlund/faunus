@@ -45,7 +45,7 @@ namespace Faunus {
   void Point::rotate(Geometry::VectorRotate &vrot) {
     *this = vrot.rotate(*this);
   }
-
+  
   /*!
    * \param geo Geomtry to use so that boundary conditions can be respected
    * \param a Vector to translate with

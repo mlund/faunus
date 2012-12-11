@@ -12,9 +12,8 @@ if(ENABLE_MPI AND MPI_CXX_FOUND)
   fau_example(mlund-rennes "./mlund/rennes" twobody.cpp)
 endif()
 
-
 if(ENABLE_MPI AND MPI_CXX_FOUND)
-  fau_example(mpitest "./mlund" mpitest.cpp)
+#  fau_example(mpitest "./mlund" mpitest.cpp)
 endif()
 
 # Anil's playground

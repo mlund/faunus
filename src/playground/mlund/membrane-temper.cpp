@@ -19,7 +19,6 @@ namespace Faunus {
           name="Lipids: WCA+CosAttract, HHIS-Tail: ChargeNonpolar, Rest: LJ";
           tailid=atom["TL"].id;
           headid=atom["HD"].id;
-          hhisid=atom["HHIS"].id;
           _tailPair=Tpair(tailid,tailid);
           _headPair=Tpair(headid,headid);
           _headtailPair=Tpair(headid,tailid);
@@ -65,7 +64,14 @@ int main() {
   Space spc( pot.getGeometry() );
 
   double custeps = mcp.get<double>("custeps", 0);
+  mpi.cout << "# Custom epsilon = " << custeps << "\n";
   nonbonded->pairpot.first.customEpsilon(atom["TL"].id, atom["ARG"].id, custeps);
+  nonbonded->pairpot.first.customEpsilon(atom["TL"].id, atom["HARG"].id, custeps);
+  nonbonded->pairpot.first.customEpsilon(atom["TL"].id, atom["NTR"].id, custeps);
+  nonbonded->pairpot.first.customEpsilon(atom["TL"].id, atom["HNTR"].id, custeps);
+  nonbonded->pairpot.first.customEpsilon(atom["TL"].id, atom["CTR"].id, custeps);
+  nonbonded->pairpot.first.customEpsilon(atom["TL"].id, atom["HCTR"].id, custeps);
+  //nonbonded->pairpot.customEpsilon(atom["TL"].id, atom["ARG"].id, custeps);
 
   // Markov moves and analysis
   Move::AtomicTranslation mv(mcp, pot, spc);
@@ -82,6 +88,7 @@ int main() {
 
   // Load membrane
   DesernoMembrane<Tgeometry> mem(mcp,pot,spc, nonbonded->pairpot.first, nonbonded->pairpot.first.cosattract);
+  //DesernoMembrane<Tgeometry> mem(mcp,pot,spc, nonbonded->pairpot, nonbonded->pairpot.cosattract);
 
   // Load peptide
   string polyfile = mcp.get<string>("polymer_file", "");
@@ -93,13 +100,13 @@ int main() {
   GroupMolecular pol = spc.insert( aam.particles() ); // Insert particles into Space and return matching group
   pol.name="peptide";                                 // Give the polymer an arbitrary name
   spc.enroll(pol);                                    // All groups need to be enrolled in the Space
-  for (int i=pol.front(); i<pol.back(); i++)
-    bonded->add(i, i+1, Potential::Harmonic(k,req));   // add bonds
+  //for (int i=pol.front(); i<pol.back(); i++)
+  //  bonded->add(i, i+1, Potential::Harmonic(k,req));   // add bonds
 
-  //for (size_t i=0; i<spc.p.size(); i++){
-  //  spc.p[i].charge=atom[spc.p[i].id].charge;
-  //  spc.trial[i].charge=spc.p[i].charge;
-  //}
+  for (size_t i=0; i<spc.p.size(); i++){
+    spc.p[i].charge=atom[spc.p[i].id].charge;
+    spc.trial[i].charge=spc.p[i].charge;
+  }
   tit.findSites(spc.p);  // search for titratable sites
 
   spc.load(textio::prefix+"state");                                     // load old config. from disk (if any)
@@ -146,10 +153,10 @@ int main() {
           }
           break;
         case 3:
-          if (slp_global.randOne()>0.99)
-            sys+=pt.move();
-          //  sys+=tit.move();
+          sys+=pt.move();
           break;
+        case 4:
+          sys+=tit.move();
       }
 
       // peptide-membrane distribution
@@ -160,7 +167,7 @@ int main() {
       end2end(d) += spc.geo->dist( spc.p[pol.front()], spc.p[pol.back()] );
 
       // gromacs trajectory
-      if ( slp_global.randOne()<0.01 ) {
+      if ( slp_global.randOne()<0.005 ) {
         distfile << d << "\n";
         xtc.save(textio::prefix+"traj.xtc", spc);
       }

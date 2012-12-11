@@ -33,7 +33,7 @@ namespace Faunus {
     /*!
      * Returns true if the particle either matches AX or A.
      */
-    bool EquilibriumController::processdata::one_of_us(const short &id) {
+    bool EquilibriumController::processdata::one_of_us(const particle::Tid &id) {
       if (id!=id_AX)
         if (id!=id_A)
           return false;
@@ -45,7 +45,7 @@ namespace Faunus {
      * means the energy stemming from the equilibrium expression when
      * no external interactions are accounted for (activity factors unity).
      */
-    double EquilibriumController::processdata::energy(const short &id) {
+    double EquilibriumController::processdata::energy(const particle::Tid &id) {
       if (id==id_AX)
         return mu_AX;
       if (id==id_A)
@@ -114,7 +114,7 @@ namespace Faunus {
       f.close();
 
       // update reference states
-      short i_AX,i_A, j_AX, j_A;
+      particle::Tid i_AX,i_A, j_AX, j_A;
       for (size_t i=0; i<process.size()-1; i++) {
         for (size_t j=i+1; j<process.size(); j++) {
           i_AX = process[i].id_AX;
@@ -157,7 +157,7 @@ namespace Faunus {
      * and the current state of the site. Explicit interactions with the surroundings
      * are not included.
      */
-    double EquilibriumController::intrinsicEnergy(const short &id) {
+    double EquilibriumController::intrinsicEnergy(const particle::Tid &id) {
       for (auto &p : process) 
         if ( p.one_of_us(id) )
           return p.energy(id);

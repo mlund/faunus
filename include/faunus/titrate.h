@@ -51,9 +51,9 @@ namespace Faunus {
           double ddG;                  //!< ddG = mu_A + mu_X - mu_AX
           int cnt;                     //!< number of sites for this process
           public:
-          short id_AX, id_A;           //!< Particle id's for AX and A
-          bool one_of_us(const short&);//!< Does the particle belong to this process?
-          double energy(const short&); //!< Returns intrinsic energy of particle id
+          particle::Tid id_AX, id_A;   //!< Particle id's for AX and A
+          bool one_of_us(const particle::Tid&);//!< Does the particle belong to this process?
+          double energy(const particle::Tid&); //!< Returns intrinsic energy of particle id
           double swap(particle &);     //!< Swap AX<->A and return intrinsic energy change
           void set(double,double);     //!< Set activity of X and the pKd value
           void set_mu_AX(double);      //!< Set chemical potential of species AX - mu_A then follows.
@@ -66,7 +66,7 @@ namespace Faunus {
         EquilibriumController(InputMap&, string="eq_");
         bool include(string);                    //!< Read equilibrium processes from file
         void findSites(const p_vec&);            //!< Locate all titratable sites
-        double intrinsicEnergy(const short&);    //!< Intrinsic energy of particle id (kT)
+        double intrinsicEnergy(const particle::Tid&);    //!< Intrinsic energy of particle id (kT)
         string info(char=25);                    //!< Get information string
         processdata& random(const p_vec&, int&); //!< Random titratable particle and assiciated random process
 
@@ -84,7 +84,7 @@ namespace Faunus {
       private:
         string _info();
       protected:
-        std::map<short, double> energymap;       //!< Map of intrinsic energy for titratable sites
+        std::map<particle::Tid, double> energymap;       //!< Map of intrinsic energy for titratable sites
       public:
         EquilibriumController eq;                //!< Process controller
         EquilibriumEnergy(InputMap&);

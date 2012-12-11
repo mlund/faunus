@@ -49,13 +49,12 @@ namespace Faunus {
    */
   RandomTwister::RandomTwister() : dist(0.0,1.0) {
     name="Mersenne Twister (C++ TR1)";
-    maxinv=1./(eng.max()+1.);
   }
 
   double RandomTwister::randOne() {
     double x;
     #pragma omp critical
-    x=dist(eng)*maxinv;
+    x=dist(eng);
     return x;
   }
 

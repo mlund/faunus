@@ -2,6 +2,7 @@
 #define FAU_GEOMETRY_H
 
 #ifndef SWIG
+#include <Eigen/Core>
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/slump.h>
@@ -291,6 +292,15 @@ namespace Faunus {
     void translate(const Geometrybase&, p_vec&, Point); //!< Translate a particle vector by a vector
     void cm2origo(const Geometrybase&, p_vec&); //!< Translate a particle vector so mass center is in (0,0,0)
 
+    /*!
+     \brief Geometric transform of a Point (rotation, translation...)
+     */
+    template<typename Ttransformer>
+    void transform(const Geometrybase &geo, const Ttransformer &t, Point &x) {
+      x=t*x;
+      geo.boundary(x);
+    }
+    
     /*!
      * \brief Find an empty space for a particle vector in a space of other particles
      * \author Mikael Lund

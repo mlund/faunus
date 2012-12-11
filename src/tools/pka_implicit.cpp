@@ -3,7 +3,7 @@
 using namespace Faunus;
 
 typedef Geometry::Sphere Tgeometry;
-typedef Potential::DebyeHuckelLJ Tpairpot;
+typedef Potential::DebyeHuckel Tpairpot;
 
 int main() {
   InputMap mcp("input");
@@ -19,7 +19,7 @@ int main() {
 
   Move::SwapMove tit(mcp,pot,spc);
   Analysis::ChargeMultipole poleTotal;
-  
+
   // Add molecule to middle of simulation container
   string file = mcp.get<string>("molecule", "in.aam");
   aam.load(file);
@@ -33,7 +33,7 @@ int main() {
     spc.p[i].charge=atom[spc.p[i].id].charge;
     spc.trial[i].charge=spc.p[i].charge;
   }
-  
+
   tit.findSites(spc.p);  // search for titratable sites
   spc.load("state");
 
@@ -45,13 +45,8 @@ int main() {
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int i=rand() % 1;
-      switch (i) {
-        case 0:
-          sys+=tit.move();
-          poleTotal.sample(g,spc);
-          break;
-      }
+      sys+=tit.move();
+      poleTotal.sample(g,spc);
     } // end of micro loop
 
     double utot=pot.external() + pot.g_internal(spc.p, g);
@@ -61,7 +56,7 @@ int main() {
   } // end of macro loop
 
   cout << loop.info() << sys.info() << tit.info() << g.info() << endl 
-       << textio::header("Total Charge Analysis") << poleTotal.info();
+    << textio::header("Total Charge Analysis") << poleTotal.info();
 
   pqr.save("confout.pqr", spc.p);
   spc.save("state");

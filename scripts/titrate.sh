@@ -5,7 +5,7 @@
 # using an implicit salt description.
 #
 
-faunus=$HOME/faunus/branches/ny/
+faunus=$HOME/faunus/
 pkaexe=src/tools/titrate_implicit
 base=pka
 

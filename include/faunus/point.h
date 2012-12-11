@@ -2,7 +2,7 @@
 #define FAUNUS_POINT_H
 
 #ifndef SWIG
-#include "faunus/common.h"
+#include <faunus/common.h>
 #include <Eigen/Core>
 #endif
 

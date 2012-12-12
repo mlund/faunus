@@ -348,10 +348,11 @@ namespace Faunus {
       class CigarSphereSplit : public PairPotentialBase {
         private:
           string _brief() {
-            return pairpot_cc.info() + pairpot_ss.info() + pairpot_sc.info();
+            return pairpot_cc.brief() + " "
+              + pairpot_ss.brief() + " "
+              + pairpot_sc.brief();
           }
         public:
-          //string name;
           Tcigarcigar pairpot_cc;
           Tspheresphere pairpot_ss;
           Tspherecigar pairpot_sc;
@@ -360,9 +361,11 @@ namespace Faunus {
             name="CigarSphereSplit";
           }
 
-          inline double operator() (const CigarParticle &a, const CigarParticle &b, double r2) {}
+          double operator() (const particle &a, const particle &b, double r2) const {
+            return 0;
+          }
 
-          inline double operator() (const CigarParticle &a, const CigarParticle &b, const Point &r_cm)
+          double operator() (const CigarParticle &a, const CigarParticle &b, const Point &r_cm)
           {
             if (a.length<1e-6) {
               // a sphere - b sphere
@@ -387,6 +390,10 @@ namespace Faunus {
               }
             }
             return 0;
+          }
+
+          string info(char w) {
+            return pairpot_cc.info(w) + pairpot_ss.info(w) + pairpot_sc.info(w);
           }
       };
 

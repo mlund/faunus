@@ -16,7 +16,7 @@ int main() {
 
   // Energy functions and space
   Energy::Hamiltonian pot;
-  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
+  auto nonbonded = pot.create( Energy::NonbondedVector<Tpairpot,Tgeometry>(mcp) );
   Space spc( pot.getGeometry() );
 
   // Markov moves and analysis

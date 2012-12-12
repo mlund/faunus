@@ -525,13 +525,30 @@ namespace Faunus {
     }
 
     /*!
+     * \param dir1 Direction of segment
+     * \param halfl1 Half length of segment
+     * \param Distance vector between the middle segment to point
+     */
+    Point mindist_segment2point(const Point &dir, double halfl, const Point &r_cm) {
+      double d;
+      double c = dir.dot(r_cm);
+      if (c > halfl)
+        d = halfl;
+      else {
+        if (c > -halfl) d = c;
+        else d = -halfl;
+      }
+      return -r_cm + (dir*d);
+    }
+
+    /*!
      * \param dir1 Direction of first segment
      * \param halfl1 Half length of first segment
      * \param dir2 Direction of second segment
      * \param halfl2 Half length of second segment
      * \param r_cm Distance vector between the middle of the two segments
      */
-    Point mindist_segments(const Point &dir1, double halfl1,
+    Point mindist_segment2segment(const Point &dir1, double halfl1,
         const Point &dir2, double halfl2, const Point &r_cm)
     {
       Point u = dir1 * (halfl1*2); //S1.P1 - S1.P0;

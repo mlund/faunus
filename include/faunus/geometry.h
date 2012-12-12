@@ -365,7 +365,8 @@ namespace Faunus {
      * liable for any real or imagined damage resulting from its use.
      * Users of this code must verify correctness for their application.
      */
-    Point mindist_segments(const Point&, double, const Point&, double, const Point&);
+    Point mindist_segment2segment(const Point&, double, const Point&, double, const Point&);
+    Point mindist_segment2point(const Point&, double, const Point&);
 
   }//namespace Geometry
 }//namespace Faunus

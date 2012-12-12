@@ -35,3 +35,6 @@ set_target_properties( vacha-gouychapman-temper
 fau_cigarexample(cigar "./vacha" cigar.cpp)
 set_target_properties( cigar PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
 
+fau_cigarexample(cigar-npt "./vacha" cigar-npt.cpp)
+set_target_properties( cigar-npt PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
+

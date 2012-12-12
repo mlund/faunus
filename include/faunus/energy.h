@@ -233,6 +233,159 @@ namespace Faunus {
       };
 
     /*!
+     * \brief Energy class for non-bonded interactions.
+     *
+     * Tpotential is expected to be a pair potential with the following
+     * properties:
+     * \li pair(const InputMap&);
+     * \li double pairpotconst particle&, const particle&, Point& vdist);
+     * \li double pait.tokT();
+     */
+    template<class Tpairpot, class Tgeometry>
+    class NonbondedVector : public Energybase {
+    protected:
+      string _info() {
+        return pairpot.info(25);
+      }
+    public:
+      Tgeometry geometry;
+      Tpairpot pairpot;
+      NonbondedVector(InputMap &in) : geometry(in), pairpot(in) {
+        name="Nonbonded N" + textio::squared + " - " + pairpot.name;
+        geo=&geometry;
+      }
+      
+      Geometry::Geometrybase& getGeometry() {
+        geo=&geometry;
+        return Energybase::getGeometry();
+      }
+      
+      //!< Particle-particle energy (kT)
+      inline double p2p(const particle &a, const particle &b) FOVERRIDE {
+        return pairpot( a,b,geometry.vdist(a,b))*pairpot.tokT();
+      }
+      
+      double all2p(const p_vec &p, const particle &a) FOVERRIDE {
+        double u=0;
+        for (auto &b : p)
+          u+=pairpot(a,b,geometry.vdist(a,b));
+        return u*pairpot.tokT();
+      }
+      
+      double all2all(const p_vec &p) FOVERRIDE {
+        int n=p.size();
+        double u=0;
+        for (int i=0; i<n-1; ++i)
+          for (int j=i+1; j<n; ++j)
+            u+=pairpot( p[i],p[j],geometry.vdist(p[i],p[j]) );
+        return u*pairpot.tokT();
+      }
+      
+      double i2i(const p_vec &p, int i, int j) FOVERRIDE {
+        return pairpot.tokT() * pairpot( p[i], p[j], geometry.vdist( p[i], p[j]) );
+      }
+      
+      double i2g(const p_vec &p, Group &g, int j) FOVERRIDE {
+        double u=0;
+        if ( !g.empty() ) {
+          int len=g.back()+1;
+          if ( g.find(j) ) {   //j is inside g - avoid self interaction
+            for (int i=g.front(); i<j; i++)
+              u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
+            for (int i=j+1; i<len; i++)
+              u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
+          } else              //simple - j not in g
+            for (int i=g.front(); i<len; i++)
+              u+=pairpot( p[i], p[j], geometry.vdist(p[i],p[j]));
+        }
+        return pairpot.tokT()*u;
+      }
+      
+      double i2all(const p_vec &p, int i) FOVERRIDE {
+        assert(i>=0 && i<int(p.size()) && "index i outside particle vector");
+        double u=0;
+        int n=(int)p.size();
+        for (int j=0; j<i; ++j)
+          u+=pairpot( p[i], p[j], geometry.vdist(p[i],p[j]) );
+        for (int j=i+1; j<n; ++j)
+          u+=pairpot( p[i], p[j], geometry.vdist(p[i],p[j]) );
+        return u*pairpot.tokT();
+      }
+      
+      double g2g(const p_vec &p, Group &g1, Group &g2) FOVERRIDE {
+        double u=0;
+        if (!g1.empty())
+          if (!g2.empty()) {
+            // IN CASE ONE GROUP IS A SUBGROUP OF THE OTHER
+            if (g1.find(g2.front()))
+              if (g1.find(g2.back())) {  // g2 is a subgroup of g1
+                assert(g1.size()>=g2.size());
+                for (int i=g1.front(); i<g2.front(); i++)
+                  for (auto j : g2)
+                    u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
+                for (int i=g2.back()+1; i<=g1.back(); i++)
+                  for (auto j : g2)
+                    u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
+                return pairpot.tokT()*u;
+              }
+            if (g2.find(g1.front()))
+              if (g2.find(g1.back())) {  // g1 is a subgroup of g2
+                assert(g2.size()>=g1.size());
+                for (int i=g2.front(); i<g1.front(); i++)
+                  for (auto j : g1)
+                    u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
+                for (int i=g1.back()+1; i<=g2.back(); i++)
+                  for (auto j : g1)
+                    u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
+                return pairpot.tokT()*u;
+              }
+            
+            // IN CASE BOTH GROUPS ARE INDEPENDENT (DEFAULT)
+            int ilen=g1.back()+1, jlen=g2.back()+1;
+#pragma omp parallel for reduction (+:u) schedule (dynamic)
+            for (int i=g1.front(); i<ilen; ++i)
+              for (int j=g2.front(); j<jlen; ++j)
+                u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
+          }
+        return pairpot.tokT()*u;
+      }
+      
+      double g2all(const p_vec &p, Group &g) FOVERRIDE {
+        double u=0;
+        if (!g.empty()) {
+          int ng=g.back()+1, np=p.size();
+#pragma omp parallel for reduction (+:u)
+          for (int i=g.front(); i<ng; ++i) {
+            for (int j=0; j<g.front(); j++)
+              u += pairpot( p[i], p[j], geometry.vdist(p[i],p[j]) );
+            for (int j=ng; j<np; j++)
+              u += pairpot( p[i], p[j], geometry.vdist(p[i],p[j]) );
+          }
+        }
+        return u*pairpot.tokT();
+      }
+      
+      double g_internal(const p_vec &p, Group &g) FOVERRIDE {
+        double u=0;
+        if (!g.empty()) {
+          int step=1,n=g.back()+1;
+          for (int i=g.front(); i<n-step; i++)
+            for (int j=g.front()+step*((i-g.front())/step+1); j<n; j++)
+              u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
+        }
+        return pairpot.tokT()*u;
+      }
+      
+      double v2v(const p_vec &p1, const p_vec &p2) FOVERRIDE {
+        double u=0;
+        for (auto &i : p1)
+          for (auto &j : p2)
+            u+=p2p(i,j);
+        return u;
+      }
+    };
+
+    /*!
      * \brief Nonbonded interactions with group-group cutoff
      *
      * This class re-implements the g2g energy function (group to group)

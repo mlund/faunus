@@ -188,7 +188,7 @@ namespace Faunus {
         HardSpheroCylinder(InputMap&);
         inline double operator() (const CigarParticle &p1, const CigarParticle &p2, double r2) {
           Point r_cm = geoPtr->vdist(p1,p2);
-          Point distvec = Geometry::mindist_segments(p1.dir, m[p1.id].halfl, p2.dir, m[p2.id].halfl, r_cm );
+          Point distvec = Geometry::mindist_segment2segment(p1.dir, m[p1.id].halfl, p2.dir, m[p2.id].halfl, r_cm );
           double mindist=p1.radius+p2.radius;
           if ( distvec.dot(distvec) < mindist*mindist)
             return pc::infty;
@@ -339,7 +339,56 @@ namespace Faunus {
           x=x*x*x;// (s/r)^6
           return eps[a.id][b.id]*(x*x - x + onefourth);
         }
+        inline double operator() (const particle &a, const particle &b, const Point &r) const {
+          return operator()(a,b,r.squaredNorm());
+        }
     };
+
+    template<typename Tcigarcigar, typename Tspheresphere, typename Tspherecigar>
+      class CigarSphereSplit : public PairPotentialBase {
+        private:
+          string _brief() {
+            return pairpot_cc.info() + pairpot_ss.info() + pairpot_sc.info();
+          }
+        public:
+          //string name;
+          Tcigarcigar pairpot_cc;
+          Tspheresphere pairpot_ss;
+          Tspherecigar pairpot_sc;
+
+          CigarSphereSplit(InputMap &in) : pairpot_cc(in), pairpot_ss(in), pairpot_sc(in){
+            name="CigarSphereSplit";
+          }
+
+          inline double operator() (const CigarParticle &a, const CigarParticle &b, double r2) {}
+
+          inline double operator() (const CigarParticle &a, const CigarParticle &b, const Point &r_cm)
+          {
+            if (a.length<1e-6) {
+              // a sphere - b sphere
+              if (b.length<1e-6) {
+                return pairpot_ss(a,b,r_cm.squaredNorm());
+              }
+              // a sphere - b cigar
+              else {
+                Point rclose=Geometry::mindist_segment2point(b.dir, 0.5*b.length, r_cm);
+                return pairpot_sc(a,b,rclose);
+              }
+            } else {
+              // a cigar - b sphere
+              if (b.length<1e-6) {
+                Point rclose=Geometry::mindist_segment2point(a.dir, 0.5*a.length, r_cm);
+                return pairpot_sc(a,b,rclose);
+              }
+              // a cigar - b cigar
+              else {
+                Point rclose=Geometry::mindist_segment2segment(a.dir, 0.5*a.length, b.dir, 0.5*b.length, r_cm);
+                return pairpot_cc(a,b,rclose);
+              }
+            }
+            return 0;
+          }
+      };
 
     /*!
      * \brief Square well pair potential
@@ -544,20 +593,20 @@ namespace Faunus {
      * \li \c excess_polarization for the delta value
      */
     class ChargeNonpolar : public Coulomb {
-    private:
-      double c;
-    public:
-      ChargeNonpolar(InputMap&); //!< Construction from InputMap
-      inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-        if ( abs(a.charge)>1e-6 )
-          return -c * a.charge * a.charge / (r2*r2) * (b.radius*b.radius*b.radius);
-        else if ( abs(b.charge)>1e-6 )
-          return -c * b.charge * b.charge / (r2*r2) * (a.radius*a.radius*a.radius);
-        return 0;
-      }
-      string info(char);
+      private:
+        double c;
+      public:
+        ChargeNonpolar(InputMap&); //!< Construction from InputMap
+        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+          if ( abs(a.charge)>1e-6 )
+            return -c * a.charge * a.charge / (r2*r2) * (b.radius*b.radius*b.radius);
+          else if ( abs(b.charge)>1e-6 )
+            return -c * b.charge * b.charge / (r2*r2) * (a.radius*a.radius*a.radius);
+          return 0;
+        }
+        string info(char);
     };
-    
+
     /*!
      * \brief Debye-Huckel/Yukawa pair potential
      * \details This potential is similar to the plain Coulomb potential but with an extra exponential term to described salt screening:

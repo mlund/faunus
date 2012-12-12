@@ -109,6 +109,8 @@ namespace Faunus {
 
       void rotate(Geometry::VectorRotate&);
 
+      inline CigarParticle() : length(0) {}
+
       CigarParticle operator+(const Point&) const;
       CigarParticle& operator=(const Point&);
       CigarParticle& operator=(const AtomData&);

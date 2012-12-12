@@ -154,9 +154,6 @@ namespace Faunus {
     class AtomicTranslation : public Movebase {
       private:
         typedef std::map<short, Average<double> > map_type;
-        map_type accmap; //!< Single particle acceptance map
-        map_type sqrmap; //!< Single particle mean square displacement map
-
         string _info();
         void _trialMove();
         void _acceptMove();
@@ -164,6 +161,9 @@ namespace Faunus {
         double _energyChange();
         bool run() const;                //!< Runfraction test
       protected:
+        map_type accmap; //!< Single particle acceptance map
+        map_type sqrmap; //!< Single particle mean square displacement map
+
         int iparticle;   //!< Select single particle to move (-1 if none, default)
         Group* igroup;   //!< Group pointer in which particles are moved randomly (NULL if none, default)
         double genericdp;//!< Generic atom displacement parameter - ignores individual dps
@@ -183,6 +183,7 @@ namespace Faunus {
     class AtomicRotation : public AtomicTranslation {
       private:
         void _trialMove();
+        string _info();
         Geometry::QuaternionRotate rot;
       public:
         AtomicRotation(InputMap&, Energy::Energybase&, Space&, string="rot_particle");

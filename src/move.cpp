@@ -275,10 +275,10 @@ namespace Faunus {
         gsize += igroup->size();
       }
       if (iparticle>-1) {
+        assert(iparticle<(int)spc->p.size() && "Trial particle out of range");
         double dprot = atom[ spc->p[iparticle].id ].dprot;
         if (dprot<1e-6)
           dprot = genericdp;
-        assert(iparticle<(int)spc->p.size() && "Trial particle out of range");
 
         Point u;
         u.ranunit(slp_global);
@@ -287,6 +287,34 @@ namespace Faunus {
       }
     }
 
+    string AtomicRotation::_info() {
+      std::ostringstream o;
+      if (gsize.cnt>0)
+        o << pad(SUB,w,"Average moves/particle") << cnt / gsize.avg() << endl;
+      if (genericdp>1e-6)
+        o << pad(SUB,w,"Generic displacement") << genericdp << _angstrom << endl;
+      if (cnt>0) {
+        char l=12;
+        o << endl
+          << indent(SUB) << "Individual particle rotation:" << endl << endl
+          << indent(SUBSUB) << std::left << string(7,' ')
+          << setw(l-6) << "dp"
+          << setw(l+1) << "Acc. "+percent
+          << setw(l+7) << bracket("r"+squared)+"/"+angstrom+squared
+          << rootof+bracket("r"+squared)+"/"+angstrom << endl;
+        for (auto m : sqrmap) {
+          particle::Tid id=m.first;
+          o << indent(SUBSUB) << std::left << setw(7) << atom[id].name
+            << setw(l-6) << ( (atom[id].dprot<1e-6) ? genericdp : atom[id].dp);
+          o.precision(3);
+          o << setw(l) << accmap[id].avg()*100
+            << setw(l) << sqrmap[id].avg()
+            << setw(l) << sqrt(sqrmap[id].avg()) << endl;
+        }
+      }
+      return o.str();
+    }
+ 
     TranslateRotate::TranslateRotate(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Group Rotation/Translation";
       igroup=nullptr;

@@ -139,11 +139,13 @@ namespace Faunus {
    *****************************/
 
   void CigarParticle::rotate(Geometry::VectorRotate &rot) {    
-    rot.rotate(dir);
-    rot.rotate(patchdir);
-    rot.rotate(patchsides[0]);
-    rot.rotate(patchsides[1]);
-    rot.rotate(chdir);
+    if (length>1e-6) {
+      dir = rot.rotate(dir);
+      patchdir = rot.rotate(patchdir);
+      patchsides[0] = rot.rotate(patchsides[0]);
+      patchsides[1] = rot.rotate(patchsides[1]);
+      chdir = rot.rotate(chdir);
+    }
   }
 
   CigarParticle CigarParticle::operator+(const Point &p) const {

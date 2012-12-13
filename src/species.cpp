@@ -18,6 +18,7 @@ namespace Faunus {
     mean=0;
     variance=0;
     hydrophobic=0;
+    patchtype=0;  
     name="UNK";
   }
 

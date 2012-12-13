@@ -139,7 +139,7 @@ namespace Faunus {
    *****************************/
 
   void CigarParticle::rotate(Geometry::VectorRotate &rot) {    
-    if (length>1e-6) {
+    if (halfl>1e-6) {
       dir = rot.rotate(dir);
       patchdir = rot.rotate(patchdir);
       patchsides[0] = rot.rotate(patchsides[0]);

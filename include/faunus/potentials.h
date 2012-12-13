@@ -343,7 +343,211 @@ namespace Faunus {
           return operator()(a,b,r.squaredNorm());
         }
     };
+    
+    class cos2 : public PairPotentialBase {
+    private:
+          string _brief();
+          void _setScale(double);
+    protected:
+ 
+      public:
+           //TODO cutoff, epsilon, pdist, pswitch!!!
+          cos2();
+          cos2(InputMap&, string="cos2_");
+          inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+              double atrenergy;
+              double ndist=sqrt(r2);
+              if (ndist < atom.list[a.id].pdis.....) 
+                  atrenergy = -interact->param->epsilon;
+              else {
+                  atrenergy = cos(PIH*(ndist-interact->param->pdis)/interact->param->pswitch);
+                  atrenergy *= -interact->param->epsilon*atrenergy;
+                  
+              }
+              return atrenergy;
+          }
+          string info(char);
+      };  
+      //TODO spherocylinder at external wall!!!
+      
+     inline double fanglscale(double a, const CigarParticle &p){
+          /* a = r_ij * n_i */
+          double f;
+          if (a <= p.pcanglsw) 
+              f=0.0;
+          else {
+              if (a >= p.pcangl) 
+                  f=1.0;
+              else {
+                  f = 0.5 - ((p.pcanglsw + p.pcangl)*0.5 - a )/(p.pcangl - p.pcanglsw);
+              }
+          }
+          return f;
+      }; 
+      
+    template<typename Tcigarsphere >  
+      class PatchyCigarSphere : public PairPotentialBase {
+      private:
+          string _brief() {
+              return pairpot.brief();
+          }
+      public:
+          Tcigarsphere pairpot;
+          
+          double operator() (const CigarParticle &a, const CigarParticle &b, const Point &r_cm) {
+              //0- isotropic, 1-PSC all-way patch,2 -CPSC cylindrical patch
+              //b is sphere, a is spherocylinder
+              double atrenergy, s, t, f0, f1, contt;
+              Point vec1,distvec;
+              
+              assert( a.halfl < 1e-6 && "First should be cigar then sphere, not opposite!");
+              double c = a.dir.dot(r_cm);
+              if (c > a.halfl)
+                  contt = a.halfl;
+              else {
+                  if (c > -a.halfl) contt = c;
+                  else contt = -a.halfl;
+              }
+              distvec = -r_cm + (a.dir*contt);
+              
+              if (atom.list[a.id].patchtype ==0 ) {
+                  if (atom.list[b.id].patchtype == 0) {
+                      return pairpot_sc(a,b,distvec.dot(distvec));
+                  }
+              }
+              
+              /*scaling function: angular dependence of patch1*/
+              vec1=Geometry::vec_perpproject(distvec, a.dir);
+              vec1.normalize();
+              s = vec1.dot(a.patchdir);
+              f1 = fanglscale(s,a);
 
+              /*scaling function for the length of spherocylinder within cutoff*/
+              
+              t = sqrt(rcut*rcut-dist*dist);//TODO cutoff
+              if ( contt + t > a.halfl ) 
+                  f0 = a.halfl;
+              else 
+                  f0 = contt + b;
+              if ( contt - t < -a.halfl ) 
+                  f0 -= -a.halfl;
+              else 
+                  f0 -= contt - t;
+              
+              return pairpot(a,b,ndist)*f1*(f0+1.0);
+
+          }
+      };
+      
+    template<typename Tcigarcigar>  
+      class PatchyCigarCigar : public PairPotentialBase {
+      private:
+          string _brief() {
+              return pairpot.brief();
+          }
+      public:
+          Tcigarcigar pairpot;
+          
+          double operator() (const CigarParticle &a, const CigarParticle &b, const Point &r_cm) {
+              //0- isotropic, 1-PSC all-way patch,2 -CPSC cylindrical patch
+              if (atom.list[a.id].patchtype >0 ) {
+                  if (atom.list[b.id].patchtype > 0) {
+                      //patchy sc with patchy sc
+                          int i, intrs;
+                          double rcut, atrenergy, ndistsq;
+                          double v1, v2, f0, f1, f2, T1, T2, S1, S2,s;
+                          double intersections[5];
+                          Point vec1, vec2, vec_intrs, vec_mindist;
+                          
+                          rcut = interact->param->rcut;//TODO cutoff
+                          for(i=0;i<5;i++) 
+                              intersections[i]=0;
+                          /*1- do intersections of spherocylinder2 with patch of spherocylinder1 at. 
+                           cut distance C*/
+                          if (atom.list[a.id].patchtype == 1) {
+                              intrs=Geometry::psc_intersect(a,b,r_cm, intersections, rcut);
+                          } else {
+                              if (atom.list[a.id].patchtype == 2) {
+                                  intrs=Geometry::cpsc_intersect(a,b,r_cm, intersections, rcut);
+                              } else {
+                                  //we dont have anything like this
+                              }
+                          }
+                          if (intrs ==0){ 
+                              return 0.0; /*sc is all outside patch, attractive energy is 0*/
+                          }
+                          T1=intersections[0]; /*points on sc2*/
+                          T2=intersections[1];
+                          /*2- now do the same oposite way psc1 in patch of psc2*/
+                          for(i=0;i<5;i++) 
+                              intersections[i]=0;
+                          if (atom.list[a.id].patchtype == 1) {
+                              intrs=Geometry::psc_intersect(b,a,-r_cm, intersections, rcut);
+                          } else {
+                              if (atom.list[a.id].patchtype == 2) {
+                                  intrs=Geometry::cpsc_intersect(b,a,-r_cm, intersections, rcut);
+                              } else {
+                                  //we dont have anything like this
+                              }
+                          }
+                          if (intrs ==0) {
+                              return 0.0; /*sc is all outside patch, attractive energy is 0*/          
+                          }
+                          S1=intersections[0]; /*points on sc1*/
+                          S2=intersections[1];
+                          
+                          /*3a- with two intersection pices calculate vector between their CM 
+                           -this is for angular orientation*/
+                          v1=fabs(S1-S2);
+                          v2=fabs(T1-T2);
+                          vec1=a.dir*(S1+S2)*0.5;
+                          vec2=b.dir*(T1+T2)*0.5;
+                          vec_intrs=vec2-vec1-r_cm;
+                          /*vec_intrs should be from sc1 to sc2*/
+                          
+                          /*3b - calculate closest distance attractive energy from it*/
+                          vec_mindist = Geometry::mindist_segment2segment(a.dir,v1,b.dir,v2,vec_intrs);
+                          ndistsq=vec_mindist.dot(vec_mindist));
+                         
+                          /*4- scaling function1: dependence on the length of intersetions*/
+                          //F0=(V1+V2)*0.5/interact->param->sigma;
+                          f0=(v1+v2)*0.5+1.0;
+                          /*5- scaling function2: angular dependence of patch1*/
+                          vec1=Geometry::vec_perpproject(vec_intrs, a.dir);
+                          vec1.normalize();
+                          s = vec1.dot(a.patchdir);
+                          f1 = fanglscale(s,interact->param, 0);
+                          
+                          /*6- scaling function3: angular dependence of patch2*/
+                          vec1=Geometry::vec_perpproject(-vec_scale, b.dir);
+                          vec1.normalize();
+                          s = vec1.dot(b.patchdir);
+                          f2 = fanglscale(s,interact->param, 1);
+                          
+                          /*7- put it all together and output scale*/
+                          return f0*f1*f2*pairpot(a,b,ndistsq);
+                  }
+                  else {
+                      //patchy sc with isotropic sc
+                      //we dont have at the moment
+                  }
+              } else {
+                  if (atom.list[b.id].patchtype > 0) {
+                      //isotropic sc with patchy sc
+                      //we dont have at the moment
+                  }
+                  else {
+                      //isotropic sc with isotropic sc
+                      Point rclose=Geometry::mindist_segment2segment(a.dir, a.halfl, b.dir, b.halfl, r_cm);
+                      return pairpot(a,b,rclose);
+                  }
+                  
+              }  
+              //something we have not implemented
+              return 0.0;
+          }
+      };
+      
     template<typename Tcigarcigar, typename Tspheresphere, typename Tspherecigar>
       class CigarSphereSplit : public PairPotentialBase {
         private:
@@ -367,26 +571,29 @@ namespace Faunus {
 
           double operator() (const CigarParticle &a, const CigarParticle &b, const Point &r_cm)
           {
-            if (a.length<1e-6) {
+            if (a.halfl<1e-6) {
               // a sphere - b sphere
-              if (b.length<1e-6) {
+              if (b.halfl<1e-6) {
                 return pairpot_ss(a,b,r_cm.squaredNorm());
               }
               // a sphere - b cigar
               else {
-                Point rclose=Geometry::mindist_segment2point(b.dir, 0.5*b.length, r_cm);
-                return pairpot_sc(a,b,rclose);
+                  //PatchyCigarSphere(b,a)
+                //Point rclose=Geometry::mindist_segment2point(b.dir, b.halfl, r_cm);
+                //return pairpot_sc(a,b,rclose);
               }
             } else {
               // a cigar - b sphere
-              if (b.length<1e-6) {
-                Point rclose=Geometry::mindist_segment2point(a.dir, 0.5*a.length, r_cm);
-                return pairpot_sc(a,b,rclose);
+              if (b.halfl<1e-6) {
+                  //PatchyCigarSphere(a,b)
+                //Point rclose=Geometry::mindist_segment2point(a.dir, a.halfl, r_cm);
+                //return pairpot_sc(a,b,rclose);
               }
               // a cigar - b cigar
               else {
-                Point rclose=Geometry::mindist_segment2segment(a.dir, 0.5*a.length, b.dir, 0.5*b.length, r_cm);
-                return pairpot_cc(a,b,rclose);
+                  //PatchyCigarCigar
+                  //Point rclose=Geometry::mindist_segment2segment(a.dir, a.halfl, b.dir, b.halfl, r_cm);
+                  //return pairpot_cc(a,b,rclose);
               }
             }
             return 0;

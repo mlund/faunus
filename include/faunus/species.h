@@ -23,6 +23,7 @@ namespace Faunus {
              dprot,      //!< Rotational displacement parameter
              mean,       //!< Mean value... (charge, sasa, etc.)
              variance;   //!< ...and the spread around it.
+      short int patchtype;  //!< Type of patch
       particle::Thydrophobic hydrophobic;  //!< Are we hydrophobic?
       string name;       //!< Name. Avoid spaces.
       bool operator==(const AtomData &d) const { return (*this==d); }

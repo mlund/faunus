@@ -507,6 +507,50 @@ namespace Faunus {
     double MultipoleEnergy::dipdip(const Point &a, const Point &b, double r) {
       return lB*( a.x()*b.x() + a.y()*b.y() - 2*a.z()*b.z() ) / (r*r*r);
     }
+      
+      
+      double PatchSCsphere::eattractive_sc_sphere(const Point &a, const Point &b, const Point r_cm) {
+          double atrenergy, a, b, f0, halfl;
+          struct vector vec1;
+          
+          //TODO if we dont have calculate distance segment to point - distvec a dist a contt point
+          
+          /*calculate closest distance attractive energy*/
+          if (dist < interact->param->pdis)
+              atrenergy = -interact->param->epsilon;
+          else {
+              atrenergy = cos(PIH*(interact->dist-interact->param->pdis)/interact->param->pswitch);
+              atrenergy *= -atrenergy*interact->param->epsilon ;
+          }
+          /*scaling function: angular dependence of patch1*/
+          if (b.halfl < 1e-6) {
+              which = 0;
+              vec1=vec_perpproject(distvec, a.dir);
+              vec1.normalize();
+              a = vec1.dot(a.patchdir);
+              halfl=a.halfl;
+          } else {
+              which = 1;
+              vec1=vec_perpproject(distvec, b.dir);
+              vec1.normalize();
+              a = vec1.dot(b.patchdir);
+              halfl=b.halfl;
+          }
+          /*scaling function for the length of spherocylinder within cutoff*/
+          
+          b = sqrt(rcut*rcut-dist*dist);
+          if ( contt + b > halfl ) 
+              f0 = halfl;
+          else 
+              f0 = contt + b;
+          if ( contt - b < -halfl ) 
+              f0 -= -halfl;
+          else 
+              f0 -= interact->contt - b;
+          atrenergy *= fanglscale(a,interact->param, which)*(f0+1.0);
+          
+          return atrenergy;
+      }//TODO atrenergy from ndist, cutoff rcut at the beginning, epsilon atd
 
   } //Potential namespace
 

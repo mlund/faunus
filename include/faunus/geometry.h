@@ -3,6 +3,7 @@
 
 #ifndef SWIG
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/slump.h>
@@ -367,7 +368,20 @@ namespace Faunus {
      */
     Point mindist_segment2segment(const Point&, double, const Point&, double, const Point&);
     Point mindist_segment2point(const Point&, double, const Point&);
-
+      
+      inline Point vec_perpproject(const Point &A, const Point &B) {
+          Point x;
+          x=A - B* (A.dot(B));
+          return x;
+      }; 
+      int test_intrpatch(const CigarParticle &, Point &, double , double , double [5]);
+      int find_intersect_plane(const CigarParticle &, const CigarParticle &, const Point &, const Point &, double , double , double [5]);
+      int find_intersect_planec(const CigarParticle &, const CigarParticle &, const Point &, const Point &, double , double , double [5]);
+      int psc_intersect(const CigarParticle &, const CigarParticle &, const Point &, double [5], double );  
+      int cpsc_intersect(const CigarParticle &, const CigarParticle &,const Point &, double [5], double );
+      
+      
+      
   }//namespace Geometry
 }//namespace Faunus
 #endif

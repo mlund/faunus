@@ -373,7 +373,7 @@ namespace Faunus {
           Point x;
           x=A - B* (A.dot(B));
           return x;
-      }; 
+      }
       int test_intrpatch(const CigarParticle &, Point &, double , double , double [5]);
       int find_intersect_plane(const CigarParticle &, const CigarParticle &, const Point &, const Point &, double , double , double [5]);
       int find_intersect_planec(const CigarParticle &, const CigarParticle &, const Point &, const Point &, double , double , double [5]);

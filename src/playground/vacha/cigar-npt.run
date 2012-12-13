@@ -5,6 +5,7 @@
 #-----------------------------------------------------------
 echo "
 Atom  CI      +0     0.5    0.1    1       no
+Atom  CE      +0     0.5    0.1    1       no
 " > cigar-npt.atoms
 
 #-----------------------------------------------------------
@@ -16,7 +17,7 @@ loop_macrosteps        10
 loop_microsteps        5000
 cuboid_len             200     # Box side length Angstrom
 temperature            298     # Kelvin
-npt_P                  500013.2   # mM
+npt_P                  50000013.2   # mM
 npt_dV                 2       # log(dV)
 tion1                  CI
 nion1                  100

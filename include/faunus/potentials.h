@@ -343,7 +343,8 @@ namespace Faunus {
           return operator()(a,b,r.squaredNorm());
         }
     };
-    
+   
+    /*
     class cos2 : public PairPotentialBase {
     private:
           string _brief();
@@ -368,10 +369,12 @@ namespace Faunus {
           }
           string info(char);
       };  
+      */
       //TODO spherocylinder at external wall!!!
-      
+     
+    /*
      inline double fanglscale(double a, const CigarParticle &p){
-          /* a = r_ij * n_i */
+          // a = r_ij * n_i
           double f;
           if (a <= p.pcanglsw) 
               f=0.0;
@@ -383,8 +386,10 @@ namespace Faunus {
               }
           }
           return f;
-      }; 
-      
+      }
+    */
+     
+    /*
     template<typename Tcigarsphere >  
       class PatchyCigarSphere : public PairPotentialBase {
       private:
@@ -416,13 +421,13 @@ namespace Faunus {
                   }
               }
               
-              /*scaling function: angular dependence of patch1*/
+              // scaling function: angular dependence of patch1
               vec1=Geometry::vec_perpproject(distvec, a.dir);
               vec1.normalize();
               s = vec1.dot(a.patchdir);
               f1 = fanglscale(s,a);
 
-              /*scaling function for the length of spherocylinder within cutoff*/
+              // scaling function for the length of spherocylinder within cutoff
               
               t = sqrt(rcut*rcut-dist*dist);//TODO cutoff
               if ( contt + t > a.halfl ) 
@@ -438,7 +443,10 @@ namespace Faunus {
 
           }
       };
-      
+      */
+
+
+    /*  
     template<typename Tcigarcigar>  
       class PatchyCigarCigar : public PairPotentialBase {
       private:
@@ -462,8 +470,8 @@ namespace Faunus {
                           rcut = interact->param->rcut;//TODO cutoff
                           for(i=0;i<5;i++) 
                               intersections[i]=0;
-                          /*1- do intersections of spherocylinder2 with patch of spherocylinder1 at. 
-                           cut distance C*/
+                          //1- do intersections of spherocylinder2 with patch of spherocylinder1 at. 
+                          // cut distance C
                           if (atom.list[a.id].patchtype == 1) {
                               intrs=Geometry::psc_intersect(a,b,r_cm, intersections, rcut);
                           } else {
@@ -474,11 +482,11 @@ namespace Faunus {
                               }
                           }
                           if (intrs ==0){ 
-                              return 0.0; /*sc is all outside patch, attractive energy is 0*/
+                              return 0.0; //sc is all outside patch, attractive energy is 0
                           }
-                          T1=intersections[0]; /*points on sc2*/
+                          T1=intersections[0]; //points on sc2
                           T2=intersections[1];
-                          /*2- now do the same oposite way psc1 in patch of psc2*/
+                          //2- now do the same oposite way psc1 in patch of psc2
                           for(i=0;i<5;i++) 
                               intersections[i]=0;
                           if (atom.list[a.id].patchtype == 1) {
@@ -491,40 +499,40 @@ namespace Faunus {
                               }
                           }
                           if (intrs ==0) {
-                              return 0.0; /*sc is all outside patch, attractive energy is 0*/          
+                              return 0.0; //sc is all outside patch, attractive energy is 0          
                           }
-                          S1=intersections[0]; /*points on sc1*/
+                          S1=intersections[0]; //points on sc1
                           S2=intersections[1];
                           
-                          /*3a- with two intersection pices calculate vector between their CM 
-                           -this is for angular orientation*/
+                          //3a- with two intersection pices calculate vector between their CM 
+                           -this is for angular orientation
                           v1=fabs(S1-S2);
                           v2=fabs(T1-T2);
                           vec1=a.dir*(S1+S2)*0.5;
                           vec2=b.dir*(T1+T2)*0.5;
                           vec_intrs=vec2-vec1-r_cm;
-                          /*vec_intrs should be from sc1 to sc2*/
+                          //vec_intrs should be from sc1 t sc2
                           
-                          /*3b - calculate closest distance attractive energy from it*/
+                          //3b - calculate closest distance attractive energy from it
                           vec_mindist = Geometry::mindist_segment2segment(a.dir,v1,b.dir,v2,vec_intrs);
                           ndistsq=vec_mindist.dot(vec_mindist));
                          
-                          /*4- scaling function1: dependence on the length of intersetions*/
+                          //4- scaling function1: dependence on the length of intersetions
                           //F0=(V1+V2)*0.5/interact->param->sigma;
                           f0=(v1+v2)*0.5+1.0;
-                          /*5- scaling function2: angular dependence of patch1*/
+                          //5- scaling function2: angular dependence of patch1
                           vec1=Geometry::vec_perpproject(vec_intrs, a.dir);
                           vec1.normalize();
                           s = vec1.dot(a.patchdir);
                           f1 = fanglscale(s,interact->param, 0);
                           
-                          /*6- scaling function3: angular dependence of patch2*/
+                          //6- scaling function3: angular dependence of patch2
                           vec1=Geometry::vec_perpproject(-vec_scale, b.dir);
                           vec1.normalize();
                           s = vec1.dot(b.patchdir);
                           f2 = fanglscale(s,interact->param, 1);
                           
-                          /*7- put it all together and output scale*/
+                          //7- put it all together and output scale
                           return f0*f1*f2*pairpot(a,b,ndistsq);
                   }
                   else {
@@ -547,7 +555,7 @@ namespace Faunus {
               return 0.0;
           }
       };
-      
+      */
     template<typename Tcigarcigar, typename Tspheresphere, typename Tspherecigar>
       class CigarSphereSplit : public PairPotentialBase {
         private:

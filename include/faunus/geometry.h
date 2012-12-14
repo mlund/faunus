@@ -100,16 +100,18 @@ namespace Faunus {
      *
      *  \author Chris Evers
      *  \date Lund, nov 2010
-      */
+     */
     class Cuboid : public Geometrybase {
       private:
         string _info(char);                      //!< Return info string
         void _setVolume(double);
         double _getVolume() const;
+        enum scaletype {XYZ,XY};
+        scaletype scaledir;                      //!< Scale directions for pressure scaling
       protected:
         Point len_inv;                           //!< Inverse sidelengths
       public:
-        Cuboid(InputMap&);                       //!< Read input parameters
+        Cuboid(InputMap&);                       //!< Construct from input file
         bool setlen(Point);                      //!< Reset Cuboid sidelengths
         Point len;                               //!< Sidelengths
         Point len_half;                          //!< Half sidelength
@@ -294,14 +296,14 @@ namespace Faunus {
     void cm2origo(const Geometrybase&, p_vec&); //!< Translate a particle vector so mass center is in (0,0,0)
 
     /*!
-     \brief Geometric transform of a Point (rotation, translation...)
-     */
+      \brief Geometric transform of a Point (rotation, translation...)
+      */
     template<typename Ttransformer>
-    void transform(const Geometrybase &geo, const Ttransformer &t, Point &x) {
-      x=t*x;
-      geo.boundary(x);
-    }
-    
+      void transform(const Geometrybase &geo, const Ttransformer &t, Point &x) {
+        x=t*x;
+        geo.boundary(x);
+      }
+
     /*!
      * \brief Find an empty space for a particle vector in a space of other particles
      * \author Mikael Lund
@@ -368,20 +370,20 @@ namespace Faunus {
      */
     Point mindist_segment2segment(const Point&, double, const Point&, double, const Point&);
     Point mindist_segment2point(const Point&, double, const Point&);
-      
-      inline Point vec_perpproject(const Point &A, const Point &B) {
-          Point x;
-          x=A - B* (A.dot(B));
-          return x;
-      }
-      int test_intrpatch(const CigarParticle &, Point &, double , double , double [5]);
-      int find_intersect_plane(const CigarParticle &, const CigarParticle &, const Point &, const Point &, double , double , double [5]);
-      int find_intersect_planec(const CigarParticle &, const CigarParticle &, const Point &, const Point &, double , double , double [5]);
-      int psc_intersect(const CigarParticle &, const CigarParticle &, const Point &, double [5], double );  
-      int cpsc_intersect(const CigarParticle &, const CigarParticle &,const Point &, double [5], double );
-      
-      
-      
+
+    inline Point vec_perpproject(const Point &A, const Point &B) {
+      Point x;
+      x=A - B* (A.dot(B));
+      return x;
+    }
+    int test_intrpatch(const CigarParticle &, Point &, double , double , double [5]);
+    int find_intersect_plane(const CigarParticle &, const CigarParticle &, const Point &, const Point &, double , double , double [5]);
+    int find_intersect_planec(const CigarParticle &, const CigarParticle &, const Point &, const Point &, double , double , double [5]);
+    int psc_intersect(const CigarParticle &, const CigarParticle &, const Point &, double [5], double );  
+    int cpsc_intersect(const CigarParticle &, const CigarParticle &,const Point &, double [5], double );
+
+
+
   }//namespace Geometry
 }//namespace Faunus
 #endif

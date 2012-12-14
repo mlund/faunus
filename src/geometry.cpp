@@ -120,14 +120,23 @@ namespace Faunus {
       return (a.x()*a.x()+a.y()*a.y()+a.z()*a.z() > r2) ? true:false;
     }
 
-    //
-    //--- Cuboid geometry ---
-    //
-
+    /*!
+     The InputMap is scanned for the following parameters:
+     \li \c cuboid_len Uniform sidelength (A). If negative, continue to...
+     \li \c cuboid_xlen x sidelength (A)
+     \li \c cuboid_ylen y sidelength (A)
+     \li \c cuboid_zlen z sidelength (A)
+     \li \c cuboid_scaledir Isobaric scaling directions (XYZ=isotropic, XY=xy only).
+     */
     Cuboid::Cuboid(InputMap &in) {
       name="Cuboid";
+      string scaledirstr = in.get<string>("cuboid_scaledir","XYZ");
+      if (scaledirstr=="XY")
+        scaledir=XY;
+      else
+        scaledir=XYZ;
       double cubelen=in.get<double>("cuboid_len",-1, name+" sidelength (AA)");
-      if (cubelen<=0) {
+      if (cubelen<1e-6) {
         len.x()=in.get<double>("cuboid_xlen",0);
         len.y()=in.get<double>("cuboid_ylen",0);
         len.z()=in.get<double>("cuboid_zlen",0);
@@ -163,7 +172,8 @@ namespace Faunus {
     string Cuboid::_info(char w) {
       std::ostringstream o;
       o << pad(SUB,w, "Sidelengths")
-        << len.x() << " x " << len.y() << " x " << len.z() << " ("+textio::angstrom+")" << endl;
+        << len.x() << " x " << len.y() << " x " << len.z() << " ("+textio::angstrom+")" << endl
+        << pad(SUB,w, "Scale directions") << (scaledir==XY ? "XY" : "XYZ") << endl;
       return o.str();
     }
 
@@ -215,7 +225,13 @@ namespace Faunus {
 
     void Cuboid::scale(Point &a, const double &newvolume) const {
       assert( getVolume()>0 && newvolume>0 );
-      a = a * std::pow( newvolume/getVolume(), 1/3.);
+      if (scaledir==XYZ)
+        a = a * std::pow( newvolume/getVolume(), 1/3.);
+      if (scaledir==XY) {
+        double s=sqrt(newvolume/getVolume());
+        a.x() *= len.x() * s;
+        a.y() *= len.y() * s;
+      }
     }
 
     Cuboidslit::Cuboidslit(InputMap &in) : Cuboid(in) {
@@ -431,7 +447,7 @@ namespace Faunus {
       assert(!"Timeout - found no space for particle(s).");
       return false;
     }
-    
+
     VectorRotate::~VectorRotate() {}
 
     /*!
@@ -479,7 +495,7 @@ namespace Faunus {
       geoPtr->boundary(p);
       return p;
     }
-   
+
     /*!
      * \brief Quaternion rotation
      */
@@ -626,440 +642,438 @@ namespace Faunus {
       //vec.z = u.z*sc + w.z - v.z*tc;
       return u*sc + w - v*tc;
     }    
-      
-      /*!
-       \brief Calculates intersections of spherocylinder2 with a all-way patch of spherocylinder1 and return them (PSC)
-       */
-      int psc_intersect(const CigarParticle &part1, const CigarParticle &part2, const Point &r_cm, double intersections[5], double rcut)
-      
-      {
-          int intrs;
-          double a, b, c, d, e, x1, x2, rcut2;
-          Point cm21, vec1, vec2, vec3, vec4;          
-          
-          intrs=0;
-          rcut2=rcut*rcut;
-          /*1- do intersections of spherocylinder2 with patch of spherocylinder1 at 
-           cut distance C*/
-          /*1a- test intersection with half planes of patch and look how far they are 
-           from spherocylinder. If closer then C  we got itersection*/
-          
-          /* plane1 */
-          /* find intersections of part2 with plane by par1 and patchsides[0] */
-          intrs+=find_intersect_plane(part1,part2,r_cm,part1.patchsides[0],rcut,part1.pcanglsw,intersections);
-          //	    printf("plane1 %d\n", intrs);
-          /* plane2 */
-          /* find intersections of part2 with plane by par1 and patchsides[1] */
-          intrs+=find_intersect_plane(part1,part2,r_cm,part1.patchsides[1],rcut,part1.pcanglsw,intersections);
-          
-          if ( (intrs == 2 ) && (part1.pcanglsw <0) ) {
-              fprintf (stderr, "ERROR: Patch is larger than 180 degrees and we are getting two segments - this hasnot been programed yet.\n\n");
-              exit (1);
-          }
-          //	    printf("plane2 %d\n", intrs);
-          
-          /*1b- test intersection with cylinder - it is at distance C*/
-          if (intrs < 2 )  {
-              cm21=-r_cm;
-              vec1=cm21.cross(part1.dir);
-              vec2=part2.dir.cross(part1.dir);
-              a = vec2.dot(vec2);
-              b = 2*vec1.dot(vec2);
-              c = -rcut*rcut + vec1.dot(vec1);
-              d = b*b - 4*a*c;
-              if ( d >= 0) { /*there is intersection with infinite cylinder */
-                  x1 = (-b+sqrt(d))*0.5/a;/*parameter on line of SC2 determining intersection*/
-                  if ((x1 >=part2.halfl) || (x1 <= -part2.halfl)) intrs+=0; /*intersection is outside sc2*/
-                  else {
-                      /* vectors from center os sc1 to intersection with infinite cylinder*/
-                      vec1=part2.dir*x1-r_cm;
-                      e = part1.dir.dot(vec1);
-                      if ((e >=part1.halfl) || (e <= -part1.halfl)) intrs+=0; /*intersection is outside sc1*/
-                      else {
-                          intrs+=test_intrpatch(part1,vec1,part1.pcanglsw,x1,intersections);
-                      }
-                  }
-                  if ( d > 0 ){
-                      x2 = (-b-sqrt(d))*0.5/a;/*parameter on line of SC2 determining intersection*/
-                      if ((x2 >=part2.halfl) || (x2 <= -part2.halfl)) intrs+=0; /*intersection is outside sc2*/
-                      else {
-                          vec2 = part2.dir*x2-r_cm;
-                          e = part1.dir.dot(vec2);
-                          if ((e >=part1.halfl) || (e <= -part1.halfl)) intrs+=0; /*intersection is outside sc1*/
-                          else {
-                              intrs+=test_intrpatch(part1,vec2,part1.pcanglsw,x2,intersections);
-                          }
-                      }
-                  }
-              }
-          }
-          //	    printf ("cylinder %d x1 %f x2 %f e %f\n", intrs, x1, x2, e);
-          /*1c- test intersection with spheres at the end - it is at distace C*/
-          if (intrs < 2 )  {
-              /*centers of spheres*/
-              /*relative to the CM of sc2*/
-              vec1 =  part1.dir*part1.halfl - r_cm;
-              vec2 = -part1.dir*part1.halfl - r_cm;
-              
-              /*sphere1*/
-              a = part2.dir.dot(part2.dir);
-              b = 2.0*vec1.dot(part2.dir);
-              c = vec1.dot(vec1)-rcut*rcut;
-              d = b*b-4*a*c;
-              if (d >= 0) { /*if d<0 there are no intersections*/
-                  x1= (-b + sqrt(d))*0.5/a; /*parameter on line of SC2 determining intersection*/
-                  if ((x1 >=part2.halfl) || (x1 <= -part2.halfl)) intrs+=0; /*intersection is outside sc2*/
-                  else {
-                      vec3 = part2.dir*x1-r_cm;
-                      e = part1.dir.dot(vec3);
-                      if ((e >= part1.halfl) || (e <= -part1.halfl)) { /*if not intersection is inside sc1*/
-                          intrs+=test_intrpatch(part1,vec3,part1.pcanglsw,x1,intersections);
-                      }
-                  }
-                  if ( d > 0) {
-                      x2= (-b - sqrt(d))*0.5/a; /*parameter on line of SC2 determining intersection*/
-                      if ((x2 >=part2.halfl) || (x2 <= -part2.halfl)) intrs+=0; /*intersection is outside sc2*/
-                      else {
-                          vec4 = part2.dir*x2 - r_cm;
-                          e = part1.dir.dot(vec4);
-                          if ((e >=part1.halfl) || (e <= -part1.halfl)) { /*if not intersection is inside sc1*/
-                              intrs+=test_intrpatch(part1,vec4,part1.pcanglsw,x2,intersections);
-                          }
-                      }
-                  }
-              }
-              //		printf ("sphere1 %d x1 %f x2 %f e %f\n", intrs, x1, x2, e);
-              /*sphere2*/
-              a = part2.dir.dot(part2.dir);
-              b = 2.0*vec2.dot(part2.dir);
-              c = vec2.dot(vec2)-rcut*rcut;
-              d = b*b-4*a*c;
-              if (d >= 0) { /*if d<0 there are no intersections*/
-                  x1= (-b + sqrt(d))*0.5/a; /*parameter on line of SC2 determining intersection*/
-                  if ((x1 >=part2.halfl) || (x1 <= -part2.halfl)) intrs+=0; /*intersection is outside sc2*/
-                  else {
-                      vec3 = part2.dir*x1 - r_cm;
-                      e = part1.dir.dot(vec3);
-                      if ((e >=part1.halfl) || (e <= -part1.halfl)) { /*if not intersection is inside sc1*/
-                          intrs+=test_intrpatch(part1,vec3,part1.pcanglsw,x1,intersections);
-                      }
-                  }
-                  if ( d > 0 ) {
-                      x2= (-b - sqrt(d))*0.5/a; /*parameter on line of SC2 determining intersection*/
-                      if ((x2 >=part2.halfl) || (x2 <= -part2.halfl)) intrs+=0; /*intersection is outside sc2*/
-                      else {
-                          vec4 = part2.dir*x2 - r_cm;
-                          e = part1.dir.dot(vec4);
-                          if ((e >=part1.halfl) || (e <= -part1.halfl)) { /*if not intersection is inside sc1*/
-                              intrs+=test_intrpatch(part1,vec4,part1.pcanglsw,x2,intersections);
-                          }
-                      }
-                  }
-              }
-              //		printf ("sphere2 %d\n", intrs);
-          }
-          
-          /*1d- if there is only one itersection shperocylinder ends within patch wedge 
-           set as second intersection end inside patch*/
-          if (intrs < 2 )  {
-              /*whole spherocylinder is in or all out if intrs ==0*/
-              vec1 = part2.dir*part2.halfl - r_cm;
-              /*vector from CM of sc1 to end of sc2*/
-              /*check is is inside sc1*/
-              a=vec1.dot(part1.dir);
-              vec3 = vec1 - part1.dir*a;
-              b=vec3.dot(vec3);
-              d = fabs(a)-part1.halfl;
-              if ( d <= 0) 
-                  c = b; /*is inside cylindrical part*/
-              else 
-                  c = d*d + b; /*is inside caps*/
-              /*c is distance squared from line or end to test if is inside sc*/
-              if (c < rcut2) 
-                  intrs+=test_intrpatch(part1,vec1,part1.pcanglsw,part2.halfl,intersections);
-              if (intrs < 2 ) {
-                  vec2 = -part2.dir*part2.halfl - r_cm;
-                  /*check is is inside sc1*/
-                  a=vec2.dot(part1.dir);
-                  vec4 = vec2 - part1.dir*a;
-                  b=vec4.dot(vec4);
-                  d = fabs(a) -part1.halfl;
-                  if (d <= 0) 
-                      c = b; /*is inside cylindrical part*/
-                  else 
-                      c = d*d + b; /*is inside caps*/
-                  /*c is distance squared from line or end to test if is inside sc*/
-                  if (c < rcut2) 
-                      intrs+=test_intrpatch(part1,vec2,part1.pcanglsw,-1.0*part2.halfl,intersections);
-              }
-              //		    printf ("ends %d\n", intrs);
-          }
-          
-          
-          return intrs;
+
+    /*!
+      \brief Calculates intersections of spherocylinder2 with a all-way patch of spherocylinder1 and return them (PSC)
+      */
+    int psc_intersect(const CigarParticle &part1, const CigarParticle &part2, const Point &r_cm, double intersections[5], double rcut)
+
+    {
+      double a, b, c, d, e, x1, x2;
+      Point cm21, vec1, vec2, vec3, vec4;          
+
+      int intrs=0;
+      double rcut2=rcut*rcut;
+      /*1- do intersections of spherocylinder2 with patch of spherocylinder1 at 
+        cut distance C*/
+      /*1a- test intersection with half planes of patch and look how far they are 
+        from spherocylinder. If closer then C  we got itersection*/
+
+      /* plane1 */
+      /* find intersections of part2 with plane by par1 and patchsides[0] */
+      intrs+=find_intersect_plane(part1,part2,r_cm,part1.patchsides[0],rcut,part1.pcanglsw,intersections);
+      //	    printf("plane1 %d\n", intrs);
+      /* plane2 */
+      /* find intersections of part2 with plane by par1 and patchsides[1] */
+      intrs+=find_intersect_plane(part1,part2,r_cm,part1.patchsides[1],rcut,part1.pcanglsw,intersections);
+
+      if ( (intrs == 2 ) && (part1.pcanglsw <0) ) {
+        fprintf (stderr, "ERROR: Patch is larger than 180 degrees and we are getting two segments - this hasnot been programed yet.\n\n");
+        exit (1);
       }
-      
-      /*!
-       \brief Finds if vector vector "vec" has angular intersection with a patch of part1 
-       */
-      int test_intrpatch(const CigarParticle &part1, Point &vec, double cospatch, 
-                         double ti, double intersections[5])
-      {
-          double a;
-          int i, intrs;
-          
-          intrs=0;
-          /*test if we have intersection*/
-          /* do projection to patch plane*/
-          vec=vec_perpproject(vec,part1.dir);
-          vec.normalize();
-          /* test angle distance from patch*/
-          a = part1.patchdir.dot(vec);
-          if (a >= cospatch) {
+      //	    printf("plane2 %d\n", intrs);
+
+      /*1b- test intersection with cylinder - it is at distance C*/
+      if (intrs < 2 )  {
+        cm21=-r_cm;
+        vec1=cm21.cross(part1.dir);
+        vec2=part2.dir.cross(part1.dir);
+        a = vec2.dot(vec2);
+        b = 2*vec1.dot(vec2);
+        c = -rcut*rcut + vec1.dot(vec1);
+        d = b*b - 4*a*c;
+        if ( d >= 0) { /*there is intersection with infinite cylinder */
+          x1 = (-b+sqrt(d))*0.5/a;/*parameter on line of SC2 determining intersection*/
+          if ((x1 >=part2.halfl) || (x1 <= -part2.halfl)) intrs+=0; /*intersection is outside sc2*/
+          else {
+            /* vectors from center os sc1 to intersection with infinite cylinder*/
+            vec1=part2.dir*x1-r_cm;
+            e = part1.dir.dot(vec1);
+            if ((e >=part1.halfl) || (e <= -part1.halfl)) intrs+=0; /*intersection is outside sc1*/
+            else {
+              intrs+=test_intrpatch(part1,vec1,part1.pcanglsw,x1,intersections);
+            }
+          }
+          if ( d > 0 ){
+            x2 = (-b-sqrt(d))*0.5/a;/*parameter on line of SC2 determining intersection*/
+            if ((x2 >=part2.halfl) || (x2 <= -part2.halfl)) intrs+=0; /*intersection is outside sc2*/
+            else {
+              vec2 = part2.dir*x2-r_cm;
+              e = part1.dir.dot(vec2);
+              if ((e >=part1.halfl) || (e <= -part1.halfl)) intrs+=0; /*intersection is outside sc1*/
+              else {
+                intrs+=test_intrpatch(part1,vec2,part1.pcanglsw,x2,intersections);
+              }
+            }
+          }
+        }
+      }
+      //	    printf ("cylinder %d x1 %f x2 %f e %f\n", intrs, x1, x2, e);
+      /*1c- test intersection with spheres at the end - it is at distace C*/
+      if (intrs < 2 )  {
+        /*centers of spheres*/
+        /*relative to the CM of sc2*/
+        vec1 =  part1.dir*part1.halfl - r_cm;
+        vec2 = -part1.dir*part1.halfl - r_cm;
+
+        /*sphere1*/
+        a = part2.dir.dot(part2.dir);
+        b = 2.0*vec1.dot(part2.dir);
+        c = vec1.dot(vec1)-rcut*rcut;
+        d = b*b-4*a*c;
+        if (d >= 0) { /*if d<0 there are no intersections*/
+          x1= (-b + sqrt(d))*0.5/a; /*parameter on line of SC2 determining intersection*/
+          if ((x1 >=part2.halfl) || (x1 <= -part2.halfl)) intrs+=0; /*intersection is outside sc2*/
+          else {
+            vec3 = part2.dir*x1-r_cm;
+            e = part1.dir.dot(vec3);
+            if ((e >= part1.halfl) || (e <= -part1.halfl)) { /*if not intersection is inside sc1*/
+              intrs+=test_intrpatch(part1,vec3,part1.pcanglsw,x1,intersections);
+            }
+          }
+          if ( d > 0) {
+            x2= (-b - sqrt(d))*0.5/a; /*parameter on line of SC2 determining intersection*/
+            if ((x2 >=part2.halfl) || (x2 <= -part2.halfl)) intrs+=0; /*intersection is outside sc2*/
+            else {
+              vec4 = part2.dir*x2 - r_cm;
+              e = part1.dir.dot(vec4);
+              if ((e >=part1.halfl) || (e <= -part1.halfl)) { /*if not intersection is inside sc1*/
+                intrs+=test_intrpatch(part1,vec4,part1.pcanglsw,x2,intersections);
+              }
+            }
+          }
+        }
+        //		printf ("sphere1 %d x1 %f x2 %f e %f\n", intrs, x1, x2, e);
+        /*sphere2*/
+        a = part2.dir.dot(part2.dir);
+        b = 2.0*vec2.dot(part2.dir);
+        c = vec2.dot(vec2)-rcut*rcut;
+        d = b*b-4*a*c;
+        if (d >= 0) { /*if d<0 there are no intersections*/
+          x1= (-b + sqrt(d))*0.5/a; /*parameter on line of SC2 determining intersection*/
+          if ((x1 >=part2.halfl) || (x1 <= -part2.halfl)) intrs+=0; /*intersection is outside sc2*/
+          else {
+            vec3 = part2.dir*x1 - r_cm;
+            e = part1.dir.dot(vec3);
+            if ((e >=part1.halfl) || (e <= -part1.halfl)) { /*if not intersection is inside sc1*/
+              intrs+=test_intrpatch(part1,vec3,part1.pcanglsw,x1,intersections);
+            }
+          }
+          if ( d > 0 ) {
+            x2= (-b - sqrt(d))*0.5/a; /*parameter on line of SC2 determining intersection*/
+            if ((x2 >=part2.halfl) || (x2 <= -part2.halfl)) intrs+=0; /*intersection is outside sc2*/
+            else {
+              vec4 = part2.dir*x2 - r_cm;
+              e = part1.dir.dot(vec4);
+              if ((e >=part1.halfl) || (e <= -part1.halfl)) { /*if not intersection is inside sc1*/
+                intrs+=test_intrpatch(part1,vec4,part1.pcanglsw,x2,intersections);
+              }
+            }
+          }
+        }
+        //		printf ("sphere2 %d\n", intrs);
+      }
+
+      /*1d- if there is only one itersection shperocylinder ends within patch wedge 
+        set as second intersection end inside patch*/
+      if (intrs < 2 )  {
+        /*whole spherocylinder is in or all out if intrs ==0*/
+        vec1 = part2.dir*part2.halfl - r_cm;
+        /*vector from CM of sc1 to end of sc2*/
+        /*check is is inside sc1*/
+        a=vec1.dot(part1.dir);
+        vec3 = vec1 - part1.dir*a;
+        b=vec3.dot(vec3);
+        d = fabs(a)-part1.halfl;
+        if ( d <= 0) 
+          c = b; /*is inside cylindrical part*/
+        else 
+          c = d*d + b; /*is inside caps*/
+        /*c is distance squared from line or end to test if is inside sc*/
+        if (c < rcut2) 
+          intrs+=test_intrpatch(part1,vec1,part1.pcanglsw,part2.halfl,intersections);
+        if (intrs < 2 ) {
+          vec2 = -part2.dir*part2.halfl - r_cm;
+          /*check is is inside sc1*/
+          a=vec2.dot(part1.dir);
+          vec4 = vec2 - part1.dir*a;
+          b=vec4.dot(vec4);
+          d = fabs(a) -part1.halfl;
+          if (d <= 0) 
+            c = b; /*is inside cylindrical part*/
+          else 
+            c = d*d + b; /*is inside caps*/
+          /*c is distance squared from line or end to test if is inside sc*/
+          if (c < rcut2) 
+            intrs+=test_intrpatch(part1,vec2,part1.pcanglsw,-1.0*part2.halfl,intersections);
+        }
+        //		    printf ("ends %d\n", intrs);
+      }
+
+      return intrs;
+    }
+
+    /*!
+      \brief Finds if vector vector "vec" has angular intersection with a patch of part1 
+      */
+    int test_intrpatch(const CigarParticle &part1, Point &vec, double cospatch, 
+        double ti, double intersections[5])
+    {
+      double a;
+      int i, intrs;
+
+      intrs=0;
+      /*test if we have intersection*/
+      /* do projection to patch plane*/
+      vec=vec_perpproject(vec,part1.dir);
+      vec.normalize();
+      /* test angle distance from patch*/
+      a = part1.patchdir.dot(vec);
+      if (a >= cospatch) {
+        intrs=1;
+        i=0;
+        while (intersections[i] !=0) {
+          if (ti == intersections[i]) 
+            intrs=0; /* found intersection we already have -it is at boundary*/
+          i++;
+        }
+        if (intrs > 0) 
+          intersections[i]=ti;
+      }
+
+      return intrs;
+    }
+
+    /*!
+      \brief Finds intersections of spherocylinder and plane defined by vector "w_vec" and if they are in all-way patch then returns number of them (PSC)
+      */
+    int find_intersect_plane(const CigarParticle &part1, const CigarParticle &part2,  
+        const Point &r_cm, const Point &w_vec, double rcut, double cospatch, double intersections[5])
+    {
+      int i, intrs;
+      double a, c, d, ti, disti;
+      Point nplane, d_vec;
+
+      nplane=part1.dir.cross(w_vec);
+      nplane.normalize();
+      a =  nplane.dot(part2.dir);
+      if (a == 0.0) intrs=0; /* there is no intersection plane and sc are paralel*/
+      else {
+        ti = nplane.dot(r_cm)/a;
+        if ((ti  > part2.halfl ) || (ti < -part2.halfl)) intrs=0; /* there is no intersection plane sc is too short*/
+        else {
+          d_vec = ti * part2.dir - r_cm; /*vector from intersection point to CM*/
+          c = d_vec.dot(w_vec);
+          if ( c * cospatch < 0) intrs=0; /* the intersection in plane is on other side of patch */
+          else {
+            d = fabs(d_vec.dot(part1.dir)) - part2.halfl;
+            if (d <= 0) disti = c*c; /*is inside cylinder*/
+            else disti = d*d + c*c; /*is inside patch*/
+            if (disti > rcut*rcut) intrs=0; /* the intersection is outside sc */
+            else {
               intrs=1;
               i=0;
               while (intersections[i] !=0) {
-                  if (ti == intersections[i]) 
-                      intrs=0; /* found intersection we already have -it is at boundary*/
+                if (ti == intersections[i]) intrs=0; /* found intersection we already have -it is at boundary*/
+                i++;
+              }
+              if (intrs > 0) intersections[i]=ti;
+            }
+          }
+        }
+
+      }
+      return intrs;
+    }
+
+
+    /*CPSC................................................................................*/
+
+    /*!
+      \brief Calculates intersections of sherocylinder2 with a cylindrical patch of spherocylinder1 and return them (CPSC)
+      */
+    int cpsc_intersect(const CigarParticle &part1, const CigarParticle &part2,
+        const Point &r_cm, double intersections[5], double rcut)
+
+    {
+      int intrs;
+      double a, b, c, d, e, x1, x2, rcut2;
+      Point cm21, vec1, vec2, vec3, vec4;
+
+      intrs=0;
+      rcut2=rcut*rcut;
+      /*1- do intersections of spherocylinder2 with patch of spherocylinder1 at 
+        cut distance C*/
+      /*1a- test intersection with half planes of patch and look how far they are 
+        from spherocylinder. If closer then C  we got itersection*/
+
+      /* plane1 */
+      /* find intersections of part2 with plane by par1 and part1.patchsides[0] */
+      intrs+=find_intersect_planec(part1,part2,r_cm,part1.patchsides[0],rcut,part1.pcanglsw,intersections);
+      //	    printf("plane1 %d\n", intrs);
+      /* plane2 */
+      /* find intersections of part2 with plane by par1 and part1.patchsides[1] */
+      intrs+=find_intersect_planec(part1,part2,r_cm,part1.patchsides[1],rcut,part1.pcanglsw,intersections);
+
+      if ( (intrs == 2 ) && (part1.pcanglsw < 0) ) {
+        fprintf (stderr, "ERROR: Patch is larger than 180 degrees and we are getting two segments - this hasnot been programed yet.\n\n");
+        exit (1);
+      }
+      //	    printf("plane2 %d\n", intrs);
+
+      /*1b- test intersection with cylinder - it is at distance C*/
+      if (intrs < 2 )  {
+        cm21=-r_cm;
+        vec1=cm21.cross(part1.dir);
+        vec2=part2.dir.cross(part1.dir);
+        a = vec2.dot(vec2);
+        b = 2*vec1.dot(vec2);
+        c = -rcut*rcut + vec1.dot(vec1);
+        d = b*b - 4*a*c;
+        if ( d >= 0) { /*there is intersection with infinite cylinder */
+          x1 = (-b+sqrt(d))*0.5/a; /*parameter on line of SC2 determining intersection*/
+          if ((x1 >=part2.halfl) || (x1 <= -part2.halfl)) intrs+=0; /*intersection is outside sc2*/
+          else {
+            /* vectors from center os sc1 to intersection with infinite cylinder*/
+            vec1=part2.dir*x1-r_cm;
+            e = part1.dir.dot(vec1);
+            if ((e >=part1.halfl) || (e <= -part1.halfl)) intrs+=0; /*intersection is outside sc1*/
+            else {
+              intrs+=test_intrpatch(part1,vec1,part1.pcanglsw,x1,intersections);
+            }
+          }
+          if ( d > 0 ){
+            x2 = (-b-sqrt(d))*0.5/a; /*parameter on line of SC2 determining intersection*/
+            if ((x2 >=part2.halfl) || (x2 <= -part2.halfl)) intrs+=0; /*intersection is outside sc2*/
+            else {
+              vec2 = part2.dir*x2-r_cm;
+              e = part1.dir.dot(vec2);
+              if ((e >=part1.halfl) || (e <= -part1.halfl)) intrs+=0; /*intersection is outside sc1*/
+              else {
+                intrs+=test_intrpatch(part1,vec2,part1.pcanglsw,x2,intersections);
+              }
+            }
+          }
+        }
+      }
+      //	    printf ("cylinder %d x1 %f x2 %f e %f\n", intrs, x1, x2, e);
+      /*1c- test intersection with plates at the end - it is at distace C and in wedge*/
+      if (intrs < 2 )  {
+        a =  part1.dir.dot( part2.dir);
+        if (a == 0.0) intrs=0; /* there is no intersection plane and sc are paralel*/
+        else {
+          /*plane cap1*/
+          vec1= r_cm + part1.halfl*part1.dir;
+          x1 = part1.dir.dot(vec1)/a; /*parameter on line of SC2 determining intersection*/
+          if ((x1 > part2.halfl ) || (x1 < -part2.halfl)) intrs+=0; /* there is no intersection plane sc is too short*/
+          else {
+            vec2 = x1*part2.dir - vec1; /*vector from ENDPOINT to intersection point */
+            b = vec2.dot( vec2);
+            if (b > rcut*rcut) intrs+=0;   /* the intersection is outside sc */
+            else {
+              intrs+=test_intrpatch(part1,vec2,part1.pcanglsw,x1,intersections);
+            }
+          }
+          //		    printf ("plane cap1 %d %f\n", intrs, x1);
+          /*plane cap2*/
+          vec1= r_cm - part1.halfl*part1.dir;
+          x2 = part1.dir.dot(vec1)/a; /*parameter on line of SC2 determining intersection*/
+          if ((x2  > part2.halfl ) || (x2 < -part2.halfl)) intrs+=0; /* there is no intersection plane sc is too short*/
+          else {
+            vec2 = x2*part2.dir - vec1; /*vector from ENDPOINT to intersection point */
+            b = vec2.dot( vec2);
+            if (b > rcut*rcut) intrs+=0;   /* the intersection is outside sc */
+            else {
+              intrs+=test_intrpatch(part1,vec2,part1.pcanglsw,x2,intersections);
+            }
+          }
+          //		    printf ("plane cap2 %d %f\n", intrs,x2);
+
+        }
+      }
+
+      /*1d- if there is only one itersection shperocylinder ends within patch wedge 
+        set as second intersection end inside patch*/
+      if (intrs < 2 )  {
+        /*whole spherocylinder is in or all out if intrs ==0*/
+        vec1 = part2.dir*part2.halfl - r_cm;
+        /*vector from CM of sc1 to end of sc2*/
+        /*check is is inside sc1*/
+        a=vec1.dot(part1.dir);
+        vec3 = vec1 - part1.dir*a;
+        b=vec3.dot(vec3);
+        d = fabs(a)-part1.halfl;
+        if ( d <= 0) { /*is in cylindrical part*/
+          /*c is distance squared from line or end to test if is inside sc*/
+          if (b < rcut2) intrs+=test_intrpatch(part1,vec1,part1.pcanglsw,part2.halfl,intersections);
+        }
+        if (intrs < 2 ) {
+          vec2 = -part2.dir*part2.halfl - r_cm;
+          /*check is is inside sc1*/
+          a=vec2.dot(part1.dir);
+          vec4 = vec2 - part1.dir*a;
+          b=vec4.dot(vec4);
+          d = fabs(a) -part1.halfl;
+          if (d <= 0) {
+            /*c is distance squared from line or end to test if is inside sc*/
+            if (b < rcut2) intrs+=test_intrpatch(part1,vec2,part1.pcanglsw,-1.0*part2.halfl,intersections);
+          }
+        }
+        //		    printf ("ends %d\n", intrs);
+      }
+
+
+      return intrs;
+    }
+
+    /*CPSC................................................................................*/
+
+    /*!
+      \brief Finds intersections of plane defined by vector "w_vec" and if they are in cylindrical patch then returns number of them (CPSC)
+      */
+    int find_intersect_planec(const CigarParticle &part1, const CigarParticle &part2, 
+        const Point &r_cm, const Point &w_vec, double rcut, double cospatch, double intersections[5])
+    {
+      int i, intrs=0;
+      double a, c, d, ti, disti;
+      Point nplane, d_vec;
+
+      nplane=part1.dir.cross(w_vec);
+      nplane.normalize();
+      a =  nplane.dot( part2.dir);
+      if (a == 0.0) intrs=0; /* there is no intersection plane and sc are paralel*/
+      else {
+        ti = nplane.dot(r_cm)/a;
+        if ((ti  > part2.halfl ) || (ti < -part2.halfl)) intrs=0; /* there is no intersection plane sc is too short*/
+        else {
+          d_vec = ti*part2.dir - r_cm; /*vector from intersection point to CM*/
+          c = d_vec.dot( w_vec);
+          if ( c *cospatch < 0) intrs=0; /* the intersection in plane is on other side of patch */
+          else {
+            d = fabs(d_vec.dot( part1.dir)) - part2.halfl;
+            if (d <= 0) {
+              disti= c*c; /*is inside cylinder*/
+              if (disti > rcut*rcut) intrs=0; /* the intersection is outside sc */
+              else {
+                intrs=1;
+                i=0;
+                while (intersections[i] !=0) {
+                  if (ti == intersections[i]) intrs=0; /* found intersection we already have -it is at boundary*/
                   i++;
+                }
+                if (intrs > 0) intersections[i]=ti;
               }
-              if (intrs > 0) 
-                  intersections[i]=ti;
+            }
           }
-          
-          return intrs;
+        }
       }
-      
-      /*!
-       \brief Finds intersections of spherocylinder and plane defined by vector "w_vec" and if they are in all-way patch then returns number of them (PSC)
-       */
-      int find_intersect_plane(const CigarParticle &part1, const CigarParticle &part2,  
-                               const Point &r_cm, const Point &w_vec, double rcut, double cospatch, double intersections[5])
-      {
-          int i, intrs;
-          double a, c, d, ti, disti;
-          Point nplane, d_vec;
-          
-          nplane=part1.dir.cross(w_vec);
-          nplane.normalize();
-          a =  nplane.dot(part2.dir);
-          if (a == 0.0) intrs=0; /* there is no intersection plane and sc are paralel*/
-          else {
-              ti = nplane.dot(r_cm)/a;
-              if ((ti  > part2.halfl ) || (ti < -part2.halfl)) intrs=0; /* there is no intersection plane sc is too short*/
-              else {
-                  d_vec = ti * part2.dir - r_cm; /*vector from intersection point to CM*/
-                  c = d_vec.dot(w_vec);
-                  if ( c * cospatch < 0) intrs=0; /* the intersection in plane is on other side of patch */
-                  else {
-                      d = fabs(d_vec.dot(part1.dir)) - part2.halfl;
-                      if (d <= 0) disti = c*c; /*is inside cylinder*/
-                      else disti = d*d + c*c; /*is inside patch*/
-                      if (disti > rcut*rcut) intrs=0; /* the intersection is outside sc */
-                      else {
-                          intrs=1;
-                          i=0;
-                          while (intersections[i] !=0) {
-                              if (ti == intersections[i]) intrs=0; /* found intersection we already have -it is at boundary*/
-                              i++;
-                          }
-                          if (intrs > 0) intersections[i]=ti;
-                      }
-                  }
-              }
-              
-          }
-          return intrs;
-      }
-      
-      
-      /*CPSC................................................................................*/
-      
-      /*!
-       \brief Calculates intersections of sherocylinder2 with a cylindrical patch of spherocylinder1 and return them (CPSC)
-       */
-      int cpsc_intersect(const CigarParticle &part1, const CigarParticle &part2,
-                        const Point &r_cm, double intersections[5], double rcut)
-      
-      {
-          int intrs;
-          double a, b, c, d, e, x1, x2, rcut2;
-          Point cm21, vec1, vec2, vec3, vec4;
-                 
-          intrs=0;
-          rcut2=rcut*rcut;
-          /*1- do intersections of spherocylinder2 with patch of spherocylinder1 at 
-           cut distance C*/
-          /*1a- test intersection with half planes of patch and look how far they are 
-           from spherocylinder. If closer then C  we got itersection*/
-          
-          /* plane1 */
-          /* find intersections of part2 with plane by par1 and part1.patchsides[0] */
-          intrs+=find_intersect_planec(part1,part2,r_cm,part1.patchsides[0],rcut,part1.pcanglsw,intersections);
-          //	    printf("plane1 %d\n", intrs);
-          /* plane2 */
-          /* find intersections of part2 with plane by par1 and part1.patchsides[1] */
-          intrs+=find_intersect_planec(part1,part2,r_cm,part1.patchsides[1],rcut,part1.pcanglsw,intersections);
-          
-          if ( (intrs == 2 ) && (part1.pcanglsw < 0) ) {
-              fprintf (stderr, "ERROR: Patch is larger than 180 degrees and we are getting two segments - this hasnot been programed yet.\n\n");
-              exit (1);
-          }
-          //	    printf("plane2 %d\n", intrs);
-          
-          /*1b- test intersection with cylinder - it is at distance C*/
-          if (intrs < 2 )  {
-              cm21=-r_cm;
-              vec1=cm21.cross(part1.dir);
-              vec2=part2.dir.cross(part1.dir);
-              a = vec2.dot(vec2);
-              b = 2*vec1.dot(vec2);
-              c = -rcut*rcut + vec1.dot(vec1);
-              d = b*b - 4*a*c;
-              if ( d >= 0) { /*there is intersection with infinite cylinder */
-                  x1 = (-b+sqrt(d))*0.5/a; /*parameter on line of SC2 determining intersection*/
-                  if ((x1 >=part2.halfl) || (x1 <= -part2.halfl)) intrs+=0; /*intersection is outside sc2*/
-                  else {
-                      /* vectors from center os sc1 to intersection with infinite cylinder*/
-                      vec1=part2.dir*x1-r_cm;
-                      e = part1.dir.dot(vec1);
-                      if ((e >=part1.halfl) || (e <= -part1.halfl)) intrs+=0; /*intersection is outside sc1*/
-                      else {
-                          intrs+=test_intrpatch(part1,vec1,part1.pcanglsw,x1,intersections);
-                      }
-                  }
-                  if ( d > 0 ){
-                      x2 = (-b-sqrt(d))*0.5/a; /*parameter on line of SC2 determining intersection*/
-                      if ((x2 >=part2.halfl) || (x2 <= -part2.halfl)) intrs+=0; /*intersection is outside sc2*/
-                      else {
-                          vec2 = part2.dir*x2-r_cm;
-                          e = part1.dir.dot(vec2);
-                          if ((e >=part1.halfl) || (e <= -part1.halfl)) intrs+=0; /*intersection is outside sc1*/
-                          else {
-                              intrs+=test_intrpatch(part1,vec2,part1.pcanglsw,x2,intersections);
-                          }
-                      }
-                  }
-              }
-          }
-          //	    printf ("cylinder %d x1 %f x2 %f e %f\n", intrs, x1, x2, e);
-          /*1c- test intersection with plates at the end - it is at distace C and in wedge*/
-          if (intrs < 2 )  {
-              a =  part1.dir.dot( part2.dir);
-              if (a == 0.0) intrs=0; /* there is no intersection plane and sc are paralel*/
-              else {
-                  /*plane cap1*/
-                  vec1= r_cm + part1.halfl*part1.dir;
-                  x1 = part1.dir.dot(vec1)/a; /*parameter on line of SC2 determining intersection*/
-                  if ((x1 > part2.halfl ) || (x1 < -part2.halfl)) intrs+=0; /* there is no intersection plane sc is too short*/
-                  else {
-                      vec2 = x1*part2.dir - vec1; /*vector from ENDPOINT to intersection point */
-                      b = vec2.dot( vec2);
-                      if (b > rcut*rcut) intrs+=0;   /* the intersection is outside sc */
-                      else {
-                          intrs+=test_intrpatch(part1,vec2,part1.pcanglsw,x1,intersections);
-                      }
-                  }
-                  //		    printf ("plane cap1 %d %f\n", intrs, x1);
-                  /*plane cap2*/
-                  vec1= r_cm - part1.halfl*part1.dir;
-                  x2 = part1.dir.dot(vec1)/a; /*parameter on line of SC2 determining intersection*/
-                  if ((x2  > part2.halfl ) || (x2 < -part2.halfl)) intrs+=0; /* there is no intersection plane sc is too short*/
-                  else {
-                      vec2 = x2*part2.dir - vec1; /*vector from ENDPOINT to intersection point */
-                      b = vec2.dot( vec2);
-                      if (b > rcut*rcut) intrs+=0;   /* the intersection is outside sc */
-                      else {
-                          intrs+=test_intrpatch(part1,vec2,part1.pcanglsw,x2,intersections);
-                      }
-                  }
-                  //		    printf ("plane cap2 %d %f\n", intrs,x2);
-                  
-              }
-          }
-          
-          /*1d- if there is only one itersection shperocylinder ends within patch wedge 
-           set as second intersection end inside patch*/
-          if (intrs < 2 )  {
-              /*whole spherocylinder is in or all out if intrs ==0*/
-              vec1 = part2.dir*part2.halfl - r_cm;
-              /*vector from CM of sc1 to end of sc2*/
-              /*check is is inside sc1*/
-              a=vec1.dot(part1.dir);
-              vec3 = vec1 - part1.dir*a;
-              b=vec3.dot(vec3);
-              d = fabs(a)-part1.halfl;
-              if ( d <= 0) { /*is in cylindrical part*/
-                  /*c is distance squared from line or end to test if is inside sc*/
-                  if (b < rcut2) intrs+=test_intrpatch(part1,vec1,part1.pcanglsw,part2.halfl,intersections);
-              }
-              if (intrs < 2 ) {
-                  vec2 = -part2.dir*part2.halfl - r_cm;
-                  /*check is is inside sc1*/
-                  a=vec2.dot(part1.dir);
-                  vec4 = vec2 - part1.dir*a;
-                  b=vec4.dot(vec4);
-                  d = fabs(a) -part1.halfl;
-                  if (d <= 0) {
-                      /*c is distance squared from line or end to test if is inside sc*/
-                      if (b < rcut2) intrs+=test_intrpatch(part1,vec2,part1.pcanglsw,-1.0*part2.halfl,intersections);
-                  }
-              }
-              //		    printf ("ends %d\n", intrs);
-          }
-          
-          
-          return intrs;
-      }
-      
-      /*CPSC................................................................................*/
-      
-      /*!
-       \brief Finds intersections of plane defined by vector "w_vec" and if they are in cylindrical patch then returns number of them (CPSC)
-       */
-      int find_intersect_planec(const CigarParticle &part1, const CigarParticle &part2, 
-                                const Point &r_cm, const Point &w_vec, double rcut, double cospatch, double intersections[5])
-      {
-          int i, intrs=0;
-          double a, c, d, ti, disti;
-          Point nplane, d_vec;
-          
-          nplane=part1.dir.cross(w_vec);
-          nplane.normalize();
-          a =  nplane.dot( part2.dir);
-          if (a == 0.0) intrs=0; /* there is no intersection plane and sc are paralel*/
-          else {
-              ti = nplane.dot(r_cm)/a;
-              if ((ti  > part2.halfl ) || (ti < -part2.halfl)) intrs=0; /* there is no intersection plane sc is too short*/
-              else {
-                  d_vec = ti*part2.dir - r_cm; /*vector from intersection point to CM*/
-                  c = d_vec.dot( w_vec);
-                  if ( c *cospatch < 0) intrs=0; /* the intersection in plane is on other side of patch */
-                  else {
-                      d = fabs(d_vec.dot( part1.dir)) - part2.halfl;
-                      if (d <= 0) {
-                          disti= c*c; /*is inside cylinder*/
-                          if (disti > rcut*rcut) intrs=0; /* the intersection is outside sc */
-                          else {
-                              intrs=1;
-                              i=0;
-                              while (intersections[i] !=0) {
-                                  if (ti == intersections[i]) intrs=0; /* found intersection we already have -it is at boundary*/
-                                  i++;
-                              }
-                              if (intrs > 0) intersections[i]=ti;
-                          }
-                      }
-                  }
-              }
-          }
-          return intrs;
-      }
-      
-  
-      
-      
-      
+      return intrs;
+    }
+
+
+
+
+
 
   }//namespace geometry
 

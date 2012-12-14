@@ -25,6 +25,11 @@ namespace Faunus {
       _setScale(_tokT);
     }
     
+    double PairPotentialBase::operator() (const particle &a, const particle &b, double r2) const {
+      assert(!"Pair energy not defined!");
+      return 0;
+    }
+    
     void PairPotentialBase::_setScale(double s) {}
    
     /*!

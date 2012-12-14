@@ -5,7 +5,8 @@ typedef Geometry::Cuboid Tgeometry;   // specify geometry - here cube w. periodi
 
 using namespace Faunus::Potential;
 
-typedef CigarSphereSplit<WeeksChandlerAndersen,WeeksChandlerAndersen,WeeksChandlerAndersen> Tpairpot;
+typedef CombinedPairPotential<CosAttract,WeeksChandlerAndersen> Tpair;
+typedef CigarSphereSplit<Tpair,Tpair,Tpair> Tpairpot;
 
 int main() {
   cout << textio::splash();           // show faunus banner and credits
@@ -29,7 +30,7 @@ int main() {
   GroupAtomic cigars(spc, mcp);
   cigars.name="cigars";
   for (auto i : cigars) {
-    spc.p[i].length = 5.0;
+    spc.p[i].halfl = 2.5;
     spc.p[i].dir.ranunit(slp_global);
     spc.trial[i]=spc.p[i];
   }

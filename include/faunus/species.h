@@ -29,6 +29,15 @@ namespace Faunus {
       bool operator==(const AtomData &d) const { return (*this==d); }
   };
 
+  class AtomPairData {
+  public:
+    typedef vector< vector<double> > Tmatrix;
+    Tmatrix eps;    //!< Interaction energy scaling
+    Tmatrix sigma2; //<! Sigma squared distance
+    Tmatrix rcut;   //<! Interaction cutoff distance
+    Tmatrix qq;     //<! Charge product
+  };
+  
   /*!
    * \brief Class to load and handle atom types from disk
    * \author Mikael Lund

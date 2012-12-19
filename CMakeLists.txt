@@ -28,7 +28,7 @@ endif()
 # -----------------
 option(ENABLE_BABEL    "Try to use OpenBabel for file I/O" off)
 option(ENABLE_OPENMP   "Try to use OpenMP parallization" off)
-option(ENABLE_MPI      "Enable MPI parallel code (experimental!)" off)
+option(ENABLE_MPI      "Enable MPI code" off)
 option(ENABLE_TWISTER  "Enable Mersenne Twister random number generator" off)
 option(ENABLE_STATIC   "Use static instead of dynamic linkage of faunus library" off)
 option(ENABLE_SWIG     "Try to create SWIG modules for python, tcl, ruby etc. (experimental!)" off)

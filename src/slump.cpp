@@ -4,73 +4,18 @@ namespace Faunus {
   RandomBase::~RandomBase() {}
   
   double RandomBase::randHalf() {
-    return -0.5 + randOne();
+    return _randone() - 0.5;
   }
 
-  bool RandomBase::runtest(float f) {
-    return ( randOne()<f) ? true : false;
+  unsigned int RandomBase::rand() {
+    static const double max=std::numeric_limits<unsigned int>::max()-1;
+    return _randone() * max;
   }
 
-  std::string RandomBase::info() {
-    std::ostringstream o;
-    o << "# RANDOM NUMBER GENERATOR:" << std::endl
-      << "#   Scheme: " << name << std::endl;
-    return o.str();
-  }
-
-  /*
-   *  Generic C++ generator
-   */
-  RandomDefault::RandomDefault() {
-    name = "C++ build in";
-    rand_max_inv = 1./(RAND_MAX);
-  }
-
-  double RandomDefault::randOne() {
-    double r;
-    #pragma omp critical
-    r=rand_max_inv*rand();
-    return (r>=1) ? r-1e-5 : r;  // we don't like *exactly* 1 !!
-  }
-
-  void RandomDefault::seed(int s) {
-    (s!=0) ? srand(s) : srand(time(0));
-  }
-
-  unsigned int RandomDefault::rand() {
-    double x;
-    #pragma omp critical
-    x=rand();
-    return x;
-  }
-
-  /*
-   *  Mersenne Twister generator (STL TR1 build-in)
-   */
-  RandomTwister::RandomTwister() : dist(0.0,1.0) {
-    name="Mersenne Twister (C++ TR1)";
-  }
-
-  double RandomTwister::randOne() {
-    double x;
-    #pragma omp critical
-    x=dist(eng);
-    return x;
-  }
-
-  void RandomTwister::seed(int s) {
-    #pragma omp critical
-    eng.seed(s);
-  }
-
-  unsigned int RandomTwister::rand() {
-    return dist(eng);
-  }
-
-  // "Ran2" - ran2 from 'Numerical Recipies'
   const double RandomRan2::EPS=3.0e-16;
+
   RandomRan2::RandomRan2() {
-    name="Numerical recipes 'ran2' (not thread safe!)";
+    name="Numerical Recipes 'ran2'";
     AM=1.0/2147483563.0;
     RNMX=1.0-3.0e-16;
     iy=0;
@@ -78,7 +23,7 @@ namespace Faunus {
     seed(-13);
   }
 
-  double RandomRan2::randOne()  {
+  double RandomRan2::_randone()  {
     #pragma omp critical
     {
       seed(idum);
@@ -118,10 +63,6 @@ namespace Faunus {
       }
       iy=iv[0];
     }
-  }
-
-  unsigned int RandomRan2::rand() {
-    return randOne()*RAND_MAX;
   }
 
   slump slp_global;

@@ -1,54 +1,37 @@
 #ifndef FAU_slump_h
 #define FAU_slump_h
 
-#ifdef SWIG
-%module pyfaunus
-%{
+#ifndef SWIG
+#include <faunus/common.h>
 #include <faunus/slump.h>
-%}
-#else
-  #include <cmath>
-  #include <iostream>
-  #include <sstream>
-  #include <cstdlib>  // Including this SUCKS! Be aware of abs()!
-  #include <ctime>
-  #include <random>
-
-  // Needed for sunCC ("__SUNPRO_CC" or "__sun" ?)
-  #ifdef __SUNPRO_CC
-    #include <stdlib.h>
-    #include <time.h>
-  #endif
 #endif
 
 namespace Faunus {
-  class RandomBase {
-    protected:
-      std::string name;
-    public:
-      virtual ~RandomBase();
-      virtual double randOne()=0;          //!< Random number between [0:1[
-      virtual void seed(int=0)=0;          //!< Seed random generator (globally)
-      bool runtest(float);                 //!< Probability bool - float between 0 (don't run) and 1 (run always)
-      double randHalf();                   //!< Random number between [-0.5:0.5[
-      std::string info();                  //!< Information string
-      virtual unsigned int rand()=0;       //!< Random number between 0 and rand_max
-  };
 
   /*!
-   * \brief Default C++ random number generator
-   * \author Mikael Lund
-   * \date Lund, 2002
-   * \warning randOne sometimes returns 1 (one)!!
+   * \brief Base class for random number generation
+   *
+   * Derived classes need only provide a _randone() and seed() function.
+   *
+   * \warning rand() function may or may not reach exactly max unsigned int
    */
-  class RandomDefault : public RandomBase {
+  class RandomBase {
     private:
-      double rand_max_inv;
+      virtual double _randone()=0;  //!< Random number in range [0:1[
     public:
-      RandomDefault();
-      void seed(int=0);
-      double randOne();
-      unsigned int rand();
+      std::string name;
+      virtual ~RandomBase();
+      virtual void seed(int=0)=0;   //!< Seed random generator
+      double randHalf();            //!< Random number in range [-0.5:0.5[
+      unsigned int rand();          //!< Random number in range [0:max unsigned int[]
+      /*!
+       * \brief Random number in range [0:1[
+       */
+      inline double operator()() {
+        double x=_randone();
+        assert(x>=0 && x<1 && "Random number out of range!");
+        return x;
+      }
   };
 
  /*!
@@ -70,40 +53,52 @@ namespace Faunus {
       int iv[32]; 
       int j,k;
       double temp;
+      double _randone();
     public:
       RandomRan2();
-      double randOne();
-      void   seed(int=-7);
-      unsigned int rand();
+      void seed(int=-7);
   };
 
   /*!
    * \brief Mersenne Twister Random number functions (C++11)
-   * \author Mikael Lund
    * \date Lund, 2010
+   *
+   * This is slightly slower than ran2 but generally thought to provide
+   * better randomness.
    */
-  class RandomTwister : public RandomBase {
-    private:
-      double maxinv;
-      std::mt19937 eng;
-      std::uniform_real_distribution<double> dist;
-    public:
-      RandomTwister();
-      double randOne();
-      void seed(int=0);
-      unsigned int rand();
-  };
-  
-  template <typename I> I random_element(I begin, I end) {
-    const unsigned long n = std::distance(begin, end);
-    const unsigned long divisor = RAND_MAX/n ; //(RAND_MAX + 1) / n;
-    unsigned long k;
-    do { k = std::rand() / divisor; } while (k >= n);
-    return *std::advance(begin, k);
-  }
+  template<typename T=double, typename Tengine=std::mt19937> 
+    class RandomTwister : public RandomBase {
+      private:
+        //std::random_device rd;
+        Tengine eng; //pseudo random number engine
+        std::uniform_real_distribution<T> dist;
+        T _randone() {
+          T x;
+#pragma omp critical
+          x=dist(eng);
+          return x;
+        }
+      public:
+        RandomTwister() : dist(0,1) {
+          name="Mersenne Twister";
+        }
+        void seed(int s) {
+#pragma omp critical
+          eng.seed(s);
+        }
+    };
+
+  /*
+     template <typename I> I random_element(I begin, I end) {
+     const unsigned long n = std::distance(begin, end);
+     const unsigned long divisor = RAND_MAX/n ; //(RAND_MAX + 1) / n;
+     unsigned long k;
+     do { k = std::rand() / divisor; } while (k >= n);
+     return *std::advance(begin, k);
+     }*/
 
 #if defined(MERSENNETWISTER)
-  typedef Faunus::RandomTwister slump;
+  typedef Faunus::RandomTwister<double,std::mt19937> slump;
 #else
   typedef Faunus::RandomRan2 slump;
 #endif

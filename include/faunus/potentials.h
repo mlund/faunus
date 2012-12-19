@@ -68,7 +68,7 @@ namespace Faunus {
          * \param b Second particle
          * \param r2 Squared distance between them (angstrom squared)
          */
-        virtual double operator() (const particle &a, const particle &b, double r2) const;
+        virtual double operator() (const particle&, const particle&, double) const;
         bool save(string, particle::Tid, particle::Tid); //!< Save table of pair potential to disk
         virtual void test(UnitTest&);                    //!< Perform unit test
         };

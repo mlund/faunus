@@ -4,6 +4,8 @@
 #include <faunus/physconst.h>
 #include <faunus/textio.h>
 #include <faunus/group.h>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 
 namespace Faunus {
   namespace Geometry {
@@ -358,28 +360,6 @@ namespace Faunus {
       return massCenter(geo,p,g);
     }
 
-    Point massCenter(const Geometrybase &geo, const p_vec &p, const Group &g) {
-      if (g.empty())
-        return Point();
-      assert(!p.empty());
-      assert(g.back() < (int)p.size());
-      assert(&geo!=NULL);
-      double sum=0;
-      Point cm(0,0,0);
-      Point t;
-      Point o = p.at( g.front()+(g.back()-g.front())/2 );  // set origo to middle particle
-      for (auto i : g) {
-        t = p[i]-o;              // translate to origo
-        geo.boundary(t);        // periodic boundary (if any)
-        cm += t * p[i].mw;
-        sum += p[i].mw;
-      }
-      if (sum<1e-6) sum=1;
-      cm=cm*(1/sum) + o;
-      geo.boundary(cm);
-      return cm;
-    }
-
     void translate(const Geometrybase &geo, p_vec &p, Point d) {
       for (auto &pi : p) {
         pi += d;
@@ -475,10 +455,10 @@ namespace Faunus {
     /*!
      * \brief Same as rotate(const Point) but kept for compatibility
      * \todo remove
-     */
     Point VectorRotate::rotate(const Geometrybase &geo, Point p) const {
       return rotate(p);
     }
+    */
 
     /*!
      * Rotate point around axis specified above.
@@ -494,6 +474,10 @@ namespace Faunus {
       p.z()=e1mcoz*eb+cosang*b.z()+sinang*(u.x()*b.y() - u.y()*b.x()) + origin.z();
       geoPtr->boundary(p);
       return p;
+    }
+
+    Point VectorRotate::operator()(const Point &p) const {
+      return rotate(p);
     }
 
     /*!

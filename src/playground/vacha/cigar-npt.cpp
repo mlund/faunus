@@ -60,7 +60,7 @@ int main() {
       }
 
       // movie
-      if (slp_global.randOne()<0.001)
+      if (slp_global()<0.001)
       {
         m << spc.p.size() << "\n"
           << "sweep " << loop.count() << "; box "

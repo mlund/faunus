@@ -14,8 +14,9 @@ namespace Faunus {
    */
   class Point : public Eigen::Vector3d {
     public:
-      typedef double Tcoord;                       //!< Floating point type for Point coordinates
-      typedef Eigen::Vector3d Tvec;                //!< 3D vector from Eigen
+      typedef double Tcoord;                             //!< Floating point type for Point coordinates
+      typedef Eigen::Vector3d Tvec;                      //!< 3D vector from Eigen
+      typedef std::function<Point(const Point)> RotFunctor;//!< Rotation functor
 
       inline Point();                              //!< Constructor, zero data.
       inline Point(Tcoord,Tcoord,Tcoord);          //!< Constructor
@@ -28,24 +29,62 @@ namespace Faunus {
           return *this;
         }
 
-      virtual ~Point() {};                         //!< Destructor
       void clear();                                //!< Zero all data.
       Tcoord len() const;                          //!< Get scalar (TO BE REMOVED)
-      void ranunit(RandomBase&);                   //!< Generate a random unit vector
-      virtual void rotate(Geometry::VectorRotate&);//!< Rotate around vector
-      virtual void translate(const Geometry::Geometrybase&, const Point&);//!< Translate along a vector
-      virtual void scale(const Geometry::Geometrybase&, double);          //!< NPT volume scaling
+
+      /*!
+       * \brief Generate a random unit vector
+       *
+       * Based on the von Neumann method described in Allen and Tildesley page 349.
+       */
+      template<typename Trandombase>
+        void ranunit(Trandombase &ran) {
+          Point u;
+          Tcoord r2;
+          do {
+            u.x()=2*( ran()-0.5 );
+            u.y()=2*( ran()-0.5 );
+            u.z()=2*( ran()-0.5 );
+            r2=u.squaredNorm();
+          } while (r2>1);
+          *this = u/std::sqrt(r2);
+          assert(std::abs(this->len()-1)<1e-7); // is it really a unit vector?
+        }
+      void rotate(RotFunctor);                     //!< Transform point (rotation etc)
+
+      /*!
+       * \brief Translate Point along a vector
+       * \param geo Geomtry to use so that boundary conditions can be respected
+       * \param a Vector to translate with
+       */
+      template<typename Tgeometry>
+        void translate(const Tgeometry &geo, const Point &a) {
+          assert(&geo!=nullptr);
+          (*this)+=a;
+          geo.boundary(*this);
+        }
+
+      /*!
+       * \brief Coordinate scaling used for NPT ensemble
+       *
+       * This will perform a volume scaling of the Point by following the algorithm
+       * specified in the Geometry.
+       */
+      template<typename Tgeometry>
+        void scale(const Tgeometry &geo, double newvol) {
+          geo.scale(*this, newvol);
+        }
+
       Point& operator<<(std::istream&);            //!< Read from stream
   };
 
   /*!
-   * \note Data IS zeroed upon construction, but don't
-   * count on it in the future!
+   * \note Data is not zeroed upon construction
    */
-  Point::Point() : Tvec(0,0,0) {}
+  Point::Point() {}
 
   Point::Point(Tcoord xx, Tcoord yy, Tcoord zz) : Tvec(xx,yy,zz) {}
- 
+
   /*!
    * \brief Class for particles
    * \author Mikael Lund
@@ -96,7 +135,6 @@ namespace Faunus {
 
   /*!
    * \brief Sphero-cylindrical particle
-   * \author ...
    * \date Brno, November 2012
    *
    * detailed information here...
@@ -107,7 +145,7 @@ namespace Faunus {
       Point patchdir, patchsides[2], chdir;
       double patchangle, pcanglsw, pcangl, halfl;
 
-      void rotate(Geometry::VectorRotate&);
+      void rotate(RotFunctor);
 
       inline CigarParticle() : halfl(0) {}
 

@@ -16,7 +16,7 @@ namespace Faunus {
 
 
     bool AnalysisBase::run() {
-      if (slp_global.randOne() > runfraction)
+      if (slp_global() > runfraction)
         return false;
       cnt++;
       return true;
@@ -49,7 +49,7 @@ namespace Faunus {
     Point PolymerShape::vectorgyrationRadiusSquared(const Group &pol, const Space &spc) {
       assert( spc.geo->dist(pol.cm, pol.massCenter(spc))<1e-9 && "Mass center must be in sync.");
       double sum=0;
-      Point t, r2;
+      Point t, r2(0,0,0);
       for (auto i : pol) {
         t = spc.p[i]-pol.cm;                // vector to center of mass
         spc.geo->boundary(t);               // periodic boundary (if any)

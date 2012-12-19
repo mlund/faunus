@@ -9,12 +9,12 @@
 #include <iomanip>
 #include <sstream>
 #include <fstream>
-#include <cstdarg>
 #include <cmath>
 #include <algorithm>
 #include <cassert>
 #include <complex>
 #include <map>
+#include <random>
 #include <set>
 #include <memory>
 #include <numeric>
@@ -84,6 +84,9 @@ namespace Faunus {
   typedef PointParticle particle;
 #endif
   typedef std::vector< particle, Eigen::aligned_allocator<particle> > p_vec;
+
+  // FUNCTORS
+  typedef std::function<double()> RandFunctor;
 
 }//namespace
 

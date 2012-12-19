@@ -2,11 +2,10 @@
 #define FAU_GEOMETRY_H
 
 #ifndef SWIG
-#include <Eigen/Core>
-#include <Eigen/Geometry>
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/slump.h>
+#include <Eigen/Eigen>
 #endif
 
 namespace Faunus {
@@ -290,8 +289,34 @@ namespace Faunus {
 
 #endif
 
+    /*!
+     * \brief Calculate mass center of a group
+     */
+    template<typename Tgeometry, typename Tgroup>
+      Point massCenter(const Tgeometry &geo, const p_vec &p, const Tgroup &g) {
+        if (g.empty())
+          return Point(0,0,0);
+        assert(!p.empty());
+        assert(g.back() < (int)p.size());
+        assert(&geo!=NULL);
+        double sum=0;
+        Point cm(0,0,0);
+        Point o = p[ g.front()+(g.back()-g.front())*0.5 ];  // set origo to middle particle
+        for (auto i : g) {
+          Point t = p[i]-o;       // translate to origo
+          geo.boundary(t);        // periodic boundary (if any)
+          cm += t * p[i].mw;
+          sum += p[i].mw;
+        }
+        if (sum<1e-6) sum=1;
+        cm=cm/sum + o;
+        geo.boundary(cm);
+        return cm;
+      }
+
     Point massCenter(const Geometrybase&, const p_vec&); //!< Calculate mass center of a particle vector
-    Point massCenter(const Geometrybase&, const p_vec&, const Group&); //!< Calculate mass center of a group
+
+
     void translate(const Geometrybase&, p_vec&, Point); //!< Translate a particle vector by a vector
     void cm2origo(const Geometrybase&, p_vec&); //!< Translate a particle vector so mass center is in (0,0,0)
 
@@ -331,29 +356,57 @@ namespace Faunus {
      * \date Canberra, 2009
      */
     class VectorRotate {
+      private:
+        virtual Point rotate(Point) const;      //!< Rotate point around axis
       protected:
         Point origin, u;
         double cosang, sinang;
         double e1mcox, e1mcoy, e1mcoz;
         Geometrybase *geoPtr;
       public:
+        Point operator()(const Point&) const; // Rotate point around axis. 
         virtual ~VectorRotate();
         virtual void setAxis(Geometrybase&, const Point&, const Point&, double);  //!< Set rotation axis and degrees
         double getAngle() const;                                                  //!< Get set rotation angle
-        virtual Point rotate(Point) const;                                        //!< Rotate point around axis
-        virtual Point rotate(const Geometrybase&, Point) const;                   //!< Rotate point around axis (to be removed)
+        //        virtual Point rotate(const Geometrybase&, Point) const;                   //!< Rotate point around axis (to be removed)
+    };
+
+    /*!
+     * \brief Quaternion rotation routine
+     */
+    class QuaternionRotateEigen : public VectorRotate {
+      private:
+        Eigen::Quaterniond q;
+        inline Point rotate(Point a) const {
+          a=a-origin;
+          geoPtr->boundary(a);
+          a=q*a+origin;
+          geoPtr->boundary(a);
+          return a;
+        }
+      public:
+        inline void setAxis(Geometrybase &g, const Point &beg, const Point &end, double angle) {
+          origin=beg;
+          u=end-beg;
+          g.boundary(u);
+          u.normalize();
+          assert( std::abs(u.squaredNorm()-1) < 1e-6 && "End point must be unit vector!");
+          geoPtr=&g;
+          q=Eigen::AngleAxisd(angle, u);
+          cosang=std::cos(angle);
+        }
     };
 
     class QuaternionRotate : public VectorRotate {
       private:
         double d1, d2, d3, d4, d5, d6, d7, d8, d9 ;
-      public:
+        Point rotate(Point) const;
         struct quat {             /* Define a quaternion structure */
           double w,x,y,z;
         };
         quat q;
+      public:
         void setAxis(Geometrybase&, const Point&, const Point&, double);  //!< Set rotation axis and degrees
-        Point rotate(Point) const;                                        //!< Rotate point around axis
     };
 
     /*! \brief Calculate minimum distance between two line segments

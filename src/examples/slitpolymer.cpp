@@ -55,7 +55,7 @@ int main() {
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int i=rand() % 4;
+      int i=slp_global.rand() % 4;
       switch (i) {
         case 0: // translate and rotate polymer
           gmv.setGroup(pol);
@@ -75,9 +75,9 @@ int main() {
           break;
       }
 
-      if (slp_global.randOne()>0.95)
+      if (slp_global()>0.95)
         shape.sample(pol,spc);
-      if (slp_global.randOne()>0.5)
+      if (slp_global()>0.5)
         for (auto i : pol)
           surfmapall( pot.dist2surf( spc.p.at(i) ) )++;
 

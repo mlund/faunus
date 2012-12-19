@@ -59,12 +59,12 @@ int main() {
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      if (slp_global.randOne() < 0.5)
+      if (slp_global() < 0.5)
         sys+=mv.move( salt.size() );  // translate salt
       else 
         sys+=iso.move();              // isobaric volume move
 
-      if (slp_global.randOne() < 0.05) {
+      if (slp_global() < 0.05) {
         particle::Tid a=atom["Na"].id, b=atom["Cl"].id;
         for (auto i=salt.front(); i<salt.back(); i++) // salt radial distribution function
           for (auto j=i+1; j<=salt.back(); j++)

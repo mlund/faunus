@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
           sys+=mv.move();
           break;
       }
-      if ( slp_global.runtest(0.0001) ) {
+      if ( slp_global()<0.001 ) {
         xtc.setbox( nonbonded->geometry.len );
         xtc.save("traj.xtc", spc);
       }

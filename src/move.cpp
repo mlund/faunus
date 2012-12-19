@@ -83,13 +83,13 @@ namespace Faunus {
     }
 
     bool Movebase::metropolis(const double &du) const {
-      if ( slp_global.randOne()>std::exp(-du) ) // core of MC!
+      if ( slp_global()>std::exp(-du) ) // core of MC!
         return false;
       return true;
     }
 
     bool Movebase::run() const {
-      if (slp_global.randOne() < runfraction)
+      if (slp_global() < runfraction)
         return true;
       return false;
     }
@@ -192,9 +192,9 @@ namespace Faunus {
           dp = genericdp;
         assert(iparticle<(int)spc->p.size() && "Trial particle out of range");
         Point t = dir*dp;
-        t.x() *= slp_global.randHalf();
-        t.y() *= slp_global.randHalf();
-        t.z() *= slp_global.randHalf();
+        t.x() *= slp_global()-0.5;
+        t.y() *= slp_global()-0.5;
+        t.z() *= slp_global()-0.5;
         spc->trial[iparticle].translate(*spc->geo, t);
 
         // make sure trial mass center is updated for molecular groups
@@ -474,7 +474,7 @@ namespace Faunus {
       // find clustered particles
       cindex.clear();
       for (auto i : *gmobile)
-        if (ClusterProbability(spc->p, i) > slp_global.randOne() )
+        if (ClusterProbability(spc->p, i) > slp_global() )
           cindex.push_back(i); // generate cluster list
       avgsize += cindex.size();
 
@@ -601,7 +601,7 @@ namespace Faunus {
 
       for (size_t i=0; i<g.size(); i++)
         remaining.push_back(i);
-      int f=slp_global.randOne()*remaining.size();
+      int f=slp_global()*remaining.size();
       moved.push_back(remaining[f]);
       remaining.erase(remaining.begin()+f);    // Pick first index in m to move
 
@@ -611,7 +611,7 @@ namespace Faunus {
           double uo=pot->g2g(spc->p,     *g[moved[i]], *g[remaining[j]]);
           double un=pot->g2g(spc->trial, *g[moved[i]], *g[remaining[j]]);
           double udiff=un-uo;
-          if (slp_global.randOne() < (1.-std::exp(-udiff)) ) {
+          if (slp_global() < (1.-std::exp(-udiff)) ) {
             moved.push_back(remaining[j]);
             remaining.erase(remaining.begin()+j);
             j=j-1;
@@ -659,7 +659,7 @@ namespace Faunus {
       findParticles();
       assert(!index.empty() && "No particles to rotate.");
       for (auto i : index)
-        spc->trial[i] = vrot.rotate( *spc->geo, spc->p[i] ); // (boundaries are accounted for)
+        spc->trial[i] = vrot(spc->p[i]); // (boundaries are accounted for)
       gPtr->cm_trial = Geometry::massCenter( *spc->geo, spc->trial, *gPtr);
     }
 
@@ -1225,7 +1225,7 @@ namespace Faunus {
     void ParallelTempering::findPartner() {
       int dr=0;
       partner = mpiPtr->rank();
-      if (mpiPtr->random.randOne()>0.5)
+      if (mpiPtr->random()>0.5)
         dr++;
       else
         dr--;

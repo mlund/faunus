@@ -131,7 +131,8 @@ namespace Faunus {
    * \param angle [rad]
    */
   void Group::rotate(Space &spc, const Point &endpoint, double angle) {
-    Geometry::VectorRotate vrot;
+    //Geometry::VectorRotate vrot;
+    Geometry::QuaternionRotateEigen vrot;
     assert( spc.geo->dist(cm,massCenter(spc) )<1e-6 );      // debug. Is mass center in sync?
     cm_trial = cm;
     vrot.setAxis(*spc.geo, cm, endpoint, angle);            // rotate around line between mass center and point

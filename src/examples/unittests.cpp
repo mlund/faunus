@@ -25,15 +25,29 @@ int main() {
   assert( x==16+64 && y==16+64 );
   assert( eq(x,y) && "No good distance calculation");
 
+  // check random numbers
+  {
+    int min=10, max=0, N=1e7;
+    double x=0;
+    for (int i=0; i<N; i++) {
+      int j = slp_global.rand() % 10;
+      if (j<min) min=j;
+      if (j>max) max=j;
+      x+=j;
+    }
+    assert( min==0 && max==9 );
+    assert( std::abs(x/N-4.5) < 1e-2 ); // average should be 4.5
+  }
+
   // check vector rotation
   {
     Geometry::VectorRotate vrot;
     a.clear();
     a.x()=1.;
     vrot.setAxis( geoCyl, Point(0,0,0), Point(0,1,0), pc::pi/2); // rotate around y-axis
-    a = vrot.rotate(a); // rot. 90 deg.
+    a = vrot(a); // rot. 90 deg.
     assert( eq(a.x(),0,1e-8) && "Vector rotation failed");
-    a = vrot.rotate(a); // rot. 90 deg.
+    a = vrot(a); // rot. 90 deg.
     assert( eq(a.x(),-1,1e-8) && "Vector rotation failed");
   }
 
@@ -42,9 +56,20 @@ int main() {
     a.clear();
     a.x()=1.;
     qrot.setAxis( geoCyl, Point(0,0,0), Point(0,1,0), pc::pi/2); // rotate around y-axis
-    a = qrot.rotate(a); // rot. 90 deg.
+    a = qrot(a); // rot. 90 deg.
     assert( eq(a.x(),0,1e-8) && "Vector rotation failed");
-    a = qrot.rotate(a); // rot. 90 deg.
+    a = qrot(a); // rot. 90 deg.
+    assert( eq(a.x(),-1,1e-8) && "Vector rotation failed");
+  }
+
+  {
+    Geometry::QuaternionRotateEigen qrot;
+    a.clear();
+    a.x()=1.;
+    qrot.setAxis( geoCyl, Point(0,0,0), Point(0,1,0), pc::pi/2); // rotate around y-axis
+    a = qrot(a); // rot. 90 deg.
+    assert( eq(a.x(),0,1e-8) && "Vector rotation failed");
+    a = qrot(a); // rot. 90 deg.
     assert( eq(a.x(),-1,1e-8) && "Vector rotation failed");
   }
 

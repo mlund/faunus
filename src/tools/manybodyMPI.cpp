@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
           break;
       }
 
-      if ( slp_global.runtest(0.0001) ) {
+      if ( slp_global()<0.001 ) {
         xtc.setbox( nonbonded->geometry.len );
         xtc.save(textio::prefix+"traj.xtc", spc);
       }

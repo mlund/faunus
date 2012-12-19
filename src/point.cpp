@@ -1,6 +1,4 @@
 #include <faunus/point.h>
-#include <faunus/slump.h>
-#include <faunus/geometry.h>
 #include <faunus/species.h>
 #include <faunus/physconst.h>
 
@@ -18,57 +16,27 @@ namespace Faunus {
     return (r2>0) ? std::sqrt(r2) : 0;
   }
 
-  /*!
-   * This uses the von Neumann method described in Allen and Tildesley page 349.
-   */
-  void Point::ranunit(RandomBase &ran) {
-    Point u;
-    Tcoord r2;
-    do {
-      u.x()=2*ran.randHalf();
-      u.y()=2*ran.randHalf();
-      u.z()=2*ran.randHalf();
-      r2=u.squaredNorm();
-    } while (r2>1);
-    *this = u/std::sqrt(r2);
-    assert(std::abs(this->len()-1)<1e-7); // is it really a unit vector?
-  }
-
   Point & Point::operator<<(std::istream &in) {
     in >> x() >> y() >> z();
     return *this;
   }
 
   /*!
-   * \param vrot Rotation class where the axis, angle and geometry are expected to be set
+   * \param rotator Functor that rotates a point and returns the rotated Point
+   *
+   * The functor should take care of simulation boundaries (if any) and typically one
+   * would want to pass the Geometry::VectorRotate class as in the following example:
+   * \code
+   * Point a(1,0,0);
+   * VectorRotate rotator;
+   * rotator.setAxis(geometry, Point(0,0,0), Point(0,0,1), 3.14 ); // rotate pi around 0,0,1
+   * a.rotate(rotator);
+   * \endcode
    */
-  void Point::rotate(Geometry::VectorRotate &vrot) {
-    *this = vrot.rotate(*this);
+  void Point::rotate(RotFunctor rotator) {
+    *this = rotator(*this);
   }
   
-  /*!
-   * \param geo Geomtry to use so that boundary conditions can be respected
-   * \param a Vector to translate with
-   */
-  void Point::translate(const Geometry::Geometrybase &geo, const Point &a) {
-    assert(&geo!=nullptr);
-    (*this)+=a;
-    geo.boundary(*this);
-  }
-
-  /*!
-   * This will perform a volume scaling of the Point by following the algorithm
-   * specified in the Geometrybase. Derived classes for more complex particles
-   * may override this function.
-   */
-  void Point::scale(const Geometry::Geometrybase &geo, double newvol) {
-    geo.scale(*this, newvol);
-  }
-
-  /********************
-    P A R T I C L E
-   ********************/
-
   /*!
    * Upon construction, data is zeroed.
    */
@@ -138,13 +106,13 @@ namespace Faunus {
     S P H E R O C Y L I N D E R
    *****************************/
 
-  void CigarParticle::rotate(Geometry::VectorRotate &rot) {    
+  void CigarParticle::rotate(RotFunctor rot) {
     if (halfl>1e-6) {
-      dir = rot.rotate(dir);
-      patchdir = rot.rotate(patchdir);
-      patchsides[0] = rot.rotate(patchsides[0]);
-      patchsides[1] = rot.rotate(patchsides[1]);
-      chdir = rot.rotate(chdir);
+      dir = rot(dir);
+      patchdir = rot(patchdir);
+      patchsides[0] = rot(patchsides[0]);
+      patchsides[1] = rot(patchsides[1]);
+      chdir = rot(chdir);
     }
   }
 

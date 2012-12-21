@@ -144,8 +144,8 @@ namespace Faunus {
             u.x()=slp_global.randHalf() * ePtr->geometry.len.x();          // random xy position
             u.y()=slp_global.randHalf() * ePtr->geometry.len.y();
             ePtr->geometry.boundary(u);                                    // respect periodicity
-            (slp_global.randOne()>0.5) ? u.z()=1 : u.z()=-1;                   // 50% inverted lipids
-            (slp_global.randOne()<qfrac) ? p[0].charge=-1 : p[0].charge=0; // dope w. charge
+            (slp_global()>0.5) ? u.z()=1 : u.z()=-1;                   // 50% inverted lipids
+            (slp_global()<qfrac) ? p[0].charge=-1 : p[0].charge=0; // dope w. charge
             for (auto &i : p) {
               i.x()=u.x();
               i.y()=u.y();

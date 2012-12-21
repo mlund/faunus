@@ -206,7 +206,7 @@ namespace Faunus {
       Tbase(in), onefourth(1/4.), twototwosixth(std::pow(2,2/6.))  {
         name="WeeksChandlerAnderson";
       }
-
+    
     LorentzBerthelot::LorentzBerthelot() : name("Lorentz-Berthelot Mixing Rule") {}
 
     double LorentzBerthelot::mixSigma(double sigma1, double sigma2) const { return 0.5*(sigma1+sigma2); }
@@ -215,6 +215,10 @@ namespace Faunus {
 
     LennardJonesR12::LennardJonesR12(InputMap &in, string pfx) : LennardJones(in,pfx) {
       name+="R12";
+    }
+    
+    LennardJonesTrunkShift::LennardJonesTrunkShift(InputMap &in, string pfx) : LennardJones(in,pfx) {
+      name+=" Truncated and shifted to sigma";
     }
 
     /*!

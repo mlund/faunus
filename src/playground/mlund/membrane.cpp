@@ -178,7 +178,7 @@ int main() {
       Group g;
       switch (i) {
         case 0:
-          if (slp_global.randOne()>0.5) {
+          if (slp_global()>0.5) {
             mv.setGroup(mem.lipids);
             sys+=mv.move( mem.lipids.size() ); // translate lipid monomers
           } else {
@@ -198,7 +198,7 @@ int main() {
           }
           break;
         case 2:
-          if (slp_global.randOne()>0.5) {
+          if (slp_global()>0.5) {
             gmvpol.setGroup(pol);
             sys+=gmvpol.move();
           } else {
@@ -207,7 +207,7 @@ int main() {
           }
           break;
         case 30:
-          if (slp_global.randOne()>0.9)
+          if (slp_global()>0.9)
             sys+=tit.move();
           break;
       }
@@ -223,7 +223,7 @@ int main() {
 #endif
 
       // gromacs trajectory
-      if ( slp_global.randOne()<0.01 )
+      if ( slp_global()<0.01 )
         xtc.save("traj.xtc", spc);
 
     } // end of micro loop

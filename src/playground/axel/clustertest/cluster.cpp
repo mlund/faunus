@@ -4,8 +4,8 @@
 using namespace Faunus;
 using namespace std;
 
-typedef Geometry::PeriodicCylinder Tgeometry;
-typedef Potential::DebyeHuckelLJ Tpairpot;
+typedef Geometry::Cylinder Tgeometry;
+typedef Potential::CoulombLJTS Tpairpot;
 
 int main(int argc, char** argv) {
   cout << textio::splash();
@@ -26,20 +26,29 @@ int main(int argc, char** argv) {
   int cnt=0;
   int N1=mcp.get("polymer1_N",0);
   int N2=mcp.get("polymer2_N",0);
+  double ppos[3];
+  ppos[1] = mcp.get<double>("polymer1_pos",0);
+  ppos[2] = mcp.get<double>("polymer2_pos",0);
   vector<GroupMolecular> pol( N1+N2);
   for (auto &g : pol) {
     cnt++;
     string polyfilekey = (cnt>N1) ? "polymer2_file" : "polymer1_file";
     aam.load( mcp.get<string>(polyfilekey, "") );
     Geometry::FindSpace f;
-    f.dir.x()=0; // put mass center
-    f.dir.y()=0; //   at [x,y,z] = [0,0,random]
-    if (f.find(*spc.geo, spc.p, aam.p )) {
+    //f.dir.x()=0; // put mass center
+    //f.dir.y()=0; //   at [x,y,z] = [0,0,random]
+    //f.dir.z()=1;
+    //if (f.find(*spc.geo, spc.p, aam.p )) {
+      Point v;
+      v.x()=0.0;
+      v.y()=0.0;
+      v.z()=ppos[cnt];
+      translate(*spc.geo, aam.p, -massCenter(*spc.geo, aam.p)-v);
       g = spc.insert( aam.p );
       g.name=mcp.get<string>(polyfilekey, "");
       spc.enroll(g);
-    } else
-      return 1;
+    //} else
+    //  return 1;
   }
 
   //constrain->addPair(pol[0], pol[1], 20, 150);
@@ -60,19 +69,20 @@ int main(int argc, char** argv) {
 
   gmv.directions[ pol[0].name ].x()=0; // do not move in x
   gmv.directions[ pol[0].name ].y()=0; // do not move in y
-  gmv.directions[ pol[0].name ].z()=1; // do move in z
+  gmv.directions[ pol[0].name ].z()=0; // do move in z
   gmv.directions[ pol[1].name ].x()=0; // do not move in x
   gmv.directions[ pol[1].name ].y()=0; // do not move in y
-  gmv.directions[ pol[1].name ].z()=1; // do move in z
+  gmv.directions[ pol[1].name ].z()=0; // do move in z
 
   Analysis::LineDistribution<float,unsigned long int> rdf(0.5);
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );
 
   cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
-
+  
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
+      xtc.save("out.xtc", spc.p);
       int k,i=rand() % 2;
       switch (i) {
         case 0:

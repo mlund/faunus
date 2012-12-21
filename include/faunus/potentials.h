@@ -69,6 +69,18 @@ namespace Faunus {
          * \param r2 Squared distance between them (angstrom squared)
          */
         virtual double operator() (const particle&, const particle&, double) const;
+      
+        /*!
+         * \brief Particle-particle force in units of \c kT
+         * \param a First particle
+         * \param b Second particle
+         * \param r2 Squared distance between them (angstrom squared)
+         */
+        virtual double force(const particle&, const particle&, double) {
+          assert(!"Force not overrided!");
+          return 0.0;
+        }
+      
         bool save(string, particle::Tid, particle::Tid); //!< Save table of pair potential to disk
         virtual void test(UnitTest&);                    //!< Perform unit test
         };
@@ -343,6 +355,8 @@ namespace Faunus {
               return operator()(a,b,r.squaredNorm());
             }
         };
+        
+
 
         /*
            class cos2 : public PairPotentialBase {
@@ -739,6 +753,9 @@ namespace Faunus {
             }
             string info(char);
         };
+    
+    
+    
 
         /*!
          * \brief As LennardJones but only the repulsive R12 part.
@@ -750,6 +767,22 @@ namespace Faunus {
               double x=r6(a.radius+b.radius,r2);
               return eps*x*x;
             }
+        };
+    
+        /*!
+         * \brief As LennardJones but truncated and shifted to sigma.
+         */
+        class LennardJonesTrunkShift : public LennardJones {
+        public:
+          LennardJonesTrunkShift(InputMap&, string="ljts_");
+          inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+            double sigma = a.radius+b.radius;
+            if (r2 > sigma*sigma)
+              return 0.0;
+            
+            double x=r6(sigma,r2)*0.5;
+            return eps*(x*x - x + 0.25);
+          }
         };
 
 
@@ -784,6 +817,7 @@ namespace Faunus {
             return lB*a.charge*b.charge / sqrt(r2);
 #endif
           }
+          
           string info(char);
           void test(UnitTest&); //!< Perform unit test
         };
@@ -936,6 +970,9 @@ namespace Faunus {
               inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
                 return first(a,b,r2) + second(a,b,r2);
               }
+              inline double force(const particle &a, const particle &b, double r2) FOVERRIDE {
+                return first.force(a,b,r2) + second.force(a,b,r2);
+              }
               string info(char w=20) { return first.info(w) + second.info(w); }
               void test(UnitTest &t) {
                 first.test(t);
@@ -998,6 +1035,16 @@ namespace Faunus {
          * \brief Combined Coulomb / LennardJones potential
          */
         typedef CombinedPairPotential<Coulomb, LennardJones> CoulombLJ;
+    
+        /*!
+         * \brief Combined Coulomb / WeeksChandlerAndersen potential
+         */
+        typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> CoulombWCA;
+        
+        /*!
+         * \brief Combined Coulomb / LennardJonesTrunkShift potential
+         */
+        typedef CombinedPairPotential<Coulomb, LennardJonesTrunkShift> CoulombLJTS;
 
         /*!
          * \brief Combined Coulomb / LennardJones potential

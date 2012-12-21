@@ -143,6 +143,8 @@
 		73E9C83515CC6A70001D5654 /* polymers.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = polymers.cpp; path = ../../../src/examples/polymers.cpp; sourceTree = "<group>"; };
 		73E9C83B15CC6B1D001D5654 /* polymers */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = polymers; sourceTree = BUILT_PRODUCTS_DIR; };
 		73E9C84915CDDAD5001D5654 /* README */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = README; path = ../../README; sourceTree = "<group>"; };
+		8B9277491684A3E7003BD642 /* cluster.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = cluster.cpp; sourceTree = "<group>"; };
+		8B92774A1684A3E7003BD642 /* cluster.run */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = cluster.run; sourceTree = "<group>"; };
 		8B969DDA166CDA09004248C1 /* membrane-temper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = "membrane-temper.cpp"; path = "../../src/playground/mlund/membrane-temper.cpp"; sourceTree = "<group>"; };
 		8B9D16DA166CA20E00E7C7D4 /* titrate.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = titrate.cpp; path = ../../src/titrate.cpp; sourceTree = "<group>"; };
 		8B9D16DC166CA22A00E7C7D4 /* titrate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = titrate.h; sourceTree = "<group>"; };
@@ -215,6 +217,7 @@
 				738C133B13FB12DE0056EF71 /* include */,
 				738C138C13FB13740056EF71 /* src */,
 				73E9C83D15CC6B1D001D5654 /* polymers */,
+				8B92774C1684A3F9003BD642 /* playground-axel */,
 				8BABBCC4166C9EAB00C223CC /* playground-mlund */,
 				738C132713FB12B30056EF71 /* Products */,
 			);
@@ -326,6 +329,24 @@
 				73E9C83515CC6A70001D5654 /* polymers.cpp */,
 			);
 			path = polymers;
+			sourceTree = "<group>";
+		};
+		8B9277481684A3E7003BD642 /* clustertest */ = {
+			isa = PBXGroup;
+			children = (
+				8B9277491684A3E7003BD642 /* cluster.cpp */,
+				8B92774A1684A3E7003BD642 /* cluster.run */,
+			);
+			name = clustertest;
+			sourceTree = "<group>";
+		};
+		8B92774C1684A3F9003BD642 /* playground-axel */ = {
+			isa = PBXGroup;
+			children = (
+				8B9277481684A3E7003BD642 /* clustertest */,
+			);
+			name = "playground-axel";
+			path = ../../src/playground/axel/clustertest;
 			sourceTree = "<group>";
 		};
 		8BABBCC4166C9EAB00C223CC /* playground-mlund */ = {

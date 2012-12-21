@@ -38,3 +38,7 @@ set_target_properties( cigar PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
 fau_cigarexample(cigar-npt "./vacha" cigar-npt.cpp)
 set_target_properties( cigar-npt PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
 
+# Axels playground
+fau_example(axel-cluster "./axel" cluster.cpp)
+set_target_properties(axel-cluster PROPERTIES OUTPUT_NAME "cluster")
+

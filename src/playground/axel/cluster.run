@@ -1,0 +1,59 @@
+#!/bin/bash
+
+faunus=../../../
+exe=cluster
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$faunus/src/
+
+function mkatoms() {
+echo "
+Atom  MM    -20     10.0    0.1    1       no
+Atom  NEU     0      1.0    0.1    1       no
+Atom  La     +3      2.0    0.1    1       no
+Atom  Na     +1      0.0    0.1    1       no
+" > cluster.atoms
+}
+
+function mkstruct() {
+echo "1
+ MM  0   0.00   0.00   0.00    1   1  2
+ MM  0   4.00   0.00   0.00    1   1  2
+" > cluster.aam
+}
+
+function mkinput() {
+echo "
+atomlist               cluster.atoms
+loop_macrosteps        10
+loop_microsteps        $micro
+cylinder_radius        $cylinder_radius
+cylinder_len           $cylinder_len
+temperature            298     # Kelvin
+epsilon_r              78.3    # Water dielectric const
+lj_eps                 0.05    # kT
+polymer1_N             1
+polymer2_N             1
+polymer1_file          cluster.aam
+polymer2_file          cluster.aam
+transrot_transdp       10
+transrot_rotdp         1
+transrot_clustersize   3
+dh_ionicstrength       0.01
+
+tion1                  La
+nion1                  2
+dpion1                 50
+" > cluster.input
+}
+
+mkatoms
+mkstruct
+
+rm -f state
+cylinder_len=350
+cylinder_radius=60
+micro=1000
+transdp=100
+mkinput
+$exe
+
+

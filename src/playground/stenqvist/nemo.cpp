@@ -25,6 +25,10 @@ class DipoleParticle : public PointParticle {
       }  
 };
 
+// Insert energy functions here!
+// Major goal:
+//   function: pairpot(particle &a, particle &b, point &vdist)
+
 int main() {
   InputMap mcp("nemo.conf");
   Geometry::Sphere geo(mcp);
@@ -33,6 +37,9 @@ int main() {
   cout << geo.info() << coulomb.info(25);
 
   DipoleParticle a, b;
+
+  Point vdist = geo.vdist(a,b);
+  double u = coulomb(a,b, geo.dist(a,b) );
 
   a.ranunit( slp_global ); // random unit vector
   double r = slp_global(); // random number [0:1[

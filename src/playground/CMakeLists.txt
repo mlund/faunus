@@ -38,6 +38,10 @@ set_target_properties( cigar PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
 fau_cigarexample(cigar-npt "./vacha" cigar-npt.cpp)
 set_target_properties( cigar-npt PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
 
+# Stenqvist playground
+fau_example(stenqvist-nemo "./stenqvist" nemo.cpp)
+set_target_properties(stenqvist-nemo PROPERTIES OUTPUT_NAME "nemo")
+
 # Axels playground
 fau_example(axel-clustertest "./axel/clustertest" cluster.cpp)
 set_target_properties(axel-clustertest PROPERTIES OUTPUT_NAME "clustertest")

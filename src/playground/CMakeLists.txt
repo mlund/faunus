@@ -46,3 +46,7 @@ set_target_properties(stenqvist-nemo PROPERTIES OUTPUT_NAME "nemo")
 fau_example(axel-clustertest "./axel/clustertest" cluster.cpp)
 set_target_properties(axel-clustertest PROPERTIES OUTPUT_NAME "clustertest")
 
+fau_example(axel-tempertest "./axel/tempertest" temper.cpp)
+set_target_properties(axel-tempertest PROPERTIES OUTPUT_NAME "tempertest")
+
+

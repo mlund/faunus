@@ -340,7 +340,39 @@ namespace Faunus {
           LineDistribution(Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {
             this->name="Line Distribution";
           }
+        
       };
+    
+    /*!
+     * \brief Line distr. when the bins values should sum up
+     * to "n"
+     *
+     * Example:
+     * Salt line distribution:
+     * \code
+     * Analysis::LineDistributionNorm<float,unsigned long int> saltdistr(salt.size(), 0.2);
+     * \endcode
+     *
+     * \author Axel Thuresson
+     * \date Lund 2012
+     */
+    template<typename Tx=double, typename Ty=int>
+    class LineDistributionNorm : public RadialDistribution<Tx,Ty> {
+    private:
+      double volume(Tx x) { return 1; }
+      int n;
+    public:
+      LineDistributionNorm(int al_n=1, Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {
+        this->name="Line Distribution Normalized for n particles";
+        n = al_n;
+      }
+      double get(Tx x) {
+        assert( volume(x)>0 );
+        assert( this->count()>0 );
+        return (double)this->operator()(x) * n / (double)this->count();
+      }
+      
+    };
 
     /*!
      * \brief Analysis of polymer shape - radius of gyration, shape factor etc.

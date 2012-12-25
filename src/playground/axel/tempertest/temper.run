@@ -1,11 +1,11 @@
 #!/bin/bash
 
 faunus=../../../../
-exe=clustertest
+exe=temptertest
 LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$faunus/src/
 
 cd $faunus
-make axel-clustertest
+make axel-temptertest
 cd -
 
 function mkatoms() {
@@ -15,7 +15,7 @@ Atom  NEU     0      5.0    10.0    1       no
 Atom  Ca     +2      2.0    0.1    1       no
 Atom  Na     +1      2.0    0.1    1       no
 Atom  Cl     -1      2.0    0.1    1       no
-" > cluster.atoms
+" > temper.atoms
 }
 
 function mkstruct() {
@@ -63,7 +63,7 @@ PAL 36 17 -5.88897 0 -1 1.0 5
 
 function mkinput() {
 echo "
-atomlist               cluster.atoms
+atomlist               temper.atoms
 loop_macrosteps        10
 loop_microsteps        $micro
 cylinder_radius        $cylinder_radius
@@ -84,39 +84,34 @@ transrot_clustersize   2
 tion1                  Na
 nion1                  72
 dpion1                 30
-" > cluster.input
+
+temper_runfraction      $temper     # Set to one/zero to turn on/off tempering
+temper_format           XYZQ 
+Tscale                  $Tscale # Reduced temperature
+" > mpi$proc.temper.input
 }
+
 
 mkatoms
 mkstruct
 
-rm -f state
+rm -f mpi*
 cylinder_len=200
 cylinder_radius=50
 
 halfdist=7.5
 # Equil
 micro=10000
-mkinput
-./$exe
+temper=1
 
-# Prod
-micro=100000
+for proc in {0..3}
+do
+if [ "$proc" == "0" ]; then Tscale=0.05; fi 
+if [ "$proc" == "1" ]; then Tscale=0.3; fi 
+if [ "$proc" == "2" ]; then Tscale=1.0; fi 
+if [ "$proc" == "3" ]; then Tscale=2.0; fi 
 mkinput
-./$exe
-mv saltdistr.dat ${halfdist}saltdistr.dat
+done
 
-rm -f state
-# Equil
-halfdist=9.5
-micro=10000
-mkinput
-./$exe
-
-# Prod
-micro=100000
-mkinput
-./$exe
-mv saltdistr.dat ${halfdist}saltdistr.dat
-
+mpiexec -np 4 ./$exe
 

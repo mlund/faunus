@@ -152,6 +152,8 @@
 		8BABBCCF166C9F8900C223CC /* mlund-membrane */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "mlund-membrane"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8BE1FA9E165A9780001073CC /* auxiliary.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = auxiliary.h; sourceTree = "<group>"; };
 		8BE1FAA1165FDAA2001073CC /* membrane.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = membrane.h; sourceTree = "<group>"; };
+		B8FAFBED1687DFF3001E9A89 /* temper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = temper.cpp; sourceTree = "<group>"; };
+		B8FAFBEE1687DFF3001E9A89 /* temper.run */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = temper.run; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -343,6 +345,7 @@
 		8B92774C1684A3F9003BD642 /* playground-axel */ = {
 			isa = PBXGroup;
 			children = (
+				B8FAFBEC1687DFF3001E9A89 /* tempertest */,
 				8B9277481684A3E7003BD642 /* clustertest */,
 			);
 			name = "playground-axel";
@@ -356,6 +359,16 @@
 				8BABBCC1166C9EA300C223CC /* membrane.cpp */,
 			);
 			name = "playground-mlund";
+			sourceTree = "<group>";
+		};
+		B8FAFBEC1687DFF3001E9A89 /* tempertest */ = {
+			isa = PBXGroup;
+			children = (
+				B8FAFBED1687DFF3001E9A89 /* temper.cpp */,
+				B8FAFBEE1687DFF3001E9A89 /* temper.run */,
+			);
+			name = tempertest;
+			path = ../tempertest;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

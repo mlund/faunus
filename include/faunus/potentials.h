@@ -71,14 +71,14 @@ namespace Faunus {
         virtual double operator() (const particle&, const particle&, double) const;
       
         /*!
-         * \brief Particle-particle force in units of \c kT
+         * \brief Particle-particle force in units of \c kT/Å
          * \param a First particle
          * \param b Second particle
          * \param r2 Squared distance between them (angstrom squared)
          */
-        virtual double force(const particle&, const particle&, double) {
+        virtual Point force(const particle&, const particle&, double) {
           assert(!"Force not overrided!");
-          return 0.0;
+          return Point(0.0, 0.0, 0.0);
         }
       
         bool save(string, particle::Tid, particle::Tid); //!< Save table of pair potential to disk
@@ -970,7 +970,7 @@ namespace Faunus {
               inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
                 return first(a,b,r2) + second(a,b,r2);
               }
-              inline double force(const particle &a, const particle &b, double r2) FOVERRIDE {
+              inline Point force(const particle &a, const particle &b, double r2) FOVERRIDE {
                 return first.force(a,b,r2) + second.force(a,b,r2);
               }
               string info(char w=20) { return first.info(w) + second.info(w); }

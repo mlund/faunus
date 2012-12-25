@@ -8,8 +8,9 @@ typedef Geometry::Cylinder Tgeometry;
 typedef Potential::CoulombLJTS Tpairpot;
 
 int main(int argc, char** argv) {
-  cout << textio::splash();
-  InputMap mcp("cluster.input");
+  Faunus::MPI::MPIController mpi;
+  mpi.cout << textio::splash();
+  InputMap mcp("temper.input");
   MCLoop loop(mcp);                    // class for handling mc loops
   FormatPQR pqr;                       // PQR structure file I/O
   FormatAAM aam;                       // AAM structure file I/O
@@ -77,7 +78,7 @@ int main(int argc, char** argv) {
   
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );
 
-  cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
+  mpi.cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
   
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
@@ -113,12 +114,12 @@ int main(int argc, char** argv) {
     
     saltdistr.save("saltdistr.dat");
     spc.save("state");
-    cout << loop.timing();
+    mpi.cout << loop.timing();
   } // end of macro loop
 
   pqr.save("confout.pqr", spc.p);
 
-  cout << loop.info() << spc.info() << sys.info() << mv.info() << gmv.info();
-  cout << pol[0].info();
-  cout << pol[0].charge(spc.p) << endl;
+  mpi.cout << loop.info() << spc.info() << sys.info() << mv.info() << gmv.info();
+  mpi.cout << pol[0].info();
+  mpi.cout << pol[0].charge(spc.p) << endl;
 }

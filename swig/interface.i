@@ -18,7 +18,6 @@
 #include "faunus/physconst.h"
 #include "faunus/titrate.h"
 #include "faunus/mcloop.h"
-#include "faunus/histogram.h"
 #include "faunus/io.h"
 //#include "faunus/mpi.h"
 %}
@@ -63,7 +62,6 @@
 %include "faunus/physconst.h"
 %include "faunus/titrate.h"
 %include "faunus/mcloop.h"
-%include "faunus/histogram.h"
 %include "faunus/io.h"
 //%include "faunus/mpi.h"
 

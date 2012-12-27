@@ -6,5 +6,3 @@ tion1         Na      # ion type 1
 tion2         Cl      # ion type 2
 nion1         10      # number of ion type 1
 nion2         10      # number of ion type 2
-dpion1        200     # displacement parameter for ion type 1 [angstrom]
-dpion2        200     # displacement parameter for ion type 2 [angstrom]

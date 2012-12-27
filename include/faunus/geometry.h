@@ -354,6 +354,7 @@ namespace Faunus {
      * \note Boundary condition are respected.
      * \author Mikael Lund
      * \date Canberra, 2009
+     * \todo Redundant? See QuaternionRotateEigen.
      */
     class VectorRotate {
       private:
@@ -368,11 +369,10 @@ namespace Faunus {
         virtual ~VectorRotate();
         virtual void setAxis(Geometrybase&, const Point&, const Point&, double);  //!< Set rotation axis and degrees
         double getAngle() const;                                                  //!< Get set rotation angle
-        //        virtual Point rotate(const Geometrybase&, Point) const;                   //!< Rotate point around axis (to be removed)
     };
 
     /*!
-     * \brief Quaternion rotation routine
+     * \brief Quaternion rotation routine using the Eigen library
      */
     class QuaternionRotateEigen : public VectorRotate {
       private:
@@ -390,13 +390,16 @@ namespace Faunus {
           u=end-beg;
           g.boundary(u);
           u.normalize();
-          assert( std::abs(u.squaredNorm()-1) < 1e-6 && "End point must be unit vector!");
           geoPtr=&g;
           q=Eigen::AngleAxisd(angle, u);
           cosang=std::cos(angle);
         }
     };
 
+    /*!
+     * \brief Quaternion rotation routine
+     * \todo Redundant?
+     */
     class QuaternionRotate : public VectorRotate {
       private:
         double d1, d2, d3, d4, d5, d6, d7, d8, d9 ;

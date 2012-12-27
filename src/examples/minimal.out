@@ -1,17 +1,16 @@
-Reading atom data from 'minimal.atoms'. OK!
-
  ...............................
   Simulation Space and Geometry  
  *******************************
   Boundary                 Cuboid
   Volume                   1e+06 Å³ = 1000 nm³ = 1e-21 liters
   Sidelengths              100 x 100 x 100 (Å)
-  Slice position [x y z]   0-100 0-100 0-100
+  Scale directions         XYZ
   Number of particles      20
   Electroneutrality        Yes 0
   System sanity check      Passed
+  Reserved Particle Space  32 (p), 32 (trial)
   Groups:
-    1     [0-19]                               
+    1     [0-19]           N/V = 2e-05  Å⁻³ = 33.2108 mM  
 
  .....................
   Energy: Hamiltonian  
@@ -32,14 +31,14 @@ Reading atom data from 'minimal.atoms'. OK!
   Markov Move: Single Particle Translation  
  ******************************************
   Number of trials              100000
-  Acceptance                    81.319﹪
+  Acceptance                    78.941﹪
   Runfraction                   100﹪
-  Total energy change           -1.36031 kT
+  Total energy change           -26.1445 kT
   Average moves/particle        5000
   Displacement vector           1 1 1
 
   Individual particle movement:
 
            dp    Acc. ﹪     ⟨r²⟩/Å²     √⟨r²⟩/Å
-    Na     200   81.4        2e+03       44.8        
-    Cl     200   81.2        2.01e+03    44.9        
+    Cl     30    79.7        177         13.3        
+    Na     40    78.2        308         17.5        

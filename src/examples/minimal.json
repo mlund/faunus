@@ -1,0 +1,6 @@
+{ "atomlist" :
+  {
+    "Na" : { "q": 1.0, "sigma":4.0, "dp":40. }, // sodium ion
+    "Cl" : { "q":-1.0, "sigma":4.0, "dp":30. }  // chloride ion
+  }
+}

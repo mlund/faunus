@@ -493,7 +493,7 @@
 		738C131D13FB12B30056EF71 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0440;
+				LastUpgradeCheck = 0450;
 			};
 			buildConfigurationList = 738C132013FB12B30056EF71 /* Build configuration list for PBXProject "faunus" */;
 			compatibilityVersion = "Xcode 3.2";

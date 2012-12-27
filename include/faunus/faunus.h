@@ -24,6 +24,7 @@
 #include <faunus/textio.h>
 #include <faunus/point.h>
 #include <faunus/geometry.h>
+#include <faunus/json.h>
 #include <faunus/species.h>
 #include <faunus/inputfile.h>
 #include <faunus/energy.h>

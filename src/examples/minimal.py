@@ -1,5 +1,5 @@
 from pyfaunus import *                   # import everything - prefer "import pyfaunus", though
-cvar.atom.includefile("minimal.atoms")   # load atom properties
+cvar.atom.includefile("minimal.json")    # load atom properties
 mcp = InputMap("minimal.input")          # open parameter file for user input
 nb  = Nonbonded_CoulombLJ_Cuboid(mcp)    # Define nonbonded pair-potential
 pot = Hamiltonian()                      # Hamiltonian - defines the energy field

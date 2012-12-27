@@ -44,7 +44,7 @@ test_file          bulk.test
 
 exe=./bulk
 if [ -x $exe ]; then
- micro=100
+ micro=50
  mkinput
  $exe
  rc=$?

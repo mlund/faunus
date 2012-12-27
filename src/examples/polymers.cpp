@@ -56,7 +56,6 @@ int main() {
   string polyfile = mcp.get<string>("polymer_file", "");
   double req    = mcp.get<double>("polymer_eqdist", 0);
   double k      = mcp.get<double>("polymer_forceconst", 0);
-  atom["MM"].dp = 10.;
   for (auto &g : pol) {                                  // load polymers
     aam.load(polyfile);
     Geometry::FindSpace f;

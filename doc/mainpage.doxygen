@@ -1,32 +1,125 @@
 /*! \mainpage Welcome to Faunus!
-Here you will find automatically generated documentation for the C++ classes in the framework.
-Being continuously developed, we do not guarantee that the code nor documentation is correct so please
-check your results carefully!
 
-\section mainclasses Important Classes
+\section toc Table of contents
+- Getting Started
+  - \ref downloadbuild
+  - \ref importantclasses
+- Tutorials
+  - \ref example_minimal - A minimal example of how to set up a MC simulation (C++/Python)
+  - \ref example_bulk - A melted NaCl crystal using a shifted Coulomb potential (NVT/NPT)
+  - \ref example_temper - Parallel tempering example using MPI
+  - \ref example_polymers - A linear polymer solution in the NPT ensemble
+
+\page downloadbuild Getting and building Faunus
+
+\section requirements System Requirements
+Faunus will compile in any unix-like environment including Linux, MacOS,
+and most probably also under Cygwin. The following are the minimum requirements:
+- CMake 2.8+
+- C++11 compliant compiler (gcc4.7+, clang3+, Intel13, ...)
+
+For more advanced features you may also need:
+- MPI (mpich, openmpi)
+- Python
+- Swig
+- Doxygen
+
+Most major compilers support the C++11 features used in Faunus and for debugging and
+development we recommend the clang compiler whereas for speedy production runs,
+gcc and intel are probably preferable.
+
+\section downloading Getting the source code
+Faunus is currently released only through the Sourceforge repository - i.e. no specific versions
+are released. To download the latest revision simply use subversion with the command:
+\code
+$ svn checkout svn://svn.code.sf.net/p/faunus/code/trunk faunus-code
+\endcode
+This will download everything you need to build Faunus into the directory \c faunus-code.
+
+If you need a particular revision or datestamp you may do something like:
+\code
+$ svn checkout -r 666 svn://svn.code.sf.net/p/faunus/code/trunk faunus-r666
+\endcode
+
+\section compiling Compiling
+\subsection defaultcompiler Using the default compiler
+If you think your system compiler is up to date, simply do:
+\code
+$ cd faunus-code/
+$ cmake . [options]
+$ make
+\endcode
+All available options are listed in the README file so let's just give an example:
+\code
+$ cmake . -DENABLE_MPI=on -DCMAKE_BUILD_TYPE=Release
+\endcode
+If you have installed \c ccmake you can also control the build setting from a text based
+interface by instead doing
+\code
+$ ccmake .
+\endcode
+
+\subsection manualcompiler Using a custom compiler
+If your compiler is in a non-standard location or if you have multiple
+compilers installed, use the \c CXX and \c CC shell variables to guide cmake to
+your desired compiler. For example:
+\code
+$ rm -f CMakeCache.txt (if any)
+$ CXX=/opt/local/bin/g++ CC=/opt/local/bin/gcc cmake .
+$ make
+\endcode
+
+\subsection outofsourcebuild Out of source build
+The above method will build Faunus directly in the \c faunus-code directory. If you wish to leave
+the source directory untouched you can instead use an out-of-source build. This can be useful if you
+want to make multiple builds with different settings or compilers.
+To make an out-of-source build do:
+\code
+$ mkdir build
+$ cd build
+$ cmake ../faunus-code [options]
+$ make
+\endcode
+
+\section testing Running the test suite
+Finally, after having build faunus as described above you should now run the test suite to check
+if everything works as expected:
+\code
+$ make
+$ make test
+\endcode
+If a test fails, it does not necessarily mean that all is horribly wrong. The tests compare numerics from simulations
+run on different systems and especially small differences in energy drifts (very small numbers) may cause a test to fail.
+To get verbose output from the tests, run:
+\code
+$ ctest -V
+\endcode
+
+\page linkingfaunus Using the Faunus library
+
+\page importantclasses Important Classes
 A good place to start is to understand the following classes. Also, for a more grouped overview do have
 a look at the Namespace list.
 
-\li Faunus::InputMap reads input parameters from a file in the format "keyword value". This class is frequently
-used in the constuctor arguments for other Faunus classes.
+- Faunus::Point and derived classes.
+  - All particles in Faunus are based on Point which in turn is based on the excellent
+    Eigen library (http://http://eigen.tuxfamily.org). This means you have access
+    to a wide range of powerful vector and matrix operations including geometric functions.
+    Particle in the system are stored in Faunus::Space.
 
-\li Faunus::Geometry::Geometrybase defines the geometry of your simulation (box, sphere, cylinder etc.). Usually
-this is instantiated by Faunus::Energy::Energybase classes and you often need not handle this yourself.
+- Faunus::InputMap
+  - Reads input parameters from a file in the format "keyword value". This class is frequently
+    used in the constuctor arguments for other Faunus classes.
 
-\li Faunus::Space contains all particles and handles particle insertion and removal. Every simulation needs a Space!
+- Faunus::Geometry::Geometrybase and namespace Faunus::Geometry.
+  - Derived classes define the simulation geometry (box, sphere, cylinder etc.) and take care
+    of distance calculations as well as boundary conditions.
 
-\li Faunus::Group and derived classes simply define a continuous range of particles in the container particle vector,
-useful for defining molecules, salt groups etc.
+- Faunus::Group and derived classes
+  - Simply define a continuous range of particles in the Faunus::Space::p particle vector.
+    Useful for defining molecules, salt groups etc. Groups contain function describing how to
+    perform geometric operations (translate, rotate).
 
-\li Faunus::Energy::Hamiltonian can sum interaction energies from multiple origins - bonded, non-bonded,
-external etc.
-
-\section examples Program Examples
-Below is a list of coding examples you may use to get started.
-\li \ref example_minimal - a minimal example of how to set up a MC simulation (C++/Python)
-\li \ref example_bulk - A melted NaCl crystal using a shifted Coulomb potential (NVT/NPT)
-\li \ref example_temper - Parallel tempering example using MPI
-\li \ref example_polymers - A linear polymer solution in the NPT ensemble
+- Faunus::Energy::Hamiltonian
+  - Sums interaction energies from multiple origins - bonded, non-bonded, external etc.
 */
-
-

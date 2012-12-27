@@ -222,7 +222,7 @@ namespace Faunus {
       npart = in.get(nion.str(), 0);
       if (npart>0) {
         short id = atom[ in.get<string>(tion.str(), "UNK") ].id;
-        atom[id].dp = in.get(dpion.str(), 0.);
+        atom[id].dp = in.get(dpion.str(), atom[id].dp);
         atom[id].activity = in.get(aion.str(), 0.);
         spc.insert( atom[id].name, npart);
         size+=npart;

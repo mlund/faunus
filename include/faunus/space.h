@@ -10,7 +10,6 @@ namespace Faunus {
 
   /*!
    * \brief Contains the particle vector and takes care of particle insertion and deletion.
-   * \todo Take care of bonds too?
    *
    * Every simulation must have a Space instance as this contains the particles. While instantiating
    * Space you must provide a valid Geometry which will be stored as a pointer. Typically the Geometrybase

@@ -743,8 +743,8 @@ namespace Faunus {
           protected:
             double eps;
           public:
-            R12Repulsion() __attribute__ ((deprecated));
-            R12Repulsion(InputMap&, string="r12rep_") __attribute__ ((deprecated));
+            R12Repulsion(); // __attribute__ ((deprecated));
+            R12Repulsion(InputMap&, string="r12rep_"); // __attribute__ ((deprecated));
             inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
               double x=(a.radius+b.radius);
               x=x*x/r2; // r2

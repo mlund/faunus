@@ -1,9 +1,7 @@
 from pyfaunus import *                   # import everything - prefer "import pyfaunus", though
 cvar.atom.includefile("minimal.json")    # load atom properties
 mcp = InputMap("minimal.input")          # open parameter file for user input
-nb  = Nonbonded_CoulombLJ_Cuboid(mcp)    # Define nonbonded pair-potential
-pot = Hamiltonian()                      # Hamiltonian - defines the energy field
-pot.add(nb)                              # add nonbonded energy to hamiltonian
+pot = Nonbonded_CoulombLJ_Cuboid(mcp)    # Define nonbonded pair-potential
 spc = Space( pot.getGeometry() )         # create simulation space, particles etc.
 salt = GroupAtomic(spc,mcp)              # group for salt particles
 mv = AtomicTranslation(mcp,pot,spc)      # particle move class

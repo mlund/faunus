@@ -177,7 +177,7 @@ namespace Faunus {
     if (empty())
       return -1;
     int i = front() + slp_global.rand() % size();
-    assert(i>=front() && i<=back() && "Generated random element out of range!");
+    assert(find(i) && "Generated random element out of range!");
     return i;
   }
 
@@ -204,10 +204,17 @@ namespace Faunus {
 
   /*!
    * The InputMap is scanned for the following keywords, starting with X=1:
-   * \li \c tionX  Type of ion X
-   * \li \c nionX  Number of type X ions
-   * \li \c dpionX Displacement parameter of ion type X
-   * \li \c aionX  Activity of ion X (molar scale)
+   *
+   * Key            | Description
+   * :------------- | :---------------------
+   * `tionX`        | Name of atom X
+   * `nionX`        | Number of type X atoms
+   * `dpionX`       | (Displacement parameter of atom type X)
+   * `aionX`        | (Activity of atom X (molar scale))
+   *
+   * If the two latter properties, displacement and activity, are omitted
+   * (recommended) the values from AtomTypes is used instead. That is, you
+   * should specify these directly in the input JSON file.
    */
   void GroupAtomic::add(Space &spc, InputMap &in) {
     setfront( spc.p.size() );

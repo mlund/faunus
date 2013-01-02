@@ -356,7 +356,7 @@ namespace Faunus {
     return false;
   }
 
-  bool FormatXTC::save(string file, p_vec &p, vector<Group> &g) {
+  bool FormatXTC::save(string file, p_vec &p, std::vector<Group> &g) {
     p_vec t;
     for (auto &gi : g)
       for (auto j : gi)

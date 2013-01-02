@@ -9,8 +9,7 @@
 namespace Faunus {
   class _inputfile;
   /*
-   * \brief Estimate speed of a computational process
-   * \author Mikael Lund
+   * @brief Estimate speed of a computational process
    * 
    * This class can be used to estimate when a computational
    * process will finish. The current resolution is seconds.
@@ -48,31 +47,37 @@ namespace Faunus {
   template<class T> int CountDown<T>::elapsed() { return time(0)-time_i; }
 
   /*!
-   * \brief Monte Carlo loop book-keeping
+   * @brief Two level loop book-keeping
    *
-   * This class keeps track of the outer and inner
-   * Markov chain loops. After each macro step an
-   * estimated time of the simulations will be evaluated.
+   * This class simply keeps track of an outer and inner
+   * Markov chain loop. After each macro step an
+   * estimated time of the simulation will be evaluated.
    *
    * The constructor will search the passed Faunus::InputMap object for the
    * keywords:
-   * \li "macrosteps" - corresponding to the number of steps in the outer loop
-   * \li "microsteps" - ...and the steps in the inner loop
    *
-   * A typical usage is as follows\n
-   * \code
-   * MCLoop(in) mc;
-   * while (mc.macroCnt()) {
-   *   while (mc.microCnt()) {
-   *     //inner loop code
+   * Key               | Description
+   * :---------------- | :-----------------------------
+   * `loop_macrosteps` | Number of steps in outer loop
+   * `loop_microsteps` | Number of steps in inner loop
+   *
+   * Typical usage:
+   *
+   * @code
+   *
+   * InputMap mcp("myinput");
+   * MCLoop(mcp) mc;
+   *
+   * while ( mc.macroCnt() ) {
+   *   while ( mc.microCnt() ) {
    *   }
    *   std::cout << mc.timing();
    * }
    * std::cout << mc.info();
-   * \endcode
    *
-   * \author Mikael Lund
-   * \date 2007
+   * @endcode
+   * @date 2007
+   * @todo This could be made very general with an arbitrary number of levels
    */
   class MCLoop {
     private:

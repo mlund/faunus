@@ -77,7 +77,7 @@ namespace Faunus {
       };
 
     /*!
-     * \brief Base class for Monte Carlo moves
+     * @brief Base class for Monte Carlo moves
      *
      * The is a base class that handles Monte Carlo moves and derived classes
      * are required to implement the following pure virtual (and private)
@@ -95,7 +95,7 @@ namespace Faunus {
      * moves the pV term should be included and so on. Please do stride not try override
      * the move() function as this should be generic to all MC moves.
      *
-     * \date Lund, 2007-2011
+     * @date Lund, 2007-2011
      */
 
     class Movebase {
@@ -140,7 +140,7 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Translation of atomic particles
+     * @brief Translation of atomic particles
      *
      * This Markov move can work in two modes:
      * - Move a single particle in space set by setParticle()
@@ -149,7 +149,7 @@ namespace Faunus {
      * The move directions can be controlled with the dir vector - for instance if you wish
      * to translate only in the `z` direction, set `dir.x()=dir.y()=0`.
      *
-     * \date Lund, 2011
+     * @date Lund, 2011
      */
     class AtomicTranslation : public Movebase {
       private:
@@ -178,7 +178,7 @@ namespace Faunus {
     };
    
     /*!
-     * \brief Rotate single particles
+     * @brief Rotate single particles
      *
      * This move works in the same way as AtomicTranslation but does
      * rotations of non-isotropic particles instead of translation. This move
@@ -194,7 +194,7 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Combined rotation and rotation of groups
+     * @brief Combined rotation and rotation of groups
      *
      * This will translate and rotate groups and collect averages based on group name.
      *
@@ -235,13 +235,12 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Combined rotation and rotation of groups and mobile species around it
-     * \author Mikael Lund
+     * @brief Combined rotation and rotation of groups and mobile species around it
      *
      * This class will do a combined translational and rotational move of a group along with
      * atomic particles surrounding it. To specify where to look for clustered particles, use
      * the setMobile() function. Whether particles are considered part of the cluster is
-     * determined by the private virtual function ClusterProbability(). By default this is a simple
+     * determined by the private virtual function `ClusterProbability()`. By default this is a simple
      * step function with P=1 when an atomic particle in the group set by setMobile is closer
      * than a certain threshold to a particle in the main group; P=0 otherwise.
      *
@@ -269,21 +268,21 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Non-rejective cluster translation.
+     * @brief Non-rejective cluster translation.
      *
      * This type of move will attempt to move collective sets of macromolecules that
      * obeys some criteria (here a hardcore overlap(?)) with a symmetric transition
      * matrix (no flow through the clusters).
      *
-     * Setting the boolen "skipEnergyUpdate" to true (default is false) updates of the
+     * Setting the boolen `skipEnergyUpdate` to true (default is false) updates of the
      * total energy are skipped to speed up the move.
      * While this has no influence on the Markov chain it will cause an apparent energy
      * drift. It is recommended that this is enabled only for long production runs after
-     * having properly checked that no drifts occur with skipEnergyUpdate=false.
+     * having properly checked that no drifts occur with `skipEnergyUpdate=false`.
      *
-     * \author Bjoern Persson
-     * \date Lund 2009-2010
-     * \note Requirements for usage:
+     * @author Bjoern Persson
+     * @date Lund 2009-2010
+     * @note Requirements for usage:
      * - Compatible only with purely molecular systems
      * - Works only with periodic containers
      * - External potentials are ignored
@@ -305,9 +304,8 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Crank shaft move of linear polymers
-     * \author Kurut, Henriques, Lund ???
-     * \date Lund 2012
+     * @brief Crank shaft move of linear polymers
+     * @date Lund 2012
      *
      * Explain what this move does and how to use it...
      * ![Polymer moves](polymerdisplacements.jpg)
@@ -337,7 +335,7 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Pivot move for linear polymers
+     * @brief Pivot move for linear polymers
      *
      * This will perform a pivot rotation of a linear polymer by the following steps:
      *
@@ -346,8 +344,7 @@ namespace Faunus {
      *
      * ![Polymer moves](polymerdisplacements.jpg)
      *
-     * \author Mikael Lund
-     * \date Asljunga 2012
+     * @date Asljunga 2012
      */
     class Pivot : public CrankShaft {
       private:
@@ -357,15 +354,17 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Reptation move for linear polymers
+     * @brief Reptation move for linear polymers
      *
      * This will perform a reptation move of a linear, non-uniform polymer chain.
      * During construction, the InputMap is searched for the following keywords:
-     * - `reptation_runfraction`. Probability to perform a move - defaults to 1.0 = 100%
-     * - `reptation_bondlength`. The bond length while moving head groups. Use -1 to use existing bondlength.
      *
-     * \author Mikael Lund
-     * \date Lund 2012
+     * Key                     | Description
+     * :---------------------- | :---------------------------
+     * `reptation_runfraction` | Probability to perform a move (defaults=1)
+     * `reptation_bondlength`  | The bond length while moving head groups. Use -1 to use existing bondlength.
+     *
+     * @date Lund 2012
      */
     class Reptation : public Movebase {
       private:
@@ -384,34 +383,32 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Isobaric volume move
+     * @brief Isobaric volume move
      *
-     * \details This class will perform a volume displacement and scale atomic
+     * @details This class will perform a volume displacement and scale atomic
      * as well as molecular groups as long as these are known to Space -
      * see Space.enroll().
      * The constructor will automatically add an instance of Energy::ExternalPressure
      * to the Hamiltonian. The InputMap class is scanned for the following keys:
      *
-     * - `npt_dV`
-     *   - Volume displacement parameter
-     * - `npt_P`
-     *   - Pressure
-     * - `npt_Punit`
-     *   - Pressure unit: mM [default] or 1/A3 (not implemented, yet!)
+     * Key           | Description
+     * :------------ | :-----------------------------
+     * `npt_dV`      | Volume displacement parameter
+     * `npt_P`       | Pressure [mM]
      *
-     * Note that the volume displacement is
-     * \f$ V^{\prime} = \exp\left ( \log V \pm \delta dV \right ) \f$ where \f$\delta\f$ is a random number
-     * between zero and one half.
+     * Note that new volumes are generated according to
+     * \f$ V^{\prime} = \exp\left ( \log V \pm \delta dV \right ) \f$
+     * where \f$\delta\f$ is a random number between zero and one half.
      *
      * Example:
-     * \code
-     * Energy::Hamiltonian pot;        // we need a hamiltonian
-     * ...                             // insert interactions...
-     * Space spc( pot.getGeometry() ); // ...and a space
-     * spc.enroll( myprotein );        // register some groups
-     * spc.enroll( mysolvent );
-     * Move::Isobaric(in, pot, spc);   // setup and add pressure to hamiltonian
-     * \endcode
+     *
+     *     Energy::Hamiltonian pot;        // we need a hamiltonian
+     *     ...                             // insert interactions...
+     *     Space spc( pot.getGeometry() ); // ...and a space
+     *     spc.enroll( myprotein );        // register some groups
+     *     spc.enroll( mysolvent );
+     *     Move::Isobaric(in, pot, spc);   // setup and add pressure to hamiltonian
+     *
      */
     class Isobaric : public Movebase {
       private:
@@ -435,21 +432,19 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Auxillary class for tracking atomic species
-     * \author Mikael Lund
-     * \date Malmo 2011
+     * @brief Auxillary class for tracking atomic species
+     * @date Malmo 2011
      *
      * This class keeps track of individual particle positions based on particle type (id).
      * It contains functions to insert and erase particles while automatically moving particles
      * above the deletion or insertion point in sync.
      *
      * Example:
-     * \code
-     * AtomTracker track(myspace);
-     * track.insert( myparticle, 20 );        // insert particle into Space at position 20
-     * ...
-     * int i=track[ myparticle.id ].random(); // pick a random particle of type myparticle.id
-     * \endcode
+     *
+     *     AtomTracker track(myspace);
+     *     track.insert( myparticle, 20 );        // insert particle into Space at position 20
+     *     ...
+     *     int i=track[ myparticle.id ].random(); // pick a random particle of type myparticle.id
      */
     class AtomTracker {
       public:
@@ -509,24 +504,25 @@ namespace Faunus {
 
 #ifdef ENABLE_MPI
     /*!
-     * \brief Class for parallel tempering (aka replica exchange) using MPI
-     * \author Mikael Lund
-     * \date Lund 2012
+     * @brief Class for parallel tempering (aka replica exchange) using MPI
      *
      * This will perform replica exchange moves by the following steps:
-     * \li Randomly find an exchange partner with rank above/under current rank
-     * \li Exchange full particle configuration with partner
-     * \li Calculate energy change using Energy::systemEnergy. Note that this
-     *     energy function can be replaced by simply setting the ParallelTempering::usys
-     *     variable to another function with the same signature (functor wrapper).
-     * \li Send/receive energy change to/from partner
-     * \li Accept or reject based on total energy change
+     *
+     * -# Randomly find an exchange partner with rank above/under current rank
+     * -# Exchange full particle configuration with partner
+     * -# Calculate energy change using Energy::systemEnergy. Note that this
+     *    energy function can be replaced by setting the `ParallelTempering::usys`
+     *    variable to another function with the same signature (functor wrapper).
+     * -# Send/receive energy change to/from partner
+     * -# Accept or reject based on *total* energy change
      *
      * Although not completely correct, the recommended way of performing a temper move
-     * is to do N Monte Carlo passes with regular moves and then do a tempering move.
+     * is to do `N` Monte Carlo passes with regular moves and then do a tempering move.
      * This is because the MPI nodes must be in sync and if you have a system where
-     * the random number generator calls is influenced by the Hamiltonian we could 
+     * the random number generator calls are influenced by the Hamiltonian we could 
      * end up in a deadlock.
+     *
+     * @date Lund 2012
      */
     class ParallelTempering : public Movebase {
       private:

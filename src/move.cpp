@@ -52,15 +52,16 @@ namespace Faunus {
   
     /*!
      * This function will perform a trial move and accept/reject using the standard
-     * Metropolis criteria. That is, it will
-     * perform the following actions \c n times:
-     * \li Perform a trial move with \c _trialMove()
-     * \li Calulate the energy change, \f$\beta\Delta U\f$ with \c _energyChange()
-     * \li Accept with probability \f$ \min(1,e^{-\beta\Delta U}) \f$
-     * \li Call either \c _acceptMove() or \c _rejectMove()
+     * [Metropolis criteria](http://en.wikipedia.org/wiki/Metropolis–Hastings_algorithm)
+     * That is, it will perform the following `n` times:
      *
-     * \note Do not override this function in derived classes.
-     * \param n Perform move \c n times
+     * - Perform a trial move with `_trialMove()`
+     * - Calulate the energy change, \f$\beta\Delta U\f$ with `_energyChange()`
+     * - Accept with probability \f$ \min(1,e^{-\beta\Delta U}) \f$
+     * - Call either `_acceptMove()` or `_rejectMove()`
+     *
+     * @note Do not override this function in derived classes.
+     * @param n Perform move `n` times (default=1)
      */
     double Movebase::move(int n) {
       double utot=0;
@@ -113,15 +114,16 @@ namespace Faunus {
     /*!
      * This will return a formatted multi-line information string about the move and
      * will as a minimum contain:
-     * \li Name of move
-     * \li Runfraction
-     * \li Number of times the move has been called
-     * \li Acceptance
-     * \li Total energy change
+     *
+     * - Name of move
+     * - Runfraction
+     * - Number of times the move has been called
+     * - Acceptance
+     * - Total energy change
      *
      * Typically, additional information will be provided as well.
      *
-     * \note Do not override in derived classes - use _info().
+     * @note Do not override in derived classes - use _info().
      */
     string Movebase::info() {
       assert(!title.empty() && "Markov Moves must have a title");
@@ -142,10 +144,13 @@ namespace Faunus {
 
     /*!
      * The InputMap is searched for the following keywords:
-     * \li \c prefix_runfraction
-     * \li \c prefix_genericdp This will be used if no specific displacement parameter
-     *     is specified for an ion.
-     * The standard prefix is \c mv_particle.
+     *
+     * Key                  | Description
+     * :------------------- | :-------------------------------------------------------------
+     * `prefix_runfraction` | Chance of running (default=1)
+     * `prefix_genericdp`   | Fallback displacement paraemter if `dp` is defined in AtomData.
+     *
+     * The standard prefix is `mv_particle`.
      */
     AtomicTranslation::AtomicTranslation(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Single Particle Translation";
@@ -315,6 +320,15 @@ namespace Faunus {
       return o.str();
     }
  
+    /*!
+     * The InputMap is scanned for the following keys:
+     *
+     * Key               | Description
+     * :---------------- | :-------------------------------------
+     * `pfx_transdp`     | Translational displacement [angstrom]
+     * `pfx_rotdp`       | Rotational displacement [radians]
+     *
+     */
     TranslateRotate::TranslateRotate(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Group Rotation/Translation";
       igroup=nullptr;

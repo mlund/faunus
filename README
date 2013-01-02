@@ -1,26 +1,37 @@
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  Faunus -- A Framework for Molecular Modelling 
-  Copyright (C) 2002-2013 Mikael Lund 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ Faunus - A Framework for Molecular Modelling 
+ Copyright (C) 2002-2013 Mikael Lund 
 
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or 
-  (at your option) any later version.
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or 
+ (at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License along
-  with this program; if not, write to the Free Software Foundation, Inc.,
-  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ You should have received a copy of the GNU General Public License along
+ with this program; if not, write to the Free Software Foundation, Inc.,
+ 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-WELCOME TO FAUNUS
+WELCOME TO FAUNUS                                          
 =================
-Faunus is a C++ library for creating programs
-for Monte Carlo simulation of molecular systems.
+
+Faunus is a C++ framework for Metropolis Monte Carlo simulations of
+molecular systems. Below is a brief overview of features:
+
+- Canonical, Grand Canonical, Isobaric-Isothermal statistical mechanical ensembles
+- General hamiltonian **parallel tempering** (temperature, screening length, bonds etc.)
+- 4D simulations on **hyperspheres**
+- **Anisotropic** particles (multipoles, sphero-cylinders)
+- Ion titration moves (pKa prediction, Hofmeister effects etc.)
+- Highly expandable!
+- Free and open source (**GPL**)
+
+Detailed information and support:
 
 - Website: <http://faunus.sourceforge.net>
 - Support: <http://sourceforge.net/projects/faunus/support>
@@ -28,6 +39,7 @@ for Monte Carlo simulation of molecular systems.
 Get the latest code resivions via SVN from sourceforge.net:
 
     $ svn co http://svn.code.sf.net/p/faunus/code/trunk faunus
+
 
 REQUIREMENTS
 ============
@@ -44,7 +56,8 @@ Optional:
 
 Developed and tested on Linux and MacOS X.
 
-COMPILING
+
+COMPILING                                         {#compiling}
 =========
 
     $ svn co http://svn.code.sf.net/p/faunus/code/trunk faunus
@@ -54,21 +67,23 @@ COMPILING
     $ make [help]
     $ make test (or use 'ctest -V' for verbose test output)
 
-Options
--------
 
--DENABLE_BABEL=ON|off             Use OpenBabel for file I/O
--DENABLE_MPI=on|OFF               Build MPI programs (parallel tempering etc.)
--DENABLE_OPENMP=on|OFF            Enable OpenMP support
--DENABLE_STATIC=on|OFF            Static linkage of faunus as opposed to default dynamic linkage
--DENABLE_SWIG=on|OFF              Build python, ruby, tcl etc. modules
--DENABLE_TWISTER=on|OFF           Use Mersenne Twister for random numbers
--DENABLE_UNICODE=ON|off           Use Unicode UTF-16 encoding for pretty output
+Build options
+-------------
 
--DCMAKE_BUILD_TYPE=Debug|Release  Debug (default, safer) or Release (faster) mode
--DCMAKE_CXX_FLAGS_RELEASE="..."   Compiler options for Release mode
--DCMAKE_CXX_FLAGS_DEBUG="..."     Compiler options for Debug mode
--DMYPLAYGROUND="..."              Add additional source directory (use absolute path)
+Option                             | Description
+:--------------------------------- | :----------------------------------------
+`-DENABLE_BABEL=OFF`               | Use OpenBabel for file I/O
+`-DENABLE_MPI=OFF`                 | Build MPI programs (parallel tempering etc.)
+`-DENABLE_OPENMP=OFF`              | Enable OpenMP support
+`-DENABLE_STATIC=OFF`              | Static linkage of faunus as opposed to default dynamic linkage
+`-DENABLE_SWIG=OFF`                | Build python, ruby, tcl etc. modules
+`-DENABLE_TWISTER=OFF`             | Use Mersenne Twister for random numbers
+`-DENABLE_UNICODE=ON`              | Use Unicode UTF-16 encoding for pretty output
+`-DCMAKE_BUILD_TYPE=RelWithDebInfo`| Alternatives: `Debug` or `Release` (faster)
+`-DCMAKE_CXX_FLAGS_RELEASE="..."`  | Compiler options for Release mode
+`-DCMAKE_CXX_FLAGS_DEBUG="..."`    | Compiler options for Debug mode
+`-DMYPLAYGROUND="..."`             | Add additional source directory (use absolute path)
 
 Example: Intel's C++ compiler with OpenMP parallelization
 ---------------------------------------------------------
@@ -76,15 +91,10 @@ Example: Intel's C++ compiler with OpenMP parallelization
     $ CXX=icpc CC=icc cmake . -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=Release
     $ make
 
-Example: LLVM Clang
--------------------
-
-    $ CXX=clang++ CC=clang cmake .
-
 Example: Libraries in odd locations
 -----------------------------------
 
-    $ LDFLAGS=-L/sw/lib CPPFLAGS=-I/sw/include/openbabel-2.0 cmake .
+    $ LDFLAGS=-L/sw/lib CPPFLAGS=-I/sw/include/openbabel-2.0 cmake . -DENABLE_BABEL=on
 
 Resetting the build system
 --------------------------
@@ -112,6 +122,6 @@ In chronological order:
 CITING FAUNUS
 =============
 
-- Lund, M., Persson, B., Trulsson, M. (2008) Source Code Biol. Med. 3:1
+- Lund, M., Persson, B., Trulsson, M. (2008) Source Code Biol. Med. 3:1.
   <http://www.scfbm.org/content/3/1/1> (free full text)
 

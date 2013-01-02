@@ -1,21 +1,23 @@
-/*! \mainpage Welcome to Faunus!
+/*! @mainpage Welcome to Faunus!
 
 Table of contents
 =================
 
+- [Overview / Readme](md_README.html)
+- @ref license
 - Getting Started
-  - \ref downloadbuild
-  - \ref linkingyourown
-  - \ref importantclasses
+  - @ref downloadbuild
+  - @ref linkingyourown
+  - @ref importantclasses
 - Tutorials
-  - \ref example_minimal - A minimal example of how to set up a MC simulation (C++/Python)
-  - \ref example_bulk - A melted NaCl crystal using a shifted Coulomb potential (NVT/NPT)
-  - \ref example_polymers - Flexible, linear polymers in an electrolyte solution (NPT)
-  - \ref example_temper - Parallel tempering example using MPI
+  - @ref example_minimal - A minimal example of how to set up a MC simulation (C++/Python)
+  - @ref example_bulk - A melted NaCl crystal using a shifted Coulomb potential (NVT/NPT)
+  - @ref example_polymers - Flexible, linear polymers in an electrolyte solution (NPT)
+  - @ref example_temper - Parallel tempering example using MPI
 - Development
-  - \ref guidelines
+  - @ref guidelines
 
-\page downloadbuild Getting and building Faunus
+@page downloadbuild Getting and building Faunus
 
 System Requirements
 ===================
@@ -42,7 +44,7 @@ work:
 
 Compiler       | Version        | Comment
 :------------- | :-----------   | :----------
-GCC            | 4.6, **4.7**   | Good optimization
+GCC            | (4.6), 4.7     | Good optimization
 Clang          | 3.1            | Good warning/error info, slower code
 Intel Composer | 13             | Pedantic warnings, good optimization
 
@@ -55,8 +57,8 @@ are released. To download the latest revision simply use subversion with the com
 
     svn checkout svn://svn.code.sf.net/p/faunus/code/trunk faunus-code
 
-This will download everything you need to build Faunus into the directory `faunus-code`.
-If you need a particular revision or datestamp you may do something like:
+This will download faunus into the directory `faunus-code`.
+For a particular revision or datestamp you, do something like this:
 
     svn checkout -r 666 svn://svn.code.sf.net/p/faunus/code/trunk faunus-r666
 
@@ -72,7 +74,8 @@ If you think your system compiler is up to date, simply do:
     $ cmake . [options]
     $ make
 
-All available options are listed in the README file so let's just give a single example:
+All available build options are listed in the [README](@ref compiling)
+file so let's just give a single example:
 
     $ cmake . -DENABLE_MPI=on -DCMAKE_BUILD_TYPE=Release
 
@@ -120,19 +123,16 @@ To get verbose output from the tests, run:
 
     $ ctest -V
 
-\page linkingyourown Making a new Faunus program
-We'll here show how to link a new, external program to the Faunus library. This can of course be done in the
-traditional way by simply compiling your program with `libfaunus`. For example:
+@page linkingyourown Making a new Faunus program
 
-    $ export faunus=$HOME/faunus
-    $ c++ hello.cpp $faunus/src/libfaunus.so -I$faunus/include
+We'll here show how to link a new, external program to the Faunus library.
 
-This will, however, require that you manually set compiler options as well as macro definitions
-compatible with your `libfaunus` build.
-A more convenient and robust way is to use CMake is described below:
+Using CMake
+-----------
 
-First make a new directory, put your source file there and make a `CMakeLists.txt` file telling CMake
-about your new executable. For example:
+Start by making a new directory (anywhere you want), put your source file there,
+and make a `CMakeLists.txt` file telling CMake about your new executable.
+For example:
 
     $ cd $HOME/newproject
     $ cat hello.cpp
@@ -158,7 +158,19 @@ directly from the `newproject` directory:
 Note that all options selected when configuring faunus will be applied to `hello` as well,
 and any changes to the faunus code base will trigger re-compilation upon running `make`.
 
-\page importantclasses Important Classes
+Using manual linking
+--------------------
+
+The above can of course be done in the traditional way by
+compiling your program with `libfaunus`. For example:
+
+    $ export faunus=$HOME/faunus
+    $ c++ hello.cpp $faunus/src/libfaunus.so -I$faunus/include
+
+This will, however, require that you manually set compiler options as well as macro definitions
+compatible with your `libfaunus` build.
+
+@page importantclasses Important Classes
 
 A good place to start is to understand the following classes. Also, for a more grouped overview do have
 a look at the Namespace list.
@@ -193,7 +205,7 @@ a look at the Namespace list.
     almost identicaly interface for all MC moves.
     See namespace Faunus::Move for an overview of available moves.
 
-\page guidelines Coding Guidelines
+@page guidelines Coding Guidelines
 
 Guidelines
 ==========
@@ -201,13 +213,12 @@ Guidelines
 Naming Style
 ------------
 
-Object                          | Example
-:------------------------------ | :-------------------------------
-Classes, templates, namespaces  | `class AtomicTranslation;`
-Member functions, functions     | `double getTemperature();`
-Private variables               | `int _i;`
-Public variables (*avoid!*)     | `int numberOfParticles;`
-Pointer                         | `double* xPtr;`
+Object                          | Example                     | Comment
+:------------------------------ | :-------------------------- | :----------
+Types and namespaces            | `class AtomicTranslation;`  | Mixed case starting with upper case
+Member functions, functions     | `double getTemperature();`  | mixed case starting with lower case
+Public variables (*avoid!*)     | `int numberOfParticles;`    | mixed case starting with lower case
+Private variables               | `int _i;`                   | Underscore prefix 
 
 
 Editing code
@@ -264,5 +275,9 @@ Please, also verify SWIG modules:
     $ cmake -DENABLE_SWIG=on
     $ make _pyfaunus
     $ make test
+
+@page license License
+@verbinclude LICENSE
+
 
 */

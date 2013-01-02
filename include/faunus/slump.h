@@ -17,13 +17,13 @@ namespace Faunus {
    */
   class RandomBase {
     private:
-      virtual double _randone()=0;  //!< Random number in range [0:1[
+      virtual double _randone()=0;  //!< Random number in range `[0:1[`
     public:
       std::string name;
       virtual ~RandomBase();
       virtual void seed(int=0)=0;   //!< Seed random generator
-      double randHalf();            //!< Random number in range [-0.5:0.5[
-      unsigned int rand();          //!< Random number in range [0:max unsigned int[]
+      double randHalf();            //!< Random number in range `[-0.5:0.5[`
+      unsigned int rand();          //!< Random number in range `[0:max unsigned int[`
       /*!
        * \brief Random number in range [0:1[
        */
@@ -60,11 +60,12 @@ namespace Faunus {
   };
 
   /*!
-   * \brief Mersenne Twister Random number functions (C++11)
-   * \date Lund, 2010
+   * @brief Mersenne Twister Random number functions (C++11)
    *
-   * This is slightly slower than ran2 but generally thought to provide
-   * better randomness.
+   * This uses the C++11 Mersenne Twister for random number generations and while
+   * slightly slower than ran2, MT generally provides better randomness.
+   *
+   * @date Lund, 2010
    */
   template<typename T=double, typename Tengine=std::mt19937> 
     class RandomTwister : public RandomBase {

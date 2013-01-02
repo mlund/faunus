@@ -16,14 +16,57 @@ int main() {
   // check approximate 1/sqrt()
   assert( eq( invsqrtQuake(20.), 1/std::sqrt(20.), 1e-1) && "Problem w. inverse Quake sqrt.");
 
+  // groups
+  {
+    Group g(2,5);           // first, last particle                                                                  
+    assert(g.front()==2);
+    assert(g.back()==5);
+    assert(g.size()==4);
+
+    g.resize(0);
+    assert(g.empty());
+
+    g.resize(1000);
+    assert(g.size()==1000);
+
+    g.setfront(1);
+    g.setback(10);
+    assert(g.front()==1);
+    assert(g.back()==10);
+    assert(g.size()==10);
+
+    int cnt=0;
+    for (auto i : g) {
+      cnt++;
+      assert(g.find(i));
+    }
+    assert(cnt==g.size());
+
+    assert(!g.find(0));
+    assert(!g.find(11));
+
+    // check random
+    int min=1e6, max=-1e6;
+    for (int n=0; n<1e6; n++) {
+      int i=g.random();
+      if (i<min) min=i;
+      if (i>max) max=i;
+      assert( g.find(i) );
+    }
+    assert(min=g.front());
+    assert(max=g.back());
+  }
+
   // check geometries
-  Geometry::Sphere geoSph(1000);
-  Geometry::Cylinder geoCyl(1000,1000);
-  Point a( 0,0,sqrt(16)), b(0,sqrt(64),0);
-  double x = geoSph.sqdist(a,b);
-  double y = geoCyl.sqdist(a,b);
-  assert( x==16+64 && y==16+64 );
-  assert( eq(x,y) && "No good distance calculation");
+  {
+    Geometry::Sphere geoSph(1000);
+    Geometry::Cylinder geoCyl(1000,1000);
+    Point a( 0,0,sqrt(16)), b(0,sqrt(64),0);
+    double x = geoSph.sqdist(a,b);
+    double y = geoCyl.sqdist(a,b);
+    assert( x==16+64 && y==16+64 );
+    assert( eq(x,y) && "No good distance calculation");
+  }
 
   // check random numbers
   {
@@ -42,9 +85,10 @@ int main() {
   // check vector rotation
   {
     Geometry::VectorRotate vrot;
-    a.clear();
+    Geometry::Cylinder geo(1000,1000);
+    Point a(0,0,0);
     a.x()=1.;
-    vrot.setAxis( geoCyl, Point(0,0,0), Point(0,1,0), pc::pi/2); // rotate around y-axis
+    vrot.setAxis( geo, Point(0,0,0), Point(0,1,0), pc::pi/2); // rotate around y-axis
     a = vrot(a); // rot. 90 deg.
     assert( eq(a.x(),0,1e-8) && "Vector rotation failed");
     a = vrot(a); // rot. 90 deg.
@@ -53,9 +97,10 @@ int main() {
 
   {
     Geometry::QuaternionRotate qrot;
-    a.clear();
+    Geometry::Cylinder geo(1000,1000);
+    Point a(0,0,0);
     a.x()=1.;
-    qrot.setAxis( geoCyl, Point(0,0,0), Point(0,1,0), pc::pi/2); // rotate around y-axis
+    qrot.setAxis( geo, Point(0,0,0), Point(0,1,0), pc::pi/2); // rotate around y-axis
     a = qrot(a); // rot. 90 deg.
     assert( eq(a.x(),0,1e-8) && "Vector rotation failed");
     a = qrot(a); // rot. 90 deg.
@@ -64,22 +109,24 @@ int main() {
 
   {
     Geometry::QuaternionRotateEigen qrot;
-    a.clear();
+    Geometry::Cylinder geo(1000,1000);
+    Point a(0,0,0);
     a.x()=1.;
-    qrot.setAxis( geoCyl, Point(0,0,0), Point(0,1,0), pc::pi/2); // rotate around y-axis
+    qrot.setAxis( geo, Point(0,0,0), Point(0,1,0), pc::pi/2); // rotate around y-axis
     a = qrot(a); // rot. 90 deg.
     assert( eq(a.x(),0,1e-8) && "Vector rotation failed");
     a = qrot(a); // rot. 90 deg.
     assert( eq(a.x(),-1,1e-8) && "Vector rotation failed");
   }
 
-
   // check table of averages
-  typedef Analysis::Table2D<float,Average<float> > Ttable;
-  Ttable table(0.1, Ttable::XYDATA);
-  table(2.1)+=1;
-  table(2.1)+=3;
-  assert( eq( table(2.1), 2 ) && "Bad average or 2D table");
+  {
+    typedef Analysis::Table2D<float,Average<float> > Ttable;
+    Ttable table(0.1, Ttable::XYDATA);
+    table(2.1)+=1;
+    table(2.1)+=3;
+    assert( eq( table(2.1), 2 ) && "Bad average or 2D table");
+  }
 
   // check vector operations
   {

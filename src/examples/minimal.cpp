@@ -3,10 +3,9 @@ using namespace Faunus;                               // use Faunus namespace
 typedef Geometry::Cuboid Tgeo;                        // select simulation geometry and pair potential
 typedef Potential::CoulombLJ Tpair;
 int main() {
-  atom.includefile("minimal.json");                   // load atom properties
+  ::atom.includefile("minimal.json");                 // load atom properties
   InputMap in("minimal.input");                       // open parameter file for user input
-  Energy::Hamiltonian pot;                            // Hamiltonian - defines the energy field
-  pot.create( Energy::Nonbonded<Tpair,Tgeo>(in) );    // add energy term for non-bonded interactions
+  Energy::Nonbonded<Tpair,Tgeo> pot(in);              // create Hamiltonian, non-bonded only
   Space spc( pot.getGeometry() );                     // create simulation space, particles etc.
   GroupAtomic salt(spc, in);                          // group for salt particles
   Move::AtomicTranslation mv(in, pot, spc);           // particle move class
@@ -24,7 +23,7 @@ int main() {
  * - Canonical ensemble (NVT)
  * - Parameters and atom properties are read from disk
  *
- * This amounts to 16 lines of C++ code as illustated in the minimal.cpp program:
+ * This amounts to 15 lines of C++ code as illustated in the minimal.cpp program:
  * \includelineno minimal.cpp
  * Run the code directly from the faunus directory:
  *
@@ -56,38 +55,34 @@ int main() {
  *     to get user input and is heavily used in constructors throughout Faunus.
  *
  * - **line 8**
- *   - Create a Hamiltonian that can sum interaction energies from an arbitrary number of energy classes.
- *     Energy classes evaluate specific contributions to the total energy -- for examples non-bonded interactions,
- *     bonded interactions, external potentials etc. For a list of all energy classes, see Faunus::Energy.
+ *   - Specify how to calculate energies in the system - i.e. the Hamiltonian. Here we only
+ *     have non-bonded interactions and we need to specify the pair potential and geometry
+ *     to use. Energy evaluations in faunus are done by classes derived from
+ *     Faunus::Energy::Energybase.
+ *     We will later see how we can construct more advanced Hamiltonians
+ *     to adding Energy classes together. For a list of energy classes, see Faunus::Energy.
  *
  * - **line 9**
- *   - By default the Hamiltonian is empty - i.e. zero is returned for all interactions.
- *     We hence need to add the nonbonded energy to the Hamiltonian.
- *     The Faunus::Energy::Nonbonded template is contructed with the
- *     geometry and pair potential as these are needed to evaluate energies. Although we could add many
- *     energy classes to the Hamiltonian, we here suffice with merely one.
- *
- * - **line 10**
  *   - Faunus::Space takes care of inserting, storing and deleting particles and knows about all particle groups in the system.
  *
- * - **line 11**
+ * - **line 10**
  *   - Create a new group defining the particle range. The constructor of Faunus::GroupAtomic reads user input
  *     from the Faunus::InputMap object and automatically adds the specified particles to Space.
  *
- * - **line 12**
+ * - **line 11**
  *   - Instantiate a Monte Carlo move object for translating atomic particles. Moves always take care of
  *     generating a trial move, calculate the energy change, accepting/rejecting and collecting
  *     statistics. For a list of all MC moves, see Faunus::Move.
  *
- * - **line 13**
+ * - **line 12**
  *   - Tell the move object which particles it should move
  *
- * - **line 14**
+ * - **line 13**
  *   - Perform 10000 Metropolis Monte Carlo moves. Particles are randomly selected, moved, and depending on the
  *     energy change accepted or rejected. Note that the move requires access both the Hamiltonian as well as the
  *     Space. The former is used for energy evaluation, while the latter is needed to move particles. 
  *
- * - **line 15**
+ * - **line 14**
  *   - Print final information to standard output.
  *
  * If you prefer Python over C++, most of Faunus can be accessed through the `pyfaunus` module.

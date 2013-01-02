@@ -8,18 +8,20 @@
 
 namespace Faunus {
   /*!
-   * \brief Class to collect average values
+   * @brief Class to collect average values
    *
    * Example:
    *
-   * ~~~
+   * @code
+   *
    * Average<double> x,y;
    * x+=2.0;
    * x+=6.0;
    * y+=1.0;
    * double f=x+y;
    * std::cout << x << " " << y << " " << f; // --> 4.0 1.0 3.0 
-   * ~~~
+   *
+   * @endcode
    *
    */
   template<class T> class Average {

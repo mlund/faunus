@@ -18,7 +18,7 @@
 namespace Faunus {
 
   /*!
-   * \brief Classes/templates that calculate the energy of particles, groups, system.
+   * @brief Classes/templates that calculate the energy of particles, groups, system.
    *
    * This namespace containes classes and templates for calculating energies of the
    * system. This can be pair interactions, external potentials, long range corrections,
@@ -32,16 +32,16 @@ namespace Faunus {
 
 
     /*!
-     *  \brief Base class for energy evaluation
+     *  @brief Base class for energy evaluation
      *
      *  This base class defines functions for evaluating interactions between particles,
      *  groups, external potentials etc. By default all energy functions return ZERO
      *  and derived classes are expected only to implement functions relevant for certain
      *  properties. I.e. a derived class for non-bonded interactions are not expected to
-     *  implement i_internal(), for example.
+     *  implement `i_internal()`, for example.
      *
-     *  \note All energy functions are expected to return energies in units of kT.
-     *  \todo Add setVolume() function such that each derived class may have it's own
+     *  @note All energy functions are expected to return energies in units of kT.
+     *  @todo Add setVolume() function such that each derived class may have it's own
      *        Geometry instance (if needed). This will significantly simplify the
      *        Hamiltonian class and increase performance by avoiding calling
      *        distance functions via the "geo" pointer.
@@ -80,13 +80,14 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Energy class for non-bonded interactions.
+     * @brief Energy class for non-bonded interactions.
      *
-     * Tpotential is expected to be a pair potential with the following
-     * properties:
-     * \li pair(const InputMap&);
-     * \li double pairpotconst particle&, const particle&, double sqdist);
-     * \li double pait.tokT();
+     * `Tpairpot` is expected to be a pair potential with the following properties:
+     *
+     * - `Tpairpot(const InputMap&)`
+     * - `double Tpairpot::operator()(const particle&, const particle&, double sqdist))`
+     *
+     * For a list of implemented potentials, see the Faunus::Potential namespace.
      */
     template<class Tpairpot, class Tgeometry>
       class Nonbonded : public Energybase {
@@ -233,13 +234,14 @@ namespace Faunus {
       };
 
     /*!
-     * \brief Energy class for non-bonded interactions.
+     * @brief Energy class for non-bonded interactions.
      *
-     * Tpotential is expected to be a pair potential with the following
-     * properties:
-     * \li pair(const InputMap&);
-     * \li double pairpotconst particle&, const particle&, Point& vdist);
-     * \li double pait.tokT();
+     * `Tpairpot` is expected to be a pair potential with the following properties:
+     *
+     * - `Tpairpot(const InputMap&)`
+     * - `double Tpairpot::operator()(const particle&, const particle&, double sqdist))`
+     *
+     * For a list of implemented potentials, see the Faunus::Potential namespace.
      */
     template<class Tpairpot, class Tgeometry>
     class NonbondedVector : public Energybase {
@@ -386,13 +388,13 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Nonbonded interactions with group-group cutoff
+     * @brief Nonbonded interactions with group-group cutoff
      *
-     * This class re-implements the g2g energy function (group to group)
+     * This class re-implements the `g2g` energy function (group to group)
      * and checks of the mass center distance is larger than a certain
-     * cut-off. If so zero is returned - otherwise the usual g2g function
+     * cut-off. If so zero is returned - otherwise the usual `g2g` function
      * from the parent class. The cut-off is observed only between groups
-     * where isMolecular() is true.
+     * where `isMolecular()` is true.
      */
     template<class Tpairpot, class Tgeometry>
       class NonbondedCut : public Nonbonded<Tpairpot, Tgeometry> {
@@ -487,23 +489,22 @@ namespace Faunus {
       };
 
     /*!
-     * \brief Class for handling bond pairs
-     * \date Lund, 2011-2012
-     * \author Mikael Lund
+     * @brief Class for handling bond pairs
      *
      * Takes care of bonded interactions and can handle mixed bond types. If you create bond BETWEEN
-     * groups, make sure to set the \c CrossGroupBonds to \c true.
+     * groups, make sure to set the `CrossGroupBonds` to `true`.
      *
      * Example:
-     * \code
-     *    vector<particle> p(...);            // particle vector
-     *    int i=10, j=11;                     // particle index
-     *    Energy::Bonded b;
-     *    b.add(i, j, Potential::Harmonic(0.1,5.0) );
-     *    std::cout << b.info();
-     *    double rij2 = ... ;                 // squared distance between i and j
-     *    double u = b(i,j)( p[i], p[j], rij2 ); // i j bond energy in kT
-     * \endcode
+     *
+     *     vector<particle> p(...);            // particle vector
+     *     int i=10, j=11;                     // particle index
+     *     Energy::Bonded b;
+     *     b.add(i, j, Potential::Harmonic(0.1,5.0) );
+     *     std::cout << b.info();
+     *     double rij2 = ... ;                 // squared distance between i and j
+     *     double u = b(i,j)( p[i], p[j], rij2 ); // i j bond energy in kT
+     *
+     * @date Lund, 2011-2012
      */
     class Bonded : public Energybase, public pair_list<Potential::PairPotentialBase> {
       private:
@@ -520,19 +521,21 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Energy from external pressure for use in the NPT-ensemble.
-     * \author Mikael Lund
-     * \date Lund, 2011
+     * @brief Energy from external pressure for use in the NPT-ensemble.
      *
-     * The system energy is:
+     * @details This will count the number of particles in the system and
+     * calculate the energy contribution to the pressure at a given
+     * volume and external pressure.
      *
-     * \f$\beta u = \beta pV - \ln V - N\ln V\f$.
-     *
-     * The two first terms are returned by external() while the last
-     * term is obtained by summing g_external() over molecular
+     * The system energy is
+     * \f$\beta u = \beta pV - \ln V - N\ln V\f$
+     * where the first two terms are returned by `external()` while the last
+     * term is obtained by summing `g_external()` over molecular
      * and or atomic groups.
-     * If applied on an atomic group, \e N will be set to the number of
-     * atoms in the group, while for a molecular group \e N =1.
+     * If applied on an atomic group, `N` will be set to the number of
+     * atoms in the group, while for a molecular group `N=1`.
+     *
+     * @date Lund, 2011
      */
     class ExternalPressure : public Energy::Energybase {
       private:
@@ -545,26 +548,24 @@ namespace Faunus {
     };
 
     /*!
-     * \brief External energy that will keep specific groups in a sub-volume of the system
+     * @brief External energy that will keep specific groups in a sub-volume of the system
      *
      * This energy class will check if particles in specific groups are located within a
-     * rectangular box, spanned by two vector points, \c upper and \c lower. If outside
+     * rectangular box, spanned by two vector points, `upper` and `lower`. If outside
      * an infinite energy is returned. This is useful for constraining molecules in specific
      * parts of the simulation container.
      * Derived classes can re-implement the virtual
-     * outside() function which should return \c true if a given point falls outside the
+     * `outside()` function which should return `true` if a given point falls outside the
      * allowed region. Note that the current implementation can be problematic with
-     * containers with periodic boundaries as the outside() function uses absolute positions.
+     * containers with periodic boundaries as `outside()` uses absolute positions.
      *
      * Example:
-     * \code
-     *   Energy::Hamiltonian pot;
-     *   ...
-     *   auto restricted = pot.create( Energy::RestrictedVolume(imap) );
-     *   restricted->groups.push_back( &mygroup );
-     * \endcode
      *
-     * \author Mikael Lund
+     *     Energy::Hamiltonian pot;
+     *     ...
+     *     auto restricted = pot.create( Energy::RestrictedVolume(imap) );
+     *     restricted->groups.push_back( &mygroup );
+     *
      * \date Lund, 2012
      */
     class RestrictedVolume : public Energy::Energybase {

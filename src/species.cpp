@@ -55,6 +55,7 @@ namespace Faunus {
       n++;
       AtomData a;
       a.name = atom.first;
+      a.activity = json::value<double>(atom.second, "activity", 0);
       a.dp = json::value<double>(atom.second, "dp", 0);
       a.dprot = json::value<double>(atom.second, "dprot", 0) * pc::pi / 180.;
       a.eps = json::value<double>(atom.second, "eps", 0);

@@ -123,12 +123,15 @@ namespace Faunus {
     }
 
     /*!
-     The InputMap is scanned for the following parameters:
-     \li \c cuboid_len Uniform sidelength (A). If negative, continue to...
-     \li \c cuboid_xlen x sidelength (A)
-     \li \c cuboid_ylen y sidelength (A)
-     \li \c cuboid_zlen z sidelength (A)
-     \li \c cuboid_scaledir Isobaric scaling directions (XYZ=isotropic, XY=xy only).
+     * The InputMap is scanned for the following parameters:
+     *
+     * Key               | Description
+     * :---------------- | :-------------------------------------------------------
+     * `cuboid_len`      | Uniform sidelength [angstrom]. If negative, continue to...
+     * `cuboid_xlen`     | x sidelength [angstrom]
+     * `cuboid_ylen`     | y sidelength [angstrom]
+     * `cuboid_zlen`     | z sidelength [angstrom]
+     * `cuboid_scaledir` | Isobaric scaling directions (`XYZ`=isotropic, `XY`=xy only).
      */
     Cuboid::Cuboid(InputMap &in) {
       name="Cuboid";
@@ -455,10 +458,10 @@ namespace Faunus {
     /*!
      * \brief Same as rotate(const Point) but kept for compatibility
      * \todo remove
-    Point VectorRotate::rotate(const Geometrybase &geo, Point p) const {
-      return rotate(p);
-    }
-    */
+     Point VectorRotate::rotate(const Geometrybase &geo, Point p) const {
+     return rotate(p);
+     }
+     */
 
     /*!
      * Rotate point around axis specified above.
@@ -525,9 +528,9 @@ namespace Faunus {
     }
 
     /*!
-     * \param dir1 Direction of segment
-     * \param halfl1 Half length of segment
-     * \param Distance vector between the middle segment to point
+     * \param dir Direction of segment
+     * \param halfl Half length of segment
+     * \param r_cm Distance vector between the middle segment to point
      */
     Point mindist_segment2point(const Point &dir, double halfl, const Point &r_cm) {
       double d;

@@ -1,6 +1,6 @@
-***************************************************************************
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   Faunus -- A Framework for Molecular Modelling 
-  Copyright (C) 2002-2012 Mikael Lund 
+  Copyright (C) 2002-2013 Mikael Lund 
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -15,30 +15,38 @@
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-***************************************************************************
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-WELCOME TO FAUNUS:
-  Faunus is a C++ class library for creating programs
-  for Monte Carlo simulation of molecular systems.
+WELCOME TO FAUNUS
+=================
+Faunus is a C++ library for creating programs
+for Monte Carlo simulation of molecular systems.
 
-  Website: http://faunus.sourceforge.net
-  Support: http://sourceforge.net/projects/faunus/support
+- Website: <http://faunus.sourceforge.net>
+- Support: <http://sourceforge.net/projects/faunus/support>
 
-  Get the latest code resivions via SVN from sourceforge.net:
-  $ svn co http://svn.code.sf.net/p/faunus/code/trunk faunus
+Get the latest code resivions via SVN from sourceforge.net:
 
-REQUIREMENTS:
-  - C/C++11 compiler (clang3+, gcc4.6+, intel13+, ...)
-  - cmake 2.8+
-  Optional:
-  - SWIG 2.0+ (for python, ruby, ... modules)
-  - OpenBabel 2 (numerous molecular formats)
-  - Doxygen and Graphviz (for code manual)
-  - Xcode (for neat environment on macos x)
+    $ svn co http://svn.code.sf.net/p/faunus/code/trunk faunus
 
-  Developed and tested on Linux and MacOS X.
+REQUIREMENTS
+============
 
-COMPILING:
+- C/C++11 compiler (clang3+, gcc4.6+, intel13+, ...)
+- CMake 2.8+
+
+Optional:
+
+- SWIG 2.0+ (for python, ruby, ... modules)
+- OpenBabel 2 (numerous molecular formats)
+- Doxygen and Graphviz (for code manual)
+- Xcode (for neat environment on macos x)
+
+Developed and tested on Linux and MacOS X.
+
+COMPILING
+=========
+
     $ svn co http://svn.code.sf.net/p/faunus/code/trunk faunus
     $ mkdir build
     $ cd build/
@@ -46,47 +54,64 @@ COMPILING:
     $ make [help]
     $ make test (or use 'ctest -V' for verbose test output)
 
-  Options:
-    -DENABLE_BABEL=ON|off             Use OpenBabel for file I/O
-    -DENABLE_MPI=on|OFF               Build MPI programs (parallel tempering etc.)
-    -DENABLE_OPENMP=on|OFF            Enable OpenMP support
-    -DENABLE_STATIC=on|OFF            Static linkage of faunus as opposed to default dynamic linkage
-    -DENABLE_SWIG=on|OFF              Build python, ruby, tcl etc. modules (experimental)
-    -DENABLE_TWISTER=on|OFF           Use Mersenne Twister for random numbers (experimental)
+Options
+-------
 
-    -DCMAKE_BUILD_TYPE=Debug|Release  Debug (default, safer) or Release (faster) mode
-    -DCMAKE_CXX_FLAGS_RELEASE="..."   Compiler options for Release mode
-    -DCMAKE_CXX_FLAGS_DEBUG="..."     Compiler options for Debug mode
+-DENABLE_BABEL=ON|off             Use OpenBabel for file I/O
+-DENABLE_MPI=on|OFF               Build MPI programs (parallel tempering etc.)
+-DENABLE_OPENMP=on|OFF            Enable OpenMP support
+-DENABLE_STATIC=on|OFF            Static linkage of faunus as opposed to default dynamic linkage
+-DENABLE_SWIG=on|OFF              Build python, ruby, tcl etc. modules
+-DENABLE_TWISTER=on|OFF           Use Mersenne Twister for random numbers
+-DENABLE_UNICODE=ON|off           Use Unicode UTF-16 encoding for pretty output
 
-  Example: Intel's C++ compiler with OpenMP parallelization:
+-DCMAKE_BUILD_TYPE=Debug|Release  Debug (default, safer) or Release (faster) mode
+-DCMAKE_CXX_FLAGS_RELEASE="..."   Compiler options for Release mode
+-DCMAKE_CXX_FLAGS_DEBUG="..."     Compiler options for Debug mode
+-DMYPLAYGROUND="..."              Add additional source directory (use absolute path)
+
+Example: Intel's C++ compiler with OpenMP parallelization
+---------------------------------------------------------
+
     $ CXX=icpc CC=icc cmake . -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=Release
     $ make
 
-  Example: LLVM Clang:
+Example: LLVM Clang
+-------------------
+
     $ CXX=clang++ CC=clang cmake .
 
-  Libraries in odd locations:
-    Can be specified using environmental variables. For example,
+Example: Libraries in odd locations
+-----------------------------------
 
     $ LDFLAGS=-L/sw/lib CPPFLAGS=-I/sw/include/openbabel-2.0 cmake .
 
-  Resetting the build system:
+Resetting the build system
+--------------------------
+
     $ make clean
     $ rm CMakeCache.txt
 
-DEVELOPERS:
-  Mikael Lund        <mikael.lund at teokem.lu.se> - http://www.teokem.lu.se/~mikael
-  Bjorn Persson      <bjorn.persson at teokem.lu.se>
-  Martin Trulsson    <martin.trulsson at teokem.lu.se>
-  Ondrej Marsalek    <ondrej.marsalek at uochb.cas.cz>
-  Christophe Labbez  <christophe.labbez at u-bourgogne.fr>
-  Andre Teixeira     <andrearteixeira at gmail.com>
-  Anil Kurut         <akurut at gmail.com>
-  Chris Evers        <chris.evers at gmail.com>
-  Magnus Ullner      <magnus.ullner at teokem.ku.se>
-  Robert Vacha
 
-CITING FAUNUS:
-  Lund, M., Persson, B., Trulsson, M. (2008) Source Code Biol. Med. 3:1
-  http://www.scfbm.org/content/3/1/1 (free full text)
+CONTRIBUTORS
+============
+
+In chronological order:
+
+- Mikael Lund        <mikael.lund at teokem.lu.se> - http://www.teokem.lu.se/~mikael
+- Bjorn Persson      <bjorn.persson at teokem.lu.se>
+- Martin Trulsson    <martin.trulsson at teokem.lu.se>
+- Ondrej Marsalek    <ondrej.marsalek at uochb.cas.cz>
+- Christophe Labbez  <christophe.labbez at u-bourgogne.fr>
+- Andre Teixeira     <andrearteixeira at gmail.com>
+- Anil Kurut         <akurut at gmail.com>
+- Chris Evers        <chris.evers at gmail.com>
+- Magnus Ullner      <magnus.ullner at teokem.ku.se>
+- Robert Vacha
+
+CITING FAUNUS
+=============
+
+- Lund, M., Persson, B., Trulsson, M. (2008) Source Code Biol. Med. 3:1
+  <http://www.scfbm.org/content/3/1/1> (free full text)
 

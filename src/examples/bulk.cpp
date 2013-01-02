@@ -1,24 +1,3 @@
-/*!
- \page example_bulk Example: Melted NaCl
- In this example we simulate melted NaCl in the NVT and NPT ensemble. We use a
- Lennard-Jones potential combined with a shifted Coulombic potential according to
- Wolf. This gives essentially identical results to the much more elaborate Particle
- Mesh Ewald method -- see figure below. In contrast, using the simple minimum image
- approach with a cubic cutoff, the system freezes.
- The \c bulk.cpp program can be used to simulate any atomic mixtures and the
- dielectric constant may also be varied (it is unity in this example).
-
- We have the following MC moves:
- \li salt translation
- \li isobaric volume move (NPT ensemble)
-
- Information about the input file can be found in \c bulk.run in the \c src/examples
- directory.
- \image html wolf.png "Na-Cl distribution function with various electrostatic potentials."
-
- \section bulk_cpp bulk.cpp
- \include examples/bulk.cpp
-*/
 #include <faunus/faunus.h>
 using namespace Faunus;
 using namespace Faunus::Potential;
@@ -32,7 +11,6 @@ int main() {
   InputMap mcp("bulk.input");         // open user input file
   MCLoop loop(mcp);                   // class for handling mc loops
   FormatPQR pqr;                      // PQR structure file I/O
-  FormatAAM aam;                      // AAM structure file I/O
   EnergyDrift sys;                    // class for tracking system energy drifts
   UnitTest test(mcp);                 // class for unit testing
 
@@ -44,7 +22,7 @@ int main() {
   // Markov moves and analysis
   Move::Isobaric iso(mcp,pot,spc);
   Move::AtomicTranslation mv(mcp, pot, spc);
-  Analysis::RadialDistribution<> rdf_ab(0.1);
+  Analysis::RadialDistribution<> rdf_ab(0.1);      // 0.1 angstrom resolution
 
   // Add salt
   GroupAtomic salt(spc, mcp);
@@ -52,7 +30,6 @@ int main() {
   mv.setGroup(salt);
 
   spc.load("state");                               // load old config. from disk (if any)
-
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );// store initial total system energy
 
   cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
@@ -94,3 +71,27 @@ int main() {
 
   return test.numFailed();
 }
+/*!
+  \page example_bulk Example: Melted NaCl
+
+  In this example we simulate melted NaCl in the NVT and NPT ensemble. We use a
+  Lennard-Jones potential combined with a shifted Coulombic potential according to
+  Wolf. This gives essentially identical results to the more elaborate Particle
+  Mesh Ewald method - see figure below. In contrast, using the simple minimum image
+  approach with a cubic cutoff, the system freezes.
+  The `bulk.cpp` program can be used to simulate any atomic mixtures and the
+  dielectric constant may also be varied (it is unity in this example).
+
+  We have the following MC moves:
+  - salt translation
+  - isotropic volume move (NPT ensemble)
+
+  Information about the input file can be found in `src/examples/bulk.run`.
+
+  ![Na-Cl distribution function with various electrostatic potentials.](wolf.png)
+
+  bulk.cpp
+  ========
+  \includelineno examples/bulk.cpp
+
+*/

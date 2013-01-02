@@ -29,9 +29,19 @@ namespace Faunus {
       assert(!"Pair energy not defined!");
       return 0;
     }
-    
+
+    /*!
+     * \param a First particle
+     * \param b Second particle
+     * \param r2 Squared distance between them (angstrom squared)
+     */
+    Point PairPotentialBase::force(const particle &a, const particle &b, double r2) {
+      assert(!"Force not overrided!");
+      return Point(0,0,0);
+    }
+
     void PairPotentialBase::_setScale(double s) {}
-   
+
     /*!
      * This will reset the temperature to the specified value. By default this function
      * does nothing, although in Debug mode it will throw an exception if derived classes
@@ -206,7 +216,7 @@ namespace Faunus {
       Tbase(in), onefourth(1/4.), twototwosixth(std::pow(2,2/6.))  {
         name="WeeksChandlerAnderson";
       }
-    
+
     LorentzBerthelot::LorentzBerthelot() : name("Lorentz-Berthelot Mixing Rule") {}
 
     double LorentzBerthelot::mixSigma(double sigma1, double sigma2) const { return 0.5*(sigma1+sigma2); }
@@ -216,7 +226,7 @@ namespace Faunus {
     LennardJonesR12::LennardJonesR12(InputMap &in, string pfx) : LennardJones(in,pfx) {
       name+="R12";
     }
-    
+
     LennardJonesTrunkShift::LennardJonesTrunkShift(InputMap &in, string pfx) : LennardJones(in,pfx) {
       name+=" Truncated and shifted to sigma";
     }
@@ -394,19 +404,19 @@ namespace Faunus {
         << pad(SUB,w,"Cut-off") << 1/Rcinv << _angstrom+"\n";
       return o.str();
     }
-    
+
     ChargeNonpolar::ChargeNonpolar(InputMap &in) : Coulomb(in) {
       name="Charge-Nonpolar";
       c=bjerrumLength()/2*in.get<double>("excess_polarization", -1);
     }
-    
+
     string ChargeNonpolar::info(char w) {
       std::ostringstream o;
       o << Coulomb::info(w)
         << textio::pad(textio::SUB,w,"Excess polarization") << 2*c*bjerrumLength() << endl;
       return o.str();
     }
-    
+
     /*!
      * In addition to the keywords from Potential::Coulomb, InputMap is searched for:
      * \li \c dh_ionicstrength [mol/l] 
@@ -516,51 +526,51 @@ namespace Faunus {
     double MultipoleEnergy::dipdip(const Point &a, const Point &b, double r) {
       return lB*( a.x()*b.x() + a.y()*b.y() - 2*a.z()*b.z() ) / (r*r*r);
     }
-      
-     /* 
-      double PatchSCsphere::eattractive_sc_sphere(const Point &a, const Point &b, const Point r_cm) {
-          double atrenergy, a, b, f0, halfl;
-          struct vector vec1;
-          
-          //TODO if we dont have calculate distance segment to point - distvec a dist a contt point
-          
-          //calculate closest distance attractive energy
-          if (dist < interact->param->pdis)
-              atrenergy = -interact->param->epsilon;
-          else {
-              atrenergy = cos(PIH*(interact->dist-interact->param->pdis)/interact->param->pswitch);
-              atrenergy *= -atrenergy*interact->param->epsilon ;
-          }
-          //scaling function: angular dependence of patch1
-          if (b.halfl < 1e-6) {
-              which = 0;
-              vec1=vec_perpproject(distvec, a.dir);
-              vec1.normalize();
-              a = vec1.dot(a.patchdir);
-              halfl=a.halfl;
-          } else {
-              which = 1;
-              vec1=vec_perpproject(distvec, b.dir);
-              vec1.normalize();
-              a = vec1.dot(b.patchdir);
-              halfl=b.halfl;
-          }
-          //scaling function for the length of spherocylinder within cutoff
-          
-          b = sqrt(rcut*rcut-dist*dist);
-          if ( contt + b > halfl ) 
-              f0 = halfl;
-          else 
-              f0 = contt + b;
-          if ( contt - b < -halfl ) 
-              f0 -= -halfl;
-          else 
-              f0 -= interact->contt - b;
-          atrenergy *= fanglscale(a,interact->param, which)*(f0+1.0);
-          
-          return atrenergy;
-      }//TODO atrenergy from ndist, cutoff rcut at the beginning, epsilon atd
-*/
+
+    /* 
+       double PatchSCsphere::eattractive_sc_sphere(const Point &a, const Point &b, const Point r_cm) {
+       double atrenergy, a, b, f0, halfl;
+       struct vector vec1;
+
+    //TODO if we dont have calculate distance segment to point - distvec a dist a contt point
+
+    //calculate closest distance attractive energy
+    if (dist < interact->param->pdis)
+    atrenergy = -interact->param->epsilon;
+    else {
+    atrenergy = cos(PIH*(interact->dist-interact->param->pdis)/interact->param->pswitch);
+    atrenergy *= -atrenergy*interact->param->epsilon ;
+    }
+    //scaling function: angular dependence of patch1
+    if (b.halfl < 1e-6) {
+    which = 0;
+    vec1=vec_perpproject(distvec, a.dir);
+    vec1.normalize();
+    a = vec1.dot(a.patchdir);
+    halfl=a.halfl;
+    } else {
+    which = 1;
+    vec1=vec_perpproject(distvec, b.dir);
+    vec1.normalize();
+    a = vec1.dot(b.patchdir);
+    halfl=b.halfl;
+    }
+    //scaling function for the length of spherocylinder within cutoff
+
+    b = sqrt(rcut*rcut-dist*dist);
+    if ( contt + b > halfl ) 
+    f0 = halfl;
+    else 
+    f0 = contt + b;
+    if ( contt - b < -halfl ) 
+    f0 -= -halfl;
+    else 
+    f0 -= interact->contt - b;
+    atrenergy *= fanglscale(a,interact->param, which)*(f0+1.0);
+
+    return atrenergy;
+    }//TODO atrenergy from ndist, cutoff rcut at the beginning, epsilon atd
+    */
 
   } //Potential namespace
 

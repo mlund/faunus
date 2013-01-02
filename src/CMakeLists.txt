@@ -97,6 +97,7 @@ else()
 endif()
 set_target_properties(libfaunus PROPERTIES OUTPUT_NAME faunus)
 target_link_libraries(libfaunus xdrfile ${LINKLIBS})
+export(TARGETS xdrfile libfaunus FILE libfaunus.cmake)
 #install(TARGETS libfaunus LIBRARY DESTINATION lib)
 
 # dynamic for cigarparticles

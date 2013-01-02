@@ -86,17 +86,17 @@ namespace Faunus {
   Point::Point(Tcoord xx, Tcoord yy, Tcoord zz) : Tvec(xx,yy,zz) {}
 
   /*!
-   * \brief Class for particles
-   * \author Mikael Lund
-   * \date 2002-2007
+   * \brief Class for isotropic particles
    *
-   * Example\n
-   * \code
+   * Example:
+   *
+   * ~~~
    * std::vector<PointParticle> p(2);
    * p[0].radius = 2.0;
-   * p[1].z = 10;
+   * p[1].z() = 10;
    * std::cout << p[0];
-   * \endcode
+   * ~~~
+   *
    */
   class PointParticle : public Point {
     public:

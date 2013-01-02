@@ -718,7 +718,7 @@ namespace Faunus {
      * Energy::Hamiltonian pot;                                          // sum energies below:
      * auto nb = pot.create(Energy::Nonbonded<Tpairpot,Tgeometry>(mcp)); // add nonbonded interactions
      * auto gc = pot.create(Energy::GouyChapman(mcp));                   // add GC surface
-     * gc->zposPtr = &(nb->geometry.len_half.z);                         // place GC surface at edge of cuboid
+     * gc->zposPtr = &(nb->geometry.len_half.z());                       // place GC surface at edge of cuboid
      * \endcode
      */
     class GouyChapman : public Energy::Energybase {
@@ -740,7 +740,8 @@ namespace Faunus {
         double g_external(const p_vec&, Group&) FOVERRIDE;//!< Group energy in GC potential
 
         /*!
-         * \brief Point-to-surface distance [AA]
+         * \brief Point-to-surface distance [angstrom]
+         *
          * Note that this function is virtual and can be replaced in derived classes to
          * customize the position of the surface.
          */
@@ -751,6 +752,7 @@ namespace Faunus {
 
         /*!
          * \brief Particle energy in GC potential
+         *
          * \f[
          * \beta e \Phi(z) = 2\ln{\frac{1+\Gamma_0 \exp{(-\kappa z)}}{1-\Gamma_0 \exp{(-\kappa z)}}}
          * \f]

@@ -1,17 +1,3 @@
-/*! \page example_polymers Example: Polymers
- This will simulate an arbitrary number of linear polymers in the NPT ensemble
- with explicit salt particles and implicit solvent (dielectric continuum).
- We include the following Monte Carlo move:
- \li salt translation
- \li monomer translation
- \li polymer translation and rotation
- \li polymer crankshaft and pivot rotations
- \li isobaric volume move (NPT ensemble)
-
- Information about the input file can be found in \c polymers.run in the \c src/examples
- directory.
- \include examples/polymers.cpp
-*/
 #include <faunus/faunus.h>
 using namespace Faunus;
 
@@ -69,7 +55,6 @@ int main() {
   Group allpol( pol.front().front(), pol.back().back() );// make group w. all polymers
 
   spc.load("state");                                     // load old config. from disk (if any)
-
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );      // store initial total system energy
 
   cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
@@ -123,7 +108,6 @@ int main() {
     } // end of micro loop
 
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
-
     cout << loop.timing();
 
   } // end of macro loop
@@ -145,3 +129,30 @@ int main() {
 
   return test.numFailed();
 }
+/*! \page example_polymers Example: Polymers
+ *
+ This will simulate an arbitrary number of linear polymers in the NPT ensemble
+ with explicit salt particles and implicit solvent (dielectric continuum).
+ We include the following Monte Carlo moves:
+
+ - salt translation
+ - monomer translation
+ - polymer translation and rotation
+ - polymer crankshaft and pivot rotations
+ - isobaric volume move (NPT ensemble)
+
+ Run this example from the `examples` directory:
+
+ ~~~~~~~~~~~~~~~~~~~
+ $ make
+ $ cd src/examples
+ $ ./polymers.run
+ ~~~~~~~~~~~~~~~~~~~
+
+ polymers.cpp
+ ============
+
+ \includelineno examples/polymers.cpp
+
+*/
+

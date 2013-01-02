@@ -9,21 +9,20 @@
 namespace Faunus {
   /*!
    * \brief Class to collect average values
-   * \author Mikael Lund
-   * \date 2002-2010
    *
-   * \code
-   * average<double> x,y;
+   * Example:
+   *
+   * ~~~
+   * Average<double> x,y;
    * x+=2.0;
    * x+=6.0;
    * y+=1.0;
    * double f=x+y;
-   * cout << x << " " << y << " " << f; // --> 4.0 1.0 3.0 
-   * \endcode
+   * std::cout << x << " " << y << " " << f; // --> 4.0 1.0 3.0 
+   * ~~~
+   *
    */
   template<class T> class Average {
-  protected:
-    //   vector v;
   public:
     T sqsum;                                      ///< Square sum
     Average();                                 
@@ -180,7 +179,6 @@ namespace Faunus {
 
   /*!
    * \brief Class to keep track of block correlations
-   * \author Mikael Lund
    * \date October 2009
    *
    * The sampling is performed in blocks of length n specified in
@@ -190,14 +188,16 @@ namespace Faunus {
    * { \langle x^2\rangle - \langle x\rangle^2  } \f$
    *
    * Example:
-   * \code
+   *
+   * ~~~
    * BlockCorrelation ci(50); // energy correlation
    * ci += uinit + du;        // place in MC loop
    * ...
    * for (size_t i=0; i<ci.size(); i++)
-   *   cout << i << " " << ci[i] << end;
-   * \endcode
-   * ci will eventually fall off from one (full correlation) to
+   *   std::cout << i << " " << ci[i] << "\n";
+   * ~~~
+   *
+   * `ci` will eventually fall off from one (full correlation) to
    * zero (uncorrelated).
    */
   template<class T=double>

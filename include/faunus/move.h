@@ -78,24 +78,24 @@ namespace Faunus {
 
     /*!
      * \brief Base class for Monte Carlo moves
-     * \author Mikael Lund
-     * \date Lund, 2007-2011
      *
      * The is a base class that handles Monte Carlo moves and derived classes
      * are required to implement the following pure virtual (and private)
      * functions:
      *
-     * \li \c _trialMove()
-     * \li \c _energyChange()
-     * \li \c _acceptMove()
-     * \li \c _rejectMove()
-     * \li \c _info()
+     * - `_trialMove()`
+     * - `_energyChange()`
+     * - `_acceptMove()`
+     * - `_rejectMove()`
+     * - `_info()`
      *
      * These functions should be pretty self-explanatory and are - via wrapper
      * functions - called by move(). It is important that the _energyChange() function
      * returns the full energy associated with the move. For example, for NPT
      * moves the pV term should be included and so on. Please do stride not try override
      * the move() function as this should be generic to all MC moves.
+     *
+     * \date Lund, 2007-2011
      */
 
     class Movebase {
@@ -108,18 +108,18 @@ namespace Faunus {
         virtual void _trialMove()=0;           //!< Do a trial move
         virtual void _acceptMove()=0;          //!< Accept move, store new coordinates.
         virtual void _rejectMove()=0;          //!< Reject move, revert to old coordinates.
-        virtual double _energyChange()=0;      //!< Returns energy change of trialMove
+        virtual double _energyChange()=0;      //!< Returns energy change of trialMove (kT)
 
         void trialMove();                      //!< Do a trial move (wrapper)
         void acceptMove();                     //!< Accept move, store new coordinates etc. (wrapper)
         void rejectMove();                     //!< Reject move, revert to old coordinates etc. (wrapper)
-        double energyChange();                 //!< Returns energy change of trialMove (wrapper)
+        double energyChange();                 //!< Returns energy change of trialMove i kT (wrapper)
         bool metropolis(const double&) const;  //!< Metropolis criteria
 
       protected:
         Energy::Energybase* pot;         //!< Pointer to energy functions
-        Space* spc;
-        string title;                    //!< title of move
+        Space* spc;                      //!< Pointer to Space (particles and groups are stored there)
+        string title;                    //!< title of move (mandatory!)
         string cite;                     //!< litterature reference, url, DOI etc.
         string prefix;                   //!< inputmap prefix
         char w;                          //!< info string text width. Adjust this in constructor if needed.
@@ -127,13 +127,13 @@ namespace Faunus {
         virtual bool run() const;        //!< Runfraction test
 
         bool useAlternateReturnEnergy;   //!< Return a different energy than returned by _energyChange(). [false]
-        double alternateReturnEnergy;    //!< Alternative return energy.
+        double alternateReturnEnergy;    //!< Alternative return energy (kT).
 
       public:
         Movebase(Energy::Energybase&, Space&, string);//!< Constructor
         virtual ~Movebase();
         double runfraction;                //!< Fraction of times calling move() should result in an actual move. 0=never, 1=always.
-        double move(int=1);                //!< Attempt \c n moves and return energy change
+        double move(int=1);                //!< Attempt \c n moves and return energy change (kT)
         string info();                     //!< Returns information string
         void test(UnitTest&);              //!< Perform unit test
         double getAcceptance();            //!< Get acceptance [0:1]
@@ -141,15 +141,15 @@ namespace Faunus {
 
     /*!
      * \brief Translation of atomic particles
-     * \author Mikael Lund
-     * \date Lund, 2011
      *
      * This Markov move can work in two modes:
-     * \li Move a single particle in space set by setParticle()
-     * \li Move single particles randomly selected in a Group set by setGroup().
+     * - Move a single particle in space set by setParticle()
+     * - Move single particles randomly selected in a Group set by setGroup().
      *
      * The move directions can be controlled with the dir vector - for instance if you wish
-     * to translate only in the \c z direction, set \c dir.x=dir.y=0.
+     * to translate only in the `z` direction, set `dir.x()=dir.y()=0`.
+     *
+     * \date Lund, 2011
      */
     class AtomicTranslation : public Movebase {
       private:
@@ -179,6 +179,10 @@ namespace Faunus {
    
     /*!
      * \brief Rotate single particles
+     *
+     * This move works in the same way as AtomicTranslation but does
+     * rotations of non-isotropic particles instead of translation. This move
+     * has no effect on isotropic particles such as Faunus::PointParticle.
      */
     class AtomicRotation : public AtomicTranslation {
       private:
@@ -191,18 +195,20 @@ namespace Faunus {
 
     /*!
      * \brief Combined rotation and rotation of groups
-     * \author Mikael Lund
      *
      * This will translate and rotate groups and collect averages based on group name.
-     * \code
+     *
+     * Example:
+     *
+     * ~~~
      * ...
      * Group g;
      * g.name="mygroup";
      * Move::TranslateRotate tr(in, pot, spc);
-     * tr.directions[g.name].z=0; // move only on xy plane - do this only once and before calling setGroup()
-     * tr.setGroup(g);           // specify which group to move
-     * tr.move();                // do the move
-     * \endcode
+     * tr.directions[g.name].z()=0; // move only on xy plane - do this only once and before calling setGroup()
+     * tr.setGroup(g);              // specify which group to move
+     * tr.move();                   // do the move
+     * ~~~
      */
     class TranslateRotate : public Movebase {
       protected:
@@ -238,6 +244,7 @@ namespace Faunus {
      * determined by the private virtual function ClusterProbability(). By default this is a simple
      * step function with P=1 when an atomic particle in the group set by setMobile is closer
      * than a certain threshold to a particle in the main group; P=0 otherwise.
+     *
      * The implemented cluster algorithm is general - see Frenkel&Smith, 2nd ed, p405 - and derived classes
      * can re-implement ClusterProbability() for arbitrary probability functions.
      */
@@ -277,9 +284,9 @@ namespace Faunus {
      * \author Bjoern Persson
      * \date Lund 2009-2010
      * \note Requirements for usage:
-     * \li Compatible only with purely molecular systems
-     * \li Works only with periodic containers
-     * \li External potentials are ignored
+     * - Compatible only with purely molecular systems
+     * - Works only with periodic containers
+     * - External potentials are ignored
      */
     class ClusterTranslateNR : public Movebase {
       private:
@@ -303,7 +310,7 @@ namespace Faunus {
      * \date Lund 2012
      *
      * Explain what this move does and how to use it...
-     * \image html polymerdisplacements.jpg "Polymer Moves"
+     * ![Polymer moves](polymerdisplacements.jpg)
      */
     class CrankShaft : public Movebase {
       private:
@@ -333,9 +340,11 @@ namespace Faunus {
      * \brief Pivot move for linear polymers
      *
      * This will perform a pivot rotation of a linear polymer by the following steps:
-     * \li Select rotation axis by two random monomers, spanning \c minlen to \c maxlen bonds
-     * \li Rotate monomers before or after end points of the above axis
-     * \image html polymerdisplacements.jpg "Polymer Moves"
+     *
+     * - Select rotation axis by two random monomers, spanning `minlen` to `maxlen` bonds
+     * - Rotate monomers before or after end points of the above axis
+     *
+     * ![Polymer moves](polymerdisplacements.jpg)
      *
      * \author Mikael Lund
      * \date Asljunga 2012
@@ -352,8 +361,8 @@ namespace Faunus {
      *
      * This will perform a reptation move of a linear, non-uniform polymer chain.
      * During construction, the InputMap is searched for the following keywords:
-     * \li \c reptation_runfraction - Probability to perform a move - defaults to 1.0 = 100%
-     * \li \c reptation_bondlength - The bond length while moving head groups. Use -1 to use existing bondlength.
+     * - `reptation_runfraction`. Probability to perform a move - defaults to 1.0 = 100%
+     * - `reptation_bondlength`. The bond length while moving head groups. Use -1 to use existing bondlength.
      *
      * \author Mikael Lund
      * \date Lund 2012
@@ -377,16 +386,20 @@ namespace Faunus {
     /*!
      * \brief Isobaric volume move
      *
-     * This class will perform a volume displacement and scale atomic as well as molecular
-     * groups as long as these are known to Space -- see Space.enroll().
+     * \details This class will perform a volume displacement and scale atomic
+     * as well as molecular groups as long as these are known to Space -
+     * see Space.enroll().
      * The constructor will automatically add an instance of Energy::ExternalPressure
      * to the Hamiltonian. The InputMap class is scanned for the following keys:
-     * \li \c npt_dV \n Volume displacement parameter
-     * \li \c npt_P \n Pressure
-     * \li \c npt_Punit \n Pressure unit: mM [default] or 1/A3 (not implemented, yet!)
      *
-     * Note that the volume displacement is done by:
+     * - `npt_dV`
+     *   - Volume displacement parameter
+     * - `npt_P`
+     *   - Pressure
+     * - `npt_Punit`
+     *   - Pressure unit: mM [default] or 1/A3 (not implemented, yet!)
      *
+     * Note that the volume displacement is
      * \f$ V^{\prime} = \exp\left ( \log V \pm \delta dV \right ) \f$ where \f$\delta\f$ is a random number
      * between zero and one half.
      *

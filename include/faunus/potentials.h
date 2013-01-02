@@ -72,14 +72,8 @@ namespace Faunus {
       
         /*!
          * \brief Particle-particle force in units of \c kT/Å
-         * \param a First particle
-         * \param b Second particle
-         * \param r2 Squared distance between them (angstrom squared)
          */
-        virtual Point force(const particle&, const particle&, double) {
-          assert(!"Force not overrided!");
-          return Point(0.0, 0.0, 0.0);
-        }
+        virtual Point force(const particle &, const particle &, double);
       
         bool save(string, particle::Tid, particle::Tid); //!< Save table of pair potential to disk
         virtual void test(UnitTest&);                    //!< Perform unit test
@@ -116,10 +110,14 @@ namespace Faunus {
          * \f]
          * for \f$r_c\leq r \leq r_c+w_c\f$. For \f$r<r_c\f$, \f$\beta u=-\epsilon\f$, while
          * zero for \f$r>r_c+w_c\f$.
+         *
          * The InputMap parameters are:
-         * \li \c cosattract_eps  Depth, \f$\epsilon\f$ [kT]
-         * \li \c cosattract_rc   Width, r_c [angstrom]
-         * \li \c cosattract_wc   Decay range, w_c [angstrom]
+         *
+         * Key                | Description
+         * :----------------- | :---------------------------
+         * `cosattract_eps`   | Depth, \f$\epsilon\f$ [kT]
+         * `cosattract_rc`    | Width, r_c [angstrom]
+         * `cosattract_wc`    | Decay range, w_c [angstrom] 
          *
          * \warning Untested!
          */
@@ -128,7 +126,7 @@ namespace Faunus {
             double eps, wc, rc, rc2, c, rcwc2;
             string _brief();
           public:
-            CosAttract(InputMap&, string="cosattract_");
+            CosAttract(InputMap&, string="cosattract_"); // Constructor from InputMap
             inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
               if (r2<rc2)
                 return -eps;
@@ -252,16 +250,15 @@ namespace Faunus {
          * \details This is a template for Lennard-Jones pair interactions where the template parameter
          * must be a class for the epsilon and sigma mixed rules. The atomic values for 
          * sigma and epsilon are taken from the AtomTypes class via the global instance
-         * \c atom. In your InputMap configuration file you would typically set the atom list file using
-         * the keyword \c atomlist. Note that sigma for each atom is set to two times the radius found in
+         * `atom`. In your InputMap configuration file you would typically set the atom list file using
+         * the keyword `atomlist`. Note that sigma for each atom is set to two times the radius found in
          * AtomTypes.
          *
          * For example:
-         * \code
-         * InputMap mcp("myconfig");
-         * LennardJonesMixed<LorentzBerthelot> lj(mcp);
-         * \endcode
-         * \todo Prettify output
+         * 
+         *     InputMap mcp("myconfig");
+         *     LennardJonesMixed<LorentzBerthelot> lj(mcp);
+         *
          */
         template<class Tmixingrule>
           class LennardJonesMixed : public PairPotentialBase {

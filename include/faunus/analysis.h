@@ -10,8 +10,6 @@
 #include <faunus/point.h>
 #endif
 
-using std::vector;
-
 namespace Faunus {
   class checkValue;
   class Space;
@@ -25,12 +23,12 @@ namespace Faunus {
      * \brief Base class for analysis routines.
      *
      * This is the base class for analysis routines. Derived class must implement:
-     * \li a descriptive name
-     * \li _info()
+     * - a descriptive name
+     * - _info()
      *
      * It is strongly recommended that derived classes implement:
-     * \li a sample(...) function that uses run() to check if the analysis should be run or not.
-     * \li the cite string to provide external information
+     * - a sample(...) function that uses run() to check if the analysis should be run or not.
+     * - the cite string to provide external information
      */
     class AnalysisBase {
       private:
@@ -54,7 +52,7 @@ namespace Faunus {
      * \brief General class for handling 2D tables - xy date, for example.
      * \author Mikael Lund
      * \date Lund 2011
-     * \note Tx is used as the std::map key and which may be problematic due to direct floating
+     * \note `Tx` is used as the `std::map` key and which may be problematic due to direct floating
      *       point comparison (== operator). We have not experienced any issues with this, though.
      * \todo We get correct behavior, but is it really OK to have virtual functions in class templates??
      */
@@ -178,20 +176,23 @@ namespace Faunus {
       \date Malmo, 2011
 
       This class stores a penalty function, f(x), along a given coordinate, x, of type
-      \c Tcoordinate which could be a distance, angle, volume etc. Initially f(x) is zero for
+      `Tcoordinate` which could be a distance, angle, volume etc. Initially f(x) is zero for
       all x. Each time the system visits x the update(x) function should be called
       so as to add the penalty energy, du. In the energy evaluation, the coordinate
       x should be associated with the extra energy f(x). This will eventually ensure uniform
       sampling.
-      Example usage:
-      \code
+
+      Example:
+
+      ~~~
       PenaltyFunction<double> f(0.1,1000,6.0); // 0.1 kT penalty
       Point masscenter;               // some 3D coordinate...
       ...
       f.update(masscenter.z);         // update penalty energy for z component
       double u = f(masscenter.z);     // get accumulated penalty at coordinate (kT)
       f.save("penalty.dat");          // save to disk
-      \endcode
+      ~~~
+
       In the above example, the penalty energy will be scaled by 0.5 if the sampling along the
       coordinate is less than 6 kT between the least and most likely position. This threshold check
       is carried out every 1000th call to update(). Note also that when the penalty energy is scaled,
@@ -270,18 +271,18 @@ namespace Faunus {
      * \brief Radial distribution analysis
      *
      * This radial distribution is defined as \f$ g(r) = \rho(r) / \rho(\infty) \f$ where \f$ \rho \f$ are
-     * the particle densities in spherical volume element \c rdr and in the bulk, respectively.
+     * the particle densities in spherical volume element `rdr` and in the bulk, respectively.
      *
      * Example:
-     * \code
+     *
+     * ~~~
      * short cation = atom["Na"].id;
      * short anion = atom["Cl"].id;
      * Analysis::RadialDistribution<float,unsigned int> rdf(0.2); // 0.2 Å resolution
      * rdf.sample( myspace, mygroup, cation, anion );
      * rdf.save("rdf.dat");
-     * \endcode
+     * ~~~
      *
-     * \author Mikael Lund
      * \date Lund 2011
      */
     template<typename Tx=float, typename Ty=unsigned long long int>
@@ -344,14 +345,13 @@ namespace Faunus {
       };
     
     /*!
-     * \brief Line distr. when the bins values should sum up
-     * to "n"
+     * \brief Line distr. when the bins values should sum up to `n`.
      *
-     * Example:
-     * Salt line distribution:
-     * \code
+     * Example: Salt line distribution
+     *
+     * ~~~
      * Analysis::LineDistributionNorm<float,unsigned long int> saltdistr(salt.size(), 0.2);
-     * \endcode
+     * ~~~
      *
      * \author Axel Thuresson
      * \date Lund 2012
@@ -376,7 +376,6 @@ namespace Faunus {
 
     /*!
      * \brief Analysis of polymer shape - radius of gyration, shape factor etc.
-     * \author Mikael Lund
      * \date November, 2011
      *
      * This will analyse polymer Groups and calculate Rg, Re and the shape factor. If
@@ -447,12 +446,12 @@ namespace Faunus {
         p_vec g;                //!< List of ghost particles to insert (simultaneously)
       public:
         Widom(Space&, Energy::Energybase&);
-        void addGhost(particle);                 //!< Add particle to insert
-        void addGhost(Space&);                   //!< All all species found in the container
-        void sample(int=10);                     //!< Insert and analyse
+        void addGhost(particle);                 //!< Add particle to insert - sum of all added particle charges should be zero.
+        void addGhost(Space&);                   //!< All species found in the container
+        void sample(int=10);                     //!< Insert and analyse `n` times.
         void check(UnitTest&);                   //!< Output checking
-        double gamma();                          //!< Mean activity coefficient
-        double muex();                           //!< Mean excess chemical potential
+        double gamma();                          //!< Sampled mean activity coefficient
+        double muex();                           //!< Sampled mean excess chemical potential
     };
 
     /*!
@@ -460,8 +459,8 @@ namespace Faunus {
      *
      * Single particle Widom insertion analysis including
      * charge re-scaling for electrostatics according to
-     * Svensson and Woodward, Mol. Phys. 1988, 64(2), 247-259.
-     * Currently works only for the primitive model of electrolytes, i.e.
+     * _Svensson and Woodward, Mol. Phys. 1988, 64(2), 247-259_.
+     * Currently works this only for the primitive model of electrolytes, i.e.
      * hard, charged spheres interacting with a Coulomb potential.
      *
      * \author Martin Trulsson and Mikael Lund

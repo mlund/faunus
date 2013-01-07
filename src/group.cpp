@@ -10,52 +10,20 @@
 
 namespace Faunus {
 
-  /* -----------------------------------*
-   *                GROUP
-   * -----------------------------------*/
-
-  Group::Group(int front, int back) : myrange<int>(front,back-front+1) {
+  Group::Group(int front, int back) : Range(front,back-front+1) {
     if (front<0 || back<0)
       resize(0);
-    //id=GROUP;
     w=15;
   }
 
   Group::~Group() {}
 
-  /*
-  bool Group::find(int i) const {
-    if (i>back()) return false;
-    if (i<front()) return false;
-    return true;
-  }
-  */
-
-  /*! \brief Calculates total charge
-   *  \return Charge number. The charge is also stored in
-   *          cm.charge.
-   */
   double Group::charge(const p_vec &p) const {
     double z=0;
     for (auto i : *this)
       z+=p[i].charge;
     return z;
   }
-
-  /*
-  Group& Group::operator+=(const Group& g) {
-    assert(!"Unimplemented!");
-    return (*this);
-  }
-
-  const Group Group::operator+(const Group& g) const {
-    // TODO: this should probably be done using operator += like this:
-    // return Group(*this) += g;
-    // (move extra functionality to +=)
-    assert(!"Unimplemented!");
-    return g;
-  }
-  */
 
   bool Group::operator==(const Group& g) const {
     return (*this == g);
@@ -111,7 +79,7 @@ namespace Faunus {
   }
 
   Point Group::massCenter(const Space &spc) const {
-    assert( &spc!=NULL );
+    assert(&spc!=nullptr);
     return _massCenter(spc);
   }
 
@@ -174,35 +142,28 @@ namespace Faunus {
   }
 
   int Group::random() const {
-    if (empty())
-      return -1;
-    int i = front() + slp_global.rand() % size();
-    assert(find(i) && "Generated random element out of range!");
-    return i;
+    if (!empty()) {
+      int i = front() + slp_global.rand() % size();
+      assert(find(i) && "Generated random element out of range!");
+      return i;
+    }
+    return -1;
   }
 
   bool Group::isAtomic() const { return false; }
 
   bool Group::isMolecular() const { return false; }
 
-  /* -----------------------------------*
-   *             ATOMIC
-   * -----------------------------------*/
-
   GroupAtomic::GroupAtomic(int front, int back) : Group(front, back) {
-    //id=ATOMIC;
-    //property.insert(ATOMIC);
   }
 
   GroupAtomic::GroupAtomic(Space &spc, InputMap &in) {
-    //id=ATOMIC;
-    //property.insert(ATOMIC);
     add(spc,in);
   }
 
   bool GroupAtomic::isAtomic() const { return true; }
 
-  /*!
+  /**
    * The InputMap is scanned for the following keywords, starting with X=1:
    *
    * Key            | Description
@@ -215,6 +176,7 @@ namespace Faunus {
    * If the two latter properties, displacement and activity, are omitted
    * (recommended) the values from AtomTypes is used instead. That is, you
    * should specify these directly in the input JSON file.
+   *
    */
   void GroupAtomic::add(Space &spc, InputMap &in) {
     setfront( spc.p.size() );
@@ -243,12 +205,7 @@ namespace Faunus {
     spc.enroll(*this);
   }
 
-  /* -----------------------------------*
-   *             MOLECULAR
-   * -----------------------------------*/
   GroupMolecular::GroupMolecular(int front, int back) : Group(front, back) {
-    //id=MOLECULAR;
-    //property.insert(MOLECULAR);
   }
 
   bool GroupMolecular::isMolecular() const { return true; }
@@ -294,7 +251,7 @@ namespace Faunus {
   }
 
   /*!
-   * \warning You must manually update the mass center of the returned group
+   * @warning You must manually update the mass center of the returned group
    */
   GroupMolecular& GroupArray::operator[](int i) {
     sel.setfront( front()+i*N );

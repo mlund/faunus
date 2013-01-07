@@ -55,12 +55,13 @@ namespace Faunus {
     return (4./3.)*pc::pi*radius*radius*radius;
   }
 
-  /*!
+  /**
    * This class tries to deactivate a pointparticle so that certain energy
    * loops does not have to be split. The deactivation is done by
-   * \li Setting the charge to zero (no electrostatics)
-   * \li Setting the hydrophobic tag to false
-   * \li Moving the pointparticle *very* far away
+   *
+   * - Setting the charge to zero (no electrostatics)
+   * - Setting the hydrophobic tag to false
+   * - Moving the pointparticle *very* far away
    */
   void PointParticle::deactivate() {
     hydrophobic=false;
@@ -68,7 +69,7 @@ namespace Faunus {
     x()=y()=z()=pc::infty;
   }
 
-  /*!
+  /**
    * This will write all data to given stream. Note that the particle id is converted
    * to a short integer since char output (Tid=char) does not print well on screen. Derived
    * classes should expand on this so that *all* data is written.
@@ -79,10 +80,11 @@ namespace Faunus {
     return o;
   }
 
-  /*!
+  /**
    * This will read all data from stream in the same order as writte.
    * Note that a short integer is expected for the particle id
-   * since chars (Tid=char) does not print well on screen. Derived classes should expand on this so
+   * since chars (Tid=char) does not print well on screen.
+   * Derived classes should expand on this so
    * that *all* data is read.
    */
   PointParticle& PointParticle::operator<<(std::istream &in) {
@@ -99,55 +101,6 @@ namespace Faunus {
     radius=d.radius;
     mw=d.mw;
     hydrophobic=d.hydrophobic;
-    return *this;
-  }
-
-  /*****************************
-    S P H E R O C Y L I N D E R
-   *****************************/
-
-  void CigarParticle::rotate(RotFunctor rot) {
-    if (halfl>1e-6) {
-      dir = rot(dir);
-      patchdir = rot(patchdir);
-      patchsides[0] = rot(patchsides[0]);
-      patchsides[1] = rot(patchsides[1]);
-      chdir = rot(chdir);
-    }
-  }
-
-  CigarParticle CigarParticle::operator+(const Point &p) const {
-    assert(!"Unimplemented");
-    return *this;
-  }
-
-  CigarParticle& CigarParticle::operator=(const Point &p) {
-    PointParticle::operator=(p);
-    return *this;
-  }
-
-  CigarParticle& CigarParticle::operator=(const AtomData &d) {
-    PointParticle::operator=(d);
-    return *this;
-  }
-
-  CigarParticle& CigarParticle::operator=(const PointParticle &p) {
-    PointParticle::operator=(p);
-    return *this;
-  }
-
-  // remember to write ALL data members to stream!
-  std::ostream &operator<<(std::ostream &o, const CigarParticle &p) {
-    o << PointParticle(p)
-      << " " << p.dir << " " << p.patchdir;
-    return o;
-  }
-
-  // remember to read ALL data members from stream - and in same order as written!
-  CigarParticle& CigarParticle::operator<<(std::istream &in) {
-    PointParticle::operator<<(in);
-    dir.operator<<(in);
-    patchdir.operator<<(in);
     return *this;
   }
 

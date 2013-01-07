@@ -87,7 +87,8 @@ int main(int argc, char** argv) {
           //sys+=mv.move( salt.size()/2 );
           break;
         case 0:
-          sys+=tit.move();
+          if (slp_global()<0.1)
+            sys+=tit.move();
           break;
         case 1:
           k=pol.size();

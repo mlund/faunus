@@ -7,19 +7,27 @@
 #endif
 
 namespace Faunus {
-  /*!
-   * \brief Cartesian coordinates
-   * \author Mikael Lund
-   * \date 2002-2007
+  /**
+   * @brief Cartesian coordinates
+   *
+   * This is the base class for all particles and takes care
+   * of positions, only. It is derived from Eigen::Vector3D
+   * vector and all particles in faunus can hence be freely
+   * mised with Eigen objects.
+   *
+   * @date 2002-2007
    */
   class Point : public Eigen::Vector3d {
     public:
       typedef double Tcoord;                             //!< Floating point type for Point coordinates
       typedef Eigen::Vector3d Tvec;                      //!< 3D vector from Eigen
-      typedef std::function<Point(const Point)> RotFunctor;//!< Rotation functor
+      typedef std::function<Tvec(const Tvec)> RotFunctor;//!< Rotation functor
 
-      inline Point();                              //!< Constructor, zero data.
-      inline Point(Tcoord,Tcoord,Tcoord);          //!< Constructor
+      /** @brief Default constructor. Data is *not* zeroed */
+      inline Point() {}
+
+      Point(Tcoord x, Tcoord y, Tcoord z) : Tvec(x,y,z) {}
+
       template<typename OtherDerived>
         Point(const Eigen::MatrixBase<OtherDerived>& other) : Tvec(other) {}
 
@@ -29,13 +37,15 @@ namespace Faunus {
           return *this;
         }
 
-      void clear();                                //!< Zero all data.
-      Tcoord len() const;                          //!< Get scalar (TO BE REMOVED)
+      void clear();                           //!< Zero x,y,z
 
-      /*!
-       * \brief Generate a random unit vector
+      Tcoord len() const;                     //!< Get scalar (TO BE REMOVED)
+
+      /**
+       * @brief Generate a random unit vector
        *
-       * Based on the von Neumann method described in Allen and Tildesley page 349.
+       * Based on the von Neumann method described
+       * in Allen and Tildesley page 349.
        */
       template<typename Trandombase>
         void ranunit(Trandombase &ran) {
@@ -50,12 +60,13 @@ namespace Faunus {
           *this = u/std::sqrt(r2);
           assert(std::abs(this->len()-1)<1e-7); // is it really a unit vector?
         }
-      void rotate(RotFunctor);                     //!< Transform point (rotation etc)
 
-      /*!
-       * \brief Translate Point along a vector
-       * \param geo Geomtry to use so that boundary conditions can be respected
-       * \param a Vector to translate with
+      void rotate(RotFunctor);                  //!< Transform point (rotation etc)
+
+      /**
+       * @brief Translate along a vector
+       * @param geo Geometry to use for boundary conditions (see Faunus::Geometry) 
+       * @param a Vector to translate with
        */
       template<typename Tgeometry>
         void translate(const Tgeometry &geo, const Point &a) {
@@ -64,11 +75,11 @@ namespace Faunus {
           geo.boundary(*this);
         }
 
-      /*!
-       * \brief Coordinate scaling used for NPT ensemble
+      /**
+       * @brief Coordinate scaling used for NPT ensemble
        *
-       * This will perform a volume scaling of the Point by following the algorithm
-       * specified in the Geometry.
+       * This will perform a volume scaling of the Point by
+       * following the algorithm specified in the Geometry.
        */
       template<typename Tgeometry>
         void scale(const Tgeometry &geo, double newvol) {
@@ -78,15 +89,8 @@ namespace Faunus {
       Point& operator<<(std::istream&);            //!< Read from stream
   };
 
-  /*!
-   * \note Data is not zeroed upon construction
-   */
-  Point::Point() {}
-
-  Point::Point(Tcoord xx, Tcoord yy, Tcoord zz) : Tvec(xx,yy,zz) {}
-
-  /*!
-   * \brief Class for isotropic particles
+  /**
+   * @brief Class for isotropic particles
    *
    * Example:
    *
@@ -115,54 +119,101 @@ namespace Faunus {
       PointParticle();                          //!< Constructor
 
       template<typename OtherDerived>
-        PointParticle(const Eigen::MatrixBase<OtherDerived>& other) : Tvec(other) {}
+        PointParticle(const Eigen::MatrixBase<OtherDerived>& other) : Point(other) {}
 
-      double volume() const;                    //!< Return volume
-      void deactivate();                        //!< Deactivate for use w. faster energy loops
-      void clear();                             //!< Zero all data
-
-      /*! \brief Copy coordinates from a point */
       template<typename OtherDerived>
         PointParticle& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
-          Tvec::operator=(other);
+          Point::operator=(other);
           return *this;
         }
 
       PointParticle& operator=(const AtomData&);//!< Copy data from AtomData
       PointParticle& operator<<(std::istream&); //!< Copy data from stream
       friend std::ostream &operator<<(std::ostream&, const PointParticle&);//!< Write to stream
+
+      double volume() const;                    //!< Return volume
+      void deactivate();                        //!< Deactivate for use w. faster energy loops
+      void clear();                             //!< Zero all data
   };
 
-  /*!
-   * \brief Sphero-cylindrical particle
-   * \date Brno, November 2012
+  /**
+   * @brief Sphero-cylindrical particle
+   * @date Brno, November 2012
    *
    * detailed information here...
    */
   class CigarParticle : public PointParticle {
     public:
       Point dir; //!< Direction of sphero cylinder (unit vector)
-      Point patchdir, patchsides[2], chdir;
-      double patchangle, pcanglsw, pcangl, halfl;
-
-      void rotate(RotFunctor);
+      Point patchdir;
+      Point patchsides[2];
+      Point chdir;
+      double patchangle;
+      double pcanglsw;
+      double pcangl;
+      double halfl;
 
       inline CigarParticle() : halfl(0) {}
 
-      CigarParticle operator+(const Point&) const;
-      CigarParticle& operator=(const Point&);
-      CigarParticle& operator=(const AtomData&);
-      CigarParticle& operator=(const PointParticle&);
-      CigarParticle& operator<<(std::istream&);
-      friend std::ostream &operator<<(std::ostream &, const CigarParticle&); //!< Output information
+      /** @brief Copy constructor for Eigen derivatives */
+      template<typename OtherDerived>
+        CigarParticle(const Eigen::MatrixBase<OtherDerived>& other) : PointParticle(other) {}
+
+      /** @brief Generic copy operator for Eigen derivatives */
+      template<typename OtherDerived>
+        CigarParticle& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
+          PointParticle::operator=(other);
+          return *this;
+        }
+
+      /** @brief Copy operator for base class (i.e no casting to Eigen derivatives) */
+      inline CigarParticle& operator=(const PointParticle &p) {
+        PointParticle::operator=(p);
+        return *this;
+      }
+
+      /* @brief Copy properties from AtomData object */
+      inline CigarParticle& operator=(const AtomData &d) {
+        PointParticle::operator=(d);
+        // copy more atom properties here...
+        return *this;
+      }
+
+      inline void rotate(RotFunctor rot) {
+        if (halfl>1e-6) {
+          dir = rot(dir);
+          patchdir = rot(patchdir);
+          patchsides[0] = rot(patchsides[0]);
+          patchsides[1] = rot(patchsides[1]);
+          chdir = rot(chdir);
+        } else
+          Point::rotate(rot);
+      }
+
+      /* read in same order as written! */
+      inline CigarParticle& operator<<(std::istream &in) {
+        PointParticle::operator<<(in);
+        dir.operator<<(in);
+        patchdir.operator<<(in);
+        in >> halfl;
+        return *this;
+      }
+
+      /* write data members to stream */
+      friend std::ostream &operator<<(std::ostream &o, const CigarParticle &p) {
+        o << PointParticle(p)
+          << " " << p.dir << " " << p.patchdir
+          << " " << p.halfl;
+        return o;
+      }
   };
 
 #ifdef HYPERSPHERE
-  /*!
-   * \brief Hypersphere particle
-   * \author Martin Trulsson
-   * \date Lund, 2009
-   * \warning Unfinished - need to transfer from jurassic branch
+  /**
+   * @brief Hypersphere particle
+   * @author Martin Trulsson
+   * @date Lund, 2009
+   * @warning Unfinished - need to transfer from jurassic branch
    */
   class Hyperpoint : public PointParticle {
     public:

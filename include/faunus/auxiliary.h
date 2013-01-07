@@ -11,11 +11,11 @@
 
 namespace Faunus {
 
-  /*!
-   * This is a template for storing permutable pairs of data T.
-   * That is (a,b)==(b,a). The < operator is implemented so the pairtype
+  /**
+   * This is a template for storing permutable pairs of data `T`.
+   * That is `(a,b)==(b,a)`. `operator<()` is implemented so the pairtype
    * can be used in STL maps etc.
-   * \code
+   * @code
    * pair_permutable<int> a(2, 10);
    * pair_permutable<int> b(10, 2);
    * a==b;      // true
@@ -23,7 +23,7 @@ namespace Faunus {
    * b.second;  // = 10
    * a.find(10);// true
    * a.find(3); // false
-   * \endcode
+   * @endcode
    */
   template<class T> class pair_permutable {
     public:
@@ -67,7 +67,8 @@ namespace Faunus {
 /*
  * The following is an extension to std::hash in order to construct hash tables,
  * for example std::unordered_map, using Faunus::pair_permutable<> as keys.
- * See more at: http://en.wikipedia.org/wiki/Unordered_associative_containers_(C%2B%2B)#Usage_example
+ * See more at:
+ * <http://en.wikipedia.org/wiki/Unordered_associative_containers_(C%2B%2B)#Usage_example>
  */
 #ifdef FAU_HASHTABLE
 namespace std {
@@ -81,7 +82,7 @@ namespace std {
 #endif
 
 namespace Faunus {
-  /*!
+  /**
    * This is a list of pairs with associated data where the latter should de derived
    * from the base Tbase. When adding data with the add() function, a copy of the data
    * is created and stored internally.
@@ -96,28 +97,28 @@ namespace Faunus {
 #endif
         Tlist list;
       public:
-        /*!
-         * \brief Associate data with a pair using an internal copy.
+        /**
+         * @brief Associate data with a pair using an internal copy.
          *
-         * Data is added by making an internal COPY of the given Tderived object.
+         * Data is added by making an internal COPY of the given `Tderived` object.
          * For large lists, consider adding a pointer instead using the alternative
-         * add() function.
+         * `add()` function.
          */
         template<typename Tderived>
           void add(Tij i, Tij j, Tderived data) {
             list[ Tpair(i,j) ] = std::shared_ptr<Tderived>( new Tderived(data) ); 
           }
 
-        /*!
-         * \brief Associate data with a pair using pointers.
+        /**
+         * @brief Associate data with a pair using pointers.
          */
         template<typename Tderived>
           void add(Tij i, Tij j, std::shared_ptr<Tderived>& sptr) {
             list[ Tpair(i,j) ] = sptr; 
           }
 
-        /*!
-         * \brief Access data of a pair
+        /**
+         * @brief Access data of a pair
          */
         Tbase& operator() (Tij i, Tij j) {
           Tpair pair(i,j);
@@ -125,15 +126,15 @@ namespace Faunus {
           return *list[pair];
         }
 
-        /*! \brief Clears all data */
+        /** @brief Clears all data */
         void clear() { list.clear(); }
     };
 
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
-  /*!
-   * \brief Quake inverse square root approximation
+  /**
+   * @brief Quake inverse square root approximation
    */
   inline float invsqrtQuake(float number) {
     assert(sizeof(int)==4 && "Integer size must be 4 bytes for quake invsqrt. Are you using a 32bit system?");
@@ -147,10 +148,10 @@ namespace Faunus {
     return y;
   }
 
-  /*!
-   * \brief Approximate exp() function
-   * \note see Cawley 2000; doi:10.1162/089976600300015033
-   * \warning Does not work in big endian systems!
+  /**
+   * @brief Approximate exp() function
+   * @note see Cawley 2000; doi:10.1162/089976600300015033
+   * @warning Does not work in big endian systems!
    */
   inline double exp_cawley(double y) {
     assert(2*sizeof(int)==sizeof(double) && "Approximate exp() requires 4-byte integer");

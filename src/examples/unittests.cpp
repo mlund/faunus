@@ -5,7 +5,47 @@ using namespace Faunus;
 
 bool eq(double a, double b, double tol=1e-6) { return (std::abs(a-b)<tol) ? true : false; }
 
+/*
+ * Check various copying operations
+ * between particle types
+ */
+template<typename Tparticle>
+void checkParticle() {
+  Tparticle p;
+  p.clear();
+  p.mw=1.0; // set some property - should should not be overridden!
+  Point::Tvec vec(1,0,0);
+  p=vec;
+  assert( eq(p.norm(), 1) );
+  p+=vec;
+  assert( eq(p.norm(), 2) );
+  p*=0.5;
+  assert( eq(p.norm(), 1) );
+
+  assert( eq(p.mw, 1) && "mw should not be overridden!");
+
+  p=Point::Tvec(2,3,5);
+  assert( eq(p.len(), sqrt(4+9+25), 1e-8) && "Bad len() calculation");
+
+  assert( eq(p.mw, 1) && "mw should not be overridden!");
+
+  PointParticle a;
+  a.clear();
+  a.x()=10.;
+  a.charge=1.0;
+  p=a; 
+  assert( eq(p.x(), a.x()) );
+  assert( eq(p.charge, a.charge) );
+  assert( eq(p.mw, 0) );
+}
+
 int main() {
+
+  // check particle operations
+  {
+    checkParticle<PointParticle>();
+    checkParticle<CigarParticle>();
+  }
 
   // check infinity
   assert( pc::infty == -std::log(0) && "Problem with infinity" );
@@ -126,13 +166,6 @@ int main() {
     table(2.1)+=1;
     table(2.1)+=3;
     assert( eq( table(2.1), 2 ) && "Bad average or 2D table");
-  }
-
-  // check vector operations
-  {
-    Point a(2,3,5);
-    assert( eq(a.len(), sqrt(4+9+25), 1e-8) && "Bad len() calculation");
-    a*=2;
   }
 
 }

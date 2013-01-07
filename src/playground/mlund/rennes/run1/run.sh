@@ -1,5 +1,27 @@
 #!/bin/bash
 
+# Submit with sbatch command
+
+#SBATCH -t 168:00:00
+#SBATCH -J rennes
+
+# - Get exclusive access to whole node (16 cores on alarik)
+#---SBATCH --exclusive
+
+# - Number of cores
+#SBATCH -n 8
+
+# - Number of nodes
+#BATCH -N 1
+
+if [ "$SNIC_RESOURCE" == "alarik" ]
+then
+  module add openmpi/1.6.2/gcc/4.6.2
+  cd $SLURM_SUBMIT_DIR
+fi
+
+corenum=8
+
 exe=../mlund-rennes
 
 function mkinput() {
@@ -58,7 +80,7 @@ Atom  GLN      0     3.8    0.1    120     no
 Atom  GLY      0     2.9    0.1    54      no
 " > cluster.atoms
 
-for proc in {0..3}
+for proc in {0..7}
 do
 if [ "$proc" == "0" ]; then salt=0.005; fi 
 if [ "$proc" == "1" ]; then salt=0.010; fi 
@@ -66,8 +88,8 @@ if [ "$proc" == "2" ]; then salt=0.020; fi
 if [ "$proc" == "3" ]; then salt=0.040; fi 
 if [ "$proc" == "4" ]; then salt=0.060; fi 
 if [ "$proc" == "5" ]; then salt=0.080; fi 
-if [ "$proc" == "5" ]; then salt=0.100; fi 
-if [ "$proc" == "5" ]; then salt=0.120; fi 
+if [ "$proc" == "6" ]; then salt=0.100; fi 
+if [ "$proc" == "7" ]; then salt=0.120; fi 
 echo "
 atomlist               cluster.atoms
 eq_processfile         eqtit
@@ -92,19 +114,20 @@ temper_format           XYZQ
 done
 }
 
-rm -f mpi*
+#rm -f mpi*
+
 cylinder_len=350
 cylinder_radius=80
 pH=7
-micro=100
+micro=1000
 transdp=100
-temper=1
+temper=0
 mkinput
-mpiexec -np 4 $exe
-exit
+#mpiexec -np 8 $exe
 
-micro=1000000
+temper=0.05
+micro=2000000
 transdp=20 #30
 mkinput
-$exe
+mpiexec -np 8 $exe
 

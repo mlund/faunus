@@ -40,7 +40,6 @@ Get the latest code resivions via SVN from sourceforge.net:
 
     $ svn co http://svn.code.sf.net/p/faunus/code/trunk faunus
 
-
 REQUIREMENTS
 ============
 
@@ -56,7 +55,6 @@ Optional:
 
 Developed and tested on Linux and MacOS X.
 
-
 COMPILING                                         {#compiling}
 =========
 
@@ -66,7 +64,6 @@ COMPILING                                         {#compiling}
     $ cmake ../faunus/ [options]
     $ make [help]
     $ make test (or use 'ctest -V' for verbose test output)
-
 
 Build options
 -------------
@@ -102,22 +99,17 @@ Resetting the build system
     $ make clean
     $ rm CMakeCache.txt
 
-
 CONTRIBUTORS
 ============
 
 In chronological order:
 
-- Mikael Lund        <mikael.lund at teokem.lu.se> - http://www.teokem.lu.se/~mikael
-- Bjorn Persson      <bjorn.persson at teokem.lu.se>
-- Martin Trulsson    <martin.trulsson at teokem.lu.se>
-- Ondrej Marsalek    <ondrej.marsalek at uochb.cas.cz>
-- Christophe Labbez  <christophe.labbez at u-bourgogne.fr>
-- Andre Teixeira     <andrearteixeira at gmail.com>
-- Anil Kurut         <akurut at gmail.com>
-- Chris Evers        <chris.evers at gmail.com>
-- Magnus Ullner      <magnus.ullner at teokem.ku.se>
-- Robert Vacha
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  Mikael Lund         Bjorn Persson       Martin Trulsson    
+Ondrej Marsalek     Christophe Labbez     Andre Teixeira     
+  Anil Kurut           Chris Evers         Magnus Ullner      
+ Robert Vacha         Axel Trulsson       Bjorn Stenqvist
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 CITING FAUNUS
 =============

@@ -9,11 +9,9 @@
 namespace Faunus {
 
   /*!
-   * \brief Base class for random number generation
+   * @brief Base class for random number generation
    *
    * Derived classes need only provide a _randone() and seed() function.
-   *
-   * \warning rand() function may or may not reach exactly max unsigned int
    */
   class RandomBase {
     private:

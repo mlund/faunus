@@ -5,56 +5,14 @@
 #include <faunus/common.h>
 #include <faunus/average.h>
 #include <faunus/geometry.h>
+#include <faunus/range.h>
 #endif
 
 namespace Faunus {
 
-  /* 
-   * \brief Range iterator class for continuous ranges
-   * \todo Replace with https://bitbucket.org/AraK/range/wiki/Home ??
-   * \comment http://stackoverflow.com/questions/7185437/is-there-a-range-class-in-c0x-aka-c11-for-use-with-range-based-for-loops
-   */
-  template<class Tint=int>
-    class myrange {
-      public:
-        class iterator {
-          friend class myrange;
-          public:
-          Tint operator *() const { return i_; }
-          const iterator &operator ++() { ++i_; return *this; }
-          iterator operator ++(int) { iterator copy(*this); ++i_; return copy; }
-          iterator operator +(int i) { iterator copy(*this); copy.i_+=i; return copy; }
-          iterator operator -(int i) { iterator copy(*this); copy.i_-=i; return copy; }
-          bool operator ==(const iterator &other) const { return i_ == other.i_; }
-          bool operator !=(const iterator &other) const { return i_ != other.i_; }
-          protected:
-          iterator(Tint start) : i_ (start) { }
-          private:
-          Tint i_;
-        };
-        iterator begin() const { return begin_; }   //!< Iterator to beginning
-        iterator end() const { return end_; }       //!< Iterator to end (end points to last element + 1)
-        Tint front() const { return begin_.i_; }    //!< Get first value in range
-        Tint back() const { return end_.i_-1; }     //!< Get last value in range
-        bool empty() const { return (end_.i_<=begin_.i_) ? true : false; } //!< Determines if range is empty.
-        void resize(unsigned int size) { end_.i_ = begin_.i_ + size; } //!< Resize range, keeping same beginning
-        Tint size() const { return end_.i_-begin_.i_; }  //!< Size of range
-        void setfront(Tint front) { begin_.i_=front; }   //!< Set first element
-        void setback(Tint back) { end_.i_=back+1; }      //!< Set last element
-        void setrange(Tint front, Tint back=-1) {        //!< Set range [front:back]
-          setfront(front);
-          if (back!=-1)
-            setback(back);
-          else setback(front-1);
-        }
-        myrange(Tint first=0, Tint size=0) : begin_(first), end_(first+size) {}
-        virtual ~myrange() {}
-      private:
-        iterator begin_;
-        iterator end_;
-    };
+  typedef ContinuousRange<int> Range;  //! Basic, continuous range of integers
 
-  /*!
+  /**
    * @brief Defines a continuous range of particles in the Space particle vector.
    *
    * This class defines a range, `[front:back]`, in the particle vector and behaves much like a standard
@@ -64,15 +22,16 @@ namespace Faunus {
    *
    *     Group g(2,5);           // first, last particle
    *     for (auto i : g)        // iterator access
-   *       cout << i;            // -> 23456
+   *       cout << i;            // -> 2345
    *     g.front();              // -> 2
-   *     g.back();               // -> 6
-   *     g.size();               // -> 5
-   *     g.resize( g.size()+1 ); // -> size=6, back=7.
+   *     g.back();               // -> 5
+   *     g.size();               // -> 4
+   *     g.resize( g.size()+1 ); // -> size=5, back=6.
    *
-   * @note http://stackoverflow.com/questions/7185437/is-there-a-range-class-in-c0x-aka-c11-for-use-with-range-based-for-loops
+   * @note
+   * <http://stackoverflow.com/questions/7185437/is-there-a-range-class-in-c0x-aka-c11-for-use-with-range-based-for-loops>
    */
-  class Group : public myrange<int> {
+  class Group : public Range {
     private:
       virtual Point _massCenter(const Space&) const;
     protected:
@@ -106,16 +65,10 @@ namespace Faunus {
       friend std::ostream &operator<<(std::ostream&, Group&);//!< Output Group data to stream
       virtual Group &operator<<(std::istream&);              //!< Get Group data from stream
       virtual ~Group();
-      inline bool find(int i) const                          //!< Check if index is part of group
-      {
-        if (i>back()) return false;
-        if (i<front()) return false;
-        return true;
-      }
   };
 
-  /*!
-   * \brief Group class for atomic species, typically salt
+  /**
+   * @brief Group class for atomic species, typically salt
    */
   class GroupAtomic : public Group {
     public:
@@ -125,8 +78,8 @@ namespace Faunus {
       bool isAtomic() const;                 //!< Always true for GroupAtomic
   };
 
-  /*!
-   * \brief Class for molecular groups - proteins, polymers etc.
+  /**
+   * @brief Class for molecular groups - proteins, polymers etc.
    */
   class GroupMolecular : public Group {
     private:
@@ -137,8 +90,8 @@ namespace Faunus {
       bool isMolecular() const;                 //!< Always true for GroupMolecular
   };
 
-  /*!
-   * \brief Class for an array of multiatom molecules - solvent, lipids etc.
+  /**
+   * @brief Class for an array of multiatom molecules - solvent, lipids etc.
    */
   class GroupArray : public GroupMolecular {
     private:

@@ -217,7 +217,7 @@ namespace Faunus {
            * \param kTthreshold Half penalty energy once this threshold in distribution has been reached
            * \param res Resolution of the penalty function (default 0.1)
            */
-          PenaltyFunction(double penalty, int Ncheck=1e20, double kTthreshold=5, Tcoord res=0.1)
+          PenaltyFunction(double penalty, int Ncheck=1e9, double kTthreshold=5, Tcoord res=0.1)
             : Tbase(res, Tbase::XYDATA), hist(res, Thist::HISTOGRAM) {
               Tbase::name="penalty";
               _cnt=0;

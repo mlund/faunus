@@ -1,4 +1,5 @@
-/*! @mainpage Welcome to Faunus!
+/*!
+@mainpage Welcome to Faunus!
 
 ____
 ![](faunus-textart.png)
@@ -7,7 +8,7 @@ ____
 Table of contents
 =================
 
-- [Overview / Readme](md_README.html)
+- [Quick Overview / Readme](md_README.html)
 - @ref license
 - Getting Started
   - @ref downloadbuild
@@ -129,13 +130,13 @@ To get verbose output from the tests, run:
 
 @page linkingyourown Making a new Faunus program
 
-We'll here show how to link a new, external program to the Faunus library.
+We'll here show three ways to link a new, external program to the Faunus library.
 
-Using CMake
------------
+1. Using CMake
+--------------
 
 Start by making a new directory (anywhere you want), put your source file there,
-and make a `CMakeLists.txt` file telling CMake about your new executable.
+and make a `CMakeLists.txt` file telling CMake about the new executable.
 For example:
 
     $ cd $HOME/newproject
@@ -162,10 +163,38 @@ directly from the `newproject` directory:
 Note that all options selected when configuring faunus will be applied to `hello` as well,
 and any changes to the faunus code base will trigger re-compilation upon running `make`.
 
-Using manual linking
---------------------
+2. Using CMake and automatic faunus download
+--------------------------------------------
 
-The above can of course be done in the traditional way by
+Here we unleash CMake magic to automatically *download and build faunus*, as well as link it
+to your program. Only two files are required:
+
+-# Your source file, for example `hello.cpp` as above.
+-# This `CMakeLists.txt` file:
+
+       if (PROJECT_NAME MATCHES "Faunus")
+         fau_example(hello "./" hello.cpp)
+       else()
+         cmake_minimum_required(VERSION 2.8)
+         include(ExternalProject)
+         ExternalProject_Add(faunus
+           SVN_REVISION "-r877"   # remove for latest revision
+           SVN_REPOSITORY http://svn.code.sf.net/p/faunus/code/trunk
+           CMAKE_ARGS -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMYPLAYGROUND=${CMAKE_SOURCE_DIR}
+           INSTALL_COMMAND "")
+       endif() 
+
+Place both in a fresh directory and do:
+
+    $ cmake .
+    $ make
+    $ make hello
+
+
+3. Using manual linking
+-----------------------
+
+Linking can of course be done in the more traditional way by
 compiling your program with `libfaunus`. For example:
 
     $ export faunus=$HOME/faunus
@@ -173,6 +202,7 @@ compiling your program with `libfaunus`. For example:
 
 This will, however, require that you manually set compiler options as well as macro definitions
 compatible with your `libfaunus` build.
+
 
 @page importantclasses Important Classes
 
@@ -274,7 +304,7 @@ is broken:
     $ make manual
     $ make test
 
-Please, also verify SWIG modules:
+Please, also try to verify SWIG modules:
 
     $ cmake -DENABLE_SWIG=on
     $ make _pyfaunus
@@ -282,6 +312,5 @@ Please, also verify SWIG modules:
 
 @page license License
 @verbinclude LICENSE
-
 
 */

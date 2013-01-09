@@ -10,7 +10,7 @@ typedef Potential::CoulombLJTS Tpairpot;
 int main(int argc, char** argv) {
   Faunus::MPI::MPIController mpi;
   mpi.cout << textio::splash();
-  InputMap mcp("temper.input");
+  InputMap mcp(textio::prefix+"temper.input");
   MCLoop loop(mcp);                    // class for handling mc loops
   FormatPQR pqr;                       // PQR structure file I/O
   FormatAAM aam;                       // AAM structure file I/O
@@ -22,6 +22,8 @@ int main(int argc, char** argv) {
   auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
   //auto constrain = pot.create( Energy::MassCenterConstrain(pot.getGeometry()) );
   Space spc( pot.getGeometry() );
+
+  double pxtc = mcp.get("pxtc",0.99);
 
   // Add molecular species
   int cnt=0;
@@ -59,10 +61,12 @@ int main(int argc, char** argv) {
   salt.name="Salt";
   spc.enroll(salt);
 
-  spc.load("state");
+  spc.load(textio::prefix+"state");
 
   Move::TranslateRotateCluster gmv(mcp,pot,spc);
   Move::AtomicTranslation mv(mcp, pot, spc);
+  Move::ParallelTempering pt(mcp,pot,spc,mpi);   //temper move
+  
   gmv.setMobile(salt); // specify where to look for clustered ions
   mv.setGroup(salt);   // specify atomic particles to be moved
 
@@ -80,10 +84,15 @@ int main(int argc, char** argv) {
 
   mpi.cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
   
+  int macronum = 0;
   while ( loop.macroCnt() ) {  // Markov chain 
+    macronum++;
     while ( loop.microCnt() ) {
-      xtc.save("out.xtc", spc.p);
-      int k,i=rand() % 2;
+      
+      if (slp_global()>pxtc)
+        xtc.save(textio::prefix+"out.xtc", spc.p);
+      
+      int k,i=rand() % 3;
       switch (i) {
         case 0:
           mv.setGroup(salt);
@@ -102,6 +111,9 @@ int main(int argc, char** argv) {
                 rdf(r)++;
             }
           break;
+        case 2:
+          sys+=pt.move();
+          break;
       }
       for (auto j=salt.begin(); j!=salt.end()-1; j++) {
         saltdistr(spc.p[(*j)].z())++;
@@ -110,16 +122,24 @@ int main(int argc, char** argv) {
 
     sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) );
 
-    rdf.save("rdf_p2p.dat");
+    rdf.save(textio::prefix+"rdf_p2p.dat");
     
-    saltdistr.save("saltdistr.dat");
-    spc.save("state");
+    string strsaltdistr("");
+    strsaltdistr += textio::prefix;
+    strsaltdistr += "_";
+    strsaltdistr += macronum;
+    strsaltdistr += "saltdistr.dat";
+    
+    saltdistr.save(strsaltdistr);
+    saltdistr.save(textio::prefix+"saltdistr.dat");
+    spc.save(textio::prefix+"state");
+    mpi.cout << loop.info() << spc.info() << sys.info() << mv.info() << gmv.info() << pt.info();
     mpi.cout << loop.timing();
   } // end of macro loop
 
-  pqr.save("confout.pqr", spc.p);
+  pqr.save(textio::prefix+"confout.pqr", spc.p);
 
-  mpi.cout << loop.info() << spc.info() << sys.info() << mv.info() << gmv.info();
+  mpi.cout << loop.info() << spc.info() << sys.info() << mv.info() << gmv.info() << pt.info();
   mpi.cout << pol[0].info();
   mpi.cout << pol[0].charge(spc.p) << endl;
 }

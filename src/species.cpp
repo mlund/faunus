@@ -64,7 +64,7 @@ namespace Faunus {
       a.charge = json::value<double>(atom.second, "q", 0);
       a.radius = json::value<double>(atom.second, "r", 0);
       a.sigma = 2*a.radius;
-      a.sigma = json::value<double>(atom.second, "s", a.sigma);
+      a.sigma = json::value<double>(atom.second, "sigma", a.sigma);
       a.radius = a.sigma/2;
       a.id=particle::Tid( list.size() );
       a.patchtype = json::value<double>(atom.second, "patchtype", 0);

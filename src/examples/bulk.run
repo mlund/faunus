@@ -8,44 +8,38 @@ source_tests_dir="`dirname $0`"
 cp -f $source_tests_dir/bulk.test . 2> /dev/null
 cp -f $source_tests_dir/bulk.state state 2> /dev/null
 
-function mkinput() {
-echo "
-#     name    charge radius     epsilon       Mw      hydrophobic?
-#                    (angstrom) (kJ/mol)      (g/mol) (yes/no)
-Atom  Na      +1     1.665      0.01158968    1       no
-Atom  Cl      -1     2.200      0.4184        1       no
-" > bulk.atoms
+echo '{
+  "atomlist" : {
+    "Na" : { "q": 1.0, "sigma":3.33, "eps":0.01158968, "dp":1.0 },  // sodium ion
+    "Cl" : { "q":-1.0, "sigma":4.40, "eps":0.4184,     "dp":1.0 }   // chloride ion
+  }
+}' > bulk.json
 
 echo "
-atomlist      bulk.atoms
-cuboid_len    80
+atomlist        bulk.json    # atom properties
+cuboid_len      80           # angstrom
 
-temperature 1100
-epsilon_r   1
-coulomb_cut 14.
+temperature     1100         # K
+epsilon_r       1            # dielectric const.
+coulomb_cut     14.          # coulomb cutoff [angstrom]
 
-loop_macrosteps 10
-loop_microsteps $micro
+loop_macrosteps 10           # number of macro loops
+loop_microsteps 50           # number of micro loops
 
 tion1  Na
-nion1  1152
-dpion1 1.0
+nion1  1152                  # number of sodium atoms
 tion2  Cl
-nion2  1152
-dpion2 1.0
+nion2  1152                  # number of chloride atoms
 
-npt_dV 0   #0.04 (0=no volume displacement=NVT)
-npt_P  11. #mM
+npt_dV 0                     # 0.04 (0=no volume displacement=NVT)
+npt_P  11.                   # external pressure [mM]
 
 test_stable        no
 test_file          bulk.test
 " > bulk.input
-}
 
 exe=./bulk
 if [ -x $exe ]; then
- micro=50
- mkinput
  $exe
  rc=$?
  exit $rc

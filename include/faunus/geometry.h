@@ -299,6 +299,11 @@ namespace Faunus {
         assert(!p.empty());
         assert(g.back() < (int)p.size());
         assert(&geo!=NULL);
+#ifndef __clang__
+        static_assert(
+            std::is_base_of<Geometry::Geometrybase, Tgeometry>::value,
+            "Tgeo must be derived from Geometrybase" );
+#endif
         double sum=0;
         Point cm(0,0,0);
         Point o = p[ g.front()+(g.back()-g.front())*0.5 ];  // set origo to middle particle

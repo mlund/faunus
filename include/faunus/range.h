@@ -36,7 +36,7 @@ class ContinuousRange {
           return *this;
         }
 
-        iterator operator++(T)
+        iterator operator++(int)
         {
           iterator copy=*this;
           ++i_;
@@ -87,7 +87,12 @@ class ContinuousRange {
 
     void setback(T back) { end_.i_=back+1; }     //!< Set last element
 
-    void setrange(T front, T back=-1)            //!< Set range [front:back]
+    /**
+     * @brief Set range `[front:back]`
+     * @param front First particle
+     * @param back Last particle
+     */
+    void setrange(T front, T back=-1) 
     {
       setfront(front);
       if (back>=0)
@@ -103,7 +108,9 @@ class ContinuousRange {
       return true;
     }
 
-    ContinuousRange(T first=0, T size=0) : begin_(first), end_(first+size) {}
+    ContinuousRange(T first=0, T size=0) : begin_(first), end_(first+size) {
+      static_assert( std::is_integral<T>::value, "T must be of integral type" );
+    }
 
   private:
 

@@ -50,7 +50,7 @@ namespace Faunus {
       return _energyChange();
     }
   
-    /*!
+    /**
      * This function will perform a trial move and accept/reject using the standard
      * [Metropolis criteria](http://en.wikipedia.org/wiki/Metropolis–Hastings_algorithm)
      * That is, it will perform the following `n` times:
@@ -80,6 +80,7 @@ namespace Faunus {
           }
         }
       }
+      assert(spc->p == spc->trial && "Trial particle vector out of sync!");
       return utot;
     }
 

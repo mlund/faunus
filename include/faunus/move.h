@@ -16,26 +16,9 @@
 #endif
 
 namespace Faunus {
-  /*!
-   * \brief Monte Carlo move related classes
-   */
+
+  /** @brief Monte Carlo move related classes */
   namespace Move {
-
-    /*
-     * \brief Optimize Monte Carlo displacement parameters for optimal mean square displament
-     * \date Lund, 2011
-     * \author Mikael Lund
-     */
-    class DisplacementOptimizer {
-      private:
-        double* dpPtr;   //!< Pointer to displacement parameter
-        //average<double>* msqPtr; //!< Pointer to mean-square displacement
-        double dp_min;
-        double dp_max;
-
-      public:
-        //void set_target(double&, average&);
-    };
 
     template<typename Tkey=std::string>
       class AcceptanceMap {
@@ -139,7 +122,7 @@ namespace Faunus {
         double getAcceptance();            //!< Get acceptance [0:1]
     };
 
-    /*!
+    /**
      * @brief Translation of atomic particles
      *
      * This Markov move can work in two modes:
@@ -176,8 +159,8 @@ namespace Faunus {
         void setGenericDisplacement(double); //!< Set single displacement for all atoms
         Point dir;             //!< Translation directions (default: x=y=z=1)
     };
-   
-    /*!
+
+    /**
      * @brief Rotate single particles
      *
      * This move works in the same way as AtomicTranslation but does
@@ -193,7 +176,7 @@ namespace Faunus {
         AtomicRotation(InputMap&, Energy::Energybase&, Space&, string="rot_particle");
     };
 
-    /*!
+    /**
      * @brief Combined rotation and rotation of groups
      *
      * This will translate and rotate groups and collect averages based on group name.
@@ -234,7 +217,7 @@ namespace Faunus {
         std::map<string,Point> directions; //!< Specify special group translation directions (default: x=y=z=1)
     };
 
-    /*!
+    /**
      * @brief Combined rotation and rotation of groups and mobile species around it
      *
      * This class will do a combined translational and rotational move of a group along with
@@ -267,7 +250,7 @@ namespace Faunus {
         double threshold;  //!< Distance between particles to define a cluster
     };
 
-    /*!
+    /**
      * @brief Non-rejective cluster translation.
      *
      * This type of move will attempt to move collective sets of macromolecules that
@@ -303,12 +286,20 @@ namespace Faunus {
         bool skipEnergyUpdate;    //!< True if energy updates should be skipped (faster evaluation!)
     };
 
-    /*!
+    /**
      * @brief Crank shaft move of linear polymers
-     * @date Lund 2012
      *
-     * Explain what this move does and how to use it...
-     * ![Polymer moves](polymerdisplacements.jpg)
+     * This will perform a crank shaft move of a linear polymer molecule.
+     * Two monomers are picked at random and a rotation axis is drawn
+     * between them. The particles in between are rotated around that
+     * axis. By setting `minlen` and `maxlen` one can control the maximum
+     * number particles to rotate. For example, for a crankshaft
+     * move spanning only one bond, set `minlen=maxlen=1`.
+     * The behavoir for branched molecules is currently undefined.
+     *
+     * ![Figure: Various polymer moves.](polymerdisplacements.jpg)
+     *
+     * @date Lund 2012
      */
     class CrankShaft : public Movebase {
       private:
@@ -329,12 +320,12 @@ namespace Faunus {
       public:
         CrankShaft(InputMap&, Energy::Energybase&, Space&, string="crank");
         virtual ~CrankShaft();
-        void setGroup(Group&); //!< Select Group to move
+        void setGroup(Group&); //!< Select Group to of the polymer to move
         int minlen;            //!< Minimum number of particles to rotate (default = 1)
         int maxlen;            //!< Maximin number of particles to rotate (default = 10)
     };
 
-    /*!
+    /**
      * @brief Pivot move for linear polymers
      *
      * This will perform a pivot rotation of a linear polymer by the following steps:
@@ -342,7 +333,7 @@ namespace Faunus {
      * - Select rotation axis by two random monomers, spanning `minlen` to `maxlen` bonds
      * - Rotate monomers before or after end points of the above axis
      *
-     * ![Polymer moves](polymerdisplacements.jpg)
+     * ![Figure: Various polymer moves.](polymerdisplacements.jpg)
      *
      * @date Asljunga 2012
      */
@@ -353,7 +344,7 @@ namespace Faunus {
         Pivot(InputMap&, Energy::Energybase&, Space&, string="pivot");
     };
 
-    /*!
+    /**
      * @brief Reptation move for linear polymers
      *
      * This will perform a reptation move of a linear, non-uniform polymer chain.
@@ -382,7 +373,7 @@ namespace Faunus {
         void setGroup(Group&); //!< Select Group to move
     };
 
-    /*!
+    /**
      * @brief Isobaric volume move
      *
      * @details This class will perform a volume displacement and scale atomic
@@ -431,7 +422,7 @@ namespace Faunus {
         Isobaric(InputMap&, Energy::Hamiltonian&, Space&, string="npt");
     };
 
-    /*!
+    /**
      * @brief Auxillary class for tracking atomic species
      * @date Malmo 2011
      *
@@ -467,11 +458,11 @@ namespace Faunus {
         bool empty();                         //!< Test if atom list is empty
     };
 
-    /*!
-     * \brief Grand Canonical insertion of arbitrary M:X salt pairs
-     * \author Bjorn Persson and Mikael Lund
-     * \date Lund 2010-2011
-     * \warning Untested in this branch
+    /**
+     * @brief Grand Canonical insertion of arbitrary M:X salt pairs
+     * @author Bjorn Persson and Mikael Lund
+     * @date Lund 2010-2011
+     * @warning Untested in this branch
      */
     class GrandCanonicalSalt : public Movebase {
       private:
@@ -503,7 +494,7 @@ namespace Faunus {
     };
 
 #ifdef ENABLE_MPI
-    /*!
+    /**
      * @brief Class for parallel tempering (aka replica exchange) using MPI
      *
      * This will perform replica exchange moves by the following steps:

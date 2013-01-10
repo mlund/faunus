@@ -46,7 +46,7 @@ int main() {
   Move::Reptation rep(mcp,pot,spc);
 
   Analysis::PolymerShape shape;                       // class for sampling the polymer shape
-  Analysis::LineDistribution<float,int> surfmapall;   // histogram for monomer-surface distribution
+  Analysis::LineDistribution<> surfmapall;            // histogram for monomer-surface distribution
 
   spc.load("state");                                  // Load start configuration, if any
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );    // Calculate initial, total system energy

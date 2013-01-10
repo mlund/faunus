@@ -1010,6 +1010,80 @@ namespace Faunus {
               }
           };
 
+        template<typename Tparticle>
+          class ExternalPotentialBase {
+            private:
+              virtual std::string _info()=0;
+              virtual std::string _brief() { return name; }
+            protected:
+              std::string name;
+            public:
+              std::string info() { return _info(); }
+              std::string brief() { return _brief(); }
+              virtual double operator()(const Tparticle&, const Point::Tvec&)=0;
+          };
+
+        template<typename Tparticle>
+          class GouyChapmanLinear : public ExternalPotentialBase<Tparticle> {
+            private:
+              typedef ExternalPotentialBase<Tparticle> Tbase;
+              Potential::DebyeHuckel dh;
+              double c0;         //!< Ion concentration (1/A^3)
+              double rho;        //!< Surface charge density (e/A^2)
+              double phi0;       //!< Unitless surface potential @f\frac{\phi0 e}{kT}@f
+              double gamma0;     //!< Gouy-chapman coefficient ()
+              double lB;
+              double kappa;
+              double *zposPtr;           //!< Pointer to z position of GC plane (xy dir)
+              bool linearize;            //!< Use linearized PB?
+            public:
+              GouyChapmanLinear(InputMap &in) : dh(in) {
+                Tbase::name = "Gouy-Chapman External Potential";
+                string prefix="gouychapman_";
+                zposPtr=nullptr;
+                c0=dh.ionicStrength() * pc::Nav / 1e27; // assuming 1:1 salt, so c0=I
+                lB=dh.bjerrumLength();
+                kappa=1/dh.debyeLength();
+
+                linearize = in.get<bool>(prefix+"linearize",false);
+
+                phi0=in.get<double>(prefix+"phi0",0); // Unitless potential = beta*e*phi0
+                if ( std::abs(phi0)>1e-6 ) {
+                  rho=sqrt(2*c0/(pc::pi*lB))*sinh(.5*phi0); // [Evans & Wennerström, 1999, Colloidal Domain p 138-140]
+                }
+                else {
+                  rho=1/in.get<double>(prefix+"qarea",0);
+                  if (rho>1e20)
+                    rho=in.get<double>(prefix+"rho",0);
+                  phi0=2.*asinh(rho * sqrt(.5*lB*pc::pi/c0 ));//  [Evans..]
+                }
+
+                gamma0=tanh(phi0/4);                          // assuming z=1  [Evans..]
+              }
+              double operator()(const Tparticle &p, const Point::Tvec &r) {
+                return 0;
+              }
+
+            private:
+              string _info() {
+                using namespace textio;
+                char w=30;
+                std::ostringstream o;
+                o << pad(SUB,w,"Surface z-position") << *zposPtr << _angstrom << endl
+                  << pad(SUB,w,"Bjerrum length") << lB << _angstrom << endl
+                  << pad(SUB,w,"Debye length") << 1./kappa << _angstrom << endl
+                  << pad(SUB,w,"Ionic strenght") << dh.ionicStrength()*1e3 << " mM" << endl
+                  << pad(SUB,w,"Bulk 1:1 salt concentration") << c0 << _angstrom+cubed << endl
+                  << pad(SUB,w,"Surface potential") << phi0 << kT+"/e = "
+                  << phi0*pc::kB*pc::T()/pc::e << " V=J/C" << endl
+                  << pad(SUB,w,"Surface charge density") << rho*pc::e*1e20 << " C/m"+squared << endl
+                  << pad(SUB,w,"Area per charge") << 1/rho << _angstrom+squared << endl
+                  << pad(SUB,w,"GC-coefficient Gamma_0") << gamma0 << endl
+                  << pad(SUB,w,"Linearize") << ((linearize) ? "yes" : "no") << endl;
+                return o.str();
+              }
+          };
+
         class MultipoleEnergy {
           public:
             double lB;
@@ -1032,12 +1106,12 @@ namespace Faunus {
          * \brief Combined Coulomb / LennardJones potential
          */
         typedef CombinedPairPotential<Coulomb, LennardJones> CoulombLJ;
-    
+
         /*!
          * \brief Combined Coulomb / WeeksChandlerAndersen potential
          */
         typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> CoulombWCA;
-        
+
         /*!
          * \brief Combined Coulomb / LennardJonesTrunkShift potential
          */

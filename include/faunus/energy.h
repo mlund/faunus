@@ -17,7 +17,7 @@
 
 namespace Faunus {
 
-  /*!
+  /**
    * @brief Classes/templates that calculate the energy of particles, groups, system.
    *
    * This namespace containes classes and templates for calculating energies of the
@@ -31,7 +31,7 @@ namespace Faunus {
   namespace Energy {
 
 
-    /*!
+    /**
      *  @brief Base class for energy evaluation
      *
      *  This base class defines functions for evaluating interactions between particles,
@@ -79,7 +79,7 @@ namespace Faunus {
         virtual string info();                                //!< Information
     };
 
-    /*!
+    /**
      * @brief Energy class for non-bonded interactions.
      *
      * `Tpairpot` is expected to be a pair potential with the following properties:
@@ -233,7 +233,7 @@ namespace Faunus {
           }
       };
 
-    /*!
+    /**
      * @brief Energy class for non-bonded interactions.
      *
      * `Tpairpot` is expected to be a pair potential with the following properties:
@@ -387,7 +387,7 @@ namespace Faunus {
       }
     };
 
-    /*!
+    /**
      * @brief Nonbonded interactions with group-group cutoff
      *
      * This class re-implements the `g2g` energy function (group to group)
@@ -422,8 +422,8 @@ namespace Faunus {
           cnt=cntfull=0;
         }
 
-        /*!
-         * \brief Specify simulation Space. Needed to distinguish trial configurations
+        /**
+         * @brief Specify simulation Space. Needed to distinguish trial configurations
          *        from old ones.
          */
         void setSpace(Space &spc) { spcPtr=&spc; }
@@ -446,8 +446,8 @@ namespace Faunus {
         }
       };
 
-    /*!
-     * \brief Energy class for hard-sphere overlap.
+    /**
+     * @brief Energy class for hard-sphere overlap.
      */
     template<class Tgeometry>
       class HardSphereOverlap : public Energybase {
@@ -488,7 +488,7 @@ namespace Faunus {
           }
       };
 
-    /*!
+    /**
      * @brief Class for handling bond pairs
      *
      * Takes care of bonded interactions and can handle mixed bond types. If you create bond BETWEEN
@@ -520,7 +520,7 @@ namespace Faunus {
         bool CrossGroupBonds;                              //!< Set to true if there are bonds across groups (slower!). Default: false
     };
 
-    /*!
+    /**
      * @brief Energy from external pressure for use in the NPT-ensemble.
      *
      * @details This will count the number of particles in the system and
@@ -547,7 +547,7 @@ namespace Faunus {
         double g_external(const p_vec&, Group&) FOVERRIDE; //!< External energy working on group
     };
 
-    /*!
+    /**
      * @brief External energy that will keep specific groups in a sub-volume of the system
      *
      * This energy class will check if particles in specific groups are located within a
@@ -566,7 +566,7 @@ namespace Faunus {
      *     auto restricted = pot.create( Energy::RestrictedVolume(imap) );
      *     restricted->groups.push_back( &mygroup );
      *
-     * \date Lund, 2012
+     * @date Lund, 2012
      */
     class RestrictedVolume : public Energy::Energybase {
       private:
@@ -580,8 +580,8 @@ namespace Faunus {
         double g_external(const p_vec&, Group&) FOVERRIDE; //!< External energy working on group
     };
 
-    /*!
-     * \brief As Energy::RestrictedVolume but restrictions are applied only on the mass center
+    /**
+     * @brief As Energy::RestrictedVolume but restrictions are applied only on the mass center
      * instead of all particles in group.
      */
     class RestrictedVolumeCM : public Energy::RestrictedVolume {
@@ -591,8 +591,8 @@ namespace Faunus {
         double i_external(const p_vec&, int);              //!< External energy working on single particle
     };
 
-    /*!
-     * \brief Collection of Energybases that when summed give the Hamiltonian
+    /**
+     * @brief Collection of Energybases that when summed give the Hamiltonian
      *
      * This class is used to collect several Energybase derivatives into a full hamiltonian.
      * The following example demonstrated how one can generate a Hamiltonian for bonded as
@@ -608,7 +608,7 @@ namespace Faunus {
      * is simply passed on from the first added potential.
      *
      * \author Mikael Lund
-     * \date Lund, 2011
+     * @date Lund, 2011
      */
     class Hamiltonian : public Energybase {
       typedef shared_ptr<Energybase> baseptr;
@@ -621,8 +621,8 @@ namespace Faunus {
       void setVolume(double);       //!< Set volume of all contained energy classes
       void setTemperature(double);  //!< Set temperature of all contained energy classes
 
-      /*!
-       * \brief Create and add an energy class to energy list
+      /**
+       * @brief Create and add an energy class to energy list
        */
       template<typename Tenergychild> shared_ptr<Tenergychild> create(Tenergychild c) {
         shared_ptr<Tenergychild> childptr( new Tenergychild(c) );
@@ -649,10 +649,10 @@ namespace Faunus {
       double v2v(const p_vec&, const p_vec&) FOVERRIDE;
     };
 
-    /*!
-     * \brief Constrain two group mass centra within a certain distance interval [mindist:maxdist]
+    /**
+     * @brief Constrain two group mass centra within a certain distance interval [mindist:maxdist]
      * \author Mikael Lund
-     * \date Lund, 2012
+     * @date Lund, 2012
      * \todo Prettify output
      *
      * This energy class will constrain the mass center separation between selected groups to a certain
@@ -682,13 +682,13 @@ namespace Faunus {
         double g_external(const p_vec&, Group&) FOVERRIDE; //!< Constrain treated as external potential
     };
 
-    /*!
-     * \brief Dummy energy class that sums missed energy changes to avoid energy drifts
-     * \author Mikael Lund
+    /**
+     * @brief Dummy energy class that sums missed energy changes to avoid energy drifts
      *
-     * This energy function is designed to be used with Move::Movebase classes that returns energy changes
-     * not detectable in the energy drift checkup routines. The idea is simply to sum the energy change
-     * discrepancy and treat this as an external potential. Use together with Energy::Hamiltonian.
+     * This energy function is designed to be used with Move::Movebase classes
+     * that returns energy changes not detectable in the energy drift checkup
+     * routines. The idea is simply to sum the energy change discrepancy and treat
+     * this as an external potential. Use together with Energy::Hamiltonian.
      */
     class EnergyRest : public Energy::Energybase {
       private:
@@ -700,28 +700,27 @@ namespace Faunus {
         double external() FOVERRIDE;  //!< Dumme rest treated as external potential to whole system
     };
 
-    /*!
-     * \brief Charged Gouy-Chapman surface in XY plane
-     * \warning Untested in this branch of faunus!
-     * \author Chris Evers / Mikael Lund
-     * \date Lund/Asljunga, 2011-2012
-     * \note Salt is assumed monovalent!
-     * \todo Add assertions
+    /**
+     * @brief Charged Gouy-Chapman surface in XY plane
      *
-     * This is an external potential due to a charged Gouy-Chapman surface (XY-plane) placed somewhere
-     * on the z-axis as specified by setPosition(). It is recommended that this is used in conjunction with a
-     * Geometry::Cuboidslit simulation container. For example:
+     * This is an external potential due to a charged Gouy-Chapman surface
+     * (XY-plane) placed somewhere on the z-axis as specified by setPosition().
+     * It is recommended that this is used in conjunction with a
+     * Geometry::Cuboidslit simulation container.
      *
-     * \code
-     * typedef Geometry::Cuboidslit Tgeometry;
-     * typedef Potential::CombinedPairPotential<Potential::DebyeHuckel, Potential::LennardJones> Tpairpot;
-     * InputMap mcp("input");                                            // read input parameters
-     * Energy::Hamiltonian pot;                                          // sum energies below:
-     * auto nb = pot.create(Energy::Nonbonded<Tpairpot,Tgeometry>(mcp)); // add nonbonded interactions
-     * auto gc = pot.create(Energy::GouyChapman(mcp));                   // add GC surface
-     * gc->zposPtr = &(nb->geometry.len_half.z());                       // place GC surface at edge of cuboid
-     * \endcode
-     */
+     * For example:
+     * 
+     *     typedef Geometry::Cuboidslit Tgeometry;
+     *     typedef Potential::CombinedPairPotential<Potential::DebyeHuckel, Potential::LennardJones> Tpairpot;
+     *     InputMap mcp("input");
+     *     Energy::Hamiltonian pot;
+     *     auto nb = pot.create(Energy::Nonbonded<Tpairpot,Tgeometry>(mcp));
+     *     auto gc = pot.create(Energy::GouyChapman(mcp));
+     *     gc->zposPtr = &(nb->geometry.len_half.z());  // GC surface at edge of cuboid
+     *
+     * @date Lund/Asljunga, 2011-2012
+     * @note Salt is assumed monovalent!
+      */
     class GouyChapman : public Energy::Energybase {
       private:
         Potential::DebyeHuckel dh;
@@ -740,8 +739,8 @@ namespace Faunus {
         double i_external(const p_vec&, int) FOVERRIDE;   //!< i'th particle energy in GC potential
         double g_external(const p_vec&, Group&) FOVERRIDE;//!< Group energy in GC potential
 
-        /*!
-         * \brief Point-to-surface distance [angstrom]
+        /**
+         * @brief Point-to-surface distance [angstrom]
          *
          * Note that this function is virtual and can be replaced in derived classes to
          * customize the position of the surface.
@@ -751,8 +750,8 @@ namespace Faunus {
           return std::abs(*zposPtr - a.z());
         }
 
-        /*!
-         * \brief Particle energy in GC potential
+        /**
+         * @brief Particle energy in GC potential
          *
          * \f[
          * \beta e \Phi(z) = 2\ln{\frac{1+\Gamma_0 \exp{(-\kappa z)}}{1-\Gamma_0 \exp{(-\kappa z)}}}
@@ -778,8 +777,8 @@ namespace Faunus {
         }
     };
 
-    /*!
-     * \brief Mean field correction
+    /**
+     * @brief Mean field correction
      * \author Anil Kurut
      * \warning unfinished!
      */
@@ -801,20 +800,20 @@ namespace Faunus {
         void sample(const p_vec&, double, double);              //!< Sample the charge density in all slices (Accepted configurations)
     };
 
-    /*!
-     * \brief General class for adding interactions between atoms based on id, hydrophobicity etc.
+    /**
+     * @brief Add interactions between atoms based on id, hydrophobicity etc.
      *
-     * This template is used to add interactions between specific particles that meet specific
-     * user defined criteria, for example between selected particle types, hydrophobic
-     * particles etc. The core of the class is a function that creates a "pair" which is
-     * simply a collection of two particle properties. Pairs are created by a function with
-     * the signature GeneralPairList::Tpaircreator and one such function must be specified
-     * in the constructor. Usually you would want to provide this information though a derived
+     * This template is used to add interactions between specific particles that
+     * meet specific criteria, for example between selected particle types,
+     * hydrophobic particles etc. The core of the class is a function that creates
+     * a "pair" which is simply a collection of two particle properties.
+     * Pairs are created by a function with the signature GeneralPairList::Tpaircreator
+     * and one such function must be specified in the constructor.
+     * Usually you would want to provide this information though a derived
      * class that contain the pair creation functions.
      *
-     * \note Not particularly fast.
-     * \author Mikael Lund
-     * \date Malmo 2012
+     * @note Not particularly fast.
+     * @date Malmo 2012
      */
     template<class Tij>
       class GeneralPairList : public Energybase, public pair_list<Potential::PairPotentialBase,Tij> {
@@ -928,16 +927,17 @@ namespace Faunus {
           Tpaircreator createPair;
       };
 
-    /*!
-     * \brief Custom potential between particle types
+    /**
+     * @brief Custom potential between particle types
      *
-     * \code
-     * // Harmonic potential between all "Na" and "Cl" particles, plus
-     * // Coulomb potential between "Na" atoms
-     * Energy::PairListID() pot;
-     * pot.add( atom["Na"].id, atom["Cl"].id, Potential::Harmonic(...) );
-     * pot.add( atom["Na"].id, atom["Na"].id, Potential::Coulomb(...) );
-     * \endcode
+     * Example:
+     *
+     *     // Harmonic potential between all "Na" and "Cl" particles, plus
+     *     // Coulomb potential between "Na" atoms
+     *     Energy::PairListID() pot;
+     *     pot.add( atom["Na"].id, atom["Cl"].id, Potential::Harmonic(...) );
+     *     pot.add( atom["Na"].id, atom["Na"].id, Potential::Coulomb(...) );
+     *
      */
     class PairListID : public GeneralPairList<particle::Tid> {
       private:
@@ -947,8 +947,8 @@ namespace Faunus {
         PairListID();
     };
 
-    /*!
-     * \brief Custom potential based on hydrophobic tag 
+    /**
+     * @brief Custom potential based on hydrophobic tag 
      *
      * \code
      * Energy::PairListHydrophobic pot;
@@ -964,9 +964,9 @@ namespace Faunus {
         PairListHydrophobic();
     };
 
-    /*!
-     * \brief Excess chemical potential of charged particles, based on Debye-Huckel theory
-     * \warning Untested
+    /**
+     * @brief Excess chemical potential of charged particles, based on Debye-Huckel theory
+     * @warning Untested
      */
     class DebyeHuckelActivity : public Energybase {
       private:
@@ -979,8 +979,8 @@ namespace Faunus {
         double p_external(const particle&) FOVERRIDE;
     };
 
-    /*!
-     * \brief Calculates the total system energy
+    /**
+     * @brief Calculates the total system energy
      *
      * For a given particle vector, space, and energy class we try to calculate the
      * total energy taking into account inter- and intra-molecular interactions as well

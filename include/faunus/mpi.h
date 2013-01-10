@@ -18,28 +18,23 @@ namespace Faunus {
    */
   namespace MPI {
 
-    /*!
+    /**
      * @brief Main controller for MPI calls
      *
      * This is the MPI controller required for all MPI programs.
      *
-     * @code
-     *
-     * MPIController mpi; // call this very first thing in your program
-     * std::cout << "I'm rank " << mpi.rank << " out of " << mpi.nproc;
-     * mpi.cout << "This will go to a file called mpi%r.stdout where %r is my rank"
-     * if (mpi.isMaster())
-     *   cout << "I'm the master!";
-     *
-     * @endcode
-     * 
+     *     MPIController mpi; // call this very first thing in your program
+     *     std::cout << "I'm rank " << mpi.rank << " out of " << mpi.nproc;
+     *     mpi.cout << "This will go to a file called mpi%r.stdout where %r is my rank"
+     *     if (mpi.isMaster())
+     *       cout << "I'm the master!";
      *
      * When MPIController is instantiated the textio::prefix variable is automatically
-     * set to \c mpi%j. which can be used to prefix input and output files. For example:
+     * set to `mpi%j`. Which can be used to prefix input and output files. For example:
      *
      *     InputMap mcp(textio::prefix+"input"); // tries to load "mpi%r.input" where %r is the rank
      *
-     * \date Lund 2012
+     * @date Lund 2012
      */
     class MPIController {
       public:
@@ -79,34 +74,33 @@ namespace Faunus {
         void waitrecv(); //!< Wait for reception to finish
     };
 
-    /*!
-     * \brief Class for sending/receiving particle vectors over MPI.
-     * \date Lund 2012
-     * \author Mikael Lund
+    /**
+     * @brief Class for sending/receiving particle vectors over MPI.
      *
      * This will take a particle vector and send selected information though MPI. It is
-     * possible to send only coordinates using the dataformat XYZ or, if charges should be
-     * send too, XYZQ.
+     * possible to send only coordinates using the dataformat `XYZ` or, if charges should be
+     * send too, `XYZQ`.
      *
      * Besides particle data it is possible to send extra floats by adding
-     * these to the sendExtra vector; received extras will be stored in recvExtra. Before
-     * transmitting extra data, make sure that recvExtra and sendExtra have the
+     * these to the `sendExtra` vector; received extras will be stored in `recvExtra`. Before
+     * transmitting extra data, make sure that `recvExtra` and `sendExtra` have the
      * same size.
      *
-     * \code
-     *   int dst_rank = 1;
-     *   floatp extra1 = 2.34, extra2 = -1.23
-     *   p_vec myparticles(200); // we have 200 particles
+     *     int dst_rank = 1;
+     *     floatp extra1 = 2.34, extra2 = -1.23
+     *     p_vec myparticles(200); // we have 200 particles
+     *    
+     *     Faunus::MPI::MPIController mpi;
+     *     Faunus::MPI::ParticleTransmitter pt;
+     *    
+     *     pt.sendExtra.push_back(extra1);
+     *     pt.sendExtra.push_back(extra2);
+     *    
+     *     pt.send(mpi, myparticles, dst_rank);
+     *     pt.waitsend();
      *
-     *   Faunus::MPI::MPIController mpi;
-     *   Faunus::MPI::ParticleTransmitter pt;
+     * @date Lund 2012
      *
-     *   pt.sendExtra.push_back(extra1);
-     *   pt.sendExtra.push_back(extra2);
-     *
-     *   pt.send(mpi, myparticles, dst_rank);
-     *   pt.waitsend();
-     * \endcode
      */
     class ParticleTransmitter : public FloatTransmitter {
       public:

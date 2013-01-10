@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
   Move::AtomicTranslation mv(mcp, pot, spc);
   Move::SwapMove tit(mcp,pot,spc);
 
-  Analysis::RadialDistribution<float,int> rdf(0.25);
+  Analysis::RadialDistribution<> rdf(0.25);
   Analysis::ChargeMultipole mpol;
 
   spc.load(istate);

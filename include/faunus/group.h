@@ -10,7 +10,7 @@
 
 namespace Faunus {
 
-  typedef ContinuousRange<int> Range;  //! Basic, continuous range of integers
+  typedef ContinuousRange<int> Range;  //<! Basic, continuous range of integers
 
   /**
    * @brief Defines a continuous range of particles in the Space particle vector.
@@ -28,8 +28,6 @@ namespace Faunus {
    *     g.size();               // -> 4
    *     g.resize( g.size()+1 ); // -> size=5, back=6.
    *
-   * @note
-   * <http://stackoverflow.com/questions/7185437/is-there-a-range-class-in-c0x-aka-c11-for-use-with-range-based-for-loops>
    */
   class Group : public Range {
     private:

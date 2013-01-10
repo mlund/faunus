@@ -18,6 +18,7 @@
 #include <set>
 #include <memory>
 #include <numeric>
+#include <type_traits>
 #endif
 
 

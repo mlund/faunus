@@ -64,7 +64,7 @@ int main() {
   potential and use tempering in temperature (you may use any
   parameter in the Hamiltonian) to overcome energy barriers.
   Below is the one-dimensional distribution function sampled with and without
-  tempering, clearly demonstrating how the high T replicas help low T systems to
+  tempering, demonstrating how the high T replicas help low T systems to
   pass steep barriers.
 
   ![Particle distribution function in an oscillating field](temper.png)

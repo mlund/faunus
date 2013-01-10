@@ -2,7 +2,7 @@
 @mainpage Welcome to Faunus!
 
 ____
-![](faunus-textart.png)
+![](faunus-textart.jpg)
 ____
 
 Table of contents
@@ -15,12 +15,13 @@ Table of contents
   - @ref linkingyourown
   - @ref importantclasses
 - Tutorials
-  - @ref example_minimal - A minimal example of how to set up a MC simulation (C++/Python)
-  - @ref example_bulk - A melted NaCl crystal using a shifted Coulomb potential (NVT/NPT)
-  - @ref example_polymers - Flexible, linear polymers in an electrolyte solution (NPT)
-  - @ref example_temper - Parallel tempering example using MPI
+  - @ref example_minimal 
+  - @ref example_bulk 
+  - @ref example_polymers
+  - @ref example_temper   
 - Development
   - @ref guidelines
+  - @ref todo
 
 @page downloadbuild Getting and building Faunus
 
@@ -32,7 +33,7 @@ and most probably also under Cygwin on Windows. The following are the
 minimum requirements:
 
 - [CMake 2.8+](http://www.cmake.org)
-- C++11 compliant compiler (gcc4.7+, clang3+, Intel13, ...)
+- C++11 compliant compiler
 
 For more advanced features you may also need:
 

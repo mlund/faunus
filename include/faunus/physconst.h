@@ -29,7 +29,7 @@ namespace Faunus {
       static void setT(double);      //!< Set temperature [K]
   };
 
-  typedef PhysicalConstants pc;
+  typedef PhysicalConstants pc;      //!< Typedef for PhysicalConstants
 
 } // namespace
 #endif

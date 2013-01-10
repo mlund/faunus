@@ -64,6 +64,8 @@ namespace Faunus {
       assert(!"Space sanity check failed. This is serious!");
       std::cerr << "Space sanity check failed. This is serious!";
     }
+    if (rc==false)
+      std::exit(1);
     return rc;
   }
 

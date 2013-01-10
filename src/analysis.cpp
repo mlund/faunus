@@ -267,31 +267,47 @@ namespace Faunus {
 
     //--------------------------------------------------------------------------------
 
-    WidomScaled::WidomScaled(int insertions){
+    /**
+     * @param bjerrumLength Bjerrum length [angstrom]
+     * @param insertions Number of insertions per call to `insert()`
+     */
+    WidomScaled::WidomScaled(double bjerrumLength, int insertions) {
+      assert(insertions>=0);
+      assert(bjerrumLength>0);
       name="Single particle Widom insertion w. charge scaling"; 
       cite="doi:10.1080/00268978800100203"; 
-      ghostin = insertions;
+      lB=bjerrumLength;
+      ghostin=insertions;
     }
 
-    void WidomScaled::add(particle p) {
+    /**
+     * This will add particle `p` to the list of ghost particles
+     * to insert.
+     */
+    void WidomScaled::add(const particle &p) {
       g.push_back(p);
       init();
     }
 
-    void WidomScaled::add(Space &c) {
-      std::map<short,bool> map;
-      for (auto p : c.p)
-        map[ p.id ] = true;
-      for (auto &m : map) {
+    /**
+     * This will scan the particle vector for particles and each unique type
+     * will be added to the list a ghost particles to insert.
+     */
+    void WidomScaled::add(const p_vec &p) {
+      std::set<particle::Tid> ids;
+      for (auto &i : p)
+        ids.insert(i.id);
+      for (auto i : ids) {
         particle a;
-        a=atom[m.first];
+        a=atom[i];
         add(a);
       }
     }
 
-    bool WidomScaled::overlap(particle &a, particle &b, Space &c) {
+    bool WidomScaled::overlap(const particle &a, const particle &b, const Geometry::Geometrybase &geo)
+    {
       double s=a.radius+b.radius;
-      return (c.geo->sqdist(a,b)<s*s) ? true : false;
+      return (geo.sqdist(a,b)<s*s) ? true : false;
     }
 
     void WidomScaled::init() {
@@ -308,42 +324,42 @@ namespace Faunus {
       ihc.resize(gspec);
       irej.resize(gspec);
 
-      for(int i=0;i<gspec;i++){
-        chel[i]=0.;
-        chhc[i]=0.;
-        chex[i]=0.;
-        chtot[i]=0.;
+      for (int i=0; i<gspec; i++){
+        chel[i]=0;
+        chhc[i]=0;
+        chex[i]=0;
+        chtot[i]=0;
         ihc[i]=0;
         ewden[i].resize(11);
         ewnom[i].resize(11);
         chint[i].resize(11);
-        for(int j=0; j<11; j++) {
-          ewden[i][j]=0.;
-          ewnom[i][j]=0.;
-          chint[i][j]=0.;
-        }
+        for(int j=0; j<11; j++)
+          ewden[i][j] = ewnom[i][j] = chint[i][j] = 0;
       }
     }
 
-    /*!
-     * \param c Simulation space to insert into
-     * \param lB Bjerrum length [angstrom]
+    /**
+     * @param p List of particles to insert into. This will typically be the main
+     *          particle vector, i.e. `Space::p`.
+     * @param geo Geometry to use for distance calculations and random position generation
      */
-    void WidomScaled::insert(Space &c, double lB) {
-      if (!run())
+    void WidomScaled::insert(const p_vec &p, Geometry::Geometrybase &geo) {
+      assert(lB>0);
+      assert(&geo!=nullptr);
+      if (!run() || g.empty() || p.empty())
         return;
       particle ghost;
       double u,cu;
-      for(int i=0; i < ghostin; i++) {
-        c.geo->randompos(ghost);
+      for (int i=0; i<ghostin; i++) {
+        geo.randompos(ghost);
         int goverlap=0;
-        for(size_t k=0; k < g.size(); k++) {
+        for (size_t k=0; k<g.size(); k++) {
           ghost.radius = g[k].radius;
           irej[k]=0;
           int j=0;
-          while(!overlap(ghost,c.p[j],c) && j<(int)c.p.size())
+          while (!overlap(ghost,p[j],geo) && j<(int)p.size())
             j++;
-          if( j != (int)c.p.size()) {
+          if (j!=(int)p.size()) {
             ihc[k]++;
             irej[k]=1;
             goverlap++;
@@ -351,21 +367,21 @@ namespace Faunus {
         }
 
         if ( goverlap != (int)g.size() ) {
-          cu=0.;
-          u=0.;  //el. potential
-          for (size_t l=0; l < c.p.size(); l++) {
-            double invdi=1./c.geo->dist(ghost,c.p[l]);
+          cu=0;
+          u=0;  //elelectric potential (Coulomb only!)
+          for (auto &i : p) {
+            double invdi=1/geo.dist(ghost,i);
             cu+=invdi;
-            u+=invdi*c.p[l].charge;
+            u+=invdi*i.charge;
           } 
           cu=cu*lB;
           u=u*lB;
           double ew,ewla,ewd;
-          for(size_t k=0; k < g.size(); k++) {
-            if(irej[k]==0) {
+          for (size_t k=0; k < g.size(); k++) {
+            if (irej[k]==0) {
               expuw[k]+=exp(-u*g[k].charge);
-              for(int cint=0; cint<11; cint++) {
-                ew=g[k].charge*(u-double(cint)*0.1*g[k].charge*cu/double(c.p.size()));
+              for (int cint=0; cint<11; cint++) {
+                ew=g[k].charge*(u-double(cint)*0.1*g[k].charge*cu/double(p.size()));
                 ewla = ew*double(cint)*0.1;
                 ewd=exp(-ewla);
                 ewden[k][cint]+=ewd;

@@ -31,7 +31,7 @@ int main() {
   Move::CrankShaft crank(mcp, pot, spc);
   Move::Pivot pivot(mcp, pot, spc);
   Analysis::PolymerShape shape;
-  Analysis::RadialDistribution<float,int> rdf(0.2);
+  Analysis::RadialDistribution<> rdf(0.2);
 
   // Add salt
   GroupAtomic salt(spc, mcp);

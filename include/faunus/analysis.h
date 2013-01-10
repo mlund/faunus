@@ -264,7 +264,10 @@ namespace Faunus {
     template<typename Tx, typename Ty=unsigned long int>
       class Histogram : public Table2D<Tx,Ty> {
         public:
-          Histogram(Tx resolution=0.2) : Table2D<Tx,Ty>(resolution, Table2D<Tx,Ty>::HISTOGRAM) {}
+          Histogram(Tx resolution=0.2) : Table2D<Tx,Ty>(resolution, Table2D<Tx,Ty>::HISTOGRAM) {
+            static_assert( std::is_integral<Ty>::value, "Histogram must be of integral type");
+            static_assert( std::is_unsigned<Ty>::value, "Histogram must be unsigned");
+          }
       };
 
     /*!
@@ -309,7 +312,9 @@ namespace Faunus {
           RadialDistribution(Tx res=0.2) : Ttable(res,Ttable::HISTOGRAM) {
             this->name="Radial Distribution Function";
             maxdist=pc::infty;
-          }
+            static_assert( std::is_integral<Ty>::value, "Histogram must be of integral type");
+            static_assert( std::is_unsigned<Ty>::value, "Histogram must be unsigned");
+           }
           /*!
            * \brief Sample radial distibution of two atom types
            * \param spc Simulation space
@@ -333,7 +338,7 @@ namespace Faunus {
           }
       };
 
-    template<typename Tx=double, typename Ty=int>
+    template<typename Tx=double, typename Ty=unsigned long>
       class LineDistribution : public RadialDistribution<Tx,Ty> {
         private:
           double volume(Tx x) { return 1; }
@@ -341,9 +346,9 @@ namespace Faunus {
           LineDistribution(Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {
             this->name="Line Distribution";
           }
-        
+
       };
-    
+
     /*!
      * \brief Line distr. when the bins values should sum up to `n`.
      *
@@ -356,23 +361,23 @@ namespace Faunus {
      * \author Axel Thuresson
      * \date Lund 2012
      */
-    template<typename Tx=double, typename Ty=int>
-    class LineDistributionNorm : public RadialDistribution<Tx,Ty> {
-    private:
-      double volume(Tx x) { return 1; }
-      int n;
-    public:
-      LineDistributionNorm(int al_n=1, Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {
-        this->name="Line Distribution Normalized for n particles";
-        n = al_n;
-      }
-      double get(Tx x) {
-        assert( volume(x)>0 );
-        assert( this->count()>0 );
-        return (double)this->operator()(x) * n / (double)this->count();
-      }
-      
-    };
+    template<typename Tx=double, typename Ty=unsigned long>
+      class LineDistributionNorm : public RadialDistribution<Tx,Ty> {
+        private:
+          double volume(Tx x) { return 1; }
+          int n;
+        public:
+          LineDistributionNorm(int al_n=1, Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {
+            this->name="Line Distribution Normalized for n particles";
+            n = al_n;
+          }
+          double get(Tx x) {
+            assert( volume(x)>0 );
+            assert( this->count()>0 );
+            return (double)this->operator()(x) * n / (double)this->count();
+          }
+
+      };
 
     /*!
      * \brief Analysis of polymer shape - radius of gyration, shape factor etc.
@@ -454,45 +459,56 @@ namespace Faunus {
         double muex();                           //!< Sampled mean excess chemical potential
     };
 
-    /*!
-     * \brief Single particle hard sphere Widom insertion with charge scaling
+    /**
+     * @brief Single particle hard sphere Widom insertion with charge scaling
      *
-     * Single particle Widom insertion analysis including
-     * charge re-scaling for electrostatics according to
-     * _Svensson and Woodward, Mol. Phys. 1988, 64(2), 247-259_.
-     * Currently works this only for the primitive model of electrolytes, i.e.
+     * This will calculate excess chemical potentials for single particles
+     * in the primitive model of electrolytes. Use the `add()` functions
+     * to add test or *ghost* particles and call `insert()` to perform single
+     * particle insertions.
+     * Inserted particles are *non-perturbing* and thus removed again after
+     * sampling. Electroneutrality for insertions of charged species is
+     * maintaing by charge re-scaling according to 
+     *
+     * - [Svensson and Woodward, Mol. Phys. 1988, 64:247]
+     *   (http://dx.doi.org/10.1080/00268978800100203)
+     *
+     * Currently this works **only** for the primitive model of electrolytes, i.e.
      * hard, charged spheres interacting with a Coulomb potential.
      *
-     * \author Martin Trulsson and Mikael Lund
-     * \date Lund / Prague 2007-2008.
-     * \note This is a direct conversion of the Widom routine found in the bulk.f
-     *       program by Bolhuis/Jonsson/Akesson
+     * @note This is a conversion of the Widom routine found in the `bulk.f`
+     *       fortran program by Bolhuis/Jonsson/Akesson at Lund University.
+     * @author Martin Trulsson and Mikael Lund
+     * @date Lund / Prague 2007-2008.
      */
     class WidomScaled : public AnalysisBase {
       private:
-        string _info();   //!< Get results
-        p_vec g;         //!< list of test particles
-        vector<double> chel;        //!< electrostatic
-        vector<double> chhc;        //!< hard collision
-        vector<double> chex;        //!< excess
-        vector<double> chexw;       //!< excess
-        vector<double> chtot;       //!< total
-        vector< vector<double> > ewden;     //!< charging denominator
-        vector< vector<double> > ewnom;     //!< charging nominator
-        vector< vector<double> > chint;     //!< charging integrand
-        vector<double> chid;                //!< ideal term
-        vector<double> expuw;
+        typedef std::vector<double> Tvec;
+        string _info();     //!< Get results
+        p_vec g;            //!< list of test particles
+        Tvec chel;          //!< electrostatic
+        Tvec chhc;          //!< hard collision
+        Tvec chex;          //!< excess
+        Tvec chexw;         //!< excess
+        Tvec chtot;         //!< total
+        vector<Tvec> ewden; //!< charging denominator
+        vector<Tvec> ewnom; //!< charging nominator
+        vector<Tvec> chint; //!< charging integrand
+        Tvec chid;          //!< ideal term
+        Tvec expuw;
         vector<int> ihc,irej;
-        long long int cnt;          //< count test insertions
-        int ghostin;                //< ghost insertions
+        long long int cnt;  //< count test insertions
+        int ghostin;        //< ghost insertions
         void init();
-        bool overlap(particle&, particle&, Space&); //!< Particle overlap test
-
+        bool overlap(const particle&, const particle&, const Geometry::Geometrybase&); //!< Test overlap
+        double lB;          //!< Bjerrum length [a]
       public:
-        WidomScaled(int=10);         //!< Constructor, number of test insertions per insert() call
-        void add(particle);          //!< Add test particle type
-        void add(Space&);            //!< Add all particles types present in Space
-        void insert(Space&, double); //!< Do a test insertion and sample excess chemical potential
+        WidomScaled(double,int=10); //!< Constructor
+        void add(const particle&);  //!< Add test particle type
+        void add(const p_vec&);     //!< Add all unique particle types present in vector
+
+        /** @brief Do test insertions and sample excess chemical potential */
+        void insert(const p_vec&, Geometry::Geometrybase&);
     };
   }//namespace
 }//namespace

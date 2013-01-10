@@ -71,6 +71,11 @@ namespace Faunus {
       template<typename Tgeometry>
         void translate(const Tgeometry &geo, const Point &a) {
           assert(&geo!=nullptr);
+#ifndef __clang__
+          static_assert(
+              std::is_base_of<Geometry::Geometrybase, Tgeometry>::value,
+              "Tgeo must be derived from Geometrybase" );
+#endif
           (*this)+=a;
           geo.boundary(*this);
         }

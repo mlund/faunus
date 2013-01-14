@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
   Move::SwapMove tit(mcp,pot,spc);
   Move::ParallelTempering temper(mcp,pot,spc,mpi);
 
-  Analysis::RadialDistribution<float,int> rdf(0.25);
+  Analysis::RadialDistribution<float,unsigned int> rdf(0.25);
   Analysis::ChargeMultipole mpol;
 
   spc.load(textio::prefix+"state");

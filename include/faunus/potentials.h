@@ -72,8 +72,11 @@ namespace Faunus {
       
         /*!
          * \brief Particle-particle force in units of \c kT/Å
+         * \param a First particle
+         * \param b Second particle
+         * \param p Vector from: p=b-a
          */
-        virtual Point force(const particle &, const particle &, double);
+        virtual Point force(const particle &, const particle &, double, Point);
       
         bool save(string, particle::Tid, particle::Tid); //!< Save table of pair potential to disk
         virtual void test(UnitTest&);                    //!< Perform unit test
@@ -780,6 +783,16 @@ namespace Faunus {
             double x=r6(sigma,r2)*0.5;
             return eps*(x*x - x + 0.25);
           }
+          
+          inline Point force(const particle &a, const particle &b, double r2, Point p) FOVERRIDE {
+            double sigma = a.radius+b.radius;
+            if (r2 > sigma*sigma)
+              return Point(0.0, 0.0, 0.0);
+            
+            double x=r6(sigma,r2)*0.5;
+            return eps*(12.0*x*x - 6.0*x) / r2 * p;
+          }
+          
         };
 
 
@@ -812,6 +825,14 @@ namespace Faunus {
             return lB*a.charge*b.charge * invsqrtQuake(r2);
 #else
             return lB*a.charge*b.charge / sqrt(r2);
+#endif
+          }
+                    
+          inline Point force(const particle &a, const particle &b, double r2, Point p) FOVERRIDE {
+#ifdef FAU_APPROXMATH
+            return lB*a.charge*b.charge * invsqrtQuake(r2) / r2 * p;
+#else
+            return lB*a.charge*b.charge * p / (sqrt(r2)*r2);
 #endif
           }
           
@@ -967,8 +988,8 @@ namespace Faunus {
               inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
                 return first(a,b,r2) + second(a,b,r2);
               }
-              inline Point force(const particle &a, const particle &b, double r2) FOVERRIDE {
-                return first.force(a,b,r2) + second.force(a,b,r2);
+              inline Point force(const particle &a, const particle &b, double r2, Point p) FOVERRIDE {
+                return first.force(a,b,r2,p) + second.force(a,b,r2,p);
               }
               string info(char w=20) { return first.info(w) + second.info(w); }
               void test(UnitTest &t) {

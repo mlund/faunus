@@ -41,7 +41,186 @@ namespace Faunus {
           << _info();
       return o.str();
     }
-
+    
+    TwobodyForce::TwobodyForce(InputMap &in,Energy::Energybase &e, Space &s, Group &g1, Group &g2, Group &_ions) {
+      name="Twobody mean force calculation";
+      runfraction = in.get("pforce", 1.0);
+      pot=&e;
+      spc=&s;
+      igroup1=nullptr;
+      igroup2=nullptr;
+      setTwobodies(g1, g2, _ions);
+    }
+    
+    /*!
+     * \brief Set the groups
+     * \param g1 Body #1
+     * \param g2 Body #2
+     * \param _ions Salt, counterions etc that mediates the two bodies
+     */
+    void TwobodyForce::setTwobodies(Group &g1, Group &g2, Group &_ions) {
+      assert(&g1!=nullptr);
+      assert(!g1.name.empty() && "Group 1 (body 1) should have a name.");
+      assert(&g2!=nullptr);
+      assert(!g2.name.empty() && "Group 2 (body 2) have a name.");
+      assert(&_ions!=nullptr);
+      assert(!_ions.name.empty() && "Group 3 (ions) should have a name.");
+      igroup1=&g1;
+      igroup2=&g2;
+      ions=&_ions;
+    }
+    
+    void TwobodyForce::save(string filename) {
+      Point p = meanforce();
+      std::ofstream f(filename.c_str());
+      f.precision(10);
+      if (f) {
+        f << p.x() << " " << p.y() << " " << p.z() << endl;
+      }
+    }
+    
+    void TwobodyForce::calc() {}
+    
+    Point TwobodyForce::meanforce() { return Point(0.0, 0.0, 0.0); }
+    
+    string TwobodyForce::_info() {
+      using namespace Faunus::textio;
+      std::ostringstream o;
+      o << "Base class of twobody force." << endl;
+      return o.str();
+    }
+    
+    
+    TwobodyForceDirect::TwobodyForceDirect(InputMap &in,Energy::Energybase &e, Space &s, Group &g1, Group &g2, Group &_ions) : TwobodyForce(in, e, s, g1, g2, _ions) {
+      name="Twobody direct mean force calculation";
+      //f_mean1 = Point(0.0, 0.0, 0.0);
+      //f_mean2 = Point(0.0, 0.0, 0.0);
+      f_pp = Point(0.0, 0.0, 0.0);
+      f_pi = Point(0.0, 0.0, 0.0);
+      f_ip = Point(0.0, 0.0, 0.0);
+    }
+    
+    /*!
+     * \brief Calculate the direct force between the two bodies
+     */
+    void TwobodyForceDirect::calc() {
+      if (run()) {
+        // Force between the two bodies
+        for (auto i : *igroup1) {
+          for (auto j : *igroup2) {
+            Point f = pot->f_p2p(spc->p[i], spc->p[j]);
+            f_pp += f;
+          }
+        }
+        //f_pp += 1.0*_f_pp;
+        //f_mean1 += 1.0*_f_pp;
+        //f_mean2 += -1.0*_f_pp;
+        for (auto i : *igroup1) {
+          for (auto j : *ions) {
+            Point f = pot->f_p2p(spc->p[i], spc->p[j]);
+            f_pi += f;
+          }
+        }
+        for (auto i : *igroup2) {
+          for (auto j : *ions) {
+            Point f = pot->f_p2p(spc->p[i], spc->p[j]);
+            f_ip += f;
+          }
+        }
+      }
+    }
+    
+    Point TwobodyForceDirect::meanforce() {
+      Point p = (f_pp+(f_pi-f_ip)*0.5)/(double)cnt;
+      return p;
+    }
+    
+    string TwobodyForceDirect::_info() {
+      using namespace Faunus::textio;
+      std::ostringstream o;
+      o << pad(SUB,w,"Mean direct Force p-p:") << "(" << f_pp.x()/(double)cnt << ", " << f_pp.y()/(double)cnt << ", " << f_pp.z()/(double)cnt << ") kT/Å" << endl;
+      o << pad(SUB,w,"Mean direct Force p-i:") << "(" << f_pi.x()/(double)cnt << ", " << f_pi.y()/(double)cnt << ", " << f_pi.z()/(double)cnt << ") kT/Å" << endl;
+      o << pad(SUB,w,"Mean direct Force i-p:") << "(" << f_ip.x()/(double)cnt << ", " << f_ip.y()/(double)cnt << ", " << f_ip.z()/(double)cnt << ") kT/Å" << endl;
+      o << pad(SUB,w,"Mean direct Force:") << "(" << meanforce().x() << ", " << meanforce().y() << ", " << meanforce().z() << ") kT/Å" << endl;
+      return o.str();
+    }
+    
+    
+    TwobodyForceMidp::TwobodyForceMidp(InputMap &in,Energy::Energybase &e, Space &s, Group &g1, Group &g2, Group &_ions, Analysis::LineDistributionNorm<float,unsigned long int> *_saltdistr) : TwobodyForce(in, e, s, g1, g2, _ions) {
+      name="Twobody midplane mean force calculation";
+      f_pp = Point(0.0, 0.0, 0.0);
+      f_pi = Point(0.0, 0.0, 0.0);
+      f_ip = Point(0.0, 0.0, 0.0);
+      f_ii = Point(0.0, 0.0, 0.0);
+      saltdistr=_saltdistr;
+    }
+    
+    /*!
+     * \brief Calculate the direct force between the two bodies
+     */
+    void TwobodyForceMidp::calc() {
+      if (run()) {
+        // Force between the two bodies
+        for (auto i : *igroup1) {
+          for (auto j : *igroup2) {
+            Point f = pot->f_p2p(spc->p[i], spc->p[j]);
+            f_pp += f;
+          }
+        }
+        
+        for (auto i : *igroup1) {
+          for (auto j : *ions) {
+            if (spc->p[j].z() < 0.0) {
+              Point f = pot->f_p2p(spc->p[i], spc->p[j]);
+              f_pi += f;
+            }
+          }
+        }
+        
+        for (auto i : *igroup2) {
+          for (auto j : *ions) {
+            if (spc->p[j].z() >= 0.0) {
+              Point f = pot->f_p2p(spc->p[i], spc->p[j]);
+              f_ip += f;
+            }
+          }
+        }
+        
+        for (auto i : *ions) {
+          if (spc->p[i].z() >= 0.0) {
+            for (auto j : *ions) {
+              if (spc->p[j].z() < 0.0) {
+                Point f = pot->f_p2p(spc->p[i], spc->p[j]);
+                f_ii += f;
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    Point TwobodyForceMidp::meanforce() {
+      Point p = f_pp+f_pi-f_ip+f_ii;
+      float midp = saltdistr->mid();
+      float endp = saltdistr->end();
+      Point I = Point(1.0, 1.0, 1.0);
+      return p/(double)cnt+I*(midp-endp);
+    }
+    
+    string TwobodyForceMidp::_info() {
+      using namespace Faunus::textio;
+      std::ostringstream o;
+      o << pad(SUB,w,"Mean midp Force p-p:") << "(" << f_pp.x()/(double)cnt << ", " << f_pp.y()/(double)cnt << ", " << f_pp.z()/(double)cnt << ") kT/Å" << endl;
+      o << pad(SUB,w,"Mean midp Force p-i:") << "(" << f_pi.x()/(double)cnt << ", " << f_pi.y()/(double)cnt << ", " << f_pi.z()/(double)cnt << ") kT/Å" << endl;
+      o << pad(SUB,w,"Mean midp Force i-p:") << "(" << f_ip.x()/(double)cnt << ", " << f_ip.y()/(double)cnt << ", " << f_ip.z()/(double)cnt << ") kT/Å" << endl;
+      o << pad(SUB,w,"Mean midp Force i-i:") << "(" << f_ii.x()/(double)cnt << ", " << f_ii.y()/(double)cnt << ", " << f_ii.z()/(double)cnt << ") kT/Å" << endl;
+      o << pad(SUB,w,"Midpressure:") << saltdistr->mid() << " kT/Å" << endl;
+      o << pad(SUB,w,"Endpressure:") << saltdistr->end() << " kT/Å" << endl;
+      o << pad(SUB,w,"Mean midp Force:") << "(" << meanforce().x() << ", " << meanforce().y() << ", " << meanforce().z() << ") kT/Å" << endl;
+      return o.str();
+    }
+    
+    
     PolymerShape::PolymerShape() {
       name="Polymer Shape";
     }

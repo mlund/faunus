@@ -148,6 +148,17 @@ namespace Faunus {
               }
             return x;
           }
+        
+          /*! Returns x at minumum x */
+          Tx minx() {
+            assert(!map.empty());
+            Tx x=0;
+            for (auto &m : map) {
+              x=m.first;
+              break;
+            }
+            return x;
+          }
 
           /*!
            * \brief Load table from disk
@@ -361,23 +372,115 @@ namespace Faunus {
      * \author Axel Thuresson
      * \date Lund 2012
      */
-    template<typename Tx=double, typename Ty=unsigned long>
-      class LineDistributionNorm : public RadialDistribution<Tx,Ty> {
-        private:
-          double volume(Tx x) { return 1; }
-          int n;
-        public:
-          LineDistributionNorm(int al_n=1, Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {
-            this->name="Line Distribution Normalized for n particles";
-            n = al_n;
-          }
-          double get(Tx x) {
-            assert( volume(x)>0 );
-            assert( this->count()>0 );
-            return (double)this->operator()(x) * n / (double)this->count();
-          }
-
-      };
+    template<typename Tx=double, typename Ty=int>
+    class LineDistributionNorm : public RadialDistribution<Tx,Ty> {
+    private:
+      double volume(Tx x) { return 1; }
+      int n;
+    public:
+      LineDistributionNorm(int al_n=1, Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {
+        this->name="Line Distribution Normalized for n particles";
+        n = al_n;
+      }
+      double get(Tx x) {
+        assert( volume(x)>0 );
+        assert( this->count()>0 );
+        return (double)this->operator()(x) * n / (double)this->count();
+      }
+      
+      /*!
+       * \brief Simplest form of the midplane pressure
+       */
+      double mid() {
+        return (get(this->dx)+get(-this->dx))*0.5/this->dx;
+      }
+      
+      /*!
+       * \brief Simplest form of the end pressure
+       */
+      double end() {
+        return (get(this->minx())+get(this->minx()+this->dx)+get(-this->minx())+get(-this->minx()-this->dx))*0.25/this->dx;
+      }
+      
+    };
+    
+    
+    /*!
+     * \brief Base class for force calculations
+     *
+     * Includes some neccessary functionality for deriving the force.
+     *
+     * \author Axel Thuresson
+     * \date Lund, 2013
+     */
+    
+    class TwobodyForce : public AnalysisBase {
+    protected:
+      Energy::Energybase* pot;         //!< Pointer to energy functions
+      Space* spc;                      //!< Pointer to Space (particles and groups are stored there)
+      string _info();         //!< Print results of analysis
+      Group* igroup1;
+      Group* igroup2;
+      Group* ions;
+    public:
+      TwobodyForce(InputMap&, Energy::Energybase&, Space&, Group &, Group &, Group &);//!< Constructor
+      virtual void calc();
+      void save(string);
+      void setTwobodies(Group &, Group &, Group &);
+      virtual Point meanforce();
+    };
+    
+    /*!
+     * \brief Calculates the "direct" twobody mean force
+     *
+     * Calculates the "direct" mean force between two bodies including ions.
+     * This method is usually decent at close distances (large mean force).
+     * When the two bodies are far apart (small mean force) the difference 
+     * between two large is taken which gives a relative large error.
+     *
+     * \author Axel Thuresson
+     * \date Lund, 2013
+     */
+    
+    class TwobodyForceDirect : public TwobodyForce {
+    private:
+      Point f_pp;
+      Point f_pi;
+      Point f_ip;
+    protected:
+      string _info();         //!< Print results of analysis
+    public:
+      TwobodyForceDirect(InputMap&, Energy::Energybase&, Space&, Group &, Group &, Group &);//!< Constructor
+      void calc();
+      Point meanforce();
+    };
+    
+    
+    
+    /*!
+     * \brief Calculates the midplane twobody mean force
+     *
+     * Calculates the midplane mean force between two bodies including ions.
+     * This method has usually faster convergence than direct force calculations.
+     *
+     * \author Axel Thuresson
+     * \date Lund, 2013
+     */
+    
+    class TwobodyForceMidp : public TwobodyForce {
+    private:
+      Point f_pp;
+      Point f_pi;
+      Point f_ip;
+      Point f_ii;
+      Analysis::LineDistributionNorm<float,unsigned long int> *saltdistr;
+    protected:
+      string _info();         //!< Print results of analysis
+    public:
+      TwobodyForceMidp(InputMap&, Energy::Energybase&, Space&, Group &, Group &, Group &, Analysis::LineDistributionNorm<float,unsigned long int>*);//!< Constructor
+      void calc();
+      Point meanforce();
+    };
 
     /*!
      * \brief Analysis of polymer shape - radius of gyration, shape factor etc.

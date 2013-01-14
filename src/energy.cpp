@@ -41,6 +41,7 @@ namespace Faunus {
     // external particle interactions
     double Energybase::all2p(const p_vec &p, const particle &a) { return 0; }
     double Energybase::p2p(const particle &a, const particle &b) { return 0; }
+    Point Energybase::f_p2p(const particle &a, const particle &b) { return Point(0.0,0.0,0.0); }
     double Energybase::v2v(const p_vec &v1, const p_vec &v2) { return 0; }
     double Energybase::p_external(const particle &a) { return 0; }
 
@@ -150,6 +151,13 @@ namespace Faunus {
         u += b->p2p( p1,p2 );
       assert(u!=0);
       return u;
+    }
+    
+    Point Hamiltonian::f_p2p(const particle &p1, const particle &p2) {
+      Point p= Point(0.0, 0.0, 0.0);
+      for (auto b : baselist)
+        p += b->f_p2p( p1,p2 );
+      return p;
     }
 
     double Hamiltonian::all2p(const p_vec &p, const particle &a) {

@@ -61,6 +61,7 @@ namespace Faunus {
         virtual void setTemperature(double);                  //!< Set temperature for interactions
         virtual void setVolume(double);                       //!< Set volume of used Geometry
         virtual double p2p(const particle&, const particle&); // Particle-particle energy
+        virtual Point f_p2p(const particle&, const particle&); // Particle-particle force
         virtual double all2p(const p_vec&, const particle&);  // Particle-Particle vector energy
         virtual double all2all(const p_vec&);                 // All inter-particle energies (N^2)
         virtual double i2i(const p_vec&, int, int);           // i'th particle with j'th particle
@@ -111,6 +112,11 @@ namespace Faunus {
           //!< Particle-particle energy (kT)
           inline double p2p(const particle &a, const particle &b) FOVERRIDE {
             return pairpot( a,b,geometry.sqdist(a,b))*pairpot.tokT();
+          }
+        
+          //!< Particle-particle force (kT/Å)
+          inline Point f_p2p(const particle &a, const particle &b) FOVERRIDE {
+            return pairpot.force( a,b,geometry.sqdist(a,b),geometry.vdist(a,b))*pairpot.tokT();
           }
 
           double all2p(const p_vec &p, const particle &a) FOVERRIDE {
@@ -265,6 +271,11 @@ namespace Faunus {
       //!< Particle-particle energy (kT)
       inline double p2p(const particle &a, const particle &b) FOVERRIDE {
         return pairpot( a,b,geometry.vdist(a,b))*pairpot.tokT();
+      }
+      
+      //!< Particle-particle force (kT/Å)
+      inline Point f_p2p(const particle &a, const particle &b) FOVERRIDE {
+        return pairpot.force( a,b,geometry.sqdist(a,b),geometry.vdist(a,b))*pairpot.tokT();
       }
       
       double all2p(const p_vec &p, const particle &a) FOVERRIDE {
@@ -634,6 +645,7 @@ namespace Faunus {
 
       void add(Energybase&); //!< Add existing energy class to list
       double p2p(const particle&, const particle&) FOVERRIDE;
+      Point f_p2p(const particle&, const particle&) FOVERRIDE;
       double all2p(const p_vec&, const particle&) FOVERRIDE;
       double all2all(const p_vec&) FOVERRIDE;
       double i2i(const p_vec&, int, int) FOVERRIDE;

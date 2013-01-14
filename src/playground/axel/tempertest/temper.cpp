@@ -67,6 +67,12 @@ int main(int argc, char** argv) {
   Move::AtomicTranslation mv(mcp, pot, spc);
   Move::ParallelTempering pt(mcp,pot,spc,mpi);   //temper move
   
+  Analysis::LineDistribution<float,unsigned long int> rdf(0.5);
+  Analysis::LineDistributionNorm<float,unsigned long int> saltdistr(salt.size(), 0.2);
+  
+  Analysis::TwobodyForceDirect tfd(mcp, pot, spc, pol[0], pol[1], salt);
+  Analysis::TwobodyForceMidp tfm(mcp, pot, spc, pol[0], pol[1], salt, &saltdistr);
+  
   gmv.setMobile(salt); // specify where to look for clustered ions
   mv.setGroup(salt);   // specify atomic particles to be moved
 
@@ -76,9 +82,6 @@ int main(int argc, char** argv) {
   gmv.directions[ pol[1].name ].x()=0; // do not move in x
   gmv.directions[ pol[1].name ].y()=0; // do not move in y
   gmv.directions[ pol[1].name ].z()=0; // do move in z
-
-  Analysis::LineDistribution<float,unsigned long int> rdf(0.5);
-  Analysis::LineDistributionNorm<float,unsigned long int> saltdistr(salt.size(), 0.2);
   
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );
 
@@ -115,9 +118,13 @@ int main(int argc, char** argv) {
           sys+=pt.move();
           break;
       }
+      
       for (auto j=salt.begin(); j!=salt.end()-1; j++) {
         saltdistr(spc.p[(*j)].z())++;
       }
+      
+      tfd.calc();
+      tfm.calc();
     } // end of micro loop
 
     sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) );
@@ -127,19 +134,49 @@ int main(int argc, char** argv) {
     string strsaltdistr("");
     strsaltdistr += textio::prefix;
     strsaltdistr += "_";
-    strsaltdistr += macronum;
+    strsaltdistr += to_string(macronum);
     strsaltdistr += "saltdistr.dat";
     
     saltdistr.save(strsaltdistr);
     saltdistr.save(textio::prefix+"saltdistr.dat");
+    
+    string strtfd("");
+    strtfd += textio::prefix;
+    strtfd += "_";
+    strtfd += to_string(macronum);
+    strtfd += "dforce.dat";
+    
+    tfd.save(strtfd);
+    tfd.save(textio::prefix+"dforce.dat");
+    
+    string strtfm("");
+    strtfm += textio::prefix;
+    strtfm += "_";
+    strtfm += to_string(macronum);
+    strtfm += "mpforce.dat";
+    
+    tfm.save(strtfm);
+    tfm.save(textio::prefix+"mpforce.dat");
+    
+    string strcur("");
+    strcur += textio::prefix;
+    strcur += "_";
+    strcur += to_string(macronum);
+    strcur += "energy.dat";
+    std::ofstream f(strcur.c_str());
+    f.precision(10);
+    if (f) {
+      f << sys.current() << endl;
+    }
+    
     spc.save(textio::prefix+"state");
     mpi.cout << loop.info() << spc.info() << sys.info() << mv.info() << gmv.info() << pt.info();
-    mpi.cout << loop.timing();
+    mpi.cout << loop.timing() << tfd.info() << tfm.info() ;
   } // end of macro loop
 
   pqr.save(textio::prefix+"confout.pqr", spc.p);
 
-  mpi.cout << loop.info() << spc.info() << sys.info() << mv.info() << gmv.info() << pt.info();
+  mpi.cout << loop.info() << spc.info() << sys.info() << mv.info() << gmv.info() << pt.info() << tfd.info() << tfm.info();
   mpi.cout << pol[0].info();
   mpi.cout << pol[0].charge(spc.p) << endl;
 }

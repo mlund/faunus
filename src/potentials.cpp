@@ -34,8 +34,9 @@ namespace Faunus {
      * \param a First particle
      * \param b Second particle
      * \param r2 Squared distance between them (angstrom squared)
+     * \param p Vector from: p=b-a
      */
-    Point PairPotentialBase::force(const particle &a, const particle &b, double r2) {
+    Point PairPotentialBase::force(const particle &a, const particle &b, double r2, Point p) {
       assert(!"Force not overrided!");
       return Point(0,0,0);
     }

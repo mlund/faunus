@@ -23,8 +23,7 @@ int main(int argc, char** argv) {
   //auto constrain = pot.create( Energy::MassCenterConstrain(pot.getGeometry()) );
   Space spc( pot.getGeometry() );
 
-  double pxtc = mcp.get("pxtc",0.99);
-
+  double pxtc = mcp.get<double>("pxtc",0.99);
   // Add molecular species
   int cnt=0;
   int N1=mcp.get("polymer1_N",0);

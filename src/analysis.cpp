@@ -44,7 +44,7 @@ namespace Faunus {
     
     TwobodyForce::TwobodyForce(InputMap &in,Energy::Energybase &e, Space &s, Group &g1, Group &g2, Group &_ions) {
       name="Twobody mean force calculation";
-      runfraction = in.get("pforce", 1.0);
+      runfraction = in.get<double>("pforce", 1.0);
       pot=&e;
       spc=&s;
       igroup1=nullptr;

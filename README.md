@@ -1,27 +1,4 @@
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
- Faunus - A Framework for Molecular Modelling 
- Copyright (C) 2002-2013 Mikael Lund 
-
- This program is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or 
- (at your option) any later version.
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License along
- with this program; if not, write to the Free Software Foundation, Inc.,
- 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-WELCOME TO FAUNUS                                          
+Welcome to Faunus
 =================
 
 Faunus is a C++ framework for Metropolis Monte Carlo simulations of
@@ -44,7 +21,7 @@ Get the latest code resivions via SVN from sourceforge.net:
 
     $ svn co http://svn.code.sf.net/p/faunus/code/trunk faunus
 
-REQUIREMENTS
+Requirements
 ============
 
 - C/C++11 compiler (clang3+, gcc4.6+, intel13+, ...)
@@ -59,7 +36,7 @@ Optional:
 
 Developed and tested on Linux and MacOS X.
 
-COMPILING                                         {#compiling}
+Compiling                                         {#compiling}
 =========
 
     $ svn co http://svn.code.sf.net/p/faunus/code/trunk faunus
@@ -103,7 +80,7 @@ Resetting the build system
     $ make clean
     $ rm CMakeCache.txt
 
-CONTRIBUTORS
+Contributors
 ============
 
 In chronological order:
@@ -115,9 +92,32 @@ Ondrej Marsalek     Christophe Labbez     Andre Teixeira
  Robert Vacha         Axel Trulsson       Bjorn Stenqvist
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-CITING FAUNUS
+Citing Faunus
 =============
 
-- Lund, M., Persson, B., Trulsson, M. (2008) Source Code Biol. Med. 3:1.
-  <http://www.scfbm.org/content/3/1/1> (free full text)
+- Lund, M., Persson, B., Trulsson, M.
+  _Source Code Biol. Med., 2008, 3:1_
+  [[DOI]](http://dx.doi.org/10.1186/1751-0473-3-1)
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ Faunus - A Framework for Molecular Modelling 
+ Copyright (C) 2002-2013 Mikael Lund 
+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or 
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License along
+ with this program; if not, write to the Free Software Foundation, Inc.,
+ 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 

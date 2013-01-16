@@ -17,81 +17,87 @@ namespace Faunus {
    *
    * @date 2002-2007
    */
-  class Point : public Eigen::Vector3d {
-    public:
-      typedef double Tcoord;                             //!< Floating point type for Point coordinates
-      typedef Eigen::Vector3d Tvec;                      //!< 3D vector from Eigen
-      typedef std::function<Tvec(const Tvec)> RotFunctor;//!< Rotation functor
+  struct Point : public Eigen::Vector3d {
+    typedef double Tcoord;                             //!< Floating point type for Point coordinates
+    typedef Eigen::Vector3d Tvec;                      //!< 3D vector from Eigen
+    typedef std::function<Tvec(const Tvec)> RotFunctor;//!< Rotation functor
 
-      /** @brief Default constructor. Data is *not* zeroed */
-      inline Point() {}
+    /** @brief Default constructor. Data is *not* zeroed */
+    inline Point() {}
 
-      Point(Tcoord x, Tcoord y, Tcoord z) : Tvec(x,y,z) {}
+    Point(Tcoord x, Tcoord y, Tcoord z) : Tvec(x,y,z) {}
 
-      template<typename OtherDerived>
-        Point(const Eigen::MatrixBase<OtherDerived>& other) : Tvec(other) {}
+    template<typename OtherDerived>
+      Point(const Eigen::MatrixBase<OtherDerived>& other) : Tvec(other) {}
 
-      template<typename OtherDerived>
-        Point& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
-          Tvec::operator=(other);
-          return *this;
-        }
+    template<typename OtherDerived>
+      Point& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
+        Tvec::operator=(other);
+        return *this;
+      }
 
-      void clear();                           //!< Zero x,y,z
+    void clear();                           //!< Zero x,y,z
 
-      Tcoord len() const;                     //!< Get scalar (TO BE REMOVED)
+    Tcoord len() const;                     //!< Get scalar (TO BE REMOVED)
 
-      /**
-       * @brief Generate a random unit vector
-       *
-       * Based on the von Neumann method described
-       * in Allen and Tildesley page 349.
-       */
-      template<typename Trandombase>
-        void ranunit(Trandombase &ran) {
-          Point u;
-          Tcoord r2;
-          do {
-            u.x()=2*( ran()-0.5 );
-            u.y()=2*( ran()-0.5 );
-            u.z()=2*( ran()-0.5 );
-            r2=u.squaredNorm();
-          } while (r2>1);
-          *this = u/std::sqrt(r2);
-          assert(std::abs(this->len()-1)<1e-7); // is it really a unit vector?
-        }
+    /**
+     * @brief Generate a random unit vector
+     *
+     * Based on the von Neumann method described in
+     * *Allen and Tildesley*, page 349, which ensures
+     * a uniform distribution on a unit sphere. More information
+     * about *Sphere Point Picking* can be found at
+     * [MathWorld](http://mathworld.wolfram.com/SpherePointPicking.html).
+     *
+     * @param ran Randomnumber function object. Must return a uniform
+     *            distribution in the range `[0:1[`. This will typically be
+     *            a class derived from `RandomBase`.
+     */
+    template<typename Trandombase>
+      void ranunit(Trandombase &ran) {
+        Point::Tvec u;
+        Tcoord r2;
+        do {
+          u.x()=2*( ran()-0.5 );
+          u.y()=2*( ran()-0.5 );
+          u.z()=2*( ran()-0.5 );
+          r2=u.squaredNorm();
+        } while (r2>1);
+        *this = u/std::sqrt(r2);
+        assert(std::abs(norm()-1)<1e-7); // is it really a unit vector?
+      }
 
-      void rotate(RotFunctor);                  //!< Transform point (rotation etc)
+    void rotate(RotFunctor);                  //!< Transform point (rotation etc)
 
-      /**
-       * @brief Translate along a vector
-       * @param geo Geometry to use for boundary conditions (see Faunus::Geometry) 
-       * @param a Vector to translate with
-       */
-      template<typename Tgeometry>
-        void translate(const Tgeometry &geo, const Point &a) {
-          assert(&geo!=nullptr);
+    /**
+     * @brief Translate along a vector
+     * @param geo Geometry to use for boundary conditions (see Faunus::Geometry) 
+     * @param a Vector to translate with
+     */
+    template<typename Tgeometry>
+      void translate(const Tgeometry &geo, const Point &a) {
+        assert(&geo!=nullptr);
 #ifndef __clang__
-          static_assert(
-              std::is_base_of<Geometry::Geometrybase, Tgeometry>::value,
-              "Tgeo must be derived from Geometrybase" );
+        static_assert(
+            std::is_base_of<Geometry::Geometrybase, Tgeometry>::value,
+            "Tgeo must be derived from Geometrybase" );
 #endif
-          (*this)+=a;
-          geo.boundary(*this);
-        }
+        (*this)+=a;
+        geo.boundary(*this);
+      }
 
-      /**
-       * @brief Coordinate scaling used for NPT ensemble
-       *
-       * This will perform a volume scaling of the Point by
-       * following the algorithm specified in the Geometry.
-       */
-      template<typename Tgeometry>
-        void scale(const Tgeometry &geo, double newvol) {
-          geo.scale(*this, newvol);
-        }
+    /**
+     * @brief Coordinate scaling used for NPT ensemble
+     *
+     * This will perform a volume scaling of the Point by
+     * following the algorithm specified in the Geometry.
+     */
+    template<typename Tgeometry>
+      void scale(const Tgeometry &geo, double newvol) {
+        geo.scale(*this, newvol);
+      }
 
-      Point& operator<<(std::istream&);            //!< Read from stream
+    Point& operator<<(std::istream&);            //!< Read from stream
   };
 
   /**
@@ -107,38 +113,87 @@ namespace Faunus {
    * ~~~
    *
    */
-  class PointParticle : public Point {
-    public:
-      typedef Point::Tcoord Tradius;
-      typedef Point::Tcoord Tcharge;
-      typedef Point::Tcoord Tmw;
-      typedef unsigned char Tid;
-      typedef bool Thydrophobic;
+  struct PointParticle : public Point {
+    typedef Point::Tcoord Tradius;
+    typedef Point::Tcoord Tcharge;
+    typedef Point::Tcoord Tmw;
+    typedef unsigned char Tid;
+    typedef bool Thydrophobic;
 
-      Tcharge charge;                           //!< Charge number
-      Tradius radius;                           //!< Radius
-      Tmw mw;                                   //!< Molecular weight
-      Tid id;                                   //!< Particle identifier
-      Thydrophobic hydrophobic;                 //!< Hydrophobic flag
+    Tcharge charge;                           //!< Charge number
+    Tradius radius;                           //!< Radius
+    Tmw mw;                                   //!< Molecular weight
+    Tid id;                                   //!< Particle identifier
+    Thydrophobic hydrophobic;                 //!< Hydrophobic flag
 
-      PointParticle();                          //!< Constructor
+    PointParticle();                          //!< Constructor
 
-      template<typename OtherDerived>
-        PointParticle(const Eigen::MatrixBase<OtherDerived>& other) : Point(other) {}
+    template<typename OtherDerived>
+      PointParticle(const Eigen::MatrixBase<OtherDerived>& other) : Point(other) {}
 
-      template<typename OtherDerived>
-        PointParticle& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
-          Point::operator=(other);
-          return *this;
-        }
+    template<typename OtherDerived>
+      PointParticle& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
+        Point::operator=(other);
+        return *this;
+      }
 
-      PointParticle& operator=(const AtomData&);//!< Copy data from AtomData
-      PointParticle& operator<<(std::istream&); //!< Copy data from stream
-      friend std::ostream &operator<<(std::ostream&, const PointParticle&);//!< Write to stream
+    PointParticle& operator=(const AtomData&);//!< Copy data from AtomData
+    PointParticle& operator<<(std::istream&); //!< Copy data from stream
+    friend std::ostream &operator<<(std::ostream&, const PointParticle&);//!< Write to stream
 
-      double volume() const;                    //!< Return volume
-      void deactivate();                        //!< Deactivate for use w. faster energy loops
-      void clear();                             //!< Zero all data
+    double volume() const;                    //!< Return volume
+    void deactivate();                        //!< Deactivate for use w. faster energy loops
+    void clear();                             //!< Zero all data
+  };
+
+  /**
+   * @brief Dipolar particle
+   */
+  struct DipoleParticle : public PointParticle {
+    Point mu;               //!< Dipole moment unit vector
+    double muscalar;        //!< Dipole moment scalar
+    Eigen::Matrix3d alpha;
+
+    inline DipoleParticle() : mu(0,0,0), muscalar(0) {};
+
+    /** @brief Copy constructor for Eigen derivatives */
+    template<typename OtherDerived>
+      DipoleParticle(const Eigen::MatrixBase<OtherDerived>& other) : PointParticle(other) {}
+
+    /** @brief Generic copy operator for Eigen derivatives */
+    template<typename OtherDerived>
+      DipoleParticle& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
+        PointParticle::operator=(other);
+        return *this;
+      }
+
+    /** @brief Copy operator for base class (i.e no casting to Eigen derivatives) */
+    inline DipoleParticle& operator=(const PointParticle &p) {
+      PointParticle::operator=(p);
+      return *this;
+    }
+
+    /** @brief Copy properties from AtomData object */
+    inline DipoleParticle& operator=(const AtomData &d) {
+      PointParticle::operator=(d);
+      // copy more atom properties here...
+      return *this;
+    }
+
+    /* read in same order as written! */
+    inline DipoleParticle& operator<<(std::istream &in) {
+      PointParticle::operator<<(in);
+      mu.operator<<(in);
+      in >> muscalar;
+      return *this;
+    }
+
+    /* write data members to stream */
+    friend std::ostream &operator<<(std::ostream &o, const DipoleParticle &p) {
+      o << PointParticle(p) << " " << p.mu << " " << p.muscalar;
+      return o;
+    }
+
   };
 
   /**
@@ -177,7 +232,7 @@ namespace Faunus {
         return *this;
       }
 
-      /* @brief Copy properties from AtomData object */
+      /** @brief Copy properties from AtomData object */
       inline CigarParticle& operator=(const AtomData &d) {
         PointParticle::operator=(d);
         // copy more atom properties here...

@@ -44,6 +44,7 @@ int main() {
   // check particle operations
   {
     checkParticle<PointParticle>();
+    checkParticle<DipoleParticle>();
     checkParticle<CigarParticle>();
   }
 

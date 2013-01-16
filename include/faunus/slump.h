@@ -68,7 +68,6 @@ namespace Faunus {
   template<typename T=double, typename Tengine=std::mt19937> 
     class RandomTwister : public RandomBase {
       private:
-        //std::random_device rd;
         Tengine eng; //pseudo random number engine
         std::uniform_real_distribution<T> dist;
         T _randone() {
@@ -80,6 +79,8 @@ namespace Faunus {
       public:
         RandomTwister() : dist(0,1) {
           name="Mersenne Twister";
+          //std::random_device rd;
+          //eng.seed( rd() );
         }
         void seed(int s) {
 #pragma omp critical

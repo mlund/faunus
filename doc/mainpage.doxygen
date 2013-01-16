@@ -58,15 +58,17 @@ Intel Composer | 13             | Pedantic warnings, good optimization
 Getting the source code
 =======================
 
-Faunus is currently released only through the Sourceforge repository - i.e. no specific versions
-are released. To download the latest revision simply use subversion with the command:
+Faunus is currently released only through the Sourceforge repository
+- i.e. no specific versions are released. To download the latest revision
+simply use subversion with the command:
 
     svn checkout svn://svn.code.sf.net/p/faunus/code/trunk faunus-code
 
 This will download faunus into the directory `faunus-code`.
-For a particular revision or datestamp you, do something like this:
+For a particular revision or datestamp, do something like this:
 
     svn checkout -r 666 svn://svn.code.sf.net/p/faunus/code/trunk faunus-r666
+    svn checkout -r {2012-12-24} svn://svn.code.sf.net/p/faunus/code/trunk faunus-xmas
 
 Compiling
 =========
@@ -86,27 +88,28 @@ file so let's just give a single example:
     $ cmake . -DENABLE_MPI=on -DCMAKE_BUILD_TYPE=Release
 
 If you have installed `ccmake` you can also control the build setting from a text based
-interface by instead doing
+interface:
 
     $ ccmake .
 
 Using a custom compiler
 -----------------------
 
-If your compiler is in a non-standard location or if you have multiple
-compilers installed, use the `CXX` and `CC` shell variables to guide cmake to
+For compilers in a non-standard locations or when multiple compilers
+are installed, use the `CXX` and `CC` shell variables to guide cmake to
 your desired compiler. For example:
 
     $ rm -f CMakeCache.txt (if any)
-    $ CXX=/opt/local/bin/g++ CC=/opt/local/bin/gcc cmake .
-    $ make
+    $ export CXX=/opt/local/bin/g++
+    $ export CC=/opt/local/bin/gcc
+    $ cmake . [options]
 
 Out of source build
 -------------------
 
-The above method will build Faunus directly in the `faunus-code` directory. If you wish to leave
-the source directory untouched you can instead use an out-of-source build. This can be useful if you
-want to make multiple builds with different settings or compilers.
+The above method will build Faunus directly in the `faunus-code` directory.
+To leave the source directory untouched, use instead an *out-of-source build*.
+This can be useful for making multiple builds with different settings or compilers.
 To make an out-of-source build do:
 
     $ mkdir build
@@ -117,7 +120,7 @@ To make an out-of-source build do:
 Running the test suite
 ======================
 
-Finally, after having build faunus as described above you should now run the test suite to check
+Finally, after having build faunus as described above, run the test suite to check
 if everything works as expected:
 
     $ make

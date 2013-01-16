@@ -27,3 +27,6 @@ CTestTestfile.cmake
 
 # Doxygen
 doxyhtml
+
+# XCode build
+build

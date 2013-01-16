@@ -1,8 +1,12 @@
+# CMake
 CMakeCache.txt
 CMakeFiles
 Makefile
 cmake_install.cmake
 install_manifest.txt
+DartConfiguration.tcl
+Testing
+CTestTestfile.cmake
 
 # Compiled Object files
 *.slo
@@ -17,3 +21,9 @@ install_manifest.txt
 *.lai
 *.la
 *.a
+
+# VIM backup files
+*~
+
+# Doxygen
+doxyhtml

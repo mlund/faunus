@@ -5,9 +5,8 @@ set(CMAKE_LEGACY_CYGWIN_WIN32 0) # Remove when CMake >= 2.8.4 is required
 # ----------------------------
 #   Locate external packages
 # ----------------------------
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/modules)
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/scripts)
 find_package(OpenBabel2)
-find_package(Subversion-patched)
 find_package(MPI)
 include(CTest)
 include(CheckIncludeFileCXX)
@@ -62,7 +61,6 @@ endif()
 # --------------------------------
 if(Subversion_FOUND)
   add_custom_target(rccommit svn commit)
-
 endif()
  
 # ---------------------------

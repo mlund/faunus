@@ -58,17 +58,14 @@ Intel Composer | 13             | Pedantic warnings, good optimization
 Getting the source code
 =======================
 
-Faunus is currently released only through the Sourceforge repository
-- i.e. no specific versions are released. To download the latest revision
-simply use subversion with the command:
+Faunus is hosted on GitHub and can be downloaded by cloning
+the main repository:
 
-    svn checkout svn://svn.code.sf.net/p/faunus/code/trunk faunus-code
+    git clone https://github.com/mlund/faunus.git
 
-This will download faunus into the directory `faunus-code`.
-For a particular revision or datestamp, do something like this:
+If you intend to change and contribute to the project, you should instead
+make a *fork* as explained [here](http://help.github.com/articles/fork-a-repo).
 
-    svn checkout -r 666 svn://svn.code.sf.net/p/faunus/code/trunk faunus-r666
-    svn checkout -r {2012-12-24} svn://svn.code.sf.net/p/faunus/code/trunk faunus-xmas
 
 Compiling
 =========
@@ -78,7 +75,7 @@ Using the default compiler
 
 If you think your system compiler is up to date, simply do:
 
-    $ cd faunus-code/
+    $ cd faunus
     $ cmake . [options]
     $ make
 
@@ -107,14 +104,14 @@ your desired compiler. For example:
 Out of source build
 -------------------
 
-The above method will build Faunus directly in the `faunus-code` directory.
+The above method will build Faunus directly in the `faunus` directory.
 To leave the source directory untouched, use instead an *out-of-source build*.
 This can be useful for making multiple builds with different settings or compilers.
 To make an out-of-source build do:
 
     $ mkdir build
     $ cd build
-    $ cmake ../faunus-code [options]
+    $ cmake ../faunus [options]
     $ make
 
 Running the test suite
@@ -182,8 +179,7 @@ to your program. Only two files are required:
          cmake_minimum_required(VERSION 2.8)
          include(ExternalProject)
          ExternalProject_Add(faunus
-           SVN_REVISION "-r877"   # remove for latest revision
-           SVN_REPOSITORY http://svn.code.sf.net/p/faunus/code/trunk
+           GIT_REPOSITORY https://github.com/mlund/faunus
            CMAKE_ARGS -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMYPLAYGROUND=${CMAKE_SOURCE_DIR}
            INSTALL_COMMAND "")
        endif() 
@@ -296,19 +292,20 @@ Some good books on C++ design,
 Committing code
 ---------------
 
-Code additions are welcome: short contributions should be submitted to the
-[ticket system](http://sourceforge.net/tracker/?group_id=196168&atid=956374),
-while if you want to become a regular contributer you may apply for repository
-write access.
+If you want to contribute to the Faunus project, first make a *fork* of the
+repository and request changes to be added via a *pull request*.
+Further instructions can be found on GitHub:
 
-Before submitting changes to the SVN repository please make sure nothing
-is broken:
+- [Forking a repository](http://help.github.com/articles/fork-a-repo)
+- [Pull requests](http://help.github.com/articles/using-pull-requests)
+
+Before submitting changes, please make sure nothing is broken:
 
     $ make all
     $ make manual
     $ make test
 
-Please, also try to verify SWIG modules:
+Also try to verify SWIG modules:
 
     $ cmake -DENABLE_SWIG=on
     $ make _pyfaunus

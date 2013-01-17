@@ -14,12 +14,13 @@ molecular systems. Below is a brief overview of features:
 
 Detailed information and support:
 
-- Website: <http://faunus.sourceforge.net>
-- Support: <http://sourceforge.net/projects/faunus/support>
+- Website: <http://github.com/mlund/faunus>
+- Documentation: <http://faunus.sourceforge.net/doxyhtml>
+- Support: <http://github.com/mlund/faunus/issues>
 
-Get the latest code resivions via SVN from sourceforge.net:
+Get the latest resivions from GitHub:
 
-    $ svn co http://svn.code.sf.net/p/faunus/code/trunk faunus
+    $ git clone https://github.com/mlund/faunus.git
 
 Requirements
 ============
@@ -39,10 +40,7 @@ Developed and tested on Linux and MacOS X.
 Compiling                                         {#compiling}
 =========
 
-    $ svn co http://svn.code.sf.net/p/faunus/code/trunk faunus
-    $ mkdir build
-    $ cd build/
-    $ cmake ../faunus/ [options]
+    $ cmake . [options]
     $ make [help]
     $ make test (or use 'ctest -V' for verbose test output)
 

@@ -4,39 +4,6 @@
 
 namespace Faunus {
 
-  /********************************
-    C A R T E S I A N  P O I N T
-   ********************************/
-   
-  void Point::clear() { setZero(); }
-
-  Point::Tcoord Point::len() const {
-    auto r2 = dot(*this);
-    assert( r2==squaredNorm() );
-    return (r2>0) ? std::sqrt(r2) : 0;
-  }
-
-  Point & Point::operator<<(std::istream &in) {
-    in >> x() >> y() >> z();
-    return *this;
-  }
-
-  /*!
-   * \param rotator Functor that rotates a point and returns the rotated Point
-   *
-   * The functor should take care of simulation boundaries (if any) and typically one
-   * would want to pass the Geometry::VectorRotate class as in the following example:
-   * \code
-   * Point a(1,0,0);
-   * VectorRotate rotator;
-   * rotator.setAxis(geometry, Point(0,0,0), Point(0,0,1), 3.14 ); // rotate pi around 0,0,1
-   * a.rotate(rotator);
-   * \endcode
-   */
-  void Point::rotate(RotFunctor rotator) {
-    *this = rotator(*this);
-  }
-  
   /*!
    * Upon construction, data is zeroed.
    */

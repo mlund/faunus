@@ -46,6 +46,9 @@ int main() {
     checkParticle<PointParticle>();
     checkParticle<DipoleParticle>();
     checkParticle<CigarParticle>();
+#ifdef FAU_HYPERSPHERE
+    checkParticle<HyperParticle>();
+#endif
   }
 
   // check infinity

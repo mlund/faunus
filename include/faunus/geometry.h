@@ -354,70 +354,51 @@ namespace Faunus {
         bool find(Geometrybase&, const p_vec&, p_vec&, unsigned int=1000);
     };
 
-    /*!
-     * \brief Vector rotation routines
-     * \note Boundary condition are respected.
-     * \author Mikael Lund
-     * \date Canberra, 2009
-     * \todo Redundant? See QuaternionRotateEigen.
+    /**
+     * @brief Quaternion rotation routine using the Eigen library
+     * @note Boundary condition are respected.
      */
-    class VectorRotate {
+    class QuaternionRotate {
       private:
-        virtual Point rotate(Point) const;      //!< Rotate point around axis
-      protected:
-        Point origin, u;
-        double cosang, sinang;
-        double e1mcox, e1mcoy, e1mcoz;
+        double angle_;
+        Eigen::Vector3d origin;
+        Eigen::Quaterniond q;
         Geometrybase *geoPtr;
       public:
-        Point operator()(const Point&) const; // Rotate point around axis. 
-        virtual ~VectorRotate();
-        virtual void setAxis(Geometrybase&, const Point&, const Point&, double);  //!< Set rotation axis and degrees
-        double getAngle() const;                                                  //!< Get set rotation angle
-    };
+        //!< Get set rotation angle
+        double getAngle() const { return angle_; }
 
-    /*!
-     * \brief Quaternion rotation routine using the Eigen library
-     */
-    class QuaternionRotateEigen : public VectorRotate {
-      private:
-        Eigen::Quaterniond q;
-        inline Point rotate(Point a) const {
+        /**
+         * @brief Set rotation axis and angle
+         * @param g Geometry to use for periodic boundaries (if any)
+         * @param beg Starting point for vector to rotate around
+         * @param end Ending point for vector to rotate around
+         * @param angle Radians to rotate
+         */
+        inline void setAxis(Geometrybase &g, const Point &beg, const Point &end, double angle) {
+          assert(&g!=nullptr && "Invalid geometry");
+          geoPtr=&g;
+          origin=beg;
+          angle_=angle;
+          Point u(end-beg);
+          assert(u.squaredNorm()>0 && "Rotation vector has zero length");
+          g.boundary(u);
+          u.normalize(); // make unit vector
+          q=Eigen::AngleAxisd(angle, u);
+        }
+
+        /** @brief Rotate point - respect boundaries */
+        inline Point operator()(Point a) const {
           a=a-origin;
           geoPtr->boundary(a);
           a=q*a+origin;
           geoPtr->boundary(a);
           return a;
         }
-      public:
-        inline void setAxis(Geometrybase &g, const Point &beg, const Point &end, double angle) {
-          origin=beg;
-          u=end-beg;
-          g.boundary(u);
-          u.normalize();
-          geoPtr=&g;
-          q=Eigen::AngleAxisd(angle, u);
-          cosang=std::cos(angle);
-        }
     };
 
-    /*!
-     * \brief Quaternion rotation routine
-     * \todo Redundant?
-     */
-    class QuaternionRotate : public VectorRotate {
-      private:
-        double d1, d2, d3, d4, d5, d6, d7, d8, d9 ;
-        Point rotate(Point) const;
-        struct quat {             /* Define a quaternion structure */
-          double w,x,y,z;
-        };
-        quat q;
-      public:
-        void setAxis(Geometrybase&, const Point&, const Point&, double);  //!< Set rotation axis and degrees
-    };
-
-    /*! \brief Calculate minimum distance between two line segments
+    /**
+     * @brief Calculate minimum distance between two line segments
      *
      * Find closest distance between line segments and return its vector
      * gets orientations and lengths of line segments and the vector connecting
@@ -442,8 +423,6 @@ namespace Faunus {
     int find_intersect_planec(const CigarParticle &, const CigarParticle &, const Point &, const Point &, double , double , double [5]);
     int psc_intersect(const CigarParticle &, const CigarParticle &, const Point &, double [5], double );  
     int cpsc_intersect(const CigarParticle &, const CigarParticle &,const Point &, double [5], double );
-
-
 
   }//namespace Geometry
 }//namespace Faunus

@@ -13,10 +13,12 @@ namespace Faunus {
   typedef ContinuousRange<int> Range;  //<! Basic, continuous range of integers
 
   /**
-   * @brief Defines a continuous range of particles in the Space particle vector.
+   * @brief Defines a continuous range of particles in the
    *
-   * This class defines a range, `[front:back]`, in the particle vector and behaves much like a standard
-   * STL container. Groups know how to perform geometric operations on it - rotate, translate etc. 
+   * Space particle vector. This class defines a range, `[front:back]`,
+   * in the particle vector and behaves much like a standard
+   * STL container. Groups know how to perform geometric operations
+   * on it - rotate, translate etc. 
    *
    * Example:
    *
@@ -97,7 +99,7 @@ namespace Faunus {
       string _info();                 //!< Show information
     public:
       int N;                          //!< Number of atoms in each molecule
-      GroupArray(int);                //!< Constructor. Specify number of atoms in each molecule.
+      GroupArray(int);                //!< Constructor - number of atoms per molecule.
       int sizeMol() const;            //!< Number of molecules
       int randomMol() const;          //!< Pick a random molecule
       GroupMolecular& operator[](int);//!< Access i'th molecule

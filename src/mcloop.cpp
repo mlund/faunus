@@ -8,11 +8,6 @@ namespace Faunus {
     string prefix=pfx;
     macro=in.get<int>(prefix+"macrosteps",10);
     micro=in.get<int>(prefix+"microsteps",0);
-    statefile=in.get<string>(prefix+"statefile", "loop.state");
-    loadstateBool = false; //in.get<bool>(prefix+"loadstate", false);
-    if (loadstateBool)
-      loadstate();
-    //eq=in.get<bool>("equilibration", false);
     cnt_micro=cnt_macro=0;
   }
 
@@ -23,8 +18,6 @@ namespace Faunus {
     o << header("MC Steps and Time")
       << pad(SUB,w,"Steps (macro micro tot)") << macro << "\u2219" << micro << " = " << macro*micro << endl
       << pad(SUB,w,"Remaining steps") << macro*micro - count() << endl;
-    if (loadstateBool)
-      o << "#   Load state from disk   = yes" << endl;
     int t=cnt.elapsed();
     if (t>5) {
       o << pad(SUB,w,"Time elapsed") << t/(3600.) << " h" << endl
@@ -55,7 +48,6 @@ namespace Faunus {
    * this function saves a state file to disk
    */
   bool MCLoop::macroCnt() {
-    //savestate();
     return (++cnt_macro>macro) ? false : true;
   }
 
@@ -76,41 +68,4 @@ namespace Faunus {
     return (cnt_macro-1)*micro + cnt_micro;
   }
 
-  bool MCLoop::savestate(string name) {
-    if (name.empty())
-      name=statefile;
-    std::ofstream f(name.c_str());
-    if (f) {
-      f << macro << " " << micro << " " << cnt_macro << " " << cnt_micro << " " << count();
-      f.close();
-      return true;
-    }
-    return false;
-  }
-
-  bool MCLoop::loadstate(string name) {
-    if (loadstateBool) {
-      if (name.empty())
-        name=statefile;
-      std::ifstream f(name.c_str());
-      if (f) {
-        unsigned int _macro, _micro, _cnt_macro, _cnt_micro, _cnt;
-        f >> _macro >> _micro >> _cnt_macro >> _cnt_micro >> _cnt;
-        f.close();
-        // Simple extension if micro/macro unchanged
-        if (_micro==micro && _macro==macro) {
-          cnt_micro=_cnt_micro;
-          cnt_macro=_cnt_macro;
-          macro+=cnt_macro;
-          return true;
-        }
-        // Otherwise map onto current micro/macro values
-        cnt_macro = _cnt / micro;
-        cnt_micro = _cnt - (cnt_macro)*micro;
-        macro+=cnt_macro;
-        return true;
-      }
-    }
-    return false;
-  }
 }//namespace

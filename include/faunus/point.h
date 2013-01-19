@@ -8,11 +8,22 @@
 
 namespace Faunus {
 
-#ifndef FAU_HYPERSPHERE
-  typedef Eigen::Vector3d BasePoint;
-#else
-  typedef Eigen::Vector4d BasePoint;
-#endif
+  /**
+   * @page points_and_particles Points and Particles
+   * 
+   * Faunus offers a number of points and particle types
+   * as listed in the table below.
+   *
+   * Class           | Properties
+   * :-------------- | :--------------------
+   * Eigen::Vector3d | 
+   * PointBase       |
+   * HyperPoint      |
+   * PointParticle   |
+   * DipoleParticle  |
+   * CigarParticle   |
+   *
+   */
 
   /**
    * @brief Cartesian coordinates
@@ -24,21 +35,21 @@ namespace Faunus {
    *
    * @date 2002-2007
    */
-  struct Point : public BasePoint {
+  struct PointBase : public Eigen::Vector3d {
     typedef double Tcoord;                             //!< Floating point type for Point coordinates
-    typedef BasePoint Tvec;                            //!< 3D vector from Eigen
+    typedef Eigen::Vector3d Tvec;                      //!< 3D vector from Eigen
     typedef std::function<Tvec(const Tvec)> RotFunctor;//!< Rotation functor
 
     /** @brief Default constructor. Data is *not* zeroed */
-    inline Point() {}
+    inline PointBase() {}
 
-    Point(Tcoord x, Tcoord y, Tcoord z) : Tvec(x,y,z) {}
-
-    template<typename OtherDerived>
-      Point(const Eigen::MatrixBase<OtherDerived>& other) : Tvec(other) {}
+    PointBase(Tcoord x, Tcoord y, Tcoord z) : Tvec(x,y,z) {}
 
     template<typename OtherDerived>
-      Point& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
+      PointBase(const Eigen::MatrixBase<OtherDerived>& other) : Tvec(other) {}
+
+    template<typename OtherDerived>
+      PointBase& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
         Tvec::operator=(other);
         return *this;
       }
@@ -63,7 +74,7 @@ namespace Faunus {
      */
     template<typename Trandombase>
       void ranunit(Trandombase &ran) {
-        Point::Tvec u;
+        PointBase::Tvec u;
         Tcoord r2;
         do {
           u.x()=2*( ran()-0.5 );
@@ -81,7 +92,7 @@ namespace Faunus {
      * @param a Vector to translate with
      */
     template<typename Tgeometry>
-      void translate(const Tgeometry &geo, const Point &a) {
+      void translate(const Tgeometry &geo, const PointBase &a) {
         assert(&geo!=nullptr);
 #ifndef __clang__
         static_assert(
@@ -108,7 +119,7 @@ namespace Faunus {
     }
 
     /** @brief Read from stream */
-    Point& operator<<(std::istream &in) {
+    PointBase& operator<<(std::istream &in) {
       for (int i=0; i<size(); ++i)
         in >> (*this)[i];
       return *this;
@@ -131,6 +142,159 @@ namespace Faunus {
       *this = rotator(*this);
     }
   };
+
+  /**
+   * @brief Hypersphere particle
+   * @date Lund, 2009-2013
+   * @warning Unfinished - need to transfer from jurassic branch
+   */
+  class HyperPoint : public PointBase {
+    private:
+      double w;
+
+    public:
+      inline HyperPoint() {}
+      inline HyperPoint(double z1, double z2, double z3, double w) : PointBase(z1,z2,z3) { z4()=w; }
+      inline HyperPoint(double z1, double z2, double z3) : PointBase(z1,z2,z3) { z4()=1; }
+
+      template<typename OtherDerived>
+        HyperPoint(const Eigen::MatrixBase<OtherDerived>& other) : PointBase(other) {}
+
+      template<typename OtherDerived>
+        HyperPoint& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
+          PointBase::operator=(other);
+          return *this;
+        }
+
+      inline const double& z1() const { return x(); }
+      inline const double& z2() const { return y(); }
+      inline const double& z3() const { return z(); }
+      inline const double& z4() const { return w; }
+      inline double& z1() { return x(); }
+      inline double& z2() { return y(); }
+      inline double& z3() { return z(); }
+      inline double& z4() { return w; }
+
+      /** @brief Read from stream */
+      HyperPoint& operator<<(std::istream &in) {
+        PointBase::operator<<(in);
+        in >> z4();
+        return *this;
+      }
+
+      /** @brief Write to stream */
+      friend std::ostream &operator<<(std::ostream &o, const HyperPoint &p) {
+        o << PointBase(p) << " " << p.z4();
+        return o;
+      }
+
+      /**
+       * @brief Translate along a vector
+       * @param geo Geometry to use for boundary conditions (see Faunus::Geometry) 
+       * @param a Vector to translate with
+       */
+      template<typename Tgeometry>
+        void translate(const Tgeometry &geo, const HyperPoint &a) {
+          assert(&geo!=nullptr);
+#ifndef __clang__
+          static_assert(
+              std::is_base_of<Geometry::Geometrybase, Tgeometry>::value,
+              "Tgeo must be derived from Geometrybase" );
+#endif
+          (*this)+=a;
+          geo.boundary(*this);
+        }
+
+      /**
+       * @brief Coordinate scaling used for NPT ensemble
+       *
+       * This will perform a volume scaling of the Point by
+       * following the algorithm specified in the Geometry.
+       */
+      template<typename Tgeometry>
+        void scale(const Tgeometry &geo, double newvol) {
+          geo.scale(*this, newvol);
+        }
+
+      inline double sqdist(const HyperPoint &a) const {
+        return dot(a) + z4()*a.z4();
+      }
+
+      /**
+       * @brief Geodesic distance between two hyperpoints
+       * @return @f[ r_g = \arccos{ (r^2) } @f]
+       */
+      inline double geodesic(const HyperPoint &a) const {
+        return std::acos( sqdist(a) );
+      }
+
+      void move(double du, double dv, double dw) {
+        double nz1, nz2, nz3, nz4,
+               tz1, tz2, tz3, tz4,
+               rho=du, omega=dv, fi=dw;
+        nz1=std::sqrt(1.-rho*rho);
+        nz2=nz1*std::cos(fi);
+        nz1=nz1*std::sin(fi);
+        nz3=rho*std::sin(omega);
+        nz4=rho*std::cos(omega);
+
+        HyperPoint e1,e2,e3,te1,te2,te3;
+        double fact1,fact2,fact3,nabla_nb,fi_nb;
+
+        //nabla_nb=slp.random_one()*2.*acos(-1.);
+        //fi_nb=std::acos(slp.random_one());
+
+        e1.z1()=std::cos(nabla_nb);
+        e1.z2()=std::sin(nabla_nb);
+        e1.z3()=0;
+        e1.z4()=0;
+        e2.z1()=-std::cos(fi_nb)*std::sin(nabla_nb);
+        e2.z2()=std::cos(fi_nb)*std::cos(nabla_nb);
+        e2.z3()=std::sin(fi_nb);
+        e2.z4()=0;
+        e3.z1()=std::sin(fi_nb)*std::sin(nabla_nb);
+        e3.z2()=-std::sin(fi_nb)*std::cos(nabla_nb);
+        e3.z3()=std::cos(fi_nb);
+        e3.z4()=0;
+
+        // First create a random orthonormal basis set at North Pole
+        fact1=e1.z1()*z1() +e1.z2()*z2() +e1.z3()*z3();
+        te1.z1()=e1.z1()-1./(1.+z4())*fact1*z1();
+        te1.z2()=e1.z2()-1./(1.+z4())*fact1*z2();
+        te1.z3()=e1.z3()-1./(1.+z4())*fact1*z3();
+        te1.z4()=e1.z4()-1./(1.+z4())*fact1*(z4()+1.);
+
+        fact2=e2.z1()*z1() +e2.z2()*z2() +e2.z3()*z3();
+        te2.z1()=e2.z1()-1./(1.+z4())*fact2*z1();
+        te2.z2()=e2.z2()-1./(1.+z4())*fact2*z2();
+        te2.z3()=e2.z3()-1./(1.+z4())*fact2*z3();
+        te2.z4()=e2.z4()-1./(1.+z4())*fact2*(z4()+1.);
+
+        fact3=e3.z1()*z1()+e3.z2()*z2()+e3.z3()*z3();
+        te3.z1()=e3.z1()-1./(1.+z4())*fact3*z1();
+        te3.z2()=e3.z2()-1./(1.+z4())*fact3*z2();
+        te3.z3()=e3.z3()-1./(1.+z4())*fact3*z3();
+        te3.z4()=e3.z4()-1./(1.+z4())*fact3*(z4()+1.);
+
+        // Then move it to point of z1,z2,z3,z4
+        tz1=nz1*te1.z1()+nz2*te2.z1()+nz3*te3.z1()+nz4*z1();
+        tz2=nz1*te1.z2()+nz2*te2.z2()+nz3*te3.z2()+nz4*z2();
+        tz3=nz1*te1.z3()+nz2*te2.z3()+nz3*te3.z3()+nz4*z3();
+        tz4=nz1*te1.z4()+nz2*te2.z4()+nz3*te3.z4()+nz4*z4();
+
+        // Update the point
+        z1()=tz1;
+        z2()=tz2;
+        z3()=tz3;
+        z4()=tz4;
+      }
+  };
+
+#ifdef FAU_HYPERSPHERE
+  typedef HyperPoint Point;
+#else
+  typedef PointBase Point;
+#endif
 
   /**
    * @brief Class for isotropic particles
@@ -297,137 +461,6 @@ namespace Faunus {
           << " " << p.halfl;
         return o;
       }
-  };
-
-  /**
-   * @brief Hypersphere particle
-   * @date Lund, 2009-2013
-   * @warning Unfinished - need to transfer from jurassic branch
-   */
-  class HyperParticle : public PointParticle {
-    private:
-
-      inline const Point::Tcoord& z1() const { return x(); }
-      inline const Point::Tcoord& z2() const { return y(); }
-      inline const Point::Tcoord& z3() const { return z(); }
-      inline const Point::Tcoord& z4() const { return w(); }
-      inline Point::Tcoord& z1() { return x(); }
-      inline Point::Tcoord& z2() { return y(); }
-      inline Point::Tcoord& z3() { return z(); }
-      inline Point::Tcoord& z4() { return w(); }
-
-    public:
-
-      inline void clear() {
-        setZero();
-        z4()=1;
-      }
-
-      inline HyperParticle() { clear(); }
-
-      /** @brief Copy constructor for Eigen derivatives */
-      template<typename OtherDerived>
-        HyperParticle(const Eigen::MatrixBase<OtherDerived>& other) : PointParticle(other) {}
-
-      /** @brief Generic copy operator for Eigen derivatives */
-      template<typename OtherDerived>
-        HyperParticle& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
-          PointParticle::operator=(other);
-          return *this;
-        }
-
-      /** @brief Copy operator for base class (i.e no casting to Eigen derivatives) */
-      inline HyperParticle& operator=(const PointParticle &p) {
-        PointParticle::operator=(p);
-        return *this;
-      }
-
-      /** @brief Copy properties from AtomData object */
-      inline HyperParticle& operator=(const AtomData &d) {
-        PointParticle::operator=(d);
-        return *this;
-      }
-
-      /**
-       * @brief Squared distance between two points.
-       * @return \f[ r^2 = z_1z_1' + z_2z_2' + z_3z_3' + z_4z_4' \f]
-       */
-      inline double sqdist(const HyperParticle &p) const {
-        return z1()*p.z1() + z2()*p.z2() + z3()*p.z3() + z4()*p.z4();
-      }
-
-      /**
-       * @brief Geodesic distance between two hyperpoints
-       * @return \f[ r_{\mbox{\scriptsize{geod}}} = \arccos{ (r^2) } \f]
-       */
-      inline double geodesic(const HyperParticle &p) const {
-        return std::acos(sqdist(p));
-      }
-
-      template<typename Tgeometry>
-        void translate(const Tgeometry &geo, const Point &a) {
-          double du=a.x();
-          double dv=a.y();
-          double dw=a.z();
-          double nz1, nz2, nz3, nz4,
-                 tz1, tz2, tz3, tz4,
-                 rho=du, omega=dv, fi=dw;
-          nz1=std::sqrt(1.-rho*rho);
-          nz2=nz1*std::cos(fi);
-          nz1=nz1*std::sin(fi);
-          nz3=rho*std::sin(omega);
-          nz4=rho*std::cos(omega);
-
-          HyperParticle e1,e2,e3,te1,te2,te3;
-          double fact1,fact2,fact3,nabla_nb,fi_nb;
-
-          //nabla_nb=slp.random_one()*2.*acos(-1.);
-          //fi_nb=std::acos(slp.random_one());
-
-          e1.z1()=std::cos(nabla_nb);
-          e1.z2()=std::sin(nabla_nb);
-          e1.z3()=0;
-          e1.z4()=0;
-          e2.z1()=-std::cos(fi_nb)*std::sin(nabla_nb);
-          e2.z2()=std::cos(fi_nb)*std::cos(nabla_nb);
-          e2.z3()=std::sin(fi_nb);
-          e2.z4()=0;
-          e3.z1()=std::sin(fi_nb)*std::sin(nabla_nb);
-          e3.z2()=-std::sin(fi_nb)*std::cos(nabla_nb);
-          e3.z3()=std::cos(fi_nb);
-          e3.z4()=0;
-
-          // First create a random orthonormal basis set at North Pole
-          fact1=e1.z1()*z1() +e1.z2()*z2() +e1.z3()*z3();
-          te1.z1()=e1.z1()-1./(1.+z4())*fact1*z1();
-          te1.z2()=e1.z2()-1./(1.+z4())*fact1*z2();
-          te1.z3()=e1.z3()-1./(1.+z4())*fact1*z3();
-          te1.z4()=e1.z4()-1./(1.+z4())*fact1*(z4()+1.);
-
-          fact2=e2.z1()*z1() +e2.z2()*z2() +e2.z3()*z3();
-          te2.z1()=e2.z1()-1./(1.+z4())*fact2*z1();
-          te2.z2()=e2.z2()-1./(1.+z4())*fact2*z2();
-          te2.z3()=e2.z3()-1./(1.+z4())*fact2*z3();
-          te2.z4()=e2.z4()-1./(1.+z4())*fact2*(z4()+1.);
-
-          fact3=e3.z1()*z1()+e3.z2()*z2()+e3.z3()*z3();
-          te3.z1()=e3.z1()-1./(1.+z4())*fact3*z1();
-          te3.z2()=e3.z2()-1./(1.+z4())*fact3*z2();
-          te3.z3()=e3.z3()-1./(1.+z4())*fact3*z3();
-          te3.z4()=e3.z4()-1./(1.+z4())*fact3*(z4()+1.);
-
-          // Then move it to point of z1,z2,z3,z4
-          tz1=nz1*te1.z1()+nz2*te2.z1()+nz3*te3.z1()+nz4*z1();
-          tz2=nz1*te1.z2()+nz2*te2.z2()+nz3*te3.z2()+nz4*z2();
-          tz3=nz1*te1.z3()+nz2*te2.z3()+nz3*te3.z3()+nz4*z3();
-          tz4=nz1*te1.z4()+nz2*te2.z4()+nz3*te3.z4()+nz4*z4();
-
-          // Update the point
-          z1()=tz1;
-          z2()=tz2;
-          z3()=tz3;
-          z4()=tz4;
-        }
   };
 
 }//namespace

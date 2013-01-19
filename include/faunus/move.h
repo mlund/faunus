@@ -232,7 +232,8 @@ namespace Faunus {
      */
     class TranslateRotateCluster : public TranslateRotate {
       private:
-        Geometry::VectorRotate vrot;
+        //Geometry::VectorRotate vrot;
+        Geometry::QuaternionRotate vrot;
         vector<int> cindex; //!< index of mobile ions to move with group
         void _trialMove();
         void _acceptMove();
@@ -315,7 +316,8 @@ namespace Faunus {
         double dp;         //!< Rotational displacement parameter
         double angle;      //!< Current rotation angle
         vector<int> index; //!< Index of particles to rotate
-        Geometry::VectorRotate vrot;
+        //Geometry::VectorRotate vrot;
+        Geometry::QuaternionRotate vrot;
         AcceptanceMap<string> accmap;
       public:
         CrankShaft(InputMap&, Energy::Energybase&, Space&, string="crank");

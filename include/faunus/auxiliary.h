@@ -175,5 +175,50 @@ namespace Faunus {
   }
 #pragma GCC diagnostic pop
 
-} // end of namespace
+  /**
+   * @brief Evaluate n'th degree Legendre polynomium
+   *
+   * Example:
+   * @code
+   * legendre<float> l(10);
+   * l.eval(1.3);
+   * cout << l.p[3]
+   * @endcode
+   *
+   * @author Mikael Lund
+   * @date Canberra 2005-2006
+   */
+  template<typename T=double>
+    class legendre {
+      private:
+        int n;           //!< Legendre order
+      public:
+        std::vector<T> p;      //!< Legendre terms stored here
+        //! Evaluate polynomium at x
+        void eval(T x) {
+          if (n > 0) {
+            p[1] = x;
+            T di;
+            for (int i=1; i<n; ++i) {
+              di=static_cast<T>(i);
+              p[i+1] = (2*di + 1) / (di+1) * x * p[i] - di/(di+1)*p[i-1];
+            }
+          }
+        }
+
+        /**
+         * @brief Constructor
+         * @param order Order of the polynomium
+         */
+        legendre(int order=0) { resize(order); }
+
+        void resize(int order) {
+          n=order;
+          assert(n>=0);
+          p.resize(n+1);
+          p[0]=1.;
+        }
+    };
+}//namespace
 #endif
+

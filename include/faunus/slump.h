@@ -8,10 +8,10 @@
 
 namespace Faunus {
 
-  /*!
+  /*@
    * @brief Base class for random number generation
    *
-   * Derived classes need only provide a _randone() and seed() function.
+   * Derived classes need only provide `_randone()` and `seed()` function.
    */
   class RandomBase {
     private:
@@ -32,12 +32,12 @@ namespace Faunus {
       }
   };
 
- /*!
-  * \brief Ran2 Random Number Gererator
-  * \author Bjorn Persson
-  * \date Lund, 2008
-  * \note A class for ran2 from 'Numerical Recipies'.
-  * \warning Not thread safe!
+ /**
+  * @brief Ran2 Random Number Gererator
+  * @author Bjorn Persson
+  * @date Lund, 2008
+  * @note A class for ran2 from 'Numerical Recipies'.
+  * @warning Not thread safe!
   */
   class RandomRan2: public RandomBase {
     private:
@@ -57,11 +57,11 @@ namespace Faunus {
       void seed(int=-7);
   };
 
-  /*!
+  /**
    * @brief Mersenne Twister Random number functions (C++11)
    *
    * This uses the C++11 Mersenne Twister for random number generations and while
-   * slightly slower than ran2, MT generally provides better randomness.
+   * quite slow ran2, MT generally provides better randomness.
    *
    * @date Lund, 2010
    */
@@ -87,15 +87,6 @@ namespace Faunus {
           eng.seed(s);
         }
     };
-
-  /*
-     template <typename I> I random_element(I begin, I end) {
-     const unsigned long n = std::distance(begin, end);
-     const unsigned long divisor = RAND_MAX/n ; //(RAND_MAX + 1) / n;
-     unsigned long k;
-     do { k = std::rand() / divisor; } while (k >= n);
-     return *std::advance(begin, k);
-     }*/
 
 #if defined(MERSENNETWISTER)
   typedef Faunus::RandomTwister<double,std::mt19937> slump;

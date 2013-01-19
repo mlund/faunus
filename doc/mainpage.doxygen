@@ -278,7 +278,7 @@ Some good books on C++ design,
 - [Effective C++](http://en.wikipedia.org/wiki/Special:BookSources/0321334876)
   by Meyers.
 
-...and some very basic tips,
+A few basic tips,
 
 - Generously use C++'s [assert()](http://www.cplusplus.com/reference/clibrary/cassert/assert)
   command to easy debugging
@@ -286,7 +286,7 @@ Some good books on C++ design,
 - Use compile-time polymophism (templates) for speed limiting steps
 - Exploit STL libraries and C++11 features
 - Hide data and functions as much as possible (i.e. make them private)
-- Ensure [const-correctness](http://en.wikipedia.org/wiki/Const-correctness)
+- Stride for [const-correctness](http://en.wikipedia.org/wiki/Const-correctness)
 - Treat compiler warnings as errors
 
 Committing code

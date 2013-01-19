@@ -1039,6 +1039,12 @@ namespace Faunus {
      */
     double systemEnergy(Space&, Energy::Energybase&, const p_vec&);
 
+    /* typedefs */
+
+    // template aliasing requires gcc 4.7+
+    // template<class Tpairpot, class Tgeometry>
+    //   using PairWise = Nonbonded<Tpairpot, Tgeometry>;
+
   }//Energy namespace
 }//Faunus namespace
 #endif

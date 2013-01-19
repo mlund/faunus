@@ -74,8 +74,16 @@ namespace Faunus {
       setradius(radius);
     }
 
+    /**
+     * The InputMap is scanned for the following parameters:
+     *
+     * Key               | Description
+     * :---------------- | :-------------------------------------------------------
+     * `sphere_radius`   | Sphere radius [angstrom]
+     */
     Sphere::Sphere(InputMap &in, string prefix)  {
-      setradius( in.get<double>(prefix+"_radius", -1.0, "Spherical container radius (A)") );
+      setradius(
+          in.get<double>(prefix+"_radius", -1.0, "Spherical container radius (A)") );
     }
 
     void Sphere::setradius(double radius) {
@@ -106,23 +114,21 @@ namespace Faunus {
       return o.str();
     }
 
-    void Sphere::randompos(Point &m) {
-      double l=r2+1;
-      while (l>r2) {
-        m.x() = slp.randHalf()*diameter;
-        m.y() = slp.randHalf()*diameter;
-        m.z() = slp.randHalf()*diameter;
-        l=m.x()*m.x()+m.y()*m.y()+m.z()*m.z();
-      }
+    void Sphere::randompos(Point &a) {
+      do {
+        a.x() = (slp()-0.5)*diameter;
+        a.y() = (slp()-0.5)*diameter;
+        a.z() = (slp()-0.5)*diameter;
+      } while ( a.squaredNorm()>r2 );
     }
 
-    void Sphere::boundary(Point &m) const {}
+    void Sphere::boundary(Point &a) const {}
 
     bool Sphere::collision(const particle &a, collisiontype type) const {
-      return (a.x()*a.x()+a.y()*a.y()+a.z()*a.z() > r2) ? true:false;
+      return (a.squaredNorm()>r2) ? true:false;
     }
 
-    /*!
+    /**
      * The InputMap is scanned for the following parameters:
      *
      * Key               | Description
@@ -145,11 +151,8 @@ namespace Faunus {
         len.x()=in.get<double>("cuboid_xlen",0);
         len.y()=in.get<double>("cuboid_ylen",0);
         len.z()=in.get<double>("cuboid_zlen",0);
-      } else {
-        len.x()=cubelen;
-        len.y()=cubelen;
-        len.z()=cubelen;
-      }
+      } else
+        len.x()=len.y()=len.z()=cubelen;
       setlen(len);
     }
 
@@ -159,7 +162,7 @@ namespace Faunus {
         return false;
       len = l;                    // Cuboid sidelength
       len_half=l*0.5;             // half Cuboid sidelength
-      len_inv.x()=1/len.x();          // inverse Cuboid side length
+      len_inv.x()=1/len.x();      // inverse Cuboid side length
       len_inv.y()=1/len.y();
       len_inv.z()=1/len.z();
       return true;
@@ -243,21 +246,25 @@ namespace Faunus {
       name="Cuboid XY-periodicity";
     }
 
-    /*!
-     * \param length Length of the Cylinder (angstrom)
-     * \param radius Radius of the Cylinder (angstrom)
+    /**
+     * @param length Length of the Cylinder (angstrom)
+     * @param radius Radius of the Cylinder (angstrom)
      */
     Cylinder::Cylinder(double length, double radius) {
       init(length, radius);
     }
 
-    /*!
-     * The inputmap is searched for the keywords:
-     * \li \c cylinder_len (along z) [A]
-     * \li \c cylinder_radius [A]
+    /**
+     * The InputMap is scanned for the following parameters:
+     *
+     * Key               | Description
+     * :---------------- | :-------------------------------------------------------
+     * `cylinder_len`    | Cylinder length [angstrom]
+     * `cylinder_radius` | Cylinder radius [angstrom] 
      */
     Cylinder::Cylinder(InputMap &in) {
-      init( in.get<double>("cylinder_len", 0), in.get<double>("cylinder_radius", 0) );
+      init(
+          in.get<double>("cylinder_len", 0), in.get<double>("cylinder_radius", 0) );
     }
 
     void Cylinder::init(double length, double radius) {
@@ -429,102 +436,6 @@ namespace Faunus {
       cout << " timeout!\n";
       assert(!"Timeout - found no space for particle(s).");
       return false;
-    }
-
-    VectorRotate::~VectorRotate() {}
-
-    /*!
-     * \param geo Simulation geometry
-     * \param beg Starting point of line to rotate around - typically a molecular mass center
-     * \param end Ending point of line to rotate around
-     * \param angle Rotation angle [rad]
-     */
-    void VectorRotate::setAxis(Geometrybase &geo, const Point &beg, const Point &end, double angle) {
-      assert(&geo!=nullptr);
-      geoPtr=&geo;
-      origin=beg;
-      u=end-beg;
-      geo.boundary(u);
-      u=u*(1/geo.dist(beg,end));
-      cosang=cos(angle);
-      sinang=sin(angle);
-      e1mcox=(1.-cosang)*u.x();
-      e1mcoy=(1.-cosang)*u.y();
-      e1mcoz=(1.-cosang)*u.z();
-    }
-
-    double VectorRotate::getAngle() const { return std::acos(cosang); }
-
-    /*!
-     * \brief Same as rotate(const Point) but kept for compatibility
-     * \todo remove
-     Point VectorRotate::rotate(const Geometrybase &geo, Point p) const {
-     return rotate(p);
-     }
-     */
-
-    /*!
-     * Rotate point around axis specified above.
-     * \param p Vector to rotate
-     */
-    Point VectorRotate::rotate(Point p) const {
-      assert(&geoPtr!=nullptr);
-      Point b(p-origin);
-      geoPtr->boundary(b);           // Apply boundary conditions
-      double eb=u.x()*b.x() + u.y()*b.y() + u.z()*b.z();
-      p.x()=e1mcox*eb+cosang*b.x()+sinang*(u.y()*b.z() - u.z()*b.y()) + origin.x();
-      p.y()=e1mcoy*eb+cosang*b.y()+sinang*(u.z()*b.x() - u.x()*b.z()) + origin.y();
-      p.z()=e1mcoz*eb+cosang*b.z()+sinang*(u.x()*b.y() - u.y()*b.x()) + origin.z();
-      geoPtr->boundary(p);
-      return p;
-    }
-
-    Point VectorRotate::operator()(const Point &p) const {
-      return rotate(p);
-    }
-
-    /*!
-     * \brief Quaternion rotation
-     */
-    void QuaternionRotate::setAxis(Geometrybase &geo, const Point &beg, const Point &end, double angle) {
-      assert(&geo!=nullptr);
-      assert( abs(end.len()-1)<1e-7 && "Unit vector required!!");
-      geoPtr=&geo;
-      double sinanghalf = sin(angle*0.5);
-      q.x=end.x()*sinanghalf;
-      q.y=end.y()*sinanghalf;
-      q.z=end.z()*sinanghalf;
-      q.w=cos(angle*0.5);
-      /*generate quaternion variables for rotation*/
-      double t2 =  q.w * q.x;
-      double t3 =  q.w * q.y;
-      double t4 =  q.w * q.z;
-      double t5 = -q.x * q.x;
-      double t6 =  q.x * q.y;
-      double t7 =  q.x * q.z;
-      double t8 = -q.y * q.y;
-      double t9 =  q.y * q.z;
-      double t10 = -q.z * q.z;
-
-      d1 = t8 + t10;
-      d2 = t6 - t4;
-      d3 = t3 + t7;
-      d4 = t4 + t6;
-      d5 = t5 + t10;
-      d6 = t9 - t2;
-      d7 = t7 - t3;
-      d8 = t2 + t9;
-      d9 = t5 + t8;
-    }
-
-    Point QuaternionRotate::rotate(Point p) const {
-      double newx = 2.0 * ( d1*p.x() + d2*p.y() + d3*p.z() ) + p.x();
-      double newy = 2.0 * ( d4*p.x() + d5*p.y() + d6*p.z() ) + p.y();
-      double newz = 2.0 * ( d7*p.x() + d8*p.y() + d9*p.z() ) + p.z();
-      p.x() = newx;
-      p.y() = newy;
-      p.z() = newz;
-      return p;
     }
 
     /*!
@@ -874,7 +785,7 @@ namespace Faunus {
     }
 
 
-    /*CPSC................................................................................*/
+    /*CPSC................*/
 
     /*!
       \brief Calculates intersections of sherocylinder2 with a cylindrical patch of spherocylinder1 and return them (CPSC)
@@ -1013,10 +924,11 @@ namespace Faunus {
       return intrs;
     }
 
-    /*CPSC................................................................................*/
+    /*CPSC..............*/
 
-    /*!
-      \brief Finds intersections of plane defined by vector "w_vec" and if they are in cylindrical patch then returns number of them (CPSC)
+    /**
+      @brief Finds intersections of plane defined by vector "w_vec"
+      and if they are in cylindrical patch then returns number of them (CPSC)
       */
     int find_intersect_planec(const CigarParticle &part1, const CigarParticle &part2, 
         const Point &r_cm, const Point &w_vec, double rcut, double cospatch, double intersections[5])
@@ -1056,11 +968,6 @@ namespace Faunus {
       }
       return intrs;
     }
-
-
-
-
-
 
   }//namespace geometry
 

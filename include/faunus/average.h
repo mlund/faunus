@@ -1,6 +1,5 @@
 #ifndef FAU_AVERAGE_H
 #define FAU_AVERAGE_H
-//%template(average_dbl) average<double>;
 
 #ifndef SWIG
 #include "faunus/common.h"

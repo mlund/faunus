@@ -13,10 +13,8 @@ namespace Faunus {
 
     class EquilibriumEnergy;
 
-    /*!
-     * \brief  Class for implicit titration of species with fixed chemical potential.
-     * \author Mikael Lund and Chris Evers
-     * \date   Malmo, October 2010
+    /**
+     * @brief  Class for implicit titration of species with fixed chemical potential.
      *
      * Consider the dissociation process AX=A+X. This class will locate
      * all species of type AX and A and make a MC swap move between them.
@@ -24,21 +22,25 @@ namespace Faunus {
      * (activity). The titrating species, their dissociation constants
      * and the chemical potential of the titrant are read from an input file with
      * this format:
-     * \code 
-     * Process type_AX type_A pKd pX
-     * \endcode
-     * where pKd and pX are the negative logarithms of the dissociation constant
+     *
+     *     Process type_AX type_A pKd pX
+     *
+     * where `pKd` and `pX` are the negative logarithms of the dissociation constant
      * and the activity of X, respectively. Make sure the standard states (units) are
      * consistent. For example, for proton titration of the phosphate ion one would
      * use the following input (pH 7):
-     * \code
-     * Process H3PO4 H2PO4   2.12    7
-     * Process H2PO4 HPO4    7.21    7
-     * Process HPO4  PO4     12.67   7
-     * \endcode
-     * All species and their properties must be defined in the faunatoms.dat
-     * file before initializing this class.
-     */
+     *
+     *     Process H3PO4 H2PO4   2.12    7
+     *     Process H2PO4 HPO4    7.21    7
+     *     Process HPO4  PO4     12.67   7
+     *
+     * All species and their properties must be defined in `AtomTypes` before
+     * initializing this class.
+     *
+     * @todo Read activity from `AtomTypes` instead of process file
+     * @author Mikael Lund and Chris Evers
+     * @date Malmo, October 2010
+      */
     class EquilibriumController {
       public:
         friend class EquilibriumEnergy;
@@ -77,16 +79,21 @@ namespace Faunus {
         double avgcharge(const p_vec&, int&);    //!< Print average charges of process i
     };
 
-    /*!
-     * \brief Energy class for implicit titration of species to be used with Move::SwapMove.
+    /**
+     * @brief Energy class for implicit titration of species
+     *        used with Move::SwapMove.
+     *
+     *  This is a Hamiltonian for swapping atomic species according
+     *  to their chemical potential and equilibrium constant as
+     *  explained in `EquilibriumController`.
      */
     class EquilibriumEnergy : public Energybase {
       private:
         string _info();
       protected:
-        std::map<particle::Tid, double> energymap;       //!< Map of intrinsic energy for titratable sites
+        std::map<particle::Tid, double> energymap;//!< Intrinsic site energy
       public:
-        EquilibriumController eq;                //!< Process controller
+        EquilibriumController eq;                 //!< Process controller
         EquilibriumEnergy(InputMap&);
         double i_internal(const p_vec&, int);
         double g_internal(const p_vec&, Group&);
@@ -97,11 +104,12 @@ namespace Faunus {
 
   namespace Move {
 
-    /*!
-     * \brief Move for swapping species types - i.e. implicit titration
+    /**
+     * @brief Move for swapping species types - i.e. implicit titration
      *
-     * Upon construction this class will add an instance of Energy::EquilibriumEnergy
-     * to the Hamiltonian. For details about the titration procedure see Energy::EquilibriumController.
+     * Upon construction this class will add an instance of
+     * Energy::EquilibriumEnergy to the Hamiltonian. For details
+     * about the titration procedure see Energy::EquilibriumController.
      */
     class SwapMove : public Movebase {
       private:
@@ -121,22 +129,26 @@ namespace Faunus {
         void applycharges(p_vec &); 
     };
 
-    /*!
-     * \brief As SwapMove but Minimizes Short Ranged interactions within a molecule upon swapping
+    /**
+     * @brief As SwapMove but Minimizes Short Ranged interactions
+     *        within a molecule upon swapping
      *
-     * Before calculating dU of attempted swap move, radii on particles within the SAME group are
-     * set to minus radius of the swapped particle and hydrophobicity is set to false.
-     * This to minimize large interactions in molecules with overlapping particles - i.e LJ will be zero.
-     * If can also be used to avoid internal hydrophobic interactions in rigid groups upon swapping
+     * Before calculating dU of an attempted swap move, radii on
+     * particles within the SAME group are set to minus radius of
+     * the swapped particle and hydrophobicity is set to false.
+     * This to minimize large interactions in molecules with overlapping
+     * particles - i.e LJ will be zero. If can also be used to avoid
+     * internal hydrophobic interactions in rigid groups upon swapping
      * between hydrophobic and non-hydrophobic species.
-     * Group information is found in Space::g and to avoid energy drifts by ignoring hydrophobic interactions
-     * internally in groups the Energy::EnergyRest is used to collect the missing contribution to dU.
+     * Group information is found in Space::g and to avoid energy drifts by
+     * ignoring hydrophobic interactions internally in groups the
+     * Energy::EnergyRest is used to collect the missing contribution to dU.
      */
     class SwapMoveMSR : public SwapMove {
       private:
         std::map<int, double> radiusbak;    // backup for radii
         std::map<int, bool> hydrophobicbak; // backup for hydrophobic state
-        Energy::EnergyRest potrest; // dummy energy class for storing missing contributions to dU in energy drift calc.
+        Energy::EnergyRest potrest; // dummy energy class missing contributions to dU in energy drift calc.
         double _energyChange();
         void modify();
         void restore();

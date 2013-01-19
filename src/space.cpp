@@ -94,11 +94,13 @@ namespace Faunus {
     return g;
   }
 
-  /*!
-   * \param a Particle to insert
-   * \param i Insert position in particle vector. Old i will be pushed forward. Default is -1 = end of vector.
+  /**
+   * @param a Particle to insert
+   * @param i Insert position in particle vector. Old i will be pushed forward.
+   *          Default is -1 = end of vector.
    *
-   * This will insert a particle in both \c p and \c trial vectors and expand or push forward any enrolled groups.
+   * This will insert a particle in both `p` and `trial` vectors and
+   * expand or push forward any enrolled groups.
    */
   bool Space::insert(const particle &a, int i) {
     if ( i==-1 || i>(int)p.size() ) {
@@ -113,16 +115,13 @@ namespace Faunus {
       if ( gj->front() > i ) gj->setfront( gj->front()+1  ); // gj->beg++;
       if ( gj->back() >= i ) gj->setback( gj->back()+1 );    //gj->last++; // +1 is a special case for adding to the end of p-vector
     }
-    //cout << "!=" << i << endl;
-    //for (auto gj : g)
-    //  cout << *gj << "     " << gj->size() << endl;
     return true;
   }
 
-  /*!
-   * \param atomname Name if atom to intert
-   * \param n Number of atoms to insert
-   * \param key Ignored for now -- overlap check is always performed
+  /**
+   * @param atomname Name if atom to intert
+   * @param n Number of atoms to insert
+   * @param key Ignored for now -- overlap check is always performed
    */
   bool Space::insert(string atomname, int n, keys key) {
     particle a;
@@ -203,9 +202,11 @@ namespace Faunus {
     return false;
   }
 
-  /*!
-   * \param file Filename
-   * \param key If set to RESIZE the \c p and \c trial will be expanded if they do not match the file (for Grand Canonical MC)
+  /**
+   * @param file Filename
+   * @param key If set to `RESIZE`, `p` and `trial` will be
+   *        expanded if they do not match the file
+   *        (for Grand Canonical MC)
    */
   bool Space::load(string file, keys key) {
     using namespace textio;
@@ -248,26 +249,30 @@ namespace Faunus {
     return false;
   }
 
-  /*!
-   * Call to this function is optional and may provide better handling of memory in cases
-   * where the maximum number of particles in the system is known. This is done by reserving
-   * the required amount of memory so that dynamic reallocation is avoided upon vector expansion.
-   * Calls to this function is best made immediately after Space construction, but can be safely
-   * called at any time.
+  /**
+   * Call to this function is *optional* and may provide better
+   * handling of memory in cases where the maximum number of
+   * particles in the system is known.
+   * This is done by reserving the required amount of memory so
+   * that dynamic reallocation is avoided upon vector expansion.
+   * Calls to this function is best made immediately after Space
+   * construction, but can be safely called at any time.
    */
   void Space::reserve(int MaxNumberOfParticles) {
     p.reserve(MaxNumberOfParticles);
     trial.reserve(MaxNumberOfParticles);
   }
 
-  /*!
-   * This will register a new group in the Space. If already found, nothing is added. In addition, the
-   * following is performed each time a new group is enroller:
-   * \li The group mass center is re-calculated and set.
-   * \li Trial vector is synched with the main (p) particle vector.
+  /**
+   * This will register a new group in the Space. If already found,
+   * nothing is added. In addition, the following is performed each
+   * time a new group is enroller:
    *
-   * \param newgroup Group to enroll (pointer is saved)
-   * \returns Position of the newgroup in the group list.
+   * - The group mass center is re-calculated and set.
+   * - Trial vector is synched with the main (`p`) particle vector.
+   *
+   * @param newgroup Group to enroll (pointer is saved)
+   * @returns Position of the newgroup in the group list.
    */
   int Space::enroll(Group &newgroup) {
     for (size_t i=0; i<g.size(); ++i)
@@ -306,12 +311,14 @@ namespace Faunus {
     return o.str();
   }
   
-  /*!
-   This will displace the whole system by a vector while respecting boundary conditions of the
-   simulation container. Group mass centers are also updated and the routine can be used to
-   keep certain groups at a particular, absolute position. Applying this function usually does not
-   cause an energy change unless the Hamiltonian depends on absolute positions (for example
-   electric potentials from planar surfaces).
+  /**
+   * This will displace the whole system by a vector while
+   * respecting boundary conditions of the simulation container.
+   * Group mass centers are also updated and the routine can be used to
+   * keep certain groups at a particular, absolute position.
+   * Applying this function usually does not cause an energy change
+   * unless the Hamiltonian depends on absolute positions (for example
+   * electric potentials from planar surfaces).
    */
   void Space::displace(const Point &v) {
     for (auto i : g) {

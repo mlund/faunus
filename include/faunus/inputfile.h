@@ -7,22 +7,19 @@
 
 namespace Faunus {
 
-  /*!
-   * \brief Retrieve parameters from a formatted input file
-   * \author Mikael Lund
-   * \todo How about "yes"/"no" strings for boolean parameters?
+  /**
+   * @brief Retrieve parameters from a formatted input file
    *
-   * The input file is expected to have the following
-   * format:
-   * \li  KEYWORD VALUE (space separated)
+   * The input file must have this format:
    *
-   * Blank lines or lines containing [ or # are ignored.
+   * -  `KEYWORD` `VALUE` (space separated)
+   *
+   * Blank lines or lines containing `[` or `#` are ignored.
    *
    * Example:
-   * \code
-   * InputMap in("myinput.in");
-   * double T = in.get<double>("temperature", 298.15);
-   * \endcode
+   *
+   *     InputMap in("myinput.in");
+   *     double T = in.get<double>("temperature", 298.15);
    */
   class InputMap {
     private:
@@ -52,28 +49,28 @@ namespace Faunus {
           std::istringstream i( map[key] );
           i >> fallback;
         }
-        //else 
-        //  add<T>(key, fallback, infostring);
         return fallback;
       }
   };
 
-  /*!
-   * \brief Class for checking generated output against stored data
-   * \author Mikael Lund
+  /**
+   * @brief Class for checking generated output against stored data
    *
    * This class is used to test generated output by comparing against
-   * a database file generated for a "stable" run that are known to work -
+   * a database file generated for a "stable" run, known to work -
    * a reference system.
    * The input file passed to the constructor is expected to have the following
    * keywords:
-   * format:
-   * \li \c test_stable - Specifies if the system is "stable" or need testing.
-   * \li \c test_file   - Name of test file to load (if unstable) or generate (if stable).
    *
-   * To check a value, simply call unittest(name,value,precision%). If stable==true this will generate
-   * a new reference testfile. If stable==false this will check the given value against the
+   * - `test_stable` Boolean for state. Default: NO = `unstable`
+   * - `test_file`   Name of test file to load (if `unstable`) or
+   *                 generate (if `stable`).
+   *
+   * To check a value, simply call unittest(name,value,precision%).
+   * If `stable==true` this will generate a new reference testfile.
+   * If `stable==false` this will check the given value against the
    * loaded testfile.
+   *
    */
   class UnitTest : private InputMap {
     private:
@@ -85,8 +82,8 @@ namespace Faunus {
       UnitTest(string, bool=true);  //!< Constructor
       UnitTest(InputMap&);          //!< Constructor using InputMap
       bool operator()(const string&, double, double=0.1); //!< Check or set value
-      string info(); //!< Information about passed and failed tests
-      int numFailed() const; //!< Return number of failed tests - i.e. zero if flawless
+      string info(); //!< Info on passed and failed tests
+      int numFailed() const; //!< Number of failed tests - i.e. zero if flawless
   };
 
 }//namespace

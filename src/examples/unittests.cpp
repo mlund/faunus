@@ -46,9 +46,6 @@ int main() {
     checkParticle<PointParticle>();
     checkParticle<DipoleParticle>();
     checkParticle<CigarParticle>();
-#ifdef FAU_HYPERSPHERE
-    checkParticle<HyperParticle>();
-#endif
   }
 
   // check infinity
@@ -128,31 +125,7 @@ int main() {
 
   // check vector rotation
   {
-    Geometry::VectorRotate vrot;
-    Geometry::Cylinder geo(1000,1000);
-    Point a(0,0,0);
-    a.x()=1.;
-    vrot.setAxis( geo, Point(0,0,0), Point(0,1,0), pc::pi/2); // rotate around y-axis
-    a = vrot(a); // rot. 90 deg.
-    assert( eq(a.x(),0,1e-8) && "Vector rotation failed");
-    a = vrot(a); // rot. 90 deg.
-    assert( eq(a.x(),-1,1e-8) && "Vector rotation failed");
-  }
-
-  {
     Geometry::QuaternionRotate qrot;
-    Geometry::Cylinder geo(1000,1000);
-    Point a(0,0,0);
-    a.x()=1.;
-    qrot.setAxis( geo, Point(0,0,0), Point(0,1,0), pc::pi/2); // rotate around y-axis
-    a = qrot(a); // rot. 90 deg.
-    assert( eq(a.x(),0,1e-8) && "Vector rotation failed");
-    a = qrot(a); // rot. 90 deg.
-    assert( eq(a.x(),-1,1e-8) && "Vector rotation failed");
-  }
-
-  {
-    Geometry::QuaternionRotateEigen qrot;
     Geometry::Cylinder geo(1000,1000);
     Point a(0,0,0);
     a.x()=1.;

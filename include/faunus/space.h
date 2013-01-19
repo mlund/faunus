@@ -8,15 +8,12 @@
 
 namespace Faunus {
 
-  /*!
-   * \brief Contains the particle vector and takes care of particle insertion and deletion.
+  /**
+   * @brief Place holder for particles and groups
    *
-   * Every simulation must have a Space instance as this contains the particles. While instantiating
-   * Space you must provide a valid Geometry which will be stored as a pointer. Typically the Geometrybase
-   * is owned by some Energybase.
-   * Space also bookkeeps groups in the system and this information can be requested by classes that needs
-   * to know about all possible groups -- two such examples are NmuT and NPT simulations that need to
-   * insert and re-scale mass centra, for example.
+   * Every simulation must have a `Space` instance as this contains
+   * the particles and information about groups (particle ranges).
+   * `Space` must also be given a valid reference to a `Geomebrybase`.
    */
   class Space {
     protected:
@@ -25,16 +22,16 @@ namespace Faunus {
       slump slp;
       bool overlap_container() const;
       bool overlap() const;
-      bool overlap(const particle&) const;            //!< Check for hardspheres overlap with particle
-      bool checkSanity();                             //!< Do a number of checks to see if eveything is OK
-      std::vector<Group*> g;                          //!< Pointers to all groups in the system (sum must match particle size!)
+      bool overlap(const particle&) const;   //!< Check hardspheres overlap with particle
+      bool checkSanity();                    //!< Check group length and vector sync
+      std::vector<Group*> g;                 //!< Pointers to ALL groups in the system
 
     public:
       enum keys {OVERLAP,NOOVERLAP,RESIZE,NORESIZE};
-      Geometry::Geometrybase* geo;               //!< Pointer to a valid Geometry (!=nullptr)
-      p_vec p;                                   //!< The main particle vector
+      Geometry::Geometrybase* geo;               //!< Pointer to a geometry
+      p_vec p;                                   //!< Main particle vector
       p_vec trial;                               //!< Trial particle vector. 
-      std::vector<Group*>& groupList();          //!< Return vector with pointers to all Groups
+      std::vector<Group*>& groupList();          //!< Vector with pointers to all groups
 
       Space(Geometry::Geometrybase&);
       virtual ~Space();
@@ -46,12 +43,12 @@ namespace Faunus {
       bool insert(const particle&, int=-1);           //!< Insert particle at pos n (old n will be pushed forward).
       bool insert(string, int, keys=NOOVERLAP); 
       bool erase(int);                                //!< Remove n'th particle
-      int enroll(Group&);                             //!< Add group pointer to g vector
+      int enroll(Group&);                             //!< Store group pointer
       void reserve(int);                              //!< Reserve space for particles for better memory efficiency
 
-      double charge() const;                          //!< Sum all charges in particle vector
-      string info();                                  //!< Print information string
-      void displace(const Point&);                    //!< Displace whole system by a vector
+      double charge() const;                          //!< Sum all charges
+      string info();                                  //!< Information string
+      void displace(const Point&);                    //!< Displace system by a vector
   };
 } //namespace
 #endif

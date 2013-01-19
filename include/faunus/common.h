@@ -75,7 +75,7 @@ namespace Faunus {
   class RandomBase;
   class Space;
 
-  class Point;
+  //class Point;
   class PointParticle;
   class CigarParticle;
 

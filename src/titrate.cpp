@@ -30,14 +30,13 @@ namespace Faunus {
       mu_AX = mu_A + mu_X - ddG;
     }
 
-    /*!
-     * Returns true if the particle either matches AX or A.
+    /**
+     * Returns `true` if the particle either matches AX or A.
      */
     bool EquilibriumController::processdata::one_of_us(const particle::Tid &id) {
-      if (id!=id_AX)
-        if (id!=id_A)
-          return false;
-      return true;
+      if (id==id_AX || id==id_A)
+        return true;
+      return false;
     }
 
     /*!
@@ -46,17 +45,16 @@ namespace Faunus {
      * no external interactions are accounted for (activity factors unity).
      */
     double EquilibriumController::processdata::energy(const particle::Tid &id) {
-      if (id==id_AX)
-        return mu_AX;
-      if (id==id_A)
-        return mu_A;
+      if (id==id_AX) return mu_AX;
+      if (id==id_A)  return mu_A;
       return 0;
     }
 
-    /*!
+    /**
      * This will swap the state of given particle from AX<->A and
      * return the energy change associated with the process.
-     * \note This will NOT swap particle radii nor masses!
+     *
+     * @note This will *NOT* swap particle radii nor masses!
      */
     double EquilibriumController::processdata::swap(particle &p) {
       double uold=energy(p.id);
@@ -73,10 +71,18 @@ namespace Faunus {
       return energy(p.id)-uold; // return intrinsic energy change
     }
 
-    /*!
-     * Constructor. Should be called when particles have been loaded into the container.
-     * Note that the particle charges, radii, weight etc. (save positions) will be reset
-     * to the default species values defined in the atoms class.
+    /**
+     * @brief Construct from `InputMap`.
+     *
+     * Call this *after* particles have been loaded into `Space`, i.e.
+     * typically just before starting the Markov chain. Also make
+     * sure that `AtomTypes` has been loaded with all atomic properties
+     * as these will be used to reset the charge, radii, weight etc.
+     * on all particles in the system.
+     *
+     * The `InputMap` is searched for:
+     *
+     * - `processfile` Name of process file
      */
     EquilibriumController::EquilibriumController(InputMap &in, string pfx) { 
       string prefix=pfx;
@@ -136,20 +142,25 @@ namespace Faunus {
      * in the sites vector.
      */
     void EquilibriumController::findSites(const p_vec &p) {
-      q.clear();
-      sites.clear();
-      for (size_t j=0; j<process.size(); j++)
-        process[j].cnt=0;
+      q.clear(); // clear average charge vector
+      sites.clear(); // empty sites vector
+      for (auto &prs : process)
+        prs.cnt=0;
+
+      int mismatch=0; // number of charge mismatches
       for (size_t i=0; i<p.size(); i++)
         for (size_t j=0; j<process.size(); j++)
           if ( process[j].one_of_us( p[i].id )) {
-            if ( abs(p[i].charge-atom[p[i].id].charge)>1e-9 )
-              cout << "Warning: Charge mismatch while searching for titratable sites ("
-                << atom[p[i].id].name << " " << i << ")" << endl;
+            if ( abs(p[i].charge-atom[p[i].id].charge)>1e-6 )
+              mismatch++;
             sites.push_back(i);
             process[j].cnt++;
             break; // no double counting of sites
           }
+      if (mismatch>0)
+        std::cerr
+          << "Warning: Found " << mismatch
+          << " mismatched charge(s) while searching for titratable sites.\n";
     }
 
     /*!
@@ -169,10 +180,11 @@ namespace Faunus {
         q[i] += p[i].charge;
     }
 
-    /*!
-     * This function will take the average charges from titrate::q
+    /**
+     * This function will take the average charges from `q`
      * and apply these to the specified particle vector. 
-     * \warning After this function you can no longer perform any
+     *
+     * @warning After this function you can no longer perform any
      *          titration steps. It is meant to be called before saving coordinates
      *          to disk, so as to include the partial charges of the system.
      */
@@ -186,7 +198,7 @@ namespace Faunus {
       return qtot;
     }
 
-    /*!
+    /**
      * This function gives the average charge for all particles which 
      * are titrated by process i, or -nan if no particles are part of process i
      */  
@@ -254,9 +266,6 @@ namespace Faunus {
 
     double EquilibriumEnergy::i_internal(const p_vec &p, int i) {
       return eq.intrinsicEnergy( p[i].id );
-      //if (energymap.find( p[i].id )!=energymap.end())
-      //  return energymap[ p[i].id ];
-      //return 0;
     }
 
     double EquilibriumEnergy::g_internal(const p_vec &p, Group &g) {
@@ -274,11 +283,12 @@ namespace Faunus {
 
   namespace Move {
 
-    /*!
-     * This will set up the swap move routines and the particles in the space are automatically
-     * searched for titratable sites. Before starting the titration the charge of titratable
-     * particles must match that loaded into Faunus::atoms -- this is also handled by the
-     * constructor.
+    /**
+     * This will set up swap move routines and search for
+     * titratable sites in `Space`.
+     * @warning This will use properties from `AtomTypes` to
+     *          override those already stored in the particle
+     *          vector.
      */
     SwapMove::SwapMove(
         InputMap &in,
@@ -291,14 +301,11 @@ namespace Faunus {
       ham.add(eqpot);
       ipart=-1;
       findSites(spc.p);
-      for (auto &i : eqpot.eq.sites ) { // make sure charges are in sync w. atom list
-        double newz=atom[ spc.p[i].id ].charge;
-        double oldz=spc.p[i].charge;
-        if ( abs(newz-oldz)>1e-6 ) {
-          cout << "SwapMove: Resetting charge on " << atom[ spc.p[i].id ].name << " " << i
-            << " from " << oldz << " to " << newz << endl;
-          spc.p[i].charge = spc.trial[i].charge = newz;
-        }
+
+      /* Sync particles with `AtomTypes` */
+      for (auto &i : eqpot.eq.sites ) {
+        spc.p[i] = atom[ spc.p[i].id ]; 
+        spc.trial[i] = spc.p[i];
       }
     }
 
@@ -308,17 +315,18 @@ namespace Faunus {
     }
 
     void SwapMove::_trialMove() {
-      int i=slp_global.rand() % eqpot.eq.sites.size();     // pick random titratable site
-      ipart=eqpot.eq.sites.at(i);                          // corresponding particle
+      int i=slp_global.rand() % eqpot.eq.sites.size(); // pick random site
+      ipart=eqpot.eq.sites.at(i);                      // and corresponding particle
       int k;
       do {
-        k=slp_global.rand() % eqpot.eq.process.size();               // pick random process..
-      } while (!eqpot.eq.process[k].one_of_us( spc->p[ipart].id ));  //   which matches particle j
-      eqpot.eq.process[k].swap( spc->trial[ipart] );       // change state and get intrinsic energy change
+        k=slp_global.rand() % eqpot.eq.process.size(); // pick random process..
+      } while (!eqpot.eq.process[k].one_of_us( spc->p[ipart].id )); //that match particle j
+      eqpot.eq.process[k].swap( spc->trial[ipart] ); // change state and get intrinsic energy change
     }
 
     double SwapMove::_energyChange() {
-      assert( spc->geo->collision(spc->p[ipart])==false && "An accepted particle collides with simulation container.");
+      assert( spc->geo->collision(spc->p[ipart])==false
+          && "Accepted particle collides with container");
       if (spc->geo->collision(spc->trial[ipart]))  // trial<->container collision?
         return pc::infty;
       return pot->i_total(spc->trial,ipart) - pot->i_total(spc->p,ipart);
@@ -334,18 +342,16 @@ namespace Faunus {
       spc->trial[ipart] = spc->p[ipart];
     }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-variable"
     double SwapMove::move() {
-      if (!run())
-        return 0;
       double du=0;
-      for (auto &n : eqpot.eq.sites )
-        du+=Movebase::move();
-      eqpot.eq.sampleCharge(spc->p);
+      if (run()) {
+        size_t i=eqpot.eq.sites.size();
+        while (i-->0)
+          du+=Movebase::move();
+        eqpot.eq.sampleCharge(spc->p);
+      }
       return du;
     }
-#pragma GCC diagnostic pop
 
     void SwapMove::applycharges(p_vec &p){
       eqpot.eq.applycharges(p);
@@ -388,8 +394,8 @@ namespace Faunus {
         if (g->find(ipart)) {  //   is ipart part of a group?
           for (auto i : *g)    //     if so, loop over that group
             if (i!=ipart) {    //       and ignore ipart
-              assert( abs(spc->p[i].radius-spc->trial[i].radius)<1e-9 && "Untouched radii must be in sync!" );
-              assert( spc->p[i].hydrophobic==spc->trial[i].hydrophobic && "Untouched particles changed.");
+              assert( abs(spc->p[i].radius-spc->trial[i].radius)<1e-9);
+              assert( spc->p[i].hydrophobic==spc->trial[i].hydrophobic);
 
               //radiusbak[i]         = spc->p[i].radius;
               //spc->p[i].radius     = -spc->p[ipart].radius;

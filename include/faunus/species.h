@@ -17,6 +17,7 @@ namespace Faunus {
     double sigma,      //!< LJ diameter [angstrom]
            eps,        //!< LJ epsilon [kJ/mol]
            radius,     //!< Radius [angstrom]
+           mu,         //!< Dipole momentscalar [eÅ]
            mw,         //!< Weight [g/mol]
            charge,     //!< Charge/valency [e]
            activity,   //!< Chemical activity [mol/l]
@@ -79,9 +80,10 @@ namespace Faunus {
    * `dprot`       | Rotational displacement parameter [degrees] (will be converted to radians)
    * `eps`         | Epsilon energy scaling commonly used for Lennard-Jones interactions etc. [kJ/mol] 
    * `hydrophobic` | Is the particle hydrophobic? [true/false]
+   * `mu`          | Dipole moment scalar [Debye]
    * `mw`          | Molecular weight [g/mol]
    * `patchtype`   | Patchtype for sphero-cylinders
-   * `q`           | Valency / partial charge number 
+   * `q`           | Valency / partial charge number [e]
    * `r`           | Radius = `sigma/2` [angstrom]
    * `sigma`       | `2*r` [angstrom] (overrides radius)
    *

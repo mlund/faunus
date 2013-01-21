@@ -87,7 +87,7 @@ In chronological order:
   Mikael Lund         Bjorn Persson       Martin Trulsson    
 Ondrej Marsalek     Christophe Labbez     Andre Teixeira     
   Anil Kurut           Chris Evers         Magnus Ullner      
- Robert Vacha         Axel Trulsson       Bjorn Stenqvist
+ Robert Vacha         Axel Thuresson      Bjorn Stenqvist
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Citing Faunus

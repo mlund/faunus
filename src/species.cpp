@@ -15,6 +15,7 @@ namespace Faunus {
     eps=0;
     hydrophobic=0;
     mean=0;
+    mu=0;
     mw=1.0;
     name="UNK";
     patchtype=0;  
@@ -60,6 +61,7 @@ namespace Faunus {
       a.dprot = json::value<double>(atom.second, "dprot", 0) * pc::pi / 180.;
       a.eps = json::value<double>(atom.second, "eps", 0);
       a.hydrophobic = json::value<bool>(atom.second, "hydrophobic", false);
+      a.mu = json::value<double>(atom.second, "mu", 0)*0.20819434; // Debye to eÅ
       a.mw = json::value<double>(atom.second, "Mw", 1.);
       a.charge = json::value<double>(atom.second, "q", 0);
       a.radius = json::value<double>(atom.second, "r", 0);

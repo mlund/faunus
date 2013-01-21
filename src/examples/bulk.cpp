@@ -10,7 +10,6 @@ int main() {
 
   InputMap mcp("bulk.input");         // open user input file
   MCLoop loop(mcp);                   // class for handling mc loops
-  FormatPQR pqr;                      // PQR structure file I/O
   EnergyDrift sys;                    // class for tracking system energy drifts
   UnitTest test(mcp);                 // class for unit testing
 
@@ -56,7 +55,7 @@ int main() {
   } // end of macro loop
 
   // save to disk
-  pqr.save("confout.pqr", spc.p); // final snapshot -- open in VMD, for example
+  FormatPQR().save("confout.pqr", spc.p); // final PQR snapshot for VMD etc.
   rdf_ab.save("rdf.dat");         // g(r) - not normalized!
   spc.save("state");              // final simulation state
 

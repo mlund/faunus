@@ -13,8 +13,6 @@ int main() {
   
   InputMap mcp("polymers.input");     // open user input file
   MCLoop loop(mcp);                   // class for handling mc loops
-  FormatPQR pqr;                      // PQR structure file I/O
-  FormatAAM aam;                      // AAM structure file I/O
   EnergyDrift sys;                    // class for tracking system energy drifts
   UnitTest test(mcp);                 // class for unit testing
 
@@ -43,9 +41,10 @@ int main() {
   double req    = mcp.get<double>("polymer_eqdist", 0);
   double k      = mcp.get<double>("polymer_forceconst", 0);
   for (auto &g : pol) {                                  // load polymers
+    FormatAAM aam;                                       // AAM structure file I/O
     aam.load(polyfile);
-    Geometry::FindSpace f;
-    f.find(*spc.geo, spc.p, aam.particles() );           // find empty spot in particle vector
+    Geometry::FindSpace().find(
+        *spc.geo, spc.p, aam.particles() );              // find empty spot in particle vector
     g = spc.insert( aam.particles() );                   // insert into space
     g.name="Polymer";
     spc.enroll(g);
@@ -114,8 +113,8 @@ int main() {
 
   // save to disk
   rdf.save("rdf_p2p.dat");
-  pqr.save("confout.pqr", spc.p);
   spc.save("state");
+  FormatPQR().save("confout.pqr", spc.p);
 
   // perform unit tests
   iso.test(test);

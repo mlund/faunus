@@ -7,7 +7,7 @@ molecular systems. Below is a brief overview of features:
 - Canonical, Grand Canonical, Isobaric-Isothermal statistical mechanical ensembles
 - General hamiltonian **parallel tempering** (temperature, screening length, bonds etc.)
 - 4D simulations on **hyperspheres**
-- **Anisotropic** particles (multipoles, sphero-cylinders)
+- **Anisotropic** atoms (multipoles, sphero-cylinders)
 - Ion titration moves (pKa prediction, Hofmeister effects etc.)
 - Highly expandable!
 - Free and open source (**GPL**)
@@ -87,7 +87,7 @@ In chronological order:
   Mikael Lund         Bjorn Persson       Martin Trulsson    
 Ondrej Marsalek     Christophe Labbez     Andre Teixeira     
   Anil Kurut           Chris Evers         Magnus Ullner      
- Robert Vacha         Axel Trulsson       Bjorn Stenqvist
+ Robert Vacha         Axel Thuresson      Bjorn Stenqvist
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Citing Faunus

@@ -28,11 +28,11 @@ namespace Faunus {
         R,                           //!< Molar gas constant [J/(K*mol)]
         Nav;                         //!< Avogadro's number [1/mol]
       static double lB(double);      //!< Bjerrum length [Aangstrom]
-      static double kT2kJ(double);   //!< kT/molecule -> kJ/mol
-      static double kJ2kT(double);   //!< kJ/mol -> kT/molecule
+      static double kT2kJ(double=1); //!< kT/molecule -> kJ/mol
+      static double kJ2kT(double=1); //!< kJ/mol -> kT/molecule
       static double T();             //!< Return temperature [K]
       static void setT(double);      //!< Set temperature [K]
-      static double D2eA(double);    //!< Debye to electron Angstrom
+      static double D2eA(double=1);  //!< Debye to electron Angstrom
   };
 
   typedef PhysicalConstants pc;      //!< Typedef for PhysicalConstants

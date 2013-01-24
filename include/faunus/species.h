@@ -89,13 +89,13 @@ namespace Faunus {
    *
    * Code example:
    *
-   *     AtomTypes a;
+   *     AtomMap a;
    *     a.include("atoms.json");       // load parameters
    *     double s=a["Na"].sigma;        // get LJ sigma for sodium
    *     particle p = a["Cl"];          // Copy properties to particle
    *     std::cout << a[p.id].activity; // Get property via particle id
    *
-   * Note that faunus currently has a global instance of AtomTypes,
+   * Note that faunus currently has a global instance of AtomMap,
    * simply named `atom`. This can be accessed from anywhere.
    *
    * If a non-JSON file is parsed, the loader attempts to use a file format
@@ -108,21 +108,27 @@ namespace Faunus {
    *     Atom  Cl      -1      2.200      0.4184       36       no
    *
    */
-  class AtomTypes {
+  class AtomMap {
     private:
       string filename;
       bool includeJSON(const string&);       //!< Load JSON file
     public:
-      AtomTypes();                           //!< Constructor - set UNK atom type (fallback)
+      AtomMap();                             //!< Constructor - set UNK atom type (fallback)
       std::vector<AtomData> list;            //!< List of atoms
       bool includefile(string);              //!< Append atom parameters from file
       bool includefile(InputMap&);           //!< Append atom parameters from file
       AtomData& operator[] (string);         //!< Name->data
       AtomData& operator[] (particle::Tid);  //!< Id->data
       string info();                         //!< Print info
-      void reset_properties(p_vec&);         //!< Reset particle properties according to particle id
+      
+      /** @brief Copy properties into particles vector. Positions are left untouched! */
+      template<typename TParticleVector>
+      void reset_properties(TParticleVector &pvec) const {
+        for (auto &i : pvec)
+          i = list.at( i.id );
+      }
   };
 
-  extern AtomTypes atom; //!< Global instance of AtomTypes - can be accessed from anywhere
+  extern AtomMap atom; //!< Global instance of AtomMap - can be accessed from anywhere
 }//namespace
 #endif

@@ -34,10 +34,10 @@ namespace Faunus {
      *     Process H2PO4 HPO4    7.21    7
      *     Process HPO4  PO4     12.67   7
      *
-     * All species and their properties must be defined in `AtomTypes` before
+     * All species and their properties must be defined in `AtomMap` before
      * initializing this class.
      *
-     * @todo Read activity from `AtomTypes` instead of process file
+     * @todo Read activity from `AtomMap` instead of process file
      * @author Mikael Lund and Chris Evers
      * @date Malmo, October 2010
       */

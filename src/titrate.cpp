@@ -76,7 +76,7 @@ namespace Faunus {
      *
      * Call this *after* particles have been loaded into `Space`, i.e.
      * typically just before starting the Markov chain. Also make
-     * sure that `AtomTypes` has been loaded with all atomic properties
+     * sure that `AtomMap` has been loaded with all atomic properties
      * as these will be used to reset the charge, radii, weight etc.
      * on all particles in the system.
      *
@@ -286,7 +286,7 @@ namespace Faunus {
     /**
      * This will set up swap move routines and search for
      * titratable sites in `Space`.
-     * @warning This will use properties from `AtomTypes` to
+     * @warning This will use properties from `AtomMap` to
      *          override those already stored in the particle
      *          vector.
      */
@@ -302,7 +302,7 @@ namespace Faunus {
       ipart=-1;
       findSites(spc.p);
 
-      /* Sync particles with `AtomTypes` */
+      /* Sync particles with `AtomMap` */
       for (auto &i : eqpot.eq.sites ) {
         spc.p[i] = atom[ spc.p[i].id ]; 
         spc.trial[i] = spc.p[i];

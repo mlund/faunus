@@ -24,31 +24,31 @@ namespace Faunus {
     variance=0;
   }
 
-  AtomTypes::AtomTypes() {
+  AtomMap::AtomMap() {
     AtomData a;
     a.id=list.size();
     a.name="UNK";
     list.push_back(a);
   }
 
-  AtomData & AtomTypes::operator[] (particle::Tid i) { return list.at(i); }
+  AtomData & AtomMap::operator[] (particle::Tid i) { return list.at(i); }
 
-  AtomData & AtomTypes::operator[] (string s) {
+  AtomData & AtomMap::operator[] (string s) {
     for (auto &l_i : list)
       if (s==l_i.name)
         return l_i;
     return list.at(0);
   }
 
-  /*!
-   * This will look for the keyword \c atomlist in the InputMap and
+  /**
+   * This will look for the keyword `atomlist` in the InputMap and
    * use value as the filename.
    */
-  bool AtomTypes::includefile(InputMap &in) {
+  bool AtomMap::includefile(InputMap &in) {
     return includefile( in.get<string>("atomlist",filename) );
   }
 
-  bool AtomTypes::includeJSON(const string& file) {
+  bool AtomMap::includeJSON(const string& file) {
     int n=0;
     filename=file;
     auto j=json::open(file);
@@ -58,10 +58,10 @@ namespace Faunus {
       a.name = atom.first;
       a.activity = json::value<double>(atom.second, "activity", 0);
       a.dp = json::value<double>(atom.second, "dp", 0);
-      a.dprot = json::value<double>(atom.second, "dprot", 0) * pc::pi / 180.;
+      a.dprot = json::value<double>(atom.second, "dprot", 0) * pc::pi / 180.; // deg->rads
       a.eps = json::value<double>(atom.second, "eps", 0);
       a.hydrophobic = json::value<bool>(atom.second, "hydrophobic", false);
-      a.mu = json::value<double>(atom.second, "mu", 0)*0.20819434; // Debye to eÅ
+      a.mu = json::value<double>(atom.second, "mu", 0)*pc::D2eA(); // Debye to eÅ
       a.mw = json::value<double>(atom.second, "Mw", 1.);
       a.charge = json::value<double>(atom.second, "q", 0);
       a.radius = json::value<double>(atom.second, "r", 0);
@@ -75,12 +75,12 @@ namespace Faunus {
     return (n>0) ? true : false;
   }
 
-  /*!
+  /**
    * This will automatically detect if the file is a JSON
    * file and call includeJSON(). If not, the old restricted
    * file format is used.
    */
-  bool AtomTypes::includefile(string file) {
+  bool AtomMap::includefile(string file) {
     // is it a JSON file?
     if (file.substr(file.find_last_of(".") + 1) == "json")
       return includeJSON(file);
@@ -109,7 +109,7 @@ namespace Faunus {
     return false;
   }
 
-  string AtomTypes::info() {
+  string AtomMap::info() {
     using namespace textio;
     char w=25;
     if (filename.empty())
@@ -128,11 +128,6 @@ namespace Faunus {
     return o.str();
   }
 
-  void AtomTypes::reset_properties(p_vec &p) {
-    for (auto &p_i : p )
-      p_i = list.at( p_i.id );
-  }
-
-  AtomTypes atom; // Instantiate global copy
+  AtomMap atom; // Instantiate global copy
 
 }//namespace

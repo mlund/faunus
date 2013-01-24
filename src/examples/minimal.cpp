@@ -47,7 +47,7 @@ int main() {
  *     a full list of pair potentials, check out the Faunus::Potential namespace.
  *
  * - **line 6**
- *   - Tell the atom objects (a global instance of Faunus::AtomTypes) to load atomic properties
+ *   - Tell the atom objects (a global instance of Faunus::AtomMap) to load atomic properties
  *     from the file \ref minimal_json.
  *
  * - **line 7**
@@ -95,7 +95,7 @@ int main() {
 *
 * minimal.json    {#minimal_json}
 * ------------
-* This input file contains properties of atoms as described in Faunus::AtomTypes. For this particular
+* This input file contains properties of atoms as described in Faunus::AtomMap. For this particular
 * case we set the charge ("q"), sigma ("sigma"), and displacement parameter ("dp").
 * \include minimal.json
 *

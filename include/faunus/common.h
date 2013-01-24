@@ -77,13 +77,17 @@ namespace Faunus {
 
   //class Point;
   class PointParticle;
+  class DipoleParticle;
   class CigarParticle;
 
-#ifdef CIGARPARTICLE
+#if defined(CIGARPARTICLE)
   typedef CigarParticle particle;
+#elif defined(DIPOLEPARTICLE)
+  typedef DipoleParticle particle;
 #else
   typedef PointParticle particle;
 #endif
+
   typedef std::vector< particle, Eigen::aligned_allocator<particle> > p_vec;
 
   // FUNCTORS

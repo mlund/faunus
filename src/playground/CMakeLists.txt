@@ -1,3 +1,17 @@
+#----- function to add a generic C++ example (CIGARPARTICLES) -----
+function( fau_dipoleexample tname tdir tsrc )
+  add_executable( ${tname} "${tdir}/${tsrc}" )
+  set_source_files_properties( "${tdir}/${tsrc}" PROPERTIES LANGUAGE CXX)
+  set_target_properties(${tname}
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${tdir}/"
+    COMPILE_DEFINITIONS "DIPOLEPARTICLE"
+    EXCLUDE_FROM_ALL TRUE )
+  target_link_libraries(${tname} libdipolefaunus)
+  install (DIRECTORY "${tdir}"
+           DESTINATION "share/faunus/examples"
+           PATTERN ".svn" EXCLUDE)
+endfunction( fau_dipoleexample )
+
 # Mikael's playground
 fau_example(mlund-cosan "./mlund" cosan.cpp)
 fau_example(mlund-test "./mlund" test.cpp)
@@ -39,7 +53,7 @@ fau_cigarexample(cigar-npt "./vacha" cigar-npt.cpp)
 set_target_properties( cigar-npt PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
 
 # Stenqvist playground
-fau_example(stenqvist-nemo "./stenqvist" nemo.cpp)
+fau_dipoleexample(stenqvist-nemo "./stenqvist" nemo.cpp)
 set_target_properties(stenqvist-nemo PROPERTIES OUTPUT_NAME "nemo")
 
 # Axels playground

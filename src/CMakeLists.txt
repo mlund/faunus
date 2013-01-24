@@ -7,7 +7,7 @@ set(objs
   titrate
   drift energy faunus geometry group inputfile io mcloop move
   physconst potentials slump space species textio analysis
-  mpi scatter)
+  mpi)
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 #----- xdrfile static library for gromacs output -----

@@ -109,6 +109,14 @@ set_target_properties(libcigarfaunus PROPERTIES
   )
 target_link_libraries(libcigarfaunus xdrfile ${LINKLIBS})
 
+# dynamic for dipolar particles
+add_library(libdipolefaunus SHARED ${objs})
+set_target_properties(libdipolefaunus PROPERTIES
+  OUTPUT_NAME dipolefaunus
+  COMPILE_DEFINITIONS "DIPOLEPARTICLE"
+  EXCLUDE_FROM_ALL TRUE
+  )
+target_link_libraries(libdipolefaunus xdrfile ${LINKLIBS})
 
 # dynamic for hypersphere
 add_library(libhyperfaunus SHARED ${objs})

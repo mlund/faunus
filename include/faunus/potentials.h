@@ -180,6 +180,9 @@ namespace Faunus {
                 return pc::infty;
               return 0;
             }
+            inline double operator() (const particle &a, const particle &b, const Point &r) const {
+              return operator()(a,b,r.squaredNorm());
+            }
             string info(char w);
         };
 
@@ -984,12 +987,10 @@ namespace Faunus {
               CombinedPairPotential(InputMap &in, string pfx1, string pfx2) : first(in,pfx1), second(in,pfx2) {
                 name=first.name+"+"+second.name;
               }
-              inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-                return first(a,b,r2) + second(a,b,r2);
-              }
-              inline Point force(const particle &a, const particle &b, double r2, Point p) FOVERRIDE {
-                return first.force(a,b,r2,p) + second.force(a,b,r2,p);
-              }
+              template<typename Tparticle, typename Tdistance>
+                inline double operator() (const Tparticle &a, const Tparticle &b, const Tdistance &r2) const {
+                  return first(a,b,r2) + second(a,b,r2);
+                }
               string info(char w=20) { return first.info(w) + second.info(w); }
               void test(UnitTest &t) {
                 first.test(t);

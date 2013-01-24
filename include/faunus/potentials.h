@@ -130,7 +130,7 @@ namespace Faunus {
             string _brief();
           public:
             CosAttract(InputMap&, string="cosattract_"); // Constructor from InputMap
-            inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+            inline double operator() (const PointParticle &a, const PointParticle &b, double r2) const FOVERRIDE {
               if (r2<rc2)
                 return -eps;
               if (r2>rcwc2)
@@ -141,18 +141,17 @@ namespace Faunus {
             string info(char); // More verbose information
         };
 
-        /*!
-         * \brief Finite Extensible nonlinear elastic (FENE) potential
-         * \details This is an anharmonic bonding potential with the form:
+        /**
+         * @brief Finite Extensible nonlinear elastic (FENE) potential
+         * @details This is an anharmonic bonding potential with the form:
          * \f[
          *     \beta u(r) = -\frac{k r_0^2}{2}\ln \left [ 1-(r/r_0)^2 \right ]
          * \f]
          * for $r<r_0$, otherwise infinity. The input parameters read by InputMap
          * are as follows:
-         * \li \c fene_stiffness Bond stiffness, k [kT]
-         * \li \c fene_maxsep Maximum separation, r_0 [angstrom]
-         *
-         * \warning Untested!
+         * - `fene_stiffness` Bond stiffness, `k` [kT]
+         * - `fene_maxsep` Maximum separation, `r_0` [angstrom]
+         * 
          */
         class FENE : public PairPotentialBase {
           private:
@@ -252,10 +251,10 @@ namespace Faunus {
          * \brief Lennard-Jones potential with arbitrary mixing rules between particle types
          * \details This is a template for Lennard-Jones pair interactions where the template parameter
          * must be a class for the epsilon and sigma mixed rules. The atomic values for 
-         * sigma and epsilon are taken from the AtomTypes class via the global instance
+         * sigma and epsilon are taken from `AtomMap` via the global instance
          * `atom`. In your InputMap configuration file you would typically set the atom list file using
          * the keyword `atomlist`. Note that sigma for each atom is set to two times the radius found in
-         * AtomTypes.
+         * `AtomMap`.
          *
          * For example:
          * 

@@ -8,18 +8,18 @@
 
 namespace Faunus {
   class _inputfile;
-  /*
+  /**
    * @brief Estimate speed of a computational process
    * 
    * This class can be used to estimate when a computational
    * process will finish. The current resolution is seconds.
    */
-  template<class T>
+  template<class T=unsigned int>
     class CountDown {
       private:
         T max;
         int time_i;              //!< Starting time in seconds
-        time_t rawtime; 
+        std::time_t rawtime; 
         struct tm *timeinfo;
       public:
         CountDown(T);
@@ -27,26 +27,26 @@ namespace Faunus {
         int elapsed();           //!< Time elapsed in seconds
         std::string eta(T);      //!< Estimate time of arrival
     };
-  /*! \param maxvalue Value at arrival
-  */
+  /** @param maxvalue Value at arrival */
   template<class T> CountDown<T>::CountDown(T maxvalue) {
-    time_i=time(0);
-    max=maxvalue;
+    time_i=std::time(0);
+    max = maxvalue;
   }
   template<class T> float CountDown<T>::speed(T midvalue) {
-    return float(time(0)-time_i) / midvalue;
+    return float(std::time(0)-time_i) / midvalue;
   }
-  /*! \param midvalue Value somewhere between start and arrival
-   *  \return String with estimated time and date of arrival
+  /** 
+   * @param midvalue Value somewhere between start and arrival
+   * @return String with estimated time and date of arrival
    */
   template<class T> std::string CountDown<T>::eta(T midvalue) {
-    rawtime = time(NULL) + int( speed(midvalue) * (max-midvalue)  );
-    timeinfo = localtime(&rawtime);
-    return asctime(timeinfo);
+    rawtime = std::time(NULL) + int( speed(midvalue) * (max-midvalue)  );
+    timeinfo = std::localtime(&rawtime);
+    return std::asctime(timeinfo);
   }
   template<class T> int CountDown<T>::elapsed() { return time(0)-time_i; }
 
-  /*!
+  /**
    * @brief Two level loop book-keeping
    *
    * This class simply keeps track of an outer and inner

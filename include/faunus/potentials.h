@@ -324,17 +324,16 @@ namespace Faunus {
               }
           };
 
-        /*!
-         * \brief Weeks-Chandler-Andersen pair potential
-         * \details This is a Lennard-Jones type potential, cut and shifted to zero
-         * at \f$r_c=2^{1/6}\sigma\f$. More info can be found in DOI: 10.1063/1.1674820
-         * and the functional form is:
-         * \f[
+        /**
+         * @brief Weeks-Chandler-Andersen pair potential
+         * @details This is a Lennard-Jones type potential, cut and shifted to zero
+         * at @f$r_c=2^{1/6}\sigma@f$. More info can be found in at
+         * <http://doi.org/ct4kh9> and the functional form is:
+         * @f[
          * \beta u = 4 \epsilon \left ( (b/r)^{12} - (b/r)^6 + \frac{1}{4} \right )
-         * \f]
-         * where sigma, epsilon per default are set from using Lorentz-Berthelot mixing rules.
-         *
-         * \warning Untested!
+         * @f]
+         * where sigma, epsilon per default are set
+         * using Lorentz-Berthelot mixing rules.
          */
         class WeeksChandlerAndersen : public LennardJonesMixed<LorentzBerthelot> {
           protected:
@@ -839,9 +838,10 @@ namespace Faunus {
           void test(UnitTest&); //!< Perform unit test
         };
 
-        /*!
-         * \brief Coulomb pair potential shifted according to Wolf/Yonezawaa -- doi:10.1063/1.4729748
-         * \details The Coulomb potential has the form:
+        /**
+         * @brief Coulomb pair potential shifted according to
+         *        Wolf/Yonezawaa (doi:10/j97)
+         * @details The Coulomb potential has the form:
          * \f[
          * \beta u_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT}
          * z_i z_j \left (

@@ -247,8 +247,8 @@ namespace Faunus {
         HyperPoint e1,e2,e3,te1,te2,te3;
         double fact1,fact2,fact3,nabla_nb,fi_nb;
 
-        //nabla_nb=slp.random_one()*2.*acos(-1.);
-        //fi_nb=std::acos(slp.random_one());
+        nabla_nb=0;//slp.random_one()*2.*acos(-1.);
+        fi_nb=0;//std::acos(slp.random_one());
 
         e1.z1()=std::cos(nabla_nb);
         e1.z2()=std::sin(nabla_nb);

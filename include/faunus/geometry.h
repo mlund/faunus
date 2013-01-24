@@ -5,7 +5,7 @@
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/slump.h>
-#include <Eigen/Eigen>
+#include <Eigen/Geometry>
 #endif
 
 namespace Faunus {

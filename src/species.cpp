@@ -31,7 +31,7 @@ namespace Faunus {
     list.push_back(a);
   }
 
-  AtomData & AtomMap::operator[] (particle::Tid i) { return list.at(i); }
+  AtomData & AtomMap::operator[] (AtomData::Tid i) { return list.at(i); }
 
   AtomData & AtomMap::operator[] (string s) {
     for (auto &l_i : list)

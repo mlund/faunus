@@ -2,8 +2,10 @@
 #define FAUNUS_POINT_H
 
 #ifndef SWIG
-#include <faunus/common.h>
 #include <Eigen/Core>
+#include <faunus/common.h>
+#include <faunus/species.h>
+#include <faunus/physconst.h>
 #endif
 
 namespace Faunus {
@@ -55,9 +57,7 @@ namespace Faunus {
       }
 
     /** @brief Zero data */
-    void clear() {
-      setZero();
-    }
+    void clear() { setZero(); }
 
     /**
      * @brief Generate a random unit vector
@@ -154,8 +154,14 @@ namespace Faunus {
 
     public:
       inline HyperPoint() {}
-      inline HyperPoint(double z1, double z2, double z3, double w) : PointBase(z1,z2,z3) { z4()=w; }
-      inline HyperPoint(double z1, double z2, double z3) : PointBase(z1,z2,z3) { z4()=1; }
+
+      inline HyperPoint(double z1, double z2, double z3, double w) : PointBase(z1,z2,z3) {
+        z4()=w;
+      }
+
+      inline HyperPoint(double z1, double z2, double z3) : PointBase(z1,z2,z3) {
+        z4()=1;
+      }
 
       template<typename OtherDerived>
         HyperPoint(const Eigen::MatrixBase<OtherDerived>& other) : PointBase(other) {}
@@ -313,19 +319,28 @@ namespace Faunus {
     typedef Point::Tcoord Tradius;
     typedef Point::Tcoord Tcharge;
     typedef Point::Tcoord Tmw;
-    typedef unsigned char Tid;
+    typedef AtomData::Tid Tid;
     typedef bool Thydrophobic;
 
     Tcharge charge;                           //!< Charge number
     Tradius radius;                           //!< Radius
     Tmw mw;                                   //!< Molecular weight
-    Tid id;                                   //!< Particle identifier
+    AtomData::Tid id;                         //!< Particle identifier
     Thydrophobic hydrophobic;                 //!< Hydrophobic flag
 
-    PointParticle();                          //!< Constructor
+    PointParticle() { clear(); }              //!< Constructor
 
     template<typename OtherDerived>
       PointParticle(const Eigen::MatrixBase<OtherDerived>& other) : Point(other) {}
+
+    PointParticle& operator=(const AtomData &d) {
+      id=d.id;
+      charge=d.charge;
+      radius=d.radius;
+      mw=d.mw;
+      hydrophobic=d.hydrophobic;
+      return *this;
+    }
 
     template<typename OtherDerived>
       PointParticle& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
@@ -333,13 +348,51 @@ namespace Faunus {
         return *this;
       }
 
-    PointParticle& operator=(const AtomData&);//!< Copy data from AtomData
-    PointParticle& operator<<(std::istream&); //!< Copy data from stream
-    friend std::ostream &operator<<(std::ostream&, const PointParticle&);//!< Write to stream
 
-    double volume() const;                    //!< Return volume
-    void deactivate();                        //!< Deactivate for use w. faster energy loops
-    void clear();                             //!< Zero all data
+    /**
+     * @brief Copy from stream
+     *
+     * This will read all data from stream in the same order as writte.
+     * Note that a short integer is expected for the particle id
+     * since chars (Tid=char) does not print well on screen.
+     * Derived classes should expand on this so
+     * that *all* data is read.
+     */
+    PointParticle& operator<<(std::istream &in) {
+      short tmp; // avoid char output in readable text files
+      Point::operator<<(in);
+      in >> charge >> radius >> mw >> tmp >> hydrophobic;
+      id = (Tid)tmp;
+      return *this;
+    }
+
+    /**
+     * @brief Write to stream
+     *
+     * This will write all data to given stream. Note that the particle id is converted
+     * to a short integer since char output (Tid=char) does not print well on screen.
+     * Derived classes should expand on this so that *all* data is written.
+     */
+    friend std::ostream& operator<<(std::ostream &o, const PointParticle &p) {
+      o << Point(p)
+        << " " << p.charge << " " << p.radius << " " << p.mw << " "
+        << (short)p.id << " " << p.hydrophobic;
+      return o;
+    }
+
+    /** @brief Volume of particle */
+    double volume() const {
+      return 4*pc::pi*radius*radius*radius/3;
+    }
+
+    /** @brief Zero data */
+    void clear() {
+      Point::clear();
+      charge=mw=radius=0;
+      hydrophobic=false;
+      id=0;
+    }
+
   };
 
   /**

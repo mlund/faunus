@@ -1,0 +1,15 @@
+*.dat
+*.json
+*.input
+*.aam
+*.pqr
+*.xtc
+
+bulk
+minimal
+polymers
+slitpolymer
+state
+titrate
+unittests
+

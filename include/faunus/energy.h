@@ -111,19 +111,19 @@ namespace Faunus {
 
           //!< Particle-particle energy (kT)
           inline double p2p(const particle &a, const particle &b) FOVERRIDE {
-            return pairpot( a,b,geometry.sqdist(a,b))*pairpot.tokT();
+            return pairpot( a,b,geometry.sqdist(a,b));
           }
         
           //!< Particle-particle force (kT/Å)
           inline Point f_p2p(const particle &a, const particle &b) FOVERRIDE {
-            return pairpot.force( a,b,geometry.sqdist(a,b),geometry.vdist(a,b))*pairpot.tokT();
+            return pairpot.force( a,b,geometry.sqdist(a,b),geometry.vdist(a,b));
           }
 
           double all2p(const p_vec &p, const particle &a) FOVERRIDE {
             double u=0;
             for (auto &b : p)
               u+=pairpot(a,b,geometry.sqdist(a,b));
-            return u*pairpot.tokT();
+            return u;
           }
 
           double all2all(const p_vec &p) FOVERRIDE {
@@ -132,11 +132,11 @@ namespace Faunus {
             for (int i=0; i<n-1; ++i)
               for (int j=i+1; j<n; ++j)
                 u+=pairpot( p[i],p[j],geometry.sqdist(p[i],p[j]) );
-            return u*pairpot.tokT();
+            return u;
           }
 
           double i2i(const p_vec &p, int i, int j) FOVERRIDE {
-            return pairpot.tokT() * pairpot( p[i], p[j], geometry.sqdist( p[i], p[j]) );
+            return pairpot( p[i], p[j], geometry.sqdist( p[i], p[j]) );
           }
 
           double i2g(const p_vec &p, Group &g, int j) FOVERRIDE {
@@ -152,7 +152,7 @@ namespace Faunus {
                 for (int i=g.front(); i<len; i++)
                   u+=pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]));
             }
-            return pairpot.tokT()*u;  
+            return u;  
           }
 
           double i2all(const p_vec &p, int i) FOVERRIDE {
@@ -163,7 +163,7 @@ namespace Faunus {
               u+=pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]) );
             for (int j=i+1; j<n; ++j)
               u+=pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]) );
-            return u*pairpot.tokT();
+            return u;
           }
 
           double g2g(const p_vec &p, Group &g1, Group &g2) FOVERRIDE {
@@ -180,7 +180,7 @@ namespace Faunus {
                     for (int i=g2.back()+1; i<=g1.back(); i++)
                       for (auto j : g2)
                         u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
-                    return pairpot.tokT()*u;
+                    return u;
                   }
                 if (g2.find(g1.front()))
                   if (g2.find(g1.back())) {  // g1 is a subgroup of g2
@@ -191,7 +191,7 @@ namespace Faunus {
                     for (int i=g1.back()+1; i<=g2.back(); i++)
                       for (auto j : g1)
                         u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
-                    return pairpot.tokT()*u;
+                    return u;
                   }
 
                 // IN CASE BOTH GROUPS ARE INDEPENDENT (DEFAULT)
@@ -201,7 +201,7 @@ namespace Faunus {
                   for (int j=g2.front(); j<jlen; ++j)
                     u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
               }
-            return pairpot.tokT()*u;
+            return u;
           }
 
           double g2all(const p_vec &p, Group &g) FOVERRIDE {
@@ -216,7 +216,7 @@ namespace Faunus {
                   u += pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]) );
               }
             }
-            return u*pairpot.tokT();
+            return u;
           }
 
           double g_internal(const p_vec &p, Group &g) FOVERRIDE { 
@@ -227,7 +227,7 @@ namespace Faunus {
                 for (int j=g.front()+step*((i-g.front())/step+1); j<n; j++)
                   u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
             }
-            return pairpot.tokT()*u;
+            return u;
           }
 
           double v2v(const p_vec &p1, const p_vec &p2) FOVERRIDE {
@@ -270,19 +270,19 @@ namespace Faunus {
       
       //!< Particle-particle energy (kT)
       inline double p2p(const particle &a, const particle &b) FOVERRIDE {
-        return pairpot( a,b,geometry.vdist(a,b))*pairpot.tokT();
+        return pairpot( a,b,geometry.vdist(a,b));
       }
       
       //!< Particle-particle force (kT/Å)
       inline Point f_p2p(const particle &a, const particle &b) FOVERRIDE {
-        return pairpot.force( a,b,geometry.sqdist(a,b),geometry.vdist(a,b))*pairpot.tokT();
+        return pairpot.force( a,b,geometry.sqdist(a,b),geometry.vdist(a,b));
       }
       
       double all2p(const p_vec &p, const particle &a) FOVERRIDE {
         double u=0;
         for (auto &b : p)
           u+=pairpot(a,b,geometry.vdist(a,b));
-        return u*pairpot.tokT();
+        return u;
       }
       
       double all2all(const p_vec &p) FOVERRIDE {
@@ -291,11 +291,11 @@ namespace Faunus {
         for (int i=0; i<n-1; ++i)
           for (int j=i+1; j<n; ++j)
             u+=pairpot( p[i],p[j],geometry.vdist(p[i],p[j]) );
-        return u*pairpot.tokT();
+        return u;
       }
       
       double i2i(const p_vec &p, int i, int j) FOVERRIDE {
-        return pairpot.tokT() * pairpot( p[i], p[j], geometry.vdist( p[i], p[j]) );
+        return pairpot( p[i], p[j], geometry.vdist( p[i], p[j]) );
       }
       
       double i2g(const p_vec &p, Group &g, int j) FOVERRIDE {
@@ -311,7 +311,7 @@ namespace Faunus {
             for (int i=g.front(); i<len; i++)
               u+=pairpot( p[i], p[j], geometry.vdist(p[i],p[j]));
         }
-        return pairpot.tokT()*u;
+        return u;
       }
       
       double i2all(const p_vec &p, int i) FOVERRIDE {
@@ -322,7 +322,7 @@ namespace Faunus {
           u+=pairpot( p[i], p[j], geometry.vdist(p[i],p[j]) );
         for (int j=i+1; j<n; ++j)
           u+=pairpot( p[i], p[j], geometry.vdist(p[i],p[j]) );
-        return u*pairpot.tokT();
+        return u;
       }
       
       double g2g(const p_vec &p, Group &g1, Group &g2) FOVERRIDE {
@@ -339,7 +339,7 @@ namespace Faunus {
                 for (int i=g2.back()+1; i<=g1.back(); i++)
                   for (auto j : g2)
                     u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
-                return pairpot.tokT()*u;
+                return u;
               }
             if (g2.find(g1.front()))
               if (g2.find(g1.back())) {  // g1 is a subgroup of g2
@@ -350,7 +350,7 @@ namespace Faunus {
                 for (int i=g1.back()+1; i<=g2.back(); i++)
                   for (auto j : g1)
                     u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
-                return pairpot.tokT()*u;
+                return u;
               }
             
             // IN CASE BOTH GROUPS ARE INDEPENDENT (DEFAULT)
@@ -360,7 +360,7 @@ namespace Faunus {
               for (int j=g2.front(); j<jlen; ++j)
                 u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
           }
-        return pairpot.tokT()*u;
+        return u;
       }
       
       double g2all(const p_vec &p, Group &g) FOVERRIDE {
@@ -375,7 +375,7 @@ namespace Faunus {
               u += pairpot( p[i], p[j], geometry.vdist(p[i],p[j]) );
           }
         }
-        return u*pairpot.tokT();
+        return u;
       }
       
       double g_internal(const p_vec &p, Group &g) FOVERRIDE {
@@ -386,7 +386,7 @@ namespace Faunus {
             for (int j=g.front()+step*((i-g.front())/step+1); j<n; j++)
               u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
         }
-        return pairpot.tokT()*u;
+        return u;
       }
       
       double v2v(const p_vec &p1, const p_vec &p2) FOVERRIDE {
@@ -882,7 +882,7 @@ namespace Faunus {
             assert(geo!=nullptr);
             auto f=list.find( createPair(a,b) );
             if (f!=list.end())
-              return f->second->tokT() * f->second->operator()( a, b, geo->sqdist(a,b) );
+              return f->second->operator()( a, b, geo->sqdist(a,b) );
             return 0;
           }
 

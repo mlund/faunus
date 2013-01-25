@@ -28,38 +28,26 @@ namespace Faunus {
 
     class DebyeHuckel;
 
-    /*!
-     * \brief Base class for pair potential classes
+    /**
+     * @brief Base class for pair potential classes
      *
      * This is a base class for all pair potentials which must implement the function
      * operator so that the potential can work as a class function.
      * To make a new pair potential you must implement
-     * 1) a function that takes two particles as arguments as well as the
+     * - a function that takes two particles as arguments as well as the
      *    squared distance between them (i.e. the function operator), and
-     * 2) a brief information string.
-     * The unit of the returned energy is arbitrary but you *must* ensure that
-     * when multiplied by tokT() that it is converted to kT units (thermal energy).
-     * By default _tokT=1 and it is a good policy to return energies in kT.
+     * - a brief information string.
+     * The unit of the returned energy is `kT`.
      *
-     * \todo remove tokT() function
      */
     class PairPotentialBase {
       private:
         virtual string _brief()=0;
-        virtual void _setScale(double);
-      protected:
-        double _tokT;
       public:  
         PairPotentialBase();
         virtual ~PairPotentialBase();
         string name;             //!< Short (preferably one-word) description of the core potential
         string brief();          //!< Brief, one-lined information string
-        void setScale(double=1);
-        /*! \brief Convert returned energy to kT.*/
-        inline double tokT() {
-          //        inline double tokT() __attribute__ ((deprecated)) {
-          return _tokT;
-        }
         virtual void setTemperature(double); //!< Set temperature [K]
 
         /*!
@@ -92,7 +80,6 @@ namespace Faunus {
         class Harmonic : public PairPotentialBase {
           private:
             string _brief();
-            void _setScale(double);
           public:
             double k;   //!< Force constant (kT/A^2) - Did you rember to divide by two? See note.
             double req; //!< Equilibrium distance (angstrom)
@@ -223,7 +210,6 @@ namespace Faunus {
         class LennardJones : public PairPotentialBase {
           private:
             string _brief();
-            void _setScale(double);
           protected:
             inline double r6(double sigma, double r2) const {
               double x(sigma*sigma/r2);  // 2
@@ -621,7 +607,6 @@ namespace Faunus {
         class SquareWell : public PairPotentialBase {
           private:
             string _brief();
-            void _setScale(double);
           public:
             double threshold;                           //!< Threshold between particle *surface* [A]
             double depth;                               //!< Energy depth [kT] (positive number)
@@ -688,7 +673,6 @@ namespace Faunus {
         class SoftRepulsion : public PairPotentialBase {
           private:
             string _brief();
-            void _setScale(double);
             double sigma6;
           public:
             SoftRepulsion(InputMap&);
@@ -712,7 +696,6 @@ namespace Faunus {
         class R12Repulsion : public PairPotentialBase {
           private:
             string _brief();
-            void _setScale(double);
           protected:
             double eps;
           public:
@@ -783,7 +766,6 @@ namespace Faunus {
           friend class Energy::GouyChapman;
           private:
           string _brief();
-          void _setScale(double);
           double epsilon_r;
           protected:
           double depsdt;      //!< \f$ T\partial \epsilon_r / \epsilon_r \partial T = -1.37 \f$
@@ -928,31 +910,25 @@ namespace Faunus {
             }
         };
 
-        /*!
-         * \brief Combines two pair potentials
-         * \details This combines two PairPotentialBases. The combined potential can subsequently
-         * be used as a normal pair potential and even be combined with a third potential and
-         * so forth. A number of typedefs such as Potential::CoulombHS is aliasing this.
+        /**
+         * @brief Combines two pair potentials
+         * @details This combines two PairPotentialBases. The combined potential
+         * can subsequently be used as a normal pair potential and even be
+         * combined with a third potential and so forth.
          *
-         * \code
-         *   // mix two and three pair potentials
-         *   using namespace Potential;
-         *   typedef CombinedPairPotential< LennardJones, SquareWell > Tpairpot1;
-         *   typedef CombinedPairPotential< Tpairpot1, Coulomb > Tpairpot2;
-         *   Tpairpot2 mypairpot;
-         *   std::cout << mypairpot.info();
-         * \endcode
+         *     // mix two and three pair potentials
+         *     using namespace Potential;
+         *     typedef CombinedPairPotential< LennardJones, SquareWell > Tpairpot1;
+         *     typedef CombinedPairPotential< Tpairpot1, Coulomb > Tpairpot2;
+         *     Tpairpot2 mypairpot;
+         *     std::cout << mypairpot.info();
          *
-         * \note tokT() functions are *ignored* and the two pair potentials must return
-         *       energies in kT directly. The plan is to remove tokT() permanently.
-         * \date Lund, 2012
-         * \author Mikael Lund
+         * @date Lund, 2012
          */
         template<class T1, class T2>
           class CombinedPairPotential : public PairPotentialBase {
             private:
               string _brief() { return first.brief() + " " + second.brief(); }
-              //void _setScale(double s) {}
             public:
               T1 first;  //!< First pair potential of type T1
               T2 second; //!< Second pair potential of type T2

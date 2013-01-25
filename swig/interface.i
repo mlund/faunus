@@ -30,7 +30,7 @@
 %rename(__int__) Faunus::Average<int>::operator int;
 %rename(__float__) Faunus::Average<double>::operator double;
 %rename(__float__) Faunus::Average<float>::operator float;
-%rename(__getitem__) Faunus::AtomTypes::operator[];
+%rename(__getitem__) Faunus::AtomMap::operator[];
 
 %ignore *::operator<<(std::istream&);
 %ignore *::operator<<(std::ostream&, const Faunus::Point&);

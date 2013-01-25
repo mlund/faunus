@@ -13,17 +13,9 @@ namespace Faunus {
 
   namespace Potential {
 
-    PairPotentialBase::PairPotentialBase() {
-      setScale(1);
-    }
+    PairPotentialBase::PairPotentialBase() {}
 
     PairPotentialBase::~PairPotentialBase() { }
-    
-    void PairPotentialBase::setScale(double s)  {
-      assert(s!=0 && "Energy scaling should be non-zero.");
-      _tokT=s;
-      _setScale(_tokT);
-    }
     
     double PairPotentialBase::operator() (const particle &a, const particle &b, double r2) const {
       assert(!"Pair energy not defined!");
@@ -40,8 +32,6 @@ namespace Faunus {
       assert(!"Force not overrided!");
       return Point(0,0,0);
     }
-
-    void PairPotentialBase::_setScale(double s) {}
 
     /*!
      * This will reset the temperature to the specified value. By default this function
@@ -67,7 +57,7 @@ namespace Faunus {
         f << "# Pair potential: " << brief() << endl
           << "# Atoms: " << atom[ida].name << "<->" << atom[idb].name << endl;
         for (double r=min; r<=150; r+=0.5)
-          f << std::left << std::setw(10) << r << " " << tokT() * operator()(a,b,r*r) << endl; 
+          f << std::left << std::setw(10) << r << " " << operator()(a,b,r*r) << endl; 
         return true;
       }
       return false;
@@ -85,15 +75,10 @@ namespace Faunus {
       req = in.get<double>( pfx+"eqdist", 0);
     }
 
-    void Harmonic::_setScale(double s) {
-      _tokT=s;
-      k=k/_tokT;
-    }
-
     string Harmonic::_brief() {
       using namespace Faunus::textio;
       std::ostringstream o;
-      o << name << ": k=" << k*tokT() << kT << "/" << angstrom << squared << " req=" << req << _angstrom; 
+      o << name << ": k=" << k << kT+"/"+angstrom+squared+" req=" << req << _angstrom; 
       return o.str();
     }
 
@@ -196,20 +181,15 @@ namespace Faunus {
 
     string LennardJones::_brief() {
       std::ostringstream o;
-      o << name << ": " << textio::epsilon+"(LJ)=" << eps*tokT()/4 << textio::kT;
+      o << name << ": " << textio::epsilon+"(LJ)=" << eps/4 << textio::kT;
       return o.str();
-    }
-
-    void LennardJones::_setScale(double s) {
-      _tokT=s;
-      eps=eps/_tokT;
     }
 
     string LennardJones::info(char w) {
       using namespace Faunus::textio;
       std::ostringstream o;
-      o << pad(SUB,w+1,epsilon+"(LJ)") << eps*tokT()/4 << kT
-        << " = " << pc::kT2kJ(eps*tokT()/4) << " kJ/mol" << endl;
+      o << pad(SUB,w+1,epsilon+"(LJ)") << eps/4 << kT
+        << " = " << pc::kT2kJ(eps/4) << " kJ/mol" << endl;
       return o.str();
     }
 
@@ -242,14 +222,9 @@ namespace Faunus {
       depth     = in.get<double>(prefix+"_depth", 0, name+" depth (kT)");
     }
 
-    void SquareWell::_setScale(double s) {
-      _tokT=s;
-      depth=depth/_tokT;
-    }
-
     string SquareWell::_brief() {
       std::ostringstream o;
-      o << name << ": u=" << depth*tokT() << textio::kT << " r=" << threshold;
+      o << name << ": u=" << depth << textio::kT + " r=" << threshold;
       return o.str();
     }
 
@@ -257,7 +232,7 @@ namespace Faunus {
       using namespace Faunus::textio;
       std::ostringstream o;
       o << pad(SUB,w,"Threshold") << threshold << " "+angstrom+" (surface-surface)" << endl;
-      o << pad(SUB,w,"Depth") << depth*tokT() << kT << endl;
+      o << pad(SUB,w,"Depth") << depth << kT << endl;
       return o.str();
     }
 
@@ -273,7 +248,7 @@ namespace Faunus {
 
     string SquareWellShifted::_brief() {
       std::ostringstream o;
-      o << name << ": u=" << depth*tokT() << textio::kT << " range=" << threshold_lower << "-" << threshold;
+      o << name << ": u=" << depth << textio::kT << " range=" << threshold_lower << "-" << threshold;
       return o.str();
     }
 
@@ -300,19 +275,14 @@ namespace Faunus {
 
     string SoftRepulsion::_brief() {
       std::ostringstream o;
-      o << name << ": " << textio::sigma  << pow(sigma6*tokT(),1/6.) << textio::_angstrom;
+      o << name << ": " << textio::sigma  << pow(sigma6,1/6.) << textio::_angstrom;
       return o.str();
-    }
-
-    void SoftRepulsion::_setScale(double s) {
-      _tokT=s;
-      sigma6=sigma6/_tokT;
     }
 
     string SoftRepulsion::info(char w) {
       using namespace Faunus::textio;
       std::ostringstream o;
-      o << textio::pad(SUB,w+1,textio::sigma) << pow(sigma6*tokT(),1/6.) << textio::_angstrom << endl;
+      o << textio::pad(SUB,w+1,textio::sigma) << pow(sigma6,1/6.) << _angstrom << endl;
       return o.str();
     }
 
@@ -331,19 +301,14 @@ namespace Faunus {
 
     string R12Repulsion::_brief() {
       std::ostringstream o;
-      o << name << ": " << textio::epsilon+"(r12)=" << eps*tokT()/4 << textio::kT;
+      o << name << ": " << textio::epsilon+"(r12)=" << eps/4 << textio::kT;
       return o.str();
-    }
-
-    void R12Repulsion::_setScale(double s) {
-      _tokT=s;
-      eps=eps/_tokT;
     }
 
     string R12Repulsion::info(char w) {
       using namespace Faunus::textio;
       std::ostringstream o;
-      o << pad(SUB,w+1,epsilon+"(r12_rep)") << eps*tokT()/4 << kT << endl;
+      o << pad(SUB,w+1,epsilon+"(r12_rep)") << eps/4 << kT << endl;
       return o.str();
     }
 
@@ -359,10 +324,6 @@ namespace Faunus {
       epsilon_r = in.get<double>("epsilon_r",80., "Dielectric constant");
       depsdt = in.get<double>("depsdt", -0.368, "See documentation") * pc::T() / epsilon_r;
       lB=pc::lB( epsilon_r );
-      //setScale(lB);
-    }
-
-    void Coulomb::_setScale(double s) {
     }
 
     string Coulomb::_brief() {

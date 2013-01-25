@@ -6,7 +6,6 @@
 #include <faunus/species.h>
 #include <faunus/inputfile.h>
 #include <faunus/geometry.h>
-#include <faunus/faunus.h>
 #include <faunus/textio.h>
 #include <faunus/physconst.h>
 

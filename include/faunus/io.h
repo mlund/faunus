@@ -5,6 +5,7 @@
 #include <faunus/common.h>
 #include <faunus/potentials.h>
 
+
 #ifndef __cplusplus
 #define __cplusplus
 #endif
@@ -17,48 +18,83 @@
 #endif
 
 namespace Faunus {
-  
-  /*
-   * \brief Basic file I/O routines
-   * \author Mikael Lund
-   */
-  class io {
-    private:
-      string s;
-    public:
-      bool readfile(string, vector<string>&);       //!< Read entire file to vector
-      bool writefile(string, string, std::ios_base::openmode=std::ios_base::out); //!< Save string to file
-      void strip(vector<string> &, string="#");     //!< Remove lines containing pattern
-      void splash(string);                          //!< Splashes the content of a file
-  };
 
-  /*!
-   * \brief Read/write AAM file format
-   * \author Mikael Lund
-   * \todo Make "p" vector private.
+  namespace IO {
+
+    /* @brief Read lines from file into vector */
+    inline bool readFile(const std::string &file, std::vector<string> &v) {
+      std::ifstream f(file.c_str() );
+      if (f) {
+        std::string s;
+        while (getline(f,s))
+          v.push_back(s);
+        f.close();
+        return true;
+      }
+      std::cout << "# WARNING! FILE " << file << " NOT READ!\n";
+      return false;
+    }
+
+    /**
+     * @brief Write string to file
+     * @param file Filename
+     * @param s String to write
+     * @param mode `std::ios_base::out` (new, default) or `std::ios_base::app` (append)
+     */
+    inline bool writeFile(string file, string s,
+        std::ios_base::openmode mode=std::ios_base::out) {
+      std::ofstream f(file.c_str(), mode);
+      cout << "Writing to file '" << file << "'. ";
+      if (f) {
+        f << s;
+        f.close();
+        cout << "OK!\n";
+        return true;
+      }
+      cout << "FAILED!\n";
+      return false;
+    }
+
+    /**
+     * @brief Strip lines matching a pattern
+     * @param v vector of string
+     * @param pat Pattern to search for
+     */
+    inline void strip(vector<string> &v, const string &pat) {
+      auto iter=v.begin();
+      while (iter!=v.end())
+        if ((*iter).find(pat)!=string::npos)
+          v.erase(iter);
+        else ++iter;
+    }
+
+  }//namespace
+
+  /**
+   * @brief Read/write AAM file format
+   * @todo Make "p" vector private.
    *
-   * The AAM format is a simple format for loading particle positions, charges, radii and
-   * molecular weights. The structure is as follows:
-   * \li Lines beginning with # are ignored and can be placed anywhere
-   * \li The first non-# line gives the number of particles
-   * \li Every subsequent line gives atom information in the format: name, number, x, y, z, charge number, weight, radius
-   * \li Positions and radii should be in angstroms
-   * \li Currently, data in the number field is ignored.
-   * \li No particular spacing is required.
+   * The AAM format is a simple format for loading particle positions
+   * charges, radii and molecular weights. The structure is as follows:
    *
-   * \code
-   * # information
-   * # more information
-   * 2
-   * Na    1     10.234 5.4454 -2.345  +1    22.0   1.7
-   * Cl    2    5.011     1.054  20.02   -1   35.0   2.0
-   * \endcode
+   * - Lines beginning with # are ignored and can be placed anywhere
+   * - The first non-# line gives the number of particles
+   * - Every subsequent line gives atom information in the format:
+   *   name, number, x, y, z, charge number, weight, radius
+   * - Positions and radii should be in angstroms
+   * - Currently, data in the number field is ignored.
+   * - No particular spacing is required.
+   *
+   *     # information
+   *     # more information
+   *     2
+   *     Na    1     10.234 5.4454 -2.345  +1    22.0   1.7
+   *     Cl    2    5.011     1.054  20.02   -1   35.0   2.0
    */
   class FormatAAM {
     private:
       string p2s(particle &, int);
       particle s2p(string &);
-      io fio;
     public:
       p_vec p; //!< Placeholder for loaded data
       FormatAAM();
@@ -74,7 +110,6 @@ namespace Faunus {
    */
   class FormatPQR {
     private:
-      io fio;
       p_vec p;                   //!< Placeholder for loaded data
     public:
       FormatPQR();
@@ -92,7 +127,6 @@ namespace Faunus {
     private:
       vector<string> v;
       particle s2p(string &);
-      io fio;
     public:
       double len;            //!< Box side length (cubic so far)
       p_vec p;
@@ -118,8 +152,8 @@ namespace Faunus {
       float time_xtc, prec_xtc;
       int natoms_xtc, step_xtc;
     public:
-      vector<GroupMolecular*> g;                    //!< List of PBC groups to be saved as whole
-      FormatXTC(float);                            //!< Constructor that sets an initially cubic box
+      vector<GroupMolecular*> g;               //!< List of PBC groups to be saved as whole
+      FormatXTC(float);                        //!< Constructor that sets an initially cubic box
       bool open(string);                       //!< Open xtc file for reading
       bool loadnextframe(Space&);              //!< Load a single frame into cuboid
       bool save(string, const p_vec&);         //!< Save a frame to trj file.
@@ -155,17 +189,6 @@ namespace Faunus {
       FormatQtraj();
       bool save(string, p_vec&);   //!< Save a frame to trj file.
       bool save(string, p_vec&, vector<Group> &); //!< Save groups
-  };
-
-  class xyfile {
-    private:
-      io fio;
-      std::ofstream f;
-      unsigned int cnt;
-    public:
-      xyfile(string);
-      void add(double, double);
-      void close();
   };
 
   /*!

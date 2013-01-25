@@ -41,7 +41,4 @@
 #include <faunus/scatter.h>
 #endif
 
-namespace Faunus {
-}//namespace
-
 #endif

@@ -1,6 +1,5 @@
 #include <faunus/species.h>
 #include <faunus/inputfile.h>
-#include <faunus/point.h>
 #include <faunus/textio.h>
 #include <faunus/physconst.h>
 #include <faunus/json.h>
@@ -68,7 +67,7 @@ namespace Faunus {
       a.sigma = 2*a.radius;
       a.sigma = json::value<double>(atom.second, "sigma", a.sigma);
       a.radius = a.sigma/2;
-      a.id=particle::Tid( list.size() );
+      a.id=AtomData::Tid( list.size() );
       a.patchtype = json::value<double>(atom.second, "patchtype", 0);
       list.push_back(a); // add to main particle list
     }

@@ -12,23 +12,7 @@ namespace Faunus {
   typedef ContinuousRange<int> Range;  //<! Basic, continuous range of integers
 
   /**
-   * @brief Defines a continuous range of particles in the
-   *
-   * Space particle vector. This class defines a range, `[front:back]`,
-   * in the particle vector and behaves much like a standard
-   * STL container. Groups know how to perform geometric operations
-   * on it - rotate, translate etc. 
-   *
-   * Example:
-   *
-   *     Group g(2,5);           // first, last particle
-   *     for (auto i : g)        // iterator access
-   *       cout << i;            // -> 2345
-   *     g.front();              // -> 2
-   *     g.back();               // -> 5
-   *     g.size();               // -> 4
-   *     g.resize( g.size()+1 ); // -> size=5, back=6.
-   *
+   * @brief Defines a continuous range of particles as described in `ContinuousRange`
    */
   class Group : public Range {
     private:

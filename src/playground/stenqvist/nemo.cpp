@@ -32,39 +32,68 @@ namespace Faunus {
       Matrix3d M; M << R/(r.x()*r.x()), R/(r.x()*r.y()), R/(r.x()*r.z()), R/(r.y()*r.x()),
                R/(r.y()*r.y()), R/(r.y()*r.z()), R/(r.z()*r.x()), R/(r.z()*r.y()),
                R/(r.z()*r.z());
-
       int size = v.size();
       switch (size) {
         case 1:
-          T = -R2*V[v[1]];
+          T = -R2*V[v[0]];
           break;
         case 2:
-          T = (2/R)*R2*V[v[1]]*V[v[2]] - R2*M(v[1],v[2]);	
+          T = (2/R)*R2*V[v[0]]*V[v[1]] - R2*M(v[0],v[1]);	
           break;
         case 3:
-          T = (-6.0*R2*R2)*V[v[1]]*V[v[2]]*V[v[3]];
-          T = T + (2.0/R)*R2*M(int(v[2]),int(v[3]))*V[v[1]];
-          T = T + (2.0/R)*R2*M(int(v[3]),int(v[1]))*V[v[1]];
-          T = T + (2.0/R)*R2*M(int(v[1]),int(v[2]))*V[v[1]];
+          T = (-6.0*R2*R2)*V[v[0]]*V[v[1]]*V[v[2]];
+          T = T + (2.0/R)*R2*M(int(v[1]),int(v[2]))*V[v[0]];
+          T = T + (2.0/R)*R2*M(int(v[2]),int(v[0]))*V[v[1]];
+          T = T + (2.0/R)*R2*M(int(v[0]),int(v[1]))*V[v[2]];
           T = T + (-R2*getSubTensor(M,r,v));
           break;
       }
       return T;
     }
 
-    double IonDipole(const particle &a, const particle &b, const Point &r) {
+    double q2q(const particle &a, const particle &b, const Point &r) {
+      return a.charge*b.charge/r.norm();
+    }
 
-      return 0.0;
+    double q2mu(const particle &a, const particle &b, const Point &r) {
+      double W = 0.0;
+      VectorXi V(0);
+      for(int i = 0; i < 3; i++) {
+        V(0) = i;
+        W = W + getTensor(r,V)*(a.charge*b.mu(i)*b.muscalar + b.charge*a.mu(i)*a.muscalar);
+      }
+      return W;
     }
 
     double mu2mu(const particle &a, const particle &b, const Point &r) {
-
-      //Point r = a.coord-b.coord;
       double W = 0.0;
+      Vector2i V(0,0);
+      double sca = double(1/3);
       for(int i = 0; i < 3; i++) {
-
+        V(0) = i;
+        for(int j = i; j < 3; j++) {
+          V(1) = j;
+          W = W + getTensor(r,V)*(sca*a.charge*b.theta(i,j) - a.mu(i)*a.muscalar*b.mu(j)*b.muscalar + sca*a.theta(i,j)*b.charge);
+        }
       }	
-      return 0.0;
+      return W;
+    }
+
+    double mu2theta(const particle &a, const particle &b, const Point &r) {
+      double W = 0.0;
+      Vector3i V(0,0,0);
+      double sca = double(1/3);
+      for(int i = 0; i < 3; i++) {
+        V(0) = i;
+        for(int j = i; j < 3; j++) {
+          V(1) = j;
+          for(int k = j; k < 3; k++) {
+            V(2) = k;
+            W = W + sca*getTensor(r,V)*(a.theta(i,j)*b.mu(k)*b.muscalar - a.mu(i)*a.muscalar*b.theta(j,k));
+          }
+        }
+      } 
+      return W;
     }
   }//namespace nemo
 }//namespace faunus
@@ -81,7 +110,7 @@ namespace Faunus {
           _lB=in.get<double>("bjerrumlength", 7.1);
         }
         double operator()(const particle &a, const particle &b, const Point &r) const {
-          return 0;
+          return _lB*Faunus::Nemo::mu2mu(a,b,r);
         }
         string info(char w) { return _brief(); }
     };
@@ -92,7 +121,6 @@ namespace Faunus {
 }//namespace
 
 int main() {
-  InputMap mcp("nemo.input");
   // particle a;
   // a.mu.x()=1.0;
   // Point b(3,4,1);
@@ -110,8 +138,9 @@ int main() {
   GroupAtomic salt(spc, in);                          // group for salt particles
   Move::AtomicTranslation mv(in, pot, spc);           // particle move class
   mv.setGroup(salt);                                  // tells move class to act on salt group
-  mv.move(1e5);                                       // move salt randomly 100000 times
+  mv.move(1e3);                                       // move salt randomly 100000 times
   std::cout << spc.info() << pot.info() << mv.info(); // final information
+  std::cout << spc.p[0].muscalar << endl;
 }
 
 

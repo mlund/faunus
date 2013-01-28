@@ -3,6 +3,7 @@
 
 #ifndef SWIG
 #include <faunus/common.h>
+#include <faunus/species.h>
 #include <Eigen/Core>
 #endif
 
@@ -349,8 +350,11 @@ namespace Faunus {
     Point mu;               //!< Dipole moment unit vector
     double muscalar;        //!< Dipole moment scalar
     Eigen::Matrix3d alpha;
+    Eigen::Matrix3d theta;  //!< Quadropole moment
 
-    inline DipoleParticle() : mu(0,0,0), muscalar(0) {};
+    inline DipoleParticle() : mu(1,0,0), muscalar(0) {
+      theta.setZero();
+    };
 
     /** @brief Copy constructor for Eigen derivatives */
     template<typename OtherDerived>

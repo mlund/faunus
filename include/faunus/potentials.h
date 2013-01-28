@@ -161,7 +161,8 @@ namespace Faunus {
           public:
             HardSphere();
             HardSphere(InputMap&);
-            inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+            template<class Tparticle>
+            double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
               double mindist=a.radius+b.radius;
               if (r2<mindist*mindist)
                 return pc::infty;
@@ -1109,7 +1110,7 @@ namespace Faunus {
          */
         typedef CombinedPairPotential<DebyeHuckel, R12Repulsion> DebyeHuckelr12;
 
-    } //end of Potential namespace
+  } //end of Potential namespace
 
-  } //end of Faunus namespace
+} //end of Faunus namespace
 #endif

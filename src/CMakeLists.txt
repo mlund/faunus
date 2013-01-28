@@ -13,14 +13,6 @@ set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 #----- xdrfile static library for gromacs output -----
 add_subdirectory(xdrfile)
 
-# -------------------------------------
-#   Check for C++11
-# -------------------------------------
-check_include_file_cxx("tuple" TUPLE)
-if (NOT TUPLE)
-  message(FATAL_ERROR "Compiler does not support C++11 tuples")
-endif()
-
 if(ENABLE_HASHTABLE)
   add_definitions(-DFAU_HASHTABLE)
 endif()

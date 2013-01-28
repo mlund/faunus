@@ -3,7 +3,6 @@
 
 #ifndef SWIG
 #include <faunus/common.h>
-#include <faunus/average.h>
 #include <faunus/geometry.h>
 #include <faunus/range.h>
 #endif

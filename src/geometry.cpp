@@ -122,8 +122,6 @@ namespace Faunus {
       } while ( a.squaredNorm()>r2 );
     }
 
-    void Sphere::boundary(Point &a) const {}
-
     bool Sphere::collision(const particle &a, collisiontype type) const {
       return (a.squaredNorm()>r2) ? true:false;
     }
@@ -195,13 +193,6 @@ namespace Faunus {
       m.x() = slp.randHalf()*len.x();
       m.y() = slp.randHalf()*len.y();
       m.z() = slp.randHalf()*len.z();
-    }
-
-    bool Cuboid::collision(const particle &a, collisiontype type) const {
-      if (std::abs(a.x())>len_half.x()) return true;
-      if (std::abs(a.y())>len_half.y()) return true;
-      if (std::abs(a.z())>len_half.z()) return true;
-      return false;
     }
 
     bool Cuboid::save(string file) {

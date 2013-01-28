@@ -130,6 +130,40 @@ namespace Faunus {
         void clear() { list.clear(); }
     };
 
+  template<typename Tparticle, typename Tij=int, typename Tpair=pair_permutable< Tij > >
+    class pair_list_functor {
+      protected:
+        typedef std::function<double(const Tparticle&, const Tparticle&, double)> Tfunctor;
+#ifdef FAU_HASHTABLE
+        typedef std::unordered_map< Tpair, Tfunctor > Tlist;
+#else
+        typedef std::map< Tpair, Tfunctor > Tlist;
+#endif
+        Tlist list;
+      public:
+        /**
+         * @brief Associate data with a pair using an internal copy.
+         *
+         * Data is added by making an internal COPY of the given `Tderived` object.
+         * For large lists, consider adding a pointer instead using the alternative
+         * `add()` function.
+         */
+        void add(Tij i, Tij j, Tfunctor f) {
+          list[ Tpair(i,j) ] = f; 
+        }
+
+        /**
+         * @brief Access data of a pair
+         */
+        Tfunctor& operator() (Tij i, Tij j) {
+          Tpair pair(i,j);
+          assert( list[pair] != nullptr ); //debug
+          return list[pair];
+        }
+
+        /** @brief Clears all data */
+        void clear() { list.clear(); }
+    };
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"

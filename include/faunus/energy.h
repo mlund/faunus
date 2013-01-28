@@ -776,54 +776,55 @@ namespace Faunus {
         double c0;                                        //!< Ion concentration (A-3)
         double rho;                                       //!< Surface charge density (e A-2)
         double phi0;                                      //!< Unitless surface potential \frac{\phi0 e}{kT}
-    double gamma0;                                    //!< Gouy-chapman coefficient ()
-    double lB;
-    double kappa;
-    double *zposPtr;                                  //!< Pointer to z position of GC plane (xy dir)
-    string _info();                                  
-    bool linearize;                                   //!< Use linearized PB?
+        double gamma0;                                    //!< Gouy-chapman coefficient ()
+        double lB;
+        double kappa;
+        double *zposPtr;                                  //!< Pointer to z position of GC plane (xy dir)
+        string _info();                                  
+        bool linearize;                                   //!< Use linearized PB?
       public:                                            
-    GouyChapman(InputMap &);                          //!< Constructor - read input parameters
-    void setPosition(double&);                        //!< Set pointer to z position of surface
-    double i_external(const p_vec&, int) FOVERRIDE;   //!< i'th particle energy in GC potential
-    double g_external(const p_vec&, Group&) FOVERRIDE;//!< Group energy in GC potential
+        GouyChapman(InputMap &);                          //!< Constructor - read input parameters
+        void setPosition(double&);                        //!< Set pointer to z position of surface
+        double i_external(const p_vec&, int) FOVERRIDE;   //!< i'th particle energy in GC potential
+        double g_external(const p_vec&, Group&) FOVERRIDE;//!< Group energy in GC potential
 
-    /**
-     * @brief Point-to-surface distance [angstrom]
-     *
-     * Note that this function is virtual and can be replaced in derived classes to
-     * customize the position of the surface.
-     */
-    double dist2surf(const Point &a) {
-      assert(zposPtr!=nullptr && "Did you forget to call setPosition()?");
-      return std::abs(*zposPtr - a.z());
-    }
+        /**
+         * @brief Point-to-surface distance [angstrom]
+         *
+         * Note that this function is virtual and can be replaced in derived classes to
+         * customize the position of the surface.
+         */
+        inline double dist2surf(const Point &a) {
+          assert(zposPtr!=nullptr && "Did you forget to call setPosition()?");
+          return std::abs(*zposPtr - a.z());
+        }
 
-    /**
-     * @brief Particle energy in GC potential
-     *
-     * \f[
-     * \beta e \Phi(z) = 2\ln{\frac{1+\Gamma_0 \exp{(-\kappa z)}}{1-\Gamma_0 \exp{(-\kappa z)}}}
-     * \f]
-     * or if linearized:
-     * \f[
-     * \beta e \Phi(z) = \beta e \phi_0 \exp{(-\kappa z)}
-     * \f]
-     */
-    double p_external(const particle &p) FOVERRIDE {
-      if (p.charge!=0) {
+        /**
+         * @brief Particle energy in GC potential
+         *
+         * \f[
+         * \beta e \Phi(z) = 2\ln{\frac{1+\Gamma_0 \exp{(-\kappa z)}}{1-\Gamma_0 \exp{(-\kappa z)}}}
+         * \f]
+         * or if linearized:
+         * \f[
+         * \beta e \Phi(z) = \beta e \phi_0 \exp{(-\kappa z)}
+         * \f]
+         */
+        template<class Tparticle>
+        double p_external(const Tparticle &p) {
+          if (p.charge!=0) {
 #ifdef FAU_APPROXMATH
-        double x=exp_cawley(-kappa*dist2surf(p));
+            double x=exp_cawley(-kappa*dist2surf(p));
 #else
-        double x=exp(-kappa*dist2surf(p));
+            double x=exp(-kappa*dist2surf(p));
 #endif
-        if (linearize)
-          return p.charge * phi0 * x;
-        else
-          return p.charge * 2 * log((1+gamma0*x)/(1-gamma0*x));
-      }
-      return 0;
-    }
+            if (linearize)
+              return p.charge * phi0 * x;
+            else
+              return p.charge * 2 * log((1+gamma0*x)/(1-gamma0*x));
+          }
+          return 0;
+        }
     };
 
     /**

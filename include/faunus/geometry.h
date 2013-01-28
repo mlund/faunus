@@ -83,7 +83,7 @@ namespace Faunus {
         Sphere(double);                         //!< Construct from radius (angstrom)
         Sphere(InputMap&, string="sphere");     //!< Construct from InputMap key \c prefix_radius
         void randompos(Point &);
-        void boundary(Point &) const;
+        void boundary(Point &p) const {};
         bool collision(const particle &, collisiontype=BOUNDARY) const;
         inline double sqdist(const Point &a, const Point &b) const {
           return (a-b).squaredNorm();
@@ -118,7 +118,12 @@ namespace Faunus {
         void randompos(Point&);      
         bool save(string);           
         bool load(string,bool=false);
-        bool collision(const particle&, collisiontype=BOUNDARY) const;
+        inline bool collision(const particle &a, collisiontype type=BOUNDARY) const {
+          if (std::abs(a.x())>len_half.x()) return true;
+          if (std::abs(a.y())>len_half.y()) return true;
+          if (std::abs(a.z())>len_half.z()) return true;
+          return false;
+        }
 
         inline double sqdist(const Point &a, const Point &b) const {
           double dx( std::abs(a.x()-b.x()) );

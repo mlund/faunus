@@ -1,10 +1,9 @@
-#include "faunus/common.h"
-#include "faunus/point.h"
-#include "faunus/space.h"
-#include "faunus/energy.h"
-#include "faunus/inputfile.h"
-#include <faunus/titrate.h>
+#include <faunus/common.h>
 #include <faunus/species.h>
+#include <faunus/inputfile.h>
+#include <faunus/space.h>
+#include <faunus/energy.h>
+#include <faunus/titrate.h>
 
 namespace Faunus {
 

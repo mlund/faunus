@@ -19,16 +19,20 @@ namespace Faunus {
    */
   namespace Analysis {
 
-    /*!
-     * \brief Base class for analysis routines.
+    /**
+     * @brief Base class for analysis routines.
      *
-     * This is the base class for analysis routines. Derived class must implement:
+     * This is the base class for analysis routines.
+     * Derived class must implement:
+     *
      * - a descriptive name
-     * - _info()
+     * - `_info()`
      *
      * It is strongly recommended that derived classes implement:
-     * - a sample(...) function that uses run() to check if the analysis should be run or not.
-     * - the cite string to provide external information
+     *
+     * - a sample(...) function that uses `run()` to check if the
+     *   analysis should be run or not.
+     * - the `cite` string to provide external information
      */
     class AnalysisBase {
       private:
@@ -48,13 +52,15 @@ namespace Faunus {
         void test(UnitTest&);//!< Perform unit test
     };
 
-    /*!
-     * \brief General class for handling 2D tables - xy date, for example.
-     * \author Mikael Lund
-     * \date Lund 2011
-     * \note `Tx` is used as the `std::map` key and which may be problematic due to direct floating
-     *       point comparison (== operator). We have not experienced any issues with this, though.
-     * \todo We get correct behavior, but is it really OK to have virtual functions in class templates??
+    /**
+     * @brief General class for handling 2D tables - xy date, for example.
+     * @date Lund 2011
+     * @note `Tx` is used as the `std::map` key and which may be
+     * problematic due to direct floating point comparison (== operator).
+     * We have not experienced any issues with this, though.
+     *
+     * @todo We get correct behavior, but is it really OK to have
+     * virtual functions in class templates??
      */
     template<typename Tx, typename Ty>
       class Table2D {
@@ -75,10 +81,10 @@ namespace Faunus {
         public:
           enum type {HISTOGRAM, XYDATA};
           type tabletype;
-          /*!
-           * \brief Constructor
-           * \param resolution Resolution of the x axis
-           * \param key Table type: HISTOGRAM or XYDATA
+          /**
+           * @brief Constructor
+           * @param resolution Resolution of the x axis
+           * @param key Table type: HISTOGRAM or XYDATA
            */
           Table2D(Tx resolution=0.2, type key=XYDATA) {
             tabletype=key;
@@ -95,12 +101,12 @@ namespace Faunus {
 
           virtual ~Table2D() {}
 
-          /*! \brief Access operator - returns reference to y(x) */
+          /** @brief Access operator - returns reference to y(x) */
           Ty& operator() (Tx x) {
             return map[ round(x) ];
           }
 
-          /*! \brief Save table to disk */
+          /** @brief Save table to disk */
           void save(string filename) {
             if (tabletype==HISTOGRAM) {
               if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
@@ -160,10 +166,11 @@ namespace Faunus {
             return x;
           }
 
-          /*!
-           * \brief Load table from disk
-           * \note The first line - used for comments - is ignored.
-           * \todo Implement end bin compensation as in the save() function when loading HISTOGRAMs
+          /**
+           * @brief Load table from disk
+           * @note The first line - used for comments - is ignored.
+           * @todo Implement end bin compensation as in the save()
+           * function when loading HISTOGRAMs
            */
           bool load(string filename) {
             std::ifstream f(filename.c_str());
@@ -186,28 +193,32 @@ namespace Faunus {
       \brief General class for penalty functions along a coordinate
       \date Malmo, 2011
 
-      This class stores a penalty function, f(x), along a given coordinate, x, of type
-      `Tcoordinate` which could be a distance, angle, volume etc. Initially f(x) is zero for
-      all x. Each time the system visits x the update(x) function should be called
-      so as to add the penalty energy, du. In the energy evaluation, the coordinate
-      x should be associated with the extra energy f(x). This will eventually ensure uniform
-      sampling.
+      This class stores a penalty function, f(x), along a given coordinate, x,
+      of type `Tcoordinate` which could be a distance, angle, volume etc.
+      Initially f(x) is zero for all x.
+      Each time the system visits x the update(x) function should be called
+      so as to add the penalty energy, du. In the energy evaluation, the
+      coordinate x should be associated with the extra energy f(x).
+      This will eventually ensure uniform sampling.
 
       Example:
 
       ~~~
       PenaltyFunction<double> f(0.1,1000,6.0); // 0.1 kT penalty
-      Point masscenter;               // some 3D coordinate...
+      Point masscenter;           // some 3D coordinate...
       ...
-      f.update(masscenter.z);         // update penalty energy for z component
-      double u = f(masscenter.z);     // get accumulated penalty at coordinate (kT)
-      f.save("penalty.dat");          // save to disk
+      f.update(masscenter.z);     // update penalty energy for z component
+      double u = f(masscenter.z); // get accumulated penalty at coordinate (kT)
+      f.save("penalty.dat");      // save to disk
       ~~~
 
-      In the above example, the penalty energy will be scaled by 0.5 if the sampling along the
-      coordinate is less than 6 kT between the least and most likely position. This threshold check
-      is carried out every 1000th call to update(). Note also that when the penalty energy is scaled,
-      so is the threshold (also by a factor of 0.5).
+      In the above example, the penalty energy will be scaled by 0.5 if the
+      sampling along the coordinate is less than 6 kT between the least and
+      most likely position.
+      This threshold check is carried out every 1000th call to `update()`.
+      Note also that when the penalty energy is scaled, so is the threshold
+      (also by a factor of 0.5).
+
       */
     template<typename Tcoord=float>
       class PenaltyFunction : public Table2D<Tcoord,double> {
@@ -503,15 +514,19 @@ namespace Faunus {
         void sample(const Group&, const Space&); //!< Sample properties of Group (identified by group name)
     };
 
-    /*!
-     * \brief Analyse charge multipoles and their fluctuations of groups
-     * \author Anil Kurut
-     * \date 2012
+    /**
+     * @brief Analyse charge multipoles and their fluctuations of groups
      *
-     * This analysis class will analyse selected groups and calculate their net-charge, dipole moment as well
-     * as their variances. It is possible to exclude certain atom types by added their names to an exclusionlist.
-     * Several groups may be analysed - the sample() function will automatically identify different groups via
-     * their names. The dipole moment is calculated with respect to the mass center.
+     * This analysis class will analyse selected groups and calculate
+     * their net-charge, dipole moment as well as their variances.
+     * It is possible to exclude certain atom types by added their
+     * names to an exclusionlist. Several groups may be analysed -
+     * the `sample()` function will automatically identify different
+     * groups via their names.
+     * The dipole moment is calculated with respect to the mass center.
+     *
+     * @author Anil Kurut
+     * @date Lund 2012
      */
     class ChargeMultipole : public AnalysisBase {
       private:
@@ -536,13 +551,13 @@ namespace Faunus {
        };
        */
 
-    /*! \brief Widom method for excess chemical potentials
-     *  \author Mikael Lund
+    /**
+     * @brief Widom method for excess chemical potentials
      *
-     *  This class will use the ghost particle insertion technique
-     *  to insert a collection of particles which, when summed, should
-     *  have no net charge. This is used to calculate the mean excess
-     *  chemical potential and activity coefficient.
+     * This class will use the ghost particle insertion technique
+     * to insert a collection of particles which, when summed, should
+     * have no net charge. This is used to calculate the mean excess
+     * chemical potential and activity coefficient.
      */
     class Widom : public AnalysisBase {
       private:
@@ -574,7 +589,7 @@ namespace Faunus {
      * maintaing by charge re-scaling according to 
      *
      * - [Svensson and Woodward, Mol. Phys. 1988, 64:247]
-     *   (http://dx.doi.org/10.1080/00268978800100203)
+     *   (http://doi.org/ft9bv9)
      *
      * Currently this works **only** for the primitive model of electrolytes, i.e.
      * hard, charged spheres interacting with a Coulomb potential.

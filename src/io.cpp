@@ -8,61 +8,6 @@
 #include <faunus/energy.h>
 
 namespace Faunus {
-  /*!
-   * The first line in the AAM file format is the number of
-   * particles. The following lines defines the particles according
-   * to: \n
-   *   name num x y z charge weight radius
-   */
-
-  bool io::readfile(string file, vector<string> &v) {
-    std::ifstream f(file.c_str() );
-    if (f) {
-      while (getline(f,s))
-        v.push_back(s);
-      f.close();
-      return true;
-    }
-    std::cout << "# WARNING! FILE " << file << " NOT READ!\n";
-    return false;
-  }
-  
-  /*!
-   * \param file Filename
-   * \param s String to write
-   * \param mode std::ios_base::out (new file, default) or std::ios_base::app (append)
-   */
-  bool io::writefile(string file, string s, std::ios_base::openmode mode) {
-    std::ofstream f(file.c_str(), mode);
-    cout << "Writing to file '" << file << "'. ";
-    if (f) {
-      f << s;
-      f.close();
-      cout << "OK!\n";
-      return true;
-    }
-    cout << "FAILED!\n";
-    return false;
-  }
-  
-  void io::strip(vector<string> &v, string pat) {
-    vector<string>::iterator iter=v.begin();
-    while (iter!=v.end())
-      if ((*iter).find(pat)!=string::npos)
-        v.erase(iter);
-      else ++iter;
-  }
-  
-  void io::splash(string f) {
-    vector<string> t;
-    t.clear();
-    readfile(f,t);
-    for (auto t_i : t)
-      std::cout << "# " << t_i <<endl;
-  }
-
-  //--------------- IOAAM ---------------------
-
   FormatAAM::FormatAAM() {}
 
   p_vec& FormatAAM::particles() {
@@ -91,8 +36,8 @@ namespace Faunus {
   bool FormatAAM::load(string file) {
     vector<string> v;
     p.clear();
-    if (fio.readfile(file,v)==true) {
-      fio.strip(v,"#");
+    if (IO::readFile(file,v)==true) {
+      IO::strip(v,"#");
       unsigned int n=atoi(v[0].c_str());
       for (unsigned int i=1; i<=n; i++)
         p.push_back( s2p(v.at(i)) );
@@ -106,57 +51,8 @@ namespace Faunus {
     o << pv.size() << std::endl;
     for (size_t i=0; i<pv.size(); i++)
       o << p2s(pv[i], i);
-    return fio.writefile(file, o.str());
+    return IO::writeFile(file, o.str());
   }
-
-/*
-  //----------------- IOXYZ ----------------------
-  ioxyz::ioxyz() {}
-  particle ioxyz::s2p(string &s) {
-    particle p;
-    std::stringstream o;
-    string name, num;
-    o << s;
-    o >> name >> num >> p.x >> p.y >> p.z >> p.charge >> p.mw >> p.radius;
-    p.id = atom[name].id;
-    p.hydrophobic = atom[p.id].hydrophobic;
-    return p;
-  }
-
-  bool ioxyz::save(string file, p_vec &p) {
-    std::ostringstream o;
-    o << p.size() << std::endl << std::endl;
-    for (unsigned short i=0; i<p.size(); i++)
-      o << atom[p[i].id].name << " "
-        << p[i].x << " " << p[i].y << " " << p[i].z << std::endl;
-    o << std::endl;
-    return writefile(file, o.str());
-  }
-
-  p_vec ioxyz::load(string file) {
-    v.resize(0);
-    particle dummy;
-
-    if (readfile(file,v)==true) {
-      strip(v,"#");
-      unsigned short n=atoi(v[0].c_str());
-      if (n!=sys->p.size()) {
-        std::cerr << "!! System vector and .coord vector are out of sync! !!\n"
-          << "!! Closing the factory since n=" <<n<< "and p.size() ="<<sys->p.size()<<" !!\n"
-          << std::endl;
-      }else{ 
-        for (unsigned short i=1; i<=n; i++) {
-          sys->p[i-1]=s2p(v[i]);
-          sys->p[i-1].charge=s2p(v[i]).charge;
-          sys->p[i-1].radius=s2p(v[i]).radius;
-          sys->p[i-1].mw=s2p(v[i]).mw;
-        }
-        std::cout << "# Old coordinates loaded\n";
-      }
-    } else{ std::cout << "# Can't find .coord${jobid} \n";}
-    return p;
-  }
-  */
 
   /*!
    * Saves particles as a PQR file. This format is very simular
@@ -182,25 +78,8 @@ namespace Faunus {
       o << buf;
       if ( atom[p_i.id].name=="CTR" ) nres++;
     }
-    return fio.writefile(file, o.str());
+    return IO::writeFile(file, o.str());
   }
-
-  /*
-  bool iopqr::save(string file, p_vec &p, titrate &tit) {
-    p_vec tmp = p;
-    for (unsigned short i=0; i<p.size(); i++)
-      tmp[i].charge = tit.avgcharge(p, i);
-    return save(file, tmp);
-  }
-
-  bool iopqr::save(string file, p_vec &p, vector<group> &g) {
-    p_vec t;
-    for (int i=0; i<g.size(); i++)
-      for (int j=g[i].beg; j<=g[i].end; j++)
-        t.push_back( p[j] );
-    return save(file, t);
-  }
-  */
 
   bool FormatGRO::save(string file, p_vec &p) {
     string name;
@@ -221,7 +100,7 @@ namespace Faunus {
     }
     if (len>0)
       o << len << " " << len << " " << len << std::endl;
-    return fio.writefile(file, o.str());
+    return IO::writeFile(file, o.str());
   }
 
   bool FormatGRO::save(string file, Space &spc) {
@@ -245,7 +124,7 @@ namespace Faunus {
     }
     if (len>0)
       o << len << " " << len << " " << len << std::endl;
-    return fio.writefile(file, o.str());
+    return IO::writeFile(file, o.str());
   }
 
 
@@ -266,7 +145,7 @@ namespace Faunus {
   bool FormatGRO::load(string file) {
     p.clear();
     v.resize(0);
-    if (fio.readfile(file,v)==true) {
+    if (IO::readFile(file,v)==true) {
       int last=atoi(v[1].c_str())+1;
       for (int i=2; i<=last; i++)
         p.push_back( s2p(v[i]) );
@@ -443,7 +322,6 @@ namespace Faunus {
   }
 
   bool FormatQtraj::save(string file, p_vec &p) {
-    io fio;
     std::ostringstream o;
     o.precision(6);
     for (size_t i=0; i<p.size(); i++) {
@@ -451,10 +329,10 @@ namespace Faunus {
     }
     o << endl;
     if ( append==true )
-      return fio.writefile(file, o.str(), std::ios_base::app);
+      return IO::writeFile(file, o.str(), std::ios_base::app);
     else
       append=true;
-    return fio.writefile(file, o.str(), std::ios_base::out);
+    return IO::writeFile(file, o.str(), std::ios_base::out);
   }
 
   bool FormatQtraj::save(string file, p_vec &p, vector<Group> &g) {
@@ -463,18 +341,6 @@ namespace Faunus {
       for (auto j : g[i])
         t.push_back( p[j] );
     return save(file, t);
-  }
-
-  xyfile::xyfile(string name) : f(name.c_str()) {
-    cnt=0;
-  }
-
-  void xyfile::add(double x, double y) {
-    f << x << " " << y << std::endl;
-  }
-
-  void xyfile::close() {
-    f.close();
   }
 
   FormatFastaSequence::FormatFastaSequence(double harmonic_k, double harmonic_req) : bond(harmonic_k, harmonic_req) {

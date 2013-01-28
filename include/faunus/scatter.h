@@ -8,13 +8,11 @@
 #include <faunus/analysis.h>
 
 namespace Faunus {
-  /*!
-   * \brief Routines related to scattering
-   */
+
+  /** @brief Routines related to scattering */
   namespace Scatter {
 
-    /*!
-     * \brief Form factor, \c F(q), for a hard sphere of radius \c R.
+    /** @brief Form factor, `F(q)`, for a hard sphere of radius `R`.
      */
     class FormFactorSphere {
       private:
@@ -24,11 +22,11 @@ namespace Faunus {
           return xinv*( sin(x)*xinv - cos(x) );
         }
       public:
-        /*!
-         * \param q q value in inverse angstroms
-         * \param a particle to take radius, \c R from.
-         * \returns
-         * \f$ I(q) = \left [\frac{3}{(qR)^3} \left ( \sin{qR} - qR\cos{qR} \right ) \right ]^2\f$
+        /**
+         * @param q q value in inverse angstroms
+         * @param a particle to take radius, \c R from.
+         * @returns
+         * @f$I(q)=\left [\frac{3}{(qR)^3}\left (\sin{qR}-qR\cos{qR}\right )\right ]^2@f$
          */
         inline Tfloat operator()(Tfloat q, const particle &a) const {
           assert(q>0 && a.radius>0 && "Particle radius and q must be positive");
@@ -38,29 +36,98 @@ namespace Faunus {
         }
     };
 
-    /*!
-     * \brief Tabulated particle form factors loaded from disk
-     * \note doi:10.1186/1471-2105-11-429
+    /**
+     * @brief Tabulated particle form factors loaded from disk
+     * @note doi:10.1186/1471-2105-11-429
      */
     class FormFactorTable {
       private:
         typedef Analysis::Table2D<float,float> Ttable;
         std::map<particle::Tid, Ttable > F;
-        void addVariants();//!< Add for atomic variants for already loaded data
-      public:
-        bool load(string, bool=true); //!< Load atomic F(q) tables from disk
 
-        inline float operator()(float q, const particle &a) {
-          assert( ~F.empty() && "Did you forget to load F(q) from disk?");
-          assert( F.find(a.id) != F.end() && "F(q) for particle not known!");
-          // or should we return largest F(q) if out of table?
-          return F[a.id](q);
+        /**
+         * @brief Add for atomic variants for already loaded data
+         *
+         * This will top up the tables with related form factors
+         * not loaded from disk. I.e. if you loaded data for "HIS",
+         * this will be duplicated for "HHIS" if not already loaded
+         * and if it is defined in the Atoms class.
+         */
+        void addVariants() {
+          for (auto &m : F) {            // loop over loaded F(q)
+            string mname = atom[m.first].name;
+            for (auto &a : atom.list)    // loop over species
+              if (a.id!=m.first)         // if non-tabulated species
+                if (a.name.find(mname)!=std::string::npos) // and it is a mutant
+                  F[a.id] = F[m.first];  // duplicate!
+          }
         }
+
+      public:
+        template<class Tparticle>
+          float operator()(float q, const Tparticle &a) {
+            assert( ~F.empty() && "Did you forget to load F(q) from disk?");
+            assert( F.find(a.id) != F.end() && "F(q) for particle not known!");
+            // or should we return largest F(q) if out of table?
+            return F[a.id](q);
+          }
+
+        /**
+         * @brief Load atomic F(q) tables from disk
+         * Example of the file format, where the first line gives
+         * the q-resolution in inverse angstroms:
+         * @verbatim
+         * l1: 0.015
+         * l2: q     ALA   ARG
+         * l3: 0.000 8.983 23.527
+         * l4: 0.015 8.980 23.516
+         * l5: ...
+         * @endverbatim
+         * @param filename Multi-column file with F(q) for different species
+         * @param variants True (default) if atomic variants to loaded date should
+         *                 be generated
+         */
+        bool load(string filename, bool variants=true) {
+          std::ifstream f(filename.c_str());
+          if (f) {
+            float dq;
+            f >> dq; // read resolution from line 1
+
+            // read atom names from line 2
+            std::vector<string> namevec;
+            string line, name;
+            std::getline(f, line);
+            std::stringstream ss(line);
+            while (ss>>name)
+              if (name!="q") {
+                namevec.push_back(name);
+                F[ atom[name].id ] = Ttable(dq,Ttable::XYDATA);
+              }
+
+            // read F(q) starting from line 3 until eof
+            while (!f.eof()) {
+              int rescnt=0;
+              float _f, _q;
+              std::getline(f, line);
+              std::stringstream ss(line);
+              ss >> _q;
+              while (ss >> _f) {
+                particle::Tid id = atom[ namevec.at(rescnt++) ].id;
+                F[id](_q) = _f;
+              }
+            }
+            if (variants)
+              addVariants();
+            return true;
+          }
+          return false;
+        }
+
     };
 
-    // See also http://www.lsinstruments.ch/technology/static_light_scattering_sls/structure_factor/
-    /*!
-     * \brief Calculates scattering intensity, I(q) using the Debye formula
+    //http://www.lsinstruments.ch/technology/static_light_scattering_sls/structure_factor/
+    /**
+     * @brief Calculates scattering intensity, I(q) using the Debye formula
      */
     template<typename Tgeometry, typename Tformfactor> class DebyeFormula {
       private:

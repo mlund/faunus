@@ -6,7 +6,6 @@
 #include <faunus/species.h>
 #include <faunus/inputfile.h>
 #include <faunus/geometry.h>
-#include <faunus/faunus.h>
 #include <faunus/textio.h>
 #include <faunus/physconst.h>
 
@@ -52,8 +51,8 @@ namespace Faunus {
   
     /**
      * This function will perform a trial move and accept/reject using the standard
-     * [Metropolis criteria](http://en.wikipedia.org/wiki/Metropolis–Hastings_algorithm)
-     * That is, it will perform the following `n` times:
+     * Metropolis criteria (doi:10/ds736f). That is, it will perform the following
+     * `n` times:
      *
      * - Perform a trial move with `_trialMove()`
      * - Calulate the energy change, \f$\beta\Delta U\f$ with `_energyChange()`
@@ -457,6 +456,7 @@ namespace Faunus {
      */
     TranslateRotateCluster::TranslateRotateCluster(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : TranslateRotate(in,e,s,pfx) {
       title="Cluster "+title;
+      cite="doi:10/cj9gnn";
       threshold = in.get<double>(prefix+"_clustersize",0);
       gmobile=nullptr;
     }
@@ -582,7 +582,7 @@ namespace Faunus {
 
     ClusterTranslateNR::ClusterTranslateNR(InputMap &in, Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Rejection Free Cluster Translation";
-      cite="doi:10.1103/PhysRevLett.92.035504";
+      cite="doi:10/fthw8k";
       useAlternateReturnEnergy=true;
       dp=in.get<double>("ctransnr_dp", 0);
       skipEnergyUpdate=in.get<bool>("ctransnr_skipenergy", false);

@@ -13,6 +13,12 @@ include(CheckIncludeFileCXX)
 include(CheckCXXSourceCompiles)
 enable_testing()
 
+find_package(Eigen3 3.1.2)
+if (NOT EIGEN3_FOUND)
+  message (FATAL_ERROR "Eigen 3.1.2+ is required.")
+endif()
+include_directories(${EIGEN3_INCLUDE_DIR})
+
 # ------------------------------
 #   Default build is "Release"
 # ------------------------------
@@ -73,7 +79,6 @@ add_subdirectory(doc EXCLUDE_FROM_ALL)
 if(ENABLE_SWIG)
   add_subdirectory(${CMAKE_SOURCE_DIR}/swig)
 endif()
-
 
 if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
   message(

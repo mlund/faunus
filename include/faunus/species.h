@@ -3,7 +3,6 @@
 
 #ifndef SWIG
 #include <faunus/common.h>
-#include <faunus/point.h>
 #endif
 
 namespace Faunus {
@@ -12,8 +11,10 @@ namespace Faunus {
    * @brief Atomic properties
    */
   struct AtomData {
+    typedef unsigned char Tid;
+    typedef bool Thydrophobic;
     AtomData();
-    particle::Tid id;  //!< Identification number
+    Tid id;            //!< Identification number
     double sigma,      //!< LJ diameter [angstrom]
            eps,        //!< LJ epsilon [kJ/mol]
            radius,     //!< Radius [angstrom]
@@ -26,7 +27,7 @@ namespace Faunus {
            mean,       //!< Mean value... (charge, sasa, etc.)
            variance;   //!< Spread around AtomData::mean
     short int patchtype;  //!< If patchy particle, which type of patch
-    particle::Thydrophobic hydrophobic;  //!< Are we hydrophobic?
+    Thydrophobic hydrophobic;  //!< Are we hydrophobic?
     string name;       //!< Name. Avoid spaces.
     bool operator==(const AtomData &d) const { return (*this==d); }
   };
@@ -118,7 +119,7 @@ namespace Faunus {
       bool includefile(string);              //!< Append atom parameters from file
       bool includefile(InputMap&);           //!< Append atom parameters from file
       AtomData& operator[] (string);         //!< Name->data
-      AtomData& operator[] (particle::Tid);  //!< Id->data
+      AtomData& operator[] (AtomData::Tid);  //!< Id->data
       string info();                         //!< Print info
       
       /** @brief Copy properties into particles vector. Positions are left untouched! */

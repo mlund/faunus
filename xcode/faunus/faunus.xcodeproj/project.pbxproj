@@ -16,7 +16,6 @@
 		73011C671423E30100509B7B /* move.h in Headers */ = {isa = PBXBuildFile; fileRef = 73011C5C1423E30100509B7B /* move.h */; };
 		73011C681423E30100509B7B /* potentials.h in Headers */ = {isa = PBXBuildFile; fileRef = 73011C5D1423E30100509B7B /* potentials.h */; };
 		73011C691423E30100509B7B /* topology.h in Headers */ = {isa = PBXBuildFile; fileRef = 73011C5E1423E30100509B7B /* topology.h */; };
-		73011C6C1423E93E00509B7B /* faunus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73011C6B1423E93E00509B7B /* faunus.cpp */; };
 		7316FA2D15C546A30024F084 /* textio.h in Headers */ = {isa = PBXBuildFile; fileRef = 7316FA2C15C546A30024F084 /* textio.h */; };
 		7316FA3015C546B20024F084 /* mpi.h in Headers */ = {isa = PBXBuildFile; fileRef = 7316FA2F15C546B20024F084 /* mpi.h */; };
 		7316FA3315C546E90024F084 /* mpi.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7316FA3115C546E90024F084 /* mpi.cpp */; };
@@ -26,8 +25,6 @@
 		7316FA5815C56BC10024F084 /* analysis.h in Headers */ = {isa = PBXBuildFile; fileRef = 7316FA5715C56BC10024F084 /* analysis.h */; };
 		738C133513FB12D20056EF71 /* group.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C132E13FB12D20056EF71 /* group.cpp */; };
 		738C133613FB12D20056EF71 /* inputfile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C132F13FB12D20056EF71 /* inputfile.cpp */; };
-		738C133713FB12D20056EF71 /* physconst.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C133013FB12D20056EF71 /* physconst.cpp */; };
-		738C133813FB12D20056EF71 /* point.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C133113FB12D20056EF71 /* point.cpp */; };
 		738C133913FB12D20056EF71 /* slump.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C133213FB12D20056EF71 /* slump.cpp */; };
 		738C133A13FB12D20056EF71 /* species.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C133313FB12D20056EF71 /* species.cpp */; };
 		738C134D13FB12DE0056EF71 /* average.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C133D13FB12DE0056EF71 /* average.h */; };
@@ -97,7 +94,6 @@
 		73011C5C1423E30100509B7B /* move.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = move.h; sourceTree = "<group>"; };
 		73011C5D1423E30100509B7B /* potentials.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = potentials.h; sourceTree = "<group>"; };
 		73011C5E1423E30100509B7B /* topology.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = topology.h; sourceTree = "<group>"; };
-		73011C6B1423E93E00509B7B /* faunus.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = faunus.cpp; path = ../../src/faunus.cpp; sourceTree = "<group>"; };
 		7316FA2C15C546A30024F084 /* textio.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = textio.h; sourceTree = "<group>"; };
 		7316FA2F15C546B20024F084 /* mpi.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = mpi.h; sourceTree = "<group>"; };
 		7316FA3115C546E90024F084 /* mpi.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mpi.cpp; path = ../../src/mpi.cpp; sourceTree = "<group>"; };
@@ -112,8 +108,6 @@
 		738C132613FB12B30056EF71 /* libfaunus.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libfaunus.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		738C132E13FB12D20056EF71 /* group.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = group.cpp; path = ../../src/group.cpp; sourceTree = "<group>"; };
 		738C132F13FB12D20056EF71 /* inputfile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = inputfile.cpp; path = ../../src/inputfile.cpp; sourceTree = "<group>"; };
-		738C133013FB12D20056EF71 /* physconst.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = physconst.cpp; path = ../../src/physconst.cpp; sourceTree = "<group>"; };
-		738C133113FB12D20056EF71 /* point.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = point.cpp; path = ../../src/point.cpp; sourceTree = "<group>"; };
 		738C133213FB12D20056EF71 /* slump.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = slump.cpp; path = ../../src/slump.cpp; sourceTree = "<group>"; };
 		738C133313FB12D20056EF71 /* species.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = species.cpp; path = ../../src/species.cpp; sourceTree = "<group>"; };
 		738C133D13FB12DE0056EF71 /* average.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = average.h; sourceTree = "<group>"; };
@@ -142,7 +136,6 @@
 		73B67CDA1423E28E00E44DD9 /* space.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = space.cpp; path = ../../src/space.cpp; sourceTree = "<group>"; };
 		73E9C83515CC6A70001D5654 /* polymers.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = polymers.cpp; path = ../../../src/examples/polymers.cpp; sourceTree = "<group>"; };
 		73E9C83B15CC6B1D001D5654 /* polymers */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = polymers; sourceTree = BUILT_PRODUCTS_DIR; };
-		73E9C84915CDDAD5001D5654 /* README */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = README; path = ../../README; sourceTree = "<group>"; };
 		8B9277491684A3E7003BD642 /* cluster.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = cluster.cpp; sourceTree = "<group>"; };
 		8B92774A1684A3E7003BD642 /* cluster.run */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = cluster.run; sourceTree = "<group>"; };
 		8B969DDA166CDA09004248C1 /* membrane-temper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = "membrane-temper.cpp"; path = "../../src/playground/mlund/membrane-temper.cpp"; sourceTree = "<group>"; };
@@ -214,7 +207,6 @@
 		738C131B13FB12B30056EF71 = {
 			isa = PBXGroup;
 			children = (
-				73E9C84915CDDAD5001D5654 /* README */,
 				7316FA3F15C55A760024F084 /* doc */,
 				738C133B13FB12DE0056EF71 /* include */,
 				738C138C13FB13740056EF71 /* src */,
@@ -305,7 +297,6 @@
 				7316FA5515C56BA10024F084 /* analysis.cpp */,
 				73B67CD21423E28E00E44DD9 /* drift.cpp */,
 				73B67CD31423E28E00E44DD9 /* energy.cpp */,
-				73011C6B1423E93E00509B7B /* faunus.cpp */,
 				73B67CD41423E28E00E44DD9 /* geometry.cpp */,
 				738C132E13FB12D20056EF71 /* group.cpp */,
 				738C132F13FB12D20056EF71 /* inputfile.cpp */,
@@ -313,8 +304,6 @@
 				73B67CD71423E28E00E44DD9 /* mcloop.cpp */,
 				73B67CD81423E28E00E44DD9 /* move.cpp */,
 				7316FA3115C546E90024F084 /* mpi.cpp */,
-				738C133013FB12D20056EF71 /* physconst.cpp */,
-				738C133113FB12D20056EF71 /* point.cpp */,
 				73B67CD91423E28E00E44DD9 /* potentials.cpp */,
 				738C133213FB12D20056EF71 /* slump.cpp */,
 				73B67CDA1423E28E00E44DD9 /* space.cpp */,
@@ -523,8 +512,6 @@
 				73B67CDF1423E28E00E44DD9 /* io.cpp in Sources */,
 				738C133513FB12D20056EF71 /* group.cpp in Sources */,
 				738C133613FB12D20056EF71 /* inputfile.cpp in Sources */,
-				738C133713FB12D20056EF71 /* physconst.cpp in Sources */,
-				738C133813FB12D20056EF71 /* point.cpp in Sources */,
 				738C133913FB12D20056EF71 /* slump.cpp in Sources */,
 				738C133A13FB12D20056EF71 /* species.cpp in Sources */,
 				73B67CDB1423E28E00E44DD9 /* drift.cpp in Sources */,
@@ -534,7 +521,6 @@
 				73B67CE11423E28E00E44DD9 /* move.cpp in Sources */,
 				73B67CE21423E28E00E44DD9 /* potentials.cpp in Sources */,
 				73B67CE31423E28E00E44DD9 /* space.cpp in Sources */,
-				73011C6C1423E93E00509B7B /* faunus.cpp in Sources */,
 				7316FA3315C546E90024F084 /* mpi.cpp in Sources */,
 				7316FA3415C546E90024F084 /* textio.cpp in Sources */,
 				7316FA5615C56BA20024F084 /* analysis.cpp in Sources */,
@@ -689,7 +675,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				HEADER_SEARCH_PATHS = (
-					../../include/,
+					"../../include/**",
 					include,
 					"../include/**",
 				);
@@ -725,7 +711,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				HEADER_SEARCH_PATHS = (
-					../../include/,
+					"../../include/**",
 					include,
 					"../include/**",
 				);

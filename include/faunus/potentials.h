@@ -28,38 +28,26 @@ namespace Faunus {
 
     class DebyeHuckel;
 
-    /*!
-     * \brief Base class for pair potential classes
+    /**
+     * @brief Base class for pair potential classes
      *
      * This is a base class for all pair potentials which must implement the function
      * operator so that the potential can work as a class function.
      * To make a new pair potential you must implement
-     * 1) a function that takes two particles as arguments as well as the
+     * - a function that takes two particles as arguments as well as the
      *    squared distance between them (i.e. the function operator), and
-     * 2) a brief information string.
-     * The unit of the returned energy is arbitrary but you *must* ensure that
-     * when multiplied by tokT() that it is converted to kT units (thermal energy).
-     * By default _tokT=1 and it is a good policy to return energies in kT.
+     * - a brief information string.
+     * The unit of the returned energy is `kT`.
      *
-     * \todo remove tokT() function
      */
     class PairPotentialBase {
       private:
         virtual string _brief()=0;
-        virtual void _setScale(double);
-      protected:
-        double _tokT;
       public:  
         PairPotentialBase();
         virtual ~PairPotentialBase();
         string name;             //!< Short (preferably one-word) description of the core potential
         string brief();          //!< Brief, one-lined information string
-        void setScale(double=1);
-        /*! \brief Convert returned energy to kT.*/
-        inline double tokT() {
-          //        inline double tokT() __attribute__ ((deprecated)) {
-          return _tokT;
-        }
         virtual void setTemperature(double); //!< Set temperature [K]
 
         /*!
@@ -76,7 +64,7 @@ namespace Faunus {
          * \param b Second particle
          * \param p Vector from: p=b-a
          */
-        virtual Point force(const particle &, const particle &, double, Point);
+        virtual Point force(const particle &, const particle &, double, const Point&);
       
         bool save(string, particle::Tid, particle::Tid); //!< Save table of pair potential to disk
         virtual void test(UnitTest&);                    //!< Perform unit test
@@ -92,7 +80,6 @@ namespace Faunus {
         class Harmonic : public PairPotentialBase {
           private:
             string _brief();
-            void _setScale(double);
           public:
             double k;   //!< Force constant (kT/A^2) - Did you rember to divide by two? See note.
             double req; //!< Equilibrium distance (angstrom)
@@ -130,7 +117,7 @@ namespace Faunus {
             string _brief();
           public:
             CosAttract(InputMap&, string="cosattract_"); // Constructor from InputMap
-            inline double operator() (const PointParticle &a, const PointParticle &b, double r2) const FOVERRIDE {
+            inline double operator() (const PointParticle &a, const PointParticle &b, double r2) const {
               if (r2<rc2)
                 return -eps;
               if (r2>rcwc2)
@@ -223,7 +210,6 @@ namespace Faunus {
         class LennardJones : public PairPotentialBase {
           private:
             string _brief();
-            void _setScale(double);
           protected:
             inline double r6(double sigma, double r2) const {
               double x(sigma*sigma/r2);  // 2
@@ -233,10 +219,11 @@ namespace Faunus {
           public:
             LennardJones();
             LennardJones(InputMap&, string="lj_");
-            inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-              double x(r6(a.radius+b.radius,r2));
-              return eps*(x*x - x);
-            }
+            template<class T> 
+              double operator() (const T &a, const T &b, double r2) const {
+                double x(r6(a.radius+b.radius,r2));
+                return eps*(x*x - x);
+              }
             string info(char);
         };
 
@@ -289,11 +276,12 @@ namespace Faunus {
                 }
               }
 
-              inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-                double x( s2[a.id][b.id] / r2 ); //s2/r2
-                x=x*x*x; // s6/r6
-                return eps[a.id][b.id] * (x*x - x);
-              }
+              template<class T>
+                double operator()(const T &a, const T &b, double r2) const {
+                  double x( s2[a.id][b.id] / r2 ); //s2/r2
+                  x=x*x*x; // s6/r6
+                  return eps[a.id][b.id] * (x*x - x);
+                }
 
               /*!
                * \brief This will set a custom epsilon for a pair of particles
@@ -327,17 +315,16 @@ namespace Faunus {
               }
           };
 
-        /*!
-         * \brief Weeks-Chandler-Andersen pair potential
-         * \details This is a Lennard-Jones type potential, cut and shifted to zero
-         * at \f$r_c=2^{1/6}\sigma\f$. More info can be found in DOI: 10.1063/1.1674820
-         * and the functional form is:
-         * \f[
+        /**
+         * @brief Weeks-Chandler-Andersen pair potential
+         * @details This is a Lennard-Jones type potential, cut and shifted to zero
+         * at @f$r_c=2^{1/6}\sigma@f$. More info can be found in at
+         * <http://doi.org/ct4kh9> and the functional form is:
+         * @f[
          * \beta u = 4 \epsilon \left ( (b/r)^{12} - (b/r)^6 + \frac{1}{4} \right )
-         * \f]
-         * where sigma, epsilon per default are set from using Lorentz-Berthelot mixing rules.
-         *
-         * \warning Untested!
+         * @f]
+         * where sigma, epsilon per default are set
+         * using Lorentz-Berthelot mixing rules.
          */
         class WeeksChandlerAndersen : public LennardJonesMixed<LorentzBerthelot> {
           protected:
@@ -353,41 +340,11 @@ namespace Faunus {
               x=x*x*x;// (s/r)^6
               return eps[a.id][b.id]*(x*x - x + onefourth);
             }
-            inline double operator() (const particle &a, const particle &b, const Point &r) const {
-              return operator()(a,b,r.squaredNorm());
-            }
+            template<class T>
+              double operator() (const T &a, const T &b, const Point &r) const {
+                return operator()(a,b,r.squaredNorm());
+              }
         };
-        
-
-
-        /*
-           class cos2 : public PairPotentialBase {
-           private:
-           string _brief();
-           void _setScale(double);
-           protected:
-
-           public:
-        //TODO cutoff, epsilon, pdist, pswitch!!!
-        cos2();
-        cos2(InputMap&, string="cos2_");
-        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-        double atrenergy;
-        double ndist=sqrt(r2);
-        if (ndist < atom.list[a.id].pdis.....) 
-        atrenergy = -interact->param->epsilon;
-        else {
-        atrenergy = cos(PIH*(ndist-interact->param->pdis)/interact->param->pswitch);
-        atrenergy *= -interact->param->epsilon*atrenergy;
-
-        }
-        return atrenergy;
-        }
-        string info(char);
-        };  
-        */
-        //TODO spherocylinder at external wall!!!
-
 
         inline double fanglscale(double a, const CigarParticle &p){
           // a = r_ij * n_i
@@ -404,7 +361,7 @@ namespace Faunus {
           return f;
         }
 
-        template<typename Tcigarsphere >
+        template<typename Tcigarsphere>
           class PatchyCigarSphere : public PairPotentialBase {
             private:
               string _brief() {
@@ -650,7 +607,6 @@ namespace Faunus {
         class SquareWell : public PairPotentialBase {
           private:
             string _brief();
-            void _setScale(double);
           public:
             double threshold;                           //!< Threshold between particle *surface* [A]
             double depth;                               //!< Energy depth [kT] (positive number)
@@ -717,7 +673,6 @@ namespace Faunus {
         class SoftRepulsion : public PairPotentialBase {
           private:
             string _brief();
-            void _setScale(double);
             double sigma6;
           public:
             SoftRepulsion(InputMap&);
@@ -741,7 +696,6 @@ namespace Faunus {
         class R12Repulsion : public PairPotentialBase {
           private:
             string _brief();
-            void _setScale(double);
           protected:
             double eps;
           public:
@@ -755,9 +709,9 @@ namespace Faunus {
             }
             string info(char);
         };
-    
-    
-    
+
+
+
 
         /*!
          * \brief As LennardJones but only the repulsive R12 part.
@@ -770,31 +724,31 @@ namespace Faunus {
               return eps*x*x;
             }
         };
-    
+
         /*!
          * \brief As LennardJones but truncated and shifted to sigma.
          */
         class LennardJonesTrunkShift : public LennardJones {
-        public:
-          LennardJonesTrunkShift(InputMap&, string="ljts_");
-          inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-            double sigma = a.radius+b.radius;
-            if (r2 > sigma*sigma)
-              return 0.0;
-            
-            double x=r6(sigma,r2)*0.5;
-            return eps*(x*x - x + 0.25);
-          }
-          
-          inline Point force(const particle &a, const particle &b, double r2, Point p) FOVERRIDE {
-            double sigma = a.radius+b.radius;
-            if (r2 > sigma*sigma)
-              return Point(0.0, 0.0, 0.0);
-            
-            double x=r6(sigma,r2)*0.5;
-            return eps*(12.0*x*x - 6.0*x) / r2 * p;
-          }
-          
+          public:
+            LennardJonesTrunkShift(InputMap&, string="ljts_");
+            inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+              double sigma = a.radius+b.radius;
+              if (r2 > sigma*sigma)
+                return 0.0;
+
+              double x=r6(sigma,r2)*0.5;
+              return eps*(x*x - x + 0.25);
+            }
+
+            template<class T>
+              Point force(const T &a, const T &b, double r2, const Point &p) {
+                double sigma = a.radius+b.radius;
+                if (r2 > sigma*sigma)
+                  return Point(0,0,0);
+
+                double x=r6(sigma,r2)*0.5;
+                return eps*(12.*x*x - 6.*x) / r2 * p;
+              }
         };
 
 
@@ -812,7 +766,6 @@ namespace Faunus {
           friend class Energy::GouyChapman;
           private:
           string _brief();
-          void _setScale(double);
           double epsilon_r;
           protected:
           double depsdt;      //!< \f$ T\partial \epsilon_r / \epsilon_r \partial T = -1.37 \f$
@@ -822,29 +775,32 @@ namespace Faunus {
           Coulomb(InputMap&); //!< Construction from InputMap
           double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
 
-          inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+          template<class T>
+            double operator() (const T &a, const T &b, double r2) const {
 #ifdef FAU_APPROXMATH
-            return lB*a.charge*b.charge * invsqrtQuake(r2);
+              return lB*a.charge*b.charge * invsqrtQuake(r2);
 #else
-            return lB*a.charge*b.charge / sqrt(r2);
+              return lB*a.charge*b.charge / sqrt(r2);
 #endif
-          }
-                    
-          inline Point force(const particle &a, const particle &b, double r2, Point p) FOVERRIDE {
+            }
+
+          template<class T>
+            Point force(const T &a, const T &b, double r2, const Point &p) {
 #ifdef FAU_APPROXMATH
-            return lB*a.charge*b.charge * invsqrtQuake(r2) / r2 * p;
+              return lB*a.charge*b.charge * invsqrtQuake(r2) / r2 * p;
 #else
-            return lB*a.charge*b.charge * p / (sqrt(r2)*r2);
+              return lB*a.charge*b.charge * p / (sqrt(r2)*r2);
 #endif
-          }
-          
+            }
+
           string info(char);
           void test(UnitTest&); //!< Perform unit test
         };
 
-        /*!
-         * \brief Coulomb pair potential shifted according to Wolf/Yonezawaa -- doi:10.1063/1.4729748
-         * \details The Coulomb potential has the form:
+        /**
+         * @brief Coulomb pair potential shifted according to
+         *        Wolf/Yonezawaa (doi:10/j97)
+         * @details The Coulomb potential has the form:
          * \f[
          * \beta u_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT}
          * z_i z_j \left (
@@ -857,17 +813,18 @@ namespace Faunus {
             double Rc2, Rcinv;
           public:
             CoulombWolf(InputMap&); //!< Construction from InputMap
-            inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-              if (r2>Rc2)
-                return 0;
+            template<class T>
+              double operator() (const T &a, const T &b, double r2) const {
+                if (r2>Rc2)
+                  return 0;
 #ifdef FAU_APPROXMATH
-              r2=invsqrtQuake(r2);  // 1/r
-              return lB * a.charge * b.charge * (r2 - Rcinv + (Rcinv/r2-1)*Rcinv );
+                r2=invsqrtQuake(r2);  // 1/r
+                return lB * a.charge * b.charge * (r2 - Rcinv + (Rcinv/r2-1)*Rcinv );
 #else
-              r2=sqrt(r2); // r
-              return lB * a.charge * b.charge * (1/r2 - Rcinv + (r2*Rcinv-1)*Rcinv );
+                r2=sqrt(r2); // r
+                return lB * a.charge * b.charge * (1/r2 - Rcinv + (r2*Rcinv-1)*Rcinv );
 #endif
-            }
+              }
             string info(char);
         };
 
@@ -953,31 +910,25 @@ namespace Faunus {
             }
         };
 
-        /*!
-         * \brief Combines two pair potentials
-         * \details This combines two PairPotentialBases. The combined potential can subsequently
-         * be used as a normal pair potential and even be combined with a third potential and
-         * so forth. A number of typedefs such as Potential::CoulombHS is aliasing this.
+        /**
+         * @brief Combines two pair potentials
+         * @details This combines two PairPotentialBases. The combined potential
+         * can subsequently be used as a normal pair potential and even be
+         * combined with a third potential and so forth.
          *
-         * \code
-         *   // mix two and three pair potentials
-         *   using namespace Potential;
-         *   typedef CombinedPairPotential< LennardJones, SquareWell > Tpairpot1;
-         *   typedef CombinedPairPotential< Tpairpot1, Coulomb > Tpairpot2;
-         *   Tpairpot2 mypairpot;
-         *   std::cout << mypairpot.info();
-         * \endcode
+         *     // mix two and three pair potentials
+         *     using namespace Potential;
+         *     typedef CombinedPairPotential< LennardJones, SquareWell > Tpairpot1;
+         *     typedef CombinedPairPotential< Tpairpot1, Coulomb > Tpairpot2;
+         *     Tpairpot2 mypairpot;
+         *     std::cout << mypairpot.info();
          *
-         * \note tokT() functions are *ignored* and the two pair potentials must return
-         *       energies in kT directly. The plan is to remove tokT() permanently.
-         * \date Lund, 2012
-         * \author Mikael Lund
+         * @date Lund, 2012
          */
         template<class T1, class T2>
           class CombinedPairPotential : public PairPotentialBase {
             private:
               string _brief() { return first.brief() + " " + second.brief(); }
-              //void _setScale(double s) {}
             public:
               T1 first;  //!< First pair potential of type T1
               T2 second; //!< Second pair potential of type T2

@@ -382,6 +382,7 @@ namespace Faunus {
 
     Widom::Widom(Space &spc, Energy::Energybase &pot) {
       name="Multi Particle Widom Analysis";
+      cite="doi:10/dkv4s6";
       spcPtr=&spc;
       potPtr=&pot;
     }
@@ -454,7 +455,7 @@ namespace Faunus {
       assert(insertions>=0);
       assert(bjerrumLength>0);
       name="Single particle Widom insertion w. charge scaling"; 
-      cite="doi:10.1080/00268978800100203"; 
+      cite="doi:10/ft9bv9 + doi:10/dkv4s6"; 
       lB=bjerrumLength;
       ghostin=insertions;
     }

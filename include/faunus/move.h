@@ -220,15 +220,19 @@ namespace Faunus {
     /**
      * @brief Combined rotation and rotation of groups and mobile species around it
      *
-     * This class will do a combined translational and rotational move of a group along with
-     * atomic particles surrounding it. To specify where to look for clustered particles, use
-     * the setMobile() function. Whether particles are considered part of the cluster is
-     * determined by the private virtual function `ClusterProbability()`. By default this is a simple
-     * step function with P=1 when an atomic particle in the group set by setMobile is closer
-     * than a certain threshold to a particle in the main group; P=0 otherwise.
+     * This class will do a combined translational and rotational move of a group
+     * along with atomic particles surrounding it.
+     * To specify where to look for clustered particles, use the `setMobile()`
+     * function. Whether particles are considered part of the cluster is
+     * determined by the private virtual function `ClusterProbability()`.
+     * By default this is a simple step function with P=1 when an atomic particle
+     * in the group set by setMobile is closer than a certain threshold to a
+     * particle in the main group; P=0 otherwise.
      *
-     * The implemented cluster algorithm is general - see Frenkel&Smith, 2nd ed, p405 - and derived classes
-     * can re-implement ClusterProbability() for arbitrary probability functions.
+     * The implemented cluster algorithm is general - see Frenkel&Smith,
+     * 2nd ed, p405 - and derived classes can re-implement `ClusterProbability()`
+     * for arbitrary probability functions.
+     *
      */
     class TranslateRotateCluster : public TranslateRotate {
       private:

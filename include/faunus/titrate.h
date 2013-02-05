@@ -63,7 +63,7 @@ namespace Faunus {
         };
 
         std::map<int, Average<double> > q;       //!< Map of average charges per site
-        vector<processdata> process;             //!< Vector of processes.
+        std::vector<processdata> process;        //!< Vector of processes.
 
         EquilibriumController(InputMap&, string="eq_");
         bool include(string);                    //!< Read equilibrium processes from file
@@ -72,7 +72,7 @@ namespace Faunus {
         string info(char=25);                    //!< Get information string
         processdata& random(const p_vec&, int&); //!< Random titratable particle and assiciated random process
 
-        vector<int> sites;                       //!< List of titratable sites
+        std::vector<int> sites;                  //!< List of titratable sites
 
         void sampleCharge(const p_vec&);         //!< Updates the average charge vector titrate::q
         double applycharges(p_vec &);            //!< Copy average charges to particles in the particle vector

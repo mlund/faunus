@@ -351,13 +351,6 @@ namespace Faunus {
       mu2[g.name]+=pow(dip,2);
     }
 
-    void ChargeMultipole::sample(const std::vector<GroupMolecular> &gvec, const Space &spc){
-      if (!run())
-        return;
-      for (auto &g : gvec)
-        sample(g, spc);
-    }
-
     string ChargeMultipole::_info(){
       using namespace textio;
       char k=13;

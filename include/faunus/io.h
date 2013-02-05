@@ -60,7 +60,7 @@ namespace Faunus {
      * @param v vector of string
      * @param pat Pattern to search for
      */
-    inline void strip(vector<string> &v, const string &pat) {
+    inline void strip(std::vector<string> &v, const string &pat) {
       auto iter=v.begin();
       while (iter!=v.end())
         if ((*iter).find(pat)!=string::npos)
@@ -125,7 +125,7 @@ namespace Faunus {
    */
   class FormatGRO {
     private:
-      vector<string> v;
+      std::vector<string> v;
       particle s2p(string &);
     public:
       double len;            //!< Box side length (cubic so far)
@@ -152,13 +152,13 @@ namespace Faunus {
       float time_xtc, prec_xtc;
       int natoms_xtc, step_xtc;
     public:
-      vector<GroupMolecular*> g;               //!< List of PBC groups to be saved as whole
+      std::vector<GroupMolecular*> g;          //!< List of PBC groups to be saved as whole
       FormatXTC(float);                        //!< Constructor that sets an initially cubic box
       bool open(string);                       //!< Open xtc file for reading
       bool loadnextframe(Space&);              //!< Load a single frame into cuboid
       bool save(string, const p_vec&);         //!< Save a frame to trj file.
       bool save(string, Space&);               //!< Save a frame to trj file (PBC)
-      bool save(string, p_vec&, vector<Group>&);//!< Save groups
+      bool save(string, p_vec&, std::vector<Group>&);//!< Save groups
       void setbox(float);                      //!< Set box length - cubic
       void setbox(double,double,double);       //!< Set box length - xyz
       void setbox(const Point&);               //!< Set box length - xyz from vector
@@ -188,7 +188,7 @@ namespace Faunus {
     public:
       FormatQtraj();
       bool save(string, p_vec&);   //!< Save a frame to trj file.
-      bool save(string, p_vec&, vector<Group> &); //!< Save groups
+      bool save(string, p_vec&, std::vector<Group> &); //!< Save groups
   };
 
   /*!

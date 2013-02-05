@@ -538,7 +538,16 @@ namespace Faunus {
       public:
         ChargeMultipole();
         void sample(const Group&, const Space&); //!< Sample properties of Group (identified by group name)
-        void sample(const vector<GroupMolecular>&, const Space&); //!< Sample properties of Group (identified by group name)
+
+        /* @brief Sample properties of Group (identified by group name) */
+        template<typename Tgroup>
+          void sample(const std::vector<Tgroup> &gvec, const Space &spc) {
+            if (!run())
+              return;
+            for (auto &g : gvec)
+              sample(g, spc);
+          }
+
         std::set<string> exclusionlist; //!< Atom names listed here will be excluded from the analysis.
     };
 

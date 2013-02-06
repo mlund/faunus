@@ -911,6 +911,18 @@ namespace Faunus {
             }
         };
 
+        class SpecialPairs {
+          typedef map_ij<AtomData::Tid, PairPotentialBase*> Tmap;
+          Tmap m;
+          template<typename Tparticle, typename Tdistance>
+            double operator() (const Tparticle &a, const Tparticle &b, const Tdistance &r2) const {
+              Tmap::Tkey pair(a.id,b.id);
+              auto i = m.list.find(pair);
+              return first(a,b,r2) + second(a,b,r2);
+            }
+
+        };
+
         /**
          * @brief Combines two pair potentials
          * @details This combines two PairPotentialBases. The combined potential

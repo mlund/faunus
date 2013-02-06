@@ -130,6 +130,16 @@ namespace Faunus {
         void clear() { list.clear(); }
     };
 
+  template<typename Tij, typename Tval>
+    struct map_ij {
+      typedef pair_permutable<Tij> Tkey;
+      std::map<Tkey,Tval> list;
+      Tval& operator() (Tij i, Tij j) {
+        return list[ Tpair(i,j) ];
+      }
+      //std::map<Tkey,Tval>::iterator
+    };
+
   template<typename Tparticle, typename Tij=int, typename Tpair=pair_permutable< Tij > >
     class pair_list_functor {
       protected:

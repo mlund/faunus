@@ -279,6 +279,7 @@
 		73B67CE11423E28E00E44DD9 /* move.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD81423E28E00E44DD9 /* move.cpp */; };
 		73B67CE21423E28E00E44DD9 /* potentials.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD91423E28E00E44DD9 /* potentials.cpp */; };
 		73B67CE31423E28E00E44DD9 /* space.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CDA1423E28E00E44DD9 /* space.cpp */; };
+		73CB4DA616D9297500DED45D /* externalpotential.h in Headers */ = {isa = PBXBuildFile; fileRef = 73CB4DA516D9297500DED45D /* externalpotential.h */; };
 		73E9C84515CC6B32001D5654 /* polymers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73E9C83515CC6A70001D5654 /* polymers.cpp */; };
 		73E9C84815CC6B6A001D5654 /* libfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 738C132613FB12B30056EF71 /* libfaunus.dylib */; };
 		8B9D16DB166CA20E00E7C7D4 /* titrate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8B9D16DA166CA20E00E7C7D4 /* titrate.cpp */; };
@@ -628,6 +629,7 @@
 		73B67CD81423E28E00E44DD9 /* move.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = move.cpp; path = ../../src/move.cpp; sourceTree = "<group>"; };
 		73B67CD91423E28E00E44DD9 /* potentials.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = potentials.cpp; path = ../../src/potentials.cpp; sourceTree = "<group>"; };
 		73B67CDA1423E28E00E44DD9 /* space.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = space.cpp; path = ../../src/space.cpp; sourceTree = "<group>"; };
+		73CB4DA516D9297500DED45D /* externalpotential.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = externalpotential.h; sourceTree = "<group>"; };
 		73E9C83515CC6A70001D5654 /* polymers.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = polymers.cpp; path = ../../../src/examples/polymers.cpp; sourceTree = "<group>"; };
 		73E9C83B15CC6B1D001D5654 /* polymers */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = polymers; sourceTree = BUILT_PRODUCTS_DIR; };
 		8B9277491684A3E7003BD642 /* cluster.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = cluster.cpp; sourceTree = "<group>"; };
@@ -1286,6 +1288,7 @@
 				738C133E13FB12DE0056EF71 /* common.h */,
 				73011C551423E30100509B7B /* drift.h */,
 				73011C561423E30100509B7B /* energy.h */,
+				73CB4DA516D9297500DED45D /* externalpotential.h */,
 				73011C571423E30100509B7B /* faunus.h */,
 				73011C581423E30100509B7B /* geometry.h */,
 				738C134113FB12DE0056EF71 /* group.h */,
@@ -1659,6 +1662,7 @@
 				730472A516B72E1300A191AE /* JacobiSVD_MKL.h in Headers */,
 				730472A616B72E1300A191AE /* UpperBidiagonalization.h in Headers */,
 				730472A716B72E1300A191AE /* UmfPackSupport.h in Headers */,
+				73CB4DA616D9297500DED45D /* externalpotential.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

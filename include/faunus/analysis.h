@@ -172,7 +172,7 @@ namespace Faunus {
            * @todo Implement end bin compensation as in the save()
            * function when loading HISTOGRAMs
            */
-          bool load(string filename) {
+          bool load(const string &filename) {
             std::ifstream f(filename.c_str());
             if (f) {
               map.clear();
@@ -273,7 +273,7 @@ namespace Faunus {
           void scale(double s) { _du*=s; }
 
           /*! \brief Save table to disk */
-          void save(string filename) {
+          void save(const string &filename) {
             Tbase::save(filename);
             hist.save(filename+".dist");
           }

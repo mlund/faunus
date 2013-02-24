@@ -14,13 +14,19 @@
 
 namespace Faunus {
 
-  /*!
-   * \brief Namespace for pair potentials
+  /**
+   * @brief Namespace for pair potentials
    *
    * This namespace contains classes and templates that calculates the
-   * pair potential between particles. The majority of these classes/templates
-   * are derived from the base class Potential::PairPotentialBase and thus
-   * have a common interface. Several pair potentials can be combined into
+   * pair potential between particles as well as particles with external
+   * potentials. The majority of these classes/templates are derived
+   * from
+   *
+   * 1. `Potential::PairPotentialBase`
+   * 2. `Potential::ExternalPotentialBase`
+   *
+   * and thus have common interfaces.
+   * Several pair potentials can be combined into
    * one by the template Potential::CombinedPairPotential and a number of
    * common combinations are already defined as typedefs.
    */
@@ -916,8 +922,8 @@ namespace Faunus {
           Tmap m;
           template<typename Tparticle, typename Tdistance>
             double operator() (const Tparticle &a, const Tparticle &b, const Tdistance &r2) const {
-              Tmap::Tkey pair(a.id,b.id);
-              auto i = m.list.find(pair);
+              //Tmap::Tkey pair(a.id,b.id);
+              //auto i = m.list.find(pair);
               return first(a,b,r2) + second(a,b,r2);
             }
 
@@ -991,80 +997,6 @@ namespace Faunus {
                 std::ostringstream o;
                 o << Tbase::info(w)
                   << textio::pad(textio::SUB,w,"Pair potential cutoff") << sqrt(cutoff2) << textio::_angstrom << endl;
-                return o.str();
-              }
-          };
-
-        template<typename Tparticle>
-          class ExternalPotentialBase {
-            private:
-              virtual std::string _info()=0;
-              virtual std::string _brief() { return name; }
-            protected:
-              std::string name;
-            public:
-              std::string info() { return _info(); }
-              std::string brief() { return _brief(); }
-              virtual double operator()(const Tparticle&, const Point::Tvec&)=0;
-          };
-
-        template<typename Tparticle>
-          class GouyChapmanLinear : public ExternalPotentialBase<Tparticle> {
-            private:
-              typedef ExternalPotentialBase<Tparticle> Tbase;
-              Potential::DebyeHuckel dh;
-              double c0;         //!< Ion concentration (1/A^3)
-              double rho;        //!< Surface charge density (e/A^2)
-              double phi0;       //!< Unitless surface potential @f\frac{\phi0 e}{kT}@f
-              double gamma0;     //!< Gouy-chapman coefficient ()
-              double lB;
-              double kappa;
-              double *zposPtr;           //!< Pointer to z position of GC plane (xy dir)
-              bool linearize;            //!< Use linearized PB?
-            public:
-              GouyChapmanLinear(InputMap &in) : dh(in) {
-                Tbase::name = "Gouy-Chapman External Potential";
-                string prefix="gouychapman_";
-                zposPtr=nullptr;
-                c0=dh.ionicStrength() * pc::Nav / 1e27; // assuming 1:1 salt, so c0=I
-                lB=dh.bjerrumLength();
-                kappa=1/dh.debyeLength();
-
-                linearize = in.get<bool>(prefix+"linearize",false);
-
-                phi0=in.get<double>(prefix+"phi0",0); // Unitless potential = beta*e*phi0
-                if ( std::abs(phi0)>1e-6 ) {
-                  rho=sqrt(2*c0/(pc::pi*lB))*sinh(.5*phi0); // [Evans & Wennerström, 1999, Colloidal Domain p 138-140]
-                }
-                else {
-                  rho=1/in.get<double>(prefix+"qarea",0);
-                  if (rho>1e20)
-                    rho=in.get<double>(prefix+"rho",0);
-                  phi0=2.*asinh(rho * sqrt(.5*lB*pc::pi/c0 ));//  [Evans..]
-                }
-
-                gamma0=tanh(phi0/4);                          // assuming z=1  [Evans..]
-              }
-              double operator()(const Tparticle &p, const Point::Tvec &r) {
-                return 0;
-              }
-
-            private:
-              string _info() {
-                using namespace textio;
-                char w=30;
-                std::ostringstream o;
-                o << pad(SUB,w,"Surface z-position") << *zposPtr << _angstrom << endl
-                  << pad(SUB,w,"Bjerrum length") << lB << _angstrom << endl
-                  << pad(SUB,w,"Debye length") << 1./kappa << _angstrom << endl
-                  << pad(SUB,w,"Ionic strenght") << dh.ionicStrength()*1e3 << " mM" << endl
-                  << pad(SUB,w,"Bulk 1:1 salt concentration") << c0 << _angstrom+cubed << endl
-                  << pad(SUB,w,"Surface potential") << phi0 << kT+"/e = "
-                  << phi0*pc::kB*pc::T()/pc::e << " V=J/C" << endl
-                  << pad(SUB,w,"Surface charge density") << rho*pc::e*1e20 << " C/m"+squared << endl
-                  << pad(SUB,w,"Area per charge") << 1/rho << _angstrom+squared << endl
-                  << pad(SUB,w,"GC-coefficient Gamma_0") << gamma0 << endl
-                  << pad(SUB,w,"Linearize") << ((linearize) ? "yes" : "no") << endl;
                 return o.str();
               }
           };

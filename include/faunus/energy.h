@@ -712,34 +712,27 @@ namespace Faunus {
         double external() FOVERRIDE;  //!< Dumme rest treated as external potential to whole system
     };
 
+    /**
+     * @brief Sum additive external potential on particles.
+     * @tparam Texpot External potential typically derived from
+     *         `Potential::ExternalPotentialBase`
+     */
     template<typename Texpot>
-      class ExternalPotential1D : public Energybase {
+      class ExternalPotential : public Energybase {
         private:
-          Texpot expot;
-          double* zPtr;
-          Point dist(const Point &a) const {
-            return Point(0,0, std::abs(*zPtr - a.z()));
-          }
           string _info() {
-            return "";
+            return expot.info();
           }
         public:
-          /**
-           * @brief Constructor
-           * @param in InputMap to be passed on to the external potential
-           * @param zOffset Pointer to coordinate offset. For example, for
-           *        external potentials due to an XY plane, located at one side
-           *        of a slit, point the offset to `Cuboidslit::len_half.z()`.
-           */
-          ExternalPotential1D(InputMap &in, double* zOffset) : expot(in), zPtr(zOffset) {
-            assert(zPtr!=nullptr);
-            name="External Potential (1D): " + expot.brief();
+          Texpot expot;
+          ExternalPotential(InputMap &in) : expot(in) {
+            name="External Potential ("+expot.name+")";
           }
           double p_external(const particle &p) FOVERRIDE {
-            return expot(p, dist(p)); 
+            return expot(p); 
           }
           double i_external(const p_vec &p, int i) FOVERRIDE {
-            return p_external(p[i]);
+            return p_external( p[i] );
           }
           double g_external(const p_vec &p, Group &g) FOVERRIDE {
             double u=0;
@@ -748,107 +741,6 @@ namespace Faunus {
             return u;
           }
       };
-
-    /**
-     * @brief Charged Gouy-Chapman surface in XY plane
-     *
-     * This is an external potential due to a charged Gouy-Chapman surface
-     * (XY-plane) placed somewhere on the z-axis as specified by setPosition().
-     * It is recommended that this is used in conjunction with a
-     * Geometry::Cuboidslit simulation container.
-     *
-     * For example:
-     * 
-     *     typedef Geometry::Cuboidslit Tgeometry;
-     *     typedef Potential::CombinedPairPotential<Potential::DebyeHuckel, Potential::LennardJones> Tpairpot;
-     *     InputMap mcp("input");
-     *     Energy::Hamiltonian pot;
-     *     auto nb = pot.create(Energy::Nonbonded<Tpairpot,Tgeometry>(mcp));
-     *     auto gc = pot.create(Energy::GouyChapman(mcp));
-     *     gc->zposPtr = &(nb->geometry.len_half.z());  // GC surface at edge of cuboid
-     *
-     * @date Lund/Asljunga, 2011-2012
-     * @note Salt is assumed monovalent!
-     */
-    class GouyChapman : public Energy::Energybase {
-      private:
-        Potential::DebyeHuckel dh;
-        double c0;                                        //!< Ion concentration (A-3)
-        double rho;                                       //!< Surface charge density (e A-2)
-        double phi0;                                      //!< Unitless surface potential \frac{\phi0 e}{kT}
-        double gamma0;                                    //!< Gouy-chapman coefficient ()
-        double lB;
-        double kappa;
-        double *zposPtr;                                  //!< Pointer to z position of GC plane (xy dir)
-        string _info();                                  
-        bool linearize;                                   //!< Use linearized PB?
-      public:                                            
-        GouyChapman(InputMap &);                          //!< Constructor - read input parameters
-        void setPosition(double&);                        //!< Set pointer to z position of surface
-        double i_external(const p_vec&, int) FOVERRIDE;   //!< i'th particle energy in GC potential
-        double g_external(const p_vec&, Group&) FOVERRIDE;//!< Group energy in GC potential
-
-        /**
-         * @brief Point-to-surface distance [angstrom]
-         *
-         * Note that this function is virtual and can be replaced in derived classes to
-         * customize the position of the surface.
-         */
-        inline double dist2surf(const Point &a) {
-          assert(zposPtr!=nullptr && "Did you forget to call setPosition()?");
-          return std::abs(*zposPtr - a.z());
-        }
-
-        /**
-         * @brief Particle energy in GC potential
-         *
-         * \f[
-         * \beta e \Phi(z) = 2\ln{\frac{1+\Gamma_0 \exp{(-\kappa z)}}{1-\Gamma_0 \exp{(-\kappa z)}}}
-         * \f]
-         * or if linearized:
-         * \f[
-         * \beta e \Phi(z) = \beta e \phi_0 \exp{(-\kappa z)}
-         * \f]
-         */
-        template<class Tparticle>
-        double p_external(const Tparticle &p) {
-          if (p.charge!=0) {
-#ifdef FAU_APPROXMATH
-            double x=exp_cawley(-kappa*dist2surf(p));
-#else
-            double x=exp(-kappa*dist2surf(p));
-#endif
-            if (linearize)
-              return p.charge * phi0 * x;
-            else
-              return p.charge * 2 * log((1+gamma0*x)/(1-gamma0*x));
-          }
-          return 0;
-        }
-    };
-
-    /**
-     * @brief Mean field correction
-     * \author Anil Kurut
-     * \warning unfinished!
-     */
-    class MeanFieldCorrection : public Energy::Energybase {
-      private:
-        string filename;                                  //!< Filename of charge density file
-        double threshold;                                 //!< Threshold for the mean field approximation, must be equal to radius of cylinderical container
-        double bin;                                       //!< Resolution for the container slices 
-        Potential::DebyeHuckel dh;  
-        typedef Analysis::Table2D<double, Average<double> > Ttable;
-        Ttable qdensity;                                  //!< Tabulated charge desity for each slice of the container.
-        bool loadfromdisk;                                //!< Yes: Load from disk, No: Sample charge density as self consistent manner 
-        double prefactor;                                 //!< exp(-kappa*threshold)
-        string _info();
-      public:
-        MeanFieldCorrection(InputMap&);//!< Constructor - reads input parameters and needs Debye H\"uckel potential
-        double i_external(const p_vec&, int) FOVERRIDE;         //!< i'th particle energy in mean field correction
-        double g_external(const p_vec&, Group&) FOVERRIDE;      //!< Group energy in mean field correction
-        void sample(const p_vec&, double, double);              //!< Sample the charge density in all slices (Accepted configurations)
-    };
 
     /**
      * @brief Add interactions between atoms based on id, hydrophobicity etc.
@@ -1012,21 +904,6 @@ namespace Faunus {
         string _info();
       public:
         PairListHydrophobic();
-    };
-
-    /**
-     * @brief Excess chemical potential of charged particles, based on Debye-Huckel theory
-     * @warning Untested
-     */
-    class DebyeHuckelActivity : public Energybase {
-      private:
-        string _info();
-        Potential::DebyeHuckel dh;
-      public:
-        DebyeHuckelActivity(InputMap&);                    //!< Constructor - read input parameters
-        double i_external(const p_vec&, int) FOVERRIDE;
-        double g_external(const p_vec&, Group&) FOVERRIDE;
-        double p_external(const particle&) FOVERRIDE;
     };
 
     /**

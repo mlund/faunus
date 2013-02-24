@@ -662,6 +662,7 @@ INPUT                  = doc \
                          src/examples/bulk.cpp \
                          src/examples/temper.cpp \
                          src/examples/polymers.cpp \
+                         src/examples/slitpolymer.cpp \
                          include/faunus
 
 # This tag can be used to specify the character encoding of the source files

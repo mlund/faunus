@@ -57,10 +57,7 @@ namespace Faunus {
 #ifdef __VERSION__
         << " using " << __VERSION__
 #endif
-#ifdef __SVN_REV__
-        << " (SVN revision: " << __SVN_REV__ << ")" << endl
-#endif
-      ;
+        << endl;
       for (auto &m : map) {
         f << std::left << setw(35) << m.first << setw(20) << m.second;
         if ( !keyinfo[m.first].empty() )

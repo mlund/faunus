@@ -59,6 +59,25 @@ namespace Faunus {
           }
       };
 
+    /**
+     * @brief Add polarization step to a move
+     *
+     * This will insert an electric field calculation
+     * after the original trial move and iteratively
+     * calculate induced dipole moments on all particles.
+     */
+    template<class Tmove>
+      class PolarizeMove : public Tmove {
+        private:
+          void _trialMove() {
+            Tmove::_trialMove();
+            // ... update induced moments
+          }
+        public:
+          PolarizeMove(InputMap &in, Energy::Energybase &e, Space &s) :
+            Tmove(in,e,s) {}
+      };
+
     /*!
      * @brief Base class for Monte Carlo moves
      *
@@ -93,13 +112,13 @@ namespace Faunus {
         virtual void _rejectMove()=0;          //!< Reject move, revert to old coordinates.
         virtual double _energyChange()=0;      //!< Returns energy change of trialMove (kT)
 
-        void trialMove();                      //!< Do a trial move (wrapper)
         void acceptMove();                     //!< Accept move, store new coordinates etc. (wrapper)
         void rejectMove();                     //!< Reject move, revert to old coordinates etc. (wrapper)
         double energyChange();                 //!< Returns energy change of trialMove i kT (wrapper)
         bool metropolis(const double&) const;  //!< Metropolis criteria
 
       protected:
+        void trialMove();                      //!< Do a trial move (wrapper)
         Energy::Energybase* pot;         //!< Pointer to energy functions
         Space* spc;                      //!< Pointer to Space (particles and groups are stored there)
         string title;                    //!< title of move (mandatory!)

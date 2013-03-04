@@ -40,6 +40,7 @@
 #include <faunus/titrate.h>
 #include <faunus/analysis.h>
 #include <faunus/scatter.h>
+#include <faunus/spherocylinder.h>
 #endif
 
 #endif

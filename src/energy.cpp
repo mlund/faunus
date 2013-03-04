@@ -154,7 +154,7 @@ namespace Faunus {
     }
     
     Point Hamiltonian::f_p2p(const particle &p1, const particle &p2) {
-      Point p= Point(0.0, 0.0, 0.0);
+      Point p(0,0,0);
       for (auto b : baselist)
         p += b->f_p2p( p1,p2 );
       return p;

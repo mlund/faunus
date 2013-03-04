@@ -24,7 +24,7 @@ int main() {
   Move::Isobaric iso(mcp,pot,spc);
   Move::AtomicTranslation mv(mcp, pot, spc);
   Move::AtomicRotation rot(mcp, pot, spc);
-  Analysis::RadialDistribution<float,int> rdf(0.2);
+  Analysis::RadialDistribution<> rdf(0.2);
 
   // Add cigars
   GroupAtomic cigars(spc, mcp);

@@ -402,33 +402,6 @@ namespace Faunus {
         }
     };
 
-    /**
-     * @brief Calculate minimum distance between two line segments
-     *
-     * Find closest distance between line segments and return its vector
-     * gets orientations and lengths of line segments and the vector connecting
-     * their center os masses (from vec1 to vec2)
-     * Copyright 2001, softSurfer (www.softsurfer.com)
-     * This code may be freely used and modified for any purpose
-     * providing that this copyright notice is included with it.
-     * SoftSurfer makes no warranty for this code, and cannot be held
-     * liable for any real or imagined damage resulting from its use.
-     * Users of this code must verify correctness for their application.
-     */
-    Point mindist_segment2segment(const Point&, double, const Point&, double, const Point&);
-    Point mindist_segment2point(const Point&, double, const Point&);
-
-    inline Point vec_perpproject(const Point &A, const Point &B) {
-      Point x;
-      x=A - B* (A.dot(B));
-      return x;
-    }
-    int test_intrpatch(const CigarParticle &, Point &, double , double , double [5]);
-    int find_intersect_plane(const CigarParticle &, const CigarParticle &, const Point &, const Point &, double , double , double [5]);
-    int find_intersect_planec(const CigarParticle &, const CigarParticle &, const Point &, const Point &, double , double , double [5]);
-    int psc_intersect(const CigarParticle &, const CigarParticle &, const Point &, double [5], double );  
-    int cpsc_intersect(const CigarParticle &, const CigarParticle &,const Point &, double [5], double );
-
   }//namespace Geometry
 }//namespace Faunus
 #endif

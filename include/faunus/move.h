@@ -68,13 +68,25 @@ namespace Faunus {
      */
     template<class Tmove>
       class PolarizeMove : public Tmove {
-        private:
+        protected:
           void _trialMove() {
             Tmove::_trialMove();
             // ... update induced moments
           }
         public:
           PolarizeMove(InputMap &in, Energy::Energybase &e, Space &s) :
+            Tmove(in,e,s) {}
+      };
+
+    template<class Tmove>
+      class EwaldMove : public Tmove {
+        protected:
+          void _trialMove() {
+            Tmove::_trialMove();
+            // ... update induced moments
+          }
+        public:
+          EwaldMove(InputMap &in, Energy::Energybase &e, Space &s) :
             Tmove(in,e,s) {}
       };
 

@@ -284,6 +284,8 @@
 		73E9C84815CC6B6A001D5654 /* libfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 738C132613FB12B30056EF71 /* libfaunus.dylib */; };
 		8B9D16DB166CA20E00E7C7D4 /* titrate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8B9D16DA166CA20E00E7C7D4 /* titrate.cpp */; };
 		8B9D16DD166CA22A00E7C7D4 /* titrate.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B9D16DC166CA22A00E7C7D4 /* titrate.h */; };
+		8BA8482016E4F579006EE6F6 /* ewald.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BA8481F16E4F579006EE6F6 /* ewald.h */; };
+		8BA8482216E4F589006EE6F6 /* spherocylinder.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BA8482116E4F589006EE6F6 /* spherocylinder.h */; };
 		8BABBCCB166C9F8900C223CC /* libfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 738C132613FB12B30056EF71 /* libfaunus.dylib */; };
 		8BABBCD1166C9FA500C223CC /* membrane.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8BABBCC1166C9EA300C223CC /* membrane.cpp */; };
 		8BE1FA9F165A9780001073CC /* auxiliary.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BE1FA9E165A9780001073CC /* auxiliary.h */; };
@@ -637,6 +639,8 @@
 		8B969DDA166CDA09004248C1 /* membrane-temper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = "membrane-temper.cpp"; path = "../../src/playground/mlund/membrane-temper.cpp"; sourceTree = "<group>"; };
 		8B9D16DA166CA20E00E7C7D4 /* titrate.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = titrate.cpp; path = ../../src/titrate.cpp; sourceTree = "<group>"; };
 		8B9D16DC166CA22A00E7C7D4 /* titrate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = titrate.h; sourceTree = "<group>"; };
+		8BA8481F16E4F579006EE6F6 /* ewald.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ewald.h; sourceTree = "<group>"; };
+		8BA8482116E4F589006EE6F6 /* spherocylinder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = spherocylinder.h; sourceTree = "<group>"; };
 		8BABBCC1166C9EA300C223CC /* membrane.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = membrane.cpp; path = ../../src/playground/mlund/membrane.cpp; sourceTree = "<group>"; };
 		8BABBCCF166C9F8900C223CC /* mlund-membrane */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "mlund-membrane"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8BE1FA9E165A9780001073CC /* auxiliary.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = auxiliary.h; sourceTree = "<group>"; };
@@ -1288,6 +1292,7 @@
 				738C133E13FB12DE0056EF71 /* common.h */,
 				73011C551423E30100509B7B /* drift.h */,
 				73011C561423E30100509B7B /* energy.h */,
+				8BA8481F16E4F579006EE6F6 /* ewald.h */,
 				73CB4DA516D9297500DED45D /* externalpotential.h */,
 				73011C571423E30100509B7B /* faunus.h */,
 				73011C581423E30100509B7B /* geometry.h */,
@@ -1304,6 +1309,7 @@
 				738C134613FB12DE0056EF71 /* slump.h */,
 				738C134713FB12DE0056EF71 /* space.h */,
 				738C134813FB12DE0056EF71 /* species.h */,
+				8BA8482116E4F589006EE6F6 /* spherocylinder.h */,
 				7316FA2C15C546A30024F084 /* textio.h */,
 				8B9D16DC166CA22A00E7C7D4 /* titrate.h */,
 				73011C5E1423E30100509B7B /* topology.h */,
@@ -1663,6 +1669,8 @@
 				730472A616B72E1300A191AE /* UpperBidiagonalization.h in Headers */,
 				730472A716B72E1300A191AE /* UmfPackSupport.h in Headers */,
 				73CB4DA616D9297500DED45D /* externalpotential.h in Headers */,
+				8BA8482016E4F579006EE6F6 /* ewald.h in Headers */,
+				8BA8482216E4F589006EE6F6 /* spherocylinder.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

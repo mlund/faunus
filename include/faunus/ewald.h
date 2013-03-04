@@ -3,12 +3,13 @@
 
 /*!
  * @brief Ewald Summation for long-ranged electrostatics
- * @author Martin Trulsson
  *
  * Energies are calculated using Ewald
  * the class also contains a optimization concerning
  * cutoff in the Fourier room
  * Cutoff in realspace is set equal to half the box
+ *
+ * @author Martin Trulsson
  */
 
 #include "faunus/inputfile.h"
@@ -19,8 +20,7 @@ namespace Faunus {
   template<typename T=double>
     class Ewald {
       private:
-        const T a1=0.254829592, a2=-0.284496736, a3=1.421413741,
-              a4=-1.453152027, a5=1.061405429, p1=0.3275911;
+        T a1,a2,a3,a4,a5,p1;
         T boxlen, halfboxlen;
         T lB; // Bjerrum length (AA)
         T twopi;
@@ -29,76 +29,129 @@ namespace Faunus {
         T alphasqrt;
         T pisqrt;
         T Ewapre;
+        T rcut2;   // Squared real space cut-off
         int totk;
         vector<T> kvec;
         vector<complex<T> > eikr, eikrold;
         vector< vector< complex<T> > > eix, eiy, eiz, eixold, eiyold, eizold;
         int kmax, ksqmax;
-        inline T erfc(T);                                 //< Error function (comblimentary)
-        void initKSpaceEwald();                                     //< initialize k-Space
+        void kSpaceInit();//< initialize k-Space
 
       public:
         Ewald(InputMap&, std::string="ewald_");
         string info();
 
-        void setvolume(T);
+        void setVolume(T);
 
-        template<class Tparticle>
-          T pairpot(const Tparticle&, const Tparticle&, T);  //< particle<->particle (real space)
+        void store() {
+          eikrold = eikr;
+          eixold  = eix;
+          eiyold  = eiy;
+          eizold  = eiz;
+        }
 
+        void restore() {
+          swap(eikr,eikrold);
+          swap(eix,eixold);
+          swap(eiy,eiyold);
+          swap(eiz,eizold);
+        }
+
+        /** @brief Real-space particle-particle energy */
+        T rSpaceEnergy(T, T);
+
+        /** @brief Update k-vectors */
         template<class Tpvec>
-          void kSpaceEwald(const Tpvec&);       //< k-Space Ewald all
+          void kSpaceUpdate(const Tpvec&);
 
+        /** @brief Update k-vectors */
         template<class Tpvec>
-          void kSpaceEwald(const Tpvec&, int);  //< k-Space Ewald particle i
+          void kSpaceUpdate(const Tpvec&, int);
 
+        /** @brief k-space energy */
         template<class Tpvec>
-          T sumkSpaceEwald(const Tpvec&);
+          T kSpaceEnergy(const Tpvec&);
 
+        /** @brief k-space energy */
         template<class Tpvec>
-          T sumkSpaceEwald(const Tpvec&, int);
+          T kSpaceEnergy(const Tpvec&, int);
 
         template<class Tpvec>
           T selfEwald(const Tpvec&);            //< Self-Interaction
 
-        void calcAlphaEwald(int, T=0.001);      //< Optimize alpha
+        /** @brief Optimize alpha */
+        void calcAlpha(int, T=0.001);
     };
 
   template<class T>
-    void Ewald<T>::setvolume(T vol) {
-      boxlen=pow(vol,1/3.);
-      halfboxlen=boxlen/2;
-      initKSpaceEwald();
+    void Ewald<T>::kSpaceInit() {
+      int ksq;
+      T b;
+      T rkx,rky,rkz;
+      T rksq;
+      b=1./4./alpha;
+      T twopii=twopi/boxlen;
+      T vol=pow(boxlen,3);
+      totk=0;
+
+      for (int kx=0; kx<(kmax+1); kx++) {      // uses symmetry
+        rkx = twopii*T(kx);
+        for (int ky=-kmax; ky<(kmax+1); ky++) {
+          rky = twopii*T(ky);
+          for (int kz=-kmax; kz<(kmax+1); kz++) {
+            rkz = twopii*T(kz);
+            ksq = kx*kx+ky*ky+kz*kz;
+            if (ksq < ksqmax && ksq!=0) {
+              totk+=1;
+              assert(totk<=2000 && "K vector too small");
+              rksq = rkx*rkx + rky*rky + rkz*rkz;
+              kvec.push_back( twopi * exp( -b*rksq ) / rksq / vol );
+            }
+          }
+        }
+      }
+      kvec.resize(totk);
+      eikr.resize(totk);
+      eikrold.resize(totk);
+      cout << "# Number of wavefunctions :" << totk << endl;
     }
 
   template<class T>
-    template<class Tparticle>
-    T Ewald<T>::pairpot(const Tparticle &p1, const Tparticle &p2, T r2) {
-      if (r2 > halfboxlen*halfboxlen)
-        return 0.;
-      r2 = sqrt(r2);
-      return p1.charge*p2.charge*erfc(r2*alphasqrt)/r2;
+    void Ewald<T>::setVolume(T vol) {
+      assert(vol>0);
+      boxlen=pow(vol,1/3.);
+      halfboxlen=boxlen/2;
+      kSpaceInit();
+      store();
     }
 
   /**
-   * @note Reference for this approximation is found in Abramowitz and Stegun,
-   *       Handbook of mathematical functions, Eq. 7.1.26
+   * @param qq particle-particle charge product
+   * @param r particle-particle distance
    */
   template<class T>
-    T Ewald<T>::erfc(T x) {
-      T t = 1./(1.+p1*x),
-        tp = t*(a1+t*(a2+t*(a3+t*(a4+t*a5))));
-      return tp*exp(-x*x);
+    T Ewald<T>::rSpaceEnergy(T qq, T r) {
+      return  (r*r>rcut2 ? 0 :
+          qq*std::erfc(r*alphasqrt)/r );
     }
 
   template<class T>
     Ewald<T>::Ewald(InputMap &in, std::string pfx) {
+      a1=0.254829592;
+      a2=-0.284496736;
+      a3=1.421413741;
+      a4=-1.453152027;
+      a5=1.061405429;
+      p1=0.3275911;
+
       int size  = in(pfx+"size",0);
       kmax      = in(pfx+"kmax",5);
       alpha     = in(pfx+"alpha",0.001);
       Ewapre    = in(pfx+"Ewapre",0.01);
       lB        = in("bjerrum",7.12591);
       boxlen    = in("cuboid_len",0);
+      rcut2     = in(pfx+"cutoff", boxlen/2);
+      rcut2 = pow(rcut2,2);
       halfboxlen= boxlen/2;
       alphasqrt=sqrt(alpha);
       T pi=std::acos(-1.);
@@ -119,7 +172,7 @@ namespace Faunus {
         eiyold[i].resize(2*kmax+1);
         eizold[i].resize(2*kmax+1);
       }
-      initKSpaceEwald();
+      kSpaceInit();
     }
 
   template<class T>
@@ -131,10 +184,10 @@ namespace Faunus {
     }
 
   template<class T>
-    void Ewald<T>::calcAlphaEwald(int size, T inewaldpression) {
+    void Ewald<T>::calcAlpha(int size, T inewaldpression) {
       ewaldpres=inewaldpression;
       int i=0;
-      T incr=1e-3, A=10, rcut2=halfboxlen*halfboxlen;
+      T incr=1e-3, A=10;
 
       while( A > (1.+1e-10) || A < (1-1e-10)) {
         A=sqrt(alpha) * ewaldpres / exp( -alpha*rcut2 );
@@ -199,41 +252,8 @@ namespace Faunus {
     }
 
   template<class T>
-    void Ewald<T>::initKSpaceEwald() {
-      int maxk=2000, ksq;
-      T b;
-      T rkx,rky,rkz;
-      T rksq;
-      b=1./4./alpha;
-      T twopii=twopi/boxlen;
-      T vol=pow(boxlen,3);
-      totk=0;
-
-      for (int kx=0; kx<(kmax+1); kx++) {      // uses symmetry
-        rkx = twopii*T(kx);
-        for (int ky=-kmax; ky<(kmax+1); ky++) {
-          rky = twopii*T(ky);
-          for (int kz=-kmax; kz<(kmax+1); kz++) {
-            rkz = twopii*T(kz);
-            ksq = kx*kx+ky*ky+kz*kz;
-            if (ksq < ksqmax && ksq!=0) {
-              totk+=1;
-              assert(totk<=maxk && "K vector too small");
-              rksq = rkx*rkx + rky*rky + rkz*rkz;
-              kvec.push_back( twopi * exp( -b*rksq ) / rksq / vol );
-            }
-          }
-        }
-      }
-      kvec.resize(totk);
-      eikr.resize(totk);
-      eikrold.resize(totk);
-      cout << "# Number of wavefunctions :" << totk << endl;
-    }
-
-  template<class T>
     template<class Tpvec>
-    void Ewald<T>::kSpaceEwald(const Tpvec &p) {
+    void Ewald<T>::kSpaceUpdate(const Tpvec &p) {
       int size=p.size();
       T twopii=twopi/boxlen;
 
@@ -263,7 +283,7 @@ namespace Faunus {
 
   template<class T>
     template<class Tpvec>
-    void Ewald<T>::kSpaceEwald(const Tpvec &p, int j) {
+    void Ewald<T>::kSpaceUpdate(const Tpvec &p, int j) {
       T twopii=twopi/boxlen;
 
       eix[j][0]    = complex<T>(1,0);
@@ -288,8 +308,7 @@ namespace Faunus {
 
   template<class T>
     template<class Tpvec>
-    T Ewald<T>::sumkSpaceEwald(const Tpvec &p) {
-      int size=p.size();
+    T Ewald<T>::kSpaceEnergy(const Tpvec &p) {
       complex<T> sum;
       int ksq;
       T u=0, fact;
@@ -304,10 +323,10 @@ namespace Faunus {
             ksq=kx*kx+(ky-kmax)*(ky-kmax)+(kz-kmax)*(kz-kmax);
             if ( ksq < ksqmax && ksq!=0 ) {
               sum = complex<T>(0,0);
-              for (int i=0; i<size; i++)
+              for (int i=0; i<(int)p.size(); i++)
                 sum += p[i].charge * eix[i][kx]*eiy[i][ky]*eiz[i][kz];
               eikr[totk] = sum;
-              u += fact*kvec[totk]*real(sum*conj(sum));
+              u += fact*kvec[totk]*std::real( sum*conj(sum) );
               totk+=1;
             }
           }
@@ -318,24 +337,21 @@ namespace Faunus {
 
   template<class T>
     template<class Tpvec>
-    T Ewald<T>::sumkSpaceEwald(const Tpvec &p, int j) {
+    T Ewald<T>::kSpaceEnergy(const Tpvec &p, int j) {
       complex<T> sum;
-      int ksq;
       T u=0, fact;
       totk=0;
       for (int kx=0; kx<(kmax+1); kx++) {
-        if (kx==0)
-          fact=1.0;
-        else
-          fact=2.0;
+        (kx==0 ? fact=1 : fact=2);
         for (int ky=0; ky<(2*kmax+1); ky++) {
           for (int kz=0; kz<(2*kmax+1); kz++) {
-            ksq=kx*kx+(ky-kmax)*(ky-kmax)+(kz-kmax)*(kz-kmax);
+            int ksq=kx*kx+(ky-kmax)*(ky-kmax)+(kz-kmax)*(kz-kmax);
             if (ksq < ksqmax && ksq!=0) {
-              eikr[totk] = eikrold[totk]+p[j].charge*(eix[j][kx]*eiy[j][ky]*eiz[j][kz]
-                  -eixold[j][kx]*eiyold[j][ky]*eizold[j][kz]);
+              eikr[totk] = eikrold[totk]+p[j].charge *
+                ( eix[j][kx]*eiy[j][ky]*eiz[j][kz]
+                  - eixold[j][kx]*eiyold[j][ky]*eizold[j][kz] );
               sum = eikr[totk];
-              u += fact*kvec[totk]*real(sum*conj(sum));
+              u += fact*kvec[totk] * std::real( sum*conj(sum) );
               totk+=1;
             }
           }

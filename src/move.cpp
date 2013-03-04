@@ -907,7 +907,9 @@ namespace Faunus {
         << pad(SUB,w, "Temperature") << pc::T() << " K" << endl;
       if (cnt>0) {
         char l=14;
-        o << pad(SUB,w, "Mean displacement") << cuberoot+rootof+bracket("dV"+squared) << " = " << pow(sqrV.avg(), 1/6.) << _angstrom << endl
+        o << pad(SUB,w, "Mean displacement")
+          << cuberoot+rootof+bracket("dV"+squared)
+          << " = " << pow(sqrV.avg(), 1/6.) << _angstrom << endl
           << pad(SUB,w, "Osmotic coefficient") << P / (N*rV.avg()) << endl
           << endl
           << indent(SUBSUB) << std::right << setw(10) << ""
@@ -917,7 +919,7 @@ namespace Faunus {
           << setw(l+8) << bracket("N/V") << endl
           << indent(SUB) << setw(10) << "Averages"
           << setw(l) << V.avg() << _angstrom << cubed
-          << setw(l) << pow(V.avg(),1/3.) << _angstrom
+          << setw(l) << std::cbrt(V.avg()) << _angstrom
           << setw(l) << rV.avg() << " 1/" << _angstrom << cubed
           << setw(l) << N*rV.avg()*tomM << " mM" << endl;
       }
@@ -925,7 +927,7 @@ namespace Faunus {
     }
 
     void Isobaric::_test(UnitTest &t) {
-      t(prefix+"_averageSideLength", pow( V.avg(), 1/3.) );
+      t(prefix+"_averageSideLength", std::cbrt(V.avg()) );
       t(prefix+"_MSQDisplacement", pow(sqrV.avg(), 1/6.) );
     }
 

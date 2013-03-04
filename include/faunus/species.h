@@ -32,14 +32,44 @@ namespace Faunus {
     bool operator==(const AtomData &d) const { return (*this==d); }
   };
 
-  class AtomPairData {
-    public:
-      typedef vector< vector<double> > Tmatrix;
-      Tmatrix eps;    //!< Interaction energy scaling
-      Tmatrix sigma2; //!< Sigma squared distance
-      Tmatrix rcut;   //!< Interaction cutoff distance
-      Tmatrix qq;     //!< Charge product
-  };
+  /**
+   * @brief Container for data between pairs
+   *
+   * The `set()` function should be used to set value while the function
+   * operator should be used for access: 
+   *
+   *     int i,j=...; // particle type, for example
+   *     AtomPairData<double> eps2;
+   *     eps2.set(i,j,2.0);
+   *     cout << eps2(i,j);
+   *
+   */
+  template<class T=double>
+    class AtomPairData {
+      private:
+      public:
+        vector< vector<T> > m; // symmetric matrix (mem waste!)
+        void resize(size_t n) {
+          m.resize(n);
+          for (auto &i : m)
+            i.resize(n);
+        }
+        AtomPairData(size_t n=0) {
+          resize(n);
+        }
+        const T& operator()(int i, int j) const {
+          assert( i<(int)m.size() );
+          assert( j<(int)m[i].size() );
+          assert( m[i][j]==m[j][i] );
+          return m[i][j]; 
+        }
+        void set(int i, int j, T val) {
+          size_t n=std::max(i,j);
+          if (n>=m.size())
+            resize(n+1);
+          m[i][j]=m[j][i]=val;
+        }
+    };
 
   /*!
    * @brief Class for loading and storing atomic properties
@@ -121,13 +151,13 @@ namespace Faunus {
       AtomData& operator[] (string);         //!< Name->data
       AtomData& operator[] (AtomData::Tid);  //!< Id->data
       string info();                         //!< Print info
-      
+
       /** @brief Copy properties into particles vector. Positions are left untouched! */
       template<typename TParticleVector>
-      void reset_properties(TParticleVector &pvec) const {
-        for (auto &i : pvec)
-          i = list.at( i.id );
-      }
+        void reset_properties(TParticleVector &pvec) const {
+          for (auto &i : pvec)
+            i = list.at( i.id );
+        }
   };
 
   extern AtomMap atom; //!< Global instance of AtomMap - can be accessed from anywhere

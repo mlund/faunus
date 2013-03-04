@@ -143,6 +143,11 @@ namespace Faunus {
      */
     HardSphere::HardSphere(InputMap& in) {
       name="Hardsphere";
+      int n=atom.list.size();
+      mindist2.resize(n);
+      for (int i=0; i<n; i++)
+        for (int j=0; j<n; j++)
+          mindist2.set(i,j, pow(atom[i].radius+atom[j].radius,2));
     }
 
     string HardSphere::_brief() {
@@ -150,15 +155,6 @@ namespace Faunus {
     }
 
     string HardSphere::info(char w) {
-      using namespace Faunus::textio;
-      return textio::indent(SUB)+name+"\n";
-    }
-
-    HardSpheroCylinder::HardSpheroCylinder(InputMap& in) { name="HardspheroCylinder"; }
-
-    string HardSpheroCylinder::_brief() { return name; }
-
-    string HardSpheroCylinder::info(char w) {
       using namespace Faunus::textio;
       return textio::indent(SUB)+name+"\n";
     }

@@ -691,7 +691,7 @@ namespace Faunus {
         struct data {
           double mindist, maxdist;
         };
-        std::map< pair_permutable<Faunus::Group*>, data> gmap;
+        std::map< opair<Faunus::Group*>, data> gmap;
       public:
         MassCenterConstrain(Geometry::Geometrybase&);      //!< Constructor
         void addPair(Group&, Group&, double, double);      //!< Add constraint between two groups
@@ -766,7 +766,7 @@ namespace Faunus {
         public:
           using pair_list<Potential::PairPotentialBase,Tij>::list;
 
-          typedef pair_permutable<Tij> Tpair;
+          typedef opair<Tij> Tpair;
           typedef std::function<Tpair (const particle&, const particle&)> Tpaircreator;
 
           GeneralPairList(Tpaircreator c) {
@@ -887,7 +887,7 @@ namespace Faunus {
      */
     class PairListID : public GeneralPairList<particle::Tid> {
       private:
-        static pair_permutable<particle::Tid> makepair(const particle&, const particle&);
+        static opair<particle::Tid> makepair(const particle&, const particle&);
         string _info();
       public:
         PairListID();
@@ -904,7 +904,7 @@ namespace Faunus {
      */
     class PairListHydrophobic : public GeneralPairList<particle::Thydrophobic> {
       private:
-        static pair_permutable<particle::Thydrophobic> makepair(const particle&, const particle&);
+        static opair<particle::Thydrophobic> makepair(const particle&, const particle&);
         string _info();
       public:
         PairListHydrophobic();

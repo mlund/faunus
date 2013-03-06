@@ -10,71 +10,44 @@
 #endif
 
 namespace Faunus {
-
   /**
-   * This is a template for storing permutable pairs of data `T`.
-   * That is `(a,b)==(b,a)`. `operator<()` is implemented so the pairtype
-   * can be used in STL maps etc.
-   * @code
-   * pair_permutable<int> a(2, 10);
-   * pair_permutable<int> b(10, 2);
-   * a==b;      // true
-   * b.first;   // = 2
-   * b.second;  // = 10
-   * a.find(10);// true
-   * a.find(3); // false
-   * @endcode
+   * @brief Ordered pair where `first<=second`
+   *
+   * Upon construction, the smallest element is placed in `first`
+   * so that `opair<int>(i,j)==opair<int>(j,i)` is always true.
    */
-  template<class T> class pair_permutable {
-    public:
-      T first, second;
-      pair_permutable() {}
+  template<class T>
+    struct opair : public std::pair<T,T> {
+      typedef std::pair<T,T> base;
+      opair() {}
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-overflow"
-      pair_permutable(T a, T b) : first(a), second(b) {
-        if (first>second)
-          std::swap(first,second);
+      opair(const T &a, const T &b) : base(a,b) {
+        if (a>b)
+          std::swap(base::first,base::second);
       }
 #pragma GCC diagnostic pop
-
-      bool operator<(const pair_permutable<T> &a) const {
-        assert(first<=second && a.first<=a.second);
-        if (first<a.first)
-          return true;
-        if (first==a.first)
-          if (second<a.second)
-            return true;
-        return false;
-      }
-    
-      bool operator==(const pair_permutable<T> &a) const {
-        assert(first<=second && a.first<=a.second);
-        if (first==a.first)
-          if (second==a.second)
-            return true;
-        return false;
-      }
-
-      bool find(const T &a) const {
-        if (a!=first)
-          if (a!=second)
+      bool find(const T &i) const {
+        assert(base::first<=base::second);
+        if (i!=base::first)
+          if (i!=base::second)
             return false;
         return true;
       }
-  };
+    };
 }//namespace
 
 /*
- * The following is an extension to std::hash in order to construct hash tables,
- * for example std::unordered_map, using Faunus::pair_permutable<> as keys.
+ * The following is an extension to `std::hash` in order to
+ * construct hash tables (`std::unordered_map`), using `opair<T>` as keys.
  * See more at:
  * <http://en.wikipedia.org/wiki/Unordered_associative_containers_(C%2B%2B)#Usage_example>
  */
 #ifdef FAU_HASHTABLE
 namespace std {
   template<typename T>
-    struct hash< Faunus::pair_permutable<T> > {
-      size_t operator()(const Faunus::pair_permutable<T> &x) const {
+    struct hash< Faunus::opair<T> > {
+      size_t operator()(const Faunus::opair<T> &x) const {
         return hash<T>()(x.first) ^ hash<T>()(x.second);
       }
     };
@@ -87,7 +60,7 @@ namespace Faunus {
    * from the base Tbase. When adding data with the add() function, a copy of the data
    * is created and stored internally.
    */
-  template<class Tbase, typename Tij=int, typename Tpair=pair_permutable< Tij > >
+  template<class Tbase, typename Tij=int, typename Tpair=opair< Tij > >
     class pair_list {
       protected:
 #ifdef FAU_HASHTABLE
@@ -132,7 +105,7 @@ namespace Faunus {
 
   template<typename Tij, typename Tval>
     struct map_ij {
-      typedef pair_permutable<Tij> Tkey;
+      typedef opair<Tij> Tkey;
       std::map<Tkey,Tval> list;
       Tval& operator() (Tij i, Tij j) {
         return list[ Tpair(i,j) ];
@@ -140,7 +113,7 @@ namespace Faunus {
       //std::map<Tkey,Tval>::iterator
     };
 
-  template<typename Tparticle, typename Tij=int, typename Tpair=pair_permutable< Tij > >
+  template<typename Tparticle, typename Tij=int, typename Tpair=opair< Tij > >
     class pair_list_functor {
       protected:
         typedef std::function<double(const Tparticle&, const Tparticle&, double)> Tfunctor;
@@ -236,31 +209,26 @@ namespace Faunus {
     class legendre {
       private:
         int n;           //!< Legendre order
-      public:
-        std::vector<T> p;      //!< Legendre terms stored here
-        //! Evaluate polynomium at x
-        void eval(T x) {
-          if (n > 0) {
-            p[1] = x;
-            T di;
-            for (int i=1; i<n; ++i) {
-              di=static_cast<T>(i);
-              p[i+1] = (2*di + 1) / (di+1) * x * p[i] - di/(di+1)*p[i-1];
-            }
-          }
-        }
-
-        /**
-         * @brief Constructor
-         * @param order Order of the polynomium
-         */
-        legendre(int order=0) { resize(order); }
-
         void resize(int order) {
           n=order;
           assert(n>=0);
-          p.resize(n+1);
-          p[0]=1.;
+          P.resize(n+1);
+          P[0]=1.;
+        }
+      public:
+        /** @brief Construct w. polynomium order>=0 */
+        legendre(int order) { resize(order); }
+
+        /** @brief Legendre terms stored here */
+        std::vector<T> P;
+
+        /** @brief Evaluate polynomium at x */
+        void eval(T x) {
+          if (n>0) {
+            P[1] = x;
+            for (int i=1; i<n; ++i)
+              P[i+1] = (2*i+1)/(i+1)*x*P[i] - i/(i+1)*P[i-1];
+          }
         }
     };
 }//namespace

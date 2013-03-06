@@ -56,21 +56,14 @@ namespace Faunus {
         string brief();          //!< Brief, one-lined information string
         virtual void setTemperature(double); //!< Set temperature [K]
 
-        /*!
-         * \brief Particle-particle energy in units of \c kT
-         * \param a First particle
-         * \param b Second particle
-         * \param r2 Squared distance between them (angstrom squared)
-         */
+        /** @brief Particle-particle energy in units of \c kT */
         virtual double operator() (const particle&, const particle&, double) const;
 
-        /*!
-         * \brief Particle-particle force in units of \c kT/Å
-         * \param a First particle
-         * \param b Second particle
-         * \param p Vector from: p=b-a
-         */
-        virtual Point force(const particle &, const particle &, double, const Point&);
+        /** @brief Particle-particle force in units of \c kT/Å */
+        virtual Point force(const particle&, const particle&, double, const Point&);
+
+        /** @brief Electric field at spatial position */
+        virtual Point field(const particle&, const Point&) const;
 
         bool save(string, particle::Tid, particle::Tid); //!< Save table of pair potential to disk
         virtual void test(UnitTest&);                    //!< Perform unit test
@@ -140,7 +133,7 @@ namespace Faunus {
      * \f[
      *     \beta u(r) = -\frac{k r_0^2}{2}\ln \left [ 1-(r/r_0)^2 \right ]
      * \f]
-     * for $r<r_0$, otherwise infinity. The input parameters read by InputMap
+     * for \f$r<r_0\f$, otherwise infinity. The input parameters read by InputMap
      * are as follows:
      * - `fene_stiffness` Bond stiffness, `k` [kT]
      * - `fene_maxsep` Maximum separation, `r_0` [angstrom]
@@ -164,17 +157,25 @@ namespace Faunus {
     class HardSphere : public PairPotentialBase {
       private:
         string _brief();
-        AtomPairData<double> mindist2;
       public:
         HardSphere();
-        HardSphere(InputMap&);
+
+        /** @brief Compatibility constructor - no data is read from the InputMap. */
+        template<class Tinputmap>
+          HardSphere(Tinputmap& in) {
+            name="Hardsphere";
+          }
+
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
-            return (r2<mindist2(a.id,b.id)) ? pc::infty : 0;
+            double m=a.radius+b.radius;
+            return (r2<m*m) ? pc::infty : 0;
           }
+
         inline double operator() (const particle &a, const particle &b, const Point &r) const {
           return operator()(a,b,r.squaredNorm());
         }
+
         string info(char w);
     };
 
@@ -675,21 +676,36 @@ namespace Faunus {
     template<class T1, class T2>
       class CombinedPairPotential : public PairPotentialBase {
         private:
-          string _brief() { return first.brief() + " " + second.brief(); }
+          string _brief() {
+            return first.brief() + " " + second.brief();
+          }
         public:
           T1 first;  //!< First pair potential of type T1
           T2 second; //!< Second pair potential of type T2
+
           CombinedPairPotential(InputMap &in) : first(in), second(in) {
             name=first.name+"+"+second.name;
           }
-          CombinedPairPotential(InputMap &in, string pfx1, string pfx2) : first(in,pfx1), second(in,pfx2) {
-            name=first.name+"+"+second.name;
-          }
+
+          CombinedPairPotential(InputMap &in, string pfx1, string pfx2) :
+            first(in,pfx1), second(in,pfx2) {
+              name=first.name+"+"+second.name;
+            }
+
           template<typename Tparticle, typename Tdistance>
-            inline double operator() (const Tparticle &a, const Tparticle &b, const Tdistance &r2) const {
+            double operator()(const Tparticle &a, const Tparticle &b, const Tdistance &r2) const {
               return first(a,b,r2) + second(a,b,r2);
             }
-          string info(char w=20) { return first.info(w) + second.info(w); }
+
+          template<typename Tparticle>
+            Point field(const Tparticle &a, const Point &r) const {
+              return first.field(a,r) + second(a,r);
+            }
+
+          string info(char w=20) {
+            return first.info(w) + second.info(w);
+          }
+
           void test(UnitTest &t) {
             first.test(t);
             second.test(t);

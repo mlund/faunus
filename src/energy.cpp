@@ -298,7 +298,7 @@ namespace Faunus {
      */
     double Bonded::i2i(const p_vec &p, int i, int j) {
       assert(i!=j);
-      auto f=list.find( pair_permutable<int>(i,j) );
+      auto f=list.find( opair<int>(i,j) );
       if (f!=list.end())
         return f->second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
       return 0;
@@ -478,7 +478,7 @@ namespace Faunus {
 
     void MassCenterConstrain::addPair(Group &a, Group &b, double mindist, double maxdist) {
       data d = {mindist, maxdist};
-      pair_permutable<Group*> p(&a, &b);
+      opair<Group*> p(&a, &b);
       gmap[p] = d;
     }
 
@@ -517,8 +517,8 @@ namespace Faunus {
     }
 
     /*
-       pair_permutable<particle::Thydrophobic> createPairHydrophobic(const particle &a, const particle &b) {
-       return pair_permutable<particle::Thydrophobic>(a.hydrophobic, b.hydrophobic);
+       opair<particle::Thydrophobic> createPairHydrophobic(const particle &a, const particle &b) {
+       return opair<particle::Thydrophobic>(a.hydrophobic, b.hydrophobic);
        }
        */
 
@@ -526,8 +526,8 @@ namespace Faunus {
       name+=" (particle id's)";
     }
 
-    pair_permutable<particle::Tid> PairListID::makepair(const particle &a, const particle &b) {
-      return pair_permutable<particle::Tid>(a.id, b.id);
+    opair<particle::Tid> PairListID::makepair(const particle &a, const particle &b) {
+      return opair<particle::Tid>(a.id, b.id);
     }
 
     string PairListID::_info() {
@@ -545,8 +545,8 @@ namespace Faunus {
       name+=" (hydrophobic particles)";
     }
 
-    pair_permutable<particle::Thydrophobic> PairListHydrophobic::makepair(const particle &a, const particle &b) {
-      return pair_permutable<particle::Thydrophobic>(a.hydrophobic, b.hydrophobic);
+    opair<particle::Thydrophobic> PairListHydrophobic::makepair(const particle &a, const particle &b) {
+      return opair<particle::Thydrophobic>(a.hydrophobic, b.hydrophobic);
     }
 
     string PairListHydrophobic::_info() {

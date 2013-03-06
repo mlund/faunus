@@ -17,19 +17,32 @@ namespace Faunus {
 
     PairPotentialBase::~PairPotentialBase() { }
     
+    /**
+     * @param a First particle
+     * @param b Second particle
+     * @param r2 Squared distance between them (angstrom squared)
+     */
     double PairPotentialBase::operator() (const particle &a, const particle &b, double r2) const {
       assert(!"Pair energy not defined!");
       return 0;
     }
 
-    /*!
-     * \param a First particle
-     * \param b Second particle
-     * \param r2 Squared distance between them (angstrom squared)
-     * \param p Vector from: p=b-a
+    /**
+     * @param a First particle
+     * @param b Second particle
+     * @param r2 Squared distance between them (angstrom squared)
+     * @param p Vector from: p=b-a
      */
     Point PairPotentialBase::force(const particle &a, const particle &b, double r2, const Point &p) {
       assert(!"Force not overrided!");
+      return Point(0,0,0);
+    }
+
+    /**
+     * @param a Particle emanating the field
+     * @param r Position in which to calculate the field
+     */
+    Point PairPotentialBase::field(const particle &a, const Point &r) const {
       return Point(0,0,0);
     }
 
@@ -136,18 +149,6 @@ namespace Faunus {
 
     HardSphere::HardSphere() {
       name="Hardsphere";
-    }
-
-    /*!
-     * This is a compatibility constructor - no data is read from the InputMap.
-     */
-    HardSphere::HardSphere(InputMap& in) {
-      name="Hardsphere";
-      int n=atom.list.size();
-      mindist2.resize(n);
-      for (int i=0; i<n; i++)
-        for (int j=0; j<n; j++)
-          mindist2.set(i,j, pow(atom[i].radius+atom[j].radius,2));
     }
 
     string HardSphere::_brief() {

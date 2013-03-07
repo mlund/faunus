@@ -164,6 +164,6 @@ endfunction( fau_example )
 
 #----- Add example programs -----
 add_subdirectory(tools)
-add_subdirectory(examples)
 add_subdirectory(playground EXCLUDE_FROM_ALL)
+add_subdirectory(examples)
 

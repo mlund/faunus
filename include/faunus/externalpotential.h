@@ -29,7 +29,7 @@ namespace Faunus {
         private:
           virtual string _info()=0;
         protected:
-          TcoordFunc p2c; // function to concert point to internal coordinate
+          TcoordFunc p2c; // function to convert point to internal coordinate
         public:
           ExternalPotentialBase() : p2c(nullptr) {}
           virtual ~ExternalPotentialBase() {}

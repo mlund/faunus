@@ -63,6 +63,7 @@ namespace Faunus {
     double Energybase::g_internal(const p_vec &p, Group &g) {return 0;}
 
     double Energybase::external() {return 0;}
+    void Energybase::field(const p_vec &p, std::vector<Point> &E) {}
 
     string Energybase::info() {
       assert(!name.empty() && "Assign a name to energy class!");
@@ -266,6 +267,12 @@ namespace Faunus {
       for (auto e : baselist)
         o << e->info();
       return o.str();
+    }
+
+    void Hamiltonian::field(const p_vec &p, std::vector<Point> &E) {
+      assert(p.size()==E.size());
+      for (auto b : baselist)
+        b->field(p,E);
     }
 
     Bonded::Bonded() {

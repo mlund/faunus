@@ -79,6 +79,8 @@ namespace Faunus {
         virtual double external();                            // External energy - pressure, for example.
         virtual string info();                                //!< Information
 
+        virtual void field(const p_vec&, std::vector<Point>&);//!< Calculate electric field on all particles
+
         virtual void trialUpdate(const Space&, std::set<int>&) {};
         virtual void acceptUpdate() {};
         virtual void rejectUpdate() {};
@@ -400,6 +402,24 @@ namespace Faunus {
                 u+=p2p(i,j);
             return u;
           }
+
+          /**
+           * Calculates the electric field on all particles
+           * and stores (add) in the vector `E`.
+           *
+           * @param p Particle vector
+           * @param E Holds field on each particle. Must be of size N.
+           */
+          void field(const p_vec &p, std::vector<Point> &E) {
+            assert(p.size()==E.size());
+            size_t i=0;
+            for (auto &pi : p) {
+              for (auto &pj : p)
+                if (&pi!=&pj)
+                  E[i]+=pairpot.field(pj, geometry.vdist(pi,pj));
+              i++;
+            }
+          }
       };
 
     /**
@@ -663,6 +683,7 @@ namespace Faunus {
       double g_internal(const p_vec&, Group&) FOVERRIDE;
       double external() FOVERRIDE;
       double v2v(const p_vec&, const p_vec&) FOVERRIDE;
+      void field(const p_vec&, std::vector<Point>&) FOVERRIDE;
     };
 
     /**

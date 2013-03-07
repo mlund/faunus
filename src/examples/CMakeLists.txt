@@ -13,6 +13,9 @@ add_test( unittests ${CMAKE_BINARY_DIR}/src/examples/unittests )
 fau_example(example_minimal "./" minimal.cpp)
 set_target_properties(example_minimal PROPERTIES OUTPUT_NAME "minimal")
 
+fau_dipoleexample(example_stockmayer "./" stockmayer.cpp)
+set_target_properties(example_stockmayer PROPERTIES OUTPUT_NAME "stockmayer")
+
 fau_example(example_titrate "./" titrate.cpp)
 set_target_properties(example_titrate PROPERTIES OUTPUT_NAME "titrate")
 

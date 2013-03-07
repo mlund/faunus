@@ -1,0 +1,6 @@
+cuboid_len    100     # Box side length [angstrom]
+temperature   298     # Temperature [K]
+epsilon_r     78.7    # Dielectric constant
+lj_eps        0.05    # Uniform LJ epsilon parameter [kT]
+tion1         sol     # ion type 1
+nion1         10      # number of ion type 1

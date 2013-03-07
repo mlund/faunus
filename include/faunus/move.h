@@ -68,32 +68,20 @@ namespace Faunus {
      *
      * @todo unfinished
      */
-    template<class Tmove, class Tpairpot>
+    template<class Tmove>
       class PolarizeMove : public Tmove {
         private:
-          Tpairpot pair;
           double threshold; // threshold for iteration
           vector<Point> E;  // field on each particle
 
-          void updateFieldVector() {
-            int i=0, n=(int)Tmove::spc->trial.size(); // number of particles
-            E.clear();
-            E.resize(n, Point(0,0,0));
-            for (auto &pi : Tmove::spc->trial) {
-              for (auto &pj : Tmove::spc->trial)
-                if (&pi!=&pj)
-                  E[i]+=pair.field(pj);
-              i++;
-            }
-          }
-
-          void updateDipoleMoment() {
-            // update dipole moments in trial vector
-          }
-
           void _trialMove() {
-            Tmove::_trialMove();
-            // update iteratively
+            Tmove::_trialMove();                         // base class MC move
+
+            E.resize(Tmove::spc->trial.size());          // make sure sizes match
+            std::fill(E.begin(), E.end(), Point(0,0,0)); // fill with zero
+
+            Tmove::pot->field(Tmove::spc->trial, E);     // calc. field on all particles
+            // update iteratively...
           }
         public:
           PolarizeMove(InputMap &in, Energy::Energybase &e, Space &s) :
@@ -609,13 +597,13 @@ namespace Faunus {
         void setEnergyFunction( std::function<double (Space&,Energy::Energybase&,const p_vec&)> );
     };
 
+#endif
+
     /** @brief Atomic translation with dipolar polarizability */
     typedef PolarizeMove<AtomicTranslation> AtomicTranslationPol;
 
     /** @brief Atomic rotation with dipolar polarizability */
     typedef PolarizeMove<AtomicRotation> AtomicRotationPol;
-
-#endif
 
   }//namespace
 }//namespace

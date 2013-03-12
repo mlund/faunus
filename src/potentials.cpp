@@ -16,6 +16,27 @@ namespace Faunus {
     PairPotentialBase::PairPotentialBase() {}
 
     PairPotentialBase::~PairPotentialBase() { }
+
+    /**
+     * @param N Maximum number of atom types
+     * @param rc Default cutoff distance (angstrom)
+     */
+    void PairPotentialBase::initCutoff(size_t N, float rc) {
+      cutoff2.setConstant(N,N,rc*rc);
+    }
+
+    /**
+     * @param i Particle type i
+     * @param j Particle type j
+     * @param rc Distance cutoff (angstrom) 
+     */
+    void PairPotentialBase::setCutoff(size_t i, size_t j, float rc) {
+      cutoff2(i,j)=cutoff2(j,i)=rc*rc;
+    }
+
+    std::string PairPotentialBase::info(char w) {
+      return "...pair potential info undefined...\n";
+    }
     
     /**
      * @param a First particle
@@ -24,7 +45,7 @@ namespace Faunus {
      */
     double PairPotentialBase::operator() (const particle &a, const particle &b, double r2) const {
       assert(!"Pair energy not defined!");
-      return 0;
+      return pc::infty;
     }
 
     /**
@@ -143,7 +164,7 @@ namespace Faunus {
       o << pad(SUB,w,"Depth") << eps << kT << endl
         << pad(SUB,w,"Decay length") << wc << _angstrom << endl
         << pad(SUB,w,"Width") << rc << _angstrom << endl
-        << pad(SUB,w,"More info") << "DOI: 10.1063/1.2135785" << endl;
+        << pad(SUB,w,"More info") << "doi:10/chqzjk" << endl;
       return o.str();
     }
 

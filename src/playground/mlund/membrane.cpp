@@ -64,7 +64,7 @@ namespace Faunus {
     class LJWCA : public WeeksChandlerAndersen {
       private:
         particle::Tid tailid, headid, hhisid;
-        typedef pair_permutable<particle::Tid> Tpair;
+        typedef opair<particle::Tid> Tpair;
         Tpair _tailPair, _headPair, _headtailPair;
       public:
         CosAttract cosattract;

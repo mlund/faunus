@@ -1,0 +1,71 @@
+#!/bin/bash
+
+#-----------------------------------------------------------
+# Create user input file
+#-----------------------------------------------------------
+function mkinput() {
+echo '{
+  "atomlist" : {
+    "HD" : { "r":5.0, "dp":4.0 },  // head group
+    "TL" : { "r":5.0, "dp":4.0 }   // tail group
+  }
+}' > membrane.json
+
+echo "3
+ HD  0 0.00  0.00   0.00   0.0   1  "`python -c "print 0.5*$sigma"`"
+ TL  1 0.00  0.00   5.00   0.0   1  "`python -c "print 0.5*$sigma"`"
+ TL  2 0.00  0.00  10.00   0.0   1  "`python -c "print 0.5*$sigma"`"
+" > membrane.aam
+
+echo "
+atomlist               membrane.json
+loop_macrosteps        10
+loop_microsteps        100000
+cuboid_len             -1        # Box side length Angstrom
+cuboid_xlen            $box
+cuboid_ylen            $box
+cuboid_zlen            "`python -c "print $box*2"`"
+
+temperature            298       # Kelvin
+epsilon_r              80        # Water dielectric const
+dh_ionicstrength       0.050     # mol/l
+excess_polarization    0
+
+lipid_N                $Nlipid   # Number of lipids
+lipid_epsilon          $epsilon  # kT
+lipid_sigma            $sigma    # angstrom
+lipid_chargefraction   0.0
+lipid_file             membrane.aam
+
+cosattract_eps         $epsilon
+cosattract_wc          "`python -c "print $sigma*1.4"`"
+cosattract_rc          "`python -c "print $sigma*2**(1/6.)"`"
+
+mv_particle_genericdp  10.
+transrot_transdp       3
+transrot_rotdp         0.5
+pivit_minlen           1
+pivot_maxlen           2
+pivor_dp               6
+
+# Constant pressure
+npt_P                  "`python -c "print 1e3*1661.*$Nlipid/(2*$box*$box*$box)"`" #mM
+npt_dV                 1       # log(dV)
+cuboid_scaledir        XY
+" > membrane.input
+}
+
+#-----------------------------------------------------------
+# Run simulation
+#-----------------------------------------------------------
+exe=./membrane
+pH=6.3
+epsilon=1
+sigma=10
+Nlipid=100
+box=`python -c "print ( ($Nlipid/1000.)*25**2 )**(1/2.)*$sigma"`
+mkinput
+
+#rm -fR state
+$exe
+

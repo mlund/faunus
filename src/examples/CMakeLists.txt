@@ -13,6 +13,10 @@ add_test( unittests ${CMAKE_BINARY_DIR}/src/examples/unittests )
 fau_example(example_minimal "./" minimal.cpp)
 set_target_properties(example_minimal PROPERTIES OUTPUT_NAME "minimal")
 
+fau_example(example_membrane "./" membrane.cpp)
+set_target_properties(example_membrane PROPERTIES OUTPUT_NAME "membrane")
+
+
 fau_dipoleexample(example_stockmayer "./" stockmayer.cpp)
 set_target_properties(example_stockmayer PROPERTIES OUTPUT_NAME "stockmayer")
 

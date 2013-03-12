@@ -227,6 +227,7 @@ namespace Faunus {
 
           double g_internal(const p_vec &p, Group &g) FOVERRIDE { 
             double u=0;
+            int step=1;
             if (!g.empty()) {
               int step=1,n=g.back()+1;
               for (int i=g.front(); i<n-step; i++)

@@ -651,12 +651,21 @@ namespace Faunus {
 
     void ClusterTranslateNR::_rejectMove() {}
 
+    /**
+     * The InputMap is searched for:
+     *
+     * Key            | Description
+     * -------------- | --------------------------------------
+     * `crank_minlen` | Minimum number of particles to rotate
+     * `crank_maxlen` | Maximum number of particles to rotate
+     * `crank_dp`     | Rotational displacement parameter (radians)
+     */
     CrankShaft::CrankShaft(InputMap &in, Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
       title="CrankShaft";
       w=30;
       gPtr=nullptr;
-      minlen = in.get<int>(prefix+"_minlen", 1, "Minimum number of particles to totate");
-      maxlen = in.get<int>(prefix+"_maxlen", 4, "Maximum number of particle to rotate");
+      minlen = in.get<int>(prefix+"_minlen", 1, "Min. particles to rotate");
+      maxlen = in.get<int>(prefix+"_maxlen", 4, "Max. particles to rotate");
       assert(minlen<=maxlen);
       dp=in.get<double>(prefix+"_dp", 3.);
       runfraction = in.get<double>(prefix+"_runfraction",1.);
@@ -902,8 +911,10 @@ namespace Faunus {
       N = Natom + Nmol;
       double Pascal = P*pc::kB*pc::T()*1e30;
       o << pad(SUB,w, "Displacement parameter") << dV << endl
-        << pad(SUB,w, "Number of molecules") <<N<< " (" <<Nmol<< " molecular + " <<Natom<< " atomic)" << endl 
-        << pad(SUB,w, "Pressure") << P*tomM << " mM" << " = " << Pascal << " Pa = " << Pascal/0.980665e5 << " atm" << endl
+        << pad(SUB,w, "Number of molecules")
+        << N << " (" <<Nmol<< " molecular + " <<Natom<< " atomic)" << endl 
+        << pad(SUB,w, "Pressure")
+        << P*tomM << " mM = " << Pascal << " Pa = " << Pascal/0.980665e5 << " atm" << endl
         << pad(SUB,w, "Temperature") << pc::T() << " K" << endl;
       if (cnt>0) {
         char l=14;
@@ -963,13 +974,16 @@ namespace Faunus {
      */
     double Isobaric::_energy(const p_vec &p) {
       double u=0;
+      if (dV<1e-6)
+        return u;
       size_t n=spc->groupList().size();  // number of groups
       for (size_t i=0; i<n-1; ++i)      // group-group
         for (size_t j=i+1; j<n; ++j)
           u += pot->g2g(p, *spc->groupList()[i], *spc->groupList()[j]);
+
       for (auto g : spc->groupList()) {
         u += pot->g_external(p, *g);
-        if (g->isAtomic())
+        if (g->numMolecules()>1)
           u+=pot->g_internal(p, *g);
       }
       return u + pot->external();

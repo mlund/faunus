@@ -89,18 +89,16 @@ namespace Faunus {
     }
 
     double ExternalPressure::g_external(const p_vec &p, Group &g) {
-      double N=1,
-             V=geo->getVolume();
-      if (g.isAtomic())
-        N=g.size();
+      int N=g.numMolecules();
+      double V=geo->getVolume();
       return -N*log(V);
     }
 
     string ExternalPressure::_info() {
-      char w=15;
       using namespace textio;
       std::ostringstream o;
-      o << pad(SUB,w,"Pressure") << P*1e30/pc::Nav << " mM = " << P*pc::kB*pc::T()*1e30 << " Pa" << endl;
+      o << pad(SUB,15,"Pressure")
+        << P*1e30/pc::Nav << " mM = " << P*pc::kB*pc::T()*1e30 << " Pa" << endl;
       return o.str();
     }
 
@@ -153,7 +151,7 @@ namespace Faunus {
       assert(u!=0);
       return u;
     }
-    
+
     Point Hamiltonian::f_p2p(const particle &p1, const particle &p2) {
       Point p(0,0,0);
       for (auto b : baselist)
@@ -338,10 +336,10 @@ namespace Faunus {
       return u;
     }
 
-    /*!
+    /**
      * Group-to-group bonds are disabled by default as these are rarely used and the current
      * implementation is rather slow for systems with *many* groups (but very general). To
-     * activate g2g(), set \c CrossGroupBonds to \c true.
+     * activate `g2g()`, set `CrossGroupBonds=true`.
      */
     double Bonded::g2g(const p_vec &p, Group &g1, Group &g2) {
       double u=0;

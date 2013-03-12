@@ -36,7 +36,8 @@ namespace Faunus {
     void Geometrybase::setVolume(double volume) {
       assert( volume>0 && "Zero volume not allowed!");
       _setVolume( volume );
-      assert( std::abs( (volume-getVolume())/volume )<1e-9 && "setVolume() and/or getVolume() is broken!" );
+      assert( std::abs( (volume-getVolume())/volume )<1e-9
+          && "setVolume() and/or getVolume() is broken!" );
     }
 
     double Geometrybase::getVolume() const {
@@ -227,9 +228,9 @@ namespace Faunus {
       if (scaledir==XYZ)
         a = a * cbrt( newvolume/getVolume() );
       if (scaledir==XY) {
-        double s=sqrt(newvolume/getVolume());
-        a.x() *= len.x() * s;
-        a.y() *= len.y() * s;
+        double s=sqrt( newvolume/getVolume() );
+        a.x() *= s;
+        a.y() *= s;
       }
     }
 

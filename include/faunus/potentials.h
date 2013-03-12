@@ -49,6 +49,11 @@ namespace Faunus {
     class PairPotentialBase {
       private:
         virtual string _brief()=0;
+      protected:
+        Eigen::MatrixXf cutoff2;              //!< Squared cut-off distance (angstrom)
+        void initCutoff(size_t, float);       //<! Initialize all cut-off distances
+        void setCutoff(size_t, size_t, float);//!< Specialized cut-off for a pair
+
       public:  
         PairPotentialBase();
         virtual ~PairPotentialBase();
@@ -67,6 +72,8 @@ namespace Faunus {
 
         bool save(string, particle::Tid, particle::Tid); //!< Save table of pair potential to disk
         virtual void test(UnitTest&);                    //!< Perform unit test
+
+        virtual std::string info(char=20);
     };
 
     /*!
@@ -116,7 +123,7 @@ namespace Faunus {
         string _brief();
       public:
         CosAttract(InputMap&, string="cosattract_"); // Constructor from InputMap
-        inline double operator() (const PointParticle &a, const PointParticle &b, double r2) const {
+        inline double operator() (const particle &a, const particle &b, double r2) const {
           if (r2<rc2)
             return -eps;
           if (r2>rcwc2)
@@ -238,7 +245,7 @@ namespace Faunus {
           Tmixingrule mixer; // mixing rule class for sigma and epsilon
           string _brief() { return name + " w. " + mixer.name; }
         protected:
-          AtomPairData<double> s2,eps; // matrix of sigma_ij^2 and eps_ij
+          PairMatrix<double> s2,eps; // matrix of sigma_ij^2 and eps_ij
         public:
           LennardJonesMixed(InputMap &in) {
             name="Lennard-Jones";
@@ -285,11 +292,12 @@ namespace Faunus {
             for (int i=0; i<n; i++)
               for (int j=0; j<n; j++)
                 if (i>=j)
-                  o << indent(SUBSUB) << setw(12) << atom[i].name+"<->"+atom[j].name
-                    << indent(SUB) << sigma+" = " << sqrt( s2(i,j) ) << _angstrom
-                    << indent(SUB) << epsilon+" = " << eps(i,j)/4 << kT+" = "
-                    << pc::kT2kJ(eps(i,j)/4) << " kJ/mol"
-                    << endl;
+                  if (i!=0 && j!=0) // ignure first "UNK" particle type
+                    o << indent(SUBSUB) << setw(12) << atom[i].name+"<->"+atom[j].name
+                      << indent(SUB) << sigma+" = " << sqrt( s2(i,j) ) << _angstrom
+                      << indent(SUB) << epsilon+" = " << eps(i,j)/4 << kT+" = "
+                      << pc::kT2kJ(eps(i,j)/4) << " kJ/mol"
+                      << endl;
             return o.str();
           }
       };
@@ -307,7 +315,7 @@ namespace Faunus {
      */
     class WeeksChandlerAndersen : public LennardJonesMixed<LorentzBerthelot> {
       protected:
-        const double onefourth, twototwosixth;
+        double onefourth, twototwosixth;
       public:
         typedef LennardJonesMixed<LorentzBerthelot> Tbase;
         WeeksChandlerAndersen(InputMap&);
@@ -646,17 +654,43 @@ namespace Faunus {
         }
     };
 
-    class SpecialPairs {
-      typedef map_ij<AtomData::Tid, PairPotentialBase*> Tmap;
-      Tmap m;
-      template<typename Tparticle, typename Tdistance>
-        double operator() (const Tparticle &a, const Tparticle &b, const Tdistance &r2) const {
-          //Tmap::Tkey pair(a.id,b.id);
-          //auto i = m.list.find(pair);
-          return first(a,b,r2) + second(a,b,r2);
-        }
+    /**
+     * @brief Custom potentials between specific particle types
+     *
+     * Of no pairs are added, the `Tdefault` pair potential is used.
+     */
+    template<class Tdefault>
+      class PotentialList : public Tdefault {
+        private:
+          typedef opair<particle::Tid> Tpair;
+          std::map<Tpair, std::shared_ptr<PairPotentialBase> > m;
+        public:
+          PotentialList(InputMap &in) : Tdefault(in) {
+            Tdefault::name += " (default)";
+          } 
 
-    };
+          template<class Tpairpot>
+            void add(AtomData::Tid id1, AtomData::Tid id2, Tpairpot pot) {
+              pot.name=atom[id1].name + "<->" + atom[id2].name + ": " + pot.name;
+              m[ Tpair(id1,id2) ] = std::shared_ptr<Tpairpot>( new Tpairpot(pot) );
+            }
+
+          template<class Tparticle, class Tdist>
+            double operator()(const Tparticle &a, const Tparticle &b, Tdist r2) const {
+              auto i=m.find( Tpair(a.id,b.id) );
+              if (i!=m.end())
+                return i->second->operator()(a,b,r2);
+              return Tdefault::operator()(a,b,r2);
+            }
+
+          std::string info(char w=20) {
+            std::ostringstream o;
+            o << Tdefault::info(w);
+            for (auto &i : m)
+              o << "\n  " + i.second->name + ":\n" << i.second->info(w);
+            return o.str();
+          }
+      };
 
     /**
      * @brief Combines two pair potentials
@@ -692,10 +726,14 @@ namespace Faunus {
               name=first.name+"+"+second.name;
             }
 
-          template<typename Tparticle, typename Tdistance>
-            double operator()(const Tparticle &a, const Tparticle &b, const Tdistance &r2) const {
-              return first(a,b,r2) + second(a,b,r2);
-            }
+          double operator()(const particle &a, const particle &b, double r2) const {
+            return first(a,b,r2) + second(a,b,r2);
+          }
+
+          double operator()(const particle &a, const particle &b, const Point &r2) const {
+            return first(a,b,r2) + second(a,b,r2);
+          }
+
 
           template<typename Tparticle>
             Point field(const Tparticle &a, const Point &r) const {

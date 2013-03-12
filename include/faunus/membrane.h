@@ -136,7 +136,7 @@ namespace Faunus {
             p[i].z() = p[i-1].z() + ePtr->sigma;
           }
 
-          // Create a bilayer in XY plane and insert info space
+          // Create a bilayer in XY plane and insert into space
           Point u;
           double qfrac=in.get<double>("lipid_chargefraction", 0);          // head group ionization?
           int N=in.get<int>("lipid_N",0);                                  // # of lipids

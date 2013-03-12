@@ -8,6 +8,7 @@
 #include <faunus/group.h>
 #include <faunus/space.h>
 #include <faunus/point.h>
+#include <faunus/textio.h>
 #endif
 
 namespace Faunus {
@@ -637,6 +638,75 @@ namespace Faunus {
         /** @brief Do test insertions and sample excess chemical potential */
         void insert(const p_vec&, Geometry::Geometrybase&);
     };
+
+    /**
+     * @brief Samples bilayer structure
+     *
+     * This was developed for coarse grained membrane models
+     * but should be general enough for other uses.
+     */
+    class BilayerStructure : public AnalysisBase {
+
+      private:
+
+        inline string _info() {
+          using namespace textio;
+          std::ostringstream o;
+          if (cnt>0)
+            o << pad(SUB,w,"Lipid order parameter") << S << endl
+              << pad(SUB,w,"Area per lipid") << A << " "+sigma+squared << endl;
+          return o.str();
+        }
+
+        Average<double> S, A;
+
+      public:
+
+        BilayerStructure() {
+          name="Bilayer structure";
+          cite="doi:10/chqzjk";
+        }
+
+        template<class Tcuboid, class Tpvec, class Tgroup>
+          void sample(Tcuboid &geo, Tpvec &p, Tgroup &lipids) {
+            if (run()) {
+              cnt++;
+              S+=orderParameter(geo,p,lipids);
+              A+=areaPerLipid(geo,p,lipids);
+            }
+          }
+
+        /**
+         * @brief Sample lipid order parameter
+         *
+         * @\f S = \frac{1}{2} \left ( 3 (\mathbf{an})^2 -1 \right ) @\f
+         *
+         * where `a` is the unit vector between the tail and the head group,
+         * `n` is the normal to the bilayer plane.
+         */
+        template<class Tcuboid, class Tpvec, class Tgroup>
+          static double
+          orderParameter(Tcuboid &geo, Tpvec &p, Tgroup &lipids, Point n=Point(0,0,1)) {
+            Average<double> S;
+            for (int i=0; i<lipids.numMolecules(); i++) {
+              auto g = lipids[i]; // i'th lipid
+              Point a = geo.vdist( p[g.front()], p[g.back()]).normalized();
+              S += 0.5 * ( 3 * pow(a.dot(n),2) - 1 );
+            }
+            return S.avg();
+          }
+
+        /**
+         * @brief Sample area per lipid (normalized by sigma)
+         */
+        template<class Tcuboid, class Tpvec>
+          static double
+          areaPerLipid(Tcuboid &geo, Tpvec &p, Group &lipids) {
+            return geo.len.x() * geo.len.y() / lipids.numMolecules() * 2
+              / pow(2*p[ lipids.front() ].radius,2);
+          }
+    };
+
   }//namespace
 }//namespace
 #endif

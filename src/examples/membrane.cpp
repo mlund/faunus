@@ -50,17 +50,6 @@ void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &bond, Tnonbonded &nb, Tin
   }
 }
 
-struct LipidAnalysis {
-  Average<double> S; // lipid order parameter
-  void sample(const Space &spc, GroupArray &lipids, Point n) {
-    for (int i=0; i<lipids.numMolecules(); i++) {
-      auto g = lipids[i];
-      Point a = spc.geo->vdist( spc.p[g.front()], spc.p[g.back()]).normalized();
-      S += 0.5 * ( 3 * pow(a.dot(n),2) - 1 );
-    }
-  }
-};
-
 typedef Geometry::Cuboid Tgeometry;   // specify geometry - here cube w. periodic boundaries
 typedef PotentialList<DebyeHuckelLJ> Tpairpot;
 
@@ -87,6 +76,8 @@ int main() {
   Move::Pivot piv(mcp,pot,spc);
   Move::Isobaric iso(mcp,pot,spc);
 
+  Analysis::BilayerStructure lipidstruct;
+
   // Load and add polymer to Space
   GroupArray lipids(3);
   FormatAAM aam;                                      // AAM structure file I/O
@@ -106,9 +97,6 @@ int main() {
 
   // Set up bonded and non-bonded interactions
   MakeDesernoMembrane(lipids, *bonded, *nonbonded, mcp);
-
-  LipidAnalysis lipidorder;
-  Average<double> rho; // lipid area
 
   // Place all lipids in xy plane (z=0);
   for (int l=0; l<lipids.numMolecules(); l++) {
@@ -160,12 +148,8 @@ int main() {
         xtc.setbox( nonbonded->geometry.len );
         xtc.save("traj.xtc", spc.p);
       }
-      if (ran>0.95) {
-        lipidorder.sample(spc, lipids, Point(0,0,1));
-        rho += 0.5 * lipids.numMolecules()
-          / (nonbonded->geometry.len.x() * nonbonded->geometry.len.y() )
-          * pow( spc.p[lipids.front()].radius*2, 2);
-      }
+      if (ran>0.90)
+        lipidstruct.sample(nonbonded->geometry, spc.p, lipids);
 
     } // end of micro loop
 
@@ -180,10 +164,5 @@ int main() {
 
   // print information
   cout << loop.info() + sys.info() + mv.info() + spc.info() + gmv.info() + iso.info()
-    << piv.info();
-
-  cout << "\n  Lipid order parameter = " << lipidorder.S;
-  cout << "\n  Lipid density         = " << 1/rho.avg()
-    << " " << textio::sigma+textio::squared << endl;
-
+    << piv.info() << lipidstruct.info();
 }

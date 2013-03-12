@@ -20,7 +20,7 @@ echo "3
 echo "
 atomlist               membrane.json
 loop_macrosteps        10
-loop_microsteps        100000
+loop_microsteps        1000
 cuboid_len             -1        # Box side length Angstrom
 cuboid_xlen            $box
 cuboid_ylen            $box
@@ -46,11 +46,13 @@ transrot_transdp       3
 transrot_rotdp         0.5
 pivit_minlen           1
 pivot_maxlen           2
-pivor_dp               6
+pivot_dp               6
 
 # Constant pressure
-npt_P                  "`python -c "print 1e3*1661.*$Nlipid/(2*$box*$box*$box)"`" #mM
-npt_dV                 1       # log(dV)
+#npt_P                  "`python -c "print 1e3*1661.*$Nlipid/(2*$box*$box*$box)"`" #mM
+npt_P                  0
+npt_dV                 2       # log(dV)
+npt_runfraction        0.2
 cuboid_scaledir        XY
 " > membrane.input
 }
@@ -66,6 +68,7 @@ Nlipid=100
 box=`python -c "print ( ($Nlipid/1000.)*25**2 )**(1/2.)*$sigma"`
 mkinput
 
-#rm -fR state
+cp membrane.state state
+#rm state
 $exe
 

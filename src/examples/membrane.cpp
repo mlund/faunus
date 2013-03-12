@@ -1,5 +1,4 @@
 #include <faunus/faunus.h>
-#include <faunus/membrane.h>
 
 using namespace Faunus;
 using namespace Faunus::Potential;
@@ -51,6 +50,17 @@ void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &bond, Tnonbonded &nb, Tin
   }
 }
 
+struct LipidAnalysis {
+  Average<double> S; // lipid order parameter
+  void sample(const Space &spc, GroupArray &lipids, Point n) {
+    for (int i=0; i<lipids.numMolecules(); i++) {
+      auto g = lipids[i];
+      Point a = spc.geo->vdist( spc.p[g.front()], spc.p[g.back()]).normalized();
+      S += 0.5 * ( 3 * pow(a.dot(n),2) - 1 );
+    }
+  }
+};
+
 typedef Geometry::Cuboid Tgeometry;   // specify geometry - here cube w. periodic boundaries
 typedef PotentialList<DebyeHuckelLJ> Tpairpot;
 
@@ -66,7 +76,7 @@ int main() {
 
   // Energy functions and space
   Energy::Hamiltonian pot;
- 
+
   auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
   auto bonded    = pot.create( Energy::Bonded() );
   Space spc( pot.getGeometry() );
@@ -97,6 +107,9 @@ int main() {
   // Set up bonded and non-bonded interactions
   MakeDesernoMembrane(lipids, *bonded, *nonbonded, mcp);
 
+  LipidAnalysis lipidorder;
+  Average<double> rho; // lipid area
+
   // Place all lipids in xy plane (z=0);
   for (int l=0; l<lipids.numMolecules(); l++) {
     auto g=lipids[l];
@@ -109,7 +122,6 @@ int main() {
   spc.trial=spc.p; // sync. particle trial vector
 
   spc.load("state");                                // load old config. from disk (if any)
-
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store initial total system energy
 
   cout << atom.info() + spc.info() + pot.info();
@@ -143,9 +155,16 @@ int main() {
           sys+=iso.move();
           break;
       }
-      if ( slp_global()>0.99 ) {
+      double ran = slp_global();
+      if (ran>0.99) {
         xtc.setbox( nonbonded->geometry.len );
         xtc.save("traj.xtc", spc.p);
+      }
+      if (ran>0.95) {
+        lipidorder.sample(spc, lipids, Point(0,0,1));
+        rho += 0.5 * lipids.numMolecules()
+          / (nonbonded->geometry.len.x() * nonbonded->geometry.len.y() )
+          * pow( spc.p[lipids.front()].radius*2, 2);
       }
 
     } // end of micro loop
@@ -157,10 +176,14 @@ int main() {
     spc.save("state");
 
     cout << loop.timing();
-
   } // end of macro loop
 
   // print information
   cout << loop.info() + sys.info() + mv.info() + spc.info() + gmv.info() + iso.info()
     << piv.info();
+
+  cout << "\n  Lipid order parameter = " << lipidorder.S;
+  cout << "\n  Lipid density         = " << 1/rho.avg()
+    << " " << textio::sigma+textio::squared << endl;
+
 }

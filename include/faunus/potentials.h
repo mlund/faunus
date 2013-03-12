@@ -663,7 +663,11 @@ namespace Faunus {
       class PotentialList : public Tdefault {
         private:
           typedef opair<particle::Tid> Tpair;
-          std::map<Tpair, std::shared_ptr<PairPotentialBase> > m;
+#ifdef FAU_HASHTABLE                                                      
+          std::unordered_map<Tpair,std::shared_ptr<PairPotentialBase> > m;
+#else 
+          std::map<Tpair,std::shared_ptr<PairPotentialBase> > m;
+#endif
         public:
           PotentialList(InputMap &in) : Tdefault(in) {
             Tdefault::name += " (default)";

@@ -228,12 +228,13 @@ namespace Faunus {
           double g_internal(const p_vec &p, Group &g) FOVERRIDE { 
             double u=0;
             int step=1;
-            if (!g.empty()) {
-              int step=1,n=g.back()+1;
-              for (int i=g.front(); i<n-step; i++)
-                for (int j=g.front()+step*((i-g.front())/step+1); j<n; j++)
+            const int b=g.back(), f=g.front();
+            if (g.numMolecules()>1)
+              step=g.size()/g.numMolecules();
+            if (!g.empty())
+              for (int i=f; i<b; ++i)
+                for (int j=i+1; j<=b; ++j)
                   u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
-            }
             return u;
           }
 

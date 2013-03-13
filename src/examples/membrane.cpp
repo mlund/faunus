@@ -1,7 +1,6 @@
 #include <faunus/faunus.h>
 
 using namespace Faunus;
-using namespace Faunus::Potential;
 
 /**
  * @brief Setup interactions for coarse grained membrane
@@ -10,6 +9,8 @@ using namespace Faunus::Potential;
  */
 template<class Tbonded, class Tnonbonded, class Tlipid, class Tinput>
 void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &bond, Tnonbonded &nb, Tinput &in) {
+
+  using namespace Potential;
 
   // non-bonded interactions
   auto hid=atom["HD"].id;
@@ -43,15 +44,18 @@ void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &bond, Tnonbonded &nb, Tin
 
   assert(lipid.size() % 3 == 0);
 
+  auto fene = std::shared_ptr<PairPotentialBase>(new FENE(fene_k,fene_rmax));
+  auto harm = std::shared_ptr<PairPotentialBase>(new Harmonic(headtail_k,headtail_req));
+
   for (int i=lipid.front(); i<lipid.back(); i=i+3) {
-    bond.add(i,  i+1, Potential::FENE(fene_k,fene_rmax) );
-    bond.add(i+1,i+2, Potential::FENE(fene_k,fene_rmax) );
-    bond.add(i,  i+2, Potential::Harmonic(headtail_k,headtail_req) );
+    bond.add(i,  i+1, fene ); // We add potentials as pointers
+    bond.add(i+1,i+2, fene ); // to reduce memory usage
+    bond.add(i,  i+2, harm );
   }
 }
 
 typedef Geometry::Cuboid Tgeometry;   // specify geometry - here cube w. periodic boundaries
-typedef PotentialList<DebyeHuckelLJ> Tpairpot;
+typedef Potential::PotentialMap<Potential::DebyeHuckelLJ> Tpairpot;
 
 int main() {
 

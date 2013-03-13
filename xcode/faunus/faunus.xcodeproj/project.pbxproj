@@ -289,7 +289,6 @@
 		8BABBCCB166C9F8900C223CC /* libfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 738C132613FB12B30056EF71 /* libfaunus.dylib */; };
 		8BABBCD1166C9FA500C223CC /* membrane.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8BABBCC1166C9EA300C223CC /* membrane.cpp */; };
 		8BE1FA9F165A9780001073CC /* auxiliary.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BE1FA9E165A9780001073CC /* auxiliary.h */; };
-		8BE1FAA2165FDAA2001073CC /* membrane.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BE1FAA1165FDAA2001073CC /* membrane.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -644,7 +643,6 @@
 		8BABBCC1166C9EA300C223CC /* membrane.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = membrane.cpp; path = ../../src/playground/mlund/membrane.cpp; sourceTree = "<group>"; };
 		8BABBCCF166C9F8900C223CC /* mlund-membrane */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "mlund-membrane"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8BE1FA9E165A9780001073CC /* auxiliary.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = auxiliary.h; sourceTree = "<group>"; };
-		8BE1FAA1165FDAA2001073CC /* membrane.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = membrane.h; sourceTree = "<group>"; };
 		B8FAFBED1687DFF3001E9A89 /* temper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = temper.cpp; sourceTree = "<group>"; };
 		B8FAFBEE1687DFF3001E9A89 /* temper.run */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = temper.run; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -1300,7 +1298,6 @@
 				738C134213FB12DE0056EF71 /* inputfile.h */,
 				73011C5A1423E30100509B7B /* io.h */,
 				73011C5B1423E30100509B7B /* mcloop.h */,
-				8BE1FAA1165FDAA2001073CC /* membrane.h */,
 				73011C5C1423E30100509B7B /* move.h */,
 				7316FA2F15C546B20024F084 /* mpi.h */,
 				738C134413FB12DE0056EF71 /* physconst.h */,
@@ -1437,7 +1434,6 @@
 				7316FA3015C546B20024F084 /* mpi.h in Headers */,
 				7316FA5815C56BC10024F084 /* analysis.h in Headers */,
 				8BE1FA9F165A9780001073CC /* auxiliary.h in Headers */,
-				8BE1FAA2165FDAA2001073CC /* membrane.h in Headers */,
 				8B9D16DD166CA22A00E7C7D4 /* titrate.h in Headers */,
 				730471C316B72E1200A191AE /* LDLT.h in Headers */,
 				730471C416B72E1200A191AE /* LLT.h in Headers */,

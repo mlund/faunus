@@ -68,7 +68,7 @@ Nlipid=100
 box=`python -c "print ( ($Nlipid/1000.)*25**2 )**(1/2.)*$sigma"`
 mkinput
 
-cp membrane.state state
+#cp membrane.state state
 #rm state
 $exe
 

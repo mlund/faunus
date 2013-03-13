@@ -44,7 +44,7 @@ namespace Faunus {
       _rejectMove();
     }
    
-    /*! \return Energy change in units of kT */
+    /** @return Energy change in units of kT */
     double Movebase::energyChange() {
       return _energyChange();
     }
@@ -111,7 +111,7 @@ namespace Faunus {
       return 0;
     }
 
-    /*!
+    /**
      * This will return a formatted multi-line information string about the move and
      * will as a minimum contain:
      *
@@ -142,7 +142,7 @@ namespace Faunus {
       return o.str();
     }
 
-    /*!
+    /**
      * The InputMap is searched for the following keywords:
      *
      * Key                  | Description
@@ -152,7 +152,8 @@ namespace Faunus {
      *
      * The standard prefix is `mv_particle`.
      */
-    AtomicTranslation::AtomicTranslation(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : Movebase(e,s,pfx) {
+    AtomicTranslation::AtomicTranslation(InputMap &in,Energy::Energybase &e,
+        Space &s, string pfx) : Movebase(e,s,pfx) {
       title="Single Particle Translation";
       iparticle=-1;
       igroup=nullptr;
@@ -162,7 +163,7 @@ namespace Faunus {
       setGenericDisplacement( in.get<double>(prefix+"_genericdp",0) );
     }
 
-    /*!
+    /**
      * The generic displacement parameter will be used only if the specific
      * atomic dp is zero.
      */
@@ -231,7 +232,8 @@ namespace Faunus {
 
     double AtomicTranslation::_energyChange() {
       if (iparticle>-1) {
-        assert( spc->geo->collision(spc->p[iparticle])==false && "An untouched particle collides with simulation container.");
+        assert( spc->geo->collision(spc->p[iparticle])==false
+            && "An untouched particle collides with simulation container.");
         if ( spc->geo->collision( spc->trial[iparticle], Geometry::Geometrybase::BOUNDARY ) )
           return pc::infty;
         return
@@ -449,9 +451,10 @@ namespace Faunus {
       }
     }
 
-    /*!
-     * The cluster threshold is set with the InputMap keyword \c transrot_clustersize and
-     * gives specifies the SURFACE distance between macromolecular particles and atomic particles
+    /**
+     * The cluster threshold is set with the InputMap keyword
+     * `transrot_clustersize` and gives specifies the SURFACE
+     * distance between macromolecular particles and atomic particles
      * to be clustered.
      */
     TranslateRotateCluster::TranslateRotateCluster(InputMap &in,Energy::Energybase &e, Space &s, string pfx) : TranslateRotate(in,e,s,pfx) {
@@ -476,7 +479,7 @@ namespace Faunus {
       if (cnt>0) {
         o << pad(SUB,w,"Average cluster size") << avgsize.avg() << endl;
         if (threshold>1e-9)
-          o << pad(SUB,w,"Average bias") << avgbias.avg() << " (0=reject, 1=accept)" << endl; 
+          o << pad(SUB,w,"Average bias") << avgbias.avg() << " (0=reject, 1=accept)\n";
       }
       return o.str();
     }
@@ -499,7 +502,7 @@ namespace Faunus {
         p.ranunit(slp_global);
         p=igroup->cm+p; // set endpoint for rotation 
         igroup->rotate(*spc, p, angle);
-        vrot.setAxis(*spc->geo, igroup->cm, p, angle); // rot. around line between CM and point
+        vrot.setAxis(*spc->geo, igroup->cm, p, angle); // rot. around line CM->p
         for (auto i : cindex)
           spc->trial[i].rotate(vrot); // rotate
       }
@@ -592,7 +595,8 @@ namespace Faunus {
     string ClusterTranslateNR::_info() {
       std::ostringstream o;
       o << pad(SUB,w,"Displacement") << dp << _angstrom << endl
-        << pad(SUB,w,"Skip energy update") << ((skipEnergyUpdate==false) ? "no" : "yes (energy drift!)") << endl;
+        << pad(SUB,w,"Skip energy update")
+        << ((skipEnergyUpdate==false) ? "no" : "yes (energy drift!)") << endl;
       if (movefrac.cnt>0)
         o << pad(SUB,w,"Move fraction") << movefrac.avg() << endl;
       return o.str();
@@ -837,7 +841,7 @@ namespace Faunus {
       // generate new position for end point ("first")
       Point u;
       u.ranunit(slp_global);                          // generate random unit vector
-      spc->trial[first].translate(*spc->geo, u*bond); // translate first w. scaled unit vector
+      spc->trial[first].translate(*spc->geo, u*bond); // trans. 1st w. scaled unit vector
       assert( std::abs( spc->geo->dist(spc->p[first],spc->trial[first])-bond ) < 1e-7  );
 
       for (auto i : *gPtr)
@@ -861,7 +865,7 @@ namespace Faunus {
         if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
           return pc::infty;
 
-      double unew = pot->g_external(spc->trial, *gPtr) + pot->g_internal(spc->trial, *gPtr);
+      double unew = pot->g_external(spc->trial, *gPtr) + pot->g_internal(spc->trial,*gPtr);
       if (unew==pc::infty)
         return pc::infty;       // early rejection
       double uold = pot->g_external(spc->p, *gPtr) + pot->g_internal(spc->p, *gPtr);
@@ -880,7 +884,7 @@ namespace Faunus {
     string Reptation::_info() {
       using namespace textio;
       std::ostringstream o;
-      o << pad(SUB,w, "Bondlength") << bondlength << _angstrom + " (-1 = automatic)" << endl;
+      o << pad(SUB,w, "Bondlength") << bondlength << _angstrom + " (-1 = automatic)\n";
       if (cnt>0)
         o << accmap.info();
       return o.str();
@@ -912,10 +916,10 @@ namespace Faunus {
       double Pascal = P*pc::kB*pc::T()*1e30;
       o << pad(SUB,w, "Displacement parameter") << dV << endl
         << pad(SUB,w, "Number of molecules")
-        << N << " (" <<Nmol<< " molecular + " <<Natom<< " atomic)" << endl 
+        << N << " (" <<Nmol<< " molecular + " <<Natom<< " atomic)\n" 
         << pad(SUB,w, "Pressure")
-        << P*tomM << " mM = " << Pascal << " Pa = " << Pascal/0.980665e5 << " atm" << endl
-        << pad(SUB,w, "Temperature") << pc::T() << " K" << endl;
+        << P*tomM << " mM = " << Pascal << " Pa = " << Pascal/0.980665e5 << " atm\n"
+        << pad(SUB,w, "Temperature") << pc::T() << " K\n";
       if (cnt>0) {
         char l=14;
         o << pad(SUB,w, "Mean displacement")
@@ -932,7 +936,7 @@ namespace Faunus {
           << setw(l) << V.avg() << _angstrom << cubed
           << setw(l) << std::cbrt(V.avg()) << _angstrom
           << setw(l) << rV.avg() << " 1/" << _angstrom << cubed
-          << setw(l) << N*rV.avg()*tomM << " mM" << endl;
+          << setw(l) << N*rV.avg()*tomM << " mM\n";
       }
       return o.str();
     }
@@ -943,7 +947,8 @@ namespace Faunus {
     }
 
     void Isobaric::_trialMove() {
-      assert(spc->groupList().size()>0 && "Space has empty group vector - NPT move not possible.");
+      assert(spc->groupList().size()>0
+          && "Space has empty group vector - NPT move not possible.");
       oldV = spc->geo->getVolume();
       newV = std::exp( std::log(oldV) + slp_global.randHalf()*dV );
       for (auto g : spc->groupList())
@@ -968,7 +973,7 @@ namespace Faunus {
         g->undo(*spc);
     }
 
-    /*!
+    /**
      * This will calculate the total energy of the configuration
      * associated with the current Hamiltonian volume
      */
@@ -989,13 +994,17 @@ namespace Faunus {
       return u + pot->external();
     }
 
-    /*!
-     * \todo Early rejection could be implemented - not relevant for geometries with periodicity, though.
+    /**
+     * @todo Early rejection could be implemented
+     *       - not relevant for geometries with periodicity, though.
      */
     double Isobaric::_energyChange() {
       double uold = _energy(spc->p);
       hamiltonian->setVolume( newV );
-      for (auto g : spc->groupList()) // In spherical geometries molecules may collide with cell boundary upon scaling mass center.
+
+      // In spherical geometries, molecules may collide with
+      // cell boundary upon mass center scaling:
+      for (auto g : spc->groupList())
         for (auto i : *g)
           if ( spc->geo->collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
@@ -1030,7 +1039,7 @@ namespace Faunus {
 
     AtomTracker::data& AtomTracker::operator[](particle::Tid id) { return map[id]; }
 
-    /*!
+    /**
      * This will insert a particle into Space and at the same time make sure
      * that all other particles are correctly tracked.
      */
@@ -1107,7 +1116,8 @@ namespace Faunus {
       trial_insert.clear();
       trial_delete.clear();
       randomIonPair(ida, idb);
-      assert(ida>0 && idb>0 && "Ion pair id is zero (UNK). Is this really what you want?");
+      assert(ida>0 && idb>0 &&
+          "Ion pair id is zero (UNK). Is this really what you want?");
       int Na = (int)abs(map[idb].p.charge);
       int Nb = (int)abs(map[ida].p.charge);
       switch ( rand() % 2) {
@@ -1317,7 +1327,7 @@ namespace Faunus {
       }
     }
 
-    /*!
+    /**
      * If the system energy is already known it may be specified with this
      * function to speed up the calculation. If not set, it will be calculated.
      */
@@ -1348,9 +1358,9 @@ namespace Faunus {
       return (unew-uold)+du_partner;          // final Metropolis trial energy
     }
 
-    /*!
+    /**
      * This will exchange energies with replica partner
-     * \todo Use FloatTransmitter::swapf() instead.
+     * @todo Use FloatTransmitter::swapf() instead.
      *       Use C++11 initializer list for vectors, i.e. vector<floatp> v={mydu};
      */
     double ParallelTempering::exchangeEnergy(double mydu) {

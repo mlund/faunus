@@ -57,8 +57,8 @@ namespace Faunus {
       public:  
         PairPotentialBase();
         virtual ~PairPotentialBase();
-        string name;             //!< Short (preferably one-word) description of the core potential
-        string brief();          //!< Brief, one-lined information string
+        string name;      //!< Name of potential
+        string brief();   //!< Brief, one-lined information string
         virtual void setTemperature(double); //!< Set temperature [K]
 
         /** @brief Particle-particle energy in units of \c kT */
@@ -657,44 +657,40 @@ namespace Faunus {
     /**
      * @brief Custom potentials between specific particle types
      *
-     * Of no pairs are added, the `Tdefault` pair potential is used.
+     * If the pair is not recognized, i.e. not added with the
+     * `add()` function, the `Tdefault` pair potential is used.
      */
-    template<class Tdefault>
-      class PotentialList : public Tdefault {
-        private:
-          typedef opair<particle::Tid> Tpair;
-#ifdef FAU_HASHTABLE                                                      
-          std::unordered_map<Tpair,std::shared_ptr<PairPotentialBase> > m;
-#else 
-          std::map<Tpair,std::shared_ptr<PairPotentialBase> > m;
-#endif
-        public:
-          PotentialList(InputMap &in) : Tdefault(in) {
-            Tdefault::name += " (default)";
-          } 
+    template<typename Tdefault, typename Tpair=opair<particle::Tid>,
+      typename Tmap=std::map<Tpair, std::shared_ptr<PairPotentialBase> > >
+        class PotentialMap : public Tdefault {
+          private:
+            Tmap m;
+          public:
+            PotentialMap(InputMap &in) : Tdefault(in) {
+              Tdefault::name += " (default)";
+            } 
 
-          template<class Tpairpot>
-            void add(AtomData::Tid id1, AtomData::Tid id2, Tpairpot pot) {
-              pot.name=atom[id1].name + "<->" + atom[id2].name + ": " + pot.name;
-              m[ Tpair(id1,id2) ] = std::shared_ptr<Tpairpot>( new Tpairpot(pot) );
+            template<class Tpairpot>
+              void add(AtomData::Tid id1, AtomData::Tid id2, Tpairpot pot) {
+                pot.name=atom[id1].name + "<->" + atom[id2].name + ": " + pot.name;
+                m[Tpair(id1,id2)] = std::shared_ptr<Tpairpot>(new Tpairpot(pot));
+              }
+
+            template<class Tparticle, class Tdist>
+              double operator()(const Tparticle &a, const Tparticle &b, Tdist r2) const {
+                auto i=m.find( Tpair(a.id,b.id) );
+                if (i!=m.end())
+                  return i->second->operator()(a,b,r2);
+                return Tdefault::operator()(a,b,r2);
+              }
+
+            std::string info(char w=20) {
+              std::ostringstream o( Tdefault::info(w) );
+              for (auto &i : m)
+                o << "\n  " + i.second->name + ":\n" << i.second->info(w);
+              return o.str();
             }
-
-          template<class Tparticle, class Tdist>
-            double operator()(const Tparticle &a, const Tparticle &b, Tdist r2) const {
-              auto i=m.find( Tpair(a.id,b.id) );
-              if (i!=m.end())
-                return i->second->operator()(a,b,r2);
-              return Tdefault::operator()(a,b,r2);
-            }
-
-          std::string info(char w=20) {
-            std::ostringstream o;
-            o << Tdefault::info(w);
-            for (auto &i : m)
-              o << "\n  " + i.second->name + ":\n" << i.second->info(w);
-            return o.str();
-          }
-      };
+        };
 
     /**
      * @brief Combines two pair potentials

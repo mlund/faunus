@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# THIS RUN SCRIPT IS USED AS A UNIT TEST SO PLEASE
+# DO NOT COMMIT ANY MODIFIED VERSIONS UNLESS TO UPDATE THE TEST.
+
+source_tests_dir="`dirname $0`"
+cp -f $source_tests_dir/membrane.test . 2> /dev/null
+cp -f $source_tests_dir/membrane.state state 2> /dev/null
+
 #-----------------------------------------------------------
 # Create user input file
 #-----------------------------------------------------------
@@ -54,6 +61,9 @@ npt_P                  0
 npt_dV                 2       # log(dV)
 npt_runfraction        0.2
 cuboid_scaledir        XY
+
+test_stable            no
+test_file              membrane.test
 " > membrane.input
 }
 
@@ -61,14 +71,17 @@ cuboid_scaledir        XY
 # Run simulation
 #-----------------------------------------------------------
 exe=./membrane
-pH=6.3
-epsilon=1
-sigma=10
-Nlipid=100
-box=`python -c "print ( ($Nlipid/1000.)*25**2 )**(1/2.)*$sigma"`
-mkinput
-
-#cp membrane.state state
-#rm state
-$exe
+if [ -x $exe ]; then
+  pH=6.3
+  epsilon=1
+  sigma=10
+  Nlipid=100
+  box=`python -c "print ( ($Nlipid/1000.)*25**2 )**(1/2.)*$sigma"`
+  mkinput
+  $exe
+  rc=$?
+  rm -f confout.pqr membrane.input membrane.json
+  exit $rc
+fi
+exit 1
 

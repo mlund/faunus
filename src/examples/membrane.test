@@ -1,0 +1,13 @@
+# Generated on Mar 12 2013 14:56:28 using 4.2.1 Compatible Apple LLVM 4.2 (clang-425.0.24)
+energyAverage                      3198.94             
+mv_particle_acceptance             13.6628             
+npt_MSQDisplacement                10.5376             
+npt_acceptance                     1.07527             
+npt_averageSideLength              101.607             
+pivot_Acceptancelipid              0.502633            
+pivot_acceptance                   50.2633             
+relativeEnergyDrift                1.0068e-15          
+transrot_acceptance                13.455              
+transrot_lipid_acceptance          13.455              
+transrot_lipid_dRot                2.63158             
+transrot_lipid_dTrans              0.471398            

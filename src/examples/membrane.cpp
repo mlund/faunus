@@ -48,7 +48,7 @@ void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &bond, Tnonbonded &nb, Tin
   auto harm = std::shared_ptr<PairPotentialBase>(new Harmonic(headtail_k,headtail_req));
 
   for (int i=lipid.front(); i<lipid.back(); i=i+3) {
-    bond.add(i,  i+1, fene ); // We add potentials as pointers
+    bond.add(i,  i+1, fene ); // Add potentials as *pointers*
     bond.add(i+1,i+2, fene ); // to reduce memory usage
     bond.add(i,  i+2, harm );
   }
@@ -166,7 +166,17 @@ int main() {
     cout << loop.timing();
   } // end of macro loop
 
+  // perform unit tests
+  UnitTest test(mcp);
+  iso.test(test);
+  mv.test(test);
+  gmv.test(test);
+  piv.test(test);
+  sys.test(test);
+
   // print information
-  cout << loop.info() + sys.info() + mv.info() + spc.info() + gmv.info() + iso.info()
-    << piv.info() << lipidstruct.info();
+  cout << loop.info() + sys.info() + spc.info() + mv.info() + gmv.info() + iso.info()
+    << piv.info() + lipidstruct.info() + test.info();
+
+  return test.numFailed();
 }

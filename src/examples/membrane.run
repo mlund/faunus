@@ -14,7 +14,7 @@ function mkinput() {
 echo '{
   "atomlist" : {
     "HD" : { "r":5.0, "dp":4.0 },  // head group
-    "TL" : { "r":5.0, "dp":4.0 }   // tail group
+    "TL" : { "r":5.0, "dp":2.0 }   // tail group
   }
 }' > membrane.json
 
@@ -45,20 +45,19 @@ lipid_chargefraction   0.0
 lipid_file             membrane.aam
 
 cosattract_eps         $epsilon
-cosattract_wc          "`python -c "print $sigma*1.4"`"
+cosattract_wc          "`python -c "print $sigma*1.6"`"
 cosattract_rc          "`python -c "print $sigma*2**(1/6.)"`"
 
 mv_particle_genericdp  10.
-transrot_transdp       3
+transrot_transdp       2
 transrot_rotdp         0.5
 pivit_minlen           1
 pivot_maxlen           2
 pivot_dp               6
 
 # Constant pressure
-#npt_P                  "`python -c "print 1e3*1661.*$Nlipid/(2*$box*$box*$box)"`" #mM
 npt_P                  0
-npt_dV                 2       # log(dV)
+npt_dV                 0.5         # log(dV)
 npt_runfraction        0.2
 cuboid_scaledir        XY
 
@@ -80,7 +79,7 @@ if [ -x $exe ]; then
   mkinput
   $exe
   rc=$?
-  rm -f confout.pqr membrane.input membrane.json
+  rm -f membrane.input membrane.json
   exit $rc
 fi
 exit 1

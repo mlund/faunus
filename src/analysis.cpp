@@ -606,5 +606,11 @@ namespace Faunus {
       }
       return o.str();
     }
+
+    void BilayerStructure::_test(UnitTest &t) {
+      t("bilayer_order", S.avg() );
+      t("bilayer_area", A.avg() );
+    }
+
   }//namespace
 }//namespace

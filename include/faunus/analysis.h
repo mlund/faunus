@@ -660,9 +660,11 @@ namespace Faunus {
 
         Average<double> S, A;
 
+        void _test(UnitTest &t);
+
       public:
 
-        BilayerStructure() {
+        inline BilayerStructure() {
           name="Bilayer structure";
           cite="doi:10/chqzjk";
         }
@@ -679,7 +681,9 @@ namespace Faunus {
         /**
          * @brief Sample lipid order parameter
          *
-         * @\f S = \frac{1}{2} \left ( 3 (\mathbf{an})^2 -1 \right ) @\f
+         * @f[
+         * S = \frac{1}{2} \left ( 3 (\mathbf{an})^2 -1 \right )
+         * @\]
          *
          * where `a` is the unit vector between the tail and the head group,
          * `n` is the normal to the bilayer plane.

@@ -173,6 +173,7 @@ int main() {
   gmv.test(test);
   piv.test(test);
   sys.test(test);
+  lipidstruct.test(test);
 
   // print information
   cout << loop.info() + sys.info() + spc.info() + mv.info() + gmv.info() + iso.info()
@@ -180,3 +181,33 @@ int main() {
 
   return test.numFailed();
 }
+
+/** @page example_membrane Example: Membrane Bilayer
+  
+ This will simulate a 3-bead coarse grained membrane according to
+ Cooke and Deserno (doi:10/chqzjk). Each bead interacts with a
+ Weeks-Chandler-Andersen potential, while tail-tail interactions
+ have an additional long range attractive potential. There is preliminary
+ support for charged head groups (effect on elastic properties is unknown).
+
+ The following moves are included:
+ - Lipid rotation, translation and pivot
+ - Monomer translation
+ - Iso-tension move
+
+ Run this example from the `examples` directory:
+
+ ~~~~~~~~~~~~~~~~~~~
+ $ make
+ $ cd src/examples
+ $ ./membrane.run
+ ~~~~~~~~~~~~~~~~~~~
+
+ ![Bilayer formed by 3-bead CG lipid model](membrane-3bead.jpg)
+
+ membrane.cpp
+ ============
+
+ \includelineno examples/membrane.cpp
+*/
+

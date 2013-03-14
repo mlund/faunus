@@ -227,10 +227,7 @@ namespace Faunus {
 
           double g_internal(const p_vec &p, Group &g) FOVERRIDE { 
             double u=0;
-            int step=1;
             const int b=g.back(), f=g.front();
-            if (g.numMolecules()>1)
-              step=g.size()/g.numMolecules();
             if (!g.empty())
               for (int i=f; i<b; ++i)
                 for (int j=i+1; j<=b; ++j)
@@ -554,7 +551,7 @@ namespace Faunus {
         double g_internal(const p_vec&, Group&) FOVERRIDE; //!< Internal bonds in Group, only
         double g2g(const p_vec&, Group&, Group&) FOVERRIDE;//!< Bonds between groups
         double total(const p_vec&);                        //!< Sum all known bond energies
-        bool CrossGroupBonds;                              //!< Set to true if there are bonds across groups (slower!). Default: false
+        bool CrossGroupBonds; //!< Set to true if bonds cross groups (slower!). Default: false
     };
 
     /**
@@ -768,170 +765,6 @@ namespace Faunus {
             return u;
           }
       };
-
-    /**
-     * @brief Add interactions between atoms based on id, hydrophobicity etc.
-     *
-     * This template is used to add interactions between specific particles that
-     * meet specific criteria, for example between selected particle types,
-     * hydrophobic particles etc. The core of the class is a function that creates
-     * a "pair" which is simply a collection of two particle properties.
-     * Pairs are created by a function with the signature GeneralPairList::Tpaircreator
-     * and one such function must be specified in the constructor.
-     * Usually you would want to provide this information though a derived
-     * class that contain the pair creation functions.
-     *
-     * @note Not particularly fast.
-     * @date Malmo 2012
-     */
-    template<class Tij>
-      class GeneralPairList : public Energybase, public pair_list<Potential::PairPotentialBase,Tij> {
-        public:
-          using pair_list<Potential::PairPotentialBase,Tij>::list;
-
-          typedef opair<Tij> Tpair;
-          typedef std::function<Tpair (const particle&, const particle&)> Tpaircreator;
-
-          GeneralPairList(Tpaircreator c) {
-            name="General Pair List";
-            geo=nullptr;
-            createPair=c;
-          }
-
-          inline double p2p(const particle &a, const particle &b) FOVERRIDE {
-            assert(geo!=nullptr);
-            auto f=list.find( createPair(a,b) );
-            if (f!=list.end())
-              return f->second->operator()( a, b, geo->sqdist(a,b) );
-            return 0;
-          }
-
-          double all2p(const p_vec &p, const particle &a) FOVERRIDE {
-            double u=0;
-            for (auto &b : p)
-              u+=p2p(a,b);
-            return u;
-          }
-
-          double v2v(const p_vec &p1, const p_vec &p2) FOVERRIDE {
-            double u=0;
-            for (auto &i : p1)
-              for (auto &j : p2)
-                u+=p2p(i,j);
-            return u;
-          }
-
-          inline double i2i(const p_vec &p, int i, int j) FOVERRIDE {
-            assert( i!=j );                    //debug
-            assert( i>=0 && i<(int)p.size() ); //debug
-            assert( j>=0 && j<(int)p.size() ); //debug
-            return p2p( p[i], p[j] );
-          }
-
-          double i2all(const p_vec &p, int i) FOVERRIDE {
-            double u=0;
-            for (int j=0; j<i; j++)
-              u+=i2i(p,i,j);
-            for (int j=i+1; j<(int)p.size(); j++)
-              u+=i2i(p,i,j);
-            return u;
-          }
-
-          double i2g(const p_vec &p, Group &g, int j) FOVERRIDE {
-            double u=0;
-            if (!g.empty()) {
-              if (g.find(j)) {
-                for (auto i=g.front(); i<j; i++)
-                  u+=i2i(p,i,j);
-                for (auto i=j+1; i<=g.back(); i++)
-                  u+=i2i(p,i,j);
-              } else                        //simple - j not in g
-                for (auto i : g)
-                  u+=i2i(p,i,j);
-            }
-            return u;  
-          }
-
-          double all2all(const p_vec &p) FOVERRIDE {
-            int n=p.size();
-            double u=0;
-            for (int i=0; i<n-1; ++i)
-              for (int j=i+1; j<n; ++j)
-                u+=i2i(p,i,j);
-            return u;
-          }
-
-          double g2g(const p_vec &p, Group &g1, Group &g2) FOVERRIDE {
-            double u=0;
-            if (!g1.empty())
-              if (!g2.empty())
-                for (auto i : g1)
-                  for (auto j : g2)
-                    u+=i2i(p,i,j);
-            return u;
-          }
-
-          double g2all(const p_vec &p, Group &g) FOVERRIDE {
-            double u=0;
-            if ( !g.empty() )
-              for (auto i : g) {
-                for (auto j=0; j<g.front(); j++)
-                  u+=i2i(p,i,j);
-                for (auto j=g.back()+1; j<(int)p.size(); j++)
-                  u+=i2i(p,i,j);
-              }
-            return u;
-          }
-
-          double g_internal(const p_vec &p, Group &g) FOVERRIDE {
-            double u=0;
-            if ( !g.empty() ) 
-              for (auto i=g.front(); i<g.back(); i++)
-                for (auto j=i+1; j<=g.back(); j++)
-                  u+=i2i(p,i,j);
-            return u;
-          }
-
-        private:
-          Tpaircreator createPair;
-      };
-
-    /**
-     * @brief Custom potential between particle types
-     *
-     * Example:
-     *
-     *     // Harmonic potential between all "Na" and "Cl" particles, plus
-     *     // Coulomb potential between "Na" atoms
-     *     Energy::PairListID() pot;
-     *     pot.add( atom["Na"].id, atom["Cl"].id, Potential::Harmonic(...) );
-     *     pot.add( atom["Na"].id, atom["Na"].id, Potential::Coulomb(...) );
-     *
-     */
-    class PairListID : public GeneralPairList<particle::Tid> {
-      private:
-        static opair<particle::Tid> makepair(const particle&, const particle&);
-        string _info();
-      public:
-        PairListID();
-    };
-
-    /**
-     * @brief Custom potential based on hydrophobic tag 
-     *
-     * \code
-     * Energy::PairListHydrophobic pot;
-     * pot.add(true, true, Potential::SquareWell(...) ); // square well between hydrophobic particles
-     * pot.add(false,false,Potential::Coulomb(...) );    // coulomb if not...
-     * \endcode
-     */
-    class PairListHydrophobic : public GeneralPairList<particle::Thydrophobic> {
-      private:
-        static opair<particle::Thydrophobic> makepair(const particle&, const particle&);
-        string _info();
-      public:
-        PairListHydrophobic();
-    };
 
     /**
      * @brief Calculates the total system energy

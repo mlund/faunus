@@ -69,6 +69,7 @@ namespace Faunus {
         typedef std::map< Tpair, std::shared_ptr<Tbase> > Tlist;
 #endif
         Tlist list;
+        std::multimap<Tij,Tij> mlist; // additional map for faster access
       public:
         /**
          * @brief Associate data with a pair using an internal copy.
@@ -80,6 +81,8 @@ namespace Faunus {
         template<typename Tderived>
           void add(Tij i, Tij j, Tderived data) {
             list[ Tpair(i,j) ] = std::shared_ptr<Tderived>( new Tderived(data) ); 
+            mlist.insert( std::pair<Tij,Tij>(i,j) );
+            mlist.insert( std::pair<Tij,Tij>(j,i) );
           }
 
         /**
@@ -88,6 +91,8 @@ namespace Faunus {
         template<typename Tderived>
           void add(Tij i, Tij j, std::shared_ptr<Tderived>& sptr) {
             list[ Tpair(i,j) ] = sptr; 
+            mlist.insert( std::pair<Tij,Tij>(i,j) );
+            mlist.insert( std::pair<Tij,Tij>(j,i) );
           }
 
         /**
@@ -100,7 +105,10 @@ namespace Faunus {
         }
 
         /** @brief Clears all data */
-        void clear() { list.clear(); }
+        void clear() {
+          list.clear();
+          mlist.clear();
+        }
     };
 
   template<typename Tij, typename Tval>

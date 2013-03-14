@@ -51,7 +51,7 @@ namespace Faunus {
         virtual string _brief()=0;
       protected:
         Eigen::MatrixXf cutoff2;              //!< Squared cut-off distance (angstrom)
-        void initCutoff(size_t, float);       //<! Initialize all cut-off distances
+        void initCutoff(size_t, float);       //!< Initialize all cut-off distances
         void setCutoff(size_t, size_t, float);//!< Specialized cut-off for a pair
 
       public:  
@@ -76,12 +76,12 @@ namespace Faunus {
         virtual std::string info(char=20);
     };
 
-    /*!
-     * \brief Harmonic pair potential
-     * \details The harmonic potential has the form
+    /**
+     * @brief Harmonic pair potential
+     * @details The harmonic potential has the form
      * \f$ \beta u_{ij} = k(r_{ij}-r_{eq})^2 \f$ where k is the force constant
      * (kT/angstrom^2) and req is the equilibrium distance (angstrom).
-     * \note We do not multiply with 1/2 which must be included in the supplied force constant, k
+     * @note We do not multiply with 1/2 which must be included in the supplied force constant, k
      */
     class Harmonic : public PairPotentialBase {
       private:
@@ -98,12 +98,12 @@ namespace Faunus {
     };
 
     /**
-     * @brief Cosine attraction ala Cooke and Deserno
+     * @brief Cosine attraction
      * @details This is an attractive potential used for coarse grained lipids
      * and has the form:
-     * \f[
+     * @f[
      *     \beta u(r) = -\epsilon \cos^2 [ \pi(r-r_c)/2w_c ]
-     * \f]
+     * @f]
      * for \f$r_c\leq r \leq r_c+w_c\f$. For \f$r<r_c\f$, \f$\beta u=-\epsilon\f$,
      * while zero for \f$r>r_c+w_c\f$.
      *
@@ -144,6 +144,8 @@ namespace Faunus {
      * are as follows:
      * - `fene_stiffness` Bond stiffness, `k` [kT]
      * - `fene_maxsep` Maximum separation, `r_0` [angstrom]
+     *
+     * More info: doi:10.1103/PhysRevE.59.4248
      * 
      */
     class FENE : public PairPotentialBase {
@@ -186,13 +188,14 @@ namespace Faunus {
         string info(char w);
     };
 
-    /*!
-     * \brief Lennard-Jones (12-6) pair potential
-     * \details The Lennard-Jones potential has the form:
-     * \f$
-     * \beta u = 4\epsilon_{lj} \left (  (\sigma_{ij}/r_{ij})^{12} - (\sigma_{ij}/r_{ij})^6    \right )
-     * \f$
-     * where \f$\sigma_{ij} = (\sigma_i+\sigma_j)/2\f$ and \f$\epsilon_{lj}=\epsilon\f$ is the same for all pairs in this class.
+    /**
+     * @brief Lennard-Jones (12-6) pair potential
+     * @details The Lennard-Jones potential has the form:
+     * @f$
+     * \beta u=4\epsilon_{lj} \left ((\sigma_{ij}/r_{ij})^{12}-(\sigma_{ij}/r_{ij})^6\right )
+     * @f$
+     * where \f$\sigma_{ij} = (\sigma_i+\sigma_j)/2\f$ and \f$\epsilon_{lj}=\epsilon\f$
+     * is the same for all pairs in this class.
      */
     class LennardJones : public PairPotentialBase {
       private:
@@ -214,19 +217,18 @@ namespace Faunus {
         string info(char);
     };
 
-    /*! \brief Lorentz-Berthelot Mixing Rule for Lennard-Jones parameters
-    */
-    class LorentzBerthelot {
-      public:
-        string name;
-        LorentzBerthelot();
-        double mixSigma(double,double) const;
-        double mixEpsilon(double,double) const;
+    /** @brief Lorentz-Berthelot Mixing Rule for sigma and epsilon */
+    struct LorentzBerthelot {
+      string name;
+      LorentzBerthelot();
+      double mixSigma(double,double) const;
+      double mixEpsilon(double,double) const;
     };
 
-    /*!
-     * \brief Lennard-Jones potential with arbitrary mixing rules between particle types
-     * \details This is a template for Lennard-Jones pair interactions where the template parameter
+    /**
+     * @brief Lennard-Jones with arbitrary mixing rule
+     *
+     * @details This is a template for Lennard-Jones pair interactions where the template parameter
      * must be a class for the epsilon and sigma mixed rules. The atomic values for 
      * sigma and epsilon are taken from `AtomMap` via the global instance
      * `atom`. In your InputMap configuration file you would typically set the atom list file using
@@ -270,11 +272,11 @@ namespace Faunus {
               return eps(a.id,b.id) * (x*x - x);
             }
 
-          /*!
-           * \brief This will set a custom epsilon for a pair of particles
-           * \param i Particle id of first particle
-           * \param j Particle id of second particle
-           * \param eps_kT epsilon in units of kT
+          /**
+           * @brief This will set a custom epsilon for a pair of particles
+           * @param i Particle id of first particle
+           * @param j Particle id of second particle
+           * @param eps_kT epsilon in units of kT
            */
           void customEpsilon(particle::Tid i, particle::Tid j, double eps_kT) {
             eps.set(i,j,4*eps_kT);
@@ -448,8 +450,8 @@ namespace Faunus {
         string info(char);
     };
 
-    /*!
-     * \brief As LennardJones but only the repulsive R12 part.
+    /**
+     * @brief Repulsive part of LennardJones
      */
     class LennardJonesR12 : public LennardJones {
       public:
@@ -460,8 +462,8 @@ namespace Faunus {
         }
     };
 
-    /*!
-     * \brief As LennardJones but truncated and shifted to sigma.
+    /**
+     * @brief Lennard-Jones truncated and shifted to sigma.
      */
     class LennardJonesTrunkShift : public LennardJones {
       public:
@@ -469,7 +471,7 @@ namespace Faunus {
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
           double sigma = a.radius+b.radius;
           if (r2 > sigma*sigma)
-            return 0.0;
+            return 0;
 
           double x=r6(sigma,r2)*0.5;
           return eps*(x*x - x + 0.25);
@@ -482,7 +484,7 @@ namespace Faunus {
               return Point(0,0,0);
 
             double x=r6(sigma,r2)*0.5;
-            return eps*(12.*x*x - 6.*x) / r2 * p;
+            return eps*(12*x*x - 6*x) / r2 * p;
           }
     };
 
@@ -579,7 +581,7 @@ namespace Faunus {
      *
      * The InputMap is scanned for
      *
-     * - The parameters from Potential::Coulomb
+     * - The parameters from `Potential::Coulomb`
      * - `excess_polarization` for the delta value
      *
      */
@@ -589,19 +591,22 @@ namespace Faunus {
       public:
         ChargeNonpolar(InputMap&); //!< Construction from InputMap
         inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          if ( abs(a.charge)>1e-6 )
-            return -c * a.charge * a.charge / (r2*r2) * (b.radius*b.radius*b.radius);
-          else if ( abs(b.charge)>1e-6 )
-            return -c * b.charge * b.charge / (r2*r2) * (a.radius*a.radius*a.radius);
+          double qq=a.charge * a.charge;
+          if (qq>1e-6)
+            return -c * qq / (r2*r2) * (b.radius*b.radius*b.radius);
+          qq=b.charge * b.charge;
+          if (qq>1e-6)
+            return -c * qq / (r2*r2) * (a.radius*a.radius*a.radius);
           return 0;
         }
         string info(char);
     };
 
-    /*!
-     * \brief Debye-Huckel/Yukawa pair potential
-     * \details Similar to the plain Coulomb potential
-     * but with an extra exponential term to described salt screening:
+    /**
+     * @brief Debye-Huckel/Yukawa potential
+     *
+     * @details Similar to the plain Coulomb potential
+     *          but with an exponential term to described salt screening:
      * \f[ \beta w_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT}
      * \frac{z_i z_j}{r_{ij}} \exp(-\kappa r_{ij}) \f]
      * where \f$\kappa=1/D\f$ is the inverse Debye screening length.
@@ -630,10 +635,10 @@ namespace Faunus {
         string info(char);
     };
 
-    /*!
-     * \brief as DebyeHuckel but shifted to reaach zero at a user specified cut-off distance
-     * \details The cut-off distance is read from the InputMap with the following keyword:
-     * \li \c pairpot_cutoff Spherical cut-off in angstroms
+    /**
+     * @brief DebyeHuckel shifted to reaach zero at given cut-off
+     * @details The cut-off distance is read from the InputMap with the following keyword:
+     * - `pairpot_cutoff` Spherical cut-off in angstroms
      */
     class DebyeHuckelShift : public DebyeHuckel {
       private:
@@ -747,39 +752,6 @@ namespace Faunus {
           void test(UnitTest &t) {
             first.test(t);
             second.test(t);
-          }
-      };
-
-    /*!
-     * \brief As CombinedPairPotential but with a spherical cut-off
-     *
-     * The following keywords are read from the InputMap:
-     * \li \c pairpot_cutoff Spherical cut-off distance (Default: infinity)
-     */
-    template<class T1, class T2>
-      class CombinedPairPotentialCutoff : public CombinedPairPotential<T1,T2> {
-        private:
-          typedef CombinedPairPotential<T1,T2> Tbase;
-          double cutoff2; // squared, spherical cutoff
-          void getin(InputMap &in) {
-            cutoff2 = pow(in.get<double>("pairpot_cutoff",pc::infty),2);
-          }
-        public:
-          CombinedPairPotentialCutoff(InputMap &in) : Tbase(in) { getin(in); }
-
-          CombinedPairPotentialCutoff(InputMap &in, string pfx1, string pfx2) : Tbase(in,pfx1,pfx2) {
-            getin(in);
-          }
-
-          inline double operator() (const particle &a, const particle &b, double r2) const {
-            return (r2>cutoff2) ? 0 : Tbase::operator()(a,b,r2);
-          }
-
-          string info(char w=20) {
-            std::ostringstream o;
-            o << Tbase::info(w)
-              << textio::pad(textio::SUB,w,"Pair potential cutoff") << sqrt(cutoff2) << textio::_angstrom << endl;
-            return o.str();
           }
       };
 

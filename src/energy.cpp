@@ -313,12 +313,10 @@ namespace Faunus {
       assert(geo!=nullptr);  //debug
       assert( i>=0 && i<(int)p.size() ); //debug
       double u=0;
-      for (auto &m : list) {
-        int j=m.first.first;
-        int k=m.first.second;
-        assert(j!=k && "Pairs between identical atom index not allowed.");
-        if (i==j || i==k)
-          u+=m.second->operator()( p[j], p[k], geo->sqdist( p[j], p[k] ) );
+      auto eqr=mlist.equal_range(i);
+      for (auto it=eqr.first; it!=eqr.second; ++it) {
+        int j = it->second; // partner index
+        u+=list[opair<int>(i,j)]->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
       }
       return u;
     }
@@ -329,7 +327,6 @@ namespace Faunus {
       for (auto &m : list) {
         int i=m.first.first;
         int j=m.first.second;
-        assert(i!=j && "Pairs between identical atom index not allowed.");
         assert(i>=0 && i<(int)p.size() && j>=0 && j<(int)p.size()); //debug
         u += m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
       }
@@ -340,39 +337,49 @@ namespace Faunus {
      * Group-to-group bonds are disabled by default as these are rarely used and the current
      * implementation is rather slow for systems with *many* groups (but very general). To
      * activate `g2g()`, set `CrossGroupBonds=true`.
+     *
+     * @warning Untested!
+     * @todo Possible optimization: swap groups so that `g1<g2`;
      */
     double Bonded::g2g(const p_vec &p, Group &g1, Group &g2) {
       double u=0;
       if (CrossGroupBonds)
-        for (auto &m : list) {
-          int i=m.first.first;
-          int j=m.first.second;
-          assert(i!=j && "Pairs between identical atom index not allowed.");
-          if (g1.find(i))
+        for (auto i : g1) {
+          auto eqr=mlist.equal_range(i);
+          for (auto it=eqr.first; it!=eqr.second; ++it) {
+            int j = it->second; // partner index
             if (g2.find(j))
-              u+=m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
-          if (g1.find(j))
-            if (g2.find(i))
-              u+=m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+              u+=list[opair<int>(i,j)]->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+          }
         }
       return u;
     }
 
-    /*!
+    /**
      * Accounts for bonds between particles within a group. Bonds with particles
      * outside the group are skipped and should be accounted for by the g2g() energy function.
      */
     double Bonded::g_internal(const p_vec &p, Group &g) {
       assert(geo!=nullptr);  //debug
       double u=0;
-      for (auto &m : list) {
-        int i=m.first.first;
-        int j=m.first.second;
-        assert(i!=j && "Pairs between identical atom index not allowed.");
-        assert(i>=0 && i<(int)p.size() && j>=0 && j<(int)p.size()); //debug
-        if (g.find(i))
-          if (g.find(j))
-            u += m.second->operator()( p[i],p[j],geo->sqdist( p[i],p[j] ) );
+
+      if ( list.size() > pow(g.size(),2) ) {
+        // small group compared to bond list
+        auto end=list.end();
+        for (auto i=g.front(); i<g.back(); i++)
+          for (auto j=i+1; j<=g.back(); j++) {
+            auto it = list.find(opair<int>(i,j));
+            if (it!=end)
+              u+=it->second->operator()( p[i],p[j],geo->sqdist( p[i],p[j] ) );
+          }
+      } else {
+        // big group compared to bond list
+        for (auto &m : list) {
+          int i=m.first.first, j=m.first.second;
+          if (g.find(i))
+            if (g.find(j))
+              u += m.second->operator()(p[i],p[j],geo->sqdist( p[i],p[j] ));
+        }
       }
       return u;
     }
@@ -390,16 +397,16 @@ namespace Faunus {
 
     string EnergyRest::_info(){ return ""; }
 
-    /*!
+    /**
      * The InputMap is searched for the following keywords that defines the two points
      * that spans the allowed region:
      *
-     * \li \c constrain_upper.x
-     * \li \c constrain_upper.y
-     * \li \c constrain_upper.z
-     * \li \c constrain_lower.x
-     * \li \c constrain_lower.y
-     * \li \c constrain_lower.z
+     * - `constrain_upper.x`
+     * - `constrain_upper.y`
+     * - `constrain_upper.z`
+     * - `constrain_lower.x`
+     * - `constrain_lower.y`
+     * - `constrain_lower.z`
      *
      * The values in the upper point must be higher than those in the lower point. The default
      * values are +infinity for the upper point and -infinity for the lower, meaning that all
@@ -518,50 +525,6 @@ namespace Faunus {
       for (auto m : gmap)
         o << indent(SUBSUB) << m.first.first->name << " " << m.first.second->name
           << " " << m.second.mindist << "-" << m.second.maxdist << _angstrom << endl;
-      return o.str();
-    }
-
-    /*
-       opair<particle::Thydrophobic> createPairHydrophobic(const particle &a, const particle &b) {
-       return opair<particle::Thydrophobic>(a.hydrophobic, b.hydrophobic);
-       }
-       */
-
-    PairListID::PairListID() : GeneralPairList<particle::Tid>(makepair) {
-      name+=" (particle id's)";
-    }
-
-    opair<particle::Tid> PairListID::makepair(const particle &a, const particle &b) {
-      return opair<particle::Tid>(a.id, b.id);
-    }
-
-    string PairListID::_info() {
-      using namespace Faunus::textio;
-      std::ostringstream o;
-      o << indent(SUBSUB) << std::left
-        << setw(7) << "i" << setw(7) << "j" << endl;
-      for (auto &m : list)
-        o << indent(SUBSUB) << std::left << setw(7) << atom[m.first.first].name
-          << setw(7) << atom[m.first.second].name << m.second->brief() << endl;
-      return o.str();
-    }
-
-    PairListHydrophobic::PairListHydrophobic() : GeneralPairList<particle::Thydrophobic>(makepair) {
-      name+=" (hydrophobic particles)";
-    }
-
-    opair<particle::Thydrophobic> PairListHydrophobic::makepair(const particle &a, const particle &b) {
-      return opair<particle::Thydrophobic>(a.hydrophobic, b.hydrophobic);
-    }
-
-    string PairListHydrophobic::_info() {
-      using namespace Faunus::textio;
-      std::ostringstream o;
-      o << indent(SUBSUB) << std::left
-        << setw(7) << "i" << setw(7) << "j" << endl;
-      for (auto &m : list)
-        o << indent(SUBSUB) << std::left << setw(7) << ((m.first.first==true) ? "true":"false")
-          << setw(7) << ((m.first.second==true) ? "true":"false") << m.second->brief() << endl;
       return o.str();
     }
 

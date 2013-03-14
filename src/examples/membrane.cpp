@@ -18,19 +18,19 @@ void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &bond, Tnonbonded &nb, Tin
   double sigma   = in("lipid_sigma", 10);  // angstrom
   double epsilon = in("lipid_epsilon", 1); // kT
 
-  WeeksChandlerAndersen headhead(in);
+  CombinedPairPotential<WeeksChandlerAndersen,DebyeHuckel> headhead(in);
   CombinedPairPotential<WeeksChandlerAndersen,CosAttract> tailtail(in);
   CombinedPairPotential<WeeksChandlerAndersen,ChargeNonpolar> headtail(in);
 
-  headhead.customSigma(hid, hid, 0.95*sigma);            
-  headhead.customSigma(hid, tid, 0.95*sigma);            
-  headhead.customSigma(tid, tid, sigma);                 
-  headhead.customEpsilon(hid, hid, epsilon);             
-  headhead.customEpsilon(hid, tid, epsilon);             
-  headhead.customEpsilon(tid, tid, epsilon);   
+  headhead.first.customSigma(hid, hid, 0.95*sigma);            
+  headhead.first.customSigma(hid, tid, 0.95*sigma);            
+  headhead.first.customSigma(tid, tid, sigma);                 
+  headhead.first.customEpsilon(hid, hid, epsilon);             
+  headhead.first.customEpsilon(hid, tid, epsilon);             
+  headhead.first.customEpsilon(tid, tid, epsilon);   
 
-  tailtail.first=headhead;      // copy initialized WCA to tail-tail and
-  headtail.first=headhead;      // head-tail pair potential
+  tailtail.first=headhead.first;      // copy initialized WCA to tail-tail and
+  headtail.first=headhead.first;      // head-tail pair potential
 
   nb.pairpot.add(hid, hid, headhead); // Add to main pair potential
   nb.pairpot.add(tid, tid, tailtail);

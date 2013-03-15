@@ -405,7 +405,7 @@ namespace Faunus {
     typedef Eigen::Matrix3d Tpol;
     Tpol alpha;
 
-    inline DipoleParticle() : mu(0,0,0), muscalar(0) {
+    inline DipoleParticle() : mu(0,0,1), muscalar(0) {
       alpha.setZero();
     };
 
@@ -429,6 +429,7 @@ namespace Faunus {
     /** @brief Copy properties from AtomData object */
     inline DipoleParticle& operator=(const AtomData &d) {
       PointParticle::operator=(d);
+      muscalar=d.mu;
       // copy more atom properties here...
       return *this;
     }
@@ -446,6 +447,11 @@ namespace Faunus {
       o << PointParticle(p) << " " << p.mu << " " << p.muscalar;
       return o;
     }
+
+    template<typename Trotator>
+      void rotate(const Trotator &rot) {
+        mu = rot(mu);
+      }
   };
 
   /**

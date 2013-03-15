@@ -64,6 +64,8 @@ namespace Faunus {
         /** @brief Particle-particle energy in units of \c kT */
         virtual double operator() (const particle&, const particle&, double) const;
 
+        virtual double operator()(const particle&, const particle&, const Point&) const;
+
         /** @brief Particle-particle force in units of \c kT/Å */
         virtual Point force(const particle&, const particle&, double, const Point&);
 
@@ -209,11 +211,14 @@ namespace Faunus {
       public:
         LennardJones();
         LennardJones(InputMap&, string="lj_");
-        template<class T> 
-          double operator() (const T &a, const T &b, double r2) const {
-            double x(r6(a.radius+b.radius,r2));
-            return eps*(x*x - x);
-          }
+        double operator() (const particle &a, const particle &b, double r2) const {
+          double x(r6(a.radius+b.radius,r2));
+          return eps*(x*x - x);
+        }
+        double operator() (const particle &a, const particle &b, const Point &r2) const {
+          return operator()(a,b,r2.squaredNorm());
+        }
+
         string info(char);
     };
 
@@ -265,12 +270,11 @@ namespace Faunus {
               }
           }
 
-          template<class T>
-            double operator()(const T &a, const T &b, double r2) const {
-              double x=s2(a.id,b.id)/r2; //s2/r2
-              x=x*x*x; // s6/r6
-              return eps(a.id,b.id) * (x*x - x);
-            }
+          double operator()(const particle &a, const particle &b, double r2) const {
+            double x=s2(a.id,b.id)/r2; //s2/r2
+            x=x*x*x; // s6/r6
+            return eps(a.id,b.id) * (x*x - x);
+          }
 
           /**
            * @brief This will set a custom epsilon for a pair of particles
@@ -512,14 +516,13 @@ namespace Faunus {
       Coulomb(InputMap&); //!< Construction from InputMap
       double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
 
-      template<class T>
-        double operator() (const T &a, const T &b, double r2) const {
+      inline double operator() (const particle &a, const particle &b, double r2) const {
 #ifdef FAU_APPROXMATH
-          return lB*a.charge*b.charge * invsqrtQuake(r2);
+        return lB*a.charge*b.charge * invsqrtQuake(r2);
 #else
-          return lB*a.charge*b.charge / sqrt(r2);
+        return lB*a.charge*b.charge / sqrt(r2);
 #endif
-        }
+      }
 
       template<class T>
         Point force(const T &a, const T &b, double r2, const Point &p) {
@@ -550,18 +553,17 @@ namespace Faunus {
         double Rc2, Rcinv;
       public:
         CoulombWolf(InputMap&); //!< Construction from InputMap
-        template<class T>
-          double operator() (const T &a, const T &b, double r2) const {
-            if (r2>Rc2)
-              return 0;
+        double operator() (const particle &a, const particle &b, double r2) const {
+          if (r2>Rc2)
+            return 0;
 #ifdef FAU_APPROXMATH
-            r2=invsqrtQuake(r2);  // 1/r
-            return lB * a.charge * b.charge * (r2 - Rcinv + (Rcinv/r2-1)*Rcinv );
+          r2=invsqrtQuake(r2);  // 1/r
+          return lB * a.charge * b.charge * (r2 - Rcinv + (Rcinv/r2-1)*Rcinv );
 #else
-            r2=sqrt(r2); // r
-            return lB * a.charge * b.charge * (1/r2 - Rcinv + (r2*Rcinv-1)*Rcinv );
+          r2=sqrt(r2); // r
+          return lB * a.charge * b.charge * (1/r2 - Rcinv + (r2*Rcinv-1)*Rcinv );
 #endif
-          }
+        }
         string info(char);
     };
 
@@ -735,14 +737,14 @@ namespace Faunus {
             return first(a,b,r2) + second(a,b,r2);
           }
 
-          double operator()(const particle &a, const particle &b, const Point &r2) const {
+          template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r2) const {
             return first(a,b,r2) + second(a,b,r2);
           }
 
-
           template<typename Tparticle>
             Point field(const Tparticle &a, const Point &r) const {
-              return first.field(a,r) + second(a,r);
+              return first.field(a,r) + second.field(a,r);
             }
 
           string info(char w=20) {

@@ -1,14 +1,17 @@
 #include <faunus/faunus.h>
+#include <faunus/multipole.h>
 using namespace Faunus;                          // use Faunus namespace
 using namespace Faunus::Move;
+using namespace Faunus::Potential;
 
 typedef Geometry::Cuboid Tgeo;                   // select simulation geometry and pair potential
-typedef Potential::LennardJones Tpair;
+typedef CombinedPairPotential<HardSphere,DipDip> Tpair;
 
 int main() {
   ::atom.includefile("stockmayer.json");         // load atom properties
   InputMap in("stockmayer.input");               // open parameter file for user input
-  Energy::Nonbonded<Tpair,Tgeo> pot(in);         // create Hamiltonian, non-bonded only
+  Energy::NonbondedVector<Tpair,Tgeo> pot(in);   // create Hamiltonian, non-bonded only
+  EnergyDrift sys;                               // class for tracking system energy drifts
   Space spc( pot.getGeometry() );                // create simulation space, particles etc.
   GroupAtomic sol(spc, in);                      // group for particles
   MCLoop loop(in);                               // class for mc loop counting
@@ -21,15 +24,20 @@ int main() {
   trans.setGroup(sol);                                // tells move class to act on sol group
   rot.setGroup(sol);                                  // tells move class to act on sol group
 
+  sys.init( Energy::systemEnergy(spc,pot,spc.p)  );      // store initial total system energy
+
   while ( loop.macroCnt() ) {                         // Markov chain 
     while ( loop.microCnt() ) {
       if (slp_global() > 0.5)
-        trans.move( sol.size() );                     // translate
+        sys+=trans.move( sol.size() );                     // translate
       else
-        rot.move( sol.size() );                       // rotate
+        sys+=rot.move( sol.size() );                       // rotate
     }
+    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
+    cout << loop.timing();
   }
 
+  FormatPQR().save("confout.pqr", spc.p);
   rdf.save("gofr.dat");                               // save g(r) to disk
-  std::cout << spc.info() + pot.info() + trans.info() + rot.info(); // final info
+  std::cout << spc.info() + pot.info() + trans.info() + rot.info() + sys.info(); // final info
 }

@@ -48,6 +48,10 @@ namespace Faunus {
       return pc::infty;
     }
 
+    double PairPotentialBase::operator() (const particle &a, const particle &b, const Point &r2) const {
+      return operator()(a,b,r2.squaredNorm());
+    }
+
     /**
      * @param a First particle
      * @param b Second particle

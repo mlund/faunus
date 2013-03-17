@@ -111,14 +111,22 @@ namespace Faunus {
         }
     };
 
-  template<typename Tij, typename Tval>
-    struct map_ij {
-      typedef opair<Tij> Tkey;
-      std::map<Tkey,Tval> list;
-      Tval& operator() (Tij i, Tij j) {
-        return list[ Tpair(i,j) ];
+  template<class Tdata, class Ti=int, class Tbase=std::map<opair<Ti>,Tdata> >
+    struct map_ij : private Tbase {
+      using Tbase::begin;
+      using Tbase::end;
+      Tdata& operator() (Ti i, Ti j)  {
+        return Tbase::operator[]( opair<Ti>(i,j) );
       }
-      //std::map<Tkey,Tval>::iterator
+      Tdata& operator() (Ti i, Ti j) const {
+        return Tbase::operator[]( opair<Ti>(i,j) );
+      }
+      typename Tbase::const_iterator find(Ti i, Ti j) const {
+        return Tbase::find(opair<Ti>(i,j));
+      }
+      typename Tbase::iterator find(Ti i, Ti j) {
+        return Tbase::find(opair<Ti>(i,j));
+      }
     };
 
   template<typename Tparticle, typename Tij=int, typename Tpair=opair< Tij > >

@@ -106,6 +106,9 @@ namespace Faunus {
           Tgeometry geometry;
           Tpairpot pairpot;
           Nonbonded(InputMap &in) : geometry(in), pairpot(in) {
+            static_assert(
+                std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
+                "Tpairpot must be a pair potential" );
             name="Nonbonded N" + textio::squared + " - " + pairpot.name;
             setGeometry(geometry);
           }

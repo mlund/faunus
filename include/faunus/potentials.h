@@ -666,11 +666,19 @@ namespace Faunus {
      *
      * If the pair is not recognized, i.e. not added with the
      * `add()` function, the `Tdefault` pair potential is used.
+     *
+     * Example:
+     *
+     *     PotentialMap<CoulombLJ> pot(...);
+     *     pot.add( atom["Na"].id ,atom["CH4"].id, ChargeNonpolar(...) );
+     *     pot.add( atom["Cl"].id ,atom["CH4"].id, ChargeNonpolar(...) );
+     *
      */
-    template<typename Tdefault, typename Tpair=opair<particle::Tid>,
-      typename Tmap=std::map<Tpair, std::shared_ptr<PairPotentialBase> > >
+    template<typename Tdefault,
+      typename Tmap=std::map<opair<int>, std::shared_ptr<PairPotentialBase> > >
         class PotentialMap : public Tdefault {
           private:
+            typedef typename Tmap::key_type Tpair;
             Tmap m;
           public:
             PotentialMap(InputMap &in) : Tdefault(in) {

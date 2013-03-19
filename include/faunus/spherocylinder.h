@@ -845,7 +845,7 @@ namespace Faunus {
           PatchyCigarCigar<Tcigarcigar> pairpot_cc;
           PatchyCigarSphere<Tcigarsphere> pairpot_cs;
 
-          CigarSphereSplit(InputMap &in) : pairpot_cc(in), pairpot_ss(in), pairpot_cs(in){
+          CigarSphereSplit(InputMap &in) : pairpot_ss(in), pairpot_cc(in), pairpot_cs(in){
             name="CigarSphereSplit";
           }
 

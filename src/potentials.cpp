@@ -45,19 +45,9 @@ namespace Faunus {
       return name+": N/A";
     }
     
-    /**
-     * @param a First particle
-     * @param b Second particle
-     * @param r2 Squared distance between them (angstrom squared)
-     */
-    double PairPotentialBase::operator() (const particle &a, const particle &b, double r2) const {
-      assert(!"Pair energy not defined!");
-      return pc::infty;
-    }
-
-    double PairPotentialBase::operator() (const particle &a, const particle &b, const Point &r2) const {
-      return operator()(a,b,r2.squaredNorm());
-    }
+    //double PairPotentialBase::operator() (const particle &a, const particle &b, const Point &r2) const {
+    //  return operator()(a,b,r2.squaredNorm());
+    //}
 
     /**
      * @param a First particle
@@ -102,7 +92,7 @@ namespace Faunus {
         f << "# Pair potential: " << brief() << endl
           << "# Atoms: " << atom[ida].name << "<->" << atom[idb].name << endl;
         for (double r=min; r<=150; r+=0.5)
-          f << std::left << std::setw(10) << r << " " << operator()(a,b,r*r) << endl; 
+          f << std::left << std::setw(10) << r << " " ;//<< operator()(a,b,r*r) << endl; 
         return true;
       }
       return false;

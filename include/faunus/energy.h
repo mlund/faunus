@@ -561,11 +561,13 @@ namespace Faunus {
 
         template<class Tpairpot>
           void add(int i, int j, Tpairpot pot) {
-            Tbase::add(i,j,pot);
             std::ostringstream o;
             o << textio::indent(textio::SUBSUB) << std::left << setw(7) << i
               << setw(7) << j << pot.brief() + "\n";
             _infolist += o.str();
+            pot.name.clear();   // potentially save a
+            pot.prefix.clear(); // little bit of memory
+            Tbase::add(i,j,pot);// create and add functor to pair list
           }
     };
 

@@ -37,15 +37,14 @@ namespace Faunus {
     /**
      * @brief Base class for pair potential classes
      *
-     * This is a base class for all pair potentials which must implement the function
-     * operator so that the potential can work as a class function.
-     * 
-     * To make a new pair potential you must implement
-     * - a function that takes two particles as arguments as well as the
-     *    squared distance between them (i.e. the function operator), and
-     * - a brief information string.
-     * The unit of the returned energy is `kT`.
+     * This is a base class for all pair potentials. All derived classes
+     * are class functions, i.e. they the function operator returns the
+     * energy. For example:
      *
+     *     PointParticle a,b;
+     *     Coulomb pot(in);
+     *     pot(a,b,16.); // -> energy in kT
+     * 
      */
     class PairPotentialBase {
       private:
@@ -61,11 +60,6 @@ namespace Faunus {
         string prefix;     //!< Prefix used for user input specific to the potential
         string brief();    //!< Brief, one-lined information string
         virtual void setTemperature(double); //!< Set temperature [K]
-
-        /** @brief Particle-particle energy in units of `kT` */
-        virtual double operator()(const particle&, const particle&, double) const;
-
-        virtual double operator()(const particle&, const particle&, const Point&) const;
 
         /** @brief Particle-particle force in units of \c kT/Å */
         virtual Point force(const particle&, const particle&, double, const Point&);
@@ -94,10 +88,11 @@ namespace Faunus {
         double req; //!< Equilibrium distance (angstrom)
         Harmonic(double=0, double=0);
         Harmonic(InputMap&, string="harmonic");
-        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          double d=sqrt(r2)-req;
-          return k*d*d;
-        }
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) const  {
+            double d=sqrt(r2)-req;
+            return k*d*d;
+          }
     };
 
     /**
@@ -126,7 +121,8 @@ namespace Faunus {
         string _brief();
       public:
         CosAttract(InputMap&, string="cosattract"); // Constructor from InputMap
-        inline double operator() (const particle &a, const particle &b, double r2) const {
+        template<class Tparticle>
+        double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
           if (r2<rc2)
             return -eps;
           if (r2>rcwc2)
@@ -158,9 +154,10 @@ namespace Faunus {
       public:
         FENE(double,double); // Constructor
         FENE(InputMap&, string="fene"); // Constructor
-        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          return (r2>r02) ? pc::infty : -0.5*k*r02*std::log(1-r2*r02inv);
-        }
+        template<class Tparticle>
+          inline double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+            return (r2>r02) ? pc::infty : -0.5*k*r02*std::log(1-r2*r02inv);
+          }
     };
 
     /**
@@ -173,14 +170,16 @@ namespace Faunus {
         /** @brief Compatibility constructor - no data is read from the InputMap. */
         inline HardSphere(InputMap& in) { name="Hardsphere"; }
 
-        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          double m=a.radius+b.radius;
-          return (r2<m*m) ? pc::infty : 0;
-        }
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+            double m=a.radius+b.radius;
+            return (r2<m*m) ? pc::infty : 0;
+          }
 
-        inline double operator() (const particle &a, const particle &b, const Point &r) const FOVERRIDE {
-          return operator()(a,b,r.squaredNorm());
-        }
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const  {
+            return operator()(a,b,r.squaredNorm());
+          }
 
         string info(char w);
     };
@@ -206,10 +205,17 @@ namespace Faunus {
       public:
         LennardJones();
         LennardJones(InputMap&, string="lj");
-        double operator() (const particle &a, const particle &b, double r2) const {
-          double x(r6(a.radius+b.radius,r2));
-          return eps*(x*x - x);
-        }
+
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
+            double x(r6(a.radius+b.radius,r2));
+            return eps*(x*x - x);
+          }
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const  {
+            return operator()(a,b,r.squaredNorm());
+          }
+
         string info(char);
     };
 
@@ -261,11 +267,12 @@ namespace Faunus {
               }
           }
 
-          double operator()(const particle &a, const particle &b, double r2) const {
-            double x=s2(a.id,b.id)/r2; //s2/r2
-            x=x*x*x; // s6/r6
-            return eps(a.id,b.id) * (x*x - x);
-          }
+          template<class Tparticle>
+            double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
+              double x=s2(a.id,b.id)/r2; //s2/r2
+              x=x*x*x; // s6/r6
+              return eps(a.id,b.id) * (x*x - x);
+            }
 
           /**
            * @brief This will set a custom epsilon for a pair of particles
@@ -285,14 +292,15 @@ namespace Faunus {
             using namespace Faunus::textio;
             std::ostringstream o;
             o << indent(SUB) << name+" pair parameters:\n";
+            o.precision(4);
             int n=(int)atom.list.size();
             for (int i=0; i<n; i++)
               for (int j=0; j<n; j++)
                 if (i>=j)
                   if (i!=0 && j!=0) // ignure first "UNK" particle type
                     o << indent(SUBSUB) << setw(12) << atom[i].name+"<->"+atom[j].name
-                      << indent(SUB) << sigma+" = " << sqrt( s2(i,j) ) << _angstrom
-                      << indent(SUB) << epsilon+" = " << eps(i,j)/4 << kT+" = "
+                      << indent(SUB) << sigma+" = " << setw(7) << sqrt( s2(i,j) ) << _angstrom
+                      << indent(SUB) << epsilon+" = " << setw(7) << eps(i,j)/4 << kT+" = "
                       << pc::kT2kJ(eps(i,j)/4) << " kJ/mol"
                       << endl;
             return o.str();
@@ -316,16 +324,19 @@ namespace Faunus {
       public:
         typedef LennardJonesMixed<LorentzBerthelot> Tbase;
         WeeksChandlerAndersen(InputMap&);
-        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          double x=s2(a.id,b.id); // s^2
-          if (r2>x*twototwosixth)
-            return 0;
-          x=x/r2;  // (s/r)^2
-          x=x*x*x;// (s/r)^6
-          return eps(a.id,b.id)*(x*x - x + onefourth);
-        }
-        template<class T>
-          double operator() (const T &a, const T &b, const Point &r) const {
+
+        template<class Tparticle>
+          inline double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+            double x=s2(a.id,b.id); // s^2
+            if (r2>x*twototwosixth)
+              return 0;
+            x=x/r2;  // (s/r)^2
+            x=x*x*x;// (s/r)^6
+            return eps(a.id,b.id)*(x*x - x + onefourth);
+          }
+
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
             return operator()(a,b,r.squaredNorm());
           }
     };
@@ -341,12 +352,14 @@ namespace Faunus {
         double threshold;                           //!< Threshold between particle *surface* [A]
         double depth;                               //!< Energy depth [kT] (positive number)
         SquareWell(InputMap&, string="squarewell"); //!< Constructor
-        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          double d=a.radius+b.radius+threshold;
-          if ( r2 < d*d )
-            return -depth;
-          return 0;
-        }
+
+        template<class Tparticle>
+          inline double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+            double d=a.radius+b.radius+threshold;
+            if ( r2 < d*d )
+              return -depth;
+            return 0;
+          }
         string info(char);
     };
 
@@ -360,12 +373,14 @@ namespace Faunus {
       public:
         double threshold_lower;
         SquareWellShifted(InputMap&, string="squarewell"); //!< Constructor
-        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          double d=a.radius+b.radius+threshold_lower;
-          if ( r2 > d*d )
-            return SquareWell::operator()(a,b,r2);
-          return 0;
-        }
+
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
+            double d=a.radius+b.radius+threshold_lower;
+            if ( r2 > d*d )
+              return SquareWell::operator()(a,b,r2);
+            return 0;
+          }
         string info(char);
     };
 
@@ -391,12 +406,14 @@ namespace Faunus {
     class SquareWellHydrophobic : public SquareWell {
       public:
         SquareWellHydrophobic(InputMap&, string="squarewell"); //!< Constructor
-        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          if (a.hydrophobic)
-            if (b.hydrophobic)
-              return SquareWell::operator()(a,b,r2);
-          return 0;
-        }
+
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+            if (a.hydrophobic)
+              if (b.hydrophobic)
+                return SquareWell::operator()(a,b,r2);
+            return 0;
+          }
     };
 
     /*!
@@ -409,14 +426,16 @@ namespace Faunus {
         double sigma6;
       public:
         SoftRepulsion(InputMap&);
-        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          double d=a.radius+b.radius;
-          if (r2<=d*d) //fp comparison!
-            return pc::infty;
-          d = sqrt(r2)-d;
-          d=d*d; //d^2
-          return sigma6 / (d*d*d); // s^6/d^6
-        }
+
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+            double d=a.radius+b.radius;
+            if (r2<=d*d) //fp comparison!
+              return pc::infty;
+            d = sqrt(r2)-d;
+            d=d*d; //d^2
+            return sigma6 / (d*d*d); // s^6/d^6
+          }
         string info(char);
     };
 
@@ -436,12 +455,13 @@ namespace Faunus {
       public:
         R12Repulsion(); // __attribute__ ((deprecated));
         R12Repulsion(InputMap&, string="r12rep"); // __attribute__ ((deprecated));
-        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          double x=(a.radius+b.radius);
-          x=x*x/r2; // r2
-          x=x*x*x; // r6
-          return eps*x*x;
-        }
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+            double x=(a.radius+b.radius);
+            x=x*x/r2; // r2
+            x=x*x*x; // r6
+            return eps*x*x;
+          }
         string info(char);
     };
 
@@ -451,10 +471,11 @@ namespace Faunus {
     class LennardJonesR12 : public LennardJones {
       public:
         LennardJonesR12(InputMap&, string="r12rep");
-        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          double x=r6(a.radius+b.radius,r2);
-          return eps*x*x;
-        }
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+            double x=r6(a.radius+b.radius,r2);
+            return eps*x*x;
+          }
     };
 
     /**
@@ -463,13 +484,14 @@ namespace Faunus {
     class LennardJonesTrunkShift : public LennardJones {
       public:
         LennardJonesTrunkShift(InputMap&, string="ljts");
-        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          double sigma = a.radius+b.radius;
-          if (r2 > sigma*sigma)
-            return 0;
-          double x=r6(sigma,r2)*0.5;
-          return eps*(x*x - x + 0.25);
-        }
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+            double sigma = a.radius+b.radius;
+            if (r2 > sigma*sigma)
+              return 0;
+            double x=r6(sigma,r2)*0.5;
+            return eps*(x*x - x + 0.25);
+          }
         template<class T>
           Point force(const T &a, const T &b, double r2, const Point &p) {
             double sigma = a.radius+b.radius;
@@ -504,13 +526,14 @@ namespace Faunus {
       Coulomb(InputMap&); //!< Construction from InputMap
       double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
 
-      inline double operator() (const particle &a, const particle &b, double r2) const {
+      template<class Tparticle>
+        double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
 #ifdef FAU_APPROXMATH
-        return lB*a.charge*b.charge * invsqrtQuake(r2);
+          return lB*a.charge*b.charge * invsqrtQuake(r2);
 #else
-        return lB*a.charge*b.charge / sqrt(r2);
+          return lB*a.charge*b.charge / sqrt(r2);
 #endif
-      }
+        }
 
       template<class T>
         Point force(const T &a, const T &b, double r2, const Point &p) {
@@ -541,17 +564,19 @@ namespace Faunus {
         double Rc2, Rcinv;
       public:
         CoulombWolf(InputMap&); //!< Construction from InputMap
-        double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          if (r2>Rc2)
-            return 0;
+
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+            if (r2>Rc2)
+              return 0;
 #ifdef FAU_APPROXMATH
-          r2=invsqrtQuake(r2);  // 1/r
-          return lB * a.charge * b.charge * (r2 - Rcinv + (Rcinv/r2-1)*Rcinv );
+            r2=invsqrtQuake(r2);  // 1/r
+            return lB * a.charge * b.charge * (r2 - Rcinv + (Rcinv/r2-1)*Rcinv );
 #else
-          r2=sqrt(r2); // r
-          return lB * a.charge * b.charge * (1/r2 - Rcinv + (r2*Rcinv-1)*Rcinv );
+            r2=sqrt(r2); // r
+            return lB * a.charge * b.charge * (1/r2 - Rcinv + (r2*Rcinv-1)*Rcinv );
 #endif
-        }
+          }
         string info(char);
     };
 
@@ -580,15 +605,16 @@ namespace Faunus {
         double c;
       public:
         ChargeNonpolar(InputMap&); //!< Construction from InputMap
-        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
-          double qq=a.charge * a.charge;
-          if (qq>1e-6)
-            return -c * qq / (r2*r2) * (b.radius*b.radius*b.radius);
-          qq=b.charge * b.charge;
-          if (qq>1e-6)
-            return -c * qq / (r2*r2) * (a.radius*a.radius*a.radius);
-          return 0;
-        }
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+            double qq=a.charge * a.charge;
+            if (qq>1e-6)
+              return -c * qq / (r2*r2) * (b.radius*b.radius*b.radius);
+            qq=b.charge * b.charge;
+            if (qq>1e-6)
+              return -c * qq / (r2*r2) * (a.radius*a.radius*a.radius);
+            return 0;
+          }
         string info(char);
     };
 
@@ -608,15 +634,16 @@ namespace Faunus {
         double c,k;
       public:
         DebyeHuckel(InputMap&);                       //!< Construction from InputMap
-        inline double operator() (const particle &a, const particle &b, double r2) const FOVERRIDE {
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
 #ifdef FAU_APPROXMATH
-          double rinv = invsqrtQuake(r2);
-          return lB * a.charge * b.charge * rinv * exp_cawley(-k/rinv);
+            double rinv = invsqrtQuake(r2);
+            return lB * a.charge * b.charge * rinv * exp_cawley(-k/rinv);
 #else
-          double r=sqrt(r2);
-          return lB * a.charge * b.charge / r * exp(-k*r);
+            double r=sqrt(r2);
+            return lB * a.charge * b.charge / r * exp(-k*r);
 #endif
-        }
+          }
         double entropy(double, double) const;         //!< Returns the interaction entropy 
         double ionicStrength() const;                 //!< Returns the ionic strength (mol/l)
         double debyeLength() const;                   //!< Returns the Debye screening length (angstrom)
@@ -636,17 +663,18 @@ namespace Faunus {
         double sqcutoff; // squared cutoff distance
       public:
         DebyeHuckelShift(InputMap&); //!< Construction from InputMap
-        inline double operator() (const particle &a, const particle &b, double r2) const {
-          if (r2>sqcutoff)
-            return 0;
+        template<class Tparticle>
+          inline double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
+            if (r2>sqcutoff)
+              return 0;
 #ifdef FAU_APPROXMATH
-          double rinv = invsqrtQuake(r2);
-          return lB * a.charge * b.charge * ( exp_cawley(-k/rinv)*rinv - shift );
+            double rinv = invsqrtQuake(r2);
+            return lB * a.charge * b.charge * ( exp_cawley(-k/rinv)*rinv - shift );
 #else
-          double r=sqrt(r2);
-          return lB * a.charge * b.charge * ( exp(-k*r)/r - shift );
+            double r=sqrt(r2);
+            return lB * a.charge * b.charge * ( exp(-k*r)/r - shift );
 #endif
-        }
+          }
     };
 
     /**
@@ -668,7 +696,7 @@ namespace Faunus {
           typedef opair<int> Tpair;
           typedef std::function<double(const particle&,const particle&,Tdist)> Tfunc;
           std::map<Tpair,Tfunc> m;
-          std::string _info;
+          std::string _info; // info for the added potentials (before turning into functors)
         public:
           PotentialMap(InputMap &in) : Tdefault(in) {
             Tdefault::name += " (default)";
@@ -679,12 +707,13 @@ namespace Faunus {
               _info+="\n  " + pot.name + ":\n" + pot.info(20);
               m[Tpair(id1,id2)] = pot;
             }
-          double operator()(const particle &a, const particle &b, Tdist r2) const {
-            auto i=m.find( Tpair(a.id,b.id) );
-            if (i!=m.end())
-              return i->second(a,b,r2);
-            return Tdefault::operator()(a,b,r2);
-          }
+          template<class Tparticle>
+            double operator()(const Tparticle &a, const Tparticle &b, const Tdist &r2) const {
+              auto i=m.find( Tpair(a.id,b.id) );
+              if (i!=m.end())
+                return i->second(a,b,r2);
+              return Tdefault::operator()(a,b,r2);
+            }
           std::string info(char w=20) {
             return Tdefault::info(w) + _info;
           }
@@ -724,12 +753,8 @@ namespace Faunus {
               name=first.name+"+"+second.name;
             }
 
-          double operator()(const particle &a, const particle &b, double r2) const FOVERRIDE {
-            return first(a,b,r2) + second(a,b,r2);
-          }
-
-          template<typename Tparticle>
-            double operator()(const Tparticle &a, const Tparticle &b, const Point &r2) const {
+          template<class Tparticle, class Tdist>
+            double operator()(const Tparticle &a, const Tparticle &b, const Tdist &r2) const  {
               return first(a,b,r2) + second(a,b,r2);
             }
 

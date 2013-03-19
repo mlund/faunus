@@ -56,52 +56,27 @@ namespace std {
 
 namespace Faunus {
   /**
-   * This is a list of pairs with associated data where the latter should de derived
-   * from the base Tbase. When adding data with the add() function, a copy of the data
-   * is created and stored internally.
+   * @brief Store data for pairs
    */
-  template<class Tbase, typename Tij=int, typename Tpair=opair< Tij > >
+  template<typename Tdata, typename T=int>
     class pair_list {
       protected:
-#ifdef FAU_HASHTABLE
-        typedef std::unordered_map< Tpair, std::shared_ptr<Tbase> > Tlist;
-#else
-        typedef std::map< Tpair, std::shared_ptr<Tbase> > Tlist;
-#endif
-        Tlist list;
-        std::multimap<Tij,Tij> mlist; // additional map for faster access
+        typedef opair<T> Tpair; // ordered pair
+        std::map<Tpair,Tdata> list;   // main pair list
+        std::multimap<T,T> mlist; // additional map for faster access
       public:
-        /**
-         * @brief Associate data with a pair using an internal copy.
-         *
-         * Data is added by making an internal COPY of the given `Tderived` object.
-         * For large lists, consider adding a pointer instead using the alternative
-         * `add()` function.
-         */
-        template<typename Tderived>
-          void add(Tij i, Tij j, Tderived data) {
-            list[ Tpair(i,j) ] = std::shared_ptr<Tderived>( new Tderived(data) ); 
-            mlist.insert( std::pair<Tij,Tij>(i,j) );
-            mlist.insert( std::pair<Tij,Tij>(j,i) );
-          }
+        /** @brief Associate data with a pair */
+        void add(T i, T j, Tdata d) {
+          list[ Tpair(i,j) ] = d; 
+          mlist.insert( std::pair<T,T>(i,j) );
+          mlist.insert( std::pair<T,T>(j,i) );
+        }
 
-        /**
-         * @brief Associate data with a pair using pointers.
-         */
-        template<typename Tderived>
-          void add(Tij i, Tij j, std::shared_ptr<Tderived>& sptr) {
-            list[ Tpair(i,j) ] = sptr; 
-            mlist.insert( std::pair<Tij,Tij>(i,j) );
-            mlist.insert( std::pair<Tij,Tij>(j,i) );
-          }
-
-        /**
-         * @brief Access data of a pair
-         */
-        Tbase& operator() (Tij i, Tij j) {
-          Tpair pair(i,j);
-          assert( list[pair] != nullptr ); //debug
-          return *list[pair];
+        /** @brief Access data of a pair */
+        Tdata& operator() (T i, T j) {
+          Tpair ij(i,j);
+          assert( list[ij] != nullptr ); //debug
+          return list[ij];
         }
 
         /** @brief Clears all data */
@@ -111,57 +86,22 @@ namespace Faunus {
         }
     };
 
-  template<class Tdata, class Ti=int, class Tbase=std::map<opair<Ti>,Tdata> >
+  template<class Tdata, class T=int, class Tbase=std::map<opair<T>,Tdata> >
     struct map_ij : private Tbase {
       using Tbase::begin;
       using Tbase::end;
-      Tdata& operator() (Ti i, Ti j)  {
-        return Tbase::operator[]( opair<Ti>(i,j) );
+      Tdata& operator() (T i, T j)  {
+        return Tbase::operator[]( opair<T>(i,j) );
       }
-      Tdata& operator() (Ti i, Ti j) const {
-        return Tbase::operator[]( opair<Ti>(i,j) );
+      Tdata& operator() (T i, T j) const {
+        return Tbase::operator[]( opair<T>(i,j) );
       }
-      typename Tbase::const_iterator find(Ti i, Ti j) const {
-        return Tbase::find(opair<Ti>(i,j));
+      typename Tbase::const_iterator find(T i, T j) const {
+        return Tbase::find(opair<T>(i,j));
       }
-      typename Tbase::iterator find(Ti i, Ti j) {
-        return Tbase::find(opair<Ti>(i,j));
+      typename Tbase::iterator find(T i, T j) {
+        return Tbase::find(opair<T>(i,j));
       }
-    };
-
-  template<typename Tparticle, typename Tij=int, typename Tpair=opair< Tij > >
-    class pair_list_functor {
-      protected:
-        typedef std::function<double(const Tparticle&, const Tparticle&, double)> Tfunctor;
-#ifdef FAU_HASHTABLE
-        typedef std::unordered_map< Tpair, Tfunctor > Tlist;
-#else
-        typedef std::map< Tpair, Tfunctor > Tlist;
-#endif
-        Tlist list;
-      public:
-        /**
-         * @brief Associate data with a pair using an internal copy.
-         *
-         * Data is added by making an internal COPY of the given `Tderived` object.
-         * For large lists, consider adding a pointer instead using the alternative
-         * `add()` function.
-         */
-        void add(Tij i, Tij j, Tfunctor f) {
-          list[ Tpair(i,j) ] = f; 
-        }
-
-        /**
-         * @brief Access data of a pair
-         */
-        Tfunctor& operator() (Tij i, Tij j) {
-          Tpair pair(i,j);
-          assert( list[pair] != nullptr ); //debug
-          return list[pair];
-        }
-
-        /** @brief Clears all data */
-        void clear() { list.clear(); }
     };
 
 #pragma GCC diagnostic push

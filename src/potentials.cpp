@@ -13,7 +13,9 @@ namespace Faunus {
 
   namespace Potential {
 
-    PairPotentialBase::PairPotentialBase() {}
+    PairPotentialBase::PairPotentialBase(std::string pfx) {
+      prefix=pfx;
+    }
 
     PairPotentialBase::~PairPotentialBase() { }
 
@@ -21,17 +23,22 @@ namespace Faunus {
      * @param N Maximum number of atom types
      * @param rc Default cutoff distance (angstrom)
      */
-    void PairPotentialBase::initCutoff(size_t N, float rc) {
-      cutoff2.setConstant(N,N,rc*rc);
+    void PairPotentialBase::initCutoff(size_t N, float rcut) {
+      rcut2.setConstant(N,N,rcut*rcut);
     }
 
     /**
      * @param i Particle type i
      * @param j Particle type j
-     * @param rc Distance cutoff (angstrom) 
+     * @param rc Cutoff distance (angstrom) 
      */
-    void PairPotentialBase::setCutoff(size_t i, size_t j, float rc) {
-      cutoff2(i,j)=cutoff2(j,i)=rc*rc;
+    void PairPotentialBase::setCutoff(size_t i, size_t j, float rcut) {
+      rcut2(i,j)=rcut2(j,i)=rcut*rcut;
+    }
+
+    std::string PairPotentialBase::_brief() {
+      assert(!name.empty() && "Provide a descriptive name for the potential");
+      return name;
     }
 
     std::string PairPotentialBase::info(char w) {
@@ -107,16 +114,16 @@ namespace Faunus {
       name="Harmonic";
     }
 
-    Harmonic::Harmonic(InputMap &in, string pfx) {
+    Harmonic::Harmonic(InputMap &in, string pfx) : PairPotentialBase(pfx) {
       name="Harmonic";
-      k  = in.get<double>( pfx+"forceconst", 0);
-      req = in.get<double>( pfx+"eqdist", 0);
+      k  = in(prefix+"_forceconst", 0.0);
+      req= in(prefix+"_eqdist", 0.0);
     }
 
     string Harmonic::_brief() {
       using namespace Faunus::textio;
       std::ostringstream o;
-      o << name << ": k=" << k << kT+"/"+angstrom+squared+" req=" << req << _angstrom; 
+      o << name + ": k=" << k << kT+"/"+angstrom+squared+" req=" << req << _angstrom; 
       return o.str();
     }
 
@@ -130,10 +137,10 @@ namespace Faunus {
       r02inv=1/r02;
     }
 
-    FENE::FENE(InputMap &in, string pfx) {
+    FENE::FENE(InputMap &in, string pfx) : PairPotentialBase(pfx) {
       name="FENE";
-      k  = in.get<double>( pfx+"stiffness", 0);
-      r02 = pow( in.get<double>( pfx+"maxsep", 0), 2);
+      k  = in.get<double>( prefix+"_stiffness", 0);
+      r02 = pow( in.get<double>( prefix+"_maxsep", 0), 2);
       r02inv = 1/r02;
     }
 
@@ -144,11 +151,11 @@ namespace Faunus {
       return o.str();
     }
 
-    CosAttract::CosAttract(InputMap &in, string pfx) {
+    CosAttract::CosAttract(InputMap &in, string pfx) : PairPotentialBase(pfx) {
       name="CosAttract";
-      eps = in.get<double>( pfx+"eps", 0);
-      rc  = in.get<double>( pfx+"rc", 0);
-      wc  = in.get<double>( pfx+"wc", 0);
+      eps = in(prefix+"_eps", 0.0);
+      rc  = in(prefix+"_rc", 0.0);
+      wc  = in(prefix+"_wc", 0.0);
       rc2=rc*rc;
       c=pc::pi/2/wc;
       rcwc2=pow((rc+wc),2);
@@ -176,10 +183,6 @@ namespace Faunus {
       name="Hardsphere";
     }
 
-    string HardSphere::_brief() {
-      return name;
-    }
-
     string HardSphere::info(char w) {
       using namespace Faunus::textio;
       return textio::indent(SUB)+name+"\n";
@@ -193,10 +196,10 @@ namespace Faunus {
      * @param in InputMap is scanned for the `lj_eps` and should be in units of kT
      * @param pfx Prefix for InputMap - default is `ls_`
      */
-    LennardJones::LennardJones(InputMap &in, string pfx) {
+    LennardJones::LennardJones(InputMap &in, string pfx) : PairPotentialBase(pfx) {
       name="Lennard-Jones";
-      eps = 4*in.get<double>( pfx+"eps", 0);
-      string unit = in.get<string>(pfx+"unit", "kT");
+      eps = 4*in(prefix+"_eps", 0.);
+      string unit = in.get<string>(prefix+"_unit", "kT");
       if (unit=="kJ/mol")
         eps=eps/pc::kT2kJ(1.);
     }
@@ -243,7 +246,7 @@ namespace Faunus {
      *        and `prefix_depth` (kT).
      * @param prefix InputMap keyword prefix. Default is `squarewell`
      */
-    SquareWell::SquareWell(InputMap &in, string prefix) {
+    SquareWell::SquareWell(InputMap &in, string pfx) : PairPotentialBase(pfx) {
       name="Square Well";
       threshold = in.get<double>(prefix+"_threshold", 0, name+" upper threshold (AA)");
       depth     = in.get<double>(prefix+"_depth", 0, name+" depth (kT)");
@@ -268,8 +271,8 @@ namespace Faunus {
      * searched for:
      * - `prefix_threshold_lower`
      */
-    SquareWellShifted::SquareWellShifted(InputMap &in, string prefix): SquareWell(in,prefix) {
-      name=name + " Shifted";
+    SquareWellShifted::SquareWellShifted(InputMap &in, string pfx): SquareWell(in,pfx) {
+      name+=" Shifted";
       threshold_lower = in.get<double>(prefix+"_threshold_lower", 0, name+" lower threshold (AA)");
     }
 
@@ -289,7 +292,7 @@ namespace Faunus {
       return o.str();
     }
 
-    SquareWellHydrophobic::SquareWellHydrophobic(InputMap &in, string prefix) : SquareWell(in,prefix) {
+    SquareWellHydrophobic::SquareWellHydrophobic(InputMap &in, string pfx) : SquareWell(in,pfx) {
       name="Hydrophobic " + name;
     }
 
@@ -322,9 +325,9 @@ namespace Faunus {
      * @param in InputMap is scanned for the keyword `lj_eps` and should be in units of kT
      * @param pfx InputMap prefix
      */
-    R12Repulsion::R12Repulsion(InputMap &in, string pfx) {
+    R12Repulsion::R12Repulsion(InputMap &in, string pfx) : PairPotentialBase(pfx) {
       name="r12-Repulsion";
-      eps = 4*in.get<double>( pfx+"eps", 0.05, name+" epsilon (kT)" );
+      eps = 4*in(prefix+"_eps", 0.05);
     }
 
     string R12Repulsion::_brief() {

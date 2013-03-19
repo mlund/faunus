@@ -582,6 +582,11 @@ namespace Faunus {
 
   namespace Potential {
 
+    /**
+     * @brief Brief description here (one line)
+     *
+     * Detailed description here...
+     */
     inline double fanglscale(double a, const CigarParticle &p) {
       // a = r_ij * n_i
       double f;
@@ -630,6 +635,11 @@ namespace Faunus {
         }
     };
 
+    /**
+     * @brief Brief description here (one line)
+     *
+     * Detailed description here...
+     */
     template<typename Tcigarsphere>
       class PatchyCigarSphere : public PairPotentialBase {
         private:
@@ -689,6 +699,11 @@ namespace Faunus {
       };
 
 
+    /**
+     * @brief Brief description here (one line)
+     *
+     * Detailed description here...
+     */
     template<typename Tcigarcigar>
       class PatchyCigarCigar : public PairPotentialBase {
         private:
@@ -809,6 +824,13 @@ namespace Faunus {
           string info(char w) { return pairpot.info(w); }
       };
 
+    /**
+     * @brief Set pair potential between cigar-cigar, sphere-sphere, cigar-sphere
+     * 
+     * This takes three pair potentials that will be called dependent on the
+     * nature of the two particles. If the sphero-cylinder has zero length it
+     * is assumed to be a spherical, isotropic particle.
+     */
     template<typename Tcigarcigar, typename Tspheresphere, typename Tcigarsphere>
       class CigarSphereSplit : public PairPotentialBase {
         private:
@@ -819,17 +841,17 @@ namespace Faunus {
           }
 
         public:
-          PatchyCigarCigar<Tcigarcigar> pairpot_cc;
           Tspheresphere pairpot_ss;
+          PatchyCigarCigar<Tcigarcigar> pairpot_cc;
           PatchyCigarSphere<Tcigarsphere> pairpot_cs;
 
           CigarSphereSplit(InputMap &in) : pairpot_cc(in), pairpot_ss(in), pairpot_cs(in){
             name="CigarSphereSplit";
           }
 
-          double operator() (const particle &a, const particle &b, double r2) const {
+          double operator() (const CigarParticle &a, const CigarParticle &b, double r2) const {
             assert(!"Undefined!");
-            return 0;
+            return pc::infty;
           }
 
           double operator() (const CigarParticle &a, const CigarParticle &b, const Point &r_cm)

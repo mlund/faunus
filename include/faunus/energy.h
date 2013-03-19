@@ -543,9 +543,12 @@ namespace Faunus {
      *
      * @date Lund, 2011-2012
      */
-    class Bonded : public Energybase, public pair_list<Potential::PairPotentialBase> {
+    //class Bonded : public Energybase, public pair_list<Potential::PairPotentialBase> {
+    class Bonded : public Energybase,
+    protected pair_list<std::function<double(const particle&,const particle&,double)> > {
       private:
-        string _info();
+        typedef pair_list<std::function<double(const particle&,const particle&,double)> > Tbase;
+        string _info(), _infolist;
       public:
         Bonded();
         Bonded(Geometry::Geometrybase&);
@@ -555,6 +558,15 @@ namespace Faunus {
         double g2g(const p_vec&, Group&, Group&) FOVERRIDE;//!< Bonds between groups
         double total(const p_vec&);                        //!< Sum all known bond energies
         bool CrossGroupBonds; //!< Set to true if bonds cross groups (slower!). Default: false
+
+        template<class Tpairpot>
+          void add(int i, int j, Tpairpot pot) {
+            Tbase::add(i,j,pot);
+            std::ostringstream o;
+            o << textio::indent(textio::SUBSUB) << std::left << setw(7) << i
+              << setw(7) << j << pot.brief() + "\n";
+            _infolist += o.str();
+          }
     };
 
     /**
@@ -787,5 +799,5 @@ namespace Faunus {
     //   using PairWise = Nonbonded<Tpairpot, Tgeometry>;
 
   }//Energy namespace
-}//Faunus namespace
+  }//Faunus namespace
 #endif

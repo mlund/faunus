@@ -292,10 +292,7 @@ namespace Faunus {
         << (CrossGroupBonds ? "yes (slow)" : "no (faster)") << endl << endl
         << indent(SUBSUB) << std::left
         << setw(7) << "i" << setw(7) << "j" << endl;
-      for (auto &m : list)
-        o << indent(SUBSUB) << std::left << setw(7) << m.first.first
-          << setw(7) << m.first.second << m.second->brief() << endl;
-      return o.str();
+      return o.str() + _infolist;
     }
 
     /*!
@@ -305,7 +302,7 @@ namespace Faunus {
       assert(i!=j);
       auto f=list.find( opair<int>(i,j) );
       if (f!=list.end())
-        return f->second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+        return f->second( p[i], p[j], geo->sqdist( p[i], p[j] ) );
       return 0;
     }
 
@@ -316,7 +313,7 @@ namespace Faunus {
       auto eqr=mlist.equal_range(i);
       for (auto it=eqr.first; it!=eqr.second; ++it) {
         int j = it->second; // partner index
-        u+=list[opair<int>(i,j)]->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+        u += list[opair<int>(i,j)]( p[i], p[j], geo->sqdist( p[i], p[j] ) );
       }
       return u;
     }
@@ -328,7 +325,7 @@ namespace Faunus {
         int i=m.first.first;
         int j=m.first.second;
         assert(i>=0 && i<(int)p.size() && j>=0 && j<(int)p.size()); //debug
-        u += m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+        u += m.second( p[i], p[j], geo->sqdist( p[i], p[j] ) );
       }
       return u;
     }
@@ -349,7 +346,7 @@ namespace Faunus {
           for (auto it=eqr.first; it!=eqr.second; ++it) {
             int j = it->second; // partner index
             if (g2.find(j))
-              u+=list[opair<int>(i,j)]->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+              u+=list[opair<int>(i,j)]( p[i], p[j], geo->sqdist( p[i], p[j] ) );
           }
         }
       return u;
@@ -370,7 +367,7 @@ namespace Faunus {
           for (auto j=i+1; j<=g.back(); j++) {
             auto it = list.find(opair<int>(i,j));
             if (it!=end)
-              u+=it->second->operator()( p[i],p[j],geo->sqdist( p[i],p[j] ) );
+              u+=it->second( p[i],p[j],geo->sqdist( p[i],p[j] ) );
           }
       } else {
         // big group compared to bond list
@@ -378,7 +375,7 @@ namespace Faunus {
           int i=m.first.first, j=m.first.second;
           if (g.find(i))
             if (g.find(j))
-              u += m.second->operator()(p[i],p[j],geo->sqdist( p[i],p[j] ));
+              u += m.second(p[i],p[j],geo->sqdist( p[i],p[j] ));
         }
       }
       return u;

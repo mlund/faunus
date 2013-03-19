@@ -44,13 +44,10 @@ void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &bond, Tnonbonded &nb, Tin
 
   assert(lipid.size() % 3 == 0);
 
-  auto fene = std::shared_ptr<PairPotentialBase>(new FENE(fene_k,fene_rmax));
-  auto harm = std::shared_ptr<PairPotentialBase>(new Harmonic(headtail_k,headtail_req));
-
-  for (int i=lipid.front(); i<lipid.back(); i=i+3) {
-    bond.add(i,  i+1, fene ); // Add potentials as *pointers*
-    bond.add(i+1,i+2, fene ); // to reduce memory usage
-    bond.add(i,  i+2, harm );
+  for (int i=lipid.front(); i<lipid.back(); i+=3) {
+    bond.add(i,  i+1, FENE(fene_k,fene_rmax) );
+    bond.add(i+1,i+2, FENE(fene_k,fene_rmax) );
+    bond.add(i,  i+2, Harmonic(headtail_k,headtail_req) );
   }
 }
 
@@ -183,31 +180,31 @@ int main() {
 }
 
 /** @page example_membrane Example: Membrane Bilayer
-  
- This will simulate a 3-bead coarse grained membrane according to
- Cooke and Deserno (doi:10/chqzjk). Each bead interacts with a
- Weeks-Chandler-Andersen potential, while tail-tail interactions
- have an additional long range attractive potential. There is preliminary
- support for charged head groups (effect on elastic properties is unknown).
 
- The following moves are included:
- - Lipid rotation, translation and pivot
- - Monomer translation
- - Iso-tension move
+  This will simulate a 3-bead coarse grained membrane according to
+  Cooke and Deserno (doi:10/chqzjk). Each bead interacts with a
+  Weeks-Chandler-Andersen potential, while tail-tail interactions
+  have an additional long range attractive potential. There is preliminary
+  support for charged head groups (effect on elastic properties is unknown).
 
- Run this example from the `examples` directory:
+  The following moves are included:
+  - Lipid rotation, translation and pivot
+  - Monomer translation
+  - Iso-tension move
 
- ~~~~~~~~~~~~~~~~~~~
- $ make
- $ cd src/examples
- $ ./membrane.run
- ~~~~~~~~~~~~~~~~~~~
+  Run this example from the `examples` directory:
 
- ![Bilayer formed by 3-bead CG lipid model](membrane-3bead.jpg)
+  ~~~~~~~~~~~~~~~~~~~
+  $ make
+  $ cd src/examples
+  $ ./membrane.run
+  ~~~~~~~~~~~~~~~~~~~
 
- membrane.cpp
- ============
+  ![Bilayer formed by 3-bead CG lipid model](membrane-3bead.jpg)
 
- \includelineno examples/membrane.cpp
-*/
+  membrane.cpp
+  ============
+
+  \includelineno examples/membrane.cpp
+  */
 

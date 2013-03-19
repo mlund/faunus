@@ -321,11 +321,10 @@ namespace Faunus {
     typedef Point::Tcoord Tmw;
     typedef AtomData::Tid Tid;
     typedef bool Thydrophobic;
-
+    AtomData::Tid id;                         //!< Particle identifier
     Tcharge charge;                           //!< Charge number
     Tradius radius;                           //!< Radius
     Tmw mw;                                   //!< Molecular weight
-    AtomData::Tid id;                         //!< Particle identifier
     Thydrophobic hydrophobic;                 //!< Hydrophobic flag
 
     PointParticle() { clear(); }              //!< Constructor

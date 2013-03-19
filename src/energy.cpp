@@ -429,8 +429,8 @@ namespace Faunus {
       std::ostringstream o;
       o << indent(SUB) << "Allowed Rectangular Region Spanned by:" << endl
         << pad(SUB,w, "  Upper") << upper.x() << d << upper.y() << d << upper.z() << endl
-        << pad(SUB,w, "  Lower") << lower.x() << d << lower.y() << d << lower.z() << endl;
-      o << indent(SUB) << "Registered Groups:" << endl;
+        << pad(SUB,w, "  Lower") << lower.x() << d << lower.y() << d << lower.z() << endl
+        << indent(SUB) << "Registered Groups:" << endl;
       for (auto g : groups)
         o << indent(SUB) << "  " << g->name << endl;
       return o.str();
@@ -519,7 +519,7 @@ namespace Faunus {
       using namespace Faunus::textio;
       std::ostringstream o;
       o << indent(SUB) << "The following groups have mass center constraints:\n";
-      for (auto m : gmap)
+      for (auto &m : gmap)
         o << indent(SUBSUB) << m.first.first->name << " " << m.first.second->name
           << " " << m.second.mindist << "-" << m.second.maxdist << _angstrom << endl;
       return o.str();

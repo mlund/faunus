@@ -125,14 +125,20 @@ namespace Faunus {
           return false;
         }
 
-        inline double sqdist(const Point &a, const Point &b) const {
-          double dx( std::abs(a.x()-b.x()) );
-          double dy( std::abs(a.y()-b.y()) );
-          double dz( std::abs(a.z()-b.z()) );
-          if (dx>len_half.x()) dx-=len.x();
-          if (dy>len_half.y()) dy-=len.y();
-          if (dz>len_half.z()) dz-=len.z();
-          return dx*dx + dy*dy + dz*dz;
+        /**
+         * See doi:10/ck2nrd for a review of minimum image algorithms
+         */
+        double sqdist(const Point &a, const Point &b) const {
+          Point d = (a-b).cwiseAbs();
+          if (d.x()>len_half.x()) d.x()-=len.x();
+          if (d.y()>len_half.y()) d.y()-=len.y();
+          if (d.z()>len_half.z()) d.z()-=len.z();
+          return d.squaredNorm();
+
+          // Alternative algorithm:
+          // Eigen::Vector3d d = a-b;
+          // Eigen::Vector3i k = (2*d.cwiseProduct(len_inv)).cast<int>();
+          // return (d-k.cast<double>().cwiseProduct(len)).squaredNorm();
         }
 
         inline Point vdist(const Point &a, const Point &b) {
@@ -162,7 +168,7 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Cubuid with no periodic boundaries in z direction
+     * \brief Cuboid with no periodic boundaries in z direction
      * \author Chris Evers
      * \date Lund, nov 2010
      */

@@ -13,8 +13,6 @@
 #include <faunus/analysis.h>
 #endif
 
-// http://publib.boulder.ibm.com/infocenter/iadthelp/v8r0/index.jsp?topic=/com.ibm.xlcpp111.linux.doc/language_ref/variadic_templates.html
-
 namespace Faunus {
 
   /**
@@ -543,7 +541,6 @@ namespace Faunus {
      *
      * @date Lund, 2011-2012
      */
-    //class Bonded : public Energybase, public pair_list<Potential::PairPotentialBase> {
     class Bonded : public Energybase,
     protected pair_list<std::function<double(const particle&,const particle&,double)> > {
       private:
@@ -671,6 +668,18 @@ namespace Faunus {
       Hamiltonian();
       void setVolume(double);       //!< Set volume of all contained energy classes
       void setTemperature(double);  //!< Set temperature of all contained energy classes
+
+      inline Geometry::Geometrybase& getGeometry() {
+#ifndef NDEBUG
+        for (size_t i=0; i<baselist.size()-1; i++) {
+          double Vi=baselist[i]->getGeometry().getVolume();
+          double Vj=baselist[i+1]->getGeometry().getVolume();
+          assert(std::abs(Vi-Vj)<1e-6 && "Volumes do not match");
+          assert(Vi>1e-6 && Vj>1e-6 && "Zero volume");
+        }
+#endif
+        return *geo;
+      }
 
       /**
        * @brief Create and add an energy class to energy list
@@ -801,5 +810,5 @@ namespace Faunus {
     //   using PairWise = Nonbonded<Tpairpot, Tgeometry>;
 
   }//Energy namespace
-  }//Faunus namespace
+}//Faunus namespace
 #endif

@@ -8,6 +8,7 @@ namespace Faunus {
 
   AtomData::AtomData() {
     activity=0;
+    alpha=0;
     charge=0;
     dp=0;
     dprot=0;

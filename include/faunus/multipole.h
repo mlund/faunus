@@ -16,7 +16,7 @@ namespace Faunus {
         Field = getField(pot,spc);
         for(int i = 0; i < size; i++) {
           E = Field.row(i);
-          mu_ind = spc.p[i].alpha*E;
+          mu_ind = atom[spc.p[i].id].alphamatrix*E;
           mu_err = mu_ind - spc.p[i].mu*spc.p[i].muscalar + mu_per.row(i).transpose();
           diConv = diConv + mu_err.norm();
           mu_ind = mu_ind + mu_per.row(i).transpose();
@@ -32,21 +32,23 @@ namespace Faunus {
    * @brief Returns dipole-dipole interaction which times the 
    * @brief bjerrum length in (Å) gives the energy in k_BT.
    *
-   * @param a DipoleParticle 1
-   * @param b DipoleParticle 2
+   * @param mu1 Unit dipole moment vector 1
+   * @param mu2 Unit dipole moment vector 2
+   * @param mu1xmu2 Product of dipole scalars
    * @param r Vector R_{1->2}
    */
-  double mu2mu(const particle &a, const particle &b, const Point &r) {
-    using namespace Eigen;
-    double R1 = 1.0/r.norm();        //   R^-1 , Å^-1
-    double R3 = -R1*R1*R1;           //  -R^-3 , Å^-3
-    double R5 = -3.0*R3*R1*R1;       // 3*R^-5 , Å^-5
+  template<class Tvec>
+    double mu2mu(const Tvec &mu1, const Tvec &mu2, double mu1xmu2, const Tvec &r) {
+      using namespace Eigen;
+      double R1 = 1.0/r.norm();        //   R^-1 , Å^-1
+      double R3 = -R1*R1*R1;           //  -R^-3 , Å^-3
+      double R5 = -3.0*R3*R1*R1;       // 3*R^-5 , Å^-5
 
-    Matrix3d T = R5*r*r.transpose() + R3*Matrix3d::Identity();  // T_{ab} = 3*r_a*r_b / |r|^5 , for a ne b , Å^-3
-    // T_{aa} = 3*r_a^2 / |r|^5 - 1 / |r|^3    , Å^-3
-    double W = -a.mu.transpose()*T*b.mu;                        // Summation of all T_{ab}*mu_a*mu_b       , Å^-3
-    return W*a.muscalar*b.muscalar;                             // Scaling with |mu_a|*|mu_b|              , Å^-1 e^ 2
-  }
+      Matrix3d T = R5*r*r.transpose() + R3*Matrix3d::Identity();  // T_{ab} = 3*r_a*r_b / |r|^5 , for a ne b , Å^-3
+      // T_{aa} = 3*r_a^2 / |r|^5 - 1 / |r|^3    , Å^-3
+      double W = -mu1.transpose()*T*mu2;                        // Summation of all T_{ab}*mu_a*mu_b       , Å^-3
+      return W*mu1xmu2;                             // Scaling with |mu_a|*|mu_b|              , Å^-1 e^ 2
+    }
 
   namespace Potential {
     class DipDip : public PairPotentialBase {
@@ -57,13 +59,10 @@ namespace Faunus {
         DipDip(InputMap &in) {
           _lB=in.get<double>("bjerrumlength", 7.1);
         }
-        double operator()(const particle &a, const particle &b, const Point &r) const {
-          return _lB*mu2mu(a,b,r);
-        }
-        double operator()(const particle &a, const particle &b, double r2) const {
-          assert(!"Should not reach here!");
-          return pc::infty;
-        }
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+            return _lB*mu2mu(a.mu,b.mu,a.muscalar*b.muscalar,r);
+          }
 
         Point field(const particle &p, const Point &r) const {
           double R1 = 0.0;          double R2 = 0.0;   double R3 = 0.0;                                                        

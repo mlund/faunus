@@ -29,6 +29,7 @@ namespace Faunus {
            variance;   //!< Spread around AtomData::mean
     short int patchtype;  //!< If patchy particle, which type of patch
     Thydrophobic hydrophobic;  //!< Are we hydrophobic?
+    Eigen::MatrixXd alphamatrix;
     string name;       //!< Name. Avoid spaces.
     bool operator==(const AtomData &d) const { return (*this==d); }
   };

@@ -401,11 +401,7 @@ namespace Faunus {
     Point mu;               //!< Dipole moment unit vector
     double muscalar;        //!< Dipole moment scalar
 
-    typedef Eigen::Matrix3d Tpol;
-    Tpol alpha;
-
     inline DipoleParticle() : mu(0,0,1), muscalar(0) {
-      alpha.setZero();
     };
 
     /** @brief Copy constructor for Eigen derivatives */

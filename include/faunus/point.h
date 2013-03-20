@@ -400,20 +400,8 @@ namespace Faunus {
   struct DipoleParticle : public PointParticle {
     Point mu;               //!< Dipole moment unit vector
     double muscalar;        //!< Dipole moment scalar
-<<<<<<< HEAD
-    Eigen::Matrix3d alpha;
-    Eigen::Matrix3d theta;  //!< Quadropole moment
-
-    inline DipoleParticle() : mu(1,0,0), muscalar(0) {
-      theta.setZero();
-=======
-
-    typedef Eigen::Matrix3d Tpol;
-    Tpol alpha;
 
     inline DipoleParticle() : mu(0,0,1), muscalar(0) {
-      alpha.setZero();
->>>>>>> upstream/master
     };
 
     /** @brief Copy constructor for Eigen derivatives */

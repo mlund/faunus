@@ -3,7 +3,6 @@
 
 #ifndef SWIG
 #include <faunus/common.h>
-#include <faunus/average.h>
 #include <faunus/geometry.h>
 #include <faunus/range.h>
 #endif
@@ -45,6 +44,8 @@ namespace Faunus {
       virtual bool isMolecular() const;                      //!< True if group represents a molecule
       virtual bool isAtomic() const;                         //!< True if group represents atomic species
 
+      virtual int numMolecules() const; //!< Number of molecules in group
+
       bool operator==(const Group&) const;                   //!< Compare two Groups
       friend std::ostream &operator<<(std::ostream&, Group&);//!< Output Group data to stream
       virtual Group &operator<<(std::istream&);              //!< Get Group data from stream
@@ -72,6 +73,7 @@ namespace Faunus {
       GroupMolecular(int=-1, int=-1);
       void scale(Space&, double);               //!< Mass-center volume scale
       bool isMolecular() const;                 //!< Always true for GroupMolecular
+      int numMolecules() const;                 //!< Number of molecules in group
   };
 
   /**
@@ -84,10 +86,11 @@ namespace Faunus {
     public:
       int N;                          //!< Number of atoms in each molecule
       GroupArray(int);                //!< Constructor - number of atoms per molecule.
-      int sizeMol() const;            //!< Number of molecules
       int randomMol() const;          //!< Pick a random molecule
       GroupMolecular& operator[](int);//!< Access i'th molecule
       void add(const GroupMolecular&);//!< Add a molecule to the array - range must be continuous
+      void scale(Space&, double);     //!< Mass-center volume scale
+      int numMolecules() const;       //!< Number of molecules
   };
 
 }//namespace

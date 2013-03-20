@@ -33,30 +33,32 @@ namespace Faunus {
       bool save(string);     //!< Save map to disk
       string info();         //!< Information string about read files and keywords
       //!< Add a keyword and an associated value
-      template<typename T> void add(const string &key, T value, string infostring=string()) {
-        std::ostringstream o;
-        o << value;
-        map[key]=o.str();
-        if (!infostring.empty())
-          keyinfo[key]=infostring;
-      }
+      template<typename T>
+        void add(const string &key, T value, string infostring=string()) {
+          std::ostringstream o;
+          o << value;
+          map[key]=o.str();
+          if (!infostring.empty())
+            keyinfo[key]=infostring;
+        }
 
       //!< Get value associated with keyword
-      template<typename T> T get(const string &key, T fallback=T(), string infostring=string()) {
-        if ( !infostring.empty() )
-          keyinfo[key] = infostring;               // save information string (if any)
-        if ( map.find(key) != map.end() ) {
-          std::istringstream i( map[key] );
-          i >> fallback;
+      template<typename T>
+        T get(const string &key, T fallback=T(), string infostring=string()) {
+          if ( !infostring.empty() )
+            keyinfo[key] = infostring;               // save information string (if any)
+          if ( map.find(key) != map.end() ) {
+            std::istringstream i( map[key] );
+            i >> fallback;
+          }
+          return fallback;
         }
-        return fallback;
-      }
-      
+
       //!< Get value associated with keyword
       template<typename T>
-      T operator()(const string &key, T fallback=T()) {
-        return get<T>(key,fallback);
-      }
+        T operator()(const string &key, T fallback=T()) {
+          return get<T>(key,fallback);
+        }
   };
 
   /**

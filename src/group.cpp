@@ -153,6 +153,10 @@ namespace Faunus {
 
   bool Group::isMolecular() const { return false; }
 
+  int Group::numMolecules() const {
+    return size();
+  }
+
   GroupAtomic::GroupAtomic(int front, int back) : Group(front, back) {
   }
 
@@ -209,6 +213,8 @@ namespace Faunus {
 
   bool GroupMolecular::isMolecular() const { return true; }
 
+  int GroupMolecular::numMolecules() const { return 1; }
+
   void GroupMolecular::scale(Space &s, double newvol) {
     assert( s.geo->dist(cm, massCenter(s))<1e-6);
     assert( s.geo->dist(cm, cm_trial)<1e-7);
@@ -244,18 +250,20 @@ namespace Faunus {
     return i;
   }
 
-  int GroupArray::sizeMol() const {
+  int GroupArray::numMolecules() const {
     assert( (size()%N)==0 );
     return size()/N;
   }
 
-  /*!
+  /**
    * @warning You must manually update the mass center of the returned group
    */
   GroupMolecular& GroupArray::operator[](int i) {
     sel.setfront( front()+i*N );
     sel.setback( sel.front()+N-1 );
-    assert( find(sel.front()) && find(sel.back()) );
+    assert( sel.size()==N );
+    assert( find( sel.front() ) );
+    assert( find( sel.back()  ) );
     return sel;
   }
 
@@ -263,7 +271,7 @@ namespace Faunus {
     using namespace textio;
     std::ostringstream o;
     o << pad(SUB,w,"Mol size") << N << endl
-      << pad(SUB,w,"Molecules") << sizeMol() << endl;
+      << pad(SUB,w,"Molecules") << numMolecules() << endl;
     return o.str();
   }
 
@@ -275,6 +283,14 @@ namespace Faunus {
         setback(g.back());
     }
     assert( (size()%N)==0 && "GroupArray not a multiple of N");
+  }
+
+  void GroupArray::scale(Space &s, double newvol) {
+    for (int i=0; i<numMolecules(); i++) {
+      operator[](i);
+      sel.setMassCenter(s);
+      sel.scale(s,newvol);
+    }
   }
 
 }//namespace

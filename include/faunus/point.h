@@ -40,7 +40,6 @@ namespace Faunus {
   struct PointBase : public Eigen::Vector3d {
     typedef double Tcoord;                             //!< Floating point type for Point coordinates
     typedef Eigen::Vector3d Tvec;                      //!< 3D vector from Eigen
-    typedef std::function<Tvec(const Tvec)> RotFunctor;//!< Rotation functor
 
     /** @brief Default constructor. Data is *not* zeroed */
     inline PointBase() {}
@@ -127,20 +126,21 @@ namespace Faunus {
 
     /**
      * @brief Transform point (rotation etc)
-     * @param rotator Functor that rotates a point and returns the rotated Point
+     * @param rot Functor that rotates a point and returns the rotated Point
      *
      * The functor should take care of simulation boundaries (if any) and typically one
      * would want to pass the Geometry::VectorRotate class as in the following example:
      * @code
      * Point a(1,0,0);
-     * VectorRotate rotator;
+     * QuaternionRotate rotator;
      * rotator.setAxis(geometry, Point(0,0,0), Point(0,0,1), 3.14 ); // rotate pi around 0,0,1
      * a.rotate(rotator);
      * @endcode
      */
-    void rotate(RotFunctor rotator) {
-      *this = rotator(*this);
-    }
+    template<typename Trotator>
+      void rotate(const Trotator &rot) {
+        *this = rot(*this);
+      }
   };
 
   /**
@@ -321,11 +321,10 @@ namespace Faunus {
     typedef Point::Tcoord Tmw;
     typedef AtomData::Tid Tid;
     typedef bool Thydrophobic;
-
+    AtomData::Tid id;                         //!< Particle identifier
     Tcharge charge;                           //!< Charge number
     Tradius radius;                           //!< Radius
     Tmw mw;                                   //!< Molecular weight
-    AtomData::Tid id;                         //!< Particle identifier
     Thydrophobic hydrophobic;                 //!< Hydrophobic flag
 
     PointParticle() { clear(); }              //!< Constructor
@@ -401,11 +400,20 @@ namespace Faunus {
   struct DipoleParticle : public PointParticle {
     Point mu;               //!< Dipole moment unit vector
     double muscalar;        //!< Dipole moment scalar
+<<<<<<< HEAD
     Eigen::Matrix3d alpha;
     Eigen::Matrix3d theta;  //!< Quadropole moment
 
     inline DipoleParticle() : mu(1,0,0), muscalar(0) {
       theta.setZero();
+=======
+
+    typedef Eigen::Matrix3d Tpol;
+    Tpol alpha;
+
+    inline DipoleParticle() : mu(0,0,1), muscalar(0) {
+      alpha.setZero();
+>>>>>>> upstream/master
     };
 
     /** @brief Copy constructor for Eigen derivatives */
@@ -428,6 +436,7 @@ namespace Faunus {
     /** @brief Copy properties from AtomData object */
     inline DipoleParticle& operator=(const AtomData &d) {
       PointParticle::operator=(d);
+      muscalar=d.mu;
       // copy more atom properties here...
       return *this;
     }
@@ -445,6 +454,11 @@ namespace Faunus {
       o << PointParticle(p) << " " << p.mu << " " << p.muscalar;
       return o;
     }
+
+    template<typename Trotator>
+      void rotate(const Trotator &rot) {
+        mu = rot(mu);
+      }
   };
 
   /**
@@ -490,16 +504,17 @@ namespace Faunus {
         return *this;
       }
 
-      inline void rotate(RotFunctor rot) {
-        if (halfl>1e-6) {
-          dir = rot(dir);
-          patchdir = rot(patchdir);
-          patchsides[0] = rot(patchsides[0]);
-          patchsides[1] = rot(patchsides[1]);
-          chdir = rot(chdir);
-        } else
-          Point::rotate(rot);
-      }
+      template<typename Trotator>
+        void rotate(const Trotator &rot) {
+          if (halfl>1e-6) {
+            dir = rot(dir);
+            patchdir = rot(patchdir);
+            patchsides[0] = rot(patchsides[0]);
+            patchsides[1] = rot(patchsides[1]);
+            chdir = rot(chdir);
+          } else
+            Point::rotate(rot);
+        }
 
       /* read in same order as written! */
       inline CigarParticle& operator<<(std::istream &in) {

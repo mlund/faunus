@@ -1,31 +1,13 @@
 #include <faunus/faunus.h>
-#include <tclap/CmdLine.h>
 
 using namespace Faunus;
-using namespace TCLAP;
 
 typedef Geometry::Cuboid Tgeometry;
 typedef Potential::DebyeHuckelLJ Tpairpot;
 
 int main(int argc, char** argv) {
-  string inputfile,istate,ostate;
-  try {
-    cout << textio::splash();
-    CmdLine cmd("NPT Monte Carlo simulation of rigid bodies in continuum", ' ', "0.1");
-    ValueArg<string> inputArg("i","inputfile","InputMap key/value file",true,"","inputfile");
-    ValueArg<string> istateArg("c","instate","Name of input statefile",false,"state","instate");
-    ValueArg<string> ostateArg("o","outstate","Name of output statefile",false,"state","outstate");
-    cmd.add( inputArg );
-    cmd.add( istateArg );
-    cmd.add( ostateArg );
-    cmd.parse( argc, argv );
-    inputfile = inputArg.getValue();
-    istate = istateArg.getValue();
-    ostate = ostateArg.getValue();
-  }
-  catch (ArgException &e)  {
-    std::cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
-  }
+  string inputfile("inputfile");
+  string state("state");
 
   InputMap mcp(inputfile);
   MCLoop loop(mcp);                    // class for handling mc loops
@@ -73,7 +55,7 @@ int main(int argc, char** argv) {
   Analysis::RadialDistribution<> rdf(0.25);
   Analysis::ChargeMultipole mpol;
 
-  spc.load(istate);
+  spc.load(state);
 
   double utot=pot.all2all(spc.p) + pot.external();
   for (auto g : spc.groupList())
@@ -128,18 +110,12 @@ int main(int argc, char** argv) {
 
   } // end of macro loop
 
-  /*
-     iso.test(test);
-     gmv.test(test);
-     sys.test(test);
-     */
-
   cout << loop.info() << sys.info() << gmv.info() << mv.info() << iso.info() << tit.info()
     << mpol.info();
 
   rdf.save("rdf_p2p.dat");
   pqr.save("confout.pqr", spc.p);
   top.save("mytopol.top", spc);
-  spc.save(ostate);
+  spc.save(state);
   mcp.save("mdout.mdp");
 }

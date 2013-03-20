@@ -1,10 +1,10 @@
-#include "faunus/common.h"
-#include "faunus/point.h"
-#include "faunus/space.h"
-#include "faunus/energy.h"
-#include "faunus/inputfile.h"
-#include <faunus/titrate.h>
+#include <faunus/common.h>
 #include <faunus/species.h>
+#include <faunus/inputfile.h>
+#include <faunus/space.h>
+#include <faunus/energy.h>
+#include <faunus/titrate.h>
+#include <faunus/json.h>
 
 namespace Faunus {
 
@@ -89,51 +89,49 @@ namespace Faunus {
       include( in.get<string>(prefix+"processfile","eq.process"));
     }
 
-    bool EquilibriumController::include(string file) {
-      using namespace textio;
-      string t;
-      processdata d;
-      std::ifstream f(file.c_str());
-      cout << "Reading titration process data from '" << file << "'. ";
-      if (!f) {
-        cout << "FAILED!\n";
-        return false;
-      }
-      cout << "OK!\n";
-      while (!f.eof()) {
-        t.clear();
-        f >> t;
-        if (t=="Process") {
-          string a,ax;
-          double pkd, pX;
-          f >> ax >> a >> pkd >> pX;
-          if (atom[ax].id==0 || atom[a].id==0) {
-            cout << indent(SUB) << "Warning: species " << ax << " or " << a << " are unknown and will be ignored." << endl;
-          } else {
-            d.id_AX=atom[ax].id;
-            d.id_A=atom[a].id;
-            d.set(pX, pkd);
-            process.push_back(d);
-          }
+    bool EquilibriumController::includeJSON(const string &file) {
+      auto j=json::open(file);
+      for (auto &p : json::object("processes", j)) {
+        cout << "Reading process " << p.first << " ... ";
+        string bound = json::value<string>(p.second, "bound", string());
+        string free  = json::value<string>(p.second, "free", string());
+        double pKd   = json::value<double>(p.second, "pKd", 0);
+        double pX    = json::value<double>(p.second, "pX", 0);
+        processdata d;
+        d.id_AX=atom[bound].id;
+        d.id_A=atom[free].id;
+        d.set(pX, pKd);
+        if (d.id_AX!=0 && d.id_A!=0) {
+          process.push_back(d);
+          cout << "OK!\n";
         }
+        else
+          cout << "ignored.\n";
       }
-      f.close();
+      return (process.empty() ? false : true);
+    }
 
-      // update reference states
-      particle::Tid i_AX,i_A, j_AX, j_A;
-      for (size_t i=0; i<process.size()-1; i++) {
-        for (size_t j=i+1; j<process.size(); j++) {
-          i_AX = process[i].id_AX;
-          i_A  = process[i].id_A;
-          j_AX = process[j].id_AX;
-          j_A  = process[j].id_A;
-          if ( j_A  == i_A  ) process[j].set_mu_A ( process[i].mu_A  );
-          if ( j_A  == i_AX ) process[j].set_mu_A ( process[i].mu_AX );
-          if ( j_AX == i_A  ) process[j].set_mu_AX( process[i].mu_A  );
-          if ( j_AX == i_AX ) process[j].set_mu_AX( process[i].mu_AX );
-        }
+    bool EquilibriumController::include(string file) {
+      if (file.substr(file.find_last_of(".") + 1) == "json") {
+        includeJSON(file);
+        // update reference states
+        particle::Tid i_AX,i_A, j_AX, j_A;
+        if (!process.empty())
+          for (size_t i=0; i<process.size()-1; i++) {
+            for (size_t j=i+1; j<process.size(); j++) {
+              i_AX = process[i].id_AX;
+              i_A  = process[i].id_A;
+              j_AX = process[j].id_AX;
+              j_A  = process[j].id_A;
+              if ( j_A  == i_A  ) process[j].set_mu_A ( process[i].mu_A  );
+              if ( j_A  == i_AX ) process[j].set_mu_A ( process[i].mu_AX );
+              if ( j_AX == i_A  ) process[j].set_mu_AX( process[i].mu_A  );
+              if ( j_AX == i_AX ) process[j].set_mu_AX( process[i].mu_AX );
+            }
+          }
+        return true;
       }
-      return true;
+      return false;
     }
 
     /*!
@@ -226,26 +224,28 @@ namespace Faunus {
       o << pad(SUB,w,"Number of sites") << sites.size() << endl
         << indent(SUB) << "Processes:" << endl << endl;
       w=8;
-      o << indent(SUB)
-        << setw(5) << "AX" << setw(5) << "<-> "
-        << std::left << setw(5) << "A" << std::right << setw(w) << "pKd"
-        << setw(w) << "pX"
-        << setw(w) << "pAX"
-        << setw(w) << "pA" 
-        << setw(w) << "N"
-        << setw(12) << bracket("Z") << endl
-        << indent(SUB) << string(70,'-') << endl;
-      for (size_t i=0; i<process.size(); i++) {
+      if (!process.empty()) {
         o << indent(SUB)
-          << setw(5) << atom[process[i].id_AX].name
-          << setw(5) << "<-> " << setw(5) << std::left
-          << atom[process[i].id_A].name << std:: right 
-          << setw(w) << -log10(exp(-process[i].ddG))
-          << setw(w) << -log10(exp(-process[i].mu_X))
-          << setw(w) << -log10(exp(-process[i].mu_AX))
-          << setw(w) << -log10(exp(-process[i].mu_A))
-          << setw(w) << process[i].cnt;
-        o << endl;
+          << setw(5) << "AX" << setw(5) << "<-> "
+          << std::left << setw(5) << "A" << std::right << setw(w) << "pKd"
+          << setw(w) << "pX"
+          << setw(w) << "pAX"
+          << setw(w) << "pA" 
+          << setw(w) << "N"
+          << setw(12) << bracket("Z") << endl
+          << indent(SUB) << string(70,'-') << endl;
+        for (size_t i=0; i<process.size(); i++) {
+          o << indent(SUB)
+            << setw(5) << atom[process[i].id_AX].name
+            << setw(5) << "<-> " << setw(5) << std::left
+            << atom[process[i].id_A].name << std:: right 
+            << setw(w) << -log10(exp(-process[i].ddG))
+            << setw(w) << -log10(exp(-process[i].mu_X))
+            << setw(w) << -log10(exp(-process[i].mu_AX))
+            << setw(w) << -log10(exp(-process[i].mu_A))
+            << setw(w) << process[i].cnt;
+          o << endl;
+        }
       }
       return o.str();
     }
@@ -285,7 +285,9 @@ namespace Faunus {
 
     /**
      * This will set up swap move routines and search for
-     * titratable sites in `Space`.
+     * titratable sites in `Space`. The constructor will
+     * add the appropriate energy functions to the Hamiltonian.
+     *
      * @warning This will use properties from `AtomMap` to
      *          override those already stored in the particle
      *          vector.
@@ -315,6 +317,8 @@ namespace Faunus {
     }
 
     void SwapMove::_trialMove() {
+      if (eqpot.eq.sites.empty())
+        return;
       int i=slp_global.rand() % eqpot.eq.sites.size(); // pick random site
       ipart=eqpot.eq.sites.at(i);                      // and corresponding particle
       int k;
@@ -360,7 +364,7 @@ namespace Faunus {
     string SwapMove::_info() {
       using namespace textio;
       std::ostringstream o;
-      if (cnt>0) {
+      if (cnt>0 && !eqpot.eq.sites.empty()) {
         o << indent(SUB) << "Site statistics:" << endl
           << indent(SUBSUB) << std::left
           << setw(15) << "Site"

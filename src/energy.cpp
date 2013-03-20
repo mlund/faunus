@@ -63,6 +63,7 @@ namespace Faunus {
     double Energybase::g_internal(const p_vec &p, Group &g) {return 0;}
 
     double Energybase::external() {return 0;}
+    void Energybase::field(const p_vec &p, std::vector<Point> &E) {}
 
     string Energybase::info() {
       assert(!name.empty() && "Assign a name to energy class!");
@@ -88,18 +89,16 @@ namespace Faunus {
     }
 
     double ExternalPressure::g_external(const p_vec &p, Group &g) {
-      double N=1,
-             V=geo->getVolume();
-      if (g.isAtomic())
-        N=g.size();
+      int N=g.numMolecules();
+      double V=geo->getVolume();
       return -N*log(V);
     }
 
     string ExternalPressure::_info() {
-      char w=15;
       using namespace textio;
       std::ostringstream o;
-      o << pad(SUB,w,"Pressure") << P*1e30/pc::Nav << " mM = " << P*pc::kB*pc::T()*1e30 << " Pa" << endl;
+      o << pad(SUB,15,"Pressure")
+        << P*1e30/pc::Nav << " mM = " << P*pc::kB*pc::T()*1e30 << " Pa" << endl;
       return o.str();
     }
 
@@ -152,9 +151,9 @@ namespace Faunus {
       assert(u!=0);
       return u;
     }
-    
+
     Point Hamiltonian::f_p2p(const particle &p1, const particle &p2) {
-      Point p= Point(0.0, 0.0, 0.0);
+      Point p(0,0,0);
       for (auto b : baselist)
         p += b->f_p2p( p1,p2 );
       return p;
@@ -268,6 +267,12 @@ namespace Faunus {
       return o.str();
     }
 
+    void Hamiltonian::field(const p_vec &p, std::vector<Point> &E) {
+      assert(p.size()==E.size());
+      for (auto b : baselist)
+        b->field(p,E);
+    }
+
     Bonded::Bonded() {
       name="Bonded particles";
       geo=nullptr;
@@ -287,10 +292,7 @@ namespace Faunus {
         << (CrossGroupBonds ? "yes (slow)" : "no (faster)") << endl << endl
         << indent(SUBSUB) << std::left
         << setw(7) << "i" << setw(7) << "j" << endl;
-      for (auto &m : list)
-        o << indent(SUBSUB) << std::left << setw(7) << m.first.first
-          << setw(7) << m.first.second << m.second->brief() << endl;
-      return o.str();
+      return o.str() + _infolist;
     }
 
     /*!
@@ -298,9 +300,9 @@ namespace Faunus {
      */
     double Bonded::i2i(const p_vec &p, int i, int j) {
       assert(i!=j);
-      auto f=list.find( pair_permutable<int>(i,j) );
+      auto f=list.find( opair<int>(i,j) );
       if (f!=list.end())
-        return f->second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+        return f->second( p[i], p[j], geo->sqdist( p[i], p[j] ) );
       return 0;
     }
 
@@ -308,12 +310,10 @@ namespace Faunus {
       assert(geo!=nullptr);  //debug
       assert( i>=0 && i<(int)p.size() ); //debug
       double u=0;
-      for (auto &m : list) {
-        int j=m.first.first;
-        int k=m.first.second;
-        assert(j!=k && "Pairs between identical atom index not allowed.");
-        if (i==j || i==k)
-          u+=m.second->operator()( p[j], p[k], geo->sqdist( p[j], p[k] ) );
+      auto eqr=mlist.equal_range(i);
+      for (auto it=eqr.first; it!=eqr.second; ++it) {
+        int j = it->second; // partner index
+        u += list[opair<int>(i,j)]( p[i], p[j], geo->sqdist( p[i], p[j] ) );
       }
       return u;
     }
@@ -324,50 +324,59 @@ namespace Faunus {
       for (auto &m : list) {
         int i=m.first.first;
         int j=m.first.second;
-        assert(i!=j && "Pairs between identical atom index not allowed.");
         assert(i>=0 && i<(int)p.size() && j>=0 && j<(int)p.size()); //debug
-        u += m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+        u += m.second( p[i], p[j], geo->sqdist( p[i], p[j] ) );
       }
       return u;
     }
 
-    /*!
+    /**
      * Group-to-group bonds are disabled by default as these are rarely used and the current
      * implementation is rather slow for systems with *many* groups (but very general). To
-     * activate g2g(), set \c CrossGroupBonds to \c true.
+     * activate `g2g()`, set `CrossGroupBonds=true`.
+     *
+     * @warning Untested!
+     * @todo Possible optimization: swap groups so that `g1<g2`;
      */
     double Bonded::g2g(const p_vec &p, Group &g1, Group &g2) {
       double u=0;
       if (CrossGroupBonds)
-        for (auto &m : list) {
-          int i=m.first.first;
-          int j=m.first.second;
-          assert(i!=j && "Pairs between identical atom index not allowed.");
-          if (g1.find(i))
+        for (auto i : g1) {
+          auto eqr=mlist.equal_range(i);
+          for (auto it=eqr.first; it!=eqr.second; ++it) {
+            int j = it->second; // partner index
             if (g2.find(j))
-              u+=m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
-          if (g1.find(j))
-            if (g2.find(i))
-              u+=m.second->operator()( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+              u+=list[opair<int>(i,j)]( p[i], p[j], geo->sqdist( p[i], p[j] ) );
+          }
         }
       return u;
     }
 
-    /*!
+    /**
      * Accounts for bonds between particles within a group. Bonds with particles
      * outside the group are skipped and should be accounted for by the g2g() energy function.
      */
     double Bonded::g_internal(const p_vec &p, Group &g) {
       assert(geo!=nullptr);  //debug
       double u=0;
-      for (auto &m : list) {
-        int i=m.first.first;
-        int j=m.first.second;
-        assert(i!=j && "Pairs between identical atom index not allowed.");
-        assert(i>=0 && i<(int)p.size() && j>=0 && j<(int)p.size()); //debug
-        if (g.find(i))
-          if (g.find(j))
-            u += m.second->operator()( p[i],p[j],geo->sqdist( p[i],p[j] ) );
+
+      if ( list.size() > pow(g.size(),2) ) {
+        // small group compared to bond list
+        auto end=list.end();
+        for (auto i=g.front(); i<g.back(); i++)
+          for (auto j=i+1; j<=g.back(); j++) {
+            auto it = list.find(opair<int>(i,j));
+            if (it!=end)
+              u+=it->second( p[i],p[j],geo->sqdist( p[i],p[j] ) );
+          }
+      } else {
+        // big group compared to bond list
+        for (auto &m : list) {
+          int i=m.first.first, j=m.first.second;
+          if (g.find(i))
+            if (g.find(j))
+              u += m.second(p[i],p[j],geo->sqdist( p[i],p[j] ));
+        }
       }
       return u;
     }
@@ -385,16 +394,16 @@ namespace Faunus {
 
     string EnergyRest::_info(){ return ""; }
 
-    /*!
+    /**
      * The InputMap is searched for the following keywords that defines the two points
      * that spans the allowed region:
      *
-     * \li \c constrain_upper.x
-     * \li \c constrain_upper.y
-     * \li \c constrain_upper.z
-     * \li \c constrain_lower.x
-     * \li \c constrain_lower.y
-     * \li \c constrain_lower.z
+     * - `constrain_upper.x`
+     * - `constrain_upper.y`
+     * - `constrain_upper.z`
+     * - `constrain_lower.x`
+     * - `constrain_lower.y`
+     * - `constrain_lower.z`
      *
      * The values in the upper point must be higher than those in the lower point. The default
      * values are +infinity for the upper point and -infinity for the lower, meaning that all
@@ -420,8 +429,8 @@ namespace Faunus {
       std::ostringstream o;
       o << indent(SUB) << "Allowed Rectangular Region Spanned by:" << endl
         << pad(SUB,w, "  Upper") << upper.x() << d << upper.y() << d << upper.z() << endl
-        << pad(SUB,w, "  Lower") << lower.x() << d << lower.y() << d << lower.z() << endl;
-      o << indent(SUB) << "Registered Groups:" << endl;
+        << pad(SUB,w, "  Lower") << lower.x() << d << lower.y() << d << lower.z() << endl
+        << indent(SUB) << "Registered Groups:" << endl;
       for (auto g : groups)
         o << indent(SUB) << "  " << g->name << endl;
       return o.str();
@@ -478,7 +487,7 @@ namespace Faunus {
 
     void MassCenterConstrain::addPair(Group &a, Group &b, double mindist, double maxdist) {
       data d = {mindist, maxdist};
-      pair_permutable<Group*> p(&a, &b);
+      opair<Group*> p(&a, &b);
       gmap[p] = d;
     }
 
@@ -510,206 +519,10 @@ namespace Faunus {
       using namespace Faunus::textio;
       std::ostringstream o;
       o << indent(SUB) << "The following groups have mass center constraints:\n";
-      for (auto m : gmap)
+      for (auto &m : gmap)
         o << indent(SUBSUB) << m.first.first->name << " " << m.first.second->name
           << " " << m.second.mindist << "-" << m.second.maxdist << _angstrom << endl;
       return o.str();
-    }
-
-    /*!
-     * The InputMap is searched for the following keywords:
-     * \li \c dh_ionicstrength - via Potential::DebyeHuckel
-     * \li \c gouychapman_phi0 - surface potential [unitless, i.e. phi_0*e/kT]
-     * \li \c gouychapman_qarea - surface charge density (if phi0 not defined)
-     * \li \c gouychapman_rho - surface charge density [1/A^2] (if qarea not defined)
-     * \li \c gouychapman_linearize - set to yes for linearized PB (default: no)
-     *
-     * Equations:
-     * \f[ \rho = \sqrt\frac{2 c_0}{\pi l_B}  \sinh( \beta \phi_0 e / 2 ) \f]
-     * \f[ \beta e \phi_0 = 2\mbox{~asinh} \left ( \rho \sqrt\frac{\pi \lambda_B} {2 c_0} \right ) \f]
-     * \f[ \Gamma_0=\tanh{ \beta \phi_0 z e / 4 } \f]
-     * where \f$\lambda_B\f$ is the Bjerrum length, \f$\kappa\f$ the inverse Debye length, and \f$c_0\f$ the
-     * bulk salt concentration.
-     */
-    GouyChapman::GouyChapman(InputMap &in) : dh(in) {
-      name = "Gouy-Chapman External Potential";
-      string prefix="gouychapman_";
-      zposPtr=nullptr;
-      c0=dh.ionicStrength() * pc::Nav / 1e27;     // assuming 1:1 salt, so c0=I
-      lB=dh.bjerrumLength();
-      kappa=1/dh.debyeLength();
-
-      linearize = in.get<bool>(prefix+"linearize",false);
-
-      phi0=in.get<double>(prefix+"phi0",0);     // Surface potential [unitless] = beta * e * phi0
-      if ( std::abs(phi0)>1e-6 ) {
-        rho=sqrt(2*c0/(pc::pi*lB))*sinh(.5*phi0);   // [Evans & Wennerström, 1999, Colloidal Domain p 138-140]
-      }
-      else {
-        rho=1/in.get<double>(prefix+"qarea",0);
-        if (rho>1e20)
-          rho=in.get<double>(prefix+"rho",0);
-        phi0=2.*asinh(rho * sqrt(.5*lB*pc::pi/c0 ));//  [Evans..]
-      }
-
-      gamma0=tanh(phi0/4);                          // assuming z=1  [Evans..]
-    }
-
-    string GouyChapman::_info() {
-      using namespace textio;
-      char w=30;
-      std::ostringstream o;
-      o << pad(SUB,w,"Surface z-position") << *zposPtr << _angstrom << endl
-        << pad(SUB,w,"Bjerrum length") << lB << _angstrom << endl
-        << pad(SUB,w,"Debye length") << 1./kappa << _angstrom << endl
-        << pad(SUB,w,"Ionic strenght") << dh.ionicStrength()*1e3 << " mM" << endl
-        << pad(SUB,w,"Bulk 1:1 salt concentration") << c0 << _angstrom+cubed << endl
-        << pad(SUB,w,"Surface potential") << phi0 << kT+"/e = "
-        << phi0*pc::kB*pc::T()/pc::e << " V=J/C" << endl
-        << pad(SUB,w,"Surface charge density") << rho*pc::e*1e20 << " C/m"+squared << endl
-        << pad(SUB,w,"Area per charge") << 1/rho << _angstrom+squared << endl
-        << pad(SUB,w,"GC-coefficient Gamma_0") << gamma0 << endl
-        << pad(SUB,w,"Linearize") << ((linearize) ? "yes" : "no") << endl;
-      return o.str();
-    }
-
-    /*!
-     * Here, give a reference to the z-position of the Gouy-Chapman surface. A
-     * typical usage would be to use len_half.z from Geometry::Cuboidslit which will
-     * place the surface at the edge of the cuboid container. By using a reference
-     * (pointer) we ensure that the position will follow possible volume fluctuations
-     * when in the NPT ensemble (although Poisson-Boltzmann electrostatics may require
-     * further considerations when using constant pressure).
-     */
-    void GouyChapman::setPosition(double &zposition) {
-      zposPtr=&zposition;
-    }
-
-    double GouyChapman::i_external(const p_vec &p, int i) {
-      return p_external(p[i]);
-    }
-
-    double GouyChapman::g_external(const p_vec &p, Group &g) {
-      double u=0;
-      for (auto i : g)
-        u+=p_external(p[i]);
-      return u;
-    }
-
-    MeanFieldCorrection::MeanFieldCorrection(InputMap& in)
-      : bin(in.get<double>("mfc_binsize", 2)), 
-      dh(in),
-      qdensity(bin,Ttable::XYDATA) {
-        name = "Mean Field Correction";  
-        threshold=in.get<double>("cylinder_radius",pc::infty);
-        loadfromdisk=in.get<bool>("mfc_load", false);
-        filename=textio::prefix+"mfc_qdensity";
-        prefactor=std::exp(-threshold/dh.debyeLength())*dh.bjerrumLength()*pc::pi*2*bin*dh.debyeLength();
-        if (loadfromdisk)
-          qdensity.load(filename);
-      }
-
-    double MeanFieldCorrection::i_external(const p_vec& p, int i) {
-      return p[i].charge*qdensity(p[i].z())*prefactor;
-    }
-
-    double MeanFieldCorrection::g_external(const p_vec& p, Group& g) {
-      double u=0;
-      for (auto i : g)  //i will be the index of the group
-        u+=i_external(p, i);
-      return u;
-    }
-
-    /*!
-     * Sampling is done only when \c loadfromdisk is set to false. After each sampling event, the charge
-     * density table is saved to disk.
-     */
-    void MeanFieldCorrection::sample(const p_vec& p, double zmin, double zmax){
-      if (!loadfromdisk) {
-        typedef Analysis::Table2D<double,double> T;
-        T qsum(bin,T::XYDATA);  // summed charge in each bin
-        double dV=pc::pi*pow(threshold, 2)*bin; // volume of each bin
-        for (auto &i : p)
-          qsum(i.z())+=i.charge;
-        for (double z=zmin; z<=zmax; z+=bin)
-          qdensity(z)+=qsum(z)/dV;
-        qdensity.save(filename);
-      }
-    }
-
-    string MeanFieldCorrection::_info(){
-      using namespace textio;
-      char w=30;
-      std::ostringstream o;
-      o << pad(SUB,w,"Mean Field hole radius") << threshold << _angstrom << endl
-        << pad(SUB,w,"Mean Field bin width") << bin << _angstrom << endl
-        << pad(SUB,w,"Prefactor") << prefactor << _angstrom+cubed << endl;
-      return o.str();
-    }
-
-    /*
-       pair_permutable<particle::Thydrophobic> createPairHydrophobic(const particle &a, const particle &b) {
-       return pair_permutable<particle::Thydrophobic>(a.hydrophobic, b.hydrophobic);
-       }
-       */
-
-    PairListID::PairListID() : GeneralPairList<particle::Tid>(makepair) {
-      name+=" (particle id's)";
-    }
-
-    pair_permutable<particle::Tid> PairListID::makepair(const particle &a, const particle &b) {
-      return pair_permutable<particle::Tid>(a.id, b.id);
-    }
-
-    string PairListID::_info() {
-      using namespace Faunus::textio;
-      std::ostringstream o;
-      o << indent(SUBSUB) << std::left
-        << setw(7) << "i" << setw(7) << "j" << endl;
-      for (auto &m : list)
-        o << indent(SUBSUB) << std::left << setw(7) << atom[m.first.first].name
-          << setw(7) << atom[m.first.second].name << m.second->brief() << endl;
-      return o.str();
-    }
-
-    PairListHydrophobic::PairListHydrophobic() : GeneralPairList<particle::Thydrophobic>(makepair) {
-      name+=" (hydrophobic particles)";
-    }
-
-    pair_permutable<particle::Thydrophobic> PairListHydrophobic::makepair(const particle &a, const particle &b) {
-      return pair_permutable<particle::Thydrophobic>(a.hydrophobic, b.hydrophobic);
-    }
-
-    string PairListHydrophobic::_info() {
-      using namespace Faunus::textio;
-      std::ostringstream o;
-      o << indent(SUBSUB) << std::left
-        << setw(7) << "i" << setw(7) << "j" << endl;
-      for (auto &m : list)
-        o << indent(SUBSUB) << std::left << setw(7) << ((m.first.first==true) ? "true":"false")
-          << setw(7) << ((m.first.second==true) ? "true":"false") << m.second->brief() << endl;
-      return o.str();
-    }
-
-    DebyeHuckelActivity::DebyeHuckelActivity(InputMap &in) : dh(in) {
-      name="Debye-Huckel Activity Coefficients";
-    }
-
-    string DebyeHuckelActivity::_info() { return dh.brief(); }
-
-    double DebyeHuckelActivity::p_external(const particle &p) {
-      return dh.excessChemPot(p.charge, 2*p.radius);
-    }
-
-    double DebyeHuckelActivity::i_external(const p_vec &p, int i) {
-      return p_external(p[i]);
-    }
-
-    double DebyeHuckelActivity::g_external(const p_vec &p, Group &g) {
-      double u=0;
-      for (auto i : g)
-        u+=p_external(p[i]);
-      return u;
     }
 
     double systemEnergy(Space &spc, Energy::Energybase &pot, const p_vec &p) {

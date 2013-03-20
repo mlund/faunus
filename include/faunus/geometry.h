@@ -83,7 +83,7 @@ namespace Faunus {
         Sphere(double);                         //!< Construct from radius (angstrom)
         Sphere(InputMap&, string="sphere");     //!< Construct from InputMap key \c prefix_radius
         void randompos(Point &);
-        void boundary(Point &) const;
+        void boundary(Point &p) const {};
         bool collision(const particle &, collisiontype=BOUNDARY) const;
         inline double sqdist(const Point &a, const Point &b) const {
           return (a-b).squaredNorm();
@@ -118,16 +118,27 @@ namespace Faunus {
         void randompos(Point&);      
         bool save(string);           
         bool load(string,bool=false);
-        bool collision(const particle&, collisiontype=BOUNDARY) const;
+        inline bool collision(const particle &a, collisiontype type=BOUNDARY) const {
+          if (std::abs(a.x())>len_half.x()) return true;
+          if (std::abs(a.y())>len_half.y()) return true;
+          if (std::abs(a.z())>len_half.z()) return true;
+          return false;
+        }
 
-        inline double sqdist(const Point &a, const Point &b) const {
-          double dx( std::abs(a.x()-b.x()) );
-          double dy( std::abs(a.y()-b.y()) );
-          double dz( std::abs(a.z()-b.z()) );
-          if (dx>len_half.x()) dx-=len.x();
-          if (dy>len_half.y()) dy-=len.y();
-          if (dz>len_half.z()) dz-=len.z();
-          return dx*dx + dy*dy + dz*dz;
+        /**
+         * See doi:10/ck2nrd for a review of minimum image algorithms
+         */
+        double sqdist(const Point &a, const Point &b) const {
+          Point d = (a-b).cwiseAbs();
+          if (d.x()>len_half.x()) d.x()-=len.x();
+          if (d.y()>len_half.y()) d.y()-=len.y();
+          if (d.z()>len_half.z()) d.z()-=len.z();
+          return d.squaredNorm();
+
+          // Alternative algorithm:
+          // Eigen::Vector3d d = a-b;
+          // Eigen::Vector3i k = (2*d.cwiseProduct(len_inv)).cast<int>();
+          // return (d-k.cast<double>().cwiseProduct(len)).squaredNorm();
         }
 
         inline Point vdist(const Point &a, const Point &b) {
@@ -157,7 +168,7 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Cubuid with no periodic boundaries in z direction
+     * \brief Cuboid with no periodic boundaries in z direction
      * \author Chris Evers
      * \date Lund, nov 2010
      */
@@ -396,33 +407,6 @@ namespace Faunus {
           return a;
         }
     };
-
-    /**
-     * @brief Calculate minimum distance between two line segments
-     *
-     * Find closest distance between line segments and return its vector
-     * gets orientations and lengths of line segments and the vector connecting
-     * their center os masses (from vec1 to vec2)
-     * Copyright 2001, softSurfer (www.softsurfer.com)
-     * This code may be freely used and modified for any purpose
-     * providing that this copyright notice is included with it.
-     * SoftSurfer makes no warranty for this code, and cannot be held
-     * liable for any real or imagined damage resulting from its use.
-     * Users of this code must verify correctness for their application.
-     */
-    Point mindist_segment2segment(const Point&, double, const Point&, double, const Point&);
-    Point mindist_segment2point(const Point&, double, const Point&);
-
-    inline Point vec_perpproject(const Point &A, const Point &B) {
-      Point x;
-      x=A - B* (A.dot(B));
-      return x;
-    }
-    int test_intrpatch(const CigarParticle &, Point &, double , double , double [5]);
-    int find_intersect_plane(const CigarParticle &, const CigarParticle &, const Point &, const Point &, double , double , double [5]);
-    int find_intersect_planec(const CigarParticle &, const CigarParticle &, const Point &, const Point &, double , double , double [5]);
-    int psc_intersect(const CigarParticle &, const CigarParticle &, const Point &, double [5], double );  
-    int cpsc_intersect(const CigarParticle &, const CigarParticle &,const Point &, double [5], double );
 
   }//namespace Geometry
 }//namespace Faunus

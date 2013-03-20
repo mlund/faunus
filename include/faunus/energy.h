@@ -13,8 +13,6 @@
 #include <faunus/analysis.h>
 #endif
 
-// http://publib.boulder.ibm.com/infocenter/iadthelp/v8r0/index.jsp?topic=/com.ibm.xlcpp111.linux.doc/language_ref/variadic_templates.html
-
 namespace Faunus {
 
   /**
@@ -56,7 +54,7 @@ namespace Faunus {
         string name;                                          //!< Short informative name
         Energybase();                                         //!< Constructor
         virtual ~Energybase();                                //!< Destructor
-        virtual Geometry::Geometrybase& getGeometry();        //!< Reference to geometry used for interactions
+        virtual Geometry::Geometrybase& getGeometry();        //!< Geometry used for interactions
         bool setGeometry( Geometry::Geometrybase& );          //!< Set Geometrybase
         virtual void setTemperature(double);                  //!< Set temperature for interactions
         virtual void setVolume(double);                       //!< Set volume of used Geometry
@@ -78,6 +76,12 @@ namespace Faunus {
         virtual double v2v(const p_vec&, const p_vec&);       // Particle vector-Particle vector energy
         virtual double external();                            // External energy - pressure, for example.
         virtual string info();                                //!< Information
+
+        virtual void field(const p_vec&, std::vector<Point>&);//!< Calculate electric field on all particles
+
+        virtual void trialUpdate(const Space&, std::set<int>&) {};
+        virtual void acceptUpdate() {};
+        virtual void rejectUpdate() {};
     };
 
     /**
@@ -100,8 +104,11 @@ namespace Faunus {
           Tgeometry geometry;
           Tpairpot pairpot;
           Nonbonded(InputMap &in) : geometry(in), pairpot(in) {
+            static_assert(
+                std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
+                "Tpairpot must be a pair potential" );
             name="Nonbonded N" + textio::squared + " - " + pairpot.name;
-            geo=&geometry;
+            setGeometry(geometry);
           }
 
           Geometry::Geometrybase& getGeometry() {
@@ -113,8 +120,8 @@ namespace Faunus {
           inline double p2p(const particle &a, const particle &b) FOVERRIDE {
             return pairpot( a,b,geometry.sqdist(a,b));
           }
-        
-          //!< Particle-particle force (kT/Å)
+
+          //!< Particle-particle force (kT/Angstrom)
           inline Point f_p2p(const particle &a, const particle &b) FOVERRIDE {
             return pairpot.force( a,b,geometry.sqdist(a,b),geometry.vdist(a,b));
           }
@@ -221,12 +228,11 @@ namespace Faunus {
 
           double g_internal(const p_vec &p, Group &g) FOVERRIDE { 
             double u=0;
-            if (!g.empty()) {
-              int step=1,n=g.back()+1;
-              for (int i=g.front(); i<n-step; i++)
-                for (int j=g.front()+step*((i-g.front())/step+1); j<n; j++)
+            const int b=g.back(), f=g.front();
+            if (!g.empty())
+              for (int i=f; i<b; ++i)
+                for (int j=i+1; j<=b; ++j)
                   u+=pairpot(p[i],p[j],geometry.sqdist(p[i],p[j]));
-            }
             return u;
           }
 
@@ -250,153 +256,171 @@ namespace Faunus {
      * For a list of implemented potentials, see the Faunus::Potential namespace.
      */
     template<class Tpairpot, class Tgeometry>
-    class NonbondedVector : public Energybase {
-    protected:
-      string _info() {
-        return pairpot.info(25);
-      }
-    public:
-      Tgeometry geometry;
-      Tpairpot pairpot;
-      NonbondedVector(InputMap &in) : geometry(in), pairpot(in) {
-        name="Nonbonded N" + textio::squared + " - " + pairpot.name;
-        geo=&geometry;
-      }
-      
-      Geometry::Geometrybase& getGeometry() {
-        geo=&geometry;
-        return Energybase::getGeometry();
-      }
-      
-      //!< Particle-particle energy (kT)
-      inline double p2p(const particle &a, const particle &b) FOVERRIDE {
-        return pairpot( a,b,geometry.vdist(a,b));
-      }
-      
-      //!< Particle-particle force (kT/Å)
-      inline Point f_p2p(const particle &a, const particle &b) FOVERRIDE {
-        return pairpot.force( a,b,geometry.sqdist(a,b),geometry.vdist(a,b));
-      }
-      
-      double all2p(const p_vec &p, const particle &a) FOVERRIDE {
-        double u=0;
-        for (auto &b : p)
-          u+=pairpot(a,b,geometry.vdist(a,b));
-        return u;
-      }
-      
-      double all2all(const p_vec &p) FOVERRIDE {
-        int n=p.size();
-        double u=0;
-        for (int i=0; i<n-1; ++i)
-          for (int j=i+1; j<n; ++j)
-            u+=pairpot( p[i],p[j],geometry.vdist(p[i],p[j]) );
-        return u;
-      }
-      
-      double i2i(const p_vec &p, int i, int j) FOVERRIDE {
-        return pairpot( p[i], p[j], geometry.vdist( p[i], p[j]) );
-      }
-      
-      double i2g(const p_vec &p, Group &g, int j) FOVERRIDE {
-        double u=0;
-        if ( !g.empty() ) {
-          int len=g.back()+1;
-          if ( g.find(j) ) {   //j is inside g - avoid self interaction
-            for (int i=g.front(); i<j; i++)
-              u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
-            for (int i=j+1; i<len; i++)
-              u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
-          } else              //simple - j not in g
-            for (int i=g.front(); i<len; i++)
-              u+=pairpot( p[i], p[j], geometry.vdist(p[i],p[j]));
-        }
-        return u;
-      }
-      
-      double i2all(const p_vec &p, int i) FOVERRIDE {
-        assert(i>=0 && i<int(p.size()) && "index i outside particle vector");
-        double u=0;
-        int n=(int)p.size();
-        for (int j=0; j<i; ++j)
-          u+=pairpot( p[i], p[j], geometry.vdist(p[i],p[j]) );
-        for (int j=i+1; j<n; ++j)
-          u+=pairpot( p[i], p[j], geometry.vdist(p[i],p[j]) );
-        return u;
-      }
-      
-      double g2g(const p_vec &p, Group &g1, Group &g2) FOVERRIDE {
-        double u=0;
-        if (!g1.empty())
-          if (!g2.empty()) {
-            // IN CASE ONE GROUP IS A SUBGROUP OF THE OTHER
-            if (g1.find(g2.front()))
-              if (g1.find(g2.back())) {  // g2 is a subgroup of g1
-                assert(g1.size()>=g2.size());
-                for (int i=g1.front(); i<g2.front(); i++)
-                  for (auto j : g2)
-                    u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
-                for (int i=g2.back()+1; i<=g1.back(); i++)
-                  for (auto j : g2)
-                    u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
-                return u;
-              }
-            if (g2.find(g1.front()))
-              if (g2.find(g1.back())) {  // g1 is a subgroup of g2
-                assert(g2.size()>=g1.size());
-                for (int i=g2.front(); i<g1.front(); i++)
-                  for (auto j : g1)
-                    u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
-                for (int i=g1.back()+1; i<=g2.back(); i++)
-                  for (auto j : g1)
-                    u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
-                return u;
-              }
-            
-            // IN CASE BOTH GROUPS ARE INDEPENDENT (DEFAULT)
-            int ilen=g1.back()+1, jlen=g2.back()+1;
+      class NonbondedVector : public Energybase {
+        protected:
+          string _info() {
+            return pairpot.info(25);
+          }
+        public:
+          Tgeometry geometry;
+          Tpairpot pairpot;
+          NonbondedVector(InputMap &in) : geometry(in), pairpot(in) {
+            name="Nonbonded N" + textio::squared + " - " + pairpot.name;
+            geo=&geometry;
+          }
+
+          Geometry::Geometrybase& getGeometry() {
+            geo=&geometry;
+            return Energybase::getGeometry();
+          }
+
+          //!< Particle-particle energy (kT)
+          inline double p2p(const particle &a, const particle &b) FOVERRIDE {
+            return pairpot( a,b,geometry.vdist(a,b));
+          }
+
+          //!< Particle-particle force (kT/Å)
+          inline Point f_p2p(const particle &a, const particle &b) FOVERRIDE {
+            return pairpot.force( a,b,geometry.sqdist(a,b),geometry.vdist(a,b));
+          }
+
+          double all2p(const p_vec &p, const particle &a) FOVERRIDE {
+            double u=0;
+            for (auto &b : p)
+              u+=pairpot(a,b,geometry.vdist(a,b));
+            return u;
+          }
+
+          double all2all(const p_vec &p) FOVERRIDE {
+            int n=p.size();
+            double u=0;
+            for (int i=0; i<n-1; ++i)
+              for (int j=i+1; j<n; ++j)
+                u+=pairpot( p[i],p[j],geometry.vdist(p[i],p[j]) );
+            return u;
+          }
+
+          double i2i(const p_vec &p, int i, int j) FOVERRIDE {
+            return pairpot( p[i], p[j], geometry.vdist( p[i], p[j]) );
+          }
+
+          double i2g(const p_vec &p, Group &g, int j) FOVERRIDE {
+            double u=0;
+            if ( !g.empty() ) {
+              int len=g.back()+1;
+              if ( g.find(j) ) {   //j is inside g - avoid self interaction
+                for (int i=g.front(); i<j; i++)
+                  u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
+                for (int i=j+1; i<len; i++)
+                  u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
+              } else              //simple - j not in g
+                for (int i=g.front(); i<len; i++)
+                  u+=pairpot( p[i], p[j], geometry.vdist(p[i],p[j]));
+            }
+            return u;
+          }
+
+          double i2all(const p_vec &p, int i) FOVERRIDE {
+            assert(i>=0 && i<int(p.size()) && "index i outside particle vector");
+            double u=0;
+            int n=(int)p.size();
+            for (int j=0; j<i; ++j)
+              u+=pairpot( p[i], p[j], geometry.vdist(p[i],p[j]) );
+            for (int j=i+1; j<n; ++j)
+              u+=pairpot( p[i], p[j], geometry.vdist(p[i],p[j]) );
+            return u;
+          }
+
+          double g2g(const p_vec &p, Group &g1, Group &g2) FOVERRIDE {
+            double u=0;
+            if (!g1.empty())
+              if (!g2.empty()) {
+                // IN CASE ONE GROUP IS A SUBGROUP OF THE OTHER
+                if (g1.find(g2.front()))
+                  if (g1.find(g2.back())) {  // g2 is a subgroup of g1
+                    assert(g1.size()>=g2.size());
+                    for (int i=g1.front(); i<g2.front(); i++)
+                      for (auto j : g2)
+                        u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
+                    for (int i=g2.back()+1; i<=g1.back(); i++)
+                      for (auto j : g2)
+                        u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
+                    return u;
+                  }
+                if (g2.find(g1.front()))
+                  if (g2.find(g1.back())) {  // g1 is a subgroup of g2
+                    assert(g2.size()>=g1.size());
+                    for (int i=g2.front(); i<g1.front(); i++)
+                      for (auto j : g1)
+                        u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
+                    for (int i=g1.back()+1; i<=g2.back(); i++)
+                      for (auto j : g1)
+                        u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
+                    return u;
+                  }
+
+                // IN CASE BOTH GROUPS ARE INDEPENDENT (DEFAULT)
+                int ilen=g1.back()+1, jlen=g2.back()+1;
 #pragma omp parallel for reduction (+:u) schedule (dynamic)
-            for (int i=g1.front(); i<ilen; ++i)
-              for (int j=g2.front(); j<jlen; ++j)
-                u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
+                for (int i=g1.front(); i<ilen; ++i)
+                  for (int j=g2.front(); j<jlen; ++j)
+                    u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
+              }
+            return u;
           }
-        return u;
-      }
-      
-      double g2all(const p_vec &p, Group &g) FOVERRIDE {
-        double u=0;
-        if (!g.empty()) {
-          int ng=g.back()+1, np=p.size();
+
+          double g2all(const p_vec &p, Group &g) FOVERRIDE {
+            double u=0;
+            if (!g.empty()) {
+              int ng=g.back()+1, np=p.size();
 #pragma omp parallel for reduction (+:u)
-          for (int i=g.front(); i<ng; ++i) {
-            for (int j=0; j<g.front(); j++)
-              u += pairpot( p[i], p[j], geometry.vdist(p[i],p[j]) );
-            for (int j=ng; j<np; j++)
-              u += pairpot( p[i], p[j], geometry.vdist(p[i],p[j]) );
+              for (int i=g.front(); i<ng; ++i) {
+                for (int j=0; j<g.front(); j++)
+                  u += pairpot( p[i], p[j], geometry.vdist(p[i],p[j]) );
+                for (int j=ng; j<np; j++)
+                  u += pairpot( p[i], p[j], geometry.vdist(p[i],p[j]) );
+              }
+            }
+            return u;
           }
-        }
-        return u;
-      }
-      
-      double g_internal(const p_vec &p, Group &g) FOVERRIDE {
-        double u=0;
-        if (!g.empty()) {
-          int step=1,n=g.back()+1;
-          for (int i=g.front(); i<n-step; i++)
-            for (int j=g.front()+step*((i-g.front())/step+1); j<n; j++)
-              u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
-        }
-        return u;
-      }
-      
-      double v2v(const p_vec &p1, const p_vec &p2) FOVERRIDE {
-        double u=0;
-        for (auto &i : p1)
-          for (auto &j : p2)
-            u+=p2p(i,j);
-        return u;
-      }
-    };
+
+          double g_internal(const p_vec &p, Group &g) FOVERRIDE {
+            double u=0;
+            if (!g.empty()) {
+              int step=1,n=g.back()+1;
+              for (int i=g.front(); i<n-step; i++)
+                for (int j=g.front()+step*((i-g.front())/step+1); j<n; j++)
+                  u+=pairpot(p[i],p[j],geometry.vdist(p[i],p[j]));
+            }
+            return u;
+          }
+
+          double v2v(const p_vec &p1, const p_vec &p2) FOVERRIDE {
+            double u=0;
+            for (auto &i : p1)
+              for (auto &j : p2)
+                u+=p2p(i,j);
+            return u;
+          }
+
+          /**
+           * Calculates the electric field on all particles
+           * and stores (add) in the vector `E`.
+           *
+           * @param p Particle vector
+           * @param E Holds field on each particle. Must be of size N.
+           */
+          void field(const p_vec &p, std::vector<Point> &E) {
+            assert(p.size()==E.size());
+            size_t i=0;
+            for (auto &pi : p) {
+              for (auto &pj : p)
+                if (&pi!=&pj)
+                  E[i]+=pairpot.field(pj, geometry.vdist(pi,pj));
+              i++;
+            }
+          }
+      };
 
     /**
      * @brief Nonbonded interactions with group-group cutoff
@@ -517,9 +541,11 @@ namespace Faunus {
      *
      * @date Lund, 2011-2012
      */
-    class Bonded : public Energybase, public pair_list<Potential::PairPotentialBase> {
+    class Bonded : public Energybase,
+    protected pair_list<std::function<double(const particle&,const particle&,double)> > {
       private:
-        string _info();
+        typedef pair_list<std::function<double(const particle&,const particle&,double)> > Tbase;
+        string _info(), _infolist;
       public:
         Bonded();
         Bonded(Geometry::Geometrybase&);
@@ -528,7 +554,18 @@ namespace Faunus {
         double g_internal(const p_vec&, Group&) FOVERRIDE; //!< Internal bonds in Group, only
         double g2g(const p_vec&, Group&, Group&) FOVERRIDE;//!< Bonds between groups
         double total(const p_vec&);                        //!< Sum all known bond energies
-        bool CrossGroupBonds;                              //!< Set to true if there are bonds across groups (slower!). Default: false
+        bool CrossGroupBonds; //!< Set to true if bonds cross groups (slower!). Default: false
+
+        template<class Tpairpot>
+          void add(int i, int j, Tpairpot pot) {
+            std::ostringstream o;
+            o << textio::indent(textio::SUBSUB) << std::left << setw(7) << i
+              << setw(7) << j << pot.brief() + "\n";
+            _infolist += o.str();
+            pot.name.clear();   // potentially save a
+            pot.prefix.clear(); // little bit of memory
+            Tbase::add(i,j,pot);// create and add functor to pair list
+          }
     };
 
     /**
@@ -632,6 +669,18 @@ namespace Faunus {
       void setVolume(double);       //!< Set volume of all contained energy classes
       void setTemperature(double);  //!< Set temperature of all contained energy classes
 
+      inline Geometry::Geometrybase& getGeometry() {
+#ifndef NDEBUG
+        for (size_t i=0; i<baselist.size()-1; i++) {
+          double Vi=baselist[i]->getGeometry().getVolume();
+          double Vj=baselist[i+1]->getGeometry().getVolume();
+          assert(std::abs(Vi-Vj)<1e-6 && "Volumes do not match");
+          assert(Vi>1e-6 && Vj>1e-6 && "Zero volume");
+        }
+#endif
+        return *geo;
+      }
+
       /**
        * @brief Create and add an energy class to energy list
        */
@@ -659,6 +708,7 @@ namespace Faunus {
       double g_internal(const p_vec&, Group&) FOVERRIDE;
       double external() FOVERRIDE;
       double v2v(const p_vec&, const p_vec&) FOVERRIDE;
+      void field(const p_vec&, std::vector<Point>&) FOVERRIDE;
     };
 
     /**
@@ -687,7 +737,7 @@ namespace Faunus {
         struct data {
           double mindist, maxdist;
         };
-        std::map< pair_permutable<Faunus::Group*>, data> gmap;
+        std::map< opair<Faunus::Group*>, data> gmap;
       public:
         MassCenterConstrain(Geometry::Geometrybase&);      //!< Constructor
         void addPair(Group&, Group&, double, double);      //!< Add constraint between two groups
@@ -712,34 +762,27 @@ namespace Faunus {
         double external() FOVERRIDE;  //!< Dumme rest treated as external potential to whole system
     };
 
+    /**
+     * @brief Sum additive external potential on particles.
+     * @tparam Texpot External potential typically derived from
+     *         `Potential::ExternalPotentialBase`
+     */
     template<typename Texpot>
-      class ExternalPotential1D : public Energybase {
+      class ExternalPotential : public Energybase {
         private:
-          Texpot expot;
-          double* zPtr;
-          Point dist(const Point &a) const {
-            return Point(0,0, std::abs(*zPtr - a.z()));
-          }
           string _info() {
-            return "";
+            return expot.info();
           }
         public:
-          /**
-           * @brief Constructor
-           * @param in InputMap to be passed on to the external potential
-           * @param zOffset Pointer to coordinate offset. For example, for
-           *        external potentials due to an XY plane, located at one side
-           *        of a slit, point the offset to `Cuboidslit::len_half.z()`.
-           */
-          ExternalPotential1D(InputMap &in, double* zOffset) : expot(in), zPtr(zOffset) {
-            assert(zPtr!=nullptr);
-            name="External Potential (1D): " + expot.brief();
+          Texpot expot;
+          ExternalPotential(InputMap &in) : expot(in) {
+            name="External Potential ("+expot.name+")";
           }
           double p_external(const particle &p) FOVERRIDE {
-            return expot(p, dist(p)); 
+            return expot(p); 
           }
           double i_external(const p_vec &p, int i) FOVERRIDE {
-            return p_external(p[i]);
+            return p_external( p[i] );
           }
           double g_external(const p_vec &p, Group &g) FOVERRIDE {
             double u=0;
@@ -748,285 +791,6 @@ namespace Faunus {
             return u;
           }
       };
-
-    /**
-     * @brief Charged Gouy-Chapman surface in XY plane
-     *
-     * This is an external potential due to a charged Gouy-Chapman surface
-     * (XY-plane) placed somewhere on the z-axis as specified by setPosition().
-     * It is recommended that this is used in conjunction with a
-     * Geometry::Cuboidslit simulation container.
-     *
-     * For example:
-     * 
-     *     typedef Geometry::Cuboidslit Tgeometry;
-     *     typedef Potential::CombinedPairPotential<Potential::DebyeHuckel, Potential::LennardJones> Tpairpot;
-     *     InputMap mcp("input");
-     *     Energy::Hamiltonian pot;
-     *     auto nb = pot.create(Energy::Nonbonded<Tpairpot,Tgeometry>(mcp));
-     *     auto gc = pot.create(Energy::GouyChapman(mcp));
-     *     gc->zposPtr = &(nb->geometry.len_half.z());  // GC surface at edge of cuboid
-     *
-     * @date Lund/Asljunga, 2011-2012
-     * @note Salt is assumed monovalent!
-     */
-    class GouyChapman : public Energy::Energybase {
-      private:
-        Potential::DebyeHuckel dh;
-        double c0;                                        //!< Ion concentration (A-3)
-        double rho;                                       //!< Surface charge density (e A-2)
-        double phi0;                                      //!< Unitless surface potential \frac{\phi0 e}{kT}
-    double gamma0;                                    //!< Gouy-chapman coefficient ()
-    double lB;
-    double kappa;
-    double *zposPtr;                                  //!< Pointer to z position of GC plane (xy dir)
-    string _info();                                  
-    bool linearize;                                   //!< Use linearized PB?
-      public:                                            
-    GouyChapman(InputMap &);                          //!< Constructor - read input parameters
-    void setPosition(double&);                        //!< Set pointer to z position of surface
-    double i_external(const p_vec&, int) FOVERRIDE;   //!< i'th particle energy in GC potential
-    double g_external(const p_vec&, Group&) FOVERRIDE;//!< Group energy in GC potential
-
-    /**
-     * @brief Point-to-surface distance [angstrom]
-     *
-     * Note that this function is virtual and can be replaced in derived classes to
-     * customize the position of the surface.
-     */
-    double dist2surf(const Point &a) {
-      assert(zposPtr!=nullptr && "Did you forget to call setPosition()?");
-      return std::abs(*zposPtr - a.z());
-    }
-
-    /**
-     * @brief Particle energy in GC potential
-     *
-     * \f[
-     * \beta e \Phi(z) = 2\ln{\frac{1+\Gamma_0 \exp{(-\kappa z)}}{1-\Gamma_0 \exp{(-\kappa z)}}}
-     * \f]
-     * or if linearized:
-     * \f[
-     * \beta e \Phi(z) = \beta e \phi_0 \exp{(-\kappa z)}
-     * \f]
-     */
-    double p_external(const particle &p) FOVERRIDE {
-      if (p.charge!=0) {
-#ifdef FAU_APPROXMATH
-        double x=exp_cawley(-kappa*dist2surf(p));
-#else
-        double x=exp(-kappa*dist2surf(p));
-#endif
-        if (linearize)
-          return p.charge * phi0 * x;
-        else
-          return p.charge * 2 * log((1+gamma0*x)/(1-gamma0*x));
-      }
-      return 0;
-    }
-    };
-
-    /**
-     * @brief Mean field correction
-     * \author Anil Kurut
-     * \warning unfinished!
-     */
-    class MeanFieldCorrection : public Energy::Energybase {
-      private:
-        string filename;                                  //!< Filename of charge density file
-        double threshold;                                 //!< Threshold for the mean field approximation, must be equal to radius of cylinderical container
-        double bin;                                       //!< Resolution for the container slices 
-        Potential::DebyeHuckel dh;  
-        typedef Analysis::Table2D<double, Average<double> > Ttable;
-        Ttable qdensity;                                  //!< Tabulated charge desity for each slice of the container.
-        bool loadfromdisk;                                //!< Yes: Load from disk, No: Sample charge density as self consistent manner 
-        double prefactor;                                 //!< exp(-kappa*threshold)
-        string _info();
-      public:
-        MeanFieldCorrection(InputMap&);//!< Constructor - reads input parameters and needs Debye H\"uckel potential
-        double i_external(const p_vec&, int) FOVERRIDE;         //!< i'th particle energy in mean field correction
-        double g_external(const p_vec&, Group&) FOVERRIDE;      //!< Group energy in mean field correction
-        void sample(const p_vec&, double, double);              //!< Sample the charge density in all slices (Accepted configurations)
-    };
-
-    /**
-     * @brief Add interactions between atoms based on id, hydrophobicity etc.
-     *
-     * This template is used to add interactions between specific particles that
-     * meet specific criteria, for example between selected particle types,
-     * hydrophobic particles etc. The core of the class is a function that creates
-     * a "pair" which is simply a collection of two particle properties.
-     * Pairs are created by a function with the signature GeneralPairList::Tpaircreator
-     * and one such function must be specified in the constructor.
-     * Usually you would want to provide this information though a derived
-     * class that contain the pair creation functions.
-     *
-     * @note Not particularly fast.
-     * @date Malmo 2012
-     */
-    template<class Tij>
-      class GeneralPairList : public Energybase, public pair_list<Potential::PairPotentialBase,Tij> {
-        public:
-          using pair_list<Potential::PairPotentialBase,Tij>::list;
-
-          typedef pair_permutable<Tij> Tpair;
-          typedef std::function<Tpair (const particle&, const particle&)> Tpaircreator;
-
-          GeneralPairList(Tpaircreator c) {
-            name="General Pair List";
-            geo=nullptr;
-            createPair=c;
-          }
-
-          inline double p2p(const particle &a, const particle &b) FOVERRIDE {
-            assert(geo!=nullptr);
-            auto f=list.find( createPair(a,b) );
-            if (f!=list.end())
-              return f->second->operator()( a, b, geo->sqdist(a,b) );
-            return 0;
-          }
-
-          double all2p(const p_vec &p, const particle &a) FOVERRIDE {
-            double u=0;
-            for (auto &b : p)
-              u+=p2p(a,b);
-            return u;
-          }
-
-          double v2v(const p_vec &p1, const p_vec &p2) FOVERRIDE {
-            double u=0;
-            for (auto &i : p1)
-              for (auto &j : p2)
-                u+=p2p(i,j);
-            return u;
-          }
-
-          inline double i2i(const p_vec &p, int i, int j) FOVERRIDE {
-            assert( i!=j );                    //debug
-            assert( i>=0 && i<(int)p.size() ); //debug
-            assert( j>=0 && j<(int)p.size() ); //debug
-            return p2p( p[i], p[j] );
-          }
-
-          double i2all(const p_vec &p, int i) FOVERRIDE {
-            double u=0;
-            for (int j=0; j<i; j++)
-              u+=i2i(p,i,j);
-            for (int j=i+1; j<(int)p.size(); j++)
-              u+=i2i(p,i,j);
-            return u;
-          }
-
-          double i2g(const p_vec &p, Group &g, int j) FOVERRIDE {
-            double u=0;
-            if (!g.empty()) {
-              if (g.find(j)) {
-                for (auto i=g.front(); i<j; i++)
-                  u+=i2i(p,i,j);
-                for (auto i=j+1; i<=g.back(); i++)
-                  u+=i2i(p,i,j);
-              } else                        //simple - j not in g
-                for (auto i : g)
-                  u+=i2i(p,i,j);
-            }
-            return u;  
-          }
-
-          double all2all(const p_vec &p) FOVERRIDE {
-            int n=p.size();
-            double u=0;
-            for (int i=0; i<n-1; ++i)
-              for (int j=i+1; j<n; ++j)
-                u+=i2i(p,i,j);
-            return u;
-          }
-
-          double g2g(const p_vec &p, Group &g1, Group &g2) FOVERRIDE {
-            double u=0;
-            if (!g1.empty())
-              if (!g2.empty())
-                for (auto i : g1)
-                  for (auto j : g2)
-                    u+=i2i(p,i,j);
-            return u;
-          }
-
-          double g2all(const p_vec &p, Group &g) FOVERRIDE {
-            double u=0;
-            if ( !g.empty() )
-              for (auto i : g) {
-                for (auto j=0; j<g.front(); j++)
-                  u+=i2i(p,i,j);
-                for (auto j=g.back()+1; j<(int)p.size(); j++)
-                  u+=i2i(p,i,j);
-              }
-            return u;
-          }
-
-          double g_internal(const p_vec &p, Group &g) FOVERRIDE {
-            double u=0;
-            if ( !g.empty() ) 
-              for (auto i=g.front(); i<g.back(); i++)
-                for (auto j=i+1; j<=g.back(); j++)
-                  u+=i2i(p,i,j);
-            return u;
-          }
-
-        private:
-          Tpaircreator createPair;
-      };
-
-    /**
-     * @brief Custom potential between particle types
-     *
-     * Example:
-     *
-     *     // Harmonic potential between all "Na" and "Cl" particles, plus
-     *     // Coulomb potential between "Na" atoms
-     *     Energy::PairListID() pot;
-     *     pot.add( atom["Na"].id, atom["Cl"].id, Potential::Harmonic(...) );
-     *     pot.add( atom["Na"].id, atom["Na"].id, Potential::Coulomb(...) );
-     *
-     */
-    class PairListID : public GeneralPairList<particle::Tid> {
-      private:
-        static pair_permutable<particle::Tid> makepair(const particle&, const particle&);
-        string _info();
-      public:
-        PairListID();
-    };
-
-    /**
-     * @brief Custom potential based on hydrophobic tag 
-     *
-     * \code
-     * Energy::PairListHydrophobic pot;
-     * pot.add(true, true, Potential::SquareWell(...) ); // square well between hydrophobic particles
-     * pot.add(false,false,Potential::Coulomb(...) );    // coulomb if not...
-     * \endcode
-     */
-    class PairListHydrophobic : public GeneralPairList<particle::Thydrophobic> {
-      private:
-        static pair_permutable<particle::Thydrophobic> makepair(const particle&, const particle&);
-        string _info();
-      public:
-        PairListHydrophobic();
-    };
-
-    /**
-     * @brief Excess chemical potential of charged particles, based on Debye-Huckel theory
-     * @warning Untested
-     */
-    class DebyeHuckelActivity : public Energybase {
-      private:
-        string _info();
-        Potential::DebyeHuckel dh;
-      public:
-        DebyeHuckelActivity(InputMap&);                    //!< Constructor - read input parameters
-        double i_external(const p_vec&, int) FOVERRIDE;
-        double g_external(const p_vec&, Group&) FOVERRIDE;
-        double p_external(const particle&) FOVERRIDE;
-    };
 
     /**
      * @brief Calculates the total system energy

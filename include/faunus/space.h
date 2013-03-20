@@ -4,6 +4,7 @@
 #ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/slump.h>
+#include <faunus/point.h>
 #endif
 
 namespace Faunus {

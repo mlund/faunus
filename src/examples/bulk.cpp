@@ -1,12 +1,47 @@
 #include <faunus/faunus.h>
+#include <faunus/ewald.h>
 using namespace Faunus;
 using namespace Faunus::Potential;
 
 typedef Geometry::Cuboid Tgeometry;   // geometry: cube w. periodic boundaries
 typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot; // pair potential
 
+/*
+template<class Tpairpot, class Tgeometry>
+class NonbondedEwald : public Energy::Energybase {
+  private:
+    Ewald<double> ew;
+    Space* _spc;
+  public:
+    Tgeometry geo;
+    Tpairpot pair;
+
+    double p2p(const particle &a, const particle &b) FOVERRIDE {
+      double r2=geo.sqdist(a,b);
+      return ew.rSpaceEnergy(a.charge*b.charge, sqrt(r2)) + pair(a,b,r2);
+    }
+
+    double i2all(const p_vec &p, int i) FOVERRIDE {
+      if (&p==&(spc->trial)) {
+        ew.store();
+        eq.kSpaceUpdate(p);
+      }
+
+      assert(i>=0 && i<int(p.size()) && "index i outside particle vector");
+      double u=0;
+      int n=(int)p.size();
+      for (int j=0; j<i; ++j)
+        u+=pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]) );
+      for (int j=i+1; j<n; ++j)
+        u+=pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]) );
+      return u;
+    }
+
+};*/
+
 int main() {
   cout << textio::splash();           // show faunus banner and credits
+
 
   InputMap mcp("bulk.input");         // open user input file
   MCLoop loop(mcp);                   // class for handling mc loops
@@ -17,6 +52,13 @@ int main() {
   Energy::Hamiltonian pot;
   auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
   Space spc( pot.getGeometry() );
+
+  /*
+  Ewald<double> ew(mcp);
+  ew.store();
+  ew.restore();
+  ew.rSpaceEnergy(spc.p[0].charge*spc.p[1].charge, 2.0);
+*/
 
   // Markov moves and analysis
   Move::Isobaric iso(mcp,pot,spc);
@@ -70,8 +112,8 @@ int main() {
 
   return test.numFailed();
 }
-/*!
-  \page example_bulk Example: Melted NaCl
+/**
+  @page example_bulk Example: Melted NaCl
 
   In this example we simulate melted NaCl in the NVT and NPT ensemble. We use a
   Lennard-Jones potential combined with a shifted Coulombic potential according to

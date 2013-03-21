@@ -300,38 +300,35 @@ namespace Faunus {
 
 #endif
 
-    /*!
-     * \brief Calculate mass center of a group
-     */
-    template<typename Tgeometry, typename Tgroup>
-      Point massCenter(const Tgeometry &geo, const p_vec &p, const Tgroup &g) {
-        if (g.empty())
-          return Point(0,0,0);
+    /** @brief Calculate mass center of a group */
+    template<typename Tgeometry, typename Tp_vec, typename TGroup>
+      Point massCenter(const Tgeometry &geo, const Tp_vec &p, const TGroup &g) {
         assert(!p.empty());
         assert(g.back() < (int)p.size());
-        assert(&geo!=NULL);
-#ifndef __clang__
-        static_assert(
-            std::is_base_of<Geometry::Geometrybase, Tgeometry>::value,
-            "Tgeo must be derived from Geometrybase" );
-#endif
-        double sum=0;
         Point cm(0,0,0);
-        Point o = p[ g.front()+(g.back()-g.front())*0.5 ];  // set origo to middle particle
-        for (auto i : g) {
-          Point t = p[i]-o;       // translate to origo
-          geo.boundary(t);        // periodic boundary (if any)
-          cm += t * p[i].mw;
-          sum += p[i].mw;
+        if (!g.empty()) {
+          Point o = p[ g.front()+(g.back()-g.front())*0.5 ];  // set origo to middle particle
+          double sum=0;
+          for (auto i : g) {
+            Point t = p[i]-o;       // translate to origo
+            geo.boundary(t);        // periodic boundary (if any)
+            cm += t * p[i].mw;
+            sum += p[i].mw;
+          }
+          if (sum<1e-6) sum=1;
+          cm=cm/sum + o;
+          geo.boundary(cm);
         }
-        if (sum<1e-6) sum=1;
-        cm=cm/sum + o;
-        geo.boundary(cm);
         return cm;
       }
 
-    Point massCenter(const Geometrybase&, const p_vec&); //!< Calculate mass center of a particle vector
-
+    /** @brief Calculate mass center of a particle vector */
+    template<typename Tgeometry, typename Tp_vec>
+      Point massCenter(const Tgeometry &geo, const Tp_vec &p) {
+        if (p.empty())
+          return Point(0,0,0);
+        return massCenter(geo,p,Group(0,p.size()-1));
+      }
 
     void translate(const Geometrybase&, p_vec&, Point); //!< Translate a particle vector by a vector
     void cm2origo(const Geometrybase&, p_vec&); //!< Translate a particle vector so mass center is in (0,0,0)

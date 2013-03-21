@@ -126,13 +126,13 @@ namespace Faunus {
         }
 
         /**
-         * See doi:10/ck2nrd for a review of minimum image algorithms
+         * For reviews of minimum image algorithms,
+         * see doi:10/ck2nrd and doi:10/kvs
          */
         double sqdist(const Point &a, const Point &b) const {
           Point d = (a-b).cwiseAbs();
-          if (d.x()>len_half.x()) d.x()-=len.x();
-          if (d.y()>len_half.y()) d.y()-=len.y();
-          if (d.z()>len_half.z()) d.z()-=len.z();
+          for (int i=0; i<3; ++i)
+            if (d[i]>len_half[i]) d[i]-=2*len_half[i];
           return d.squaredNorm();
 
           // Alternative algorithm:

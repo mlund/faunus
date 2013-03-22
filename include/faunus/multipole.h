@@ -4,7 +4,7 @@
 namespace Faunus {
 
   template<typename Tenergy>
-    void getInducedDipoles(Tenergy &pot, Space &spc, const Eigen::MatrixXd &mu_per, const double &limit) { 
+    void getInducedDipoles(Tenergy &pot, Space &spc, const Eigen::MatrixXd &mu_per, double &limit) { 
       using namespace Eigen;
       int size = spc.p.size();
       double diLim = size*limit;   double diConv;
@@ -41,23 +41,25 @@ namespace Faunus {
     double mu2mu(const Tvec &mu1, const Tvec &mu2, double mu1xmu2, const Tvec &r) {
       using namespace Eigen;
       double R1 = 1.0/r.norm();        //   R^-1 , Å^-1
-      double R3 = -R1*R1*R1;           //  -R^-3 , Å^-3
-      double R5 = -3.0*R3*R1*R1;       // 3*R^-5 , Å^-5
-
-      Matrix3d T = R5*r*r.transpose() + R3*Matrix3d::Identity();  // T_{ab} = 3*r_a*r_b / |r|^5 , for a ne b , Å^-3
+      double R3 = R1*R1*R1;           //   R^-3 , Å^-3
+      double R5 = 3.0*R3*R1*R1;       // 3*R^-5 , Å^-5
+      Matrix3d T = R5*r*r.transpose() - R3*Matrix3d::Identity();  // T_{ab} = 3*r_a*r_b / |r|^5 , for a ne b , Å^-3
       // T_{aa} = 3*r_a^2 / |r|^5 - 1 / |r|^3    , Å^-3
       double W = -mu1.transpose()*T*mu2;                        // Summation of all T_{ab}*mu_a*mu_b       , Å^-3
       return W*mu1xmu2;                             // Scaling with |mu_a|*|mu_b|              , Å^-1 e^ 2
     }
 
   namespace Potential {
-    class DipDip : public PairPotentialBase {
+    class DipoleDipole : public PairPotentialBase {
       private:
         string _brief() { return "Dipole-dipole"; }
+      protected:
         double _lB;
       public:
-        DipDip(InputMap &in) {
-          _lB=in.get<double>("bjerrumlength", 7.1);
+        DipoleDipole(InputMap &in) {
+          pc::setT ( in.get<double>("temperature", 298.15, "Absolute temperature (K)") );
+          double epsilon_r = in.get<double>("epsilon_r",80., "Dielectric constant");
+          _lB=pc::lB( epsilon_r );
         }
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
@@ -74,6 +76,28 @@ namespace Faunus {
           return E;                                                                                                        
 
         }
+
+        string info(char w) { return _brief(); }
+    };
+
+    class DipoleDipoleRF : public DipoleDipole {
+      private:
+        string _brief() { return "Reaction Field"; }
+        double rc2,eps;
+      public:
+        DipoleDipoleRF(InputMap &in) : DipoleDipole(in) { 
+          rc2 = in.get<double>("dipdip_cutoff",pc::infty);
+          rc2 = rc2*rc2;
+          eps = in.get<double>("epsilon_rf",80.);
+          eps = _lB*(2*(eps-1)/(eps+1))/pow(rc2,1.5);
+        }
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+            //cout << DipoleDipole::operator()(a,b,r) << " " << eps*a.mu.dot(b.mu)*a.muscalar*b.muscalar << "\n";
+            if (r.squaredNorm() < rc2)
+              return DipoleDipole::operator()(a,b,r) - eps*a.mu.dot(b.mu)*a.muscalar*b.muscalar;
+            return 0.0;
+          }
 
         string info(char w) { return _brief(); }
     };

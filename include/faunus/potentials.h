@@ -12,6 +12,8 @@
 #include <faunus/geometry.h>
 #endif
 
+using namespace Eigen;
+
 namespace Faunus {
 
   /**

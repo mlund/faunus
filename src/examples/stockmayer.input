@@ -1,9 +1,11 @@
 loop_macrosteps        10
-loop_microsteps        1000
+loop_microsteps        2000
 
-cuboid_len    50     # Box side length [angstrom]
+dipdip_cutoff 10.5      # Reaction field cut off
+epsilon_rf    80     # epsilon of the reaction field 
+cuboid_len    30     # Box side length [angstrom]
 temperature   298     # Temperature [K]
-epsilon_r     78.7    # Dielectric constant
+epsilon_r     1      # Dielectric constant
 lj_eps        0.05    # Uniform LJ epsilon parameter [kT]
 tion1         sol     # ion type 1
-nion1         50      # number of ion type 1
+nion1         1000      # number of ion type 1

@@ -1,5 +1,5 @@
-#ifndef FAUNUS_MULTIPOLE
-#define FAUNUS_MULTIPOLE
+#ifndef FAUNUS_MULTIPOLE_H
+#define FAUNUS_MULTIPOLE_H
 
 namespace Faunus {
 

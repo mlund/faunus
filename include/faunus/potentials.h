@@ -9,7 +9,6 @@
 #include <faunus/auxiliary.h>
 #include <faunus/inputfile.h>
 #include <faunus/species.h>
-#include <faunus/geometry.h>
 #endif
 
 using namespace Eigen;
@@ -124,14 +123,14 @@ namespace Faunus {
       public:
         CosAttract(InputMap&, string="cosattract"); // Constructor from InputMap
         template<class Tparticle>
-        double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
-          if (r2<rc2)
-            return -eps;
-          if (r2>rcwc2)
-            return 0;
-          double x=cos( c*( sqrt(r2)-rc ) );
-          return -eps*x*x;
-        }
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
+            if (r2<rc2)
+              return -eps;
+            if (r2>rcwc2)
+              return 0;
+            double x=cos( c*( sqrt(r2)-rc ) );
+            return -eps*x*x;
+          }
         string info(char); // More verbose information
     };
 
@@ -746,6 +745,10 @@ namespace Faunus {
           T1 first;  //!< First pair potential of type T1
           T2 second; //!< Second pair potential of type T2
 
+          CombinedPairPotential(T1 a, T2 b) : first(a), second(b) {
+            name=first.name+"+"+second.name;
+          }
+
           CombinedPairPotential(InputMap &in) : first(in), second(in) {
             name=first.name+"+"+second.name;
           }
@@ -774,6 +777,19 @@ namespace Faunus {
             second.test(t);
           }
       };
+
+    /**
+     * @brief Adds pair potentials together
+     *
+     * Example:
+     *     auto primitiveModel = Potential::Coulomb() + Potential::HardSphere();
+     */
+    template<class T1, class T2,
+      class = typename std::enable_if<std::is_base_of<PairPotentialBase,T1>::value>::type,
+      class = typename std::enable_if<std::is_base_of<PairPotentialBase,T2>::value>::type>
+        Potential::CombinedPairPotential<T1,T2>& operator+(const T1 &pot1, const T2 &pot2) {
+          return *(new Potential::CombinedPairPotential<T1,T2>(pot1,pot2));
+        }
 
     class MultipoleEnergy {
       public:

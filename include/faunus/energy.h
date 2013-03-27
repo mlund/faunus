@@ -1,5 +1,5 @@
-#ifndef faunus_energy_h
-#define faunus_energy_h
+#ifndef FAUNUS_ENERGY_H
+#define FAUNUS_ENERGY_H
 
 #ifndef SWIG
 #include <faunus/common.h>

@@ -1,5 +1,5 @@
-#ifndef FAUNUS_MCMOVE_H
-#define FAUNUS_MCMOVE_H
+#ifndef FAUNUS_MOVE_H
+#define FAUNUS_MOVE_H
 
 #ifndef SWIG
 #include <faunus/common.h>

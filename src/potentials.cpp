@@ -234,7 +234,7 @@ namespace Faunus {
     /**
      * @param in is scanned for the keywords `prefix_threshold` (angstrom)
      *        and `prefix_depth` (kT).
-     * @param prefix InputMap keyword prefix. Default is `squarewell`
+     * @param pfx InputMap keyword prefix. Default is `squarewell`
      */
     SquareWell::SquareWell(InputMap &in, string pfx) : PairPotentialBase(pfx) {
       name="Square Well";

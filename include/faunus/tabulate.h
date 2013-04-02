@@ -35,7 +35,6 @@ namespace Faunus {
       class tabulatorbase {
         protected:
           T utol, ftol, umaxtol, fmaxtol, rmin, rmax;
-
           T numdr; // dr for derivative evaluation
 
           // First derivative with respect to x
@@ -98,12 +97,12 @@ namespace Faunus {
           std::string info(char w=20) {
             using namespace Faunus::textio;
             std::ostringstream o( "" );
-            o << pad(SUB,w,"Rmin") << rmin << std::endl;
-            o << pad(SUB,w,"Rmax") << rmax << std::endl;
-            o << pad(SUB,w,"Utol") << utol << std::endl;
-            o << pad(SUB,w,"Ftol") << ftol << std::endl;
-            o << pad(SUB,w,"Umaxtol") << umaxtol << std::endl;
-            o << pad(SUB,w,"Fmaxtol") << fmaxtol << std::endl;
+            o << pad(SUB,w,"Rmin") << rmin << std::endl
+              << pad(SUB,w,"Rmax") << rmax << std::endl
+              << pad(SUB,w,"Utol") << utol << std::endl
+              << pad(SUB,w,"Ftol") << ftol << std::endl
+              << pad(SUB,w,"Umaxtol") << umaxtol << std::endl
+              << pad(SUB,w,"Fmaxtol") << fmaxtol << std::endl;
             return o.str();
           }
       };
@@ -117,6 +116,7 @@ namespace Faunus {
      * Ref of algorithm Andrea,Swope,Andersen JCP. 79 (1983)
      *
      * @note Slow on Intel compiler
+     * @todo Hide data and functions
      */
     template<typename T=double>
       class tabulator : public tabulatorbase<T> {
@@ -266,11 +266,8 @@ namespace Faunus {
 
             T minv = base::rmin;
             T maxv = base::rmax;
-
             T rumin = minv;
-
             T maxv2 = maxv*maxv;
-
             T dr = maxv-minv;
             T rupp = maxv;
             T zupp = maxv2;
@@ -279,7 +276,7 @@ namespace Faunus {
             td.r2.push_back(zupp);
 
             int i;
-            for (i=0; i < mngrid; i++) {
+            for (i=0; i<mngrid; i++) {
               T rlow = rupp;
               T zlow;
               std::vector<T> ubuft;
@@ -287,7 +284,7 @@ namespace Faunus {
 
               dr=(rupp-minv);
 
-              for (j=0; j < ndr; j++) {
+              for (j=0; j<ndr; j++) {
                 zupp=rupp*rupp;
                 rlow = rupp-dr;
                 if (rumin > rlow)
@@ -348,12 +345,12 @@ namespace Faunus {
             // Assume zero at from max to "infinity"
             tg.rmax2 = 10000000000000.0;
             tg.r2.push_back(pc::infty);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
 
             // Assume infinity from min to zero
             auto it = tg.r2.begin();
@@ -381,28 +378,28 @@ namespace Faunus {
             tg.rmax2 = 10000000000000.0;
             tg.r2.push_back(0.0);
             tg.r2.push_back(10000000000000.0);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
             return tg;
           }
 
           std::string print(typename base::data &d) {
             std::ostringstream o( "Size of r2: " + d.r2.size() );
-            o << "rmax2 r2=" << d.rmax2 << " r=" << std::sqrt(d.rmax2) << std::endl;
-            o << "rmin2 r2=" << d.rmin2 << " r=" << std::sqrt(d.rmin2) << std::endl;
-            for (unsigned int i = 0; i<d.r2.size(); i++) {
+            o << "rmax2 r2=" << d.rmax2 << " r=" << sqrt(d.rmax2) << endl
+              << "rmin2 r2=" << d.rmin2 << " r=" << sqrt(d.rmin2) << endl;
+            for (int i=0; i<d.r2.size(); i++) {
               o << i << ": r2=" << d.r2.at(i)
-                << " r=" << std::sqrt(d.r2.at(i)) << std::endl;
+                << " r=" << std::sqrt(d.r2.at(i)) << endl;
               if (i != (d.r2.size()-1)) {
                 o << "coeffs:";
-                for (unsigned int j = 0; j < 6; j++)
+                for (int j=0; j<6; j++)
                   o << " "<< d.c.at(i*6+j) <<",";
               }
-              o << std::endl;
+              o << endl;
             }
             return o.str();
           }
@@ -415,6 +412,8 @@ namespace Faunus {
      * Code mainly from MolSim (Per Linse) with some upgrades
      * Translated from Fortran into C++
      * Ref of algorithm Andrea,Swope,Andersen JCP. 79 (1983)
+     *
+     * @todo Inherit from "tabulate"
      */
     template<typename T=double>
       class tabulatorintel : public tabulatorbase<T> {
@@ -510,7 +509,7 @@ namespace Faunus {
                           dz*ubuft.at(6)
                           ))));
 
-              T fsum =  ubuft.at(2)+
+              T fsum = ubuft.at(2)+
                 dz*(2.0*ubuft.at(3)+
                     dz*(3.0*ubuft.at(4)+
                       dz*(4.0*ubuft.at(5)+
@@ -579,7 +578,7 @@ namespace Faunus {
             td.r2.push_back(zupp);
 
             int i;
-            for (i=0; i < mngrid; i++) {
+            for (i=0; i<mngrid; i++) {
               T rlow = rupp;
               T zlow;
               std::vector<T> ubuft;
@@ -587,7 +586,7 @@ namespace Faunus {
 
               dr=(rupp-minv);
 
-              for (j=0; j < ndr; j++) {
+              for (j=0; j<ndr; j++) {
                 zupp=rupp*rupp;
                 rlow = rupp-dr;
                 if (rumin > rlow)
@@ -631,31 +630,31 @@ namespace Faunus {
             typename base::data tg = generate(f);
 
             // Assume infinity from min to zero
-            tg.rmin2 = 0.0;
-            tg.r2.push_back(0.0);
+            tg.rmin2=0;
+            tg.r2.push_back(0);
             tg.c.push_back(100000.0);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
 
             // Assume zero at from max to "infinity"
             auto it = tg.r2.begin();
             tg.r2.insert(it, pc::infty);
             tg.rmax2 = 10000000000000.0;
             it = tg.c.begin();
-            tg.c.insert ( it , 0.0 );
+            tg.c.insert(it,0);
             it = tg.c.begin();
-            tg.c.insert ( it , 0.0 );
+            tg.c.insert(it,0);
             it = tg.c.begin();
-            tg.c.insert ( it , 0.0 );
+            tg.c.insert(it,0);
             it = tg.c.begin();
-            tg.c.insert ( it , 0.0 );
+            tg.c.insert(it,0);
             it = tg.c.begin();
-            tg.c.insert ( it , 0.0 );
+            tg.c.insert(it,0);
             it = tg.c.begin();
-            tg.c.insert ( it , 0.0 );
+            tg.c.insert(it,0);
             return tg;
           }
 
@@ -665,13 +664,13 @@ namespace Faunus {
             tg.rmin2 = 0.0;
             tg.rmax2 = 10000000000000.0;
             tg.r2.push_back(10000000000000.0);
-            tg.r2.push_back(0.0);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
-            tg.c.push_back(0.0);
+            tg.r2.push_back(0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
+            tg.c.push_back(0);
             return tg;
           }
 
@@ -694,6 +693,7 @@ namespace Faunus {
 
     /**
      * @brief Hermite cubic spline table
+     * @todo Hide data and functions
      */
     template<typename T=double>
       struct tabulatorherm : public tabulatorbase<T> {
@@ -746,8 +746,8 @@ namespace Faunus {
           ubuft.push_back(zlow);
           // Zero potential and force return no coefficients
           if (u0low == 0.0 && u1low == 0.0) {
-            for (int i = 0; i < 4; i++)
-              ubuft.push_back(0.0);
+            for (int i=0; i<4; i++)
+              ubuft.push_back(0);
             return ubuft;
           }
 
@@ -951,6 +951,7 @@ namespace Faunus {
 
     /**
      * @brief Linear interpolation spline
+     * @todo Hide data and functions
      */
     template<typename T=double>
       struct tabulatorlin : public tabulatorbase<T> {
@@ -1160,7 +1161,8 @@ namespace Faunus {
 
   } //Tabulate namespace
 
-
+#ifdef FAUNUS_POTENTIAL_H
+  
   namespace Potential {
 
     /**
@@ -1180,11 +1182,12 @@ namespace Faunus {
             tab.setRange(
                 in.get<double>("tab_rmin", 1.0),
                 in.get<double>("tab_rmax", 100.0));
-            tab.setTolerance(in.get<double>("tab_utol", 0.01), 
+            tab.setTolerance(
+                in.get<double>("tab_utol", 0.01), 
                 in.get<double>("tab_ftol", -1), 
                 in.get<double>("tab_umaxtol", -1), 
                 in.get<double>("tab_fmaxtol", -1));
-          } 
+          }
 
           double operator()(const particle &a, const particle &b, double r2) {
             Tpair ab(a.id,b.id);
@@ -1226,38 +1229,38 @@ namespace Faunus {
 
             // Filling up matrix of tabulated data
             atomlistsize = atom.list.size();
-            for (unsigned int i = 0; i < atom.list.size(); i++) {
-              for (unsigned int j = 0; j < atom.list.size(); j++) {
+            for (auto &i : atom.list) {
+              for (auto &j : atom.list) {
                 particle a,b;
-                a = atom[atom.list[i].id];
-                b = atom[atom.list[j].id];
+                a = i;
+                b = j;
                 std::function<double(double)> func = [=](double r2) {return Tpairpot(*this)(a,b,r2);};
                 typename Ttabulator::data td = tab.generate_full(func);
                 vtab.push_back(td);
                 if (print > 1) {
                   int n = print;
                   if (vtab[a.id*atomlistsize+b.id].r2.size() > 2) {
-                    std::cout << atom[i].name << "<->" << atom[j].name << " r2.size() " << vtab[a.id*atomlistsize+b.id].r2.size() << std::endl;
-                    std::ofstream ff1(std::string(atom[i].name+"."+atom[j].name+".real.dat").c_str());
+                    cout << i.name << "<->" << j.name << " r2.size() "
+                      << vtab[a.id*atomlistsize+b.id].r2.size() << endl;
+                    std::ofstream ff1(std::string(i.name+"."+j.name+".real.dat").c_str());
                     ff1.precision(10);
 
-                    std::ofstream ff2(std::string(atom[i].name+"."+atom[j].name+".tab.dat").c_str());
+                    std::ofstream ff2(std::string(i.name+"."+j.name+".tab.dat").c_str());
                     ff2.precision(10);
                     double max = vtab[a.id*atomlistsize+b.id].r2.at(vtab[a.id*atomlistsize+b.id].r2.size()-2);
-                    double min = vtab[atom.list[i].id*atomlistsize+atom.list[j].id].r2.at(1);
+                    double min = vtab[i.id*atomlistsize+j.id].r2.at(1);
                     double dr = (max-min)/(double)n;
-                    for (int k = 0; k < n; k++) {
+                    for (int k=0; k<n; k++) {
                       double r2 = min+dr*((double)k)+0.0000000000001;
-                      ff1 << sqrt(r2) << " " << Tpairpot(*this)(a,b,r2) << std::endl;
-                      ff2 << sqrt(r2) << " " << tab.eval(vtab[a.id*atomlistsize+b.id], r2) << std::endl;
+                      ff1 << sqrt(r2) << " " << Tpairpot(*this)(a,b,r2) << endl;
+                      ff2 << sqrt(r2) << " " << tab.eval(vtab[a.id*atomlistsize+b.id], r2) << endl;
                     }
-                    ff1.close();
-                    ff2.close();
                   }
                 }
               }
             }
-          } 
+          }
+
           double operator()(const particle &a, const particle &b, double r2) {
             return tab.eval(vtab[a.id*atomlistsize+b.id], r2);
           }
@@ -1271,11 +1274,11 @@ namespace Faunus {
      * If the pair is found then a tabulation will be used.
      */
     template<typename Tdefault, typename Ttabulator=Tabulate::tabulator<double>, typename Tpair=opair<int> >
-      class PotentialMapTabulated : public PotentialMap<Tdefault,Tpair> {
+      class PotentialMapTabulated : public PotentialMap<Tdefault> {
         private:
           double rmin2,rmax2;
           int print;
-          typedef PotentialMap<Tdefault,Tpair> base;
+          typedef PotentialMap<Tdefault> base;
           Ttabulator tab;
           std::map<Tpair, typename Ttabulator::data> mtab;
 
@@ -1304,20 +1307,19 @@ namespace Faunus {
                 if (r2<it->second.rmax2)
                   if (r2>it->second.rmin2) 
                     return tab.eval(it->second, r2);
-                return base::m[ab]->operator()(a,b,r2); // fall back to original
+                return base::m[ab](a,b,r2); // fall back to original
               }
               return Tdefault::operator()(a,b,r2); // fall back to default
             }
 
           template<class Tpairpot>
-            void add(int id1, int id2, Tpairpot pot) {
-              particle a;
+            void add(AtomData::Tid id1, AtomData::Tid id2, Tpairpot pot) {
+              particle a,b;
               a = atom[id1];
-              particle b;
               b = atom[id2];
               base::add(a.id,b.id,pot);
-              std::function<double(double)> func = [=](double r2) {return Tpairpot(pot)(a,b,r2);};
-              mtab[ Tpair(id1,id2) ] = tab.generate(func);
+              std::function<double(double)> f = [=](double r2) {return Tpairpot(pot)(a,b,r2);};
+              mtab[ Tpair(id1,id2) ] = tab.generate(f);
             }
 
           std::string info(char w=20) {
@@ -1328,9 +1330,9 @@ namespace Faunus {
               auto ab = Tpair(i.first.first,i.first.second);
               auto it=mtab.find(ab);
               o << pad(SUB,w,"Nbr of elements in table ("+atom[i.first.first].name+"<->"+atom[i.first.second].name+"): ")
-                << it->second.r2.size() << std::endl;
+                << it->second.r2.size() << endl;
             }
-            o << std::endl;
+            o << endl;
             if (print == 1)
               print_tabulation();
             return o.str();
@@ -1341,8 +1343,7 @@ namespace Faunus {
               auto ab = Tpair(i.first.first,i.first.second);
               auto it=mtab.find(ab);
 
-              particle a;
-              particle b;
+              particle a,b;
               a = atom[i.first.first];
               b = atom[i.first.second];
 
@@ -1355,13 +1356,11 @@ namespace Faunus {
               double max = it->second.r2.at(it->second.r2.size()-2);
               double min = it->second.rmin2;
               double dr = (max-min)/(double)n;
-              for (int j = 1; j < n; j++) {
+              for (int j=1; j<n; j++) {
                 double r2 = min+dr*((double)j);
-                ff1 << sqrt(r2) << " " << base::m[ab]->operator()(a,b,r2) << std::endl;
-                ff2 << sqrt(r2) << " " << tab.eval(it->second, r2) << std::endl;
+                ff1 << sqrt(r2) << " " << base::m[ab](a,b,r2) << endl;
+                ff2 << sqrt(r2) << " " << tab.eval(it->second, r2) << endl;
               }
-              ff1.close();
-              ff2.close();
             }
           }
       };
@@ -1374,9 +1373,9 @@ namespace Faunus {
      * Recommended for the user to specify all pairs in `add()`
      */
     template<typename Tdefault, typename Ttabulator=Tabulate::tabulator<double>, typename Tpair=opair<int> >
-      class PotentialVecTabulated : public PotentialMap<Tdefault,Tpair> {
+      class PotentialVecTabulated : public PotentialMap<Tdefault> {
         private:
-          typedef PotentialMap<Tdefault,Tpair> base;
+          typedef PotentialMap<Tdefault> base;
           Ttabulator tab;
           vector<typename Ttabulator::data> vtab;
           unsigned int atomlistsize;
@@ -1385,8 +1384,8 @@ namespace Faunus {
           PotentialVecTabulated(InputMap &in) : base(in) {
             // Filling up matrix of empty tabulated data
             atomlistsize = atom.list.size();
-            for (unsigned int i = 0; i < atom.list.size(); i++) 
-              for (unsigned int j = 0; j < atom.list.size(); j++) 
+            for (size_t i=0; i<atom.list.size(); i++)
+              for (size_t j=0; j<atom.list.size(); j++)
                 vtab.push_back(tab.generate_empty());
 
             tab.setRange(
@@ -1405,59 +1404,55 @@ namespace Faunus {
 
           template<class Tpairpot>
             void add(int id1, int id2, Tpairpot pot) {
-              particle a;
+              particle a,b;
               a = atom[id1];
-              particle b;
               b = atom[id2];
               base::add(a.id,b.id,pot);
               std::function<double(double)> func = [=](double r2) {return Tpairpot(pot)(a,b,r2);};
               typename Ttabulator::data tg = tab.generate_full(func);
               vtab[id1*atomlistsize+id2] = tg;
               vtab[id2*atomlistsize+id1] = tg;
-
             }
 
           std::string info(char w=20) {
             std::ostringstream o( base::info(w) );
-            o << tab.info(w) << std::endl;
+            o << tab.info(w) << endl;
             using namespace Faunus::textio;
-            for (unsigned int i = 0; i < atom.list.size(); i++)
-              for (unsigned int j = 0; j < atom.list.size(); j++)
-                o << pad(SUB,w,"Nbr of elements in table ("+atom.list[i].name+"<->"+atom.list[j].name+"): ")
-                  << vtab[atom.list[i].id*atomlistsize+atom.list[j].id].r2.size() << std::endl;
-            o << std::endl;
+            for (auto &i : atom.list)
+              for (auto &j : atom.list)
+                o << pad(SUB,w,"Nbr of elements in table ("+i.name+"<->"+j.name+"): ")
+                  << vtab[i.id*atomlistsize+j.id].r2.size() << endl;
+            o << endl;
             return o.str();
           }
 
           void print_tabulation(int n=1000) {
-            for (unsigned int i = 0; i < atom.list.size(); i++) {
-              for (unsigned int j = 0; j < atom.list.size(); j++) {
-                particle a;
-                particle b;
-                a = atom[i];
-                b = atom[j];
+            for (auto &i : atom.list) {
+              for (auto &j : atom.list) {
+                particle a,b;
+                a = i;
+                b = j;
                 if (vtab[a.id*atomlistsize+b.id].r2.size() > 2) {
                   auto ab = Tpair(a.id,b.id);
-                  std::ofstream ff1(std::string(atom[i].name+"."+atom[j].name+".real.dat").c_str());
+                  std::ofstream ff1(std::string(i.name+"."+j.name+".real.dat").c_str());
                   ff1.precision(10);
-                  std::ofstream ff2(std::string(atom[i].name+"."+atom[j].name+".tab.dat").c_str());
+                  std::ofstream ff2(std::string(i.name+"."+j.name+".tab.dat").c_str());
                   ff2.precision(10);
                   double max = vtab[a.id*atomlistsize+b.id].r2.at(vtab[a.id*atomlistsize+b.id].r2.size()-2);
-                  double min = vtab[atom.list[i].id*atomlistsize+atom.list[j].id].r2.at(1);
+                  double min = vtab[i.id*atomlistsize+j.id].r2.at(1);
                   double dr = (max-min)/(double)n;
-                  for (int k = 0; k < n; k++) {
+                  for (int k=0; k<n; k++) {
                     double r2 = min+dr*((double)k)+0.0000000000001;
                     ff1 << sqrt(r2) << " " << base::m[ab]->operator()(a,b,r2) << std::endl;
-                    ff2 << sqrt(r2) << " " << tab.eval(vtab[a.id*atomlistsize+b.id], r2) << std::endl;
+                    ff2 << sqrt(r2) << " " << tab.eval(vtab[a.id*atomlistsize+b.id], r2)
+                      << endl;
                   }
-                  ff1.close();
-                  ff2.close();
                 }
               }
             }
           }
       };
-
   }//Potential namespace
+#endif  
 }//Faunus namespace
 #endif

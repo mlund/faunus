@@ -26,13 +26,15 @@ namespace Faunus {
    * be used to tabulate any function f(x) in a specified
    * interval. This is used to tabulate pair potentials
    *
+   * @note Code in this namespace has no dependencies and can be
+   *       used for general tabulation outside Faunus.
    */
 
   namespace Tabulate {
 
     /* base class for all tabulators - no dependencies */
     template<typename T=double>
-      class tabulatorbase {
+      class TabulatorBase {
         protected:
           T utol, ftol, umaxtol, fmaxtol, rmin, rmax;
           T numdr; // dr for derivative evaluation
@@ -89,7 +91,7 @@ namespace Faunus {
             numdr = _numdr;
           }
 
-          tabulatorbase() {
+          TabulatorBase() {
             utol=0.01; ftol = -1; umaxtol = -1; fmaxtol = -1;                  
             numdr = 0.0001; // dr for derivative evaluation                    
           }
@@ -112,28 +114,18 @@ namespace Faunus {
      *
      * Tabulator with logarithmic search.
      * Code mainly from MolSim (Per Linse) with some upgrades
-     * Translated from Fortran into C++
-     * Ref of algorithm Andrea,Swope,Andersen JCP. 79 (1983)
+     * Reference: doi:10/frzp4d
      *
      * @note Slow on Intel compiler
      * @todo Hide data and functions
      */
     template<typename T=double>
-      class tabulator : public tabulatorbase<T> {
+      class Andrea : public TabulatorBase<T> {
         private:
-          typedef tabulatorbase<T> base; // for convenience, only
-
+          typedef TabulatorBase<T> base; // for convenience, only
           int mngrid;    // Max number of controlpoints
           int ndr;        // Max number of trials to decr dr
           T drfrac;  // Multiplicative factor to decr dr
-
-          void set_mngrid(int _mngrid) {
-            mngrid = _mngrid;
-          }
-
-          void set_ndr(int _ndr) {
-            mngrid = _ndr;
-          }
 
           std::vector<T> SetUBuffer(T rlow, 
               T zlow, 
@@ -147,12 +139,11 @@ namespace Faunus {
               T u2upp) {
 
             std::vector<T> ubuft;
-
             ubuft.push_back(zlow);
+
             // Zero potential and force return no coefficients
-            if (u0low == 0.0 && u1low == 0.0) {
-              for (int i = 0; i < 6; i++)
-                ubuft.push_back(0.0);
+            if (fabs(u0low)<1e-9 && fabs(u1low)<1e-9) {
+              ubuft.resize(7,0);
               return ubuft;
             }
 
@@ -168,12 +159,12 @@ namespace Faunus {
             T c0 = w0low;
             T c1 = w1low;
             T c2 = w2low*0.5;
-            T a = 6.0*(w0upp-c0-c1*dz1-c2*dz2)/dz3;
-            T b = 2.0*(w1upp-c1-2.0*c2*dz1)/dz2;
+            T a = 6*(w0upp-c0-c1*dz1-c2*dz2)/dz3;
+            T b = 2*(w1upp-c1-2*c2*dz1)/dz2;
             T c = (w2upp-2*c2)/dz1;
-            T c3 = (10.0*a-12.0*b+3.0*c)/6.0;
-            T c4 = (-15.0*a+21.0*b-6.0*c)/(6.0*dz1);
-            T c5 = (2.0*a-3.0*b+c)/(2.0*dz2);
+            T c3 = (10*a-12*b+3*c)/6;
+            T c4 = (-15*a+21*b-6*c)/(6*dz1);
+            T c5 = (2*a-3*b+c)/(2*dz2);
 
             ubuft.push_back(c0);
             ubuft.push_back(c1);
@@ -185,19 +176,21 @@ namespace Faunus {
             return ubuft;
           }
 
+          /*
+           * Returns:
+           *
+           * vb[0]: Tolerance is approved
+           * vb[1]: A repulsive part is found
+           */
           std::vector<bool> CheckUBuffer(std::vector<T>& ubuft, 
               T rlow,
               T rupp,
-              std::function<T(T)> &f) {
-            // vb[0]: Tolerance is approved
-            // vb[1]: A repulsive part is found
-            std::vector<bool> vb;
-            vb.push_back(false);
-            vb.push_back(false);
+              std::function<T(T)> f) {
 
             // Number of points to control
             int ncheck = 11;
-            T dr = (rupp-rlow)/(ncheck-1);
+            T dr = (rupp-rlow) / (ncheck-1);
+            std::vector<bool> vb(2, false);
 
             for (int i=0; i<ncheck; i++) {
               T r1 = rlow+dr*((T)i);
@@ -210,31 +203,29 @@ namespace Faunus {
                     dz*(ubuft.at(3)+
                       dz*(ubuft.at(4)+
                         dz*(ubuft.at(5)+
-                          dz*ubuft.at(6)
-                          ))));
+                          dz*ubuft.at(6) ))));
 
               T fsum =  ubuft.at(2)+
-                dz*(2.0*ubuft.at(3)+
-                    dz*(3.0*ubuft.at(4)+
-                      dz*(4.0*ubuft.at(5)+
-                        dz*(5.0*ubuft.at(6)
-                          ))));
+                dz*(2*ubuft.at(3)+
+                    dz*(3*ubuft.at(4)+
+                      dz*(4*ubuft.at(5)+
+                        dz*(5*ubuft.at(6) ))));
 
               if (std::abs(usum-u0) > base::utol)
                 return vb;
               if (base::ftol != -1 && std::abs(fsum-u1) > base::ftol)
                 return vb;    
               if (base::umaxtol != -1 && std::abs(usum) > base::umaxtol)
-                vb.at(1) = true;
+                vb[1] = true;
               if (base::fmaxtol != -1 && std::abs(usum) > base::fmaxtol)
-                vb.at(1) = true;
+                vb[1] = true;
             }
-            vb.at(0) = true;
+            vb[0] = true;
             return vb;
           }
 
         public:
-          tabulator() : base() {
+          Andrea() : base() {
             mngrid = 1200;
             ndr = 100;
             drfrac = 0.9;
@@ -243,23 +234,21 @@ namespace Faunus {
           // gets tabulated value at r2
           T eval(const typename base::data& d, T r2) const {
             auto low = std::lower_bound(d.r2.begin(), d.r2.end(), r2);
-            int pos = (low-d.r2.begin()-1);
+            size_t pos = (low-d.r2.begin()-1);
             T min = d.r2[pos];
             T dz = r2-min;
             int pos6 = 6*pos;
-            T usum =  d.c[pos6+0]+
+            T usum = d.c[pos6+0]+
               dz*(d.c[pos6+1]+
                   dz*(d.c[pos6+2]+
                     dz*(d.c[pos6+3]+
                       dz*(d.c[pos6+4]+
-                        dz*(d.c[pos6+5])
-                        ))));
+                        dz*(d.c[pos6+5]) ))));
             return usum;
           }
 
-          typename base::data generate(std::function<T(T)> &f) {
+          typename base::data generate(std::function<T(T)> f) {
             base::check();
-
             typename base::data td;
             td.rmax2 = base::rmax*base::rmax;
             td.rmin2 = base::rmin*base::rmin;
@@ -301,18 +290,17 @@ namespace Faunus {
 
                 ubuft = SetUBuffer(rlow,zlow,rupp,zupp,u0low,u1low,u2low,u0upp,u1upp,u2upp);
                 std::vector<bool> vb = CheckUBuffer(ubuft,rlow,rupp,f);
-                repul = vb.at(1);
-                if (vb.at(0) == true) {
+                repul = vb[1];
+                if (vb[0] == true) {
                   rupp=rlow;
                   break;
-                } else {
                 }
                 dr*=drfrac;
               }
               assert(j<ndr && "Try to increase utol/ftol");
+              assert(ubuft.size()==7 && "Wrong size of ubuft, minvalue + 6 coefficients");
               td.r2.push_back(zlow);
-              assert(ubuft==7 && "Wrong size of ubuft, minvalue + 6 coefficients");
-              for (unsigned int k = 1; k < ubuft.size(); k++)
+              for (size_t k = 1; k<ubuft.size(); k++)
                 td.c.push_back(ubuft.at(k));
 
               // Entered a highly repulsive part, stop tabulation
@@ -330,44 +318,29 @@ namespace Faunus {
             tdsort.rmax2 = td.rmax2;
             tdsort.rmin2 = td.rmin2;
             tdsort.r2.push_back(td.r2.at(td.r2.size()-1));
-            for (int i = td.r2.size()-2; i >= 0; i--) {
+            for (int i = td.r2.size()-2; i>=0; i--) {
               tdsort.r2.push_back(td.r2.at(i));
-              for (int j = 0; j < 6; j++)
+              for (int j=0; j<6; j++)
                 tdsort.c.push_back(td.c.at(6*i+j));
             }
             return tdsort;
           }
 
-          typename base::data generate_full(std::function<T(T)> &f) {
-
+          typename base::data generate_full(std::function<T(T)> f) {
             typename base::data tg = generate(f);
 
             // Assume zero at from max to "infinity"
-            tg.rmax2 = 10000000000000.0;
+            tg.rmax2 = 1e9;
             tg.r2.push_back(pc::infty);
-            tg.c.push_back(0);
-            tg.c.push_back(0);
-            tg.c.push_back(0);
-            tg.c.push_back(0);
-            tg.c.push_back(0);
-            tg.c.push_back(0);
+            tg.c.resize(tg.c.size()+6, 0);
 
             // Assume infinity from min to zero
-            auto it = tg.r2.begin();
-            tg.rmin2 = 0.0;
-            tg.r2.insert(it, 0.0);
-            it = tg.c.begin();
-            tg.c.insert ( it , 0.0 );
-            it = tg.c.begin();
-            tg.c.insert ( it , 0.0 );
-            it = tg.c.begin();
-            tg.c.insert ( it , 0.0 );
-            it = tg.c.begin();
-            tg.c.insert ( it , 0.0 );
-            it = tg.c.begin();
-            tg.c.insert ( it , 0.0 );
-            it = tg.c.begin();
-            tg.c.insert ( it , 100000.0 );
+            tg.rmin2 = 0;
+            tg.r2.insert(tg.r2.begin(), 0);
+            vector<T> c(6,0);
+            c[0]=100000;
+            tg.c.insert(tg.c.begin(), c.begin(), c.end() );
+
             return tg;
           }
 
@@ -375,9 +348,9 @@ namespace Faunus {
             typename base::data tg;
             // Assume zero at from zero to "infinity"
             tg.rmin2 = 0.0;
-            tg.rmax2 = 10000000000000.0;
-            tg.r2.push_back(0.0);
-            tg.r2.push_back(10000000000000.0);
+            tg.rmax2 = 1e10;
+            tg.r2.push_back(0);
+            tg.r2.push_back(1e10);
             tg.c.push_back(0);
             tg.c.push_back(0);
             tg.c.push_back(0);
@@ -388,10 +361,11 @@ namespace Faunus {
           }
 
           std::string print(typename base::data &d) {
-            std::ostringstream o( "Size of r2: " + d.r2.size() );
-            o << "rmax2 r2=" << d.rmax2 << " r=" << sqrt(d.rmax2) << endl
+            std::ostringstream o;
+            o << "Size of r2: " << d.r2.size() << endl
+              << "rmax2 r2=" << d.rmax2 << " r=" << sqrt(d.rmax2) << endl
               << "rmin2 r2=" << d.rmin2 << " r=" << sqrt(d.rmin2) << endl;
-            for (int i=0; i<d.r2.size(); i++) {
+            for (size_t i=0; i<d.r2.size(); i++) {
               o << i << ": r2=" << d.r2.at(i)
                 << " r=" << std::sqrt(d.r2.at(i)) << endl;
               if (i != (d.r2.size()-1)) {
@@ -410,26 +384,17 @@ namespace Faunus {
      *
      * Tabulator with linear search starting from large distances
      * Code mainly from MolSim (Per Linse) with some upgrades
-     * Translated from Fortran into C++
-     * Ref of algorithm Andrea,Swope,Andersen JCP. 79 (1983)
+     * Reference: doi:10/frzp4d
      *
-     * @todo Inherit from "tabulate"
+     * @todo Inherit from "Andrea"
      */
     template<typename T=double>
-      class tabulatorintel : public tabulatorbase<T> {
+      class AndreaIntel : public TabulatorBase<T> {
         private:
-          typedef tabulatorbase<T> base; // for convenience, only
-          int mngrid;    // Max number of controlpoints
-          int ndr;        // Max number of trials to decr dr
+          typedef TabulatorBase<T> base; // for convenience, only
+          int mngrid;// Max number of controlpoints
+          int ndr;   // Max number of trials to decr dr
           T drfrac;  // Multiplicative factor to decr dr
-
-          void set_mngrid(int _mngrid) {
-            mngrid = _mngrid;
-          }
-
-          void set_ndr(int _ndr) {
-            mngrid = _ndr;
-          }
 
           std::vector<T> SetUBuffer(T rlow, 
               T zlow, 
@@ -447,7 +412,7 @@ namespace Faunus {
             ubuft.push_back(zlow);
             // Zero potential and force return no coefficients
             if (u0low == 0.0 && u1low == 0.0) {
-              for (int i = 0; i < 6; i++)
+              for (int i=0; i<6; i++)
                 ubuft.push_back(0.0);
               return ubuft;
             }
@@ -464,12 +429,12 @@ namespace Faunus {
             T c0 = w0low;
             T c1 = w1low;
             T c2 = w2low*0.5;
-            T a = 6.0*(w0upp-c0-c1*dz1-c2*dz2)/dz3;
-            T b = 2.0*(w1upp-c1-2.0*c2*dz1)/dz2;
+            T a = 6*(w0upp-c0-c1*dz1-c2*dz2)/dz3;
+            T b = 2*(w1upp-c1-2*c2*dz1)/dz2;
             T c = (w2upp-2*c2)/dz1;
-            T c3 = (10.0*a-12.0*b+3.0*c)/6.0;
-            T c4 = (-15.0*a+21.0*b-6.0*c)/(6.0*dz1);
-            T c5 = (2.0*a-3.0*b+c)/(2.0*dz2);
+            T c3 = (10*a-12*b+3*c)/6;
+            T c4 = (-15*a+21*b-6*c)/(6*dz1);
+            T c5 = (2*a-3*b+c)/(2*dz2);
 
             ubuft.push_back(c0);
             ubuft.push_back(c1);
@@ -484,7 +449,7 @@ namespace Faunus {
           std::vector<bool> CheckUBuffer(std::vector<T>& ubuft, 
               T rlow,
               T rupp,
-              std::function<T(T)> &f) {
+              std::function<T(T)> f) {
             // vb[0]: Tolerance is approved
             // vb[1]: A repulsive part is found
             std::vector<bool> vb;
@@ -495,7 +460,7 @@ namespace Faunus {
             int ncheck = 11;
             T dr = (rupp-rlow)/(ncheck-1);
 
-            for (int i = 0; i < ncheck; i++) {
+            for (int i=0; i<ncheck; i++) {
               T r1 = rlow+dr*((T)i);
               T r2 = r1*r1;
               T u0 = f(r2);
@@ -506,15 +471,13 @@ namespace Faunus {
                     dz*(ubuft.at(3)+
                       dz*(ubuft.at(4)+
                         dz*(ubuft.at(5)+
-                          dz*ubuft.at(6)
-                          ))));
+                          dz*ubuft.at(6) ))));
 
               T fsum = ubuft.at(2)+
-                dz*(2.0*ubuft.at(3)+
-                    dz*(3.0*ubuft.at(4)+
-                      dz*(4.0*ubuft.at(5)+
-                        dz*(5.0*ubuft.at(6)
-                          ))));
+                dz*(2*ubuft.at(3)+
+                    dz*(3*ubuft.at(4)+
+                      dz*(4*ubuft.at(5)+
+                        dz*(5*ubuft.at(6) ))));
 
               if (std::abs(usum-u0) > base::utol)
                 return vb;
@@ -530,7 +493,7 @@ namespace Faunus {
           }
 
         public:
-          tabulatorintel() : base() {
+          AndreaIntel() : base() {
             mngrid = 1200;
             ndr = 100;
             drfrac = 0.9;
@@ -541,8 +504,8 @@ namespace Faunus {
 
             // Linear search starting from large distances
             unsigned int i;
-            for (i = 0; i < d.r2.size(); i++)
-              if (r2 > d.r2[i])
+            for (i=0; i<d.r2.size(); i++)
+              if (r2>d.r2[i])
                 break;
             int pos = i;
 
@@ -560,7 +523,7 @@ namespace Faunus {
             return usum;
           }
 
-          typename base::data generate(std::function<T(T)> &f) {
+          typename base::data generate(std::function<T(T)> f) {
             base::check();
 
             typename base::data td;
@@ -582,10 +545,8 @@ namespace Faunus {
               T rlow = rupp;
               T zlow;
               std::vector<T> ubuft;
-              int j;
-
               dr=(rupp-minv);
-
+              int j;
               for (j=0; j<ndr; j++) {
                 zupp=rupp*rupp;
                 rlow = rupp-dr;
@@ -610,7 +571,7 @@ namespace Faunus {
               }
               assert(j<ndr && "Try to increase utol/ftol");
               td.r2.push_back(zlow);
-              assert(ubuft==7 && "Wrong size of ubuft, minvalue + 6 coefficients");
+              assert(ubuft.size()==7 && "Wrong size of ubuft, minvalue + 6 coefficients");
               for (unsigned int k = 1; k < ubuft.size(); k++)
                 td.c.push_back(ubuft.at(k));
 
@@ -626,7 +587,7 @@ namespace Faunus {
             return td;
           }
 
-          typename base::data generate_full(std::function<T(T)> &f) {
+          typename base::data generate_full(std::function<T(T)> f) {
             typename base::data tg = generate(f);
 
             // Assume infinity from min to zero
@@ -692,29 +653,21 @@ namespace Faunus {
       };
 
     /**
-     * @brief Hermite cubic spline table
+     * @brief Hermite cubic spline
      * @todo Hide data and functions
      */
     template<typename T=double>
-      struct tabulatorherm : public tabulatorbase<T> {
-        typedef tabulatorbase<T> base; // for convenience, only
+      struct Hermite : public TabulatorBase<T> {
+        typedef TabulatorBase<T> base; // for convenience, only
 
         int mngrid;    // Max number of controlpoints
         int ndr;        // Max number of trials to decr dr
         T drfrac;  // Multiplicative factor to decr dr
 
-        tabulatorherm() : base() {
+        Hermite() : base() {
           mngrid = 1200;
           ndr = 100;
           drfrac = 0.9;
-        }
-
-        void set_mngrid(int _mngrid) {
-          mngrid = _mngrid;
-        }
-
-        void set_ndr(int _ndr) {
-          mngrid = _ndr;
         }
 
         // gets tabulated value at r2
@@ -724,7 +677,7 @@ namespace Faunus {
           T min = d.r2[pos];
           T dz = r2-min;
           int pos4 = 4*pos;
-          T usum =  d.c[pos4+0]+
+          T usum = d.c[pos4+0]+
             dz*(d.c[pos4+1]+
                 dz*(d.c[pos4+2]+
                   dz*(d.c[pos4+3])
@@ -741,13 +694,11 @@ namespace Faunus {
             T u0upp,
             T u1upp) {
 
-          std::vector<T> ubuft;
+          std::vector<T> ubuft(1,zlow);
 
-          ubuft.push_back(zlow);
           // Zero potential and force return no coefficients
           if (u0low == 0.0 && u1low == 0.0) {
-            for (int i=0; i<4; i++)
-              ubuft.push_back(0);
+            ubuft.resize(5,0);
             return ubuft;
           }
 
@@ -760,8 +711,8 @@ namespace Faunus {
           T w1upp = u1upp;
           T c0 = w0low;
           T c1 = w1low;
-          T c2 = 3.0*(w0upp-w0low)/dz2-(w1upp+2.0*w1low)/dz1;
-          T c3 = (w1upp+w1low)/dz2-2.0*(w0upp-w0low)/dz3;
+          T c2 = 3*(w0upp-w0low)/dz2-(w1upp+2*w1low)/dz1;
+          T c3 = (w1upp+w1low)/dz2-2*(w0upp-w0low)/dz3;
 
           ubuft.push_back(c0);
           ubuft.push_back(c1);
@@ -773,12 +724,10 @@ namespace Faunus {
         std::vector<bool> CheckUBuffer(std::vector<T>& ubuft, 
             T rlow,
             T rupp,
-            std::function<T(T)> &f) {
-          // vb[0]: Tolerance is approved
-          // vb[1]: A repulsive part is found
+            std::function<T(T)> f) {
           std::vector<bool> vb;
-          vb.push_back(false);
-          vb.push_back(false);
+          vb.push_back(false); // vb[0]: Tolerance is approved
+          vb.push_back(false); // vb[1]: A repulsive part is found
 
           // Number of points to control
           int ncheck = 101;
@@ -813,7 +762,7 @@ namespace Faunus {
           return vb;
         }
 
-        typename base::data generate(std::function<T(T)> &f) {
+        typename base::data generate(std::function<T(T)> f) {
           base::check();
 
           typename base::data td;
@@ -831,7 +780,7 @@ namespace Faunus {
           td.r2.push_back(zupp);
 
           int i;
-          for (i=0; i < mngrid; i++) {
+          for (i=0; i<mngrid; i++) {
             T rlow = rupp;
             T zlow;
             std::vector<T> ubuft;
@@ -839,7 +788,7 @@ namespace Faunus {
 
             dr=(rupp-minv);
 
-            for (j=0; j < ndr; j++) {
+            for (j=0; j<ndr; j++) {
               zupp=rupp*rupp;
               rlow = rupp-dr;
               if (rumin > rlow)
@@ -861,7 +810,7 @@ namespace Faunus {
             }
             assert(j<ndr && "Try to increase utol");
             td.r2.push_back(zlow);
-            assert(ubuft==5 && "Wrong size of ubuft, minvalue + 4 coefficients");
+            assert(ubuft.size()==5 && "Wrong size of ubuft, minvalue + 4 coefficients");
             for (unsigned int k = 1; k < ubuft.size(); k++)
               td.c.push_back(ubuft.at(k));
 
@@ -888,22 +837,22 @@ namespace Faunus {
           return tdsort;
         }
 
-        typename base::data generate_full(std::function<T(T)> &f) {
+        typename base::data generate_full(std::function<T(T)> f) {
 
           typename base::data tg = generate(f);
 
           // Assume zero at from max to "infinity"
-          tg.rmax2 = 10000000000000.0;
+          tg.rmax2 = 1e9;
           tg.r2.push_back(pc::infty);
-          tg.c.push_back(0.0);
-          tg.c.push_back(0.0);
-          tg.c.push_back(0.0);
-          tg.c.push_back(0.0);
+          tg.c.push_back(0);
+          tg.c.push_back(0);
+          tg.c.push_back(0);
+          tg.c.push_back(0);
 
           // Assume infinity from min to zero
           auto it = tg.r2.begin();
-          tg.rmin2 = 0.0;
-          tg.r2.insert(it, 0.0);
+          tg.rmin2 = 0;
+          tg.r2.insert(it, 0);
 
           it = tg.c.begin();
           tg.c.insert ( it , 0.0 );
@@ -921,9 +870,9 @@ namespace Faunus {
 
           // Assume zero at from zero to "infinity"
           tg.rmin2 = 0.0;
-          tg.rmax2 = 10000000000000.0;
-          tg.r2.push_back(0.0);
-          tg.r2.push_back(10000000000000.0);
+          tg.rmax2 = 1e9;
+          tg.r2.push_back(0);
+          tg.r2.push_back(1e9);
           tg.c.push_back(0);
           tg.c.push_back(0);
           tg.c.push_back(0);
@@ -954,25 +903,17 @@ namespace Faunus {
      * @todo Hide data and functions
      */
     template<typename T=double>
-      struct tabulatorlin : public tabulatorbase<T> {
-        typedef tabulatorbase<T> base; // for convenience, only
+      struct Linear : public TabulatorBase<T> {
+        typedef TabulatorBase<T> base; // for convenience, only
 
         int mngrid;    // Max number of controlpoints
         int ndr;        // Max number of trials to decr dr
         T drfrac;  // Multiplicative factor to decr dr
 
-        tabulatorlin() : base() {
+        Linear() : base() {
           mngrid = 1200;
           ndr = 100;
           drfrac = 0.9;
-        }
-
-        void set_mngrid(int _mngrid) {
-          mngrid = _mngrid;
-        }
-
-        void set_ndr(int _ndr) {
-          mngrid = _ndr;
         }
 
         // gets tabulated value at r2
@@ -1010,18 +951,17 @@ namespace Faunus {
         std::vector<bool> CheckUBuffer(std::vector<T>& ubuft, 
             T rlow,
             T rupp,
-            std::function<T(T)> &f) {
-          // vb[0]: Tolerance is approved
-          // vb[1]: A repulsive part is found
-          std::vector<bool> vb;
-          vb.push_back(false);
-          vb.push_back(false);
+            std::function<T(T)> f) {
+
+          std::vector<bool> vb(2);
+          vb[0]=false; // vb[0]: Tolerance is approved 
+          vb[1]=false; // vb[1]: A repulsive part is found
 
           // Number of points to control
           int ncheck = 11;
           T dr = (rupp-rlow)/(ncheck-1);
 
-          for (int i = 0; i < ncheck; i++) {
+          for (int i=0; i<ncheck; i++) {
             T r1 = rlow+dr*((T)i);
             T r2 = r1*r1;
             T u0 = f(r2);
@@ -1037,7 +977,7 @@ namespace Faunus {
           return vb;
         }
 
-        typename base::data generate(std::function<T(T)> &f) {
+        typename base::data generate(std::function<T(T)> f) {
           base::check();
           typename base::data td;
           td.rmax2 = base::rmax*base::rmax;
@@ -1053,7 +993,7 @@ namespace Faunus {
           td.r2.push_back(zupp);
 
           int i;
-          for (i=0; i < mngrid; i++) {
+          for (i=0; i<mngrid; i++) {
             T rlow = rupp;
             T zlow;
             std::vector<T> ubuft;
@@ -1061,7 +1001,7 @@ namespace Faunus {
 
             dr=(rupp-minv);
 
-            for (j=0; j < ndr; j++) {
+            for (j=0; j<ndr; j++) {
               zupp=rupp*rupp;
               rlow = rupp-dr;
               if (rumin > rlow)
@@ -1080,7 +1020,7 @@ namespace Faunus {
             }
             assert(j<ndr && "Try to increase utol/ftol");
             td.r2.push_back(zlow);
-            assert(ubuft.size==3 && "Wrong size of ubuft, minvalue + 2 coefficients");
+            assert(ubuft.size()==3 && "Wrong size of ubuft, minvalue + 2 coefficients");
             for (unsigned int k = 1; k < ubuft.size(); k++)
               td.c.push_back(ubuft.at(k));
 
@@ -1109,7 +1049,7 @@ namespace Faunus {
           return tdsort;
         }
 
-        typename base::data generate_full(std::function<T(T)> &f) {
+        typename base::data generate_full(std::function<T(T)> f) {
           typename base::data tg = generate(f);
           // Assume zero at from max to "infinity"
           tg.rmax2 = 10000000000000.0;
@@ -1162,7 +1102,7 @@ namespace Faunus {
   } //Tabulate namespace
 
 #ifdef FAUNUS_POTENTIAL_H
-  
+
   namespace Potential {
 
     /**
@@ -1170,7 +1110,7 @@ namespace Faunus {
      *
      * If the pair is not recognized, the pair-potential will be tabulated
      */
-    template<typename Tpairpot, typename Ttabulator=Tabulate::tabulator<double> >
+    template<typename Tpairpot, typename Ttabulator=Tabulate::Andrea<double> >
       class PotentialTabulate : public Tpairpot {
         private:
           Ttabulator tab;
@@ -1192,9 +1132,8 @@ namespace Faunus {
           double operator()(const particle &a, const particle &b, double r2) {
             Tpair ab(a.id,b.id);
             auto it=m.find(ab);
-            if (it!=m.end()) {
+            if (it!=m.end())
               return tab.eval(it->second, r2);
-            }
             std::function<double(double)> f = [=](double r2) {return Tpairpot(*this)(a,b,r2);};
             m[ab] = tab.generate_full(f);
             return (*this)(a,b,r2);
@@ -1206,7 +1145,7 @@ namespace Faunus {
      *
      * All pair-potentials are tabulated in constructor
      */
-    template<typename Tpairpot, typename Ttabulator=Tabulate::tabulator<double> >
+    template<typename Tpairpot, typename Ttabulator=Tabulate::Andrea<double> >
       class PotentialTabulateVec : public Tpairpot {
         private:
           Ttabulator tab;
@@ -1273,12 +1212,13 @@ namespace Faunus {
      * `add()` function, the `Tdefault` pair potential is used.
      * If the pair is found then a tabulation will be used.
      */
-    template<typename Tdefault, typename Ttabulator=Tabulate::tabulator<double>, typename Tpair=opair<int> >
+    template<typename Tdefault, typename Ttabulator=Tabulate::Andrea<double> >
       class PotentialMapTabulated : public PotentialMap<Tdefault> {
         private:
+          typedef opair<int> Tpair;
+          typedef PotentialMap<Tdefault> base;
           double rmin2,rmax2;
           int print;
-          typedef PotentialMap<Tdefault> base;
           Ttabulator tab;
           std::map<Tpair, typename Ttabulator::data> mtab;
 
@@ -1372,9 +1312,10 @@ namespace Faunus {
      * `add()` function, the pairpotential will use generate_empty().
      * Recommended for the user to specify all pairs in `add()`
      */
-    template<typename Tdefault, typename Ttabulator=Tabulate::tabulator<double>, typename Tpair=opair<int> >
+    template<typename Tdefault, typename Ttabulator=Tabulate::Andrea<double> >
       class PotentialVecTabulated : public PotentialMap<Tdefault> {
         private:
+          typedef opair<int> Tpair;
           typedef PotentialMap<Tdefault> base;
           Ttabulator tab;
           vector<typename Ttabulator::data> vtab;

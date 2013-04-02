@@ -5,6 +5,20 @@ using namespace Faunus;
 
 bool eq(double a, double b, double tol=1e-6) { return (std::abs(a-b)<tol) ? true : false; }
 
+/* check tabulator */
+template<typename Ttabulator>
+void checkTabulator() {
+  Ttabulator t;
+  t.setRange(0.9, 100);
+  t.setTolerance(0.01, 0.01);
+  std::function<double(double)> f = [](double x) { return 1/x; };
+  auto data = t.generate(f); 
+  for (double x=1.0; x<100; x+=1) {
+    double error = fabs( f(x) - t.eval(data,x) );
+    assert(error<0.01 && error>0);
+  }
+}
+
 /*
  * Check various copying operations
  * between particle types
@@ -144,5 +158,10 @@ int main() {
     table(2.1)+=3;
     assert( eq( table(2.1), 2 ) && "Bad average or 2D table");
   }
+
+  // check tabulators
+  checkTabulator<Tabulate::Andrea<double> >();
+  checkTabulator<Tabulate::Linear<double> >();
+  checkTabulator<Tabulate::Hermite<double> >();
 
 }

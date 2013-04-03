@@ -786,6 +786,7 @@ namespace Faunus {
      * @brief Adds pair potentials together
      *
      * Example:
+     *
      *     auto primitiveModel = Potential::Coulomb() + Potential::HardSphere();
      */
     template<class T1, class T2,
@@ -803,48 +804,48 @@ namespace Faunus {
         double dipdip(const Point&, const Point&, double);
     };
 
-    /*!
-     * \brief Lennard-Jones potential with Lorentz-Berthelot mixing rule
+    /**
+     * @brief Lennard-Jones potential with Lorentz-Berthelot mixing rule
      */
     typedef LennardJonesMixed<LorentzBerthelot> LennardJonesLB;
 
-    /*!
-     * \brief Combined Coulomb / HardSphere potential
+    /**
+     * @brief Combined Coulomb / HardSphere potential
      */
     typedef CombinedPairPotential<Coulomb, HardSphere> CoulombHS;
 
-    /*!
-     * \brief Combined Coulomb / LennardJones potential
+    /**
+     * @brief Combined Coulomb / LennardJones potential
      */
     typedef CombinedPairPotential<Coulomb, LennardJones> CoulombLJ;
 
-    /*!
-     * \brief Combined Coulomb / WeeksChandlerAndersen potential
+    /**
+     * @brief Combined Coulomb / WeeksChandlerAndersen potential
      */
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> CoulombWCA;
 
-    /*!
-     * \brief Combined Coulomb / LennardJonesTrunkShift potential
+    /**
+     * @brief Combined Coulomb / LennardJonesTrunkShift potential
      */
     typedef CombinedPairPotential<Coulomb, LennardJonesTrunkShift> CoulombLJTS;
 
-    /*!
-     * \brief Combined Coulomb / LennardJones potential
+    /**
+     * @brief Combined Coulomb / LennardJones potential
      */
     typedef CombinedPairPotential<CoulombWolf, LennardJones> CoulombWolfLJ;
 
-    /*!
-     * \brief Combined DebyeHuckel / HardSphere potential
+    /**
+     * @brief Combined DebyeHuckel / HardSphere potential
      */
     typedef CombinedPairPotential<DebyeHuckel, HardSphere> DebyeHuckelHS;
 
-    /*!
-     * \brief Combined DebyeHuckel / LennardJones potential
+    /**
+     * @brief Combined DebyeHuckel / LennardJones potential
      */
     typedef CombinedPairPotential<DebyeHuckel, LennardJones> DebyeHuckelLJ;
 
-    /*!
-     * \brief Combined DebyeHuckel / R12Repulsion potential
+    /**
+     * @brief Combined DebyeHuckel / R12Repulsion potential
      */
     typedef CombinedPairPotential<DebyeHuckel, R12Repulsion> DebyeHuckelr12;
 

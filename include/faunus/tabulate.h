@@ -49,7 +49,7 @@ namespace Faunus {
             return (f1(f,x+numdr*0.5)-f1(f,x-numdr*0.5))/(numdr);
           }
 
-          void check() {
+          void check() const {
             assert(rmin>=0);
             assert(rmax>0);
             assert(rmin<rmax);
@@ -122,10 +122,10 @@ namespace Faunus {
     template<typename T=double>
       class Andrea : public TabulatorBase<T> {
         private:
-          typedef TabulatorBase<T> base; // for convenience, only
-          int mngrid;    // Max number of controlpoints
-          int ndr;        // Max number of trials to decr dr
-          T drfrac;  // Multiplicative factor to decr dr
+          typedef TabulatorBase<T> base;// for convenience
+          int mngrid; // Max number of controlpoints
+          int ndr;    // Max number of trials to decr dr
+          T drfrac;   // Multiplicative factor to decr dr
 
           std::vector<T> SetUBuffer(T rlow, 
               T zlow, 
@@ -176,16 +176,17 @@ namespace Faunus {
             return ubuft;
           }
 
-          /*
-           * Returns:
-           *
-           * vb[0]: Tolerance is approved
-           * vb[1]: A repulsive part is found
+          /**
+           * @brief Description...
+           * @param ubuft description...
+           * @returns boolean vector.
+           * - `[0]==true`: tolerance is approved,
+           * - `[1]==true` Repulsive part is found.
            */
           std::vector<bool> CheckUBuffer(std::vector<T>& ubuft, 
               T rlow,
               T rupp,
-              std::function<T(T)> f) {
+              std::function<T(T)> f) const {
 
             // Number of points to control
             int ncheck = 11;
@@ -231,7 +232,11 @@ namespace Faunus {
             drfrac = 0.9;
           }
 
-          // gets tabulated value at r2
+          /**
+           * @brief Get tabulated value at f(x)
+           * @param d Table data
+           * @param r2 x value
+           */
           T eval(const typename base::data& d, T r2) const {
             auto low = std::lower_bound(d.r2.begin(), d.r2.end(), r2);
             size_t pos = (low-d.r2.begin()-1);
@@ -247,6 +252,9 @@ namespace Faunus {
             return usum;
           }
 
+          /**
+           * @brief Tabulate f(x)
+           */
           typename base::data generate(std::function<T(T)> f) {
             base::check();
             typename base::data td;
@@ -326,6 +334,9 @@ namespace Faunus {
             return tdsort;
           }
 
+          /**
+           * @brief ...
+           */
           typename base::data generate_full(std::function<T(T)> f) {
             typename base::data tg = generate(f);
 
@@ -344,6 +355,9 @@ namespace Faunus {
             return tg;
           }
 
+          /**
+           * @brief ...
+           */
           typename base::data generate_empty() {
             typename base::data tg;
             // Assume zero at from zero to "infinity"

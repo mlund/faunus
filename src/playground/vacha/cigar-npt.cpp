@@ -13,7 +13,7 @@ int main() {
   InputMap mcp("cigar-npt.input");     // open user input file
   MCLoop loop(mcp);                   // class for handling mc loops
   FormatPQR pqr;                      // PQR structure file I/O
-  EnergyDrift sys;                    // class for tracking system energy drifts
+  EnergyDrift sys; // class for tracking system energy drifts
 
   // Energy functions and space
   Energy::Hamiltonian pot;
@@ -24,7 +24,7 @@ int main() {
   Move::Isobaric iso(mcp,pot,spc);
   Move::AtomicTranslation mv(mcp, pot, spc);
   Move::AtomicRotation rot(mcp, pot, spc);
-  Analysis::RadialDistribution<float,int> rdf(0.2);
+  Analysis::RadialDistribution<> rdf(0.2);
 
   // Add cigars
   GroupAtomic cigars(spc, mcp);
@@ -52,10 +52,10 @@ int main() {
           break;
         case 1:
           rot.setGroup(cigars);
-          sys+=rot.move( cigars.size() );  // translate cigars
+          sys+=rot.move( cigars.size() ); // translate cigars
           break;
         case 2:
-          sys+=iso.move();              // isobaric volume move
+          sys+=iso.move();                // isobaric volume move
           break;
       }
 

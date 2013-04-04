@@ -1,5 +1,5 @@
-#ifndef FAUNUS_MCMOVE_H
-#define FAUNUS_MCMOVE_H
+#ifndef FAUNUS_MOVE_H
+#define FAUNUS_MOVE_H
 
 #ifndef SWIG
 #include <faunus/common.h>
@@ -59,7 +59,48 @@ namespace Faunus {
           }
       };
 
-    /*!
+    /**
+     * @brief Add polarization step to a move
+     *
+     * This will insert an electric field calculation
+     * after the original trial move and iteratively
+     * calculate induced dipole moments on all particles.
+     *
+     * @todo unfinished
+     */
+    template<class Tmove>
+      class PolarizeMove : public Tmove {
+        private:
+          double threshold; // threshold for iteration
+          vector<Point> E;  // field on each particle
+
+          void _trialMove() {
+            Tmove::_trialMove();                         // base class MC move
+
+            E.resize(Tmove::spc->trial.size());          // make sure sizes match
+            std::fill(E.begin(), E.end(), Point(0,0,0)); // fill with zero
+
+            Tmove::pot->field(Tmove::spc->trial, E);     // calc. field on all particles
+            // update iteratively...
+          }
+        public:
+          PolarizeMove(InputMap &in, Energy::Energybase &e, Space &s) :
+            Tmove(in,e,s) {}
+      };
+
+    template<class Tmove>
+      class EwaldMove : public Tmove {
+        protected:
+          void _trialMove() {
+            Tmove::_trialMove();
+            // ... update induced moments
+          }
+        public:
+          EwaldMove(InputMap &in, Energy::Energybase &e, Space &s) :
+            Tmove(in,e,s) {}
+      };
+
+    /**
      * @brief Base class for Monte Carlo moves
      *
      * The is a base class that handles Monte Carlo moves and derived classes
@@ -75,7 +116,7 @@ namespace Faunus {
      * These functions should be pretty self-explanatory and are - via wrapper
      * functions - called by move(). It is important that the _energyChange() function
      * returns the full energy associated with the move. For example, for NPT
-     * moves the pV term should be included and so on. Please do stride not try override
+     * moves the pV term should be included and so on. Try not to override
      * the move() function as this should be generic to all MC moves.
      *
      * @date Lund, 2007-2011
@@ -93,13 +134,13 @@ namespace Faunus {
         virtual void _rejectMove()=0;          //!< Reject move, revert to old coordinates.
         virtual double _energyChange()=0;      //!< Returns energy change of trialMove (kT)
 
-        void trialMove();                      //!< Do a trial move (wrapper)
         void acceptMove();                     //!< Accept move, store new coordinates etc. (wrapper)
         void rejectMove();                     //!< Reject move, revert to old coordinates etc. (wrapper)
         double energyChange();                 //!< Returns energy change of trialMove i kT (wrapper)
         bool metropolis(const double&) const;  //!< Metropolis criteria
 
       protected:
+        void trialMove();                      //!< Do a trial move (wrapper)
         Energy::Energybase* pot;         //!< Pointer to energy functions
         Space* spc;                      //!< Pointer to Space (particles and groups are stored there)
         string title;                    //!< title of move (mandatory!)
@@ -138,12 +179,12 @@ namespace Faunus {
       private:
         typedef std::map<short, Average<double> > map_type;
         string _info();
-        void _trialMove();
         void _acceptMove();
         void _rejectMove();
         double _energyChange();
         bool run() const;                //!< Runfraction test
       protected:
+        void _trialMove();
         map_type accmap; //!< Single particle acceptance map
         map_type sqrmap; //!< Single particle mean square displacement map
 
@@ -169,9 +210,10 @@ namespace Faunus {
      */
     class AtomicRotation : public AtomicTranslation {
       private:
-        void _trialMove();
         string _info();
         Geometry::QuaternionRotate rot;
+      protected:
+        void _trialMove();
       public:
         AtomicRotation(InputMap&, Energy::Energybase&, Space&, string="rot_particle");
     };
@@ -556,6 +598,12 @@ namespace Faunus {
     };
 
 #endif
+
+    /** @brief Atomic translation with dipolar polarizability */
+    typedef PolarizeMove<AtomicTranslation> AtomicTranslationPol;
+
+    /** @brief Atomic rotation with dipolar polarizability */
+    typedef PolarizeMove<AtomicRotation> AtomicRotationPol;
 
   }//namespace
 }//namespace

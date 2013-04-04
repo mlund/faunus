@@ -3,7 +3,6 @@
 
 #ifndef SWIG
 #include <faunus/common.h>
-#include <faunus/average.h>
 #include <faunus/geometry.h>
 #include <faunus/range.h>
 #endif
@@ -24,26 +23,26 @@ namespace Faunus {
       char w;                           //!< Text padding for info() functions
     public:
       Group(int=-1, int=-1);
-      string info();                                         //!< Information string
-      string name;                                           //!< Information time (and short) name
-      Point cm_trial;                                        //!< mass center vector for trial position
-      Point cm;                                              //!< mass center vector
-      int random() const;                                    //!< Pick random particle index in Group
+      string info();                          //!< Information string
+      string name;                            //!< Information time (and short) name
+      Point cm_trial;                         //!< mass center vector for trial position
+      Point cm;                               //!< mass center vector
+      int random() const;                     //!< Pick random particle index in Group
+      double charge(const p_vec&) const;      //!< Calculates total charge
+      Point massCenter(const Space&) const;   //!< Calculates mass center - does not touch group!
+      Point setMassCenter(const Space &);     //!< Calculate AND set mass center (cm and cm_trial)
+      Point dipolemoment(const Space&) const; //!< Calculates dipole moment
 
-      double charge(const p_vec&) const;                     //!< Calculates total charge
+      virtual void rotate(Space&, const Point&, double);//!< Rotate around a vector
+      virtual void translate(Space&, const Point&);     //!< Translate along a vector
+      virtual void scale(Space&, double);               //!< Volume scaling for NPT ensemble
+      virtual void undo(Space&);                        //!< Undo move operation
+      virtual void accept(Space&);                      //!< Accept a trial move
 
-      Point massCenter(const Space&) const;                  //!< Calculates mass center - does not set touch group!
-      Point setMassCenter(const Space &);                    //!< Calculate AND set mass center (cm and cm_trial)
-      Point dipolemoment(const Space&) const;                //!< Calculates dipole moment
+      virtual bool isMolecular() const;                 //!< True if group represents a molecule
+      virtual bool isAtomic() const;                    //!< True if group represents atomic species
 
-      virtual void rotate(Space&, const Point&, double);     //!< Rotate around a vector
-      virtual void translate(Space&, const Point&);          //!< Translate along a vector
-      virtual void scale(Space&, double);                    //!< Volume scaling for NPT ensemble
-      virtual void undo(Space&);                             //!< Undo move operation
-      virtual void accept(Space&);                           //!< Accept a trial move
-
-      virtual bool isMolecular() const;                      //!< True if group represents a molecule
-      virtual bool isAtomic() const;                         //!< True if group represents atomic species
+      virtual int numMolecules() const; //!< Number of molecules in group
 
       bool operator==(const Group&) const;                   //!< Compare two Groups
       friend std::ostream &operator<<(std::ostream&, Group&);//!< Output Group data to stream
@@ -72,6 +71,7 @@ namespace Faunus {
       GroupMolecular(int=-1, int=-1);
       void scale(Space&, double);               //!< Mass-center volume scale
       bool isMolecular() const;                 //!< Always true for GroupMolecular
+      int numMolecules() const;                 //!< Number of molecules in group
   };
 
   /**
@@ -84,10 +84,11 @@ namespace Faunus {
     public:
       int N;                          //!< Number of atoms in each molecule
       GroupArray(int);                //!< Constructor - number of atoms per molecule.
-      int sizeMol() const;            //!< Number of molecules
       int randomMol() const;          //!< Pick a random molecule
       GroupMolecular& operator[](int);//!< Access i'th molecule
       void add(const GroupMolecular&);//!< Add a molecule to the array - range must be continuous
+      void scale(Space&, double);     //!< Mass-center volume scale
+      int numMolecules() const;       //!< Number of molecules
   };
 
 }//namespace

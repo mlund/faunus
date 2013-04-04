@@ -3,12 +3,11 @@
 
 #ifndef SWIG
 #include <Eigen/Core>
-#include <faunus/common.h>
-#include <faunus/species.h>
-#include <faunus/physconst.h>
 #endif
 
 namespace Faunus {
+
+  class AtomData;
 
   /**
    * @page points_and_particles Points and Particles
@@ -38,9 +37,8 @@ namespace Faunus {
    * @date 2002-2007
    */
   struct PointBase : public Eigen::Vector3d {
-    typedef double Tcoord;                             //!< Floating point type for Point coordinates
-    typedef Eigen::Vector3d Tvec;                      //!< 3D vector from Eigen
-    typedef std::function<Tvec(const Tvec)> RotFunctor;//!< Rotation functor
+    typedef double Tcoord;        //!< Floating point type for Point coordinates
+    typedef Eigen::Vector3d Tvec; //!< 3D vector from Eigen
 
     /** @brief Default constructor. Data is *not* zeroed */
     inline PointBase() {}
@@ -94,11 +92,6 @@ namespace Faunus {
     template<typename Tgeometry>
       void translate(const Tgeometry &geo, const PointBase &a) {
         assert(&geo!=nullptr);
-#ifndef __clang__
-        static_assert(
-            std::is_base_of<Geometry::Geometrybase, Tgeometry>::value,
-            "Tgeo must be derived from Geometrybase" );
-#endif
         (*this)+=a;
         geo.boundary(*this);
       }
@@ -127,20 +120,21 @@ namespace Faunus {
 
     /**
      * @brief Transform point (rotation etc)
-     * @param rotator Functor that rotates a point and returns the rotated Point
+     * @param rot Functor that rotates a point and returns the rotated Point
      *
      * The functor should take care of simulation boundaries (if any) and typically one
      * would want to pass the Geometry::VectorRotate class as in the following example:
      * @code
      * Point a(1,0,0);
-     * VectorRotate rotator;
+     * QuaternionRotate rotator;
      * rotator.setAxis(geometry, Point(0,0,0), Point(0,0,1), 3.14 ); // rotate pi around 0,0,1
      * a.rotate(rotator);
      * @endcode
      */
-    void rotate(RotFunctor rotator) {
-      *this = rotator(*this);
-    }
+    template<typename Trotator>
+      void rotate(const Trotator &rot) {
+        *this = rot(*this);
+      }
   };
 
   /**
@@ -202,11 +196,6 @@ namespace Faunus {
       template<typename Tgeometry>
         void translate(const Tgeometry &geo, const HyperPoint &a) {
           assert(&geo!=nullptr);
-#ifndef __clang__
-          static_assert(
-              std::is_base_of<Geometry::Geometrybase, Tgeometry>::value,
-              "Tgeo must be derived from Geometrybase" );
-#endif
           (*this)+=a;
           geo.boundary(*this);
         }
@@ -319,13 +308,12 @@ namespace Faunus {
     typedef Point::Tcoord Tradius;
     typedef Point::Tcoord Tcharge;
     typedef Point::Tcoord Tmw;
-    typedef AtomData::Tid Tid;
+    typedef unsigned char Tid;
     typedef bool Thydrophobic;
-
+    Tid id;                                   //!< Particle identifier
     Tcharge charge;                           //!< Charge number
     Tradius radius;                           //!< Radius
     Tmw mw;                                   //!< Molecular weight
-    AtomData::Tid id;                         //!< Particle identifier
     Thydrophobic hydrophobic;                 //!< Hydrophobic flag
 
     PointParticle() { clear(); }              //!< Constructor
@@ -333,21 +321,22 @@ namespace Faunus {
     template<typename OtherDerived>
       PointParticle(const Eigen::MatrixBase<OtherDerived>& other) : Point(other) {}
 
-    PointParticle& operator=(const AtomData &d) {
-      id=d.id;
-      charge=d.charge;
-      radius=d.radius;
-      mw=d.mw;
-      hydrophobic=d.hydrophobic;
-      return *this;
-    }
-
     template<typename OtherDerived>
       PointParticle& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
         Point::operator=(other);
         return *this;
       }
 
+    template<class T,
+      class = typename std::enable_if<std::is_base_of<AtomData,T>::value>::type>
+      PointParticle& operator=(const T &d) {
+        id=d.id;
+        charge=d.charge;
+        radius=d.radius;
+        mw=d.mw;
+        hydrophobic=d.hydrophobic;
+        return *this;
+      }
 
     /**
      * @brief Copy from stream
@@ -382,7 +371,7 @@ namespace Faunus {
 
     /** @brief Volume of particle */
     double volume() const {
-      return 4*pc::pi*radius*radius*radius/3;
+      return 4*std::acos(-1)*radius*radius*radius/3;
     }
 
     /** @brief Zero data */
@@ -401,9 +390,9 @@ namespace Faunus {
   struct DipoleParticle : public PointParticle {
     Point mu;               //!< Dipole moment unit vector
     double muscalar;        //!< Dipole moment scalar
-    Eigen::Matrix3d alpha;
 
-    inline DipoleParticle() : mu(0,0,0), muscalar(0) {};
+    inline DipoleParticle() : mu(0,0,1), muscalar(0) {
+    };
 
     /** @brief Copy constructor for Eigen derivatives */
     template<typename OtherDerived>
@@ -423,11 +412,14 @@ namespace Faunus {
     }
 
     /** @brief Copy properties from AtomData object */
-    inline DipoleParticle& operator=(const AtomData &d) {
-      PointParticle::operator=(d);
-      // copy more atom properties here...
-      return *this;
-    }
+    template<class T,
+      class = typename std::enable_if<std::is_base_of<AtomData,T>::value>::type>
+        DipoleParticle& operator=(const T &d) {
+          PointParticle::operator=(d);
+          muscalar=d.mu;
+          // copy more atom properties here...
+          return *this;
+        }
 
     /* read in same order as written! */
     inline DipoleParticle& operator<<(std::istream &in) {
@@ -442,6 +434,11 @@ namespace Faunus {
       o << PointParticle(p) << " " << p.mu << " " << p.muscalar;
       return o;
     }
+
+    template<typename Trotator>
+      void rotate(const Trotator &rot) {
+        mu = rot(mu);
+      }
   };
 
   /**
@@ -481,22 +478,25 @@ namespace Faunus {
       }
 
       /** @brief Copy properties from AtomData object */
-      inline CigarParticle& operator=(const AtomData &d) {
-        PointParticle::operator=(d);
-        // copy more atom properties here...
-        return *this;
-      }
+      template<class T,
+        class = typename std::enable_if<std::is_base_of<AtomData,T>::value>::type> 
+          CigarParticle& operator=(const T &d) {
+            PointParticle::operator=(d);
+            // copy more atom properties here...
+            return *this;
+          }
 
-      inline void rotate(RotFunctor rot) {
-        if (halfl>1e-6) {
-          dir = rot(dir);
-          patchdir = rot(patchdir);
-          patchsides[0] = rot(patchsides[0]);
-          patchsides[1] = rot(patchsides[1]);
-          chdir = rot(chdir);
-        } else
-          Point::rotate(rot);
-      }
+      template<typename Trotator>
+        void rotate(const Trotator &rot) {
+          if (halfl>1e-6) {
+            dir = rot(dir);
+            patchdir = rot(patchdir);
+            patchsides[0] = rot(patchsides[0]);
+            patchsides[1] = rot(patchsides[1]);
+            chdir = rot(chdir);
+          } else
+            Point::rotate(rot);
+        }
 
       /* read in same order as written! */
       inline CigarParticle& operator<<(std::istream &in) {

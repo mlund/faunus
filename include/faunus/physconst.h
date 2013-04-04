@@ -41,7 +41,7 @@ namespace Faunus {
 #ifdef __INTEL_COMPILER
   // needed due to constexpr bug in intel13 compiler. Fixed?
   template<class Td>
-    const Td PhysicalConstants<Td>::infty=-std::log(0);
+    const Td PhysicalConstants<Td>::infty=-std::log(0.);
 #else
   template<class Td>
     const Td PhysicalConstants<Td>::infty=std::numeric_limits<Td>::infinity();

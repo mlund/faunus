@@ -38,6 +38,7 @@ namespace Faunus {
   using std::setw;
   using std::abs;    // *very* important if cstdlib.h or algorithm is included!
   using std::sqrt;
+  using std::cbrt;   // cubic root (C++11)
   using std::exp;
   using std::cout;
   using std::ostringstream;

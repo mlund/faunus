@@ -1,14 +1,14 @@
-# Generated on Oct 23 2012 14:31:40 using 4.7.2 (SVN revision: 836)
-PolymerShape_Rgpolymer             6.08065             
-crank_Acceptancepolymer            0.962583            
-crank_acceptance                   96.2583             
-energyAverage                      -0.907744           
-pivot_Acceptancepolymer            0.913474            
-pivot_acceptance                   91.3474             
-relativeEnergyDrift                1.89669e-11         
-reptation_Acceptancepolymer        0.909231            
-reptation_acceptance               90.9231             
-transrot_acceptance                71.9381             
-transrot_polymer_acceptance        71.9381             
-transrot_polymer_dRot              83.8136             
-transrot_polymer_dTrans            12.5157             
+# Generated on Feb 24 2013 20:44:58 using 4.2.1 Compatible Apple LLVM 4.2 (clang-425.0.24)
+PolymerShape_Rgpolymer             6.08575             
+crank_Acceptancepolymer            0.941386            
+crank_acceptance                   94.1386             
+energyAverage                      -0.911416           
+pivot_Acceptancepolymer            0.915374            
+pivot_acceptance                   91.5374             
+relativeEnergyDrift                6.12886e-15         
+reptation_Acceptancepolymer        0.90869             
+reptation_acceptance               90.869              
+transrot_acceptance                56.032              
+transrot_polymer_acceptance        56.032              
+transrot_polymer_dRot              74.2071             
+transrot_polymer_dTrans            36.389              

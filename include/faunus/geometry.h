@@ -83,7 +83,7 @@ namespace Faunus {
         Sphere(double);                         //!< Construct from radius (angstrom)
         Sphere(InputMap&, string="sphere");     //!< Construct from InputMap key \c prefix_radius
         void randompos(Point &);
-        void boundary(Point &) const;
+        void boundary(Point &p) const {};
         bool collision(const particle &, collisiontype=BOUNDARY) const;
         inline double sqdist(const Point &a, const Point &b) const {
           return (a-b).squaredNorm();
@@ -118,16 +118,27 @@ namespace Faunus {
         void randompos(Point&);      
         bool save(string);           
         bool load(string,bool=false);
-        bool collision(const particle&, collisiontype=BOUNDARY) const;
+        inline bool collision(const particle &a, collisiontype type=BOUNDARY) const {
+          if (std::abs(a.x())>len_half.x()) return true;
+          if (std::abs(a.y())>len_half.y()) return true;
+          if (std::abs(a.z())>len_half.z()) return true;
+          return false;
+        }
 
-        inline double sqdist(const Point &a, const Point &b) const {
-          double dx( std::abs(a.x()-b.x()) );
-          double dy( std::abs(a.y()-b.y()) );
-          double dz( std::abs(a.z()-b.z()) );
-          if (dx>len_half.x()) dx-=len.x();
-          if (dy>len_half.y()) dy-=len.y();
-          if (dz>len_half.z()) dz-=len.z();
-          return dx*dx + dy*dy + dz*dz;
+        /**
+         * For reviews of minimum image algorithms,
+         * see doi:10/ck2nrd and doi:10/kvs
+         */
+        double sqdist(const Point &a, const Point &b) const {
+          Point d = (a-b).cwiseAbs();
+          for (int i=0; i<3; ++i)
+            if (d[i]>len_half[i]) d[i]-=2*len_half[i];
+          return d.squaredNorm();
+
+          // Alternative algorithm:
+          // Eigen::Vector3d d = a-b;
+          // Eigen::Vector3i k = (2*d.cwiseProduct(len_inv)).cast<int>();
+          // return (d-k.cast<double>().cwiseProduct(len)).squaredNorm();
         }
 
         inline Point vdist(const Point &a, const Point &b) {
@@ -157,7 +168,7 @@ namespace Faunus {
     };
 
     /*!
-     * \brief Cubuid with no periodic boundaries in z direction
+     * \brief Cuboid with no periodic boundaries in z direction
      * \author Chris Evers
      * \date Lund, nov 2010
      */
@@ -289,38 +300,35 @@ namespace Faunus {
 
 #endif
 
-    /*!
-     * \brief Calculate mass center of a group
-     */
-    template<typename Tgeometry, typename Tgroup>
-      Point massCenter(const Tgeometry &geo, const p_vec &p, const Tgroup &g) {
-        if (g.empty())
-          return Point(0,0,0);
+    /** @brief Calculate mass center of a group */
+    template<typename Tgeometry, typename Tp_vec, typename TGroup>
+      Point massCenter(const Tgeometry &geo, const Tp_vec &p, const TGroup &g) {
         assert(!p.empty());
         assert(g.back() < (int)p.size());
-        assert(&geo!=NULL);
-#ifndef __clang__
-        static_assert(
-            std::is_base_of<Geometry::Geometrybase, Tgeometry>::value,
-            "Tgeo must be derived from Geometrybase" );
-#endif
-        double sum=0;
         Point cm(0,0,0);
-        Point o = p[ g.front()+(g.back()-g.front())*0.5 ];  // set origo to middle particle
-        for (auto i : g) {
-          Point t = p[i]-o;       // translate to origo
-          geo.boundary(t);        // periodic boundary (if any)
-          cm += t * p[i].mw;
-          sum += p[i].mw;
+        if (!g.empty()) {
+          Point o = p[ g.front()+(g.back()-g.front())*0.5 ];  // set origo to middle particle
+          double sum=0;
+          for (auto i : g) {
+            Point t = p[i]-o;       // translate to origo
+            geo.boundary(t);        // periodic boundary (if any)
+            cm += t * p[i].mw;
+            sum += p[i].mw;
+          }
+          if (sum<1e-6) sum=1;
+          cm=cm/sum + o;
+          geo.boundary(cm);
         }
-        if (sum<1e-6) sum=1;
-        cm=cm/sum + o;
-        geo.boundary(cm);
         return cm;
       }
 
-    Point massCenter(const Geometrybase&, const p_vec&); //!< Calculate mass center of a particle vector
-
+    /** @brief Calculate mass center of a particle vector */
+    template<typename Tgeometry, typename Tp_vec>
+      Point massCenter(const Tgeometry &geo, const Tp_vec &p) {
+        if (p.empty())
+          return Point(0,0,0);
+        return massCenter(geo,p,Group(0,p.size()-1));
+      }
 
     void translate(const Geometrybase&, p_vec&, Point); //!< Translate a particle vector by a vector
     void cm2origo(const Geometrybase&, p_vec&); //!< Translate a particle vector so mass center is in (0,0,0)
@@ -396,33 +404,6 @@ namespace Faunus {
           return a;
         }
     };
-
-    /**
-     * @brief Calculate minimum distance between two line segments
-     *
-     * Find closest distance between line segments and return its vector
-     * gets orientations and lengths of line segments and the vector connecting
-     * their center os masses (from vec1 to vec2)
-     * Copyright 2001, softSurfer (www.softsurfer.com)
-     * This code may be freely used and modified for any purpose
-     * providing that this copyright notice is included with it.
-     * SoftSurfer makes no warranty for this code, and cannot be held
-     * liable for any real or imagined damage resulting from its use.
-     * Users of this code must verify correctness for their application.
-     */
-    Point mindist_segment2segment(const Point&, double, const Point&, double, const Point&);
-    Point mindist_segment2point(const Point&, double, const Point&);
-
-    inline Point vec_perpproject(const Point &A, const Point &B) {
-      Point x;
-      x=A - B* (A.dot(B));
-      return x;
-    }
-    int test_intrpatch(const CigarParticle &, Point &, double , double , double [5]);
-    int find_intersect_plane(const CigarParticle &, const CigarParticle &, const Point &, const Point &, double , double , double [5]);
-    int find_intersect_planec(const CigarParticle &, const CigarParticle &, const Point &, const Point &, double , double , double [5]);
-    int psc_intersect(const CigarParticle &, const CigarParticle &, const Point &, double [5], double );  
-    int cpsc_intersect(const CigarParticle &, const CigarParticle &,const Point &, double [5], double );
 
   }//namespace Geometry
 }//namespace Faunus

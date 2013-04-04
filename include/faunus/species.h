@@ -22,24 +22,56 @@ namespace Faunus {
            mw,         //!< Weight [g/mol]
            charge,     //!< Charge/valency [e]
            activity,   //!< Chemical activity [mol/l]
+           alpha,      //!< Polarizability [A^3]
            dp,         //!< Translational displacement parameter [angstrom]
            dprot,      //!< Rotational displacement parameter [radians]
            mean,       //!< Mean value... (charge, sasa, etc.)
            variance;   //!< Spread around AtomData::mean
     short int patchtype;  //!< If patchy particle, which type of patch
     Thydrophobic hydrophobic;  //!< Are we hydrophobic?
+    Eigen::MatrixXd alphamatrix;
     string name;       //!< Name. Avoid spaces.
     bool operator==(const AtomData &d) const { return (*this==d); }
   };
 
-  class AtomPairData {
-    public:
-      typedef vector< vector<double> > Tmatrix;
-      Tmatrix eps;    //!< Interaction energy scaling
-      Tmatrix sigma2; //!< Sigma squared distance
-      Tmatrix rcut;   //!< Interaction cutoff distance
-      Tmatrix qq;     //!< Charge product
-  };
+  /**
+   * @brief Container for data between pairs
+   *
+   * This will maintain a symmetric, dynamic NxN matrix for storing data
+   * about pairs.
+   * Use the `set()` function for setting values and use the function
+   * operator for access: 
+   *
+   *     int i=2,j=3; // particle type, for example
+   *     PairMatrix<double> cutoff;
+   *     eps2.set(i,j,12.0);
+   *     cout << cutoff(i,j); // -> 12.0
+   */
+  template<class T=double>
+    class PairMatrix {
+      public:
+        vector< vector<T> > m; // symmetric matrix (mem.wasteful - fast access)
+        void resize(size_t n) {
+          m.resize(n);
+          for (auto &i : m)
+            i.resize(n);
+        }
+        PairMatrix(size_t n=0) {
+          resize(n);
+        }
+        const T& operator()(size_t i, size_t j) const {
+          assert( i<m.size() );
+          assert( j<m[i].size() );
+          assert( m[i][j]==m[j][i] );
+          return m[i][j]; 
+        }
+        void set(size_t i, size_t j, T val) {
+          size_t n=std::max(i,j);
+          if (n>=m.size())
+            resize(n+1);
+          m[i][j]=m[j][i]=val;
+        }
+    };
 
   /*!
    * @brief Class for loading and storing atomic properties
@@ -77,6 +109,7 @@ namespace Faunus {
    * Key           | Description
    * :------------ | :----------------------------------------------------------------
    * `activity`    | Chemical activity for grand caninical MC [mol/l]
+   * `alpha`       | Polarizability [cubic angstrom]
    * `dp`          | Translational displacement parameter [angstrom] 
    * `dprot`       | Rotational displacement parameter [degrees] (will be converted to radians)
    * `eps`         | Epsilon energy scaling commonly used for Lennard-Jones interactions etc. [kJ/mol] 
@@ -121,13 +154,13 @@ namespace Faunus {
       AtomData& operator[] (string);         //!< Name->data
       AtomData& operator[] (AtomData::Tid);  //!< Id->data
       string info();                         //!< Print info
-      
+
       /** @brief Copy properties into particles vector. Positions are left untouched! */
       template<typename TParticleVector>
-      void reset_properties(TParticleVector &pvec) const {
-        for (auto &i : pvec)
-          i = list.at( i.id );
-      }
+        void reset_properties(TParticleVector &pvec) const {
+          for (auto &i : pvec)
+            i = list.at( i.id );
+        }
   };
 
   extern AtomMap atom; //!< Global instance of AtomMap - can be accessed from anywhere

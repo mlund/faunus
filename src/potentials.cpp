@@ -13,27 +13,62 @@ namespace Faunus {
 
   namespace Potential {
 
-    PairPotentialBase::PairPotentialBase() {}
-
-    PairPotentialBase::~PairPotentialBase() { }
-    
-    double PairPotentialBase::operator() (const particle &a, const particle &b, double r2) const {
-      assert(!"Pair energy not defined!");
-      return 0;
+    PairPotentialBase::PairPotentialBase(std::string pfx) {
+      prefix=pfx;
     }
 
-    /*!
-     * \param a First particle
-     * \param b Second particle
-     * \param r2 Squared distance between them (angstrom squared)
-     * \param p Vector from: p=b-a
+    PairPotentialBase::~PairPotentialBase() { }
+
+    /**
+     * @param N Maximum number of atom types
+     * @param rc Default cutoff distance (angstrom)
+     */
+    void PairPotentialBase::initCutoff(size_t N, float rcut) {
+      rcut2.setConstant(N,N,rcut*rcut);
+    }
+
+    /**
+     * @param i Particle type i
+     * @param j Particle type j
+     * @param rc Cutoff distance (angstrom) 
+     */
+    void PairPotentialBase::setCutoff(size_t i, size_t j, float rcut) {
+      rcut2(i,j)=rcut2(j,i)=rcut*rcut;
+    }
+
+    std::string PairPotentialBase::_brief() {
+      assert(!name.empty() && "Provide a descriptive name for the potential");
+      return name;
+    }
+
+    std::string PairPotentialBase::info(char w) {
+      return name+": N/A";
+    }
+    
+    //double PairPotentialBase::operator() (const particle &a, const particle &b, const Point &r2) const {
+    //  return operator()(a,b,r2.squaredNorm());
+    //}
+
+    /**
+     * @param a First particle
+     * @param b Second particle
+     * @param r2 Squared distance between them (angstrom squared)
+     * @param p Vector from: p=b-a
      */
     Point PairPotentialBase::force(const particle &a, const particle &b, double r2, const Point &p) {
       assert(!"Force not overrided!");
       return Point(0,0,0);
     }
 
-    /*!
+    /**
+     * @param a Particle emanating the field
+     * @param r Position in which to calculate the field
+     */
+    Point PairPotentialBase::field(const particle &a, const Point &r) const {
+      return Point(0,0,0);
+    }
+
+    /**
      * This will reset the temperature to the specified value. By default this function
      * does nothing, although in Debug mode it will throw an exception if derived classes
      * do not implement it (and is called).
@@ -57,7 +92,7 @@ namespace Faunus {
         f << "# Pair potential: " << brief() << endl
           << "# Atoms: " << atom[ida].name << "<->" << atom[idb].name << endl;
         for (double r=min; r<=150; r+=0.5)
-          f << std::left << std::setw(10) << r << " " << operator()(a,b,r*r) << endl; 
+          f << std::left << std::setw(10) << r << " " ;//<< operator()(a,b,r*r) << endl; 
         return true;
       }
       return false;
@@ -69,22 +104,22 @@ namespace Faunus {
       name="Harmonic";
     }
 
-    Harmonic::Harmonic(InputMap &in, string pfx) {
+    Harmonic::Harmonic(InputMap &in, string pfx) : PairPotentialBase(pfx) {
       name="Harmonic";
-      k  = in.get<double>( pfx+"forceconst", 0);
-      req = in.get<double>( pfx+"eqdist", 0);
+      k  = in(prefix+"_forceconst", 0.0);
+      req= in(prefix+"_eqdist", 0.0);
     }
 
     string Harmonic::_brief() {
       using namespace Faunus::textio;
       std::ostringstream o;
-      o << name << ": k=" << k << kT+"/"+angstrom+squared+" req=" << req << _angstrom; 
+      o << name + ": k=" << k << kT+"/"+angstrom+squared+" req=" << req << _angstrom; 
       return o.str();
     }
 
-    /*!
-     * \param k_kT   Stiffness or bond strength [kT]
-     * \param rmax_A Maximum length after which the energy goes to infinity [angstrom]
+    /**
+     * @param k_kT   Stiffness or bond strength [kT]
+     * @param rmax_A Maximum length after which the energy goes to infinity [angstrom]
      */
     FENE::FENE(double k_kT, double rmax_A) : k(k_kT) {
       name="FENE";
@@ -92,10 +127,10 @@ namespace Faunus {
       r02inv=1/r02;
     }
 
-    FENE::FENE(InputMap &in, string pfx) {
+    FENE::FENE(InputMap &in, string pfx) : PairPotentialBase(pfx) {
       name="FENE";
-      k  = in.get<double>( pfx+"stiffness", 0);
-      r02 = pow( in.get<double>( pfx+"maxsep", 0), 2);
+      k  = in.get<double>( prefix+"_stiffness", 0);
+      r02 = pow( in.get<double>( prefix+"_maxsep", 0), 2);
       r02inv = 1/r02;
     }
 
@@ -106,11 +141,11 @@ namespace Faunus {
       return o.str();
     }
 
-    CosAttract::CosAttract(InputMap &in, string pfx) {
+    CosAttract::CosAttract(InputMap &in, string pfx) : PairPotentialBase(pfx) {
       name="CosAttract";
-      eps = in.get<double>( pfx+"eps", 0);
-      rc  = in.get<double>( pfx+"rc", 0);
-      wc  = in.get<double>( pfx+"wc", 0);
+      eps = in(prefix+"_eps", 0.0);
+      rc  = in(prefix+"_rc", 0.0);
+      wc  = in(prefix+"_wc", 0.0);
       rc2=rc*rc;
       c=pc::pi/2/wc;
       rcwc2=pow((rc+wc),2);
@@ -130,7 +165,7 @@ namespace Faunus {
       o << pad(SUB,w,"Depth") << eps << kT << endl
         << pad(SUB,w,"Decay length") << wc << _angstrom << endl
         << pad(SUB,w,"Width") << rc << _angstrom << endl
-        << pad(SUB,w,"More info") << "DOI: 10.1063/1.2135785" << endl;
+        << pad(SUB,w,"More info") << "doi:10/chqzjk" << endl;
       return o.str();
     }
 
@@ -138,27 +173,7 @@ namespace Faunus {
       name="Hardsphere";
     }
 
-    /*!
-     * This is a compatibility constructor - no data is read from the InputMap.
-     */
-    HardSphere::HardSphere(InputMap& in) {
-      name="Hardsphere";
-    }
-
-    string HardSphere::_brief() {
-      return name;
-    }
-
     string HardSphere::info(char w) {
-      using namespace Faunus::textio;
-      return textio::indent(SUB)+name+"\n";
-    }
-
-    HardSpheroCylinder::HardSpheroCylinder(InputMap& in) { name="HardspheroCylinder"; }
-
-    string HardSpheroCylinder::_brief() { return name; }
-
-    string HardSpheroCylinder::info(char w) {
       using namespace Faunus::textio;
       return textio::indent(SUB)+name+"\n";
     }
@@ -167,14 +182,14 @@ namespace Faunus {
       name="Lennard-Jones";
     }
 
-    /*!
-     * \param in InputMap is scanned for the keyword \c lj_eps and should be in units of kT
-     * \param pfx Prefix for InputMap - default is "ls_"
+    /**
+     * @param in InputMap is scanned for the `lj_eps` and should be in units of kT
+     * @param pfx Prefix for InputMap - default is `ls_`
      */
-    LennardJones::LennardJones(InputMap &in, string pfx) {
+    LennardJones::LennardJones(InputMap &in, string pfx) : PairPotentialBase(pfx) {
       name="Lennard-Jones";
-      eps = 4*in.get<double>( pfx+"eps", 0);
-      string unit = in.get<string>(pfx+"unit", "kT");
+      eps = 4*in(prefix+"_eps", 0.);
+      string unit = in.get<string>(prefix+"_unit", "kT");
       if (unit=="kJ/mol")
         eps=eps/pc::kT2kJ(1.);
     }
@@ -200,9 +215,13 @@ namespace Faunus {
 
     LorentzBerthelot::LorentzBerthelot() : name("Lorentz-Berthelot Mixing Rule") {}
 
-    double LorentzBerthelot::mixSigma(double sigma1, double sigma2) const { return 0.5*(sigma1+sigma2); }
+    double LorentzBerthelot::mixSigma(double sigma1, double sigma2) const {
+      return 0.5*(sigma1+sigma2);
+    }
 
-    double LorentzBerthelot::mixEpsilon(double eps1, double eps2) const { return sqrt(eps1*eps2); }
+    double LorentzBerthelot::mixEpsilon(double eps1, double eps2) const {
+      return sqrt(eps1*eps2);
+    }
 
     LennardJonesR12::LennardJonesR12(InputMap &in, string pfx) : LennardJones(in,pfx) {
       name+="R12";
@@ -212,11 +231,12 @@ namespace Faunus {
       name+=" Truncated and shifted to sigma";
     }
 
-    /*!
-     * \param in is scanned for the keywords \c prefix_threshold (angstrom) and \c prefix_depth (kT).
-     * \param prefix InputMap keyword prefix. Default is "squareWell"
+    /**
+     * @param in is scanned for the keywords `prefix_threshold` (angstrom)
+     *        and `prefix_depth` (kT).
+     * @param pfx InputMap keyword prefix. Default is `squarewell`
      */
-    SquareWell::SquareWell(InputMap &in, string prefix) {
+    SquareWell::SquareWell(InputMap &in, string pfx) : PairPotentialBase(pfx) {
       name="Square Well";
       threshold = in.get<double>(prefix+"_threshold", 0, name+" upper threshold (AA)");
       depth     = in.get<double>(prefix+"_depth", 0, name+" depth (kT)");
@@ -236,19 +256,20 @@ namespace Faunus {
       return o.str();
     }
 
-    /*!
-     * In addition to the keywords from Potential::SquareWell the InputMap is
-     * searcher for:
-     * \li \c prefix_threshold_lower
+    /**
+     * In addition to the keywords from `Potential::SquareWell` the InputMap is
+     * searched for:
+     * - `prefix_threshold_lower`
      */
-    SquareWellShifted::SquareWellShifted(InputMap &in, string prefix): SquareWell(in,prefix) {
-      name=name + " Shifted";
+    SquareWellShifted::SquareWellShifted(InputMap &in, string pfx): SquareWell(in,pfx) {
+      name+=" Shifted";
       threshold_lower = in.get<double>(prefix+"_threshold_lower", 0, name+" lower threshold (AA)");
     }
 
     string SquareWellShifted::_brief() {
       std::ostringstream o;
-      o << name << ": u=" << depth << textio::kT << " range=" << threshold_lower << "-" << threshold;
+      o << name << ": u=" << depth << textio::kT
+        << " range=" << threshold_lower << "-" << threshold;
       return o.str();
     }
 
@@ -261,12 +282,12 @@ namespace Faunus {
       return o.str();
     }
 
-    SquareWellHydrophobic::SquareWellHydrophobic(InputMap &in, string prefix) : SquareWell(in,prefix) {
+    SquareWellHydrophobic::SquareWellHydrophobic(InputMap &in, string pfx) : SquareWell(in,pfx) {
       name="Hydrophobic " + name;
     }
 
-    /*!
-     * \param in InputMap is scanned for the keyword \c softrep_sigma which should be in angstrom
+    /**
+     * @param in InputMap is scanned for the keyword `softrep_sigma` which should be in angstrom
      */
     SoftRepulsion::SoftRepulsion(InputMap &in) {
       name="Repulsive r6";
@@ -290,13 +311,13 @@ namespace Faunus {
       name="r12-Repulsion";
     }
 
-    /*!
-     * \param in InputMap is scanned for the keyword \c lj_eps and should be in units of kT
-     * \param pfx InputMap prefix
+    /**
+     * @param in InputMap is scanned for the keyword `lj_eps` and should be in units of kT
+     * @param pfx InputMap prefix
      */
-    R12Repulsion::R12Repulsion(InputMap &in, string pfx) {
+    R12Repulsion::R12Repulsion(InputMap &in, string pfx) : PairPotentialBase(pfx) {
       name="r12-Repulsion";
-      eps = 4*in.get<double>( pfx+"eps", 0.05, name+" epsilon (kT)" );
+      eps = 4*in(prefix+"_eps", 0.05);
     }
 
     string R12Repulsion::_brief() {
@@ -312,11 +333,12 @@ namespace Faunus {
       return o.str();
     }
 
-    /*!
+    /**
      * The following input keywords are searched searched:
-     * \li \c temperature [Kelvin, default = 298.15]
-     * \li \c epsilon_r - relative dielectric constant. Default is 80.
-     * \li \c depsdt - temperature dependence of dielectric constant, \f$ \partial\epsilon_r/\partial T\approx-0.368\f$ for water.
+     * - `temperature` [Kelvin, default = 298.15]
+     * - `epsilon_r` - relative dielectric constant. Default is 80.
+     * - `depsdt` - temperature dependence of dielectric constant,
+     *   \f$ \partial\epsilon_r/\partial T\approx-0.368\f$ for water.
      */
     Coulomb::Coulomb(InputMap &in) {
       name="Coulomb";
@@ -379,10 +401,11 @@ namespace Faunus {
       return o.str();
     }
 
-    /*!
+    /**
      * In addition to the keywords from Potential::Coulomb, InputMap is searched for:
-     * \li \c dh_ionicstrength [mol/l] 
-     * \li \c dh_debyelength [angstrom] (only if I=0, default)
+     *
+     * - `dh_ionicstrength` [mol/l] 
+     * - `dh_debyelength` [angstrom] (only if I=0, default)
      */
     DebyeHuckel::DebyeHuckel(InputMap &in) : Coulomb(in) {
       double I;
@@ -409,42 +432,43 @@ namespace Faunus {
       return 1/k;
     }
 
-    /*!
-     * \details The Debye-Huckel potential is temperature dependent and contains entropy
+    /**
+     * @details The Debye-Huckel potential is temperature dependent and contains entropy
      * contributions from both solvent and salt degrees of freedom.
      * This function return the entropy of interaction between a pair of
      * particles interacting with an effective Debye-Huckel potential. This is done by
      * taking the temperature derivate of w(R):
      *
-     * \f[
-     * S(r_{ij})/k_B = -\frac{ \partial w(r_{ij},T) } {k_B \partial T} = \beta w_{ij}\left [ \alpha - \frac{\kappa r_{ij}(\alpha+1)}{2}\right ]
-     * \f]
+     * @f[
+     * S(r_{ij})/k_B = -\frac{ \partial w(r_{ij},T) } {k_B \partial T}
+     *     = \beta w_{ij}\left [ \alpha - \frac{\kappa r_{ij}(\alpha+1)}{2}\right ]
+     * @f]
      * where \f$ \alpha=T \partial \epsilon_r/\epsilon_r\partial T\f$
      * is determined experimentally for pure water. To get the entropy from salt ions
      * only, set \f$\alpha=0\f$ via the InputMap.
      *
-     * \param  betaw    Inter particle free energy, \f$\beta w\f$, in units of kT.
-     * \param  r        Inter particle distance
-     * \return Interaction entropy \f$ S(r_{ij})/k_B = \beta TS(r_{ij})\f$
-     * \todo   Optimize
+     * @param  betaw    Inter particle free energy, \f$\beta w\f$, in units of kT.
+     * @param  r        Inter particle distance
+     * @return Interaction entropy \f$ S(r_{ij})/k_B = \beta TS(r_{ij})\f$
+     * @todo   Optimize
      */
     double DebyeHuckel::entropy(double betaw, double r) const {
       return betaw * (depsdt - 0.5*k*r*(depsdt+1));
     }
 
-    /*!
-     * \return \f$\beta \mu_{\mbox{\scriptsize{excess}}} = -\frac{l_Bz^2\kappa}{2(1+\kappa a)}\f$
-     * \param z Charge number
-     * \param a Particle diameter (angstrom)
+    /**
+     * @return \f$\beta \mu_{\mbox{excess}} = -\frac{l_Bz^2\kappa}{2(1+\kappa a)}\f$
+     * @param z Charge number
+     * @param a Particle diameter (angstrom)
      */
     double DebyeHuckel::excessChemPot(double z, double a) const {
       return -lB*z*z*k / ( 2 * (1+k*a) );
     }
 
-    /*!
-     * \return \f$\exp {(\beta\mu_{\mbox{\scriptsize{excess}}})}\f$
-     * \param z Charge number
-     * \param a Particle diameter (angstrom)
+    /**
+     * @return \f$\exp {(\beta\mu_{\mbox{excess}})}\f$
+     * @param z Charge number
+     * @param a Particle diameter (angstrom)
      */
     double DebyeHuckel::activityCoeff(double z, double a) const {
       return exp( excessChemPot(z,a) );
@@ -468,21 +492,21 @@ namespace Faunus {
       name+=o.str();
     }
 
-    /*!
+    /**
      * \f$ \beta u(r) = l_B \frac{ z_1 z_2 }{r}\f$
      */
     double MultipoleEnergy::ionion(double z1, double z2, double r) {
       return lB*z1*z2/r;
     }
 
-    /*!
+    /**
      * \f$ \beta u(r) = -l_B \frac{ z a_z }{r^2}\f$
      */
     double MultipoleEnergy::iondip(double z, const Point &a, double r) {
       return -lB*z*a.z()/(r*r);
     }
 
-    /*!
+    /**
      * \f$ \beta u(r) = l_B \frac{a_x b_x + a_y b_y - 2a_z b_z  }{r^3}\f$
      */
     double MultipoleEnergy::dipdip(const Point &a, const Point &b, double r) {

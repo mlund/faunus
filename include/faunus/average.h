@@ -2,7 +2,8 @@
 #define FAU_AVERAGE_H
 
 #ifndef SWIG
-#include "faunus/common.h"
+#include <vector>
+#include <string>
 #endif
 
 namespace Faunus {
@@ -206,7 +207,7 @@ namespace Faunus {
       private:
         unsigned int n,            //!< Length of each correlation measurement
                      cnt;          //!< Internal counter for each correlation set
-        vector< Average<T> > xixj; //!< Average correlation product, <xixj>
+        std::vector< Average<T> > xixj; //!< Average correlation product, <xixj>
         Average<T> xmean;          //!< Average values, <x>
         T xi;                      //!< Reference value (i=0) for each correlation set
       public:
@@ -214,7 +215,7 @@ namespace Faunus {
         BlockCorrelation & operator+=(T);    //!< Sample value
         T operator[] (unsigned int);    //!< Get correlation at i
         unsigned int size();            //!< Get block length
-        bool dump(string filename); //!< Dump to disk
+        bool dump(std::string filename); //!< Dump to disk
     };
 
   /*!
@@ -251,7 +252,7 @@ namespace Faunus {
 
   //! Dump to disk
   template<class T>
-    bool BlockCorrelation<T>::dump(string filename) {
+    bool BlockCorrelation<T>::dump(std::string filename) {
       std::ofstream f(filename.c_str());
       if (f) {
         f.precision(6);

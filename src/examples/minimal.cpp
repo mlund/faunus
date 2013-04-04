@@ -1,17 +1,17 @@
 #include <faunus/faunus.h>
-using namespace Faunus;                               // use Faunus namespace
-typedef Geometry::Cuboid Tgeo;                        // select simulation geometry and pair potential
+using namespace Faunus;                        // use Faunus namespace
+typedef Geometry::Cuboid Tgeo;                 // select simulation geometry and pair potential
 typedef Potential::CoulombLJ Tpair;
 int main() {
-  ::atom.includefile("minimal.json");                 // load atom properties
-  InputMap in("minimal.input");                       // open parameter file for user input
-  Energy::Nonbonded<Tpair,Tgeo> pot(in);              // create Hamiltonian, non-bonded only
-  Space spc( pot.getGeometry() );                     // create simulation space, particles etc.
-  GroupAtomic salt(spc, in);                          // group for salt particles
-  Move::AtomicTranslation mv(in, pot, spc);           // particle move class
-  mv.setGroup(salt);                                  // tells move class to act on salt group
-  mv.move(1e5);                                       // move salt randomly 100000 times
-  std::cout << spc.info() << pot.info() << mv.info(); // final information
+  ::atom.includefile("minimal.json");          // load atom properties
+  InputMap in("minimal.input");                // open parameter file for user input
+  Energy::Nonbonded<Tpair,Tgeo> pot(in);       // create Hamiltonian, non-bonded only
+  Space spc( pot.getGeometry() );              // create simulation space, particles etc.
+  GroupAtomic salt(spc, in);                   // group for salt particles
+  Move::AtomicTranslation mv(in, pot, spc);    // particle move class
+  mv.setGroup(salt);                           // tells move class to act on salt group
+  mv.move(1e5);                                // move salt randomly 100000 times
+  cout << spc.info() + pot.info() + mv.info(); // final information
 }
 /*!
  * \page example_minimal Example: Hello Monte Carlo!
@@ -84,14 +84,14 @@ int main() {
  *
  * - **line 14**
  *   - Print final information to standard output.
- *
- * If you prefer Python over C++, most of Faunus can be accessed through the `pyfaunus` module.
- * The minimal.py script below is equivalent to the above C++ version:
- * \includelineno minimal.py
- *
- * Input           {#minimalin}
- * =====
- * All listed files including the above C++ and python programs can be found in `src/examples/`
+*
+* If you prefer Python over C++, most of Faunus can be accessed through the `pyfaunus` module.
+* The minimal.py script below is equivalent to the above C++ version:
+* \includelineno minimal.py
+*
+* Input           {#minimalin}
+* =====
+* All listed files including the above C++ and python programs can be found in `src/examples/`
 *
 * minimal.json    {#minimal_json}
 * ------------

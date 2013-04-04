@@ -13,14 +13,6 @@ set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 #----- xdrfile static library for gromacs output -----
 add_subdirectory(xdrfile)
 
-# -------------------------------------
-#   Check for C++11
-# -------------------------------------
-check_include_file_cxx("tuple" TUPLE)
-if (NOT TUPLE)
-  message(FATAL_ERROR "Compiler does not support C++11 tuples")
-endif()
-
 if(ENABLE_HASHTABLE)
   add_definitions(-DFAU_HASHTABLE)
 endif()
@@ -58,26 +50,32 @@ endif()
 # -----------------------
 #   Link with openbabel
 # -----------------------
-if(ENABLE_BABEL AND OPENBABEL_FOUND)
-  set(objs ${objs} iobabel)
-  include_directories(${OPENBABEL_INCLUDE_DIR})
-  set(LINKLIBS ${LINKLIBS} ${OPENBABEL_LIBRARIES})
-  add_definitions(-DBABEL)
+if(ENABLE_BABEL)
+  find_package(OpenBabel2)
+  if (OPENBABEL_FOUND)
+    set(objs ${objs} iobabel)
+    include_directories(${OPENBABEL_INCLUDE_DIR})
+    set(LINKLIBS ${LINKLIBS} ${OPENBABEL_LIBRARIES})
+    add_definitions(-DBABEL)
+  endif()
 endif()
 
 # -----------------------
 #   Link with MPI
 # -----------------------
-if(ENABLE_MPI AND MPI_CXX_FOUND)
-  set(CMAKE_CXX_COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_CXX_COMPILE_FLAGS})
-  if (APPLE)
-    set(CMAKE_CXX_LINK_FLAGS ${MPI_CXX_LINK_FLAGS})
-  else()
-    set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS})
+if(ENABLE_MPI)
+  find_package(MPI)
+  if(MPI_CXX_FOUND)
+    set(CMAKE_CXX_COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_CXX_COMPILE_FLAGS})
+    if (APPLE)
+      set(CMAKE_CXX_LINK_FLAGS ${MPI_CXX_LINK_FLAGS})
+    else()
+      set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS})
+    endif()
+    set(LINKLIBS ${LINKLIBS} ${MPI_CXX_LIBRARIES})
+    include_directories(${MPI_CXX_INCLUDE_PATH})
+    add_definitions(-DENABLE_MPI)
   endif()
-  set(LINKLIBS ${LINKLIBS} ${MPI_CXX_LIBRARIES})
-  include_directories(${MPI_CXX_INCLUDE_PATH})
-  add_definitions(-DENABLE_MPI)
 endif()
 
 # -----------------------------
@@ -159,13 +157,13 @@ function( fau_example tname tdir tsrc )
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${tdir}/")
   target_link_libraries(${tname} libfaunus)
   install (DIRECTORY "${tdir}"
-           DESTINATION "share/faunus/examples"
-           PATTERN ".svn" EXCLUDE)
+    DESTINATION "share/faunus/examples"
+    PATTERN ".svn" EXCLUDE)
 endfunction( fau_example )
 
 
 #----- Add example programs -----
 add_subdirectory(tools)
-add_subdirectory(examples)
 add_subdirectory(playground EXCLUDE_FROM_ALL)
+add_subdirectory(examples)
 

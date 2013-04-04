@@ -37,15 +37,14 @@ cuboid_xlen            300
 cuboid_ylen            300
 cuboid_zlen            154
 
-transrot_transdp       30      # Molecular translation parameter
+transrot_transdp       100     # Molecular translation parameter
 transrot_rotdp         6      # Molecular rotation parameter
 crank_dp               6 
-crank_maxlen           3 
+crank_maxlen           6 
 pivot_dp               6
-pivot_maxlen           3 
+pivot_maxlen           6 
 reptation_runfraction  1
 reptation_bondlength   4.9
-mv_particle_genericdp  0
 polymer_file           slitpolymer.aam 
 
 test_stable            no
@@ -55,7 +54,7 @@ test_file              slitpolymer.test
 
 exe=./slitpolymer
 if [ -x $exe ]; then
- micro=2500000
+ micro=1000000
  mkinput
  $exe
  rc=$?

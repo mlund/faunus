@@ -8,6 +8,7 @@ namespace Faunus {
 
   AtomData::AtomData() {
     activity=0;
+    alpha=0;
     charge=0;
     dp=0;
     dprot=0;
@@ -56,6 +57,7 @@ namespace Faunus {
       AtomData a;
       a.name = atom.first;
       a.activity = json::value<double>(atom.second, "activity", 0);
+      a.alpha = json::value<double>(atom.second, "alpha", 0);
       a.dp = json::value<double>(atom.second, "dp", 0);
       a.dprot = json::value<double>(atom.second, "dprot", 0) * pc::pi / 180.; // deg->rads
       a.eps = json::value<double>(atom.second, "eps", 0);
@@ -69,6 +71,7 @@ namespace Faunus {
       a.radius = a.sigma/2;
       a.id=AtomData::Tid( list.size() );
       a.patchtype = json::value<double>(atom.second, "patchtype", 0);
+
       list.push_back(a); // add to main particle list
     }
     return (n>0) ? true : false;

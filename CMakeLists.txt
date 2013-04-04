@@ -6,8 +6,6 @@ set(CMAKE_LEGACY_CYGWIN_WIN32 0) # Remove when CMake >= 2.8.4 is required
 #   Locate external packages
 # ----------------------------
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/scripts)
-find_package(OpenBabel2)
-find_package(MPI)
 include(CTest)
 include(CheckIncludeFileCXX)
 include(CheckCXXSourceCompiles)
@@ -74,11 +72,8 @@ endif()
 # ---------------------------
 add_subdirectory(src)
 add_subdirectory(xcode)
+add_subdirectory(scripts)
 add_subdirectory(doc EXCLUDE_FROM_ALL)
-
-if(ENABLE_SWIG)
-  add_subdirectory(${CMAKE_SOURCE_DIR}/swig)
-endif()
 
 if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
   message(

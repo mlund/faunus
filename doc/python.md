@@ -12,10 +12,10 @@ Building
 Usage
 -----
 
-    $ export PYTHONPATH=misc/swig/
+    $ export PYTHONPATH=scripts/
     $ python
     >>> import pyfaunus as f
-    >>> p = f.particle()
+    >>> p = f.PointParticle()
     >>> p.charge = +1.0
     >>> help(faunus)
 
@@ -26,7 +26,7 @@ If python crashes upon importing the faunus module,
 most likely the `_pyfaunus.so` and your python interpreter are
 linked against different Python frameworks. Check with:
 
-    $ otool -L misc/swig/_pyfaunus.so
+    $ otool -L scripts/_pyfaunus.so
     $ otool -L `which python`
 
 Is this the case, re-compile faunus with the same framework as

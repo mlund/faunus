@@ -29,6 +29,7 @@
 #include <faunus/inputfile.h>
 #include <faunus/energy.h>
 #include <faunus/potentials.h>
+#include <faunus/externalpotential.h>
 #include <faunus/average.h>
 #include <faunus/space.h>
 #include <faunus/move.h>
@@ -36,9 +37,11 @@
 #include <faunus/group.h>
 #include <faunus/io.h>
 #include <faunus/drift.h>
+#include <faunus/tabulate.h>
 #include <faunus/titrate.h>
 #include <faunus/analysis.h>
 #include <faunus/scatter.h>
+#include <faunus/spherocylinder.h>
 #endif
 
 #endif

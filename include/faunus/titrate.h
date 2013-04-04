@@ -1,5 +1,5 @@
-#ifndef FAU_TITRATE_H
-#define FAU_TITRATE_H
+#ifndef FAUNUS_TITRATE_H
+#define FAUNUS_TITRATE_H
 
 #ifndef SWIG
 #include <faunus/common.h>
@@ -20,28 +20,29 @@ namespace Faunus {
      * all species of type AX and A and make a MC swap move between them.
      * X is implicit, meaning that it enters only with its chemical potential
      * (activity). The titrating species, their dissociation constants
-     * and the chemical potential of the titrant are read from an input file with
-     * this format:
+     * and the chemical potential of the titrant are read from a
+     * `processes` JSON object.
+     * For example, for proton titration of phosphate one would
+     * use the following JSON input (pH 7.0):
      *
-     *     Process type_AX type_A pKd pX
-     *
-     * where `pKd` and `pX` are the negative logarithms of the dissociation constant
-     * and the activity of X, respectively. Make sure the standard states (units) are
-     * consistent. For example, for proton titration of the phosphate ion one would
-     * use the following input (pH 7):
-     *
-     *     Process H3PO4 H2PO4   2.12    7
-     *     Process H2PO4 HPO4    7.21    7
-     *     Process HPO4  PO4     12.67   7
+     *     {
+     *       "processes" :
+     *       {
+     *         "K1" : { "bound":"H3PO4", "free":"H2PO4", "pKd":2.12,  "pX":7.0 }, 
+     *         "K2" : { "bound":"H2PO4", "free":"HPO4",  "pKd":7.21,  "pX":7.0 }, 
+     *         "K3" : { "bound":"HPO4",  "free":"PO4",   "pKd":12.67, "pX":7.0 }
+     *       }
+     *     }
      *
      * All species and their properties must be defined in `AtomMap` before
      * initializing this class.
      *
-     * @todo Read activity from `AtomMap` instead of process file
-     * @author Mikael Lund and Chris Evers
      * @date Malmo, October 2010
-      */
+     * @author Mikael Lund and Chris Evers
+     */
     class EquilibriumController {
+      private:
+        bool includeJSON(const string&); //!< Read equilibrium processes 
       public:
         friend class EquilibriumEnergy;
         class processdata {
@@ -63,16 +64,16 @@ namespace Faunus {
         };
 
         std::map<int, Average<double> > q;       //!< Map of average charges per site
-        vector<processdata> process;             //!< Vector of processes.
+        std::vector<processdata> process;        //!< Vector of processes.
 
         EquilibriumController(InputMap&, string="eq_");
-        bool include(string);                    //!< Read equilibrium processes from file
+        bool include(string);                    //!< Read equilibrium processes
         void findSites(const p_vec&);            //!< Locate all titratable sites
         double intrinsicEnergy(const particle::Tid&);    //!< Intrinsic energy of particle id (kT)
         string info(char=25);                    //!< Get information string
         processdata& random(const p_vec&, int&); //!< Random titratable particle and assiciated random process
 
-        vector<int> sites;                       //!< List of titratable sites
+        std::vector<int> sites;                  //!< List of titratable sites
 
         void sampleCharge(const p_vec&);         //!< Updates the average charge vector titrate::q
         double applycharges(p_vec &);            //!< Copy average charges to particles in the particle vector
@@ -137,7 +138,7 @@ namespace Faunus {
      * particles within the SAME group are set to minus radius of
      * the swapped particle and hydrophobicity is set to false.
      * This to minimize large interactions in molecules with overlapping
-     * particles - i.e LJ will be zero. If can also be used to avoid
+     * particles - i.e LJ will be zero. It can also be used to avoid
      * internal hydrophobic interactions in rigid groups upon swapping
      * between hydrophobic and non-hydrophobic species.
      * Group information is found in Space::g and to avoid energy drifts by
@@ -154,7 +155,7 @@ namespace Faunus {
         void restore();
       public:
         SwapMoveMSR(InputMap&, Energy::Hamiltonian&, Space&, string="swapmv_");
-     };
+    };
 
   }// Move namespace
 }//Faunus namespace

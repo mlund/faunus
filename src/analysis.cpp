@@ -272,27 +272,29 @@ namespace Faunus {
     }
 
     string PolymerShape::_info() {
-      char w=13;
+      char w=10;
       using namespace textio;
       std::ostringstream o;
-      o << endl << indent(SUBSUB) << std::left << setw(w) << "Polymer"
+      o << endl << indent(SUBSUB) << std::left << setw(w) << "Group"
         << setw(w+5) << bracket("Rg"+squared)
         << setw(w+12) << bracket("Rg"+squared)+"-"+bracket("Rg")+squared
-        << setw(w+7) << rootof+bracket("Rg"+squared)
+        << setw(w+5) << rootof+bracket("Rg"+squared)
         << setw(w+7) << rootof+bracket("Rgx"+squared)
-        << setw(w+6) << rootof+bracket("Rgy"+squared)
-        << setw(w+6) << rootof+bracket("Rgz"+squared)
+        << setw(w+7) << rootof+bracket("Rgy"+squared)
+        << setw(w+7) << rootof+bracket("Rgz"+squared)
         << setw(w+7) << rootof+bracket("Re"+squared)
-        << setw(w+7) << bracket("Re"+squared)+"/"+bracket("Rg"+squared) << endl; 
+        << bracket("Re"+squared)+"/"+bracket("Rg"+squared) << endl; 
       for (auto &m : Rg2)
-        o << indent(SUBSUB) << std::left << setw(w) << m.first << setw(w) << m.second.avg()
-          << setw(w) << m.second.avg() - pow( Rg[m.first].avg(),2 )
-          << setw(w) << sqrt( m.second.avg() )
+        o << indent(SUBSUB) << std::left << setw(w) << m.first
+          << std::setprecision(4)
+          << setw(w) << m.second.avg()
+          << setw(w+2) << m.second.avg() - pow( Rg[m.first].avg(),2 )
+          << setw(w-2) << sqrt( m.second.avg() )
           << setw(w) << sqrt(Rg2x[m.first].avg())
           << setw(w) << sqrt(Rg2y[m.first].avg())
           << setw(w) << sqrt(Rg2z[m.first].avg())
           << setw(w) << sqrt(Re2[m.first].avg())
-          << setw(w) << Re2[m.first].avg() / Rg2[m.first].avg() << endl; 
+          << Re2[m.first].avg() / Rg2[m.first].avg() << endl; 
       return o.str();
     }
 
@@ -349,13 +351,6 @@ namespace Faunus {
       double dip=dipole(g,spc);
       mu[g.name]+=dip;
       mu2[g.name]+=pow(dip,2);
-    }
-
-    void ChargeMultipole::sample(const std::vector<GroupMolecular> &gvec, const Space &spc){
-      if (!run())
-        return;
-      for (auto &g : gvec)
-        sample(g, spc);
     }
 
     string ChargeMultipole::_info(){
@@ -611,5 +606,11 @@ namespace Faunus {
       }
       return o.str();
     }
+
+    void BilayerStructure::_test(UnitTest &t) {
+      t("bilayer_order", S.avg() );
+      t("bilayer_area", A.avg() );
+    }
+
   }//namespace
 }//namespace

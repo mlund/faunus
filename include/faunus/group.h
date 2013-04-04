@@ -23,26 +23,24 @@ namespace Faunus {
       char w;                           //!< Text padding for info() functions
     public:
       Group(int=-1, int=-1);
-      string info();                                         //!< Information string
-      string name;                                           //!< Information time (and short) name
-      Point cm_trial;                                        //!< mass center vector for trial position
-      Point cm;                                              //!< mass center vector
-      int random() const;                                    //!< Pick random particle index in Group
+      string info();                          //!< Information string
+      string name;                            //!< Information time (and short) name
+      Point cm_trial;                         //!< mass center vector for trial position
+      Point cm;                               //!< mass center vector
+      int random() const;                     //!< Pick random particle index in Group
+      double charge(const p_vec&) const;      //!< Calculates total charge
+      Point massCenter(const Space&) const;   //!< Calculates mass center - does not touch group!
+      Point setMassCenter(const Space &);     //!< Calculate AND set mass center (cm and cm_trial)
+      Point dipolemoment(const Space&) const; //!< Calculates dipole moment
 
-      double charge(const p_vec&) const;                     //!< Calculates total charge
+      virtual void rotate(Space&, const Point&, double);//!< Rotate around a vector
+      virtual void translate(Space&, const Point&);     //!< Translate along a vector
+      virtual void scale(Space&, double);               //!< Volume scaling for NPT ensemble
+      virtual void undo(Space&);                        //!< Undo move operation
+      virtual void accept(Space&);                      //!< Accept a trial move
 
-      Point massCenter(const Space&) const;                  //!< Calculates mass center - does not set touch group!
-      Point setMassCenter(const Space &);                    //!< Calculate AND set mass center (cm and cm_trial)
-      Point dipolemoment(const Space&) const;                //!< Calculates dipole moment
-
-      virtual void rotate(Space&, const Point&, double);     //!< Rotate around a vector
-      virtual void translate(Space&, const Point&);          //!< Translate along a vector
-      virtual void scale(Space&, double);                    //!< Volume scaling for NPT ensemble
-      virtual void undo(Space&);                             //!< Undo move operation
-      virtual void accept(Space&);                           //!< Accept a trial move
-
-      virtual bool isMolecular() const;                      //!< True if group represents a molecule
-      virtual bool isAtomic() const;                         //!< True if group represents atomic species
+      virtual bool isMolecular() const;                 //!< True if group represents a molecule
+      virtual bool isAtomic() const;                    //!< True if group represents atomic species
 
       virtual int numMolecules() const; //!< Number of molecules in group
 

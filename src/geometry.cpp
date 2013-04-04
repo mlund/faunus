@@ -355,13 +355,6 @@ namespace Faunus {
        */
 #endif
 
-    Point massCenter(const Geometrybase &geo, const p_vec &p) {
-      if (p.empty())
-        return Point();
-      Group g(0, p.size()-1);
-      return massCenter(geo,p,g);
-    }
-
     void translate(const Geometrybase &geo, p_vec &p, Point d) {
       for (auto &pi : p) {
         pi += d;

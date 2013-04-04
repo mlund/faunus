@@ -1,5 +1,5 @@
-#ifndef FAU_TITRATE_H
-#define FAU_TITRATE_H
+#ifndef FAUNUS_TITRATE_H
+#define FAUNUS_TITRATE_H
 
 #ifndef SWIG
 #include <faunus/common.h>

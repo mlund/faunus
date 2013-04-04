@@ -1,5 +1,5 @@
-#ifndef FAU_POTENTIAL_H
-#define FAU_POTENTIAL_H
+#ifndef FAUNUS_POTENTIAL_H
+#define FAUNUS_POTENTIAL_H
 
 #ifndef SWIG
 #include <faunus/common.h>
@@ -9,7 +9,6 @@
 #include <faunus/auxiliary.h>
 #include <faunus/inputfile.h>
 #include <faunus/species.h>
-#include <faunus/geometry.h>
 #endif
 
 using namespace Eigen;
@@ -91,7 +90,7 @@ namespace Faunus {
         Harmonic(double=0, double=0);
         Harmonic(InputMap&, string="harmonic");
         template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, double r2) const  {
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) {
             double d=sqrt(r2)-req;
             return k*d*d;
           }
@@ -124,14 +123,14 @@ namespace Faunus {
       public:
         CosAttract(InputMap&, string="cosattract"); // Constructor from InputMap
         template<class Tparticle>
-        double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
-          if (r2<rc2)
-            return -eps;
-          if (r2>rcwc2)
-            return 0;
-          double x=cos( c*( sqrt(r2)-rc ) );
-          return -eps*x*x;
-        }
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
+            if (r2<rc2)
+              return -eps;
+            if (r2>rcwc2)
+              return 0;
+            double x=cos( c*( sqrt(r2)-rc ) );
+            return -eps*x*x;
+          }
         string info(char); // More verbose information
     };
 
@@ -157,7 +156,7 @@ namespace Faunus {
         FENE(double,double); // Constructor
         FENE(InputMap&, string="fene"); // Constructor
         template<class Tparticle>
-          inline double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+          inline double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             return (r2>r02) ? pc::infty : -0.5*k*r02*std::log(1-r2*r02inv);
           }
     };
@@ -173,13 +172,13 @@ namespace Faunus {
         inline HardSphere(InputMap& in) { name="Hardsphere"; }
 
         template<class Tparticle>
-          double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double m=a.radius+b.radius;
             return (r2<m*m) ? pc::infty : 0;
           }
 
         template<class Tparticle>
-          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const  {
+          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
             return operator()(a,b,r.squaredNorm());
           }
 
@@ -214,7 +213,7 @@ namespace Faunus {
             return eps*(x*x - x);
           }
         template<class Tparticle>
-          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const  {
+          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
             return operator()(a,b,r.squaredNorm());
           }
 
@@ -328,7 +327,7 @@ namespace Faunus {
         WeeksChandlerAndersen(InputMap&);
 
         template<class Tparticle>
-          inline double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+          inline double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double x=s2(a.id,b.id); // s^2
             if (r2>x*twototwosixth)
               return 0;
@@ -356,7 +355,7 @@ namespace Faunus {
         SquareWell(InputMap&, string="squarewell"); //!< Constructor
 
         template<class Tparticle>
-          inline double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+          inline double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double d=a.radius+b.radius+threshold;
             if ( r2 < d*d )
               return -depth;
@@ -410,7 +409,7 @@ namespace Faunus {
         SquareWellHydrophobic(InputMap&, string="squarewell"); //!< Constructor
 
         template<class Tparticle>
-          double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             if (a.hydrophobic)
               if (b.hydrophobic)
                 return SquareWell::operator()(a,b,r2);
@@ -430,7 +429,7 @@ namespace Faunus {
         SoftRepulsion(InputMap&);
 
         template<class Tparticle>
-          double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double d=a.radius+b.radius;
             if (r2<=d*d) //fp comparison!
               return pc::infty;
@@ -458,7 +457,7 @@ namespace Faunus {
         R12Repulsion(); // __attribute__ ((deprecated));
         R12Repulsion(InputMap&, string="r12rep"); // __attribute__ ((deprecated));
         template<class Tparticle>
-          double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double x=(a.radius+b.radius);
             x=x*x/r2; // r2
             x=x*x*x; // r6
@@ -474,7 +473,7 @@ namespace Faunus {
       public:
         LennardJonesR12(InputMap&, string="r12rep");
         template<class Tparticle>
-          double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double x=r6(a.radius+b.radius,r2);
             return eps*x*x;
           }
@@ -487,7 +486,7 @@ namespace Faunus {
       public:
         LennardJonesTrunkShift(InputMap&, string="ljts");
         template<class Tparticle>
-          double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double sigma = a.radius+b.radius;
             if (r2 > sigma*sigma)
               return 0;
@@ -568,7 +567,7 @@ namespace Faunus {
         CoulombWolf(InputMap&); //!< Construction from InputMap
 
         template<class Tparticle>
-          double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             if (r2>Rc2)
               return 0;
 #ifdef FAU_APPROXMATH
@@ -608,7 +607,7 @@ namespace Faunus {
       public:
         ChargeNonpolar(InputMap&); //!< Construction from InputMap
         template<class Tparticle>
-          double operator() (const Tparticle &a, const Tparticle &b, double r2) const  {
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double qq=a.charge * a.charge;
             if (qq>1e-6)
               return -c * qq / (r2*r2) * (b.radius*b.radius*b.radius);
@@ -694,28 +693,32 @@ namespace Faunus {
      */
     template<typename Tdefault, typename Tdist=double>
       class PotentialMap : public Tdefault {
-        private:
+        protected:
           typedef opair<int> Tpair;
           typedef std::function<double(const particle&,const particle&,Tdist)> Tfunc;
           std::map<Tpair,Tfunc> m;
           std::string _info; // info for the added potentials (before turning into functors)
+
         public:
           PotentialMap(InputMap &in) : Tdefault(in) {
             Tdefault::name += " (default)";
           } 
+
           template<class Tpairpot>
             void add(AtomData::Tid id1, AtomData::Tid id2, Tpairpot pot) {
               pot.name=atom[id1].name + "<->" + atom[id2].name + ": " + pot.name;
               _info+="\n  " + pot.name + ":\n" + pot.info(20);
               m[Tpair(id1,id2)] = pot;
             }
+
           template<class Tparticle>
-            double operator()(const Tparticle &a, const Tparticle &b, const Tdist &r2) const {
+            double operator()(const Tparticle &a, const Tparticle &b, const Tdist &r2) {
               auto i=m.find( Tpair(a.id,b.id) );
               if (i!=m.end())
                 return i->second(a,b,r2);
               return Tdefault::operator()(a,b,r2);
             }
+
           std::string info(char w=20) {
             return Tdefault::info(w) + _info;
           }
@@ -746,6 +749,10 @@ namespace Faunus {
           T1 first;  //!< First pair potential of type T1
           T2 second; //!< Second pair potential of type T2
 
+          CombinedPairPotential(T1 a, T2 b) : first(a), second(b) {
+            name=first.name+"+"+second.name;
+          }
+
           CombinedPairPotential(InputMap &in) : first(in), second(in) {
             name=first.name+"+"+second.name;
           }
@@ -756,7 +763,7 @@ namespace Faunus {
             }
 
           template<class Tparticle, class Tdist>
-            double operator()(const Tparticle &a, const Tparticle &b, const Tdist &r2) const  {
+            double operator()(const Tparticle &a, const Tparticle &b, const Tdist &r2) {
               return first(a,b,r2) + second(a,b,r2);
             }
 
@@ -775,6 +782,20 @@ namespace Faunus {
           }
       };
 
+    /**
+     * @brief Adds pair potentials together
+     *
+     * Example:
+     *
+     *     auto primitiveModel = Potential::Coulomb() + Potential::HardSphere();
+     */
+    template<class T1, class T2,
+      class = typename std::enable_if<std::is_base_of<PairPotentialBase,T1>::value>::type,
+      class = typename std::enable_if<std::is_base_of<PairPotentialBase,T2>::value>::type>
+        Potential::CombinedPairPotential<T1,T2>& operator+(const T1 &pot1, const T2 &pot2) {
+          return *(new Potential::CombinedPairPotential<T1,T2>(pot1,pot2));
+        }
+
     class MultipoleEnergy {
       public:
         double lB;
@@ -783,48 +804,48 @@ namespace Faunus {
         double dipdip(const Point&, const Point&, double);
     };
 
-    /*!
-     * \brief Lennard-Jones potential with Lorentz-Berthelot mixing rule
+    /**
+     * @brief Lennard-Jones potential with Lorentz-Berthelot mixing rule
      */
     typedef LennardJonesMixed<LorentzBerthelot> LennardJonesLB;
 
-    /*!
-     * \brief Combined Coulomb / HardSphere potential
+    /**
+     * @brief Combined Coulomb / HardSphere potential
      */
     typedef CombinedPairPotential<Coulomb, HardSphere> CoulombHS;
 
-    /*!
-     * \brief Combined Coulomb / LennardJones potential
+    /**
+     * @brief Combined Coulomb / LennardJones potential
      */
     typedef CombinedPairPotential<Coulomb, LennardJones> CoulombLJ;
 
-    /*!
-     * \brief Combined Coulomb / WeeksChandlerAndersen potential
+    /**
+     * @brief Combined Coulomb / WeeksChandlerAndersen potential
      */
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> CoulombWCA;
 
-    /*!
-     * \brief Combined Coulomb / LennardJonesTrunkShift potential
+    /**
+     * @brief Combined Coulomb / LennardJonesTrunkShift potential
      */
     typedef CombinedPairPotential<Coulomb, LennardJonesTrunkShift> CoulombLJTS;
 
-    /*!
-     * \brief Combined Coulomb / LennardJones potential
+    /**
+     * @brief Combined Coulomb / LennardJones potential
      */
     typedef CombinedPairPotential<CoulombWolf, LennardJones> CoulombWolfLJ;
 
-    /*!
-     * \brief Combined DebyeHuckel / HardSphere potential
+    /**
+     * @brief Combined DebyeHuckel / HardSphere potential
      */
     typedef CombinedPairPotential<DebyeHuckel, HardSphere> DebyeHuckelHS;
 
-    /*!
-     * \brief Combined DebyeHuckel / LennardJones potential
+    /**
+     * @brief Combined DebyeHuckel / LennardJones potential
      */
     typedef CombinedPairPotential<DebyeHuckel, LennardJones> DebyeHuckelLJ;
 
-    /*!
-     * \brief Combined DebyeHuckel / R12Repulsion potential
+    /**
+     * @brief Combined DebyeHuckel / R12Repulsion potential
      */
     typedef CombinedPairPotential<DebyeHuckel, R12Repulsion> DebyeHuckelr12;
 

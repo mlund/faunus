@@ -1,10 +1,9 @@
 #ifndef FAU_slump_h
 #define FAU_slump_h
 
-#ifndef SWIG
-#include <faunus/common.h>
-#include <faunus/slump.h>
-#endif
+#include <string>
+#include <random>
+#include <cassert>
 
 namespace Faunus {
 

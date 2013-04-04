@@ -18,9 +18,9 @@ void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &bond, Tnonbonded &nb, Tin
   double sigma   = in("lipid_sigma", 10);  // angstrom
   double epsilon = in("lipid_epsilon", 1); // kT
 
-  CombinedPairPotential<WeeksChandlerAndersen,DebyeHuckel> headhead(in);
-  CombinedPairPotential<WeeksChandlerAndersen,CosAttract> tailtail(in);
-  CombinedPairPotential<WeeksChandlerAndersen,ChargeNonpolar> headtail(in);
+  auto headhead = WeeksChandlerAndersen(in) + DebyeHuckel(in);
+  auto tailtail = WeeksChandlerAndersen(in) + CosAttract(in);
+  auto headtail = WeeksChandlerAndersen(in) + ChargeNonpolar(in);
 
   headhead.first.customSigma(hid, hid, 0.95*sigma);            
   headhead.first.customSigma(hid, tid, 0.95*sigma);            

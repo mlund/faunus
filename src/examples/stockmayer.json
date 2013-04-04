@@ -1,5 +1,0 @@
-{ "atomlist" :
-  {
-    "sol" : { "sigma":2.0, "mu":0.65, "dp":20., "dprot":180.0, "alpha":0 }
-  }
-}

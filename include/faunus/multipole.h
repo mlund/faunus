@@ -1,5 +1,5 @@
-#ifndef FAUNUS_MULTIPOLE
-#define FAUNUS_MULTIPOLE
+#ifndef FAUNUS_MULTIPOLE_H
+#define FAUNUS_MULTIPOLE_H
 
 namespace Faunus {
 
@@ -12,13 +12,15 @@ namespace Faunus {
    * @param limit Limit of sum of dipole-changes when iteration should stop
    */
   template<typename Tenergy>
-    void induceDipoles(const Tenergy &pot, const Space &spc, const Eigen::MatrixXd &mu_per, double &limit, Point ExternalField) { 
+    void getInducedDipoles(Tenergy &pot, Space &spc, const Eigen::MatrixXd &mu_per, double &limit) { 
       int size = spc.p.size();
       double diLim = size*limit;
       double diConv;
-      MatrixXd Field(size,3);
+      Eigen::MatrixXd Field(size,3);
       Field.setZero();
-      Point E(0,0,0);              Point mu_ind(0,0,0);    Point mu_err(0,0,0);
+      Point E(0,0,0);
+      Point mu_ind(0,0,0);
+      Point mu_err(0,0,0);
 
       do {  
         diConv = 0.0;
@@ -98,26 +100,26 @@ namespace Faunus {
 
   /**
    * @brief Returns dipole-dipole interaction which times the 
-   * @brief bjerrum length in (Å) gives the energy in k_BT.
    *
    * @param mu1 Unit dipole moment vector 1
    * @param mu2 Unit dipole moment vector 2
    * @param mu1xmu2 Product of dipole scalars
-   * @param r Vector R_{1\rightarrow 2}
+   * @param r Vector R_{1->2}
+   *
+   * T_{ab} = 3*r_a*r_b / |r|^5 , for a ne b
+   * T_{aa} = 3*r_a^2 / |r|^5 - 1 / |r|^3
+   * Summation of all T_{ab}*mu_a*mu_b
+   *
    */
   template<class Tvec>
     double mu2mu(const Tvec &mu1, const Tvec &mu2, double mu1xmu2, const Tvec &r) {
-      using namespace Eigen;
-      double R1 = 1.0/r.norm();        //   R^-1 , Å^-1
-      double R3 = R1*R1*R1;           //   R^-3 , Å^-3
-      double R5 = 3.0*R3*R1*R1;       // 3*R^-5 , Å^-5
-      //Matrix3d T = R5*r*r.transpose() - R3*Matrix3d::Identity();  // T_{ab} = 3*r_a*r_b / |r|^5 , for a ne b , Å^-3
-      // T_{aa} = 3*r_a^2 / |r|^5 - 1 / |r|^3    , Å^-3
-      //double W = -mu1.transpose()*T*mu2;                        // Summation of all T_{ab}*mu_a*mu_b       , Å^-3
-      double T1 = mu1.dot(mu2)*R3;
-      double T2 = mu2.dot(r)*R5*3*mu1.dot(r);
-      double W = T1 - T2;
-      return W*mu1xmu2;                             // Scaling with |mu_a|*|mu_b|              , Å^-1 e^ 2
+      double R2 = 1/r.squaredNorm();
+      double R1 = sqrt(R2);
+      double R3 = R1*R2;
+      double R5 = R3*R2;
+      Eigen::Matrix3d T = 3*R5*r*r.transpose() - R3*Matrix3d::Identity();
+      double W = -mu1.transpose()*T*mu2;
+      return W*mu1xmu2;
     }
 /*
   namespace Induced {
@@ -144,6 +146,12 @@ namespace Faunus {
   }
 */
   namespace Potential {
+
+    /**
+     * @brief Dipole-dipole interaction
+     *
+     * More info...
+     */
     class DipoleDipole : public PairPotentialBase {
       private:
         string _brief() { return "Dipole-dipole"; }
@@ -160,6 +168,7 @@ namespace Faunus {
             return _lB*mu2mu(a.mu,b.mu,a.muscalar*b.muscalar,r);
           }
 
+        /** @brief Dipole field at `r` due to dipole `p` */
         template<class Tparticle>
         Point field (const Tparticle &p, const Point &r) const {
           double R2 = 1.0/r.squaredNorm();
@@ -170,20 +179,23 @@ namespace Faunus {
         string info(char w) { return _brief(); }
     };
 
+    /**
+     * @brief Dipole-dipole interaction w. spherical cutoff and reaction field
+     *
+     * More info...
+     */
     class DipoleDipoleRF : public DipoleDipole {
       private:
-        string _brief() { return "Reaction Field"; }
+        string _brief() { return "Dipole-dipole (RF)"; }
         double rc2,eps;
       public:
         DipoleDipoleRF(InputMap &in) : DipoleDipole(in) { 
-          rc2 = in.get<double>("dipdip_cutoff",pc::infty);
-          rc2 = rc2*rc2;
+          rc2 = pow(in.get<double>("dipdip_cutoff",pc::infty), 2);
           eps = in.get<double>("epsilon_rf",80.);
           eps = _lB*(2*(eps-1)/(eps+1))/pow(rc2,1.5);
         }
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-            //cout << DipoleDipole::operator()(a,b,r) << " " << eps*a.mu.dot(b.mu)*a.muscalar*b.muscalar << "\n";
             if (r.squaredNorm() < rc2)
               return DipoleDipole::operator()(a,b,r) - eps*a.mu.dot(b.mu)*a.muscalar*b.muscalar;
             return 0.0;

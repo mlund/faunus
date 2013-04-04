@@ -1,5 +1,5 @@
-#ifndef FAU_auxiliary
-#define FAU_auxiliary
+#ifndef FAUNUS_AUXILIARY_H
+#define FAUNUS_AUXILIARY_H
 
 #ifndef SWIG
 #include <utility>
@@ -109,44 +109,62 @@ namespace Faunus {
   /**
    * @brief Quake inverse square root approximation
    */
-  inline float invsqrtQuake(float number) {
-    assert(sizeof(int)==4 && "Integer size must be 4 bytes for quake invsqrt. Are you using a 32bit system?");
-    float y  = number;
-    float x2 = y * 0.5F;
-    int i  = * ( int * ) &y;
-    i  = 0x5f3759df - ( i >> 1 );
-    y  = * ( float * ) &i;
-    y  = y * ( 1.5F - ( x2 * y * y ) );   // 1st iteration
-    //      y  = y * ( 1.5F - ( x2 * y * y ) );   // 2nd iteration, this can be removed
-    return y;
-  }
+  template<class Tint=int>
+    float invsqrtQuake(float number) {
+      static_assert(sizeof(Tint)==4,
+          "Integer size must be 4 bytes for quake invsqrt.");
+      float y  = number;
+      float x2 = y * 0.5F;
+      Tint i  = * ( Tint * ) &y;
+      i  = 0x5f3759df - ( i >> 1 );
+      y  = * ( float * ) &i;
+      y  = y * ( 1.5F - ( x2 * y * y ) );   // 1st iteration
+      //      y  = y * ( 1.5F - ( x2 * y * y ) );   // 2nd iteration, this can be removed
+      return y;
+    }
 
   /**
    * @brief Approximate exp() function
    * @note see Cawley 2000; doi:10.1162/089976600300015033
    * @warning Does not work in big endian systems!
    */
-  inline double exp_cawley(double y) {
-    assert(2*sizeof(int)==sizeof(double) && "Approximate exp() requires 4-byte integer");
-    //static double EXPA=1048576/std::log(2);
-    union {
-      double d;
-      struct { int j, i; } n;  // little endian
-      //struct { int i, j; } n;  // bin endian
-    } eco;
-    eco.n.i = 1072632447 + (int)(y*1512775.39519519);
-    eco.n.j = 0;
-    return eco.d;
-  }
+  template<class Tint=int>
+    double exp_cawley(double y) {
+      static_assert(2*sizeof(Tint)==sizeof(double),
+          "Approximate exp() requires 4-byte integer" );
+      //static double EXPA=1048576/std::log(2);
+      union {
+        double d;
+        struct { Tint j, i; } n;  // little endian
+        //struct { int i, j; } n;  // bin endian
+      } eco;
+      eco.n.i = 1072632447 + (Tint)(y*1512775.39519519);
+      eco.n.j = 0;
+      return eco.d;
+    }
 
-  inline double exp_untested(double y) {
-    assert(2*sizeof(int)==sizeof(double) && "Approximate exp() requires 4-byte integer");
-    double d;
-    *((int*)(&d) + 0) = 0;
-    *((int*)(&d) + 1) = (int)(1512775 * y + 1072632447);
-    return d;
-  }
+  template<class Tint>
+    double exp_untested(double y) {
+      static_assert(2*sizeof(Tint)==sizeof(double),
+          "Approximate exp() requires 4-byte integer");
+      double d;
+      *((Tint*)(&d) + 0) = 0;
+      *((Tint*)(&d) + 1) = (Tint)(1512775 * y + 1072632447);
+      return d;
+    }
 #pragma GCC diagnostic pop
+
+  /** @brief Convert string to float, int, bool */
+  template<class T>
+    T str2val(const std::string &s, T fallback=T()) {
+      return (!s.empty()) ? T(std::stod(s)) : fallback;
+    }
+  template<>
+    inline bool str2val<bool>(const std::string &s, bool fallback) {
+      if (s=="yes" || s=="true") return true;
+      if (s=="no" || s=="false") return false;
+      return fallback;
+    }
 
   /**
    * @brief Evaluate n'th degree Legendre polynomium

@@ -1,5 +1,5 @@
-#ifndef faunus_energy_h
-#define faunus_energy_h
+#ifndef FAUNUS_ENERGY_H
+#define FAUNUS_ENERGY_H
 
 #ifndef SWIG
 #include <faunus/common.h>
@@ -710,6 +710,42 @@ namespace Faunus {
       double v2v(const p_vec&, const p_vec&) FOVERRIDE;
       void field(const p_vec&, std::vector<Point>&) FOVERRIDE;
     };
+
+    template<class T1, class T2>
+      struct CombinedEnergy : public Energybase {
+        T1 first;
+        T2 second;
+        CombinedEnergy(T1 a, T2 b) : first(a), second(b) {
+          name=first.name+second.name;
+          assert(&a.getGeometry()!=nullptr);
+          //setGeometry( a.getGeometry()  );
+          setGeometry( first.geometry  );
+          second.setGeometry( first.geometry  );
+        }
+        void setVolume(double V) FOVERRIDE {
+          first.setVolume(V);
+          second.setVolume(V);
+        }
+        string _info() { return "hej"; }
+
+        double p2p(const particle &a, const particle &b) FOVERRIDE { return first.p2p(a,b)+second.p2p(a,b); }
+        Point f_p2p(const particle &a, const particle &b) FOVERRIDE { return first.f_p2p(a,b)+second.f_p2p(a,b); }
+        double all2p(const p_vec &p, const particle &a) FOVERRIDE { return first.all2p(p,a)+second.all2p(p,a); }
+        double all2all(const p_vec &p) FOVERRIDE { return first.all2all(p)+second.all2all(p); }
+        double i2i(const p_vec &p, int i, int j) FOVERRIDE { return first.i2i(p,i,j)+second.i2i(p,i,j); }
+        double i2g(const p_vec &p, Group &g, int i) FOVERRIDE { return first.i2g(p,g,i)+second.i2g(p,g,i); }
+        double i2all(const p_vec &p , int i) FOVERRIDE { return first.i2all(p,i)+second.i2all(p,i); }
+        double i_external(const p_vec&p, int i) FOVERRIDE { return first.i_external(p,i)+second.i_external(p,i); }
+        double i_internal(const p_vec&p, int i) FOVERRIDE { return first.i_internal(p,i)+second.i_internal(p,i); }
+        double g2g(const p_vec&p, Group&g1, Group&g2) FOVERRIDE { return first.g2g(p,g1,g2)+second.g2g(p,g1,g2); }
+        double g2all(const p_vec&p, Group&g) FOVERRIDE { return first.g2all(p,g)+second.g2all(p,g); }
+        double g_external(const p_vec&p, Group&g) FOVERRIDE { return first.g_external(p,g)+second.g_external(p,g); }
+        double g_internal(const p_vec&p, Group&g) FOVERRIDE { return first.g_internal(p,g)+second.g_internal(p,g); }
+        double external() FOVERRIDE { return first.external()+second.external(); }
+        double v2v(const p_vec&p1, const p_vec&p2) FOVERRIDE { return first.v2v(p1,p2)+second.v2v(p1,p2); }
+        void field(const p_vec&p, std::vector<Point>&E) FOVERRIDE { first.field(p,E); second.field(p,E); }
+      };
+
 
     /**
      * @brief Constrain two group mass centra within a certain distance interval [mindist:maxdist]

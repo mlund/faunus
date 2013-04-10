@@ -4,42 +4,6 @@
 namespace Faunus {
 
   /**
-   * @brief Replaces dipole moment with permanent dipole moment plus induced dipole moment
-   *
-   * @param pot The potential including geometry
-   * @param spc The space including the particles
-   * @param mu_per Matrix with permanent dipole moments of all particles
-   * @param limit Limit of sum of dipole-changes when iteration should stop
-   */
-  template<typename Tenergy>
-    void getInducedDipoles(Tenergy &pot, Space &spc, const Eigen::MatrixXd &mu_per, double &limit) { 
-      int size = spc.p.size();
-      double diLim = size*limit;
-      double diConv;
-      Eigen::MatrixXd Field(size,3);
-      Field.setZero();
-      Point E(0,0,0);
-      Point mu_ind(0,0,0);
-      Point mu_err(0,0,0);
-
-      do {  
-        diConv = 0.0;
-        Field = getField(pot,spc);
-        for(int i = 0; i < size; i++) {
-          E = Field.col(i) + ExternalField;
-          //mu_ind = atom[spc.p[i].id].alphamatrix*E;
-          mu_ind = 0.0001*E;
-          mu_err = mu_ind - spc.p[i].mu*spc.p[i].muscalar + mu_per.col(i);
-          diConv = diConv + mu_err.norm();
-          mu_ind = mu_ind + mu_per.col(i);
-
-          spc.p[i].muscalar = mu_ind.norm();
-          spc.p[i].mu = mu_ind/spc.p[i].muscalar;
-        }
-      } while (diConv > diLim);
-    }
-
-  /**
    * @brief Returns the dielectric constant outside the cutoff limit. Only hold when using PBC and $\epsilon_{sur} = \epsilon$,
    * @brief [Neumann, M. (1983) Mol. Phys., 50, 841-858].
    *
@@ -119,32 +83,10 @@ namespace Faunus {
       double R5 = R3*R2;
       Eigen::Matrix3d T = 3*R5*r*r.transpose() - R3*Matrix3d::Identity();
       double W = -mu1.transpose()*T*mu2;
+      //double W = mu1.dot(mu2)*R3-3*mu1.dot(r)*mu2.dot(r)*R5;
       return W*mu1xmu2;
     }
-/*
-  namespace Induced {
-    class InduceDipoles {
-      private:
-        string _brief() { return "Induced dipoles"; }
-      public:
-        InducedDipoles(InputMap &in, const Space &spc) {
-          double epsilon_r = in.get<double>("epsilon_r",80., "Dielectric constant");
-          Eigen::MatrixXd mu_per(3,spc.p.size());
-          for(unsigned int i = 0; i < spc.p.size(); i++) {
-            mu_per.row(i) = spc.p[i].mu*spc.p[i].muscalar;
-          }
-        }
-        template<class Tenergy>
-          void operator()(const Tenergy &pot, const Space &spc, double limit, Point ExternalField) const { 
-            induceDipoles(pot,spc,mu_per,limit,ExternalField);
-            return;
-          }
 
-
-        string info(char w) { return _brief(); }
-    };
-  }
-*/
   namespace Potential {
 
     /**

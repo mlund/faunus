@@ -71,29 +71,63 @@ namespace Faunus {
     template<class Tmove>
       class PolarizeMove : public Tmove {
         private:
-          double threshold; // threshold for iteration
-          vector<Point> E;  // field on each particle
+          double threshold;       // threshold for iteration
+          Eigen::MatrixXd field;  // field on each particle
+          Eigen::MatrixXd mu_per; // permanent dipole moments for all particles
 
-          void _trialMove() {
-            Tmove::_trialMove();                         // base class MC move
+          /**
+           *  @brief Replaces dipole moment with permanent dipole moment plus induced dipole moment
+           *  
+           *  @param pot The potential including geometry
+           *  @param p Trial particles
+           */
+          template<typename Tenergy,typename Tparticles>
+          void induceDipoles(Tenergy &pot, Tparticles &p) { 
+            Eigen::VectorXd mu_err_norm;
+            Point mu_ind(0,0,0);  
+            Point mu_err(0,0,0);
+            Point E(0,0,0);
+            do {  
+              pot.field(p,field);
+              for(int i = 0; i < (int)p.size(); i++) {
+                E = field.col(i);                                         // Get field on particle i
+                mu_ind = atom[p[i].id].alphamatrix*E;                     // Calculate induced dipole moment on particle i
+                mu_err = mu_ind - p[i].mu*p[i].muscalar + mu_per.col(i);  // Get difference between former and current induced dipole
+                mu_err_norm(i) = mu_err.norm();                           // Get norm of previous row
+                mu_ind = mu_ind + mu_per.col(i);                          // Calculate total dipole moment
 
-            E.resize(Tmove::spc->trial.size());          // make sure sizes match
-            std::fill(E.begin(), E.end(), Point(0,0,0)); // fill with zero
-
-            Tmove::pot->field(Tmove::spc->trial, E);     // calc. field on all particles
-            // update iteratively...
+                p[i].muscalar = mu_ind.norm();                            // Update dipole scalar in particle
+                p[i].mu = mu_ind/p[i].muscalar;                           // Update dipole vector in particle
+              }
+            } while (mu_err_norm.maxCoeff() > threshold);                 // Check if threshold is ok
           }
-        public:
-          PolarizeMove(InputMap &in, Energy::Energybase &e, Space &s) :
-            Tmove(in,e,s) {}
-      };
 
-    template<class Tmove>
-      class EwaldMove : public Tmove {
-        protected:
-          void _trialMove() {
-            Tmove::_trialMove();
-            // ... update induced moments
+        void _trialMove() {
+          Tmove::_trialMove();                         // base class MC move
+
+          field.resize(3,Tmove::spc->trial.size());          // make sure sizes match
+
+          // Store permanent dipole moments
+          int size = Tmove::spc->trial.size();
+          MatrixXd mu_per(3,size);
+          for(int i = 0; i < size; i ++) {
+            mu_per.col(i) = Tmove::spc->trial[i].mu*Tmove::spc->trial[i].muscalar;
+          }
+
+          // Get induced dipole moments
+          induceDipoles(*Tmove::pot,Tmove::spc->trial);
+        }
+      public:
+        PolarizeMove(InputMap &in, Energy::Energybase &e, Space &s) :
+          Tmove(in,e,s) {}
+    };
+
+  template<class Tmove>
+    class EwaldMove : public Tmove {
+      protected:
+        void _trialMove() {
+          Tmove::_trialMove();
+          // ... update induced moments
           }
         public:
           EwaldMove(InputMap &in, Energy::Energybase &e, Space &s) :

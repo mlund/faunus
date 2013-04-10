@@ -63,7 +63,7 @@ namespace Faunus {
     double Energybase::g_internal(const p_vec &p, Group &g) {return 0;}
 
     double Energybase::external() {return 0;}
-    void Energybase::field(const p_vec &p, std::vector<Point> &E) {}
+    void Energybase::field(const p_vec &p, Eigen::MatrixXd &E) {}
 
     string Energybase::info() {
       assert(!name.empty() && "Assign a name to energy class!");
@@ -267,8 +267,8 @@ namespace Faunus {
       return o.str();
     }
 
-    void Hamiltonian::field(const p_vec &p, std::vector<Point> &E) {
-      assert(p.size()==E.size());
+    void Hamiltonian::field(const p_vec &p, Eigen::MatrixXd &E) {
+      assert(p.size()==E.cols());
       for (auto b : baselist)
         b->field(p,E);
     }

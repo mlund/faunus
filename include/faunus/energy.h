@@ -77,7 +77,8 @@ namespace Faunus {
         virtual double external();                            // External energy - pressure, for example.
         virtual string info();                                //!< Information
 
-        virtual void field(const p_vec&, std::vector<Point>&);//!< Calculate electric field on all particles
+        //virtual void field(const p_vec&, std::vector<Point>&);//!< Calculate electric field on all particles
+        virtual void field(const p_vec&, Eigen::MatrixXd&);//!< Calculate electric field on all particles
 
         virtual void trialUpdate(const Space&, std::set<int>&) {};
         virtual void acceptUpdate() {};
@@ -408,15 +409,25 @@ namespace Faunus {
            * and stores (add) in the vector `E`.
            *
            * @param p Particle vector
-           * @param E Holds field on each particle. Must be of size N.
+           * @param E Holds field on each particle. Must have N columns.
            */
-          void field(const p_vec &p, std::vector<Point> &E) {
-            assert(p.size()==E.size());
+          void field(const p_vec &p, Eigen::MatrixXd &E) FOVERRIDE {
+            assert((int)p.size()==E.cols());
+	    
+	    //for(int i = 0; i < p.size() - 1; i++) {
+	    //  for(int j = 0; j < i; j++) {
+		//  E.col(i) = E.col(i) + pairpot.field(p[j], geometry.vdist(p[i],p[j]));
+	      //}
+	      //for(int j = i+1; p.size(); j++) {
+	//	  E.col(i) = E.col(i) + pairpot.field(p[j], geometry.vdist(p[i],p[j]));
+	 //     }
+	  //  }
+	    
             size_t i=0;
             for (auto &pi : p) {
               for (auto &pj : p)
                 if (&pi!=&pj)
-                  E[i]+=pairpot.field(pj, geometry.vdist(pi,pj));
+                  E.col(i) = E.col(i) + pairpot.field(pj, geometry.vdist(pi,pj));
               i++;
             }
           }
@@ -708,7 +719,8 @@ namespace Faunus {
       double g_internal(const p_vec&, Group&) FOVERRIDE;
       double external() FOVERRIDE;
       double v2v(const p_vec&, const p_vec&) FOVERRIDE;
-      void field(const p_vec&, std::vector<Point>&) FOVERRIDE;
+      //void field(const p_vec&, std::vector<Point>&) FOVERRIDE;
+      void field(const p_vec&, Eigen::MatrixXd&) FOVERRIDE;
     };
 
     template<class T1, class T2>
@@ -743,7 +755,7 @@ namespace Faunus {
         double g_internal(const p_vec&p, Group&g) FOVERRIDE { return first.g_internal(p,g)+second.g_internal(p,g); }
         double external() FOVERRIDE { return first.external()+second.external(); }
         double v2v(const p_vec&p1, const p_vec&p2) FOVERRIDE { return first.v2v(p1,p2)+second.v2v(p1,p2); }
-        void field(const p_vec&p, std::vector<Point>&E) FOVERRIDE { first.field(p,E); second.field(p,E); }
+        void field(const p_vec&p, Eigen::MatrixXd&E) FOVERRIDE { first.field(p,E); second.field(p,E); }
       };
 
 

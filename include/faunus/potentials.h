@@ -66,7 +66,10 @@ namespace Faunus {
         virtual Point force(const particle&, const particle&, double, const Point&);
 
         /** @brief Electric field at spatial position */
-        virtual Point field(const particle&, const Point&) const;
+	template<typename Tparticle>
+            Point field(const Tparticle &a, const Point &r) const {
+              return Point(0,0,0);
+            }
 
         bool save(string, particle::Tid, particle::Tid); //!< Save table of pair potential to disk
         virtual void test(UnitTest&);                    //!< Perform unit test

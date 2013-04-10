@@ -58,7 +58,7 @@ namespace Faunus {
       a.name = atom.first;
       a.activity = json::value<double>(atom.second, "activity", 0);
       a.alpha = json::value<double>(atom.second, "alpha", 0);
-
+      a.alphamatrix = Eigen::Matrix3d::Identity()*a.alpha;
       a.dp = json::value<double>(atom.second, "dp", 0);
       a.dprot = json::value<double>(atom.second, "dprot", 0) * pc::pi / 180.; // deg->rads
       a.eps = json::value<double>(atom.second, "eps", 0);

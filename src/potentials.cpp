@@ -61,14 +61,6 @@ namespace Faunus {
     }
 
     /**
-     * @param a Particle emanating the field
-     * @param r Position in which to calculate the field
-     */
-    Point PairPotentialBase::field(const particle &a, const Point &r) const {
-      return Point(0,0,0);
-    }
-
-    /**
      * This will reset the temperature to the specified value. By default this function
      * does nothing, although in Debug mode it will throw an exception if derived classes
      * do not implement it (and is called).

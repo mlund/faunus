@@ -77,7 +77,6 @@ namespace Faunus {
         virtual double external();                            // External energy - pressure, for example.
         virtual string info();                                //!< Information
 
-        //virtual void field(const p_vec&, std::vector<Point>&);//!< Calculate electric field on all particles
         virtual void field(const p_vec&, Eigen::MatrixXd&);//!< Calculate electric field on all particles
 
         virtual void trialUpdate(const Space&, std::set<int>&) {};
@@ -414,15 +413,6 @@ namespace Faunus {
           void field(const p_vec &p, Eigen::MatrixXd &E) FOVERRIDE {
             assert((int)p.size()==E.cols());
 	    
-	    //for(int i = 0; i < p.size() - 1; i++) {
-	    //  for(int j = 0; j < i; j++) {
-		//  E.col(i) = E.col(i) + pairpot.field(p[j], geometry.vdist(p[i],p[j]));
-	      //}
-	      //for(int j = i+1; p.size(); j++) {
-	//	  E.col(i) = E.col(i) + pairpot.field(p[j], geometry.vdist(p[i],p[j]));
-	 //     }
-	  //  }
-	    
             size_t i=0;
             for (auto &pi : p) {
               for (auto &pj : p)
@@ -719,7 +709,6 @@ namespace Faunus {
       double g_internal(const p_vec&, Group&) FOVERRIDE;
       double external() FOVERRIDE;
       double v2v(const p_vec&, const p_vec&) FOVERRIDE;
-      //void field(const p_vec&, std::vector<Point>&) FOVERRIDE;
       void field(const p_vec&, Eigen::MatrixXd&) FOVERRIDE;
     };
 

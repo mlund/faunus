@@ -6,6 +6,7 @@ using namespace Faunus::Potential;
 
 typedef Geometry::Cuboid Tgeo;                   // select simulation geometry and pair potential
 typedef CombinedPairPotential<LennardJones,DipoleDipoleRF> Tpair;
+//typedef DipoleDipoleRF Tpair;
 
 int main() {
   ::atom.includefile("stockmayer.json");         // load atom properties
@@ -18,10 +19,10 @@ int main() {
   Analysis::RadialDistribution<> rdf(0.05);       // particle-particle g(r)
   Analysis::Table2D<double,Average<double> > mucorr(0.05);       // particle-particle g(r)
 
-  Move::AtomicTranslation trans(in, pot, spc);   // particle move class
-  Move::AtomicRotation rot(in, pot, spc);        // particle move class
-  //PolarizeMove<AtomicTranslation> trans(in,pot,spc);
-  //PolarizeMove<AtomicRotation> rot(in,pot,spc);
+  //Move::AtomicTranslation trans(in, pot, spc);   // particle move class
+  //Move::AtomicRotation rot(in, pot, spc);        // particle move class
+  PolarizeMove<AtomicTranslation> trans(in,pot,spc);
+  PolarizeMove<AtomicRotation> rot(in,pot,spc);
   trans.setGroup(sol);                                // tells move class to act on sol group
   rot.setGroup(sol);                                  // tells move class to act on sol group
   //spc.load("state_ST");
@@ -33,6 +34,7 @@ int main() {
         sys+=trans.move( sol.size() );                     // translate
       else
         sys+=rot.move( sol.size() );                       // rotate
+	std::cout << "Uno! \n";
 
       if (slp_global()<0.5)
         for (auto i=sol.front(); i<sol.back(); i++) { // salt radial distribution function

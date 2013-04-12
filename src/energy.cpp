@@ -268,7 +268,7 @@ namespace Faunus {
     }
 
     void Hamiltonian::field(const p_vec &p, Eigen::MatrixXd &E) {
-      assert(p.size()==E.cols());
+      assert((int)p.size()==E.cols());
       for (auto b : baselist)
         b->field(p,E);
     }

@@ -68,7 +68,7 @@ namespace Faunus {
         /** @brief Electric field at spatial position */
 	template<typename Tparticle>
             Point field(const Tparticle &a, const Point &r) const {
-              return Point(0,0,0);
+	      return Point(0,0,0);
             }
 
         bool save(string, particle::Tid, particle::Tid); //!< Save table of pair potential to disk

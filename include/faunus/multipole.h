@@ -108,6 +108,7 @@ namespace Faunus {
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
             return _lB*mu2mu(a.mu,b.mu,a.muscalar*b.muscalar,r);
+	    //return _lB*mu2mu(a.mup,b.mup,1,r);
           }
 
         /** @brief Dipole field at `r` due to dipole `p` */
@@ -116,7 +117,7 @@ namespace Faunus {
           double R2 = 1.0/r.squaredNorm();
           double R1 = sqrt(R2);
           Point r_n = r*R1;
-          return _lB*((3.0*p.mu.dot(r_n)*r_n - p.mu)*p.muscalar*R2*R1);
+          return _lB*((3.0*p.mup.dot(r_n)*r_n - p.mup)*R2*R1);
         }
         string info(char w) { return _brief(); }
     };

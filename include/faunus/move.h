@@ -8,6 +8,7 @@
 #include <faunus/textio.h>
 #include <faunus/geometry.h>
 #include <faunus/energy.h>
+#include <unistd.h>
 
 #ifdef ENABLE_MPI
 #include <faunus/mpi.h>
@@ -71,9 +72,8 @@ namespace Faunus {
     template<class Tmove>
       class PolarizeMove : public Tmove {
         private:
-          double threshold;       // threshold for iteration
-          Eigen::MatrixXd field;  // field on each particle
-          Eigen::MatrixXd mu_per; // permanent dipole moments for all particles
+          double threshold;       	  // threshold for iteration
+          Eigen::MatrixXd field;  	  // field on each particle
 
           /**
            *  @brief Replaces dipole moment with permanent dipole moment plus induced dipole moment
@@ -83,36 +83,35 @@ namespace Faunus {
            */
           template<typename Tenergy,typename Tparticles>
           void induceDipoles(Tenergy &pot, Tparticles &p) { 
-            Eigen::VectorXd mu_err_norm;
-            Point mu_ind(0,0,0);  
+	    Eigen::VectorXd mu_err_norm((int)p.size());
+            Point mu_ind_p(0,0,0);  
             Point mu_err(0,0,0);
             Point E(0,0,0);
+	    threshold = 0.001;
+	    
+	    int count = 0;
             do {  
+	      mu_err_norm.setZero();
+	      field.setZero();
               pot.field(p,field);
               for(int i = 0; i < (int)p.size(); i++) {
                 E = field.col(i);                                         // Get field on particle i
-                mu_ind = atom[p[i].id].alphamatrix*E;                     // Calculate induced dipole moment on particle i
-                mu_err = mu_ind - p[i].mu*p[i].muscalar + mu_per.col(i);  // Get difference between former and current induced dipole
-                mu_err_norm(i) = mu_err.norm();                           // Get norm of previous row
-                mu_ind = mu_ind + mu_per.col(i);                          // Calculate total dipole moment
-
-                p[i].muscalar = mu_ind.norm();                            // Update dipole scalar in particle
-                p[i].mu = mu_ind/p[i].muscalar;                           // Update dipole vector in particle
+		mu_ind_p = atom[p[i].id].alphamatrix*E + p[i].mup;        // Total new dipole moment
+	   	mu_err = mu_ind_p - p[i].mu*p[i].muscalar;     // Difference between former and current state
+                mu_err_norm[i] = mu_err.norm();                           // Get norm of previous row
+                
+                p[i].muscalar = mu_ind_p.norm();                          // Update dipole scalar in particle
+                p[i].mu = mu_ind_p/p[i].muscalar;                         // Update dipole vector in particle
               }
+              count++;
             } while (mu_err_norm.maxCoeff() > threshold);                 // Check if threshold is ok
+	    //std::cout << "Count,Value: " << count << " " << mu_err_norm.maxCoeff() << "\n";
           }
 
         void _trialMove() {
           Tmove::_trialMove();                         // base class MC move
 
           field.resize(3,Tmove::spc->trial.size());          // make sure sizes match
-
-          // Store permanent dipole moments
-          int size = Tmove::spc->trial.size();
-          MatrixXd mu_per(3,size);
-          for(int i = 0; i < size; i ++) {
-            mu_per.col(i) = Tmove::spc->trial[i].mu*Tmove::spc->trial[i].muscalar;
-          }
 
           // Get induced dipole moments
           induceDipoles(*Tmove::pot,Tmove::spc->trial);

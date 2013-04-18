@@ -5,7 +5,8 @@ using namespace Faunus::Move;
 using namespace Faunus::Potential;
 
 typedef Geometry::Cuboid Tgeo;                   // select simulation geometry and pair potential
-typedef CombinedPairPotential<LennardJones,DipoleDipoleRF> Tpair;
+typedef CombinedPairPotential<CoulombLJ,DipoleDipoleRF> TpairTemp;
+typedef CombinedPairPotential<TpairTemp,LennardJones> Tpair;
 //typedef DipoleDipoleRF Tpair;
 
 int main() {
@@ -18,15 +19,23 @@ int main() {
   MCLoop loop(in);                               // class for mc loop counting
   Analysis::RadialDistribution<> rdf(0.05);       // particle-particle g(r)
   Analysis::Table2D<double,Average<double> > mucorr(0.05);       // particle-particle g(r)
-
   //Move::AtomicTranslation trans(in, pot, spc);   // particle move class
   //Move::AtomicRotation rot(in, pot, spc);        // particle move class
   PolarizeMove<AtomicTranslation> trans(in,pot,spc);
   PolarizeMove<AtomicRotation> rot(in,pot,spc);
   trans.setGroup(sol);                                // tells move class to act on sol group
   rot.setGroup(sol);                                  // tells move class to act on sol group
-  //spc.load("state_ST");
-
+  spc.load("state_ST");
+  
+  spc.p[0].x() = 0;
+  spc.p[0].y() = 0;
+  spc.p[0].z() = 0;
+  
+  spc.p[1].x() = 0;
+  spc.p[1].y() = 0;
+  spc.p[1].z() = 4;
+  spc.trial = spc.p;
+  
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );      // store initial total system energy
   while ( loop.macroCnt() ) {                         // Markov chain 
     while ( loop.microCnt() ) {
@@ -34,7 +43,6 @@ int main() {
         sys+=trans.move( sol.size() );                     // translate
       else
         sys+=rot.move( sol.size() );                       // rotate
-	std::cout << "Uno! \n";
 
       if (slp_global()<0.5)
         for (auto i=sol.front(); i<sol.back(); i++) { // salt radial distribution function
@@ -46,7 +54,7 @@ int main() {
         }
     }
 
-    cout << "Eps: " << getDielectricConstant(pot,spc,in.get<double>("dipdip_cutoff",pc::infty)) << "\n";
+    //cout << "Eps: " << getDielectricConstant(pot,spc,in.get<double>("dipdip_cutoff",pc::infty)) << "\n";
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
     cout << loop.timing();
   }
@@ -54,6 +62,6 @@ int main() {
   FormatPQR().save("confout.pqr", spc.p);
   rdf.save("gofr.dat");                               // save g(r) to disk
   mucorr.save("mucorr.dat");                               // save g(r) to disk
-  std::cout << spc.info() + pot.info() + trans.info() + rot.info() + sys.info(); // final info
+  //std::cout << spc.info() + pot.info() + trans.info() + rot.info() + sys.info(); // final info
   spc.save("state_ST");
 }

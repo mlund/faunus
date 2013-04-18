@@ -72,6 +72,8 @@ namespace Faunus {
     template<class Tmove>
       class PolarizeMove : public Tmove {
         private:
+	  using Tmove::spc;
+	  using Tmove::pot;
           double threshold;       	  // threshold for iteration
           Eigen::MatrixXd field;  	  // field on each particle
 
@@ -84,26 +86,29 @@ namespace Faunus {
           template<typename Tenergy,typename Tparticles>
           void induceDipoles(Tenergy &pot, Tparticles &p) { 
 	    Eigen::VectorXd mu_err_norm((int)p.size());
-            Point mu_ind_p(0,0,0);  
+            Point mu_trial(0,0,0);  
             Point mu_err(0,0,0);
             Point E(0,0,0);
-	    threshold = 0.001;
+	    threshold = 0.01;
 	    
-	    int count = 0;
+	    //int count = 0;
             do {  
 	      mu_err_norm.setZero();
 	      field.setZero();
               pot.field(p,field);
               for(int i = 0; i < (int)p.size(); i++) {
-                E = field.col(i);                                         // Get field on particle i
-		mu_ind_p = atom[p[i].id].alphamatrix*E + p[i].mup;        // Total new dipole moment
-	   	mu_err = mu_ind_p - p[i].mu*p[i].muscalar;     // Difference between former and current state
+                E = field.col(i);                                         // Get field on particle i, in e/Å
+		mu_trial = atom[p[i].id].alphamatrix*E + p[i].mup;        // Total new dipole moment
+	   	mu_err = mu_trial - p[i].mu*p[i].muscalar;     // Difference between former and current state
                 mu_err_norm[i] = mu_err.norm();                           // Get norm of previous row
-                
-                p[i].muscalar = mu_ind_p.norm();                          // Update dipole scalar in particle
-                p[i].mu = mu_ind_p/p[i].muscalar;                         // Update dipole vector in particle
-              }
-              count++;
+                p[i].muscalar = mu_trial.norm();                          // Update dipole scalar in particle
+		if(p[i].muscalar == 0) {
+		  continue;
+		}
+                p[i].mu = mu_trial/p[i].muscalar;                         // Update dipole vector in particle
+	       }
+	       std::cout << "Dipole moment in Debye: " << p[0].muscalar/0.20819434 << " " << p[1].muscalar/0.20819434  << "\n";
+              //count++;
             } while (mu_err_norm.maxCoeff() > threshold);                 // Check if threshold is ok
 	    //std::cout << "Count,Value: " << count << " " << mu_err_norm.maxCoeff() << "\n";
           }
@@ -116,6 +121,24 @@ namespace Faunus {
           // Get induced dipole moments
           induceDipoles(*Tmove::pot,Tmove::spc->trial);
         }
+        
+        double _energyChange() {
+	    if(Tmove::iparticle == -1) {
+		return 0.0;
+	    }
+	    return (Energy::systemEnergy(*spc,*pot,spc->trial)-Energy::systemEnergy(*spc,*pot,spc->p));
+	}
+        
+        void _rejectMove() {
+	  Tmove::_rejectMove();
+	  Tmove::spc->trial = Tmove::spc->p;
+	}
+	
+	void _acceptMove() {
+	  Tmove::_acceptMove();
+	  Tmove::spc->p = Tmove::spc->trial;
+	}
+	
       public:
         PolarizeMove(InputMap &in, Energy::Energybase &e, Space &s) :
           Tmove(in,e,s) {}
@@ -212,12 +235,12 @@ namespace Faunus {
       private:
         typedef std::map<short, Average<double> > map_type;
         string _info();
-        void _acceptMove();
-        void _rejectMove();
         double _energyChange();
         bool run() const;                //!< Runfraction test
       protected:
         void _trialMove();
+	void _acceptMove();
+        void _rejectMove();
         map_type accmap; //!< Single particle acceptance map
         map_type sqrmap; //!< Single particle mean square displacement map
 

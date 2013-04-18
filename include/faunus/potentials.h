@@ -538,6 +538,11 @@ namespace Faunus {
           return lB*a.charge*b.charge / sqrt(r2);
 #endif
         }
+        
+       template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
+            return operator()(a,b,r.squaredNorm());
+          }
 
       template<class T>
         Point force(const T &a, const T &b, double r2, const Point &p) {
@@ -547,6 +552,15 @@ namespace Faunus {
           return lB*a.charge*b.charge * p / (sqrt(r2)*r2);
 #endif
         }
+   
+       /** @brief Electric field at `r` due to charge `p` 
+	* Gets returned in [e/Å^2] [C^2 / J m]
+	*/
+       template<class Tparticle>
+       Point field (const Tparticle &p, const Point &r) const {
+         double R2 = 1.0/r.squaredNorm();
+         return p.charge*R2*r*sqrt(R2)/(4*pc::pi*pc::e0);
+       }
 
       string info(char);
       void test(UnitTest&); //!< Perform unit test

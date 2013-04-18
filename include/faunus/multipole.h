@@ -35,6 +35,7 @@ namespace Faunus {
    * @param pot The potential including geometry
    * @param spc The space including the particles
    */
+  /*
   template<typename Tenergy>
     MatrixXd getField(Tenergy &pot, const Space &spc) {
       int size = spc.p.size();
@@ -60,10 +61,10 @@ namespace Faunus {
         E.setZero();
       }
       return field;
-    }
+    }*/
 
   /**
-   * @brief Returns dipole-dipole interaction which times the 
+   * @brief Returns dipole-dipole interaction
    *
    * @param mu1 Unit dipole moment vector 1
    * @param mu2 Unit dipole moment vector 2
@@ -111,13 +112,15 @@ namespace Faunus {
 	    //return _lB*mu2mu(a.mup,b.mup,1,r);
           }
 
-        /** @brief Dipole field at `r` due to dipole `p` */
+        /** @brief Dipole field at `r` due to dipole `p` 
+	 *  Gets returned in [e/Å^2] [C^2 / J m]
+	 */
         template<class Tparticle>
         Point field (const Tparticle &p, const Point &r) const {
           double R2 = 1.0/r.squaredNorm();
           double R1 = sqrt(R2);
           Point r_n = r*R1;
-          return _lB*((3.0*p.mup.dot(r_n)*r_n - p.mup)*R2*R1);
+          return ((3.0*p.mu.dot(r_n)*r_n - p.mu)*R2*R1)*p.muscalar/(4*pc::pi*pc::e0);
         }
         string info(char w) { return _brief(); }
     };

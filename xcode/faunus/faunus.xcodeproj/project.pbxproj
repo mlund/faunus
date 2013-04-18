@@ -309,6 +309,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		2ADE665C170DCE4900519B6C /* HS.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = HS.cpp; path = ../../src/examples/HS.cpp; sourceTree = "<group>"; };
 		73011C551423E30100509B7B /* drift.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = drift.h; sourceTree = "<group>"; };
 		73011C561423E30100509B7B /* energy.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = energy.h; sourceTree = "<group>"; };
 		73011C571423E30100509B7B /* faunus.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = faunus.h; sourceTree = "<group>"; };
@@ -668,6 +669,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		2ADE665B170DCE3700519B6C /* examples */ = {
+			isa = PBXGroup;
+			children = (
+				2ADE665C170DCE4900519B6C /* HS.cpp */,
+			);
+			name = examples;
+			sourceTree = "<group>";
+		};
 		7304709716B72E1200A191AE /* eigen3 */ = {
 			isa = PBXGroup;
 			children = (
@@ -1325,6 +1334,7 @@
 		738C138C13FB13740056EF71 /* src */ = {
 			isa = PBXGroup;
 			children = (
+				2ADE665B170DCE3700519B6C /* examples */,
 				738C136713FB133A0056EF71 /* xdrfile */,
 				7316FA5515C56BA10024F084 /* analysis.cpp */,
 				73B67CD21423E28E00E44DD9 /* drift.cpp */,

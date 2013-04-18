@@ -161,9 +161,47 @@ namespace Faunus {
           }
     };
 
+    class Hertz : public PairPotentialBase {
+    private: 
+      
+      //double Y,nu;
+      double E;
+      string _brief();
+    public:
+      Hertz(InputMap&, string="hertz");
+      template<class Tparticle>
+	double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+    
+	double m = a.radius+b.radius;
+	double diameter = 2.*a.radius;
+	if(r2 <= m*m) {
+	  // double D = (3./2.)*((1-nu*nu)/Y);
+	  // return (sqrt(2.*size)/(5*D))*pow((2.*size - sqrt(r2)),(5./2.));
+	  return E*pow((1-(sqrt(r2)/diameter)),(5./2.));
+	  
+	}
+	return 0;
+      }
+
+       string info(char); 
+    };
+
+
+
+
+
+
+
+
+
     /**
      * @brief Hard sphere pair potential
      */
+
+    
+
+
+
     class HardSphere : public PairPotentialBase {
       public:
         HardSphere();
@@ -518,6 +556,7 @@ namespace Faunus {
       friend class Energy::GouyChapman;
       private:
       string _brief();
+ 
       double epsilon_r;
       protected:
       double depsdt;      //!< \f$ T\partial \epsilon_r / \epsilon_r \partial T = -1.37 \f$
@@ -615,14 +654,71 @@ namespace Faunus {
             if (qq>1e-6)
               return -c * qq / (r2*r2) * (a.radius*a.radius*a.radius);
             return 0;
-          }
+	}
         string info(char);
     };
 
+
+    class YukawaGel : public Coulomb {
+    private:
+      string _brief();
+      double Z, nc,ns, v, k, Z2e2overER,d,kd,k2d2,ekd, braket7;
+      
+      public:
+      
+      YukawaGel(InputMap&);
+      template<class Tparticle>
+	double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+	double m = a.radius+b.radius;
+	double r = sqrt(r2);
+	double kr = k*r;
+	
+	
+	double ekr=exp(-kr);
+	
+	if(r2 <= m*m) {
+	  double roverd = r/d;
+	  
+	  double ekdsinhkr = ekd*sinh(kr);
+	  
+	  double A = (2./d)*Z2e2overER;
+
+	  double braket = (6./5.)-(2.*pow(roverd,2))+((3./2.)*pow(roverd,3))-((1./5.)*pow(roverd,5));
+
+	  double B = (72./((k2d2*k2d2)*r))*Z2e2overER;
+
+	  double braket2 = (((1.-ekr+(0.5*kr*kr)+((1./24.)*pow(kr,4)))*(1.-(4./k2d2)))+((4.*ekdsinhkr)/kd));
+
+	  double braket3 = ( ekdsinhkr + (k*k*d*r) + ( ((k*k*k*k)/6.) * ((d*d*d*r)+(r*r*r*d)) ) )* (1.+(4./k2d2));
+
+	  double braket4 = ((4.*r)/d)*(1.+(0.5*k2d2)+((1./30.)*(k2d2*k2d2)));
+	  double braket5 = ((8.*r*r*r)/(3.*d*d*d))*((k2d2/4.)+((k2d2*k2d2)/12.));
+	  double braket6 = (((1./180.)*((k*k*k*k)/(d*d)))*(r*r*r*r*r*r));
+
+	  double pot = (A*braket)-(B*(braket2+braket3-braket4-braket5-braket6));
+	  return pot;
+      }
+	else{
+	 
+	  double pot2 = ((144./(k2d2*k2d2))*(Z2e2overER)*(braket7*braket7)*(ekr/r));
+	  
+	  return pot2;
+      }
+      }
+      string info(char); 
+    };
+
+  
+
+
+
+
+
+
+
     /**
      * @brief Debye-Huckel/Yukawa potential
-     *
-     * @details Similar to the plain Coulomb potential
+     *1     * @details Similar to the plain Coulomb potential
      *          but with an exponential term to described salt screening:
      * \f[ \beta w_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT}
      * \frac{z_i z_j}{r_{ij}} \exp(-\kappa r_{ij}) \f]
@@ -723,6 +819,8 @@ namespace Faunus {
             return Tdefault::info(w) + _info;
           }
       };
+    
+    
 
     /**
      * @brief Combines two pair potentials

@@ -559,7 +559,7 @@ namespace Faunus {
        template<class Tparticle>
        Point field (const Tparticle &p, const Point &r) const {
          double R2 = 1.0/r.squaredNorm();
-         return p.charge*R2*r*sqrt(R2)/(4*pc::pi*pc::e0);
+         return p.charge*R2*r*sqrt(R2)*lB;
        }
 
       string info(char);

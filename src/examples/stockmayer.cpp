@@ -5,9 +5,12 @@ using namespace Faunus::Move;
 using namespace Faunus::Potential;
 
 typedef Geometry::Cuboid Tgeo;                   // select simulation geometry and pair potential
-typedef CombinedPairPotential<CoulombLJ,DipoleDipoleRF> TpairTemp;
-typedef CombinedPairPotential<TpairTemp,LennardJones> Tpair;
+typedef CombinedPairPotential<CoulombHS,DipoleDipole> Tpair;
+//typedef CoulombLJ Tpair;
 //typedef DipoleDipoleRF Tpair;
+
+
+
 
 int main() {
   ::atom.includefile("stockmayer.json");         // load atom properties
@@ -26,15 +29,7 @@ int main() {
   trans.setGroup(sol);                                // tells move class to act on sol group
   rot.setGroup(sol);                                  // tells move class to act on sol group
   spc.load("state_ST");
-  
-  spc.p[0].x() = 0;
-  spc.p[0].y() = 0;
-  spc.p[0].z() = 0;
-  
-  spc.p[1].x() = 0;
-  spc.p[1].y() = 0;
-  spc.p[1].z() = 4;
-  spc.trial = spc.p;
+  Analysis::getDielConst cdm(5);
   
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );      // store initial total system energy
   while ( loop.macroCnt() ) {                         // Markov chain 
@@ -44,6 +39,9 @@ int main() {
       else
         sys+=rot.move( sol.size() );                       // rotate
 
+ 	//cdm.sample(spc.p,*spc.geo);
+      
+      
       if (slp_global()<0.5)
         for (auto i=sol.front(); i<sol.back(); i++) { // salt radial distribution function
           for (auto j=i+1; j<=sol.back(); j++) {
@@ -53,8 +51,7 @@ int main() {
           }
         }
     }
-
-    //cout << "Eps: " << getDielectricConstant(pot,spc,in.get<double>("dipdip_cutoff",pc::infty)) << "\n";
+    //cout << cdm.info();
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
     cout << loop.timing();
   }
@@ -62,6 +59,6 @@ int main() {
   FormatPQR().save("confout.pqr", spc.p);
   rdf.save("gofr.dat");                               // save g(r) to disk
   mucorr.save("mucorr.dat");                               // save g(r) to disk
-  //std::cout << spc.info() + pot.info() + trans.info() + rot.info() + sys.info(); // final info
+  std::cout << spc.info() + pot.info() + trans.info() + rot.info() + sys.info(); // final info
   spc.save("state_ST");
 }

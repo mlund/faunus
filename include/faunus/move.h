@@ -76,20 +76,21 @@ namespace Faunus {
 	  using Tmove::pot;
           double threshold;       	  // threshold for iteration
           Eigen::MatrixXd field;  	  // field on each particle
-
+	  
           /**
            *  @brief Replaces dipole moment with permanent dipole moment plus induced dipole moment
            *  
            *  @param pot The potential including geometry
            *  @param p Trial particles
+           *  @param E_ext External field on particles
            */
           template<typename Tenergy,typename Tparticles>
-          void induceDipoles(Tenergy &pot, Tparticles &p) { 
+          void induceDipoles(Tenergy &pot, Tparticles &p, Point E_ext) { 
 	    Eigen::VectorXd mu_err_norm((int)p.size());
             Point mu_trial(0,0,0);  
             Point mu_err(0,0,0);
             Point E(0,0,0);
-	    threshold = 0.01;
+	    threshold = 0.001;
 	    
 	    //int count = 0;
             do {  
@@ -97,17 +98,16 @@ namespace Faunus {
 	      field.setZero();
               pot.field(p,field);
               for(int i = 0; i < (int)p.size(); i++) {
-                E = field.col(i);                                         // Get field on particle i, in e/Å
+                E = field.col(i) + E_ext;                                         // Get field on particle i, in e/Å
 		mu_trial = atom[p[i].id].alphamatrix*E + p[i].mup;        // Total new dipole moment
 	   	mu_err = mu_trial - p[i].mu*p[i].muscalar;     // Difference between former and current state
                 mu_err_norm[i] = mu_err.norm();                           // Get norm of previous row
                 p[i].muscalar = mu_trial.norm();                          // Update dipole scalar in particle
-		if(p[i].muscalar == 0) {
+                if(p[i].muscalar < 1e-6) {
 		  continue;
 		}
                 p[i].mu = mu_trial/p[i].muscalar;                         // Update dipole vector in particle
-	       }
-	       std::cout << "Dipole moment in Debye: " << p[0].muscalar/0.20819434 << " " << p[1].muscalar/0.20819434  << "\n";
+	      }
               //count++;
             } while (mu_err_norm.maxCoeff() > threshold);                 // Check if threshold is ok
 	    //std::cout << "Count,Value: " << count << " " << mu_err_norm.maxCoeff() << "\n";
@@ -119,7 +119,8 @@ namespace Faunus {
           field.resize(3,Tmove::spc->trial.size());          // make sure sizes match
 
           // Get induced dipole moments
-          induceDipoles(*Tmove::pot,Tmove::spc->trial);
+	  Point E_ext(0,0,0); // No external field 
+          induceDipoles(*Tmove::pot,Tmove::spc->trial,E_ext);
         }
         
         double _energyChange() {
@@ -140,8 +141,9 @@ namespace Faunus {
 	}
 	
       public:
+	double eps;
         PolarizeMove(InputMap &in, Energy::Energybase &e, Space &s) :
-          Tmove(in,e,s) {}
+          Tmove(in,e,s) { }
     };
 
   template<class Tmove>

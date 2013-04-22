@@ -428,6 +428,7 @@ namespace Faunus {
       PointParticle::operator<<(in);
       mu.operator<<(in);
       in >> muscalar;
+      mup.operator<<(in);
       return *this;
     }
 

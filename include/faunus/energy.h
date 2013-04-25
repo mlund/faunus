@@ -837,7 +837,16 @@ namespace Faunus {
      * first guess. This is the default energy routine for Move::ParallelTempering and may
      * also be used for checking energy drifts.
      */
-    double systemEnergy(Space&, Energy::Energybase&, const p_vec&);
+    template<class Tspace, class Tenergy, class Tpvec>
+      double systemEnergy(Tspace &spc, Tenergy &pot, const Tpvec &p) {
+        double u = pot.external();
+        for (auto g : spc.groupList())
+          u += pot.g_external(p, *g) + pot.g_internal(p, *g);
+        for (size_t i=0; i<spc.groupList().size()-1; i++)
+          for (size_t j=i+1; j<spc.groupList().size(); j++)
+            u += pot.g2g(p, *spc.groupList()[i], *spc.groupList()[j]);
+        return u;
+      }
 
     /* typedefs */
 

@@ -225,52 +225,6 @@ namespace Faunus {
       name="Polymer Shape";
     }
 
-    Point PolymerShape::vectorgyrationRadiusSquared(const Group &pol, const Space &spc) {
-      assert( spc.geo->dist(pol.cm, pol.massCenter(spc))<1e-9 && "Mass center must be in sync.");
-      double sum=0;
-      Point t, r2(0,0,0);
-      for (auto i : pol) {
-        t = spc.p[i]-pol.cm;                // vector to center of mass
-        spc.geo->boundary(t);               // periodic boundary (if any)
-        r2.x() += spc.p[i].mw * t.x() * t.x();
-        r2.y() += spc.p[i].mw * t.y() * t.y();
-        r2.z() += spc.p[i].mw * t.z() * t.z();
-        sum += spc.p[i].mw;                 // total mass
-      }
-      assert(sum>0 && "Zero molecular weight not allowed.");
-      return r2*(1./sum);
-    }
-
-    double PolymerShape::gyrationRadiusSquared(const Group &pol, const Space &spc) {
-      assert( spc.geo->dist(pol.cm, pol.massCenter(spc))<1e-9 && "Mass center must be in sync.");
-      Point rg2=vectorgyrationRadiusSquared(pol,spc);
-      return rg2.x()+rg2.y()+rg2.z();
-    }
-
-    Point PolymerShape::vectorEnd2end(const Group &pol, const Space &spc) {
-      return spc.geo->vdist( spc.p[pol.front()], spc.p[pol.back()] );
-    }
-
-    void PolymerShape::sample(const Group &pol, const Space &spc) {
-      if (!run() || pol.front()==pol.back())
-        return;
-      Point r2 = vectorgyrationRadiusSquared(pol,spc);
-      double rg2 = r2.x()+r2.y()+r2.z(); 
-      double re2 = spc.geo->sqdist( spc.p[pol.front()], spc.p[pol.back()] );
-      Rg2[pol.name]  += rg2;
-      Rg2x[pol.name] += r2.x();
-      Rg2y[pol.name] += r2.y();
-      Rg2z[pol.name] += r2.z();
-      Rg[pol.name]   += sqrt(r2.x()+r2.y()+r2.z());
-      Re2[pol.name]  += re2; //end-2-end squared
-      double rs = Re2[pol.name].avg()/Rg2[pol.name].avg(); // fluctuations in shape factor
-      Rs[pol.name]   += rs;
-      Rs2[pol.name]  += rs*rs;
-      
-      //Point re = vectorEnd2end(pol,spc);
-      //Re2[pol.name] += pow(re.len(), 2);
-    }
-
     string PolymerShape::_info() {
       char w=10;
       using namespace textio;
@@ -307,50 +261,10 @@ namespace Faunus {
       name="Multipole";
     }
 
-    /*!
-     * \param g Group to calculate charge for
-       \param spc Space
-     */
-    double ChargeMultipole::charge(const Group &g,const Space &spc) {
-      double x=0;
-      for (auto i : g){
-        if (exclude(spc.p[i])==false)
-          x+=spc.p[i].charge;
-      }
-      return x;
-    }
-
-    double ChargeMultipole::dipole(const Group &g, const Space &spc){
-      assert( spc.geo->dist(g.cm, g.massCenter(spc))<1e-9 && "Mass center must be in sync.");
-      Point t, mu(0,0,0);
-      for (auto i : g) {
-        if (exclude(spc.p[i])==false){
-          t = spc.p[i]-g.cm;                // vector to center of mass
-          spc.geo->boundary(t);               // periodic boundary (if any)
-          mu.x()+=spc.p[i].charge * t.x();
-          mu.y()+=spc.p[i].charge * t.y();
-          mu.z()+=spc.p[i].charge * t.z();
-        }
-      }
-      return mu.len();
-    }
-
     bool ChargeMultipole::exclude(const particle &p){
       if (exclusionlist.find(atom[p.id].name)==exclusionlist.end())
         return false;
       return true;
-    }
-
-    void ChargeMultipole::sample(const Group &g, const Space &spc) {
-      assert(!g.name.empty() && "All Groups should have a name!");
-      if (!run())
-        return;
-      double z=charge(g, spc);
-      Z[g.name]+=z;
-      Z2[g.name]+=pow(z,2);
-      double dip=dipole(g,spc);
-      mu[g.name]+=dip;
-      mu2[g.name]+=pow(dip,2);
     }
 
     string ChargeMultipole::_info(){

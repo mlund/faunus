@@ -338,27 +338,29 @@ namespace Faunus {
             static_assert( std::is_integral<Ty>::value, "Histogram must be of integral type");
             static_assert( std::is_unsigned<Ty>::value, "Histogram must be unsigned");
            }
-          /*!
-           * \brief Sample radial distibution of two atom types
-           * \param spc Simulation space
-           * \param g Group to search
-           * \param ida Atom id of first particle
-           * \param idb Atom id of second particle
+
+          /**
+           * @brief Sample radial distibution of two atom types
+           * @param spc Simulation space
+           * @param g Group to search
+           * @param ida Atom id of first particle
+           * @param idb Atom id of second particle
            */
-          void sample(Space &spc, Group &g, short ida, short idb) {
-            for (auto i=g.begin(); i!=g.end()-1; i++)
-              for (auto j=i+1; j!=g.end(); j++)
-                if ( (spc.p[*i].id==ida && spc.p[*j].id==idb) || (spc.p[*i].id==idb && spc.p[*j].id==ida) ) {
-                  Tx r=spc.geo->dist(spc.p[*i], spc.p[*j]);
-                  if (r<=maxdist)
-                    this->operator() (r)++; 
-                }
-            double bulk=0;
-            for (auto i : g)
-              if (spc.p[i].id==ida || spc.p[i].id==idb)
-                bulk++;
-            bulkconc += bulk / spc.geo->getVolume();
-          }
+          template<class Tspace, class Tgroup>
+            void sample(Tspace &spc, Tgroup &g, short ida, short idb) {
+              for (auto i=g.begin(); i!=g.end()-1; i++)
+                for (auto j=i+1; j!=g.end(); j++)
+                  if ( (spc.p[*i].id==ida && spc.p[*j].id==idb) || (spc.p[*i].id==idb && spc.p[*j].id==ida) ) {
+                    Tx r=spc.geo->dist(spc.p[*i], spc.p[*j]);
+                    if (r<=maxdist)
+                      this->operator() (r)++; 
+                  }
+              double bulk=0;
+              for (auto i : g)
+                if (spc.p[i].id==ida || spc.p[i].id==idb)
+                  bulk++;
+              bulkconc += bulk / spc.geo->getVolume();
+            }
       };
 
     template<typename Tx=double, typename Ty=unsigned long>
@@ -385,38 +387,36 @@ namespace Faunus {
      * \date Lund 2012
      */
     template<typename Tx=double, typename Ty=int>
-    class LineDistributionNorm : public RadialDistribution<Tx,Ty> {
-    private:
-      double volume(Tx x) { return 1; }
-      int n;
-    public:
-      LineDistributionNorm(int al_n=1, Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {
-        this->name="Line Distribution Normalized for n particles";
-        n = al_n;
-      }
-      double get(Tx x) {
-        assert( volume(x)>0 );
-        assert( this->count()>0 );
-        return (double)this->operator()(x) * n / (double)this->count();
-      }
-      
-      /*!
-       * \brief Simplest form of the midplane pressure
-       */
-      double mid() {
-        return (get(this->dx)+get(-this->dx))*0.5/this->dx;
-      }
-      
-      /*!
-       * \brief Simplest form of the end pressure
-       */
-      double end() {
-        return (get(this->minx())+get(this->minx()+this->dx)+get(-this->minx())+get(-this->minx()-this->dx))*0.25/this->dx;
-      }
-      
-    };
-    
-    
+      class LineDistributionNorm : public RadialDistribution<Tx,Ty> {
+        private:
+          double volume(Tx x) { return 1; }
+          int n;
+        public:
+          LineDistributionNorm(int al_n=1, Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {
+            this->name="Line Distribution Normalized for n particles";
+            n = al_n;
+          }
+          double get(Tx x) {
+            assert( volume(x)>0 );
+            assert( this->count()>0 );
+            return (double)this->operator()(x) * n / (double)this->count();
+          }
+
+          /*!
+           * \brief Simplest form of the midplane pressure
+           */
+          double mid() {
+            return (get(this->dx)+get(-this->dx))*0.5/this->dx;
+          }
+
+          /*!
+           * \brief Simplest form of the end pressure
+           */
+          double end() {
+            return (get(this->minx())+get(this->minx()+this->dx)+get(-this->minx())+get(-this->minx()-this->dx))*0.25/this->dx;
+          }
+      };
+
     /*!
      * \brief Base class for force calculations
      *
@@ -425,23 +425,23 @@ namespace Faunus {
      * \author Axel Thuresson
      * \date Lund, 2013
      */
-    
+
     class TwobodyForce : public AnalysisBase {
-    protected:
-      Energy::Energybase* pot;         //!< Pointer to energy functions
-      Space* spc;                      //!< Pointer to Space (particles and groups are stored there)
-      string _info();         //!< Print results of analysis
-      Group* igroup1;
-      Group* igroup2;
-      Group* ions;
-    public:
-      TwobodyForce(InputMap&, Energy::Energybase&, Space&, Group &, Group &, Group &);//!< Constructor
-      virtual void calc();
-      void save(string);
-      void setTwobodies(Group &, Group &, Group &);
-      virtual Point meanforce();
+      protected:
+        Energy::Energybase* pot;         //!< Pointer to energy functions
+        Space* spc;                      //!< Pointer to Space (particles and groups are stored there)
+        string _info();         //!< Print results of analysis
+        Group* igroup1;
+        Group* igroup2;
+        Group* ions;
+      public:
+        TwobodyForce(InputMap&, Energy::Energybase&, Space&, Group &, Group &, Group &);//!< Constructor
+        virtual void calc();
+        void save(string);
+        void setTwobodies(Group &, Group &, Group &);
+        virtual Point meanforce();
     };
-    
+
     /*!
      * \brief Calculates the "direct" twobody mean force
      *
@@ -453,22 +453,20 @@ namespace Faunus {
      * \author Axel Thuresson
      * \date Lund, 2013
      */
-    
+
     class TwobodyForceDirect : public TwobodyForce {
-    private:
-      Point f_pp;
-      Point f_pi;
-      Point f_ip;
-    protected:
-      string _info();         //!< Print results of analysis
-    public:
-      TwobodyForceDirect(InputMap&, Energy::Energybase&, Space&, Group &, Group &, Group &);//!< Constructor
-      void calc();
-      Point meanforce();
+      private:
+        Point f_pp;
+        Point f_pi;
+        Point f_ip;
+      protected:
+        string _info();         //!< Print results of analysis
+      public:
+        TwobodyForceDirect(InputMap&, Energy::Energybase&, Space&, Group &, Group &, Group &);//!< Constructor
+        void calc();
+        Point meanforce();
     };
-    
-    
-    
+
     /*!
      * \brief Calculates the midplane twobody mean force
      *
@@ -478,20 +476,20 @@ namespace Faunus {
      * \author Axel Thuresson
      * \date Lund, 2013
      */
-    
+
     class TwobodyForceMidp : public TwobodyForce {
-    private:
-      Point f_pp;
-      Point f_pi;
-      Point f_ip;
-      Point f_ii;
-      Analysis::LineDistributionNorm<float,unsigned long int> *saltdistr;
-    protected:
-      string _info();         //!< Print results of analysis
-    public:
-      TwobodyForceMidp(InputMap&, Energy::Energybase&, Space&, Group &, Group &, Group &, Analysis::LineDistributionNorm<float,unsigned long int>*);//!< Constructor
-      void calc();
-      Point meanforce();
+      private:
+        Point f_pp;
+        Point f_pi;
+        Point f_ip;
+        Point f_ii;
+        Analysis::LineDistributionNorm<float,unsigned long int> *saltdistr;
+      protected:
+        string _info();         //!< Print results of analysis
+      public:
+        TwobodyForceMidp(InputMap&, Energy::Energybase&, Space&, Group &, Group &, Group &, Analysis::LineDistributionNorm<float,unsigned long int>*);//!< Constructor
+        void calc();
+        Point meanforce();
     };
 
     /*!
@@ -505,14 +503,62 @@ namespace Faunus {
     class PolymerShape : public AnalysisBase {
       private:
         std::map< string, Average<double> > Rg2, Rg, Re2, Rs, Rs2, Rg2x, Rg2y, Rg2z;
-        double gyrationRadiusSquared(const Group&, const Space &);
-        Point vectorEnd2end(const Group&, const Space &);
         void _test(UnitTest&);
         string _info();
+        template<class Tgroup, class Tspace>
+          double gyrationRadiusSquared(const Tgroup &pol, const Tspace &spc) {
+            assert( spc.geo->dist(pol.cm, pol.massCenter(spc))<1e-9
+                && "Mass center must be in sync.");
+            Point rg2=vectorgyrationRadiusSquared(pol,spc);
+            return rg2.x()+rg2.y()+rg2.z();
+          }
+
+        template<class Tgroup, class Tspace>
+          Point vectorEnd2end(const Tgroup &pol, const Tspace &spc) {
+            return spc.geo->vdist( spc.p[pol.front()], spc.p[pol.back()] );
+          }
+
+        template<class Tgroup, class Tspace>
+          Point vectorgyrationRadiusSquared(const Tgroup &pol, const Tspace &spc) {
+            assert( spc.geo->dist(pol.cm, pol.massCenter(spc))<1e-9
+                && "Mass center must be in sync.");
+            double sum=0;
+            Point t, r2(0,0,0);
+            for (auto i : pol) {
+              t = spc.p[i]-pol.cm;                // vector to center of mass
+              spc.geo->boundary(t);               // periodic boundary (if any)
+              r2.x() += spc.p[i].mw * t.x() * t.x();
+              r2.y() += spc.p[i].mw * t.y() * t.y();
+              r2.z() += spc.p[i].mw * t.z() * t.z();
+              sum += spc.p[i].mw;                 // total mass
+            }
+            assert(sum>0 && "Zero molecular weight not allowed.");
+            return r2*(1./sum);
+          }
+
       public:
         PolymerShape();
-        Point vectorgyrationRadiusSquared(const Group&, const Space &);
-        void sample(const Group&, const Space&); //!< Sample properties of Group (identified by group name)
+
+        /** @brief Sample properties of Group (identified by group name) */
+        template<class Tgroup, class Tspace>
+          void sample(const Tgroup &pol, const Tspace &spc) {
+            if (!run() || pol.front()==pol.back())
+              return;
+            Point r2 = vectorgyrationRadiusSquared(pol,spc);
+            double rg2 = r2.x()+r2.y()+r2.z(); 
+            double re2 = spc.geo->sqdist( spc.p[pol.front()], spc.p[pol.back()] );
+            Rg2[pol.name]  += rg2;
+            Rg2x[pol.name] += r2.x();
+            Rg2y[pol.name] += r2.y();
+            Rg2z[pol.name] += r2.z();
+            Rg[pol.name]   += sqrt(r2.x()+r2.y()+r2.z());
+            Re2[pol.name]  += re2; //end-2-end squared
+            double rs = Re2[pol.name].avg()/Rg2[pol.name].avg(); // fluctuations in shape factor
+            Rs[pol.name]   += rs;
+            Rs2[pol.name]  += rs*rs;
+            //Point re = vectorEnd2end(pol,spc);
+            //Re2[pol.name] += pow(re.len(), 2);
+          }
     };
 
     /**
@@ -532,34 +578,62 @@ namespace Faunus {
     class ChargeMultipole : public AnalysisBase {
       private:
         std::map< string, Average<double> > Z, Z2, mu, mu2;
-        double charge(const Group&, const Space&);
-        double dipole(const Group&, const Space&);
+
+        /**
+         * @param g Group to calculate charge for
+         * @param spc Space
+         */
+        template<class Tgroup, class Tpvec>
+          double charge(const Tgroup &g, const Tpvec &p, double Z=0) {
+            for (auto i : g)
+              if (!exclude(p[i]))
+                Z+=p[i].charge;
+            return Z;
+          }
+
+        template<class Tgroup, class Tspace>
+          double dipole(const Tgroup &g, const Tspace &spc) {
+            assert( spc.geo->dist(g.cm, g.massCenter(spc))<1e-9
+                && "Mass center must be in sync.");
+            Point t, mu(0,0,0);
+            for (auto i : g)
+              if (exclude(spc.p[i])==false) {
+                t = spc.p[i]-g.cm;                // vector to center of mass
+                spc.geo->boundary(t);               // periodic boundary (if any)
+                mu+=spc.p[i].charge*t;
+              }
+            return mu.len();
+          }
+
         virtual bool exclude(const particle&);  //!< Determines particle should be excluded from analysis
         string _info();
       public:
         ChargeMultipole();
-        void sample(const Group&, const Space&); //!< Sample properties of Group (identified by group name)
+
+        /** @brief Sample properties of Group (identified by group name) */
+        template<class Tgroup, class Tspace>
+          void sample(const Tgroup &g, const Tspace &spc) {
+            assert(!g.name.empty() && "All Groups should have a name!");
+            if (run()) {
+              double z=charge(g, spc.p);
+              Z[g.name]+=z;
+              Z2[g.name]+=pow(z,2);
+              double dip=dipole(g,spc);
+              mu[g.name]+=dip;
+              mu2[g.name]+=pow(dip,2);
+            }
+          }
 
         /* @brief Sample properties of Group (identified by group name) */
-        template<typename Tgroup>
-          void sample(const std::vector<Tgroup> &gvec, const Space &spc) {
-            if (!run())
-              return;
-            for (auto &g : gvec)
-              sample(g, spc);
+        template<typename Tgroup, typename Tspace>
+          void sample(const std::vector<Tgroup> &gvec, const Tspace &spc) {
+            if (run())
+              for (auto &g : gvec)
+                sample(g, spc);
           }
 
         std::set<string> exclusionlist; //!< Atom names listed here will be excluded from the analysis.
     };
-
-    /*
-       class VectorAlignment : public AnalysisBase {
-       private:
-       virtual Point convert(const Group&, const Space&); // Returns points calculated from group properties
-       public:
-       void sample(const Group&, const Group&, const Space&);
-       };
-       */
 
     /**
      * @brief Widom method for excess chemical potentials

@@ -229,7 +229,7 @@ namespace Faunus {
             p[i] << fin;
           trial=p;
           cout << indent(SUB) << "Read " << n << " particle(s)." << endl;
-          fin >> n;
+	  fin >> n;
           if (n==(int)g.size()) {
             for (auto g_i : g) {
               *g_i << fin;

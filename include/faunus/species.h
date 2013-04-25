@@ -22,7 +22,7 @@ namespace Faunus {
            mw,         //!< Weight [g/mol]
            charge,     //!< Charge/valency [e]
            activity,   //!< Chemical activity [mol/l]
-           alpha,      //!< Polarizability [A^3]
+           alpha,      //!< Polarizability [C^2 A^2 / J]
            dp,         //!< Translational displacement parameter [angstrom]
            dprot,      //!< Rotational displacement parameter [radians]
            mean,       //!< Mean value... (charge, sasa, etc.)
@@ -109,7 +109,7 @@ namespace Faunus {
    * Key           | Description
    * :------------ | :----------------------------------------------------------------
    * `activity`    | Chemical activity for grand caninical MC [mol/l]
-   * `alpha`       | Polarizability [cubic angstrom]
+   * `alpha`       | Polarizability [\f$ 4\pi\epsilon_0 \f$ cubic angstrom]
    * `dp`          | Translational displacement parameter [angstrom] 
    * `dprot`       | Rotational displacement parameter [degrees] (will be converted to radians)
    * `eps`         | Epsilon energy scaling commonly used for Lennard-Jones interactions etc. [kJ/mol] 

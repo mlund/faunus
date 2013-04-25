@@ -8,6 +8,7 @@
 #include <faunus/textio.h>
 #include <faunus/geometry.h>
 #include <faunus/energy.h>
+#include <unistd.h>
 
 #ifdef ENABLE_MPI
 #include <faunus/mpi.h>
@@ -71,29 +72,86 @@ namespace Faunus {
     template<class Tmove>
       class PolarizeMove : public Tmove {
         private:
-          double threshold; // threshold for iteration
-          vector<Point> E;  // field on each particle
-
-          void _trialMove() {
-            Tmove::_trialMove();                         // base class MC move
-
-            E.resize(Tmove::spc->trial.size());          // make sure sizes match
-            std::fill(E.begin(), E.end(), Point(0,0,0)); // fill with zero
-
-            Tmove::pot->field(Tmove::spc->trial, E);     // calc. field on all particles
-            // update iteratively...
+	  using Tmove::spc;
+	  using Tmove::pot;
+          double threshold;       	  // threshold for iteration
+          Eigen::MatrixXd field;  	  // field on each particle
+	  
+          /**
+           *  @brief Replaces dipole moment with permanent dipole moment plus induced dipole moment
+           *  
+           *  @param pot The potential including geometry
+           *  @param p Trial particles
+           *  @param E_ext External field on particles
+           */
+          template<typename Tenergy,typename Tparticles>
+          void induceDipoles(Tenergy &pot, Tparticles &p, Point E_ext) { 
+	    Eigen::VectorXd mu_err_norm((int)p.size());
+            Point mu_trial(0,0,0);  
+            Point mu_err(0,0,0);
+            Point E(0,0,0);
+	    threshold = 0.001;
+	    
+	    //int count = 0;
+            do {  
+	      mu_err_norm.setZero();
+	      field.setZero();
+              pot.field(p,field);
+              for(int i = 0; i < (int)p.size(); i++) {
+                E = field.col(i) + E_ext;                                         // Get field on particle i, in e/Å
+		mu_trial = atom[p[i].id].alphamatrix*E + p[i].mup;        // Total new dipole moment
+	   	mu_err = mu_trial - p[i].mu*p[i].muscalar;     // Difference between former and current state
+                mu_err_norm[i] = mu_err.norm();                           // Get norm of previous row
+                p[i].muscalar = mu_trial.norm();                          // Update dipole scalar in particle
+                if(p[i].muscalar < 1e-6) {
+		  continue;
+		}
+                p[i].mu = mu_trial/p[i].muscalar;                         // Update dipole vector in particle
+	      }
+              //count++;
+            } while (mu_err_norm.maxCoeff() > threshold);                 // Check if threshold is ok
+	    //std::cout << "Count,Value: " << count << " " << mu_err_norm.maxCoeff() << "\n";
           }
-        public:
-          PolarizeMove(InputMap &in, Energy::Energybase &e, Space &s) :
-            Tmove(in,e,s) {}
-      };
 
-    template<class Tmove>
-      class EwaldMove : public Tmove {
-        protected:
-          void _trialMove() {
-            Tmove::_trialMove();
-            // ... update induced moments
+        void _trialMove() {
+          Tmove::_trialMove();                         // base class MC move
+
+          field.resize(3,Tmove::spc->trial.size());          // make sure sizes match
+
+          // Get induced dipole moments
+	  Point E_ext(0,0,0); // No external field 
+          induceDipoles(*Tmove::pot,Tmove::spc->trial,E_ext);
+        }
+        
+        double _energyChange() {
+	    if(Tmove::iparticle == -1) {
+		return 0.0;
+	    }
+	    return (Energy::systemEnergy(*spc,*pot,spc->trial)-Energy::systemEnergy(*spc,*pot,spc->p));
+	}
+        
+        void _rejectMove() {
+	  Tmove::_rejectMove();
+	  Tmove::spc->trial = Tmove::spc->p;
+	}
+	
+	void _acceptMove() {
+	  Tmove::_acceptMove();
+	  Tmove::spc->p = Tmove::spc->trial;
+	}
+	
+      public:
+	double eps;
+        PolarizeMove(InputMap &in, Energy::Energybase &e, Space &s) :
+          Tmove(in,e,s) { }
+    };
+
+  template<class Tmove>
+    class EwaldMove : public Tmove {
+      protected:
+        void _trialMove() {
+          Tmove::_trialMove();
+          // ... update induced moments
           }
         public:
           EwaldMove(InputMap &in, Energy::Energybase &e, Space &s) :
@@ -179,12 +237,12 @@ namespace Faunus {
       private:
         typedef std::map<short, Average<double> > map_type;
         string _info();
-        void _acceptMove();
-        void _rejectMove();
         double _energyChange();
         bool run() const;                //!< Runfraction test
       protected:
         void _trialMove();
+	void _acceptMove();
+        void _rejectMove();
         map_type accmap; //!< Single particle acceptance map
         map_type sqrmap; //!< Single particle mean square displacement map
 

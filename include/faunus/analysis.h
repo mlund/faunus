@@ -15,8 +15,8 @@ namespace Faunus {
   class checkValue;
   class Space;
 
-  /*!
-   * \brief Namespace for analysis routines
+  /**
+   * @brief Namespace for analysis routines
    */
   namespace Analysis {
 
@@ -190,9 +190,9 @@ namespace Faunus {
           }
       };
 
-    /*!
-      \brief General class for penalty functions along a coordinate
-      \date Malmo, 2011
+    /**
+      @brief General class for penalty functions along a coordinate
+      @date Malmo, 2011
 
       This class stores a penalty function, f(x), along a given coordinate, x,
       of type `Tcoordinate` which could be a distance, angle, volume etc.
@@ -200,27 +200,25 @@ namespace Faunus {
       Each time the system visits x the update(x) function should be called
       so as to add the penalty energy, du. In the energy evaluation, the
       coordinate x should be associated with the extra energy f(x).
-      This will eventually ensure uniform sampling.
 
-Example:
+      This will eventually ensure uniform sampling. Example:
 
-~~~
-PenaltyFunction<double> f(0.1,1000,6.0); // 0.1 kT penalty
-Point masscenter;           // some 3D coordinate...
-...
-f.update(masscenter.z);     // update penalty energy for z component
-double u = f(masscenter.z); // get accumulated penalty at coordinate (kT)
-f.save("penalty.dat");      // save to disk
-~~~
+      ~~~
+      PenaltyFunction<double> f(0.1,1000,6.0); // 0.1 kT penalty
+      Point masscenter;           // some 3D coordinate...
+      ...
+      f.update(masscenter.z);     // update penalty energy for z component
+      double u = f(masscenter.z); // get accumulated penalty at coordinate (kT)
+      f.save("penalty.dat");      // save to disk
+      ~~~
 
-In the above example, the penalty energy will be scaled by 0.5 if the
-sampling along the coordinate is less than 6 kT between the least and
-most likely position.
-This threshold check is carried out every 1000th call to `update()`.
-Note also that when the penalty energy is scaled, so is the threshold
-(also by a factor of 0.5).
-
-*/
+      In the above example, the penalty energy will be scaled by 0.5 if the
+      sampling along the coordinate is less than 6 kT between the least and
+      most likely position.
+      This threshold check is carried out every 1000th call to `update()`.
+      Note also that when the penalty energy is scaled, so is the threshold
+      (also by a factor of 0.5).
+      */
     template<typename Tcoord=float>
       class PenaltyFunction : public Table2D<Tcoord,double> {
         private:
@@ -233,12 +231,14 @@ Note also that when the penalty energy is scaled, so is the threshold
           Tcoord _du; //!< penalty energy
           std::string _log;
         public:
-          /*!
-           * \brief Constructor
-           * \param penalty Penalty energy for each update (kT)
-           * \param Ncheck Check histogram every Nscale'th step (put large number for no scaling, default)
-           * \param kTthreshold Half penalty energy once this threshold in distribution has been reached
-           * \param res Resolution of the penalty function (default 0.1)
+          /**
+           * @brief Constructor
+           * @param penalty Penalty energy for each update (kT)
+           * @param Ncheck Check histogram every Nscale'th step
+           *        (put large number for no scaling, default)
+           * @param kTthreshold Half penalty energy once this
+           *        threshold in distribution has been reached
+           * @param res Resolution of the penalty function (default 0.1)
            */
           PenaltyFunction(double penalty, int Ncheck=1e9, double kTthreshold=5, Tcoord res=0.1)
             : Tbase(res, Tbase::XYDATA), hist(res, Thist::HISTOGRAM) {
@@ -251,7 +251,7 @@ Note also that when the penalty energy is scaled, so is the threshold
               _log="#   initial penalty energy = "+std::to_string(_du)+"\n";
             }
 
-          /*! \brief Update penalty for coordinate */
+          /** @brief Update penalty for coordinate */
           double update(Tcoord coordinate) {
             _cnt++;
             Tbase::operator()(coordinate)+=_du;  // penalize coordinate
@@ -786,8 +786,10 @@ Note also that when the penalty energy is scaled, so is the threshold
     };
 
     /**
-     * @brief Returns the dielectric constant outside the cutoff limit. Only hold when using PBC and \f$\epsilon_{sur} = \epsilon\f$,
-     * @brief [Neumann, M. (1983) Mol. Phys., 50, 841-858].
+     * @brief Returns the dielectric constant outside the cutoff limit.
+     *
+     *        Only hold when using PBC and \f$\epsilon_{sur} = \epsilon\f$,
+     *        [Neumann, M. (1983) Mol. Phys., 50, 841-858].
      *
      * @param pot The potential including geometry
      * @param spc The space including the particles
@@ -817,7 +819,7 @@ Note also that when the penalty energy is scaled, so is the threshold
             M += _m.squaredNorm();
           }
 
-        string info() {
+        inline string info() {
           std::ostringstream o;
           if (M.cnt <= 0)
             return o.str();

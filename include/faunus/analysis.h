@@ -155,7 +155,7 @@ namespace Faunus {
               }
             return x;
           }
-        
+
           /*! Returns x at minumum x */
           Tx minx() {
             assert(!map.empty());
@@ -202,25 +202,25 @@ namespace Faunus {
       coordinate x should be associated with the extra energy f(x).
       This will eventually ensure uniform sampling.
 
-      Example:
+Example:
 
-      ~~~
-      PenaltyFunction<double> f(0.1,1000,6.0); // 0.1 kT penalty
-      Point masscenter;           // some 3D coordinate...
-      ...
-      f.update(masscenter.z);     // update penalty energy for z component
-      double u = f(masscenter.z); // get accumulated penalty at coordinate (kT)
-      f.save("penalty.dat");      // save to disk
-      ~~~
+~~~
+PenaltyFunction<double> f(0.1,1000,6.0); // 0.1 kT penalty
+Point masscenter;           // some 3D coordinate...
+...
+f.update(masscenter.z);     // update penalty energy for z component
+double u = f(masscenter.z); // get accumulated penalty at coordinate (kT)
+f.save("penalty.dat");      // save to disk
+~~~
 
-      In the above example, the penalty energy will be scaled by 0.5 if the
-      sampling along the coordinate is less than 6 kT between the least and
-      most likely position.
-      This threshold check is carried out every 1000th call to `update()`.
-      Note also that when the penalty energy is scaled, so is the threshold
-      (also by a factor of 0.5).
+In the above example, the penalty energy will be scaled by 0.5 if the
+sampling along the coordinate is less than 6 kT between the least and
+most likely position.
+This threshold check is carried out every 1000th call to `update()`.
+Note also that when the penalty energy is scaled, so is the threshold
+(also by a factor of 0.5).
 
-      */
+*/
     template<typename Tcoord=float>
       class PenaltyFunction : public Table2D<Tcoord,double> {
         private:
@@ -278,7 +278,7 @@ namespace Faunus {
             Tbase::save(filename);
             hist.save(filename+".dist");
           }
-        
+
           string info() {
             return "# Penalty function log:\n" + _log;
           }
@@ -337,7 +337,7 @@ namespace Faunus {
             maxdist=pc::infty;
             static_assert( std::is_integral<Ty>::value, "Histogram must be of integral type");
             static_assert( std::is_unsigned<Ty>::value, "Histogram must be unsigned");
-           }
+          }
 
           /**
            * @brief Sample radial distibution of two atom types
@@ -783,6 +783,49 @@ namespace Faunus {
             return geo.len.x() * geo.len.y() / lipids.numMolecules() * 2
               / pow(2*p[ lipids.front() ].radius,2);
           }
+    };
+
+    /**
+     * @brief Returns the dielectric constant outside the cutoff limit. Only hold when using PBC and \f$\epsilon_{sur} = \epsilon\f$,
+     * @brief [Neumann, M. (1983) Mol. Phys., 50, 841-858].
+     *
+     * @param pot The potential including geometry
+     * @param spc The space including the particles
+     * @param cutoff The cutoff of the reaction field
+     */
+    class getDielConst {
+      private:
+        Average<double> M;
+        double volume;
+        double convert;
+        double cutoff;
+      public:
+        getDielConst(double cutoff_in) {
+          cutoff = cutoff_in;
+          convert = (3.33564*3.33564*(1e-30)/(0.20819434*0.20819434)); // Constant to convert to SI-units, including the cancelation of volume 10^-30
+          volume = 4*pc::pi*pow(cutoff,3)/3;
+          convert = convert*pc::pi/volume;
+        }
+
+        template<class Tpvec, class Tgeo>
+          void sample(const Tpvec &p, Tgeo &geo) {
+            Point origin(0,0,0);
+            Point _m(0,0,0);
+            for(unsigned int i = 0; i < p.size(); i ++)
+              if(geo.dist(p[i],origin) < cutoff)
+                _m += p[i].mu*p[i].muscalar;
+            M += _m.squaredNorm();
+          }
+
+        string info() {
+          std::ostringstream o;
+          if (M.cnt <= 0)
+            return o.str();
+          double Q = 0.25 + M.avg()*convert/pc::kT();
+          o << "Eps: " << Q + std::sqrt(Q*Q+0.5) << "\n";
+          //o << "<M>: " << M.avg() << ", convert/kT " << convert/pc::kT() << "\n";
+          return o.str();
+        }
     };
 
   }//namespace

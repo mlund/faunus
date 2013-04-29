@@ -66,7 +66,10 @@ namespace Faunus {
         virtual Point force(const particle&, const particle&, double, const Point&);
 
         /** @brief Electric field at spatial position */
-        virtual Point field(const particle&, const Point&) const;
+        template<typename Tparticle>
+          Point field(const Tparticle &a, const Point &r) const {
+            return Point(0,0,0);
+          }
 
         bool save(string, particle::Tid, particle::Tid); //!< Save table of pair potential to disk
         virtual void test(UnitTest&);                    //!< Perform unit test
@@ -536,6 +539,11 @@ namespace Faunus {
 #endif
         }
 
+      template<class Tparticle>
+        double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
+          return operator()(a,b,r.squaredNorm());
+        }
+
       template<class T>
         Point force(const T &a, const T &b, double r2, const Point &p) {
 #ifdef FAU_APPROXMATH
@@ -543,6 +551,15 @@ namespace Faunus {
 #else
           return lB*a.charge*b.charge * p / (sqrt(r2)*r2);
 #endif
+        }
+
+      /** @brief Electric field at `r` due to charge `p` 
+       * Gets returned in [e/Å] (\f$\beta eE \f$)
+       */
+      template<class Tparticle>
+        Point field (const Tparticle &p, const Point &r) const {
+          double R2 = 1.0/r.squaredNorm();
+          return p.charge*R2*r*sqrt(R2)*lB;
         }
 
       string info(char);

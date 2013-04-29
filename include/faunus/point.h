@@ -329,14 +329,14 @@ namespace Faunus {
 
     template<class T,
       class = typename std::enable_if<std::is_base_of<AtomData,T>::value>::type>
-      PointParticle& operator=(const T &d) {
-        id=d.id;
-        charge=d.charge;
-        radius=d.radius;
-        mw=d.mw;
-        hydrophobic=d.hydrophobic;
-        return *this;
-      }
+        PointParticle& operator=(const T &d) {
+          id=d.id;
+          charge=d.charge;
+          radius=d.radius;
+          mw=d.mw;
+          hydrophobic=d.hydrophobic;
+          return *this;
+        }
 
     /**
      * @brief Copy from stream
@@ -390,8 +390,10 @@ namespace Faunus {
   struct DipoleParticle : public PointParticle {
     Point mu;               //!< Dipole moment unit vector
     double muscalar;        //!< Dipole moment scalar
+    Point mup;              //!< Permanente Dipole moment vector
+    Eigen::Matrix3d theta;
 
-    inline DipoleParticle() : mu(0,0,1), muscalar(0) {
+    inline DipoleParticle() : mu(0,0,1), muscalar(0),mup(0,0,1) {
     };
 
     /** @brief Copy constructor for Eigen derivatives */
@@ -417,6 +419,8 @@ namespace Faunus {
         DipoleParticle& operator=(const T &d) {
           PointParticle::operator=(d);
           muscalar=d.mu;
+          mup=mup*muscalar;
+          theta=d.theta;
           // copy more atom properties here...
           return *this;
         }
@@ -426,18 +430,20 @@ namespace Faunus {
       PointParticle::operator<<(in);
       mu.operator<<(in);
       in >> muscalar;
+      mup.operator<<(in);
       return *this;
     }
 
     /* write data members to stream */
     friend std::ostream &operator<<(std::ostream &o, const DipoleParticle &p) {
-      o << PointParticle(p) << " " << p.mu << " " << p.muscalar;
+      o << PointParticle(p) << " " << p.mu << " " << p.muscalar << " " << p.mup;
       return o;
     }
 
     template<typename Trotator>
       void rotate(const Trotator &rot) {
         mu = rot(mu);
+        mup = rot(mup);
       }
   };
 

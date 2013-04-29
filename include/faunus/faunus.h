@@ -29,6 +29,7 @@
 #include <faunus/inputfile.h>
 #include <faunus/energy.h>
 #include <faunus/potentials.h>
+#include <faunus/multipole.h>
 #include <faunus/externalpotential.h>
 #include <faunus/average.h>
 #include <faunus/space.h>

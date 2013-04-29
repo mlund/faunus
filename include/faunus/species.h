@@ -29,7 +29,8 @@ namespace Faunus {
            variance;   //!< Spread around AtomData::mean
     short int patchtype;  //!< If patchy particle, which type of patch
     Thydrophobic hydrophobic;  //!< Are we hydrophobic?
-    Eigen::MatrixXd alphamatrix;
+    Eigen::Matrix3d alphamatrix,
+                    theta;  //!< Quadrupole moment
     string name;       //!< Name. Avoid spaces.
     bool operator==(const AtomData &d) const { return (*this==d); }
   };

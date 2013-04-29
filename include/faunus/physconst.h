@@ -33,10 +33,10 @@ namespace Faunus {
         static Td kT2kJ(Td=1); //!< kT/molecule -> kJ/mol
         static Td kJ2kT(Td=1); //!< kJ/mol -> kT/molecule
         static Td T();         //!< Return temperature [K]
-	static Td kT();        //!< Returns k_bT [J]
+        static Td kT();        //!< Returns k_bT [J]
         static void setT(Td);  //!< Set temperature [K]
         static Td D2eA(Td=1);  //!< Debye to electron Angstrom
-	static Td eA2Cm(Td=1); //!< Converts eÅ to SI-units Cm
+        static Td eA2Cm(Td=1); //!< Converts eÅ to SI-units Cm
     };
 
 
@@ -78,7 +78,7 @@ namespace Faunus {
 
   template<class Td>
     Td PhysicalConstants<Td>::T() { return _T; }
-    
+
   template<class Td>
     Td PhysicalConstants<Td>::kT() { return kB*_T; }
 
@@ -95,10 +95,10 @@ namespace Faunus {
 
   template<class Td>
     Td PhysicalConstants<Td>::D2eA(Td D) { return 0.20819434*D; }
-    
+
   template<class Td>
     Td PhysicalConstants<Td>::eA2Cm(Td eA) { return (eA*3.33564*(1e-30)/0.20819434); }
-    
+
   typedef PhysicalConstants<double> pc;      //!< Typedef for PhysicalConstants
 
 }// namespace

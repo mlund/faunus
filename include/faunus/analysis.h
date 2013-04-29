@@ -711,14 +711,14 @@ Note also that when the penalty energy is scaled, so is the threshold
           }
     };
 
-  /**
-   * @brief Returns the dielectric constant outside the cutoff limit. Only hold when using PBC and \f$\epsilon_{sur} = \epsilon\f$,
-   * @brief [Neumann, M. (1983) Mol. Phys., 50, 841-858].
-   *
-   * @param pot The potential including geometry
-   * @param spc The space including the particles
-   * @param cutoff The cutoff of the reaction field
-   */
+    /**
+     * @brief Returns the dielectric constant outside the cutoff limit. Only hold when using PBC and \f$\epsilon_{sur} = \epsilon\f$,
+     * @brief [Neumann, M. (1983) Mol. Phys., 50, 841-858].
+     *
+     * @param pot The potential including geometry
+     * @param spc The space including the particles
+     * @param cutoff The cutoff of the reaction field
+     */
     class getDielConst {
       private:
         Average<double> M;
@@ -732,7 +732,7 @@ Note also that when the penalty energy is scaled, so is the threshold
           volume = 4*pc::pi*pow(cutoff,3)/3;
           convert = convert*pc::pi/volume;
         }
-        
+
         template<class Tpvec, class Tgeo>
           void sample(const Tpvec &p, Tgeo &geo) {
             Point origin(0,0,0);
@@ -742,14 +742,14 @@ Note also that when the penalty energy is scaled, so is the threshold
                 _m += p[i].mu*p[i].muscalar;
             M += _m.squaredNorm();
           }
-          
+
         string info() {
           std::ostringstream o;
           if (M.cnt <= 0)
             return o.str();
           double Q = 0.25 + M.avg()*convert/pc::kT();
           o << "Eps: " << Q + std::sqrt(Q*Q+0.5) << "\n";
-          o << "<M>: " << M.avg() << "\n";
+          //o << "<M>: " << M.avg() << ", convert/kT " << convert/pc::kT() << "\n";
           return o.str();
         }
     };

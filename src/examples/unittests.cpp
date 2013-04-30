@@ -22,7 +22,6 @@ void checkTabulator(Ttabulator t) {
 
 TEST_CASE("Spline table", "...")
 {
-  INFO("hej");
   checkTabulator(Tabulate::Hermite<double>());
   checkTabulator(Tabulate::AndreaIntel<double>());
   checkTabulator(Tabulate::Andrea<double>());
@@ -33,10 +32,10 @@ TEST_CASE("Spline table", "...")
   b.charge=-1;
   a.radius=b.radius=2;
   InputMap mcp;
-  Potential::DebyeHuckelLJ pot_org(mcp);
-  Potential::PotentialTabulate<Potential::DebyeHuckelLJ> pot_tab(mcp);
+  Potential::Coulomb pot_org(mcp);
+  Potential::PotentialTabulate<Potential::Coulomb> pot_tab(mcp);
 
-  double error = fabs( pot_org(a,b,5)-pot_tab(a,b,5) ) ;
+  double error = fabs( pot_org(a,b,25)-pot_tab(a,b,25) ) ;
   CHECK(error>0);
   CHECK(error<0.01);
 }
@@ -82,33 +81,36 @@ TEST_CASE("Particles", "...")
   checkParticle<CigarParticle>();
 }
 
-TEST_CASE("Polar Test","Checks if polarization is working") 
+TEST_CASE("Polar Test","Ion-induced dipole test (polarization)") 
 {
-  
   std::ofstream json_file;
   json_file.open ("polar_test.json");
-  json_file << "{ \"atomlist\" : \n { \n \"sol1\" : {\"q\":1, \"dp\":0, \"dprot\":0, \"alpha\":0},\n";
-  json_file << "\"sol2\" : {\"q\":0, \"dp\":0, \"dprot\":0, \"alpha\":2.6}\n } \n }";
+  json_file
+    << "{ \"atomlist\" : \n { \n "
+    << "\"sol1\" : {\"q\":1, \"dp\":0, \"dprot\":0, \"alpha\":0},\n"
+    << "\"sol2\" : {\"q\":0, \"dp\":0, \"dprot\":0, \"alpha\":2.6}\n } \n }";
   json_file.close();
   std::ofstream input_file;
-  input_file.open ("polar_test.input");
-  input_file << "\n cuboid_len 10\n temperature 298\n epsilon_r 1\n tion1 sol1\n tion2 sol2\n nion1 1\n nion2 1\n";
+  input_file.open("polar_test.input");
+  input_file
+    << "cuboid_len 10\n"
+    << "temperature 298\n"
+    << "epsilon_r 1\n tion1 sol1\n tion2 sol2\n nion1 1\n nion2 1\n";
   input_file.close();
 
-::atom.includefile("polar_test.json");         // load atom properties
-InputMap in("polar_test.input");               // open parameter file for user input
-typedef Potential::CombinedPairPotential<Potential::Coulomb,Potential::IonDipole> Tpair;
-Energy::NonbondedVector<Tpair,Geometry::Cuboid> pot(in);   // create Hamiltonian, non-bonded only
-Faunus::Space spc( pot.getGeometry() );                // create simulation space, particles etc.
-Faunus::GroupAtomic sol(spc, in);                      // group for particles
-Faunus::Move::PolarizeMove<Faunus::Move::AtomicTranslation> trans(in,pot,spc);
-trans.setGroup(sol);                                // tells move class to act on sol group
-spc.p[0]=Point(0,0,0);
-spc.p[1] = Point(0,0,4);
-spc.trial = spc.p;
-std::cout << trans.move(1) << endl;                     // translate
-CHECK(spc.p[1].muscalar == Approx(0.162582));
-
+  ::atom.includefile("polar_test.json");
+  InputMap in("polar_test.input");
+  typedef Potential::CombinedPairPotential<Potential::Coulomb,Potential::IonDipole> Tpair;
+  Energy::NonbondedVector<Tpair,Geometry::Cuboid> pot(in);
+  Space spc( pot.getGeometry() );
+  GroupAtomic sol(spc, in);
+  Move::PolarizeMove<Move::AtomicTranslation> trans(in,pot,spc);
+  trans.setGroup(sol);
+  spc.p[0] = Point(0,0,0);
+  spc.p[1] = Point(0,0,4);
+  spc.trial = spc.p;
+  CHECK(trans.move(1) == Approx(-5.69786)); // check energy change
+  CHECK(spc.p[1].muscalar == Approx(0.162582)); // check induced moment
 }
 
 TEST_CASE("Groups", "Check group range and size properties")

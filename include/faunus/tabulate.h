@@ -1143,15 +1143,16 @@ namespace Faunus {
                 in.get<double>("tab_fmaxtol", -1));
           }
 
-          double operator()(const particle &a, const particle &b, double r2) {
-            Tpair ab(a.id,b.id);
-            auto it=m.find(ab);
-            if (it!=m.end())
-              return tab.eval(it->second, r2);
-            std::function<double(double)> f = [=](double r2) {return Tpairpot(*this)(a,b,r2);};
-            m[ab] = tab.generate_full(f);
-            return (*this)(a,b,r2);
-          }
+          template<class Tparticle>
+            double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+              Tpair ab(a.id,b.id);
+              auto it=m.find(ab);
+              if (it!=m.end())
+                return tab.eval(it->second, r2);
+              std::function<double(double)> f = [=](double r2) {return Tpairpot(*this)(a,b,r2);};
+              m[ab] = tab.generate_full(f);
+              return (*this)(a,b,r2);
+            }
       };
 
     /**
@@ -1214,9 +1215,10 @@ namespace Faunus {
             }
           }
 
-          double operator()(const particle &a, const particle &b, double r2) {
-            return tab.eval(vtab[a.id*atomlistsize+b.id], r2);
-          }
+          template<class Tparticle>
+            double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+              return tab.eval(vtab[a.id*atomlistsize+b.id], r2);
+            }
       };
 
     /**

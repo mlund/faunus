@@ -18,17 +18,6 @@ namespace Faunus {
 
   Group::~Group() {}
 
-  double Group::charge(const p_vec &p) const {
-    double z=0;
-    for (auto i : *this)
-      z+=p[i].charge;
-    return z;
-  }
-
-  bool Group::operator==(const Group& g) const {
-    return (*this == g);
-  }
-
   std::ostream& Group::write(std::ostream &o) const {
     o << front() << " " << back() << " " << cm;
     return o;
@@ -64,50 +53,6 @@ namespace Faunus {
     return o.str() + _info();
   }
 
-  /*!
-   * \warning Intra-molecular distances must not exceed half the box size for cubouid geometry.
-   * \todo Implement assertion to catch failure when molecule is bigger than half the box size.
-   */
-  Point Group::_massCenter(const Space &spc) const {
-    return Geometry::massCenter(*spc.geo, spc.p, *this);
-  }
-
-  Point Group::setMassCenter(const Space &spc) {
-    cm=massCenter(spc);
-    cm_trial=cm;
-    return cm;
-  }
-
-  Point Group::massCenter(const Space &spc) const {
-    assert(&spc!=nullptr);
-    return _massCenter(spc);
-  }
-
-  Point Group::dipolemoment(const Space &s) const {
-    Point t, mu(0,0,0);
-    for (auto i : *this) {
-      t=s.p[i] - cm;
-      s.geo->boundary(t);
-      mu += t*s.p[i].charge;
-    }
-    return mu;
-  }
-
-  /**
-   * @param spc Simulation space
-   * @param endpoint End point of rotation axis, starting from the mass center
-   * @param angle [rad]
-   */
-  void Group::rotate(Space &spc, const Point &endpoint, double angle) {
-    Geometry::QuaternionRotate vrot;
-    assert( spc.geo->dist(cm,massCenter(spc) )<1e-6 );      // debug. Is mass center in sync?
-    cm_trial = cm;
-    vrot.setAxis(*spc.geo, cm, endpoint, angle);            // rotate around line between mass center and point
-    for (auto i : *this)
-      spc.trial[i].rotate(vrot);
-    assert( spc.geo->dist(cm_trial, massCenter(spc))<1e-9 && "Rotation messed up mass center. Is the box too small?");
-  }
-
   void Group::scale(Space &s, double newvol) {
     if (!empty()) {
       cm_trial=cm;
@@ -115,29 +60,6 @@ namespace Faunus {
       for (auto i : *this)
         s.trial[i].scale(*s.geo, newvol);
     }
-  }
-
-  void Group::undo(Space &s) {
-    for (auto i : *this)
-      s.trial[i]=s.p[i];
-    cm_trial=cm;
-  }
-
-  void Group::accept(Space &s) {
-    for (auto i : *this)
-      s.p[i] = s.trial[i];
-    cm=cm_trial;
-  }
-
-  /*!
-   * \param spc Simulation Space
-   * \param p Vector to translate with
-   */
-  void Group::translate(Space &spc, const Point &p) {
-    assert( spc.geo->sqdist(cm,massCenter(spc))<1e-6  && "Mass center out of sync.");
-    for (auto i : *this)
-      spc.trial[i].translate(*spc.geo, p);
-    cm_trial.translate(*spc.geo, p);
   }
 
   int Group::random() const {
@@ -165,48 +87,6 @@ namespace Faunus {
   }
 
   bool GroupAtomic::isAtomic() const { return true; }
-
-  /**
-   * The InputMap is scanned for the following keywords, starting with X=1:
-   *
-   * Key            | Description
-   * :------------- | :---------------------
-   * `tionX`        | Name of atom X
-   * `nionX`        | Number of type X atoms
-   * `dpionX`       | (Displacement parameter of atom type X)
-   * `aionX`        | (Activity of atom X (molar scale))
-   *
-   * If the two latter properties, displacement and activity, are omitted
-   * (recommended) the values from AtomTypes is used instead. That is, you
-   * should specify these directly in the input JSON file.
-   *
-   */
-  void GroupAtomic::add(Space &spc, InputMap &in) {
-    setfront( spc.p.size() );
-    int size=0;
-    int n=1, npart;
-    do {
-      std::ostringstream nion("nion"), tion("tion"), dpion("dpion"), aion("aion");
-      nion << "nion" << n;
-      tion << "tion" << n;
-      dpion<< "dpion"<< n;
-      aion << "aion" << n++; //activity
-      npart = in.get(nion.str(), 0);
-      if (npart>0) {
-        short id = atom[ in.get<string>(tion.str(), "UNK") ].id;
-        atom[id].dp = in.get(dpion.str(), atom[id].dp);
-        atom[id].activity = in.get(aion.str(), 0.);
-        spc.insert( atom[id].name, npart);
-        size+=npart;
-      } else break;
-    } while (npart>0);
-    if (size>0)
-      resize(size);
-    else
-      resize(0);
-    setMassCenter(spc);
-    spc.enroll(*this);
-  }
 
   GroupMolecular::GroupMolecular(int front, int back) : Group(front, back) {
   }

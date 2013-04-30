@@ -18,15 +18,14 @@ namespace Faunus {
       double W = QxMu*mu.dot(r)*R3;     
       return W;  // Beware of r_Mu - r_Q = -r according to Israelachvili p.36, i.e. minus becomes plus
     }
-  
+
   /**
    * @brief Returns dipole-dipole interaction
    *
-   * @param mu1 Unit dipole moment vector of particle A
-   * @param mu2 Unit dipole moment vector of particle B
-   * @param mu1xmu2 Product of dipole scalars
+   * @param muA Unit dipole moment vector of particle A
+   * @param muB Unit dipole moment vector of particle B
+   * @param muAxmuB Product of dipole scalars
    * @param r Vector \f$ r_{AB} \f$
-   *
    */
   template<class Tvec>
     double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r) {
@@ -39,14 +38,9 @@ namespace Faunus {
       //double W = mu1.dot(mu2)*R3-3*mu1.dot(r)*mu2.dot(r)*R5; // J&K
       return W*muAxmuB;
     }
-    
+
   /**
    * @brief Returns ion-quadrupole interaction
-   *
-   * @param mu1 Charge of particle 1
-   * @param mu2 Quadrupole matrix of particle 2
-   * @param r Vector \f$ R_{ij} \f$
-   *
    */
   template<class Tvec, class Tmat>
     double q2quad(double q, const Tmat &quad, const Tvec &r) {
@@ -58,7 +52,7 @@ namespace Faunus {
       W = W*R5  - quad.trace()*(R3/3);
       return q*W;
     }
-    
+
   namespace Potential {
 
     /**
@@ -71,7 +65,7 @@ namespace Faunus {
         string _brief() { return "Ion-dipole"; }
       protected:
         double _lB;
-    public:
+      public:
         IonDipole(InputMap &in) {
           pc::setT ( in.get<double>("temperature", 298.15, "Absolute temperature (K)") );
           double epsilon_r = in.get<double>("epsilon_r",80., "Dielectric constant");
@@ -90,7 +84,7 @@ namespace Faunus {
 
         string info(char w) { return _brief(); }
     };
-    
+
     /**
      * @brief Dipole-dipole interaction
      *
@@ -101,13 +95,13 @@ namespace Faunus {
         string _brief() { return "Dipole-dipole"; }
       protected:
         double _lB;
-	double convert;
-    public:
+        double convert;
+      public:
         DipoleDipole(InputMap &in) {
           pc::setT ( in.get<double>("temperature", 298.15, "Absolute temperature (K)") );
           double epsilon_r = in.get<double>("epsilon_r",80., "Dielectric constant");
           _lB=pc::lB( epsilon_r );
-	  convert = _lB*pc::kT()/(pc::e*pc::e);
+          convert = _lB*pc::kT()/(pc::e*pc::e);
         }
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
@@ -151,7 +145,7 @@ namespace Faunus {
 
         string info(char w) { return _brief(); }
     };
-    
+
     /**
      * @brief Ion-dipole interaction
      *
@@ -162,7 +156,7 @@ namespace Faunus {
         string _brief() { return "Ion-quadrupole"; }
       protected:
         double _lB;
-    public:
+      public:
         IonQuad(InputMap &in) {
           pc::setT ( in.get<double>("temperature", 298.15, "Absolute temperature (K)") );
           double epsilon_r = in.get<double>("epsilon_r",80., "Dielectric constant");
@@ -175,7 +169,6 @@ namespace Faunus {
 
         string info(char w) { return _brief(); }
     };
-    
   }
 }
 #endif

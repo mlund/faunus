@@ -15,8 +15,8 @@ namespace Faunus {
   class checkValue;
   class Space;
 
-  /*!
-   * \brief Namespace for analysis routines
+  /**
+   * @brief Namespace for analysis routines
    */
   namespace Analysis {
 
@@ -190,9 +190,9 @@ namespace Faunus {
           }
       };
 
-    /*!
-      \brief General class for penalty functions along a coordinate
-      \date Malmo, 2011
+    /**
+      @brief General class for penalty functions along a coordinate
+      @date Malmo, 2011
 
       This class stores a penalty function, f(x), along a given coordinate, x,
       of type `Tcoordinate` which could be a distance, angle, volume etc.
@@ -200,27 +200,25 @@ namespace Faunus {
       Each time the system visits x the update(x) function should be called
       so as to add the penalty energy, du. In the energy evaluation, the
       coordinate x should be associated with the extra energy f(x).
-      This will eventually ensure uniform sampling.
 
-Example:
+      This will eventually ensure uniform sampling. Example:
 
-~~~
-PenaltyFunction<double> f(0.1,1000,6.0); // 0.1 kT penalty
-Point masscenter;           // some 3D coordinate...
-...
-f.update(masscenter.z);     // update penalty energy for z component
-double u = f(masscenter.z); // get accumulated penalty at coordinate (kT)
-f.save("penalty.dat");      // save to disk
-~~~
+      ~~~
+      PenaltyFunction<double> f(0.1,1000,6.0); // 0.1 kT penalty
+      Point masscenter;           // some 3D coordinate...
+      ...
+      f.update(masscenter.z);     // update penalty energy for z component
+      double u = f(masscenter.z); // get accumulated penalty at coordinate (kT)
+      f.save("penalty.dat");      // save to disk
+      ~~~
 
-In the above example, the penalty energy will be scaled by 0.5 if the
-sampling along the coordinate is less than 6 kT between the least and
-most likely position.
-This threshold check is carried out every 1000th call to `update()`.
-Note also that when the penalty energy is scaled, so is the threshold
-(also by a factor of 0.5).
-
-*/
+      In the above example, the penalty energy will be scaled by 0.5 if the
+      sampling along the coordinate is less than 6 kT between the least and
+      most likely position.
+      This threshold check is carried out every 1000th call to `update()`.
+      Note also that when the penalty energy is scaled, so is the threshold
+      (also by a factor of 0.5).
+      */
     template<typename Tcoord=float>
       class PenaltyFunction : public Table2D<Tcoord,double> {
         private:
@@ -233,12 +231,14 @@ Note also that when the penalty energy is scaled, so is the threshold
           Tcoord _du; //!< penalty energy
           std::string _log;
         public:
-          /*!
-           * \brief Constructor
-           * \param penalty Penalty energy for each update (kT)
-           * \param Ncheck Check histogram every Nscale'th step (put large number for no scaling, default)
-           * \param kTthreshold Half penalty energy once this threshold in distribution has been reached
-           * \param res Resolution of the penalty function (default 0.1)
+          /**
+           * @brief Constructor
+           * @param penalty Penalty energy for each update (kT)
+           * @param Ncheck Check histogram every Nscale'th step
+           *        (put large number for no scaling, default)
+           * @param kTthreshold Half penalty energy once this
+           *        threshold in distribution has been reached
+           * @param res Resolution of the penalty function (default 0.1)
            */
           PenaltyFunction(double penalty, int Ncheck=1e9, double kTthreshold=5, Tcoord res=0.1)
             : Tbase(res, Tbase::XYDATA), hist(res, Thist::HISTOGRAM) {
@@ -251,7 +251,7 @@ Note also that when the penalty energy is scaled, so is the threshold
               _log="#   initial penalty energy = "+std::to_string(_du)+"\n";
             }
 
-          /*! \brief Update penalty for coordinate */
+          /** @brief Update penalty for coordinate */
           double update(Tcoord coordinate) {
             _cnt++;
             Tbase::operator()(coordinate)+=_du;  // penalize coordinate
@@ -338,27 +338,29 @@ Note also that when the penalty energy is scaled, so is the threshold
             static_assert( std::is_integral<Ty>::value, "Histogram must be of integral type");
             static_assert( std::is_unsigned<Ty>::value, "Histogram must be unsigned");
           }
-          /*!
-           * \brief Sample radial distibution of two atom types
-           * \param spc Simulation space
-           * \param g Group to search
-           * \param ida Atom id of first particle
-           * \param idb Atom id of second particle
+
+          /**
+           * @brief Sample radial distibution of two atom types
+           * @param spc Simulation space
+           * @param g Group to search
+           * @param ida Atom id of first particle
+           * @param idb Atom id of second particle
            */
-          void sample(Space &spc, Group &g, short ida, short idb) {
-            for (auto i=g.begin(); i!=g.end()-1; i++)
-              for (auto j=i+1; j!=g.end(); j++)
-                if ( (spc.p[*i].id==ida && spc.p[*j].id==idb) || (spc.p[*i].id==idb && spc.p[*j].id==ida) ) {
-                  Tx r=spc.geo->dist(spc.p[*i], spc.p[*j]);
-                  if (r<=maxdist)
-                    this->operator() (r)++; 
-                }
-            double bulk=0;
-            for (auto i : g)
-              if (spc.p[i].id==ida || spc.p[i].id==idb)
-                bulk++;
-            bulkconc += bulk / spc.geo->getVolume();
-          }
+          template<class Tspace, class Tgroup>
+            void sample(Tspace &spc, Tgroup &g, short ida, short idb) {
+              for (auto i=g.begin(); i!=g.end()-1; i++)
+                for (auto j=i+1; j!=g.end(); j++)
+                  if ( (spc.p[*i].id==ida && spc.p[*j].id==idb) || (spc.p[*i].id==idb && spc.p[*j].id==ida) ) {
+                    Tx r=spc.geo->dist(spc.p[*i], spc.p[*j]);
+                    if (r<=maxdist)
+                      this->operator() (r)++; 
+                  }
+              double bulk=0;
+              for (auto i : g)
+                if (spc.p[i].id==ida || spc.p[i].id==idb)
+                  bulk++;
+              bulkconc += bulk / spc.geo->getVolume();
+            }
       };
 
     template<typename Tx=double, typename Ty=unsigned long>
@@ -413,9 +415,7 @@ Note also that when the penalty energy is scaled, so is the threshold
           double end() {
             return (get(this->minx())+get(this->minx()+this->dx)+get(-this->minx())+get(-this->minx()-this->dx))*0.25/this->dx;
           }
-
       };
-
 
     /*!
      * \brief Base class for force calculations
@@ -467,8 +467,6 @@ Note also that when the penalty energy is scaled, so is the threshold
         Point meanforce();
     };
 
-
-
     /*!
      * \brief Calculates the midplane twobody mean force
      *
@@ -505,14 +503,62 @@ Note also that when the penalty energy is scaled, so is the threshold
     class PolymerShape : public AnalysisBase {
       private:
         std::map< string, Average<double> > Rg2, Rg, Re2, Rs, Rs2, Rg2x, Rg2y, Rg2z;
-        double gyrationRadiusSquared(const Group&, const Space &);
-        Point vectorEnd2end(const Group&, const Space &);
         void _test(UnitTest&);
         string _info();
+        template<class Tgroup, class Tspace>
+          double gyrationRadiusSquared(const Tgroup &pol, const Tspace &spc) {
+            assert( spc.geo->dist(pol.cm, pol.massCenter(spc))<1e-9
+                && "Mass center must be in sync.");
+            Point rg2=vectorgyrationRadiusSquared(pol,spc);
+            return rg2.x()+rg2.y()+rg2.z();
+          }
+
+        template<class Tgroup, class Tspace>
+          Point vectorEnd2end(const Tgroup &pol, const Tspace &spc) {
+            return spc.geo->vdist( spc.p[pol.front()], spc.p[pol.back()] );
+          }
+
+        template<class Tgroup, class Tspace>
+          Point vectorgyrationRadiusSquared(const Tgroup &pol, const Tspace &spc) {
+            assert( spc.geo->dist(pol.cm, pol.massCenter(spc))<1e-9
+                && "Mass center must be in sync.");
+            double sum=0;
+            Point t, r2(0,0,0);
+            for (auto i : pol) {
+              t = spc.p[i]-pol.cm;                // vector to center of mass
+              spc.geo->boundary(t);               // periodic boundary (if any)
+              r2.x() += spc.p[i].mw * t.x() * t.x();
+              r2.y() += spc.p[i].mw * t.y() * t.y();
+              r2.z() += spc.p[i].mw * t.z() * t.z();
+              sum += spc.p[i].mw;                 // total mass
+            }
+            assert(sum>0 && "Zero molecular weight not allowed.");
+            return r2*(1./sum);
+          }
+
       public:
         PolymerShape();
-        Point vectorgyrationRadiusSquared(const Group&, const Space &);
-        void sample(const Group&, const Space&); //!< Sample properties of Group (identified by group name)
+
+        /** @brief Sample properties of Group (identified by group name) */
+        template<class Tgroup, class Tspace>
+          void sample(const Tgroup &pol, const Tspace &spc) {
+            if (!run() || pol.front()==pol.back())
+              return;
+            Point r2 = vectorgyrationRadiusSquared(pol,spc);
+            double rg2 = r2.x()+r2.y()+r2.z(); 
+            double re2 = spc.geo->sqdist( spc.p[pol.front()], spc.p[pol.back()] );
+            Rg2[pol.name]  += rg2;
+            Rg2x[pol.name] += r2.x();
+            Rg2y[pol.name] += r2.y();
+            Rg2z[pol.name] += r2.z();
+            Rg[pol.name]   += sqrt(r2.x()+r2.y()+r2.z());
+            Re2[pol.name]  += re2; //end-2-end squared
+            double rs = Re2[pol.name].avg()/Rg2[pol.name].avg(); // fluctuations in shape factor
+            Rs[pol.name]   += rs;
+            Rs2[pol.name]  += rs*rs;
+            //Point re = vectorEnd2end(pol,spc);
+            //Re2[pol.name] += pow(re.len(), 2);
+          }
     };
 
     /**
@@ -532,34 +578,62 @@ Note also that when the penalty energy is scaled, so is the threshold
     class ChargeMultipole : public AnalysisBase {
       private:
         std::map< string, Average<double> > Z, Z2, mu, mu2;
-        double charge(const Group&, const Space&);
-        double dipole(const Group&, const Space&);
+
+        /**
+         * @param g Group to calculate charge for
+         * @param spc Space
+         */
+        template<class Tgroup, class Tpvec>
+          double charge(const Tgroup &g, const Tpvec &p, double Z=0) {
+            for (auto i : g)
+              if (!exclude(p[i]))
+                Z+=p[i].charge;
+            return Z;
+          }
+
+        template<class Tgroup, class Tspace>
+          double dipole(const Tgroup &g, const Tspace &spc) {
+            assert( spc.geo->dist(g.cm, g.massCenter(spc))<1e-9
+                && "Mass center must be in sync.");
+            Point t, mu(0,0,0);
+            for (auto i : g)
+              if (exclude(spc.p[i])==false) {
+                t = spc.p[i]-g.cm;                // vector to center of mass
+                spc.geo->boundary(t);               // periodic boundary (if any)
+                mu+=spc.p[i].charge*t;
+              }
+            return mu.len();
+          }
+
         virtual bool exclude(const particle&);  //!< Determines particle should be excluded from analysis
         string _info();
       public:
         ChargeMultipole();
-        void sample(const Group&, const Space&); //!< Sample properties of Group (identified by group name)
+
+        /** @brief Sample properties of Group (identified by group name) */
+        template<class Tgroup, class Tspace>
+          void sample(const Tgroup &g, const Tspace &spc) {
+            assert(!g.name.empty() && "All Groups should have a name!");
+            if (run()) {
+              double z=charge(g, spc.p);
+              Z[g.name]+=z;
+              Z2[g.name]+=pow(z,2);
+              double dip=dipole(g,spc);
+              mu[g.name]+=dip;
+              mu2[g.name]+=pow(dip,2);
+            }
+          }
 
         /* @brief Sample properties of Group (identified by group name) */
-        template<typename Tgroup>
-          void sample(const std::vector<Tgroup> &gvec, const Space &spc) {
-            if (!run())
-              return;
-            for (auto &g : gvec)
-              sample(g, spc);
+        template<typename Tgroup, typename Tspace>
+          void sample(const std::vector<Tgroup> &gvec, const Tspace &spc) {
+            if (run())
+              for (auto &g : gvec)
+                sample(g, spc);
           }
 
         std::set<string> exclusionlist; //!< Atom names listed here will be excluded from the analysis.
     };
-
-    /*
-       class VectorAlignment : public AnalysisBase {
-       private:
-       virtual Point convert(const Group&, const Space&); // Returns points calculated from group properties
-       public:
-       void sample(const Group&, const Group&, const Space&);
-       };
-       */
 
     /**
      * @brief Widom method for excess chemical potentials
@@ -712,8 +786,10 @@ Note also that when the penalty energy is scaled, so is the threshold
     };
 
     /**
-     * @brief Returns the dielectric constant outside the cutoff limit. Only hold when using PBC and \f$\epsilon_{sur} = \epsilon\f$,
-     * @brief [Neumann, M. (1983) Mol. Phys., 50, 841-858].
+     * @brief Returns the dielectric constant outside the cutoff limit.
+     *
+     *        Only hold when using PBC and \f$\epsilon_{sur} = \epsilon\f$,
+     *        [Neumann, M. (1983) Mol. Phys., 50, 841-858].
      *
      * @param pot The potential including geometry
      * @param spc The space including the particles
@@ -743,7 +819,7 @@ Note also that when the penalty energy is scaled, so is the threshold
             M += _m.squaredNorm();
           }
 
-        string info() {
+        inline string info() {
           std::ostringstream o;
           if (M.cnt <= 0)
             return o.str();

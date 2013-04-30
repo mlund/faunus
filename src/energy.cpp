@@ -525,16 +525,6 @@ namespace Faunus {
       return o.str();
     }
 
-    double systemEnergy(Space &spc, Energy::Energybase &pot, const p_vec &p) {
-      double u = pot.external();
-      for (auto g : spc.groupList())
-        u += pot.g_external(p, *g) + pot.g_internal(p, *g);
-      for (size_t i=0; i<spc.groupList().size()-1; i++)
-        for (size_t j=i+1; j<spc.groupList().size(); j++)
-          u += pot.g2g(p, *spc.groupList()[i], *spc.groupList()[j]);
-      return u;
-    }
-
   }//namespace
 }//namespace
 

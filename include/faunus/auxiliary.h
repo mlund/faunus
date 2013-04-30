@@ -10,6 +10,19 @@
 #endif
 
 namespace Faunus {
+
+  /**
+   * @brief Iterate over pairs in container and return sum of function
+   */
+  template<typename Tit, typename Tfunc, typename T=double>
+    T for_each_pair_sum(const Tit &begin, const Tit &end, Tfunc f, T sum=T())
+    {
+      for (auto i=begin; i!=end; ++i)
+        for (auto j=i; ++j!=end;)
+          sum+=f(*i,*j);
+      return sum;
+    }
+
   /**
    * @brief Ordered pair where `first<=second`
    *

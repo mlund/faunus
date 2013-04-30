@@ -64,7 +64,7 @@ Option                             | Description
 Example: Intel's C++ compiler with OpenMP parallelization
 ---------------------------------------------------------
 
-    $ CXX=icpc CC=icc cmake . -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=Release
+    $ CXX=icpc CC=icc cmake . -DCMAKE_BUILD_TYPE=Release
     $ make
 
 Example: Libraries in odd locations
@@ -77,6 +77,7 @@ Resetting the build system
 
     $ make clean
     $ rm CMakeCache.txt
+    $ (rm -fR CMakeFiles/)
 
 Contributors
 ============

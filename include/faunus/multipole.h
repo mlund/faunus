@@ -170,7 +170,7 @@ namespace Faunus {
         }
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-            return _lB*q2quad(a.charge, b.theta,r);
+            return _lB*(q2quad(a.charge, b.theta,r)+q2quad(b.charge, a.theta,r));
           }
 
         string info(char w) { return _brief(); }

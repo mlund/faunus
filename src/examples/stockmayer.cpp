@@ -7,7 +7,7 @@ using namespace Faunus::Potential;
 typedef Geometry::Cuboid Tgeo;                   // select simulation geometry and pair potential
 //typedef DipoleDipole Tpair;
 //typedef CombinedPairPotential<CoulombHS,DipoleDipole> Tpair;
-typedef CombinedPairPotential<HardSphere,IonDipole> Tpair;
+typedef CombinedPairPotential<HardSphere,IonQuad> Tpair;
 //typedef CoulombLJ Tpair;
 //typedef DipoleDipoleRF Tpair;
 

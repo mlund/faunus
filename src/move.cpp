@@ -246,8 +246,7 @@ namespace Faunus {
       std::ostringstream o;
       if (gsize.cnt>0)
         o << pad(SUB,w,"Average moves/particle") << cnt / gsize.avg() << endl;
-      o << pad(SUB,w,"Displacement vector")
-        << dir.x() << " " << dir.y() << " " << dir.z() << endl;
+      o << pad(SUB,w,"Displacement vector") << dir.transpose() << endl;
       if (genericdp>1e-6)
         o << pad(SUB,w,"Generic displacement") << genericdp << _angstrom << endl;
       if (cnt>0) {

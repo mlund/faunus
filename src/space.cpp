@@ -69,31 +69,6 @@ namespace Faunus {
     return rc;
   }
 
-  /*!
-   * This will insert a particle vector into the current space. No overlap checks are performed; this should
-   * be done prior to insertion by for example the Geometry::FindSpace class.
-   *
-   * \param pin Particle vector to insert
-   * \param i Insert position (PRESENTLY IGNORED). Default = -1 which means end of current vector
-   *
-   * \todo Implement insertion at random position
-   */
-  GroupMolecular Space::insert(const p_vec &pin, int i) {
-    assert(i==-1 && "Vector insertion at random position unimplemented.");
-    GroupMolecular g;
-    if ( !pin.empty() ) {
-      g.setrange( p.size(), -1);
-      assert(g.size()==0 && "Group range broken!");
-      for (auto &i : pin) {
-        p.push_back(i);
-        trial.push_back(i);
-        g.resize( g.size()+1 );
-      }
-      g.setMassCenter(*this);
-    }
-    return g;
-  }
-
   /**
    * @param a Particle to insert
    * @param i Insert position in particle vector. Old i will be pushed forward.

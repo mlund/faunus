@@ -767,7 +767,8 @@ namespace Faunus {
           orderParameter(Tcuboid &geo, Tpvec &p, Tgroup &lipids, Point n=Point(0,0,1)) {
             Average<double> S;
             for (int i=0; i<lipids.numMolecules(); i++) {
-              auto g = lipids[i]; // i'th lipid
+              Group g;
+              lipids.getMolecule(i,g); // i'th lipid
               Point a = geo.vdist( p[g.front()], p[g.back()]).normalized();
               S += 0.5 * ( 3 * pow(a.dot(n),2) - 1 );
             }

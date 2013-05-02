@@ -152,7 +152,7 @@ namespace Faunus {
       float time_xtc, prec_xtc;
       int natoms_xtc, step_xtc;
     public:
-      std::vector<GroupMolecular*> g;          //!< List of PBC groups to be saved as whole
+      std::vector<Group*> g;          //!< List of PBC groups to be saved as whole
       FormatXTC(float);                        //!< Constructor that sets an initially cubic box
       bool open(string);                       //!< Open xtc file for reading
       bool loadnextframe(Space&);              //!< Load a single frame into cuboid

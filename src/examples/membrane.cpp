@@ -80,7 +80,8 @@ int main() {
   Analysis::BilayerStructure lipidstruct;
 
   // Load and add polymer to Space
-  GroupArray lipids(3);
+  Group lipids;
+  lipids.setMolSize(3);
   FormatAAM aam;                                      // AAM structure file I/O
   string flipid = mcp.get<string>("lipid_file","");
   int Nlipid=mcp("lipid_N",1);
@@ -101,7 +102,8 @@ int main() {
 
   // Place all lipids in xy plane (z=0);
   for (int l=0; l<lipids.numMolecules(); l++) {
-    auto g=lipids[l];
+    Group g;
+    lipids.getMolecule(l,g);
     double dz=spc.p[ g.back() ].z();
     for (auto i : g) {
       spc.p[i].z() -= dz;
@@ -128,7 +130,7 @@ int main() {
         case 1:
           while (k-->0) {
             i=lipids.randomMol(); // pick random lipid molecule
-            g=lipids[i];
+            lipids.getMolecule(i,g);
             g.name="lipid";
             g.setMassCenter(spc);     // mass center needed for rotation
             if (slp_global()>0.5) {

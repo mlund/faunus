@@ -66,8 +66,8 @@ int main() {
   Analysis::RadialDistribution<> rdf_ab(0.1);      // 0.1 angstrom resolution
 
   // Add salt
-  GroupAtomic salt(spc, mcp);
-  salt.name="Salt";
+  Group salt;
+  salt.addParticles(spc, mcp);
   mv.setGroup(salt);
 
   spc.load("state");                               // load old config. from disk (if any)

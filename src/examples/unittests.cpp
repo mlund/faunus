@@ -103,7 +103,8 @@ TEST_CASE("Polar Test","Ion-induced dipole test (polarization)")
   typedef Potential::CombinedPairPotential<Potential::Coulomb,Potential::IonDipole> Tpair;
   Energy::NonbondedVector<Tpair,Geometry::Cuboid> pot(in);
   Space spc( pot.getGeometry() );
-  GroupAtomic sol(spc, in);
+  Group sol;
+  sol.addParticles(spc, in);
   Move::PolarizeMove<Move::AtomicTranslation> trans(in,pot,spc);
   trans.setGroup(sol);
   spc.p[0] = Point(0,0,0);

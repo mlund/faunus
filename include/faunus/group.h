@@ -6,7 +6,7 @@
 #include <faunus/geometry.h>
 #include <faunus/range.h>
 #include <faunus/species.h>
-#include <faunus/inputfile.h>
+#include <faunus/textio.h>
 #endif
 
 namespace Faunus {
@@ -18,26 +18,64 @@ namespace Faunus {
    */
   class Group : public Range {
     private:
-      /**
-       * @warning Intra-molecular distances must not exceed half
-       *          the box size for cubouid geometry.
-       *    @todo Implement assertion to catch failure when molecule
-       *          is bigger than half the box size.
-       */
-      template<class Tspace>
-        Point _massCenter(const Tspace &spc) const {
-          return Geometry::massCenter(*spc.geo, spc.p, *this);
-        }
-    protected:
-      virtual std::ostream& write(std::ostream &) const; //!< Write all Group data to stream
-      virtual string _info();
+      int molsize; // Number of atoms in contained molecule(s)
     public:
-      Group(int=-1, int=-1);
-      string info();                          //!< Information string
+      Group(int front=-1, int back=-1) : Range(front,back-front+1) {
+        setMolSize(-1);
+        if (front<0 || back<0)
+          resize(0);
+      }
+
       string name;                            //!< Information time (and short) name
       Point cm_trial;                         //!< mass center vector for trial position
       Point cm;                               //!< mass center vector
-      int random() const;                     //!< Pick random particle index in Group
+
+      /** @brief Information string */
+      std::string info() {
+        using namespace textio;
+        using namespace std;
+        char w=15;
+        ostringstream o;
+        o << header("Group: " + name)
+          << pad(SUB,w,"Size") << size() << endl
+          << pad(SUB,w,"Range")
+          << ((empty()) ? "Empty" : "["+to_string(front())+"-"+to_string(back())+"]")
+          << endl
+          << pad(SUB,w,"Mol size") << molsize << endl
+          << pad(SUB,w,"Molecules") << numMolecules() << endl
+          << pad(SUB,w,"Mass center") << cm.transpose() << endl;
+        return o.str();
+      }
+
+      /** @brief Pick random particle index in Group */
+      int random() const {
+        if (!empty()) {
+          int i = front() + slp_global.rand() % size();
+          assert(find(i) && "Generated random element out of range!");
+          return i;
+        }
+        return -1;
+      }
+
+      /** @brief True if group represents a molecule */
+      inline bool isMolecular() const { return (molsize==size()); }
+
+      /** @brief True if group represents a molecule */
+      inline bool isAtomic() const { return (molsize==1); }
+
+      /** @brief True if group contains a range of groups */
+      inline bool isRange() const { return (molsize>1 && molsize<size()); }
+
+      inline void setMolSize(int N) {
+        molsize=N;
+        assert( (size()%molsize)==0 );
+      }
+
+      /** @brief Number of molecules in group */
+      inline int numMolecules() const {
+        assert( (size()%molsize)==0 );
+        return size()/molsize;
+      }
 
       /** @brief Total charge */
       template<class Tpvec>
@@ -46,11 +84,17 @@ namespace Faunus {
           return Z;
         }
 
-      /** @brief Calculates mass center - does not touch group! */
+      /**
+       *  @brief   Calculates mass center - does not touch group!
+       *  @warning Intra-molecular distances must not exceed half
+       *           the box size for cubouid geometry.
+       *  @todo    Implement assertion to catch failure when molecule
+       *           is bigger than half the box size.
+       */
       template<class Tspace>
         Point massCenter(const Tspace &spc) const {
           assert(&spc!=nullptr);
-          return _massCenter(spc);
+          return Geometry::massCenter(*spc.geo, spc.p, *this);
         }
 
       /** @brief Calculate AND set mass center (cm and cm_trial) */
@@ -81,9 +125,9 @@ namespace Faunus {
         void translate(Tspace &spc, const Point &p) {
           assert( spc.geo->sqdist(cm,massCenter(spc))<1e-6
               && "Mass center out of sync.");
+          cm_trial.translate(*spc.geo, p);
           for (auto i : *this)
             spc.trial[i].translate(*spc.geo, p);
-          cm_trial.translate(*spc.geo, p);
         }
 
       /**
@@ -104,7 +148,67 @@ namespace Faunus {
               && "Rotation messed up mass center. Is the box too small?");
         }
 
-      virtual void scale(Space&, double);               //!< Volume scaling for NPT ensemble
+      /**
+       * @brief Get the i'th molecule in the group
+       * @warning You must manually update the mass center of the returned group
+       */
+      template<class Tgroup>
+        void getMolecule(int i, Tgroup &sel) const {
+          sel.setfront( front()+i*molsize );
+          sel.setback( sel.front()+molsize-1 );
+          sel.setMolSize(sel.size());
+
+          assert( molsize>0 );
+          assert( (size()%molsize)==0 );
+          assert( isMolecular() );
+          assert( sel.size()==molsize );
+          assert( find( sel.front() ) );
+          assert( find( sel.back()  ) );
+        }
+
+      /** @brief Volume scaling for NPT ensemble */
+      template<class Tspace>
+        void scale(Tspace &s, double newvol) {
+          if (empty()) return;
+
+          if (isAtomic()) {
+            cm_trial=cm;
+            cm_trial.scale(*s.geo, newvol);
+            for (auto i : *this)
+              s.trial[i].scale(*s.geo, newvol);
+            return;
+          }
+
+          if (isMolecular()) {
+            assert( s.geo->dist(cm, massCenter(s))<1e-6);
+            assert( s.geo->dist(cm, cm_trial)<1e-7);
+
+            Point newcm=cm;
+            newcm.scale(*s.geo, newvol);
+            translate(s,-cm);                 // move to origo
+
+            double oldvol=s.geo->getVolume(); // store original volume
+            s.geo->setVolume(newvol);         // apply trial volume
+
+            for (auto i : *this) {
+              s.trial[i] += newcm;            // move all particles to new cm
+              s.geo->boundary( s.trial[i] );  // respect boundary conditions
+            }
+            cm_trial=newcm;
+            s.geo->setVolume(oldvol);         // restore original volume
+            return;
+          }
+
+          if (isRange()) {
+            for (int i=0; i!=numMolecules(); ++i) {
+              Group sel;
+              getMolecule(i,sel);
+              sel.setMassCenter(s);
+              sel.scale(s,newvol);
+            }
+            return;
+          }
+        }
 
       /** @brief Undo move operation */
       template<class Tspace>
@@ -122,23 +226,29 @@ namespace Faunus {
           cm=cm_trial;
         }
 
-      virtual bool isMolecular() const; //!< True if group represents a molecule
-      virtual bool isAtomic() const;    //!< True if group represents atomic species
-      virtual int numMolecules() const; //!< Number of molecules in group
+      /** @brief Write group data to stream */
+      friend std::ostream& operator<<(std::ostream &o, const Group &g) {
+        o << g.front() << " " << g.back() << " " << g.cm;
+        return o;
+      }
 
-      friend std::ostream &operator<<(std::ostream&, Group&);//!< Output Group data to stream
-      virtual Group &operator<<(std::istream&);              //!< Get Group data from stream
-      virtual ~Group();
-  };
+      /** @brief Read group data from stream */
+      Group& operator<<(std::istream &in) {
+        int front;
+        int back;
+        in >> front >> back;
+        setrange(front,back);
+        assert( size()==back-front+1 && "Problem with Group range");
+        cm.operator<<(in);
+        return *this;
+      }
 
-  /**
-   * @brief Group class for atomic species, typically salt
-   */
-  class GroupAtomic : public Group {
-    public:
-      GroupAtomic(int=-1, int=-1);
-      GroupAtomic(Space&, InputMap&);        //!< Construct and call add()
-      bool isAtomic() const;                 //!< Always true for GroupAtomic
+      /** @brief Select random molecule */
+      inline int randomMol() const {
+        int i=(random()-front())/molsize;
+        assert(find(i) && "Out of range!");
+        return i;
+      }
 
       /**
        * @brief Add atomic particles via InputMap parameters
@@ -155,8 +265,9 @@ namespace Faunus {
        * (recommended) the values from AtomTypes is used instead. That is, you
        * should specify these directly in the input JSON file.
        */
-      template<class Tspace>
-        void add(Tspace &spc, InputMap &in) {
+      template<class Tspace, class Tinputmap>
+        void addParticles(Tspace &spc, Tinputmap &in) {
+          name="Salt";
           setfront( spc.p.size() );
           int size=0;
           int n=1, npart;
@@ -169,7 +280,7 @@ namespace Faunus {
             aion << "aion" << n++; //activity
             npart = in.get(nion.str(), 0);
             if (npart>0) {
-              short id = atom[ in.get<string>(tion.str(), "UNK") ].id;
+              auto id = atom[in.get(tion.str(), string("UNK")) ].id;
               atom[id].dp = in.get(dpion.str(), atom[id].dp);
               atom[id].activity = in.get(aion.str(), 0.);
               spc.insert( atom[id].name, npart);
@@ -180,39 +291,24 @@ namespace Faunus {
             resize(size);
           else
             resize(0);
+          setMolSize(1);
           setMassCenter(spc);
           spc.enroll(*this);
         }
-  };
 
-  /**
-   * @brief Class for molecular groups - proteins, polymers etc.
-   */
-  class GroupMolecular : public Group {
-    private:
-      string _info();
-    public:
-      GroupMolecular(int=-1, int=-1);
-      void scale(Space&, double);               //!< Mass-center volume scale
-      bool isMolecular() const;                 //!< Always true for GroupMolecular
-      int numMolecules() const;                 //!< Number of molecules in group
-  };
-
-  /**
-   * @brief Class for an array of multiatom molecules - solvent, lipids etc.
-   */
-  class GroupArray : public GroupMolecular {
-    private:
-      GroupMolecular sel;             //!< A temporary group class
-      string _info();                 //!< Show information
-    public:
-      int N;                          //!< Number of atoms in each molecule
-      GroupArray(int);                //!< Constructor - number of atoms per molecule.
-      int randomMol() const;          //!< Pick a random molecule
-      GroupMolecular& operator[](int);//!< Access i'th molecule
-      void add(const GroupMolecular&);//!< Add a molecule to the array - range must be continuous
-      void scale(Space&, double);     //!< Mass-center volume scale
-      int numMolecules() const;       //!< Number of molecules
+      /**
+       * @todo rename to addGroup or implement operator
+       */
+      template<class Tgroup>
+        void addMolecule(const Tgroup &g) {
+          if ((g.size()%molsize)==0) {
+            if (empty())
+              setrange(g.front(), g.back());
+            else if (g.front()==back()+1)
+              setback(g.back());
+          }
+          assert( (size()%molsize)==0 && "GroupArray not a multiple of N");
+        }
   };
 
 }//namespace

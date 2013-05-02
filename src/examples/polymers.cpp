@@ -32,11 +32,11 @@ int main() {
   Analysis::RadialDistribution<> rdf(0.2);
 
   // Add salt
-  GroupAtomic salt(spc, mcp);
-  salt.name="Salt";
+  Group salt;
+  salt.addParticles(spc, mcp);
 
   // Add polymers
-  vector<GroupMolecular> pol( mcp.get("polymer_N",0));   // vector of polymers
+  vector<Group> pol( mcp.get("polymer_N",0));            // vector of polymers
   string polyfile = mcp.get<string>("polymer_file", "");
   double req    = mcp.get<double>("polymer_eqdist", 0);
   double k      = mcp.get<double>("polymer_forceconst", 0);
@@ -45,7 +45,7 @@ int main() {
     aam.load(polyfile);
     Geometry::FindSpace().find(
         *spc.geo, spc.p, aam.particles() );              // find empty spot in particle vector
-    g = spc.insert( aam.particles() );                   // insert into space
+    g = spc.insert( aam.particles() );                // insert into space
     g.name="Polymer";
     spc.enroll(g);
     for (int i=g.front(); i<g.back(); i++)

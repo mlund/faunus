@@ -261,12 +261,6 @@ namespace Faunus {
       name="Multipole";
     }
 
-    bool ChargeMultipole::exclude(const particle &p){
-      if (exclusionlist.find(atom[p.id].name)==exclusionlist.end())
-        return false;
-      return true;
-    }
-
     string ChargeMultipole::_info(){
       using namespace textio;
       char k=13;
@@ -289,70 +283,6 @@ namespace Faunus {
       return o.str();
     }
 
-    Widom::Widom(Space &spc, Energy::Energybase &pot) {
-      name="Multi Particle Widom Analysis";
-      cite="doi:10/dkv4s6";
-      spcPtr=&spc;
-      potPtr=&pot;
-    }
-
-    void Widom::sample(int ghostin) {
-      if (!run())
-        return;
-      assert(spcPtr->geo!=NULL);
-      int n=g.size();
-      for (int k=0; k<ghostin; k++) {     // insert ghostin times
-        double du=0;
-        for (int i=0; i<n; i++)
-          spcPtr->geo->randompos( g[i] ); // random ghost positions
-        for (int i=0; i<n; i++)
-          du+=potPtr->all2p( spcPtr->p, g[i] );    // energy with all particles in space
-        for (int i=0; i<n-1; i++)
-          for (int j=i+1; j<n; j++)
-            du+=potPtr->p2p( g[i], g[j] );   // energy between ghost particles
-        expsum += exp(-du);
-      }
-    }
-
-    void Widom::addGhost(particle p) {
-      g.push_back(p);
-    }
-
-    void Widom::addGhost(Space &c) {
-      std::map<short,bool> map;
-      for (auto p : c.p)
-        map[ p.id ] = true;
-      for (auto &m : map) {
-        particle a;
-        a=atom[m.first];
-        addGhost(a);
-      }
-    }
-
-    void Widom::check(UnitTest &test) {
-      test("widom_muex", muex() );
-    }
-
-    string Widom::_info() {
-      using namespace Faunus::textio;
-      std::ostringstream o;
-      o << pad(SUB,w, "Number of insertions") << expsum.cnt << endl
-        << pad(SUB,w, "Excess chemical pot.") << muex() << kT << endl
-        << pad(SUB,w, "Mean activity coefficient") << gamma() << endl
-        << pad(SUB,w, "Ghost particles");
-      for (auto p : g)
-        o << atom[p.id].name << " ";
-      o << endl;
-      return o.str();
-    }
-
-    double Widom::gamma() {
-      return exp(muex());
-    }
-
-    double Widom::muex() {
-      return -log(expsum.avg())/g.size();
-    }
 
     //--------------------------------------------------------------------------------
 

@@ -579,14 +579,10 @@ namespace Faunus {
       private:
         std::map< string, Average<double> > Z, Z2, mu, mu2;
 
-        /**
-         * @param g Group to calculate charge for
-         * @param spc Space
-         */
         template<class Tgroup, class Tpvec>
           double charge(const Tgroup &g, const Tpvec &p, double Z=0) {
             for (auto i : g)
-              if (!exclude(p[i]))
+              if (!excluded(p[i]))
                 Z+=p[i].charge;
             return Z;
           }
@@ -597,7 +593,7 @@ namespace Faunus {
                 && "Mass center must be in sync.");
             Point t, mu(0,0,0);
             for (auto i : g)
-              if (exclude(spc.p[i])==false) {
+              if (!excluded(spc.p[i])) {
                 t = spc.p[i]-g.cm;                // vector to center of mass
                 spc.geo->boundary(t);               // periodic boundary (if any)
                 mu+=spc.p[i].charge*t;
@@ -605,7 +601,14 @@ namespace Faunus {
             return mu.len();
           }
 
-        virtual bool exclude(const particle&);  //!< Determines particle should be excluded from analysis
+        /** @brief Determines particle should be excluded from analysis */
+        template<class Tparticle>
+          bool excluded(const Tparticle &p){
+            if (exclusionlist.count(atom[p.id].name)==0)
+              return false;
+            return true;
+          }
+
         string _info();
       public:
         ChargeMultipole();
@@ -643,23 +646,74 @@ namespace Faunus {
      * have no net charge. This is used to calculate the mean excess
      * chemical potential and activity coefficient.
      */
-    class Widom : public AnalysisBase {
-      private:
-        Space* spcPtr;
-        Energy::Energybase* potPtr;
-        Average<double> expsum; //!< Average of the excess chemical potential 
-        string _info();         //!< Print results of analysis
-      protected:
-        p_vec g;                //!< List of ghost particles to insert (simultaneously)
-      public:
-        Widom(Space&, Energy::Energybase&);
-        void addGhost(particle);                 //!< Add particle to insert - sum of all added particle charges should be zero.
-        void addGhost(Space&);                   //!< All species found in the container
-        void sample(int=10);                     //!< Insert and analyse `n` times.
-        void check(UnitTest&);                   //!< Output checking
-        double gamma();                          //!< Sampled mean activity coefficient
-        double muex();                           //!< Sampled mean excess chemical potential
-    };
+    template<class Tparticle>
+      class Widom : public AnalysisBase {
+        private:
+          Average<double> expsum; //!< Average of the excess chemical potential 
+
+          string _info() {
+            using namespace Faunus::textio;
+            std::ostringstream o;
+            o << pad(SUB,w, "Number of insertions") << expsum.cnt << endl
+              << pad(SUB,w, "Excess chemical pot.") << muex() << kT << endl
+              << pad(SUB,w, "Mean activity coefficient") << gamma() << endl
+              << pad(SUB,w, "Ghost particles");
+            for (auto &p : g)
+              o << atom[p.id].name << " ";
+            return o.str() + "\n";
+          }
+
+          void _test(UnitTest &test) { test("widom_muex", muex() ); }
+
+        protected:
+          std::vector<Tparticle> g; //!< Pool of ghost particles to insert (simultaneously)
+        public:
+          Widom() {
+            name="Multi Particle Widom Analysis";
+            cite="doi:10/dkv4s6";
+          }
+
+          void addGhost(Tparticle p) { g.push_back(p); }
+
+          /* @brief Add particle to insert - sum of added particle charges should be zero.*/
+          template<class Tpvec>
+            void addGhost(Tpvec &p) {
+              std::map<short,bool> map; // replace w. `std::set`
+              for (auto i : p)
+                map[ i.id ] = true;
+              for (auto &m : map) {
+                particle a;
+                a=atom[m.first];
+                addGhost(a);
+              }
+            }
+
+          /** @brief Sampled mean activity coefficient */
+          double gamma() { return exp(muex()); }
+
+          /** @brief Sampled mean excess chemical potential */
+          double muex() { return -log(expsum.avg())/g.size(); }
+
+          /** @brief Insert and analyse `n` times */
+          template<class Tspace, class Tenergy>
+            void sample(int ghostin, Tspace &spc, Tenergy &pot) {
+              if (!run())
+                return;
+              assert(spc.geo!=NULL);
+              int n=g.size();
+              for (int k=0; k<ghostin; k++) {     // insert ghostin times
+                double du=0;
+                for (int i=0; i<n; i++)
+                  spc.geo->randompos( g[i] ); // random ghost positions
+                for (int i=0; i<n; i++)
+                  pot.all2p( spc.p, g[i] );    // energy with all particles in space
+                for (int i=0; i<n-1; i++)
+                  for (int j=i+1; j<n; j++)
+                    du+=pot.p2p( g[i], g[j] );   // energy between ghost particles
+                expsum += exp(-du);
+              }
+            }
+      };
 
     /**
      * @brief Single particle hard sphere Widom insertion with charge scaling
@@ -803,30 +857,29 @@ namespace Faunus {
         double convert;
         double cutoff;
       public:
-        getDielConst(double cutoff_in) {
+        inline getDielConst(double cutoff_in) {
           cutoff = cutoff_in;
           convert = (3.33564*3.33564*(1e-30)/(0.20819434*0.20819434)); // Constant to convert to SI-units, including the cancelation of volume 10^-30
           volume = 4*pc::pi*pow(cutoff,3)/3;
           convert = convert*pc::pi/volume;
         }
 
-        template<class Tpvec, class Tgeo>
-          void sample(const Tpvec &p, Tgeo &geo) {
-            Point origin(0,0,0);
-            Point _m(0,0,0);
-            for(unsigned int i = 0; i < p.size(); i ++)
-              if(geo.dist(p[i],origin) < cutoff)
-                _m += p[i].mu*p[i].muscalar;
-            M += _m.squaredNorm();
+        template<class Tpvec, class Tgeometry>
+          void sample(const Tpvec &p, Tgeometry &geo) {
+            Point origin(0,0,0), mu(0,0,0);
+            for (auto &i : p)
+              if (geo.sqdist(i,origin)<cutoff*cutoff)
+                mu += i.mu*i.muscalar;
+            M += mu.squaredNorm();
           }
 
         inline string info() {
           std::ostringstream o;
-          if (M.cnt <= 0)
-            return o.str();
-          double Q = 0.25 + M.avg()*convert/pc::kT();
-          o << "Eps: " << Q + std::sqrt(Q*Q+0.5) << "\n";
-          //o << "<M>: " << M.avg() << ", convert/kT " << convert/pc::kT() << "\n";
+          if (M.cnt>0) {
+            double Q = 0.25 + M.avg()*convert/pc::kT();
+            o << "Eps: " << Q + std::sqrt(Q*Q+0.5) << "\n";
+            //o << "<M>: " << M.avg() << ", convert/kT " << convert/pc::kT() << "\n";
+          }
           return o.str();
         }
     };

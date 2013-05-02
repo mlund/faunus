@@ -5,6 +5,7 @@
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/slump.h>
+#include <faunus/textio.h>
 #include <Eigen/Geometry>
 #endif
 
@@ -351,15 +352,64 @@ namespace Faunus {
      */
     class FindSpace {
       private:
-        bool containerOverlap(const Geometrybase&, const p_vec&);
-        virtual bool matterOverlap(const Geometrybase&, const p_vec&, const p_vec&);
+        template<class Tgeometry, class Tpvec>
+          bool matterOverlap(const Tgeometry &geo, const Tpvec &p1, const Tpvec &p2) const {
+            if (allowMatterOverlap==false)
+              for (auto &i : p1)
+                for (auto &j : p2) {
+                  double max=i.radius+j.radius;
+                  if ( geo.sqdist(i,j)<max*max )
+                    return true;
+                }
+            return false;
+          }
+
+        template<class Tgeometry, class Tpvec>
+          bool containerOverlap(const Tgeometry &geo, const Tpvec &p) const {
+            if (allowContainerOverlap==false)
+              for (auto &i : p)
+                if (geo.collision(i)) return true;
+            return false;
+          }
+
       public:
-        FindSpace();
-        virtual ~FindSpace();
         Point dir;                  //!< default = [1,1,1]
         bool allowContainerOverlap; //!< default = false;
         bool allowMatterOverlap;    //!< default = false;
-        bool find(Geometrybase&, const p_vec&, p_vec&, unsigned int=1000);
+
+        inline FindSpace() {
+          dir=Point(1,1,1);
+          allowContainerOverlap=false;
+          allowMatterOverlap=false;   
+        }
+
+        /**
+         * @param geo Geometry to use
+         * @param dst Destination particle vector (will not be touched!)
+         * @param p Particle vector to find space for. Coordinates will be changed.
+         * @param maxtrials Number of times to try before timeout.
+         */
+        template<class Tgeometry, class Tpvec>
+          bool find(Tgeometry &geo, const Tpvec &dst, Tpvec &p, int maxtrials=1e3) const {
+            using namespace textio;
+            cout << "Trying to insert " << p.size() << " particle(s)";
+            Point v;
+            do {
+              cout << ".";
+              maxtrials--;
+              Point cm = massCenter(geo, p);
+              geo.randompos(v);
+              v = v.cwiseProduct(dir);
+              translate(geo, p, -cm+v);
+            } while (maxtrials>0 && (containerOverlap(geo,p) || matterOverlap(geo,p,dst)));
+            if (maxtrials>0) {
+              cout << " OK!\n";
+              return true;
+            }
+            cout << " timeout!\n";
+            assert(!"Timeout - found no space for particle(s).");
+            return false;
+          }
     };
 
     /**

@@ -96,7 +96,7 @@ Citing Faunus
 
 - Lund, M., Persson, B., Trulsson, M.
   _Source Code Biol. Med., 2008, 3:1_
-  [[DOI]](http://dx.doi.org/10.1186/1751-0473-3-1)
+  [[DOI]](http://dx.doi.org/10/dfqgch)
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

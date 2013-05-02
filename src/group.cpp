@@ -13,7 +13,6 @@ namespace Faunus {
   Group::Group(int front, int back) : Range(front,back-front+1) {
     if (front<0 || back<0)
       resize(0);
-    w=15;
   }
 
   Group::~Group() {}
@@ -44,12 +43,13 @@ namespace Faunus {
 
   string Group::info() {
     using namespace textio;
+    char w=15;
     std::ostringstream o;
     o << header("Group: " + name)
       << pad(SUB,w,"Size") << size() << endl;
     if (!empty())
       o << pad(SUB,w,"Range") << "[" << front() << "-" << back() << "]" << endl;
-    o << pad(SUB,w,"Mass center") << cm.x() << " " << cm.y() << " " << cm.z() << endl;
+    o << pad(SUB,w,"Mass center") << cm.transpose() << endl;
     return o.str() + _info();
   }
 
@@ -149,6 +149,7 @@ namespace Faunus {
 
   string GroupArray::_info() {
     using namespace textio;
+    char w=15;
     std::ostringstream o;
     o << pad(SUB,w,"Mol size") << N << endl
       << pad(SUB,w,"Molecules") << numMolecules() << endl;

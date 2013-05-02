@@ -31,7 +31,6 @@ namespace Faunus {
     protected:
       virtual std::ostream& write(std::ostream &) const; //!< Write all Group data to stream
       virtual string _info();
-      char w;                           //!< Text padding for info() functions
     public:
       Group(int=-1, int=-1);
       string info();                          //!< Information string

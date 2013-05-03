@@ -444,6 +444,7 @@ namespace Faunus {
       void rotate(const Trotator &rot) {
         mu = rot(mu);
         mup = rot(mup);
+        theta = rot(theta);
       }
   };
 

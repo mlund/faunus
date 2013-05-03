@@ -421,7 +421,11 @@ namespace Faunus {
         double angle_;
         Eigen::Vector3d origin;
         Eigen::Quaterniond q;
+        Eigen::Matrix3d rot_mat; // rotation matrix
         Geometrybase *geoPtr;
+        
+    protected:
+      
       public:
         //!< Get set rotation angle
         double getAngle() const { return angle_; }
@@ -438,11 +442,14 @@ namespace Faunus {
           geoPtr=&g;
           origin=beg;
           angle_=angle;
-          Point u(end-beg);
+          Point u(end-beg); //Point u(end-beg);
           assert(u.squaredNorm()>0 && "Rotation vector has zero length");
           g.boundary(u);
           u.normalize(); // make unit vector
           q=Eigen::AngleAxisd(angle, u);
+          
+          rot_mat << 0, -u.z(), u.y(),u.z(),0,-u.x(),-u.y(),u.x(),0;
+          rot_mat = Eigen::Matrix3d::Identity() + rot_mat*std::sin(angle) + rot_mat*rot_mat*(1-std::cos(angle));
         }
 
         /** @brief Rotate point - respect boundaries */
@@ -451,6 +458,11 @@ namespace Faunus {
           geoPtr->boundary(a);
           a=q*a+origin;
           geoPtr->boundary(a);
+          return a;
+        }
+        
+        inline Eigen::Matrix3d operator()(Eigen::Matrix3d a) const {
+          a = rot_mat*a*rot_mat.transpose();
           return a;
         }
     };

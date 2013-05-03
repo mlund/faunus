@@ -17,7 +17,7 @@ int main() {
   FormatAAM aam;
   aam.load( mcp.get<string>("molecule", string()) );
   Geometry::cm2origo(*spc.geo, aam.particles() ); // center molecule
-  GroupMolecular g = spc.insert( aam.particles() ); // insert into space
+  Group g = spc.insert( aam.particles() ); // insert into space
   g.name="peptide"; // babtise
   spc.enroll(g); // enroll group in space
 

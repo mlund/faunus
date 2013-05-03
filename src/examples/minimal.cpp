@@ -7,7 +7,8 @@ int main() {
   InputMap in("minimal.input");                // open parameter file for user input
   Energy::Nonbonded<Tpair,Tgeo> pot(in);       // create Hamiltonian, non-bonded only
   Space spc( pot.getGeometry() );              // create simulation space, particles etc.
-  GroupAtomic salt(spc, in);                   // group for salt particles
+  Group salt;                                  // group for salt particles
+  salt.addParticles(spc, in);                  // add salt according to inputfile
   Move::AtomicTranslation mv(in, pot, spc);    // particle move class
   mv.setGroup(salt);                           // tells move class to act on salt group
   mv.move(1e5);                                // move salt randomly 100000 times
@@ -65,24 +66,24 @@ int main() {
  * - **line 9**
  *   - Faunus::Space takes care of inserting, storing and deleting particles and knows about all particle groups in the system.
  *
- * - **line 10**
- *   - Create a new group defining the particle range. The constructor of Faunus::GroupAtomic reads user input
+ * - **line 10-11**
+ *   - Create a new group defining the particle range. Reads user input
  *     from the Faunus::InputMap object and automatically adds the specified particles to Space.
  *
- * - **line 11**
+ * - **line 12**
  *   - Instantiate a Monte Carlo move object for translating atomic particles. Moves always take care of
  *     generating a trial move, calculate the energy change, accepting/rejecting and collecting
  *     statistics. For a list of all MC moves, see Faunus::Move.
  *
- * - **line 12**
+ * - **line 13**
  *   - Tell the move object which particles it should move
  *
- * - **line 13**
+ * - **line 14**
  *   - Perform 10000 Metropolis Monte Carlo moves. Particles are randomly selected, moved, and depending on the
  *     energy change accepted or rejected. Note that the move requires access both the Hamiltonian as well as the
  *     Space. The former is used for energy evaluation, while the latter is needed to move particles. 
  *
- * - **line 14**
+ * - **line 15**
  *   - Print final information to standard output.
 *
 * If you prefer Python over C++, most of Faunus can be accessed through the `pyfaunus` module.

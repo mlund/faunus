@@ -5,7 +5,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 # -------------------------------
 set(objs
   titrate
-  drift energy geometry group inputfile io mcloop move
+  drift energy geometry inputfile io mcloop move
   potentials slump space species textio analysis
   mpi)
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)

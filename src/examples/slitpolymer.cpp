@@ -21,7 +21,7 @@ int main() {
   string polyfile = mcp.get<string>("polymer_file", "");
   aam.load(polyfile);                                 // Load polymer structure into aam class
   Geometry::FindSpace().find(*spc.geo, spc.p, aam.particles()); // find empty spot
-  GroupMolecular pol = spc.insert( aam.particles() ); // Insert into Space and return matching group
+  Group pol = spc.insert( aam.particles() );          // Insert into Space and return matching group
   pol.name="polymer";                                 // Give polymer arbitrary name
   spc.enroll(pol);                                    // Enroll polymer in Space
 

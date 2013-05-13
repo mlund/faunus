@@ -5,6 +5,7 @@ using namespace Faunus::Potential;
 
 typedef Geometry::Cuboid Tgeometry;   // geometry: cube w. periodic boundaries
 typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot; // pair potential
+typedef Space<Tgeometry,PointParticle> Tspace;
 
 /*
 template<class Tpairpot, class Tgeometry>
@@ -48,21 +49,14 @@ int main() {
   EnergyDrift sys;                    // class for tracking system energy drifts
   UnitTest test(mcp);                 // class for unit testing
 
-  // Energy functions and space
-  Energy::Hamiltonian pot;
-  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
-  Space spc( pot.getGeometry() );
-
-  /*
-  Ewald<double> ew(mcp);
-  ew.store();
-  ew.restore();
-  ew.rSpaceEnergy(spc.p[0].charge*spc.p[1].charge, 2.0);
-*/
+  // Construct Hamiltonian and Space
+  Tspace spc(mcp);
+  auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
+    + Energy::ExternalPressure<Tspace>(mcp);
 
   // Markov moves and analysis
-  Move::Isobaric iso(mcp,pot,spc);
-  Move::AtomicTranslation mv(mcp, pot, spc);
+  Move::Isobaric<Tspace> iso(mcp,pot,spc);
+  Move::AtomicTranslation<Tspace> mv(mcp,pot,spc);
   Analysis::RadialDistribution<> rdf_ab(0.1);      // 0.1 angstrom resolution
 
   // Add salt
@@ -87,7 +81,7 @@ int main() {
         for (auto i=salt.front(); i<salt.back(); i++) // salt radial distribution function
           for (auto j=i+1; j<=salt.back(); j++)
             if ( (spc.p[i].id==a && spc.p[j].id==b) || (spc.p[i].id==b && spc.p[j].id==a) )
-              rdf_ab( spc.geo->dist(spc.p[i],spc.p[j]) )++;
+              rdf_ab( spc.geo.dist(spc.p[i],spc.p[j]) )++;
       }
     } // end of micro loop
 
@@ -105,7 +99,7 @@ int main() {
   iso.test(test);
   mv.test(test);
   sys.test(test);
-  nonbonded->pairpot.test(test);
+  //pot.first.pairpot.test(test);
 
   // print information
   cout << loop.info() << sys.info() << mv.info() << iso.info() << test.info();

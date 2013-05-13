@@ -59,7 +59,7 @@ namespace Faunus {
       a.activity = json::value<double>(atom.second, "activity", 0);
       a.alpha = json::value<double>(atom.second, "alpha", 0)*4*pc::pi*pc::e0*(1e-10)*pc::kT()/(pc::e*pc::e); // Get in units of (4\pi \epsilon_0)Å^3
       a.alphamatrix = Eigen::Matrix3d::Identity()*a.alpha;
-      a.theta << 1.9151,0,0,0,-2.2495,0,0,0.3344;
+      a.theta << 1.9151,0,0,0,-2.2495,0,0,0.3344,0;
       a.theta = a.theta*0.20819434; // Debye Å -> e Å^2
       a.dp = json::value<double>(atom.second, "dp", 0);
       a.dprot = json::value<double>(atom.second, "dprot", 0) * pc::pi / 180.; // deg->rads

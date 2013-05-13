@@ -2,6 +2,8 @@
 
 using namespace Faunus;
 
+typedef Space<Geometry::Cuboidslit> Tspace;
+
 int main() {
   cout << textio::splash();          // Spam
 
@@ -9,27 +11,25 @@ int main() {
   MCLoop loop(mcp);                  // handle mc loops
   EnergyDrift sys;                   // track system energy drifts
   UnitTest test(mcp);                // unit testing
-  Geometry::Cuboidslit geo(mcp);     // rectangular simulation box w. XY periodicity
 
-  Energy::ExternalPotential< Potential::GouyChapman<> > pot(mcp);
-  pot.setGeometry(geo);              // Pass on geometry to potential
-  pot.expot.setSurfPositionZ( &geo.len_half.z() ); // Pass position of GC surface
-  Space spc( pot.getGeometry() );    // Simulation space (all particles and group info)
+  Tspace spc(mcp);                   // Simulation space (all particles and group info)
+  Energy::ExternalPotential<Tspace,Potential::GouyChapman<> > pot(mcp);
+  pot.expot.setSurfPositionZ( &spc.geo.len_half.z() ); // Pass position of GC surface
 
   // Load and add polymer to Space
   FormatAAM aam;                                      // AAM structure file I/O
   string polyfile = mcp.get<string>("polymer_file", "");
   aam.load(polyfile);                                 // Load polymer structure into aam class
-  Geometry::FindSpace().find(*spc.geo, spc.p, aam.particles()); // find empty spot
+  Geometry::FindSpace().find(spc.geo, spc.p, aam.particles()); // find empty spot
   Group pol = spc.insert( aam.particles() );          // Insert into Space and return matching group
   pol.name="polymer";                                 // Give polymer arbitrary name
   spc.enroll(pol);                                    // Enroll polymer in Space
 
   // MC moves
-  Move::TranslateRotate gmv(mcp,pot,spc);
-  Move::CrankShaft crank(mcp,pot,spc);
-  Move::Pivot pivot(mcp,pot,spc);
-  Move::Reptation rep(mcp,pot,spc);
+  Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
+  Move::CrankShaft<Tspace> crank(mcp,pot,spc);
+  Move::Pivot<Tspace> pivot(mcp,pot,spc);
+  Move::Reptation<Tspace> rep(mcp,pot,spc);
 
   Analysis::PolymerShape shape;                       // sample polymer shape
   Analysis::LineDistribution<> surfmapall;            // monomer-surface histogram

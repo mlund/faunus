@@ -252,7 +252,6 @@
 		7316FA3515C548D00024F084 /* libxdrfile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 738C136013FB13250056EF71 /* libxdrfile.a */; };
 		7316FA5615C56BA20024F084 /* analysis.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7316FA5515C56BA10024F084 /* analysis.cpp */; };
 		7316FA5815C56BC10024F084 /* analysis.h in Headers */ = {isa = PBXBuildFile; fileRef = 7316FA5715C56BC10024F084 /* analysis.h */; };
-		738C133513FB12D20056EF71 /* group.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C132E13FB12D20056EF71 /* group.cpp */; };
 		738C133613FB12D20056EF71 /* inputfile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C132F13FB12D20056EF71 /* inputfile.cpp */; };
 		738C133913FB12D20056EF71 /* slump.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C133213FB12D20056EF71 /* slump.cpp */; };
 		738C133A13FB12D20056EF71 /* species.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C133313FB12D20056EF71 /* species.cpp */; };
@@ -272,11 +271,9 @@
 		738C138A13FB13510056EF71 /* xdrfile_trr.c in Sources */ = {isa = PBXBuildFile; fileRef = 738C137F13FB133A0056EF71 /* xdrfile_trr.c */; };
 		738C138B13FB13510056EF71 /* xdrfile_xtc.c in Sources */ = {isa = PBXBuildFile; fileRef = 738C138013FB133A0056EF71 /* xdrfile_xtc.c */; };
 		73B67CDB1423E28E00E44DD9 /* drift.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD21423E28E00E44DD9 /* drift.cpp */; };
-		73B67CDC1423E28E00E44DD9 /* energy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD31423E28E00E44DD9 /* energy.cpp */; };
 		73B67CDD1423E28E00E44DD9 /* geometry.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD41423E28E00E44DD9 /* geometry.cpp */; };
 		73B67CDF1423E28E00E44DD9 /* io.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD61423E28E00E44DD9 /* io.cpp */; };
 		73B67CE01423E28E00E44DD9 /* mcloop.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD71423E28E00E44DD9 /* mcloop.cpp */; };
-		73B67CE11423E28E00E44DD9 /* move.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD81423E28E00E44DD9 /* move.cpp */; };
 		73B67CE21423E28E00E44DD9 /* potentials.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD91423E28E00E44DD9 /* potentials.cpp */; };
 		73B67CE31423E28E00E44DD9 /* space.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CDA1423E28E00E44DD9 /* space.cpp */; };
 		73CB4DA616D9297500DED45D /* externalpotential.h in Headers */ = {isa = PBXBuildFile; fileRef = 73CB4DA516D9297500DED45D /* externalpotential.h */; };
@@ -595,7 +592,6 @@
 		7316FA5515C56BA10024F084 /* analysis.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = analysis.cpp; path = ../../src/analysis.cpp; sourceTree = "<group>"; };
 		7316FA5715C56BC10024F084 /* analysis.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = analysis.h; sourceTree = "<group>"; };
 		738C132613FB12B30056EF71 /* libfaunus.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libfaunus.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
-		738C132E13FB12D20056EF71 /* group.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = group.cpp; path = ../../src/group.cpp; sourceTree = "<group>"; };
 		738C132F13FB12D20056EF71 /* inputfile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = inputfile.cpp; path = ../../src/inputfile.cpp; sourceTree = "<group>"; };
 		738C133213FB12D20056EF71 /* slump.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = slump.cpp; path = ../../src/slump.cpp; sourceTree = "<group>"; };
 		738C133313FB12D20056EF71 /* species.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = species.cpp; path = ../../src/species.cpp; sourceTree = "<group>"; };
@@ -616,11 +612,9 @@
 		738C137F13FB133A0056EF71 /* xdrfile_trr.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xdrfile_trr.c; sourceTree = "<group>"; };
 		738C138013FB133A0056EF71 /* xdrfile_xtc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xdrfile_xtc.c; sourceTree = "<group>"; };
 		73B67CD21423E28E00E44DD9 /* drift.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = drift.cpp; path = ../../src/drift.cpp; sourceTree = "<group>"; };
-		73B67CD31423E28E00E44DD9 /* energy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = energy.cpp; path = ../../src/energy.cpp; sourceTree = "<group>"; };
 		73B67CD41423E28E00E44DD9 /* geometry.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = geometry.cpp; path = ../../src/geometry.cpp; sourceTree = "<group>"; };
 		73B67CD61423E28E00E44DD9 /* io.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = io.cpp; path = ../../src/io.cpp; sourceTree = "<group>"; };
 		73B67CD71423E28E00E44DD9 /* mcloop.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mcloop.cpp; path = ../../src/mcloop.cpp; sourceTree = "<group>"; };
-		73B67CD81423E28E00E44DD9 /* move.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = move.cpp; path = ../../src/move.cpp; sourceTree = "<group>"; };
 		73B67CD91423E28E00E44DD9 /* potentials.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = potentials.cpp; path = ../../src/potentials.cpp; sourceTree = "<group>"; };
 		73B67CDA1423E28E00E44DD9 /* space.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = space.cpp; path = ../../src/space.cpp; sourceTree = "<group>"; };
 		73CB4DA516D9297500DED45D /* externalpotential.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = externalpotential.h; sourceTree = "<group>"; };
@@ -1328,13 +1322,10 @@
 				738C136713FB133A0056EF71 /* xdrfile */,
 				7316FA5515C56BA10024F084 /* analysis.cpp */,
 				73B67CD21423E28E00E44DD9 /* drift.cpp */,
-				73B67CD31423E28E00E44DD9 /* energy.cpp */,
 				73B67CD41423E28E00E44DD9 /* geometry.cpp */,
-				738C132E13FB12D20056EF71 /* group.cpp */,
 				738C132F13FB12D20056EF71 /* inputfile.cpp */,
 				73B67CD61423E28E00E44DD9 /* io.cpp */,
 				73B67CD71423E28E00E44DD9 /* mcloop.cpp */,
-				73B67CD81423E28E00E44DD9 /* move.cpp */,
 				7316FA3115C546E90024F084 /* mpi.cpp */,
 				73B67CD91423E28E00E44DD9 /* potentials.cpp */,
 				738C133213FB12D20056EF71 /* slump.cpp */,
@@ -1757,15 +1748,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				73B67CDF1423E28E00E44DD9 /* io.cpp in Sources */,
-				738C133513FB12D20056EF71 /* group.cpp in Sources */,
 				738C133613FB12D20056EF71 /* inputfile.cpp in Sources */,
 				738C133913FB12D20056EF71 /* slump.cpp in Sources */,
 				738C133A13FB12D20056EF71 /* species.cpp in Sources */,
 				73B67CDB1423E28E00E44DD9 /* drift.cpp in Sources */,
-				73B67CDC1423E28E00E44DD9 /* energy.cpp in Sources */,
 				73B67CDD1423E28E00E44DD9 /* geometry.cpp in Sources */,
 				73B67CE01423E28E00E44DD9 /* mcloop.cpp in Sources */,
-				73B67CE11423E28E00E44DD9 /* move.cpp in Sources */,
 				73B67CE21423E28E00E44DD9 /* potentials.cpp in Sources */,
 				73B67CE31423E28E00E44DD9 /* space.cpp in Sources */,
 				7316FA3315C546E90024F084 /* mpi.cpp in Sources */,

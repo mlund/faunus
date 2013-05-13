@@ -4,9 +4,8 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 #   Faunus library object files
 # -------------------------------
 set(objs
-  titrate
-  drift energy geometry inputfile io mcloop move
-  potentials slump space species textio analysis
+  drift geometry inputfile io mcloop
+  potentials slump species textio analysis
   mpi)
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 

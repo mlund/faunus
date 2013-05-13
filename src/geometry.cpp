@@ -14,7 +14,7 @@ namespace Faunus {
 
     Geometrybase::~Geometrybase() {}
 
-    double Geometrybase::dist(const Point &p1, const Point &p2) {
+    double Geometrybase::dist(const Point &p1, const Point &p2) const {
       return sqrt(sqdist(p1,p2));
     }
 

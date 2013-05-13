@@ -100,13 +100,15 @@ TEST_CASE("Polar Test","Ion-induced dipole test (polarization)")
 
   ::atom.includefile("polar_test.json");
   InputMap in("polar_test.input");
+  typedef Space<Geometry::Cuboid, DipoleParticle> Tspace;
   typedef Potential::CombinedPairPotential<Potential::Coulomb,Potential::IonDipole> Tpair;
-  Energy::NonbondedVector<Tpair,Geometry::Cuboid> pot(in);
-  Space spc( pot.getGeometry() );
+  Energy::NonbondedVector<Tspace,Tpair> pot(in);
+  Tspace spc(in);
   Group sol;
   sol.addParticles(spc, in);
-  Move::PolarizeMove<Move::AtomicTranslation> trans(in,pot,spc);
+  Move::PolarizeMove<Move::AtomicTranslation<Tspace> > trans(in,pot,spc);
   trans.setGroup(sol);
+
   spc.p[0] = Point(0,0,0);
   spc.p[1] = Point(0,0,4);
   spc.trial = spc.p;

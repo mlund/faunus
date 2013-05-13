@@ -66,6 +66,7 @@ namespace Faunus {
       /** @brief True if group contains a range of groups */
       inline bool isRange() const { return (molsize>1 && molsize<size()); }
 
+      /** @brief Number of atoms in contained molecule(s) */
       inline void setMolSize(int N) {
         molsize=N;
         assert( (size()%molsize)==0 );
@@ -94,7 +95,7 @@ namespace Faunus {
       template<class Tspace>
         Point massCenter(const Tspace &spc) const {
           assert(&spc!=nullptr);
-          return Geometry::massCenter(*spc.geo, spc.p, *this);
+          return Geometry::massCenter(spc.geo, spc.p, *this);
         }
 
       /** @brief Calculate AND set mass center (cm and cm_trial) */
@@ -110,7 +111,7 @@ namespace Faunus {
         Point dipolemoment(const Tspace &s, Point mu=Point(0,0,0)) const {
           for (auto i : *this) {
             Point t=s.p[i] - cm;
-            s.geo->boundary(t);
+            s.geo.boundary(t);
             mu += t*s.p[i].charge;
           }
           return mu;
@@ -123,11 +124,11 @@ namespace Faunus {
        */
       template<class Tspace>
         void translate(Tspace &spc, const Point &p) {
-          assert( spc.geo->sqdist(cm,massCenter(spc))<1e-6
+          assert( spc.geo.sqdist(cm,massCenter(spc))<1e-6
               && "Mass center out of sync.");
-          cm_trial.translate(*spc.geo, p);
+          cm_trial.translate(spc.geo, p);
           for (auto i : *this)
-            spc.trial[i].translate(*spc.geo, p);
+            spc.trial[i].translate(spc.geo, p);
         }
 
       /**
@@ -138,13 +139,13 @@ namespace Faunus {
        */
       template<class Tspace>
         void rotate(Tspace &spc, const Point &endpoint, double angle) {
-          assert( spc.geo->dist(cm,massCenter(spc) )<1e-6 );
+          assert( spc.geo.dist(cm,massCenter(spc) )<1e-6 );
           Geometry::QuaternionRotate vrot;
           cm_trial = cm;
-          vrot.setAxis(*spc.geo, cm, endpoint, angle);//rot around CM->point vec
+          vrot.setAxis(spc.geo, cm, endpoint, angle);//rot around CM->point vec
           for (auto i : *this)
             spc.trial[i].rotate(vrot);
-          assert( spc.geo->dist(cm_trial, massCenter(spc))<1e-9
+          assert( spc.geo.dist(cm_trial, massCenter(spc))<1e-9
               && "Rotation messed up mass center. Is the box too small?");
         }
 
@@ -158,10 +159,9 @@ namespace Faunus {
           sel.setback( sel.front()+molsize-1 );
           sel.setMolSize(sel.size());
 
-          assert( molsize>0 );
-          assert( (size()%molsize)==0 );
-          assert( isMolecular() );
-          assert( sel.size()==molsize );
+          assert( sel.molsize>0 );
+          assert( (sel.size()%molsize)==0 );
+          assert( sel.isMolecular() );
           assert( find( sel.front() ) );
           assert( find( sel.back()  ) );
         }
@@ -173,29 +173,29 @@ namespace Faunus {
 
           if (isAtomic()) {
             cm_trial=cm;
-            cm_trial.scale(*s.geo, newvol);
+            cm_trial.scale(s.geo, newvol);
             for (auto i : *this)
-              s.trial[i].scale(*s.geo, newvol);
+              s.trial[i].scale(s.geo, newvol);
             return;
           }
 
           if (isMolecular()) {
-            assert( s.geo->dist(cm, massCenter(s))<1e-6);
-            assert( s.geo->dist(cm, cm_trial)<1e-7);
+            assert( s.geo.dist(cm, massCenter(s))<1e-6);
+            assert( s.geo.dist(cm, cm_trial)<1e-7);
 
             Point newcm=cm;
-            newcm.scale(*s.geo, newvol);
+            newcm.scale(s.geo, newvol);
             translate(s,-cm);                 // move to origo
 
-            double oldvol=s.geo->getVolume(); // store original volume
-            s.geo->setVolume(newvol);         // apply trial volume
+            double oldvol=s.geo.getVolume(); // store original volume
+            s.geo.setVolume(newvol);         // apply trial volume
 
             for (auto i : *this) {
               s.trial[i] += newcm;            // move all particles to new cm
-              s.geo->boundary( s.trial[i] );  // respect boundary conditions
+              s.geo.boundary( s.trial[i] );  // respect boundary conditions
             }
             cm_trial=newcm;
-            s.geo->setVolume(oldvol);         // restore original volume
+            s.geo.setVolume(oldvol);         // restore original volume
             return;
           }
 
@@ -244,8 +244,9 @@ namespace Faunus {
       }
 
       /** @brief Select random molecule */
-      inline int randomMol() const {
+      int randomMol() const {
         int i=(random()-front())/molsize;
+        assert(molsize>0);
         assert(find(i) && "Out of range!");
         return i;
       }

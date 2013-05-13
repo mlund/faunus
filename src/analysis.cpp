@@ -41,17 +41,15 @@ namespace Faunus {
           << _info();
       return o.str();
     }
-    
-    TwobodyForce::TwobodyForce(InputMap &in,Energy::Energybase &e, Space &s, Group &g1, Group &g2, Group &_ions) {
+
+    TwobodyForce::TwobodyForce(InputMap &in, Group &g1, Group &g2, Group &_ions) {
       name="Twobody mean force calculation";
       runfraction = in.get<double>("pforce", 1.0);
-      pot=&e;
-      spc=&s;
       igroup1=nullptr;
       igroup2=nullptr;
       setTwobodies(g1, g2, _ions);
     }
-    
+
     /*!
      * \brief Set the groups
      * \param g1 Body #1
@@ -69,7 +67,9 @@ namespace Faunus {
       igroup2=&g2;
       ions=&_ions;
     }
-    
+
+    Point TwobodyForce::meanforce() { return Point(0,0,0); }
+
     void TwobodyForce::save(string filename) {
       Point p = meanforce();
       std::ofstream f(filename.c_str());
@@ -78,63 +78,26 @@ namespace Faunus {
         f << p.x() << " " << p.y() << " " << p.z() << endl;
       }
     }
-    
-    void TwobodyForce::calc() {}
-    
-    Point TwobodyForce::meanforce() { return Point(0.0, 0.0, 0.0); }
-    
+
     string TwobodyForce::_info() {
       using namespace Faunus::textio;
       std::ostringstream o;
       o << "Base class of twobody force." << endl;
       return o.str();
     }
-    
-    
-    TwobodyForceDirect::TwobodyForceDirect(InputMap &in,Energy::Energybase &e, Space &s, Group &g1, Group &g2, Group &_ions) : TwobodyForce(in, e, s, g1, g2, _ions) {
+
+    TwobodyForceDirect::TwobodyForceDirect(InputMap &in, Group &g1, Group &g2, Group &_ions) : TwobodyForce(in, g1, g2, _ions) {
       name="Twobody direct mean force calculation";
-      //f_mean1 = Point(0.0, 0.0, 0.0);
-      //f_mean2 = Point(0.0, 0.0, 0.0);
-      f_pp = Point(0.0, 0.0, 0.0);
-      f_pi = Point(0.0, 0.0, 0.0);
-      f_ip = Point(0.0, 0.0, 0.0);
+      f_pp = Point(0,0,0);
+      f_pi = Point(0,0,0);
+      f_ip = Point(0,0,0);
     }
-    
-    /*!
-     * \brief Calculate the direct force between the two bodies
-     */
-    void TwobodyForceDirect::calc() {
-      if (run()) {
-        // Force between the two bodies
-        for (auto i : *igroup1) {
-          for (auto j : *igroup2) {
-            Point f = pot->f_p2p(spc->p[i], spc->p[j]);
-            f_pp += f;
-          }
-        }
-        //f_pp += 1.0*_f_pp;
-        //f_mean1 += 1.0*_f_pp;
-        //f_mean2 += -1.0*_f_pp;
-        for (auto i : *igroup1) {
-          for (auto j : *ions) {
-            Point f = pot->f_p2p(spc->p[i], spc->p[j]);
-            f_pi += f;
-          }
-        }
-        for (auto i : *igroup2) {
-          for (auto j : *ions) {
-            Point f = pot->f_p2p(spc->p[i], spc->p[j]);
-            f_ip += f;
-          }
-        }
-      }
-    }
-    
+
     Point TwobodyForceDirect::meanforce() {
       Point p = (f_pp+(f_pi-f_ip)*0.5)/(double)cnt;
       return p;
     }
-    
+
     string TwobodyForceDirect::_info() {
       using namespace Faunus::textio;
       std::ostringstream o;
@@ -144,9 +107,9 @@ namespace Faunus {
       o << pad(SUB,w,"Mean direct Force:") << "(" << meanforce().x() << ", " << meanforce().y() << ", " << meanforce().z() << ") kT/Å" << endl;
       return o.str();
     }
-    
-    
-    TwobodyForceMidp::TwobodyForceMidp(InputMap &in,Energy::Energybase &e, Space &s, Group &g1, Group &g2, Group &_ions, Analysis::LineDistributionNorm<float,unsigned long int> *_saltdistr) : TwobodyForce(in, e, s, g1, g2, _ions) {
+
+    TwobodyForceMidp::TwobodyForceMidp(InputMap &in,Group &g1, Group &g2, Group &_ions,
+        Analysis::LineDistributionNorm<float,unsigned long int> *_saltdistr) : TwobodyForce(in,g1,g2,_ions) {
       name="Twobody midplane mean force calculation";
       f_pp = Point(0.0, 0.0, 0.0);
       f_pi = Point(0.0, 0.0, 0.0);
@@ -154,51 +117,7 @@ namespace Faunus {
       f_ii = Point(0.0, 0.0, 0.0);
       saltdistr=_saltdistr;
     }
-    
-    /*!
-     * \brief Calculate the direct force between the two bodies
-     */
-    void TwobodyForceMidp::calc() {
-      if (run()) {
-        // Force between the two bodies
-        for (auto i : *igroup1) {
-          for (auto j : *igroup2) {
-            Point f = pot->f_p2p(spc->p[i], spc->p[j]);
-            f_pp += f;
-          }
-        }
-        
-        for (auto i : *igroup1) {
-          for (auto j : *ions) {
-            if (spc->p[j].z() < 0.0) {
-              Point f = pot->f_p2p(spc->p[i], spc->p[j]);
-              f_pi += f;
-            }
-          }
-        }
-        
-        for (auto i : *igroup2) {
-          for (auto j : *ions) {
-            if (spc->p[j].z() >= 0.0) {
-              Point f = pot->f_p2p(spc->p[i], spc->p[j]);
-              f_ip += f;
-            }
-          }
-        }
-        
-        for (auto i : *ions) {
-          if (spc->p[i].z() >= 0.0) {
-            for (auto j : *ions) {
-              if (spc->p[j].z() < 0.0) {
-                Point f = pot->f_p2p(spc->p[i], spc->p[j]);
-                f_ii += f;
-              }
-            }
-          }
-        }
-      }
-    }
-    
+
     Point TwobodyForceMidp::meanforce() {
       Point p = f_pp+f_pi-f_ip+f_ii;
       float midp = saltdistr->mid();
@@ -206,7 +125,7 @@ namespace Faunus {
       Point I = Point(1.0, 1.0, 1.0);
       return p/(double)cnt+I*(midp-endp);
     }
-    
+
     string TwobodyForceMidp::_info() {
       using namespace Faunus::textio;
       std::ostringstream o;
@@ -219,8 +138,8 @@ namespace Faunus {
       o << pad(SUB,w,"Mean midp Force:") << "(" << meanforce().x() << ", " << meanforce().y() << ", " << meanforce().z() << ") kT/Å" << endl;
       return o.str();
     }
-    
-    
+
+
     PolymerShape::PolymerShape() {
       name="Polymer Shape";
     }

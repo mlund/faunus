@@ -44,23 +44,16 @@ namespace Faunus {
   using std::ostringstream;
   using std::shared_ptr;
 
-  namespace Move {
-    class Movebase;
-  }
-
   namespace Geometry {
     class Geometrybase;
     class VectorRotate;
   }
 
   namespace Energy {
-    class Bonded;
-    class Energybase;
     class Hamiltonian;
     class EqEnergy;
     class HarmonicBond;
     class GouyChapman;
-    class EnergyRest;
   }
 
   namespace Potential {
@@ -74,7 +67,6 @@ namespace Faunus {
   class InputMap;
   class UnitTest;
   class RandomBase;
-  class Space;
 
   //class Point;
   class PointParticle;

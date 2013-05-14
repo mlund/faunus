@@ -388,14 +388,14 @@ namespace Faunus {
     template<class Tspace>
       class SwapMove : public Movebase<Tspace> {
         private:
-          using Movebase<Tspace>::spc;
-          using Movebase<Tspace>::pot;
           std::map<int, Average<double> > accmap; //!< Site acceptance map
           string _info();
           void _trialMove();
           void _acceptMove();
           void _rejectMove();
         protected:
+          using Movebase<Tspace>::spc;
+          using Movebase<Tspace>::pot;
           double _energyChange();
           int ipart;                              //!< Particle to be swapped
           Energy::EquilibriumEnergy<Tspace> eqpot;
@@ -521,6 +521,77 @@ namespace Faunus {
         return o.str();
       }
 
+    /**
+     * @brief As SwapMove but Minimizes Short Ranged interactions
+     *        within a molecule upon swapping
+     *
+     * Before calculating dU of an attempted swap move, radii on
+     * particles within the SAME group are set to minus radius of
+     * the swapped particle and hydrophobicity is set to false.
+     * This to minimize large interactions in molecules with overlapping
+     * particles - i.e LJ will be zero. It can also be used to avoid
+     * internal hydrophobic interactions in rigid groups upon swapping
+     * between hydrophobic and non-hydrophobic species.
+     */
+    template<class Tspace>
+      class SwapMoveMSR : public SwapMove<Tspace> {
+        private:
+          using SwapMove<Tspace>::spc;
+          using SwapMove<Tspace>::pot;
+          std::map<int, double> radiusbak;    // backup for radii
+          std::map<int, bool> hydrophobicbak; // backup for hydrophobic state
+
+          void modify() {
+            radiusbak.clear();
+            hydrophobicbak.clear();
+            for (auto g : spc->groupList() )   // loop over all groups
+              if (g->find(this->ipart)) {  //   is ipart part of a group?
+                for (auto i : *g)    //     if so, loop over that group
+                  if (i!=this->ipart) {    //       and ignore ipart
+                    assert( abs(spc->p[i].radius-spc->trial[i].radius)<1e-9);
+                    assert( spc->p[i].hydrophobic==spc->trial[i].hydrophobic);
+
+                    //radiusbak[i]         = spc->p[i].radius;
+                    //spc->p[i].radius     = -spc->p[ipart].radius;
+                    //spc->trial[i].radius = -spc->p[ipart].radius;
+
+                    hydrophobicbak[i]         = spc->p[i].hydrophobic;
+                    spc->p[i].hydrophobic     = false;
+                    spc->trial[i].hydrophobic = false;
+                  }
+                return; // a particle can be part of a single group, only
+              }
+          }
+
+          void restore() {
+            for (auto &m : radiusbak) {
+              spc->p[m.first].radius = m.second;
+              spc->trial[m.first].radius = m.second;
+            }
+            for (auto &m : hydrophobicbak) {
+              spc->p[m.first].hydrophobic = m.second;
+              spc->trial[m.first].hydrophobic = m.second;
+            }
+          }
+
+          double _energyChange() {
+            double du_orig = SwapMove<Tspace>::_energyChange();
+            modify();
+            double du = SwapMove<Tspace>::_energyChange();
+            restore();
+            this->alternateReturnEnergy=du_orig;
+            return du;
+          }
+
+        public:
+          SwapMoveMSR(
+              InputMap &in, Energy::Energybase<Tspace> &ham, Tspace &spc,
+              string pfx="swapmv_") : SwapMove<Tspace>(in,ham,spc,pfx)
+          {
+            this->title+=" (min. shortrange)";
+            this->useAlternateReturnEnergy=true;
+          }
+      };
 
   }// Move namespace
 }//Faunus namespace

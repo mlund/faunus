@@ -8,15 +8,15 @@ int main() {
   InputMap in("minimal.input");           // open parameter file for user input
   Energy::Nonbonded<Tspace,Tpair> pot(in);// Hamiltonian, non-bonded only
   Tspace spc(in);                         // Simulation space, particles etc.
-  Group salt;                             // group for salt particles
-  salt.addParticles(spc, in);             // add salt according to inputfile
+  Group salt;                             // Group for salt particles
+  salt.addParticles(spc,in);              // Add according to user input
   Move::AtomicTranslation<Tspace> mv(in,pot,spc);// particle move class
   mv.setGroup(salt);                      // move class acts on salt group
   mv.move(1e5);                           // move salt randomly 100000 times
   cout << spc.info() + pot.info() + mv.info(); // final information
 }
-/*!
- * \page example_minimal Example: Hello Monte Carlo!
+/**
+ * @page example_minimal Example: Hello Monte Carlo!
  *
  * This is a minimal example of how to set up a Metropolis Monte Carlo simulation
  * with the following characteristics:
@@ -25,8 +25,9 @@ int main() {
  * - Canonical ensemble (NVT)
  * - Parameters and atom properties are read from disk
  *
- * This amounts to 16 lines of C++ code as illustated in the minimal.cpp program:
- * \includelineno minimal.cpp
+ * This amounts to 16 lines of C++ code as illustated in the minimal.cpp
+ * program:
+ * @includelineno minimal.cpp
  * Run the code directly from the faunus directory:
  *
  *     $ make example_minimal
@@ -38,33 +39,41 @@ int main() {
  *   - Include faunus header files and add the Faunus namespace to search path
  *
  * - **line 3**
- *   - Here we define what kind of simulation cell we wish to use - a periodic box, Faunus::Geometry::Cuboid.
- *     There are many other geometries including spheres, slits and cylinders. The geometry takes
+ *   - Here we define what kind of simulation cell we wish to use
+ *     a periodic box, Faunus::Geometry::Cuboid.
+ *     There are many other geometries including spheres, slits and
+ *     cylinders. The geometry takes
  *     care of all distance calculations as well as boundary conditions.
  *
  * - **line 4**
- *   - This defines the pair potantial between our particles. Pair potentials can
- *     be arbitrarily mixed and Faunus::Potential::CoulombLJ is actually just a typedef
- *     for a mixture of Faunus::Potential::Coulomb and Faunus::Potential::LennardJones. To see
- *     a full list of pair potentials, check out the Faunus::Potential namespace.
+ *   - This defines the pair potantial between our particles.
+ *     Pair potentials can
+ *     be arbitrarily mixed and `Faunus::Potential::CoulombLJ` is actually
+ *     just a typedef
+ *     for a mixture of `Faunus::Potential::Coulomb` and
+ *     `Faunus::Potential::LennardJones`. To see
+ *     a full list of pair potentials, check out the `Faunus::Potential`
+ *     namespace.
  *
  * - **line 5**
- *   - This defines the simulation space, which includes all properties as well as geometry
- *     information
+ *   - This defines the simulation space, which includes all properties as
+ *     well as geometry information
  *
  * - **line 7**
- *   - Tell the atom objects (a global instance of Faunus::AtomMap) to load atomic properties
- *     from the file \ref minimal_json.
+ *   - Tell the atom objects (a global instance of `Faunus::AtomMap`)
+ *     to load atomic properties from the file \ref minimal_json.
  *
  * - **line 8**
- *   - Load the user input parameter file \ref minimal_input into a Faunus::InputMap object. This simply uses keywords
+ *   - Load the user input parameter file \ref minimal_input into a
+ *     `Faunus::InputMap object`. This simply uses keywords
  *     to get user input and is heavily used in constructors throughout Faunus.
  *
  * - **line 9**
- *   - Specify how to calculate energies in the system - i.e. the Hamiltonian. Here we only
- *     have non-bonded interactions and we need to specify the pair potential and geometry
+ *   - Specify how to calculate energies in the system - i.e. the Hamiltonian.
+ *     Here we only have non-bonded interactions and we need to specify
+ *     the pair potential and space type
  *     to use. Energy evaluations in faunus are done by classes derived from
- *     Faunus::Energy::Energybase.
+ *     `Faunus::Energy::Energybase`.
  *     We will later see how we can construct more advanced Hamiltonians
  *     to adding Energy classes together. For a list of energy classes, see Faunus::Energy.
  *

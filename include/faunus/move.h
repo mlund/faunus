@@ -523,7 +523,7 @@ namespace Faunus {
           o << pad(SUB,base::w,"Average moves/particle")
             << base::cnt / gsize.avg() << endl;
         o << pad(SUB,base::w,"Displacement vector")
-          << dir.x() << " " << dir.y() << " " << dir.z() << endl;
+          << dir.transpose() << endl;
         if (genericdp>1e-6)
           o << pad(SUB,base::w,"Generic displacement")
             << genericdp << _angstrom << endl;
@@ -693,13 +693,15 @@ namespace Faunus {
         igroup=nullptr;
         dir.x()=dir.y()=dir.z()=1;
         groupWiseEnergy=false;
-        base::runfraction = in.get<double>(base::prefix+"_runfraction",1.0);
-        dp_trans = in.get<double>(base::prefix+"_transdp", 2, "Group translationsal displacement (AA)");
-        dp_rot   = in.get<double>(base::prefix+"_rotdp", 3, "Group rotational displacement (rad)");
+        dp_trans = in.get<double>(base::prefix+"_transdp", 2,
+            "Group translationsal displacement (AA)");
+        dp_rot = in.get<double>(base::prefix+"_rotdp", 3,
+            "Group rotational displacement (rad)");
         if (dp_rot>4*pc::pi) // no need to rotate more than
           dp_rot=4*pc::pi;   // +/- 2 pi.
+        this->runfraction = in.get<double>(base::prefix+"_runfraction",1.0);
         if (dp_rot<1e-6 && dp_trans<1e-6)
-          base::runfraction=0;
+          this->runfraction=0;
       }
 
     template<class Tspace>

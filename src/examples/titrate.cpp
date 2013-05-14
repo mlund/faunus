@@ -7,20 +7,22 @@ int main() {
   cout << textio::splash();            // faunus splash info!
   ::atom.includefile("titrate.json");  // load atom properties
   InputMap mcp("titrate.input");
-  EnergyDrift sys;                     // class for tracking system energy drifts
+  EnergyDrift sys;                     // track system energy drift
   UnitTest test(mcp);
 
-  auto pot = Energy::Nonbonded<Tspace,Potential::DebyeHuckel>(mcp)
-    + Energy::EquilibriumEnergy<Tspace>(mcp);
+  // Space and hamiltonian
   Tspace spc(mcp);
+  auto pot = Energy::Nonbonded<Tspace,Potential::DebyeHuckel>(mcp)
+    + Energy::EquilibriumEnergy<Tspace>(mcp)
+    + Energy::ExternalPotential<Tspace,Potential::ExcessDH<> >(mcp);
 
   // Add molecule to middle of simulation container
   FormatAAM aam;
   aam.load( mcp.get<string>("molecule", string()) );
   Geometry::cm2origo(spc.geo, aam.particles() ); // center molecule
-  Group g = spc.insert( aam.particles() ); // insert into space
+  Group g = spc.insert( aam.particles() );       // insert into space
   g.name="peptide"; // babtise
-  spc.enroll(g); // enroll group in space
+  spc.enroll(g);    // enroll group in space
 
   Move::SwapMove<Tspace> tit(mcp,pot,spc);
   Analysis::ChargeMultipole mp;

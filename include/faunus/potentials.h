@@ -518,7 +518,7 @@ namespace Faunus {
      */
     class Coulomb : public PairPotentialBase {
       friend class Potential::DebyeHuckel;
-      friend class Energy::GouyChapman;
+      //friend class Energy::GouyChapman;
       private:
       string _brief();
       double epsilon_r;

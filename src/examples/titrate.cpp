@@ -1,6 +1,7 @@
 #include <faunus/faunus.h>
 
 using namespace Faunus;
+typedef Space<Geometry::Sphere> Tspace;
 
 int main() {
   cout << textio::splash();            // faunus splash info!
@@ -9,19 +10,19 @@ int main() {
   EnergyDrift sys;                     // class for tracking system energy drifts
   UnitTest test(mcp);
 
-  Energy::Hamiltonian pot;
-  pot.create( Energy::Nonbonded<Potential::DebyeHuckel,Geometry::Sphere>(mcp) );
-  Space spc( pot.getGeometry() );
+  auto pot = Energy::Nonbonded<Tspace,Potential::DebyeHuckel>(mcp)
+    + Energy::EquilibriumEnergy<Tspace>(mcp);
+  Tspace spc(mcp);
 
   // Add molecule to middle of simulation container
   FormatAAM aam;
   aam.load( mcp.get<string>("molecule", string()) );
-  Geometry::cm2origo(*spc.geo, aam.particles() ); // center molecule
+  Geometry::cm2origo(spc.geo, aam.particles() ); // center molecule
   Group g = spc.insert( aam.particles() ); // insert into space
   g.name="peptide"; // babtise
   spc.enroll(g); // enroll group in space
 
-  Move::SwapMove tit(mcp,pot,spc);
+  Move::SwapMove<Tspace> tit(mcp,pot,spc);
   Analysis::ChargeMultipole mp;
 
   spc.load("state");

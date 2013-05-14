@@ -139,7 +139,7 @@ namespace Faunus {
 
           string info() { return _info(); }
 
-          void setSpace(typename T1::SpaceType &s) {
+          void setSpace(typename T1::SpaceType &s) FOVERRIDE {
             first.setSpace(s);
             second.setSpace(s);
             Tbase::setSpace(s);
@@ -244,7 +244,7 @@ namespace Faunus {
             Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
           }
 
-          void setSpace(Tspace &s) {
+          void setSpace(Tspace &s) FOVERRIDE {
             geo=s.geo;
             Tbase::setSpace(s);
           } 
@@ -383,7 +383,7 @@ namespace Faunus {
             Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
           }
 
-          void setSpace(Tspace &s) {
+          void setSpace(Tspace &s) FOVERRIDE {
             geo=s.geo;
             Tbase::setSpace(s);
           } 

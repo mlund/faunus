@@ -49,13 +49,6 @@ namespace Faunus {
     class VectorRotate;
   }
 
-  namespace Energy {
-    class Hamiltonian;
-    class EqEnergy;
-    class HarmonicBond;
-    class GouyChapman;
-  }
-
   namespace Potential {
     class PairPotentialBase;
     class HardSphere;

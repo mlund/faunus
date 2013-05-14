@@ -23,9 +23,9 @@ endfunction( fau_cigarexample )
 #fau_example(manybody "./" manybody.cpp)
 
 if(ENABLE_MPI AND MPI_CXX_FOUND)
-  fau_example(manybodyMPI "./" manybodyMPI.cpp)
-  fau_example(manybodyMPI_slit "./" manybodyMPI.cpp)
-  set_target_properties( manybodyMPI_slit PROPERTIES COMPILE_DEFINITIONS "SLIT" EXCLUDE_FROM_ALL TRUE)
+  #fau_example(manybodyMPI "./" manybodyMPI.cpp)
+  #fau_example(manybodyMPI_slit "./" manybodyMPI.cpp)
+  #set_target_properties( manybodyMPI_slit PROPERTIES COMPILE_DEFINITIONS "SLIT" EXCLUDE_FROM_ALL TRUE)
 endif()
 
 #----- target specific build options -----

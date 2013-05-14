@@ -275,11 +275,9 @@
 		73B67CDF1423E28E00E44DD9 /* io.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD61423E28E00E44DD9 /* io.cpp */; };
 		73B67CE01423E28E00E44DD9 /* mcloop.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD71423E28E00E44DD9 /* mcloop.cpp */; };
 		73B67CE21423E28E00E44DD9 /* potentials.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD91423E28E00E44DD9 /* potentials.cpp */; };
-		73B67CE31423E28E00E44DD9 /* space.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CDA1423E28E00E44DD9 /* space.cpp */; };
 		73CB4DA616D9297500DED45D /* externalpotential.h in Headers */ = {isa = PBXBuildFile; fileRef = 73CB4DA516D9297500DED45D /* externalpotential.h */; };
 		73E9C84515CC6B32001D5654 /* polymers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73E9C83515CC6A70001D5654 /* polymers.cpp */; };
 		73E9C84815CC6B6A001D5654 /* libfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 738C132613FB12B30056EF71 /* libfaunus.dylib */; };
-		8B9D16DB166CA20E00E7C7D4 /* titrate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8B9D16DA166CA20E00E7C7D4 /* titrate.cpp */; };
 		8B9D16DD166CA22A00E7C7D4 /* titrate.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B9D16DC166CA22A00E7C7D4 /* titrate.h */; };
 		8BA8482016E4F579006EE6F6 /* ewald.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BA8481F16E4F579006EE6F6 /* ewald.h */; };
 		8BA8482216E4F589006EE6F6 /* spherocylinder.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BA8482116E4F589006EE6F6 /* spherocylinder.h */; };
@@ -616,14 +614,12 @@
 		73B67CD61423E28E00E44DD9 /* io.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = io.cpp; path = ../../src/io.cpp; sourceTree = "<group>"; };
 		73B67CD71423E28E00E44DD9 /* mcloop.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mcloop.cpp; path = ../../src/mcloop.cpp; sourceTree = "<group>"; };
 		73B67CD91423E28E00E44DD9 /* potentials.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = potentials.cpp; path = ../../src/potentials.cpp; sourceTree = "<group>"; };
-		73B67CDA1423E28E00E44DD9 /* space.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = space.cpp; path = ../../src/space.cpp; sourceTree = "<group>"; };
 		73CB4DA516D9297500DED45D /* externalpotential.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = externalpotential.h; sourceTree = "<group>"; };
 		73E9C83515CC6A70001D5654 /* polymers.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = polymers.cpp; path = ../../../src/examples/polymers.cpp; sourceTree = "<group>"; };
 		73E9C83B15CC6B1D001D5654 /* polymers */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = polymers; sourceTree = BUILT_PRODUCTS_DIR; };
 		8B9277491684A3E7003BD642 /* cluster.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = cluster.cpp; sourceTree = "<group>"; };
 		8B92774A1684A3E7003BD642 /* cluster.run */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = cluster.run; sourceTree = "<group>"; };
 		8B969DDA166CDA09004248C1 /* membrane-temper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = "membrane-temper.cpp"; path = "../../src/playground/mlund/membrane-temper.cpp"; sourceTree = "<group>"; };
-		8B9D16DA166CA20E00E7C7D4 /* titrate.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = titrate.cpp; path = ../../src/titrate.cpp; sourceTree = "<group>"; };
 		8B9D16DC166CA22A00E7C7D4 /* titrate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = titrate.h; sourceTree = "<group>"; };
 		8BA8481F16E4F579006EE6F6 /* ewald.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ewald.h; sourceTree = "<group>"; };
 		8BA8482116E4F589006EE6F6 /* spherocylinder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = spherocylinder.h; sourceTree = "<group>"; };
@@ -1329,10 +1325,8 @@
 				7316FA3115C546E90024F084 /* mpi.cpp */,
 				73B67CD91423E28E00E44DD9 /* potentials.cpp */,
 				738C133213FB12D20056EF71 /* slump.cpp */,
-				73B67CDA1423E28E00E44DD9 /* space.cpp */,
 				738C133313FB12D20056EF71 /* species.cpp */,
 				7316FA3215C546E90024F084 /* textio.cpp */,
-				8B9D16DA166CA20E00E7C7D4 /* titrate.cpp */,
 			);
 			name = src;
 			sourceTree = "<group>";
@@ -1755,11 +1749,9 @@
 				73B67CDD1423E28E00E44DD9 /* geometry.cpp in Sources */,
 				73B67CE01423E28E00E44DD9 /* mcloop.cpp in Sources */,
 				73B67CE21423E28E00E44DD9 /* potentials.cpp in Sources */,
-				73B67CE31423E28E00E44DD9 /* space.cpp in Sources */,
 				7316FA3315C546E90024F084 /* mpi.cpp in Sources */,
 				7316FA3415C546E90024F084 /* textio.cpp in Sources */,
 				7316FA5615C56BA20024F084 /* analysis.cpp in Sources */,
-				8B9D16DB166CA20E00E7C7D4 /* titrate.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -98,10 +98,10 @@ namespace Faunus {
                 field.setZero();
                 pot.field(p,field);
                 for(int i = 0; i < (int)p.size(); i++) {
-                  E = field.col(i) + E_ext;                                         // Get field on particle i, in e/Å
+                  E = field.col(i) + E_ext; // field on particle i, in e/Å
                   mu_trial = atom[p[i].id].alphamatrix*E + p[i].mup;        // Total new dipole moment
                   mu_err = mu_trial - p[i].mu*p[i].muscalar;     // Difference between former and current state
-                  mu_err_norm[i] = mu_err.norm();                           // Get norm of previous row
+                  mu_err_norm[i] = mu_err.norm();// Get norm of previous row
                   p[i].muscalar = mu_trial.norm();                          // Update dipole scalar in particle
                   if(p[i].muscalar < 1e-6) {
                     continue;
@@ -113,9 +113,8 @@ namespace Faunus {
               //std::cout << "Count,Value: " << count << " " << mu_err_norm.maxCoeff() << "\n";
             }
 
-          void _trialMove() {
+          void _trialMove() FOVERRIDE {
             Tmove::_trialMove();                         // base class MC move
-
             field.resize(3,Tmove::spc->trial.size());          // make sure sizes match
 
             // Get induced dipole moments
@@ -144,7 +143,7 @@ namespace Faunus {
           double eps;
           template<class Tspace>
             PolarizeMove(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s) :
-              Tmove(in,e,s) { }
+              Tmove(in,e,s) {}
       };
 
 
@@ -384,11 +383,11 @@ namespace Faunus {
           string _info();
           bool run() const;                //!< Runfraction test
         protected:
-          void _acceptMove();
-          void _rejectMove();
-          double _energyChange();
+          void _acceptMove() FOVERRIDE;
+          void _rejectMove() FOVERRIDE;
+          double _energyChange() FOVERRIDE;
+          void _trialMove() FOVERRIDE;
           using base::spc;
-          void _trialMove();
           map_type accmap; //!< Single particle acceptance map
           map_type sqrmap; //!< Single particle mean square displacement map
 
@@ -422,8 +421,8 @@ namespace Faunus {
         iparticle=-1;
         igroup=nullptr;
         dir.x()=dir.y()=dir.z()=1;
-        base::w=30; //width of output
-        base::runfraction = in.get<double>(pfx+"_runfraction",0.);
+        this->w=30; //width of output
+        this->runfraction = in.get<double>(pfx+"_runfraction",1.);
         setGenericDisplacement( in.get<double>(pfx+"_genericdp",0) );
       }
 
@@ -1818,11 +1817,11 @@ namespace Faunus {
           Group* saltPtr;  // GC ions *must* be in this group
 
         public:
-          GrandCanonicalSalt(InputMap&, Energy::Hamiltonian&, Tspace&, Group&, string="saltbath");
+          GrandCanonicalSalt(InputMap&, Energy::Energybase<Tspace>&, Tspace&, Group&, string="saltbath");
       };
 
     template<class Tspace>
-      GrandCanonicalSalt<Tspace>::GrandCanonicalSalt(InputMap &in, Energy::Hamiltonian &e, Tspace &s, Group &g, string pfx) :
+      GrandCanonicalSalt<Tspace>::GrandCanonicalSalt(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, Group &g, string pfx) :
         base(e,s,pfx), tracker(s) {
           base::title="Grand Canonical Salt";
           w=30;
@@ -2017,14 +2016,14 @@ namespace Faunus {
           using base::spc;
           using base::w;
           using base::runfraction;
-          enum extradata {VOLUME=0};    //!< Indicates structure of extra data to send
+          enum extradata {VOLUME=0};    //!< Structure of extra data to send
           typedef std::map<string, Average<double> > map_type;
           map_type accmap;              //!< Acceptance map
-          int partner;                  //!< Other replica (partner) to exchange with
-          virtual void findPartner();   //!< Find which replica to exchange with
-          bool goodPartner();           //!< Detemine if found partner is valid
+          int partner;                  //!< Exchange replica (partner)
+          virtual void findPartner();   //!< Find replica to exchange with
+          bool goodPartner();           //!< Is partned valid?
           double exchangeEnergy(double);//!< Exchange energy with partner
-          string id();                  //!< Get unique string to identify set of partners
+          string id();                  //!< Unique string to identify set of partners
 
           double currentEnergy;         //!< Energy of configuration before move (uold)
           bool haveCurrentEnergy;       //!< True if currentEnergy has been set
@@ -2036,7 +2035,6 @@ namespace Faunus {
           double _energyChange();
           std::ofstream temperPath;
 
-          Energy::Energybase<Tspace>* hamiltonian;   //!< Hamiltonian class needed for volume displacement
           Faunus::MPI::MPIController *mpiPtr; //!< Controller class for MPI calls
           Faunus::MPI::FloatTransmitter ft;   //!< Class for transmitting floats over MPI
           Faunus::MPI::ParticleTransmitter pt;//!< Class for transmitting particles over MPI
@@ -2053,19 +2051,19 @@ namespace Faunus {
       ParallelTempering<Tspace>::ParallelTempering(
           InputMap &in,
           Energy::Energybase<Tspace> &e,
-          Space &s,
+          Tspace &s,
           Faunus::MPI::MPIController &mpi,
           string pfx) : base(e,s,pfx), mpiPtr(&mpi) {
-        base::title="Parallel Tempering";
+        this->title="Parallel Tempering";
         partner=-1;
-        base::useAlternateReturnEnergy=true; //we don't want to return dU from partner replica (=drift)
-        runfraction = in.get<double>(prefix+"_runfraction",1);
-        hamiltonian = &e;
+        this->useAlternateReturnEnergy=true; //we don't want to return dU from partner replica (=drift)
+        this->runfraction = in.get<double>(pfx+"_runfraction",1);
         pt.recvExtra.resize(1);
         pt.sendExtra.resize(1);
-        pt.setFormat( in.get<string>(prefix+"_format", "XYZQI") );
-        setEnergyFunction( Energy::systemEnergy );
-        haveCurrentEnergy=false;
+        pt.setFormat( in.get<string>(pfx+"_format", "XYZQI") );
+        setEnergyFunction(
+            Energy::systemEnergy<Tspace,Energy::Energybase<Tspace>,p_vec> );
+        this->haveCurrentEnergy=false;
         //temperPath.open(textio::prefix+"temperpath.dat");
       }
 
@@ -2073,7 +2071,7 @@ namespace Faunus {
       ParallelTempering<Tspace>::~ParallelTempering() {}
 
     template<class Tspace>
-      void ParallelTempering<Tspace>::setEnergyFunction( std::function<double (Space&,Energy::Energybase<Tspace>&,const p_vec&)> f ) {
+      void ParallelTempering<Tspace>::setEnergyFunction( std::function<double (Tspace&,Energy::Energybase<Tspace>&,const p_vec&)> f ) {
         usys = f;
       }
 
@@ -2103,17 +2101,19 @@ namespace Faunus {
 
     template<class Tspace>
       string ParallelTempering<Tspace>::_info() {
+        using namespace textio;
         std::ostringstream o;
         o << pad(SUB,w,"Process rank") << mpiPtr->rank() << endl
           << pad(SUB,w,"Number of replicas") << mpiPtr->nproc() << endl
           << pad(SUB,w,"Data size format") << short(pt.getFormat()) << endl
           << indent(SUB) << "Acceptance:"
           << endl;
-        if (cnt>0) {
+        if (this->cnt>0) {
           o.precision(3);
           for (auto &m : accmap)
             o << indent(SUBSUB) << std::left << setw(12)
-              << m.first << setw(8) << m.second.cnt << m.second.avg()*100 << percent << endl;
+              << m.first << setw(8) << m.second.cnt << m.second.avg()*100
+              << percent << endl;
         }
         return o.str();
       }
@@ -2157,7 +2157,7 @@ namespace Faunus {
 
     template<class Tspace>
       double ParallelTempering<Tspace>::_energyChange() {
-        alternateReturnEnergy=0;
+        this->alternateReturnEnergy=0;
         if ( !goodPartner() )
           return pc::infty;
         double uold, du_partner;
@@ -2167,14 +2167,15 @@ namespace Faunus {
         else
           uold = usys(*spc,*pot,spc->p);
 
-        hamiltonian->setVolume( pt.recvExtra[VOLUME] ); // set new volume
+        spc->geo.setVolume( pt.recvExtra[VOLUME] ); // set new volume
+        pot->setSpace(*spc);
 
         double unew = usys(*spc,*pot,spc->trial);
 
         du_partner = exchangeEnergy(unew-uold); // Exchange dU with partner (MPI)
 
         haveCurrentEnergy=false;                // Make sure user call setCurrentEnergy() before next move
-        alternateReturnEnergy=unew-uold;        // Avoid energy drift (no effect on sampling!)
+        this->alternateReturnEnergy=unew-uold;        // Avoid energy drift (no effect on sampling!)
         return (unew-uold)+du_partner;          // final Metropolis trial energy
       }
 
@@ -2216,7 +2217,8 @@ namespace Faunus {
     template<class Tspace>
       void ParallelTempering<Tspace>::_rejectMove() {
         if ( goodPartner() ) {
-          hamiltonian->setVolume( pt.sendExtra[VOLUME] ); // restore old volume
+          spc->geo.setVolume( pt.sendExtra[VOLUME] ); // restore old volume
+          pot->setSpace(*spc);
           accmap[ id() ] += 0;
           for (size_t i=0; i<spc->p.size(); i++)
             spc->trial[i] = spc->p[i];   // restore old configuration

@@ -3,6 +3,7 @@
 
 #ifndef SWIG
 #include <faunus/common.h>
+#include "point.h"
 #endif
 
 namespace Faunus {
@@ -18,18 +19,18 @@ namespace Faunus {
     double sigma,      //!< LJ diameter [angstrom]
            eps,        //!< LJ epsilon [kJ/mol]
            radius,     //!< Radius [angstrom]
-           mu,         //!< Dipole momentscalar [eÅ]
+           muscalar,  //!< Dipole momentscalar [eÅ]
            mw,         //!< Weight [g/mol]
            charge,     //!< Charge/valency [e]
            activity,   //!< Chemical activity [mol/l]
-           alpha,      //!< Polarizability [C^2 A^2 / J]
            dp,         //!< Translational displacement parameter [angstrom]
            dprot,      //!< Rotational displacement parameter [radians]
            mean,       //!< Mean value... (charge, sasa, etc.)
            variance;   //!< Spread around AtomData::mean
+    Point mu;
     short int patchtype;  //!< If patchy particle, which type of patch
     Thydrophobic hydrophobic;  //!< Are we hydrophobic?
-    Eigen::Matrix3d alphamatrix,
+    Tensor<double>  alpha,
                     theta;  //!< Quadrupole moment
     string name;       //!< Name. Avoid spaces.
     bool operator==(const AtomData &d) const { return (*this==d); }
@@ -98,6 +99,14 @@ namespace Faunus {
    *       }
    *     }
    *
+   * Example 2: 
+   *       "atomlist" :
+   *       {
+   *         "sol1" : { "q": 1.0, "r":1.9, "mw":22.99, "mu":"1.3 0.1 0",
+   *         "alpha":"1.1   0 0 2.3 0   1" },   // Matrix input in 
+   *         "theta":"2.4 0.3 0 1.8 0 3.2"}     // (xx, xy, xz, yy, yz, zz)-form
+   *       }
+   * 
    * @note
    * For simple JSON syntax highlighting in the VIM editor, add
    * the following to `.vimrc`:
@@ -115,12 +124,14 @@ namespace Faunus {
    * `dprot`       | Rotational displacement parameter [degrees] (will be converted to radians)
    * `eps`         | Epsilon energy scaling commonly used for Lennard-Jones interactions etc. [kJ/mol] 
    * `hydrophobic` | Is the particle hydrophobic? [true/false]
-   * `mu`          | Dipole moment scalar [Debye]
+   * 'mu'          | Dipole moment vector [Debye]
+   * 'theta'       | Quadrupole moment matrix [Debye Å]
    * `mw`          | Molecular weight [g/mol]
    * `patchtype`   | Patchtype for sphero-cylinders
    * `q`           | Valency / partial charge number [e]
    * `r`           | Radius = `sigma/2` [angstrom]
    * `sigma`       | `2*r` [angstrom] (overrides radius)
+   * 
    *
    * Code example:
    *

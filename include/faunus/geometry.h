@@ -429,6 +429,12 @@ namespace Faunus {
       public:
         //!< Get set rotation angle
         double getAngle() const { return angle_; }
+        
+        bool ignoreBoundaries;
+        
+        QuaternionRotate() {
+          ignoreBoundaries=false;
+        }
 
         /**
          * @brief Set rotation axis and angle
@@ -454,6 +460,8 @@ namespace Faunus {
 
         /** @brief Rotate point - respect boundaries */
         inline Point operator()(Point a) const {
+          if(ignoreBoundaries)
+            return q*a;
           a=a-origin;
           geoPtr->boundary(a);
           a=q*a+origin;

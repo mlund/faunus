@@ -99,7 +99,7 @@ namespace Faunus {
                 pot.field(p,field);
                 for(int i = 0; i < (int)p.size(); i++) {
                   E = field.col(i) + E_ext;                                         // Get field on particle i, in e/Å
-                  mu_trial = atom[p[i].id].alphamatrix*E + p[i].mup;        // Total new dipole moment
+                  mu_trial = p[i].alpha*E + p[i].mup;        // Total new dipole moment
                   mu_err = mu_trial - p[i].mu*p[i].muscalar;     // Difference between former and current state
                   mu_err_norm[i] = mu_err.norm();                           // Get norm of previous row
                   p[i].muscalar = mu_trial.norm();                          // Update dipole scalar in particle

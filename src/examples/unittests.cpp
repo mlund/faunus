@@ -83,30 +83,26 @@ TEST_CASE("Particles", "...")
 
 TEST_CASE("Polar Test","Ion-induced dipole test (polarization)") 
 {
-  std::ofstream json_file;
-  json_file.open ("polar_test.json");
-  json_file
-    << "{ \"atomlist\" : \n { \n "
+  std::ofstream js("polar_test.json"), inp("polar_test.input");
+  js << "{ \"atomlist\" : \n { \n "
     << "\"sol1\" : {\"q\":1, \"dp\":0, \"dprot\":0, \"alpha\":0},\n"
     << "\"sol2\" : {\"q\":0, \"dp\":0, \"dprot\":0, \"alpha\":2.6}\n } \n }";
-  json_file.close();
-  std::ofstream input_file;
-  input_file.open("polar_test.input");
-  input_file
-    << "cuboid_len 10\n"
-    << "temperature 298\n"
+  inp << "cuboid_len 10\n" << "temperature 298\n"
     << "epsilon_r 1\n tion1 sol1\n tion2 sol2\n nion1 1\n nion2 1\n";
-  input_file.close();
+  js.close();
+  inp.close();
 
   ::atom.includefile("polar_test.json");
   InputMap in("polar_test.input");
+  typedef Space<Geometry::Cuboid, DipoleParticle> Tspace;
   typedef Potential::CombinedPairPotential<Potential::Coulomb,Potential::IonDipole> Tpair;
-  Energy::NonbondedVector<Tpair,Geometry::Cuboid> pot(in);
-  Space spc( pot.getGeometry() );
+  Energy::NonbondedVector<Tspace,Tpair> pot(in);
+  Tspace spc(in);
   Group sol;
   sol.addParticles(spc, in);
-  Move::PolarizeMove<Move::AtomicTranslation> trans(in,pot,spc);
+  Move::PolarizeMove<Move::AtomicTranslation<Tspace> > trans(in,pot,spc);
   trans.setGroup(sol);
+
   spc.p[0] = Point(0,0,0);
   spc.p[1] = Point(0,0,4);
   spc.trial = spc.p;

@@ -13,7 +13,6 @@
 
 namespace Faunus {
   class checkValue;
-  class Space;
 
   /**
    * @brief Namespace for analysis routines
@@ -351,7 +350,7 @@ namespace Faunus {
               for (auto i=g.begin(); i!=g.end()-1; i++)
                 for (auto j=i+1; j!=g.end(); j++)
                   if ( (spc.p[*i].id==ida && spc.p[*j].id==idb) || (spc.p[*i].id==idb && spc.p[*j].id==ida) ) {
-                    Tx r=spc.geo->dist(spc.p[*i], spc.p[*j]);
+                    Tx r=spc.geo.dist(spc.p[*i], spc.p[*j]);
                     if (r<=maxdist)
                       this->operator() (r)++; 
                   }
@@ -359,7 +358,7 @@ namespace Faunus {
               for (auto i : g)
                 if (spc.p[i].id==ida || spc.p[i].id==idb)
                   bulk++;
-              bulkconc += bulk / spc.geo->getVolume();
+              bulkconc += bulk / spc.geo.getVolume();
             }
       };
 
@@ -417,29 +416,25 @@ namespace Faunus {
           }
       };
 
-    /*!
-     * \brief Base class for force calculations
+    /**
+     * @brief Base class for force calculations
      *
      * Includes some neccessary functionality for deriving the force.
      *
-     * \author Axel Thuresson
-     * \date Lund, 2013
+     * @author Axel Thuresson
+     * @date Lund, 2013
      */
-
     class TwobodyForce : public AnalysisBase {
       protected:
-        Energy::Energybase* pot;         //!< Pointer to energy functions
-        Space* spc;                      //!< Pointer to Space (particles and groups are stored there)
         string _info();         //!< Print results of analysis
         Group* igroup1;
         Group* igroup2;
         Group* ions;
       public:
-        TwobodyForce(InputMap&, Energy::Energybase&, Space&, Group &, Group &, Group &);//!< Constructor
-        virtual void calc();
-        void save(string);
-        void setTwobodies(Group &, Group &, Group &);
         virtual Point meanforce();
+        TwobodyForce(InputMap&, Group&, Group&, Group&);//!< Constructor
+        void save(string);
+        void setTwobodies(Group&, Group&, Group&);
     };
 
     /*!
@@ -453,7 +448,6 @@ namespace Faunus {
      * \author Axel Thuresson
      * \date Lund, 2013
      */
-
     class TwobodyForceDirect : public TwobodyForce {
       private:
         Point f_pp;
@@ -462,9 +456,37 @@ namespace Faunus {
       protected:
         string _info();         //!< Print results of analysis
       public:
-        TwobodyForceDirect(InputMap&, Energy::Energybase&, Space&, Group &, Group &, Group &);//!< Constructor
-        void calc();
+        TwobodyForceDirect(InputMap&, Group&, Group&, Group&);//!< Constructor
         Point meanforce();
+
+        /** @brief Calculate the direct force between the two bodies */
+        template<class Tpvec, class Tenergy>
+          void calc(Tpvec &p, Tenergy &pot) {
+            if (run()) {
+              // Force between the two bodies
+              for (auto i : *igroup1) {
+                for (auto j : *igroup2) {
+                  Point f = pot.f_p2p(p[i], p[j]);
+                  f_pp += f;
+                }
+              }
+              //f_pp += 1.0*_f_pp;
+              //f_mean1 += 1.0*_f_pp;
+              //f_mean2 += -1.0*_f_pp;
+              for (auto i : *igroup1) {
+                for (auto j : *ions) {
+                  Point f = pot.f_p2p(p[i],p[j]);
+                  f_pi += f;
+                }
+              }
+              for (auto i : *igroup2) {
+                for (auto j : *ions) {
+                  Point f = pot.f_p2p(p[i], p[j]);
+                  f_ip += f;
+                }
+              }
+            }
+          }
     };
 
     /*!
@@ -476,7 +498,6 @@ namespace Faunus {
      * \author Axel Thuresson
      * \date Lund, 2013
      */
-
     class TwobodyForceMidp : public TwobodyForce {
       private:
         Point f_pp;
@@ -487,10 +508,53 @@ namespace Faunus {
       protected:
         string _info();         //!< Print results of analysis
       public:
-        TwobodyForceMidp(InputMap&, Energy::Energybase&, Space&, Group &, Group &, Group &, Analysis::LineDistributionNorm<float,unsigned long int>*);//!< Constructor
-        void calc();
+        TwobodyForceMidp(InputMap&, Group&, Group&, Group&, Analysis::LineDistributionNorm<float,unsigned long int>*);//!< Constructor
         Point meanforce();
+
+        /** @brief Calculate the direct force between the two bodies */
+        template<class Tpvec, class Tenergy>
+          void calc(Tpvec &p, Tenergy &pot) {
+            if (run()) {
+              // Force between the two bodies
+              for (auto i : *igroup1) {
+                for (auto j : *igroup2) {
+                  Point f = pot.f_p2p(p[i], p[j]);
+                  f_pp += f;
+                }
+              }
+
+              for (auto i : *igroup1) {
+                for (auto j : *ions) {
+                  if (p[j].z() < 0.0) {
+                    Point f = pot.f_p2p(p[i], p[j]);
+                    f_pi += f;
+                  }
+                }
+              }
+
+              for (auto i : *igroup2) {
+                for (auto j : *ions) {
+                  if (p[j].z() >= 0.0) {
+                    Point f = pot.f_p2p(p[i], p[j]);
+                    f_ip += f;
+                  }
+                }
+              }
+
+              for (auto i : *ions) {
+                if (p[i].z() >= 0.0) {
+                  for (auto j : *ions) {
+                    if (p[j].z() < 0.0) {
+                      Point f = pot.f_p2p(p[i],p[j]);
+                      f_ii += f;
+                    }
+                  }
+                }
+              }
+            }
+          }
     };
+
 
     /*!
      * \brief Analysis of polymer shape - radius of gyration, shape factor etc.
@@ -507,7 +571,7 @@ namespace Faunus {
         string _info();
         template<class Tgroup, class Tspace>
           double gyrationRadiusSquared(const Tgroup &pol, const Tspace &spc) {
-            assert( spc.geo->dist(pol.cm, pol.massCenter(spc))<1e-9
+            assert( spc.geo.dist(pol.cm, pol.massCenter(spc))<1e-9
                 && "Mass center must be in sync.");
             Point rg2=vectorgyrationRadiusSquared(pol,spc);
             return rg2.x()+rg2.y()+rg2.z();
@@ -515,18 +579,18 @@ namespace Faunus {
 
         template<class Tgroup, class Tspace>
           Point vectorEnd2end(const Tgroup &pol, const Tspace &spc) {
-            return spc.geo->vdist( spc.p[pol.front()], spc.p[pol.back()] );
+            return spc.geo.vdist( spc.p[pol.front()], spc.p[pol.back()] );
           }
 
         template<class Tgroup, class Tspace>
           Point vectorgyrationRadiusSquared(const Tgroup &pol, const Tspace &spc) {
-            assert( spc.geo->dist(pol.cm, pol.massCenter(spc))<1e-9
+            assert( spc.geo.dist(pol.cm, pol.massCenter(spc))<1e-9
                 && "Mass center must be in sync.");
             double sum=0;
             Point t, r2(0,0,0);
             for (auto i : pol) {
               t = spc.p[i]-pol.cm;                // vector to center of mass
-              spc.geo->boundary(t);               // periodic boundary (if any)
+              spc.geo.boundary(t);               // periodic boundary (if any)
               r2.x() += spc.p[i].mw * t.x() * t.x();
               r2.y() += spc.p[i].mw * t.y() * t.y();
               r2.z() += spc.p[i].mw * t.z() * t.z();
@@ -546,7 +610,7 @@ namespace Faunus {
               return;
             Point r2 = vectorgyrationRadiusSquared(pol,spc);
             double rg2 = r2.x()+r2.y()+r2.z(); 
-            double re2 = spc.geo->sqdist( spc.p[pol.front()], spc.p[pol.back()] );
+            double re2 = spc.geo.sqdist( spc.p[pol.front()], spc.p[pol.back()] );
             Rg2[pol.name]  += rg2;
             Rg2x[pol.name] += r2.x();
             Rg2y[pol.name] += r2.y();
@@ -589,13 +653,13 @@ namespace Faunus {
 
         template<class Tgroup, class Tspace>
           double dipole(const Tgroup &g, const Tspace &spc) {
-            assert( spc.geo->dist(g.cm, g.massCenter(spc))<1e-9
+            assert( spc.geo.dist(g.cm, g.massCenter(spc))<1e-9
                 && "Mass center must be in sync.");
             Point t, mu(0,0,0);
             for (auto i : g)
               if (!excluded(spc.p[i])) {
                 t = spc.p[i]-g.cm;                // vector to center of mass
-                spc.geo->boundary(t);               // periodic boundary (if any)
+                spc.geo.boundary(t);               // periodic boundary (if any)
                 mu+=spc.p[i].charge*t;
               }
             return mu.len();
@@ -704,7 +768,7 @@ namespace Faunus {
               for (int k=0; k<ghostin; k++) {     // insert ghostin times
                 double du=0;
                 for (int i=0; i<n; i++)
-                  spc.geo->randompos( g[i] ); // random ghost positions
+                  spc.geo.randompos( g[i] ); // random ghost positions
                 for (int i=0; i<n; i++)
                   pot.all2p( spc.p, g[i] );    // energy with all particles in space
                 for (int i=0; i<n-1; i++)

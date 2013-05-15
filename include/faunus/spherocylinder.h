@@ -614,7 +614,7 @@ namespace Faunus {
           double halfl;
         };
 
-        std::map<particle::Tid, prop> m;
+        std::map<CigarParticle::Tid, prop> m;
 
         HardSpheroCylinder(InputMap &in) {
           name="HardspheroCylinder";

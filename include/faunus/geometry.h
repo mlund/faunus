@@ -53,7 +53,7 @@ namespace Faunus {
         enum collisiontype {BOUNDARY,ZONE};                 //!< Types for collision() function
         double getVolume() const;                           //!< Get volume of container (A^3)
         void setVolume(double);                             //!< Specify new volume (A^3)
-        double dist(const Point&,const Point&);             //!< Distance between two points (A)
+        double dist(const Point&,const Point&) const;       //!< Distance between two points (A)
         string info(char=20);                               //!< Return info string
         bool save(string);                                  //!< Save geometry state to disk
         bool load(string,bool=false);                       //!< Load geometry state from disk

@@ -28,7 +28,7 @@ done
 if [ -x $exe ]; then
   $mpicommand -np 4 ./temper
   rc=$?
-  rm mpi*
+  #rm mpi*
   exit $rc
 fi
 exit 1

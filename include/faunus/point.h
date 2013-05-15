@@ -148,7 +148,7 @@ namespace Faunus {
       typedef Eigen::Matrix<T,3,3> Tmat; //!< Matrix from Eigen
 
       /** @brief Default constructor. Data is *not* zeroed */
-      inline Tensor() {}
+      Tensor() {}
 
       Tensor(T xx, T xy, T xz, T yy, T yz, T zz) {
         (*this) << xx,xy,xz,xy,yy,yz,xz,yz,zz;
@@ -184,10 +184,16 @@ namespace Faunus {
         return operator<<(i);
       }
 
+      /** @brief Write data members to stream */
+      friend std::ostream &operator<<(std::ostream &o, const Tensor<T> &t) {
+        for (int i=0; i!=t.rows(); ++i)
+          for (int j=i; j!=t.cols(); ++j)
+            o << t(i,j);
+        return o;
+      }
+
       template<typename Trotator>
-        void rotate(const Trotator &rot) {
-          *this = rot(*this);
-        }
+        void rotate(const Trotator &rot) { *this = rot(*this); }
     };
 
   /**
@@ -492,7 +498,8 @@ namespace Faunus {
     }
 
     /* write data members to stream */
-    friend std::ostream &operator<<(std::ostream &o, const DipoleParticle &p) {
+    friend std::ostream &operator<<(std::ostream &o, const DipoleParticle &p)
+    {
       o << PointParticle(p) << " " << p.mu << " " << p.muscalar
         << " " << p.mup << " " << p.alpha << " " << p.theta;
       return o;

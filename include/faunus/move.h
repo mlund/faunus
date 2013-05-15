@@ -102,11 +102,11 @@ namespace Faunus {
                   mu_trial = p[i].alpha*E + p[i].mup;        // Total new dipole moment
                   mu_err = mu_trial - p[i].mu*p[i].muscalar;     // Difference between former and current state
                   mu_err_norm[i] = mu_err.norm();// Get norm of previous row
-                  p[i].muscalar = mu_trial.norm();                          // Update dipole scalar in particle
+                  p[i].muscalar = mu_trial.norm();// Update dip scalar in particle
                   if(p[i].muscalar < 1e-6) {
                     continue;
                   }
-                  p[i].mu = mu_trial/p[i].muscalar;                         // Update dipole vector in particle
+                  p[i].mu = mu_trial/p[i].muscalar;// Update article dip.
                 }
                 //count++;
               } while (mu_err_norm.maxCoeff() > threshold);                 // Check if threshold is ok

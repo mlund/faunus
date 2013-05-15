@@ -499,7 +499,7 @@ namespace Faunus {
            * @param p Particle vector
            * @param E Holds field on each particle. Must have N columns.
            */
-          void field(const p_vec &p, Eigen::MatrixXd &E) FOVERRIDE {
+          void field(const Tpvec &p, Eigen::MatrixXd &E) FOVERRIDE {
             assert((int)p.size()==E.cols());
             size_t i=0;
             for (auto &pi : p) {

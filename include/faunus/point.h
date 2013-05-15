@@ -144,52 +144,52 @@ namespace Faunus {
   };
 
   template<class T>
-  struct Tensor : public Eigen::Matrix<T,3,3> {
-    typedef Eigen::Matrix<T,3,3> Tmat; //!< Matrix from Eigen
+    struct Tensor : public Eigen::Matrix<T,3,3> {
+      typedef Eigen::Matrix<T,3,3> Tmat; //!< Matrix from Eigen
 
-    /** @brief Default constructor. Data is *not* zeroed */
-    inline Tensor() {}
+      /** @brief Default constructor. Data is *not* zeroed */
+      inline Tensor() {}
 
-    Tensor(T xx, T xy, T xz, T yy, T yz, T zz) {
-      (*this) << xx,xy,xz,xy,yy,yz,xz,yz,zz;
-    }
+      Tensor(T xx, T xy, T xz, T yy, T yz, T zz) {
+        (*this) << xx,xy,xz,xy,yy,yz,xz,yz,zz;
+      }
 
-    template<typename OtherDerived>
-      Tensor(const Eigen::MatrixBase<OtherDerived>& other) : Tmat(other) {}
+      template<typename OtherDerived>
+        Tensor(const Eigen::MatrixBase<OtherDerived>& other) : Tmat(other) {}
 
-    template<typename OtherDerived>
-      Tensor& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
-        Tmat::operator=(other);
+      template<typename OtherDerived>
+        Tensor& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
+          Tmat::operator=(other);
+          return *this;
+        }
+
+      /** @brief Zero data */
+      void clear() { Tmat::setZero(); }
+
+      /** @brief Read from stream */
+      Tensor& operator<<(std::istream &in) {
+        (*this).clear();
+        for (int i=0; i<(*this).rows(); i++) {
+          for (int j=i; j < (*this).cols();j++) {
+            in >> (*this)(i,j);
+            (*this)(j,i) = (*this)(i,j);
+          }
+        }
         return *this;
       }
 
-    /** @brief Zero data */
-    void clear() { Tmat::setZero(); }
+      /** @brief Read from string */
+      Tensor& operator<<(const std::string &in) {
+        std::istringstream i(in);
+        return operator<<(i);
+      }
 
-    /** @brief Read from stream */
-    Tensor& operator<<(std::istream &in) {
-      (*this).clear();
-      for (int i=0; i<(*this).rows(); i++) {
-        for (int j=i; j < (*this).cols();j++) {
-          in >> (*this)(i,j);
-          (*this)(j,i) = (*this)(i,j);
+      template<typename Trotator>
+        void rotate(const Trotator &rot) {
+          *this = rot(*this);
         }
-      }
-      return *this;
-    }
-    
-    /** @brief Read from string */
-    Tensor& operator<<(const std::string &in) {
-      std::istringstream i(in);
-      return operator<<(i);
-    }
-    
-    template<typename Trotator>
-      void rotate(const Trotator &rot) {
-        *this = rot(*this);
-      }
-  };
-  
+    };
+
   /**
    * @brief Hypersphere particle
    * @date Lund, 2009-2013
@@ -477,7 +477,7 @@ namespace Faunus {
           mup=mu*muscalar;
           alpha=d.alpha;
           theta=d.theta;
-//           // copy more atom properties here...
+          //           // copy more atom properties here...
           return *this;
         }
 

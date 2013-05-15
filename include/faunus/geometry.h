@@ -331,8 +331,20 @@ namespace Faunus {
         return massCenter(geo,p,Group(0,p.size()-1));
       }
 
-    void translate(const Geometrybase&, p_vec&, Point); //!< Translate a particle vector by a vector
-    void cm2origo(const Geometrybase&, p_vec&); //!< Translate a particle vector so mass center is in (0,0,0)
+    /** @brief Translate a particle vector by a vector */
+    template<class Tgeo, class Tpvec>
+      void translate(const Tgeo &geo, Tpvec &p, const Point &d) {
+        for (auto &pi : p) {
+          pi += d;
+          geo.boundary(pi);
+        }
+      }
+
+    /** @brief Translate a particle vector so mass center is in (0,0,0) */
+    template<class Tgeo, class Tpvec>
+      void cm2origo(const Tgeo &geo, Tpvec &p) {
+        translate(geo, p, -massCenter(geo, p) );
+      }
 
     /*!
       \brief Geometric transform of a Point (rotation, translation...)
@@ -423,15 +435,15 @@ namespace Faunus {
         Eigen::Quaterniond q;
         Eigen::Matrix3d rot_mat; // rotation matrix
         Geometrybase *geoPtr;
-        
-    protected:
-      
+
+      protected:
+
       public:
         //!< Get set rotation angle
         double getAngle() const { return angle_; }
-        
+
         bool ignoreBoundaries;
-        
+
         QuaternionRotate() {
           ignoreBoundaries=false;
         }
@@ -453,7 +465,7 @@ namespace Faunus {
           g.boundary(u);
           u.normalize(); // make unit vector
           q=Eigen::AngleAxisd(angle, u);
-          
+
           rot_mat << 0, -u.z(), u.y(),u.z(),0,-u.x(),-u.y(),u.x(),0;
           rot_mat = Eigen::Matrix3d::Identity() + rot_mat*std::sin(angle) + rot_mat*rot_mat*(1-std::cos(angle));
         }
@@ -468,7 +480,7 @@ namespace Faunus {
           geoPtr->boundary(a);
           return a;
         }
-        
+
         inline Eigen::Matrix3d operator()(Eigen::Matrix3d a) const {
           a = rot_mat*a*rot_mat.transpose();
           return a;

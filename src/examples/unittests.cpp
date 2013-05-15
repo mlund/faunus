@@ -85,8 +85,8 @@ TEST_CASE("Polar Test","Ion-induced dipole test (polarization)")
 {
   std::ofstream js("polar_test.json"), inp("polar_test.input");
   js << "{ \"atomlist\" : \n { \n "
-    << "\"sol1\" : {\"q\":1, \"dp\":0, \"dprot\":0, \"alpha\":0},\n"
-    << "\"sol2\" : {\"q\":0, \"dp\":0, \"dprot\":0, \"alpha\":2.6}\n } \n }";
+    << "\"sol1\" : {\"q\":1, \"dp\":0, \"dprot\":0, \"alpha\":\"0 0 0 0 0 0\"},\n"
+    << "\"sol2\" : {\"q\":0, \"dp\":0, \"dprot\":0, \"alpha\":\"2.6 0 0 2.6 0 2.6\"}\n } \n }";
   inp << "cuboid_len 10\n" << "temperature 298\n"
     << "epsilon_r 1\n tion1 sol1\n tion2 sol2\n nion1 1\n nion2 1\n";
   js.close();
@@ -108,8 +108,8 @@ TEST_CASE("Polar Test","Ion-induced dipole test (polarization)")
   spc.trial = spc.p;
   CHECK(trans.move(1) == Approx(-5.69786)); // check energy change
   CHECK(spc.p[1].muscalar == Approx(0.162582)); // check induced moment
-  remove("polar_test.json");
-  remove("polar_test.input");
+  //remove("polar_test.json");
+  //remove("polar_test.input");
 }
 
 /*

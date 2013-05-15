@@ -94,8 +94,9 @@ TEST_CASE("Polar Test","Ion-induced dipole test (polarization)")
 
   ::atom.includefile("polar_test.json");
   InputMap in("polar_test.input");
+  using namespace Faunus::Potential;
+  typedef CombinedPairPotential<Coulomb,IonDipole> Tpair;
   typedef Space<Geometry::Cuboid, DipoleParticle> Tspace;
-  typedef Potential::CombinedPairPotential<Potential::Coulomb,Potential::IonDipole> Tpair;
   Energy::NonbondedVector<Tspace,Tpair> pot(in);
   Tspace spc(in);
   Group sol;

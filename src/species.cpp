@@ -72,9 +72,10 @@ namespace Faunus {
       a.dprot = json::value<double>(atom.second, "dprot", 0) * pc::pi / 180.; // deg->rads
       a.eps = json::value<double>(atom.second, "eps", 0);
       a.hydrophobic = json::value<bool>(atom.second, "hydrophobic", false);
-      a.mu << json::value<std::string>(atom.second, "mu", "");
+      a.mu << json::value<std::string>(atom.second, "mu", "0 0 0");
       a.muscalar = a.mu.len()*pc::D2eA();
-      a.mu = a.mu/a.mu.len();
+      if (a.mu.len()>1e-6)
+        a.mu = a.mu/a.mu.len();
       a.mw = json::value<double>(atom.second, "Mw", 1.);
       a.charge = json::value<double>(atom.second, "q", 0);
       a.radius = json::value<double>(atom.second, "r", 0);

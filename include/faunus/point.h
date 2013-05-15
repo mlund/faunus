@@ -477,7 +477,6 @@ namespace Faunus {
           mup=mu*muscalar;
           alpha=d.alpha;
           theta=d.theta;
-          //           // copy more atom properties here...
           return *this;
         }
 
@@ -494,7 +493,8 @@ namespace Faunus {
 
     /* write data members to stream */
     friend std::ostream &operator<<(std::ostream &o, const DipoleParticle &p) {
-      o << PointParticle(p) << " " << p.mu << " " << p.muscalar << " " << p.mup << " " << p.alpha << " " << p.theta;
+      o << PointParticle(p) << " " << p.mu << " " << p.muscalar
+        << " " << p.mup << " " << p.alpha << " " << p.theta;
       return o;
     }
 

@@ -87,9 +87,6 @@ namespace Faunus {
           template<typename Tenergy,typename Tparticles>
             void induceDipoles(Tenergy &pot, Tparticles &p, Point E_ext) { 
               Eigen::VectorXd mu_err_norm((int)p.size());
-              Point mu_trial(0,0,0);  
-              Point mu_err(0,0,0);
-              Point E(0,0,0);
               threshold = 0.001;
 
               //int count = 0;
@@ -97,10 +94,10 @@ namespace Faunus {
                 mu_err_norm.setZero();
                 field.setZero();
                 pot.field(p,field);
-                for(int i = 0; i < (int)p.size(); i++) {
-                  E = field.col(i) + E_ext;                                         // Get field on particle i, in e/Å
-                  mu_trial = p[i].alpha*E + p[i].mup;        // Total new dipole moment
-                  mu_err = mu_trial - p[i].mu*p[i].muscalar;     // Difference between former and current state
+                for(size_t i=0; i<p.size(); i++) {
+                  Point E = field.col(i) + E_ext; // field on i, in e/Å
+                  Point mu_trial = p[i].alpha*E + p[i].mup; // New tot dipole
+                  Point mu_err = mu_trial - p[i].mu*p[i].muscalar;     // Difference between former and current state
                   mu_err_norm[i] = mu_err.norm();// Get norm of previous row
                   p[i].muscalar = mu_trial.norm();// Update dip scalar in particle
                   if(p[i].muscalar < 1e-6) {
@@ -114,27 +111,25 @@ namespace Faunus {
             }
 
           void _trialMove() FOVERRIDE {
-            Tmove::_trialMove();                         // base class MC move
-            field.resize(3,Tmove::spc->trial.size());          // make sure sizes match
-
-            // Get induced dipole moments
+            Tmove::_trialMove();                     // base class MC move
+            field.resize(3,Tmove::spc->trial.size());// match sizes
             Point E_ext(0,0,0); // No external field 
             induceDipoles(*Tmove::pot,Tmove::spc->trial,E_ext);
           }
 
-          double _energyChange() {
+          double _energyChange() FOVERRIDE {
             if(Tmove::iparticle == -1) {
               return 0.0;
             }
             return (Energy::systemEnergy(*spc,*pot,spc->trial)-Energy::systemEnergy(*spc,*pot,spc->p));
           }
 
-          void _rejectMove() {
+          void _rejectMove() FOVERRIDE {
             Tmove::_rejectMove();
             Tmove::spc->trial = Tmove::spc->p;
           }
 
-          void _acceptMove() {
+          void _acceptMove() FOVERRIDE {
             Tmove::_acceptMove();
             Tmove::spc->p = Tmove::spc->trial;
           }

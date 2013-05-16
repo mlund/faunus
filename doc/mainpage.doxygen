@@ -17,6 +17,7 @@ Table of contents
 - Tutorials
   - @ref example_minimal 
   - @ref example_bulk 
+  - @ref example_water
   - @ref example_polymers
   - @ref example_temper   
   - @ref example_slitpolymer

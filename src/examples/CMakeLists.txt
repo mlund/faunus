@@ -39,3 +39,7 @@ fau_example(example_bulk "./" bulk.cpp)
 set_target_properties(example_bulk PROPERTIES OUTPUT_NAME "bulk")
 add_test( example_bulk ${CMAKE_CURRENT_SOURCE_DIR}/bulk.run )
 
+fau_example(example_water "./" water.cpp)
+set_target_properties(example_water PROPERTIES OUTPUT_NAME "water")
+add_test( example_water ${CMAKE_CURRENT_SOURCE_DIR}/water.run )
+

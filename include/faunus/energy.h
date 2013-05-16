@@ -718,7 +718,8 @@ namespace Faunus {
             std::ostringstream o;
             o << textio::pad(textio::SUB,15,"Pressure")
               << P*1e30/pc::Nav << " mM = "
-              << P*pc::kB*pc::T()*1e30 << " Pa" << endl;
+              << P*pc::kB*pc::T()*1e30 << " Pa = "
+              << P*pc::kB*pc::T()*1e30/0.980665e5 << " atm\n";
             return o.str();
           }
         public:

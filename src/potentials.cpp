@@ -376,7 +376,7 @@ namespace Faunus {
       using namespace textio;
       std::ostringstream o;
       o << Coulomb::info(w)
-        << pad(SUB,w,"More info") << "doi:10.1063/1.4729748\n"
+        << pad(SUB,w,"More info") << "doi:10/j97\n"
         << pad(SUB,w,"Cut-off") << 1/Rcinv << _angstrom+"\n";
       return o.str();
     }

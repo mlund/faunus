@@ -664,6 +664,7 @@ INPUT                  = doc \
                          src/examples/polymers.cpp \
                          src/examples/slitpolymer.cpp \
                          src/examples/membrane.cpp \
+                         src/examples/water.cpp \
                          include/faunus
 
 # This tag can be used to specify the character encoding of the source files

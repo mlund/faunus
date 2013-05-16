@@ -948,6 +948,8 @@ namespace Faunus {
         }
     };
     /*
+     * Perhaps make this a template, taking T=double as parameter?
+     *
        class checkWhiteNoise {
        private:
        std::vector<double> noise;

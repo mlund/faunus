@@ -22,15 +22,14 @@ int main() {
   // Read single water from disk and add N times
   Group sol;
   sol.setMolSize(3);
-  FormatAAM aam;
-  string flipid = mcp.get<string>("mol_file","");
-  int Nlipid=mcp("mol_N",1);
-  for (int i=0; i<Nlipid; i++) {
-    aam.load(flipid);
-    cout << atom[aam.particles()[0].id].name << endl;
+  string file = mcp.get<string>("mol_file");
+  int N=mcp("mol_N",1);
+  for (int i=0; i<N; i++) {
+    FormatAAM aam;
+    aam.load(file);
     Geometry::FindSpace().find(spc.geo, spc.p, aam.particles());
-    Group pol = spc.insert( aam.particles() );// Insert into Space
-    sol.setrange(0, pol.back());
+    Group g = spc.insert( aam.particles() );// Insert into Space
+    sol.setrange(0, g.back());
   }
   spc.enroll(sol);
 

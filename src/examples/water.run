@@ -23,7 +23,7 @@ HW    3    2.31    5.89    0.21  0.4238   1.00800 1
 
 echo "
 atomlist           water.json   # atom properties
-cuboid_len         25           # angstrom
+cuboid_len         27           # angstrom
                   
 temperature        300          # K
 epsilon_r          1            # dielectric const.

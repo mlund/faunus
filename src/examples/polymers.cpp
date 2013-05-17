@@ -38,8 +38,8 @@ int main() {
     FormatAAM aam;                                       // AAM structure file I/O
     aam.load(polyfile);
     Geometry::FindSpace().find(
-        spc.geo, spc.p, aam.particles() );              // find empty spot in particle vector
-    g = spc.insert( aam.particles() );                // insert into space
+        spc.geo, spc.p, aam.particles() );               // find empty spot in particle vector
+    g = spc.insert( aam.particles() );                   // insert into space
     g.name="Polymer";
     spc.enroll(g);
     for (int i=g.front(); i<g.back(); i++)
@@ -103,9 +103,10 @@ int main() {
           break;
       }
 
+      // polymer-polymer mass center rdf
       for (auto i=pol.begin(); i!=pol.end()-1; i++)
         for (auto j=i+1; j!=pol.end(); j++)
-          rdf( spc.geo.dist(i->cm,j->cm) )++;// polymer mass-center distribution function
+          rdf( spc.geo.dist(i->cm,j->cm) )++;
 
     } // end of micro loop
 

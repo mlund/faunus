@@ -3,11 +3,12 @@
 
 #ifndef SWIG
 #include <faunus/common.h>
+#include "point.h"
 #endif
 
 namespace Faunus {
 
-  /*!
+  /**
    * @brief Atomic properties
    */
   struct AtomData {
@@ -18,19 +19,20 @@ namespace Faunus {
     double sigma,      //!< LJ diameter [angstrom]
            eps,        //!< LJ epsilon [kJ/mol]
            radius,     //!< Radius [angstrom]
-           mu,         //!< Dipole momentscalar [eÅ]
+           muscalar,   //!< Dipole momentscalar [eÅ]
            mw,         //!< Weight [g/mol]
            charge,     //!< Charge/valency [e]
            activity,   //!< Chemical activity [mol/l]
-           alpha,      //!< Polarizability [C^2 A^2 / J]
            dp,         //!< Translational displacement parameter [angstrom]
            dprot,      //!< Rotational displacement parameter [radians]
            mean,       //!< Mean value... (charge, sasa, etc.)
            variance;   //!< Spread around AtomData::mean
-    short int patchtype;  //!< If patchy particle, which type of patch
-    Thydrophobic hydrophobic;  //!< Are we hydrophobic?
-    Eigen::Matrix3d alphamatrix,
-                    theta;  //!< Quadrupole moment
+    Point mu;
+    short int patchtype;     //!< If patchy particle, which type of patch
+    Thydrophobic hydrophobic;//!< Are we hydrophobic?
+    Tensor<double>
+      alpha,           //!< Polarizability
+      theta;           //!< Quadrupole moment
     string name;       //!< Name. Avoid spaces.
     bool operator==(const AtomData &d) const { return (*this==d); }
   };
@@ -78,9 +80,12 @@ namespace Faunus {
    * @brief Class for loading and storing atomic properties
    * 
    * This will load atom properties from disk and store them in a
-   * map of AtomData. The recommended file format is JSON (<http://www.json.org>)
-   * and all atom properties must be inclosed in an object with the keyword "atomlist".
-   * While not strictly JSON compliant, comments beginning with `//` are allowed.
+   * map of AtomData. The recommended file format is JSON
+   * (<http://www.json.org>)
+   * and all atom properties must be inclosed in an object with
+   * the keyword "atomlist".
+   * While not strictly JSON compliant, comments beginning
+   * with `//` are allowed.
    * For example:
    *
    *     {
@@ -98,29 +103,39 @@ namespace Faunus {
    *       }
    *     }
    *
+   * Example 2: 
+   *       "atomlist" :
+   *       {
+   *         "sol1" : { "q": 1.0, "r":1.9, "mw":22.99, "mu":"1.3 0.1 0",
+   *         "alpha":"1.1   0 0 2.3 0   1" },   // Matrix input in 
+   *         "theta":"2.4 0.3 0 1.8 0 3.2"}     // (xx, xy, xz, yy, yz, zz)-form
+   *       }
+   * 
    * @note
    * For simple JSON syntax highlighting in the VIM editor, add
    * the following to `.vimrc`:
    *
    *     au! BufRead,BufNewFile *.json set filetype=javascript
    *
-   * Loading the input file, the following keywords are read and if not present,
-   * a default value of zero, false or unity (mw) is assumed.
+   * Loading the input file, the following keywords are read and
+   * if not present, a default value of zero, false or unity (mw) is assumed.
    *
    * Key           | Description
-   * :------------ | :----------------------------------------------------------------
+   * :------------ | :-------------------------------------------------------
    * `activity`    | Chemical activity for grand caninical MC [mol/l]
    * `alpha`       | Polarizability [\f$ 4\pi\epsilon_0 \f$ cubic angstrom]
    * `dp`          | Translational displacement parameter [angstrom] 
    * `dprot`       | Rotational displacement parameter [degrees] (will be converted to radians)
    * `eps`         | Epsilon energy scaling commonly used for Lennard-Jones interactions etc. [kJ/mol] 
    * `hydrophobic` | Is the particle hydrophobic? [true/false]
-   * `mu`          | Dipole moment scalar [Debye]
+   * `mu`          | Dipole moment vector [Debye]
+   * `theta`       | Quadrupole moment matrix [Debye Å]
    * `mw`          | Molecular weight [g/mol]
    * `patchtype`   | Patchtype for sphero-cylinders
    * `q`           | Valency / partial charge number [e]
    * `r`           | Radius = `sigma/2` [angstrom]
    * `sigma`       | `2*r` [angstrom] (overrides radius)
+   * 
    *
    * Code example:
    *
@@ -134,8 +149,8 @@ namespace Faunus {
    * simply named `atom`. This can be accessed from anywhere.
    *
    * If a non-JSON file is parsed, the loader attempts to use a file format
-   * from older versions of Faunus - see below. This is discouraged, though, as
-   * this is a fixed format that cannot be expanded.
+   * from older versions of Faunus - see below. This is discouraged, though,
+   * as this is a fixed format that cannot be expanded.
    *
    *     #     name    charge  radius     epsilon      Mw       hydrophobic?
    *     #             (e)     (angstrom) (kJ/mol)     (g/mol)  (yes/no)
@@ -146,24 +161,28 @@ namespace Faunus {
   class AtomMap {
     private:
       string filename;
-      bool includeJSON(const string&);       //!< Load JSON file
+      bool includeJSON(const string&);     //!< Load JSON file
     public:
-      AtomMap();                             //!< Constructor - set UNK atom type (fallback)
-      std::vector<AtomData> list;            //!< List of atoms
-      bool includefile(string);              //!< Append atom parameters from file
-      bool includefile(InputMap&);           //!< Append atom parameters from file
-      AtomData& operator[] (string);         //!< Name->data
-      AtomData& operator[] (AtomData::Tid);  //!< Id->data
-      string info();                         //!< Print info
+      AtomMap();                           //!< Constructor
+      std::vector<AtomData> list;          //!< List of atoms
+      bool includefile(string);            //!< Append atom parameters from file
+      bool includefile(InputMap&);         //!< Append atom parameters from file
+      AtomData& operator[] (string);       //!< Name->data
+      AtomData& operator[] (AtomData::Tid);//!< Id->data
+      string info();                       //!< Print info
 
-      /** @brief Copy properties into particles vector. Positions are left untouched! */
-      template<typename TParticleVector>
-        void reset_properties(TParticleVector &pvec) const {
+      /**
+       * @brief Copy properties into particles vector.
+       *
+       * Positions are left untouched!
+       */
+      template<typename Tpvec>
+        void reset_properties(Tpvec &pvec) const {
           for (auto &i : pvec)
             i = list.at( i.id );
         }
   };
 
-  extern AtomMap atom; //!< Global instance of AtomMap - can be accessed from anywhere
+extern AtomMap atom; //!< Global instance of AtomMap - can be accessed from anywhere
 }//namespace
 #endif

@@ -8,7 +8,7 @@
 function mkinput() {
 echo '{ "atomlist" :
   {
-    "sol" : { "sigma":'${sigma}', "mu":'$mu', "dp":'$dp', "dprot":'$dprot', "alpha":'$alpha'}
+    "sol" : { "sigma":'${sigma}', "mu":"0 0 $mu", "dp":'$dp', "dprot":'$dprot', "alpha":"$alpha 0 0 $alpha 0 $alpha"}
   }
 }' > stockmayer.json
 
@@ -18,13 +18,13 @@ loop_macrosteps        $loop_macrosteps
 loop_microsteps        $loop_microsteps
 
 dipdip_cutoff $dipdip_cutoff      # Reaction field cut off
-epsilon_rf    $epsilon_rf      # epsilon of the reaction field
-cuboid_len    $cuboid_len     # Box side length [angstrom]
-temperature   $temperature     # Temperature [K]
-epsilon_r     $epsilon_r      # Dielectric constant
-lj_eps        $lj_eps    # Uniform LJ epsilon parameter [kT]
-tion1         sol     # ion type 1
-nion1         $N      # number of ion type 1
+epsilon_rf    $epsilon_rf         # epsilon of the reaction field
+cuboid_len    $cuboid_len 
+temperature   $temperature    
+epsilon_r     $epsilon_r          # Dielectric constant
+lj_eps        $lj_eps             # Uniform LJ epsilon parameter [kT]
+tion1         sol 
+nion1         $N  
 " > stockmayer.input
 }
 
@@ -51,62 +51,5 @@ if [ -x $exe ]; then
   $exe
   rc=$?
   rm -f stockmayer.input stockmayer.json
-#  exit $rc
+  exit $rc
 fi
-cp gofr.dat gofr_eps_inf_1000.dat
-cp mucorr.dat mucorr_eps_inf_1000.dat
-exit $rc
-
-
-if [ -x $exe ]; then
-  sigma=1.0
-  mu=1.5712
-  dp=0.5
-  dprot=30
-  alpha=0
-  loop_macrosteps=10
-  loop_microsteps=1000
-  dipdip_cutoff=10.5    # Reaction field cut off
-  epsilon_rf=1            # epsilon of the reaction field
-  cuboid_len=19.2586      # Box side length [angstrom]
-  temperature=4321        # Temperature [K]
-  epsilon_r=1             # Dielectric constant
-  lj_eps=0.069            # Uniform LJ epsilon parameter [kT]
-  N=1000                  # number of ion type 1
-  mkinput
-  $exe
-  rc=$?
-  rm -f stockmayer.input stockmayer.json
-  #exit $rc
-fi
-cp gofr.dat gofr_eps_1_1000.dat
-cp mucorr.dat mucorr_eps_1_1000.dat
-exit $rc
-
-
-if [ -x $exe ]; then
-  sigma=1.0
-  mu=1.5712
-  dp=0.5
-  dprot=30
-  alpha=0
-  loop_macrosteps=10
-  loop_microsteps=1000
-  dipdip_cutoff=10.5    # Reaction field cut off
-  epsilon_rf=80            # epsilon of the reaction field
-  cuboid_len=19.2586      # Box side length [angstrom]
-  temperature=4321        # Temperature [K]
-  epsilon_r=1             # Dielectric constant
-  lj_eps=0.069            # Uniform LJ epsilon parameter [kT]
-  N=1000                  # number of ion type 1
-  mkinput
-  $exe
-  rc=$?
-  rm -f stockmayer.input stockmayer.json
-#  exit $rc
-fi
-cp gofr.dat gofr_eps_80_1000.dat
-cp mucorr.dat mucorr_eps_80_1000.dat
-
-exit 1
-

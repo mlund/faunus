@@ -74,22 +74,6 @@ namespace Faunus {
       return _brief();
     }
 
-    bool PairPotentialBase::save(string filename, particle::Tid ida, particle::Tid idb) {
-      std::ofstream f(filename.c_str());
-      if (f) {
-        double min=0.9 * (atom[ida].radius+atom[idb].radius);
-        particle a,b;
-        a = atom[ida];
-        b = atom[idb];
-        f << "# Pair potential: " << brief() << endl
-          << "# Atoms: " << atom[ida].name << "<->" << atom[idb].name << endl;
-        for (double r=min; r<=150; r+=0.5)
-          f << std::left << std::setw(10) << r << " " ;//<< operator()(a,b,r*r) << endl; 
-        return true;
-      }
-      return false;
-    }
-
     void PairPotentialBase::test(UnitTest&) {}
 
     Harmonic::Harmonic(double forceconst, double eqdist) : k(forceconst), req(eqdist) {
@@ -376,7 +360,7 @@ namespace Faunus {
       using namespace textio;
       std::ostringstream o;
       o << Coulomb::info(w)
-        << pad(SUB,w,"More info") << "doi:10.1063/1.4729748\n"
+        << pad(SUB,w,"More info") << "doi:10/j97\n"
         << pad(SUB,w,"Cut-off") << 1/Rcinv << _angstrom+"\n";
       return o.str();
     }

@@ -19,6 +19,7 @@
 #include <memory>
 #include <numeric>
 #include <type_traits>
+#include <tuple>
 #endif
 
 

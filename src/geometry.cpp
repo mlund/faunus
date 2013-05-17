@@ -355,16 +355,5 @@ namespace Faunus {
        */
 #endif
 
-    void translate(const Geometrybase &geo, p_vec &p, Point d) {
-      for (auto &pi : p) {
-        pi += d;
-        geo.boundary(pi);
-      }
-    }
-
-    void cm2origo(const Geometrybase &geo, p_vec &p) {
-      translate(geo, p, -massCenter(geo, p) );
-    }
-
   }//namespace geometry
 }//namespace

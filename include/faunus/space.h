@@ -100,6 +100,10 @@ namespace Faunus {
         double charge() const;       //!< Sum all charges
         string info();               //!< Information string
         void displace(const Point&); //!< Displace system by a vector
+
+        inline double dist(int i, int j) const {
+          return geo.dist(p[i],p[j]);
+        }
     };
 
   template<class Tgeometry, class Tparticle>
@@ -396,9 +400,10 @@ namespace Faunus {
       o << header("Simulation Space and Geometry")
         << geo.info(w)
         << pad(SUB,w,"Number of particles") << p.size() << endl
-        << pad(SUB,w,"Electroneutrality") << ((abs(z)>1e-7) ? "NO!" : "Yes") << " "  << z << endl
-        << pad(SUB,w,"System sanity check") << (checkSanity() ? "Passed" : "Failed") << endl
-        << pad(SUB,w,"Reserved Particle Space") << p.capacity() << " (p), " << trial.capacity() << " (trial)\n"
+        << pad(SUB,w,"Electroneutrality")
+        << ((abs(z)>1e-7) ? "NO!" : "Yes") << " "  << z << endl
+        << pad(SUB,w,"System sanity check")
+        << (checkSanity() ? "Passed" : "Failed") << endl
         << indent(SUB) << "Groups:" << endl;
       for (size_t i=0; i<g.size(); i++) {
         std::ostringstream range;
@@ -406,12 +411,11 @@ namespace Faunus {
         o << indent(SUBSUB) << std::left
           << setw(6) << i+1
           << setw(17) << range.str()
-          << "N/V = " << setw(6) << g[i]->size()/geo.getVolume() << _angstrom+superminus+cubed
-          << " = "  << setw(6) << g[i]->size()/geo.getVolume()*1e30/pc::Nav << " mM  "
-          << g[i]->name
-          << endl;
+          << "N/V = " << setw(6) << g[i]->numMolecules()/geo.getVolume()
+          << _angstrom+superminus+cubed
+          << " = "  << setw(6) << g[i]->size()/geo.getVolume()*1e30/pc::Nav
+          << " mM  " << g[i]->name << endl;
       }
-
       return o.str();
     }
 

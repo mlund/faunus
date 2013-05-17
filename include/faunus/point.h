@@ -117,6 +117,12 @@ namespace Faunus {
         in >> (*this)[i];
       return *this;
     }
+    
+    /** @brief Read from string */
+    PointBase& operator<<(const std::string &in) {
+      std::istringstream i(in);
+      return operator<<(i);
+    }
 
     /**
      * @brief Transform point (rotation etc)
@@ -136,6 +142,59 @@ namespace Faunus {
         *this = rot(*this);
       }
   };
+
+  template<class T>
+    struct Tensor : public Eigen::Matrix<T,3,3> {
+      typedef Eigen::Matrix<T,3,3> Tmat; //!< Matrix from Eigen
+
+      /** @brief Default constructor. Data is *not* zeroed */
+      Tensor() {}
+
+      Tensor(T xx, T xy, T xz, T yy, T yz, T zz) {
+        (*this) << xx,xy,xz,xy,yy,yz,xz,yz,zz;
+      }
+
+      template<typename OtherDerived>
+        Tensor(const Eigen::MatrixBase<OtherDerived>& other) : Tmat(other) {}
+
+      template<typename OtherDerived>
+        Tensor& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
+          Tmat::operator=(other);
+          return *this;
+        }
+
+      /** @brief Zero data */
+      void clear() { Tmat::setZero(); }
+
+      /** @brief Read from stream */
+      Tensor& operator<<(std::istream &in) {
+        (*this).clear();
+        for (int i=0; i<(*this).rows(); i++) {
+          for (int j=i; j < (*this).cols();j++) {
+            in >> (*this)(i,j);
+            (*this)(j,i) = (*this)(i,j);
+          }
+        }
+        return *this;
+      }
+
+      /** @brief Read from string */
+      Tensor& operator<<(const std::string &in) {
+        std::istringstream i(in);
+        return operator<<(i);
+      }
+
+      /** @brief Write data members to stream */
+      friend std::ostream &operator<<(std::ostream &o, const Tensor<T> &t) {
+        for (int i=0; i!=t.rows(); ++i)
+          for (int j=i; j!=t.cols(); ++j)
+            o << t(i,j);
+        return o;
+      }
+
+      template<typename Trotator>
+        void rotate(const Trotator &rot) { *this = rot(*this); }
+    };
 
   /**
    * @brief Hypersphere particle
@@ -391,9 +450,10 @@ namespace Faunus {
     Point mu;               //!< Dipole moment unit vector
     double muscalar;        //!< Dipole moment scalar
     Point mup;              //!< Permanente Dipole moment vector
-    Eigen::Matrix3d theta;
+    Tensor<double> alpha;         //!< Polarization matrix
+    Tensor<double> theta;         //!< Quadrupole matrix
 
-    inline DipoleParticle() : mu(0,0,1), muscalar(0),mup(0,0,1) {
+    inline DipoleParticle() : mu(0,0,0), muscalar(0),mup(0,0,0) {
     };
 
     /** @brief Copy constructor for Eigen derivatives */
@@ -418,10 +478,11 @@ namespace Faunus {
       class = typename std::enable_if<std::is_base_of<AtomData,T>::value>::type>
         DipoleParticle& operator=(const T &d) {
           PointParticle::operator=(d);
-          muscalar=d.mu;
-          mup=mup*muscalar;
+          muscalar=d.muscalar;
+          mu = d.mu;
+          mup=mu*muscalar;
+          alpha=d.alpha;
           theta=d.theta;
-          // copy more atom properties here...
           return *this;
         }
 
@@ -431,12 +492,16 @@ namespace Faunus {
       mu.operator<<(in);
       in >> muscalar;
       mup.operator<<(in);
+      alpha.operator<<(in);
+      theta.operator<<(in);
       return *this;
     }
 
     /* write data members to stream */
-    friend std::ostream &operator<<(std::ostream &o, const DipoleParticle &p) {
-      o << PointParticle(p) << " " << p.mu << " " << p.muscalar << " " << p.mup;
+    friend std::ostream &operator<<(std::ostream &o, const DipoleParticle &p)
+    {
+      o << PointParticle(p) << " " << p.mu << " " << p.muscalar
+        << " " << p.mup << " " << p.alpha << " " << p.theta;
       return o;
     }
 
@@ -444,6 +509,7 @@ namespace Faunus {
       void rotate(const Trotator &rot) {
         mu = rot(mu);
         mup = rot(mup);
+        alpha = rot(alpha);
         theta = rot(theta);
       }
   };

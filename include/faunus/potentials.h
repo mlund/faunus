@@ -71,11 +71,29 @@ namespace Faunus {
             return Point(0,0,0);
           }
 
-        bool save(string, particle::Tid, particle::Tid); //!< Save table of pair potential to disk
+        template<class Tparticle>
+          inline bool save(string, typename Tparticle::Tid, typename Tparticle::Tid); //!< Save table of pair potential to disk
         virtual void test(UnitTest&);                    //!< Perform unit test
 
         virtual std::string info(char=20);
     };
+
+    template<class Tparticle>
+      bool PairPotentialBase::save(string filename, typename Tparticle::Tid ida, typename Tparticle::Tid idb) {
+        std::ofstream f(filename.c_str());
+        if (f) {
+          double min=0.9 * (atom[ida].radius+atom[idb].radius);
+          particle a,b;
+          a = atom[ida];
+          b = atom[idb];
+          f << "# Pair potential: " << brief() << endl
+            << "# Atoms: " << atom[ida].name << "<->" << atom[idb].name << endl;
+          for (double r=min; r<=150; r+=0.5)
+            f << std::left << std::setw(10) << r << " " ;//<< operator()(a,b,r*r) << endl; 
+          return true;
+        }
+        return false;
+      }
 
     /**
      * @brief Harmonic pair potential
@@ -708,11 +726,11 @@ namespace Faunus {
      *     pot.add( atom["Cl"].id ,atom["CH4"].id, ChargeNonpolar(...) );
      *
      */
-    template<typename Tdefault, typename Tdist=double>
+    template<typename Tdefault, typename Tparticle=PointParticle, typename Tdist=double>
       class PotentialMap : public Tdefault {
         protected:
           typedef opair<int> Tpair;
-          typedef std::function<double(const particle&,const particle&,Tdist)> Tfunc;
+          typedef std::function<double(const Tparticle&,const Tparticle&,Tdist)> Tfunc;
           std::map<Tpair,Tfunc> m;
           std::string _info; // info for the added potentials (before turning into functors)
 
@@ -728,13 +746,12 @@ namespace Faunus {
               m[Tpair(id1,id2)] = pot;
             }
 
-          template<class Tparticle>
-            double operator()(const Tparticle &a, const Tparticle &b, const Tdist &r2) {
-              auto i=m.find( Tpair(a.id,b.id) );
-              if (i!=m.end())
-                return i->second(a,b,r2);
-              return Tdefault::operator()(a,b,r2);
-            }
+          double operator()(const Tparticle &a, const Tparticle &b, const Tdist &r2) {
+            auto i=m.find( Tpair(a.id,b.id) );
+            if (i!=m.end())
+              return i->second(a,b,r2);
+            return Tdefault::operator()(a,b,r2);
+          }
 
           std::string info(char w=20) {
             return Tdefault::info(w) + _info;

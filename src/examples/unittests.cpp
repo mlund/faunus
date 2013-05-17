@@ -85,8 +85,8 @@ TEST_CASE("Polar Test","Ion-induced dipole test (polarization)")
 {
   std::ofstream js("polar_test.json"), inp("polar_test.input");
   js << "{ \"atomlist\" : \n { \n "
-    << "\"sol1\" : {\"q\":1, \"dp\":0, \"dprot\":0, \"alpha\":0},\n"
-    << "\"sol2\" : {\"q\":0, \"dp\":0, \"dprot\":0, \"alpha\":2.6}\n } \n }";
+    << "\"sol1\" : {\"q\":1, \"dp\":0, \"dprot\":0, \"alpha\":\"0 0 0 0 0 0\"},\n"
+    << "\"sol2\" : {\"q\":0, \"dp\":0, \"dprot\":0, \"alpha\":\"2.6 0 0 2.6 0 2.6\"}\n } \n }";
   inp << "cuboid_len 10\n" << "temperature 298\n"
     << "epsilon_r 1\n tion1 sol1\n tion2 sol2\n nion1 1\n nion2 1\n";
   js.close();
@@ -94,8 +94,9 @@ TEST_CASE("Polar Test","Ion-induced dipole test (polarization)")
 
   ::atom.includefile("polar_test.json");
   InputMap in("polar_test.input");
+  using namespace Faunus::Potential;
+  typedef CombinedPairPotential<Coulomb,IonDipole> Tpair;
   typedef Space<Geometry::Cuboid, DipoleParticle> Tspace;
-  typedef Potential::CombinedPairPotential<Potential::Coulomb,Potential::IonDipole> Tpair;
   Energy::NonbondedVector<Tspace,Tpair> pot(in);
   Tspace spc(in);
   Group sol;
@@ -108,7 +109,83 @@ TEST_CASE("Polar Test","Ion-induced dipole test (polarization)")
   spc.trial = spc.p;
   CHECK(trans.move(1) == Approx(-5.69786)); // check energy change
   CHECK(spc.p[1].muscalar == Approx(0.162582)); // check induced moment
+  //remove("polar_test.json");
+  //remove("polar_test.input");
 }
+
+/*
+TEST_CASE("Stockmayer fluid","Checks stockmayer-potentoial")
+{
+  #ifdef Polarize
+  typedef Move::AtomicTranslationPol TmoveTran;   
+  typedef Move::AtomicRotationPol TmoveRot;
+  #else
+  typedef Move::AtomicTranslation TmoveTran;   
+  typedef Move::AtomicRotation TmoveRot;
+  #endif
+  std::ofstream json_file;
+  json_file.open ("stockmayer.json");
+  json_file
+    << "{ \"atomlist\" : \n { \n "
+    << "\"sol\" : {\"sigma\":1, \"dp\":8.939, \"dprot\":180, \"mu\":\"0 0 1.5712\", \"alpha\":\"1 0 0 1 0 1\"}\n"
+  json_file.close();
+  std::ofstream input_file;
+  input_file.open("stockmayer.input");
+  input_file
+  << "loop_macrosteps 10\n"
+  << "loop_microsteps 10\n \n"
+  << "dipdip_cutoff 10.5\n"
+  << "epsilon_rf 1\n"
+  << "cuboid_len 8.9390\n"
+    << "temperature 4321\n"
+    << "epsilon_r 1\n"
+    << "tion1 sol\n nion1 100";
+  input_file.close();
+
+  ::atom.includefile("stockmayer.json");         // load atom properties
+  InputMap in("stockmayer.input");               // open parameter file for user input
+  Energy::NonbondedVector<CombinedPairPotential<LennardJones,DipoleDipole>,Geometry::Cuboid> pot(in);   // create Hamiltonian, non-bonded only
+  EnergyDrift sys;                               // class for tracking system energy drifts
+  Space spc( pot.getGeometry() );                // create simulation space, particles etc.
+  Group sol;
+  sol.addParticles(spc, in);                     // group for particles
+  MCLoop loop(in);                               // class for mc loop counting
+  Analysis::RadialDistribution<> rdf(0.1);       // particle-particle g(r)
+  Analysis::Table2D<double,Average<double> > mucorr(0.2);       // particle-particle g(r)
+  TmoveTran trans(in,pot,spc);
+  TmoveRot rot(in,pot,spc);
+  trans.setGroup(sol);                                // tells move class to act on sol group
+  rot.setGroup(sol);                                  // tells move class to act on sol group
+  spc.load("state_ST");
+  spc.p = spc.trial;
+  
+  sys.init( Energy::systemEnergy(spc,pot,spc.p)  );      // store initial total system energy
+  while ( loop.macroCnt() ) {                         // Markov chain 
+    while ( loop.microCnt() ) {
+      if (slp_global() > 0.5)
+        sys+=trans.move( sol.size() );                     // translate
+      else
+        sys+=rot.move( sol.size() );                       // rotate
+      
+      if (slp_global()<0.5)
+        for (auto i=sol.front(); i<sol.back(); i++) { // salt radial distribution function
+          for (auto j=i+1; j<=sol.back(); j++) {
+            double r =pot.geometry.dist(spc.p[i],spc.p[j]); 
+            rdf(r)++;
+            mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu)/(spc.p[i].muscalar*spc.p[j].muscalar);
+          }
+        }
+    }    
+    
+    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
+    cout << loop.timing();
+  }
+  rdf.save("gofr_ST.dat");                               // save g(r) to disk
+  mucorr.save("mucorr_ST.dat");                               // save g(r) to disk
+  CHECK(sys.current() == Approx(-5.69786));         // check energy change
+  CHECK(trans.getAcceptance()*100 == Approx(1.01)); // check acceptence of translation
+  CHECK(rot.getAcceptance()*100 == Approx(0.54));   // check acceptence of rotation
+}*/
 
 TEST_CASE("Groups", "Check group range and size properties")
 {

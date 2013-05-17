@@ -499,7 +499,7 @@ namespace Faunus {
            * @param p Particle vector
            * @param E Holds field on each particle. Must have N columns.
            */
-          void field(const p_vec &p, Eigen::MatrixXd &E) FOVERRIDE {
+          void field(const Tpvec &p, Eigen::MatrixXd &E) FOVERRIDE {
             assert((int)p.size()==E.cols());
             size_t i=0;
             for (auto &pi : p) {
@@ -718,7 +718,8 @@ namespace Faunus {
             std::ostringstream o;
             o << textio::pad(textio::SUB,15,"Pressure")
               << P*1e30/pc::Nav << " mM = "
-              << P*pc::kB*pc::T()*1e30 << " Pa" << endl;
+              << P*pc::kB*pc::T()*1e30 << " Pa = "
+              << P*pc::kB*pc::T()*1e30/0.980665e5 << " atm\n";
             return o.str();
           }
         public:

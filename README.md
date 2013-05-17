@@ -59,8 +59,8 @@ Option                             | Description
 `-DCMAKE_CXX_FLAGS_DEBUG="..."`    | Compiler options for Debug mode
 `-DMYPLAYGROUND="..."`             | Add additional source directory (use absolute path)
 
-Example: Intel's C++ compiler with OpenMP parallelization
----------------------------------------------------------
+Example: Intel's C++ compiler
+-----------------------------
 
     $ CXX=icpc CC=icc cmake . -DCMAKE_BUILD_TYPE=Release
     $ make

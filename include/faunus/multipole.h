@@ -79,7 +79,8 @@ namespace Faunus {
          */
         template<class Tparticle> // q2mu(1->2,r) + q2mu(2->1,-r) = q2mu(1->2,r) - q2mu(2->1,r)
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-            return _lB*(q2mu(a.charge*b.muscalar,b.mu,r) - q2mu(b.charge*a.muscalar,a.mu,r)); 
+            return _lB*(q2mu(a.charge*b.muscalar,b.mu,r)
+                - q2mu(b.charge*a.muscalar,a.mu,r)); 
           }
 
         string info(char w) { return _brief(); }
@@ -98,8 +99,10 @@ namespace Faunus {
         double convert;
       public:
         DipoleDipole(InputMap &in) {
-          pc::setT ( in.get<double>("temperature", 298.15, "Absolute temperature (K)") );
-          double epsilon_r = in.get<double>("epsilon_r",80., "Dielectric constant");
+          pc::setT ( in.get<double>("temperature", 298.15,
+                "Absolute temperature (K)") );
+          double epsilon_r = in.get<double>("epsilon_r",80.,
+              "Dielectric constant");
           _lB=pc::lB( epsilon_r );
           convert = _lB*pc::kT()/(pc::e*pc::e);
         }
@@ -139,8 +142,9 @@ namespace Faunus {
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
             if (r.squaredNorm() < rc2)
-              return DipoleDipole::operator()(a,b,r) - eps*a.mu.dot(b.mu)*a.muscalar*b.muscalar;
-            return 0.0;
+              return DipoleDipole::operator()(a,b,r)
+                - eps*a.mu.dot(b.mu)*a.muscalar*b.muscalar;
+            return 0;
           }
 
         string info(char w) { return _brief(); }

@@ -947,7 +947,136 @@ namespace Faunus {
           return o.str();
         }
     };
+    /*
+     * Perhaps make this a template, taking T=double as parameter?
+     *
+       class checkWhiteNoise {
+       private:
+       std::vector<double> noise;
+       int le;
+       double significance;
+       double lag;
+       double mu;
+       double sigma2;
+       public:
+       inline checkWhiteNoise(std::vector<double> noise_in,double significance_in, double lag_in) {
+       noise = noise_in;
+       significance = significance_in;
+       lag = lag_in;
+       le = noise.size();
+       getMu();
+       getVariance();
+       }
 
-  }//namespace
+       bool check(int h) {
+       double Q = 0.0;
+       for(int k = 0;k < h; k++) {
+       Q += noise[k]*noise[k+lag]/(le-k);
+       }
+       Q = le*(le+2)*Q;
+       double chi2 = getChi2(1-significance,h);
+       if(Q > chi2) {
+       return false;
+       } else {
+       return true;
+       }
+       }
+
+       void getMu() {
+       mu = 0;
+       for(int k = 0;k < le; k++) {
+       mu += noise[k];
+       }
+       mu /= le;
+       }
+
+       void getVariance() {
+       sigma2 = 0;
+       for(int k = 0;k < le; k++) {
+       sigma2 += noise[k]*noise[k];
+       }
+       sigma2 -= mu*mu;
+       }
+
+       double getChi2(double x, int k) {
+       if(x < 0) return 0.0;
+       return (1-(incgamma(x,k)/(Gamma(x))));
+       }
+
+       double incgamma (double x, double a){
+       double sum = 0;
+       double term = 1.0/a;
+       int n = 1;
+       while (term != 0){
+       sum = sum + term;
+       term = term*(x/(a+n));
+       n++;
+       }
+       return pow(x,a)*exp(-1*x)*sum;
+       }
+
+       double Gamma(double x) {
+       if(std::abs(x-(int)x) < 1e-6 && (int)x > 1) {
+       return (int)x*Gamma(((int)x)-1);
+       } else if(std::abs(x-(int)x) < 1e-6 && (int)x == 1) {
+       return 1;
+}
+
+if(x <= 0) { 
+  return 0.0; 
+} else if(x <= 0.001) {
+  double constant = 0.577215664901532860606512090; // Euler's gamma constant
+  return 1.0/(x*(1.0 + constant*x));
+} else if(x <= 12) {
+  double y = x;
+  int n = 0;
+  bool arg_was_less_than_one = (y < 1.0);
+  if (arg_was_less_than_one) {
+    y += 1.0;
+  } else {
+    n = static_cast<int> (floor(y)) - 1;  // will use n later
+    y -= n;
+  }
+  static const double p[] =
+  {
+    -1.71618513886549492533811E+0,
+    2.47656508055759199108314E+1,
+    -3.79804256470945635097577E+2,
+    6.29331155312818442661052E+2,
+    8.66966202790413211295064E+2,
+    -3.14512729688483675254357E+4,
+    -3.61444134186911729807069E+4,
+    6.64561438202405440627855E+4};
+  static const double q[] =
+  {
+    -3.08402300119738975254353E+1,
+    3.15350626979604161529144E+2,
+    -1.01515636749021914166146E+3,
+    -3.10777167157231109440444E+3,
+    2.25381184209801510330112E+4,
+    4.75584627752788110767815E+3,
+    -1.34659959864969306392456E+5,
+    -1.15132259675553483497211E+5};
+  double num = 0.0;
+  double den = 1.0;
+  int i;
+  double z = y - 1;
+  for (i = 0; i < 8; i++) {
+    num = (num + p[i])*z;
+    den = den*z + q[i];
+  }
+  double result = num/den + 1.0;
+  if (arg_was_less_than_one) {
+    result /= (y-1.0);
+  } else {
+    for (i = 0; i < n; i++)
+      result *= y++;
+  }
+  return result;
+} else if (x > 171.624)
+return pc::infty;
+}
+};*/
+}//namespace
 }//namespace
 #endif

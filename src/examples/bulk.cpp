@@ -67,7 +67,7 @@ int main() {
   spc.load("state");                               // load old config. from disk (if any)
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );// store initial total system energy
 
-  cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
+  cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
@@ -77,11 +77,11 @@ int main() {
         sys+=iso.move();              // isobaric volume move
 
       if (slp_global() < 0.05) {
-        particle::Tid a=atom["Na"].id, b=atom["Cl"].id;
+        auto a=atom["Na"].id, b=atom["Cl"].id;
         for (auto i=salt.front(); i<salt.back(); i++) // salt radial distribution function
           for (auto j=i+1; j<=salt.back(); j++)
             if ( (spc.p[i].id==a && spc.p[j].id==b) || (spc.p[i].id==b && spc.p[j].id==a) )
-              rdf_ab( spc.geo.dist(spc.p[i],spc.p[j]) )++;
+              rdf_ab( spc.dist(i,j) )++;
       }
     } // end of micro loop
 
@@ -102,7 +102,7 @@ int main() {
   //pot.first.pairpot.test(test);
 
   // print information
-  cout << loop.info() << sys.info() << mv.info() << iso.info() << test.info();
+  cout << loop.info() + sys.info() + mv.info() + iso.info() + test.info();
 
   return test.numFailed();
 }

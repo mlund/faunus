@@ -404,8 +404,6 @@ namespace Faunus {
         << ((abs(z)>1e-7) ? "NO!" : "Yes") << " "  << z << endl
         << pad(SUB,w,"System sanity check")
         << (checkSanity() ? "Passed" : "Failed") << endl
-        << pad(SUB,w,"Reserved Particle Space") << p.capacity() << " (p), "
-        << trial.capacity() << " (trial)\n"
         << indent(SUB) << "Groups:" << endl;
       for (size_t i=0; i<g.size(); i++) {
         std::ostringstream range;

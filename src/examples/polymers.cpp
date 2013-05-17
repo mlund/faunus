@@ -104,8 +104,8 @@ int main() {
       }
 
       // polymer-polymer mass center rdf
-      for (int i=pol.begin(); i!=pol.end()-1; i++)
-        for (int j=i+1; j!=pol.end(); j++)
+      for (auto i=pol.begin(); i!=pol.end()-1; i++)
+        for (auto j=i+1; j!=pol.end(); j++)
           rdf( spc.geo.dist(i->cm,j->cm) )++;
 
     } // end of micro loop

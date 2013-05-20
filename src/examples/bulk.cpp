@@ -76,13 +76,8 @@ int main() {
       else 
         sys+=iso.move();              // isobaric volume move
 
-      if (slp_global() < 0.05) {
-        auto a=atom["Na"].id, b=atom["Cl"].id;
-        for (auto i=salt.front(); i<salt.back(); i++) // salt radial distribution function
-          for (auto j=i+1; j<=salt.back(); j++)
-            if ( (spc.p[i].id==a && spc.p[j].id==b) || (spc.p[i].id==b && spc.p[j].id==a) )
-              rdf_ab( spc.dist(i,j) )++;
-      }
+      if (slp_global() < 0.05)
+        rdf_ab.sample(spc,salt,atom["Na"].id,atom["Cl"].id);
     } // end of micro loop
 
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current

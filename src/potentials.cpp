@@ -45,21 +45,6 @@ namespace Faunus {
       return name+": N/A";
     }
     
-    //double PairPotentialBase::operator() (const particle &a, const particle &b, const Point &r2) const {
-    //  return operator()(a,b,r2.squaredNorm());
-    //}
-
-    /**
-     * @param a First particle
-     * @param b Second particle
-     * @param r2 Squared distance between them (angstrom squared)
-     * @param p Vector from: p=b-a
-     */
-    Point PairPotentialBase::force(const particle &a, const particle &b, double r2, const Point &p) {
-      assert(!"Force not overrided!");
-      return Point(0,0,0);
-    }
-
     /**
      * This will reset the temperature to the specified value. By default this function
      * does nothing, although in Debug mode it will throw an exception if derived classes

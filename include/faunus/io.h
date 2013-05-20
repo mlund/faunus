@@ -3,11 +3,9 @@
 
 #ifndef SWIG
 #include <faunus/common.h>
-#include <faunus/potentials.h>
 #include <faunus/geometry.h>
 #include <faunus/group.h>
-#include <faunus/energy.h>
-
+#include <faunus/space.h>
 
 #ifndef __cplusplus
 #define __cplusplus
@@ -382,37 +380,70 @@ namespace Faunus {
   /*!
    * \brief File IO for faste protein sequences
    */
-  class FormatFastaSequence {
-    private:
-      std::map<char,string> map; //!< Map one letter code (char) to three letter code (string)
-      Potential::Harmonic bond;
-    public:
-      p_vec interpret(string);
-      FormatFastaSequence(double=0.76, double=4.9);
+  template<class Tbonded>
+    class FormatFastaSequence {
+      private:
+        std::map<char,string> map; //!< Map one letter code (char) to three letter code (string)
+        Tbonded bond;
+      public:
+        FormatFastaSequence(double harmonic_k, double harmonic_req) : bond(harmonic_k, harmonic_req) {
+          map['A']="ALA";
+          map['R']="ARG";
+          map['N']="ASN";
+          map['D']="ASP";
+          map['C']="CYS";
+          map['E']="GLU";
+          map['Q']="GLN";
+          map['G']="GLY";
+          map['H']="HIS";
+          map['I']="ILE";
+          map['L']="LEU";
+          map['K']="LYS";
+          map['M']="MET";
+          map['F']="PHE";
+          map['P']="PRO";
+          map['S']="SER";
+          map['T']="THR";
+          map['W']="TRP";
+          map['Y']="TYR";
+          map['V']="VAL";
+        }
 
-      /*!
-       * Inserts at end of particle vector
-       */
-      template<class Tspace, class Tbonded>
-        Group insert(string fasta, Tspace &spc, Tbonded &b) {
-          p_vec p = interpret(fasta);
-          Group g( p.size() );
-          if (p.size()>0) {
-            for (auto &a : p)
-              if ( spc.insert(a) )
-                g.resize( g.size()+1 );
-            for (int i=g.front(); i<g.back(); i++)
-              b.add(i, i+1, bond );
+        p_vec interpret(string seq) {
+          p_vec p;
+          particle a;
+          for (auto c : seq) {
+            if (map.find(c)!=map.end() ) {
+              a=atom[ map[c] ];
+              p.push_back(a);
+            }
           }
-          return g;
+          return p;
         }
 
-      template<class Tspace, class Tbonded>
-        Group include(string file, Tspace &spc, Tbonded &b) {
-          Group g;
-          return g;
-        }
+        /*!
+         * Inserts at end of particle vector
+         */
+        template<class Tspace>
+          Group insert(string fasta, Tspace &spc, Tbonded &b) {
+            p_vec p = interpret(fasta);
+            Group g( p.size() );
+            if (p.size()>0) {
+              for (auto &a : p)
+                if ( spc.insert(a) )
+                  g.resize( g.size()+1 );
+              for (int i=g.front(); i<g.back(); i++)
+                b.add(i, i+1, bond );
+            }
+            return g;
+          }
 
-  };
+        template<class Tspace>
+          Group include(string file, Tspace &spc, Tbonded &b) {
+            Group g;
+            return g;
+          }
+
+    };
 }//namespace
 #endif

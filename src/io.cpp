@@ -223,41 +223,6 @@ namespace Faunus {
     return save(file, t);
   }
 
-  FormatFastaSequence::FormatFastaSequence(double harmonic_k, double harmonic_req) : bond(harmonic_k, harmonic_req) {
-    map['A']="ALA";
-    map['R']="ARG";
-    map['N']="ASN";
-    map['D']="ASP";
-    map['C']="CYS";
-    map['E']="GLU";
-    map['Q']="GLN";
-    map['G']="GLY";
-    map['H']="HIS";
-    map['I']="ILE";
-    map['L']="LEU";
-    map['K']="LYS";
-    map['M']="MET";
-    map['F']="PHE";
-    map['P']="PRO";
-    map['S']="SER";
-    map['T']="THR";
-    map['W']="TRP";
-    map['Y']="TYR";
-    map['V']="VAL";
-  }
-
-  p_vec FormatFastaSequence::interpret(string seq) {
-    p_vec p;
-    particle a;
-    for (auto c : seq) {
-      if (map.find(c)!=map.end() ) {
-        a=atom[ map[c] ];
-        p.push_back(a);
-      }
-    }
-    return p;
-  }
-
   FormatTopology::FormatTopology() : rescnt(0) {}
   //bool FormatTopology::open(string);                         //!< Open file for writing
   //void FormatTopology::writeDefaults();

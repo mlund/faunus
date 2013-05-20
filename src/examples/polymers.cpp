@@ -31,15 +31,14 @@ int main() {
 
   // Add polymers
   vector<Group> pol( mcp.get("polymer_N",0));            // vector of polymers
-  string polyfile = mcp.get<string>("polymer_file", "");
+  string file = mcp.get<string>("polymer_file", "");
   double req = mcp.get<double>("polymer_eqdist", 0);
   double k   = mcp.get<double>("polymer_forceconst", 0);
   for (auto &g : pol) {                                  // load polymers
-    FormatAAM aam;                                       // AAM structure file I/O
-    aam.load(polyfile);
-    Geometry::FindSpace().find(
-        spc.geo, spc.p, aam.particles() );               // find empty spot in particle vector
-    g = spc.insert( aam.particles() );                   // insert into space
+    Tspace::ParticleVector v;                            // temporary, empty particle vector
+    FormatAAM::load(file,v);                             // load AAM structure into v
+    Geometry::FindSpace().find(spc.geo,spc.p,v);         // find empty spot in particle vector
+    g = spc.insert(v);                                   // insert into space
     g.name="Polymer";
     spc.enroll(g);
     for (int i=g.front(); i<g.back(); i++)
@@ -118,7 +117,7 @@ int main() {
   // save to disk
   rdf.save("rdf_p2p.dat");
   spc.save("state");
-  FormatPQR().save("confout.pqr", spc.p);
+  FormatPQR::save("confout.pqr", spc.p);
 
   // perform unit tests
   iso.test(test);

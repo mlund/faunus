@@ -25,10 +25,10 @@ int main() {
   string file = mcp.get<string>("mol_file");
   int N=mcp("mol_N",1);
   for (int i=0; i<N; i++) {
-    FormatAAM aam;
-    aam.load(file);
-    Geometry::FindSpace().find(spc.geo, spc.p, aam.particles());
-    Group g = spc.insert( aam.particles() );// Insert into Space
+    Tspace::ParticleVector v;
+    FormatAAM::load(file,v);
+    Geometry::FindSpace().find(spc.geo, spc.p, v);
+    Group g = spc.insert(v);// Insert into Space
     sol.setrange(0, g.back());
   }
   spc.enroll(sol);
@@ -79,7 +79,7 @@ int main() {
 
   rdf.save("rdf.dat");
   spc.save("state");
-  FormatPQR().save("confout.pqr", spc.p);
+  FormatPQR::save("confout.pqr", spc.p);
 
   // perform unit tests
   iso.test(test);

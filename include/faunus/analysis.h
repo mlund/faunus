@@ -13,10 +13,9 @@
 
 namespace Faunus {
   class checkValue;
-  class Space;
 
-  /*!
-   * \brief Namespace for analysis routines
+  /**
+   * @brief Namespace for analysis routines
    */
   namespace Analysis {
 
@@ -155,7 +154,7 @@ namespace Faunus {
               }
             return x;
           }
-        
+
           /*! Returns x at minumum x */
           Tx minx() {
             assert(!map.empty());
@@ -190,9 +189,9 @@ namespace Faunus {
           }
       };
 
-    /*!
-      \brief General class for penalty functions along a coordinate
-      \date Malmo, 2011
+    /**
+      @brief General class for penalty functions along a coordinate
+      @date Malmo, 2011
 
       This class stores a penalty function, f(x), along a given coordinate, x,
       of type `Tcoordinate` which could be a distance, angle, volume etc.
@@ -200,9 +199,8 @@ namespace Faunus {
       Each time the system visits x the update(x) function should be called
       so as to add the penalty energy, du. In the energy evaluation, the
       coordinate x should be associated with the extra energy f(x).
-      This will eventually ensure uniform sampling.
 
-      Example:
+      This will eventually ensure uniform sampling. Example:
 
       ~~~
       PenaltyFunction<double> f(0.1,1000,6.0); // 0.1 kT penalty
@@ -219,7 +217,6 @@ namespace Faunus {
       This threshold check is carried out every 1000th call to `update()`.
       Note also that when the penalty energy is scaled, so is the threshold
       (also by a factor of 0.5).
-
       */
     template<typename Tcoord=float>
       class PenaltyFunction : public Table2D<Tcoord,double> {
@@ -233,12 +230,14 @@ namespace Faunus {
           Tcoord _du; //!< penalty energy
           std::string _log;
         public:
-          /*!
-           * \brief Constructor
-           * \param penalty Penalty energy for each update (kT)
-           * \param Ncheck Check histogram every Nscale'th step (put large number for no scaling, default)
-           * \param kTthreshold Half penalty energy once this threshold in distribution has been reached
-           * \param res Resolution of the penalty function (default 0.1)
+          /**
+           * @brief Constructor
+           * @param penalty Penalty energy for each update (kT)
+           * @param Ncheck Check histogram every Nscale'th step
+           *        (put large number for no scaling, default)
+           * @param kTthreshold Half penalty energy once this
+           *        threshold in distribution has been reached
+           * @param res Resolution of the penalty function (default 0.1)
            */
           PenaltyFunction(double penalty, int Ncheck=1e9, double kTthreshold=5, Tcoord res=0.1)
             : Tbase(res, Tbase::XYDATA), hist(res, Thist::HISTOGRAM) {
@@ -251,7 +250,7 @@ namespace Faunus {
               _log="#   initial penalty energy = "+std::to_string(_du)+"\n";
             }
 
-          /*! \brief Update penalty for coordinate */
+          /** @brief Update penalty for coordinate */
           double update(Tcoord coordinate) {
             _cnt++;
             Tbase::operator()(coordinate)+=_du;  // penalize coordinate
@@ -278,7 +277,7 @@ namespace Faunus {
             Tbase::save(filename);
             hist.save(filename+".dist");
           }
-        
+
           string info() {
             return "# Penalty function log:\n" + _log;
           }
@@ -312,65 +311,65 @@ namespace Faunus {
      * \date Lund 2011
      */
     template<typename Tx=float, typename Ty=unsigned long long int>
-    class RadialDistribution : public Table2D<Tx,Ty> {
-    private:
-      
-      typedef Table2D<Tx,Ty> Ttable;
-      virtual double volume(Tx x) {
-        return 4./3.*pc::pi*( pow(x+0.5*this->dx,3) - pow(x-0.5*this->dx,3) );
-      }
-      
-      double get(Tx x) {
-        assert( volume(x)>0 );
-        assert( this->count()>0 );
-        
-        if (bulkconc.cnt==0) bulkconc+=1;
-        
-        return ((double)this->operator()(x)*Npart.avg()) / (volume(x) *(double)this->count() * bulkconc.avg())
-        ;
-        
-      }
-      Average<double> bulkconc; //!< Average bulk concentration
-      Average<double> Npart;
-    public:
-      Tx maxdist; //!< Pairs with distances above this value will be skipped (default: infinity)
-      
-      /*!
-       * \param res Resolution of X axis
-       */
-      RadialDistribution(Tx res=0.2) : Ttable(res,Ttable::HISTOGRAM) {
-        this->name="Radial Distribution Function";
-        
-        maxdist=pc::infty;
-        static_assert( std::is_integral<Ty>::value, "Histogram must be of integral type");
-        static_assert( std::is_unsigned<Ty>::value, "Histogram must be unsigned");
-      }
-      /*!
-       * \brief Sample radial distibution of two atom types
-       * \param spc Simulation space
-       * \param g Group to search
-       * \param ida Atom id of first particle
-       * \param idb Atom id of second particle
-       */
-      void sample(Space &spc, Group &g, short ida, short idb) {
-        
-        for (auto i=g.begin(); i!=g.end()-1; i++)
-          for (auto j=i+1; j!=g.end(); j++)
-            if ( (spc.p[*i].id==ida && spc.p[*j].id==idb) || (spc.p[*i].id==idb && spc.p[*j].id==ida) ) {
-              Tx r=spc.geo->dist(spc.p[*i], spc.p[*j]);
-              if (r<=maxdist)
-                this->operator() (r)++;
-            }
-        double bulk=0;
-	      for (auto i : g){
-          if (spc.p[i].id==ida || spc.p[i].id==idb){
-            bulk++;
+      class RadialDistribution : public Table2D<Tx,Ty> {
+        private:
+          typedef Table2D<Tx,Ty> Ttable;
+          virtual double volume(Tx x) {
+            return 4./3.*pc::pi*( pow(x+0.5*this->dx,3)
+                - pow(x-0.5*this->dx,3) );
           }
-	      }
-	      Npart+=bulk;
-	      bulkconc += bulk / spc.geo->getVolume();
-      }
-    };
+
+          double get(Tx x) {
+            assert( volume(x)>0 );
+            assert( this->count()>0 );
+
+            if (bulkconc.cnt==0) bulkconc+=1;
+
+            return ((double)this->operator()(x)*Npart.avg()) / (volume(x) *(double)this->count() * bulkconc.avg())
+              ;
+
+          }
+          Average<double> bulkconc; //!< Average bulk concentration
+          Average<double> Npart;
+        public:
+          Tx maxdist; //!< Pairs with distances above this value will be skipped (default: infinity)
+
+          /*!
+           * \param res Resolution of X axis
+           */
+          RadialDistribution(Tx res=0.2) : Ttable(res,Ttable::HISTOGRAM) {
+            this->name="Radial Distribution Function";
+
+            maxdist=pc::infty;
+            static_assert( std::is_integral<Ty>::value,
+                "Histogram must be of integral type");
+            static_assert( std::is_unsigned<Ty>::value,
+                "Histogram must be unsigned");
+          }
+          /*!
+           * \brief Sample radial distibution of two atom types
+           * \param spc Simulation space
+           * \param g Group to search
+           * \param ida Atom id of first particle
+           * \param idb Atom id of second particle
+           */
+          template<class Tspace>
+            void sample(Tspace &spc, Group &g, short ida, short idb) {
+              for (auto i=g.begin(); i!=g.end()-1; i++)
+                for (auto j=i+1; j!=g.end(); j++)
+                  if ( (spc.p[*i].id==ida && spc.p[*j].id==idb) || (spc.p[*i].id==idb && spc.p[*j].id==ida) ) {
+                    Tx r=spc.geo.dist(spc.p[*i], spc.p[*j]);
+                    if (r<=maxdist)
+                      this->operator() (r)++;
+                  }
+              double bulk=0;
+              for (auto i : g)
+                if (spc.p[i].id==ida || spc.p[i].id==idb)
+                  bulk++;
+              Npart+=bulk;
+              bulkconc += bulk / spc.geo.getVolume();
+            }
+      };
 
     template<typename Tx=double, typename Ty=unsigned long>
       class LineDistribution : public RadialDistribution<Tx,Ty> {
@@ -396,63 +395,57 @@ namespace Faunus {
      * \date Lund 2012
      */
     template<typename Tx=double, typename Ty=int>
-    class LineDistributionNorm : public RadialDistribution<Tx,Ty> {
-    private:
-      double volume(Tx x) { return 1; }
-      int n;
-    public:
-      LineDistributionNorm(int al_n=1, Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {
-        this->name="Line Distribution Normalized for n particles";
-        n = al_n;
-      }
-      double get(Tx x) {
-        assert( volume(x)>0 );
-        assert( this->count()>0 );
-        return (double)this->operator()(x) * n / (double)this->count();
-      }
-      
-      /*!
-       * \brief Simplest form of the midplane pressure
-       */
-      double mid() {
-        return (get(this->dx)+get(-this->dx))*0.5/this->dx;
-      }
-      
-      /*!
-       * \brief Simplest form of the end pressure
-       */
-      double end() {
-        return (get(this->minx())+get(this->minx()+this->dx)+get(-this->minx())+get(-this->minx()-this->dx))*0.25/this->dx;
-      }
-      
-    };
-    
-    
-    /*!
-     * \brief Base class for force calculations
+      class LineDistributionNorm : public RadialDistribution<Tx,Ty> {
+        private:
+          double volume(Tx x) { return 1; }
+          int n;
+        public:
+          LineDistributionNorm(int al_n=1, Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {
+            this->name="Line Distribution Normalized for n particles";
+            n = al_n;
+          }
+          double get(Tx x) {
+            assert( volume(x)>0 );
+            assert( this->count()>0 );
+            return (double)this->operator()(x) * n / (double)this->count();
+          }
+
+          /*!
+           * \brief Simplest form of the midplane pressure
+           */
+          double mid() {
+            return (get(this->dx)+get(-this->dx))*0.5/this->dx;
+          }
+
+          /*!
+           * \brief Simplest form of the end pressure
+           */
+          double end() {
+            return (get(this->minx())+get(this->minx()+this->dx)+get(-this->minx())+get(-this->minx()-this->dx))*0.25/this->dx;
+          }
+      };
+
+    /**
+     * @brief Base class for force calculations
      *
      * Includes some neccessary functionality for deriving the force.
      *
-     * \author Axel Thuresson
-     * \date Lund, 2013
+     * @author Axel Thuresson
+     * @date Lund, 2013
      */
-    
     class TwobodyForce : public AnalysisBase {
-    protected:
-      Energy::Energybase* pot;         //!< Pointer to energy functions
-      Space* spc;                      //!< Pointer to Space (particles and groups are stored there)
-      string _info();         //!< Print results of analysis
-      Group* igroup1;
-      Group* igroup2;
-      Group* ions;
-    public:
-      TwobodyForce(InputMap&, Energy::Energybase&, Space&, Group &, Group &, Group &);//!< Constructor
-      virtual void calc();
-      void save(string);
-      void setTwobodies(Group &, Group &, Group &);
-      virtual Point meanforce();
+      protected:
+        string _info();         //!< Print results of analysis
+        Group* igroup1;
+        Group* igroup2;
+        Group* ions;
+      public:
+        virtual Point meanforce();
+        TwobodyForce(InputMap&, Group&, Group&, Group&);//!< Constructor
+        void save(string);
+        void setTwobodies(Group&, Group&, Group&);
     };
-    
+
     /*!
      * \brief Calculates the "direct" twobody mean force
      *
@@ -464,22 +457,47 @@ namespace Faunus {
      * \author Axel Thuresson
      * \date Lund, 2013
      */
-    
     class TwobodyForceDirect : public TwobodyForce {
-    private:
-      Point f_pp;
-      Point f_pi;
-      Point f_ip;
-    protected:
-      string _info();         //!< Print results of analysis
-    public:
-      TwobodyForceDirect(InputMap&, Energy::Energybase&, Space&, Group &, Group &, Group &);//!< Constructor
-      void calc();
-      Point meanforce();
+      private:
+        Point f_pp;
+        Point f_pi;
+        Point f_ip;
+      protected:
+        string _info();         //!< Print results of analysis
+      public:
+        TwobodyForceDirect(InputMap&, Group&, Group&, Group&);//!< Constructor
+        Point meanforce();
+
+        /** @brief Calculate the direct force between the two bodies */
+        template<class Tpvec, class Tenergy>
+          void calc(Tpvec &p, Tenergy &pot) {
+            if (run()) {
+              // Force between the two bodies
+              for (auto i : *igroup1) {
+                for (auto j : *igroup2) {
+                  Point f = pot.f_p2p(p[i], p[j]);
+                  f_pp += f;
+                }
+              }
+              //f_pp += 1.0*_f_pp;
+              //f_mean1 += 1.0*_f_pp;
+              //f_mean2 += -1.0*_f_pp;
+              for (auto i : *igroup1) {
+                for (auto j : *ions) {
+                  Point f = pot.f_p2p(p[i],p[j]);
+                  f_pi += f;
+                }
+              }
+              for (auto i : *igroup2) {
+                for (auto j : *ions) {
+                  Point f = pot.f_p2p(p[i], p[j]);
+                  f_ip += f;
+                }
+              }
+            }
+          }
     };
-    
-    
-    
+
     /*!
      * \brief Calculates the midplane twobody mean force
      *
@@ -489,21 +507,63 @@ namespace Faunus {
      * \author Axel Thuresson
      * \date Lund, 2013
      */
-    
     class TwobodyForceMidp : public TwobodyForce {
-    private:
-      Point f_pp;
-      Point f_pi;
-      Point f_ip;
-      Point f_ii;
-      Analysis::LineDistributionNorm<float,unsigned long int> *saltdistr;
-    protected:
-      string _info();         //!< Print results of analysis
-    public:
-      TwobodyForceMidp(InputMap&, Energy::Energybase&, Space&, Group &, Group &, Group &, Analysis::LineDistributionNorm<float,unsigned long int>*);//!< Constructor
-      void calc();
-      Point meanforce();
+      private:
+        Point f_pp;
+        Point f_pi;
+        Point f_ip;
+        Point f_ii;
+        Analysis::LineDistributionNorm<float,unsigned long int> *saltdistr;
+      protected:
+        string _info();         //!< Print results of analysis
+      public:
+        TwobodyForceMidp(InputMap&, Group&, Group&, Group&, Analysis::LineDistributionNorm<float,unsigned long int>*);//!< Constructor
+        Point meanforce();
+
+        /** @brief Calculate the direct force between the two bodies */
+        template<class Tpvec, class Tenergy>
+          void calc(Tpvec &p, Tenergy &pot) {
+            if (run()) {
+              // Force between the two bodies
+              for (auto i : *igroup1) {
+                for (auto j : *igroup2) {
+                  Point f = pot.f_p2p(p[i], p[j]);
+                  f_pp += f;
+                }
+              }
+
+              for (auto i : *igroup1) {
+                for (auto j : *ions) {
+                  if (p[j].z() < 0.0) {
+                    Point f = pot.f_p2p(p[i], p[j]);
+                    f_pi += f;
+                  }
+                }
+              }
+
+              for (auto i : *igroup2) {
+                for (auto j : *ions) {
+                  if (p[j].z() >= 0.0) {
+                    Point f = pot.f_p2p(p[i], p[j]);
+                    f_ip += f;
+                  }
+                }
+              }
+
+              for (auto i : *ions) {
+                if (p[i].z() >= 0.0) {
+                  for (auto j : *ions) {
+                    if (p[j].z() < 0.0) {
+                      Point f = pot.f_p2p(p[i],p[j]);
+                      f_ii += f;
+                    }
+                  }
+                }
+              }
+            }
+          }
     };
+
 
     /*!
      * \brief Analysis of polymer shape - radius of gyration, shape factor etc.
@@ -516,14 +576,62 @@ namespace Faunus {
     class PolymerShape : public AnalysisBase {
       private:
         std::map< string, Average<double> > Rg2, Rg, Re2, Rs, Rs2, Rg2x, Rg2y, Rg2z;
-        double gyrationRadiusSquared(const Group&, const Space &);
-        Point vectorEnd2end(const Group&, const Space &);
         void _test(UnitTest&);
         string _info();
+        template<class Tgroup, class Tspace>
+          double gyrationRadiusSquared(const Tgroup &pol, const Tspace &spc) {
+            assert( spc.geo.dist(pol.cm, pol.massCenter(spc))<1e-9
+                && "Mass center must be in sync.");
+            Point rg2=vectorgyrationRadiusSquared(pol,spc);
+            return rg2.x()+rg2.y()+rg2.z();
+          }
+
+        template<class Tgroup, class Tspace>
+          Point vectorEnd2end(const Tgroup &pol, const Tspace &spc) {
+            return spc.geo.vdist( spc.p[pol.front()], spc.p[pol.back()] );
+          }
+
+        template<class Tgroup, class Tspace>
+          Point vectorgyrationRadiusSquared(const Tgroup &pol, const Tspace &spc) {
+            assert( spc.geo.dist(pol.cm, pol.massCenter(spc))<1e-9
+                && "Mass center must be in sync.");
+            double sum=0;
+            Point t, r2(0,0,0);
+            for (auto i : pol) {
+              t = spc.p[i]-pol.cm;                // vector to center of mass
+              spc.geo.boundary(t);               // periodic boundary (if any)
+              r2.x() += spc.p[i].mw * t.x() * t.x();
+              r2.y() += spc.p[i].mw * t.y() * t.y();
+              r2.z() += spc.p[i].mw * t.z() * t.z();
+              sum += spc.p[i].mw;                 // total mass
+            }
+            assert(sum>0 && "Zero molecular weight not allowed.");
+            return r2*(1./sum);
+          }
+
       public:
         PolymerShape();
-        Point vectorgyrationRadiusSquared(const Group&, const Space &);
-        void sample(const Group&, const Space&); //!< Sample properties of Group (identified by group name)
+
+        /** @brief Sample properties of Group (identified by group name) */
+        template<class Tgroup, class Tspace>
+          void sample(const Tgroup &pol, const Tspace &spc) {
+            if (!run() || pol.front()==pol.back())
+              return;
+            Point r2 = vectorgyrationRadiusSquared(pol,spc);
+            double rg2 = r2.x()+r2.y()+r2.z(); 
+            double re2 = spc.geo.sqdist( spc.p[pol.front()], spc.p[pol.back()] );
+            Rg2[pol.name]  += rg2;
+            Rg2x[pol.name] += r2.x();
+            Rg2y[pol.name] += r2.y();
+            Rg2z[pol.name] += r2.z();
+            Rg[pol.name]   += sqrt(r2.x()+r2.y()+r2.z());
+            Re2[pol.name]  += re2; //end-2-end squared
+            double rs = Re2[pol.name].avg()/Rg2[pol.name].avg(); // fluctuations in shape factor
+            Rs[pol.name]   += rs;
+            Rs2[pol.name]  += rs*rs;
+            //Point re = vectorEnd2end(pol,spc);
+            //Re2[pol.name] += pow(re.len(), 2);
+          }
     };
 
     /**
@@ -543,34 +651,65 @@ namespace Faunus {
     class ChargeMultipole : public AnalysisBase {
       private:
         std::map< string, Average<double> > Z, Z2, mu, mu2;
-        double charge(const Group&, const Space&);
-        double dipole(const Group&, const Space&);
-        virtual bool exclude(const particle&);  //!< Determines particle should be excluded from analysis
+
+        template<class Tgroup, class Tpvec>
+          double charge(const Tgroup &g, const Tpvec &p, double Z=0) {
+            for (auto i : g)
+              if (!excluded(p[i]))
+                Z+=p[i].charge;
+            return Z;
+          }
+
+        template<class Tgroup, class Tspace>
+          double dipole(const Tgroup &g, const Tspace &spc) {
+            assert( spc.geo.dist(g.cm, g.massCenter(spc))<1e-9
+                && "Mass center must be in sync.");
+            Point t, mu(0,0,0);
+            for (auto i : g)
+              if (!excluded(spc.p[i])) {
+                t = spc.p[i]-g.cm;                // vector to center of mass
+                spc.geo.boundary(t);               // periodic boundary (if any)
+                mu+=spc.p[i].charge*t;
+              }
+            return mu.len();
+          }
+
+        /** @brief Determines particle should be excluded from analysis */
+        template<class Tparticle>
+          bool excluded(const Tparticle &p){
+            if (exclusionlist.count(atom[p.id].name)==0)
+              return false;
+            return true;
+          }
+
         string _info();
       public:
         ChargeMultipole();
-        void sample(const Group&, const Space&); //!< Sample properties of Group (identified by group name)
+
+        /** @brief Sample properties of Group (identified by group name) */
+        template<class Tgroup, class Tspace>
+          void sample(const Tgroup &g, const Tspace &spc) {
+            assert(!g.name.empty() && "All Groups should have a name!");
+            if (run()) {
+              double z=charge(g, spc.p);
+              Z[g.name]+=z;
+              Z2[g.name]+=pow(z,2);
+              double dip=dipole(g,spc);
+              mu[g.name]+=dip;
+              mu2[g.name]+=pow(dip,2);
+            }
+          }
 
         /* @brief Sample properties of Group (identified by group name) */
-        template<typename Tgroup>
-          void sample(const std::vector<Tgroup> &gvec, const Space &spc) {
-            if (!run())
-              return;
-            for (auto &g : gvec)
-              sample(g, spc);
+        template<typename Tgroup, typename Tspace>
+          void sample(const std::vector<Tgroup> &gvec, const Tspace &spc) {
+            if (run())
+              for (auto &g : gvec)
+                sample(g, spc);
           }
 
         std::set<string> exclusionlist; //!< Atom names listed here will be excluded from the analysis.
     };
-
-    /*
-       class VectorAlignment : public AnalysisBase {
-       private:
-       virtual Point convert(const Group&, const Space&); // Returns points calculated from group properties
-       public:
-       void sample(const Group&, const Group&, const Space&);
-       };
-       */
 
     /**
      * @brief Widom method for excess chemical potentials
@@ -580,23 +719,74 @@ namespace Faunus {
      * have no net charge. This is used to calculate the mean excess
      * chemical potential and activity coefficient.
      */
-    class Widom : public AnalysisBase {
-      private:
-        Space* spcPtr;
-        Energy::Energybase* potPtr;
-        Average<double> expsum; //!< Average of the excess chemical potential 
-        string _info();         //!< Print results of analysis
-      protected:
-        p_vec g;                //!< List of ghost particles to insert (simultaneously)
-      public:
-        Widom(Space&, Energy::Energybase&);
-        void addGhost(particle);                 //!< Add particle to insert - sum of all added particle charges should be zero.
-        void addGhost(Space&);                   //!< All species found in the container
-        void sample(int=10);                     //!< Insert and analyse `n` times.
-        void check(UnitTest&);                   //!< Output checking
-        double gamma();                          //!< Sampled mean activity coefficient
-        double muex();                           //!< Sampled mean excess chemical potential
-    };
+    template<class Tparticle>
+      class Widom : public AnalysisBase {
+        private:
+          Average<double> expsum; //!< Average of the excess chemical potential 
+
+          string _info() {
+            using namespace Faunus::textio;
+            std::ostringstream o;
+            o << pad(SUB,w, "Number of insertions") << expsum.cnt << endl
+              << pad(SUB,w, "Excess chemical pot.") << muex() << kT << endl
+              << pad(SUB,w, "Mean activity coefficient") << gamma() << endl
+              << pad(SUB,w, "Ghost particles");
+            for (auto &p : g)
+              o << atom[p.id].name << " ";
+            return o.str() + "\n";
+          }
+
+          void _test(UnitTest &test) { test("widom_muex", muex() ); }
+
+        protected:
+          std::vector<Tparticle> g; //!< Pool of ghost particles to insert (simultaneously)
+        public:
+          Widom() {
+            name="Multi Particle Widom Analysis";
+            cite="doi:10/dkv4s6";
+          }
+
+          void addGhost(Tparticle p) { g.push_back(p); }
+
+          /* @brief Add particle to insert - sum of added particle charges should be zero.*/
+          template<class Tpvec>
+            void addGhost(Tpvec &p) {
+              std::map<short,bool> map; // replace w. `std::set`
+              for (auto i : p)
+                map[ i.id ] = true;
+              for (auto &m : map) {
+                particle a;
+                a=atom[m.first];
+                addGhost(a);
+              }
+            }
+
+          /** @brief Sampled mean activity coefficient */
+          double gamma() { return exp(muex()); }
+
+          /** @brief Sampled mean excess chemical potential */
+          double muex() { return -log(expsum.avg())/g.size(); }
+
+          /** @brief Insert and analyse `n` times */
+          template<class Tspace, class Tenergy>
+            void sample(int ghostin, Tspace &spc, Tenergy &pot) {
+              if (!run())
+                return;
+              assert(spc.geo!=NULL);
+              int n=g.size();
+              for (int k=0; k<ghostin; k++) {     // insert ghostin times
+                double du=0;
+                for (int i=0; i<n; i++)
+                  spc.geo.randompos( g[i] ); // random ghost positions
+                for (int i=0; i<n; i++)
+                  pot.all2p( spc.p, g[i] );    // energy with all particles in space
+                for (int i=0; i<n-1; i++)
+                  for (int j=i+1; j<n; j++)
+                    du+=pot.p2p( g[i], g[j] );   // energy between ghost particles
+                expsum += exp(-du);
+              }
+            }
+      };
 
     /**
      * @brief Single particle hard sphere Widom insertion with charge scaling
@@ -704,7 +894,8 @@ namespace Faunus {
           orderParameter(Tcuboid &geo, Tpvec &p, Tgroup &lipids, Point n=Point(0,0,1)) {
             Average<double> S;
             for (int i=0; i<lipids.numMolecules(); i++) {
-              auto g = lipids[i]; // i'th lipid
+              Group g;
+              lipids.getMolecule(i,g); // i'th lipid
               Point a = geo.vdist( p[g.front()], p[g.back()]).normalized();
               S += 0.5 * ( 3 * pow(a.dot(n),2) - 1 );
             }
@@ -722,6 +913,179 @@ namespace Faunus {
           }
     };
 
-  }//namespace
+    /**
+     * @brief Returns the dielectric constant outside the cutoff limit.
+     *
+     *        Only hold when using PBC and \f$\epsilon_{sur} = \epsilon\f$,
+     *        [Neumann, M. (1983) Mol. Phys., 50, 841-858].
+     *
+     * @param pot The potential including geometry
+     * @param spc The space including the particles
+     * @param cutoff The cutoff of the reaction field
+     */
+    class getDielConst {
+      private:
+        Average<double> M;
+        double volume;
+        double convert;
+        double cutoff;
+      public:
+        inline getDielConst(double cutoff_in) {
+          cutoff = cutoff_in;
+          convert = (3.33564*3.33564*(1e-30)/(0.20819434*0.20819434)); // Constant to convert to SI-units, including the cancelation of volume 10^-30
+          volume = 4*pc::pi*pow(cutoff,3)/3;
+          convert = convert*pc::pi/volume;
+        }
+
+        template<class Tpvec, class Tgeometry>
+          void sample(const Tpvec &p, Tgeometry &geo) {
+            Point origin(0,0,0), mu(0,0,0);
+            for (auto &i : p)
+              if (geo.sqdist(i,origin)<cutoff*cutoff)
+                mu += i.mu*i.muscalar;
+            M += mu.squaredNorm();
+          }
+
+        inline string info() {
+          std::ostringstream o;
+          if (M.cnt>0) {
+            double Q = 0.25 + M.avg()*convert/pc::kT();
+            o << "Eps: " << Q + std::sqrt(Q*Q+0.5) << "\n";
+            //o << "<M>: " << M.avg() << ", convert/kT " << convert/pc::kT() << "\n";
+          }
+          return o.str();
+        }
+    };
+    /*
+     * Perhaps make this a template, taking T=double as parameter?
+     *
+     class checkWhiteNoise {
+     private:
+     std::vector<double> noise;
+     int le;
+     double significance;
+     double lag;
+     double mu;
+     double sigma2;
+     public:
+     inline checkWhiteNoise(std::vector<double> noise_in,double significance_in, double lag_in) {
+     noise = noise_in;
+     significance = significance_in;
+     lag = lag_in;
+     le = noise.size();
+     getMu();
+     getVariance();
+     }
+
+     bool check(int h) {
+     double Q = 0.0;
+     for(int k = 0;k < h; k++) {
+     Q += noise[k]*noise[k+lag]/(le-k);
+     }
+     Q = le*(le+2)*Q;
+     double chi2 = getChi2(1-significance,h);
+     if(Q > chi2) {
+     return false;
+     } else {
+     return true;
+     }
+     }
+
+     void getMu() {
+     mu = 0;
+     for(int k = 0;k < le; k++) {
+     mu += noise[k];
+     }
+     mu /= le;
+     }
+
+     void getVariance() {
+     sigma2 = 0;
+     for(int k = 0;k < le; k++) {
+     sigma2 += noise[k]*noise[k];
+     }
+     sigma2 -= mu*mu;
+     }
+
+     double getChi2(double x, int k) {
+     if(x < 0) return 0.0;
+     return (1-(incgamma(x,k)/(Gamma(x))));
+     }
+
+     double incgamma (double x, double a){
+     double sum = 0;
+     double term = 1.0/a;
+     int n = 1;
+     while (term != 0){
+     sum = sum + term;
+     term = term*(x/(a+n));
+     n++;
+     }
+     return pow(x,a)*exp(-1*x)*sum;
+     }
+
+     double Gamma(double x) {
+     if(std::abs(x-(int)x) < 1e-6 && (int)x > 1) {
+     return (int)x*Gamma(((int)x)-1);
+} else if(std::abs(x-(int)x) < 1e-6 && (int)x == 1) {
+  return 1;
+}
+
+if(x <= 0) { 
+  return 0.0; 
+} else if(x <= 0.001) {
+  double constant = 0.577215664901532860606512090; // Euler's gamma constant
+  return 1.0/(x*(1.0 + constant*x));
+} else if(x <= 12) {
+  double y = x;
+  int n = 0;
+  bool arg_was_less_than_one = (y < 1.0);
+  if (arg_was_less_than_one) {
+    y += 1.0;
+  } else {
+    n = static_cast<int> (floor(y)) - 1;  // will use n later
+    y -= n;
+  }
+  static const double p[] =
+  {
+    -1.71618513886549492533811E+0,
+    2.47656508055759199108314E+1,
+    -3.79804256470945635097577E+2,
+    6.29331155312818442661052E+2,
+    8.66966202790413211295064E+2,
+    -3.14512729688483675254357E+4,
+    -3.61444134186911729807069E+4,
+    6.64561438202405440627855E+4};
+  static const double q[] =
+  {
+    -3.08402300119738975254353E+1,
+    3.15350626979604161529144E+2,
+    -1.01515636749021914166146E+3,
+    -3.10777167157231109440444E+3,
+    2.25381184209801510330112E+4,
+    4.75584627752788110767815E+3,
+    -1.34659959864969306392456E+5,
+    -1.15132259675553483497211E+5};
+  double num = 0.0;
+  double den = 1.0;
+  int i;
+  double z = y - 1;
+  for (i = 0; i < 8; i++) {
+    num = (num + p[i])*z;
+    den = den*z + q[i];
+  }
+  double result = num/den + 1.0;
+  if (arg_was_less_than_one) {
+    result /= (y-1.0);
+  } else {
+    for (i = 0; i < n; i++)
+      result *= y++;
+  }
+  return result;
+} else if (x > 171.624)
+return pc::infty;
+}
+};*/
+}//namespace
 }//namespace
 #endif

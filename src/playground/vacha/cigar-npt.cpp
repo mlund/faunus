@@ -27,7 +27,8 @@ int main() {
   Analysis::RadialDistribution<> rdf(0.2);
 
   // Add cigars
-  GroupAtomic cigars(spc, mcp);
+  Group cigars;
+  cigars.addParticles(spc, mcp);
   cigars.name="cigars";
   for (auto i : cigars) {
     spc.p[i].halfl = 2.5;

@@ -19,13 +19,13 @@ endfunction( fau_cigarexample )
 #fau_example(gc "./" gc.cpp)
 #fau_example(polymer-npt-sphere "./" polymer-npt.cpp)
 #fau_example(polymer-npt-cuboid "./" polymer-npt.cpp)
-fau_example(titrate_implicit "./" pka_implicit.cpp)
-fau_example(manybody "./" manybody.cpp)
+#fau_example(titrate_implicit "./" pka_implicit.cpp)
+#fau_example(manybody "./" manybody.cpp)
 
 if(ENABLE_MPI AND MPI_CXX_FOUND)
-  fau_example(manybodyMPI "./" manybodyMPI.cpp)
-  fau_example(manybodyMPI_slit "./" manybodyMPI.cpp)
-  set_target_properties( manybodyMPI_slit PROPERTIES COMPILE_DEFINITIONS "SLIT" EXCLUDE_FROM_ALL TRUE)
+  #fau_example(manybodyMPI "./" manybodyMPI.cpp)
+  #fau_example(manybodyMPI_slit "./" manybodyMPI.cpp)
+  #set_target_properties( manybodyMPI_slit PROPERTIES COMPILE_DEFINITIONS "SLIT" EXCLUDE_FROM_ALL TRUE)
 endif()
 
 #----- target specific build options -----

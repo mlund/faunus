@@ -36,18 +36,21 @@ namespace Faunus {
     o << header("System Energy and Drift");
     if (avg.cnt>0) {
       char w=25;
-      o << textio::pad(SUB,w, "Average") << avg.avg() << kT << ", " << sigma << "=" << avg.stdev() << endl
+      o << textio::pad(SUB,w, "Average") << avg.avg() << kT << ", "
+        << sigma << "=" << avg.stdev() << endl
         << textio::pad(SUB,w, "Initial energy") << initial << kT << endl
         << textio::pad(SUB,w, "Initial + changes") << current() << kT << endl;
       o.precision(4);
-      o << pad(SUB,w, "Total energy drift") << drift << kT << " (" << drift/current()*100.
+      o << pad(SUB,w, "Total energy drift") << drift << kT
+        << " (" << drift/current()*100.
         << percent << ")" << endl;
     }
     return o.str();
   }
 
   void EnergyDrift::test(UnitTest &t) {
-    t("energyAverage", avg.avg() );                                                           
+    t("energyAverage", avg.avg() );
     t("relativeEnergyDrift", std::abs(drift/current()), 10.0 ); // allow 200% deviation    
+    assert(std::fabs(drift)<1e-6);
   }
 }//namespace

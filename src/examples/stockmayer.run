@@ -1,0 +1,55 @@
+#!/bin/bash
+
+#source_tests_dir="`dirname $0`"
+
+#-----------------------------------------------------------
+# Create user input file
+#-----------------------------------------------------------
+function mkinput() {
+echo '{ "atomlist" :
+  {
+    "sol" : { "sigma":'${sigma}', "mu":"0 0 $mu", "dp":'$dp', "dprot":'$dprot', "alpha":"$alpha 0 0 $alpha 0 $alpha"}
+  }
+}' > stockmayer.json
+
+
+echo "
+loop_macrosteps        $loop_macrosteps
+loop_microsteps        $loop_microsteps
+
+dipdip_cutoff $dipdip_cutoff      # Reaction field cut off
+epsilon_rf    $epsilon_rf         # epsilon of the reaction field
+cuboid_len    $cuboid_len 
+temperature   $temperature    
+epsilon_r     $epsilon_r          # Dielectric constant
+lj_eps        $lj_eps             # Uniform LJ epsilon parameter [kT]
+tion1         sol 
+nion1         $N  
+" > stockmayer.input
+}
+
+#-----------------------------------------------------------
+# Run simulation
+#-----------------------------------------------------------
+exe=./stockmayer
+if [ -x $exe ]; then
+  sigma=1.0
+  mu=1.5712
+  dp=0.5
+  dprot=30
+  alpha=1
+  loop_macrosteps=10
+  loop_microsteps=1000
+  dipdip_cutoff=8.939    # Reaction field cut off
+  epsilon_rf=1e4          # epsilon of the reaction field
+  cuboid_len=8.939      # Box side length [angstrom]
+  temperature=4321        # Temperature [K]
+  epsilon_r=1             # Dielectric constant
+  lj_eps=0.069            # Uniform LJ epsilon parameter [kT]
+  N=100                  # number of ion type 1
+  mkinput
+  $exe
+  rc=$?
+  rm -f stockmayer.input stockmayer.json
+  exit $rc
+fi

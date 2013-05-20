@@ -61,14 +61,6 @@ namespace Faunus {
     }
 
     /**
-     * @param a Particle emanating the field
-     * @param r Position in which to calculate the field
-     */
-    Point PairPotentialBase::field(const particle &a, const Point &r) const {
-      return Point(0,0,0);
-    }
-
-    /**
      * This will reset the temperature to the specified value. By default this function
      * does nothing, although in Debug mode it will throw an exception if derived classes
      * do not implement it (and is called).
@@ -80,22 +72,6 @@ namespace Faunus {
     string PairPotentialBase::brief() {
       assert(!name.empty() && "Potential must have a name.");
       return _brief();
-    }
-
-    bool PairPotentialBase::save(string filename, particle::Tid ida, particle::Tid idb) {
-      std::ofstream f(filename.c_str());
-      if (f) {
-        double min=0.9 * (atom[ida].radius+atom[idb].radius);
-        particle a,b;
-        a = atom[ida];
-        b = atom[idb];
-        f << "# Pair potential: " << brief() << endl
-          << "# Atoms: " << atom[ida].name << "<->" << atom[idb].name << endl;
-        for (double r=min; r<=150; r+=0.5)
-          f << std::left << std::setw(10) << r << " " ;//<< operator()(a,b,r*r) << endl; 
-        return true;
-      }
-      return false;
     }
 
     void PairPotentialBase::test(UnitTest&) {}
@@ -440,7 +416,7 @@ namespace Faunus {
       using namespace textio;
       std::ostringstream o;
       o << Coulomb::info(w)
-        << pad(SUB,w,"More info") << "doi:10.1063/1.4729748\n"
+        << pad(SUB,w,"More info") << "doi:10/j97\n"
         << pad(SUB,w,"Cut-off") << 1/Rcinv << _angstrom+"\n";
       return o.str();
     }

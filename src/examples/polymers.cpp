@@ -8,6 +8,8 @@ typedef Geometry::Sphere Tgeometry;   // sphere with hard boundaries
 #endif
 typedef Potential::CoulombHS Tpairpot;// particle pair potential: primitive model
 
+typedef Space<Tgeometry,PointParticle> Tspace;
+
 int main() {
   cout << textio::splash();           // show faunus banner and credits
   
@@ -16,35 +18,27 @@ int main() {
   EnergyDrift sys;                    // class for tracking system energy drifts
   UnitTest test(mcp);                 // class for unit testing
 
-  // Energy functions and space
-  Energy::Hamiltonian pot;
-  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
-  auto bonded    = pot.create( Energy::Bonded() );
-  Space spc( pot.getGeometry() );
+  // Create Space and a Hamiltonian with three terms
+  Tspace spc(mcp);
+  auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
+    + Energy::ExternalPressure<Tspace>(mcp) + Energy::Bonded<Tspace>();
 
-  // Markov moves and analysis
-  Move::Isobaric iso(mcp,pot,spc);
-  Move::TranslateRotate gmv(mcp,pot,spc);
-  Move::AtomicTranslation mv(mcp, pot, spc);
-  Move::CrankShaft crank(mcp, pot, spc);
-  Move::Pivot pivot(mcp, pot, spc);
-  Analysis::PolymerShape shape;
-  Analysis::RadialDistribution<> rdf(0.2);
+  auto bonded = &pot.second; // pointer to bond energy class
 
   // Add salt
-  GroupAtomic salt(spc, mcp);
-  salt.name="Salt";
+  Group salt;
+  salt.addParticles(spc, mcp);
 
   // Add polymers
-  vector<GroupMolecular> pol( mcp.get("polymer_N",0));   // vector of polymers
+  vector<Group> pol( mcp.get("polymer_N",0));            // vector of polymers
   string polyfile = mcp.get<string>("polymer_file", "");
-  double req    = mcp.get<double>("polymer_eqdist", 0);
-  double k      = mcp.get<double>("polymer_forceconst", 0);
+  double req = mcp.get<double>("polymer_eqdist", 0);
+  double k   = mcp.get<double>("polymer_forceconst", 0);
   for (auto &g : pol) {                                  // load polymers
     FormatAAM aam;                                       // AAM structure file I/O
     aam.load(polyfile);
     Geometry::FindSpace().find(
-        *spc.geo, spc.p, aam.particles() );              // find empty spot in particle vector
+        spc.geo, spc.p, aam.particles() );               // find empty spot in particle vector
     g = spc.insert( aam.particles() );                   // insert into space
     g.name="Polymer";
     spc.enroll(g);
@@ -52,6 +46,15 @@ int main() {
       bonded->add(i, i+1, Potential::Harmonic(k,req));   // add bonds
   }
   Group allpol( pol.front().front(), pol.back().back() );// make group w. all polymers
+
+  // Markov moves and analysis
+  Move::Isobaric<Tspace> iso(mcp,pot,spc);
+  Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
+  Move::AtomicTranslation<Tspace> mv(mcp, pot, spc);
+  Move::CrankShaft<Tspace> crank(mcp, pot, spc);
+  Move::Pivot<Tspace> pivot(mcp, pot, spc);
+  Analysis::PolymerShape shape;
+  Analysis::RadialDistribution<> rdf(0.2);
 
   spc.load("state");                                     // load old config. from disk (if any)
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );      // store initial total system energy
@@ -100,9 +103,10 @@ int main() {
           break;
       }
 
+      // polymer-polymer mass center rdf
       for (auto i=pol.begin(); i!=pol.end()-1; i++)
         for (auto j=i+1; j!=pol.end(); j++)
-          rdf( spc.geo->dist(i->cm,j->cm) )++;// polymer mass-center distribution function
+          rdf( spc.geo.dist(i->cm,j->cm) )++;
 
     } // end of micro loop
 

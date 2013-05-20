@@ -41,17 +41,15 @@ namespace Faunus {
           << _info();
       return o.str();
     }
-    
-    TwobodyForce::TwobodyForce(InputMap &in,Energy::Energybase &e, Space &s, Group &g1, Group &g2, Group &_ions) {
+
+    TwobodyForce::TwobodyForce(InputMap &in, Group &g1, Group &g2, Group &_ions) {
       name="Twobody mean force calculation";
       runfraction = in.get<double>("pforce", 1.0);
-      pot=&e;
-      spc=&s;
       igroup1=nullptr;
       igroup2=nullptr;
       setTwobodies(g1, g2, _ions);
     }
-    
+
     /*!
      * \brief Set the groups
      * \param g1 Body #1
@@ -69,7 +67,9 @@ namespace Faunus {
       igroup2=&g2;
       ions=&_ions;
     }
-    
+
+    Point TwobodyForce::meanforce() { return Point(0,0,0); }
+
     void TwobodyForce::save(string filename) {
       Point p = meanforce();
       std::ofstream f(filename.c_str());
@@ -78,63 +78,26 @@ namespace Faunus {
         f << p.x() << " " << p.y() << " " << p.z() << endl;
       }
     }
-    
-    void TwobodyForce::calc() {}
-    
-    Point TwobodyForce::meanforce() { return Point(0.0, 0.0, 0.0); }
-    
+
     string TwobodyForce::_info() {
       using namespace Faunus::textio;
       std::ostringstream o;
       o << "Base class of twobody force." << endl;
       return o.str();
     }
-    
-    
-    TwobodyForceDirect::TwobodyForceDirect(InputMap &in,Energy::Energybase &e, Space &s, Group &g1, Group &g2, Group &_ions) : TwobodyForce(in, e, s, g1, g2, _ions) {
+
+    TwobodyForceDirect::TwobodyForceDirect(InputMap &in, Group &g1, Group &g2, Group &_ions) : TwobodyForce(in, g1, g2, _ions) {
       name="Twobody direct mean force calculation";
-      //f_mean1 = Point(0.0, 0.0, 0.0);
-      //f_mean2 = Point(0.0, 0.0, 0.0);
-      f_pp = Point(0.0, 0.0, 0.0);
-      f_pi = Point(0.0, 0.0, 0.0);
-      f_ip = Point(0.0, 0.0, 0.0);
+      f_pp = Point(0,0,0);
+      f_pi = Point(0,0,0);
+      f_ip = Point(0,0,0);
     }
-    
-    /*!
-     * \brief Calculate the direct force between the two bodies
-     */
-    void TwobodyForceDirect::calc() {
-      if (run()) {
-        // Force between the two bodies
-        for (auto i : *igroup1) {
-          for (auto j : *igroup2) {
-            Point f = pot->f_p2p(spc->p[i], spc->p[j]);
-            f_pp += f;
-          }
-        }
-        //f_pp += 1.0*_f_pp;
-        //f_mean1 += 1.0*_f_pp;
-        //f_mean2 += -1.0*_f_pp;
-        for (auto i : *igroup1) {
-          for (auto j : *ions) {
-            Point f = pot->f_p2p(spc->p[i], spc->p[j]);
-            f_pi += f;
-          }
-        }
-        for (auto i : *igroup2) {
-          for (auto j : *ions) {
-            Point f = pot->f_p2p(spc->p[i], spc->p[j]);
-            f_ip += f;
-          }
-        }
-      }
-    }
-    
+
     Point TwobodyForceDirect::meanforce() {
       Point p = (f_pp+(f_pi-f_ip)*0.5)/(double)cnt;
       return p;
     }
-    
+
     string TwobodyForceDirect::_info() {
       using namespace Faunus::textio;
       std::ostringstream o;
@@ -144,9 +107,9 @@ namespace Faunus {
       o << pad(SUB,w,"Mean direct Force:") << "(" << meanforce().x() << ", " << meanforce().y() << ", " << meanforce().z() << ") kT/Å" << endl;
       return o.str();
     }
-    
-    
-    TwobodyForceMidp::TwobodyForceMidp(InputMap &in,Energy::Energybase &e, Space &s, Group &g1, Group &g2, Group &_ions, Analysis::LineDistributionNorm<float,unsigned long int> *_saltdistr) : TwobodyForce(in, e, s, g1, g2, _ions) {
+
+    TwobodyForceMidp::TwobodyForceMidp(InputMap &in,Group &g1, Group &g2, Group &_ions,
+        Analysis::LineDistributionNorm<float,unsigned long int> *_saltdistr) : TwobodyForce(in,g1,g2,_ions) {
       name="Twobody midplane mean force calculation";
       f_pp = Point(0.0, 0.0, 0.0);
       f_pi = Point(0.0, 0.0, 0.0);
@@ -154,51 +117,7 @@ namespace Faunus {
       f_ii = Point(0.0, 0.0, 0.0);
       saltdistr=_saltdistr;
     }
-    
-    /*!
-     * \brief Calculate the direct force between the two bodies
-     */
-    void TwobodyForceMidp::calc() {
-      if (run()) {
-        // Force between the two bodies
-        for (auto i : *igroup1) {
-          for (auto j : *igroup2) {
-            Point f = pot->f_p2p(spc->p[i], spc->p[j]);
-            f_pp += f;
-          }
-        }
-        
-        for (auto i : *igroup1) {
-          for (auto j : *ions) {
-            if (spc->p[j].z() < 0.0) {
-              Point f = pot->f_p2p(spc->p[i], spc->p[j]);
-              f_pi += f;
-            }
-          }
-        }
-        
-        for (auto i : *igroup2) {
-          for (auto j : *ions) {
-            if (spc->p[j].z() >= 0.0) {
-              Point f = pot->f_p2p(spc->p[i], spc->p[j]);
-              f_ip += f;
-            }
-          }
-        }
-        
-        for (auto i : *ions) {
-          if (spc->p[i].z() >= 0.0) {
-            for (auto j : *ions) {
-              if (spc->p[j].z() < 0.0) {
-                Point f = pot->f_p2p(spc->p[i], spc->p[j]);
-                f_ii += f;
-              }
-            }
-          }
-        }
-      }
-    }
-    
+
     Point TwobodyForceMidp::meanforce() {
       Point p = f_pp+f_pi-f_ip+f_ii;
       float midp = saltdistr->mid();
@@ -206,7 +125,7 @@ namespace Faunus {
       Point I = Point(1.0, 1.0, 1.0);
       return p/(double)cnt+I*(midp-endp);
     }
-    
+
     string TwobodyForceMidp::_info() {
       using namespace Faunus::textio;
       std::ostringstream o;
@@ -219,56 +138,10 @@ namespace Faunus {
       o << pad(SUB,w,"Mean midp Force:") << "(" << meanforce().x() << ", " << meanforce().y() << ", " << meanforce().z() << ") kT/Å" << endl;
       return o.str();
     }
-    
-    
+
+
     PolymerShape::PolymerShape() {
       name="Polymer Shape";
-    }
-
-    Point PolymerShape::vectorgyrationRadiusSquared(const Group &pol, const Space &spc) {
-      assert( spc.geo->dist(pol.cm, pol.massCenter(spc))<1e-9 && "Mass center must be in sync.");
-      double sum=0;
-      Point t, r2(0,0,0);
-      for (auto i : pol) {
-        t = spc.p[i]-pol.cm;                // vector to center of mass
-        spc.geo->boundary(t);               // periodic boundary (if any)
-        r2.x() += spc.p[i].mw * t.x() * t.x();
-        r2.y() += spc.p[i].mw * t.y() * t.y();
-        r2.z() += spc.p[i].mw * t.z() * t.z();
-        sum += spc.p[i].mw;                 // total mass
-      }
-      assert(sum>0 && "Zero molecular weight not allowed.");
-      return r2*(1./sum);
-    }
-
-    double PolymerShape::gyrationRadiusSquared(const Group &pol, const Space &spc) {
-      assert( spc.geo->dist(pol.cm, pol.massCenter(spc))<1e-9 && "Mass center must be in sync.");
-      Point rg2=vectorgyrationRadiusSquared(pol,spc);
-      return rg2.x()+rg2.y()+rg2.z();
-    }
-
-    Point PolymerShape::vectorEnd2end(const Group &pol, const Space &spc) {
-      return spc.geo->vdist( spc.p[pol.front()], spc.p[pol.back()] );
-    }
-
-    void PolymerShape::sample(const Group &pol, const Space &spc) {
-      if (!run() || pol.front()==pol.back())
-        return;
-      Point r2 = vectorgyrationRadiusSquared(pol,spc);
-      double rg2 = r2.x()+r2.y()+r2.z(); 
-      double re2 = spc.geo->sqdist( spc.p[pol.front()], spc.p[pol.back()] );
-      Rg2[pol.name]  += rg2;
-      Rg2x[pol.name] += r2.x();
-      Rg2y[pol.name] += r2.y();
-      Rg2z[pol.name] += r2.z();
-      Rg[pol.name]   += sqrt(r2.x()+r2.y()+r2.z());
-      Re2[pol.name]  += re2; //end-2-end squared
-      double rs = Re2[pol.name].avg()/Rg2[pol.name].avg(); // fluctuations in shape factor
-      Rs[pol.name]   += rs;
-      Rs2[pol.name]  += rs*rs;
-      
-      //Point re = vectorEnd2end(pol,spc);
-      //Re2[pol.name] += pow(re.len(), 2);
     }
 
     string PolymerShape::_info() {
@@ -307,52 +180,6 @@ namespace Faunus {
       name="Multipole";
     }
 
-    /*!
-     * \param g Group to calculate charge for
-       \param spc Space
-     */
-    double ChargeMultipole::charge(const Group &g,const Space &spc) {
-      double x=0;
-      for (auto i : g){
-        if (exclude(spc.p[i])==false)
-          x+=spc.p[i].charge;
-      }
-      return x;
-    }
-
-    double ChargeMultipole::dipole(const Group &g, const Space &spc){
-      assert( spc.geo->dist(g.cm, g.massCenter(spc))<1e-9 && "Mass center must be in sync.");
-      Point t, mu(0,0,0);
-      for (auto i : g) {
-        if (exclude(spc.p[i])==false){
-          t = spc.p[i]-g.cm;                // vector to center of mass
-          spc.geo->boundary(t);               // periodic boundary (if any)
-          mu.x()+=spc.p[i].charge * t.x();
-          mu.y()+=spc.p[i].charge * t.y();
-          mu.z()+=spc.p[i].charge * t.z();
-        }
-      }
-      return mu.len();
-    }
-
-    bool ChargeMultipole::exclude(const particle &p){
-      if (exclusionlist.find(atom[p.id].name)==exclusionlist.end())
-        return false;
-      return true;
-    }
-
-    void ChargeMultipole::sample(const Group &g, const Space &spc) {
-      assert(!g.name.empty() && "All Groups should have a name!");
-      if (!run())
-        return;
-      double z=charge(g, spc);
-      Z[g.name]+=z;
-      Z2[g.name]+=pow(z,2);
-      double dip=dipole(g,spc);
-      mu[g.name]+=dip;
-      mu2[g.name]+=pow(dip,2);
-    }
-
     string ChargeMultipole::_info(){
       using namespace textio;
       char k=13;
@@ -375,70 +202,6 @@ namespace Faunus {
       return o.str();
     }
 
-    Widom::Widom(Space &spc, Energy::Energybase &pot) {
-      name="Multi Particle Widom Analysis";
-      cite="doi:10/dkv4s6";
-      spcPtr=&spc;
-      potPtr=&pot;
-    }
-
-    void Widom::sample(int ghostin) {
-      if (!run())
-        return;
-      assert(spcPtr->geo!=NULL);
-      int n=g.size();
-      for (int k=0; k<ghostin; k++) {     // insert ghostin times
-        double du=0;
-        for (int i=0; i<n; i++)
-          spcPtr->geo->randompos( g[i] ); // random ghost positions
-        for (int i=0; i<n; i++)
-          du+=potPtr->all2p( spcPtr->p, g[i] );    // energy with all particles in space
-        for (int i=0; i<n-1; i++)
-          for (int j=i+1; j<n; j++)
-            du+=potPtr->p2p( g[i], g[j] );   // energy between ghost particles
-        expsum += exp(-du);
-      }
-    }
-
-    void Widom::addGhost(particle p) {
-      g.push_back(p);
-    }
-
-    void Widom::addGhost(Space &c) {
-      std::map<short,bool> map;
-      for (auto p : c.p)
-        map[ p.id ] = true;
-      for (auto &m : map) {
-        particle a;
-        a=atom[m.first];
-        addGhost(a);
-      }
-    }
-
-    void Widom::check(UnitTest &test) {
-      test("widom_muex", muex() );
-    }
-
-    string Widom::_info() {
-      using namespace Faunus::textio;
-      std::ostringstream o;
-      o << pad(SUB,w, "Number of insertions") << expsum.cnt << endl
-        << pad(SUB,w, "Excess chemical pot.") << muex() << kT << endl
-        << pad(SUB,w, "Mean activity coefficient") << gamma() << endl
-        << pad(SUB,w, "Ghost particles");
-      for (auto p : g)
-        o << atom[p.id].name << " ";
-      o << endl;
-      return o.str();
-    }
-
-    double Widom::gamma() {
-      return exp(muex());
-    }
-
-    double Widom::muex() {
-      return -log(expsum.avg())/g.size();
-    }
 
     //--------------------------------------------------------------------------------
 

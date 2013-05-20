@@ -5,6 +5,7 @@
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/slump.h>
+#include <faunus/textio.h>
 #include <Eigen/Geometry>
 #endif
 
@@ -52,7 +53,7 @@ namespace Faunus {
         enum collisiontype {BOUNDARY,ZONE};                 //!< Types for collision() function
         double getVolume() const;                           //!< Get volume of container (A^3)
         void setVolume(double);                             //!< Specify new volume (A^3)
-        double dist(const Point&,const Point&);             //!< Distance between two points (A)
+        double dist(const Point&,const Point&) const;       //!< Distance between two points (A)
         string info(char=20);                               //!< Return info string
         bool save(string);                                  //!< Save geometry state to disk
         bool load(string,bool=false);                       //!< Load geometry state from disk
@@ -330,8 +331,20 @@ namespace Faunus {
         return massCenter(geo,p,Group(0,p.size()-1));
       }
 
-    void translate(const Geometrybase&, p_vec&, Point); //!< Translate a particle vector by a vector
-    void cm2origo(const Geometrybase&, p_vec&); //!< Translate a particle vector so mass center is in (0,0,0)
+    /** @brief Translate a particle vector by a vector */
+    template<class Tgeo, class Tpvec>
+      void translate(const Tgeo &geo, Tpvec &p, const Point &d) {
+        for (auto &pi : p) {
+          pi += d;
+          geo.boundary(pi);
+        }
+      }
+
+    /** @brief Translate a particle vector so mass center is in (0,0,0) */
+    template<class Tgeo, class Tpvec>
+      void cm2origo(const Tgeo &geo, Tpvec &p) {
+        translate(geo, p, -massCenter(geo, p) );
+      }
 
     /*!
       \brief Geometric transform of a Point (rotation, translation...)
@@ -351,15 +364,64 @@ namespace Faunus {
      */
     class FindSpace {
       private:
-        bool containerOverlap(const Geometrybase&, const p_vec&);
-        virtual bool matterOverlap(const Geometrybase&, const p_vec&, const p_vec&);
+        template<class Tgeometry, class Tpvec>
+          bool matterOverlap(const Tgeometry &geo, const Tpvec &p1, const Tpvec &p2) const {
+            if (allowMatterOverlap==false)
+              for (auto &i : p1)
+                for (auto &j : p2) {
+                  double max=i.radius+j.radius;
+                  if ( geo.sqdist(i,j)<max*max )
+                    return true;
+                }
+            return false;
+          }
+
+        template<class Tgeometry, class Tpvec>
+          bool containerOverlap(const Tgeometry &geo, const Tpvec &p) const {
+            if (allowContainerOverlap==false)
+              for (auto &i : p)
+                if (geo.collision(i)) return true;
+            return false;
+          }
+
       public:
-        FindSpace();
-        virtual ~FindSpace();
         Point dir;                  //!< default = [1,1,1]
         bool allowContainerOverlap; //!< default = false;
         bool allowMatterOverlap;    //!< default = false;
-        bool find(Geometrybase&, const p_vec&, p_vec&, unsigned int=1000);
+
+        inline FindSpace() {
+          dir=Point(1,1,1);
+          allowContainerOverlap=false;
+          allowMatterOverlap=false;   
+        }
+
+        /**
+         * @param geo Geometry to use
+         * @param dst Destination particle vector (will not be touched!)
+         * @param p Particle vector to find space for. Coordinates will be changed.
+         * @param maxtrials Number of times to try before timeout.
+         */
+        template<class Tgeometry, class Tpvec>
+          bool find(Tgeometry &geo, const Tpvec &dst, Tpvec &p, int maxtrials=1e3) const {
+            using namespace textio;
+            cout << "Trying to insert " << p.size() << " particle(s)";
+            Point v;
+            do {
+              cout << ".";
+              maxtrials--;
+              Point cm = massCenter(geo, p);
+              geo.randompos(v);
+              v = v.cwiseProduct(dir);
+              translate(geo, p, -cm+v);
+            } while (maxtrials>0 && (containerOverlap(geo,p) || matterOverlap(geo,p,dst)));
+            if (maxtrials>0) {
+              cout << " OK!\n";
+              return true;
+            }
+            cout << " timeout!\n";
+            assert(!"Timeout - found no space for particle(s).");
+            return false;
+          }
     };
 
     /**
@@ -371,10 +433,20 @@ namespace Faunus {
         double angle_;
         Eigen::Vector3d origin;
         Eigen::Quaterniond q;
+        Eigen::Matrix3d rot_mat; // rotation matrix
         Geometrybase *geoPtr;
+
+      protected:
+
       public:
         //!< Get set rotation angle
         double getAngle() const { return angle_; }
+
+        bool ignoreBoundaries;
+
+        QuaternionRotate() {
+          ignoreBoundaries=false;
+        }
 
         /**
          * @brief Set rotation axis and angle
@@ -388,19 +460,29 @@ namespace Faunus {
           geoPtr=&g;
           origin=beg;
           angle_=angle;
-          Point u(end-beg);
+          Point u(end-beg); //Point u(end-beg);
           assert(u.squaredNorm()>0 && "Rotation vector has zero length");
           g.boundary(u);
           u.normalize(); // make unit vector
           q=Eigen::AngleAxisd(angle, u);
+
+          rot_mat << 0, -u.z(), u.y(),u.z(),0,-u.x(),-u.y(),u.x(),0;
+          rot_mat = Eigen::Matrix3d::Identity() + rot_mat*std::sin(angle) + rot_mat*rot_mat*(1-std::cos(angle));
         }
 
         /** @brief Rotate point - respect boundaries */
         inline Point operator()(Point a) const {
+          if(ignoreBoundaries)
+            return q*a;
           a=a-origin;
           geoPtr->boundary(a);
           a=q*a+origin;
           geoPtr->boundary(a);
+          return a;
+        }
+
+        inline Eigen::Matrix3d operator()(Eigen::Matrix3d a) const {
+          a = rot_mat*a*rot_mat.transpose();
           return a;
         }
     };

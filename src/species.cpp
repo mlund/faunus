@@ -3,25 +3,29 @@
 #include <faunus/textio.h>
 #include <faunus/physconst.h>
 #include <faunus/json.h>
+#include <stdlib.h>
+
 
 namespace Faunus {
 
   AtomData::AtomData() {
     activity=0;
-    alpha=0;
     charge=0;
     dp=0;
     dprot=0;
     eps=0;
     hydrophobic=0;
     mean=0;
-    mu=0;
+    muscalar=0;
     mw=1.0;
     name="UNK";
     patchtype=0;  
     radius=0;
     sigma=0;      
     variance=0;
+    mu.clear();
+    theta.clear();
+    alpha.clear();
   }
 
   AtomMap::AtomMap() {
@@ -30,7 +34,7 @@ namespace Faunus {
     a.name="UNK";
     list.push_back(a);
   }
-
+  
   AtomData & AtomMap::operator[] (AtomData::Tid i) { return list.at(i); }
 
   AtomData & AtomMap::operator[] (string s) {
@@ -42,7 +46,7 @@ namespace Faunus {
 
   /**
    * This will look for the keyword `atomlist` in the InputMap and
-   * use value as the filename.
+   * use value as the filename.fs
    */
   bool AtomMap::includefile(InputMap &in) {
     return includefile( in.get<string>("atomlist",filename) );
@@ -51,18 +55,27 @@ namespace Faunus {
   bool AtomMap::includeJSON(const string& file) {
     int n=0;
     filename=file;
+    std::vector<double> test1 (3,0);
     auto j=json::open(file);
     for (auto &atom : json::object("atomlist", j)) {
       n++;
       AtomData a;
+      //Tensor<double> fallback;
+      //fallback.clear();
       a.name = atom.first;
       a.activity = json::value<double>(atom.second, "activity", 0);
-      a.alpha = json::value<double>(atom.second, "alpha", 0);
+      a.alpha << json::value<std::string>(atom.second, "alpha", "");
+      a.alpha *= 4*pc::pi*pc::e0*(1e-10)*pc::kT()/(pc::e*pc::e);
+      a.theta << json::value<std::string>(atom.second, "theta", "");
+      a.theta *= 0.20819434; // Debye Å -> e Å^2
       a.dp = json::value<double>(atom.second, "dp", 0);
       a.dprot = json::value<double>(atom.second, "dprot", 0) * pc::pi / 180.; // deg->rads
       a.eps = json::value<double>(atom.second, "eps", 0);
       a.hydrophobic = json::value<bool>(atom.second, "hydrophobic", false);
-      a.mu = json::value<double>(atom.second, "mu", 0)*pc::D2eA(); // Debye to eÅ
+      a.mu << json::value<std::string>(atom.second, "mu", "0 0 0");
+      a.muscalar = a.mu.len()*pc::D2eA();
+      if (a.mu.len()>1e-6)
+        a.mu = a.mu/a.mu.len();
       a.mw = json::value<double>(atom.second, "Mw", 1.);
       a.charge = json::value<double>(atom.second, "q", 0);
       a.radius = json::value<double>(atom.second, "r", 0);
@@ -71,7 +84,6 @@ namespace Faunus {
       a.radius = a.sigma/2;
       a.id=AtomData::Tid( list.size() );
       a.patchtype = json::value<double>(atom.second, "patchtype", 0);
-
       list.push_back(a); // add to main particle list
     }
     return (n>0) ? true : false;

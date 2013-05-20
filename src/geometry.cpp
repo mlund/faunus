@@ -14,7 +14,7 @@ namespace Faunus {
 
     Geometrybase::~Geometrybase() {}
 
-    double Geometrybase::dist(const Point &p1, const Point &p2) {
+    double Geometrybase::dist(const Point &p1, const Point &p2) const {
       return sqrt(sqdist(p1,p2));
     }
 
@@ -354,74 +354,6 @@ namespace Faunus {
        }
        */
 #endif
-
-    void translate(const Geometrybase &geo, p_vec &p, Point d) {
-      for (auto &pi : p) {
-        pi += d;
-        geo.boundary(pi);
-      }
-    }
-
-    void cm2origo(const Geometrybase &geo, p_vec &p) {
-      translate(geo, p, -massCenter(geo, p) );
-    }
-
-    FindSpace::FindSpace() {
-      dir.x()=1;
-      dir.y()=1;
-      dir.z()=1;
-      allowContainerOverlap=false;
-      allowMatterOverlap=false;   
-    }
-
-    FindSpace::~FindSpace() {}
-
-    bool FindSpace::matterOverlap(const Geometrybase &geo, const p_vec &p1, const p_vec &p2) {
-      if (allowMatterOverlap==false)
-        for (auto &i : p1)
-          for (auto &j : p2) {
-            double max=i.radius+j.radius;
-            if ( geo.sqdist(i,j)<max*max )
-              return true;
-          }
-      return false;
-    }
-
-    bool FindSpace::containerOverlap(const Geometrybase &geo, const p_vec &p) {
-      if (allowContainerOverlap==false)
-        for (auto &i : p)
-          if (geo.collision(i)) return true;
-      return false;
-    }
-
-    /*!
-     * \param geo Geometry to use
-     * \param dst Destination particle vector (will not be touched!)
-     * \param p Particle vector to find space for. Coordinates will be changed.
-     * \param maxtrials Number of times to try before timeout.
-     */
-    bool FindSpace::find(Geometrybase &geo, const p_vec &dst, p_vec &p, unsigned int maxtrials) {
-      using namespace textio;
-      cout << "Trying to insert " << p.size() << " particle(s)";
-      Point cm,v;
-      do {
-        cout << ".";
-        maxtrials--;
-        cm = massCenter(geo, p);
-        geo.randompos(v);
-        v.x()*=dir.x();
-        v.y()*=dir.y();
-        v.z()*=dir.z();
-        translate(geo, p, -cm+v);
-      } while (maxtrials>0 && (containerOverlap(geo,p)==true || matterOverlap(geo,p,dst)==true));
-      if (maxtrials>0) {
-        cout << " OK!\n";
-        return true;
-      }
-      cout << " timeout!\n";
-      assert(!"Timeout - found no space for particle(s).");
-      return false;
-    }
 
   }//namespace geometry
 }//namespace

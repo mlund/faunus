@@ -51,42 +51,42 @@ void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &bond, Tnonbonded &nb, Tin
   }
 }
 
-typedef Geometry::Cuboid Tgeometry;   // specify geometry - here cube w. periodic boundaries
+typedef Space<Geometry::Cuboid> Tspace;
 typedef Potential::PotentialMap<Potential::DebyeHuckelLJ> Tpairpot;
 
 int main() {
 
-  cout << textio::splash();           // show faunus banner and credits
-  InputMap mcp("membrane.input");   //read input file
+  cout << textio::splash();      // show faunus banner and credits
+  InputMap mcp("membrane.input");//read input file
 
-  MCLoop loop(mcp);                   // class for handling mc loops
-  FormatPQR pqr;                      // PQR structure file I/O
+  MCLoop loop(mcp);              // class for handling mc loops
   FormatXTC xtc(1000);
-  EnergyDrift sys;                    // class for tracking system energy drifts
+  EnergyDrift sys;               // class for tracking system energy drifts
 
   // Energy functions and space
-  Energy::Hamiltonian pot;
-
-  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
-  auto bonded    = pot.create( Energy::Bonded() );
-  Space spc( pot.getGeometry() );
+  auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
+    + Energy::Bonded<Tspace>() + Energy::ExternalPressure<Tspace>(mcp);
+  auto nonbonded = &pot.first.first;
+  auto bonded = &pot.first.second;
+  Tspace spc(mcp);
 
   // Markov moves and analysis
-  Move::AtomicTranslation mv(mcp, pot, spc);
-  Move::TranslateRotate gmv(mcp,pot,spc);
-  Move::Pivot piv(mcp,pot,spc);
-  Move::Isobaric iso(mcp,pot,spc);
+  Move::AtomicTranslation<Tspace> mv(mcp, pot, spc);
+  Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
+  Move::Pivot<Tspace> piv(mcp,pot,spc);
+  Move::Isobaric<Tspace> iso(mcp,pot,spc);
 
   Analysis::BilayerStructure lipidstruct;
 
   // Load and add polymer to Space
-  GroupArray lipids(3);
-  FormatAAM aam;                                      // AAM structure file I/O
+  Group lipids;
+  lipids.setMolSize(3);
+  FormatAAM aam;           // AAM structure file I/O
   string flipid = mcp.get<string>("lipid_file","");
   int Nlipid=mcp("lipid_N",1);
   for (int i=0; i<Nlipid; i++) {
-    aam.load(flipid);                                 // Load polymer structure into aam class
-    Geometry::FindSpace().find(*spc.geo, spc.p, aam.particles()); // find empty spot
+    aam.load(flipid);      // Load polymer structure into aam class
+    Geometry::FindSpace().find(spc.geo, spc.p, aam.particles()); // find empty spot
     Group pol = spc.insert( aam.particles() );        // Insert into Space
     if (slp_global()>0.5)
       std::swap( spc.p[pol.front()].z(), spc.p[pol.back()].z() );
@@ -101,17 +101,18 @@ int main() {
 
   // Place all lipids in xy plane (z=0);
   for (int l=0; l<lipids.numMolecules(); l++) {
-    auto g=lipids[l];
+    Group g;
+    lipids.getMolecule(l,g);
     double dz=spc.p[ g.back() ].z();
     for (auto i : g) {
       spc.p[i].z() -= dz;
-      spc.geo->boundary(spc.p[i]);
+      spc.geo.boundary(spc.p[i]);
     }
   }
-  spc.trial=spc.p; // sync. particle trial vector
+  spc.trial=spc.p;   // sync. particle trial vector
 
-  spc.load("state");                                // load old config. from disk (if any)
-  sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store initial total system energy
+  spc.load("state"); // load old config. from disk (if any)
+  sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
 
   cout << atom.info() + spc.info() + pot.info();
 
@@ -128,7 +129,7 @@ int main() {
         case 1:
           while (k-->0) {
             i=lipids.randomMol(); // pick random lipid molecule
-            g=lipids[i];
+            lipids.getMolecule(i,g);
             g.name="lipid";
             g.setMassCenter(spc);     // mass center needed for rotation
             if (slp_global()>0.5) {
@@ -146,18 +147,18 @@ int main() {
       }
       double ran = slp_global();
       if (ran>0.99) {
-        xtc.setbox( nonbonded->geometry.len );
+        xtc.setbox( spc.geo.len );
         xtc.save("traj.xtc", spc.p);
       }
       if (ran>0.90)
-        lipidstruct.sample(nonbonded->geometry, spc.p, lipids);
+        lipidstruct.sample(spc.geo, spc.p, lipids);
 
     } // end of micro loop
 
-    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
+    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // energy drift?
 
     // save to disk
-    pqr.save("confout.pqr", spc.p);
+    FormatPQR().save("confout.pqr", spc.p);
     spc.save("state");
 
     cout << loop.timing();
@@ -173,8 +174,9 @@ int main() {
   lipidstruct.test(test);
 
   // print information
-  cout << loop.info() + sys.info() + spc.info() + mv.info() + gmv.info() + iso.info()
-    << piv.info() + lipidstruct.info() + test.info();
+  cout << loop.info() + sys.info() + spc.info() + mv.info()
+    + gmv.info() + iso.info() +piv.info()
+    + lipidstruct.info() + test.info();
 
   return test.numFailed();
 }

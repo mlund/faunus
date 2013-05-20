@@ -7,14 +7,18 @@ if(ENABLE_MPI AND MPI_CXX_FOUND)
 endif()
 
 #----- add examples to build process -----
-fau_example(unittests "./" unittests.cpp)
+fau_dipoleexample(unittests "./" unittests.cpp)
 add_test( unittests ${CMAKE_BINARY_DIR}/src/examples/unittests )
+set_target_properties(unittests PROPERTIES EXCLUDE_FROM_ALL false)
 
 fau_example(example_minimal "./" minimal.cpp)
 set_target_properties(example_minimal PROPERTIES OUTPUT_NAME "minimal")
 
 fau_dipoleexample(example_stockmayer "./" stockmayer.cpp)
+fau_dipoleexample(example_stockmayer_polarizable "./" stockmayer.cpp)
 set_target_properties(example_stockmayer PROPERTIES OUTPUT_NAME "stockmayer")
+set_target_properties(example_stockmayer_polarizable PROPERTIES OUTPUT_NAME "stockmayer_polarizable")
+set_target_properties(example_stockmayer_polarizable PROPERTIES COMPILE_DEFINITIONS "POLARIZE;DIPOLEPARTICLE")
 
 fau_example(example_titrate "./" titrate.cpp)
 set_target_properties(example_titrate PROPERTIES OUTPUT_NAME "titrate")
@@ -35,4 +39,7 @@ fau_example(example_bulk "./" bulk.cpp)
 set_target_properties(example_bulk PROPERTIES OUTPUT_NAME "bulk")
 add_test( example_bulk ${CMAKE_CURRENT_SOURCE_DIR}/bulk.run )
 
+fau_example(example_water "./" water.cpp)
+set_target_properties(example_water PROPERTIES OUTPUT_NAME "water")
+add_test( example_water ${CMAKE_CURRENT_SOURCE_DIR}/water.run )
 

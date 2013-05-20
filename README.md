@@ -30,7 +30,6 @@ Requirements
 
 Optional:
 
-- SWIG 2.0+ (for python, ruby, ... modules)
 - OpenBabel 2 (numerous molecular formats)
 - Doxygen and Graphviz (for code manual)
 - Xcode (for neat environment on macos x)
@@ -53,7 +52,6 @@ Option                             | Description
 `-DENABLE_MPI=OFF`                 | Build MPI programs (parallel tempering etc.)
 `-DENABLE_OPENMP=OFF`              | Enable OpenMP support
 `-DENABLE_STATIC=OFF`              | Static linkage of faunus as opposed to default dynamic linkage
-`-DENABLE_SWIG=OFF`                | Build python, ruby, tcl etc. modules
 `-DENABLE_TWISTER=OFF`             | Use Mersenne Twister for random numbers
 `-DENABLE_UNICODE=ON`              | Use Unicode UTF-16 encoding for pretty output
 `-DCMAKE_BUILD_TYPE=RelWithDebInfo`| Alternatives: `Debug` or `Release` (faster)
@@ -61,10 +59,10 @@ Option                             | Description
 `-DCMAKE_CXX_FLAGS_DEBUG="..."`    | Compiler options for Debug mode
 `-DMYPLAYGROUND="..."`             | Add additional source directory (use absolute path)
 
-Example: Intel's C++ compiler with OpenMP parallelization
----------------------------------------------------------
+Example: Intel's C++ compiler
+-----------------------------
 
-    $ CXX=icpc CC=icc cmake . -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=Release
+    $ CXX=icpc CC=icc cmake . -DCMAKE_BUILD_TYPE=Release
     $ make
 
 Example: Libraries in odd locations
@@ -77,6 +75,7 @@ Resetting the build system
 
     $ make clean
     $ rm CMakeCache.txt
+    $ (rm -fR CMakeFiles/)
 
 Contributors
 ============
@@ -95,7 +94,7 @@ Citing Faunus
 
 - Lund, M., Persson, B., Trulsson, M.
   _Source Code Biol. Med., 2008, 3:1_
-  [[DOI]](http://dx.doi.org/10.1186/1751-0473-3-1)
+  [[DOI]](http://dx.doi.org/10/dfqgch)
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

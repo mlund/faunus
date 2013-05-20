@@ -35,6 +35,4 @@ fau_example(example_bulk "./" bulk.cpp)
 set_target_properties(example_bulk PROPERTIES OUTPUT_NAME "bulk")
 add_test( example_bulk ${CMAKE_CURRENT_SOURCE_DIR}/bulk.run )
 
-fau_example(example_HS "./" HS.cpp)
-set_target_properties(example_HS PROPERTIES OUTPUT_NAME "HS")
 

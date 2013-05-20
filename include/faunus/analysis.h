@@ -312,65 +312,65 @@ namespace Faunus {
      * \date Lund 2011
      */
     template<typename Tx=float, typename Ty=unsigned long long int>
-      class RadialDistribution : public Table2D<Tx,Ty> {
-        private:
-  
-          typedef Table2D<Tx,Ty> Ttable;
-          virtual double volume(Tx x) {
-            return 4./3.*pc::pi*( pow(x+0.5*this->dx,3) - pow(x-0.5*this->dx,3) );
-          }
-	
-          double get(Tx x) {
-            assert( volume(x)>0 );
-            assert( this->count()>0 );
-            
-            if (bulkconc.cnt==0) bulkconc+=1;
-	    
-            return ((double)this->operator()(x)*Npart.avg()) / (volume(x) *(double)this->count() * bulkconc.avg())
-              ;
-	    
-          }
-          Average<double> bulkconc; //!< Average bulk concentration
-          Average<double> Npart;
-        public:
-          Tx maxdist; //!< Pairs with distances above this value will be skipped (default: infinity)
-
-          /*!
-           * \param res Resolution of X axis
-           */
-    RadialDistribution(Tx res=0.2) : Ttable(res,Ttable::HISTOGRAM) {
-            this->name="Radial Distribution Function";
-                       
-            maxdist=pc::infty;
-            static_assert( std::is_integral<Ty>::value, "Histogram must be of integral type");
-            static_assert( std::is_unsigned<Ty>::value, "Histogram must be unsigned");
-           }
-          /*!
-           * \brief Sample radial distibution of two atom types
-           * \param spc Simulation space
-           * \param g Group to search
-           * \param ida Atom id of first particle
-           * \param idb Atom id of second particle
-           */
-          void sample(Space &spc, Group &g, short ida, short idb) {
-     
-              for (auto i=g.begin(); i!=g.end()-1; i++)
-              for (auto j=i+1; j!=g.end(); j++)
-                if ( (spc.p[*i].id==ida && spc.p[*j].id==idb) || (spc.p[*i].id==idb && spc.p[*j].id==ida) ) {
-                  Tx r=spc.geo->dist(spc.p[*i], spc.p[*j]);
-                  if (r<=maxdist)
-                    this->operator() (r)++; 
-                }
-            double bulk=0;
+    class RadialDistribution : public Table2D<Tx,Ty> {
+    private:
+      
+      typedef Table2D<Tx,Ty> Ttable;
+      virtual double volume(Tx x) {
+        return 4./3.*pc::pi*( pow(x+0.5*this->dx,3) - pow(x-0.5*this->dx,3) );
+      }
+      
+      double get(Tx x) {
+        assert( volume(x)>0 );
+        assert( this->count()>0 );
+        
+        if (bulkconc.cnt==0) bulkconc+=1;
+        
+        return ((double)this->operator()(x)*Npart.avg()) / (volume(x) *(double)this->count() * bulkconc.avg())
+        ;
+        
+      }
+      Average<double> bulkconc; //!< Average bulk concentration
+      Average<double> Npart;
+    public:
+      Tx maxdist; //!< Pairs with distances above this value will be skipped (default: infinity)
+      
+      /*!
+       * \param res Resolution of X axis
+       */
+      RadialDistribution(Tx res=0.2) : Ttable(res,Ttable::HISTOGRAM) {
+        this->name="Radial Distribution Function";
+        
+        maxdist=pc::infty;
+        static_assert( std::is_integral<Ty>::value, "Histogram must be of integral type");
+        static_assert( std::is_unsigned<Ty>::value, "Histogram must be unsigned");
+      }
+      /*!
+       * \brief Sample radial distibution of two atom types
+       * \param spc Simulation space
+       * \param g Group to search
+       * \param ida Atom id of first particle
+       * \param idb Atom id of second particle
+       */
+      void sample(Space &spc, Group &g, short ida, short idb) {
+        
+        for (auto i=g.begin(); i!=g.end()-1; i++)
+          for (auto j=i+1; j!=g.end(); j++)
+            if ( (spc.p[*i].id==ida && spc.p[*j].id==idb) || (spc.p[*i].id==idb && spc.p[*j].id==ida) ) {
+              Tx r=spc.geo->dist(spc.p[*i], spc.p[*j]);
+              if (r<=maxdist)
+                this->operator() (r)++;
+            }
+        double bulk=0;
 	      for (auto i : g){
-		if (spc.p[i].id==ida || spc.p[i].id==idb){
-		  bulk++;
-		}
+          if (spc.p[i].id==ida || spc.p[i].id==idb){
+            bulk++;
+          }
 	      }
 	      Npart+=bulk;
 	      bulkconc += bulk / spc.geo->getVolume();
-          }
-      };
+      }
+    };
 
     template<typename Tx=double, typename Ty=unsigned long>
       class LineDistribution : public RadialDistribution<Tx,Ty> {

@@ -45,21 +45,6 @@ namespace Faunus {
       return name+": N/A";
     }
     
-    //double PairPotentialBase::operator() (const particle &a, const particle &b, const Point &r2) const {
-    //  return operator()(a,b,r2.squaredNorm());
-    //}
-
-    /**
-     * @param a First particle
-     * @param b Second particle
-     * @param r2 Squared distance between them (angstrom squared)
-     * @param p Vector from: p=b-a
-     */
-    Point PairPotentialBase::force(const particle &a, const particle &b, double r2, const Point &p) {
-      assert(!"Force not overrided!");
-      return Point(0,0,0);
-    }
-
     /**
      * This will reset the temperature to the specified value. By default this function
      * does nothing, although in Debug mode it will throw an exception if derived classes
@@ -114,6 +99,62 @@ namespace Faunus {
       using namespace Faunus::textio;
       std::ostringstream o;
       o << name+": k=" << k << kT+"/"+angstrom+squared+" r0=" << sqrt(r02) << _angstrom; 
+      return o.str();
+    }
+    
+    Hertz::Hertz(InputMap &in, string pfx) : PairPotentialBase(pfx) {
+      name = "Hertz";
+      //  Y = in(prefix+"_Y", 0.0);
+      //nu = in(prefix+"_nu", 0.0);
+      E = in(prefix+"_E",0.0);
+    }
+
+    string Hertz::_brief() {
+      using namespace Faunus::textio;
+      std::ostringstream o;
+      o <<name+" E:"<< E;
+      return o.str();
+    }
+	  
+    string Hertz::info(char w) {
+      using namespace Faunus::textio;
+      std::ostringstream o;
+      o <<name+" E: "<< E;
+      return o.str();
+    }
+
+    YukawaGel::YukawaGel(InputMap &in) : Coulomb(in) {
+      name = "YukawaGel";
+    
+      Z = in.get<double>("yukawagel_Z", 0.0);
+      nc = in.get<double>("yukawagel_nc", 0.0);
+      ns = in.get<double>("yukawagel_ns", 0.0);
+      v = in.get<double>("yukawagel_v",1.0);
+      d = in.get<double>("yukawagel_d",1.0);
+      
+      k = sqrt(4.*pc::pi*(nc+2.*ns)*v*v*bjerrumLength());
+      Z2e2overER = Z*Z*bjerrumLength();
+      kd = k*d;
+      k2d2 = k*k*d*d;
+      ekd = exp(-kd);
+      braket7 = (cosh(kd/2.) - (2.*sinh(kd/2.)/kd));
+      cout << Z <<"   "<< bjerrumLength() << "  " << k << endl ;
+    }
+
+    string YukawaGel::_brief() {
+      using namespace Faunus::textio;
+      std::ostringstream o;
+      o <<name;
+      return o.str();
+    }
+
+     string YukawaGel::info(char w) {
+      using namespace Faunus::textio;
+      std::ostringstream o;
+      o <<name+" Z: "<< Z << endl << " Counter ions:  "<< nc <<  endl
+	<<" Salt: " << ns << endl <<" BjerrumL: " << bjerrumLength() << endl
+	<<" kappa: " << k <<endl;
+	
       return o.str();
     }
 
@@ -488,6 +529,12 @@ namespace Faunus {
     double MultipoleEnergy::dipdip(const Point &a, const Point &b, double r) {
       return lB*( a.x()*b.x() + a.y()*b.y() - 2*a.z()*b.z() ) / (r*r*r);
     }
+    
+   
+     
+
+
+  
 
     /* 
        double PatchSCsphere::eattractive_sc_sphere(const Point &a, const Point &b, const Point r_cm) {

@@ -63,6 +63,11 @@ set_target_properties(axel-clustertest PROPERTIES OUTPUT_NAME "clustertest")
 fau_example(axel-tempertest "./axel/tempertest" temper.cpp)
 set_target_properties(axel-tempertest PROPERTIES OUTPUT_NAME "tempertest")
 
+# Alexei's playground
+fau_example(alexei-hs "./alexei" HS.cpp)
+set_target_properties(alexei-hs PROPERTIES OUTPUT_NAME "HS")
+
+
 if (EXISTS ${MYPLAYGROUND})
   add_subdirectory(${MYPLAYGROUND} ${MYPLAYGROUND})
 endif()

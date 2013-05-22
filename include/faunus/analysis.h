@@ -315,16 +315,24 @@ namespace Faunus {
         private:
           typedef Table2D<Tx,Ty> Ttable;
           virtual double volume(Tx x) {
-            return 4./3.*pc::pi*( pow(x+0.5*this->dx,3) - pow(x-0.5*this->dx,3) );
+            return 4./3.*pc::pi*( pow(x+0.5*this->dx,3)
+                - pow(x-0.5*this->dx,3) );
           }
+
           double get(Tx x) {
             assert( volume(x)>0 );
             assert( this->count()>0 );
+
             if (bulkconc.cnt==0) bulkconc+=1;
-            return (double)this->operator()(x) / volume(x) / (double)this->count() / bulkconc.avg()
-              * this->map.size() * this->dx;
+            if (bulkconc.avg()<1e-6) bulkconc+=1;
+            if (Npart.cnt==0) Npart+=1;
+
+            return ((double)this->operator()(x)*Npart.avg()) / (volume(x) *(double)this->count() * bulkconc.avg())
+              ;
+
           }
           Average<double> bulkconc; //!< Average bulk concentration
+          Average<double> Npart;
         public:
           Tx maxdist; //!< Pairs with distances above this value will be skipped (default: infinity)
 
@@ -333,32 +341,42 @@ namespace Faunus {
            */
           RadialDistribution(Tx res=0.2) : Ttable(res,Ttable::HISTOGRAM) {
             this->name="Radial Distribution Function";
-            maxdist=pc::infty;
-            static_assert( std::is_integral<Ty>::value, "Histogram must be of integral type");
-            static_assert( std::is_unsigned<Ty>::value, "Histogram must be unsigned");
-          }
 
-          /**
-           * @brief Sample radial distibution of two atom types
-           * @param spc Simulation space
-           * @param g Group to search
-           * @param ida Atom id of first particle
-           * @param idb Atom id of second particle
+            maxdist=pc::infty;
+            static_assert( std::is_integral<Ty>::value,
+                "Histogram must be of integral type");
+            static_assert( std::is_unsigned<Ty>::value,
+                "Histogram must be unsigned");
+          }
+          /*!
+           * \brief Sample radial distibution of two atom types
+           * \param spc Simulation space
+           * \param g Group to search
+           * \param ida Atom id of first particle
+           * \param idb Atom id of second particle
            */
-          template<class Tspace, class Tgroup>
-            void sample(Tspace &spc, Tgroup &g, short ida, short idb) {
+          template<class Tspace>
+            void sample(Tspace &spc, Group &g, short ida, short idb) {
               for (auto i=g.begin(); i!=g.end()-1; i++)
                 for (auto j=i+1; j!=g.end(); j++)
                   if ( (spc.p[*i].id==ida && spc.p[*j].id==idb) || (spc.p[*i].id==idb && spc.p[*j].id==ida) ) {
                     Tx r=spc.geo.dist(spc.p[*i], spc.p[*j]);
                     if (r<=maxdist)
-                      this->operator() (r)++; 
+                      this->operator() (r)++;
                   }
-              double bulk=0;
+              int bulk=0;
               for (auto i : g)
                 if (spc.p[i].id==ida || spc.p[i].id==idb)
                   bulk++;
+              Npart+=bulk;
               bulkconc += bulk / spc.geo.getVolume();
+            }
+
+          template<class Tspace>
+            void sample(Tspace &spc, short ida, short idb) {
+              Group all(0, spc.p.size()-1);
+              assert(all.size()==spc.p.size());
+              return sample(spc,all,ida,idb);
             }
       };
 
@@ -950,76 +968,76 @@ namespace Faunus {
     /*
      * Perhaps make this a template, taking T=double as parameter?
      *
-       class checkWhiteNoise {
-       private:
-       std::vector<double> noise;
-       int le;
-       double significance;
-       double lag;
-       double mu;
-       double sigma2;
-       public:
-       inline checkWhiteNoise(std::vector<double> noise_in,double significance_in, double lag_in) {
-       noise = noise_in;
-       significance = significance_in;
-       lag = lag_in;
-       le = noise.size();
-       getMu();
-       getVariance();
-       }
+     class checkWhiteNoise {
+     private:
+     std::vector<double> noise;
+     int le;
+     double significance;
+     double lag;
+     double mu;
+     double sigma2;
+     public:
+     inline checkWhiteNoise(std::vector<double> noise_in,double significance_in, double lag_in) {
+     noise = noise_in;
+     significance = significance_in;
+     lag = lag_in;
+     le = noise.size();
+     getMu();
+     getVariance();
+     }
 
-       bool check(int h) {
-       double Q = 0.0;
-       for(int k = 0;k < h; k++) {
-       Q += noise[k]*noise[k+lag]/(le-k);
-       }
-       Q = le*(le+2)*Q;
-       double chi2 = getChi2(1-significance,h);
-       if(Q > chi2) {
-       return false;
-       } else {
-       return true;
-       }
-       }
+     bool check(int h) {
+     double Q = 0.0;
+     for(int k = 0;k < h; k++) {
+     Q += noise[k]*noise[k+lag]/(le-k);
+     }
+     Q = le*(le+2)*Q;
+     double chi2 = getChi2(1-significance,h);
+     if(Q > chi2) {
+     return false;
+     } else {
+     return true;
+     }
+     }
 
-       void getMu() {
-       mu = 0;
-       for(int k = 0;k < le; k++) {
-       mu += noise[k];
-       }
-       mu /= le;
-       }
+     void getMu() {
+     mu = 0;
+     for(int k = 0;k < le; k++) {
+     mu += noise[k];
+     }
+     mu /= le;
+     }
 
-       void getVariance() {
-       sigma2 = 0;
-       for(int k = 0;k < le; k++) {
-       sigma2 += noise[k]*noise[k];
-       }
-       sigma2 -= mu*mu;
-       }
+     void getVariance() {
+     sigma2 = 0;
+     for(int k = 0;k < le; k++) {
+     sigma2 += noise[k]*noise[k];
+     }
+     sigma2 -= mu*mu;
+     }
 
-       double getChi2(double x, int k) {
-       if(x < 0) return 0.0;
-       return (1-(incgamma(x,k)/(Gamma(x))));
-       }
+     double getChi2(double x, int k) {
+     if(x < 0) return 0.0;
+     return (1-(incgamma(x,k)/(Gamma(x))));
+     }
 
-       double incgamma (double x, double a){
-       double sum = 0;
-       double term = 1.0/a;
-       int n = 1;
-       while (term != 0){
-       sum = sum + term;
-       term = term*(x/(a+n));
-       n++;
-       }
-       return pow(x,a)*exp(-1*x)*sum;
-       }
+     double incgamma (double x, double a){
+     double sum = 0;
+     double term = 1.0/a;
+     int n = 1;
+     while (term != 0){
+     sum = sum + term;
+     term = term*(x/(a+n));
+     n++;
+     }
+     return pow(x,a)*exp(-1*x)*sum;
+     }
 
-       double Gamma(double x) {
-       if(std::abs(x-(int)x) < 1e-6 && (int)x > 1) {
-       return (int)x*Gamma(((int)x)-1);
-       } else if(std::abs(x-(int)x) < 1e-6 && (int)x == 1) {
-       return 1;
+     double Gamma(double x) {
+     if(std::abs(x-(int)x) < 1e-6 && (int)x > 1) {
+     return (int)x*Gamma(((int)x)-1);
+} else if(std::abs(x-(int)x) < 1e-6 && (int)x == 1) {
+  return 1;
 }
 
 if(x <= 0) { 

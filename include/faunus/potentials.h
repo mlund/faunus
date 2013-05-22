@@ -62,8 +62,17 @@ namespace Faunus {
         string brief();    //!< Brief, one-lined information string
         virtual void setTemperature(double); //!< Set temperature [K]
 
-        /** @brief Particle-particle force in units of \c kT/Å */
-        virtual Point force(const particle&, const particle&, double, const Point&);
+        /**
+         * @brief Particle-particle force in units of \c kT/AA
+         * @param a First particle
+         * @param b Second particle
+         * @param r2 Squared distance between them (angstrom squared)
+         * @param p Vector from: p=b-a
+         */
+        template<typename Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            return Point(0,0,0);
+          }
 
         /** @brief Electric field at spatial position */
         template<typename Tparticle>
@@ -181,6 +190,33 @@ namespace Faunus {
             return (r2>r02) ? pc::infty : -0.5*k*r02*std::log(1-r2*r02inv);
           }
     };
+
+    /**
+     * @brief Hertz pair potential
+     */
+    class Hertz : public PairPotentialBase {
+      private:
+        double E;
+        string _brief();
+      public:
+        Hertz(InputMap&, string="hertz");
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+            double m = a.radius+b.radius;
+            double diameter = 2.*a.radius;
+            if(r2 <= m*m) {
+              return E*pow((1-(sqrt(r2)/diameter)),(5./2.));
+            }
+            return 0;
+          }
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b,const Point &r2) {
+            return operator()(a,b, r2.squaredNorm());
+
+          }
+        string info(char); 
+    };
+
 
     /**
      * @brief Hard sphere pair potential
@@ -514,8 +550,8 @@ namespace Faunus {
             double x=r6(sigma,r2)*0.5;
             return eps*(x*x - x + 0.25);
           }
-        template<class T>
-          Point force(const T &a, const T &b, double r2, const Point &p) {
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
             double sigma = a.radius+b.radius;
             if (r2 > sigma*sigma)
               return Point(0,0,0);
@@ -539,6 +575,7 @@ namespace Faunus {
       //friend class Energy::GouyChapman;
       private:
       string _brief();
+
       double epsilon_r;
       protected:
       double depsdt;      //!< \f$ T\partial \epsilon_r / \epsilon_r \partial T = -1.37 \f$
@@ -654,10 +691,63 @@ namespace Faunus {
         string info(char);
     };
 
+
+    class YukawaGel : public Coulomb {
+      private:
+        string _brief();
+        double Z, nc,ns, v, k, Z2e2overER,d,kd,k2d2,ekd, braket7;
+
+      public:
+
+        YukawaGel(InputMap&);
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+            double m = a.radius+b.radius;
+            double r = sqrt(r2);
+            double kr = k*r;
+
+
+            double ekr=exp(-kr);
+
+            if(r2 <= m*m) {
+              double roverd = r/d;
+
+              double ekdsinhkr = ekd*sinh(kr);
+
+              double A = (2./d)*Z2e2overER;
+
+              double braket = (6./5.)-(2.*pow(roverd,2))+((3./2.)*pow(roverd,3))-((1./5.)*pow(roverd,5));
+
+              double B = (72./((k2d2*k2d2)*r))*Z2e2overER;
+
+              double braket2 = (((1.-ekr+(0.5*kr*kr)+((1./24.)*pow(kr,4)))*(1.-(4./k2d2)))+((4.*ekdsinhkr)/kd));
+
+              double braket3 = ( ekdsinhkr + (k*k*d*r) + ( ((k*k*k*k)/6.) * ((d*d*d*r)+(r*r*r*d)) ) )* (1.+(4./k2d2));
+
+              double braket4 = ((4.*r)/d)*(1.+(0.5*k2d2)+((1./30.)*(k2d2*k2d2)));
+              double braket5 = ((8.*r*r*r)/(3.*d*d*d))*((k2d2/4.)+((k2d2*k2d2)/12.));
+              double braket6 = (((1./180.)*((k*k*k*k)/(d*d)))*(r*r*r*r*r*r));
+
+              double pot = (A*braket)-(B*(braket2+braket3-braket4-braket5-braket6));
+              return pot;
+            }
+            else{
+
+              double pot2 = ((144./(k2d2*k2d2))*(Z2e2overER)*(braket7*braket7)*(ekr/r));
+
+              return pot2;
+            }
+          }
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
+            return operator()(a,b,r.squaredNorm());
+          }
+        string info(char); 
+    };
+
     /**
      * @brief Debye-Huckel/Yukawa potential
-     *
-     * @details Similar to the plain Coulomb potential
+     *1     * @details Similar to the plain Coulomb potential
      *          but with an exponential term to described salt screening:
      * \f[ \beta w_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT}
      * \frac{z_i z_j}{r_{ij}} \exp(-\kappa r_{ij}) \f]
@@ -757,6 +847,8 @@ namespace Faunus {
             return Tdefault::info(w) + _info;
           }
       };
+
+
 
     /**
      * @brief Combines two pair potentials
@@ -882,6 +974,8 @@ namespace Faunus {
      * @brief Combined DebyeHuckel / R12Repulsion potential
      */
     typedef CombinedPairPotential<DebyeHuckel, R12Repulsion> DebyeHuckelr12;
+
+    typedef CombinedPairPotential<Hertz,YukawaGel> HertzYukawa;
 
   } //end of Potential namespace
 

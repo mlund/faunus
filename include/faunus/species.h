@@ -1,9 +1,9 @@
-#ifndef FAU_species_h
-#define FAU_species_h
+#ifndef FAUNUS_SPECIES_H
+#define FAUNUS_SPECIES_H
 
 #ifndef SWIG
 #include <faunus/common.h>
-#include "point.h"
+#include <faunus/point.h>
 #endif
 
 namespace Faunus {

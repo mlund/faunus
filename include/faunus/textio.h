@@ -1,9 +1,7 @@
 #ifndef FAUNUS_TEXTIO_H
 #define FAUNUS_TEXTIO_H
 
-#ifndef SWIG
 #include <faunus/common.h>
-#endif
 
 namespace Faunus {
   /*!
@@ -61,18 +59,81 @@ namespace Faunus {
     const string theta="\u03b8";      //!< Greek theta
 #endif
 
-    string splash();                              //!< Show Faunus welcome text, version etc.
-    string bracket(const string&);                //!< Put angular brackets around string
-    string header(const string&);                 //!< Print header for info() functions
-    string indent(indentlevel);                   //!< Indent text
-    string pad(indentlevel, char, const string&); //!< Pad and indent text
-    string trim(string);                          //!< Remove white space from string
+    /** @brief Remove white space from string */
+    inline string trim(string s) {
+      s.erase( std::remove_if(s.begin(), s.end(), isspace), s.end());
+      return s;
+    }
+
+    /** @brief  Put angular brackets around string */
+    inline string bracket(const string &s) {
+#ifdef AVOID_UNICODE
+      return "<"+s+">";
+#else
+      return "\u27e8"+s+"\u27e9";
+#endif
+    }
+
+    /** @brief Print header for info() functions */
+    inline string header(const string &s) {
+      int l=s.size()+2;
+      return "\n " + std::string(l,'.') + "\n  " + s + "  \n " + string(l,'*') + "\n";
+    }
+
+    /** @brief Indent text */
+    inline string indent(indentlevel level) {
+      return std::string(level, ' ');
+    }
+
+    /** @brief Pad and indent text */
+    inline string pad(indentlevel level, char width, const string &s) {
+      std::stringstream o;
+      o << indent(level) << std::left << std::setw(width) << s;
+      return o.str();
+    }
+
+    /**
+     * @brief Show Faunus welcome text, version etc.
+     * @note See http://patorjk.com/software/taag for ASCII art generation
+     */
+    inline string splash() {
+      std::ostringstream o;
+      o << std::string(71,'.') << endl
+        << "  Welcome to FAUNUS - A Framework for Molecule Simulation.\n"
+        << "  Copyright (C) 2002-2013 Mikael Lund\n"
+        << "\n"
+        << "  This program is free software; you can redistribute it and/or modify\n"
+        << "  it under the terms of the GNU General Public License as published by\n"
+        << "  the Free Software Foundation; either version 2 of the License, or\n"
+        << "  (at your option) any later version.\n"
+        << "\n"
+        << "   ___________                               _________\n"
+        << "   \\_   _____/_____    __ __   ____   __ __ /   _____/\n"
+        << "    |    __)  \\__  \\  |  |  \\ /    \\ |  |  \\\\_____  \\\n"
+        << "    |     \\    / __ \\_|  |  /|   |  \\|  |  //        \\\n"
+        << "    \\___  /   (____  /|____/ |___|  /|____//_______  /\n"
+        << "        \\/         \\/             \\/               \\/\n"
+        << "\n"
+        << "  Developed by:\n"
+        << "    Mikael Lund, Bj\u00F6rn Persson, Martin Trulsson,\n"
+        << "    Ond\u0159ej Mar\u0161\u00E1lek, Christophe Labbez, Andre Teixeira,\n"
+        << "    An\u0131l Kurut, Chris Evers, Robert V\u00E1cha, Axel Thuresson,\n"
+        << "    Bj\u00F6rn Stenqvist.\n"
+        << "\n"
+        << "  Reference:\n"
+        << "    Source Code Biol. Med. (2008) 3:1\n"
+        << "    doi:10/dfqgch\n"
+        << "\n"
+        << "  Library build details:\n"
+        << "    Compiled on " << __DATE__ << " " << __TIME__
+#ifdef __VERSION__
+        << "\n    " << __VERSION__
+#endif
+        << "\n" << string(71,'*') << endl;
+      return o.str();
+    }
 
     extern std::string prefix;                    //!< Unique prefix for current job. Use for file I/O.
-#ifndef SWIG
-    extern std::ostream &fcout;                   //!< Alias for standard output (can be redirected)
-    extern std::ostream &fcerr;                   //!< Alias for standard error (can be redirected)
-#endif
 
   }//end of textio namespace
 }// end of Faunus namespace

@@ -17,10 +17,11 @@ int main() {
     + Energy::ExternalPotential<Tspace,Potential::ExcessDH<> >(mcp);
 
   // Add molecule to middle of simulation container
-  FormatAAM aam;
-  aam.load( mcp.get<string>("molecule", string()) );
-  Geometry::cm2origo(spc.geo, aam.particles() ); // center molecule
-  Group g = spc.insert( aam.particles() );       // insert into space
+  string file = mcp.get<string>("molecule", string());
+  Tspace::ParticleVector v;
+  FormatAAM::load(file,v);
+  Geometry::cm2origo(spc.geo,v); // center molecule
+  Group g = spc.insert(v);       // insert into space
   g.name="peptide"; // babtise
   spc.enroll(g);    // enroll group in space
 

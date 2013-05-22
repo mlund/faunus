@@ -18,7 +18,7 @@ namespace Faunus {
    */
   class Group : public Range {
     private:
-      int molsize; // Number of atoms in contained molecule(s)
+      int molsize; // Number of atoms per molecule
     public:
       Group(int front=-1, int back=-1) : Range(front,back-front+1) {
         setMolSize(-1);

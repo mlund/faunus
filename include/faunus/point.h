@@ -188,7 +188,7 @@ namespace Faunus {
       friend std::ostream &operator<<(std::ostream &o, const Tensor<T> &t) {
         for (int i=0; i!=t.rows(); ++i)
           for (int j=i; j!=t.cols(); ++j)
-            o << t(i,j);
+            o << t(i,j) << " " ;
         return o;
       }
 

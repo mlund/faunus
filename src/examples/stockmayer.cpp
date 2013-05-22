@@ -5,6 +5,7 @@ using namespace Faunus::Move;
 using namespace Faunus::Potential;
 
 typedef Space<Geometry::Cuboid,DipoleParticle> Tspace;
+typedef CombinedPairPotential<LennardJones,DipoleDipole> Tpair;
 
 #ifdef POLARIZE
 typedef Move::PolarizeMove<AtomicTranslation<Tspace> > TmoveTran;
@@ -13,8 +14,6 @@ typedef Move::PolarizeMove<AtomicRotation<Tspace> > TmoveRot;
 typedef Move::AtomicTranslation<Tspace> TmoveTran;   
 typedef Move::AtomicRotation<Tspace> TmoveRot;
 #endif
-
-typedef CombinedPairPotential<LennardJones,DipoleDipole> Tpair;
 
 int main() {
   ::atom.includefile("stockmayer.json");         // load atom properties
@@ -31,9 +30,9 @@ int main() {
   TmoveRot rot(in,pot,spc);
   trans.setGroup(sol);                                // tells move class to act on sol group
   rot.setGroup(sol);                                  // tells move class to act on sol group
-  spc.load("state_ST");
+  spc.load("state");
   spc.p = spc.trial;
-  
+  UnitTest test(in);               // class for unit testing
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );   // initial energy
   while ( loop.macroCnt() ) {                         // Markov chain 
     while ( loop.microCnt() ) {
@@ -52,15 +51,39 @@ int main() {
           }
         }
     }    
-    
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
     cout << loop.timing();
   }
+  
+  // perform unit tests
+  trans.test(test);
+  rot.test(test);
+  sys.test(test);
 
   FormatPQR().save("confout.pqr", spc.p);
   rdf.save("gofr.dat");                               // save g(r) to disk
   mucorr.save("mucorr.dat");                               // save g(r) to disk
   std::cout << spc.info() + pot.info() + trans.info()
-    + rot.info() + sys.info(); // final info
-  spc.save("state_ST");
+    + rot.info() + sys.info() + test.info(); // final info
+  spc.save("state");
+  
+  return test.numFailed();
 }
+/**  @page example_stockmayer Example: Stockmayer potential
+ *
+ This will simulate a Stockmayer potential in a cubic box.
+
+ Run this example from the `examples` directory:
+
+ ~~~~~~~~~~~~~~~~~~~
+ $ make
+ $ cd src/examples
+ $ ./stockmayer.run
+ ~~~~~~~~~~~~~~~~~~~
+
+ stockmayer.cpp
+ ============
+
+ @includelineno examples/stockmayer.cpp
+
+*/

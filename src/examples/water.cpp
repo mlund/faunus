@@ -25,10 +25,10 @@ int main() {
   string file = mcp.get<string>("mol_file");
   int N=mcp("mol_N",1);
   for (int i=0; i<N; i++) {
-    FormatAAM aam;
-    aam.load(file);
-    Geometry::FindSpace().find(spc.geo, spc.p, aam.particles());
-    Group g = spc.insert( aam.particles() );// Insert into Space
+    Tspace::ParticleVector v;
+    FormatAAM::load(file,v);
+    Geometry::FindSpace().find(spc.geo, spc.p, v);
+    Group g = spc.insert(v);// Insert into Space
     sol.setrange(0, g.back());
   }
   spc.enroll(sol);
@@ -67,10 +67,7 @@ int main() {
       // sample oxygen-oxygen rdf
       if (slp_global()>0.9) {
         auto id = atom["OW"].id;
-        for (int i=0; i<sol.size()-1; i++)
-          for (int j=i+1; j<sol.size(); j++)
-            if (spc.p[i].id==id && spc.p[j].id==id)
-              rdf( spc.dist(i,j) )++;
+        rdf.sample(spc,sol,id,id);
       }
 
     } // end of micro loop
@@ -82,7 +79,7 @@ int main() {
 
   rdf.save("rdf.dat");
   spc.save("state");
-  FormatPQR().save("confout.pqr", spc.p);
+  FormatPQR::save("confout.pqr", spc.p);
 
   // perform unit tests
   iso.test(test);

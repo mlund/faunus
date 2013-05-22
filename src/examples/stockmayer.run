@@ -1,55 +1,43 @@
 #!/bin/bash
 
-#source_tests_dir="`dirname $0`"
+# THIS RUN SCRIPT IS USED AS A UNIT TEST SO PLEASE
+# DO NOT UPLOAD ANY MODIFIED VERSIONS TO SVN UNLESS
+# TO UPDATE THE TEST.
 
-#-----------------------------------------------------------
-# Create user input file
-#-----------------------------------------------------------
-function mkinput() {
+source_tests_dir="`dirname $0`"
+cp -f $source_tests_dir/stockmayer.test . 2> /dev/null
+cp -f $source_tests_dir/stockmayer.state state 2> /dev/null
+
 echo '{ "atomlist" :
   {
-    "sol" : { "sigma":'${sigma}', "mu":"0 0 $mu", "dp":'$dp', "dprot":'$dprot', "alpha":"$alpha 0 0 $alpha 0 $alpha"}
+    "sol" : { "sigma":1.0, "mu":"0 0 1.5712", "dp":4.4695, "dprot":180, "alpha":"1 2 3 4 5 6", "theta":"10 11 12 13 14 15"}
   }
 }' > stockmayer.json
 
 
 echo "
-loop_macrosteps        $loop_macrosteps
-loop_microsteps        $loop_microsteps
+atomlist           stockmayer.json   # atom properties
+cuboid_len         8.939           # angstrom
+                  
+temperature        4321         # K
+epsilon_r          1            # dielectric const.
+dipdip_cutoff      10.5         # dipole cutoff [angstrom]
+lj_eps             0.069        # Uniform LJ epsilon parameter [kT]
+                  
+loop_macrosteps    10           # number of macro loops
+loop_microsteps    500          # number of micro loops
 
-dipdip_cutoff $dipdip_cutoff      # Reaction field cut off
-epsilon_rf    $epsilon_rf         # epsilon of the reaction field
-cuboid_len    $cuboid_len 
-temperature   $temperature    
-epsilon_r     $epsilon_r          # Dielectric constant
-lj_eps        $lj_eps             # Uniform LJ epsilon parameter [kT]
-tion1         sol 
-nion1         $N  
+tion1              sol 
+nion1              100  
+
+test_stable        no
+test_file          stockmayer.test
 " > stockmayer.input
-}
 
-#-----------------------------------------------------------
-# Run simulation
-#-----------------------------------------------------------
 exe=./stockmayer
 if [ -x $exe ]; then
-  sigma=1.0
-  mu=1.5712
-  dp=0.5
-  dprot=30
-  alpha=1
-  loop_macrosteps=10
-  loop_microsteps=1000
-  dipdip_cutoff=8.939    # Reaction field cut off
-  epsilon_rf=1e4          # epsilon of the reaction field
-  cuboid_len=8.939      # Box side length [angstrom]
-  temperature=4321        # Temperature [K]
-  epsilon_r=1             # Dielectric constant
-  lj_eps=0.069            # Uniform LJ epsilon parameter [kT]
-  N=100                  # number of ion type 1
-  mkinput
-  $exe
-  rc=$?
-  rm -f stockmayer.input stockmayer.json
-  exit $rc
+ $exe
+ rc=$?
+ exit $rc
 fi
+exit 1

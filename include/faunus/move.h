@@ -645,12 +645,12 @@ namespace Faunus {
       class TranslateRotate : public Movebase<Tspace> {
         private:
           typedef Movebase<Tspace> base;
+        protected:
           using base::spc;
           using base::pot;
           using base::w;
           using base::cnt;
           using base::prefix;
-        protected:
           void _test(UnitTest&);
           void _trialMove();
           void _acceptMove();
@@ -831,9 +831,8 @@ namespace Faunus {
      */
     template<class Tspace>
       class TranslateRotateCluster : public TranslateRotate<Tspace> {
-        private:
+        protected:
           typedef TranslateRotate<Tspace> base;
-          using base::spc;
           using base::pot;
           using base::w;
           using base::cnt;
@@ -853,6 +852,7 @@ namespace Faunus {
           Group* gmobile;          //!< Pointer to group with potential cluster particles
           virtual double ClusterProbability(p_vec&,int); //!< Probability that particle index belongs to cluster
         public:
+          using base::spc;
           TranslateRotateCluster(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="transrot");
           virtual ~TranslateRotateCluster();
           void setMobile(Group&); //!< Select atomic species to move with the main group

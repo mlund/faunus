@@ -77,6 +77,7 @@ namespace Faunus {
 
       public:
         typedef std::vector<Tparticle, Eigen::aligned_allocator<particle> > p_vec;
+        typedef p_vec ParticleVector;
         typedef Tparticle ParticleType;
         typedef Tgeometry GeometryType;
         enum keys {OVERLAP,NOOVERLAP,RESIZE,NORESIZE};

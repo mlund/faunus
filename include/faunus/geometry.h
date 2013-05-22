@@ -355,12 +355,11 @@ namespace Faunus {
         geo.boundary(x);
       }
 
-    /*!
-     * \brief Find an empty space for a particle vector in a space of other particles
-     * \author Mikael Lund
-     * \date Asljunga 2011
-     * \todo Implement random rotation in addition to current translation scheme.
-     *
+    /**
+     * @brief Find an empty space for a particle vector in a space of other particles
+     * @author Mikael Lund
+     * @date Asljunga 2011
+     * @todo Implement random rotation in addition to current translation scheme.
      */
     class FindSpace {
       private:

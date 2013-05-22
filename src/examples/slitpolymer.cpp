@@ -17,13 +17,13 @@ int main() {
   pot.expot.setSurfPositionZ( &spc.geo.len_half.z() ); // Pass position of GC surface
 
   // Load and add polymer to Space
-  FormatAAM aam;                                      // AAM structure file I/O
-  string polyfile = mcp.get<string>("polymer_file", "");
-  aam.load(polyfile);                                 // Load polymer structure into aam class
-  Geometry::FindSpace().find(spc.geo, spc.p, aam.particles()); // find empty spot
-  Group pol = spc.insert( aam.particles() );          // Insert into Space and return matching group
-  pol.name="polymer";                                 // Give polymer arbitrary name
-  spc.enroll(pol);                                    // Enroll polymer in Space
+  string file = mcp.get<string>("polymer_file", "");
+  Tspace::ParticleVector v;                   // temporary, empty particle vector
+  FormatAAM::load(file,v);                    // load AAM structure into v
+  Geometry::FindSpace().find(spc.geo,spc.p,v);// find empty spot in particle vector
+  Group pol = spc.insert(v);                  // Insert into Space and return matching group
+  pol.name="polymer";                         // Give polymer arbitrary name
+  spc.enroll(pol);                            // Enroll polymer in Space
 
   // MC moves
   Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
@@ -76,7 +76,7 @@ int main() {
 
   spc.save("state");               // save final state of simulation (positions etc)
   surfmapall.save("surfall.dat");  // save monomer-surface distribution
-  FormatPQR().save("confout.pqr", spc.p);  // save PQR file
+  FormatPQR::save("confout.pqr", spc.p);  // save PQR file
 
   // Perform unit tests (only for faunus integrity)
   gmv.test(test);

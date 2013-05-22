@@ -4,9 +4,8 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 #   Faunus library object files
 # -------------------------------
 set(objs
-  drift geometry inputfile io mcloop
-  potentials slump species textio analysis
-  mpi)
+  geometry inputfile
+  potentials slump species textio analysis mpi)
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 #----- xdrfile static library for gromacs output -----

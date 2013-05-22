@@ -82,12 +82,13 @@ int main() {
   Group lipids;
   lipids.setMolSize(3);
   FormatAAM aam;           // AAM structure file I/O
-  string flipid = mcp.get<string>("lipid_file","");
+  string file = mcp.get<string>("lipid_file","");
   int Nlipid=mcp("lipid_N",1);
   for (int i=0; i<Nlipid; i++) {
-    aam.load(flipid);      // Load polymer structure into aam class
-    Geometry::FindSpace().find(spc.geo, spc.p, aam.particles()); // find empty spot
-    Group pol = spc.insert( aam.particles() );        // Insert into Space
+    Tspace::ParticleVector v;                   // temporary, empty particle vector
+    FormatAAM::load(file,v);                    // load AAM structure into v
+    Geometry::FindSpace().find(spc.geo,spc.p,v);// find empty spot in particle vector
+    Group pol = spc.insert(v);                  // Insert into Space
     if (slp_global()>0.5)
       std::swap( spc.p[pol.front()].z(), spc.p[pol.back()].z() );
     if (slp_global()<mcp("lipid_chargefraction", 0.0))
@@ -158,7 +159,7 @@ int main() {
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // energy drift?
 
     // save to disk
-    FormatPQR().save("confout.pqr", spc.p);
+    FormatPQR::save("confout.pqr", spc.p);
     spc.save("state");
 
     cout << loop.timing();

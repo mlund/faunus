@@ -1,7 +1,7 @@
 #include <faunus/faunus.h>
 using namespace Faunus;
 
-typedef Geometry::Cuboid Tgeometry;   // specify geometry - here cube w. periodic boundaries
+typedef Space<Geometry::Cuboid,CigarParticle> Tspace;
 
 using namespace Faunus::Potential;
 
@@ -16,14 +16,14 @@ int main() {
   EnergyDrift sys; // class for tracking system energy drifts
 
   // Energy functions and space
-  Energy::Hamiltonian pot;
-  auto nonbonded = pot.create( Energy::NonbondedVector<Tpairpot,Tgeometry>(mcp) );
-  Space spc( pot.getGeometry() );
+  Tspace spc(mcp);
+  auto pot = Energy::NonbondedVector<Tspace,Tpairpot>(mcp)
+    + Energy::ExternalPressure<Tspace>(mcp);
 
   // Markov moves and analysis
-  Move::Isobaric iso(mcp,pot,spc);
-  Move::AtomicTranslation mv(mcp, pot, spc);
-  Move::AtomicRotation rot(mcp, pot, spc);
+  Move::Isobaric<Tspace> iso(mcp,pot,spc);
+  Move::AtomicTranslation<Tspace> mv(mcp, pot, spc);
+  Move::AtomicRotation<Tspace> rot(mcp, pot, spc);
   Analysis::RadialDistribution<> rdf(0.2);
 
   // Add cigars
@@ -65,9 +65,9 @@ int main() {
       {
         m << spc.p.size() << "\n"
           << "sweep " << loop.count() << "; box "
-          << nonbonded->geometry.len.x() << " "
-          << nonbonded->geometry.len.y() << " "
-          << nonbonded->geometry.len.z() << "\n";
+          << spc.geo.len.x() << " "
+          << spc.geo.len.y() << " "
+          << spc.geo.len.z() << "\n";
         for (auto &i : spc.p) {
           m << i.x() << " " << i.y() << " " << i.z() << " "
             << i.dir.x() << " " << i.dir.y() << " " << i.dir.z() << " "

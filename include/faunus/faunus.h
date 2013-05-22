@@ -44,6 +44,7 @@
 #include <faunus/analysis.h>
 #include <faunus/scatter.h>
 #include <faunus/spherocylinder.h>
+//#include <faunus/multipole.h>
 #endif
 
 #endif

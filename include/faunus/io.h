@@ -338,8 +338,8 @@ namespace Faunus {
        * \param c Cuboid container from which particles and box dimensions are read.
        */
       template<class T1, class T2>
-        bool save(const string &file, const Space<T1,T2> &c) {
-          Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(c.geo);
+        bool save(const string &file, Space<T1,T2> &c) {
+          Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(&c.geo);
           assert(geo!=nullptr && "Only Cuboid geometries classes allowed.");
           if (geo==nullptr)
             return false;
@@ -390,7 +390,7 @@ namespace Faunus {
         delete[] x_xtc;
       }
 
-      FormatXTC(float len) {
+      FormatXTC(double len) {
         prec_xtc = 1000.;
         time_xtc=step_xtc=0;
         setbox(len);
@@ -408,7 +408,7 @@ namespace Faunus {
         xdbox[2][2]=0.1*z; // in nanometers!
       }
 
-      void setbox(float len) { setbox(len,len,len); }
+      void setbox(double len) { setbox(len,len,len); }
 
       void setbox(const Point &p) { setbox(p.x(), p.y(), p.z()); }
 

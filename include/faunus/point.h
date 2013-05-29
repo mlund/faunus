@@ -386,6 +386,9 @@ namespace Faunus {
         return *this;
       }
 
+    Tcharge& q() { return charge; }
+    Tcharge q() const { return charge; }
+
     template<class T,
       class = typename std::enable_if<std::is_base_of<AtomData,T>::value>::type>
         PointParticle& operator=(const T &d) {

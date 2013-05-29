@@ -61,6 +61,11 @@ int main(int argc, char** argv) {
 
   spc.load("state");
 
+  //Geometry::cm2origo(spc.geo, spc.p);
+  //spc.trial=spc.p;
+  //for (auto i : spc.groupList())
+  //  i->setMassCenter(spc);
+
   Move::Isobaric<Tspace> iso(mcp,pot,spc);
   Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
   Move::AtomicTranslation<Tspace> mv(mcp, pot, spc);
@@ -102,7 +107,7 @@ int main(int argc, char** argv) {
           sys+=mv.move();
           break;
       }
-      if ( slp_global()<0.001 ) {
+      if ( slp_global()<-0.001 ) {
         xtc.setbox( spc.geo.len );
         xtc.save("traj.xtc", spc);
       }

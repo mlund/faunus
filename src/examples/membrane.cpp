@@ -75,7 +75,6 @@ int main() {
   // Load and add polymer to Space
   Group lipids;
   lipids.setMolSize(3);
-  FormatAAM aam;           // AAM structure file I/O
   string file = mcp.get<string>("lipid_file","");
   int Nlipid=mcp("lipid_N",1);
   for (int i=0; i<Nlipid; i++) {

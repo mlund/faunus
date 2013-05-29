@@ -79,28 +79,28 @@ temperature            298     # Kelvin
 epsilon_r              78.7    # Water dielectric const
 dh_ionicstrength       0.010   # mol/l
 lj_eps                 0.05    # kT
-squarewell_depth       0.0     # kT
-squarewell_threshold   1.5     # angstrom
 
 cuboid_len             $boxlen # Box side length Angstrom
+cuboid_scaledir        XY      # Volume fluctuation in XYZ or XY only
 npt_P                  0       # mM
 npt_dV                 0       # log(dV)
 transrot_transdp       50      # Molecular translation parameter
-transrot_rotdp         2       # Molecular rotation parameter
+transrot_rotdp         6       # Molecular rotation parameter
 
 # Molecular species - currently only two different kinds
-molecule1_N            1
-molecule1         manybody.aam
-molecule2_N            1
-molecule2         manybody.aam
+molecule1_N            10
+molecule1              manybody.aam
+molecule2_N            0
+molecule2              manybody.aam
+molecule_plane         1
 
 # Atomic species - add up to ten.
 tion1                  Na
-nion1                  100
+nion1                  5
 dpion1                 10
 
 tion2                  Cl
-nion2                  100
+nion2                  5
 dpion2                 10
 
 test_stable            yes

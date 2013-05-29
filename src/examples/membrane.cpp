@@ -65,18 +65,12 @@ int main() {
 
   // Energy functions and space
   auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
-    + Energy::Bonded<Tspace>() + Energy::ExternalPressure<Tspace>(mcp);
-  auto nonbonded = &pot.first.first;
-  auto bonded = &pot.first.second;
+    + Energy::Bonded<Tspace>()
+    + Energy::ExternalPressure<Tspace>(mcp)
+    + Energy::EquilibriumEnergy<Tspace>(mcp);
+  auto nonbonded = &pot.first.first.first;
+  auto bonded = &pot.first.first.second;
   Tspace spc(mcp);
-
-  // Markov moves and analysis
-  Move::AtomicTranslation<Tspace> mv(mcp, pot, spc);
-  Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
-  Move::Pivot<Tspace> piv(mcp,pot,spc);
-  Move::Isobaric<Tspace> iso(mcp,pot,spc);
-
-  Analysis::BilayerStructure lipidstruct;
 
   // Load and add polymer to Space
   Group lipids;
@@ -111,8 +105,17 @@ int main() {
     }
   }
   spc.trial=spc.p;   // sync. particle trial vector
-
   spc.load("state"); // load old config. from disk (if any)
+
+  // Markov moves and analysis
+  Move::AtomicTranslation<Tspace> mv(mcp, pot, spc);
+  Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
+  Move::Pivot<Tspace> piv(mcp,pot,spc);
+  Move::Isobaric<Tspace> iso(mcp,pot,spc);
+  Move::SwapMove<Tspace> swap(mcp,pot,spc);
+
+  Analysis::BilayerStructure lipidstruct;
+
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
 
   cout << atom.info() + spc.info() + pot.info();

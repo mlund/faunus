@@ -19,6 +19,7 @@ int main(int argc, char** argv) {
   FormatXTC xtc(1000);                 // XTC gromacs trajectory format
   EnergyDrift sys;                     // class for tracking system energy drifts
   UnitTest test(mcp);
+  bool inPlane = mcp.get<bool>("molecule_plane");
 
   Tspace spc(mcp);
   auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
@@ -39,7 +40,10 @@ int main(int argc, char** argv) {
       file = mcp.get<string>("molecule1");
     Tspace::ParticleVector v;
     FormatAAM::load(file,v);
-    Geometry::FindSpace().find(spc.geo,spc.p,v);
+    Geometry::FindSpace fs;
+    if (inPlane)
+      fs.dir=Point(1,1,0);
+    fs.find(spc.geo,spc.p,v);
     pol[i] = spc.insert(v);
     pol[i].name=file;
     spc.enroll( pol[i] );
@@ -61,6 +65,9 @@ int main(int argc, char** argv) {
   Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
   Move::AtomicTranslation<Tspace> mv(mcp, pot, spc);
   Move::SwapMove<Tspace> tit(mcp,pot,spc);
+  if (inPlane)
+    for (auto &m : pol)
+      gmv.directions[ m.name ]=Point(1,1,0);
 
   eqenergy->eq.findSites(spc.p);
 
@@ -106,8 +113,8 @@ int main(int argc, char** argv) {
 
   } // end of macro loop
 
-  cout << loop.info() << sys.info() << gmv.info() << mv.info() << iso.info() << tit.info()
-    << mpol.info();
+  cout << loop.info() + sys.info() + gmv.info() + mv.info()
+    + iso.info() + tit.info() + mpol.info();
 
   rdf.save("rdf_p2p.dat");
   FormatPQR::save("confout.pqr", spc.p);

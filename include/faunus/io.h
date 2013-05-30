@@ -148,16 +148,25 @@ namespace Faunus {
    * @date December 2007
    *
    * Saves particles as a PQR file. This format is very simular
-   * to PDB but also contains charges and radii of the proteins.
+   * to PDB but also contains charges and radii
    */
   class FormatPQR {
+    private:
+      template<class Tvec>
+        static string writeCryst1(const Tvec &len, Tvec angle=Tvec(90,90,90)) {
+          char buf[100];
+          sprintf(buf, "CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           1\n", 
+              len.x(),len.y(),len.z(),angle.x(),angle.y(),angle.z());
+          return string(buf);
+        }
     public:
-      template<class Tpvec>
-        static bool save(const string &file, const Tpvec &p) {
+      template<class Tpvec, class Tvec=Point>
+        static bool save(const string &file, const Tpvec &p, Tvec len=Tvec(0,0,0)) {
           int nres=1, natom=1;
           char buf[100];
           std::ostringstream o;
-          // index, atom->name, atom->resname, atom->resid,x, y, z, atom->charge, atom->radius
+          if (len.norm()>1e-6)
+            o << writeCryst1(len);
           for (auto &p_i : p) {
             string name=atom[p_i.id].name;
             sprintf(buf, "ATOM  %5d %-4s %-4s%5d    %8.3f %8.3f %8.3f %.3f %.3f\n",
@@ -168,13 +177,18 @@ namespace Faunus {
           }
           return IO::writeFile(file, o.str());
         }
+      /*
+      sprintf(sd,"%-6s%5s %4s%c%-4s%c%4s%c   %8.3f%8.3f%8.3f%6.2f%6.2f      %-4s%2s\n",
+          recordname, indexbuf, atomname, altlocchar, resnamebuf, chain[0], 
+          residbuf, insertion[0], x, y, z, occ, beta, segnamebuf, elementsymbol);
+          */
+
   };
 
-  /*!
-   * \brief Gromacs GRO format
-   * \date December 2007
-   * \author Mikael Lund
-   * \todo Non cubic dimensions
+  /**
+   * @brief Gromacs GRO format
+   * @date December 2007
+   * @todo Non cubic dimensions
    */
   class FormatGRO {
     private:

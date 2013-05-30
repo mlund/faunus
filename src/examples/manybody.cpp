@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
     + iso.info() + tit.info() + mpol.info();
 
   rdf.save("rdf_p2p.dat");
-  FormatPQR::save("confout.pqr", spc.p);
+  FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
   spc.save("state");
   mcp.save("mdout.mdp");
 }

@@ -5,7 +5,7 @@ using namespace Faunus::Move;
 using namespace Faunus::Potential;
 
 typedef Space<Geometry::Cuboid,DipoleParticle> Tspace;
-typedef CombinedPairPotential<LennardJones,DipoleDipole> Tpair;
+typedef CombinedPairPotential<LennardJones,DipoleDipoleRF> Tpair;
 
 #ifdef POLARIZE
 typedef Move::PolarizeMove<AtomicTranslation<Tspace> > TmoveTran;
@@ -33,6 +33,9 @@ int main() {
   spc.load("state");
   spc.p = spc.trial;
   UnitTest test(in);               // class for unit testing
+  Analysis::getDielConst gdc(spc,15);
+  
+  
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );   // initial energy
   while ( loop.macroCnt() ) {                         // Markov chain 
     while ( loop.microCnt() ) {
@@ -40,6 +43,8 @@ int main() {
         sys+=trans.move( sol.size() );                // translate
       else
         sys+=rot.move( sol.size() );                  // rotate
+        
+      gdc.sampleDP(spc.geo,spc);
 
       if (slp_global()<0.5)
         for (auto i=sol.front(); i<sol.back(); i++) { // salt rdf
@@ -51,6 +56,7 @@ int main() {
           }
         }
     }    
+    cout << gdc.info() << endl;
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
     cout << loop.timing();
   }

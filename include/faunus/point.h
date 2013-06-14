@@ -194,6 +194,8 @@ namespace Faunus {
 
       template<typename Trotator>
         void rotate(const Trotator &rot) { *this = rot(*this); }
+        
+      void eye() { *this = Tmat::Identity(3,3); }
     };
 
   /**

@@ -330,6 +330,18 @@ namespace Faunus {
           return Point(0,0,0);
         return massCenter(geo,p,Group(0,p.size()-1));
       }
+      
+     template<class Tspace, class Tgroup>
+        Point dipoleMoment(const Tspace &s, const Tgroup &g, double cutoff=1e9,Point mu=Point(0,0,0)) {
+          assert(g.size()<=spc.p.size());
+          for (auto i : g) {
+            Point t=s.p[i] - g.cm;
+            s.geo.boundary(t);
+            if(t.squaredNorm() < cutoff*cutoff)
+              mu += t*s.p[i].charge;
+          }
+          return mu;
+        }
 
     /** @brief Translate a particle vector by a vector */
     template<class Tgeo, class Tpvec>

@@ -37,6 +37,7 @@ int main() {
   Move::Isobaric<Tspace> iso(mcp,pot,spc);
   Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
   Analysis::RadialDistribution<> rdf(0.05);
+  Analysis::getDielConst gdc(spc,9);  // Same cutoff as coulomb
 
   spc.load("state");                               // load old config. from disk (if any)
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );// store init system energy
@@ -63,20 +64,22 @@ int main() {
           sys+=iso.move();                         // volume move
           break;
       }
-
+      gdc.samplePP(spc.geo,spc);
       // sample oxygen-oxygen rdf
       if (slp_global()>0.9) {
         auto id = atom["OW"].id;
         rdf.sample(spc,sol,id,id);
       }
-
+    
     } // end of micro loop
-
+    cout << gdc.info() << endl;
+    cout << "Inf: " << gdc.getDielInfty() << endl;
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p));
     cout << loop.timing();
 
   } // end of macro loop
 
+  cout << gdc.info() << endl;
   rdf.save("rdf.dat");
   spc.save("state");
   FormatPQR::save("confout.pqr", spc.p);
@@ -87,7 +90,7 @@ int main() {
   sys.test(test);
 
   // print information
-  cout << loop.info() + sys.info() + gmv.info() + iso.info() + test.info();
+  //cout << loop.info() + sys.info() + gmv.info() + iso.info() + test.info();
 
   return test.numFailed();
 }

@@ -37,6 +37,8 @@ namespace Faunus {
         static void setT(Td);  //!< Set temperature [K]
         static Td D2eA(Td=1);  //!< Debye to electron Angstrom
         static Td eA2Cm(Td=1); //!< Converts eÅ to SI-units Cm
+        static Td Ang2Bohr(Td=1,int=1);   //!< Convert Å to atomic unit(Bohr)
+        static Td kT2Hartree(Td=kT());    //!< Convert energy in kT to atomic unit(Hartree Energy)
     };
 
 
@@ -98,6 +100,15 @@ namespace Faunus {
 
   template<class Td>
     Td PhysicalConstants<Td>::eA2Cm(Td eA) { return (eA*3.33564*(1e-30)/0.20819434); }
+    
+  // Converts to atomic units
+  
+  // Convert length scales. E.g. Length -> dim=1, Area -> dim=2, Volume -> dim=3
+  template<class Td>
+    Td PhysicalConstants<Td>::Ang2Bohr(Td Ang, int dim) { return (Ang*pow(1.88971616463,dim)); }
+    
+  template<class Td>
+    Td PhysicalConstants<Td>::kT2Hartree(Td E_kT) { return (E_kT/(4.3597441775*pow(10,-18))); }
 
   typedef PhysicalConstants<double> pc;      //!< Typedef for PhysicalConstants
 

@@ -112,6 +112,10 @@ namespace Faunus {
           string name, num;
           o << s;
           o >> name >> num >> a.x() >> a.y() >> a.z() >> a.charge >> a.mw >> a.radius;
+          /*o >> a.mup.x() >> a.mup.y() >> a.mup.z() >> a.theta(0,0) >> a.theta(0,1) >> a.theta(0,2) >> a.theta(1,1) >> a.theta(1,2) >> a.theta(2,2);
+          a.theta(1,0) = a.theta(0,1);
+          a.theta(2,0) = a.theta(0,2);
+          a.theta(2,1) = a.theta(1,2);*/
           a.id = atom[name].id;
           a.hydrophobic = atom[a.id].hydrophobic;
           return a;

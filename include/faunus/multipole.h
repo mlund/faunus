@@ -93,7 +93,11 @@ namespace Faunus {
      */
     class DipoleDipole : public PairPotentialBase {
       private:
-        string _brief() { return "Dipole-dipole"; }
+        string _brief() {
+          std::ostringstream o;
+          o << "Dipole-dipole, lB=" << _lB << textio::_angstrom;
+          return o.str();          
+        }
       protected:
         double _lB;
         double convert;

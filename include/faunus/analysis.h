@@ -11,6 +11,9 @@
 #include <faunus/textio.h>
 #endif
 
+#include <chrono>
+#include <thread>
+
 namespace Faunus {
   class checkValue;
 
@@ -72,8 +75,8 @@ namespace Faunus {
               cnt+=m.second;
             return cnt;
           }
-          Tx dx;
           Tmap map;
+          Tx dx;
           string name;
         private:
           Tx round(Tx x) { return (x>=0) ? int( x/dx+0.5 )*dx : int( x/dx-0.5 )*dx; }
@@ -81,6 +84,7 @@ namespace Faunus {
         public:
           enum type {HISTOGRAM, XYDATA};
           type tabletype;
+
           /**
            * @brief Constructor
            * @param resolution Resolution of the x axis
@@ -127,6 +131,14 @@ namespace Faunus {
               if (!map.empty()) map.begin()->second/=2;   // restore half bin width
               if (map.size()>1) (--map.end())->second/=2; // -//-
             }
+          }
+          
+          Tmap getMap() {
+            return map;
+          }
+          
+          Tx getResolution() {
+              return dx;
           }
 
           /*! Returns x at minumum y */
@@ -188,6 +200,24 @@ namespace Faunus {
             return false;
           }
       };
+
+    /**
+     * @brief Subtract two tables
+     */
+    template<class Tx, class Ty>
+      Table2D<Tx,Ty> operator-(Table2D<Tx,Ty> &a, Table2D<Tx,Ty> &b) {
+        Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()));
+        c.clear();
+        for (auto &m1 : a.getMap()) {
+          for (auto &m2 : b.getMap()) {
+            if( m1.first == m2.first) {
+              c(m1.first) = m1.second-m2.second;
+              break;
+            }
+          }
+        }
+        return c;
+      }
 
     /**
       @brief General class for penalty functions along a coordinate
@@ -923,126 +953,393 @@ namespace Faunus {
     };
 
     /**
-     * @brief Returns the dielectric constant outside the cutoff limit.
-     *
-     *        Only hold when using PBC and \f$\epsilon_{sur} = \epsilon\f$,
+     * @brief Class to calculate dielectric constant outside the cutoff limit. Using atomic units.
      *        [Neumann, M. (1983) Mol. Phys., 50, 841-858].
      *
-     * @param pot The potential including geometry
-     * @param spc The space including the particles
+     * @param spc The space
      * @param cutoff The cutoff of the reaction field
      */
-    class getDielConst {
+    class DielectricConstant {
       private:
         Average<double> M;
-        double volume;
-        double convert;
-        double cutoff;
+        Average<double> M_inf;
+        double cutoff2;
+        double vol_const;
+        double vol_const_inf;
+        double CM;
+        Analysis::Table2D<double,Average<double> > P;
+        Analysis::Histogram<double,unsigned int> P1;
+
+        Point MC_old;
+        Point MCI_old;
+        Point MC_new;
+        Point MCI_new;
+        //double convertSI;
       public:
-        inline getDielConst(double cutoff_in) {
-          cutoff = cutoff_in;
-          convert = (3.33564*3.33564*(1e-30)/(0.20819434*0.20819434)); // Constant to convert to SI-units, including the cancelation of volume 10^-30
-          volume = 4*pc::pi*pow(cutoff,3)/3;
-          convert = convert*pc::pi/volume;
+        template<class Tspace>
+          inline DielectricConstant(const Tspace &spc) : P1(0.1),P(0.1) {
+            cutoff2 = spc.geo.len_half.squaredNorm();
+            vol_const = 3/(4*pc::Ang2Bohr(pow(cutoff2,1.5),3)*pc::kT2Hartree());
+            vol_const_inf = 4*pc::pi/(3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree());
+            CM = 1;
+            MC_old = Point(0,0,0);
+            MCI_old = Point(0,0,0);
+            MC_new = Point(0,0,0);
+            MCI_new = Point(0,0,0);
+            //convertSI = (3.33564*3.33564*(1e-30)/(0.20819434*0.20819434))*3/(pow(cutoff2,1.5)*pc::kT()*16*pc::pi*pc::e0);
+          }
+
+        void setCutoff(double cutoff) {
+          cutoff2 = cutoff*cutoff;
         }
 
-        template<class Tpvec, class Tgeometry>
-          void sample(const Tpvec &p, Tgeometry &geo) {
-            Point origin(0,0,0), mu(0,0,0);
-            for (auto &i : p)
-              if (geo.sqdist(i,origin)<cutoff*cutoff)
+        /**
+         * @brief Samples dipole-moment from dipole particles.
+         * 
+         * @param geo The geometry.
+         * @param spc The space.
+         */
+        template<class Tgeometry, class Tspace>
+          void sampleDP(Tgeometry &geo, const Tspace &spc) {
+            Point origin(0,0,0);
+            Point mu(0,0,0);
+            Point mu_inf(0,0,0);
+            clausiusMossotti(spc.p,spc);
+            for (auto &i : spc.p) {
+              if (geo.sqdist(i,origin)<cutoff2)
                 mu += i.mu*i.muscalar;
-            M += mu.squaredNorm();
+              mu_inf += i.mu*i.muscalar;
+            }
+            samplePP(geo,spc,origin,mu,mu_inf);
           }
+
+        /**
+         * @brief Samples dipole-moment from point particles.
+         * 
+         * @param geo The geometry
+         * @param spc The space
+         * @param origin Origin to use (optional)
+         * @param mu Dipoles to add to from within cutoff (optional)
+         * @param mu_inf Dipoles to add to from entire box (optional)
+         */
+        template<class Tgeometry, class Tspace>
+          void samplePP(Tgeometry &geo, Tspace &spc, Point origin=Point(0,0,0), Point mu=Point(0,0,0), Point mu_inf=Point(0,0,0)) {
+            Group all(0,spc.p.size()-1);
+            all.setMassCenter(spc);
+            mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
+            mu_inf += Geometry::dipoleMoment(spc,all);
+            MC_old = MC_new;
+            MCI_old = MCI_new;
+            MC_new = mu;
+            MCI_new = mu_inf;
+            Point temp1 = MC_new - MC_old;
+            Point temp2 = MCI_new - MCI_old;
+            P1(MC_new(0))++;
+            P1(MC_new(1))++;
+            P1(MC_new(2))++;
+            P(temp1(0)) += MC_new(0)*MC_new(0);
+            P(temp1(1)) += MC_new(1)*MC_new(1);
+            P(temp1(2)) += MC_new(2)*MC_new(2);
+            P(temp2(0)) += MCI_new(0)*MCI_new(0);
+            P(temp2(1)) += MCI_new(1)*MCI_new(1);
+            P(temp2(2)) += MCI_new(2)*MCI_new(2);
+            M += mu.squaredNorm();
+            M_inf += mu_inf.squaredNorm();
+          }
+
+        /**
+         * @brief Claussius-Mossotti relationship calculates \f$ \epsilon_x \f$ according to \f$ \frac{\epsilon_x-1}{\epsilon_x+2} = \frac{4\pi}{3}\rho\alpha  \f$.
+         * @brief DOI:10.1080/08927029708024131
+         * 
+         * @param p Particle vector
+         * @param spc The space
+         */ 
+        template<class Tpvec, class Tspace>
+          void clausiusMossotti(const Tpvec &p, const Tspace &spc) {
+            double Q = 4*pc::pi*p.size()*p[0].alpha.trace()/(9*spc.geo.getVolume());  // 9 = 3*3, where one 3 is a normalization of the trace of alpha
+            CM = ((1+2*Q)/(1-Q));
+          }
+
+        // Every particle has to have the same absolute dipole moment. Convertions to a.u. cancels out!
+        template<class Tpvec>
+          double getKirkwoodFactor(const Tpvec &p) {
+            double val = 0;
+            for(int k = 0; k < p.size(); k++) {
+              val += cos(p.dot(p.mu));
+            }
+            val /= p.size();
+            cout << "K: " << 1+val << ", " << M_inf.avg()/(p[0].muscalar*p[0].muscalar) << endl;
+            
+            return M_inf.avg()/(p[0].muscalar*p[0].muscalar);
+          }
+
+        
+           template<class Tspace>
+           void kusalik(const Tspace &spc) {
+            double lambda = 1;
+            double alpha = 1;
+            //mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
+            double A = alpha*3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree()/(8*pc::pi);
+            double eps = (lambda*lambda-2*lambda-A)/(lambda*lambda-2*lambda-A-1);
+            P.save("AAA.dat"); 
+            P1.save("BBB.dat");
+           }
+
+        /**
+         * @brief Returns dielectric constant according to \f$ \frac{\epsilon_0-1}{3} = \frac{4\pi}{9Vk_BT}<\bold{M}^2> + \frac{\epsilon_x-1}{3}  \f$. Only works when \f$ \epsilon_{RF} = \infty \f$.
+         * @brief DOI:10.1080/08927029708024131
+         */ 
+        double getDielInfty() {
+          return (CM+pc::Ang2Bohr(M_inf.avg(),2)*vol_const_inf);
+        }  
 
         inline string info() {
           std::ostringstream o;
           if (M.cnt>0) {
-            double Q = 0.25 + M.avg()*convert/pc::kT();
-            o << "Eps: " << Q + std::sqrt(Q*Q+0.5) << "\n";
-            //o << "<M>: " << M.avg() << ", convert/kT " << convert/pc::kT() << "\n";
+            double Q_AU = 0.25 + pc::Ang2Bohr(M.avg(),2)*vol_const;   // In a.u.
+            Q_AU = Q_AU + std::sqrt(Q_AU*Q_AU+0.5);
+            //double Q_SI = 0.25 + M.avg()*convertSI;  // in SI-units
+            //Q_SI = Q_SI + std::sqrt(Q_SI*Q_SI+0.5)
+            o << "M-avg*vol_const:        " << M.avg()*vol_const << endl;
+            o << "Eps:          " << Q_AU << endl;
+            o << "Eps_{\\infty}: " << getDielInfty() << endl;
           }
           return o.str();
         }
     };
-    
+
     /*
      * Perhaps make this a template, taking T=double as parameter?
      */
-    class checkWhiteNoise {
-      private:
-        std::vector<double> noise;
-        int le;
-        int lag;
-        double significance;
-        double mu;
-        double sigma2;
-        double F_X;
-      public:
-        template<class Ttype>
-        inline checkWhiteNoise(std::vector<Ttype> noise_in,double significance_in, int lag_in) {
-          noise = noise_in;
-          significance = significance_in;
-          lag = lag_in;
-          le = noise.size();
-          getMu();
-          getVariance();
-        }
-
-        int check() {
-          double Q = 0.0;
-          int h = 10; // le-1
-          for(int k = 0;k < h; k++) {
-            Q += (noise[k]-mu)*(noise[k+lag]-mu);///(le-k);
+    template<class T=double>
+      class analyzeVector {
+        private:
+          std::vector<T> noise;
+          int N;
+          int lag;
+          double mu;
+          double sigma2;
+          double F_X_LB;
+          double F_X_BP;
+          double F_X_stud;
+          double sTd_alpha;
+        public:
+          inline analyzeVector(std::vector<T> noise_in) {
+            noise = noise_in;
+            N = noise.size();
+            lag = std::round(std::round(std::log(N)));  // More general instead of the maybe more common lag=20'
+            lag = N;                                  // Only meaningful for large N (???)
+            initMu();
+            initVariance();
+            F_X_LB = 0;
+            F_X_BP = 0;
+            F_X_stud = 0;
+            sTd_alpha = 0;
           }
-          Q = le*Q/sigma2;
-          double chi2 = getChi2(h);
-          std::cout << "F_X: " << F_X << ", x: " << chi2 << ", Q: " << Q << endl;
-          if(Q > chi2) {
-            return 0;
-          } else {
-            return 1;
-          }
-        }
 
-        void getMu() {
-          mu = 0;
-          for(int k = 0;k < le; k++) {
-            mu += noise[k];
+          void setLag(int lag_in) {
+            lag = lag_in;
           }
-          mu /= le;
-        }
 
-        void getVariance() {
-          sigma2 = 0;
-          for(int k = 0;k < le; k++) {
-            sigma2 += noise[k]*noise[k];
+          void initMu() {
+            mu = 0;
+            for(int k = 0;k < N; k++) {
+              mu += noise[k];
+            }
+            mu /= N;
           }
-          sigma2 -= mu*mu;
-        }
 
-        double getChi2(int k) {
-          double x = -0.01;
-          double level = 1-significance;
-          do {
-            x += 0.01;
-            F_X = incgamma(x/2,k/2)/std::tgamma(k/2);
-          } while (level > F_X);
-          return x;
-        }
-
-        double incgamma (double x, double a){
-          double sum = 0;
-          double term = 1.0/a;
-          int n = 1;
-          while (term != 0){
-            sum = sum + term;
-            term = term*(x/(a+n));
-            n++;
+          double getMu() {
+            return mu;
           }
-          return pow(x,a)*exp(-1*x)*sum;
-        }
-    };
+
+          void initVariance() {
+            sigma2 = 0;
+            for(int k = 0;k < N; k++) {
+              sigma2 += noise[k]*noise[k];
+            }
+            sigma2 -= mu*mu;
+          }
+
+          double getVariance() {
+            return sigma2;
+          }
+
+          double getF_X_LB() {
+            return F_X_LB;
+          }
+
+          double getF_X_BP() {
+            return F_X_BP;
+          }
+
+          double getF_X_stud() {
+            return F_X_stud;
+          }
+
+          double getStdAlpha() {
+            return sTd_alpha;
+          }
+
+          /**
+           * @brief Chi-squared distribution. 
+           *        \f$ F(x;k) = \frac{\gamma\left(\frac{k}{2},\frac{x}{2}\right)}{\Gamma\left(\frac{k}{2}\right)} \f$ where \f$ s \f$ is half the lag.
+           * 
+           * @param significance The significance to reach.
+           * @param chi2step Step size in the iteration.
+           */
+          double getChi2(double significance, double &F_X, double chi2_step=0.01) {
+            double x = -chi2_step;
+            double level = 1-significance;
+            do {
+              x += chi2_step;
+              F_X = incompleteGamma(x/2)/std::tgamma(double(lag)/2);
+            } while (level > F_X);
+            return x;
+          }
+
+          /**
+           * @brief Lower Incomplete Gamma Function.
+           *        \f$ \gamma(s,x) = x^se^{-x}\sum_{k=0}^{\infty}\frac{x^k}{s(s+1)...(s+k)} \f$ where \f$ s \f$ is half the lag.
+           * 
+           * @param x Value to estimate for.
+           */
+          double incompleteGamma(double x){
+            double s = double(lag)/2;
+            double sum = 0;
+            double term = 1.0/s;
+            int n = 1;
+            while (term != 0){
+              sum += term;
+              term *= (x/(s+n++));
+            }
+            return pow(x,s)*exp(-x)*sum;
+          }
+
+          double sampleAutocorrelation(double k) {
+            double nom = 0;
+            double den = 0;
+            for(int t = 0; t < N-k;t++) {
+              nom += (noise[t]-mu)*(noise[t+k]-mu);
+              den += (noise[t]-mu)*(noise[t]-mu);
+            }
+            for(int t = N-k; t < N;t++) {
+              den += (noise[t]-mu)*(noise[t]-mu);
+            }
+            return (nom/den);
+          }
+
+          /**
+           * @brief The Ljung-Box test is a statistical test. It tests if a group of autocorrelations differ from zero, 
+           *        based on a number of lags. Initially it was developed for ARMA-processes. It is a portmanteau test.
+           *        DOI: 10.1093/biomet/65.2.297
+           *
+           * @param alpha The significance of the test. With a probability of \f$ (1-\alpha)*100 \f$ % the result is true.
+           */
+          bool LjungBox(double alpha) {
+            double Q = 0.0;
+            F_X_LB = 0;
+            for(int k = 0;k < lag; k++)
+              Q += sampleAutocorrelation(k)/(N-k);
+
+            if(Q*N*(N+2) > getChi2(alpha,F_X_LB))
+              return false;
+            return true;
+          }
+
+          /**
+           * @brief The Box-Pierce test is a statistical test. It tests if a group of autocorrelations differ from zero. 
+           *        It tests the wider randomness based on a number of lags. This is more simple, and not as accurate, as the Ljung_Box test.
+           *
+           * @param alpha The significance of the test. With a probability of \f$ (1-\alpha)*100 \f$ % the result is true.
+           */
+          bool BoxPierce(double alpha) {
+            double Q = 0.0;
+            F_X_BP = 0;
+            for(int k = 0;k < lag; k++)
+              Q += sampleAutocorrelation(k);
+
+            if(Q*N > getChi2(alpha,F_X_LB))
+              return false;
+            return true;
+          }
+
+          /**
+           * @brief Hypergeometric function. This function uses \f$ x=(x)_1=(x)_2=... \f$ for x=a,x=b and x=c.
+           *        \f$ F_1(a,b,c;z) = \sum_{n=0}^{\infty}\frac{(a)_n(b)_n}{(c)_n}\frac{z^n}{n!} \f$
+           * 
+           * @param a Coefficient
+           * @param b Coefficient
+           * @param c Coefficient
+           * @param z Value to estimate for. Only works for \f$ |z|<1 \f$.
+           */
+          double F2(double a,double b,double c, double z) {
+            assert( std::abs(z) < 1 && "|z| is not smaller than 1!");
+            int n = 0;
+            int nfac = 1;
+            double term = 0;
+            double sum = 0;
+            double coeff = a*b/c;
+            do {
+              term = coeff*(pow(z,n)/nfac);
+              sum += term;
+              nfac *= ++n;
+            } while(term > 1e-30); // Some cutoff
+            return sum;
+          }
+
+          /**
+           * @brief Student's t-test distribution
+           * 
+           * @param alpha The significance of the test. With a probability of \f$ (1-\alpha)*100 \f$ % the result is true.
+           * @param dof Degrees of freedom.
+           */
+          double studentTdistribution(double alpha, int dof, double x_step=0.01) {
+            double level = 1 - alpha;
+            F_X_stud = 0;
+            double x = -x_step;
+            do {
+              x += 0.01;
+              if(x*x/dof > 1) {
+                x -= x_step;
+                sTd_alpha = 1 - F_X_stud;
+                break;
+              }
+              F_X_stud = 0.5+x*std::tgamma((dof+1)/2)*F2(0.5,(dof+1)/2,1.5,-x*x/dof)/(sqrt(pc::pi*dof)*std::tgamma(dof/2));
+            } while (level > F_X_stud);
+            return x;
+          }
+
+          /**
+           * @brief Testing the null hypothesis that the mean is equal to zero. The degrees of freedom used in this test is N − 1. 
+           * 
+           * @param alpha The significance of the test. With a probability of \f$ (1-\alpha)*100 \f$ % the result is true.
+           */
+          bool oneSampleT(double alpha) {
+            return (studentTdistribution(alpha, N-1) > sqrt(N/sigma2)*mu);
+          }
+
+          /**
+           * @brief Returns the result of the LjungBox-, BoxPierce- and oneSampleT-tests.
+           * 
+           * @param alpha The significance of the test. With a probability of \f$ (1-\alpha)*100 \f$ % the result is true.
+           */
+          std::vector<bool> checkAll(double alpha) {
+            std::vector<bool> tests(3);
+            tests.at(0) = LjungBox(alpha);
+            tests.at(1) = BoxPierce(alpha);
+            tests.at(2) = oneSampleT(alpha);
+            return tests;
+          }
+
+          string info(char w=0) {
+            using namespace Faunus::textio;
+            std::ostringstream o;
+            o << "Sample size: " << N << ", Mean value: " << mu << ", Variance: " << sigma2 << ", Lag: " << lag << endl;
+            o << "F_X(Ljung-Box): " << F_X_LB << ", F_X(Box_Pierce): " << F_X_BP << ", Significance(oneSampleT): " << sTd_alpha << endl;
+            return o.str();
+          }
+      };
   }//namespace
 }//namespace
 #endif

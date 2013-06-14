@@ -175,13 +175,14 @@ namespace Faunus {
             o << buf;
             if ( atom[p_i.id].name=="CTR" ) nres++;
           }
+          o << "END\n";
           return IO::writeFile(file, o.str());
         }
       /*
-      sprintf(sd,"%-6s%5s %4s%c%-4s%c%4s%c   %8.3f%8.3f%8.3f%6.2f%6.2f      %-4s%2s\n",
-          recordname, indexbuf, atomname, altlocchar, resnamebuf, chain[0], 
-          residbuf, insertion[0], x, y, z, occ, beta, segnamebuf, elementsymbol);
-          */
+         sprintf(sd,"%-6s%5s %4s%c%-4s%c%4s%c   %8.3f%8.3f%8.3f%6.2f%6.2f      %-4s%2s\n",
+         recordname, indexbuf, atomname, altlocchar, resnamebuf, chain[0], 
+         residbuf, insertion[0], x, y, z, occ, beta, segnamebuf, elementsymbol);
+         */
 
   };
 

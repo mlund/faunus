@@ -75,8 +75,8 @@ namespace Faunus {
               cnt+=m.second;
             return cnt;
           }
-          Tx dx;
           Tmap map;
+          Tx dx;
           string name;
         private:
           Tx round(Tx x) { return (x>=0) ? int( x/dx+0.5 )*dx : int( x/dx-0.5 )*dx; }
@@ -84,6 +84,7 @@ namespace Faunus {
         public:
           enum type {HISTOGRAM, XYDATA};
           type tabletype;
+
           /**
            * @brief Constructor
            * @param resolution Resolution of the x axis
@@ -130,6 +131,14 @@ namespace Faunus {
               if (!map.empty()) map.begin()->second/=2;   // restore half bin width
               if (map.size()>1) (--map.end())->second/=2; // -//-
             }
+          }
+          
+          Tmap getMap() {
+            return map;
+          }
+          
+          Tx getResolution() {
+              return dx;
           }
 
           /*! Returns x at minumum y */
@@ -197,10 +206,17 @@ namespace Faunus {
      */
     template<class Tx, class Ty>
       Table2D<Tx,Ty> operator-(Table2D<Tx,Ty> &a, Table2D<Tx,Ty> &b) {
-        Table2D<Tx,Ty> c;
-        for(int i = 0; i < a.size(); i++) {
-
+        Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()));
+        c.clear();
+        for (auto &m1 : a.getMap()) {
+          for (auto &m2 : b.getMap()) {
+            if( m1.first == m2.first) {
+              c(m1.first) = m1.second-m2.second;
+              break;
+            }
+          }
         }
+        return c;
       }
 
     /**
@@ -943,7 +959,7 @@ namespace Faunus {
      * @param spc The space
      * @param cutoff The cutoff of the reaction field
      */
-    class getDielConst {
+    class DielectricConstant {
       private:
         Average<double> M;
         Average<double> M_inf;
@@ -951,16 +967,31 @@ namespace Faunus {
         double vol_const;
         double vol_const_inf;
         double CM;
+        Analysis::Table2D<double,Average<double> > P;
+        Analysis::Histogram<double,unsigned int> P1;
+
+        Point MC_old;
+        Point MCI_old;
+        Point MC_new;
+        Point MCI_new;
         //double convertSI;
       public:
         template<class Tspace>
-          inline getDielConst(const Tspace &spc, double cutoff) {
-            cutoff2 = cutoff*cutoff;
+          inline DielectricConstant(const Tspace &spc) : P1(0.1),P(0.1) {
+            cutoff2 = spc.geo.len_half.squaredNorm();
             vol_const = 3/(4*pc::Ang2Bohr(pow(cutoff2,1.5),3)*pc::kT2Hartree());
             vol_const_inf = 4*pc::pi/(3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree());
             CM = 1;
+            MC_old = Point(0,0,0);
+            MCI_old = Point(0,0,0);
+            MC_new = Point(0,0,0);
+            MCI_new = Point(0,0,0);
             //convertSI = (3.33564*3.33564*(1e-30)/(0.20819434*0.20819434))*3/(pow(cutoff2,1.5)*pc::kT()*16*pc::pi*pc::e0);
           }
+
+        void setCutoff(double cutoff) {
+          cutoff2 = cutoff*cutoff;
+        }
 
         /**
          * @brief Samples dipole-moment from dipole particles.
@@ -997,6 +1028,21 @@ namespace Faunus {
             all.setMassCenter(spc);
             mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
             mu_inf += Geometry::dipoleMoment(spc,all);
+            MC_old = MC_new;
+            MCI_old = MCI_new;
+            MC_new = mu;
+            MCI_new = mu_inf;
+            Point temp1 = MC_new - MC_old;
+            Point temp2 = MCI_new - MCI_old;
+            P1(MC_new(0))++;
+            P1(MC_new(1))++;
+            P1(MC_new(2))++;
+            P(temp1(0)) += MC_new(0)*MC_new(0);
+            P(temp1(1)) += MC_new(1)*MC_new(1);
+            P(temp1(2)) += MC_new(2)*MC_new(2);
+            P(temp2(0)) += MCI_new(0)*MCI_new(0);
+            P(temp2(1)) += MCI_new(1)*MCI_new(1);
+            P(temp2(2)) += MCI_new(2)*MCI_new(2);
             M += mu.squaredNorm();
             M_inf += mu_inf.squaredNorm();
           }
@@ -1017,9 +1063,27 @@ namespace Faunus {
         // Every particle has to have the same absolute dipole moment. Convertions to a.u. cancels out!
         template<class Tpvec>
           double getKirkwoodFactor(const Tpvec &p) {
-            double mu = p[0].muscalar;
-            return M.avg()/(p.size()*mu*mu);
+            double val = 0;
+            for(int k = 0; k < p.size(); k++) {
+              val += cos(p.dot(p.mu));
+            }
+            val /= p.size();
+            cout << "K: " << 1+val << ", " << M_inf.avg()/(p[0].muscalar*p[0].muscalar) << endl;
+            
+            return M_inf.avg()/(p[0].muscalar*p[0].muscalar);
           }
+
+        
+           template<class Tspace>
+           void kusalik(const Tspace &spc) {
+            double lambda = 1;
+            double alpha = 1;
+            //mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
+            double A = alpha*3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree()/(8*pc::pi);
+            double eps = (lambda*lambda-2*lambda-A)/(lambda*lambda-2*lambda-A-1);
+            P.save("AAA.dat"); 
+            P1.save("BBB.dat");
+           }
 
         /**
          * @brief Returns dielectric constant according to \f$ \frac{\epsilon_0-1}{3} = \frac{4\pi}{9Vk_BT}<\bold{M}^2> + \frac{\epsilon_x-1}{3}  \f$. Only works when \f$ \epsilon_{RF} = \infty \f$.
@@ -1036,7 +1100,7 @@ namespace Faunus {
             Q_AU = Q_AU + std::sqrt(Q_AU*Q_AU+0.5);
             //double Q_SI = 0.25 + M.avg()*convertSI;  // in SI-units
             //Q_SI = Q_SI + std::sqrt(Q_SI*Q_SI+0.5)
-            o << "M-avg:        " << M.avg() << endl;
+            o << "M-avg*vol_const:        " << M.avg()*vol_const << endl;
             o << "Eps:          " << Q_AU << endl;
             o << "Eps_{\\infty}: " << getDielInfty() << endl;
           }

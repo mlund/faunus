@@ -30,7 +30,7 @@ epsilon_r          1            # dielectric const.
 coulomb_cut        9.           # coulomb cutoff [angstrom]
                   
 loop_macrosteps    10           # number of macro loops
-loop_microsteps    500          # number of micro loops
+loop_microsteps    250          # number of micro loops
 
 npt_dV             0.1          # 0.04 (0=no volume displacement=NVT)
 npt_P              39.3155      # external pressure [mM]

@@ -35,6 +35,10 @@ fau_example(example_membrane "./" membrane.cpp)
 set_target_properties(example_membrane PROPERTIES OUTPUT_NAME "membrane")
 add_test( example_membrane ${CMAKE_CURRENT_SOURCE_DIR}/membrane.run )
 
+fau_example(example_manybody "./" manybody.cpp)
+set_target_properties(example_manybody PROPERTIES OUTPUT_NAME "manybody")
+#add_test( example_manybody ${CMAKE_CURRENT_SOURCE_DIR}/membrane.run )
+
 fau_example(example_bulk "./" bulk.cpp)
 set_target_properties(example_bulk PROPERTIES OUTPUT_NAME "bulk")
 add_test( example_bulk ${CMAKE_CURRENT_SOURCE_DIR}/bulk.run )

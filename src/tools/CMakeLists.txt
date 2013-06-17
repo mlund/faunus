@@ -20,7 +20,6 @@ endfunction( fau_cigarexample )
 #fau_example(polymer-npt-sphere "./" polymer-npt.cpp)
 #fau_example(polymer-npt-cuboid "./" polymer-npt.cpp)
 #fau_example(titrate_implicit "./" pka_implicit.cpp)
-#fau_example(manybody "./" manybody.cpp)
 
 if(ENABLE_MPI AND MPI_CXX_FOUND)
   #fau_example(manybodyMPI "./" manybodyMPI.cpp)

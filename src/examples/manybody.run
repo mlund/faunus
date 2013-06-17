@@ -1,6 +1,14 @@
 #!/bin/bash
 
-function mkatoms() {
+# THIS RUN SCRIPT IS USED AS A UNIT TEST SO PLEASE
+# DO NOT UPLOAD ANY MODIFIED VERSIONS TO SVN UNLESS
+# TO UPDATE THE TEST.
+
+source_tests_dir="`dirname $0`"
+cp -f $source_tests_dir/manybody.test . 2> /dev/null
+cp -f $source_tests_dir/manybody.state state 2> /dev/null
+
+function mkinput() {
 echo '
 {
   "processes" :
@@ -10,10 +18,6 @@ echo '
     "H-Glu" : { "bound":"HGLU" , "free":"GLU" , "pKd":4.4  , "pX":'$pH' },
     "H-His" : { "bound":"HHIS" , "free":"HIS" , "pKd":6.3  , "pX":'$pH' },
     "H-Arg" : { "bound":"HARG" , "free":"ARG" , "pKd":12.0 , "pX":'$pH' },
-    "H-Ntr" : { "bound":"HNTR" , "free":"NTR" , "pKd":7.5  , "pX":'$pH' },
-    "H-Cys" : { "bound":"HCYS" , "free":"CYS" , "pKd":10.8 , "pX":'$pH' },
-    "H-Tyr" : { "bound":"HTYR" , "free":"TYR" , "pKd":9.6  , "pX":'$pH' },
-    "H-Lys" : { "bound":"HLYS" , "free":"LYS" , "pKd":10.4 , "pX":'$pH' },
     "K1"    : { "bound":"H3PO4", "free":"H2PO4","pKd":2.12,  "pX":'$pH' },
     "K2"    : { "bound":"H2PO4", "free":"HPO4", "pKd":7.21,  "pX":'$pH' },
     "K3"    : { "bound":"HPO4",  "free":"PO4",  "pKd":12.67, "pX":'$pH' }
@@ -62,35 +66,67 @@ echo '
     "GLY"  :  { "q":0,  "r":2.9, "mw":54 }
   }
 }
-' > titrate.json
+' > manybody.json
 
-#----------------------------------------------------
-# Make file with molecule of ONE atom
-#----------------------------------------------------
-echo "1
- PO4  0   0.00   0.00   0.00  -3.0   1.0  2.0
-" > titrate.aam
-}
-
-function mkinput() {
 echo "
-atomlist               titrate.json
-eq_processfile         titrate.json
-molecule               titrate.aam
+atomlist               manybody.json
+eq_processfile         manybody.json
+
 loop_macrosteps        10
-loop_microsteps        10000
+loop_microsteps        $micro
+
 temperature            298     # Kelvin
 epsilon_r              78.7    # Water dielectric const
-lj_eps                 0.0     # kT
-dh_ionicstrength       0.1     # mol/l
-sphere_radius          500     # Angstroms
-" > titrate.input
+dh_ionicstrength       0.010   # mol/l
+lj_eps                 0.05    # kT
+
+cuboid_len             $boxlen # Box side length Angstrom
+cuboid_scaledir        XY      # Volume fluctuation in XYZ or XY only
+npt_P                  0       # mM
+npt_dV                 0       # log(dV)
+transrot_transdp       50      # Molecular translation parameter
+transrot_rotdp         6       # Molecular rotation parameter
+
+# Molecular species - currently only two different kinds
+molecule1_N            10
+molecule1              manybody.aam
+molecule2_N            0
+molecule2              manybody.aam
+molecule_plane         1
+
+# Atomic species - add up to ten.
+tion1                  Na
+nion1                  5
+dpion1                 10
+
+tion2                  Cl
+nion2                  5
+dpion2                 10
+
+test_stable            yes
+test_file              manybody.test
+" > manybody.input
+
+echo "2
+ HIS  0   0.00   0.00   0.00    -0   1  3.0
+ GLY  0   2.00   0.00   1.00     0   1  2.0
+" > manybody.aam
 }
 
-for pH in 7.21; do
-  mkatoms
-  rm -f state
+boxlen=100
+
+for pH in 6.3
+do
+  rm -fR state
+  micro=10000
   mkinput
-  ./titrate
+  ./manybody
+  exit
+
+  # production
+  micro=10000
+  mktit
+  mkinput
+  mpiexec -np 2 $exe -i $base.input -c $base.state -o $base.state #> out
 done
 

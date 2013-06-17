@@ -967,8 +967,8 @@ namespace Faunus {
         double vol_const;
         double vol_const_inf;
         double CM;
-        Analysis::Table2D<double,Average<double> > P;
         Analysis::Histogram<double,unsigned int> P1;
+        Analysis::Table2D<double,Average<double> > P;
 
         Point MC_old;
         Point MCI_old;

@@ -426,7 +426,6 @@ namespace Faunus {
 
         this->title="Site Titration - Swap Move";
         this->runfraction=in.get<double>(pfx+"runfraction",1);
-        //ham.add(eqpot);
         ipart=-1;
         findSites(spc.p);
 

@@ -327,7 +327,7 @@ namespace Faunus {
 
                 // IN CASE BOTH GROUPS ARE INDEPENDENT (DEFAULT)
                 int ilen=g1.back()+1, jlen=g2.back()+1;
-#pragma omp parallel for reduction (+:u) schedule (dynamic)
+#pragma omp parallel for reduction (+:u)
                 for (int i=g1.front(); i<ilen; ++i)
                   for (int j=g2.front(); j<jlen; ++j)
                     u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]));

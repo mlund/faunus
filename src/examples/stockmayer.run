@@ -10,26 +10,26 @@ cp -f $source_tests_dir/stockmayer.state state 2> /dev/null
 
 echo '{ "atomlist" :
   {
-    "sol" : { "sigma":1, "mu":"0 0 0.4141", "dp":8.939, "dprot":360, "alpha":"0 0 0 0 0 0", "theta":"0 0 0 0 0 0"}
+    "sol" : { "sigma":1, "mu":"0 0 0.4141", "dp":0.3, "dprot":90, "alpha":"0 0 0 0 0 0", "theta":"0 0 0 0 0 0"}
   }
 }' > stockmayer.json
 
 #   0.091015919518598
 
-echo "                                            # 4.4645
+echo "
 atomlist           stockmayer.json   # atom properties
-cuboid_len         8.939 #10.391157968780986        # angstrom 12.8923
+cuboid_len         8.939        # angstrom
                   
-temperature        300         # K
+temperature        300          # K
 epsilon_r          1            # dielectric const.
 dipdip_cutoff      1000         # dipole cutoff [angstrom]
 lj_eps             0.069        # Uniform LJ epsilon parameter [kT]
                   
 loop_macrosteps    10           # number of macro loops
-loop_microsteps    10000         # number of micro loops
+loop_microsteps    1000         # number of micro loops
 
 tion1              sol 
-nion1              100 #162  
+nion1              100
 
 test_stable        no
 test_file          stockmayer.test

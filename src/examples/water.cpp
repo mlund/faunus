@@ -37,7 +37,7 @@ int main() {
   Move::Isobaric<Tspace> iso(mcp,pot,spc);
   Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
   Analysis::RadialDistribution<> rdf(0.05);
-  Analysis::getDielConst gdc(spc,9);  // Same cutoff as coulomb
+  Analysis::DielectricConstant gdc(spc);
 
   spc.load("state");                               // load old config. from disk (if any)
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );// store init system energy

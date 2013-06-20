@@ -121,7 +121,7 @@ namespace Faunus {
               std::ofstream f(filename.c_str());
               f.precision(10);
               if (f) {
-                f << "# Faunus 2D table: " << name << endl;
+                //f << "# Faunus 2D table: " << name << endl;
                 for (auto m : map)
                   f << m.first << " " << get( m.first ) << endl;
               }
@@ -970,13 +970,17 @@ namespace Faunus {
         double vol_const_inf;
         double CM;
         double y;
-        Analysis::Histogram<double,unsigned int> N2;
-        Analysis::Histogram<double,unsigned int> N2_inf;
+        Analysis::Histogram<double,unsigned int> N2_x;
+        Analysis::Histogram<double,unsigned int> N2_y;
+        Analysis::Histogram<double,unsigned int> N2_z;
+        Analysis::Histogram<double,unsigned int> N2_inf_x;
+        Analysis::Histogram<double,unsigned int> N2_inf_y;
+        Analysis::Histogram<double,unsigned int> N2_inf_z;
 
         //double convertSI;
       public:
         template<class Tspace>
-          inline DielectricConstant(const Tspace &spc) : N2(0.1),N2_inf(0.1) {
+          inline DielectricConstant(const Tspace &spc) : N2_x(0.1),N2_y(0.1),N2_z(0.1),N2_inf_x(0.1),N2_inf_y(0.1),N2_inf_z(0.1) {
             cutoff2 = spc.geo.len_half.squaredNorm();
             vol_const = 3/(4*pc::Ang2Bohr(pow(cutoff2,1.5),3)*pc::kT2Hartree());
             vol_const_inf = 4*pc::pi/(3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree());
@@ -1023,12 +1027,12 @@ namespace Faunus {
             all.setMassCenter(spc);
             mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
             mu_inf += Geometry::dipoleMoment(spc,all);
-            N2(mu(0))++;
-            N2(mu(1))++;
-            N2(mu(2))++;
-            N2_inf(mu_inf(0))++;
-            N2_inf(mu_inf(1))++;
-            N2_inf(mu_inf(2))++;
+            N2_x(mu(0))++;
+            N2_y(mu(1))++;
+            N2_z(mu(2))++;
+            N2_inf_x(mu_inf(0))++;
+            N2_inf_y(mu_inf(1))++;
+            N2_inf_z(mu_inf(2))++;
             M += mu.norm();
             M_inf += mu_inf.norm();
             M2 += mu.squaredNorm();
@@ -1068,8 +1072,12 @@ namespace Faunus {
             //mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
             double A = alpha*3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree()/(8*pc::pi);
             double eps = (lambda*lambda-2*lambda-A)/(lambda*lambda-2*lambda-A-1);
-            N2.save("normal_cutoff.dat"); 
-            N2_inf.save("normal_box.dat");
+            N2_x.save("/home/work/Dropbox/Work/UpFiles/normal_cutoff_x.dat"); 
+            N2_y.save("/home/work/Dropbox/Work/UpFiles/normal_cutoff_y.dat");
+            N2_z.save("/home/work/Dropbox/Work/UpFiles/normal_cutoff_z.dat");
+            N2_inf_x.save("/home/work/Dropbox/Work/UpFiles/normal_box_x.dat");
+            N2_inf_y.save("/home/work/Dropbox/Work/UpFiles/normal_box_y.dat");
+            N2_inf_z.save("/home/work/Dropbox/Work/UpFiles/normal_box_z.dat");
            }
            
         /**

@@ -34,7 +34,7 @@ loop_microsteps    250          # number of micro loops
 
 npt_dV             0.1          # 0.04 (0=no volume displacement=NVT)
 npt_P              39.3155      # external pressure [mM]
-npt_runfraction    1.0
+npt_runfraction    0.0
 
 transrot_transdp   0.5
 transrot_rotdp     0.5

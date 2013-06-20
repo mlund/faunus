@@ -64,7 +64,7 @@ int main() {
           sys+=iso.move();                         // volume move
           break;
       }
-      gdc.samplePP(spc.geo,spc);
+      gdc.samplePP(spc);
       // sample oxygen-oxygen rdf
       if (slp_global()>0.9) {
         auto id = atom["OW"].id;

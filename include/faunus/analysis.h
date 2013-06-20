@@ -981,8 +981,7 @@ namespace Faunus {
             vol_const = 3/(4*pc::Ang2Bohr(pow(cutoff2,1.5),3)*pc::kT2Hartree());
             vol_const_inf = 4*pc::pi/(3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree());
             CM = 1;
-            y = 4*pc::pi*spc.p.size()*spc.p[0].muscalar*spc.p[0].muscalar/(9*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree());
-            clausiusMossotti(spc);
+            y = 0;
             //convertSI = (3.33564*3.33564*(1e-30)/(0.20819434*0.20819434))*3/(pow(cutoff2,1.5)*pc::kT()*16*pc::pi*pc::e0);
           }
 
@@ -1000,7 +999,8 @@ namespace Faunus {
             Point origin(0,0,0);
             Point mu(0,0,0);
             Point mu_inf(0,0,0);
-            
+            clausiusMossotti(spc);
+            y = 4*pc::pi*spc.p.size()*spc.p[0].muscalar*spc.p[0].muscalar/(9*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree());
             for (auto &i : spc.p) {
               if (spc.geo.sqdist(i,origin)<cutoff2)
                 mu += i.mu*i.muscalar;

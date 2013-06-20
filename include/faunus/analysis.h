@@ -963,29 +963,26 @@ namespace Faunus {
       private:
         Average<double> M;
         Average<double> M_inf;
+        Average<double> M2;
+        Average<double> M2_inf;
         double cutoff2;
         double vol_const;
         double vol_const_inf;
         double CM;
-        Analysis::Histogram<double,unsigned int> P1;
-        Analysis::Table2D<double,Average<double> > P;
+        double y;
+        Analysis::Histogram<double,unsigned int> N2;
+        Analysis::Histogram<double,unsigned int> N2_inf;
 
-        Point MC_old;
-        Point MCI_old;
-        Point MC_new;
-        Point MCI_new;
         //double convertSI;
       public:
         template<class Tspace>
-          inline DielectricConstant(const Tspace &spc) : P1(0.1),P(0.1) {
+          inline DielectricConstant(const Tspace &spc) : N2(0.1),N2_inf(0.1) {
             cutoff2 = spc.geo.len_half.squaredNorm();
             vol_const = 3/(4*pc::Ang2Bohr(pow(cutoff2,1.5),3)*pc::kT2Hartree());
             vol_const_inf = 4*pc::pi/(3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree());
             CM = 1;
-            MC_old = Point(0,0,0);
-            MCI_old = Point(0,0,0);
-            MC_new = Point(0,0,0);
-            MCI_new = Point(0,0,0);
+            y = 4*pc::pi*spc.p.size()*spc.p[0].muscalar*spc.p[0].muscalar/(9*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree());
+            clausiusMossotti(spc);
             //convertSI = (3.33564*3.33564*(1e-30)/(0.20819434*0.20819434))*3/(pow(cutoff2,1.5)*pc::kT()*16*pc::pi*pc::e0);
           }
 
@@ -996,55 +993,46 @@ namespace Faunus {
         /**
          * @brief Samples dipole-moment from dipole particles.
          * 
-         * @param geo The geometry.
          * @param spc The space.
          */
-        template<class Tgeometry, class Tspace>
-          void sampleDP(Tgeometry &geo, const Tspace &spc) {
+        template<class Tspace>
+          void sampleDP(const Tspace &spc) {
             Point origin(0,0,0);
             Point mu(0,0,0);
             Point mu_inf(0,0,0);
-            clausiusMossotti(spc.p,spc);
+            
             for (auto &i : spc.p) {
-              if (geo.sqdist(i,origin)<cutoff2)
+              if (spc.geo.sqdist(i,origin)<cutoff2)
                 mu += i.mu*i.muscalar;
               mu_inf += i.mu*i.muscalar;
             }
-            samplePP(geo,spc,origin,mu,mu_inf);
+            samplePP(spc,origin,mu,mu_inf);
           }
 
         /**
          * @brief Samples dipole-moment from point particles.
          * 
-         * @param geo The geometry
          * @param spc The space
          * @param origin Origin to use (optional)
          * @param mu Dipoles to add to from within cutoff (optional)
          * @param mu_inf Dipoles to add to from entire box (optional)
          */
-        template<class Tgeometry, class Tspace>
-          void samplePP(Tgeometry &geo, Tspace &spc, Point origin=Point(0,0,0), Point mu=Point(0,0,0), Point mu_inf=Point(0,0,0)) {
+        template<class Tspace>
+          void samplePP(Tspace &spc, Point origin=Point(0,0,0), Point mu=Point(0,0,0), Point mu_inf=Point(0,0,0)) {
             Group all(0,spc.p.size()-1);
             all.setMassCenter(spc);
             mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
             mu_inf += Geometry::dipoleMoment(spc,all);
-            MC_old = MC_new;
-            MCI_old = MCI_new;
-            MC_new = mu;
-            MCI_new = mu_inf;
-            Point temp1 = MC_new - MC_old;
-            Point temp2 = MCI_new - MCI_old;
-            P1(MC_new(0))++;
-            P1(MC_new(1))++;
-            P1(MC_new(2))++;
-            P(temp1(0)) += MC_new(0)*MC_new(0);
-            P(temp1(1)) += MC_new(1)*MC_new(1);
-            P(temp1(2)) += MC_new(2)*MC_new(2);
-            P(temp2(0)) += MCI_new(0)*MCI_new(0);
-            P(temp2(1)) += MCI_new(1)*MCI_new(1);
-            P(temp2(2)) += MCI_new(2)*MCI_new(2);
-            M += mu.squaredNorm();
-            M_inf += mu_inf.squaredNorm();
+            N2(mu(0))++;
+            N2(mu(1))++;
+            N2(mu(2))++;
+            N2_inf(mu_inf(0))++;
+            N2_inf(mu_inf(1))++;
+            N2_inf(mu_inf(2))++;
+            M += mu.norm();
+            M_inf += mu_inf.norm();
+            M2 += mu.squaredNorm();
+            M2_inf += mu_inf.squaredNorm();
           }
 
         /**
@@ -1054,23 +1042,22 @@ namespace Faunus {
          * @param p Particle vector
          * @param spc The space
          */ 
-        template<class Tpvec, class Tspace>
-          void clausiusMossotti(const Tpvec &p, const Tspace &spc) {
-            double Q = 4*pc::pi*p.size()*p[0].alpha.trace()/(9*spc.geo.getVolume());  // 9 = 3*3, where one 3 is a normalization of the trace of alpha
+        template<class Tspace>
+          void clausiusMossotti(const Tspace &spc) {
+            double Q = 4*pc::pi*spc.p.size()*spc.p[0].alpha.trace()/(9*pc::Ang2Bohr(spc.geo.getVolume(),3));  // 9 = 3*3, where one 3 is a normalization of the trace of alpha
             CM = ((1+2*Q)/(1-Q));
           }
 
-        // Every particle has to have the same absolute dipole moment. Convertions to a.u. cancels out!
-        template<class Tpvec>
-          double getKirkwoodFactor(const Tpvec &p) {
-            double val = 0;
-            for(int k = 0; k < p.size(); k++) {
-              val += cos(p.dot(p.mu));
-            }
-            val /= p.size();
-            cout << "K: " << 1+val << ", " << M_inf.avg()/(p[0].muscalar*p[0].muscalar) << endl;
-            
-            return M_inf.avg()/(p[0].muscalar*p[0].muscalar);
+        /**
+         * @brief Get the Kirkwood-factor, g_k. 
+         * @brief "Understanding Molecular Simulation", D. Frenkel, B. Smit, p.302
+         * 
+         * @param p Particle vector
+         * @param spc The space
+         */ 
+        template<class Tspace>
+          double KirkwoodFactor(const Tspace &spc) {
+            return (M2.avg() - M.avg()*M.avg())/(spc.p.size()*spc.p[0].muscalar*spc.p[0].muscalar);
           }
 
         
@@ -1081,26 +1068,25 @@ namespace Faunus {
             //mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
             double A = alpha*3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree()/(8*pc::pi);
             double eps = (lambda*lambda-2*lambda-A)/(lambda*lambda-2*lambda-A-1);
-            P.save("AAA.dat"); 
-            P1.save("BBB.dat");
+            N2.save("normal_cutoff.dat"); 
+            N2_inf.save("normal_box.dat");
            }
-
+           
         /**
          * @brief Returns dielectric constant according to \f$ \frac{\epsilon_0-1}{3} = \frac{4\pi}{9Vk_BT}<\bold{M}^2> + \frac{\epsilon_x-1}{3}  \f$. Only works when \f$ \epsilon_{RF} = \infty \f$.
          * @brief DOI:10.1080/08927029708024131
          */ 
         double getDielInfty() {
-          return (CM+pc::Ang2Bohr(M_inf.avg(),2)*vol_const_inf);
+          return (CM+pc::Ang2Bohr(M2_inf.avg(),2)*vol_const_inf);
         }  
 
         inline string info() {
           std::ostringstream o;
-          if (M.cnt>0) {
-            double Q_AU = 0.25 + pc::Ang2Bohr(M.avg(),2)*vol_const;   // In a.u.
+          if (M2.cnt>0) {
+            double Q_AU = 0.25 + pc::Ang2Bohr(M2.avg(),2)*vol_const;   // In a.u.
             Q_AU = Q_AU + std::sqrt(Q_AU*Q_AU+0.5);
             //double Q_SI = 0.25 + M.avg()*convertSI;  // in SI-units
             //Q_SI = Q_SI + std::sqrt(Q_SI*Q_SI+0.5)
-            o << "M-avg*vol_const:        " << M.avg()*vol_const << endl;
             o << "Eps:          " << Q_AU << endl;
             o << "Eps_{\\infty}: " << getDielInfty() << endl;
           }
@@ -1165,18 +1151,22 @@ namespace Faunus {
             return sigma2;
           }
 
+          // Approximate cumulative distribution function for value alpha in Ljung-Box method
           double getF_X_LB() {
             return F_X_LB;
           }
 
+          // Approximate cumulative distribution function for value alpha in Box-Pierce method
           double getF_X_BP() {
             return F_X_BP;
           }
 
+          // Approximate cumulative distribution function for value alpha in studentTdistribution method
           double getF_X_stud() {
             return F_X_stud;
           }
 
+          // Value of alpha to approximately get F_X_stud in studentTdistribution method (Method fails if (x*x/dof > 1), see line further down)
           double getStdAlpha() {
             return sTd_alpha;
           }
@@ -1259,7 +1249,7 @@ namespace Faunus {
             for(int k = 0;k < lag; k++)
               Q += sampleAutocorrelation(k);
 
-            if(Q*N > getChi2(alpha,F_X_LB))
+            if(Q*N > getChi2(alpha,F_X_BP))
               return false;
             return true;
           }
@@ -1268,9 +1258,9 @@ namespace Faunus {
            * @brief Hypergeometric function. This function uses \f$ x=(x)_1=(x)_2=... \f$ for x=a,x=b and x=c.
            *        \f$ F_1(a,b,c;z) = \sum_{n=0}^{\infty}\frac{(a)_n(b)_n}{(c)_n}\frac{z^n}{n!} \f$
            * 
-           * @param a Coefficient
-           * @param b Coefficient
-           * @param c Coefficient
+           * @param a Coefficient (usually a vector) 
+           * @param b Coefficient (usually a vector) 
+           * @param c Coefficient (usually a vector) 
            * @param z Value to estimate for. Only works for \f$ |z|<1 \f$.
            */
           double F2(double a,double b,double c, double z) {

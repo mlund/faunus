@@ -85,7 +85,7 @@ namespace Faunus {
            *  @param E_ext External field on particles
            */
           template<typename Tenergy,typename Tparticles>
-            void induceDipoles(Tenergy &pot, Tparticles &p, Point E_ext) { 
+            void induceDipoles(Tenergy &pot, Tparticles &p, Point E_ext=Point(0,0,0)) { 
               Eigen::VectorXd mu_err_norm((int)p.size());
               threshold = 0.001;
 
@@ -113,8 +113,7 @@ namespace Faunus {
           void _trialMove() FOVERRIDE {
             Tmove::_trialMove();                     // base class MC move
             field.resize(3,Tmove::spc->trial.size());// match sizes
-            Point E_ext(0,0,0); // No external field 
-            induceDipoles(*Tmove::pot,Tmove::spc->trial,E_ext);
+            induceDipoles(*Tmove::pot,Tmove::spc->trial);
           }
 
           double _energyChange() FOVERRIDE {

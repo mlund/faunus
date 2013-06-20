@@ -35,6 +35,7 @@ test_stable        no
 test_file          stockmayer.test
 " > stockmayer.input
 
+rm state
 exe=./stockmayer
 if [ -x $exe ]; then
  $exe

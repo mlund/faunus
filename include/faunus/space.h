@@ -228,10 +228,11 @@ namespace Faunus {
       a=atom[atomname];
       while (n>0) {
         geo.randompos(a);
-        if (!overlap(a)) {
-          insert(a,-1);
-          n--;
-        }
+        if (overlap(a))
+          cout << "Overlap on insert ignored!\n";
+        insert(a,-1);
+        n--;
+        //}
       }
       return true;
     }

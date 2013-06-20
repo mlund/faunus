@@ -324,8 +324,8 @@ namespace Faunus {
             assert( this->count()>0 );
 
             if (bulkconc.cnt==0) bulkconc+=1;
-            if (bulkconc.avg()<1e-6) bulkconc+=1;
-            if (Npart.cnt==0) Npart+=1;
+            //if (bulkconc.avg()<1e-6) bulkconc+=1;
+            //if (Npart.cnt==0) Npart+=1;
 
             return ((double)this->operator()(x)*Npart.avg()) / (volume(x) *(double)this->count() * bulkconc.avg())
               ;
@@ -365,12 +365,15 @@ namespace Faunus {
                       this->operator() (r)++;
                   }
               int bulk=0;
-              for (auto i : g)
-                if (spc.p[i].id==ida || spc.p[i].id==idb)
+              for (auto i : g){
+                if (spc.p[i].id==ida || spc.p[i].id==idb){
                   bulk++;
+		}
+	      }
               Npart+=bulk;
               bulkconc += bulk / spc.geo.getVolume();
             }
+    
 
           template<class Tspace>
             void sample(Tspace &spc, short ida, short idb) {

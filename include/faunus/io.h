@@ -144,6 +144,86 @@ namespace Faunus {
   };
 
   /**
+   *@brief Dipolar particles in VRML format
+   */
+
+  class DipoleWRL {
+  public:
+    template<class Tspace>
+      void saveDipoleWRL(string filename, Tspace &spc, Group &sol) {
+      auto L = spc.geo.len.x();
+      auto L2 = L/2;
+
+      std::ofstream f;
+      f.open(filename);
+      f << "#VRML V2.0 utf8\n" << endl;
+      f << "Viewpoint {description" << "\"View 1\"" << "position" << "  "  << L*2 
+	<< "  " << "0.00    0.00" << endl
+	<< "orientation 0 1 0 0 }"<< endl
+	<< " Shape {appearance Appearance { material Material { " << endl
+	<< "diffuseColor 0.9 0.9 0.9 transparency 1.0 }}" << endl
+	<< "geometry Box { size"<< "  " << L << "  " << L << "  " << L << "}}" << endl
+	<< "Shape {appearance Appearance {material Material {" << endl
+	<< "emissiveColor 0.8 1.0 0.6 }}" << endl
+	<< "geometry IndexedLineSet {coord Coordinate {" << endl 
+	<< "point [" << endl
+	
+	<< -L2 << "  " <<   L2  << "  " <<   L2 << endl 
+	<<  L2 << "  " <<   L2  << "  " <<   L2 << endl 
+	<<  L2 << "  " <<   L2  << "  " <<  -L2 << endl 
+	<< -L2 << "  " <<   L2  << "  " <<  -L2 << endl 
+	<< -L2 << "  " <<  -L2  << "  " <<   L2 << endl 
+	<<  L2 << "  " <<  -L2  << "  " <<   L2 << endl 
+	<<  L2 << "  " <<  -L2  << "  " <<  -L2 << endl 
+	<< -L2 << "  " <<  -L2  << "  " <<  -L2 << endl 
+	<< "]}" << endl 
+	<< "coordIndex [" << endl 
+	<< "0, 1, 2, 3, 0, -1," << endl 
+	<< "4, 5, 6, 7, 4, -1," << endl 
+	<< "0, 4, -1," << endl 
+	<< "1, 5, -1," << endl 
+	<< "2, 6, -1," << endl 
+	<< "3, 7, -1," << endl 
+	<< "]}}" << endl;
+      
+      
+      
+      for (auto i : sol) { 
+	auto  x = Point(spc.p[i]).transpose().x(); 
+	auto  y = Point(spc.p[i]).transpose().y(); 
+	auto  z = Point(spc.p[i]).transpose().z(); 
+	auto dipx = spc.p[i].mu.transpose().x();
+	auto dipy = spc.p[i].mu.transpose().y();
+	auto dipz = spc.p[i].mu.transpose().z();
+	auto r = spc.p[i].radius;
+	f << "Transform { translation" << "  " <<  x << "  " << y << "  "<< z << endl
+	  << " children [ DEF par_0 Shape{ appearance Appearance { material" << endl
+	  << " Material {diffuseColor       0.00      1.00      1.00 transparency 0.2 }}" << endl 
+	  << "  geometry Sphere {radius" <<"  " << r <<"}}]}" << endl;
+	
+	auto size = sqrt((dipx * dipx) + (dipy*dipy) + (dipz*dipz)); 
+	auto cosT = dipy/size;
+	auto angle = acos(cosT);
+	
+	auto Xdipx = (-1.0) * dipx;
+	
+	f << "Transform { translation" << "  " <<  x << "  " << y << "  "<< z << endl
+	  <<" rotation" << "  "<< dipz << "  " << " 0" << "  "<< Xdipx << " " <<  angle << endl 
+	  
+	  <<  " children[DEF tip_0 Shape{appearance Appearance{material Material{" << endl 
+	  
+	  <<  "diffuseColor       1.00      0.00      0.00 }}  geometry Cone { bottomRadius"<<"  "<< 0.3*r<<"  "<< "height" << "  "<< 0.6*r << "}}]}" << endl;
+      }
+      f.close();
+    }
+    
+    
+    
+  };
+  
+
+
+  /**
    * @brief PQR format
    * @date December 2007
    *
@@ -590,5 +670,6 @@ namespace Faunus {
           }
 
     };
+
 }//namespace
 #endif

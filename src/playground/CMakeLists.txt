@@ -66,7 +66,11 @@ set_target_properties(axel-tempertest PROPERTIES OUTPUT_NAME "tempertest")
 # Alexei's playground
 fau_example(alexei-hs "./alexei" HS.cpp)
 set_target_properties(alexei-hs PROPERTIES OUTPUT_NAME "HS")
-
+fau_dipoleexample(alexei_stockmayer "./alexei" stockmayer.cpp)
+fau_dipoleexample(alexei_stockmayer_polarizable "./alexei" stockmayer.cpp)
+set_target_properties(alexei_stockmayer PROPERTIES OUTPUT_NAME "stockmayer")
+set_target_properties(alexei_stockmayer_polarizable PROPERTIES OUTPUT_NAME "stockmayer_polarizable")
+set_target_properties(alexei_stockmayer_polarizable PROPERTIES COMPILE_DEFINITIONS "POLARIZE;DIPOLEPARTICLE")
 
 if (EXISTS ${MYPLAYGROUND})
   add_subdirectory(${MYPLAYGROUND} ${MYPLAYGROUND})

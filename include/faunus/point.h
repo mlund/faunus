@@ -558,7 +558,10 @@ namespace Faunus {
         class = typename std::enable_if<std::is_base_of<AtomData,T>::value>::type> 
           CigarParticle& operator=(const T &d) {
             PointParticle::operator=(d);
-            // copy more atom properties here...
+              halfl = d.half_len;
+              patchangle = d.pangl;
+              pcanglsw = d.pcanglsw;
+              pcangl = d.pcangl;
             return *this;
           }
 

@@ -27,6 +27,49 @@ namespace Faunus {
      * \param halfl2 Half length of second segment
      * \param r_cm Distance vector between the middle of the two segments
      */
+    template<class Tgeometry>
+      int cigar_initialize(Tgeometry &geo, CigarParticle &target)
+      {
+          //epsilon; sigma; pdis; pswitch; len; half_len; pangl; panglsw; chiral_angle;
+          /*
+          rcutwca = (sigma)*pow(2.0,1.0/6.0);
+          rcut = pswitch+pdis;
+          pcangl = cos(pangl/2.0/180*PI);                
+          pcanglsw = cos((pangl/2.0+panglsw)/180*PI);
+          pcoshalfi = cos((pangl/2.0+panglsw)/2.0/180*PI);
+          psinhalfi = sqrt(1.0 - pcoshalfi * pcoshalfi);
+          chiral_cos = cos(chiral_angle / 360 * PI);
+          chiral_sin = sqrt(1 - chiral_cos * chiral_cos);
+           */
+          Point vec;
+          Geometry::QuaternionRotate rot;
+          
+          target.dir.normalize();
+          target.patchdir=vec_perpproject(target.patchdir,target.dir);
+          /*calculate patch sides*/
+          if ( atom[target.id].chiral_angle < 1e-6 ){
+              vec = target.dir;
+          } else {
+              target.chdir = target.dir;
+              rot.setAxis(geo, Point(0,0,0), target.patchdir, 0.5*atom[target.id].chiral_angle);
+              target.chdir.rotate(rot);
+              vec=target.chdir;
+          }          
+          /* rotate patch vector by half size of patch*/
+          //target.patchsides[0] = target.patchdir;
+          //quatrot=quat_create(target.dir, target.pcoshalfi, target.psinhalfi);
+          //vec_rotate(&(target.patchsides[0]),quatrot);
+          target.patchsides[0] = patchdir;
+          rot.setAxis(geo, Point(0,0,0), vec, 0.5*atom[target.id].pangl);
+          target.patchsides[0].rotate(rot);
+          /*second side*/
+          target.patchsides[1] = patchdir;
+          rot.setAxis(geo, Point(0,0,0), vec, -0.5*atom[target.id].pangl);
+          target.patchsides[1].rotate(rot);
+          return 0;
+         
+      }
+      
     template<class T=double>
       Point mindist_segment2segment(const Point &dir1, T halfl1,
           const Point &dir2, T halfl2, const Point &r_cm)

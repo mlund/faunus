@@ -26,7 +26,17 @@ namespace Faunus {
            dp,         //!< Translational displacement parameter [angstrom]
            dprot,      //!< Rotational displacement parameter [radians]
            mean,       //!< Mean value... (charge, sasa, etc.)
-           variance;   //!< Spread around AtomData::mean
+           variance,   //!< Spread around AtomData::mean
+      
+           len,        //!< Spherocylinder length [Å]
+           half_len,   //!< Spherocylinder half length [Å]
+           pangl,      //!< Angle of attrative patch on PatchySpherocylinder [degrees]
+           panglsw,    //!< Angle of angluar switch on sides of patch on PatchySpherocylinder [degrees]
+           pdis,       //!< Distance to which attraction is flat (typicaly end of repulsion) on attrative patch on PatchySpherocylinder [Å]
+           pswitch,    //!< Distance on which attraction switches to zero on PatchySpherocylinder [Å]
+           chiral_angle,//!< Angle of chirality (rotation of patch) on PatchySpherocylinder [degrees]
+           rcutwca,
+           rcut;
     Point mu;
     short int patchtype;     //!< If patchy particle, which type of patch
     Thydrophobic hydrophobic;//!< Are we hydrophobic?

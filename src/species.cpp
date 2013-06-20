@@ -31,8 +31,8 @@ namespace Faunus {
     panglsw=0;
     rcutwca=0;
     rcut=0;
-    //pcangl=0;
-    //pcanglsw=0;
+    pcangl=0;
+    pcanglsw=0;
     //pcoshalfi=0;
     //psinhalfi=0;
     chiral_angle=0;
@@ -106,11 +106,11 @@ namespace Faunus {
       a.panglsw = json::value<double>(atom.second, "patchangleswitch", 0)/180*pc::pi;
       a.rcutwca = (a.sigma) * std::pow(2.0,1.0/6.0);
       a.rcut = a.pswitch + a.pdis;
-      //a.pcangl = cos(a.pangl/360*pc::pi);
-      //a.pcanglsw = cos((a.pangl/2.0 + a.panglsw)/180*pc::pi);
+      a.pcangl = cos(a.pangl/360*pc::pi);
+      a.pcanglsw = cos((a.pangl/2.0 + a.panglsw)/180*pc::pi);
       //a.pcoshalfi = cos((a.pangl/2.0 + a.panglsw)/360*pc::pi);
       //a.psinhalfi = sqrt(1.0 - a.pcoshalfi * a.pcoshalfi);
-      double chiral_angle = json::value<double>(atom.second, "patchchiralangle", 0)/180*pc::pi;
+      a.chiral_angle = json::value<double>(atom.second, "patchchiralangle", 0)/180*pc::pi;
       //a.chiral_cos = cos(chiral_angle / 360 * pc::pi);
       //a.chiral_sin = sqrt(1 - a.chiral_cos * a.chiral_cos);
         

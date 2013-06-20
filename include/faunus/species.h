@@ -35,6 +35,8 @@ namespace Faunus {
            pdis,       //!< Distance to which attraction is flat (typicaly end of repulsion) on attrative patch on PatchySpherocylinder [Å]
            pswitch,    //!< Distance on which attraction switches to zero on PatchySpherocylinder [Å]
            chiral_angle,//!< Angle of chirality (rotation of patch) on PatchySpherocylinder [degrees]
+           pcangl,
+           pcanglsw,
            rcutwca,
            rcut;
     Point mu;

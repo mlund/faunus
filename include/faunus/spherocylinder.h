@@ -8,6 +8,81 @@ namespace Faunus {
 
   namespace Geometry {
 
+      /**
+       * @brief Calculate perpendicular projection of the first vector versus the second vector
+       *
+       * Calculate projection of a vector to a plane define by second vector (normal of a plan)
+       * \param a the first vector
+       * \param b the second vector
+       */
+      template<class Tpoint1, class Tpoint2>
+      Point vec_perpproject(const Tpoint1 &a, const Tpoint2 &b) {
+          return a-b*a.dot(b);
+      }
+  
+      /**
+       * @brief Initialize vectors and propertise of patchy spherocylinder - run at start and after patch changes
+       *
+       * Calculates cosine of angles, patch direction including chirality
+       * and vector corresponding to sides of patch that are used in
+       * calculations of interactions. 
+       * This function shall be run at the beginning of calculations and after changes of patch properties.
+       * It shall be also after a lot of move to remove accumulated comouptation errors
+       * \param geo geometry
+       * \param target patchy spherocylinder
+       */
+    template<class Tgeometry>
+      int cigar_initialize(Tgeometry &geo, CigarParticle &target)
+      {
+          //epsilon; sigma; pdis; pswitch; len; half_len; pangl; panglsw; chiral_angle;
+          /*
+          rcutwca = (sigma)*pow(2.0,1.0/6.0);
+          rcut = pswitch+pdis;
+          pcangl = cos(pangl/2.0/180*PI);                
+          pcanglsw = cos((pangl/2.0+panglsw)/180*PI);
+          pcoshalfi = cos((pangl/2.0+panglsw)/2.0/180*PI);
+          psinhalfi = sqrt(1.0 - pcoshalfi * pcoshalfi);
+          chiral_cos = cos(chiral_angle / 360 * PI);
+          chiral_sin = sqrt(1 - chiral_cos * chiral_cos);
+           */
+          Point vec;
+          Geometry::QuaternionRotate rot;
+          
+          if ( target.halfl < 1e-6 ) return 0;
+          target.pcangl = cos(target.patchangle/360*pc::pi);
+          target.pcanglsw = cos((0.5*target.patchangle + atom[target.id].panglsw)/180*pc::pi);
+          
+          assert( target.dir.squaredNorm() < 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
+          target.dir.normalize();
+          assert( target.patchdir.squaredNorm() < 1e-6 && "Patch direction vector of patchy spherocylinder has zero size.");
+          target.patchdir=vec_perpproject(target.patchdir,target.dir);
+          target.patchdir.normalize();
+          /*calculate patch sides*/
+          if ( atom[target.id].chiral_angle < 1e-6 ){
+              vec = target.dir;
+          } else {
+              target.chdir = target.dir;
+              rot.setAxis(geo, Point(0,0,0), target.patchdir, 0.5*atom[target.id].chiral_angle);
+              target.chdir.rotate(rot);
+              vec=target.chdir;
+          }          
+          /* rotate patch vector by half size of patch*/
+          //target.patchsides[0] = target.patchdir;
+          //quatrot=quat_create(target.dir, target.pcoshalfi, target.psinhalfi);
+          //vec_rotate(&(target.patchsides[0]),quatrot);
+          target.patchsides[0] = target.patchdir;
+          rot.setAxis(geo, Point(0,0,0), vec, 0.5*atom[target.id].pangl);
+          target.patchsides[0].rotate(rot);
+          target.patchsides[0].normalize();
+          /*second side*/
+          target.patchsides[1] = target.patchdir;
+          rot.setAxis(geo, Point(0,0,0), vec, -0.5*atom[target.id].pangl);
+          target.patchsides[1].rotate(rot);
+          target.patchsides[0].normalize();
+          return 0;
+          assert( target.patchsides[0].squaredNorm() < 1e-6 && "Vector associated with patch side has zero size. Patchy spherocylinder were probably not initialized.");
+      }
+      
     /**
      * @brief Calculate minimum distance between two line segments
      *
@@ -26,50 +101,7 @@ namespace Faunus {
      * \param dir2 Direction of second segment
      * \param halfl2 Half length of second segment
      * \param r_cm Distance vector between the middle of the two segments
-     */
-    template<class Tgeometry>
-      int cigar_initialize(Tgeometry &geo, CigarParticle &target)
-      {
-          //epsilon; sigma; pdis; pswitch; len; half_len; pangl; panglsw; chiral_angle;
-          /*
-          rcutwca = (sigma)*pow(2.0,1.0/6.0);
-          rcut = pswitch+pdis;
-          pcangl = cos(pangl/2.0/180*PI);                
-          pcanglsw = cos((pangl/2.0+panglsw)/180*PI);
-          pcoshalfi = cos((pangl/2.0+panglsw)/2.0/180*PI);
-          psinhalfi = sqrt(1.0 - pcoshalfi * pcoshalfi);
-          chiral_cos = cos(chiral_angle / 360 * PI);
-          chiral_sin = sqrt(1 - chiral_cos * chiral_cos);
-           */
-          Point vec;
-          Geometry::QuaternionRotate rot;
-          
-          target.dir.normalize();
-          target.patchdir=vec_perpproject(target.patchdir,target.dir);
-          /*calculate patch sides*/
-          if ( atom[target.id].chiral_angle < 1e-6 ){
-              vec = target.dir;
-          } else {
-              target.chdir = target.dir;
-              rot.setAxis(geo, Point(0,0,0), target.patchdir, 0.5*atom[target.id].chiral_angle);
-              target.chdir.rotate(rot);
-              vec=target.chdir;
-          }          
-          /* rotate patch vector by half size of patch*/
-          //target.patchsides[0] = target.patchdir;
-          //quatrot=quat_create(target.dir, target.pcoshalfi, target.psinhalfi);
-          //vec_rotate(&(target.patchsides[0]),quatrot);
-          target.patchsides[0] = patchdir;
-          rot.setAxis(geo, Point(0,0,0), vec, 0.5*atom[target.id].pangl);
-          target.patchsides[0].rotate(rot);
-          /*second side*/
-          target.patchsides[1] = patchdir;
-          rot.setAxis(geo, Point(0,0,0), vec, -0.5*atom[target.id].pangl);
-          target.patchsides[1].rotate(rot);
-          return 0;
-         
-      }
-      
+     */      
     template<class T=double>
       Point mindist_segment2segment(const Point &dir1, T halfl1,
           const Point &dir2, T halfl2, const Point &r_cm)
@@ -171,11 +203,6 @@ namespace Faunus {
             d = -halfl;
         }
         return -r_cm + (dir*d);
-      }
-
-    template<class Tpoint1, class Tpoint2>
-      Point vec_perpproject(const Tpoint1 &a, const Tpoint2 &b) {
-        return a-b*a.dot(b);
       }
 
     /**
@@ -774,6 +801,7 @@ namespace Faunus {
                 double intersections[5];
                 Point vec1, vec2, vec_intrs, vec_mindist;
 
+                intrs=0;
                 for(i=0;i<5;i++)
                   intersections[i]=0;
                 //1- do intersections of spherocylinder2 with patch of spherocylinder1 at.
@@ -907,17 +935,29 @@ namespace Faunus {
               // a sphere - b cigar
               else {
                 //PatchyCigarSphere(b,a)
+                assert( b.dir.squaredNorm() < 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
+                assert( b.patchdir.squaredNorm() < 1e-6 && "Patch direction vector of patchy spherocylinder has zero size.");
+                assert( b.patchsides[0].squaredNorm() < 1e-6 && "Vector associated with patch side has zero size. Patchy spherocylinder were probably not initialized.");
                 return pairpot_cs(b,a,r_cm);
               }
             } else {
               // a cigar - b sphere
               if (b.halfl<1e-6) {
                 //PatchyCigarSphere(a,b)
+                assert( a.dir.squaredNorm() < 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
+                assert( a.patchdir.squaredNorm() < 1e-6 && "Patch direction vector of patchy spherocylinder has zero size.");
+                assert( a.patchsides[0].squaredNorm() < 1e-6 && "Vector associated with patch side has zero size. Patchy spherocylinder were probably not initialized.");
                 return pairpot_cs(a,b,r_cm);
               }
               // a cigar - b cigar
               else {
                 //PatchyCigarCigar
+                assert( a.dir.squaredNorm() < 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
+                assert( b.dir.squaredNorm() < 1e-6 && "Direction vector of patchy spherocylinder has zero size.");
+                assert( a.patchdir.squaredNorm() < 1e-6 && "Patch direction vector of patchy spherocylinder has zero size.");
+                assert( b.patchdir.squaredNorm() < 1e-6 && "Patch direction vector of patchy spherocylinder has zero size.");
+                assert( a.patchsides[0].squaredNorm() < 1e-6 && "Vector associated with patch side has zero size. Patchy spherocylinder were probably not initialized.");
+                assert( b.patchsides[0].squaredNorm() < 1e-6 && "Vector associated with patch side has zero size. Patchy spherocylinder were probably not initialized.");
                 return pairpot_cc(a,b,r_cm);
               }
             }

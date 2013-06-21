@@ -147,7 +147,7 @@ namespace Faunus {
      * @warning Untested!
      */
     class CosAttract : public PairPotentialBase {
-      private:
+      protected:
         double eps, wc, rc, rc2, c, rcwc2;
         string _brief();
       public:
@@ -163,7 +163,7 @@ namespace Faunus {
           }
         string info(char); // More verbose information
     };
-
+      
     /**
      * @brief Finite Extensible nonlinear elastic (FENE) potential
      * @details This is an anharmonic bonding potential with the form:
@@ -303,10 +303,9 @@ namespace Faunus {
      */
     template<class Tmixingrule>
       class LennardJonesMixed : public PairPotentialBase {
-        private:
+        protected:
           Tmixingrule mixer; // mixing rule class for sigma and epsilon
           string _brief() { return name + " w. " + mixer.name; }
-        protected:
           PairMatrix<double> s2,eps; // matrix of sigma_ij^2 and eps_ij
         public:
           LennardJonesMixed(InputMap &in) {
@@ -362,6 +361,48 @@ namespace Faunus {
                       << pc::kT2kJ(eps(i,j)/4) << " kJ/mol"
                       << endl;
             return o.str();
+          }
+      };
+
+      template<class Tmixingrule=LorentzBerthelot>
+      class CosAttractMixed : public LennardJonesMixed<Tmixingrule> {
+      protected:
+          typedef LennardJonesMixed<Tmixingrule> base;
+          PairMatrix<double> rcwc2,rc2,c,rc,eps; // matrix of sigma_ij^2 and eps_ij
+      public:
+          CosAttractMixed(InputMap &in) : base(in) {
+              base::name="Cos^2 attraction (mixed)";
+              size_t n=atom.list.size(); // number of atom types
+              c.resize(n);
+              rc.resize(n);
+              rc2.resize(n);
+              rcwc2.resize(n);
+              eps.resize(n);
+              for (size_t i=0; i<n; i++)
+                  for (size_t j=0; j<n; j++) {
+                      rc.set(i,j,base::mixer.mixSigma( atom.list[i].pdis, atom.list[j].pdis));
+                      rcwc2.set(i,j,base::mixer.mixSigma( atom.list[i].pswitch, atom.list[j].pswitch));
+                      c.set(i,j, 0.5*pc::pi/rcwc2(i,j) );
+                      rcwc2.set(i,j, rcwc2(i,j) + rc(i,j) );
+                      rcwc2.set(i,j, rcwc2(i,j) * rcwc2(i,j) );
+                      rc2.set(i,j, rc(i,j)*rc(i,j) );
+                      eps.set(i,j,base::mixer.mixEpsilon( atom.list[i].eps, atom.list[j].eps ));
+                      
+                  }
+          }
+          
+          template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
+              if (r2<rc2(a.id,b.id))
+                  return -eps(a.id,b.id);
+              if (r2>rcwc2(a.id,b.id))
+                  return 0;
+              double x=cos( c(a.id,b.id)*( sqrt(r2)-rc(a.id,b.id) ) );
+              return -eps(a.id,b.id)*x*x;
+          }
+          template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
+              return operator()(a,b,r.squaredNorm());
           }
       };
 

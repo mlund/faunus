@@ -226,23 +226,57 @@ namespace Faunus {
      * direction and patch direction on each line
      */
     class FormatMXYZ {
+    private:
+        template<class Tparticle>
+        static std::string p2s(const Tparticle &a, int i) {
+            std::ostringstream o;
+            o.precision(5);
+            o << a.x() << " " << a.y() <<" "<< a.z() << " " << a.dir.x() << " " << a.dir.y() <<" "<< a.dir.z() << " "
+            << a.patchdir.x() << " " << a.patchdir.y() <<" "<< a.patchdir.z() << " " << std::endl;
+            return o.str();
+        }
+        
+        template<class Tparticle>
+        static Tparticle& s2p(const std::string &s, Tparticle &a) {
+            std::stringstream o;
+            o << s;
+            o >> a.x() >> a.y() >> a.z() >> a.dir.x() >> a.dir.y() >> a.dir.z() >> a.patchdir.x() >> a.patchdir.y() >> a.patchdir.z();
+            return a;
+        }
     public:
         template<class Tpvec, class Tvec=Point>
-        static bool save(const string &file, const Tpvec &p, Tvec len=Tvec(0,0,0)) {
+        static bool save(const string &file, const Tpvec &p, const Point &len, const unsigned int time) {
             char buf[200];
-            int time;
             
-            time=0;
             std::ostringstream o;
             o << p.size() << "\n";
             sprintf(buf, "sweep %d; box %f %f %f \n", time, len.x(),len.y(),len.z());
             o << buf;
-            for (auto &p_i : p) {
-                sprintf(buf, "%f %f %f    %f %f %f    %f %f %f\n",
-                        p_i.x(), p_i.y(), p_i.z(), p_i.dir.x(), p_i.dir.y(), p_i.dir.z(), p_i.patchdir.x(), p_i.patchdir.y(), p_i.patchdir.z() );
-                o << buf;
-            }
+            for (size_t i=0; i< p.size(); i++)
+                o << p2s(p[i], i);
             return IO::writeFile(file, o.str());
+        }
+        
+    public:
+        template<class Tpvec>
+        static bool load(const string &file, Tpvec &p, Point &len) {
+            std::stringstream o;
+            vector<string> v;
+            
+            if (IO::readFile(file,v)==true) {
+                IO::strip(v,"#");
+                unsigned int n=atoi(v[0].c_str());
+                //target.resize(n);
+                if (p.size() != n)
+                    std::cerr << "# mxyz load error: number of particles in xyz file " << n
+                        << " does not match input file (" << p.size() << ")!" << endl;
+                o << v[1].erase(0, v[1].find_last_of("x")+1);
+                o >> len.x() >> len.y() >> len.z();
+                for (unsigned int i=2; i<n+2; i++)
+                    s2p(v.at(i), p.at(i-2));
+                return true;
+            }
+            return false;
         }
         
     };

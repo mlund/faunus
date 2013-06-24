@@ -47,3 +47,7 @@ fau_example(example_water "./" water.cpp)
 set_target_properties(example_water PROPERTIES OUTPUT_NAME "water")
 add_test( example_water ${CMAKE_CURRENT_SOURCE_DIR}/water.run )
 
+fau_example(example_cigarsenergy "./" cigarsenergy.cpp)
+set_target_properties(example_cigarsenergy PROPERTIES OUTPUT_NAME "cigarsenergy")
+add_test( example_cigarsenergy ${CMAKE_CURRENT_SOURCE_DIR}/cigarsenergy.run )
+

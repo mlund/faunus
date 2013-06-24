@@ -17,14 +17,14 @@ namespace Faunus {
     AtomData();
     Tid id;            //!< Identification number
     double sigma,      //!< LJ diameter [angstrom]
-           eps,        //!< LJ epsilon [kJ/mol]
+           eps,        //!< LJ epsilon [kJ/mol] (pair potentials should convert to kT)
            radius,     //!< Radius [angstrom]
            muscalar,   //!< Dipole momentscalar [eÅ]
            mw,         //!< Weight [g/mol]
            charge,     //!< Charge/valency [e]
            activity,   //!< Chemical activity [mol/l]
            dp,         //!< Translational displacement parameter [angstrom]
-           dprot,      //!< Rotational displacement parameter [radians]
+           dprot,      //!< Rotational displacement parameter [degrees]
            mean,       //!< Mean value... (charge, sasa, etc.)
            variance,   //!< Spread around AtomData::mean
       
@@ -69,7 +69,7 @@ namespace Faunus {
         void resize(size_t n) {
           m.resize(n);
           for (auto &i : m)
-            i.resize(n);
+            i.resize(n,0);
         }
         PairMatrix(size_t n=0) {
           resize(n);

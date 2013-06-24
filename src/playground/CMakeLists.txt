@@ -55,6 +55,9 @@ set_target_properties( sc-npt PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
 fau_cigarexample(psc-nvt "./vacha" psc-nvt.cpp)
 set_target_properties( psc-nvt PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
 
+fau_cigarexample(test2 "./vacha" test2.cpp)
+set_target_properties( psc-nvt PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
+
 # Stenqvist playground
 fau_dipoleexample(stenqvist-nemo "./stenqvist" nemo.cpp)
 set_target_properties(stenqvist-nemo PROPERTIES OUTPUT_NAME "nemo")

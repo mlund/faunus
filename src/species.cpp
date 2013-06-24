@@ -97,22 +97,19 @@ namespace Faunus {
       a.radius = a.sigma/2;
       a.id=AtomData::Tid( list.size() );
       
-      double len = json::value<double>(atom.second, "length", 0);
+      double len = json::value<double>(atom.second, "len", 0);
       a.half_len = 0.5 * len;
       a.patchtype = json::value<double>(atom.second, "patchtype", 0);
       a.pswitch = json::value<double>(atom.second, "patchswitch", 0);
       a.pdis = json::value<double>(atom.second, "patchdistance", 0);
-      a.pangl = json::value<double>(atom.second, "patchangle", 0)/180*pc::pi;
-      a.panglsw = json::value<double>(atom.second, "patchangleswitch", 0)/180*pc::pi;
+      a.pangl = json::value<double>(atom.second, "patchangle", 0)/180.0*pc::pi;
+      a.panglsw = json::value<double>(atom.second, "patchangleswitch", 0)/180.0*pc::pi;
       a.rcutwca = (a.sigma) * std::pow(2.0,1.0/6.0);
       a.rcut = a.pswitch + a.pdis;
-      a.pcangl = cos(a.pangl/360*pc::pi);
-      a.pcanglsw = cos((a.pangl/2.0 + a.panglsw)/180*pc::pi);
-      //a.pcoshalfi = cos((a.pangl/2.0 + a.panglsw)/360*pc::pi);
-      //a.psinhalfi = sqrt(1.0 - a.pcoshalfi * a.pcoshalfi);
-      a.chiral_angle = json::value<double>(atom.second, "patchchiralangle", 0)/180*pc::pi;
-      //a.chiral_cos = cos(chiral_angle / 360 * pc::pi);
-      //a.chiral_sin = sqrt(1 - a.chiral_cos * a.chiral_cos);
+      a.pcangl = cos(a.pangl*0.5);
+      a.pcanglsw = cos((a.pangl/0.5 + a.panglsw));
+      a.chiral_angle = json::value<double>(atom.second, "patchchiralangle", 0)/180.0*pc::pi;
+
         
         
       list.push_back(a); // add to main particle list

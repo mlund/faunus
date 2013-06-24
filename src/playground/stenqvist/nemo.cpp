@@ -16,8 +16,8 @@ typedef Move::AtomicRotation<Tspace> TmoveRot;
 #endif
 
 int main() {
-  ::atom.includefile("stockmayer.json");         // load atom properties
-  InputMap in("stockmayer.input");               // open parameter file for user input
+  ::atom.includefile("nemo.json");         // load atom properties
+  InputMap in("nemo.input");               // open parameter file for user input
   Energy::NonbondedVector<Tspace,Tpair> pot(in); // non-bonded only
   EnergyDrift sys;                               // class for tracking system energy drifts
   Tspace spc(in);                // create simulation space, particles etc.
@@ -58,7 +58,6 @@ int main() {
         xtc.save(textio::prefix+"out.xtc", spc.p);  
     }    
     cout << gdc.info() << endl;
-    //gdc.getKirkwoodFactor();
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
     cout << loop.timing();
   }
@@ -68,13 +67,13 @@ int main() {
   rot.test(test);
   sys.test(test);
 
-  FormatPQR().save("confout.pqr", spc.p);
+  FormatPQR().save(in.get<string>("target_folder","")+"confout.pqr", spc.p);
+  gdc.save(in.get<string>("target_folder",""));
   rdf.save("gofr.dat");                               // save g(r) to disk
   mucorr.save("mucorr.dat");                               // save g(r) to disk
   std::cout << spc.info() + pot.info() + trans.info()
     + rot.info() + sys.info() + test.info(); // final info
   spc.save("state");
-  gdc.kusalik(spc);
   
   return test.numFailed();
 }

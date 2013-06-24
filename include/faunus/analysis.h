@@ -1040,7 +1040,7 @@ namespace Faunus {
           }
 
         /**
-         * @brief Claussius-Mossotti relationship calculates \f$ \epsilon_x \f$ according to \f$ \frac{\epsilon_x-1}{\epsilon_x+2} = \frac{4\pi}{3}\rho\alpha  \f$.
+         * @brief Claussius-Mossotti relationship calculates \f$ \epsilon_x \f$ according to \f$ \frac{\epsilon_x-1}{\epsilon_x+2} = \frac{4\pi}{3}\rho\alpha  \f$. Only valid for isotropic systems. 
          * @brief DOI:10.1080/08927029708024131
          * 
          * @param p Particle vector
@@ -1072,12 +1072,6 @@ namespace Faunus {
             //mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
             double A = alpha*3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree()/(8*pc::pi);
             double eps = (lambda*lambda-2*lambda-A)/(lambda*lambda-2*lambda-A-1);
-            N2_x.save("/home/work/Dropbox/Work/UpFiles/normal_cutoff_x.dat"); 
-            N2_y.save("/home/work/Dropbox/Work/UpFiles/normal_cutoff_y.dat");
-            N2_z.save("/home/work/Dropbox/Work/UpFiles/normal_cutoff_z.dat");
-            N2_inf_x.save("/home/work/Dropbox/Work/UpFiles/normal_box_x.dat");
-            N2_inf_y.save("/home/work/Dropbox/Work/UpFiles/normal_box_y.dat");
-            N2_inf_z.save("/home/work/Dropbox/Work/UpFiles/normal_box_z.dat");
            }
            
         /**
@@ -1099,6 +1093,20 @@ namespace Faunus {
             o << "Eps_{\\infty}: " << getDielInfty() << endl;
           }
           return o.str();
+        }
+        
+        /**
+         * @brief Saves histogram of dipole components throughout the simulation. Both within a sphere(cutoff) and in the total box(box).
+         * 
+         * @param dir Directory to save in
+         */ 
+        void save(string dir) {
+            N2_x.save(dir+"dipole_x_cutoff.dat"); 
+            N2_y.save(dir+"dipole_y_cutoff.dat"); 
+            N2_z.save(dir+"dipole_z_cutoff.dat"); 
+            N2_inf_x.save(dir+"dipole_x_box.dat");
+            N2_inf_y.save(dir+"dipole_y_box.dat");
+            N2_inf_z.save(dir+"dipole_z_box.dat");
         }
     };
 

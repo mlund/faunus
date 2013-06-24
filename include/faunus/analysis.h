@@ -354,8 +354,8 @@ namespace Faunus {
             assert( this->count()>0 );
 
             if (bulkconc.cnt==0) bulkconc+=1;
-            //if (bulkconc.avg()<1e-6) bulkconc+=1;
-            //if (Npart.cnt==0) Npart+=1;
+            if (bulkconc.avg()<1e-6) bulkconc+=1;
+            if (Npart.cnt==0) Npart+=1;
 
             return ((double)this->operator()(x)*Npart.avg()) / (volume(x) *(double)this->count() * bulkconc.avg())
               ;

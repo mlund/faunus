@@ -50,11 +50,11 @@ namespace Faunus {
     class PairPotentialBase {
       private:
         virtual string _brief();
-      protected:
-        Eigen::MatrixXf rcut2;                //!< Squared cut-off distance (angstrom)
-        void initCutoff(size_t, float);       //!< Initialize all cut-off distances to single value
-        void setCutoff(size_t, size_t, float);//!< Specialized cut-off for a pair
-      public:  
+        //void initCutoff(size_t, float);       //!< Initialize all cut-off distances to single value
+        //void setCutoff(size_t, size_t, float);//!< Specialized cut-off for a pair
+      public:
+        typedef PairMatrix<double> Tcutoff;
+        Tcutoff rcut2;                        //!< Squared cut-off distance (angstrom^2)
         PairPotentialBase(std::string="");
         virtual ~PairPotentialBase();
         string name;       //!< Name of potential
@@ -147,7 +147,7 @@ namespace Faunus {
      * @warning Untested!
      */
     class CosAttract : public PairPotentialBase {
-      private:
+      protected:
         double eps, wc, rc, rc2, c, rcwc2;
         string _brief();
       public:
@@ -163,7 +163,7 @@ namespace Faunus {
           }
         string info(char); // More verbose information
     };
-
+      
     /**
      * @brief Finite Extensible nonlinear elastic (FENE) potential
      * @details This is an anharmonic bonding potential with the form:
@@ -293,7 +293,7 @@ namespace Faunus {
      * sigma and epsilon are taken from `AtomMap` via the global instance
      * `atom`. In your InputMap configuration file you would typically set the atom list file using
      * the keyword `atomlist`. Note that sigma for each atom is set to two times the radius found in
-     * `AtomMap`.
+     * `AtomMap`. Epsilon is stored internally in `kT*4`.
      *
      * For example:
      * 
@@ -303,10 +303,9 @@ namespace Faunus {
      */
     template<class Tmixingrule>
       class LennardJonesMixed : public PairPotentialBase {
-        private:
+        protected:
           Tmixingrule mixer; // mixing rule class for sigma and epsilon
           string _brief() { return name + " w. " + mixer.name; }
-        protected:
           PairMatrix<double> s2,eps; // matrix of sigma_ij^2 and eps_ij
         public:
           LennardJonesMixed(InputMap &in) {
@@ -365,6 +364,55 @@ namespace Faunus {
           }
       };
 
+      template<class Tmixingrule=LorentzBerthelot>
+      class CosAttractMixed : public LennardJonesMixed<Tmixingrule> {
+      protected:
+          typedef LennardJonesMixed<Tmixingrule> base;
+          PairMatrix<double> rc2,rc,c; // matrix of sigma_ij^2 and eps_ij
+      public:
+          CosAttractMixed(InputMap &in) : base(in) {
+              base::name="Cos^2 attraction (mixed)";
+              size_t n=atom.list.size(); // number of atom types
+              c.resize(n);
+              rc.resize(n);
+              rc2.resize(n);
+              /*PatchyCigarCigar.rcutPtr=new double*[n];
+              for(int i = 0; i < n; ++i) {
+                  PatchyCigarCigar.rcutPtr[i] = new double[n];
+              }*/
+              //Potential::PatchyCigarCigar.rcutPtr.resize(n);
+              for (size_t i=0; i<n; i++)
+                  for (size_t j=i; j<n; j++) {
+                      rc.set(i,j,base::mixer.mixSigma( atom.list[i].pdis, atom.list[j].pdis));
+                      base::rcut2.set(i,j,base::mixer.mixSigma( atom.list[i].pswitch, atom.list[j].pswitch));
+                      c.set(i,j, 0.5*pc::pi/base::rcut2(i,j) );
+                      base::rcut2.set(i,j, base::rcut2(i,j) + rc(i,j) );
+                      base::rcut2.set(i,j, base::rcut2(i,j) * base::rcut2(i,j) );
+                      rc2.set(i,j, rc(i,j)*rc(i,j) );
+                      //epsilon is set in base class LJmixed and is stored as multiplied by 4
+                      //PatchyCigarCigar.rcutPtr[i][j]=rc(i,j);
+                      //Potential::PatchyCigarCigar.rcutPtr(i,j)=rc(i,j);
+                  }
+          }
+          
+          template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
+              if (r2<rc2(a.id,b.id)) {
+                  //epsilon is from LJmixed stored as multiplied by 4
+                  return -0.25*base::eps(a.id,b.id);
+              }
+              if (r2>base::rcut2(a.id,b.id))
+                  return 0;
+              double x=cos( c(a.id,b.id)*( sqrt(r2)-rc(a.id,b.id) ) );
+              //epsilon is from LJmixed stored as multiplied by 4
+              return -0.25*base::eps(a.id,b.id)*x*x;
+          }
+          template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
+              return operator()(a,b,r.squaredNorm());
+          }
+      };
+
     /**
      * @brief Weeks-Chandler-Andersen pair potential
      * @details This is a Lennard-Jones type potential, cut and shifted to zero
@@ -390,6 +438,7 @@ namespace Faunus {
               return 0;
             x=x/r2;  // (s/r)^2
             x=x*x*x;// (s/r)^6
+             // cout<<"weeks: "<< eps(a.id,b.id)*(x*x - x + onefourth) <<"\n";
             return eps(a.id,b.id)*(x*x - x + onefourth);
           }
 
@@ -871,21 +920,34 @@ namespace Faunus {
           string _brief() {
             return first.brief() + " " + second.brief();
           }
+        void setCutoff() {
+          for (size_t i=0; i<atom.list.size(); i++)
+            for (size_t j=0; j<atom.list.size(); j++) {
+              if (first.rcut2(i,j) > second.rcut2(i,j))
+                PairPotentialBase::rcut2.set(i,j,first.rcut2(i,j));
+              else
+                PairPotentialBase::rcut2.set(i,j,second.rcut2(i,j));
+            }
+        }
+        
         public:
           T1 first;  //!< First pair potential of type T1
           T2 second; //!< Second pair potential of type T2
 
           CombinedPairPotential(T1 a, T2 b) : first(a), second(b) {
             name=first.name+"+"+second.name;
+            setCutoff();
           }
 
           CombinedPairPotential(InputMap &in) : first(in), second(in) {
             name=first.name+"+"+second.name;
+            setCutoff();
           }
 
           CombinedPairPotential(InputMap &in, string pfx1, string pfx2) :
             PairPotentialBase(pfx1+pfx2), first(in,pfx1), second(in,pfx2) {
               name=first.name+"+"+second.name;
+              setCutoff();
             }
 
           template<class Tparticle, class Tdist>

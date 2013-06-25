@@ -15,26 +15,26 @@ namespace Faunus {
 
     PairPotentialBase::PairPotentialBase(std::string pfx) {
       prefix=pfx;
+      rcut2.resize(atom.list.size());
     }
 
     PairPotentialBase::~PairPotentialBase() { }
 
-    /**
+    /*
      * @param N Maximum number of atom types
      * @param rc Default cutoff distance (angstrom)
-     */
+     *
     void PairPotentialBase::initCutoff(size_t N, float rcut) {
       rcut2.setConstant(N,N,rcut*rcut);
-    }
+    }*/
 
-    /**
+    /*
      * @param i Particle type i
      * @param j Particle type j
-     * @param rc Cutoff distance (angstrom) 
-     */
+     * @param rc Cutoff distance (angstrom)
     void PairPotentialBase::setCutoff(size_t i, size_t j, float rcut) {
       rcut2(i,j)=rcut2(j,i)=rcut*rcut;
-    }
+    }*/
 
     std::string PairPotentialBase::_brief() {
       assert(!name.empty() && "Provide a descriptive name for the potential");

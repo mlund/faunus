@@ -961,32 +961,30 @@ namespace Faunus {
      */
     class DielectricConstant {
       private:
-        Average<double> M;
-        Average<double> M_inf;
-        Average<double> M2;
-        Average<double> M2_inf;
+        Average<double> M_x,M_y,M_z;
+        Average<double> M_x_box,M_y_box,M_z_box;
+        Average<double> M2,M2_box;
+        Analysis::Histogram<double,unsigned int> N2_x,N2_y,N2_z,N2_x_box,N2_y_box,N2_z_box;
         double cutoff2;
         double vol_const;
-        double vol_const_inf;
+        double vol_const_box;
         double CM;
         double y;
-        Analysis::Histogram<double,unsigned int> N2_x;
-        Analysis::Histogram<double,unsigned int> N2_y;
-        Analysis::Histogram<double,unsigned int> N2_z;
-        Analysis::Histogram<double,unsigned int> N2_inf_x;
-        Analysis::Histogram<double,unsigned int> N2_inf_y;
-        Analysis::Histogram<double,unsigned int> N2_inf_z;
+        double lambda;
+        double mu_0;
+        int N;
 
-        //double convertSI;
       public:
         template<class Tspace>
-          inline DielectricConstant(const Tspace &spc) : N2_x(0.1),N2_y(0.1),N2_z(0.1),N2_inf_x(0.1),N2_inf_y(0.1),N2_inf_z(0.1) {
-            cutoff2 = spc.geo.len_half.squaredNorm();
+          inline DielectricConstant(const Tspace &spc) : N2_x(0.1),N2_y(0.1),N2_z(0.1),N2_x_box(0.1),N2_y_box(0.1),N2_z_box(0.1) {
+            cutoff2 = pow(spc.geo.len_half.x(),2);
             vol_const = 3/(4*pc::Ang2Bohr(pow(cutoff2,1.5),3)*pc::kT2Hartree());
-            vol_const_inf = 4*pc::pi/(3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree());
+            vol_const_box = 4*pc::pi/(3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree());
             CM = 1;
             y = 0;
-            //convertSI = (3.33564*3.33564*(1e-30)/(0.20819434*0.20819434))*3/(pow(cutoff2,1.5)*pc::kT()*16*pc::pi*pc::e0);
+            lambda = 0;
+            mu_0 = spc.p[0].muscalar;
+            N = spc.p.size();
           }
 
         void setCutoff(double cutoff) {
@@ -1002,15 +1000,17 @@ namespace Faunus {
           void sampleDP(const Tspace &spc) {
             Point origin(0,0,0);
             Point mu(0,0,0);
-            Point mu_inf(0,0,0);
+            Point mu_box(0,0,0);
+            
             clausiusMossotti(spc);
             y = 4*pc::pi*spc.p.size()*spc.p[0].muscalar*spc.p[0].muscalar/(9*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree());
+            
             for (auto &i : spc.p) {
               if (spc.geo.sqdist(i,origin)<cutoff2)
                 mu += i.mu*i.muscalar;
-              mu_inf += i.mu*i.muscalar;
+              mu_box += i.mu*i.muscalar;
             }
-            samplePP(spc,origin,mu,mu_inf);
+            samplePP(spc,origin,mu,mu_box);
           }
 
         /**
@@ -1022,21 +1022,22 @@ namespace Faunus {
          * @param mu_inf Dipoles to add to from entire box (optional)
          */
         template<class Tspace>
-          void samplePP(Tspace &spc, Point origin=Point(0,0,0), Point mu=Point(0,0,0), Point mu_inf=Point(0,0,0)) {
+          void samplePP(Tspace &spc, Point origin=Point(0,0,0), Point mu=Point(0,0,0), Point mu_box=Point(0,0,0)) {
             Group all(0,spc.p.size()-1);
             all.setMassCenter(spc);
             mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
-            mu_inf += Geometry::dipoleMoment(spc,all);
-            N2_x(mu(0))++;
-            N2_y(mu(1))++;
-            N2_z(mu(2))++;
-            N2_inf_x(mu_inf(0))++;
-            N2_inf_y(mu_inf(1))++;
-            N2_inf_z(mu_inf(2))++;
-            M += mu.norm();
-            M_inf += mu_inf.norm();
-            M2 += mu.squaredNorm();
-            M2_inf += mu_inf.squaredNorm();
+            mu_box += Geometry::dipoleMoment(spc,all);
+            N2_x(mu.x())++;
+            N2_y(mu.y())++;
+            N2_z(mu.z())++;
+            N2_x_box(mu_box.x())++;
+            N2_y_box(mu_box.y())++;
+            N2_z_box(mu_box.z())++;
+            M_x += mu.x();
+            M_y += mu.y();
+            M_z += mu.z();
+            M2 += mu.dot(mu);
+            M2_box += mu_box.dot(mu_box);
           }
 
         /**
@@ -1048,7 +1049,7 @@ namespace Faunus {
          */ 
         template<class Tspace>
           void clausiusMossotti(const Tspace &spc) {
-            double Q = 4*pc::pi*spc.p.size()*spc.p[0].alpha.trace()/(9*pc::Ang2Bohr(spc.geo.getVolume(),3));  // 9 = 3*3, where one 3 is a normalization of the trace of alpha
+            double Q = 4*pc::pi*N*spc.p[0].alpha.trace()/(9*pc::Ang2Bohr(spc.geo.getVolume(),3));  // 9 = 3*3, where one 3 is a normalization of the trace of alpha
             CM = ((1+2*Q)/(1-Q));
           }
 
@@ -1059,12 +1060,18 @@ namespace Faunus {
          * @param p Particle vector
          * @param spc The space
          */ 
-        template<class Tspace>
-          double KirkwoodFactor(const Tspace &spc) {
-            return (M2.avg() - M.avg()*M.avg())/(spc.p.size()*spc.p[0].muscalar*spc.p[0].muscalar);
+          double KirkwoodFactor() {
+            Point tmp(M_x_box.avg(),M_y_box.avg(),M_z_box.avg());
+            //cout << "M: " << tmp.transpose() << endl;
+            return (M2_box.avg() - tmp.squaredNorm())/(N*mu_0*mu_0);
           }
 
+          double getDielA() {
+            double gk_const = KirkwoodFactor()*3*y;
+            return (gk_const*(lambda-1)*(lambda-1)-gk_const-1)/(gk_const*(lambda-1)*(lambda-1)-1);
+          }
         
+        /*
            template<class Tspace>
            void kusalik(const Tspace &spc) {
             double lambda = 1;
@@ -1072,26 +1079,30 @@ namespace Faunus {
             //mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
             double A = alpha*3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree()/(8*pc::pi);
             double eps = (lambda*lambda-2*lambda-A)/(lambda*lambda-2*lambda-A-1);
-           }
+           }*/
            
         /**
          * @brief Returns dielectric constant according to \f$ \frac{\epsilon_0-1}{3} = \frac{4\pi}{9Vk_BT}<\bold{M}^2> + \frac{\epsilon_x-1}{3}  \f$. Only works when \f$ \epsilon_{RF} = \infty \f$.
          * @brief DOI:10.1080/08927029708024131
          */ 
-        double getDielInfty() {
-          return (CM+pc::Ang2Bohr(M2_inf.avg(),2)*vol_const_inf);
+        double getDielTinfoil() {
+          return (CM+pc::Ang2Bohr(M2_box.avg(),2)*vol_const_box);
         }  
+        
+        double getDielKirkwood() {
+          if (M2.cnt>0) {
+            double Q = 0.25 + pc::Ang2Bohr(M2.avg(),2)*vol_const;   // In a.u.
+            return (Q + std::sqrt(Q*Q+0.5));
+          }
+          return 1;
+        }
 
         inline string info() {
           std::ostringstream o;
-          if (M2.cnt>0) {
-            double Q_AU = 0.25 + pc::Ang2Bohr(M2.avg(),2)*vol_const;   // In a.u.
-            Q_AU = Q_AU + std::sqrt(Q_AU*Q_AU+0.5);
-            //double Q_SI = 0.25 + M.avg()*convertSI;  // in SI-units
-            //Q_SI = Q_SI + std::sqrt(Q_SI*Q_SI+0.5)
-            o << "Eps:          " << Q_AU << endl;
-            o << "Eps_{\\infty}: " << getDielInfty() << endl;
-          }
+          o << "gk:          " << KirkwoodFactor() << endl;
+            o << "Eps:          " << getDielKirkwood() << endl;
+            o << "Eps_{\\infty}: " << getDielTinfoil() << endl;
+            o << "Eps: " << getDielA() << endl;
           return o.str();
         }
         
@@ -1104,9 +1115,9 @@ namespace Faunus {
             N2_x.save(dir+"dipole_x_cutoff.dat"); 
             N2_y.save(dir+"dipole_y_cutoff.dat"); 
             N2_z.save(dir+"dipole_z_cutoff.dat"); 
-            N2_inf_x.save(dir+"dipole_x_box.dat");
-            N2_inf_y.save(dir+"dipole_y_box.dat");
-            N2_inf_z.save(dir+"dipole_z_box.dat");
+            N2_x_box.save(dir+"dipole_x_box.dat");
+            N2_y_box.save(dir+"dipole_y_box.dat");
+            N2_z_box.save(dir+"dipole_z_box.dat");
         }
     };
 

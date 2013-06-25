@@ -19,7 +19,8 @@ int main() {
   ::atom.includefile("nemo.json");         // load atom properties
   InputMap in("nemo.input");               // open parameter file for user input
   Energy::NonbondedVector<Tspace,Tpair> pot(in); // non-bonded only
-  EnergyDrift sys;                               // class for tracking system energy drifts
+  Energy::NonbondedVector<Tspace,DipoleDipole> pot2(in); // non-bonded only
+  EnergyDrift sys,sys2;                               // class for tracking system energy drifts
   Tspace spc(in);                // create simulation space, particles etc.
   Group sol;
   sol.addParticles(spc, in);                     // group for particles
@@ -37,6 +38,7 @@ int main() {
   FormatXTC xtc(spc.geo.len.norm());
   
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );   // initial energy
+  sys2.init( Energy::systemEnergy(spc,pot2,spc.p)  );   // initial energy
   while ( loop.macroCnt() ) {                         // Markov chain 
     while ( loop.microCnt() ) {
       if (slp_global() > 0.5)
@@ -54,8 +56,10 @@ int main() {
             mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
           }
         }
-      if (slp_global()>0.99)
+      if (slp_global()>0.99) {
         xtc.save(textio::prefix+"out.xtc", spc.p);  
+        sys2.checkDrift(Energy::systemEnergy(spc,pot2,spc.p));
+      }
     }    
     cout << gdc.info() << endl;
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
@@ -72,7 +76,7 @@ int main() {
   rdf.save("gofr.dat");                               // save g(r) to disk
   mucorr.save("mucorr.dat");                               // save g(r) to disk
   std::cout << spc.info() + pot.info() + trans.info()
-    + rot.info() + sys.info() + test.info(); // final info
+    + rot.info() + sys.info() + test.info() + sys2.info(); // final info
   spc.save("state");
   
   return test.numFailed();

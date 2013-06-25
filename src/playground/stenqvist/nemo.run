@@ -10,11 +10,10 @@ cp -f $source_tests_dir/nemo.state state 2> /dev/null
 
 echo '{ "atomlist" :
   {
-    "sol" : { "sigma":2.8863, "mu":"0 0 0.5083", "dp":0.6, "dprot":90, "alpha":"0 0 0 0 0 0", "theta":"0 0 0 0 0 0"}
+    "sol" : { "sigma":2.8863, "mu":"0 0 0.508351956158443", "dp":0.6, "dprot":90, "alpha":"0 0 0 0 0 0", "theta":"0 0 0 0 0 0"}
   }
 }' > nemo.json
 
-#   0.091015919518598
 
 echo "
 atomlist           nemo.json   # atom properties
@@ -26,7 +25,7 @@ dipdip_cutoff      1000         # dipole cutoff [angstrom]
 lj_eps             0.7523        # Uniform LJ epsilon parameter [kT]
                   
 loop_macrosteps    10           # number of macro loops
-loop_microsteps    10          # number of micro loops
+loop_microsteps    100          # number of micro loops
 
 tion1              sol 
 nion1              300

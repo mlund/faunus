@@ -33,9 +33,9 @@ namespace Faunus {
       double R1 = sqrt(R2);
       double R3 = R1*R2;
       double R5 = R3*R2;
-      Eigen::Matrix3d T = 3*R5*r*r.transpose() - R3*Matrix3d::Identity();
-      double W = -muA.transpose()*T*muB;                       // Buckingham    Å^-3
-      //double W = mu1.dot(mu2)*R3-3*mu1.dot(r)*mu2.dot(r)*R5; // J&K
+      //Eigen::Matrix3d T = 3*R5*r*r.transpose() - R3*Matrix3d::Identity();
+      //double W = -muA.transpose()*T*muB;                       // Buckingham    Å^-3
+      double W = muA.dot(muB)*R3-3*muA.dot(r)*muB.dot(r)*R5; // J&K
       return W*muAxmuB;  // e^2 Å^2 Å ^-3 = e^2 /A
     }
 

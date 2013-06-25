@@ -1,0 +1,9 @@
+atomlist	 test2.json
+cuboid_len 	 2000
+temperature	 298.15
+loop_macrosteps  1
+loop_microsteps  1
+tion1            PSC
+nion1            30
+tion2            CPSC
+nion2            30

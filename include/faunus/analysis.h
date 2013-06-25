@@ -395,12 +395,15 @@ namespace Faunus {
                       this->operator() (r)++;
                   }
               int bulk=0;
-              for (auto i : g)
-                if (spc.p[i].id==ida || spc.p[i].id==idb)
+              for (auto i : g){
+                if (spc.p[i].id==ida || spc.p[i].id==idb){
                   bulk++;
+		}
+	      }
               Npart+=bulk;
               bulkconc += bulk / spc.geo.getVolume();
             }
+    
 
           template<class Tspace>
             void sample(Tspace &spc, short ida, short idb) {

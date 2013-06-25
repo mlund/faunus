@@ -1,0 +1,9 @@
+{ "atomlist" :
+  {
+    "CPSC1" : { "sigma": 10.0, "eps":2.0, "dp":1.0, "dprot":5.0, "charge":0.0, "patchtype":2,
+	"len":30.0, "patchangle":80.0, "patchangleswitch":5.0, "patchswitch":6.0, "patchdistance":11.2246204831, "patchchiralangle":0.0},
+    "PSC1" : { "sigma": 10.0, "eps":2.0, "dp":1.0, "dprot":5.0, "charge":0.0, "patchtype":1,
+		"len":30.0, "patchangle":80.0, "patchangleswitch":5.0, "patchswitch":6.0, "patchdistance":11.2246204831, "patchchiralangle":0.0}
+  }
+}
+

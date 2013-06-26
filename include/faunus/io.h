@@ -334,7 +334,7 @@ namespace Faunus {
             o << buf;
             for (size_t i=0; i< p.size(); i++)
                 o << p2s(p[i], i);
-            return IO::writeFile(file, o.str());
+          return IO::writeFile(file, o.str(), std::ios_base::app);
         }
         
     public:

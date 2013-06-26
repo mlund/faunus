@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# THIS RUN SCRIPT IS USED AS A UNIT TEST SO PLEASE
+# DO NOT UPLOAD ANY MODIFIED VERSIONS TO SVN UNLESS
+# TO UPDATE THE TEST.
+
+source_tests_dir="`dirname $0`"
+cp -f $source_tests_dir/cigarsenergy.test . 2> /dev/null
+
+#-----------------------------------------------------------
+# Create input file with atom properties
+#-----------------------------------------------------------
+#/ sigma - size paralemter [angstrom]
+#/ eps - interaction strength per unit length [kJ/mol/angstrom]
+#/ dp - Translational displacement parameter [angstrom]
+#/ dprot - Rotational displacement parameter [degrees]
+#/ patchtype - Type of patch on spherocylinder 1 - attractive ends 2 - non-attractive ends
+#/ len - spherocylinder length [angstrom]
+#/ pangl - angle of attrative patch on PatchySpherocylinder [degrees]
+#/ panglsw - angle of angluar switch on sides of patch on PatchySpherocylinder [degrees]
+#/ pdis - distance to which attraction is flat (typicaly end of repulsion) on attrative patch on PatchySpherocylinder [angstrom]
+#/ pswitch - distance on which attraction switches to zero on PatchySpherocylinder [angstrom]
+#/ chiral_angle - angle of chirality (rotation of patch) on PatchySpherocylinder [degrees]
+echo '{ "atomlist" :
+  {
+    //patchy spherocylinder with non-attractive ends - patch is only on cylindrical part
+    "CPSC" : { "sigma":10.0, "eps":2.479, "dp":1.0, "dprot":5.0, "patchtype":2,
+              "len":30.0, "patchangle":80.0, "patchangleswitch":5.0, "patchswitch":6.0, "patchdistance":11.2246204831, "patchchiralangle":0.0},
+    //patchy spherocylinder with attractive ends - attractive wedge goes all the way toward the ends
+    "PSC" : { "sigma":10.0, "eps":2.479, "dp":1.0, "dprot":5.0, "patchtype":1,
+              "len":30.0, "patchangle":80.0, "patchangleswitch":5.0, "patchswitch":6.0, "patchdistance":11.2246204831, "patchchiralangle":0.0}
+  }
+}' > cigars2fibrils.json
+
+#-----------------------------------------------------------
+# Create user input file
+#-----------------------------------------------------------
+echo "atomlist               cigars2fibrils.json
+cuboid_len         100
+temperature        298.15
+loop_macrosteps    20
+loop_microsteps    20000
+tion1              PSC
+nion1              30
+" > cigars2fibrils.input
+
+
+#-----------------------------------------------------------
+# Run simulation
+#-----------------------------------------------------------
+exe=./cigars2fibrils
+if [ -x $exe ]; then
+  $exe
+  rc=$?
+  ./cigars-mov2pdb.py -i cigars2fibrils-mov -o cigars2fibrils.pdb --psf cigars2fibrils.psf
+  vmd -e vmd.script
+  rm -f cigars2fibrils.json cigars2fibrils.input cigars2fibrils.pdb cigars2fibrils.psf vmd.script cigars2fibrils-mov
+  exit $rc
+fi
+exit 1
+

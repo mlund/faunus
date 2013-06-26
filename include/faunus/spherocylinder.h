@@ -34,17 +34,6 @@ namespace Faunus {
     template<class Tgeometry>
       int cigar_initialize(Tgeometry &geo, CigarParticle &target)
       {
-          //epsilon; sigma; pdis; pswitch; len; half_len; pangl; panglsw; chiral_angle;
-          /*
-           rcutwca = (sigma)*pow(2.0,1.0/6.0);
-           rcut = pswitch+pdis;
-           pcangl = cos(pangl/2.0/180*PI);
-           pcanglsw = cos((pangl/2.0+panglsw)/180*PI);
-           pcoshalfi = cos((pangl/2.0+panglsw)/2.0/180*PI);
-           psinhalfi = sqrt(1.0 - pcoshalfi * pcoshalfi);
-           chiral_cos = cos(chiral_angle / 360 * PI);
-           chiral_sin = sqrt(1 - chiral_cos * chiral_cos);
-           */
           Point vec;
           Geometry::QuaternionRotate rot;
           
@@ -65,15 +54,13 @@ namespace Faunus {
               target.chdir.rotate(rot);
               vec=target.chdir;
           }          
-          /* rotate patch vector by half size of patch*/
-          //target.patchsides[0] = target.patchdir;
-          //quatrot=quat_create(target.dir, target.pcoshalfi, target.psinhalfi);
-          //vec_rotate(&(target.patchsides[0]),quatrot);
+          /* create side vector by rotating patch vector by half size of patch*/
+          /*the first side */
           target.patchsides[0] = target.patchdir;
           rot.setAxis(geo, Point(0,0,0), vec, 0.5*atom[target.id].pangl + atom[target.id].panglsw);
           target.patchsides[0].rotate(rot);
           target.patchsides[0].normalize();
-          /*second side*/
+          /*the second side*/
           target.patchsides[1] = target.patchdir;
           rot.setAxis(geo, Point(0,0,0), vec, -0.5*atom[target.id].pangl - atom[target.id].panglsw);
           target.patchsides[1].rotate(rot);
@@ -599,7 +586,6 @@ namespace Faunus {
                 intrs+=test_intrpatch(part1,vec2,part1.pcanglsw,x1,intersections);
               }
             }
-            //		    printf ("plane cap1 %d %f\n", intrs, x1);
             /*plane cap2*/
             vec1= r_cm - part1.halfl*part1.dir;
             x2 = part1.dir.dot(vec1)/a; /*parameter on line of SC2 determining intersection*/
@@ -612,8 +598,6 @@ namespace Faunus {
                 intrs+=test_intrpatch(part1,vec2,part1.pcanglsw,x2,intersections);
               }
             }
-            //		    printf ("plane cap2 %d %f\n", intrs,x2);
-
           }
         }
         /*1d- if there is only one itersection shperocylinder ends within patch wedge 
@@ -765,7 +749,6 @@ namespace Faunus {
               f0 -= contt - t;
               
               //cout << pairpot.first(a,b,ndistsq) << f1 << (f0+1.0);
-            
               return pairpot.first(a,b,ndistsq)*f1*(f0+1.0)+pairpot.second(a,b,ndistsq);
           }
 
@@ -774,11 +757,17 @@ namespace Faunus {
 
 
     /**
-     * @brief Brief description here (one line)
+     * @brief Template for cigar-cigar interactions including patchy cigars
      *
-     * Detailed description here...
-     * For patchy spherocylinder `Tcigarcigar` should be a combined pair potential,
+     * This template takes care of cigar-cigar interactions. If there are patches
+     * here we calculate scaling factors based on the overlapping segments of the two
+     * cigars (spherocylinders) withn their patches. f0 is for size of overlapping segment
+     * whicle f1 anf f2 are scaling fators for orientation of pacthes.
+     * For patchy spherocylinder `Tcigarcigar` potential should be a combined pair potential,
      * where `first` accounts for patchy interaction and `second` is isotropic, only.
+     * There are two types of patches evaluated here:
+     * patchtype 1 (PSC) runs along the whole axis including the ends
+     * patchtype 2 (CPSC) is limited to the cylindrical part
      */
     template<typename Tcigarcigar>
       class PatchyCigarCigar : public PairPotentialBase {
@@ -876,26 +865,18 @@ namespace Faunus {
                 vec1.normalize();
                 s = vec1.dot(b.patchdir);
                 f2 = fanglscale(s,b);
-                  
-                //cout <<"pair pot: "<< pairpot.first(a,b,ndistsq) <<" f0: "<< f0 <<" f1: "<< f1 <<" f2: "<< f2;
-                //cout << " v1: " << v1 << " v2: " << v2 << "\n";
-                //cout <<"v1: "<<v1 <<" v2: "<<v2 << " distsq: " << ndistsq << " \n";
-                //cout << "repdist " << rclose.squaredNorm() << "\n";
-                //cout << "eatr: " << f0*f1*f2*pairpot.first(a,b,ndistsq) <<" erep: " << pairpot.second(a,b,rclose.squaredNorm()) << "\n";
                 
                 //8- put it all together and output scale
                 return f0*f1*f2*pairpot.first(a,b,ndistsq)+pairpot.second(a,b,rclose.squaredNorm());
               }
               else {
                 assert(!"PSC w. isotropic cigar not implemented!");
-                //patchy sc with isotropic sc
-                //we dont have at the moment
+                //patchy sc with isotropic sc - we dont have at the moment
               }
             } else {
               if (atom.list[b.id].patchtype > 0) {
                 assert(!"PSC w. isotropic cigar not implemented!");
-                //isotropic sc with patchy sc
-                //we dont have at the moment
+                //isotropic sc with patchy sc - we dont have at the moment
               }
               else {
                 //isotropic sc with isotropic sc

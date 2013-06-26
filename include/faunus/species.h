@@ -34,11 +34,7 @@ namespace Faunus {
            panglsw,    //!< Angle of angluar switch on sides of patch on PatchySpherocylinder [degrees]
            pdis,       //!< Distance to which attraction is flat (typicaly end of repulsion) on attrative patch on PatchySpherocylinder [Å]
            pswitch,    //!< Distance on which attraction switches to zero on PatchySpherocylinder [Å]
-           chiral_angle,//!< Angle of chirality (rotation of patch) on PatchySpherocylinder [degrees]
-           pcangl,
-           pcanglsw,
-           rcutwca,
-           rcut;
+           chiral_angle;//!< Angle of chirality (rotation of patch) on PatchySpherocylinder [degrees]
     Point mu;
     short int patchtype;     //!< If patchy particle, which type of patch
     Thydrophobic hydrophobic;//!< Are we hydrophobic?

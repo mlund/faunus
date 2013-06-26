@@ -29,10 +29,10 @@ namespace Faunus {
     pdis=0;
     pangl=0;
     panglsw=0;
-    rcutwca=0;
-    rcut=0;
-    pcangl=0;
-    pcanglsw=0;
+    //rcutwca=0;
+    //rcut=0;
+    //pcangl=0;
+    //pcanglsw=0;
     //pcoshalfi=0;
     //psinhalfi=0;
     chiral_angle=0;
@@ -97,17 +97,12 @@ namespace Faunus {
       a.radius = a.sigma/2;
       a.id=AtomData::Tid( list.size() );
       
-      double len = json::value<double>(atom.second, "len", 0);
-      a.half_len = 0.5 * len;
+      a.half_len = 0.5 * json::value<double>(atom.second, "len", 0);
       a.patchtype = json::value<double>(atom.second, "patchtype", 0);
       a.pswitch = json::value<double>(atom.second, "patchswitch", 0);
       a.pdis = json::value<double>(atom.second, "patchdistance", 0);
       a.pangl = json::value<double>(atom.second, "patchangle", 0)/180.0*pc::pi;
       a.panglsw = json::value<double>(atom.second, "patchangleswitch", 0)/180.0*pc::pi;
-      a.rcutwca = (a.sigma) * std::pow(2.0,1.0/6.0);
-      a.rcut = a.pswitch + a.pdis;
-      a.pcangl = cos(a.pangl*0.5);
-      a.pcanglsw = cos((a.pangl/0.5 + a.panglsw));
       a.chiral_angle = json::value<double>(atom.second, "patchchiralangle", 0)/180.0*pc::pi;
 
         

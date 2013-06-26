@@ -562,8 +562,8 @@ namespace Faunus {
             PointParticle::operator=(d);
               halfl = d.half_len;
               patchangle = d.pangl;
-              pcanglsw = d.pcanglsw;
-              pcangl = d.pcangl;
+              pcanglsw = std::cos(0.5*d.pangl + d.panglsw);
+              pcangl = std::cos(0.5*d.pangl);
             return *this;
           }
 

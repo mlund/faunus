@@ -73,7 +73,6 @@ int main() {
     
     } // end of micro loop
     cout << gdc.info() << endl;
-    cout << "Inf: " << gdc.getDielInfty() << endl;
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p));
     cout << loop.timing();
 

@@ -983,7 +983,6 @@ namespace Faunus {
             CM = 1;
             y = 0;
             lambda = 0;
-            mu_0 = spc.p[0].muscalar;
             N = spc.p.size();
           }
 
@@ -991,6 +990,10 @@ namespace Faunus {
           cutoff2 = cutoff*cutoff;
         }
 
+        void setLambda(double lambda_in) {
+          lambda = lambda_in;
+        }
+        
         /**
          * @brief Samples dipole-moment from dipole particles.
          * 
@@ -1001,9 +1004,10 @@ namespace Faunus {
             Point origin(0,0,0);
             Point mu(0,0,0);
             Point mu_box(0,0,0);
+            mu_0 = spc.p[0].muscalar;
             
             clausiusMossotti(spc);
-            y = 4*pc::pi*spc.p.size()*spc.p[0].muscalar*spc.p[0].muscalar/(9*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree());
+            y = 4*pc::pi*N*mu_0*mu_0/(9*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree());
             
             for (auto &i : spc.p) {
               if (spc.geo.sqdist(i,origin)<cutoff2)
@@ -1027,6 +1031,8 @@ namespace Faunus {
             all.setMassCenter(spc);
             mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
             mu_box += Geometry::dipoleMoment(spc,all);
+            mu = pc::Ang2Bohr(mu);
+            mu_box = pc::Ang2Bohr(mu_box);
             N2_x(mu.x())++;
             N2_y(mu.y())++;
             N2_z(mu.z())++;
@@ -1036,6 +1042,9 @@ namespace Faunus {
             M_x += mu.x();
             M_y += mu.y();
             M_z += mu.z();
+            M_x_box += mu_box.x();
+            M_y_box += mu_box.x();
+            M_z_box += mu_box.x();
             M2 += mu.dot(mu);
             M2_box += mu_box.dot(mu_box);
           }

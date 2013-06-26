@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
-#this program convert movie data to atom data = for each spherocylinder make residue
-#consiting of two atoms at begining and end then in vmd use cpk to draw cylinders
-#no it also ads a spherocylinder for patch
+#This program converts trajectory file with spherocylinders(cigars) from fuanus to pdb, psf and vmd.script files.
+#Each spherocylinder is represented by two atoms at begining and end and bond between. VMD draw this as spherocylinder
+#in cpk draw representation. (if radiuses are set right) Patch on particles is represented by a shifted spherocylinder
+#in direction of patch using different color
 
 import os
 import sys
@@ -180,7 +181,7 @@ parser.add_option(
 parser.add_option(
     "-l",
     "--length",
-    help="Set length/diameter size of spherocylinder",
+    help="Set length of spherocylinder",
     dest="leng",
     default="30"
     )

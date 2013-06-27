@@ -63,10 +63,7 @@ int main() {
     }    
     
     cout << gdc.info() << endl;
-    cout << "Test if works(pre): " << in.get("epsilon_r",80) << endl;
-    in.set("epsilon_r", gdc.getDielKirkwood());
-    cout << "Test if works(post): " << in.get("epsilon_r",80) << endl;
-    pot2.pairpot.updateDiel(gdc.getDielKirkwood());
+    //pot2.pairpot.updateDiel(gdc.getDielKirkwood());
     //cout << "Test: " << pot2.second.test << endl;
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
     cout << loop.timing();

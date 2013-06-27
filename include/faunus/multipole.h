@@ -107,18 +107,14 @@ namespace Faunus {
                 "Absolute temperature (K)") );
           double epsilon_r = in.get<double>("epsilon_r",80.,
               "Dielectric constant");
-          updateDiel(epsilon_r);
+          _lB = pc::lB(epsilon_r);
+          convert = _lB*pc::kT()/(pc::e*pc::e);
         }
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
             return _lB*mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r);
           }
 
-          void updateDiel(double er) {
-            _lB = pc::lB(er);
-            convert = _lB*pc::kT()/(pc::e*pc::e);
-        }
-          
         /** @brief Dipole field at `r` due to dipole `p` 
          *  Gets returned in [e/Å] (\f$\beta eE \f$)
          */
@@ -155,6 +151,10 @@ namespace Faunus {
             return 0;
           }
 
+         void updateDiel(double er) {
+            eps = _lB*(2*(er-1)/(er+1))/pow(rc2,1.5);
+        }  
+          
         string info(char w) { return _brief(); }
     };
 

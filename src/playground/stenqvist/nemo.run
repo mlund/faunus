@@ -25,7 +25,7 @@ dipdip_cutoff      1000         # dipole cutoff [angstrom]
 lj_eps             0.7523        # Uniform LJ epsilon parameter [kT]
                   
 loop_macrosteps    10           # number of macro loops
-loop_microsteps    100          # number of micro loops
+loop_microsteps    10          # number of micro loops
 
 tion1              sol 
 nion1              300

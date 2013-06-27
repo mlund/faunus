@@ -218,6 +218,22 @@ namespace Faunus {
         }
         return c;
       }
+      
+    /**
+     * @brief Addition two tables
+     */
+    template<class Tx, class Ty>
+      Table2D<Tx,Ty> operator+=(Table2D<Tx,Ty> &a, Table2D<Tx,Ty> &b) {
+        Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()));
+        c.clear();
+        for (auto &m : a.getMap()) {
+          c(m.first) += m.second;
+        }
+        for (auto &m : b.getMap()) {
+          c(m.first) += m.second;
+        }
+        return c;
+      }
 
     /**
       @brief General class for penalty functions along a coordinate
@@ -1122,6 +1138,11 @@ namespace Faunus {
          */ 
         void save(string dir) {
             N2_x.save(dir+"dipole_x_cutoff.dat"); 
+            N2_x += N2_y;
+            N2_x.save(dir+"temp.dat");
+          
+          
+            
             N2_y.save(dir+"dipole_y_cutoff.dat"); 
             N2_z.save(dir+"dipole_z_cutoff.dat"); 
             N2_x_box.save(dir+"dipole_x_box.dat");

@@ -85,6 +85,7 @@ namespace Faunus {
         virtual void test(UnitTest&);                    //!< Perform unit test
 
         virtual std::string info(char=20);
+        
     };
 
     template<class Tparticle>

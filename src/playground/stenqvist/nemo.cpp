@@ -5,7 +5,7 @@ using namespace Faunus::Move;
 using namespace Faunus::Potential;
 
 typedef Space<Geometry::Cuboid,DipoleParticle> Tspace;
-typedef CombinedPairPotential<LennardJones,DipoleDipole> Tpair;
+typedef CombinedPairPotential<LennardJones,DipoleDipoleRF> Tpair;
 
 #ifdef POLARIZE
 typedef Move::PolarizeMove<AtomicTranslation<Tspace> > TmoveTran;
@@ -19,7 +19,7 @@ int main() {
   ::atom.includefile("nemo.json");         // load atom properties
   InputMap in("nemo.input");               // open parameter file for user input
   Energy::NonbondedVector<Tspace,Tpair> pot(in); // non-bonded only
-  Energy::NonbondedVector<Tspace,DipoleDipole> pot2(in); // non-bonded only
+  Energy::NonbondedVector<Tspace,DipoleDipoleRF> pot2(in); // non-bonded only
   EnergyDrift sys,sys2;                               // class for tracking system energy drifts
   Tspace spc(in);                // create simulation space, particles etc.
   Group sol;
@@ -61,7 +61,13 @@ int main() {
         sys2.checkDrift(Energy::systemEnergy(spc,pot2,spc.p));
       }
     }    
+    
     cout << gdc.info() << endl;
+    cout << "Test if works(pre): " << in.get("epsilon_r",80) << endl;
+    in.set("epsilon_r", gdc.getDielKirkwood());
+    cout << "Test if works(post): " << in.get("epsilon_r",80) << endl;
+    pot2.pairpot.updateDiel(gdc.getDielKirkwood());
+    //cout << "Test: " << pot2.second.test << endl;
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
     cout << loop.timing();
   }

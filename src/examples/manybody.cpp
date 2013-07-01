@@ -58,6 +58,7 @@ int main(int argc, char** argv) {
 
   Analysis::RadialDistribution<> rdf(0.5);
   Analysis::ChargeMultipole mpol;
+  Scatter::StructureFactor<Geometry::Cuboid> sofq(mcp);
 
   spc.load("state");
 
@@ -81,6 +82,11 @@ int main(int argc, char** argv) {
   cout << atom.info() << spc.info() << pot.info() << tit.info()
     << textio::header("MC Simulation Begins!");
 
+  vector<Point> cm_vec; // vector of mass centers
+  double qmin=2*pc::pi / spc.geo.len.x();
+  double qmax=2;
+  double dq=0.01;
+
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
       int k,i=rand() % 4;
@@ -91,9 +97,17 @@ int main(int argc, char** argv) {
             gmv.setGroup( pol[ rand() % pol.size() ] );
             sys+=gmv.move();
           }
+          cm_vec.clear();
           for (auto i=pol.begin(); i!=pol.end()-1; i++)
             for (auto j=i+1; j!=pol.end(); j++)
               rdf( spc.geo.dist(i->cm,j->cm) )++;
+
+          // structure factor calc.
+          cm_vec.clear();
+          for (auto &i : pol)
+            cm_vec.push_back(i.cm);
+          sofq.sample(cm_vec, qmin, qmax, dq, 1);
+
           break;
         case 1:
           sys+=iso.move();
@@ -125,4 +139,5 @@ int main(int argc, char** argv) {
   FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
   spc.save("state");
   mcp.save("mdout.mdp");
+  sofq.save("sofq.dat");
 }

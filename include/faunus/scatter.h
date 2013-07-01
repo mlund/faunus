@@ -131,7 +131,7 @@ namespace Faunus {
      */
     template<typename Tgeometry, typename Tformfactor, typename T=float>
       class DebyeFormula {
-        private:
+        protected:
           Tformfactor F; // scattering from a single particle
           Tgeometry geo; // geometry to use for distance calculations
         public:
@@ -139,12 +139,12 @@ namespace Faunus {
 
           DebyeFormula(InputMap &in) : geo(in) {}
 
-          /*!
-           * \brief Sample I(q) and add to average
-           * \param p Particle vector
-           * \param qmin Minimum q-value to sample (1/A)
-           * \param qmax Maximum q-value to sample (1/A)
-           * \param dq q spacing (1/A)
+          /**
+           * @brief Sample I(q) and add to average
+           * @param p Particle vector
+           * @param qmin Minimum q-value to sample (1/A)
+           * @param qmax Maximum q-value to sample (1/A)
+           * @param dq q spacing (1/A)
            */
           template<class Tpvec>
             void sample(const Tpvec &p, T qmin, T qmax, T dq) {
@@ -177,6 +177,54 @@ namespace Faunus {
               }
             }
           }
+      };
+
+    /**
+     * @brief Structor factor calculation
+     *
+     * This will take a vector of points or particles and calculate
+     * the structure factor according to
+     *
+     * @f[ S(q) = \sum_{i\neq j} \cos(\mathbf{qr}) @f]
+     */
+
+    template<typename Tgeometry, typename Tformfactor, typename T=float>
+      class StructureFactor : public DebyeFormula<Tgeometry,Tformfactor,T> {
+
+        typedef DebyeFormula<Tgeometry,Tformfactor,T> base;
+
+        StructureFactor(InputMap &in) : base(in) {}
+
+        /**
+         * @brief Sample S(q) and add to average
+         * @param p Particle/point vector
+         * @param qmin Minimum q-value to sample (1/A)
+         * @param qmax Maximum q-value to sample (1/A)
+         * @param dq q spacing (1/A)
+         * @param Nq Number of
+         */
+        template<class Tpvec>
+          void sample(const Tpvec &p, T qmin, T qmax, T dq, int Nq=1) {
+            if (qmin<1e-6)
+              qmin=dq;  // assure q>0
+            int n=(int)p.size();
+            for (int k=0; k<Nq; k++) { // random q directions
+              std::map<T,T> _I;
+              Point qdir;
+              qdir.ranunit(slp_global);
+              for (int i=0; i<n-1; i++) {
+                for (int j=i+1; j<n; j++) {
+                  T r = base::geo.dist(p[i],p[j]);
+                  for (T q=qmin; q<=qmax; q+=dq)
+                    _I[q] += cos( (q*qdir).dot(r) );
+                }
+              } // end of particle loop
+              T rho = n/base::geo.getVolume();
+              for (auto &i : _I)
+                base::I[i.first]+=2*rho*i.second; // add to average I(q)
+            } // end of q averaging 
+          }
+
       };
 
   } // end of namespace

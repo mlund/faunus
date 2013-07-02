@@ -173,7 +173,7 @@ namespace Faunus {
               std::ofstream f(filename.c_str());
               if (f) {
                 for (auto &i : I)
-                  f << std::left << std::setw(10) << i.first << i.second << "\n";
+                  f << std::left << std::setw(20) << i.first << i.second << "\n";
               }
             }
           }
@@ -225,6 +225,58 @@ namespace Faunus {
                   base::I[i.first]+=2*rho*i.second; // add to average I(q)
               } // end of q averaging 
             }
+
+          /**
+           * @brief See doi:10/d8zgw5
+           */
+          template<class Tpvec>
+            void sample2(const Tpvec &p, T qmin, T qmax, T dq, int Nq=1) {
+              if (qmin<1e-6)
+                qmin=dq;  // assure q>0
+              int n=(int)p.size();
+              for (int k=0; k<Nq; k++) { // random q directions
+                Point qdir(1,0,0);
+                qdir.ranunit(slp_global);
+                std::map<T,T> _cos, _sin;
+                for (T q=qmin; q<=qmax; q+=dq) {
+                  for (int i=0; i<n; i++) {
+                    T qr = (q*qdir).dot(p[i]);
+                    _sin[q] += sin(qr);
+                    _cos[q] += cos(qr);
+                  }
+                }
+                for (auto &i : _sin) {
+                  T q=i.first;
+                  base::I[q] += (pow(_sin[q],2) + pow(_cos[q],2))/n;
+                }
+              } // end of q averaging 
+            }
+
+          template<class Tpvec>
+            void sample3(const Tpvec &p, T qmin, T qmax, T dq, int Nq=1) {
+              if (qmin<1e-6)
+                qmin=dq;  // assure q>0
+              int n=(int)p.size();
+              for (int k=0; k<Nq; k++) { // random q directions
+                Point qdir(1,0,0);
+                //qdir.ranunit(slp_global);
+                std::map<T,T> _cos, _sin;
+                for (T q=qmin; q<=qmax; q+=dq) {
+                  for (int i=0; i<n-1; i++) {
+                    for (int j=i+1; j<n; j++) {
+                      T qr = (q*qdir).dot(p[i]);
+                      _sin[q] += sin(qr);
+                      _cos[q] += cos(qr);
+                    }
+                  }
+                }
+                for (auto &i : _sin) {
+                  T q=i.first;
+                  base::I[q] += pow(_sin[q],2) + pow(_cos[q],2);
+                }
+              } // end of q averaging 
+            }
+
 
       };
 

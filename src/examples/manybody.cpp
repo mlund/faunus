@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
 
   Analysis::RadialDistribution<> rdf(0.5);
   Analysis::ChargeMultipole mpol;
-  Scatter::StructureFactor<Geometry::Cuboid> sofq(mcp);
+  Scatter::DebyeFormula<Scatter::FormFactorUnity<>> debye(mcp);
 
   spc.load("state");
 
@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
 
   vector<Point> cm_vec; // vector of mass centers
   double qmin=2*pc::pi / spc.geo.len.x();
-  double qmax=2;
+  double qmax=1;
   double dq=0.01;
 
   while ( loop.macroCnt() ) {  // Markov chain 
@@ -106,7 +106,7 @@ int main(int argc, char** argv) {
           cm_vec.clear();
           for (auto &i : pol)
             cm_vec.push_back(i.cm);
-          sofq.sample(cm_vec, qmin, qmax, dq, 1);
+          debye.sample(cm_vec, qmin, qmax, dq);
 
           break;
         case 1:
@@ -139,5 +139,5 @@ int main(int argc, char** argv) {
   FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
   spc.save("state");
   mcp.save("mdout.mdp");
-  sofq.save("sofq.dat");
+  debye.save("debye.dat");
 }

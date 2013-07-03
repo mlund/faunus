@@ -36,6 +36,17 @@ namespace Faunus {
       };
 
     /**
+     * @brief Unity form factor (q independent)
+     */
+    template<class T=float>
+      struct FormFactorUnity {
+        template<class Tparticle>
+          T operator()(T q, const Tparticle &a) const {
+            return 1;
+          }
+      };
+
+    /**
      * @brief Tabulated particle form factors loaded from disk
      * @note doi:10.1186/1471-2105-11-429
      */
@@ -84,8 +95,8 @@ namespace Faunus {
            * l5: ...
            * @endverbatim
            * @param filename Multi-column file with F(q) for different species
-           * @param variants True (default) if atomic variants to loaded date should
-           *                 be generated
+           * @param variants True (default) if atomic variants to loaded
+           * date should be generated
            */
           bool load(string filename, bool variants=true) {
             std::ifstream f(filename.c_str());
@@ -125,11 +136,10 @@ namespace Faunus {
 
       };
 
-    //http://www.lsinstruments.ch/technology/static_light_scattering_sls/structure_factor/
     /**
      * @brief Calculates scattering intensity, I(q) using the Debye formula
      */
-    template<typename Tgeometry, typename Tformfactor, typename T=float>
+    template<class Tformfactor,class Tgeometry=Geometry::Sphere,class T=float>
       class DebyeFormula {
         protected:
           Tformfactor F; // scattering from a single particle
@@ -163,9 +173,8 @@ namespace Faunus {
                   }
                 }
               }
-              T rho = n/geo.getVolume();
               for (auto &i : _I)
-                I[i.first]+=2*rho*i.second; // add to average I(q)
+                I[i.first]+=2*i.second/n+1; // add to average I(q)
             }
 
           void save(string filename) {
@@ -173,7 +182,7 @@ namespace Faunus {
               std::ofstream f(filename.c_str());
               if (f) {
                 for (auto &i : I)
-                  f << std::left << std::setw(20) << i.first << i.second << "\n";
+                  f << i.first << " " << i.second << "\n";
               }
             }
           }
@@ -183,29 +192,42 @@ namespace Faunus {
      * @brief Structor factor calculation
      *
      * This will take a vector of points or particles and calculate
-     * the structure factor according to
-     *
-     * @f[ S(q) = \sum_{i\neq j} \cos(\mathbf{qr}) @f]
+     * the structure factor using different methods described below.
      */
-
-    template<typename Tgeometry, typename T=double>
-      class StructureFactor : public DebyeFormula<Tgeometry,FormFactorSphere<T>,T> {
+    template<typename T=double>
+      class StructureFactor : public DebyeFormula<FormFactorSphere<T>> {
         public:
 
-          typedef DebyeFormula<Tgeometry,FormFactorSphere<T>,T> base;
+          typedef DebyeFormula<FormFactorSphere<T>> base;
 
           StructureFactor(InputMap &in) : base(in) {}
 
           /**
-           * @brief Sample S(q) and add to average
+           * @brief Sample S(q) using a double sum.
+           *
+           * This will directly sample
+           *
+           * @f[
+           *   S(\mathbf{q})= \frac{1}{N}\left < \sum_i^N\sum_j^N
+           *   \exp(-i\mathbf{qr}_{ij}) \right >
+           *   =1+\frac{1}{N} \left <
+           *   \sum_{i\neq j}\sum_{j\neq i}\cos(\mathbf{qr}_{ij})
+           *   \right >
+           * @f]
+           * The direction of the q vector is randomly generated on a unit
+           * sphere, i.e. during a simulation there will be an angular
+           * averaging, producing the same result as the Debye formula. The
+           * number of directions for each sample event can be set using
+           * the `Nq` parameter which defaults to 1. 
+           *
            * @param p Particle/point vector
            * @param qmin Minimum q-value to sample (1/A)
            * @param qmax Maximum q-value to sample (1/A)
            * @param dq q spacing (1/A)
-           * @param Nq Number of
+           * @param Nq Number of random q direction (default: 1)
            */
           template<class Tpvec>
-            void sample(const Tpvec &p, T qmin, T qmax, T dq, int Nq=1) {
+            void sample(const Tpvec &p, T qmin, T qmax, T dq, int Nq=10) {
               if (qmin<1e-6)
                 qmin=dq;  // assure q>0
               int n=(int)p.size();
@@ -220,14 +242,24 @@ namespace Faunus {
                       _I[q] += cos( (q*qdir).dot(r) );
                   }
                 } // end of particle loop
-                T rho = n/base::geo.getVolume();
                 for (auto &i : _I)
-                  base::I[i.first]+=2*rho*i.second; // add to average I(q)
+                  base::I[i.first]+=2*i.second/n+1; // add to average I(q)
               } // end of q averaging 
             }
 
           /**
-           * @brief See doi:10/d8zgw5
+           * @brief Single sum evaluation of S(q)
+           *
+           * @f[ S(\mathbf{q}) = \frac{1}{N} \left <
+           *    \left ( \sum_i^N \sin(\mathbf{qr}_i) \right )^2 +
+           *    \left ( \sum_j^N \cos(\mathbf{qr}_j) \right )^2
+           *   \right >
+           * @f]
+           *
+           * Angulalar averaging is done as in the `sample()` function.
+           * For more information, see <http://doi.org/d8zgw5>
+           *
+           * @todo Swap loop order
            */
           template<class Tpvec>
             void sample2(const Tpvec &p, T qmin, T qmax, T dq, int Nq=1) {

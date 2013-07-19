@@ -1079,11 +1079,11 @@ namespace Faunus {
         
            template<class Tspace>
            void kusalik(const Tspace &spc) {
-            double lambda = 1;
-            double alpha = 1;
+            //double lambda = 1;
+            //double alpha = 1;
             //mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
-            double A = alpha*3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree()/(8*pc::pi);
-            double eps = (lambda*lambda-2*lambda-A)/(lambda*lambda-2*lambda-A-1);
+            //double A = alpha*3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree()/(8*pc::pi);
+            //double eps = (lambda*lambda-2*lambda-A)/(lambda*lambda-2*lambda-A-1);
             P.save("AAA.dat"); 
             P1.save("BBB.dat");
            }

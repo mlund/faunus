@@ -72,14 +72,14 @@ int main() {
       }
     
     } // end of micro loop
-    cout << gdc.info() << endl;
-    cout << "Inf: " << gdc.getDielInfty() << endl;
+    //cout << gdc.info() << endl;
+    //cout << "Inf: " << gdc.getDielInfty() << endl;
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p));
     cout << loop.timing();
 
   } // end of macro loop
 
-  cout << gdc.info() << endl;
+  //cout << gdc.info() << endl;
   rdf.save("rdf.dat");
   spc.save("state");
   FormatPQR::save("confout.pqr", spc.p);
@@ -90,13 +90,13 @@ int main() {
   sys.test(test);
 
   // print information
-  //cout << loop.info() + sys.info() + gmv.info() + iso.info() + test.info();
+  cout << loop.info() + sys.info() + gmv.info() + iso.info() + test.info();
 
   return test.numFailed();
 }
 /**  @page example_water Example: SPC Water
  *
- This will simulate an arbitrary SPC water in a cubic box using
+ This will simulate SPC water in a cubic volume using
  the Wolf method for electrostatic interactions.
 
  Run this example from the `examples` directory:

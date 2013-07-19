@@ -4,6 +4,10 @@ if(ENABLE_MPI AND MPI_CXX_FOUND)
   set_target_properties(example_temper PROPERTIES OUTPUT_NAME "temper")
   add_test( example_temper ${CMAKE_CURRENT_SOURCE_DIR}/temper.run ${MPIEXEC})
   set_tests_properties(example_temper PROPERTIES WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/examples/")
+
+  fau_example(example_manybody "./" manybody.cpp)
+  set_target_properties(example_manybody PROPERTIES OUTPUT_NAME "manybody")
+  #add_test( example_manybody ${CMAKE_CURRENT_SOURCE_DIR}/membrane.run )
 endif()
 
 #----- add examples to build process -----
@@ -35,10 +39,6 @@ add_test( example_slitpolymer ${CMAKE_CURRENT_SOURCE_DIR}/slitpolymer.run )
 fau_example(example_membrane "./" membrane.cpp)
 set_target_properties(example_membrane PROPERTIES OUTPUT_NAME "membrane")
 add_test( example_membrane ${CMAKE_CURRENT_SOURCE_DIR}/membrane.run )
-
-fau_example(example_manybody "./" manybody.cpp)
-set_target_properties(example_manybody PROPERTIES OUTPUT_NAME "manybody")
-#add_test( example_manybody ${CMAKE_CURRENT_SOURCE_DIR}/membrane.run )
 
 fau_example(example_bulk "./" bulk.cpp)
 set_target_properties(example_bulk PROPERTIES OUTPUT_NAME "bulk")

@@ -81,8 +81,6 @@ namespace Faunus {
     inline double reduceDouble(MPIController &mpi, double local) {
       double sum;
       MPI_Allreduce(&local,&sum,1,MPI_DOUBLE,MPI_SUM,mpi.comm);
-      //MPI_Reduce(&local,&sum,1,MPI_DOUBLE,MPI_SUM,mpi.rankMaster(),mpi.comm);
-      //MPI_Bcast(&sum,1,MPI_DOUBLE,mpi.rankMaster(),mpi.comm);
       return sum;
     }
 

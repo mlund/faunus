@@ -1,5 +1,3 @@
-#ifdef ENABLE_MPI
-
 #include <faunus/faunus.h>
 
 /*
@@ -8,58 +6,18 @@
  * - any number of atomic species
  * - equilibrium swap moves
  * - external pressure (NPT)
+ * - arbitrary pair potential
  */
 
 using namespace Faunus;
 using namespace Faunus::Potential;
-
-template<class Tspace>
-struct myenergy : public Energy::Energybase<Tspace> {
-
-  typedef Energy::Energybase<Tspace> base;
-
-  double rc,a,z;
-  bool havecharge;
-
-  Potential::DebyeHuckel dh;
-
-  myenergy(InputMap &in) : dh(in) {
-    base::name="myenergy";
-    havecharge=false;
-    double k=1/dh.debyeLength();
-    rc=in.get<double>("dh_cutoff", pc::infty);
-    double v=4*pc::pi*pow(rc,3)/3.; // cut-off volume
-    a=4*pc::pi*exp(-k*rc)*(k*rc+1)/(k*k);
-    a=a*dh.bjerrumLength() / v;
-  }
-
-  double i_external(const p_vec &p, int i) FOVERRIDE {
-    if (havecharge==false) {
-      z=base::spc->charge();
-      havecharge=true;
-    }
-    return p[i].charge * z * a;
-  }
-
-  double g_external(const p_vec &p, Group &g) FOVERRIDE {
-    double u=0;
-    for (auto i : g)
-      u+=i_external(p,i);
-    return u;
-  }
-
-  string _info() {
-    return "myenergy - cutoff = " + std::to_string(rc)
-      + textio::_angstrom;
-  }
-};
 
 typedef Space<Geometry::Cuboid> Tspace;
 typedef CombinedPairPotential<DebyeHuckelShift,CutShift<LennardJones> > Tpairpot;
 
 int main(int argc, char** argv) {
   Faunus::MPI::MPIController mpi;
-  
+
   InputMap mcp("manybody.input");
   FormatXTC xtc(1000);                 // XTC gromacs trajectory format
   EnergyDrift sys;                     // class for tracking system energy drifts
@@ -72,11 +30,6 @@ int main(int argc, char** argv) {
     + Energy::EquilibriumEnergy<Tspace>(mcp);// + myenergy<Tspace>(mcp);
 
   auto eqenergy = &pot.second;
-
-  DebyeHuckel dh(mcp);
-
-  //save(pot.first.first.pairpot, atom["ASP"].id, atom["ASP"].id, "pot.dat");
-  //save(dh, atom["ASP"].id, atom["ASP"].id, "pot_dh.dat");
 
   // Add molecules
   int N1 = mcp.get("molecule1_N",0);
@@ -110,18 +63,18 @@ int main(int argc, char** argv) {
   Analysis::ChargeMultipole mpol;
   Scatter::DebyeFormula<Scatter::FormFactorUnity<>> debye(mcp);
 
-  spc.load("state");
+  spc.load("state"); // load previous state, if any
 
   Move::Isobaric<Tspace> iso(mcp,pot,spc);
   Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
   Move::AtomicTranslation<Tspace> mv(mcp,pot,spc);
   Move::SwapMove<Tspace> tit(mcp,pot,spc,*eqenergy);
-  if (inPlane)
-    for (auto &m : pol)
-      gmv.directions[ m.name ]=Point(1,1,0);
   
   gmv.mpi=&mpi;
   tit.mpi=&mpi;
+  if (inPlane)
+    for (auto &m : pol)
+      gmv.directions[ m.name ]=Point(1,1,0);
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );    // Store total system energy
 
@@ -134,9 +87,9 @@ int main(int argc, char** argv) {
   MCLoop loop(mcp);
   while ( loop.macroCnt() ) {  // Markov chain
     while ( loop.microCnt() ) {
-      int k,i=rand() % 2;
+      int k,i=rand() % 4;
       switch (i) {
-        case 1:
+        case 1: // move all proteins
           k=pol.size();
           while (k-->0) {
             gmv.setGroup( pol[ rand() % pol.size() ] );
@@ -149,22 +102,21 @@ int main(int argc, char** argv) {
               rdf( spc.geo.dist(i->cm,j->cm) )++;
 
           // sample S(q)
-          if (slp_global()>1.95) {
+          if (slp_global()>0.95) {
             cm_vec.clear();
             for (auto &i : pol)
               cm_vec.push_back(i.cm);
             debye.sample(cm_vec);
           }
-
           break;
-        case 2:
+        case 2: // volume move (NPT)
           sys+=iso.move();
           break;
-        case 0:
+        case 0: // titration move
           sys+=tit.move();
           mpol.sample(pol,spc);
           break;
-        case 3:
+        case 3: // move atomic species
           mv.setGroup(salt);
           sys+=mv.move();
           break;
@@ -176,24 +128,21 @@ int main(int argc, char** argv) {
     } // end of micro loop
 
     sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) ); // detect energy drift
-    if (mpi.isMaster())
+
+    if (mpi.isMaster()) {
       cout << loop.timing();
+      std::ofstream f("masscenter"+std::to_string(loop.count())+".xyz");
+      if (f && !cm_vec.empty())
+        for (auto &m : cm_vec)
+          f << "H " << m.transpose() << endl;
+    }
 
   } // end of macro loop
 
   if (mpi.isMaster()) {
     cout << tit.info() + loop.info() + sys.info() + gmv.info() + mv.info()
-    + iso.info() + mpol.info() << endl;
-    
-    int cnt=0;
-    std::ofstream f;
-    f.open("debye"+std::to_string(cnt)+".xyz");
-    if (f) {
-      for (auto m : cm_vec)
-        f << "H " << m.transpose() << endl;
-      f.close();
-    }
-    
+      + iso.info() + mpol.info() << endl;
+
     rdf.save("rdf_p2p.dat");
     FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
     spc.save("state");
@@ -201,4 +150,3 @@ int main(int argc, char** argv) {
     debye.save("debye.dat");
   }
 }
-#endif

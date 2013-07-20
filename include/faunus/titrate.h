@@ -222,23 +222,16 @@ namespace Faunus {
         for (auto &prs : process)
           prs.cnt=0;
 
-        int mismatch=0; // number of charge mismatches
         for (size_t i=0; i<p.size(); i++)
           for (size_t j=0; j<process.size(); j++)
             if ( process[j].one_of_us( p[i].id )) {
-              if ( abs(p[i].charge-atom[p[i].id].charge)>1e-6 )
-                mismatch++;
               sites.push_back(i);
               process[j].cnt++;
               break; // no double counting of sites
             }
-        if (mismatch>0)
-          std::cerr
-            << "Warning: Found " << mismatch
-            << " mismatched charge(s) while searching for titratable sites.\n";
       }
 
-    /*!
+    /**
      * Returns the intrinsic energy, i.e. the ideal free energy connected with -log(Kd)
      * and the current state of the site. Explicit interactions with the surroundings
      * are not included.
@@ -433,12 +426,11 @@ namespace Faunus {
         eqpot=&eq;
         ipart=-1;
 
-        /* Sync particle charges with `AtomMap` */
-        for (size_t i=0; i<spc.p.size(); i++ ) {
-          spc.p[i].charge = atom[ spc.p[i].id ].charge;
-          spc.trial[i] = spc.p[i];
-        }
         findSites(spc.p);
+
+        /* Sync particle charges with `AtomMap` */
+        for (auto i : eqpot->eq.sites)
+          spc.trial[i].charge = spc.p[i].charge = atom[ spc.p[i].id ].charge;
 #ifdef ENABLE_MPI
         mpi=nullptr;
 #endif

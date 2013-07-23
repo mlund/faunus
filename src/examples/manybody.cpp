@@ -106,7 +106,7 @@ int main(int argc, char** argv) {
             cm_vec.clear();
             for (auto &i : pol)
               cm_vec.push_back(i.cm);
-            debye.sample(cm_vec);
+            debye.sample(cm_vec,spc.geo.getVolume());
           }
           break;
         case 2: // volume move (NPT)

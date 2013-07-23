@@ -104,6 +104,7 @@ swapmv_runfraction     0.2     # Proton titration run fraction
 qmin                   0.05    # q range for S(q) calc.
 qmax                   0.4
 dq                     0.005
+sofq_cutoff            1e10
 
 # Molecular species - currently only two different kinds
 molecule1_N            $Np
@@ -133,6 +134,8 @@ Zp=7.0
 Rp=17.
 # Number of protein molecules in simulation
 Np=100
+# 1:1 salt concentration (mol/l)
+Cs=0.020
 
 # Protein concentration [mol/l]
 for Cp in 0.001496
@@ -143,7 +146,7 @@ do
   V=`python -c "print $Np/(1e-27*6.022e23*${Cp})"`
   boxlen=`python -c "print $V**(1/3.)"`
   # Calc. counter ion contribution to ionic strength
-  salt=`python -c "print 0.5*$Zp*$Cp"`
+  salt=`python -c "print 0.5*$Zp*$Cp + $Cs"`
   # Calc. Debye length and cutoff (3xDebye length)
   D=`python -c "from math import sqrt; print 3.04/sqrt($salt)"`
   cut_i2i=`python -c "print 3*$D"`
@@ -152,10 +155,10 @@ do
   for pH in 4.1
   do
     prefix="pH${pH}-Cp${Cp}"
-    rm -fR state
-    micro=10
+    #rm -fR state
+    micro=100
     mkinput
-    mpiexec -hosts "localhost:4" $exe #> $prefix.eq
+    mpiexec -hosts "localhost:1" $exe #> $prefix.eq
     exit
 
     micro=1000

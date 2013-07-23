@@ -148,7 +148,7 @@ namespace Faunus {
     template<class Tformfactor,class Tgeometry=Geometry::Sphere,class T=float>
       class DebyeFormula {
         private:
-          T qmin,qmax,dq,rmax;
+          T qmin,qmax,dq,rc;
         protected:
           Tformfactor F; // scattering from a single particle
           Tgeometry geo; // geometry to use for distance calculations
@@ -159,7 +159,7 @@ namespace Faunus {
             qmin=in.get<double>("qmin",-1);
             qmax=in.get<double>("qmax",-1);
             dq=in.get<double>("dq",-1);
-            rmax=0.5*std::cbrt(Geometry::Cuboid(in).getVolume());
+            rc=in.get<double>("sofq_cutoff",1e9);
           }
 
           /**
@@ -168,11 +168,17 @@ namespace Faunus {
            *
            * The q range is read from input as `qmin`, `qmax`, `dq` in units of
            * inverse angstrom.
+           * It is also possible to specify an isotropic correction beyond
+           * a given cut-off -- see for example
+           * <https://debyer.readthedocs.org/en/latest/>.
+           * The cut-off distance - which should be smaller than half the
+           * box length for a cubic system is read specific by the
+           * keyword `sofq_cutoff`.
            */
           template<class Tpvec>
-            void sample(const Tpvec &p) {
+            void sample(const Tpvec &p, T V=-1) {
               assert(qmin>0 && qmax>0 && dq>0 && "q range invalid.");
-              sample(p,qmin,qmax,dq);
+              sample(p,qmin,qmax,dq,V);
             }
 
           /**
@@ -181,10 +187,10 @@ namespace Faunus {
            * @param qmin Minimum q-value to sample (1/A)
            * @param qmax Maximum q-value to sample (1/A)
            * @param dq q spacing (1/A)
+           * @param V Simulation volume (angstrom^3) used only for cut-off correction
            */
           template<class Tpvec>
-            void sample(const Tpvec &p, T qmin, T qmax, T dq) {
-              rmax=1e6;
+            void sample(const Tpvec &p, T qmin, T qmax, T dq, T V=-1) {
               if (qmin<1e-6)
                 qmin=dq;              // ensure that q>0
               std::map<T,T> _I;       // temporary I(q) table
@@ -192,15 +198,20 @@ namespace Faunus {
               for (int i=0; i<N-1; ++i) {
                 for (int j=i+1; j<N; ++j) {
                   T r = geo.sqdist(p[i],p[j]);
-                  if (r<rmax*rmax) {
+                  if (r<rc*rc) {
                     r=sqrt(r);
                     for (T q=qmin; q<=qmax; q+=dq)
-                      _I[q] += F(q,p[i]) * F(q,p[j]) * sin(q*r) / (q*r); // slow: map lookup
+                      _I[q] += F(q,p[i])*F(q,p[j])*sin(q*r)/(q*r); // slow: map lookup
                   }
                 }
               }
-              for (auto &i : _I)
-                I[i.first]+=2*i.second/N+1; // add to average I(q)
+              for (auto &i : _I) {
+                T q=i.first, Icorr=0;
+                if (rc<1e9 && V>0)
+                  Icorr = 4*pc::pi * N / (V*pow(q,3)) *
+                    ( q*rc*cos(q*rc) - sin(q*rc) );
+                I[q]+=2*i.second/N+1 + Icorr; // add to average I(q)
+              }
             }
 
           void save(string filename) {
@@ -221,11 +232,11 @@ namespace Faunus {
      */
     template<typename T=double>
       class StructureFactor : public DebyeFormula<FormFactorSphere<T>> {
-        
+
         private:
           T qmin, qmax, dq;
           Point qdir;
-        
+
         public:
 
           typedef DebyeFormula<FormFactorSphere<T>> base;
@@ -272,17 +283,17 @@ namespace Faunus {
             void sample(const Tpvec &p, T qmin, T qmax, T dq, int Nq=10, Point qdir=Point(0,0,0)) {
               if (qmin<1e-6)
                 qmin=dq;  // assure q>0
-              
+
               int n=(int)p.size();
               for (int k=0; k<Nq; k++) { // random q directions
                 std::map<T,T> _I; // temp map for I(q) value
-              
+
                 // Random q vector if none given in input
                 if (Nq==0 && qdir.squaredNorm()>1e-6)
                   Nq=1;
                 else
                   qdir.ranunit(slp_global);
-                
+
                 // N^2 loop over all particles
                 for (int i=0; i<n-1; i++) {
                   for (int j=i+1; j<n; j++) {
@@ -291,10 +302,10 @@ namespace Faunus {
                       _I[q] += cos( (q*qdir).dot(r) );
                   }
                 }
-                
+
                 for (auto &i : _I)
                   base::I[i.first]+=2*i.second/n+1; // add to average I(q)
-                
+
               } // end of q averaging
             }
 

@@ -888,7 +888,7 @@ namespace Faunus {
           struct data {
             double mindist, maxdist;
           };
-          std::map< pair_permutable<Faunus::Group*>, data> gmap;
+          std::map<opair<Faunus::Group*>, data> gmap;
         public:
           MassCenterConstrain(Geometry::Geometrybase&);      //!< Constructor
           void addPair(Group&, Group&, double, double);      //!< Add constraint between two groups

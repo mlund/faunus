@@ -774,6 +774,40 @@ namespace Faunus {
       };
 
     /**
+     * @brief Constrain two group mass centra within a certain distance interval [mindist:maxdist]
+     * @author Mikael Lund
+     * @date Lund, 2012
+     * @todo Prettify output
+     *
+     * This energy class will constrain the mass center separation between selected groups to a certain
+     * interval. This can be useful to sample rare events and the constraint is implemented as an external
+     * group energy that return infinity if the mass center separation are outside the defined range.
+     * An arbitrary number of group pairs can be added with the addPair() command, although one would
+     * rarely want to have more than one.
+     * In the following example,
+     * the distance between `mygroup1` and `mygroup2` are constrained to the range `[10:50]` angstrom:
+     * @code
+     * Energy::Hamiltonian pot;
+     * auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
+     * auto constrain = pot.create( Energy::MassCenterConstrain(pot.getGeometry()) );
+     * constrain->addPair( mygroup1, mygroup2, 10, 50); 
+     * @endcode
+     */
+    template<typename Tspace>
+      class MassCenterConstrain : public Energybase<Tspace> {
+        private:
+          string _info();
+          struct data {
+            double mindist, maxdist;
+          };
+          std::map< pair_permutable<Faunus::Group*>, data> gmap;
+        public:
+          MassCenterConstrain(Geometry::Geometrybase&);      //!< Constructor
+          void addPair(Group&, Group&, double, double);      //!< Add constraint between two groups
+          double g_external(const p_vec&, Group&) FOVERRIDE; //!< Constrain treated as external potential
+      };
+
+    /**
      * @brief Calculates the total system energy
      *
      * For a given particle vector, space, and energy class we try to

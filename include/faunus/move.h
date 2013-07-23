@@ -671,6 +671,9 @@ namespace Faunus {
           void setGroup(Group&); //!< Select Group to move
           bool groupWiseEnergy;  //!< Attempt to evaluate energy over groups from vector in Space (default=false)
           std::map<string,Point> directions; //!< Specify special group translation directions (default: x=y=z=1)
+#ifdef ENABLE_MPI
+          Faunus::MPI::MPIController* mpi;
+#endif
       };
 
     /**
@@ -697,6 +700,9 @@ namespace Faunus {
         this->runfraction = in.get<double>(base::prefix+"_runfraction",1.0);
         if (dp_rot<1e-6 && dp_trans<1e-6)
           this->runfraction=0;
+#ifdef ENABLE_MPI
+        mpi=nullptr;
+#endif
       }
 
     template<class Tspace>
@@ -760,6 +766,19 @@ namespace Faunus {
           return pc::infty;       // early rejection
         double uold = pot->g_external(spc->p, *igroup);
 
+#ifdef ENABLE_MPI
+        if (mpi!=nullptr) {
+          double du=0;
+          auto s = Faunus::MPI::splitEven(*mpi, spc->groupList().size());
+          for (auto i=s.first; i<=s.second; ++i) {
+            auto gi=spc->groupList()[i];
+            if (gi!=igroup)
+              du += pot->g2g(spc->trial, *gi, *igroup) - pot->g2g(spc->p, *gi, *igroup);
+          }
+          return (unew-uold) + Faunus::MPI::reduceDouble(*mpi, du);
+        }
+#endif
+        
         for (auto g : spc->groupList()) {
           if (g!=igroup) {
             unew += pot->g2g(spc->trial, *g, *igroup);
@@ -813,6 +832,148 @@ namespace Faunus {
         }
       }
 
+    /**
+     @brief Translates/rotates many groups simultaneously
+     */
+    template<class Tspace>
+    class TranslateRotateNbody : public TranslateRotate<Tspace> {
+    private:
+      typedef TranslateRotate<Tspace> base;
+      typedef opair<Group*> Tpair;
+      std::vector<Tpair> pairlist; // interacting groups
+      
+      typename base::map_type angle2; //!< Temporary storage for angular movement
+      vector<Group*> gVec;   //!< Vector of groups to move
+      
+      void _trialMove() FOVERRIDE {
+        angle2.clear();
+        for (auto g : gVec) {
+          if (g->isMolecular()) {
+            Point p;
+            if (base::dp_rot>1e-6) {
+              p.ranunit(slp_global);        // random unit vector
+              p=g->cm+p;                    // set endpoint for rotation
+              double angle=base::dp_rot*slp_global.randHalf();
+              g->rotate(*base::spc, p, angle);
+              angle2[g->name] += pow(angle*180/pc::pi, 2); // sum angular movement^2
+            }
+            if (base::dp_trans>1e-6) {
+              p.ranunit(slp_global);
+              p=base::dp_trans*p.cwiseProduct(base::dir);
+              g->translate(*base::spc, p);
+            }
+          }
+        }
+      }
+      
+      void _acceptMove() FOVERRIDE {
+        std::map<string,double> r2;
+        for (auto g : gVec) {
+          r2[g->name] += base::spc->geo.sqdist(g->cm, g->cm_trial);
+          g->accept(*base::spc);
+          base::accmap[g->name] += 1;
+        }
+        for (auto &i : r2)
+          base::sqrmap_t[i.first] += i.second;
+        for (auto &i : angle2)
+          base::sqrmap_r[i.first] += i.second;
+      }
+      
+      void _rejectMove() FOVERRIDE {
+        std::set<string> names; // unique group names
+        for (auto g : gVec) {
+          names.insert(g->name);
+          g->undo(*base::spc);
+          base::accmap[g->name]+=0;
+        }
+        for (auto n : names) {
+          base::sqrmap_t[n]+=0;
+          base::sqrmap_r[n]+=0;
+        }
+      }
+      
+      string _info() {
+        std::ostringstream o;
+        o << textio::pad(textio::SUB,base::w,"Number of groups") << gVec.size() << endl
+          << base::_info();
+        return o.str();
+      }
+      
+      double _energyChange() FOVERRIDE {
+        int N=(int)base::spc->groupList().size();
+        double du=0;
+        
+#ifdef ENABLE_MPI
+        if (!pairlist.empty()) {
+          
+          // group <-> group
+          auto s = Faunus::MPI::splitEven(*mpi, pairlist.size());
+          for (size_t i=s.first; i<=s.second; ++i)
+            du += base::pot->g2g(base::spc->trial,*pairlist[i].first,*pairlist[i].second)
+            - base::pot->g2g(base::spc->p,*pairlist[i].first,*pairlist[i].second);
+
+          // group <-> external potential
+          s = Faunus::MPI::splitEven(*mpi, base::spc->groupList().size());
+          for (size_t i=s.first; i<=s.second; ++i) {
+            auto gi=base::spc->groupList()[i];
+            du += base::pot->g_external(base::spc->trial, *gi) - base::pot->g_external(base::spc->p, *gi);
+          }
+          
+          return Faunus::MPI::reduceDouble(*mpi, du);
+        }
+#endif
+        
+        if (!pairlist.empty()) {
+#pragma omp parallel for reduction (+:du)
+          for (int i=0; i<(int)pairlist.size(); i++)
+            du+=base::pot->g2g(base::spc->trial,*pairlist[i].first,*pairlist[i].second)
+            - base::pot->g2g(base::spc->p,*pairlist[i].first,*pairlist[i].second);
+          for (auto g : base::spc->groupList())
+            du += base::pot->g_external(base::spc->trial, *g) - base::pot->g_external(base::spc->p, *g);
+          return du;
+        }
+        
+        if (!gVec.empty()) {
+#pragma omp parallel for reduction (+:du) schedule (dynamic)
+          for (int i=0; i<N-1; i++)
+            for (int j=i+1; j<N; j++) {
+              auto gi=base::spc->groupList()[i];
+              auto gj=base::spc->groupList()[j];
+              du += base::pot->g2g(base::spc->trial,*gi,*gj) - base::pot->g2g(base::spc->p,*gi,*gj);
+            }
+          for (auto g : base::spc->groupList())
+            du += base::pot->g_external(base::spc->trial, *g) - base::pot->g_external(base::spc->p, *g);
+        }
+        return du;
+      }
+      void setGroup(std::vector<Group*> &v) {
+        gVec.clear();
+        pairlist.clear();
+        std::set<Tpair> l; // set of all unique g2g pairs
+        for (auto i : v) {
+          if (i->isMolecular())
+            gVec.push_back(i);
+          for (auto j : v)
+            l.insert(Tpair(i,j));
+        }
+        for (auto i : l)
+          pairlist.push_back(i); // set->vector (faster)
+        
+        //auto N=gVec.size();
+        //base::dp_trans /= N;
+        //base::dp_rot /= N;
+      }
+
+    public:
+      TranslateRotateNbody(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string pfx="transrot") : base(in,e,s,pfx) {
+        base::title+=" (N-body)";
+        setGroup(s.groupList());
+      }
+#ifdef ENABLE_MPI
+      Faunus::MPI::MPIController* mpi;
+#endif
+    };
+  
     /**
      * @brief Combined rotation and rotation of groups and mobile species around it
      *

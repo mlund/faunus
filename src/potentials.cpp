@@ -15,26 +15,26 @@ namespace Faunus {
 
     PairPotentialBase::PairPotentialBase(std::string pfx) {
       prefix=pfx;
+      rcut2.resize(atom.list.size());
     }
 
     PairPotentialBase::~PairPotentialBase() { }
 
-    /**
+    /*
      * @param N Maximum number of atom types
      * @param rc Default cutoff distance (angstrom)
-     */
-    void PairPotentialBase::initCutoff(size_t N, float rcut) {
-      rcut2.setConstant(N,N,rcut*rcut);
-    }
+     *
+     void PairPotentialBase::initCutoff(size_t N, float rcut) {
+     rcut2.setConstant(N,N,rcut*rcut);
+     }*/
 
-    /**
+    /*
      * @param i Particle type i
      * @param j Particle type j
-     * @param rc Cutoff distance (angstrom) 
-     */
-    void PairPotentialBase::setCutoff(size_t i, size_t j, float rcut) {
-      rcut2(i,j)=rcut2(j,i)=rcut*rcut;
-    }
+     * @param rc Cutoff distance (angstrom)
+     void PairPotentialBase::setCutoff(size_t i, size_t j, float rcut) {
+     rcut2(i,j)=rcut2(j,i)=rcut*rcut;
+     }*/
 
     std::string PairPotentialBase::_brief() {
       assert(!name.empty() && "Provide a descriptive name for the potential");
@@ -44,7 +44,7 @@ namespace Faunus {
     std::string PairPotentialBase::info(char w) {
       return name+": N/A";
     }
-    
+
     /**
      * This will reset the temperature to the specified value. By default this function
      * does nothing, although in Debug mode it will throw an exception if derived classes
@@ -101,7 +101,7 @@ namespace Faunus {
       o << name+": k=" << k << kT+"/"+angstrom+squared+" r0=" << sqrt(r02) << _angstrom; 
       return o.str();
     }
-    
+
     Hertz::Hertz(InputMap &in, string pfx) : PairPotentialBase(pfx) {
       name = "Hertz";
       //  Y = in(prefix+"_Y", 0.0);
@@ -115,7 +115,7 @@ namespace Faunus {
       o <<name+" E:"<< E;
       return o.str();
     }
-	  
+
     string Hertz::info(char w) {
       using namespace Faunus::textio;
       std::ostringstream o;
@@ -125,13 +125,13 @@ namespace Faunus {
 
     YukawaGel::YukawaGel(InputMap &in) : Coulomb(in) {
       name = "YukawaGel";
-    
+
       Z = in.get<double>("yukawagel_Z", 0.0);
       nc = in.get<double>("yukawagel_nc", 0.0);
       ns = in.get<double>("yukawagel_ns", 0.0);
       v = in.get<double>("yukawagel_v",1.0);
       d = in.get<double>("yukawagel_d",1.0);
-      
+
       k = sqrt(4.*pc::pi*(nc+2.*ns)*v*v*bjerrumLength());
       Z2e2overER = Z*Z*bjerrumLength();
       kd = k*d;
@@ -148,13 +148,13 @@ namespace Faunus {
       return o.str();
     }
 
-     string YukawaGel::info(char w) {
+    string YukawaGel::info(char w) {
       using namespace Faunus::textio;
       std::ostringstream o;
       o <<name+" Z: "<< Z << endl << " Counter ions:  "<< nc <<  endl
-	<<" Salt: " << ns << endl <<" BjerrumL: " << bjerrumLength() << endl
-	<<" kappa: " << k <<endl;
-	
+        <<" Salt: " << ns << endl <<" BjerrumL: " << bjerrumLength() << endl
+        <<" kappa: " << k <<endl;
+
       return o.str();
     }
 
@@ -500,15 +500,6 @@ namespace Faunus {
       return o.str();
     }
 
-    DebyeHuckelShift::DebyeHuckelShift(InputMap &in) : DebyeHuckel(in) {
-      double rc=in.get<double>("pairpot_cutoff",pc::infty);
-      sqcutoff=rc*rc;
-      shift = exp(-rc*k)/rc;
-      std::ostringstream o;
-      o << " (shifted, rcut=" << rc << textio::_angstrom << ")";
-      name+=o.str();
-    }
-
     /**
      * \f$ \beta u(r) = l_B \frac{ z_1 z_2 }{r}\f$
      */
@@ -529,57 +520,6 @@ namespace Faunus {
     double MultipoleEnergy::dipdip(const Point &a, const Point &b, double r) {
       return lB*( a.x()*b.x() + a.y()*b.y() - 2*a.z()*b.z() ) / (r*r*r);
     }
-    
-   
-     
-
-
-  
-
-    /* 
-       double PatchSCsphere::eattractive_sc_sphere(const Point &a, const Point &b, const Point r_cm) {
-       double atrenergy, a, b, f0, halfl;
-       struct vector vec1;
-
-    //TODO if we dont have calculate distance segment to point - distvec a dist a contt point
-
-    //calculate closest distance attractive energy
-    if (dist < interact->param->pdis)
-    atrenergy = -interact->param->epsilon;
-    else {
-    atrenergy = cos(PIH*(interact->dist-interact->param->pdis)/interact->param->pswitch);
-    atrenergy *= -atrenergy*interact->param->epsilon ;
-    }
-    //scaling function: angular dependence of patch1
-    if (b.halfl < 1e-6) {
-    which = 0;
-    vec1=vec_perpproject(distvec, a.dir);
-    vec1.normalize();
-    a = vec1.dot(a.patchdir);
-    halfl=a.halfl;
-    } else {
-    which = 1;
-    vec1=vec_perpproject(distvec, b.dir);
-    vec1.normalize();
-    a = vec1.dot(b.patchdir);
-    halfl=b.halfl;
-    }
-    //scaling function for the length of spherocylinder within cutoff
-
-    b = sqrt(rcut*rcut-dist*dist);
-    if ( contt + b > halfl ) 
-    f0 = halfl;
-    else 
-    f0 = contt + b;
-    if ( contt - b < -halfl ) 
-    f0 -= -halfl;
-    else 
-    f0 -= interact->contt - b;
-    atrenergy *= fanglscale(a,interact->param, which)*(f0+1.0);
-
-    return atrenergy;
-    }//TODO atrenergy from ndist, cutoff rcut at the beginning, epsilon atd
-    */
 
   } //Potential namespace
 

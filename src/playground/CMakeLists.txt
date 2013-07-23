@@ -49,8 +49,14 @@ set_target_properties( vacha-gouychapman-temper
 fau_cigarexample(cigar "./vacha" cigar.cpp)
 set_target_properties( cigar PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
 
-fau_cigarexample(cigar-npt "./vacha" cigar-npt.cpp)
-set_target_properties( cigar-npt PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
+fau_cigarexample(sc-npt "./vacha" sc-npt.cpp)
+set_target_properties( sc-npt PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
+
+fau_cigarexample(psc-nvt "./vacha" psc-nvt.cpp)
+set_target_properties( psc-nvt PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
+
+fau_cigarexample(test2 "./vacha" test2.cpp)
+set_target_properties( psc-nvt PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
 
 # Stenqvist playground
 fau_dipoleexample(stenqvist-nemo "./stenqvist" nemo.cpp)
@@ -66,7 +72,11 @@ set_target_properties(axel-tempertest PROPERTIES OUTPUT_NAME "tempertest")
 # Alexei's playground
 fau_example(alexei-hs "./alexei" HS.cpp)
 set_target_properties(alexei-hs PROPERTIES OUTPUT_NAME "HS")
-
+#fau_dipoleexample(alexei_stockmayer "./alexei" stockmayer.cpp)
+#fau_dipoleexample(alexei_stockmayer_polarizable "./alexei" stockmayer.cpp)
+#set_target_properties(alexei_stockmayer PROPERTIES OUTPUT_NAME "stockmayer")
+#set_target_properties(alexei_stockmayer_polarizable PROPERTIES OUTPUT_NAME "stockmayer_polarizable")
+#set_target_properties(alexei_stockmayer_polarizable PROPERTIES COMPILE_DEFINITIONS "POLARIZE;DIPOLEPARTICLE")
 
 if (EXISTS ${MYPLAYGROUND})
   add_subdirectory(${MYPLAYGROUND} ${MYPLAYGROUND})

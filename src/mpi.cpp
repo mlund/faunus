@@ -14,10 +14,8 @@ namespace Faunus {
     MPIController::MPIController(MPI_Comm c) : comm(c), _master(0) {
       MPI_Init(NULL,NULL);
       MPI_Comm_size(comm, &_nproc);
-      MPI_Comm_rank(comm, &_rank);    
-      std::ostringstream o;
-      o << _rank;
-      id = o.str();
+      MPI_Comm_rank(comm, &_rank);
+      id=std::to_string(_rank);
       textio::prefix += "mpi" + id + ".";
       cout.open(textio::prefix+"stdout");
     }

@@ -222,23 +222,16 @@ namespace Faunus {
         for (auto &prs : process)
           prs.cnt=0;
 
-        int mismatch=0; // number of charge mismatches
         for (size_t i=0; i<p.size(); i++)
           for (size_t j=0; j<process.size(); j++)
             if ( process[j].one_of_us( p[i].id )) {
-              if ( abs(p[i].charge-atom[p[i].id].charge)>1e-6 )
-                mismatch++;
               sites.push_back(i);
               process[j].cnt++;
               break; // no double counting of sites
             }
-        if (mismatch>0)
-          std::cerr
-            << "Warning: Found " << mismatch
-            << " mismatched charge(s) while searching for titratable sites.\n";
       }
 
-    /*!
+    /**
      * Returns the intrinsic energy, i.e. the ideal free energy connected with -log(Kd)
      * and the current state of the site. Explicit interactions with the surroundings
      * are not included.
@@ -341,12 +334,16 @@ namespace Faunus {
      */
     template<class Tspace>
       class EquilibriumEnergy : public Energybase<Tspace> {
+        
         private:
           string _info() { return eq.info(); }
+        
         protected:
           std::map<particle::Tid, double> energymap;//!< Intrinsic site energy
+        
         public:
           EquilibriumController eq;
+        
           EquilibriumEnergy(InputMap &in) : eq(in) {
             this->name="Equilibrium State Energy";
           }
@@ -398,62 +395,71 @@ namespace Faunus {
           using Movebase<Tspace>::pot;
           double _energyChange();
           int ipart;                              //!< Particle to be swapped
-          Energy::EquilibriumEnergy<Tspace> eqpot;
+          Energy::EquilibriumEnergy<Tspace>* eqpot;
         public:
-          SwapMove(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="swapmv_"); //!< Constructor
+          SwapMove(InputMap&, Energy::Energybase<Tspace>&, Tspace&, Energy::EquilibriumEnergy<Tspace>&, string="swapmv_"); //!< Constructor
           template<class Tpvec>
             int findSites(const Tpvec&); //!< Search for titratable sites (old ones are discarded)
           double move();
           template<class Tpvec>
             void applycharges(Tpvec &);
+        
+#ifdef ENABLE_MPI
+          Faunus::MPI::MPIController* mpi;
+#endif
       };
 
     /**
      * This will set up swap move routines and search for
-     * titratable sites in `Space`. The constructor will
-     * add the appropriate energy functions to the Hamiltonian.
-     *
-     * @warning This will use properties from `AtomMap` to
-     *          override those already stored in the particle
-     *          vector.
+     * titratable sites in `Space`.
      */
     template<class Tspace>
       SwapMove<Tspace>::SwapMove(
           InputMap &in,
           Energy::Energybase<Tspace> &ham,
           Tspace &spc,
-          string pfx) : Movebase<Tspace>(ham,spc,pfx), eqpot(in) {
+          Energy::EquilibriumEnergy<Tspace> &eq,
+          string pfx) : Movebase<Tspace>(ham,spc,pfx) {
 
         this->title="Site Titration - Swap Move";
         this->runfraction=in.get<double>(pfx+"runfraction",1);
+        eqpot=&eq;
         ipart=-1;
+
         findSites(spc.p);
 
-        /* Sync particles with `AtomMap` */
-        for (auto &i : eqpot.eq.sites ) {
-          spc.p[i] = atom[ spc.p[i].id ];
-          spc.trial[i] = spc.p[i];
-        }
+        /* Sync particle charges with `AtomMap` */
+        for (auto i : eqpot->eq.sites)
+          spc.trial[i].charge = spc.p[i].charge = atom[ spc.p[i].id ].charge;
+#ifdef ENABLE_MPI
+        mpi=nullptr;
+#endif
       }
 
+    /**
+     * @brief Search for titratable sites and store internally
+     *
+     * Use this to re-scan for titratable sites. Called by default
+     * in the constructor
+     */
     template<class Tspace>
       template<class Tpvec>
       int SwapMove<Tspace>::findSites(const Tpvec &p) {
         accmap.clear();
-        return eqpot.findSites(p);
+        return eqpot->findSites(p);
       }
 
     template<class Tspace>
       void SwapMove<Tspace>::_trialMove() {
-        if (eqpot.eq.sites.empty())
-          return;
-        int i=slp_global.rand() % eqpot.eq.sites.size(); // pick random site
-        ipart=eqpot.eq.sites.at(i);                      // and corresponding particle
-        int k;
-        do {
-          k=slp_global.rand() % eqpot.eq.process.size(); // pick random process..
-        } while (!eqpot.eq.process[k].one_of_us( this->spc->p[ipart].id )); //that match particle j
-        eqpot.eq.process[k].swap( this->spc->trial[ipart] ); // change state and get intrinsic energy change
+        if (!eqpot->eq.sites.empty()) {
+          int i=slp_global.rand() % eqpot->eq.sites.size(); // pick random site
+          ipart=eqpot->eq.sites.at(i);                      // and corresponding particle
+          int k;
+          do {
+            k=slp_global.rand() % eqpot->eq.process.size(); // pick random process..
+          } while (!eqpot->eq.process[k].one_of_us( this->spc->p[ipart].id )); //that match particle j
+          eqpot->eq.process[k].swap( this->spc->trial[ipart] ); // change state and get intrinsic energy change
+        }
       }
 
     template<class Tspace>
@@ -462,6 +468,20 @@ namespace Faunus {
             && "Accepted particle collides with container");
         if (spc->geo.collision(spc->trial[ipart]))  // trial<->container collision?
           return pc::infty;
+        
+#ifdef ENABLE_MPI
+        if (mpi!=nullptr) {
+          double sum=0;
+          auto r = Faunus::MPI::splitEven(*mpi, (int)spc->p.size());
+          for (int i=r.first; i<=r.second; ++i)
+            if (i!=ipart)
+              sum+=pot->i2i(spc->trial,i,ipart) - pot->i2i(spc->p,i,ipart);
+          sum = Faunus::MPI::reduceDouble(*mpi, sum);
+          
+          return sum + pot->i_external(spc->trial, ipart) - pot->i_external(spc->p, ipart)
+          + pot->i_internal(spc->trial, ipart) - pot->i_internal(spc->p, ipart);
+        }
+#endif
         return pot->i_total(spc->trial,ipart) - pot->i_total(spc->p,ipart);
       }
 
@@ -481,10 +501,10 @@ namespace Faunus {
       double SwapMove<Tspace>::move() {
         double du=0;
         if (this->run()) {
-          size_t i=eqpot.eq.sites.size();
+          size_t i=eqpot->eq.sites.size();
           while (i-->0)
             du+=Movebase<Tspace>::move();
-          eqpot.eq.sampleCharge(spc->p);
+          eqpot->eq.sampleCharge(spc->p);
         }
         return du;
       }
@@ -492,26 +512,26 @@ namespace Faunus {
     template<class Tspace>
       template<class Tpvec>
       void SwapMove<Tspace>::applycharges(Tpvec &p){
-        eqpot.eq.applycharges(p);
+        eqpot->eq.applycharges(p);
       }
 
     template<class Tspace>
       string SwapMove<Tspace>::_info() {
         using namespace textio;
         std::ostringstream o;
-        if (this->cnt>0 && !eqpot.eq.sites.empty()) {
+        if (this->cnt>0 && !eqpot->eq.sites.empty()) {
           o << indent(SUB) << "Site statistics:" << endl
             << indent(SUBSUB) << std::left
             << setw(15) << "Site"
             << setw(14) << bracket("z")
             << "Acceptance" << endl;
-          for (auto i : eqpot.eq.sites) {
+          for (auto i : eqpot->eq.sites) {
             if (accmap[i].cnt>0) {
               std::ostringstream a;
               o.precision(4);
               a << atom[ spc->p[i].id ].name << " " << i;
               o << pad(SUBSUB,15, a.str())
-                << setw(10) << eqpot.eq.q[i].avg()
+                << setw(10) << eqpot->eq.q[i].avg()
                 << accmap[i].avg()*100. << percent
                 << endl;
             }

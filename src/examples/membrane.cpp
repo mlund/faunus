@@ -70,6 +70,7 @@ int main() {
     + Energy::EquilibriumEnergy<Tspace>(mcp);
   auto nonbonded = &pot.first.first.first;
   auto bonded = &pot.first.first.second;
+  auto eqenergy = &pot.second;
   Tspace spc(mcp);
 
   // Load and add polymer to Space
@@ -111,7 +112,7 @@ int main() {
   Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
   Move::Pivot<Tspace> piv(mcp,pot,spc);
   Move::Isobaric<Tspace> iso(mcp,pot,spc);
-  Move::SwapMove<Tspace> swap(mcp,pot,spc);
+  Move::SwapMove<Tspace> swap(mcp,pot,spc,*eqenergy);
 
   Analysis::BilayerStructure lipidstruct;
 

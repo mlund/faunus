@@ -194,6 +194,8 @@ namespace Faunus {
 
       template<typename Trotator>
         void rotate(const Trotator &rot) { *this = rot(*this); }
+        
+      void eye() { *this = Tmat::Identity(3,3); }
     };
 
   /**
@@ -558,7 +560,10 @@ namespace Faunus {
         class = typename std::enable_if<std::is_base_of<AtomData,T>::value>::type> 
           CigarParticle& operator=(const T &d) {
             PointParticle::operator=(d);
-            // copy more atom properties here...
+              halfl = d.half_len;
+              patchangle = d.pangl;
+              pcanglsw = std::cos(0.5*d.pangl + d.panglsw);
+              pcangl = std::cos(0.5*d.pangl);
             return *this;
           }
 

@@ -10,7 +10,7 @@ typedef CigarSphereSplit<Tpair,Tpair,Tpair> Tpairpot;
 
 int main() {
   cout << textio::splash();           // show faunus banner and credits
-  InputMap mcp("cigar-npt.input");     // open user input file
+  InputMap mcp("sc-npt.input");     // open user input file
   MCLoop loop(mcp);                   // class for handling mc loops
   FormatPQR pqr;                      // PQR structure file I/O
   EnergyDrift sys; // class for tracking system energy drifts
@@ -45,7 +45,7 @@ int main() {
   std::ofstream m("snapshot");
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int k,i=slp_global.rand() % 3;
+      int i=slp_global.rand() % 3;
       switch (i) {
         case 0:
           mv.setGroup(cigars);

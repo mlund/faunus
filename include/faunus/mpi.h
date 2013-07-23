@@ -48,11 +48,51 @@ namespace Faunus {
         slump random;     //!< Random number generator for MPI calls
         string id;        //!< Unique name associated with current rank
         std::ofstream cout; //!< Redirect stdout to here for rank-based file output
+      
+        inline string info() {
+          std::ostringstream o;
+          o << textio::header("Message Parsing Interface (MPI)");
+          o << textio::pad(textio::SUB, 20, "Number of processors") << nproc() << endl;
+          o << textio::pad(textio::SUB, 20, "Current rank") << rank() << endl;
+          o << textio::pad(textio::SUB, 20, "Master rank") << rankMaster() << endl;
+          return o.str();
+        }
+
       private:
         int _nproc;        //!< Number of processors in communicator
         int _rank;         //!< Rank of process
         int _master;       //!< Rank number of the master
     };
+
+    /**
+     * @brief Split N items into M parts
+     * @param N number of items
+     * @param M number of parts
+     * @param i part number in range [0:M]
+     *
+     * This will a pair with the first and last
+     * item for the i'th part.
+     */
+    template<class T=int>
+      std::pair<T,T> splitEven(MPIController &mpi, T N) {
+        T M = mpi.nproc();
+        T i = mpi.rank();
+        T beg=(N*i)/M;
+        T end=(N*i+N)/M-1;
+        return std::pair<T,T>(beg,end);
+      }
+
+    /**
+     * @brief Reduced sum
+     *
+     * Each rank sends "local" to master who sums them up.
+     * Master sends back (broadcasts) sum to all ranks.
+     */
+    inline double reduceDouble(MPIController &mpi, double local) {
+      double sum;
+      MPI_Allreduce(&local,&sum,1,MPI_DOUBLE,MPI_SUM,mpi.comm);
+      return sum;
+    }
 
     /*!
      * \brief Class for transmitting floating point arrays over MPI

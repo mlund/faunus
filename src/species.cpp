@@ -23,6 +23,19 @@ namespace Faunus {
     radius=0;
     sigma=0;      
     variance=0;
+    len=0;
+    half_len=0;
+    pswitch=0;
+    pdis=0;
+    pangl=0;
+    panglsw=0;
+    //rcutwca=0;
+    //rcut=0;
+    //pcangl=0;
+    //pcanglsw=0;
+    //pcoshalfi=0;
+    //psinhalfi=0;
+    chiral_angle=0;
     mu.clear();
     theta.clear();
     alpha.clear();
@@ -83,7 +96,17 @@ namespace Faunus {
       a.sigma = json::value<double>(atom.second, "sigma", a.sigma);
       a.radius = a.sigma/2;
       a.id=AtomData::Tid( list.size() );
+      
+      a.half_len = 0.5 * json::value<double>(atom.second, "len", 0);
       a.patchtype = json::value<double>(atom.second, "patchtype", 0);
+      a.pswitch = json::value<double>(atom.second, "patchswitch", 0);
+      a.pdis = json::value<double>(atom.second, "patchdistance", 0);
+      a.pangl = json::value<double>(atom.second, "patchangle", 0)/180.0*pc::pi;
+      a.panglsw = json::value<double>(atom.second, "patchangleswitch", 0)/180.0*pc::pi;
+      a.chiral_angle = json::value<double>(atom.second, "patchchiralangle", 0)/180.0*pc::pi;
+
+        
+        
       list.push_back(a); // add to main particle list
     }
     return (n>0) ? true : false;

@@ -528,77 +528,95 @@ namespace Faunus {
       class NonbondedCutg2g : public Nonbonded<Tspace,Tpairpot> {
         protected:
           typedef Nonbonded<Tspace,Tpairpot> base;
-          typename Tspace::ParticleVector *_p, *_trial;
           double rcut2;
+
           template<class Tpvec>
             Point getMassCenter(const Tpvec &p, const Group &g) {
-              assert(_p!=nullptr && _trial!=nullptr && "Did you call setSpace?");
-              assert(&p==_p || &p==_trial);
-              return (&p==_p) ? g.cm : g.cm_trial;
+              return (&p==&base::spc->p) ? g.cm : g.cm_trial;
             };
+
+          template<class Tpvec>
+            bool cut(const Tpvec &p, const Group &g1, const Group &g2) {
+              if (g1.isMolecular())
+                if (g2.isMolecular()) {
+                  Point a = getMassCenter(p,g1);
+                  Point b = getMassCenter(p,g2);
+                  if (base::geo.sqdist(a,b)>rcut2)
+                    return true;
+                }
+              return false;
+            }
 
         public:
           NonbondedCutg2g(InputMap &in) : base(in) {
             rcut2 = pow( in.get<double>("g2g_cutoff",pc::infty), 2);
-            base::name+=" (g2g cut=" + std::to_string(sqrt(rcut2)) + textio::_angstrom + ")";
+            base::name+=" (g2g cut=" + std::to_string(sqrt(rcut2))
+              + textio::_angstrom + ")";
           }
-          void setSpace(Tspace &spc) {
-            _p=&(spc.p);
-            _trial=&(spc.trial);
-          }
+
           double g2g(const typename base::Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
-            if (g1.isMolecular())
-              if (g2.isMolecular()) {
-                Point a = getMassCenter(p,g1);
-                Point b = getMassCenter(p,g2);
-                if (base::geo.sqdist(a,b)>rcut2)
-                  return 0;
-              }
-            return base::g2g(p,g1,g2);
+            return cut(p,g1,g2) ? 0 : base::g2g(p,g1,g2);
+          }
+
+          double i2g(const typename base::Tpvec &p, Group &g, int i) FOVERRIDE {
+            auto gi=base::spc->findGroup(i);
+            return cut(p,g,*gi) ? 0 : base::i2g(p,g,i);
+          }
+
+          double i2all(typename base::Tpvec &p, int i) FOVERRIDE {
+            auto gi=base::spc->findGroup(i);
+            double u=base::g_internal(p,*gi);
+            for (auto gj : base::spc->groupList())
+              if (gi!=gj)
+                u+=g2g(p,*gi,*gj);
+
+            //for (auto gj : base::spc->groupList())
+            //  u+=i2g(p,*gj,i);
+            return u;
           }
       };
 
     /**
-     @brief Treats groups as charged monopoles beyond cut-off
-     */
+      @brief Treats groups as charged monopoles beyond cut-off
+      */
     template<class Tspace, class Tpairpot, class Tmppot=Potential::DebyeHuckel>
-    class NonbondedCutg2gMonopole : public NonbondedCutg2g<Tspace,Tpairpot> {
-    private:
-      double qscale,Q,R; // charge scaling
-      Tmppot dh;
-      typedef NonbondedCutg2g<Tspace,Tpairpot> base;
-      string _info() {
-        using namespace Faunus::textio;
-        std::ostringstream o;
-        o << pad(SUB,30,"Monopole radius") << R << _angstrom << endl
-          << pad(SUB,30,"Monopole charge") << Q/qscale << endl
-          << pad(SUB,30,"DH charge scaling") << qscale << endl;
-        return o.str();
-      }
-    public:
-      NonbondedCutg2gMonopole(InputMap &in) : base(in), dh(in) {
-        base::name+="+MP";
-        R=in.get<double>("monopole_radius", 0, "g2g cutoff monopole radius (angstrom)");
-        double k=1/dh.debyeLength();
-        qscale = std::sinh(k*R)/(k*R);
-        Q = qscale * in.get<double>("monopole_charge", 0, "g2g cutoff monopole charge number (e)");
-      }
-      double g2g(const typename base::Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
-        if (g1.isMolecular())
-          if (g2.isMolecular()) {
-            Point a = base::getMassCenter(p,g1);
-            Point b = base::getMassCenter(p,g2);
-            double r2=base::geo.sqdist(a,b);
-            if (r2>base::rcut2) {
-              typename base::Tparticle p1,p2;
-              p1.charge = Q; //qscale*g1.charge(p);
-              p2.charge = Q; //qscale*g2.charge(p);
-              return dh(p1,p2,r2);
-            }
+      class NonbondedCutg2gMonopole : public NonbondedCutg2g<Tspace,Tpairpot> {
+        private:
+          double qscale,Q,R; // charge scaling
+          Tmppot dh;
+          typedef NonbondedCutg2g<Tspace,Tpairpot> base;
+          string _info() {
+            using namespace Faunus::textio;
+            std::ostringstream o;
+            o << pad(SUB,30,"Monopole radius") << R << _angstrom << endl
+              << pad(SUB,30,"Monopole charge") << Q/qscale << endl
+              << pad(SUB,30,"DH charge scaling") << qscale << endl;
+            return o.str();
           }
-        return base::base::g2g(p,g1,g2);
-      }
-    };
+        public:
+          NonbondedCutg2gMonopole(InputMap &in) : base(in), dh(in) {
+            base::name+="+MP";
+            R=in.get<double>("monopole_radius", 0, "g2g cutoff monopole radius (angstrom)");
+            double k=1/dh.debyeLength();
+            qscale = std::sinh(k*R)/(k*R);
+            Q = qscale * in.get<double>("monopole_charge", 0, "g2g cutoff monopole charge number (e)");
+          }
+          double g2g(const typename base::Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+            if (g1.isMolecular())
+              if (g2.isMolecular()) {
+                Point a = base::getMassCenter(p,g1);
+                Point b = base::getMassCenter(p,g2);
+                double r2=base::geo.sqdist(a,b);
+                if (r2>base::rcut2) {
+                  typename base::Tparticle p1,p2;
+                  p1.charge = Q; //qscale*g1.charge(p);
+                  p2.charge = Q; //qscale*g2.charge(p);
+                  return dh(p1,p2,r2);
+                }
+              }
+            return base::base::g2g(p,g1,g2);
+          }
+      };
 
     /**
      * @brief Class for handling bond pairs

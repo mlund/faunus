@@ -13,8 +13,8 @@
 
 namespace Faunus {
 
-  /*!
-   * \brief Namespace for Message Parsing Interface (MPI) functionality
+  /**
+   * @brief Namespace for Message Parsing Interface (MPI) functionality
    */
   namespace MPI {
 
@@ -48,13 +48,13 @@ namespace Faunus {
         slump random;     //!< Random number generator for MPI calls
         string id;        //!< Unique name associated with current rank
         std::ofstream cout; //!< Redirect stdout to here for rank-based file output
-      
+
         inline string info() {
           std::ostringstream o;
-          o << textio::header("Message Parsing Interface (MPI)");
-          o << textio::pad(textio::SUB, 20, "Number of processors") << nproc() << endl;
-          o << textio::pad(textio::SUB, 20, "Current rank") << rank() << endl;
-          o << textio::pad(textio::SUB, 20, "Master rank") << rankMaster() << endl;
+          o << textio::header("Message Parsing Interface (MPI)")
+            << textio::pad(textio::SUB, 25, "Number of processors") << nproc() << endl
+            << textio::pad(textio::SUB, 25, "Current rank") << rank() << endl
+            << textio::pad(textio::SUB, 25, "Master rank") << rankMaster() << endl;
           return o.str();
         }
 

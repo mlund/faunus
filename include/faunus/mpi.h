@@ -65,10 +65,7 @@ namespace Faunus {
     };
 
     /**
-     * @brief Split N items into M parts
-     * @param N number of items
-     * @param M number of parts
-     * @param i part number in range [0:M]
+     * @brief Split N items into nproc parts
      *
      * This will a pair with the first and last
      * item for the i'th part.

@@ -102,6 +102,13 @@ namespace Faunus {
         string info();               //!< Information string
         void displace(const Point&); //!< Displace system by a vector
 
+        inline Group* findGroup(int i) {
+          for (auto g : groupList())
+            if (g->find(i))
+              return g;
+          return nullptr;
+        }
+
         inline double dist(int i, int j) const {
           return geo.dist(p[i],p[j]);
         }

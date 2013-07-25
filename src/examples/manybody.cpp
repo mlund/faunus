@@ -13,7 +13,8 @@ using namespace Faunus;
 using namespace Faunus::Potential;
 
 typedef Space<Geometry::Cuboid> Tspace;
-typedef CombinedPairPotential<DebyeHuckelShift,CutShift<LennardJones> > Tpairpot;
+typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot;
+//typedef CombinedPairPotential<DebyeHuckelShift,CutShift<LennardJones> > Tpairpot;
 
 int main(int argc, char** argv) {
   Faunus::MPI::MPIController mpi;
@@ -44,6 +45,7 @@ int main(int argc, char** argv) {
     Tspace::ParticleVector v;
     FormatAAM::load(file,v);
     Geometry::FindSpace fs;
+    fs.allowMatterOverlap=true;
     if (inPlane)
       fs.dir=Point(1,1,0);
     fs.find(spc.geo,spc.p,v);
@@ -106,7 +108,7 @@ int main(int argc, char** argv) {
             cm_vec.clear();
             for (auto &i : pol)
               cm_vec.push_back(i.cm);
-            debye.sample(cm_vec);
+            debye.sample(cm_vec,spc.geo.getVolume());
           }
           break;
         case 2: // volume move (NPT)

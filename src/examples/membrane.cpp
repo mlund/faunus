@@ -22,6 +22,7 @@ void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &bond, Tnonbonded &nb, Tin
   auto tailtail = WeeksChandlerAndersen(in) + CosAttract(in);
   auto headtail = WeeksChandlerAndersen(in) + ChargeNonpolar(in);
 
+  // initialize WCA for head-head
   headhead.first.customSigma(hid, hid, 0.95*sigma);            
   headhead.first.customSigma(hid, tid, 0.95*sigma);            
   headhead.first.customSigma(tid, tid, sigma);                 
@@ -59,12 +60,11 @@ int main() {
   cout << textio::splash();      // show faunus banner and credits
   InputMap mcp("membrane.input");//read input file
 
-  MCLoop loop(mcp);              // class for handling mc loops
   FormatXTC xtc(1000);
   EnergyDrift sys;               // class for tracking system energy drifts
 
   // Energy functions and space
-  auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
+  auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)
     + Energy::Bonded<Tspace>()
     + Energy::ExternalPressure<Tspace>(mcp)
     + Energy::EquilibriumEnergy<Tspace>(mcp);
@@ -74,10 +74,9 @@ int main() {
   Tspace spc(mcp);
 
   // Load and add polymer to Space
-  Group lipids;
-  lipids.setMolSize(3);
   string file = mcp.get<string>("lipid_file","");
   int Nlipid=mcp("lipid_N",1);
+  vector<Group> lipids(Nlipid);
   for (int i=0; i<Nlipid; i++) {
     Tspace::ParticleVector v;                   // temporary, empty particle vector
     FormatAAM::load(file,v);                    // load AAM structure into v
@@ -87,21 +86,23 @@ int main() {
       std::swap( spc.p[pol.front()].z(), spc.p[pol.back()].z() );
     if (slp_global()<mcp("lipid_chargefraction", 0.0))
       spc.p[ pol.front() ].charge = -1;
-    lipids.setrange(0, pol.back());
+    pol.name="lipid";
+    lipids[i]=pol;
+    spc.enroll(lipids[i]);
   }
-  spc.enroll(lipids);   // Enroll polymer in Space
 
   // Set up bonded and non-bonded interactions
-  MakeDesernoMembrane(lipids, *bonded, *nonbonded, mcp);
+  Group allLipids(lipids.front().front(), lipids.back().back());
+  allLipids.setMolSize(3);
+  MakeDesernoMembrane(allLipids, *bonded, *nonbonded, mcp);
 
   // Place all lipids in xy plane (z=0);
-  for (int l=0; l<lipids.numMolecules(); l++) {
-    Group g;
-    lipids.getMolecule(l,g);
+  for (auto &g : lipids) {
     double dz=spc.p[ g.back() ].z();
     for (auto i : g) {
       spc.p[i].z() -= dz;
       spc.geo.boundary(spc.p[i]);
+      g.setMassCenter(spc);
     }
   }
   spc.trial=spc.p;   // sync. particle trial vector
@@ -113,34 +114,31 @@ int main() {
   Move::Pivot<Tspace> piv(mcp,pot,spc);
   Move::Isobaric<Tspace> iso(mcp,pot,spc);
   Move::SwapMove<Tspace> swap(mcp,pot,spc,*eqenergy);
-
   Analysis::BilayerStructure lipidstruct;
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
 
   cout << atom.info() + spc.info() + pot.info();
 
+  MCLoop loop(mcp);            // class for handling mc loops
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int k=lipids.numMolecules(); //number of lipids
       int i=slp_global.rand() % 3;
+      int k=lipids.size(), j;
       Group g;
       switch (i) {
         case 0:
-          mv.setGroup(lipids);
-          sys+=mv.move( lipids.size() ); // translate lipid monomers
+          mv.setGroup(allLipids);
+          sys+=mv.move(allLipids.size()); // translate lipid monomers
           break;
         case 1:
           while (k-->0) {
-            i=lipids.randomMol(); // pick random lipid molecule
-            lipids.getMolecule(i,g);
-            g.name="lipid";
-            g.setMassCenter(spc);     // mass center needed for rotation
+            j=slp_global.rand() % (lipids.size());
             if (slp_global()>0.5) {
-              gmv.setGroup(g);          // tell what to move
+              gmv.setGroup(lipids[j]);          // tell what to move
               sys+=gmv.move();          // translate/rotate polymers
             } else {
-              piv.setGroup(g);          // tell what to move
+              piv.setGroup(lipids[j]);          // tell what to move
               sys+=piv.move();          // translate/rotate polymers
             }
           }
@@ -155,7 +153,7 @@ int main() {
         xtc.save("traj.xtc", spc.p);
       }
       if (ran>0.90)
-        lipidstruct.sample(spc.geo, spc.p, lipids);
+        lipidstruct.sample(spc.geo, spc.p, allLipids);
 
     } // end of micro loop
 
@@ -178,9 +176,8 @@ int main() {
   lipidstruct.test(test);
 
   // print information
-  cout << loop.info() + sys.info() + spc.info() + mv.info()
-    + gmv.info() + iso.info() +piv.info()
-    + lipidstruct.info() + test.info();
+  cout << loop.info() + mv.info() + gmv.info() + iso.info() + piv.info()
+    + lipidstruct.info() + test.info() + sys.info();
 
   return test.numFailed();
 }

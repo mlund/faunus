@@ -270,7 +270,7 @@ namespace Faunus {
             return pairpot( p[i], p[j], geo.sqdist( p[i], p[j]) );
           }
 
-          double i2g(const Tpvec &p, Group &g, int j) {
+          double i2g(const Tpvec &p, Group &g, int j) FOVERRIDE {
             double u=0;
             if ( !g.empty() ) {
               int len=g.back()+1;
@@ -286,12 +286,12 @@ namespace Faunus {
             return u;  
           }
 
-          double i2all(Tpvec &p, int i) {
+          double i2all(Tpvec &p, int i) FOVERRIDE {
             assert(i>=0 && i<int(p.size()) && "index i outside particle vector");
             double u=0;
+            int n=(int)p.size();
             for (int j=0; j!=i; ++j)
               u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]) );
-            int n=(int)p.size();
             for (int j=i+1; j<n; ++j)
               u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]) );
             return u;
@@ -526,30 +526,29 @@ namespace Faunus {
      */
     template<class Tspace, class Tpairpot>
       class NonbondedCutg2g : public Nonbonded<Tspace,Tpairpot> {
-        protected:
+        private:
           typedef Nonbonded<Tspace,Tpairpot> base;
           double rcut2;
 
-          template<class Tpvec>
-            Point getMassCenter(const Tpvec &p, const Group &g) {
-              return (&p==&base::spc->p) ? g.cm : g.cm_trial;
-            };
+          Point getMassCenter(const typename base::Tpvec &p, const Group &g) {
+            assert(&p==&base::spc->p || &p==&base::spc->trial);
+            return (&p==&base::spc->p) ? g.cm : g.cm_trial;
+          }
 
-          template<class Tpvec>
-            bool cut(const Tpvec &p, const Group &g1, const Group &g2) {
-              if (g1.isMolecular())
-                if (g2.isMolecular()) {
-                  Point a = getMassCenter(p,g1);
-                  Point b = getMassCenter(p,g2);
-                  if (base::geo.sqdist(a,b)>rcut2)
-                    return true;
-                }
-              return false;
-            }
+          bool cut(const typename base::Tpvec &p, const Group &g1, const Group &g2) {
+            if (g1.isMolecular())
+              if (g2.isMolecular()) {
+                Point a = getMassCenter(p,g1);
+                Point b = getMassCenter(p,g2);
+                if (base::geo.sqdist(a,b)>rcut2)
+                  return true;
+              }
+            return false;
+          }
 
         public:
           NonbondedCutg2g(InputMap &in) : base(in) {
-            rcut2 = pow( in.get<double>("g2g_cutoff",pc::infty), 2);
+            rcut2 = pow(in.get<double>("g2g_cutoff",pc::infty), 2);
             base::name+=" (g2g cut=" + std::to_string(sqrt(rcut2))
               + textio::_angstrom + ")";
           }
@@ -563,15 +562,19 @@ namespace Faunus {
             return cut(p,g,*gi) ? 0 : base::i2g(p,g,i);
           }
 
+          /**
+           * @note If combined with a cut pair potential this can be optimized
+           * to use `i2g` instead of `g2g`.
+           * @warning This does not return the interction of i with all,
+           * but rather i's group with all! (use `i2g` instead)
+           */
           double i2all(typename base::Tpvec &p, int i) FOVERRIDE {
             auto gi=base::spc->findGroup(i);
-            double u=base::g_internal(p,*gi);
+            assert(gi!=nullptr);
+            double u=base::i2g(p,*gi,i); // i<->own group
             for (auto gj : base::spc->groupList())
-              if (gi!=gj)
+              if (gj!=gi)
                 u+=g2g(p,*gi,*gj);
-
-            //for (auto gj : base::spc->groupList())
-            //  u+=i2g(p,*gj,i);
             return u;
           }
       };

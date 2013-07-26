@@ -179,6 +179,29 @@ namespace Faunus {
       return fallback;
     }
 
+  // http://devmaster.net/forums/topic/4648-fast-and-accurate-sinecosine/
+  template<class T>
+    T sinApprox(T x) {
+      const T B = 4/pc::pi;
+      const T C = -4/(pc::pi*pc::pi);
+
+      T y = B * x + C * x * abs(x);
+
+#ifdef EXTRA_PRECISION
+      //  const float Q = 0.775;
+      const T P = 0.225;
+
+      y = P * (y * abs(y) - y) + y;   // Q * y + P * y * abs(y)
+#endif
+      return y;
+    }
+
+  template<class T>
+    T cosApprox(T x) {
+      const T shift = 0.5*pc::pi;
+      return sinApprox(x+shift);
+    }
+
   /**
    * @brief Evaluate n'th degree Legendre polynomium
    *

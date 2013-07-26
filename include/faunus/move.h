@@ -432,10 +432,6 @@ namespace Faunus {
 
     template<class Tspace>
       void AtomicTranslation<Tspace>::setGroup(Group &g) {
-        int N=spc->p.size();
-        assert(g.size()<=N);
-        assert(g.back()<N);
-        assert(g.front()>=0);
         igroup=&g;
         iparticle=-1;
        }

@@ -71,6 +71,7 @@ int main() {
   auto nonbonded = &pot.first.first.first;
   auto bonded = &pot.first.first.second;
   auto eqenergy = &pot.second;
+  nonbonded->noPairPotentialCutoff=true;
   Tspace spc(mcp);
 
   // Load and add polymer to Space

@@ -19,17 +19,11 @@ namespace Faunus {
    * @brief Namespace for pair potentials
    *
    * This namespace contains classes and templates that calculates the
-   * pair potential between particles as well as particles with external
-   * potentials. The majority of these classes/templates are derived
-   * from
-   *
-   * 1. `Potential::PairPotentialBase`
-   * 2. `Potential::ExternalPotentialBase`
-   *
-   * and thus have common interfaces.
+   * pair potential between particles. All pair potentials are based
+   * on `Potential::PairPotentialBase` and thus have common interfaces.
    * Several pair potentials can be combined into
-   * one by the template Potential::CombinedPairPotential and a number of
-   * common combinations are already defined as typedefs.
+   * one by the template `Potential::CombinedPairPotential` and a number of
+   * common combinations are pre-defined as typedefs.
    */
   namespace Potential {
 
@@ -146,7 +140,6 @@ namespace Faunus {
      * `cosattract_rc`    | Width, r_c [angstrom]
      * `cosattract_wc`    | Decay range, w_c [angstrom] 
      *
-     * @warning Untested!
      */
     class CosAttract : public PairPotentialBase {
       protected:
@@ -154,13 +147,32 @@ namespace Faunus {
         string _brief();
       public:
         CosAttract(InputMap&, string="cosattract"); // Constructor from InputMap
+
+        /**
+         * @todo
+         * The function `x(c,r2,rc)` defined herein could be approximated
+         * by a series expansion for `r2=rcwc2`. In this way one can
+         * avoid `cos()` and `sqrt()`. C code for this could be generated
+         * in Matlab:
+         *
+         * ~~~
+         * with(CodeGeneration)
+         * x := series(cos(c*(sqrt(r2)-rc)), r2 = rcwc2, 2)
+         * convert(x, polynom)
+         * C(%, resultname = "x")
+         * ~~~
+         */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
             if (r2<rc2)
               return -eps;
             if (r2>rcwc2)
               return 0;
+#ifdef FAU_APPROXMATH
+            double x=cosApprox( c*( sqrt(r2)-rc ) );
+#else
             double x=cos( c*( sqrt(r2)-rc ) );
+#endif
             return -eps*x*x;
           }
         string info(char); // More verbose information
@@ -169,9 +181,9 @@ namespace Faunus {
     /**
      * @brief Finite Extensible Nonlinear Elastic (FENE) potential
      * @details This is an anharmonic bonding potential with the form:
-     * \f[
+     * @f[
      *     \beta u(r) = -\frac{k r_0^2}{2}\ln \left [ 1-(r/r_0)^2 \right ]
-     * \f]
+     * @f]
      * for \f$r<r_0\f$, otherwise infinity. The input parameters read by InputMap
      * are as follows:
      * - `fene_stiffness` Bond stiffness, `k` [kT]
@@ -920,6 +932,10 @@ namespace Faunus {
             Tdefault::name += " (default)";
           } 
 
+          /**
+           * @warning Templating `Tpairpot` may cause code-bloat if used on
+           * many different potentials
+           */
           template<class Tpairpot>
             void add(AtomData::Tid id1, AtomData::Tid id2, Tpairpot pot) {
               pot.name=atom[id1].name + "<->" + atom[id2].name + ": " + pot.name;
@@ -1025,8 +1041,8 @@ namespace Faunus {
         }
 
     /**
-     @brief Old class for multipole energy. To be removed.
-     */
+      @brief Old class for multipole energy. To be removed.
+      */
     class MultipoleEnergy {
       public:
         double lB;

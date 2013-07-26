@@ -547,7 +547,10 @@ namespace Faunus {
           }
 
         public:
+          bool noPairPotentialCutoff; //!< Set if range of pairpot is longer than rcut (default: false)
+
           NonbondedCutg2g(InputMap &in) : base(in) {
+            noPairPotentialCutoff=false;
             rcut2 = pow(in.get<double>("g2g_cutoff",pc::infty), 2);
             base::name+=" (g2g cut=" + std::to_string(sqrt(rcut2))
               + textio::_angstrom + ")";
@@ -563,19 +566,30 @@ namespace Faunus {
           }
 
           /**
-           * @note If combined with a cut pair potential this can be optimized
-           * to use `i2g` instead of `g2g`.
-           * @warning This does not return the interction of i with all,
-           * but rather i's group with all! (use `i2g` instead)
+           * If no pair potential cutoff is applied, `i2all` may need
+           * to re-calculate the full g2g interaction as the mass centers
+           * may have moved. To activate this behavior set
+           * `noPairPotentialCutoff=true`.
            */
           double i2all(typename base::Tpvec &p, int i) FOVERRIDE {
-            auto gi=base::spc->findGroup(i);
-            assert(gi!=nullptr);
-            double u=base::i2g(p,*gi,i); // i<->own group
-            for (auto gj : base::spc->groupList())
-              if (gj!=gi)
-                u+=g2g(p,*gi,*gj);
-            return u;
+            if (noPairPotentialCutoff) {
+              auto gi=base::spc->findGroup(i);
+              assert(gi!=nullptr);
+              double u=base::i2g(p,*gi,i); // i<->own group
+              for (auto gj : base::spc->groupList())
+                if (gj!=gi)
+                  u+=g2g(p,*gi,*gj);
+              return u;
+            }
+            else
+            {
+              double u=0;
+              auto gi=base::spc->findGroup(i);
+              for (auto gj : base::spc->groupList())
+                if (!cut(p,*gi,*gj))
+                  u+=base::i2g(p,*gj,i);
+              return u;
+            }
           }
       };
 

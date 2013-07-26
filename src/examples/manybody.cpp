@@ -13,8 +13,8 @@ using namespace Faunus;
 using namespace Faunus::Potential;
 
 typedef Space<Geometry::Cuboid> Tspace;
-typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot;
-//typedef CombinedPairPotential<DebyeHuckelShift,CutShift<LennardJones> > Tpairpot;
+//typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot;
+typedef CombinedPairPotential<DebyeHuckelShift,CutShift<LennardJones> > Tpairpot;
 
 int main(int argc, char** argv) {
   Faunus::MPI::MPIController mpi;
@@ -80,9 +80,12 @@ int main(int argc, char** argv) {
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );    // Store total system energy
 
-  if (mpi.isMaster())
+  std::ofstream cmfile;
+  if (mpi.isMaster()) {
+    cmfile.open("cm.xyz");
     cout << atom.info() << spc.info() << pot.info() << tit.info()
       << textio::header("MC Simulation Begins!");
+  }
 
   vector<Point> cm_vec; // vector of mass centers
 
@@ -109,6 +112,12 @@ int main(int argc, char** argv) {
             for (auto &i : pol)
               cm_vec.push_back(i.cm);
             debye.sample(cm_vec,spc.geo.getVolume());
+            if (mpi.isMaster())
+              if (cmfile) {
+                cmfile << cm_vec.size() << endl << "cm" << endl;
+                for (auto &m : cm_vec)
+                  cmfile << "H " << ((m+spc.geo.len_half)/10).transpose() << endl;
+              }
           }
           break;
         case 2: // volume move (NPT)
@@ -131,14 +140,9 @@ int main(int argc, char** argv) {
 
     sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) ); // detect energy drift
 
-    if (mpi.isMaster()) {
+    if (mpi.isMaster())
       cout << loop.timing();
-      std::ofstream f("masscenter"+std::to_string(loop.count())+".xyz");
-      if (f && !cm_vec.empty())
-        for (auto &m : cm_vec)
-          f << "H " << m.transpose() << endl;
-    }
-
+ 
   } // end of macro loop
 
   if (mpi.isMaster()) {

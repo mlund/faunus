@@ -56,7 +56,44 @@ namespace Faunus {
     };
 
     /**
-     * @brief General class for handling 2D tables - xy date, for example.
+     * @brief Pressure from virial
+     *
+     * At the moment this is limited to isotropic, atomic liquids
+     * only.
+     */
+    class VirialPressure : public AnalysisBase {
+      private:
+        double P_ideal;
+        Average<double> P;
+        inline string _info() {
+          double p=P.avg();
+          using namespace Faunus::textio;
+          std::ostringstream o;
+          o << pad(SUB,w, "Excess") << p << " kT/"+angstrom+cubed+" = " << endl
+            << p*1e30/pc::Nav << " mM = "
+            << p*pc::kB*pc::T()*1e30 << " Pa = "
+            << p*pc::kB*pc::T()*1e30/0.980665e5 << " atm\n";
+          return o.str();
+        }
+      public:
+        VirialPressure() { name="Virial Pressure"; }
+        template<class Tvec, class Tgeo, class Tpot>
+          void sample(Tgeo &geo, Tpot &pot, const Tvec &p) {
+            cnt++;
+            double x;
+#pragma omp parallel for reduction (+:x) schedule (dynamic)
+            for (int i=0; i<p.size()-1; i++)
+              for (int j=i+1; j<p.size(); j++) {
+                auto rij = geo.vdist(p[i],p[j]);
+                x += pot.f_p2p(p[i],p[j]).dot(rij);
+              }
+            P += x / (3*geo.getVolume());
+            P_ideal = p.size() / geo.getVolume();
+          }
+    };
+
+    /**
+     * @brief General class for handling 2D tables - xy data, for example.
      * @date Lund 2011
      * @note `Tx` is used as the `std::map` key and which may be
      * problematic due to direct floating point comparison (== operator).
@@ -132,13 +169,13 @@ namespace Faunus {
               if (map.size()>1) (--map.end())->second/=2; // -//-
             }
           }
-          
+
           Tmap getMap() {
             return map;
           }
-          
+
           Tx getResolution() {
-              return dx;
+            return dx;
           }
 
           /*! Returns x at minumum y */
@@ -398,12 +435,12 @@ namespace Faunus {
               for (auto i : g){
                 if (spc.p[i].id==ida || spc.p[i].id==idb){
                   bulk++;
-		}
-	      }
+                }
+              }
               Npart+=bulk;
               bulkconc += bulk / spc.geo.getVolume();
             }
-    
+
 
           template<class Tspace>
             void sample(Tspace &spc, short ida, short idb) {
@@ -1072,13 +1109,13 @@ namespace Faunus {
             }
             val /= p.size();
             cout << "K: " << 1+val << ", " << M_inf.avg()/(p[0].muscalar*p[0].muscalar) << endl;
-            
+
             return M_inf.avg()/(p[0].muscalar*p[0].muscalar);
           }
 
-        
-           template<class Tspace>
-           void kusalik(const Tspace &spc) {
+
+        template<class Tspace>
+          void kusalik(const Tspace &spc) {
             //double lambda = 1;
             //double alpha = 1;
             //mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
@@ -1086,7 +1123,7 @@ namespace Faunus {
             //double eps = (lambda*lambda-2*lambda-A)/(lambda*lambda-2*lambda-A-1);
             P.save("AAA.dat"); 
             P1.save("BBB.dat");
-           }
+          }
 
         /**
          * @brief Returns dielectric constant according to \f$ \frac{\epsilon_0-1}{3} = \frac{4\pi}{9Vk_BT}<\bold{M}^2> + \frac{\epsilon_x-1}{3}  \f$. Only works when \f$ \epsilon_{RF} = \infty \f$.

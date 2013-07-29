@@ -17,9 +17,11 @@
 
 # User input
 in=$1      # .xyx trajectory file as 1st argument
-box=82.18  # cube side length (nm)
+box=37.6963  # cube side length (nm)
 qmax=5.0   # maximum q value (nm)
 dq=0.01    # q spacing (nm)
+
+read -p "Box length (nm): " box                                       
 
 debyer=$HOME/Downloads/debyer-r77/debyer/debyer
 

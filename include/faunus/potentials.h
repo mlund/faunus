@@ -934,7 +934,7 @@ namespace Faunus {
             struct ForceFunctionObject {
               Tpairpot pot;
               ForceFunctionObject(const Tpairpot &p) : pot(p) {}
-              Point operator()(const Tparticle &a, const Tparticle &b, double r2, const Point &r) {
+              Point operator()(const particle &a, const particle &b, double r2, const Point &r) {
                 return pot.force(a,b,r2,r);
               }
             };

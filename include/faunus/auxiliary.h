@@ -71,9 +71,11 @@ namespace Faunus {
   /**
    * @brief Store data for pairs
    */
-  template<typename Tdata, typename T=int>
+  template<typename _Tdata, typename T=int>
     class pair_list {
       protected:
+        typedef _Tdata Tdata;
+        typedef T Tij;
         typedef opair<T> Tpair; // ordered pair
         std::map<Tpair,Tdata> list;   // main pair list
         std::multimap<T,T> mlist; // additional map for faster access
@@ -180,6 +182,10 @@ namespace Faunus {
     }
 
   // http://devmaster.net/forums/topic/4648-fast-and-accurate-sinecosine/
+  /**
+   * @brief Fast sine calculation in range (-pi:pi)
+   * @warning Do not go beyond these boundaries!
+   */
   template<class T>
     T sinApprox(T x) {
       const T B = 4/pc::pi;

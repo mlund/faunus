@@ -662,7 +662,10 @@ namespace Faunus {
         typedef typename Energybase<Tspace>::Tparticle Tparticle;
         typedef typename Energybase<Tspace>::Tpvec Tpvec;
         typedef pair_list<std::function<double(const Tparticle&,const Tparticle&,double)> > Tbase;
+        typedef std::function<Point(const Tparticle&,const Tparticle&,double,const Point&)> Tforce;
+
         using Energybase<Tspace>::spc;
+        std::map< opair<int>, Tforce> force_list;
 
         string _infolist;
         string _info() {
@@ -693,6 +696,10 @@ namespace Faunus {
           if (f!=this->list.end())
             return f->second( p[i], p[j], spc->geo.sqdist( p[i], p[j] ) );
           return 0;
+        }
+
+        Point f_p2p(const Tparticle &a, const Tparticle &b) FOVERRIDE {
+          return Point(0,0,0);
         }
 
         //!< All bonds w. i'th particle 

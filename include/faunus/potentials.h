@@ -924,8 +924,20 @@ namespace Faunus {
         protected:
           typedef opair<int> Tpair;
           typedef std::function<double(const Tparticle&,const Tparticle&,Tdist)> Tfunc;
+          typedef std::function<Point(const Tparticle&,const Tparticle&,double,const Point&)> Tforce;
           std::map<Tpair,Tfunc> m;
+          std::map<Tpair,Tforce> mforce;
           std::string _info; // info for the added potentials (before turning into functors)
+
+          // Force function object wrapper class
+          template<class Tpairpot>
+            struct ForceFunctionObject {
+              Tpairpot pot;
+              ForceFunctionObject(const Tpairpot &p) : pot(p) {}
+              Point operator()(const Tparticle &a, const Tparticle &b, double r2, const Point &r) {
+                return pot.force(a,b,r2,r);
+              }
+            };
 
         public:
           PotentialMap(InputMap &in) : Tdefault(in) {
@@ -941,6 +953,7 @@ namespace Faunus {
               pot.name=atom[id1].name + "<->" + atom[id2].name + ": " + pot.name;
               _info+="\n  " + pot.name + ":\n" + pot.info(20);
               m[Tpair(id1,id2)] = pot;
+              mforce[Tpair(id1,id2)] = ForceFunctionObject<decltype(pot)>(pot);
             }
 
           double operator()(const Tparticle &a, const Tparticle &b, const Tdist &r2) {
@@ -948,6 +961,13 @@ namespace Faunus {
             if (i!=m.end())
               return i->second(a,b,r2);
             return Tdefault::operator()(a,b,r2);
+          }
+
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            auto i=mforce.find( Tpair(a.id,b.id) );
+            if (i!=mforce.end())
+              return i->second(a,b,r2,p);
+            return Tdefault::force(a,b,r2,p);
           }
 
           std::string info(char w=20) {

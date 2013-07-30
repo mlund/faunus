@@ -80,7 +80,7 @@ namespace Faunus {
     };
 
     /**
-     * @brief Save pair potential to table on disk
+     * @brief Save pair potential and force table to disk
      */
     template<class Tpairpot, class Tid>
       bool save(Tpairpot pot, Tid ida, Tid idb, string file) {
@@ -93,7 +93,7 @@ namespace Faunus {
             << endl;
           for (double r=min; r<=150; r+=0.5)
             f << std::left << std::setw(10) << r << " "
-              << pot(a,b,r*r) << endl; 
+              << pot(a,b,r*r) << " " << pot.force(a,b,r*r,Point(r,0,0)) << endl; 
           return true;
         }
         return false;
@@ -113,12 +113,21 @@ namespace Faunus {
       public:
         double k;   //!< Force constant (kT/A^2) - Remember to divide by two!
         double req; //!< Equilibrium distance (angstrom)
+
         Harmonic(double=0, double=0);
+
         Harmonic(InputMap&, string="harmonic");
+
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
             double d=sqrt(r2)-req;
             return k*d*d;
+          }
+
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            double d=sqrt(r2)-req;
+            return -2 * k * d / sqrt(r2) * p;
           }
     };
 
@@ -175,7 +184,22 @@ namespace Faunus {
 #endif
             return -eps*x*x;
           }
+
         string info(char); // More verbose information
+
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            if (r2<rc2 || r2>rcwc2)
+              return Point(0,0,0);
+#ifdef FAU_APPROXMATH
+            double x1=cosApprox( c*( sqrt(r2)-rc ) );
+            double x2=sinApprox( c*( sqrt(r2)-rc ) );
+#else
+            double x1=cos( c*( sqrt(r2)-rc ) );
+            double x2=sin( c*( sqrt(r2)-rc ) );
+#endif
+            return -2*c*eps*x1*x2/sqrt(r2)*p;
+          }
     };
 
     /**
@@ -199,10 +223,16 @@ namespace Faunus {
       public:
         FENE(double,double); // Constructor
         FENE(InputMap&, string="fene"); // Constructor
+
         template<class Tparticle>
           inline double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             return (r2>r02) ? pc::infty : -0.5*k*r02*std::log(1-r2*r02inv);
           }
+
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            return (r2>r02) ? -pc::infty*p : -k * r02 / (r02-r2) * p;
+          }        
     };
 
     /**
@@ -214,6 +244,7 @@ namespace Faunus {
         string _brief();
       public:
         Hertz(InputMap&, string="hertz");
+
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
             double m = a.radius+b.radius;
@@ -223,11 +254,12 @@ namespace Faunus {
             }
             return 0;
           }
+
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b,const Point &r2) {
             return operator()(a,b, r2.squaredNorm());
-
           }
+
         string info(char); 
     };
 
@@ -476,8 +508,17 @@ namespace Faunus {
           double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
             return operator()(a,b,r.squaredNorm());
           }
-    };
 
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            double x=s2(a.id,b.id); // s^2
+            if (r2>x*twototwosixth)
+              return Point(0,0,0);
+            x=x/r2;  // (s/r)^2
+            x=x*x*x;// (s/r)^6
+            return eps(a.id,b.id)*6*(2*x*x - x)/r2*p;
+          }
+    };
 
     /**
      * @brief Square well pair potential
@@ -621,6 +662,7 @@ namespace Faunus {
     class LennardJonesTrunkShift : public LennardJones {
       public:
         LennardJonesTrunkShift(InputMap&, string="ljts");
+
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double sigma = a.radius+b.radius;
@@ -629,6 +671,7 @@ namespace Faunus {
             double x=r6(sigma,r2)*0.5;
             return eps*(x*x - x + 0.25);
           }
+
         template<class Tparticle>
           Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
             double sigma = a.radius+b.radius;
@@ -677,8 +720,8 @@ namespace Faunus {
           return operator()(a,b,r.squaredNorm());
         }
 
-      template<class T>
-        Point force(const T &a, const T &b, double r2, const Point &p) {
+      template<class Tparticle>
+        Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
 #ifdef FAU_APPROXMATH
           return lB*a.charge*b.charge * invsqrtQuake(r2) / r2 * p;
 #else
@@ -756,6 +799,7 @@ namespace Faunus {
         double c;
       public:
         ChargeNonpolar(InputMap&); //!< Construction from InputMap
+
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double qq=a.charge * a.charge;
@@ -766,9 +810,20 @@ namespace Faunus {
               return -c * qq / (r2*r2) * (a.radius*a.radius*a.radius);
             return 0;
           }
-        string info(char);
-    };
 
+        string info(char);
+
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            double qq=a.charge * a.charge;
+            if (qq>1e-6)
+              return -4*c * qq / (r2*r2) * (b.radius*b.radius*b.radius) / r2 * p;
+            qq=b.charge * b.charge;
+            if (qq>1e-6)
+              return -4*c * qq / (r2*r2) * (a.radius*a.radius*a.radius) / r2 * p;
+            return Point(0,0,0);
+          }
+    };
 
     class YukawaGel : public Coulomb {
       private:
@@ -853,6 +908,17 @@ namespace Faunus {
         double excessChemPot(double, double=0) const; //!< Single ion excess chemical potential (kT)
         double activityCoeff(double, double=0) const; //!< Single ion activity coefficient (molar scale) 
         string info(char);
+
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+#ifdef FAU_APPROXMATH
+            double rinv = invsqrtQuake(r2);
+            return lB * a.charge * b.charge * rinv * exp_cawley(-k/rinv) * ( 1/r2 + k/rinv ) * p;
+#else
+            double r=sqrt(r2);
+            return lB * a.charge * b.charge / (r*r2) * exp(-k*r) * ( 1 + k*r ) * p;
+#endif
+          }
     };
 
     /**

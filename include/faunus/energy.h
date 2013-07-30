@@ -255,8 +255,9 @@ namespace Faunus {
           }
 
           //!< Particle-particle force (kT/Angstrom)
-          inline Point f_p2p(const Tparticle &a, const Tparticle &b) {
-            return pairpot.force( a,b,geo.sqdist(a,b),geo.vdist(a,b));
+          inline Point f_p2p(const Tparticle &a, const Tparticle &b) FOVERRIDE {
+            auto r=geo.vdist(a,b);
+            return pairpot.force(a,b,r.squaredNorm(),r);
           }
 
           double all2p(const Tpvec &p, const Tparticle &a) {
@@ -394,7 +395,7 @@ namespace Faunus {
           }
 
           //!< Particle-particle force (kT/Angstrom)
-          inline Point f_p2p(const Tparticle &a, const Tparticle &b) {
+          inline Point f_p2p(const Tparticle &a, const Tparticle &b) FOVERRIDE {
             return pairpot.force( a,b,geo.sqdist(a,b),geo.vdist(a,b));
           }
 
@@ -665,7 +666,7 @@ namespace Faunus {
         typedef std::function<Point(const Tparticle&,const Tparticle&,double,const Point&)> Tforce;
 
         using Energybase<Tspace>::spc;
-        std::map< opair<int>, Tforce> force_list;
+        std::map<typename Tbase::Tpair, Tforce> force_list;
 
         string _infolist;
         string _info() {
@@ -677,6 +678,15 @@ namespace Faunus {
             << setw(7) << "i" << setw(7) << "j" << endl;
           return o.str() + _infolist;
         }
+
+        template<class Tpairpot>
+          struct ForceFunctionObject {
+            Tpairpot pot;
+            ForceFunctionObject(const Tpairpot &p) : pot(p) {}
+            Point operator()(const Tparticle &a, const Tparticle &b, double r2, const Point &r) {
+              return pot.force(a,b,r2,r);
+            }
+          };
 
       public:
         bool CrossGroupBonds; //!< Set to true if bonds cross groups (slower!). Default: false
@@ -699,6 +709,11 @@ namespace Faunus {
         }
 
         Point f_p2p(const Tparticle &a, const Tparticle &b) FOVERRIDE {
+          auto f=force_list.find( opair<int>(a.id,b.id) );
+          if (f!=this->force_list.end()) {
+            auto r = spc->geo.vdist(a,b);
+            return f->second(a,b,r.squaredNorm(),r);
+          }
           return Point(0,0,0);
         }
 
@@ -790,6 +805,8 @@ namespace Faunus {
             pot.name.clear();   // potentially save a
             pot.prefix.clear(); // little bit of memory
             Tbase::add(i,j,pot);// create and add functor to pair list
+            force_list[ typename Tbase::Tpair(i,j) ]
+              = ForceFunctionObject<decltype(pot)>(pot);
           }
     };
 

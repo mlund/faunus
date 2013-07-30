@@ -71,11 +71,9 @@ namespace Faunus {
   /**
    * @brief Store data for pairs
    */
-  template<typename _Tdata, typename T=int>
+  template<typename Tdata, typename T=int>
     class pair_list {
       protected:
-        typedef _Tdata Tdata;
-        typedef T Tij;
         typedef opair<T> Tpair; // ordered pair
         std::map<Tpair,Tdata> list;   // main pair list
         std::multimap<T,T> mlist; // additional map for faster access

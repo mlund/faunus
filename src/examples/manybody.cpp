@@ -80,9 +80,10 @@ int main(int argc, char** argv) {
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );    // Store total system energy
 
-  std::ofstream cmfile;
+  std::ofstream cmfile, energyfile;
   if (mpi.isMaster()) {
     cmfile.open("cm.xyz");
+    energyfile.open("energy.dat");
     cout << atom.info() << spc.info() << pot.info() << tit.info()
       << textio::header("MC Simulation Begins!");
   }
@@ -118,6 +119,8 @@ int main(int argc, char** argv) {
                 for (auto &m : cm_vec)
                   cmfile << "H " << ((m+spc.geo.len_half)/10).transpose() << endl;
               }
+              if (energyfile)
+                energyfile << loop.count() << " " << sys.current() << endl;
           }
           break;
         case 2: // volume move (NPT)

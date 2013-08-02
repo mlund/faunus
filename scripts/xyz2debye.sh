@@ -17,7 +17,7 @@
 
 # User input
 in=$1      # .xyx trajectory file as 1st argument
-box=37.6963  # cube side length (nm)
+box=0      # cube side length (nm)
 qmax=5.0   # maximum q value (nm)
 dq=0.01    # q spacing (nm)
 
@@ -28,7 +28,7 @@ debyer=$HOME/Downloads/debyer-r77/debyer/debyer
 # Calculated variables
 cutoff=`python -c "print $box/2.01"`
 N=`head -n 1 $in`
-qmin=`python -c "print 2*3.1416/($box/10.)"`
+qmin=`python -c "print 2*3.1416/($box/2.)"`
 
 echo "XYZ trajectory file     "$in
 echo "Number of particles     "$N

@@ -708,8 +708,18 @@ namespace Faunus {
           return 0;
         }
 
+        /**
+         * @note This will work only for particles contained inside
+         * Space main particle vector.
+         */
         Point f_p2p(const Tparticle &a, const Tparticle &b) FOVERRIDE {
-          auto f=force_list.find( opair<int>(a.id,b.id) );
+          int i=&(spc->p)-&a;
+          int j=&(spc->p)-&b;
+          assert(i>=0);
+          assert(j>=0);
+          assert(i<(int)spc->p.size());
+          assert(j<(int)spc->p.size());
+          auto f=force_list.find( opair<int>(i,j) );
           if (f!=this->force_list.end()) {
             auto r = spc->geo.vdist(a,b);
             return f->second(a,b,r.squaredNorm(),r);

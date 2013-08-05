@@ -445,7 +445,7 @@ namespace Faunus {
           template<class Tspace>
             void sample(Tspace &spc, short ida, short idb) {
               Group all(0, spc.p.size()-1);
-              assert(all.size()==spc.p.size());
+              assert(all.size()==(int)spc.p.size());
               return sample(spc,all,ida,idb);
             }
       };

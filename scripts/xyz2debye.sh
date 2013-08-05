@@ -58,4 +58,5 @@ done
 # average all frames to final S(q)
 LANG=en
 awk '{ sum[$1]+=$2; cnt[$1]++ } END { for (i in sum) print i, sum[i]/cnt[i] | "sort -n" }' $prefix*.dat > sofq.dat
+rm _cm.*
 

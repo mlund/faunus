@@ -713,12 +713,10 @@ namespace Faunus {
          * Space main particle vector.
          */
         Point f_p2p(const Tparticle &a, const Tparticle &b) FOVERRIDE {
-          int i=&(spc->p)-&a;
-          int j=&(spc->p)-&b;
-          assert(i>=0);
-          assert(j>=0);
-          assert(i<(int)spc->p.size());
-          assert(j<(int)spc->p.size());
+          int i=&a-&spc->p[0]; // calc. index from addresses
+          int j=&b-&spc->p[0];
+          assert(i>=0 && j>=0);
+          assert(i<(int)spc->p.size() && j<(int)spc->p.size());
           auto f=force_list.find( opair<int>(i,j) );
           if (f!=this->force_list.end()) {
             auto r = spc->geo.vdist(a,b);

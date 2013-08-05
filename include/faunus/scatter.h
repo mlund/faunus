@@ -142,6 +142,12 @@ namespace Faunus {
      * It is important to note that distances should be calculated without
      * periodicity and if molecules cross periodic boundaries, these
      * must be made whole before performing the analysis.
+     * The `InputMap` is scanned for the following keywords:
+     *
+     * - `qmin` Minimum q value (1/angstrom)
+     * - `qmax` Maximum q value (1/angstrom)
+     * - `dr` q spacing (1/angstrom)
+     * - `sofq_cutoff` Cutoff distance (angstrom). Experimental.
      *
      * See also <http://dx.doi.org/10.1016/S0022-2860(96)09302-7>
      */
@@ -193,7 +199,7 @@ namespace Faunus {
             void sample(const Tpvec &p, T qmin, T qmax, T dq, T V=-1) {
               if (qmin<1e-6)
                 qmin=dq;              // ensure that q>0
-              std::map<T,T> _I;       // temporary I(q) table
+              std::map<T,T> _I,_ff;       // temporary I(q) table
               int N=(int)p.size();
               for (int i=0; i<N-1; ++i) {
                 for (int j=i+1; j<N; ++j) {
@@ -205,12 +211,16 @@ namespace Faunus {
                   }
                 }
               }
+              for (int i=0; i<N; i++)
+                for (T q=qmin; q<=qmax; q+=dq)
+                  _ff[q] += pow(F(q,p[i]),2);
+
               for (auto &i : _I) {
                 T q=i.first, Icorr=0;
                 if (rc<1e9 && V>0)
                   Icorr = 4*pc::pi * N / (V*pow(q,3)) *
                     ( q*rc*cos(q*rc) - sin(q*rc) );
-                I[q]+=2*i.second/N+1 + Icorr; // add to average I(q)
+                I[q]+=(2*i.second+_ff[q])/N + Icorr; // add to average I(q)
               }
             }
 

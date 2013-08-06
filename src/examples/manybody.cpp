@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
                   cmfile << "H " << ((m+spc.geo.len_half)/10).transpose() << endl;
               }
               if (energyfile)
-                energyfile << loop.count() << " " << sys.current() << endl;
+                energyfile << loop.count() << " " << sys.current() << " " << std::cbrt(spc.geo.getVolume()) << "\n";
           }
           break;
         case 2: // volume move (NPT)

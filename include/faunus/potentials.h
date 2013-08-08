@@ -1113,6 +1113,26 @@ namespace Faunus {
       };
 
     /**
+     * @brief Creates a new pair potential with opposite sign
+     */
+    template<class T>
+      struct Minus : public T {
+        Minus(const T &pot) : T(pot) { T::name = "minus " + T::name; }
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+            return -T::operator()(a,b,r2);
+          }
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r2) {
+            return -T::operator()(a,b,r2);
+          }
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            return -T::force(a,b,r2,p);
+          }
+      };
+
+    /**
      * @brief Adds pair potentials together
      *
      * Example:
@@ -1125,6 +1145,14 @@ namespace Faunus {
         Potential::CombinedPairPotential<T1,T2>& operator+(const T1 &pot1, const T2 &pot2) {
           return *(new Potential::CombinedPairPotential<T1,T2>(pot1,pot2));
         }
+
+    template<class T1, class T2,
+      class = typename std::enable_if<std::is_base_of<PairPotentialBase,T1>::value>::type,
+      class = typename std::enable_if<std::is_base_of<PairPotentialBase,T2>::value>::type>
+        Potential::CombinedPairPotential<T1,Minus<T2>>& operator-(const T1 &pot1, const T2 &pot2) {
+          return *(new Potential::CombinedPairPotential<T1,Minus<T2>>(pot1,Minus<T2>(pot2)));
+        }
+
 
     /**
       @brief Old class for multipole energy. To be removed.

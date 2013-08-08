@@ -65,6 +65,7 @@ namespace Faunus {
          */
         template<typename Tparticle>
           Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            assert(!"Force method not implemented in pair potential.");
             return Point(0,0,0);
           }
 
@@ -126,8 +127,8 @@ namespace Faunus {
 
         template<class Tparticle>
           Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
-            double d=sqrt(r2)-req;
-            return -2 * k * d / sqrt(r2) * p;
+            double r=sqrt(r2), d=r-req;
+            return -2 * k * d / r * p;
           }
     };
 
@@ -191,14 +192,15 @@ namespace Faunus {
           Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
             if (r2<rc2 || r2>rcwc2)
               return Point(0,0,0);
+            double r=sqrt(r2);
 #ifdef FAU_APPROXMATH
-            double x1=cosApprox( c*( sqrt(r2)-rc ) );
-            double x2=sinApprox( c*( sqrt(r2)-rc ) );
+            double x1=cosApprox( c*( r-rc ) );
+            double x2=sinApprox( c*( r-rc ) );
 #else
-            double x1=cos( c*( sqrt(r2)-rc ) );
-            double x2=sin( c*( sqrt(r2)-rc ) );
+            double x1=cos( c*( r-rc ) );
+            double x2=sin( c*( r-rc ) );
 #endif
-            return -2*c*eps*x1*x2/sqrt(r2)*p;
+            return -2*c*eps*x1*x2/r*p;
           }
     };
 
@@ -1118,22 +1120,22 @@ namespace Faunus {
     template<class T>
       struct Minus : public T {
         Minus(const T &pot) : T(pot) { T::name = "minus " + T::name; }
-        template<class Tparticle>
+        template<class Tparticle> // isotropic energy
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
             return -T::operator()(a,b,r2);
           }
-        template<class Tparticle>
+        template<class Tparticle> // anisotropic energy
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r2) {
             return -T::operator()(a,b,r2);
           }
-        template<class Tparticle>
+        template<class Tparticle> // force
           Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
             return -T::force(a,b,r2,p);
           }
       };
 
     /**
-     * @brief Adds pair potentials together
+     * @brief Adds two pair potentials
      *
      * Example:
      *
@@ -1142,17 +1144,30 @@ namespace Faunus {
     template<class T1, class T2,
       class = typename std::enable_if<std::is_base_of<PairPotentialBase,T1>::value>::type,
       class = typename std::enable_if<std::is_base_of<PairPotentialBase,T2>::value>::type>
-        Potential::CombinedPairPotential<T1,T2>& operator+(const T1 &pot1, const T2 &pot2) {
-          return *(new Potential::CombinedPairPotential<T1,T2>(pot1,pot2));
+        CombinedPairPotential<T1,T2>& operator+(const T1 &pot1, const T2 &pot2) {
+          return *(new CombinedPairPotential<T1,T2>(pot1,pot2));
         }
 
+    /**
+     * @brief Subtracts two pair potentials
+     *
+     * This can be useful for excluding non-bonded interactions between bonded pairs.
+     * Beware, though, that in the case of strongly repulsive interactions
+     * for example due to particle overlap,
+     * first adding (non-bonded) then subtracting (bonded) interactions
+     * may lead to numerical issues, often manifested in a system energy
+     * drift.
+     *
+     * Example:
+     *
+     *     auto mypot = Potential::Harmonic(...) - Potential::LennardJones(...);
+     */
     template<class T1, class T2,
       class = typename std::enable_if<std::is_base_of<PairPotentialBase,T1>::value>::type,
       class = typename std::enable_if<std::is_base_of<PairPotentialBase,T2>::value>::type>
-        Potential::CombinedPairPotential<T1,Minus<T2>>& operator-(const T1 &pot1, const T2 &pot2) {
-          return *(new Potential::CombinedPairPotential<T1,Minus<T2>>(pot1,Minus<T2>(pot2)));
+        CombinedPairPotential<T1,Minus<T2>>& operator-(const T1 &pot1, const T2 &pot2) {
+          return *(new CombinedPairPotential<T1,Minus<T2>>(pot1,Minus<T2>(pot2)));
         }
-
 
     /**
       @brief Old class for multipole energy. To be removed.

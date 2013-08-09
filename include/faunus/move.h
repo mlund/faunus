@@ -516,8 +516,10 @@ namespace Faunus {
                 spc->trial[iparticle], Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
           return
-            base::pot->i_total(spc->trial, iparticle)
-            - base::pot->i_total(spc->p, iparticle);
+            (base::pot->i_total(spc->trial, iparticle)
+             + base::pot->external(spc->trial))
+            - (base::pot->i_total(spc->p, iparticle)
+                + base::pot->external(spc->p));
         }
         return 0;
       }
@@ -774,10 +776,10 @@ namespace Faunus {
           if ( spc->geo.collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
 
-        double unew = pot->g_external(spc->trial, *igroup);
+        double unew = pot->external(spc->trial) +pot->g_external(spc->trial, *igroup);
         if (unew==pc::infty)
           return pc::infty;       // early rejection
-        double uold = pot->g_external(spc->p, *igroup);
+        double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
 
 #ifdef ENABLE_MPI
         if (mpi!=nullptr) {
@@ -1813,7 +1815,7 @@ namespace Faunus {
           if (g->numMolecules()>1)
             u+=pot->g_internal(p, *g);
         }
-        return u + pot->external();
+        return u + pot->external(p);
       }
 
     /**

@@ -107,7 +107,7 @@ namespace Faunus {
           virtual double v2v(const Tpvec&, const Tpvec&)       // Particle vector-Particle vector energy
           { return 0; }
 
-          virtual double external()                            // External energy - pressure, for example.
+          virtual double external(const Tpvec&)                // External energy - pressure, for example.
           { return 0; }
 
           virtual void field(const Tpvec&, Eigen::MatrixXd&) //!< Calculate electric field on all particles
@@ -178,8 +178,8 @@ namespace Faunus {
           double g_internal(const Tpvec&p, Group&g) FOVERRIDE
           { return first.g_internal(p,g)+second.g_internal(p,g); }
 
-          double external() FOVERRIDE
-          { return first.external()+second.external(); }
+          double external(const Tpvec&p) FOVERRIDE
+          { return first.external(p)+second.external(p); }
 
           double v2v(const Tpvec&p1, const Tpvec&p2) FOVERRIDE
           { return first.v2v(p1,p2)+second.v2v(p1,p2); }
@@ -865,7 +865,7 @@ namespace Faunus {
           void add(double du) { usum+=du; }
 
           //!< Dumme rest treated as external potential to whole system
-          double external() FOVERRIDE {
+          double external(const typename Energybase<Tspace>::Tpvec &p) FOVERRIDE {
             return usum;
           }
       };
@@ -909,7 +909,7 @@ namespace Faunus {
           }
 
           /** @brief External energy working on system. pV/kT-lnV */
-          double external() FOVERRIDE {
+          double external(const Tpvec&p) FOVERRIDE {
             double V=this->getSpace().geo.getVolume();
             assert(V>1e-9 && "Volume must be non-zero!");
             return P*V - log(V); 
@@ -999,7 +999,7 @@ namespace Faunus {
     template<class Tspace, class Tenergy, class Tpvec>
       double systemEnergy(Tspace &spc, Tenergy &pot, const Tpvec &p) {
         pot.setSpace(spc); // ensure pot geometry is in sync with spc
-        double u = pot.external();
+        double u = pot.external(p);
         for (auto g : spc.groupList())
           u += pot.g_external(p, *g) + pot.g_internal(p, *g);
         for (size_t i=0; i<spc.groupList().size()-1; i++)

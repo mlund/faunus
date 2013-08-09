@@ -242,22 +242,20 @@ namespace Faunus {
 
           template<class Tpvec, class Tg>
             void sampleg2g(const Tpvec &p, T qmin, T qmax, T dq, Tg groupList) {
-              if (qmin<1e-6)
-                qmin=dq;              // ensure that q>0
-              std::map<T,T> _I;       // temporary I(q) table
+              vector<T> _I( int((qmax-qmin)/dq+0.5) );
               // loop over all pairs of groups, then over particles
               for (int k=0; k<(int)groupList.size()-1; k++)
                 for (int l=k+1; l<(int)groupList.size(); l++)
                   for (auto i : *groupList[k])
                     for (auto j : *groupList[l]) {
                       T r = geo.dist(p[i],p[j]);
+                      int cnt=0;
                       for (T q=qmin; q<=qmax; q+=dq)
-                        _I[q] += sin(q*r)/(q*r); // slow: map lookup
+                        _I[cnt++] += sin(q*r)/(q*r);
                     }
-
-              int N=p.size();
-              for (auto &i : _I)
-                I[i.first]+=2.*i.second/N+1; // add to average I(q)
+              int cnt=0, N=p.size();
+              for (T q=qmin; q<=qmax; q+=dq)
+                I[q]+=2.*_I.at(cnt++)/N+1; // add to average I(q)
             }
 
           void save(string filename) {

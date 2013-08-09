@@ -116,6 +116,7 @@ int main() {
   Move::Isobaric<Tspace> iso(mcp,pot,spc);
   Move::SwapMove<Tspace> swap(mcp,pot,spc,*eqenergy);
   Analysis::BilayerStructure lipidstruct;
+  Analysis::VirialPressure virial;
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
 
@@ -153,8 +154,10 @@ int main() {
         xtc.setbox( spc.geo.len );
         xtc.save("traj.xtc", spc.p);
       }
-      if (ran>0.90)
+      if (ran>0.90) {
+        virial.sample(spc.geo, pot, spc.p);
         lipidstruct.sample(spc.geo, spc.p, allLipids);
+      }
 
     } // end of micro loop
 
@@ -178,7 +181,7 @@ int main() {
 
   // print information
   cout << loop.info() + mv.info() + gmv.info() + iso.info() + piv.info()
-    + lipidstruct.info() + test.info() + sys.info();
+    + lipidstruct.info() + test.info() + sys.info() + virial.info();
 
   return test.numFailed();
 }

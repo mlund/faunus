@@ -252,9 +252,9 @@ namespace Faunus {
           typedef DebyeFormula<FormFactorSphere<T>> base;
 
           StructureFactor(InputMap &in) : base(in), Point(0,0,0) {
-            qmin=in.get<double>("qmin",-1);
-            qmax=in.get<double>("qmax",-1);
-            dq=in.get<double>("dq",-1);
+            qmin=in.get<double>("qmin",-1, "Minimum q value (1/A)");
+            qmax=in.get<double>("qmax",-1, "Maximum q value (1/A)");
+            dq=in.get<double>("dq",-1, "q spacing (1/A)");
           }
 
           template<class Tpvec>

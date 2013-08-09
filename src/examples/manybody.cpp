@@ -64,6 +64,7 @@ int main(int argc, char** argv) {
   Analysis::RadialDistribution<> rdf(0.5);
   Analysis::ChargeMultipole mpol;
   Scatter::DebyeFormula<Scatter::FormFactorUnity<>> debye(mcp);
+  Scatter::DebyeFormula<Scatter::FormFactorUnity<>> debye2(mcp);
 
   spc.load("state"); // load previous state, if any
 
@@ -113,6 +114,8 @@ int main(int argc, char** argv) {
             for (auto &i : pol)
               cm_vec.push_back(i.cm);
             debye.sample(cm_vec,spc.geo.getVolume());
+            debye2.sampleg2g(spc.p,spc.groupList());
+
             if (mpi.isMaster())
               if (cmfile) {
                 cmfile << cm_vec.size() << endl << "cm" << endl;
@@ -157,5 +160,6 @@ int main(int argc, char** argv) {
     spc.save("state");
     mcp.save("mdout.mdp");
     debye.save("debye.dat");
+    debye2.save("debye.g2g.dat");
   }
 }

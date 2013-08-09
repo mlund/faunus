@@ -546,7 +546,7 @@ namespace Faunus {
               }
             return false;
           }
-
+          
         public:
           bool noPairPotentialCutoff; //!< Set if range of pairpot is longer than rcut (default: false)
 
@@ -591,6 +591,29 @@ namespace Faunus {
                   u+=base::i2g(p,*gj,i);
               return u;
             }
+          }
+          
+          // unfinished
+          void field(const typename base::Tpvec &p, Eigen::MatrixXd &E) FOVERRIDE {
+            assert((int)p.size()==E.cols());
+            assert(!"Validate this!");
+
+            // double loop over all groups and test cutoff
+            // todo: openmp pragma
+            for (auto gi : base::spc->groupList())
+              for (auto gj : base::spc->groupList())
+                if (gi!=gj)
+                  if (!cut(p,*gi,*gj))
+                    for (int i : *gi)
+                      for (int j : *gj)
+                        E.col(i)+=base::pairpot.field(p[j],base::geo.vdist(p[i],p[j]));
+              
+              // now loop over all internal particles in groups
+              for (auto g : base::spc->groupList())
+                for (int i : *g)
+                  for (int j : *g)
+                    if (i!=j)
+                      E.col(i)+=base::pairpot.field(p[j],base::geo.vdist(p[i],p[j]));
           }
       };
 

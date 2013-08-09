@@ -12,15 +12,16 @@
 namespace Faunus {
 
   /**
-   * @brief Iterate over pairs in container and return sum of function
+   * @brief Iterate over pairs in container, call a function on the elements, and sum results
    */
-  template<typename Tit, typename Tfunc, typename T=double>
-    T for_each_pair_sum(const Tit &begin, const Tit &end, Tfunc f, T sum=T())
+  template<typename Tit, typename Tfunc, typename T=double, typename Top>
+    T for_each_pair(const Tit &begin, const Tit &end, Tfunc f, Top operation=std::plus<T>())
     {
+      T x;
       for (auto i=begin; i!=end; ++i)
         for (auto j=i; ++j!=end;)
-          sum+=f(*i,*j);
-      return sum;
+          x = operation(x, f(*i,*j));
+      return x;
     }
 
   /**
@@ -28,6 +29,8 @@ namespace Faunus {
    *
    * Upon construction, the smallest element is placed in `first`
    * so that `opair<int>(i,j)==opair<int>(j,i)` is always true.
+   *
+   * @todo Add std::pair copy operator
    */
   template<class T>
     struct opair : public std::pair<T,T> {

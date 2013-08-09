@@ -1112,6 +1112,11 @@ namespace Faunus {
             }
 
           template<typename Tparticle>
+            Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+              return first.force(a,b,r2,p) + second.force(a,b,r2,p);
+            }
+
+          template<typename Tparticle>
             Point field(const Tparticle &a, const Point &r) const {
               return first.field(a,r) + second.field(a,r);
             }

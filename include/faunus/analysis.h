@@ -95,7 +95,10 @@ namespace Faunus {
             setResolution(resolution);
           }
 
-          void clear() { map.clear(); }
+          void clear() { 
+            map.clear(); 
+            
+          }
 
           void setResolution(Tx resolution) {
             assert( resolution>0 );
@@ -199,22 +202,53 @@ namespace Faunus {
             }
             return false;
           }
-      };
+          
+         /**
+          * @brief Convert table to matrix
+          */
+          Eigen::MatrixXd tableToMatrix() {
+            assert(!this->map.empty() && "Map is empty!");
+            Eigen::MatrixXd table(2,map.size());
+            table.setZero();
+            int I = 0;
+            for (auto &m : this->map) {
+              table(0,I) = m.first;
+              table(1,I) = m.second;
+              I++;
+            }
+            return table;
+          }
+        };
 
     /**
      * @brief Subtract two tables
      */
-    template<class Tx, class Ty>
+    template<class Tx, class Ty, class Tmap>
       Table2D<Tx,Ty> operator-(Table2D<Tx,Ty> &a, Table2D<Tx,Ty> &b) {
-        Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()));
-        c.clear();
-        for (auto &m1 : a.getMap()) {
-          for (auto &m2 : b.getMap()) {
-            if( m1.first == m2.first) {
+        assert(a.tabletype=b.tabletype && "Table a and b needs to be of same type");
+        Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()),a.tabletype);
+        Tmap a_map = a.getMap();
+        Tmap b_map = b.getMap();
+        
+        if (a.tabletype=="HISTOGRAM") {
+           if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
+           if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
+           if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
+           if (b_map.size()>1) (--b_map.end())->second*=2; // -//-
+        }
+        
+        for (auto &m1 : a_map) {
+          for (auto &m2 : b_map) {
               c(m1.first) = m1.second-m2.second;
               break;
             }
-          }
+        }
+        
+        if (a.tabletype=="HISTOGRAM") {
+           if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
+           if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
+           if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
+           if (b_map.size()>1) (--b_map.end())->second/=2; // -//-
         }
         return c;
       }
@@ -222,16 +256,34 @@ namespace Faunus {
     /**
      * @brief Addition two tables
      */
-    template<class Tx, class Ty>
-      Table2D<Tx,Ty> operator+=(Table2D<Tx,Ty> &a, Table2D<Tx,Ty> &b) {
-        Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()));
-        c.clear();
-        for (auto &m : a.getMap()) {
+    template<class Tx, class Ty, class Tmap>
+      Table2D<Tx,Ty> operator+(Table2D<Tx,Ty> &a, Table2D<Tx,Ty> &b) {
+        assert(a.tabletype=b.tabletype && "Table a and b needs to be of same type");
+        Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()),a.tabletype);
+        Tmap a_map = a.getMap();
+        Tmap b_map = b.getMap();
+        
+        if (a.tabletype=="HISTOGRAM") {
+           if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
+           if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
+           if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
+           if (b_map.size()>1) (--b_map.end())->second*=2; // -//-
+        }
+        
+        for (auto &m : a_map) {
           c(m.first) += m.second;
         }
-        for (auto &m : b.getMap()) {
+        for (auto &m : b_map) {
           c(m.first) += m.second;
         }
+        
+        if (a.tabletype=="HISTOGRAM") {
+           if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
+           if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
+           if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
+           if (b_map.size()>1) (--b_map.end())->second/=2; // -//-
+        }
+        
         return c;
       }
 
@@ -424,6 +476,21 @@ namespace Faunus {
               assert(all.size()==spc.p.size());
               return sample(spc,all,ida,idb);
             }
+            
+            /*
+          template<class Tspace>
+            void sampleMolecule(Tspace &spc, Group) {
+              for (int i=0; i<sol.numMolecules()-1; i++) {
+                for (int j=i+1; j<sol.numMolecules(); j++) {
+                  Group ig, jg;
+                  sol.getMolecule(i,ig);
+                  sol.getMolecule(j,jg);
+                  Point icm = ig.massCenter(spc);
+                  Point jcm = jg.massCenter(spc);
+                  rdf_cm(spc.geo.dist(icm,jcm))++;
+                }
+              }
+            }*/
       };
 
     template<typename Tx=double, typename Ty=unsigned long>
@@ -1136,19 +1203,20 @@ namespace Faunus {
          * 
          * @param dir Directory to save in
          */ 
-        void save(string dir) {
+       /* void save(string dir) {
             N2_x.save(dir+"dipole_x_cutoff.dat"); 
-            N2_x += N2_y;
-            N2_x.save(dir+"temp.dat");
+            auto test = N2_x + N2_y;
+            test.save(dir+"temp.dat");
           
-          
+            Eigen::MatrixXd test11 =  N2_x.tableToMatrix();
+            cout << "Test: " << test11 << endl;
             
             N2_y.save(dir+"dipole_y_cutoff.dat"); 
             N2_z.save(dir+"dipole_z_cutoff.dat"); 
             N2_x_box.save(dir+"dipole_x_box.dat");
             N2_y_box.save(dir+"dipole_y_box.dat");
             N2_z_box.save(dir+"dipole_z_box.dat");
-        }
+        }*/
     };
 
     /*

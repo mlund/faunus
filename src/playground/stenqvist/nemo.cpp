@@ -1,104 +1,163 @@
 #include <faunus/faunus.h>
-#include <faunus/multipole.h>
-using namespace Faunus;                          // use Faunus namespace
-using namespace Faunus::Move;
+using namespace Faunus;
 using namespace Faunus::Potential;
 
-typedef Space<Geometry::Cuboid,DipoleParticle> Tspace;
-typedef CombinedPairPotential<LennardJones,DipoleDipoleRF> Tpair;
+typedef Geometry::Cuboid Tgeometry; // specify geometry 
+typedef CombinedPairPotential<CoulombWolf,NemoRepulsion> Tpairpot;
+typedef Space<Tgeometry,DipoleParticle> Tspace;
 
-#ifdef POLARIZE
-typedef Move::PolarizeMove<AtomicTranslation<Tspace> > TmoveTran;
-typedef Move::PolarizeMove<AtomicRotation<Tspace> > TmoveRot;
-#else
-typedef Move::AtomicTranslation<Tspace> TmoveTran;   
-typedef Move::AtomicRotation<Tspace> TmoveRot;
-#endif
-
-int main() {
-  ::atom.includefile("nemo.json");         // load atom properties
-  InputMap in("nemo.input");               // open parameter file for user input
-  Energy::NonbondedVector<Tspace,Tpair> pot(in); // non-bonded only
-  Energy::NonbondedVector<Tspace,DipoleDipoleRF> pot2(in); // non-bonded only
-  EnergyDrift sys,sys2;                               // class for tracking system energy drifts
-  Tspace spc(in);                // create simulation space, particles etc.
-  Group sol;
-  sol.addParticles(spc, in);                     // group for particles
-  MCLoop loop(in);                               // class for mc loop counting
-  Analysis::RadialDistribution<> rdf(0.05);       // particle-particle g(r)
-  Analysis::Table2D<double,Average<double> > mucorr(0.1);       // particle-particle g(r)
-  TmoveTran trans(in,pot,spc);
-  TmoveRot rot(in,pot,spc);
-  trans.setGroup(sol);                                // tells move class to act on sol group
-  rot.setGroup(sol);                                  // tells move class to act on sol group
-  spc.load("state");
-  spc.p = spc.trial;
-  UnitTest test(in);               // class for unit testing
-  Analysis::DielectricConstant gdc(spc);
-  FormatXTC xtc(spc.geo.len.norm());
-  
-  sys.init( Energy::systemEnergy(spc,pot,spc.p)  );   // initial energy
-  sys2.init( Energy::systemEnergy(spc,pot2,spc.p)  );   // initial energy
-  while ( loop.macroCnt() ) {                         // Markov chain 
-    while ( loop.microCnt() ) {
-      if (slp_global() > 0.5)
-        sys+=trans.move( sol.size() );                // translate
-      else
-        sys+=rot.move( sol.size() );                  // rotate
-        
-      gdc.sampleDP(spc);
-      gdc.info();
-      if (slp_global()<1.5)
-        for (auto i=sol.front(); i<sol.back(); i++) { // salt rdf
-          for (auto j=i+1; j<=sol.back(); j++) {
-            double r =spc.geo.dist(spc.p[i],spc.p[j]); 
-            rdf(r)++;
-            mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
-          }
+template<class Tpairpot, class Tid>
+      bool savePotential(Tpairpot pot, Tid ida, Tid idb, string file) {
+        std::ofstream f(file.c_str());
+        if (f) {
+          double min=0.02 * (atom[ida].radius+atom[idb].radius);
+          DipoleParticle a,b;
+          a=atom[ida];
+          b=atom[idb];
+          /*f << "# Pair potential: " << pot.brief() << endl
+            << "# Atoms: " << atom[ida].name << "<->" << atom[idb].name
+            << endl;*/
+          for (double r=min; r<=18; r+=0.2)
+            f << std::left << std::setw(10) << r << " "
+              << pot(a,b,Point(r,0,0)) << endl;
+          return true;
         }
-      if (slp_global()>0.99) {
-        xtc.save(textio::prefix+"out.xtc", spc.p);  
-        sys2.checkDrift(Energy::systemEnergy(spc,pot2,spc.p));
+        return false;
       }
-    }    
-    
-    cout << gdc.info() << endl;
-    //pot2.pairpot.updateDiel(gdc.getDielKirkwood());
-    //cout << "Test: " << pot2.second.test << endl;
-    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
-    cout << loop.timing();
-  }
-  
-  // perform unit tests
-  trans.test(test);
-  rot.test(test);
-  sys.test(test);
+      
+int main() {
+  cout << textio::splash();         // show faunus banner and credits
+                                  
+  InputMap mcp("nemo.input");      // open user input file
+  MCLoop loop(mcp);                 // class for handling mc loops
+  EnergyDrift sys;                  // class for tracking system energy drifts
+  UnitTest test(mcp);               // class for unit testing
+  FormatXTC xtc(1000);
 
-  FormatPQR().save(in.get<string>("target_folder","")+"confout.pqr", spc.p);
-  gdc.save(in.get<string>("target_folder",""));
-  rdf.save("gofr.dat");                               // save g(r) to disk
-  mucorr.save("mucorr.dat");                               // save g(r) to disk
-  std::cout << spc.info() + pot.info() + trans.info()
-    + rot.info() + sys.info() + test.info() + sys2.info(); // final info
-  spc.save("state");
+  // Create Space and a Hamiltonian (nonbonded+NVT)
+  Tspace spc(mcp);
+  auto pot = Energy::NonbondedVector<Tspace,Tpairpot>(mcp)
+    + Energy::ExternalPressure<Tspace>(mcp);
+    
+  // Read single water from disk and add N times
+  Group sol;
+  sol.setMolSize(3);
+  string file = mcp.get<string>("mol_file");
+  int N=mcp("mol_N",1);
+  for (int i=0; i<N; i++) {
+    Tspace::ParticleVector v;
+    FormatAAM::load(file,v);
+    Geometry::FindSpace f;
+    //f.allowMatterOverlap=true;
+    f.find(spc.geo, spc.p, v);
+    Group g = spc.insert(v);// Insert into Space
+    sol.setrange(0, g.back());
+  }
+  spc.enroll(sol);
+
   
-  return test.numFailed();
+  savePotential(Tpairpot(mcp), atom["OW"].id, atom["HW"].id, "pot_OWHW_nemorepulsion.dat");
+  savePotential(Tpairpot(mcp), atom["OW"].id, atom["OW"].id, "pot_OWOW_nemorepulsion.dat");
+  savePotential(Tpairpot(mcp), atom["HW"].id, atom["HW"].id, "pot_HWHW_nemorepulsion.dat");
+ 
+  // Markov moves and analysis
+  Move::Isobaric<Tspace> iso(mcp,pot,spc);
+  Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
+  Analysis::RadialDistribution<> rdf_OO(0.05);
+  Analysis::RadialDistribution<> rdf_OH(0.05);
+  Analysis::RadialDistribution<> rdf_HH(0.05);
+  Analysis::RadialDistribution<> rdf_cm(0.05);
+
+  spc.load("state");                               // load old config. from disk (if any)
+  sys.init( Energy::systemEnergy(spc,pot,spc.p)  );// store init system energy
+  double pxtc = mcp.get<double>("pxtc",0.99);
+
+  cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
+
+  while ( loop.macroCnt() ) {                      // Markov chain 
+    while ( loop.microCnt() ) {
+      int j,i=slp_global.rand() % 2;
+      int k=sol.numMolecules();                    //number of water molecules
+      Group g;
+      switch (i) {
+        case 0:
+          while (k-->0) {
+            j=sol.randomMol();                     // pick random water mol.
+            sol.getMolecule(j,g);
+            g.name="water";
+            g.setMassCenter(spc);                  // mass center needed for rotation
+            gmv.setGroup(g);
+            sys+=gmv.move();                       // translate/rotate
+          }
+          break;
+        case 1:
+          sys+=iso.move();                         // volume move
+          break;
+      }
+
+      for (int i=0; i<sol.numMolecules()-1; i++) {
+        for (int j=i+1; j<sol.numMolecules(); j++) {
+          Group ig, jg;
+          sol.getMolecule(i,ig);
+          sol.getMolecule(j,jg);
+          Point icm = ig.massCenter(spc);
+          Point jcm = jg.massCenter(spc);
+          rdf_cm(spc.geo.dist(icm,jcm))++;
+        }
+      }
+        
+      // sample oxygen-oxygen rdf
+      if (slp_global()>0.5) {
+        auto idO = atom["OW"].id;
+        auto idH = atom["HW"].id;
+        rdf_OO.sample(spc,sol,idO,idO);
+        rdf_OH.sample(spc,sol,idO,idH);
+        rdf_HH.sample(spc,sol,idH,idH);
+      }
+      if (slp_global()>pxtc)
+        xtc.save(textio::prefix+"out.xtc", spc.p);
+
+    } // end of micro loop
+
+    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p));
+    cout << loop.timing();
+
+  } // end of macro loop
+
+  rdf_OO.save("rdf_OO.dat");
+  rdf_OH.save("rdf_OH.dat");
+  rdf_HH.save("rdf_HH.dat");
+  rdf_cm.save("rdf_cm.dat");
+  spc.save("state");
+  FormatPQR::save("confout.pqr", spc.p);
+
+  // perform unit tests
+  //iso.test(test);
+  //gmv.test(test);
+  //sys.test(test);
+
+  // print information
+  cout << loop.info() + sys.info() + gmv.info() + iso.info();// + test.info();
+
+  return 0;//test.numFailed();
 }
-/**  @page example_stockmayer Example: Stockmayer potential
+/**  @page example_water Example: SPC Water
  *
- This will simulate a Stockmayer potential in a cubic box.
+ This will simulate an arbitrary SPC water in a cubic box using
+ the Wolf method for electrostatic interactions.
 
  Run this example from the `examples` directory:
 
  ~~~~~~~~~~~~~~~~~~~
  $ make
  $ cd src/examples
- $ ./stockmayer.run
+ $ ./water.run
  ~~~~~~~~~~~~~~~~~~~
 
- stockmayer.cpp
+ water.cpp
  ============
 
- @includelineno examples/stockmayer.cpp
+ @includelineno examples/water.cpp
 
 */
+

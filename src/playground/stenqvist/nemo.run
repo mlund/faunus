@@ -6,33 +6,47 @@
 
 source_tests_dir="`dirname $0`"
 cp -f $source_tests_dir/nemo.test . 2> /dev/null
-cp -f $source_tests_dir/nemo.state state 2> /dev/null
+#cp -f $source_tests_dir/nemo.state state 2> /dev/null
 
-echo '{ "atomlist" :
-  {
-    "sol" : { "sigma":2.8863, "mu":"0 0 0.508351956158443", "dp":0.6, "dprot":90, "alpha":"0 0 0 0 0 0", "theta":"0 0 0 0 0 0"}
+echo '{
+  "atomlist" : {
+    "OW"  : { "q":-0.80100, "sigma":3.2,  "eps":0.65,"mu":"0.00000   0.00000  -0.12990", "dp":13.5, "dprot":180, "alpha":"0.67150   0.61330   0.70020   0.00000   0.00000   0.00000"},
+    "HW" : { "q": 0.40050, "sigma":1.0,  "eps":0.0, "mu":"0.07840   0.00000   0.04220", "dp":13.5, "dprot":180, "alpha":"0.21990   0.07560   0.14410   0.00000   0.10050   0.00000"}
   }
 }' > nemo.json
 
+echo "3
+OW     1    0.000000    0.000000     -0.06560    -0.80100    16.00000   1.6     0.00000   0.00000  -0.12990  0.67150   0.61330   0.70020   0.00000   0.00000   0.00000
+HW    2    0.757200    0.00000       0.52050     0.40050    1.008000   1.0     0.07840   0.00000   0.04220  0.21990   0.07560   0.14410   0.00000   0.10050   0.00000
+HW    3   -0.757200    0.00000       0.52050     0.40050    1.008000   1.0    -0.07840   0.00000   0.04220  0.21990   0.07560   0.14410   0.00000  -0.10050   0.00000
+" > nemo.aam
 
 echo "
 atomlist           nemo.json   # atom properties
-cuboid_len         19.8346        # angstrom
+cuboid_len         28.6           # angstrom  13.924766500838334   18.6
                   
-temperature        315.8          # K
+temperature        300          # K
 epsilon_r          1            # dielectric const.
-dipdip_cutoff      1000         # dipole cutoff [angstrom]
-lj_eps             0.7523        # Uniform LJ epsilon parameter [kT]
+epsilon_rf         78.54
+dipdip_cutoff      9.0         # dipole cutoff [angstrom]
+coulomb_cut        9.0           # coulomb cutoff [angstrom]
                   
 loop_macrosteps    10           # number of macro loops
-loop_microsteps    10          # number of micro loops
+loop_microsteps    100          # number of micro loops
+pxtc               0.9
 
-tion1              sol 
-nion1              300
+npt_dV             0.1          # 0.04 (0=no volume displacement=NVT)
+npt_P              39.3155      # external pressure [mM]
+npt_runfraction    0.1
 
-test_stable        no
+transrot_transdp   0.1
+transrot_rotdp     0.1
+
+mol_N              64     # 100  216
+mol_file           nemo.aam
+
+test_stable        yes
 test_file          nemo.test
-target_folder      /home/work/Dropbox/Work/UpFiles/Laptop/ # /Users/bjorns/Dropbox/Work/UpFiles/Melba/
 " > nemo.input
 
 exe=./nemo

@@ -223,6 +223,40 @@ namespace Faunus {
                 I[q]+=(2*i.second+_ff[q])/N + Icorr; // add to average I(q)
               }
             }
+          
+          /**
+           * @brief Sample between all groups
+           *
+           * Instead of looping over all particles, this will ignore all internal
+           * group distances.
+           *
+           * @param p Particle vector
+           * @param groupList Vector of group pointers - i.e. as returned from `Space::groupList()`.
+           * @note Particle form factors are always set to unity, i.e. F(q) is ignored.
+           */  
+          template<class Tpvec, class Tg>
+            void sampleg2g(const Tpvec &p, Tg groupList) {
+              assert(qmin>0 && qmax>0 && dq>0 && "q range invalid.");
+              sampleg2g(p,qmin,qmax,dq,groupList);
+            }
+
+          template<class Tpvec, class Tg>
+            void sampleg2g(const Tpvec &p, T qmin, T qmax, T dq, Tg groupList) {
+              vector<T> _I( int((qmax-qmin)/dq+0.5) );
+              // loop over all pairs of groups, then over particles
+              for (int k=0; k<(int)groupList.size()-1; k++)
+                for (int l=k+1; l<(int)groupList.size(); l++)
+                  for (auto i : *groupList[k])
+                    for (auto j : *groupList[l]) {
+                      T r = geo.dist(p[i],p[j]);
+                      int cnt=0;
+                      for (T q=qmin; q<=qmax; q+=dq)
+                        _I[cnt++] += sin(q*r)/(q*r);
+                    }
+              int cnt=0, N=p.size();
+              for (T q=qmin; q<=qmax; q+=dq)
+                I[q]+=2.*_I.at(cnt++)/N+1; // add to average I(q)
+            }
 
           void save(string filename) {
             if (!I.empty()) {

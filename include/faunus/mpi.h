@@ -67,8 +67,8 @@ namespace Faunus {
     /**
      * @brief Split N items into nproc parts
      *
-     * This will a pair with the first and last
-     * item for the i'th part.
+     * This returns a pair with the first and last
+     * item for the current rank.
      */
     template<class T=int>
       std::pair<T,T> splitEven(MPIController &mpi, T N) {

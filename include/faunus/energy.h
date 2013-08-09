@@ -107,7 +107,7 @@ namespace Faunus {
           virtual double v2v(const Tpvec&, const Tpvec&)       // Particle vector-Particle vector energy
           { return 0; }
 
-          virtual double external()                            // External energy - pressure, for example.
+          virtual double external(const Tpvec&)                // External energy - pressure, for example.
           { return 0; }
 
           virtual void field(const Tpvec&, Eigen::MatrixXd&) //!< Calculate electric field on all particles
@@ -178,8 +178,8 @@ namespace Faunus {
           double g_internal(const Tpvec&p, Group&g) FOVERRIDE
           { return first.g_internal(p,g)+second.g_internal(p,g); }
 
-          double external() FOVERRIDE
-          { return first.external()+second.external(); }
+          double external(const Tpvec&p) FOVERRIDE
+          { return first.external(p)+second.external(p); }
 
           double v2v(const Tpvec&p1, const Tpvec&p2) FOVERRIDE
           { return first.v2v(p1,p2)+second.v2v(p1,p2); }
@@ -546,7 +546,7 @@ namespace Faunus {
               }
             return false;
           }
-
+          
         public:
           bool noPairPotentialCutoff; //!< Set if range of pairpot is longer than rcut (default: false)
 
@@ -591,6 +591,29 @@ namespace Faunus {
                   u+=base::i2g(p,*gj,i);
               return u;
             }
+          }
+          
+          // unfinished
+          void field(const typename base::Tpvec &p, Eigen::MatrixXd &E) FOVERRIDE {
+            assert((int)p.size()==E.cols());
+            assert(!"Validate this!");
+
+            // double loop over all groups and test cutoff
+            // todo: openmp pragma
+            for (auto gi : base::spc->groupList())
+              for (auto gj : base::spc->groupList())
+                if (gi!=gj)
+                  if (!cut(p,*gi,*gj))
+                    for (int i : *gi)
+                      for (int j : *gj)
+                        E.col(i)+=base::pairpot.field(p[j],base::geo.vdist(p[i],p[j]));
+              
+              // now loop over all internal particles in groups
+              for (auto g : base::spc->groupList())
+                for (int i : *g)
+                  for (int j : *g)
+                    if (i!=j)
+                      E.col(i)+=base::pairpot.field(p[j],base::geo.vdist(p[i],p[j]));
           }
       };
 
@@ -842,7 +865,7 @@ namespace Faunus {
           void add(double du) { usum+=du; }
 
           //!< Dumme rest treated as external potential to whole system
-          double external() FOVERRIDE {
+          double external(const typename Energybase<Tspace>::Tpvec &p) FOVERRIDE {
             return usum;
           }
       };
@@ -886,7 +909,7 @@ namespace Faunus {
           }
 
           /** @brief External energy working on system. pV/kT-lnV */
-          double external() FOVERRIDE {
+          double external(const Tpvec&p) FOVERRIDE {
             double V=this->getSpace().geo.getVolume();
             assert(V>1e-9 && "Volume must be non-zero!");
             return P*V - log(V); 
@@ -976,7 +999,7 @@ namespace Faunus {
     template<class Tspace, class Tenergy, class Tpvec>
       double systemEnergy(Tspace &spc, Tenergy &pot, const Tpvec &p) {
         pot.setSpace(spc); // ensure pot geometry is in sync with spc
-        double u = pot.external();
+        double u = pot.external(p);
         for (auto g : spc.groupList())
           u += pot.g_external(p, *g) + pot.g_internal(p, *g);
         for (size_t i=0; i<spc.groupList().size()-1; i++)

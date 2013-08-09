@@ -9,6 +9,7 @@
 #include <faunus/space.h>
 #include <faunus/point.h>
 #include <faunus/textio.h>
+#include <Eigen/Core>
 #endif
 
 #include <chrono>
@@ -63,32 +64,49 @@ namespace Faunus {
      */
     class VirialPressure : public AnalysisBase {
       private:
-        double P_ideal;
-        Average<double> P;
+
+        double Pid;        // ideal pressure
+        Average<double> P; // excess pressure scalar
+        Eigen::Matrix3d T; // excess pressure tensor
+
         inline string _info() {
-          double p=P.avg();
           using namespace Faunus::textio;
           std::ostringstream o;
-          o << pad(SUB,w, "Excess") << p << " kT/"+angstrom+cubed+" = " << endl
-            << p*1e30/pc::Nav << " mM = "
-            << p*pc::kB*pc::T()*1e30 << " Pa = "
-            << p*pc::kB*pc::T()*1e30/0.980665e5 << " atm\n";
+          if (cnt>0) {
+            double p=P.avg(), kT=pc::kB*pc::T();
+            o << pad(SUB,w, "Excess pressure") << p << " kT/"+angstrom+cubed+" = "
+              << p*1e30/pc::Nav << " mM = "
+              << p*kT*1e30 << " Pa = "
+              << p*kT*1e30/0.980665e5 << " atm\n"
+              << pad(SUB,w, "Tensor trace") << (T/cnt).trace() << " kT/"+angstrom+cubed+"\n"
+              << "  Excess pressure tensor:\n\n" << T/cnt << "\n"
+              << endl;
+          }
           return o.str();
         }
+
       public:
-        VirialPressure() { name="Virial Pressure"; }
+
+        VirialPressure() {
+          name="Virial Pressure";
+          T.setZero();
+        }
+
         template<class Tvec, class Tgeo, class Tpot>
-          void sample(Tgeo &geo, Tpot &pot, const Tvec &p) {
+          void sample(Tgeo &geo, Tpot &pot, const Tvec &v, double d=3) {
             cnt++;
-            double x;
-#pragma omp parallel for reduction (+:x) schedule (dynamic)
-            for (int i=0; i<p.size()-1; i++)
-              for (int j=i+1; j<p.size(); j++) {
-                auto rij = geo.vdist(p[i],p[j]);
-                x += pot.f_p2p(p[i],p[j]).dot(rij);
+            double p=0, V=geo.getVolume();
+            Eigen::Matrix3d t;
+            t.setZero();
+            for (size_t i=0; i<v.size()-1; i++)
+              for (size_t j=i+1; j<v.size(); j++) {
+                auto rij = geo.vdist(v[i],v[j]);
+                auto fij = pot.f_p2p(v[i],v[j]);
+                t += fij * rij.transpose(); // sample P tensor
+                p += fij.dot(rij);          // sample pressure scalar (check!)
               }
-            P += x / (3*geo.getVolume());
-            P_ideal = p.size() / geo.getVolume();
+            T += t/(d*V);
+            P += p/(d*V);
           }
     };
 

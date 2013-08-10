@@ -1747,9 +1747,9 @@ namespace Faunus {
             << setw(l+8) << bracket("1/V")
             << setw(l+8) << bracket("N/V") << endl
             << indent(SUB) << setw(10) << "Averages"
-            << setw(l) << V.avg() << _angstrom << cubed
+            << setw(l) << V.avg() << _angstrom + cubed
             << setw(l) << std::cbrt(V.avg()) << _angstrom
-            << setw(l) << rV.avg() << " 1/" << _angstrom << cubed
+            << setw(l) << rV.avg() << " 1/" + _angstrom + cubed
             << setw(l) << N*rV.avg()*tomM << " mM\n";
         }
         return o.str();

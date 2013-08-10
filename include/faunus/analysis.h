@@ -57,10 +57,16 @@ namespace Faunus {
     };
 
     /**
-     * @brief Pressure from virial
+     * @brief Pressure analysis using the virial theorem
      *
-     * At the moment this is limited to isotropic, atomic liquids
-     * only.
+     * At the moment this is limited to "soft" systems only,
+     * i.e. for non-rigid systems with continuous potentials.
+     *
+     * References:
+     *
+     * - <http://dx.doi.org/10/fspzcx>
+     * - <http://dx.doi.org/10/ffwrhd>
+     *
      */
     class VirialPressure : public AnalysisBase {
       private:
@@ -102,8 +108,8 @@ namespace Faunus {
               for (size_t j=i+1; j<v.size(); j++) {
                 auto rij = geo.vdist(v[i],v[j]);
                 auto fij = pot.f_p2p(v[i],v[j]);
-                t += fij * rij.transpose(); // sample P tensor
-                p += fij.dot(rij);          // sample pressure scalar (check!)
+                t += rij * fij.transpose(); // sample P tensor
+                p += rij.dot(fij);          // sample pressure scalar (check!)
               }
             T += t/(d*V);
             P += p/(d*V);

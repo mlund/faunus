@@ -972,6 +972,18 @@ namespace Faunus {
               * ( exp(-k*r)/r - u_rc - (dudrc*(r-rc))  );
 #endif
           }
+        template<class Tparticle>                                                                             
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {                    
+            if (r2>rc2)                                                                                       
+              return Point(0,0,0);                                                                            
+#ifdef FAU_APPROXMATH                                                                                         
+            double r = 1./invsqrtQuake(r2);                                                                   
+            return lB * a.charge * b.charge * ( exp_cawley(-k*r) / r2 * (k + 1/r) + dudrc / r) * p;           
+#else                                                                                                         
+            double r=sqrt(r2);                                                                                
+            return lB * a.charge * b.charge * ( exp(-k*r) / r2 * (k + 1/r) + dudrc / r) * p;                  
+#endif                                                                                                        
+          } 
     };
 
     /**

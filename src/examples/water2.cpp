@@ -34,7 +34,6 @@ int main() {
   Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
   Move::Isobaric<Tspace> iso(mcp,pot,spc);
   Analysis::RadialDistribution<> rdf(0.05);
-  Analysis::DielectricConstant gdc(spc);
 
   spc.load("state"); // load old config. from disk (if any)
   
@@ -68,9 +67,6 @@ int main() {
         rdf.sample(spc,id,id);
       }
       
-      // sample dielectric constant (unfinished)
-      gdc.samplePP(spc.geo,spc);
-
     } // end of micro loop
 
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // energy drift?

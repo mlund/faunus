@@ -140,11 +140,15 @@ namespace Faunus {
       template<class Tspace>
         void rotate(Tspace &spc, const Point &endpoint, double angle) {
           assert( spc.geo.dist(cm,massCenter(spc) )<1e-6 );
-          Geometry::QuaternionRotate vrot;
+          Geometry::QuaternionRotate vrot1;
           cm_trial = cm;
-          vrot.setAxis(spc.geo, cm, endpoint, angle);//rot around CM->point vec
-          for (auto i : *this)
-            spc.trial[i].rotate(vrot);
+          vrot1.setAxis(spc.geo, cm, endpoint, angle);//rot around CM->point vec
+          auto vrot2 = vrot1;
+          vrot2.getOrigin() = Point(0,0,0);
+          for (auto i : *this) {
+            spc.trial[i] = vrot1(spc.trial[i]); // rotate coordinates
+            spc.trial[i].rotate(vrot2);         // rotate internal coordinates
+          }
           assert( spc.geo.dist(cm_trial, massCenter(spc))<1e-9
               && "Rotation messed up mass center. Is the box too small?");
         }

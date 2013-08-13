@@ -525,10 +525,10 @@ namespace Faunus {
      * Upon construction the `InputMap` is searched for the keyword
      * `g2g_cutoff` - the default value is infinity.
      */
-    template<class Tspace, class Tpairpot>
-      class NonbondedCutg2g : public Nonbonded<Tspace,Tpairpot> {
+    template<class Tspace, class Tpairpot, class Tnonbonded=Energy::Nonbonded<Tspace,Tpairpot> >
+      class NonbondedCutg2g : public Tnonbonded {
         private:
-          typedef Nonbonded<Tspace,Tpairpot> base;
+          typedef Tnonbonded base;
           double rcut2;
 
           Point getMassCenter(const typename base::Tpvec &p, const Group &g) {

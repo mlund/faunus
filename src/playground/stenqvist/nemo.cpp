@@ -1,155 +1,114 @@
 #include <faunus/faunus.h>
+
 using namespace Faunus;
 using namespace Faunus::Potential;
 
-typedef Geometry::Cuboid Tgeometry; // specify geometry 
-typedef CombinedPairPotential<CoulombWolf,NemoRepulsion> Tpairpot;
-typedef CombinedPairPotential<Coulomb,NemoRepulsion> TpairpotTest;
-typedef NemoRepulsion TpairpotTest;
-typedef Space<Tgeometry,DipoleParticle> Tspace;
+typedef Space<Geometry::Cuboid,DipoleParticle> Tspace;
+typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot;
 
-template<class Tpairpot, class Tid>
-      bool savePotential(Tpairpot pot, Tid ida, Tid idb, string file) {
-        std::ofstream f(file.c_str());
-        if (f) {
-          double min=0.02 * (atom[ida].radius+atom[idb].radius);
-          DipoleParticle a,b;
-          a=atom[ida];
-          b=atom[idb];
-          /*f << "# Pair potential: " << pot.brief() << endl
-            << "# Atoms: " << atom[ida].name << "<->" << atom[idb].name
-            << endl;*/
-          for (double r=min; r<=18; r+=0.2)
-            f << std::left << std::setw(10) << r << " "
-              << pot(a,b,Point(r,0,0)) << endl;
-          return true;
-        }
-        return false;
-      }
-      
 int main() {
-  cout << textio::splash();         // show faunus banner and credits
-                                  
-  InputMap mcp("nemo.input");      // open user input file
-  MCLoop loop(mcp);                 // class for handling mc loops
-  EnergyDrift sys;                  // class for tracking system energy drifts
-  UnitTest test(mcp);               // class for unit testing
-  FormatXTC xtc(1000);
 
-  // Create Space and a Hamiltonian (nonbonded+NVT)
-  Tspace spc(mcp);
-  auto pot = Energy::NonbondedVector<Tspace,Tpairpot>(mcp)
+  cout << textio::splash();      // show faunus banner and credits
+  InputMap mcp("nemo.input");//read input file
+
+  // Energy functions and space
+  auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot,Energy::NonbondedVector<Tspace,Tpairpot>>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp);
-    
-  // Read single water from disk and add N times
-  Group sol;
-  sol.setMolSize(3);
-  string file = mcp.get<string>("mol_file");
-  int N=mcp("mol_N",1);
-  for (int i=0; i<N; i++) {
-    Tspace::ParticleVector v;
-    FormatAAM::load(file,v);
-    Geometry::FindSpace f;
-    //f.allowMatterOverlap=true;
-    f.find(spc.geo, spc.p, v);
-    Group g = spc.insert(v);// Insert into Space
-    sol.setrange(0, g.back());
+  Tspace spc(mcp);
+
+  // Load and add polymer to Space
+  string file = mcp.get<string>("mol_file","");
+  int Nwater=mcp("mol_N",1);
+  vector<Group> water(Nwater);
+  for (int i=0; i<Nwater; i++) {
+    Tspace::ParticleVector v;                   // temporary, empty particle vector
+    FormatAAM::load(file,v);                    // load AAM structure into v
+    Geometry::FindSpace().find(spc.geo,spc.p,v);// find empty spot in particle vector
+    Group g = spc.insert(v);                  // Insert into Space
+    g.name="sol";
+    water[i]=g;
+    spc.enroll(water[i]);
   }
-  spc.enroll(sol);
 
-  
-  savePotential(TpairpotTest(mcp), atom["OW"].id, atom["HW"].id, "pot_OWHW_nemorepulsion.dat");
-  savePotential(TpairpotTest(mcp), atom["OW"].id, atom["OW"].id, "pot_OWOW_nemorepulsion.dat");
-  savePotential(TpairpotTest(mcp), atom["HW"].id, atom["HW"].id, "pot_HWHW_nemorepulsion.dat");
- 
   // Markov moves and analysis
-  Move::Isobaric<Tspace> iso(mcp,pot,spc);
   Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
-  Analysis::RadialDistribution<> rdf_OO(0.05);
-  Analysis::RadialDistribution<> rdf_OH(0.05);
-  Analysis::RadialDistribution<> rdf_HH(0.05);
-  Analysis::RadialDistribution<> rdf_cm(0.05);
+  Move::Isobaric<Tspace> iso(mcp,pot,spc);
+  Analysis::RadialDistribution<> rdf(0.05);
 
-  spc.load("state");                               // load old config. from disk (if any)
-  sys.init( Energy::systemEnergy(spc,pot,spc.p)  );// store init system energy
-  double pxtc = mcp.get<double>("pxtc",0.99);
+  spc.load("state"); // load old config. from disk (if any)
+  
+  EnergyDrift sys;   // class for tracking system energy drifts
+  sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
 
   cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
 
-  while ( loop.macroCnt() ) {                      // Markov chain 
+  MCLoop loop(mcp);            // class for handling mc loops
+  while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int j,i=slp_global.rand() % 2;
-      int k=sol.numMolecules();                    //number of water molecules
+      int i=slp_global.rand() % 2;
+      int j,k=water.size();
       Group g;
       switch (i) {
         case 0:
           while (k-->0) {
-            j=sol.randomMol();                     // pick random water mol.
-            sol.getMolecule(j,g);
-            g.name="water";
-            g.setMassCenter(spc);                  // mass center needed for rotation
-            gmv.setGroup(g);
-            sys+=gmv.move();                       // translate/rotate
+            j=slp_global.rand() % (water.size());
+            gmv.setGroup(water[j]);
+            sys+=gmv.move();          // translate/rotate polymers
           }
           break;
         case 1:
-          sys+=iso.move();                         // volume move
+          sys+=iso.move();
           break;
       }
-        
+      
       // sample oxygen-oxygen rdf
-      //if (slp_global()>0.5) {
-        auto idO = atom["OW"].id;
-        auto idH = atom["HW"].id;
-        rdf_OO.sample(spc,sol,idO,idO);
-        rdf_OH.sample(spc,sol,idO,idH);
-        rdf_HH.sample(spc,sol,idH,idH);
-        rdf_cm.sampleMolecule(spc,sol);
-      //}
-      if (slp_global()>pxtc)
-        xtc.save(textio::prefix+"out.xtc", spc.p);
-
+      if (slp_global()>0.9) {
+        auto id = atom["OW"].id;
+        rdf.sample(spc,id,id);
+      }
+      
     } // end of micro loop
 
-    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p));
-    cout << loop.timing();
+    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // energy drift?
 
+    cout << loop.timing();
   } // end of macro loop
 
-  rdf_OO.save("rdf_OO.dat");
-  rdf_OH.save("rdf_OH.dat");
-  rdf_HH.save("rdf_HH.dat");
-  rdf_cm.save("rdf_cm.dat");
-  spc.save("state");
+  // save to disk
   FormatPQR::save("confout.pqr", spc.p);
+  spc.save("state");
+  rdf.save("rdf.dat");
+  spc.save("state");
+  FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
 
-  // perform unit tests
-  //iso.test(test);
-  //gmv.test(test);
-  //sys.test(test);
+  // perform unit 
+  UnitTest test(mcp);
+  iso.test(test);
+  gmv.test(test);
+  sys.test(test);
 
   // print information
-  cout << loop.info() + sys.info() + gmv.info() + iso.info();// + test.info();
-
-  return 0;//test.numFailed();
+  cout << loop.info() + sys.info() + gmv.info() + iso.info() + test.info();
 }
-/**  @page example_water Example: SPC Water
+
+/**  @page example_water2 Example: SPC Water (V2)
  *
- This will simulate an arbitrary SPC water in a cubic box using
+ This will simulate SPC water in a cubic volume using
  the Wolf method for electrostatic interactions.
+ This version uses a lazy cell list to discard pair
+ interactions beyond the Coulomb cutoff.
 
  Run this example from the `examples` directory:
 
  ~~~~~~~~~~~~~~~~~~~
  $ make
  $ cd src/examples
- $ ./water.run
+ $ ./water2.run
  ~~~~~~~~~~~~~~~~~~~
 
- water.cpp
+ water2.cpp
  ============
 
- @includelineno examples/water.cpp
+ @includelineno examples/water2.cpp
 
 */
-

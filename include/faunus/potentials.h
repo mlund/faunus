@@ -405,6 +405,11 @@ namespace Faunus {
               return eps(a.id,b.id) * (x*x - x);
             }
 
+          template<class Tparticle>
+            double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+              return operator()(a,b,r.squaredNorm()); 
+            }
+
           /**
            * @brief This will set a custom epsilon for a pair of particles
            * @param i Particle id of first particle

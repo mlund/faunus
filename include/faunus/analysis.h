@@ -185,7 +185,7 @@ namespace Faunus {
               std::ofstream f(filename.c_str());
               f.precision(10);
               if (f) {
-                //f << "# Faunus 2D table: " << name << endl;
+                f << "# Faunus 2D table: " << name << endl;
                 for (auto m : map)
                   f << m.first << " " << get( m.first ) << endl;
               }

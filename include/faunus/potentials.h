@@ -977,7 +977,7 @@ namespace Faunus {
             if (r2>rc2)                                                                                       
               return Point(0,0,0);                                                                            
 #ifdef FAU_APPROXMATH                                                                                         
-            double rinv = 1./invsqrtQuake(r2);                                                                   
+            double rinv = invsqrtQuake(r2);                                                                   
             return lB * a.charge * b.charge * ( exp_cawley(-k/rinv) / r2 * (k+rinv) + dudrc*rinv) * p;           
 #else                                                                                                         
             double r=sqrt(r2);                                                                                

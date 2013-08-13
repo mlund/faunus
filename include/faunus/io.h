@@ -102,7 +102,10 @@ namespace Faunus {
           std::ostringstream o;
           o.precision(5);
           o << atom[a.id].name << " " << i+1 << " " << a.x() << " " << a.y() <<" "<< a.z() << " "
-            << a.charge << " " << a.mw << " " << a.radius << std::endl;
+            << a.charge << " " << a.mw << " " << a.radius << " ";
+            o << a.mup.x() << " " << a.mup.y() << " " << a.mup.z() << " ";
+            o << a.alpha(0,0) << " " << a.alpha(1,1) << " " << a.alpha(2,2) << " " << a.alpha(0,1) << " " << a.alpha(0,2) << " " << a.alpha(1,2) << " ";
+            o << a.theta(0,0) << " " << a.theta(1,1) << " " << a.theta(2,2) << " " << a.theta(0,1) << " " << a.theta(0,2) << " " << a.theta(1,2) << std::endl;
           return o.str();
         }
 
@@ -112,14 +115,15 @@ namespace Faunus {
           string name, num;
           o << s;
           o >> name >> num >> a.x() >> a.y() >> a.z() >> a.charge >> a.mw >> a.radius;
-          /*o >> a.mup.x() >> a.mup.y() >> a.mup.z() >> a.theta(0,0) >> a.theta(0,1) >> a.theta(0,2) >> a.theta(1,1) >> a.theta(1,2) >> a.theta(2,2);
-          a.theta(1,0) = a.theta(0,1);
-          a.theta(2,0) = a.theta(0,2);
-          a.theta(2,1) = a.theta(1,2);*/
-          o >> a.mup.x() >> a.mup.y() >> a.mup.z() >> a.alpha(0,0) >> a.alpha(1,1) >> a.alpha(2,2) >> a.alpha(0,1) >> a.alpha(0,2) >> a.alpha(1,2);
+          o >> a.mup.x() >> a.mup.y() >> a.mup.z();
+          o >> a.alpha(0,0) >> a.alpha(1,1) >> a.alpha(2,2) >> a.alpha(0,1) >> a.alpha(0,2) >> a.alpha(1,2);
+          o >> a.theta(0,0) >> a.theta(1,1) >> a.theta(2,2) >> a.theta(0,1) >> a.theta(0,2) >> a.theta(1,2);
           a.alpha(1,0) = a.alpha(0,1);
           a.alpha(2,0) = a.alpha(0,2);
           a.alpha(2,1) = a.alpha(1,2);
+          a.theta(1,0) = a.theta(0,1);
+          a.theta(2,0) = a.theta(0,2);
+          a.theta(2,1) = a.theta(1,2);
           a.id = atom[name].id;
           a.hydrophobic = atom[a.id].hydrophobic;
           return a;

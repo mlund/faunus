@@ -720,12 +720,12 @@ namespace Faunus {
           angle=dp_rot*slp_global.randHalf();
           igroup->rotate(*spc, p, angle);
         }
-        if (dp_trans>1e-6) {
+        /*if (dp_trans>1e-6) {
           p.x()=dir.x() * dp_trans * slp_global.randHalf();
           p.y()=dir.y() * dp_trans * slp_global.randHalf();
           p.z()=dir.z() * dp_trans * slp_global.randHalf();
           igroup->translate(*spc, p);
-        }
+        }*/
       }
 
     template<class Tspace>
@@ -747,6 +747,7 @@ namespace Faunus {
 
     template<class Tspace>
       double TranslateRotate<Tspace>::_energyChange() {
+        cout << "New-test!" << endl;
         if (dp_rot<1e-6 && dp_trans<1e-6)
           return 0;
 
@@ -758,13 +759,13 @@ namespace Faunus {
         if (unew==pc::infty)
           return pc::infty;       // early rejection
         double uold = pot->g_external(spc->p, *igroup);
-
         for (auto g : spc->groupList()) {
           if (g!=igroup) {
             unew += pot->g2g(spc->trial, *g, *igroup);
             if (unew==pc::infty)
               return pc::infty;   // early rejection
             uold += pot->g2g(spc->p, *g, *igroup);
+            cout << "Unew: " << unew << ", Uold: " << uold << ", Angle: " << angle <<  endl;
           }
         }
         return unew-uold;

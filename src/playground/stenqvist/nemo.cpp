@@ -4,6 +4,8 @@ using namespace Faunus::Potential;
 
 typedef Geometry::Cuboid Tgeometry; // specify geometry 
 typedef CombinedPairPotential<CoulombWolf,NemoRepulsion> Tpairpot;
+typedef CombinedPairPotential<Coulomb,NemoRepulsion> TpairpotTest;
+typedef NemoRepulsion TpairpotTest;
 typedef Space<Tgeometry,DipoleParticle> Tspace;
 
 template<class Tpairpot, class Tid>
@@ -56,9 +58,9 @@ int main() {
   spc.enroll(sol);
 
   
-  savePotential(Tpairpot(mcp), atom["OW"].id, atom["HW"].id, "pot_OWHW_nemorepulsion.dat");
-  savePotential(Tpairpot(mcp), atom["OW"].id, atom["OW"].id, "pot_OWOW_nemorepulsion.dat");
-  savePotential(Tpairpot(mcp), atom["HW"].id, atom["HW"].id, "pot_HWHW_nemorepulsion.dat");
+  savePotential(TpairpotTest(mcp), atom["OW"].id, atom["HW"].id, "pot_OWHW_nemorepulsion.dat");
+  savePotential(TpairpotTest(mcp), atom["OW"].id, atom["OW"].id, "pot_OWOW_nemorepulsion.dat");
+  savePotential(TpairpotTest(mcp), atom["HW"].id, atom["HW"].id, "pot_HWHW_nemorepulsion.dat");
  
   // Markov moves and analysis
   Move::Isobaric<Tspace> iso(mcp,pot,spc);
@@ -94,26 +96,16 @@ int main() {
           sys+=iso.move();                         // volume move
           break;
       }
-
-      for (int i=0; i<sol.numMolecules()-1; i++) {
-        for (int j=i+1; j<sol.numMolecules(); j++) {
-          Group ig, jg;
-          sol.getMolecule(i,ig);
-          sol.getMolecule(j,jg);
-          Point icm = ig.massCenter(spc);
-          Point jcm = jg.massCenter(spc);
-          rdf_cm(spc.geo.dist(icm,jcm))++;
-        }
-      }
         
       // sample oxygen-oxygen rdf
-      if (slp_global()>0.5) {
+      //if (slp_global()>0.5) {
         auto idO = atom["OW"].id;
         auto idH = atom["HW"].id;
         rdf_OO.sample(spc,sol,idO,idO);
         rdf_OH.sample(spc,sol,idO,idH);
         rdf_HH.sample(spc,sol,idH,idH);
-      }
+        rdf_cm.sampleMolecule(spc,sol);
+      //}
       if (slp_global()>pxtc)
         xtc.save(textio::prefix+"out.xtc", spc.p);
 

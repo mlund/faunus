@@ -477,9 +477,9 @@ namespace Faunus {
               return sample(spc,all,ida,idb);
             }
             
-            /*
+            
           template<class Tspace>
-            void sampleMolecule(Tspace &spc, Group) {
+            void sampleMolecule(Tspace &spc, Group &sol) {
               for (int i=0; i<sol.numMolecules()-1; i++) {
                 for (int j=i+1; j<sol.numMolecules(); j++) {
                   Group ig, jg;
@@ -487,10 +487,10 @@ namespace Faunus {
                   sol.getMolecule(j,jg);
                   Point icm = ig.massCenter(spc);
                   Point jcm = jg.massCenter(spc);
-                  rdf_cm(spc.geo.dist(icm,jcm))++;
+                  this->operator() (spc.geo.dist(icm,jcm))++;
                 }
               }
-            }*/
+            }
       };
 
     template<typename Tx=double, typename Ty=unsigned long>
@@ -1197,28 +1197,8 @@ namespace Faunus {
             o << "Eps: " << getDielA() << endl;
           return o.str();
         }
-        
-        /**
-         * @brief Saves histogram of dipole components throughout the simulation. Both within a sphere(cutoff) and in the total box(box).
-         * 
-         * @param dir Directory to save in
-         */ 
-       /* void save(string dir) {
-            N2_x.save(dir+"dipole_x_cutoff.dat"); 
-            auto test = N2_x + N2_y;
-            test.save(dir+"temp.dat");
-          
-            Eigen::MatrixXd test11 =  N2_x.tableToMatrix();
-            cout << "Test: " << test11 << endl;
-            
-            N2_y.save(dir+"dipole_y_cutoff.dat"); 
-            N2_z.save(dir+"dipole_z_cutoff.dat"); 
-            N2_x_box.save(dir+"dipole_x_box.dat");
-            N2_y_box.save(dir+"dipole_y_box.dat");
-            N2_z_box.save(dir+"dipole_z_box.dat");
-        }*/
     };
-
+    
     /*
      * Perhaps make this a template, taking T=double as parameter?
      */

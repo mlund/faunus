@@ -467,9 +467,19 @@ namespace Faunus {
 
           // make sure trial mass center is updated for molecular groups
           // (certain energy functions may rely on up-to-date mass centra)
-          if (igroup!=nullptr)
-            if (igroup->isMolecular())
-              igroup->cm_trial=Geometry::massCenter(spc->geo, spc->trial, *igroup);
+          auto gi = spc->findGroup(iparticle);
+          assert(gi!=nullptr);
+          assert((gi->cm - gi->cm_trial).squaredNorm()<1e-6);
+          if (gi->isMolecular())
+            gi->cm_trial = Geometry::massCenter(spc->geo,spc->trial,*gi);
+
+#ifndef NDEBUG
+          // are untouched particles in group synched?
+          for (auto j : *gi)
+            if (j!=iparticle)
+              assert((base::spc->p[j] - base::spc->trial[j]).squaredNorm()<1e-6);
+#endif
+
         }
       }
 
@@ -479,9 +489,10 @@ namespace Faunus {
         sqrmap[ spc->p[iparticle].id ] += r2;
         accmap[ spc->p[iparticle].id ] += 1;
         spc->p[iparticle] = spc->trial[iparticle];
-        if (igroup!=nullptr)
-          if (igroup->isMolecular())
-            igroup->cm=igroup->cm_trial;
+        auto gi = spc->findGroup(iparticle);
+        assert(gi!=nullptr);
+        if (gi->isMolecular())
+          gi->cm = gi->cm_trial;
       }
 
     template<class Tspace>
@@ -489,9 +500,10 @@ namespace Faunus {
         spc->trial[iparticle] = spc->p[iparticle];
         sqrmap[ spc->p[iparticle].id ] += 0;
         accmap[ spc->p[iparticle].id ] += 0;
-        if (igroup!=nullptr)
-          if (igroup->isMolecular())
-            igroup->cm_trial = igroup->cm;
+        auto gi = spc->findGroup(iparticle);
+        assert(gi!=nullptr);
+        if (gi->isMolecular())
+          gi->cm_trial = gi->cm;
       }
 
     template<class Tspace>
@@ -503,8 +515,10 @@ namespace Faunus {
                 spc->trial[iparticle], Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
           return
-            base::pot->i_total(spc->trial, iparticle)
-            - base::pot->i_total(spc->p, iparticle);
+            (base::pot->i_total(spc->trial, iparticle)
+             + base::pot->external(spc->trial))
+            - (base::pot->i_total(spc->p, iparticle)
+                + base::pot->external(spc->p));
         }
         return 0;
       }
@@ -670,6 +684,9 @@ namespace Faunus {
           void setGroup(Group&); //!< Select Group to move
           bool groupWiseEnergy;  //!< Attempt to evaluate energy over groups from vector in Space (default=false)
           std::map<string,Point> directions; //!< Specify special group translation directions (default: x=y=z=1)
+#ifdef ENABLE_MPI
+          Faunus::MPI::MPIController* mpi;
+#endif
       };
 
     /**
@@ -696,6 +713,9 @@ namespace Faunus {
         this->runfraction = in.get<double>(base::prefix+"_runfraction",1.0);
         if (dp_rot<1e-6 && dp_trans<1e-6)
           this->runfraction=0;
+#ifdef ENABLE_MPI
+        mpi=nullptr;
+#endif
       }
 
     template<class Tspace>
@@ -703,6 +723,7 @@ namespace Faunus {
         assert(&g!=nullptr);
         assert(!g.name.empty() && "Group should have a name.");
         assert(g.isMolecular());
+        assert(spc->geo.sqdist(g.cm,g.cm_trial)<1e-6 && "Trial CM mismatch");
         igroup=&g;
         if ( directions.find(g.name) != directions.end() )
           dir = directions[g.name];
@@ -755,10 +776,24 @@ namespace Faunus {
           if ( spc->geo.collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
 
-        double unew = pot->g_external(spc->trial, *igroup);
+        double unew = pot->external(spc->trial) +pot->g_external(spc->trial, *igroup);
         if (unew==pc::infty)
           return pc::infty;       // early rejection
-        double uold = pot->g_external(spc->p, *igroup);
+        double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
+
+#ifdef ENABLE_MPI
+        if (mpi!=nullptr) {
+          double du=0;
+          auto s = Faunus::MPI::splitEven(*mpi, spc->groupList().size());
+          for (auto i=s.first; i<=s.second; ++i) {
+            auto gi=spc->groupList()[i];
+            if (gi!=igroup)
+              du += pot->g2g(spc->trial, *gi, *igroup) - pot->g2g(spc->p, *gi, *igroup);
+          }
+          return (unew-uold) + Faunus::MPI::reduceDouble(*mpi, du);
+        }
+#endif
+
         for (auto g : spc->groupList()) {
           if (g!=igroup) {
             unew += pot->g2g(spc->trial, *g, *igroup);
@@ -812,6 +847,148 @@ namespace Faunus {
           t(prefix+idtrim+"dTrans", sqrt(sqrmap_t[id].avg()));
         }
       }
+
+    /**
+      @brief Translates/rotates many groups simultaneously
+      */
+    template<class Tspace>
+      class TranslateRotateNbody : public TranslateRotate<Tspace> {
+        private:
+          typedef TranslateRotate<Tspace> base;
+          typedef opair<Group*> Tpair;
+          std::vector<Tpair> pairlist; // interacting groups
+
+          typename base::map_type angle2; //!< Temporary storage for angular movement
+          vector<Group*> gVec;   //!< Vector of groups to move
+
+          void _trialMove() FOVERRIDE {
+            angle2.clear();
+            for (auto g : gVec) {
+              if (g->isMolecular()) {
+                Point p;
+                if (base::dp_rot>1e-6) {
+                  p.ranunit(slp_global);        // random unit vector
+                  p=g->cm+p;                    // set endpoint for rotation
+                  double angle=base::dp_rot*slp_global.randHalf();
+                  g->rotate(*base::spc, p, angle);
+                  angle2[g->name] += pow(angle*180/pc::pi, 2); // sum angular movement^2
+                }
+                if (base::dp_trans>1e-6) {
+                  p.ranunit(slp_global);
+                  p=base::dp_trans*p.cwiseProduct(base::dir);
+                  g->translate(*base::spc, p);
+                }
+              }
+            }
+          }
+
+          void _acceptMove() FOVERRIDE {
+            std::map<string,double> r2;
+            for (auto g : gVec) {
+              r2[g->name] += base::spc->geo.sqdist(g->cm, g->cm_trial);
+              g->accept(*base::spc);
+              base::accmap[g->name] += 1;
+            }
+            for (auto &i : r2)
+              base::sqrmap_t[i.first] += i.second;
+            for (auto &i : angle2)
+              base::sqrmap_r[i.first] += i.second;
+          }
+
+          void _rejectMove() FOVERRIDE {
+            std::set<string> names; // unique group names
+            for (auto g : gVec) {
+              names.insert(g->name);
+              g->undo(*base::spc);
+              base::accmap[g->name]+=0;
+            }
+            for (auto n : names) {
+              base::sqrmap_t[n]+=0;
+              base::sqrmap_r[n]+=0;
+            }
+          }
+
+          string _info() {
+            std::ostringstream o;
+            o << textio::pad(textio::SUB,base::w,"Number of groups") << gVec.size() << endl
+              << base::_info();
+            return o.str();
+          }
+
+          double _energyChange() FOVERRIDE {
+            int N=(int)base::spc->groupList().size();
+            double du=0;
+
+#ifdef ENABLE_MPI
+            if (!pairlist.empty()) {
+
+              // group <-> group
+              auto s = Faunus::MPI::splitEven(*mpi, pairlist.size());
+              for (size_t i=s.first; i<=s.second; ++i)
+                du += base::pot->g2g(base::spc->trial,*pairlist[i].first,*pairlist[i].second)
+                  - base::pot->g2g(base::spc->p,*pairlist[i].first,*pairlist[i].second);
+
+              // group <-> external potential
+              s = Faunus::MPI::splitEven(*mpi, base::spc->groupList().size());
+              for (size_t i=s.first; i<=s.second; ++i) {
+                auto gi=base::spc->groupList()[i];
+                du += base::pot->g_external(base::spc->trial, *gi) - base::pot->g_external(base::spc->p, *gi);
+              }
+
+              return Faunus::MPI::reduceDouble(*mpi, du);
+            }
+#endif
+
+            if (!pairlist.empty()) {
+#pragma omp parallel for reduction (+:du)
+              for (int i=0; i<(int)pairlist.size(); i++)
+                du+=base::pot->g2g(base::spc->trial,*pairlist[i].first,*pairlist[i].second)
+                  - base::pot->g2g(base::spc->p,*pairlist[i].first,*pairlist[i].second);
+              for (auto g : base::spc->groupList())
+                du += base::pot->g_external(base::spc->trial, *g) - base::pot->g_external(base::spc->p, *g);
+              return du;
+            }
+
+            if (!gVec.empty()) {
+#pragma omp parallel for reduction (+:du) schedule (dynamic)
+              for (int i=0; i<N-1; i++)
+                for (int j=i+1; j<N; j++) {
+                  auto gi=base::spc->groupList()[i];
+                  auto gj=base::spc->groupList()[j];
+                  du += base::pot->g2g(base::spc->trial,*gi,*gj) - base::pot->g2g(base::spc->p,*gi,*gj);
+                }
+              for (auto g : base::spc->groupList())
+                du += base::pot->g_external(base::spc->trial, *g) - base::pot->g_external(base::spc->p, *g);
+            }
+            return du;
+          }
+          void setGroup(std::vector<Group*> &v) {
+            gVec.clear();
+            pairlist.clear();
+            std::set<Tpair> l; // set of all unique g2g pairs
+            for (auto i : v) {
+              if (i->isMolecular())
+                gVec.push_back(i);
+              for (auto j : v)
+                l.insert(Tpair(i,j));
+            }
+            for (auto i : l)
+              pairlist.push_back(i); // set->vector (faster)
+
+            //auto N=gVec.size();
+            //base::dp_trans /= N;
+            //base::dp_rot /= N;
+          }
+
+        public:
+          TranslateRotateNbody(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string pfx="transrot") : base(in,e,s,pfx) {
+            base::title+=" (N-body)";
+            setGroup(s.groupList());
+          }
+#ifdef ENABLE_MPI
+          Faunus::MPI::MPIController* mpi;
+#endif
+      };
 
     /**
      * @brief Combined rotation and rotation of groups and mobile species around it
@@ -1571,9 +1748,9 @@ namespace Faunus {
             << setw(l+8) << bracket("1/V")
             << setw(l+8) << bracket("N/V") << endl
             << indent(SUB) << setw(10) << "Averages"
-            << setw(l) << V.avg() << _angstrom << cubed
+            << setw(l) << V.avg() << _angstrom + cubed
             << setw(l) << std::cbrt(V.avg()) << _angstrom
-            << setw(l) << rV.avg() << " 1/" << _angstrom << cubed
+            << setw(l) << rV.avg() << " 1/" + _angstrom + cubed
             << setw(l) << N*rV.avg()*tomM << " mM\n";
         }
         return o.str();
@@ -1639,7 +1816,7 @@ namespace Faunus {
           if (g->numMolecules()>1)
             u+=pot->g_internal(p, *g);
         }
-        return u + pot->external();
+        return u + pot->external(p);
       }
 
     /**
@@ -2223,8 +2400,234 @@ namespace Faunus {
             g->cm_trial = g->cm;
         }
       }
-
 #endif
+
+    /**
+     * @brief Swap atom charges
+     *
+     * This move selects two particle index from a user-defined list and swaps
+     * their charges.
+     *
+     * @date Lund, 2013
+     */
+    template<class Tspace>
+      class SwapCharge : public Movebase<Tspace> {
+        private:
+          typedef Movebase<Tspace> base;
+          typedef std::map<short, Average<double> > map_type;
+          string _info();
+        protected:
+          void _acceptMove();
+          void _rejectMove();
+          double _energyChange();
+          void _trialMove();
+          using base::spc;
+          using base::pot;
+          map_type accmap; //!< Single particle acceptance map        
+          int ip, jp;
+
+          //int iparticle;   //!< Select single particle to move (-1 if none, default)
+
+        public:
+          SwapCharge(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="swapcharge");
+          std::set<int> swappableParticles;  //!< Particle index that can be swapped
+      };  
+
+    template<class Tspace>
+      SwapCharge<Tspace>::SwapCharge(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(e,s,pfx) {
+        base::title="Swap head groups of different charges";
+      }
+
+    template<class Tspace>
+      void SwapCharge<Tspace>::_trialMove() {
+        assert(!swappableParticles.empty());
+        auto vi=swappableParticles.begin();
+        auto vj=swappableParticles.begin();
+        std::advance(vi, slp_global.rand() % swappableParticles.size());
+        std::advance(vj, slp_global.rand() % swappableParticles.size());
+        ip=*(vi);
+        jp=*(vj);
+        if ( spc->trial[ip].charge != spc->trial[jp].charge ) {
+          std::swap( spc->trial[ip].charge, spc->trial[jp].charge );
+        }
+      }
+    template<class Tspace>
+      double SwapCharge<Tspace>::_energyChange() {
+        //cout << "Swapping particles: " << ip << " " << jp << endl;
+        return base::pot->i_total(spc->trial, jp) + base::pot->i_total(spc->trial, ip) 
+          - base::pot->i_total(spc->p, jp) - base::pot->i_total(spc->p, ip);
+      }
+    template<class Tspace>
+      void SwapCharge<Tspace>::_acceptMove() {
+        accmap[ spc->p[ip].id ] += 1;
+        spc->p[ip].charge = spc->trial[ip].charge;
+        spc->p[jp].charge = spc->trial[jp].charge;
+      }
+
+    template<class Tspace>
+      void SwapCharge<Tspace>::_rejectMove() {
+        accmap[ spc->p[ip].id ] += 0;
+        spc->trial[ip].charge = spc->p[ip].charge;
+        spc->trial[jp].charge = spc->p[jp].charge;
+      }
+    template<class Tspace>
+      string SwapCharge<Tspace>::_info() {
+        using namespace textio;
+        std::ostringstream o;
+        o << pad(SUB,base::w,"Average moves/particle")
+          << base::cnt / swappableParticles.size() << endl;
+        if (base::cnt>0) {
+          char l=12;
+          o << endl
+            << indent(SUB) << "Individual particle movement:" << endl << endl
+            << indent(SUBSUB) << std::left << string(7,' ')
+            << setw(l+1) << "Acc. "+percent;
+          for (auto m : accmap) {
+            auto id=m.first;
+            o << indent(SUBSUB) << std::left << setw(7) << atom[id].name;
+            o.precision(3);
+            o << setw(l) << accmap[id].avg()*100;
+          }
+        }
+        return o.str();
+      }
+
+    /**
+     * @brief Make a flip-flip move on lipids
+     *
+     * @date Lund, 2013
+     */
+    template<class Tspace>
+      class FlipFlop : public Movebase<Tspace> {
+        private:
+          typedef Movebase<Tspace> base;
+        protected:
+          using base::spc;
+          using base::pot;
+          using base::w;
+          using base::cnt;
+          using base::prefix;
+          void _trialMove();
+          void _acceptMove();
+          void _rejectMove();
+          double _energyChange();
+          string _info();
+          typedef std::map<string, Average<double> > map_type;
+          map_type accmap;   //!< Group particle acceptance map
+          Group* igroup;
+          Point* cntr;
+        public:
+          FlipFlop(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="flipflop");
+          void setGroup(Group&); //!< Select Group to move
+          void setCenter(Point&); //!< Select Center of Mass of the vescicle
+      };
+
+    template<class Tspace>
+      FlipFlop<Tspace>::FlipFlop(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(e,s,pfx) {
+        base::title="Group Flip-Flop Move";
+        base::w=30;
+        igroup=nullptr;
+        cntr=nullptr;
+        this->runfraction = in.get<double>(base::prefix+"_runfraction",1.0);
+      }
+
+    template<class Tspace>
+      void FlipFlop<Tspace>::setGroup(Group &g) {
+        assert(&g!=nullptr);
+        assert(g.isMolecular());
+        igroup=&g;
+      }
+
+    template<class Tspace>
+      void FlipFlop<Tspace>::setCenter(Point &center) {
+        assert(&center!=nullptr);
+        cntr=&center;
+      }
+
+    template<class Tspace>
+      void FlipFlop<Tspace>::_trialMove() {
+        //double u1=pot->g_internal(spc->p, *igroup);
+        assert(igroup!=nullptr);
+        assert(cntr!=nullptr);
+        Point startpoint=spc->p[igroup->back()];
+        Point head=spc->p[igroup->front()];
+        cntr->z()=head.z()=startpoint.z();
+        Point dir = spc->geo.vdist(*cntr, startpoint) / sqrt(spc->geo.sqdist(*cntr, startpoint)) * 1.1*spc->p[igroup->back()].radius;
+        if (spc->geo.sqdist(*cntr, startpoint) > spc->geo.sqdist(*cntr, head))
+          startpoint.translate(spc->geo,-dir);      // set startpoint for rotation
+        else startpoint.translate(spc->geo, dir);
+        double x1=cntr->x();
+        double y1=cntr->y();
+        double x2=startpoint.x();
+        double y2=startpoint.y();
+        Point endpoint;                   // set endpoint for rotation on the axis ⊥ to line connecting cm of cylinder with 2nd TL
+        endpoint.x()=x2+1;
+        endpoint.y()=-(x2-x1)/(y2-y1)+y2;
+        endpoint.z()=startpoint.z();
+        double angle=pc::pi;
+        Geometry::QuaternionRotate vrot;
+        vrot.setAxis(spc->geo, startpoint, endpoint, angle); //rot around startpoint->endpoint vec
+        for (auto i : *igroup)
+          spc->trial[i].rotate(vrot);
+        igroup->cm_trial.rotate(vrot);
+        //double u2=pot->g_internal(spc->p, *igroup);
+        //double delta=u2-u1;
+        //cout << "Internal Energy Change " << delta << endl;
+      }
+
+    template<class Tspace>
+      void FlipFlop<Tspace>::_acceptMove() {
+        accmap[ igroup->name ] += 1;
+        igroup->accept(*spc);
+      }
+
+    template<class Tspace>
+      void FlipFlop<Tspace>::_rejectMove() {
+        accmap[ igroup->name ] += 0;
+        igroup->undo(*spc);
+      }
+
+    template<class Tspace>
+      double FlipFlop<Tspace>::_energyChange() {
+
+        for (auto i : *igroup)
+          if ( spc->geo.collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
+            return pc::infty;
+
+        double unew = pot->g_external(spc->trial, *igroup);
+        if (unew==pc::infty)
+          return pc::infty;       // early rejection
+        double uold = pot->g_external(spc->p, *igroup);
+
+        for (auto g : spc->groupList()) {
+          if (g!=igroup) {
+            unew += pot->g2g(spc->trial, *g, *igroup);
+            if (unew==pc::infty)
+              return pc::infty;   // early rejection
+            uold += pot->g2g(spc->p, *g, *igroup);
+          }
+        }
+        return unew-uold;
+      }
+
+    template<class Tspace>
+      string FlipFlop<Tspace>::_info() {
+        using namespace textio;
+        std::ostringstream o;
+        if (cnt>0) {
+          char l=12;
+          o << indent(SUB) << "Move Statistics:" << endl
+            << indent(SUBSUB) << std::left << setw(20) << "Group name" //<< string(20,' ')
+            << setw(l+1) << "Acc. "+percent << endl;
+          for (auto m : accmap) {
+            string id=m.first;
+            o << indent(SUBSUB) << std::left << setw(20) << id;
+            o.precision(3);
+            o << setw(l) << accmap[id].avg()*100 << endl;
+          }
+        }
+        return o.str();
+      }
 
     /** @brief Atomic translation with dipolar polarizability */
     //typedef PolarizeMove<AtomicTranslation> AtomicTranslationPol;

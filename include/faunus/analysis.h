@@ -9,6 +9,7 @@
 #include <faunus/space.h>
 #include <faunus/point.h>
 #include <faunus/textio.h>
+#include <Eigen/Core>
 #endif
 
 #include <chrono>
@@ -56,7 +57,67 @@ namespace Faunus {
     };
 
     /**
-     * @brief General class for handling 2D tables - xy date, for example.
+     * @brief Pressure analysis using the virial theorem
+     *
+     * At the moment this is limited to "soft" systems only,
+     * i.e. for non-rigid systems with continuous potentials.
+     *
+     * References:
+     *
+     * - <http://dx.doi.org/10/fspzcx>
+     * - <http://dx.doi.org/10/ffwrhd>
+     *
+     */
+    class VirialPressure : public AnalysisBase {
+      private:
+
+        double Pid;        // ideal pressure
+        Average<double> P; // excess pressure scalar
+        Eigen::Matrix3d T; // excess pressure tensor
+
+        inline string _info() {
+          using namespace Faunus::textio;
+          std::ostringstream o;
+          if (cnt>0) {
+            double p=P.avg(), kT=pc::kB*pc::T();
+            o << pad(SUB,w, "Excess pressure") << p << " kT/"+angstrom+cubed+" = "
+              << p*1e30/pc::Nav << " mM = "
+              << p*kT*1e30 << " Pa = "
+              << p*kT*1e30/0.980665e5 << " atm\n"
+              << pad(SUB,w, "Tensor trace") << (T/cnt).trace() << " kT/"+angstrom+cubed+"\n"
+              << "  Excess pressure tensor:\n\n" << T/cnt << "\n"
+              << endl;
+          }
+          return o.str();
+        }
+
+      public:
+
+        VirialPressure() {
+          name="Virial Pressure";
+          T.setZero();
+        }
+
+        template<class Tvec, class Tgeo, class Tpot>
+          void sample(Tgeo &geo, Tpot &pot, const Tvec &v, double d=3) {
+            cnt++;
+            double p=0, V=geo.getVolume();
+            Eigen::Matrix3d t;
+            t.setZero();
+            for (size_t i=0; i<v.size()-1; i++)
+              for (size_t j=i+1; j<v.size(); j++) {
+                auto rij = geo.vdist(v[i],v[j]);
+                auto fij = pot.f_p2p(v[i],v[j]);
+                t += rij * fij.transpose(); // sample P tensor
+                p += rij.dot(fij);          // sample pressure scalar (check!)
+              }
+            T += t/(d*V);
+            P += p/(d*V);
+          }
+    };
+
+    /**
+     * @brief General class for handling 2D tables - xy data, for example.
      * @date Lund 2011
      * @note `Tx` is used as the `std::map` key and which may be
      * problematic due to direct floating point comparison (== operator).
@@ -97,7 +158,7 @@ namespace Faunus {
 
           void clear() { 
             map.clear(); 
-            
+
           }
 
           void setResolution(Tx resolution) {
@@ -135,13 +196,13 @@ namespace Faunus {
               if (map.size()>1) (--map.end())->second/=2; // -//-
             }
           }
-          
+
           Tmap getMap() {
             return map;
           }
-          
+
           Tx getResolution() {
-              return dx;
+            return dx;
           }
 
           /*! Returns x at minumum y */
@@ -202,10 +263,10 @@ namespace Faunus {
             }
             return false;
           }
-          
-         /**
-          * @brief Convert table to matrix
-          */
+
+          /**
+           * @brief Convert table to matrix
+           */
           Eigen::MatrixXd tableToMatrix() {
             assert(!this->map.empty() && "Map is empty!");
             Eigen::MatrixXd table(2,map.size());
@@ -218,7 +279,7 @@ namespace Faunus {
             }
             return table;
           }
-        };
+      };
 
     /**
      * @brief Subtract two tables
@@ -229,30 +290,30 @@ namespace Faunus {
         Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()),a.tabletype);
         Tmap a_map = a.getMap();
         Tmap b_map = b.getMap();
-        
+
         if (a.tabletype=="HISTOGRAM") {
-           if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
-           if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
-           if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
-           if (b_map.size()>1) (--b_map.end())->second*=2; // -//-
+          if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
+          if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
+          if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
+          if (b_map.size()>1) (--b_map.end())->second*=2; // -//-
         }
-        
+
         for (auto &m1 : a_map) {
           for (auto &m2 : b_map) {
-              c(m1.first) = m1.second-m2.second;
-              break;
-            }
+            c(m1.first) = m1.second-m2.second;
+            break;
+          }
         }
-        
+
         if (a.tabletype=="HISTOGRAM") {
-           if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
-           if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
-           if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
-           if (b_map.size()>1) (--b_map.end())->second/=2; // -//-
+          if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
+          if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
+          if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
+          if (b_map.size()>1) (--b_map.end())->second/=2; // -//-
         }
         return c;
       }
-      
+
     /**
      * @brief Addition two tables
      */
@@ -262,28 +323,28 @@ namespace Faunus {
         Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()),a.tabletype);
         Tmap a_map = a.getMap();
         Tmap b_map = b.getMap();
-        
+
         if (a.tabletype=="HISTOGRAM") {
-           if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
-           if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
-           if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
-           if (b_map.size()>1) (--b_map.end())->second*=2; // -//-
+          if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
+          if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
+          if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
+          if (b_map.size()>1) (--b_map.end())->second*=2; // -//-
         }
-        
+
         for (auto &m : a_map) {
           c(m.first) += m.second;
         }
         for (auto &m : b_map) {
           c(m.first) += m.second;
         }
-        
+
         if (a.tabletype=="HISTOGRAM") {
-           if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
-           if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
-           if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
-           if (b_map.size()>1) (--b_map.end())->second/=2; // -//-
+          if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
+          if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
+          if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
+          if (b_map.size()>1) (--b_map.end())->second/=2; // -//-
         }
-        
+
         return c;
       }
 
@@ -463,21 +524,24 @@ namespace Faunus {
                       this->operator() (r)++;
                   }
               int bulk=0;
-              for (auto i : g)
-                if (spc.p[i].id==ida || spc.p[i].id==idb)
+              for (auto i : g){
+                if (spc.p[i].id==ida || spc.p[i].id==idb){
                   bulk++;
+                }
+              }
               Npart+=bulk;
               bulkconc += bulk / spc.geo.getVolume();
             }
 
+
           template<class Tspace>
             void sample(Tspace &spc, short ida, short idb) {
               Group all(0, spc.p.size()-1);
-              assert(all.size()==spc.p.size());
+              assert(all.size()==(int)spc.p.size());
               return sample(spc,all,ida,idb);
             }
-            
-            
+
+
           template<class Tspace>
             void sampleMolecule(Tspace &spc, Group &sol) {
               for (int i=0; i<sol.numMolecules()-1; i++) {
@@ -1076,7 +1140,7 @@ namespace Faunus {
         void setLambda(double lambda_in) {
           lambda = lambda_in;
         }
-        
+
         /**
          * @brief Samples dipole-moment from dipole particles.
          * 
@@ -1088,10 +1152,10 @@ namespace Faunus {
             Point mu(0,0,0);
             Point mu_box(0,0,0);
             mu_0 = spc.p[0].muscalar;
-            
+
             clausiusMossotti(spc);
             y = 4*pc::pi*N*mu_0*mu_0/(9*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree());
-            
+
             for (auto &i : spc.p) {
               if (spc.geo.sqdist(i,origin)<cutoff2)
                 mu += i.mu*i.muscalar;
@@ -1152,35 +1216,36 @@ namespace Faunus {
          * @param p Particle vector
          * @param spc The space
          */ 
-          double KirkwoodFactor() {
-            Point tmp(M_x_box.avg(),M_y_box.avg(),M_z_box.avg());
-            //cout << "M: " << tmp.transpose() << endl;
-            return (M2_box.avg() - tmp.squaredNorm())/(N*mu_0*mu_0);
-          }
+        double KirkwoodFactor() {
+          Point tmp(M_x_box.avg(),M_y_box.avg(),M_z_box.avg());
+          //cout << "M: " << tmp.transpose() << endl;
+          return (M2_box.avg() - tmp.squaredNorm())/(N*mu_0*mu_0);
+        }
 
-          double getDielA() {
-            double gk_const = KirkwoodFactor()*3*y;
-            return (gk_const*(lambda-1)*(lambda-1)-gk_const-1)/(gk_const*(lambda-1)*(lambda-1)-1);
-          }
-        
+        double getDielA() {
+          double gk_const = KirkwoodFactor()*3*y;
+          return (gk_const*(lambda-1)*(lambda-1)-gk_const-1)/(gk_const*(lambda-1)*(lambda-1)-1);
+        }
+
         /*
            template<class Tspace>
            void kusalik(const Tspace &spc) {
-            double lambda = 1;
-            double alpha = 1;
-            //mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
-            double A = alpha*3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree()/(8*pc::pi);
-            double eps = (lambda*lambda-2*lambda-A)/(lambda*lambda-2*lambda-A-1);
-           }*/
-           
+           double lambda = 1;
+           double alpha = 1;
+        //mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
+        double A = alpha*3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree()/(8*pc::pi);
+        double eps = (lambda*lambda-2*lambda-A)/(lambda*lambda-2*lambda-A-1);
+        }*/
+
         /**
-         * @brief Returns dielectric constant according to \f$ \frac{\epsilon_0-1}{3} = \frac{4\pi}{9Vk_BT}<\bold{M}^2> + \frac{\epsilon_x-1}{3}  \f$. Only works when \f$ \epsilon_{RF} = \infty \f$.
+         * @brief Returns dielectric constant according to
+         * \f$ \frac{\epsilon_0-1}{3} = \frac{4\pi}{9Vk_BT}<\bold{M}^2> + \frac{\epsilon_x-1}{3}  \f$. Only works when \f$ \epsilon_{RF} = \infty \f$.
          * @brief DOI:10.1080/08927029708024131
          */ 
         double getDielTinfoil() {
           return (CM+pc::Ang2Bohr(M2_box.avg(),2)*vol_const_box);
         }  
-        
+
         double getDielKirkwood() {
           if (M2.cnt>0) {
             double Q = 0.25 + pc::Ang2Bohr(M2.avg(),2)*vol_const;   // In a.u.
@@ -1192,13 +1257,13 @@ namespace Faunus {
         inline string info() {
           std::ostringstream o;
           o << "gk:          " << KirkwoodFactor() << endl;
-            o << "Eps:          " << getDielKirkwood() << endl;
-            o << "Eps_{\\infty}: " << getDielTinfoil() << endl;
-            o << "Eps: " << getDielA() << endl;
+          o << "Eps:          " << getDielKirkwood() << endl;
+          o << "Eps_{\\infty}: " << getDielTinfoil() << endl;
+          o << "Eps: " << getDielA() << endl;
           return o.str();
         }
     };
-    
+
     /*
      * Perhaps make this a template, taking T=double as parameter?
      */

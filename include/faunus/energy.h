@@ -107,7 +107,7 @@ namespace Faunus {
           virtual double v2v(const Tpvec&, const Tpvec&)       // Particle vector-Particle vector energy
           { return 0; }
 
-          virtual double external()                            // External energy - pressure, for example.
+          virtual double external(const Tpvec&)                // External energy - pressure, for example.
           { return 0; }
 
           virtual void field(const Tpvec&, Eigen::MatrixXd&) //!< Calculate electric field on all particles
@@ -178,8 +178,8 @@ namespace Faunus {
           double g_internal(const Tpvec&p, Group&g) FOVERRIDE
           { return first.g_internal(p,g)+second.g_internal(p,g); }
 
-          double external() FOVERRIDE
-          { return first.external()+second.external(); }
+          double external(const Tpvec&p) FOVERRIDE
+          { return first.external(p)+second.external(p); }
 
           double v2v(const Tpvec&p1, const Tpvec&p2) FOVERRIDE
           { return first.v2v(p1,p2)+second.v2v(p1,p2); }
@@ -255,8 +255,9 @@ namespace Faunus {
           }
 
           //!< Particle-particle force (kT/Angstrom)
-          inline Point f_p2p(const Tparticle &a, const Tparticle &b) {
-            return pairpot.force( a,b,geo.sqdist(a,b),geo.vdist(a,b));
+          inline Point f_p2p(const Tparticle &a, const Tparticle &b) FOVERRIDE {
+            auto r=geo.vdist(a,b);
+            return pairpot.force(a,b,r.squaredNorm(),r);
           }
 
           double all2p(const Tpvec &p, const Tparticle &a) {
@@ -270,7 +271,7 @@ namespace Faunus {
             return pairpot( p[i], p[j], geo.sqdist( p[i], p[j]) );
           }
 
-          double i2g(const Tpvec &p, Group &g, int j) {
+          double i2g(const Tpvec &p, Group &g, int j) FOVERRIDE {
             double u=0;
             if ( !g.empty() ) {
               int len=g.back()+1;
@@ -286,12 +287,12 @@ namespace Faunus {
             return u;  
           }
 
-          double i2all(Tpvec &p, int i) {
+          double i2all(Tpvec &p, int i) FOVERRIDE {
             assert(i>=0 && i<int(p.size()) && "index i outside particle vector");
             double u=0;
+            int n=(int)p.size();
             for (int j=0; j!=i; ++j)
               u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]) );
-            int n=(int)p.size();
             for (int j=i+1; j<n; ++j)
               u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]) );
             return u;
@@ -394,7 +395,7 @@ namespace Faunus {
           }
 
           //!< Particle-particle force (kT/Angstrom)
-          inline Point f_p2p(const Tparticle &a, const Tparticle &b) {
+          inline Point f_p2p(const Tparticle &a, const Tparticle &b) FOVERRIDE {
             return pairpot.force( a,b,geo.sqdist(a,b),geo.vdist(a,b));
           }
 
@@ -511,6 +512,152 @@ namespace Faunus {
           }
       };
 
+    /**
+     * @brief Cuts group-to-group interactions at specified mass-center separation
+     *
+     * For two molecular groups (`Group::isMolecular()==true`) this will invoke
+     * a mass center cut-off and return zero if beyond. This is best used
+     * in connection with cut-off based pair potentials as a simple alternative
+     * to cell lists. In this case the `g2g` cutoff should be set to the
+     * particle-particle cutoff plus the maximum radii of the two groups,
+     * @f$ r_{cut}^{g2g} = r_{cut}^{p2p} + a_{g1} + a_{g2} @f$.
+     *
+     * Upon construction the `InputMap` is searched for the keyword
+     * `g2g_cutoff` - the default value is infinity.
+     */
+    template<class Tspace, class Tpairpot>
+      class NonbondedCutg2g : public Nonbonded<Tspace,Tpairpot> {
+        private:
+          typedef Nonbonded<Tspace,Tpairpot> base;
+          double rcut2;
+
+          Point getMassCenter(const typename base::Tpvec &p, const Group &g) {
+            assert(&p==&base::spc->p || &p==&base::spc->trial);
+            return (&p==&base::spc->p) ? g.cm : g.cm_trial;
+          }
+
+          bool cut(const typename base::Tpvec &p, const Group &g1, const Group &g2) {
+            if (g1.isMolecular())
+              if (g2.isMolecular()) {
+                Point a = getMassCenter(p,g1);
+                Point b = getMassCenter(p,g2);
+                if (base::geo.sqdist(a,b)>rcut2)
+                  return true;
+              }
+            return false;
+          }
+          
+        public:
+          bool noPairPotentialCutoff; //!< Set if range of pairpot is longer than rcut (default: false)
+
+          NonbondedCutg2g(InputMap &in) : base(in) {
+            noPairPotentialCutoff=false;
+            rcut2 = pow(in.get<double>("g2g_cutoff",pc::infty), 2);
+            base::name+=" (g2g cut=" + std::to_string(sqrt(rcut2))
+              + textio::_angstrom + ")";
+          }
+
+          double g2g(const typename base::Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+            return cut(p,g1,g2) ? 0 : base::g2g(p,g1,g2);
+          }
+
+          double i2g(const typename base::Tpvec &p, Group &g, int i) FOVERRIDE {
+            auto gi=base::spc->findGroup(i);
+            return cut(p,g,*gi) ? 0 : base::i2g(p,g,i);
+          }
+
+          /**
+           * If no pair potential cutoff is applied, `i2all` may need
+           * to re-calculate the full g2g interaction as the mass centers
+           * may have moved. To activate this behavior set
+           * `noPairPotentialCutoff=true`.
+           */
+          double i2all(typename base::Tpvec &p, int i) FOVERRIDE {
+            if (noPairPotentialCutoff) {
+              auto gi=base::spc->findGroup(i);
+              assert(gi!=nullptr);
+              double u=base::i2g(p,*gi,i); // i<->own group
+              for (auto gj : base::spc->groupList())
+                if (gj!=gi)
+                  u+=g2g(p,*gi,*gj);
+              return u;
+            }
+            else
+            {
+              double u=0;
+              auto gi=base::spc->findGroup(i);
+              for (auto gj : base::spc->groupList())
+                if (!cut(p,*gi,*gj))
+                  u+=base::i2g(p,*gj,i);
+              return u;
+            }
+          }
+          
+          // unfinished
+          void field(const typename base::Tpvec &p, Eigen::MatrixXd &E) FOVERRIDE {
+            assert((int)p.size()==E.cols());
+            assert(!"Validate this!");
+
+            // double loop over all groups and test cutoff
+            // todo: openmp pragma
+            for (auto gi : base::spc->groupList())
+              for (auto gj : base::spc->groupList())
+                if (gi!=gj)
+                  if (!cut(p,*gi,*gj))
+                    for (int i : *gi)
+                      for (int j : *gj)
+                        E.col(i)+=base::pairpot.field(p[j],base::geo.vdist(p[i],p[j]));
+              
+              // now loop over all internal particles in groups
+              for (auto g : base::spc->groupList())
+                for (int i : *g)
+                  for (int j : *g)
+                    if (i!=j)
+                      E.col(i)+=base::pairpot.field(p[j],base::geo.vdist(p[i],p[j]));
+          }
+      };
+
+    /**
+      @brief Treats groups as charged monopoles beyond cut-off
+      */
+    template<class Tspace, class Tpairpot, class Tmppot=Potential::DebyeHuckel>
+      class NonbondedCutg2gMonopole : public NonbondedCutg2g<Tspace,Tpairpot> {
+        private:
+          double qscale,Q,R; // charge scaling
+          Tmppot dh;
+          typedef NonbondedCutg2g<Tspace,Tpairpot> base;
+          string _info() {
+            using namespace Faunus::textio;
+            std::ostringstream o;
+            o << pad(SUB,30,"Monopole radius") << R << _angstrom << endl
+              << pad(SUB,30,"Monopole charge") << Q/qscale << endl
+              << pad(SUB,30,"DH charge scaling") << qscale << endl;
+            return o.str();
+          }
+        public:
+          NonbondedCutg2gMonopole(InputMap &in) : base(in), dh(in) {
+            base::name+="+MP";
+            R=in.get<double>("monopole_radius", 0, "g2g cutoff monopole radius (angstrom)");
+            double k=1/dh.debyeLength();
+            qscale = std::sinh(k*R)/(k*R);
+            Q = qscale * in.get<double>("monopole_charge", 0, "g2g cutoff monopole charge number (e)");
+          }
+          double g2g(const typename base::Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+            if (g1.isMolecular())
+              if (g2.isMolecular()) {
+                Point a = base::getMassCenter(p,g1);
+                Point b = base::getMassCenter(p,g2);
+                double r2=base::geo.sqdist(a,b);
+                if (r2>base::rcut2) {
+                  typename base::Tparticle p1,p2;
+                  p1.charge = Q; //qscale*g1.charge(p);
+                  p2.charge = Q; //qscale*g2.charge(p);
+                  return dh(p1,p2,r2);
+                }
+              }
+            return base::base::g2g(p,g1,g2);
+          }
+      };
 
     /**
      * @brief Class for handling bond pairs
@@ -539,7 +686,10 @@ namespace Faunus {
         typedef typename Energybase<Tspace>::Tparticle Tparticle;
         typedef typename Energybase<Tspace>::Tpvec Tpvec;
         typedef pair_list<std::function<double(const Tparticle&,const Tparticle&,double)> > Tbase;
+        typedef std::function<Point(const Tparticle&,const Tparticle&,double,const Point&)> Tforce;
+
         using Energybase<Tspace>::spc;
+        std::map<typename Tbase::Tpair, Tforce> force_list;
 
         string _infolist;
         string _info() {
@@ -551,6 +701,15 @@ namespace Faunus {
             << setw(7) << "i" << setw(7) << "j" << endl;
           return o.str() + _infolist;
         }
+
+        template<class Tpairpot>
+          struct ForceFunctionObject {
+            Tpairpot pot;
+            ForceFunctionObject(const Tpairpot &p) : pot(p) {}
+            Point operator()(const Tparticle &a, const Tparticle &b, double r2, const Point &r) {
+              return pot.force(a,b,r2,r);
+            }
+          };
 
       public:
         bool CrossGroupBonds; //!< Set to true if bonds cross groups (slower!). Default: false
@@ -570,6 +729,23 @@ namespace Faunus {
           if (f!=this->list.end())
             return f->second( p[i], p[j], spc->geo.sqdist( p[i], p[j] ) );
           return 0;
+        }
+
+        /**
+         * @note This will work only for particles contained inside
+         * Space main particle vector.
+         */
+        Point f_p2p(const Tparticle &a, const Tparticle &b) FOVERRIDE {
+          int i=spc->findIndex(a);
+          int j=spc->findIndex(b);
+          assert(i>=0 && j>=0);
+          assert(i<(int)spc->p.size() && j<(int)spc->p.size());
+          auto f=force_list.find( opair<int>(i,j) );
+          if (f!=this->force_list.end()) {
+            auto r = spc->geo.vdist(a,b);
+            return f->second(a,b,r.squaredNorm(),r);
+          }
+          return Point(0,0,0);
         }
 
         //!< All bonds w. i'th particle 
@@ -660,6 +836,8 @@ namespace Faunus {
             pot.name.clear();   // potentially save a
             pot.prefix.clear(); // little bit of memory
             Tbase::add(i,j,pot);// create and add functor to pair list
+            force_list[ typename Tbase::Tpair(i,j) ]
+              = ForceFunctionObject<decltype(pot)>(pot);
           }
     };
 
@@ -687,7 +865,7 @@ namespace Faunus {
           void add(double du) { usum+=du; }
 
           //!< Dumme rest treated as external potential to whole system
-          double external() FOVERRIDE {
+          double external(const typename Energybase<Tspace>::Tpvec &p) FOVERRIDE {
             return usum;
           }
       };
@@ -731,7 +909,7 @@ namespace Faunus {
           }
 
           /** @brief External energy working on system. pV/kT-lnV */
-          double external() FOVERRIDE {
+          double external(const Tpvec&p) FOVERRIDE {
             double V=this->getSpace().geo.getVolume();
             assert(V>1e-9 && "Volume must be non-zero!");
             return P*V - log(V); 
@@ -774,6 +952,40 @@ namespace Faunus {
       };
 
     /**
+     * @brief Constrain two group mass centra within a certain distance interval [mindist:maxdist]
+     * @author Mikael Lund
+     * @date Lund, 2012
+     * @todo Prettify output
+     *
+     * This energy class will constrain the mass center separation between selected groups to a certain
+     * interval. This can be useful to sample rare events and the constraint is implemented as an external
+     * group energy that return infinity if the mass center separation are outside the defined range.
+     * An arbitrary number of group pairs can be added with the addPair() command, although one would
+     * rarely want to have more than one.
+     * In the following example,
+     * the distance between `mygroup1` and `mygroup2` are constrained to the range `[10:50]` angstrom:
+     * @code
+     * Energy::Hamiltonian pot;
+     * auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
+     * auto constrain = pot.create( Energy::MassCenterConstrain(pot.getGeometry()) );
+     * constrain->addPair( mygroup1, mygroup2, 10, 50); 
+     * @endcode
+     */
+    template<typename Tspace>
+      class MassCenterConstrain : public Energybase<Tspace> {
+        private:
+          string _info();
+          struct data {
+            double mindist, maxdist;
+          };
+          std::map<opair<Faunus::Group*>, data> gmap;
+        public:
+          MassCenterConstrain(Geometry::Geometrybase&);      //!< Constructor
+          void addPair(Group&, Group&, double, double);      //!< Add constraint between two groups
+          double g_external(const p_vec&, Group&) FOVERRIDE; //!< Constrain treated as external potential
+      };
+
+    /**
      * @brief Calculates the total system energy
      *
      * For a given particle vector, space, and energy class we try to
@@ -787,7 +999,7 @@ namespace Faunus {
     template<class Tspace, class Tenergy, class Tpvec>
       double systemEnergy(Tspace &spc, Tenergy &pot, const Tpvec &p) {
         pot.setSpace(spc); // ensure pot geometry is in sync with spc
-        double u = pot.external();
+        double u = pot.external(p);
         for (auto g : spc.groupList())
           u += pot.g_external(p, *g) + pot.g_internal(p, *g);
         for (size_t i=0; i<spc.groupList().size()-1; i++)

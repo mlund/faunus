@@ -270,14 +270,15 @@
 		738C138913FB13510056EF71 /* xdrfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 738C137E13FB133A0056EF71 /* xdrfile.c */; };
 		738C138A13FB13510056EF71 /* xdrfile_trr.c in Sources */ = {isa = PBXBuildFile; fileRef = 738C137F13FB133A0056EF71 /* xdrfile_trr.c */; };
 		738C138B13FB13510056EF71 /* xdrfile_xtc.c in Sources */ = {isa = PBXBuildFile; fileRef = 738C138013FB133A0056EF71 /* xdrfile_xtc.c */; };
-		73B67CDB1423E28E00E44DD9 /* drift.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD21423E28E00E44DD9 /* drift.cpp */; };
 		73B67CDD1423E28E00E44DD9 /* geometry.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD41423E28E00E44DD9 /* geometry.cpp */; };
 		73B67CDF1423E28E00E44DD9 /* io.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD61423E28E00E44DD9 /* io.cpp */; };
-		73B67CE01423E28E00E44DD9 /* mcloop.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD71423E28E00E44DD9 /* mcloop.cpp */; };
 		73B67CE21423E28E00E44DD9 /* potentials.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD91423E28E00E44DD9 /* potentials.cpp */; };
 		73CB4DA616D9297500DED45D /* externalpotential.h in Headers */ = {isa = PBXBuildFile; fileRef = 73CB4DA516D9297500DED45D /* externalpotential.h */; };
 		73E9C84515CC6B32001D5654 /* polymers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73E9C83515CC6A70001D5654 /* polymers.cpp */; };
 		73E9C84815CC6B6A001D5654 /* libfaunus.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 738C132613FB12B30056EF71 /* libfaunus.dylib */; };
+		8B6B1C7D1797F2B800FDF9F4 /* json.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B6B1C7A1797F2B700FDF9F4 /* json.h */; };
+		8B6B1C7E1797F2B800FDF9F4 /* range.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B6B1C7B1797F2B800FDF9F4 /* range.h */; };
+		8B6B1C7F1797F2B800FDF9F4 /* scatter.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B6B1C7C1797F2B800FDF9F4 /* scatter.h */; };
 		8B9D16DD166CA22A00E7C7D4 /* titrate.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B9D16DC166CA22A00E7C7D4 /* titrate.h */; };
 		8BA8482016E4F579006EE6F6 /* ewald.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BA8481F16E4F579006EE6F6 /* ewald.h */; };
 		8BA8482216E4F589006EE6F6 /* spherocylinder.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BA8482116E4F589006EE6F6 /* spherocylinder.h */; };
@@ -304,7 +305,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		2ADE665C170DCE4900519B6C /* HS.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = HS.cpp; path = ../../src/examples/HS.cpp; sourceTree = "<group>"; };
 		73011C551423E30100509B7B /* drift.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = drift.h; sourceTree = "<group>"; };
 		73011C561423E30100509B7B /* energy.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = energy.h; sourceTree = "<group>"; };
 		73011C571423E30100509B7B /* faunus.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = faunus.h; sourceTree = "<group>"; };
@@ -610,14 +610,18 @@
 		738C137E13FB133A0056EF71 /* xdrfile.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xdrfile.c; sourceTree = "<group>"; };
 		738C137F13FB133A0056EF71 /* xdrfile_trr.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xdrfile_trr.c; sourceTree = "<group>"; };
 		738C138013FB133A0056EF71 /* xdrfile_xtc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xdrfile_xtc.c; sourceTree = "<group>"; };
-		73B67CD21423E28E00E44DD9 /* drift.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = drift.cpp; path = ../../src/drift.cpp; sourceTree = "<group>"; };
 		73B67CD41423E28E00E44DD9 /* geometry.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = geometry.cpp; path = ../../src/geometry.cpp; sourceTree = "<group>"; };
 		73B67CD61423E28E00E44DD9 /* io.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = io.cpp; path = ../../src/io.cpp; sourceTree = "<group>"; };
-		73B67CD71423E28E00E44DD9 /* mcloop.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mcloop.cpp; path = ../../src/mcloop.cpp; sourceTree = "<group>"; };
 		73B67CD91423E28E00E44DD9 /* potentials.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = potentials.cpp; path = ../../src/potentials.cpp; sourceTree = "<group>"; };
 		73CB4DA516D9297500DED45D /* externalpotential.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = externalpotential.h; sourceTree = "<group>"; };
 		73E9C83515CC6A70001D5654 /* polymers.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = polymers.cpp; path = ../../../src/examples/polymers.cpp; sourceTree = "<group>"; };
 		73E9C83B15CC6B1D001D5654 /* polymers */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = polymers; sourceTree = BUILT_PRODUCTS_DIR; };
+		8B6B1C781797F26F00FDF9F4 /* manybody.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = manybody.cpp; path = ../../src/examples/manybody.cpp; sourceTree = "<group>"; };
+		8B6B1C7A1797F2B700FDF9F4 /* json.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = json.h; sourceTree = "<group>"; };
+		8B6B1C7B1797F2B800FDF9F4 /* range.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = range.h; sourceTree = "<group>"; };
+		8B6B1C7C1797F2B800FDF9F4 /* scatter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = scatter.h; sourceTree = "<group>"; };
+		8B6B1C8017984C0800FDF9F4 /* titrate.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = titrate.cpp; path = ../../src/examples/titrate.cpp; sourceTree = "<group>"; };
+		8B6B1C821799B91F00FDF9F4 /* membrane.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = membrane.cpp; path = ../../src/examples/membrane.cpp; sourceTree = "<group>"; };
 		8B9277491684A3E7003BD642 /* cluster.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = cluster.cpp; sourceTree = "<group>"; };
 		8B92774A1684A3E7003BD642 /* cluster.run */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = cluster.run; sourceTree = "<group>"; };
 		8B969DDA166CDA09004248C1 /* membrane-temper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = "membrane-temper.cpp"; path = "../../src/playground/mlund/membrane-temper.cpp"; sourceTree = "<group>"; };
@@ -662,7 +666,9 @@
 		2ADE665B170DCE3700519B6C /* examples */ = {
 			isa = PBXGroup;
 			children = (
-				2ADE665C170DCE4900519B6C /* HS.cpp */,
+				8B6B1C781797F26F00FDF9F4 /* manybody.cpp */,
+				8B6B1C821799B91F00FDF9F4 /* membrane.cpp */,
+				8B6B1C8017984C0800FDF9F4 /* titrate.cpp */,
 			);
 			name = examples;
 			sourceTree = "<group>";
@@ -1281,6 +1287,7 @@
 				738C134113FB12DE0056EF71 /* group.h */,
 				738C134213FB12DE0056EF71 /* inputfile.h */,
 				73011C5A1423E30100509B7B /* io.h */,
+				8B6B1C7A1797F2B700FDF9F4 /* json.h */,
 				73011C5B1423E30100509B7B /* mcloop.h */,
 				73011C5C1423E30100509B7B /* move.h */,
 				7316FA2F15C546B20024F084 /* mpi.h */,
@@ -1288,11 +1295,13 @@
 				738C134413FB12DE0056EF71 /* physconst.h */,
 				738C134513FB12DE0056EF71 /* point.h */,
 				73011C5D1423E30100509B7B /* potentials.h */,
+				8B6B1C7C1797F2B800FDF9F4 /* scatter.h */,
 				738C134613FB12DE0056EF71 /* slump.h */,
 				738C134713FB12DE0056EF71 /* space.h */,
 				738C134813FB12DE0056EF71 /* species.h */,
 				8BA8482116E4F589006EE6F6 /* spherocylinder.h */,
 				8BB0BCB1170B2CF300467E2D /* tabulate.h */,
+				8B6B1C7B1797F2B800FDF9F4 /* range.h */,
 				7316FA2C15C546A30024F084 /* textio.h */,
 				8B9D16DC166CA22A00E7C7D4 /* titrate.h */,
 				73011C5E1423E30100509B7B /* topology.h */,
@@ -1327,11 +1336,9 @@
 				2ADE665B170DCE3700519B6C /* examples */,
 				738C136713FB133A0056EF71 /* xdrfile */,
 				7316FA5515C56BA10024F084 /* analysis.cpp */,
-				73B67CD21423E28E00E44DD9 /* drift.cpp */,
 				73B67CD41423E28E00E44DD9 /* geometry.cpp */,
 				738C132F13FB12D20056EF71 /* inputfile.cpp */,
 				73B67CD61423E28E00E44DD9 /* io.cpp */,
-				73B67CD71423E28E00E44DD9 /* mcloop.cpp */,
 				7316FA3115C546E90024F084 /* mpi.cpp */,
 				73B67CD91423E28E00E44DD9 /* potentials.cpp */,
 				738C133213FB12D20056EF71 /* slump.cpp */,
@@ -1651,6 +1658,9 @@
 				8BA8482216E4F589006EE6F6 /* spherocylinder.h in Headers */,
 				8BB0BCB2170B2CF300467E2D /* multipole.h in Headers */,
 				8BB0BCB3170B2CF300467E2D /* tabulate.h in Headers */,
+				8B6B1C7D1797F2B800FDF9F4 /* json.h in Headers */,
+				8B6B1C7E1797F2B800FDF9F4 /* range.h in Headers */,
+				8B6B1C7F1797F2B800FDF9F4 /* scatter.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1755,9 +1765,7 @@
 				738C133613FB12D20056EF71 /* inputfile.cpp in Sources */,
 				738C133913FB12D20056EF71 /* slump.cpp in Sources */,
 				738C133A13FB12D20056EF71 /* species.cpp in Sources */,
-				73B67CDB1423E28E00E44DD9 /* drift.cpp in Sources */,
 				73B67CDD1423E28E00E44DD9 /* geometry.cpp in Sources */,
-				73B67CE01423E28E00E44DD9 /* mcloop.cpp in Sources */,
 				73B67CE21423E28E00E44DD9 /* potentials.cpp in Sources */,
 				7316FA3315C546E90024F084 /* mpi.cpp in Sources */,
 				7316FA3415C546E90024F084 /* textio.cpp in Sources */,

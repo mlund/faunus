@@ -50,6 +50,9 @@ transrot_transdp       50
 transrot_rotdp         6
 tion1                  Cl
 nion1                  32
+qmin                   0.25
+qmax                   4.0
+dq                     0.01
 test_stable            no
 test_file              polymers.test
 " > polymers.input

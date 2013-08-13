@@ -44,16 +44,23 @@ lipid_sigma            $sigma    # angstrom
 lipid_chargefraction   0.0
 lipid_file             membrane.aam
 
+g2g_cutoff             40
+
 cosattract_eps         $epsilon
 cosattract_wc          "`python -c "print $sigma*1.6"`"
 cosattract_rc          "`python -c "print $sigma*2**(1/6.)"`"
 
-mv_particle_genericdp  10.
-transrot_transdp       2
+mv_particle_genericdp   10.
+mv_particle_runfraction 0.5
+
+transrot_transdp       2.0
 transrot_rotdp         0.5
+transrot_runfraction   1
+
 pivit_minlen           1
 pivot_maxlen           2
 pivot_dp               6
+pivot_runfraction      1
 
 # Constant pressure
 npt_P                  0

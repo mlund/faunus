@@ -102,7 +102,7 @@ namespace Faunus {
           std::ostringstream o;
           o.precision(5);
           o << atom[a.id].name << " " << i+1 << " " << a.x() << " " << a.y() <<" "<< a.z() << " "
-            << a.charge << " " << a.mw << " " << a.radius << "\n";
+            << a.charge << " " << a.mw << " " << a.radius << endl;
           return o.str();
         }
 

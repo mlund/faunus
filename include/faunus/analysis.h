@@ -156,10 +156,7 @@ namespace Faunus {
             setResolution(resolution);
           }
 
-          void clear() { 
-            map.clear(); 
-
-          }
+          void clear() { map.clear(); } 
 
           void setResolution(Tx resolution) {
             assert( resolution>0 );
@@ -540,7 +537,6 @@ namespace Faunus {
               assert(all.size()==(int)spc.p.size());
               return sample(spc,all,ida,idb);
             }
-
 
           template<class Tspace>
             void sampleMolecule(Tspace &spc, Group &sol) {
@@ -1197,8 +1193,15 @@ namespace Faunus {
           }
 
         /**
-         * @brief Claussius-Mossotti relationship calculates \f$ \epsilon_x \f$ according to \f$ \frac{\epsilon_x-1}{\epsilon_x+2} = \frac{4\pi}{3}\rho\alpha  \f$. Only valid for isotropic systems. 
-         * @brief DOI:10.1080/08927029708024131
+         * @brief Claussius-Mossotti analysis
+         *
+         * Calculates \f$ \epsilon_x \f$ according to \f$ \frac{\epsilon_x-1}{\epsilon_x+2} = \frac{4\pi}{3}\rho\alpha  \f$.
+         *
+         * Only valid for isotropic systems. 
+         * 
+         * More information: <http://dx.doi.org/10.1080/08927029708024131>
+         *
+         * @warning Unfinished
          * 
          * @param p Particle vector
          * @param spc The space
@@ -1211,7 +1214,9 @@ namespace Faunus {
 
         /**
          * @brief Get the Kirkwood-factor, g_k. 
-         * @brief "Understanding Molecular Simulation", D. Frenkel, B. Smit, p.302
+         * More here: "Understanding Molecular Simulation", D. Frenkel, B. Smit, p.302
+         *
+         * @warning Unfinished
          * 
          * @param p Particle vector
          * @param spc The space
@@ -1240,7 +1245,8 @@ namespace Faunus {
         /**
          * @brief Returns dielectric constant according to
          * \f$ \frac{\epsilon_0-1}{3} = \frac{4\pi}{9Vk_BT}<\bold{M}^2> + \frac{\epsilon_x-1}{3}  \f$. Only works when \f$ \epsilon_{RF} = \infty \f$.
-         * @brief DOI:10.1080/08927029708024131
+         * 
+         * More info: <http://dx.doi.org:10.1080/08927029708024131>
          */ 
         double getDielTinfoil() {
           return (CM+pc::Ang2Bohr(M2_box.avg(),2)*vol_const_box);

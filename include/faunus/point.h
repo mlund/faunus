@@ -570,6 +570,7 @@ namespace Faunus {
       template<typename Trotator>
         void rotate(const Trotator &rot) {
           if (halfl>1e-6) {
+            assert(rot.getOrigin().squaredNorm()<1e-6);
             dir = rot(dir);
             patchdir = rot(patchdir);
             patchsides[0] = rot(patchsides[0]);

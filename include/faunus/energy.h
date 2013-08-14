@@ -341,7 +341,7 @@ namespace Faunus {
             int b=g.back(), f=g.front();
             if (!g.empty())
               for (int i=f; i<b; ++i)
-                for (int j=i+1; j<=b; ++j) 
+                for (int j=i+1; j<=b; ++j)
                   u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]));
             return u;
           }

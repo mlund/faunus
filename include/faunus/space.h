@@ -259,14 +259,12 @@ namespace Faunus {
     bool Space<Tgeometry,Tparticle>::insert(string atomname, int n, keys key) {
       particle a;
       a=atom[atomname];
-      cout << "Overlap on insert ignored!\n";
       while (n>0) {
         geo.randompos(a);
-        //if (overlap(a))
-          //cout << "Overlap on insert ignored!\n";
-        insert(a,-1);
-        n--;
-        //}
+        if (!overlap(a)) {
+          insert(a,-1);
+          n--;
+        }
       }
       return true;
     }

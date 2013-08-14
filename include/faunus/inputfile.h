@@ -54,7 +54,7 @@ namespace Faunus {
           return fallback;
         }
         
-      //!< Get value associated with keyword
+      //!< Set value associated with keyword
       template<typename T>
         void set(const string &key, T value, string infostring=string()) {
           if ( map.find(key) != map.end() ) {

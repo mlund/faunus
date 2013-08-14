@@ -107,7 +107,6 @@ namespace Faunus {
                 }
                 //count++;
               } while (mu_err_norm.maxCoeff() > threshold);                 // Check if threshold is ok
-              //std::cout << "Count,Value: " << count << " " << mu_err_norm.maxCoeff() << "\n";
             }
 
           void _trialMove() FOVERRIDE {
@@ -801,7 +800,6 @@ namespace Faunus {
             uold += pot->g2g(spc->p, *g, *igroup);
           }
         }
-        //cout << "Unew: " << unew << ", Uold: " << uold << ", Angle: " << angle <<  endl;
         return unew-uold;
       }
 
@@ -2452,7 +2450,6 @@ namespace Faunus {
       }
     template<class Tspace>
       double SwapCharge<Tspace>::_energyChange() {
-        //cout << "Swapping particles: " << ip << " " << jp << endl;
         return base::pot->i_total(spc->trial, jp) + base::pot->i_total(spc->trial, ip) 
           - base::pot->i_total(spc->p, jp) - base::pot->i_total(spc->p, ip);
       }
@@ -2545,7 +2542,6 @@ namespace Faunus {
 
     template<class Tspace>
       void FlipFlop<Tspace>::_trialMove() {
-        //double u1=pot->g_internal(spc->p, *igroup);
         assert(igroup!=nullptr);
         assert(cntr!=nullptr);
         Point startpoint=spc->p[igroup->back()];
@@ -2569,9 +2565,6 @@ namespace Faunus {
         for (auto i : *igroup)
           spc->trial[i].rotate(vrot);
         igroup->cm_trial.rotate(vrot);
-        //double u2=pot->g_internal(spc->p, *igroup);
-        //double delta=u2-u1;
-        //cout << "Internal Energy Change " << delta << endl;
       }
 
     template<class Tspace>

@@ -156,7 +156,7 @@ namespace Faunus {
             setResolution(resolution);
           }
 
-          void clear() { map.clear(); } 
+          void clear() { map.clear(); }
 
           void setResolution(Tx resolution) {
             assert( resolution>0 );
@@ -1166,7 +1166,9 @@ namespace Faunus {
          * @param spc The space
          * @param origin Origin to use (optional)
          * @param mu Dipoles to add to from within cutoff (optional)
-         * @param mu_inf Dipoles to add to from entire box (optional)
+         * @param mu_box Dipoles to add to from entire box (optional)
+         *
+         * @warning Unfinished
          */
         template<class Tspace>
           void samplePP(Tspace &spc, Point origin=Point(0,0,0), Point mu=Point(0,0,0), Point mu_box=Point(0,0,0)) {
@@ -1203,7 +1205,6 @@ namespace Faunus {
          *
          * @warning Unfinished
          * 
-         * @param p Particle vector
          * @param spc The space
          */ 
         template<class Tspace>
@@ -1217,9 +1218,6 @@ namespace Faunus {
          * More here: "Understanding Molecular Simulation", D. Frenkel, B. Smit, p.302
          *
          * @warning Unfinished
-         * 
-         * @param p Particle vector
-         * @param spc The space
          */ 
         double KirkwoodFactor() {
           Point tmp(M_x_box.avg(),M_y_box.avg(),M_z_box.avg());

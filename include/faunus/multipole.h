@@ -78,9 +78,14 @@ namespace Faunus {
       private:
         string _brief() { return "NemoRepulsion"; }
       protected:
+        typedef Eigen::VectorXd Tvec;
+        typedef opair<int> Tpair;
+        std::map<Tpair,Tvec> map;
+
         double _lB, epsilon_r, rc2, eps;
         Eigen::MatrixXd pab;
         particle::Tid HW,OW; // particle ID
+
       public:
         NemoRepulsion(InputMap &in) {
           name="Nemo repulsion";
@@ -92,14 +97,15 @@ namespace Faunus {
           eps = _lB*(2*(eps-1)/(eps+1))/pow(rc2,1.5);
           pab.resize(3,6);
           pab << 28063.645684, 3.816817, 816.621758, 13824.695518, 518387.587215, 4.194060,
-                 1872.664555,  3.997893, 214.610684, 8857.398499,  11055.163586,  3.534167,
-                 597.625692,   4.197006, 16.5577400, 0.000000,     800.775380,    2.677176;
+              1872.664555,  3.997893, 214.610684, 8857.398499,  11055.163586,  3.534167,
+              597.625692,   4.197006, 16.5577400, 0.000000,     800.775380,    2.677176;
           pab = pab*(1000/(pc::Nav*pc::kT()));
           pab.col(1) = pab.col(1)/(1000/(pc::Nav*pc::kT()));
           pab.col(5) = pab.col(5)/(1000/(pc::Nav*pc::kT()));
           HW = atom["HW"].id;
           OW = atom["OW"].id;
         }
+
         /**
          * @brief NemoRepulsion
          * @param a Dipole particle A
@@ -110,9 +116,9 @@ namespace Faunus {
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
             int temp = 1;
             if(a.id == HW && b.id == HW) {
-                temp = 2;
+              temp = 2;
             } else if(a.id == OW && b.id == OW) {
-                temp = 0;
+              temp = 0;
             }
             //double iondipole_e = _lB*(q2mu(a.charge*b.muscalar,b.mu,r) - q2mu(b.charge*a.muscalar,a.mu,r));
             //double dipdip_e = _lB*mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r);
@@ -221,10 +227,10 @@ namespace Faunus {
             return 0;
           }
 
-         void updateDiel(double er) {
-            eps = _lB*(2*(er-1)/(er+1))/pow(rc2,1.5);
+        void updateDiel(double er) {
+          eps = _lB*(2*(er-1)/(er+1))/pow(rc2,1.5);
         }  
-          
+
         string info(char w) { return _brief(); }
     };
 

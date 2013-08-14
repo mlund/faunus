@@ -12,6 +12,12 @@ echo '{
   "atomlist" : {
     "OW" : { "q":-0.8476, "sigma":3.2, "eps":0.65 },
     "HW" : { "q": 0.4238, "sigma":0.0, "eps":0    }
+  },
+
+  "pairproperties" : {
+    "OW OW"  : { "nemorep":"12. 23. 0.2  -2   3   4   5" },
+    "HW HW"  : { "nemorep":"-2. 23. 0.2   2  99   4  -5 " },
+    "HW OW"  : { "nemorep":"112. 23. 0.2 129 391 238  23" }
   }
 }' > water2.json
 

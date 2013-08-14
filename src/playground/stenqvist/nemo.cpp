@@ -4,7 +4,9 @@ using namespace Faunus;
 using namespace Faunus::Potential;
 
 typedef Space<Geometry::Cuboid,DipoleParticle> Tspace;
-typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot;
+//typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot;
+typedef CombinedPairPotential<CoulombWolf,NemoRepulsion> TpairpotTest;
+typedef CombinedPairPotential<CoulombWolf,NemoRepulsion> Tpairpot;
 
 int main() {
 
@@ -15,6 +17,12 @@ int main() {
   auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot,Energy::NonbondedVector<Tspace,Tpairpot>>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp);
   Tspace spc(mcp);
+
+  Potential::NemoRepulsion pp(mcp);
+  auto map = json::atomPairMap("water2.json", "pairproperties", "nemorep");
+  for (auto &m : map)
+    cout << m.second.transpose() << endl;
+  return 0;
 
   // Load and add polymer to Space
   string file = mcp.get<string>("mol_file","");

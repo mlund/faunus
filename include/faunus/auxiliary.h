@@ -189,8 +189,8 @@ namespace Faunus {
    */
   template<class T>
     T sinApprox(T x) {
-      const T B = 4/pc::pi;
-      const T C = -4/(pc::pi*pc::pi);
+      const T B = 4/std::acos(-1);
+      const T C = -B/std::acos(-1);
 
       T y = B * x + C * x * abs(x);
 
@@ -205,7 +205,7 @@ namespace Faunus {
 
   template<class T>
     T cosApprox(T x) {
-      const T shift = 0.5*pc::pi;
+      const T shift = 0.5*std::acos(-1);
       return sinApprox(x+shift);
     }
 

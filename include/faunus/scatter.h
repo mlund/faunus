@@ -170,7 +170,6 @@ namespace Faunus {
 
           /**
            * @brief Sample I(q) and add to average
-           * @param p Particle vector
            *
            * The q range is read from input as `qmin`, `qmax`, `dq` in units of
            * inverse angstrom.

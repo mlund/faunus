@@ -102,6 +102,7 @@ namespace Faunus {
         virtual void test(UnitTest&);                    //!< Perform unit test
 
         virtual std::string info(char=20);
+        
     };
 
     /**
@@ -426,6 +427,11 @@ namespace Faunus {
               double x=s2(a.id,b.id)/r2; //s2/r2
               x=x*x*x; // s6/r6
               return eps(a.id,b.id) * (x*x - x);
+            }
+
+          template<class Tparticle>
+            double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+              return operator()(a,b,r.squaredNorm()); 
             }
 
           /**
@@ -796,6 +802,11 @@ namespace Faunus {
             r2=sqrt(r2); // r
             return lB * a.charge * b.charge * (1/r2 - Rcinv + (r2*Rcinv-1)*Rcinv );
 #endif
+          }
+          
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
+            return operator()(a,b,r.squaredNorm());
           }
         string info(char);
     };

@@ -33,7 +33,6 @@ int main() {
   spc.load("state");
   spc.p = spc.trial;
   UnitTest test(in);               // class for unit testing
-  Analysis::DielectricConstant gdc(spc);
   FormatXTC xtc(spc.geo.len.norm());
   
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );   // initial energy
@@ -44,7 +43,6 @@ int main() {
       else
         sys+=rot.move( sol.size() );                  // rotate
         
-      gdc.sampleDP(spc.geo,spc);
       if (slp_global()<1.5)
         for (auto i=sol.front(); i<sol.back(); i++) { // salt rdf
           for (auto j=i+1; j<=sol.back(); j++) {
@@ -56,8 +54,6 @@ int main() {
       if (slp_global()>0.99)
         xtc.save(textio::prefix+"out.xtc", spc.p);  
     }    
-    cout << gdc.info() << endl;
-    //gdc.getKirkwoodFactor();
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
     cout << loop.timing();
   }
@@ -73,7 +69,6 @@ int main() {
   std::cout << spc.info() + pot.info() + trans.info()
     + rot.info() + sys.info() + test.info(); // final info
   spc.save("state");
-  gdc.kusalik(spc);
   
   return test.numFailed();
 }

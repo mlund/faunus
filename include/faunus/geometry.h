@@ -450,6 +450,9 @@ namespace Faunus {
       protected:
 
       public:
+        //!< Get rotation origin
+        Eigen::Vector3d& getOrigin() { return origin; }
+
         //!< Get set rotation angle
         double getAngle() const { return angle_; }
 

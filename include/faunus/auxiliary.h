@@ -100,6 +100,8 @@ namespace Faunus {
           list.clear();
           mlist.clear();
         }
+
+        decltype(list)& getBondList() { return list; }
     };
 
   template<class Tdata, class T=int, class Tbase=std::map<opair<T>,Tdata> >

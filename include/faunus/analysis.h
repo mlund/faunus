@@ -59,60 +59,133 @@ namespace Faunus {
     /**
      * @brief Pressure analysis using the virial theorem
      *
-     * At the moment this is limited to "soft" systems only,
-     * i.e. for non-rigid systems with continuous potentials.
+     * This calculates the excess pressure tensor defined as
+     * @f[
+     * \mathcal{P} = \frac{1}{3V}\left <
+     * \sum_{i}^{N-1} \sum_{j=i+1}^N \mathbf{r}_{ij} \otimes \mathbf{f}_{ij}
+     * \right >_{NVT}
+     * @f]
+     * where @f$r@f$ and @f$f@f$ are the distance and force, @f$V@f$ the system volume,
+     * and the excess pressure scalar is simply the trace of @f$\mathcal{P}@f$.
+     * The trivial kinetic contribution is currently not included.
      *
      * References:
      *
-     * - <http://dx.doi.org/10/fspzcx>
      * - <http://dx.doi.org/10/ffwrhd>
+     * - <http://dx.doi.org/10/fspzcx>
+     *
+     * @todo At the moment this analysis is limited to "soft" systems only,
+     * i.e. for non-rigid systems with continuous potentials. By including
+     * a group controlled loop this could easily be remedied.
      *
      */
     class VirialPressure : public AnalysisBase {
       private:
 
+        typedef Eigen::Matrix3d Ttensor;
+        Ttensor T;         // excess pressure tensor
         double Pid;        // ideal pressure
-        Average<double> P; // excess pressure scalar
-        Eigen::Matrix3d T; // excess pressure tensor
 
         inline string _info() {
           using namespace Faunus::textio;
           std::ostringstream o;
+
           if (cnt>0) {
-            double p=P.avg(), kT=pc::kB*pc::T();
-            o << pad(SUB,w, "Excess pressure") << p << " kT/"+angstrom+cubed+" = "
-              << p*1e30/pc::Nav << " mM = "
-              << p*kT*1e30 << " Pa = "
-              << p*kT*1e30/0.980665e5 << " atm\n"
-              << pad(SUB,w, "Tensor trace") << (T/cnt).trace() << " kT/"+angstrom+cubed+"\n"
-              << "  Excess pressure tensor:\n\n" << T/cnt << "\n"
-              << endl;
+            vector<double> P(3);
+            vector<string> id = {"Ideal", "Excess", "Total"};
+
+            P[0] = Pid;             // ideal
+            P[1] = (T/cnt).trace(); // excess
+            P[2] = P[0] + P[1];     // total
+
+            char l=15;
+            double kT=pc::kB*pc::T();
+            o << "\n  " << std::right
+              << setw(l+l) << "kT/"+angstrom+cubed
+              << setw(l) << "mM" << setw(l) << "Pa" << setw(l) << "atm" << "\n";
+            for (int i=0; i<3; i++) {
+              o << std::left << setw(l) << "  "+id[i] << std::right
+                << setw(l) << P[i]
+                << setw(l) << P[i] * 1e30/pc::Nav
+                << setw(l) << P[i] * kT*1e30
+                << setw(l) << P[i] * kT*1e30/0.980665e5
+                << "\n";
+            }
+            o << "\n  Excess pressure tensor (mM):\n\n"
+              << T/cnt*1e30/pc::Nav << "\n\n";
           }
           return o.str();
         }
+
+        void _test(UnitTest &test) {
+          test("virial_pressure_mM", (T/cnt).trace()*1e30/pc::Nav );
+        }
+
+        template<class Tpvec, class Tgeo, class Tpot>
+          Ttensor g_internal(const Tpvec &p, Tgeo &geo, Tpot &pot, Group &g) { 
+            Ttensor t;
+            t.setZero();
+            for (auto i=g.front(); i<g.back(); i++)
+              for (auto j=i+1; j<=g.back(); j++) {
+                auto rij = geo.vdist(p[i],p[j]);
+                auto fij = pot.f_p2p(p[i],p[j]);
+                t += rij * fij.transpose();
+              }
+            return t;
+          }
+
+        template<class Tpvec, class Tgeo, class Tpot>
+          Ttensor g2g(const Tpvec &p, Tgeo &geo, Tpot &pot, Group &g1, Group &g2) { 
+            assert(&g1!=&g2);
+            Ttensor t;
+            t.setZero();
+            for (auto i : g1)
+              for (auto j : g2) {
+                auto rij = geo.vdist(p[i],p[j]);
+                auto fij = pot.f_p2p(p[i],p[j]);
+                t += rij * fij.transpose();
+              }
+            return t;
+          }
 
       public:
 
         VirialPressure() {
           name="Virial Pressure";
+          noMolecularPressure=false;
           T.setZero();
         }
 
-        template<class Tvec, class Tgeo, class Tpot>
-          void sample(Tgeo &geo, Tpot &pot, const Tvec &v, double d=3) {
+        bool noMolecularPressure;
+
+        template<class Tspace, class Tpotential>
+          void sample(Tspace &spc, Tpotential &pot, int d=3) {
             cnt++;
-            double p=0, V=geo.getVolume();
-            Eigen::Matrix3d t;
+            Ttensor t;
             t.setZero();
-            for (size_t i=0; i<v.size()-1; i++)
-              for (size_t j=i+1; j<v.size(); j++) {
-                auto rij = geo.vdist(v[i],v[j]);
-                auto fij = pot.f_p2p(v[i],v[j]);
-                t += rij * fij.transpose(); // sample P tensor
-                p += rij.dot(fij);          // sample pressure scalar (check!)
-              }
+            int N=spc.p.size();
+
+            // loop over groups internally
+            for (auto g : spc.groupList()) {
+              if (noMolecularPressure)
+                if (g->isMolecular()) {
+                  N=N-g->size()+1;
+                  continue;
+                }
+              t+=g_internal(spc.p, spc.geo, pot, *g);
+            }
+
+            // loop group-to-group
+            auto beg=spc.groupList().begin();
+            auto end=spc.groupList().end();
+            for (auto gi=beg; gi!=end; ++gi)
+              for (auto gj=gi; ++gj!=end;)
+                t+=g2g(spc.p, spc.geo, pot, *(*gi), *(*gj));
+
+            // add to grand avarage
+            double V = spc.geo.getVolume();
             T += t/(d*V);
-            P += p/(d*V);
+            Pid = N/V;
           }
     };
 

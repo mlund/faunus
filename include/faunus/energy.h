@@ -839,6 +839,10 @@ namespace Faunus {
             force_list[ typename Tbase::Tpair(i,j) ]
               = ForceFunctionObject<decltype(pot)>(pot);
           }
+
+        auto getBondList() -> decltype(this->list) {
+          return Tbase::getBondList();
+        }
     };
 
     /**

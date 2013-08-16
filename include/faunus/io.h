@@ -674,6 +674,15 @@ namespace Faunus {
         }
   };
 
+  /** @brief Generates TCL script for adding bonds in VMD */
+  template<class Tbondlist>
+    std::string VMDBonds(const Tbondlist &bondlist) {
+      std::ostringstream o;
+      for (auto &b : bondlist)
+        o << "topo addbond " << b.first.first << " " << b.first.second << "\n";
+      return o.str();
+    }  
+
   /** @brief Trajectory of charges per particle
    *  @author Chris Evers
    *  @date May 2011, Lund

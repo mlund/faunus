@@ -19,11 +19,35 @@ namespace Faunus {
    * @brief Namespace for pair potentials
    *
    * This namespace contains classes and templates that calculates the
-   * pair potential between particles. All pair potentials are based
-   * on `Potential::PairPotentialBase` and thus have common interfaces.
+   * pair interaction energy and force between particles.
+   * All pair potentials are based
+   * on `PairPotentialBase` and thus have common interfaces.
    * Several pair potentials can be combined into
-   * one by the template `Potential::CombinedPairPotential` and a number of
+   * one by the template `CombinedPairPotential` and a number of
    * common combinations are pre-defined as typedefs.
+   *
+   * ~~~
+   * Coulomb a();                         // Note that constructor
+   * auto b = Coulomb() + LennardJones(); // arguments are here
+   * auto c = Harmonic() - b;             // omitted for clarity
+   * ~~~
+   *
+   * As shown in the last example, pair potentials can also be subtracted
+   * which can be used to for example exclude non-bonded interactions
+   * between bonded pairs.
+   *
+   * If the pair interaction depends on particle types, use
+   * `PotentialMap` pair interaction.
+   *
+   * *Behind the scene:*
+   *
+   * The above combination of pair potentials is done at compile time
+   * using templates. This means that there is a good chance that
+   * the mixing overhead can be optimized out by the compiler.
+   * For example, the adding two potentials
+   * we in fact construct a new `CombinedPairPotential`. Likewise when
+   * subtracting, a new `Minus` template is created and then combined.
+   *
    */
   namespace Potential {
 

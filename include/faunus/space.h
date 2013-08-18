@@ -324,8 +324,8 @@ namespace Faunus {
         std::ofstream fout( file.c_str() );
         if (fout) {
           fout.precision( numeric_limits<double>::digits10 + 1 );
-          fout << geo.getVolume() << endl
-            << p.size() << endl;
+          fout << geo.getVolume() << "\n"
+            << p.size() << "\n";
           for (auto p_i : p)
             fout << p_i << "\n";
           fout << g.size() << "\n";

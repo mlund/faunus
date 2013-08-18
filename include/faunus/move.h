@@ -813,7 +813,7 @@ namespace Faunus {
           o << indent(SUB) << "Group Move directions:" << endl;
           for (auto &m : directions)
             o << pad(SUBSUB,w-2,m.first)
-              << m.second.x() << " " << m.second.y() << " " << m.second.z() << endl;
+              << m.second.transpose() << endl;
         }
         if (cnt>0) {
           char l=12;
@@ -1091,7 +1091,7 @@ namespace Faunus {
           igroup->rotate(*spc, p, base::angle);
           vrot.setAxis(spc->geo, igroup->cm, p, base::angle); // rot. around line CM->p
           for (auto i : cindex)
-            spc->trial[i].rotate(vrot); // rotate
+            spc->trial[i] = vrot(spc->trial[i]); // rotate
         }
 
         // translation
@@ -1230,8 +1230,8 @@ namespace Faunus {
         using namespace textio;
         std::ostringstream o;
         o << pad(SUB,w,"Displacement") << dp << _angstrom << endl
-          << pad(SUB,w,"Skip energy update")
-          << ((skipEnergyUpdate==false) ? "no" : "yes (energy drift!)") << endl;
+          << pad(SUB,w,"Skip energy update") << std::boolalpha
+          << skipEnergyUpdate << endl;
         if (movefrac.cnt>0)
           o << pad(SUB,w,"Move fraction") << movefrac.avg() << endl;
         return o.str();
@@ -2547,7 +2547,8 @@ namespace Faunus {
         Point startpoint=spc->p[igroup->back()];
         Point head=spc->p[igroup->front()];
         cntr->z()=head.z()=startpoint.z();
-        Point dir = spc->geo.vdist(*cntr, startpoint) / sqrt(spc->geo.sqdist(*cntr, startpoint)) * 1.1*spc->p[igroup->back()].radius;
+        Point dir = spc->geo.vdist(*cntr, startpoint)
+          / sqrt(spc->geo.sqdist(*cntr, startpoint)) * 1.1*spc->p[igroup->back()].radius;
         if (spc->geo.sqdist(*cntr, startpoint) > spc->geo.sqdist(*cntr, head))
           startpoint.translate(spc->geo,-dir);      // set startpoint for rotation
         else startpoint.translate(spc->geo, dir);
@@ -2555,7 +2556,7 @@ namespace Faunus {
         double y1=cntr->y();
         double x2=startpoint.x();
         double y2=startpoint.y();
-        Point endpoint;                   // set endpoint for rotation on the axis ⊥ to line connecting cm of cylinder with 2nd TL
+        Point endpoint; // rot endpoint for on axis ⊥ to line connecting cm of cylinder with 2nd TL
         endpoint.x()=x2+1;
         endpoint.y()=-(x2-x1)/(y2-y1)+y2;
         endpoint.z()=startpoint.z();
@@ -2563,8 +2564,8 @@ namespace Faunus {
         Geometry::QuaternionRotate vrot;
         vrot.setAxis(spc->geo, startpoint, endpoint, angle); //rot around startpoint->endpoint vec
         for (auto i : *igroup)
-          spc->trial[i].rotate(vrot);
-        igroup->cm_trial.rotate(vrot);
+          spc->trial[i] = vrot(spc->trial[i]);
+        igroup->cm_trial = vrot(igroup->cm_trial);
       }
 
     template<class Tspace>

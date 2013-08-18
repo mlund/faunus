@@ -696,7 +696,7 @@ namespace Faunus {
           using namespace Faunus::textio;
           std::ostringstream o;
           o << pad(SUB,30,"Look for group-group bonds:")
-            << (CrossGroupBonds ? "yes (slow)" : "no (faster)") << endl << endl
+            << std::boolalpha << CrossGroupBonds << endl
             << indent(SUBSUB) << std::left
             << setw(7) << "i" << setw(7) << "j" << endl;
           return o.str() + _infolist;

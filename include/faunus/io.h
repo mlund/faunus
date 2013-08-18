@@ -316,7 +316,8 @@ namespace Faunus {
         static Tparticle& s2p(const std::string &s, Tparticle &a) {
           std::stringstream o;
           o << s;
-          o >> a.x() >> a.y() >> a.z() >> a.dir.x() >> a.dir.y() >> a.dir.z() >> a.patchdir.x() >> a.patchdir.y() >> a.patchdir.z();
+          o >> a.x() >> a.y() >> a.z() >> a.dir.x() >> a.dir.y() >> a.dir.z()
+            >> a.patchdir.x() >> a.patchdir.y() >> a.patchdir.z();
           return a;
         }
     public:

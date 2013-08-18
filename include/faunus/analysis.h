@@ -112,7 +112,7 @@ namespace Faunus {
                 << "\n";
             }
             o << "\n  Excess pressure tensor (mM):\n\n"
-              << T/cnt*1e30/pc::Nav << "\n\n";
+              << T/cnt*1e30/pc::Nav << endl << endl;
           }
           return o.str();
         }
@@ -164,6 +164,7 @@ namespace Faunus {
             Ttensor t;
             t.setZero();
             int N=spc.p.size();
+            double V=spc.geo.getVolume();
 
             // loop over groups internally
             for (auto g : spc.groupList()) {
@@ -183,7 +184,6 @@ namespace Faunus {
                 t+=g2g(spc.p, spc.geo, pot, *(*gi), *(*gj));
 
             // add to grand avarage
-            double V = spc.geo.getVolume();
             T += t/(d*V);
             Pid = N/V;
           }

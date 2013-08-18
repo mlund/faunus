@@ -23,8 +23,11 @@ int main() {
   Tspace::ParticleVector v;                   // temporary, empty particle vector
   FormatAAM::load(file,v);                    // load AAM structure into v
   for (auto &i : water) {
-    Geometry::FindSpace().find(spc.geo,spc.p,v);// find empty spot in particle vector
+    Geometry::FindSpace f;
+    f.allowMatterOverlap=true;
+    f.find(spc.geo,spc.p,v);// find empty spot in particle vector
     i = spc.insert(v);                          // Insert into Space
+    i.name="h2o";
     spc.enroll(i);
   }
 
@@ -65,9 +68,6 @@ int main() {
         rdf.sample(spc,id,id);
       }
 
-      // sample dielectric constant (unfinished)
-      gdc.samplePP(spc.geo,spc);
-      
     } // end of micro loop
 
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // energy drift?

@@ -617,7 +617,7 @@
 		73E9C83515CC6A70001D5654 /* polymers.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = polymers.cpp; path = ../../../src/examples/polymers.cpp; sourceTree = "<group>"; };
 		73E9C83B15CC6B1D001D5654 /* polymers */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = polymers; sourceTree = BUILT_PRODUCTS_DIR; };
 		8B6B1C781797F26F00FDF9F4 /* manybody.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = manybody.cpp; path = ../../src/examples/manybody.cpp; sourceTree = "<group>"; };
-		8B6B1C7A1797F2B700FDF9F4 /* json.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = json.h; sourceTree = "<group>"; };
+		8B6B1C7A1797F2B700FDF9F4 /* json.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = json.h; sourceTree = "<group>"; };
 		8B6B1C7B1797F2B800FDF9F4 /* range.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = range.h; sourceTree = "<group>"; };
 		8B6B1C7C1797F2B800FDF9F4 /* scatter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = scatter.h; sourceTree = "<group>"; };
 		8B6B1C8017984C0800FDF9F4 /* titrate.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = titrate.cpp; path = ../../src/examples/titrate.cpp; sourceTree = "<group>"; };

@@ -23,13 +23,17 @@ namespace Faunus {
    * All pair potentials are based
    * on `PairPotentialBase` and thus have common interfaces.
    * Several pair potentials can be combined into
-   * one by the template `CombinedPairPotential` and a number of
+   * a new pair potential and a number of
    * common combinations are pre-defined as typedefs.
    *
    * ~~~
-   * Coulomb a();                         // Note that constructor
-   * auto b = Coulomb() + LennardJones(); // arguments are here
-   * auto c = Harmonic() - b;             // omitted for clarity
+   * CoulombHS primitiveModel();                // Note that constructor
+   * auto nonbond = Coulomb() + LennardJones(); // arguments are here
+   * auto bond    = Harmonic() - nonbond;       // omitted for clarity
+   *
+   * PointParticle i,j;                         // two particles
+   * double r = 10;                             // i<->j distance
+   * double u = nonbond(i,j,r);                 // i<->j energy in kT
    * ~~~
    *
    * As shown in the last example, pair potentials can also be subtracted
@@ -44,8 +48,8 @@ namespace Faunus {
    * The above combination of pair potentials is done at compile time
    * using templates. This means that there is a good chance that
    * the mixing overhead can be optimized out by the compiler.
-   * For example, the adding two potentials
-   * we in fact construct a new `CombinedPairPotential`. Likewise when
+   * For example, when adding two potentials
+   * we construct a new `CombinedPairPotential`. Likewise when
    * subtracting, a new `Minus` template is created and then combined.
    *
    */
@@ -89,7 +93,7 @@ namespace Faunus {
          */
         template<typename Tparticle>
           Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
-            assert(!"Force method not implemented in pair potential.");
+            std::cerr << "Using unimplemented force!" << std::endl;
             return Point(0,0,0);
           }
 
@@ -112,14 +116,17 @@ namespace Faunus {
       bool save(Tpairpot pot, Tid ida, Tid idb, string file) {
         std::ofstream f(file.c_str());
         if (f) {
-          double min=0.9 * (atom[ida].radius+atom[idb].radius);
-          particle a(atom[ida]),b(atom[idb]);
+          double min=atom[ida].radius+atom[idb].radius;
+          particle a,b;
+          a = atom[ida];
+          b = atom[idb];
           f << "# Pair potential: " << pot.brief() << endl
             << "# Atoms: " << atom[ida].name << "<->" << atom[idb].name
             << endl;
-          for (double r=min; r<=150; r+=0.5)
-            f << std::left << std::setw(10) << r << " "
-              << pot(a,b,r*r) << " " << pot.force(a,b,r*r,Point(r,0,0)) << endl; 
+          f.precision(12);
+          for (double r=min; r<=5*min; r+=0.01)
+            f << std::left << std::setw(12) << r << " "
+              << pot(a,b,r*r) << " " << pot.force(a,b,r*r,Point(r,0,0)).x() << endl; 
           return true;
         }
         return false;
@@ -347,6 +354,13 @@ namespace Faunus {
           double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
             return operator()(a,b,r.squaredNorm());
           }
+        template<typename Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            double s6=pow(a.radius+b.radius,6); //pow() is slow
+            double r6=r2*r2*r2;
+            double r14=r6*r6*r2;
+            return 6.*eps*s6*(2*s6-r6)/r14*p;
+          }
 
         string info(char);
     };
@@ -429,6 +443,14 @@ namespace Faunus {
               return eps(a.id,b.id) * (x*x - x);
             }
 
+          template<typename Tparticle>
+            Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+              double s6=pow(s2(a.id,b.id),3);
+              double r6=r2*r2*r2;
+              double r14=r6*r6*r2;
+              return 6.*eps(a.id,b.id) * s6 * (2*s6-r6) / r14 * p;
+            }
+
           template<class Tparticle>
             double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
               return operator()(a,b,r.squaredNorm()); 
@@ -474,7 +496,7 @@ namespace Faunus {
           PairMatrix<double> rc2,rc,c; // matrix of sigma_ij^2 and eps_ij
         public:
           CosAttractMixed(InputMap &in) : base(in) {
-            base::name="Cos^2 attraction (mixed)";
+            base::name="Cos" + textio::squared + " attraction (mixed)";
             size_t n=atom.list.size(); // number of atom types
             c.resize(n);
             rc.resize(n);
@@ -803,11 +825,18 @@ namespace Faunus {
             return lB * a.charge * b.charge * (1/r2 - Rcinv + (r2*Rcinv-1)*Rcinv );
 #endif
           }
-          
+
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
             return operator()(a,b,r.squaredNorm());
           }
+
+        template<typename Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            if (r2>Rc2) return Point(0,0,0);
+            return lB*a.charge*b.charge*(1-Rcinv*Rcinv*r2)/(r2*sqrt(r2))*p;
+          }
+
         string info(char);
     };
 
@@ -959,7 +988,7 @@ namespace Faunus {
     };
 
     /**
-     * @brief DebyeHuckel shifted to reaach zero at given cut-off
+     * @brief DebyeHuckel shifted to reach zero at given cut-off
      *
      * Shifted and truncated Yukawa potential of the form,
      * @f[
@@ -1206,7 +1235,7 @@ namespace Faunus {
      * This can be useful for excluding non-bonded interactions between bonded pairs.
      * Beware, though, that in the case of strongly repulsive interactions
      * for example due to particle overlap,
-     * first adding (non-bonded) then subtracting (bonded) interactions
+     * first adding then subtracting
      * may lead to numerical issues, often manifested in a system energy
      * drift.
      *

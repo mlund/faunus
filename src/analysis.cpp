@@ -74,9 +74,8 @@ namespace Faunus {
       Point p = meanforce();
       std::ofstream f(filename.c_str());
       f.precision(10);
-      if (f) {
-        f << p.x() << " " << p.y() << " " << p.z() << endl;
-      }
+      if (f)
+        f << p.transpose() << endl;
     }
 
     string TwobodyForce::_info() {
@@ -88,9 +87,7 @@ namespace Faunus {
 
     TwobodyForceDirect::TwobodyForceDirect(InputMap &in, Group &g1, Group &g2, Group &_ions) : TwobodyForce(in, g1, g2, _ions) {
       name="Twobody direct mean force calculation";
-      f_pp = Point(0,0,0);
-      f_pi = Point(0,0,0);
-      f_ip = Point(0,0,0);
+      f_pp = f_pi = f_ip = Point(0,0,0);
     }
 
     Point TwobodyForceDirect::meanforce() {
@@ -101,20 +98,17 @@ namespace Faunus {
     string TwobodyForceDirect::_info() {
       using namespace Faunus::textio;
       std::ostringstream o;
-      o << pad(SUB,w,"Mean direct Force p-p:") << "(" << f_pp.x()/(double)cnt << ", " << f_pp.y()/(double)cnt << ", " << f_pp.z()/(double)cnt << ") kT/Å" << endl;
-      o << pad(SUB,w,"Mean direct Force p-i:") << "(" << f_pi.x()/(double)cnt << ", " << f_pi.y()/(double)cnt << ", " << f_pi.z()/(double)cnt << ") kT/Å" << endl;
-      o << pad(SUB,w,"Mean direct Force i-p:") << "(" << f_ip.x()/(double)cnt << ", " << f_ip.y()/(double)cnt << ", " << f_ip.z()/(double)cnt << ") kT/Å" << endl;
-      o << pad(SUB,w,"Mean direct Force:") << "(" << meanforce().x() << ", " << meanforce().y() << ", " << meanforce().z() << ") kT/Å" << endl;
+      o << pad(SUB,w,"Mean direct Force p-p:") << "(" << (f_pp/cnt).transpose() << ") kT/Å" << endl;
+      o << pad(SUB,w,"Mean direct Force p-i:") << "(" << (f_pi/cnt).transpose() << ") kT/Å" << endl;
+      o << pad(SUB,w,"Mean direct Force i-p:") << "(" << (f_ip/cnt).transpose() << ") kT/Å" << endl;
+      o << pad(SUB,w,"Mean direct Force:") << "(" << meanforce().transpose() << ") kT/Å" << endl;
       return o.str();
     }
 
     TwobodyForceMidp::TwobodyForceMidp(InputMap &in,Group &g1, Group &g2, Group &_ions,
         Analysis::LineDistributionNorm<float,unsigned long int> *_saltdistr) : TwobodyForce(in,g1,g2,_ions) {
       name="Twobody midplane mean force calculation";
-      f_pp = Point(0.0, 0.0, 0.0);
-      f_pi = Point(0.0, 0.0, 0.0);
-      f_ip = Point(0.0, 0.0, 0.0);
-      f_ii = Point(0.0, 0.0, 0.0);
+      f_pp = f_pi = f_ip = f_ii = Point(0,0,0);
       saltdistr=_saltdistr;
     }
 
@@ -122,23 +116,22 @@ namespace Faunus {
       Point p = f_pp+f_pi-f_ip+f_ii;
       float midp = saltdistr->mid();
       float endp = saltdistr->end();
-      Point I = Point(1.0, 1.0, 1.0);
+      Point I = Point(1,1,1);
       return p/(double)cnt+I*(midp-endp);
     }
 
     string TwobodyForceMidp::_info() {
       using namespace Faunus::textio;
       std::ostringstream o;
-      o << pad(SUB,w,"Mean midp Force p-p:") << "(" << f_pp.x()/(double)cnt << ", " << f_pp.y()/(double)cnt << ", " << f_pp.z()/(double)cnt << ") kT/Å" << endl;
-      o << pad(SUB,w,"Mean midp Force p-i:") << "(" << f_pi.x()/(double)cnt << ", " << f_pi.y()/(double)cnt << ", " << f_pi.z()/(double)cnt << ") kT/Å" << endl;
-      o << pad(SUB,w,"Mean midp Force i-p:") << "(" << f_ip.x()/(double)cnt << ", " << f_ip.y()/(double)cnt << ", " << f_ip.z()/(double)cnt << ") kT/Å" << endl;
-      o << pad(SUB,w,"Mean midp Force i-i:") << "(" << f_ii.x()/(double)cnt << ", " << f_ii.y()/(double)cnt << ", " << f_ii.z()/(double)cnt << ") kT/Å" << endl;
+      o << pad(SUB,w,"Mean midp Force p-p:") << "(" << (f_pp/cnt).transpose() << ") kT/Å" << endl;
+      o << pad(SUB,w,"Mean midp Force p-i:") << "(" << (f_pi/cnt).transpose() << ") kT/Å" << endl;
+      o << pad(SUB,w,"Mean midp Force i-p:") << "(" << (f_ip/cnt).transpose() << ") kT/Å" << endl;
+      o << pad(SUB,w,"Mean midp Force i-i:") << "(" << (f_ii/cnt).transpose() << ") kT/Å" << endl;
       o << pad(SUB,w,"Midpressure:") << saltdistr->mid() << " kT/Å" << endl;
       o << pad(SUB,w,"Endpressure:") << saltdistr->end() << " kT/Å" << endl;
-      o << pad(SUB,w,"Mean midp Force:") << "(" << meanforce().x() << ", " << meanforce().y() << ", " << meanforce().z() << ") kT/Å" << endl;
+      o << pad(SUB,w,"Mean midp Force:") << "(" << meanforce().transpose() << ") kT/Å" << endl;
       return o.str();
     }
-
 
     PolymerShape::PolymerShape() {
       name="Polymer Shape";

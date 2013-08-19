@@ -6,17 +6,16 @@ molecular systems. Below is a brief overview of features:
 
 - Canonical, Grand Canonical, Isobaric-Isothermal statistical mechanical ensembles
 - General hamiltonian **parallel tempering** (temperature, screening length, bonds etc.)
-- 4D simulations on **hyperspheres**
 - **Anisotropic** atoms (multipoles, sphero-cylinders)
 - Ion titration moves (pKa prediction, Hofmeister effects etc.)
-- Highly expandable!
+- Highy expandable
 - Free and open source (**GPL**)
 
 Detailed information and support:
 
 - Website: <http://github.com/mlund/faunus>
-- Documentation: <http://faunus.sourceforge.net/doxyhtml>
 - Support: <http://github.com/mlund/faunus/issues>
+- Documentation: <http://faunus.sourceforge.net>
 
 Get the latest resivions from GitHub:
 

@@ -3,11 +3,8 @@ if(DOXYGEN_FOUND AND DOXYGEN_DOT_EXECUTABLE)
   add_custom_target(manual
     COMMAND ${DOXYGEN_EXECUTABLE} doc/Doxyfile
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} ) 
-  add_custom_target(upload_homepage_and_manual
-    COMMAND scp -rC doc/homepage/* mikaellund,faunus@web.sourceforge.net:htdocs
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} ) 
   add_custom_target(upload_homepage
-    COMMAND scp -rC doc/homepage/*.html doc/homepage/images mikaellund,faunus@web.sourceforge.net:htdocs
+    COMMAND scp -rC doc/homepage/doxyhtml/* mikaellund,faunus@web.sourceforge.net:htdocs
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} ) 
   add_custom_target(docclean
     COMMAND rm -fR doc/homepage/doxyhtml doc/latex 

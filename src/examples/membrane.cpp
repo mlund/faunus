@@ -7,8 +7,8 @@ using namespace Faunus;
  *
  * More information: doi:10/chqzjk
  */
-template<class Tbonded, class Tnonbonded, class Tlipid, class Tinput>
-void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &bond, Tnonbonded &nb, Tinput &in) {
+template<class Tbonded, class Tpotmap, class Tlipid, class Tinput>
+void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &b, Tpotmap &m, Tinput &in) {
 
   using namespace Potential;
 
@@ -18,23 +18,18 @@ void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &bond, Tnonbonded &nb, Tin
   double sigma   = in("lipid_sigma", 10);  // angstrom
   double epsilon = in("lipid_epsilon", 1); // kT
 
-  auto headhead = WeeksChandlerAndersen(in) + DebyeHuckel(in);
-  auto tailtail = WeeksChandlerAndersen(in) + CosAttract(in);
-  auto headtail = WeeksChandlerAndersen(in) + ChargeNonpolar(in);
+  WeeksChandlerAndersen WCA(in);
+  WCA.customSigma(hid, hid, 0.95*sigma);            
+  WCA.customSigma(hid, tid, 0.95*sigma);            
+  WCA.customSigma(tid, tid, sigma);                 
+  WCA.customEpsilon(hid, hid, epsilon);             
+  WCA.customEpsilon(hid, tid, epsilon);             
+  WCA.customEpsilon(tid, tid, epsilon);   
 
-  headhead.first.customSigma(hid, hid, 0.95*sigma);            
-  headhead.first.customSigma(hid, tid, 0.95*sigma);            
-  headhead.first.customSigma(tid, tid, sigma);                 
-  headhead.first.customEpsilon(hid, hid, epsilon);             
-  headhead.first.customEpsilon(hid, tid, epsilon);             
-  headhead.first.customEpsilon(tid, tid, epsilon);   
-
-  tailtail.first=headhead.first;      // copy initialized WCA to tail-tail and
-  headtail.first=headhead.first;      // head-tail pair potential
-
-  nb.pairpot.add(hid, hid, headhead); // Add to main pair potential
-  nb.pairpot.add(tid, tid, tailtail);
-  nb.pairpot.add(hid, tid, headtail);
+  // Add to main potential
+  m.add(hid, hid, WCA + DebyeHuckel(in) );
+  m.add(tid, tid, WCA + CosAttract(in) );
+  m.add(hid, tid, WCA + ChargeNonpolar(in) );
 
   // bonded interactions
   double headtail_k=0.5*10*epsilon/(sigma*sigma);
@@ -44,10 +39,10 @@ void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &bond, Tnonbonded &nb, Tin
 
   assert(lipid.size() % 3 == 0);
 
-  for (int i=lipid.front(); i<lipid.back(); i+=3) {
-    bond.add(i,  i+1, FENE(fene_k,fene_rmax) );
-    bond.add(i+1,i+2, FENE(fene_k,fene_rmax) );
-    bond.add(i,  i+2, Harmonic(headtail_k,headtail_req) );
+  for (auto i=lipid.front(); i<lipid.back(); i+=3) {
+    b.add(i,  i+1, FENE(fene_k,fene_rmax) );
+    b.add(i+1,i+2, FENE(fene_k,fene_rmax) );
+    b.add(i,  i+2, Harmonic(headtail_k,headtail_req) );
   }
 }
 
@@ -59,24 +54,24 @@ int main() {
   cout << textio::splash();      // show faunus banner and credits
   InputMap mcp("membrane.input");//read input file
 
-  MCLoop loop(mcp);              // class for handling mc loops
   FormatXTC xtc(1000);
   EnergyDrift sys;               // class for tracking system energy drifts
 
   // Energy functions and space
-  auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
+  auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)
     + Energy::Bonded<Tspace>()
     + Energy::ExternalPressure<Tspace>(mcp)
     + Energy::EquilibriumEnergy<Tspace>(mcp);
   auto nonbonded = &pot.first.first.first;
   auto bonded = &pot.first.first.second;
+  auto eqenergy = &pot.second;
+  nonbonded->noPairPotentialCutoff=true;
   Tspace spc(mcp);
 
   // Load and add polymer to Space
-  Group lipids;
-  lipids.setMolSize(3);
   string file = mcp.get<string>("lipid_file","");
   int Nlipid=mcp("lipid_N",1);
+  vector<Group> lipids(Nlipid);
   for (int i=0; i<Nlipid; i++) {
     Tspace::ParticleVector v;                   // temporary, empty particle vector
     FormatAAM::load(file,v);                    // load AAM structure into v
@@ -86,21 +81,23 @@ int main() {
       std::swap( spc.p[pol.front()].z(), spc.p[pol.back()].z() );
     if (slp_global()<mcp("lipid_chargefraction", 0.0))
       spc.p[ pol.front() ].charge = -1;
-    lipids.setrange(0, pol.back());
+    pol.name="lipid";
+    lipids[i]=pol;
+    spc.enroll(lipids[i]);
   }
-  spc.enroll(lipids);   // Enroll polymer in Space
 
   // Set up bonded and non-bonded interactions
-  MakeDesernoMembrane(lipids, *bonded, *nonbonded, mcp);
+  Group allLipids(lipids.front().front(), lipids.back().back());
+  allLipids.setMolSize(3);
+  MakeDesernoMembrane(allLipids, *bonded, nonbonded->pairpot, mcp);
 
   // Place all lipids in xy plane (z=0);
-  for (int l=0; l<lipids.numMolecules(); l++) {
-    Group g;
-    lipids.getMolecule(l,g);
+  for (auto &g : lipids) {
     double dz=spc.p[ g.back() ].z();
     for (auto i : g) {
       spc.p[i].z() -= dz;
       spc.geo.boundary(spc.p[i]);
+      g.setMassCenter(spc);
     }
   }
   spc.trial=spc.p;   // sync. particle trial vector
@@ -111,35 +108,33 @@ int main() {
   Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
   Move::Pivot<Tspace> piv(mcp,pot,spc);
   Move::Isobaric<Tspace> iso(mcp,pot,spc);
-  Move::SwapMove<Tspace> swap(mcp,pot,spc);
-
+  Move::SwapMove<Tspace> swap(mcp,pot,spc,*eqenergy);
   Analysis::BilayerStructure lipidstruct;
+  Analysis::VirialPressure virial;
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
 
   cout << atom.info() + spc.info() + pot.info();
 
+  MCLoop loop(mcp);            // class for handling mc loops
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int k=lipids.numMolecules(); //number of lipids
       int i=slp_global.rand() % 3;
+      int k=lipids.size(), j;
       Group g;
       switch (i) {
         case 0:
-          mv.setGroup(lipids);
-          sys+=mv.move( lipids.size() ); // translate lipid monomers
+          mv.setGroup(allLipids);
+          sys+=mv.move(allLipids.size()); // translate lipid monomers
           break;
         case 1:
           while (k-->0) {
-            i=lipids.randomMol(); // pick random lipid molecule
-            lipids.getMolecule(i,g);
-            g.name="lipid";
-            g.setMassCenter(spc);     // mass center needed for rotation
+            j=slp_global.rand() % (lipids.size());
             if (slp_global()>0.5) {
-              gmv.setGroup(g);          // tell what to move
+              gmv.setGroup(lipids[j]);          // tell what to move
               sys+=gmv.move();          // translate/rotate polymers
             } else {
-              piv.setGroup(g);          // tell what to move
+              piv.setGroup(lipids[j]);          // tell what to move
               sys+=piv.move();          // translate/rotate polymers
             }
           }
@@ -153,8 +148,10 @@ int main() {
         xtc.setbox( spc.geo.len );
         xtc.save("traj.xtc", spc.p);
       }
-      if (ran>0.90)
-        lipidstruct.sample(spc.geo, spc.p, lipids);
+      if (ran>0.90) {
+        virial.sample(spc, pot);
+        lipidstruct.sample(spc.geo, spc.p, allLipids);
+      }
 
     } // end of micro loop
 
@@ -177,9 +174,8 @@ int main() {
   lipidstruct.test(test);
 
   // print information
-  cout << loop.info() + sys.info() + spc.info() + mv.info()
-    + gmv.info() + iso.info() +piv.info()
-    + lipidstruct.info() + test.info();
+  cout << loop.info() + mv.info() + gmv.info() + iso.info() + piv.info()
+    + lipidstruct.info() + test.info() + sys.info() + virial.info();
 
   return test.numFailed();
 }
@@ -187,7 +183,7 @@ int main() {
 /** @page example_membrane Example: Membrane Bilayer
 
   This will simulate a 3-bead coarse grained membrane according to
-  Cooke and Deserno (doi:10/chqzjk). Each bead interacts with a
+  [Cooke and Deserno](http://dx.doi.org/10/chqzjk). Each bead interacts with a
   Weeks-Chandler-Andersen potential, while tail-tail interactions
   have an additional long range attractive potential. There is preliminary
   support for charged head groups (effect on elastic properties is unknown).

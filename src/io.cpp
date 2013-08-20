@@ -17,10 +17,7 @@ namespace Faunus {
     o >> name >> x >> y >> z;
     particle p;
     p=atom[name]; 
-    p.x()=x*10; // nm->angstrom
-    p.y()=y*10;
-    p.z()=z*10;
-    return p;
+    return 10*p; //nm->angstrom
   }
 
   bool FormatGRO::load(string file) {

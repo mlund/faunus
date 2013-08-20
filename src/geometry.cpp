@@ -179,7 +179,7 @@ namespace Faunus {
     string Cuboid::_info(char w) {
       std::ostringstream o;
       o << pad(SUB,w, "Sidelengths")
-        << len.x() << " x " << len.y() << " x " << len.z() << " ("+textio::angstrom+")" << endl
+        << len.transpose() << " ("+textio::angstrom+")" << endl
         << pad(SUB,w, "Scale directions") << (scaledir==XY ? "XY" : "XYZ") << endl;
       return o.str();
     }
@@ -201,7 +201,7 @@ namespace Faunus {
         std::ofstream fout( file.c_str(), std::ios_base::app);
         if (fout) {
           fout.precision(10);
-          fout << len.x() << " " << len.y() << " " << len.z() << endl;
+          fout << len.transpose() << endl;
           return true;
         }
       }

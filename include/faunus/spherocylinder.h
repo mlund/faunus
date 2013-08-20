@@ -51,19 +51,22 @@ namespace Faunus {
           } else {
               target.chdir = target.dir;
               rot.setAxis(geo, Point(0,0,0), target.patchdir, 0.5*atom[target.id].chiral_angle);
-              target.chdir.rotate(rot);
+              //target.chdir.rotate(rot);
+              target.chdir = rot(target.chdir);
               vec=target.chdir;
           }          
           /* create side vector by rotating patch vector by half size of patch*/
           /*the first side */
           target.patchsides[0] = target.patchdir;
           rot.setAxis(geo, Point(0,0,0), vec, 0.5*atom[target.id].pangl + atom[target.id].panglsw);
-          target.patchsides[0].rotate(rot);
+          //target.patchsides[0].rotate(rot);
+          target.patchsides[0] =  rot(target.patchsides[0]);
           target.patchsides[0].normalize();
           /*the second side*/
           target.patchsides[1] = target.patchdir;
           rot.setAxis(geo, Point(0,0,0), vec, -0.5*atom[target.id].pangl - atom[target.id].panglsw);
-          target.patchsides[1].rotate(rot);
+          //target.patchsides[1].rotate(rot);
+          target.patchsides[1] = rot(target.patchsides[1]);
           target.patchsides[1].normalize();
           return 0;
           assert( target.patchsides[0].squaredNorm() > 1e-6 && "Vector associated with patch side has zero size. Patchy spherocylinder were probably not initialized.");

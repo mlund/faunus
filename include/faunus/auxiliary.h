@@ -12,15 +12,16 @@
 namespace Faunus {
 
   /**
-   * @brief Iterate over pairs in container and return sum of function
+   * @brief Iterate over pairs in container, call a function on the elements, and sum results
    */
-  template<typename Tit, typename Tfunc, typename T=double>
-    T for_each_pair_sum(const Tit &begin, const Tit &end, Tfunc f, T sum=T())
+  template<typename Tit, typename Tfunc, typename T=double, typename Top>
+    T for_each_pair(const Tit &begin, const Tit &end, Tfunc f, Top operation=std::plus<T>())
     {
+      T x;
       for (auto i=begin; i!=end; ++i)
         for (auto j=i; ++j!=end;)
-          sum+=f(*i,*j);
-      return sum;
+          x = operation(x, f(*i,*j));
+      return x;
     }
 
   /**
@@ -28,6 +29,8 @@ namespace Faunus {
    *
    * Upon construction, the smallest element is placed in `first`
    * so that `opair<int>(i,j)==opair<int>(j,i)` is always true.
+   *
+   * @todo Add std::pair copy operator
    */
   template<class T>
     struct opair : public std::pair<T,T> {
@@ -97,6 +100,8 @@ namespace Faunus {
           list.clear();
           mlist.clear();
         }
+
+        decltype(list)& getBondList() { return list; }
     };
 
   template<class Tdata, class T=int, class Tbase=std::map<opair<T>,Tdata> >
@@ -177,6 +182,33 @@ namespace Faunus {
       if (s=="yes" || s=="true") return true;
       if (s=="no" || s=="false") return false;
       return fallback;
+    }
+
+  // http://devmaster.net/forums/topic/4648-fast-and-accurate-sinecosine/
+  /**
+   * @brief Fast sine calculation in range (-pi:pi)
+   * @warning Do not go beyond these boundaries!
+   */
+  template<class T>
+    T sinApprox(T x) {
+      const T B = 4/std::acos(-1);
+      const T C = -B/std::acos(-1);
+
+      T y = B * x + C * x * abs(x);
+
+#ifdef EXTRA_PRECISION
+      //  const float Q = 0.775;
+      const T P = 0.225;
+
+      y = P * (y * abs(y) - y) + y;   // Q * y + P * y * abs(y)
+#endif
+      return y;
+    }
+
+  template<class T>
+    T cosApprox(T x) {
+      const T shift = 0.5*std::acos(-1);
+      return sinApprox(x+shift);
     }
 
   /**

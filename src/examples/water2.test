@@ -1,0 +1,10 @@
+# Generated on Aug  2 2013 15:10:30 using 4.7.3
+energyAverage                      -64777.6            
+npt_MSQDisplacement                3.30892             
+npt_acceptance                     19.8713             
+npt_averageSideLength              18.9937             
+relativeEnergyDrift                2.24703e-14         
+transrot_acceptance                28.465              
+transrot_h2o_acceptance            28.465              
+transrot_h2o_dRot                  4.09894             
+transrot_h2o_dTrans                0.120341            

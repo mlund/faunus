@@ -102,7 +102,7 @@ namespace Faunus {
           std::ostringstream o;
           o.precision(5);
           o << atom[a.id].name << " " << i+1 << " " << a.x() << " " << a.y() <<" "<< a.z() << " "
-            << a.charge << " " << a.mw << " " << a.radius << std::endl;
+            << a.charge << " " << a.mw << " " << a.radius << endl;
           return o.str();
         }
 
@@ -112,10 +112,6 @@ namespace Faunus {
           string name, num;
           o << s;
           o >> name >> num >> a.x() >> a.y() >> a.z() >> a.charge >> a.mw >> a.radius;
-          /*o >> a.mup.x() >> a.mup.y() >> a.mup.z() >> a.theta(0,0) >> a.theta(0,1) >> a.theta(0,2) >> a.theta(1,1) >> a.theta(1,2) >> a.theta(2,2);
-          a.theta(1,0) = a.theta(0,1);
-          a.theta(2,0) = a.theta(0,2);
-          a.theta(2,1) = a.theta(1,2);*/
           a.id = atom[name].id;
           a.hydrophobic = atom[a.id].hydrophobic;
           return a;
@@ -152,79 +148,79 @@ namespace Faunus {
    */
 
   class DipoleWRL {
-  public:
-    template<class Tspace>
-      void saveDipoleWRL(string filename, Tspace &spc, Group &sol) {
-      auto L = spc.geo.len.x();
-      auto L2 = L/2;
+    public:
+      template<class Tspace>
+        void saveDipoleWRL(string filename, Tspace &spc, Group &sol) {
+          auto L = spc.geo.len.x();
+          auto L2 = L/2;
 
-      std::ofstream f;
-      f.open(filename);
-      f << "#VRML V2.0 utf8\n" << endl;
-      f << "Viewpoint {description" << "\"View 1\"" << "position" << "  "  << L*2 
-	<< "  " << "0.00    0.00" << endl
-	<< "orientation 0 1 0 0 }"<< endl
-	<< " Shape {appearance Appearance { material Material { " << endl
-	<< "diffuseColor 0.9 0.9 0.9 transparency 1.0 }}" << endl
-	<< "geometry Box { size"<< "  " << L << "  " << L << "  " << L << "}}" << endl
-	<< "Shape {appearance Appearance {material Material {" << endl
-	<< "emissiveColor 0.8 1.0 0.6 }}" << endl
-	<< "geometry IndexedLineSet {coord Coordinate {" << endl 
-	<< "point [" << endl
-	
-	<< -L2 << "  " <<   L2  << "  " <<   L2 << endl 
-	<<  L2 << "  " <<   L2  << "  " <<   L2 << endl 
-	<<  L2 << "  " <<   L2  << "  " <<  -L2 << endl 
-	<< -L2 << "  " <<   L2  << "  " <<  -L2 << endl 
-	<< -L2 << "  " <<  -L2  << "  " <<   L2 << endl 
-	<<  L2 << "  " <<  -L2  << "  " <<   L2 << endl 
-	<<  L2 << "  " <<  -L2  << "  " <<  -L2 << endl 
-	<< -L2 << "  " <<  -L2  << "  " <<  -L2 << endl 
-	<< "]}" << endl 
-	<< "coordIndex [" << endl 
-	<< "0, 1, 2, 3, 0, -1," << endl 
-	<< "4, 5, 6, 7, 4, -1," << endl 
-	<< "0, 4, -1," << endl 
-	<< "1, 5, -1," << endl 
-	<< "2, 6, -1," << endl 
-	<< "3, 7, -1," << endl 
-	<< "]}}" << endl;
-      
-      
-      
-      for (auto i : sol) { 
-	auto  x = Point(spc.p[i]).transpose().x(); 
-	auto  y = Point(spc.p[i]).transpose().y(); 
-	auto  z = Point(spc.p[i]).transpose().z(); 
-	auto dipx = spc.p[i].mu.transpose().x();
-	auto dipy = spc.p[i].mu.transpose().y();
-	auto dipz = spc.p[i].mu.transpose().z();
-	auto r = spc.p[i].radius;
-	f << "Transform { translation" << "  " <<  x << "  " << y << "  "<< z << endl
-	  << " children [ DEF par_0 Shape{ appearance Appearance { material" << endl
-	  << " Material {diffuseColor       0.00      1.00      1.00 transparency 0.2 }}" << endl 
-	  << "  geometry Sphere {radius" <<"  " << r <<"}}]}" << endl;
-	
-	auto size = sqrt((dipx * dipx) + (dipy*dipy) + (dipz*dipz)); 
-	auto cosT = dipy/size;
-	auto angle = acos(cosT);
-	
-	auto Xdipx = (-1.0) * dipx;
-	
-	f << "Transform { translation" << "  " <<  x << "  " << y << "  "<< z << endl
-	  <<" rotation" << "  "<< dipz << "  " << " 0" << "  "<< Xdipx << " " <<  angle << endl 
-	  
-	  <<  " children[DEF tip_0 Shape{appearance Appearance{material Material{" << endl 
-	  
-	  <<  "diffuseColor       1.00      0.00      0.00 }}  geometry Cone { bottomRadius"<<"  "<< 0.3*r<<"  "<< "height" << "  "<< 0.6*r << "}}]}" << endl;
-      }
-      f.close();
-    }
-    
-    
-    
+          std::ofstream f;
+          f.open(filename);
+          f << "#VRML V2.0 utf8\n" << endl;
+          f << "Viewpoint {description" << "\"View 1\"" << "position" << "  "  << L*2 
+            << "  " << "0.00    0.00" << endl
+            << "orientation 0 1 0 0 }"<< endl
+            << " Shape {appearance Appearance { material Material { " << endl
+            << "diffuseColor 0.9 0.9 0.9 transparency 1.0 }}" << endl
+            << "geometry Box { size"<< "  " << L << "  " << L << "  " << L << "}}" << endl
+            << "Shape {appearance Appearance {material Material {" << endl
+            << "emissiveColor 0.8 1.0 0.6 }}" << endl
+            << "geometry IndexedLineSet {coord Coordinate {" << endl 
+            << "point [" << endl
+
+            << -L2 << "  " <<   L2  << "  " <<   L2 << endl 
+            <<  L2 << "  " <<   L2  << "  " <<   L2 << endl 
+            <<  L2 << "  " <<   L2  << "  " <<  -L2 << endl 
+            << -L2 << "  " <<   L2  << "  " <<  -L2 << endl 
+            << -L2 << "  " <<  -L2  << "  " <<   L2 << endl 
+            <<  L2 << "  " <<  -L2  << "  " <<   L2 << endl 
+            <<  L2 << "  " <<  -L2  << "  " <<  -L2 << endl 
+            << -L2 << "  " <<  -L2  << "  " <<  -L2 << endl 
+            << "]}" << endl 
+            << "coordIndex [" << endl 
+            << "0, 1, 2, 3, 0, -1," << endl 
+            << "4, 5, 6, 7, 4, -1," << endl 
+            << "0, 4, -1," << endl 
+            << "1, 5, -1," << endl 
+            << "2, 6, -1," << endl 
+            << "3, 7, -1," << endl 
+            << "]}}" << endl;
+
+
+
+          for (auto i : sol) { 
+            auto  x = Point(spc.p[i]).transpose().x(); 
+            auto  y = Point(spc.p[i]).transpose().y(); 
+            auto  z = Point(spc.p[i]).transpose().z(); 
+            auto dipx = spc.p[i].mu.transpose().x();
+            auto dipy = spc.p[i].mu.transpose().y();
+            auto dipz = spc.p[i].mu.transpose().z();
+            auto r = spc.p[i].radius;
+            f << "Transform { translation" << "  " <<  x << "  " << y << "  "<< z << endl
+              << " children [ DEF par_0 Shape{ appearance Appearance { material" << endl
+              << " Material {diffuseColor       0.00      1.00      1.00 transparency 0.2 }}" << endl 
+              << "  geometry Sphere {radius" <<"  " << r <<"}}]}" << endl;
+
+            auto size = sqrt((dipx * dipx) + (dipy*dipy) + (dipz*dipz)); 
+            auto cosT = dipy/size;
+            auto angle = acos(cosT);
+
+            auto Xdipx = (-1.0) * dipx;
+
+            f << "Transform { translation" << "  " <<  x << "  " << y << "  "<< z << endl
+              <<" rotation" << "  "<< dipz << "  " << " 0" << "  "<< Xdipx << " " <<  angle << endl 
+
+              <<  " children[DEF tip_0 Shape{appearance Appearance{material Material{" << endl 
+
+              <<  "diffuseColor       1.00      0.00      0.00 }}  geometry Cone { bottomRadius"<<"  "<< 0.3*r<<"  "<< "height" << "  "<< 0.6*r << "}}]}" << endl;
+          }
+          f.close();
+        }
+
+
+
   };
-  
+
 
 
   /**
@@ -269,97 +265,98 @@ namespace Faunus {
          */
 
   };
-   
-    /**
-     * @brief XYZ format
-     * @date June 2013
-     *
-     * Saves particles as a XYZ file. This format has number of particles at the first line
-     * comment on second line followed by positions of all particles xyz position on each line
-     */
-    class FormatXYZ {
+
+  /**
+   * @brief XYZ format
+   * @date June 2013
+   *
+   * Saves particles as a XYZ file. This format has number of particles at the first line
+   * comment on second line followed by positions of all particles xyz position on each line
+   */
+  class FormatXYZ {
     public:
-        template<class Tpvec, class Tvec=Point>
+      template<class Tpvec, class Tvec=Point>
         static bool save(const string &file, const Tpvec &p, Tvec len=Tvec(0,0,0)) {
-            char buf[100];
-            
-            std::ostringstream o;
-            o << p.size();
-            sprintf(buf, "Generated by Faunus\n");
+          char buf[100];
+
+          std::ostringstream o;
+          o << p.size();
+          sprintf(buf, "Generated by Faunus\n");
+          o << buf;
+          for (auto &p_i : p) {
+            string name=atom[p_i.id].name;
+            sprintf(buf, "%f %f %f\n", p_i.x(), p_i.y(), p_i.z() );
             o << buf;
-            for (auto &p_i : p) {
-                string name=atom[p_i.id].name;
-                sprintf(buf, "%f %f %f\n", p_i.x(), p_i.y(), p_i.z() );
-                o << buf;
-            }
-            return IO::writeFile(file, o.str());
+          }
+          return IO::writeFile(file, o.str());
         }
-        
-    };
-    
-    /**
-     * @brief MXYZ format
-     * @date June 2013
-     *
-     * Saves particles as a modifiedXYZ file. This format has number of particles at the first line
-     * comment on second line, which we use to have a box information, and this is followed by positions,
-     * direction and patch direction on each line
-     */
-    class FormatMXYZ {
+
+  };
+
+  /**
+   * @brief MXYZ format
+   * @date June 2013
+   *
+   * Saves particles as a modifiedXYZ file. This format has number of particles at the first line
+   * comment on second line, which we use to have a box information, and this is followed by positions,
+   * direction and patch direction on each line
+   */
+  class FormatMXYZ {
     private:
-        template<class Tparticle>
+      template<class Tparticle>
         static std::string p2s(const Tparticle &a, int i) {
-            std::ostringstream o;
-            o.precision(5);
-            o << a.x() << " " << a.y() <<" "<< a.z() << " " << a.dir.x() << " " << a.dir.y() <<" "<< a.dir.z() << " "
+          std::ostringstream o;
+          o.precision(5);
+          o << a.x() << " " << a.y() <<" "<< a.z() << " " << a.dir.x() << " " << a.dir.y() <<" "<< a.dir.z() << " "
             << a.patchdir.x() << " " << a.patchdir.y() <<" "<< a.patchdir.z() << " " << std::endl;
-            return o.str();
+          return o.str();
         }
-        
-        template<class Tparticle>
+
+      template<class Tparticle>
         static Tparticle& s2p(const std::string &s, Tparticle &a) {
-            std::stringstream o;
-            o << s;
-            o >> a.x() >> a.y() >> a.z() >> a.dir.x() >> a.dir.y() >> a.dir.z() >> a.patchdir.x() >> a.patchdir.y() >> a.patchdir.z();
-            return a;
+          std::stringstream o;
+          o << s;
+          o >> a.x() >> a.y() >> a.z() >> a.dir.x() >> a.dir.y() >> a.dir.z()
+            >> a.patchdir.x() >> a.patchdir.y() >> a.patchdir.z();
+          return a;
         }
     public:
-        template<class Tpvec, class Tvec=Point>
+      template<class Tpvec, class Tvec=Point>
         static bool save(const string &file, const Tpvec &p, const Point &len, const unsigned int time) {
-            char buf[200];
-            
-            std::ostringstream o;
-            o << p.size() << "\n";
-            sprintf(buf, "sweep %d; box %f %f %f \n", time, len.x(),len.y(),len.z());
-            o << buf;
-            for (size_t i=0; i< p.size(); i++)
-                o << p2s(p[i], i);
+          char buf[200];
+
+          std::ostringstream o;
+          o << p.size() << "\n";
+          sprintf(buf, "sweep %d; box %f %f %f \n", time, len.x(),len.y(),len.z());
+          o << buf;
+          for (size_t i=0; i< p.size(); i++)
+            o << p2s(p[i], i);
           return IO::writeFile(file, o.str(), std::ios_base::app);
         }
-        
+
     public:
-        template<class Tpvec>
+      template<class Tpvec>
         static bool load(const string &file, Tpvec &p, Point &len) {
-            std::stringstream o;
-            vector<string> v;
-            
-            if (IO::readFile(file,v)==true) {
-                IO::strip(v,"#");
-                unsigned int n=atoi(v[0].c_str());
-                //target.resize(n);
-                if (p.size() != n)
-                    std::cerr << "# mxyz load error: number of particles in xyz file " << n
-                        << " does not match input file (" << p.size() << ")!" << endl;
-                o << v[1].erase(0, v[1].find_last_of("x")+1);
-                o >> len.x() >> len.y() >> len.z();
-                for (unsigned int i=2; i<n+2; i++)
-                    s2p(v.at(i), p.at(i-2));
-                return true;
-            }
-            return false;
+          std::stringstream o;
+          vector<string> v;
+
+          if (IO::readFile(file,v)==true) {
+            IO::strip(v,"#");
+            unsigned int n=atoi(v[0].c_str());
+            //target.resize(n);
+            if (p.size() != n)
+              std::cerr << "# mxyz load error: number of particles in xyz file " << n
+                << " does not match input file (" << p.size() << ")!" << endl;
+            o << v[1].erase(0, v[1].find_last_of("x")+1);
+            o >> len.x() >> len.y() >> len.z();
+            for (unsigned int i=2; i<n+2; i++)
+              s2p(v.at(i), p.at(i-2));
+            return true;
+          }
+          return false;
         }
-        
-    };
+
+  };
 
   /**
    * @brief Gromacs GRO format
@@ -673,6 +670,15 @@ namespace Faunus {
           return false;
         }
   };
+
+  /** @brief Generates TCL script for adding bonds in VMD */
+  template<class Tbondlist>
+    std::string VMDBonds(const Tbondlist &bondlist) {
+      std::ostringstream o;
+      for (auto &b : bondlist)
+        o << "topo addbond " << b.first.first << " " << b.first.second << "\n";
+      return o.str();
+    }  
 
   /** @brief Trajectory of charges per particle
    *  @author Chris Evers

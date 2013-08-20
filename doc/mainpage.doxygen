@@ -18,6 +18,7 @@ Table of contents
   - @ref example_minimal 
   - @ref example_bulk 
   - @ref example_water
+  - @ref example_water2
   - @ref example_polymers
   - @ref example_temper   
   - @ref example_slitpolymer
@@ -54,9 +55,9 @@ work:
 
 Compiler       | Version        | Comment
 :------------- | :-----------   | :----------
-GCC            | (4.6), 4.7     | Good optimization
-Clang          | 3.1            | Good warning/error info, slower code
-Intel Composer | 13             | Pedantic warnings, good optimization
+GCC            | (4.6), 4.7+    | Good optimization
+Clang          | 3.1+           | Good warning/error info, slower code
+Intel Composer | 13+            | Pedantic warnings, good optimization
 
 
 Getting the source code
@@ -210,11 +211,11 @@ compatible with your `libfaunus` build.
 
 @page importantclasses Important Classes
 
-A good place to start is to understand the following classes. Also, for a more grouped overview do have
-a look at the Namespace list.
+A good place to start is to understand the following classes. Also, for a more grouped
+overview do have a look at the Namespace list.
 
 - Faunus::Point and derived classes.
-  - All particles in Faunus are based on a 3D vector, Point, which in turn is based on the excellent
+  - All particles in Faunus are based on a 3D vector, Point, which in turn is based on the 
     Eigen library, <http://http://eigen.tuxfamily.org>. This means you have access
     to a wide range of powerful vector and matrix operations including geometric functions, much
     in the spirit of Numpy in Python.
@@ -233,11 +234,8 @@ a look at the Namespace list.
     Useful for defining molecules, salt groups etc. Groups contain functions for describing how to
     perform geometric operations (translate, rotate).
 
-- Faunus::Energy::Hamiltonian
-  - Sums interaction energies from multiple origins - bonded, non-bonded, external etc.
-
 - Faunus::Move::Movebase
-  - All Monte Carlo moves are based in this class which is responsible for making the
+  - All Monte Carlo moves are based on this class which is responsible for making a MC
     move, calculating the energy difference, accepting/rejecting as well as collecting
     statistics. Derived classes are forced to obey certain rules which leads to an
     almost identicaly interface for all MC moves.
@@ -307,12 +305,6 @@ Before submitting changes, please make sure nothing is broken:
 
     $ make all
     $ make manual
-    $ make test
-
-Also try to verify SWIG modules:
-
-    $ cmake -DENABLE_SWIG=on
-    $ make _pyfaunus
     $ make test
 
 @page license License

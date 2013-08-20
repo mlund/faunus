@@ -665,6 +665,7 @@ INPUT                  = doc \
                          src/examples/slitpolymer.cpp \
                          src/examples/membrane.cpp \
                          src/examples/water.cpp \
+                         src/examples/water2.cpp \
                          src/examples/cigars2fibrils.cpp \
                          include/faunus
 

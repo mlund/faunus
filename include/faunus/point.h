@@ -124,23 +124,13 @@ namespace Faunus {
       return operator<<(i);
     }
 
-    /**
-     * @brief Transform point (rotation etc)
-     * @param rot Functor that rotates a point and returns the rotated Point
-     *
-     * The functor should take care of simulation boundaries (if any) and typically one
-     * would want to pass the Geometry::VectorRotate class as in the following example:
-     * @code
-     * Point a(1,0,0);
-     * QuaternionRotate rotator;
-     * rotator.setAxis(geometry, Point(0,0,0), Point(0,0,1), 3.14 ); // rotate pi around 0,0,1
-     * a.rotate(rotator);
-     * @endcode
+    /*
+     * @brief Internal rotation. No effect on isotropic particle.
      */
     template<typename Trotator>
       void rotate(const Trotator &rot) {
-        *this = rot(*this);
       }
+
   };
 
   template<class T>
@@ -194,7 +184,7 @@ namespace Faunus {
 
       template<typename Trotator>
         void rotate(const Trotator &rot) { *this = rot(*this); }
-        
+
       void eye() { *this = Tmat::Identity(3,3); }
     };
 
@@ -510,8 +500,12 @@ namespace Faunus {
       return o;
     }
 
+    /**
+     * @brief Internal rotation: dipole and polarizability
+     */
     template<typename Trotator>
       void rotate(const Trotator &rot) {
+        assert(rot.getOrigin().squaredNorm()<1e-6);
         mu = rot(mu);
         mup = rot(mup);
         alpha = rot(alpha);
@@ -560,23 +554,23 @@ namespace Faunus {
         class = typename std::enable_if<std::is_base_of<AtomData,T>::value>::type> 
           CigarParticle& operator=(const T &d) {
             PointParticle::operator=(d);
-              halfl = d.half_len;
-              patchangle = d.pangl;
-              pcanglsw = std::cos(0.5*d.pangl + d.panglsw);
-              pcangl = std::cos(0.5*d.pangl);
+            halfl = d.half_len;
+            patchangle = d.pangl;
+            pcanglsw = std::cos(0.5*d.pangl + d.panglsw);
+            pcangl = std::cos(0.5*d.pangl);
             return *this;
           }
 
       template<typename Trotator>
         void rotate(const Trotator &rot) {
           if (halfl>1e-6) {
+            assert(rot.getOrigin().squaredNorm()<1e-6);
             dir = rot(dir);
             patchdir = rot(patchdir);
             patchsides[0] = rot(patchsides[0]);
             patchsides[1] = rot(patchsides[1]);
             chdir = rot(chdir);
-          } else
-            Point::rotate(rot);
+          }
         }
 
       /* read in same order as written! */

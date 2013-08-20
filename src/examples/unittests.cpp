@@ -38,6 +38,10 @@ TEST_CASE("Spline table", "...")
   double error = fabs( pot_org(a,b,25)-pot_tab(a,b,25) ) ;
   CHECK(error>0);
   CHECK(error<0.01);
+
+  // Check if negative potential operator works
+  auto minus = Potential::Coulomb(mcp) - Potential::Coulomb(mcp);
+  CHECK( abs(minus(a,b,7)) < 1e-6 );
 }
 
 /*

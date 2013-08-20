@@ -54,6 +54,7 @@ int main() {
   Move::Pivot<Tspace> pivot(mcp, pot, spc);
   Analysis::PolymerShape shape;
   Analysis::RadialDistribution<> rdf(0.2);
+  Scatter::DebyeFormula<Scatter::FormFactorUnity<>> debye(mcp);
 
   spc.load("state");                                     // load old config. from disk (if any)
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );      // store initial total system energy
@@ -109,6 +110,9 @@ int main() {
 
     } // end of micro loop
 
+    // sample scattering
+    debye.sample(spc.p);
+
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
     cout << loop.timing();
 
@@ -117,6 +121,7 @@ int main() {
   // save to disk
   rdf.save("rdf_p2p.dat");
   spc.save("state");
+  debye.save("debye.dat");
   FormatPQR::save("confout.pqr", spc.p);
 
   // perform unit tests
@@ -142,6 +147,8 @@ int main() {
  - polymer translation and rotation
  - polymer crankshaft and pivot rotations
  - isobaric volume move (NPT ensemble)
+
+ ![Hardsphere polyelectrolytes with counter ions](polymers.png)
 
  Run this example from the `examples` directory:
 

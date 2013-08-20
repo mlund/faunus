@@ -13,8 +13,7 @@ int main() {
   // Space and hamiltonian
   Tspace spc(mcp);
   auto pot = Energy::Nonbonded<Tspace,Potential::DebyeHuckel>(mcp)
-    + Energy::EquilibriumEnergy<Tspace>(mcp)
-    + Energy::ExternalPotential<Tspace,Potential::ExcessDH<> >(mcp);
+    + Energy::EquilibriumEnergy<Tspace>(mcp);
 
   // Add molecule to middle of simulation container
   string file = mcp.get<string>("molecule", string());
@@ -25,10 +24,11 @@ int main() {
   g.name="peptide"; // babtise
   spc.enroll(g);    // enroll group in space
 
-  Move::SwapMove<Tspace> tit(mcp,pot,spc);
+  spc.load("state");
+
+  Move::SwapMove<Tspace> tit(mcp,pot,spc,pot.second);
   Analysis::ChargeMultipole mp;
 
-  spc.load("state");
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );
 
   cout << atom.info() + spc.info() + pot.info() + tit.info()

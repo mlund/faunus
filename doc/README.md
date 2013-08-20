@@ -6,17 +6,16 @@ molecular systems. Below is a brief overview of features:
 
 - Canonical, Grand Canonical, Isobaric-Isothermal statistical mechanical ensembles
 - General hamiltonian **parallel tempering** (temperature, screening length, bonds etc.)
-- 4D simulations on **hyperspheres**
-- **Anisotropic** particles (multipoles, sphero-cylinders)
+- **Anisotropic** atoms (multipoles, sphero-cylinders)
 - Ion titration moves (pKa prediction, Hofmeister effects etc.)
-- Highly expandable!
+- Highy expandable
 - Free and open source (**GPL**)
 
 Detailed information and support:
 
 - Website: <http://github.com/mlund/faunus>
-- Documentation: <http://faunus.sourceforge.net/doxyhtml>
 - Support: <http://github.com/mlund/faunus/issues>
+- Documentation: <http://faunus.sourceforge.net>
 
 Get the latest resivions from GitHub:
 
@@ -30,7 +29,6 @@ Requirements
 
 Optional:
 
-- SWIG 2.0+ (for python, ruby, ... modules)
 - OpenBabel 2 (numerous molecular formats)
 - Doxygen and Graphviz (for code manual)
 - Xcode (for neat environment on macos x)
@@ -53,7 +51,6 @@ Option                             | Description
 `-DENABLE_MPI=OFF`                 | Build MPI programs (parallel tempering etc.)
 `-DENABLE_OPENMP=OFF`              | Enable OpenMP support
 `-DENABLE_STATIC=OFF`              | Static linkage of faunus as opposed to default dynamic linkage
-`-DENABLE_SWIG=OFF`                | Build python, ruby, tcl etc. modules
 `-DENABLE_TWISTER=OFF`             | Use Mersenne Twister for random numbers
 `-DENABLE_UNICODE=ON`              | Use Unicode UTF-16 encoding for pretty output
 `-DCMAKE_BUILD_TYPE=RelWithDebInfo`| Alternatives: `Debug` or `Release` (faster)
@@ -61,10 +58,10 @@ Option                             | Description
 `-DCMAKE_CXX_FLAGS_DEBUG="..."`    | Compiler options for Debug mode
 `-DMYPLAYGROUND="..."`             | Add additional source directory (use absolute path)
 
-Example: Intel's C++ compiler with OpenMP parallelization
----------------------------------------------------------
+Example: Intel's C++ compiler
+-----------------------------
 
-    $ CXX=icpc CC=icc cmake . -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=Release
+    $ CXX=icpc CC=icc cmake . -DCMAKE_BUILD_TYPE=Release
     $ make
 
 Example: Libraries in odd locations
@@ -77,6 +74,7 @@ Resetting the build system
 
     $ make clean
     $ rm CMakeCache.txt
+    $ (rm -fR CMakeFiles/)
 
 Contributors
 ============
@@ -87,7 +85,7 @@ In chronological order:
   Mikael Lund         Bjorn Persson       Martin Trulsson    
 Ondrej Marsalek     Christophe Labbez     Andre Teixeira     
   Anil Kurut           Chris Evers         Magnus Ullner      
- Robert Vacha         Axel Trulsson       Bjorn Stenqvist
+ Robert Vacha         Axel Thuresson      Bjorn Stenqvist
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Citing Faunus
@@ -95,7 +93,7 @@ Citing Faunus
 
 - Lund, M., Persson, B., Trulsson, M.
   _Source Code Biol. Med., 2008, 3:1_
-  [[DOI]](http://dx.doi.org/10.1186/1751-0473-3-1)
+  [[DOI]](http://dx.doi.org/10/dfqgch)
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -102,6 +102,39 @@ namespace Faunus {
         string info();               //!< Information string
         void displace(const Point&); //!< Displace system by a vector
 
+        /**
+         * @brief Find which group given particle index belongs to
+         *
+         * If not found, `nullptr` is returned.
+         */
+        inline Group* findGroup(int i) {
+          for (auto g : groupList())
+            if (g->find(i))
+              return g;
+          return nullptr;
+        }
+
+        /**
+         * @brief Finds index of particle using addresses
+         *
+         * Given a particle reference, this function will try
+         * to locate the particle position in the particle
+         * vector. Both `p` and `trial` and scanned and in
+         * that order. If the particle is not from `Space`
+         * -1 will be returned.
+         */
+        int findIndex(const Tparticle &a) const {
+          int i=&a-&p.at(0); // calc. index from addresses
+          if (i>=0)
+            if (i<(int)p.size())
+              return i;
+          i=&a-&trial.at(0); // calc. index from addresses
+          if (i>=0)
+            if (i<(int)trial.size())
+              return i;
+          return -1;
+        }
+
         inline double dist(int i, int j) const {
           return geo.dist(p[i],p[j]);
         }
@@ -291,8 +324,8 @@ namespace Faunus {
         std::ofstream fout( file.c_str() );
         if (fout) {
           fout.precision( numeric_limits<double>::digits10 + 1 );
-          fout << geo.getVolume() << endl
-            << p.size() << endl;
+          fout << geo.getVolume() << "\n"
+            << p.size() << "\n";
           for (auto p_i : p)
             fout << p_i << "\n";
           fout << g.size() << "\n";

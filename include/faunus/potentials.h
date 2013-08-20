@@ -19,17 +19,39 @@ namespace Faunus {
    * @brief Namespace for pair potentials
    *
    * This namespace contains classes and templates that calculates the
-   * pair potential between particles as well as particles with external
-   * potentials. The majority of these classes/templates are derived
-   * from
-   *
-   * 1. `Potential::PairPotentialBase`
-   * 2. `Potential::ExternalPotentialBase`
-   *
-   * and thus have common interfaces.
+   * pair interaction energy and force between particles.
+   * All pair potentials are based
+   * on `PairPotentialBase` and thus have common interfaces.
    * Several pair potentials can be combined into
-   * one by the template Potential::CombinedPairPotential and a number of
-   * common combinations are already defined as typedefs.
+   * a new pair potential and a number of
+   * common combinations are pre-defined as typedefs.
+   *
+   * ~~~
+   * CoulombHS primitiveModel();                // Note that constructor
+   * auto nonbond = Coulomb() + LennardJones(); // arguments are here
+   * auto bond    = Harmonic() - nonbond;       // omitted for clarity
+   *
+   * PointParticle i,j;                         // two particles
+   * double r = 10;                             // i<->j distance
+   * double u = nonbond(i,j,r);                 // i<->j energy in kT
+   * ~~~
+   *
+   * As shown in the last example, pair potentials can also be subtracted
+   * which can be used to for example exclude non-bonded interactions
+   * between bonded pairs.
+   *
+   * If the pair interaction depends on particle types, use
+   * `PotentialMap` pair interaction.
+   *
+   * *Behind the scene:*
+   *
+   * The above combination of pair potentials is done at compile time
+   * using templates. This means that there is a good chance that
+   * the mixing overhead can be optimized out by the compiler.
+   * For example, when adding two potentials
+   * we construct a new `CombinedPairPotential`. Likewise when
+   * subtracting, a new `Minus` template is created and then combined.
+   *
    */
   namespace Potential {
 
@@ -63,7 +85,7 @@ namespace Faunus {
         virtual void setTemperature(double); //!< Set temperature [K]
 
         /**
-         * @brief Particle-particle force in units of \c kT/AA
+         * @brief Particle-particle force in units of `kT/AA`
          * @param a First particle
          * @param b Second particle
          * @param r2 Squared distance between them (angstrom squared)
@@ -71,6 +93,7 @@ namespace Faunus {
          */
         template<typename Tparticle>
           Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            std::cerr << "Using unimplemented force!" << std::endl;
             return Point(0,0,0);
           }
 
@@ -80,25 +103,30 @@ namespace Faunus {
             return Point(0,0,0);
           }
 
-        template<class Tparticle>
-          inline bool save(string, typename Tparticle::Tid, typename Tparticle::Tid); //!< Save table of pair potential to disk
         virtual void test(UnitTest&);                    //!< Perform unit test
 
         virtual std::string info(char=20);
+        
     };
 
-    template<class Tparticle>
-      bool PairPotentialBase::save(string filename, typename Tparticle::Tid ida, typename Tparticle::Tid idb) {
-        std::ofstream f(filename.c_str());
+    /**
+     * @brief Save pair potential and force table to disk
+     */
+    template<class Tpairpot, class Tid>
+      bool save(Tpairpot pot, Tid ida, Tid idb, string file) {
+        std::ofstream f(file.c_str());
         if (f) {
-          double min=0.9 * (atom[ida].radius+atom[idb].radius);
+          double min=atom[ida].radius+atom[idb].radius;
           particle a,b;
           a = atom[ida];
           b = atom[idb];
-          f << "# Pair potential: " << brief() << endl
-            << "# Atoms: " << atom[ida].name << "<->" << atom[idb].name << endl;
-          for (double r=min; r<=150; r+=0.5)
-            f << std::left << std::setw(10) << r << " " ;//<< operator()(a,b,r*r) << endl; 
+          f << "# Pair potential: " << pot.brief() << endl
+            << "# Atoms: " << atom[ida].name << "<->" << atom[idb].name
+            << endl;
+          f.precision(12);
+          for (double r=min; r<=5*min; r+=0.01)
+            f << std::left << std::setw(12) << r << " "
+              << pot(a,b,r*r) << " " << pot.force(a,b,r*r,Point(r,0,0)).x() << endl; 
           return true;
         }
         return false;
@@ -109,20 +137,30 @@ namespace Faunus {
      * @details The harmonic potential has the form
      * \f$ \beta u_{ij} = k(r_{ij}-r_{eq})^2 \f$ where k is the force constant
      * (kT/angstrom^2) and req is the equilibrium distance (angstrom).
-     * @note We do not multiply with 1/2 which must be included in the supplied force constant, k
+     * @note We do not multiply with 1/2 which must be included in the
+     * supplied force constant, k
      */
     class Harmonic : public PairPotentialBase {
       private:
         string _brief();
       public:
-        double k;   //!< Force constant (kT/A^2) - Did you rember to divide by two? See note.
+        double k;   //!< Force constant (kT/A^2) - Remember to divide by two!
         double req; //!< Equilibrium distance (angstrom)
+
         Harmonic(double=0, double=0);
+
         Harmonic(InputMap&, string="harmonic");
+
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
             double d=sqrt(r2)-req;
             return k*d*d;
+          }
+
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            double r=sqrt(r2), d=r-req;
+            return -2 * k * d / r * p;
           }
     };
 
@@ -144,7 +182,6 @@ namespace Faunus {
      * `cosattract_rc`    | Width, r_c [angstrom]
      * `cosattract_wc`    | Decay range, w_c [angstrom] 
      *
-     * @warning Untested!
      */
     class CosAttract : public PairPotentialBase {
       protected:
@@ -152,24 +189,59 @@ namespace Faunus {
         string _brief();
       public:
         CosAttract(InputMap&, string="cosattract"); // Constructor from InputMap
+
+        /**
+         * @todo
+         * The function `x(c,r2,rc)` defined herein could be approximated
+         * by a series expansion for `r2=rcwc2`. In this way one can
+         * avoid `cos()` and `sqrt()`. C code for this could be generated
+         * in Matlab:
+         *
+         * ~~~
+         * with(CodeGeneration)
+         * x := series(cos(c*(sqrt(r2)-rc)), r2 = rcwc2, 2)
+         * convert(x, polynom)
+         * C(%, resultname = "x")
+         * ~~~
+         */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
             if (r2<rc2)
               return -eps;
             if (r2>rcwc2)
               return 0;
+#ifdef FAU_APPROXMATH
+            double x=cosApprox( c*( sqrt(r2)-rc ) );
+#else
             double x=cos( c*( sqrt(r2)-rc ) );
+#endif
             return -eps*x*x;
           }
+
         string info(char); // More verbose information
+
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            if (r2<rc2 || r2>rcwc2)
+              return Point(0,0,0);
+            double r=sqrt(r2);
+#ifdef FAU_APPROXMATH
+            double x1=cosApprox( c*( r-rc ) );
+            double x2=sinApprox( c*( r-rc ) );
+#else
+            double x1=cos( c*( r-rc ) );
+            double x2=sin( c*( r-rc ) );
+#endif
+            return -2*c*eps*x1*x2/r*p;
+          }
     };
-      
+
     /**
-     * @brief Finite Extensible nonlinear elastic (FENE) potential
+     * @brief Finite Extensible Nonlinear Elastic (FENE) potential
      * @details This is an anharmonic bonding potential with the form:
-     * \f[
+     * @f[
      *     \beta u(r) = -\frac{k r_0^2}{2}\ln \left [ 1-(r/r_0)^2 \right ]
-     * \f]
+     * @f]
      * for \f$r<r_0\f$, otherwise infinity. The input parameters read by InputMap
      * are as follows:
      * - `fene_stiffness` Bond stiffness, `k` [kT]
@@ -185,10 +257,16 @@ namespace Faunus {
       public:
         FENE(double,double); // Constructor
         FENE(InputMap&, string="fene"); // Constructor
+
         template<class Tparticle>
           inline double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             return (r2>r02) ? pc::infty : -0.5*k*r02*std::log(1-r2*r02inv);
           }
+
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            return (r2>r02) ? -pc::infty*p : -k * r02 / (r02-r2) * p;
+          }        
     };
 
     /**
@@ -200,6 +278,7 @@ namespace Faunus {
         string _brief();
       public:
         Hertz(InputMap&, string="hertz");
+
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
             double m = a.radius+b.radius;
@@ -209,14 +288,14 @@ namespace Faunus {
             }
             return 0;
           }
+
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b,const Point &r2) {
             return operator()(a,b, r2.squaredNorm());
-
           }
+
         string info(char); 
     };
-
 
     /**
      * @brief Hard sphere pair potential
@@ -246,9 +325,11 @@ namespace Faunus {
      * @brief Lennard-Jones (12-6) pair potential
      * @details The Lennard-Jones potential has the form:
      * @f$
-     * \beta u=4\epsilon_{lj} \left ((\sigma_{ij}/r_{ij})^{12}-(\sigma_{ij}/r_{ij})^6\right )
+     * \beta u=4\epsilon_{lj}
+     * \left ((\sigma_{ij}/r_{ij})^{12}-(\sigma_{ij}/r_{ij})^6\right )
      * @f$
-     * where \f$\sigma_{ij} = (\sigma_i+\sigma_j)/2\f$ and \f$\epsilon_{lj}=\epsilon\f$
+     * where
+     * \f$\sigma_{ij} = (\sigma_i+\sigma_j)/2\f$ and \f$\epsilon_{lj}=\epsilon\f$
      * is the same for all pairs in this class.
      */
     class LennardJones : public PairPotentialBase {
@@ -273,9 +354,40 @@ namespace Faunus {
           double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
             return operator()(a,b,r.squaredNorm());
           }
+        template<typename Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            double s6=pow(a.radius+b.radius,6); //pow() is slow
+            double r6=r2*r2*r2;
+            double r14=r6*r6*r2;
+            return 6.*eps*s6*(2*s6-r6)/r14*p;
+          }
 
         string info(char);
     };
+
+    /**
+     * @brief Cuts a pair-potential and shift to zero at cutoff
+     *
+     * This will cut any pair potential at `prefix_cutoff` and shift to
+     * zero at that distance. Slow but general.
+     *
+     * @todo Implement force calculation
+     */
+    template<class Tpairpot>
+      class CutShift : public Tpairpot {
+        private:
+          double rc2; // squared cut-off distance
+        public:
+          CutShift(InputMap &in) : Tpairpot(in) {
+            rc2=pow(in.get<double>(Tpairpot::prefix+"_cutoff", pc::infty),2);
+            Tpairpot::name+=" (rcut="
+              + std::to_string(sqrt(rc2)) + textio::_angstrom + ")";
+          }
+          template<class Tparticle>
+            double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
+              return (r2>rc2) ? 0 : Tpairpot::operator()(a,b,r2) - Tpairpot::operator()(a,b,rc2);
+            }
+      };
 
     /** @brief Lorentz-Berthelot Mixing Rule for sigma and epsilon */
     struct LorentzBerthelot {
@@ -331,6 +443,19 @@ namespace Faunus {
               return eps(a.id,b.id) * (x*x - x);
             }
 
+          template<typename Tparticle>
+            Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+              double s6=pow(s2(a.id,b.id),3);
+              double r6=r2*r2*r2;
+              double r14=r6*r6*r2;
+              return 6.*eps(a.id,b.id) * s6 * (2*s6-r6) / r14 * p;
+            }
+
+          template<class Tparticle>
+            double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+              return operator()(a,b,r.squaredNorm()); 
+            }
+
           /**
            * @brief This will set a custom epsilon for a pair of particles
            * @param i Particle id of first particle
@@ -364,53 +489,45 @@ namespace Faunus {
           }
       };
 
-      template<class Tmixingrule=LorentzBerthelot>
+    template<class Tmixingrule=LorentzBerthelot>
       class CosAttractMixed : public LennardJonesMixed<Tmixingrule> {
-      protected:
+        protected:
           typedef LennardJonesMixed<Tmixingrule> base;
           PairMatrix<double> rc2,rc,c; // matrix of sigma_ij^2 and eps_ij
-      public:
+        public:
           CosAttractMixed(InputMap &in) : base(in) {
-              base::name="Cos^2 attraction (mixed)";
-              size_t n=atom.list.size(); // number of atom types
-              c.resize(n);
-              rc.resize(n);
-              rc2.resize(n);
-              /*PatchyCigarCigar.rcutPtr=new double*[n];
-              for(int i = 0; i < n; ++i) {
-                  PatchyCigarCigar.rcutPtr[i] = new double[n];
-              }*/
-              //Potential::PatchyCigarCigar.rcutPtr.resize(n);
-              for (size_t i=0; i<n; i++)
-                  for (size_t j=i; j<n; j++) {
-                      rc.set(i,j,base::mixer.mixSigma( atom.list[i].pdis, atom.list[j].pdis));
-                      base::rcut2.set(i,j,base::mixer.mixSigma( atom.list[i].pswitch, atom.list[j].pswitch));
-                      c.set(i,j, 0.5*pc::pi/base::rcut2(i,j) );
-                      base::rcut2.set(i,j, base::rcut2(i,j) + rc(i,j) );
-                      base::rcut2.set(i,j, base::rcut2(i,j) * base::rcut2(i,j) );
-                      rc2.set(i,j, rc(i,j)*rc(i,j) );
-                      //epsilon is set in base class LJmixed and is stored as multiplied by 4
-                      //PatchyCigarCigar.rcutPtr[i][j]=rc(i,j);
-                      //Potential::PatchyCigarCigar.rcutPtr(i,j)=rc(i,j);
-                  }
+            base::name="Cos" + textio::squared + " attraction (mixed)";
+            size_t n=atom.list.size(); // number of atom types
+            c.resize(n);
+            rc.resize(n);
+            rc2.resize(n);
+            for (size_t i=0; i<n; i++)
+              for (size_t j=i; j<n; j++) {
+                rc.set(i,j,base::mixer.mixSigma( atom.list[i].pdis, atom.list[j].pdis));
+                base::rcut2.set(i,j,base::mixer.mixSigma( atom.list[i].pswitch, atom.list[j].pswitch));
+                c.set(i,j, 0.5*pc::pi/base::rcut2(i,j) );
+                base::rcut2.set(i,j, base::rcut2(i,j) + rc(i,j) );
+                base::rcut2.set(i,j, base::rcut2(i,j) * base::rcut2(i,j) );
+                rc2.set(i,j, rc(i,j)*rc(i,j) );
+              }
           }
-          
+
           template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
+            double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
               if (r2<rc2(a.id,b.id)) {
-                  //epsilon is from LJmixed stored as multiplied by 4
-                  return -0.25*base::eps(a.id,b.id);
+                //epsilon is from LJmixed stored as multiplied by 4
+                return -0.25*base::eps(a.id,b.id);
               }
               if (r2>base::rcut2(a.id,b.id))
-                  return 0;
+                return 0;
               double x=cos( c(a.id,b.id)*( sqrt(r2)-rc(a.id,b.id) ) );
               //epsilon is from LJmixed stored as multiplied by 4
               return -0.25*base::eps(a.id,b.id)*x*x;
-          }
+            }
           template<class Tparticle>
-          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
+            double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
               return operator()(a,b,r.squaredNorm());
-          }
+            }
       };
 
     /**
@@ -438,7 +555,6 @@ namespace Faunus {
               return 0;
             x=x/r2;  // (s/r)^2
             x=x*x*x;// (s/r)^6
-             // cout<<"weeks: "<< eps(a.id,b.id)*(x*x - x + onefourth) <<"\n";
             return eps(a.id,b.id)*(x*x - x + onefourth);
           }
 
@@ -446,11 +562,20 @@ namespace Faunus {
           double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
             return operator()(a,b,r.squaredNorm());
           }
+
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            double x=s2(a.id,b.id); // s^2
+            if (r2>x*twototwosixth)
+              return Point(0,0,0);
+            x=x/r2;  // (s/r)^2
+            x=x*x*x;// (s/r)^6
+            return eps(a.id,b.id)*6*(2*x*x - x)/r2*p;
+          }
     };
 
-
-    /*!
-     * \brief Square well pair potential
+    /**
+     * @brief Square well pair potential
      */
     class SquareWell : public PairPotentialBase {
       private:
@@ -591,6 +716,7 @@ namespace Faunus {
     class LennardJonesTrunkShift : public LennardJones {
       public:
         LennardJonesTrunkShift(InputMap&, string="ljts");
+
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double sigma = a.radius+b.radius;
@@ -599,6 +725,7 @@ namespace Faunus {
             double x=r6(sigma,r2)*0.5;
             return eps*(x*x - x + 0.25);
           }
+
         template<class Tparticle>
           Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
             double sigma = a.radius+b.radius;
@@ -621,7 +748,6 @@ namespace Faunus {
      */
     class Coulomb : public PairPotentialBase {
       friend class Potential::DebyeHuckel;
-      //friend class Energy::GouyChapman;
       private:
       string _brief();
 
@@ -648,8 +774,8 @@ namespace Faunus {
           return operator()(a,b,r.squaredNorm());
         }
 
-      template<class T>
-        Point force(const T &a, const T &b, double r2, const Point &p) {
+      template<class Tparticle>
+        Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
 #ifdef FAU_APPROXMATH
           return lB*a.charge*b.charge * invsqrtQuake(r2) / r2 * p;
 #else
@@ -672,7 +798,7 @@ namespace Faunus {
 
     /**
      * @brief Coulomb pair potential shifted according to
-     *        Wolf/Yonezawaa (doi:10/j97)
+     *        Wolf/Yonezawaa, see  <http://dx.doi.org/10/j97>
      * @details The Coulomb potential has the form:
      * @f[
      * \beta u_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT}
@@ -699,6 +825,18 @@ namespace Faunus {
             return lB * a.charge * b.charge * (1/r2 - Rcinv + (r2*Rcinv-1)*Rcinv );
 #endif
           }
+
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
+            return operator()(a,b,r.squaredNorm());
+          }
+
+        template<typename Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            if (r2>Rc2) return Point(0,0,0);
+            return lB*a.charge*b.charge*(1-Rcinv*Rcinv*r2)/(r2*sqrt(r2))*p;
+          }
+
         string info(char);
     };
 
@@ -727,6 +865,7 @@ namespace Faunus {
         double c;
       public:
         ChargeNonpolar(InputMap&); //!< Construction from InputMap
+
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double qq=a.charge * a.charge;
@@ -737,9 +876,20 @@ namespace Faunus {
               return -c * qq / (r2*r2) * (a.radius*a.radius*a.radius);
             return 0;
           }
-        string info(char);
-    };
 
+        string info(char);
+
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            double qq=a.charge * a.charge;
+            if (qq>1e-6)
+              return -4*c * qq / (r2*r2) * (b.radius*b.radius*b.radius) / r2 * p;
+            qq=b.charge * b.charge;
+            if (qq>1e-6)
+              return -4*c * qq / (r2*r2) * (a.radius*a.radius*a.radius) / r2 * p;
+            return Point(0,0,0);
+          }
+    };
 
     class YukawaGel : public Coulomb {
       private:
@@ -796,8 +946,7 @@ namespace Faunus {
 
     /**
      * @brief Debye-Huckel/Yukawa potential
-     *1     * @details Similar to the plain Coulomb potential
-     *          but with an exponential term to described salt screening:
+     * @details Coulomb with an exponential term to describe salt screening:
      * \f[ \beta w_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT}
      * \frac{z_i z_j}{r_{ij}} \exp(-\kappa r_{ij}) \f]
      * where \f$\kappa=1/D\f$ is the inverse Debye screening length.
@@ -825,31 +974,80 @@ namespace Faunus {
         double excessChemPot(double, double=0) const; //!< Single ion excess chemical potential (kT)
         double activityCoeff(double, double=0) const; //!< Single ion activity coefficient (molar scale) 
         string info(char);
+
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+#ifdef FAU_APPROXMATH
+            double rinv = invsqrtQuake(r2);
+            return lB * a.charge * b.charge * rinv * exp_cawley(-k/rinv) * ( 1/r2 + k/rinv ) * p;
+#else
+            double r=sqrt(r2);
+            return lB * a.charge * b.charge / (r*r2) * exp(-k*r) * ( 1 + k*r ) * p;
+#endif
+          }
     };
 
     /**
-     * @brief DebyeHuckel shifted to reaach zero at given cut-off
-     * @details The cut-off distance is read from the InputMap with the following keyword:
-     * - `pairpot_cutoff` Spherical cut-off in angstroms
+     * @brief DebyeHuckel shifted to reach zero at given cut-off
+     *
+     * Shifted and truncated Yukawa potential of the form,
+     * @f[
+     * u(r) = u^{dh}(r) - u^{dh}(r_c)
+     *         - \frac{\partial u^{dh}(r_c)}{\partial r_c}
+     *         \left ( r-r_c \right )
+     * @f]
+     * where @f$r_c@f$ is a spherical cut-off beyond which the
+     * energy is zero.
+     * See more in for example <http://dx.doi.org/10/fm7qm5>.
+     * The cut-off distance is read from the InputMap with the following
+     * keyword:
+     * - `dh_cutoff` Spherical cut-off in angstroms
      */
     class DebyeHuckelShift : public DebyeHuckel {
       private:
-        double shift;    // offset at cutoff distance
-        double sqcutoff; // squared cutoff distance
+        double rc2,rc; // (squared) cutoff distance
+        double u_rc,dudrc;
       public:
-        DebyeHuckelShift(InputMap&); //!< Construction from InputMap
+        DebyeHuckelShift(InputMap &in) : DebyeHuckel(in) {
+          rc=in.get<double>("dh_cutoff",pc::infty);
+          rc2=rc*rc;
+#ifdef FAU_APPROXMATH
+          u_rc = exp_cawley(-k*rc)/rc; // use approx. func even here!
+#else
+          u_rc = exp(-k*rc)/rc;
+#endif
+          dudrc = -k*u_rc - u_rc/rc; // 1st derivative of u(r) at r_c
+          std::ostringstream o;
+          o << " (shifted, rcut=" << rc << textio::_angstrom << ")";
+          name+=o.str();
+        }
+
         template<class Tparticle>
           inline double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
-            if (r2>sqcutoff)
+            if (r2>rc2)
               return 0;
 #ifdef FAU_APPROXMATH
-            double rinv = invsqrtQuake(r2);
-            return lB * a.charge * b.charge * ( exp_cawley(-k/rinv)*rinv - shift );
+            double r = 1./invsqrtQuake(r2);
+            return lB * a.charge * b.charge
+              * ( exp_cawley(-k*r)/r - u_rc - (dudrc*(r-rc)) );
 #else
             double r=sqrt(r2);
-            return lB * a.charge * b.charge * ( exp(-k*r)/r - shift );
+            return lB * a.charge * b.charge
+              * ( exp(-k*r)/r - u_rc - (dudrc*(r-rc))  );
 #endif
           }
+        template<class Tparticle>                                                                             
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {                    
+            if (r2>rc2)                                                                                       
+              return Point(0,0,0);                                                                            
+#ifdef FAU_APPROXMATH                                                                                         
+            double rinv = invsqrtQuake(r2);                                                                   
+            return lB * a.charge * b.charge * ( exp_cawley(-k/rinv) / r2 * (k+rinv) + dudrc*rinv) * p;           
+#else                                                                                                         
+            double r=sqrt(r2);                                                                                
+            return lB * a.charge * b.charge * ( exp(-k*r) / r2 * (k + 1/r) + dudrc / r) * p;                  
+#endif                                                                                                        
+          } 
     };
 
     /**
@@ -870,19 +1068,36 @@ namespace Faunus {
         protected:
           typedef opair<int> Tpair;
           typedef std::function<double(const Tparticle&,const Tparticle&,Tdist)> Tfunc;
+          typedef std::function<Point(const Tparticle&,const Tparticle&,double,const Point&)> Tforce;
           std::map<Tpair,Tfunc> m;
+          std::map<Tpair,Tforce> mforce;
           std::string _info; // info for the added potentials (before turning into functors)
+
+          // Force function object wrapper class
+          template<class Tpairpot>
+            struct ForceFunctionObject {
+              Tpairpot pot;
+              ForceFunctionObject(const Tpairpot &p) : pot(p) {}
+              Point operator()(const particle &a, const particle &b, double r2, const Point &r) {
+                return pot.force(a,b,r2,r);
+              }
+            };
 
         public:
           PotentialMap(InputMap &in) : Tdefault(in) {
             Tdefault::name += " (default)";
           } 
 
+          /**
+           * @warning Templating `Tpairpot` may cause code-bloat if used on
+           * many different potentials
+           */
           template<class Tpairpot>
             void add(AtomData::Tid id1, AtomData::Tid id2, Tpairpot pot) {
               pot.name=atom[id1].name + "<->" + atom[id2].name + ": " + pot.name;
               _info+="\n  " + pot.name + ":\n" + pot.info(20);
               m[Tpair(id1,id2)] = pot;
+              mforce[Tpair(id1,id2)] = ForceFunctionObject<decltype(pot)>(pot);
             }
 
           double operator()(const Tparticle &a, const Tparticle &b, const Tdist &r2) {
@@ -892,12 +1107,17 @@ namespace Faunus {
             return Tdefault::operator()(a,b,r2);
           }
 
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            auto i=mforce.find( Tpair(a.id,b.id) );
+            if (i!=mforce.end())
+              return i->second(a,b,r2,p);
+            return Tdefault::force(a,b,r2,p);
+          }
+
           std::string info(char w=20) {
             return Tdefault::info(w) + _info;
           }
       };
-
-
 
     /**
      * @brief Combines two pair potentials
@@ -920,16 +1140,16 @@ namespace Faunus {
           string _brief() {
             return first.brief() + " " + second.brief();
           }
-        void setCutoff() {
-          for (size_t i=0; i<atom.list.size(); i++)
-            for (size_t j=0; j<atom.list.size(); j++) {
-              if (first.rcut2(i,j) > second.rcut2(i,j))
-                PairPotentialBase::rcut2.set(i,j,first.rcut2(i,j));
-              else
-                PairPotentialBase::rcut2.set(i,j,second.rcut2(i,j));
-            }
-        }
-        
+          void setCutoff() {
+            for (size_t i=0; i<atom.list.size(); i++)
+              for (size_t j=0; j<atom.list.size(); j++) {
+                if (first.rcut2(i,j) > second.rcut2(i,j))
+                  PairPotentialBase::rcut2.set(i,j,first.rcut2(i,j));
+                else
+                  PairPotentialBase::rcut2.set(i,j,second.rcut2(i,j));
+              }
+          }
+
         public:
           T1 first;  //!< First pair potential of type T1
           T2 second; //!< Second pair potential of type T2
@@ -956,6 +1176,11 @@ namespace Faunus {
             }
 
           template<typename Tparticle>
+            Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+              return first.force(a,b,r2,p) + second.force(a,b,r2,p);
+            }
+
+          template<typename Tparticle>
             Point field(const Tparticle &a, const Point &r) const {
               return first.field(a,r) + second.field(a,r);
             }
@@ -971,19 +1196,63 @@ namespace Faunus {
       };
 
     /**
-     * @brief Adds pair potentials together
+     * @brief Creates a new pair potential with opposite sign
+     */
+    template<class T>
+      struct Minus : public T {
+        Minus(const T &pot) : T(pot) { T::name = "minus " + T::name; }
+        template<class Tparticle> // isotropic energy
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+            return -T::operator()(a,b,r2);
+          }
+        template<class Tparticle> // anisotropic energy
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r2) {
+            return -T::operator()(a,b,r2);
+          }
+        template<class Tparticle> // force
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            return -T::force(a,b,r2,p);
+          }
+      };
+
+    /**
+     * @brief Adds two pair potentials
      *
      * Example:
      *
-     *     auto primitiveModel = Potential::Coulomb() + Potential::HardSphere();
+     *     auto PrimitiveModel = Potential::Coulomb(...) + Potential::HardSphere(...);
      */
     template<class T1, class T2,
       class = typename std::enable_if<std::is_base_of<PairPotentialBase,T1>::value>::type,
       class = typename std::enable_if<std::is_base_of<PairPotentialBase,T2>::value>::type>
-        Potential::CombinedPairPotential<T1,T2>& operator+(const T1 &pot1, const T2 &pot2) {
-          return *(new Potential::CombinedPairPotential<T1,T2>(pot1,pot2));
+        CombinedPairPotential<T1,T2>& operator+(const T1 &pot1, const T2 &pot2) {
+          return *(new CombinedPairPotential<T1,T2>(pot1,pot2));
         }
 
+    /**
+     * @brief Subtracts two pair potentials
+     *
+     * This can be useful for excluding non-bonded interactions between bonded pairs.
+     * Beware, though, that in the case of strongly repulsive interactions
+     * for example due to particle overlap,
+     * first adding then subtracting
+     * may lead to numerical issues, often manifested in a system energy
+     * drift.
+     *
+     * Example:
+     *
+     *     auto mypot = Potential::Harmonic(...) - Potential::LennardJones(...);
+     */
+    template<class T1, class T2,
+      class = typename std::enable_if<std::is_base_of<PairPotentialBase,T1>::value>::type,
+      class = typename std::enable_if<std::is_base_of<PairPotentialBase,T2>::value>::type>
+        CombinedPairPotential<T1,Minus<T2>>& operator-(const T1 &pot1, const T2 &pot2) {
+          return *(new CombinedPairPotential<T1,Minus<T2>>(pot1,Minus<T2>(pot2)));
+        }
+
+    /**
+      @brief Old class for multipole energy. To be removed.
+      */
     class MultipoleEnergy {
       public:
         double lB;

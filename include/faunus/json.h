@@ -1,6 +1,8 @@
 #ifndef FAU_JSON
 #define FAU_JSON
 #include <faunus/common.h>
+#include <faunus/auxiliary.h>
+#include <faunus/species.h>
 #include <faunus/picojson.h>
 
 namespace Faunus {
@@ -95,6 +97,49 @@ namespace Faunus {
             if (v.get(key).is<T>())
               return v.get(key).get<T>();
         return fallback;
+      }
+
+    /**
+     * @brief Loads a JSON file, reads pair properties and returns a vector map
+     *
+     * Example:
+     * ~~~~
+     * auto map = atomPairMap("input.json", "pairproperties", "nemorep");
+     * for (auto &m : map)
+     *   cout << m.second.transpose() << endl;
+     * ~~~~
+     * where the input file could look like this:
+     * ~~~~
+     * {
+     *   "pairproperties" : {
+     *      "OW OW"  : { "nemorep":"12. 23. 0.2  -2   3   4   5" },
+     *      "HW HW"  : { "nemorep":"-2. 23. 0.2   2  99   4  -5 " },
+     *      "HW OW"  : { "nemorep":"112. 23. 0.2 129 391 238  23" }
+     *   }
+     * }
+     * ~~~~
+     */
+    std::map<opair<int>,Eigen::VectorXd>
+      atomPairMap(const string &file, string section, string key) {
+        typedef Eigen::VectorXd Tvec;
+        typedef opair<int> Tpair;
+        std::map<Tpair,Tvec> map;
+        auto j=json::open(file);
+        for (auto &a : json::object(section, j)) {
+          string atom1, atom2;
+          std::istringstream is(a.first);
+          is >> atom1 >> atom2;
+          Tpair pair( atom[atom1].id, atom[atom2].id );
+
+          auto pstr = json::value<string>(a.second, key, "");
+          std::istringstream is2(pstr), tmp(pstr);
+          int size = std::distance(std::istream_iterator<string>(tmp), std::istream_iterator<string>());
+          Tvec v(size);
+          for (int i=0; i<v.size(); i++)
+            is2 >> v[i];
+          map[pair] = v;
+        }
+        return map;
       }
   }//namespace
 }//namespace

@@ -232,6 +232,8 @@ namespace Faunus {
            * @param p Particle vector
            * @param groupList Vector of group pointers - i.e. as returned from `Space::groupList()`.
            * @note Particle form factors are always set to unity, i.e. F(q) is ignored.
+           *
+           * @warning Untested
            */  
           template<class Tpvec, class Tg>
             void sampleg2g(const Tpvec &p, Tg groupList) {
@@ -245,12 +247,12 @@ namespace Faunus {
               // loop over all pairs of groups, then over particles
               for (int k=0; k<(int)groupList.size()-1; k++)
                 for (int l=k+1; l<(int)groupList.size(); l++)
-                  for (auto i : *groupList[k])
-                    for (auto j : *groupList[l]) {
+                  for (auto i : *groupList.at(k))
+                    for (auto j : *groupList.at(l)) {
                       T r = geo.dist(p[i],p[j]);
                       int cnt=0;
                       for (T q=qmin; q<=qmax; q+=dq)
-                        _I[cnt++] += sin(q*r)/(q*r);
+                        _I.at(cnt++) += sin(q*r)/(q*r);
                     }
               int cnt=0, N=p.size();
               for (T q=qmin; q<=qmax; q+=dq)
@@ -340,7 +342,7 @@ namespace Faunus {
                 // N^2 loop over all particles
                 for (int i=0; i<n-1; i++) {
                   for (int j=i+1; j<n; j++) {
-                    Point r = base::geo.vdist(p[i],p[j]);
+                    auto r = base::geo.vdist(p[i],p[j]);
                     for (T q=qmin; q<=qmax; q+=dq)
                       _I[q] += cos( (q*qdir).dot(r) );
                   }

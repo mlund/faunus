@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
             for (auto &i : pol)
               cm_vec.push_back(i.cm);
             debye.sample(cm_vec,spc.geo.getVolume());
-            debye2.sampleg2g(spc.p,spc.groupList());
+            //debye2.sampleg2g(spc.p,spc.groupList());
 
             if (mpi.isMaster())
               if (cmfile) {

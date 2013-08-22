@@ -50,7 +50,7 @@ CHECK_CXX_SOURCE_COMPILES("int main() { long double f; }" long_double)
 CHECK_CXX_SOURCE_COMPILES("int main() { int a[0]; for (int &i:a) i++; }" range_based_for_loop)
 CHECK_CXX_SOURCE_COMPILES("int main() { auto i=0; }" auto_type_inference)
 CHECK_CXX_SOURCE_COMPILES("int main() { nullptr; }" nullptr)
-CHECK_CXX_SOURCE_COMPILES("int main() { int i=0; decltype(i) j=0; return i*j;}" decltype_)
+CHECK_CXX_SOURCE_COMPILES("auto f()->decltype(int()) {return 0;} int main() {return f();}" decltype_)
 CHECK_CXX_SOURCE_COMPILES("#include<memory>\nint main() {std::shared_ptr<int> i;}" smart_pointers)
 CHECK_CXX_SOURCE_COMPILES("int main() { struct a { virtual void f() final; }; }" final_keyword)
 

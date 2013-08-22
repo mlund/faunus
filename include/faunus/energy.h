@@ -882,9 +882,11 @@ namespace Faunus {
               = ForceFunctionObject<decltype(pot)>(pot);
           }
 
+        /* uncommented due to gcc 4.6
         auto getBondList() -> decltype(this->list) {
           return Tbase::getBondList();
         }
+        */
     };
 
     /**

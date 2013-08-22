@@ -4,5 +4,5 @@ epsilon_r     78.7    # Dielectric constant
 lj_eps        0.05    # Uniform LJ epsilon parameter [kT]
 tion1         Na      # ion type 1
 tion2         Cl      # ion type 2
-nion1         1      # number of ion type 1
-nion2         1      # number of ion type 2
+nion1         10      # number of ion type 1
+nion2         10      # number of ion type 2

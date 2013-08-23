@@ -522,17 +522,18 @@ namespace Faunus {
         if (this->cnt>0 && !eqpot->eq.sites.empty()) {
           o << indent(SUB) << "Site statistics:" << endl
             << indent(SUBSUB) << std::left
-            << setw(15) << "Site"
-            << setw(14) << bracket("z")
-            << "Acceptance" << endl;
+	    << setw(16) << "Site" // Mod <-- joaoh
+            << setw(13) << bracket("z") // Mod <-- joaoh
+	    << "Acceptance" << endl;
           for (auto i : eqpot->eq.sites) {
             if (accmap[i].cnt>0) {
               std::ostringstream a;
-              o.precision(4);
-              a << atom[ spc->p[i].id ].name << " " << i;
-              o << pad(SUBSUB,15, a.str())
-                << setw(10) << eqpot->eq.q[i].avg()
-                << accmap[i].avg()*100. << percent
+	      o.precision(5);
+              o.setf( std::ios::fixed, std::ios::floatfield );
+              a << std::left << setw(5) << atom[ spc->p[i].id ].name << std::right << setw(5) << i; // Modified <-- joaoh
+	      o << pad(SUBSUB,15, a.str())
+                << setw(8) << std::right << eqpot->eq.q[i].avg() // Mod <-- joaoh
+                << setw(11) << std::right << accmap[i].avg()*100. << percent // Mod <-- joaoh
                 << endl;
             }
           }

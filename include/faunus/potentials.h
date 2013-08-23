@@ -9,6 +9,7 @@
 #include <faunus/auxiliary.h>
 #include <faunus/inputfile.h>
 #include <faunus/species.h>
+#include <faunus/average.h>
 #endif
 
 using namespace Eigen;
@@ -103,10 +104,18 @@ namespace Faunus {
             return Point(0,0,0);
           }
 
+        /**
+         * @brief Set space dependent features such as density dependent potentials
+         *
+         * The base-class version does nothing.
+         */
+        template<class Tspace>
+          void setSpace(Tspace&) {} 
+
         virtual void test(UnitTest&);                    //!< Perform unit test
 
         virtual std::string info(char=20);
-        
+
     };
 
     /**
@@ -955,7 +964,8 @@ namespace Faunus {
       private:
         string _brief();
       protected:
-        double c,k;
+        double c,k,k2_count, z_count;
+        Average<double> k2_count_avg;
       public:
         DebyeHuckel(InputMap&);                       //!< Construction from InputMap
         template<class Tparticle>
@@ -985,6 +995,21 @@ namespace Faunus {
             return lB * a.charge * b.charge / (r*r2) * exp(-k*r) * ( 1 + k*r ) * p;
 #endif
           }
+
+        /**
+         * @brief Adds counter ions to kappa
+         */
+        template<class Tspace>
+          void setSpace(Tspace &s) {
+            if (std::fabs(z_count)>1e-6) {
+              double N=s.charge() / std::fabs(z_count);
+              double V=s.geo.getVolume();
+              double k2=k*k - k2_count; // salt contribution
+              k2_count = 4*pc::pi*lB*N/V*std::pow(z_count,2); // counter ion contrib
+              k=sqrt( k2+k2_count );    // total 
+              k2_count_avg+=k2_count;   // sample average
+            }
+          } 
     };
 
     /**

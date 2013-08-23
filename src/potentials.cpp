@@ -430,6 +430,8 @@ namespace Faunus {
       name="Debye-Huckel";
       c=8 * lB * pc::pi * pc::Nav / 1e27;
       I=in.get<double>("dh_ionicstrength",0, "Ionic strength (mol/l)");  // [mol/l]
+      z_count=in.get<double>("dh_countervalency",0, "Counter ion valency");  // [e]
+      k2_count=0;
       k=sqrt( I*c );
       if (k<zero)
         k=1/in.get<double>("dh_debyelength", 1/zero, "Debye length (AA)"); // [A]
@@ -497,6 +499,13 @@ namespace Faunus {
       o << Coulomb::info(w);
       o << pad(SUB,w,"Ionic strength") << ionicStrength() << " mol/l" << endl;
       o << pad(SUB,w+1,"Debye length, 1/"+textio::kappa) << debyeLength() << " "+angstrom << endl;
+      if (k2_count_avg.cnt>0) {
+        double k2_s = k*k - k2_count;
+        o << pad(SUB,w+1,"Debye length (count), 1/"+textio::kappa)
+          << 1/sqrt(k2_count_avg.avg()) << " "+angstrom+"\n"
+          << pad(SUB,w+1,"Debye length (salt), 1/"+textio::kappa)
+          << 1/sqrt(k2_s) << " "+angstrom << endl;
+      }
       return o.str();
     }
 

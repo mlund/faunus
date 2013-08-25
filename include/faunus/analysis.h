@@ -117,8 +117,9 @@ namespace Faunus {
                 << setw(l) << P[i] * kT*1e30/0.980665e5
                 << "\n";
             }
-            o << "\n  Excess pressure tensor (mM):\n\n"
-              << T/cnt*1e30/pc::Nav << endl << endl;
+            o << "\n  Osmotic coefficient = " << 1+P[1]/P[0] << "\n";
+            o << "  Excess pressure tensor (mM):\n\n"
+              << T/cnt*1e30/pc::Nav << endl;
           }
           return o.str();
         }

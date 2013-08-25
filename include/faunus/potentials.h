@@ -770,7 +770,7 @@ namespace Faunus {
       double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
 
       template<class Tparticle>
-        double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
+        double operator() (const Tparticle &a, const Tparticle &b, double r2) {
 #ifdef FAU_APPROXMATH
           return lB*a.charge*b.charge * invsqrtQuake(r2);
 #else
@@ -969,7 +969,7 @@ namespace Faunus {
       public:
         DebyeHuckel(InputMap&);                       //!< Construction from InputMap
         template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) {
 #ifdef FAU_APPROXMATH
             double rinv = invsqrtQuake(r2);
             return lB * a.charge * b.charge * rinv * exp_cawley(-k/rinv);
@@ -1010,6 +1010,98 @@ namespace Faunus {
               k2_count_avg+=k2_count;   // sample average
             }
           } 
+    };
+
+    /**
+     * DebyeHuckel ala Chung and Denton, <http://dx.doi.org/10/nkc>
+     */
+    class DebyeHuckelDenton : public DebyeHuckel {
+      private:
+        double lB_org; // original Bjerrum length without prefactor
+
+        // Eq. 37 prefactor
+        void setBjerrum(double a_m, double a_n) {
+          double ka_m=k*a_m, ka_n=k*a_n;
+          lB=lB_org * exp(ka_m+ka_n) / ( (1+ka_m)*(1+ka_n) );
+        }
+
+        // Eq. A7, first term
+        double fmn(double m, double n) {
+          return k*(m*m + n*n + k*(m+n)*m*n) / ( (1+k*m)*(1+k*n) );
+        }
+
+        // Eq. 11
+        template<class Tpvec>
+          double eta(Tpvec &p, double V) {
+            double v=0;
+            for (auto &i : p)
+              v += pow(i.radius,3);
+            return 4*pc::pi/(3*V) * v;
+          }
+
+        // Eq. 41 - volume energy contrib. to pressure (microions)
+        // (currently salt free case, only!)
+        template<class Tpvec>
+          double p0(Tpvec &p, double V) {
+            double Z=0,sum=0;
+            for (auto &i : p) {
+              Z+=i.charge; // total charge
+              sum += pow(i.charge / (1+k*i.radius),2) / V; // Eq.41 sum
+            }
+            double p_id = std::fabs(Z)/V; // assume microion valency is unity
+            double p_ex = -k*lB_org/4/(1-eta(p,V))*sum; // Eq.41, complete
+            cout << "id = " << p_id*1660*1e3 << " ex = " << p_ex*1660*1e3 << "\n";
+            return p_id + p_ex;
+          }
+ 
+      public:
+        DebyeHuckelDenton(InputMap &in) : DebyeHuckel(in) {
+          name+="-Denton";
+          lB_org=lB;
+        }
+
+        // Effective macroion-macroion interaction (Eq. 37)
+        template<class Tparticle>
+          double operator()(const Tparticle &m, const Tparticle &n, double r2) {
+            setBjerrum(m.radius, n.radius);
+            return DebyeHuckel::operator()(m,n,r2);
+          }
+
+        template<class Tparticle>
+          Point force(const Tparticle &m, const Tparticle &n, double r2, const Point &p) {
+            setBjerrum(m.radius, n.radius);
+            return DebyeHuckel::force(m,n,r2,p);
+          }
+
+        string info(char w) {
+          lB=lB_org;
+          return DebyeHuckel::info(w);
+        }
+
+        template<class Tpvec>
+          string info(Tpvec &p, double V) {
+            cout << "p0 = " << p0(p,V)*1660*1e3 << " mM\n";
+            return info(20);
+          }
+
+        /**
+         * @brief Contribution to pressure due to (dU/dk)(dk/dV), Eq.A3 / Eq.42
+         */
+        template<class Tpvec, class Tgeo>
+          double virial(Tpvec &p, Tgeo &geo) {
+            int n=int(p.size());
+            double P=0, V=geo.getVolume();
+            for (int i=0; i<n-1; i++)
+              for (int j=i+1; j<n; j++) {
+                double r2=geo.sqdist(p[i],p[j]);
+                double vmn=operator()(p[i],p[j],r2);
+                P += vmn * (fmn(p[i].radius, p[j].radius) - sqrt(r2)); // Eq. A5
+              }
+            return P * -k/(2*V*( 1-eta(p,V) )); // Eq. A3 = A5*A4
+          }
+
+        template<class Tspace>
+          void setSpace(Tspace &s) {}
     };
 
     /**
@@ -1209,6 +1301,12 @@ namespace Faunus {
             Point field(const Tparticle &a, const Point &r) const {
               return first.field(a,r) + second.field(a,r);
             }
+
+          template<class Tspace>
+            void setSpace(Tspace &s) {
+              first.setSpace(s);
+              second.setSpace(s);
+            } 
 
           string info(char w=20) {
             return first.info(w) + second.info(w);

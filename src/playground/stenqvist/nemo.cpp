@@ -5,8 +5,30 @@ using namespace Faunus::Potential;
 
 typedef Space<Geometry::Cuboid,DipoleParticle> Tspace;
 //typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot;
-typedef CombinedPairPotential<CoulombWolf,NemoRepulsion> TpairpotTest;
+typedef NemoRepulsion TpairpotTest;
 typedef CombinedPairPotential<CoulombWolf,NemoRepulsion> Tpairpot;
+//typedef NemoRepulsion Tpairpot;
+
+
+
+template<class Tpairpot, class Tid>
+      bool savePotential(Tpairpot pot, Tid ida, Tid idb, string file) {
+        std::ofstream f(file.c_str());
+        if (f) {
+          double min=0.1 * (atom[ida].radius+atom[idb].radius);
+          DipoleParticle a,b;
+          a=atom[ida];
+          b=atom[idb];
+          /*f << "# Pair potential: " << pot.brief() << endl
+            << "# Atoms: " << atom[ida].name << "<->" << atom[idb].name
+            << endl;*/
+          for (double r=min; r<=18; r+=0.2)
+            f << std::left << std::setw(10) << r << " "
+              << pot(a,b,Point(r,0,0)) << endl;
+          return true;
+        }
+        return false;
+      }
 
 int main() {
 
@@ -17,12 +39,6 @@ int main() {
   auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot,Energy::NonbondedVector<Tspace,Tpairpot>>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp);
   Tspace spc(mcp);
-
-  Potential::NemoRepulsion pp(mcp);
-  auto map = json::atomPairMap("water2.json", "pairproperties", "nemorep");
-  for (auto &m : map)
-    cout << m.second.transpose() << endl;
-  return 0;
 
   // Load and add polymer to Space
   string file = mcp.get<string>("mol_file","");
@@ -37,18 +53,25 @@ int main() {
     water[i]=g;
     spc.enroll(water[i]);
   }
-
+  
   // Markov moves and analysis
   Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
   Move::Isobaric<Tspace> iso(mcp,pot,spc);
-  Analysis::RadialDistribution<> rdf(0.05);
-
-  spc.load("state"); // load old config. from disk (if any)
   
+  spc.load("state"); // load old config. from disk (if any)
   EnergyDrift sys;   // class for tracking system energy drifts
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
 
-  cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
+  Analysis::RadialDistribution<> rdf_OO(0.05);
+  Analysis::RadialDistribution<> rdf_OH(0.05);
+  Analysis::RadialDistribution<> rdf_HH(0.05);
+  Analysis::RadialDistribution<> rdf_cm(0.05);
+  
+  savePotential(TpairpotTest(mcp), atom["OW"].id, atom["HW"].id, "pot_OWHW_nemorepulsion.dat");
+  savePotential(TpairpotTest(mcp), atom["OW"].id, atom["OW"].id, "pot_OWOW_nemorepulsion.dat");
+  savePotential(TpairpotTest(mcp), atom["HW"].id, atom["HW"].id, "pot_HWHW_nemorepulsion.dat");
+  
+  //cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
 
   MCLoop loop(mcp);            // class for handling mc loops
   while ( loop.macroCnt() ) {  // Markov chain 
@@ -70,9 +93,13 @@ int main() {
       }
       
       // sample oxygen-oxygen rdf
-      if (slp_global()>0.9) {
-        auto id = atom["OW"].id;
-        rdf.sample(spc,id,id);
+      if (slp_global()>0.0) {
+        auto idO = atom["OW"].id;
+        auto idH = atom["HW"].id;
+        rdf_OO.sample(spc,idO,idO);
+        rdf_OH.sample(spc,idO,idH);
+        rdf_HH.sample(spc,idH,idH);
+        rdf_cm.sampleMolecule1(spc,water,"sol");
       }
       
     } // end of micro loop
@@ -83,9 +110,10 @@ int main() {
   } // end of macro loop
 
   // save to disk
-  FormatPQR::save("confout.pqr", spc.p);
-  spc.save("state");
-  rdf.save("rdf.dat");
+  rdf_OO.save("rdf_OO.dat");
+  rdf_OH.save("rdf_OH.dat");
+  rdf_HH.save("rdf_HH.dat");
+  rdf_cm.save("rdf_cm.dat");
   spc.save("state");
   FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
 
@@ -97,6 +125,10 @@ int main() {
 
   // print information
   cout << loop.info() + sys.info() + gmv.info() + iso.info() + test.info();
+  std::ostringstream o;
+  o << loop.info() + sys.info() + gmv.info() + iso.info() + test.info() << endl;
+  return IO::writeFile("nemo.output", o.str());
+  
 }
 
 /**  @page example_water2 Example: SPC Water (V2)

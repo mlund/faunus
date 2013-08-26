@@ -182,7 +182,7 @@ namespace Faunus {
               std::ofstream f(filename.c_str());
               f.precision(10);
               if (f) {
-                f << "# Faunus 2D table: " << name << endl;
+                //f << "# Faunus 2D table: " << name << endl;
                 for (auto m : map)
                   f << m.first << " " << get( m.first ) << endl;
               }
@@ -550,6 +550,27 @@ namespace Faunus {
                   this->operator() (spc.geo.dist(icm,jcm))++;
                 }
               }
+            }
+            
+          template<class Tspace>
+            void sampleMolecule1(Tspace &spc, vector<Group> &g, string name) {
+              int bulk = 0;
+              for(int i = 0; i < g.size()-1; i++) {
+                Group ig = g[i];
+                if(ig.name == name) {
+                  bulk++;
+                  for(int j = i+1; j < g.size(); j++) {
+                    Group jg = g[j];
+                    if(jg.name == name) {
+                      Point icm = ig.massCenter(spc);
+                      Point jcm = jg.massCenter(spc);
+                      this->operator() (spc.geo.dist(icm,jcm))++;
+                    }
+                  }
+                }
+              }
+              Npart+=bulk;
+              bulkconc += bulk / spc.geo.getVolume();
             }
       };
 

@@ -1,21 +1,37 @@
 #ifndef FAUNUS_MULTIPOLE_H
 #define FAUNUS_MULTIPOLE_H
+#include <faunus/common.h>
+#include <faunus/auxiliary.h>
+#include <faunus/species.h>
+#include <faunus/picojson.h>
 
 namespace Faunus {
   
   template<class Tvec>
-    double nemoRep(double aab, double bab, double cab, double dab, double eab, double fab, const Tvec &r) {
-      double r2i = 1/r.squaredNorm();
+    double nemoRep(Eigen::VectorXd &vec, const Tvec &r) {
+      double r1i = 1/r.norm();
+      double r2i = r1i*r1i;
       double r6i = r2i*r2i*r2i;
-      double uexp1  = eab*pow(2.71828,-std::min(80.0,fab/sqrt(r2i)));
-      double uexp2  = dab*r6i*r6i*r2i;
-      double udis1  =-cab*r6i;
-      double udis2  = aab*pow(2.71828,-std::min(80.0,bab/sqrt(r2i)));
+      double uexp1  = vec[4]*pow(2.71828,-std::min(80.0,vec[5]/r1i));
+      double uexp2  = vec[3]*r6i*r6i*r2i;
+      double udis1  =-vec[2]*r6i;
+      double udis2  = vec[0]*pow(2.71828,-std::min(80.0,vec[1]/r1i));
       double ur = (uexp1 + uexp2  + udis1 + udis2);
       // (q1*q2*lB/r)*kT*N_AV/1000 = kJ/mol
       //return (1000/(pc::Nav*pc::kT()))*ur;
       return ur;
     }
+    /*
+    template<class Tvec>
+      double NemoType1(Eigen::VectorXd &vec, const Tvec &r) {
+        double r1i = 1/r.norm();
+        double r2i = r1i*r1i;
+        double r6i = r2i*r2i*r2i;
+        double uexp = vec[0]*pow(2.71828,-std::min(expmax,vec[1]/r1i));
+        double ur20 = pow(vec[2]*r1i,20);
+        double udis = vec[3]*(1 - pow(2.71828,-min(expmax,(1/(r1i*asw))**nsw)))*r6i;
+        return (uexp + ur20 + udis);
+      }*/
   
   /**
    * @brief Returns ion-dipole interaction, Needs to be checked!
@@ -80,10 +96,11 @@ namespace Faunus {
       protected:
         typedef Eigen::VectorXd Tvec;
         typedef opair<int> Tpair;
-        std::map<Tpair,Tvec> map;
+        std::map<Tpair,Tvec> map1;
+        double expmax;
+        double scaling;
 
         double _lB, epsilon_r, rc2, eps;
-        Eigen::MatrixXd pab;
         particle::Tid HW,OW; // particle ID
 
       public:
@@ -95,15 +112,10 @@ namespace Faunus {
           rc2 = pow(in.get<double>("dipdip_cutoff",pc::infty), 2);
           eps = in.get<double>("epsilon_rf",80.);
           eps = _lB*(2*(eps-1)/(eps+1))/pow(rc2,1.5);
-          pab.resize(3,6);
-          pab << 28063.645684, 3.816817, 816.621758, 13824.695518, 518387.587215, 4.194060,
-              1872.664555,  3.997893, 214.610684, 8857.398499,  11055.163586,  3.534167,
-              597.625692,   4.197006, 16.5577400, 0.000000,     800.775380,    2.677176;
-          pab = pab*(1000/(pc::Nav*pc::kT()));
-          pab.col(1) = pab.col(1)/(1000/(pc::Nav*pc::kT()));
-          pab.col(5) = pab.col(5)/(1000/(pc::Nav*pc::kT()));
-          HW = atom["HW"].id;
-          OW = atom["OW"].id;
+          expmax = 80;
+          scaling = 1000/(pc::Nav*pc::kT());  // Converts from kJ/mol to kT
+          
+          map1 = json::atomPairMap("water2.json","pairproperties","nemorep");
         }
 
         /**
@@ -114,19 +126,15 @@ namespace Faunus {
          */
         template<class Tparticle> // q2mu(1->2,r) + q2mu(2->1,-r) = q2mu(1->2,r) - q2mu(2->1,r)
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-            int temp = 1;
-            if(a.id == HW && b.id == HW) {
-              temp = 2;
-            } else if(a.id == OW && b.id == OW) {
-              temp = 0;
+            Tpair pair(a.id,b.id);
+            Tvec vec;
+            auto it = map1.find(pair);
+            if (it!=map1.end()) { 
+              vec = it->second;
+              return nemoRep(vec, r)*scaling;
             }
-            //double iondipole_e = _lB*(q2mu(a.charge*b.muscalar,b.mu,r) - q2mu(b.charge*a.muscalar,a.mu,r));
-            //double dipdip_e = _lB*mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r);
-            double nemoRep_e = nemoRep(pab(temp,0),pab(temp,1),pab(temp,2),pab(temp,3),pab(temp,4),pab(temp,5), r);
-            //double ionquad_e = _lB*(q2quad(a.charge, b.theta,r)+q2quad(b.charge, a.theta,r));
-            //if (r.squaredNorm() < rc2)
-            //  dipdip_e = dipdip_e - eps*a.mu.dot(b.mu)*a.muscalar*b.muscalar;
-            return (nemoRep_e);
+            assert(!"No pair data defined");
+            return 0;
           }
 
         string info(char w) { return _brief(); }

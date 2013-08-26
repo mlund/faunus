@@ -78,9 +78,9 @@ namespace Faunus {
       a.name = atom.first;
       a.activity = json::value<double>(atom.second, "activity", 0);
       a.alpha << json::value<std::string>(atom.second, "alpha", "");
-      a.alpha *= 4*pc::pi*pc::e0*(1e-10)*pc::kT()/(pc::e*pc::e);
+      a.alpha *= 4*pc::pi*pc::e0*(1e-10)*pc::kT()/(pc::e*pc::e);      
       a.theta << json::value<std::string>(atom.second, "theta", "");
-      a.theta *= 0.20819434; // Debye Å -> e Å^2
+      a.theta *= 0.20819434; // Debye Å -> e Å^2        
       a.dp = json::value<double>(atom.second, "dp", 0);
       a.dprot = json::value<double>(atom.second, "dprot", 0) * pc::pi / 180.; // deg->rads
       a.eps = json::value<double>(atom.second, "eps", 0);

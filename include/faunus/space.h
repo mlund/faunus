@@ -158,8 +158,8 @@ namespace Faunus {
 
   template<class Tgeometry, class Tparticle>
     bool Space<Tgeometry,Tparticle>::checkSanity() {
-      assert(p.size()==trial.size() && "Trial/P vector mismatch!");
-      assert(p==trial);
+      assert(p.size()==trial.size() && "Trial/P vector-size mismatch!");
+      assert(p==trial && "Trial/P vector mismatch!");
       bool rc=false;
       if (p.size()==trial.size())
         for (size_t i=0; i<p.size(); i++) {
@@ -195,6 +195,7 @@ namespace Faunus {
       }
       if (rc==false)
         std::exit(1);
+      
       return rc;
     }
 

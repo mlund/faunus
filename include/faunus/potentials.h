@@ -32,9 +32,9 @@ namespace Faunus {
    * auto nonbond = Coulomb() + LennardJones(); // arguments are here
    * auto bond    = Harmonic() - nonbond;       // omitted for clarity
    *
-   * PointParticle i,j;                         // two particles
-   * double r = 10;                             // i<->j distance
-   * double u = nonbond(i,j,r);                 // i<->j energy in kT
+   * PointParticle a,b;                         // two particles
+   * double r2 = 100;                           // a<->b squared distance
+   * double u  = nonbond(a,b,r2);               // a<->b energy in kT
    * ~~~
    *
    * As shown in the last example, pair potentials can also be subtracted
@@ -120,6 +120,17 @@ namespace Faunus {
 
     /**
      * @brief Save pair potential and force table to disk
+     *
+     * This will save a pair potential to disk as three columns:
+     * `distance`, `energy`, and `force`. The distance interval
+     * is hard coded to `dmin=a.radius+b.radius` to `5*dmin`.
+     *
+     * Example:
+     * ~~~~
+     * using namespace Potential;
+     * CoulombLJ pot(...);
+     * save(pot, atom["Na"].id, atom["Cl"].id, "mytable.dat");
+     * ~~~~
      */
     template<class Tpairpot, class Tid>
       bool save(Tpairpot pot, Tid ida, Tid idb, string file) {
@@ -1061,17 +1072,16 @@ namespace Faunus {
               * ( exp(-k*r)/r - u_rc - (dudrc*(r-rc))  );
 #endif
           }
-        template<class Tparticle>                                                                             
-          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {                    
-            if (r2>rc2)                                                                                       
-              return Point(0,0,0);                                                                            
-#ifdef FAU_APPROXMATH                                                                                         
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            if (r2>rc2)              return Point(0,0,0);                                                                            
+#ifdef FAU_APPROXMATH
             double rinv = invsqrtQuake(r2);                                                                   
-            return lB * a.charge * b.charge * ( exp_cawley(-k/rinv) / r2 * (k+rinv) + dudrc*rinv) * p;           
-#else                                                                                                         
-            double r=sqrt(r2);                                                                                
-            return lB * a.charge * b.charge * ( exp(-k*r) / r2 * (k + 1/r) + dudrc / r) * p;                  
-#endif                                                                                                        
+            return lB * a.charge * b.charge * ( exp_cawley(-k/rinv) / r2 * (k+rinv) + dudrc*rinv) * p;
+#else
+            double r=sqrt(r2);
+            return lB * a.charge * b.charge * ( exp(-k*r) / r2 * (k + 1/r) + dudrc / r) * p;
+#endif
           } 
     };
 

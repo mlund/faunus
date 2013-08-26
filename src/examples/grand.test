@@ -1,0 +1,9 @@
+# Generated on Aug 26 2013 15:21:42 using 4.2.1 Compatible Apple LLVM 4.2 (clang-425.0.28)
+energyAverage                      -3.42884            
+mv_particle_acceptance             60.6242             
+relativeEnergyDrift                5.07629e-15         
+saltbath_Cl_activity               0.02                
+saltbath_Cl_conc                   0.0222501           
+saltbath_Na_activity               0.02                
+saltbath_Na_conc                   0.0222501           
+saltbath_acceptance                73.7491             

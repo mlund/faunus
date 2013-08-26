@@ -247,6 +247,7 @@ namespace Faunus {
           void setSpace(Tspace &s) FOVERRIDE {
             geo=s.geo;
             Tbase::setSpace(s);
+            pairpot.setSpace(s);
           } 
 
           //!< Particle-particle energy (kT)

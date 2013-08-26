@@ -44,6 +44,14 @@ fau_example(example_bulk "./" bulk.cpp)
 set_target_properties(example_bulk PROPERTIES OUTPUT_NAME "bulk")
 add_test( example_bulk ${CMAKE_CURRENT_SOURCE_DIR}/bulk.run )
 
+fau_example(example_bulk_coulomb "./" bulk.cpp)
+set_target_properties(example_bulk_coulomb PROPERTIES OUTPUT_NAME "bulk_coulomb" EXCLUDE_FROM_ALL FALSE)
+set_target_properties(example_bulk_coulomb PROPERTIES COMPILE_DEFINITIONS "COULOMB")
+
+fau_example(example_bulk_dh "./" bulk.cpp)
+set_target_properties(example_bulk_dh PROPERTIES OUTPUT_NAME "bulk_dh" EXCLUDE_FROM_ALL FALSE)
+set_target_properties(example_bulk_dh PROPERTIES COMPILE_DEFINITIONS "DEBYEHUCKEL")
+
 fau_example(example_water "./" water.cpp)
 set_target_properties(example_water PROPERTIES OUTPUT_NAME "water")
 add_test( example_water ${CMAKE_CURRENT_SOURCE_DIR}/water.run )

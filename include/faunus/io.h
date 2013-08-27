@@ -250,9 +250,9 @@ namespace Faunus {
           for (auto &p_i : p) {
             string name=atom[p_i.id].name;
             sprintf(buf, "ATOM  %5d %-4s %-4s%5d    %8.3f %8.3f %8.3f %.3f %.3f\n",
-		    natom++, name.c_str(), name.c_str(), nres,
-		    (p_i+len/2).x(), (p_i+len/2).y(), (p_i+len/2).z(), p_i.charge, p_i.radius); // move particles inside the sim. box
-	    o << buf;
+                    natom++, name.c_str(), name.c_str(), nres,
+                    (p_i+len/2).x(), (p_i+len/2).y(), (p_i+len/2).z(), p_i.charge, p_i.radius); // move particles inside the sim. box
+            o << buf;
             if ( atom[p_i.id].name=="CTR" ) nres++;
           }
           o << "END\n";
@@ -383,18 +383,18 @@ namespace Faunus {
           for (auto &pi : p) {
             string name=atom[pi.id].name;
             sprintf(buf, "%5d%5s%5s%5d%8.3f%8.3f%8.3f\n",
-                nres,name.c_str(),name.c_str(),natom++,
-                pi.x()/10+halflen, pi.y()/10+halflen, pi.z()/10+halflen );
+                    nres,name.c_str(),name.c_str(),natom++,
+                    pi.x()/10+halflen, pi.y()/10+halflen, pi.z()/10+halflen );
             o << buf;
             if ( atom[pi.id].name=="CTR" )
               nres++;
           }
           if (len>0)
             o << len/10 << " " << len/10 << " " << len/10 << std::endl; // box side length in nm
-	  if ( mode=="append" )
+          if ( mode=="append" )
             return IO::writeFile(file, o.str(), std::ios_base::app);
           else
-	    return IO::writeFile(file, o.str(), std::ios_base::out);
+            return IO::writeFile(file, o.str(), std::ios_base::out);
         }
 
       template<class Tspace>
@@ -504,7 +504,7 @@ namespace Faunus {
             rvec *x = new rvec [p.size()];
             int i=0;
             for (auto &pi : p) {
-	      x[i][0] = (pi.x() * 0.1) + (xdbox[0][0] * 0.5);      // AA->nm
+              x[i][0] = (pi.x() * 0.1) + (xdbox[0][0] * 0.5);      // AA->nm
               x[i][1] = (pi.y() * 0.1) + (xdbox[1][1] * 0.5);      // move particles inside the sim. box
               x[i][2] = (pi.z() * 0.1) + (xdbox[2][2] * 0.5);      //
               i++;

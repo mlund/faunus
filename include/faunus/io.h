@@ -367,7 +367,7 @@ namespace Faunus {
     private:
       std::vector<string> v;
       particle s2p(string &);
-  public:
+    public:
       double len;            //!< Box side length (cubic so far)
       p_vec p;
       bool load(string);

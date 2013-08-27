@@ -96,26 +96,17 @@ namespace Faunus {
       protected:
         typedef Eigen::VectorXd Tvec;
         typedef opair<int> Tpair;
-        std::map<Tpair,Tvec> map1;
+        std::map<Tpair,Tvec> pairMap;
         double expmax;
         double scaling;
-
-        double _lB, epsilon_r, rc2, eps;
-        particle::Tid HW,OW; // particle ID
 
       public:
         NemoRepulsion(InputMap &in) {
           name="Nemo repulsion";
           pc::setT ( in.get<double>("temperature", 298.15, "Absolute temperature (K)") );
-          epsilon_r = in.get<double>("epsilon_r",80., "Dielectric constant");
-          _lB=pc::lB( epsilon_r );
-          rc2 = pow(in.get<double>("dipdip_cutoff",pc::infty), 2);
-          eps = in.get<double>("epsilon_rf",80.);
-          eps = _lB*(2*(eps-1)/(eps+1))/pow(rc2,1.5);
-          expmax = 80;
+          expmax = in.get<double>("expmax", 80, "Maximum repulsion exponent");
           scaling = 1000/(pc::Nav*pc::kT());  // Converts from kJ/mol to kT
-          
-          map1 = json::atomPairMap("water2.json","pairproperties","nemorep");
+          pairMap = json::atomPairMap("water2.json","pairproperties","nemorep");
         }
 
         /**
@@ -128,8 +119,8 @@ namespace Faunus {
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
             Tpair pair(a.id,b.id);
             Tvec vec;
-            auto it = map1.find(pair);
-            if (it!=map1.end()) { 
+            auto it = pairMap.find(pair);
+            if (it!=pairMap.end()) { 
               vec = it->second;
               return nemoRep(vec, r)*scaling;
             }

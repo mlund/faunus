@@ -64,7 +64,8 @@ int main() {
       // sample oxygen-oxygen rdf
       if (slp_global()>0.9) {
         auto id = atom["OW"].id;
-        rdf.sample(spc,id,id);
+        //rdf.sample(spc,id,id);
+        rdf.sampleMolecule(spc,water,"sol");
       }
       
     } // end of micro loop

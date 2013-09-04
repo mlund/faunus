@@ -6,12 +6,12 @@
 
 source_tests_dir="`dirname $0`"
 #cp -f $source_tests_dir/bulk_dh.test . 2> /dev/null
-cp -f $source_tests_dir/bulk_dh.state state 2> /dev/null
+#cp -f $source_tests_dir/bulk_dh.state state 2> /dev/null
 
 echo '{
   "atomlist" : {
-    "MI" : { "q": 1.0, "r":2, "dp":100.0 },  // macroion
-    "Cl" : { "q":-1.0, "r":2, "dp":100 }    // counterion
+    "MI" : { "q": 5.0, "r":10, "dp":10.0 },  // macroion
+    "Cl" : { "q":-1.0, "r":0, "dp":100 }    // counterion
   }
 }' > bulk.json
 
@@ -23,14 +23,14 @@ cuboid_len      $len         # angstrom
 temperature     300          # K
 epsilon_r       80           # dielectric const.
 ljts_eps        0.5
-dh_ionicstrength  0.16 #0.0810830078125
+dh_ionicstrength  0.0883076614723
 dh_countervalency 0
 
 loop_macrosteps 10           # number of macro loops
 loop_microsteps $micro         # number of micro loops
 
 tion1  MI
-nion1  50                    # number of sodium atoms
+nion1  10                    # number of sodium atoms
 tion2  Cl
 nion2  0                     # number of chloride atoms
 

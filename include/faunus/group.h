@@ -263,12 +263,8 @@ namespace Faunus {
        * :------------- | :---------------------
        * `tionX`        | Name of atom X
        * `nionX`        | Number of type X atoms
-       * `dpionX`       | (Displacement parameter of atom type X)
-       * `aionX`        | (Activity of atom X (molar scale))
        *
-       * If the two latter properties, displacement and activity, are omitted
-       * (recommended) the values from AtomTypes is used instead. That is, you
-       * should specify these directly in the input JSON file.
+       * @todo Rename to addAtoms.
        */
       template<class Tspace, class Tinputmap>
         void addParticles(Tspace &spc, Tinputmap &in) {
@@ -277,17 +273,12 @@ namespace Faunus {
           int size=0;
           int n=1, npart;
           do {
-            std::ostringstream nion("nion"),
-              tion("tion"), dpion("dpion"), aion("aion");
+            std::ostringstream nion("nion"), tion("tion");
             nion << "nion" << n;
-            tion << "tion" << n;
-            dpion<< "dpion"<< n;
-            aion << "aion" << n++; //activity
+            tion << "tion" << n++;
             npart = in.get(nion.str(), 0);
             if (npart>0) {
               auto id = atom[in.get(tion.str(), string("UNK")) ].id;
-              atom[id].dp = in.get(dpion.str(), atom[id].dp);
-              atom[id].activity = in.get(aion.str(), 0.);
               spc.insert( atom[id].name, npart);
               size+=npart;
             } else break;

@@ -111,13 +111,14 @@ namespace Faunus {
    *       }
    *     }
    *
-   * Example 2: 
-   *       "atomlist" :
-   *       {
-   *         "sol1" : { "q": 1.0, "r":1.9, "mw":22.99, "mu":"1.3 0.1 0",
-   *         "alpha":"1.1   0 0 2.3 0   1" },   // Matrix input in 
-   *         "theta":"2.4 0.3 0 1.8 0 3.2"}     // (xx, xy, xz, yy, yz, zz)-form
-   *       }
+   * Or: 
+   * 
+   *     "atomlist" :
+   *     {
+   *       "sol1" : { "q": 1.0, "r":1.9, "mw":22.99, "mu":"1.3 0.1 0",
+   *          "alpha":"1.1   0 0 2.3 0   1",    // Matrix input in 
+   *          "theta":"2.4 0.3 0 1.8 0 3.2" }   // (xx, xy, xz, yy, yz, zz) form
+   *     }
    * 
    * @note
    * For simple JSON syntax highlighting in the VIM editor, add
@@ -130,7 +131,7 @@ namespace Faunus {
    *
    * Key           | Description
    * :------------ | :-------------------------------------------------------
-   * `activity`    | Chemical activity for grand caninical MC [mol/l]
+   * `activity`    | Chemical activity for grand canonical MC [mol/l]
    * `alpha`       | Polarizability [\f$ 4\pi\epsilon_0 \f$ cubic angstrom]
    * `dp`          | Translational displacement parameter [angstrom] 
    * `dprot`       | Rotational displacement parameter [degrees] (will be converted to radians)

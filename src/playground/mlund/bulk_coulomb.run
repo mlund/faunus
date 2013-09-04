@@ -6,12 +6,12 @@
 
 source_tests_dir="`dirname $0`"
 #cp -f $source_tests_dir/bulk.test . 2> /dev/null
-cp -f $source_tests_dir/bulk_coulomb.state state 2> /dev/null
+#cp -f $source_tests_dir/bulk_coulomb.state state 2> /dev/null
 
 echo '{
   "atomlist" : {
-    "MI" : { "q": 1.0, "r":2, "dp":10.0 },  // macroion
-    "Cl" : { "q":-1.0, "r":2, "dp":100 }    // counterion
+    "MI" : { "q": 5.0, "r":10, "dp":10.0 },  // macroion
+    "Cl" : { "q":-1.0, "r":0, "dp":100 }    // counterion
   }
 }' > bulk.json
 
@@ -28,12 +28,12 @@ loop_macrosteps 10           # number of macro loops
 loop_microsteps $micro         # number of micro loops
 
 tion1  MI
-nion1  50                  # number of sodium atoms
+nion1  10                  # number of sodium atoms
 tion2  Cl
 nion2  50                  # number of chloride atoms
 
 npt_dV 0.5                 # 0.04 (0=no volume displacement=NVT)
-npt_P  168.838             # external pressure [mM]
+npt_P  152.279             # external pressure [mM]
 npt_runfraction 0
 
 test_stable        yes
@@ -43,12 +43,13 @@ test_file          bulk.test
 
 exe=../../examples/bulk_coulomb
 if [ -x $exe ]; then
-for len in 40 80 120
+for len in 80 #120
 do
-  rm state
-  micro=1000
+  #rm state
+  micro=5000
   mkinput
   $exe 
+  exit
   micro=10000
   mkinput
   $exe  > "len.coulomb.$len"

@@ -1008,18 +1008,18 @@ namespace Faunus {
             cite="doi:10/dkv4s6";
           }
 
-          void addGhost(Tparticle p) { g.push_back(p); }
+          void add(Tparticle p) { g.push_back(p); }
 
           /* @brief Add particle to insert - sum of added particle charges should be zero.*/
           template<class Tpvec>
-            void addGhost(Tpvec &p) {
+            void add(Tpvec &p) {
               std::map<short,bool> map; // replace w. `std::set`
               for (auto i : p)
                 map[ i.id ] = true;
               for (auto &m : map) {
-                particle a;
+                Tparticle a;
                 a=atom[m.first];
-                addGhost(a);
+                add(a);
               }
             }
 
@@ -1027,26 +1027,26 @@ namespace Faunus {
           double gamma() { return exp(muex()); }
 
           /** @brief Sampled mean excess chemical potential */
-          double muex() { return -log(expsum.avg())/g.size(); }
+          double muex() { return -log(expsum.avg())/g.size() ; }
 
           /** @brief Insert and analyse `n` times */
           template<class Tspace, class Tenergy>
-            void sample(int ghostin, Tspace &spc, Tenergy &pot) {
-              if (!run())
-                return;
-              assert(spc.geo!=NULL);
+            void sample(Tspace &spc, Tenergy &pot, int ghostin) {
               int n=g.size();
-              for (int k=0; k<ghostin; k++) {     // insert ghostin times
-                double du=0;
-                for (int i=0; i<n; i++)
-                  spc.geo.randompos( g[i] ); // random ghost positions
-                for (int i=0; i<n; i++)
-                  pot.all2p( spc.p, g[i] );    // energy with all particles in space
-                for (int i=0; i<n-1; i++)
-                  for (int j=i+1; j<n; j++)
-                    du+=pot.p2p( g[i], g[j] );   // energy between ghost particles
-                expsum += exp(-du);
-              }
+              if (n>0)
+                if (run()) {
+                  while (ghostin-->0) {
+                    double du=0;
+                    for (auto &i : g)
+                      spc.geo.randompos(i);     // random ghost positions
+                    for (auto &i : g)
+                      du+=pot.all2p(spc.p, i);  // energy with all particles in space
+                    for (int i=0; i<n-1; i++)
+                      for (int j=i+1; j<n; j++)
+                        du+=pot.p2p(g[i], g[j]);// energy between ghost particles
+                    expsum += exp(-du);
+                  }
+                }
             }
       };
 
@@ -1055,7 +1055,7 @@ namespace Faunus {
      *
      * This will calculate excess chemical potentials for single particles
      * in the primitive model of electrolytes. Use the `add()` functions
-     * to add test or *ghost* particles and call `insert()` to perform single
+     * to add test or *ghost* particles and call `sample()` to perform single
      * particle insertions.
      * Inserted particles are *non-perturbing* and thus removed again after
      * sampling. Electroneutrality for insertions of charged species is
@@ -1067,40 +1067,212 @@ namespace Faunus {
      * Currently this works **only** for the primitive model of electrolytes, i.e.
      * hard, charged spheres interacting with a Coulomb potential.
      *
+     * @warning Works only for the primitive model
      * @note This is a conversion of the Widom routine found in the `bulk.f`
      *       fortran program by Bolhuis/Jonsson/Akesson at Lund University.
      * @author Martin Trulsson and Mikael Lund
      * @date Lund / Prague 2007-2008.
      */
-    class WidomScaled : public AnalysisBase {
-      private:
-        typedef std::vector<double> Tvec;
-        string _info();     //!< Get results
-        p_vec g;            //!< list of test particles
-        Tvec chel;          //!< electrostatic
-        Tvec chhc;          //!< hard collision
-        Tvec chex;          //!< excess
-        Tvec chexw;         //!< excess
-        Tvec chtot;         //!< total
-        vector<Tvec> ewden; //!< charging denominator
-        vector<Tvec> ewnom; //!< charging nominator
-        vector<Tvec> chint; //!< charging integrand
-        Tvec chid;          //!< ideal term
-        Tvec expuw;
-        vector<int> ihc,irej;
-        long long int cnt;  //< count test insertions
-        int ghostin;        //< ghost insertions
-        void init();
-        bool overlap(const particle&, const particle&, const Geometry::Geometrybase&); //!< Test overlap
-        double lB;          //!< Bjerrum length [a]
-      public:
-        WidomScaled(double,int=10); //!< Constructor
-        void add(const particle&);  //!< Add test particle type
-        void add(const p_vec&);     //!< Add all unique particle types present in vector
+    template<class Tparticle>
+      class WidomScaled : public AnalysisBase {
 
-        /** @brief Do test insertions and sample excess chemical potential */
-        void insert(const p_vec&, Geometry::Geometrybase&);
-    };
+        private:
+
+          typedef std::vector<double> Tvec;
+          p_vec g;            //!< list of test particles
+          Tvec chel;          //!< electrostatic
+          Tvec chhc;          //!< hard collision
+          Tvec chex;          //!< excess
+          Tvec chexw;         //!< excess
+          Tvec chtot;         //!< total
+          vector<Tvec> ewden; //!< charging denominator
+          vector<Tvec> ewnom; //!< charging nominator
+          vector<Tvec> chint; //!< charging integrand
+          Tvec chid;          //!< ideal term
+          Tvec expuw;
+          vector<int> ihc,irej;
+          int ghostin;        //< ghost insertions
+          double lB;          //!< Bjerrum length [a]
+
+          void init() {
+            int gspec=g.size();
+            chel.resize(gspec);
+            chhc.resize(gspec);
+            chex.resize(gspec);
+            chtot.resize(gspec);
+            ewden.resize(gspec);
+            ewnom.resize(gspec);
+            chint.resize(gspec);
+            expuw.resize(gspec);
+            chexw.resize(gspec);
+            ihc.resize(gspec);
+            irej.resize(gspec);
+
+            for (int i=0; i<gspec; i++){
+              chel[i]=0;
+              chhc[i]=0;
+              chex[i]=0;
+              chtot[i]=0;
+              ihc[i]=0;
+              ewden[i].resize(11);
+              ewnom[i].resize(11);
+              chint[i].resize(11);
+              for(int j=0; j<11; j++)
+                ewden[i][j] = ewnom[i][j] = chint[i][j] = 0;
+            }
+          }
+
+          template<class Tgeo>
+            bool overlap(const Tparticle &a, const Tparticle &b, const Tgeo &geo)
+            {
+              double s=a.radius+b.radius;
+              return (geo.sqdist(a,b)<s*s) ? true : false;
+            }
+
+          string _info() {
+            using namespace textio;
+            std::ostringstream o;
+            double aint4,aint2,aint1;
+            for(size_t i=0; i<g.size(); i++) {
+              for(int cint=0; cint<11; cint++) {
+                if(ewden[i][cint]==0)
+                  std::cerr << "# WARNING: Widom denominator equals zero" << endl;
+                else
+                  chint[i][cint]=ewnom[i][cint]/ewden[i][cint];
+              }
+              aint4=chint[i][1]+chint[i][3]+chint[i][5]+chint[i][7]+chint[i][9];
+              aint2=chint[i][2]+chint[i][4]+chint[i][6]+chint[i][8];
+              aint1=chint[i][0]+chint[i][10];  
+              chel[i]=1./30.*(aint1+2*aint2+4*aint4);
+            }
+
+            int cnttot=cnt*ghostin;
+            o << pad(SUB,w,"Number of insertions") << cnttot << endl
+              << pad(SUB,w,"Excess chemical potentials (kT)") << endl
+              << "             total    elec.   hs             z        r"<< endl;
+            char w=10;
+            for (size_t i=0; i < g.size(); i++) {
+              chhc[i]=-log(double(cnttot-ihc[i])/cnttot);
+              chexw[i]=-log(expuw[i]);
+              chex[i]=chhc[i]+chel[i];
+              o.unsetf( std::ios_base::floatfield );
+              o << "    [" << i << "] "
+                << std::setprecision(4)
+                << std::setw(w) << chex[i]
+                << std::setw(w) << chel[i]
+                << std::setw(w) << chhc[i]
+                << std::setprecision(2) << std::fixed
+                << std::setw(w) << g[i].charge
+                << std::setw(w) << g[i].radius << endl;
+            }
+            return o.str();
+          }
+
+        public:
+
+          /**
+           * @param bjerrumLength Bjerrum length [angstrom]
+           * @param insertions Number of insertions per call to `insert()`
+           */
+          WidomScaled(double bjerrumLength, int insertions) {
+            assert(insertions>=0);
+            assert(bjerrumLength>0);
+            name="Single particle Widom insertion w. charge scaling"; 
+            cite="doi:10/ft9bv9 + doi:10/dkv4s6"; 
+            lB=bjerrumLength;
+            ghostin=insertions;
+          }
+
+          /**
+           * @brief Add ghost particle
+           *
+           * This will add particle `p` to the list of ghost particles
+           * to insert.
+           */
+          void add(const Tparticle &p) {
+            g.push_back(p);
+            init();
+          }
+
+          /**
+           * @brief Add ghost particles
+           *
+           * This will scan the particle vector for particles and each unique type
+           * will be added to the list a ghost particles to insert.
+           */
+          template<class Tpvec>
+            void add(const Tpvec &p) {
+              std::set<particle::Tid> ids;
+              for (auto &i : p)
+                ids.insert(i.id);
+              for (auto i : ids) {
+                particle a;
+                a=atom[i];
+                add(a);
+              }
+            }
+
+          /**
+           * @brief Do test insertions and sample excess chemical potential 
+           *
+           * @param p List of particles to insert into. This will typically be the main
+           *          particle vector, i.e. `Space::p`.
+           * @param geo Geometry to use for distance calculations and random position generation
+           */
+          template<class Tpvec, class Tgeo>
+            void sample(const Tpvec &p, Tgeo &geo) {
+              assert(lB>0);
+              assert(&geo!=nullptr);
+              if (!g.empty())
+                if (!p.empty())
+                  if (run()) {
+                    Tparticle ghost;
+                    double u,cu;
+                    for (int i=0; i<ghostin; i++) {
+                      geo.randompos(ghost);
+                      int goverlap=0;
+                      for (size_t k=0; k<g.size(); k++) {
+                        ghost.radius = g[k].radius;
+                        irej[k]=0;
+                        int j=0;
+                        while (!overlap(ghost,p[j],geo) && j<(int)p.size())
+                          j++;
+                        if (j!=(int)p.size()) {
+                          ihc[k]++;
+                          irej[k]=1;
+                          goverlap++;
+                        }
+                      }
+
+                      if ( goverlap != (int)g.size() ) {
+                        cu=0;
+                        u=0;  //elelectric potential (Coulomb only!)
+                        for (auto &i : p) {
+                          double invdi=1/geo.dist(ghost,i);
+                          cu+=invdi;
+                          u+=invdi*i.charge;
+                        } 
+                        cu=cu*lB;
+                        u=u*lB;
+                        double ew,ewla,ewd;
+                        for (size_t k=0; k < g.size(); k++) {
+                          if (irej[k]==0) {
+                            expuw[k]+=exp(-u*g[k].charge);
+                            for (int cint=0; cint<11; cint++) {
+                              ew=g[k].charge*(u-double(cint)*0.1*g[k].charge*cu/double(p.size()));
+                              ewla = ew*double(cint)*0.1;
+                              ewd=exp(-ewla);
+                              ewden[k][cint]+=ewd;
+                              ewnom[k][cint]+=ew*ewd;
+                            }
+                          }
+                        }
+                      }
+                    }
+                  } 
+            }
+
+      }; // end of WidomScaled
 
     /**
      * @brief Samples bilayer structure

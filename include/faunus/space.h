@@ -61,7 +61,8 @@ namespace Faunus {
    *
    * Every simulation must have a `Space` instance as this contains
    * the particles and information about groups (particle ranges).
-   * `Space` must also be given a valid reference to a `Geometrybase`.
+   * Space also contains the geometry as given by the template
+   * parameter.
    */
   template<typename Tgeometry, typename Tparticle=PointParticle>
     class Space {

@@ -13,11 +13,11 @@ molecular systems. Below is a brief overview of features:
 
 Detailed information and support:
 
-- Website: <http://github.com/mlund/faunus>
+- Manual: <http://faunus.sourceforge.net>
 - Support: <http://github.com/mlund/faunus/issues>
-- Documentation: <http://faunus.sourceforge.net>
+- Source code: <http://github.com/mlund/faunus>
 
-Get the latest resivions from GitHub:
+Get the latest resivion from GitHub:
 
     $ git clone https://github.com/mlund/faunus.git
 

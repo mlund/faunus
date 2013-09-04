@@ -1955,7 +1955,7 @@ namespace Faunus {
      * @brief Grand Canonical insertion of arbitrary M:X salt pairs
      * @author Bjorn Persson and Mikael Lund
      * @date Lund 2010-2011
-     * @warning Untested in this branch
+     * @warning Untested for asymmetric salt in this branch
      */
     template<class Tspace>
       class GrandCanonicalSalt : public Movebase<Tspace> {
@@ -1969,7 +1969,7 @@ namespace Faunus {
           void _acceptMove();
           void _rejectMove();
           double _energyChange();
-          void add(Group&);       // add salt group and scan for ions with non-zero activities
+          void add(Group&);       // scan group for ions with non-zero activities
 
           AtomTracker<Tspace> tracker;
           struct ionprop {
@@ -1983,21 +1983,29 @@ namespace Faunus {
           vector<int> trial_delete;
           particle::Tid ida, idb;     // particle id's of current salt pair (a=cation, b=anion)
 
-          Energy::EnergyRest<Tspace> Urest;   // store non-Hamiltonian energy here to correctly calculate energy drift
-          double du_rest;
           Group* saltPtr;  // GC ions *must* be in this group
+
+          // unit testing
+          void _test(UnitTest &t) {
+            for (auto &m : map) {
+              auto s=base::prefix+"_"+atom[m.first].name;
+              t(s+"_activity", atom[m.first].activity);
+              t(s+"_conc", m.second.rho.avg()/pc::Nav/1e-27);
+            }
+          }
 
         public:
           GrandCanonicalSalt(InputMap&, Energy::Energybase<Tspace>&, Tspace&, Group&, string="saltbath");
       };
 
     template<class Tspace>
-      GrandCanonicalSalt<Tspace>::GrandCanonicalSalt(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, Group &g, string pfx) :
+      GrandCanonicalSalt<Tspace>::GrandCanonicalSalt(
+          InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, Group &g, string pfx) :
         base(e,s,pfx), tracker(s) {
           base::title="Grand Canonical Salt";
+          base::useAlternateReturnEnergy=true;
           w=30;
           base::runfraction = in.get<double>(pfx+"_runfraction",1.0);
-          //e.add(Urest);
           saltPtr=&g;
           add(*saltPtr);
         }
@@ -2005,7 +2013,6 @@ namespace Faunus {
     template<class Tspace>
       void GrandCanonicalSalt<Tspace>::add(Group &g) {
         assert( g.isAtomic() && "Salt group must be atomic" );
-        //g.property.insert(Group::GRANDCANONICAL);  // mark given group as grand canonical
         spc->enroll(g);
         tracker.clear();
         for (auto i : g) {
@@ -2022,7 +2029,7 @@ namespace Faunus {
     template<class Tspace>
       void GrandCanonicalSalt<Tspace>::randomIonPair(particle::Tid &id_cation, particle::Tid &id_anion) {
         do id_anion  = tracker.randomAtomType(); while ( map[id_anion].p.charge>=0);
-        do id_cation = tracker.randomAtomType(); while ( map[id_cation].p.charge<=0  );
+        do id_cation = tracker.randomAtomType(); while ( map[id_cation].p.charge<=0);
         assert( !tracker[id_anion].index.empty() && "Ion list is empty");
         assert( !tracker[id_cation].index.empty() && "Ion list is empty");
       }
@@ -2065,10 +2072,10 @@ namespace Faunus {
 
     template<class Tspace>
       double GrandCanonicalSalt<Tspace>::_energyChange() {
-        du_rest=0;
-        int Na=0, Nb=0;                     // number of added or deleted ions
+        int Na=0, Nb=0;            // number of added or deleted ions
         double idfactor=1;
         double uold=0, unew=0, V=spc->geo.getVolume();
+        double potold=0, potnew=0; // energy change due to interactions
         if ( !trial_insert.empty() ) {
           for (auto &t : trial_insert)     // count added ions
             if (t.id==map[ida].p.id) Na++; else Nb++;
@@ -2078,14 +2085,14 @@ namespace Faunus {
             idfactor *= (tracker[idb].index.size()+1+n)/V;
 
           unew = log(idfactor) - Na*map[ida].chempot - Nb*map[idb].chempot;
-          du_rest=unew;
 
-          unew += pot->v2v(spc->p, trial_insert);
+          potnew += pot->v2v(spc->p, trial_insert);
           for (auto i=trial_insert.begin(); i!=trial_insert.end()-1; i++)
             for (auto j=i+1; j!=trial_insert.end(); j++)
-              unew+=pot->p2p(*i,*j);
+              potnew+=pot->p2p(*i,*j);
           for (auto i=trial_insert.begin(); i!=trial_insert.end(); i++)
-            unew+=pot->p_external(*i);
+            potnew+=pot->p_external(*i);
+          unew+=potnew;
         }
         else if ( !trial_delete.empty() ) {
           for (auto i : trial_delete) {
@@ -2098,17 +2105,18 @@ namespace Faunus {
             idfactor *= (tracker[idb].index.size()-Nb+1+n)/V;
 
           unew = -log(idfactor) + Na*map[ida].chempot + Nb*map[idb].chempot;
-          du_rest=unew;
 
           for (auto &i : trial_delete)
-            uold+=pot->i_total(spc->p, i);
+            potold+=pot->i_total(spc->p, i);
           for (auto i=trial_delete.begin(); i!=trial_delete.end()-1; i++)
             for (auto j=i+1; j!=trial_delete.end(); j++)
-              uold-=pot->i2i(spc->p, *i, *j);
+              potold-=pot->i2i(spc->p, *i, *j);
+          uold+=potold;
         } else {
           assert(!"No salt to insert or delete!");
           std::cerr << "!! No salt to insert or delete !!";
         }
+        base::alternateReturnEnergy=potnew-potold; // track only pot. energy
         return unew-uold;
       }
 
@@ -2123,7 +2131,6 @@ namespace Faunus {
           for (auto i : trial_delete)
             tracker.erase(i);
         }
-        Urest.add(du_rest);
         double V = spc->geo.getVolume();
         map[ida].rho += tracker[ida].index.size() / V;
         map[idb].rho += tracker[idb].index.size() / V;
@@ -2141,18 +2148,19 @@ namespace Faunus {
         char s=10;
         using namespace textio;
         std::ostringstream o;
-        o << pad(SUB,w,"Number of GC species")
-          << endl << endl;
-        o << setw(4) << "" << std::left << setw(s) << "Ion" << setw(s)
-          << "activity" << setw(s+4) << bracket("c/M") << setw(s)
-          << bracket( gamma+pm ) << endl;
+        o << pad(SUB,w,"Number of GC species") << endl << endl;
+        o << setw(4) << "" << std::left
+          << setw(s) << "Ion" << setw(s) << "activity"
+          << setw(s+4) << bracket("c/M") << setw(s+6) << bracket( gamma+pm )
+          << setw(s+4) << bracket("N") << "\n";
         for (auto &m : map) {
           particle::Tid id=m.first;
           o.precision(5);
           o << setw(4) << "" << setw(s) << atom[id].name
             << setw(s) << atom[id].activity << setw(s) << m.second.rho.avg()/pc::Nav/1e-27
             << setw(s) << atom[id].activity / (m.second.rho.avg()/pc::Nav/1e-27)
-            << endl;
+            << setw(s) << m.second.rho.avg()*spc->geo.getVolume()
+            << "\n";
         }
         return o.str();
       }

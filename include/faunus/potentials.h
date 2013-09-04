@@ -493,7 +493,7 @@ namespace Faunus {
           string info(char w=0) {
             using namespace Faunus::textio;
             std::ostringstream o;
-            o << indent(SUB) << name+" pair parameters:\n";
+            o << indent(SUB) << name+" pair parameters:\n\n";
             o.precision(4);
             int n=(int)atom.list.size();
             for (int i=0; i<n; i++)
@@ -1061,6 +1061,7 @@ namespace Faunus {
             }
             double p_id = std::fabs(Z)/V; // assume microion valency is unity
             double p_ex = -k*lB_org/4/(1-eta(p,V))*sum; // Eq.41, complete
+            cout << "eta = " << eta(p,V) << endl;
             cout << "id = " << p_id*1660*1e3 << " ex = " << p_ex*1660*1e3 << "\n";
             return p_id + p_ex;
           }
@@ -1137,7 +1138,7 @@ namespace Faunus {
         double u_rc,dudrc;
       public:
         DebyeHuckelShift(InputMap &in) : DebyeHuckel(in) {
-          rc=in.get<double>("dh_cutoff",pc::infty);
+          rc=in.get<double>("dh_cutoff",sqrt(std::numeric_limits<double>::max()));
           rc2=rc*rc;
 #ifdef FAU_APPROXMATH
           u_rc = exp_cawley(-k*rc)/rc; // use approx. func even here!
@@ -1166,15 +1167,16 @@ namespace Faunus {
           }
         template<class Tparticle>
           Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
-            if (r2>rc2)              return Point(0,0,0);                                                                            
+            if (r2>rc2)
+              return Point(0,0,0);
 #ifdef FAU_APPROXMATH
-            double rinv = invsqrtQuake(r2);                                                                   
+            double rinv = invsqrtQuake(r2);
             return lB * a.charge * b.charge * ( exp_cawley(-k/rinv) / r2 * (k+rinv) + dudrc*rinv) * p;
 #else
             double r=sqrt(r2);
             return lB * a.charge * b.charge * ( exp(-k*r) / r2 * (k + 1/r) + dudrc / r) * p;
 #endif
-          } 
+          }
     };
 
     /**

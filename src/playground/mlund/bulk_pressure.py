@@ -2,9 +2,12 @@
 from math import pi,sinh,sqrt,exp
 import numpy as np
 
-N=50.    # num. particles
-Q=1.
+N=10.    # num. particles
+Q=5.
 L=80.
+R=10.
+
+Vf = L**3 - N*4*pi*R**3/3.
 
 Cp = N/L**3*1660.58 # protein concentration [mol/l]
 Cc = Cp*abs(Q)      # counter ion conc [mol/l]
@@ -17,7 +20,9 @@ print "num. particles     = ", N
 print "box length         = ", L
 print "Conc. (M)          = ", Cp
 print "Counter conc (M)   = ", Cc
+print "Counter conc,free  = ", Cc*L**3/Vf
 print "Ionic strength     = ", I
+print "Ionic strength     = ", I*L**3/Vf
 print "Debye length       = ", Debye
 print "Kappa              = ", 1/Debye
 

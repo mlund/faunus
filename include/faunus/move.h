@@ -76,6 +76,7 @@ namespace Faunus {
           using Tmove::pot;
           double threshold;       	  // threshold for iteration
           Eigen::MatrixXd field;  	  // field on each particle
+          Average<int> numIter;           // average number of iterations per move
 
           /**
            *  @brief Replaces dipole moment with permanent dipole moment plus induced dipole moment
@@ -83,30 +84,33 @@ namespace Faunus {
            *  @param pot The potential including geometry
            *  @param p Trial particles
            *  @param E_ext External field on particles
+           *
+           *  @todo External field should enter only through the potential. In the current way,
+           *  `E_ext` will polarize particles, but will never be used for the actual energy
+           *  evalutation.
            */
           template<typename Tenergy,typename Tparticles>
             void induceDipoles(Tenergy &pot, Tparticles &p, Point E_ext=Point(0,0,0)) { 
               Eigen::VectorXd mu_err_norm((int)p.size());
-              threshold = 0.001;
-
-              //int count = 0;
-              do {  
+              int cnt=0;
+              do {
+                cnt++;
                 mu_err_norm.setZero();
                 field.setZero();
                 pot.field(p,field);
-                for(size_t i=0; i<p.size(); i++) {
+                for (size_t i=0; i<p.size(); i++) {
                   Point E = field.col(i) + E_ext; // field on i, in e/Å
                   Point mu_trial = p[i].alpha*E + p[i].mup; // New tot dipole
                   Point mu_err = mu_trial - p[i].mu*p[i].muscalar;     // Difference between former and current state
                   mu_err_norm[i] = mu_err.norm();// Get norm of previous row
                   p[i].muscalar = mu_trial.norm();// Update dip scalar in particle
-                  if(p[i].muscalar < 1e-6) {
-                    continue;
-                  }
-                  p[i].mu = mu_trial/p[i].muscalar;// Update article dip.
+
+                  if (p[i].muscalar > 1e-6)
+                    p[i].mu = mu_trial/p[i].muscalar;// Update article dip.
                 }
-                //count++;
               } while (mu_err_norm.maxCoeff() > threshold);                 // Check if threshold is ok
+
+              numIter+=cnt; // average number of iterations
             }
 
           void _trialMove() FOVERRIDE {
@@ -115,10 +119,13 @@ namespace Faunus {
             induceDipoles(*Tmove::pot,Tmove::spc->trial);
           }
 
+          /**
+           * @todo The `iparticle` part here will work only for a limited number of moves
+           * is this needed?
+           */
           double _energyChange() FOVERRIDE {
-            if(Tmove::iparticle == -1) {
+            if (Tmove::iparticle == -1)
               return 0.0;
-            }
             return (Energy::systemEnergy(*spc,*pot,spc->trial)-Energy::systemEnergy(*spc,*pot,spc->p));
           }
 
@@ -132,11 +139,20 @@ namespace Faunus {
             Tmove::spc->p = Tmove::spc->trial;
           }
 
+          string _info() FOVERRIDE {
+            std::ostringstream o;
+            using namespace textio;
+            o << pad(SUB,Tmove::w,"Polarization iterations") << numIter.avg() << endl
+              << Tmove::_info();
+            return o.str();
+          }
+
         public:
-          double eps;
           template<class Tspace>
             PolarizeMove(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s) :
-              Tmove(in,e,s) {}
+              Tmove(in,e,s) {
+                threshold = in.get<double>("pol_threshold", 0.001, "Iterative polarization precision");
+              }
       };
 
 
@@ -181,7 +197,6 @@ namespace Faunus {
           double dusum;                    //!< Sum of all energy changes
 
           virtual void _test(UnitTest&);   //!< Unit testing
-          virtual string _info()=0;        //!< info for derived moves
           virtual void _trialMove()=0;     //!< Do a trial move
           virtual void _acceptMove()=0;    //!< Accept move and config
           virtual void _rejectMove()=0;    //!< Reject move and config
@@ -193,6 +208,7 @@ namespace Faunus {
           bool metropolis(const double&) const;//!< Metropolis criteria
 
         protected:
+          virtual string _info()=0;        //!< info for derived moves
           void trialMove();                //!< Do a trial move (wrapper)
           Energy::Energybase<Tspace>* pot; //!< Pointer to energy functions
           Tspace* spc;                     //!< Pointer to Space
@@ -373,9 +389,9 @@ namespace Faunus {
         private:
           typedef Movebase<Tspace> base;
           typedef std::map<short, Average<double> > map_type;
-          string _info();
           bool run() const;                //!< Runfraction test
         protected:
+          string _info();
           void _acceptMove() FOVERRIDE;
           void _rejectMove() FOVERRIDE;
           double _energyChange() FOVERRIDE;
@@ -565,7 +581,7 @@ namespace Faunus {
      */
     template<class Tspace>
       class AtomicRotation : public AtomicTranslation<Tspace> {
-        private:
+        protected:
           typedef AtomicTranslation<Tspace> base;
           using base::spc;
           using base::iparticle;
@@ -573,9 +589,8 @@ namespace Faunus {
           using base::w;
           using base::gsize;
           using base::genericdp;
-          string _info();
           Geometry::QuaternionRotate rot;
-        protected:
+          string _info();
           void _trialMove();
         public:
           AtomicRotation(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="rot_particle");

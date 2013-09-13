@@ -32,11 +32,18 @@ namespace Faunus {
           TcoordFunc p2c; // function to convert point to internal coordinate
         public:
           ExternalPotentialBase() : p2c(nullptr) {}
+
           virtual ~ExternalPotentialBase() {}
+
           template<typename T> void setCoordinateFunc(T f) { p2c=f; }
+
           string info() {
             return _info();
           }
+
+          template<class Tparticle>
+            Point field(const Tparticle &) { return Point(0,0,0); }
+
           std::string name;
       };
 
@@ -282,6 +289,53 @@ namespace Faunus {
           << pad(SUB,w,"Prefactor") << prefactor << _angstrom+cubed << endl;
         return o.str();
       }
+
+    /**
+     * @brief External, uniform electric field
+     *
+     * This is a "potential" for `ExternalPotential` to
+     * mimic a uniform electric field. The template argument must
+     * be a pair potential that implements a `fieldEnergy` function.
+     * The `InputMap` is searched for `field_x`, `field_y`, and
+     * `field_z` which indicate the electric field vector. Default
+     * value is `(0,0,0)`.
+     *
+     * Example:
+     *
+     * ~~~~
+     * typedef Potential::ElectricField<Potential::DipoleDipole> Texpot;
+     * ExternalPotential<Tspace,Texpot> pot(in);
+     * ~~~~
+     *
+     * @todo unifinished and lacking doc (units?)
+     */
+    template<class Tpairpot>
+      class ElectricField : ExternalPotentialBase<> {
+        private:
+          typedef ExternalPotentialBase<> base;
+          Tpairpot pairpot;
+          Point E; // electric field vector
+
+          string _info() { return pairpot.info(); }
+
+        public:
+          ElectricField(InputMap &in) : pairpot(in) {
+            base::name = "Uniform electric field";
+            E.x() = in.get<double>("field_x", 0, "Electric field (x)");
+            E.y() = in.get<double>("field_y", 0, "Electric field (y)");
+            E.z() = in.get<double>("field_z", 0, "Electric field (z)");
+          }
+
+          /** @brief Interaction of particle `p` with electric field */
+          template<class Tparticle>
+            double operator()(const Tparticle &p) {
+              return pairpot.fieldEnergy(p,E);
+            }
+
+          /** @brief Electric field on particle `p` */
+          template<class Tparticle>
+            Point field(const Tparticle &p) { return E; }
+      };
 
   } //namespace
 } //namespace

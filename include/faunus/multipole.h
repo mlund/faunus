@@ -195,12 +195,22 @@ namespace Faunus {
          *  Gets returned in [e/Å] (\f$\beta eE \f$)
          */
         template<class Tparticle>
-          Point field (const Tparticle &p, const Point &r) const {
+          Point field(const Tparticle &p, const Point &r) const {
             double R2 = 1.0/r.squaredNorm();
             double R1 = sqrt(R2);
             Point r_n = r*R1;
             return ((3.0*p.mu.dot(r_n)*r_n - p.mu)*R2*R1)*p.muscalar*_lB; // \beta e E
           }
+
+        /**
+         * @brief Interaction of dipole `p` with field `E`
+         * @todo unfinished
+         */
+        template<class Tparticle>
+          double fieldEnergy(const Tparticle &p, const Point &E) {
+            return 0; // implement!
+          }
+
         string info(char w) { return _brief(); }
     };
 

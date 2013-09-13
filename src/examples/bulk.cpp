@@ -87,9 +87,10 @@ int main() {
 /**
   @page example_bulk Example: Melted NaCl
 
-  In this example we simulate melted NaCl in the NVT and NPT ensemble. We use a
+  In this example we simulate melted NaCl in the NVT or NPT ensemble. We use a
   Lennard-Jones potential combined with a shifted Coulombic potential according to
-  Wolf. This gives essentially identical results to the more elaborate Particle
+  [Wolf/Yonezawa](<http://dx.doi.org/10/j97>).
+  This gives essentially identical results to the more elaborate Particle
   Mesh Ewald method - see figure below. In contrast, using the simple minimum image
   approach with a cubic cutoff, the system freezes.
   The `bulk.cpp` program can be used to simulate any atomic mixtures and the
@@ -105,6 +106,6 @@ int main() {
 
   bulk.cpp
   ========
-  \includelineno examples/bulk.cpp
+  @includelineno examples/bulk.cpp
 
 */

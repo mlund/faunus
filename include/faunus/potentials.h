@@ -817,8 +817,7 @@ namespace Faunus {
     };
 
     /**
-     * @brief Coulomb pair potential shifted according to
-     *        Wolf/Yonezawaa, see  <http://dx.doi.org/10/j97>
+     * @brief Coulomb pair potential shifted according to Wolf/Yonezawa (<http://dx.doi.org/10/j97>)
      * @details The Coulomb potential has the form:
      * @f[
      * \beta u_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT}

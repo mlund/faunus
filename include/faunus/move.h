@@ -61,13 +61,19 @@ namespace Faunus {
       };
 
     /**
-     * @brief Add polarization step to a move
+     * @brief Add polarization step to an arbitrary move
      *
-     * This will insert an electric field calculation
-     * after the original trial move and iteratively
+     * This class will modify any MC move to account for polarization
+     * using an iterative procedure.
+     * An electric field calculation is inserted
+     * after the original trial move whereafter it will iteratively
      * calculate induced dipole moments on all particles.
+     * The energy change function will evaluate the *total*
+     * system energy as all dipoles in the system may have changed.
+     * This is thus an expensive computation and is best used with
+     * MC moves that propagate many or all particles.
      *
-     * @todo unfinished
+     * @todo Unfinished - fix polarization catastrophy!
      */
     template<class Tmove>
       class PolarizeMove : public Tmove {
@@ -80,17 +86,11 @@ namespace Faunus {
 
           /**
            *  @brief Replaces dipole moment with permanent dipole moment plus induced dipole moment
-           *  
-           *  @param pot The potential including geometry
-           *  @param p Trial particles
-           *  @param E_ext External field on particles
-           *
-           *  @todo External field should enter only through the potential. In the current way,
-           *  `E_ext` will polarize particles, but will never be used for the actual energy
-           *  evalutation.
+           *  @param pot Hamiltonian
+           *  @param p Particles to update
            */
           template<typename Tenergy,typename Tparticles>
-            void induceDipoles(Tenergy &pot, Tparticles &p, Point E_ext=Point(0,0,0)) { 
+            void induceDipoles(Tenergy &pot, Tparticles &p) { 
               Eigen::VectorXd mu_err_norm((int)p.size());
               int cnt=0;
               do {
@@ -99,7 +99,7 @@ namespace Faunus {
                 field.setZero();
                 pot.field(p,field);
                 for (size_t i=0; i<p.size(); i++) {
-                  Point E = field.col(i) + E_ext; // field on i, in e/Å
+                  Point E = field.col(i); // field on i, in e/Å
                   Point mu_trial = p[i].alpha*E + p[i].mup; // New tot dipole
                   Point mu_err = mu_trial - p[i].mu*p[i].muscalar;     // Difference between former and current state
                   mu_err_norm[i] = mu_err.norm();// Get norm of previous row
@@ -119,14 +119,8 @@ namespace Faunus {
             induceDipoles(*Tmove::pot,Tmove::spc->trial);
           }
 
-          /**
-           * @todo The `iparticle` part here will work only for a limited number of moves
-           * is this needed?
-           */
           double _energyChange() FOVERRIDE {
-            if (Tmove::iparticle == -1)
-              return 0.0;
-            return (Energy::systemEnergy(*spc,*pot,spc->trial)-Energy::systemEnergy(*spc,*pot,spc->p));
+            return Energy::systemEnergy(*spc,*pot,spc->trial) - Energy::systemEnergy(*spc,*pot,spc->p);
           }
 
           void _rejectMove() FOVERRIDE {
@@ -153,20 +147,6 @@ namespace Faunus {
               Tmove(in,e,s) {
                 threshold = in.get<double>("pol_threshold", 0.001, "Iterative polarization precision");
               }
-      };
-
-
-    template<class Tmove>
-      class EwaldMove : public Tmove {
-        protected:
-          void _trialMove() {
-            Tmove::_trialMove();
-            // ... update induced moments
-          }
-        public:
-          template<class Tspace>
-            EwaldMove(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s) :
-              Tmove(in,e,s) {}
       };
 
     /**

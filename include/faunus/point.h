@@ -442,14 +442,13 @@ namespace Faunus {
    * @brief Dipolar particle
    */
   struct DipoleParticle : public PointParticle {
-    Point mu;               //!< Dipole moment unit vector
-    double muscalar;        //!< Dipole moment scalar
-    Point mup;              //!< Permanente Dipole moment vector
-    Tensor<double> alpha;         //!< Polarization matrix
-    Tensor<double> theta;         //!< Quadrupole matrix
+    Point mu;               //!< Dipole moment unit vector (permanent+induced)
+    double muscalar;        //!< Dipole moment scalar (permanent+induced)
+    Point mup;              //!< Permanent dipole moment vector
+    Tensor<double> alpha;   //!< Polarization matrix
+    Tensor<double> theta;   //!< Quadrupole matrix
 
-    inline DipoleParticle() : mu(0,0,0), muscalar(0),mup(0,0,0) {
-    };
+    inline DipoleParticle() : mu(0,0,0), muscalar(0),mup(0,0,0) {};
 
     /** @brief Copy constructor for Eigen derivatives */
     template<typename OtherDerived>

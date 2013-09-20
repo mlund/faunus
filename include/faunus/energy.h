@@ -247,6 +247,7 @@ namespace Faunus {
           void setSpace(Tspace &s) FOVERRIDE {
             geo=s.geo;
             Tbase::setSpace(s);
+            pairpot.setSpace(s);
           } 
 
           //!< Particle-particle energy (kT)
@@ -996,6 +997,13 @@ namespace Faunus {
             for (auto i : g)
               u+=p_external(p[i]);
             return u;
+          }
+
+          /** @brief Field on all particles due to external potential */
+          void field(const typename base::Tpvec &p, Eigen::MatrixXd &E) FOVERRIDE {
+            assert((int)p.size()==E.cols());
+            for (size_t i=0; i<p.size(); i++)
+              E.col(i) += expot.field(p[i]);
           }
       };
 

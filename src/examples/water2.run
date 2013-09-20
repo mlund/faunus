@@ -30,7 +30,7 @@ epsilon_r          1            # dielectric const.
 coulomb_cut        9.           # coulomb cutoff [angstrom]
 g2g_cutoff         10.          # Group-to-group cutoff
                   
-loop_macrosteps    10           # number of macro loops
+loop_macrosteps    5            # number of macro loops
 loop_microsteps    250          # number of micro loops
 
 npt_dV             0.1          # 0.04 (0=no volume displacement=NVT)

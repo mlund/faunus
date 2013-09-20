@@ -3,46 +3,19 @@
 using namespace Faunus;
 using namespace Faunus::Potential;
 
-typedef Geometry::Cuboid Tgeometry;   // geometry: cube w. periodic boundaries
+#if defined(COULOMB)
+typedef CombinedPairPotential<Coulomb,LennardJonesTrunkShift> Tpairpot; // pair potential
+#elif defined(DEBYEHUCKEL)
+typedef CombinedPairPotential<DebyeHuckelDenton,LennardJonesTrunkShift> Tpairpot; // pair potential
+#else
 typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot; // pair potential
+#endif
+
+typedef Geometry::Cuboid Tgeometry;   // geometry: cube w. periodic boundaries
 typedef Space<Tgeometry,PointParticle> Tspace;
-
-/*
-template<class Tpairpot, class Tgeometry>
-class NonbondedEwald : public Energy::Energybase {
-  private:
-    Ewald<double> ew;
-    Space* _spc;
-  public:
-    Tgeometry geo;
-    Tpairpot pair;
-
-    double p2p(const particle &a, const particle &b) FOVERRIDE {
-      double r2=geo.sqdist(a,b);
-      return ew.rSpaceEnergy(a.charge*b.charge, sqrt(r2)) + pair(a,b,r2);
-    }
-
-    double i2all(const p_vec &p, int i) FOVERRIDE {
-      if (&p==&(spc->trial)) {
-        ew.store();
-        eq.kSpaceUpdate(p);
-      }
-
-      assert(i>=0 && i<int(p.size()) && "index i outside particle vector");
-      double u=0;
-      int n=(int)p.size();
-      for (int j=0; j<i; ++j)
-        u+=pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]) );
-      for (int j=i+1; j<n; ++j)
-        u+=pairpot( p[i], p[j], geometry.sqdist(p[i],p[j]) );
-      return u;
-    }
-
-};*/
 
 int main() {
   cout << textio::splash();           // show faunus banner and credits
-
 
   InputMap mcp("bulk.input");         // open user input file
   MCLoop loop(mcp);                   // class for handling mc loops
@@ -54,10 +27,14 @@ int main() {
   auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp);
 
+  pot.setSpace(spc);
+
   // Markov moves and analysis
   Move::Isobaric<Tspace> iso(mcp,pot,spc);
   Move::AtomicTranslation<Tspace> mv(mcp,pot,spc);
   Analysis::RadialDistribution<> rdf_ab(0.1);      // 0.1 angstrom resolution
+  Analysis::VirialPressure virial;
+  Average<double> pm;
 
   // Add salt
   Group salt;
@@ -69,6 +46,10 @@ int main() {
 
   cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
 
+#ifdef DEBYEHUCKEL
+  cout << pot.first.pairpot.first.info(spc.p,spc.geo.getVolume()) << endl;
+#endif
+
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
       if (slp_global() < 0.5)
@@ -76,8 +57,11 @@ int main() {
       else 
         sys+=iso.move();              // isobaric volume move
 
-      if (slp_global() < 0.05)
+      if (slp_global() < 0.05) {
         rdf_ab.sample(spc,salt,atom["Na"].id,atom["Cl"].id);
+        virial.sample(spc,pot);
+        //pm+=pot.first.pairpot.first.virial(spc.p,spc.geo);
+      }
     } // end of micro loop
 
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
@@ -94,19 +78,19 @@ int main() {
   iso.test(test);
   mv.test(test);
   sys.test(test);
-  //pot.first.pairpot.test(test);
 
   // print information
-  cout << loop.info() + sys.info() + mv.info() + iso.info() + test.info();
+  cout << loop.info() + sys.info() + mv.info() + iso.info() + virial.info() + test.info();
 
   return test.numFailed();
 }
 /**
   @page example_bulk Example: Melted NaCl
 
-  In this example we simulate melted NaCl in the NVT and NPT ensemble. We use a
+  In this example we simulate melted NaCl in the NVT or NPT ensemble. We use a
   Lennard-Jones potential combined with a shifted Coulombic potential according to
-  Wolf. This gives essentially identical results to the more elaborate Particle
+  [Wolf/Yonezawa](<http://dx.doi.org/10/j97>).
+  This gives essentially identical results to the more elaborate Particle
   Mesh Ewald method - see figure below. In contrast, using the simple minimum image
   approach with a cubic cutoff, the system freezes.
   The `bulk.cpp` program can be used to simulate any atomic mixtures and the
@@ -122,6 +106,6 @@ int main() {
 
   bulk.cpp
   ========
-  \includelineno examples/bulk.cpp
+  @includelineno examples/bulk.cpp
 
 */

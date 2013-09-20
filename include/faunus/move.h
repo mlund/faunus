@@ -61,13 +61,19 @@ namespace Faunus {
       };
 
     /**
-     * @brief Add polarization step to a move
+     * @brief Add polarization step to an arbitrary move
      *
-     * This will insert an electric field calculation
-     * after the original trial move and iteratively
+     * This class will modify any MC move to account for polarization
+     * using an iterative procedure.
+     * An electric field calculation is inserted
+     * after the original trial move whereafter it will iteratively
      * calculate induced dipole moments on all particles.
+     * The energy change function will evaluate the *total*
+     * system energy as all dipoles in the system may have changed.
+     * This is thus an expensive computation and is best used with
+     * MC moves that propagate many or all particles.
      *
-     * @todo unfinished
+     * @todo Unfinished - fix polarization catastrophy!
      */
     template<class Tmove>
       class PolarizeMove : public Tmove {
@@ -76,37 +82,35 @@ namespace Faunus {
           using Tmove::pot;
           double threshold;       	  // threshold for iteration
           Eigen::MatrixXd field;  	  // field on each particle
+          Average<int> numIter;           // average number of iterations per move
 
           /**
            *  @brief Replaces dipole moment with permanent dipole moment plus induced dipole moment
-           *  
-           *  @param pot The potential including geometry
-           *  @param p Trial particles
-           *  @param E_ext External field on particles
+           *  @param pot Hamiltonian
+           *  @param p Particles to update
            */
           template<typename Tenergy,typename Tparticles>
-            void induceDipoles(Tenergy &pot, Tparticles &p, Point E_ext=Point(0,0,0)) { 
+            void induceDipoles(Tenergy &pot, Tparticles &p) { 
               Eigen::VectorXd mu_err_norm((int)p.size());
-              threshold = 0.001;
-
-              //int count = 0;
-              do {  
+              int cnt=0;
+              do {
+                cnt++;
                 mu_err_norm.setZero();
                 field.setZero();
                 pot.field(p,field);
-                for(size_t i=0; i<p.size(); i++) {
-                  Point E = field.col(i) + E_ext; // field on i, in e/Å
+                for (size_t i=0; i<p.size(); i++) {
+                  Point E = field.col(i); // field on i, in e/Å
                   Point mu_trial = p[i].alpha*E + p[i].mup; // New tot dipole
                   Point mu_err = mu_trial - p[i].mu*p[i].muscalar;     // Difference between former and current state
                   mu_err_norm[i] = mu_err.norm();// Get norm of previous row
                   p[i].muscalar = mu_trial.norm();// Update dip scalar in particle
-                  if(p[i].muscalar < 1e-6) {
-                    continue;
-                  }
-                  p[i].mu = mu_trial/p[i].muscalar;// Update article dip.
+
+                  if (p[i].muscalar > 1e-6)
+                    p[i].mu = mu_trial/p[i].muscalar;// Update article dip.
                 }
-                //count++;
               } while (mu_err_norm.maxCoeff() > threshold);                 // Check if threshold is ok
+
+              numIter+=cnt; // average number of iterations
             }
 
           void _trialMove() FOVERRIDE {
@@ -116,10 +120,7 @@ namespace Faunus {
           }
 
           double _energyChange() FOVERRIDE {
-            if(Tmove::iparticle == -1) {
-              return 0.0;
-            }
-            return (Energy::systemEnergy(*spc,*pot,spc->trial)-Energy::systemEnergy(*spc,*pot,spc->p));
+            return Energy::systemEnergy(*spc,*pot,spc->trial) - Energy::systemEnergy(*spc,*pot,spc->p);
           }
 
           void _rejectMove() FOVERRIDE {
@@ -132,25 +133,20 @@ namespace Faunus {
             Tmove::spc->p = Tmove::spc->trial;
           }
 
+          string _info() FOVERRIDE {
+            std::ostringstream o;
+            using namespace textio;
+            o << pad(SUB,Tmove::w,"Polarization iterations") << numIter.avg() << endl
+              << Tmove::_info();
+            return o.str();
+          }
+
         public:
-          double eps;
           template<class Tspace>
             PolarizeMove(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s) :
-              Tmove(in,e,s) {}
-      };
-
-
-    template<class Tmove>
-      class EwaldMove : public Tmove {
-        protected:
-          void _trialMove() {
-            Tmove::_trialMove();
-            // ... update induced moments
-          }
-        public:
-          template<class Tspace>
-            EwaldMove(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s) :
-              Tmove(in,e,s) {}
+              Tmove(in,e,s) {
+                threshold = in.get<double>("pol_threshold", 0.001, "Iterative polarization precision");
+              }
       };
 
     /**
@@ -181,7 +177,6 @@ namespace Faunus {
           double dusum;                    //!< Sum of all energy changes
 
           virtual void _test(UnitTest&);   //!< Unit testing
-          virtual string _info()=0;        //!< info for derived moves
           virtual void _trialMove()=0;     //!< Do a trial move
           virtual void _acceptMove()=0;    //!< Accept move and config
           virtual void _rejectMove()=0;    //!< Reject move and config
@@ -193,6 +188,7 @@ namespace Faunus {
           bool metropolis(const double&) const;//!< Metropolis criteria
 
         protected:
+          virtual string _info()=0;        //!< info for derived moves
           void trialMove();                //!< Do a trial move (wrapper)
           Energy::Energybase<Tspace>* pot; //!< Pointer to energy functions
           Tspace* spc;                     //!< Pointer to Space
@@ -373,9 +369,9 @@ namespace Faunus {
         private:
           typedef Movebase<Tspace> base;
           typedef std::map<short, Average<double> > map_type;
-          string _info();
           bool run() const;                //!< Runfraction test
         protected:
+          string _info();
           void _acceptMove() FOVERRIDE;
           void _rejectMove() FOVERRIDE;
           double _energyChange() FOVERRIDE;
@@ -565,7 +561,7 @@ namespace Faunus {
      */
     template<class Tspace>
       class AtomicRotation : public AtomicTranslation<Tspace> {
-        private:
+        protected:
           typedef AtomicTranslation<Tspace> base;
           using base::spc;
           using base::iparticle;
@@ -573,9 +569,8 @@ namespace Faunus {
           using base::w;
           using base::gsize;
           using base::genericdp;
-          string _info();
           Geometry::QuaternionRotate rot;
-        protected:
+          string _info();
           void _trialMove();
         public:
           AtomicRotation(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="rot_particle");
@@ -1955,7 +1950,7 @@ namespace Faunus {
      * @brief Grand Canonical insertion of arbitrary M:X salt pairs
      * @author Bjorn Persson and Mikael Lund
      * @date Lund 2010-2011
-     * @warning Untested in this branch
+     * @warning Untested for asymmetric salt in this branch
      */
     template<class Tspace>
       class GrandCanonicalSalt : public Movebase<Tspace> {
@@ -1969,7 +1964,7 @@ namespace Faunus {
           void _acceptMove();
           void _rejectMove();
           double _energyChange();
-          void add(Group&);       // add salt group and scan for ions with non-zero activities
+          void add(Group&);       // scan group for ions with non-zero activities
 
           AtomTracker<Tspace> tracker;
           struct ionprop {
@@ -1983,21 +1978,29 @@ namespace Faunus {
           vector<int> trial_delete;
           particle::Tid ida, idb;     // particle id's of current salt pair (a=cation, b=anion)
 
-          Energy::EnergyRest<Tspace> Urest;   // store non-Hamiltonian energy here to correctly calculate energy drift
-          double du_rest;
           Group* saltPtr;  // GC ions *must* be in this group
+
+          // unit testing
+          void _test(UnitTest &t) {
+            for (auto &m : map) {
+              auto s=base::prefix+"_"+atom[m.first].name;
+              t(s+"_activity", atom[m.first].activity);
+              t(s+"_conc", m.second.rho.avg()/pc::Nav/1e-27);
+            }
+          }
 
         public:
           GrandCanonicalSalt(InputMap&, Energy::Energybase<Tspace>&, Tspace&, Group&, string="saltbath");
       };
 
     template<class Tspace>
-      GrandCanonicalSalt<Tspace>::GrandCanonicalSalt(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, Group &g, string pfx) :
+      GrandCanonicalSalt<Tspace>::GrandCanonicalSalt(
+          InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, Group &g, string pfx) :
         base(e,s,pfx), tracker(s) {
           base::title="Grand Canonical Salt";
+          base::useAlternateReturnEnergy=true;
           w=30;
           base::runfraction = in.get<double>(pfx+"_runfraction",1.0);
-          //e.add(Urest);
           saltPtr=&g;
           add(*saltPtr);
         }
@@ -2005,7 +2008,6 @@ namespace Faunus {
     template<class Tspace>
       void GrandCanonicalSalt<Tspace>::add(Group &g) {
         assert( g.isAtomic() && "Salt group must be atomic" );
-        //g.property.insert(Group::GRANDCANONICAL);  // mark given group as grand canonical
         spc->enroll(g);
         tracker.clear();
         for (auto i : g) {
@@ -2022,7 +2024,7 @@ namespace Faunus {
     template<class Tspace>
       void GrandCanonicalSalt<Tspace>::randomIonPair(particle::Tid &id_cation, particle::Tid &id_anion) {
         do id_anion  = tracker.randomAtomType(); while ( map[id_anion].p.charge>=0);
-        do id_cation = tracker.randomAtomType(); while ( map[id_cation].p.charge<=0  );
+        do id_cation = tracker.randomAtomType(); while ( map[id_cation].p.charge<=0);
         assert( !tracker[id_anion].index.empty() && "Ion list is empty");
         assert( !tracker[id_cation].index.empty() && "Ion list is empty");
       }
@@ -2065,10 +2067,10 @@ namespace Faunus {
 
     template<class Tspace>
       double GrandCanonicalSalt<Tspace>::_energyChange() {
-        du_rest=0;
-        int Na=0, Nb=0;                     // number of added or deleted ions
+        int Na=0, Nb=0;            // number of added or deleted ions
         double idfactor=1;
         double uold=0, unew=0, V=spc->geo.getVolume();
+        double potold=0, potnew=0; // energy change due to interactions
         if ( !trial_insert.empty() ) {
           for (auto &t : trial_insert)     // count added ions
             if (t.id==map[ida].p.id) Na++; else Nb++;
@@ -2078,14 +2080,14 @@ namespace Faunus {
             idfactor *= (tracker[idb].index.size()+1+n)/V;
 
           unew = log(idfactor) - Na*map[ida].chempot - Nb*map[idb].chempot;
-          du_rest=unew;
 
-          unew += pot->v2v(spc->p, trial_insert);
+          potnew += pot->v2v(spc->p, trial_insert);
           for (auto i=trial_insert.begin(); i!=trial_insert.end()-1; i++)
             for (auto j=i+1; j!=trial_insert.end(); j++)
-              unew+=pot->p2p(*i,*j);
+              potnew+=pot->p2p(*i,*j);
           for (auto i=trial_insert.begin(); i!=trial_insert.end(); i++)
-            unew+=pot->p_external(*i);
+            potnew+=pot->p_external(*i);
+          unew+=potnew;
         }
         else if ( !trial_delete.empty() ) {
           for (auto i : trial_delete) {
@@ -2098,17 +2100,18 @@ namespace Faunus {
             idfactor *= (tracker[idb].index.size()-Nb+1+n)/V;
 
           unew = -log(idfactor) + Na*map[ida].chempot + Nb*map[idb].chempot;
-          du_rest=unew;
 
           for (auto &i : trial_delete)
-            uold+=pot->i_total(spc->p, i);
+            potold+=pot->i_total(spc->p, i);
           for (auto i=trial_delete.begin(); i!=trial_delete.end()-1; i++)
             for (auto j=i+1; j!=trial_delete.end(); j++)
-              uold-=pot->i2i(spc->p, *i, *j);
+              potold-=pot->i2i(spc->p, *i, *j);
+          uold+=potold;
         } else {
           assert(!"No salt to insert or delete!");
           std::cerr << "!! No salt to insert or delete !!";
         }
+        base::alternateReturnEnergy=potnew-potold; // track only pot. energy
         return unew-uold;
       }
 
@@ -2123,7 +2126,6 @@ namespace Faunus {
           for (auto i : trial_delete)
             tracker.erase(i);
         }
-        Urest.add(du_rest);
         double V = spc->geo.getVolume();
         map[ida].rho += tracker[ida].index.size() / V;
         map[idb].rho += tracker[idb].index.size() / V;
@@ -2141,18 +2143,19 @@ namespace Faunus {
         char s=10;
         using namespace textio;
         std::ostringstream o;
-        o << pad(SUB,w,"Number of GC species")
-          << endl << endl;
-        o << setw(4) << "" << std::left << setw(s) << "Ion" << setw(s)
-          << "activity" << setw(s+4) << bracket("c/M") << setw(s)
-          << bracket( gamma+pm ) << endl;
+        o << pad(SUB,w,"Number of GC species") << endl << endl;
+        o << setw(4) << "" << std::left
+          << setw(s) << "Ion" << setw(s) << "activity"
+          << setw(s+4) << bracket("c/M") << setw(s+6) << bracket( gamma+pm )
+          << setw(s+4) << bracket("N") << "\n";
         for (auto &m : map) {
           particle::Tid id=m.first;
           o.precision(5);
           o << setw(4) << "" << setw(s) << atom[id].name
             << setw(s) << atom[id].activity << setw(s) << m.second.rho.avg()/pc::Nav/1e-27
             << setw(s) << atom[id].activity / (m.second.rho.avg()/pc::Nav/1e-27)
-            << endl;
+            << setw(s) << m.second.rho.avg()*spc->geo.getVolume()
+            << "\n";
         }
         return o.str();
       }

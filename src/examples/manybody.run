@@ -115,11 +115,9 @@ molecule2              manybody.bpti
 # Atomic species - add up to ten.
 tion1                  Na
 nion1                  0
-dpion1                 10
 
 tion2                  Cl
 nion2                  0
-dpion2                 10
 
 test_stable            yes
 test_file              manybody.test

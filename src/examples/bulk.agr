@@ -1,6 +1,6 @@
 # Grace project file
 #
-@version 50122
+@version 50123
 @page size 792, 612
 @page scroll 5%
 @page inout 5%
@@ -54,7 +54,7 @@
 @timestamp rot 0
 @timestamp font 0
 @timestamp char size 1.000000
-@timestamp def "Sun Nov  4 11:46:12 2012"
+@timestamp def "Fri Sep 13 15:59:28 2013"
 @r0 off
 @link r0 to g0
 @r0 type above
@@ -341,7 +341,7 @@
 @    s1 errorbar riser clip off
 @    s1 errorbar riser clip length 0.100000
 @    s1 comment "rdf.dat"
-@    s1 legend  "MC - Faunus (Wolf, cutoff 14 Å)"
+@    s1 legend  "MC - Faunus Yonezawa cutoff 14 "
 @    s3 hidden false
 @    s3 type xy
 @    s3 symbol 1

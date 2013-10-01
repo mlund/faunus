@@ -1,10 +1,10 @@
-# Generated on May 16 2013 11:10:13 using 4.2.1 Compatible Apple LLVM 4.2 (clang-425.0.28)
-energyAverage                      -64956.5            
-npt_MSQDisplacement                3.33424             
-npt_acceptance                     21.8363             
-npt_averageSideLength              19.1079             
-relativeEnergyDrift                4.32793e-13         
-transrot_acceptance                27.8056             
-transrot_water_acceptance          27.8056             
-transrot_water_dRot                4.0535              
-transrot_water_dTrans              0.118456            
+# Generated on Aug 29 2013 11:08:36 using 4.2.1 Compatible Apple LLVM 4.2 (clang-425.0.28)
+energyAverage                      -64934.8            
+npt_MSQDisplacement                3.41272             
+npt_acceptance                     21.7822             
+npt_averageSideLength              19.1566             
+relativeEnergyDrift                8.73049e-14         
+transrot_acceptance                28.0423             
+transrot_water_acceptance          28.0423             
+transrot_water_dRot                4.07797             
+transrot_water_dTrans              0.119245            

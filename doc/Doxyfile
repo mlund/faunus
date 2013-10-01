@@ -660,11 +660,13 @@ INPUT                  = doc \
                          src/tools \
                          src/examples/minimal.cpp \
                          src/examples/bulk.cpp \
+                         src/examples/grand.cpp \
                          src/examples/temper.cpp \
                          src/examples/polymers.cpp \
                          src/examples/slitpolymer.cpp \
                          src/examples/membrane.cpp \
                          src/examples/water.cpp \
+                         src/examples/water2.cpp \
                          src/examples/cigars2fibrils.cpp \
                          include/faunus
 
@@ -883,7 +885,7 @@ GENERATE_HTML          = YES
 # If a relative path is entered the value of OUTPUT_DIRECTORY will be
 # put in front of it. If left blank `html' will be used as the default path.
 
-HTML_OUTPUT            = homepage/doxyhtml
+HTML_OUTPUT            = doxyhtml
 
 # The HTML_FILE_EXTENSION tag can be used to specify the file extension for
 # each generated HTML page (for example: .htm,.php,.asp). If it is left blank

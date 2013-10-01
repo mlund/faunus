@@ -61,7 +61,8 @@ namespace Faunus {
    *
    * Every simulation must have a `Space` instance as this contains
    * the particles and information about groups (particle ranges).
-   * `Space` must also be given a valid reference to a `Geometrybase`.
+   * Space also contains the geometry as given by the template
+   * parameter.
    */
   template<typename Tgeometry, typename Tparticle=PointParticle>
     class Space {
@@ -325,8 +326,8 @@ namespace Faunus {
         std::ofstream fout( file.c_str() );
         if (fout) {
           fout.precision( numeric_limits<double>::digits10 + 1 );
-          fout << geo.getVolume() << endl
-            << p.size() << endl;
+          fout << geo.getVolume() << "\n"
+            << p.size() << "\n";
           for (auto p_i : p)
             fout << p_i << "\n";
           fout << g.size() << "\n";

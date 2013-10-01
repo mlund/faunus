@@ -23,8 +23,8 @@ temperature     1100         # K
 epsilon_r       1            # dielectric const.
 coulomb_cut     14.          # coulomb cutoff [angstrom]
 
-loop_macrosteps 10           # number of macro loops
-loop_microsteps 50           # number of micro loops
+loop_macrosteps 5            # number of macro loops
+loop_microsteps 40           # number of micro loops
 
 tion1  Na
 nion1  1152                  # number of sodium atoms

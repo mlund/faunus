@@ -247,6 +247,7 @@ namespace Faunus {
           void setSpace(Tspace &s) FOVERRIDE {
             geo=s.geo;
             Tbase::setSpace(s);
+            pairpot.setSpace(s);
           } 
 
           //!< Particle-particle energy (kT)
@@ -513,6 +514,48 @@ namespace Faunus {
       };
 
     /**
+     * @brief Nonbonded with early rejection for infinite energies
+     *
+     * Useful for potentials with a hard sphere part
+     */
+    template<class Tspace, class Tpairpot, class Tnonbonded=Energy::Nonbonded<Tspace,Tpairpot> >
+      class NonbondedEarlyReject : public Tnonbonded {
+        private:
+          typedef Tnonbonded base;
+        public:
+          NonbondedEarlyReject(InputMap &in) : base(in) {
+            base::name+=" (early reject)";
+          }
+
+          double g2g(const typename base::Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+            double u=0;
+            for (auto i : g1)
+              for (auto j : g2) {
+                auto _u = base::pairpot(p[i],p[j],base::geo.sqdist(p[i],p[j]));
+                if (std::isinf(_u))
+                  return INFINITY;
+                u+=_u;
+              }
+            return u;
+          }
+
+          double g_internal(const typename base::Tpvec &p, Group &g) FOVERRIDE { 
+            double u=0;
+            int b=g.back(), f=g.front();
+            if (!g.empty())
+              for (int i=f; i<b; ++i)
+                for (int j=i+1; j<=b; ++j) {
+                  auto _u = base::pairpot(p[i],p[j],base::geo.sqdist(p[i],p[j]));
+                  if (std::isinf(_u))
+                    return INFINITY;
+                  u+=_u;
+                }
+            return u;
+          }
+
+      };
+
+    /**
      * @brief Cuts group-to-group interactions at specified mass-center separation
      *
      * For two molecular groups (`Group::isMolecular()==true`) this will invoke
@@ -546,7 +589,7 @@ namespace Faunus {
               }
             return false;
           }
-          
+
         public:
           bool noPairPotentialCutoff; //!< Set if range of pairpot is longer than rcut (default: false)
 
@@ -592,7 +635,7 @@ namespace Faunus {
               return u;
             }
           }
-          
+
           // unfinished
           void field(const typename base::Tpvec &p, Eigen::MatrixXd &E) FOVERRIDE {
             assert((int)p.size()==E.cols());
@@ -607,13 +650,13 @@ namespace Faunus {
                     for (int i : *gi)
                       for (int j : *gj)
                         E.col(i)+=base::pairpot.field(p[j],base::geo.vdist(p[i],p[j]));
-              
-              // now loop over all internal particles in groups
-              for (auto g : base::spc->groupList())
-                for (int i : *g)
-                  for (int j : *g)
-                    if (i!=j)
-                      E.col(i)+=base::pairpot.field(p[j],base::geo.vdist(p[i],p[j]));
+
+            // now loop over all internal particles in groups
+            for (auto g : base::spc->groupList())
+              for (int i : *g)
+                for (int j : *g)
+                  if (i!=j)
+                    E.col(i)+=base::pairpot.field(p[j],base::geo.vdist(p[i],p[j]));
           }
       };
 
@@ -696,7 +739,7 @@ namespace Faunus {
           using namespace Faunus::textio;
           std::ostringstream o;
           o << pad(SUB,30,"Look for group-group bonds:")
-            << (CrossGroupBonds ? "yes (slow)" : "no (faster)") << endl << endl
+            << std::boolalpha << CrossGroupBonds << endl
             << indent(SUBSUB) << std::left
             << setw(7) << "i" << setw(7) << "j" << endl;
           return o.str() + _infolist;
@@ -839,6 +882,12 @@ namespace Faunus {
             force_list[ typename Tbase::Tpair(i,j) ]
               = ForceFunctionObject<decltype(pot)>(pot);
           }
+
+        /* uncommented due to gcc 4.6
+        auto getBondList() -> decltype(this->list) {
+          return Tbase::getBondList();
+        }
+        */
     };
 
     /**
@@ -948,6 +997,13 @@ namespace Faunus {
             for (auto i : g)
               u+=p_external(p[i]);
             return u;
+          }
+
+          /** @brief Field on all particles due to external potential */
+          void field(const typename base::Tpvec &p, Eigen::MatrixXd &E) FOVERRIDE {
+            assert((int)p.size()==E.cols());
+            for (size_t i=0; i<p.size(); i++)
+              E.col(i) += expot.field(p[i]);
           }
       };
 

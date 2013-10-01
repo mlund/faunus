@@ -124,22 +124,13 @@ namespace Faunus {
       return operator<<(i);
     }
 
-    /**
-     * @brief Transform point (rotation etc)
-     * @param rot Functor that rotates a point and returns the rotated Point
-     *
-     * The functor should take care of simulation boundaries (if any) and typically one
-     * would want to pass the Geometry::VectorRotate class as in the following example:
-     * @code
-     * Point a(1,0,0);
-     * QuaternionRotate rotator;
-     * rotator.setAxis(geometry, Point(0,0,0), Point(0,0,1), 3.14 ); // rotate pi around 0,0,1
-     * a.rotate(rotator);
-     * @endcode
+    /*
+     * @brief Internal rotation. No effect on isotropic particle.
      */
     template<typename Trotator>
       void rotate(const Trotator &rot) {
       }
+
   };
 
   template<class T>
@@ -193,7 +184,7 @@ namespace Faunus {
 
       template<typename Trotator>
         void rotate(const Trotator &rot) { *this = rot(*this); }
-        
+
       void eye() { *this = Tmat::Identity(3,3); }
     };
 
@@ -451,14 +442,13 @@ namespace Faunus {
    * @brief Dipolar particle
    */
   struct DipoleParticle : public PointParticle {
-    Point mu;               //!< Dipole moment unit vector
-    double muscalar;        //!< Dipole moment scalar
-    Point mup;              //!< Permanente Dipole moment vector
-    Tensor<double> alpha;         //!< Polarization matrix
-    Tensor<double> theta;         //!< Quadrupole matrix
+    Point mu;               //!< Dipole moment unit vector (permanent+induced)
+    double muscalar;        //!< Dipole moment scalar (permanent+induced)
+    Point mup;              //!< Permanent dipole moment vector
+    Tensor<double> alpha;   //!< Polarization matrix
+    Tensor<double> theta;   //!< Quadrupole matrix
 
-    inline DipoleParticle() : mu(0,0,0), muscalar(0),mup(0,0,0) {
-    };
+    inline DipoleParticle() : mu(0,0,0), muscalar(0),mup(0,0,0) {};
 
     /** @brief Copy constructor for Eigen derivatives */
     template<typename OtherDerived>
@@ -509,6 +499,9 @@ namespace Faunus {
       return o;
     }
 
+    /**
+     * @brief Internal rotation: dipole and polarizability
+     */
     template<typename Trotator>
       void rotate(const Trotator &rot) {
         assert(rot.getOrigin().squaredNorm()<1e-6);
@@ -560,10 +553,10 @@ namespace Faunus {
         class = typename std::enable_if<std::is_base_of<AtomData,T>::value>::type> 
           CigarParticle& operator=(const T &d) {
             PointParticle::operator=(d);
-              halfl = d.half_len;
-              patchangle = d.pangl;
-              pcanglsw = std::cos(0.5*d.pangl + d.panglsw);
-              pcangl = std::cos(0.5*d.pangl);
+            halfl = d.half_len;
+            patchangle = d.pangl;
+            pcanglsw = std::cos(0.5*d.pangl + d.panglsw);
+            pcangl = std::cos(0.5*d.pangl);
             return *this;
           }
 
@@ -576,8 +569,7 @@ namespace Faunus {
             patchsides[0] = rot(patchsides[0]);
             patchsides[1] = rot(patchsides[1]);
             chdir = rot(chdir);
-          } else
-            Point::rotate(rot);
+          }
         }
 
       /* read in same order as written! */

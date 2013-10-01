@@ -579,15 +579,21 @@
 		730471C016B72E1200A191AE /* UmfPackSupport */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = UmfPackSupport; sourceTree = "<group>"; };
 		730471C116B72E1200A191AE /* VERSION */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = VERSION; sourceTree = "<group>"; };
 		730471C216B72E1200A191AE /* signature_of_eigen3_matrix_library */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = signature_of_eigen3_matrix_library; sourceTree = "<group>"; };
+		730721CB17D7C832000EC96F /* bulk.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = bulk.cpp; path = ../../src/examples/bulk.cpp; sourceTree = "<group>"; };
+		730721CC17D7C832000EC96F /* cigars2fibrils.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = cigars2fibrils.cpp; path = ../../src/examples/cigars2fibrils.cpp; sourceTree = "<group>"; };
+		730721CD17D7C832000EC96F /* cigarsenergy.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = cigarsenergy.cpp; path = ../../src/examples/cigarsenergy.cpp; sourceTree = "<group>"; };
+		730721CE17D7C832000EC96F /* grand.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = grand.cpp; path = ../../src/examples/grand.cpp; sourceTree = "<group>"; };
+		730721CF17D7C832000EC96F /* minimal.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = minimal.cpp; path = ../../src/examples/minimal.cpp; sourceTree = "<group>"; };
+		730721D017D7C832000EC96F /* slitpolymer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = slitpolymer.cpp; path = ../../src/examples/slitpolymer.cpp; sourceTree = "<group>"; };
+		730721D117D7C832000EC96F /* stockmayer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = stockmayer.cpp; path = ../../src/examples/stockmayer.cpp; sourceTree = "<group>"; };
+		730721D217D7C832000EC96F /* temper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = temper.cpp; path = ../../src/examples/temper.cpp; sourceTree = "<group>"; };
+		730721D317D7C832000EC96F /* unittests.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = unittests.cpp; path = ../../src/examples/unittests.cpp; sourceTree = "<group>"; };
+		730721D417D7C832000EC96F /* water.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = water.cpp; path = ../../src/examples/water.cpp; sourceTree = "<group>"; };
+		730721D517D7C832000EC96F /* water2.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = water2.cpp; path = ../../src/examples/water2.cpp; sourceTree = "<group>"; };
 		7316FA2C15C546A30024F084 /* textio.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = textio.h; sourceTree = "<group>"; };
 		7316FA2F15C546B20024F084 /* mpi.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = mpi.h; sourceTree = "<group>"; };
 		7316FA3115C546E90024F084 /* mpi.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mpi.cpp; path = ../../src/mpi.cpp; sourceTree = "<group>"; };
 		7316FA3215C546E90024F084 /* textio.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = textio.cpp; path = ../../src/textio.cpp; sourceTree = "<group>"; };
-		7316FA3915C55A540024F084 /* developer.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; name = developer.html; path = ../../doc/homepage/developer.html; sourceTree = "<group>"; };
-		7316FA3A15C55A540024F084 /* download.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; name = download.html; path = ../../doc/homepage/download.html; sourceTree = "<group>"; };
-		7316FA3B15C55A540024F084 /* help.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; name = help.html; path = ../../doc/homepage/help.html; sourceTree = "<group>"; };
-		7316FA3C15C55A540024F084 /* index.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; name = index.html; path = ../../doc/homepage/index.html; sourceTree = "<group>"; };
-		7316FA3D15C55A550024F084 /* programs.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; name = programs.html; path = ../../doc/homepage/programs.html; sourceTree = "<group>"; };
 		7316FA5515C56BA10024F084 /* analysis.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = analysis.cpp; path = ../../src/analysis.cpp; sourceTree = "<group>"; };
 		7316FA5715C56BC10024F084 /* analysis.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = analysis.h; sourceTree = "<group>"; };
 		738C132613FB12B30056EF71 /* libfaunus.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libfaunus.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -617,18 +623,16 @@
 		73E9C83515CC6A70001D5654 /* polymers.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = polymers.cpp; path = ../../../src/examples/polymers.cpp; sourceTree = "<group>"; };
 		73E9C83B15CC6B1D001D5654 /* polymers */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = polymers; sourceTree = BUILT_PRODUCTS_DIR; };
 		8B6B1C781797F26F00FDF9F4 /* manybody.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = manybody.cpp; path = ../../src/examples/manybody.cpp; sourceTree = "<group>"; };
-		8B6B1C7A1797F2B700FDF9F4 /* json.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = json.h; sourceTree = "<group>"; };
+		8B6B1C7A1797F2B700FDF9F4 /* json.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = json.h; sourceTree = "<group>"; };
 		8B6B1C7B1797F2B800FDF9F4 /* range.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = range.h; sourceTree = "<group>"; };
 		8B6B1C7C1797F2B800FDF9F4 /* scatter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = scatter.h; sourceTree = "<group>"; };
 		8B6B1C8017984C0800FDF9F4 /* titrate.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = titrate.cpp; path = ../../src/examples/titrate.cpp; sourceTree = "<group>"; };
 		8B6B1C821799B91F00FDF9F4 /* membrane.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = membrane.cpp; path = ../../src/examples/membrane.cpp; sourceTree = "<group>"; };
 		8B9277491684A3E7003BD642 /* cluster.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = cluster.cpp; sourceTree = "<group>"; };
 		8B92774A1684A3E7003BD642 /* cluster.run */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = cluster.run; sourceTree = "<group>"; };
-		8B969DDA166CDA09004248C1 /* membrane-temper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = "membrane-temper.cpp"; path = "../../src/playground/mlund/membrane-temper.cpp"; sourceTree = "<group>"; };
 		8B9D16DC166CA22A00E7C7D4 /* titrate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = titrate.h; sourceTree = "<group>"; };
 		8BA8481F16E4F579006EE6F6 /* ewald.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ewald.h; sourceTree = "<group>"; };
 		8BA8482116E4F589006EE6F6 /* spherocylinder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = spherocylinder.h; sourceTree = "<group>"; };
-		8BABBCC1166C9EA300C223CC /* membrane.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = membrane.cpp; path = ../../src/playground/mlund/membrane.cpp; sourceTree = "<group>"; };
 		8BB0BCB0170B2CF300467E2D /* multipole.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = multipole.h; sourceTree = "<group>"; };
 		8BB0BCB1170B2CF300467E2D /* tabulate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tabulate.h; sourceTree = "<group>"; };
 		8BE1FA9E165A9780001073CC /* auxiliary.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = auxiliary.h; sourceTree = "<group>"; };
@@ -666,6 +670,17 @@
 		2ADE665B170DCE3700519B6C /* examples */ = {
 			isa = PBXGroup;
 			children = (
+				730721CB17D7C832000EC96F /* bulk.cpp */,
+				730721CC17D7C832000EC96F /* cigars2fibrils.cpp */,
+				730721CD17D7C832000EC96F /* cigarsenergy.cpp */,
+				730721CE17D7C832000EC96F /* grand.cpp */,
+				730721CF17D7C832000EC96F /* minimal.cpp */,
+				730721D017D7C832000EC96F /* slitpolymer.cpp */,
+				730721D117D7C832000EC96F /* stockmayer.cpp */,
+				730721D217D7C832000EC96F /* temper.cpp */,
+				730721D317D7C832000EC96F /* unittests.cpp */,
+				730721D417D7C832000EC96F /* water.cpp */,
+				730721D517D7C832000EC96F /* water2.cpp */,
 				8B6B1C781797F26F00FDF9F4 /* manybody.cpp */,
 				8B6B1C821799B91F00FDF9F4 /* membrane.cpp */,
 				8B6B1C8017984C0800FDF9F4 /* titrate.cpp */,
@@ -1220,11 +1235,6 @@
 		7316FA3E15C55A640024F084 /* homepage */ = {
 			isa = PBXGroup;
 			children = (
-				7316FA3915C55A540024F084 /* developer.html */,
-				7316FA3A15C55A540024F084 /* download.html */,
-				7316FA3B15C55A540024F084 /* help.html */,
-				7316FA3C15C55A540024F084 /* index.html */,
-				7316FA3D15C55A550024F084 /* programs.html */,
 			);
 			name = homepage;
 			sourceTree = "<group>";
@@ -1378,8 +1388,6 @@
 		8BABBCC4166C9EAB00C223CC /* playground-mlund */ = {
 			isa = PBXGroup;
 			children = (
-				8B969DDA166CDA09004248C1 /* membrane-temper.cpp */,
-				8BABBCC1166C9EA300C223CC /* membrane.cpp */,
 			);
 			name = "playground-mlund";
 			sourceTree = "<group>";
@@ -1913,6 +1921,11 @@
 					../../include/eigen3,
 				);
 				INCLUDED_RECURSIVE_SEARCH_PATH_SUBDIRECTORIES = "";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../../src\"",
+					"\"$(SRCROOT)/../../src/xdrfile\"",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "";
 			};
@@ -1950,6 +1963,11 @@
 					../../include/eigen3,
 				);
 				INCLUDED_RECURSIVE_SEARCH_PATH_SUBDIRECTORIES = "";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../../src\"",
+					"\"$(SRCROOT)/../../src/xdrfile\"",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "";
 			};

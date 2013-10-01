@@ -18,6 +18,10 @@ set_target_properties(unittests PROPERTIES EXCLUDE_FROM_ALL false)
 fau_example(example_minimal "./" minimal.cpp)
 set_target_properties(example_minimal PROPERTIES OUTPUT_NAME "minimal")
 
+fau_example(example_grand "./" grand.cpp)
+set_target_properties(example_grand PROPERTIES OUTPUT_NAME "grand")
+add_test( example_grand python ${CMAKE_CURRENT_SOURCE_DIR}/grand.py )
+
 fau_dipoleexample(example_stockmayer "./" stockmayer.cpp)
 fau_dipoleexample(example_stockmayer_polarizable "./" stockmayer.cpp)
 set_target_properties(example_stockmayer PROPERTIES OUTPUT_NAME "stockmayer" EXCLUDE_FROM_ALL FALSE)
@@ -43,6 +47,14 @@ add_test( example_membrane ${CMAKE_CURRENT_SOURCE_DIR}/membrane.run )
 fau_example(example_bulk "./" bulk.cpp)
 set_target_properties(example_bulk PROPERTIES OUTPUT_NAME "bulk")
 add_test( example_bulk ${CMAKE_CURRENT_SOURCE_DIR}/bulk.run )
+
+fau_example(example_bulk_coulomb "./" bulk.cpp)
+set_target_properties(example_bulk_coulomb PROPERTIES OUTPUT_NAME "bulk_coulomb" EXCLUDE_FROM_ALL TRUE)
+set_target_properties(example_bulk_coulomb PROPERTIES COMPILE_DEFINITIONS "COULOMB")
+
+fau_example(example_bulk_dh "./" bulk.cpp)
+set_target_properties(example_bulk_dh PROPERTIES OUTPUT_NAME "bulk_dh" EXCLUDE_FROM_ALL TRUE)
+set_target_properties(example_bulk_dh PROPERTIES COMPILE_DEFINITIONS "DEBYEHUCKEL")
 
 fau_example(example_water "./" water.cpp)
 set_target_properties(example_water PROPERTIES OUTPUT_NAME "water")

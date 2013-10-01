@@ -114,16 +114,17 @@ int main(int argc, char** argv) {
             for (auto &i : pol)
               cm_vec.push_back(i.cm);
             debye.sample(cm_vec,spc.geo.getVolume());
-            debye2.sampleg2g(spc.p,spc.groupList());
+            //debye2.sampleg2g(spc.p,spc.groupList());
 
             if (mpi.isMaster())
               if (cmfile) {
-                cmfile << cm_vec.size() << endl << "cm" << endl;
+                cmfile << cm_vec.size() << "\n" << "cm" << "\n";
                 for (auto &m : cm_vec)
-                  cmfile << "H " << ((m+spc.geo.len_half)/10).transpose() << endl;
+                  cmfile << "H " << ((m+spc.geo.len_half)/10).transpose() << "\n";
               }
               if (energyfile)
-                energyfile << loop.count() << " " << sys.current() << " " << std::cbrt(spc.geo.getVolume()) << "\n";
+                energyfile << loop.count() << " " << sys.current()
+                  << " " << std::cbrt(spc.geo.getVolume()) << "\n";
           }
           break;
         case 2: // volume move (NPT)

@@ -148,6 +148,8 @@ int main() {
  - polymer crankshaft and pivot rotations
  - isobaric volume move (NPT ensemble)
 
+ ![Hardsphere polyelectrolytes with counter ions](polymers.png)
+
  Run this example from the `examples` directory:
 
  ~~~~~~~~~~~~~~~~~~~

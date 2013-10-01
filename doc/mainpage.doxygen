@@ -8,16 +8,18 @@ ____
 Table of contents
 =================
 
-- [Quick Overview / Readme](md_README.html)
+- [Overview / Readme](md_README.html)
 - @ref license
 - Getting Started
   - @ref downloadbuild
   - @ref linkingyourown
   - @ref importantclasses
-- Tutorials
+- Examples
   - @ref example_minimal 
   - @ref example_bulk 
+  - @ref example_grand 
   - @ref example_water
+  - @ref example_water2
   - @ref example_polymers
   - @ref example_temper   
   - @ref example_slitpolymer
@@ -27,14 +29,14 @@ Table of contents
   - @ref guidelines
   - @ref todo
 
-@page downloadbuild Getting and building Faunus
+@page downloadbuild Downloading and building Faunus
 
 System Requirements
 ===================
 
-Faunus will compile in any unix-like environment including Linux, MacOS,
-and most probably also under Cygwin on Windows. The following are the
-minimum requirements:
+Faunus should compile in any unix-like environment including Linux, MacOS,
+and most probably also under Cygwin on Windows. The minimum requirements
+are:
 
 - [CMake 2.8+](http://www.cmake.org)
 - C++11 compliant compiler
@@ -43,32 +45,30 @@ For more advanced features you may also need:
 
 - MPI (mpich, openmpi)
 - Openbabel
-- Python
-- Swig
 - Doxygen
 
 Most major compilers support the C++11 features used in Faunus and for debugging and
-development we recommend the clang compiler whereas for speedy production runs,
+development, the clang compiler is recommended whereas for speedy production runs,
 gcc and intel are probably preferable. Below is a list of compilers, known to
 work:
 
 Compiler       | Version        | Comment
 :------------- | :-----------   | :----------
-GCC            | (4.6), 4.7     | Good optimization
-Clang          | 3.1            | Good warning/error info, slower code
-Intel Composer | 13             | Pedantic warnings, good optimization
+GCC            | (4.6), 4.7+    | Good optimization
+Clang          | 3.1+           | Good warning/error info, slower code
+Intel Composer | 13+            | Pedantic warnings, good optimization
 
 
 Getting the source code
 =======================
 
-Faunus is hosted on GitHub and can be downloaded by cloning
-the main repository:
+Faunus is hosted on GitHub (http://github.com/mlund/faunus) and can be downloaded
+by cloning the main repository:
 
     git clone https://github.com/mlund/faunus.git
 
-If you intend to change and contribute to the project, you should instead
-make a *fork* as explained [here](http://help.github.com/articles/fork-a-repo).
+If you intend to change and contribute to the project, consider making
+a *fork* as explained in the [development guidelines](@ref guidelines).
 
 
 Compiling
@@ -77,28 +77,29 @@ Compiling
 Using the default compiler
 --------------------------
 
-If you think your system compiler is up to date, simply do:
+Assuming the default compiler meets the minimum requirements,
+simply do:
 
     $ cd faunus
     $ cmake . [options]
     $ make
 
 All available build options are listed in the [README](@ref compiling)
-file so let's just give a single example:
+file - for example,
 
     $ cmake . -DENABLE_MPI=on -DCMAKE_BUILD_TYPE=Release
 
-If you have installed `ccmake` you can also control the build setting from a text based
-interface:
+If you have installed `ccmake` you can also control the build settings
+from a text based interface:
 
     $ ccmake .
 
 Using a custom compiler
 -----------------------
 
-For compilers in a non-standard locations or when multiple compilers
+For compilers in non-standard locations or when multiple compilers
 are installed, use the `CXX` and `CC` shell variables to guide cmake to
-your desired compiler. For example:
+the desired compiler. For example:
 
     $ rm -f CMakeCache.txt (if any)
     $ export CXX=/opt/local/bin/g++
@@ -127,8 +128,9 @@ if everything works as expected:
     $ make
     $ make test
 
-If a test fails, it does not necessarily mean that all is horribly wrong. The tests compare numerics from simulations
-run on different systems and especially small differences in energy drifts (very small numbers) may cause a test to fail.
+If a test fails, it does not necessarily mean that all is horribly wrong.
+The tests compare numerics from simulations run on different systems and especially small
+differences in energy drifts (very small numbers) may cause a test to fail.
 To get verbose output from the tests, run:
 
     $ ctest -V
@@ -198,8 +200,8 @@ Place both in a fresh directory and do:
 3. Using manual linking
 -----------------------
 
-Linking can of course be done in the more traditional way by
-compiling your program with `libfaunus`. For example:
+Linking can also be done in the more traditional way by
+compiling with `libfaunus`. For example:
 
     $ export faunus=$HOME/faunus
     $ c++ hello.cpp $faunus/src/libfaunus.so -I$faunus/include
@@ -210,13 +212,13 @@ compatible with your `libfaunus` build.
 
 @page importantclasses Important Classes
 
-A good place to start is to understand the following classes. Also, for a more grouped overview do have
-a look at the Namespace list.
+A good place to start is to understand the following classes. Also, for a more grouped
+overview do have a look at the Namespace list.
 
 - Faunus::Point and derived classes.
-  - All particles in Faunus are based on a 3D vector, Point, which in turn is based on the excellent
+  - All particles in Faunus are based on a 3D vector, Point, which in turn is based on the 
     Eigen library, <http://http://eigen.tuxfamily.org>. This means you have access
-    to a wide range of powerful vector and matrix operations including geometric functions, much
+    to a range of vector and matrix operations including geometric functions, much
     in the spirit of Numpy in Python.
     The class Faunus::Space is responsible for storing all particles in a STL vector.
 
@@ -228,16 +230,17 @@ a look at the Namespace list.
   - Derived classes define the simulation geometry (box, sphere, cylinder etc.) and take care
     of distance calculations as well as boundary conditions.
 
+- Faunus::Space
+  - This is central to any simulation and contains the particles as well
+    as the geometry. Space also knows about all groups in the system.
+
 - Faunus::Group and derived classes
   - Simply defines a continuous range of particles in the Faunus::Space::p particle vector.
     Useful for defining molecules, salt groups etc. Groups contain functions for describing how to
     perform geometric operations (translate, rotate).
 
-- Faunus::Energy::Hamiltonian
-  - Sums interaction energies from multiple origins - bonded, non-bonded, external etc.
-
 - Faunus::Move::Movebase
-  - All Monte Carlo moves are based in this class which is responsible for making the
+  - All Monte Carlo moves are based on this class which is responsible for making a MC
     move, calculating the energy difference, accepting/rejecting as well as collecting
     statistics. Derived classes are forced to obey certain rules which leads to an
     almost identicaly interface for all MC moves.
@@ -285,10 +288,10 @@ Some good books on C++ design,
 A few basic tips,
 
 - Generously use C++'s [assert()](http://www.cplusplus.com/reference/clibrary/cassert/assert)
-  command to easy debugging
+  command to ease debugging
 - Recycle code with polymorphic designs
 - Use compile-time polymophism (templates) for speed limiting steps
-- Exploit STL libraries and C++11 features
+- Exploit the STL library as much as possible
 - Hide data and functions as much as possible (i.e. make them private)
 - Stride for [const-correctness](http://en.wikipedia.org/wiki/Const-correctness)
 - Treat compiler warnings as errors
@@ -307,12 +310,6 @@ Before submitting changes, please make sure nothing is broken:
 
     $ make all
     $ make manual
-    $ make test
-
-Also try to verify SWIG modules:
-
-    $ cmake -DENABLE_SWIG=on
-    $ make _pyfaunus
     $ make test
 
 @page license License

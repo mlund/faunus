@@ -7,8 +7,8 @@ using namespace Faunus;
  *
  * More information: doi:10/chqzjk
  */
-template<class Tbonded, class Tnonbonded, class Tlipid, class Tinput>
-void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &bond, Tnonbonded &nb, Tinput &in) {
+template<class Tbonded, class Tpotmap, class Tlipid, class Tinput>
+void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &b, Tpotmap &m, Tinput &in) {
 
   using namespace Potential;
 
@@ -18,24 +18,18 @@ void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &bond, Tnonbonded &nb, Tin
   double sigma   = in("lipid_sigma", 10);  // angstrom
   double epsilon = in("lipid_epsilon", 1); // kT
 
-  auto headhead = WeeksChandlerAndersen(in) + DebyeHuckel(in);
-  auto tailtail = WeeksChandlerAndersen(in) + CosAttract(in);
-  auto headtail = WeeksChandlerAndersen(in) + ChargeNonpolar(in);
+  WeeksChandlerAndersen WCA(in);
+  WCA.customSigma(hid, hid, 0.95*sigma);            
+  WCA.customSigma(hid, tid, 0.95*sigma);            
+  WCA.customSigma(tid, tid, sigma);                 
+  WCA.customEpsilon(hid, hid, epsilon);             
+  WCA.customEpsilon(hid, tid, epsilon);             
+  WCA.customEpsilon(tid, tid, epsilon);   
 
-  // initialize WCA for head-head
-  headhead.first.customSigma(hid, hid, 0.95*sigma);            
-  headhead.first.customSigma(hid, tid, 0.95*sigma);            
-  headhead.first.customSigma(tid, tid, sigma);                 
-  headhead.first.customEpsilon(hid, hid, epsilon);             
-  headhead.first.customEpsilon(hid, tid, epsilon);             
-  headhead.first.customEpsilon(tid, tid, epsilon);   
-
-  tailtail.first=headhead.first;      // copy initialized WCA to tail-tail and
-  headtail.first=headhead.first;      // head-tail pair potential
-
-  nb.pairpot.add(hid, hid, headhead); // Add to main pair potential
-  nb.pairpot.add(tid, tid, tailtail);
-  nb.pairpot.add(hid, tid, headtail);
+  // Add to main potential
+  m.add(hid, hid, WCA + DebyeHuckel(in) );
+  m.add(tid, tid, WCA + CosAttract(in) );
+  m.add(hid, tid, WCA + ChargeNonpolar(in) );
 
   // bonded interactions
   double headtail_k=0.5*10*epsilon/(sigma*sigma);
@@ -45,10 +39,10 @@ void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &bond, Tnonbonded &nb, Tin
 
   assert(lipid.size() % 3 == 0);
 
-  for (int i=lipid.front(); i<lipid.back(); i+=3) {
-    bond.add(i,  i+1, FENE(fene_k,fene_rmax) );
-    bond.add(i+1,i+2, FENE(fene_k,fene_rmax) );
-    bond.add(i,  i+2, Harmonic(headtail_k,headtail_req) );
+  for (auto i=lipid.front(); i<lipid.back(); i+=3) {
+    b.add(i,  i+1, FENE(fene_k,fene_rmax) );
+    b.add(i+1,i+2, FENE(fene_k,fene_rmax) );
+    b.add(i,  i+2, Harmonic(headtail_k,headtail_req) );
   }
 }
 
@@ -95,7 +89,7 @@ int main() {
   // Set up bonded and non-bonded interactions
   Group allLipids(lipids.front().front(), lipids.back().back());
   allLipids.setMolSize(3);
-  MakeDesernoMembrane(allLipids, *bonded, *nonbonded, mcp);
+  MakeDesernoMembrane(allLipids, *bonded, nonbonded->pairpot, mcp);
 
   // Place all lipids in xy plane (z=0);
   for (auto &g : lipids) {
@@ -155,7 +149,7 @@ int main() {
         xtc.save("traj.xtc", spc.p);
       }
       if (ran>0.90) {
-        virial.sample(spc.geo, pot, spc.p);
+        virial.sample(spc, pot);
         lipidstruct.sample(spc.geo, spc.p, allLipids);
       }
 
@@ -189,7 +183,7 @@ int main() {
 /** @page example_membrane Example: Membrane Bilayer
 
   This will simulate a 3-bead coarse grained membrane according to
-  Cooke and Deserno (doi:10/chqzjk). Each bead interacts with a
+  [Cooke and Deserno](http://dx.doi.org/10/chqzjk). Each bead interacts with a
   Weeks-Chandler-Andersen potential, while tail-tail interactions
   have an additional long range attractive potential. There is preliminary
   support for charged head groups (effect on elastic properties is unknown).

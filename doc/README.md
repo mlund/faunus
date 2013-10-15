@@ -91,6 +91,10 @@ Ondrej Marsalek     Christophe Labbez     Andre Teixeira
 Citing Faunus
 =============
 
+- Stenqvist et al.
+  _Molecular Simulation 2013_
+  [[DOI]](http://dx.doi.org/10/nvn)
+
 - Lund, M., Persson, B., Trulsson, M.
   _Source Code Biol. Med., 2008, 3:1_
   [[DOI]](http://dx.doi.org/10/dfqgch)

@@ -12,6 +12,13 @@ function( fau_dipoleexample tname tdir tsrc )
            PATTERN ".svn" EXCLUDE)
 endfunction( fau_dipoleexample )
 
+# Bosse's playground
+fau_example(boj-grand "./bosse" grand.cpp)
+
+# Bearnix playground
+fau_example(bearnix-cyl "./bearnix" cyl.cpp)
+
+
 # Mikael's playground
 fau_example(mlund-cosan "./mlund" cosan.cpp)
 fau_example(mlund-angular "./mlund" angular.cpp)

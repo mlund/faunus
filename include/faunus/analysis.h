@@ -83,8 +83,8 @@ namespace Faunus {
       private:
 
         typedef Eigen::Matrix3d Ttensor;
-        Ttensor T;         // excess pressure tensor
-        double Pid;        // ideal pressure
+        Ttensor T;           // excess pressure tensor
+        Average<double> Pid; // ideal pressure
 
         inline string _info() {
           using namespace Faunus::textio;
@@ -100,7 +100,7 @@ namespace Faunus {
 #else
             vector<string> id = {"Ideal", "Excess", "Total"};
 #endif
-            P[0] = Pid;             // ideal
+            P[0] = Pid.avg();       // ideal
             P[1] = (T/cnt).trace(); // excess
             P[2] = P[0] + P[1];     // total
 
@@ -163,6 +163,7 @@ namespace Faunus {
           T.setZero();
         }
 
+        /*! @brief Ignore internal pressure in molecular groups (default: false) */
         bool noMolecularPressure;
 
         template<class Tspace, class Tpotential>
@@ -192,7 +193,7 @@ namespace Faunus {
 
             // add to grand avarage
             T += t/(d*V);
-            Pid = N/V;
+            Pid += N/V;
           }
     };
 

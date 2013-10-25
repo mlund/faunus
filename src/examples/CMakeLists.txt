@@ -66,9 +66,9 @@ add_test( example_water2 ${CMAKE_CURRENT_SOURCE_DIR}/water2.run )
 
 
 fau_cigarexample(example_cigarsenergy "./" cigarsenergy.cpp)
-set_target_properties(example_cigarsenergy PROPERTIES OUTPUT_NAME "cigarsenergy"EXCLUDE_FROM_ALL FALSE)
+set_target_properties(example_cigarsenergy PROPERTIES OUTPUT_NAME "cigarsenergy" EXCLUDE_FROM_ALL FALSE)
 add_test( example_cigarsenergy ${CMAKE_CURRENT_SOURCE_DIR}/cigarsenergy.run )
 
 fau_cigarexample(example_cigars2fibrils "./" cigars2fibrils.cpp)
-set_target_properties(example_cigars2fibrils PROPERTIES OUTPUT_NAME "cigars2fibrils"EXCLUDE_FROM_ALL FALSE)
+set_target_properties(example_cigars2fibrils PROPERTIES OUTPUT_NAME "cigars2fibrils" EXCLUDE_FROM_ALL FALSE)
 

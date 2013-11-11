@@ -12,7 +12,7 @@ Except the pKa for O-phospho-L-serine (pSE), taken from Zachariou_1996_JPC_100_1
 #
 __author__  = "Joao Henriques"
 __email__   = "joao.henriques@teokem.lu.se"
-__date__    = "2013.11.06"
+__date__    = "2013.11.11"
 __status__  = "Production"
 #
 """
@@ -52,6 +52,10 @@ dict={'ALA' :[ 0, 71 , "True" ],
       'HCTR':[ 0, 16 , "False"],
       'NTR' :[ 0, 14 , "False", 8.6 ],
       'HNTR':[ 1, 14 , "False"]}
+#
+def Usage():
+    print "\nTo produce a JSON file: \n\t%s json <protein density, g/L> <pH value>" %(sys.argv[0])
+    print "\nTo produce a AAM file : \n\t%s aam <input file, fasta format> <protein density, g/L>\n" %(sys.argv[0])
 #
 def readFasta(file):
     """
@@ -128,9 +132,12 @@ def writeAAM(list, dict, density):
         i+=4.9
 #
 if __name__=="__main__":
-    if sys.argv[1].lower()=='json':
-        writeJSON(dict, sys.argv[2], sys.argv[3])
-    elif sys.argv[1].lower()=="aam":
-        writeAAM(readFasta(sys.argv[2]), dict, sys.argv[3])
+    if len(sys.argv[:]) > 1:
+        if sys.argv[1].lower()=='json':
+            writeJSON(dict, sys.argv[2], sys.argv[3])
+        elif sys.argv[1].lower()=="aam":
+            writeAAM(readFasta(sys.argv[2]), dict, sys.argv[3])
+        else:
+            Usage()
     else:
-        print "\nYou're doing something wrong!\n"
+        Usage()

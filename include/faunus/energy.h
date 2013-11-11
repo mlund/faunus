@@ -1016,6 +1016,14 @@ namespace Faunus {
      * Mainly for use with free energy vs. surface distance simulations, where the the surface is too attractive and prevents
      * correct sampling. Can also be used to restrain the mass center of a group to a subset of the simulation cell volume in 
      * other type of systems.
+     *
+     * The InputMap parameters are:
+     *
+     * Key                | Description
+     * :----------------- | :---------------------------
+     * `bin_min`          | Lower limit (always positive, i.e. from 0 to `cuboid_zlen`), [angstrom]
+     * `bin_max`          | Higher limit (from `bin_min` to `cuboid_zlen`), [angstrom]
+     *
      */
     template<class Tspace>
       class MassCenterRestrain : public Energybase<Tspace> {

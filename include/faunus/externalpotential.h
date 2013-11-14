@@ -337,6 +337,73 @@ namespace Faunus {
             Point field(const Tparticle &p) { return E; }
       };
 
+    /**
+     * @brief Hydrophobic wall square well potential
+     * @author Joao Henriques
+     * @date Lund, 2013
+     *
+     * This (external) potential class is used to simulate hydrophobic interactions between 
+     * particle(s) and a surface, using a simple square well potential. Surface position must 
+     * be specified in the program even if one has already done it for the Gouy-Chapman 
+     * potential (both classes inherit from ExternalPotentialBase<> but are for the most part
+     * independent).
+     *
+     * See doi:10.1021/la300892p for more details on the method.
+     *
+     * The InputMap parameters are:
+     *
+     * Key                | Description
+     * :----------------- | :---------------------------
+     * `sqwl_depth`       | Depth, \f$\epsilon\f$ [kT] (positive number)
+     * `sqwl_threshold    | Threshold, [angstrom] (particle center-to-wall distance)
+     *
+     */
+    template<class T=double>
+    class HydrophobicWall : public ExternalPotentialBase<> {
+    private:
+      T _depth;
+      T _threshold;
+      std::string _info();
+    public:
+      HydrophobicWall(InputMap&);
+      void setSurfPositionZ(T*);        // sets position of surface
+      template<typename Tparticle>
+      T operator()(const Tparticle &p); // returns energy
+    };
+
+    template<class T>
+    HydrophobicWall<T>::HydrophobicWall(InputMap &in) {
+      string prefix = "sqwl_";
+      name          = "Hydrophobic Wall";
+      _depth        = in.get<double>(prefix + "depth");     // defaults to zero
+      _threshold    = in.get<double>(prefix + "threshold"); // defaults to zero
+    }
+
+    template<class T>
+    void HydrophobicWall<T>::setSurfPositionZ(T* z) {
+        this->setCoordinateFunc
+          (
+           [=](const Point &p) { return std::abs(*z-p.z()); }
+          ); // c++11 lambda
+    }
+
+    template<class T>
+    template<typename Tparticle>
+    T HydrophobicWall<T>::operator()(const Tparticle &p) {
+      if (p.hydrophobic)
+        if (this->p2c(p) < _threshold)
+          return -_depth;
+      return 0;
+    }
+
+    template<class T>
+    std::string HydrophobicWall<T>::_info() {
+      char w = 30;
+      std::ostringstream o;
+      o << pad(textio::SUB,25,"Threshold") << _threshold << textio::_angstrom << " (particle - wall distance)" << endl
+	<< pad(textio::SUB,25,"Depth")     << _depth     << textio::kT << endl;
+      return o.str();
+    }
   } //namespace
 } //namespace
 #endif

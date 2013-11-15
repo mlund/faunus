@@ -246,11 +246,22 @@ namespace Faunus {
       return W*muAxmuB;  // e^2 Å^2 Å ^-3 = e^2 /A
     }
 
-  class WolfDipoleDipole {
+  /**
+   * @brief Base class for Wolf based interactions
+   *
+   * The idea is that this class has no dependencies and is
+   * to be used as a helper class for other classes.
+   */
+  class WolfBase {
     private:
       double rc1i_d, rc3i_d, rc4i_d, rc1i, rc2i, expKc, kappa, kappa2;
     public:
-      WolfDipoleDipole(double alpha, double rcut) {
+      /**
+       * @brief Constructor
+       * @param alpha Dampening factor (inverse angstrom)
+       * @param rcut Cutoff distance (angstrom)
+       */
+      WolfBase(double alpha, double rcut) {
         kappa = alpha;
         kappa2 = kappa*kappa;
         rc1i = 1/rcut;
@@ -261,21 +272,31 @@ namespace Faunus {
         rc4i_d = 2*expKc*((kappa2*kappa2/(3*rc1i)) + (kappa2*rc1i/3) + (rc1i*rc2i/2)) + rc1i_d*rc1i*rc2i;
       }
 
+      /**
+       * @brief Dipole-dipole energy
+       * @param muA Dipole moment (A) unit vector
+       * @param muB Dipole moment (B) unit vector
+       * @param muAxMuB Product of dipole moment scalars, |A|*|B|
+       * @param r_ab Vector A to B
+       * @param r1i inverse length of `r_ab`
+       * @param r2i inverer length of `r_ab` squared
+       * @returns energy in `kT/lB`
+       */
       template<class Tvec>
-        double energy(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r_ab, double r1i, double r2i) const {
-          if(r2i < rc2i)
+        double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r_ab, double r1i, double r2i) const {
+          if (r2i < rc2i)
             return 0;
-          Point r = r_ab*r1i;
+          Tvec r = r_ab*r1i;
           double r1i_d = erfc_x(kappa/r1i)*r1i;
-          double expK = 2*kappa*exp(-kappa2/r2i)/sqrt(pc::pi);
-          double r3i_d = expK*(kappa2 + r2i) + r1i_d*r2i;
+          double expK =  2 * kappa*exp(-kappa2/r2i) / sqrt(pc::pi);
+          double r3i_d = expK * (kappa2 + r2i) + r1i_d * r2i;
           Eigen::Matrix3d T = 3*r*r.transpose() - Matrix3d::Identity();
           double W = muA.transpose()*T*muB;  
           return W*muAxmuB*(r3i_d-rc3i_d + 3*rc4i_d*(r1i_d - rc1i_d));
         }
 
       double getKappa() { return kappa; }
-      double getCutoff() { return (1/rc1i); }
+      double getCutoff() { return 1/rc1i; }
   };
 
   /**
@@ -486,30 +507,27 @@ namespace Faunus {
     class DipoleDipoleWolf : public DipoleDipole {
       private:
         string _brief() { return "Dipole-dipole Wolf"; }
-      protected:
-        double _lB, rc2i;
-        WolfDipoleDipole wmu2mu;
+        WolfBase wolf;
       public:
         DipoleDipoleWolf(InputMap &in) : DipoleDipole(in),
-        wmu2mu(in.get<double>("kappa",1.8, "Kappa-damping"), in.get<double>("dipdip_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) {
+        wolf(in.get<double>("kappa", 1.8, "Kappa-damping"),
+            in.get<double>("dipdip_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) {
           name+=" Wolf";
-          rc2i = 1/in.get<double>("dipdip_cutoff",in.get<double>("cuboid_len",pc::infty)/2);
-          rc2i = rc2i*rc2i;
         }
 
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
             double r2i = 1/r.squaredNorm();
             double r1i = std::sqrt(r2i);
-            return _lB*wmu2mu.energy(a.mu,b.mu, a.muscalar*b.muscalar, r, r1i, r2i);
+            return _lB*wolf.mu2mu(a.mu,b.mu, a.muscalar*b.muscalar, r, r1i, r2i);
           }
 
         string info(char w) {
           using namespace textio;
           std::ostringstream o;
           o << DipoleDipole::info(w)
-            << pad(SUB,w,"Cutoff") << wmu2mu.getCutoff() << " "+angstrom << endl
-            << pad(SUB,w,"Kappa") << wmu2mu.getKappa() << " "+angstrom+"^-1" << endl;
+            << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
+            << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
           return o.str();
         }
     };

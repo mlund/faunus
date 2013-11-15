@@ -1,5 +1,9 @@
 #ifndef FAUNUS_MULTIPOLE_H
 #define FAUNUS_MULTIPOLE_H
+#include <faunus/common.h>
+#include <faunus/auxiliary.h>
+#include <faunus/species.h>
+#include <faunus/picojson.h>
 
 namespace Faunus {
 
@@ -90,6 +94,17 @@ namespace Faunus {
       double udis2  = vec[0]*pow(2.71828,-vec[1]/r1i);
       return (uexp  + udis1 + udis2);
     }
+    /*
+    template<class Tvec>
+      double NemoType1(Eigen::VectorXd &vec, const Tvec &r) {
+        double r1i = 1/r.norm();
+        double r2i = r1i*r1i;
+        double r6i = r2i*r2i*r2i;
+        double uexp = vec[0]*pow(2.71828,-std::min(expmax,vec[1]/r1i));
+        double ur20 = pow(vec[2]*r1i,20);
+        double udis = vec[3]*(1 - pow(2.71828,-min(expmax,(1/(r1i*asw))**nsw)))*r6i;
+        return (uexp + ur20 + udis);
+      }*/
   
   /**
    * @brief Returns NemoType4-interaction (Damping Exponential)

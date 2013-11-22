@@ -5,7 +5,7 @@
  *         (charged and/or hydrophobic  surface). Implicit salt.
  *        
  * @author Joao Henriques
- * @date   2013/11/06
+ * @date   2013/11/22
  */
 
 using namespace Faunus;
@@ -61,9 +61,9 @@ int main() {
   Group pol = spc.insert(v);
   pol.name  = "peptide";
   spc.enroll(pol);
-  for (int i = pol.front(); i<pol.back(); i++)
-    bonded->add(i, i+1, Potential::Harmonic(k, req)
-		      + Potential::LennardJonesR12(mcp, "r12repex"));
+  for (int i = pol.front(); i < pol.back(); i++)
+    bonded->add(i, i + 1, Potential::Harmonic(k, req)
+		        + Potential::LennardJonesR12(mcp, "r12repex"));
   
   restraint->add(pol);
   
@@ -94,9 +94,9 @@ int main() {
   Analysis::PolymerShape shape;
   std::map<string, Average<double> > Rg2;
   Analysis::ChargeMultipole mp;
-  
 #ifdef SLIT
   Analysis::LineDistribution<> surfmcdist;
+  std::map<int, Analysis::LineDistribution<> > surfresdist;
   Analysis::Table2D<double, Average<double> > netqtable;
   Analysis::Table2D<double, Average<double> > rg2table;
 #endif
@@ -118,7 +118,8 @@ int main() {
        << textio::header("The right man in the wrong place can make all the difference in the world.\n"
 			 "  So, wake up, Mister Freeman. Wake up and smell the ashes.");
   
-  std::ofstream f("rg_step.dat");
+  std::ofstream f1("rg_step.dat");
+  std::ofstream f2("surf_res_dist.dat");
 
   MCLoop loop(mcp);
   while (loop.macroCnt()) {
@@ -156,12 +157,18 @@ int main() {
 
 #ifdef SLIT
       if (rnd < 0.05) {
-	Point mc = Geometry::massCenter(spc.geo, spc.p, pol);
-	surfmcdist(pot.first.first.first.first.second.expot.surfDist(mc))++;
-	double dist = pot.first.first.first.first.second.expot.surfDist(mc);
-	netqtable(dist) += pol.charge(spc.p);
-	Point rg2 = shape.vectorgyrationRadiusSquared(pol, spc);
-	rg2table(dist) += rg2.x() + rg2.y() + rg2.z();
+	Point mc = Geometry::massCenter(spc.geo, spc.p, pol);                // mass center coord
+	double dist = pot.first.first.first.first.second.expot.surfDist(mc); // mc dist to surf
+	surfmcdist(dist)++;                                                  // mass center prob distr along the z axis
+	netqtable(dist) += pol.charge(spc.p);                                // net charge vs. dist to surf 
+	Point rg2 = shape.vectorgyrationRadiusSquared(pol, spc);             // Rg2 coord
+	rg2table(dist) += rg2.x() + rg2.y() + rg2.z();                       // Rg2 vs. dist to surf
+	for (int i = pol.front(); i <= pol.back(); i++) {
+	  // res dist to surf
+	  double resdist = spc.geo.len.z()/2 - spc.p[i].z();
+	  // res prob distr along the z axis
+	  surfresdist[i](resdist)++;
+	}
       }
 #endif
 
@@ -171,7 +178,7 @@ int main() {
     cout << loop.timing();
 
     for (auto &m : Rg2)
-      f << loop.count() << " " << sqrt(m.second.avg()) << "\n";
+      f1 << loop.count() << " " << sqrt(m.second.avg()) << "\n";
     
 #ifdef SLIT  
     netqtable.save("netq_dist.dat");
@@ -185,11 +192,17 @@ int main() {
   FormatPQR::save("simulation.pqr", spc.p, spc.geo.len);
   spc.save("simulation.state");
 
-  f.close();
-
 #ifdef SLIT
-  surfmcdist.save("surfmcdist.dat");
+  surfmcdist.save("surf_mc_dist.dat");
+  for (double d = 0; d <= spc.geo.len.z(); d += 0.25) {
+    for (int i = pol.front(); i <= pol.back(); i++)  
+      f2 << d << " " << i + 1 << " " << -log(surfresdist[i](d)) << endl;
+    f2 << endl;
+  }
 #endif
+  
+  f1.close();
+  f2.close();
 
   cout << sys.info() 
        << mv.info() 

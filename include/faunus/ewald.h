@@ -1,21 +1,21 @@
 #ifndef FAUNUS_EWALD_H
 #define FAUNUS_EWALD_H
 
-/*!
- * @brief Ewald Summation for long-ranged electrostatics
- *
- * Energies are calculated using Ewald
- * the class also contains a optimization concerning
- * cutoff in the Fourier room
- * Cutoff in realspace is set equal to half the box
- *
- * @author Martin Trulsson
- */
-
 #include "faunus/inputfile.h"
 #include <complex>
 
 namespace Faunus {
+
+  /*!
+   * @brief Ewald Summation for long-ranged electrostatics
+   *
+   * Energies are calculated using Ewald
+   * the class also contains a optimization concerning
+   * cutoff in the Fourier room
+   * Cutoff in realspace is set equal to half the box
+   *
+   * @author Martin Trulsson
+   */
 
   template<typename T=double>
     class Ewald {

@@ -50,13 +50,14 @@ namespace Faunus {
    *
    * This will maintain a symmetric, dynamic NxN matrix for storing data
    * about pairs.
-   * Use the `set()` function for setting values and use the function
-   * operator for access: 
+   * Use the `set()` function for setting values and the function
+   * operator for access:
    *
    *     int i=2,j=3; // particle type, for example
-   *     PairMatrix<double> cutoff;
-   *     eps2.set(i,j,12.0);
-   *     cout << cutoff(i,j); // -> 12.0
+   *     PairMatrix<double> m;
+   *     m.set(i,j,12.0);
+   *     cout << m(i,j);         // -> 12.0
+   *     cout << m(i,j)==m(j,i); // -> true
    */
   template<class T=double>
     class PairMatrix {

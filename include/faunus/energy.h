@@ -1065,7 +1065,6 @@ namespace Faunus {
 
     /**
      * @brief Constrain two group mass centra within a certain distance interval [mindist:maxdist]
-     * @author Mikael Lund
      * @date Lund, 2012
      * @todo Prettify output
      *
@@ -1077,24 +1076,80 @@ namespace Faunus {
      * In the following example,
      * the distance between `mygroup1` and `mygroup2` are constrained to the range `[10:50]` angstrom:
      * @code
-     * Energy::Hamiltonian pot;
-     * auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
-     * auto constrain = pot.create( Energy::MassCenterConstrain(pot.getGeometry()) );
-     * constrain->addPair( mygroup1, mygroup2, 10, 50); 
+     * InputMap mcp;
+     * Energy::MassCenterConstrain<Tspace> constrain(mcp);
+     * constrain.addPair( mygroup1, mygroup2, 10, 50); 
      * @endcode
+     *
+     * The `addPair` function can be called without distance interval in
+     * which case the default window is used. This is read during 
+     * construction with the keywords `cmconstrain_min` and
+     * `cmconstrain_max`.
      */
     template<typename Tspace>
       class MassCenterConstrain : public Energybase<Tspace> {
         private:
-          string _info();
+          string _info() {
+            using namespace Faunus::textio;
+            std::ostringstream o;
+            o << indent(SUB) << "The following groups have mass center constraints:\n";
+            for (auto &m : gmap)
+              o << indent(SUBSUB) << m.first.first->name << " " << m.first.second->name
+                << " " << m.second.mindist << "-" << m.second.maxdist << _angstrom << endl;
+            return o.str();
+          }
+
           struct data {
             double mindist, maxdist;
           };
+
+          data defaultWindow;
+
           std::map<opair<Faunus::Group*>, data> gmap;
+
         public:
-          MassCenterConstrain(Geometry::Geometrybase&);      //!< Constructor
-          void addPair(Group&, Group&, double, double);      //!< Add constraint between two groups
-          double g_external(const p_vec&, Group&) FOVERRIDE; //!< Constrain treated as external potential
+
+          MassCenterConstrain(InputMap &in) {
+            this->name="Group Mass Center Distance Constraints";
+            defaultWindow.mindist = in("cmconstrain_min", 0.0);
+            defaultWindow.maxdist = in("cmconstrain_max", 1.0e20);
+
+            assert(defaultWindow.mindist<defaultWindow.maxdist);
+            assert(defaultWindow.mindist>0);
+            assert(defaultWindow.maxdist>0);
+          }
+
+          /** @brief Add constraint between two groups */
+          void addPair(Group &a, Group &b, double mindist, double maxdist) {
+            data d = {mindist, maxdist};
+            opair<Group*> p(&a, &b);
+            gmap[p] = d;
+          }
+
+          /** @brief Add constraint between two groups - distances read from user input */
+          void addPair(Group &a, Group &b) {
+            addPair(a,b,defaultWindow.mindist,defaultWindow.maxdist);
+          }
+
+          /** @brief Constrain treated as external potential */
+          double g_external(const p_vec &p, Group &g1) {
+            for (auto m : gmap)              // scan through pair map
+              if (m.first.find(&g1)) {       // and look for group g1
+                Group *g2ptr;                // pointer to constrained partner
+                if (&g1 == m.first.first)
+                  g2ptr = m.first.second;
+                else
+                  g2ptr = m.first.first;
+                Point cma = Geometry::massCenter(this->getSpace().geo, p, g1);
+                Point cmb = Geometry::massCenter(this->getSpace().geo, p, *g2ptr);
+                double r2 = this->getSpace().geo.sqdist(cma,cmb);
+                double min = m.second.mindist;
+                double max = m.second.maxdist;
+                if (r2<min*min || r2>max*max) 
+                  return pc::infty;
+              }
+            return 0;
+          }
       };
 
     /**

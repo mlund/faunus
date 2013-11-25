@@ -1065,7 +1065,6 @@ namespace Faunus {
 
     /**
      * @brief Constrain two group mass centra within a certain distance interval [mindist:maxdist]
-     * @author Mikael Lund
      * @date Lund, 2012
      * @todo Prettify output
      *
@@ -1077,11 +1076,15 @@ namespace Faunus {
      * In the following example,
      * the distance between `mygroup1` and `mygroup2` are constrained to the range `[10:50]` angstrom:
      * @code
-     * Energy::Hamiltonian pot;
-     * auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
-     * auto constrain = pot.create( Energy::MassCenterConstrain(pot.getGeometry()) );
-     * constrain->addPair( mygroup1, mygroup2, 10, 50); 
+     * InputMap mcp;
+     * Energy::MassCenterConstrain<Tspace> constrain(mcp);
+     * constrain.addPair( mygroup1, mygroup2, 10, 50); 
      * @endcode
+     *
+     * The `addPair` function can be called without distance interval in
+     * which case the default window is used. This is read during 
+     * construction with the keywords `cmconstrain_min` and
+     * `cmconstrain_max`.
      */
     template<typename Tspace>
       class MassCenterConstrain : public Energybase<Tspace> {
@@ -1110,6 +1113,10 @@ namespace Faunus {
             this->name="Group Mass Center Distance Constraints";
             defaultWindow.mindist = in("cmconstrain_min", 0.0);
             defaultWindow.maxdist = in("cmconstrain_max", 1.0e20);
+
+            assert(defaultWindow.mindist<defaultWindow.maxdist);
+            assert(defaultWindow.mindist>0);
+            assert(defaultWindow.maxdist>0);
           }
 
           /** @brief Add constraint between two groups */

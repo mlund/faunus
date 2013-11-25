@@ -398,7 +398,6 @@ namespace Faunus {
 
     template<class T>
     std::string HydrophobicWall<T>::_info() {
-      char w = 30;
       std::ostringstream o;
       o << pad(textio::SUB,25,"Threshold") << _threshold << textio::_angstrom << " (particle - wall distance)" << endl
 	<< pad(textio::SUB,25,"Depth")     << _depth     << textio::kT << endl;

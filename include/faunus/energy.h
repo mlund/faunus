@@ -1086,15 +1086,63 @@ namespace Faunus {
     template<typename Tspace>
       class MassCenterConstrain : public Energybase<Tspace> {
         private:
-          string _info();
+          string _info() {
+            using namespace Faunus::textio;
+            std::ostringstream o;
+            o << indent(SUB) << "The following groups have mass center constraints:\n";
+            for (auto &m : gmap)
+              o << indent(SUBSUB) << m.first.first->name << " " << m.first.second->name
+                << " " << m.second.mindist << "-" << m.second.maxdist << _angstrom << endl;
+            return o.str();
+          }
+
           struct data {
             double mindist, maxdist;
           };
+
+          data defaultWindow;
+
           std::map<opair<Faunus::Group*>, data> gmap;
+
         public:
-          MassCenterConstrain(Geometry::Geometrybase&);      //!< Constructor
-          void addPair(Group&, Group&, double, double);      //!< Add constraint between two groups
-          double g_external(const p_vec&, Group&) FOVERRIDE; //!< Constrain treated as external potential
+
+          MassCenterConstrain(InputMap &in) {
+            this->name="Group Mass Center Distance Constraints";
+            defaultWindow.mindist = in("cmconstrain_min", 0.0);
+            defaultWindow.maxdist = in("cmconstrain_max", 1.0e20);
+          }
+
+          /** @brief Add constraint between two groups */
+          void addPair(Group &a, Group &b, double mindist, double maxdist) {
+            data d = {mindist, maxdist};
+            opair<Group*> p(&a, &b);
+            gmap[p] = d;
+          }
+
+          /** @brief Add constraint between two groups - distances read from user input */
+          void addPair(Group &a, Group &b) {
+            addPair(a,b,defaultWindow.mindist,defaultWindow.maxdist);
+          }
+
+          /** @brief Constrain treated as external potential */
+          double g_external(const p_vec &p, Group &g1) {
+            for (auto m : gmap)              // scan through pair map
+              if (m.first.find(&g1)) {       // and look for group g1
+                Group *g2ptr;                // pointer to constrained partner
+                if (&g1 == m.first.first)
+                  g2ptr = m.first.second;
+                else
+                  g2ptr = m.first.first;
+                Point cma = Geometry::massCenter(this->getSpace().geo, p, g1);
+                Point cmb = Geometry::massCenter(this->getSpace().geo, p, *g2ptr);
+                double r2 = this->getSpace().geo.sqdist(cma,cmb);
+                double min = m.second.mindist;
+                double max = m.second.maxdist;
+                if (r2<min*min || r2>max*max) 
+                  return pc::infty;
+              }
+            return 0;
+          }
       };
 
     /**

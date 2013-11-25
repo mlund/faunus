@@ -21,6 +21,9 @@ fau_example(bearnix-cyl "./bearnix" cyl.cpp)
 # Carolina's playground
 fau_example(cc-polymers "./cragnell" polymers.cpp)
 
+# Carolina's playground
+fau_example(fer-cyl "./fernando" cyl.cpp)
+
 # Mikael's playground
 fau_example(mlund-cosan "./mlund" cosan.cpp)
 fau_example(mlund-angular "./mlund" angular.cpp)

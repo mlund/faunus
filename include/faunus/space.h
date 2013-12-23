@@ -196,7 +196,6 @@ namespace Faunus {
       }
       if (rc==false)
         std::exit(1);
-      
       return rc;
     }
 

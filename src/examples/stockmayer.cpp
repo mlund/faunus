@@ -4,8 +4,8 @@ using namespace Faunus;                          // use Faunus namespace
 using namespace Faunus::Move;
 using namespace Faunus::Potential;
 
-typedef Space<Geometry::Cuboid,DipoleParticle> Tspace;   // Cuboid
-typedef CombinedPairPotential<HardSphere,DipoleDipoleRF> Tpair;
+typedef Space<Geometry::Cuboid,DipoleParticle> Tspace; 
+typedef CombinedPairPotential<LennardJones,DipoleDipole> Tpair;
 
 #ifdef POLARIZE
 typedef Move::PolarizeMove<AtomicTranslation<Tspace> > TmoveTran;
@@ -24,9 +24,9 @@ int main() {
   Group sol;
   sol.addParticles(spc, in);                     // group for particles
   MCLoop loop(in);                               // class for mc loop counting
-  Analysis::RadialDistribution<> rdf(0.005);       // particle-particle g(r)
-  Analysis::Table2D<double,Average<double> > mucorr(0.005);       // particle-particle g(r)
-  Analysis::Table2D<double,double> mucorr_distribution(0.005);
+  Analysis::RadialDistribution<> rdf(0.05);       // particle-particle g(r)
+  Analysis::Table2D<double,Average<double> > mucorr(0.1);       // particle-particle g(r)
+  Analysis::Table2D<double,double> mucorr_distribution(0.1);
   TmoveTran trans(in,pot,spc);
   TmoveRot rot(in,pot,spc);
   trans.setGroup(sol);                                // tells move class to act on sol group
@@ -36,7 +36,6 @@ int main() {
   UnitTest test(in);               // class for unit testing
   DipoleWRL sdp;
   FormatXTC xtc(spc.geo.len.norm());
-  double rc = in.get<double>("dipdip_cutoff",in.get<double>("cuboid_len",pc::infty)/2);
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );   // initial energy
   while ( loop.macroCnt() ) {                         // Markov chain 
@@ -50,11 +49,9 @@ int main() {
         for (auto i=sol.front(); i<sol.back(); i++) { // salt rdf
           for (auto j=i+1; j<=sol.back(); j++) {
             double r =spc.geo.dist(spc.p[i],spc.p[j]); 
-            if(r < rc) {
-              rdf(r)++;
-              mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
-              mucorr_distribution(spc.p[i].mu.dot(spc.p[j].mu)) += 1;
-            }
+            rdf(r)++;
+            mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
+            mucorr_distribution(spc.p[i].mu.dot(spc.p[j].mu)) += 1;
           }
         }
       if (slp_global()>0.99)

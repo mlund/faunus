@@ -215,15 +215,15 @@ namespace Faunus {
    * @param QxMu Product of ion charge and dipole scalar
    * @param mu Unit dipole moment vector
    * @param r Direction \f$ r_Mu - r_Q \f$  
-   *
    */
   template<class Tvec>
-    double q2mu(double QxMu, const Tvec &mu, const Tvec &r) {
+    double q2mu(double QxMu1, const Tvec &mu1, double QxMu2, const Tvec &mu2, const Tvec &r) {
       double R2 = 1/r.squaredNorm();
       double R1 = sqrt(R2);
       double R3 = R1*R2;
-      double W = QxMu*mu.dot(r)*R3;
-      return W;  // Beware of r_Mu - r_Q = -r according to Israelachvili p.36, i.e. minus becomes plus
+      double W1 = QxMu1*mu1.dot(r)*R3;
+      double W2 = QxMu2*mu2.dot(r)*R3;
+      return (W1-W2);  // Beware of r_Mu - r_Q = -r according to Israelachvili p.36, i.e. minus becomes plus
     }
 
   /**
@@ -254,7 +254,30 @@ namespace Faunus {
    */
   class WolfBase {
     private:
-      double rc1i_d, rc3i_d, rc4i_d, rc1i, rc2i, expKc, kappa, kappa2;
+      double rc1i_d, rc3i_d, rc4i_d, rc5i_d, rc6i_d, rc1i, rc2i, rc3i, expKc, kappa, kappa2, kappa4, kappa6;
+      
+      
+      struct wdata {
+        //template<class Tparticle>
+        double r1i_d, r3i_d, r5i_d, diffR;
+        //Tparticle* a,b;
+      };
+      
+      template<class Tparticle, class Tvec>
+        wdata calcWolfData(const Tparticle &a, const Tparticle &b, const Tvec &r) {
+          wdata data;
+          //data.a = a;
+          //data.b = b;
+          double r2i = 1/r.squaredNorm();
+          double r1i = sqrt(r2i);
+          double expK = 2*kappa*exp(-kappa2/r2i)/sqrt(pc::pi);
+          data.diffR = (1/r1i) - (1/rc1i);
+          data.r1i_d = erfc_x(kappa/r1i)*r1i;
+          data.r3i_d = expK * (kappa2 + r2i) + data.r1i_d * r2i;
+          data.r5i_d = expK*(r2i*r2i + (2*r2i/3)*kappa2 + (kappa6/(3*r2i)) + (kappa4/6)) + data.r1i_d*r2i*r2i;
+          return data;
+        }
+            
     public:
       /**
        * @brief Constructor
@@ -264,13 +287,38 @@ namespace Faunus {
       WolfBase(double alpha, double rcut) {
         kappa = alpha;
         kappa2 = kappa*kappa;
+        kappa4 = kappa2*kappa2;
+        kappa6 = kappa4*kappa2;
         rc1i = 1/rcut;
         rc2i = rc1i*rc1i;
+        rc3i = rc1i*rc2i;
         expKc = 2*kappa*exp(-kappa2/rc2i)/sqrt(pc::pi);
         rc1i_d = erfc_x(kappa/rc1i)*rc1i;
         rc3i_d = expKc*(kappa2 + rc2i) + rc1i_d*rc2i;
-        rc4i_d = 2*expKc*((kappa2*kappa2/(3*rc1i)) + (kappa2*rc1i/3) + (rc1i*rc2i/2)) + rc1i_d*rc1i*rc2i;
+        rc4i_d = expKc*( (2*kappa4/(3*rc1i)) + (2*kappa2*rc1i/3) + rc3i ) + rc1i_d*rc3i;
+        rc5i_d = expKc*(rc2i*rc2i + (2*rc2i*kappa2/3) + (kappa6/(3*rc2i)) + (kappa4/6)) + rc1i_d*rc2i*rc2i;
+        rc6i_d = expKc*((-kappa6/(15*rc1i)) + (2*kappa6*kappa2/(15*rc3i)) + (2*kappa2*rc3i/3) + (4*kappa4/(15*rc1i)) + rc1i) + rc1i_d*rc3i*rc2i;
       }
+      
+      /**
+       * @brief Returns ion-dipole interaction, Needs to be checked!
+       * @param QxMu Product of ion charge and dipole scalar
+       * @param mu Unit dipole moment vector
+       * @param r Direction \f$ r_Mu - r_Q \f$  
+       */
+       template<class Tvec>
+         double q2mu(double QxMu1, const Tvec &mu1, double QxMu2, const Tvec &mu2, const Tvec &r) {
+           double r2i = 1/r.squaredNorm();
+           if (r2i < rc2i)
+            return 0;
+           double r1i = sqrt(r2i);
+           double expK = 2*kappa*exp(-kappa2/r2i)/sqrt(pc::pi);
+           double r3i_d = expK * (kappa2 + r2i) + erfc_x(kappa/r1i)*r1i * r2i;
+           double der = ((1/r1i) - (1/rc1i))*3*rc4i_d;
+           double W1 = QxMu1*mu1.dot(r)*(r3i_d - rc3i_d + der);
+           double W2 = QxMu2*mu2.dot(r)*(r3i_d - rc3i_d + der);
+           return (W1-W2);  // Beware of r_Mu - r_Q = -r according to Israelachvili p.36, i.e. minus becomes plus
+         }
 
       /**
        * @brief Dipole-dipole energy
@@ -283,17 +331,53 @@ namespace Faunus {
        * @returns energy in `kT/lB`
        */
       template<class Tvec>
-        double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r_ab, double r1i, double r2i) const {
+        double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r) const {
+          double r2i = 1/r.squaredNorm();
           if (r2i < rc2i)
             return 0;
-          Tvec r = r_ab*r1i;
+          double r1i = sqrt(r2i);
           double r1i_d = erfc_x(kappa/r1i)*r1i;
           double expK =  2 * kappa*exp(-kappa2/r2i) / sqrt(pc::pi);
           double r3i_d = expK * (kappa2 + r2i) + r1i_d * r2i;
-          Eigen::Matrix3d T = 3*r*r.transpose() - Matrix3d::Identity();
-          double W = muA.transpose()*T*muB;  
-          return W*muAxmuB*(r3i_d-rc3i_d + 3*rc4i_d*(r1i_d - rc1i_d));
+          double r5i_d = r2i*expK*(r2i + (2/3)*kappa2 + (kappa6/(3*r2i*r2i)) + (kappa4/(6*r2i))) + r1i_d*r2i*r2i;       
+          Eigen::Matrix3d T = 3*r*r.transpose()*(r5i_d - rc5i_d + 5*rc6i_d) - Matrix3d::Identity()*(r3i_d - rc3i_d + 3*rc4i_d);
+          double W = -muA.transpose()*T*muB;  
+          return W*muAxmuB;
         }
+        
+      /**
+       * @brief Returns ion-quadrupole interaction
+       */
+       template<class Tvec, class Tmat>
+         double q2quad(double q1, const Tmat &quad1, double q2, const Tmat &quad2, const Tvec &r) {
+           double r2i = 1/r.squaredNorm();
+           if (r2i < rc2i)
+            return 0;
+           double r1i = sqrt(r2i);
+           double r3i = r1i*r2i;
+           double expK =  2 * kappa*exp(-kappa2/r2i) / sqrt(pc::pi);
+           double r1i_d = erfc_x(kappa/r1i)*r1i;
+           double r3i_d = expK*(kappa2 + r2i) + r1i_d*r2i;
+           double r5i_d = r2i*expK*(r2i + (2/3)*kappa2 + (kappa6/(3*r2i*r2i)) + (kappa4/(6*r2i))) + r1i_d*r2i*r2i;   
+           double W1 = q1*r.transpose()*quad1*r*r5i_d  - q1*quad1.trace()*(r3i_d/3);
+           double W2 = q2*r.transpose()*quad2*r*r5i_d  - q2*quad2.trace()*(r3i_d/3);
+           return (W1+W2); // e^2 / Å
+         }
+         
+        /** @brief Dipole field at `r` due to dipole `p` 
+         *  Gets returned in [e/Å / lB] (\f$\beta eE / lB \f$)
+         */
+        template<class Tparticle>
+          Point fieldMu2Mu(const Tparticle &p, const Point &r) const {
+            double r2i = 1.0/r.squaredNorm();
+            double r1i = sqrt(r2i);
+            Point r_ab = r*r1i;
+            double expK =  2 * kappa*exp(-kappa2/r2i) / sqrt(pc::pi);
+            double r1i_d = erfc_x(kappa/r1i)*r1i*r2i;    // multiplied with r2i
+            double r3i_d = expK*(kappa2 + r2i) + r1i_d;
+            double r5i_d = expK*(r2i + (2/3)*kappa2 + (kappa6/(3*r2i*r2i)) + (kappa4/(6*r2i))) + r1i_d;                                        // Normalized with 1/r2i
+            return (3.0*p.mu.dot(r_ab)*r_ab*r5i_d - p.mu*r3i_d)*p.muscalar; // \beta e E
+          }
 
       double getKappa() { return kappa; }
       double getCutoff() { return 1/rc1i; }
@@ -304,12 +388,11 @@ namespace Faunus {
    */
   template<class Tvec, class Tmat>
     double q2quad(double q, const Tmat &quad, const Tvec &r) {
-      double R2 = 1/r.squaredNorm();
-      double R1 = sqrt(R2);
-      double R3 = R1*R2;
-      double R5 = R3*R2;
-      double W = r.transpose()*quad*r;
-      W = W*R5  - quad.trace()*(R3/3); // e / Å
+      double r2i = 1/r.squaredNorm();
+      double r1i = sqrt(r2i);
+      double r3i = r1i*r2i;
+      double r5i = r3i*r2i;
+      double W = r.transpose()*quad*r*r5i  - quad.trace()*(r3i/3);
       return q*W; // e^2 / Å
     }
 
@@ -380,7 +463,7 @@ namespace Faunus {
          */
         template<class Tparticle> // q2mu(1->2,r) + q2mu(2->1,-r) = q2mu(1->2,r) - q2mu(2->1,r)
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-            return _lB*(q2mu(a.charge*b.muscalar,b.mu,r) - q2mu(b.charge*a.muscalar,a.mu,r));
+            return _lB*q2mu(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
           }
 
         string info(char w) { return _brief(); }
@@ -426,12 +509,12 @@ namespace Faunus {
           }
 
         /**
-         * @brief Interaction of dipole `p` with field `E`
-         * @todo unfinished
+         * @brief Interaction of dipole `p` with field `E`, see 'Intermolecular and SUrface Forces' by J. Israelachvili, p. 97 eq. 5.15
+         * @todo Needs to be tested!
          */
         template<class Tparticle>
           double fieldEnergy(const Tparticle &p, const Point &E) {
-            return 0; // implement!
+            return -p.muscalar*p.mu.dot(E);
           }
 
         string info(char w) {
@@ -503,6 +586,39 @@ namespace Faunus {
 
         string info(char w) { return _brief(); }
     };
+    
+    class IonDipoleWolf : public IonDipole {
+      private:
+        string _brief() { return "Ion-dipole Wolf"; }
+        WolfBase wolf;
+      public:
+        IonDipoleWolf(InputMap &in) : IonDipole(in),
+        wolf(in.get<double>("kappa", 1.8, "Kappa-damping"),
+            in.get<double>("dipdip_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) {
+          name+=" Wolf";
+        }
+
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+            double r2i = 1/r.squaredNorm();
+            double r1i = std::sqrt(r2i);
+            return _lB*wolf.q2mu(a.mu,b.mu, a.muscalar*b.muscalar, r, r1i, r2i);
+          }
+          
+        template<class Tparticle>
+          Point field(const Tparticle &p, const Point &r) const {
+            return Point(0,0,0);
+          }
+
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          o << IonDipole::info(w)
+            << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
+            << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
+          return o.str();
+        }
+    };
 
     class DipoleDipoleWolf : public DipoleDipole {
       private:
@@ -517,15 +633,82 @@ namespace Faunus {
 
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-            double r2i = 1/r.squaredNorm();
-            double r1i = std::sqrt(r2i);
-            return _lB*wolf.mu2mu(a.mu,b.mu, a.muscalar*b.muscalar, r, r1i, r2i);
+            return _lB*wolf.mu2mu(a.mu,b.mu, a.muscalar*b.muscalar, r);
+          }
+          
+        /** @brief Dipole field at `r` due to dipole `p` 
+         *  Gets returned in [e/Å] (\f$\beta eE \f$)
+         */
+        template<class Tparticle>
+          Point field(const Tparticle &p, const Point &r) const {
+            return _lB*wolf.fieldMu2Mu(p,r);
           }
 
         string info(char w) {
           using namespace textio;
           std::ostringstream o;
           o << DipoleDipole::info(w)
+            << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
+            << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
+          return o.str();
+        }
+    };
+    
+    class IonQuadWolf : public IonQuad {
+      private:
+        string _brief() { return "Ion-Quadrupole Wolf"; }
+        WolfBase wolf;
+      public:
+        IonQuadWolf(InputMap &in) : IonQuad(in),
+        wolf(in.get<double>("kappa", 1.8, "Kappa-damping"),
+            in.get<double>("dipdip_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) {
+          name+=" Wolf";
+        }
+
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+            return _lB*wolf.q2quad(a.charge, b.theta, b.charge, a.theta,r);
+          }
+          
+        template<class Tparticle>
+          Point field(const Tparticle &p, const Point &r) const {
+            Eigen::Matrix3d T1, T2, T3;/*
+            T1(0,0) = r.x()*r.x()*r.x();
+            T1(0,1) = r.x()*r.x()*r.y();
+            T1(0,2) = r.x()*r.x()*r.z();
+            T1(1,0) = r.x()*r.y()*r.x();
+            T1(1,1) = r.x()*r.y()*r.y();
+            T1(1,2) = r.x()*r.y()*r.z();
+            T1(2,0) = r.x()*r.z()*r.x();
+            T1(2,1) = r.x()*r.z()*r.y();
+            T1(2,2) = r.x()*r.z()*r.z();
+            
+            T2(0,0) = r.y()*r.x()*r.x();
+            T2(0,1) = r.y()*r.x()*r.y();
+            T2(0,2) = r.y()*r.x()*r.z();
+            T2(1,0) = r.y()*r.y()*r.x();
+            T2(1,1) = r.y()*r.y()*r.y();
+            T2(1,2) = r.y()*r.y()*r.z();
+            T2(2,0) = r.y()*r.z()*r.x();
+            T2(2,1) = r.y()*r.z()*r.y();
+            T2(2,2) = r.y()*r.z()*r.z();
+            
+            T3(0,0) = r.z()*r.x()*r.x();
+            T3(0,1) = r.z()*r.x()*r.y();
+            T3(0,2) = r.z()*r.x()*r.z();
+            T3(1,0) = r.z()*r.y()*r.x();
+            T3(1,1) = r.z()*r.y()*r.y();
+            T3(1,2) = r.z()*r.y()*r.z();
+            T3(2,0) = r.z()*r.z()*r.x();
+            T3(2,1) = r.z()*r.z()*r.y();
+            T3(2,2) = r.z()*r.z()*r.z();*/
+            return Point(0,0,0);
+          }
+
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          o << IonQuad::info(w)
             << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
             << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
           return o.str();

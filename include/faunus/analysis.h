@@ -232,7 +232,7 @@ namespace Faunus {
            * @param resolution Resolution of the x axis
            * @param key Table type: HISTOGRAM or XYDATA
            */
-          Table2D(Tx resolution=0.005, type key=XYDATA) {
+          Table2D(Tx resolution=0.2, type key=XYDATA) {
             tabletype=key;
             setResolution(resolution);
           }
@@ -263,7 +263,7 @@ namespace Faunus {
               std::ofstream f(filename.c_str());
               f.precision(10);
               if (f) {
-                //f << "# Faunus 2D table: " << name << endl;
+                f << "# Faunus 2D table: " << name << endl;
                 for (auto m : map)
                   f << m.first << " " << get( m.first ) << endl;
               }
@@ -540,7 +540,7 @@ namespace Faunus {
      * ~~~
      * short cation = atom["Na"].id;
      * short anion = atom["Cl"].id;
-     * Analysis::RadialDistribution<float,unsigned int> rdf(0.005); // 0.2 Å resolution
+     * Analysis::RadialDistribution<float,unsigned int> rdf(0.2); // 0.2 Å resolution
      * rdf.sample( myspace, mygroup, cation, anion );
      * rdf.save("rdf.dat");
      * ~~~
@@ -576,7 +576,7 @@ namespace Faunus {
           /*!
            * \param res Resolution of X axis
            */
-          RadialDistribution(Tx res=0.005) : Ttable(res,Ttable::HISTOGRAM) {
+          RadialDistribution(Tx res=0.2) : Ttable(res,Ttable::HISTOGRAM) {
             this->name="Radial Distribution Function";
 
             maxdist=pc::infty;
@@ -620,7 +620,7 @@ namespace Faunus {
             }
 
           template<class Tspace>
-            void sampleMolecule1(Tspace &spc, Group &sol) {
+            void sampleMolecule(Tspace &spc, Group &sol) {
               for (int i=0; i<sol.numMolecules()-1; i++) {
                 for (int j=i+1; j<sol.numMolecules(); j++) {
                   Group ig, jg;
@@ -633,8 +633,9 @@ namespace Faunus {
               }
             }
             
+          // Same as sampeMolecule but different inputs
           template<class Tspace>
-            void sampleMolecule(Tspace &spc, vector<Group> &g, string name) {
+            void sampleMoleculeGroup(Tspace &spc, vector<Group> &g, string name) {
               int bulk = 0;
               for(size_t i = 0; i < g.size()-1; i++) {
                 Group ig = g[i];

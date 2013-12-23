@@ -111,9 +111,9 @@ namespace Faunus {
           std::stringstream o;
           string name, num;
           o << s;
-          o >> name;
-          a = atom[name];
-          o >> num >> a.x() >> a.y() >> a.z() >> a.charge >> a.mw >> a.radius;
+          o >> name >> num >> a.x() >> a.y() >> a.z() >> a.charge >> a.mw >> a.radius;
+          a.id = atom[name].id;
+          a.hydrophobic = atom[a.id].hydrophobic;
           return a;
         }
 

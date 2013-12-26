@@ -632,6 +632,28 @@ namespace Faunus {
                 }
               }
             }
+            
+          // Same as sampeMolecule but different inputs
+          template<class Tspace>
+            void sampleMoleculeGroup(Tspace &spc, vector<Group> &g, string name) {
+              int bulk = 0;
+              for(size_t i = 0; i < g.size()-1; i++) {
+                Group ig = g[i];
+                if(ig.name == name) {
+                  bulk++;
+                  for(size_t j = i+1; j < g.size(); j++) {
+                    Group jg = g[j];
+                    if(jg.name == name) {
+                      Point icm = ig.massCenter(spc);
+                      Point jcm = jg.massCenter(spc);
+                      this->operator() (spc.geo.dist(icm,jcm))++;
+                    }
+                  }
+                }
+              }
+              Npart+=bulk;
+              bulkconc += bulk / spc.geo.getVolume();
+            }
       };
 
     template<typename Tx=double, typename Ty=unsigned long>

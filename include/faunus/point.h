@@ -363,6 +363,7 @@ namespace Faunus {
     typedef bool Thydrophobic;
     Tid id;                                   //!< Particle identifier
     Tcharge charge;                           //!< Charge number
+    double betaC;                             //!< Exponent of Gaussian charge density
     Tradius radius;                           //!< Radius
     Tmw mw;                                   //!< Molecular weight
     Thydrophobic hydrophobic;                 //!< Hydrophobic flag
@@ -443,6 +444,7 @@ namespace Faunus {
    */
   struct DipoleParticle : public PointParticle {
     Point mu;               //!< Dipole moment unit vector (permanent+induced)
+    double betaD;           //!< Exponent of Gaussian dipole density
     double muscalar;        //!< Dipole moment scalar (permanent+induced)
     Point mup;              //!< Permanent dipole moment vector
     Tensor<double> alpha;   //!< Polarization matrix

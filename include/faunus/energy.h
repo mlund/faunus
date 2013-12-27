@@ -507,7 +507,7 @@ namespace Faunus {
             for (auto &pi : p) {
               for (auto &pj : p)
                 if (&pi!=&pj)
-                  E.col(i) = E.col(i) + pairpot.field(pj, geo.vdist(pi,pj));
+                  E.col(i) = E.col(i) + pairpot.field(pj,pi,geo.vdist(pi,pj));
               i++;
             }
           }

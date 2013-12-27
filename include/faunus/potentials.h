@@ -100,7 +100,7 @@ namespace Faunus {
 
         /** @brief Electric field at spatial position */
         template<typename Tparticle>
-          Point field(const Tparticle &a, const Point &r) const {
+          Point field(const Tparticle &a,const Tparticle &b, const Point &r) const {
             return Point(0,0,0);
           }
 
@@ -807,7 +807,7 @@ namespace Faunus {
        * Gets returned in [e/Å] (\f$\beta eE \f$)
        */
       template<class Tparticle>
-        Point field (const Tparticle &p, const Point &r) const {
+        Point field (const Tparticle &p,const Tparticle &p0, const Point &r) const {
           double R2 = 1.0/r.squaredNorm();
           return p.charge*R2*r*sqrt(R2)*lB;
         }
@@ -1309,8 +1309,8 @@ namespace Faunus {
             }
 
           template<typename Tparticle>
-            Point field(const Tparticle &a, const Point &r) const {
-              return first.field(a,r) + second.field(a,r);
+            Point field(const Tparticle &a,const Tparticle &b, const Point &r) const {
+              return first.field(a,b,r) + second.field(a,b,r);
             }
 
           template<class Tspace>

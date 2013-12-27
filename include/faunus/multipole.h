@@ -596,6 +596,34 @@ namespace Faunus {
 
         string info(char w) { return _brief(); }
     };
+    
+      class IonIonDamped : public Coulomb {
+      private:
+        string _brief() { return "Damped Coulomb"; }
+        GaussianDamping gd;
+      public:
+        CoulombDamped(InputMap &in) : Coulomb(in),
+        gd() {
+          name+=" Coulomb";
+        }
+
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+            return lB*gd.q2q(a.charge*b.charge, a.betaC, b.betaC, r);
+          }
+          
+        template<class Tparticle>
+          Point field(const Tparticle &p,const Tparticle &p0, const Point &r) const {
+            return lB*gd.fieldQ2Q(p,p0,r);
+          }
+
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          o << Coulomb::info(w) << endl;
+          return o.str();
+        }
+    };
 
     /**
      * @brief Ion-dipole interaction, 

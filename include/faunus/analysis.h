@@ -167,12 +167,17 @@ namespace Faunus {
         bool noMolecularPressure;
 
         template<class Tspace, class Tpotential>
-          void sample(Tspace &spc, Tpotential &pot, int d=3) {
+          void sample(Tspace &spc, Tpotential &pot, int d=3, double area=0) {
             cnt++;
             Ttensor t;
             t.setZero();
+
             int N=spc.p.size();
             double V=spc.geo.getVolume();
+            if (d==2) {
+              assert(area>0 && "Area must be specified for 2D sampling");
+              V=area;
+            }
 
             // loop over groups internally
             for (auto g : spc.groupList()) {

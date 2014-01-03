@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
   spc.enroll(salt);
 
   Analysis::ChargeMultipole mpol;
-  Analysis::VirialPressure virial;
+  Average<double> P_ex;
 
   spc.load("state"); // load previous state, if any
 
@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
             sys+=gmv.move();
           }
 
-          if (slp_global()>0.99) {
+          if (slp_global()>0.999) {
             if (energyfile)
               energyfile << loop.count() << " " << sys.current()
                 << " " << std::cbrt(spc.geo.getVolume()) << "\n";
@@ -110,10 +110,22 @@ int main(int argc, char** argv) {
           break;
       }
 
-      if (slp_global()>0.99 )
-        virial.sample(spc, pot);
+      if (slp_global()>0.99 ) {
+        // 2D pressure calculation (see i.e. Frenkel+Smit)
+        double sum=0;
+        for (size_t i=0; i<pol.size()-1; i++) // double loop over proteins
+          for (size_t j=i+1; j<pol.size(); j++)
+            for (auto k : pol[i]) // loop over particles in proteins
+              for (auto l : pol[j]) {
+                auto r=spc.geo.vdist(spc.p[k], spc.p[l]); // distance vector
+                auto f=pot.f_p2p(spc.p[k], spc.p[l]);     // force vector
+                r.z()=f.z()=0;                            // neglect z-direction
+                sum+=f.dot(r);                            // sum scalar product
+              } 
+        P_ex += sum / (2*spc.geo.len.x() * spc.geo.len.y());
+      }
 
-      if (slp_global()>0.95 ) {
+      if (slp_global()>0.999 ) {
         xtc.setbox(spc.geo.len);
         xtc.save("traj.xtc", spc.p); // save gromacs trajectory
       }
@@ -126,7 +138,18 @@ int main(int argc, char** argv) {
   } // end of macro loop
 
   cout << tit.info() + loop.info() + sys.info() + gmv.info() + mv.info()
-    + mpol.info() + virial.info() << endl;
+    + mpol.info();
+
+  {
+    using namespace textio;
+    string punit=" kT/" + angstrom + squared;
+    double P_id = pol.size() / (spc.geo.len.x()*spc.geo.len.y());
+    cout << header("Analysis: 2D Pressure")
+      << "  Excess              = " << P_ex.avg() << punit + "\n"
+      << "  Ideal               = " << P_id << punit+"\n"
+      << "  Total               = " << P_id+P_ex.avg() << punit+"\n"
+      << "  Osmotic coefficient = " << 1 + P_ex.avg() / P_id << "\n\n";
+  }
 
   FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
   spc.save("state");

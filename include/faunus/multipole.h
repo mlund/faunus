@@ -22,7 +22,7 @@ namespace Faunus {
    *     |\epsilon(x)| \le 1.5\times 10^{-7}
    * @f]
    */
-  double erfc_x(double x) {
+  inline double erfc_x(double x) {
     //
     // |error| <= 1.5*10^-7
     double p = 0.3275911;
@@ -354,7 +354,7 @@ namespace Faunus {
            if (r2i < rc2i)
             return 0;
            double r1i = sqrt(r2i);
-           double r3i = r1i*r2i;
+           //double r3i = r1i*r2i;
            double expK =  2 * kappa*exp(-kappa2/r2i) / sqrt(pc::pi);
            double r1i_d = erfc_x(kappa/r1i)*r1i;
            double r3i_d = expK*(kappa2 + r2i) + r1i_d*r2i;

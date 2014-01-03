@@ -4,8 +4,8 @@ using namespace Faunus;
 using namespace Faunus::Potential;
 
 typedef Space<Geometry::Cuboidslit> Tspace;
-typedef CombinedPairPotential<DebyeHuckel,LennardJones> Tpairpot;
-//typedef CombinedPairPotential<DebyeHuckelShift,CutShift<LennardJones> > Tpairpot;
+//typedef CombinedPairPotential<DebyeHuckel,LennardJones> Tpairpot;
+typedef CombinedPairPotential<DebyeHuckelShift,CutShift<LennardJones> > Tpairpot;
 
 int main(int argc, char** argv) {
 
@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
   bool inPlane = mcp.get<bool>("molecule_plane");
 
   Tspace spc(mcp);
-  auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
+  auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPotential<Tspace,Potential::GouyChapman<> >(mcp)
     + Energy::EquilibriumEnergy<Tspace>(mcp);// + myenergy<Tspace>(mcp);
 
@@ -35,12 +35,14 @@ int main(int argc, char** argv) {
     else
       file = mcp.get<string>("molecule1");
     Tspace::ParticleVector v;
-    FormatAAM::load(file,v);
-    Geometry::FindSpace fs;
-    fs.allowMatterOverlap=true;
+    FormatAAM::load(file,v);    // load molecule into 'v'
+    Geometry::FindSpace fs;     // class for finding free space
+    fs.allowMatterOverlap=true; // molecules can initially overlap
     if (inPlane)
-      fs.dir=Point(1,1,0);
-    fs.find(spc.geo,spc.p,v);
+      fs.dir=Point(1,1,0);      // molecule is in Z=0 plane
+    fs.find(spc.geo,spc.p,v);   // place molecule randomly - coords saved in 'v'
+    auto offset = Point(0,0,spc.geo.len_half.z()-mcp.get("molecule_offset",0));
+    Geometry::translate(spc.geo, v, offset);
     pol[i] = spc.insert(v);
     pol[i].name=file;
     spc.enroll( pol[i] );
@@ -50,11 +52,11 @@ int main(int argc, char** argv) {
   // Add atomic species
   Group salt;
   salt.addParticles(spc, mcp);
-  salt.name="Atomic Species";
+  salt.name="Free ions";
   spc.enroll(salt);
 
-  Analysis::LineDistribution<> cmhist(0.2);            // monomer-surface histogram
   Analysis::ChargeMultipole mpol;
+  Analysis::VirialPressure virial;
 
   spc.load("state"); // load previous state, if any
 
@@ -62,17 +64,23 @@ int main(int argc, char** argv) {
   Move::AtomicTranslation<Tspace> mv(mcp,pot,spc);
   Move::SwapMove<Tspace> tit(mcp,pot,spc,*eqenergy);
 
+  // MC translation only in XY plane?
   if (inPlane)
     for (auto &m : pol)
       gmv.directions[ m.name ]=Point(1,1,0);
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );    // Store total system energy
 
-  std::ofstream energyfile;
-
+  std::ofstream energyfile; // file for system energy
   energyfile.open("energy.dat");
-  cout << atom.info() << spc.info() << pot.info() << tit.info()
-    << textio::header("MC Simulation Begins!");
+
+  cout << atom.info() + spc.info() + pot.info() + tit.info()
+    + textio::header("MC Simulation Begins!");
+
+  cout << "  Area per protein = " << spc.geo.len.x()*spc.geo.len.y()/pol.size()
+    << textio::_angstrom + textio::squared << "\n";
+  cout << "  sqrt(area)       = " << sqrt(spc.geo.len.x()*spc.geo.len.y()/pol.size())
+    << textio::_angstrom << "\n\n";
 
   MCLoop loop(mcp);
   while ( loop.macroCnt() ) {  // Markov chain
@@ -86,8 +94,6 @@ int main(int argc, char** argv) {
             sys+=gmv.move();
           }
 
-          cmhist(  gouy->expot.surfDist(pol[0].cm)  )++;
-
           if (slp_global()>0.99) {
             if (energyfile)
               energyfile << loop.count() << " " << sys.current()
@@ -98,14 +104,18 @@ int main(int argc, char** argv) {
           sys+=tit.move();
           mpol.sample(pol,spc);
           break;
-        case 3: // move atomic species
+        case 3: // move free ions (if any)
           mv.setGroup(salt);
           sys+=mv.move();
           break;
       }
+
+      if (slp_global()>0.99 )
+        virial.sample(spc, pot);
+
       if (slp_global()>0.95 ) {
-        xtc.setbox( spc.geo.len );
-        xtc.save("traj.xtc", spc);
+        xtc.setbox(spc.geo.len);
+        xtc.save("traj.xtc", spc.p); // save gromacs trajectory
       }
     } // end of micro loop
 
@@ -116,9 +126,8 @@ int main(int argc, char** argv) {
   } // end of macro loop
 
   cout << tit.info() + loop.info() + sys.info() + gmv.info() + mv.info()
-    + mpol.info() << endl;
+    + mpol.info() + virial.info() << endl;
 
-  cmhist.save("cmdist.dat");
   FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
   spc.save("state");
   mcp.save("mdout.mdp");

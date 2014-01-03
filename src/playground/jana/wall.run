@@ -67,43 +67,63 @@ echo '
 }
 ' > wall.json
 
+echo "2
+HIS  0   0.00   0.00   0.00    0   130.  3.0
+HIS  0   0.00   0.00   6.00    0   130.  3.0
+" > testmolecule.aam
+
 echo "
 atomlist               wall.json
 eq_processfile         wall.json
 loop_macrosteps        10
 loop_microsteps        $micro
-temperature            298     # Kelvin
+
+temperature            298.15  # Kelvin
 epsilon_r              78.7    # Water dielectric const
-gouychapman_phi0       -2      # unitless i.e. e*phi/kT
+gouychapman_phi0       0       # unitless i.e. e*phi/kT
 gouychapman_linearize  yes
-dh_ionicstrength       0.01    # mol/l
+
 lj_eps                 0.05    # kT
-cuboid_len             300     # Box side length Angstrom
+lj_cutoff              $cut_i2i
+dh_ionicstrength       $salt   # mol/l
+dh_cutoff              $cut_i2i
+g2g_cutoff             $cut_g2g
+
+cuboid_len             150     # Box side length Angstrom
+
 transrot_transdp       80      # Molecular translation parameter
 transrot_rotdp         6       # Molecular rotation parameter
-transrot_runfraction   1
+transrot_runfraction   1.0
 swapmv_runfraction     0.2     # Proton titration run fraction
 
 # Molecular species - currently only two different kinds
-molecule1_N            1
-molecule1              test.aam
+molecule1_N            10
+molecule1              testmolecule.aam
 molecule2_N            0
-molecule2              test.aam 
+molecule2              testmolecule.aam 
+molecule_plane         yes
+molecule_offset        $Rp     # Elevate protein mass center above surface
 
-# Atomic species - add up to ten.
-tion1                  Na
+# Explicit ions - add up to ten. To be used for multivalent ions
+tion1                  Ca
 nion1                  0
-tion2                  Cl
-nion2                  0
 " > wall.input
 }
 
 # Executable
 exe=./jana-wall
-for pH in 4.1
+
+# Calc. Debye length and cutoff (3xDebye length)
+salt=0.01 # salt concentration
+Rp=20     # max protein radius
+D=`python -c "from math import sqrt; print 3.04/sqrt($salt)"`
+cut_i2i=`python -c "print 4*$D"`
+cut_g2g=`python -c "print $Rp+$Rp+$cut_i2i"`
+
+for pH in 6.3
 do
   #rm -fR state
-  micro=100000
+  micro=10000
   mkinput
   $exe
 done

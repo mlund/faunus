@@ -38,8 +38,11 @@ state:
   parameters are being used, delete this file
   first!
 
-confout.pqr:
-  PDB-like snapshot that can be opened in VMD
+confout.pqr + traj.xtc:
+  PDB-like snapshot and trajectory that can be opened in VMD,
+
+  $ vmd confout.pqr traj.xtc
+  $ pbc box
 
 traj.xtc:
   Gromacs trajectory file that can be opened in VMD

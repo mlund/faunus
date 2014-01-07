@@ -524,8 +524,10 @@ namespace Faunus {
        * dimensions are taken from the Cuboid class and the particles are shifted so
        * that origin is in the corner of the box (Gromacs practice)
        *
-       * \param file Name of the output xtc file
-       * \param c Cuboid container from which particles and box dimensions are read.
+       * @param file Name of the output xtc file
+       * @param c Cuboid container from which particles and box dimensions are read.
+       *
+       * @warning This is broken!
        */
       template<class T1, class T2>
         bool save(const string &file, Space<T1,T2> &c) {
@@ -534,7 +536,7 @@ namespace Faunus {
           if (geo==nullptr)
             return false;
           setbox(geo->len.x(), geo->len.y(), geo->len.z());
-          std::vector<Point> p(c.p.size());
+          auto p=c.p;
           for (auto gi : g) {
             gi->translate( c, -gi->cm );             // b.trial is moved to origo -> whole!
             for (auto j : *gi)

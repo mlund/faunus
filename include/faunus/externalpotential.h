@@ -375,7 +375,7 @@ namespace Faunus {
     };
 
     template<class T>
-      HydrophobicWall<T>::HydrophobicWall(InputMap &in) {
+    HydrophobicWall<T>::HydrophobicWall(InputMap &in) {
       string prefix = "hydrwl_";
       name          = "Hydrophobic Wall";
       _type         = in.get<string>(prefix + "type", "sqwl");

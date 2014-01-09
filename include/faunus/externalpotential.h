@@ -338,24 +338,26 @@ namespace Faunus {
       };
 
     /**
-     * @brief Hydrophobic wall square well potential
+     * @brief Hydrophobic wall potential
      * @author Joao Henriques
-     * @date Lund, 2013
+     * @date Lund, 2014
      *
      * This (external) potential class is used to simulate hydrophobic interactions between 
-     * particle(s) and a surface, using a simple square well potential. Surface position must 
-     * be specified in the program even if one has already done it for the Gouy-Chapman 
-     * potential (both classes inherit from ExternalPotentialBase<> but are for the most part
-     * independent).
+     * particle(s) and a surface, using a simple square well (the default) or a 1/r^6 potential.
+     * Surface position must be specified in the program even if one has already done it for the 
+     * Gouy-Chapman potential (both classes inherit from ExternalPotentialBase<> but are for
+     * the most part independent).
      *
-     * See doi:10.1021/la300892p for more details on the method.
+     * See doi:10.1021/la300892p for more details on the square well potential.
+     * See doi:10.1063/1.3002317 for more details on the 1/r^6 potential.
      *
      * The InputMap parameters are:
      *
-     * Key                | Description
-     * :----------------- | :---------------------------
-     * `sqwl_depth`       | Depth, \f$\epsilon\f$ [kT] (positive number)
-     * `sqwl_threshold    | Threshold, [angstrom] (particle center-to-wall distance)
+     * Key                  | Description
+     * :------------------- | :---------------------------
+     * `hydrwl_type`        | Type of potential, ie. square well ("sqwl", default) or 1/r^6 ("r6") 
+     * `hydrwl_depth`       | Depth, \f$\epsilon\f$ [kT] (positive number)
+     * `hydrwl_threshold    | Threshold, [angstrom] (particle center-to-wall distance) - for "sqwl" type only
      *
      */
     template<class T=double>
@@ -363,20 +365,22 @@ namespace Faunus {
     private:
       T _depth;
       T _threshold;
+      std::string _type;
       std::string _info();
     public:
-      HydrophobicWall(InputMap&);
+    HydrophobicWall(InputMap&);
       void setSurfPositionZ(T*);        // sets position of surface
       template<typename Tparticle>
       T operator()(const Tparticle &p); // returns energy
     };
 
     template<class T>
-    HydrophobicWall<T>::HydrophobicWall(InputMap &in) {
-      string prefix = "sqwl_";
+      HydrophobicWall<T>::HydrophobicWall(InputMap &in) {
+      string prefix = "hydrwl_";
       name          = "Hydrophobic Wall";
-      _depth        = in.get<double>(prefix + "depth");     // defaults to zero
-      _threshold    = in.get<double>(prefix + "threshold"); // defaults to zero
+      _type         = in.get<string>(prefix + "type", "sqwl");
+      _depth        = in.get<double>(prefix + "depth"    , 0);
+      _threshold    = in.get<double>(prefix + "threshold", 0);
     }
 
     template<class T>
@@ -390,17 +394,25 @@ namespace Faunus {
     template<class T>
     template<typename Tparticle>
     T HydrophobicWall<T>::operator()(const Tparticle &p) {
-      if (p.hydrophobic)
-        if (this->p2c(p) < _threshold)
-          return -_depth;
+      if (p.hydrophobic) {
+        if (_type == "sqwl")
+          if (this->p2c(p) < _threshold)
+            return -_depth;
+        if (_type == "r6")
+          return -_depth / pow(this->p2c(p), 6);
+      }
       return 0;
     }
 
     template<class T>
     std::string HydrophobicWall<T>::_info() {
       std::ostringstream o;
-      o << pad(textio::SUB,25,"Threshold") << _threshold << textio::_angstrom << " (particle - wall distance)" << endl
-	<< pad(textio::SUB,25,"Depth")     << _depth     << textio::kT << endl;
+      if (_type == "sqwl")
+        o << pad(textio::SUB, 50, ">>> USING: square well potential <<<") << endl 
+          << pad(textio::SUB, 25, "Threshold") << _threshold << textio::_angstrom << " (particle - wall distance)" << endl;
+      if (_type == "r6")
+        o << pad(textio::SUB, 50, ">>> USING: 1/r" + textio::powsix + " potential <<<") << endl;
+      o << pad(textio::SUB, 25, "Depth") << _depth << textio::kT << endl;
       return o.str();
     }
   } //namespace

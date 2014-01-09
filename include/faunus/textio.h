@@ -28,11 +28,14 @@ namespace Faunus {
     const string percent="%";
     const string partial="d";
     const string pm="+-";
+    const string powsix="^6";
     const string rho="rho";
     const string rootof="sqrt";
     const string squared="^2";
     const string sigma="sigma";
     const string superminus="-";
+    const string subi="i";
+    const string subj="j";  
     const string subr="r";
     const string theta="theta";
 #else
@@ -50,11 +53,14 @@ namespace Faunus {
     const string partial="\u2202";    //!< Partial derivative
     const string percent="\ufe6a";    //!< Percent sign
     const string pm="\u00b1";         //!< Plus minus sign
+    const string powsix="\u2076";     //!< Superscript 6?
     const string rho="\u03C1";        //!< Greek rho
     const string rootof="\u221a";     //!< Square root sign
     const string squared="\u00b2";    //!< Superscript 2
     const string sigma="\u03c3";      //!< Greek sigma
     const string superminus="\u207b"; //!< Superscript minus (-)
+    const string subi="\u1D62";       //!< Subscript "i"
+    const string subj="\u2C7C";       //!< Subscript "j"
     const string subr="\u1D63";       //!< Subscript "r"
     const string theta="\u03b8";      //!< Greek theta
 #endif

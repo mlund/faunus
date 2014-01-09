@@ -368,7 +368,7 @@ namespace Faunus {
       std::string _type;
       std::string _info();
     public:
-    HydrophobicWall(InputMap&);
+      HydrophobicWall(InputMap&);
       void setSurfPositionZ(T*);        // sets position of surface
       template<typename Tparticle>
       T operator()(const Tparticle &p); // returns energy

@@ -397,10 +397,11 @@ namespace Faunus {
         if (_type == "sqwl")
           if (this->p2c(p) < _threshold)
             return -_depth;
-        if (_type == "lj"){
-          double r2  = p.radius * p.radius / this->p2c(p) * this->p2c(p);
+        if (_type == "lj") {
+          double r2  = (p.radius * p.radius) / (this->p2c(p) * this->p2c(p));
           double r6  = r2 * r2 * r2;
-          return 4 * _depth * (r6 * r6 - r6);
+          double val = 4 * _depth * ((r6 * r6) - r6);
+          return val;
         } 
       }
       return 0;

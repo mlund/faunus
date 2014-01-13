@@ -343,19 +343,18 @@ namespace Faunus {
      * @date Lund, 2014
      *
      * This (external) potential class is used to simulate hydrophobic interactions between 
-     * particle(s) and a surface, using a simple square well (the default) or a 1/r^6 potential.
-     * Surface position must be specified in the program even if one has already done it for the 
-     * Gouy-Chapman potential (both classes inherit from ExternalPotentialBase<> but are for
-     * the most part independent).
+     * particle(s) and a surface, using a simple square well (the default) or a Lennard-Jones
+     * potential. Surface position must be specified in the program even if one has already
+     * done it for the Gouy-Chapman potential (both classes inherit from ExternalPotentialBase<>
+     * but are for the most part independent).
      *
      * See doi:10.1021/la300892p for more details on the square well potential.
-     * See doi:10.1063/1.3002317 for more details on the 1/r^6 potential.
      *
      * The InputMap parameters are:
      *
      * Key                  | Description
      * :------------------- | :---------------------------
-     * `hydrwl_type`        | Type of potential, ie. square well ("sqwl", default) or 1/r^6 ("r6") 
+     * `hydrwl_type`        | Type of potential, ie. square well ("sqwl", default) or Lennard-Jones ("lj") 
      * `hydrwl_depth`       | Depth, \f$\epsilon\f$ [kT] (positive number)
      * `hydrwl_threshold    | Threshold, [angstrom] (particle center-to-wall distance) - for "sqwl" type only
      *
@@ -398,8 +397,11 @@ namespace Faunus {
         if (_type == "sqwl")
           if (this->p2c(p) < _threshold)
             return -_depth;
-        if (_type == "r6")
-          return -_depth / pow(this->p2c(p), 6);
+        if (_type == "lj"){
+          double r2  = p.radius * p.radius / this->p2c(p) * this->p2c(p);
+          double r6  = r2 * r2 * r2;
+          return 4 * _depth * (r6 * r6 - r6);
+        } 
       }
       return 0;
     }
@@ -408,11 +410,12 @@ namespace Faunus {
     std::string HydrophobicWall<T>::_info() {
       std::ostringstream o;
       if (_type == "sqwl")
-        o << pad(textio::SUB, 50, ">>> USING: square well potential <<<") << endl 
+        o << pad(textio::SUB, 50, ">>> USING: square well potential <<<") << endl
+          << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(SQWL)") << _depth << textio::kT + " = " << pc::kT2kJ(_depth) << " kJ/mol" << endl
           << pad(textio::SUB, 25, "Threshold") << _threshold << textio::_angstrom << " (particle - wall distance)" << endl;
-      if (_type == "r6")
-        o << pad(textio::SUB, 50, ">>> USING: 1/r" + textio::powsix + " potential <<<") << endl;
-      o << pad(textio::SUB, 25, "Depth") << _depth << textio::kT << endl;
+      if (_type == "lj")
+        o << pad(textio::SUB, 50, ">>> USING: Lennard-Jones potential <<<") << endl
+          << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(LJ)") << _depth << textio::kT + " = " << pc::kT2kJ(_depth) << " kJ/mol"<< endl;
       return o.str();
     }
   } //namespace

@@ -28,7 +28,6 @@ namespace Faunus {
     const string percent="%";
     const string partial="d";
     const string pm="+-";
-    const string powsix="^6";
     const string rho="rho";
     const string rootof="sqrt";
     const string squared="^2";
@@ -51,7 +50,6 @@ namespace Faunus {
     const string partial="\u2202";    //!< Partial derivative
     const string percent="\ufe6a";    //!< Percent sign
     const string pm="\u00b1";         //!< Plus minus sign
-    const string powsix="\u2076";     //!< Superscript 6
     const string rho="\u03C1";        //!< Greek rho
     const string rootof="\u221a";     //!< Square root sign
     const string squared="\u00b2";    //!< Superscript 2

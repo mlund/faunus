@@ -350,13 +350,22 @@ namespace Faunus {
      *
      * See doi:10.1021/la300892p for more details on the square well potential.
      *
+     * The Lennard-Jones potential has the form:
+     * @f$
+     * \beta u=\epsilon
+     * \left ((\sigma_{i}/r_{i,s})^{12}-2(\sigma_{i}/r_{i,s})^6\right )
+     * @f$
+     * where
+     * \f$\sigma_{i}\f$ is the residue/particle radius. The potential reaches its minimum when
+     * \f$r_{i,s} = \sigma_{i}\f$, ie. the residue/particle is in close contact with the wall.
+     *   
      * The InputMap parameters are:
      *
      * Key                  | Description
      * :------------------- | :---------------------------
      * `hydrwl_type`        | Type of potential, ie. square well ("sqwl", default) or Lennard-Jones ("lj") 
      * `hydrwl_depth`       | Depth, \f$\epsilon\f$ [kT] (positive number)
-     * `hydrwl_threshold    | Threshold, [angstrom] (particle center-to-wall distance) - for "sqwl" type only
+     * `hydrwl_threshold    | Threshold, [angstrom] (particle center-to-wall distance) - for "sqwl" type only!
      *
      */
     template<class T=double>
@@ -400,7 +409,7 @@ namespace Faunus {
         if (_type == "lj") {
           double r2  = (p.radius * p.radius) / (this->p2c(p) * this->p2c(p));
           double r6  = r2 * r2 * r2;
-          double val = 4 * _depth * ((r6 * r6) - r6);
+          double val = _depth * ((r6 * r6) - (2 * r6));
           return val;
         } 
       }

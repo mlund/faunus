@@ -542,24 +542,26 @@ namespace Faunus {
     public:
       /**
        * @brief Constructor
+       * @param p Particles
        * @param kappa_in Dampening factor (inverse angstrom)
        * @param betaC Exponent of Gaussian charge distribution
        * @param betaD Exponent of Gaussian dipole distribution
        * @param rcut Cutoff distance (angstrom)
        */
-      WolfGaussianDamping(double kappa_in, Eigen::VectorXd betaC, Eigen::VectorXd betaD, double rcut) {
+      template<class Tparticles>
+      WolfGaussianDamping(const Tparticles &p, double kappa_in, double rcut) {
         Eigen::MatrixXd expBCC, expBCD, expBDD, erfBCC, erfBCD, erfBDD;
+        Eigen::VectorXd betaC, betaD;
+        constant = 2/sqrt(pc::pi);
         kappa = kappa_in;
         kappa2 = kappa*kappa;
         kappa4 = kappa2*kappa2;
         kappa6 = kappa4*kappa2;
-        rc1 = rcut;
         
-        double rc1i = 1/rcut;
+        rc1 = rcut;
+        double rc1i = 1/rc1;
         rc2i = rc1i*rc1i;
         double rc3i = rc2i*rc1i;
-        
-        constant = 2/sqrt(pc::pi);
         double expKc = constant*kappa*exp(-kappa2/rc2i);
         
         double rc1i_dW = erfc_x(kappa/rc1i)*rc1i;
@@ -568,28 +570,33 @@ namespace Faunus {
         double rc4i_dW = expKc*((2*kappa4/(3*rc1i)) + (2*kappa2*rc1i/3) + rc3i) + rc1i_dW*rc3i;
         double rc5i_dW = expKc*(rc2i*rc2i + (2*rc2i*kappa2/3) + (kappa6/(3*rc2i)) + (kappa4/6)) + rc1i_dW*rc2i*rc2i;
         double rc6i_dW = expKc*(rc2i*rc3i + (2/3)*kappa2*rc3i + (4/15)*kappa4*rc1i - (1/15)*(kappa6/rc1i) + (2/15)*(kappa4*kappa4/rc3i)) + rc1i_dW*rc2i*rc3i;
+
+        double N = p.size();
+        betaC.resize(N);
+        betaD.resize(N);
+        betaCC12.resize(N,N);
+        betaCD12.resize(N,N);
+        betaCD122.resize(N,N);
+        betaCD123.resize(N,N);
+        betaDD12.resize(N,N);
+        betaDD122.resize(N,N);
+        betaDD123.resize(N,N);
+        B0cCC.resize(N,N);
+        B1cCD.resize(N,N);
+        B1cDD.resize(N,N);
+        B2cDD.resize(N,N);
+        dB0cCC.resize(N,N);
+        dB1cCD.resize(N,N);
+        dB1cDD.resize(N,N);
+        dB2cDD.resize(N,N);
         
-        double NC = betaC.size();
-        double ND = betaD.size();
-        betaCC12.resize(NC,NC);
-        betaCD12.resize(NC,ND);
-        betaCD122.resize(NC,ND);
-        betaCD123.resize(NC,ND);
-        betaDD12.resize(ND,ND);
-        betaDD122.resize(ND,ND);
-        betaDD123.resize(ND,ND);
-        B0cCC.resize(NC,NC);
-        B1cCD.resize(NC,ND);
-        B1cDD.resize(ND,ND);
-        B2cDD.resize(ND,ND);
-        dB0cCC.resize(NC,NC);
-        dB1cCD.resize(NC,ND);
-        dB1cDD.resize(ND,ND);
-        dB2cDD.resize(ND,ND);
-        
-        // Assumes betaC.size() == betaD.size()
-        for(int i = 0; i < NC; i++) {
-          for(int j = 0; j < NC; j++) {
+        for(int i = 0; i < N; i++) {
+          betaC(i) = p[i].betaC;
+          betaD(i) = p[i].betaD;
+        }
+
+        for(int i = 0; i < N; i++) {
+          for(int j = 0; j < N; j++) {
             betaCC12(i,j) = betaC(i)*betaC(j)/sqrt(betaC(i)*betaC(i) + betaC(j)*betaC(j));
             betaCD12(i,j) = betaC(i)*betaD(j)/sqrt(betaC(i)*betaC(i) + betaD(j)*betaD(j));
             betaDD12(i,j) = betaD(i)*betaD(j)/sqrt(betaD(i)*betaD(i) + betaD(j)*betaD(j));

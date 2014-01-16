@@ -525,6 +525,239 @@ namespace Faunus {
   
   
   
+   /**
+   * @brief Base class for Wolf with Gaussian charge- or dipole-distribution based interactions
+   *
+   * The idea is that this class has no dependencies and is
+   * to be used as a helper class for other classes.
+   */
+   
+  class WolfGaussianDamping {
+    private:
+      double rc1, rc2i, constant, kappa, kappa2, kappa4, kappa6;
+      Eigen::MatrixXd betaCC12, betaCD12, betaCD122, betaCD123, betaDD12, betaDD122, betaDD123;
+      Eigen::MatrixXd B0cCC, B1cCD, B1cDD, B2cDD;
+      Eigen::MatrixXd dB0cCC, dB1cCD, dB1cDD, dB2cDD;
+      
+    public:
+      /**
+       * @brief Constructor
+       * @param kappa_in Dampening factor (inverse angstrom)
+       * @param betaC Exponent of Gaussian charge distribution
+       * @param betaD Exponent of Gaussian dipole distribution
+       * @param rcut Cutoff distance (angstrom)
+       */
+      WolfGaussianDamping(double kappa_in, Eigen::VectorXd betaC, Eigen::VectorXd betaD, double rcut) {
+        Eigen::MatrixXd expBCC, expBCD, expBDD, erfBCC, erfBCD, erfBDD;
+        kappa = kappa_in;
+        kappa2 = kappa*kappa;
+        kappa4 = kappa2*kappa2;
+        kappa6 = kappa4*kappa2;
+        rc1 = rcut;
+        
+        double rc1i = 1/rcut;
+        rc2i = rc1i*rc1i;
+        double rc3i = rc2i*rc1i;
+        
+        constant = 2/sqrt(pc::pi);
+        double expKc = constant*kappa*exp(-kappa2/rc2i);
+        
+        double rc1i_dW = erfc_x(kappa/rc1i)*rc1i;
+        double rc2i_dW = (expKc + rc1i_dW)*rc1i;
+        double rc3i_dW = expKc*(kappa2 + rc2i) + rc1i_dW*rc2i;
+        double rc4i_dW = expKc*((2*kappa4/(3*rc1i)) + (2*kappa2*rc1i/3) + rc3i) + rc1i_dW*rc3i;
+        double rc5i_dW = expKc*(rc2i*rc2i + (2*rc2i*kappa2/3) + (kappa6/(3*rc2i)) + (kappa4/6)) + rc1i_dW*rc2i*rc2i;
+        double rc6i_dW = expKc*(rc2i*rc3i + (2/3)*kappa2*rc3i + (4/15)*kappa4*rc1i - (1/15)*(kappa6/rc1i) + (2/15)*(kappa4*kappa4/rc3i)) + rc1i_dW*rc2i*rc3i;
+        
+        double NC = betaC.size();
+        double ND = betaD.size();
+        betaCC12.resize(NC,NC);
+        betaCD12.resize(NC,ND);
+        betaCD122.resize(NC,ND);
+        betaCD123.resize(NC,ND);
+        betaDD12.resize(ND,ND);
+        betaDD122.resize(ND,ND);
+        betaDD123.resize(ND,ND);
+        B0cCC.resize(NC,NC);
+        B1cCD.resize(NC,ND);
+        B1cDD.resize(ND,ND);
+        B2cDD.resize(ND,ND);
+        dB0cCC.resize(NC,NC);
+        dB1cCD.resize(NC,ND);
+        dB1cDD.resize(ND,ND);
+        dB2cDD.resize(ND,ND);
+        
+        // Assumes betaC.size() == betaD.size()
+        for(int i = 0; i < NC; i++) {
+          for(int j = 0; j < NC; j++) {
+            betaCC12(i,j) = betaC(i)*betaC(j)/sqrt(betaC(i)*betaC(i) + betaC(j)*betaC(j));
+            betaCD12(i,j) = betaC(i)*betaD(j)/sqrt(betaC(i)*betaC(i) + betaD(j)*betaD(j));
+            betaDD12(i,j) = betaD(i)*betaD(j)/sqrt(betaD(i)*betaD(i) + betaD(j)*betaD(j));
+            betaCD122(i,j) = betaCD12(i,j)*betaCD12(i,j);
+            betaDD122(i,j) = betaDD12(i,j)*betaDD12(i,j);
+            betaCD123(i,j) = betaCD122(i,j)*betaCD12(i,j);
+            betaDD123(i,j) = betaDD122(i,j)*betaDD12(i,j);
+            
+            expBCC(i,j) = constant*exp(-betaCC12(i,j)/rc2i);
+            expBCD(i,j) = constant*exp(-betaCD12(i,j)/rc2i);
+            expBDD(i,j) = constant*exp(-betaDD12(i,j)/rc2i);
+            erfBCC(i,j) = erf_x(betaCC12(i,j)/rc1i);
+            erfBCD(i,j) = erf_x(betaCD12(i,j)/rc1i);
+            erfBDD(i,j) = erf_x(betaDD12(i,j)/rc1i);
+
+            // U_{qq} = q_A*q_B*B0
+            // U_{q\mu} = q*(\mu.dot(R))*B1
+            // U_{\mu_A\mu_B} = (\mu_A.dot(\mu_B))*B1 - (\mu_A.dot(R))*(\mu_B.dot(R))*B2
+            B0cCC(i,j) = erfBCC(i,j)*rc1i_dW;
+            B1cCD(i,j) = erfBCD(i,j)*rc3i_dW - betaCD123(i,j)*expBCC(i,j)*rc2i_dW;
+            B1cDD(i,j) = erfBDD(i,j)*rc3i_dW - betaDD123(i,j)*expBCD(i,j)*rc2i_dW;            
+            B2cDD(i,j) = 3*erfBDD(i,j)*betaDD12(i,j)*rc5i_dW - expBDD(i,j)*betaDD122(i,j)*(2*rc2i_dW*betaDD122(i,j) + 3*rc4i_dW);
+            
+            // dU_{qq}/dr = q_A*q_B*dB0
+            // dU_{q\mu}/dr = q*(\mu.dot(R))*( (B1/|r|) + dB1 )
+            // dU_{\mu_A\mu_B}/dr = (\mu_A.dot(\mu_B))*dB1 - (\mu_A.dot(R))*(\mu_B.dot(R))*( 2*B2/|R| + dB2 )
+            dB0cCC(i,j) = expBCC(i,j)*betaCC12(i,j)*rc1i_dW - erfBCC(i,j)*rc2i_dW;
+            dB1cCD(i,j) = expBCD(i,j)*betaCD12(i,j)*(3*rc3i_dW + 2*betaCD122(i,j)*rc1i_dW) - 3*erfBCD(i,j)*rc4i_dW;
+            dB1cDD(i,j) = expBDD(i,j)*betaDD12(i,j)*(3*rc3i_dW + 2*betaDD122(i,j)*rc1i_dW) - 3*erfBDD(i,j)*rc4i_dW;
+            dB2cDD(i,j) = expBDD(i,j)*betaDD12(i,j)*(4*betaDD123(i,j)*betaDD122(i,j)*rc1i_dW + 10*betaDD123(i,j)*rc3i_dW + 15*betaDD12(i,j)*rc5i_dW) - 15*erfBDD(i,j)*betaDD12(i,j)*rc6i_dW;
+          }
+        }
+      }
+      
+      /**
+       * @brief Returns ion-ion interaction. Needs to be checked!
+       * @param QxQ Product of ion charges
+       * @param betaA Index of type atom A:s charge distribution
+       * @param betaB Index of type atom B:s charge distribution
+       * @param r Direction \f$ r_{q_A} - r_{q_B} \f$  
+       */
+       template<class Tvec>
+         double q2q(double QxQ, int betaA, int betaB, const Tvec &r) {
+           double r1 = r.norm();
+           if(r1 > rc1)
+            return 0;
+           double r1i_dW = erfc_x(kappa*r1)/r1;
+           double B0 = erf_x(betaCC12(betaA,betaB)*r1)*r1i_dW;
+           return QxQ*(B0 - B0cCC(betaA,betaB) - (r1 - rc1)*dB0cCC(betaA,betaB));
+         }
+      
+      /**
+       * @brief Returns ion-dipole interaction, Needs to be checked!
+       * @param QBxMuA Product of ion B:s charge and dipole A:s scalar
+       * @param muA Unit dipole moment vector of particle A
+       * @param QAxMuB Product of ion A:s charge and dipole B:s scalar
+       * @param muB Unit dipole moment vector of particle B
+       * @param betaA Index of type atom A:s charge/dipole distribution
+       * @param betaB Index of type atom B:s dipole/charge distribution
+       * @param r Direction \f$ r_A - r_B \f$  
+       */
+       template<class Tvec>
+         double q2mu(double QBxMuA, const Tvec &muA, double QAxMuB, const Tvec &muB, int betaA, int betaB, const Tvec &r) {
+           double r2i = 1/r.squaredNorm;
+           if (r2i < rc2i)
+            return 0;
+           double r1i = sqrt(r2i);
+           double expK = constant*kappa*exp(-kappa2/r2i);
+           double r1i_dW = erfc_x(kappa/r1i)*r1i;
+           double r2i_dW = (expK + r1i_dW)*r1i;
+           double r3i_dW = expK*(kappa2 + r2i) + r1i_dW*r2i;
+           double B1 = erf_x(betaCD12(betaA,betaB)/r1i)*r3i_dW - constant*betaCD123(betaA,betaB)*exp(-betaCD12(betaA,betaB)/r2i)*r2i_dW;
+           return (QBxMuA*muA.dot(r) - QAxMuB*muB.dot(r))*(B1 - B1cCD(betaA,betaB) - ((1/r1i) - rc1)*dB1cCD(betaA,betaB));  // Beware of r_Mu - r_Q = -r according to Israelachvili p.36, i.e. minus becomes plus
+         }
+
+      /**
+       * @brief Dipole-dipole energy
+       * @param muA Dipole moment (A) unit vector
+       * @param muB Dipole moment (B) unit vector
+       * @param muAxMuB Product of dipole moment scalars, |A|*|B|
+       * @param betaA Index of type atom A:s dipole distribution
+       * @param betaB Index of type atom B:s dipole distribution
+       * @param r_ab Vector A to B
+       * @returns energy in `kT/lB`
+       */
+      template<class Tvec>
+        double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, int betaA, int betaB, const Tvec &r) const {
+          double r2i = 1/r.squaredNorm();
+          if (r2i < rc2i)
+            return 0;
+          double r1i = sqrt(r2i);
+          double der = (1/r1i) - rc1;
+          double r3i = r2i*r1i;
+          double expK =  constant*kappa*exp(-kappa2/r2i);
+          double r1i_dW = erfc_x(kappa/r1i)*r1i;
+          double r2i_dW = (expK + r1i_dW)*r1i;
+          double r3i_dW = expK*(kappa2 + r2i) + r1i_dW * r2i;
+          double r4i_dW = expK*((2*kappa4/(3*r1i)) + (2*kappa2*r1i/3) + r3i) + r1i_dW*r3i;
+          double r5i_dW = expK*r2i*(r2i + (2/3)*kappa2 + (kappa6/(3*r2i*r2i)) + (kappa4/(6*r2i))) + r1i_dW*r2i*r2i;   
+          double erfX = erf_x(betaDD12(betaA,betaB)/r1i);
+          double expX = constant*exp(-betaDD12(betaA,betaB)/r2i);
+          double B1 = erfX*r3i_dW - betaDD123(betaA,betaB)*expX*r2i_dW;
+          double B2 = 3*erfX*betaDD12(betaA,betaB)*r5i_dW - expX*betaDD122(betaA,betaB)*(2*r2i_dW*betaDD122(betaA,betaB) + 3*r4i_dW);
+          double W = muA.dot(muB)*(B1 - B1cDD(betaA,betaB) - der*dB1cDD(betaA,betaB)) - muA.dot(r)*muB.dot(r)*(B2 - B2cDD(betaA,betaB) -der*dB2cDD(betaA,betaB));
+          return W*muAxmuB;
+        }
+        
+      /**
+       * @brief Returns ion-quadrupole interaction. Not implemented!
+       */
+       template<class Tvec, class Tmat>
+         double q2quad(double q1, const Tmat &quad1, double q2, const Tmat &quad2, const Tvec &r) {
+           double r2i = 1/r.squaredNorm();
+           if (r2i < rc2i)
+            return 0;
+           double r1i = sqrt(r2i);
+           double r3i = r1i*r2i;
+           double expK =  2 * kappa*exp(-kappa2/r2i) / sqrt(pc::pi);
+           double r1i_d = erfc_x(kappa/r1i)*r1i;
+           double r3i_d = expK*(kappa2 + r2i) + r1i_d*r2i;
+           double r5i_d = r2i*expK*(r2i + (2/3)*kappa2 + (kappa6/(3*r2i*r2i)) + (kappa4/(6*r2i))) + r1i_d*r2i*r2i;   
+           double W1 = q1*r.transpose()*quad1*r*r5i_d  - q1*quad1.trace()*(r3i_d/3);
+           double W2 = q2*r.transpose()*quad2*r*r5i_d  - q2*quad2.trace()*(r3i_d/3);
+           return (W1+W2); // e^2 / Å
+         }
+         
+        /** 
+         * @brief Dipole field at `r` due to dipole `p` 
+         * @param p Particle from which to evaluate the field
+         * @param betaA Index of type atom A:s dipole distribution
+         * @param betaB Index of type atom B:s dipole distribution
+         * @param r_ab Vector A to B
+         * @returns [e/Å / lB] (\f$\beta eE / lB \f$)
+         */
+        template<class Tparticle>
+          Point field(const Tparticle &p, int betaA, int betaB, const Point &r) const {
+           double r2i = 1/r.squaredNorm();
+           if (r2i < rc2i)
+            return 0;
+           double r1i = sqrt(r2i);
+           double r3i = r2i*r1i;
+           double der = (1/r1i) - rc1;
+           double expK = constant*kappa*exp(-kappa2/r2i);
+           double r1i_dW = erfc_x(kappa/r1i)*r1i;
+           double r2i_dW = (expK + r1i_dW)*r1i;
+           double r3i_dW = expK*(kappa2 + r2i) + r1i_dW*r2i;
+           double r4i_dW = expK*((2*kappa4/(3*r1i)) + (2*kappa2*r1i/3) + r3i) + r1i_dW*r3i;
+           double r5i_dW = expK*r2i*(r2i + (2/3)*kappa2 + (kappa6/(3*r2i*r2i)) + (kappa4/(6*r2i))) + r1i_dW*r2i*r2i;
+           double erfX = erf_x(betaDD12(betaA,betaB)/r1i);
+           double expX = constant*exp(-betaDD12(betaA,betaB)/r2i);
+           double B1 = erf_x(betaCD12(betaA,betaB)/r1i)*r3i_dW - constant*betaCD123(betaA,betaB)*exp(-betaCD12(betaA,betaB)/r2i)*r2i_dW;
+           double B2 = 3*erfX*betaDD12(betaA,betaB)*r5i_dW - expX*betaDD122(betaA,betaB)*(2*r2i_dW*betaDD122(betaA,betaB) + 3*r4i_dW);
+           Point fieldCharge = p.charge*r*(B1 - B1cCD(betaA,betaB) - ((1/r1i) - rc1)*dB1cCD(betaA,betaB));
+           Point fieldDipole = p.muscalar*(p.mu*(B1 - B1cDD(betaA,betaB) - der*dB1cDD(betaA,betaB)) - r*p.mu.dot(r)*(B2 - B2cDD(betaA,betaB) -der*dB2cDD(betaA,betaB)));
+           return (fieldCharge + fieldDipole);
+          }
+
+      double getKappa() { return kappa; }
+      double getCutoff() { return rc1; }
+  };
+  
+  
+  
+  
+  
+  
+  
+  
   
   
   
@@ -596,7 +829,7 @@ namespace Faunus {
 
         string info(char w) { return _brief(); }
     };
-    
+   /* 
       class IonIonDamped : public Coulomb {
       private:
         string _brief() { return "Damped Coulomb"; }
@@ -623,7 +856,7 @@ namespace Faunus {
           o << Coulomb::info(w) << endl;
           return o.str();
         }
-    };
+    };*/
 
     /**
      * @brief Ion-dipole interaction, 

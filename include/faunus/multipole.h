@@ -102,17 +102,6 @@ namespace Faunus {
       double udis2  = vec[0]*pow(2.71828,-vec[1]/r1i);
       return (uexp  + udis1 + udis2);
     }
-    /*
-    template<class Tvec>
-      double NemoType1(Eigen::VectorXd &vec, const Tvec &r) {
-        double r1i = 1/r.norm();
-        double r2i = r1i*r1i;
-        double r6i = r2i*r2i*r2i;
-        double uexp = vec[0]*pow(2.71828,-std::min(expmax,vec[1]/r1i));
-        double ur20 = pow(vec[2]*r1i,20);
-        double udis = vec[3]*(1 - pow(2.71828,-min(expmax,(1/(r1i*asw))**nsw)))*r6i;
-        return (uexp + ur20 + udis);
-      }*/
   
   /**
    * @brief Returns NemoType4-interaction (Damping Exponential)
@@ -244,16 +233,35 @@ namespace Faunus {
    */
   template<class Tvec>
     double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r) {
-      double R2 = 1/r.squaredNorm();
-      double R1 = sqrt(R2);
-      double R3 = R1*R2;
-      double R5 = R3*R2;
-      //Eigen::Matrix3d T = 3*R5*r*r.transpose() - R3*Matrix3d::Identity();
+      double r2i = 1/r.squaredNorm();
+      double r1i = sqrt(r2i);
+      double r3i = r1i*r2i;
+      double r5i = r3i*r2i;
+      //Eigen::Matrix3d T = 3*r5i*r*r.transpose() - r3i*Matrix3d::Identity();
       //double W = -muA.transpose()*T*muB;                       // Buckingham    Å^-3
-      double W = muA.dot(muB)*R3-3*muA.dot(r)*muB.dot(r)*R5; // J&K
+      double W = muA.dot(muB)*r3i-3*muA.dot(r)*muB.dot(r)*r5i; // J&K
       return W*muAxmuB;  // e^2 Å^2 Å ^-3 = e^2 /A
     }
 
+  /**
+   * @brief Returns ion-quadrupole interaction
+   * @param q Charge of particle A
+   * @param quad Quadrupole moment of particle B
+   * @param r Vector \f$ r_{AB} \f$
+   */
+  template<class Tvec, class Tmat>
+    double q2quad(double q, const Tmat &quad, const Tvec &r) {
+      double r2i = 1/r.squaredNorm();
+      double r1i = sqrt(r2i);
+      double r3i = r1i*r2i;
+      double r5i = r3i*r2i;
+      double W = r.transpose()*quad*r*r5i  - quad.trace()*(r3i/3);
+      return q*W; // e^2 / Å
+    }
+    
+    
+    
+    
   /**
    * @brief Base class for Wolf based interactions
    *
@@ -262,7 +270,7 @@ namespace Faunus {
    */
   class WolfBase {
     private:
-      double rc1i_d, rc3i_d, rc4i_d, rc5i_d, rc6i_d, rc1i, rc2i, rc3i, expKc, kappa, kappa2, kappa4, kappa6;
+      double rc1i_d, rc2i_d, rc3i_d, rc4i_d, rc5i_d, rc6i_d, rc1, rc1i, rc2i, rc3i, expKc, kappa, kappa2, kappa4, kappa6, constant;
       
       
       struct wdata {
@@ -297,15 +305,21 @@ namespace Faunus {
         kappa2 = kappa*kappa;
         kappa4 = kappa2*kappa2;
         kappa6 = kappa4*kappa2;
+        constant = 2/sqrt(pc::pi);
+        rc1 = rcut;
         rc1i = 1/rcut;
         rc2i = rc1i*rc1i;
         rc3i = rc1i*rc2i;
-        expKc = 2*kappa*exp(-kappa2/rc2i)/sqrt(pc::pi);
+        expKc = constant*kappa*exp(-kappa2/rc2i);
         rc1i_d = erfc_x(kappa/rc1i)*rc1i;
+        rc2i_d = (expKc + rc1i_d)*rc1i;
         rc3i_d = expKc*(kappa2 + rc2i) + rc1i_d*rc2i;
         rc4i_d = expKc*( (2*kappa4/(3*rc1i)) + (2*kappa2*rc1i/3) + rc3i ) + rc1i_d*rc3i;
         rc5i_d = expKc*(rc2i*rc2i + (2*rc2i*kappa2/3) + (kappa6/(3*rc2i)) + (kappa4/6)) + rc1i_d*rc2i*rc2i;
-        rc6i_d = expKc*((-kappa6/(15*rc1i)) + (2*kappa6*kappa2/(15*rc3i)) + (2*kappa2*rc3i/3) + (4*kappa4/(15*rc1i)) + rc1i) + rc1i_d*rc3i*rc2i;
+        rc6i_d = expKc*(rc2i*rc3i + (2/3)*kappa2*rc3i + (4/15)*kappa4*rc1i - (1/15)*(kappa6/rc1i) + (2/15)*(kappa4*kappa4/rc3i)) + rc1i_d*rc2i*rc3i;
+      
+        cout << rc1i_d << ", " << rc3i_d << ", " << rc3i_d << ", " << 3*rc5i_d << endl;
+        cout << -rc2i_d << ", " << -3*rc4i_d << ", " << -3*rc4i_d << ", " << -15*rc6i_d << endl;
       }
       
       /**
@@ -320,9 +334,9 @@ namespace Faunus {
            if (r2i < rc2i)
             return 0;
            double r1i = sqrt(r2i);
-           double expK = 2*kappa*exp(-kappa2/r2i)/sqrt(pc::pi);
+           double expK = constant*kappa*exp(-kappa2/r2i);
            double r3i_d = expK * (kappa2 + r2i) + erfc_x(kappa/r1i)*r1i * r2i;
-           double der = ((1/r1i) - (1/rc1i))*3*rc4i_d;
+           double der = ((1/r1i) - rc1)*3*rc4i_d;
            double W1 = QxMu1*mu1.dot(r)*(r3i_d - rc3i_d + der);
            double W2 = QxMu2*mu2.dot(r)*(r3i_d - rc3i_d + der);
            return (W1-W2);  // Beware of r_Mu - r_Q = -r according to Israelachvili p.36, i.e. minus becomes plus
@@ -340,16 +354,30 @@ namespace Faunus {
        */
       template<class Tvec>
         double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r) const {
+          double r1 = r.norm();
           double r2i = 1/r.squaredNorm();
           if (r2i < rc2i)
             return 0;
           double r1i = sqrt(r2i);
           double r1i_d = erfc_x(kappa/r1i)*r1i;
-          double expK =  2 * kappa*exp(-kappa2/r2i) / sqrt(pc::pi);
+          double expK =  constant * kappa*exp(-kappa2/r2i);
           double r3i_d = expK * (kappa2 + r2i) + r1i_d * r2i;
-          double r5i_d = r2i*expK*(r2i + (2/3)*kappa2 + (kappa6/(3*r2i*r2i)) + (kappa4/(6*r2i))) + r1i_d*r2i*r2i;       
-          Eigen::Matrix3d T = 3*r*r.transpose()*(r5i_d - rc5i_d + 5*rc6i_d) - Matrix3d::Identity()*(r3i_d - rc3i_d + 3*rc4i_d);
-          double W = -muA.transpose()*T*muB;  
+          double r5i_d = r2i*expK*(r2i + (2/3)*kappa2 + (kappa6/(3*r2i*r2i)) + (kappa4/(6*r2i))) + r1i_d*r2i*r2i;    
+          double der = r1 - rc1;
+          double t3 = muA.dot(muB)*(r3i_d - rc3i_d + der*3*rc4i_d);
+          double t5 = muA.dot(r)*muB.dot(r)*(3*r5i_d - 3*rc5i_d + der*15*rc6i_d);
+          /*
+          if((1/r1i) > 4.1) {
+            cout << "r: " << (1/r1i) << endl;
+            cout << (r3i_d - rc3i_d) << endl;
+            cout << (r5i_d - rc5i_d) << endl;
+            cout << "der: " << der << endl;
+            cout << "r5i_d: " << r5i_d << ", r3i_d: " << r3i_d << endl;
+            cout << "r5i: " << r2i*r2i*r1i << ", r3i: " << r2i*r1i << endl;
+          }*/
+          //Eigen::Matrix3d T = Matrix3d::Identity()*(r3i_d - rc3i_d + der*3*rc4i_d) - 3*r*r.transpose()*(r5i_d - rc5i_d + der*5*rc6i_d);
+          //double W = muA.transpose()*T*muB; 
+          double W = t3 - t5;
           return W*muAxmuB;
         }
         
@@ -363,7 +391,7 @@ namespace Faunus {
             return 0;
            double r1i = sqrt(r2i);
            double r3i = r1i*r2i;
-           double expK =  2 * kappa*exp(-kappa2/r2i) / sqrt(pc::pi);
+           double expK =  constant * kappa*exp(-kappa2/r2i);
            double r1i_d = erfc_x(kappa/r1i)*r1i;
            double r3i_d = expK*(kappa2 + r2i) + r1i_d*r2i;
            double r5i_d = r2i*expK*(r2i + (2/3)*kappa2 + (kappa6/(3*r2i*r2i)) + (kappa4/(6*r2i))) + r1i_d*r2i*r2i;   
@@ -376,15 +404,19 @@ namespace Faunus {
          *  Gets returned in [e/Å / lB] (\f$\beta eE / lB \f$)
          */
         template<class Tparticle>
-          Point fieldMu2Mu(const Tparticle &p,const Tparticle &p0, const Point &r) const {
+          Point field(const Tparticle &p, const Tparticle &p0, const Point &r) const {
             double r2i = 1.0/r.squaredNorm();
+            if (r2i < rc2i)
+              return Point(0,0,0);
             double r1i = sqrt(r2i);
-            Point r_ab = r*r1i;
-            double expK =  2 * kappa*exp(-kappa2/r2i) / sqrt(pc::pi);
-            double r1i_d = erfc_x(kappa/r1i)*r1i*r2i;    // multiplied with r2i
-            double r3i_d = expK*(kappa2 + r2i) + r1i_d;
-            double r5i_d = expK*(r2i + (2/3)*kappa2 + (kappa6/(3*r2i*r2i)) + (kappa4/(6*r2i))) + r1i_d;                                        // Normalized with 1/r2i
-            return (3.0*p.mu.dot(r_ab)*r_ab*r5i_d - p.mu*r3i_d)*p.muscalar; // \beta e E
+            double expK =  constant * kappa*exp(-kappa2/r2i);
+            double r1i_d = erfc_x(kappa/r1i)*r1i;
+            //double r2i_d = expK*r1i + r1i_d*r1i;
+            double r3i_d = expK*(kappa2 + r2i) + r1i_d*r2i;
+            double r5i_d = expK*(r2i*r2i + (2/3)*kappa2*r2i + (kappa6/(3*r2i)) + (kappa4/6)) + r1i_d*r2i*r2i;
+            Point fieldCharge = p.charge*r*r3i_d;
+            Point fieldDipole = (3.0*p.mu.dot(r)*r*r5i_d - p.mu*r3i_d)*p.muscalar; // \beta e E
+            return (fieldCharge + fieldDipole);
           }
 
       double getKappa() { return kappa; }
@@ -548,8 +580,9 @@ namespace Faunus {
        * @param betaD Exponent of Gaussian dipole distribution
        * @param rcut Cutoff distance (angstrom)
        */
-      template<class Tparticles>
-      WolfGaussianDamping(const Tparticles &p, double kappa_in, double rcut) {
+      //template<class Tparticles>
+      WolfGaussianDamping(double kappa_in, double rcut) {
+      //WolfGaussianDamping(const Tparticles &p, double kappa_in, double rcut) {
         Eigen::MatrixXd expBCC, expBCD, expBDD, erfBCC, erfBCD, erfBDD;
         Eigen::VectorXd betaC, betaD;
         constant = 2/sqrt(pc::pi);
@@ -570,10 +603,16 @@ namespace Faunus {
         double rc4i_dW = expKc*((2*kappa4/(3*rc1i)) + (2*kappa2*rc1i/3) + rc3i) + rc1i_dW*rc3i;
         double rc5i_dW = expKc*(rc2i*rc2i + (2*rc2i*kappa2/3) + (kappa6/(3*rc2i)) + (kappa4/6)) + rc1i_dW*rc2i*rc2i;
         double rc6i_dW = expKc*(rc2i*rc3i + (2/3)*kappa2*rc3i + (4/15)*kappa4*rc1i - (1/15)*(kappa6/rc1i) + (2/15)*(kappa4*kappa4/rc3i)) + rc1i_dW*rc2i*rc3i;
-
-        double N = p.size();
+        
+        int N = 1; //p.size();
         betaC.resize(N);
         betaD.resize(N);
+        erfBCC.resize(N,N);
+        erfBCD.resize(N,N);
+        erfBDD.resize(N,N);
+        expBCC.resize(N,N);
+        expBCD.resize(N,N);
+        expBDD.resize(N,N);
         betaCC12.resize(N,N);
         betaCD12.resize(N,N);
         betaCD122.resize(N,N);
@@ -591,8 +630,8 @@ namespace Faunus {
         dB2cDD.resize(N,N);
         
         for(int i = 0; i < N; i++) {
-          betaC(i) = p[i].betaC;
-          betaD(i) = p[i].betaD;
+          betaC(i) = 1.3; //p[i].betaC;
+          betaD(i) = 1.3; //p[i].betaD;
         }
 
         for(int i = 0; i < N; i++) {
@@ -605,28 +644,28 @@ namespace Faunus {
             betaCD123(i,j) = betaCD122(i,j)*betaCD12(i,j);
             betaDD123(i,j) = betaDD122(i,j)*betaDD12(i,j);
             
-            expBCC(i,j) = constant*exp(-betaCC12(i,j)/rc2i);
-            expBCD(i,j) = constant*exp(-betaCD12(i,j)/rc2i);
-            expBDD(i,j) = constant*exp(-betaDD12(i,j)/rc2i);
+            expBCC(i,j) = constant*betaCC12(i,j)*exp(-betaCC12(i,j)/rc2i);
+            expBCD(i,j) = constant*betaCD12(i,j)*exp(-betaCD12(i,j)/rc2i);
+            expBDD(i,j) = constant*betaDD12(i,j)*exp(-betaDD12(i,j)/rc2i);
             erfBCC(i,j) = erf_x(betaCC12(i,j)/rc1i);
             erfBCD(i,j) = erf_x(betaCD12(i,j)/rc1i);
             erfBDD(i,j) = erf_x(betaDD12(i,j)/rc1i);
-
-            // U_{qq} = q_A*q_B*B0
-            // U_{q\mu} = q*(\mu.dot(R))*B1
-            // U_{\mu_A\mu_B} = (\mu_A.dot(\mu_B))*B1 - (\mu_A.dot(R))*(\mu_B.dot(R))*B2
-            B0cCC(i,j) = erfBCC(i,j)*rc1i_dW;
-            B1cCD(i,j) = erfBCD(i,j)*rc3i_dW - betaCD123(i,j)*expBCC(i,j)*rc2i_dW;
-            B1cDD(i,j) = erfBDD(i,j)*rc3i_dW - betaDD123(i,j)*expBCD(i,j)*rc2i_dW;            
-            B2cDD(i,j) = 3*erfBDD(i,j)*betaDD12(i,j)*rc5i_dW - expBDD(i,j)*betaDD122(i,j)*(2*rc2i_dW*betaDD122(i,j) + 3*rc4i_dW);
             
-            // dU_{qq}/dr = q_A*q_B*dB0
-            // dU_{q\mu}/dr = q*(\mu.dot(R))*( (B1/|r|) + dB1 )
-            // dU_{\mu_A\mu_B}/dr = (\mu_A.dot(\mu_B))*dB1 - (\mu_A.dot(R))*(\mu_B.dot(R))*( 2*B2/|R| + dB2 )
-            dB0cCC(i,j) = expBCC(i,j)*betaCC12(i,j)*rc1i_dW - erfBCC(i,j)*rc2i_dW;
-            dB1cCD(i,j) = expBCD(i,j)*betaCD12(i,j)*(3*rc3i_dW + 2*betaCD122(i,j)*rc1i_dW) - 3*erfBCD(i,j)*rc4i_dW;
-            dB1cDD(i,j) = expBDD(i,j)*betaDD12(i,j)*(3*rc3i_dW + 2*betaDD122(i,j)*rc1i_dW) - 3*erfBDD(i,j)*rc4i_dW;
-            dB2cDD(i,j) = expBDD(i,j)*betaDD12(i,j)*(4*betaDD123(i,j)*betaDD122(i,j)*rc1i_dW + 10*betaDD123(i,j)*rc3i_dW + 15*betaDD12(i,j)*rc5i_dW) - 15*erfBDD(i,j)*betaDD12(i,j)*rc6i_dW;
+            cout << expBCC(i,j) << ", " << expBCD(i,j) << ", " << expBDD(i,j) << endl;
+            cout << erfBCC(i,j) << ", " << erfBCD(i,j) << ", " << erfBDD(i,j) << endl;
+            
+            B0cCC(i,j) = erfBCC(i,j)*rc1i_dW;
+            B1cCD(i,j) = erfBCD(i,j)*rc3i_dW - expBCD(i,j)*rc2i_dW;
+            B1cDD(i,j) = erfBDD(i,j)*rc3i_dW - expBDD(i,j)*rc2i_dW;            
+            B2cDD(i,j) = 3*erfBDD(i,j)*rc5i_dW - expBDD(i,j)*(2*rc2i_dW*betaDD122(i,j) + 3*rc4i_dW);
+
+            dB0cCC(i,j) = expBCC(i,j)*rc1i_dW - erfBCC(i,j)*rc2i_dW;
+            dB1cCD(i,j) = expBCD(i,j)*(rc3i_dW + (2/betaCD12(i,j))*rc3i_dW + 2*betaCD12(i,j)*rc1i_dW) - 3*erfBCD(i,j)*rc4i_dW;
+            dB1cDD(i,j) = expBDD(i,j)*(rc3i_dW + (2/betaDD12(i,j))*rc3i_dW + 2*betaDD12(i,j)*rc1i_dW) - 3*erfBDD(i,j)*rc4i_dW;
+            dB2cDD(i,j) = expBDD(i,j)*(15*rc5i_dW + 10*betaDD122(i,j)*rc3i_dW + 4*betaDD122(i,j)*betaDD122(i,j)*rc1i_dW) - 15*erfBDD(i,j)*rc6i_dW;
+          
+            cout << B0cCC(i,j) << ", " << B1cCD(i,j) << ", " << B1cDD(i,j) << ", " << B2cDD(i,j) << endl;
+            cout << dB0cCC(i,j) << ", " << dB1cCD(i,j) << ", " << dB1cDD(i,j) << ", " << dB2cDD(i,j) << endl;
           }
         }
       }
@@ -668,7 +707,7 @@ namespace Faunus {
            double r1i_dW = erfc_x(kappa/r1i)*r1i;
            double r2i_dW = (expK + r1i_dW)*r1i;
            double r3i_dW = expK*(kappa2 + r2i) + r1i_dW*r2i;
-           double B1 = erf_x(betaCD12(betaA,betaB)/r1i)*r3i_dW - constant*betaCD123(betaA,betaB)*exp(-betaCD12(betaA,betaB)/r2i)*r2i_dW;
+           double B1 = erf_x(betaCD12(betaA,betaB)/r1i)*r3i_dW - constant*betaCD12(betaA,betaB)*exp(-betaCD12(betaA,betaB)/r2i)*r2i_dW;
            return (QBxMuA*muA.dot(r) - QAxMuB*muB.dot(r))*(B1 - B1cCD(betaA,betaB) - ((1/r1i) - rc1)*dB1cCD(betaA,betaB));  // Beware of r_Mu - r_Q = -r according to Israelachvili p.36, i.e. minus becomes plus
          }
 
@@ -683,7 +722,10 @@ namespace Faunus {
        * @returns energy in `kT/lB`
        */
       template<class Tvec>
-        double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, int betaA, int betaB, const Tvec &r) const {
+        double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r) const {
+        //double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, int betaA, int betaB, const Tvec &r) const {
+          int betaA = 0;
+          int betaB = 0;
           double r2i = 1/r.squaredNorm();
           if (r2i < rc2i)
             return 0;
@@ -697,10 +739,23 @@ namespace Faunus {
           double r4i_dW = expK*((2*kappa4/(3*r1i)) + (2*kappa2*r1i/3) + r3i) + r1i_dW*r3i;
           double r5i_dW = expK*r2i*(r2i + (2/3)*kappa2 + (kappa6/(3*r2i*r2i)) + (kappa4/(6*r2i))) + r1i_dW*r2i*r2i;   
           double erfX = erf_x(betaDD12(betaA,betaB)/r1i);
-          double expX = constant*exp(-betaDD12(betaA,betaB)/r2i);
-          double B1 = erfX*r3i_dW - betaDD123(betaA,betaB)*expX*r2i_dW;
-          double B2 = 3*erfX*betaDD12(betaA,betaB)*r5i_dW - expX*betaDD122(betaA,betaB)*(2*r2i_dW*betaDD122(betaA,betaB) + 3*r4i_dW);
-          double W = muA.dot(muB)*(B1 - B1cDD(betaA,betaB) - der*dB1cDD(betaA,betaB)) - muA.dot(r)*muB.dot(r)*(B2 - B2cDD(betaA,betaB) -der*dB2cDD(betaA,betaB));
+          double expX = constant*betaDD12(betaA,betaB)*exp(-betaDD12(betaA,betaB)/r2i);
+
+          double B1_s = erfX*r3i_dW - expX*r2i_dW;            
+          double B2_s = 3*erfX*r5i_dW - expX*(2*r2i_dW*betaDD122(betaA,betaB) + 3*r4i_dW);
+          /*
+          if((1/r1i) > 4.29) {
+            cout << "r: " << (1/r1i) << endl;
+            cout << (B1_s - B1cDD(betaA,betaB)) << endl;
+            cout << (B2_s - B2cDD(betaA,betaB)) << endl;
+            cout << der << endl;
+            cout << "Erf: " << erf_x(1000) << ", beta: " << betaDD12(betaA,betaB) << ", r1: " << (1/r1i) << endl;
+            cout << "erfX: " << erfX << ", r3i_dW: " << r3i_dW << ", expX: " << expX << ", r2i_dW: " << r2i_dW << endl;
+            cout << "erfX: " << erfX << ", r5i_dW: " << r5i_dW << ", expX: " << expX << ", r2i_dW*betaDD122(betaA,betaB): " << r2i_dW*betaDD122(betaA,betaB) << ", r4i_dW:" << r4i_dW << endl;
+            cout << "B2_s: " << B2_s << ", B1_s: " << B1_s << endl;
+            cout << "r5i: " << r2i*r3i << ", r3i: " << r3i << endl;
+          }*/
+          double W = muA.dot(muB)*(B1_s - B1cDD(betaA,betaB) - der*dB1cDD(betaA,betaB)) - muA.dot(r)*muB.dot(r)*(B2_s - B2cDD(betaA,betaB) -der*dB2cDD(betaA,betaB));
           return W*muAxmuB;
         }
         
@@ -732,10 +787,13 @@ namespace Faunus {
          * @returns [e/Å / lB] (\f$\beta eE / lB \f$)
          */
         template<class Tparticle>
-          Point field(const Tparticle &p, int betaA, int betaB, const Point &r) const {
+          Point field(const Tparticle &p, const Tparticle &p0, const Point &r) const {
+          //Point field(const Tparticle &p, int betaA, int betaB, const Point &r) const {
+            int betaA = 1;
+            int betaB = 1;
            double r2i = 1/r.squaredNorm();
            if (r2i < rc2i)
-            return 0;
+            return Point(0,0,0);
            double r1i = sqrt(r2i);
            double r3i = r2i*r1i;
            double der = (1/r1i) - rc1;
@@ -781,18 +839,7 @@ namespace Faunus {
   
   
 
-  /**
-   * @brief Returns ion-quadrupole interaction
-   */
-  template<class Tvec, class Tmat>
-    double q2quad(double q, const Tmat &quad, const Tvec &r) {
-      double r2i = 1/r.squaredNorm();
-      double r1i = sqrt(r2i);
-      double r3i = r1i*r2i;
-      double r5i = r3i*r2i;
-      double W = r.transpose()*quad*r*r5i  - quad.trace()*(r3i/3);
-      return q*W; // e^2 / Å
-    }
+
 
   namespace Potential {
 
@@ -1095,7 +1142,7 @@ namespace Faunus {
          */
         template<class Tparticle>
           Point field(const Tparticle &p,const Tparticle &p0, const Point &r) const {
-            return _lB*wolf.fieldMu2Mu(p,p0,r);
+            return _lB*wolf.field(p,p0,r);
           }
 
         string info(char w) {
@@ -1120,7 +1167,7 @@ namespace Faunus {
 
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-            return _lB*gd.q2mu(a.charge*b.muscalar, b.mu, b.charge*a.muscal, a.mu, a.betaC, b.betaC, a.betaD, b.betaD,r);
+            return _lB*gd.mu2mu(a.charge*b.muscalar, b.mu, b.charge*a.muscal, a.mu, a.betaC, b.betaC, a.betaD, b.betaD,r);
           }
           
         template<class Tparticle>
@@ -1135,6 +1182,45 @@ namespace Faunus {
           return o.str();
         }
     };
+    
+    class DipoleDipoleWolfDamped : public DipoleDipole {
+      private:
+        string _brief() { return "Dipole-dipole Wolf Damped"; }
+        WolfGaussianDamping wolf;
+      public:
+        DipoleDipoleWolfDamped(InputMap &in) : DipoleDipole(in),
+        wolf(in.get<double>("kappa", 1.8, "Kappa-damping"),
+            in.get<double>("dipdip_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) {
+          name+=" Wolf";
+        }
+
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+            return _lB*wolf.mu2mu(a.mu,b.mu, a.muscalar*b.muscalar, r);
+          }
+          
+        /** @brief Dipole field at `r` due to dipole `p` 
+         *  Gets returned in [e/Å] (\f$\beta eE \f$)
+         */
+        template<class Tparticle>
+          Point field(const Tparticle &p,const Tparticle &p0, const Point &r) const {
+            return _lB*wolf.field(p,p0,r);
+          }
+
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          o << DipoleDipole::info(w)
+            << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
+            << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
+          return o.str();
+        }
+    };
+    
+    
+    
+    
+    
     
     class IonQuadWolf : public IonQuad {
       private:
@@ -1154,36 +1240,6 @@ namespace Faunus {
           
         template<class Tparticle>
           Point field(const Tparticle &p,const Tparticle &p0, const Point &r) const {
-            Eigen::Matrix3d T1, T2, T3;/*
-            T1(0,0) = r.x()*r.x()*r.x();
-            T1(0,1) = r.x()*r.x()*r.y();
-            T1(0,2) = r.x()*r.x()*r.z();
-            T1(1,0) = r.x()*r.y()*r.x();
-            T1(1,1) = r.x()*r.y()*r.y();
-            T1(1,2) = r.x()*r.y()*r.z();
-            T1(2,0) = r.x()*r.z()*r.x();
-            T1(2,1) = r.x()*r.z()*r.y();
-            T1(2,2) = r.x()*r.z()*r.z();
-            
-            T2(0,0) = r.y()*r.x()*r.x();
-            T2(0,1) = r.y()*r.x()*r.y();
-            T2(0,2) = r.y()*r.x()*r.z();
-            T2(1,0) = r.y()*r.y()*r.x();
-            T2(1,1) = r.y()*r.y()*r.y();
-            T2(1,2) = r.y()*r.y()*r.z();
-            T2(2,0) = r.y()*r.z()*r.x();
-            T2(2,1) = r.y()*r.z()*r.y();
-            T2(2,2) = r.y()*r.z()*r.z();
-            
-            T3(0,0) = r.z()*r.x()*r.x();
-            T3(0,1) = r.z()*r.x()*r.y();
-            T3(0,2) = r.z()*r.x()*r.z();
-            T3(1,0) = r.z()*r.y()*r.x();
-            T3(1,1) = r.z()*r.y()*r.y();
-            T3(1,2) = r.z()*r.y()*r.z();
-            T3(2,0) = r.z()*r.z()*r.x();
-            T3(2,1) = r.z()*r.z()*r.y();
-            T3(2,2) = r.z()*r.z()*r.z();*/
             return Point(0,0,0);
           }
 

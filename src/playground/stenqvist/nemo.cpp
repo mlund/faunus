@@ -4,13 +4,38 @@ using namespace Faunus;                          // use Faunus namespace
 using namespace Faunus::Move;
 using namespace Faunus::Potential;
 
-typedef Space<Geometry::Cuboid,DipoleParticle> Tspace;   // Cuboid
-typedef CombinedPairPotential<LennardJones,DipoleDipoleRF> Tpair;
+typedef Space<Geometry::Cuboid,DipoleParticle> Tspace; 
+typedef CombinedPairPotential<LennardJones,DipoleDipoleWolfDamped> Tpair;
 
-//typedef Move::PolarizeMove<AtomicTranslation<Tspace> > TmoveTran;
-//typedef Move::PolarizeMove<AtomicRotation<Tspace> > TmoveRot;
+#ifdef POLARIZE
 typedef Move::AtomicTranslation<Tspace> TmoveTran;   
 typedef Move::AtomicRotation<Tspace> TmoveRot;
+#else
+typedef Move::PolarizeMove<AtomicTranslation<Tspace> > TmoveTran;
+typedef Move::PolarizeMove<AtomicRotation<Tspace> > TmoveRot;
+#endif
+
+template<class Tpairpot, class Tid>
+bool savePotential(Tpairpot pot, Tid ida, Tid idb, string file) {
+  std::ofstream f(file.c_str());
+  if (f) {
+    //double min=1.1 * (atom[ida].radius+atom[idb].radius);
+    DipoleParticle a,b;
+    a=atom[ida];
+    b=atom[idb];
+    a.mu = Point(1,0,0);
+    b.mu = Point(1,0,0);
+    /*f << "# Pair potential: " << pot.brief() << endl
+      << "# Atoms: " << atom[ida].name << "<->" << atom[idb].name
+      << endl;*/
+    for (double r=1.1; r<=5.3; r+=0.001) {
+      f << std::left << std::setw(10) << r << " "
+        << pot(a,b,Point(r,0,0)) << endl;
+    }
+    return true;
+  }
+  return false;
+}
 
 int main() {
   ::atom.includefile("stockmayer.json");         // load atom properties
@@ -21,9 +46,9 @@ int main() {
   Group sol;
   sol.addParticles(spc, in);                     // group for particles
   MCLoop loop(in);                               // class for mc loop counting
-  Analysis::RadialDistribution<> rdf(0.005);       // particle-particle g(r)
-  Analysis::Table2D<double,Average<double> > mucorr(0.005);       // particle-particle g(r)
-  Analysis::Table2D<double,double> mucorr_distribution(0.005);
+  Analysis::RadialDistribution<> rdf(0.05);       // particle-particle g(r)
+  Analysis::Table2D<double,Average<double> > mucorr(0.1);       // particle-particle g(r)
+  Analysis::Table2D<double,double> mucorr_distribution(0.1);
   TmoveTran trans(in,pot,spc);
   TmoveRot rot(in,pot,spc);
   trans.setGroup(sol);                                // tells move class to act on sol group
@@ -33,7 +58,7 @@ int main() {
   UnitTest test(in);               // class for unit testing
   DipoleWRL sdp;
   FormatXTC xtc(spc.geo.len.norm());
-  double rc = in.get<double>("dipdip_cutoff",in.get<double>("cuboid_len",pc::infty)/2);
+  savePotential(Tpair(in), atom["sol"].id, atom["sol"].id, "pot_dipdip.dat");
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );   // initial energy
   while ( loop.macroCnt() ) {                         // Markov chain 
@@ -47,11 +72,9 @@ int main() {
         for (auto i=sol.front(); i<sol.back(); i++) { // salt rdf
           for (auto j=i+1; j<=sol.back(); j++) {
             double r =spc.geo.dist(spc.p[i],spc.p[j]); 
-            if(r < rc) {
-              rdf(r)++;
-              mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
-              mucorr_distribution(spc.p[i].mu.dot(spc.p[j].mu)) += 1;
-            }
+            rdf(r)++;
+            mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
+            mucorr_distribution(spc.p[i].mu.dot(spc.p[j].mu)) += 1;
           }
         }
       if (slp_global()>0.99)

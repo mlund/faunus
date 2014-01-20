@@ -15,12 +15,21 @@ int main(int argc, char** argv) {
   bool inPlane = mcp.get<bool>("molecule_plane");
 
   Tspace spc(mcp);
+
+  // Surface-particle interactions
+  auto surfpot = Energy::ExternalPotential<Tspace,Potential::GouyChapman<> >(mcp)
+    + Energy::ExternalPotential<Tspace,Potential::HydrophobicWallLinear<> >(mcp);
+
+  surfpot.first.expot.setSurfPositionZ( &spc.geo.len_half.z() );
+  surfpot.second.expot.setSurfPositionZ( &spc.geo.len_half.z() );
+
+  // Final energy function
   auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)
-    + Energy::ExternalPotential<Tspace,Potential::GouyChapman<> >(mcp)
+    + surfpot
     + Energy::EquilibriumEnergy<Tspace>(mcp);// + myenergy<Tspace>(mcp);
 
-  auto gouy = &pot.first.second;
-  gouy->expot.setSurfPositionZ( &spc.geo.len_half.z() ); // Pass position of GC surface
+  //auto gouy = &pot.first.second;
+  //gouy->expot.setSurfPositionZ( &spc.geo.len_half.z() ); // Pass position of GC surface
 
   auto eqenergy = &pot.second;
 
@@ -48,6 +57,18 @@ int main(int argc, char** argv) {
     spc.enroll( pol[i] );
   }
   Group allpol( pol.front().front(), pol.back().back() );
+
+  // Use charge scaling?
+  bool boolChargeScaling=mcp.get<bool>("chargescaling",false);
+  if (boolChargeScaling==true) {
+    double D=pot.first.first.pairpot.first.debyeLength();
+    for (auto &g : pol)
+      for (auto i : g) {
+        double kR = spc.p[i].radius/D;
+        spc.p[i].charge *= std::sinh(kR)/kR;
+        spc.trial[i] = spc.p[i];
+      }
+  }
 
   // Add atomic species
   Group salt;
@@ -77,9 +98,15 @@ int main(int argc, char** argv) {
   cout << atom.info() + spc.info() + pot.info() + tit.info()
     + textio::header("MC Simulation Begins!");
 
-  cout << "  Area per protein = " << spc.geo.len.x()*spc.geo.len.y()/pol.size()
-    << textio::_angstrom + textio::squared << "\n";
-  cout << "  sqrt(area)       = " << sqrt(spc.geo.len.x()*spc.geo.len.y()/pol.size())
+  int _numHydrophobic=0;
+  for (auto &i : spc.p)
+    if (i.hydrophobic)
+      _numHydrophobic++;
+
+  cout << "  Hydrophobic particles = " << _numHydrophobic << "\n"
+    << "  Area per protein      = " << spc.geo.len.x()*spc.geo.len.y()/pol.size()
+    << textio::_angstrom + textio::squared << "\n"
+    << "  sqrt(area)            = " << sqrt(spc.geo.len.x()*spc.geo.len.y()/pol.size())
     << textio::_angstrom << "\n\n";
 
   MCLoop loop(mcp);

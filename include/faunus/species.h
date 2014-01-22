@@ -34,7 +34,10 @@ namespace Faunus {
            panglsw,    //!< Angle of angluar switch on sides of patch on PatchySpherocylinder [degrees]
            pdis,       //!< Distance to which attraction is flat (typicaly end of repulsion) on attrative patch on PatchySpherocylinder [Å]
            pswitch,    //!< Distance on which attraction switches to zero on PatchySpherocylinder [Å]
-           chiral_angle;//!< Angle of chirality (rotation of patch) on PatchySpherocylinder [degrees]
+           chiral_angle,//!< Angle of chirality (rotation of patch) on PatchySpherocylinder [degrees]
+           betaC,      //!< Value of the charge distribution (inverse) width [Å^-1]
+           betaD,      //!< Value of the dipole distribution (inverse) width [Å^-1] 
+           betaQ;      //!< Value of the quadrupole distribution (inverse) width [Å^-1] 
     Point mu;
     short int patchtype;     //!< If patchy particle, which type of patch
     Thydrophobic hydrophobic;//!< Are we hydrophobic?
@@ -176,6 +179,7 @@ namespace Faunus {
       std::vector<AtomData> list;          //!< List of atoms
       bool includefile(string);            //!< Append atom parameters from file
       bool includefile(InputMap&);         //!< Append atom parameters from file
+      int size();                          //!< Number of atom-types
       AtomData& operator[] (string);       //!< Name->data
       AtomData& operator[] (AtomData::Tid);//!< Id->data
       string info();                       //!< Print info

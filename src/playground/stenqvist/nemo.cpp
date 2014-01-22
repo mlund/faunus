@@ -5,14 +5,15 @@ using namespace Faunus::Move;
 using namespace Faunus::Potential;
 
 typedef Space<Geometry::Cuboid,DipoleParticle> Tspace; 
-typedef CombinedPairPotential<LennardJones,DipoleDipoleWolfDamped> Tpair;
+typedef DipoleDipoleWolfDamped Tpair1;
+typedef CombinedPairPotential<LennardJones,Tpair1> Tpair;
 
 #ifdef POLARIZE
-typedef Move::AtomicTranslation<Tspace> TmoveTran;   
-typedef Move::AtomicRotation<Tspace> TmoveRot;
-#else
 typedef Move::PolarizeMove<AtomicTranslation<Tspace> > TmoveTran;
 typedef Move::PolarizeMove<AtomicRotation<Tspace> > TmoveRot;
+#else
+typedef Move::AtomicTranslation<Tspace> TmoveTran;   
+typedef Move::AtomicRotation<Tspace> TmoveRot;
 #endif
 
 template<class Tpairpot, class Tid>
@@ -28,7 +29,29 @@ bool savePotential(Tpairpot pot, Tid ida, Tid idb, string file) {
     /*f << "# Pair potential: " << pot.brief() << endl
       << "# Atoms: " << atom[ida].name << "<->" << atom[idb].name
       << endl;*/
-    for (double r=1.1; r<=5.3; r+=0.001) {
+    for (double r=0.6; r<=4.5; r+=0.01) {
+      f << std::left << std::setw(10) << r << " "
+        << pot(a,b,Point(r,0,0)) << endl;
+    }
+    return true;
+  }
+  return false;
+}
+
+template<class Tpairpot, class Tid>
+bool savePotential1(Tpairpot pot, Tid ida, Tid idb, string file) {
+  std::ofstream f(file.c_str());
+  if (f) {
+    //double min=1.1 * (atom[ida].radius+atom[idb].radius);
+    DipoleParticle a,b;
+    a=atom[ida];
+    b=atom[idb];
+    a.mu = Point(1,0,0);
+    b.mu = Point(0,1,0);
+    /*f << "# Pair potential: " << pot.brief() << endl
+      << "# Atoms: " << atom[ida].name << "<->" << atom[idb].name
+      << endl;*/
+    for (double r=0.6; r<=4.5; r+=0.01) {
       f << std::left << std::setw(10) << r << " "
         << pot(a,b,Point(r,0,0)) << endl;
     }
@@ -38,7 +61,7 @@ bool savePotential(Tpairpot pot, Tid ida, Tid idb, string file) {
 }
 
 int main() {
-  ::atom.includefile("stockmayer.json");         // load atom properties
+  //::atom.includefile("stockmayer.json");         // load atom properties
   InputMap in("stockmayer.input");               // open parameter file for user input
   Energy::NonbondedVector<Tspace,Tpair> pot(in); // non-bonded only
   EnergyDrift sys;                               // class for tracking system energy drifts
@@ -58,8 +81,9 @@ int main() {
   UnitTest test(in);               // class for unit testing
   DipoleWRL sdp;
   FormatXTC xtc(spc.geo.len.norm());
-  savePotential(Tpair(in), atom["sol"].id, atom["sol"].id, "pot_dipdip.dat");
-
+  savePotential(Tpair1(in), atom["sol"].id, atom["sol"].id, "pot_dipdip.dat");
+  savePotential1(Tpair1(in), atom["sol"].id, atom["sol"].id, "pot_dipdip1.dat");
+  return 1;
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );   // initial energy
   while ( loop.macroCnt() ) {                         // Markov chain 
     while ( loop.microCnt() ) {

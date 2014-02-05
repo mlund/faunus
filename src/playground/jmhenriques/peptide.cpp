@@ -5,7 +5,7 @@
  *         (charged and/or hydrophobic  surface). Implicit salt.
  *        
  * @author Joao Henriques
- * @date   2013/11/24
+ * @date   2013/11/26
  */
 
 using namespace Faunus;
@@ -96,7 +96,12 @@ int main() {
   Analysis::ChargeMultipole mp;
 #ifdef SLIT
   Analysis::LineDistribution<> surfmcdist;
-  int cntr = 0;
+  int scnt = 0;
+  double nmax;              // avoid 
+  if (max != pc::infty)     // problems 
+    nmax = max;             // with 
+  else                      // infinite
+    nmax = spc.geo.len.z(); // loops
   std::map<int, Analysis::LineDistribution<> > surfresdist;
   Analysis::Table2D<double, Average<double> > netqtable;
   Analysis::Table2D<double, Average<double> > rg2table;
@@ -105,11 +110,11 @@ int main() {
   spc.load("simulation.state");
   sys.init(Energy::systemEnergy(spc, pot, spc.p));
 
-  int cnt = 0;
+  int hcnt = 0;
   for (auto &i : spc.p)
     if (i.hydrophobic)
-      cnt++;
-  cout << "\nNumber of hydrophobic sites = " << cnt << endl;
+      hcnt++;
+  cout << "\nNumber of hydrophobic sites = " << hcnt << endl;
 
   cout << atom.info()
        << pol.info()        
@@ -170,7 +175,7 @@ int main() {
 	  // res prob distr along the z axis
 	  surfresdist[i](resdist)++;
 	}
-	cntr += 1;
+	scnt += 1;
       }
 #endif
 
@@ -194,10 +199,18 @@ int main() {
   spc.save("simulation.state");
 
 #ifdef SLIT
+  /* Mikael's suggestion
+  for (auto &m : surfresdist) {
+    f2 << m.first;
+    for (auto &h : m.second)
+      f2 << h.first << " " << h.second << endl;
+  }
+  */
   surfmcdist.save("surf_mc_dist.dat");
-  for (double d = 0; d <= spc.geo.len.z(); d += 0.25) {
-    for (int i = pol.front(); i <= pol.back(); i++)  
-      f2 << d << " " << i + 1 << " " << -log(double(surfresdist[i](d))/double(cntr)) << endl;
+  for (double d = spc.geo.len.z() - nmax; d <= spc.geo.len.z() - min; d += 0.25) {
+    for (int i = pol.front(); i <= pol.back(); i++)
+      // Warning: This can write 'inf' if probability is 0
+      f2 << d << " " << i + 1 << " " << -log(double(surfresdist[i](d))/double(scnt)) << endl;
     f2 << endl;
   }
 #endif

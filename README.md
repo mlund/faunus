@@ -86,13 +86,14 @@ In chronological order:
 Ondrej Marsalek     Christophe Labbez     Andre Teixeira     
   Anil Kurut           Chris Evers         Magnus Ullner      
  Robert Vacha         Axel Thuresson      Bjorn Stenqvist
+ Joao Henriques        Giulio Tesei
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Citing Faunus
 =============
 
 - Stenqvist et al.
-  _Molecular Simulation 2013_
+  _Molecular Simulation 2013, 39:1233_
   [[DOI]](http://dx.doi.org/10/nvn)
 
 - Lund, M., Persson, B., Trulsson, M.
@@ -102,7 +103,7 @@ Citing Faunus
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
  Faunus - A Framework for Molecular Modelling 
- Copyright (C) 2002-2013 Mikael Lund 
+ Copyright (C) 2002-2014 Mikael Lund 
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by

@@ -370,7 +370,7 @@ namespace Faunus {
      */
     template<class T=double>
     class HydrophobicWall : public ExternalPotentialBase<> {
-    private:
+    protected:
       T _depth;
       T _threshold;
       std::string _type;
@@ -428,6 +428,32 @@ namespace Faunus {
           << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(LJ)") << _depth << textio::kT + " = " << pc::kT2kJ(_depth) << " kJ/mol"<< endl;
       return o.str();
     }
+
+    /**
+     * @brief Hydrophobic wall potential w. linear slope
+     * @date Lund, 2014
+     *
+     * As `HydrophobicWall` but the potential is varying linearly with
+     * distance. It the potential is zero at `threshold` and `depth` when
+     * the particle-surface separation is zero.
+     */
+    template<class T=double>
+      struct HydrophobicWallLinear : public HydrophobicWall<T> {
+        HydrophobicWallLinear(InputMap &in) : HydrophobicWall<T>::HydrophobicWall(in) {
+          this->name+=" Linear";
+        }
+        template<typename Tparticle>
+          T operator()(const Tparticle &p) {
+            if (p.hydrophobic) {
+              double d = this->p2c(p);
+              assert(d>0 && "Particle-surface distance must be positive");
+              if (d<this->_threshold)
+                return -(this->_depth) * (1-d/this->_threshold);
+            }
+            return 0;
+          }
+      };
+
   } //namespace
 } //namespace
 #endif

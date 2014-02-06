@@ -38,8 +38,8 @@ echo '
 "GLU"  :  { "q":-1, "r":3.8, "mw":122 },
 "HGLU" :  { "q":0,  "r":3.8, "mw":122 },
 "LGLU" :  { "q":2,  "r":3.8, "mw":122 },
-"HIS"  :  { "q":0,  "r":3.9, "mw":130 },
-"HHIS" :  { "q":1,  "r":3.9, "mw":130 },
+"HIS"  :  { "q":0,  "r":3.9, "mw":130, "hydrophobic":true },
+"HHIS" :  { "q":1,  "r":3.9, "mw":130, "hydrophobic":true },
 "NTR"  :  { "q":0,  "r":2.0, "mw":14 },
 "HNTR" :  { "q":1,  "r":2.0, "mw":14 },
 "TYR"  :  { "q":-1, "r":4.1, "mw":154 },
@@ -53,7 +53,7 @@ echo '
 "ALA"  :  { "q":0,  "r":3.1, "mw":66 },
 "ILE"  :  { "q":0,  "r":3.6, "mw":102 },
 "LEU"  :  { "q":0,  "r":3.6, "mw":102 },
-"MET"  :  { "q":0,  "r":3.8, "mw":122 },
+"MET"  :  { "q":0,  "r":3.8, "mw":122, "hydrophobic":true },
 "PHE"  :  { "q":0,  "r":3.9, "mw":138 },
 "PRO"  :  { "q":0,  "r":3.4, "mw":90 },
 "TRP"  :  { "q":0,  "r":4.3, "mw":176 },
@@ -85,6 +85,8 @@ gouychapman_linearize  yes
 
 lj_eps                 0.05    # kT
 lj_cutoff              $cut_i2i
+sqwl_depth             10      # Maximum hydrophobic wall interaction
+sqwl_threshold         $Rp     # End of hydrophobic region (zero energy beyond)
 dh_ionicstrength       $salt   # mol/l
 dh_cutoff              $cut_i2i
 g2g_cutoff             $cut_g2g

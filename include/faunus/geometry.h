@@ -447,8 +447,6 @@ namespace Faunus {
         Eigen::Matrix3d rot_mat; // rotation matrix
         Geometrybase *geoPtr;
 
-      protected:
-
       public:
         //!< Get rotation origin
         Eigen::Vector3d& getOrigin() { return origin; }

@@ -358,7 +358,7 @@ namespace Faunus {
         translate(geo, p, -massCenter(geo, p) );
       }
 
-    /*!
+    /*!+
       \brief Geometric transform of a Point (rotation, translation...)
       */
     template<typename Ttransformer>

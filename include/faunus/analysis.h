@@ -263,7 +263,7 @@ namespace Faunus {
               std::ofstream f(filename.c_str());
               f.precision(10);
               if (f) {
-                f << "# Faunus 2D table: " << name << endl;
+                //f << "# Faunus 2D table: " << name << endl;
                 for (auto m : map)
                   f << m.first << " " << get( m.first ) << endl;
               }
@@ -1382,34 +1382,26 @@ namespace Faunus {
         Average<double> M_x,M_y,M_z;
         Average<double> M_x_box,M_y_box,M_z_box;
         Average<double> M2,M2_box;
+        Table2D<double,Average<double> > KWI;
         Analysis::Histogram<double,unsigned int> N2_x,N2_y,N2_z,N2_x_box,N2_y_box,N2_z_box;
-        double cutoff2;
-        double vol_const;
-        double vol_const_box;
-        double CM;
-        double y;
-        double lambda;
+        double cutoff2;             // Å^2
+        double volume;              // Å^3
+        double y;                   // e^2 / Å J
         double mu_0;
         int N;
 
       public:
         template<class Tspace>
-          inline DielectricConstant(const Tspace &spc) : N2_x(0.1),N2_y(0.1),N2_z(0.1),N2_x_box(0.1),N2_y_box(0.1),N2_z_box(0.1) {
+          inline DielectricConstant(const Tspace &spc) : KWI(0.1),N2_x(0.1),N2_y(0.1),N2_z(0.1),N2_x_box(0.1),N2_y_box(0.1),N2_z_box(0.1) {
             cutoff2 = pow(spc.geo.len_half.x(),2);
-            vol_const = 3/(4*pc::Ang2Bohr(pow(cutoff2,1.5),3)*pc::kT2Hartree());
-            vol_const_box = 4*pc::pi/(3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree());
-            CM = 1;
-            y = 0;
-            lambda = 0;
+            volume = spc.geo.getVolume();
             N = spc.p.size();
+            y = 4*pc::pi*N*spc.p[0].muscalar*spc.p[0].muscalar/(9*volume*pc::kT());
+            mu_0 = spc.p[0].muscalar;
           }
 
         void setCutoff(double cutoff) {
           cutoff2 = cutoff*cutoff;
-        }
-
-        void setLambda(double lambda_in) {
-          lambda = lambda_in;
         }
 
         /**
@@ -1420,18 +1412,17 @@ namespace Faunus {
         template<class Tspace>
           void sampleDP(const Tspace &spc) {
             Point origin(0,0,0);
-            Point mu(0,0,0);
-            Point mu_box(0,0,0);
-            mu_0 = spc.p[0].muscalar;
-
-            clausiusMossotti(spc);
-            y = 4*pc::pi*N*mu_0*mu_0/(9*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree());
+            Point mu(0,0,0);        // In eÅ
+            Point mu_box(0,0,0);    // In eÅ
 
             for (auto &i : spc.p) {
-              if (spc.geo.sqdist(i,origin)<cutoff2)
+              if (spc.geo.sqdist(i,origin)<cutoff2) {
                 mu += i.mu*i.muscalar;
-              mu_box += i.mu*i.muscalar;
+              } else {
+                mu_box += i.mu*i.muscalar;
+              }
             }
+            mu_box += mu;
             samplePP(spc,origin,mu,mu_box);
           }
 
@@ -1447,12 +1438,12 @@ namespace Faunus {
          */
         template<class Tspace>
           void samplePP(Tspace &spc, Point origin=Point(0,0,0), Point mu=Point(0,0,0), Point mu_box=Point(0,0,0)) {
-            Group all(0,spc.p.size()-1);
-            all.setMassCenter(spc);
-            mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
-            mu_box += Geometry::dipoleMoment(spc,all);
-            mu = pc::Ang2Bohr(mu);
-            mu_box = pc::Ang2Bohr(mu_box);
+            //Group all(0,spc.p.size()-1);
+            //all.setMassCenter(spc);
+            //mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
+            //mu_box += Geometry::dipoleMoment(spc,all);
+            //mu = pc::Ang2Bohr(mu);
+            //mu_box = pc::Ang2Bohr(mu_box);
             N2_x(mu.x())++;
             N2_y(mu.y())++;
             N2_z(mu.z())++;
@@ -1468,24 +1459,23 @@ namespace Faunus {
             M2 += mu.dot(mu);
             M2_box += mu_box.dot(mu_box);
           }
-
+          
         /**
-         * @brief Claussius-Mossotti analysis
-         *
-         * Calculates \f$ \epsilon_x \f$ according to \f$ \frac{\epsilon_x-1}{\epsilon_x+2} = \frac{4\pi}{3}\rho\alpha  \f$.
-         *
-         * Only valid for isotropic systems. 
-         * 
-         * More information: <http://dx.doi.org/10.1080/08927029708024131>
-         *
-         * @warning Unfinished
+         * @brief Samples to calculate distant-dependent Kirkwood-factor. The final distant-dependent 
+         *        Kirkwood-factor is the sum of all previous distances. 
          * 
          * @param spc The space
-         */ 
-        template<class Tspace>
-          void clausiusMossotti(const Tspace &spc) {
-            double Q = 4*pc::pi*N*spc.p[0].alpha.trace()/(9*pc::Ang2Bohr(spc.geo.getVolume(),3));  // 9 = 3*3, where one 3 is a normalization of the trace of alpha
-            CM = ((1+2*Q)/(1-Q));
+         *
+         * @warning Unfinished
+         */
+          template<class Tspace>
+          void sampleKirkwood(Tspace &spc) {
+            for (auto &i : spc.p) {
+              for (auto &j : spc.p) {
+                double r = spc.geo.sqdist(i,j);
+                KWI(r) = i.mu.dot(j.mu);
+              }
+            }
           }
 
         /**
@@ -1496,49 +1486,24 @@ namespace Faunus {
          */ 
         double KirkwoodFactor() {
           Point tmp(M_x_box.avg(),M_y_box.avg(),M_z_box.avg());
-          //cout << "M: " << tmp.transpose() << endl;
           return (M2_box.avg() - tmp.squaredNorm())/(N*mu_0*mu_0);
         }
-
-        double getDielA() {
-          double gk_const = KirkwoodFactor()*3*y;
-          return (gk_const*(lambda-1)*(lambda-1)-gk_const-1)/(gk_const*(lambda-1)*(lambda-1)-1);
-        }
-
-        /*
-           template<class Tspace>
-           void kusalik(const Tspace &spc) {
-           double lambda = 1;
-           double alpha = 1;
-        //mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
-        double A = alpha*3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree()/(8*pc::pi);
-        double eps = (lambda*lambda-2*lambda-A)/(lambda*lambda-2*lambda-A-1);
-        }*/
-
+        
         /**
-         * @brief Returns dielectric constant according to
-         * \f$ \frac{\epsilon_0-1}{3} = \frac{4\pi}{9Vk_BT}<\bold{M}^2> + \frac{\epsilon_x-1}{3}  \f$. Only works when \f$ \epsilon_{RF} = \infty \f$.
-         * 
-         * More info: <http://dx.doi.org:10.1080/08927029708024131>
-         */ 
+         * @brief Returns dielectric constant according to Tinfoil conditions
+         */
         double getDielTinfoil() {
-          return (CM+pc::Ang2Bohr(M2_box.avg(),2)*vol_const_box);
+          // 1 + ( ( ( 4 * pi * <M^2> ) / ( 3 * V * kT ) ) / ( 4 * pi * e0 ) )
+          // 1 + ( <M^2> / ( 3 * V * kT * e0) )
+          return ( 1 + (M2_box.avg()*pow(pc::e,2)*1e10)/(3*volume*pc::kT()*pc::e0)); 
         }  
-
-        double getDielKirkwood() {
-          if (M2.cnt>0) {
-            double Q = 0.25 + pc::Ang2Bohr(M2.avg(),2)*vol_const;   // In a.u.
-            return (Q + std::sqrt(Q*Q+0.5));
-          }
-          return 1;
-        }
 
         inline string info() {
           std::ostringstream o;
           o << "gk:          " << KirkwoodFactor() << endl;
-          o << "Eps:          " << getDielKirkwood() << endl;
-          o << "Eps_{\\infty}: " << getDielTinfoil() << endl;
-          o << "Eps: " << getDielA() << endl;
+          o << "Eps_{Tinfoil}: " << getDielTinfoil() << endl;
+          o << "AvgM2: " << M2_box.avg() << endl;
+          KWI.save("KW.dat");   // <=== Needs to be fixed!!!
           return o.str();
         }
     };

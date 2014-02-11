@@ -109,7 +109,6 @@ namespace Faunus {
                     p[i].mu = mu_trial/p[i].muscalar;// Update article dip.
                 }
               } while (mu_err_norm.maxCoeff() > threshold);                 // Check if threshold is ok
-
               numIter+=cnt; // average number of iterations
             }
 

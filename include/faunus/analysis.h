@@ -1379,25 +1379,28 @@ namespace Faunus {
      */
     class DielectricConstant {
       private:
+        Analysis::Histogram<double,unsigned int> N2_x,N2_y,N2_z,N2_x_box,N2_y_box,N2_z_box;
         Average<double> M_x,M_y,M_z;
         Average<double> M_x_box,M_y_box,M_z_box;
         Average<double> M2,M2_box;
-        Table2D<double,Average<double> > KWI;
-        Analysis::Histogram<double,unsigned int> N2_x,N2_y,N2_z,N2_x_box,N2_y_box,N2_z_box;
-        double cutoff2;             // Å^2
-        double volume;              // Å^3
-        double y;                   // e^2 / Å J
+        std::vector<double> diel_std;
+        double std_diel;
+        double cutoff2;                // Å^2
+        double volume, N;              // Å^3
+        double y;                      // e^2 / Å J
         double mu_0;
-        int N;
+        double const_DielTinfoil;
 
       public:
         template<class Tspace>
-          inline DielectricConstant(const Tspace &spc) : KWI(0.1),N2_x(0.1),N2_y(0.1),N2_z(0.1),N2_x_box(0.1),N2_y_box(0.1),N2_z_box(0.1) {
+          inline DielectricConstant(const Tspace &spc) : N2_x(0.1),N2_y(0.1),N2_z(0.1),N2_x_box(0.1),N2_y_box(0.1),N2_z_box(0.1) {
             cutoff2 = pow(spc.geo.len_half.x(),2);
             volume = spc.geo.getVolume();
             N = spc.p.size();
             y = 4*pc::pi*N*spc.p[0].muscalar*spc.p[0].muscalar/(9*volume*pc::kT());
             mu_0 = spc.p[0].muscalar;
+            const_DielTinfoil = pc::e*pc::e*1e10/(3*volume*pc::kT()*pc::e0);
+            std_diel = pc::infty;
           }
 
         void setCutoff(double cutoff) {
@@ -1425,7 +1428,27 @@ namespace Faunus {
             mu_box += mu;
             samplePP(spc,origin,mu,mu_box);
           }
-
+          
+        template<class Tspace>
+        void sampleKirkwood(Tspace &spc) {
+          double resolution = 0.1;
+          Analysis::Table2D<double,double> kw(resolution);
+          double r;
+          double r0 = 0;
+          while(r0 < spc.geo.len.norm()) {
+            for (auto &i : spc.p) {
+              for (auto &j : spc.p) {
+                r = spc.geo.dist(i,j);
+                if(r < r0) {
+                  kw(r0) += i.mu.dot(j.mu)*i.muscalar*j.muscalar;
+                }
+              }
+            }
+            r0 += resolution;
+          }
+          kw.save("KW.dat");
+        }
+          
         /**
          * @brief Samples dipole-moment from point particles.
          * 
@@ -1454,28 +1477,11 @@ namespace Faunus {
             M_y += mu.y();
             M_z += mu.z();
             M_x_box += mu_box.x();
-            M_y_box += mu_box.x();
-            M_z_box += mu_box.x();
+            M_y_box += mu_box.y();
+            M_z_box += mu_box.z();
             M2 += mu.dot(mu);
             M2_box += mu_box.dot(mu_box);
-          }
-          
-        /**
-         * @brief Samples to calculate distant-dependent Kirkwood-factor. The final distant-dependent 
-         *        Kirkwood-factor is the sum of all previous distances. 
-         * 
-         * @param spc The space
-         *
-         * @warning Unfinished
-         */
-          template<class Tspace>
-          void sampleKirkwood(Tspace &spc) {
-            for (auto &i : spc.p) {
-              for (auto &j : spc.p) {
-                double r = spc.geo.sqdist(i,j);
-                KWI(r) = i.mu.dot(j.mu);
-              }
-            }
+            diel_std.push_back(getDielTinfoil());
           }
 
         /**
@@ -1490,20 +1496,36 @@ namespace Faunus {
         }
         
         /**
-         * @brief Returns dielectric constant according to Tinfoil conditions
+         * @brief Returns dielectric constant according to Tinfoil conditions.
+         * 1 + ( ( ( 4 * pi * <M^2> ) / ( 3 * V * kT ) ) / ( 4 * pi * e0 ) )
+         * 1 + ( <M^2> / ( 3 * V * kT * e0) )
          */
         double getDielTinfoil() {
-          // 1 + ( ( ( 4 * pi * <M^2> ) / ( 3 * V * kT ) ) / ( 4 * pi * e0 ) )
-          // 1 + ( <M^2> / ( 3 * V * kT * e0) )
+          //return ( 1 + M2_box.avg()*const_DielTinfoil); 
           return ( 1 + (M2_box.avg()*pow(pc::e,2)*1e10)/(3*volume*pc::kT()*pc::e0)); 
         }  
+        
+        double getStdDiel() {
+          int nbr = diel_std.size();
+          std_diel = 0;
+          double mean = 0;
+          for(int n = 0; n < nbr; n++) {
+            mean += diel_std.at(n);
+          }
+          mean = mean/nbr;
+          for(int n = 0; n < nbr; n++) {
+            std_diel = std_diel + (diel_std.at(n) - mean)*(diel_std.at(n) - mean);
+          }
+          std_diel = sqrt(std_diel/nbr);
+          return std_diel;
+        }
 
         inline string info() {
           std::ostringstream o;
           o << "gk:          " << KirkwoodFactor() << endl;
           o << "Eps_{Tinfoil}: " << getDielTinfoil() << endl;
+          o << "Std_eps: " << getStdDiel() << endl;
           o << "AvgM2: " << M2_box.avg() << endl;
-          KWI.save("KW.dat");   // <=== Needs to be fixed!!!
           return o.str();
         }
     };

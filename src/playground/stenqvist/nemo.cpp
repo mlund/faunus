@@ -98,6 +98,9 @@ int main() {
   getSystemEnergyExternal(spc, TpairLJ(in),"InitLennardJones");
   getSystemEnergyExternal(spc, TpairDDW(in),"InitDipoleDipoleWolf");
   
+  diel.sampleDP(spc);
+  cout << "Diel before: " << diel.info() << endl;
+  
   while ( loop.macroCnt() ) {                         // Markov chain 
     while ( loop.microCnt() ) {
       if (slp_global() > 0.5)
@@ -105,29 +108,31 @@ int main() {
       else
         sys+=rot.move( sol.size() );                  // rotate
 
-      if (slp_global()<0.2) {
-        EnergyDDW += getSystemEnergyExternalIn(spc,TpairDDW(in));
+      if (slp_global()<1.2) {
+        //EnergyDDW += getSystemEnergyExternalIn(spc,TpairDDW(in));
         double r, sca;
-        for (auto i=sol.front(); i<sol.back(); i++) { // salt rdf
-          for (auto j=i+1; j<=sol.back(); j++) {
-            r =spc.geo.dist(spc.p[i],spc.p[j]); 
+        for (auto i=sol.front(); i<=sol.back(); i++) { // salt rdf
+          for (auto j=i+1.; j<=sol.back(); j++) {
+            r = spc.geo.dist(spc.p[i],spc.p[j]); 
             rdf(r)++;
             sca = spc.p[i].mu.dot(spc.p[j].mu);
             mucorr(r) += sca;
-            mucorr_distribution(sca) += 1;
-            mucorr_distribution1(r) += 3*(sca*sca -1)/2;
+            mucorr_distribution(sca) += 1.;
+            mucorr_distribution1(r) += 1.5*(sca*sca -1.);
           }
         }
       }
-      diel.sampleKirkwood(spc);
       diel.sampleDP(spc);
       //if (slp_global()>0.99)
       //  xtc.save(textio::prefix+"out.xtc", spc.p);  
     }
+    cout << "Std_eps: " << diel.getStdDiel() << endl;
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
     cout << loop.timing();
   }
-  getSystemEnergyExternal(spc, TpairLJ(in),"EndLennardJones");
+  diel.sampleKirkwood(spc);
+
+  //getSystemEnergyExternal(spc, TpairLJ(in),"EndLennardJones");
   getSystemEnergyExternal(spc, TpairDDW(in),"EndDipoleDipoleWolf");
   cout << "System average energy: " << EnergyDDW.avg() << endl;
   

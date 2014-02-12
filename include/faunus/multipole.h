@@ -596,7 +596,6 @@ namespace Faunus {
           data.B1_s = data.erfX*data.r3i_dW - data.expX*data.r2i_dW;            
           data.B2_s = 3*data.erfX*data.r5i_dW - data.expX*(2*data.r2i_dW*betaDD122(a.id-1,b.id-1) + 3*data.r4i_dW);
           data.diffR = (1/r1i) - rc1;
-          return data;
         }
 
     public:

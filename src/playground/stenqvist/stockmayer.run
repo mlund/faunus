@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# THIS RUN SCRIPT IS USED AS A UNIT TEST SO PLEASE
+# DO NOT UPLOAD ANY MODIFIED VERSIONS TO SVN UNLESS
+# TO UPDATE THE TEST.
+
+source_tests_dir="`dirname $0`"
+cp -f $source_tests_dir/stockmayer.test . 2> /dev/null
+cp -f $source_tests_dir/stockmayer.state state 2> /dev/null
+
+echo '{ "atomlist" :
+  {
+    "sol" : { "sigma":2.8863, "mu":"0 0 1.143785803974680", "dp":0.5, "dprot":114.5915, "alpha":"0 0 0 0 0 0", "theta":"0 0 0 0 0 0"}
+  }
+}' > stockmayer.json
+
+echo "
+atomlist           stockmayer.json   # atom properties
+cuboid_len         19.6287        # angstrom
+                  
+temperature        315.8        # K
+epsilon_r          1            # dielectric const.
+dipdip_cutoff      9.9172         # dipole cutoff [angstrom]
+lj_eps             0.7503616        # Uniform LJ epsilon parameter [kT]
+kappa              0.2
+                  
+loop_macrosteps    10           # number of macro loops
+loop_microsteps    100         # number of micro loops
+
+tion1              sol 
+nion1              300
+
+test_stable        no
+test_file          stockmayer.test
+" > stockmayer.input
+
+exe=./nemo
+if [ -x $exe ]; then
+ $exe
+ rc=$?
+ exit $rc
+fi
+exit 1

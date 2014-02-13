@@ -36,7 +36,6 @@ int main() {
   UnitTest test(in);               // class for unit testing
   DipoleWRL sdp;
   FormatXTC xtc(spc.geo.len.norm());
-
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );   // initial energy
   while ( loop.macroCnt() ) {                         // Markov chain 
     while ( loop.microCnt() ) {

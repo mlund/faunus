@@ -1,2 +1,2 @@
 cd ..
-make -j8 stenqvist-nemo
+make -j2 stenqvist-nemo

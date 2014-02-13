@@ -131,6 +131,7 @@ int main() {
     cout << loop.timing();
   }
   diel.sampleKirkwood(spc);
+  diel.saveKirkwood();
 
   //getSystemEnergyExternal(spc, TpairLJ(in),"EndLennardJones");
   getSystemEnergyExternal(spc, TpairDDW(in),"EndDipoleDipoleWolf");

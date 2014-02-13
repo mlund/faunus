@@ -1379,11 +1379,15 @@ namespace Faunus {
      */
     class DielectricConstant {
       private:
+        Analysis::Table2D<double,double> kw;
+        Analysis::Table2D<double,double> kw1;
         Analysis::Histogram<double,unsigned int> N2_x,N2_y,N2_z,N2_x_box,N2_y_box,N2_z_box;
         Average<double> M_x,M_y,M_z;
         Average<double> M_x_box,M_y_box,M_z_box;
         Average<double> M2,M2_box;
         std::vector<double> diel_std;
+        double resolution;
+        int sampleKW;
         double std_diel;
         double cutoff2;                // Å^2
         double volume, N;              // Å^3
@@ -1393,7 +1397,7 @@ namespace Faunus {
 
       public:
         template<class Tspace>
-          inline DielectricConstant(const Tspace &spc) : N2_x(0.1),N2_y(0.1),N2_z(0.1),N2_x_box(0.1),N2_y_box(0.1),N2_z_box(0.1) {
+          inline DielectricConstant(const Tspace &spc) : kw(0.1),kw1(0.1),N2_x(0.1),N2_y(0.1),N2_z(0.1),N2_x_box(0.1),N2_y_box(0.1),N2_z_box(0.1) {
             cutoff2 = pow(spc.geo.len_half.x(),2);
             volume = spc.geo.getVolume();
             N = spc.p.size();
@@ -1401,6 +1405,8 @@ namespace Faunus {
             mu_0 = spc.p[0].muscalar;
             const_DielTinfoil = pc::e*pc::e*1e10/(3*volume*pc::kT()*pc::e0);
             std_diel = pc::infty;
+            resolution = 0.1;
+            sampleKW = 0;
           }
 
         void setCutoff(double cutoff) {
@@ -1431,8 +1437,22 @@ namespace Faunus {
           
         template<class Tspace>
         void sampleKirkwood(Tspace &spc) {
-          double resolution = 0.1;
-          Analysis::Table2D<double,double> kw(resolution);
+          double r;
+          int N = spc.p.size();
+          for (int n = 0; n < N -1; n++) {
+            kw(0) += spc.p[n].mu.dot(spc.p[n].mu)*spc.p[n].muscalar*spc.p[n].muscalar;
+            for (int m = n + 1; m < N; m++) {
+              r = spc.geo.dist(spc.p[n],spc.p[m]);
+              kw(r) += 2*spc.p[n].mu.dot(spc.p[m].mu)*spc.p[n].muscalar*spc.p[m].muscalar;
+            }
+          }
+          kw(0) += spc.p[N-1].mu.dot(spc.p[N-1].mu)*spc.p[N-1].muscalar*spc.p[N-1].muscalar;
+          sampleKW++;
+          //sampleKirkwood1(spc);
+        }
+        
+        template<class Tspace>
+        void sampleKirkwood1(Tspace &spc) {
           double r;
           double r0 = 0;
           while(r0 < spc.geo.len.norm()) {
@@ -1440,12 +1460,17 @@ namespace Faunus {
               for (auto &j : spc.p) {
                 r = spc.geo.dist(i,j);
                 if(r < r0) {
-                  kw(r0) += i.mu.dot(j.mu)*i.muscalar*j.muscalar;
+                  kw1(r0) += i.mu.dot(j.mu)*i.muscalar*j.muscalar;
                 }
               }
             }
             r0 += resolution;
           }
+          sampleKW++;
+        }
+        
+        void saveKirkwood() {
+          //kw1.save("KWcorr.dat");
           kw.save("KW.dat");
         }
           

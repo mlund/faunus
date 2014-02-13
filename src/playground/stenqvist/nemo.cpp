@@ -34,7 +34,7 @@ bool savePotential(Tpairpot pot, TmoveRot rot, Tid ida, Tid idb, string file) {
       << endl;*/
     for (double r=min; r<=14; r+=0.05) {
       f << std::left << std::setw(10) << r << " "
-        << exp(-pot(a,b,Point(r,0,0))) << endl;
+        << pot(a,b,Point(r,0,0)) << endl;
     }
     return true;
   }
@@ -131,7 +131,7 @@ int main() {
     cout << loop.timing();
   }
   diel.sampleKirkwood(spc);
-  diel.saveKirkwood();
+  diel.saveKirkwood("KW.dat");
 
   //getSystemEnergyExternal(spc, TpairLJ(in),"EndLennardJones");
   getSystemEnergyExternal(spc, TpairDDW(in),"EndDipoleDipoleWolf");

@@ -217,8 +217,8 @@ namespace Faunus {
               cnt+=m.second;
             return cnt;
           }
-          Tmap map;
           Tx dx;
+          Tmap map;
           string name;
         private:
           Tx round(Tx x) { return (x>=0) ? int( x/dx+0.5 )*dx : int( x/dx-0.5 )*dx; }
@@ -1380,13 +1380,9 @@ namespace Faunus {
     class DielectricConstant {
       private:
         Analysis::Table2D<double,double> kw;
-        Analysis::Table2D<double,double> kw1;
         Analysis::Histogram<double,unsigned int> N2_x,N2_y,N2_z,N2_x_box,N2_y_box,N2_z_box;
-        Average<double> M_x,M_y,M_z;
-        Average<double> M_x_box,M_y_box,M_z_box;
-        Average<double> M2,M2_box;
+        Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box;
         std::vector<double> diel_std;
-        double resolution;
         int sampleKW;
         double std_diel;
         double cutoff2;                // Å^2
@@ -1397,15 +1393,14 @@ namespace Faunus {
 
       public:
         template<class Tspace>
-          inline DielectricConstant(const Tspace &spc) : kw(0.1),kw1(0.1),N2_x(0.1),N2_y(0.1),N2_z(0.1),N2_x_box(0.1),N2_y_box(0.1),N2_z_box(0.1) {
+          inline DielectricConstant(const Tspace &spc) : kw(0.1),N2_x(0.1),N2_y(0.1),N2_z(0.1),N2_x_box(0.1),N2_y_box(0.1),N2_z_box(0.1) {
             cutoff2 = pow(spc.geo.len_half.x(),2);
             volume = spc.geo.getVolume();
             N = spc.p.size();
-            y = 4*pc::pi*N*spc.p[0].muscalar*spc.p[0].muscalar/(9*volume*pc::kT());
             mu_0 = spc.p[0].muscalar;
+            y = 4*pc::pi*N*mu_0*mu_0/(9*volume*pc::kT());
             const_DielTinfoil = pc::e*pc::e*1e10/(3*volume*pc::kT()*pc::e0);
             std_diel = pc::infty;
-            resolution = 0.1;
             sampleKW = 0;
           }
 
@@ -1435,55 +1430,6 @@ namespace Faunus {
             samplePP(spc,origin,mu,mu_box);
           }
           
-        template<class Tspace>
-        void sampleKirkwood(Tspace &spc) {
-          double r;
-          int N = spc.p.size();
-          for (int n = 0; n < N -1; n++) {
-            kw(0) += spc.p[n].mu.dot(spc.p[n].mu)*spc.p[n].muscalar*spc.p[n].muscalar;
-            for (int m = n + 1; m < N; m++) {
-              r = spc.geo.dist(spc.p[n],spc.p[m]);
-              kw(r) += 2*spc.p[n].mu.dot(spc.p[m].mu)*spc.p[n].muscalar*spc.p[m].muscalar;
-            }
-          }
-          kw(0) += spc.p[N-1].mu.dot(spc.p[N-1].mu)*spc.p[N-1].muscalar*spc.p[N-1].muscalar;
-          sampleKW++;
-          cout << "Mx: " << M_x_box.avg() << "My: " << M_y_box.avg() << "Mz: " << M_z_box.avg() << endl;
-          cout << "M2: " << M2_box.avg() << endl;
-          //sampleKirkwood1(spc);
-        }
-        
-        template<class Tspace>
-        void sampleKirkwood1(Tspace &spc) {
-          double r;
-          double r0 = 0;
-          int cnt = 0;
-          int cnt_t = 0;
-          while(r0 < spc.geo.len.norm()) {
-            for (auto &i : spc.p) {
-              for (auto &j : spc.p) {
-                r = spc.geo.dist(i,j);
-                if(r < r0) {
-                  if(r < 4.45 && r > 4.35) {
-                    cnt++;
-                  }
-                  cnt_t++;
-                  kw1(r0) += i.mu.dot(j.mu)*i.muscalar*j.muscalar;
-                }
-              }
-            }
-            r0 += resolution;
-          }
-          sampleKW++;
-          cout << "Cnt: " << cnt << endl;
-          cout << "Cnt_t: " << cnt_t << endl;
-        }
-        
-        void saveKirkwood() {
-          //kw1.save("KWcorr.dat");
-          kw.save("KW.dat");
-        }
-          
         /**
          * @brief Samples dipole-moment from point particles.
          * 
@@ -1500,8 +1446,6 @@ namespace Faunus {
             //all.setMassCenter(spc);
             //mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
             //mu_box += Geometry::dipoleMoment(spc,all);
-            //mu = pc::Ang2Bohr(mu);
-            //mu_box = pc::Ang2Bohr(mu_box);
             N2_x(mu.x())++;
             N2_y(mu.y())++;
             N2_z(mu.z())++;
@@ -1518,6 +1462,25 @@ namespace Faunus {
             M2_box += mu_box.dot(mu_box);
             diel_std.push_back(getDielTinfoil());
           }
+          
+        template<class Tspace>
+        void sampleKirkwood(Tspace &spc) {
+          double r;
+          int N = spc.p.size() - 1;
+          for (int i = 0; i < N; i++) {
+            kw(0) += spc.p[i].mu.dot(spc.p[i].mu)*spc.p[i].muscalar*spc.p[i].muscalar;
+            for (int j = i + 1; j < N + 1; j++) {
+              r = spc.geo.dist(spc.p[i],spc.p[j]);
+              kw(r) += 2*spc.p[i].mu.dot(spc.p[j].mu)*spc.p[i].muscalar*spc.p[j].muscalar;
+            }
+          }
+          kw(0) += spc.p[N].mu.dot(spc.p[N].mu)*spc.p[N].muscalar*spc.p[N].muscalar;
+          sampleKW++;
+        }
+        
+        void saveKirkwood(string filename) {
+          kw.save(filename);
+        }
 
         /**
          * @brief Get the Kirkwood-factor, g_k. 
@@ -1531,26 +1494,23 @@ namespace Faunus {
         }
         
         /**
-         * @brief Returns dielectric constant according to Tinfoil conditions.
+         * @brief Returns dielectric constant with to Tinfoil conditions.
          * 1 + ( ( ( 4 * pi * <M^2> ) / ( 3 * V * kT ) ) / ( 4 * pi * e0 ) )
          * 1 + ( <M^2> / ( 3 * V * kT * e0) )
          */
         double getDielTinfoil() {
-          //return ( 1 + M2_box.avg()*const_DielTinfoil); 
-          return ( 1 + (M2_box.avg()*pow(pc::e,2)*1e10)/(3*volume*pc::kT()*pc::e0)); 
+          return ( 1 + M2_box.avg()*const_DielTinfoil); 
         }  
         
         double getStdDiel() {
           int nbr = diel_std.size();
           std_diel = 0;
           double mean = 0;
-          for(int n = 0; n < nbr; n++) {
+          for(int n = 0; n < nbr; n++)
             mean += diel_std.at(n);
-          }
-          mean = mean/nbr;
-          for(int n = 0; n < nbr; n++) {
+          mean /= nbr;
+          for(int n = 0; n < nbr; n++)
             std_diel = std_diel + (diel_std.at(n) - mean)*(diel_std.at(n) - mean);
-          }
           std_diel = sqrt(std_diel/nbr);
           return std_diel;
         }
@@ -1561,6 +1521,8 @@ namespace Faunus {
           o << "Eps_{Tinfoil}: " << getDielTinfoil() << endl;
           o << "Std_eps: " << getStdDiel() << endl;
           o << "AvgM2: " << M2_box.avg() << endl;
+          cout << "Mx: " << M_x_box.avg() << "My: " << M_y_box.avg() << "Mz: " << M_z_box.avg() << endl;
+          cout << "M2: " << M2_box.avg() << endl;
           return o.str();
         }
     };

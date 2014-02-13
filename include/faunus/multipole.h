@@ -319,6 +319,10 @@ namespace Faunus {
         rc4i_d = expKc*( (2*kappa4/(3*rc1i)) + (2*kappa2*rc1i/3) + rc3i ) + rc1i_d*rc3i;
         rc5i_d = rc2i*expKc*(rc2i + (2/3)*kappa2 + (kappa6/(3*rc2i*rc2i)) + (kappa4/(6*rc2i))) + rc1i_d*rc2i*rc2i;
         rc6i_d = expKc*(rc2i*rc3i + (2/3)*kappa2*rc3i + (4/15)*kappa4*rc1i - (1/15)*(kappa6/rc1i) + (2/15)*(kappa4*kappa4/rc3i)) + rc1i_d*rc2i*rc3i;
+        rc3i_d = 0;
+        rc4i_d = 0;
+        rc5i_d = 0;
+        rc6i_d = 0;
       }
 
       /**

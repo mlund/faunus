@@ -1448,6 +1448,8 @@ namespace Faunus {
           }
           kw(0) += spc.p[N-1].mu.dot(spc.p[N-1].mu)*spc.p[N-1].muscalar*spc.p[N-1].muscalar;
           sampleKW++;
+          cout << "Mx: " << M_x_box.avg() << "My: " << M_y_box.avg() << "Mz: " << M_z_box.avg() << endl;
+          cout << "M2: " << M2_box.avg() << endl;
           //sampleKirkwood1(spc);
         }
         
@@ -1455,11 +1457,17 @@ namespace Faunus {
         void sampleKirkwood1(Tspace &spc) {
           double r;
           double r0 = 0;
+          int cnt = 0;
+          int cnt_t = 0;
           while(r0 < spc.geo.len.norm()) {
             for (auto &i : spc.p) {
               for (auto &j : spc.p) {
                 r = spc.geo.dist(i,j);
                 if(r < r0) {
+                  if(r < 4.45 && r > 4.35) {
+                    cnt++;
+                  }
+                  cnt_t++;
                   kw1(r0) += i.mu.dot(j.mu)*i.muscalar*j.muscalar;
                 }
               }
@@ -1467,6 +1475,8 @@ namespace Faunus {
             r0 += resolution;
           }
           sampleKW++;
+          cout << "Cnt: " << cnt << endl;
+          cout << "Cnt_t: " << cnt_t << endl;
         }
         
         void saveKirkwood() {

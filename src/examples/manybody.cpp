@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
           sys+=mv.move();
           break;
       }
-      if (slp_global()<-0.001 ) {
+      if (slp_global()>0.99 ) {
         xtc.setbox( spc.geo.len );
         xtc.save("traj.xtc", spc);
       }

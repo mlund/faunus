@@ -9,9 +9,10 @@
  */
 
 using namespace Faunus;
+using namespace Faunus::Potential;
 
 typedef Space<Geometry::PeriodicCylinder> Tspace;
-typedef Potential::DebyeHuckelLJ Tpairpot;
+typedef CombinedPairPotential<DebyeHuckel,LennardJonesLB> Tpairpot;
 
 int main(int argc, char** argv) {
   InputMap mcp("cyl.input");

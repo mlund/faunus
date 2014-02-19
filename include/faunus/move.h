@@ -1649,6 +1649,125 @@ namespace Faunus {
         return o.str();
       }
 
+    /** 
+     * @brief Grand canonical move for molecular species
+     * @warning Under construction!
+     * @date Lund, 2014
+     */
+    template<class Tspace>
+    class GCMolecular : public Movebase<Tspace> {
+    private:
+      typedef Movebase<Tspace> base;
+      typedef std::map<short, Average<double> > map_type;
+      bool use2D;
+      Point dir;
+      int inmol; // molecule to be inserted
+      int outmol; // molecule to be deleted
+      int imol;
+      int idel;
+      
+      // structure for molecular data
+      struct MolData {
+        string name;
+        double activity; // in 1/angstrom^3 (3D) or 1/angstrom^2 (2D)
+        typename Tspace::ParticleVector p;
+      };
+      
+      std::vector<MolData> molvec;
+      
+      template<typename pvec>
+      void randomRotate(pvec &p) {
+        Geometry::QuaternionRotate rot;
+      }
+      
+      template<typename pvec>
+      void randomState(pvec &p) {
+        Point a;
+        base::spc->randomPos(a);
+        a=a*dir+offset;
+        auto dp = a-Geometry::massCenter(base::spc->geo, p);
+        for (auto i : &p) {
+          i=i+dp;
+          base::spc->geo.boundary(i);
+        }
+      }
+      
+      int randomMol() {
+        return slp_global.rand() % molvec.size();
+      }
+      
+      bool insert() {
+        inmol = randomMol();
+        randomState( molvec[inmol] );
+      }
+      
+    protected:
+      bool deleteBool;
+      string _info();
+      void _acceptMove() FOVERRIDE;
+      void _rejectMove() FOVERRIDE;
+      
+      double _energyChange() FOVERRIDE {
+        double uold=0;//, unew=0;
+        
+        // count molecules
+        int N=0;
+        for (auto g : base::spc->groupList())
+          if (g->isMolecular())
+            if ( g->name==molvec[imol] )
+              N++;
+        
+        // calc. volume or area
+        double V = base::spc->geo.getVolume();
+        if (use2D)
+          V = V / base::spc->geo.len.z();
+        
+        // in case of deletion
+        if (deleteBool) {
+          auto gi = base::spc->findGroup(idel);
+          for (auto gj : base::spc->groupList())
+            if (gi!=gj)
+              uold += base::pot->g2g( base::spc->p, *gi, *gj )
+                + base::pot->g_external( base::spc->p, *gi );
+        } else {
+          // in case of insertion
+          
+        }
+          
+      }
+      
+      void _trialMove() {
+        
+        // insert
+        if (slp_global()>0.5) {
+          inmol = randomMol();
+          outmol=-1;
+          randomState( molvec[inmol] );
+        }
+        // delete
+        else {
+          inmol=-1;
+          outmol=randomMol();
+          //for (auto i : base::spc->groupList())
+          //  if ()
+          
+        }
+        
+      }
+      using base::spc;
+      map_type accmap; //!< acceptance map
+      
+    public:
+      Point offset;
+      GCMolecular(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, string pfx="gcmol_") : base(e,s,pfx) {
+        dir=Point(1,1,1);
+        offset=Point(0,0,0);
+        use2D=in(pfx+"2d", true);
+        if (use2D)
+          dir.z()=1;
+      }
+    };
+    
     /**
      * @brief Isobaric volume move
      *

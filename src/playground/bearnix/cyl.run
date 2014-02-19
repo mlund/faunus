@@ -40,14 +40,14 @@ echo '
     "HCYS" :  { "eps":0.124, "q":0,  "r":3.6, "mw":103 },
     "ARG"  :  { "eps":0.124, "q":0,  "r":4.0, "mw":144 },
     "HARG" :  { "eps":0.124, "q":1,  "r":4.0, "mw":144 },
-    "ALA"  :  { "eps":0.124, "q":0,  "r":3.1, "mw":66 },
-    "ILE"  :  { "eps":0.124, "q":0,  "r":3.6, "mw":102 },
-    "LEU"  :  { "eps":0.124, "q":0,  "r":3.6, "mw":102 },
-    "MET"  :  { "eps":0.124, "q":0,  "r":3.8, "mw":122 },
-    "PHE"  :  { "eps":0.124, "q":0,  "r":3.9, "mw":138 },
-    "PRO"  :  { "eps":0.124, "q":0,  "r":3.4, "mw":90 },
-    "TRP"  :  { "eps":0.124, "q":0,  "r":4.3, "mw":176 },
-    "VAL"  :  { "eps":0.124, "q":0,  "r":3.4, "mw":90 },
+    "ALA"  :  { "eps":0.124, "q":0,  "r":3.1, "mw":66,  "hydrophobic":true },
+    "ILE"  :  { "eps":0.124, "q":0,  "r":3.6, "mw":102, "hydrophobic":true },
+    "LEU"  :  { "eps":0.124, "q":0,  "r":3.6, "mw":102, "hydrophobic":true },
+    "MET"  :  { "eps":0.124, "q":0,  "r":3.8, "mw":122, "hydrophobic":true },
+    "PHE"  :  { "eps":0.124, "q":0,  "r":3.9, "mw":138, "hydrophobic":true },
+    "PRO"  :  { "eps":0.124, "q":0,  "r":3.4, "mw":90,  "hydrophobic":true },
+    "TRP"  :  { "eps":0.124, "q":0,  "r":4.3, "mw":176, "hydrophobic":true },
+    "VAL"  :  { "eps":0.124, "q":0,  "r":3.4, "mw":90,  "hydrophobic":true },
     "SER"  :  { "eps":0.124, "q":0,  "r":3.3, "mw":82 },
     "THR"  :  { "eps":0.124, "q":0,  "r":3.5, "mw":94 },
     "ASN"  :  { "eps":0.124, "q":0,  "r":3.6, "mw":108 },
@@ -67,6 +67,7 @@ loop_microsteps        $micro
 temperature            298     # Kelvin
 epsilon_r              78.7    # Water dielectric const
 dh_ionicstrength       $salt   # mol/l
+eps_hydrophobic        0.5     # hydrophobic-hydrophobic LJ (kT)
 
 cylinder_radius        $cylinder_radius
 cylinder_len           $cylinder_len

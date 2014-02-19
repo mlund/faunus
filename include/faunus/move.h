@@ -1699,6 +1699,7 @@ namespace Faunus {
       bool insert() {
         inmol = randomMol();
         randomState( molvec[inmol] );
+        return true;
       }
       
     protected:
@@ -1733,6 +1734,8 @@ namespace Faunus {
           // in case of insertion
           
         }
+
+        return 0;
           
       }
       

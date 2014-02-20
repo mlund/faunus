@@ -6,6 +6,7 @@
 #include <faunus/point.h>
 #include <faunus/slump.h>
 #include <faunus/textio.h>
+#include <faunus/physconst.h>
 #include <Eigen/Geometry>
 #endif
 
@@ -447,8 +448,6 @@ namespace Faunus {
         Eigen::Matrix3d rot_mat; // rotation matrix
         Geometrybase *geoPtr;
 
-      protected:
-
       public:
         //!< Get rotation origin
         Eigen::Vector3d& getOrigin() { return origin; }
@@ -503,6 +502,43 @@ namespace Faunus {
           return a;
         }
     };
+
+    /**
+     * @brief Calculates the volume of a collection of particles
+     *
+     * This will use a brute force, stochastic hit and miss algorithm to
+     * calculate the net volume of a collection of overlapping
+     * particles.
+     *
+     * @param p Particle vector (structure must be whole)
+     * @param n Number of iterations (default: 1e7)
+     * @param pradius Probe radius (default: 0)
+     */
+    template<typename Tpvec>
+      double calcVolume(const Tpvec &p, unsigned int n=1e7, double pradius=0) {
+        double L=0;      // size of test box
+        Point gc(0,0,0); // geometric center of molecule
+        for (auto &i : p)
+          gc += i / p.size();
+        for (auto &i : p)
+          L = std::max(L, 2*((i-gc).norm() + i.radius));
+
+        // Start shooting!
+        Point r;
+        unsigned int hit=0, cnt=0;
+        while (++cnt<n) {
+          r.x() = slp_global.randHalf();
+          r.y() = slp_global.randHalf();
+          r.z() = slp_global.randHalf();
+          r = r*L + gc;
+          for (auto &i : p)
+            if ((i-r).squaredNorm()<pow(i.radius+pradius,2)) {
+              hit++;
+              break;
+            }
+        }
+        return hit/double(cnt) * pow(L,3);
+      }
 
   }//namespace Geometry
 }//namespace Faunus

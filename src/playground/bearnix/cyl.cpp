@@ -9,9 +9,10 @@
  */
 
 using namespace Faunus;
+using namespace Faunus::Potential;
 
 typedef Space<Geometry::PeriodicCylinder> Tspace;
-typedef Potential::DebyeHuckelLJ Tpairpot;
+typedef CombinedPairPotential<DebyeHuckel,LennardJonesLB> Tpairpot;
 
 int main(int argc, char** argv) {
   InputMap mcp("cyl.input");
@@ -19,7 +20,6 @@ int main(int argc, char** argv) {
   FormatXTC xtc(1000);                 // XTC gromacs trajectory format
   EnergyDrift sys;                     // class for tracking system energy drifts
   UnitTest test(mcp);
-  bool inPlane = mcp.get<bool>("molecule_plane");
 
   Tspace spc(mcp);
   auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
@@ -28,9 +28,18 @@ int main(int argc, char** argv) {
 
   auto eqenergy = &pot.second;
 
+  // set hydrophobic-hydrophobic LJ epsilon
+  double epsh = mcp.get("eps_hydrophobic", 0.05);
+  for (size_t i=0; i<atom.list.size()-1; i++)
+    for (size_t j=i+1; j<atom.list.size(); j++)
+      if (atom[i].hydrophobic)
+        if (atom[j].hydrophobic)
+          pot.first.first.pairpot.second.customEpsilon(i,j,epsh);
+
   // Add molecules
   int N1 = mcp.get("molecule1_N",0);
   int N2 = mcp.get("molecule2_N",0);
+  bool inPlane = mcp.get("molecule_plane", false);
   string file;
   vector<Group> pol(N1+N2);
   for (int i=0; i<N1+N2; i++) {

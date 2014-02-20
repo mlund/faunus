@@ -1,0 +1,26 @@
+#!/bin/bash
+rho=0.291    # reduced density
+T=0.18       # reduced temperature
+N=1000       # number of particles
+L=`python -c "from math import sqrt,pi; print sqrt($N*pi*(1.0)**2/$rho)"`
+eps=`python -c "print 1./$T"`
+
+echo "
+atomlist      stripes.json
+cuboid_len    $L      # Box side length [angstrom]
+tion1         CS      # ion type 1
+nion1         $N      # number of ion type 1
+core_radius   1.0
+shell_radius  2.5
+epsilon       $eps
+steps         5000000
+" > stripes.input
+
+echo '
+{ "atomlist" :
+  {
+    "CS" : { "dp":0.9, "r":1.0 }
+  }
+}' > stripes.json
+
+./stripes

@@ -21,6 +21,8 @@ int main(int argc, char** argv) {
   EnergyDrift sys;                     // class for tracking system energy drifts
   UnitTest test(mcp);
 
+  bool movie = mcp.get("movie", true);
+
   Tspace spc(mcp);
   auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp)
@@ -112,9 +114,9 @@ int main(int argc, char** argv) {
           sys+=mv.move();
           break;
       }
-      if ( slp_global()<-0.001 ) {
+      if ( movie==true && slp_global()>0.995 ) {
         xtc.setbox( 1000. );
-        xtc.save("traj.xtc", spc);
+        xtc.save("traj.xtc", spc.p);
       }
     } // end of micro loop
 

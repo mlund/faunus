@@ -13,8 +13,8 @@ namespace Faunus {
       double a1,a2,eps;
       inline CoreShell(InputMap& in) {
         name="Coreshell";
-        a1 = pow( 2*in("core_radius",1.0), 2);
-        a2 = pow( 2*in("shell_radius",2.5), 2);
+        a1 = pow( in("core_radius",1.0), 2);
+        a2 = pow( in("shell_radius",2.5), 2);
         eps = in("epsilon", 0.2);
       }
       template<class Tparticle>

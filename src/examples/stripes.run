@@ -2,7 +2,7 @@
 rho=0.291    # reduced density
 T=0.18       # reduced temperature
 N=1000       # number of particles
-L=`python -c "from math import sqrt,pi; print sqrt($N*pi*(1.0)**2/$rho)"`
+L=`python -c "from math import sqrt,pi; print sqrt($N/$rho)"`
 eps=`python -c "print 1./$T"`
 
 echo "
@@ -19,7 +19,7 @@ steps         5000000
 echo '
 { "atomlist" :
   {
-    "CS" : { "dp":0.9, "r":1.0 }
+    "CS" : { "dp":0.9, "r":0.5 }
   }
 }' > stripes.json
 

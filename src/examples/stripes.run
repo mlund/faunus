@@ -2,7 +2,7 @@
 rho=0.291    # reduced density
 T=0.18       # reduced temperature
 N=1000       # number of particles
-L=`python -c "from math import sqrt,pi; print sqrt($N/$rho)"`
+L=`python -c "print ($N/$rho)**0.5"`
 eps=`python -c "print 1./$T"`
 
 echo "
@@ -13,7 +13,7 @@ nion1         $N      # number of ion type 1
 core_radius   1.0
 shell_radius  2.5
 epsilon       $eps
-steps         5000000
+steps         1000000
 " > stripes.input
 
 echo '

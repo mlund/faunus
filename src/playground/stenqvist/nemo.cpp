@@ -28,7 +28,7 @@ bool savePotential(Tpairpot pot, TmoveRot rot, Tid ida, Tid idb, string file) {
     a=atom[ida];
     b=atom[idb];
     a.mu = Point(1,0,0);
-    b.mu = Point(1,0,0);
+    b.mu = Point(-1,0,0);
     /*f << "# Pair potential: " << pot.brief() << endl
       << "# Atoms: " << atom[ida].name << "<->" << atom[idb].name
       << endl;*/
@@ -109,7 +109,7 @@ int main() {
         sys+=rot.move( sol.size() );                  // rotate
 
       if (slp_global()<1.2) {
-        //EnergyDDW += getSystemEnergyExternalIn(spc,TpairDDW(in));
+        EnergyDDW += getSystemEnergyExternalIn(spc,TpairDDW(in));
         double r, sca;
         for (auto i=sol.front(); i<=sol.back(); i++) { // salt rdf
           for (auto j=i+1.; j<=sol.back(); j++) {

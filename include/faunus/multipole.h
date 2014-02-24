@@ -273,6 +273,7 @@ namespace Faunus {
   class WolfBase {
     private:
       double rc1i_d, rc2i_d, rc3i_d, rc4i_d, rc5i_d, rc6i_d, rc1, rc1i, rc2i, rc3i, expKc, kappa, kappa2, kappa4, kappa6, constant;
+      double Bc, Cc, Bdc, Cdc;
 
 
       struct wdata {
@@ -313,6 +314,7 @@ namespace Faunus {
         rc2i = rc1i*rc1i;
         rc3i = rc1i*rc2i;
         expKc = constant*kappa*exp(-kappa2/rc2i);
+        
         rc1i_d = erfc_x(kappa/rc1i)*rc1i;
         rc2i_d = (expKc + rc1i_d)*rc1i;
         rc3i_d = expKc*(kappa2 + rc2i) + rc1i_d*rc2i;
@@ -320,12 +322,20 @@ namespace Faunus {
         rc5i_d = rc2i*expKc*(rc2i + (2/3)*kappa2 + (kappa6/(3*rc2i*rc2i)) + (kappa4/(6*rc2i))) + rc1i_d*rc2i*rc2i;
         rc6i_d = expKc*(rc2i*rc3i + (2/3)*kappa2*rc3i + (4/15)*kappa4*rc1i - (1/15)*(kappa6/rc1i) + (2/15)*(kappa4*kappa4/rc3i)) + rc1i_d*rc2i*rc3i;
         
-        /*
+        Bc = (rc1i_d + expKc)*rc2i;
+        Cc = 3*(rc1i_d*rc2i + expKc*(rc2i + 2*(kappa2/3))); 
+        Bdc = -(3*Bc + 2*kappa2*expKc)*rc1i;
+        Cdc = expKc*(-3*rc3i*rc2i - 6*rc3i - 2*kappa2*rc1*(2*kappa2 + 3*rc2i)) - 15*rc1i_d*rc3i*rc2i;
+        
+        //Bc = 0;
+        //Cc = 0;
+        Bdc = 0;
+        Cdc = 0;
+        
         rc3i_d = 0;
         rc4i_d = 0;
         rc5i_d = 0;
         rc6i_d = 0;
-        */
       }
 
       /**
@@ -359,21 +369,26 @@ namespace Faunus {
        * @returns energy in `kT/lB`
        */
       template<class Tvec>
-        double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r) const {
-          double r1 = r.norm();
-          double r2i = 1/r.squaredNorm();
+        double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r_in) const {
+          double r1 = r_in.norm();
+          double r2i = 1/r_in.squaredNorm();
+          Point r = r_in/r1;
           if (r2i < rc2i)
             return 0;
           double r1i = sqrt(r2i);
           double r1i_d = erfc_x(kappa/r1i)*r1i;
           double expK =  constant * kappa*exp(-kappa2/r2i);
-          double r3i_d = expK * (kappa2 + r2i) + r1i_d * r2i;
-          double r5i_d = r2i*expK*(r2i + (2/3)*kappa2 + (kappa6/(3*r2i*r2i)) + (kappa4/(6*r2i))) + r1i_d*r2i*r2i;
+          //double r3i_d = expK * (kappa2 + r2i) + r1i_d * r2i;
+          //double r5i_d = r2i*expK*(r2i + (2/3)*kappa2 + (kappa6/(3*r2i*r2i)) + (kappa4/(6*r2i))) + r1i_d*r2i*r2i;
           double der = r1 - rc1;
-          double t3 = muA.dot(muB)*(r3i_d - rc3i_d + der*3*rc4i_d);
-          double t5 = 3*muA.dot(r)*muB.dot(r)*(r5i_d - rc5i_d + der*5*rc6i_d);
-          //Eigen::Matrix3d T = Matrix3d::Identity()*(r3i_d - rc3i_d + der*3*rc4i_d) - 3*r*r.transpose()*(r5i_d - rc5i_d + der*5*rc6i_d);
-          //double W = muA.transpose()*T*muB; 
+          //double t3 = muA.dot(muB)*(r3i_d - rc3i_d + der*3*rc4i_d);
+          //double t5 = 3*muA.dot(r)*muB.dot(r)*(r5i_d - rc5i_d + der*5*rc6i_d);
+          
+          double B = (r1i_d + expK)*r2i;
+          double C = 3*(r1i_d*r2i + expK*(r2i + 2*(kappa2/3))); // *r2i
+          double t3 = muA.dot(muB)*(B - Bc - der*Bdc);
+          double t5 = muA.dot(r)*muB.dot(r)*(C - Cc - der*Cdc);
+          
           double W = t3 - t5;
           return W*muAxmuB;
         }

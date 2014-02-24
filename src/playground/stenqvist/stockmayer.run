@@ -16,19 +16,19 @@ echo '{ "atomlist" :
 
 echo "
 atomlist           stockmayer.json   # atom properties
-cuboid_len         29.6287        # angstrom
+cuboid_len         19.834596245552174        # angstrom
                   
 temperature        315.8        # K
 epsilon_r          1            # dielectric const.
-dipdip_cutoff      9.9172         # dipole cutoff [angstrom]
+#dipdip_cutoff      9.9172         # dipole cutoff [angstrom]
 lj_eps             0.7503616        # Uniform LJ epsilon parameter [kT]
-kappa              0.2
+kappa              0.18
                   
 loop_macrosteps    10           # number of macro loops
 loop_microsteps    100         # number of micro loops
 
 tion1              sol 
-nion1              1000
+nion1              300
 
 test_stable        no
 test_file          stockmayer.test

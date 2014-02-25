@@ -668,6 +668,7 @@ INPUT                  = doc \
                          src/examples/water.cpp \
                          src/examples/water2.cpp \
                          src/examples/cigars2fibrils.cpp \
+                         src/examples/stripes.cpp \
                          include/faunus
 
 # This tag can be used to specify the character encoding of the source files

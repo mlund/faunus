@@ -86,6 +86,8 @@ molecule2_N            1
 molecule2              test.aam
 molecule_plane         1
 
+movie                  yes
+
 # Atomic species - add up to ten.
 tion1                  Na
 nion1                  0
@@ -114,7 +116,7 @@ for pH in 7.0
 do
   rm state
   prefix="pH${pH}-pH${pH}"
-  micro=1000
+  micro=100000
   mkinput
   echo $prefix
   $exe #> $prefix.eq

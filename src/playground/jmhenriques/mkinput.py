@@ -12,7 +12,7 @@ Except the pKa for O-phospho-L-serine (pSE), taken from Zachariou_1996_JPC_100_1
 #
 __author__  = "Joao Henriques"
 __email__   = "joao.henriques@teokem.lu.se"
-__date__    = "2013.11.11"
+__date__    = "2014.02.24"
 __status__  = "Production"
 #
 """
@@ -38,6 +38,7 @@ dict={'ALA' :[ 0, 71 , "True" ],
       'LYS' :[ 0, 128, "False", 10.8],
       'HLYS':[ 1, 128, "False"],
       'MET' :[ 0, 131, "True" ],
+      'nSE' :[ 0, 165, "False"],
       'PHE' :[ 0, 147, "True" ],
       'PRO' :[ 0, 97 , "True" ],
       'pSE' :[-2, 165, "False", 5.8 ],
@@ -85,7 +86,8 @@ def readFasta(file):
             'W' : 'TRP',
             'Y' : 'TYR',
             'V' : 'VAL',
-            'X' : 'pSE'
+            'X' : 'pSE',
+            'Z' : 'nSE'
             }
     f = open(file, 'r')
     for line in f.readlines():

@@ -5,7 +5,7 @@
  *         (charged and/or hydrophobic  surface). Implicit salt.
  *        
  * @author Joao Henriques
- * @date   2013/11/26
+ * @date   2014/02/25
  */
 
 using namespace Faunus;
@@ -125,8 +125,10 @@ int main() {
 			 "  So, wake up, Mister Freeman. Wake up and smell the ashes.");
   
   std::ofstream f1("rg_step.dat");
+#ifdef SLIT
   std::ofstream f2("surf_res_dist.dat");
-  
+#endif  
+
   MCLoop loop(mcp);
   while (loop.macroCnt()) {
     while (loop.microCnt()) {
@@ -216,7 +218,9 @@ int main() {
 #endif
   
   f1.close();
+#ifdef SLIT
   f2.close();
+#endif
 
   cout << sys.info() 
        << mv.info() 

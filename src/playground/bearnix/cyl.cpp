@@ -69,6 +69,7 @@ int main(int argc, char** argv) {
 
   Analysis::LineDistribution<> rdf(0.5);
   Analysis::ChargeMultipole mpol;
+  Analysis::MultipoleDistribution<Tspace> mpoldist(mcp);
 
   spc.load("state");
 
@@ -114,6 +115,12 @@ int main(int argc, char** argv) {
           sys+=mv.move();
           break;
       }
+      if ( slp_global()>0.95 ) {
+        pol[0].setMassCenter(spc);
+        pol[1].setMassCenter(spc);
+        mpoldist.sample(spc, pol[0], pol[1]);
+      }
+
       if ( movie==true && slp_global()>0.995 ) {
         xtc.setbox( 1000. );
         xtc.save("traj.xtc", spc.p);
@@ -132,4 +139,5 @@ int main(int argc, char** argv) {
   FormatPQR::save("confout.pqr", spc.p);
   spc.save("state");
   mcp.save("mdout.mdp");
+  mpoldist.save("multipole.dat");
 }

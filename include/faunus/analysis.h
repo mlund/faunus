@@ -1095,7 +1095,7 @@ namespace Faunus {
           void save(const string &filename) const {
             std::ofstream f(filename.c_str());
             if (f) {
-              char w = 12;
+              char w=12;
               auto lB=pot.pairpot.bjerrumLength();
               f.precision(4);
               f << "# Multipolar energy analysis (kT)\n"
@@ -1104,9 +1104,9 @@ namespace Faunus {
                 << setw(w) << "dipdip" << setw(w) << "ionquad" << "\n";
               for (auto &i : m)
                 f << std::left
-                  << setw(w) << i.first*dr // r
+                  << setw(w) << i.first*dr                  // r
                   << std::right
-                  << setw(w) << i.second.tot/i.second.cnt // exact (already in kT)
+                  << setw(w) << i.second.tot/i.second.cnt   // exact (already in kT)
                   << setw(w) << lB*(i.second.ii+i.second.id+i.second.dd+i.second.iq)/i.second.cnt // total
                   << setw(w) << lB*i.second.ii/i.second.cnt // individual poles...
                   << setw(w) << lB*i.second.id/i.second.cnt

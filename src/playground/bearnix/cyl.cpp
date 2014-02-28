@@ -2,10 +2,17 @@
 
 /*
  * This will simulate:
- * - an arbitrary number of rigid molecules (two different kinds)
+ * - two rigid molecules fixed on the axis of
+ *   a cylinder with open end planes and hard surfaces
  * - any number of atomic species
  * - equilibrium swap moves
  * - external pressure (NPT)
+ * - electric multipole expansion analysis
+ *
+ * Particles interact with a combined Debye-Huckel/Lennard-Jones
+ * potential with Lorentz-Berthelot mixed rules. Hydrophobic
+ * groups interact with a custom epsilon as specified in the
+ * input file.
  */
 
 using namespace Faunus;
@@ -104,8 +111,6 @@ int main(int argc, char** argv) {
           break;
         case 1:
           sys+=tit.move();
-          if( slp_global()>0.9 )
-            mpol.sample(pol,spc);
           break;
         case 2:
           sys+=iso.move();
@@ -115,13 +120,18 @@ int main(int argc, char** argv) {
           sys+=mv.move();
           break;
       }
-      if ( slp_global()>0.95 ) {
+
+      double xi = slp_global(); // random number [0,1)
+
+      // Sample multipolar moments and distribution
+      if ( xi>0.95 ) {
         pol[0].setMassCenter(spc);
         pol[1].setMassCenter(spc);
+        mpol.sample(pol,spc);
         mpoldist.sample(spc, pol[0], pol[1]);
       }
 
-      if ( movie==true && slp_global()>0.995 ) {
+      if ( movie==true && xi>0.995 ) {
         xtc.setbox( 1000. );
         xtc.save("traj.xtc", spc.p);
       }
@@ -135,9 +145,9 @@ int main(int argc, char** argv) {
   cout << loop.info() + sys.info() + gmv.info() + mv.info()
     + iso.info() + tit.info() + mpol.info();
 
-  rdf.save("rdf_p2p.dat");
-  FormatPQR::save("confout.pqr", spc.p);
   spc.save("state");
   mcp.save("mdout.mdp");
+  rdf.save("rdf_p2p.dat");
   mpoldist.save("multipole.dat");
+  FormatPQR::save("confout.pqr", spc.p);
 }

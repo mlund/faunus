@@ -113,8 +113,6 @@ TEST_CASE("Polar Test","Ion-induced dipole test (polarization)")
   spc.trial = spc.p;
   CHECK(trans.move(1) == Approx(-5.69786)); // check energy change
   CHECK(spc.p[1].muscalar == Approx(0.162582)); // check induced moment
-  //remove("polar_test.json");
-  //remove("polar_test.input");
 }
 
 /*

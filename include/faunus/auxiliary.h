@@ -3,12 +3,23 @@
 
 #ifndef SWIG
 #include <utility>
+#include <algorithm>
+#include <utility>
+#include <regex>
+
 #ifdef FAU_HASHTABLE
 #include <unordered_map>
 #include <functional>
 #endif
 #endif
 
+/**
+ * @file auxiliary.h
+ *
+ * This file contains auxiliary functionality that
+ * have no dependencies other than STL and can hence
+ * be copied to other projects.
+ */ 
 namespace Faunus {
 
   /**
@@ -143,7 +154,7 @@ namespace Faunus {
 
   /**
    * @brief Approximate exp() function
-   * @note see Cawley 2000; doi:10.1162/089976600300015033
+   * @note see [Cawley 2000](http://dx.doi.org/10.1162/089976600300015033)
    * @warning Does not work in big endian systems!
    */
   template<class Tint=int>
@@ -172,22 +183,33 @@ namespace Faunus {
     }
 #pragma GCC diagnostic pop
 
-  /** @brief Convert string to float, int, bool */
+  /**
+   * @brief Convert string to float, int, bool
+   *
+   * Examples:
+   *
+   *     double x = str2val("10.0");       // -> 10.0
+   *     double y = str2val("",0.5);       // -> 0.5 (fallback)
+   *     bool z   = str2val<bool>("true"); // -> true
+   *
+   * Boolean text can be "yes/true/on" - if not, the default
+   * fallback, `false` is returned. Matching is case insensitive.
+   */
   template<class T>
     T str2val(const std::string &s, T fallback=T()) {
       return (!s.empty()) ? T(std::stod(s)) : fallback;
     }
   template<>
     inline bool str2val<bool>(const std::string &s, bool fallback) {
-      if (s=="yes" || s=="true") return true;
-      if (s=="no" || s=="false") return false;
+      if (std::regex_match(s, std::regex("yes|true|on", std::regex_constants::icase) ) )
+        return true;
       return fallback;
     }
 
-  // http://devmaster.net/forums/topic/4648-fast-and-accurate-sinecosine/
   /**
    * @brief Fast sine calculation in range (-pi:pi)
-   * @warning Do not go beyond these boundaries!
+   * @warning Invalid beyond boundaries!
+   * @note <http://devmaster.net/forums/topic/4648-fast-and-accurate-sinecosine>
    */
   template<class T>
     T sinApprox(T x) {
@@ -256,21 +278,76 @@ namespace Faunus {
    *
    * This will round to nearest integer, assuming a certain resolution
    * (default 1). This can be useful for binning floating point data
-   * into a histogram or table of resolution `dx` (second argument)
+   * into a histogram or table of resolution `dx` (second argument).
    *
    * Example:
    *
    * ~~~~
    *     double x=21.3;
-   *     toBin(x);   // -> 21
-   *     toBin(x,2); // -> 20
+   *     to_bin(x);     // -> 21
+   *     to_bin(x,2);   // -> 11
+   *     to_bin(x,0.5); // -> 43
    * ~~~~
    *
    */
   template<class T, class Tint=int>
-    Tint toBin(T x, T dx=1) {
-      return (x>=0) ? Tint( x/dx+0.5 ) : Tint( x/dx-0.5 );
+    Tint to_bin(T x, T dx=1) {
+      return (x<0) ? Tint( x/dx-0.5 ) : Tint( x/dx+0.5 );
     }
+
+  /**
+   * @brief Use xy data from disk as function object
+   *
+   * This is a very basic structure to store xy data
+   * in a map to be used as a function object. Linear
+   * interpolation is used between data points. The lookup
+   * complexity is `log(N)` and no particular spacing
+   * between data points is expected. Upon loading, data
+   * is sorted and possible duplicate points trimmed.
+   *
+   * Example:
+   *
+   *     InterpolTable<double> f("xy.dat");
+   *     double y;
+   *     y = f(15);  // --> 2.5
+   *     y = f(-1);  // --> NaN
+   *     y = f(21);  // --> NaN
+   *
+   * where the `xy.dat` file may look like this (comments not allowed!),
+   *
+   *      0.0   1.0
+   *     10.0   2.0
+   *     20.0   3.0
+   *
+   * @date Malmo 2014
+   */
+  template<typename T=double>
+    class InterpolTable {
+      private:
+        typedef std::pair<T,T> Tpair; // xy data stored as pairs
+        std::vector<Tpair> t;         // in a vector
+      public:
+        InterpolTable(const std::string filename) {
+          Tpair a;
+          std::ifstream in(filename);
+          while (in >> a.first >> a.second)
+            t.push_back(a);
+          std::sort(t.begin(), t.end()); // sort
+          t.erase( std::unique( t.begin(), t.end() ), t.end() ); // remove duplicates 
+        }
+
+        T operator()(T x) const {
+          assert(~t.empty() && "Table is empty");
+          if (x>t.back().first) return std::numeric_limits<T>::quiet_NaN();
+          if (x<t[0].first) return std::numeric_limits<T>::quiet_NaN();
+          auto it = std::lower_bound(t.begin(), t.end(), Tpair(x,0));
+          if (it==t.begin())
+            return it->second;
+          auto it2=it;
+          --it2;
+          return it2->second + (it->second-it2->second)*(x-it2->first)/(it->first-it2->first);
+        }
+    }; // end of InterpolTable
 
 }//namespace
 #endif

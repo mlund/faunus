@@ -349,6 +349,46 @@ namespace Faunus {
         }
     }; // end of InterpolTable
 
+  /**
+   * @brief Container for data between pairs
+   *
+   * This will maintain a symmetric, dynamic NxN matrix for storing data
+   * about pairs.
+   * Use the `set()` function for setting values and the function
+   * operator for access:
+   *
+   *     int i=2,j=3; // particle type, for example
+   *     PairMatrix<double> m;
+   *     m.set(i,j,12.0);
+   *     cout << m(i,j);         // -> 12.0
+   *     cout << m(i,j)==m(j,i); // -> true
+   */
+  template<class T=double>
+    class PairMatrix {
+      public:
+        vector< vector<T> > m; // symmetric matrix (mem.wasteful - fast access)
+        void resize(size_t n) {
+          m.resize(n);
+          for (auto &i : m)
+            i.resize(n,0);
+        }
+        PairMatrix(size_t n=0) {
+          resize(n);
+        }
+        const T& operator()(size_t i, size_t j) const {
+          assert( i<m.size() );
+          assert( j<m[i].size() );
+          assert( m[i][j]==m[j][i] );
+          return m[i][j]; 
+        }
+        void set(size_t i, size_t j, T val) {
+          size_t n=std::max(i,j);
+          if (n>=m.size())
+            resize(n+1);
+          m[i][j]=m[j][i]=val;
+        }
+    };
+
 }//namespace
 #endif
 

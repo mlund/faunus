@@ -47,7 +47,7 @@ namespace Faunus {
     a.name="UNK";
     list.push_back(a);
   }
-  
+
   AtomData & AtomMap::operator[] (AtomData::Tid i) { return list.at(i); }
 
   AtomData & AtomMap::operator[] (string s) {
@@ -96,7 +96,7 @@ namespace Faunus {
       a.sigma = json::value<double>(atom.second, "sigma", a.sigma);
       a.radius = a.sigma/2;
       a.id=AtomData::Tid( list.size() );
-      
+
       a.half_len = 0.5 * json::value<double>(atom.second, "len", 0);
       a.patchtype = json::value<double>(atom.second, "patchtype", 0);
       a.pswitch = json::value<double>(atom.second, "patchswitch", 0);
@@ -105,9 +105,16 @@ namespace Faunus {
       a.panglsw = json::value<double>(atom.second, "patchangleswitch", 0)/180.0*pc::pi;
       a.chiral_angle = json::value<double>(atom.second, "patchchiralangle", 0)/180.0*pc::pi;
 
-        
-        
-      list.push_back(a); // add to main particle list
+      // add to particle list 
+      bool insert=true;
+      for (auto &i : list)
+        if (i.name==a.name) {
+          i=a; // override existing
+          insert=false;
+          break;
+        }
+      if (insert)
+        list.push_back(a);
     }
     return (n>0) ? true : false;
   }

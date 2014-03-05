@@ -21,6 +21,8 @@ namespace Faunus {
    * @f[
    *     |\epsilon(x)| \le 1.5\times 10^{-7}
    * @f]
+   * 
+   * @warning Needs modification if x < 0
    */
   double erfc_x(double x) {
     //
@@ -272,8 +274,8 @@ namespace Faunus {
    */
   class WolfBase {
     private:
-      double rc1i_d, rc2i_d, rc3i_d, rc4i_d, rc5i_d, rc6i_d, rc1, rc1i, rc2i, rc3i, expKc, kappa, kappa2, kappa4, kappa6, constant;
-      double Bc, Cc, Bdc, Cdc;
+      double rc1i_d, rc1, rc1i, rc2i, rc3i, expKc, kappa, kappa2, kappa4, kappa6, constant, pisqrt, erfccc;
+      double Bc, Cc, dBc, dCc;
 
 
       struct wdata {
@@ -316,26 +318,17 @@ namespace Faunus {
         expKc = constant*kappa*exp(-kappa2/rc2i);
         
         rc1i_d = erfc_x(kappa/rc1i)*rc1i;
-        rc2i_d = (expKc + rc1i_d)*rc1i;
-        rc3i_d = expKc*(kappa2 + rc2i) + rc1i_d*rc2i;
-        rc4i_d = expKc*( (2*kappa4/(3*rc1i)) + (2*kappa2*rc1i/3) + rc3i ) + rc1i_d*rc3i;
-        rc5i_d = rc2i*expKc*(rc2i + (2/3)*kappa2 + (kappa6/(3*rc2i*rc2i)) + (kappa4/(6*rc2i))) + rc1i_d*rc2i*rc2i;
-        rc6i_d = expKc*(rc2i*rc3i + (2/3)*kappa2*rc3i + (4/15)*kappa4*rc1i - (1/15)*(kappa6/rc1i) + (2/15)*(kappa4*kappa4/rc3i)) + rc1i_d*rc2i*rc3i;
-        
-        Bc = (rc1i_d + expKc)*rc2i;
-        Cc = 3*(rc1i_d*rc2i + expKc*(rc2i + 2*(kappa2/3))); 
-        Bdc = -(3*Bc + 2*kappa2*expKc)*rc1i;
-        Cdc = expKc*(-3*rc3i*rc2i - 6*rc3i - 2*kappa2*rc1*(2*kappa2 + 3*rc2i)) - 15*rc1i_d*rc3i*rc2i;
+        pisqrt = sqrt(pc::pi);
+        erfccc = erfc(kappa/rc1i);
+        Bc = (erfccc+2.*kappa*rcut/pisqrt*exp(-rcut*rcut*kappa2))/(rcut*rcut*rcut);
+        Cc = (3.*erfccc+2.*kappa*rcut/pisqrt*(3.+2.*rcut*rcut*kappa2)*exp(-rcut*rcut*kappa2))/(rcut*rcut*rcut*rcut*rcut);
+        dBc = (-3*Bc/rcut) - (4*kappa2*kappa*exp(-rcut*rcut*kappa2)*rc1i/pisqrt);
+        dCc = (-3*Cc/rcut) - (8*kappa2*kappa2*kappa*exp(-rcut*rcut*kappa2)*rc1i/pisqrt);
+        Cc = Cc*rcut*rcut;
+        dCc = dCc*rcut*rcut;
         
         //Bc = 0;
         //Cc = 0;
-        Bdc = 0;
-        Cdc = 0;
-        
-        rc3i_d = 0;
-        rc4i_d = 0;
-        rc5i_d = 0;
-        rc6i_d = 0;
       }
 
       /**
@@ -343,6 +336,8 @@ namespace Faunus {
        * @param QxMu Product of ion charge and dipole scalar
        * @param mu Unit dipole moment vector
        * @param r Direction \f$ r_Mu - r_Q \f$  
+       * 
+       * @warning Needs to be fixed!
        */
       template<class Tvec>
         double q2mu(double QxMu1, const Tvec &mu1, double QxMu2, const Tvec &mu2, const Tvec &r) const {
@@ -352,9 +347,9 @@ namespace Faunus {
           double r1i = sqrt(r2i);
           double expK = constant*kappa*exp(-kappa2/r2i);
           double r3i_d = expK * (kappa2 + r2i) + erfc_x(kappa/r1i)*r1i * r2i;
-          double der = ((1/r1i) - rc1)*3*rc4i_d;
-          double W1 = QxMu1*mu1.dot(r)*(r3i_d - rc3i_d + der);
-          double W2 = QxMu2*mu2.dot(r)*(r3i_d - rc3i_d + der);
+          double der = ((1/r1i) - rc1)*3*rc3i;
+          double W1 = QxMu1*mu1.dot(r)*(r3i_d - rc3i + der);
+          double W2 = QxMu2*mu2.dot(r)*(r3i_d - rc3i + der);
           return (W1-W2);  // Beware of r_Mu - r_Q = -r according to Israelachvili p.36, i.e. minus becomes plus
         }
 
@@ -364,37 +359,37 @@ namespace Faunus {
        * @param muB Dipole moment (B) unit vector
        * @param muAxMuB Product of dipole moment scalars, |A|*|B|
        * @param r_ab Vector A to B
-       * @param r1i inverse length of `r_ab`
-       * @param r2i inverer length of `r_ab` squared
        * @returns energy in `kT/lB`
        */
       template<class Tvec>
-        double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r_in) const {
-          double r1 = r_in.norm();
-          double r2i = 1/r_in.squaredNorm();
-          Point r = r_in/r1;
+        double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r) const {
+          double r2i = 1.0/r.squaredNorm();
           if (r2i < rc2i)
             return 0;
           double r1i = sqrt(r2i);
-          double r1i_d = erfc_x(kappa/r1i)*r1i;
-          double expK =  constant * kappa*exp(-kappa2/r2i);
-          //double r3i_d = expK * (kappa2 + r2i) + r1i_d * r2i;
-          //double r5i_d = r2i*expK*(r2i + (2/3)*kappa2 + (kappa6/(3*r2i*r2i)) + (kappa4/(6*r2i))) + r1i_d*r2i*r2i;
-          double der = r1 - rc1;
-          //double t3 = muA.dot(muB)*(r3i_d - rc3i_d + der*3*rc4i_d);
-          //double t5 = 3*muA.dot(r)*muB.dot(r)*(r5i_d - rc5i_d + der*5*rc6i_d);
+          double erfcc = erfc(kappa/r1i);
+          double B = (erfcc+2.*kappa*(1/r1i)/pisqrt*exp(-kappa2/r2i))*(r2i*r1i);
+          double C = (3.*erfcc+2.*kappa*(1/r1i)/pisqrt*(3.+2.*(1/r2i)*kappa2)*exp(-kappa2/r2i))*(r2i*r2i*r1i);
+          double der = (1/r1i) - rc1;
+          //der = 0;
+          //B = r2i*r1i;
+          //C = r2i*r2i*r1i;
+          double t3 = muA.dot(muB)*(B - Bc - der*dBc);
+          double t5 = muA.dot(r)*muB.dot(r)*(C - Cc*r2i - der*dCc*r2i);
           
-          double B = (r1i_d + expK)*r2i;
-          double C = 3*(r1i_d*r2i + expK*(r2i + 2*(kappa2/3))); // *r2i
-          double t3 = muA.dot(muB)*(B - Bc - der*Bdc);
-          double t5 = muA.dot(r)*muB.dot(r)*(C - Cc - der*Cdc);
+          /*
+          cout << "B: " << B << ", " << Bc << endl;
+          cout << "C: " << C << ", " << Cc << endl;
+          cout << "dBc: " << dBc << endl;
+          cout << "dCc: " << dCc << endl;
+          */
           
-          double W = t3 - t5;
-          return W*muAxmuB;
+          return (t3 - t5)*muAxmuB;
         }
 
       /**
        * @brief Returns ion-quadrupole interaction
+       * @warning Needs to be fixed!
        */
       template<class Tvec, class Tmat>
         double q2quad(double q1, const Tmat &quad1, double q2, const Tmat &quad2, const Tvec &r) const {
@@ -407,19 +402,21 @@ namespace Faunus {
           double r3i_d = expK*(kappa2 + r2i) + r1i_d*r2i;
           double r5i_d = r2i*expK*(r2i + (2/3)*kappa2 + (kappa6/(3*r2i*r2i)) + (kappa4/(6*r2i))) + r1i_d*r2i*r2i;   
           double W1 = q1*r.transpose()*quad1*r;
-          W1 = W1*(r5i_d - rc5i_d);
+          W1 = W1*(r5i_d - rc3i);
           W1 = - q1*quad1.trace()*((r3i_d - rc3i)/3);
           double W2 = q2*r.transpose()*quad2*r;
-          W2 = W2*(r5i_d - rc5i_d);
-          W2 = - q2*quad2.trace()*((r3i_d - rc3i_d)/3);
+          W2 = W2*(r5i_d - rc3i);
+          W2 = - q2*quad2.trace()*((r3i_d - rc3i)/3);
           return (W1+W2); // e^2 / Å
         }
 
       /** @brief Dipole field at `r` due to dipole `p` 
        *  Gets returned in [e/Å / lB] (\f$\beta eE / lB \f$)
+       * 
+       * @warning Needs to be fixed!
        */
       template<class Tparticle>
-        Point field(const Tparticle &p, const Tparticle &p0, const Point &r) const {
+        Point field(const Tparticle &p, const Point &r) const {
           double r2i = 1.0/r.squaredNorm();
           if (r2i < rc2i)
             return Point(0,0,0);
@@ -432,7 +429,7 @@ namespace Faunus {
           double r3i_d = expK*(kappa2 + r2i) + r1i_d*r2i;
           double r5i_d = expK*(r2i*r2i + (2/3)*kappa2*r2i + (kappa6/(3*r2i)) + (kappa4/6)) + r1i_d*r2i*r2i;
           Point fieldCharge = p.charge*r*r3i_d;
-          Point fieldDipole = (3.0*p.mu.dot(r_n)*r_n*((r5i_d/r2i) - (rc5i_d/rc2i) + 3*der*(rc6i_d/rc2i)) - p.mu*(r3i_d - rc3i_d + 3*der*rc4i_d))*p.muscalar; // \beta e E
+          Point fieldDipole = (3.0*p.mu.dot(r_n)*r_n*((r5i_d/r2i) - (rc3i/rc2i) + 3*der*(rc3i/rc2i)) - p.mu*(r3i_d - rc3i + 3*der*rc3i))*p.muscalar; // \beta e E
           return (fieldCharge + fieldDipole);
         }
 
@@ -461,111 +458,6 @@ namespace Faunus {
 
 
 
-
-
-
-
-  class GaussianDamping {
-
-    private:
-      string _brief() { return "GaussianDamping"; }
-    public:
-
-      /**
-       * @brief Returns ion-ion interaction, Needs to be checked!
-       * @param QxQ Product of the ion charges
-       * @param betaA Exponent of particles A:s Gaussian charge density
-       * @param betaB Exponent of particles B:s Gaussian charge density
-       * @param r Direction \f$ r_A - r_B \f$  
-       */
-      template<class Tvec>
-        double q2q(double QxQ, double betaA, double betaB, const Tvec &r) {
-          double beta12 = betaA*betaB/sqrt(betaA*betaA + betaB*betaB);
-          double r1i = 1/(beta12*r.norm());
-          return QxQ*beta12*erf_x(1/r1i)*r1i;
-        }
-
-      /**
-       * @brief Returns ion-dipole interaction, Needs to be checked!
-       * @param QAxMuB Product of ion charge and dipole scalar
-       * @param muB Unit dipole moment vector
-       * @param QBxMuA Product of ion charge and dipole scalar
-       * @param muA Unit dipole moment vector
-       * @param betaAC Exponent of particles A:s Gaussian charge density
-       * @param betaBC Exponent of particles B:s Gaussian charge density
-       * @param betaAD Exponent of particles A:s Gaussian dipole density
-       * @param betaBC Exponent of particles B:s Gaussian dipole density
-       * @param r Direction \f$ r_A - r_B \f$  
-       */
-      template<class Tvec>
-        double q2mu(double QAxMuB, const Tvec &muB, double QBxMuA, const Tvec &muA, double betaAC, double betaBC, double betaAD, double betaBD, const Tvec &r) {
-          double beta12 = betaAC*betaBD/sqrt(betaAC*betaAC + betaBD*betaBD);
-          double r1i = 1/(beta12*r.norm());
-          double B1A = r1i*r1i*(erf_x(1/r1i)*r1i - (2/sqrt(pc::pi))*exp(-1/(r1i*r1i)))*beta12*beta12*beta12;
-          beta12 = betaAD*betaBC/sqrt(betaAD*betaAD + betaBC*betaBC);
-          r1i = 1/(beta12*r.norm());
-          double B1B = r1i*r1i*(erf_x(1/r1i)*r1i - (2/sqrt(pc::pi))*exp(-1/(r1i*r1i)))*beta12*beta12*beta12;
-          double U1 = QAxMuB*muB.dot(r)*B1A;
-          double U2 = QBxMuA*muA.dot(r)*B1B;
-          return (U1 - U2);
-        }
-
-      /**
-       * @brief Dipole-dipole energy, Needs to be checked!
-       * @param muA Dipole moment (A) unit vector
-       * @param muB Dipole moment (B) unit vector
-       * @param muAxMuB Product of dipole moment scalars, |A|*|B|
-       * @param betaA Exponent of particles A:s Gaussian charge density
-       * @param betaB Exponent of particles B:s Gaussian charge density
-       * @param r Direction \f$ r_A - r_B \f$ 
-       * @returns energy in `kT/lB`
-       */
-      template<class Tvec>
-        double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, double betaA, double betaB, const Tvec &r) const {
-          double beta12 = betaA*betaB/sqrt(betaA*betaA + betaB*betaB);
-          double beta123 = beta12*beta12*beta12;
-          double r1i = 1/(beta12*r.norm()); 
-          double r2i = r1i*r1i;
-          double B1 = r2i*(erf_x(1/r1i)*r1i - (2/sqrt(pc::pi))*exp(-1/r2i));
-          double B2 = 3*B1*r2i - (4/sqrt(pc::pi))*r2i*exp(-1/r2i);
-          return muAxmuB*(muA.dot(muB)*beta123*B1 - (muA.dot(r))*(muB.dot(r))*beta123*beta123*B2);
-        }
-
-      /** 
-       * @brief Field at `r` due to charge `p` 
-       *  Gets returned in [e/Å / lB] (\f$\beta eE / lB \f$)
-       * @param p Particle from where field is evaluated
-       * @param beta Exponent of the Gaussian charge density of the particle where field is evaluated 
-       * @param r Direction \f$ r_A - r_B \f$ 
-       */
-      template<class Tparticle>
-        Point fieldQ2Q(const Tparticle &p,const Tparticle &p0, const Point &r) const {
-          double beta12 = p.betaC*p0.betaC/sqrt(p.betaC*p.betaC + p0.betaC*p0.betaC);
-          double r1i = 1/(beta12*r.norm()); 
-          double r2i = r1i*r1i;
-          double B1 = r2i*(erf_x(1/r1i)*r1i - (2/sqrt(pc::pi))*exp(-1/r2i));
-          return (p.charge*beta12*beta12*beta12*B1*r);
-        }
-
-      /** 
-       * @brief Field at `r` due to dipole `p` 
-       *  Gets returned in [e/Å / lB] (\f$\beta eE / lB \f$)
-       * @param p Particle from where field is evaluated
-       * @param beta Exponent of the Gaussian dipole density of the particle where field is evaluated 
-       * @param r Direction \f$ r_A - r_B \f$ 
-       */
-      template<class Tparticle>
-        Point fieldMu2Mu(const Tparticle &p,const Tparticle &p0, const Point &r) const {
-          double beta12 = p.betaD*p0.betaD/sqrt(p.betaD*p.betaD + p0.betaD*p0.betaD);
-          double beta123 = beta12*beta12*beta12;
-          double r1i = 1/(beta12*r.norm()); 
-          double r2i = r1i*r1i;
-          double B1 = r2i*(erf_x(1/r1i)*r1i - (2/sqrt(pc::pi))*exp(-1/r2i));
-          double B2 = 3*B1*r2i - (4/sqrt(pc::pi))*r2i*exp(-1/r2i);
-          return (beta123*B1*p.muscalar*p.mu - beta123*beta123*(p.muscalar*p.mu.dot(r))*B2*r);
-        }
-
-  };
 
 
 
@@ -886,7 +778,8 @@ namespace Faunus {
          * @returns [e/Å / lB] (\f$\beta eE / lB \f$)
          */
         template<class Tparticle>
-          Point field(const Tparticle &p, int beta, const Point &r) const {
+          Point field(const Tparticle &p, const Point &r) const {
+            double beta = p.id;
             double r2i = 1/r.squaredNorm();
             if (r2i < rc2i)
               return Point(0,0,0);
@@ -1043,7 +936,7 @@ namespace Faunus {
                *  Gets returned in [e/Å] (\f$\beta eE \f$)
                */
               template<class Tparticle>
-                Point field(const Tparticle &p,const Tparticle &p0, const Point &r) const {
+                Point field(const Tparticle &p, const Point &r) const {
                   double R2 = 1.0/r.squaredNorm();
                   double R1 = sqrt(R2);
                   Point r_n = r*R1;
@@ -1131,7 +1024,7 @@ namespace Faunus {
                *  Gets returned in [e/Å] (\f$\beta eE \f$)
                */
               template<class Tparticle>
-                Point field(const Tparticle &p,const Tparticle &p0, const Point &r) const {
+                Point field(const Tparticle &p, const Point &r) const {
                   double r2i = 1.0/r.squaredNorm();
                   double r1i = sqrt(r2i);
                   double r4i = r2i*r2i;
@@ -1196,8 +1089,8 @@ namespace Faunus {
                *  Gets returned in [e/Å] (\f$\beta eE \f$)
                */
               template<class Tparticle>
-                Point field(const Tparticle &p,const Tparticle &p0, const Point &r) const {
-                  return _lB*wolf.field(p,p0,r);
+                Point field(const Tparticle &p, const Point &r) const {
+                  return _lB*wolf.field(p,r);
                 }
 
               string info(char w) {
@@ -1206,34 +1099,6 @@ namespace Faunus {
                 o << IonDipole::info(w)
                   << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
                   << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
-                return o.str();
-              }
-          };
-          
-          class IonDipoleDamped : public IonDipole {
-            private:
-              string _brief() { return "Damped Ion-dipole"; }
-              GaussianDamping gd;
-            public:
-              IonDipoleDamped(InputMap &in) : IonDipole(in),
-              gd() {
-                name+=" IonDipole";
-              }
-
-              template<class Tparticle>
-                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-                  return _lB*gd.q2mu(a.charge*b.muscalar, b.mu, b.charge*a.muscal, a.mu, a.betaC, b.betaC, a.betaD, b.betaD,r);
-                }
-
-              template<class Tparticle>
-                Point field(const Tparticle &p,const Tparticle &p0, const Point &r) const {
-                  return Point(0,0,0);
-                }
-
-              string info(char w) {
-                using namespace textio;
-                std::ostringstream o;
-                o << IonDipole::info(w) << endl;
                 return o.str();
               }
           };
@@ -1258,8 +1123,8 @@ namespace Faunus {
                *  Gets returned in [e/Å] (\f$\beta eE \f$)
                */
               template<class Tparticle>
-                Point field(const Tparticle &p,const Tparticle &p0, const Point &r) const {
-                  return _lB*wolf.field(p,p0,r);
+                Point field(const Tparticle &p, const Point &r) const {
+                  return _lB*wolf.field(p,r);
                 }
 
               string info(char w) {
@@ -1268,34 +1133,6 @@ namespace Faunus {
                 o << DipoleDipole::info(w)
                   << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
                   << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
-                return o.str();
-              }
-          };
-
-          class DipoleDipoleDamped : public DipoleDipole {
-            private:
-              string _brief() { return "Damped Dipole-dipole"; }
-              GaussianDamping gd;
-            public:
-              DipoleDipoleDamped(InputMap &in) : DipoleDipole(in),
-              gd() {
-                name+=" DipoleDipole";
-              }
-
-              template<class Tparticle>
-                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-                  return _lB*gd.mu2mu(a.charge*b.muscalar, b.mu, b.charge*a.muscal, a.mu, a.betaC, b.betaC, a.betaD, b.betaD,r);
-                }
-
-              template<class Tparticle>
-                Point field(const Tparticle &p,const Tparticle &p0, const Point &r) const {
-                  return _lB*gd.fieldMu2Mu(p,p0,r);
-                }
-
-              string info(char w) {
-                using namespace textio;
-                std::ostringstream o;
-                o << DipoleDipole::info(w) << endl;
                 return o.str();
               }
           };
@@ -1320,8 +1157,8 @@ namespace Faunus {
                *  Gets returned in [e/Å] (\f$\beta eE \f$)
                */
               template<class Tparticle>
-                Point field(const Tparticle &p,const Tparticle &p0, const Point &r) const {
-                  return _lB*wolf.field(p,p.id,r);
+                Point field(const Tparticle &p, const Point &r) const {
+                  return _lB*wolf.field(p,r);
                 }
 
               string info(char w) {
@@ -1351,8 +1188,8 @@ namespace Faunus {
                 }
                 
               template<class Tparticle>
-                Point field(const Tparticle &p,const Tparticle &p0, const Point &r) const {
-                  return _lB*wolf.field(p,p0,r);
+                Point field(const Tparticle &p, const Point &r) const {
+                  return _lB*wolf.field(p,r);
                 }
 
               string info(char w) {
@@ -1383,7 +1220,7 @@ namespace Faunus {
                 }
 
               template<class Tparticle>
-                Point field(const Tparticle &p,const Tparticle &p0, const Point &r) const {
+                Point field(const Tparticle &p, const Point &r) const {
                   return Point(0,0,0);
                 }
 

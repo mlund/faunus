@@ -342,6 +342,18 @@ namespace Faunus {
           }
           return mu;
         }
+        
+     template<class Tspace, class Tgroup>
+        Tensor<double> quadrupoleMoment(const Tspace &s, const Tgroup &g, double cutoff=1e9,Tensor<double> theta=Tensor<double>()) {
+          assert(g.size()<=(int)s.p.size());
+          for (auto i : g) {
+            Point t=s.p[i] - g.cm;
+            s.geo.boundary(t);
+            if(t.squaredNorm() < cutoff*cutoff)
+              theta = theta + t*t.transpose()*s.p[i].charge;
+          }
+          return theta;
+        }
 
     /** @brief Translate a particle vector by a vector */
     template<class Tgeo, class Tpvec>

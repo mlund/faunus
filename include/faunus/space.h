@@ -262,7 +262,7 @@ namespace Faunus {
       a=atom[atomname];
       while (n>0) {
         geo.randompos(a);
-        if (1) {//!overlap(a)) {    <=======  No overlap check!!!!!
+        if (1) {//!overlap(a)) {   // <=======  No overlap check!!!!!
           insert(a,-1);
           n--;
         }

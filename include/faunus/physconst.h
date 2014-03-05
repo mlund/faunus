@@ -36,6 +36,7 @@ namespace Faunus {
         static Td kT();        //!< Returns k_bT [J]
         static void setT(Td);  //!< Set temperature [K]
         static Td D2eA(Td=1);  //!< Debye to electron Angstrom
+        static Td eA2D(Td=1);  //!< Electron Angstrom to Debye
         static Td eA2Cm(Td=1); //!< Converts eÅ to SI-units Cm
         
         //!< Convert Å to atomic unit(Bohr). Convert length scales. E.g. Length -> dim=1, Area -> dim=2, Volume -> dim=3
@@ -101,6 +102,9 @@ namespace Faunus {
 
   template<class Td>
     Td PhysicalConstants<Td>::D2eA(Td D) { return 0.20819434*D; }
+    
+  template<class Td>
+    Td PhysicalConstants<Td>::eA2D(Td eA) { return (eA/0.20819434); }
 
   template<class Td>
     Td PhysicalConstants<Td>::eA2Cm(Td eA) { return (eA*3.33564*(1e-30)/0.20819434); }

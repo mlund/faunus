@@ -137,8 +137,10 @@ namespace Faunus {
     struct Tensor : public Eigen::Matrix<T,3,3> {
       typedef Eigen::Matrix<T,3,3> Tmat; //!< Matrix from Eigen
 
-      /** @brief Default constructor. Data is *not* zeroed */
-      Tensor() {}
+      /** @brief Default constructor. Data is zeroed */
+      Tensor() {
+        (*this).clear();
+      }
 
       Tensor(T xx, T xy, T xz, T yy, T yz, T zz) {
         (*this) << xx,xy,xz,xy,yy,yz,xz,yz,zz;
@@ -363,10 +365,10 @@ namespace Faunus {
     typedef bool Thydrophobic;
     Tid id;                                   //!< Particle identifier
     Tcharge charge;                           //!< Charge number
-    double betaC;                             //!< Exponent of Gaussian charge density
     Tradius radius;                           //!< Radius
     Tmw mw;                                   //!< Molecular weight
     Thydrophobic hydrophobic;                 //!< Hydrophobic flag
+    double betaC;                             //!< Exponent of Gaussian charge density
 
     PointParticle() { clear(); }              //!< Constructor
 
@@ -390,6 +392,7 @@ namespace Faunus {
           radius=d.radius;
           mw=d.mw;
           hydrophobic=d.hydrophobic;
+          betaC=d.betaC;
           return *this;
         }
 

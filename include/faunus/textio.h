@@ -20,6 +20,7 @@ namespace Faunus {
     const string cuberoot="3root";
     const string degrees="deg";
     const string epsilon="eps";
+    const string epsilon_m="eps_m";
     const string gamma="gamma";
     const string Gamma="Gamma";
     const string kappa="k";
@@ -42,6 +43,7 @@ namespace Faunus {
     const string cuberoot="\u221b";   //!< Cubic root
     const string degrees="\u00b0";    //!< Degrees
     const string epsilon="\u03f5";    //!< Greek epsilon
+    const string epsilon_m="\u03b5";  //!< Greek epsilon (minuscule)
     const string gamma="\u0263";      //!< Greek gamma
     const string Gamma="\u0393";      //!< Greek capital gamma
     const string kappa="\u03ba";      //!< Greek kappa

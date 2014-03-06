@@ -1,7 +1,6 @@
 #ifndef FAUNUS_ANALYSIS_H
 #define FAUNUS_ANALYSIS_H
 
-#ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/average.h>
 #include <faunus/physconst.h>
@@ -9,14 +8,13 @@
 #include <faunus/space.h>
 #include <faunus/point.h>
 #include <faunus/textio.h>
+#include <faunus/energy.h>
 #include <Eigen/Core>
-#endif
 
 #include <chrono>
 #include <thread>
 
 namespace Faunus {
-  class checkValue;
 
   /**
    * @brief Namespace for analysis routines
@@ -1003,6 +1001,121 @@ namespace Faunus {
 
         std::set<string> exclusionlist; //!< Atom names listed here will be excluded from the analysis.
     };
+
+    /**
+     * @brief Multipolar decomposition between groups as a function of separation
+     * @date Malmo 2014
+     * @note Needs testing!
+     */
+    template<class Tspace, class Tcoulomb=Potential::Coulomb>
+      class MultipoleDistribution : public AnalysisBase {
+        private:
+          Energy::Nonbonded<Tspace,Tcoulomb> pot;
+
+          string _info() FOVERRIDE { return string(); }
+
+          struct data {
+            double tot, ii, id, iq, dd;
+            unsigned long int cnt;
+            data() : cnt(0) {}
+          };
+
+          std::map<int,data> m; // slow, but OK for infrequent sampling
+          double dr;            // distance resolution
+
+          template<class Tgroup>
+            Tensor<double> quadrupoleMoment(const Tspace &s, const Tgroup &g) const {
+              Tensor<double> theta;
+              theta.clear();
+              assert(g.size()<=(int)s.p.size());
+              for (auto i : g) {
+                Point t=s.p[i] - g.cm;
+                s.geo.boundary(t);
+                theta = theta + t*t.transpose()*s.p[i].charge;
+              }
+              return 0.5*theta;
+            }
+
+          // convert group to multipolar particle
+          template<class Tgroup>
+            DipoleParticle toMultipole(const Tspace &spc, const Tgroup &g) const {
+              DipoleParticle m;
+              m = g.cm;
+              m.charge = g.charge(spc.p);            // monopole
+              m.mu = Geometry::dipoleMoment(spc, g); // dipole
+              m.muscalar = m.mu.norm();
+              if (m.muscalar>1e-8)
+                m.mu=m.mu/m.muscalar; 
+              m.theta = quadrupoleMoment(spc, g);    // quadrupole
+              return m;
+            }
+
+        public:
+
+          MultipoleDistribution(InputMap &in) : pot(in) {
+            dr = in.get("multipoledist_dr", 0.1, "Distance resolution of multipole analysis");
+          }
+
+          template<class Tmultipole=DipoleParticle>
+            void sample(Tspace &spc, Group &g1, Group &g2) {
+              // multipoles and cm-cm distance
+              auto a = toMultipole(spc,g1);
+              auto b = toMultipole(spc,g2);
+              auto r = spc.geo.vdist(g1.cm, g2.cm);
+              double r2inv = 1/r.squaredNorm();
+              double rinv = sqrt(r2inv);
+              double r3inv = rinv * r2inv;
+
+              // multipolar energy
+              pot.setSpace(spc);
+              data d;
+              d.cnt++;
+              d.tot = pot.g2g(spc.p, g1, g2);
+              d.ii = a.charge * b.charge * rinv;
+              d.id = ( a.charge*b.mu.dot(r) - b.charge*a.mu.dot(r) ) * r3inv;
+              d.dd = mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r);
+              d.iq = q2quad(a.charge, b.theta, r) + q2quad(b.charge, a.theta, r);
+
+              // add to grand average
+              int key = toBin(1/rinv,dr);
+              auto it = m.find(key);
+              if (it==m.end())
+                m[key]=d;
+              else {
+                it->second.cnt++;
+                it->second.ii  += d.ii;
+                it->second.id  += d.id;
+                it->second.iq  += d.iq;
+                it->second.dd  += d.dd;
+                it->second.tot += d.tot;
+              }
+            }
+
+          /** @brief Save multipole distribution to disk */
+          void save(const string &filename) const {
+            std::ofstream f(filename.c_str());
+            if (f) {
+              char w=12;
+              auto lB=pot.pairpot.bjerrumLength();
+              f.precision(4);
+              f << "# Multipolar energy analysis (kT)\n"
+                << std::left << setw(w) << "# r/AA" << std::right << setw(w) << "exact"
+                << setw(w) << "total" << setw(w) << "ionion" << setw(w) << "iondip"
+                << setw(w) << "dipdip" << setw(w) << "ionquad" << "\n";
+              for (auto &i : m)
+                f << std::left
+                  << setw(w) << i.first*dr                  // r
+                  << std::right
+                  << setw(w) << i.second.tot/i.second.cnt   // exact (already in kT)
+                  << setw(w) << lB*(i.second.ii+i.second.id+i.second.dd+i.second.iq)/i.second.cnt // total
+                  << setw(w) << lB*i.second.ii/i.second.cnt // individual poles...
+                  << setw(w) << lB*i.second.id/i.second.cnt
+                  << setw(w) << lB*i.second.dd/i.second.cnt
+                  << setw(w) << lB*i.second.iq/i.second.cnt
+                  << "\n";
+            }
+          }
+      };
 
     /**
      * @brief Widom method for excess chemical potentials

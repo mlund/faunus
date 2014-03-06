@@ -392,7 +392,8 @@ namespace Faunus {
       double r1i = sqrt(r2i);
       double r3i = r1i*r2i;
       double r5i = r3i*r2i;
-      double W = r.transpose()*quad*r*r5i  - quad.trace()*(r3i/3);
+      double W = r.transpose()*quad*r;
+      W = W*r5i - quad.trace()*(r3i/3);
       return q*W; // e^2 / Å
     }
 

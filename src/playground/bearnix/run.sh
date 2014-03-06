@@ -1,6 +1,8 @@
 #!/bin/bash
 
 function mkinput() {
+
+# Write titration and atom property files:
 echo '
 {
   "processes" :
@@ -20,6 +22,7 @@ echo '
   {
     "Na"   :  { "eps":0.124, "q": 1, "r":1.9, "mw":22.99 }, // epsilon in kJ/mol!
     "Cl"   :  { "eps":0.124, "q":-1, "r":1.7, "mw":35.45 },
+    "X"    :  { "eps":0.010, "q":-1, "r":1.7, "mw":1.0 },
     "ASP"  :  { "eps":0.124, "q":-1, "r":3.6, "mw":110 },
     "HASP" :  { "eps":0.124, "q":0,  "r":3.6, "mw":110 },
     "LASP" :  { "eps":0.124, "q":2,  "r":3.6, "mw":110 },
@@ -57,6 +60,7 @@ echo '
 }
 ' > cyl.json
 
+# Write main input file:
 echo "
 atomlist               cyl.json
 eq_processfile         cyl.json
@@ -69,26 +73,27 @@ epsilon_r              78.7    # Water dielectric const
 dh_ionicstrength       $salt   # mol/l
 eps_hydrophobic        0.5     # hydrophobic-hydrophobic LJ (kT)
 
-cylinder_radius        $cylinder_radius
-cylinder_len           $cylinder_len
+cylinder_radius        $cylinder_radius # angstrom
+cylinder_len           $cylinder_len    # angstrom
 
 npt_P                  0       # mM
 npt_dV                 0       # log(dV)
 npt_runfraction        0.0
-transrot_transdp       100      # Molecular translation parameter
+transrot_transdp       100     # Molecular translation parameter
 transrot_rotdp         3       # Molecular rotation parameter
-swapmv_runfraction     0.1
+swapmv_runfraction     0.1     # Chance of performing titration
 
 # Molecular species - currently only two different kinds
 molecule1_N            1
-molecule1              test.aam
+molecule1              monopole.aam
 molecule2_N            1
-molecule2              test.aam
+molecule2              dipole.aam
 molecule_plane         1
 
-movie                  yes
+movie                  yes     # save trajectory? (gromacs xtc format)
+multipoledist_dr       0.2     # resolution of multipole analysis (angstrom)
 
-# Atomic species - add up to ten.
+# Atomic species - add up to ten different kinds
 tion1                  Na
 nion1                  0
 dpion1                 10
@@ -99,36 +104,69 @@ dpion2                 10
 
 " > cyl.input
 
+# Generate some simple molecules:
+# format: name anything x y z charge weight radius)
 echo "2
  HIS  0   0.00   0.00   0.00    -0   1  3.0
  GLY  0   2.00   0.00   1.00     0   1  2.0
-" > test.aam
+" > titratable.aam
+
+echo "1
+ X  0   0.00   0.00   0.00    +1   1  2.0
+" > monopole.aam
+
+echo "2
+ X  0  -0.50   0.00   0.00    -1   1  2.0
+ X  0   0.50   0.00   0.00     1   1  2.0
+" > dipole.aam
+
+echo "4
+ X  0   1.00   1.00   0.00    +1   1  2.0
+ X  0  -1.00  -1.00   0.00    +1   1  2.0
+ X  0   1.00  -1.00   0.00    -1   1  2.0
+ X  0  -1.00   1.00   0.00    -1   1  2.0
+" > quadrupole.aam
 
 }
 
 exe=./bearnix-cyl
-salt=0.1
+cylinder_len=50
+cylinder_radius=60
 
-cylinder_len=300
-cylinder_radius=100
+# control equilibration and production runs
+eqrun=true
+prodrun=false
+copy=true
 
-for pH in 7.0
+for salt in 0.10  # loop over salt
 do
-  rm state
-  prefix="pH${pH}-pH${pH}"
-  micro=100000
-  mkinput
-  echo $prefix
-  $exe #> $prefix.eq
-  exit
+  for pH in 7.0   # loop over pH
+  do
+    prefix="I${salt}-pH${pH}"
 
-  micro=100000
-  mkinput
-  $exe > $prefix.out
-  cp rdf_p2p.dat $prefix.rdf 
-  cp traj.xtc $prefix.xtc
-  cp confout.pqr $prefix.pqr
-  cp state $prefix.state
-  cp manybody.input $prefix.input
+    if [ "$eqrun" = true ]; then
+      echo "Equilibration run...(state file deleted)"
+      rm -fR state
+      micro=100000
+      mkinput
+      $exe
+    fi
+
+    if [ "$prodrun" = true ]; then
+      echo "Production run..."
+      micro=100000
+      mkinput
+      $exe > $prefix.out
+    fi
+
+    if [ "$copy" = true ]; then
+      cp "$0" $prefix.sh
+      cp state $prefix.state
+      cp traj.xtc $prefix.xtc
+      cp cyl.input $prefix.input
+      cp rdf_p2p.dat $prefix.rdf 
+      cp confout.pqr $prefix.pqr
+      cp multipole.dat $prefix.multipole
+    fi
+  done
 done
-

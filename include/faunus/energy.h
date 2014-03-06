@@ -10,7 +10,6 @@
 #include <faunus/textio.h>
 #include <faunus/potentials.h>
 #include <faunus/auxiliary.h>
-#include <faunus/analysis.h>
 #endif
 
 namespace Faunus {

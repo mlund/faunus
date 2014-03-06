@@ -62,7 +62,7 @@ int main() {
  Run this example from the `examples` directory:
 
  ~~~~~~~~~~~~~~~~~~~
- $ make examples_stripes
+ $ make example_stripes
  $ cd src/examples
  $ ./stripes.run
  ~~~~~~~~~~~~~~~~~~~

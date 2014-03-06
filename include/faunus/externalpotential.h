@@ -2,6 +2,7 @@
 #define FAUNUS_EXTERNALPOTENTIAL_H
 
 #include <faunus/potentials.h>
+#include <faunus/analysis.h>
 
 namespace Faunus {
 

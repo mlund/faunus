@@ -250,6 +250,28 @@ namespace Faunus {
           }
         }
     };
+
+  /**
+   * @brief Round a floating point to integer for use with histogram binning.
+   *
+   * This will round to nearest integer, assuming a certain resolution
+   * (default 1). This can be useful for binning floating point data
+   * into a histogram or table of resolution `dx` (second argument)
+   *
+   * Example:
+   *
+   * ~~~~
+   *     double x=21.3;
+   *     toBin(x);   // -> 21
+   *     toBin(x,2); // -> 20
+   * ~~~~
+   *
+   */
+  template<class T, class Tint=int>
+    Tint toBin(T x, T dx=1) {
+      return (x>=0) ? Tint( x/dx+0.5 ) : Tint( x/dx-0.5 );
+    }
+
 }//namespace
 #endif
 

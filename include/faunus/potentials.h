@@ -1385,17 +1385,6 @@ namespace Faunus {
         }
 
     /**
-      @brief Old class for multipole energy. To be removed.
-      */
-    class MultipoleEnergy {
-      public:
-        double lB;
-        double ionion(double, double, double);
-        double iondip(double, const Point&, double);
-        double dipdip(const Point&, const Point&, double);
-    };
-
-    /**
      * @brief Lennard-Jones potential with Lorentz-Berthelot mixing rule
      */
     typedef LennardJonesMixed<LorentzBerthelot> LennardJonesLB;

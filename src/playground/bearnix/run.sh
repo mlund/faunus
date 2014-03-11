@@ -87,7 +87,7 @@ swapmv_runfraction     0.1     # Chance of performing titration
 molecule1_N            1
 molecule1              monopole.aam
 molecule2_N            1
-molecule2              dipole.aam
+molecule2              quadrupole.aam
 molecule_plane         1
 
 movie                  yes     # save trajectory? (gromacs xtc format)

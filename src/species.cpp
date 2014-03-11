@@ -48,7 +48,10 @@ namespace Faunus {
     list.push_back(a);
   }
 
-  AtomData & AtomMap::operator[] (AtomData::Tid i) { return list.at(i); }
+  AtomData & AtomMap::operator[] (AtomData::Tid i) {
+    assert(i>=0 && i<list.size() && "Particle id not found!");
+    return list.at(i);
+  }
 
   AtomData & AtomMap::operator[] (string s) {
     for (auto &l_i : list)
@@ -68,7 +71,6 @@ namespace Faunus {
   bool AtomMap::includeJSON(const string& file) {
     int n=0;
     filename=file;
-    std::vector<double> test1 (3,0);
     auto j=json::open(file);
     for (auto &atom : json::object("atomlist", j)) {
       n++;
@@ -109,6 +111,7 @@ namespace Faunus {
       bool insert=true;
       for (auto &i : list)
         if (i.name==a.name) {
+          a.id=i.id; // keep old id and
           i=a; // override existing
           insert=false;
           break;

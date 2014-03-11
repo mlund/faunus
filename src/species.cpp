@@ -145,7 +145,6 @@ namespace Faunus {
           list.push_back(a);
         }
       }
-      f.close();
       return true;
     }
     cout << "FAILED!\n";

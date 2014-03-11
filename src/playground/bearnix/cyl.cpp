@@ -13,6 +13,10 @@
  * potential with Lorentz-Berthelot mixed rules. Hydrophobic
  * groups interact with a custom epsilon as specified in the
  * input file.
+ *
+ * The structure of the molecules may be given either
+ * as a PQR or AAM file -- see `FormatPQR` and `FormatAAM`
+ * for details
  */
 
 using namespace Faunus;
@@ -57,7 +61,13 @@ int main(int argc, char** argv) {
     else
       file = mcp.get<string>("molecule1");
     Tspace::ParticleVector v;
-    FormatAAM::load(file,v);
+
+    // PQR or AAM molecular file format?
+    if (file.find(".pqr")!=std::string::npos)
+      FormatPQR::load(file,v);
+    else
+      FormatAAM::load(file,v);
+
     Geometry::FindSpace fs;
     if (inPlane)
       fs.dir=Point(0,0,1);
@@ -140,14 +150,15 @@ int main(int argc, char** argv) {
     sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) ); // detect energy drift
     cout << loop.timing();
 
+    spc.save("state");
+    mcp.save("mdout.mdp");
+    rdf.save("rdf_p2p.dat");
+    mpoldist.save("multipole.dat");
+    FormatPQR::save("confout.pqr", spc.p);
+
   } // end of macro loop
 
   cout << loop.info() + sys.info() + gmv.info() + mv.info()
     + iso.info() + tit.info() + mpol.info();
 
-  spc.save("state");
-  mcp.save("mdout.mdp");
-  rdf.save("rdf_p2p.dat");
-  mpoldist.save("multipole.dat");
-  FormatPQR::save("confout.pqr", spc.p);
 }

@@ -70,25 +70,25 @@ loop_microsteps        $micro
 
 temperature            298     # Kelvin
 epsilon_r              78.7    # Water dielectric const
-dh_ionicstrength       $salt   # mol/l
+dh_ionicstrength       $salt   # Ionic strength (mol/l)
 eps_hydrophobic        0.5     # hydrophobic-hydrophobic LJ (kT)
 
 cylinder_radius        $cylinder_radius # angstrom
 cylinder_len           $cylinder_len    # angstrom
 
-npt_P                  0       # mM
-npt_dV                 0       # log(dV)
-npt_runfraction        0.0
+npt_P                  0       # External pressure for NPT ensemble (mM)
+npt_dV                 0       # Volume displacement log(dV)
+npt_runfraction        0.0     # Fraction of sweeps where V moves are attempted
 transrot_transdp       100     # Molecular translation parameter
 transrot_rotdp         3       # Molecular rotation parameter
 swapmv_runfraction     0.1     # Chance of performing titration
 
 # Molecular species - currently only two different kinds
 molecule1_N            1
-molecule1              monopole.aam
+molecule1              monopole.pqr
 molecule2_N            1
-molecule2              quadrupole.aam
-molecule_plane         1
+molecule2              quadrupole.pqr
+molecule_plane         yes
 
 movie                  yes     # save trajectory? (gromacs xtc format)
 multipoledist_dr       0.2     # resolution of multipole analysis (angstrom)
@@ -104,28 +104,28 @@ dpion2                 10
 
 " > cyl.input
 
-# Generate some simple molecules:
-# format: name anything x y z charge weight radius)
-echo "2
- HIS  0   0.00   0.00   0.00    -0   1  3.0
- GLY  0   2.00   0.00   1.00     0   1  2.0
+# Generate some simple molecules in PQR format:
+# atom# atomname resname res#    x        y        z      q     r
+echo "
+ATOM      1 HIS  GLY     1       0.000    0.000    0.000  0.000 3.000
+ATOM      2 HIS  GLY     2       2.000    0.000    1.000  0.000 2.000
 " > titratable.aam
 
-echo "1
- X  0   0.00   0.00   0.00    +1   1  2.0
-" > monopole.aam
+echo "
+ATOM      1 X    MP      1       0.000    0.000    0.000 -1.000 2.000
+" > monopole.pqr
 
-echo "2
- X  0  -0.50   0.00   0.00    -1   1  2.0
- X  0   0.50   0.00   0.00     1   1  2.0
-" > dipole.aam
+echo "
+ATOM      1 X    DP      1      -0.500    0.000    0.000 -1.000 2.000
+ATOM      2 X    DP      1       0.000    0.000    0.000  1.000 2.000
+" > dipole.pqr
 
-echo "4
- X  0   1.00   1.00   0.00    +1   1  2.0
- X  0  -1.00  -1.00   0.00    +1   1  2.0
- X  0   1.00  -1.00   0.00    -1   1  2.0
- X  0  -1.00   1.00   0.00    -1   1  2.0
-" > quadrupole.aam
+echo "
+ATOM      1 X    QP      1       1.000    1.000    0.000 +1.000 2.000
+ATOM      2 X    QP      1      -1.000   -1.000    0.000 +1.000 2.000
+ATOM      3 X    QP      1       1.000   -1.000    0.000 -1.000 2.000
+ATOM      4 X    QP      1      -1.000    1.000    0.000 -1.000 2.000
+" > quadrupole.pqr
 
 }
 
@@ -162,11 +162,11 @@ do
     if [ "$copy" = true ]; then
       cp "$0" $prefix.sh
       cp state $prefix.state
-      cp traj.xtc $prefix.xtc
       cp cyl.input $prefix.input
       cp rdf_p2p.dat $prefix.rdf 
       cp confout.pqr $prefix.pqr
       cp multipole.dat $prefix.multipole
+      cp traj.xtc $prefix.xtc 2>/dev/null
     fi
   done
 done

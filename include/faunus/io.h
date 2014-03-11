@@ -84,13 +84,15 @@ namespace Faunus {
    * - Lines beginning with # are ignored and can be placed anywhere
    * - The first non-# line gives the number of particles
    * - Every subsequent line gives atom information in the format:
-   *   name, number, x, y, z, charge number, weight, radius
-   * - Positions and radii should be in angstroms
+   *
+   *   `name number x y z charge  weight radius`
+   *
+   * - Positions and radii should be in angstroms.
    * - Currently, data in the number field is ignored.
    * - No particular spacing is required.
    *
-   *     # information
-   *     # more information
+   * Example:
+   *
    *     2
    *     Na    1     10.234 5.4454 -2.345  +1    22.0   1.7
    *     Cl    2    5.011     1.054  20.02   -1   35.0   2.0
@@ -268,6 +270,7 @@ namespace Faunus {
             int iatom, ires;
             std::string line,key,aname,rname;
             while (std::getline(in, line)) {
+              cout << "!!! " << line << endl;
               std::stringstream o(line);
               while (o >> key)
                 if (key=="ATOM" || key=="HETATM") {

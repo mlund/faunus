@@ -16,7 +16,7 @@ namespace Faunus {
       class FormFactorSphere {
         private:
           T j1(T x) const { // spherical Bessel function
-            register T xinv=1/x;
+            T xinv=1/x;
             return xinv*( sin(x)*xinv - cos(x) );
           }
         public:

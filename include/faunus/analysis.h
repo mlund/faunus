@@ -64,7 +64,7 @@ namespace Faunus {
      * \right >_{NVT}
      * @f]
      * where @f$r@f$ and @f$f@f$ are the distance and force, @f$V@f$ the system volume,
-     * and the excess pressure scalar is simply the trace of @f$\mathcal{P}@f$.
+     * and the excess pressure scalar is the trace of @f$\mathcal{P}@f$.
      * The trivial kinetic contribution is currently not included.
      *
      * References:
@@ -73,9 +73,7 @@ namespace Faunus {
      * - <http://dx.doi.org/10/fspzcx>
      *
      * @todo At the moment this analysis is limited to "soft" systems only,
-     * i.e. for non-rigid systems with continuous potentials. By including
-     * a group controlled loop this could easily be remedied.
-     *
+     * i.e. for non-rigid systems with continuous potentials.
      */
     class VirialPressure : public AnalysisBase {
       private:
@@ -205,10 +203,8 @@ namespace Faunus {
      * @date Lund 2011
      * @note `Tx` is used as the `std::map` key and which may be
      * problematic due to direct floating point comparison (== operator).
-     * We have not experienced any issues with this, though.
-     *
-     * @todo We get correct behavior, but is it really OK to have
-     * virtual functions in class templates??
+     * We have not experienced any issues with this, though. This uses
+     * `std::map` and table lookup is of complexity logarithmic with N.
      */
     template<typename Tx, typename Ty>
       class Table2D {
@@ -1004,15 +1000,48 @@ namespace Faunus {
 
     /**
      * @brief Multipolar decomposition between groups as a function of separation
+     *
+     * This will analyse the electrostatic energy between two groups as
+     * a function of their mass center separation. Sampling consists of
+     * the following:
+     *
+     * 1. The exact electrostatic energy is calculated by explicitly summing
+     *    Coulomb interactions between charged particles
+     * 2. Each group -- assumed to be a molecule -- is translated into a
+     *    multipole (monopole, dipole, quadrupole)
+     * 3. Multipolar interaction energies are calculated, summed, and tabulated
+     *    together with the exact electrostatic interaction energy. Ideally
+     *    (infinite number of terms) the multipoles should capture full
+     *    electrostatics
+     *
+     * The points 1-3 above will be done as a function of group-to-group
+     * mass center separation.
+     *
+     * Note also that the moments are defined with
+     * respect to the *mass* center, not *charge* center. While for most
+     * macromolecules there is only a minor difference between the two,
+     * the latter is more appropriate and is is planned for a future update.
+     * A simply way to mimic this is to assign zero mass to all neutral
+     * atoms in the molecule.
+     *
+     * The constructor takes the following `InputMap` keywords:
+     *
+     * Keyword             | Note
+     * :------------------ | :--------------------------------------------
+     * `multipoledist_dr`  | Distance resolution - default is 0.2 angstrom
+     *
      * @date Malmo 2014
      * @note Needs testing!
+     * @todo Add option to use charge center instead of mass center
      */
     template<class Tspace, class Tcoulomb=Potential::Coulomb>
       class MultipoleDistribution : public AnalysisBase {
         private:
-          Energy::Nonbonded<Tspace,Tcoulomb> pot;
+          Energy::Nonbonded<Tspace,Tcoulomb> pot; // Coulombic hamiltonian
 
-          string _info() FOVERRIDE { return string(); }
+          string _info() FOVERRIDE {
+            return textio::header("Multipole Analysis");
+          }
 
           struct data {
             double tot, ii, id, iq, dd;
@@ -1053,41 +1082,52 @@ namespace Faunus {
         public:
 
           MultipoleDistribution(InputMap &in) : pot(in) {
-            dr = in.get("multipoledist_dr", 0.1, "Distance resolution of multipole analysis");
+            dr = in.get("multipoledist_dr", 0.1,
+                "Distance resolution of multipole analysis");
           }
 
+          /**
+           * @brief Sample multipole energy
+           * @param spc Simulation space
+           * @param g1  Group with molecule 1
+           * @param g2  Group with molecule 2
+           * @note Group mass-centers (`Group::cm`) must be up-to-date before
+           *       calling this function
+           */
           template<class Tmultipole=DipoleParticle>
             void sample(Tspace &spc, Group &g1, Group &g2) {
-              // multipoles and cm-cm distance
-              auto a = toMultipole(spc,g1);
-              auto b = toMultipole(spc,g2);
-              auto r = spc.geo.vdist(g1.cm, g2.cm);
-              double r2inv = 1/r.squaredNorm();
-              double rinv = sqrt(r2inv);
-              double r3inv = rinv * r2inv;
+              if (run()) {
+                // multipoles and cm-cm distance
+                auto a = toMultipole(spc,g1);
+                auto b = toMultipole(spc,g2);
+                auto r = spc.geo.vdist(g1.cm, g2.cm);
+                double r2inv = 1/r.squaredNorm();
+                double rinv = sqrt(r2inv);
+                double r3inv = rinv * r2inv;
 
-              // multipolar energy
-              pot.setSpace(spc);
-              data d;
-              d.cnt++;
-              d.tot = pot.g2g(spc.p, g1, g2);
-              d.ii = a.charge * b.charge * rinv;
-              d.id = ( a.charge*b.mu.dot(r) - b.charge*a.mu.dot(r) ) * r3inv;
-              d.dd = mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r);
-              d.iq = q2quad(a.charge, b.theta, r) + q2quad(b.charge, a.theta, r);
+                // multipolar energy
+                pot.setSpace(spc);
+                data d;
+                d.cnt++;
+                d.tot = pot.g2g(spc.p, g1, g2); // exact el. energy
+                d.ii = a.charge * b.charge * rinv; // ion-ion, etc.
+                d.id = ( a.charge*b.mu.dot(r) - b.charge*a.mu.dot(r) ) * r3inv;
+                d.dd = mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r);
+                d.iq = q2quad(a.charge, b.theta, r) + q2quad(b.charge, a.theta, r);
 
-              // add to grand average
-              int key = toBin(1/rinv,dr);
-              auto it = m.find(key);
-              if (it==m.end())
-                m[key]=d;
-              else {
-                it->second.cnt++;
-                it->second.ii  += d.ii;
-                it->second.id  += d.id;
-                it->second.iq  += d.iq;
-                it->second.dd  += d.dd;
-                it->second.tot += d.tot;
+                // add to grand average
+                int key = to_bin(1/rinv,dr);
+                auto it = m.find(key);
+                if (it==m.end())
+                  m[key]=d;
+                else {
+                  it->second.cnt++;
+                  it->second.ii  += d.ii;
+                  it->second.id  += d.id;
+                  it->second.iq  += d.iq;
+                  it->second.dd  += d.dd;
+                  it->second.tot += d.tot;
+                }
               }
             }
 
@@ -1101,7 +1141,7 @@ namespace Faunus {
               f << "# Multipolar energy analysis (kT)\n"
                 << std::left << setw(w) << "# r/AA" << std::right << setw(w) << "exact"
                 << setw(w) << "total" << setw(w) << "ionion" << setw(w) << "iondip"
-                << setw(w) << "dipdip" << setw(w) << "ionquad" << "\n";
+                << setw(w) << "dipdip" << setw(w) << "ionquad\n";
               for (auto &i : m)
                 f << std::left
                   << setw(w) << i.first*dr                  // r

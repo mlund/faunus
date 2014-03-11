@@ -371,7 +371,6 @@ namespace Faunus {
           fout << g.size() << "\n";
           for (auto g_i : g)
             fout << *g_i << "\n";
-          fout.close();
           cout << "OK!\n";
           return true;
         }

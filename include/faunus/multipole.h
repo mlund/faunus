@@ -431,9 +431,6 @@ namespace Faunus {
         }
 
       /** @brief Dipole field at `r` due to dipole `p` 
-       *  Gets returned in [e/Å / lB] (\f$\beta eE / lB \f$)
-       * 
-       * @warning Needs to be fixed!
        */
       template<class Tparticle>
         Point field(const Tparticle &p, const Point &r) const {

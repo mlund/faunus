@@ -36,6 +36,7 @@ namespace Faunus {
     T stdev();                                    ///< Standard deviation
     void add(T);                                  ///< Add value to current set.
     void reset();                                 ///< Clear all data
+    void load(unsigned long long int,T);          ///< Load initial values
     Average & operator=(T);                       ///< Assign value to current set. 
     Average & operator+=(T);                      ///< Add value to current set. 
     Average & operator*=(T);                      ///< Scale current set
@@ -61,6 +62,12 @@ namespace Faunus {
   template<class T> void Average<T>::reset() {
     sum=sqsum=0;
     cnt=0;
+  }
+  
+  template<class T> void Average<T>::load(unsigned long long int cnt_in,T x) {
+    reset();
+    cnt = cnt_in - 1;
+    add(cnt_in*x);
   }
 
   template<class T> Average<T>& Average<T>::operator=(T x) {

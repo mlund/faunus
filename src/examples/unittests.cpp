@@ -189,7 +189,8 @@ TEST_CASE("Stockmayer fluid","Checks stockmayer-potentoial")
   CHECK(sys.current() == Approx(-5.69786));         // check energy change
   CHECK(trans.getAcceptance()*100 == Approx(1.01)); // check acceptence of translation
   CHECK(rot.getAcceptance()*100 == Approx(0.54));   // check acceptence of rotation
-}*/
+}
+*/
 
 TEST_CASE("Groups", "Check group range and size properties")
 {

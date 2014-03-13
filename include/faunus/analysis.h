@@ -275,6 +275,33 @@ namespace Faunus {
               if (map.size()>1) (--map.end())->second/=2; // -//-
             }
           }
+          
+          /** @brief Sums up all previous elements and saves table to disk */
+          template<class T=double>
+          void sumSave(string filename, T scale=1) {
+            if (tabletype==HISTOGRAM) {
+              if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
+              if (map.size()>1) (--map.end())->second*=2; // -//-
+            }
+
+            if (!map.empty()) {
+              std::ofstream f(filename.c_str());
+              f.precision(10);
+              if (f) {
+                Tx sum_t = 0.0;
+                //f << "# Faunus 2D table: " << name << endl;
+                for (auto m : map) {
+                  sum_t += get( m.first );
+                  f << m.first << " " << sum_t * scale << "\n";
+                }
+              }
+            }
+
+            if (tabletype==HISTOGRAM) {
+              if (!map.empty()) map.begin()->second/=2;   // restore half bin width
+              if (map.size()>1) (--map.end())->second/=2; // -//-
+            }
+          }
 
           Tmap getMap() {
             return map;
@@ -331,7 +358,7 @@ namespace Faunus {
             std::ifstream f(filename.c_str());
             if (f) {
               map.clear();
-              f.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); // ignore first line
+              //f.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); // ignore first line
               while (!f.eof()) {
                 Tx x;
                 double y;
@@ -1384,26 +1411,23 @@ namespace Faunus {
         Analysis::Table2D<double,double> kw, mucorr_angle;
         Analysis::Table2D<double,Average<double> > mucorr, mucorr_dist;       // dipole-dipole <\hat{mu}(0)\cdot \hat{mu}(r)>   ,    < 0.5 * ( 3 * cos^2(theta) - 1 ) >
         Analysis::Histogram<double,unsigned int> PM_x,PM_y,PM_z,PM_x_box,PM_y_box,PM_z_box,PM2,PM2_box; // Probability distributions for components of M
-        Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box;
-        std::vector<double> diel_std;
+        Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std;
         
         int sampleKW;
-        double std_diel;
         double cutoff2;                // Å^2
         double volume, N;              // Å^3
-        //double y;                      // e^2 / Å J
         double const_DielTinfoil;
 
       public:
         template<class Tspace>
-          inline DipoleAnalysis(const Tspace &spc) : rdf(0.1),kw(0.1),mucorr_angle(0.1),mucorr(0.1),mucorr_dist(0.1),PM_x(0.1),PM_y(0.1),PM_z(0.1),PM_x_box(0.1),PM_y_box(0.1),PM_z_box(0.1),PM2(0.1),PM2_box(0.1) {
+          inline DipoleAnalysis(const Tspace &spc, const string filename="") : rdf(0.1),kw(0.1),mucorr_angle(0.1),mucorr(0.1),mucorr_dist(0.1),PM_x(0.1),PM_y(0.1),PM_z(0.1),PM_x_box(0.1),PM_y_box(0.1),PM_z_box(0.1),PM2(0.1),PM2_box(0.1) {
             cutoff2 = pow(spc.geo.len_half.x(),2);
             volume = spc.geo.getVolume();
             N = spc.p.size();
-            //y = 4*pc::pi*N*spc.p[0].muscalar*spc.p[0].muscalar/(9*volume*pc::kT());
             const_DielTinfoil = pc::e*pc::e*1e10/(3*volume*pc::kT()*pc::e0);
-            std_diel = pc::infty;
             sampleKW = 0;
+            
+            load(filename);
           }
 
         void setCutoff(double cutoff) {
@@ -1429,30 +1453,22 @@ namespace Faunus {
               }
             }
             mu_box += mu;
-            samplePP(spc,origin,mu,mu_box);
+            samplePP(spc,mu,mu_box);
           }
           
         /**
          * @brief Samples dipole-moment from point particles.
          * 
          * @param spc The space
-         * @param origin Origin to use (optional)
          * @param mu Dipoles to add to from within cutoff (optional)
          * @param mu_box Dipoles to add to from entire box (optional)
-         *
-         * @warning Unfinished
          */
         template<class Tspace>
-          void samplePP(Tspace &spc, Point origin=Point(0,0,0), Point mu=Point(0,0,0), Point mu_box=Point(0,0,0)) {
+          void samplePP(Tspace &spc, Point mu=Point(0,0,0), Point mu_box=Point(0,0,0)) {
             Group all(0,spc.p.size()-1);
             all.setMassCenter(spc);
             mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
             mu_box += Geometry::dipoleMoment(spc,all);
-            
-            Eigen::Matrix3d test1(3,3);
-            test1.setZero();
-            test1 =  Geometry::quadrupoleMoment(spc,all);
-            test1.setZero();
             
             PM_x(mu.x())++;
             PM_y(mu.y())++;
@@ -1472,7 +1488,7 @@ namespace Faunus {
             sca = mu_box.dot(mu_box);
             PM2_box(sca)++;
             M2_box += sca;
-            diel_std.push_back(getDielTinfoil());
+            diel_std.add(getDielTinfoil());
           }
         
         /**
@@ -1510,64 +1526,99 @@ namespace Faunus {
           return ( 1 + M2_box.avg()*const_DielTinfoil); 
         }  
         
-        double getStdDiel() {
-          int nbr = diel_std.size();
-          std_diel = 0;
-          double mean = 0;
-          for(int n = 0; n < nbr; n++)
-            mean += diel_std.at(n);
-          mean /= nbr;
-          for(int n = 0; n < nbr; n++)
-            std_diel = std_diel + (diel_std.at(n) - mean)*(diel_std.at(n) - mean);
-          std_diel = sqrt(std_diel/nbr);
-          return std_diel;
-        }
-        
-        void saveHistogramTotalDipole(string filename_x, string filename_y, string filename_z, string filename_x_box, string filename_y_box, string filename_z_box) {
-          PM_x.save(filename_x);
-          PM_y.save(filename_y);
-          PM_z.save(filename_z);
-          PM_x_box.save(filename_x_box);
-          PM_y_box.save(filename_y_box);
-          PM_z_box.save(filename_z_box);
-        }
-        
-        void saveGofr(string filename) {
-          rdf.save(filename);
-        }
-        
-        void saveMuCorrelation(string filename) {
-          mucorr.save(filename);
-        }
-        
-        void saveMuAngle(string filename) {
-          mucorr_angle.save(filename);
-        }
-        
-        void saveMuUnity(string filename) {
-          mucorr_dist.save(filename);
-        }
-        
-        void saveKirkwood(string filename) {
-          kw.save(filename,1.0/double(sampleKW));
-        }
-        
         void save(string nbr="") {
-          saveGofr("gofr.dat"+nbr);
-          saveMuAngle("mucorr_angle.dat"+nbr);
-          saveMuCorrelation("mucorr.dat"+nbr);
-          saveMuUnity("mucorr_dist.dat"+nbr);
-          saveKirkwood("KW.dat"+nbr);
-          saveHistogramTotalDipole("proTotDip_x.dat"+nbr,"proTotDip_y.dat"+nbr,"proTotDip_z.dat"+nbr,"proTotDip_x_box.dat"+nbr,"proTotDip_y_box.dat"+nbr,"proTotDip_z_box.dat"+nbr);
+          rdf.save("gofr.dat"+nbr);
+          mucorr.save("mucorr.dat"+nbr);
+          mucorr_angle.save("mucorr_angle.dat"+nbr);
+          mucorr_dist.save("mucorr_dist.dat"+nbr);
+          kw.sumSave("KW.dat"+nbr,1.0/double(sampleKW));
+          PM_x.save("proTotDip_x.dat"+nbr);
+          PM_y.save("proTotDip_y.dat"+nbr);
+          PM_z.save("proTotDip_z.dat"+nbr);
+          PM_x_box.save("proTotDip_x_box.dat"+nbr);
+          PM_y_box.save("proTotDip_y_box.dat"+nbr);
+          PM_z_box.save("proTotDip_z_box.dat"+nbr);
+          PM2.save("proTotDip2.dat"+nbr);
+          PM2_box.save("proTotDip2_box.dat"+nbr);
+          
+          string filename = "dipoledata.dat"+nbr;
+          std::ofstream f(filename.c_str());
+          f.precision(10);
+          if (f) {
+            if (M_x.cnt != 0)      f << "\nM_x " << M_x.cnt << " " << M_x.avg();
+            if (M_y.cnt != 0)      f << "\nM_y " << M_y.cnt << " " << M_y.avg();
+            if (M_z.cnt != 0)      f << "\nM_z " << M_z.cnt << " " << M_z.avg();
+            if (M_x_box.cnt != 0)  f << "\nM_x_box " << M_x_box.cnt << " " << M_x_box.avg();
+            if (M_y_box.cnt != 0)  f << "\nM_y_box " << M_y_box.cnt << " " << M_y_box.avg();
+            if (M_z_box.cnt != 0)  f << "\nM_z_box " << M_z_box.cnt << " " << M_z_box.avg();
+            if (M2.cnt != 0)       f << "\nM2 " << M2.cnt << " " << M2.avg();
+            if (M2_box.cnt != 0)   f << "\nM2_box " << M2_box.cnt << " " << M2_box.avg();
+            if (diel_std.cnt != 0) f << "\ndiel_std " << diel_std.cnt << " " << diel_std.avg();
+          }
+        }
+        
+        void load(string nbr="") {
+          rdf.load("gofr.dat"+nbr);
+          mucorr.load("mucorr.dat"+nbr);
+          mucorr_angle.load("mucorr_angle.dat"+nbr);
+          mucorr_dist.load("mucorr_dist.dat"+nbr);
+          kw.load("KW.dat"+nbr);
+          PM_x.load("proTotDip_x.dat"+nbr);
+          PM_y.load("proTotDip_y.dat"+nbr);
+          PM_z.load("proTotDip_z.dat"+nbr);
+          PM_x_box.load("proTotDip_x_box.dat"+nbr);
+          PM_y_box.load("proTotDip_y_box.dat"+nbr);
+          PM_z_box.load("proTotDip_z_box.dat"+nbr);
+          PM2.load("proTotDip2.dat"+nbr);
+          PM2_box.load("proTotDip2_box.dat"+nbr);
+          
+          string filename = "dipoledata.dat"+nbr;
+          std::ifstream f(filename.c_str());
+          string name;
+          unsigned long long int cnt;
+          double average;
+          M_x.reset();
+          M_y.reset();
+          M_z.reset();
+          M_x_box.reset();
+          M_y_box.reset();
+          M_z_box.reset();
+          M2.reset();
+          M2_box.reset();
+          diel_std.reset();
+          if (f) {
+            while (!f.eof()) {
+              f >> name >> cnt >> average;
+              if(name == "M_x")
+                M_x.load(cnt,average);
+              if(name == "M_y")
+                M_y.load(cnt,average);
+              if(name == "M_z")
+                M_z.load(cnt,average);
+              if(name == "M_x_box")
+                M_x_box.load(cnt,average);
+              if(name == "M_y_box")
+                M_y_box.load(cnt,average);
+              if(name == "M_z_box")
+                M_z_box.load(cnt,average);
+              if(name == "M2")
+                M2.load(cnt,average);
+              if(name == "M2_box")
+                M2_box.load(cnt,average);
+              if(name == "diel_std")
+                diel_std.load(cnt,average);
+            }
+          }
         }
 
         inline string info() {
           using namespace Faunus::textio;
           std::ostringstream o;
           o << header("Dipole analysis");
-          o << "  " << epsilon_m << subr << " (Tinfoil)                  " << getDielTinfoil() << ", " << sigma << "=" << getStdDiel() << endl;
-          o << "  <M^2>                         " << pc::eA2D(pc::eA2D(M2_box.avg())) << " Debye^2" << endl;
-          o << "  <M>                           " << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl;
+          o << "  " << epsilon_m << subr << " (Tinfoil)                  " << getDielTinfoil() << ", " << sigma << "=" << diel_std.stdev() << ", " << sigma << "/" << epsilon_m << subr << "=" << (100*diel_std.stdev()/getDielTinfoil()) << percent << endl;
+          o << "  <M^2>                         " << pc::eA2D(pc::eA2D(M2_box.avg())) << " Debye^2, " << sigma << "=" << pc::eA2D(pc::eA2D(M2_box.stdev())) << endl;
+          o << "  <M>                           " << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl; 
+          o << "                            " << sigma << " = ( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl;
           return o.str();
         }
     };

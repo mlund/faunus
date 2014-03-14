@@ -4,7 +4,6 @@
 #include <faunus/auxiliary.h>
 #include <faunus/species.h>
 #include <faunus/picojson.h>
-#include "potentials.h"
 
 namespace Faunus {
 
@@ -343,12 +342,12 @@ namespace Faunus {
        */
       template<class Tvec>
         double q2mu(double QBxMuA, const Tvec &muA, double QAxMuB, const Tvec &muB, const Tvec &r) const {
-          /*
+          /* Code to use if calcWolfData is not called
           double r2i = 1/r.squaredNorm();
           if (r2i < rc2i)
             return 0;
           double r1i = sqrt(r2i);
-          double T1 = (-constant*exp(-kappa2/r2i) - erfc_x(kappa/r1i)*r1i)*r2i;
+          double T1 = (constant*exp(-kappa2/r2i) + erfc_x(kappa/r1i)*r1i)*r2i;
           double der = (1/r1i) - rc1;
           double W1 = QBxMuA*muA.dot(r)*(T1 - Tc1*r1i - der*dTc1*r1i);
           double W2 = QAxMuB*muB.dot(-r)*(T1 - Tc1*r1i - der*dTc1*r1i);
@@ -370,7 +369,7 @@ namespace Faunus {
        */
       template<class Tvec>
         double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r) const {
-          /*
+          /* Code to use if calcWolfData is not called
           double r2i = 1.0/r.squaredNorm();
           if (r2i < rc2i)
             return 0;
@@ -403,7 +402,7 @@ namespace Faunus {
        */
       template<class Tvec, class Tmat>
         double q2quad(double qA, const Tmat &quadB,double qB, const Tmat &quadA, const Tvec &r) const {
-          /*
+          /* Code to use if calcWolfData is not called
           double r2i = 1/r.squaredNorm();
           if (r2i < rc2i)
             return 0;
@@ -762,7 +761,6 @@ namespace Faunus {
                 }
 
               /** @brief Dipole field at `r` due to dipole `p` 
-               *  Gets returned in [e/Å] (\f$\beta eE \f$)
                */
               template<class Tparticle>
                 Point field(const Tparticle &p, const Point &r) const {
@@ -909,7 +907,6 @@ namespace Faunus {
                 }
 
               /** @brief Dipole field at `r` due to dipole `p` 
-               *  Gets returned in [e/Å] (\f$\beta eE \f$)
                */
               template<class Tparticle>
                 Point field(const Tparticle &p, const Point &r) const {

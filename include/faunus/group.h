@@ -268,7 +268,7 @@ namespace Faunus {
 
       /** @brief Write group data to stream */
       friend std::ostream& operator<<(std::ostream &o, const Group &g) {
-        o << g.front() << " " << g.back() << " " << g.cm << " " << g.cc;
+        o << g.front() << " " << g.back() << " " << g.cm; // << " " << g.cc;
         return o;
       }
 

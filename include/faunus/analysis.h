@@ -264,7 +264,6 @@ namespace Faunus {
               std::ofstream f(filename.c_str());
               f.precision(10);
               if (f) {
-                //f << "# Faunus 2D table: " << name << endl;
                 for (auto m : map)
                   f << m.first << " " << get( m.first ) * scale << "\n";
               }
@@ -289,7 +288,6 @@ namespace Faunus {
               f.precision(10);
               if (f) {
                 Tx sum_t = 0.0;
-                //f << "# Faunus 2D table: " << name << endl;
                 for (auto m : map) {
                   sum_t += get( m.first );
                   f << m.first << " " << sum_t * scale << "\n";
@@ -358,7 +356,6 @@ namespace Faunus {
             std::ifstream f(filename.c_str());
             if (f) {
               map.clear();
-              //f.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); // ignore first line
               while (!f.eof()) {
                 Tx x;
                 double y;
@@ -1414,13 +1411,13 @@ namespace Faunus {
         Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std;
         
         int sampleKW;
-        double cutoff2;                // Å^2
-        double volume, N;              // Å^3
+        double cutoff2;                // \AA^2
+        double volume, N;              // \AA^3
         double const_DielTinfoil;
 
       public:
         template<class Tspace>
-          inline DipoleAnalysis(const Tspace &spc, const string filename="") : rdf(0.1),kw(0.1),mucorr_angle(0.1),mucorr(0.1),mucorr_dist(0.1),PM_x(0.1),PM_y(0.1),PM_z(0.1),PM_x_box(0.1),PM_y_box(0.1),PM_z_box(0.1),PM2(0.1),PM2_box(0.1) {
+          DipoleAnalysis(const Tspace &spc, const string filename="") : rdf(0.1),kw(0.1),mucorr_angle(0.1),mucorr(0.1),mucorr_dist(0.1),PM_x(0.1),PM_y(0.1),PM_z(0.1),PM_x_box(0.1),PM_y_box(0.1),PM_z_box(0.1),PM2(0.1),PM2_box(0.1) {
             cutoff2 = pow(spc.geo.len_half.x(),2);
             volume = spc.geo.getVolume();
             N = spc.p.size();
@@ -1442,8 +1439,8 @@ namespace Faunus {
         template<class Tspace>
           void sampleDP(const Tspace &spc) {
             Point origin(0,0,0);
-            Point mu(0,0,0);        // In eÅ
-            Point mu_box(0,0,0);    // In eÅ
+            Point mu(0,0,0);        // In e\AA
+            Point mu_box(0,0,0);    // In e\AA
 
             for (auto &i : spc.p) {
               if (spc.geo.sqdist(i,origin)<cutoff2) {
@@ -1615,10 +1612,10 @@ namespace Faunus {
           using namespace Faunus::textio;
           std::ostringstream o;
           o << header("Dipole analysis");
-          o << "  " << epsilon_m << subr << " (Tinfoil)                  " << getDielTinfoil() << ", " << sigma << "=" << diel_std.stdev() << ", " << sigma << "/" << epsilon_m << subr << "=" << (100*diel_std.stdev()/getDielTinfoil()) << percent << endl;
-          o << "  <M^2>                         " << pc::eA2D(pc::eA2D(M2_box.avg())) << " Debye^2, " << sigma << "=" << pc::eA2D(pc::eA2D(M2_box.stdev())) << endl;
-          o << "  <M>                           " << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl; 
-          o << "                            " << sigma << " = ( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl;
+          o << indent(SUB) << epsilon_m+subr+"(Tinfoil)" << setw(22) << getDielTinfoil() << ", "+sigma+"=" << diel_std.stdev() << ", "+sigma+"/"+epsilon_m+subr+"=" << (100*diel_std.stdev()/getDielTinfoil()) << percent << endl
+          << indent(SUB) << bracket("M"+squared) << setw(29) << pc::eA2D(M2_box.avg(),2) << " Debye"+squared+", "+sigma+"=" << pc::eA2D(M2_box.stdev(),2) << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg()) << percent << endl
+          << indent(SUB) << bracket("M") << setw(25) << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl 
+          << indent(SUBSUB) << sigma << setw(25) << "( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl;
           return o.str();
         }
     };

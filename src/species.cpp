@@ -107,6 +107,8 @@ namespace Faunus {
       a.panglsw = json::value<double>(atom.second, "patchangleswitch", 0)/180.0*pc::pi;
       a.chiral_angle = json::value<double>(atom.second, "patchchiralangle", 0)/180.0*pc::pi;
 
+      list.push_back(a); // add to main particle list
+
       // add to particle list 
       bool insert=true;
       for (auto &i : list)

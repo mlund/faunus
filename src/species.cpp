@@ -102,7 +102,7 @@ namespace Faunus {
       a.sigma = 2*a.radius;
       a.sigma = json::value<double>(atom.second, "sigma", a.sigma);
       a.radius = a.sigma/2;
-      a.id=AtomData::Tid( list.size() ); 
+      a.id=AtomData::Tid( list.size() );
       a.half_len = 0.5 * json::value<double>(atom.second, "len", 0);
       a.patchtype = json::value<double>(atom.second, "patchtype", 0);
       a.pswitch = json::value<double>(atom.second, "patchswitch", 0);

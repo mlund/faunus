@@ -31,6 +31,8 @@ doxyhtml
 # XCode build
 build
 *.xcuserstate
+*project.xcworkspace*
+xcuserdata
 
 # MacOS X generated files
 .DS_Store

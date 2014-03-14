@@ -49,7 +49,7 @@ namespace Faunus {
   }
 
   AtomData & AtomMap::operator[] (AtomData::Tid i) {
-    assert(i>=0 && i<list.size() && "Particle id not found!");
+    assert(i<list.size() && "Particle id not found!");
     return list.at(i);
   }
 
@@ -98,7 +98,6 @@ namespace Faunus {
       a.sigma = json::value<double>(atom.second, "sigma", a.sigma);
       a.radius = a.sigma/2;
       a.id=AtomData::Tid( list.size() );
-
       a.half_len = 0.5 * json::value<double>(atom.second, "len", 0);
       a.patchtype = json::value<double>(atom.second, "patchtype", 0);
       a.pswitch = json::value<double>(atom.second, "patchswitch", 0);
@@ -106,7 +105,9 @@ namespace Faunus {
       a.pangl = json::value<double>(atom.second, "patchangle", 0)/180.0*pc::pi;
       a.panglsw = json::value<double>(atom.second, "patchangleswitch", 0)/180.0*pc::pi;
       a.chiral_angle = json::value<double>(atom.second, "patchchiralangle", 0)/180.0*pc::pi;
-
+      a.betaC = json::value<double>(atom.second, "betaC", pc::infty);
+      a.betaD = json::value<double>(atom.second, "betaD", pc::infty);
+      a.betaQ = json::value<double>(atom.second, "betaQ", pc::infty);
       // add to particle list 
       bool insert=true;
       for (auto &i : list)

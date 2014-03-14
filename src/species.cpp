@@ -98,7 +98,6 @@ namespace Faunus {
       a.sigma = json::value<double>(atom.second, "sigma", a.sigma);
       a.radius = a.sigma/2;
       a.id=AtomData::Tid( list.size() );
-
       a.half_len = 0.5 * json::value<double>(atom.second, "len", 0);
       a.patchtype = json::value<double>(atom.second, "patchtype", 0);
       a.pswitch = json::value<double>(atom.second, "patchswitch", 0);
@@ -109,9 +108,6 @@ namespace Faunus {
       a.betaC = json::value<double>(atom.second, "betaC", pc::infty);
       a.betaD = json::value<double>(atom.second, "betaD", pc::infty);
       a.betaQ = json::value<double>(atom.second, "betaQ", pc::infty);
- 
-      list.push_back(a); // add to main particle list
-
       // add to particle list 
       bool insert=true;
       for (auto &i : list)

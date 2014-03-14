@@ -772,74 +772,61 @@ namespace Faunus {
         }
   };
 
-  /*!
-   * \brief File IO for faste protein sequences
+  /*
+   * @brief Add bonded peptide from fasta sequence
+   * @param spc Space
+   * @param bonded Bonded energy class, i.e. `Energy::Bonded`
+   * @param pairpot Bond potential, i.e. `Potential::Harmonic`
+   * @param fasta Fasta sequence (captital letters, no spacing)
+   * @return Group with peptide -- remember to enroll in space using `Space::enroll`
+   * @note Untested
    */
-  template<class Tbonded>
-    class FormatFastaSequence {
-      private:
-        std::map<char,string> map; //!< Map one letter code (char) to three letter code (string)
-        Tbonded bond;
-      public:
-        FormatFastaSequence(double harmonic_k, double harmonic_req) : bond(harmonic_k, harmonic_req) {
-          map['A']="ALA";
-          map['R']="ARG";
-          map['N']="ASN";
-          map['D']="ASP";
-          map['C']="CYS";
-          map['E']="GLU";
-          map['Q']="GLN";
-          map['G']="GLY";
-          map['H']="HIS";
-          map['I']="ILE";
-          map['L']="LEU";
-          map['K']="LYS";
-          map['M']="MET";
-          map['F']="PHE";
-          map['P']="PRO";
-          map['S']="SER";
-          map['T']="THR";
-          map['W']="TRP";
-          map['Y']="TYR";
-          map['V']="VAL";
-        }
+  template<class Tspace, class Tbonded, class Tpairpot>
+    Group addFastaSequence(Tspace &spc, Tbonded &bonded, const Tpairpot &pairpot, const string &fasta) {
+      std::map<char,string> map;
+      map['A']="ALA";
+      map['R']="ARG";
+      map['N']="ASN";
+      map['D']="ASP";
+      map['C']="CYS";
+      map['E']="GLU";
+      map['Q']="GLN";
+      map['G']="GLY";
+      map['H']="HIS";
+      map['I']="ILE";
+      map['L']="LEU";
+      map['K']="LYS";
+      map['M']="MET";
+      map['F']="PHE";
+      map['P']="PRO";
+      map['S']="SER";
+      map['T']="THR";
+      map['W']="TRP";
+      map['Y']="TYR";
+      map['V']="VAL";
 
-        p_vec interpret(string seq) {
-          p_vec p;
-          particle a;
-          for (auto c : seq) {
-            if (map.find(c)!=map.end() ) {
-              a=atom[ map[c] ];
-              p.push_back(a);
-            }
-          }
-          return p;
-        }
+      Group g;
+      typename Tspace::ParticleVector p;
+      typename Tspace::ParticleVector::value_type a;
 
-        /*!
-         * Inserts at end of particle vector
-         */
-        template<class Tspace>
-          Group insert(string fasta, Tspace &spc, Tbonded &b) {
-            p_vec p = interpret(fasta);
-            Group g( p.size() );
-            if (p.size()>0) {
-              for (auto &a : p)
-                if ( spc.insert(a) )
-                  g.resize( g.size()+1 );
-              for (int i=g.front(); i<g.back(); i++)
-                b.add(i, i+1, bond );
-            }
-            return g;
-          }
+      // interpret fasta sequence
+      for (auto c : fasta) {
+        if (map.find(c)!=map.end() ) {
+          a=atom[ map[c] ];
+          p.push_back(a);
+        } else std::cerr << "Unknown character in fasta sequence!";
+      }
 
-        template<class Tspace>
-          Group include(string file, Tspace &spc, Tbonded &b) {
-            Group g;
-            return g;
-          }
-
-    };
+      if (!p.empty()) {
+        for (auto &i : p)
+          spc.geo.randompos(i);        // random positions
+        g = spc.insert(p);             // add to space
+        g.name = fasta;
+        for (int i=g.front(); i<g.back(); i++)
+          bonded.add(i, i+1, pairpot); // add bonds
+      }
+      return g;
+    }
 
 }//namespace
 #endif

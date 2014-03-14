@@ -49,7 +49,7 @@ namespace Faunus {
   }
 
   AtomData & AtomMap::operator[] (AtomData::Tid i) {
-    assert(i>=0 && i<list.size() && "Particle id not found!");
+    assert(i<list.size() && "Particle id not found!");
     return list.at(i);
   }
 

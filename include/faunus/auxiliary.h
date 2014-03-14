@@ -327,7 +327,7 @@ namespace Faunus {
         typedef std::pair<T,T> Tpair; // xy data stored as pairs
         std::vector<Tpair> t;         // in a vector
       public:
-        InterpolTable(const std::string filename) {
+        InterpolTable(const std::string &filename) {
           Tpair a;
           std::ifstream in(filename);
           while (in >> a.first >> a.second)

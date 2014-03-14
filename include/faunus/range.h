@@ -74,6 +74,8 @@ class ContinuousRange {
 
     bool empty() const { return (end_.i_<=begin_.i_) ? true : false; } //!< Determines if range is empty.
 
+    void clear() { *this = ContinuousRange<T>(); } //!< Clear range
+
     /** @brief Resize range, keeping same beginning */
     void resize(T size)
     {

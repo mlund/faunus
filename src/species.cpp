@@ -62,7 +62,7 @@ namespace Faunus {
         return l_i;
     return list.at(0);
   }
-  
+
   int AtomMap::size() {
     return (int)list.size();
   }

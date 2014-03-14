@@ -28,9 +28,7 @@ namespace Faunus {
 
       string name;                            //!< Information time (and short) name
       Point cm_trial;                         //!< mass center vector for trial position
-      Point cc_trial;                         //!< charge center vector for trial position
       Point cm;                               //!< mass center vector
-      Point cc;                               //!< charge center vector
 
       /** @brief Information string */
       std::string info() {
@@ -45,8 +43,7 @@ namespace Faunus {
           << endl
           << pad(SUB,w,"Mol size") << molsize << endl
           << pad(SUB,w,"Molecules") << numMolecules() << endl
-          << pad(SUB,w,"Mass center") << cm.transpose() << endl
-          << pad(SUB,w,"Charge center") << cc.transpose() << endl;
+          << pad(SUB,w,"Mass center") << cm.transpose() << endl;
         return o.str();
       }
 
@@ -115,19 +112,11 @@ namespace Faunus {
           return cm;
         }
         
-      /** @brief Calculate AND set charge center (cc and cc_trial) */
-      template<class Tspace>
-        Point setChargeCenter(const Tspace &spc) {
-          cc=chargeCenter(spc);
-          cc_trial=cc;
-          return cc;
-        }
-
       /** @brief Calculates electric dipole moment */
       template<class Tspace>
         Point dipolemoment(const Tspace &s, Point mu=Point(0,0,0)) const {
           for (auto i : *this) {
-            Point t=s.p[i] - cm;  // - cc     <===== Diff
+            Point t=s.p[i] - cm;
             s.geo.boundary(t);
             mu += t*s.p[i].charge;
           }
@@ -143,10 +132,7 @@ namespace Faunus {
         void translate(Tspace &spc, const Point &p) {
           assert( spc.geo.sqdist(cm,massCenter(spc))<1e-6
               && "Mass center out of sync.");
-          assert( spc.geo.sqdist(cc,chargeCenter(spc))<1e-6
-              && "Charge center out of sync.");
           cm_trial.translate(spc.geo, p);
-          cc_trial.translate(spc.geo, p);
           for (auto i : *this)
             spc.trial[i].translate(spc.geo, p);
         }
@@ -160,12 +146,9 @@ namespace Faunus {
       template<class Tspace>
         void rotate(Tspace &spc, const Point &endpoint, double angle) {
           assert( spc.geo.dist(cm,massCenter(spc) )<1e-6 );
-          assert( spc.geo.dist(cc,chargeCenter(spc) )<1e-6 );
           Geometry::QuaternionRotate vrot1;
           cm_trial = cm;
-          cc_trial = cc;
           vrot1.setAxis(spc.geo, cm, endpoint, angle);//rot around CM->point vec
-          vrot1.setAxis(spc.geo, cc, endpoint, angle);//rot around CC->point vec
           auto vrot2 = vrot1;
           vrot2.getOrigin() = Point(0,0,0);
           for (auto i : *this) {
@@ -174,8 +157,6 @@ namespace Faunus {
           }
           assert( spc.geo.dist(cm_trial, massCenter(spc))<1e-9
               && "Rotation messed up mass center. Is the box too small?");
-          assert( spc.geo.dist(cc_trial, massCenter(spc))<1e-9
-              && "Rotation messed up charge center. Is the box too small?");
         }
 
       /**
@@ -202,9 +183,7 @@ namespace Faunus {
 
           if (isAtomic()) {
             cm_trial=cm;
-            cc_trial=cc;
             cm_trial.scale(s.geo, newvol);
-            cc_trial.scale(s.geo, newvol);
             for (auto i : *this)
               s.trial[i].scale(s.geo, newvol);
             return;
@@ -213,26 +192,19 @@ namespace Faunus {
           if (isMolecular()) {
             assert( s.geo.dist(cm, massCenter(s))<1e-6);
             assert( s.geo.dist(cm, cm_trial)<1e-7);
-            assert( s.geo.dist(cc, chargeCenter(s))<1e-6);
-            assert( s.geo.dist(cc, cc_trial)<1e-7);
 
             Point newcm=cm;
-            Point newcc=cc;
             newcm.scale(s.geo, newvol);
-            newcc.scale(s.geo, newvol);
             translate(s,-cm);                 // move to origo
-            translate(s,-cc);                 // move to origo
 
             double oldvol=s.geo.getVolume(); // store original volume
             s.geo.setVolume(newvol);         // apply trial volume
 
             for (auto i : *this) {
               s.trial[i] += newcm;            // move all particles to new cm
-              //s.trial[i] += newcc;            // move all particles to new cc   <==== Diff
               s.geo.boundary( s.trial[i] );  // respect boundary conditions
             }
             cm_trial=newcm;
-            cc_trial=newcc;
             s.geo.setVolume(oldvol);         // restore original volume
             return;
           }
@@ -254,7 +226,6 @@ namespace Faunus {
           for (auto i : *this)
             s.trial[i]=s.p[i];
           cm_trial=cm;
-          cc_trial=cc; 
         }
 
       /** @brief Accept a trial move */
@@ -263,12 +234,11 @@ namespace Faunus {
           for (auto i : *this)
             s.p[i] = s.trial[i];
           cm=cm_trial;
-          cc=cc_trial;
         }
 
       /** @brief Write group data to stream */
       friend std::ostream& operator<<(std::ostream &o, const Group &g) {
-        o << g.front() << " " << g.back() << " " << g.cm; // << " " << g.cc;
+        o << g.front() << " " << g.back() << " " << g.cm;
         return o;
       }
 
@@ -278,9 +248,8 @@ namespace Faunus {
         int back;
         in >> front >> back;
         setrange(front,back);
-        assert( size()==back-front+1 && "Problem with Group range");   // <==== Check for cc
+        assert( size()==back-front+1 && "Problem with Group range");
         cm.operator<<(in);
-        cc.operator<<(in);
         return *this;
       }
 

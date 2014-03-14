@@ -253,52 +253,52 @@ namespace Faunus {
 
           /** @brief Save table to disk */
           template<class T=double>
-          void save(string filename, T scale=1) {
-            if (tabletype==HISTOGRAM) {
-              if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
-              if (map.size()>1) (--map.end())->second*=2; // -//-
-            }
-
-            if (!map.empty()) {
-              std::ofstream f(filename.c_str());
-              f.precision(10);
-              if (f) {
-                for (auto m : map)
-                  f << m.first << " " << get( m.first ) * scale << "\n";
+            void save(string filename, T scale=1) {
+              if (tabletype==HISTOGRAM) {
+                if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
+                if (map.size()>1) (--map.end())->second*=2; // -//-
               }
-            }
 
-            if (tabletype==HISTOGRAM) {
-              if (!map.empty()) map.begin()->second/=2;   // restore half bin width
-              if (map.size()>1) (--map.end())->second/=2; // -//-
-            }
-          }
-          
-          /** @brief Sums up all previous elements and saves table to disk */
-          template<class T=double>
-          void sumSave(string filename, T scale=1) {
-            if (tabletype==HISTOGRAM) {
-              if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
-              if (map.size()>1) (--map.end())->second*=2; // -//-
-            }
-
-            if (!map.empty()) {
-              std::ofstream f(filename.c_str());
-              f.precision(10);
-              if (f) {
-                Tx sum_t = 0.0;
-                for (auto m : map) {
-                  sum_t += get( m.first );
-                  f << m.first << " " << sum_t * scale << "\n";
+              if (!map.empty()) {
+                std::ofstream f(filename.c_str());
+                f.precision(10);
+                if (f) {
+                  for (auto m : map)
+                    f << m.first << " " << get( m.first ) * scale << "\n";
                 }
               }
+
+              if (tabletype==HISTOGRAM) {
+                if (!map.empty()) map.begin()->second/=2;   // restore half bin width
+                if (map.size()>1) (--map.end())->second/=2; // -//-
+              }
             }
 
-            if (tabletype==HISTOGRAM) {
-              if (!map.empty()) map.begin()->second/=2;   // restore half bin width
-              if (map.size()>1) (--map.end())->second/=2; // -//-
+          /** @brief Sums up all previous elements and saves table to disk */
+          template<class T=double>
+            void sumSave(string filename, T scale=1) {
+              if (tabletype==HISTOGRAM) {
+                if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
+                if (map.size()>1) (--map.end())->second*=2; // -//-
+              }
+
+              if (!map.empty()) {
+                std::ofstream f(filename.c_str());
+                f.precision(10);
+                if (f) {
+                  Tx sum_t = 0.0;
+                  for (auto m : map) {
+                    sum_t += get( m.first );
+                    f << m.first << " " << sum_t * scale << "\n";
+                  }
+                }
+              }
+
+              if (tabletype==HISTOGRAM) {
+                if (!map.empty()) map.begin()->second/=2;   // restore half bin width
+                if (map.size()>1) (--map.end())->second/=2; // -//-
+              }
             }
-          }
 
           Tmap getMap() {
             return map;
@@ -656,7 +656,7 @@ namespace Faunus {
                 }
               }
             }
-            
+
           // Same as sampeMolecule but different inputs
           template<class Tspace>
             void sampleMoleculeGroup(Tspace &spc, vector<Group> &g, string name) {
@@ -1570,7 +1570,7 @@ namespace Faunus {
         Analysis::Table2D<double,Average<double> > mucorr, mucorr_dist;       // dipole-dipole <\hat{mu}(0)\cdot \hat{mu}(r)>   ,    < 0.5 * ( 3 * cos^2(theta) - 1 ) >
         Analysis::Histogram<double,unsigned int> PM_x,PM_y,PM_z,PM_x_box,PM_y_box,PM_z_box,PM2,PM2_box; // Probability distributions for components of M
         Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std;
-        
+
         int sampleKW;
         double cutoff2;                // \AA^2
         double volume, N;              // \AA^3
@@ -1586,7 +1586,7 @@ namespace Faunus {
             sampleKW = 0;
             cout << "Before load Mx! cnt, average, sqsum: " << M_x.cnt << ", " << M_x.avg() << ", " << M_x.sqsum << endl;
             load(filename);
-            
+
             cout << "After load Mx! cnt, average, sqsum: " << M_x.cnt << ", " << M_x.avg() << ", " << M_x.sqsum << endl;
           }
 
@@ -1615,7 +1615,7 @@ namespace Faunus {
             mu_box += mu;
             samplePP(spc,mu,mu_box);
           }
-          
+
         /**
          * @brief Samples dipole-moment from point particles.
          * 
@@ -1629,7 +1629,7 @@ namespace Faunus {
             all.setMassCenter(spc);
             mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
             mu_box += Geometry::dipoleMoment(spc,all);
-            
+
             PM_x(mu.x())++;
             PM_y(mu.y())++;
             PM_z(mu.z())++;
@@ -1650,7 +1650,7 @@ namespace Faunus {
             M2_box += sca;
             diel_std.add(getDielTinfoil());
           }
-        
+
         /**
          * @brief Samples g(r), <\mu(0) \cdot \mu(r)>, <\frac{1}{2} ( 3*\mu(0) \cdot \mu(r) - 1 )>, Histogram(\mu(0) \cdot \mu(r)) and distant-dependent Kirkwood-factor.
          * 
@@ -1658,25 +1658,25 @@ namespace Faunus {
          *
          */
         template<class Tspace>
-        void sampleMuCorrelationAndKirkwood(Tspace &spc) {
-          double r, sca;
-          int N = spc.p.size() - 1;
-          for (int i = 0; i < N; i++) {
-            kw(0) += spc.p[i].mu.dot(spc.p[i].mu)*spc.p[i].muscalar*spc.p[i].muscalar;
-            for (int j = i+1.; j < N + 1; j++) {
-              r = spc.geo.dist(spc.p[i],spc.p[j]); 
-              rdf(r)++;
-              sca = spc.p[i].mu.dot(spc.p[j].mu);
-              mucorr_angle(sca) += 1.;
-              mucorr(r) += sca;
-              mucorr_dist(r) += 0.5*(3*sca*sca -1.);
-              kw(r) += 2*sca*spc.p[i].muscalar*spc.p[j].muscalar;
+          void sampleMuCorrelationAndKirkwood(Tspace &spc) {
+            double r, sca;
+            int N = spc.p.size() - 1;
+            for (int i = 0; i < N; i++) {
+              kw(0) += spc.p[i].mu.dot(spc.p[i].mu)*spc.p[i].muscalar*spc.p[i].muscalar;
+              for (int j = i+1.; j < N + 1; j++) {
+                r = spc.geo.dist(spc.p[i],spc.p[j]); 
+                rdf(r)++;
+                sca = spc.p[i].mu.dot(spc.p[j].mu);
+                mucorr_angle(sca) += 1.;
+                mucorr(r) += sca;
+                mucorr_dist(r) += 0.5*(3*sca*sca -1.);
+                kw(r) += 2*sca*spc.p[i].muscalar*spc.p[j].muscalar;
+              }
             }
+            kw(0) += spc.p[N].mu.dot(spc.p[N].mu)*spc.p[N].muscalar*spc.p[N].muscalar;
+            sampleKW++;
           }
-          kw(0) += spc.p[N].mu.dot(spc.p[N].mu)*spc.p[N].muscalar*spc.p[N].muscalar;
-          sampleKW++;
-        }
-        
+
         /**
          * @brief Returns dielectric constant with to Tinfoil conditions.
          * 1 + ( ( ( 4 * pi * <M^2> ) / ( 3 * V * kT ) ) / ( 4 * pi * e0 ) )
@@ -1685,7 +1685,7 @@ namespace Faunus {
         double getDielTinfoil() {
           return ( 1 + M2_box.avg()*const_DielTinfoil); 
         }  
-        
+
         void save(string nbr="") {
           rdf.save("gofr.dat"+nbr);
           mucorr.save("mucorr.dat"+nbr);
@@ -1700,7 +1700,7 @@ namespace Faunus {
           PM_z_box.save("proTotDip_z_box.dat"+nbr);
           PM2.save("proTotDip2.dat"+nbr);
           PM2_box.save("proTotDip2_box.dat"+nbr);
-          
+
           string filename = "dipoledata.dat"+nbr;
           std::ofstream f(filename.c_str());
           f.precision(10);
@@ -1716,7 +1716,7 @@ namespace Faunus {
             if (diel_std.cnt != 0) f << "\ndiel_std " << diel_std.cnt << " " << diel_std.avg() << " " << diel_std.sqsum;
           }
         }
-        
+
         /**
          * @warning Does not work right!
          */
@@ -1734,7 +1734,7 @@ namespace Faunus {
           PM_z_box.load("proTotDip_z_box.dat"+nbr);
           PM2.load("proTotDip2.dat"+nbr);
           PM2_box.load("proTotDip2_box.dat"+nbr);
-          
+
           string filename = "dipoledata.dat"+nbr;
           std::ifstream f(filename.c_str());
           string name;
@@ -1750,7 +1750,7 @@ namespace Faunus {
           M2.reset();
           M2_box.reset();
           diel_std.reset();
-          
+
           if (f) {
             while (!f.eof()) {
               f >> name >> cnt >> average >> sqsum;
@@ -1792,9 +1792,9 @@ namespace Faunus {
                 diel_std = diel_std + diel_stdt;
               }
             }
-            
+
           }
-          
+
         }
 
         inline string info() {
@@ -1802,9 +1802,9 @@ namespace Faunus {
           std::ostringstream o;
           o << header("Dipole analysis");
           o << indent(SUB) << epsilon_m+subr+"(Tinfoil)" << setw(22) << getDielTinfoil() << ", "+sigma+"=" << diel_std.stdev() << ", "+sigma+"/"+epsilon_m+subr+"=" << (100*diel_std.stdev()/getDielTinfoil()) << percent << endl
-          << indent(SUB) << bracket("M"+squared) << setw(27) << pc::eA2D(M2_box.avg(),2) << " Debye"+squared+", "+sigma+"=" << pc::eA2D(M2_box.stdev(),2) << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg()) << percent << endl
-          << indent(SUB) << bracket("M") << setw(25) << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl 
-          << indent(SUBSUB) << sigma << setw(25) << "( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl;
+            << indent(SUB) << bracket("M"+squared) << setw(27) << pc::eA2D(M2_box.avg(),2) << " Debye"+squared+", "+sigma+"=" << pc::eA2D(M2_box.stdev(),2) << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg()) << percent << endl
+            << indent(SUB) << bracket("M") << setw(25) << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl 
+            << indent(SUBSUB) << sigma << setw(25) << "( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl;
           return o.str();
         }
     };
@@ -1935,9 +1935,11 @@ namespace Faunus {
           }
 
           /**
-           * @brief The Ljung-Box test is a statistical test. It tests if a group of autocorrelations differ from zero, 
-           *        based on a number of lags. Initially it was developed for ARMA-processes. It is a portmanteau test.
-           *        DOI: 10.1093/biomet/65.2.297
+           * @brief The Ljung-Box test is a statistical test.
+           *
+           * This tests if a group of autocorrelations differ from zero, 
+           * based on a number of lags. Initially it was developed for ARMA-processes.
+           * It is a portmanteau test. More info at DOI: 10.1093/biomet/65.2.297
            *
            * @param alpha The significance of the test. With a probability of \f$ (1-\alpha)*100 \f$ % the result is true.
            */
@@ -1953,10 +1955,14 @@ namespace Faunus {
           }
 
           /**
-           * @brief The Box-Pierce test is a statistical test. It tests if a group of autocorrelations differ from zero. 
-           *        It tests the wider randomness based on a number of lags. This is more simple, and not as accurate, as the Ljung_Box test.
+           * @brief The Box-Pierce test is a statistical test.
            *
-           * @param alpha The significance of the test. With a probability of \f$ (1-\alpha)*100 \f$ % the result is true.
+           * This tests if a group of autocorrelations differ from zero. 
+           * It tests the wider randomness based on a number of lags.
+           * This is more simple, and not as accurate, as the Ljung_Box test.
+           *
+           * @param alpha The significance of the test. With a probability of
+           * \f$ (1-\alpha)*100 \f$ % the result is true.
            */
           bool BoxPierce(double alpha) {
             double Q = 0.0;
@@ -1970,8 +1976,10 @@ namespace Faunus {
           }
 
           /**
-           * @brief Hypergeometric function. This function uses \f$ x=(x)_1=(x)_2=... \f$ for x=a,x=b and x=c.
-           *        \f$ F_1(a,b,c;z) = \sum_{n=0}^{\infty}\frac{(a)_n(b)_n}{(c)_n}\frac{z^n}{n!} \f$
+           * @brief Hypergeometric function.
+           *
+           * This function uses \f$ x=(x)_1=(x)_2=... \f$ for x=a,x=b and x=c.
+           * \f$ F_1(a,b,c;z) = \sum_{n=0}^{\infty}\frac{(a)_n(b)_n}{(c)_n}\frac{z^n}{n!} \f$
            * 
            * @param a Coefficient (usually a vector) 
            * @param b Coefficient (usually a vector) 
@@ -1996,7 +2004,8 @@ namespace Faunus {
           /**
            * @brief Student's t-test distribution
            * 
-           * @param alpha The significance of the test. With a probability of \f$ (1-\alpha)*100 \f$ % the result is true.
+           * @param alpha The significance of the test.
+           *        With a probability of \f$ (1-\alpha)*100 \f$ % the result is true.
            * @param dof Degrees of freedom.
            */
           double studentTdistribution(double alpha, int dof, double x_step=0.01) {

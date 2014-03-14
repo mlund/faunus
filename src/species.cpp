@@ -114,8 +114,20 @@ namespace Faunus {
       a.betaC = json::value<double>(atom.second, "betaC", pc::infty);
       a.betaD = json::value<double>(atom.second, "betaD", pc::infty);
       a.betaQ = json::value<double>(atom.second, "betaQ", pc::infty);
-        
+
       list.push_back(a); // add to main particle list
+
+      // add to particle list 
+      bool insert=true;
+      for (auto &i : list)
+        if (i.name==a.name) {
+          a.id=i.id; // keep old id and
+          i=a; // override existing
+          insert=false;
+          break;
+        }
+      if (insert)
+        list.push_back(a);
     }
     return (n>0) ? true : false;
   }

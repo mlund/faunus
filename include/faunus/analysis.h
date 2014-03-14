@@ -1423,8 +1423,10 @@ namespace Faunus {
             N = spc.p.size();
             const_DielTinfoil = pc::e*pc::e*1e10/(3*volume*pc::kT()*pc::e0);
             sampleKW = 0;
-            
+            cout << "Before load Mx! cnt, average, sqsum: " << M_x.cnt << ", " << M_x.avg() << ", " << M_x.sqsum << endl;
             load(filename);
+            
+            cout << "After load Mx! cnt, average, sqsum: " << M_x.cnt << ", " << M_x.avg() << ", " << M_x.sqsum << endl;
           }
 
         void setCutoff(double cutoff) {
@@ -1542,18 +1544,21 @@ namespace Faunus {
           std::ofstream f(filename.c_str());
           f.precision(10);
           if (f) {
-            if (M_x.cnt != 0)      f << "\nM_x " << M_x.cnt << " " << M_x.avg();
-            if (M_y.cnt != 0)      f << "\nM_y " << M_y.cnt << " " << M_y.avg();
-            if (M_z.cnt != 0)      f << "\nM_z " << M_z.cnt << " " << M_z.avg();
-            if (M_x_box.cnt != 0)  f << "\nM_x_box " << M_x_box.cnt << " " << M_x_box.avg();
-            if (M_y_box.cnt != 0)  f << "\nM_y_box " << M_y_box.cnt << " " << M_y_box.avg();
-            if (M_z_box.cnt != 0)  f << "\nM_z_box " << M_z_box.cnt << " " << M_z_box.avg();
-            if (M2.cnt != 0)       f << "\nM2 " << M2.cnt << " " << M2.avg();
-            if (M2_box.cnt != 0)   f << "\nM2_box " << M2_box.cnt << " " << M2_box.avg();
-            if (diel_std.cnt != 0) f << "\ndiel_std " << diel_std.cnt << " " << diel_std.avg();
+            if (M_x.cnt != 0)      f << "\nM_x " << M_x.cnt << " " << M_x.avg() << " " << M_x.sqsum;
+            if (M_y.cnt != 0)      f << "\nM_y " << M_y.cnt << " " << M_y.avg() << " " << M_y.sqsum;
+            if (M_z.cnt != 0)      f << "\nM_z " << M_z.cnt << " " << M_z.avg() << " " << M_z.sqsum;
+            if (M_x_box.cnt != 0)  f << "\nM_x_box " << M_x_box.cnt << " " << M_x_box.avg() << " " << M_x_box.sqsum;
+            if (M_y_box.cnt != 0)  f << "\nM_y_box " << M_y_box.cnt << " " << M_y_box.avg() << " " << M_y_box.sqsum;
+            if (M_z_box.cnt != 0)  f << "\nM_z_box " << M_z_box.cnt << " " << M_z_box.avg() << " " << M_z_box.sqsum;
+            if (M2.cnt != 0)       f << "\nM2 " << M2.cnt << " " << M2.avg() << " " << M2.sqsum;
+            if (M2_box.cnt != 0)   f << "\nM2_box " << M2_box.cnt << " " << M2_box.avg() << " " << M2_box.sqsum;
+            if (diel_std.cnt != 0) f << "\ndiel_std " << diel_std.cnt << " " << diel_std.avg() << " " << diel_std.sqsum;
           }
         }
         
+        /**
+         * @warning Does not work right!
+         */
         void load(string nbr="") {
           rdf.load("gofr.dat"+nbr);
           mucorr.load("mucorr.dat"+nbr);
@@ -1572,8 +1577,9 @@ namespace Faunus {
           string filename = "dipoledata.dat"+nbr;
           std::ifstream f(filename.c_str());
           string name;
-          unsigned long long int cnt;
+          int cnt;
           double average;
+          double sqsum;
           M_x.reset();
           M_y.reset();
           M_z.reset();
@@ -1583,29 +1589,51 @@ namespace Faunus {
           M2.reset();
           M2_box.reset();
           diel_std.reset();
+          
           if (f) {
             while (!f.eof()) {
-              f >> name >> cnt >> average;
-              if(name == "M_x")
-                M_x.load(cnt,average);
-              if(name == "M_y")
-                M_y.load(cnt,average);
-              if(name == "M_z")
-                M_z.load(cnt,average);
-              if(name == "M_x_box")
-                M_x_box.load(cnt,average);
-              if(name == "M_y_box")
-                M_y_box.load(cnt,average);
-              if(name == "M_z_box")
-                M_z_box.load(cnt,average);
-              if(name == "M2")
-                M2.load(cnt,average);
-              if(name == "M2_box")
-                M2_box.load(cnt,average);
-              if(name == "diel_std")
-                diel_std.load(cnt,average);
+              f >> name >> cnt >> average >> sqsum;
+              cout << "Test: " << cnt << ", " <<  average << ", " << sqsum << endl;
+              if(name == "M_x") {
+                Average<double> M_xt(average,sqsum,cnt);
+                M_x = M_x + M_xt;
+              }
+              if(name == "M_y") {
+                Average<double>M_yt(average,sqsum,cnt);
+                M_y = M_y + M_yt;
+              }
+              if(name == "M_z") {
+                Average<double> M_zt(average,sqsum,cnt);
+                M_z = M_z + M_zt;
+              }
+              if(name == "M_x_box") {
+                Average<double> M_x_boxt(average,sqsum,cnt);
+                M_x_box = M_x_box + M_x_boxt;
+              }
+              if(name == "M_y_box") {
+                Average<double> M_y_boxt(average,sqsum,cnt);
+                M_y_box = M_y_box + M_y_boxt;
+              }
+              if(name == "M_z_box") {
+                Average<double> M_z_boxt(average,sqsum,cnt);
+                M_z_box = M_z_box + M_z_boxt;
+              }
+              if(name == "M2") {
+                Average<double> M2t(average,sqsum,cnt);
+                M2 = M2 + M2t;
+              }
+              if(name == "M2_box") {
+                Average<double> M2_boxt(average,sqsum,cnt);
+                M2_box = M2_box + M2_boxt;
+              }
+              if(name == "diel_std") {
+                Average<double> diel_stdt(average,sqsum,cnt);
+                diel_std = diel_std + diel_stdt;
+              }
             }
+            
           }
+          
         }
 
         inline string info() {

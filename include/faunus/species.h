@@ -19,7 +19,7 @@ namespace Faunus {
     double sigma,      //!< LJ diameter [angstrom]
            eps,        //!< LJ epsilon [kJ/mol] (pair potentials should convert to kT)
            radius,     //!< Radius [angstrom]
-           muscalar,   //!< Dipole momentscalar [eÅ]
+           muscalar,   //!< Dipole momentscalar [e\AA]
            mw,         //!< Weight [g/mol]
            charge,     //!< Charge/valency [e]
            activity,   //!< Chemical activity [mol/l]
@@ -28,16 +28,16 @@ namespace Faunus {
            mean,       //!< Mean value... (charge, sasa, etc.)
            variance,   //!< Spread around AtomData::mean
       
-           len,        //!< Spherocylinder length [Å]
-           half_len,   //!< Spherocylinder half length [Å]
+           len,        //!< Spherocylinder length [\AA]
+           half_len,   //!< Spherocylinder half length [\AA]
            pangl,      //!< Angle of attrative patch on PatchySpherocylinder [degrees]
            panglsw,    //!< Angle of angluar switch on sides of patch on PatchySpherocylinder [degrees]
-           pdis,       //!< Distance to which attraction is flat (typicaly end of repulsion) on attrative patch on PatchySpherocylinder [Å]
-           pswitch,    //!< Distance on which attraction switches to zero on PatchySpherocylinder [Å]
+           pdis,       //!< Distance to which attraction is flat (typicaly end of repulsion) on attrative patch on PatchySpherocylinder [\AA]
+           pswitch,    //!< Distance on which attraction switches to zero on PatchySpherocylinder [\AA]
            chiral_angle,//!< Angle of chirality (rotation of patch) on PatchySpherocylinder [degrees]
-           betaC,      //!< Value of the charge distribution (inverse) width [Å^-1]
-           betaD,      //!< Value of the dipole distribution (inverse) width [Å^-1] 
-           betaQ;      //!< Value of the quadrupole distribution (inverse) width [Å^-1] 
+           betaC,      //!< Value of the charge distribution (inverse) width [\AA^-1]
+           betaD,      //!< Value of the dipole distribution (inverse) width [\AA^-1] 
+           betaQ;      //!< Value of the quadrupole distribution (inverse) width [\AA^-1] 
     Point mu;
     short int patchtype;     //!< If patchy particle, which type of patch
     Thydrophobic hydrophobic;//!< Are we hydrophobic?
@@ -141,7 +141,7 @@ namespace Faunus {
    * `eps`         | Epsilon energy scaling commonly used for Lennard-Jones interactions etc. [kJ/mol] 
    * `hydrophobic` | Is the particle hydrophobic? [true/false]
    * `mu`          | Dipole moment vector [Debye]
-   * `theta`       | Quadrupole moment matrix [Debye Å]
+   * `theta`       | Quadrupole moment matrix [Debye \AA]
    * `mw`          | Molecular weight [g/mol]
    * `patchtype`   | Patchtype for sphero-cylinders
    * `q`           | Valency / partial charge number [e]

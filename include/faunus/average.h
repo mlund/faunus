@@ -27,7 +27,8 @@ namespace Faunus {
   template<class T> class Average {
   public:
     T sqsum;                                      ///< Square sum
-    Average();                                 
+    Average();          
+    Average(T,T,int=1); 
     virtual ~Average() {} 
     T sum;                                        ///< Sum of all values
     unsigned long long int cnt;                   ///< Number of values
@@ -36,7 +37,6 @@ namespace Faunus {
     T stdev();                                    ///< Standard deviation
     void add(T);                                  ///< Add value to current set.
     void reset();                                 ///< Clear all data
-    void load(unsigned long long int,T);          ///< Load initial values
     Average & operator=(T);                       ///< Assign value to current set. 
     Average & operator+=(T);                      ///< Add value to current set. 
     Average & operator*=(T);                      ///< Scale current set
@@ -51,6 +51,18 @@ namespace Faunus {
   
   template<class T> Average<T>::Average() { reset(); }
   
+  template<class T> Average<T>::Average(T average, T squaresum, int N) {
+    reset();
+    assert( N>0 && "Counter has rotated to zero!");
+    if (N<=0)
+      std::cerr << "Numeric limits reached in average class!\n";
+    else {
+      sum+=N*average;
+      sqsum+=squaresum;
+      cnt = N;
+    }
+  }
+  
   template<class T> T Average<T>::avg() const {
     if (cnt<=0) {
       std::cerr << "Warning average counter is empty.\n";
@@ -62,12 +74,6 @@ namespace Faunus {
   template<class T> void Average<T>::reset() {
     sum=sqsum=0;
     cnt=0;
-  }
-  
-  template<class T> void Average<T>::load(unsigned long long int cnt_in,T x) {
-    reset();
-    cnt = cnt_in - 1;
-    add(cnt_in*x);
   }
 
   template<class T> Average<T>& Average<T>::operator=(T x) {
@@ -178,7 +184,7 @@ namespace Faunus {
       }
 
       friend std::ostream &operator<<(std::ostream &o, const AverageExt<T> &a) {
-        double s=a.stddev();
+        T s=a.stddev();
         o << a.avg();
         if (s>1e-15)
           o << " " << s;

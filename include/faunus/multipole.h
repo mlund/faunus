@@ -340,19 +340,20 @@ namespace Faunus {
        * @param muB Unit dipole moment vector of particel B
        * @param r Direction \f$ r_A - r_B \f$
        */
-      template<class Tvec>
+      template<class Tvec, bool useWdata=false>
         double q2mu(double QBxMuA, const Tvec &muA, double QAxMuB, const Tvec &muB, const Tvec &r) const {
-          /* Code to use if calcWolfData is not called
-          double r2i = 1/r.squaredNorm();
-          if (r2i < rc2i)
-            return 0;
-          double r1i = sqrt(r2i);
-          double T1 = (constant*exp(-kappa2/r2i) + erfc_x(kappa/r1i)*r1i)*r2i;
-          double der = (1/r1i) - rc1;
-          double W1 = QBxMuA*muA.dot(r)*(T1 - Tc1*r1i - der*dTc1*r1i);
-          double W2 = QAxMuB*muB.dot(-r)*(T1 - Tc1*r1i - der*dTc1*r1i);
-          return (W1 + W2);
-          */
+          /* Code to use if calcWolfData is not called */
+          if (useWdata==false) {
+            double r2i = 1/r.squaredNorm();
+            if (r2i < rc2i)
+              return 0;
+            double r1i = sqrt(r2i);
+            double T1 = (constant*exp(-kappa2/r2i) + erfc_x(kappa/r1i)*r1i)*r2i;
+            double der = (1/r1i) - rc1;
+            double W1 = QBxMuA*muA.dot(r)*(T1 - Tc1*r1i - der*dTc1*r1i);
+            double W2 = QAxMuB*muB.dot(-r)*(T1 - Tc1*r1i - der*dTc1*r1i);
+            return (W1 + W2);
+          }
           if (data.r2i < rc2i)
             return 0;
           double W1 = QBxMuA*muA.dot(r)*(data.T1 - data.Tc1_r1i - data.der_dTc1_r1i);

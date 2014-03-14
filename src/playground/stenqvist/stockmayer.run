@@ -25,8 +25,8 @@ dipdip_cutoff      4.3         # dipole cutoff [angstrom]
 lj_eps             0.069        # Uniform LJ epsilon parameter [kT] 0.7504
 kappa              0
                   
-loop_macrosteps    10           # number of macro loops
-loop_microsteps    100000        # number of micro loops
+loop_macrosteps    5           # number of macro loops
+loop_microsteps    10        # number of micro loops
 
 tion1              sol 
 nion1              100
@@ -55,7 +55,8 @@ test_stable        no
 test_file          stockmayer.test
 " > stockmayerEQ.input
 
-rm -fR state
+#rm -fR state
+#rm dipol*
 exe=./nemo
 if [ -x $exe ]; then
  $exe
@@ -64,7 +65,5 @@ if [ -x $exe ]; then
  rm proTotDip*
  rm KW.dat*
  rm mucorr*
- rm dipoledata.dat*
- exit $rc
 fi
 exit 1

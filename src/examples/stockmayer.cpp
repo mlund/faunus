@@ -16,7 +16,7 @@ typedef Move::AtomicRotation<Tspace> TmoveRot;
 #endif
 
 int main() {
-  ::atom.includefile("stockmayer.json");         // load atom properties
+  //::atom.includefile("stockmayer.json");         // load atom properties
   InputMap in("stockmayer.input");               // open parameter file for user input
   Energy::NonbondedVector<Tspace,Tpair> pot(in); // non-bonded only
   EnergyDrift sys;                               // class for tracking system energy drifts

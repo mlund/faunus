@@ -904,7 +904,7 @@ namespace Faunus {
         PolymerShape();
 
         /** 
-         * @brief This functions is now public and const. I don't see the point of making it static, yet. - Joao Henriques.
+         * @note This functions is now public and const. I don't see the point of making it static, yet. - Joao Henriques.
          */
         template<class Tgroup, class Tspace>
           Point vectorgyrationRadiusSquared(const Tgroup &pol, const Tspace &spc) const {
@@ -1557,8 +1557,10 @@ namespace Faunus {
     };
 
     /**
-     * @brief Class to calculate dielectric constant outside the cutoff limit. Using atomic units.
-     *        [Neumann, M. (1983) Mol. Phys., 50, 841-858].
+     * @brief Analyse dielectric constant outside the cutoff limit.
+     *
+     * @note Using atomic units.
+     * @note [Neumann, M. (1983) Mol. Phys., 50, 841-858].
      *
      * @param spc The space
      * @param cutoff The cutoff of the reaction field
@@ -1578,16 +1580,21 @@ namespace Faunus {
 
       public:
         template<class Tspace>
-          DipoleAnalysis(const Tspace &spc, const string filename="") : rdf(0.1),kw(0.1),mucorr_angle(0.1),mucorr(0.1),mucorr_dist(0.1),PM_x(0.1),PM_y(0.1),PM_z(0.1),PM_x_box(0.1),PM_y_box(0.1),PM_z_box(0.1),PM2(0.1),PM2_box(0.1) {
+          DipoleAnalysis(const Tspace &spc, const string filename="") :
+          rdf(0.1), kw(0.1), mucorr_angle(0.1), mucorr(0.1),
+          mucorr_dist(0.1),PM_x(0.1),PM_y(0.1),PM_z(0.1),PM_x_box(0.1),
+          PM_y_box(0.1),PM_z_box(0.1),PM2(0.1),PM2_box(0.1) {
             cutoff2 = pow(spc.geo.len_half.x(),2);
             volume = spc.geo.getVolume();
             N = spc.p.size();
             const_DielTinfoil = pc::e*pc::e*1e10/(3*volume*pc::kT()*pc::e0);
             sampleKW = 0;
-            cout << "Before load Mx! cnt, average, sqsum: " << M_x.cnt << ", " << M_x.avg() << ", " << M_x.sqsum << endl;
+            cout << "Before load Mx! cnt, average, sqsum: "
+              << M_x.cnt << ", " << M_x.avg() << ", " << M_x.sqsum << endl;
             load(filename);
 
-            cout << "After load Mx! cnt, average, sqsum: " << M_x.cnt << ", " << M_x.avg() << ", " << M_x.sqsum << endl;
+            cout << "After load Mx! cnt, average, sqsum: "
+              << M_x.cnt << ", " << M_x.avg() << ", " << M_x.sqsum << endl;
           }
 
         void setCutoff(double cutoff) {
@@ -1655,7 +1662,6 @@ namespace Faunus {
          * @brief Samples g(r), <\mu(0) \cdot \mu(r)>, <\frac{1}{2} ( 3*\mu(0) \cdot \mu(r) - 1 )>, Histogram(\mu(0) \cdot \mu(r)) and distant-dependent Kirkwood-factor.
          * 
          * @param spc The space
-         *
          */
         template<class Tspace>
           void sampleMuCorrelationAndKirkwood(Tspace &spc) {
@@ -1679,6 +1685,7 @@ namespace Faunus {
 
         /**
          * @brief Returns dielectric constant with to Tinfoil conditions.
+         *
          * 1 + ( ( ( 4 * pi * <M^2> ) / ( 3 * V * kT ) ) / ( 4 * pi * e0 ) )
          * 1 + ( <M^2> / ( 3 * V * kT * e0) )
          */

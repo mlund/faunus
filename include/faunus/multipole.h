@@ -1,5 +1,6 @@
 #ifndef FAUNUS_MULTIPOLE_H
 #define FAUNUS_MULTIPOLE_H
+
 #include <faunus/common.h>
 #include <faunus/auxiliary.h>
 #include <faunus/species.h>
@@ -156,8 +157,9 @@ namespace Faunus {
     }
 
   /**
-   * @brief Returns NemoType6-interaction (Full Damping chtr)                         Needs to be checked!
-   * @param vec Vector with parameters. Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab} e_{ab} f_{ab} n_{ab}] \f$  
+   * @brief Returns NemoType6-interaction (Full Damping chtr) Needs to be checked!
+   * @param vec Vector with parameters.
+   *        Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab} e_{ab} f_{ab} n_{ab}] \f$  
    * @param r Vector between particles
    * @param expmax Maximum exponential coefficient (optional)
    */
@@ -186,7 +188,8 @@ namespace Faunus {
 
   /**
    * @brief Returns NemoType7-interaction (Full Damping chtr gaussian) Needs to be checked!
-   * @param vec Vector with parameters. Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab} e_{ab} f_{ab} n_{ab}  a_{cht} k_{cht}] \f$  
+   * @param vec Vector with parameters.
+   * Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab} e_{ab} f_{ab} n_{ab}  a_{cht} k_{cht}] \f$  
    * @param r Vector between particles
    * @param expmax Maximum exponential coefficient (optional)
    */
@@ -392,7 +395,6 @@ namespace Faunus {
           double t3 = muA.dot(muB)*(data.T2_1 - Tc2_1 - data.der_dTc2_1);
           double t5 = muA.dot(r)*muB.dot(r)*(data.T2_2 - data.Tc2_2_r2i - data.der_dTc2_2_r2i);
           return -(t5 + t3)*muAxmuB;
-
         }
 
       /**
@@ -432,8 +434,7 @@ namespace Faunus {
 
         }
 
-      /** @brief Dipole field at `r` due to dipole `p` 
-      */
+      /** @brief Dipole field at `r` due to dipole `p` */
       template<class Tparticle>
         Point field(const Tparticle &p, const Point &r) const {
           return Point(0,0,0);
@@ -444,10 +445,11 @@ namespace Faunus {
   };
 
   /**
-   * @brief Base class for Gaussian-damped interactions. Implemented according to DOI: 10.1002/jcc.20574
+   * @brief Base class for Gaussian-damped interactions.
    *
    * The idea is that this class has no dependencies and is
    * to be used as a helper class for other classes.
+   * Implemented according to DOI: 10.1002/jcc.20574
    */
   class GaussianDampingBase {
     private:
@@ -613,7 +615,8 @@ namespace Faunus {
        * @brief Field at `r` due to ion `p`.
        * @param p Particles from which field arises
        * @param r Direction @f$ r_A - r_B @f$
-       * @param ida Id of particle exposed to the field from p. If ida is not set the exposed particle is assumed to be a point particle (optional)
+       * @param ida Id of particle exposed to the field from p.
+       * If ida is not set the exposed particle is assumed to be a point particle (optional)
        */
       template<class Tparticle>
         Point fieldCharge(const Tparticle &p, const Point &r, int ida=-1) const {
@@ -634,7 +637,8 @@ namespace Faunus {
        * @brief Field at `r` due to dipole `p`.
        * @param p Particles from which field arises
        * @param r Direction @f$ r_A - r_B @f$
-       * @param ida Id of particle exposed to the field from p. If ida is not set the exposed particle is assumed to be a point particle (optional)
+       * @param ida Id of particle exposed to the field from p.
+       * If ida is not set the exposed particle is assumed to be a point particle (optional)
        */
       template<class Tparticle>
         Point fieldDipole(const Tparticle &p, const Point &r, int ida=-1) const {
@@ -771,7 +775,8 @@ namespace Faunus {
           }
 
         /**
-         * @brief Interaction of dipole `p` with field `E`, see 'Intermolecular and SUrface Forces' by J. Israelachvili, p. 97 eq. 5.15
+         * @brief Interaction of dipole `p` with field `E`.
+         * @note See 'Intermolecular and Surface Forces' by J. Israelachvili, p. 97 eq. 5.15
          * @todo Needs to be tested!
          */
         template<class Tparticle>
@@ -841,7 +846,8 @@ namespace Faunus {
             return 0;
           }
 
-        /** @brief Field at `r` due to dipole `p` 
+        /**
+         * @brief Field at `r` due to dipole `p` 
          * @warning Untested!
          */
         template<class Tparticle>
@@ -907,8 +913,7 @@ namespace Faunus {
             return _lB*wolf.mu2mu(a.mu,b.mu, a.muscalar*b.muscalar, r);
           }
 
-        /** @brief Dipole field at `r` due to dipole `p` 
-        */
+        /** @brief Dipole field at `r` due to dipole `p` */
         template<class Tparticle>
           Point field(const Tparticle &p, const Point &r) const {
             return _lB*wolf.field(p,r);

@@ -368,7 +368,6 @@ namespace Faunus {
     Tradius radius;                           //!< Radius
     Tmw mw;                                   //!< Molecular weight
     Thydrophobic hydrophobic;                 //!< Hydrophobic flag
-    double betaC;                             //!< Exponent of Gaussian charge density
 
     PointParticle() { clear(); }              //!< Constructor
 
@@ -392,7 +391,6 @@ namespace Faunus {
           radius=d.radius;
           mw=d.mw;
           hydrophobic=d.hydrophobic;
-          betaC=d.betaC;
           return *this;
         }
 
@@ -447,7 +445,6 @@ namespace Faunus {
    */
   struct DipoleParticle : public PointParticle {
     Point mu;               //!< Dipole moment unit vector (permanent+induced)
-    double betaD;           //!< Exponent of Gaussian dipole density
     double muscalar;        //!< Dipole moment scalar (permanent+induced)
     Point mup;              //!< Permanent dipole moment vector
     Tensor<double> alpha;   //!< Polarization matrix

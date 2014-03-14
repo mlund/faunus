@@ -56,8 +56,6 @@ bool saveField(Tpairpot pot, TmoveRot rot, Tid ida, string file) {
 
 
 int runSim(string name) {
-  
-  ::atom.includefile("stockmayer.json");         // load atom properties
   InputMap in(name);               // open parameter file for user input
   Energy::NonbondedVector<Tspace,Tpair> pot(in); // non-bonded only
   Energy::NonbondedVector<Tspace,TpairDDW> potDDW(in);
@@ -91,8 +89,8 @@ int runSim(string name) {
   FormatXTC xtc(spc.geo.len.norm());
   DipoleWRL sdp;
   
-  savePotential(IonDipole(in),rot, atom["sol"].id, atom["ch"].id, "pot_dipdip.dat");
-  savePotential(IonDipoleWolf(in),rot, atom["sol"].id, atom["ch"].id, "potGD_dipdip.dat");
+  savePotential(IonQuad(in),rot, atom["sol"].id, atom["ch"].id, "pot_dipdip.dat");
+  savePotential(IonQuadGaussianDamping(in),rot, atom["sol"].id, atom["ch"].id, "potGD_dipdip.dat");
   saveField(DipoleDipole(in),rot, atom["sol"].id, "field_dipdip.dat");
   saveField(DipoleDipoleGaussianDamping(in),rot, atom["sol"].id, "fieldGD_dipdip.dat");
   //getKeesom(TpairDDW(in),rot, atom["sol"].id, atom["sol"].id, "potKeesom.dat");

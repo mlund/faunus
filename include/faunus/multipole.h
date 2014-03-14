@@ -460,9 +460,7 @@ namespace Faunus {
        */
       GaussianDampingBase() {
         constant = 2/sqrt(pc::pi);
-        int N = int((atom.size() - 1)/2);    //              <============== Something wrong?!
-        cout << "Atoms: " << N << endl;
-        cout << "Name: " << atom.info() << endl;
+        int N = atom.size() - 1;
         betaC.resize(N);
         betaD.resize(N);
         betaQ.resize(N);
@@ -548,8 +546,8 @@ namespace Faunus {
         double q2mu(double QBxMuA, const Tvec &muA, double QAxMuB, const Tvec &muB, int ida, int idb, const Tvec &r) const {
           double r2 = r.squaredNorm();
           double r1 = sqrt(r2);
-          double B1_BA = ( (erf_x( betaCD(idb-1,ida-1) * r1 )/r1) - betaCD(idb-1,ida-1) * constant * exp(-betaCD2(idb-1,ida-1)*r2) ) / r2;
-          double B1_AB = ( (erf_x( betaCD(ida-1,idb-1) * r1 )/r1) - betaCD(ida-1,idb-1) * constant * exp(-betaCD2(ida-1,idb-1)*r2) ) / r2;
+          double B1_BA = ( (erf_x( betaCD(ida-1,idb-1) * r1 )/r1) - betaCD(ida-1,idb-1) * constant * exp(-betaCD2(ida-1,idb-1)*r2) ) / r2;
+          double B1_AB = ( (erf_x( betaCD(idb-1,ida-1) * r1 )/r1) - betaCD(idb-1,ida-1) * constant * exp(-betaCD2(idb-1,ida-1)*r2) ) / r2;
           double W_BA = ( QBxMuA * muA.dot(r) * B1_BA);
           double W_AB = ( QAxMuB * muB.dot(-r) * B1_AB);
           return ( W_BA + W_AB );
@@ -589,23 +587,23 @@ namespace Faunus {
       template<class Tvec, class Tmat>
         double q2quad(double qA, const Tmat &quadB,double qB, const Tmat &quadA, int ida, int idb, const Tvec &r) const {
           double r1 = r.norm();
-          double x_AB = betaCQ(idb-1,ida-1)*r1;
+          double x_AB = betaCQ(ida-1,idb-1)*r1;
           double x2_AB = x_AB*x_AB;
           double erfX_AB = erf_x(x_AB)/x_AB;
           double expX_AB = constant * exp(-x2_AB);
           double B1_AB = ( erfX_AB - expX_AB ) / x2_AB;
-          double B2_AB = betaCQ2(idb-1,ida-1) * ( 3*erfX_AB - (3 + 2*x2_AB) * expX_AB ) / ( x2_AB * x2_AB );
+          double B2_AB = betaCQ2(ida-1,idb-1) * ( 3*erfX_AB - (3 + 2*x2_AB) * expX_AB ) / ( x2_AB * x2_AB );
           double W_AB = r.transpose()*quadB*r;
           W_AB = W_AB * B2_AB - quadB.trace() * B1_AB;
-          double x_BA = betaCQ(ida-1,idb-1)*r1;
+          double x_BA = betaCQ(idb-1,ida-1)*r1;
           double x2_BA = x_BA*x_BA;
           double erfX_BA = erf_x(x_BA)/x_BA;
           double expX_BA = constant * exp(-x2_BA);
           double B1_BA = ( erfX_BA - expX_BA ) / x2_BA;
-          double B2_BA = betaCQ2(ida-1,idb-1) * ( 3*erfX_BA - (3 + 2*x2_BA) * expX_BA ) / ( x2_BA * x2_BA );
+          double B2_BA = betaCQ2(idb-1,ida-1) * ( 3*erfX_BA - (3 + 2*x2_BA) * expX_BA ) / ( x2_BA * x2_BA );
           double W_BA = r.transpose()*quadA*r;
           W_BA = W_BA * B2_BA - quadA.trace() * B1_BA;
-          return ( qA * W_AB * betaCQ3(idb-1,ida-1) + qB * W_BA * betaCQ3(ida-1,idb-1) );
+          return ( qA * W_AB * betaCQ3(ida-1,idb-1) + qB * W_BA * betaCQ3(idb-1,ida-1) );
         }
 
       /** 

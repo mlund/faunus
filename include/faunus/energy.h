@@ -426,14 +426,15 @@ namespace Faunus {
             return u;  
           }
 
+
           double i2all(Tpvec &p, int i) {
             assert(i>=0 && i<int(p.size()) && "index i outside particle vector");
             double u=0;
-            for (int j=0; j!=i; ++j)
+            std::swap(p[0],p[i]);
+#pragma omp parallel for reduction (+:u)
+            for (int j=1; j<(int)p.size(); j++)
               u+=pairpot( p[i], p[j], geo.vdist(p[i],p[j]) );
-            int n=(int)p.size();
-            for (int j=i+1; j<n; ++j)
-              u+=pairpot( p[i], p[j], geo.vdist(p[i],p[j]) );
+            std::swap(p[0],p[i]);
             return u;
           }
 
@@ -506,7 +507,7 @@ namespace Faunus {
             for (auto &pi : p) {
               for (auto &pj : p)
                 if (&pi!=&pj)
-                  E.col(i) = E.col(i) + pairpot.field(pj, geo.vdist(pi,pj));
+                  E.col(i) = E.col(i) + pairpot.field(pj,geo.vdist(pi,pj));
               i++;
             }
           }

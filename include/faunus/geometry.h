@@ -2,7 +2,6 @@
 #define FAU_GEOMETRY_H
 
 #ifndef SWIG
-#include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/slump.h>
 #include <faunus/textio.h>
@@ -323,6 +322,28 @@ namespace Faunus {
         }
         return cm;
       }
+      
+    /** @brief Calculate charge center of a group */
+    template<typename Tgeometry, typename Tp_vec, typename TGroup>
+      Point chargeCenter(const Tgeometry &geo, const Tp_vec &p, const TGroup &g) {
+        assert(!p.empty());
+        assert(g.back() < (int)p.size());
+        Point cc(0,0,0);
+        if (!g.empty()) {
+          Point o = p[ g.front()+(g.back()-g.front())*0.5 ];  // set origo to middle particle
+          double sum=0;
+          for (auto i : g) {
+            Point t = p[i]-o;       // translate to origo
+            geo.boundary(t);        // periodic boundary (if any)
+            cc += t * p[i].charge;
+            sum += p[i].charge;
+          }
+          if (sum<1e-6) sum=1;
+          cc=cc/sum + o;
+          geo.boundary(cc);
+        }
+        return cc;
+      }
 
     /** @brief Calculate mass center of a particle vector */
     template<typename Tgeometry, typename Tp_vec>
@@ -332,11 +353,19 @@ namespace Faunus {
         return massCenter(geo,p,Group(0,p.size()-1));
       }
       
+    /** @brief Calculate charge center of a particle vector */
+    template<typename Tgeometry, typename Tp_vec>
+      Point chargeCenter(const Tgeometry &geo, const Tp_vec &p) {
+        if (p.empty())
+          return Point(0,0,0);
+        return chargeCenter(geo,p,Group(0,p.size()-1));
+      }
+      
      template<class Tspace, class Tgroup>
         Point dipoleMoment(const Tspace &s, const Tgroup &g, double cutoff=1e9,Point mu=Point(0,0,0)) {
           assert(g.size()<=(int)s.p.size());
           for (auto i : g) {
-            Point t=s.p[i] - g.cm;
+            Point t=s.p[i] - g.cm;  // g.cc  <======     Diff
             s.geo.boundary(t);
             if(t.squaredNorm() < cutoff*cutoff)
               mu += t*s.p[i].charge;
@@ -359,6 +388,12 @@ namespace Faunus {
         translate(geo, p, -massCenter(geo, p) );
       }
 
+    /** @brief Translate a particle vector so charge center is in (0,0,0) */
+    template<class Tgeo, class Tpvec>
+      void cc2origo(const Tgeo &geo, Tpvec &p) {
+        translate(geo, p, -chargeCenter(geo, p) );
+      }
+      
     /*!
       \brief Geometric transform of a Point (rotation, translation...)
       */
@@ -422,6 +457,7 @@ namespace Faunus {
               cout << ".";
               maxtrials--;
               Point cm = massCenter(geo, p);
+              //Point cc = chargeCenter(geo, p);  // <====   Diff
               geo.randompos(v);
               v = v.cwiseProduct(dir);
               translate(geo, p, -cm+v);

@@ -39,6 +39,9 @@ namespace Faunus {
     mu.clear();
     theta.clear();
     alpha.clear();
+    betaC = pc::infty;
+    betaD = pc::infty;
+    betaQ = pc::infty;
   }
 
   AtomMap::AtomMap() {
@@ -58,6 +61,10 @@ namespace Faunus {
       if (s==l_i.name)
         return l_i;
     return list.at(0);
+  }
+  
+  int AtomMap::size() {
+    return (int)list.size();
   }
 
   /**

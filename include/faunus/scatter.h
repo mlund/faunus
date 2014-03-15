@@ -16,7 +16,7 @@ namespace Faunus {
       class FormFactorSphere {
         private:
           T j1(T x) const { // spherical Bessel function
-            register T xinv=1/x;
+            T xinv=1/x;
             return xinv*( sin(x)*xinv - cos(x) );
           }
         public:
@@ -147,7 +147,7 @@ namespace Faunus {
      * - `qmin` Minimum q value (1/angstrom)
      * - `qmax` Maximum q value (1/angstrom)
      * - `dr` q spacing (1/angstrom)
-     * - `sofq_cutoff` Cutoff distance (angstrom). Experimental.
+     * - `sofq_cutoff` Cutoff distance (angstrom). *Experimental!*
      *
      * See also <http://dx.doi.org/10.1016/S0022-2860(96)09302-7>
      */
@@ -259,7 +259,11 @@ namespace Faunus {
                 I[q]+=2.*_I.at(cnt++)/N+1; // add to average I(q)
             }
 
-          void save(string filename) {
+
+          /**
+           * @brief Save I(q) to disk
+           */
+          void save(const string &filename) {
             if (!I.empty()) {
               std::ofstream f(filename.c_str());
               if (f)

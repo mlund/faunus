@@ -5,6 +5,7 @@
 #include <faunus/point.h>
 #include <faunus/slump.h>
 #include <faunus/textio.h>
+#include <faunus/physconst.h>
 #include <Eigen/Geometry>
 #endif
 
@@ -300,9 +301,20 @@ namespace Faunus {
 
 #endif
 
-    /** @brief Calculate mass center of a group */
-    template<typename Tgeometry, typename Tp_vec, typename TGroup>
-      Point massCenter(const Tgeometry &geo, const Tp_vec &p, const TGroup &g) {
+    /**
+     * @brief Calculate center of cluster of particles
+     * @param geo Geometry
+     * @param p Particle vector
+     * @param g Range of particle index
+     * @param weight Weight function
+     *
+     * The weight function is typically a lambda function that takes a particle
+     * as an argument and returns the weight, for example Mw, charge, or unity
+     * for mass center, charge center, or geometry center. Functions for
+     * these three examples are predefined.
+     */
+    template<class Tgeo, class Tpvec, class TGroup, class Tweightf>
+      Point anyCenter(const Tgeo &geo, const Tpvec &p, const TGroup &g, Tweightf weight) {
         assert(!p.empty());
         assert(g.back() < (int)p.size());
         Point cm(0,0,0);
@@ -312,36 +324,21 @@ namespace Faunus {
           for (auto i : g) {
             Point t = p[i]-o;       // translate to origo
             geo.boundary(t);        // periodic boundary (if any)
-            cm += t * p[i].mw;
-            sum += p[i].mw;
+            cm += t * weight(p[i]);
+            sum += weight(p[i]);
           }
-          if (sum<1e-6) sum=1;
+          if (fabs(sum)<1e-6) sum=1;
           cm=cm/sum + o;
           geo.boundary(cm);
         }
         return cm;
       }
-      
-    /** @brief Calculate charge center of a group */
-    template<typename Tgeometry, typename Tp_vec, typename TGroup>
-      Point chargeCenter(const Tgeometry &geo, const Tp_vec &p, const TGroup &g) {
-        assert(!p.empty());
-        assert(g.back() < (int)p.size());
-        Point cc(0,0,0);
-        if (!g.empty()) {
-          Point o = p[ g.front()+(g.back()-g.front())*0.5 ];  // set origo to middle particle
-          double sum=0;
-          for (auto i : g) {
-            Point t = p[i]-o;       // translate to origo
-            geo.boundary(t);        // periodic boundary (if any)
-            cc += t * p[i].charge;
-            sum += p[i].charge;
-          }
-          if (sum<1e-6) sum=1;
-          cc=cc/sum + o;
-          geo.boundary(cc);
-        }
-        return cc;
+
+    /** @brief Calculate mass center of cluster of particles */
+    template<class Tgeo, class Tpvec, class TGroup>
+      Point massCenter(const Tgeo &geo, const Tpvec &p, const TGroup &g) {
+        return anyCenter(geo,p,g,
+            [](const typename Tpvec::value_type &x) {return x.mw;} );
       }
 
     /** @brief Calculate mass center of a particle vector */
@@ -351,7 +348,14 @@ namespace Faunus {
           return Point(0,0,0);
         return massCenter(geo,p,Group(0,p.size()-1));
       }
-      
+ 
+    /** @brief Calculate charge center of cluster of particles */
+    template<class Tgeo, class Tpvec, class TGroup>
+      Point chargeCenter(const Tgeo &geo, const Tpvec &p, const TGroup &g) {
+        return anyCenter(geo,p,g,
+            [](const typename Tpvec::value_type &x) {return x.charge;} );
+      }
+
     /** @brief Calculate charge center of a particle vector */
     template<typename Tgeometry, typename Tp_vec>
       Point chargeCenter(const Tgeometry &geo, const Tp_vec &p) {
@@ -359,12 +363,19 @@ namespace Faunus {
           return Point(0,0,0);
         return chargeCenter(geo,p,Group(0,p.size()-1));
       }
-      
+ 
+    /** @brief Calculate geometric center of cluster of particles */
+    template<class Tgeo, class Tpvec, class TGroup>
+      Point geometricCenter(const Tgeo &geo, const Tpvec &p, const TGroup &g) {
+        return anyCenter(geo,p,g,
+            [](const typename Tpvec::value_type &x) {return 1.0;} );
+      }
+ 
      template<class Tspace, class Tgroup>
         Point dipoleMoment(const Tspace &s, const Tgroup &g, double cutoff=1e9,Point mu=Point(0,0,0)) {
           assert(g.size()<=(int)s.p.size());
           for (auto i : g) {
-            Point t=s.p[i] - g.cm;  // g.cc  <======     Diff
+            Point t=s.p[i] - g.cm;
             s.geo.boundary(t);
             if(t.squaredNorm() < cutoff*cutoff)
               mu += t*s.p[i].charge;
@@ -456,7 +467,6 @@ namespace Faunus {
               cout << ".";
               maxtrials--;
               Point cm = massCenter(geo, p);
-              //Point cc = chargeCenter(geo, p);  // <====   Diff
               geo.randompos(v);
               v = v.cwiseProduct(dir);
               translate(geo, p, -cm+v);
@@ -537,6 +547,43 @@ namespace Faunus {
           return a;
         }
     };
+
+    /**
+     * @brief Calculates the volume of a collection of particles
+     *
+     * This will use a brute force, stochastic hit and miss algorithm to
+     * calculate the net volume of a collection of overlapping
+     * particles.
+     *
+     * @param p Particle vector (structure must be whole)
+     * @param n Number of iterations (default: 1e7)
+     * @param pradius Probe radius (default: 0)
+     */
+    template<typename Tpvec>
+      double calcVolume(const Tpvec &p, unsigned int n=1e7, double pradius=0) {
+        double L=0;      // size of test box
+        Point gc(0,0,0); // geometric center of molecule
+        for (auto &i : p)
+          gc += i / p.size();
+        for (auto &i : p)
+          L = std::max(L, 2*((i-gc).norm() + i.radius));
+
+        // Start shooting!
+        Point r;
+        unsigned int hit=0, cnt=0;
+        while (++cnt<n) {
+          r.x() = slp_global.randHalf();
+          r.y() = slp_global.randHalf();
+          r.z() = slp_global.randHalf();
+          r = r*L + gc;
+          for (auto &i : p)
+            if ((i-r).squaredNorm()<pow(i.radius+pradius,2)) {
+              hit++;
+              break;
+            }
+        }
+        return hit/double(cnt) * pow(L,3);
+      }
 
   }//namespace Geometry
 }//namespace Faunus

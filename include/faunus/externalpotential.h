@@ -2,6 +2,7 @@
 #define FAUNUS_EXTERNALPOTENTIAL_H
 
 #include <faunus/potentials.h>
+#include <faunus/analysis.h>
 
 namespace Faunus {
 
@@ -335,6 +336,123 @@ namespace Faunus {
           /** @brief Electric field on particle `p` */
           template<class Tparticle>
             Point field(const Tparticle &p) { return E; }
+      };
+
+    /**
+     * @brief Hydrophobic wall potential
+     * @author Joao Henriques
+     * @date Lund, 2014
+     *
+     * This (external) potential class is used to simulate hydrophobic interactions between 
+     * particle(s) and a surface, using a simple square well (the default) or a Lennard-Jones
+     * potential. Surface position must be specified in the program even if one has already
+     * done it for the Gouy-Chapman potential (both classes inherit from ExternalPotentialBase<>
+     * but are for the most part independent).
+     *
+     * See doi:10.1021/la300892p for more details on the square well potential.
+     *
+     * The Lennard-Jones potential has the form:
+     * @f$
+     * \beta u=\epsilon
+     * \left ((\sigma_{i}/r_{i,s})^{12}-2(\sigma_{i}/r_{i,s})^6\right )
+     * @f$
+     * where
+     * \f$\sigma_{i}\f$ is the residue/particle radius. The potential reaches its minimum when
+     * \f$r_{i,s} = \sigma_{i}\f$, ie. the residue/particle is in close contact with the wall.
+     *   
+     * The InputMap parameters are:
+     *
+     * Key                  | Description
+     * :------------------- | :---------------------------
+     * `hydrwl_type`        | Type of potential, ie. square well ("sqwl", default) or Lennard-Jones ("lj") 
+     * `hydrwl_depth`       | Depth, \f$\epsilon\f$ [kT] (positive number)
+     * `hydrwl_threshold    | Threshold, [angstrom] (particle center-to-wall distance) - for "sqwl" type only!
+     *
+     */
+    template<class T=double>
+    class HydrophobicWall : public ExternalPotentialBase<> {
+    protected:
+      T _depth;
+      T _threshold;
+      std::string _type;
+      std::string _info();
+    public:
+      HydrophobicWall(InputMap&);
+      void setSurfPositionZ(T*);        // sets position of surface
+      template<typename Tparticle>
+      T operator()(const Tparticle &p); // returns energy
+    };
+
+    template<class T>
+    HydrophobicWall<T>::HydrophobicWall(InputMap &in) {
+      string prefix = "hydrwl_";
+      name          = "Hydrophobic Wall";
+      _type         = in.get<string>(prefix + "type", "sqwl");
+      _depth        = in.get<double>(prefix + "depth"    , 0);
+      _threshold    = in.get<double>(prefix + "threshold", 0);
+    }
+
+    template<class T>
+    void HydrophobicWall<T>::setSurfPositionZ(T* z) {
+        this->setCoordinateFunc
+          (
+           [=](const Point &p) { return std::abs(*z-p.z()); }
+          ); // c++11 lambda
+    }
+
+    template<class T>
+    template<typename Tparticle>
+    T HydrophobicWall<T>::operator()(const Tparticle &p) {
+      if (p.hydrophobic) {
+        if (_type == "sqwl")
+          if (this->p2c(p) < _threshold)
+            return -_depth;
+        if (_type == "lj") {
+          double r2  = (p.radius * p.radius) / (this->p2c(p) * this->p2c(p));
+          double r6  = r2 * r2 * r2;
+          double val = _depth * ((r6 * r6) - (2 * r6));
+          return val;
+        } 
+      }
+      return 0;
+    }
+
+    template<class T>
+    std::string HydrophobicWall<T>::_info() {
+      std::ostringstream o;
+      if (_type == "sqwl")
+        o << pad(textio::SUB, 50, ">>> USING: square well potential <<<") << endl
+          << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(SQWL)") << _depth << textio::kT + " = " << pc::kT2kJ(_depth) << " kJ/mol" << endl
+          << pad(textio::SUB, 25, "Threshold") << _threshold << textio::_angstrom << " (particle - wall distance)" << endl;
+      if (_type == "lj")
+        o << pad(textio::SUB, 50, ">>> USING: Lennard-Jones potential <<<") << endl
+          << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(LJ)") << _depth << textio::kT + " = " << pc::kT2kJ(_depth) << " kJ/mol"<< endl;
+      return o.str();
+    }
+
+    /**
+     * @brief Hydrophobic wall potential w. linear slope
+     * @date Lund, 2014
+     *
+     * As `HydrophobicWall` but the potential is varying linearly with
+     * distance. It the potential is zero at `threshold` and `depth` when
+     * the particle-surface separation is zero.
+     */
+    template<class T=double>
+      struct HydrophobicWallLinear : public HydrophobicWall<T> {
+        HydrophobicWallLinear(InputMap &in) : HydrophobicWall<T>::HydrophobicWall(in) {
+          this->name+=" Linear";
+        }
+        template<typename Tparticle>
+          T operator()(const Tparticle &p) {
+            if (p.hydrophobic) {
+              double d = this->p2c(p);
+              assert(d>0 && "Particle-surface distance must be positive");
+              if (d<this->_threshold)
+                return -(this->_depth) * (1-d/this->_threshold);
+            }
+            return 0;
+          }
       };
 
   } //namespace

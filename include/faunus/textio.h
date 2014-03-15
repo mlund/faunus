@@ -94,6 +94,12 @@ namespace Faunus {
       return o.str();
     }
 
+    /** @brief Count number of white-space separated words in a string */
+    inline size_t numWords(const std::string &s) {
+      return std::distance(std::istream_iterator<std::string>(
+            std::istringstream(s) >> std::ws), std::istream_iterator<std::string>());
+    }
+
     /**
      * @brief Show Faunus welcome text, version etc.
      * @note See http://patorjk.com/software/taag for ASCII art generation

@@ -15,6 +15,15 @@ endfunction( fau_dipoleexample )
 # Bosse's playground
 fau_example(boj-grand "./bosse" grand.cpp)
 
+# Bearnix playground
+fau_example(bearnix-cyl "./bearnix" cyl.cpp)
+
+# Carolina's playground
+fau_example(cc-polymers "./cragnell" polymers.cpp)
+
+# Carolina's playground
+fau_example(fer-cyl "./fernando" cyl.cpp)
+
 # Mikael's playground
 fau_example(mlund-cosan "./mlund" cosan.cpp)
 fau_example(mlund-angular "./mlund" angular.cpp)
@@ -81,6 +90,9 @@ set_target_properties(alexei-hs PROPERTIES OUTPUT_NAME "HS")
 #set_target_properties(alexei_stockmayer PROPERTIES OUTPUT_NAME "stockmayer")
 #set_target_properties(alexei_stockmayer_polarizable PROPERTIES OUTPUT_NAME "stockmayer_polarizable")
 #set_target_properties(alexei_stockmayer_polarizable PROPERTIES COMPILE_DEFINITIONS "POLARIZE;DIPOLEPARTICLE")
+
+# Jana's playground
+fau_example(jana-wall "./jana" wall.cpp)
 
 if (EXISTS ${MYPLAYGROUND})
   add_subdirectory(${MYPLAYGROUND} ${MYPLAYGROUND})

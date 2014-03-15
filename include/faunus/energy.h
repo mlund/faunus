@@ -10,7 +10,6 @@
 #include <faunus/textio.h>
 #include <faunus/potentials.h>
 #include <faunus/auxiliary.h>
-#include <faunus/analysis.h>
 #endif
 
 namespace Faunus {
@@ -1009,8 +1008,63 @@ namespace Faunus {
       };
 
     /**
+     * @brief Restrain a group mass center within a certain z-axis interval [bin_min:bin_max]
+     * @author Joao Henriques
+     * @date Lund, 2013     
+     * 
+     * This energy class will restrain the mass center of a given group within a certain window/bin along the z-axis.
+     * Mainly for use with free energy vs. surface distance simulations, where the the surface is too attractive and prevents
+     * correct sampling. Can also be used to restrain the mass center of a group to a subset of the simulation cell volume in 
+     * other type of systems.
+     *
+     * The InputMap parameters are:
+     *
+     * Key                | Description
+     * :----------------- | :---------------------------
+     * `bin_min`          | Lower limit (always positive, i.e. from 0 to `cuboid_zlen`), [angstrom]
+     * `bin_max`          | Higher limit (from `bin_min` to `cuboid_zlen`), [angstrom]
+     *
+     */
+    template<class Tspace>
+      class MassCenterRestrain : public Energybase<Tspace> {
+        private:
+          typedef Energybase<Tspace> base;
+          typedef typename Tspace::p_vec Tpvec;
+          string _info() {
+            std::ostringstream o;
+            o << pad(textio::SUB,25,"Bin limits (z-axis)") << "[" << min << ":" << max << "]" << textio::_angstrom << endl;
+            return o.str();
+          };
+          double min, max;
+          Group* gPtr;
+        public:
+          MassCenterRestrain(InputMap &in) {
+            min = in.get<double>("bin_min", 0);
+            max = in.get<double>("bin_max", pc::infty);
+            base::name = "Mass Center Restrain";
+            gPtr = nullptr;
+          }
+          void add(Group &g) {
+            gPtr = &g;
+          }
+          double g_external(const Tpvec &p, Group &g) {
+            if (&g != gPtr)
+              return 0;
+            double boxlenz = base::spc->geo.len.z();
+            double mc = Geometry::massCenter(base::spc->geo, p, g).z() + (boxlenz / 2);
+            if (mc >= min && mc <= max)
+              return 0;
+            else
+              return pc::infty;
+          }
+        double i_external(const Tpvec &p, int i) {
+          auto gi = base::spc->findGroup(i);
+          return g_external(p, *gi);
+        }
+      };
+
+    /**
      * @brief Constrain two group mass centra within a certain distance interval [mindist:maxdist]
-     * @author Mikael Lund
      * @date Lund, 2012
      * @todo Prettify output
      *
@@ -1022,24 +1076,80 @@ namespace Faunus {
      * In the following example,
      * the distance between `mygroup1` and `mygroup2` are constrained to the range `[10:50]` angstrom:
      * @code
-     * Energy::Hamiltonian pot;
-     * auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
-     * auto constrain = pot.create( Energy::MassCenterConstrain(pot.getGeometry()) );
-     * constrain->addPair( mygroup1, mygroup2, 10, 50); 
+     * InputMap mcp;
+     * Energy::MassCenterConstrain<Tspace> constrain(mcp);
+     * constrain.addPair( mygroup1, mygroup2, 10, 50); 
      * @endcode
+     *
+     * The `addPair` function can be called without distance interval in
+     * which case the default window is used. This is read during 
+     * construction with the keywords `cmconstrain_min` and
+     * `cmconstrain_max`.
      */
     template<typename Tspace>
       class MassCenterConstrain : public Energybase<Tspace> {
         private:
-          string _info();
+          string _info() {
+            using namespace Faunus::textio;
+            std::ostringstream o;
+            o << indent(SUB) << "The following groups have mass center constraints:\n";
+            for (auto &m : gmap)
+              o << indent(SUBSUB) << m.first.first->name << " " << m.first.second->name
+                << " " << m.second.mindist << "-" << m.second.maxdist << _angstrom << endl;
+            return o.str();
+          }
+
           struct data {
             double mindist, maxdist;
           };
+
+          data defaultWindow;
+
           std::map<opair<Faunus::Group*>, data> gmap;
+
         public:
-          MassCenterConstrain(Geometry::Geometrybase&);      //!< Constructor
-          void addPair(Group&, Group&, double, double);      //!< Add constraint between two groups
-          double g_external(const p_vec&, Group&) FOVERRIDE; //!< Constrain treated as external potential
+
+          MassCenterConstrain(InputMap &in) {
+            this->name="Group Mass Center Distance Constraints";
+            defaultWindow.mindist = in("cmconstrain_min", 0.0);
+            defaultWindow.maxdist = in("cmconstrain_max", 1.0e20);
+
+            assert(defaultWindow.mindist<defaultWindow.maxdist);
+            assert(defaultWindow.mindist>0);
+            assert(defaultWindow.maxdist>0);
+          }
+
+          /** @brief Add constraint between two groups */
+          void addPair(Group &a, Group &b, double mindist, double maxdist) {
+            data d = {mindist, maxdist};
+            opair<Group*> p(&a, &b);
+            gmap[p] = d;
+          }
+
+          /** @brief Add constraint between two groups - distances read from user input */
+          void addPair(Group &a, Group &b) {
+            addPair(a,b,defaultWindow.mindist,defaultWindow.maxdist);
+          }
+
+          /** @brief Constrain treated as external potential */
+          double g_external(const p_vec &p, Group &g1) {
+            for (auto m : gmap)              // scan through pair map
+              if (m.first.find(&g1)) {       // and look for group g1
+                Group *g2ptr;                // pointer to constrained partner
+                if (&g1 == m.first.first)
+                  g2ptr = m.first.second;
+                else
+                  g2ptr = m.first.first;
+                Point cma = Geometry::massCenter(this->getSpace().geo, p, g1);
+                Point cmb = Geometry::massCenter(this->getSpace().geo, p, *g2ptr);
+                double r2 = this->getSpace().geo.sqdist(cma,cmb);
+                double min = m.second.mindist;
+                double max = m.second.maxdist;
+                if (r2<min*min || r2>max*max) 
+                  return pc::infty;
+              }
+            return 0;
+          }
       };
 
     /**

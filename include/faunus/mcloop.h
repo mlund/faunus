@@ -94,6 +94,10 @@ namespace Faunus {
       string timing();             //!< Show macrostep middle time and ETA.
       bool macroCnt();             //!< Increase and test macro loop counter
       bool microCnt();             //!< Increase and test micro loop counter
+
+      inline unsigned int getMacroCnt() const {
+        return cnt_macro;
+      }
   };
 
   MCLoop::MCLoop(InputMap &in, string pfx) : cnt( in.get<int>(pfx+"macrosteps",10)) {
@@ -110,7 +114,7 @@ namespace Faunus {
     o << header("MC Steps and Time")
       << pad(SUB,w,"Steps (macro micro tot)") << macro << "\u2219" << micro << " = " << macro*micro << endl
       << pad(SUB,w,"Remaining steps") << macro*micro - count() << endl;
-    int t=cnt.elapsed();
+    int t=cnt.elapsed(); // in seconds
     if (t>5) {
       o << pad(SUB,w,"Time elapsed") << t/(3600.) << " h" << endl
         << pad(SUB,w,"Steps/minute") << macro*micro/(t/60.) << endl;

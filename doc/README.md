@@ -8,7 +8,7 @@ molecular systems. Below is a brief overview of features:
 - General hamiltonian **parallel tempering** (temperature, screening length, bonds etc.)
 - **Anisotropic** atoms (multipoles, sphero-cylinders)
 - Ion titration moves (pKa prediction, Hofmeister effects etc.)
-- Highy expandable
+- Highy modular
 - Free and open source (**GPL**)
 
 Detailed information and support:
@@ -17,7 +17,7 @@ Detailed information and support:
 - Support: <http://github.com/mlund/faunus/issues>
 - Source code: <http://github.com/mlund/faunus>
 
-Get the latest resivion from GitHub:
+Get the latest revision from GitHub:
 
     $ git clone https://github.com/mlund/faunus.git
 
@@ -86,10 +86,15 @@ In chronological order:
 Ondrej Marsalek     Christophe Labbez     Andre Teixeira     
   Anil Kurut           Chris Evers         Magnus Ullner      
  Robert Vacha         Axel Thuresson      Bjorn Stenqvist
+ Joao Henriques        Giulio Tesei
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Citing Faunus
 =============
+
+- Stenqvist et al.
+  _Molecular Simulation 2013, 39:1233_
+  [[DOI]](http://dx.doi.org/10/nvn)
 
 - Lund, M., Persson, B., Trulsson, M.
   _Source Code Biol. Med., 2008, 3:1_
@@ -98,7 +103,7 @@ Citing Faunus
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
  Faunus - A Framework for Molecular Modelling 
- Copyright (C) 2002-2013 Mikael Lund 
+ Copyright (C) 2002-2014 Mikael Lund 
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by

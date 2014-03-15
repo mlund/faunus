@@ -1,7 +1,6 @@
 #ifndef FAUNUS_ANALYSIS_H
 #define FAUNUS_ANALYSIS_H
 
-#ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/average.h>
 #include <faunus/physconst.h>
@@ -9,14 +8,13 @@
 #include <faunus/space.h>
 #include <faunus/point.h>
 #include <faunus/textio.h>
+#include <faunus/energy.h>
 #include <Eigen/Core>
-#endif
 
 #include <chrono>
 #include <thread>
 
 namespace Faunus {
-  class checkValue;
 
   /**
    * @brief Namespace for analysis routines
@@ -66,7 +64,7 @@ namespace Faunus {
      * \right >_{NVT}
      * @f]
      * where @f$r@f$ and @f$f@f$ are the distance and force, @f$V@f$ the system volume,
-     * and the excess pressure scalar is simply the trace of @f$\mathcal{P}@f$.
+     * and the excess pressure scalar is the trace of @f$\mathcal{P}@f$.
      * The trivial kinetic contribution is currently not included.
      *
      * References:
@@ -75,9 +73,7 @@ namespace Faunus {
      * - <http://dx.doi.org/10/fspzcx>
      *
      * @todo At the moment this analysis is limited to "soft" systems only,
-     * i.e. for non-rigid systems with continuous potentials. By including
-     * a group controlled loop this could easily be remedied.
-     *
+     * i.e. for non-rigid systems with continuous potentials.
      */
     class VirialPressure : public AnalysisBase {
       private:
@@ -167,12 +163,17 @@ namespace Faunus {
         bool noMolecularPressure;
 
         template<class Tspace, class Tpotential>
-          void sample(Tspace &spc, Tpotential &pot, int d=3) {
+          void sample(Tspace &spc, Tpotential &pot, int d=3, double area=0) {
             cnt++;
             Ttensor t;
             t.setZero();
+
             int N=spc.p.size();
             double V=spc.geo.getVolume();
+            if (d==2) {
+              assert(area>0 && "Area must be specified for 2D sampling");
+              V=area;
+            }
 
             // loop over groups internally
             for (auto g : spc.groupList()) {
@@ -202,10 +203,8 @@ namespace Faunus {
      * @date Lund 2011
      * @note `Tx` is used as the `std::map` key and which may be
      * problematic due to direct floating point comparison (== operator).
-     * We have not experienced any issues with this, though.
-     *
-     * @todo We get correct behavior, but is it really OK to have
-     * virtual functions in class templates??
+     * We have not experienced any issues with this, though. This uses
+     * `std::map` and table lookup is of complexity logarithmic with N.
      */
     template<typename Tx, typename Ty>
       class Table2D {
@@ -254,52 +253,52 @@ namespace Faunus {
 
           /** @brief Save table to disk */
           template<class T=double>
-          void save(string filename, T scale=1) {
-            if (tabletype==HISTOGRAM) {
-              if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
-              if (map.size()>1) (--map.end())->second*=2; // -//-
-            }
-
-            if (!map.empty()) {
-              std::ofstream f(filename.c_str());
-              f.precision(10);
-              if (f) {
-                for (auto m : map)
-                  f << m.first << " " << get( m.first ) * scale << "\n";
+            void save(string filename, T scale=1) {
+              if (tabletype==HISTOGRAM) {
+                if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
+                if (map.size()>1) (--map.end())->second*=2; // -//-
               }
-            }
 
-            if (tabletype==HISTOGRAM) {
-              if (!map.empty()) map.begin()->second/=2;   // restore half bin width
-              if (map.size()>1) (--map.end())->second/=2; // -//-
-            }
-          }
-          
-          /** @brief Sums up all previous elements and saves table to disk */
-          template<class T=double>
-          void sumSave(string filename, T scale=1) {
-            if (tabletype==HISTOGRAM) {
-              if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
-              if (map.size()>1) (--map.end())->second*=2; // -//-
-            }
-
-            if (!map.empty()) {
-              std::ofstream f(filename.c_str());
-              f.precision(10);
-              if (f) {
-                Tx sum_t = 0.0;
-                for (auto m : map) {
-                  sum_t += get( m.first );
-                  f << m.first << " " << sum_t * scale << "\n";
+              if (!map.empty()) {
+                std::ofstream f(filename.c_str());
+                f.precision(10);
+                if (f) {
+                  for (auto m : map)
+                    f << m.first << " " << get( m.first ) * scale << "\n";
                 }
               }
+
+              if (tabletype==HISTOGRAM) {
+                if (!map.empty()) map.begin()->second/=2;   // restore half bin width
+                if (map.size()>1) (--map.end())->second/=2; // -//-
+              }
             }
 
-            if (tabletype==HISTOGRAM) {
-              if (!map.empty()) map.begin()->second/=2;   // restore half bin width
-              if (map.size()>1) (--map.end())->second/=2; // -//-
+          /** @brief Sums up all previous elements and saves table to disk */
+          template<class T=double>
+            void sumSave(string filename, T scale=1) {
+              if (tabletype==HISTOGRAM) {
+                if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
+                if (map.size()>1) (--map.end())->second*=2; // -//-
+              }
+
+              if (!map.empty()) {
+                std::ofstream f(filename.c_str());
+                f.precision(10);
+                if (f) {
+                  Tx sum_t = 0.0;
+                  for (auto m : map) {
+                    sum_t += get( m.first );
+                    f << m.first << " " << sum_t * scale << "\n";
+                  }
+                }
+              }
+
+              if (tabletype==HISTOGRAM) {
+                if (!map.empty()) map.begin()->second/=2;   // restore half bin width
+                if (map.size()>1) (--map.end())->second/=2; // -//-
+              }
             }
-          }
 
           Tmap getMap() {
             return map;
@@ -657,7 +656,7 @@ namespace Faunus {
                 }
               }
             }
-            
+
           // Same as sampeMolecule but different inputs
           template<class Tspace>
             void sampleMoleculeGroup(Tspace &spc, vector<Group> &g, string name) {
@@ -901,26 +900,29 @@ namespace Faunus {
             return spc.geo.vdist( spc.p[pol.front()], spc.p[pol.back()] );
           }
 
+      public:
+        PolymerShape();
+
+        /** 
+         * @note This functions is now public and const. I don't see the point of making it static, yet. - Joao Henriques.
+         */
         template<class Tgroup, class Tspace>
-          Point vectorgyrationRadiusSquared(const Tgroup &pol, const Tspace &spc) {
+          Point vectorgyrationRadiusSquared(const Tgroup &pol, const Tspace &spc) const {
             assert( spc.geo.dist(pol.cm, pol.massCenter(spc))<1e-9
                 && "Mass center must be in sync.");
             double sum=0;
             Point t, r2(0,0,0);
             for (auto i : pol) {
-              t = spc.p[i]-pol.cm;                // vector to center of mass
-              spc.geo.boundary(t);               // periodic boundary (if any)
+              t = spc.p[i]-pol.cm;                     // vector to center of mass
+              spc.geo.boundary(t);                     // periodic boundary (if any)
               r2.x() += spc.p[i].mw * t.x() * t.x();
               r2.y() += spc.p[i].mw * t.y() * t.y();
               r2.z() += spc.p[i].mw * t.z() * t.z();
-              sum += spc.p[i].mw;                 // total mass
+              sum += spc.p[i].mw;                      // total mass
             }
             assert(sum>0 && "Zero molecular weight not allowed.");
             return r2*(1./sum);
           }
-
-      public:
-        PolymerShape();
 
         /** @brief Sample properties of Group (identified by group name) */
         template<class Tgroup, class Tspace>
@@ -1020,6 +1022,165 @@ namespace Faunus {
 
         std::set<string> exclusionlist; //!< Atom names listed here will be excluded from the analysis.
     };
+
+    /**
+     * @brief Multipolar decomposition between groups as a function of separation
+     *
+     * This will analyse the electrostatic energy between two groups as
+     * a function of their mass center separation. Sampling consists of
+     * the following:
+     *
+     * 1. The exact electrostatic energy is calculated by explicitly summing
+     *    Coulomb interactions between charged particles
+     * 2. Each group -- assumed to be a molecule -- is translated into a
+     *    multipole (monopole, dipole, quadrupole)
+     * 3. Multipolar interaction energies are calculated, summed, and tabulated
+     *    together with the exact electrostatic interaction energy. Ideally
+     *    (infinite number of terms) the multipoles should capture full
+     *    electrostatics
+     *
+     * The points 1-3 above will be done as a function of group-to-group
+     * mass center separation.
+     *
+     * Note also that the moments are defined with
+     * respect to the *mass* center, not *charge* center. While for most
+     * macromolecules there is only a minor difference between the two,
+     * the latter is more appropriate and is is planned for a future update.
+     * A simply way to mimic this is to assign zero mass to all neutral
+     * atoms in the molecule.
+     *
+     * The constructor takes the following `InputMap` keywords:
+     *
+     * Keyword             | Note
+     * :------------------ | :--------------------------------------------
+     * `multipoledist_dr`  | Distance resolution - default is 0.2 angstrom
+     *
+     * @date Malmo 2014
+     * @note Needs testing!
+     * @todo Add option to use charge center instead of mass center
+     */
+    template<class Tspace, class Tcoulomb=Potential::Coulomb>
+      class MultipoleDistribution : public AnalysisBase {
+        private:
+          Energy::Nonbonded<Tspace,Tcoulomb> pot; // Coulombic hamiltonian
+
+          string _info() FOVERRIDE {
+            return textio::header("Multipole Analysis");
+          }
+
+          struct data {
+            double tot, ii, id, iq, dd;
+            unsigned long int cnt;
+            data() : cnt(0) {}
+          };
+
+          std::map<int,data> m; // slow, but OK for infrequent sampling
+          double dr;            // distance resolution
+
+          template<class Tgroup>
+            Tensor<double> quadrupoleMoment(const Tspace &s, const Tgroup &g) const {
+              Tensor<double> theta;
+              theta.clear();
+              assert(g.size()<=(int)s.p.size());
+              for (auto i : g) {
+                Point t=s.p[i] - g.cm;
+                s.geo.boundary(t);
+                theta = theta + t*t.transpose()*s.p[i].charge;
+              }
+              return 0.5*theta;
+            }
+
+          // convert group to multipolar particle
+          template<class Tgroup>
+            DipoleParticle toMultipole(const Tspace &spc, const Tgroup &g) const {
+              DipoleParticle m;
+              m = g.cm;
+              m.charge = g.charge(spc.p);            // monopole
+              m.mu = Geometry::dipoleMoment(spc, g); // dipole
+              m.muscalar = m.mu.norm();
+              if (m.muscalar>1e-8)
+                m.mu=m.mu/m.muscalar; 
+              m.theta = quadrupoleMoment(spc, g);    // quadrupole
+              return m;
+            }
+
+        public:
+
+          MultipoleDistribution(InputMap &in) : pot(in) {
+            dr = in.get("multipoledist_dr", 0.1,
+                "Distance resolution of multipole analysis");
+          }
+
+          /**
+           * @brief Sample multipole energy
+           * @param spc Simulation space
+           * @param g1  Group with molecule 1
+           * @param g2  Group with molecule 2
+           * @note Group mass-centers (`Group::cm`) must be up-to-date before
+           *       calling this function
+           */
+          template<class Tmultipole=DipoleParticle>
+            void sample(Tspace &spc, Group &g1, Group &g2) {
+              if (run()) {
+                // multipoles and cm-cm distance
+                auto a = toMultipole(spc,g1);
+                auto b = toMultipole(spc,g2);
+                auto r = spc.geo.vdist(g1.cm, g2.cm);
+                double r2inv = 1/r.squaredNorm();
+                double rinv = sqrt(r2inv);
+                double r3inv = rinv * r2inv;
+
+                // multipolar energy
+                pot.setSpace(spc);
+                data d;
+                d.cnt++;
+                d.tot = pot.g2g(spc.p, g1, g2); // exact el. energy
+                d.ii = a.charge * b.charge * rinv; // ion-ion, etc.
+                d.id = ( a.charge*b.mu.dot(r) - b.charge*a.mu.dot(r) ) * r3inv;
+                d.dd = mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r);
+                d.iq = q2quad(a.charge, b.theta, r) + q2quad(b.charge, a.theta, r);
+
+                // add to grand average
+                int key = to_bin(1/rinv,dr);
+                auto it = m.find(key);
+                if (it==m.end())
+                  m[key]=d;
+                else {
+                  it->second.cnt++;
+                  it->second.ii  += d.ii;
+                  it->second.id  += d.id;
+                  it->second.iq  += d.iq;
+                  it->second.dd  += d.dd;
+                  it->second.tot += d.tot;
+                }
+              }
+            }
+
+          /** @brief Save multipole distribution to disk */
+          void save(const string &filename) const {
+            std::ofstream f(filename.c_str());
+            if (f) {
+              char w=12;
+              auto lB=pot.pairpot.bjerrumLength();
+              f.precision(4);
+              f << "# Multipolar energy analysis (kT)\n"
+                << std::left << setw(w) << "# r/AA" << std::right << setw(w) << "exact"
+                << setw(w) << "total" << setw(w) << "ionion" << setw(w) << "iondip"
+                << setw(w) << "dipdip" << setw(w) << "ionquad\n";
+              for (auto &i : m)
+                f << std::left
+                  << setw(w) << i.first*dr                  // r
+                  << std::right
+                  << setw(w) << i.second.tot/i.second.cnt   // exact (already in kT)
+                  << setw(w) << lB*(i.second.ii+i.second.id+i.second.dd+i.second.iq)/i.second.cnt // total
+                  << setw(w) << lB*i.second.ii/i.second.cnt // individual poles...
+                  << setw(w) << lB*i.second.id/i.second.cnt
+                  << setw(w) << lB*i.second.dd/i.second.cnt
+                  << setw(w) << lB*i.second.iq/i.second.cnt
+                  << "\n";
+            }
+          }
+      };
 
     /**
      * @brief Widom method for excess chemical potentials
@@ -1396,8 +1557,10 @@ namespace Faunus {
     };
 
     /**
-     * @brief Class to calculate dielectric constant outside the cutoff limit. Using atomic units.
-     *        [Neumann, M. (1983) Mol. Phys., 50, 841-858].
+     * @brief Analyse dielectric constant outside the cutoff limit.
+     *
+     * @note Using atomic units.
+     * @note [Neumann, M. (1983) Mol. Phys., 50, 841-858].
      *
      * @param spc The space
      * @param cutoff The cutoff of the reaction field
@@ -1409,7 +1572,7 @@ namespace Faunus {
         Analysis::Table2D<double,Average<double> > mucorr, mucorr_dist;       // dipole-dipole <\hat{mu}(0)\cdot \hat{mu}(r)>   ,    < 0.5 * ( 3 * cos^2(theta) - 1 ) >
         Analysis::Histogram<double,unsigned int> PM_x,PM_y,PM_z,PM_x_box,PM_y_box,PM_z_box,PM2,PM2_box; // Probability distributions for components of M
         Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std;
-        
+
         int sampleKW;
         double cutoff2;                // \AA^2
         double volume, N;              // \AA^3
@@ -1417,16 +1580,21 @@ namespace Faunus {
 
       public:
         template<class Tspace>
-          DipoleAnalysis(const Tspace &spc, const string filename="") : rdf(0.1),kw(0.1),mucorr_angle(0.1),mucorr(0.1),mucorr_dist(0.1),PM_x(0.1),PM_y(0.1),PM_z(0.1),PM_x_box(0.1),PM_y_box(0.1),PM_z_box(0.1),PM2(0.1),PM2_box(0.1) {
+          DipoleAnalysis(const Tspace &spc, const string filename="") :
+          rdf(0.1), kw(0.1), mucorr_angle(0.1), mucorr(0.1),
+          mucorr_dist(0.1),PM_x(0.1),PM_y(0.1),PM_z(0.1),PM_x_box(0.1),
+          PM_y_box(0.1),PM_z_box(0.1),PM2(0.1),PM2_box(0.1) {
             cutoff2 = pow(spc.geo.len_half.x(),2);
             volume = spc.geo.getVolume();
             N = spc.p.size();
             const_DielTinfoil = pc::e*pc::e*1e10/(3*volume*pc::kT()*pc::e0);
             sampleKW = 0;
-            cout << "Before load Mx! cnt, average, sqsum: " << M_x.cnt << ", " << M_x.avg() << ", " << M_x.sqsum << endl;
+            cout << "Before load Mx! cnt, average, sqsum: "
+              << M_x.cnt << ", " << M_x.avg() << ", " << M_x.sqsum << endl;
             load(filename);
-            
-            cout << "After load Mx! cnt, average, sqsum: " << M_x.cnt << ", " << M_x.avg() << ", " << M_x.sqsum << endl;
+
+            cout << "After load Mx! cnt, average, sqsum: "
+              << M_x.cnt << ", " << M_x.avg() << ", " << M_x.sqsum << endl;
           }
 
         void setCutoff(double cutoff) {
@@ -1454,7 +1622,7 @@ namespace Faunus {
             mu_box += mu;
             samplePP(spc,mu,mu_box);
           }
-          
+
         /**
          * @brief Samples dipole-moment from point particles.
          * 
@@ -1468,7 +1636,7 @@ namespace Faunus {
             all.setMassCenter(spc);
             mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
             mu_box += Geometry::dipoleMoment(spc,all);
-            
+
             PM_x(mu.x())++;
             PM_y(mu.y())++;
             PM_z(mu.z())++;
@@ -1489,42 +1657,42 @@ namespace Faunus {
             M2_box += sca;
             diel_std.add(getDielTinfoil());
           }
-        
+
         /**
          * @brief Samples g(r), <\mu(0) \cdot \mu(r)>, <\frac{1}{2} ( 3*\mu(0) \cdot \mu(r) - 1 )>, Histogram(\mu(0) \cdot \mu(r)) and distant-dependent Kirkwood-factor.
          * 
          * @param spc The space
-         *
          */
         template<class Tspace>
-        void sampleMuCorrelationAndKirkwood(Tspace &spc) {
-          double r, sca;
-          int N = spc.p.size() - 1;
-          for (int i = 0; i < N; i++) {
-            kw(0) += spc.p[i].mu.dot(spc.p[i].mu)*spc.p[i].muscalar*spc.p[i].muscalar;
-            for (int j = i+1.; j < N + 1; j++) {
-              r = spc.geo.dist(spc.p[i],spc.p[j]); 
-              rdf(r)++;
-              sca = spc.p[i].mu.dot(spc.p[j].mu);
-              mucorr_angle(sca) += 1.;
-              mucorr(r) += sca;
-              mucorr_dist(r) += 0.5*(3*sca*sca -1.);
-              kw(r) += 2*sca*spc.p[i].muscalar*spc.p[j].muscalar;
+          void sampleMuCorrelationAndKirkwood(Tspace &spc) {
+            double r, sca;
+            int N = spc.p.size() - 1;
+            for (int i = 0; i < N; i++) {
+              kw(0) += spc.p[i].mu.dot(spc.p[i].mu)*spc.p[i].muscalar*spc.p[i].muscalar;
+              for (int j = i+1.; j < N + 1; j++) {
+                r = spc.geo.dist(spc.p[i],spc.p[j]); 
+                rdf(r)++;
+                sca = spc.p[i].mu.dot(spc.p[j].mu);
+                mucorr_angle(sca) += 1.;
+                mucorr(r) += sca;
+                mucorr_dist(r) += 0.5*(3*sca*sca -1.);
+                kw(r) += 2*sca*spc.p[i].muscalar*spc.p[j].muscalar;
+              }
             }
+            kw(0) += spc.p[N].mu.dot(spc.p[N].mu)*spc.p[N].muscalar*spc.p[N].muscalar;
+            sampleKW++;
           }
-          kw(0) += spc.p[N].mu.dot(spc.p[N].mu)*spc.p[N].muscalar*spc.p[N].muscalar;
-          sampleKW++;
-        }
-        
+
         /**
          * @brief Returns dielectric constant with to Tinfoil conditions.
+         *
          * 1 + ( ( ( 4 * pi * <M^2> ) / ( 3 * V * kT ) ) / ( 4 * pi * e0 ) )
          * 1 + ( <M^2> / ( 3 * V * kT * e0) )
          */
         double getDielTinfoil() {
           return ( 1 + M2_box.avg()*const_DielTinfoil); 
         }  
-        
+
         void save(string nbr="") {
           rdf.save("gofr.dat"+nbr);
           mucorr.save("mucorr.dat"+nbr);
@@ -1539,7 +1707,7 @@ namespace Faunus {
           PM_z_box.save("proTotDip_z_box.dat"+nbr);
           PM2.save("proTotDip2.dat"+nbr);
           PM2_box.save("proTotDip2_box.dat"+nbr);
-          
+
           string filename = "dipoledata.dat"+nbr;
           std::ofstream f(filename.c_str());
           f.precision(10);
@@ -1555,7 +1723,7 @@ namespace Faunus {
             if (diel_std.cnt != 0) f << "\ndiel_std " << diel_std.cnt << " " << diel_std.avg() << " " << diel_std.sqsum;
           }
         }
-        
+
         /**
          * @warning Does not work right!
          */
@@ -1573,7 +1741,7 @@ namespace Faunus {
           PM_z_box.load("proTotDip_z_box.dat"+nbr);
           PM2.load("proTotDip2.dat"+nbr);
           PM2_box.load("proTotDip2_box.dat"+nbr);
-          
+
           string filename = "dipoledata.dat"+nbr;
           std::ifstream f(filename.c_str());
           string name;
@@ -1589,7 +1757,7 @@ namespace Faunus {
           M2.reset();
           M2_box.reset();
           diel_std.reset();
-          
+
           if (f) {
             while (!f.eof()) {
               f >> name >> cnt >> average >> sqsum;
@@ -1631,9 +1799,9 @@ namespace Faunus {
                 diel_std = diel_std + diel_stdt;
               }
             }
-            
+
           }
-          
+
         }
 
         inline string info() {
@@ -1641,9 +1809,9 @@ namespace Faunus {
           std::ostringstream o;
           o << header("Dipole analysis");
           o << indent(SUB) << epsilon_m+subr+"(Tinfoil)" << setw(22) << getDielTinfoil() << ", "+sigma+"=" << diel_std.stdev() << ", "+sigma+"/"+epsilon_m+subr+"=" << (100*diel_std.stdev()/getDielTinfoil()) << percent << endl
-          << indent(SUB) << bracket("M"+squared) << setw(27) << pc::eA2D(M2_box.avg(),2) << " Debye"+squared+", "+sigma+"=" << pc::eA2D(M2_box.stdev(),2) << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg()) << percent << endl
-          << indent(SUB) << bracket("M") << setw(25) << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl 
-          << indent(SUBSUB) << sigma << setw(25) << "( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl;
+            << indent(SUB) << bracket("M"+squared) << setw(27) << pc::eA2D(M2_box.avg(),2) << " Debye"+squared+", "+sigma+"=" << pc::eA2D(M2_box.stdev(),2) << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg()) << percent << endl
+            << indent(SUB) << bracket("M") << setw(25) << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl 
+            << indent(SUBSUB) << sigma << setw(25) << "( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl;
           return o.str();
         }
     };
@@ -1774,9 +1942,11 @@ namespace Faunus {
           }
 
           /**
-           * @brief The Ljung-Box test is a statistical test. It tests if a group of autocorrelations differ from zero, 
-           *        based on a number of lags. Initially it was developed for ARMA-processes. It is a portmanteau test.
-           *        DOI: 10.1093/biomet/65.2.297
+           * @brief The Ljung-Box test is a statistical test.
+           *
+           * This tests if a group of autocorrelations differ from zero, 
+           * based on a number of lags. Initially it was developed for ARMA-processes.
+           * It is a portmanteau test. More info at DOI: 10.1093/biomet/65.2.297
            *
            * @param alpha The significance of the test. With a probability of \f$ (1-\alpha)*100 \f$ % the result is true.
            */
@@ -1792,10 +1962,14 @@ namespace Faunus {
           }
 
           /**
-           * @brief The Box-Pierce test is a statistical test. It tests if a group of autocorrelations differ from zero. 
-           *        It tests the wider randomness based on a number of lags. This is more simple, and not as accurate, as the Ljung_Box test.
+           * @brief The Box-Pierce test is a statistical test.
            *
-           * @param alpha The significance of the test. With a probability of \f$ (1-\alpha)*100 \f$ % the result is true.
+           * This tests if a group of autocorrelations differ from zero. 
+           * It tests the wider randomness based on a number of lags.
+           * This is more simple, and not as accurate, as the Ljung_Box test.
+           *
+           * @param alpha The significance of the test. With a probability of
+           * \f$ (1-\alpha)*100 \f$ % the result is true.
            */
           bool BoxPierce(double alpha) {
             double Q = 0.0;
@@ -1809,8 +1983,10 @@ namespace Faunus {
           }
 
           /**
-           * @brief Hypergeometric function. This function uses \f$ x=(x)_1=(x)_2=... \f$ for x=a,x=b and x=c.
-           *        \f$ F_1(a,b,c;z) = \sum_{n=0}^{\infty}\frac{(a)_n(b)_n}{(c)_n}\frac{z^n}{n!} \f$
+           * @brief Hypergeometric function.
+           *
+           * This function uses \f$ x=(x)_1=(x)_2=... \f$ for x=a,x=b and x=c.
+           * \f$ F_1(a,b,c;z) = \sum_{n=0}^{\infty}\frac{(a)_n(b)_n}{(c)_n}\frac{z^n}{n!} \f$
            * 
            * @param a Coefficient (usually a vector) 
            * @param b Coefficient (usually a vector) 
@@ -1835,7 +2011,8 @@ namespace Faunus {
           /**
            * @brief Student's t-test distribution
            * 
-           * @param alpha The significance of the test. With a probability of \f$ (1-\alpha)*100 \f$ % the result is true.
+           * @param alpha The significance of the test.
+           *        With a probability of \f$ (1-\alpha)*100 \f$ % the result is true.
            * @param dof Degrees of freedom.
            */
           double studentTdistribution(double alpha, int dof, double x_step=0.01) {

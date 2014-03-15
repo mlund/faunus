@@ -66,7 +66,7 @@ int main() {
   return test.numFailed();
 }
 /**  @page example_stockmayer Example: Stockmayer potential
- *
+
  This will simulate a Stockmayer potential in a cubic box.
 
  Run this example from the `examples` directory:

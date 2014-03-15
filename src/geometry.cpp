@@ -64,7 +64,6 @@ namespace Faunus {
         double vol;
         f >> vol;
         setVolume(vol);
-        f.close();
         return true;
       }
       std::cerr << "!! Geometry data NOT read from file " << file << endl;
@@ -215,7 +214,6 @@ namespace Faunus {
         if (f) {
           f >> l.x() >> l.y() >> l.z();
           setlen(l);
-          f.close();
           return true;
         }
       }

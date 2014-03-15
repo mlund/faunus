@@ -14,16 +14,14 @@ namespace Faunus {
    */
   class RandomBase {
     private:
-      virtual double _randone()=0;  //!< Random number in range `[0:1[`
+      virtual double _randone()=0;  //!< Random number in range `[0,1)`
     public:
       std::string name;
       virtual ~RandomBase();
-      virtual void seed(int=0)=0;   //!< Seed random generator
-      double randHalf();            //!< Random number in range `[-0.5:0.5[`
-      unsigned int rand();          //!< Random number in range `[0:max unsigned int[`
-      /*!
-       * \brief Random number in range [0:1[
-       */
+      double randHalf();            //!< Random number in range `[-0.5,0.5)`
+      unsigned int rand();          //!< Random number in range `[0,max unsigned int)`
+
+      /** @brief Random number in range [0,1) */
       inline double operator()() {
         double x=_randone();
         assert(x>=0 && x<1 && "Random number out of range!");
@@ -59,8 +57,8 @@ namespace Faunus {
   /**
    * @brief Mersenne Twister Random number functions (C++11)
    *
-   * This uses the C++11 Mersenne Twister for random number generations and while
-   * quite slow ran2, MT generally provides better randomness.
+   * This uses the C++11 Mersenne Twister for random number generation and while
+   * slower than ran2, MT generally provides better randomness.
    *
    * @date Lund, 2010
    */
@@ -78,13 +76,20 @@ namespace Faunus {
       public:
         RandomTwister() : dist(0,1) {
           name="Mersenne Twister";
-          //std::random_device rd;
-          //eng.seed( rd() );
         }
-        void seed(int s) {
+
+        /**
+         * @brief Seed generator
+         *
+         * The default value is obtained from `std::random_device`
+         * but an integer can be given as well. Note that `seed()`
+         * is *not* called upon construction.
+         */
+        template<typename Tint>
+          void seed(Tint s=std::random_device()) {
 #pragma omp critical
-          eng.seed(s);
-        }
+            eng.seed(s);
+          }
     };
 
 #if defined(MERSENNETWISTER)

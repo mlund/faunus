@@ -11,7 +11,7 @@ namespace Faunus {
   /**
    * @brief Approximation of erfc-function
    * @param x Value for which erfc should be calculated 
-   * @details Reference for this approximation is found in Abramowitz and Stegun,
+   * @details Reference for this approximation is found in Abramowitz and Stegun, 
    *          Handbook of mathematical functions, eq. 7.1.26
    *
    * @f[
@@ -50,7 +50,7 @@ namespace Faunus {
   }
 
   /**
-   * @brief Returns NemoType1-interaction (Exponential Repulsion) Needs to be checked!
+   * @brief Returns NemoType1-interaction (Exponential Repulsion)                         Needs to be checked!
    * @param vec Vector with parameters. Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab}] \f$  
    * @param r Vector between particles
    * @param expmax Maximum exponential coefficient (optional)
@@ -71,7 +71,7 @@ namespace Faunus {
     }
 
   /**
-   * @brief Returns NemoType2-interaction (r-7 Repulsion) Needs to be checked!
+   * @brief Returns NemoType2-interaction (r-7 Repulsion)                         Needs to be checked!
    * @param vec Vector with parameters. Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab}] \f$  
    * @param r Vector between particles
    * @param expmax Maximum exponential coefficient (optional)
@@ -91,7 +91,7 @@ namespace Faunus {
     }
 
   /**
-   * @brief Returns NemoType3-interaction (Modified Interactions) Needs to be checked!
+   * @brief Returns NemoType3-interaction (Modified Interactions)                         Needs to be checked!
    * @param vec Vector with parameters. Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab} n_{ab}] \f$  
    * @param r Vector between particles
    */
@@ -109,9 +109,8 @@ namespace Faunus {
 
   /**
    * @brief Returns NemoType4-interaction (Damping Exponential)
-   * @param vec Vector with parameters.
-   *            Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab} e_{ab} f_{ab} n_{ab}] \f$  
-   * @param r   Vector between particles
+   * @param vec Vector with parameters. Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab} e_{ab} f_{ab} n_{ab}] \f$  
+   * @param r Vector between particles
    * @param expmax Maximum exponential coefficient (optional)
    */
   template<class Tvec>
@@ -157,9 +156,8 @@ namespace Faunus {
     }
 
   /**
-   * @brief Returns NemoType6-interaction (Full Damping chtr) Needs to be checked!
-   * @param vec Vector with parameters.
-   *        Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab} e_{ab} f_{ab} n_{ab}] \f$  
+   * @brief Returns NemoType6-interaction (Full Damping chtr)                         Needs to be checked!
+   * @param vec Vector with parameters. Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab} e_{ab} f_{ab} n_{ab}] \f$  
    * @param r Vector between particles
    * @param expmax Maximum exponential coefficient (optional)
    */
@@ -187,9 +185,8 @@ namespace Faunus {
     }
 
   /**
-   * @brief Returns NemoType7-interaction (Full Damping chtr gaussian) Needs to be checked!
-   * @param vec Vector with parameters.
-   * Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab} e_{ab} f_{ab} n_{ab}  a_{cht} k_{cht}] \f$  
+   * @brief Returns NemoType7-interaction (Full Damping chtr gaussian)                         Needs to be checked!
+   * @param vec Vector with parameters. Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab} e_{ab} f_{ab} n_{ab}  a_{cht} k_{cht}] \f$  
    * @param r Vector between particles
    * @param expmax Maximum exponential coefficient (optional)
    */
@@ -231,7 +228,7 @@ namespace Faunus {
       double W2 = QAxMuB*muB.dot(-r)*r3i;
       return (W1+W2);
     }
-
+    
   /**
    * @brief Returns dipole-dipole interaction
    *
@@ -280,33 +277,34 @@ namespace Faunus {
    * to be used as a helper class for other classes.
    */
   class WolfBase {
-    private:
-      struct wdata {
-        double r2i, T1, Tc1_r1i, der_dTc1_r1i, T2_1, T2_2, Tc2_2_r2i, der_dTc2_1, der_dTc2_2_r2i;
+      
+    struct wdata {
+        double r1i_d, r2i, der_dT0c, T1, T1c_r1i, der_dT1c_r1i, T21, T22, T2c2_r2i, der_dT2c1, der_dT2c2_r2i;
       };
-
-      double rc1, rc2i, kappa, kappa2, constant;
-      double Tc1, Tc2_1, Tc2_2, dTc1, dTc2_1, dTc2_2;
+    private:
+      double rc1, rc1i, rc1i_d, rc2i, kappa, kappa2, constant;
+      double dT0c, T1c_rc1, dT1c_rc1, T2c1, T2c2_rc2, dT2c1, dT2c2_rc2;
       wdata data;
 
     public:
-      template<class Tparticle>
-        void calcWolfData(const Tparticle &a, const Tparticle &b, const Point &r) {
+        void calcWolfData(const Point &r) {
           data.r2i = 1/r.squaredNorm();
           double r1i = sqrt(data.r2i);
-          double r1i_d = erfc_x(kappa/r1i)*r1i;
+          data.r1i_d = erfc_x(kappa/r1i)*r1i;
           double der = (1/r1i) - rc1;
+          der = 0;
           double expK = constant*exp(-kappa2/data.r2i);
-          data.T1 = (expK + r1i_d)*data.r2i;
-          data.Tc1_r1i = Tc1*r1i;
-          data.der_dTc1_r1i = der*dTc1*r1i;
-          data.T2_1 = -(r1i_d + expK)*data.r2i;
-          data.T2_2 = (3.*r1i_d*data.r2i + (3.*data.r2i + 2.*kappa2)*expK)*data.r2i;
-          data.Tc2_2_r2i = Tc2_2*data.r2i;
-          data.der_dTc2_1 = der*dTc2_1;
-          data.der_dTc2_2_r2i = der*dTc2_2*data.r2i;
+          data.der_dT0c = der*dT0c;
+          data.T1 = (expK + data.r1i_d)*data.r2i;
+          data.T1c_r1i = T1c_rc1*r1i;
+          data.der_dT1c_r1i = der*dT1c_rc1*r1i;
+          data.T21 = -(data.r1i_d + expK)*data.r2i;
+          data.T22 = (3.*data.r1i_d*data.r2i + (3.*data.r2i + 2.*kappa2)*expK)*data.r2i;
+          data.T2c2_r2i = T2c2_rc2*data.r2i;
+          data.der_dT2c1 = der*dT2c1;
+          data.der_dT2c2_r2i = der*dT2c2_rc2*data.r2i;
         }
-
+      
       /**
        * @brief Constructor
        * @param alpha Dampening factor (inverse angstrom)
@@ -319,22 +317,53 @@ namespace Faunus {
         rc1 = rcut;
         double rc2 = rc1*rc1;
         rc2i = 1/rc2;
-        double rc1i = 1/rc1;
+        rc1i = 1/rc1;
         double expKc = constant*exp(-kappa2/rc2i);
-        double rc1i_d = erfc_x(kappa*rc1)*rc1i;
+        rc1i_d = erfc_x(kappa*rc1)*rc1i;
 
-        Tc1 = (expKc + rc1i_d)*rc2i;
-        Tc2_1 = -(rc1i_d*rc2i + expKc*rc2i);
-        Tc2_2 = (3.*rc1i_d*rc2i*rc2i + (3.*rc2i + 2.*kappa2)*expKc*rc2i);
-
-        dTc1 = (-2*Tc1/rc1) - 2*kappa2*expKc;
-        dTc2_1 = -(3*Tc2_1/rc1) + (2*kappa2*exp(-rc2*kappa2)*rc1i*constant);
-        dTc2_2 = (-3*Tc2_2/rc1) - (4*kappa2*kappa2*exp(-rc2*kappa2)*rc1i*constant);
-
-        Tc1 = Tc1*rc1;
-        dTc1 = dTc1*rc1;
-        Tc2_2 = Tc2_2*rc2;
-        dTc2_2 = dTc2_2*rc2;
+        T1c_rc1 = (expKc + rc1i_d)*rc2i;
+        T2c1 = -(expKc + rc1i_d)*rc2i;
+        T2c2_rc2 = (3.*rc1i_d*rc2i*rc2i + (3.*rc2i + 2.*kappa2)*expKc*rc2i);
+        
+        dT0c = -(expKc + rc1i_d)*rc1i;
+        dT1c_rc1 = (-2*T1c_rc1/rc1) - 2*kappa2*expKc*rc1i;
+        dT2c1 = -(3*T2c1/rc1) + (2*kappa2*exp(-rc2*kappa2)*rc1i*constant);
+        dT2c2_rc2 = (-3*T2c2_rc2/rc1) - (4*kappa2*kappa2*exp(-rc2*kappa2)*rc1i*constant);
+        
+        T1c_rc1 = T1c_rc1*rc1;
+        dT1c_rc1 = dT1c_rc1*rc1;
+        T2c2_rc2 = T2c2_rc2*rc2;
+        dT2c2_rc2 = dT2c2_rc2*rc2;
+        
+        T1c_rc1 = 0;
+        T2c1 = 0;
+        T2c2_rc2 = 0;
+        dT0c = 0;
+        dT1c_rc1 = 0;
+        dT2c1 = 0;
+        dT2c2_rc2 = 0;
+        rc1i_d = 0;
+      }
+      
+      /**
+       * @brief Returns ion-ion interaction.
+       * @param qA Charge of ion A
+       * @param qB Charge of ion B
+       * @param r Direction \f$ r_A - r_B \f$
+       */
+      template<bool useWdata=false, class Tvec>
+        double q2q(double qA, double qB, const Tvec &r) const {
+          /* Code to use if calcWolfData is not called */
+          if (useWdata==false) {
+            double r2i = 1/r.squaredNorm();
+            if (r2i < rc2i)
+              return 0;
+            double r1i = sqrt(r2i);
+            double der = (1/r1i) - rc1;
+            double r1i_d = erfc_x(kappa/r1i)*r1i;
+            return (qA*qB*(r1i_d - rc1i_d - der*dT0c));
+          }
+          return (qA*qB*(data.r1i_d - rc1i_d - data.der_dT0c));
       }
 
       /**
@@ -345,7 +374,7 @@ namespace Faunus {
        * @param muB Unit dipole moment vector of particel B
        * @param r Direction \f$ r_A - r_B \f$
        */
-      template<class Tvec, bool useWdata=false>
+      template<bool useWdata=false, class Tvec>
         double q2mu(double QBxMuA, const Tvec &muA, double QAxMuB, const Tvec &muB, const Tvec &r) const {
           /* Code to use if calcWolfData is not called */
           if (useWdata==false) {
@@ -355,16 +384,14 @@ namespace Faunus {
             double r1i = sqrt(r2i);
             double T1 = (constant*exp(-kappa2/r2i) + erfc_x(kappa/r1i)*r1i)*r2i;
             double der = (1/r1i) - rc1;
-            double W1 = QBxMuA*muA.dot(r)*(T1 - Tc1*r1i - der*dTc1*r1i);
-            double W2 = QAxMuB*muB.dot(-r)*(T1 - Tc1*r1i - der*dTc1*r1i);
+            double W1 = QBxMuA*muA.dot(r)*(T1 - T1c_rc1*r1i - der*dT1c_rc1*r1i);
+            double W2 = QAxMuB*muB.dot(-r)*(T1 - T1c_rc1*r1i - der*dT1c_rc1*r1i);
             return (W1 + W2);
           }
-          if (data.r2i < rc2i)
-            return 0;
-          double W1 = QBxMuA*muA.dot(r)*(data.T1 - data.Tc1_r1i - data.der_dTc1_r1i);
-          double W2 = QAxMuB*muB.dot(-r)*(data.T1 - data.Tc1_r1i - data.der_dTc1_r1i);
+          double W1 = QBxMuA*muA.dot(r)*(data.T1 - data.T1c_r1i - data.der_dT1c_r1i);
+          double W2 = QAxMuB*muB.dot(-r)*(data.T1 - data.T1c_r1i - data.der_dT1c_r1i);
           return (W1 + W2);
-        }
+      }
 
       /**
        * @brief Dipole-dipole energy
@@ -373,27 +400,25 @@ namespace Faunus {
        * @param muAxmuB Product of dipole moment scalars, |A|*|B|
        * @param r Direction \f$ r_A - r_B \f$
        */
-      template<class Tvec>
+      template<bool useWdata=false, class Tvec>
         double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r) const {
-          /* Code to use if calcWolfData is not called
-             double r2i = 1.0/r.squaredNorm();
-             if (r2i < rc2i)
-             return 0;
-             double r1i = sqrt(r2i);
-             double r1i_d = erfc_x(kappa/r1i)*r1i;
-             double expK = constant*exp(-kappa2/r2i);
-             double T2_1 = -(r1i_d + expK)*r2i;
-             double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
-             double der = (1/r1i) - rc1;
-             double t3 = muA.dot(muB)*(T2_1 - Tc2_1 - der*dTc2_1);
-             double t5 = muA.dot(r)*muB.dot(r)*(T2_2 - Tc2_2*r2i - der*dTc2_2*r2i);
-             return -(t5 + t3)*muAxmuB;
-             */
-
-          if (data.r2i < rc2i)
-            return 0;
-          double t3 = muA.dot(muB)*(data.T2_1 - Tc2_1 - data.der_dTc2_1);
-          double t5 = muA.dot(r)*muB.dot(r)*(data.T2_2 - data.Tc2_2_r2i - data.der_dTc2_2_r2i);
+          /* Code to use if calcWolfData is not called */
+          if (useWdata==false) {
+            double r2i = 1.0/r.squaredNorm();
+            if (r2i < rc2i)
+              return 0;
+            double r1i = sqrt(r2i);
+            double r1i_d = erfc_x(kappa/r1i)*r1i;
+            double expK = constant*exp(-kappa2/r2i);
+            double T2_1 = -(r1i_d + expK)*r2i;
+            double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
+            double der = (1/r1i) - rc1;
+            double t3 = muA.dot(muB)*(T2_1 - T2c1 - der*dT2c1);
+            double t5 = muA.dot(r)*muB.dot(r)*(T2_2 - T2c2_rc2*r2i - der*dT2c2_rc2*r2i);
+            return -(t5 + t3)*muAxmuB;
+          }
+          double t3 = muA.dot(muB)*(data.T21 - T2c1 - data.der_dT2c1);
+          double t5 = muA.dot(r)*muB.dot(r)*(data.T22 - data.T2c2_r2i - data.der_dT2c2_r2i);
           return -(t5 + t3)*muAxmuB;
         }
 
@@ -405,51 +430,90 @@ namespace Faunus {
        * @param quadA Quadrupole moment of particle A
        * @param r Direction @f$ r_A - r_B @f$
        */
-      template<class Tvec, class Tmat>
+      template<bool useWdata=false, class Tvec, class Tmat>
         double q2quad(double qA, const Tmat &quadB,double qB, const Tmat &quadA, const Tvec &r) const {
-          /* Code to use if calcWolfData is not called
-             double r2i = 1/r.squaredNorm();
-             if (r2i < rc2i)
-             return 0;
-             double r1i = sqrt(r2i);
-             double r1i_d = erfc_x(kappa/r1i)*r1i;
-             double expK = constant*exp(-kappa2/r2i);
-             double T2_1 = -(r1i_d + expK)*r2i;
-             double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
-             double der = (1/r1i) - rc1;
-             double WAB = r.transpose()*quadB*r;
-             WAB = WAB*(T2_2 - Tc2_2*r2i - der*dTc2_2*r2i) + quadB.trace()*(T2_1 - Tc2_1 - der*dTc2_1);
-             double WBA = r.transpose()*quadA*r;
-             WBA = WBA*(T2_2 - Tc2_2*r2i - der*dTc2_2*r2i) + quadA.trace()*(T2_1 - Tc2_1 - der*dTc2_1);
-             return (qA*WAB + qB*WAB);
-             */
-
-          if (data.r2i < rc2i)
-            return 0;
+          /* Code to use if calcWolfData is not called */
+          if (useWdata==false) {
+            double r2i = 1/r.squaredNorm();
+            if (r2i < rc2i)
+              return 0;
+            double r1i = sqrt(r2i);
+            double r1i_d = erfc_x(kappa/r1i)*r1i;
+            double expK = constant*exp(-kappa2/r2i);
+            double T2_1 = -(r1i_d + expK)*r2i;
+            double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
+            double der = (1/r1i) - rc1;
+            double WAB = r.transpose()*quadB*r;
+            WAB = WAB*(T2_2 - T2c2_rc2*r2i - der*dT2c2_rc2*r2i) + quadB.trace()*(T2_1 - T2c1 - der*dT2c1);
+            double WBA = r.transpose()*quadA*r;
+            WBA = WBA*(T2_2 - T2c2_rc2*r2i - der*dT2c2_rc2*r2i) + quadA.trace()*(T2_1 - T2c1 - der*dT2c1);
+            return (qA*WAB + qB*WBA);
+          }
           double WAB = r.transpose()*quadB*r;
-          WAB = WAB*(data.T2_2 - data.Tc2_2_r2i - data.der_dTc2_2_r2i) + quadB.trace()*(data.T2_1 - Tc2_1 - data.der_dTc2_1);
+          WAB = WAB*(data.T22 - data.T2c2_r2i - data.der_dT2c2_r2i) + quadB.trace()*(data.T21 - T2c1 - data.der_dT2c1);
           double WBA = r.transpose()*quadA*r;
-          WBA = WBA*(data.T2_2 - data.Tc2_2_r2i - data.der_dTc2_2_r2i) + quadA.trace()*(data.T2_1 - Tc2_1 - data.der_dTc2_1);
-          return (qA*WAB + qB*WAB);
-
+          WBA = WBA*(data.T22 - data.T2c2_r2i - data.der_dT2c2_r2i) + quadA.trace()*(data.T21 - T2c1 - data.der_dT2c1);
+          return (qA*WAB + qB*WBA);
         }
-
-      /** @brief Dipole field at `r` due to dipole `p` */
-      template<class Tparticle>
-        Point field(const Tparticle &p, const Point &r) const {
-          return Point(0,0,0);
+        
+      /** 
+       * @brief Field at `r` due to charge `p` 
+       * @param p Particles from which field arises
+       * @param r Direction @f$ r_A - r_B @f$
+       */
+      template<bool useWdata=false, class Tparticle>
+        Point fieldCharge(const Tparticle &p, const Point &r) const {
+          /* Code to use if calcWolfData is not called */
+          if (useWdata==false) {
+            double r2i = 1/r.squaredNorm();
+            if (r2i < rc2i)
+              return Point(0,0,0);
+            double r1i = sqrt(r2i);
+            double T1 = (constant*exp(-kappa2/r2i) + erfc_x(kappa/r1i)*r1i)*r2i;
+            double der = (1/r1i) - rc1;
+            return (T1 - T1c_rc1*r1i - der*dT1c_rc1*r1i)*r*p.charge;
+          }
+          return (data.T1 - data.T1c_r1i - data.der_dT1c_r1i)*r*p.charge;
         }
-
+        
+      /** 
+       * @brief Field at `r` due to dipole `p` 
+       * @param p Particles from which field arises
+       * @param r Direction @f$ r_A - r_B @f$
+       */
+      template<bool useWdata=false, class Tparticle>
+        Point fieldDipole(const Tparticle &p, const Point &r) const {
+          /* Code to use if calcWolfData is not called */
+          if (useWdata==false) {
+            double r2i = 1.0/r.squaredNorm();
+            if (r2i < rc2i)
+              return Point(0,0,0);
+            double r1i = sqrt(r2i);
+            double r1i_d = erfc_x(kappa/r1i)*r1i;
+            double expK = constant*exp(-kappa2/r2i);
+            double T2_1 = -(r1i_d + expK)*r2i;
+            double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
+            double der = (1/r1i) - rc1;
+            Point t3 = p.mu*(T2_1 - T2c1 - der*dT2c1);
+            Point t5 = r*p.mu.dot(r)*(T2_2 - T2c2_rc2*r2i - der*dT2c2_rc2*r2i);
+            return (t5 + t3)*p.muscalar;
+          }
+          Point t3 = p.mu*(data.T21 - T2c1 - data.der_dT2c1);
+          Point t5 = r*p.mu.dot(r)*(data.T22 - data.T2c2_r2i - data.der_dT2c2_r2i);
+          return (t5 + t3)*p.muscalar;
+        }
+        
+      double getRc2i() const { return rc2i; }
+      double getR2i() const { return data.r2i; }
       double getKappa() { return kappa; }
       double getCutoff() { return rc1; }
   };
-
+  
   /**
-   * @brief Base class for Gaussian-damped interactions.
+   * @brief Base class for Gaussian-damped interactions. Implemented according to DOI: 10.1002/jcc.20574
    *
    * The idea is that this class has no dependencies and is
    * to be used as a helper class for other classes.
-   * Implemented according to DOI: 10.1002/jcc.20574
    */
   class GaussianDampingBase {
     private:
@@ -484,7 +548,7 @@ namespace Faunus {
         betaCD3.resize(N,N);
         betaCQ3.resize(N,N);
         betaDD3.resize(N,N);
-
+        
         for(int i = 0; i < N; i++) {
           betaC(i) = atom[i+1].betaC;
           betaC3(i) = betaC(i)*betaC(i)*betaC(i);
@@ -522,7 +586,7 @@ namespace Faunus {
           }
         }
       }
-
+      
       /**
        * @brief Returns ion-ion energy
        * @param qA Charge of ion A
@@ -535,7 +599,7 @@ namespace Faunus {
         double q2q(double qA, double qB, int ida, int idb, const Tvec &r) const {
           double r1 = r.norm();
           return (qA*qB*erf_x(betaCC(ida-1,idb-1)*r1)/r1);
-        }
+      }
 
       /**
        * @brief Returns ion-dipole energy
@@ -556,7 +620,7 @@ namespace Faunus {
           double W_BA = ( QBxMuA * muA.dot(r) * B1_BA);
           double W_AB = ( QAxMuB * muB.dot(-r) * B1_AB);
           return ( W_BA + W_AB );
-        }
+      }
 
       /**
        * @brief Dipole-dipole energy
@@ -615,8 +679,7 @@ namespace Faunus {
        * @brief Field at `r` due to ion `p`.
        * @param p Particles from which field arises
        * @param r Direction @f$ r_A - r_B @f$
-       * @param ida Id of particle exposed to the field from p.
-       * If ida is not set the exposed particle is assumed to be a point particle (optional)
+       * @param ida Id of particle exposed to the field from p. If ida is not set the exposed particle is assumed to be a point particle (optional)
        */
       template<class Tparticle>
         Point fieldCharge(const Tparticle &p, const Point &r, int ida=-1) const {
@@ -632,13 +695,12 @@ namespace Faunus {
           }
           return E;
         }
-
+        
       /** 
        * @brief Field at `r` due to dipole `p`.
        * @param p Particles from which field arises
        * @param r Direction @f$ r_A - r_B @f$
-       * @param ida Id of particle exposed to the field from p.
-       * If ida is not set the exposed particle is assumed to be a point particle (optional)
+       * @param ida Id of particle exposed to the field from p. If ida is not set the exposed particle is assumed to be a point particle (optional)
        */
       template<class Tparticle>
         Point fieldDipole(const Tparticle &p, const Point &r, int ida=-1) const {
@@ -663,365 +725,468 @@ namespace Faunus {
           return E;
         }
   };
+  
+        namespace Potential {
 
-  namespace Potential {
+          class NemoRepulsion : public PairPotentialBase {
+            private:
+              string _brief() { return "NemoRepulsion"; }
+            protected:
+              typedef Eigen::VectorXd Tvec;
+              typedef opair<int> Tpair;
+              std::map<Tpair,Tvec> pairMap;
+              double expmax;
+              double scaling;
 
-    class NemoRepulsion : public PairPotentialBase {
-      private:
-        string _brief() { return "NemoRepulsion"; }
-      protected:
-        typedef Eigen::VectorXd Tvec;
-        typedef opair<int> Tpair;
-        std::map<Tpair,Tvec> pairMap;
-        double expmax;
-        double scaling;
+            public:
+              NemoRepulsion(InputMap &in) {
+                name="Nemo repulsion";
+                pc::setT ( in.get<double>("temperature", 298.15, "Absolute temperature (K)") );
+                expmax = in.get<double>("expmax", 80, "Maximum repulsion exponent");
+                scaling = 1000/(pc::Nav*pc::kT());  // Converts from kJ/mol to kT
+                pairMap = json::atomPairMap("water2.json","pairproperties","nemorep");
+              }
 
-      public:
-        NemoRepulsion(InputMap &in) {
-          name="Nemo repulsion";
-          pc::setT ( in.get<double>("temperature", 298.15, "Absolute temperature (K)") );
-          expmax = in.get<double>("expmax", 80, "Maximum repulsion exponent");
-          scaling = 1000/(pc::Nav*pc::kT());  // Converts from kJ/mol to kT
-          pairMap = json::atomPairMap("water2.json","pairproperties","nemorep");
-        }
+              /**
+               * @brief NemoRepulsion
+               * @param a Dipole particle A
+               * @param b Dipole particle B
+               * @param r Direction \f$ r_A - r_B \f$  
+               */
+              template<class Tparticle>
+                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                  Tpair pair(a.id,b.id);
+                  Tvec vec;
+                  auto it = pairMap.find(pair);
+                  if (it!=pairMap.end()) { 
+                    vec = it->second;
+                    return nemo4(vec, r,expmax)*scaling;
+                  }
+                  assert(!"No pair data defined");
+                  return 0;
+                }
 
-        /**
-         * @brief NemoRepulsion
-         * @param a Dipole particle A
-         * @param b Dipole particle B
-         * @param r Direction \f$ r_A - r_B \f$  
-         */
-        template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-            Tpair pair(a.id,b.id);
-            Tvec vec;
-            auto it = pairMap.find(pair);
-            if (it!=pairMap.end()) { 
-              vec = it->second;
-              return nemo4(vec, r,expmax)*scaling;
-            }
-            assert(!"No pair data defined");
-            return 0;
-          }
+              string info(char w) { return _brief(); }
+          };
 
-        string info(char w) { return _brief(); }
-    };
+          /**
+           * @brief Ion-dipole interaction, 
+           *
+           * More info...
+           */
+          class IonDipole : public PairPotentialBase {
+            private:
+              string _brief() { return "Ion-dipole"; }
+            protected:
+              double _lB;
+            public:
+              IonDipole(InputMap &in) {
+                pc::setT ( in.get<double>("temperature", 298.15, "Absolute temperature (K)") );
+                double epsilon_r = in.get<double>("epsilon_r",80., "Dielectric constant");
+                _lB=pc::lB( epsilon_r );
+              }
+              /**
+               * @brief Ion-dipole
+               * @param a Dipole particle A
+               * @param b Dipole particle B
+               * @param r Direction \f$ r_A - r_B \f$  
+               */
+              template<class Tparticle>
+                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                  return _lB*q2mu(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
+                }
 
-    /**
-     * @brief Ion-dipole interaction, 
-     *
-     * More info...
-     */
-    class IonDipole : public PairPotentialBase {
-      private:
-        string _brief() { return "Ion-dipole"; }
-      protected:
-        double _lB;
-      public:
-        IonDipole(InputMap &in) {
-          pc::setT ( in.get<double>("temperature", 298.15, "Absolute temperature (K)") );
-          double epsilon_r = in.get<double>("epsilon_r",80., "Dielectric constant");
-          _lB=pc::lB( epsilon_r );
-        }
-        /**
-         * @brief Ion-dipole
-         * @param a Dipole particle A
-         * @param b Dipole particle B
-         * @param r Direction \f$ r_A - r_B \f$  
-         */
-        template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-            return _lB*q2mu(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
-          }
+              string info(char w) { return _brief(); }
+          };
 
-        string info(char w) { return _brief(); }
-    };
+          /**
+           * @brief Dipole-dipole interaction
+           *
+           * More info...
+           */
+          class DipoleDipole : public PairPotentialBase {
+            private:
+              string _brief() {
+                std::ostringstream o;
+                o << "Dipole-dipole, lB=" << _lB << textio::_angstrom;
+                return o.str();          
+              }
+            protected:
+              double _lB;
+            public:
+              DipoleDipole(InputMap &in) {
+                name="Dipole-dipole";
+                pc::setT ( in.get<double>("temperature", 298.15,
+                      "Absolute temperature (K)") );
+                double epsilon_r = in.get<double>("epsilon_r",80.,
+                    "Dielectric constant");
+                _lB = pc::lB(epsilon_r);
+              }
+              template<class Tparticle>
+                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                  return _lB*mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r);
+                }
 
-    /**
-     * @brief Dipole-dipole interaction
-     *
-     * More info...
-     */
-    class DipoleDipole : public PairPotentialBase {
-      private:
-        string _brief() {
-          std::ostringstream o;
-          o << "Dipole-dipole, lB=" << _lB << textio::_angstrom;
-          return o.str();          
-        }
-      protected:
-        double _lB;
-      public:
-        DipoleDipole(InputMap &in) {
-          name="Dipole-dipole";
-          pc::setT ( in.get<double>("temperature", 298.15,
-                "Absolute temperature (K)") );
-          double epsilon_r = in.get<double>("epsilon_r",80.,
-              "Dielectric constant");
-          _lB = pc::lB(epsilon_r);
-        }
-        template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-            return _lB*mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r);
-          }
+              /** @brief Dipole field at `r` due to dipole `p` 
+               */
+              template<class Tparticle>
+                Point field(const Tparticle &p, const Point &r) const {
+                  double r2i = 1.0/r.squaredNorm();
+                  double r1i = sqrt(r2i);
+                  return ((3.0*p.mu.dot(r)*r*r2i - p.mu)*r2i*r1i)*p.muscalar*_lB;
+                }
 
-        /** @brief Dipole field at `r` due to dipole `p` 
-        */
-        template<class Tparticle>
-          Point field(const Tparticle &p, const Point &r) const {
-            double r2i = 1.0/r.squaredNorm();
-            double r1i = sqrt(r2i);
-            return ((3.0*p.mu.dot(r)*r*r2i - p.mu)*r2i*r1i)*p.muscalar*_lB;
-          }
+              /**
+               * @brief Interaction of dipole `p` with field `E`, see 'Intermolecular and SUrface Forces' by J. Israelachvili, p. 97 eq. 5.15
+               * @todo Needs to be tested!
+               */
+              template<class Tparticle>
+                double fieldEnergy(const Tparticle &p, const Point &E) {
+                  return -p.muscalar*p.mu.dot(E);
+                }
 
-        /**
-         * @brief Interaction of dipole `p` with field `E`.
-         * @note See 'Intermolecular and Surface Forces' by J. Israelachvili, p. 97 eq. 5.15
-         * @todo Needs to be tested!
-         */
-        template<class Tparticle>
-          double fieldEnergy(const Tparticle &p, const Point &E) {
-            return -p.muscalar*p.mu.dot(E);
-          }
+              string info(char w) {
+                using namespace textio;
+                std::ostringstream o;
+                o << pad(SUB,w,"Temperature") << pc::T() << " K" << endl
+                  << pad(SUB,w,"Bjerrum length") << _lB << " "+angstrom << endl;
+                return o.str();
+              }
+          };
 
-        string info(char w) {
-          using namespace textio;
-          std::ostringstream o;
-          o << pad(SUB,w,"Temperature") << pc::T() << " K" << endl
-            << pad(SUB,w,"Bjerrum length") << _lB << " "+angstrom << endl;
-          return o.str();
-        }
-    };
+          /**
+           * @brief Ion-quadrupole interaction
+           *
+           * More info...
+           */
+          class IonQuad : public PairPotentialBase {
+            private:
+              string _brief() { return "Ion-quadrupole"; }
+            protected:
+              double _lB;
+            public:
+              IonQuad(InputMap &in) {
+                name="Ion-Quad";
+                pc::setT ( in.get<double>("temperature", 298.15, "Absolute temperature (K)") );
+                double epsilon_r = in.get<double>("epsilon_r",80., "Dielectric constant");
+                _lB=pc::lB( epsilon_r );
+              }
+              template<class Tparticle>
+                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                  return _lB*q2quad(a.charge, b.theta,b.charge, a.theta,r);
+                }
+                
+              template<class Tparticle>
+                Point field(const Tparticle &p, const Point &r) const {
+                  return Point(0,0,0);
+                }
 
-    /**
-     * @brief Ion-quadrupole interaction
-     *
-     * More info...
-     */
-    class IonQuad : public PairPotentialBase {
-      private:
-        string _brief() { return "Ion-quadrupole"; }
-      protected:
-        double _lB;
-      public:
-        IonQuad(InputMap &in) {
-          name="Ion-Quad";
-          pc::setT ( in.get<double>("temperature", 298.15, "Absolute temperature (K)") );
-          double epsilon_r = in.get<double>("epsilon_r",80., "Dielectric constant");
-          _lB=pc::lB( epsilon_r );
-        }
-        template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-            return _lB*q2quad(a.charge, b.theta,b.charge, a.theta,r);
-          }
+              string info(char w) { return _brief(); }
+          };
+          
+          /**
+           * @brief Dipole-dipole interaction w. spherical cutoff and reaction field
+           *
+           * More info...
+           */
+          class DipoleDipoleRF : public DipoleDipole {
+            private:
+              string _brief() { return "Dipole-dipole (RF)"; }
+              double rc2,eps,eps_rf;
+            public:
+              DipoleDipoleRF(InputMap &in) : DipoleDipole(in) {
+                name+=" Reaction Field";
+                rc2 = pow(in.get<double>("dipdip_cutoff",pc::infty), 2);
+                eps_rf = in.get<double>("epsilon_rf",80.);
+                eps = _lB*(2*(eps_rf-1)/(2*eps_rf+1))/pow(rc2,1.5);
+              }
+              template<class Tparticle>
+                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                  if (r.squaredNorm() < rc2)
+                    return (DipoleDipole::operator()(a,b,r) - eps*a.mu.dot(b.mu)*a.muscalar*b.muscalar);
+                  return 0;
+                }
+                
+              /** @brief Field at `r` due to dipole `p` 
+               * @warning Untested!
+               */
+              template<class Tparticle>
+                Point field(const Tparticle &p, const Point &r) const {
+                  return (DipoleDipole::field(p,r) + eps*p.mu*p.muscalar);
+                }
 
-        template<class Tparticle>
-          Point field(const Tparticle &p, const Point &r) const {
-            return Point(0,0,0);
-          }
+              void updateDiel(double er) {
+                eps = _lB*(2*(er-1)/(er+1))/pow(rc2,1.5);
+              }  
 
-        string info(char w) { return _brief(); }
-    };
+              string info(char w) {
+                using namespace textio;
+                std::ostringstream o;
+                o << DipoleDipole::info(w)
+                  << pad(SUB,w,"Cutoff") << sqrt(rc2) << " "+angstrom << endl
+                  << pad(SUB,w,"epsilon_rf") << eps_rf << endl;
+                return o.str();
+              }
+          };
+          
+          class MultipoleWolf : public PairPotentialBase {
+            private:
+              WolfBase wolf;
+              string _brief() {
+                std::ostringstream o;
+                o << "Multipole Wolf, lB=" << _lB << textio::_angstrom;
+                return o.str();          
+              }
+            protected:
+              double _lB;
+            public:
+            //template<bool useIonIon=false, bool useIonDipole=false, bool useDipoleDipole=false, bool useIonQuadrupole=false>
+              MultipoleWolf(InputMap &in) : wolf(in.get<double>("kappa", 0.0, "Kappa-damping"),
+                  in.get<double>("wolf_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) {
+                name="Multipole Wolf";
+                pc::setT ( in.get<double>("temperature", 298.15,
+                      "Absolute temperature (K)") );
+                double epsilon_r = in.get<double>("epsilon_r",80.,
+                    "Dielectric constant");
+                _lB = pc::lB(epsilon_r);
+              }
+              template<class Tparticle, bool useIonIon=false, bool useIonDipole=false, bool useDipoleDipole=false, bool useIonQuadrupole=false>
+                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
+                  double U_total = 0;
+                  if((useIonIon? 1:0) + (useIonDipole? 1:0) + (useDipoleDipole? 1:0) + (useIonQuadrupole? 1:0) > 1) {
+                    wolf.calcWolfData(r);
+                    if (wolf.getR2i() < wolf.getRc2i())
+                      return 0;
+                    if(useIonIon == true) U_total += wolf.q2q<true>(a.charge,b.charge,r);
+                    if(useIonDipole == true) U_total += wolf.q2mu<true>(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
+                    if(useDipoleDipole == true) U_total += wolf.mu2mu<true>(a.mu,b.mu, a.muscalar*b.muscalar, r);
+                    if(useIonQuadrupole == true) U_total += wolf.q2quad<true>(a.charge, b.theta,b.charge, a.theta,r);
+                    return _lB*U_total;
+                  }
+                  if(useIonIon == true) U_total += wolf.q2q(a.charge,b.charge,r);
+                  if(useIonDipole == true) U_total += wolf.q2mu(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
+                  if(useDipoleDipole == true) U_total += wolf.mu2mu(a.mu,b.mu, a.muscalar*b.muscalar, r);
+                  if(useIonQuadrupole == true) U_total += wolf.q2quad(a.charge, b.theta,b.charge, a.theta,r);
+                  return _lB*U_total;
+                }
 
-    /**
-     * @brief Dipole-dipole interaction w. spherical cutoff and reaction field
-     *
-     * More info...
-     */
-    class DipoleDipoleRF : public DipoleDipole {
-      private:
-        string _brief() { return "Dipole-dipole (RF)"; }
-        double rc2,eps,eps_rf;
-      public:
-        DipoleDipoleRF(InputMap &in) : DipoleDipole(in) {
-          name+=" Reaction Field";
-          rc2 = pow(in.get<double>("dipdip_cutoff",pc::infty), 2);
-          eps_rf = in.get<double>("epsilon_rf",80.);
-          eps = _lB*(2*(eps_rf-1)/(2*eps_rf+1))/pow(rc2,1.5);
-        }
-        template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-            if (r.squaredNorm() < rc2)
-              return (DipoleDipole::operator()(a,b,r) - eps*a.mu.dot(b.mu)*a.muscalar*b.muscalar);
-            return 0;
-          }
+              template<class Tparticle, bool useIon=false, bool useDipole=false>
+                Point field(const Tparticle &p, const Point &r) {
+                  if(useIon && useDipole) {
+                    wolf.calcWolfData(r);
+                    if (wolf.getR2i() < wolf.getRc2i())
+                      return Point(0,0,0);
+                    Point E = wolf.fieldCharge<true>(p,r);
+                    E += wolf.fieldDipole<true>(p,r);
+                    return _lB*E;
+                  }
+                  if(useIon == true) return _lB*wolf.fieldCharge(p,r);
+                  if(useDipole == true) return _lB*wolf.fieldDipole(p,r);
+                  return Point(0,0,0);
+                }
+                
+              /**
+               * @brief Interaction of dipole `p` with field `E`, see 'Intermolecular and SUrface Forces' by J. Israelachvili, p. 97 eq. 5.15
+               * @todo Needs to be tested!
+               */
+              template<class Tparticle>
+                double fieldEnergy(const Tparticle &p, const Point &E) {
+                  return 0;
+                }
 
-        /**
-         * @brief Field at `r` due to dipole `p` 
-         * @warning Untested!
-         */
-        template<class Tparticle>
-          Point field(const Tparticle &p, const Point &r) const {
-            return (DipoleDipole::field(p,r) + eps*p.mu*p.muscalar);
-          }
+              string info(char w) {
+                using namespace textio;
+                std::ostringstream o;
+                o << pad(SUB,w,"Temperature") << pc::T() << " K" << endl
+                  << pad(SUB,w,"Bjerrum length") << _lB << " "+angstrom << endl
+                  << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
+                  << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
+                return o.str();
+              }
+          };
+          
+          class IonIonWolf : public Coulomb {
+            private:
+              string _brief() { return "Coulomb Wolf"; }
+              WolfBase wolf;
+            public:
+              IonIonWolf(InputMap &in) : Coulomb(in),
+              wolf(in.get<double>("kappa", 0.0, "Kappa-damping"),
+                  in.get<double>("wolf_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) { 
+                name+=" Wolf"; 
+              }
 
-        void updateDiel(double er) {
-          eps = _lB*(2*(er-1)/(er+1))/pow(rc2,1.5);
-        }  
+              template<class Tparticle>
+                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                  return lB*wolf.q2q(a.charge,b.charge,r);
+                }
+                
+              template<class Tparticle>
+                Point field(const Tparticle &p, const Point &r) const {
+                  return lB*wolf.fieldCharge(p,r);
+                }
+                
+              string info(char w) {
+                using namespace textio;
+                std::ostringstream o;
+                o << Coulomb::info(w)
+                  << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
+                  << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
+                return o.str();
+              }
+          };
 
-        string info(char w) {
-          using namespace textio;
-          std::ostringstream o;
-          o << DipoleDipole::info(w)
-            << pad(SUB,w,"Cutoff") << sqrt(rc2) << " "+angstrom << endl
-            << pad(SUB,w,"epsilon_rf") << eps_rf << endl;
-          return o.str();
-        }
-    };
+          class IonDipoleWolf : public IonDipole {
+            private:
+              string _brief() { return "Ion-dipole Wolf"; }
+              WolfBase wolf;
+            public:
+              IonDipoleWolf(InputMap &in) : IonDipole(in),
+              wolf(in.get<double>("kappa", 0.0, "Kappa-damping"),
+                  in.get<double>("wolf_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) {
+                name+=" Wolf";
+              }
 
-    class IonDipoleWolf : public IonDipole {
-      private:
-        string _brief() { return "Ion-dipole Wolf"; }
-        WolfBase wolf;
-      public:
-        IonDipoleWolf(InputMap &in) : IonDipole(in),
-        wolf(in.get<double>("kappa", 1.8, "Kappa-damping"),
-            in.get<double>("dipdip_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) {
-          name+=" Wolf";
-        }
+              template<class Tparticle>
+                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                  return _lB*wolf.q2mu(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
+                }
 
-        template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
-            wolf.calcWolfData(a,b,r);
-            return _lB*wolf.q2mu(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
-          }
+              string info(char w) {
+                using namespace textio;
+                std::ostringstream o;
+                o << IonDipole::info(w)
+                  << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
+                  << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
+                return o.str();
+              }
+          };
+          
+          class DipoleDipoleWolf : public DipoleDipole {
+            private:
+              string _brief() { return "Dipole-dipole Wolf"; }
+              WolfBase wolf;
+            public:
+              DipoleDipoleWolf(InputMap &in) : DipoleDipole(in),
+              wolf(in.get<double>("kappa", 0.0, "Kappa-damping"),
+                  in.get<double>("wolf_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) {
+                name+=" Wolf";
+              }
 
-        string info(char w) {
-          using namespace textio;
-          std::ostringstream o;
-          o << IonDipole::info(w)
-            << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
-            << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
-          return o.str();
-        }
-    };
+              template<class Tparticle>
+                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                  return _lB*wolf.mu2mu(a.mu,b.mu, a.muscalar*b.muscalar, r);
+                }
 
-    class DipoleDipoleWolf : public DipoleDipole {
-      private:
-        string _brief() { return "Dipole-dipole Wolf"; }
-        WolfBase wolf;
-      public:
-        DipoleDipoleWolf(InputMap &in) : DipoleDipole(in),
-        wolf(in.get<double>("kappa", 1.8, "Kappa-damping"),
-            in.get<double>("dipdip_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) {
-          name+=" Wolf";
-        }
+              /** @brief Dipole field at `r` due to dipole `p` 
+               */
+              template<class Tparticle>
+                Point field(const Tparticle &p, const Point &r) const {
+                  return _lB*wolf.fieldDipole(p,r);
+                }
 
-        template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
-            wolf.calcWolfData(a,b,r);
-            return _lB*wolf.mu2mu(a.mu,b.mu, a.muscalar*b.muscalar, r);
-          }
+              string info(char w) {
+                using namespace textio;
+                std::ostringstream o;
+                o << DipoleDipole::info(w)
+                  << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
+                  << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
+                return o.str();
+              }
+          };
+          
+          class IonQuadWolf : public IonQuad {
+            private:
+              string _brief() { return "Ion-Quadrupole Wolf"; }
+              WolfBase wolf;
+            public:
+              IonQuadWolf(InputMap &in) : IonQuad(in),
+              wolf(in.get<double>("kappa", 0.0, "Kappa-damping"),
+                  in.get<double>("wolf_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) {
+                name+=" Wolf";
+              }
 
-        /** @brief Dipole field at `r` due to dipole `p` */
-        template<class Tparticle>
-          Point field(const Tparticle &p, const Point &r) const {
-            return _lB*wolf.field(p,r);
-          }
+              template<class Tparticle>
+                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                  return _lB*wolf.q2quad(a.charge, b.theta,b.charge, a.theta,r);
+                }
 
-        string info(char w) {
-          using namespace textio;
-          std::ostringstream o;
-          o << DipoleDipole::info(w)
-            << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
-            << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
-          return o.str();
-        }
-    };
+              string info(char w) {
+                using namespace textio;
+                std::ostringstream o;
+                o << IonQuad::info(w)
+                  << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
+                  << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
+                return o.str();
+              }
+          };
+          
+          class IonIonGaussianDamping : public Coulomb {
+            private:
+              string _brief() { return "Coulomb Gaussian Damping"; }
+              GaussianDampingBase gdb;
+            public:
+              IonIonGaussianDamping(InputMap &in) : Coulomb(in),
+              gdb() { name+=" Gaussian Damping"; }
 
-    class IonQuadWolf : public IonQuad {
-      private:
-        string _brief() { return "Ion-Quadrupole Wolf"; }
-        WolfBase wolf;
-      public:
-        IonQuadWolf(InputMap &in) : IonQuad(in),
-        wolf(in.get<double>("kappa", 1.8, "Kappa-damping"),
-            in.get<double>("dipdip_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) {
-          name+=" Wolf";
-        }
+              template<class Tparticle>
+                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
+                  return lB*gdb.q2q(a.charge,b.charge,a.id,b.id,r);
+                }
+                
+              template<class Tparticle>
+                Point field(const Tparticle &p, const Point &r) const {
+                  return lB*gdb.fieldCharge(p,r);
+                }
+          };
+          
+          class IonDipoleGaussianDamping : public IonDipole {
+            private:
+              string _brief() { return "Ion-dipole Gaussian Damping"; }
+              GaussianDampingBase gdb;
+            public:
+              IonDipoleGaussianDamping(InputMap &in) : IonDipole(in),
+              gdb() { name+=" Gaussian Damping"; }
 
-        template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
-            wolf.calcWolfData(a,b,r);
-            return _lB*wolf.q2quad(a.charge, b.theta,b.charge, a.theta,r);
-          }
+              template<class Tparticle>
+                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
+                  return _lB*gdb.q2mu(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,a.id,b.id,r);
+                }
+          };
+          
+          class DipoleDipoleGaussianDamping : public DipoleDipole {
+            private:
+              string _brief() { return "Dipole-dipole Gaussian Damping"; }
+              GaussianDampingBase gdb;
+            public:
+              DipoleDipoleGaussianDamping(InputMap &in) : DipoleDipole(in),
+              gdb() { name+=" Gaussian Damping"; }
 
-        string info(char w) {
-          using namespace textio;
-          std::ostringstream o;
-          o << IonQuad::info(w)
-            << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
-            << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
-          return o.str();
-        }
-    };
+              template<class Tparticle>
+                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
+                  return _lB*gdb.mu2mu(a.mu,b.mu, a.muscalar*b.muscalar,a.id,b.id,r);
+                }
+                
+              template<class Tparticle>
+                Point field(const Tparticle &p, const Point &r) const {
+                  return _lB*gdb.fieldDipole(p,r);
+                }
+          };
+          
+          class IonQuadGaussianDamping : public IonQuad {
+            private:
+              string _brief() { return "Ion-Quadrupole Gaussian Damping"; }
+              GaussianDampingBase gdb;
+            public:
+              IonQuadGaussianDamping(InputMap &in) : IonQuad(in),
+              gdb() { name+=" Gaussian Damping"; }
 
-    class IonIonGaussianDamping : public Coulomb {
-      private:
-        string _brief() { return "Coulomb Gaussian Damping"; }
-        GaussianDampingBase gdb;
-      public:
-        IonIonGaussianDamping(InputMap &in) : Coulomb(in),
-        gdb() { name+=" Gaussian Damping"; }
-
-        template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
-            return lB*gdb.q2q(a.charge,b.charge,a.id,b.id,r);
-          }
-
-        template<class Tparticle>
-          Point field(const Tparticle &p, const Point &r) const {
-            return lB*gdb.fieldCharge(p,r);
-          }
-    };
-
-    class IonDipoleGaussianDamping : public IonDipole {
-      private:
-        string _brief() { return "Ion-dipole Gaussian Damping"; }
-        GaussianDampingBase gdb;
-      public:
-        IonDipoleGaussianDamping(InputMap &in) : IonDipole(in),
-        gdb() { name+=" Gaussian Damping"; }
-
-        template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
-            return _lB*gdb.q2mu(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,a.id,b.id,r);
-          }
-    };
-
-    class DipoleDipoleGaussianDamping : public DipoleDipole {
-      private:
-        string _brief() { return "Dipole-dipole Gaussian Damping"; }
-        GaussianDampingBase gdb;
-      public:
-        DipoleDipoleGaussianDamping(InputMap &in) : DipoleDipole(in),
-        gdb() { name+=" Gaussian Damping"; }
-
-        template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
-            return _lB*gdb.mu2mu(a.mu,b.mu, a.muscalar*b.muscalar,a.id,b.id,r);
-          }
-
-        template<class Tparticle>
-          Point field(const Tparticle &p, const Point &r) const {
-            return _lB*gdb.fieldDipole(p,r);
-          }
-    };
-
-    class IonQuadGaussianDamping : public IonQuad {
-      private:
-        string _brief() { return "Ion-Quadrupole Gaussian Damping"; }
-        GaussianDampingBase gdb;
-      public:
-        IonQuadGaussianDamping(InputMap &in) : IonQuad(in),
-        gdb() { name+=" Gaussian Damping"; }
-
-        template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
-            return _lB*gdb.q2quad(a.charge, b.theta,b.charge, a.theta,a.id,b.id,r);
-          }
-    };
-  }
+              template<class Tparticle>
+                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
+                  return _lB*gdb.q2quad(a.charge, b.theta,b.charge, a.theta,a.id,b.id,r);
+                }
+          };
+      }
 }
 #endif
 

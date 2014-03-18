@@ -91,12 +91,14 @@ int main(int argc, char** argv) {
   spc.load("state");
 
   Move::Isobaric<Tspace> iso(mcp,pot,spc);
-  Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
+  Move::TranslateRotateGroupCluster<Tspace> gmv(mcp,pot,spc);
   Move::AtomicTranslation<Tspace> mv(mcp, pot, spc);
   Move::SwapMove<Tspace> tit(mcp,pot,spc,*eqenergy);
   if (inPlane)
     for (auto &m : pol)
       gmv.directions[ m.name ]=Point(0,0,1);
+
+  gmv.setMobile(salt);
 
   eqenergy->eq.findSites(spc.p);
 

@@ -26,7 +26,7 @@ namespace Faunus {
    * 
    * @warning Needs modification if x < 0
    */
-  double erfc_x(double x) {
+  inline double erfc_x(double x) {
     //
     // |error| <= 1.5*10^-7
     double p = 0.3275911;
@@ -45,7 +45,7 @@ namespace Faunus {
    * @brief See erfc_x-function. 1 - erfc_x
    * @param x Value for which erf should be calculated 
    */
-  double erf_x(double x) {
+  inline double erf_x(double x) {
     return (1 - erfc_x(x));
   }
 

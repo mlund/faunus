@@ -247,7 +247,12 @@ namespace Faunus {
     /** @return Energy change in units of kT */
     template<class Tspace>
       double Movebase<Tspace>::energyChange() {
-        return _energyChange();
+        double du = _energyChange();
+        if (std::isnan(du)) {
+          std::cerr << "Error: energy change returns not-a-number (NaN)\n";
+          std::exit(1);
+        }
+        return du;
       }
 
     /**
@@ -449,7 +454,7 @@ namespace Faunus {
           gsize += igroup->size();
         }
         if (iparticle>-1) {
-          double dp = atom[ spc->p[iparticle].id ].dp;
+          double dp = atom[ spc->p.at(iparticle).id ].dp;
           if (dp<1e-6) dp = genericdp;
           assert(iparticle<(int)spc->p.size()
               && "Trial particle out of range");

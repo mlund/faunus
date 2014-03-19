@@ -270,7 +270,6 @@ namespace Faunus {
             int iatom, ires;
             std::string line,key,aname,rname;
             while (std::getline(in, line)) {
-              cout << "!!! " << line << endl;
               std::stringstream o(line);
               while (o >> key)
                 if (key=="ATOM" || key=="HETATM") {

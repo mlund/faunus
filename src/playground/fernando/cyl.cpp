@@ -2,16 +2,28 @@
 
 /*
  * This will simulate:
- * - an arbitrary number of rigid molecules (two different kinds)
+ * - two rigid molecules fixed on the axis of
+ *   a cylinder with open end planes and hard surfaces
  * - any number of atomic species
  * - equilibrium swap moves
  * - external pressure (NPT)
+ * - electric multipole expansion analysis
+ *
+ * Particles interact with a combined Debye-Huckel/Lennard-Jones
+ * potential with Lorentz-Berthelot mixed rules. Hydrophobic
+ * groups interact with a custom epsilon as specified in the
+ * input file.
+ *
+ * The structure of the molecules may be given either
+ * as a PQR or AAM file -- see `FormatPQR` and `FormatAAM`
+ * for details
  */
 
 using namespace Faunus;
+using namespace Faunus::Potential;
 
 typedef Space<Geometry::PeriodicCylinder> Tspace;
-typedef Potential::DebyeHuckelLJ Tpairpot;
+typedef CombinedPairPotential<DebyeHuckel,LennardJonesLB> Tpairpot;
 
 int main(int argc, char** argv) {
   InputMap mcp("cyl.input");
@@ -19,19 +31,29 @@ int main(int argc, char** argv) {
   FormatXTC xtc(1000);                 // XTC gromacs trajectory format
   EnergyDrift sys;                     // class for tracking system energy drifts
   UnitTest test(mcp);
-  bool inPlane = mcp.get<bool>("molecule_plane");
+
+  bool movie = mcp.get("movie", true);
 
   Tspace spc(mcp);
   auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
-    + Energy::MassCenterConstrain<Tspace>(mcp) 
+    + Energy::Bonded<Tspace>()
     + Energy::EquilibriumEnergy<Tspace>(mcp);
 
-  auto constrainenergy = &pot.first.second;
   auto eqenergy = &pot.second;
+  auto bonded = &pot.first.second;
+
+  // set hydrophobic-hydrophobic LJ epsilon
+  double epsh = mcp.get("eps_hydrophobic", 0.05);
+  for (size_t i=0; i<atom.list.size()-1; i++)
+    for (size_t j=i+1; j<atom.list.size(); j++)
+      if (atom[i].hydrophobic)
+        if (atom[j].hydrophobic)
+          pot.first.first.pairpot.second.customEpsilon(i,j,epsh);
 
   // Add molecules
   int N1 = mcp.get("molecule1_N",0);
   int N2 = mcp.get("molecule2_N",0);
+  bool inPlane = mcp.get("molecule_plane", false);
   string file;
   vector<Group> pol(N1+N2);
   for (int i=0; i<N1+N2; i++) {
@@ -40,7 +62,13 @@ int main(int argc, char** argv) {
     else
       file = mcp.get<string>("molecule1");
     Tspace::ParticleVector v;
-    FormatAAM::load(file,v);
+
+    // PQR or AAM molecular file format?
+    if (file.find(".pqr")!=std::string::npos)
+      FormatPQR::load(file,v);
+    else
+      FormatAAM::load(file,v);
+
     Geometry::FindSpace fs;
     if (inPlane)
       fs.dir=Point(0,0,1);
@@ -51,7 +79,19 @@ int main(int argc, char** argv) {
   }
   Group allpol( pol.front().front(), pol.back().back() );
 
-  constrainenergy->addPair(pol[0], pol[1]);
+  // add some fasta sequences as flexible chains
+  {
+    Group g;
+
+    g = addFastaSequence(spc, *bonded, Potential::Harmonic(4.9,0.1), "RRR");
+    pol.push_back(g);
+    spc.enroll(pol.back());
+
+    g = addFastaSequence(spc, *bonded, Potential::Harmonic(4.9,0.1), "AAAK");
+    pol.push_back(g);
+    spc.enroll(pol.back());
+  }
+
 
   // Add atomic species
   Group salt;
@@ -61,16 +101,19 @@ int main(int argc, char** argv) {
 
   Analysis::LineDistribution<> rdf(0.5);
   Analysis::ChargeMultipole mpol;
+  Analysis::MultipoleDistribution<Tspace> mpoldist(mcp);
 
   spc.load("state");
 
   Move::Isobaric<Tspace> iso(mcp,pot,spc);
-  Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
+  Move::TranslateRotateGroupCluster<Tspace> gmv(mcp,pot,spc);
   Move::AtomicTranslation<Tspace> mv(mcp, pot, spc);
   Move::SwapMove<Tspace> tit(mcp,pot,spc,*eqenergy);
   if (inPlane)
     for (auto &m : pol)
       gmv.directions[ m.name ]=Point(0,0,1);
+
+  gmv.setMobile(salt);
 
   eqenergy->eq.findSites(spc.p);
 
@@ -84,9 +127,10 @@ int main(int argc, char** argv) {
       int k,i=rand() % 2;
       switch (i) {
         case 0:
-          k=pol.size();
+          k=2; // we have only two proteins;
           while (k-->0) {
             gmv.setGroup( pol[ rand() % pol.size() ] );
+            gmv.setMobile( pol[3] );
             sys+=gmv.move();
           }
           for (auto i=pol.begin(); i!=pol.end()-1; i++)
@@ -95,8 +139,6 @@ int main(int argc, char** argv) {
           break;
         case 1:
           sys+=tit.move();
-          if( slp_global()>0.9 )
-            mpol.sample(pol,spc);
           break;
         case 2:
           sys+=iso.move();
@@ -106,22 +148,35 @@ int main(int argc, char** argv) {
           sys+=mv.move();
           break;
       }
-      if ( slp_global()<-0.001 ) {
+
+      double xi = slp_global(); // random number [0,1)
+
+      // Sample multipolar moments and distribution
+      if ( xi>0.95 ) {
+        pol[0].setMassCenter(spc);
+        pol[1].setMassCenter(spc);
+        mpol.sample(pol,spc);
+        mpoldist.sample(spc, pol[0], pol[1]);
+      }
+
+      if ( movie==true && xi>0.995 ) {
         xtc.setbox( 1000. );
-        xtc.save("traj.xtc", spc);
+        xtc.save("traj.xtc", spc.p);
       }
     } // end of micro loop
 
     sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) ); // detect energy drift
     cout << loop.timing();
 
-    rdf.save("rdf_p2p_macro" + std::to_string(loop.getMacroCnt()) +".dat");
-    FormatPQR::save("confout.pqr", spc.p);
     spc.save("state");
     mcp.save("mdout.mdp");
+    rdf.save("rdf_p2p.dat");
+    mpoldist.save("multipole.dat");
+    FormatPQR::save("confout.pqr", spc.p);
 
   } // end of macro loop
 
   cout << loop.info() + sys.info() + gmv.info() + mv.info()
     + iso.info() + tit.info() + mpol.info();
+
 }

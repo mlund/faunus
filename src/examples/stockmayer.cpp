@@ -29,7 +29,7 @@ int main() {
   trans.setGroup(sol);                                // tells move class to act on sol group
   rot.setGroup(sol);                                  // tells move class to act on sol group
   spc.load("state");
-  spc.p = spc.trial;
+  spc.trial = spc.p;
   UnitTest test(in);               // class for unit testing
   Analysis::DipoleAnalysis dian(spc);
   DipoleWRL sdp;

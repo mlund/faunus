@@ -1138,7 +1138,7 @@ namespace Faunus {
                 d.ii = a.charge * b.charge * rinv; // ion-ion, etc.
                 d.id = ( a.charge*b.mu.dot(r) - b.charge*a.mu.dot(r) ) * r3inv;
                 d.dd = mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r);
-                d.iq = q2quad(a.charge, b.theta, r) + q2quad(b.charge, a.theta, r);
+                d.iq = q2quad(a.charge, b.theta, b.charge, a.theta, r);
 
                 // add to grand average
                 int key = to_bin(1/rinv,dr);

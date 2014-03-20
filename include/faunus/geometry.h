@@ -558,6 +558,9 @@ namespace Faunus {
      * @param p Particle vector (structure must be whole)
      * @param n Number of iterations (default: 1e7)
      * @param pradius Probe radius (default: 0)
+     *
+     * @todo More efficient sampling may be achieved by adjusting the
+     *       box vs. molecular volume (i.e. 1:1)
      */
     template<typename Tpvec>
       double calcVolume(const Tpvec &p, unsigned int n=1e7, double pradius=0) {
@@ -566,7 +569,7 @@ namespace Faunus {
         for (auto &i : p)
           gc += i / p.size();
         for (auto &i : p)
-          L = std::max(L, 2*((i-gc).norm() + i.radius));
+          L = std::max(L, 2*((i-gc).norm() + i.radius + pradius));
 
         // Start shooting!
         Point r;

@@ -75,7 +75,6 @@ int main(int argc, char** argv) {
     fs.find(spc.geo,spc.p,v);
     pol[i] = spc.insert(v);
     pol[i].name=file+std::to_string(i);
-    spc.enroll( pol[i] );
   }
   Group allpol( pol.front().front(), pol.back().back() );
 
@@ -90,8 +89,13 @@ int main(int argc, char** argv) {
     g = addFastaSequence(spc, *bonded, Potential::Harmonic(4.9,0.1), "AAAK");
     pol.push_back(g);
     spc.enroll(pol.back());
+    cout << "size = " << spc.p.size() << std::endl;
+
+    spc.trial = spc.p;
   }
 
+  for (auto &g : pol)
+    spc.enroll(g);
 
   // Add atomic species
   Group salt;
@@ -144,7 +148,10 @@ int main(int argc, char** argv) {
           sys+=iso.move();
           break;
         case 3:
-          mv.setGroup(salt);
+          if (slp_global()<0.5)
+            mv.setGroup(salt);
+          else
+            mv.setGroup(pol[2]);
           sys+=mv.move();
           break;
       }

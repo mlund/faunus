@@ -43,6 +43,11 @@ namespace Faunus {
           virtual std::string _info()=0;
           char w; //!< Width of info output
           Tspace* spc;
+
+          /** @brief Determines if given particle vector is the trial vector */
+          template<class Tpvec>
+            bool isTrial(const Tpvec &p) const { return (&p==&spc->trial); }
+
         public:
           typedef Tspace SpaceType;
           typedef typename Tspace::ParticleType Tparticle;
@@ -1149,6 +1154,75 @@ namespace Faunus {
                   return pc::infty;
               }
             return 0;
+          }
+      };
+
+    /**
+     * @brief Hydrophobic interactions using SASA
+     * @author Anil Kurut
+     * @date Lund, 2014
+     * @note Experimental
+     */
+    template<class Tspace>
+      class HydrophobicSASA : public Energybase<Tspace> {
+        private:
+          typedef Energybase<Tspace> base;
+          typedef typename Tspace::p_vec Tpvec;
+
+          vector<bool> v;
+          vector<double> sasa; // sasa for all particles
+          double threshold;
+          double tension, tension_dyne;
+
+          string _info() {
+            char w=25;
+            using namespace textio;
+            std::ostringstream o;
+            o << pad(SUB,w,"SASA file") << "To come...\n"
+              << pad(SUB,w,"sasa_threshold: ") << threshold << _angstrom << "\n"
+              << pad(SUB,w,"surface_tension: ") << tension_dyne << " dyne/cm (" << tension
+              << kT+"/"+_angstrom+squared << ")\n";
+            return o.str();
+          }
+
+          bool loadSASA(const string &file) {
+            std::ifstream f(file);
+            return false;
+          }
+
+        public:
+          HydrophobicSASA(InputMap &in) {
+            base::name = "Hydrophobic SASA";
+            threshold = in.get<double>("sasahydro_threshold", 3.0);
+            tension_dyne = in.get<double>("sasahydro_tension", 0);
+            tension = tension_dyne * 1e-23 / (pc::kB * pc::T());  // dyne/cm converted to kT/A^2, 1dyne/cm = 0.001 J/m^2
+          }
+
+          double external(const Tpvec &p) FOVERRIDE {
+            assert(sasa.size()==p.size());
+            double dsasa=0; // change in surface area
+            v.resize(p.size());
+            std::fill(v.begin(), v.end(), true);
+            auto g = base::spcPtr->groupList();
+            for (auto gi=g.begin(); gi!=g.end(); ++gi)
+              for (auto gj=gi; ++gj!=g.end();)
+                if (gi->isMolecular())
+                  if (gj->isMolecular())
+                    for (auto i : gi)
+                      for (auto j : gj)
+                        if (p[i].hydrophobic)
+                          if (p[j].hydrophobic)
+                            if (v[i] || v[j]) {
+                              double r2=base::spcPtr->geo.sqdist(p[i],p[j]);
+                              if (r2<pow(threshold+p[i].radius+p[j].radius,2)) {
+                                if (v[i])
+                                  dsasa += sasa[i];
+                                if (v[j])
+                                  dsasa += sasa[j];
+                                v[i]=v[j]=false;
+                              }
+                            }
+            return -tension * dsasa; // in kT
           }
       };
 

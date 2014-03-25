@@ -353,7 +353,7 @@ namespace Faunus {
     template<class Tgeo, class Tpvec, class TGroup>
       Point chargeCenter(const Tgeo &geo, const Tpvec &p, const TGroup &g) {
         return anyCenter(geo,p,g,
-            [](const typename Tpvec::value_type &x) {return x.charge;} );
+            [](const typename Tpvec::value_type &x) { return std::fabs(x.charge); } );
       }
 
     /** @brief Calculate charge center of a particle vector */

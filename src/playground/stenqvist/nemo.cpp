@@ -37,24 +37,6 @@ bool savePotential(Tpairpot pot, TmoveRot rot, Tid ida, Tid idb, string file) {
   return false;
 }
 
-template<class Tpairpot, class Tid>
-bool saveField(Tpairpot pot, TmoveRot rot, Tid ida, string file) {
-  std::ofstream f(file.c_str());
-  if (f) {
-    double min=1.1 * atom[ida].radius;
-    DipoleParticle a;
-    a=atom[ida];
-    a.mu = Point(1,0,0);
-    for (double r=min; r<=14; r+=0.05) {
-      f << std::left << std::setw(10) << r << " "
-        << pot.field(a,Point(r,0,0)).transpose() << endl;
-    }
-    return true;
-  }
-  return false;
-}
-
-
 int runSim(string name) {
   InputMap in(name);               // open parameter file for user input
   Energy::NonbondedVector<Tspace,Tpair> pot(in); // non-bonded only
@@ -70,16 +52,6 @@ int runSim(string name) {
   trans.setGroup(sol);                                // tells move class to act on sol group
   rot.setGroup(sol);                                  // tells move class to act on sol group
   spc.load("state");
-  
-  //spc.p[0].x() = 0;
-  //spc.p[0].y() = 0;
-  //spc.p[0].z() = 0;
-  //spc.p[1].x() = 0;
-  //spc.p[1].y() = 0;
-  //spc.p[1].z() = 5;
-  //cout << "p0: charge:" << spc.p[0].charge << ", mu: " << spc.p[0].muscalar*spc.p[0].mu.transpose() << ", x: " << spc.p[0].x() << ", y: " << spc.p[0].y() << ", z: " << spc.p[0].z() << endl;
-  //cout << "p1: charge:" << spc.p[1].charge << ", mu: " << spc.p[1].muscalar*spc.p[1].mu.transpose() << ", x: " << spc.p[1].x() << ", y: " << spc.p[1].y() << ", z: " << spc.p[1].z() << endl;
-  
   spc.trial = spc.p;
   UnitTest test(in);               // class for unit testing
   
@@ -89,17 +61,18 @@ int runSim(string name) {
   FormatXTC xtc(spc.geo.len.norm());
   DipoleWRL sdp;
 
-  savePotential(IonQuad(in),rot, atom["sol"].id, atom["ch"].id, "pot_dipdip.dat");
-  savePotential(IonQuadGaussianDamping(in),rot, atom["sol"].id, atom["ch"].id, "potGD_dipdip.dat");
-  saveField(DipoleDipole(in),rot, atom["sol"].id, "field_dipdip.dat");
-  saveField(DipoleDipoleGaussianDamping(in),rot, atom["sol"].id, "fieldGD_dipdip.dat");
-  //getKeesom(TpairDDW(in),rot, atom["sol"].id, atom["sol"].id, "potKeesom.dat");
-  cout << "sol: " << int(atom["sol"].id) << ", ch: " << int(atom["ch"].id) << endl;
+  savePotential(TpairDDW(in),rot, atom["sol"].id, atom["sol"].id, "pot_dipdip.dat");
+  
+  std::vector<double> EDDW;
+  std::vector<double> ELJ;
   
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );   // initial energy
-  EnergyDDW += Energy::systemEnergy(spc,potDDW,spc.p);
-  EnergyLJ += Energy::systemEnergy(spc,potLJ,spc.p);
-
+  double DDW = Energy::systemEnergy(spc,potDDW,spc.p);
+  double LJ = Energy::systemEnergy(spc,potLJ,spc.p);
+  EDDW.push_back(DDW);
+  ELJ.push_back(LJ);
+  EnergyDDW += DDW;
+  EnergyLJ += LJ;
 
   while ( loop.macroCnt() ) {                         // Markov chain 
     while ( loop.microCnt() ) {
@@ -109,16 +82,19 @@ int runSim(string name) {
         sys+=rot.move( sol.size() );                  // rotate
 
       if (slp_global() < 0.2) {
-        EnergyDDW += Energy::systemEnergy(spc,potDDW,spc.p);
-        EnergyLJ += Energy::systemEnergy(spc,potLJ,spc.p);
+        DDW = Energy::systemEnergy(spc,potDDW,spc.p);
+        LJ = Energy::systemEnergy(spc,potLJ,spc.p);
+        EDDW.push_back(DDW);
+        ELJ.push_back(LJ);
+        EnergyDDW += DDW;
+        EnergyLJ += LJ;
         dian.sampleMuCorrelationAndKirkwood(spc);
         xtc.save(textio::prefix+"xtcout.xtc", spc.p); 
       }
       dian.sampleDP(spc);
     }
-    //dian.save(std::to_string(loop.count()));
+    dian.save(std::to_string(loop.count()));
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
-    cout << loop.timing();
   }
   
   // Perform unit tests
@@ -138,6 +114,17 @@ int runSim(string name) {
   sdp.saveDipoleWRL("stockmayer.wrl",spc,sol);
   FormatPQR().save("confout.pqr", spc.p);
   spc.save("state");
+  
+  string filenameDDW = "energyDDW.dat";
+  string filenameLJ = "energyLJ.dat";
+  std::ofstream fDDW(filenameDDW.c_str());
+  std::ofstream fLJ(filenameLJ.c_str());
+  fDDW.precision(10);
+  fLJ.precision(10);
+  for(int i = 0; i < int(EDDW.size()); i++) {
+    fDDW << EDDW.at(i) << "\n";
+    fLJ << ELJ.at(i) << "\n";
+  }
 
   return test.numFailed();
 }

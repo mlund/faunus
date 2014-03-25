@@ -88,7 +88,7 @@ int runSim(string name) {
   Average<double> EnergyLJ;
   FormatXTC xtc(spc.geo.len.norm());
   DipoleWRL sdp;
-  
+
   savePotential(IonQuad(in),rot, atom["sol"].id, atom["ch"].id, "pot_dipdip.dat");
   savePotential(IonQuadGaussianDamping(in),rot, atom["sol"].id, atom["ch"].id, "potGD_dipdip.dat");
   saveField(DipoleDipole(in),rot, atom["sol"].id, "field_dipdip.dat");
@@ -116,7 +116,7 @@ int runSim(string name) {
       }
       dian.sampleDP(spc);
     }
-    dian.save(std::to_string(loop.count()));
+    //dian.save(std::to_string(loop.count()));
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
     cout << loop.timing();
   }

@@ -57,6 +57,7 @@ namespace Faunus {
       //!< Set value associated with keyword
       template<typename T>
         void set(const string &key, T value, string infostring=string()) {
+          cout << "Key: " << key << ", value: " << value << endl;
           if ( map.find(key) != map.end() ) {
             std::ostringstream o;
             o << value;

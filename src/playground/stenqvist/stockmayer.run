@@ -10,8 +10,8 @@ cp -f $source_tests_dir/stockmayer.state state 2> /dev/null
 
 echo '{ "atomlist" :
   {
-    "sol" : {"q":1.0, "sigma":1.0, "mu":"0 0 0", "dp":1, "dprot":30, "alpha":"0 0 0 0 0 0", "theta":"0 0 0 0.333333 0 0", "betaC":1e9, "betaD":1e9, "betaQ":1e9},
-    "ch" : {"q":0.0, "sigma":1.0, "mu":"0 0 0.4141", "dp":1, "dprot":30, "alpha":"0 0 0 0 0 0", "theta":"0 0 0 0.333333 0 0", "betaC":1e9, "betaD":1e9, "betaQ":1e9}
+    "sol" : {"q":1.0, "sigma":4.0, "mu":"0 0 0", "dp":1, "dprot":30, "alpha":"0 0 0 0 0 0", "theta":"0 0 0 0.333333 0 0", "betaC":1e9, "betaD":1e9, "betaQ":1e9},
+    "ch" : {"q":0.0, "sigma":4.0, "mu":"0 0 0.4141", "dp":1, "dprot":30, "alpha":"0 0 0 0 0 0", "theta":"0 0 0 0.333333 0 0", "betaC":1e9, "betaD":1e9, "betaQ":1e9}
   }
 }' > stockmayer.json
 
@@ -24,12 +24,15 @@ epsilon_r          1            # dielectric const.
 dipdip_cutoff      4.3         # dipole cutoff [angstrom]
 lj_eps             0.069        # Uniform LJ epsilon parameter [kT] 0.7504
 kappa              0
+epsilon_rf         1
+
+overlap            true
                   
 loop_macrosteps    5           # number of macro loops
 loop_microsteps    10        # number of micro loops
 
 tion1              sol 
-nion1              100
+nion1              10
 
 test_stable        no
 test_file          stockmayer.test
@@ -55,8 +58,8 @@ test_stable        no
 test_file          stockmayer.test
 " > stockmayerEQ.input
 
-#rm -fR state
-#rm dipol*
+rm -fR state
+rm dipol*
 exe=./nemo
 if [ -x $exe ]; then
  $exe

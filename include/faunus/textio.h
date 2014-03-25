@@ -2,6 +2,7 @@
 #define FAUNUS_TEXTIO_H
 
 #include <faunus/common.h>
+#include <iterator>
 
 namespace Faunus {
   /*!

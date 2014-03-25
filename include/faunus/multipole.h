@@ -334,15 +334,6 @@ namespace Faunus {
         dT1c_rc1 = dT1c_rc1*rc1;
         T2c2_rc2 = T2c2_rc2*rc2;
         dT2c2_rc2 = dT2c2_rc2*rc2;
-        
-        T1c_rc1 = 0;
-        T2c1 = 0;
-        T2c2_rc2 = 0;
-        dT0c = 0;
-        dT1c_rc1 = 0;
-        dT2c1 = 0;
-        dT2c2_rc2 = 0;
-        rc1i_d = 0;
       }
       
       /**

@@ -28,7 +28,8 @@ int main(int argc, char** argv) {
   Tspace spc(mcp);
   auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp)
-    + Energy::EquilibriumEnergy<Tspace>(mcp);// + myenergy<Tspace>(mcp);
+    + Energy::HydrophobicSASA<Tspace>(mcp)
+    + Energy::EquilibriumEnergy<Tspace>(mcp);
 
   auto eqenergy = &pot.second;
 

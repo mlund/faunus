@@ -102,11 +102,6 @@ tion2                  Cl
 nion2                  0
 dpion2                 10
 
-sasahydro_sasafile     sasafile.dat   # SASA file - one line per particle
-sasahydro_duplicate    2              # read SASA file n times
-sasahydro_tension      3              # surface tension (dyne/cm)
-sasahydro_threshold    3              # surface distance threshold (angstrom)
- 
 " > cyl.input
 
 # Generate some simple molecules in PQR format:
@@ -134,14 +129,14 @@ ATOM      4 X    QP      1      -1.000    1.000    0.000 -1.000 2.000
 
 }
 
-exe=./bearnix-cyl
+exe=./fer-cyl
 cylinder_len=50
 cylinder_radius=60
 
 # control equilibration and production runs
 eqrun=true
 prodrun=false
-copy=true
+copy=false
 
 for salt in 0.10  # loop over salt
 do

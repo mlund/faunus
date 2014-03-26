@@ -25,7 +25,7 @@ Requirements
 ============
 
 - C/C++11 compiler (clang3+, gcc4.6+, intel13+, ...)
-- CMake 2.8+
+- CMake 2.8.5+
 
 Optional:
 

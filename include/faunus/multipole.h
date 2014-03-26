@@ -920,6 +920,7 @@ namespace Faunus {
               }
           };
           
+         template<bool useIonIon=false, bool useIonDipole=false, bool useDipoleDipole=false, bool useIonQuadrupole=false>
           class MultipoleWolf : public PairPotentialBase {
             private:
               WolfBase wolf;
@@ -941,7 +942,7 @@ namespace Faunus {
                     "Dielectric constant");
                 _lB = pc::lB(epsilon_r);
               }
-              template<class Tparticle, bool useIonIon=false, bool useIonDipole=false, bool useDipoleDipole=false, bool useIonQuadrupole=false>
+              template<class Tparticle>
                 double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
                   double U_total = 0;
                   if((useIonIon? 1:0) + (useIonDipole? 1:0) + (useDipoleDipole? 1:0) + (useIonQuadrupole? 1:0) > 1) {
@@ -961,7 +962,7 @@ namespace Faunus {
                   return _lB*U_total;
                 }
 
-              template<class Tparticle, bool useIon=false, bool useDipole=false>
+              template<bool useIon=false, bool useDipole=false, class Tparticle>
                 Point field(const Tparticle &p, const Point &r) {
                   if(useIon && useDipole) {
                     wolf.calcWolfData(r);

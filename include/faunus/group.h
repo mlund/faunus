@@ -269,6 +269,7 @@ namespace Faunus {
        * :------------- | :---------------------
        * `tionX`        | Name of atom X
        * `nionX`        | Number of type X atoms
+       * `overlap`      | Allow overlap of atoms [default: no]
        *
        * @todo Rename to addAtoms.
        */
@@ -278,8 +279,7 @@ namespace Faunus {
           setfront( spc.p.size() );
           int size=0;
           int n=1, npart;
-          bool overlap;
-          std::istringstream(in.get(string("overlap"),string("false"))) >> std::boolalpha >> overlap;
+          bool overlap = in.get("overlap", false);
           do {
             std::ostringstream nion("nion"), tion("tion");
             nion << "nion" << n;

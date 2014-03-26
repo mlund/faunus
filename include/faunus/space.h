@@ -82,7 +82,7 @@ namespace Faunus {
         typedef p_vec ParticleVector;
         typedef Tparticle ParticleType;
         typedef Tgeometry GeometryType;
-        enum keys {OVERLAP,NOOVERLAP,RESIZE,NORESIZE};
+        enum keys {OVERLAP_CHECK,NOOVERLAP_CHECK,RESIZE,NORESIZE};
         Tgeometry geo;                      //!< System geometry
         p_vec p;                            //!< Main particle vector
         p_vec trial;                        //!< Trial particle vector. 
@@ -95,7 +95,7 @@ namespace Faunus {
 
         Group insert(const p_vec&, int=-1);
         bool insert(const Tparticle&, int=-1); //!< Insert particle at pos n (old n will be pushed forward).
-        bool insert(string, int, bool=false, keys=NOOVERLAP); 
+        bool insert(string, int, keys=OVERLAP_CHECK); 
         bool erase(int);             //!< Remove n'th particle
         bool eraseGroup(int);        //!< Remove n'th group as well as its particles
         int enroll(Group&);          //!< Store group pointer
@@ -261,16 +261,15 @@ namespace Faunus {
   /**
    * @param atomname Name if atom to intert
    * @param n Number of atoms to insert
-   * @param key Ignored for now -- overlap check is always performed
-   * @param override_overlap True if overlap is set to 'true' (default set to false)
+   * @param key Specify `NOOVERLAPCHECK` if overlap is allowed [default: `OVERLAPCHECK`]
    */
   template<class Tgeometry, class Tparticle>
-    bool Space<Tgeometry,Tparticle>::insert(string atomname, int n, bool override_overlap, keys key) {
+    bool Space<Tgeometry,Tparticle>::insert(string atomname, int n, keys key) {
       particle a;
       a=atom[atomname];
       while (n>0) {
         geo.randompos(a);
-        if (!overlap(a) || override_overlap) {
+        if (!overlap(a) || key==NOOVERLAP_CHECK) {
           insert(a,-1);
           n--;
         }

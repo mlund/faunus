@@ -279,7 +279,11 @@ namespace Faunus {
           setfront( spc.p.size() );
           int size=0;
           int n=1, npart;
-          bool overlap = in.get("overlap", false);
+
+          auto overlap=Tspace::OVERLAP_CHECK;
+          if (in.get("overlap", false))
+            overlap=Tspace::NOOVERLAP_CHECK;
+
           do {
             std::ostringstream nion("nion"), tion("tion");
             nion << "nion" << n;
@@ -287,7 +291,7 @@ namespace Faunus {
             npart = in.get(nion.str(), 0);
             if (npart>0) {
               auto id = atom[in.get(tion.str(), string("UNK")) ].id;
-              spc.insert( atom[id].name, npart,overlap);
+              spc.insert(atom[id].name, npart, overlap);
               size+=npart;
             } else break;
           } while (npart>0);

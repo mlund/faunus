@@ -1159,7 +1159,17 @@ namespace Faunus {
 
     /**
      * @brief Hydrophobic interactions using SASA
-     * @author Anil Kurut
+     *
+     * Upon construction the following keywords are read from `InputMap`:
+     *
+     *  Keyword                | Comment
+     *  :--------------------- | :--------------
+     *  `sasahydro_sasafile`   | SASA file - one column
+     *  `sasahydro_duplicate`  | read SASA file n times
+     *  `sasahydro_tension`    | surface tension (dyne/cm)
+     *  `sasahydro_threshold`  | surface distance threshold (angstrom)
+     *
+     * @author Kurut / Lund
      * @date Lund, 2014
      * @note Experimental
      */
@@ -1169,61 +1179,104 @@ namespace Faunus {
           typedef Energybase<Tspace> base;
           typedef typename Tspace::p_vec Tpvec;
 
-          vector<bool> v;
+          vector<bool> v;      // bool for all particles; true=active
           vector<double> sasa; // sasa for all particles
-          double threshold;
+          double threshold;    // surface-surface distance threshold
           double tension, tension_dyne;
+          int duplicate;       // how many times to load sasa file
+          string file;         // sasa file
 
           string _info() {
             char w=25;
             using namespace textio;
             std::ostringstream o;
-            o << pad(SUB,w,"SASA file") << "To come...\n"
-              << pad(SUB,w,"sasa_threshold: ") << threshold << _angstrom << "\n"
-              << pad(SUB,w,"surface_tension: ") << tension_dyne << " dyne/cm (" << tension
-              << kT+"/"+_angstrom+squared << ")\n";
+            o << pad(SUB,w,"SASA file") << file << " (" << duplicate << " times)\n"
+              << pad(SUB,w,"sasa vector size") << sasa.size() << "\n"
+              << pad(SUB,w,"threshold") << threshold << _angstrom << "\n"
+              << pad(SUB,w,"surface tension") << tension_dyne << " dyne/cm =" << tension
+              << kT+"/"+angstrom+squared << "\n";
             return o.str();
           }
 
-          bool loadSASA(const string &file) {
-            std::ifstream f(file);
-            return false;
+          void loadSASA(const string &file, unsigned int n) {
+            sasa.clear();
+            while (n-->0) {
+              double s;
+              std::ifstream f(file);
+              while (f>>s)
+                sasa.push_back(s);
+            }
+            if (sasa.empty())
+              cout << "# Warning: No SASA data loaded from " << file << "\n";
           }
 
         public:
           HydrophobicSASA(InputMap &in) {
+            string pfx="sasahydro_";
             base::name = "Hydrophobic SASA";
-            threshold = in.get<double>("sasahydro_threshold", 3.0);
-            tension_dyne = in.get<double>("sasahydro_tension", 0);
+            threshold = in.get<double>(pfx+"threshold", 3.0);
+            tension_dyne = in.get<double>(pfx+"tension", 0);
             tension = tension_dyne * 1e-23 / (pc::kB * pc::T());  // dyne/cm converted to kT/A^2, 1dyne/cm = 0.001 J/m^2
+            file = in.get(pfx+"sasafile", string());
+            duplicate = in.get(pfx+"duplicate", 0);
+            loadSASA(file, duplicate);
           }
 
-          double external(const Tpvec &p) FOVERRIDE {
-            assert(sasa.size()==p.size());
-            double dsasa=0; // change in surface area
-            v.resize(p.size());
-            std::fill(v.begin(), v.end(), true);
-            auto g = base::spcPtr->groupList();
-            for (auto gi=g.begin(); gi!=g.end(); ++gi)
-              for (auto gj=gi; ++gj!=g.end();)
-                if (gi->isMolecular())
-                  if (gj->isMolecular())
-                    for (auto i : gi)
-                      for (auto j : gj)
-                        if (p[i].hydrophobic)
-                          if (p[j].hydrophobic)
-                            if (v[i] || v[j]) {
-                              double r2=base::spcPtr->geo.sqdist(p[i],p[j]);
-                              if (r2<pow(threshold+p[i].radius+p[j].radius,2)) {
-                                if (v[i])
-                                  dsasa += sasa[i];
-                                if (v[j])
-                                  dsasa += sasa[j];
-                                v[i]=v[j]=false;
+          double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+            double dsasa=0;
+            if (sasa.size()==p.size())
+              if (g1.isMolecular())
+                if (g2.isMolecular()) {
+                  v.resize(p.size());
+                  std::fill(v.begin(), v.end(), true);
+                  for (auto i : g1)
+                    for (auto j : g2)
+                      if (p[i].hydrophobic)
+                        if (p[j].hydrophobic)
+                          if (sasa[i]>1e-3)
+                            if (sasa[j]>1e-3)
+                              if (v[i] || v[j]) {
+                                double r2=base::spc->geo.sqdist(p[i],p[j]);
+                                if (r2<pow(threshold+p[i].radius+p[j].radius,2)) {
+                                  if (v[i])
+                                    dsasa += sasa[i];
+                                  if (v[j])
+                                    dsasa += sasa[j];
+                                  v[i]=v[j]=false;
+                                }
                               }
-                            }
+                }
             return -tension * dsasa; // in kT
           }
+
+          /*
+             double external(const Tpvec &p) {
+             assert(sasa.size()==p.size());
+             double dsasa=0; // change in surface area
+             v.resize(p.size());
+             std::fill(v.begin(), v.end(), true);
+             auto g = base::spc->groupList();
+             for (auto gi=g.begin(); gi!=g.end(); ++gi)
+             for (auto gj=gi; ++gj!=g.end();)
+             if (gi->isMolecular())
+             if (gj->isMolecular())
+             for (auto i : gi)
+             for (auto j : gj)
+             if (p[i].hydrophobic)
+             if (p[j].hydrophobic)
+             if (v[i] || v[j]) {
+             double r2=base::spc->geo.sqdist(p[i],p[j]);
+             if (r2<pow(threshold+p[i].radius+p[j].radius,2)) {
+             if (v[i])
+             dsasa += sasa[i];
+             if (v[j])
+             dsasa += sasa[j];
+             v[i]=v[j]=false;
+             }
+             }
+             return -tension * dsasa; // in kT
+             }
+             */
       };
 
     /**

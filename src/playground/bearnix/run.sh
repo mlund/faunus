@@ -102,7 +102,7 @@ tion2                  Cl
 nion2                  0
 dpion2                 10
 
-sasahydro_sasafile     protein.sasa   # SASA file - one column
+sasahydro_sasafile     sasafile.dat   # SASA file - one line per particle
 sasahydro_duplicate    2              # read SASA file n times
 sasahydro_tension      3              # surface tension (dyne/cm)
 sasahydro_threshold    3              # surface distance threshold (angstrom)

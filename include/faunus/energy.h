@@ -1190,8 +1190,8 @@ namespace Faunus {
             char w=25;
             using namespace textio;
             std::ostringstream o;
-            o << pad(SUB,w,"SASA file") << file << " (" << duplicate << " times)\n"
-              << pad(SUB,w,"sasa vector size") << sasa.size() << "\n"
+            o << pad(SUB,w,"SASA file") << file << " (duplicated " << duplicate << " times)\n"
+              << pad(SUB,w,"SASA vector size") << sasa.size() << "\n"
               << pad(SUB,w,"threshold") << threshold << _angstrom << "\n"
               << pad(SUB,w,"surface tension") << tension_dyne << " dyne/cm =" << tension
               << kT+"/"+angstrom+squared << "\n";
@@ -1199,15 +1199,16 @@ namespace Faunus {
           }
 
           void loadSASA(const string &file, unsigned int n) {
+            double s;
+            std::vector<double> t;
+            std::ifstream f(file);
+            while (f>>s)
+              t.push_back(s);
             sasa.clear();
-            while (n-->0) {
-              double s;
-              std::ifstream f(file);
-              while (f>>s)
-                sasa.push_back(s);
-            }
+            while (n-->0)
+              sasa.insert(sasa.end(), t.begin(), t.end());
             if (sasa.empty())
-              cout << "# Warning: No SASA data loaded from " << file << "\n";
+              cout << "Warning: No SASA data loaded from " << file << "\n";
           }
 
         public:

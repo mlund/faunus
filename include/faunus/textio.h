@@ -4,8 +4,8 @@
 #include <faunus/common.h>
 
 namespace Faunus {
-  /*!
-   * \brief Namespace for text related operations: formatting, special characters etc.
+  /**
+   * @brief Namespace for text related operations: formatting, special characters etc.
    *
    * Unless using the macro definition AVOID_UNICODE, Faunus will use UTF-16 unicode
    * output to print fancy output with mathematical symbols, greek letters etc.
@@ -108,7 +108,7 @@ namespace Faunus {
       std::ostringstream o;
       o << std::string(71,'.') << endl
         << "  Welcome to FAUNUS - A Framework for Molecule Simulation.\n"
-        << "  Copyright (C) 2002-2013 Mikael Lund\n"
+        << "  Copyright (C) 2002-2014 Mikael Lund\n"
         << "\n"
         << "  This program is free software; you can redistribute it and/or modify\n"
         << "  it under the terms of the GNU General Public License as published by\n"
@@ -126,7 +126,7 @@ namespace Faunus {
         << "    Mikael Lund, Bj\u00F6rn Persson, Martin Trulsson,\n"
         << "    Ond\u0159ej Mar\u0161\u00E1lek, Christophe Labbez, Andre Teixeira,\n"
         << "    An\u0131l Kurut, Chris Evers, Robert V\u00E1cha, Axel Thuresson,\n"
-        << "    Bj\u00F6rn Stenqvist.\n"
+        << "    Bj\u00F6rn Stenqvist, Alexei Abrikossov, Giulio Tesei.\n"
         << "\n"
         << "  Reference:\n"
         << "    Source Code Biol. Med. (2008) 3:1\n"

@@ -28,6 +28,9 @@ CTestTestfile.cmake
 # Doxygen
 doxyhtml
 
+# Kdevelop
+*.kdev4
+
 # XCode build
 build
 *.xcuserstate

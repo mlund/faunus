@@ -1160,15 +1160,37 @@ namespace Faunus {
     /**
      * @brief Hydrophobic interactions using SASA
      *
+     * This will add a square-well attraction between solvent
+     * exposed, hydrophobic sites where the strength is given
+     * by a surface tension argument, 
+     *
+     * @f[ U = \sum_i \Gamma_i a_{\mbox{SASA}} @f]
+     *
+     * where @f$a@f$ is the SASA value for a residue and `i` runs
+     * over all particles in contact with at least one other
+     * hydrophobic and exposed site. Note that the value of the surface
+     * tension, @f$\Gamma@f$, is not comparable to a true, macroscopic
+     * tension.
+     *
      * Upon construction the following keywords are read from `InputMap`:
      *
      *  Keyword                | Comment
      *  :--------------------- | :--------------
-     *  `sasahydro_sasafile`   | SASA file - one column
+     *  `sasahydro_sasafile`   | SASA file - one column (angstrom^2)
      *  `sasahydro_duplicate`  | read SASA file n times
      *  `sasahydro_tension`    | surface tension (dyne/cm)
      *  `sasahydro_threshold`  | surface distance threshold (angstrom)
-     *  `sasahydro_uofr`       | set to true if U(r) should be sampled (default: false)
+     *  `sasahydro_uofr`       | set to "yes" if U(r) should be sampled (default: "no")
+     *
+     *  The `sasafile` should be a single colomn file with SASA values for each particle in
+     *  the system (angstrom^2). Alternatively one can load the file several times using
+     *  the `duplicate` option. If `sasahydro_uofr` is specified, the hydrophobic interaction
+     *  energi is averaged as a function of mass center separation between groups and
+     *  automatically saved to disk upon calling the destructor.
+     *
+     * @todo
+     * Currently only `g2g` is implemented and it is assumed that a hydrophobic site on
+     * one group can be in contact only with sites on a single, alien group.
      *
      * @author Kurut / Lund
      * @date Lund, 2014
@@ -1219,6 +1241,16 @@ namespace Faunus {
               cout << "Warning: No SASA data loaded from " << file << "\n";
           }
 
+          /** @brief Save U(r) to disk if sampled */
+          void save(const string &pfx=textio::prefix) {
+            for (auto &i : uofr) {
+              std::ofstream f(pfx+"Usasa_"+i.first);
+              if (f)
+                for (auto &j : i.second)
+                  f << j.first*dr << " " << j.second << "\n";
+            }
+          }
+
         public:
           HydrophobicSASA(InputMap &in) {
             string pfx="sasahydro_";
@@ -1234,16 +1266,6 @@ namespace Faunus {
           }
 
           ~HydrophobicSASA() { save(); }
-
-          /** @brief Save U(r) to disk if sampled */
-          void save(const string &prefix="sasahydro_uofr_") {
-              for (auto &i : uofr) {
-                std::ofstream f(prefix+i.first);
-                if (f)
-                  for (auto &j : i.second)
-                    f << j.first << " " << j.second << "\n";
-              }
-          }
 
           double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
             double dsasa=0;
@@ -1268,18 +1290,16 @@ namespace Faunus {
                                   v[i]=v[j]=false;
                                 }
                               }
+                  // analyze
+                  if (sample_uofr && !base::isTrial(p)) {
+                    double r = base::spc->geo.dist(g1.cm,g2.cm);
+                    string key = std::max(g1.name,g2.name)
+                      + "-" +std::min(g1.name,g2.name);
+                    uofr[key][to_bin(r,dr)] += -tension*dsasa;
+                  }
                 }
 
-            double u=-tension*dsasa; // in kT
-            if (sample_uofr)
-              if (base::isTrial(p)==false) {
-                double r = base::spc->geo.dist(g1.cm,g2.cm);
-                if (g1.name>g2.name)
-                  uofr[ g1.name+"-"+g2.name ][r] += u;
-                else
-                  uofr[ g2.name+"-"+g1.name ][r] += u;
-              }
-            return u;
+            return -tension*dsasa; // in kT
           }
       };
 

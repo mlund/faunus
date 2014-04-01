@@ -115,7 +115,7 @@ sasahydro_uofr         no             # sample U_sasa(r) for groups?
 echo "
 ATOM      1 HIS  GLY     1       0.000    0.000    0.000  0.000 3.000
 ATOM      2 HIS  GLY     2       2.000    0.000    1.000  0.000 2.000
-" > titratable.aam
+" > titratable.pqr
 
 echo "
 ATOM      1 X    MP      1       0.000    0.000    0.000 -1.000 2.000

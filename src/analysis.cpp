@@ -177,7 +177,7 @@ namespace Faunus {
       using namespace textio;
       char k=13;
       std::ostringstream o;
-      if (~exclusionlist.empty()) {
+      if (!exclusionlist.empty()) {
         o << pad(SUB,w, "Exclusion list");
         for (auto i : exclusionlist)
           o << i << " ";

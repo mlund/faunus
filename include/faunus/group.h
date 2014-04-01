@@ -85,6 +85,14 @@ namespace Faunus {
           return Z;
         }
 
+      /** @brief Number of hydrophobic sites */
+      template<class Tpvec>
+        double numHydrophobic(const Tpvec &p, double sum=0) const {
+          for (auto i : *this) sum+=double(p[i].hydrophobic);
+          return sum;
+        }
+
+
       /**
        *  @brief   Calculates mass center - does not touch group!
        *  @warning Intra-molecular distances must not exceed half

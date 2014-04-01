@@ -1168,6 +1168,7 @@ namespace Faunus {
      *  `sasahydro_duplicate`  | read SASA file n times
      *  `sasahydro_tension`    | surface tension (dyne/cm)
      *  `sasahydro_threshold`  | surface distance threshold (angstrom)
+     *  `sasahydro_uofr`       | set to true if U(r) should be sampled (default: false)
      *
      * @author Kurut / Lund
      * @date Lund, 2014
@@ -1178,6 +1179,9 @@ namespace Faunus {
         private:
           typedef Energybase<Tspace> base;
           typedef typename Tspace::p_vec Tpvec;
+          typedef std::map<int, Average<double> > Tuofr;
+
+          std::map<string,Tuofr> uofr; // sasa energy vs. group-2-group distance
 
           vector<bool> v;      // bool for all particles; true=active
           vector<double> sasa; // sasa for all particles
@@ -1186,15 +1190,19 @@ namespace Faunus {
           int duplicate;       // how many times to load sasa file
           string file;         // sasa file
 
+          bool sample_uofr;    // set to true if we should sample U_sasa(r)
+          double dr;           // U(r) resolution in r
+
           string _info() {
             char w=25;
             using namespace textio;
             std::ostringstream o;
             o << pad(SUB,w,"SASA file") << file << " (duplicated " << duplicate << " times)\n"
               << pad(SUB,w,"SASA vector size") << sasa.size() << "\n"
-              << pad(SUB,w,"threshold") << threshold << _angstrom << "\n"
-              << pad(SUB,w,"surface tension") << tension_dyne << " dyne/cm =" << tension
-              << kT+"/"+angstrom+squared << "\n";
+              << pad(SUB,w,"Threshold") << threshold << _angstrom << "\n"
+              << pad(SUB,w,"Surface tension") << tension_dyne << " dyne/cm =" << tension
+              << kT+"/"+angstrom+squared << "\n"
+              << pad(SUB,w,"Sample U(r)") << std::boolalpha << sample_uofr << "\n";
             return o.str();
           }
 
@@ -1220,7 +1228,21 @@ namespace Faunus {
             tension = tension_dyne * 1e-23 / (pc::kB * pc::T());  // dyne/cm converted to kT/A^2, 1dyne/cm = 0.001 J/m^2
             file = in.get(pfx+"sasafile", string());
             duplicate = in.get(pfx+"duplicate", 0);
+            sample_uofr = in.get<bool>(pfx+"uofr", false);
             loadSASA(file, duplicate);
+            dr=0.5;
+          }
+
+          ~HydrophobicSASA() { save(); }
+
+          /** @brief Save U(r) to disk if sampled */
+          void save(const string &prefix="sasahydro_uofr_") {
+              for (auto &i : uofr) {
+                std::ofstream f(prefix+i.first);
+                if (f)
+                  for (auto &j : i.second)
+                    f << j.first << " " << j.second << "\n";
+              }
           }
 
           double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
@@ -1247,37 +1269,18 @@ namespace Faunus {
                                 }
                               }
                 }
-            return -tension * dsasa; // in kT
-          }
 
-          /*
-             double external(const Tpvec &p) {
-             assert(sasa.size()==p.size());
-             double dsasa=0; // change in surface area
-             v.resize(p.size());
-             std::fill(v.begin(), v.end(), true);
-             auto g = base::spc->groupList();
-             for (auto gi=g.begin(); gi!=g.end(); ++gi)
-             for (auto gj=gi; ++gj!=g.end();)
-             if (gi->isMolecular())
-             if (gj->isMolecular())
-             for (auto i : gi)
-             for (auto j : gj)
-             if (p[i].hydrophobic)
-             if (p[j].hydrophobic)
-             if (v[i] || v[j]) {
-             double r2=base::spc->geo.sqdist(p[i],p[j]);
-             if (r2<pow(threshold+p[i].radius+p[j].radius,2)) {
-             if (v[i])
-             dsasa += sasa[i];
-             if (v[j])
-             dsasa += sasa[j];
-             v[i]=v[j]=false;
-             }
-             }
-             return -tension * dsasa; // in kT
-             }
-             */
+            double u=-tension*dsasa; // in kT
+            if (sample_uofr)
+              if (base::isTrial(p)==false) {
+                double r = base::spc->geo.dist(g1.cm,g2.cm);
+                if (g1.name>g2.name)
+                  uofr[ g1.name+"-"+g2.name ][r] += u;
+                else
+                  uofr[ g2.name+"-"+g1.name ][r] += u;
+              }
+            return u;
+          }
       };
 
     /**

@@ -106,6 +106,7 @@ sasahydro_sasafile     sasafile.dat   # SASA file - one line per particle
 sasahydro_duplicate    2              # read SASA file n times
 sasahydro_tension      3              # surface tension (dyne/cm)
 sasahydro_threshold    3              # surface distance threshold (angstrom)
+sasahydro_uofr         no             # sample U_sasa(r) for groups?
  
 " > cyl.input
 

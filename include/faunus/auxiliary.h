@@ -337,7 +337,7 @@ namespace Faunus {
         }
 
         T operator()(T x) const {
-          assert(~t.empty() && "Table is empty");
+          assert(!t.empty() && "Table is empty");
           if (x>t.back().first) return std::numeric_limits<T>::quiet_NaN();
           if (x<t[0].first) return std::numeric_limits<T>::quiet_NaN();
           auto it = std::lower_bound(t.begin(), t.end(), Tpair(x,0));

@@ -67,8 +67,7 @@ namespace Faunus {
             return *spc;
           }
 
-          /** @brief Particle-particle energy */
-          virtual double p2p(const Tparticle&, const Tparticle&)
+          virtual double p2p(const Tparticle&, const Tparticle&) // Particle-particle energy
           { return 0; }
 
           virtual Point f_p2p(const Tparticle&, const Tparticle&) // Particle-particle force
@@ -95,7 +94,7 @@ namespace Faunus {
           virtual double p_external(const Tparticle&)   // External energy of particle
           { return 0; }
 
-          /** @brief Total energy of i'th = i2all+i_external+i_internal */
+          /* @brief Total energy of i'th = i2all+i_external+i_internal */
           double i_total(Tpvec &p, int i)
           { return i2all(p,i) + i_external(p,i) + i_internal(p,i); }
 
@@ -1164,12 +1163,12 @@ namespace Faunus {
      * exposed, hydrophobic sites where the strength is given
      * by a surface tension argument, 
      *
-     * @f[ U = \sum_i \Gamma_i a_{\mbox{SASA}} @f]
+     * @f[ U = \sum_i^{N_{contact}} \gamma a_i @f]
      *
      * where @f$a@f$ is the SASA value for a residue and `i` runs
      * over all particles in contact with at least one other
-     * hydrophobic and exposed site. Note that the value of the surface
-     * tension, @f$\Gamma@f$, is not comparable to a true, macroscopic
+     * hydrophobic and exposed site(s). Note that the value of the surface
+     * tension, @f$\gamma@f$, is not comparable to a true, macroscopic
      * tension.
      *
      * Upon construction the following keywords are read from `InputMap`:
@@ -1177,20 +1176,22 @@ namespace Faunus {
      *  Keyword                | Comment
      *  :--------------------- | :--------------
      *  `sasahydro_sasafile`   | SASA file - one column (angstrom^2)
-     *  `sasahydro_duplicate`  | read SASA file n times
-     *  `sasahydro_tension`    | surface tension (dyne/cm)
-     *  `sasahydro_threshold`  | surface distance threshold (angstrom)
+     *  `sasahydro_duplicate`  | read SASA file n times (default: 1)
+     *  `sasahydro_tension`    | surface tension (default: 0 dyne/cm)
+     *  `sasahydro_threshold`  | surface distance threshold (default: 3.0 angstrom)
      *  `sasahydro_uofr`       | set to "yes" if U(r) should be sampled (default: "no")
+     *  `sasahydro_dr`         | distance resolution of U(r) (default: 0.5 angstrom)
      *
-     *  The `sasafile` should be a single colomn file with SASA values for each particle in
+     *  The `sasafile` should be a single column file with SASA values for each particle in
      *  the system (angstrom^2). Alternatively one can load the file several times using
      *  the `duplicate` option. If `sasahydro_uofr` is specified, the hydrophobic interaction
-     *  energi is averaged as a function of mass center separation between groups and
-     *  automatically saved to disk upon calling the destructor.
+     *  energy is averaged as a function of mass center separation between groups and
+     *  saved to disk upon calling the destructor.
      *
      * @todo
      * Currently only `g2g` is implemented and it is assumed that a hydrophobic site on
-     * one group can be in contact only with sites on a single, alien group.
+     * one group is in contact with sites on *maximum one* other group. For large macro 
+     * molecules this is hardly a problem; if it is, an energy drift should show.
      *
      * @author Kurut / Lund
      * @date Lund, 2014
@@ -1215,16 +1216,33 @@ namespace Faunus {
           bool sample_uofr;    // set to true if we should sample U_sasa(r)
           double dr;           // U(r) resolution in r
 
+          /** @brief Fraction of hydrophobic area */
+          double fracHydrophobic() const {
+            double h=0, noh=0;
+            if (sasa.size()==base::spc->p.size()) {
+              for (size_t i=0; i<sasa.size(); i++)
+                if (base::spc->p[i].hydrophobic)
+                  h+=sasa[i];
+                else
+                  noh+=sasa[i];
+              return h/(h+noh);
+            }
+            return 0;
+          }
+
           string _info() {
             char w=25;
             using namespace textio;
             std::ostringstream o;
             o << pad(SUB,w,"SASA file") << file << " (duplicated " << duplicate << " times)\n"
-              << pad(SUB,w,"SASA vector size") << sasa.size() << "\n"
-              << pad(SUB,w,"Threshold") << threshold << _angstrom << "\n"
-              << pad(SUB,w,"Surface tension") << tension_dyne << " dyne/cm =" << tension
-              << kT+"/"+angstrom+squared << "\n"
-              << pad(SUB,w,"Sample U(r)") << std::boolalpha << sample_uofr << "\n";
+              << pad(SUB,w,"SASA vector size") << sasa.size()
+              << " (particle vector = " << base::spc->p.size() << ")\n"
+              << pad(SUB,w,"Hydrophobic SASA") << fracHydrophobic()*100 << percent + "\n"
+              << pad(SUB,w,"Threshold") << threshold << _angstrom + "\n"
+              << pad(SUB,w,"Surface tension") << tension_dyne << " dyne/cm = " << tension
+              << kT+"/"+angstrom+squared+"\n"
+              << pad(SUB,w+1,"Sample "+beta+"U(r)") << std::boolalpha << sample_uofr << "\n"
+              << pad(SUB,w+1,beta+"U(r) resolution") << dr << _angstrom + "\n";
             return o.str();
           }
 
@@ -1238,7 +1256,7 @@ namespace Faunus {
             while (n-->0)
               sasa.insert(sasa.end(), t.begin(), t.end());
             if (sasa.empty())
-              cout << "Warning: No SASA data loaded from " << file << "\n";
+              std::cerr << "Warning: No SASA data loaded from "+file+"\n";
           }
 
           /** @brief Save U(r) to disk if sampled */
@@ -1261,12 +1279,13 @@ namespace Faunus {
             file = in.get(pfx+"sasafile", string());
             duplicate = in.get(pfx+"duplicate", 0);
             sample_uofr = in.get<bool>(pfx+"uofr", false);
+            dr = in.get<double>(pfx+"dr", 0.5);
             loadSASA(file, duplicate);
-            dr=0.5;
           }
 
           ~HydrophobicSASA() { save(); }
 
+          /** @brief Group-to-group energy */
           double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
             double dsasa=0;
             if (sasa.size()==p.size())

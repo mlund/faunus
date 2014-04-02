@@ -17,6 +17,7 @@ namespace Faunus {
 #ifdef AVOID_UNICODE
     const string angstrom="AA";
     const string _angstrom=" AA";
+    const string beta="B";
     const string cubed="^3";
     const string cuberoot="3root";
     const string degrees="deg";
@@ -40,6 +41,7 @@ namespace Faunus {
 #else
     const string angstrom="\u00c5";   //!< Angstrom symbol
     const string _angstrom=" \u00c5"; //!< Angstrom symbol with space in front
+    const string beta="\u03b2";       //!< Greek beta
     const string cubed="\u00b3";      //!< Superscript 3
     const string cuberoot="\u221b";   //!< Cubic root
     const string degrees="\u00b0";    //!< Degrees

@@ -747,6 +747,7 @@ INPUT                  = doc \
                          src/examples/water2.cpp \
                          src/examples/cigars2fibrils.cpp \
                          src/examples/stripes.cpp \
+                         scripts/vmd-sasa.tcl \
                          include/faunus
 
 # This tag can be used to specify the character encoding of the source files

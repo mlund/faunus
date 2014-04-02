@@ -1,5 +1,5 @@
-#
-# VMD script to measure SASA for residues in proteins
+## @file vmd-sasa.tcl 
+# @brief VMD script to measure SASA for residues in proteins
 #
 # This is a VMD script to measure solvent accessible
 # surface areas (SASA) of residues in proteins. The
@@ -10,7 +10,7 @@
 #
 # Usage:
 #
-#    $ vmd -dispdev text infile.pdb -e vmd-sasa.tcl
+#     vmd -dispdev text infile.pdb -e vmd-sasa.tcl
 #
 set sum 0
 set outfile [open "out.sasa" w]

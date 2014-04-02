@@ -1184,7 +1184,10 @@ namespace Faunus {
      *
      *  The `sasafile` should be a single column file with SASA values for each particle in
      *  the system (angstrom^2). Alternatively one can load the file several times using
-     *  the `duplicate` option. If `sasahydro_uofr` is specified, the hydrophobic interaction
+     *  the `duplicate` option. To generate a SASA file of a protein, use the vmd-sasa.tcl
+     *  VMD script, found in the `scripts` folder.
+     *
+     *  If `sasahydro_uofr` is specified, the hydrophobic interaction
      *  energy is averaged as a function of mass center separation between groups and
      *  saved to disk upon calling the destructor.
      *

@@ -11,8 +11,8 @@
 
 namespace Faunus {
 
-  /*!
-   * \brief Namespace for geometric operations.
+  /**
+   * @brief Namespace for geometric operations.
    *
    * This namespace contains classes for handling various simulation geometries
    * such as cubes, spheres, cylinder, slits etc. The geometry of a simulation
@@ -305,12 +305,12 @@ namespace Faunus {
      * @brief Calculate center of cluster of particles
      * @param geo Geometry
      * @param p Particle vector
-     * @param g Range of particle index
+     * @param g Range of particle index (`Group`, `vector<int>`, ...)
      * @param weight Weight function
      *
      * The weight function is typically a lambda function that takes a particle
      * as an argument and returns the weight, for example Mw, charge, or unity
-     * for mass center, charge center, or geometry center. Functions for
+     * for mass center, charge center, or geometric center. Functions for
      * these three examples are predefined.
      */
     template<class Tgeo, class Tpvec, class TGroup, class Tweightf>

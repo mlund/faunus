@@ -1095,7 +1095,7 @@ namespace Faunus {
             DipoleParticle toMultipole(const Tspace &spc, const Tgroup &g) const {
               DipoleParticle m;
               m = g.cm;
-              m.charge = g.charge(spc.p);            // monopole
+              m.charge = netCharge(spc.p, g);            // monopole
               m.mu = Geometry::dipoleMoment(spc, g); // dipole
               m.muscalar = m.mu.norm();
               if (m.muscalar>1e-8)

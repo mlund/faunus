@@ -1695,6 +1695,7 @@ namespace Faunus {
          * 
          */
         void save(string nbr="") {
+          cout << "Nbr is:" << nbr << "!" << endl;
           rdf.save("gofr.dat"+nbr);
           mucorr.save("mucorr.dat"+nbr);
           mucorr_angle.save("mucorr_angle.dat"+nbr);

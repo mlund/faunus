@@ -13,6 +13,7 @@ namespace Faunus {
    */
   namespace textio {
     enum indentlevel {TITLE=0,SUB=2,SUBSUB=4};
+    static std::string prefix="";   //!< Unique prefix for current job. Use for file I/O.
 
 #ifdef AVOID_UNICODE
     const string angstrom="AA";
@@ -143,8 +144,6 @@ namespace Faunus {
         << "\n" << string(71,'*') << endl;
       return o.str();
     }
-
-    extern std::string prefix;                    //!< Unique prefix for current job. Use for file I/O.
 
   }//end of textio namespace
 }// end of Faunus namespace

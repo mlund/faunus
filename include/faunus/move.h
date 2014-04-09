@@ -247,7 +247,12 @@ namespace Faunus {
     /** @return Energy change in units of kT */
     template<class Tspace>
       double Movebase<Tspace>::energyChange() {
-        return _energyChange();
+        double du = _energyChange();
+        if (std::isnan(du)) {
+          std::cerr << "Error: energy change returns not-a-number (NaN)\n";
+          std::exit(1);
+        }
+        return du;
       }
 
     /**
@@ -449,7 +454,7 @@ namespace Faunus {
           gsize += igroup->size();
         }
         if (iparticle>-1) {
-          double dp = atom[ spc->p[iparticle].id ].dp;
+          double dp = atom[ spc->p.at(iparticle).id ].dp;
           if (dp<1e-6) dp = genericdp;
           assert(iparticle<(int)spc->p.size()
               && "Trial particle out of range");
@@ -1167,6 +1172,35 @@ namespace Faunus {
           }
         return 0;
       }
+
+    /**
+     * @brief Rotate/translate group along with an extra group
+     *
+     * This will rotate/translate a group A around its mass center and, if
+     * defined, also an extra group, B. This can be useful for sampling groups
+     * joined together with springs, for example a polymer (B) joined to a
+     * protein (A). The group B can consist of many molecules/chains as
+     * long as these are continuous in the particle vector.
+     *
+     * @date Malmo 2014
+     */
+    template<class Tspace>
+      class TranslateRotateGroupCluster : public TranslateRotateCluster<Tspace> {
+        private:
+          typedef TranslateRotateCluster<Tspace> base;
+          void _acceptMove() {
+            base::_acceptMove();
+            for (auto i : base::spc->groupList())
+              i->setMassCenter(*base::spc);
+          }
+          string _info() FOVERRIDE { return base::base::_info(); }
+          double ClusterProbability(p_vec &p, int i) FOVERRIDE { return 1; }
+        public:
+          TranslateRotateGroupCluster(InputMap &in, Energy::Energybase<Tspace> &e,
+              Tspace &s, string pfx="transrot") : base(in,e,s,pfx) {
+            base::title = "Translate-Rotate w. extra group";
+          }
+      };
 
     /**
      * @brief Non-rejective cluster translation.

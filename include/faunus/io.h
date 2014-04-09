@@ -270,7 +270,6 @@ namespace Faunus {
             int iatom, ires;
             std::string line,key,aname,rname;
             while (std::getline(in, line)) {
-              cout << "!!! " << line << endl;
               std::stringstream o(line);
               while (o >> key)
                 if (key=="ATOM" || key=="HETATM") {
@@ -822,6 +821,7 @@ namespace Faunus {
           spc.geo.randompos(i);        // random positions
         g = spc.insert(p);             // add to space
         g.name = fasta;
+        cout << "FASTA group: " << g.info() << "\n";
         for (int i=g.front(); i<g.back(); i++)
           bonded.add(i, i+1, pairpot); // add bonds
       }

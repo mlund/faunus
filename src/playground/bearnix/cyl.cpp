@@ -37,6 +37,7 @@ int main(int argc, char** argv) {
   Tspace spc(mcp);
   auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp)
+    + Energy::HydrophobicSASA<Tspace>(mcp)
     + Energy::EquilibriumEnergy<Tspace>(mcp);
 
   auto eqenergy = &pot.second;
@@ -47,7 +48,7 @@ int main(int argc, char** argv) {
     for (size_t j=i+1; j<atom.list.size(); j++)
       if (atom[i].hydrophobic)
         if (atom[j].hydrophobic)
-          pot.first.first.pairpot.second.customEpsilon(i,j,epsh);
+          pot.first.first.first.pairpot.second.customEpsilon(i,j,epsh);
 
   // Add molecules
   int N1 = mcp.get("molecule1_N",0);

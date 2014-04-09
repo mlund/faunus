@@ -11,8 +11,8 @@
 
 namespace Faunus {
 
-  /*!
-   * \brief Namespace for geometric operations.
+  /**
+   * @brief Namespace for geometric operations.
    *
    * This namespace contains classes for handling various simulation geometries
    * such as cubes, spheres, cylinder, slits etc. The geometry of a simulation
@@ -305,12 +305,12 @@ namespace Faunus {
      * @brief Calculate center of cluster of particles
      * @param geo Geometry
      * @param p Particle vector
-     * @param g Range of particle index
+     * @param g Range of particle index (`Group`, `vector<int>`, ...)
      * @param weight Weight function
      *
      * The weight function is typically a lambda function that takes a particle
      * as an argument and returns the weight, for example Mw, charge, or unity
-     * for mass center, charge center, or geometry center. Functions for
+     * for mass center, charge center, or geometric center. Functions for
      * these three examples are predefined.
      */
     template<class Tgeo, class Tpvec, class TGroup, class Tweightf>
@@ -353,7 +353,7 @@ namespace Faunus {
     template<class Tgeo, class Tpvec, class TGroup>
       Point chargeCenter(const Tgeo &geo, const Tpvec &p, const TGroup &g) {
         return anyCenter(geo,p,g,
-            [](const typename Tpvec::value_type &x) {return x.charge;} );
+            [](const typename Tpvec::value_type &x) { return std::fabs(x.charge); } );
       }
 
     /** @brief Calculate charge center of a particle vector */
@@ -558,6 +558,9 @@ namespace Faunus {
      * @param p Particle vector (structure must be whole)
      * @param n Number of iterations (default: 1e7)
      * @param pradius Probe radius (default: 0)
+     *
+     * @todo More efficient sampling may be achieved by adjusting the
+     *       box vs. molecular volume (i.e. 1:1)
      */
     template<typename Tpvec>
       double calcVolume(const Tpvec &p, unsigned int n=1e7, double pradius=0) {
@@ -566,7 +569,7 @@ namespace Faunus {
         for (auto &i : p)
           gc += i / p.size();
         for (auto &i : p)
-          L = std::max(L, 2*((i-gc).norm() + i.radius));
+          L = std::max(L, 2*((i-gc).norm() + i.radius + pradius));
 
         // Start shooting!
         Point r;

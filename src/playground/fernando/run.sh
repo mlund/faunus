@@ -22,7 +22,7 @@ echo '
   {
     "Na"   :  { "eps":0.124, "q": 1, "r":1.9, "mw":22.99 }, // epsilon in kJ/mol!
     "Cl"   :  { "eps":0.124, "q":-1, "r":1.7, "mw":35.45 },
-    "X"    :  { "eps":0.010, "q":-1, "r":1.7, "mw":1.0, "hydrophobic":true },
+    "X"    :  { "eps":0.010, "q":-1, "r":1.7, "mw":1.0 },
     "ASP"  :  { "eps":0.124, "q":-1, "r":3.6, "mw":110 },
     "HASP" :  { "eps":0.124, "q":0,  "r":3.6, "mw":110 },
     "LASP" :  { "eps":0.124, "q":2,  "r":3.6, "mw":110 },
@@ -102,12 +102,6 @@ tion2                  Cl
 nion2                  0
 dpion2                 10
 
-sasahydro_sasafile     sasafile.dat   # SASA file - one line per particle
-sasahydro_duplicate    1              # read SASA file n times
-sasahydro_tension      3              # surface tension (dyne/cm)
-sasahydro_threshold    3              # surface distance threshold (angstrom)
-sasahydro_uofr         yes            # sample U_sasa(r) for groups?
- 
 " > cyl.input
 
 # Generate some simple molecules in PQR format:
@@ -115,7 +109,7 @@ sasahydro_uofr         yes            # sample U_sasa(r) for groups?
 echo "
 ATOM      1 HIS  GLY     1       0.000    0.000    0.000  0.000 3.000
 ATOM      2 HIS  GLY     2       2.000    0.000    1.000  0.000 2.000
-" > titratable.pqr
+" > titratable.aam
 
 echo "
 ATOM      1 X    MP      1       0.000    0.000    0.000 -1.000 2.000
@@ -135,14 +129,14 @@ ATOM      4 X    QP      1      -1.000    1.000    0.000 -1.000 2.000
 
 }
 
-exe=./bearnix-cyl
+exe=./fer-cyl
 cylinder_len=50
 cylinder_radius=60
 
 # control equilibration and production runs
 eqrun=true
 prodrun=false
-copy=true
+copy=false
 
 for salt in 0.10  # loop over salt
 do

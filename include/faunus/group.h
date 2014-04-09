@@ -78,12 +78,13 @@ namespace Faunus {
         return size()/molsize;
       }
 
-      /** @brief Total charge */
+      /** @brief Total charge
       template<class Tpvec>
         double charge(const Tpvec &p, double Z=0) const {
           for (auto i : *this) Z+=p[i].charge;
           return Z;
         }
+        */
 
       /**
        *  @brief   Calculates mass center - does not touch group!
@@ -96,12 +97,6 @@ namespace Faunus {
         Point massCenter(const Tspace &spc) const {
           assert(&spc!=nullptr);
           return Geometry::massCenter(spc.geo, spc.p, *this);
-        }
-        
-      template<class Tspace>
-        Point chargeCenter(const Tspace &spc) const {
-          assert(&spc!=nullptr);
-          return Geometry::chargeCenter(spc.geo, spc.p, *this);
         }
 
       /** @brief Calculate AND set mass center (cm and cm_trial) */
@@ -269,6 +264,7 @@ namespace Faunus {
        * :------------- | :---------------------
        * `tionX`        | Name of atom X
        * `nionX`        | Number of type X atoms
+       * `overlap`      | Allow overlap of atoms [default: no]
        *
        * @todo Rename to addAtoms.
        */
@@ -278,6 +274,11 @@ namespace Faunus {
           setfront( spc.p.size() );
           int size=0;
           int n=1, npart;
+
+          auto overlap=Tspace::OVERLAP_CHECK;
+          if (in.get("overlap", false))
+            overlap=Tspace::NOOVERLAP_CHECK;
+
           do {
             std::ostringstream nion("nion"), tion("tion");
             nion << "nion" << n;
@@ -285,7 +286,7 @@ namespace Faunus {
             npart = in.get(nion.str(), 0);
             if (npart>0) {
               auto id = atom[in.get(tion.str(), string("UNK")) ].id;
-              spc.insert( atom[id].name, npart);
+              spc.insert(atom[id].name, npart, overlap);
               size+=npart;
             } else break;
           } while (npart>0);
@@ -312,6 +313,21 @@ namespace Faunus {
           assert( (size()%molsize)==0 && "GroupArray not a multiple of N");
         }
   };
+
+  /** @brief Number of hydrophobic sites */
+  template<class Tpvec, class Tindex>
+    int numHydrophobic(const Tpvec &p, const Tindex &g) {
+      return std::count_if(g.begin(), g.end(),
+          [&](int i) { return p[i].hydrophobic; });
+    }
+
+  /** @brief Total charge */
+  template<class Tpvec, class Tindex>
+    double netCharge(const Tpvec &p, const Tindex &g, double Z=0) {
+      for (auto i : g)
+        Z += p[i].charge;
+      return Z;
+    }
 
 }//namespace
 #endif

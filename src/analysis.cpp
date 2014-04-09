@@ -177,7 +177,7 @@ namespace Faunus {
       using namespace textio;
       char k=13;
       std::ostringstream o;
-      if (~exclusionlist.empty()) {
+      if (!exclusionlist.empty()) {
         o << pad(SUB,w, "Exclusion list");
         for (auto i : exclusionlist)
           o << i << " ";
@@ -189,7 +189,7 @@ namespace Faunus {
         << setw(k+5) << bracket(textio::mu+squared)+"-"+bracket(textio::mu)+squared << endl;
       for (auto &m : Z)
         o << indent(SUB) << std::left << setw(w) << m.first << setw(k) << m.second.avg()
-          << setw(k) << Z2[m.first].avg()-pow(m.second.avg(),2)
+          << setw(k+1) << Z2[m.first].avg()-pow(m.second.avg(),2)
           << setw(k) << mu[m.first].avg()
           << setw(k) << mu2[m.first].avg()-pow(mu[m.first].avg(),2)<< endl;
       return o.str();

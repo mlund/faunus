@@ -1585,9 +1585,7 @@ namespace Faunus {
             N = spc.p.size();
             const_DielTinfoil = pc::e*pc::e*1e10/(3*volume*pc::kT()*pc::e0);
             sampleKW = 0;
-            
-            if (in.get("load_dipole_data", false))
-              load(in.get("file_dipole_data", string("")));
+            load(in.get("dipole_data_ext", string("")));
           }
 
         void setCutoff(double cutoff) {
@@ -1694,23 +1692,22 @@ namespace Faunus {
          *       \f$ <\frac{1}{2} ( 3 \mu(0) \cdot \mu(r) - 1 )> \rightarrow \f$ mucorr_dist.dat+nbr
          * 
          */
-        void save(string nbr="") {
-          cout << "Nbr is:" << nbr << "!" << endl;
-          rdf.save("gofr.dat"+nbr);
-          mucorr.save("mucorr.dat"+nbr);
-          mucorr_angle.save("mucorr_angle.dat"+nbr);
-          mucorr_dist.save("mucorr_dist.dat"+nbr);
-          kw.sumSave("kirkwood.dat"+nbr,1.0/double(sampleKW));
-          HM_x.save("hist_dip_x.dat"+nbr);
-          HM_y.save("hist_dip_y.dat"+nbr);
-          HM_z.save("hist_dip_z.dat"+nbr);
-          HM_x_box.save("hist_dip_x_box.dat"+nbr);
-          HM_y_box.save("hist_dip_y_box.dat"+nbr);
-          HM_z_box.save("hist_dip_z_box.dat"+nbr);
-          HM2.save("hist_dip2.dat"+nbr);
-          HM2_box.save("hist_dip2_box.dat"+nbr);
+        void save(string ext="") {
+          rdf.save("gofr.dat"+ext);
+          mucorr.save("mucorr.dat"+ext);
+          mucorr_angle.save("mucorr_angle.dat"+ext);
+          mucorr_dist.save("mucorr_dist.dat"+ext);
+          kw.sumSave("kirkwood.dat"+ext,1.0/double(sampleKW));
+          HM_x.save("hist_dip_x.dat"+ext);
+          HM_y.save("hist_dip_y.dat"+ext);
+          HM_z.save("hist_dip_z.dat"+ext);
+          HM_x_box.save("hist_dip_x_box.dat"+ext);
+          HM_y_box.save("hist_dip_y_box.dat"+ext);
+          HM_z_box.save("hist_dip_z_box.dat"+ext);
+          HM2.save("hist_dip2.dat"+ext);
+          HM2_box.save("hist_dip2_box.dat"+ext);
           
-          string filename = "dipoledata.dat"+nbr;
+          string filename = "dipoledata.dat"+ext;
           std::ofstream f(filename.c_str());
           f.precision(10);
           if (f) {
@@ -1726,22 +1723,24 @@ namespace Faunus {
           }
         }
         
-        void load(string nbr="") {
-          rdf.load("gofr.dat"+nbr);
-          mucorr.load("mucorr.dat"+nbr);
-          mucorr_angle.load("mucorr_angle.dat"+nbr);
-          mucorr_dist.load("mucorr_dist.dat"+nbr);
-          kw.load("kirkwood.dat"+nbr);
-          HM_x.load("hist_dip_x.dat"+nbr);
-          HM_y.load("hist_dip_y.dat"+nbr);
-          HM_z.load("hist_dip_z.dat"+nbr);
-          HM_x_box.load("hist_dip_x_box.dat"+nbr);
-          HM_y_box.load("hist_dip_y_box.dat"+nbr);
-          HM_z_box.load("hist_dip_z_box.dat"+nbr);
-          HM2.load("hist_dip2.dat"+nbr);
-          HM2_box.load("hist_dip2_box.dat"+nbr);
+        void load(string ext="") {
+          if(ext == "none")
+            ext = "";
+          rdf.load("gofr.dat"+ext);
+          mucorr.load("mucorr.dat"+ext);
+          mucorr_angle.load("mucorr_angle.dat"+ext);
+          mucorr_dist.load("mucorr_dist.dat"+ext);
+          kw.load("kirkwood.dat"+ext);
+          HM_x.load("hist_dip_x.dat"+ext);
+          HM_y.load("hist_dip_y.dat"+ext);
+          HM_z.load("hist_dip_z.dat"+ext);
+          HM_x_box.load("hist_dip_x_box.dat"+ext);
+          HM_y_box.load("hist_dip_y_box.dat"+ext);
+          HM_z_box.load("hist_dip_z_box.dat"+ext);
+          HM2.load("hist_dip2.dat"+ext);
+          HM2_box.load("hist_dip2_box.dat"+ext);
           
-          string filename = "dipoledata.dat"+nbr;
+          string filename = "dipoledata.dat"+ext;
           std::ifstream f(filename.c_str());
           if (f) {
             while (!f.eof()) {

@@ -26,8 +26,7 @@ lj_eps             0.069        # Uniform LJ epsilon parameter [kT] 0.7504
 kappa              0
 epsilon_rf         1
 
-load_dipole_data   no
-file_dipole_data   30000
+dipole_data_ext    none
 
 overlap            true
                   
@@ -65,15 +64,22 @@ test_file          stockmayer.test
 " > stockmayerEQ.input
 
 rm -fR state
-rm dipol*
+rm -fR dipoledata*
+rm -fR hist_dip*
+rm -fR mucorr*
+rm -fR kirkwood.dat*
+rm -fR gofr.dat*
+rm -fR energy*
 exe=./nemo
 if [ -x $exe ]; then
  $exe
  rc=$?
- rm gofr.dat*
- rm proTotDip*
- rm KW.dat*
- rm mucorr*
- rm hist*
 fi
+rm -fR state
+rm -fR dipoledata*
+rm -fR hist_dip*
+rm -fR mucorr*
+rm -fR kirkwood.dat*
+rm -fR gofr.dat*
+rm -fR energy*
 exit 1

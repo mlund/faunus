@@ -1559,18 +1559,17 @@ namespace Faunus {
     /**
      * @brief Analyse dielectric constant outside the cutoff limit.
      *
-     * @note Using atomic units.
      * @note [Neumann, M. (1983) Mol. Phys., 50, 841-858].
      *
      * @param spc The space
-     * @param cutoff The cutoff of the reaction field
+     * @param filename Extention of filename from previous saved run (optional)
      */
     class DipoleAnalysis {
       private:
         Analysis::RadialDistribution<> rdf;
         Analysis::Table2D<double,double> kw, mucorr_angle;
-        Analysis::Table2D<double,Average<double> > mucorr, mucorr_dist;       // dipole-dipole <\hat{mu}(0)\cdot \hat{mu}(r)>   ,    < 0.5 * ( 3 * cos^2(theta) - 1 ) >
-        Analysis::Histogram<double,unsigned int> HM_x,HM_y,HM_z,HM_x_box,HM_y_box,HM_z_box,HM2,HM2_box; // Probability distributions for components of M
+        Analysis::Table2D<double,Average<double> > mucorr, mucorr_dist; 
+        Analysis::Histogram<double,unsigned int> HM_x,HM_y,HM_z,HM_x_box,HM_y_box,HM_z_box,HM2,HM2_box;
         Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std;
         
         int sampleKW;
@@ -1579,14 +1578,16 @@ namespace Faunus {
         double const_DielTinfoil;
 
       public:
-        template<class Tspace>
-          DipoleAnalysis(const Tspace &spc, const string filename="") : rdf(0.1),kw(0.1),mucorr_angle(0.1),mucorr(0.1),mucorr_dist(0.1),HM_x(0.1),HM_y(0.1),HM_z(0.1),HM_x_box(0.1),HM_y_box(0.1),HM_z_box(0.1),HM2(0.1),HM2_box(0.1) {
+        template<class Tspace, class Tinputmap>
+          DipoleAnalysis(const Tspace &spc, Tinputmap &in) : rdf(0.1),kw(0.1),mucorr_angle(0.1),mucorr(0.1),mucorr_dist(0.1),HM_x(0.1),HM_y(0.1),HM_z(0.1),HM_x_box(0.1),HM_y_box(0.1),HM_z_box(0.1),HM2(0.1),HM2_box(0.1) {
             cutoff2 = pow(spc.geo.len_half.x(),2);
             volume = spc.geo.getVolume();
             N = spc.p.size();
             const_DielTinfoil = pc::e*pc::e*1e10/(3*volume*pc::kT()*pc::e0);
             sampleKW = 0;
-            load(filename);
+            
+            if (in.get("load_dipole_data", false))
+              load(in.get("file_dipole_data", string("")));
           }
 
         void setCutoff(double cutoff) {
@@ -1650,7 +1651,7 @@ namespace Faunus {
           }
         
         /**
-         * @brief Samples g(r), <\mu(0) \cdot \mu(r)>, <\frac{1}{2} ( 3*\mu(0) \cdot \mu(r) - 1 )>, Histogram(\mu(0) \cdot \mu(r)) and distant-dependent Kirkwood-factor.
+         * @brief Samples g(r), \f$ <\mu(0) \cdot \mu(r)> \f$, \f$ <\frac{1}{2} ( 3 \mu(0) \cdot \mu(r) - 1 )> \f$, Histogram(\f$ \mu(0) \cdot \mu(r) \f$) and distant-dependent Kirkwood-factor.
          * 
          * @param spc The space
          *
@@ -1676,14 +1677,23 @@ namespace Faunus {
         }
         
         /**
-         * @brief Returns dielectric constant with to Tinfoil conditions.
-         * 1 + ( ( ( 4 * pi * <M^2> ) / ( 3 * V * kT ) ) / ( 4 * pi * e0 ) )
-         * 1 + ( <M^2> / ( 3 * V * kT * e0) )
+         * @brief Returns dielectric constant (using Tinfoil conditions).
+         * \f$ 1 + \frac{<M^2>}{3V\epsilon_0k_BT} \f$
          */
         double getDielTinfoil() {
+          // 1 + ( ( ( 4 * pi * <M^2> ) / ( 3 * V * kT ) ) / ( 4 * pi * e0 ) )
           return ( 1 + M2_box.avg()*const_DielTinfoil); 
         }  
         
+        /**
+         * @brief Saves data to files. 
+         * @param nbr Extention of filename
+         * 
+         * @note \f$ g(r) \rightarrow \f$ gofr.dat+nbr
+         *       \f$ \mu(0)\cdot\mu(r) \rightarrow \f$ mucorr.dat+nbr
+         *       \f$ <\frac{1}{2} ( 3 \mu(0) \cdot \mu(r) - 1 )> \rightarrow \f$ mucorr_dist.dat+nbr
+         * 
+         */
         void save(string nbr="") {
           rdf.save("gofr.dat"+nbr);
           mucorr.save("mucorr.dat"+nbr);

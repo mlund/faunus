@@ -2,10 +2,11 @@
 #define FAUNUS_TEXTIO_H
 
 #include <faunus/common.h>
+#include <iterator>
 
 namespace Faunus {
-  /*!
-   * \brief Namespace for text related operations: formatting, special characters etc.
+  /**
+   * @brief Namespace for text related operations: formatting, special characters etc.
    *
    * Unless using the macro definition AVOID_UNICODE, Faunus will use UTF-16 unicode
    * output to print fancy output with mathematical symbols, greek letters etc.
@@ -16,10 +17,12 @@ namespace Faunus {
 #ifdef AVOID_UNICODE
     const string angstrom="AA";
     const string _angstrom=" AA";
+    const string beta="B";
     const string cubed="^3";
     const string cuberoot="3root";
     const string degrees="deg";
     const string epsilon="eps";
+    const string epsilon_m="eps_m";
     const string gamma="gamma";
     const string Gamma="Gamma";
     const string kappa="k";
@@ -38,10 +41,12 @@ namespace Faunus {
 #else
     const string angstrom="\u00c5";   //!< Angstrom symbol
     const string _angstrom=" \u00c5"; //!< Angstrom symbol with space in front
+    const string beta="\u03b2";       //!< Greek beta
     const string cubed="\u00b3";      //!< Superscript 3
     const string cuberoot="\u221b";   //!< Cubic root
     const string degrees="\u00b0";    //!< Degrees
     const string epsilon="\u03f5";    //!< Greek epsilon
+    const string epsilon_m="\u03b5";  //!< Greek epsilon (minuscule)
     const string gamma="\u0263";      //!< Greek gamma
     const string Gamma="\u0393";      //!< Greek capital gamma
     const string kappa="\u03ba";      //!< Greek kappa
@@ -92,6 +97,12 @@ namespace Faunus {
       return o.str();
     }
 
+    /** @brief Count number of white-space separated words in a string */
+    inline size_t numWords(const std::string &s) {
+      return std::distance(std::istream_iterator<std::string>(
+            std::istringstream(s) >> std::ws), std::istream_iterator<std::string>());
+    }
+
     /**
      * @brief Show Faunus welcome text, version etc.
      * @note See http://patorjk.com/software/taag for ASCII art generation
@@ -100,7 +111,7 @@ namespace Faunus {
       std::ostringstream o;
       o << std::string(71,'.') << endl
         << "  Welcome to FAUNUS - A Framework for Molecule Simulation.\n"
-        << "  Copyright (C) 2002-2013 Mikael Lund\n"
+        << "  Copyright (C) 2002-2014 Mikael Lund\n"
         << "\n"
         << "  This program is free software; you can redistribute it and/or modify\n"
         << "  it under the terms of the GNU General Public License as published by\n"
@@ -118,7 +129,7 @@ namespace Faunus {
         << "    Mikael Lund, Bj\u00F6rn Persson, Martin Trulsson,\n"
         << "    Ond\u0159ej Mar\u0161\u00E1lek, Christophe Labbez, Andre Teixeira,\n"
         << "    An\u0131l Kurut, Chris Evers, Robert V\u00E1cha, Axel Thuresson,\n"
-        << "    Bj\u00F6rn Stenqvist.\n"
+        << "    Bj\u00F6rn Stenqvist, Alexei Abrikossov, Giulio Tesei.\n"
         << "\n"
         << "  Reference:\n"
         << "    Source Code Biol. Med. (2008) 3:1\n"

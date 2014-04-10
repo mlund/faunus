@@ -137,8 +137,10 @@ namespace Faunus {
     struct Tensor : public Eigen::Matrix<T,3,3> {
       typedef Eigen::Matrix<T,3,3> Tmat; //!< Matrix from Eigen
 
-      /** @brief Default constructor. Data is *not* zeroed */
-      Tensor() {}
+      /** @brief Default constructor. Data is zeroed */
+      Tensor() {
+        (*this).clear();
+      }
 
       Tensor(T xx, T xy, T xz, T yy, T yz, T zz) {
         (*this) << xx,xy,xz,xy,yy,yz,xz,yz,zz;

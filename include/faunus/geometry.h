@@ -2,7 +2,6 @@
 #define FAU_GEOMETRY_H
 
 #ifndef SWIG
-#include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/slump.h>
 #include <faunus/textio.h>
@@ -12,8 +11,8 @@
 
 namespace Faunus {
 
-  /*!
-   * \brief Namespace for geometric operations.
+  /**
+   * @brief Namespace for geometric operations.
    *
    * This namespace contains classes for handling various simulation geometries
    * such as cubes, spheres, cylinder, slits etc. The geometry of a simulation
@@ -302,9 +301,20 @@ namespace Faunus {
 
 #endif
 
-    /** @brief Calculate mass center of a group */
-    template<typename Tgeometry, typename Tp_vec, typename TGroup>
-      Point massCenter(const Tgeometry &geo, const Tp_vec &p, const TGroup &g) {
+    /**
+     * @brief Calculate center of cluster of particles
+     * @param geo Geometry
+     * @param p Particle vector
+     * @param g Range of particle index (`Group`, `vector<int>`, ...)
+     * @param weight Weight function
+     *
+     * The weight function is typically a lambda function that takes a particle
+     * as an argument and returns the weight, for example Mw, charge, or unity
+     * for mass center, charge center, or geometric center. Functions for
+     * these three examples are predefined.
+     */
+    template<class Tgeo, class Tpvec, class TGroup, class Tweightf>
+      Point anyCenter(const Tgeo &geo, const Tpvec &p, const TGroup &g, Tweightf weight) {
         assert(!p.empty());
         assert(g.back() < (int)p.size());
         Point cm(0,0,0);
@@ -314,14 +324,21 @@ namespace Faunus {
           for (auto i : g) {
             Point t = p[i]-o;       // translate to origo
             geo.boundary(t);        // periodic boundary (if any)
-            cm += t * p[i].mw;
-            sum += p[i].mw;
+            cm += t * weight(p[i]);
+            sum += weight(p[i]);
           }
-          if (sum<1e-6) sum=1;
+          if (fabs(sum)<1e-6) sum=1;
           cm=cm/sum + o;
           geo.boundary(cm);
         }
         return cm;
+      }
+
+    /** @brief Calculate mass center of cluster of particles */
+    template<class Tgeo, class Tpvec, class TGroup>
+      Point massCenter(const Tgeo &geo, const Tpvec &p, const TGroup &g) {
+        return anyCenter(geo,p,g,
+            [](const typename Tpvec::value_type &x) {return x.mw;} );
       }
 
     /** @brief Calculate mass center of a particle vector */
@@ -331,7 +348,29 @@ namespace Faunus {
           return Point(0,0,0);
         return massCenter(geo,p,Group(0,p.size()-1));
       }
-      
+ 
+    /** @brief Calculate charge center of cluster of particles */
+    template<class Tgeo, class Tpvec, class TGroup>
+      Point chargeCenter(const Tgeo &geo, const Tpvec &p, const TGroup &g) {
+        return anyCenter(geo,p,g,
+            [](const typename Tpvec::value_type &x) { return std::fabs(x.charge); } );
+      }
+
+    /** @brief Calculate charge center of a particle vector */
+    template<typename Tgeometry, typename Tp_vec>
+      Point chargeCenter(const Tgeometry &geo, const Tp_vec &p) {
+        if (p.empty())
+          return Point(0,0,0);
+        return chargeCenter(geo,p,Group(0,p.size()-1));
+      }
+ 
+    /** @brief Calculate geometric center of cluster of particles */
+    template<class Tgeo, class Tpvec, class TGroup>
+      Point geometricCenter(const Tgeo &geo, const Tpvec &p, const TGroup &g) {
+        return anyCenter(geo,p,g,
+            [](const typename Tpvec::value_type &x) {return 1.0;} );
+      }
+ 
      template<class Tspace, class Tgroup>
         Point dipoleMoment(const Tspace &s, const Tgroup &g, double cutoff=1e9,Point mu=Point(0,0,0)) {
           assert(g.size()<=(int)s.p.size());
@@ -359,6 +398,12 @@ namespace Faunus {
         translate(geo, p, -massCenter(geo, p) );
       }
 
+    /** @brief Translate a particle vector so charge center is in (0,0,0) */
+    template<class Tgeo, class Tpvec>
+      void cc2origo(const Tgeo &geo, Tpvec &p) {
+        translate(geo, p, -chargeCenter(geo, p) );
+      }
+      
     /*!
       \brief Geometric transform of a Point (rotation, translation...)
       */
@@ -513,6 +558,9 @@ namespace Faunus {
      * @param p Particle vector (structure must be whole)
      * @param n Number of iterations (default: 1e7)
      * @param pradius Probe radius (default: 0)
+     *
+     * @todo More efficient sampling may be achieved by adjusting the
+     *       box vs. molecular volume (i.e. 1:1)
      */
     template<typename Tpvec>
       double calcVolume(const Tpvec &p, unsigned int n=1e7, double pradius=0) {
@@ -521,7 +569,7 @@ namespace Faunus {
         for (auto &i : p)
           gc += i / p.size();
         for (auto &i : p)
-          L = std::max(L, 2*((i-gc).norm() + i.radius));
+          L = std::max(L, 2*((i-gc).norm() + i.radius + pradius));
 
         // Start shooting!
         Point r;

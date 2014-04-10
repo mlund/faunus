@@ -41,6 +41,9 @@ namespace Faunus {
         //!< Convert Å to atomic unit(Bohr). Convert length scales. E.g. Length -> dim=1, Area -> dim=2, Volume -> dim=3
         template<class T>
           static T Ang2Bohr(const T &Ang, int dim=1) { return (Ang*pow(1.88971616463,dim)); }
+        //!< Electron Angstrom to Debye. E.g. @f$ \mu_{e\AA} -> \mu_{Debye} @f$ -> dim=1, @f$ \mu^2_{e\AA} -> \mu^2_{Debye} @f$ -> dim=2
+        template<class T>
+        static T eA2D(const T &eA, int dim=1) { return eA*pow(4.803204544369458,dim); }
 
         static Td kT2Hartree(Td=kT());    //!< Convert energy in kT to atomic unit(Hartree Energy)
     };
@@ -101,7 +104,7 @@ namespace Faunus {
 
   template<class Td>
     Td PhysicalConstants<Td>::D2eA(Td D) { return 0.20819434*D; }
-
+    
   template<class Td>
     Td PhysicalConstants<Td>::eA2Cm(Td eA) { return (eA*3.33564*(1e-30)/0.20819434); }
     

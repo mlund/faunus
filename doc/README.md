@@ -8,7 +8,7 @@ molecular systems. Below is a brief overview of features:
 - General hamiltonian **parallel tempering** (temperature, screening length, bonds etc.)
 - **Anisotropic** atoms (multipoles, sphero-cylinders)
 - Ion titration moves (pKa prediction, Hofmeister effects etc.)
-- Highy expandable
+- Highy modular
 - Free and open source (**GPL**)
 
 Detailed information and support:
@@ -17,7 +17,7 @@ Detailed information and support:
 - Support: <http://github.com/mlund/faunus/issues>
 - Source code: <http://github.com/mlund/faunus>
 
-Get the latest resivion from GitHub:
+Get the latest revision from GitHub:
 
     $ git clone https://github.com/mlund/faunus.git
 

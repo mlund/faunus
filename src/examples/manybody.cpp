@@ -28,6 +28,7 @@ int main(int argc, char** argv) {
   Tspace spc(mcp);
   auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp)
+    + Energy::HydrophobicSASA<Tspace>(mcp)
     + Energy::EquilibriumEnergy<Tspace>(mcp);// + myenergy<Tspace>(mcp);
 
   auto eqenergy = &pot.second;
@@ -96,7 +97,7 @@ int main(int argc, char** argv) {
     while ( loop.microCnt() ) {
       int k,i=rand() % 4;
       switch (i) {
-        case 1: // move all proteins
+        case 0: // move all proteins
           k=pol.size();
           while (k-->0) {
             gmv.setGroup( pol[ rand() % pol.size() ] );
@@ -127,10 +128,10 @@ int main(int argc, char** argv) {
                   << " " << std::cbrt(spc.geo.getVolume()) << "\n";
           }
           break;
-        case 2: // volume move (NPT)
+        case 1: // volume move (NPT)
           sys+=iso.move();
           break;
-        case 0: // titration move
+        case 2: // titration move
           sys+=tit.move();
           mpol.sample(pol,spc);
           break;

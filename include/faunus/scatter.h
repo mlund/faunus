@@ -16,7 +16,7 @@ namespace Faunus {
       class FormFactorSphere {
         private:
           T j1(T x) const { // spherical Bessel function
-            register T xinv=1/x;
+            T xinv=1/x;
             return xinv*( sin(x)*xinv - cos(x) );
           }
         public:
@@ -77,7 +77,7 @@ namespace Faunus {
         public:
           template<class Tparticle>
             T operator()(T q, const Tparticle &a) {
-              assert( ~F.empty() && "Did you forget to load F(q) from disk?");
+              assert( !F.empty() && "Did you forget to load F(q) from disk?");
               assert( F.find(a.id) != F.end() && "F(q) for particle not known!");
               // or should we return largest F(q) if out of table?
               return F[a.id](q);

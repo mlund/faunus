@@ -24,8 +24,8 @@ namespace Faunus {
         i >> key >> val;
         if (!key.empty() && !val.empty() ) {
           if (key.find("#")==string::npos) {
-            if (val=="yes") val="1";
-            if (val=="no") val="0";
+            if (val=="yes" || val=="true") val="1";
+            if (val=="no" || val=="false") val="0";
             map[key]=val;
           }
         }

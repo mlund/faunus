@@ -4,38 +4,76 @@ using namespace Faunus;                          // use Faunus namespace
 using namespace Faunus::Move;
 using namespace Faunus::Potential;
 
-typedef Space<Geometry::Cuboid,DipoleParticle> Tspace;   // Cuboid
-typedef CombinedPairPotential<LennardJones,DipoleDipoleRF> Tpair;
+typedef Space<Geometry::Cuboid,DipoleParticle> Tspace; 
+typedef DipoleDipoleWolf TpairDDW;
+typedef LennardJones TpairLJ;
+typedef CombinedPairPotential<TpairLJ,TpairDDW> Tpair;
 
-//typedef Move::PolarizeMove<AtomicTranslation<Tspace> > TmoveTran;
-//typedef Move::PolarizeMove<AtomicRotation<Tspace> > TmoveRot;
+#ifdef POLARIZE
+typedef Move::PolarizeMove<AtomicTranslation<Tspace> > TmoveTran; 
+typedef Move::PolarizeMove<AtomicRotation<Tspace> > TmoveRot;
+#else
 typedef Move::AtomicTranslation<Tspace> TmoveTran;   
 typedef Move::AtomicRotation<Tspace> TmoveRot;
+#endif
 
-int main() {
-  ::atom.includefile("stockmayer.json");         // load atom properties
-  InputMap in("stockmayer.input");               // open parameter file for user input
+
+template<class Tpairpot, class Tid>
+bool savePotential(Tpairpot pot, TmoveRot rot, Tid ida, Tid idb, string file) {
+  std::ofstream f(file.c_str());
+  if (f) {
+    double min=1.1 * (atom[ida].radius+atom[idb].radius);
+    DipoleParticle a,b;
+    a=atom[ida];
+    b=atom[idb];
+    a.mu = Point(1,0,0);
+    b.mu = Point(1,0,0);
+    for (double r=min; r<=14; r+=0.05) {
+      f << std::left << std::setw(10) << r << " "
+        << pot(a,b,Point(r,0,0)) << endl;
+    }
+    return true;
+  }
+  return false;
+}
+
+int runSim(string name) {
+  InputMap in(name);               // open parameter file for user input
   Energy::NonbondedVector<Tspace,Tpair> pot(in); // non-bonded only
+  Energy::NonbondedVector<Tspace,TpairDDW> potDDW(in);
+  Energy::NonbondedVector<Tspace,TpairLJ> potLJ(in);
   EnergyDrift sys;                               // class for tracking system energy drifts
   Tspace spc(in);                // create simulation space, particles etc.
   Group sol;
   sol.addParticles(spc, in);                     // group for particles
   MCLoop loop(in);                               // class for mc loop counting
-  Analysis::RadialDistribution<> rdf(0.005);       // particle-particle g(r)
-  Analysis::Table2D<double,Average<double> > mucorr(0.005);       // particle-particle g(r)
-  Analysis::Table2D<double,double> mucorr_distribution(0.005);
   TmoveTran trans(in,pot,spc);
   TmoveRot rot(in,pot,spc);
   trans.setGroup(sol);                                // tells move class to act on sol group
   rot.setGroup(sol);                                  // tells move class to act on sol group
   spc.load("state");
-  spc.p = spc.trial;
+  spc.trial = spc.p;
   UnitTest test(in);               // class for unit testing
-  DipoleWRL sdp;
+  
+  Analysis::DipoleAnalysis dian(spc);
+  Average<double> EnergyDDW;
+  Average<double> EnergyLJ;
   FormatXTC xtc(spc.geo.len.norm());
-  double rc = in.get<double>("dipdip_cutoff",in.get<double>("cuboid_len",pc::infty)/2);
+  DipoleWRL sdp;
 
+  savePotential(TpairDDW(in),rot, atom["sol"].id, atom["sol"].id, "pot_dipdip.dat");
+  
+  std::vector<double> EDDW;
+  std::vector<double> ELJ;
+  
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );   // initial energy
+  double DDW = Energy::systemEnergy(spc,potDDW,spc.p);
+  double LJ = Energy::systemEnergy(spc,potLJ,spc.p);
+  EDDW.push_back(DDW);
+  ELJ.push_back(LJ);
+  EnergyDDW += DDW;
+  EnergyLJ += LJ;
+
   while ( loop.macroCnt() ) {                         // Markov chain 
     while ( loop.microCnt() ) {
       if (slp_global() > 0.5)
@@ -43,54 +81,57 @@ int main() {
       else
         sys+=rot.move( sol.size() );                  // rotate
 
-      if (slp_global()<1.5)
-        for (auto i=sol.front(); i<sol.back(); i++) { // salt rdf
-          for (auto j=i+1; j<=sol.back(); j++) {
-            double r =spc.geo.dist(spc.p[i],spc.p[j]); 
-            if(r < rc) {
-              rdf(r)++;
-              mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
-              mucorr_distribution(spc.p[i].mu.dot(spc.p[j].mu)) += 1;
-            }
-          }
-        }
-      if (slp_global()>0.99)
-        xtc.save(textio::prefix+"out.xtc", spc.p);  
-    }    
+      if (slp_global() < 0.2) {
+        DDW = Energy::systemEnergy(spc,potDDW,spc.p);
+        LJ = Energy::systemEnergy(spc,potLJ,spc.p);
+        EDDW.push_back(DDW);
+        ELJ.push_back(LJ);
+        EnergyDDW += DDW;
+        EnergyLJ += LJ;
+        dian.sampleMuCorrelationAndKirkwood(spc);
+        xtc.save(textio::prefix+"xtcout.xtc", spc.p); 
+      }
+      dian.sampleDP(spc);
+    }
+    dian.save(std::to_string(loop.count()));
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
-    cout << loop.timing();
   }
-
-  // perform unit tests
+  
+  // Perform unit tests
   trans.test(test);
   rot.test(test);
   sys.test(test);
+  
+  // Show info
+  std::cout << spc.info() + pot.info() + trans.info()
+    + rot.info() + sys.info() + dian.info();
+    
+  cout << "\n  System DipoleDipoleWolf average energy: " << EnergyDDW.avg() << " kT" << endl;
+  cout << "  System LennardJones average energy:     " << EnergyLJ.avg() << " kT" << "\n" << endl;
+    
+  // Save data
+  dian.save();
   sdp.saveDipoleWRL("stockmayer.wrl",spc,sol);
   FormatPQR().save("confout.pqr", spc.p);
-  rdf.save("gofr.dat");                               // save g(r) to disk
-  mucorr.save("mucorr.dat");                               // save g(r) to disk
-  mucorr_distribution.save("mucorr_distribution.dat");
-  std::cout << spc.info() + pot.info() + trans.info()
-    + rot.info() + sys.info() + test.info(); // final info
   spc.save("state");
+  
+  string filenameDDW = "energyDDW.dat";
+  string filenameLJ = "energyLJ.dat";
+  std::ofstream fDDW(filenameDDW.c_str());
+  std::ofstream fLJ(filenameLJ.c_str());
+  fDDW.precision(10);
+  fLJ.precision(10);
+  for(int i = 0; i < int(EDDW.size()); i++) {
+    fDDW << EDDW.at(i) << "\n";
+    fLJ << ELJ.at(i) << "\n";
+  }
 
   return test.numFailed();
 }
-/**  @page example_stockmayer Example: Stockmayer potential
- *
- This will simulate a Stockmayer potential in a cubic box.
 
- Run this example from the `examples` directory:
-
- ~~~~~~~~~~~~~~~~~~~
- $ make
- $ cd src/examples
- $ ./stockmayer.run
- ~~~~~~~~~~~~~~~~~~~
-
- stockmayer.cpp
- ============
-
- @includelineno examples/stockmayer.cpp
-
-*/
+int main() {
+  // cout << "Equilibration done ! Code: " << runSim("stockmayerEQ.input") << "!" << endl;
+  int prod = runSim("stockmayer.input");
+  cout << "Production done ! Code: " << prod << "!" << endl;
+  return prod;
+}

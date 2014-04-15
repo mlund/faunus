@@ -216,18 +216,18 @@ compatible with your `libfaunus` build.
 A good place to start is to understand the following classes. Also, for a more grouped
 overview do have a look at the Namespace list.
 
-- Faunus::Point and derived classes.
-  - All particles in Faunus are based on a 3D vector, Point, which in turn is based on the 
-    Eigen library, <http://http://eigen.tuxfamily.org>. This means you have access
+- `Faunus::Point` and derived classes.
+  - All particles in Faunus are based on a 3D vector, `Point`, which in turn is based on the 
+    Eigen library, <http://eigen.tuxfamily.org>. This means you have access
     to a range of vector and matrix operations including geometric functions, much
     in the spirit of Numpy in Python.
-    The class Faunus::Space is responsible for storing all particles in a STL vector.
+    The class `Faunus::Space` is responsible for storing all particles in a STL vector.
 
-- Faunus::InputMap
+- `Faunus::InputMap`
   - Reads user input parameters from a file in the format "keyword value". This class is frequently
     used in the constuctor arguments for other Faunus classes.
 
-- Faunus::Geometry::Geometrybase and namespace Faunus::Geometry.
+- `Faunus::Geometry::Geometrybase` and namespace `Faunus::Geometry`.
   - Derived classes define the simulation geometry (box, sphere, cylinder etc.) and take care
     of distance calculations as well as boundary conditions.
 

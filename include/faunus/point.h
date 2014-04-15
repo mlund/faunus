@@ -341,7 +341,7 @@ namespace Faunus {
 #ifdef FAU_HYPERSPHERE
   typedef HyperPoint Point;
 #else
-  typedef PointBase Point;
+  typedef PointBase Point;  //!< 3D vector
 #endif
 
   /**

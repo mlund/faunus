@@ -290,6 +290,16 @@ namespace Faunus {
         return utot;
       }
 
+    /**
+     * @param du Energy change for MC move (kT)
+     * @return True if move should be accepted; false if not.
+     * @note
+     * One could put in `if (du>0)` before the first line, but
+     * certain MPI communications require the random number
+     * generator to be in sync, i.e. each rank must call
+     * `slp_global()` equal number of times, independent of
+     * dU.
+     */
     template<class Tspace>
       bool Movebase<Tspace>::metropolis(const double &du) const {
         if ( slp_global()>std::exp(-du) ) // core of MC!
@@ -478,7 +488,6 @@ namespace Faunus {
             if (j!=iparticle)
               assert((base::spc->p[j] - base::spc->trial[j]).squaredNorm()<1e-6);
 #endif
-
         }
       }
 

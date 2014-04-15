@@ -83,6 +83,7 @@ int main(int argc, char** argv) {
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );    // Store total system energy
 
   std::ofstream cmfile, energyfile;
+
   if (mpi.isMaster()) {
     cmfile.open("cm.xyz");
     energyfile.open("energy.dat");
@@ -115,7 +116,6 @@ int main(int argc, char** argv) {
             for (auto &i : pol)
               cm_vec.push_back(i.cm);
             debye.sample(cm_vec,spc.geo.getVolume());
-            //debye2.sampleg2g(spc.p,spc.groupList());
 
             if (mpi.isMaster())
               if (cmfile) {
@@ -150,7 +150,7 @@ int main(int argc, char** argv) {
 
     if (mpi.isMaster())
       cout << loop.timing();
- 
+
   } // end of macro loop
 
   if (mpi.isMaster()) {
@@ -163,5 +163,12 @@ int main(int argc, char** argv) {
     mcp.save("mdout.mdp");
     debye.save("debye.dat");
     debye2.save("debye.g2g.dat");
+
+    // save first molecule with average charges (as opposed to instantaneous)
+    eqenergy->eq.copyAvgCharge(spc.p);
+    spc.p.erase( spc.p.begin() + spc.groupList()[0]->size(), spc.p.end() );
+    Geometry::cm2origo(spc.geo, spc.p);
+    FormatPQR::save("avgcharge.pqr", spc.p, spc.geo.len);
+    FormatAAM::save("avgcharge.aam", spc.p);
   }
 }

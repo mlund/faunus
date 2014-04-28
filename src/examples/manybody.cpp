@@ -105,13 +105,12 @@ int main(int argc, char** argv) {
             sys+=gmv.move();
           }
 
-          // sample g(r)
-          for (auto i=pol.begin(); i!=pol.end()-1; i++)
-            for (auto j=i+1; j!=pol.end(); j++)
-              rdf( spc.geo.dist(i->cm,j->cm) )++;
+          if (slp_global()>0.995) {
+            // sample g(r)
+            for (auto i=pol.begin(); i!=pol.end()-1; i++)
+              for (auto j=i+1; j!=pol.end(); j++)
+                rdf( spc.geo.dist(i->cm,j->cm) )++;
 
-          // sample S(q)
-          if (slp_global()>0.95) {
             cm_vec.clear();
             for (auto &i : pol)
               cm_vec.push_back(i.cm);
@@ -123,9 +122,9 @@ int main(int argc, char** argv) {
                 for (auto &m : cm_vec)
                   cmfile << "H " << ((m+spc.geo.len_half)/10).transpose() << "\n";
               }
-              if (energyfile)
-                energyfile << loop.count() << " " << sys.current()
-                  << " " << std::cbrt(spc.geo.getVolume()) << "\n";
+            if (energyfile)
+              energyfile << loop.count() << " " << sys.current()
+                << " " << std::cbrt(spc.geo.getVolume()) << "\n";
           }
           break;
         case 1: // volume move (NPT)
@@ -148,21 +147,22 @@ int main(int argc, char** argv) {
 
     sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) ); // detect energy drift
 
-    if (mpi.isMaster())
+    if (mpi.isMaster()) {
       cout << loop.timing();
+      rdf.save("rdf_p2p.dat");
+      FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
+      spc.save("state");
+      mcp.save("mdout.mdp");
+      debye.save("debye.dat");
+      debye2.save("debye.g2g.dat");
+    }
+
 
   } // end of macro loop
 
   if (mpi.isMaster()) {
     cout << tit.info() + loop.info() + sys.info() + gmv.info() + mv.info()
       + iso.info() + mpol.info() << endl;
-
-    rdf.save("rdf_p2p.dat");
-    FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
-    spc.save("state");
-    mcp.save("mdout.mdp");
-    debye.save("debye.dat");
-    debye2.save("debye.g2g.dat");
 
     // save first molecule with average charges (as opposed to instantaneous)
     eqenergy->eq.copyAvgCharge(spc.p);

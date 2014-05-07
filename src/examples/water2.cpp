@@ -9,24 +9,24 @@ typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot;
 int main() {
 
   cout << textio::splash();      // show faunus banner and credits
-  InputMap mcp("water2.input");//read input file
+  InputMap mcp("water2.input");  // read input file
 
   // Energy functions and space
   auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp);
   Tspace spc(mcp);
 
-  // Load and add polymer to Space
+  // Load and add molecules to Space
   auto N    = mcp.get<int>("mol_N",1);
   auto file = mcp.get<string>("mol_file");
   vector<Group> water(N);
-  Tspace::ParticleVector v;                   // temporary, empty particle vector
-  FormatAAM::load(file,v);                    // load AAM structure into v
+  Tspace::ParticleVector v;      // temporary, empty particle vector
+  FormatAAM::load(file,v);       // load AAM structure into v
   for (auto &i : water) {
     Geometry::FindSpace f;
     f.allowMatterOverlap=true;
-    f.find(spc.geo,spc.p,v);// find empty spot in particle vector
-    i = spc.insert(v);                          // Insert into Space
+    f.find(spc.geo,spc.p,v);     // find empty spot in particle vector
+    i = spc.insert(v);           // Insert into Space
     i.name="h2o";
     spc.enroll(i);
   }
@@ -54,7 +54,7 @@ int main() {
           while (k-->0) {
             j=slp_global.rand() % (water.size());
             gmv.setGroup(water[j]);
-            sys+=gmv.move();          // translate/rotate polymers
+            sys+=gmv.move();   // translate/rotate polymers
           }
           break;
         case 1:
@@ -100,10 +100,10 @@ int main() {
  interactions beyond a specified water-water mass-center
  cutoff.
 
- Run this example from the `examples` directory:
+ Run this example from the main faunus directory:
 
  ~~~~~~~~~~~~~~~~~~~
- $ make
+ $ make example_water2
  $ cd src/examples
  $ ./water2.run
  ~~~~~~~~~~~~~~~~~~~

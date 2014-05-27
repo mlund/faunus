@@ -1045,7 +1045,7 @@ namespace Faunus {
      * Note also that the moments are defined with
      * respect to the *mass* center, not *charge* center. While for most
      * macromolecules there is only a minor difference between the two,
-     * the latter is more appropriate and is is planned for a future update.
+     * the latter is more appropriate and is planned for a future update.
      * A simply way to mimic this is to assign zero mass to all neutral
      * atoms in the molecule.
      *
@@ -1104,6 +1104,16 @@ namespace Faunus {
               return m;
             }
 
+          template<class Tgroup>
+            double g2g(const Tspace &spc, const Tgroup &g1, const Tgroup &g2) { 
+              double u=0;
+              for (auto i : g1)
+                for (auto j : g2)
+                  u += spc.p[i].charge * spc.p[j].charge /
+                    spc.geo.dist( spc.p[i], spc.p[j] );
+              return u * pot.pairpot.bjerrumLength();
+            }
+
         public:
 
           MultipoleDistribution(InputMap &in) : pot(in) {
@@ -1134,7 +1144,7 @@ namespace Faunus {
                 pot.setSpace(spc);
                 data d;
                 d.cnt++;
-                d.tot = pot.g2g(spc.p, g1, g2); // exact el. energy
+                d.tot = g2g(spc, g1, g2); // exact el. energy
                 d.ii = a.charge * b.charge * rinv; // ion-ion, etc.
                 d.id = ( a.charge*b.mu.dot(r) - b.charge*a.mu.dot(r) ) * r3inv;
                 d.dd = mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r);
@@ -1571,7 +1581,7 @@ namespace Faunus {
         Analysis::Table2D<double,Average<double> > mucorr, mucorr_dist; 
         Analysis::Histogram<double,unsigned int> HM_x,HM_y,HM_z,HM_x_box,HM_y_box,HM_z_box,HM2,HM2_box;
         Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std;
-        
+
         int sampleKW;
         double cutoff2;
         double volume, N;
@@ -1612,7 +1622,7 @@ namespace Faunus {
             mu_box += mu;
             samplePP(spc,mu,mu_box);
           }
-          
+
         /**
          * @brief Samples dipole-moment from point particles.
          * 
@@ -1626,7 +1636,7 @@ namespace Faunus {
             all.setMassCenter(spc);
             mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
             mu_box += Geometry::dipoleMoment(spc,all);
-            
+
             HM_x(mu.x())++;
             HM_y(mu.y())++;
             HM_z(mu.z())++;
@@ -1647,7 +1657,7 @@ namespace Faunus {
             M2_box += sca;
             diel_std.add(getDielTinfoil());
           }
-        
+
         /**
          * @brief Samples g(r), \f$ <\mu(0) \cdot \mu(r)> \f$, \f$ <\frac{1}{2} ( 3 \mu(0) \cdot \mu(r) - 1 )> \f$, Histogram(\f$ \mu(0) \cdot \mu(r) \f$) and distant-dependent Kirkwood-factor.
          * 
@@ -1655,25 +1665,25 @@ namespace Faunus {
          *
          */
         template<class Tspace>
-        void sampleMuCorrelationAndKirkwood(Tspace &spc) {
-          double r, sca;
-          int N = spc.p.size() - 1;
-          for (int i = 0; i < N; i++) {
-            kw(0) += spc.p[i].mu.dot(spc.p[i].mu)*spc.p[i].muscalar*spc.p[i].muscalar;
-            for (int j = i+1.; j < N + 1; j++) {
-              r = spc.geo.dist(spc.p[i],spc.p[j]); 
-              rdf(r)++;
-              sca = spc.p[i].mu.dot(spc.p[j].mu);
-              mucorr_angle(sca) += 1.;
-              mucorr(r) += sca;
-              mucorr_dist(r) += 0.5*(3*sca*sca -1.);
-              kw(r) += 2*sca*spc.p[i].muscalar*spc.p[j].muscalar;
+          void sampleMuCorrelationAndKirkwood(Tspace &spc) {
+            double r, sca;
+            int N = spc.p.size() - 1;
+            for (int i = 0; i < N; i++) {
+              kw(0) += spc.p[i].mu.dot(spc.p[i].mu)*spc.p[i].muscalar*spc.p[i].muscalar;
+              for (int j = i+1.; j < N + 1; j++) {
+                r = spc.geo.dist(spc.p[i],spc.p[j]); 
+                rdf(r)++;
+                sca = spc.p[i].mu.dot(spc.p[j].mu);
+                mucorr_angle(sca) += 1.;
+                mucorr(r) += sca;
+                mucorr_dist(r) += 0.5*(3*sca*sca -1.);
+                kw(r) += 2*sca*spc.p[i].muscalar*spc.p[j].muscalar;
+              }
             }
+            kw(0) += spc.p[N].mu.dot(spc.p[N].mu)*spc.p[N].muscalar*spc.p[N].muscalar;
+            sampleKW++;
           }
-          kw(0) += spc.p[N].mu.dot(spc.p[N].mu)*spc.p[N].muscalar*spc.p[N].muscalar;
-          sampleKW++;
-        }
-        
+
         /**
          * @brief Returns dielectric constant (using Tinfoil conditions).
          * \f$ 1 + \frac{<M^2>}{3V\epsilon_0k_BT} \f$
@@ -1682,7 +1692,7 @@ namespace Faunus {
           // 1 + ( ( ( 4 * pi * <M^2> ) / ( 3 * V * kT ) ) / ( 4 * pi * e0 ) )
           return ( 1 + M2_box.avg()*const_DielTinfoil); 
         }  
-        
+
         /**
          * @brief Saves data to files. 
          * @param nbr Extention of filename
@@ -1706,7 +1716,7 @@ namespace Faunus {
           HM_z_box.save("hist_dip_z_box.dat"+ext);
           HM2.save("hist_dip2.dat"+ext);
           HM2_box.save("hist_dip2_box.dat"+ext);
-          
+
           string filename = "dipoledata.dat"+ext;
           std::ofstream f(filename.c_str());
           f.precision(10);
@@ -1722,7 +1732,7 @@ namespace Faunus {
             if (diel_std.cnt != 0) f << "diel_std " << diel_std.cnt << " " << diel_std.avg() << " " << diel_std.sqsum;
           }
         }
-        
+
         void load(string ext="") {
           if(ext == "none")
             ext = "";
@@ -1739,7 +1749,7 @@ namespace Faunus {
           HM_z_box.load("hist_dip_z_box.dat"+ext);
           HM2.load("hist_dip2.dat"+ext);
           HM2_box.load("hist_dip2_box.dat"+ext);
-          
+
           string filename = "dipoledata.dat"+ext;
           std::ifstream f(filename.c_str());
           if (f) {
@@ -1803,9 +1813,9 @@ namespace Faunus {
           std::ostringstream o;
           o << header("Dipole analysis");
           o << indent(SUB) << epsilon_m+subr+"(Tinfoil)" << setw(22) << getDielTinfoil() << ", "+sigma+"=" << diel_std.stdev() << ", "+sigma+"/"+epsilon_m+subr+"=" << (100*diel_std.stdev()/getDielTinfoil()) << percent << endl
-          << indent(SUB) << bracket("M"+squared) << setw(27) << pc::eA2D(M2_box.avg(),2) << " Debye"+squared+", "+sigma+"=" << pc::eA2D(M2_box.stdev(),2) << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg()) << percent << endl
-          << indent(SUB) << bracket("M") << setw(25) << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl 
-          << indent(SUBSUB) << sigma << setw(25) << "( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl;
+            << indent(SUB) << bracket("M"+squared) << setw(27) << pc::eA2D(M2_box.avg(),2) << " Debye"+squared+", "+sigma+"=" << pc::eA2D(M2_box.stdev(),2) << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg()) << percent << endl
+            << indent(SUB) << bracket("M") << setw(25) << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl 
+            << indent(SUBSUB) << sigma << setw(25) << "( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl;
           return o.str();
         }
     };

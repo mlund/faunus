@@ -1309,7 +1309,7 @@ namespace Faunus {
             }
 
           template<typename Tparticle>
-            Point field(const Tparticle &a, const Point &r) const {
+            Point field(const Tparticle &a, const Point &r) {
               return first.field(a,r) + second.field(a,r);
             }
 

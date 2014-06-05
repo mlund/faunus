@@ -1570,26 +1570,38 @@ namespace Faunus {
         Analysis::Table2D<double,double> kw, mucorr_angle;
         Analysis::Table2D<double,Average<double> > mucorr, mucorr_dist; 
         Analysis::Histogram<double,unsigned int> HM_x,HM_y,HM_z,HM_x_box,HM_y_box,HM_z_box,HM2,HM2_box;
-        Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std;
+        Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std, V_t;
         
         int sampleKW;
-        double cutoff2;
-        double volume, N;
-        double const_DielTinfoil;
+        double cutoff2, N;
+        double const_Diel, const_DielTinfoil, const_DielCM, const_DielRF, epsRF, constEpsRF;
 
       public:
         template<class Tspace, class Tinputmap>
           DipoleAnalysis(const Tspace &spc, Tinputmap &in) : rdf(0.1),kw(0.1),mucorr_angle(0.1),mucorr(0.1),mucorr_dist(0.1),HM_x(0.1),HM_y(0.1),HM_z(0.1),HM_x_box(0.1),HM_y_box(0.1),HM_z_box(0.1),HM2(0.1),HM2_box(0.1) {
-            cutoff2 = pow(spc.geo.len_half.x(),2);
-            volume = spc.geo.getVolume();
-            N = spc.p.size();
-            const_DielTinfoil = pc::e*pc::e*1e10/(3*volume*pc::kT()*pc::e0);
             sampleKW = 0;
+            setCutoff(spc.geo.len_half.x());
+            N = spc.p.size();
+            const_Diel = pc::e*pc::e*1e10/(3*pc::kT()*pc::e0);
+            updateConstants(spc.geo.getVolume());
+            updateDielectricConstantRF(in.get("epsilon_rf",80.));
             load(in.get("dipole_data_ext", string("")));
           }
 
         void setCutoff(double cutoff) {
           cutoff2 = cutoff*cutoff;
+        }
+        
+        void updateDielectricConstantRF(double er) {
+          epsRF = er;
+          constEpsRF = 2*(epsRF - 1)/(2*epsRF + 1);
+        }
+        
+        void updateConstants(double volume) {
+          V_t += volume;
+          const_DielTinfoil = const_Diel/V_t.avg();
+          const_DielCM = const_DielTinfoil/3;
+          const_DielRF = const_DielTinfoil/3;
         }
 
         /**
@@ -1622,6 +1634,7 @@ namespace Faunus {
          */
         template<class Tspace>
           void samplePP(Tspace &spc, Point mu=Point(0,0,0), Point mu_box=Point(0,0,0)) {
+            updateConstants(spc.geo.getVolume());
             Group all(0,spc.p.size()-1);
             all.setMassCenter(spc);
             mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
@@ -1681,6 +1694,32 @@ namespace Faunus {
         double getDielTinfoil() {
           // 1 + ( ( ( 4 * pi * <M^2> ) / ( 3 * V * kT ) ) / ( 4 * pi * e0 ) )
           return ( 1 + M2_box.avg()*const_DielTinfoil); 
+        }  
+        
+        /**
+         * @brief Returns dielectric constant ( Clausius-Mossotti ).
+         * \f$ \frac{1 + \frac{2<M^2>}{9V\epsilon_0k_BT}}{1 - \frac{<M^2>}{9V\epsilon_0k_BT}} \f$
+         * 
+         * @warning Needs to be checked!
+         */
+        double getDielCM() {
+          double temp = M2_box.avg()*const_DielCM;
+          return ((1 + 2*temp)/(1 - temp));
+        }  
+        
+        /**
+         * @brief Returns dielectric constant ( Reaction Field ).
+         * 
+         * @warning Needs to be checked!
+         */
+        double getDielRF() {
+          double avgRF = M2_box.avg()*const_DielRF;
+          double sqrtRF = 0;
+          if(-4*constEpsRF*avgRF + 1 > 0)
+            sqrtRF = 3*sqrt(-4*constEpsRF*avgRF + 1);
+          double one = 0.5*(2*constEpsRF - 4*avgRF + 1 + sqrtRF)/(constEpsRF + avgRF - 1);
+          //double two = 0.5*(2*constEpsRF - 4*avgRF + 1 - sqrtRF)/(constEpsRF + avgRF - 1);
+          return one;
         }  
         
         /**

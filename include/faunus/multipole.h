@@ -500,6 +500,7 @@ namespace Faunus {
       double getCutoff() { return rc1; }
   };
   
+  
   /**
    * @brief Base class for Gaussian-damped interactions. Implemented according to DOI: 10.1002/jcc.20574
    *
@@ -883,13 +884,14 @@ namespace Faunus {
           class DipoleDipoleRF : public DipoleDipole {
             private:
               string _brief() { return "Dipole-dipole (RF)"; }
-              double rc2,eps,eps_rf;
+              double rc2,eps,eps_rf,eps_r;
             public:
               DipoleDipoleRF(InputMap &in) : DipoleDipole(in) {
                 name+=" Reaction Field";
                 rc2 = pow(in.get<double>("dipdip_cutoff",pc::infty), 2);
                 eps_rf = in.get<double>("epsilon_rf",80.);
-                eps = _lB*(2*(eps_rf-1)/(2*eps_rf+1))/pow(rc2,1.5);
+                eps_r = in.get<double>("epsilon_r",1.);
+                updateDiel(eps_rf);
               }
               template<class Tparticle>
                 double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
@@ -907,7 +909,7 @@ namespace Faunus {
                 }
 
               void updateDiel(double er) {
-                eps = _lB*(2*(er-1)/(er+1))/pow(rc2,1.5);
+                eps = _lB*(2*(er-eps_r)/(2*er+eps_r))/pow(rc2,1.5)/eps_r;
               }  
 
               string info(char w) {
@@ -1178,6 +1180,7 @@ namespace Faunus {
                   return _lB*gdb.q2quad(a.charge, b.theta,b.charge, a.theta,a.id,b.id,r);
                 }
           };
+          
       }
 }
 #endif

@@ -9,9 +9,6 @@ typedef DipoleDipoleWolf TpairDDW;
 typedef LennardJones TpairLJ;
 typedef CombinedPairPotential<TpairLJ,TpairDDW> Tpair;
 
-typedef IonQuad TpairIQ;
-typedef DipoleDipole TpairDD;
-
 #ifdef POLARIZE
 typedef Move::PolarizeMove<AtomicTranslation<Tspace> > TmoveTran; 
 typedef Move::PolarizeMove<AtomicRotation<Tspace> > TmoveRot;
@@ -169,6 +166,7 @@ int runSim(string name) {
       }
       dian.sampleDP(spc);
     }
+    // Tpair.pairpot.second.updateDiel(dian.getDielTinfoil());
     dian.save(std::to_string(loop.count()));
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
   }
@@ -206,7 +204,7 @@ int runSim(string name) {
 }
 
 int main() {
-  // cout << "Equilibration done ! Code: " << runSim("stockmayerEQ.input") << "!" << endl;
+  cout << "Equilibration done ! Code: " << runSim("stockmayerEQ.input") << "!" << endl;
   int prod = runSim("stockmayer.input");
   cout << "Production done ! Code: " << prod << "!" << endl;
   return prod;

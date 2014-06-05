@@ -1144,7 +1144,7 @@ namespace Faunus {
                 pot.setSpace(spc);
                 data d;
                 d.cnt++;
-                d.tot = g2g(spc, g1, g2); // exact el. energy
+                d.tot = pot.g2g(spc.p, g1, g2); // exact el. energy
                 d.ii = a.charge * b.charge * rinv; // ion-ion, etc.
                 d.id = ( a.charge*b.mu.dot(r) - b.charge*a.mu.dot(r) ) * r3inv;
                 d.dd = mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r);

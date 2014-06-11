@@ -80,7 +80,7 @@ namespace Faunus {
         double _getVolume() const;
         string _info(char);
       public:
-        void setradius(double);                 //!< Set radius (angstrom)
+        void setRadius(double);                 //!< Set radius (angstrom)
         Sphere(double);                         //!< Construct from radius (angstrom)
         Sphere(InputMap&, string="sphere");     //!< Construct from InputMap key \c prefix_radius
         void randompos(Point &);

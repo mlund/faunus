@@ -14,6 +14,7 @@ Table of contents
   - @ref downloadbuild
   - @ref linkingyourown
   - @ref importantclasses
+  - @ref videos
 - Examples
   - @ref example_minimal 
   - @ref example_bulk 
@@ -29,6 +30,13 @@ Table of contents
 - Development
   - @ref guidelines
   - @ref todo
+
+@page videos Video Tutorials
+
+### Download and compilation ###
+@htmlonly
+<iframe src="https://docs.google.com/file/d/0BzpLUBrTxmurRzN0RnFZc2lhZFE/preview" width="640" height="385"></iframe>
+@endhtmlonly
 
 @page downloadbuild Downloading and building Faunus
 

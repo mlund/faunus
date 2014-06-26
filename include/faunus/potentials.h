@@ -12,8 +12,6 @@
 #include <faunus/average.h>
 #endif
 
-using namespace Eigen;
-
 namespace Faunus {
 
   /**

@@ -80,7 +80,7 @@ namespace Faunus {
         double _getVolume() const;
         string _info(char);
       public:
-        void setradius(double);                 //!< Set radius (angstrom)
+        void setRadius(double);                 //!< Set radius (angstrom)
         Sphere(double);                         //!< Construct from radius (angstrom)
         Sphere(InputMap&, string="sphere");     //!< Construct from InputMap key \c prefix_radius
         void randompos(Point &);
@@ -233,7 +233,9 @@ namespace Faunus {
         inline double sqdist(const Point &a, const Point &b) const {
           return (a-b).squaredNorm();
         }
-        inline Point vdist(const Point &a, const Point &b) { return a-b; }
+        inline Point vdist(const Point &a, const Point &b) FOVERRIDE {
+          return a-b;
+        }
     };
 
     /*!
@@ -246,6 +248,7 @@ namespace Faunus {
         PeriodicCylinder(double, double);
         PeriodicCylinder(InputMap&);
         void boundary(Point&) const;
+
         inline double sqdist(const Point &a, const Point &b) const {
           double dx=a.x()-b.x();
           double dy=a.y()-b.y();
@@ -254,7 +257,8 @@ namespace Faunus {
             dz-=len;
           return dx*dx + dy*dy + dz*dz;
         }
-        inline Point vdist(const Point &a, const Point &b) {
+
+        inline Point vdist(const Point &a, const Point &b) FOVERRIDE {
           Point r=a-b;
           if (r.z()>halflen)
             r.z()-=len;
@@ -348,7 +352,7 @@ namespace Faunus {
           return Point(0,0,0);
         return massCenter(geo,p,Group(0,p.size()-1));
       }
- 
+
     /** @brief Calculate charge center of cluster of particles */
     template<class Tgeo, class Tpvec, class TGroup>
       Point chargeCenter(const Tgeo &geo, const Tpvec &p, const TGroup &g) {
@@ -363,25 +367,25 @@ namespace Faunus {
           return Point(0,0,0);
         return chargeCenter(geo,p,Group(0,p.size()-1));
       }
- 
+
     /** @brief Calculate geometric center of cluster of particles */
     template<class Tgeo, class Tpvec, class TGroup>
       Point geometricCenter(const Tgeo &geo, const Tpvec &p, const TGroup &g) {
         return anyCenter(geo,p,g,
             [](const typename Tpvec::value_type &x) {return 1.0;} );
       }
- 
-     template<class Tspace, class Tgroup>
-        Point dipoleMoment(const Tspace &s, const Tgroup &g, double cutoff=1e9,Point mu=Point(0,0,0)) {
-          assert(g.size()<=(int)s.p.size());
-          for (auto i : g) {
-            Point t=s.p[i] - g.cm;
-            s.geo.boundary(t);
-            if(t.squaredNorm() < cutoff*cutoff)
-              mu += t*s.p[i].charge;
-          }
-          return mu;
+
+    template<class Tspace, class Tgroup>
+      Point dipoleMoment(const Tspace &s, const Tgroup &g, double cutoff=1e9,Point mu=Point(0,0,0)) {
+        assert(g.size()<=(int)s.p.size());
+        for (auto i : g) {
+          Point t=s.p[i] - g.cm;
+          s.geo.boundary(t);
+          if(t.squaredNorm() < cutoff*cutoff)
+            mu += t*s.p[i].charge;
         }
+        return mu;
+      }
 
     /** @brief Translate a particle vector by a vector */
     template<class Tgeo, class Tpvec>
@@ -403,7 +407,7 @@ namespace Faunus {
       void cc2origo(const Tgeo &geo, Tpvec &p) {
         translate(geo, p, -chargeCenter(geo, p) );
       }
-      
+
     /*!
       \brief Geometric transform of a Point (rotation, translation...)
       */

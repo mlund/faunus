@@ -1,13 +1,5 @@
 #!/bin/bash
 
-# THIS RUN SCRIPT IS USED AS A UNIT TEST SO PLEASE
-# DO NOT UPLOAD ANY MODIFIED VERSIONS TO SVN UNLESS
-# TO UPDATE THE TEST.
-
-source_tests_dir="`dirname $0`"
-#cp -f $source_tests_dir/manybody.test . 2> /dev/null
-#cp -f $source_tests_dir/manybody.state state 2> /dev/null
-
 function mkinput() {
 echo '
 {
@@ -87,7 +79,7 @@ dh_ionicstrength       $salt   # mol/l
 dh_cutoff              $cut_i2i
 g2g_cutoff             $cut_g2g
 lj_cutoff              $cut_i2i
-lj_eps                 0.05    # kT
+lj_eps                 0.00005    # kT
 
 monopole_charge        $Zp
 monopole_radius        $Rp
@@ -126,48 +118,73 @@ test_file              manybody.test
 
 # Executable
 exe=$HOME/github/faunus/src/examples/manybody
+
 # Protein charge (approximate, for counter ion calc.)
 Zp=7.0
+
 # Protein max radius used for cutoff determination
 Rp=17.
+
 # Number of protein molecules in simulation
-Np=100
+Np=2
+
 # 1:1 salt concentration (mol/l)
-Cs=0.020
+Cs=0.0
+
+# Default displacements
+dp=60
+dprot=6
+
+# Flow control
+eqrun=true
+prodrun=true
+copy=false
 
 # Protein concentration [mol/l]
-for Cp in 0.001496
+for Cp in 0.0155
 do
+  # Custom displacements for specific concentrations
   if [ "${Cp}" = "0.001496" ]; then dp=60; dprot=6; fi
 
   # Calc. simulation volume [aa^3]
   V=`python -c "print $Np/(1e-27*6.022e23*${Cp})"`
   boxlen=`python -c "print $V**(1/3.)"`
-  # Calc. counter ion contribution to ionic strength
+
+  # Counter ion contribution to ionic strength
   salt=`python -c "print 0.5*$Zp*$Cp + $Cs"`
-  # Calc. Debye length and cutoff (3xDebye length)
-  D=`python -c "from math import sqrt; print 3.04/sqrt($salt)"`
+
+  # Debye length and cutoff (3xDebye length)
+  D=`python -c "print 3.04/${salt}**0.5"`
   cut_i2i=`python -c "print 3*$D"`
   cut_g2g=`python -c "print $Rp+$Rp+$cut_i2i"`
 
   for pH in 4.1
   do
     prefix="pH${pH}-Cp${Cp}"
-    #rm -fR state
-    micro=100
-    mkinput
-    mpiexec -hosts "localhost:1" $exe #> $prefix.eq
-    exit
 
-    micro=1000
-    mkinput
-    mpiexec -hosts "localhost:4" $exe > $prefix.out
+    if [ "$eqrun" = true ]; then
+      echo "Equilibration run...(state file deleted)"
+      rm -fR state
+      micro=1000
+      mkinput
+      mpiexec -hosts "localhost:1" $exe
+    fi
 
-    mv confout.pqr $prefix.pqr
-    mv state $prefix.state
-    mv debye.dat $prefix.debye
-    mv rdf_p2p.dat $prefix.rdf
-    mv manybody.input $prefix.input
+    if [ "$prodrun" = true ]; then
+      echo "Production run..."
+      micro=1000
+      mkinput
+      mpiexec -hosts "localhost:1" $exe #> $prefix.out
+    fi
+
+    if [ "$copy" = true ]; then
+      mv confout.pqr $prefix.pqr
+      mv avgcharge.pqr $prefix.avgcharge.pqr
+      mv state $prefix.state
+      mv debye.dat $prefix.debye
+      mv rdf_p2p.dat $prefix.rdf
+      mv manybody.input $prefix.input
+    fi
   done
 done
 

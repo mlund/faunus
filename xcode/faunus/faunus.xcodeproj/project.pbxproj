@@ -247,12 +247,9 @@
 		730472A716B72E1300A191AE /* UmfPackSupport.h in Headers */ = {isa = PBXBuildFile; fileRef = 730471BA16B72E1200A191AE /* UmfPackSupport.h */; };
 		7316FA2D15C546A30024F084 /* textio.h in Headers */ = {isa = PBXBuildFile; fileRef = 7316FA2C15C546A30024F084 /* textio.h */; };
 		7316FA3015C546B20024F084 /* mpi.h in Headers */ = {isa = PBXBuildFile; fileRef = 7316FA2F15C546B20024F084 /* mpi.h */; };
-		7316FA3315C546E90024F084 /* mpi.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7316FA3115C546E90024F084 /* mpi.cpp */; };
-		7316FA3415C546E90024F084 /* textio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7316FA3215C546E90024F084 /* textio.cpp */; };
 		7316FA3515C548D00024F084 /* libxdrfile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 738C136013FB13250056EF71 /* libxdrfile.a */; };
 		7316FA5615C56BA20024F084 /* analysis.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7316FA5515C56BA10024F084 /* analysis.cpp */; };
 		7316FA5815C56BC10024F084 /* analysis.h in Headers */ = {isa = PBXBuildFile; fileRef = 7316FA5715C56BC10024F084 /* analysis.h */; };
-		738C133613FB12D20056EF71 /* inputfile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C132F13FB12D20056EF71 /* inputfile.cpp */; };
 		738C133913FB12D20056EF71 /* slump.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C133213FB12D20056EF71 /* slump.cpp */; };
 		738C133A13FB12D20056EF71 /* species.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 738C133313FB12D20056EF71 /* species.cpp */; };
 		738C134D13FB12DE0056EF71 /* average.h in Headers */ = {isa = PBXBuildFile; fileRef = 738C133D13FB12DE0056EF71 /* average.h */; };
@@ -271,7 +268,6 @@
 		738C138A13FB13510056EF71 /* xdrfile_trr.c in Sources */ = {isa = PBXBuildFile; fileRef = 738C137F13FB133A0056EF71 /* xdrfile_trr.c */; };
 		738C138B13FB13510056EF71 /* xdrfile_xtc.c in Sources */ = {isa = PBXBuildFile; fileRef = 738C138013FB133A0056EF71 /* xdrfile_xtc.c */; };
 		73B67CDD1423E28E00E44DD9 /* geometry.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD41423E28E00E44DD9 /* geometry.cpp */; };
-		73B67CDF1423E28E00E44DD9 /* io.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD61423E28E00E44DD9 /* io.cpp */; };
 		73B67CE21423E28E00E44DD9 /* potentials.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD91423E28E00E44DD9 /* potentials.cpp */; };
 		73CB4DA616D9297500DED45D /* externalpotential.h in Headers */ = {isa = PBXBuildFile; fileRef = 73CB4DA516D9297500DED45D /* externalpotential.h */; };
 		73E9C84515CC6B32001D5654 /* polymers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73E9C83515CC6A70001D5654 /* polymers.cpp */; };
@@ -592,12 +588,9 @@
 		730721D517D7C832000EC96F /* water2.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = water2.cpp; path = ../../src/examples/water2.cpp; sourceTree = "<group>"; };
 		7316FA2C15C546A30024F084 /* textio.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = textio.h; sourceTree = "<group>"; };
 		7316FA2F15C546B20024F084 /* mpi.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = mpi.h; sourceTree = "<group>"; };
-		7316FA3115C546E90024F084 /* mpi.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mpi.cpp; path = ../../src/mpi.cpp; sourceTree = "<group>"; };
-		7316FA3215C546E90024F084 /* textio.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = textio.cpp; path = ../../src/textio.cpp; sourceTree = "<group>"; };
 		7316FA5515C56BA10024F084 /* analysis.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = analysis.cpp; path = ../../src/analysis.cpp; sourceTree = "<group>"; };
 		7316FA5715C56BC10024F084 /* analysis.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = analysis.h; sourceTree = "<group>"; };
 		738C132613FB12B30056EF71 /* libfaunus.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libfaunus.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
-		738C132F13FB12D20056EF71 /* inputfile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = inputfile.cpp; path = ../../src/inputfile.cpp; sourceTree = "<group>"; };
 		738C133213FB12D20056EF71 /* slump.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = slump.cpp; path = ../../src/slump.cpp; sourceTree = "<group>"; };
 		738C133313FB12D20056EF71 /* species.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = species.cpp; path = ../../src/species.cpp; sourceTree = "<group>"; };
 		738C133D13FB12DE0056EF71 /* average.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = average.h; sourceTree = "<group>"; };
@@ -617,7 +610,6 @@
 		738C137F13FB133A0056EF71 /* xdrfile_trr.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xdrfile_trr.c; sourceTree = "<group>"; };
 		738C138013FB133A0056EF71 /* xdrfile_xtc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xdrfile_xtc.c; sourceTree = "<group>"; };
 		73B67CD41423E28E00E44DD9 /* geometry.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = geometry.cpp; path = ../../src/geometry.cpp; sourceTree = "<group>"; };
-		73B67CD61423E28E00E44DD9 /* io.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = io.cpp; path = ../../src/io.cpp; sourceTree = "<group>"; };
 		73B67CD91423E28E00E44DD9 /* potentials.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = potentials.cpp; path = ../../src/potentials.cpp; sourceTree = "<group>"; };
 		73CB4DA516D9297500DED45D /* externalpotential.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = externalpotential.h; sourceTree = "<group>"; };
 		73E9C83515CC6A70001D5654 /* polymers.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = polymers.cpp; path = ../../../src/examples/polymers.cpp; sourceTree = "<group>"; };
@@ -1347,13 +1339,9 @@
 				738C136713FB133A0056EF71 /* xdrfile */,
 				7316FA5515C56BA10024F084 /* analysis.cpp */,
 				73B67CD41423E28E00E44DD9 /* geometry.cpp */,
-				738C132F13FB12D20056EF71 /* inputfile.cpp */,
-				73B67CD61423E28E00E44DD9 /* io.cpp */,
-				7316FA3115C546E90024F084 /* mpi.cpp */,
 				73B67CD91423E28E00E44DD9 /* potentials.cpp */,
 				738C133213FB12D20056EF71 /* slump.cpp */,
 				738C133313FB12D20056EF71 /* species.cpp */,
-				7316FA3215C546E90024F084 /* textio.cpp */,
 			);
 			name = src;
 			sourceTree = "<group>";
@@ -1769,14 +1757,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				73B67CDF1423E28E00E44DD9 /* io.cpp in Sources */,
-				738C133613FB12D20056EF71 /* inputfile.cpp in Sources */,
 				738C133913FB12D20056EF71 /* slump.cpp in Sources */,
 				738C133A13FB12D20056EF71 /* species.cpp in Sources */,
 				73B67CDD1423E28E00E44DD9 /* geometry.cpp in Sources */,
 				73B67CE21423E28E00E44DD9 /* potentials.cpp in Sources */,
-				7316FA3315C546E90024F084 /* mpi.cpp in Sources */,
-				7316FA3415C546E90024F084 /* textio.cpp in Sources */,
 				7316FA5615C56BA20024F084 /* analysis.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -413,14 +413,36 @@ namespace Faunus {
   class FormatGRO {
     private:
       std::vector<string> v;
-      particle s2p(string &);
+
+      inline particle s2p(const string &s) {
+        std::stringstream o;
+        string name;
+        double x,y,z;
+        o << s.substr(10,5) << s.substr(20,8) << s.substr(28,8) << s.substr(36,8);
+        o >> name >> x >> y >> z;
+        particle p;
+        p=atom[name]; 
+        return 10*p; //nm->angstrom
+      }
+
     public:
       double len;            //!< Box side length (cubic so far)
       p_vec p;
-      bool load(string);
+
+      inline bool load(const string &file) {
+        p.clear();
+        v.resize(0);
+        if (IO::readFile(file,v)==true) {
+          int last=atoi(v[1].c_str())+1;
+          for (int i=2; i<=last; i++)
+            p.push_back( s2p(v[i]) );
+          return true;
+        }
+        return false;
+      }
 
       template<class Tparticle, class Talloc>
-        bool save(const string &file, std::vector<Tparticle,Talloc> &p, string mode="") { // default does not append
+        bool save(const string &file, std::vector<Tparticle,Talloc> &p, string mode="") {
           int nres=1, natom=1;
           char buf[79];
           double halflen=len/20; // halflen in nm
@@ -472,13 +494,14 @@ namespace Faunus {
 
   };
 
-  /*! \brief GROMACS xtc compressed trajectory file format
-   *  \author Mikael Lund
-   *  \date June 2007-2011, Prague / Malmo
+  /** 
+   * @brief GROMACS xtc compressed trajectory file format
    *
-   *  Saves simulation frames to a Gromacs xtc trajectory file including
-   *  box information if applicable. Molecules with periodic boundaries
-   *  can be saved as "whole" by adding their groups to the public g-vector.
+   * Saves simulation frames to a Gromacs xtc trajectory file including
+   * box information if applicable. Molecules with periodic boundaries
+   * can be saved as "whole" by adding their groups to the public g-vector.
+   *
+   * @date June 2007-2011, Prague / Malmo
    */
   class FormatXTC {
     private:
@@ -609,7 +632,7 @@ namespace Faunus {
        * This will open an xtc file for reading. The number of atoms in each frame
        * is saved and memory for the coordinate array is allocated.
        */
-      bool open(std::string s) {
+      inline bool open(std::string s) {
         if (xd!=NULL)
           close();
         xd = xdrfile_open(&s[0], "r");
@@ -624,7 +647,7 @@ namespace Faunus {
         return false;
       }
 
-      void close() {
+      inline void close() {
         xdrfile_close(xd);
         xd=NULL;
         delete[] x_xtc;
@@ -638,7 +661,7 @@ namespace Faunus {
         x_xtc=NULL;
       }
 
-      void setbox(double x, double y, double z) {
+      inline void setbox(double x, double y, double z) {
         assert(x>0 && y>0 && z>0);
         for (int i=0; i<3; i++)
           for (int j=0; j<3; j++)
@@ -648,9 +671,9 @@ namespace Faunus {
         xdbox[2][2]=0.1*z; // in nanometers!
       }
 
-      void setbox(double len) { setbox(len,len,len); }
+      inline void setbox(double len) { setbox(len,len,len); }
 
-      void setbox(const Point &p) { setbox(p.x(), p.y(), p.z()); }
+      inline void setbox(const Point &p) { setbox(p.x(), p.y(), p.z()); }
 
   };
 
@@ -699,10 +722,10 @@ namespace Faunus {
         }
 
     public:
-      FormatTopology();
+      FormatTopology() : rescnt(0) {}
 
       template<class Tspace>
-        bool save(string topfile, Tspace &spc) {
+        bool save(const string &topfile, Tspace &spc) {
           std::set<string> done;
           std::ofstream f(topfile.c_str());
           if (f) {

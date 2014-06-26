@@ -9,6 +9,9 @@ typedef DipoleDipoleWolf TpairDDW;
 typedef LennardJones TpairLJ;
 typedef CombinedPairPotential<TpairLJ,TpairDDW> Tpair;
 
+typedef IonQuad TpairIQ;
+typedef DipoleDipole TpairDD;
+
 #ifdef POLARIZE
 typedef Move::PolarizeMove<AtomicTranslation<Tspace> > TmoveTran; 
 typedef Move::PolarizeMove<AtomicRotation<Tspace> > TmoveRot;
@@ -37,6 +40,77 @@ bool savePotential(Tpairpot pot, TmoveRot rot, Tid ida, Tid idb, string file) {
   return false;
 }
 
+template<class Tpairpot, class Tid>
+void getKeesomDD(Tpairpot pot, TmoveRot rot, Tid ida, Tid idb, string file) {
+  std::ofstream f(file.c_str());
+  DipoleParticle a,b;
+  a=atom[ida];
+  b=atom[idb];
+  
+  double stepA = 0.1;
+  double stepR = 0.05;
+  double sum_t = 0.0;
+  int cnt = 0;
+  if (f) {
+    double min=1.1 * (atom[ida].radius+atom[idb].radius);
+    for (double r=min; r<=3*min; r+=stepR) {
+      cnt = 0;
+      sum_t = 0;
+      for(double theta1 = 0; theta1 < pc::pi; theta1+=stepA) {
+        for(double psi1 = 0; psi1 < 2*pc::pi; psi1+=stepA) {
+          for(double theta2 = 0; theta2 < pc::pi; theta2+=stepA) {
+            for(double psi2 = 0; psi2 < 2*pc::pi; psi2+=stepA) {
+              Point p1(sin(theta1)*cos(psi1) , sin(theta1)*sin(psi1) , cos(theta1));
+              Point p2(sin(theta2)*cos(psi2) , sin(theta2)*sin(psi2) , cos(theta2));
+              a.mu = p1;
+              b.mu = p2;
+              sum_t += exp(-pot(a,b,Point(r,0,0)));
+              cnt++;
+            }
+          }
+        }
+      }
+      f << std::left << std::setw(10) << r << " " << -log(sum_t/cnt) << endl;
+      cout << "r: " << r << endl;
+    }
+  }
+}
+
+template<class Tpairpot, class Tid>
+void getKeesomIQ(Tpairpot pot, TmoveRot rot, Tid ida, Tid idb, string file) {
+  std::ofstream f(file.c_str());
+  DipoleParticle a,b;
+  a=atom[ida];
+  b=atom[idb];
+  
+  double stepA = 0.01;
+  double stepR = 0.05;
+  double sum_t = 0.0;
+  int cnt = 0;
+  cout << "A: " << a.charge << ", " << a.theta << endl;
+  cout << "B: " << b.charge << ", " << b.theta << endl;
+  if (f) {
+    double min=1.1 * (atom[ida].radius+atom[idb].radius);
+    for (double r=1; r<=15; r+=stepR) {
+      cnt = 0;
+      sum_t = 0;
+      for(double theta = 0; theta < pc::pi; theta+=stepA) {
+        for(double psi = 0; psi < 2*pc::pi; psi+=stepA) {
+          Point p(r*sin(theta)*cos(psi) , r*sin(theta)*sin(psi) , r*cos(theta));
+          //cout << "Angles: " << theta << ", " << psi << endl;
+          //a.theta.rotate(rot);
+          //b.theta.rotate(rot);
+          //a.rotate(rot);
+          sum_t += exp(-pot(a,b,p));
+          cnt++;
+        }
+      }
+      f << std::left << std::setw(10) << r << " " << -log(sum_t/cnt) << endl;
+      cout << "r: " << r << endl;
+    }
+  }
+}
+
 int runSim(string name) {
   InputMap in(name);               // open parameter file for user input
   Energy::NonbondedVector<Tspace,Tpair> pot(in); // non-bonded only
@@ -55,13 +129,15 @@ int runSim(string name) {
   spc.trial = spc.p;
   UnitTest test(in);               // class for unit testing
   
-  Analysis::DipoleAnalysis dian(spc);
+  Analysis::DipoleAnalysis dian(spc,in);
   Average<double> EnergyDDW;
   Average<double> EnergyLJ;
   FormatXTC xtc(spc.geo.len.norm());
   DipoleWRL sdp;
 
   savePotential(TpairDDW(in),rot, atom["sol"].id, atom["sol"].id, "pot_dipdip.dat");
+  //getKeesomIQ(TpairIQ(in),rot, atom["sol"].id, atom["ch"].id, "keesom_IQ.dat");
+  //getKeesomDD(TpairDD(in),rot, atom["sol"].id, atom["sol"].id, "keesom_DD.dat");
   
   std::vector<double> EDDW;
   std::vector<double> ELJ;

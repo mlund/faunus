@@ -36,7 +36,8 @@ option(ENABLE_STATIC   "Use static instead of dynamic linkage of faunus library"
 option(ENABLE_SWIG     "Try to create SWIG modules for python, tcl, ruby etc. (experimental!)" off)
 option(ENABLE_APPROXMATH "Use approximate math (Quake inverse sqrt, fast exponentials etc.)" off)
 option(ENABLE_HASHTABLE "Use hash tables for bond bookkeeping - may be faster for big systems" off)
-option(ENABLE_UNICODE  "Use unicode characters in output" on)
+option(ENABLE_UNICODE   "Use unicode characters in output" on)
+option(ENABLE_POWERSASA "Fetch 3rd-party SASA calculation software" off)
 mark_as_advanced( CLEAR CMAKE_VERBOSE_MAKEFILE CMAKE_CXX_COMPILER CMAKE_CXX_FLAGS )
 mark_as_advanced( EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH
                   CMAKE_OSX_ARCHITECTURES CMAKE_OSX_SYSROOT GCCXML DART_TESTING_TIMEOUT)

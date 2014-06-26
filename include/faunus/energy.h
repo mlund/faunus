@@ -1315,9 +1315,8 @@ namespace Faunus {
                   // analyze
                   if (sample_uofr && !base::isTrial(p)) {
                     double r = base::spc->geo.dist(g1.cm,g2.cm);
-                    string key = std::max(g1.name,g2.name)
-                      + "-" +std::min(g1.name,g2.name);
-                    uofr[key][to_bin(r,dr)] += -tension*dsasa;
+                    auto k = std::minmax(g1.name,g2.name);
+                    uofr[k.first+"-"+k.second][to_bin(r,dr)] += -tension*dsasa;
                   }
                 }
 

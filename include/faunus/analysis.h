@@ -1580,7 +1580,7 @@ namespace Faunus {
         Analysis::Table2D<double,double> kw, mucorr_angle;
         Analysis::Table2D<double,Average<double> > mucorr, mucorr_dist; 
         Analysis::Histogram<double,unsigned int> HM_x,HM_y,HM_z,HM_x_box,HM_y_box,HM_z_box,HM2,HM2_box;
-        Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std;
+        Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std, V_t;
 
         int sampleKW;
         double cutoff2;

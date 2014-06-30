@@ -1068,27 +1068,33 @@ namespace Faunus {
       };
 
     /**
-     * @brief Constrain two group mass centra within a certain distance interval [mindist:maxdist]
-     * @date Lund, 2012
-     * @todo Prettify output
+     * @brief Constrain two group mass centre separations to a distance interval [mindist:maxdist]
      *
      * This energy class will constrain the mass center separation between selected groups to a certain
      * interval. This can be useful to sample rare events and the constraint is implemented as an external
      * group energy that return infinity if the mass center separation are outside the defined range.
      * An arbitrary number of group pairs can be added with the addPair() command, although one would
      * rarely want to have more than one.
-     * In the following example,
-     * the distance between `mygroup1` and `mygroup2` are constrained to the range `[10:50]` angstrom:
+     * In the following example, the distance between `mygroup1` and `mygroup2`
+     * are constrained to the range `[10:50]` angstrom:
+     *
      * @code
      * InputMap mcp;
-     * Energy::MassCenterConstrain<Tspace> constrain(mcp);
-     * constrain.addPair( mygroup1, mygroup2, 10, 50); 
+     * Energy::MassCenterConstrain<Tspace> pot(mcp);
+     * pot.addPair( mygroup1, mygroup2, 10, 50); 
      * @endcode
      *
      * The `addPair` function can be called without distance interval in
-     * which case the default window is used. This is read during 
-     * construction with the keywords `cmconstrain_min` and
-     * `cmconstrain_max`.
+     * which case the default window is used. This is read during from
+     * the `InputMap` using the keywords,
+     *
+     * Keyword           | Description
+     * :---------------- | :----------------------------------------
+     * `cmconstrain_min` | Minimum mass center separation (angstrom)
+     * `cmconstrain_max` | Maximum mass center separation (angstrom)
+     *
+     * @date Lund, 2012
+     * @todo Prettify output
      */
     template<typename Tspace>
       class MassCenterConstrain : public Energybase<Tspace> {

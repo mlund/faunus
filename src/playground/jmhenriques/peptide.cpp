@@ -1,11 +1,15 @@
 #include <faunus/faunus.h>
 
 /**
- * @brief  Constant-pH, NVT, MC simulation of a peptide in bulk or in a slit 
- *         (charged and/or hydrophobic  surface). Implicit salt.
+ * @brief  Peptide in bulk OR at a charged (and/or hydrophobic) surface.
+ *         Coarse-grained constant-pH, NVT, MC simulation with implicit 
+ *         solvent and salt.
+ *
+ *         NOTE: Code was modified for the new Faunus functions, "netCharge" 
+ *               and "numHydrophobic".
  *        
  * @author Joao Henriques
- * @date   2013/11/26
+ * @date   2014/05/23
  */
 
 using namespace Faunus;
@@ -55,6 +59,7 @@ int main() {
   double req  = mcp.get<double>("harmonic_eqdist", 0);
   double k    = mcp.get<double>("harmonic_forceconst", 0);
   
+  // TO DO: modify things to use the new addFastaSequence() 
   Tspace::ParticleVector v;
   FormatAAM::load(file, v);
   Geometry::FindSpace().find(spc.geo, spc.p, v);
@@ -110,11 +115,14 @@ int main() {
   spc.load("simulation.state");
   sys.init(Energy::systemEnergy(spc, pot, spc.p));
 
+  /* OLD
   int hcnt = 0;
   for (auto &i : spc.p)
     if (i.hydrophobic)
       hcnt++;
   cout << "\nNumber of hydrophobic sites = " << hcnt << endl;
+  */
+  cout << "\nNumber of hydrophobic sites = " << ::numHydrophobic(spc.p, pol) << endl; // NEW
 
   cout << atom.info()
        << pol.info()        
@@ -125,8 +133,10 @@ int main() {
 			 "  So, wake up, Mister Freeman. Wake up and smell the ashes.");
   
   std::ofstream f1("rg_step.dat");
+#ifdef SLIT
   std::ofstream f2("surf_res_dist.dat");
-  
+#endif  
+
   MCLoop loop(mcp);
   while (loop.macroCnt()) {
     while (loop.microCnt()) {
@@ -166,7 +176,10 @@ int main() {
 	Point mc = Geometry::massCenter(spc.geo, spc.p, pol);                // mass center coord
 	double dist = pot.first.first.first.first.second.expot.surfDist(mc); // mc dist to surf
 	surfmcdist(dist)++;                                                  // mass center prob distr along the z axis
+	/* OLD
 	netqtable(dist) += pol.charge(spc.p);                                // net charge vs. dist to surf 
+	*/
+	netqtable(dist) += ::netCharge(spc.p, pol);                          // NEW
 	Point rg2 = shape.vectorgyrationRadiusSquared(pol, spc);             // Rg2 coord
 	rg2table(dist) += rg2.x() + rg2.y() + rg2.z();                       // Rg2 vs. dist to surf
 	for (int i = pol.front(); i <= pol.back(); i++) {
@@ -216,7 +229,9 @@ int main() {
 #endif
   
   f1.close();
+#ifdef SLIT
   f2.close();
+#endif
 
   cout << sys.info() 
        << mv.info() 

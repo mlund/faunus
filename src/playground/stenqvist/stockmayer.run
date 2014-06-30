@@ -25,9 +25,11 @@ dipdip_cutoff      4.3         # dipole cutoff [angstrom]
 lj_eps             0.069        # Uniform LJ epsilon parameter [kT] 0.7504
 kappa              0
 epsilon_rf         1
+seed               5
+
+ewald_cutoff       2.23475
 
 dipole_data_ext    none
-
 overlap            true
                   
 loop_macrosteps    5           # number of macro loops
@@ -49,6 +51,7 @@ epsilon_r          1            # dielectric const.
 dipdip_cutoff      4.3         # dipole cutoff [angstrom]
 lj_eps             0.069        # Uniform LJ epsilon parameter [kT] 0.7504
 kappa              0
+seed               5
 
 load_dipole_data   yes
 file_dipole_data   40000
@@ -57,7 +60,7 @@ loop_macrosteps    10           # number of macro loops
 loop_microsteps    10         # number of micro loops
 
 tion1              sol
-nion1              100
+nion1              10
 
 test_stable        no
 test_file          stockmayer.test
@@ -75,7 +78,6 @@ if [ -x $exe ]; then
  $exe
  rc=$?
 fi
-rm -fR state
 rm -fR dipoledata*
 rm -fR hist_dip*
 rm -fR mucorr*

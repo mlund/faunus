@@ -80,9 +80,12 @@ namespace Faunus {
         private:
           using Tmove::spc;
           using Tmove::pot;
+          int max_iter;                   // max numbr of iterations
           double threshold;       	  // threshold for iteration
           Eigen::MatrixXd field;  	  // field on each particle
           Average<int> numIter;           // average number of iterations per move
+          bool broke_loop;
+          bool groupBasedField;
 
           /**
            *  @brief Replaces dipole moment with permanent dipole moment plus induced dipole moment
@@ -104,9 +107,13 @@ namespace Faunus {
                   Point mu_err = mu_trial - p[i].mu*p[i].muscalar;     // Difference between former and current state
                   mu_err_norm[i] = mu_err.norm();// Get norm of previous row
                   p[i].muscalar = mu_trial.norm();// Update dip scalar in particle
-
                   if (p[i].muscalar > 1e-6)
                     p[i].mu = mu_trial/p[i].muscalar;// Update article dip.
+                }
+                if(cnt > max_iter) {
+                  cout << "Reached " << max_iter << " iterations. Breaking loop!" << endl;
+                  broke_loop = true;
+                  break;
                 }
               } while (mu_err_norm.maxCoeff() > threshold);                 // Check if threshold is ok
               numIter+=cnt; // average number of iterations
@@ -135,8 +142,10 @@ namespace Faunus {
           string _info() FOVERRIDE {
             std::ostringstream o;
             using namespace textio;
-            o << pad(SUB,Tmove::w,"Polarization iterations") << numIter.avg() << endl
-              << Tmove::_info();
+            o << pad(SUB,Tmove::w,"Polarization iterations") << numIter.avg() << endl;
+            if(broke_loop)
+              o << "Maximum number of iterations reached. Loop was broken!" << endl;
+            o  << Tmove::_info();
             return o.str();
           }
 
@@ -144,7 +153,10 @@ namespace Faunus {
           template<class Tspace>
             PolarizeMove(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s) :
               Tmove(in,e,s) {
+                broke_loop = false;
                 threshold = in.get<double>("pol_threshold", 0.001, "Iterative polarization precision");
+                max_iter = in.get<int>("max_iterations", 40, "Maximum number of iteratins");
+                groupBasedField = in.get<bool>("pol_g2g", false, "Group based field calculation");
               }
       };
 

@@ -112,7 +112,7 @@ namespace Faunus {
 
           virtual double external(const Tpvec&)                // External energy - pressure, for example.
           { return 0; }
-
+          
           virtual void field(const Tpvec&, Eigen::MatrixXd&) //!< Calculate electric field on all particles
           { }
 
@@ -371,11 +371,12 @@ namespace Faunus {
      */
     template<class Tspace, class Tpairpot>
       class NonbondedVector : public Energybase<Tspace> {
-        protected:
+        private:
           string _info() { return pairpot.info(25); }
           typedef Energybase<Tspace> Tbase;
           typedef typename Tbase::Tparticle Tparticle;
           typedef typename Tbase::Tpvec Tpvec;
+          bool groupBasedField;
 
         public:
           typename Tspace::GeometryType geo;
@@ -386,6 +387,7 @@ namespace Faunus {
                 std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
                 "Tpairpot must be a pair potential" );
             Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
+            groupBasedField = in.get<bool>("pol_g2g",false,"Field will exclude own group");
           }
 
           void setSpace(Tspace &s) FOVERRIDE {
@@ -507,12 +509,23 @@ namespace Faunus {
            */
           void field(const Tpvec &p, Eigen::MatrixXd &E) FOVERRIDE {
             assert((int)p.size()==E.cols());
-            size_t i=0;
-            for (auto &pi : p) {
-              for (auto &pj : p)
-                if (&pi!=&pj)
-                  E.col(i) = E.col(i) + pairpot.field(pj,geo.vdist(pi,pj));
-              i++;
+
+            // Include field only from external molecules
+            if (groupBasedField) {
+              for (auto gi : Tbase::spc->groupList()) // loop over all groups
+                for (auto gj : Tbase::spc->groupList()) // loop over all group
+                  if (gi!=gj) // discard identical groups (addresss comparison)
+                    for (auto i : *gi)  // loop over particle index in 1st group
+                      for (auto j : *gj) // loop ove
+                        E.col(i) = E.col(i) + pairpot.field(p[j],geo.vdist(p[i],p[j]));
+              } else {
+              size_t i=0;
+              for (auto &pi : p) {
+                for (auto &pj : p)
+                  if (&pi!=&pj)
+                    E.col(i) = E.col(i) + pairpot.field(pj,geo.vdist(pi,pj));
+                i++;
+              }
             }
           }
       };

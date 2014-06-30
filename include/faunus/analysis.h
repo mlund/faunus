@@ -1581,25 +1581,38 @@ namespace Faunus {
         Analysis::Table2D<double,Average<double> > mucorr, mucorr_dist; 
         Analysis::Histogram<double,unsigned int> HM_x,HM_y,HM_z,HM_x_box,HM_y_box,HM_z_box,HM2,HM2_box;
         Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std, V_t;
-
+        Average<double> mu_abs;
+        
         int sampleKW;
-        double cutoff2;
-        double volume, N;
-        double const_DielTinfoil;
+        double cutoff2, N;
+        double const_Diel, const_DielTinfoil, const_DielCM, const_DielRF, epsRF, constEpsRF;
 
       public:
         template<class Tspace, class Tinputmap>
           DipoleAnalysis(const Tspace &spc, Tinputmap &in) : rdf(0.1),kw(0.1),mucorr_angle(0.1),mucorr(0.1),mucorr_dist(0.1),HM_x(0.1),HM_y(0.1),HM_z(0.1),HM_x_box(0.1),HM_y_box(0.1),HM_z_box(0.1),HM2(0.1),HM2_box(0.1) {
-            cutoff2 = pow(spc.geo.len_half.x(),2);
-            volume = spc.geo.getVolume();
-            N = spc.p.size();
-            const_DielTinfoil = pc::e*pc::e*1e10/(3*volume*pc::kT()*pc::e0);
             sampleKW = 0;
+            setCutoff(spc.geo.len_half.x());
+            N = spc.p.size();
+            const_Diel = pc::e*pc::e*1e10/(3*pc::kT()*pc::e0);
+            updateConstants(spc.geo.getVolume());
+            updateDielectricConstantRF(in.get("epsilon_rf",80.));
             load(in.get("dipole_data_ext", string("")));
           }
 
         void setCutoff(double cutoff) {
           cutoff2 = cutoff*cutoff;
+        }
+        
+        void updateDielectricConstantRF(double er) {
+          epsRF = er;
+          constEpsRF = 2*(epsRF - 1)/(2*epsRF + 1);
+        }
+        
+        void updateConstants(double volume) {
+          V_t += volume;
+          const_DielTinfoil = const_Diel/V_t.avg();
+          const_DielCM = const_DielTinfoil/3;
+          const_DielRF = const_DielTinfoil/3;
         }
 
         /**
@@ -1618,6 +1631,7 @@ namespace Faunus {
               } else {
                 mu_box += i.mu*i.muscalar;
               }
+              mu_abs += i.muscalar;
             }
             mu_box += mu;
             samplePP(spc,mu,mu_box);
@@ -1632,6 +1646,7 @@ namespace Faunus {
          */
         template<class Tspace>
           void samplePP(Tspace &spc, Point mu=Point(0,0,0), Point mu_box=Point(0,0,0)) {
+            updateConstants(spc.geo.getVolume());
             Group all(0,spc.p.size()-1);
             all.setMassCenter(spc);
             mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
@@ -1694,6 +1709,32 @@ namespace Faunus {
         }  
 
         /**
+         * @brief Returns dielectric constant ( Clausius-Mossotti ).
+         * \f$ \frac{1 + \frac{2<M^2>}{9V\epsilon_0k_BT}}{1 - \frac{<M^2>}{9V\epsilon_0k_BT}} \f$
+         * 
+         * @warning Needs to be checked!
+         */
+        double getDielCM() {
+          double temp = M2_box.avg()*const_DielCM;
+          return ((1 + 2*temp)/(1 - temp));
+        }  
+        
+        /**
+         * @brief Returns dielectric constant ( Reaction Field ).
+         * 
+         * @warning Needs to be checked!
+         */
+        double getDielRF() {
+          double avgRF = M2_box.avg()*const_DielRF;
+          double sqrtRF = 0;
+          if(-4*constEpsRF*avgRF + 1 > 0)
+            sqrtRF = 3*sqrt(-4*constEpsRF*avgRF + 1);
+          double one = 0.5*(2*constEpsRF - 4*avgRF + 1 + sqrtRF)/(constEpsRF + avgRF - 1);
+          //double two = 0.5*(2*constEpsRF - 4*avgRF + 1 - sqrtRF)/(constEpsRF + avgRF - 1);
+          return one;
+        }  
+        
+        /**
          * @brief Saves data to files. 
          * @param nbr Extention of filename
          * 
@@ -1730,6 +1771,7 @@ namespace Faunus {
             if (M2.cnt != 0)       f << "M2 " << M2.cnt << " " << M2.avg() << " " << M2.sqsum << "\n";
             if (M2_box.cnt != 0)   f << "M2_box " << M2_box.cnt << " " << M2_box.avg() << " " << M2_box.sqsum << "\n";
             if (diel_std.cnt != 0) f << "diel_std " << diel_std.cnt << " " << diel_std.avg() << " " << diel_std.sqsum;
+            if (mu_abs.cnt != 0)      f << "mu_abs " << mu_abs.cnt << " " << mu_abs.avg() << " " << mu_abs.sqsum << "\n";
           }
         }
 
@@ -1804,6 +1846,11 @@ namespace Faunus {
                 Average<double> diel_stdt(average,sqsum,cnt);
                 diel_std = diel_std + diel_stdt;
               }
+              if(name == "mu_abs") {
+                mu_abs.reset();
+                Average<double> mu_abst(average,sqsum,cnt);
+                mu_abs = mu_abs + mu_abst;
+              }
             }
           }
         }
@@ -1813,9 +1860,10 @@ namespace Faunus {
           std::ostringstream o;
           o << header("Dipole analysis");
           o << indent(SUB) << epsilon_m+subr+"(Tinfoil)" << setw(22) << getDielTinfoil() << ", "+sigma+"=" << diel_std.stdev() << ", "+sigma+"/"+epsilon_m+subr+"=" << (100*diel_std.stdev()/getDielTinfoil()) << percent << endl
-            << indent(SUB) << bracket("M"+squared) << setw(27) << pc::eA2D(M2_box.avg(),2) << " Debye"+squared+", "+sigma+"=" << pc::eA2D(M2_box.stdev(),2) << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg()) << percent << endl
-            << indent(SUB) << bracket("M") << setw(25) << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl 
-            << indent(SUBSUB) << sigma << setw(25) << "( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl;
+          << indent(SUB) << bracket("M"+squared) << setw(27) << pc::eA2D(M2_box.avg(),2) << " Debye"+squared+", "+sigma+"=" << pc::eA2D(M2_box.stdev(),2) << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg()) << percent << endl
+          << indent(SUB) << bracket("M") << setw(25) << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl 
+          << indent(SUBSUB) << sigma << setw(25) << "( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl
+          << indent(SUB) << bracket("|"+mu+"|") << setw(25) << pc::eA2D(mu_abs.avg()) << " Debye, "+sigma+"=" << pc::eA2D(mu_abs.stdev()) << ", "+sigma+"/"+bracket("|"+mu+"|")+"=" << (100*mu_abs.stdev()/mu_abs.avg()) << percent << endl;
           return o.str();
         }
     };

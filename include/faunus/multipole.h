@@ -303,6 +303,8 @@ namespace Faunus {
           data.T2c2_r2i = T2c2_rc2*data.r2i;
           data.der_dT2c1 = der*dT2c1;
           data.der_dT2c2_r2i = der*dT2c2_rc2*data.r2i;
+          data.T2c2_r2i = 0.0; // No Energy
+          data.der_dT2c2_r2i = 0.0; // No Force
         }
       
       /**
@@ -522,6 +524,22 @@ namespace Faunus {
       GaussianDampingBase() {
         constant = 2/sqrt(pc::pi);
         int N = atom.size() - 1;
+        
+        double alpha;
+        double pre_factor = pow(3*sqrt(8*pc::pi)/4,1.0/3.0);
+        for(int i = 0; i < N; i++) {
+          alpha = (atom[i+1].alpha(0,0) + atom[i+1].alpha(1,1) + atom[i+1].alpha(2,2))/3.0;
+          if(atom[i+1].betaC == pc::infty) {
+            atom[i+1].betaC = 0.75*pre_factor*pow(alpha,-1.0/3.0);
+          }
+          if(atom[i+1].betaD == pc::infty) {
+            atom[i+1].betaD = 0.75*pre_factor*pow(alpha,-1.0/3.0);
+          }
+          if(atom[i+1].betaQ == pc::infty) {
+            atom[i+1].betaC = 0.75*pre_factor*pow(alpha,-1.0/3.0);
+          }
+        }
+        
         betaC.resize(N);
         betaD.resize(N);
         betaQ.resize(N);
@@ -964,7 +982,7 @@ namespace Faunus {
                   return _lB*U_total;
                 }
 
-              template<bool useIon=false, bool useDipole=false, class Tparticle>
+              template<bool useIon=true, bool useDipole=true, class Tparticle>
                 Point field(const Tparticle &p, const Point &r) {
                   if(useIon && useDipole) {
                     wolf.calcWolfData(r);

@@ -808,8 +808,8 @@ namespace Faunus {
        */
       template<class Tparticle>
         Point field (const Tparticle &p, const Point &r) const {
-          double R2 = 1.0/r.squaredNorm();
-          return p.charge*R2*r*sqrt(R2)*lB;
+          double r2i = 1.0/r.squaredNorm();
+          return p.charge*r2i*r*sqrt(r2i)*lB;
         }
 
       string info(char);

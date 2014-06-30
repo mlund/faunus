@@ -25,6 +25,7 @@ dipdip_cutoff      4.3         # dipole cutoff [angstrom]
 lj_eps             0.069        # Uniform LJ epsilon parameter [kT] 0.7504
 kappa              0
 epsilon_rf         1
+seed               5
 
 ewald_cutoff       2.23475
 
@@ -50,6 +51,7 @@ epsilon_r          1            # dielectric const.
 dipdip_cutoff      4.3         # dipole cutoff [angstrom]
 lj_eps             0.069        # Uniform LJ epsilon parameter [kT] 0.7504
 kappa              0
+seed               5
 
 load_dipole_data   yes
 file_dipole_data   40000

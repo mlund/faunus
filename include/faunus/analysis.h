@@ -1571,6 +1571,7 @@ namespace Faunus {
         Analysis::Table2D<double,Average<double> > mucorr, mucorr_dist; 
         Analysis::Histogram<double,unsigned int> HM_x,HM_y,HM_z,HM_x_box,HM_y_box,HM_z_box,HM2,HM2_box;
         Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std, V_t;
+        Average<double> mu_abs;
         
         int sampleKW;
         double cutoff2, N;
@@ -1620,6 +1621,7 @@ namespace Faunus {
               } else {
                 mu_box += i.mu*i.muscalar;
               }
+              mu_abs += i.muscalar;
             }
             mu_box += mu;
             samplePP(spc,mu,mu_box);
@@ -1759,6 +1761,7 @@ namespace Faunus {
             if (M2.cnt != 0)       f << "M2 " << M2.cnt << " " << M2.avg() << " " << M2.sqsum << "\n";
             if (M2_box.cnt != 0)   f << "M2_box " << M2_box.cnt << " " << M2_box.avg() << " " << M2_box.sqsum << "\n";
             if (diel_std.cnt != 0) f << "diel_std " << diel_std.cnt << " " << diel_std.avg() << " " << diel_std.sqsum;
+            if (mu_abs.cnt != 0)      f << "mu_abs " << mu_abs.cnt << " " << mu_abs.avg() << " " << mu_abs.sqsum << "\n";
           }
         }
         
@@ -1833,6 +1836,11 @@ namespace Faunus {
                 Average<double> diel_stdt(average,sqsum,cnt);
                 diel_std = diel_std + diel_stdt;
               }
+              if(name == "mu_abs") {
+                mu_abs.reset();
+                Average<double> mu_abst(average,sqsum,cnt);
+                mu_abs = mu_abs + mu_abst;
+              }
             }
           }
         }
@@ -1844,7 +1852,8 @@ namespace Faunus {
           o << indent(SUB) << epsilon_m+subr+"(Tinfoil)" << setw(22) << getDielTinfoil() << ", "+sigma+"=" << diel_std.stdev() << ", "+sigma+"/"+epsilon_m+subr+"=" << (100*diel_std.stdev()/getDielTinfoil()) << percent << endl
           << indent(SUB) << bracket("M"+squared) << setw(27) << pc::eA2D(M2_box.avg(),2) << " Debye"+squared+", "+sigma+"=" << pc::eA2D(M2_box.stdev(),2) << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg()) << percent << endl
           << indent(SUB) << bracket("M") << setw(25) << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl 
-          << indent(SUBSUB) << sigma << setw(25) << "( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl;
+          << indent(SUBSUB) << sigma << setw(25) << "( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl
+          << indent(SUB) << bracket("|"+mu+"|") << setw(25) << pc::eA2D(mu_abs.avg()) << " Debye, "+sigma+"=" << pc::eA2D(mu_abs.stdev()) << ", "+sigma+"/"+bracket("|"+mu+"|")+"=" << (100*mu_abs.stdev()/mu_abs.avg()) << percent << endl;
           return o.str();
         }
     };

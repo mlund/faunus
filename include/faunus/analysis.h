@@ -1735,6 +1735,32 @@ namespace Faunus {
         }  
         
         /**
+         * @brief Returns dielectric constant ( Clausius-Mossotti ).
+         * \f$ \frac{1 + \frac{2<M^2>}{9V\epsilon_0k_BT}}{1 - \frac{<M^2>}{9V\epsilon_0k_BT}} \f$
+         * 
+         * @warning Needs to be checked!
+         */
+        double getDielCM() {
+          double temp = M2_box.avg()*const_DielCM;
+          return ((1 + 2*temp)/(1 - temp));
+        }  
+        
+        /**
+         * @brief Returns dielectric constant ( Reaction Field ).
+         * 
+         * @warning Needs to be checked!
+         */
+        double getDielRF() {
+          double avgRF = M2_box.avg()*const_DielRF;
+          double sqrtRF = 0;
+          if(-4*constEpsRF*avgRF + 1 > 0)
+            sqrtRF = 3*sqrt(-4*constEpsRF*avgRF + 1);
+          double one = 0.5*(2*constEpsRF - 4*avgRF + 1 + sqrtRF)/(constEpsRF + avgRF - 1);
+          //double two = 0.5*(2*constEpsRF - 4*avgRF + 1 - sqrtRF)/(constEpsRF + avgRF - 1);
+          return one;
+        }  
+        
+        /**
          * @brief Saves data to files. 
          * @param nbr Extention of filename
          * 

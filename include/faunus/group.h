@@ -78,13 +78,6 @@ namespace Faunus {
         return size()/molsize;
       }
 
-      /** @brief Total charge */
-      template<class Tpvec>
-        double charge(const Tpvec &p, double Z=0) const {
-          for (auto i : *this) Z+=p[i].charge;
-          return Z;
-        }
-
       /**
        *  @brief   Calculates mass center - does not touch group!
        *  @warning Intra-molecular distances must not exceed half
@@ -96,12 +89,6 @@ namespace Faunus {
         Point massCenter(const Tspace &spc) const {
           assert(&spc!=nullptr);
           return Geometry::massCenter(spc.geo, spc.p, *this);
-        }
-        
-      template<class Tspace>
-        Point chargeCenter(const Tspace &spc) const {
-          assert(&spc!=nullptr);
-          return Geometry::chargeCenter(spc.geo, spc.p, *this);
         }
 
       /** @brief Calculate AND set mass center (cm and cm_trial) */
@@ -318,6 +305,21 @@ namespace Faunus {
           assert( (size()%molsize)==0 && "GroupArray not a multiple of N");
         }
   };
+
+  /** @brief Number of hydrophobic sites */
+  template<class Tpvec, class Tindex>
+    int numHydrophobic(const Tpvec &p, const Tindex &g) {
+      return std::count_if(g.begin(), g.end(),
+          [&](int i) { return p[i].hydrophobic; });
+    }
+
+  /** @brief Total charge */
+  template<class Tpvec, class Tindex>
+    double netCharge(const Tpvec &p, const Tindex &g, double Z=0) {
+      for (auto i : g)
+        Z += p[i].charge;
+      return Z;
+    }
 
 }//namespace
 #endif

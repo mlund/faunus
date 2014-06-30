@@ -3,6 +3,16 @@
 function mkatoms() {
 echo '
 {
+
+  "partition coefficients" :
+  {
+    "Na" :
+    {
+      "ASP" : { "Kp" : 0.5 },
+      "BB"  : { "Kp" : 1.5 }
+    }
+  }
+
   "processes" :
   {
     "H-Asp" : { "bound":"HASP" , "free":"ASP" , "pKd":4.0  , "pX":'$pH' },

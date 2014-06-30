@@ -22,7 +22,7 @@ echo '
   {
     "Na"   :  { "eps":0.124, "q": 1, "r":1.9, "mw":22.99 }, // epsilon in kJ/mol!
     "Cl"   :  { "eps":0.124, "q":-1, "r":1.7, "mw":35.45 },
-    "X"    :  { "eps":0.010, "q":-1, "r":1.7, "mw":1.0 },
+    "X"    :  { "eps":0.010, "q":-1, "r":1.7, "mw":1.0, "hydrophobic":true },
     "ASP"  :  { "eps":0.124, "q":-1, "r":3.6, "mw":110 },
     "HASP" :  { "eps":0.124, "q":0,  "r":3.6, "mw":110 },
     "LASP" :  { "eps":0.124, "q":2,  "r":3.6, "mw":110 },
@@ -103,9 +103,10 @@ nion2                  0
 dpion2                 10
 
 sasahydro_sasafile     sasafile.dat   # SASA file - one line per particle
-sasahydro_duplicate    2              # read SASA file n times
+sasahydro_duplicate    1              # read SASA file n times
 sasahydro_tension      3              # surface tension (dyne/cm)
 sasahydro_threshold    3              # surface distance threshold (angstrom)
+sasahydro_uofr         yes            # sample U_sasa(r) for groups?
  
 " > cyl.input
 
@@ -114,7 +115,7 @@ sasahydro_threshold    3              # surface distance threshold (angstrom)
 echo "
 ATOM      1 HIS  GLY     1       0.000    0.000    0.000  0.000 3.000
 ATOM      2 HIS  GLY     2       2.000    0.000    1.000  0.000 2.000
-" > titratable.aam
+" > titratable.pqr
 
 echo "
 ATOM      1 X    MP      1       0.000    0.000    0.000 -1.000 2.000

@@ -4,8 +4,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 #   Faunus library object files
 # -------------------------------
 set(objs
-  geometry inputfile
-  potentials slump species textio analysis mpi)
+  geometry potentials slump species analysis)
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 #----- xdrfile static library for gromacs output -----
@@ -43,6 +42,21 @@ if(Subversion_FOUND)
   if(Faunus_WC_FOUND)
     add_definitions("-D__SVN_REV__=${Faunus_WC_REVISION}")
   endif()
+endif()
+
+# ----------------------------
+#  Fetch 3rd-party sasa class
+# ----------------------------
+if(ENABLE_POWERSASA)
+  foreach(powf array.hpp power_diagram.h power_sasa.h LICENSE)
+    if(NOT EXISTS "${CMAKE_SOURCE_DIR}/include/faunus/sasa/${powf}")
+      file(DOWNLOAD
+        "http://sourceforge.net/p/pteros/code/ci/master/tree/src/core/sasa/${powf}?format=raw"
+        "${CMAKE_SOURCE_DIR}/include/faunus/sasa/${powf}" STATUS status)
+    endif()
+  endforeach()
+  add_definitions("-DFAU_POWERSASA")
+  include_directories("${CMAKE_SOURCE_DIR}/include/faunus/sasa")
 endif()
 
 # -----------------------

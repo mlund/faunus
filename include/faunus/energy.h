@@ -67,8 +67,7 @@ namespace Faunus {
             return *spc;
           }
 
-          /** @brief Particle-particle energy */
-          virtual double p2p(const Tparticle&, const Tparticle&)
+          virtual double p2p(const Tparticle&, const Tparticle&) // Particle-particle energy
           { return 0; }
 
           virtual Point f_p2p(const Tparticle&, const Tparticle&) // Particle-particle force
@@ -95,7 +94,7 @@ namespace Faunus {
           virtual double p_external(const Tparticle&)   // External energy of particle
           { return 0; }
 
-          /** @brief Total energy of i'th = i2all+i_external+i_internal */
+          /* @brief Total energy of i'th = i2all+i_external+i_internal */
           double i_total(Tpvec &p, int i)
           { return i2all(p,i) + i_external(p,i) + i_internal(p,i); }
 
@@ -1082,27 +1081,33 @@ namespace Faunus {
       };
 
     /**
-     * @brief Constrain two group mass centra within a certain distance interval [mindist:maxdist]
-     * @date Lund, 2012
-     * @todo Prettify output
+     * @brief Constrain two group mass centre separations to a distance interval [mindist:maxdist]
      *
      * This energy class will constrain the mass center separation between selected groups to a certain
      * interval. This can be useful to sample rare events and the constraint is implemented as an external
      * group energy that return infinity if the mass center separation are outside the defined range.
      * An arbitrary number of group pairs can be added with the addPair() command, although one would
      * rarely want to have more than one.
-     * In the following example,
-     * the distance between `mygroup1` and `mygroup2` are constrained to the range `[10:50]` angstrom:
+     * In the following example, the distance between `mygroup1` and `mygroup2`
+     * are constrained to the range `[10:50]` angstrom:
+     *
      * @code
      * InputMap mcp;
-     * Energy::MassCenterConstrain<Tspace> constrain(mcp);
-     * constrain.addPair( mygroup1, mygroup2, 10, 50); 
+     * Energy::MassCenterConstrain<Tspace> pot(mcp);
+     * pot.addPair( mygroup1, mygroup2, 10, 50); 
      * @endcode
      *
      * The `addPair` function can be called without distance interval in
-     * which case the default window is used. This is read during 
-     * construction with the keywords `cmconstrain_min` and
-     * `cmconstrain_max`.
+     * which case the default window is used. This is read during from
+     * the `InputMap` using the keywords,
+     *
+     * Keyword           | Description
+     * :---------------- | :----------------------------------------
+     * `cmconstrain_min` | Minimum mass center separation (angstrom)
+     * `cmconstrain_max` | Maximum mass center separation (angstrom)
+     *
+     * @date Lund, 2012
+     * @todo Prettify output
      */
     template<typename Tspace>
       class MassCenterConstrain : public Energybase<Tspace> {
@@ -1173,14 +1178,42 @@ namespace Faunus {
     /**
      * @brief Hydrophobic interactions using SASA
      *
+     * This will add a square-well attraction between solvent
+     * exposed, hydrophobic sites where the strength is given
+     * by a surface tension argument, 
+     *
+     * @f[ U = \sum_i^{N_{contact}} \gamma a_i @f]
+     *
+     * where @f$a@f$ is the SASA value for a residue and `i` runs
+     * over all particles in contact with at least one other
+     * hydrophobic and exposed site(s). Note that the value of the surface
+     * tension, @f$\gamma@f$, is not comparable to a true, macroscopic
+     * tension.
+     *
      * Upon construction the following keywords are read from `InputMap`:
      *
      *  Keyword                | Comment
      *  :--------------------- | :--------------
-     *  `sasahydro_sasafile`   | SASA file - one column
-     *  `sasahydro_duplicate`  | read SASA file n times
-     *  `sasahydro_tension`    | surface tension (dyne/cm)
-     *  `sasahydro_threshold`  | surface distance threshold (angstrom)
+     *  `sasahydro_sasafile`   | SASA file - one column (angstrom^2)
+     *  `sasahydro_duplicate`  | read SASA file n times (default: 1)
+     *  `sasahydro_tension`    | surface tension (default: 0 dyne/cm)
+     *  `sasahydro_threshold`  | surface distance threshold (default: 3.0 angstrom)
+     *  `sasahydro_uofr`       | set to "yes" if U(r) should be sampled (default: "no")
+     *  `sasahydro_dr`         | distance resolution of U(r) (default: 0.5 angstrom)
+     *
+     *  The `sasafile` should be a single column file with SASA values for each particle in
+     *  the system (angstrom^2). Alternatively one can load the file several times using
+     *  the `duplicate` option. To generate a SASA file of a protein, use the vmd-sasa.tcl
+     *  VMD script, found in the `scripts` folder.
+     *
+     *  If `sasahydro_uofr` is specified, the hydrophobic interaction
+     *  energy is averaged as a function of mass center separation between groups and
+     *  saved to disk upon calling the destructor.
+     *
+     * @todo
+     * Currently only `g2g` is implemented and it is assumed that a hydrophobic site on
+     * one group is in contact with sites on *maximum one* other group. For large macro 
+     * molecules this is hardly a problem; if it is, an energy drift should show.
      *
      * @author Kurut / Lund
      * @date Lund, 2014
@@ -1191,6 +1224,9 @@ namespace Faunus {
         private:
           typedef Energybase<Tspace> base;
           typedef typename Tspace::p_vec Tpvec;
+          typedef std::map<int, Average<double> > Tuofr;
+
+          std::map<string,Tuofr> uofr; // sasa energy vs. group-2-group distance
 
           vector<bool> v;      // bool for all particles; true=active
           vector<double> sasa; // sasa for all particles
@@ -1199,15 +1235,36 @@ namespace Faunus {
           int duplicate;       // how many times to load sasa file
           string file;         // sasa file
 
+          bool sample_uofr;    // set to true if we should sample U_sasa(r)
+          double dr;           // U(r) resolution in r
+
+          /** @brief Fraction of hydrophobic area */
+          double fracHydrophobic() const {
+            double h=0, noh=0;
+            if (sasa.size()==base::spc->p.size()) {
+              for (size_t i=0; i<sasa.size(); i++)
+                if (base::spc->p[i].hydrophobic)
+                  h+=sasa[i];
+                else
+                  noh+=sasa[i];
+              return h/(h+noh);
+            }
+            return 0;
+          }
+
           string _info() {
             char w=25;
             using namespace textio;
             std::ostringstream o;
             o << pad(SUB,w,"SASA file") << file << " (duplicated " << duplicate << " times)\n"
-              << pad(SUB,w,"SASA vector size") << sasa.size() << "\n"
-              << pad(SUB,w,"threshold") << threshold << _angstrom << "\n"
-              << pad(SUB,w,"surface tension") << tension_dyne << " dyne/cm =" << tension
-              << kT+"/"+angstrom+squared << "\n";
+              << pad(SUB,w,"SASA vector size") << sasa.size()
+              << " (particle vector = " << base::spc->p.size() << ")\n"
+              << pad(SUB,w,"Hydrophobic SASA") << fracHydrophobic()*100 << percent + "\n"
+              << pad(SUB,w,"Threshold") << threshold << _angstrom + "\n"
+              << pad(SUB,w,"Surface tension") << tension_dyne << " dyne/cm = " << tension
+              << kT+"/"+angstrom+squared+"\n"
+              << pad(SUB,w+1,"Sample "+beta+"U(r)") << std::boolalpha << sample_uofr << "\n"
+              << pad(SUB,w+1,beta+"U(r) resolution") << dr << _angstrom + "\n";
             return o.str();
           }
 
@@ -1221,7 +1278,17 @@ namespace Faunus {
             while (n-->0)
               sasa.insert(sasa.end(), t.begin(), t.end());
             if (sasa.empty())
-              cout << "Warning: No SASA data loaded from " << file << "\n";
+              std::cerr << "Warning: No SASA data loaded from "+file+"\n";
+          }
+
+          /** @brief Save U(r) to disk if sampled */
+          void save(const string &pfx=textio::prefix) {
+            for (auto &i : uofr) {
+              std::ofstream f(pfx+"Usasa_"+i.first);
+              if (f)
+                for (auto &j : i.second)
+                  f << j.first*dr << " " << j.second << "\n";
+            }
           }
 
         public:
@@ -1233,9 +1300,14 @@ namespace Faunus {
             tension = tension_dyne * 1e-23 / (pc::kB * pc::T());  // dyne/cm converted to kT/A^2, 1dyne/cm = 0.001 J/m^2
             file = in.get(pfx+"sasafile", string());
             duplicate = in.get(pfx+"duplicate", 0);
+            sample_uofr = in.get<bool>(pfx+"uofr", false);
+            dr = in.get<double>(pfx+"dr", 0.5);
             loadSASA(file, duplicate);
           }
 
+          ~HydrophobicSASA() { save(); }
+
+          /** @brief Group-to-group energy */
           double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
             double dsasa=0;
             if (sasa.size()==p.size())
@@ -1259,38 +1331,16 @@ namespace Faunus {
                                   v[i]=v[j]=false;
                                 }
                               }
+                  // analyze
+                  if (sample_uofr && !base::isTrial(p)) {
+                    double r = base::spc->geo.dist(g1.cm,g2.cm);
+                    auto k = std::minmax(g1.name,g2.name);
+                    uofr[k.first+"-"+k.second][to_bin(r,dr)] += -tension*dsasa;
+                  }
                 }
-            return -tension * dsasa; // in kT
-          }
 
-          /*
-             double external(const Tpvec &p) {
-             assert(sasa.size()==p.size());
-             double dsasa=0; // change in surface area
-             v.resize(p.size());
-             std::fill(v.begin(), v.end(), true);
-             auto g = base::spc->groupList();
-             for (auto gi=g.begin(); gi!=g.end(); ++gi)
-             for (auto gj=gi; ++gj!=g.end();)
-             if (gi->isMolecular())
-             if (gj->isMolecular())
-             for (auto i : gi)
-             for (auto j : gj)
-             if (p[i].hydrophobic)
-             if (p[j].hydrophobic)
-             if (v[i] || v[j]) {
-             double r2=base::spc->geo.sqdist(p[i],p[j]);
-             if (r2<pow(threshold+p[i].radius+p[j].radius,2)) {
-             if (v[i])
-             dsasa += sasa[i];
-             if (v[j])
-             dsasa += sasa[j];
-             v[i]=v[j]=false;
-             }
-             }
-             return -tension * dsasa; // in kT
-             }
-             */
+            return -tension*dsasa; // in kT
+          }
       };
 
     /**

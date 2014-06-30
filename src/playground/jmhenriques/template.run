@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # Joao Henriques
-# 2013.11.11
+# 2014.05.23
 #
 # Script is not ready to use, some values are ill-defined on purpose.
 # It's just a template.
@@ -30,8 +30,9 @@ harmonic_eqdist          4.9              # A
 harmonic_forceconst      0.76             # kT/A^2
 squarewell_depth         0.5              # kT
 squarewell_threshold     3                # A
-sqwl_depth               0.5              # kT
-sqwl_threshold           3                # A
+hydrwl_type              lj               # LJ potential
+hydrwl_depth             2.75             # kT
+# hydrwl_threshold         3                # A
 bin_min                  xxx              # A
 bin_max                  yyy              # A
 
@@ -50,14 +51,14 @@ pivot_maxlen             210              # N-1
 test_stable              no" > simulation.input
 }
 # ext params
-dens=zzz     # g/L
+dens=zzz # g/L
 pH=kkk
 # run stuff
 scr="path_to_script"
 exe="path_to_program"
 mdl="path_to_peptide_model"
 if [ -x $exe ]; then
-    rm -f param.json simulation.{input,gro,pqr,state} molecule.aam surfmcdist.dat netq_dist.dat rg2_dist.dat rg_step.dat
+    rm -f param.json simulation.{input,gro,pqr,state} molecule.aam surf_{mc,res}_dist.dat netq_dist.dat rg2_dist.dat rg_step.dat
     $scr/mkinput.py json $dens $pH > param.json
     $scr/mkinput.py aam $mdl/"name".fasta $dens > molecule.aam
     mkinput

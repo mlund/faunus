@@ -1045,7 +1045,7 @@ namespace Faunus {
      * Note also that the moments are defined with
      * respect to the *mass* center, not *charge* center. While for most
      * macromolecules there is only a minor difference between the two,
-     * the latter is more appropriate and is is planned for a future update.
+     * the latter is more appropriate and is planned for a future update.
      * A simply way to mimic this is to assign zero mass to all neutral
      * atoms in the molecule.
      *
@@ -1095,13 +1095,23 @@ namespace Faunus {
             DipoleParticle toMultipole(const Tspace &spc, const Tgroup &g) const {
               DipoleParticle m;
               m = g.cm;
-              m.charge = g.charge(spc.p);            // monopole
+              m.charge = netCharge(spc.p, g);            // monopole
               m.mu = Geometry::dipoleMoment(spc, g); // dipole
               m.muscalar = m.mu.norm();
               if (m.muscalar>1e-8)
                 m.mu=m.mu/m.muscalar; 
               m.theta = quadrupoleMoment(spc, g);    // quadrupole
               return m;
+            }
+
+          template<class Tgroup>
+            double g2g(const Tspace &spc, const Tgroup &g1, const Tgroup &g2) { 
+              double u=0;
+              for (auto i : g1)
+                for (auto j : g2)
+                  u += spc.p[i].charge * spc.p[j].charge /
+                    spc.geo.dist( spc.p[i], spc.p[j] );
+              return u * pot.pairpot.bjerrumLength();
             }
 
         public:
@@ -1626,7 +1636,7 @@ namespace Faunus {
             mu_box += mu;
             samplePP(spc,mu,mu_box);
           }
-          
+
         /**
          * @brief Samples dipole-moment from point particles.
          * 
@@ -1641,7 +1651,7 @@ namespace Faunus {
             all.setMassCenter(spc);
             mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
             mu_box += Geometry::dipoleMoment(spc,all);
-            
+
             HM_x(mu.x())++;
             HM_y(mu.y())++;
             HM_z(mu.z())++;
@@ -1662,7 +1672,7 @@ namespace Faunus {
             M2_box += sca;
             diel_std.add(getDielTinfoil());
           }
-        
+
         /**
          * @brief Samples g(r), \f$ <\mu(0) \cdot \mu(r)> \f$, \f$ <\frac{1}{2} ( 3 \mu(0) \cdot \mu(r) - 1 )> \f$, Histogram(\f$ \mu(0) \cdot \mu(r) \f$) and distant-dependent Kirkwood-factor.
          * 
@@ -1670,25 +1680,25 @@ namespace Faunus {
          *
          */
         template<class Tspace>
-        void sampleMuCorrelationAndKirkwood(Tspace &spc) {
-          double r, sca;
-          int N = spc.p.size() - 1;
-          for (int i = 0; i < N; i++) {
-            kw(0) += spc.p[i].mu.dot(spc.p[i].mu)*spc.p[i].muscalar*spc.p[i].muscalar;
-            for (int j = i+1.; j < N + 1; j++) {
-              r = spc.geo.dist(spc.p[i],spc.p[j]); 
-              rdf(r)++;
-              sca = spc.p[i].mu.dot(spc.p[j].mu);
-              mucorr_angle(sca) += 1.;
-              mucorr(r) += sca;
-              mucorr_dist(r) += 0.5*(3*sca*sca -1.);
-              kw(r) += 2*sca*spc.p[i].muscalar*spc.p[j].muscalar;
+          void sampleMuCorrelationAndKirkwood(Tspace &spc) {
+            double r, sca;
+            int N = spc.p.size() - 1;
+            for (int i = 0; i < N; i++) {
+              kw(0) += spc.p[i].mu.dot(spc.p[i].mu)*spc.p[i].muscalar*spc.p[i].muscalar;
+              for (int j = i+1.; j < N + 1; j++) {
+                r = spc.geo.dist(spc.p[i],spc.p[j]); 
+                rdf(r)++;
+                sca = spc.p[i].mu.dot(spc.p[j].mu);
+                mucorr_angle(sca) += 1.;
+                mucorr(r) += sca;
+                mucorr_dist(r) += 0.5*(3*sca*sca -1.);
+                kw(r) += 2*sca*spc.p[i].muscalar*spc.p[j].muscalar;
+              }
             }
+            kw(0) += spc.p[N].mu.dot(spc.p[N].mu)*spc.p[N].muscalar*spc.p[N].muscalar;
+            sampleKW++;
           }
-          kw(0) += spc.p[N].mu.dot(spc.p[N].mu)*spc.p[N].muscalar*spc.p[N].muscalar;
-          sampleKW++;
-        }
-        
+
         /**
          * @brief Returns dielectric constant (using Tinfoil conditions).
          * \f$ 1 + \frac{<M^2>}{3V\epsilon_0k_BT} \f$
@@ -1696,6 +1706,32 @@ namespace Faunus {
         double getDielTinfoil() {
           // 1 + ( ( ( 4 * pi * <M^2> ) / ( 3 * V * kT ) ) / ( 4 * pi * e0 ) )
           return ( 1 + M2_box.avg()*const_DielTinfoil); 
+        }  
+
+        /**
+         * @brief Returns dielectric constant ( Clausius-Mossotti ).
+         * \f$ \frac{1 + \frac{2<M^2>}{9V\epsilon_0k_BT}}{1 - \frac{<M^2>}{9V\epsilon_0k_BT}} \f$
+         * 
+         * @warning Needs to be checked!
+         */
+        double getDielCM() {
+          double temp = M2_box.avg()*const_DielCM;
+          return ((1 + 2*temp)/(1 - temp));
+        }  
+        
+        /**
+         * @brief Returns dielectric constant ( Reaction Field ).
+         * 
+         * @warning Needs to be checked!
+         */
+        double getDielRF() {
+          double avgRF = M2_box.avg()*const_DielRF;
+          double sqrtRF = 0;
+          if(-4*constEpsRF*avgRF + 1 > 0)
+            sqrtRF = 3*sqrt(-4*constEpsRF*avgRF + 1);
+          double one = 0.5*(2*constEpsRF - 4*avgRF + 1 + sqrtRF)/(constEpsRF + avgRF - 1);
+          //double two = 0.5*(2*constEpsRF - 4*avgRF + 1 - sqrtRF)/(constEpsRF + avgRF - 1);
+          return one;
         }  
         
         /**
@@ -1747,7 +1783,7 @@ namespace Faunus {
           HM_z_box.save("hist_dip_z_box.dat"+ext);
           HM2.save("hist_dip2.dat"+ext);
           HM2_box.save("hist_dip2_box.dat"+ext);
-          
+
           string filename = "dipoledata.dat"+ext;
           std::ofstream f(filename.c_str());
           f.precision(10);
@@ -1764,7 +1800,7 @@ namespace Faunus {
             if (mu_abs.cnt != 0)      f << "mu_abs " << mu_abs.cnt << " " << mu_abs.avg() << " " << mu_abs.sqsum << "\n";
           }
         }
-        
+
         void load(string ext="") {
           if(ext == "none")
             ext = "";
@@ -1781,7 +1817,7 @@ namespace Faunus {
           HM_z_box.load("hist_dip_z_box.dat"+ext);
           HM2.load("hist_dip2.dat"+ext);
           HM2_box.load("hist_dip2_box.dat"+ext);
-          
+
           string filename = "dipoledata.dat"+ext;
           std::ifstream f(filename.c_str());
           if (f) {

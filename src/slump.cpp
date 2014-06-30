@@ -1,17 +1,6 @@
 #include <faunus/slump.h>
 
 namespace Faunus {
-  RandomBase::~RandomBase() {}
-  
-  double RandomBase::randHalf() {
-    return _randone() - 0.5;
-  }
-
-  unsigned int RandomBase::rand() {
-    static const double max=std::numeric_limits<unsigned int>::max()-1;
-    return _randone() * max;
-  }
-
   const double RandomRan2::EPS=3.0e-16;
 
   RandomRan2::RandomRan2() {

@@ -17,9 +17,16 @@ namespace Faunus {
       virtual double _randone()=0;  //!< Random number in range `[0,1)`
     public:
       std::string name;
-      virtual ~RandomBase();
-      double randHalf();            //!< Random number in range `[-0.5,0.5)`
-      unsigned int rand();          //!< Random number in range `[0,max unsigned int)`
+      virtual ~RandomBase() {};
+  
+      /** @brief Random number in range `[-0.5,0.5)` */
+      inline double randHalf() { return _randone() - 0.5; }
+
+      /** @brief Random number in range `[0,max unsigned int)` */
+      inline unsigned int rand() {
+        static const double max=std::numeric_limits<unsigned int>::max()-1;
+        return _randone() * max;
+      }
 
       /** @brief Random number in range [0,1) */
       inline double operator()() {
@@ -29,13 +36,13 @@ namespace Faunus {
       }
   };
 
- /**
-  * @brief Ran2 Random Number Gererator
-  * @author Bjorn Persson
-  * @date Lund, 2008
-  * @note A class for ran2 from 'Numerical Recipies'.
-  * @warning Not thread safe!
-  */
+  /**
+   * @brief Ran2 Random Number Gererator
+   * @author Bjorn Persson
+   * @date Lund, 2008
+   * @note A class for ran2 from 'Numerical Recipies'.
+   * @warning Not thread safe!
+   */
   class RandomRan2: public RandomBase {
     private:
       static const int IM1=2147483563, IM2=2147483399;

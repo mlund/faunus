@@ -3,6 +3,9 @@
 
 #ifndef SWIG
 #include <faunus/common.h>
+#include <faunus/textio.h>
+#include <faunus/species.h>
+#include <faunus/physconst.h>
 #endif
 
 namespace Faunus {
@@ -53,6 +56,18 @@ namespace Faunus {
           }
           return fallback;
         }
+        
+      //!< Set value associated with keyword
+      template<typename T>
+        void set(const string &key, T value, string infostring=string()) {
+          if ( map.find(key) != map.end() ) {
+            std::ostringstream o;
+            o << value;
+            map[key] = o.str();
+          } else {
+            add(key,value,infostring);
+          }
+        }
 
       //!< Get value associated with keyword
       template<typename T>
@@ -60,6 +75,66 @@ namespace Faunus {
           return get<T>(key,fallback);
         }
   };
+
+  inline InputMap::InputMap() {}
+
+  inline InputMap::InputMap(string filename) { include(filename); }
+
+  /** @todo Remove ugly atom loader */
+  inline bool InputMap::include(string filename) {
+    string line,key,val;
+    std::ifstream f( filename.c_str() );
+    if (f) {
+      incfiles.push_back(filename);
+      while (std::getline(f,line)) {
+        std::istringstream i(line);
+        i >> key >> val;
+        if (!key.empty() && !val.empty() ) {
+          if (key.find("#")==string::npos) {
+            if (val=="yes" || val=="true") val="1";
+            if (val=="no" || val=="false") val="0";
+            map[key]=val;
+          }
+        }
+      }
+      string atomfile = get<string>("atomlist", "");
+      pc::setT( get<double>("temperature", 298.15) );
+      if (!atomfile.empty())
+        atom.includefile(atomfile);
+      return true;
+    }
+    return false;
+  }
+
+  inline string InputMap::info() {
+    short w=25;
+    using namespace Faunus::textio;
+    std::ostringstream o;
+    o << header("User Input Parameters (InputMap)");
+    o << pad(SUB,w,"Number of parameters") << map.size() << endl;
+    for (auto &m : map)
+      o << std::left << setw(25) << m.first << m.second << endl;
+    return o.str();
+  }
+
+  inline bool InputMap::save(string file) {
+    std::ofstream f(file);
+    if (f) {
+      f << "# Generated on " << __DATE__ << " " << __TIME__
+#ifdef __VERSION__
+        << " using " << __VERSION__
+#endif
+        << endl;
+      for (auto &m : map) {
+        f << std::left << setw(35) << m.first << setw(20) << m.second;
+        if ( !keyinfo[m.first].empty() )
+          f << "# " << keyinfo[m.first];
+        f << endl;
+      }
+      return true;
+    }
+    return false;
+  }
 
   /**
    * @brief Class for checking generated output against stored data
@@ -94,6 +169,59 @@ namespace Faunus {
       int numFailed() const; //!< Number of failed tests - i.e. zero if flawless
   };
 
+  inline UnitTest::UnitTest(string testfile, bool state) : InputMap(testfile) {
+    cnt=0;
+    stable=state;
+    file=testfile;
+  }
+
+  inline UnitTest::UnitTest(InputMap &in) : InputMap(in.get<string>("test_file","")) {
+    cnt=0;
+    file=in.get<string>("test_file","");
+    stable=in.get<bool>("test_stable", true);
+  }
+
+  inline bool UnitTest::operator()(const string &key, double value, double precision) {
+    cnt++;
+    if (stable==true) {
+      add(key,value);
+      save(file);
+    } else {
+      double ref = get<double>(key, 0.);
+      double diff = std::abs( (ref-value)/ref );
+      if (diff>precision) {
+        failed[key] = std::pair<double,double>(ref, value);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  inline int UnitTest::numFailed() const { return (int)failed.size(); }
+
+  inline string UnitTest::info() {
+    short w=37;
+    using namespace Faunus::textio;
+    std::ostringstream o;
+    o << header("Unittests")
+      << pad(SUB,w,"Unittest state") << ( (stable==true) ? "stable" : "unstable") << endl
+      << pad(SUB,w,"Test file") << file << ( (stable==true) ? " (created)" : " (read)") << endl
+      << pad(SUB,w,"Number of tests") << cnt << endl;
+    if (stable==false) {
+      o << pad(SUB,w,"Number of failed tests") << failed.size() << endl;
+      if (!failed.empty()) {
+        o << endl << std::left << setw(w+2) << "" << setw(12) << "Stable" << setw(12) << "Current" << "Difference" << endl;
+        for (auto &m : failed) {
+          double current=m.second.second;
+          double ref=m.second.first;
+          o << indent(SUBSUB) << std::left << setw(w-2) << m.first
+            << setw(12) << ref << setw(12) << current
+            << std::abs( (ref-current)/ref*100 ) << percent << endl;
+        }
+      }
+    }
+    return o.str();
+  }
 }//namespace
 #endif
 

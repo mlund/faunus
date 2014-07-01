@@ -430,6 +430,8 @@ namespace Faunus {
       name="Debye-Huckel";
       c=8 * lB * pc::pi * pc::Nav / 1e27;
       I=in.get<double>("dh_ionicstrength",0, "Ionic strength (mol/l)");  // [mol/l]
+      z_count=in.get<double>("dh_countervalency",0, "Counter ion valency");  // [e]
+      k2_count=0;
       k=sqrt( I*c );
       if (k<zero)
         k=1/in.get<double>("dh_debyelength", 1/zero, "Debye length (AA)"); // [A]
@@ -496,29 +498,15 @@ namespace Faunus {
       std::ostringstream o;
       o << Coulomb::info(w);
       o << pad(SUB,w,"Ionic strength") << ionicStrength() << " mol/l" << endl;
-      o << pad(SUB,w+1,"Debye length, 1/"+textio::kappa) << debyeLength() << " "+angstrom << endl;
+      o << pad(SUB,w+1,"Debye length, 1/"+textio::kappa) << debyeLength() << " " << 1/k << " "+angstrom << endl;
+      if (k2_count_avg.cnt>0) {
+        double k2_s = k*k - k2_count;
+        o << pad(SUB,w+1,"Debye length, 1/"+textio::kappa)
+          << 1/sqrt(k2_count_avg.avg()) << " "+angstrom+" (counter ions)\n"
+          << pad(SUB,w+1,"Debye length, 1/"+textio::kappa)
+          << 1/sqrt(k2_s) << " "+angstrom+" (salt)" << endl;
+      }
       return o.str();
-    }
-
-    /**
-     * \f$ \beta u(r) = l_B \frac{ z_1 z_2 }{r}\f$
-     */
-    double MultipoleEnergy::ionion(double z1, double z2, double r) {
-      return lB*z1*z2/r;
-    }
-
-    /**
-     * \f$ \beta u(r) = -l_B \frac{ z a_z }{r^2}\f$
-     */
-    double MultipoleEnergy::iondip(double z, const Point &a, double r) {
-      return -lB*z*a.z()/(r*r);
-    }
-
-    /**
-     * \f$ \beta u(r) = l_B \frac{a_x b_x + a_y b_y - 2a_z b_z  }{r^3}\f$
-     */
-    double MultipoleEnergy::dipdip(const Point &a, const Point &b, double r) {
-      return lB*( a.x()*b.x() + a.y()*b.y() - 2*a.z()*b.z() ) / (r*r*r);
     }
 
   } //Potential namespace

@@ -37,7 +37,14 @@ namespace Faunus {
         static void setT(Td);  //!< Set temperature [K]
         static Td D2eA(Td=1);  //!< Debye to electron Angstrom
         static Td eA2Cm(Td=1); //!< Converts eÅ to SI-units Cm
-        static Td Ang2Bohr(Td=1,int=1);   //!< Convert Å to atomic unit(Bohr)
+        
+        //!< Convert Å to atomic unit(Bohr). Convert length scales. E.g. Length -> dim=1, Area -> dim=2, Volume -> dim=3
+        template<class T>
+          static T Ang2Bohr(const T &Ang, int dim=1) { return (Ang*pow(1.88971616463,dim)); }
+        //!< Electron Angstrom to Debye. E.g. @f$ \mu_{e\AA} -> \mu_{Debye} @f$ -> dim=1, @f$ \mu^2_{e\AA} -> \mu^2_{Debye} @f$ -> dim=2
+        template<class T>
+        static T eA2D(const T &eA, int dim=1) { return eA*pow(4.803204544369458,dim); }
+
         static Td kT2Hartree(Td=kT());    //!< Convert energy in kT to atomic unit(Hartree Energy)
     };
 
@@ -97,16 +104,11 @@ namespace Faunus {
 
   template<class Td>
     Td PhysicalConstants<Td>::D2eA(Td D) { return 0.20819434*D; }
-
+    
   template<class Td>
     Td PhysicalConstants<Td>::eA2Cm(Td eA) { return (eA*3.33564*(1e-30)/0.20819434); }
     
   // Converts to atomic units
-  
-  // Convert length scales. E.g. Length -> dim=1, Area -> dim=2, Volume -> dim=3
-  template<class Td>
-    Td PhysicalConstants<Td>::Ang2Bohr(Td Ang, int dim) { return (Ang*pow(1.88971616463,dim)); }
-    
   template<class Td>
     Td PhysicalConstants<Td>::kT2Hartree(Td E_kT) { return (E_kT/(4.3597441775*pow(10,-18))); }
 

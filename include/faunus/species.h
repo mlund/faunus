@@ -19,7 +19,7 @@ namespace Faunus {
     double sigma,      //!< LJ diameter [angstrom]
            eps,        //!< LJ epsilon [kJ/mol] (pair potentials should convert to kT)
            radius,     //!< Radius [angstrom]
-           muscalar,   //!< Dipole momentscalar [eÅ]
+           muscalar,   //!< Dipole momentscalar [e\f$ \AA \f$]
            mw,         //!< Weight [g/mol]
            charge,     //!< Charge/valency [e]
            activity,   //!< Chemical activity [mol/l]
@@ -28,13 +28,16 @@ namespace Faunus {
            mean,       //!< Mean value... (charge, sasa, etc.)
            variance,   //!< Spread around AtomData::mean
       
-           len,        //!< Spherocylinder length [Å]
-           half_len,   //!< Spherocylinder half length [Å]
+           len,        //!< Spherocylinder length [\f$ \AA \f$]
+           half_len,   //!< Spherocylinder half length [\f$ \AA \f$]
            pangl,      //!< Angle of attrative patch on PatchySpherocylinder [degrees]
            panglsw,    //!< Angle of angluar switch on sides of patch on PatchySpherocylinder [degrees]
-           pdis,       //!< Distance to which attraction is flat (typicaly end of repulsion) on attrative patch on PatchySpherocylinder [Å]
-           pswitch,    //!< Distance on which attraction switches to zero on PatchySpherocylinder [Å]
-           chiral_angle;//!< Angle of chirality (rotation of patch) on PatchySpherocylinder [degrees]
+           pdis,       //!< Distance to which attraction is flat (typicaly end of repulsion) on attrative patch on PatchySpherocylinder [\f$ \AA \f$]
+           pswitch,    //!< Distance on which attraction switches to zero on PatchySpherocylinder [\f$ \AA \f$]
+           chiral_angle,//!< Angle of chirality (rotation of patch) on PatchySpherocylinder [degrees]
+           betaC,      //!< Value of the charge distribution (inverse) width [\f$ \AA^{-1} \f$]
+           betaD,      //!< Value of the dipole distribution (inverse) width [\f$ \AA^{-1} \f$] 
+           betaQ;      //!< Value of the quadrupole distribution (inverse) width [\f$ \AA^{-1} \f$] 
     Point mu;
     short int patchtype;     //!< If patchy particle, which type of patch
     Thydrophobic hydrophobic;//!< Are we hydrophobic?
@@ -44,45 +47,6 @@ namespace Faunus {
     string name;       //!< Name. Avoid spaces.
     bool operator==(const AtomData &d) const { return (*this==d); }
   };
-
-  /**
-   * @brief Container for data between pairs
-   *
-   * This will maintain a symmetric, dynamic NxN matrix for storing data
-   * about pairs.
-   * Use the `set()` function for setting values and use the function
-   * operator for access: 
-   *
-   *     int i=2,j=3; // particle type, for example
-   *     PairMatrix<double> cutoff;
-   *     eps2.set(i,j,12.0);
-   *     cout << cutoff(i,j); // -> 12.0
-   */
-  template<class T=double>
-    class PairMatrix {
-      public:
-        vector< vector<T> > m; // symmetric matrix (mem.wasteful - fast access)
-        void resize(size_t n) {
-          m.resize(n);
-          for (auto &i : m)
-            i.resize(n,0);
-        }
-        PairMatrix(size_t n=0) {
-          resize(n);
-        }
-        const T& operator()(size_t i, size_t j) const {
-          assert( i<m.size() );
-          assert( j<m[i].size() );
-          assert( m[i][j]==m[j][i] );
-          return m[i][j]; 
-        }
-        void set(size_t i, size_t j, T val) {
-          size_t n=std::max(i,j);
-          if (n>=m.size())
-            resize(n+1);
-          m[i][j]=m[j][i]=val;
-        }
-    };
 
   /*!
    * @brief Class for loading and storing atomic properties
@@ -111,13 +75,14 @@ namespace Faunus {
    *       }
    *     }
    *
-   * Example 2: 
-   *       "atomlist" :
-   *       {
-   *         "sol1" : { "q": 1.0, "r":1.9, "mw":22.99, "mu":"1.3 0.1 0",
-   *         "alpha":"1.1   0 0 2.3 0   1" },   // Matrix input in 
-   *         "theta":"2.4 0.3 0 1.8 0 3.2"}     // (xx, xy, xz, yy, yz, zz)-form
-   *       }
+   * Or: 
+   * 
+   *     "atomlist" :
+   *     {
+   *       "sol1" : { "q": 1.0, "r":1.9, "mw":22.99, "mu":"1.3 0.1 0",
+   *          "alpha":"1.1   0 0 2.3 0   1",    // Matrix input in 
+   *          "theta":"2.4 0.3 0 1.8 0 3.2" }   // (xx, xy, xz, yy, yz, zz) form
+   *     }
    * 
    * @note
    * For simple JSON syntax highlighting in the VIM editor, add
@@ -130,14 +95,14 @@ namespace Faunus {
    *
    * Key           | Description
    * :------------ | :-------------------------------------------------------
-   * `activity`    | Chemical activity for grand caninical MC [mol/l]
+   * `activity`    | Chemical activity for grand canonical MC [mol/l]
    * `alpha`       | Polarizability [\f$ 4\pi\epsilon_0 \f$ cubic angstrom]
    * `dp`          | Translational displacement parameter [angstrom] 
    * `dprot`       | Rotational displacement parameter [degrees] (will be converted to radians)
    * `eps`         | Epsilon energy scaling commonly used for Lennard-Jones interactions etc. [kJ/mol] 
    * `hydrophobic` | Is the particle hydrophobic? [true/false]
    * `mu`          | Dipole moment vector [Debye]
-   * `theta`       | Quadrupole moment matrix [Debye Å]
+   * `theta`       | Quadrupole moment matrix [Debye \f$ \AA \f$]
    * `mw`          | Molecular weight [g/mol]
    * `patchtype`   | Patchtype for sphero-cylinders
    * `q`           | Valency / partial charge number [e]
@@ -175,6 +140,7 @@ namespace Faunus {
       std::vector<AtomData> list;          //!< List of atoms
       bool includefile(string);            //!< Append atom parameters from file
       bool includefile(InputMap&);         //!< Append atom parameters from file
+      int size();                          //!< Number of atom-types
       AtomData& operator[] (string);       //!< Name->data
       AtomData& operator[] (AtomData::Tid);//!< Id->data
       string info();                       //!< Print info

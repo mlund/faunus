@@ -18,6 +18,7 @@
 
 namespace Faunus {
   
+  // currently not used for anything!
   template<typename T, typename Tparticle=particle>
     class ParticleVector {
       private:
@@ -61,7 +62,8 @@ namespace Faunus {
    *
    * Every simulation must have a `Space` instance as this contains
    * the particles and information about groups (particle ranges).
-   * `Space` must also be given a valid reference to a `Geometrybase`.
+   * Space also contains the geometry as given by the template
+   * parameter.
    */
   template<typename Tgeometry, typename Tparticle=PointParticle>
     class Space {
@@ -80,7 +82,7 @@ namespace Faunus {
         typedef p_vec ParticleVector;
         typedef Tparticle ParticleType;
         typedef Tgeometry GeometryType;
-        enum keys {OVERLAP,NOOVERLAP,RESIZE,NORESIZE};
+        enum keys {OVERLAP_CHECK,NOOVERLAP_CHECK,RESIZE,NORESIZE};
         Tgeometry geo;                      //!< System geometry
         p_vec p;                            //!< Main particle vector
         p_vec trial;                        //!< Trial particle vector. 
@@ -93,8 +95,9 @@ namespace Faunus {
 
         Group insert(const p_vec&, int=-1);
         bool insert(const Tparticle&, int=-1); //!< Insert particle at pos n (old n will be pushed forward).
-        bool insert(string, int, keys=NOOVERLAP); 
+        bool insert(string, int, keys=OVERLAP_CHECK); 
         bool erase(int);             //!< Remove n'th particle
+        bool eraseGroup(int);        //!< Remove n'th group as well as its particles
         int enroll(Group&);          //!< Store group pointer
         void reserve(int);           //!< Reserve space for particles for better memory efficiency
 
@@ -158,8 +161,8 @@ namespace Faunus {
 
   template<class Tgeometry, class Tparticle>
     bool Space<Tgeometry,Tparticle>::checkSanity() {
-      assert(p.size()==trial.size() && "Trial/P vector mismatch!");
-      assert(p==trial);
+      assert(p.size()==trial.size() && "Trial/P vector-size mismatch!");
+      assert(p==trial && "Trial/P vector mismatch!");
       bool rc=false;
       if (p.size()==trial.size())
         for (size_t i=0; i<p.size(); i++) {
@@ -200,7 +203,7 @@ namespace Faunus {
 
   /**
    * This will insert a particle vector into the current space. No overlap checks are performed; this should
-   * be done prior to insertion by for example the Geometry::FindSpace class.
+   * be done prior to insertion by for example the `Geometry::FindSpace` class.
    *
    * @param pin Particle vector to insert
    * @param i Insert position (PRESENTLY IGNORED). Default = -1 which means end of current vector
@@ -214,11 +217,16 @@ namespace Faunus {
       if ( !pin.empty() ) {
         g.setrange( p.size(), -1);
         assert(g.size()==0 && "Group range broken!");
-        for (auto &i : pin) {
-          p.push_back(i);
-          trial.push_back(i);
-          g.resize( g.size()+1 );
-        }
+
+        p.insert(p.end(), pin.begin(), pin.end());
+        g.resize(pin.size());
+
+        //for (auto &i : pin) {
+        //  p.push_back(i);
+        //  trial.push_back(i);
+        //  g.resize( g.size()+1 );
+        //}
+
         g.setMassCenter(*this);
         g.setMolSize(pin.size());
       }
@@ -253,7 +261,7 @@ namespace Faunus {
   /**
    * @param atomname Name if atom to intert
    * @param n Number of atoms to insert
-   * @param key Ignored for now -- overlap check is always performed
+   * @param key Specify `NOOVERLAPCHECK` if overlap is allowed [default: `OVERLAPCHECK`]
    */
   template<class Tgeometry, class Tparticle>
     bool Space<Tgeometry,Tparticle>::insert(string atomname, int n, keys key) {
@@ -261,7 +269,7 @@ namespace Faunus {
       a=atom[atomname];
       while (n>0) {
         geo.randompos(a);
-        if (!overlap(a)) {
+        if (!overlap(a) || key==NOOVERLAP_CHECK) {
           insert(a,-1);
           n--;
         }
@@ -271,7 +279,8 @@ namespace Faunus {
 
   template<class Tgeometry, class Tparticle>
     bool Space<Tgeometry,Tparticle>::erase(int i) {
-      assert( !p.empty() && i<(int)p.size() && "Tried to delete non-existing particle or particle vector empty!" );
+      assert( !p.empty() && i<(int)p.size() &&
+          "Tried to delete non-existing particle or particle vector empty!" );
       if (i>=(int)p.size())
         return false;
       p.erase( p.begin()+i );
@@ -284,6 +293,37 @@ namespace Faunus {
       return true;
     }
 
+  /**
+   * This will remove the specified group (given as index in `groupList()`)
+   * from the space. Later groups will be shufled down.
+   * The `groupList()` contains pointers to groups and it is important
+   * that you clean up the deleted group only *after* having called this function.
+   *
+   * @warning untested
+   */
+  template<class Tgeometry, class Tparticle>
+    bool Space<Tgeometry,Tparticle>::eraseGroup(int i) {
+      int n=g.at(i)->size(); // number of particles in group
+      int beg=g[i]->front(); // first particle
+      int end=g[i]->back();  // last particle
+
+      g.erase( g.begin()+i );// remove group pointer
+      p.erase( p.begin()+beg, p.begin()+end); // remove particles
+      trial.erase( trial.begin()+beg, trial.begin()+end );
+
+      // move later groups down to reflect new particle index
+      size_t cnt=0;
+      for (auto l : g) { // loop over groups (pointers)
+        cnt+=l->size(); // count particles in each group
+        if (l->front()>end) {
+          l->setfront( l->front()-n );
+          l->setback( l->back()-n );
+        }
+      }
+      assert(cnt==p.size() && "Particle mismatch while erasing a group!");
+      return true;
+    }
+ 
   template<class Tgeometry, class Tparticle>
     bool Space<Tgeometry,Tparticle>::overlap_container() const {
       for (auto &i : p)
@@ -324,14 +364,13 @@ namespace Faunus {
         std::ofstream fout( file.c_str() );
         if (fout) {
           fout.precision( numeric_limits<double>::digits10 + 1 );
-          fout << geo.getVolume() << endl
-            << p.size() << endl;
+          fout << geo.getVolume() << "\n"
+            << p.size() << "\n";
           for (auto p_i : p)
             fout << p_i << "\n";
           fout << g.size() << "\n";
           for (auto g_i : g)
             fout << *g_i << "\n";
-          fout.close();
           cout << "OK!\n";
           return true;
         }
@@ -406,7 +445,7 @@ namespace Faunus {
   /**
    * This will register a new group in the Space. If already found,
    * nothing is added. In addition, the following is performed each
-   * time a new group is enroller:
+   * time a new group is enrolled:
    *
    * - The group mass center is re-calculated and set.
    * - Trial vector is synched with the main (`p`) particle vector.

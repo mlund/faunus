@@ -1,116 +1,148 @@
 #include <faunus/faunus.h>
-#include <tclap/CmdLine.h>
 
 using namespace Faunus;
-using namespace TCLAP;
+using namespace Faunus::Potential;
 
-typedef Geometry::Cuboid Tgeometry;
-typedef Potential::CoulombSR<Tgeometry, Potential::Coulomb, Potential::LennardJones> Tpairpot;
+typedef Space<Geometry::Cuboid> Tspace;
+typedef CombinedPairPotential<DebyeHuckelShift,CutShift<LennardJones> > Tpairpot;
 
-int main(int argc, char** argv) {
-  string inputfile,istate,ostate;
-  try {
-    cout << textio::splash();
-    CmdLine cmd("Monte Carlo simulation of rigid molecules explicit salt", ' ', "0.1");
-    ValueArg<string> inputArg("i","inputfile","InputMap key/value file",true,"cosan.input","inputfile");
-    ValueArg<string> istateArg("c","instate","Name of input statefile",false,"state","instate");
-    ValueArg<string> ostateArg("o","outstate","Name of output statefile",false,"state","outstate");
-    cmd.add( inputArg );
-    cmd.add( istateArg );
-    cmd.add( ostateArg );
-    cmd.parse( argc, argv );
-    inputfile = inputArg.getValue();
-    istate = istateArg.getValue();
-    ostate = ostateArg.getValue();
-  }
-  catch (ArgException &e)  {
-    cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
-  }
+int main() {
 
-  InputMap mcp(inputfile);
-  MCLoop loop(mcp);                    // class for handling mc loops
-  FormatPQR pqr;                       // PQR structure file I/O
-  FormatAAM aam;                       // AAM structure file I/O
-  FormatTopology top;
+
+  cout << textio::splash();      // show faunus banner and credits
+  InputMap mcp("cosan.input");//read input file
   FormatXTC xtc(1000);                 // XTC gromacs trajectory format
-  EnergyDrift sys;                     // class for tracking system energy drifts
-  UnitTest test(mcp);
 
-  Energy::Hamiltonian pot;
-  auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot>(mcp) );
-  Space spc( pot.getGeometry() );
+  // Energy functions and space
+  auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)
+    + Energy::ExternalPressure<Tspace>(mcp);
+  Tspace spc(mcp);
 
-  // Add polymers
-  vector<GroupMolecular> pol( mcp.get("polymer_N",0));
-  string polyfile = mcp.get<string>("polymer_file", "");
-  for (auto &g : pol) {
-    aam.load(polyfile);
-    g = spc.insert( aam.p,-1,Space::OVERLAP );
-    g.name="Protein";
-    spc.enroll(g);
+  bool plane = mcp.get("plane", false);
+
+  // Load and add polymer to Space
+  auto N    = mcp.get<int>("mol_N",1);
+  auto file = mcp.get<string>("mol_file");
+  vector<Group> water(N);
+  Tspace::ParticleVector v;                   // temporary, empty particle vector
+  FormatAAM::load(file,v);                    // load AAM structure into v
+
+  cout << "# Mol volume = " << Geometry::calcVolume(v) << endl;
+
+  for (auto &i : water) {
+    Geometry::FindSpace f;
+    f.allowMatterOverlap=true;
+    if (plane)
+      f.dir=Point(1,1,0);
+    f.find(spc.geo,spc.p,v);// find empty spot in particle vector
+    i = spc.insert(v);                          // Insert into Space
+    i.name="cosan";
+    spc.enroll(i);
   }
 
-  // Add salt
-  GroupAtomic salt(spc, mcp);
-  salt.name="Salt";
-  spc.enroll(salt);
-  spc.load(istate, Space::RESIZE);
+  // Markov moves and analysis
+  Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
+  Move::TranslateRotate<Tspace> gmv_short(mcp,pot,spc, "transrot_s");
+  if (plane) {
+    gmv.directions["cosan"]=Point(1,1,0);
+    gmv_short.directions["cosan"]=Point(1,1,0);
+  }
+  Move::Isobaric<Tspace> iso(mcp,pot,spc);
+  Analysis::RadialDistribution<> rdf(0.05);
+  Scatter::DebyeFormula<Scatter::FormFactorUnity<>> debye(mcp);
+  vector<Point> cm_vec; // vector of mass centers
 
-  Analysis::RadialDistribution<float,int> rdf(0.2);
-  rdf.maxdist=pow( spc.geo->getVolume(), 1/3.)/2;   // sample half box length
+  spc.load("state"); // load old config. from disk (if any)
 
-  Move::TranslateRotate gmv(mcp,pot,spc);
-  Move::GrandCanonicalSalt gc(mcp,pot,spc,salt);
-  Move::AtomicTranslation mv(mcp, pot, spc);
-  mv.setGroup(salt);
+  EnergyDrift sys;   // class for tracking system energy drifts
+  sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
 
-  double utot=pot.external() + pot.g_internal(spc.p, salt);
-  for (auto &p : pol)
-    utot+=pot.g2g(spc.p, salt, p);
-  for (auto i=pol.begin(); i!=pol.end()-1; i++)
-    for (auto j=i+1; j!=pol.end(); j++)
-      utot += pot.g2g(spc.p, *i, *j);
-  sys.init( utot );
+  cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
 
-  cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
-
+  MCLoop loop(mcp);            // class for handling mc loops
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int k,i=rand() % 3;
+      int i=slp_global.rand() % 2;
+      int j,k=water.size();
+      Group g;
       switch (i) {
         case 0:
-          mv.setGroup(salt);
-          sys+=mv.move( salt.size()/2 );
+          while (k-->0) {
+            j=slp_global.rand() % (water.size());
+            if (slp_global()>0.5) {
+              gmv.setGroup(water[j]);
+              sys+=gmv.move();          // translate/rotate polymers
+            }
+            else {
+              gmv_short.setGroup(water[j]);
+              sys+=gmv_short.move();          // translate/rotate polymers
+            }
+          }
           break;
         case 1:
-          k=pol.size();
-          while (k-->0) {
-            gmv.setGroup( pol[ rand() % pol.size() ] );
-            sys+=gmv.move();
-          }
-          for (auto i=pol.begin(); i!=pol.end()-1; i++)
-            for (auto j=i+1; j!=pol.end(); j++)
-              rdf( spc.geo->dist(i->cm,j->cm) )++;
-          break;
-        case 2:
-          sys+=gc.move( salt.size()/2 );
+          sys+=iso.move();
           break;
       }
+
+      // sample oxygen-oxygen rdf
+      if (slp_global()>0.95) {
+        //auto id = atom["OW"].id;
+        //rdf.sample(spc,id,id);
+        cm_vec.clear();
+        for (auto &i : water)
+          cm_vec.push_back(i.cm);
+        debye.sample(cm_vec,spc.geo.getVolume());
+      }
+      if (slp_global()<0.01 ) {
+        xtc.setbox( spc.geo.len );
+        xtc.save("traj.xtc", spc);
+      }
+
     } // end of micro loop
 
-    double utot=pot.external() + pot.g_internal(spc.p, salt);
-    for (auto &p : pol)
-      utot+=pot.g2g(spc.p, salt, p);
-    for (auto i=pol.begin(); i!=pol.end()-1; i++)
-      for (auto j=i+1; j!=pol.end(); j++)
-        utot += pot.g2g(spc.p, *i, *j);
-    sys.checkDrift( utot );
-    rdf.save("rdf_p2p.dat");
+    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // energy drift?
+
     cout << loop.timing();
   } // end of macro loop
 
-  pqr.save("confout.pqr", spc.p);
-  spc.save(ostate);
+  // save to disk
+  FormatPQR::save("confout.pqr", spc.p);
+  spc.save("state");
+  rdf.save("rdf.dat");
+  spc.save("state");
+  FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
+  FormatXYZ::save("confout.xyz", spc.p);
+  debye.save("debye.dat");
 
-  cout << loop.info() << spc.info() << sys.info() << mv.info() << gmv.info() << gc.info();
+  {
+    int natom=0,nres=1;
+    Point len = spc.geo.len/10.;
+    char buf[79];
+    std::ofstream o;
+    o.open("confout.gro");
+    if (o) {
+      o << "Generated by Faunus -- http://faunus.sourceforge.net"
+        << std::endl << spc.p.size() << std::endl;
+      for (auto i : spc.p) {
+        auto t=i/10. + len/2.;
+        string name=atom[i.id].name;
+        sprintf(buf, "%5d%5s%5s%5d%8.3f%8.3f%8.3f\n",
+            nres,name.c_str(),name.c_str(),natom++,
+            i.x(), i.y(), i.z() );
+        o << buf;
+      }
+      o << len.transpose() << endl;
+    }
+  }
+
+  // perform unit 
+  UnitTest test(mcp);
+  iso.test(test);
+  gmv.test(test);
+  sys.test(test);
+
+  // print information
+  cout << loop.info() + sys.info() + "LONG\n" + gmv.info() + "SHORT!\n" + gmv_short.info() 
+    + iso.info() + test.info();
 }
+

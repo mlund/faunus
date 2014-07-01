@@ -43,23 +43,28 @@ namespace Faunus {
       private:
         bool includeJSON(const string&); //!< Read equilibrium processes
       public:
-        //friend class EquilibriumEnergy;
         class processdata {
-          //friend class EquilibriumController;
           public:
             double mu_AX;                //!< chemical potential of AX
             double mu_A;                 //!< chemical potential of A
             double mu_X;                 //!< chemical potential of X (this is the titrant)
             double ddG;                  //!< ddG = mu_A + mu_X - mu_AX
             int cnt;                     //!< number of sites for this process
+
           public:
             particle::Tid id_AX, id_A;   //!< Particle id's for AX and A
+
             bool one_of_us(const particle::Tid&);//!< Does the particle belong to this process?
+
             double energy(const particle::Tid&); //!< Returns intrinsic energy of particle id
+
             template<class Tparticle>
-              double swap(Tparticle&);      //!< Swap AX<->A and return intrinsic energy change
+              double swap(Tparticle&);   //!< Swap AX<->A and return intrinsic energy change
+
             void set(double,double);     //!< Set activity of X and the pKd value
+
             void set_mu_AX(double);      //!< Set chemical potential of species AX - mu_A then follows.
+
             void set_mu_A(double);       //!< Set chemical potential of species A  - mu_AX then follows.
         };
 
@@ -67,20 +72,26 @@ namespace Faunus {
         std::vector<processdata> process;        //!< Vector of processes.
 
         EquilibriumController(InputMap&, string="eq_");
-        bool include(string);                    //!< Read equilibrium processes
+
+        bool include(string);                      //!< Read equilibrium processes
+
         template<class Tpvec>
           void findSites(const Tpvec&);            //!< Locate all titratable sites
+
         double intrinsicEnergy(const particle::Tid&);    //!< Intrinsic energy of particle id (kT)
-        string info(char=25);                    //!< Get information string
+        string info(char=25);                      //!< Get information string
+
         template<class Tpvec>
           processdata& random(const Tpvec&, int&); //!< Random titratable particle and assiciated random process
 
-        std::vector<int> sites;                  //!< List of titratable sites
+        std::vector<int> sites;                    //!< List of titratable sites
 
         template<class Tpvec>
           void sampleCharge(const Tpvec&);         //!< Updates the average charge vector titrate::q
+
         template<class Tpvec>
-          double applycharges(Tpvec &);            //!< Copy average charges to particles in the particle vector
+          void copyAvgCharge(Tpvec &);             //!< Copy average charges to particles in the particle vector
+
         template<class Tpvec>
           double avgcharge(const Tpvec&, int&);    //!< Print average charges of process i
     };
@@ -253,19 +264,20 @@ namespace Faunus {
      * This function will take the average charges from `q`
      * and apply these to the specified particle vector.
      *
+     * @param p Particle vector to modify
+     * @return Average net charge
+     *
      * @warning After this function you can no longer perform any
      *          titration steps. It is meant to be called before saving coordinates
      *          to disk, so as to include the partial charges of the system.
      */
     template<class Tpvec>
-      double EquilibriumController::applycharges(Tpvec &p) {
-        double qtot=0;
+      void EquilibriumController::copyAvgCharge(Tpvec &p) {
         for (auto i : sites) {
-          if (q[i].cnt>0)
-            p[i].charge = q[i].avg();
-          qtot += q[i].avg();
+          auto it = q.find(i);
+          if (it!=q.end())
+            p.at(i).charge = it->second.avg();
         }
-        return qtot;
       }
 
     /**
@@ -334,16 +346,16 @@ namespace Faunus {
      */
     template<class Tspace>
       class EquilibriumEnergy : public Energybase<Tspace> {
-        
+
         private:
           string _info() { return eq.info(); }
-        
+
         protected:
           std::map<particle::Tid, double> energymap;//!< Intrinsic site energy
-        
+
         public:
           EquilibriumController eq;
-        
+
           EquilibriumEnergy(InputMap &in) : eq(in) {
             this->name="Equilibrium State Energy";
           }
@@ -403,7 +415,7 @@ namespace Faunus {
           double move();
           template<class Tpvec>
             void applycharges(Tpvec &);
-        
+
 #ifdef ENABLE_MPI
           Faunus::MPI::MPIController* mpi;
 #endif
@@ -466,9 +478,10 @@ namespace Faunus {
       double SwapMove<Tspace>::_energyChange() {
         assert( spc->geo.collision(this->spc->p[ipart])==false
             && "Accepted particle collides with container");
+
         if (spc->geo.collision(spc->trial[ipart]))  // trial<->container collision?
           return pc::infty;
-        
+
 #ifdef ENABLE_MPI
         if (mpi!=nullptr) {
           double sum=0;
@@ -476,12 +489,14 @@ namespace Faunus {
           for (int i=r.first; i<=r.second; ++i)
             if (i!=ipart)
               sum+=pot->i2i(spc->trial,i,ipart) - pot->i2i(spc->p,i,ipart);
+
           sum = Faunus::MPI::reduceDouble(*mpi, sum);
-          
+
           return sum + pot->i_external(spc->trial, ipart) - pot->i_external(spc->p, ipart)
-          + pot->i_internal(spc->trial, ipart) - pot->i_internal(spc->p, ipart);
+            + pot->i_internal(spc->trial, ipart) - pot->i_internal(spc->p, ipart);
         }
 #endif
+
         return pot->i_total(spc->trial,ipart) - pot->i_total(spc->p,ipart);
       }
 
@@ -522,17 +537,18 @@ namespace Faunus {
         if (this->cnt>0 && !eqpot->eq.sites.empty()) {
           o << indent(SUB) << "Site statistics:" << endl
             << indent(SUBSUB) << std::left
-            << setw(15) << "Site"
+            << setw(16) << "Site"
             << setw(14) << bracket("z")
             << "Acceptance" << endl;
           for (auto i : eqpot->eq.sites) {
             if (accmap[i].cnt>0) {
               std::ostringstream a;
-              o.precision(4);
-              a << atom[ spc->p[i].id ].name << " " << i;
+              o.precision(5);
+              o.setf( std::ios::fixed, std::ios::floatfield );
+              a << std::left << setw(5) << atom[ spc->p[i].id ].name << std::right << setw(5) << i;
               o << pad(SUBSUB,15, a.str())
-                << setw(10) << eqpot->eq.q[i].avg()
-                << accmap[i].avg()*100. << percent
+                << setw(8) << std::right << eqpot->eq.q[i].avg()
+                << setw(11) << std::right << accmap[i].avg()*100. << " " << percent
                 << endl;
             }
           }

@@ -16,7 +16,7 @@ namespace Faunus {
       class FormFactorSphere {
         private:
           T j1(T x) const { // spherical Bessel function
-            register T xinv=1/x;
+            T xinv=1/x;
             return xinv*( sin(x)*xinv - cos(x) );
           }
         public:
@@ -77,7 +77,7 @@ namespace Faunus {
         public:
           template<class Tparticle>
             T operator()(T q, const Tparticle &a) {
-              assert( ~F.empty() && "Did you forget to load F(q) from disk?");
+              assert( !F.empty() && "Did you forget to load F(q) from disk?");
               assert( F.find(a.id) != F.end() && "F(q) for particle not known!");
               // or should we return largest F(q) if out of table?
               return F[a.id](q);
@@ -147,7 +147,7 @@ namespace Faunus {
      * - `qmin` Minimum q value (1/angstrom)
      * - `qmax` Maximum q value (1/angstrom)
      * - `dr` q spacing (1/angstrom)
-     * - `sofq_cutoff` Cutoff distance (angstrom). Experimental.
+     * - `sofq_cutoff` Cutoff distance (angstrom). *Experimental!*
      *
      * See also <http://dx.doi.org/10.1016/S0022-2860(96)09302-7>
      */
@@ -170,7 +170,6 @@ namespace Faunus {
 
           /**
            * @brief Sample I(q) and add to average
-           * @param p Particle vector
            *
            * The q range is read from input as `qmin`, `qmax`, `dq` in units of
            * inverse angstrom.
@@ -233,6 +232,8 @@ namespace Faunus {
            * @param p Particle vector
            * @param groupList Vector of group pointers - i.e. as returned from `Space::groupList()`.
            * @note Particle form factors are always set to unity, i.e. F(q) is ignored.
+           *
+           * @warning Untested
            */  
           template<class Tpvec, class Tg>
             void sampleg2g(const Tpvec &p, Tg groupList) {
@@ -246,19 +247,23 @@ namespace Faunus {
               // loop over all pairs of groups, then over particles
               for (int k=0; k<(int)groupList.size()-1; k++)
                 for (int l=k+1; l<(int)groupList.size(); l++)
-                  for (auto i : *groupList[k])
-                    for (auto j : *groupList[l]) {
+                  for (auto i : *groupList.at(k))
+                    for (auto j : *groupList.at(l)) {
                       T r = geo.dist(p[i],p[j]);
                       int cnt=0;
                       for (T q=qmin; q<=qmax; q+=dq)
-                        _I[cnt++] += sin(q*r)/(q*r);
+                        _I.at(cnt++) += sin(q*r)/(q*r);
                     }
               int cnt=0, N=p.size();
               for (T q=qmin; q<=qmax; q+=dq)
                 I[q]+=2.*_I.at(cnt++)/N+1; // add to average I(q)
             }
 
-          void save(string filename) {
+
+          /**
+           * @brief Save I(q) to disk
+           */
+          void save(const string &filename) {
             if (!I.empty()) {
               std::ofstream f(filename.c_str());
               if (f)
@@ -286,9 +291,9 @@ namespace Faunus {
           typedef DebyeFormula<FormFactorSphere<T>> base;
 
           StructureFactor(InputMap &in) : base(in), Point(0,0,0) {
-            qmin=in.get<double>("qmin",-1);
-            qmax=in.get<double>("qmax",-1);
-            dq=in.get<double>("dq",-1);
+            qmin=in.get<double>("qmin",-1, "Minimum q value (1/A)");
+            qmax=in.get<double>("qmax",-1, "Maximum q value (1/A)");
+            dq=in.get<double>("dq",-1, "q spacing (1/A)");
           }
 
           template<class Tpvec>
@@ -341,7 +346,7 @@ namespace Faunus {
                 // N^2 loop over all particles
                 for (int i=0; i<n-1; i++) {
                   for (int j=i+1; j<n; j++) {
-                    Point r = base::geo.vdist(p[i],p[j]);
+                    auto r = base::geo.vdist(p[i],p[j]);
                     for (T q=qmin; q<=qmax; q+=dq)
                       _I[q] += cos( (q*qdir).dot(r) );
                   }

@@ -28,6 +28,7 @@ int main(int argc, char** argv) {
   Tspace spc(mcp);
   auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp)
+    + Energy::HydrophobicSASA<Tspace>(mcp)
     + Energy::EquilibriumEnergy<Tspace>(mcp);// + myenergy<Tspace>(mcp);
 
   auto eqenergy = &pot.second;
@@ -82,6 +83,7 @@ int main(int argc, char** argv) {
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );    // Store total system energy
 
   std::ofstream cmfile, energyfile;
+
   if (mpi.isMaster()) {
     cmfile.open("cm.xyz");
     energyfile.open("energy.dat");
@@ -96,40 +98,39 @@ int main(int argc, char** argv) {
     while ( loop.microCnt() ) {
       int k,i=rand() % 4;
       switch (i) {
-        case 1: // move all proteins
+        case 0: // move all proteins
           k=pol.size();
           while (k-->0) {
             gmv.setGroup( pol[ rand() % pol.size() ] );
             sys+=gmv.move();
           }
 
-          // sample g(r)
-          for (auto i=pol.begin(); i!=pol.end()-1; i++)
-            for (auto j=i+1; j!=pol.end(); j++)
-              rdf( spc.geo.dist(i->cm,j->cm) )++;
+          if (slp_global()>0.995) {
+            // sample g(r)
+            for (auto i=pol.begin(); i!=pol.end()-1; i++)
+              for (auto j=i+1; j!=pol.end(); j++)
+                rdf( spc.geo.dist(i->cm,j->cm) )++;
 
-          // sample S(q)
-          if (slp_global()>0.95) {
             cm_vec.clear();
             for (auto &i : pol)
               cm_vec.push_back(i.cm);
             debye.sample(cm_vec,spc.geo.getVolume());
-            debye2.sampleg2g(spc.p,spc.groupList());
 
             if (mpi.isMaster())
               if (cmfile) {
-                cmfile << cm_vec.size() << endl << "cm" << endl;
+                cmfile << cm_vec.size() << "\n" << "cm" << "\n";
                 for (auto &m : cm_vec)
-                  cmfile << "H " << ((m+spc.geo.len_half)/10).transpose() << endl;
+                  cmfile << "H " << ((m+spc.geo.len_half)/10).transpose() << "\n";
               }
-              if (energyfile)
-                energyfile << loop.count() << " " << sys.current() << " " << std::cbrt(spc.geo.getVolume()) << "\n";
+            if (energyfile)
+              energyfile << loop.count() << " " << sys.current()
+                << " " << std::cbrt(spc.geo.getVolume()) << "\n";
           }
           break;
-        case 2: // volume move (NPT)
+        case 1: // volume move (NPT)
           sys+=iso.move();
           break;
-        case 0: // titration move
+        case 2: // titration move
           sys+=tit.move();
           mpol.sample(pol,spc);
           break;
@@ -138,7 +139,7 @@ int main(int argc, char** argv) {
           sys+=mv.move();
           break;
       }
-      if (slp_global()<-0.001 ) {
+      if (slp_global()>0.99 ) {
         xtc.setbox( spc.geo.len );
         xtc.save("traj.xtc", spc);
       }
@@ -146,20 +147,28 @@ int main(int argc, char** argv) {
 
     sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) ); // detect energy drift
 
-    if (mpi.isMaster())
+    if (mpi.isMaster()) {
       cout << loop.timing();
- 
+      rdf.save("rdf_p2p.dat");
+      FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
+      spc.save("state");
+      mcp.save("mdout.mdp");
+      debye.save("debye.dat");
+      debye2.save("debye.g2g.dat");
+    }
+
+
   } // end of macro loop
 
   if (mpi.isMaster()) {
     cout << tit.info() + loop.info() + sys.info() + gmv.info() + mv.info()
       + iso.info() + mpol.info() << endl;
 
-    rdf.save("rdf_p2p.dat");
-    FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
-    spc.save("state");
-    mcp.save("mdout.mdp");
-    debye.save("debye.dat");
-    debye2.save("debye.g2g.dat");
+    // save first molecule with average charges (as opposed to instantaneous)
+    eqenergy->eq.copyAvgCharge(spc.p);
+    spc.p.erase( spc.p.begin() + spc.groupList()[0]->size(), spc.p.end() );
+    Geometry::cm2origo(spc.geo, spc.p);
+    FormatPQR::save("avgcharge.pqr", spc.p, spc.geo.len);
+    FormatAAM::save("avgcharge.aam", spc.p);
   }
 }

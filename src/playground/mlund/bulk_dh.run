@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# THIS RUN SCRIPT IS USED AS A UNIT TEST SO PLEASE
+# DO NOT UPLOAD ANY MODIFIED VERSIONS TO SVN UNLESS
+# TO UPDATE THE TEST.
+
+source_tests_dir="`dirname $0`"
+#cp -f $source_tests_dir/bulk_dh.test . 2> /dev/null
+#cp -f $source_tests_dir/bulk_dh.state state 2> /dev/null
+
+echo '{
+  "atomlist" : {
+    "MI" : { "q": 5.0, "r":10, "dp":10.0 },  // macroion
+    "Cl" : { "q":-1.0, "r":0, "dp":100 }    // counterion
+  }
+}' > bulk.json
+
+mkinput() {
+echo "
+atomlist        bulk.json    # atom properties
+cuboid_len      $len         # angstrom
+
+temperature     300          # K
+epsilon_r       80           # dielectric const.
+ljts_eps        0.5
+dh_ionicstrength  0.0883076614723
+dh_countervalency 0
+
+loop_macrosteps 10           # number of macro loops
+loop_microsteps $micro         # number of micro loops
+
+tion1  MI
+nion1  10                    # number of sodium atoms
+tion2  Cl
+nion2  0                     # number of chloride atoms
+
+npt_dV 0                     # 0.04 (0=no volume displacement=NVT)
+npt_P  11.                   # external pressure [mM]
+
+test_stable        yes
+test_file          bulk.test
+" > bulk.input
+}
+
+exe=../../examples/bulk_dh
+if [ -x $exe ]; then
+for len in 80 #80 120
+do
+  micro=10000
+  mkinput
+  $exe
+  cp state bulk_dh.state
+  exit
+  micro=1000
+  mkinput
+  $exe > "len.dh.$len"
+done
+fi
+exit 1
+

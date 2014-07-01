@@ -37,7 +37,7 @@ int main() {
   Move::Isobaric<Tspace> iso(mcp,pot,spc);
   Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
   Analysis::RadialDistribution<> rdf(0.05);
-  Analysis::DielectricConstant gdc(spc);
+  Analysis::DipoleAnalysis gdc(spc,mcp);
 
   spc.load("state");                               // load old config. from disk (if any)
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );// store init system energy
@@ -64,7 +64,7 @@ int main() {
           sys+=iso.move();                         // volume move
           break;
       }
-      gdc.samplePP(spc.geo,spc);
+      gdc.samplePP(spc);
       // sample oxygen-oxygen rdf
       if (slp_global()>0.9) {
         auto id = atom["OW"].id;
@@ -72,10 +72,9 @@ int main() {
       }
     
     } // end of micro loop
-    //cout << gdc.info() << endl;
-    //cout << "Inf: " << gdc.getDielInfty() << endl;
+
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p));
-    cout << loop.timing();
+    cout << gdc.info() << loop.timing();
 
   } // end of macro loop
 

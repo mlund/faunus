@@ -78,13 +78,6 @@ namespace Faunus {
         return size()/molsize;
       }
 
-      /** @brief Total charge */
-      template<class Tpvec>
-        double charge(const Tpvec &p, double Z=0) const {
-          for (auto i : *this) Z+=p[i].charge;
-          return Z;
-        }
-
       /**
        *  @brief   Calculates mass center - does not touch group!
        *  @warning Intra-molecular distances must not exceed half
@@ -105,7 +98,7 @@ namespace Faunus {
           cm_trial=cm;
           return cm;
         }
-
+        
       /** @brief Calculates electric dipole moment */
       template<class Tspace>
         Point dipolemoment(const Tspace &s, Point mu=Point(0,0,0)) const {
@@ -140,11 +133,15 @@ namespace Faunus {
       template<class Tspace>
         void rotate(Tspace &spc, const Point &endpoint, double angle) {
           assert( spc.geo.dist(cm,massCenter(spc) )<1e-6 );
-          Geometry::QuaternionRotate vrot;
+          Geometry::QuaternionRotate vrot1;
           cm_trial = cm;
-          vrot.setAxis(spc.geo, cm, endpoint, angle);//rot around CM->point vec
-          for (auto i : *this)
-            spc.trial[i].rotate(vrot);
+          vrot1.setAxis(spc.geo, cm, endpoint, angle);//rot around CM->point vec
+          auto vrot2 = vrot1;
+          vrot2.getOrigin() = Point(0,0,0);
+          for (auto i : *this) {
+            spc.trial[i] = vrot1(spc.trial[i]); // rotate coordinates
+            spc.trial[i].rotate(vrot2);         // rotate internal coordinates
+          }
           assert( spc.geo.dist(cm_trial, massCenter(spc))<1e-9
               && "Rotation messed up mass center. Is the box too small?");
         }
@@ -259,12 +256,9 @@ namespace Faunus {
        * :------------- | :---------------------
        * `tionX`        | Name of atom X
        * `nionX`        | Number of type X atoms
-       * `dpionX`       | (Displacement parameter of atom type X)
-       * `aionX`        | (Activity of atom X (molar scale))
+       * `overlap`      | Allow overlap of atoms [default: no]
        *
-       * If the two latter properties, displacement and activity, are omitted
-       * (recommended) the values from AtomTypes is used instead. That is, you
-       * should specify these directly in the input JSON file.
+       * @todo Rename to addAtoms.
        */
       template<class Tspace, class Tinputmap>
         void addParticles(Tspace &spc, Tinputmap &in) {
@@ -272,19 +266,19 @@ namespace Faunus {
           setfront( spc.p.size() );
           int size=0;
           int n=1, npart;
+
+          auto overlap=Tspace::OVERLAP_CHECK;
+          if (in.get("overlap", false))
+            overlap=Tspace::NOOVERLAP_CHECK;
+
           do {
-            std::ostringstream nion("nion"),
-              tion("tion"), dpion("dpion"), aion("aion");
+            std::ostringstream nion("nion"), tion("tion");
             nion << "nion" << n;
-            tion << "tion" << n;
-            dpion<< "dpion"<< n;
-            aion << "aion" << n++; //activity
+            tion << "tion" << n++;
             npart = in.get(nion.str(), 0);
             if (npart>0) {
               auto id = atom[in.get(tion.str(), string("UNK")) ].id;
-              atom[id].dp = in.get(dpion.str(), atom[id].dp);
-              atom[id].activity = in.get(aion.str(), 0.);
-              spc.insert( atom[id].name, npart);
+              spc.insert(atom[id].name, npart, overlap);
               size+=npart;
             } else break;
           } while (npart>0);
@@ -311,6 +305,21 @@ namespace Faunus {
           assert( (size()%molsize)==0 && "GroupArray not a multiple of N");
         }
   };
+
+  /** @brief Number of hydrophobic sites */
+  template<class Tpvec, class Tindex>
+    int numHydrophobic(const Tpvec &p, const Tindex &g) {
+      return std::count_if(g.begin(), g.end(),
+          [&](int i) { return p[i].hydrophobic; });
+    }
+
+  /** @brief Total charge */
+  template<class Tpvec, class Tindex>
+    double netCharge(const Tpvec &p, const Tindex &g, double Z=0) {
+      for (auto i : g)
+        Z += p[i].charge;
+      return Z;
+    }
 
 }//namespace
 #endif

@@ -6,19 +6,18 @@ molecular systems. Below is a brief overview of features:
 
 - Canonical, Grand Canonical, Isobaric-Isothermal statistical mechanical ensembles
 - General hamiltonian **parallel tempering** (temperature, screening length, bonds etc.)
-- 4D simulations on **hyperspheres**
 - **Anisotropic** atoms (multipoles, sphero-cylinders)
 - Ion titration moves (pKa prediction, Hofmeister effects etc.)
-- Highly expandable!
+- Highy modular
 - Free and open source (**GPL**)
 
 Detailed information and support:
 
-- Website: <http://github.com/mlund/faunus>
-- Documentation: <http://faunus.sourceforge.net/doxyhtml>
+- Manual: <http://faunus.sourceforge.net>
 - Support: <http://github.com/mlund/faunus/issues>
+- Source code: <http://github.com/mlund/faunus>
 
-Get the latest resivions from GitHub:
+Get the latest revision from GitHub:
 
     $ git clone https://github.com/mlund/faunus.git
 
@@ -26,13 +25,13 @@ Requirements
 ============
 
 - C/C++11 compiler (clang3+, gcc4.6+, intel13+, ...)
-- CMake 2.8+
+- CMake 2.8.5+
 
 Optional:
 
-- OpenBabel 2 (numerous molecular formats)
-- Doxygen and Graphviz (for code manual)
+- Doxygen (for code manual)
 - Xcode (for neat environment on macos x)
+- MPI (for parallelisation)
 
 Developed and tested on Linux and MacOS X.
 
@@ -87,10 +86,15 @@ In chronological order:
 Ondrej Marsalek     Christophe Labbez     Andre Teixeira     
   Anil Kurut           Chris Evers         Magnus Ullner      
  Robert Vacha         Axel Thuresson      Bjorn Stenqvist
+ Joao Henriques        Giulio Tesei
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Citing Faunus
 =============
+
+- Stenqvist et al.
+  _Molecular Simulation 2013, 39:1233_
+  [[DOI]](http://dx.doi.org/10/nvn)
 
 - Lund, M., Persson, B., Trulsson, M.
   _Source Code Biol. Med., 2008, 3:1_
@@ -99,7 +103,7 @@ Citing Faunus
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
  Faunus - A Framework for Molecular Modelling 
- Copyright (C) 2002-2013 Mikael Lund 
+ Copyright (C) 2002-2014 Mikael Lund 
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by

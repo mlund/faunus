@@ -1,7 +1,6 @@
 #ifndef FAUNUS_ANALYSIS_H
 #define FAUNUS_ANALYSIS_H
 
-#ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/average.h>
 #include <faunus/physconst.h>
@@ -9,14 +8,13 @@
 #include <faunus/space.h>
 #include <faunus/point.h>
 #include <faunus/textio.h>
+#include <faunus/energy.h>
 #include <Eigen/Core>
-#endif
 
 #include <chrono>
 #include <thread>
 
 namespace Faunus {
-  class checkValue;
 
   /**
    * @brief Namespace for analysis routines
@@ -57,56 +55,146 @@ namespace Faunus {
     };
 
     /**
-     * @brief Pressure from virial
+     * @brief Pressure analysis using the virial theorem
      *
-     * At the moment this is limited to isotropic, atomic liquids
-     * only.
+     * This calculates the excess pressure tensor defined as
+     * @f[
+     * \mathcal{P} = \frac{1}{3V}\left <
+     * \sum_{i}^{N-1} \sum_{j=i+1}^N \mathbf{r}_{ij} \otimes \mathbf{f}_{ij}
+     * \right >_{NVT}
+     * @f]
+     * where @f$r@f$ and @f$f@f$ are the distance and force, @f$V@f$ the system volume,
+     * and the excess pressure scalar is the trace of @f$\mathcal{P}@f$.
+     * The trivial kinetic contribution is currently not included.
+     *
+     * References:
+     *
+     * - <http://dx.doi.org/10/ffwrhd>
+     * - <http://dx.doi.org/10/fspzcx>
+     *
+     * @todo At the moment this analysis is limited to "soft" systems only,
+     * i.e. for non-rigid systems with continuous potentials.
      */
     class VirialPressure : public AnalysisBase {
       private:
 
-        double Pid;        // ideal pressure
-        Average<double> P; // excess pressure scalar
-        Eigen::Matrix3d T; // excess pressure tensor
+        typedef Eigen::Matrix3d Ttensor;
+        Ttensor T;           // excess pressure tensor
+        Average<double> Pid; // ideal pressure
 
         inline string _info() {
           using namespace Faunus::textio;
           std::ostringstream o;
+
           if (cnt>0) {
-            double p=P.avg(), kT=pc::kB*pc::T();
-            o << pad(SUB,w, "Excess pressure") << p << " kT/"+angstrom+cubed+" = "
-              << p*1e30/pc::Nav << " mM = "
-              << p*kT*1e30 << " Pa = "
-              << p*kT*1e30/0.980665e5 << " atm\n"
-              << pad(SUB,w, "Tensor trace") << (T/cnt).trace() << " kT/"+angstrom+cubed+"\n"
-              << "  Excess pressure tensor:\n\n" << T/cnt << "\n"
-              << endl;
+            vector<double> P(3);
+#ifdef __INTEL_COMPILER
+            vector<string> id(3);
+            id[0]="Ideal";
+            id[1]="Excess";
+            id[2]="Total";
+#else
+            vector<string> id = {"Ideal", "Excess", "Total"};
+#endif
+            P[0] = Pid.avg();       // ideal
+            P[1] = (T/cnt).trace(); // excess
+            P[2] = P[0] + P[1];     // total
+
+            char l=15;
+            double kT=pc::kB*pc::T();
+            o << "\n  " << std::right
+              << setw(l+l) << "kT/"+angstrom+cubed
+              << setw(l) << "mM" << setw(l) << "Pa" << setw(l) << "atm" << "\n";
+            for (int i=0; i<3; i++) {
+              o << std::left << setw(l) << "  "+id[i] << std::right
+                << setw(l) << P[i]
+                << setw(l) << P[i] * 1e30/pc::Nav
+                << setw(l) << P[i] * kT*1e30
+                << setw(l) << P[i] * kT*1e30/0.980665e5
+                << "\n";
+            }
+            o << "\n  Osmotic coefficient = " << 1+P[1]/P[0] << "\n";
+            o << "  Excess pressure tensor (mM):\n\n"
+              << T/cnt*1e30/pc::Nav << endl;
           }
           return o.str();
         }
+
+        void _test(UnitTest &test) {
+          test("virial_pressure_mM", (T/cnt).trace()*1e30/pc::Nav );
+        }
+
+        template<class Tpvec, class Tgeo, class Tpot>
+          Ttensor g_internal(const Tpvec &p, Tgeo &geo, Tpot &pot, Group &g) { 
+            Ttensor t;
+            t.setZero();
+            for (auto i=g.front(); i<g.back(); i++)
+              for (auto j=i+1; j<=g.back(); j++) {
+                auto rij = geo.vdist(p[i],p[j]);
+                auto fij = pot.f_p2p(p[i],p[j]);
+                t += rij * fij.transpose();
+              }
+            return t;
+          }
+
+        template<class Tpvec, class Tgeo, class Tpot>
+          Ttensor g2g(const Tpvec &p, Tgeo &geo, Tpot &pot, Group &g1, Group &g2) { 
+            assert(&g1!=&g2);
+            Ttensor t;
+            t.setZero();
+            for (auto i : g1)
+              for (auto j : g2) {
+                auto rij = geo.vdist(p[i],p[j]);
+                auto fij = pot.f_p2p(p[i],p[j]);
+                t += rij * fij.transpose();
+              }
+            return t;
+          }
 
       public:
 
         VirialPressure() {
           name="Virial Pressure";
+          noMolecularPressure=false;
           T.setZero();
         }
 
-        template<class Tvec, class Tgeo, class Tpot>
-          void sample(Tgeo &geo, Tpot &pot, const Tvec &v, double d=3) {
+        /*! @brief Ignore internal pressure in molecular groups (default: false) */
+        bool noMolecularPressure;
+
+        template<class Tspace, class Tpotential>
+          void sample(Tspace &spc, Tpotential &pot, int d=3, double area=0) {
             cnt++;
-            double p=0, V=geo.getVolume();
-            Eigen::Matrix3d t;
+            Ttensor t;
             t.setZero();
-            for (size_t i=0; i<v.size()-1; i++)
-              for (size_t j=i+1; j<v.size(); j++) {
-                auto rij = geo.vdist(v[i],v[j]);
-                auto fij = pot.f_p2p(v[i],v[j]);
-                t += fij * rij.transpose(); // sample P tensor
-                p += fij.dot(rij);          // sample pressure scalar (check!)
-              }
+
+            int N=spc.p.size();
+            double V=spc.geo.getVolume();
+            if (d==2) {
+              assert(area>0 && "Area must be specified for 2D sampling");
+              V=area;
+            }
+
+            // loop over groups internally
+            for (auto g : spc.groupList()) {
+              if (noMolecularPressure)
+                if (g->isMolecular()) {
+                  N=N-g->size()+1;
+                  continue;
+                }
+              t+=g_internal(spc.p, spc.geo, pot, *g);
+            }
+
+            // loop group-to-group
+            auto beg=spc.groupList().begin();
+            auto end=spc.groupList().end();
+            for (auto gi=beg; gi!=end; ++gi)
+              for (auto gj=gi; ++gj!=end;)
+                t+=g2g(spc.p, spc.geo, pot, *(*gi), *(*gj));
+
+            // add to grand avarage
             T += t/(d*V);
-            P += p/(d*V);
+            Pid += N/V;
           }
     };
 
@@ -115,10 +203,8 @@ namespace Faunus {
      * @date Lund 2011
      * @note `Tx` is used as the `std::map` key and which may be
      * problematic due to direct floating point comparison (== operator).
-     * We have not experienced any issues with this, though.
-     *
-     * @todo We get correct behavior, but is it really OK to have
-     * virtual functions in class templates??
+     * We have not experienced any issues with this, though. This uses
+     * `std::map` and table lookup is of complexity logarithmic with N.
      */
     template<typename Tx, typename Ty>
       class Table2D {
@@ -130,8 +216,8 @@ namespace Faunus {
               cnt+=m.second;
             return cnt;
           }
-          Tmap map;
           Tx dx;
+          Tmap map;
           string name;
         private:
           Tx round(Tx x) { return (x>=0) ? int( x/dx+0.5 )*dx : int( x/dx-0.5 )*dx; }
@@ -166,27 +252,53 @@ namespace Faunus {
           }
 
           /** @brief Save table to disk */
-          void save(string filename) {
-            if (tabletype==HISTOGRAM) {
-              if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
-              if (map.size()>1) (--map.end())->second*=2; // -//-
-            }
+          template<class T=double>
+            void save(string filename, T scale=1) {
+              if (tabletype==HISTOGRAM) {
+                if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
+                if (map.size()>1) (--map.end())->second*=2; // -//-
+              }
 
-            if (!map.empty()) {
-              std::ofstream f(filename.c_str());
-              f.precision(10);
-              if (f) {
-                f << "# Faunus 2D table: " << name << endl;
-                for (auto m : map)
-                  f << m.first << " " << get( m.first ) << endl;
+              if (!map.empty()) {
+                std::ofstream f(filename.c_str());
+                f.precision(10);
+                if (f) {
+                  for (auto m : map)
+                    f << m.first << " " << get( m.first ) * scale << "\n";
+                }
+              }
+
+              if (tabletype==HISTOGRAM) {
+                if (!map.empty()) map.begin()->second/=2;   // restore half bin width
+                if (map.size()>1) (--map.end())->second/=2; // -//-
               }
             }
 
-            if (tabletype==HISTOGRAM) {
-              if (!map.empty()) map.begin()->second/=2;   // restore half bin width
-              if (map.size()>1) (--map.end())->second/=2; // -//-
+          /** @brief Sums up all previous elements and saves table to disk */
+          template<class T=double>
+            void sumSave(string filename, T scale=1) {
+              if (tabletype==HISTOGRAM) {
+                if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
+                if (map.size()>1) (--map.end())->second*=2; // -//-
+              }
+
+              if (!map.empty()) {
+                std::ofstream f(filename.c_str());
+                f.precision(10);
+                if (f) {
+                  Tx sum_t = 0.0;
+                  for (auto m : map) {
+                    sum_t += get( m.first );
+                    f << m.first << " " << sum_t * scale << "\n";
+                  }
+                }
+              }
+
+              if (tabletype==HISTOGRAM) {
+                if (!map.empty()) map.begin()->second/=2;   // restore half bin width
+                if (map.size()>1) (--map.end())->second/=2; // -//-
+              }
             }
-          }
 
           Tmap getMap() {
             return map;
@@ -243,7 +355,6 @@ namespace Faunus {
             std::ifstream f(filename.c_str());
             if (f) {
               map.clear();
-              f.ignore(std::numeric_limits<std::streamsize>::max(),'\n'); // ignore first line
               while (!f.eof()) {
                 Tx x;
                 double y;
@@ -254,23 +365,88 @@ namespace Faunus {
             }
             return false;
           }
+
+          /**
+           * @brief Convert table to matrix
+           */
+          Eigen::MatrixXd tableToMatrix() {
+            assert(!this->map.empty() && "Map is empty!");
+            Eigen::MatrixXd table(2,map.size());
+            table.setZero();
+            int I = 0;
+            for (auto &m : this->map) {
+              table(0,I) = m.first;
+              table(1,I) = m.second;
+              I++;
+            }
+            return table;
+          }
       };
 
     /**
      * @brief Subtract two tables
      */
-    template<class Tx, class Ty>
+    template<class Tx, class Ty, class Tmap>
       Table2D<Tx,Ty> operator-(Table2D<Tx,Ty> &a, Table2D<Tx,Ty> &b) {
-        Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()));
-        c.clear();
-        for (auto &m1 : a.getMap()) {
-          for (auto &m2 : b.getMap()) {
-            if( m1.first == m2.first) {
-              c(m1.first) = m1.second-m2.second;
-              break;
-            }
+        assert(a.tabletype=b.tabletype && "Table a and b needs to be of same type");
+        Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()),a.tabletype);
+        Tmap a_map = a.getMap();
+        Tmap b_map = b.getMap();
+
+        if (a.tabletype=="HISTOGRAM") {
+          if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
+          if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
+          if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
+          if (b_map.size()>1) (--b_map.end())->second*=2; // -//-
+        }
+
+        for (auto &m1 : a_map) {
+          for (auto &m2 : b_map) {
+            c(m1.first) = m1.second-m2.second;
+            break;
           }
         }
+
+        if (a.tabletype=="HISTOGRAM") {
+          if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
+          if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
+          if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
+          if (b_map.size()>1) (--b_map.end())->second/=2; // -//-
+        }
+        return c;
+      }
+
+    /**
+     * @brief Addition two tables
+     */
+    template<class Tx, class Ty, class Tmap>
+      Table2D<Tx,Ty> operator+(Table2D<Tx,Ty> &a, Table2D<Tx,Ty> &b) {
+        assert(a.tabletype=b.tabletype && "Table a and b needs to be of same type");
+        Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()),a.tabletype);
+        Tmap a_map = a.getMap();
+        Tmap b_map = b.getMap();
+
+        if (a.tabletype=="HISTOGRAM") {
+          if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
+          if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
+          if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
+          if (b_map.size()>1) (--b_map.end())->second*=2; // -//-
+        }
+
+        for (auto &m : a_map) {
+          c(m.first) += m.second;
+        }
+        for (auto &m : b_map) {
+          c(m.first) += m.second;
+        }
+
+        if (a.tabletype=="HISTOGRAM") {
+          if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
+          if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
+          if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
+          if (b_map.size()>1) (--b_map.end())->second/=2; // -//-
+        }
+
         return c;
       }
 
@@ -465,6 +641,42 @@ namespace Faunus {
               Group all(0, spc.p.size()-1);
               assert(all.size()==(int)spc.p.size());
               return sample(spc,all,ida,idb);
+            }
+
+          template<class Tspace>
+            void sampleMolecule(Tspace &spc, Group &sol) {
+              for (int i=0; i<sol.numMolecules()-1; i++) {
+                for (int j=i+1; j<sol.numMolecules(); j++) {
+                  Group ig, jg;
+                  sol.getMolecule(i,ig);
+                  sol.getMolecule(j,jg);
+                  Point icm = ig.massCenter(spc);
+                  Point jcm = jg.massCenter(spc);
+                  this->operator() (spc.geo.dist(icm,jcm))++;
+                }
+              }
+            }
+
+          // Same as sampeMolecule but different inputs
+          template<class Tspace>
+            void sampleMoleculeGroup(Tspace &spc, vector<Group> &g, string name) {
+              int bulk = 0;
+              for(size_t i = 0; i < g.size()-1; i++) {
+                Group ig = g[i];
+                if(ig.name == name) {
+                  bulk++;
+                  for(size_t j = i+1; j < g.size(); j++) {
+                    Group jg = g[j];
+                    if(jg.name == name) {
+                      Point icm = ig.massCenter(spc);
+                      Point jcm = jg.massCenter(spc);
+                      this->operator() (spc.geo.dist(icm,jcm))++;
+                    }
+                  }
+                }
+              }
+              Npart+=bulk;
+              bulkconc += bulk / spc.geo.getVolume();
             }
       };
 
@@ -688,26 +900,29 @@ namespace Faunus {
             return spc.geo.vdist( spc.p[pol.front()], spc.p[pol.back()] );
           }
 
+      public:
+        PolymerShape();
+
+        /** 
+         * @note This functions is now public and const. I don't see the point of making it static, yet. - Joao Henriques.
+         */
         template<class Tgroup, class Tspace>
-          Point vectorgyrationRadiusSquared(const Tgroup &pol, const Tspace &spc) {
+          Point vectorgyrationRadiusSquared(const Tgroup &pol, const Tspace &spc) const {
             assert( spc.geo.dist(pol.cm, pol.massCenter(spc))<1e-9
                 && "Mass center must be in sync.");
             double sum=0;
             Point t, r2(0,0,0);
             for (auto i : pol) {
-              t = spc.p[i]-pol.cm;                // vector to center of mass
-              spc.geo.boundary(t);               // periodic boundary (if any)
+              t = spc.p[i]-pol.cm;                     // vector to center of mass
+              spc.geo.boundary(t);                     // periodic boundary (if any)
               r2.x() += spc.p[i].mw * t.x() * t.x();
               r2.y() += spc.p[i].mw * t.y() * t.y();
               r2.z() += spc.p[i].mw * t.z() * t.z();
-              sum += spc.p[i].mw;                 // total mass
+              sum += spc.p[i].mw;                      // total mass
             }
             assert(sum>0 && "Zero molecular weight not allowed.");
             return r2*(1./sum);
           }
-
-      public:
-        PolymerShape();
 
         /** @brief Sample properties of Group (identified by group name) */
         template<class Tgroup, class Tspace>
@@ -809,6 +1024,175 @@ namespace Faunus {
     };
 
     /**
+     * @brief Multipolar decomposition between groups as a function of separation
+     *
+     * This will analyse the electrostatic energy between two groups as
+     * a function of their mass center separation. Sampling consists of
+     * the following:
+     *
+     * 1. The exact electrostatic energy is calculated by explicitly summing
+     *    Coulomb interactions between charged particles
+     * 2. Each group -- assumed to be a molecule -- is translated into a
+     *    multipole (monopole, dipole, quadrupole)
+     * 3. Multipolar interaction energies are calculated, summed, and tabulated
+     *    together with the exact electrostatic interaction energy. Ideally
+     *    (infinite number of terms) the multipoles should capture full
+     *    electrostatics
+     *
+     * The points 1-3 above will be done as a function of group-to-group
+     * mass center separation.
+     *
+     * Note also that the moments are defined with
+     * respect to the *mass* center, not *charge* center. While for most
+     * macromolecules there is only a minor difference between the two,
+     * the latter is more appropriate and is planned for a future update.
+     * A simply way to mimic this is to assign zero mass to all neutral
+     * atoms in the molecule.
+     *
+     * The constructor takes the following `InputMap` keywords:
+     *
+     * Keyword             | Note
+     * :------------------ | :--------------------------------------------
+     * `multipoledist_dr`  | Distance resolution - default is 0.2 angstrom
+     *
+     * @date Malmo 2014
+     * @note Needs testing!
+     * @todo Add option to use charge center instead of mass center
+     */
+    template<class Tspace, class Tcoulomb=Potential::Coulomb>
+      class MultipoleDistribution : public AnalysisBase {
+        private:
+          Energy::Nonbonded<Tspace,Tcoulomb> pot; // Coulombic hamiltonian
+
+          string _info() FOVERRIDE {
+            return textio::header("Multipole Analysis");
+          }
+
+          struct data {
+            double tot, ii, id, iq, dd;
+            unsigned long int cnt;
+            data() : cnt(0) {}
+          };
+
+          std::map<int,data> m; // slow, but OK for infrequent sampling
+          double dr;            // distance resolution
+
+          template<class Tgroup>
+            Tensor<double> quadrupoleMoment(const Tspace &s, const Tgroup &g) const {
+              Tensor<double> theta;
+              theta.clear();
+              assert(g.size()<=(int)s.p.size());
+              for (auto i : g) {
+                Point t=s.p[i] - g.cm;
+                s.geo.boundary(t);
+                theta = theta + t*t.transpose()*s.p[i].charge;
+              }
+              return 0.5*theta;
+            }
+
+          // convert group to multipolar particle
+          template<class Tgroup>
+            DipoleParticle toMultipole(const Tspace &spc, const Tgroup &g) const {
+              DipoleParticle m;
+              m = g.cm;
+              m.charge = netCharge(spc.p, g);            // monopole
+              m.mu = Geometry::dipoleMoment(spc, g); // dipole
+              m.muscalar = m.mu.norm();
+              if (m.muscalar>1e-8)
+                m.mu=m.mu/m.muscalar; 
+              m.theta = quadrupoleMoment(spc, g);    // quadrupole
+              return m;
+            }
+
+          template<class Tgroup>
+            double g2g(const Tspace &spc, const Tgroup &g1, const Tgroup &g2) { 
+              double u=0;
+              for (auto i : g1)
+                for (auto j : g2)
+                  u += spc.p[i].charge * spc.p[j].charge /
+                    spc.geo.dist( spc.p[i], spc.p[j] );
+              return u * pot.pairpot.bjerrumLength();
+            }
+
+        public:
+
+          MultipoleDistribution(InputMap &in) : pot(in) {
+            dr = in.get("multipoledist_dr", 0.1,
+                "Distance resolution of multipole analysis");
+          }
+
+          /**
+           * @brief Sample multipole energy
+           * @param spc Simulation space
+           * @param g1  Group with molecule 1
+           * @param g2  Group with molecule 2
+           * @note Group mass-centers (`Group::cm`) must be up-to-date before
+           *       calling this function
+           */
+          template<class Tmultipole=DipoleParticle>
+            void sample(Tspace &spc, Group &g1, Group &g2) {
+              if (run()) {
+                // multipoles and cm-cm distance
+                auto a = toMultipole(spc,g1);
+                auto b = toMultipole(spc,g2);
+                auto r = spc.geo.vdist(g1.cm, g2.cm);
+                double r2inv = 1/r.squaredNorm();
+                double rinv = sqrt(r2inv);
+                double r3inv = rinv * r2inv;
+
+                // multipolar energy
+                pot.setSpace(spc);
+                data d;
+                d.cnt++;
+                d.tot = pot.g2g(spc.p, g1, g2); // exact el. energy
+                d.ii = a.charge * b.charge * rinv; // ion-ion, etc.
+                d.id = ( a.charge*b.mu.dot(r) - b.charge*a.mu.dot(r) ) * r3inv;
+                d.dd = mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r);
+                d.iq = q2quad(a.charge, b.theta, b.charge, a.theta, r);
+
+                // add to grand average
+                int key = to_bin(1/rinv,dr);
+                auto it = m.find(key);
+                if (it==m.end())
+                  m[key]=d;
+                else {
+                  it->second.cnt++;
+                  it->second.ii  += d.ii;
+                  it->second.id  += d.id;
+                  it->second.iq  += d.iq;
+                  it->second.dd  += d.dd;
+                  it->second.tot += d.tot;
+                }
+              }
+            }
+
+          /** @brief Save multipole distribution to disk */
+          void save(const string &filename) const {
+            std::ofstream f(filename.c_str());
+            if (f) {
+              char w=12;
+              auto lB=pot.pairpot.bjerrumLength();
+              f.precision(4);
+              f << "# Multipolar energy analysis (kT)\n"
+                << std::left << setw(w) << "# r/AA" << std::right << setw(w) << "exact"
+                << setw(w) << "total" << setw(w) << "ionion" << setw(w) << "iondip"
+                << setw(w) << "dipdip" << setw(w) << "ionquad\n";
+              for (auto &i : m)
+                f << std::left
+                  << setw(w) << i.first*dr                  // r
+                  << std::right
+                  << setw(w) << i.second.tot/i.second.cnt   // exact (already in kT)
+                  << setw(w) << lB*(i.second.ii+i.second.id+i.second.dd+i.second.iq)/i.second.cnt // total
+                  << setw(w) << lB*i.second.ii/i.second.cnt // individual poles...
+                  << setw(w) << lB*i.second.id/i.second.cnt
+                  << setw(w) << lB*i.second.dd/i.second.cnt
+                  << setw(w) << lB*i.second.iq/i.second.cnt
+                  << "\n";
+            }
+          }
+      };
+
+    /**
      * @brief Widom method for excess chemical potentials
      *
      * This class will use the ghost particle insertion technique
@@ -843,18 +1227,18 @@ namespace Faunus {
             cite="doi:10/dkv4s6";
           }
 
-          void addGhost(Tparticle p) { g.push_back(p); }
+          void add(Tparticle p) { g.push_back(p); }
 
           /* @brief Add particle to insert - sum of added particle charges should be zero.*/
           template<class Tpvec>
-            void addGhost(Tpvec &p) {
+            void add(Tpvec &p) {
               std::map<short,bool> map; // replace w. `std::set`
               for (auto i : p)
                 map[ i.id ] = true;
               for (auto &m : map) {
-                particle a;
+                Tparticle a;
                 a=atom[m.first];
-                addGhost(a);
+                add(a);
               }
             }
 
@@ -862,26 +1246,26 @@ namespace Faunus {
           double gamma() { return exp(muex()); }
 
           /** @brief Sampled mean excess chemical potential */
-          double muex() { return -log(expsum.avg())/g.size(); }
+          double muex() { return -log(expsum.avg())/g.size() ; }
 
           /** @brief Insert and analyse `n` times */
           template<class Tspace, class Tenergy>
-            void sample(int ghostin, Tspace &spc, Tenergy &pot) {
-              if (!run())
-                return;
-              assert(spc.geo!=NULL);
+            void sample(Tspace &spc, Tenergy &pot, int ghostin) {
               int n=g.size();
-              for (int k=0; k<ghostin; k++) {     // insert ghostin times
-                double du=0;
-                for (int i=0; i<n; i++)
-                  spc.geo.randompos( g[i] ); // random ghost positions
-                for (int i=0; i<n; i++)
-                  pot.all2p( spc.p, g[i] );    // energy with all particles in space
-                for (int i=0; i<n-1; i++)
-                  for (int j=i+1; j<n; j++)
-                    du+=pot.p2p( g[i], g[j] );   // energy between ghost particles
-                expsum += exp(-du);
-              }
+              if (n>0)
+                if (run()) {
+                  while (ghostin-->0) {
+                    double du=0;
+                    for (auto &i : g)
+                      spc.geo.randompos(i);     // random ghost positions
+                    for (auto &i : g)
+                      du+=pot.all2p(spc.p, i);  // energy with all particles in space
+                    for (int i=0; i<n-1; i++)
+                      for (int j=i+1; j<n; j++)
+                        du+=pot.p2p(g[i], g[j]);// energy between ghost particles
+                    expsum += exp(-du);
+                  }
+                }
             }
       };
 
@@ -890,7 +1274,7 @@ namespace Faunus {
      *
      * This will calculate excess chemical potentials for single particles
      * in the primitive model of electrolytes. Use the `add()` functions
-     * to add test or *ghost* particles and call `insert()` to perform single
+     * to add test or *ghost* particles and call `sample()` to perform single
      * particle insertions.
      * Inserted particles are *non-perturbing* and thus removed again after
      * sampling. Electroneutrality for insertions of charged species is
@@ -902,40 +1286,212 @@ namespace Faunus {
      * Currently this works **only** for the primitive model of electrolytes, i.e.
      * hard, charged spheres interacting with a Coulomb potential.
      *
+     * @warning Works only for the primitive model
      * @note This is a conversion of the Widom routine found in the `bulk.f`
      *       fortran program by Bolhuis/Jonsson/Akesson at Lund University.
      * @author Martin Trulsson and Mikael Lund
      * @date Lund / Prague 2007-2008.
      */
-    class WidomScaled : public AnalysisBase {
-      private:
-        typedef std::vector<double> Tvec;
-        string _info();     //!< Get results
-        p_vec g;            //!< list of test particles
-        Tvec chel;          //!< electrostatic
-        Tvec chhc;          //!< hard collision
-        Tvec chex;          //!< excess
-        Tvec chexw;         //!< excess
-        Tvec chtot;         //!< total
-        vector<Tvec> ewden; //!< charging denominator
-        vector<Tvec> ewnom; //!< charging nominator
-        vector<Tvec> chint; //!< charging integrand
-        Tvec chid;          //!< ideal term
-        Tvec expuw;
-        vector<int> ihc,irej;
-        long long int cnt;  //< count test insertions
-        int ghostin;        //< ghost insertions
-        void init();
-        bool overlap(const particle&, const particle&, const Geometry::Geometrybase&); //!< Test overlap
-        double lB;          //!< Bjerrum length [a]
-      public:
-        WidomScaled(double,int=10); //!< Constructor
-        void add(const particle&);  //!< Add test particle type
-        void add(const p_vec&);     //!< Add all unique particle types present in vector
+    template<class Tparticle>
+      class WidomScaled : public AnalysisBase {
 
-        /** @brief Do test insertions and sample excess chemical potential */
-        void insert(const p_vec&, Geometry::Geometrybase&);
-    };
+        private:
+
+          typedef std::vector<double> Tvec;
+          p_vec g;            //!< list of test particles
+          Tvec chel;          //!< electrostatic
+          Tvec chhc;          //!< hard collision
+          Tvec chex;          //!< excess
+          Tvec chexw;         //!< excess
+          Tvec chtot;         //!< total
+          vector<Tvec> ewden; //!< charging denominator
+          vector<Tvec> ewnom; //!< charging nominator
+          vector<Tvec> chint; //!< charging integrand
+          Tvec chid;          //!< ideal term
+          Tvec expuw;
+          vector<int> ihc,irej;
+          int ghostin;        //< ghost insertions
+          double lB;          //!< Bjerrum length [a]
+
+          void init() {
+            int gspec=g.size();
+            chel.resize(gspec);
+            chhc.resize(gspec);
+            chex.resize(gspec);
+            chtot.resize(gspec);
+            ewden.resize(gspec);
+            ewnom.resize(gspec);
+            chint.resize(gspec);
+            expuw.resize(gspec);
+            chexw.resize(gspec);
+            ihc.resize(gspec);
+            irej.resize(gspec);
+
+            for (int i=0; i<gspec; i++){
+              chel[i]=0;
+              chhc[i]=0;
+              chex[i]=0;
+              chtot[i]=0;
+              ihc[i]=0;
+              ewden[i].resize(11);
+              ewnom[i].resize(11);
+              chint[i].resize(11);
+              for(int j=0; j<11; j++)
+                ewden[i][j] = ewnom[i][j] = chint[i][j] = 0;
+            }
+          }
+
+          template<class Tgeo>
+            bool overlap(const Tparticle &a, const Tparticle &b, const Tgeo &geo)
+            {
+              double s=a.radius+b.radius;
+              return (geo.sqdist(a,b)<s*s) ? true : false;
+            }
+
+          string _info() {
+            using namespace textio;
+            std::ostringstream o;
+            double aint4,aint2,aint1;
+            for(size_t i=0; i<g.size(); i++) {
+              for(int cint=0; cint<11; cint++) {
+                if(ewden[i][cint]==0)
+                  std::cerr << "# WARNING: Widom denominator equals zero" << endl;
+                else
+                  chint[i][cint]=ewnom[i][cint]/ewden[i][cint];
+              }
+              aint4=chint[i][1]+chint[i][3]+chint[i][5]+chint[i][7]+chint[i][9];
+              aint2=chint[i][2]+chint[i][4]+chint[i][6]+chint[i][8];
+              aint1=chint[i][0]+chint[i][10];  
+              chel[i]=1./30.*(aint1+2*aint2+4*aint4);
+            }
+
+            int cnttot=cnt*ghostin;
+            o << pad(SUB,w,"Number of insertions") << cnttot << endl
+              << pad(SUB,w,"Excess chemical potentials (kT)") << endl
+              << "             total    elec.   hs             z        r"<< endl;
+            char w=10;
+            for (size_t i=0; i < g.size(); i++) {
+              chhc[i]=-log(double(cnttot-ihc[i])/cnttot);
+              chexw[i]=-log(expuw[i]);
+              chex[i]=chhc[i]+chel[i];
+              o.unsetf( std::ios_base::floatfield );
+              o << "    [" << i << "] "
+                << std::setprecision(4)
+                << std::setw(w) << chex[i]
+                << std::setw(w) << chel[i]
+                << std::setw(w) << chhc[i]
+                << std::setprecision(2) << std::fixed
+                << std::setw(w) << g[i].charge
+                << std::setw(w) << g[i].radius << endl;
+            }
+            return o.str();
+          }
+
+        public:
+
+          /**
+           * @param bjerrumLength Bjerrum length [angstrom]
+           * @param insertions Number of insertions per call to `insert()`
+           */
+          WidomScaled(double bjerrumLength, int insertions) {
+            assert(insertions>=0);
+            assert(bjerrumLength>0);
+            name="Single particle Widom insertion w. charge scaling"; 
+            cite="doi:10/ft9bv9 + doi:10/dkv4s6"; 
+            lB=bjerrumLength;
+            ghostin=insertions;
+          }
+
+          /**
+           * @brief Add ghost particle
+           *
+           * This will add particle `p` to the list of ghost particles
+           * to insert.
+           */
+          void add(const Tparticle &p) {
+            g.push_back(p);
+            init();
+          }
+
+          /**
+           * @brief Add ghost particles
+           *
+           * This will scan the particle vector for particles and each unique type
+           * will be added to the list a ghost particles to insert.
+           */
+          template<class Tpvec>
+            void add(const Tpvec &p) {
+              std::set<particle::Tid> ids;
+              for (auto &i : p)
+                ids.insert(i.id);
+              for (auto i : ids) {
+                particle a;
+                a=atom[i];
+                add(a);
+              }
+            }
+
+          /**
+           * @brief Do test insertions and sample excess chemical potential 
+           *
+           * @param p List of particles to insert into. This will typically be the main
+           *          particle vector, i.e. `Space::p`.
+           * @param geo Geometry to use for distance calculations and random position generation
+           */
+          template<class Tpvec, class Tgeo>
+            void sample(const Tpvec &p, Tgeo &geo) {
+              assert(lB>0);
+              assert(&geo!=nullptr);
+              if (!g.empty())
+                if (!p.empty())
+                  if (run()) {
+                    Tparticle ghost;
+                    double u,cu;
+                    for (int i=0; i<ghostin; i++) {
+                      geo.randompos(ghost);
+                      int goverlap=0;
+                      for (size_t k=0; k<g.size(); k++) {
+                        ghost.radius = g[k].radius;
+                        irej[k]=0;
+                        int j=0;
+                        while (!overlap(ghost,p[j],geo) && j<(int)p.size())
+                          j++;
+                        if (j!=(int)p.size()) {
+                          ihc[k]++;
+                          irej[k]=1;
+                          goverlap++;
+                        }
+                      }
+
+                      if ( goverlap != (int)g.size() ) {
+                        cu=0;
+                        u=0;  //elelectric potential (Coulomb only!)
+                        for (auto &i : p) {
+                          double invdi=1/geo.dist(ghost,i);
+                          cu+=invdi;
+                          u+=invdi*i.charge;
+                        } 
+                        cu=cu*lB;
+                        u=u*lB;
+                        double ew,ewla,ewd;
+                        for (size_t k=0; k < g.size(); k++) {
+                          if (irej[k]==0) {
+                            expuw[k]+=exp(-u*g[k].charge);
+                            for (int cint=0; cint<11; cint++) {
+                              ew=g[k].charge*(u-double(cint)*0.1*g[k].charge*cu/double(p.size()));
+                              ewla = ew*double(cint)*0.1;
+                              ewd=exp(-ewla);
+                              ewden[k][cint]+=ewd;
+                              ewnom[k][cint]+=ew*ewd;
+                            }
+                          }
+                        }
+                      }
+                    }
+                  } 
+            }
+
+      }; // end of WidomScaled
 
     /**
      * @brief Samples bilayer structure
@@ -1011,157 +1567,303 @@ namespace Faunus {
     };
 
     /**
-     * @brief Class to calculate dielectric constant outside the cutoff limit. Using atomic units.
-     *        [Neumann, M. (1983) Mol. Phys., 50, 841-858].
+     * @brief Analyse dielectric constant outside the cutoff limit.
+     *
+     * @note [Neumann, M. (1983) Mol. Phys., 50, 841-858].
      *
      * @param spc The space
-     * @param cutoff The cutoff of the reaction field
+     * @param filename Extention of filename from previous saved run (optional)
      */
-    class DielectricConstant {
+    class DipoleAnalysis {
       private:
-        Average<double> M;
-        Average<double> M_inf;
-        double cutoff2;
-        double vol_const;
-        double vol_const_inf;
-        double CM;
-        Analysis::Histogram<double,unsigned int> P1;
-        Analysis::Table2D<double,Average<double> > P;
+        Analysis::RadialDistribution<> rdf;
+        Analysis::Table2D<double,double> kw, mucorr_angle;
+        Analysis::Table2D<double,Average<double> > mucorr, mucorr_dist; 
+        Analysis::Histogram<double,unsigned int> HM_x,HM_y,HM_z,HM_x_box,HM_y_box,HM_z_box,HM2,HM2_box;
+        Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std, V_t;
+        Average<double> mu_abs;
+        
+        int sampleKW;
+        double cutoff2, N;
+        double const_Diel, const_DielTinfoil, const_DielCM, const_DielRF, epsRF, constEpsRF;
 
-        Point MC_old;
-        Point MCI_old;
-        Point MC_new;
-        Point MCI_new;
-        //double convertSI;
       public:
-        template<class Tspace>
-          inline DielectricConstant(const Tspace &spc) : P1(0.1),P(0.1) {
-            cutoff2 = spc.geo.len_half.squaredNorm();
-            vol_const = 3/(4*pc::Ang2Bohr(pow(cutoff2,1.5),3)*pc::kT2Hartree());
-            vol_const_inf = 4*pc::pi/(3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree());
-            CM = 1;
-            MC_old = Point(0,0,0);
-            MCI_old = Point(0,0,0);
-            MC_new = Point(0,0,0);
-            MCI_new = Point(0,0,0);
-            //convertSI = (3.33564*3.33564*(1e-30)/(0.20819434*0.20819434))*3/(pow(cutoff2,1.5)*pc::kT()*16*pc::pi*pc::e0);
+        template<class Tspace, class Tinputmap>
+          DipoleAnalysis(const Tspace &spc, Tinputmap &in) : rdf(0.1),kw(0.1),mucorr_angle(0.1),mucorr(0.1),mucorr_dist(0.1),HM_x(0.1),HM_y(0.1),HM_z(0.1),HM_x_box(0.1),HM_y_box(0.1),HM_z_box(0.1),HM2(0.1),HM2_box(0.1) {
+            sampleKW = 0;
+            setCutoff(spc.geo.len_half.x());
+            N = spc.p.size();
+            const_Diel = pc::e*pc::e*1e10/(3*pc::kT()*pc::e0);
+            updateConstants(spc.geo.getVolume());
+            updateDielectricConstantRF(in.get("epsilon_rf",80.));
+            load(in.get("dipole_data_ext", string("")));
           }
 
         void setCutoff(double cutoff) {
           cutoff2 = cutoff*cutoff;
         }
+        
+        void updateDielectricConstantRF(double er) {
+          epsRF = er;
+          constEpsRF = 2*(epsRF - 1)/(2*epsRF + 1);
+        }
+        
+        void updateConstants(double volume) {
+          V_t += volume;
+          const_DielTinfoil = const_Diel/V_t.avg();
+          const_DielCM = const_DielTinfoil/3;
+          const_DielRF = const_DielTinfoil/3;
+        }
 
         /**
          * @brief Samples dipole-moment from dipole particles.
-         * 
-         * @param geo The geometry.
          * @param spc The space.
          */
-        template<class Tgeometry, class Tspace>
-          void sampleDP(Tgeometry &geo, const Tspace &spc) {
+        template<class Tspace>
+          void sampleDP(const Tspace &spc) {
             Point origin(0,0,0);
-            Point mu(0,0,0);
-            Point mu_inf(0,0,0);
-            clausiusMossotti(spc.p,spc);
+            Point mu(0,0,0);        // In e\AA
+            Point mu_box(0,0,0);    // In e\AA
+
             for (auto &i : spc.p) {
-              if (geo.sqdist(i,origin)<cutoff2)
+              if (spc.geo.sqdist(i,origin)<cutoff2) {
                 mu += i.mu*i.muscalar;
-              mu_inf += i.mu*i.muscalar;
+              } else {
+                mu_box += i.mu*i.muscalar;
+              }
+              mu_abs += i.muscalar;
             }
-            samplePP(geo,spc,origin,mu,mu_inf);
+            mu_box += mu;
+            samplePP(spc,mu,mu_box);
           }
 
         /**
          * @brief Samples dipole-moment from point particles.
          * 
-         * @param geo The geometry
          * @param spc The space
-         * @param origin Origin to use (optional)
          * @param mu Dipoles to add to from within cutoff (optional)
-         * @param mu_inf Dipoles to add to from entire box (optional)
+         * @param mu_box Dipoles to add to from entire box (optional)
          */
-        template<class Tgeometry, class Tspace>
-          void samplePP(Tgeometry &geo, Tspace &spc, Point origin=Point(0,0,0), Point mu=Point(0,0,0), Point mu_inf=Point(0,0,0)) {
+        template<class Tspace>
+          void samplePP(Tspace &spc, Point mu=Point(0,0,0), Point mu_box=Point(0,0,0)) {
+            updateConstants(spc.geo.getVolume());
             Group all(0,spc.p.size()-1);
             all.setMassCenter(spc);
             mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
-            mu_inf += Geometry::dipoleMoment(spc,all);
-            MC_old = MC_new;
-            MCI_old = MCI_new;
-            MC_new = mu;
-            MCI_new = mu_inf;
-            Point temp1 = MC_new - MC_old;
-            Point temp2 = MCI_new - MCI_old;
-            P1(MC_new(0))++;
-            P1(MC_new(1))++;
-            P1(MC_new(2))++;
-            P(temp1(0)) += MC_new(0)*MC_new(0);
-            P(temp1(1)) += MC_new(1)*MC_new(1);
-            P(temp1(2)) += MC_new(2)*MC_new(2);
-            P(temp2(0)) += MCI_new(0)*MCI_new(0);
-            P(temp2(1)) += MCI_new(1)*MCI_new(1);
-            P(temp2(2)) += MCI_new(2)*MCI_new(2);
-            M += mu.squaredNorm();
-            M_inf += mu_inf.squaredNorm();
+            mu_box += Geometry::dipoleMoment(spc,all);
+
+            HM_x(mu.x())++;
+            HM_y(mu.y())++;
+            HM_z(mu.z())++;
+            HM_x_box(mu_box.x())++;
+            HM_y_box(mu_box.y())++;
+            HM_z_box(mu_box.z())++;
+            M_x += mu.x();
+            M_y += mu.y();
+            M_z += mu.z();
+            M_x_box += mu_box.x();
+            M_y_box += mu_box.y();
+            M_z_box += mu_box.z();
+            double sca = mu.dot(mu);
+            HM2(sca)++;
+            M2 += sca;
+            sca = mu_box.dot(mu_box);
+            HM2_box(sca)++;
+            M2_box += sca;
+            diel_std.add(getDielTinfoil());
           }
 
         /**
-         * @brief Claussius-Mossotti relationship calculates \f$ \epsilon_x \f$ according to \f$ \frac{\epsilon_x-1}{\epsilon_x+2} = \frac{4\pi}{3}\rho\alpha  \f$.
-         * @brief DOI:10.1080/08927029708024131
+         * @brief Samples g(r), \f$ <\mu(0) \cdot \mu(r)> \f$, \f$ <\frac{1}{2} ( 3 \mu(0) \cdot \mu(r) - 1 )> \f$, Histogram(\f$ \mu(0) \cdot \mu(r) \f$) and distant-dependent Kirkwood-factor.
          * 
-         * @param p Particle vector
          * @param spc The space
-         */ 
-        template<class Tpvec, class Tspace>
-          void clausiusMossotti(const Tpvec &p, const Tspace &spc) {
-            double Q = 4*pc::pi*p.size()*p[0].alpha.trace()/(9*spc.geo.getVolume());  // 9 = 3*3, where one 3 is a normalization of the trace of alpha
-            CM = ((1+2*Q)/(1-Q));
-          }
-
-        // Every particle has to have the same absolute dipole moment. Convertions to a.u. cancels out!
-        template<class Tpvec>
-          double getKirkwoodFactor(const Tpvec &p) {
-            double val = 0;
-            for(int k = 0; k < p.size(); k++) {
-              val += cos(p.dot(p.mu));
-            }
-            val /= p.size();
-            cout << "K: " << 1+val << ", " << M_inf.avg()/(p[0].muscalar*p[0].muscalar) << endl;
-
-            return M_inf.avg()/(p[0].muscalar*p[0].muscalar);
-          }
-
-
+         *
+         */
         template<class Tspace>
-          void kusalik(const Tspace &spc) {
-            //double lambda = 1;
-            //double alpha = 1;
-            //mucorr(r) += spc.p[i].mu.dot(spc.p[j].mu);
-            //double A = alpha*3*pc::Ang2Bohr(spc.geo.getVolume(),3)*pc::kT2Hartree()/(8*pc::pi);
-            //double eps = (lambda*lambda-2*lambda-A)/(lambda*lambda-2*lambda-A-1);
-            P.save("AAA.dat"); 
-            P1.save("BBB.dat");
+          void sampleMuCorrelationAndKirkwood(Tspace &spc) {
+            double r, sca;
+            int N = spc.p.size() - 1;
+            for (int i = 0; i < N; i++) {
+              kw(0) += spc.p[i].mu.dot(spc.p[i].mu)*spc.p[i].muscalar*spc.p[i].muscalar;
+              for (int j = i+1.; j < N + 1; j++) {
+                r = spc.geo.dist(spc.p[i],spc.p[j]); 
+                rdf(r)++;
+                sca = spc.p[i].mu.dot(spc.p[j].mu);
+                mucorr_angle(sca) += 1.;
+                mucorr(r) += sca;
+                mucorr_dist(r) += 0.5*(3*sca*sca -1.);
+                kw(r) += 2*sca*spc.p[i].muscalar*spc.p[j].muscalar;
+              }
+            }
+            kw(0) += spc.p[N].mu.dot(spc.p[N].mu)*spc.p[N].muscalar*spc.p[N].muscalar;
+            sampleKW++;
           }
 
         /**
-         * @brief Returns dielectric constant according to \f$ \frac{\epsilon_0-1}{3} = \frac{4\pi}{9Vk_BT}<\bold{M}^2> + \frac{\epsilon_x-1}{3}  \f$. Only works when \f$ \epsilon_{RF} = \infty \f$.
-         * @brief DOI:10.1080/08927029708024131
-         */ 
-        double getDielInfty() {
-          return (CM+pc::Ang2Bohr(M_inf.avg(),2)*vol_const_inf);
+         * @brief Returns dielectric constant (using Tinfoil conditions).
+         * \f$ 1 + \frac{<M^2>}{3V\epsilon_0k_BT} \f$
+         */
+        double getDielTinfoil() {
+          // 1 + ( ( ( 4 * pi * <M^2> ) / ( 3 * V * kT ) ) / ( 4 * pi * e0 ) )
+          return ( 1 + M2_box.avg()*const_DielTinfoil); 
         }  
 
-        inline string info() {
-          std::ostringstream o;
-          if (M.cnt>0) {
-            double Q_AU = 0.25 + pc::Ang2Bohr(M.avg(),2)*vol_const;   // In a.u.
-            Q_AU = Q_AU + std::sqrt(Q_AU*Q_AU+0.5);
-            //double Q_SI = 0.25 + M.avg()*convertSI;  // in SI-units
-            //Q_SI = Q_SI + std::sqrt(Q_SI*Q_SI+0.5)
-            o << "M-avg*vol_const:        " << M.avg()*vol_const << endl;
-            o << "Eps:          " << Q_AU << endl;
-            o << "Eps_{\\infty}: " << getDielInfty() << endl;
+        /**
+         * @brief Returns dielectric constant ( Clausius-Mossotti ).
+         * \f$ \frac{1 + \frac{2<M^2>}{9V\epsilon_0k_BT}}{1 - \frac{<M^2>}{9V\epsilon_0k_BT}} \f$
+         * 
+         * @warning Needs to be checked!
+         */
+        double getDielCM() {
+          double temp = M2_box.avg()*const_DielCM;
+          return ((1 + 2*temp)/(1 - temp));
+        }  
+        
+        /**
+         * @brief Returns dielectric constant ( Reaction Field ).
+         * 
+         * @warning Needs to be checked!
+         */
+        double getDielRF() {
+          double avgRF = M2_box.avg()*const_DielRF;
+          double sqrtRF = 0;
+          if(-4*constEpsRF*avgRF + 1 > 0)
+            sqrtRF = 3*sqrt(-4*constEpsRF*avgRF + 1);
+          double one = 0.5*(2*constEpsRF - 4*avgRF + 1 + sqrtRF)/(constEpsRF + avgRF - 1);
+          //double two = 0.5*(2*constEpsRF - 4*avgRF + 1 - sqrtRF)/(constEpsRF + avgRF - 1);
+          return one;
+        }  
+        
+        /**
+         * @brief Saves data to files. 
+         * @param nbr Extention of filename
+         * 
+         * @note \f$ g(r) \rightarrow \f$ gofr.dat+nbr
+         *       \f$ \mu(0)\cdot\mu(r) \rightarrow \f$ mucorr.dat+nbr
+         *       \f$ <\frac{1}{2} ( 3 \mu(0) \cdot \mu(r) - 1 )> \rightarrow \f$ mucorr_dist.dat+nbr
+         * 
+         */
+        void save(string ext="") {
+          rdf.save("gofr.dat"+ext);
+          mucorr.save("mucorr.dat"+ext);
+          mucorr_angle.save("mucorr_angle.dat"+ext);
+          mucorr_dist.save("mucorr_dist.dat"+ext);
+          kw.sumSave("kirkwood.dat"+ext,1.0/double(sampleKW));
+          HM_x.save("hist_dip_x.dat"+ext);
+          HM_y.save("hist_dip_y.dat"+ext);
+          HM_z.save("hist_dip_z.dat"+ext);
+          HM_x_box.save("hist_dip_x_box.dat"+ext);
+          HM_y_box.save("hist_dip_y_box.dat"+ext);
+          HM_z_box.save("hist_dip_z_box.dat"+ext);
+          HM2.save("hist_dip2.dat"+ext);
+          HM2_box.save("hist_dip2_box.dat"+ext);
+
+          string filename = "dipoledata.dat"+ext;
+          std::ofstream f(filename.c_str());
+          f.precision(10);
+          if (f) {
+            if (M_x.cnt != 0)      f << "M_x " << M_x.cnt << " " << M_x.avg() << " " << M_x.sqsum << "\n";
+            if (M_y.cnt != 0)      f << "M_y " << M_y.cnt << " " << M_y.avg() << " " << M_y.sqsum << "\n";
+            if (M_z.cnt != 0)      f << "M_z " << M_z.cnt << " " << M_z.avg() << " " << M_z.sqsum << "\n";
+            if (M_x_box.cnt != 0)  f << "M_x_box " << M_x_box.cnt << " " << M_x_box.avg() << " " << M_x_box.sqsum << "\n";
+            if (M_y_box.cnt != 0)  f << "M_y_box " << M_y_box.cnt << " " << M_y_box.avg() << " " << M_y_box.sqsum << "\n";
+            if (M_z_box.cnt != 0)  f << "M_z_box " << M_z_box.cnt << " " << M_z_box.avg() << " " << M_z_box.sqsum << "\n";
+            if (M2.cnt != 0)       f << "M2 " << M2.cnt << " " << M2.avg() << " " << M2.sqsum << "\n";
+            if (M2_box.cnt != 0)   f << "M2_box " << M2_box.cnt << " " << M2_box.avg() << " " << M2_box.sqsum << "\n";
+            if (diel_std.cnt != 0) f << "diel_std " << diel_std.cnt << " " << diel_std.avg() << " " << diel_std.sqsum;
+            if (mu_abs.cnt != 0)      f << "mu_abs " << mu_abs.cnt << " " << mu_abs.avg() << " " << mu_abs.sqsum << "\n";
           }
+        }
+
+        void load(string ext="") {
+          if(ext == "none")
+            ext = "";
+          rdf.load("gofr.dat"+ext);
+          mucorr.load("mucorr.dat"+ext);
+          mucorr_angle.load("mucorr_angle.dat"+ext);
+          mucorr_dist.load("mucorr_dist.dat"+ext);
+          kw.load("kirkwood.dat"+ext);
+          HM_x.load("hist_dip_x.dat"+ext);
+          HM_y.load("hist_dip_y.dat"+ext);
+          HM_z.load("hist_dip_z.dat"+ext);
+          HM_x_box.load("hist_dip_x_box.dat"+ext);
+          HM_y_box.load("hist_dip_y_box.dat"+ext);
+          HM_z_box.load("hist_dip_z_box.dat"+ext);
+          HM2.load("hist_dip2.dat"+ext);
+          HM2_box.load("hist_dip2_box.dat"+ext);
+
+          string filename = "dipoledata.dat"+ext;
+          std::ifstream f(filename.c_str());
+          if (f) {
+            while (!f.eof()) {
+              string name;
+              int cnt;
+              double average;
+              double sqsum;
+              f >> name >> cnt >> average >> sqsum;
+              if(name == "M_x") {
+                M_x.reset();
+                Average<double> M_xt(average,sqsum,cnt);
+                M_x = M_x + M_xt;
+              }
+              if(name == "M_y") {
+                M_y.reset();
+                Average<double>M_yt(average,sqsum,cnt);
+                M_y = M_y + M_yt;
+              }
+              if(name == "M_z") {
+                M_z.reset();
+                Average<double> M_zt(average,sqsum,cnt);
+                M_z = M_z + M_zt;
+              }
+              if(name == "M_x_box") {
+                M_x_box.reset();
+                Average<double> M_x_boxt(average,sqsum,cnt);
+                M_x_box = M_x_box + M_x_boxt;
+              }
+              if(name == "M_y_box") {
+                M_y_box.reset();
+                Average<double> M_y_boxt(average,sqsum,cnt);
+                M_y_box = M_y_box + M_y_boxt;
+              }
+              if(name == "M_z_box") {
+                M_z_box.reset();
+                Average<double> M_z_boxt(average,sqsum,cnt);
+                M_z_box = M_z_box + M_z_boxt;
+              }
+              if(name == "M2") {
+                M2.reset();
+                Average<double> M2t(average,sqsum,cnt);
+                M2 = M2 + M2t;
+              }
+              if(name == "M2_box") {
+                M2_box.reset();
+                Average<double> M2_boxt(average,sqsum,cnt);
+                M2_box = M2_box + M2_boxt;
+              }
+              if(name == "diel_std") {
+                diel_std.reset();
+                Average<double> diel_stdt(average,sqsum,cnt);
+                diel_std = diel_std + diel_stdt;
+              }
+              if(name == "mu_abs") {
+                mu_abs.reset();
+                Average<double> mu_abst(average,sqsum,cnt);
+                mu_abs = mu_abs + mu_abst;
+              }
+            }
+          }
+        }
+
+        inline string info() {
+          using namespace Faunus::textio;
+          std::ostringstream o;
+          o << header("Dipole analysis");
+          o << indent(SUB) << epsilon_m+subr+"(Tinfoil)" << setw(22) << getDielTinfoil() << ", "+sigma+"=" << diel_std.stdev() << ", "+sigma+"/"+epsilon_m+subr+"=" << (100*diel_std.stdev()/getDielTinfoil()) << percent << endl
+          << indent(SUB) << bracket("M"+squared) << setw(27) << pc::eA2D(M2_box.avg(),2) << " Debye"+squared+", "+sigma+"=" << pc::eA2D(M2_box.stdev(),2) << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg()) << percent << endl
+          << indent(SUB) << bracket("M") << setw(25) << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl 
+          << indent(SUBSUB) << sigma << setw(25) << "( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl
+          << indent(SUB) << bracket("|"+mu+"|") << setw(25) << pc::eA2D(mu_abs.avg()) << " Debye, "+sigma+"=" << pc::eA2D(mu_abs.stdev()) << ", "+sigma+"/"+bracket("|"+mu+"|")+"=" << (100*mu_abs.stdev()/mu_abs.avg()) << percent << endl;
           return o.str();
         }
     };
@@ -1223,18 +1925,22 @@ namespace Faunus {
             return sigma2;
           }
 
+          // Approximate cumulative distribution function for value alpha in Ljung-Box method
           double getF_X_LB() {
             return F_X_LB;
           }
 
+          // Approximate cumulative distribution function for value alpha in Box-Pierce method
           double getF_X_BP() {
             return F_X_BP;
           }
 
+          // Approximate cumulative distribution function for value alpha in studentTdistribution method
           double getF_X_stud() {
             return F_X_stud;
           }
 
+          // Value of alpha to approximately get F_X_stud in studentTdistribution method (Method fails if (x*x/dof > 1), see line further down)
           double getStdAlpha() {
             return sTd_alpha;
           }
@@ -1288,9 +1994,11 @@ namespace Faunus {
           }
 
           /**
-           * @brief The Ljung-Box test is a statistical test. It tests if a group of autocorrelations differ from zero, 
-           *        based on a number of lags. Initially it was developed for ARMA-processes. It is a portmanteau test.
-           *        DOI: 10.1093/biomet/65.2.297
+           * @brief The Ljung-Box test is a statistical test.
+           *
+           * This tests if a group of autocorrelations differ from zero, 
+           * based on a number of lags. Initially it was developed for ARMA-processes.
+           * It is a portmanteau test. More info at DOI: 10.1093/biomet/65.2.297
            *
            * @param alpha The significance of the test. With a probability of \f$ (1-\alpha)*100 \f$ % the result is true.
            */
@@ -1306,10 +2014,14 @@ namespace Faunus {
           }
 
           /**
-           * @brief The Box-Pierce test is a statistical test. It tests if a group of autocorrelations differ from zero. 
-           *        It tests the wider randomness based on a number of lags. This is more simple, and not as accurate, as the Ljung_Box test.
+           * @brief The Box-Pierce test is a statistical test.
            *
-           * @param alpha The significance of the test. With a probability of \f$ (1-\alpha)*100 \f$ % the result is true.
+           * This tests if a group of autocorrelations differ from zero. 
+           * It tests the wider randomness based on a number of lags.
+           * This is more simple, and not as accurate, as the Ljung_Box test.
+           *
+           * @param alpha The significance of the test. With a probability of
+           * \f$ (1-\alpha)*100 \f$ % the result is true.
            */
           bool BoxPierce(double alpha) {
             double Q = 0.0;
@@ -1317,18 +2029,20 @@ namespace Faunus {
             for(int k = 0;k < lag; k++)
               Q += sampleAutocorrelation(k);
 
-            if(Q*N > getChi2(alpha,F_X_LB))
+            if(Q*N > getChi2(alpha,F_X_BP))
               return false;
             return true;
           }
 
           /**
-           * @brief Hypergeometric function. This function uses \f$ x=(x)_1=(x)_2=... \f$ for x=a,x=b and x=c.
-           *        \f$ F_1(a,b,c;z) = \sum_{n=0}^{\infty}\frac{(a)_n(b)_n}{(c)_n}\frac{z^n}{n!} \f$
+           * @brief Hypergeometric function.
+           *
+           * This function uses \f$ x=(x)_1=(x)_2=... \f$ for x=a,x=b and x=c.
+           * \f$ F_1(a,b,c;z) = \sum_{n=0}^{\infty}\frac{(a)_n(b)_n}{(c)_n}\frac{z^n}{n!} \f$
            * 
-           * @param a Coefficient
-           * @param b Coefficient
-           * @param c Coefficient
+           * @param a Coefficient (usually a vector) 
+           * @param b Coefficient (usually a vector) 
+           * @param c Coefficient (usually a vector) 
            * @param z Value to estimate for. Only works for \f$ |z|<1 \f$.
            */
           double F2(double a,double b,double c, double z) {
@@ -1349,7 +2063,8 @@ namespace Faunus {
           /**
            * @brief Student's t-test distribution
            * 
-           * @param alpha The significance of the test. With a probability of \f$ (1-\alpha)*100 \f$ % the result is true.
+           * @param alpha The significance of the test.
+           *        With a probability of \f$ (1-\alpha)*100 \f$ % the result is true.
            * @param dof Degrees of freedom.
            */
           double studentTdistribution(double alpha, int dof, double x_step=0.01) {

@@ -64,7 +64,6 @@ namespace Faunus {
         double vol;
         f >> vol;
         setVolume(vol);
-        f.close();
         return true;
       }
       std::cerr << "!! Geometry data NOT read from file " << file << endl;
@@ -72,7 +71,7 @@ namespace Faunus {
     }
 
     Sphere::Sphere(double radius) {
-      setradius(radius);
+      setRadius(radius);
     }
 
     /**
@@ -83,11 +82,11 @@ namespace Faunus {
      * `sphere_radius`   | Sphere radius [angstrom]
      */
     Sphere::Sphere(InputMap &in, string prefix)  {
-      setradius(
+      setRadius(
           in.get<double>(prefix+"_radius", -1.0, "Spherical container radius (A)") );
     }
 
-    void Sphere::setradius(double radius) {
+    void Sphere::setRadius(double radius) {
       assert(radius>0 && "Radius must be larger than zero.");
       name="Spherical";
       r = radius; 
@@ -100,7 +99,7 @@ namespace Faunus {
     }
 
     void Sphere::_setVolume(double vol) {
-      setradius( cbrt( 3*vol/(4*pc::pi) ) );
+      setRadius( cbrt( 3*vol/(4*pc::pi) ) );
     }
 
     void Sphere::scale(Point &a, const double &newvolume) const {
@@ -179,7 +178,7 @@ namespace Faunus {
     string Cuboid::_info(char w) {
       std::ostringstream o;
       o << pad(SUB,w, "Sidelengths")
-        << len.x() << " x " << len.y() << " x " << len.z() << " ("+textio::angstrom+")" << endl
+        << len.transpose() << " ("+textio::angstrom+")" << endl
         << pad(SUB,w, "Scale directions") << (scaledir==XY ? "XY" : "XYZ") << endl;
       return o.str();
     }
@@ -201,7 +200,7 @@ namespace Faunus {
         std::ofstream fout( file.c_str(), std::ios_base::app);
         if (fout) {
           fout.precision(10);
-          fout << len.x() << " " << len.y() << " " << len.z() << endl;
+          fout << len.transpose() << endl;
           return true;
         }
       }
@@ -215,7 +214,6 @@ namespace Faunus {
         if (f) {
           f >> l.x() >> l.y() >> l.z();
           setlen(l);
-          f.close();
           return true;
         }
       }

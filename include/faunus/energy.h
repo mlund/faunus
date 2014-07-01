@@ -10,7 +10,6 @@
 #include <faunus/textio.h>
 #include <faunus/potentials.h>
 #include <faunus/auxiliary.h>
-#include <faunus/analysis.h>
 #endif
 
 namespace Faunus {
@@ -44,6 +43,11 @@ namespace Faunus {
           virtual std::string _info()=0;
           char w; //!< Width of info output
           Tspace* spc;
+
+          /** @brief Determines if given particle vector is the trial vector */
+          template<class Tpvec>
+            bool isTrial(const Tpvec &p) const { return (&p==&spc->trial); }
+
         public:
           typedef Tspace SpaceType;
           typedef typename Tspace::ParticleType Tparticle;
@@ -63,8 +67,7 @@ namespace Faunus {
             return *spc;
           }
 
-          /** @brief Particle-particle energy */
-          virtual double p2p(const Tparticle&, const Tparticle&)
+          virtual double p2p(const Tparticle&, const Tparticle&) // Particle-particle energy
           { return 0; }
 
           virtual Point f_p2p(const Tparticle&, const Tparticle&) // Particle-particle force
@@ -91,7 +94,7 @@ namespace Faunus {
           virtual double p_external(const Tparticle&)   // External energy of particle
           { return 0; }
 
-          /** @brief Total energy of i'th = i2all+i_external+i_internal */
+          /* @brief Total energy of i'th = i2all+i_external+i_internal */
           double i_total(Tpvec &p, int i)
           { return i2all(p,i) + i_external(p,i) + i_internal(p,i); }
 
@@ -109,7 +112,7 @@ namespace Faunus {
 
           virtual double external(const Tpvec&)                // External energy - pressure, for example.
           { return 0; }
-
+          
           virtual void field(const Tpvec&, Eigen::MatrixXd&) //!< Calculate electric field on all particles
           { }
 
@@ -247,6 +250,7 @@ namespace Faunus {
           void setSpace(Tspace &s) FOVERRIDE {
             geo=s.geo;
             Tbase::setSpace(s);
+            pairpot.setSpace(s);
           } 
 
           //!< Particle-particle energy (kT)
@@ -367,11 +371,12 @@ namespace Faunus {
      */
     template<class Tspace, class Tpairpot>
       class NonbondedVector : public Energybase<Tspace> {
-        protected:
+        private:
           string _info() { return pairpot.info(25); }
           typedef Energybase<Tspace> Tbase;
           typedef typename Tbase::Tparticle Tparticle;
           typedef typename Tbase::Tpvec Tpvec;
+          bool groupBasedField;
 
         public:
           typename Tspace::GeometryType geo;
@@ -382,6 +387,7 @@ namespace Faunus {
                 std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
                 "Tpairpot must be a pair potential" );
             Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
+            groupBasedField = in.get<bool>("pol_g2g",false,"Field will exclude own group");
           }
 
           void setSpace(Tspace &s) FOVERRIDE {
@@ -426,14 +432,15 @@ namespace Faunus {
             return u;  
           }
 
+
           double i2all(Tpvec &p, int i) {
             assert(i>=0 && i<int(p.size()) && "index i outside particle vector");
+            std::swap(p[0],p[i]);
             double u=0;
-            for (int j=0; j!=i; ++j)
-              u+=pairpot( p[i], p[j], geo.vdist(p[i],p[j]) );
-            int n=(int)p.size();
-            for (int j=i+1; j<n; ++j)
-              u+=pairpot( p[i], p[j], geo.vdist(p[i],p[j]) );
+#pragma omp parallel for reduction (+:u)
+            for (int j=1; j<(int)p.size(); ++j)
+              u+=pairpot( p[0], p[j], geo.vdist(p[0],p[j]) );
+            std::swap(p[0],p[i]);
             return u;
           }
 
@@ -502,14 +509,67 @@ namespace Faunus {
            */
           void field(const Tpvec &p, Eigen::MatrixXd &E) FOVERRIDE {
             assert((int)p.size()==E.cols());
-            size_t i=0;
-            for (auto &pi : p) {
-              for (auto &pj : p)
-                if (&pi!=&pj)
-                  E.col(i) = E.col(i) + pairpot.field(pj, geo.vdist(pi,pj));
-              i++;
+
+            // Include field only from external molecules
+            if (groupBasedField) {
+              for (auto gi : Tbase::spc->groupList()) // loop over all groups
+                for (auto gj : Tbase::spc->groupList()) // loop over all group
+                  if (gi!=gj) // discard identical groups (addresss comparison)
+                    for (auto i : *gi)  // loop over particle index in 1st group
+                      for (auto j : *gj) // loop ove
+                        E.col(i) = E.col(i) + pairpot.field(p[j],geo.vdist(p[i],p[j]));
+              } else {
+              size_t i=0;
+              for (auto &pi : p) {
+                for (auto &pj : p)
+                  if (&pi!=&pj)
+                    E.col(i) = E.col(i) + pairpot.field(pj,geo.vdist(pi,pj));
+                i++;
+              }
             }
           }
+      };
+
+    /**
+     * @brief Nonbonded with early rejection for infinite energies
+     *
+     * Useful for potentials with a hard sphere part
+     */
+    template<class Tspace, class Tpairpot, class Tnonbonded=Energy::Nonbonded<Tspace,Tpairpot> >
+      class NonbondedEarlyReject : public Tnonbonded {
+        private:
+          typedef Tnonbonded base;
+        public:
+          NonbondedEarlyReject(InputMap &in) : base(in) {
+            base::name+=" (early reject)";
+          }
+
+          double g2g(const typename base::Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+            double u=0;
+            for (auto i : g1)
+              for (auto j : g2) {
+                auto _u = base::pairpot(p[i],p[j],base::geo.sqdist(p[i],p[j]));
+                if (std::isinf(_u))
+                  return INFINITY;
+                u+=_u;
+              }
+            return u;
+          }
+
+          double g_internal(const typename base::Tpvec &p, Group &g) FOVERRIDE { 
+            double u=0;
+            int b=g.back(), f=g.front();
+            if (!g.empty())
+              for (int i=f; i<b; ++i)
+                for (int j=i+1; j<=b; ++j) {
+                  auto _u = base::pairpot(p[i],p[j],base::geo.sqdist(p[i],p[j]));
+                  if (std::isinf(_u))
+                    return INFINITY;
+                  u+=_u;
+                }
+            return u;
+          }
+
       };
 
     /**
@@ -525,10 +585,10 @@ namespace Faunus {
      * Upon construction the `InputMap` is searched for the keyword
      * `g2g_cutoff` - the default value is infinity.
      */
-    template<class Tspace, class Tpairpot>
-      class NonbondedCutg2g : public Nonbonded<Tspace,Tpairpot> {
+    template<class Tspace, class Tpairpot, class Tnonbonded=Energy::Nonbonded<Tspace,Tpairpot> >
+      class NonbondedCutg2g : public Tnonbonded {
         private:
-          typedef Nonbonded<Tspace,Tpairpot> base;
+          typedef Tnonbonded base;
           double rcut2;
 
           Point getMassCenter(const typename base::Tpvec &p, const Group &g) {
@@ -546,7 +606,7 @@ namespace Faunus {
               }
             return false;
           }
-          
+
         public:
           bool noPairPotentialCutoff; //!< Set if range of pairpot is longer than rcut (default: false)
 
@@ -592,7 +652,7 @@ namespace Faunus {
               return u;
             }
           }
-          
+
           // unfinished
           void field(const typename base::Tpvec &p, Eigen::MatrixXd &E) FOVERRIDE {
             assert((int)p.size()==E.cols());
@@ -607,13 +667,13 @@ namespace Faunus {
                     for (int i : *gi)
                       for (int j : *gj)
                         E.col(i)+=base::pairpot.field(p[j],base::geo.vdist(p[i],p[j]));
-              
-              // now loop over all internal particles in groups
-              for (auto g : base::spc->groupList())
-                for (int i : *g)
-                  for (int j : *g)
-                    if (i!=j)
-                      E.col(i)+=base::pairpot.field(p[j],base::geo.vdist(p[i],p[j]));
+
+            // now loop over all internal particles in groups
+            for (auto g : base::spc->groupList())
+              for (int i : *g)
+                for (int j : *g)
+                  if (i!=j)
+                    E.col(i)+=base::pairpot.field(p[j],base::geo.vdist(p[i],p[j]));
           }
       };
 
@@ -696,7 +756,7 @@ namespace Faunus {
           using namespace Faunus::textio;
           std::ostringstream o;
           o << pad(SUB,30,"Look for group-group bonds:")
-            << (CrossGroupBonds ? "yes (slow)" : "no (faster)") << endl << endl
+            << std::boolalpha << CrossGroupBonds << endl
             << indent(SUBSUB) << std::left
             << setw(7) << "i" << setw(7) << "j" << endl;
           return o.str() + _infolist;
@@ -736,8 +796,8 @@ namespace Faunus {
          * Space main particle vector.
          */
         Point f_p2p(const Tparticle &a, const Tparticle &b) FOVERRIDE {
-          int i=&a-&spc->p[0]; // calc. index from addresses
-          int j=&b-&spc->p[0];
+          int i=spc->findIndex(a);
+          int j=spc->findIndex(b);
           assert(i>=0 && j>=0);
           assert(i<(int)spc->p.size() && j<(int)spc->p.size());
           auto f=force_list.find( opair<int>(i,j) );
@@ -839,6 +899,12 @@ namespace Faunus {
             force_list[ typename Tbase::Tpair(i,j) ]
               = ForceFunctionObject<decltype(pot)>(pot);
           }
+
+        /* uncommented due to gcc 4.6
+        auto getBondList() -> decltype(this->list) {
+          return Tbase::getBondList();
+        }
+        */
     };
 
     /**
@@ -949,40 +1015,332 @@ namespace Faunus {
               u+=p_external(p[i]);
             return u;
           }
+
+          /** @brief Field on all particles due to external potential */
+          void field(const typename base::Tpvec &p, Eigen::MatrixXd &E) FOVERRIDE {
+            assert((int)p.size()==E.cols());
+            for (size_t i=0; i<p.size(); i++)
+              E.col(i) += expot.field(p[i]);
+          }
       };
 
     /**
-     * @brief Constrain two group mass centra within a certain distance interval [mindist:maxdist]
-     * @author Mikael Lund
-     * @date Lund, 2012
-     * @todo Prettify output
+     * @brief Restrain a group mass center within a certain z-axis interval [bin_min:bin_max]
+     * @author Joao Henriques
+     * @date Lund, 2013     
+     * 
+     * This energy class will restrain the mass center of a given group within a certain window/bin along the z-axis.
+     * Mainly for use with free energy vs. surface distance simulations, where the the surface is too attractive and prevents
+     * correct sampling. Can also be used to restrain the mass center of a group to a subset of the simulation cell volume in 
+     * other type of systems.
+     *
+     * The InputMap parameters are:
+     *
+     * Key                | Description
+     * :----------------- | :---------------------------
+     * `bin_min`          | Lower limit (always positive, i.e. from 0 to `cuboid_zlen`), [angstrom]
+     * `bin_max`          | Higher limit (from `bin_min` to `cuboid_zlen`), [angstrom]
+     *
+     */
+    template<class Tspace>
+      class MassCenterRestrain : public Energybase<Tspace> {
+        private:
+          typedef Energybase<Tspace> base;
+          typedef typename Tspace::p_vec Tpvec;
+          string _info() {
+            std::ostringstream o;
+            o << pad(textio::SUB,25,"Bin limits (z-axis)") << "[" << min << ":" << max << "]" << textio::_angstrom << endl;
+            return o.str();
+          };
+          double min, max;
+          Group* gPtr;
+        public:
+          MassCenterRestrain(InputMap &in) {
+            min = in.get<double>("bin_min", 0);
+            max = in.get<double>("bin_max", pc::infty);
+            base::name = "Mass Center Restrain";
+            gPtr = nullptr;
+          }
+          void add(Group &g) {
+            gPtr = &g;
+          }
+          double g_external(const Tpvec &p, Group &g) {
+            if (&g != gPtr)
+              return 0;
+            double boxlenz = base::spc->geo.len.z();
+            double mc = Geometry::massCenter(base::spc->geo, p, g).z() + (boxlenz / 2);
+            if (mc >= min && mc <= max)
+              return 0;
+            else
+              return pc::infty;
+          }
+        double i_external(const Tpvec &p, int i) {
+          auto gi = base::spc->findGroup(i);
+          return g_external(p, *gi);
+        }
+      };
+
+    /**
+     * @brief Constrain two group mass centre separations to a distance interval [mindist:maxdist]
      *
      * This energy class will constrain the mass center separation between selected groups to a certain
      * interval. This can be useful to sample rare events and the constraint is implemented as an external
      * group energy that return infinity if the mass center separation are outside the defined range.
      * An arbitrary number of group pairs can be added with the addPair() command, although one would
      * rarely want to have more than one.
-     * In the following example,
-     * the distance between `mygroup1` and `mygroup2` are constrained to the range `[10:50]` angstrom:
+     * In the following example, the distance between `mygroup1` and `mygroup2`
+     * are constrained to the range `[10:50]` angstrom:
+     *
      * @code
-     * Energy::Hamiltonian pot;
-     * auto nonbonded = pot.create( Energy::Nonbonded<Tpairpot,Tgeometry>(mcp) );
-     * auto constrain = pot.create( Energy::MassCenterConstrain(pot.getGeometry()) );
-     * constrain->addPair( mygroup1, mygroup2, 10, 50); 
+     * InputMap mcp;
+     * Energy::MassCenterConstrain<Tspace> pot(mcp);
+     * pot.addPair( mygroup1, mygroup2, 10, 50); 
      * @endcode
+     *
+     * The `addPair` function can be called without distance interval in
+     * which case the default window is used. This is read during from
+     * the `InputMap` using the keywords,
+     *
+     * Keyword           | Description
+     * :---------------- | :----------------------------------------
+     * `cmconstrain_min` | Minimum mass center separation (angstrom)
+     * `cmconstrain_max` | Maximum mass center separation (angstrom)
+     *
+     * @date Lund, 2012
+     * @todo Prettify output
      */
     template<typename Tspace>
       class MassCenterConstrain : public Energybase<Tspace> {
         private:
-          string _info();
+          string _info() {
+            using namespace Faunus::textio;
+            std::ostringstream o;
+            o << indent(SUB) << "The following groups have mass center constraints:\n";
+            for (auto &m : gmap)
+              o << indent(SUBSUB) << m.first.first->name << " " << m.first.second->name
+                << " " << m.second.mindist << "-" << m.second.maxdist << _angstrom << endl;
+            return o.str();
+          }
+
           struct data {
             double mindist, maxdist;
           };
+
+          data defaultWindow;
+
           std::map<opair<Faunus::Group*>, data> gmap;
+
         public:
-          MassCenterConstrain(Geometry::Geometrybase&);      //!< Constructor
-          void addPair(Group&, Group&, double, double);      //!< Add constraint between two groups
-          double g_external(const p_vec&, Group&) FOVERRIDE; //!< Constrain treated as external potential
+
+          MassCenterConstrain(InputMap &in) {
+            this->name="Group Mass Center Distance Constraints";
+            defaultWindow.mindist = in("cmconstrain_min", 0.0);
+            defaultWindow.maxdist = in("cmconstrain_max", 1.0e20);
+
+            assert(defaultWindow.mindist<defaultWindow.maxdist);
+            assert(defaultWindow.mindist>0);
+            assert(defaultWindow.maxdist>0);
+          }
+
+          /** @brief Add constraint between two groups */
+          void addPair(Group &a, Group &b, double mindist, double maxdist) {
+            data d = {mindist, maxdist};
+            opair<Group*> p(&a, &b);
+            gmap[p] = d;
+          }
+
+          /** @brief Add constraint between two groups - distances read from user input */
+          void addPair(Group &a, Group &b) {
+            addPair(a,b,defaultWindow.mindist,defaultWindow.maxdist);
+          }
+
+          /** @brief Constrain treated as external potential */
+          double g_external(const p_vec &p, Group &g1) {
+            for (auto m : gmap)              // scan through pair map
+              if (m.first.find(&g1)) {       // and look for group g1
+                Group *g2ptr;                // pointer to constrained partner
+                if (&g1 == m.first.first)
+                  g2ptr = m.first.second;
+                else
+                  g2ptr = m.first.first;
+                Point cma = Geometry::massCenter(this->getSpace().geo, p, g1);
+                Point cmb = Geometry::massCenter(this->getSpace().geo, p, *g2ptr);
+                double r2 = this->getSpace().geo.sqdist(cma,cmb);
+                double min = m.second.mindist;
+                double max = m.second.maxdist;
+                if (r2<min*min || r2>max*max) 
+                  return pc::infty;
+              }
+            return 0;
+          }
+      };
+
+    /**
+     * @brief Hydrophobic interactions using SASA
+     *
+     * This will add a square-well attraction between solvent
+     * exposed, hydrophobic sites where the strength is given
+     * by a surface tension argument, 
+     *
+     * @f[ U = \sum_i^{N_{contact}} \gamma a_i @f]
+     *
+     * where @f$a@f$ is the SASA value for a residue and `i` runs
+     * over all particles in contact with at least one other
+     * hydrophobic and exposed site(s). Note that the value of the surface
+     * tension, @f$\gamma@f$, is not comparable to a true, macroscopic
+     * tension.
+     *
+     * Upon construction the following keywords are read from `InputMap`:
+     *
+     *  Keyword                | Comment
+     *  :--------------------- | :--------------
+     *  `sasahydro_sasafile`   | SASA file - one column (angstrom^2)
+     *  `sasahydro_duplicate`  | read SASA file n times (default: 1)
+     *  `sasahydro_tension`    | surface tension (default: 0 dyne/cm)
+     *  `sasahydro_threshold`  | surface distance threshold (default: 3.0 angstrom)
+     *  `sasahydro_uofr`       | set to "yes" if U(r) should be sampled (default: "no")
+     *  `sasahydro_dr`         | distance resolution of U(r) (default: 0.5 angstrom)
+     *
+     *  The `sasafile` should be a single column file with SASA values for each particle in
+     *  the system (angstrom^2). Alternatively one can load the file several times using
+     *  the `duplicate` option. To generate a SASA file of a protein, use the vmd-sasa.tcl
+     *  VMD script, found in the `scripts` folder.
+     *
+     *  If `sasahydro_uofr` is specified, the hydrophobic interaction
+     *  energy is averaged as a function of mass center separation between groups and
+     *  saved to disk upon calling the destructor.
+     *
+     * @todo
+     * Currently only `g2g` is implemented and it is assumed that a hydrophobic site on
+     * one group is in contact with sites on *maximum one* other group. For large macro 
+     * molecules this is hardly a problem; if it is, an energy drift should show.
+     *
+     * @author Kurut / Lund
+     * @date Lund, 2014
+     * @note Experimental
+     */
+    template<class Tspace>
+      class HydrophobicSASA : public Energybase<Tspace> {
+        private:
+          typedef Energybase<Tspace> base;
+          typedef typename Tspace::p_vec Tpvec;
+          typedef std::map<int, Average<double> > Tuofr;
+
+          std::map<string,Tuofr> uofr; // sasa energy vs. group-2-group distance
+
+          vector<bool> v;      // bool for all particles; true=active
+          vector<double> sasa; // sasa for all particles
+          double threshold;    // surface-surface distance threshold
+          double tension, tension_dyne;
+          int duplicate;       // how many times to load sasa file
+          string file;         // sasa file
+
+          bool sample_uofr;    // set to true if we should sample U_sasa(r)
+          double dr;           // U(r) resolution in r
+
+          /** @brief Fraction of hydrophobic area */
+          double fracHydrophobic() const {
+            double h=0, noh=0;
+            if (sasa.size()==base::spc->p.size()) {
+              for (size_t i=0; i<sasa.size(); i++)
+                if (base::spc->p[i].hydrophobic)
+                  h+=sasa[i];
+                else
+                  noh+=sasa[i];
+              return h/(h+noh);
+            }
+            return 0;
+          }
+
+          string _info() {
+            char w=25;
+            using namespace textio;
+            std::ostringstream o;
+            o << pad(SUB,w,"SASA file") << file << " (duplicated " << duplicate << " times)\n"
+              << pad(SUB,w,"SASA vector size") << sasa.size()
+              << " (particle vector = " << base::spc->p.size() << ")\n"
+              << pad(SUB,w,"Hydrophobic SASA") << fracHydrophobic()*100 << percent + "\n"
+              << pad(SUB,w,"Threshold") << threshold << _angstrom + "\n"
+              << pad(SUB,w,"Surface tension") << tension_dyne << " dyne/cm = " << tension
+              << kT+"/"+angstrom+squared+"\n"
+              << pad(SUB,w+1,"Sample "+beta+"U(r)") << std::boolalpha << sample_uofr << "\n"
+              << pad(SUB,w+1,beta+"U(r) resolution") << dr << _angstrom + "\n";
+            return o.str();
+          }
+
+          void loadSASA(const string &file, unsigned int n) {
+            double s;
+            std::vector<double> t;
+            std::ifstream f(file);
+            while (f>>s)
+              t.push_back(s);
+            sasa.clear();
+            while (n-->0)
+              sasa.insert(sasa.end(), t.begin(), t.end());
+            if (sasa.empty())
+              std::cerr << "Warning: No SASA data loaded from "+file+"\n";
+          }
+
+          /** @brief Save U(r) to disk if sampled */
+          void save(const string &pfx=textio::prefix) {
+            for (auto &i : uofr) {
+              std::ofstream f(pfx+"Usasa_"+i.first);
+              if (f)
+                for (auto &j : i.second)
+                  f << j.first*dr << " " << j.second << "\n";
+            }
+          }
+
+        public:
+          HydrophobicSASA(InputMap &in) {
+            string pfx="sasahydro_";
+            base::name = "Hydrophobic SASA";
+            threshold = in.get<double>(pfx+"threshold", 3.0);
+            tension_dyne = in.get<double>(pfx+"tension", 0);
+            tension = tension_dyne * 1e-23 / (pc::kB * pc::T());  // dyne/cm converted to kT/A^2, 1dyne/cm = 0.001 J/m^2
+            file = in.get(pfx+"sasafile", string());
+            duplicate = in.get(pfx+"duplicate", 0);
+            sample_uofr = in.get<bool>(pfx+"uofr", false);
+            dr = in.get<double>(pfx+"dr", 0.5);
+            loadSASA(file, duplicate);
+          }
+
+          ~HydrophobicSASA() { save(); }
+
+          /** @brief Group-to-group energy */
+          double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+            double dsasa=0;
+            if (sasa.size()==p.size())
+              if (g1.isMolecular())
+                if (g2.isMolecular()) {
+                  v.resize(p.size());
+                  std::fill(v.begin(), v.end(), true);
+                  for (auto i : g1)
+                    for (auto j : g2)
+                      if (p[i].hydrophobic)
+                        if (p[j].hydrophobic)
+                          if (sasa[i]>1e-3)
+                            if (sasa[j]>1e-3)
+                              if (v[i] || v[j]) {
+                                double r2=base::spc->geo.sqdist(p[i],p[j]);
+                                if (r2<pow(threshold+p[i].radius+p[j].radius,2)) {
+                                  if (v[i])
+                                    dsasa += sasa[i];
+                                  if (v[j])
+                                    dsasa += sasa[j];
+                                  v[i]=v[j]=false;
+                                }
+                              }
+                  // analyze
+                  if (sample_uofr && !base::isTrial(p)) {
+                    double r = base::spc->geo.dist(g1.cm,g2.cm);
+                    auto k = std::minmax(g1.name,g2.name);
+                    uofr[k.first+"-"+k.second][to_bin(r,dr)] += -tension*dsasa;
+                  }
+                }
+
+            return -tension*dsasa; // in kT
+          }
       };
 
     /**

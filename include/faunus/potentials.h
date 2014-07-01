@@ -9,9 +9,8 @@
 #include <faunus/auxiliary.h>
 #include <faunus/inputfile.h>
 #include <faunus/species.h>
+#include <faunus/average.h>
 #endif
-
-using namespace Eigen;
 
 namespace Faunus {
 
@@ -19,11 +18,39 @@ namespace Faunus {
    * @brief Namespace for pair potentials
    *
    * This namespace contains classes and templates that calculates the
-   * pair potential between particles. All pair potentials are based
-   * on `Potential::PairPotentialBase` and thus have common interfaces.
+   * pair interaction energy and force between particles.
+   * All pair potentials are based
+   * on `PairPotentialBase` and thus have common interfaces.
    * Several pair potentials can be combined into
-   * one by the template `Potential::CombinedPairPotential` and a number of
+   * a new pair potential and a number of
    * common combinations are pre-defined as typedefs.
+   *
+   * ~~~
+   * CoulombHS primitiveModel();                // Note that constructor
+   * auto nonbond = Coulomb() + LennardJones(); // arguments are here
+   * auto bond    = Harmonic() - nonbond;       // omitted for clarity
+   *
+   * PointParticle a,b;                         // two particles
+   * double r2 = 100;                           // a<->b squared distance
+   * double u  = nonbond(a,b,r2);               // a<->b energy in kT
+   * ~~~
+   *
+   * As shown in the last example, pair potentials can also be subtracted
+   * which can be used to for example exclude non-bonded interactions
+   * between bonded pairs.
+   *
+   * If the pair interaction depends on particle types, use
+   * `PotentialMap` pair interaction.
+   *
+   * *Behind the scene:*
+   *
+   * The above combination of pair potentials is done at compile time
+   * using templates. This means that there is a good chance that
+   * the mixing overhead can be optimized out by the compiler.
+   * For example, when adding two potentials
+   * we construct a new `CombinedPairPotential`. Likewise when
+   * subtracting, a new `Minus` template is created and then combined.
+   *
    */
   namespace Potential {
 
@@ -65,7 +92,7 @@ namespace Faunus {
          */
         template<typename Tparticle>
           Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
-            assert(!"Force method not implemented in pair potential.");
+            std::cerr << "Using unimplemented force!" << std::endl;
             return Point(0,0,0);
           }
 
@@ -75,26 +102,49 @@ namespace Faunus {
             return Point(0,0,0);
           }
 
+        /**
+         * @brief Set space dependent features such as density dependent potentials
+         *
+         * The base-class version does nothing.
+         */
+        template<class Tspace>
+          void setSpace(Tspace&) {} 
+
         virtual void test(UnitTest&);                    //!< Perform unit test
 
         virtual std::string info(char=20);
+
     };
 
     /**
      * @brief Save pair potential and force table to disk
+     *
+     * This will save a pair potential to disk as three columns:
+     * `distance`, `energy`, and `force`. The distance interval
+     * is hard coded to `dmin=a.radius+b.radius` to `5*dmin`.
+     *
+     * Example:
+     * ~~~~
+     * using namespace Potential;
+     * CoulombLJ pot(...);
+     * save(pot, atom["Na"].id, atom["Cl"].id, "mytable.dat");
+     * ~~~~
      */
     template<class Tpairpot, class Tid>
       bool save(Tpairpot pot, Tid ida, Tid idb, string file) {
         std::ofstream f(file.c_str());
         if (f) {
-          double min=0.9 * (atom[ida].radius+atom[idb].radius);
-          particle a(atom[ida]),b(atom[idb]);
+          double min=atom[ida].radius+atom[idb].radius;
+          particle a,b;
+          a = atom[ida];
+          b = atom[idb];
           f << "# Pair potential: " << pot.brief() << endl
             << "# Atoms: " << atom[ida].name << "<->" << atom[idb].name
             << endl;
-          for (double r=min; r<=150; r+=0.5)
-            f << std::left << std::setw(10) << r << " "
-              << pot(a,b,r*r) << " " << pot.force(a,b,r*r,Point(r,0,0)) << endl; 
+          f.precision(12);
+          for (double r=min; r<=5*min; r+=0.01)
+            f << std::left << std::setw(12) << r << " "
+              << pot(a,b,r*r) << " " << pot.force(a,b,r*r,Point(r,0,0)).x() << endl; 
           return true;
         }
         return false;
@@ -322,6 +372,13 @@ namespace Faunus {
           double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
             return operator()(a,b,r.squaredNorm());
           }
+        template<typename Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            double s6=pow(a.radius+b.radius,6); //pow() is slow
+            double r6=r2*r2*r2;
+            double r14=r6*r6*r2;
+            return 6.*eps*s6*(2*s6-r6)/r14*p;
+          }
 
         string info(char);
     };
@@ -404,6 +461,19 @@ namespace Faunus {
               return eps(a.id,b.id) * (x*x - x);
             }
 
+          template<typename Tparticle>
+            Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+              double s6=pow(s2(a.id,b.id),3);
+              double r6=r2*r2*r2;
+              double r14=r6*r6*r2;
+              return 6.*eps(a.id,b.id) * s6 * (2*s6-r6) / r14 * p;
+            }
+
+          template<class Tparticle>
+            double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+              return operator()(a,b,r.squaredNorm()); 
+            }
+
           /**
            * @brief This will set a custom epsilon for a pair of particles
            * @param i Particle id of first particle
@@ -421,7 +491,7 @@ namespace Faunus {
           string info(char w=0) {
             using namespace Faunus::textio;
             std::ostringstream o;
-            o << indent(SUB) << name+" pair parameters:\n";
+            o << indent(SUB) << name+" pair parameters:\n\n";
             o.precision(4);
             int n=(int)atom.list.size();
             for (int i=0; i<n; i++)
@@ -444,7 +514,7 @@ namespace Faunus {
           PairMatrix<double> rc2,rc,c; // matrix of sigma_ij^2 and eps_ij
         public:
           CosAttractMixed(InputMap &in) : base(in) {
-            base::name="Cos^2 attraction (mixed)";
+            base::name="Cos" + textio::squared + " attraction (mixed)";
             size_t n=atom.list.size(); // number of atom types
             c.resize(n);
             rc.resize(n);
@@ -709,7 +779,7 @@ namespace Faunus {
       double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
 
       template<class Tparticle>
-        double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
+        double operator() (const Tparticle &a, const Tparticle &b, double r2) {
 #ifdef FAU_APPROXMATH
           return lB*a.charge*b.charge * invsqrtQuake(r2);
 #else
@@ -736,8 +806,8 @@ namespace Faunus {
        */
       template<class Tparticle>
         Point field (const Tparticle &p, const Point &r) const {
-          double R2 = 1.0/r.squaredNorm();
-          return p.charge*R2*r*sqrt(R2)*lB;
+          double r2i = 1.0/r.squaredNorm();
+          return p.charge*r2i*r*sqrt(r2i)*lB;
         }
 
       string info(char);
@@ -745,8 +815,7 @@ namespace Faunus {
     };
 
     /**
-     * @brief Coulomb pair potential shifted according to
-     *        Wolf/Yonezawaa, see  <http://dx.doi.org/10/j97>
+     * @brief Coulomb pair potential shifted according to Wolf/Yonezawa (<http://dx.doi.org/10/j97>)
      * @details The Coulomb potential has the form:
      * @f[
      * \beta u_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT}
@@ -773,6 +842,18 @@ namespace Faunus {
             return lB * a.charge * b.charge * (1/r2 - Rcinv + (r2*Rcinv-1)*Rcinv );
 #endif
           }
+
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
+            return operator()(a,b,r.squaredNorm());
+          }
+
+        template<typename Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            if (r2>Rc2) return Point(0,0,0);
+            return lB*a.charge*b.charge*(1-Rcinv*Rcinv*r2)/(r2*sqrt(r2))*p;
+          }
+
         string info(char);
     };
 
@@ -891,11 +972,12 @@ namespace Faunus {
       private:
         string _brief();
       protected:
-        double c,k;
+        double c,k,k2_count, z_count;
+        Average<double> k2_count_avg;
       public:
         DebyeHuckel(InputMap&);                       //!< Construction from InputMap
         template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) {
 #ifdef FAU_APPROXMATH
             double rinv = invsqrtQuake(r2);
             return lB * a.charge * b.charge * rinv * exp_cawley(-k/rinv);
@@ -921,10 +1003,118 @@ namespace Faunus {
             return lB * a.charge * b.charge / (r*r2) * exp(-k*r) * ( 1 + k*r ) * p;
 #endif
           }
+
+        /**
+         * @brief Adds counter ions to kappa
+         */
+        template<class Tspace>
+          void setSpace(Tspace &s) {
+            if (std::fabs(z_count)>1e-6) {
+              double N=s.charge() / std::fabs(z_count);
+              double V=s.geo.getVolume();
+              double k2=k*k - k2_count; // salt contribution
+              k2_count = 4*pc::pi*lB*N/V*std::pow(z_count,2); // counter ion contrib
+              k=sqrt( k2+k2_count );    // total 
+              k2_count_avg+=k2_count;   // sample average
+            }
+          } 
     };
 
     /**
-     * @brief DebyeHuckel shifted to reaach zero at given cut-off
+     * DebyeHuckel ala Chung and Denton, <http://dx.doi.org/10/nkc>
+     */
+    class DebyeHuckelDenton : public DebyeHuckel {
+      private:
+        double lB_org; // original Bjerrum length without prefactor
+
+        // Eq. 37 prefactor
+        void setBjerrum(double a_m, double a_n) {
+          double ka_m=k*a_m, ka_n=k*a_n;
+          lB=lB_org * exp(ka_m+ka_n) / ( (1+ka_m)*(1+ka_n) );
+        }
+
+        // Eq. A7, first term
+        double fmn(double m, double n) {
+          return k*(m*m + n*n + k*(m+n)*m*n) / ( (1+k*m)*(1+k*n) );
+        }
+
+        // Eq. 11
+        template<class Tpvec>
+          double eta(Tpvec &p, double V) {
+            double v=0;
+            for (auto &i : p)
+              v += pow(i.radius,3);
+            return 4*pc::pi/(3*V) * v;
+          }
+
+        // Eq. 41 - volume energy contrib. to pressure (microions)
+        // (currently salt free case, only!)
+        template<class Tpvec>
+          double p0(Tpvec &p, double V) {
+            double Z=0,sum=0;
+            for (auto &i : p) {
+              Z+=i.charge; // total charge
+              sum += pow(i.charge / (1+k*i.radius),2) / V; // Eq.41 sum
+            }
+            double p_id = std::fabs(Z)/V; // assume microion valency is unity
+            double p_ex = -k*lB_org/4/(1-eta(p,V))*sum; // Eq.41, complete
+            cout << "eta = " << eta(p,V) << endl;
+            cout << "id = " << p_id*1660*1e3 << " ex = " << p_ex*1660*1e3 << "\n";
+            return p_id + p_ex;
+          }
+ 
+      public:
+        DebyeHuckelDenton(InputMap &in) : DebyeHuckel(in) {
+          name+="-Denton";
+          lB_org=lB;
+        }
+
+        // Effective macroion-macroion interaction (Eq. 37)
+        template<class Tparticle>
+          double operator()(const Tparticle &m, const Tparticle &n, double r2) {
+            setBjerrum(m.radius, n.radius);
+            return DebyeHuckel::operator()(m,n,r2);
+          }
+
+        template<class Tparticle>
+          Point force(const Tparticle &m, const Tparticle &n, double r2, const Point &p) {
+            setBjerrum(m.radius, n.radius);
+            return DebyeHuckel::force(m,n,r2,p);
+          }
+
+        string info(char w) {
+          lB=lB_org;
+          return DebyeHuckel::info(w);
+        }
+
+        template<class Tpvec>
+          string info(Tpvec &p, double V) {
+            cout << "p0 = " << p0(p,V)*1660*1e3 << " mM\n";
+            return info(20);
+          }
+
+        /**
+         * @brief Contribution to pressure due to (dU/dk)(dk/dV), Eq.A3 / Eq.42
+         */
+        template<class Tpvec, class Tgeo>
+          double virial(Tpvec &p, Tgeo &geo) {
+            int n=int(p.size());
+            double P=0, V=geo.getVolume();
+            for (int i=0; i<n-1; i++)
+              for (int j=i+1; j<n; j++) {
+                double r2=geo.sqdist(p[i],p[j]);
+                double vmn=operator()(p[i],p[j],r2);
+                P += vmn * (fmn(p[i].radius, p[j].radius) - sqrt(r2)); // Eq. A5
+              }
+            return P * -k/(2*V*( 1-eta(p,V) )); // Eq. A3 = A5*A4
+          }
+
+        template<class Tspace>
+          void setSpace(Tspace &s) {}
+    };
+
+    /**
+     * @brief DebyeHuckel shifted to reach zero at given cut-off
      *
      * Shifted and truncated Yukawa potential of the form,
      * @f[
@@ -945,7 +1135,7 @@ namespace Faunus {
         double u_rc,dudrc;
       public:
         DebyeHuckelShift(InputMap &in) : DebyeHuckel(in) {
-          rc=in.get<double>("dh_cutoff",pc::infty);
+          rc=in.get<double>("dh_cutoff",sqrt(std::numeric_limits<double>::max()));
           rc2=rc*rc;
 #ifdef FAU_APPROXMATH
           u_rc = exp_cawley(-k*rc)/rc; // use approx. func even here!
@@ -972,18 +1162,18 @@ namespace Faunus {
               * ( exp(-k*r)/r - u_rc - (dudrc*(r-rc))  );
 #endif
           }
-        template<class Tparticle>                                                                             
-          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {                    
-            if (r2>rc2)                                                                                       
-              return Point(0,0,0);                                                                            
-#ifdef FAU_APPROXMATH                                                                                         
-            double r = 1./invsqrtQuake(r2);                                                                   
-            return lB * a.charge * b.charge * ( exp_cawley(-k*r) / r2 * (k + 1/r) + dudrc / r) * p;           
-#else                                                                                                         
-            double r=sqrt(r2);                                                                                
-            return lB * a.charge * b.charge * ( exp(-k*r) / r2 * (k + 1/r) + dudrc / r) * p;                  
-#endif                                                                                                        
-          } 
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            if (r2>rc2)
+              return Point(0,0,0);
+#ifdef FAU_APPROXMATH
+            double rinv = invsqrtQuake(r2);
+            return lB * a.charge * b.charge * ( exp_cawley(-k/rinv) / r2 * (k+rinv) + dudrc*rinv) * p;
+#else
+            double r=sqrt(r2);
+            return lB * a.charge * b.charge * ( exp(-k*r) / r2 * (k + 1/r) + dudrc / r) * p;
+#endif
+          }
     };
 
     /**
@@ -1117,9 +1307,15 @@ namespace Faunus {
             }
 
           template<typename Tparticle>
-            Point field(const Tparticle &a, const Point &r) const {
+            Point field(const Tparticle &a, const Point &r) {
               return first.field(a,r) + second.field(a,r);
             }
+
+          template<class Tspace>
+            void setSpace(Tspace &s) {
+              first.setSpace(s);
+              second.setSpace(s);
+            } 
 
           string info(char w=20) {
             return first.info(w) + second.info(w);
@@ -1171,7 +1367,7 @@ namespace Faunus {
      * This can be useful for excluding non-bonded interactions between bonded pairs.
      * Beware, though, that in the case of strongly repulsive interactions
      * for example due to particle overlap,
-     * first adding (non-bonded) then subtracting (bonded) interactions
+     * first adding then subtracting
      * may lead to numerical issues, often manifested in a system energy
      * drift.
      *
@@ -1185,17 +1381,6 @@ namespace Faunus {
         CombinedPairPotential<T1,Minus<T2>>& operator-(const T1 &pot1, const T2 &pot2) {
           return *(new CombinedPairPotential<T1,Minus<T2>>(pot1,Minus<T2>(pot2)));
         }
-
-    /**
-      @brief Old class for multipole energy. To be removed.
-      */
-    class MultipoleEnergy {
-      public:
-        double lB;
-        double ionion(double, double, double);
-        double iondip(double, const Point&, double);
-        double dipdip(const Point&, const Point&, double);
-    };
 
     /**
      * @brief Lennard-Jones potential with Lorentz-Berthelot mixing rule

@@ -46,7 +46,7 @@ namespace Faunus {
      * @param mode `std::ios_base::out` (new, default) or `std::ios_base::app` (append)
      */
     inline bool writeFile(string file, string s,
-        std::ios_base::openmode mode=std::ios_base::out) {
+      std::ios_base::openmode mode=std::ios_base::out) {
       std::ofstream f(file.c_str(), mode);
       cout << "Writing to file '" << file << "'. ";
       if (f) {
@@ -84,13 +84,15 @@ namespace Faunus {
    * - Lines beginning with # are ignored and can be placed anywhere
    * - The first non-# line gives the number of particles
    * - Every subsequent line gives atom information in the format:
-   *   name, number, x, y, z, charge number, weight, radius
-   * - Positions and radii should be in angstroms
+   *
+   *   `name number x y z charge  weight radius`
+   *
+   * - Positions and radii should be in angstroms.
    * - Currently, data in the number field is ignored.
    * - No particular spacing is required.
    *
-   *     # information
-   *     # more information
+   * Example:
+   *
    *     2
    *     Na    1     10.234 5.4454 -2.345  +1    22.0   1.7
    *     Cl    2    5.011     1.054  20.02   -1   35.0   2.0
@@ -102,7 +104,7 @@ namespace Faunus {
           std::ostringstream o;
           o.precision(5);
           o << atom[a.id].name << " " << i+1 << " " << a.x() << " " << a.y() <<" "<< a.z() << " "
-            << a.charge << " " << a.mw << " " << a.radius << std::endl;
+            << a.charge << " " << a.mw << " " << a.radius << endl;
           return o.str();
         }
 
@@ -111,13 +113,9 @@ namespace Faunus {
           std::stringstream o;
           string name, num;
           o << s;
-          o >> name >> num >> a.x() >> a.y() >> a.z() >> a.charge >> a.mw >> a.radius;
-          /*o >> a.mup.x() >> a.mup.y() >> a.mup.z() >> a.theta(0,0) >> a.theta(0,1) >> a.theta(0,2) >> a.theta(1,1) >> a.theta(1,2) >> a.theta(2,2);
-            a.theta(1,0) = a.theta(0,1);
-            a.theta(2,0) = a.theta(0,2);
-            a.theta(2,1) = a.theta(1,2);*/
-          a.id = atom[name].id;
-          a.hydrophobic = atom[a.id].hydrophobic;
+          o >> name;
+          a = atom[name];
+          o >> num >> a.x() >> a.y() >> a.z() >> a.charge >> a.mw >> a.radius;
           return a;
         }
 
@@ -236,6 +234,7 @@ namespace Faunus {
    */
   class FormatPQR {
     private:
+      // Write box dimensions (standard PDB format)
       template<class Tvec>
         static string writeCryst1(const Tvec &len, Tvec angle=Tvec(90,90,90)) {
           char buf[100];
@@ -244,9 +243,57 @@ namespace Faunus {
           return string(buf);
         }
     public:
+
+      /**
+       * @brief Simple loader for PQR files
+       *
+       * This will load coordinates from a PQR file into
+       * a particle vector. Atoms are identified by the
+       * `ATOM` and `HETATM` keywords and the PQR atom
+       * name is used to identify the particle from `AtomMap`.
+       * If the unit cell dimension, given by `CRYST1`, is
+       * found a non-zero vector is returned.
+       *
+       * @param file PQR file to load
+       * @param p Target particle vector to *append* to
+       * @return Vector with unit cell dimensions. Zero length if not found.
+       * @note This is a lazy and unsafe loader that doesn't properly
+       *       respect the PQR fixed column format. Has been tested to
+       *       work with files from VMD, pdb2pqr, and Faunus.
+       */
+      template<class Tpvec>
+        static Point load(const std::string &file, Tpvec &p) {
+          Point len(0,0,0);
+          std::ifstream in(file);
+          if (in) {
+            typename Tpvec::value_type a;
+            int iatom, ires;
+            std::string line,key,aname,rname;
+            while (std::getline(in, line)) {
+              std::stringstream o(line);
+              while (o >> key)
+                if (key=="ATOM" || key=="HETATM") {
+                  o >> iatom >> aname;
+                  a=atom[aname];
+                  o >> rname >> ires
+                    >> a.x() >> a.y() >> a.z() >> a.charge >> a.radius; 
+                  p.push_back(a);
+                } else if (key=="CRYST1")
+                  o >> len.x() >> len.y() >> len.z();
+            }
+          }
+          return len;
+        }
+
+      /**
+       * @param file Filename
+       * @param p Particle vector
+       * @param len Unit cell dimensions (optional)
+       * @param n Number of atoms in each residue (default: 1e20)
+       */
       template<class Tpvec, class Tvec=Point>
-        static bool save(const string &file, const Tpvec &p, Tvec len=Tvec(0,0,0)) {
-          int nres=1, natom=1;
+        static bool save(const string &file, const Tpvec &p, Tvec len=Tvec(0,0,0), unsigned int n=1e9) {
+          unsigned int nres=1, natom=1;
           char buf[100];
           std::ostringstream o;
           if (len.norm()>1e-6)
@@ -255,9 +302,12 @@ namespace Faunus {
             string name=atom[p_i.id].name;
             sprintf(buf, "ATOM  %5d %-4s %-4s%5d    %8.3f %8.3f %8.3f %.3f %.3f\n",
                 natom++, name.c_str(), name.c_str(), nres,
-                p_i.x(), p_i.y(), p_i.z(), p_i.charge, p_i.radius );
+                (p_i+len/2).x(), (p_i+len/2).y(), (p_i+len/2).z(), p_i.charge, p_i.radius); // move particles inside the sim. box
             o << buf;
-            if ( atom[p_i.id].name=="CTR" ) nres++;
+            if ( atom[p_i.id].name=="CTR" )
+              nres++;
+            else if (natom % n == 0)
+              nres++;
           }
           o << "END\n";
           return IO::writeFile(file, o.str());
@@ -281,17 +331,10 @@ namespace Faunus {
     public:
       template<class Tpvec, class Tvec=Point>
         static bool save(const string &file, const Tpvec &p, Tvec len=Tvec(0,0,0)) {
-          char buf[100];
-
           std::ostringstream o;
-          o << p.size();
-          sprintf(buf, "Generated by Faunus\n");
-          o << buf;
-          for (auto &p_i : p) {
-            string name=atom[p_i.id].name;
-            sprintf(buf, "%f %f %f\n", p_i.x(), p_i.y(), p_i.z() );
-            o << buf;
-          }
+          o << p.size() << "\nGenerated by Faunus\n";
+          for (auto &i : p)
+            o << atom[i.id].name << " " << Tvec(i).transpose() << "\n";
           return IO::writeFile(file, o.str());
         }
 
@@ -320,7 +363,8 @@ namespace Faunus {
         static Tparticle& s2p(const std::string &s, Tparticle &a) {
           std::stringstream o;
           o << s;
-          o >> a.x() >> a.y() >> a.z() >> a.dir.x() >> a.dir.y() >> a.dir.z() >> a.patchdir.x() >> a.patchdir.y() >> a.patchdir.z();
+          o >> a.x() >> a.y() >> a.z() >> a.dir.x() >> a.dir.y() >> a.dir.z()
+            >> a.patchdir.x() >> a.patchdir.y() >> a.patchdir.z();
           return a;
         }
     public:
@@ -369,17 +413,39 @@ namespace Faunus {
   class FormatGRO {
     private:
       std::vector<string> v;
-      particle s2p(string &);
+
+      inline particle s2p(const string &s) {
+        std::stringstream o;
+        string name;
+        double x,y,z;
+        o << s.substr(10,5) << s.substr(20,8) << s.substr(28,8) << s.substr(36,8);
+        o >> name >> x >> y >> z;
+        particle p;
+        p=atom[name]; 
+        return 10*p; //nm->angstrom
+      }
+
     public:
       double len;            //!< Box side length (cubic so far)
       p_vec p;
-      bool load(string);
+
+      inline bool load(const string &file) {
+        p.clear();
+        v.resize(0);
+        if (IO::readFile(file,v)==true) {
+          int last=atoi(v[1].c_str())+1;
+          for (int i=2; i<=last; i++)
+            p.push_back( s2p(v[i]) );
+          return true;
+        }
+        return false;
+      }
 
       template<class Tparticle, class Talloc>
-        bool save(const string &file, std::vector<Tparticle,Talloc> &p) {
+        bool save(const string &file, std::vector<Tparticle,Talloc> &p, string mode="") {
           int nres=1, natom=1;
           char buf[79];
-          double halflen=len/2;
+          double halflen=len/20; // halflen in nm
           std::ostringstream o;
           o << "Generated by Faunus -- http://faunus.sourceforge.net"
             << std::endl << p.size() << std::endl;
@@ -393,8 +459,11 @@ namespace Faunus {
               nres++;
           }
           if (len>0)
-            o << len << " " << len << " " << len << std::endl;
-          return IO::writeFile(file, o.str());
+            o << len/10 << " " << len/10 << " " << len/10 << std::endl; // box side length in nm
+          if ( mode=="append" )
+            return IO::writeFile(file, o.str(), std::ios_base::app);
+          else
+            return IO::writeFile(file, o.str(), std::ios_base::out);
         }
 
       template<class Tspace>
@@ -425,17 +494,17 @@ namespace Faunus {
 
   };
 
-  /*! \brief GROMACS xtc compressed trajectory file format
-   *  \author Mikael Lund
-   *  \date June 2007-2011, Prague / Malmo
+  /** 
+   * @brief GROMACS xtc compressed trajectory file format
    *
-   *  Saves simulation frames to a Gromacs xtc trajectory file including
-   *  box information if applicable. Molecules with periodic boundaries
-   *  can be saved as "whole" by adding their groups to the public g-vector.
+   * Saves simulation frames to a Gromacs xtc trajectory file including
+   * box information if applicable. Molecules with periodic boundaries
+   * can be saved as "whole" by adding their groups to the public g-vector.
+   *
+   * @date June 2007-2011, Prague / Malmo
    */
   class FormatXTC {
     private:
-      //p_vec p; //!< internal particle vector for temporary data
       XDRFILE *xd;        //!< file handle
       matrix xdbox;       //!< box dimensions
       rvec *x_xtc;        //!< vector of particle coordinates
@@ -452,12 +521,14 @@ namespace Faunus {
        * to the container. Coordinates are copied into both the particle vector "p" and the
        * "trial" vector. In doing so, positions are converted from nm to angstroms and the
        * coordinate system is shifted so that origin is on the middle of the box. As a safefy
-       * measure we do a container collision check to see if all particles are within the Cuboid
-       * boundaries.
+       * measure we do a container collision check to see if all particles are within
+       * the Cuboid boundaries.
        *
-       * \note The container particle vector *must* match the number of particles in the xtc file. If not
+       * @note The container particle vector *must* match the number of particles
+       *       in the xtc file. If not
        *       an error message will be issued and the function will abort.
-       * \note You may want to transfer the new box size to the pair potential if periodic boundaries are used.
+       *       You may want to transfer the new box size to the pair potential if
+       *       periodic boundaries are used.
        */
       template<class Tspace>
         bool loadnextframe(Tspace &c) {
@@ -465,17 +536,15 @@ namespace Faunus {
             if (natoms_xtc==(int)c.p.size()) { 
               int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
               if (rc==0) {
-                static double ten=10;
                 Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(c.geo);
-                Point l( xdbox[0][0], xdbox[1][1], xdbox[2][2] );
-                geo->setlen(l*ten);
+                assert(geo!=nullptr && "Geometry must to derived from Cuboid");
+                geo->setlen( Point( xdbox[0][0], xdbox[1][1], xdbox[2][2] ) );
                 for (size_t i=0; i<c.p.size(); i++) {
-                  c.p[i].x() = x_xtc[i][0]*ten - geo->len_half.x();     // store pos. in container.                 
-                  c.p[i].y() = x_xtc[i][1]*ten - geo->len_half.y();
-                  c.p[i].z() = x_xtc[i][2]*ten - geo->len_half.z();
-                  c.trial[i].x()=c.p[i].x();
-                  c.trial[i].y()=c.p[i].y();
-                  c.trial[i].z()=c.p[i].z();
+                  c.p[i].x() = x_xtc[i][0];
+                  c.p[i].y() = x_xtc[i][1];
+                  c.p[i].z() = x_xtc[i][2];
+                  c.p[i] = c.p[i]*10 - geo->len_half;
+                  c.trial[i] = Point(c.p[i]);
                   if ( geo->collision(c.p[i]) ) {
                     std::cerr << "# ioxtc load error: particle-container collision!" << endl;
                     return false;
@@ -490,10 +559,12 @@ namespace Faunus {
           return false;
         }
 
-      /*!
+      /**
        * This will take an arbitrary particle vector and add it
-       * to an xtc file. No shifting is done - only modification is conversion
-       * from aangstom to nanometers. The box dimensions for the frame must be manually
+       * to an xtc file. If the file is already open, coordinates will
+       * be added, while a new file is created if not.
+       * Coordinates are shiftet and converted to nanometers.
+       * Box dimensions for the frame must be manually
        * set by the ioxtc::setbox() function before calling this.
        */
       template<class Tpoint, class Talloc>
@@ -502,11 +573,11 @@ namespace Faunus {
             xd=xdrfile_open(&file[0], "w");
           if (xd!=NULL) {
             rvec *x = new rvec [p.size()];
-            int i=0;
+            unsigned int i=0;
             for (auto &pi : p) {
-              x[i][0] = (pi.x() ) * 0.1;      // AA->nm
-              x[i][1] = (pi.y() ) * 0.1;
-              x[i][2] = (pi.z() ) * 0.1;
+              x[i][0] = pi.x()*0.1 + xdbox[0][0]*0.5; // AA->nm
+              x[i][1] = pi.y()*0.1 + xdbox[1][1]*0.5; // move inside sim. box
+              x[i][2] = pi.z()*0.1 + xdbox[2][2]*0.5; //
               i++;
             }
             write_xtc(xd,p.size(),step_xtc++,time_xtc++,xdbox,x,prec_xtc);
@@ -516,16 +587,18 @@ namespace Faunus {
           return false;
         }
 
-      /*!
+      /**
        * @brief Save a frame to trj file (PBC)
        *
-       * Save all particles in Cuboid to xtc file. Molecules added to the ioxtc::g
+       * Save all particles in Cuboid to xtc file. Molecules added to the `ioxtc::g`
        * vector will be made whole (periodic boundaries are temporarily undone). Box
        * dimensions are taken from the Cuboid class and the particles are shifted so
        * that origin is in the corner of the box (Gromacs practice)
        *
-       * \param file Name of the output xtc file
-       * \param c Cuboid container from which particles and box dimensions are read.
+       * @param file Name of the output xtc file
+       * @param c Cuboid container from which particles and box dimensions are read.
+       *
+       * @warning This is broken!
        */
       template<class T1, class T2>
         bool save(const string &file, Space<T1,T2> &c) {
@@ -534,16 +607,16 @@ namespace Faunus {
           if (geo==nullptr)
             return false;
           setbox(geo->len.x(), geo->len.y(), geo->len.z());
-          std::vector<Point> p(c.p.size());
+          auto p=c.p;
           for (auto gi : g) {
-            gi->translate( c, -gi->cm );             // b.trial is moved to origo -> whole!
+            gi->translate( c, -gi->cm );  // b.trial is moved to origo -> whole!
             for (auto j : *gi)
-              p[j] = c.trial[j] + gi->cm;            // move back to cm without periodicity
-            gi->undo(c);                             // restore to original PBC location
+              p[j] = c.trial[j] + gi->cm; // move back to cm without periodicity
+            gi->undo(c);                  // restore to original PBC location
           }
           for (auto &pi : p)
-            pi+=geo->len_half;                       // gromacs origo is in the corner of the box
-          return save(file, p);                      // while in Cuboid we use the middle
+            pi+=geo->len_half;            // gromacs origo is in the corner of the box
+          return save(file, p);           // while in Cuboid we use the middle
         }
 
       template<class Tpvec>
@@ -559,7 +632,7 @@ namespace Faunus {
        * This will open an xtc file for reading. The number of atoms in each frame
        * is saved and memory for the coordinate array is allocated.
        */
-      bool open(string s) {
+      inline bool open(std::string s) {
         if (xd!=NULL)
           close();
         xd = xdrfile_open(&s[0], "r");
@@ -574,7 +647,7 @@ namespace Faunus {
         return false;
       }
 
-      void close() {
+      inline void close() {
         xdrfile_close(xd);
         xd=NULL;
         delete[] x_xtc;
@@ -588,7 +661,7 @@ namespace Faunus {
         x_xtc=NULL;
       }
 
-      void setbox(double x, double y, double z) {
+      inline void setbox(double x, double y, double z) {
         assert(x>0 && y>0 && z>0);
         for (int i=0; i<3; i++)
           for (int j=0; j<3; j++)
@@ -598,9 +671,9 @@ namespace Faunus {
         xdbox[2][2]=0.1*z; // in nanometers!
       }
 
-      void setbox(double len) { setbox(len,len,len); }
+      inline void setbox(double len) { setbox(len,len,len); }
 
-      void setbox(const Point &p) { setbox(p.x(), p.y(), p.z()); }
+      inline void setbox(const Point &p) { setbox(p.x(), p.y(), p.z()); }
 
   };
 
@@ -649,10 +722,10 @@ namespace Faunus {
         }
 
     public:
-      FormatTopology();
+      FormatTopology() : rescnt(0) {}
 
       template<class Tspace>
-        bool save(string topfile, Tspace &spc) {
+        bool save(const string &topfile, Tspace &spc) {
           std::set<string> done;
           std::ofstream f(topfile.c_str());
           if (f) {
@@ -673,6 +746,15 @@ namespace Faunus {
           return false;
         }
   };
+
+  /** @brief Generates TCL script for adding bonds in VMD */
+  template<class Tbondlist>
+    std::string VMDBonds(const Tbondlist &bondlist) {
+      std::ostringstream o;
+      for (auto &b : bondlist)
+        o << "topo addbond " << b.first.first << " " << b.first.second << "\n";
+      return o.str();
+    }  
 
   /** @brief Trajectory of charges per particle
    *  @author Chris Evers
@@ -712,74 +794,62 @@ namespace Faunus {
         }
   };
 
-  /*!
-   * \brief File IO for faste protein sequences
+  /*
+   * @brief Add bonded peptide from fasta sequence
+   * @param spc Space
+   * @param bonded Bonded energy class, i.e. `Energy::Bonded`
+   * @param pairpot Bond potential, i.e. `Potential::Harmonic`
+   * @param fasta Fasta sequence (captital letters, no spacing)
+   * @return Group with peptide -- remember to enroll in space using `Space::enroll`
+   * @note Untested
    */
-  template<class Tbonded>
-    class FormatFastaSequence {
-      private:
-        std::map<char,string> map; //!< Map one letter code (char) to three letter code (string)
-        Tbonded bond;
-      public:
-        FormatFastaSequence(double harmonic_k, double harmonic_req) : bond(harmonic_k, harmonic_req) {
-          map['A']="ALA";
-          map['R']="ARG";
-          map['N']="ASN";
-          map['D']="ASP";
-          map['C']="CYS";
-          map['E']="GLU";
-          map['Q']="GLN";
-          map['G']="GLY";
-          map['H']="HIS";
-          map['I']="ILE";
-          map['L']="LEU";
-          map['K']="LYS";
-          map['M']="MET";
-          map['F']="PHE";
-          map['P']="PRO";
-          map['S']="SER";
-          map['T']="THR";
-          map['W']="TRP";
-          map['Y']="TYR";
-          map['V']="VAL";
-        }
+  template<class Tspace, class Tbonded, class Tpairpot>
+    Group addFastaSequence(Tspace &spc, Tbonded &bonded, const Tpairpot &pairpot, const string &fasta) {
+      std::map<char,string> map;
+      map['A']="ALA";
+      map['R']="ARG";
+      map['N']="ASN";
+      map['D']="ASP";
+      map['C']="CYS";
+      map['E']="GLU";
+      map['Q']="GLN";
+      map['G']="GLY";
+      map['H']="HIS";
+      map['I']="ILE";
+      map['L']="LEU";
+      map['K']="LYS";
+      map['M']="MET";
+      map['F']="PHE";
+      map['P']="PRO";
+      map['S']="SER";
+      map['T']="THR";
+      map['W']="TRP";
+      map['Y']="TYR";
+      map['V']="VAL";
 
-        p_vec interpret(string seq) {
-          p_vec p;
-          particle a;
-          for (auto c : seq) {
-            if (map.find(c)!=map.end() ) {
-              a=atom[ map[c] ];
-              p.push_back(a);
-            }
-          }
-          return p;
-        }
+      Group g;
+      typename Tspace::ParticleVector p;
+      typename Tspace::ParticleVector::value_type a;
 
-        /*!
-         * Inserts at end of particle vector
-         */
-        template<class Tspace>
-          Group insert(string fasta, Tspace &spc, Tbonded &b) {
-            p_vec p = interpret(fasta);
-            Group g( p.size() );
-            if (p.size()>0) {
-              for (auto &a : p)
-                if ( spc.insert(a) )
-                  g.resize( g.size()+1 );
-              for (int i=g.front(); i<g.back(); i++)
-                b.add(i, i+1, bond );
-            }
-            return g;
-          }
+      // interpret fasta sequence
+      for (auto c : fasta) {
+        if (map.find(c)!=map.end() ) {
+          a=atom[ map[c] ];
+          p.push_back(a);
+        } else std::cerr << "Unknown character in fasta sequence!";
+      }
 
-        template<class Tspace>
-          Group include(string file, Tspace &spc, Tbonded &b) {
-            Group g;
-            return g;
-          }
-
-    };
+      if (!p.empty()) {
+        for (auto &i : p)
+          spc.geo.randompos(i);        // random positions
+        g = spc.insert(p);             // add to space
+        g.name = fasta;
+        cout << "FASTA group: " << g.info() << "\n";
+        for (int i=g.front(); i<g.back(); i++)
+          bonded.add(i, i+1, pairpot); // add bonds
+      }
+      return g;
+    }
 
 }//namespace
 #endif

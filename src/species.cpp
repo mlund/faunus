@@ -39,6 +39,9 @@ namespace Faunus {
     mu.clear();
     theta.clear();
     alpha.clear();
+    betaC = pc::infty;
+    betaD = pc::infty;
+    betaQ = pc::infty;
   }
 
   AtomMap::AtomMap() {
@@ -47,14 +50,21 @@ namespace Faunus {
     a.name="UNK";
     list.push_back(a);
   }
-  
-  AtomData & AtomMap::operator[] (AtomData::Tid i) { return list.at(i); }
+
+  AtomData & AtomMap::operator[] (AtomData::Tid i) {
+    assert(i<list.size() && "Particle id not found!");
+    return list.at(i);
+  }
 
   AtomData & AtomMap::operator[] (string s) {
     for (auto &l_i : list)
       if (s==l_i.name)
         return l_i;
     return list.at(0);
+  }
+
+  int AtomMap::size() {
+    return (int)list.size();
   }
 
   /**
@@ -68,7 +78,6 @@ namespace Faunus {
   bool AtomMap::includeJSON(const string& file) {
     int n=0;
     filename=file;
-    std::vector<double> test1 (3,0);
     auto j=json::open(file);
     for (auto &atom : json::object("atomlist", j)) {
       n++;
@@ -96,7 +105,6 @@ namespace Faunus {
       a.sigma = json::value<double>(atom.second, "sigma", a.sigma);
       a.radius = a.sigma/2;
       a.id=AtomData::Tid( list.size() );
-      
       a.half_len = 0.5 * json::value<double>(atom.second, "len", 0);
       a.patchtype = json::value<double>(atom.second, "patchtype", 0);
       a.pswitch = json::value<double>(atom.second, "patchswitch", 0);
@@ -104,10 +112,20 @@ namespace Faunus {
       a.pangl = json::value<double>(atom.second, "patchangle", 0)/180.0*pc::pi;
       a.panglsw = json::value<double>(atom.second, "patchangleswitch", 0)/180.0*pc::pi;
       a.chiral_angle = json::value<double>(atom.second, "patchchiralangle", 0)/180.0*pc::pi;
-
-        
-        
-      list.push_back(a); // add to main particle list
+      a.betaC = json::value<double>(atom.second, "betaC", pc::infty);
+      a.betaD = json::value<double>(atom.second, "betaD", pc::infty);
+      a.betaQ = json::value<double>(atom.second, "betaQ", pc::infty);
+      // add to particle list 
+      bool insert=true;
+      for (auto &i : list)
+        if (i.name==a.name) {
+          a.id=i.id; // keep old id and
+          i=a; // override existing
+          insert=false;
+          break;
+        }
+      if (insert)
+        list.push_back(a);
     }
     return (n>0) ? true : false;
   }
@@ -138,7 +156,6 @@ namespace Faunus {
           list.push_back(a);
         }
       }
-      f.close();
       return true;
     }
     cout << "FAILED!\n";

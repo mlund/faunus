@@ -2,17 +2,17 @@
 #define FAU_GEOMETRY_H
 
 #ifndef SWIG
-#include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/slump.h>
 #include <faunus/textio.h>
+#include <faunus/physconst.h>
 #include <Eigen/Geometry>
 #endif
 
 namespace Faunus {
 
-  /*!
-   * \brief Namespace for geometric operations.
+  /**
+   * @brief Namespace for geometric operations.
    *
    * This namespace contains classes for handling various simulation geometries
    * such as cubes, spheres, cylinder, slits etc. The geometry of a simulation
@@ -80,7 +80,7 @@ namespace Faunus {
         double _getVolume() const;
         string _info(char);
       public:
-        void setradius(double);                 //!< Set radius (angstrom)
+        void setRadius(double);                 //!< Set radius (angstrom)
         Sphere(double);                         //!< Construct from radius (angstrom)
         Sphere(InputMap&, string="sphere");     //!< Construct from InputMap key \c prefix_radius
         void randompos(Point &);
@@ -233,7 +233,9 @@ namespace Faunus {
         inline double sqdist(const Point &a, const Point &b) const {
           return (a-b).squaredNorm();
         }
-        inline Point vdist(const Point &a, const Point &b) { return a-b; }
+        inline Point vdist(const Point &a, const Point &b) FOVERRIDE {
+          return a-b;
+        }
     };
 
     /*!
@@ -246,6 +248,7 @@ namespace Faunus {
         PeriodicCylinder(double, double);
         PeriodicCylinder(InputMap&);
         void boundary(Point&) const;
+
         inline double sqdist(const Point &a, const Point &b) const {
           double dx=a.x()-b.x();
           double dy=a.y()-b.y();
@@ -254,7 +257,8 @@ namespace Faunus {
             dz-=len;
           return dx*dx + dy*dy + dz*dz;
         }
-        inline Point vdist(const Point &a, const Point &b) {
+
+        inline Point vdist(const Point &a, const Point &b) FOVERRIDE {
           Point r=a-b;
           if (r.z()>halflen)
             r.z()-=len;
@@ -301,9 +305,20 @@ namespace Faunus {
 
 #endif
 
-    /** @brief Calculate mass center of a group */
-    template<typename Tgeometry, typename Tp_vec, typename TGroup>
-      Point massCenter(const Tgeometry &geo, const Tp_vec &p, const TGroup &g) {
+    /**
+     * @brief Calculate center of cluster of particles
+     * @param geo Geometry
+     * @param p Particle vector
+     * @param g Range of particle index (`Group`, `vector<int>`, ...)
+     * @param weight Weight function
+     *
+     * The weight function is typically a lambda function that takes a particle
+     * as an argument and returns the weight, for example Mw, charge, or unity
+     * for mass center, charge center, or geometric center. Functions for
+     * these three examples are predefined.
+     */
+    template<class Tgeo, class Tpvec, class TGroup, class Tweightf>
+      Point anyCenter(const Tgeo &geo, const Tpvec &p, const TGroup &g, Tweightf weight) {
         assert(!p.empty());
         assert(g.back() < (int)p.size());
         Point cm(0,0,0);
@@ -313,14 +328,21 @@ namespace Faunus {
           for (auto i : g) {
             Point t = p[i]-o;       // translate to origo
             geo.boundary(t);        // periodic boundary (if any)
-            cm += t * p[i].mw;
-            sum += p[i].mw;
+            cm += t * weight(p[i]);
+            sum += weight(p[i]);
           }
-          if (sum<1e-6) sum=1;
+          if (fabs(sum)<1e-6) sum=1;
           cm=cm/sum + o;
           geo.boundary(cm);
         }
         return cm;
+      }
+
+    /** @brief Calculate mass center of cluster of particles */
+    template<class Tgeo, class Tpvec, class TGroup>
+      Point massCenter(const Tgeo &geo, const Tpvec &p, const TGroup &g) {
+        return anyCenter(geo,p,g,
+            [](const typename Tpvec::value_type &x) {return x.mw;} );
       }
 
     /** @brief Calculate mass center of a particle vector */
@@ -330,18 +352,40 @@ namespace Faunus {
           return Point(0,0,0);
         return massCenter(geo,p,Group(0,p.size()-1));
       }
-      
-     template<class Tspace, class Tgroup>
-        Point dipoleMoment(const Tspace &s, const Tgroup &g, double cutoff=1e9,Point mu=Point(0,0,0)) {
-          assert(g.size()<=(int)s.p.size());
-          for (auto i : g) {
-            Point t=s.p[i] - g.cm;
-            s.geo.boundary(t);
-            if(t.squaredNorm() < cutoff*cutoff)
-              mu += t*s.p[i].charge;
-          }
-          return mu;
+
+    /** @brief Calculate charge center of cluster of particles */
+    template<class Tgeo, class Tpvec, class TGroup>
+      Point chargeCenter(const Tgeo &geo, const Tpvec &p, const TGroup &g) {
+        return anyCenter(geo,p,g,
+            [](const typename Tpvec::value_type &x) { return std::fabs(x.charge); } );
+      }
+
+    /** @brief Calculate charge center of a particle vector */
+    template<typename Tgeometry, typename Tp_vec>
+      Point chargeCenter(const Tgeometry &geo, const Tp_vec &p) {
+        if (p.empty())
+          return Point(0,0,0);
+        return chargeCenter(geo,p,Group(0,p.size()-1));
+      }
+
+    /** @brief Calculate geometric center of cluster of particles */
+    template<class Tgeo, class Tpvec, class TGroup>
+      Point geometricCenter(const Tgeo &geo, const Tpvec &p, const TGroup &g) {
+        return anyCenter(geo,p,g,
+            [](const typename Tpvec::value_type &x) {return 1.0;} );
+      }
+
+    template<class Tspace, class Tgroup>
+      Point dipoleMoment(const Tspace &s, const Tgroup &g, double cutoff=1e9,Point mu=Point(0,0,0)) {
+        assert(g.size()<=(int)s.p.size());
+        for (auto i : g) {
+          Point t=s.p[i] - g.cm;
+          s.geo.boundary(t);
+          if(t.squaredNorm() < cutoff*cutoff)
+            mu += t*s.p[i].charge;
         }
+        return mu;
+      }
 
     /** @brief Translate a particle vector by a vector */
     template<class Tgeo, class Tpvec>
@@ -356,6 +400,12 @@ namespace Faunus {
     template<class Tgeo, class Tpvec>
       void cm2origo(const Tgeo &geo, Tpvec &p) {
         translate(geo, p, -massCenter(geo, p) );
+      }
+
+    /** @brief Translate a particle vector so charge center is in (0,0,0) */
+    template<class Tgeo, class Tpvec>
+      void cc2origo(const Tgeo &geo, Tpvec &p) {
+        translate(geo, p, -chargeCenter(geo, p) );
       }
 
     /*!
@@ -447,9 +497,13 @@ namespace Faunus {
         Eigen::Matrix3d rot_mat; // rotation matrix
         Geometrybase *geoPtr;
 
-      protected:
-
       public:
+        //!< Get rotation origin
+        Eigen::Vector3d& getOrigin() { return origin; }
+
+        //!< Get rotation origin
+        Eigen::Vector3d getOrigin() const { return origin; }
+
         //!< Get set rotation angle
         double getAngle() const { return angle_; }
 
@@ -497,6 +551,46 @@ namespace Faunus {
           return a;
         }
     };
+
+    /**
+     * @brief Calculates the volume of a collection of particles
+     *
+     * This will use a brute force, stochastic hit and miss algorithm to
+     * calculate the net volume of a collection of overlapping
+     * particles.
+     *
+     * @param p Particle vector (structure must be whole)
+     * @param n Number of iterations (default: 1e7)
+     * @param pradius Probe radius (default: 0)
+     *
+     * @todo More efficient sampling may be achieved by adjusting the
+     *       box vs. molecular volume (i.e. 1:1)
+     */
+    template<typename Tpvec>
+      double calcVolume(const Tpvec &p, unsigned int n=1e7, double pradius=0) {
+        double L=0;      // size of test box
+        Point gc(0,0,0); // geometric center of molecule
+        for (auto &i : p)
+          gc += i / p.size();
+        for (auto &i : p)
+          L = std::max(L, 2*((i-gc).norm() + i.radius + pradius));
+
+        // Start shooting!
+        Point r;
+        unsigned int hit=0, cnt=0;
+        while (++cnt<n) {
+          r.x() = slp_global.randHalf();
+          r.y() = slp_global.randHalf();
+          r.z() = slp_global.randHalf();
+          r = r*L + gc;
+          for (auto &i : p)
+            if ((i-r).squaredNorm()<pow(i.radius+pradius,2)) {
+              hit++;
+              break;
+            }
+        }
+        return hit/double(cnt) * pow(L,3);
+      }
 
   }//namespace Geometry
 }//namespace Faunus

@@ -44,6 +44,16 @@ if(Subversion_FOUND)
   endif()
 endif()
 
+find_package(Git)
+if(GIT_FOUND)
+  execute_process(
+    COMMAND ${GIT_EXECUTABLE} describe
+    OUTPUT_VARIABLE DESCRIBE_BUILD
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REGEX MATCH "[0-9]+" BUILD_NUMBER ${DESCRIBE_BUILD})
+  message(${BUILD_NUMBER})
+endif()
+
 # ----------------------------
 #  Fetch 3rd-party sasa class
 # ----------------------------

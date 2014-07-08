@@ -75,3 +75,6 @@ add_test( example_cigarsenergy ${CMAKE_CURRENT_SOURCE_DIR}/cigarsenergy.run )
 fau_cigarexample(example_cigars2fibrils "./" cigars2fibrils.cpp)
 set_target_properties(example_cigars2fibrils PROPERTIES OUTPUT_NAME "cigars2fibrils" EXCLUDE_FROM_ALL FALSE)
 
+fau_cigarexample(example_penalty "./" penalty.cpp)
+set_target_properties(example_cigarsenergy PROPERTIES OUTPUT_NAME "penalty" EXCLUDE_FROM_ALL FALSE)
+add_test( example_penalty ${CMAKE_CURRENT_SOURCE_DIR}/penalty.run )

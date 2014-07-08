@@ -794,7 +794,7 @@ namespace Faunus {
           if ( spc->geo.collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
 
-        double unew = pot->external(spc->trial) +pot->g_external(spc->trial, *igroup);
+        double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
         if (unew==pc::infty)
           return pc::infty;       // early rejection
         double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
@@ -1462,7 +1462,7 @@ namespace Faunus {
         for (auto g : spc->groupList())
           if (g!=gPtr)
             du+=pot->g2g(spc->trial, *g, *gPtr) - pot->g2g(spc->p, *g, *gPtr);
-
+        du+=pot->external(spc->trial) - pot->external(spc->p);
         //for (auto i : index)
         //  du += pot->i2all(spc->trial, i) - pot->i2all(spc->p, i);
         return du;
@@ -1709,122 +1709,122 @@ namespace Faunus {
      * @date Lund, 2014
      */
     template<class Tspace>
-    class GCMolecular : public Movebase<Tspace> {
-    private:
-      typedef Movebase<Tspace> base;
-      typedef std::map<short, Average<double> > map_type;
-      bool use2D;
-      Point dir;
-      int inmol; // molecule to be inserted
-      int outmol; // molecule to be deleted
-      int imol;
-      int idel;
-      
-      // structure for molecular data
-      struct MolData {
-        string name;
-        double activity; // in 1/angstrom^3 (3D) or 1/angstrom^2 (2D)
-        typename Tspace::ParticleVector p;
-      };
-      
-      std::vector<MolData> molvec;
-      
-      template<typename pvec>
-      void randomRotate(pvec &p) {
-        Geometry::QuaternionRotate rot;
-      }
-      
-      template<typename pvec>
-      void randomState(pvec &p) {
-        Point a;
-        base::spc->randomPos(a);
-        a=a*dir+offset;
-        auto dp = a-Geometry::massCenter(base::spc->geo, p);
-        for (auto i : &p) {
-          i=i+dp;
-          base::spc->geo.boundary(i);
-        }
-      }
-      
-      int randomMol() {
-        return slp_global.rand() % molvec.size();
-      }
-      
-      bool insert() {
-        inmol = randomMol();
-        randomState( molvec[inmol] );
-        return true;
-      }
-      
-    protected:
-      bool deleteBool;
-      string _info();
-      void _acceptMove() FOVERRIDE;
-      void _rejectMove() FOVERRIDE;
-      
-      double _energyChange() FOVERRIDE {
-        double uold=0;//, unew=0;
-        
-        // count molecules
-        int N=0;
-        for (auto g : base::spc->groupList())
-          if (g->isMolecular())
-            if ( g->name==molvec[imol] )
-              N++;
-        
-        // calc. volume or area
-        double V = base::spc->geo.getVolume();
-        if (use2D)
-          V = V / base::spc->geo.len.z();
-        
-        // in case of deletion
-        if (deleteBool) {
-          auto gi = base::spc->findGroup(idel);
-          for (auto gj : base::spc->groupList())
-            if (gi!=gj)
-              uold += base::pot->g2g( base::spc->p, *gi, *gj )
-                + base::pot->g_external( base::spc->p, *gi );
-        } else {
-          // in case of insertion
-          
-        }
+      class GCMolecular : public Movebase<Tspace> {
+        private:
+          typedef Movebase<Tspace> base;
+          typedef std::map<short, Average<double> > map_type;
+          bool use2D;
+          Point dir;
+          int inmol; // molecule to be inserted
+          int outmol; // molecule to be deleted
+          int imol;
+          int idel;
 
-        return 0;
-          
-      }
-      
-      void _trialMove() {
-        
-        // insert
-        if (slp_global()>0.5) {
-          inmol = randomMol();
-          outmol=-1;
-          randomState( molvec[inmol] );
-        }
-        // delete
-        else {
-          inmol=-1;
-          outmol=randomMol();
-          //for (auto i : base::spc->groupList())
-          //  if ()
-          
-        }
-        
-      }
-      using base::spc;
-      map_type accmap; //!< acceptance map
-      
-    public:
-      Point offset;
-      GCMolecular(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, string pfx="gcmol_") : base(e,s,pfx) {
-        dir=Point(1,1,1);
-        offset=Point(0,0,0);
-        use2D=in(pfx+"2d", true);
-        if (use2D)
-          dir.z()=1;
-      }
-    };
-    
+          // structure for molecular data
+          struct MolData {
+            string name;
+            double activity; // in 1/angstrom^3 (3D) or 1/angstrom^2 (2D)
+            typename Tspace::ParticleVector p;
+          };
+
+          std::vector<MolData> molvec;
+
+          template<typename pvec>
+            void randomRotate(pvec &p) {
+              Geometry::QuaternionRotate rot;
+            }
+
+          template<typename pvec>
+            void randomState(pvec &p) {
+              Point a;
+              base::spc->randomPos(a);
+              a=a*dir+offset;
+              auto dp = a-Geometry::massCenter(base::spc->geo, p);
+              for (auto i : &p) {
+                i=i+dp;
+                base::spc->geo.boundary(i);
+              }
+            }
+
+          int randomMol() {
+            return slp_global.rand() % molvec.size();
+          }
+
+          bool insert() {
+            inmol = randomMol();
+            randomState( molvec[inmol] );
+            return true;
+          }
+
+        protected:
+          bool deleteBool;
+          string _info();
+          void _acceptMove() FOVERRIDE;
+          void _rejectMove() FOVERRIDE;
+
+          double _energyChange() FOVERRIDE {
+            double uold=0;//, unew=0;
+
+            // count molecules
+            int N=0;
+            for (auto g : base::spc->groupList())
+              if (g->isMolecular())
+                if ( g->name==molvec[imol] )
+                  N++;
+
+            // calc. volume or area
+            double V = base::spc->geo.getVolume();
+            if (use2D)
+              V = V / base::spc->geo.len.z();
+
+            // in case of deletion
+            if (deleteBool) {
+              auto gi = base::spc->findGroup(idel);
+              for (auto gj : base::spc->groupList())
+                if (gi!=gj)
+                  uold += base::pot->g2g( base::spc->p, *gi, *gj )
+                    + base::pot->g_external( base::spc->p, *gi );
+            } else {
+              // in case of insertion
+
+            }
+
+            return 0;
+
+          }
+
+          void _trialMove() {
+
+            // insert
+            if (slp_global()>0.5) {
+              inmol = randomMol();
+              outmol=-1;
+              randomState( molvec[inmol] );
+            }
+            // delete
+            else {
+              inmol=-1;
+              outmol=randomMol();
+              //for (auto i : base::spc->groupList())
+              //  if ()
+
+            }
+
+          }
+          using base::spc;
+          map_type accmap; //!< acceptance map
+
+        public:
+          Point offset;
+          GCMolecular(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, string pfx="gcmol_") : base(e,s,pfx) {
+            dir=Point(1,1,1);
+            offset=Point(0,0,0);
+            use2D=in(pfx+"2d", true);
+            if (use2D)
+              dir.z()=1;
+          }
+      };
+
     /**
      * @brief Isobaric volume move
      *
@@ -2692,9 +2692,9 @@ namespace Faunus {
           Group* igroup;
           Point* cntr;
         public:
-          FlipFlop(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="flipflop");
+          FlipFlop(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="flipflop"); // if cylindrical geometry, string=cylinder
           void setGroup(Group&); //!< Select Group to move
-          void setCenter(Point&); //!< Select Center of Mass of the vescicle
+          void setCenter(Point&); //!< Select Center of Mass of the bilayer
       };
 
     template<class Tspace>
@@ -2724,22 +2724,26 @@ namespace Faunus {
         assert(igroup!=nullptr);
         assert(cntr!=nullptr);
         Point startpoint=spc->p[igroup->back()];
-        Point head=spc->p[igroup->front()];
-        cntr->z()=head.z()=startpoint.z();
-        Point dir = spc->geo.vdist(*cntr, startpoint)
-          / sqrt(spc->geo.sqdist(*cntr, startpoint)) * 1.1*spc->p[igroup->back()].radius;
-        if (spc->geo.sqdist(*cntr, startpoint) > spc->geo.sqdist(*cntr, head))
-          startpoint.translate(spc->geo,-dir);      // set startpoint for rotation
-        else startpoint.translate(spc->geo, dir);
-        double x1=cntr->x();
-        double y1=cntr->y();
-        double x2=startpoint.x();
-        double y2=startpoint.y();
-        Point endpoint; // rot endpoint for on axis ⊥ to line connecting cm of cylinder with 2nd TL
-        endpoint.x()=x2+1;
-        endpoint.y()=-(x2-x1)/(y2-y1)+y2;
-        endpoint.z()=startpoint.z();
-        double angle=pc::pi;
+        Point endpoint=*cntr;
+        startpoint.z()=cntr->z();
+        if (base::prefix.compare("cylinder") == 0) { // MC move in case of cylindrical geometry
+          startpoint=spc->p[igroup->back()];
+          Point head=spc->p[igroup->front()];
+          cntr->z()=head.z()=startpoint.z();
+          Point dir = spc->geo.vdist(*cntr, startpoint)
+            / sqrt(spc->geo.sqdist(*cntr, startpoint)) * 1.1*spc->p[igroup->back()].radius;
+          if (spc->geo.sqdist(*cntr, startpoint) > spc->geo.sqdist(*cntr, head))
+            startpoint.translate(spc->geo,-dir); // set startpoint for rotation
+          else startpoint.translate(spc->geo, dir);
+          double x1=cntr->x();
+          double y1=cntr->y();
+          double x2=startpoint.x();
+          double y2=startpoint.y();
+          endpoint.x()=x2+1; // rot endpoint of axis ⊥ to line connecting cm of cylinder with 2nd TL
+          endpoint.y()=-(x2-x1)/(y2-y1)+y2;
+          endpoint.z()=startpoint.z();
+        }
+        double angle=pc::pi; // MC move in case of planar geometry
         Geometry::QuaternionRotate vrot;
         vrot.setAxis(spc->geo, startpoint, endpoint, angle); //rot around startpoint->endpoint vec
         for (auto i : *igroup)
@@ -2766,10 +2770,10 @@ namespace Faunus {
           if ( spc->geo.collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
 
-        double unew = pot->g_external(spc->trial, *igroup);
+        double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
         if (unew==pc::infty)
           return pc::infty;       // early rejection
-        double uold = pot->g_external(spc->p, *igroup);
+        double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
 
         for (auto g : spc->groupList()) {
           if (g!=igroup) {

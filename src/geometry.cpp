@@ -135,13 +135,15 @@ namespace Faunus {
      * `cuboid_xlen`     | x sidelength [angstrom]
      * `cuboid_ylen`     | y sidelength [angstrom]
      * `cuboid_zlen`     | z sidelength [angstrom]
-     * `cuboid_scaledir` | Isobaric scaling directions (`XYZ`=isotropic, `XY`=xy only).
+     * `cuboid_scaledir` | Isobaric scaling directions (`XYZ`=isotropic, `XY`=xy only, 'Z'=z only).
      */
     Cuboid::Cuboid(InputMap &in) {
       name="Cuboid";
       string scaledirstr = in.get<string>("cuboid_scaledir","XYZ");
       if (scaledirstr=="XY")
         scaledir=XY;
+      else if (scaledirstr=="Z")
+        scaledir=Z;
       else
         scaledir=XYZ;
       double cubelen=in.get<double>("cuboid_len",-1, name+" sidelength (AA)");
@@ -179,7 +181,7 @@ namespace Faunus {
       std::ostringstream o;
       o << pad(SUB,w, "Sidelengths")
         << len.transpose() << " ("+textio::angstrom+")" << endl
-        << pad(SUB,w, "Scale directions") << (scaledir==XY ? "XY" : "XYZ") << endl;
+        << pad(SUB,w, "Scale directions") << scaledirstr << endl;
       return o.str();
     }
 
@@ -230,6 +232,8 @@ namespace Faunus {
         a.x() *= s;
         a.y() *= s;
       }
+      if (scaledir==Z)
+        a.z() *= newvolume/getVolume();
     }
 
     Cuboidslit::Cuboidslit(InputMap &in) : Cuboid(in) {

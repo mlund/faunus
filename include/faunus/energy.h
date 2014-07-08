@@ -8,6 +8,7 @@
 #include <faunus/inputfile.h>
 #include <faunus/space.h>
 #include <faunus/textio.h>
+#include <faunus/mpi.h>
 #include <faunus/potentials.h>
 #include <faunus/auxiliary.h>
 #endif
@@ -112,7 +113,7 @@ namespace Faunus {
 
           virtual double external(const Tpvec&)                // External energy - pressure, for example.
           { return 0; }
-          
+
           virtual void field(const Tpvec&, Eigen::MatrixXd&) //!< Calculate electric field on all particles
           { }
 
@@ -518,7 +519,7 @@ namespace Faunus {
                     for (auto i : *gi)  // loop over particle index in 1st group
                       for (auto j : *gj) // loop ove
                         E.col(i) = E.col(i) + pairpot.field(p[j],geo.vdist(p[i],p[j]));
-              } else {
+            } else {
               size_t i=0;
               for (auto &pi : p) {
                 for (auto &pj : p)
@@ -901,10 +902,10 @@ namespace Faunus {
           }
 
         /* uncommented due to gcc 4.6
-        auto getBondList() -> decltype(this->list) {
-          return Tbase::getBondList();
-        }
-        */
+           auto getBondList() -> decltype(this->list) {
+           return Tbase::getBondList();
+           }
+           */
     };
 
     /**
@@ -1074,10 +1075,10 @@ namespace Faunus {
             else
               return pc::infty;
           }
-        double i_external(const Tpvec &p, int i) {
-          auto gi = base::spc->findGroup(i);
-          return g_external(p, *gi);
-        }
+          double i_external(const Tpvec &p, int i) {
+            auto gi = base::spc->findGroup(i);
+            return g_external(p, *gi);
+          }
       };
 
     /**
@@ -1340,6 +1341,43 @@ namespace Faunus {
                 }
 
             return -tension*dsasa; // in kT
+          }
+      };
+
+    /**
+     * @brief General energy class for handling penalty function methods in 1D or 2D with
+     * user-defined reaction coordinate(s).
+     * The penalty function class and the struct of the function that defines 
+     * the reaction coordinate(s) are templated.
+     * The return type of the function can be either float or pair of floats
+     */
+    template<class Tspace, class Tpenalty, class Tfunction>
+      class PenaltyEnergy : public Energybase<Tspace> {
+        private:
+          string _info() { return "Energy from Penalty Function\n"; }
+          std::vector<Group*> gvec; // vector of pointer(s) to group(s) needed to define reaction coordinate(s)
+          Tfunction func;
+          Tspace *spcPtr;
+          typedef Energybase<Tspace> Tbase;
+        public:
+          Tpenalty pf;
+          PenaltyEnergy(Faunus::MPI::MPIController &mpi, InputMap &in) :
+            pf(mpi,in.get<int>("loop_update",1e5),
+                in.get<size_t>("hist_size",2000),
+                in.get<float>("res1",0.1),
+                in.get<float>("res2",0.1)
+              ) { Tbase::name="Penalty Function"; }
+          /**
+           * @brief The following member function takes as argument the function 
+           * that defines the reaction coordinate(s)
+           */
+          void setPenalized(Tspace *s, std::vector<Group*> &g) {
+            spcPtr = s;
+            gvec = g;
+          }
+          double external(const p_vec &p) {
+            auto coor = func(spcPtr,p,gvec);
+            return pf.find(coor);
           }
       };
 

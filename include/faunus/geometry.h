@@ -106,8 +106,9 @@ namespace Faunus {
         string _info(char);                      //!< Return info string
         void _setVolume(double);
         double _getVolume() const;
-        enum scaletype {XYZ,XY};
+        enum scaletype {XYZ,XY,Z};
         scaletype scaledir;                      //!< Scale directions for pressure scaling
+        string scaledirstr;
       protected:
         Point len_inv;                           //!< Inverse sidelengths
       public:
@@ -590,6 +591,37 @@ namespace Faunus {
             }
         }
         return hit/double(cnt) * pow(L,3);
+      }
+
+    /**
+     * @brief Calculates the gyration tensor of a molecular group
+     *
+     * @param geo Geometry to use for periodic boundaries (if any)
+     * @param p Particle vector (structure must be whole)
+     * @param m Molecular group
+     * @param m Center-of-mass of the molecular group
+     *
+     */
+    template<typename Tgeometry, typename Tpvec, typename Tgroup>
+      Eigen::Matrix<double,3,3> gyration(Tgeometry &geo, Tpvec &p, Tgroup &g, const Point &cm) {
+        double xx=0, xy=0, xz=0, yy=0, yz=0, zz=0, sum=0;
+        Point t;
+        for (auto i : g) {
+          t = p[i] - cm;
+          geo.boundary(t);
+          xx += p[i].mw * t.x() * t.x();
+          xy += p[i].mw * t.x() * t.y();
+          xz += p[i].mw * t.x() * t.z();
+          yy += p[i].mw * t.y() * t.y();
+          yz += p[i].mw * t.y() * t.z();
+          zz += p[i].mw * t.z() * t.z();
+          sum += p[i].mw;                      // total mass
+        }
+        assert(sum>0 && "Zero molecular weight not allowed.");
+        Eigen::Matrix<double,3,3> S;
+        S << xx,xy,xz,xy,yy,yz,xz,yz,zz;
+        S*=(1./sum);
+        return S;
       }
 
   }//namespace Geometry

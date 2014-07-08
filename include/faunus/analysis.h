@@ -9,8 +9,8 @@
 #include <faunus/point.h>
 #include <faunus/textio.h>
 #include <faunus/energy.h>
+#include <faunus/mpi.h>
 #include <Eigen/Core>
-
 #include <chrono>
 #include <thread>
 
@@ -251,9 +251,17 @@ namespace Faunus {
             return map[ round(x) ];
           }
 
+          /** @brief Find key and return corresponding value otherwise zero*/
+          Ty find(Tx &x) {
+            Ty value = 0;
+            auto it = map.find( round(x) );
+            if (it!=map.end()) value = it->second;
+            return value;
+          }
+
           /** @brief Save table to disk */
           template<class T=double>
-            void save(string filename, T scale=1) {
+            void save(string filename, T translate=0, T scale=1) {
               if (tabletype==HISTOGRAM) {
                 if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
                 if (map.size()>1) (--map.end())->second*=2; // -//-
@@ -261,10 +269,34 @@ namespace Faunus {
 
               if (!map.empty()) {
                 std::ofstream f(filename.c_str());
-                f.precision(10);
+                f.precision(6);
                 if (f) {
                   for (auto m : map)
-                    f << m.first << " " << get( m.first ) * scale << "\n";
+                    f << m.first << " " << (m.second + translate) * scale << "\n";
+                }
+              }
+
+              if (tabletype==HISTOGRAM) {
+                if (!map.empty()) map.begin()->second/=2;   // restore half bin width
+                if (map.size()>1) (--map.end())->second/=2; // -//-
+              }
+            }
+
+          /** @brief Save normalized table to disk */
+          template<class T=double>
+            void normSave(string filename) {
+              if (tabletype==HISTOGRAM) {
+                if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
+                if (map.size()>1) (--map.end())->second*=2; // -//-
+              }
+
+              if (!map.empty()) {
+                std::ofstream f(filename.c_str());
+                f.precision(6);
+                Ty cnt = count()*dx;
+                if (f) {
+                  for (auto m : map)
+                    f << m.first << " " << m.second/cnt << "\n";
                 }
               }
 
@@ -284,11 +316,11 @@ namespace Faunus {
 
               if (!map.empty()) {
                 std::ofstream f(filename.c_str());
-                f.precision(10);
+                f.precision(6);
                 if (f) {
-                  Tx sum_t = 0.0;
+                  Ty sum_t = 0.0;
                   for (auto m : map) {
-                    sum_t += get( m.first );
+                    sum_t += m.second;
                     f << m.first << " " << sum_t * scale << "\n";
                   }
                 }
@@ -308,30 +340,30 @@ namespace Faunus {
             return dx;
           }
 
-          /*! Returns x at minumum y */
-          Tx miny() {
+          /*! Returns iterator of minumum y */
+          typename Tmap::const_iterator min() {
             assert(!map.empty());
             Ty min=std::numeric_limits<Ty>::max();
-            Tx x=0;
-            for (auto &m : map)
-              if (m.second<min) {
-                min=m.second;
-                x=m.first;
+            typename Tmap::const_iterator it;
+            for (auto m=map.begin(); m!=map.end(); ++m)
+              if (m->second<min) {
+                min=m->second;
+                it=m;
               }
-            return x;
+            return it;
           }
 
-          /*! Returns x at minumum y */
-          Tx maxy() {
+          /*! Returns iterator of maximum y */
+          typename Tmap::const_iterator max() {
             assert(!map.empty());
             Ty max=std::numeric_limits<Ty>::min();
-            Tx x=0;
-            for (auto &m : map)
-              if (m.second>max) {
-                max=m.second;
-                x=m.first;
+            typename Tmap::const_iterator it;
+            for (auto m=map.begin(); m!=map.end(); ++m)
+              if (m->second>max) {
+                max=m->second;
+                it=m;
               }
-            return x;
+            return it;
           }
 
           /*! Returns x at minumum x */
@@ -343,6 +375,45 @@ namespace Faunus {
               break;
             }
             return x;
+          }
+
+          /*! Returns average in interval */
+          Ty ave(Tx limit1, Tx limit2) {
+            Ty ave = 0;
+            int cnt = 0;
+            assert(!map.empty());
+            for (auto &m : map) {
+              if (m.first>=limit1 && m.first<=limit2) {
+                ave+=m.second;
+                ++cnt;  
+              }
+            }
+            return ave/cnt;
+          }
+
+          /**
+           * @brief Convert table2D to vector of floats
+           */
+          vector<double> hist2buf(int &size) {
+            std::vector<double> sendBuf;
+            assert(!map.empty());
+            for (auto &m : map) {
+              sendBuf.push_back(m.first);
+              sendBuf.push_back(double(m.second));
+            }
+            sendBuf.resize(size,0);
+            return sendBuf;
+          }
+
+          /**
+           * @brief Convert vector of floats to table2D
+           */
+          void buf2hist(vector<double> &v) {
+            this->clear();
+            assert(!v.empty());
+            for (int i=0; i<v.size(); i+=2) {
+              if (int(v[i+1])!=0) this->operator()(v[i])+=int(v[i+1]);
+            }
           }
 
           /**
@@ -360,6 +431,10 @@ namespace Faunus {
                 double y;
                 f >> x >> y;
                 operator()(x)=y;
+              }
+              if (tabletype==HISTOGRAM) {
+                if (!map.empty()) map.begin()->second/=2;   // restore half bin width
+                if (map.size()>1) (--map.end())->second/=2; // -//-
               }
               return true;
             }
@@ -382,7 +457,6 @@ namespace Faunus {
             return table;
           }
       };
-
     /**
      * @brief Subtract two tables
      */
@@ -449,6 +523,523 @@ namespace Faunus {
 
         return c;
       }
+
+    template<typename Tx, typename Ty>
+      class Table3D {
+        protected:
+          typedef std::map<std::pair<Tx,Tx>,Ty> Tmap;
+          Tx dx1, dx2;
+          Tmap map;
+          string name;
+          Ty count() {
+            Ty cnt=0;
+            for (auto &m : map)
+              cnt+=m.second;
+            return cnt;
+          }
+        private:
+          Tx round1(Tx x) { return (x>=0) ? int( x/dx1+0.5 )*dx1 : int( x/dx1-0.5 )*dx1; }
+          Tx round2(Tx x) { return (x>=0) ? int( x/dx2+0.5 )*dx2 : int( x/dx2-0.5 )*dx2; }
+          virtual double get(Tx x1, Tx x2) { return operator()(x1, x2); }
+        public:
+          enum type {HISTOGRAM, XYDATA};
+          type tabletype;
+
+          /**
+           * @brief Constructor
+           * @param resolution Resolution of the x axis
+           * @param key Table type: HISTOGRAM or XYDATA
+           */
+          Table3D(Tx resolution1=1, Tx resolution2=1, type key=XYDATA) {
+            tabletype=key;
+            setResolution(resolution1, resolution2);
+          }
+
+          void clear() { map.clear(); }
+
+          void setResolution(Tx resolution1, Tx resolution2) {
+            assert( resolution1>0 && resolution2>0 );
+            dx1=resolution1;
+            dx2=resolution2;
+            map.clear();
+          }
+
+          virtual ~Table3D() {}
+
+          /** @brief Access operator - returns reference to y(x) */
+          Ty& operator() (Tx x1, Tx x2) {
+            return map[ std::make_pair(round1(x1),round2(x2)) ];
+          }
+
+          /** @brief Find key and return corresponding value otherwise zero*/
+          Ty find(std::pair<Tx,Tx> &xp) {
+            Ty value = 0;
+            auto it = map.find( std::make_pair(round1(xp.first),round2(xp.second)));
+            if (it!=map.end()) value = it->second;
+            return value;
+          }
+
+          /** @brief Save table to disk */
+          void save(string filename, Ty translate=0, Ty scale=1) {
+            if (tabletype==HISTOGRAM) { // compensate for half bin width
+              auto first = map.begin();
+              auto last = map.rbegin();
+              if (!map.empty()) {
+                for (auto it = first; it != map.end(); ++it) {
+                  if (it->first.first == first->first.first) it->second*=2;
+                  else if (it->first.second == first->first.second) it->second*=2;
+                }
+              }
+              if (map.size()>1) {
+                for (auto it = last; it != map.rend(); ++it) {
+                  if (it->first.first == last->first.first) it->second*=2;
+                  else if (it->first.second == last->first.second) it->second*=2;
+                }
+              }
+            }
+
+            if (!map.empty()) {
+              std::ofstream f(filename.c_str());
+              f.precision(6);
+              if (f) {
+                for (auto m : map)
+                  f << m.first.first << " " << m.first.second 
+                    << " " << (m.second + translate) * scale << "\n";
+              }
+            }
+
+            if (tabletype==HISTOGRAM) { // restore half bin width
+              auto first = map.begin();
+              auto last = map.rbegin();
+              if (!map.empty()) {
+                for (auto it = first; it != map.end(); ++it) {
+                  if (it->first.first == first->first.first) it->second/=2;
+                  else if (it->first.second == first->first.second) it->second/=2;
+                }
+              }
+              if (map.size()>1) {
+                for (auto it = last; it != map.rend(); ++it) {
+                  if (it->first.first == last->first.first) it->second/=2;
+                  else if (it->first.second == last->first.second) it->second/=2;
+                }
+              }
+            }
+          }
+
+          /** @brief Save normalized table to disk */
+          void normSave(string filename) {
+            if (tabletype==HISTOGRAM) { // compensate for half bin width
+              auto first = map.begin();
+              auto last = map.rbegin();
+              if (!map.empty()) {
+                for (auto it = first; it != map.end(); ++it) {
+                  if (it->first.first == first->first.first) it->second*=2;
+                  else if (it->first.second == first->first.second) it->second*=2;
+                }
+              }
+              if (map.size()>1) {
+                for (auto it = last; it != map.rend(); ++it) {
+                  if (it->first.first == last->first.first) it->second*=2;
+                  else if (it->first.second == last->first.second) it->second*=2;
+                }
+              }
+            }
+
+            if (!map.empty()) {
+              std::ofstream f(filename.c_str());
+              f.precision(6);
+              Ty cnt = count()*dx1*dx2;
+              if (f) {
+                for (auto m : map)
+                  f << m.first.first << " " << m.first.second
+                    << " " << m.second/cnt << "\n";
+              }
+            }
+
+            if (tabletype==HISTOGRAM) { // restore half bin width
+              auto first = map.begin();
+              auto last = map.rbegin();
+              if (!map.empty()) {
+                for (auto it = first; it != map.end(); ++it) {
+                  if (it->first.first == first->first.first) it->second/=2;
+                  else if (it->first.second == first->first.second) it->second/=2;
+                }
+              }
+              if (map.size()>1) {
+                for (auto it = last; it != map.rend(); ++it) {
+                  if (it->first.first == last->first.first) it->second/=2;
+                  else if (it->first.second == last->first.second) it->second/=2;
+                }
+              }
+            }
+          }
+
+          Tmap getMap() {
+            return map;
+          }
+
+          /*! Returns iterator of minumum y */
+          typename Tmap::const_iterator min() {
+            assert(!map.empty());
+            Ty min=std::numeric_limits<Ty>::max();
+            typename Tmap::const_iterator it;
+            for (auto m=map.begin(); m!=map.end(); ++m)
+              if (m->second<min) {
+                min=m->second;
+                it=m;
+              }
+            return it;
+          }
+
+          /*! Returns iterator of maximum y */
+          typename Tmap::const_iterator max() {
+            assert(!map.empty());
+            Ty max=std::numeric_limits<Ty>::min();
+            typename Tmap::const_iterator it;
+            for (auto m=map.begin(); m!=map.end(); ++m)
+              if (m->second>max) {
+                max=m->second;
+                it=m;
+              }
+            return it;
+          }
+
+          /*! Returns average in interval */
+          Ty ave(Tx limit1_x1, Tx limit2_x1, Tx limit1_x2, Tx limit2_x2) {
+            Ty ave = 0;
+            int cnt = 0;
+            assert(!map.empty());
+            for (auto &m : map) {
+              if (m.first.first>=limit1_x1 && m.first.first<=limit2_x1
+                  && m.first.second>=limit1_x2 && m.first.second<=limit2_x2) {
+                ave+=m.second;
+                ++cnt;  
+              }
+            }
+            return ave/cnt;
+          }
+
+          /**
+           * @brief Convert table3D to vector of floats
+           */
+          vector<double> hist2buf(int &size) {
+            std::vector<double> sendBuf;
+            assert(!map.empty());
+            for (auto &m : map) {
+              sendBuf.push_back(m.first.first);
+              sendBuf.push_back(m.first.second);
+              sendBuf.push_back(double(m.second));
+            }
+            sendBuf.resize(size,0);
+            return sendBuf;
+          }
+
+          /**
+           * @brief Convert vector of floats to table3D
+           */
+          void buf2hist(vector<double> &v) {
+            this->clear();
+            assert(!v.empty());
+            for (int i=0; i<v.size(); i+=3) {
+              if (v[i+2]!=0) this->operator()(v[i],v[i+1])+=int(v[i+2]);
+            }
+          }
+
+          /**
+           * @brief Load table from disk
+           */
+          bool load(const string &filename) {
+            std::ifstream f(filename.c_str());
+            if (f) {
+              map.clear();
+              while (!f.eof()) {
+                Tx x1, x2;
+                Ty y;
+                f >> x1 >> x2 >> y;
+                operator()(x1,x2)=y;
+              }
+              if (tabletype==HISTOGRAM) { // restore half bin width
+                auto first = map.begin();
+                auto last = map.rbegin();
+                if (!map.empty()) {
+                  for (auto it = first; it != map.end(); ++it) {
+                    if (it->first.first == first->first.first) it->second/=2;
+                    else if (it->first.second == first->first.second) it->second/=2;
+                  }
+                }
+                if (map.size()>1) {
+                  for (auto it = last; it != map.rend(); ++it) {
+                    if (it->first.first == last->first.first) it->second/=2;
+                    else if (it->first.second == last->first.second) it->second/=2;
+                  }
+                }
+              }
+              return true;
+            }
+            return false;
+          }
+      };
+
+    template<typename Tcoord=double>
+      class PenaltyFunction1D : public Table2D<Tcoord,double> {
+        private:
+          int _cnt;
+          int _Nupdate;
+          double _du;
+          double _du_sum;
+          int _size; // maximum number of keys in the map
+          typedef Faunus::MPI::FloatTransmitter::floatp floatp;
+          typedef Table2D<Tcoord,double> Tbase;
+          typedef Table2D<Tcoord,int> Thist;
+          Thist hist;
+          Faunus::MPI::MPIController *mpiPtr; 
+          Faunus::MPI::FloatTransmitter ft;
+        public:
+          /**
+           * @brief Constructor
+           * @param MPI controller
+           * @param Nupdate Number of moves between updates of the penalty function
+           * @param res1 Resolution of the reaction coordinate (default 1)
+           * @param size Total number of points in the penalty function
+           */
+          PenaltyFunction1D(Faunus::MPI::MPIController &mpi, int Nupdate, size_t size, Tcoord res1, Tcoord res2)
+            : Tbase(res1, Tbase::XYDATA), hist(res1, Thist::XYDATA), mpiPtr(&mpi) {
+              Tbase::name = "1D Penalty Function";
+              _size = size*2;
+              _cnt = 0;
+              _du = 0;
+              _Nupdate = Nupdate;
+              _du_sum = 0;
+            }
+          /**
+           * @brief The slaves send histograms to the master
+           * @brief The master computes the sum over all histograms and sends it to the slaves
+           */
+          void exchange() {
+            if (!mpiPtr->isMaster()) {
+              std::vector<floatp> sendBuf = hist.hist2buf(_size);
+              std::vector<floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
+              hist.buf2hist(recvBuf);
+            }
+            if (mpiPtr->isMaster()) {
+              std::vector<floatp> sendBuf = hist.hist2buf(_size);
+              std::vector<floatp> recvBuf(_size);
+              for (int i=0; i<mpiPtr->nproc(); ++i) {
+                if (i==mpiPtr->rankMaster()) continue;
+                ft.recvf(*mpiPtr, i, recvBuf);
+                ft.waitrecv();
+                sendBuf.insert(sendBuf.end(), recvBuf.begin(), recvBuf.end());
+              }
+              hist.buf2hist(sendBuf);
+              sendBuf = hist.hist2buf(_size);
+              for (int i=1; i<mpiPtr->nproc(); ++i) {
+                ft.sendf(*mpiPtr, sendBuf, i);
+                ft.waitsend();
+              }
+              hist.buf2hist(sendBuf);
+            }
+          }
+
+          /** 
+           * @brief Update histogram of the single process 
+           * @brief Merge histograms from all processes and update the penalty function
+           */
+          double update(Tcoord coord) {
+            _cnt++;
+            hist(coord)++; // increment internal histogram
+            _du = 0;
+            if ((_cnt%_Nupdate)==0) { // if Nupdate'th time
+              exchange();
+              for (auto &m : hist.getMap()) { // update penalty function
+                Tbase::operator()(m.first) += std::log(m.second);
+              }
+              double min = Tbase::min()->second;
+              for (auto &m : Tbase::getMap()) {
+                Tbase::operator()(m.first) -= min;
+              }
+              assert(hist(coord)!=0 && "hist_size (>= max # of points in histogram) is set too small.");
+              _du = std::log(hist(coord)) - min; // prevents energy drift
+              _du_sum += _du;
+              hist.clear();
+            }
+            return _du;
+          }
+
+          /*! \brief Save table to disk */
+          void save(const string &filename) {
+            Tbase::save(filename);
+            hist.save(filename+".dist");
+          }
+
+          /*! \brief Translate penalty by a reference value and save it to disk */
+          void save_final(const string &filename, Tcoord a, Tcoord b) {
+            double ref_value = - Tbase::ave(a,b);
+            Tbase::save(filename,ref_value,1.);
+          }
+
+          /*! \brief Load table to disk */
+          void load(const string &filename) {
+            Tbase::load(filename);
+            hist.load(filename+".dist");
+          }
+
+          void test(UnitTest &t) {
+            auto it_max = Tbase::max();
+            auto it_min = Tbase::min();
+            t("Penalty range", it_max->second-it_min->second );
+          }
+
+          string info() {
+            using namespace Faunus::textio;
+            std::ostringstream o;
+            o << header("1D penalty function");
+            if (_cnt/_Nupdate>=1) {
+              char w=25;
+              auto it_max = Tbase::max();
+              auto it_min = Tbase::min();
+              o << textio::pad(SUB,w, "Number of updates") << _cnt/_Nupdate << endl
+                << textio::pad(SUB,w, "Point of lowest penalty") << it_min->first 
+                << " " << angstrom << endl
+                << textio::pad(SUB,w, "Point of highest penalty") << it_max->first
+                << " " << angstrom << endl
+                << textio::pad(SUB,w, "Penalty range") << it_max->second-it_min->second << kT << endl
+                << textio::pad(SUB,w, "Drift compensation") << _du_sum << kT << endl;
+            }
+            return o.str();
+          }
+      };
+
+    template<typename Tcoord=double>
+      class PenaltyFunction2D : public Table3D<Tcoord,double> {
+        private:
+          int _cnt;
+          int _Nupdate;
+          double _du;
+          double _du_sum;
+          int _size; // maximum number of keys in the map
+          typedef Faunus::MPI::FloatTransmitter::floatp floatp;
+          typedef Table3D<Tcoord,double> Tbase;
+          typedef Table3D<Tcoord,int> Thist;
+          Thist hist;
+          Faunus::MPI::MPIController *mpiPtr; 
+          Faunus::MPI::FloatTransmitter ft;
+        public:
+          /**
+           * @brief Constructor
+           * @param MPI controller
+           * @param Nupdate Number of moves between updates of the penalty function
+           * @param res1 Resolution of one coordinate (default 1)
+           * @param res2 Resolution of the other coordinate (default 1)
+           * @param size Total number of points in the penalty function
+           */
+          PenaltyFunction2D(Faunus::MPI::MPIController &mpi, int Nupdate, size_t size, Tcoord res1, Tcoord res2)
+            : Tbase(res1, res2, Tbase::XYDATA), hist(res1, res2, Thist::XYDATA), mpiPtr(&mpi) {
+              Tbase::name = "2D Penalty Function";
+              _size = size*3;
+              _cnt = 0;
+              _du = 0;
+              _Nupdate = Nupdate;
+              _du_sum = 0;
+            }
+          /**
+           * @brief The slaves send histograms to the master
+           * @brief The master computes the sum over all histograms and sends it to the slaves
+           */
+          void exchange() {
+            if (!mpiPtr->isMaster()) {
+              std::vector<floatp> sendBuf = hist.hist2buf(_size);
+              std::vector<floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
+              hist.buf2hist(recvBuf);
+            }
+            if (mpiPtr->isMaster()) {
+              std::vector<floatp> sendBuf = hist.hist2buf(_size);
+              std::vector<floatp> recvBuf(_size);
+              for (int i=0; i<mpiPtr->nproc(); ++i) {
+                if (i==mpiPtr->rankMaster()) continue;
+                ft.recvf(*mpiPtr, i, recvBuf);
+                ft.waitrecv();
+                sendBuf.insert(sendBuf.end(), recvBuf.begin(), recvBuf.end());
+              }
+              hist.buf2hist(sendBuf);
+              sendBuf = hist.hist2buf(_size);
+              for (int i=1; i<mpiPtr->nproc(); ++i) {
+                ft.sendf(*mpiPtr, sendBuf, i);
+                ft.waitsend();
+              }
+              hist.buf2hist(sendBuf);
+            }
+          }
+
+          /** 
+           * @brief Update histogram of the single process 
+           * @brief Merge histograms from all processes and update the penalty function
+           */
+          double update(Tcoord coord1, Tcoord coord2) {
+            _cnt++;
+            hist(coord1, coord2)++; // increment internal histogram
+            _du = 0;
+            if ((_cnt%_Nupdate)==0) { // if Nupdate'th time
+              exchange();
+              for (auto &m : hist.getMap()) { // update penalty function
+                Tbase::operator()(m.first.first, m.first.second) += std::log(m.second);
+              }
+              double min = Tbase::min()->second;
+              for (auto &m : Tbase::getMap()) {
+                Tbase::operator()(m.first.first, m.first.second) -= min;
+              }
+              assert(hist(coord1, coord2)!=0 && "hist_size (>= max # of points in histogram) is set too small.");
+              if (hist(coord1, coord2)==0) cout << mpiPtr->rank() << " hist(coord1, coord2)=0\n";
+              _du = std::log(hist(coord1, coord2)) - min; // prevents energy drift
+              _du_sum += _du;
+              hist.clear();
+            }
+            return _du;
+          }
+
+          /*! \brief Save table to disk */
+          void save(const string &filename) {
+            Tbase::save(filename);
+            hist.save(filename+".dist");
+          }
+
+          /*! \brief Translate penalty by a reference value and save it to disk */
+          void save_final(const string &filename, Tcoord a,
+              Tcoord b, Tcoord c, Tcoord d) {
+            double ref_value = - Tbase::ave(a,b,c,d);
+            Tbase::save(filename,ref_value,1.);
+          }
+
+          /*! \brief Load table to disk */
+          void load(const string &filename) {
+            Tbase::load(filename);
+            hist.load(filename+".dist");
+          }
+
+          void test(UnitTest &t) {
+            auto it_max = Tbase::max();
+            auto it_min = Tbase::min();
+            t("Penalty range", it_max->second-it_min->second );
+          }
+
+          string info() {
+            using namespace Faunus::textio;
+            std::ostringstream o;
+            o << header("2D penalty function");
+            if (_cnt/_Nupdate>=1) {
+              char w=25;
+              auto it_max = Tbase::max();
+              auto it_min = Tbase::min();
+              o << textio::pad(SUB,w, "Number of updates") << _cnt/_Nupdate << endl
+                << textio::pad(SUB,w, "Point of lowest penalty") << "(" << it_min->first.first 
+                << ", " << it_min->first.second << ") " << angstrom << endl
+                << textio::pad(SUB,w, "Point of highest penalty") << "(" << it_max->first.first 
+                << ", " << it_max->first.second << ") " << angstrom << endl
+                << textio::pad(SUB,w, "Penalty range") << it_max->second-it_min->second << kT << endl
+                << textio::pad(SUB,w, "Drift compensation") << _du_sum << kT << endl;
+            }
+            return o.str();
+          }
+      };
 
     /**
       @brief General class for penalty functions along a coordinate
@@ -1582,7 +2173,7 @@ namespace Faunus {
         Analysis::Histogram<double,unsigned int> HM_x,HM_y,HM_z,HM_x_box,HM_y_box,HM_z_box,HM2,HM2_box;
         Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std, V_t;
         Average<double> mu_abs;
-        
+
         int sampleKW;
         double cutoff2, N;
         double const_Diel, const_DielTinfoil, const_DielCM, const_DielRF, epsRF, constEpsRF;
@@ -1602,12 +2193,12 @@ namespace Faunus {
         void setCutoff(double cutoff) {
           cutoff2 = cutoff*cutoff;
         }
-        
+
         void updateDielectricConstantRF(double er) {
           epsRF = er;
           constEpsRF = 2*(epsRF - 1)/(2*epsRF + 1);
         }
-        
+
         void updateConstants(double volume) {
           V_t += volume;
           const_DielTinfoil = const_Diel/V_t.avg();
@@ -1718,7 +2309,7 @@ namespace Faunus {
           double temp = M2_box.avg()*const_DielCM;
           return ((1 + 2*temp)/(1 - temp));
         }  
-        
+
         /**
          * @brief Returns dielectric constant ( Reaction Field ).
          * 
@@ -1733,7 +2324,7 @@ namespace Faunus {
           //double two = 0.5*(2*constEpsRF - 4*avgRF + 1 - sqrtRF)/(constEpsRF + avgRF - 1);
           return one;
         }  
-        
+
         /**
          * @brief Saves data to files. 
          * @param nbr Extention of filename
@@ -1860,10 +2451,10 @@ namespace Faunus {
           std::ostringstream o;
           o << header("Dipole analysis");
           o << indent(SUB) << epsilon_m+subr+"(Tinfoil)" << setw(22) << getDielTinfoil() << ", "+sigma+"=" << diel_std.stdev() << ", "+sigma+"/"+epsilon_m+subr+"=" << (100*diel_std.stdev()/getDielTinfoil()) << percent << endl
-          << indent(SUB) << bracket("M"+squared) << setw(27) << pc::eA2D(M2_box.avg(),2) << " Debye"+squared+", "+sigma+"=" << pc::eA2D(M2_box.stdev(),2) << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg()) << percent << endl
-          << indent(SUB) << bracket("M") << setw(25) << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl 
-          << indent(SUBSUB) << sigma << setw(25) << "( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl
-          << indent(SUB) << bracket("|"+mu+"|") << setw(25) << pc::eA2D(mu_abs.avg()) << " Debye, "+sigma+"=" << pc::eA2D(mu_abs.stdev()) << ", "+sigma+"/"+bracket("|"+mu+"|")+"=" << (100*mu_abs.stdev()/mu_abs.avg()) << percent << endl;
+            << indent(SUB) << bracket("M"+squared) << setw(27) << pc::eA2D(M2_box.avg(),2) << " Debye"+squared+", "+sigma+"=" << pc::eA2D(M2_box.stdev(),2) << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg()) << percent << endl
+            << indent(SUB) << bracket("M") << setw(25) << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl 
+            << indent(SUBSUB) << sigma << setw(25) << "( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl
+            << indent(SUB) << bracket("|"+mu+"|") << setw(25) << pc::eA2D(mu_abs.avg()) << " Debye, "+sigma+"=" << pc::eA2D(mu_abs.stdev()) << ", "+sigma+"/"+bracket("|"+mu+"|")+"=" << (100*mu_abs.stdev()/mu_abs.avg()) << percent << endl;
           return o.str();
         }
     };

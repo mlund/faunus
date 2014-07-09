@@ -6,8 +6,9 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   set(CMAKE_CXX_FLAGS "-std=c++0x -funroll-loops -Wall -Wno-unknown-pragmas -Wextra -Wno-unused-parameter")
 
 # Intel
+# (list of warning codes: icpc -diag-dump a.cpp)
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
-  set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wcheck -wd2259,981,869,383 -Wno-unknown-pragmas")
+  set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wcheck -wd2259,3180 -Wno-unknown-pragmas")
 
 # Clang
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")

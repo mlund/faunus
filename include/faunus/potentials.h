@@ -12,8 +12,6 @@
 #include <faunus/average.h>
 #endif
 
-using namespace Eigen;
-
 namespace Faunus {
 
   /**
@@ -808,8 +806,8 @@ namespace Faunus {
        */
       template<class Tparticle>
         Point field (const Tparticle &p, const Point &r) const {
-          double R2 = 1.0/r.squaredNorm();
-          return p.charge*R2*r*sqrt(R2)*lB;
+          double r2i = 1.0/r.squaredNorm();
+          return p.charge*r2i*r*sqrt(r2i)*lB;
         }
 
       string info(char);
@@ -1309,7 +1307,7 @@ namespace Faunus {
             }
 
           template<typename Tparticle>
-            Point field(const Tparticle &a, const Point &r) const {
+            Point field(const Tparticle &a, const Point &r) {
               return first.field(a,r) + second.field(a,r);
             }
 

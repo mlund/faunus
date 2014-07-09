@@ -71,7 +71,7 @@ namespace Faunus {
     }
 
     Sphere::Sphere(double radius) {
-      setradius(radius);
+      setRadius(radius);
     }
 
     /**
@@ -82,11 +82,11 @@ namespace Faunus {
      * `sphere_radius`   | Sphere radius [angstrom]
      */
     Sphere::Sphere(InputMap &in, string prefix)  {
-      setradius(
+      setRadius(
           in.get<double>(prefix+"_radius", -1.0, "Spherical container radius (A)") );
     }
 
-    void Sphere::setradius(double radius) {
+    void Sphere::setRadius(double radius) {
       assert(radius>0 && "Radius must be larger than zero.");
       name="Spherical";
       r = radius; 
@@ -99,7 +99,7 @@ namespace Faunus {
     }
 
     void Sphere::_setVolume(double vol) {
-      setradius( cbrt( 3*vol/(4*pc::pi) ) );
+      setRadius( cbrt( 3*vol/(4*pc::pi) ) );
     }
 
     void Sphere::scale(Point &a, const double &newvolume) const {

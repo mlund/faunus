@@ -1,137 +1,110 @@
 #include <faunus/faunus.h>
-#include <faunus/multipole.h>
-using namespace Faunus;                          // use Faunus namespace
+
+using namespace Faunus;
 using namespace Faunus::Move;
 using namespace Faunus::Potential;
 
-typedef Space<Geometry::Cuboid,DipoleParticle> Tspace; 
-typedef DipoleDipoleWolf TpairDDW;
-typedef LennardJones TpairLJ;
-typedef CombinedPairPotential<TpairLJ,TpairDDW> Tpair;
+typedef Space<Geometry::Cuboid,DipoleParticle> Tspace;
+typedef CombinedPairPotential<LennardJonesLB,MultipoleWolf<true,true,true,false>> Tpairpot;
+//typedef CombinedPairPotential<LennardJonesLB,Coulomb> Tpairpot1;
+//typedef CombinedPairPotential<Tpairpot1,IonDipole> Tpairpot2;
+//typedef CombinedPairPotential<Tpairpot2,DipoleDipole> Tpairpot;
 
-#ifdef POLARIZE
-typedef Move::PolarizeMove<AtomicTranslation<Tspace> > TmoveTran; 
-typedef Move::PolarizeMove<AtomicRotation<Tspace> > TmoveRot;
-#else
-typedef Move::AtomicTranslation<Tspace> TmoveTran;   
-typedef Move::AtomicRotation<Tspace> TmoveRot;
-#endif
-
-
-template<class Tpairpot, class Tid>
-bool savePotential(Tpairpot pot, TmoveRot rot, Tid ida, Tid idb, string file) {
-  std::ofstream f(file.c_str());
-  if (f) {
-    double min=1.1 * (atom[ida].radius+atom[idb].radius);
-    DipoleParticle a,b;
-    a=atom[ida];
-    b=atom[idb];
-    a.mu = Point(1,0,0);
-    b.mu = Point(1,0,0);
-    for (double r=min; r<=14; r+=0.05) {
-      f << std::left << std::setw(10) << r << " "
-        << pot(a,b,Point(r,0,0)) << endl;
-    }
-    return true;
-  }
-  return false;
-}
-
-int runSim(string name) {
-  InputMap in(name);               // open parameter file for user input
-  Energy::NonbondedVector<Tspace,Tpair> pot(in); // non-bonded only
-  Energy::NonbondedVector<Tspace,TpairDDW> potDDW(in);
-  Energy::NonbondedVector<Tspace,TpairLJ> potLJ(in);
-  EnergyDrift sys;                               // class for tracking system energy drifts
-  Tspace spc(in);                // create simulation space, particles etc.
-  Group sol;
-  sol.addParticles(spc, in);                     // group for particles
-  MCLoop loop(in);                               // class for mc loop counting
-  TmoveTran trans(in,pot,spc);
-  TmoveRot rot(in,pot,spc);
-  trans.setGroup(sol);                                // tells move class to act on sol group
-  rot.setGroup(sol);                                  // tells move class to act on sol group
-  spc.load("state");
-  spc.trial = spc.p;
-  UnitTest test(in);               // class for unit testing
-  
-  Analysis::DipoleAnalysis dian(spc);
-  Average<double> EnergyDDW;
-  Average<double> EnergyLJ;
-  FormatXTC xtc(spc.geo.len.norm());
-  DipoleWRL sdp;
-
-  savePotential(TpairDDW(in),rot, atom["sol"].id, atom["sol"].id, "pot_dipdip.dat");
-  
-  std::vector<double> EDDW;
-  std::vector<double> ELJ;
-  
-  sys.init( Energy::systemEnergy(spc,pot,spc.p)  );   // initial energy
-  double DDW = Energy::systemEnergy(spc,potDDW,spc.p);
-  double LJ = Energy::systemEnergy(spc,potLJ,spc.p);
-  EDDW.push_back(DDW);
-  ELJ.push_back(LJ);
-  EnergyDDW += DDW;
-  EnergyLJ += LJ;
-
-  while ( loop.macroCnt() ) {                         // Markov chain 
-    while ( loop.microCnt() ) {
-      if (slp_global() > 0.5)
-        sys+=trans.move( sol.size() );                // translate
-      else
-        sys+=rot.move( sol.size() );                  // rotate
-
-      if (slp_global() < 0.2) {
-        DDW = Energy::systemEnergy(spc,potDDW,spc.p);
-        LJ = Energy::systemEnergy(spc,potLJ,spc.p);
-        EDDW.push_back(DDW);
-        ELJ.push_back(LJ);
-        EnergyDDW += DDW;
-        EnergyLJ += LJ;
-        dian.sampleMuCorrelationAndKirkwood(spc);
-        xtc.save(textio::prefix+"xtcout.xtc", spc.p); 
-      }
-      dian.sampleDP(spc);
-    }
-    dian.save(std::to_string(loop.count()));
-    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
-  }
-  
-  // Perform unit tests
-  trans.test(test);
-  rot.test(test);
-  sys.test(test);
-  
-  // Show info
-  std::cout << spc.info() + pot.info() + trans.info()
-    + rot.info() + sys.info() + dian.info();
-    
-  cout << "\n  System DipoleDipoleWolf average energy: " << EnergyDDW.avg() << " kT" << endl;
-  cout << "  System LennardJones average energy:     " << EnergyLJ.avg() << " kT" << "\n" << endl;
-    
-  // Save data
-  dian.save();
-  sdp.saveDipoleWRL("stockmayer.wrl",spc,sol);
-  FormatPQR().save("confout.pqr", spc.p);
-  spc.save("state");
-  
-  string filenameDDW = "energyDDW.dat";
-  string filenameLJ = "energyLJ.dat";
-  std::ofstream fDDW(filenameDDW.c_str());
-  std::ofstream fLJ(filenameLJ.c_str());
-  fDDW.precision(10);
-  fLJ.precision(10);
-  for(int i = 0; i < int(EDDW.size()); i++) {
-    fDDW << EDDW.at(i) << "\n";
-    fLJ << ELJ.at(i) << "\n";
-  }
-
-  return test.numFailed();
-}
+//typedef CombinedPairPotential<LennardJonesLB,IonIonGaussianDamping> Tpairpot1;
+//typedef CombinedPairPotential<Tpairpot1,IonDipoleGaussianDamping> Tpairpot2;
+//typedef CombinedPairPotential<Tpairpot2,DipoleDipoleGaussianDamping> Tpairpot;
 
 int main() {
-  // cout << "Equilibration done ! Code: " << runSim("stockmayerEQ.input") << "!" << endl;
-  int prod = runSim("stockmayer.input");
-  cout << "Production done ! Code: " << prod << "!" << endl;
-  return prod;
+  InputMap mcp("water2.input");//read input file
+  slp_global.seed(mcp.get<int>("seed", -7));
+
+  // Energy functions and space
+  auto pot = Energy::NonbondedVector<Tspace,Tpairpot>(mcp)
+    + Energy::ExternalPressure<Tspace>(mcp);
+  Tspace spc(mcp);
+
+  // Load and add polymer to Space
+  auto N    = mcp.get<int>("mol_N",1);
+  auto file = mcp.get<string>("mol_file");
+  vector<Group> water(N);
+  Tspace::ParticleVector v;                   // temporary, empty particle vector
+  FormatAAM::load(file,v);                    // load AAM structure into v
+  for (auto &i : water) {
+    Geometry::FindSpace f;
+    f.allowMatterOverlap=true;
+    f.find(spc.geo,spc.p,v);// find empty spot in particle vector
+    i = spc.insert(v);                          // Insert into Space
+    i.name="h2o";
+    spc.enroll(i);
+  }
+
+  // Markov moves and analysis
+  Move::PolarizeMove<TranslateRotate<Tspace> >  gmv(mcp,pot,spc);
+  //Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
+  Move::Isobaric<Tspace> iso(mcp,pot,spc);
+  
+  Analysis::RadialDistribution<> rdfOO(0.05);
+  Analysis::RadialDistribution<> rdfOH(0.05);
+  Analysis::RadialDistribution<> rdfHH(0.05);
+
+  spc.load("state"); // load old config. from disk (if any)
+  Analysis::DipoleAnalysis dian(spc,mcp);
+  dian.load(mcp.get<string>("dipole_data_ext", ""));
+
+  FormatPQR::save("initial.pqr", spc.p);
+
+  EnergyDrift sys;   // class for tracking system energy drifts
+  sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
+
+  cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
+
+  MCLoop loop(mcp);            // class for handling mc loops
+  while ( loop.macroCnt() ) {  // Markov chain 
+    while ( loop.microCnt() ) {
+      int i=slp_global.rand() % 2;
+      int j,k=water.size();
+      Group g;
+      switch (i) {
+        case 0:
+          while (k-->0) {
+            j=slp_global.rand() % (water.size());
+            gmv.setGroup(water[j]);
+            sys+=gmv.move();          // translate/rotate polymers
+          }
+          break;
+        case 1:
+          sys+=iso.move();
+          break;
+      }
+      dian.sampleDP(spc);
+      // sample oxygen-oxygen rdf
+      if (slp_global()>0.5) {
+        dian.sampleMuCorrelationAndKirkwood(spc);
+        auto idO = atom["OW"].id;
+        auto idH = atom["HW"].id;
+        rdfOO.sample(spc,idO,idO);
+        rdfOH.sample(spc,idO,idH);
+        rdfHH.sample(spc,idH,idH);
+      }
+    } // end of micro loop
+    //rdfOO.save("rdfOO.dat"+std::to_string(loop.count()));
+    //rdfOH.save("rdfOH.dat"+std::to_string(loop.count()));
+    //rdfHH.save("rdfHH.dat"+std::to_string(loop.count()));
+    //dian.save(std::to_string(loop.count()));
+    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // energy drift?
+
+    cout << loop.timing();
+  } // end of macro loop
+
+  // save to disk
+  spc.save("state");
+  rdfOO.save("rdfOO.dat");
+  rdfOH.save("rdfOH.dat");
+  rdfHH.save("rdfHH.dat");
+  spc.save("state");
+  dian.save();
+  FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
+
+  // print information
+  cout << loop.info() + sys.info() + gmv.info() + iso.info() + dian.info();
 }

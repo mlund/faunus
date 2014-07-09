@@ -78,14 +78,6 @@ namespace Faunus {
         return size()/molsize;
       }
 
-      /** @brief Total charge
-      template<class Tpvec>
-        double charge(const Tpvec &p, double Z=0) const {
-          for (auto i : *this) Z+=p[i].charge;
-          return Z;
-        }
-        */
-
       /**
        *  @brief   Calculates mass center - does not touch group!
        *  @warning Intra-molecular distances must not exceed half

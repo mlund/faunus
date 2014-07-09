@@ -31,7 +31,7 @@ int main() {
   spc.load("state");
   spc.trial = spc.p;
   UnitTest test(in);               // class for unit testing
-  Analysis::DipoleAnalysis dian(spc);
+  Analysis::DipoleAnalysis dian(spc,in);
   DipoleWRL sdp;
   FormatXTC xtc(spc.geo.len.norm());
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );   // initial energy

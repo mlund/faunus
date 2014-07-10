@@ -9,7 +9,7 @@
  *               and "numHydrophobic".
  *        
  * @author Joao Henriques
- * @date   2014/05/23
+ * @date   2014/07/10
  */
 
 using namespace Faunus;
@@ -209,6 +209,9 @@ int main() {
   } // End of macro loop
   
   FormatPQR::save("simulation.pqr", spc.p, spc.geo.len);
+
+  // TO DO: Move this inside the macro loop, because if simulation crashes before completion, 
+  // there will be no checkpoint to restart from
   spc.save("simulation.state");
 
 #ifdef SLIT

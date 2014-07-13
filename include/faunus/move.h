@@ -1476,6 +1476,8 @@ namespace Faunus {
           if (g!=gPtr)
             du+=pot->g2g(spc->trial, *g, *gPtr) - pot->g2g(spc->p, *g, *gPtr);
 
+        du += pot->external(spc->trial) - pot->external(spc->p);
+
         //for (auto i : index)
         //  du += pot->i2all(spc->trial, i) - pot->i2all(spc->p, i);
         return du;

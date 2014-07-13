@@ -12,6 +12,10 @@
 #include <faunus/auxiliary.h>
 #endif
 
+#ifdef FAU_POWERSASA
+#include <power_sasa.h>
+#endif
+
 namespace Faunus {
 
   /**
@@ -1342,6 +1346,87 @@ namespace Faunus {
             return -tension*dsasa; // in kT
           }
       };
+
+#ifdef FAU_POWERSASA
+    /**
+     * @brief SASA energy from transfer free energies
+     *
+     * Detailed description here...
+     */
+    template<class Tspace>
+      class SASAEnergy : public Energybase<Tspace> {
+        private:
+          vector<double> tfe; // transfer free energies (1/angstrom^2)
+          vector<double> sasa; // transfer free energies (1/angstrom^2)
+          vector<Point> sasaCoords;
+          vector<double> sasaWeights;
+          double probe; // sasa probe radius (angstrom)
+          double conc;  // co-solute concentration (mol/l)
+          Average<double> avgArea; // average surface area
+
+          typedef typename Energybase<Tspace>::Tpvec Tpvec;
+
+          string _info() {
+            char w=20;
+            std::ostringstream o;
+            o << textio::pad(textio::SUB,w,"Probe radius")
+              << probe << textio::_angstrom << "\n"
+              << textio::pad(textio::SUB,w,"Co-solute conc.")
+              << conc << " mol/l\n"
+              << textio::pad(textio::SUB,w,"Average area")
+              << avgArea.avg() << textio::_angstrom+textio::squared << "\n";
+            return o.str();
+          }
+
+          template<class Tpvec>
+            void updateSASA(const Tpvec &p) {
+              size_t n=p.size(); // number of particles
+              sasa.resize(n);
+              sasaCoords.resize(n);
+              sasaWeights.resize(n);
+
+              for (size_t i=0; i<n; ++i) {
+                sasaCoords[i]  = p[i];
+                sasaWeights[i] = p[i].radius + probe;
+              }
+
+              // generate powersasa object and calc. sasa for all particles
+              POWERSASA::PowerSasa<double,Point> ps(sasaCoords, sasaWeights, 1, 1, 1, 1);
+              ps.calc_sasa_all();
+              for (size_t i=0; i<n; ++i)
+                sasa[i] = ps.getSasa()[i];
+            }
+
+        public:
+          SASAEnergy(InputMap &in) {
+            this->name="SASA Energy";
+            probe=in.get<double>("sasa_probe", 1.4, "SASA probe radius (angstrom)");
+            conc=in.get<double>("sasa_conc", 0, "Co-solute concentration (mol/l)");
+          }
+
+          double external(const Tpvec &p) FOVERRIDE {
+            // if first run, resize and fill tfe vector
+            if (tfe.size()!=p.size()) {
+              tfe.resize(p.size());
+              for (size_t i=0; i<p.size(); ++i)
+                tfe[i] = atom[ p[i].id ].tfe / (pc::kT() * pc::Nav); // -> kT
+            }
+
+            // calc. sasa and energy
+            updateSASA(p);
+            assert(sasa.size() == p.size());
+            double u=0, A=0;
+            for (size_t i=0; i<sasa.size(); ++i) {
+              u += sasa[i] * tfe[i]; // a^2 * kT/a^2/M -> kT/M
+              if (!this->isTrial(p))
+                A+=sasa[i];
+            }
+            if (!this->isTrial(p))
+              avgArea+=A; // sample average area for accepted confs. only
+            return u * conc; // -> kT
+          }
+      };
+#endif
 
     /**
      * @brief Calculates the total system energy

@@ -9,10 +9,12 @@
 #include <faunus/point.h>
 #include <faunus/textio.h>
 #include <faunus/energy.h>
-#include <faunus/mpi.h>
 #include <Eigen/Core>
 #include <chrono>
 #include <thread>
+#ifdef ENABLE_MPI
+#include <faunus/mpi.h>
+#endif
 
 namespace Faunus {
 
@@ -261,7 +263,7 @@ namespace Faunus {
 
           /** @brief Save table to disk */
           template<class T=double>
-            void save(string filename, T translate=0, T scale=1) {
+            void save(string filename, T scale=1, T translate=0) {
               if (tabletype==HISTOGRAM) {
                 if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
                 if (map.size()>1) (--map.end())->second*=2; // -//-
@@ -269,7 +271,7 @@ namespace Faunus {
 
               if (!map.empty()) {
                 std::ofstream f(filename.c_str());
-                f.precision(6);
+                f.precision(10);
                 if (f) {
                   for (auto m : map)
                     f << m.first << " " << (m.second + translate) * scale << "\n";
@@ -292,7 +294,7 @@ namespace Faunus {
 
               if (!map.empty()) {
                 std::ofstream f(filename.c_str());
-                f.precision(6);
+                f.precision(10);
                 Ty cnt = count()*dx;
                 if (f) {
                   for (auto m : map)
@@ -316,7 +318,7 @@ namespace Faunus {
 
               if (!map.empty()) {
                 std::ofstream f(filename.c_str());
-                f.precision(6);
+                f.precision(10);
                 if (f) {
                   Ty sum_t = 0.0;
                   for (auto m : map) {
@@ -580,7 +582,7 @@ namespace Faunus {
           }
 
           /** @brief Save table to disk */
-          void save(string filename, Ty translate=0, Ty scale=1) {
+          void save(string filename, Ty scale=1, Ty translate=0) {
             if (tabletype==HISTOGRAM) { // compensate for half bin width
               auto first = map.begin();
               auto last = map.rbegin();
@@ -600,7 +602,7 @@ namespace Faunus {
 
             if (!map.empty()) {
               std::ofstream f(filename.c_str());
-              f.precision(6);
+              f.precision(10);
               if (f) {
                 for (auto m : map)
                   f << m.first.first << " " << m.first.second 
@@ -647,7 +649,7 @@ namespace Faunus {
 
             if (!map.empty()) {
               std::ofstream f(filename.c_str());
-              f.precision(6);
+              f.precision(10);
               Ty cnt = count()*dx1*dx2;
               if (f) {
                 for (auto m : map)
@@ -780,6 +782,7 @@ namespace Faunus {
           }
       };
 
+#ifdef ENABLE_MPI
     template<typename Tcoord=double>
       class PenaltyFunction1D : public Table2D<Tcoord,double> {
         private:
@@ -1040,6 +1043,7 @@ namespace Faunus {
             return o.str();
           }
       };
+#endif
 
     /**
       @brief General class for penalty functions along a coordinate

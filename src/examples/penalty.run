@@ -29,7 +29,7 @@ test_file          penalty.test
 " > mpi$rank.penalty.input
 done
 
-exe=./penalty.x
+exe=./penalty
 # Run simulation
 if [ -x $exe ]; then
   $mpicommand -n 4 $exe

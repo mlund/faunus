@@ -5,6 +5,10 @@ if(ENABLE_MPI AND MPI_CXX_FOUND)
   add_test( example_temper ${CMAKE_CURRENT_SOURCE_DIR}/temper.run ${MPIEXEC})
   set_tests_properties(example_temper PROPERTIES WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/examples/")
 
+  fau_example(example_penalty "./" penalty.cpp)
+  set_target_properties(example_penalty PROPERTIES OUTPUT_NAME "penalty")
+  add_test( example_penalty ${CMAKE_CURRENT_SOURCE_DIR}/penalty.run ${MPIEXEC})
+
   fau_example(example_manybody "./" manybody.cpp)
   set_target_properties(example_manybody PROPERTIES OUTPUT_NAME "manybody")
   #add_test( example_manybody ${CMAKE_CURRENT_SOURCE_DIR}/membrane.run )
@@ -67,14 +71,10 @@ fau_example(example_water2 "./" water2.cpp)
 set_target_properties(example_water2 PROPERTIES OUTPUT_NAME "water2")
 add_test( example_water2 ${CMAKE_CURRENT_SOURCE_DIR}/water2.run )
 
-
 fau_cigarexample(example_cigarsenergy "./" cigarsenergy.cpp)
 set_target_properties(example_cigarsenergy PROPERTIES OUTPUT_NAME "cigarsenergy" EXCLUDE_FROM_ALL FALSE)
 add_test( example_cigarsenergy ${CMAKE_CURRENT_SOURCE_DIR}/cigarsenergy.run )
 
 fau_cigarexample(example_cigars2fibrils "./" cigars2fibrils.cpp)
 set_target_properties(example_cigars2fibrils PROPERTIES OUTPUT_NAME "cigars2fibrils" EXCLUDE_FROM_ALL FALSE)
-
-fau_cigarexample(example_penalty "./" penalty.cpp)
-set_target_properties(example_cigarsenergy PROPERTIES OUTPUT_NAME "penalty" EXCLUDE_FROM_ALL FALSE)
-add_test( example_penalty ${CMAKE_CURRENT_SOURCE_DIR}/penalty.run )
+add_test( example_cigars2fibrils ${CMAKE_CURRENT_SOURCE_DIR}/cigars2fibrils.run )

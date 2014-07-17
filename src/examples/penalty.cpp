@@ -88,7 +88,7 @@ int main() {
   penalty function method to overcome energy barriers. 
   Below is the two-dimensional distribution functions sampled with and without
   the penalty function method, demonstrating how the penalty function 
-  (at the bottom right) leads to flat distribution functions in rough energy landscapes.
+  (at the bottom right) yields flat distribution functions in rough energy landscapes.
 
   ![Particle distribution functions in an 2D oscillating field](penalty.png)
 

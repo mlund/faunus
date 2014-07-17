@@ -8,9 +8,11 @@
 #include <faunus/inputfile.h>
 #include <faunus/space.h>
 #include <faunus/textio.h>
-#include <faunus/mpi.h>
 #include <faunus/potentials.h>
 #include <faunus/auxiliary.h>
+#endif
+#ifdef ENABLE_MPI
+#include <faunus/mpi.h>
 #endif
 
 namespace Faunus {
@@ -901,11 +903,11 @@ namespace Faunus {
               = ForceFunctionObject<decltype(pot)>(pot);
           }
 
-        /* uncommented due to gcc 4.6
-           auto getBondList() -> decltype(this->list) {
-           return Tbase::getBondList();
-           }
-           */
+        //uncommented due to gcc 4.6
+        auto getBondList() -> decltype(this->list) {
+          return Tbase::getBondList();
+        }
+
     };
 
     /**
@@ -1344,6 +1346,7 @@ namespace Faunus {
           }
       };
 
+#ifdef ENABLE_MPI
     /**
      * @brief General energy class for handling penalty function methods in 1D or 2D with
      * user-defined reaction coordinate(s).
@@ -1380,6 +1383,7 @@ namespace Faunus {
             return pf.find(coor);
           }
       };
+#endif
 
     /**
      * @brief Calculates the total system energy

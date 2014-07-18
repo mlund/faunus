@@ -342,6 +342,22 @@ namespace Faunus {
             return dx;
           }
 
+          /*! Returns average */
+          Tx mean() {
+            assert(!map.empty());
+            Tx ave = 0;
+            for (auto &m : map) ave += m.first*m.second;
+            return ave/count();
+          }
+
+          /*! Returns standard deviation */
+          Tx std() {
+            assert(!map.empty());
+            Tx std2 = 0;
+            Tx ave = mean();
+            for (auto &m : map) std2 += m.second*(m.first - ave)*(m.first - ave);
+            return sqrt(std2/count());
+          }
           /*! Returns iterator of minumum y */
           typename Tmap::const_iterator min() {
             assert(!map.empty());

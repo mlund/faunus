@@ -358,6 +358,7 @@ namespace Faunus {
             for (auto &m : map) std2 += m.second*(m.first - ave)*(m.first - ave);
             return sqrt(std2/count());
           }
+
           /*! Returns iterator of minumum y */
           typename Tmap::const_iterator min() {
             assert(!map.empty());

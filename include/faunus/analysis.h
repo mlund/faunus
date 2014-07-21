@@ -273,7 +273,7 @@ namespace Faunus {
                 std::ofstream f(filename.c_str());
                 f.precision(10);
                 if (f) {
-                  for (auto m : map)
+                  for (auto &m : map)
                     f << m.first << " " << (m.second + translate) * scale << "\n";
                 }
               }
@@ -297,7 +297,7 @@ namespace Faunus {
                 f.precision(10);
                 Ty cnt = count()*dx;
                 if (f) {
-                  for (auto m : map)
+                  for (auto &m : map)
                     f << m.first << " " << m.second/cnt << "\n";
                 }
               }
@@ -321,7 +321,7 @@ namespace Faunus {
                 f.precision(10);
                 if (f) {
                   Ty sum_t = 0.0;
-                  for (auto m : map) {
+                  for (auto &m : map) {
                     sum_t += m.second;
                     f << m.first << " " << sum_t * scale << "\n";
                   }
@@ -621,7 +621,7 @@ namespace Faunus {
               std::ofstream f(filename.c_str());
               f.precision(10);
               if (f) {
-                for (auto m : map)
+                for (auto &m : map)
                   f << m.first.first << " " << m.first.second 
                     << " " << (m.second + translate) * scale << "\n";
               }
@@ -669,7 +669,7 @@ namespace Faunus {
               f.precision(10);
               Ty cnt = count()*dx1*dx2;
               if (f) {
-                for (auto m : map)
+                for (auto &m : map)
                   f << m.first.first << " " << m.first.second
                     << " " << m.second/cnt << "\n";
               }
@@ -894,7 +894,7 @@ namespace Faunus {
           /*! \brief Translate penalty by a reference value and save it to disk */
           void save_final(const string &filename, Tcoord a, Tcoord b) {
             double ref_value = - Tbase::ave(a,b);
-            Tbase::save(filename,ref_value,1.);
+            Tbase::save(filename,1.,ref_value);
           }
 
           /*! \brief Load table to disk */
@@ -1026,7 +1026,7 @@ namespace Faunus {
           void save_final(const string &filename, Tcoord a,
               Tcoord b, Tcoord c, Tcoord d) {
             double ref_value = - Tbase::ave(a,b,c,d);
-            Tbase::save(filename,ref_value,1.);
+            Tbase::save(filename,1.,ref_value);
           }
 
           /*! \brief Load table to disk */

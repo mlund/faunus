@@ -624,6 +624,64 @@ namespace Faunus {
         return S;
       }
 
+    /** 
+     * @brief Calculate mass center of cluster of particles in unbounded environment 
+     * DOI:10.1080/2151237X.2008.10129266
+     *
+     */
+    template<class Tgeo, class Tpvec, class TGroup>
+      Point unboundedCom(const Tgeo &geo, const Tpvec &p, const TGroup &g, string str="Z") {
+        double N = g.size(),
+               lx = geo.len.x(), xhi_x=0, zeta_x=0, theta_x=0, com_x=0,
+               ly = geo.len.y(), xhi_y=0, zeta_y=0, theta_y=0, com_y=0,
+               lz = geo.len.z(), xhi_z=0, zeta_z=0, theta_z=0, com_z=0;
+        if (str=="Z") {
+          for (auto i : g) {
+            theta_z = p[i].z()/lz*2*pc::pi;
+            xhi_z += std::cos(theta_z);
+            zeta_z += std::sin(theta_z);
+          }
+          theta_z = std::atan2(-zeta_z/N,-xhi_z/N) + pc::pi;
+          com_z = lz*theta_z/2/pc::pi;
+        }
+        if (str=="XY") {
+          for (auto i : g) {
+            theta_x = p[i].x()/lx*2*pc::pi;
+            xhi_x += std::cos(theta_x);
+            zeta_x += std::sin(theta_x);
+            theta_y = p[i].y()/ly*2*pc::pi;
+            xhi_y += std::cos(theta_y);
+            zeta_y += std::sin(theta_y);
+          }
+          theta_x = std::atan2(-zeta_x/N,-xhi_x/N) + pc::pi;
+          theta_y = std::atan2(-zeta_y/N,-xhi_y/N) + pc::pi;
+          com_x = lx*theta_x/2/pc::pi;
+          com_y = ly*theta_y/2/pc::pi;
+        }
+        if (str=="XYZ") {
+          for (auto i : g) {
+            theta_x = p[i].x()/lx*2*pc::pi;
+            xhi_x += std::cos(theta_x);
+            zeta_x += std::sin(theta_x);
+            theta_y = p[i].y()/ly*2*pc::pi;
+            xhi_y += std::cos(theta_y);
+            zeta_y += std::sin(theta_y);
+            theta_z = p[i].z()/lz*2*pc::pi;
+            xhi_z += std::cos(theta_z);
+            zeta_z += std::sin(theta_z);
+          }
+          theta_x = std::atan2(-zeta_x/N,-xhi_x/N) + pc::pi;
+          theta_y = std::atan2(-zeta_y/N,-xhi_y/N) + pc::pi;
+          theta_z = std::atan2(-zeta_z/N,-xhi_z/N) + pc::pi;
+          com_x = lx*theta_x/2/pc::pi;
+          com_y = ly*theta_y/2/pc::pi;
+          com_z = lz*theta_z/2/pc::pi;
+        }
+        Point com = Point(com_x,com_y,com_z);
+        geo.boundary(com);
+        return com;
+      }
+
   }//namespace Geometry
 }//namespace Faunus
 #endif

@@ -703,9 +703,9 @@ namespace Faunus {
           void setGroup(Group&); //!< Select Group to move
           bool groupWiseEnergy;  //!< Attempt to evaluate energy over groups from vector in Space (default=false)
           std::map<string,Point> directions; //!< Specify special group translation directions (default: x=y=z=1)
-#ifdef ENABLE_MPI
-          Faunus::MPI::MPIController* mpi;
-#endif
+          /*#ifdef ENABLE_MPI
+            Faunus::MPI::MPIController* mpi;
+#endif*/
       };
 
     /**
@@ -732,9 +732,9 @@ namespace Faunus {
         this->runfraction = in.get<double>(base::prefix+"_runfraction",1.0);
         if (dp_rot<1e-6 && dp_trans<1e-6)
           this->runfraction=0;
-#ifdef ENABLE_MPI
-        mpi=nullptr;
-#endif
+        /*#ifdef ENABLE_MPI
+          mpi=nullptr;
+#endif*/
       }
 
     template<class Tspace>
@@ -799,18 +799,18 @@ namespace Faunus {
           return pc::infty;       // early rejection
         double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
 
-#ifdef ENABLE_MPI
-        if (mpi!=nullptr) {
+        /*#ifdef ENABLE_MPI
+          if (mpi!=nullptr) {
           double du=0;
           auto s = Faunus::MPI::splitEven(*mpi, spc->groupList().size());
           for (auto i=s.first; i<=s.second; ++i) {
-            auto gi=spc->groupList()[i];
-            if (gi!=igroup)
-              du += pot->g2g(spc->trial, *gi, *igroup) - pot->g2g(spc->p, *gi, *igroup);
+          auto gi=spc->groupList()[i];
+          if (gi!=igroup)
+          du += pot->g2g(spc->trial, *gi, *igroup) - pot->g2g(spc->p, *gi, *igroup);
           }
           return (unew-uold) + Faunus::MPI::reduceDouble(*mpi, du);
-        }
-#endif
+          }
+#endif*/
 
         for (auto g : spc->groupList()) {
           if (g!=igroup) {

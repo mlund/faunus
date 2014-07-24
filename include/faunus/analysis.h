@@ -810,7 +810,7 @@ namespace Faunus {
           int _size; // maximum number of keys in the map
           typedef Faunus::MPI::FloatTransmitter::floatp floatp;
           typedef Table2D<Tcoord,double> Tbase;
-          typedef Table2D<Tcoord,int> Thist;
+          typedef Table2D<Tcoord,double> Thist;
           Thist hist;
           Faunus::MPI::MPIController *mpiPtr; 
           Faunus::MPI::FloatTransmitter ft;
@@ -879,6 +879,36 @@ namespace Faunus {
               }
               assert(hist(coord)!=0 && "hist_size (>= max # of points in histogram) is set too small.");
               _du = std::log(hist(coord)) - min; // prevents energy drift
+              _du_sum += _du;
+              hist.clear();
+            }
+            return _du;
+          }
+
+          /**
+           * @brief Update histogram of the single process
+           * @brief Merge histograms from all processes and update the penalty function
+           */
+          double update_recycle(std::pair<Tcoord,Tcoord> coord, double weight, bool rejection) {
+            _cnt++;
+            if (weight < 1) {
+              hist(coord.first) += (1-weight);
+              hist(coord.second) += weight;
+            }
+            else hist(coord.second)++;
+            _du = 0;
+            if ((_cnt%_Nupdate)==0) { // if Nupdate'th time
+              exchange();
+              for (auto &m : hist.getMap()) { // update penalty function
+                Tbase::operator()(m.first) += std::log(m.second);
+              }
+              double min = Tbase::min()->second;
+              for (auto &m : Tbase::getMap()) {
+                Tbase::operator()(m.first) -= min;
+              }
+              if (!rejection) _du = std::log(hist(coord.second)) - min;
+              else _du = std::log(hist(coord.first)) - min;
+              assert(hist(coord.second)!=0 && "hist_size (>= max # of points in histogram) is set too small.");
               _du_sum += _du;
               hist.clear();
             }

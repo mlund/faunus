@@ -16,6 +16,9 @@ namespace Faunus {
       void init(const double&);
       double current() const;
       EnergyDrift& operator+=(const double&);
+      EnergyDrift& operator+=(const std::pair<double,double>&);
+      double weight;
+      bool rejection;
       double checkDrift(const double&);
       string info();
       void test(UnitTest&);
@@ -39,6 +42,15 @@ namespace Faunus {
   EnergyDrift& EnergyDrift::operator+=(const double &du) {
     delta+=du;
     avg+=current();
+    return *this;
+  }
+
+  EnergyDrift& EnergyDrift::operator+=(const std::pair<double,double> &du) {
+    delta+=du.first;
+    avg+=current();
+    weight=std::exp(-du.second);
+    if (du.first==du.second) rejection=false;
+    else rejection=true;
     return *this;
   }
 

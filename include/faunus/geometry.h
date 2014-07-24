@@ -62,6 +62,7 @@ namespace Faunus {
         virtual void randompos(Point &)=0;              //!< Random point within container
         virtual void boundary(Point &) const=0;             //!< Apply boundary conditions to a point
         virtual void scale(Point&, const double&) const;    //!< Scale point to a new volume - for NPT ensemble
+        virtual void isoscale(Point&, const double&, const double&) const;    //!< Scale point anisotropically - for NVT ensemble
         virtual double sqdist(const Point &a, const Point &b) const=0; //!< Squared distance between two points
         virtual Point vdist(const Point&, const Point&)=0;  //!< Distance in vector form
         virtual ~Geometrybase();
@@ -127,6 +128,7 @@ namespace Faunus {
           return false;
         }
 
+
         /**
          * For reviews of minimum image algorithms,
          * see doi:10/ck2nrd and doi:10/kvs
@@ -167,6 +169,7 @@ namespace Faunus {
         }
 
         void scale(Point&, const double&) const;
+        void isoscale(Point&, const double&, const double&) const;
     };
 
     /*!

@@ -1363,6 +1363,7 @@ namespace Faunus {
           Tspace *spcPtr;
           typedef Energybase<Tspace> Tbase;
         public:
+          std::pair<double,double> connected_pair;
           Tpenalty pf;
           PenaltyEnergy(Faunus::MPI::MPIController &mpi, InputMap &in) :
             pf(mpi,in.get<int>("loop_update",1e5),
@@ -1380,6 +1381,8 @@ namespace Faunus {
           }
           double external(const p_vec &p) {
             auto coor = func(spcPtr,p,gvec);
+            if(!Tbase::isTrial(p)) connected_pair.first=coor;
+            else connected_pair.second=coor;
             return pf.find(coor);
           }
       };

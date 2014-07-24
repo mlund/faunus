@@ -218,6 +218,7 @@ namespace Faunus {
           virtual ~Movebase();
           double runfraction;                //!< Fraction of times calling move() should result in an actual move. 0=never, 1=always.
           double move(int=1);                //!< Attempt \c n moves and return energy change (kT)
+          std::pair<double,double> recycle();
           string info();                     //!< Returns information string
           void test(UnitTest&);              //!< Perform unit test
           double getAcceptance();            //!< Get acceptance [0:1]
@@ -300,6 +301,35 @@ namespace Faunus {
         }
         assert(spc->p == spc->trial && "Trial particle vector out of sync!");
         return utot;
+      }
+
+    /**
+     * This function differs from move in that:
+     * 1. it returns a pair of energy change values;
+     * 2. it performs one move only.
+     * The second member of the pair stores the energy change, du.
+     * The first is zero in case of rejection and otherwise equal to du.
+     * The information on the energy change in case of rejection is useful in Waste-Recycle MC.
+     * DOI: 10.1007/3-540-35273-2_4
+     */
+    template<class Tspace>
+      std::pair<double,double> Movebase<Tspace>::recycle() {
+        double du_accepted=0, du=0;
+        if (run()) {
+          trialMove();
+          du=energyChange();
+          if ( !metropolis(du) )
+            rejectMove();
+          else {
+            acceptMove();
+            if (useAlternateReturnEnergy)
+              du=alternateReturnEnergy;
+            dusum+=du;
+            du_accepted+=du;
+          }
+        }
+        assert(spc->p == spc->trial && "Trial particle vector out of sync!");
+        return std::make_pair(du_accepted,du);
       }
 
     /**
@@ -703,9 +733,9 @@ namespace Faunus {
           void setGroup(Group&); //!< Select Group to move
           bool groupWiseEnergy;  //!< Attempt to evaluate energy over groups from vector in Space (default=false)
           std::map<string,Point> directions; //!< Specify special group translation directions (default: x=y=z=1)
-          /*#ifdef ENABLE_MPI
-            Faunus::MPI::MPIController* mpi;
-#endif*/
+#ifdef ENABLE_MPI
+          Faunus::MPI::MPIController* mpi;
+#endif
       };
 
     /**
@@ -732,9 +762,9 @@ namespace Faunus {
         this->runfraction = in.get<double>(base::prefix+"_runfraction",1.0);
         if (dp_rot<1e-6 && dp_trans<1e-6)
           this->runfraction=0;
-        /*#ifdef ENABLE_MPI
-          mpi=nullptr;
-#endif*/
+#ifdef ENABLE_MPI
+        mpi=nullptr;
+#endif
       }
 
     template<class Tspace>
@@ -799,18 +829,18 @@ namespace Faunus {
           return pc::infty;       // early rejection
         double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
 
-        /*#ifdef ENABLE_MPI
-          if (mpi!=nullptr) {
+#ifdef ENABLE_MPI
+        if (mpi!=nullptr) {
           double du=0;
           auto s = Faunus::MPI::splitEven(*mpi, spc->groupList().size());
           for (auto i=s.first; i<=s.second; ++i) {
-          auto gi=spc->groupList()[i];
-          if (gi!=igroup)
-          du += pot->g2g(spc->trial, *gi, *igroup) - pot->g2g(spc->p, *gi, *igroup);
+            auto gi=spc->groupList()[i];
+            if (gi!=igroup)
+              du += pot->g2g(spc->trial, *gi, *igroup) - pot->g2g(spc->p, *gi, *igroup);
           }
           return (unew-uold) + Faunus::MPI::reduceDouble(*mpi, du);
-          }
-#endif*/
+        }
+#endif
 
         for (auto g : spc->groupList()) {
           if (g!=igroup) {
@@ -2007,6 +2037,152 @@ namespace Faunus {
         return unew-uold;
       }
 
+    /**
+     * @brief Isochoric scaling move in Cuboid geometry with pbc
+     *
+     * @details This class will expand along the z-axis
+     * and shrink in the xy-plane atomic as well as molecular groups 
+     * as long as these are known to Space - see Space.enroll().
+     * The InputMap class is scanned for the following keys:
+     *
+     * Key                | Description
+     * :----------------- | :-----------------------------
+     * `scale_z`          | Length displacement parameter
+     * `scale_runfraction`| Runfraction [default=1]
+     *
+     */
+    template<class Tspace>
+       class Isochoric : public Movebase<Tspace> {
+         private:
+           typedef Movebase<Tspace> base;
+           using base::spc;
+           using base::pot;
+           using base::w;
+           string _info();
+           void _test(UnitTest&);
+           void _trialMove();
+           void _acceptMove();
+           void _rejectMove();
+           template<class Tpvec> double _energy(const Tpvec&);
+           double _energyChange();
+           double dz; //!< Volume displacement parameter
+           Point oldlen;
+           Point newlen;
+           double factor_z;
+           double factor_xy;
+           Average<double> sqrLz; //!< Mean squared Lz displacement
+           Average<double> Lz;    //!< Average Lz
+         public:
+           template<class Tenergy>
+             Isochoric(InputMap&, Tenergy&, Tspace&, string="nvt");
+       };
+
+    template<class Tspace>
+      template<class Tenergy>
+      Isochoric<Tspace>::Isochoric(InputMap &in, Tenergy &e, Tspace &s, string pfx) : base(e,s,pfx) {
+        this->title="Isochoric Side Lengths Fluctuations";
+        this->w=30;
+        dz=in.get<double>(pfx+"_dz", 0.,
+            "z-displacement parameter");
+        this->runfraction = in.get<double>(pfx+"_runfraction",1.0);
+        if (dz<1e-6)
+          base::runfraction=0;
+      }
+
+    template<class Tspace>
+      string Isochoric<Tspace>::_info() {
+        using namespace textio;
+        std::ostringstream o;
+        o << pad(SUB,w, "Displacement parameter") << dz << endl
+          << pad(SUB,w, "Temperature") << pc::T() << " K\n";
+        if (base::cnt>0) {
+          char l=14;
+          o << pad(SUB,w, "Mean displacement")
+            << rootof+bracket("dz"+squared)
+            << " = " << pow(sqrLz.avg(), 1/2.) << _angstrom << endl
+            << endl
+            << indent(SUBSUB) << std::right << setw(10) << ""
+            << setw(l+5) << bracket("Lz") << endl
+            << indent(SUB) << setw(10) << "Averages"
+            << setw(l) << Lz.avg() << _angstrom + cubed;
+        }
+        return o.str();
+      }
+
+    template<class Tspace>
+      void Isochoric<Tspace>::_test(UnitTest &t) {
+        t(this->prefix+"_averageSideLength", Lz.avg() );
+        t(this->prefix+"_MSQDisplacement", pow(sqrLz.avg(), 1/2.) );
+      }
+
+    template<class Tspace>
+      void Isochoric<Tspace>::_trialMove() {
+        assert(spc->groupList().size()>0
+            && "Space has empty group vector - Isochoric scaling move not possible.");
+        oldlen = spc->geo.len;
+        factor_z = (oldlen.z()+slp_global.randHalf()*dz) / oldlen.z();
+        factor_xy = 1 / std::sqrt(factor_z);
+        newlen = Point( oldlen.x()*factor_xy,oldlen.y()*factor_xy,oldlen.z()*factor_z);
+        for (auto g : spc->groupList()) {
+          g->setMassCenter(*spc);
+          g->isoscale(*spc,factor_xy,factor_z); // scale trial coordinates to new coordinates
+        }
+      }
+
+    template<class Tspace>
+      void Isochoric<Tspace>::_acceptMove() {
+        Lz += newlen.z();
+        sqrLz += pow( oldlen.z()-newlen.z(), 2 );
+        spc->geo.setlen( newlen );
+        pot->setSpace(*spc);
+        for (auto g : spc->groupList() )
+          g->accept(*spc);
+      }
+
+    template<class Tspace>
+      void Isochoric<Tspace>::_rejectMove() {
+        Lz += oldlen.z();
+        sqrLz += 0;
+        spc->geo.setlen( oldlen );
+        pot->setSpace(*spc);
+        for (auto g : spc->groupList() )
+          g->undo(*spc);
+      }
+
+    /**
+     * This will calculate the total energy of the configuration
+     */
+    template<class Tspace>
+      template<class Tpvec>
+      double Isochoric<Tspace>::_energy(const Tpvec &p) {
+        double u=0;
+        if (dz<1e-6)
+          return u;
+        size_t n=spc->groupList().size();  // number of groups
+        for (size_t i=0; i<n-1; ++i)      // group-group
+          for (size_t j=i+1; j<n; ++j)
+            u += pot->g2g(p, *spc->groupList()[i], *spc->groupList()[j]);
+
+        for (auto g : spc->groupList()) {
+          u += pot->g_external(p, *g);
+          if (g->numMolecules()>1)
+            u+=pot->g_internal(p, *g);
+        }
+        return u + pot->external(p);
+      }
+
+    /**
+     * @todo Early rejection could be implemented
+     *       - not relevant for geometries with periodicity, though.
+     */
+    template<class Tspace>
+      double Isochoric<Tspace>::_energyChange() {
+        double uold = _energy(spc->p);
+        spc->geo.setlen( newlen );
+        pot->setSpace(*spc); // potential must know about side lengths
+        double unew = _energy(spc->trial);
+        return unew-uold;
+      }
 
     /**
      * @brief Auxillary class for tracking atomic species

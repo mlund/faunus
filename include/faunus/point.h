@@ -107,6 +107,18 @@ namespace Faunus {
         geo.scale(*this, newvol);
       }
 
+    /**
+     * @brief Coordinate scaling used for isochoric-anisotropic scaling moves
+     *
+     * This will perform a scaling of the Point by
+     * following the algorithm specified in the Cuboid Geometry.
+     */
+
+    template<typename Tgeometry>
+      void isoscale(const Tgeometry &geo, double xy, double z) {
+        geo.isoscale(*this,xy,z);
+      }
+
     Tcoord len() const {
       return norm();
     }
@@ -117,7 +129,7 @@ namespace Faunus {
         in >> (*this)[i];
       return *this;
     }
-    
+
     /** @brief Read from string */
     PointBase& operator<<(const std::string &in) {
       std::istringstream i(in);

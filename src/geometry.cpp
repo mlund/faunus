@@ -22,6 +22,10 @@ namespace Faunus {
       assert(!"Volume scaling function unimplemented for this geometry");
     }
 
+    void Geometrybase::isoscale(Point &a, const double &xy, const double &z) const {
+      assert(!"Isochoric-anisotropic scaling function unimplemented for this geometry");
+    }
+
     string Geometrybase::info(char w) {
       using namespace textio;
       std::ostringstream o;
@@ -135,7 +139,7 @@ namespace Faunus {
      * `cuboid_xlen`     | x sidelength [angstrom]
      * `cuboid_ylen`     | y sidelength [angstrom]
      * `cuboid_zlen`     | z sidelength [angstrom]
-     * `cuboid_scaledir` | Isobaric scaling directions (`XYZ`=isotropic, `XY`=xy only, 'Z'=z only).
+     * `cuboid_scaledir` | Isobaric scaling directions (`XYZ`=isotropic, `XY`=xy, 'Z'=z).
      */
     Cuboid::Cuboid(InputMap &in) {
       name="Cuboid";
@@ -234,6 +238,12 @@ namespace Faunus {
       }
       if (scaledir==Z)
         a.z() *= newvolume/getVolume();
+    }
+
+    void Cuboid::isoscale(Point &a, const double &xy, const double &z) const {
+      a.x() *= xy;
+      a.y() *= xy;
+      a.z() *= z;
     }
 
     Cuboidslit::Cuboidslit(InputMap &in) : Cuboid(in) {

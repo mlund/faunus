@@ -633,7 +633,7 @@ namespace Faunus {
      *
      */
     template<class Tgeo, class Tpvec, class TGroup>
-      Point unboundedCom(const Tgeo &geo, const Tpvec &p, const TGroup &g, string str="Z") {
+      Point trigoCom(const Tgeo &geo, const Tpvec &p, const TGroup &g, string str="Z") {
         double N = g.size(),
                lx = geo.len.x(), xhi_x=0, zeta_x=0, theta_x=0, com_x=0,
                ly = geo.len.y(), xhi_y=0, zeta_y=0, theta_y=0, com_y=0,

@@ -1246,6 +1246,69 @@ namespace Faunus {
       };
 
     /**
+     * @brief Base class for manybody potentials (dihedrals etc.)
+     *
+     * This is an inter-particle potential for interactions involving
+     * many particles such as angles and dihedrals.
+     * It works much in the same way as pair potentials, but instead
+     * of taking particles as input, it maintains a list of particle
+     * index that interact.
+     * Derived classes are expected to implement a function operator
+     * that takes as arguments a geometry and particle vector.
+     */
+    class ManybodyBase {
+      protected:
+        virtual string _brief() const=0;
+        typedef vector<int> Tivec;
+        Tivec v; // particle index
+        string ndxStr() const {
+          std::ostringstream o;
+          for (auto i : v)
+            o << i << " ";
+          return "[ " + o.str() + "]";
+        }
+      public:
+        string brief() const { return _brief(); }
+        void setIndex(const Tivec &index) { v = index; }
+        Tivec& getIndex() { return v; }
+        Tivec getIndex() const { return v; }
+        virtual ~ManybodyBase() {}
+    };
+
+    /**
+     * @brief Angular potential
+     * @warning unfinished!
+     */
+    class Angular : public ManybodyBase {
+      private:
+        static const string name;
+        typedef ManybodyBase base;
+        double c1,c2; // pot parameters
+        string _brief() const FOVERRIDE {
+          std::ostringstream o;
+          o << ndxStr() << " - " << name << ": " << c1 << " " << c2;
+          return o.str();
+        }
+      public:
+        Angular() : c1(0), c2(0) {}
+        Angular(const Tivec& ndx, double angle, double energy) {
+          assert(ndx.size()==3);
+          setIndex(ndx);
+        }
+
+        /** @brief Energy function (kT) */
+        template<class Tgeometry, class Tpvec>
+          double operator()(Tgeometry &g, const Tpvec &p) {
+            assert(v.size()==3);
+            assert((int)p.size()>*std::max_element(v.begin(), v.end()));
+            auto ab = g.vdist(p[v[0]], p[v[1]]);
+            auto ac = g.vdist(p[v[0]], p[v[2]]);
+            auto bc = g.vdist(p[v[1]], p[v[2]]);
+            return c1 * ab.dot(bc) / ac.norm(); // for example...
+          }
+    };
+
+    /**
      * @brief Combines two pair potentials
      * @details This combines two PairPotentialBases. The combined potential
      * can subsequently be used as a normal pair potential and even be

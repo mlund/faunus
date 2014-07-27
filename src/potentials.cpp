@@ -509,6 +509,8 @@ namespace Faunus {
       return o.str();
     }
 
+    const string Angular::name = "Angle";
+
   } //Potential namespace
 
 } //Faunus namespace

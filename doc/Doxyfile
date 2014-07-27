@@ -1968,6 +1968,8 @@ PREDEFINED             = protected=private \
                          GROMACS \
                          BABEL \
                          ENABLE_MPI \
+                         FAU_POWERSASA \
+                         FOVERRIDE=override \
                          HYPERSPHERE
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this

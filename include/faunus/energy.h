@@ -56,7 +56,7 @@ namespace Faunus {
           typedef Tspace SpaceType;
           typedef typename Tspace::ParticleType Tparticle;
           typedef typename Tspace::GeometryType Tgeometry;
-          typedef typename Tspace::p_vec Tpvec;
+          typedef typename Tspace::ParticleVector Tpvec;
 
           string name;  //!< Short informative name
 
@@ -1347,6 +1347,65 @@ namespace Faunus {
           }
       };
 
+    /**
+     * @brief Energy class for manybody interactions such as dihedrals and angular potentials
+     *
+     * This is a general class for interactions that can involve
+     * any number of atoms.
+     *
+     * In the following example we add an angular potential between
+     * particle index 3,4,5:
+     *
+     * ~~~~
+     * Manybody<Tspace> pot;
+     * pot.add( Potential::Angular( {3,4,5}, 70., 0.5 ) );
+     * ~~~~
+     *
+     * @todo Currently implemented as `external()` which means
+     * that all added potentials are evaluated for each move
+     * eventhough only a subset of atoms are touched. Implement
+     * dictionary to speed up.
+     */
+    template<class Tspace>
+      class Manybody : public Energybase<Tspace> {
+        protected:
+          string _infosum;
+          string _info() FOVERRIDE {
+            return _infosum;
+          }
+          typedef Energybase<Tspace> Tbase;
+          typedef typename Tbase::Tpvec Tpvec;
+
+          typedef std::function<double(typename Tbase::Tgeometry&, const Tpvec&)> EnergyFunct;
+          vector<EnergyFunct> list;
+          std::set<int> allindex; // index of all particles involved
+
+        public:
+          Manybody(Tspace &spc) {
+            Tbase::name="Manybody potential";
+            Tbase::setSpace(spc);
+          }
+
+          /**
+           * @brief Add a manybody potential
+           */
+          template<class Tmanybodypot>
+            void add(const Tmanybodypot &f) {
+              list.push_back(f);
+              _infosum += "  " + f.brief() + "\n";
+              for (auto i : f.getIndex())
+                allindex.insert(i);
+            }
+
+          double external(const Tpvec &p) FOVERRIDE {
+            double u=0;
+            for (auto &f : list)
+              u += f(Tbase::spc->geo, p);
+            return u;
+          }
+      };
+
+
 #ifdef FAU_POWERSASA
     /**
      * @brief SASA energy from transfer free energies
@@ -1404,6 +1463,10 @@ namespace Faunus {
             conc=in.get<double>("sasa_conc", 0, "Co-solute concentration (mol/l)");
           }
 
+          /**
+           * @brief The SASA calculation is implemented
+           * as an external potential, only
+           */
           double external(const Tpvec &p) FOVERRIDE {
             // if first run, resize and fill tfe vector
             if (tfe.size()!=p.size()) {

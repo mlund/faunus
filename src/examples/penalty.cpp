@@ -5,26 +5,26 @@ typedef std::vector<Group*> Tvec;
 typedef Space<Geometry::Cuboid> Tspace;
 typedef Faunus::Analysis::PenaltyFunction2D<double> Tpenalty;
 
-  struct myenergy : public Energy::Energybase<Tspace> { //custom energy class
-    public:
-      double i_external(const p_vec &p, int i)  { //pot. on particle
-        double s= 1 + std::sin(2*pc::pi*p[i].x()) + std::cos(2*pc::pi*p[i].y());
-        if (p[i].x() >=-2.00 && p[i].x() <=-1.25) return 1*s;
-        if (p[i].x() >=-1.25 && p[i].x() <=-0.25) return 2*s;
-        if (p[i].x() >=-0.25 && p[i].x() <= 0.75) return 3*s;
-        if (p[i].x() >= 0.75 && p[i].x() <= 1.75) return 4*s;
-        if (p[i].x() >= 1.75 && p[i].x() <= 2.00) return 5*s;
-        return pc::infty;
+struct myenergy : public Energy::Energybase<Tspace> { //custom energy class
+  public:
+    double i_external(const p_vec &p, int i)  { //pot. on particle
+      double s= 1 + std::sin(2*pc::pi*p[i].x()) + std::cos(2*pc::pi*p[i].y());
+      if (p[i].x() >=-2.00 && p[i].x() <=-1.25) return 1*s;
+      if (p[i].x() >=-1.25 && p[i].x() <=-0.25) return 2*s;
+      if (p[i].x() >=-0.25 && p[i].x() <= 0.75) return 3*s;
+      if (p[i].x() >= 0.75 && p[i].x() <= 1.75) return 4*s;
+      if (p[i].x() >= 1.75 && p[i].x() <= 2.00) return 5*s;
+      return pc::infty;
 
-      }
-      double g_external(const p_vec &p, Group &g) { //pot. on group
-        double u=0;
-        for (auto i : g)
-          u+=i_external(p, i);
-        return u; // in kT
-      }
-      string _info() { return "myenergy"; }       //mandatory info 
-  };
+    }
+    double g_external(const p_vec &p, Group &g) { //pot. on group
+      double u=0;
+      for (auto i : g)
+        u+=i_external(p, i);
+      return u; // in kT
+    }
+    string _info() { return "myenergy"; }       //mandatory info 
+};
 
 struct coordinates { //function that defines the reaction coordinates
   std::pair<double,double> operator()(Tspace *spc, const p_vec &p, Tvec &gv) {
@@ -56,11 +56,10 @@ int main() {
   int sweeps = 0;
   while ( loop.macroCnt() ) {                 //start markov chain
     while ( loop.microCnt() ) {
-      sys += trans.move();                    //translate particle
+      sys += trans.recycle();                    //translate particle
       ++sweeps;
-      coordinates c;
-      std::pair<double,double> coor = c(&spc,spc.p,gvec);
-      sys += penalty->pf.update(coor.first,coor.second); //increment the histogram and/or update the penalty function
+      //increment the histogram and/or update the penalty function using waste recycling
+      sys += penalty->pf.update_recycle(penalty->connected_pair,sys.weight,sys.rejection); 
     }
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // energy drift?
     // save to disk
@@ -70,11 +69,8 @@ int main() {
   mpi.cout << trans.info() + loop.info() + penalty->pf.info() + sys.info();
   // perform unit 
   UnitTest test(mcp);
-  trans.test(test);
   penalty->pf.test(test);
-  sys.test(test);
   return test.numFailed();
-  mpi.cout << trans.info() + loop.info() + penalty->pf.info() + sys.info();
 }
 /**
   @page example_penalty Example: Penalty Function

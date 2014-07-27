@@ -938,7 +938,7 @@ namespace Faunus {
           void test(UnitTest &t) {
             auto it_max = Tbase::max();
             auto it_min = Tbase::min();
-            t("Penalty range", it_max->second-it_min->second );
+            t("Penalty range",it_max->second-it_min->second,2.);
           }
 
           string info() {
@@ -971,7 +971,7 @@ namespace Faunus {
           int _size; // maximum number of keys in the map
           typedef Faunus::MPI::FloatTransmitter::floatp floatp;
           typedef Table3D<Tcoord,double> Tbase;
-          typedef Table3D<Tcoord,int> Thist;
+          typedef Table3D<Tcoord,double> Thist;
           typedef std::pair<Tcoord,Tcoord> Tpair;
           Thist hist;
           Faunus::MPI::MPIController *mpiPtr; 
@@ -1103,7 +1103,7 @@ namespace Faunus {
           void test(UnitTest &t) {
             auto it_max = Tbase::max();
             auto it_min = Tbase::min();
-            t("Penalty range", it_max->second-it_min->second );
+            t("Penalty range",it_max->second-it_min->second,2.);
           }
 
           string info() {

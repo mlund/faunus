@@ -37,7 +37,8 @@ namespace Faunus {
            chiral_angle,//!< Angle of chirality (rotation of patch) on PatchySpherocylinder [degrees]
            betaC,      //!< Value of the charge distribution (inverse) width [\f$ \AA^{-1} \f$]
            betaD,      //!< Value of the dipole distribution (inverse) width [\f$ \AA^{-1} \f$] 
-           betaQ;      //!< Value of the quadrupole distribution (inverse) width [\f$ \AA^{-1} \f$] 
+           betaQ,      //!< Value of the quadrupole distribution (inverse) width [\f$ \AA^{-1} \f$] 
+           tfe;        //!< Transfer free energy (J/mol/angstrom^2/M)
     Point mu;
     short int patchtype;     //!< If patchy particle, which type of patch
     Thydrophobic hydrophobic;//!< Are we hydrophobic?
@@ -108,6 +109,7 @@ namespace Faunus {
    * `q`           | Valency / partial charge number [e]
    * `r`           | Radius = `sigma/2` [angstrom]
    * `sigma`       | `2*r` [angstrom] (overrides radius)
+   * `tfe`         | Transfer free energy [J/mol/angstrom^2/M] (default: 0)
    * 
    *
    * Code example:

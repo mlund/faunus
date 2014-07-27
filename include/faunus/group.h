@@ -249,7 +249,8 @@ namespace Faunus {
       }
 
       /**
-       * @brief Add atomic particles via InputMap parameters
+       * @brief Add atomic particles via `InputMap` parameters
+       *
        * The InputMap is scanned for the following keywords, starting with X=1:
        *
        * Key            | Description
@@ -258,14 +259,13 @@ namespace Faunus {
        * `nionX`        | Number of type X atoms
        * `overlap`      | Allow overlap of atoms [default: no]
        *
-       * @todo Rename to addAtoms.
+       * @todo Rename to addAtoms; rename 'overlap' keyword - perhaps to 'overlapionX' ?
        */
       template<class Tspace, class Tinputmap>
         void addParticles(Tspace &spc, Tinputmap &in) {
-          name="Salt";
+          name="Atomic Species";
           setfront( spc.p.size() );
-          int size=0;
-          int n=1, npart;
+          int size=0, n=1, npart;
 
           auto overlap=Tspace::OVERLAP_CHECK;
           if (in.get("overlap", false))
@@ -313,7 +313,12 @@ namespace Faunus {
           [&](int i) { return p[i].hydrophobic; });
     }
 
-  /** @brief Total charge */
+  /**
+   * @brief Summed valency of a set of particles
+   * @param p Particle vector
+   * @param g Range (`Group` or arbitrary container with index)
+   * @param Z Starting charge (default: 0)
+   */
   template<class Tpvec, class Tindex>
     double netCharge(const Tpvec &p, const Tindex &g, double Z=0) {
       for (auto i : g)

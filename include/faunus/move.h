@@ -1016,12 +1016,24 @@ namespace Faunus {
      * function. Whether particles are considered part of the cluster is
      * determined by the private virtual function `ClusterProbability()`.
      * By default this is a simple step function with P=1 when an atomic particle
-     * in the group set by setMobile is closer than a certain threshold to a
+     * in the group set by `setMobile()` is within a certain threshold to a
      * particle in the main group; P=0 otherwise.
      *
      * The implemented cluster algorithm is general - see Frenkel&Smith,
      * 2nd ed, p405 - and derived classes can re-implement `ClusterProbability()`
      * for arbitrary probability functions.
+     *
+     * Upon construction, the `InputMap` is scanned for the
+     * following keywords,
+     *
+     * Keyword                | Description
+     * :--------------------- | :----------------
+     * `transrot_clustersize` | Surface threshold from mobile ion to particle in group (angstrom)
+     *
+     * @todo Energy evaluation puts all moved particles in an index vector used
+     * to sum the interaction energy with static particles. This could be optimized
+     * by only adding mobile ions and calculate i.e. group-group interactions in a
+     * more traditional (and faster) way.
      */
     template<class Tspace>
       class TranslateRotateCluster : public TranslateRotate<Tspace> {
@@ -1049,16 +1061,10 @@ namespace Faunus {
           using base::spc;
           TranslateRotateCluster(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="transrot");
           virtual ~TranslateRotateCluster();
-          void setMobile(Group&); //!< Select atomic species to move with the main group
-          double threshold;  //!< Distance between particles to define a cluster
+          void setMobile(Group&);  //!< Pool of atomic species to move with the main group
+          double threshold;        //!< Distance between particles to define a cluster
       };
 
-    /**
-     * The cluster threshold is set with the InputMap keyword
-     * `transrot_clustersize` and gives specifies the SURFACE
-     * distance between macromolecular particles and atomic particles
-     * to be clustered.
-     */
     template<class Tspace>
       TranslateRotateCluster<Tspace>::TranslateRotateCluster(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(in,e,s,pfx) {
         base::title="Cluster "+base::title;
@@ -1174,6 +1180,7 @@ namespace Faunus {
         }
 
         // pair energy between static and moved particles
+        // note: this could be optimized!
         double du=0;
 #pragma omp parallel for reduction (+:du)
         for (int j=0; j<(int)spc->p.size(); j++)
@@ -1183,9 +1190,15 @@ namespace Faunus {
         return unew - uold + du - log(bias); // exp[ -( dU-log(bias) ) ] = exp(-dU)*bias
       }
 
+    /**
+     * This is the default function for determining the probability, P,
+     * that a mobile particle is considered part of the cluster. This
+     * is here a simple distance critera but derived classes can reimplement
+     * this (virtual) function to arbitrary probability functions.
+     */
     template<class Tspace>
       double TranslateRotateCluster<Tspace>::ClusterProbability(p_vec &p, int i) {
-        for (auto j : *igroup)
+        for (auto j : *igroup) // loop over main group
           if (i!=j) {
             double r=threshold+p[i].radius+p[j].radius;
             if (spc->geo.sqdist(p[i],p[j])<r*r )
@@ -1462,6 +1475,8 @@ namespace Faunus {
         for (auto g : spc->groupList())
           if (g!=gPtr)
             du+=pot->g2g(spc->trial, *g, *gPtr) - pot->g2g(spc->p, *g, *gPtr);
+
+        du += pot->external(spc->trial) - pot->external(spc->p);
 
         //for (auto i : index)
         //  du += pot->i2all(spc->trial, i) - pot->i2all(spc->p, i);

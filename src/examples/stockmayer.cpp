@@ -49,7 +49,7 @@ int main() {
       dian.sampleDP(spc);
     }    
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
-    cout << loop.timing();
+    cout << loop.timing() << std::flush;
   }
 
   // perform unit tests

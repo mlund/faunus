@@ -586,8 +586,12 @@ namespace Faunus {
      * particle-particle cutoff plus the maximum radii of the two groups,
      * @f$ r_{cut}^{g2g} = r_{cut}^{p2p} + a_{g1} + a_{g2} @f$.
      *
-     * Upon construction the `InputMap` is searched for the keyword
-     * `g2g_cutoff` - the default value is infinity.
+     * Upon construction the `InputMap` is searched for: 
+     *
+     * Keyword      |  Description
+     * :----------- |  :------------------------------------
+     * `g2g_cutoff` |  Cutoff (angstrom) [default: infinity]
+     *
      */
     template<class Tspace, class Tpairpot, class Tnonbonded=Energy::Nonbonded<Tspace,Tpairpot> >
       class NonbondedCutg2g : public Tnonbonded {

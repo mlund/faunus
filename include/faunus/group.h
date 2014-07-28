@@ -20,6 +20,12 @@ namespace Faunus {
     private:
       int molsize; // Number of atoms per molecule
     public:
+
+      /**
+       * @brief Constructor
+       * @param front First index
+       * @param back Last index
+       */
       Group(int front=-1, int back=-1) : Range(front,back-front+1) {
         setMolSize(-1);
         if (front<0 || back<0)

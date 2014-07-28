@@ -23,14 +23,13 @@ GLY 10 5.2769 -22.427 0 0 1 2.45
 
 function mkinput() {
 echo "
-loop_macrosteps        $macro
+loop_macrosteps        10
 loop_microsteps        $micro
 
 temperature            298     # Kelvin
 epsilon_r              78.9    # Water dielectric const
 dh_debyelength         11.6492873993050 # angstrom
 gouychapman_phi0       -2      # unitless i.e. e*phi/kT
-gouychapman_linearize  yes
 
 cuboid_len             -1 # Box side length Angstrom
 cuboid_xlen            300

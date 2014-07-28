@@ -41,7 +41,7 @@ int main() {
         sys+=trans.move( sol.size() );                // translate
       else
         sys+=rot.move( sol.size() );                  // rotate
-      
+
       if (slp_global()<0.5)
         dian.sampleMuCorrelationAndKirkwood(spc);
       if (slp_global()>0.99)

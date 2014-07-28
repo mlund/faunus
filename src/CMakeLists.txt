@@ -35,15 +35,8 @@ if(ENABLE_APPROXMATH)
 endif()
 
 # -------------------------------------
-#   Get subversion revision of source
+#   Get source revision (unfinished)
 # -------------------------------------
-if(Subversion_FOUND)
-  Subversion_WC_INFO(${CMAKE_HOME_DIRECTORY} Faunus ERROR_QUIET)
-  if(Faunus_WC_FOUND)
-    add_definitions("-D__SVN_REV__=${Faunus_WC_REVISION}")
-  endif()
-endif()
-
 find_package(Git)
 if(GIT_FOUND)
   execute_process(
@@ -51,7 +44,7 @@ if(GIT_FOUND)
     OUTPUT_VARIABLE DESCRIBE_BUILD
     OUTPUT_STRIP_TRAILING_WHITESPACE)
   string(REGEX MATCH "[0-9]+" BUILD_NUMBER ${DESCRIBE_BUILD})
-  message(${BUILD_NUMBER})
+  #message(${BUILD_NUMBER})
 endif()
 
 # ----------------------------

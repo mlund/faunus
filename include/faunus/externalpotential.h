@@ -78,7 +78,7 @@ namespace Faunus {
      * `gouychapman_phi0`      | Surface potential [unitless, i.e. phi_0*e/kT]
      * `gouychapman_qarea`     | Surface charge density (if phi0 not defined)
      * `gouychapman_rho`       | Surface charge density [1/A^2] (if qarea not defined)
-     * `gouychapman_linearize` | Set to `yes` for linearized GC (default: `no`)
+     * `gouychapman_offset`    | Shift GC surface [A] (default: 0)
      *
      * Code example:
      * 
@@ -91,7 +91,7 @@ namespace Faunus {
      * @note Salt is assumed monovalent
      * @date Lund/Asljunga, 2011-2012
      */
-    template<class T=double>
+    template<class T=double, bool linearize=false>
       class GouyChapman : public ExternalPotentialBase<> {
         private:
           Potential::DebyeHuckel dh;
@@ -101,7 +101,7 @@ namespace Faunus {
           T gamma0;      //!< Gouy-chapman coefficient ()
           T lB;          //!< Bjerrum length (A)
           T k;           //!< Inv. debye len (1/A)
-          bool linearize;//!< Use linearized PB?
+          T offset;      //!< Distance off set for hiding GC surface behind the box surface
           std::string _info();
         public:
           GouyChapman(InputMap&);          //!< Constructor
@@ -119,15 +119,15 @@ namespace Faunus {
      * where `lB` is the Bjerrum length, `kappa` the inverse Debye length, and `c_0` the
      * bulk salt concentration.
      */
-    template<class T>
-      GouyChapman<T>::GouyChapman(InputMap &in) : dh(in) {
+    template<class T, bool linearize>
+      GouyChapman<T,linearize>::GouyChapman(InputMap &in) : dh(in) {
         string prefix = "gouychapman_";
         name = "Gouy-Chapman";
         c0 = dh.ionicStrength() * pc::Nav / 1e27; // assuming 1:1 salt, so c0=I
         lB = dh.bjerrumLength();
         k  = 1/dh.debyeLength();
-        linearize = in(prefix+"linearize",false);
-        phi0 = in(prefix+"phi0",0); // Unitless potential = beta*e*phi0
+        //linearize = in(prefix+"linearize",false);
+        phi0 = in(prefix+"phi0",0.); // Unitless potential = beta*e*phi0
         if ( std::abs(phi0)>1e-6 )
           rho = sqrt(2*c0/(pc::pi*lB))*sinh(.5*phi0); //Evans&Wennerstrom,Colloidal Domain p 138-140
         else {
@@ -137,23 +137,24 @@ namespace Faunus {
           phi0 = 2.*asinh(rho * sqrt(.5*lB*pc::pi/c0 ));//[Evans..]
         }
         gamma0 = tanh(phi0/4); // assuming z=1  [Evans..]
+        offset = in(prefix+"offset",0.);
       }
 
     /**
      * Before using this function make sure to set a surface calculations
      * method either with `setSurfPositionZ` or `setSurfPositionZ`.
      */
-    template<class T>
-      T GouyChapman<T>::surfDist(const Point &p) {
+    template<class T, bool linearize>
+      T GouyChapman<T,linearize>::surfDist(const Point &p) {
         assert(p2c!=nullptr && "Surface distance function not set!");
         return p2c(p);
       }
 
-    template<class T>
-      void GouyChapman<T>::setSurfPositionZ(T* z) {
+    template<class T, bool linearize>
+      void GouyChapman<T,linearize>::setSurfPositionZ(T* z) {
         setCoordinateFunc
           (
-           [=](const Point &p) { return std::abs(*z-p.z()); }
+           [=](const Point &p) { return std::abs(*z-p.z()) + offset; }
           ); // c++11 lambda
       }
 
@@ -163,9 +164,9 @@ namespace Faunus {
      * @f[ \beta u = z_i \cdot \beta e \Phi(r_i) @f]
      * where `z_i` is the charge number and `r_i` the distance from the surface.
      */
-    template<class T>
+    template<class T, bool linearize>
       template<typename Tparticle>
-      T GouyChapman<T>::operator()(const Tparticle &p) {
+      T GouyChapman<T,linearize>::operator()(const Tparticle &p) {
         if (p.charge!=0) {
 #ifdef FAU_APPROXMATH
           T x=exp_cawley(-k*surfDist(p));
@@ -182,8 +183,8 @@ namespace Faunus {
         return 0;
       }
 
-    template<class T>
-      std::string GouyChapman<T>::_info() {
+    template<class T, bool linearize>
+      std::string GouyChapman<T,linearize>::_info() {
         using namespace textio;
         char w=30;
         std::ostringstream o;
@@ -193,7 +194,8 @@ namespace Faunus {
           << pad(SUB,w,"Surface charge density") << rho*pc::e*1e20 << " C/m"+squared << endl
           << pad(SUB,w,"Area per charge") << 1/rho << _angstrom+squared << endl
           << pad(SUB,w,"GC-coefficient "+Gamma+"o") << " " << gamma0 << endl
-          << pad(SUB,w,"Linearize") << ((linearize) ? "yes" : "no") << endl;
+          << pad(SUB,w,"Linearize") << ((linearize) ? "yes" : "no") << endl
+          << pad(SUB,w,"Surface position") << surfDist(Point(0,0,0)) << _angstrom << endl;
         return o.str();
       }
 
@@ -370,65 +372,65 @@ namespace Faunus {
      *
      */
     template<class T=double>
-    class HydrophobicWall : public ExternalPotentialBase<> {
-    protected:
-      T _depth;
-      T _threshold;
-      std::string _type;
-      std::string _info();
-    public:
-      HydrophobicWall(InputMap&);
-      void setSurfPositionZ(T*);        // sets position of surface
-      template<typename Tparticle>
-      T operator()(const Tparticle &p); // returns energy
-    };
+      class HydrophobicWall : public ExternalPotentialBase<> {
+        protected:
+          T _depth;
+          T _threshold;
+          std::string _type;
+          std::string _info();
+        public:
+          HydrophobicWall(InputMap&);
+          void setSurfPositionZ(T*);        // sets position of surface
+          template<typename Tparticle>
+            T operator()(const Tparticle &p); // returns energy
+      };
 
     template<class T>
-    HydrophobicWall<T>::HydrophobicWall(InputMap &in) {
-      string prefix = "hydrwl_";
-      name          = "Hydrophobic Wall";
-      _type         = in.get<string>(prefix + "type", "sqwl");
-      _depth        = in.get<double>(prefix + "depth"    , 0);
-      _threshold    = in.get<double>(prefix + "threshold", 0);
-    }
+      HydrophobicWall<T>::HydrophobicWall(InputMap &in) {
+        string prefix = "hydrwl_";
+        name          = "Hydrophobic Wall";
+        _type         = in.get<string>(prefix + "type", "sqwl");
+        _depth        = in.get<double>(prefix + "depth"    , 0);
+        _threshold    = in.get<double>(prefix + "threshold", 0);
+      }
 
     template<class T>
-    void HydrophobicWall<T>::setSurfPositionZ(T* z) {
+      void HydrophobicWall<T>::setSurfPositionZ(T* z) {
         this->setCoordinateFunc
           (
            [=](const Point &p) { return std::abs(*z-p.z()); }
           ); // c++11 lambda
-    }
-
-    template<class T>
-    template<typename Tparticle>
-    T HydrophobicWall<T>::operator()(const Tparticle &p) {
-      if (p.hydrophobic) {
-        if (_type == "sqwl")
-          if (this->p2c(p) < _threshold)
-            return -_depth;
-        if (_type == "lj") {
-          double r2  = (p.radius * p.radius) / (this->p2c(p) * this->p2c(p));
-          double r6  = r2 * r2 * r2;
-          double val = _depth * ((r6 * r6) - (2 * r6));
-          return val;
-        } 
       }
-      return 0;
-    }
 
     template<class T>
-    std::string HydrophobicWall<T>::_info() {
-      std::ostringstream o;
-      if (_type == "sqwl")
-        o << pad(textio::SUB, 50, ">>> USING: square well potential <<<") << endl
-          << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(SQWL)") << _depth << textio::kT + " = " << pc::kT2kJ(_depth) << " kJ/mol" << endl
-          << pad(textio::SUB, 25, "Threshold") << _threshold << textio::_angstrom << " (particle - wall distance)" << endl;
-      if (_type == "lj")
-        o << pad(textio::SUB, 50, ">>> USING: Lennard-Jones potential <<<") << endl
-          << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(LJ)") << _depth << textio::kT + " = " << pc::kT2kJ(_depth) << " kJ/mol"<< endl;
-      return o.str();
-    }
+      template<typename Tparticle>
+      T HydrophobicWall<T>::operator()(const Tparticle &p) {
+        if (p.hydrophobic) {
+          if (_type == "sqwl")
+            if (this->p2c(p) < _threshold)
+              return -_depth;
+          if (_type == "lj") {
+            double r2  = (p.radius * p.radius) / (this->p2c(p) * this->p2c(p));
+            double r6  = r2 * r2 * r2;
+            double val = _depth * ((r6 * r6) - (2 * r6));
+            return val;
+          } 
+        }
+        return 0;
+      }
+
+    template<class T>
+      std::string HydrophobicWall<T>::_info() {
+        std::ostringstream o;
+        if (_type == "sqwl")
+          o << pad(textio::SUB, 50, ">>> USING: square well potential <<<") << endl
+            << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(SQWL)") << _depth << textio::kT + " = " << pc::kT2kJ(_depth) << " kJ/mol" << endl
+            << pad(textio::SUB, 25, "Threshold") << _threshold << textio::_angstrom << " (particle - wall distance)" << endl;
+        if (_type == "lj")
+          o << pad(textio::SUB, 50, ">>> USING: Lennard-Jones potential <<<") << endl
+            << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(LJ)") << _depth << textio::kT + " = " << pc::kT2kJ(_depth) << " kJ/mol"<< endl;
+        return o.str();
+      }
 
     /**
      * @brief Hydrophobic wall potential w. linear slope

@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 2.8.5 FATAL_ERROR)
 project("Faunus")
 
+if(POLICY CMP0042)
+  cmake_policy(SET CMP0042 OLD)
+endif()
+
 # ----------------------------
 #   Locate external packages
 # ----------------------------

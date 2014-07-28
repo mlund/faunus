@@ -389,6 +389,17 @@ namespace Faunus {
      * This will cut any pair potential at `prefix_cutoff` and shift to
      * zero at that distance. Slow but general.
      *
+     * Example:
+     *
+     * ~~~~
+     * using namespace Faunus::Potential;
+     * typedef CutShift<LennardJones> Tpairpot;
+     * ~~~~
+     *
+     * Upon construction with an `InputMap`, the `lj_cutoff`
+     * keyword will be used to set the cut-off.
+     *
+     *
      * @todo Implement force calculation
      */
     template<class Tpairpot>
@@ -763,6 +774,15 @@ namespace Faunus {
      *              = \lambda_B \frac{z_i z_j}{r_{ij}}
      * @f]
      * where \f$\lambda_B\f$ is the Bjerrum length and \c z are the valencies.
+     *
+     * Upon construction, the following parameters are read from the
+     * `InputMap`:
+     *
+     * Keyword        |  Description
+     * :------------- | :---------------------
+     *  `temperature` | Absolute temperature (K) [default: 298.15 K]
+     *  `epsilon_r`   | Relative dielectric constant [default: 80]
+     *  `depsdt`      | Dielectric constant temperature derivative [default: -0.368]
      */
     class Coulomb : public PairPotentialBase {
       friend class Potential::DebyeHuckel;
@@ -775,7 +795,7 @@ namespace Faunus {
       double lB;          //!< Bjerrum length (angstrom)
 
       public:
-      Coulomb(InputMap&); //!< Construction from InputMap
+      Coulomb(InputMap&, string="coulomb"); //!< Construction from InputMap
       double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
 
       template<class Tparticle>
@@ -816,13 +836,20 @@ namespace Faunus {
 
     /**
      * @brief Coulomb pair potential shifted according to Wolf/Yonezawa (<http://dx.doi.org/10/j97>)
-     * @details The Coulomb potential has the form:
+     * @details The potential has the form:
      * @f[
      * \beta u_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT}
      * z_i z_j \left (
      * \frac{1}{r} - \frac{1}{R_c} + \frac{r-R_c}{R_c^2}
      * \right )
      * @f]
+     *
+     * and is hence a particular simple form of the original Wolf
+     * formulation. This potential is expected to work reasonably well
+     * for dense liquids.
+     *
+     * Upon construction using an `InputMap` the keywords from `Potential::Coulomb`
+     * are used in addition to `coulomb_cut` to specifify the cut-off.
      */
     class CoulombWolf : public Coulomb {
       private:

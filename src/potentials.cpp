@@ -357,7 +357,7 @@ namespace Faunus {
      * - `depsdt` - temperature dependence of dielectric constant,
      *   \f$ \partial\epsilon_r/\partial T\approx-0.368\f$ for water.
      */
-    Coulomb::Coulomb(InputMap &in) {
+    Coulomb::Coulomb(InputMap &in, string pfx) : PairPotentialBase(pfx) {
       name="Coulomb";
       pc::setT ( in.get<double>("temperature", 298.15, "Absolute temperature (K)") );
       epsilon_r = in.get<double>("epsilon_r",80., "Dielectric constant");

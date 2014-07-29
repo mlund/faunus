@@ -61,8 +61,7 @@ namespace Faunus {
         virtual bool collision(const particle&, collisiontype=BOUNDARY) const=0;//!< Check for collision with boundaries, forbidden zones, matter,..
         virtual void randompos(Point &)=0;              //!< Random point within container
         virtual void boundary(Point &) const=0;             //!< Apply boundary conditions to a point
-        virtual void scale(Point&, const double&) const;    //!< Scale point to a new volume - for NPT ensemble
-        virtual void isoscale(Point&, const double&, const double&) const;    //!< Scale point anisotropically - for NVT ensemble
+        virtual void scale(Point&, Point &, const double, const double) const;  //!< Scale point
         virtual double sqdist(const Point &a, const Point &b) const=0; //!< Squared distance between two points
         virtual Point vdist(const Point&, const Point&)=0;  //!< Distance in vector form
         virtual ~Geometrybase();
@@ -81,6 +80,8 @@ namespace Faunus {
         double _getVolume() const;
         string _info(char);
       public:
+        Point len;
+        bool setlen(Point);                      //!< Reset radius (angstrom)
         void setRadius(double);                 //!< Set radius (angstrom)
         Sphere(double);                         //!< Construct from radius (angstrom)
         Sphere(InputMap&, string="sphere");     //!< Construct from InputMap key \c prefix_radius
@@ -91,7 +92,7 @@ namespace Faunus {
           return (a-b).squaredNorm();
         }
         inline Point vdist(const Point &a, const Point &b) { return a-b; }
-        void scale(Point&, const double&) const; //!< Linear scaling along radius (NPT ensemble)
+        void scale(Point&, Point &, const double, const double) const; //!< Linear scaling along radius (NPT ensemble)
     };
 
     /*! \brief Cuboid geometry with periodic boundaries
@@ -107,7 +108,7 @@ namespace Faunus {
         string _info(char);                      //!< Return info string
         void _setVolume(double);
         double _getVolume() const;
-        enum scaletype {XYZ,XY,Z};
+        enum scaletype {XYZ,XY};
         scaletype scaledir;                      //!< Scale directions for pressure scaling
         string scaledirstr;
       protected:
@@ -168,8 +169,7 @@ namespace Faunus {
           if (std::abs(a.z())>len_half.z()) a.z()-=len.z()*anint(a.z()*len_inv.z());
         }
 
-        void scale(Point&, const double&) const;
-        void isoscale(Point&, const double&, const double&) const;
+        void scale(Point&, Point&, const double, const double) const;
     };
 
     /*!

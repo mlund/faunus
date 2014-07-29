@@ -1,9 +1,7 @@
 #include <faunus/faunus.h>
 using namespace Faunus;
 
-typedef std::vector<Group*> Tvec;
 typedef Space<Geometry::Cuboid> Tspace;
-typedef Faunus::Analysis::PenaltyFunction2D<double> Tpenalty;
 
 struct myenergy : public Energy::Energybase<Tspace> { //custom energy class
   public:
@@ -27,17 +25,19 @@ struct myenergy : public Energy::Energybase<Tspace> { //custom energy class
 };
 
 struct coordinates { //function that defines the reaction coordinates
-  std::pair<double,double> operator()(Tspace *spc, const p_vec &p, Tvec &gv) {
-    return std::make_pair(p[gv[0]->front()].x(),p[gv[0]->front()].y());
+  static Group* pg; // penalized group
+  std::pair<double,double> operator()(const p_vec &p) {
+    return std::make_pair(p[pg->front()].x(),p[pg->front()].y());
   }
 };
+Group* coordinates::pg;
 
 int main() {
   Faunus::MPI::MPIController mpi;                  //init MPI
   InputMap mcp(textio::prefix+"penalty.input");    //read input file
   MCLoop loop(mcp);                                //handle mc loops
   auto pot = myenergy()                            //our custom potential!
-    + Energy::PenaltyEnergy<Tspace,Tpenalty,coordinates>(mpi, mcp);
+    + Energy::PenaltyEnergy<Tspace,coordinates>(mpi, mcp);
   auto penalty = &pot.second;                      //penalty function
   Tspace spc(mcp);                                 //create simulation space
   spc.insert( PointParticle() );                   //insert a single particle
@@ -46,30 +46,31 @@ int main() {
   EnergyDrift sys;                                 //class for tracking system energy drifts
   Move::AtomicTranslation<Tspace> trans(mcp,pot,spc); //translational move
   trans.setGroup(mygroup);                            //set translation group
-  Tvec gvec;                                          //vector of pointers to penalized groups 
-  gvec.push_back(&mygroup);
-  penalty->setPenalized(&spc,gvec);
-  penalty->pf.load(textio::prefix+"penalty");
+  coordinates::pg = &mygroup;                         //set penalized group
   sys.init( Energy::systemEnergy(spc,pot,spc.p) ); // store total energy
   int seed_value = mcp.get<int>("seed_value",-13);
   slp_global.seed(seed_value);
   int sweeps = 0;
   while ( loop.macroCnt() ) {                 //start markov chain
     while ( loop.microCnt() ) {
-      sys += trans.recycle();                    //translate particle
+      sys(trans.recycle());                    //translate particle
       ++sweeps;
       //increment the histogram and/or update the penalty function using waste recycling
-      sys += penalty->pf.update_recycle(penalty->connected_pair,sys.weight,sys.rejection); 
+      sys += penalty->update(penalty->coordpair,sys.weight,sys.rejection); 
     }
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // energy drift?
     // save to disk
-    if (sweeps == 2.5e5) penalty->pf.save(textio::prefix+"penalty_init"); // initial histogram obtained without penalty
-    else penalty->pf.save(textio::prefix+"penalty");
+    if (sweeps == 2.5e5) penalty->save(textio::prefix+"init_"); // initial histogram obtained without penalty
+    else penalty->save(textio::prefix);
   }
-  mpi.cout << trans.info() + loop.info() + penalty->pf.info() + sys.info();
   // perform unit 
   UnitTest test(mcp);
-  penalty->pf.test(test);
+  trans.test(test);
+  sys.test(test);
+  penalty->test(test);
+
+  mpi.cout << trans.info() + loop.info() + penalty->info() + sys.info() + test.info();
+
   return test.numFailed();
 }
 /**
@@ -106,10 +107,14 @@ int main() {
   ~~~
   loop_macrosteps         100       # 2 * number of updates of penalty function
   loop_microsteps         250000    # number of moves between printing histograms
-  loop_update             500000    # number of moves between updates
-  hist_size               2000      # must be >= max number of points in the histogram (i.e. 41x41=1681)
-  res1                    0.1       # resolution of one reaction coordinate
-  res2                    0.1       # resolution of the second reaction coordinate
+  penalty_update          500000    # number of moves between updates
+  penalty_size            20000     # must be >= max number of points in the histogram (i.e. 41x41=1681)
+  penalty_res1            0.1       # bin width of 1st coordinate
+  penalty_res2            0.1       # bin width of 2nd coordinate
+  penalty_lo1             -2.0      # lower limit of 1st coordinate
+  penalty_hi1             2.0       # upper limit of 1st coordinate
+  penalty_lo2             -2.0      # lower limit of 2nd coordinate
+  penalty_hi2             2.0       # upper limit of 2nd coordinate
   cuboid_len              4         # box side length Angstrom
   mv_particle_genericdp   0.5       # translational displacement [Angstrom]
   seed_value              $seed     # random seed

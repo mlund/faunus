@@ -210,7 +210,7 @@ namespace Faunus {
     template<typename T=double>
       class CylindricalCorrectionDH : public ExternalPotentialBase<> {
         private:
-          typedef Analysis::Table2D<T,Average<T> > Ttable;
+          typedef Table2D<T,Average<T> > Ttable;
           T threshold;       //!< Threshold for mean field; must be equal to radius of cylinderical container
           T bin;             //!< Resolution for the container slices 
           T prefactor;       //!< exp(-kappa*threshold)
@@ -243,7 +243,7 @@ namespace Faunus {
       template<class Tpvec>
       void CylindricalCorrectionDH<T>::sample(const Tpvec& p, T zmin, T zmax){
         if (!loadfromdisk) {
-          typedef Analysis::Table2D<T,T> Ttable;
+          typedef Table2D<T,T> Ttable;
           Ttable qsum(bin,Ttable::XYDATA);   //total bin charge
           T dV=pc::pi*pow(threshold, 2)*bin; // bin volume
           for (auto &i : p)

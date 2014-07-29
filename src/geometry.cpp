@@ -18,12 +18,8 @@ namespace Faunus {
       return sqrt(sqdist(p1,p2));
     }
 
-    void Geometrybase::scale(Point &a, const double &s) const {
-      assert(!"Volume scaling function unimplemented for this geometry");
-    }
-
-    void Geometrybase::isoscale(Point &a, const double &xy, const double &z) const {
-      assert(!"Isochoric-anisotropic scaling function unimplemented for this geometry");
+    void Geometrybase::scale(Point &a, Point &s, const double xyz, const double xy) const {
+      assert(!"Scaling function unimplemented for this geometry");
     }
 
     string Geometrybase::info(char w) {
@@ -76,6 +72,7 @@ namespace Faunus {
 
     Sphere::Sphere(double radius) {
       setRadius(radius);
+      len = Point(r,diameter,0);
     }
 
     /**
@@ -96,6 +93,7 @@ namespace Faunus {
       r = radius; 
       r2 = r*r; 
       diameter = 2*r; 
+      len = Point(r,diameter,0);
     }
 
     double Sphere::_getVolume() const {
@@ -106,9 +104,15 @@ namespace Faunus {
       setRadius( cbrt( 3*vol/(4*pc::pi) ) );
     }
 
-    void Sphere::scale(Point &a, const double &newvolume) const {
-      assert( getVolume()>0 && newvolume>0 );
-      double newradius = cbrt( 3*newvolume/(4*pc::pi) );
+    bool Sphere::setlen(Point l) {
+      if (l.x()<=0) return false;
+      Sphere::setRadius(l.x());
+      return true;
+    }
+
+    void Sphere::scale(Point &a, Point &s, const double xyz=1, const double xy=1) const {
+      assert( getVolume()>0 );
+      double newradius = cbrt( 3*xyz*xyz*xyz*getVolume()/(4*pc::pi) );
       a = a * (newradius/r);
     }
 
@@ -139,15 +143,13 @@ namespace Faunus {
      * `cuboid_xlen`     | x sidelength [angstrom]
      * `cuboid_ylen`     | y sidelength [angstrom]
      * `cuboid_zlen`     | z sidelength [angstrom]
-     * `cuboid_scaledir` | Isobaric scaling directions (`XYZ`=isotropic, `XY`=xy, 'Z'=z).
+     * `cuboid_scaledir` | Isobaric scaling directions (`XYZ`=isotropic, `XY`=xy only).
      */
     Cuboid::Cuboid(InputMap &in) {
       name="Cuboid";
       string scaledirstr = in.get<string>("cuboid_scaledir","XYZ");
       if (scaledirstr=="XY")
         scaledir=XY;
-      else if (scaledirstr=="Z")
-        scaledir=Z;
       else
         scaledir=XYZ;
       double cubelen=in.get<double>("cuboid_len",-1, name+" sidelength (AA)");
@@ -173,7 +175,13 @@ namespace Faunus {
     }
 
     void Cuboid::_setVolume(double newV) {
-      scale(len,newV);
+      double xyz=1.0, xy=1.0;
+      Point s = Point(1,1,1);
+      if (scaledir==XYZ) 
+        xyz = cbrt(newV/getVolume());
+      if (scaledir==XY) 
+        xy = sqrt(newV/getVolume());
+      scale(len,s,xyz,xy);
       setlen(len);
     }
 
@@ -227,23 +235,12 @@ namespace Faunus {
       return false;
     }
 
-    void Cuboid::scale(Point &a, const double &newvolume) const {
-      assert( getVolume()>0 && newvolume>0 );
+    void Cuboid::scale(Point &a, Point &s, const double xyz=1, const double xy=1) const {
+      assert( getVolume()>0 );
       if (scaledir==XYZ)
-        a = a * cbrt( newvolume/getVolume() );
-      if (scaledir==XY) {
-        double s=sqrt( newvolume/getVolume() );
-        a.x() *= s;
-        a.y() *= s;
-      }
-      if (scaledir==Z)
-        a.z() *= newvolume/getVolume();
-    }
-
-    void Cuboid::isoscale(Point &a, const double &xy, const double &z) const {
-      a.x() *= xy;
-      a.y() *= xy;
-      a.z() *= z;
+        a = Point(a.x()*s.x()*xyz,a.y()*s.y()*xyz,a.z()*s.z()*xyz);
+      if (scaledir==XY) 
+        a = Point(a.x()*s.x()*xy,a.y()*s.y()*xy,a.z()*s.z());
     }
 
     Cuboidslit::Cuboidslit(InputMap &in) : Cuboid(in) {

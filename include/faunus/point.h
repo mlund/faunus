@@ -97,26 +97,14 @@ namespace Faunus {
       }
 
     /**
-     * @brief Coordinate scaling used for NPT ensemble
+     * @brief Coordinate scaling used for NPT and NVT ensemble
      *
      * This will perform a volume scaling of the Point by
      * following the algorithm specified in the Geometry.
      */
     template<typename Tgeometry>
-      void scale(const Tgeometry &geo, double newvol) {
-        geo.scale(*this, newvol);
-      }
-
-    /**
-     * @brief Coordinate scaling used for isochoric-anisotropic scaling moves
-     *
-     * This will perform a scaling of the Point by
-     * following the algorithm specified in the Cuboid Geometry.
-     */
-
-    template<typename Tgeometry>
-      void isoscale(const Tgeometry &geo, double xy, double z) {
-        geo.isoscale(*this,xy,z);
+      void scale(const Tgeometry &geo, PointBase &s, double xyz=1, double xy=1) {
+        geo.scale(*this,s,xyz,xy);
       }
 
     Tcoord len() const {

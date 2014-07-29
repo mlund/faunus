@@ -20,14 +20,14 @@ set origin 0.02,0.26
 unset colorbox
 set cbrange [0:12]
 set title "Initial histogram" font "helvetica, 25" offset 0, -0.7, 0
-splot "mpi0.penalty_init.dist" u 1:2:(log($3)) w p ps 1 pt 5 palette noti
+splot "mpi0.init_histo" u 1:2:(log($3)) w p ps 1 pt 5 palette noti
 
 set origin 0.47,0.26
 set colorbox
 set cbrange [0:12]
 set cblabel "log(counts)"
 set title "Final histogram" font "helvetica, 25" offset 0, -0.7, 0
-splot "mpi0.penalty.dist" u 1:2:(log($3)) w p ps 1 pt 5 palette noti
+splot "mpi0.histo" u 1:2:(log($3)) w p ps 1 pt 5 palette noti
 
 set origin 0.47,-0.24
 set colorbox
@@ -45,7 +45,7 @@ set xlabel "x" offset 0,0.7
 set key spacing 2
 set ylabel "free energy" offset 2,0 
 set title "Final 1D profiles" font "helvetica, 25" offset 0, -0.7, 0
-plot "mpi0.penalty" u 1:($2==0 ? $3 : 1/0) w p ps 1 pt 7 lc rgb "red" ti "penalty at y=0",\
-"mpi0.penalty.dist" u 1:($2==0 ? log($3) : 1/0) w p ps 1 lc rgb "gray" pt 7 ti "log(histogram) at y=0"
+plot "mpi0.histo" u 1:($2==0 ? log($3) : 1/0):(0.1) w circles lc rgb "#4992BA" fs transparent solid 0.60 border ti "log(histogram) at y=0",\
+"mpi0.penalty" u 1:($2==0 ? $3 : 1/0):(0.1) w circles lc rgb "#00C795" fs transparent solid 0.60 border ti "penalty at y=0"
 
 unset multiplot

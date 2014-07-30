@@ -600,37 +600,35 @@ namespace Faunus {
      * @brief Calculates the gyration tensor of a molecular group
      *
      * @param geo Geometry to use for periodic boundaries (if any)
-     * @param p Particle vector (structure must be whole)
-     * @param m Molecular group
-     * @param m Center-of-mass of the molecular group
+     * @param p Particle vector
+     * @param g Molecular group
+     * @param cm Center-of-mass of the molecular group
+     *
+     * The gyration tensor is computed from the dyadic product of the position
+     * vectors in the c-o-m reference system, \f$ t_{i} = r_{i} - cm \f$:
+     * \f$ S = \sum_{i=0}^{N} t_{i} t_{i}^{T} \f$
      *
      */
     template<typename Tgeometry, typename Tpvec, typename Tgroup>
-      Eigen::Matrix<double,3,3> gyration(Tgeometry &geo, Tpvec &p, Tgroup &g, const Point &cm) {
-        double xx=0, xy=0, xz=0, yy=0, yz=0, zz=0, sum=0;
-        Point t;
+      Tensor<double> gyration(Tgeometry &geo, Tpvec &p, Tgroup &g, const Point &cm) {
+        Tensor<double> S;
         for (auto i : g) {
-          t = p[i] - cm;
+          Point t = p[i] - cm;
           geo.boundary(t);
-          xx += p[i].mw * t.x() * t.x();
-          xy += p[i].mw * t.x() * t.y();
-          xz += p[i].mw * t.x() * t.z();
-          yy += p[i].mw * t.y() * t.y();
-          yz += p[i].mw * t.y() * t.z();
-          zz += p[i].mw * t.z() * t.z();
-          sum += p[i].mw;                      // total mass
+          S += t * t.transpose();
         }
-        assert(sum>0 && "Zero molecular weight not allowed.");
-        Eigen::Matrix<double,3,3> S;
-        S << xx,xy,xz,xy,yy,yz,xz,yz,zz;
-        S*=(1./sum);
-        return S;
+        return S*(1/g.size());
       }
 
     /** 
      * @brief Calculate mass center of cluster of particles in unbounded environment 
-     * DOI:10.1080/2151237X.2008.10129266
+     * 
+     * @param geo Geometry to use
+     * @param p Particle vector
+     * @param g Molecular group
+     * @param str Component(s) of the c-o-m to be calculated
      *
+     * [More info](http://dx.doi.org/10.1080/2151237X.2008.10129266)
      */
     template<class Tgeo, class Tpvec, class TGroup>
       Point trigoCom(const Tgeo &geo, const Tpvec &p, const TGroup &g, string str="Z") {

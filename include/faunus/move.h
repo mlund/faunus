@@ -269,9 +269,9 @@ namespace Faunus {
       }
 
     /**
-     * This function will perform a trial move and accept/reject using the
-     * Metropolis criteria (doi:10/ds736f).
-     * That is, it will perform the following `n` times:
+     * @brief Trial move and accept/reject using the Metropolis criteria.
+     *
+     * @details It will perform the following `n` times:
      *
      * - Perform a trial move with `_trialMove()`
      * - Calulate the energy change, \f$\beta\Delta U\f$ with `_energyChange()`
@@ -280,6 +280,8 @@ namespace Faunus {
      *
      * @note Do not override this function in derived classes.
      * @param n Perform move `n` times (default=1)
+     *
+     * [More info](http://dx.doi.org/10.1063/1.1699114)
      */
     template<class Tspace>
       double Movebase<Tspace>::move(int n) {
@@ -304,13 +306,16 @@ namespace Faunus {
       }
 
     /**
-     * This function differs from move in that:
+     * @brief Trial move and accept/reject using the Metropolis criteria
+     *
+     * @details This function differs from move in that:
      * 1. it returns a pair of energy change values;
-     * 2. it performs one move only.
+     * 2. it performs one move at a time.
      * The second member of the pair stores the energy change, du.
      * The first is zero in case of rejection and otherwise equal to du.
      * The information on the energy change in case of rejection is useful in Waste-Recycle MC.
-     * DOI: 10.1007/3-540-35273-2_4
+     * 
+     * [More info](http://dx.doi.org/10.1007/3-540-35273-2_4)
      */
     template<class Tspace>
       std::pair<double,double> Movebase<Tspace>::recycle() {
@@ -2044,17 +2049,17 @@ namespace Faunus {
       }
 
     /**
-     * @brief Isochoric scaling move in Cuboid geometry with pbc
+     * @brief Isochoric scaling move in Cuboid geometry
      *
-     * @details This class will expand along the z-axis
-     * and shrink in the xy-plane atomic as well as molecular groups 
+     * @details This class will expand/shrink along the z-axis
+     * and shrink/expand in the xy-plane atomic as well as molecular groups 
      * as long as these are known to Space - see Space.enroll().
      * The InputMap class is scanned for the following keys:
      *
      * Key                | Description
      * :----------------- | :-----------------------------
-     * `nvt_z`          | Length displacement parameter
-     * `nvt_runfraction`| Runfraction [default=1]
+     * `nvt_z`            | Length displacement parameter
+     * `nvt_runfraction`  | Runfraction [default=1]
      *
      */
     template<class Tspace>

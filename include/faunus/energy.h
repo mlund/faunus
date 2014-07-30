@@ -902,10 +902,11 @@ namespace Faunus {
               = ForceFunctionObject<decltype(pot)>(pot);
           }
 
-        //uncommented due to gcc 4.6
-        auto getBondList() -> decltype(this->list) {
-          return Tbase::getBondList();
-        }
+        /* Commented to allow for gcc 4.6 compatibility
+           auto getBondList() -> decltype(this->list) {
+           return Tbase::getBondList();
+           }
+           */
 
     };
 
@@ -1365,10 +1366,16 @@ namespace Faunus {
         public:
           /**
            * @brief Constructor
-           * @param MPI controller
+           *
+           * @param mpi MPI controller
            * @param Nupdate Number of moves between updates of the penalty function
-           * @param res1 Resolution of the reaction coordinate (default 1)
-           * @param size Total number of points in the penalty function
+           * @param size Total number of points in the penalty function (default 2000)
+           * @param bw1 Bin width of 1st reaction coordinate (default 1)
+           * @param bw1 Bin width of 2nd reaction coordinate (default 1)
+           * @param lo1 Lower limit of 1st reaction coordinate (default -20)
+           * @param hi1 Lower limit of 1st reaction coordinate (default 20)
+           * @param lo2 Lower limit of 2nd reaction coordinate (default -20)
+           * @param hi2 Lower limit of 2nd reaction coordinate (default 20)
            */
           PenaltyFunction1D(Faunus::MPI::MPIController &mpi, int Nupdate, size_t size, Tcoord res1, Tcoord res2,
               float lo1, float hi1, float lo2, float hi2)
@@ -1382,13 +1389,15 @@ namespace Faunus {
               _lo1 = lo1;
               _hi1 = hi1;
             }
-          /* @brief Check if the coordinate is within the user-defined range */
+          /** @brief Check if coordinate is within user-defined range */
           bool isInrange(Tcoord &coord) {
             return (coord>=_lo1 && coord<=_hi1);
           }
           /**
-           * @brief The slaves send histograms to the master
-           * @brief The master computes the sum over all histograms and sends it to the slaves
+           * @brief Merge histograms obtained from parallel processes with different seeds
+           *
+           * @details Slave processes send histograms to the master. The master computes the 
+           * sum over all histograms and sends it back to the slaves.
            */
           void exchange() {
             if (!mpiPtr->isMaster()) {
@@ -1414,10 +1423,10 @@ namespace Faunus {
               hist.buf2hist(sendBuf);
             }
           }
-
-          /** 
-           * @brief Update histogram of the single process 
-           * @brief Merge histograms from all processes and update the penalty function
+          /** @brief Update histogram of single processes and penalty function 
+           * 
+           *  @details Penalty function is updated using histogram obtained
+           *  by merging contributions from all processes.
            */
           double update(Tcoord &coord) {
             _cnt++;
@@ -1439,11 +1448,15 @@ namespace Faunus {
             }
             return _du;
           }
-
           /**
-           * @brief Update histogram of the single process using both the accepted and rejected 
-           * configutations according to the waste_recycling method. DOI:10.1007/3-540-35273-2_4
-           * Merge histograms from all processes and update the penalty function
+           * @brief Update histogram of single processes using waste-recycling method.
+           *
+           * @details If energy change > 0, histogram receives contributions from both
+           * accepted and rejected configurations.
+           * Penalty function is updated using histogram obtained
+           * by merging contributions from all processes.
+           *
+           * [More info](http://dx.doi.org/10.1007/3-540-35273-2_4)
            */
           double update(Tpair &coord, double &weight, bool &rejection) {
             _cnt++;
@@ -1470,31 +1483,32 @@ namespace Faunus {
             }
             return _du;
           }
-
-          /*! \brief Save table to disk */
+          /** @brief Save table to disk */
           void save(const string &filename) {
             Tbase::save(filename+"penalty");
             hist.save(filename+"histo");
           }
-
-          /*! \brief Translate penalty by a reference value and save it to disk */
+          /** 
+           * @brief Translate penalty by a reference value and save it to disk. 
+           *
+           * @details The reference value is obtained by averaging over a region of the
+           * reaction coordinate space.
+           */
           void save_final(const string &filename, Tcoord a, Tcoord b) {
             double ref_value = - Tbase::ave(a,b);
             Tbase::save(filename+"penalty_fin",1.,ref_value);
           }
 
-          /*! \brief Load table to disk */
+          /** @brief Load table to disk */
           void load(const string &filename) {
             Tbase::load(filename+"penalty");
             hist.load(filename+"histo");
           }
-
           void test(UnitTest &t) {
             auto it_max = Tbase::max();
             auto it_min = Tbase::min();
             t("penalty1D_range",it_max->second-it_min->second,0.1);
           }
-
           string info() {
             using namespace Faunus::textio;
             std::ostringstream o;
@@ -1534,11 +1548,16 @@ namespace Faunus {
         public:
           /**
            * @brief Constructor
-           * @param MPI controller
+           *
+           * @param mpi MPI controller
            * @param Nupdate Number of moves between updates of the penalty function
-           * @param res1 Resolution of one coordinate (default 1)
-           * @param res2 Resolution of the other coordinate (default 1)
-           * @param size Total number of points in the penalty function
+           * @param size Total number of points in the penalty function (default 2000)
+           * @param bw1 Bin width of 1st reaction coordinate (default 1)
+           * @param bw1 Bin width of 2nd reaction coordinate (default 1)
+           * @param lo1 Lower limit of 1st reaction coordinate (default -20)
+           * @param hi1 Lower limit of 1st reaction coordinate (default 20)
+           * @param lo2 Lower limit of 2nd reaction coordinate (default -20)
+           * @param hi2 Lower limit of 2nd reaction coordinate (default 20)
            */
           PenaltyFunction2D(Faunus::MPI::MPIController &mpi, int Nupdate, size_t size, Tcoord res1, Tcoord res2,
               float lo1, float hi1, float lo2, float hi2)
@@ -1554,13 +1573,15 @@ namespace Faunus {
               _lo2 = lo2;
               _hi2 = hi2;
             }
-          /* @brief Check if the coordinates are within the user-defined ranges */
+          /** @brief Check if coordinates are within user-defined ranges */
           bool isInrange(Tpair &coord) {
             return (coord.first>=_lo1 && coord.first<=_hi1 && coord.second>=_lo2 && coord.second<=_hi2);
           }
           /**
-           * @brief The slaves send histograms to the master
-           * @brief The master computes the sum over all histograms and sends it to the slaves
+           * @brief Merge histograms obtained from parallel processes with different seeds
+           *
+           * @details Slave processes send histograms to the master. The master computes the 
+           * sum over all histograms and sends it back to the slaves.
            */
           void exchange() {
             if (!mpiPtr->isMaster()) {
@@ -1586,11 +1607,11 @@ namespace Faunus {
               hist.buf2hist(sendBuf);
             }
           }
-
-          /** 
-           * @brief Update histogram of the single process 
-           * @brief Merge histograms from all processes and update the penalty function
-           */
+          /** @brief Update histogram of single processes and penalty function
+           *                               
+           *  @details Penalty function is updated using histogram obtained 
+           *  by merging contributions from all processes.                               
+           */ 
           double update(Tpair &coord) {
             _cnt++;
             hist(coord.first, coord.second)++; // increment internal histogram
@@ -1612,11 +1633,15 @@ namespace Faunus {
             }
             return _du;
           }
-
           /**
-           * @brief Update histogram of the single process using both the accepted and rejected 
-           * configutations according to the waste_recycling method. DOI:10.1007/3-540-35273-2_4
-           * Merge histograms from all processes and update the penalty function
+           * @brief Update histogram of single processes using waste-recycling method.
+           *
+           * @details If energy change > 0, histogram receives contributions from both
+           * accepted and rejected configurations.
+           * Penalty function is updated using histogram obtained
+           * by merging contributions from all processes.
+           *
+           * [More info](http://dx.doi.org/10.1007/3-540-35273-2_4)
            */
           double update(std::pair<Tpair,Tpair> &coord, double &weight, bool &rejection) {
             _cnt++;
@@ -1645,31 +1670,32 @@ namespace Faunus {
             return _du;
           }
 
-          /*! \brief Save table to disk */
+          /** @brief Save table to disk */
           void save(const string &filename) {
             Tbase::save(filename+"penalty");
             hist.save(filename+"histo");
           }
-
-          /*! \brief Translate penalty by a reference value and save it to disk */
+          /** 
+           * @brief Translate penalty by a reference value and save it to disk. 
+           *
+           * @details The reference value is obtained by averaging over a region of the
+           * reaction coordinate space.
+           */
           void save_final(const string &filename,
               Tcoord a, Tcoord b, Tcoord c, Tcoord d) {
             double ref_value = - Tbase::ave(a,b,c,d);
             Tbase::save(filename+"penalty_fin",1.,ref_value);
           }
-
-          /*! \brief Load table to disk */
+          /** @brief Load table to disk */
           void load(const string &filename) {
             Tbase::load(filename+"penalty");
             hist.load(filename+"histo");
           }
-
           void test(UnitTest &t) {
             auto it_max = Tbase::max();
             auto it_min = Tbase::min();
             t("penalty2D_range",it_max->second-it_min->second,0.1);
           }
-
           string info() {
             using namespace Faunus::textio;
             std::ostringstream o;
@@ -1750,7 +1776,6 @@ namespace Faunus {
               assert(Ncheck>0);
               _log="#   initial penalty energy = "+std::to_string(_du)+"\n";
             }
-
           /** @brief Update penalty for coordinate */
           double update(Tcoord coordinate) {
             _cnt++;
@@ -1786,7 +1811,8 @@ namespace Faunus {
 
     /**
      * @brief General energy class for handling penalty function (PF) methods.
-     * User-defined reaction coordinate(s) are provided by an external function, f.
+     *
+     * @details User-defined reaction coordinate(s) are provided by an external function, f.
      * f is a member of a class given as a template argument.
      * The return type of f can be either a double or a pair of doubles.
      * The dimensionality of the penalty function is inferred from the return value of f.
@@ -1821,8 +1847,8 @@ namespace Faunus {
            PenaltyEnergy(Faunus::MPI::MPIController &mpi, InputMap &in) :
              pf(mpi,in.get<int>(pfx+"_update",1e5),
                  in.get<size_t>(pfx+"_size",2000),
-                 in.get<float>(pfx+"_res1",0.1),
-                 in.get<float>(pfx+"_res2",0.1),
+                 in.get<float>(pfx+"_bw1",0.1),
+                 in.get<float>(pfx+"_bw2",0.1),
                  in.get<float>(pfx+"_lo1",-20),
                  in.get<float>(pfx+"_hi1",20),
                  in.get<float>(pfx+"_lo2",-20),
@@ -1842,10 +1868,6 @@ namespace Faunus {
              return pf.update(c, w, r);
            }
            std::map<Treturn,double> getMap() { return pf.getMap(); }
-           /**
-            * @brief The following member function takes as argument the function 
-            * that defines the reaction coordinate(s)
-            */
            double external(const p_vec &p) {
              Treturn coor = f(p);
              double du;

@@ -18,8 +18,8 @@ loop_macrosteps         50        # 2 * number of updates of penalty function
 loop_microsteps         250000    # number of moves between printing histograms
 penalty_update          500000    # number of moves between updates
 penalty_size            2000      # must be >= max number of points in the histogram (i.e. 41x41=1681)
-penalty_res1            0.1       # bin width of 1st coordinate
-penalty_res2            0.1       # bin width of 2nd coordinate
+penalty_bw1             0.1       # bin width of 1st coordinate
+penalty_bw2             0.1       # bin width of 2nd coordinate
 penalty_lo1             -2.0      # lower limit of 1st coordinate
 penalty_hi1             2.0       # upper limit of 1st coordinate
 penalty_lo2             -2.0      # lower limit of 2nd coordinate

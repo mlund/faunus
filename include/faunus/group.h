@@ -98,7 +98,7 @@ namespace Faunus {
           cm_trial=cm;
           return cm;
         }
-        
+
       /** @brief Calculates electric dipole moment */
       template<class Tspace>
         Point dipolemoment(const Tspace &s, Point mu=Point(0,0,0)) const {
@@ -208,50 +208,6 @@ namespace Faunus {
             return;
           }
         }
-
-      /** @brief Side lengths scaling for NVT ensemble 
-      template<class Tspace>
-        void isoscale(Tspace &s, double xy, double z) {
-          if (empty()) return;
-
-          if (isAtomic()) {
-            cm_trial=cm;
-            cm_trial.isoscale(s.geo,xy,z);
-            for (auto i : *this)
-              s.trial[i].isoscale(s.geo,xy,z);
-            return;
-          }
-
-          if (isMolecular()) {
-            assert( s.geo.dist(cm, massCenter(s))<1e-6);
-            assert( s.geo.dist(cm, cm_trial)<1e-7);
-
-            Point newcm=cm;
-            newcm.isoscale(s.geo,xy,z);
-            translate(s,-cm);           // move to origo
-            Point oldlen = s.geo.len;
-            Point newlen = Point ( s.geo.len.x()*xy, s.geo.len.y()*xy, s.geo.len.z()*z );
-            s.geo.setlen( newlen );  // apply trial lengths
-
-            for (auto i : *this) {
-              s.trial[i] += newcm;           // move all particles to new cm
-              s.geo.boundary( s.trial[i] );  // respect boundary conditions
-            }
-            cm_trial=newcm;
-            s.geo.setlen( oldlen );   // restore original lengths
-            return;
-          }
-
-          if (isRange()) {
-            for (int i=0; i!=numMolecules(); ++i) {
-              Group sel;
-              getMolecule(i,sel);
-              sel.setMassCenter(s);
-              sel.isoscale(s,xy,z);
-            }
-            return;
-          }
-        }*/
 
       /** @brief Undo move operation */
       template<class Tspace>

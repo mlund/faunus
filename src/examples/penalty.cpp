@@ -87,7 +87,7 @@ int main() {
   the penalty function method, demonstrating how the penalty function 
   (at the bottom right) yields flat distribution functions in rough energy landscapes.
 
-  ![Particle distribution functions in an 2D oscillating field](penalty.png)
+  ![Particle distribution functions and penalty function in an 2D oscillating field](penalty.png)
 
   To run this example, make sure faunus is compiled with MPI enabled:
 
@@ -96,6 +96,13 @@ int main() {
   $ make
   $ cd src/examples
   $ ./penalty.run mpirun
+  ~~~
+
+  A gnuplot script to generate the plots of the probability distributions and 
+  penalty function is provided:
+  
+  ~~~
+  $ gnuplot penalty.gnu
   ~~~
 
   The penalty function routine in Faunus is general and implemented in
@@ -109,8 +116,8 @@ int main() {
   loop_microsteps         250000    # number of moves between printing histograms
   penalty_update          500000    # number of moves between updates
   penalty_size            20000     # must be >= max number of points in the histogram (i.e. 41x41=1681)
-  penalty_res1            0.1       # bin width of 1st coordinate
-  penalty_res2            0.1       # bin width of 2nd coordinate
+  penalty_bw1             0.1       # bin width of 1st coordinate
+  penalty_bw2             0.1       # bin width of 2nd coordinate
   penalty_lo1             -2.0      # lower limit of 1st coordinate
   penalty_hi1             2.0       # upper limit of 1st coordinate
   penalty_lo2             -2.0      # lower limit of 2nd coordinate

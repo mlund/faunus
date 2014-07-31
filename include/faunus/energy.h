@@ -1317,6 +1317,8 @@ namespace Faunus {
 
           /** @brief Group-to-group energy */
           double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+            if (fabs(tension)<1e-6)
+              return 0;
             double dsasa=0;
             if (sasa.size()==p.size())
               if (g1.isMolecular())

@@ -835,7 +835,7 @@ namespace Faunus {
     };
 
     /**
-     * @brief Coulomb pair potential shifted according to Wolf/Yonezawa (<http://dx.doi.org/10/j97>)
+     * @brief Coulomb pair potential shifted according to Wolf/Yonezawa
      * @details The potential has the form:
      * @f[
      * \beta u_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT}
@@ -846,7 +846,7 @@ namespace Faunus {
      *
      * and is hence a particular simple form of the original Wolf
      * formulation. This potential is expected to work reasonably well
-     * for dense liquids.
+     * for dense liquids, see [here](http://dx.doi.org/10/j97).
      *
      * Upon construction using an `InputMap` the keywords from `Potential::Coulomb`
      * are used in addition to `coulomb_cut` to specifify the cut-off.

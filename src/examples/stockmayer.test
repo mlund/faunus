@@ -1,5 +1,5 @@
-# Generated on Jun 14 2013 11:14:55 using 4.7.3
-energyAverage                      -1381.76            
-mv_particle_acceptance             19.4621             
-relativeEnergyDrift                4.56884e-15         
-rot_particle_acceptance            44.5552             
+# Generated on Jul 31 2014 15:10:34 using 4.8.2
+energyAverage                      -1359.55            
+mv_particle_acceptance             20.2006             
+relativeEnergyDrift                4.78909e-15         
+rot_particle_acceptance            25.528              

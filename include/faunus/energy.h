@@ -1436,6 +1436,9 @@ namespace Faunus {
               exchange();
               for (auto &m : hist.getMap()) { // update penalty function
                 Tbase::operator()(m.first) += std::log(m.second);
+                double log2 = std::log(2); // half bin width compensation
+                if (m.first==_lo1 || m.first==_hi1) 
+                  Tbase::operator()(m.first) += log2;
               }
               double min = Tbase::min()->second;
               for (auto &m : Tbase::getMap()) {
@@ -1470,6 +1473,9 @@ namespace Faunus {
               exchange();
               for (auto &m : hist.getMap()) { // update penalty function
                 Tbase::operator()(m.first) += std::log(m.second);
+                double log2 = std::log(2); // half bin width compensation
+                if (m.first==_lo1 || m.first==_hi1) 
+                  Tbase::operator()(m.first) += log2;
               }
               double min = Tbase::min()->second;
               for (auto &m : Tbase::getMap()) {
@@ -1505,9 +1511,11 @@ namespace Faunus {
             hist.load(filename+"histo");
           }
           void test(UnitTest &t) {
-            auto it_max = Tbase::max();
-            auto it_min = Tbase::min();
-            t("penalty1D_range",it_max->second-it_min->second,0.1);
+            if (_cnt/_Nupdate>=1) {
+              auto it_max = Tbase::max();
+              auto it_min = Tbase::min();
+              t("penalty2D_range",it_max->second-it_min->second,0.1);
+            }
           }
           string info() {
             using namespace Faunus::textio;
@@ -1620,6 +1628,14 @@ namespace Faunus {
               exchange();
               for (auto &m : hist.getMap()) { // update penalty function
                 Tbase::operator()(m.first.first, m.first.second) += std::log(m.second);
+                double log2 = std::log(2); // half bin width compensation
+                if (m.first.first==_lo1 || m.first.first==_hi1) {
+                  Tbase::operator()(m.first.first, m.first.second) += log2;
+                  if (m.first.second==_lo2 || m.first.second==_hi2)
+                    Tbase::operator()(m.first.first, m.first.second) += log2;
+                }
+                else if (m.first.second==_lo2 || m.first.second==_hi2)
+                  Tbase::operator()(m.first.first, m.first.second) += log2;
               }
               double min = Tbase::min()->second;
               for (auto &m : Tbase::getMap()) {
@@ -1655,6 +1671,14 @@ namespace Faunus {
               exchange();
               for (auto &m : hist.getMap()) { // update penalty function
                 Tbase::operator()(m.first.first, m.first.second) += std::log(m.second);
+                double log2 = std::log(2); // half bin width compensation
+                if (m.first.first==_lo1 || m.first.first==_hi1) {
+                  Tbase::operator()(m.first.first, m.first.second) += log2;
+                  if (m.first.second==_lo2 || m.first.second==_hi2)
+                    Tbase::operator()(m.first.first, m.first.second) += log2;
+                }
+                else if (m.first.second==_lo2 || m.first.second==_hi2)
+                  Tbase::operator()(m.first.first, m.first.second) += log2;
               }
               double min = Tbase::min()->second;
               for (auto &m : Tbase::getMap()) {
@@ -1692,9 +1716,11 @@ namespace Faunus {
             hist.load(filename+"histo");
           }
           void test(UnitTest &t) {
-            auto it_max = Tbase::max();
-            auto it_min = Tbase::min();
-            t("penalty2D_range",it_max->second-it_min->second,0.1);
+            if (_cnt/_Nupdate>=1) {
+              auto it_max = Tbase::max();
+              auto it_min = Tbase::min();
+              t("penalty2D_range",it_max->second-it_min->second,0.1);
+            }
           }
           string info() {
             using namespace Faunus::textio;

@@ -959,6 +959,9 @@ namespace Faunus {
      * If applied on an atomic group, `N` will be set to the number of
      * atoms in the group, while for a molecular group `N=1`.
      *
+     * To groups from being counted against `N`, insert them into
+     * `ignored`.
+     *
      * @date Lund, 2011
      */
     template<class Tspace>
@@ -966,15 +969,40 @@ namespace Faunus {
         private:
           typedef typename Energybase<Tspace>::Tpvec Tpvec;
           double P; //!< Pressure, p/kT
+
           string _info() {
+            size_t N, Natom=0, Nmol=0;
+            for (auto g : this->getSpace().groupList()) {
+              if (ignore.count(g)==0) {
+                if (g->isAtomic())
+                  Natom += g->size();
+                else
+                  Nmol+=g->numMolecules();
+              }
+            }
+            N = Natom + Nmol;
+
             std::ostringstream o;
             o << textio::pad(textio::SUB,15,"Pressure")
               << P*1e30/pc::Nav << " mM = "
               << P*pc::kB*pc::T()*1e30 << " Pa = "
-              << P*pc::kB*pc::T()*1e30/0.980665e5 << " atm\n";
+              << P*pc::kB*pc::T()*1e30/0.980665e5 << " atm\n"
+              << textio::pad(textio::SUB,25, "Number of molecules")
+              << N << " (" <<Nmol<< " molecular + " <<Natom<< " atomic)\n";
+            if (!ignore.empty()) { 
+              int cnt=0;
+              o << textio::pad(textio::SUB,25, "Ignored groups:\n");
+              for (auto g : this->getSpace().groupList())
+                if (ignore.count(g)!=0) {
+                  o << "     " << cnt++ << " " << g->name << "\n";
+                }
+            }
             return o.str();
           }
+
         public:
+          std::set<Group*> ignore; //!< Ignore groups added here
+
           ExternalPressure(InputMap &in) {
             this->name="External Pressure";
             P=in.get<double>("npt_P",0,
@@ -990,6 +1018,9 @@ namespace Faunus {
           }
 
           double g_external(const Tpvec &p, Group &g) FOVERRIDE {
+            // should this group be ignored?
+            if ( ignore.count(&g)!=0 )
+              return 0;
             int N=g.numMolecules();
             double V=this->getSpace().geo.getVolume();
             return -N*log(V);
@@ -1082,10 +1113,10 @@ namespace Faunus {
             else
               return pc::infty;
           }
-        double i_external(const Tpvec &p, int i) {
-          auto gi = base::spc->findGroup(i);
-          return g_external(p, *gi);
-        }
+          double i_external(const Tpvec &p, int i) {
+            auto gi = base::spc->findGroup(i);
+            return g_external(p, *gi);
+          }
       };
 
     /**

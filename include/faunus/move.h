@@ -269,9 +269,9 @@ namespace Faunus {
       }
 
     /**
-     * @brief Trial move and accept/reject using the Metropolis criteria.
-     *
-     * @details It will perform the following `n` times:
+     * This function performs trial move and accept/reject using 
+     * the Metropolis criteria.
+     * It carries out the following `n` times:
      *
      * - Perform a trial move with `_trialMove()`
      * - Calulate the energy change, \f$\beta\Delta U\f$ with `_energyChange()`
@@ -306,14 +306,14 @@ namespace Faunus {
       }
 
     /**
-     * @brief Trial move and accept/reject using the Metropolis criteria
-     *
-     * @details This function differs from move in that:
+     * This function performs trial move and accept/reject using 
+     * the Metropolis criteria
+     * It differs from move in that:
      * 1. it returns a pair of energy change values;
      * 2. it performs one move at a time.
      * The second member of the pair stores the energy change, du.
      * The first is zero in case of rejection and otherwise equal to du.
-     * The information on the energy change in case of rejection is useful in Waste-Recycle MC.
+     * The information on the energy change in case of rejection is useful in Waste-Recycling MC.
      * 
      * [More info](http://dx.doi.org/10.1007/3-540-35273-2_4)
      */
@@ -1870,7 +1870,7 @@ namespace Faunus {
      *
      * Key              | Description
      * :--------------- | :-----------------------------
-     * `npt_dp`         | Volume displacement parameter
+     * `npt_dV`         | Volume displacement parameter
      * `npt_P`          | Pressure [mM]
      * `npt_runfraction`| Runfraction [default=1]
      *
@@ -2058,7 +2058,7 @@ namespace Faunus {
      *
      * Key                | Description
      * :----------------- | :-----------------------------
-     * `nvt_z`            | Length displacement parameter
+     * `nvt_dz`            | Length displacement parameter
      * `nvt_runfraction`  | Runfraction [default=1]
      *
      */

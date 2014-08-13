@@ -1500,7 +1500,8 @@ namespace Faunus {
            * @details The reference value is obtained by averaging over a region of the
            * reaction coordinate space.
            */
-          void save_final(const string &filename, Tcoord a, Tcoord b) {
+          void save_final(const string &filename, 
+              Tcoord a, Tcoord b, Tcoord c, Tcoord d) {
             double ref_value = - Tbase::ave(a,b);
             Tbase::save(filename+"penalty_fin",1.,ref_value);
           }
@@ -1884,8 +1885,8 @@ namespace Faunus {
            void test(UnitTest &t) { pf.test(t); }
            void load(const string &filename) { pf.load(filename); }
            void save(const string &filename) { pf.save(filename); }
-           void save_final(const string &filename, double a, double b) { 
-             pf.save(filename, a, b); 
+           void save_final(const string &filename, double a, double b, double c=0, double d=0) { 
+             pf.save_final(filename, a, b, c, d); 
            }
            double update(Treturn &c) {
              return pf.update(c);
@@ -1894,6 +1895,7 @@ namespace Faunus {
              return pf.update(c, w, r);
            }
            std::map<Treturn,double> getMap() { return pf.getMap(); }
+           double find(Treturn c) { return pf.find(c); }
            double external(const p_vec &p) {
              Treturn coor = f(p);
              double du;

@@ -364,8 +364,10 @@ namespace Faunus {
         std::ofstream fout( file.c_str() );
         if (fout) {
           fout.precision( numeric_limits<double>::digits10 + 1 );
-          fout << geo.getVolume() << "\n"
-            << p.size() << "\n";
+          if (std::is_same<Geometry::Cuboid,Tgeometry>::value) 
+            fout << geo.len.x() << " " << geo.len.y() << " " << geo.len.z() << "\n";
+          else fout << geo.getVolume() << "\n";
+          fout << p.size() << "\n";
           for (auto p_i : p)
             fout << p_i << "\n";
           fout << g.size() << "\n";
@@ -394,10 +396,16 @@ namespace Faunus {
         fin.open( file.c_str() );
         if (fin) {
           int n;
-          double vol;
+          double x, y, z, vol;
           cout << "OK!\n";
-          fin >> vol >> n;
-          geo.setVolume(vol);
+          if (std::is_same<Geometry::Cuboid,Tgeometry>::value) {
+            fin >> x >> y >> z >> n;
+            geo.setlen(Point(x,y,z));
+          }
+          else {
+            fin >> vol >> n;
+            geo.setVolume(vol);
+          }
           if (key==RESIZE && n!=(int)p.size()) {
             cout << indent(SUB) << "Resizing particle vector from " << p.size() << " --> " << n << ".\n";
             p.resize(n);

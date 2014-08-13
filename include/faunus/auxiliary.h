@@ -620,7 +620,7 @@ namespace Faunus {
           this->clear();
           assert(!v.empty());
           for (int i=0; i<v.size(); i+=2) {
-            if (int(v[i+1])!=0) this->operator()(v[i])+=int(v[i+1]);
+            if (int(v[i+1])>1e-20) this->operator()(v[i])+=int(v[i+1]);
           }
         }
 
@@ -949,7 +949,7 @@ namespace Faunus {
           this->clear();
           assert(!v.empty());
           for (int i=0; i<v.size(); i+=3) {
-            if (v[i+2]!=0) this->operator()(v[i],v[i+1])+=int(v[i+2]);
+            if (v[i+2]>1e-20) this->operator()(v[i],v[i+1])+=int(v[i+2]);
           }
         }
 

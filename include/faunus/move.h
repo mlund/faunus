@@ -738,9 +738,9 @@ namespace Faunus {
           void setGroup(Group&); //!< Select Group to move
           bool groupWiseEnergy;  //!< Attempt to evaluate energy over groups from vector in Space (default=false)
           std::map<string,Point> directions; //!< Specify special group translation directions (default: x=y=z=1)
-#ifdef ENABLE_MPI
+/*#ifdef ENABLE_MPI
           Faunus::MPI::MPIController* mpi;
-#endif
+#endif*/
       };
 
     /**
@@ -767,9 +767,9 @@ namespace Faunus {
         this->runfraction = in.get<double>(base::prefix+"_runfraction",1.0);
         if (dp_rot<1e-6 && dp_trans<1e-6)
           this->runfraction=0;
-#ifdef ENABLE_MPI
+/*#ifdef ENABLE_MPI
         mpi=nullptr;
-#endif
+#endif*/
       }
 
     template<class Tspace>
@@ -834,7 +834,7 @@ namespace Faunus {
           return pc::infty;       // early rejection
         double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
 
-#ifdef ENABLE_MPI
+/*#ifdef ENABLE_MPI
         if (mpi!=nullptr) {
           double du=0;
           auto s = Faunus::MPI::splitEven(*mpi, spc->groupList().size());
@@ -845,7 +845,7 @@ namespace Faunus {
           }
           return (unew-uold) + Faunus::MPI::reduceDouble(*mpi, du);
         }
-#endif
+#endif*/
 
         for (auto g : spc->groupList()) {
           if (g!=igroup) {
@@ -2117,7 +2117,8 @@ namespace Faunus {
       void Isochoric<Tspace>::_trialMove() {
         assert(spc->groupList().size()>0
             && "Space has empty group vector - Isochoric scaling move not possible.");
-        oldlen = newlen = spc->geo.len;
+        oldlen = spc->geo.len;
+        newlen = oldlen;
         oldval = spc->geo.len.z();
         newval = oldval+slp_global.randHalf()*dp;
         Point s;

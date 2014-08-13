@@ -483,20 +483,20 @@ namespace Faunus {
           return pc::infty;
         double uold = pot->external(spc->p) + pot->i_total(spc->p,ipart);
         double unew = pot->external(spc->trial) + pot->i_total(spc->trial,ipart);
-        /*#ifdef ENABLE_MPI
-          if (mpi!=nullptr) {
+#ifdef ENABLE_MPI
+        if (mpi!=nullptr) {
           double sum=0;
           auto r = Faunus::MPI::splitEven(*mpi, (int)spc->p.size());
           for (int i=r.first; i<=r.second; ++i)
-          if (i!=ipart)
-          sum+=pot->i2i(spc->trial,i,ipart) - pot->i2i(spc->p,i,ipart);
+            if (i!=ipart)
+              sum+=pot->i2i(spc->trial,i,ipart) - pot->i2i(spc->p,i,ipart);
 
           sum = Faunus::MPI::reduceDouble(*mpi, sum);
 
           return sum + pot->i_external(spc->trial, ipart) - pot->i_external(spc->p, ipart)
-          + pot->i_internal(spc->trial, ipart) - pot->i_internal(spc->p, ipart);
-          }
-#endif*/
+            + pot->i_internal(spc->trial, ipart) - pot->i_internal(spc->p, ipart);
+        }
+#endif
 
         return unew - uold;
       }

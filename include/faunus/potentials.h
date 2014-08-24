@@ -1024,7 +1024,7 @@ namespace Faunus {
           Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
 #ifdef FAU_APPROXMATH
             double rinv = invsqrtQuake(r2);
-            return lB * a.charge * b.charge * rinv * exp_cawley(-k/rinv) * ( 1/r2 + k/rinv ) * p;
+            return lB * a.charge * b.charge * rinv * exp_cawley(-k/rinv) * ( 1/r2 + k*rinv ) * p;
 #else
             double r=sqrt(r2);
             return lB * a.charge * b.charge / (r*r2) * exp(-k*r) * ( 1 + k*r ) * p;
@@ -1045,6 +1045,47 @@ namespace Faunus {
               k2_count_avg+=k2_count;   // sample average
             }
           } 
+    };
+    /**
+     * @brief Debye-Huckel potential
+     * @details Unlike in the Debye-Huckel/Yukawa potential,
+     * particle size is taken into account:
+     * \f[ \beta w_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT}
+     * \frac{z_i z_j}{r_{ij}(1+\kappa a)} \exp(-\kappa (r_{ij} - a)) \f]
+     * where \f$\kappa=1/D\f$ is the inverse Debye screening length
+     * and \f$a\f$ is the contact distance between two particles.
+     */
+    class DebyeHuckelSD : public DebyeHuckel {
+      public:
+        DebyeHuckelSD(InputMap &in) : DebyeHuckel(in) {}
+
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+            double contact=a.radius+b.radius;
+#ifdef FAU_APPROXMATH
+            double rinv = invsqrtQuake(r2);
+            return (rinv>1/contact) ? pc::infty : 
+              lB * a.charge * b.charge * rinv / (1 + k*contact) * exp_cawley(-k/rinv+k*contact);
+#else
+            double r=sqrt(r2);
+            return (r<contact) ? pc::infty : 
+              lB * a.charge * b.charge / r / (1 + k*contact) * exp(-k*(r-contact));
+#endif
+          }
+
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            double contact=a.radius+b.radius;
+#ifdef FAU_APPROXMATH
+            double rinv = invsqrtQuake(r2);
+            return (rinv>1/contact) ? -pc::infty*p :
+              lB * a.charge * b.charge * rinv / (1 + k*contact) * exp_cawley(-k/rinv+k*contact) * ( 1/r2 + k*rinv ) * p;
+#else
+            double r=sqrt(r2);
+            return (r<contact) ? -pc::infty*p :
+              lB * a.charge * b.charge / (r*r2) / (1 + k*contact) * exp(-k*(r-contact)) * ( 1 + k*r ) * p;
+#endif
+          }
     };
 
     /**
@@ -1089,7 +1130,7 @@ namespace Faunus {
             cout << "id = " << p_id*1660*1e3 << " ex = " << p_ex*1660*1e3 << "\n";
             return p_id + p_ex;
           }
- 
+
       public:
         DebyeHuckelDenton(InputMap &in) : DebyeHuckel(in) {
           name+="-Denton";

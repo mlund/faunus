@@ -481,7 +481,8 @@ namespace Faunus {
 
         if (spc->geo.collision(spc->trial[ipart]))  // trial<->container collision?
           return pc::infty;
-
+        double uold = pot->external(spc->p) + pot->i_total(spc->p,ipart);
+        double unew = pot->external(spc->trial) + pot->i_total(spc->trial,ipart);
 #ifdef ENABLE_MPI
         if (mpi!=nullptr) {
           double sum=0;
@@ -497,7 +498,7 @@ namespace Faunus {
         }
 #endif
 
-        return pot->i_total(spc->trial,ipart) - pot->i_total(spc->p,ipart);
+        return unew - uold;
       }
 
     template<class Tspace>
@@ -622,10 +623,10 @@ namespace Faunus {
           SwapMoveMSR(
               InputMap &in, Energy::Energybase<Tspace> &ham, Tspace &spc,
               string pfx="swapmv_") : SwapMove<Tspace>(in,ham,spc,pfx)
-          {
-            this->title+=" (min. shortrange)";
-            this->useAlternateReturnEnergy=true;
-          }
+        {
+          this->title+=" (min. shortrange)";
+          this->useAlternateReturnEnergy=true;
+        }
       };
 
   }// Move namespace

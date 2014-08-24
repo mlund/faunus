@@ -53,7 +53,7 @@ namespace Faunus {
     template<typename T=float>
       class FormFactorTable {
         private:
-          typedef Analysis::Table2D<T,T> Ttable;
+          typedef Table2D<T,T> Ttable;
           std::map<int, Ttable > F;
 
           /**

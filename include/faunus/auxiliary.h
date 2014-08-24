@@ -389,6 +389,612 @@ namespace Faunus {
         }
     };
 
+  /**
+   * @brief General class for handling 2D tables - xy data, for example.
+   * @date Lund 2011
+   * @note `Tx` is used as the `std::map` key and which may be
+   * problematic due to direct floating point comparison (== operator).
+   * We have not experienced any issues with this, though. This uses
+   * `std::map` and table lookup is of complexity logarithmic with N.
+   */
+  template<typename Tx, typename Ty>
+    class Table2D {
+      protected:
+        typedef std::map<Tx,Ty> Tmap;
+        Ty count() {
+          Ty cnt=0;
+          for (auto &m : map)
+            cnt+=m.second;
+          return cnt;
+        }
+        Tx dx;
+        Tmap map;
+        string name;
+      private:
+        Tx round(Tx x) { return (x>=0) ? int( x/dx+0.5 )*dx : int( x/dx-0.5 )*dx; }
+        virtual double get(Tx x) { return operator()(x); }
+      public:
+        enum type {HISTOGRAM, XYDATA};
+        type tabletype;
+
+        /**
+         * @brief Constructor
+         * @param resolution Resolution of the x axis
+         * @param key Table type: HISTOGRAM or XYDATA
+         */
+        Table2D(Tx resolution=0.2, type key=XYDATA) {
+          tabletype=key;
+          setResolution(resolution);
+        }
+
+        void clear() { map.clear(); }
+
+        void setResolution(Tx resolution) {
+          assert( resolution>0 );
+          dx=resolution;
+          map.clear();
+        }
+
+        virtual ~Table2D() {}
+
+        /** @brief Access operator - returns reference to y(x) */
+        Ty& operator() (Tx x) {
+          return map[ round(x) ];
+        }
+
+        /** @brief Find key and return corresponding value otherwise zero*/
+        Ty find(Tx &x) {
+          Ty value = 0;
+          auto it = map.find( round(x) );
+          if (it!=map.end()) value = it->second;
+          return value;
+        }
+
+        /** @brief Save table to disk */
+        template<class T=double>
+          void save(string filename, T scale=1, T translate=0) {
+            if (tabletype==HISTOGRAM) {
+              if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
+              if (map.size()>1) (--map.end())->second*=2; // -//-
+            }
+
+            if (!map.empty()) {
+              std::ofstream f(filename.c_str());
+              f.precision(10);
+              if (f) {
+                for (auto &m : map)
+                  f << m.first << " " << (m.second + translate) * scale << "\n";
+              }
+            }
+
+            if (tabletype==HISTOGRAM) {
+              if (!map.empty()) map.begin()->second/=2;   // restore half bin width
+              if (map.size()>1) (--map.end())->second/=2; // -//-
+            }
+          }
+
+        /** @brief Save normalized table to disk */
+        template<class T=double>
+          void normSave(string filename) {
+            if (tabletype==HISTOGRAM) {
+              if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
+              if (map.size()>1) (--map.end())->second*=2; // -//-
+            }
+
+            if (!map.empty()) {
+              std::ofstream f(filename.c_str());
+              f.precision(10);
+              Ty cnt = count()*dx;
+              if (f) {
+                for (auto &m : map)
+                  f << m.first << " " << m.second/cnt << "\n";
+              }
+            }
+
+            if (tabletype==HISTOGRAM) {
+              if (!map.empty()) map.begin()->second/=2;   // restore half bin width
+              if (map.size()>1) (--map.end())->second/=2; // -//-
+            }
+          }
+
+        /** @brief Sums up all previous elements and saves table to disk */
+        template<class T=double>
+          void sumSave(string filename, T scale=1) {
+            if (tabletype==HISTOGRAM) {
+              if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
+              if (map.size()>1) (--map.end())->second*=2; // -//-
+            }
+
+            if (!map.empty()) {
+              std::ofstream f(filename.c_str());
+              f.precision(10);
+              if (f) {
+                Ty sum_t = 0.0;
+                for (auto &m : map) {
+                  sum_t += m.second;
+                  f << m.first << " " << sum_t * scale << "\n";
+                }
+              }
+            }
+
+            if (tabletype==HISTOGRAM) {
+              if (!map.empty()) map.begin()->second/=2;   // restore half bin width
+              if (map.size()>1) (--map.end())->second/=2; // -//-
+            }
+          }
+
+        Tmap getMap() {
+          return map;
+        }
+
+        Tx getResolution() {
+          return dx;
+        }
+
+        /*! Returns average */
+        Tx mean() {
+          assert(!map.empty());
+          Tx ave = 0;
+          for (auto &m : map) ave += m.first*m.second;
+          return ave/count();
+        }
+
+        /*! Returns standard deviation */
+        Tx std() {
+          assert(!map.empty());
+          Tx std2 = 0;
+          Tx ave = mean();
+          for (auto &m : map) std2 += m.second*(m.first - ave)*(m.first - ave);
+          return sqrt(std2/count());
+        }
+
+        /*! Returns iterator of minumum y */
+        typename Tmap::const_iterator min() {
+          assert(!map.empty());
+          Ty min=std::numeric_limits<Ty>::max();
+          typename Tmap::const_iterator it;
+          for (auto m=map.begin(); m!=map.end(); ++m)
+            if (m->second<min) {
+              min=m->second;
+              it=m;
+            }
+          return it;
+        }
+
+        /*! Returns iterator of maximum y */
+        typename Tmap::const_iterator max() {
+          assert(!map.empty());
+          Ty max=std::numeric_limits<Ty>::min();
+          typename Tmap::const_iterator it;
+          for (auto m=map.begin(); m!=map.end(); ++m)
+            if (m->second>max) {
+              max=m->second;
+              it=m;
+            }
+          return it;
+        }
+
+        /*! Returns x at minumum x */
+        Tx minx() {
+          assert(!map.empty());
+          Tx x=0;
+          for (auto &m : map) {
+            x=m.first;
+            break;
+          }
+          return x;
+        }
+
+        /*! Returns average in interval */
+        Ty ave(Tx limit1, Tx limit2) {
+          Ty ave = 0;
+          int cnt = 0;
+          assert(!map.empty());
+          for (auto &m : map) {
+            if (m.first>=limit1 && m.first<=limit2) {
+              ave+=m.second;
+              ++cnt;  
+            }
+          }
+          return ave/cnt;
+        }
+
+        /**
+         * @brief Convert table2D to vector of floats
+         */
+        vector<double> hist2buf(int &size) {
+          std::vector<double> sendBuf;
+          assert(!map.empty());
+          for (auto &m : map) {
+            sendBuf.push_back(m.first);
+            sendBuf.push_back(double(m.second));
+          }
+          sendBuf.resize(size,0);
+          return sendBuf;
+        }
+
+        /**
+         * @brief Convert vector of floats to table2D
+         */
+        void buf2hist(vector<double> &v) {
+          this->clear();
+          assert(!v.empty());
+          for (int i=0; i<v.size(); i+=2) {
+            if (int(v[i+1])>1e-20) this->operator()(v[i])+=int(v[i+1]);
+          }
+        }
+
+        /**
+         * @brief Load table from disk
+         * @note The first line - used for comments - is ignored.
+         * @todo Implement end bin compensation as in the save()
+         * function when loading HISTOGRAMs
+         */
+        bool load(const string &filename) {
+          std::ifstream f(filename.c_str());
+          if (f) {
+            map.clear();
+            while (!f.eof()) {
+              Tx x;
+              double y;
+              f >> x >> y;
+              operator()(x)=y;
+            }
+            if (tabletype==HISTOGRAM) {
+              if (!map.empty()) map.begin()->second/=2;   // restore half bin width
+              if (map.size()>1) (--map.end())->second/=2; // -//-
+            }
+            return true;
+          }
+          return false;
+        }
+
+        /**
+         * @brief Convert table to matrix
+         */
+        Eigen::MatrixXd tableToMatrix() {
+          assert(!this->map.empty() && "Map is empty!");
+          Eigen::MatrixXd table(2,map.size());
+          table.setZero();
+          int I = 0;
+          for (auto &m : this->map) {
+            table(0,I) = m.first;
+            table(1,I) = m.second;
+            I++;
+          }
+          return table;
+        }
+    };
+  /**
+   * @brief Subtract two tables
+   */
+  template<class Tx, class Ty, class Tmap>
+    Table2D<Tx,Ty> operator-(Table2D<Tx,Ty> &a, Table2D<Tx,Ty> &b) {
+      assert(a.tabletype=b.tabletype && "Table a and b needs to be of same type");
+      Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()),a.tabletype);
+      Tmap a_map = a.getMap();
+      Tmap b_map = b.getMap();
+
+      if (a.tabletype=="HISTOGRAM") {
+        if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
+        if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
+        if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
+        if (b_map.size()>1) (--b_map.end())->second*=2; // -//-
+      }
+
+      for (auto &m1 : a_map) {
+        for (auto &m2 : b_map) {
+          c(m1.first) = m1.second-m2.second;
+          break;
+        }
+      }
+
+      if (a.tabletype=="HISTOGRAM") {
+        if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
+        if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
+        if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
+        if (b_map.size()>1) (--b_map.end())->second/=2; // -//-
+      }
+      return c;
+    }
+
+  /**
+   * @brief Addition two tables
+   */
+  template<class Tx, class Ty, class Tmap>
+    Table2D<Tx,Ty> operator+(Table2D<Tx,Ty> &a, Table2D<Tx,Ty> &b) {
+      assert(a.tabletype=b.tabletype && "Table a and b needs to be of same type");
+      Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()),a.tabletype);
+      Tmap a_map = a.getMap();
+      Tmap b_map = b.getMap();
+
+      if (a.tabletype=="HISTOGRAM") {
+        if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
+        if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
+        if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
+        if (b_map.size()>1) (--b_map.end())->second*=2; // -//-
+      }
+
+      for (auto &m : a_map) {
+        c(m.first) += m.second;
+      }
+      for (auto &m : b_map) {
+        c(m.first) += m.second;
+      }
+
+      if (a.tabletype=="HISTOGRAM") {
+        if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
+        if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
+        if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
+        if (b_map.size()>1) (--b_map.end())->second/=2; // -//-
+      }
+
+      return c;
+    }
+
+  template<typename Tx, typename Ty>
+    class Table3D {
+      protected:
+        typedef std::map<std::pair<Tx,Tx>,Ty> Tmap;
+        Tx dx1, dx2;
+        Tmap map;
+        string name;
+        Ty count() {
+          Ty cnt=0;
+          for (auto &m : map)
+            cnt+=m.second;
+          return cnt;
+        }
+      private:
+        Tx round1(Tx x) { return (x>=0) ? int( x/dx1+0.5 )*dx1 : int( x/dx1-0.5 )*dx1; }
+        Tx round2(Tx x) { return (x>=0) ? int( x/dx2+0.5 )*dx2 : int( x/dx2-0.5 )*dx2; }
+        virtual double get(Tx x1, Tx x2) { return operator()(x1, x2); }
+      public:
+        enum type {HISTOGRAM, XYDATA};
+        type tabletype;
+
+        /**
+         * @brief Constructor
+         * @param resolution Resolution of the x axis
+         * @param key Table type: HISTOGRAM or XYDATA
+         */
+        Table3D(Tx resolution1=1, Tx resolution2=1, type key=XYDATA) {
+          tabletype=key;
+          setResolution(resolution1, resolution2);
+        }
+
+        void clear() { map.clear(); }
+
+        void setResolution(Tx resolution1, Tx resolution2) {
+          assert( resolution1>0 && resolution2>0 );
+          dx1=resolution1;
+          dx2=resolution2;
+          map.clear();
+        }
+
+        virtual ~Table3D() {}
+
+        /** @brief Access operator - returns reference to y(x) */
+        Ty& operator() (Tx x1, Tx x2) {
+          return map[ std::make_pair(round1(x1),round2(x2)) ];
+        }
+
+        /** @brief Find key and return corresponding value otherwise zero*/
+        Ty find(std::pair<Tx,Tx> &xp) {
+          Ty value = 0;
+          auto it = map.find( std::make_pair(round1(xp.first),round2(xp.second)));
+          if (it!=map.end()) value = it->second;
+          return value;
+        }
+
+        /** @brief Save table to disk */
+        void save(string filename, Ty scale=1, Ty translate=0) {
+          if (tabletype==HISTOGRAM) { // compensate for half bin width
+            auto first = map.begin();
+            auto last = map.rbegin();
+            if (!map.empty()) {
+              for (auto it = first; it != map.end(); ++it) {
+                if (it->first.first == first->first.first) it->second*=2;
+                else if (it->first.second == first->first.second) it->second*=2;
+              }
+            }
+            if (map.size()>1) {
+              for (auto it = last; it != map.rend(); ++it) {
+                if (it->first.first == last->first.first) it->second*=2;
+                else if (it->first.second == last->first.second) it->second*=2;
+              }
+            }
+          }
+
+          if (!map.empty()) {
+            std::ofstream f(filename.c_str());
+            f.precision(10);
+            if (f) {
+              for (auto &m : map)
+                f << m.first.first << " " << m.first.second 
+                  << " " << (m.second + translate) * scale << "\n";
+            }
+          }
+
+          if (tabletype==HISTOGRAM) { // restore half bin width
+            auto first = map.begin();
+            auto last = map.rbegin();
+            if (!map.empty()) {
+              for (auto it = first; it != map.end(); ++it) {
+                if (it->first.first == first->first.first) it->second/=2;
+                else if (it->first.second == first->first.second) it->second/=2;
+              }
+            }
+            if (map.size()>1) {
+              for (auto it = last; it != map.rend(); ++it) {
+                if (it->first.first == last->first.first) it->second/=2;
+                else if (it->first.second == last->first.second) it->second/=2;
+              }
+            }
+          }
+        }
+
+        /** @brief Save normalized table to disk */
+        void normSave(string filename) {
+          if (tabletype==HISTOGRAM) { // compensate for half bin width
+            auto first = map.begin();
+            auto last = map.rbegin();
+            if (!map.empty()) {
+              for (auto it = first; it != map.end(); ++it) {
+                if (it->first.first == first->first.first) it->second*=2;
+                else if (it->first.second == first->first.second) it->second*=2;
+              }
+            }
+            if (map.size()>1) {
+              for (auto it = last; it != map.rend(); ++it) {
+                if (it->first.first == last->first.first) it->second*=2;
+                else if (it->first.second == last->first.second) it->second*=2;
+              }
+            }
+          }
+
+          if (!map.empty()) {
+            std::ofstream f(filename.c_str());
+            f.precision(10);
+            Ty cnt = count()*dx1*dx2;
+            if (f) {
+              for (auto &m : map)
+                f << m.first.first << " " << m.first.second
+                  << " " << m.second/cnt << "\n";
+            }
+          }
+
+          if (tabletype==HISTOGRAM) { // restore half bin width
+            auto first = map.begin();
+            auto last = map.rbegin();
+            if (!map.empty()) {
+              for (auto it = first; it != map.end(); ++it) {
+                if (it->first.first == first->first.first) it->second/=2;
+                else if (it->first.second == first->first.second) it->second/=2;
+              }
+            }
+            if (map.size()>1) {
+              for (auto it = last; it != map.rend(); ++it) {
+                if (it->first.first == last->first.first) it->second/=2;
+                else if (it->first.second == last->first.second) it->second/=2;
+              }
+            }
+          }
+        }
+
+        Tmap getMap() {
+          return map;
+        }
+
+        /*! Returns iterator of minumum y */
+        typename Tmap::const_iterator min() {
+          assert(!map.empty());
+          Ty min=std::numeric_limits<Ty>::max();
+          typename Tmap::const_iterator it;
+          for (auto m=map.begin(); m!=map.end(); ++m)
+            if (m->second<min) {
+              min=m->second;
+              it=m;
+            }
+          return it;
+        }
+
+        /*! Returns iterator of maximum y */
+        typename Tmap::const_iterator max() {
+          assert(!map.empty());
+          Ty max=std::numeric_limits<Ty>::min();
+          typename Tmap::const_iterator it;
+          for (auto m=map.begin(); m!=map.end(); ++m)
+            if (m->second>max) {
+              max=m->second;
+              it=m;
+            }
+          return it;
+        }
+
+        /*! Returns average in interval */
+        Ty ave(Tx limit1_x1, Tx limit2_x1, Tx limit1_x2, Tx limit2_x2) {
+          Ty ave = 0;
+          int cnt = 0;
+          assert(!map.empty());
+          for (auto &m : map) {
+            if (m.first.first>=limit1_x1 && m.first.first<=limit2_x1
+                && m.first.second>=limit1_x2 && m.first.second<=limit2_x2) {
+              ave+=m.second;
+              ++cnt;  
+            }
+          }
+          return ave/cnt;
+        }
+
+        /**
+         * @brief Convert table3D to vector of floats
+         */
+        vector<double> hist2buf(int &size) {
+          std::vector<double> sendBuf;
+          assert(!map.empty());
+          for (auto &m : map) {
+            sendBuf.push_back(m.first.first);
+            sendBuf.push_back(m.first.second);
+            sendBuf.push_back(double(m.second));
+          }
+          sendBuf.resize(size,0);
+          return sendBuf;
+        }
+
+        /**
+         * @brief Convert vector of floats to table3D
+         */
+        void buf2hist(vector<double> &v) {
+          this->clear();
+          assert(!v.empty());
+          for (int i=0; i<v.size(); i+=3) {
+            if (v[i+2]>1e-20) this->operator()(v[i],v[i+1])+=int(v[i+2]);
+          }
+        }
+
+        /**
+         * @brief Load table from disk
+         */
+        bool load(const string &filename) {
+          std::ifstream f(filename.c_str());
+          if (f) {
+            map.clear();
+            while (!f.eof()) {
+              Tx x1, x2;
+              Ty y;
+              f >> x1 >> x2 >> y;
+              operator()(x1,x2)=y;
+            }
+            if (tabletype==HISTOGRAM) { // restore half bin width
+              if (!map.empty()) {
+                auto first = map.begin();
+                auto last = map.rbegin();
+                for (auto it = first; it != map.end(); ++it) {
+                  if (it->first.first == first->first.first) it->second/=2;
+                  else if (it->first.second == first->first.second) it->second/=2;
+                }
+                if (map.size()>1) {
+                  for (auto it = last; it != map.rend(); ++it) {
+                    if (it->first.first == last->first.first) it->second/=2;
+                    else if (it->first.second == last->first.second) it->second/=2;
+                  }
+                }
+              }
+            }
+            return true;
+          }
+          return false;
+        }
+    };
+
+  template<typename Tx, typename Ty=unsigned long int>
+    class Histogram : public Table2D<Tx,Ty> {
+      public:
+        Histogram(Tx resolution=0.2) : Table2D<Tx,Ty>(resolution, Table2D<Tx,Ty>::HISTOGRAM) {
+          static_assert( std::is_integral<Ty>::value, "Histogram must be of integral type");
+          static_assert( std::is_unsigned<Ty>::value, "Histogram must be unsigned");
+        }
+    };
 }//namespace
 #endif
-

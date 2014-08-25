@@ -483,6 +483,21 @@ namespace Faunus {
             assert(!"Timeout - found no space for particle(s).");
             return false;
           }
+
+        template<class Tgeometry, class Tpvec>
+          bool find(const Tpvec &dst, Tpvec &p, Tgeometry &geo) const {
+
+            Point v;
+            Point cm = massCenter(geo, p);
+            geo.randompos(v);
+            v = v.cwiseProduct(dir);
+            translate(geo, p, -cm+v);
+
+            if(!containerOverlap(geo,p) && !matterOverlap(geo,p,dst))
+              return true;
+
+            return false;
+          }
     };
 
     /**

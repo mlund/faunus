@@ -86,6 +86,7 @@ namespace Faunus {
       //fallback.clear();
       a.name = atom.first;
       a.activity = json::value<double>(atom.second, "activity", 0);
+      a.chemPot = log( a.activity*pc::Nav*1e-27);
       a.alpha << json::value<std::string>(atom.second, "alpha", "");
       a.alpha *= 4*pc::pi*pc::e0*(1e-10)*pc::kT()/(pc::e*pc::e);
       a.theta << json::value<std::string>(atom.second, "theta", "");
@@ -182,6 +183,92 @@ namespace Faunus {
     return o.str();
   }
 
+  bool Topology::includefile(std::string topoFile) {
+
+      if(topoFile.find(".topo") == string::npos)
+          return false;
+
+      string::size_type pos;
+      string::size_type oldPos;
+      string token;
+      string line;
+      auto file = json::open( topoFile );
+
+      //
+      // load topology
+      //
+      for (auto &mol : json::object("topology", file)) {
+          pos = 0;
+          oldPos = 0;
+
+          molecules.push_back(Molecule() );
+          molecules.back().molName = mol.first;
+          molecules.back().activity = json::value<double>(mol.second, "activity", 0.0);
+          molecules.back().chemPot = log( molecules.back().activity*pc::Nav*1e-27);
+
+          line = json::value<string>(mol.second, "init", "Error");
+          if(line.compare("POOL") == 0) molecules.back().initType = POOL;
+          if(line.compare("RANDOM") == 0) molecules.back().initType = RANDOM;
+          assert(molecules.back().initType != -1);
+
+          line = json::value<string>(mol.second, "atoms", "Error");
+          assert(line.compare("Error"));
+
+          // tokenize atoms string and save as atom TID
+          while(pos != string::npos) {
+
+              pos = line.find_first_of(',', oldPos);
+              token = line.substr(oldPos, pos-oldPos);
+              oldPos = pos+1;
+
+              for(auto &i : atom.list) {
+                  if(i.name.compare(token) == 0) {
+                      molecules.back().atoms.push_back(i.id);
+                      break;
+                  }
+              }
+          }
+      }
+
+      return true;
+  }
+
+  string Topology::info() {
+      char s=14;
+      using namespace textio;
+      ostringstream o;
+
+      o << header("Topology");
+
+      o << setw(4) << "" << std::left
+        << setw(s) << "Molecule" << setw(s) << "init"
+        << setw(s) << "atoms" << endl;
+
+      for (auto &i : molecules) {
+
+          o << setw(4) << "" << setw(s) << i.molName;
+
+          if(i.initType == RANDOM) o << setw(s) << "RANDOM";
+          else
+              if(i.initType == POOL) o << setw(s) << "POOL";
+              else o << setw(s) << "";
+
+          for ( auto j=i.atoms.begin(); j!=i.atoms.end(); ++j ) {
+              o << setw(0) << atom.list[(*j)].name;
+
+              if(j != i.atoms.end()-1)
+                  o<<",";
+          }
+          o<<"\n";
+      }
+
+      return o.str();
+  }
+
+  Topology topo;
+
   AtomMap atom; // Instantiate global copy
+
+
 
 }//namespace

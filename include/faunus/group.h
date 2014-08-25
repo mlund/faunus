@@ -20,7 +20,13 @@ namespace Faunus {
     private:
       int molsize; // Number of atoms per molecule
     public:
-      Group(int front=-1, int back=-1) : Range(front,back-front+1) {
+      Group(int front=-1, int back=-1) : Range(front,back-front+1), molName("undefined") {
+        setMolSize(-1);
+        if (front<0 || back<0)
+          resize(0);
+      }
+
+      Group(string molName, int front=-1, int back=-1) : Range(front,back-front+1), molName(molName) {
         setMolSize(-1);
         if (front<0 || back<0)
           resize(0);
@@ -29,6 +35,20 @@ namespace Faunus {
       string name;                            //!< Information time (and short) name
       Point cm_trial;                         //!< mass center vector for trial position
       Point cm;                               //!< mass center vector
+
+      //
+      // Notes: name and molName duplicit because of original addParticles() function
+      //    when activity low and species erased completely -> upon new insert name = molName (from topology)
+      //
+
+      string molName;       ///< \brief type of Molecule    -> for Topology link
+      MolID molId;          ///< \brief starts at 0,        -> cooperation with topology
+
+      int getMolSize() {return molsize;}
+
+      bool operator== (Group& other) {
+          return ((this->front() == other.front()) && (this->back() == other.back()));
+      }
 
       /** @brief Information string */
       std::string info() {
@@ -163,6 +183,24 @@ namespace Faunus {
           assert( find( sel.back()  ) );
         }
 
+	/**
+         * @brief Get the i'th molecule in the group
+         * @warning You must manually update the mass center of the returned group
+         */
+        Group getMolecule(int i) const {
+            Group sel(molName, front()+i*molsize, front()+i*molsize+molsize-1);
+            sel.molId = this->molId;
+            sel.setMolSize(molsize);
+
+            assert( sel.back() <= this->back());
+            assert( sel.molsize>0 );
+            assert( (sel.size()%molsize)==0 );
+            assert( sel.isMolecular() );
+            assert( find( sel.front() ) );
+            assert( find( sel.back()  ) );
+            return sel;
+          }
+
       /** @brief Volume scaling for NPT ensemble */
       template<class Tspace>
         void scale(Tspace &s, double newvol) {
@@ -289,6 +327,23 @@ namespace Faunus {
           setMolSize(1);
           setMassCenter(spc);
           spc.enroll(*this);
+        }
+
+	/**
+         * @brief Add atomic particles, checks overlaps
+         * @param name = name of particle type
+         * @param count = number of particles
+         */
+      template<class Tspace>
+        void addParticles(Tspace &spc, string& name, int count) {
+          if(spc.insert(name, count) ) {
+            if(size() < 0) resize(count);
+            else resize(size()+count);
+              setMolSize(1);
+              setMassCenter(spc);
+            } else {
+                cout << "Error inserting group" << endl;
+            }
         }
 
       /**

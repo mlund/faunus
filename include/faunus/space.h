@@ -90,13 +90,37 @@ namespace Faunus {
 
         Space(InputMap&);
 
+        void freeGroups() {
+            for(auto it = g.begin(); it != g.end(); ++it) delete *it;
+            g.clear();
+        }
+
         bool save(string);                  //!< Save container state to disk
         bool load(string, keys=NORESIZE);   //!< Load container state from disk
 
+        /// \brief Sets molId of groups and molecules based on molName
+        ///
+        /// TODO: UNITE molName and name
+        ///
+        void linkGroupsToTopo();
+
         Group insert(const p_vec&, int=-1);
+
+        ///
+        /// \brief insert p_vec of MolID to end of p and trial
+        ///
+        Group* insert(MolID, const p_vec&); // inserts to trial and p
+
+        ///
+        /// \brief insert p_vec of MolID
+        /// \param enlarge - sets whether to enlarge group of MolID, or to add new isMolecular()==true group
+        ///
+        Group* insert(const p_vec&, MolID, bool enlarge=true);
+
         bool insert(const Tparticle&, int=-1); //!< Insert particle at pos n (old n will be pushed forward).
         bool insert(string, int, keys=OVERLAP_CHECK); 
         bool erase(int);             //!< Remove n'th particle
+	bool eraseGroup(Group& group); ///< find and remove group in g and its particles from p and trial
         bool eraseGroup(int);        //!< Remove n'th group as well as its particles
         int enroll(Group&);          //!< Store group pointer
         void reserve(int);           //!< Reserve space for particles for better memory efficiency
@@ -508,6 +532,169 @@ namespace Faunus {
         i->accept(*this);
         assert( geo.sqdist(i->cm, i->cm_trial) < 1e-6 );
       }
+    }
+
+  template<class Tgeometry, class Tparticle>
+    void Space<Tgeometry,Tparticle>::linkGroupsToTopo() {
+        char c = 0;
+        for(auto& mol : topo.molecules) {  // for each molecule
+            mol.id = c;
+            c++;
+        }
+
+        for(auto* group: g) { // for each group
+            for(auto& mol : topo.molecules) { // for each molecule
+                if(mol.molName.compare(group->molName)==0) {
+                    group->molId = mol.id;
+                    mol.isAtomic = group->isAtomic();
+                }
+            }
+        }
+    }
+
+  /**
+   * This will insert a particle vector into the current space. No overlap checks are performed; this should
+   * be done prior to insertion by for example the `Geometry::FindSpace` class.
+   *
+   * @param pin Particle vector to insert
+   * @param i Insert position (PRESENTLY IGNORED). Default = -1 which means end of current vector
+   *
+   * @todo Implement insertion at random position
+   */
+  template<class Tgeometry, class Tparticle>
+    Group* Space<Tgeometry,Tparticle>::insert(MolID id, const p_vec &pin) {
+      Group* group = new Group(topo.molecules[id].molName);
+      group->molId = id;
+
+      if ( !pin.empty() ) {
+        group->setrange( p.size(), -1);
+        assert(group->size()==0 && "Group range broken!");
+
+        p.insert(p.end(), pin.begin(), pin.end());
+        trial.insert(trial.end(), pin.begin(), pin.end());
+        group->resize(pin.size());
+
+        group->setMassCenter(*this);
+        group->setMolSize(pin.size());
+      }
+      return group;
+    }
+
+    /**
+     * This will insert a particle vector into the current space at the end of its group. No overlap checks are performed; this should
+     * be done prior to insertion by for example the `Geometry::FindSpace` class.
+     *
+     * @param pin Particle vector to insert
+     * @param type of molecule
+     * @return new Group
+     *
+     */
+    template<class Tgeometry, class Tparticle>
+      Group* Space<Tgeometry,Tparticle>::insert(const p_vec &pin, MolID molId, bool enlarge) {
+
+          assert(!pin.empty());
+
+          bool found = false;
+          Group* retGroup = NULL;
+          unsigned int last=std::numeric_limits<unsigned int>::max();
+          for(unsigned int i=0; i<g.size(); i++) if(g[i]->molId == molId) last=i;
+
+          for(unsigned int i=last; i<g.size(); i++) {
+              if(found && ((i!=last+1) || enlarge)) { // when not enlarging group -> dont overwrite back of newly inserted
+                  g[i]->setfront(g[i]->front() + pin.size());
+                  g[i]->setback(g[i]->back() + pin.size());                  
+              }
+
+              if(!found && i==last) {
+
+                  // add particles to particle vectors
+                  p.insert(p.begin() + g[i]->back() +1, pin.begin(), pin.end());
+                  trial.insert(trial.begin() + g[i]->back() +1, pin.begin(), pin.end());
+                  found = true;
+
+                  if(enlarge) {
+                    // change group range
+                    g[i]->setback(g[i]->back() + pin.size());
+                    retGroup = g[i];
+                    g[i]->setMassCenter(*this);
+
+                  } else {
+                      retGroup = new Group(g[i]->molName);
+                      retGroup->setback(g[i]->back() + pin.size());
+                      retGroup->setfront(g[i]->back()+1);
+                      retGroup->setMolSize(g[i]->getMolSize());
+                      retGroup->name = g[i]->name;
+                      retGroup->molId = molId;
+
+                      retGroup->setMassCenter(*this);
+
+                      g.insert(g.begin() + i+1, retGroup);
+                  }
+              }
+
+          }
+
+          if(!found) { // no groups of molId -> adding at end of g
+              Group* newGroup = insert(molId, pin);
+              newGroup->name = newGroup->molName = topo.molecules[molId].molName;
+              g.push_back(newGroup);
+              return newGroup;
+          }
+          assert(retGroup != NULL);
+          return retGroup;
+      }
+
+   /**
+     * This will remove the specified group
+     * from the space. Later groups will be shufled down.
+     *
+     */
+    template<class Tgeometry, class Tparticle>
+      bool Space<Tgeometry,Tparticle>::eraseGroup(Group& group) {
+        int n   = group.size(); // number of particles in group
+        int beg = group.front(); // first particle
+        int end = group.back();  // last particle
+        bool del = false;
+        int i=0;
+        auto it = g.begin();
+
+        // group isnt in group list
+        p.erase( p.begin()+beg, p.begin()+end+1); // remove particles -> doest remove partice pointed by last (+1)
+        trial.erase( trial.begin()+beg, trial.begin()+end+1 );
+
+        for (auto* l : g) {
+          // group overlaps with l -> all 4 possibilities condensed (== ==, < >=, <= >, < >)
+          if( (l->front() == beg && l->back() == end) ) {
+              it += i;
+              del = true;
+          } else { if(l->front() <= beg && l->back() >= end) {
+              l->setback( l->back()-n );
+            }
+          }
+
+          // later groups
+          if (l->front() > end) {
+            l->setfront( l->front()-n );
+            l->setback( l->back()-n );
+          }
+
+          i++;
+        }
+
+        if(del) {
+            assert((*it)->front() == group.front() && (*it)->back() == group.back());
+            delete *it;
+
+            g.erase( it );// remove group pointer
+        }
+
+#ifndef NDEBUG
+        size_t cnt=0;
+        for (auto* l : g)
+            cnt+=l->size(); // count particles in each group
+        assert(cnt==p.size() && "Particle mismatch while erasing a group!");
+#endif
+        return true;
     }
 
 } //namespace

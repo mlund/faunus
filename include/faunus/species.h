@@ -4,6 +4,7 @@
 #ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/point.h>
+#include <faunus/slump.h>
 #endif
 
 namespace Faunus {
@@ -23,6 +24,7 @@ namespace Faunus {
            mw,         //!< Weight [g/mol]
            charge,     //!< Charge/valency [e]
            activity,   //!< Chemical activity [mol/l]
+           chemPot,
            dp,         //!< Translational displacement parameter [angstrom]
            dprot,      //!< Rotational displacement parameter [degrees]
            mean,       //!< Mean value... (charge, sasa, etc.)
@@ -156,6 +158,74 @@ namespace Faunus {
             i = list.at( i.id );
         }
   };
+
+  /**
+   * @brief Informattion about single Molecule type
+   */
+  class Molecule {
+  public:
+      Molecule() : activity(-1.0), initType(-1) , isAtomic(false) {}
+
+      std::vector<particle::Tid> atoms;
+      std::vector<p_vec> conformations; ///< \brief Conformations of molecule
+
+      double activity;
+      double chemPot;
+
+      int initType;                 ///< \brief sets how inserted combination will be initialized
+
+      // TODO
+      // generate p_vec of this
+      // list of moves
+
+      string molName;         ///< \brief type of Molecule -> for group link
+      MolID id;
+
+      bool isAtomic; // set in GCMolecular, used only in GCM, here for conveniency
+
+  };
+
+
+  /**
+   * @brief Topology of the system
+   */
+  class Topology {
+  public:
+      string filename;
+      std::vector<Molecule > molecules;
+
+      int molTypeCount() {return molecules.size();}
+
+      p_vec& getRandomConformation(MolID molId) {
+          assert(!molecules[molId].conformations.empty());
+          return molecules[molId].conformations[slp_global.rand() % molecules[molId].conformations.size() ];
+      }
+
+      void pushConfiguration(string molName, p_vec& vec) {
+          for(auto& mol:molecules) if(molName.compare(mol.molName) == 0) {
+              pushConfiguration(mol.id, vec);
+              break;
+          }
+      }
+
+      void pushConfiguration(MolID molId, p_vec& vec) {
+          molecules[molId].conformations.push_back(vec);
+      }
+
+      bool includefile(string topoFile);            //!< Append topology parameters from file
+
+      /**
+       * @brief Loads topology, sets molecules a grand canonical combinations
+       * @param in
+       */
+      Topology() {}
+
+      /** @brief Information string */
+      string info();
+
+};
+
+  extern Topology topo;
 
 extern AtomMap atom; //!< Global instance of AtomMap - can be accessed from anywhere
 }//namespace

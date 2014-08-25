@@ -68,6 +68,9 @@ namespace Faunus {
   class DipoleParticle;
   class CigarParticle;
 
+  // Grand Canonical ensemble - type of initialization of insertion combinations
+  enum{RANDOM,POOL};
+
 #if defined(CIGARPARTICLE)
   typedef CigarParticle particle;
 #elif defined(DIPOLEPARTICLE)
@@ -80,6 +83,8 @@ namespace Faunus {
 
   // FUNCTORS
   typedef std::function<double()> RandFunctor;
+
+  typedef char MolID;
 
 }//namespace
 

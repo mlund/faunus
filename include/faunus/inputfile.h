@@ -101,6 +101,11 @@ namespace Faunus {
       pc::setT( get<double>("temperature", 298.15) );
       if (!atomfile.empty())
         atom.includefile(atomfile);
+
+      string topoFile = get<string>("topology", "");
+      if (!topoFile.empty())
+        topo.includefile(topoFile);
+
       return true;
     }
     return false;

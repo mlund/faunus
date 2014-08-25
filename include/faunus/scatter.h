@@ -67,7 +67,7 @@ namespace Faunus {
           void addVariants() {
             for (auto &m : F) {            // loop over loaded F(q)
               string mname = atom[m.first].name;
-              for (auto &a : atom.list)    // loop over species
+              for (auto &a : atom)    // loop over species
                 if (a.id!=m.first)         // if non-tabulated species
                   if (a.name.find(mname)!=std::string::npos) // and it is a mutant
                     F[a.id] = F[m.first];  // duplicate!

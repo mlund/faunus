@@ -23,6 +23,7 @@ Table of contents
   - @ref example_water2
   - @ref example_polymers
   - @ref example_temper   
+  - @ref example_penalty
   - @ref example_slitpolymer
   - @ref example_membrane
   - @ref example_cigars2fibrils

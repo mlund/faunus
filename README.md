@@ -74,8 +74,7 @@ Resetting the build system
 --------------------------
 
     $ make clean
-    $ rm CMakeCache.txt
-    $ (rm -fR CMakeFiles/)
+    $ rm -fR CMakeCache.txt CMakeFiles
 
 Contributors
 ============

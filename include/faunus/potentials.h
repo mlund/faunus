@@ -451,15 +451,15 @@ namespace Faunus {
         public:
           LennardJonesMixed(InputMap &in) {
             name="Lennard-Jones";
-            size_t n=atom.list.size(); // number of atom types
+            size_t n=atom.size(); // number of atom types
             s2.resize(n); // not required...
             eps.resize(n);// ...but possible reduced mem. fragmentation
             for (size_t i=0; i<n; i++)
               for (size_t j=0; j<n; j++) {
                 s2.set(i,j,
-                    pow( mixer.mixSigma( atom.list[i].sigma, atom.list[j].sigma), 2));
+                    pow( mixer.mixSigma( atom[i].sigma, atom[j].sigma), 2));
                 eps.set(i,j,
-                    4*mixer.mixEpsilon( atom.list[i].eps, atom.list[j].eps ));
+                    4*mixer.mixEpsilon( atom[i].eps, atom[j].eps ));
                 eps.set(i,j,
                     pc::kJ2kT( eps(i,j) ) ); // convert to kT
               }
@@ -504,7 +504,7 @@ namespace Faunus {
             std::ostringstream o;
             o << indent(SUB) << name+" pair parameters:\n\n";
             o.precision(4);
-            int n=(int)atom.list.size();
+            int n=(int)atom.size();
             for (int i=0; i<n; i++)
               for (int j=0; j<n; j++)
                 if (i>=j)
@@ -526,14 +526,14 @@ namespace Faunus {
         public:
           CosAttractMixed(InputMap &in) : base(in) {
             base::name="Cos" + textio::squared + " attraction (mixed)";
-            size_t n=atom.list.size(); // number of atom types
+            size_t n=atom.size(); // number of atom types
             c.resize(n);
             rc.resize(n);
             rc2.resize(n);
             for (size_t i=0; i<n; i++)
               for (size_t j=i; j<n; j++) {
-                rc.set(i,j,base::mixer.mixSigma( atom.list[i].pdis, atom.list[j].pdis));
-                base::rcut2.set(i,j,base::mixer.mixSigma( atom.list[i].pswitch, atom.list[j].pswitch));
+                rc.set(i,j,base::mixer.mixSigma( atom[i].pdis, atom[j].pdis));
+                base::rcut2.set(i,j,base::mixer.mixSigma( atom[i].pswitch, atom[j].pswitch));
                 c.set(i,j, 0.5*pc::pi/base::rcut2(i,j) );
                 base::rcut2.set(i,j, base::rcut2(i,j) + rc(i,j) );
                 base::rcut2.set(i,j, base::rcut2(i,j) * base::rcut2(i,j) );
@@ -1398,8 +1398,8 @@ namespace Faunus {
             return first.brief() + " " + second.brief();
           }
           void setCutoff() {
-            for (size_t i=0; i<atom.list.size(); i++)
-              for (size_t j=0; j<atom.list.size(); j++) {
+            for (size_t i=0; i<atom.size(); i++)
+              for (size_t j=0; j<atom.size(); j++) {
                 if (first.rcut2(i,j) > second.rcut2(i,j))
                   PairPotentialBase::rcut2.set(i,j,first.rcut2(i,j));
                 else

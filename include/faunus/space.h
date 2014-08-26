@@ -364,8 +364,8 @@ namespace Faunus {
         std::ofstream fout( file.c_str() );
         if (fout) {
           fout.precision( numeric_limits<double>::digits10 + 1 );
-          if (std::is_same<Geometry::Cuboid,Tgeometry>::value) 
-            fout << geo.len.x() << " " << geo.len.y() << " " << geo.len.z() << "\n";
+          if (std::is_base_of<Geometry::Cuboid,Tgeometry>::value) 
+            fout << geo.len.transpose() << "\n";
           else fout << geo.getVolume() << "\n";
           fout << p.size() << "\n";
           for (auto p_i : p)
@@ -398,7 +398,7 @@ namespace Faunus {
           int n;
           double x, y, z, vol;
           cout << "OK!\n";
-          if (std::is_same<Geometry::Cuboid,Tgeometry>::value) {
+          if (std::is_base_of<Geometry::Cuboid,Tgeometry>::value) {
             fin >> x >> y >> z >> n;
             geo.setlen(Point(x,y,z));
           }

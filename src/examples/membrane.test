@@ -1,15 +1,15 @@
-# Generated on Aug 29 2013 11:08:36 using 4.2.1 Compatible Apple LLVM 4.2 (clang-425.0.28)
-bilayer_area                       1.12961             
-bilayer_order                      0.832568            
-energyAverage                      2642.33             
-mv_particle_acceptance             24.4959             
-npt_MSQDisplacement                13.6066             
-npt_acceptance                     5.6962              
-npt_averageSideLength              96.3233             
-pivot_Acceptancelipid              0.476652            
-pivot_acceptance                   47.6652             
-relativeEnergyDrift                9.73664e-15         
-transrot_acceptance                15.6612             
-transrot_lipid_acceptance          15.6612             
-transrot_lipid_dRot                2.56879             
-transrot_lipid_dTrans              0.350491            
+# Generated on Aug 26 2014 07:29:37 using 4.2.1 Compatible Apple LLVM 5.1 (clang-503.0.40)
+bilayer_area                       1.16585             
+bilayer_order                      0.767603            
+energyAverage                      2672.88             
+mv_particle_acceptance             24.9637             
+npt_MSQDisplacement                12.4828             
+npt_acceptance                     4.83619             
+npt_averageSideLength              97.3421             
+pivot_Acceptancelipid              0.478701            
+pivot_acceptance                   47.8701             
+relativeEnergyDrift                6.29743e-15         
+transrot_acceptance                16.2533             
+transrot_lipid_acceptance          16.2533             
+transrot_lipid_dRot                2.63071             
+transrot_lipid_dTrans              0.360374            

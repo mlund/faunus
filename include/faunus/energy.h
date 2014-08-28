@@ -15,6 +15,10 @@
 #include <faunus/mpi.h>
 #endif
 
+#ifdef FAU_POWERSASA
+#include <power_sasa.h>
+#endif
+
 namespace Faunus {
   /**
    * @brief Classes/templates that calculate the energy of particles, groups, system.
@@ -54,7 +58,7 @@ namespace Faunus {
           typedef Tspace SpaceType;
           typedef typename Tspace::ParticleType Tparticle;
           typedef typename Tspace::GeometryType Tgeometry;
-          typedef typename Tspace::p_vec Tpvec;
+          typedef typename Tspace::ParticleVector Tpvec;
 
           string name;  //!< Short informative name
 
@@ -584,8 +588,12 @@ namespace Faunus {
      * particle-particle cutoff plus the maximum radii of the two groups,
      * @f$ r_{cut}^{g2g} = r_{cut}^{p2p} + a_{g1} + a_{g2} @f$.
      *
-     * Upon construction the `InputMap` is searched for the keyword
-     * `g2g_cutoff` - the default value is infinity.
+     * Upon construction the `InputMap` is searched for: 
+     *
+     * Keyword      |  Description
+     * :----------- |  :------------------------------------
+     * `g2g_cutoff` |  Cutoff (angstrom) [default: infinity]
+     *
      */
     template<class Tspace, class Tpairpot, class Tnonbonded=Energy::Nonbonded<Tspace,Tpairpot> >
       class NonbondedCutg2g : public Tnonbonded {
@@ -954,6 +962,9 @@ namespace Faunus {
      * If applied on an atomic group, `N` will be set to the number of
      * atoms in the group, while for a molecular group `N=1`.
      *
+     * To groups from being counted against `N`, insert them into
+     * `ignored`.
+     *
      * @date Lund, 2011
      */
     template<class Tspace>
@@ -961,15 +972,40 @@ namespace Faunus {
         private:
           typedef typename Energybase<Tspace>::Tpvec Tpvec;
           double P; //!< Pressure, p/kT
+
           string _info() {
+            size_t N, Natom=0, Nmol=0;
+            for (auto g : this->getSpace().groupList()) {
+              if (ignore.count(g)==0) {
+                if (g->isAtomic())
+                  Natom += g->size();
+                else
+                  Nmol+=g->numMolecules();
+              }
+            }
+            N = Natom + Nmol;
+
             std::ostringstream o;
             o << textio::pad(textio::SUB,15,"Pressure")
               << P*1e30/pc::Nav << " mM = "
               << P*pc::kB*pc::T()*1e30 << " Pa = "
-              << P*pc::kB*pc::T()*1e30/0.980665e5 << " atm\n";
+              << P*pc::kB*pc::T()*1e30/0.980665e5 << " atm\n"
+              << textio::pad(textio::SUB,25, "Number of molecules")
+              << N << " (" <<Nmol<< " molecular + " <<Natom<< " atomic)\n";
+            if (!ignore.empty()) { 
+              int cnt=0;
+              o << textio::pad(textio::SUB,25, "Ignored groups:\n");
+              for (auto g : this->getSpace().groupList())
+                if (ignore.count(g)!=0) {
+                  o << "     " << cnt++ << " " << g->name << "\n";
+                }
+            }
             return o.str();
           }
+
         public:
+          std::set<Group*> ignore; //!< Ignore groups added here
+
           ExternalPressure(InputMap &in) {
             this->name="External Pressure";
             P=in.get<double>("npt_P",0,
@@ -985,6 +1021,9 @@ namespace Faunus {
           }
 
           double g_external(const Tpvec &p, Group &g) FOVERRIDE {
+            // should this group be ignored?
+            if ( ignore.count(&g)!=0 )
+              return 0;
             int N=g.numMolecules();
             double V=this->getSpace().geo.getVolume();
             return -N*log(V);
@@ -1312,6 +1351,8 @@ namespace Faunus {
 
           /** @brief Group-to-group energy */
           double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+            if (fabs(tension)<1e-6)
+              return 0;
             double dsasa=0;
             if (sasa.size()==p.size())
               if (g1.isMolecular())
@@ -1906,6 +1947,150 @@ namespace Faunus {
              return du;
            }
        };
+#endif
+
+    /**
+     * @brief Energy class for manybody interactions such as dihedrals and angular potentials
+     *
+     * This is a general class for interactions that can involve
+     * any number of atoms.
+     *
+     * In the following example we add an angular potential between
+     * particle index 3,4,5:
+     *
+     * ~~~~
+     * Manybody<Tspace> pot;
+     * pot.add( Potential::Angular( {3,4,5}, 70., 0.5 ) );
+     * ~~~~
+     *
+     * @todo Currently implemented as `external()` which means
+     * that all added potentials are evaluated for each move
+     * eventhough only a subset of atoms are touched. Implement
+     * dictionary to speed up.
+     */
+    template<class Tspace>
+      class Manybody : public Energybase<Tspace> {
+        protected:
+          string _infosum;
+          string _info() FOVERRIDE {
+            return _infosum;
+          }
+          typedef Energybase<Tspace> Tbase;
+          typedef typename Tbase::Tpvec Tpvec;
+
+          typedef std::function<double(typename Tbase::Tgeometry&, const Tpvec&)> EnergyFunct;
+          vector<EnergyFunct> list;
+          std::set<int> allindex; // index of all particles involved
+
+        public:
+          Manybody(Tspace &spc) {
+            Tbase::name="Manybody potential";
+            Tbase::setSpace(spc);
+          }
+
+          /**
+           * @brief Add a manybody potential
+           */
+          template<class Tmanybodypot>
+            void add(const Tmanybodypot &f) {
+              list.push_back(f);
+              _infosum += "  " + f.brief() + "\n";
+              for (auto i : f.getIndex())
+                allindex.insert(i);
+            }
+
+          double external(const Tpvec &p) FOVERRIDE {
+            double u=0;
+            for (auto &f : list)
+              u += f(Tbase::spc->geo, p);
+            return u;
+          }
+      };
+
+
+#ifdef FAU_POWERSASA
+    /**
+     * @brief SASA energy from transfer free energies
+     *
+     * Detailed description here...
+     */
+    template<class Tspace>
+      class SASAEnergy : public Energybase<Tspace> {
+        private:
+          vector<double> tfe; // transfer free energies (1/angstrom^2)
+          vector<double> sasa; // transfer free energies (1/angstrom^2)
+          vector<Point> sasaCoords;
+          vector<double> sasaWeights;
+          double probe; // sasa probe radius (angstrom)
+          double conc;  // co-solute concentration (mol/l)
+          Average<double> avgArea; // average surface area
+
+          typedef typename Energybase<Tspace>::Tpvec Tpvec;
+
+          string _info() {
+            char w=20;
+            std::ostringstream o;
+            o << textio::pad(textio::SUB,w,"Probe radius")
+              << probe << textio::_angstrom << "\n"
+              << textio::pad(textio::SUB,w,"Co-solute conc.")
+              << conc << " mol/l\n"
+              << textio::pad(textio::SUB,w,"Average area")
+              << avgArea.avg() << textio::_angstrom+textio::squared << "\n";
+            return o.str();
+          }
+
+          template<class Tpvec>
+            void updateSASA(const Tpvec &p) {
+              size_t n=p.size(); // number of particles
+              sasa.resize(n);
+              sasaCoords.resize(n);
+              sasaWeights.resize(n);
+
+              for (size_t i=0; i<n; ++i) {
+                sasaCoords[i]  = p[i];
+                sasaWeights[i] = p[i].radius + probe;
+              }
+
+              // generate powersasa object and calc. sasa for all particles
+              POWERSASA::PowerSasa<double,Point> ps(sasaCoords, sasaWeights, 1, 1, 1, 1);
+              ps.calc_sasa_all();
+              for (size_t i=0; i<n; ++i)
+                sasa[i] = ps.getSasa()[i];
+            }
+
+        public:
+          SASAEnergy(InputMap &in) {
+            this->name="SASA Energy";
+            probe=in.get<double>("sasa_probe", 1.4, "SASA probe radius (angstrom)");
+            conc=in.get<double>("sasa_conc", 0, "Co-solute concentration (mol/l)");
+          }
+
+          /**
+           * @brief The SASA calculation is implemented
+           * as an external potential, only
+           */
+          double external(const Tpvec &p) FOVERRIDE {
+            // if first run, resize and fill tfe vector
+            if (tfe.size()!=p.size()) {
+              tfe.resize(p.size());
+              for (size_t i=0; i<p.size(); ++i)
+                tfe[i] = atom[ p[i].id ].tfe / (pc::kT() * pc::Nav); // -> kT
+            }
+
+            // calc. sasa and energy
+            updateSASA(p);
+            assert(sasa.size() == p.size());
+            double u=0, A=0;
+            for (size_t i=0; i<sasa.size(); ++i) {
+              u += sasa[i] * tfe[i]; // a^2 * kT/a^2/M -> kT/M
+              if (!this->isTrial(p))
+                A+=sasa[i];
+            }
+            if (!this->isTrial(p))
+              avgArea+=A; // sample average area for accepted confs. only
+            return u * conc; // -> kT
+          }
+      };
 #endif
 
     /**

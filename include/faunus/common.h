@@ -76,6 +76,7 @@ namespace Faunus {
   typedef PointParticle particle;
 #endif
 
+  // to be removed:
   typedef std::vector< particle, Eigen::aligned_allocator<particle> > p_vec;
 
   // FUNCTORS

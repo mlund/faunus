@@ -242,6 +242,9 @@ namespace Faunus {
 
     template<class Tspace>
       void Movebase<Tspace>::trialMove() {
+        if (cnt==0)
+          for (auto i : spc->groupList())
+            i->setMassCenter(*spc);
         cnt++;
         _trialMove();
       }
@@ -1051,12 +1054,24 @@ namespace Faunus {
      * function. Whether particles are considered part of the cluster is
      * determined by the private virtual function `ClusterProbability()`.
      * By default this is a simple step function with P=1 when an atomic particle
-     * in the group set by setMobile is closer than a certain threshold to a
+     * in the group set by `setMobile()` is within a certain threshold to a
      * particle in the main group; P=0 otherwise.
      *
      * The implemented cluster algorithm is general - see Frenkel&Smith,
      * 2nd ed, p405 - and derived classes can re-implement `ClusterProbability()`
      * for arbitrary probability functions.
+     *
+     * Upon construction, the `InputMap` is scanned for the
+     * following keywords,
+     *
+     * Keyword                | Description
+     * :--------------------- | :----------------
+     * `transrot_clustersize` | Surface threshold from mobile ion to particle in group (angstrom)
+     *
+     * @todo Energy evaluation puts all moved particles in an index vector used
+     * to sum the interaction energy with static particles. This could be optimized
+     * by only adding mobile ions and calculate i.e. group-group interactions in a
+     * more traditional (and faster) way.
      */
     template<class Tspace>
       class TranslateRotateCluster : public TranslateRotate<Tspace> {
@@ -1084,16 +1099,10 @@ namespace Faunus {
           using base::spc;
           TranslateRotateCluster(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="transrot");
           virtual ~TranslateRotateCluster();
-          void setMobile(Group&); //!< Select atomic species to move with the main group
-          double threshold;  //!< Distance between particles to define a cluster
+          void setMobile(Group&);  //!< Pool of atomic species to move with the main group
+          double threshold;        //!< Distance between particles to define a cluster
       };
 
-    /**
-     * The cluster threshold is set with the InputMap keyword
-     * `transrot_clustersize` and gives specifies the SURFACE
-     * distance between macromolecular particles and atomic particles
-     * to be clustered.
-     */
     template<class Tspace>
       TranslateRotateCluster<Tspace>::TranslateRotateCluster(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(in,e,s,pfx) {
         base::title="Cluster "+base::title;
@@ -1209,6 +1218,7 @@ namespace Faunus {
         }
 
         // pair energy between static and moved particles
+        // note: this could be optimized!
         double du=0;
 #pragma omp parallel for reduction (+:du)
         for (int j=0; j<(int)spc->p.size(); j++)
@@ -1218,9 +1228,15 @@ namespace Faunus {
         return unew - uold + du - log(bias); // exp[ -( dU-log(bias) ) ] = exp(-dU)*bias
       }
 
+    /**
+     * This is the default function for determining the probability, P,
+     * that a mobile particle is considered part of the cluster. This
+     * is here a simple distance critera but derived classes can reimplement
+     * this (virtual) function to arbitrary probability functions.
+     */
     template<class Tspace>
       double TranslateRotateCluster<Tspace>::ClusterProbability(p_vec &p, int i) {
-        for (auto j : *igroup)
+        for (auto j : *igroup) // loop over main group
           if (i!=j) {
             double r=threshold+p[i].radius+p[j].radius;
             if (spc->geo.sqdist(p[i],p[j])<r*r )
@@ -1261,22 +1277,33 @@ namespace Faunus {
     /**
      * @brief Non-rejective cluster translation.
      *
-     * This type of move will attempt to move collective sets of macromolecules that
-     * obeys some criteria (here a hardcore overlap(?)) with a symmetric transition
-     * matrix (no flow through the clusters).
+     * This type of move will attempt to translate collective sets of macromolecules that
+     * with a symmetric transition matrix (no flow through the clusters).
+     * See detailed description [here](http://dx.doi.org/10/fthw8k).
      *
-     * Setting the boolen `skipEnergyUpdate` to true (default is false) updates of the
+     * Setting the boolean `skipEnergyUpdate` to true (default is false) updates of the
      * total energy are skipped to speed up the move.
      * While this has no influence on the Markov chain it will cause an apparent energy
      * drift. It is recommended that this is enabled only for long production runs after
      * having properly checked that no drifts occur with `skipEnergyUpdate=false`.
      *
-     * @author Bjoern Persson
-     * @date Lund 2009-2010
+     * Upon construction the following keywords are read from `InputMap`,
+     *
+     * Keyword                | Description
+     * :--------------------  | :-------------------------------
+     * `ctransnr_dp`          | Displacement parameter
+     * `ctransnr_skipenergy`  | Skip energy update, see above (default: false)
+     * `ctransnr_runfraction` | Runfraction (default: 1.0)
+     *
      * @note Requirements for usage:
      * - Compatible only with purely molecular systems
      * - Works only with periodic containers
      * - External potentials are ignored
+     *
+     * @author Bjoern Persson
+     * @date Lund 2009-2010
+     * @todo Energy calc. before and after can be optimized by only looping over `moved` with
+     * `remaining`
      */
     template<class Tspace>
       class ClusterTranslateNR : public Movebase<Tspace> {
@@ -1285,6 +1312,7 @@ namespace Faunus {
           using base::w;
           using base::spc;
           using base::pot;
+          using base::prefix;
           vector<int> moved, remaining;
           void _trialMove();
           void _acceptMove();
@@ -1299,13 +1327,17 @@ namespace Faunus {
           bool skipEnergyUpdate;    //!< True if energy updates should be skipped (faster evaluation!)
       };
 
+    /** @brief Constructor */
     template<class Tspace>
       ClusterTranslateNR<Tspace>::ClusterTranslateNR(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(e,s,pfx) {
         base::title="Rejection Free Cluster Translation";
         base::cite="doi:10/fthw8k";
         base::useAlternateReturnEnergy=true;
-        dp=in.get<double>("ctransnr_dp", 0);
-        skipEnergyUpdate=in.get<bool>("ctransnr_skipenergy", false);
+        base::runfraction=in.get<double>(prefix+"_runfraction", 1.0);
+        skipEnergyUpdate=in.get<bool>(prefix+"_skipenergy", false);
+        dp=in.get<double>(prefix+"_dp", 0);
+        if (dp<1e-6)
+          base::runfraction=0;
         g=spc->groupList(); // currently ALL groups in the system will be moved!
       }
 
@@ -1316,16 +1348,25 @@ namespace Faunus {
         o << pad(SUB,w,"Displacement") << dp << _angstrom << endl
           << pad(SUB,w,"Skip energy update") << std::boolalpha
           << skipEnergyUpdate << endl;
-        if (movefrac.cnt>0)
-          o << pad(SUB,w,"Move fraction") << movefrac.avg() << endl;
+        if (movefrac.cnt>0) {
+          o << pad(SUB,w,"Move fraction") << movefrac.avg()*100 << percent << endl
+            << pad(SUB,w,"Avg. moved groups") << movefrac.avg()*spc->groupList().size() << endl;
+        }
         return o.str();
       }
 
     template<class Tspace>
       void ClusterTranslateNR<Tspace>::_trialMove() {
         double du=0;
+        g=spc->groupList();
         moved.clear();
-        remaining.clear();
+        remaining.resize( g.size() );
+
+        for (size_t i=0; i<g.size(); i++) {
+          remaining[i] = i;
+          if (base::cnt<=1)
+            g[i]->setMassCenter(*spc);
+        }
 
         if (skipEnergyUpdate==false)
 #pragma omp parallel for reduction (+:du) schedule (dynamic)
@@ -1338,8 +1379,6 @@ namespace Faunus {
         ip.y()*=slp_global.randHalf();
         ip.z()*=slp_global.randHalf();
 
-        for (size_t i=0; i<g.size(); i++)
-          remaining.push_back(i);
         int f=slp_global()*remaining.size();
         moved.push_back(remaining[f]);
         remaining.erase(remaining.begin()+f);    // Pick first index in m to move
@@ -1353,7 +1392,7 @@ namespace Faunus {
             if (slp_global() < (1.-std::exp(-udiff)) ) {
               moved.push_back(remaining[j]);
               remaining.erase(remaining.begin()+j);
-              j=j-1;
+              j--;
             }
           }
           g[moved[i]]->accept(*spc);
@@ -1366,7 +1405,10 @@ namespace Faunus {
               du+=pot->g2g(spc->p, *g[i], *g[j]);
 
         base::alternateReturnEnergy=du;
-        movefrac+=double(moved.size()) / double((moved.size()+remaining.size()));
+        movefrac+=double(moved.size()) / (moved.size()+remaining.size());
+
+        assert( moved.size() >= 1);
+        assert( spc->groupList().size() == moved.size()+remaining.size() );
       }
 
     template<class Tspace>

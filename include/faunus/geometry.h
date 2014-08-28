@@ -412,15 +412,6 @@ namespace Faunus {
         translate(geo, p, -chargeCenter(geo, p) );
       }
 
-    /*!
-      \brief Geometric transform of a Point (rotation, translation...)
-      */
-    template<typename Ttransformer>
-      void transform(const Geometrybase &geo, const Ttransformer &t, Point &x) {
-        x=t*x;
-        geo.boundary(x);
-      }
-
     /**
      * @brief Find an empty space for a particle vector in a space of other particles
      * @author Mikael Lund

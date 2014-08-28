@@ -201,7 +201,7 @@ namespace Faunus {
     }
   template<>
     inline bool str2val<bool>(const std::string &s, bool fallback) {
-      if (std::regex_match(s, std::regex("yes|true|on", std::regex_constants::icase) ) )
+      if (std::regex_match(s, std::regex("yes|true|on|aye", std::regex_constants::icase) ) )
         return true;
       return fallback;
     }

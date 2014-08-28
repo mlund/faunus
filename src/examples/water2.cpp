@@ -90,6 +90,8 @@ int main() {
 
   // print information
   cout << loop.info() + sys.info() + gmv.info() + iso.info() + test.info();
+
+  return test.numFailed();
 }
 
 /**  @page example_water2 Example: SPC Water (V2)

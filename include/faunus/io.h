@@ -292,7 +292,7 @@ namespace Faunus {
        * @param n Number of atoms in each residue (default: 1e20)
        */
       template<class Tpvec, class Tvec=Point>
-        static bool save(const string &file, const Tpvec &p, Tvec len=Tvec(0,0,0), unsigned int n=1e9) {
+        static bool save(const string &file, const Tpvec &p, Tvec len=Point(0,0,0), unsigned int n=1e9) {
           unsigned int nres=1, natom=1;
           char buf[100];
           std::ostringstream o;
@@ -317,6 +317,34 @@ namespace Faunus {
          recordname, indexbuf, atomname, altlocchar, resnamebuf, chain[0], 
          residbuf, insertion[0], x, y, z, occ, beta, segnamebuf, elementsymbol);
          */
+
+      template<class Tgeo, class Tparticle>
+        static bool save(const string &file, Space<Tgeo,Tparticle> &spc) {
+          Group* oldg=nullptr;
+          unsigned int nres=0, natom=1, cnt=0;
+          char buf[100];
+          string name, resname;
+          std::ostringstream o;
+          o << writeCryst1(spc.geo.len);
+          for (auto i : spc.p) {
+            name=atom[i.id].name;
+            Group* g = spc.findGroup(cnt++);
+            if (g!=oldg) {
+              oldg=g;
+              nres++;
+            }
+            resname = (g->name.empty() ? name : g->name);
+            resname.resize(3,'x'); 
+            i+=spc.geo.len/2;
+            sprintf(buf, "ATOM  %5d %-4s %-4s%5d    %8.3f %8.3f %8.3f %.3f %.3f\n",
+                natom++, name.c_str(), resname.c_str(), nres, i.x(), i.y(), i.z(),
+                i.charge, i.radius);
+            o << buf;
+          }
+          o << "END\n";
+          assert(cnt==spc.p.size());
+          return IO::writeFile(file, o.str());
+        }
 
   };
 
@@ -502,6 +530,8 @@ namespace Faunus {
    * can be saved as "whole" by adding their groups to the public g-vector.
    *
    * @date June 2007-2011, Prague / Malmo
+   * @note Alternative pure C++ version(?):
+   * http://loos.sourceforge.net/xtc_8hpp_source.html
    */
   class FormatXTC {
     private:
@@ -565,7 +595,7 @@ namespace Faunus {
        * be added, while a new file is created if not.
        * Coordinates are shiftet and converted to nanometers.
        * Box dimensions for the frame must be manually
-       * set by the ioxtc::setbox() function before calling this.
+       * set by the `ioxtc::setbox()` function before calling this.
        */
       template<class Tpoint, class Talloc>
         bool save(const string &file, const std::vector<Tpoint,Talloc> &p) {
@@ -587,7 +617,7 @@ namespace Faunus {
           return false;
         }
 
-      /**
+      /*
        * @brief Save a frame to trj file (PBC)
        *
        * Save all particles in Cuboid to xtc file. Molecules added to the `ioxtc::g`

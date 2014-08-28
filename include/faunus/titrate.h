@@ -363,7 +363,7 @@ namespace Faunus {
           template<class Tpvec>
             int findSites(const Tpvec &p) {
               eq.findSites(p);
-              for (auto &s : atom.list )
+              for (auto &s : atom )
                 for (auto &process : eq.process )
                   if ( process.one_of_us( s.id ) )
                     energymap[s.id] = process.energy( s.id );

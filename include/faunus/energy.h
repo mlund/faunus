@@ -1522,8 +1522,8 @@ namespace Faunus {
               for (auto &m : Tbase::getMap()) {
                 Tbase::operator()(m.first) -= min;
               }
-              if (!rejection) _du = std::log(hist(coord.second)) - min;
-              else _du = std::log(hist(coord.first)) - min;
+              if (!rejection) _du = std::log(hist.find(coord.second)) - min;
+              else if (hist.find(coord.second)!=0) _du = std::log(hist.find(coord.first)) - min;
               assert(hist(coord.second)!=0 && "hist_size (>= max # of points in histogram) is set too small.");
               _du_sum += _du;
               hist.clear();
@@ -1726,8 +1726,8 @@ namespace Faunus {
               for (auto &m : Tbase::getMap()) {
                 Tbase::operator()(m.first.first, m.first.second) -= min;
               }
-              if (!rejection) _du = std::log(hist(coord.second.first, coord.second.second)) - min;
-              else _du = std::log(hist(coord.first.first, coord.first.second)) - min;
+              if (!rejection) _du = std::log(hist.find(coord.second)) - min;
+              else if (hist.find(coord.second)!=0) _du = std::log(hist.find(coord.first)) - min;
               assert(hist(coord.second.first, coord.second.second)!=0 
                   && "hist_size (>= max # of points in histogram) is set too small.");
               _du_sum += _du;

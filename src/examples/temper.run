@@ -24,9 +24,10 @@ Tscale                  $Tscale # Reduced temperature
 " > mpi$proc.temper.input
 done
 
+exe=./temper
 # Run simulation
 if [ -x $exe ]; then
-  $mpicommand -np 4 ./temper
+  $mpicommand -np 4 $exe
   rc=$?
   #rm mpi*
   exit $rc

@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 2.8.5 FATAL_ERROR)
 project("Faunus")
 
+if(POLICY CMP0042)
+  cmake_policy(SET CMP0042 OLD)
+endif()
+
 # ----------------------------
 #   Locate external packages
 # ----------------------------
@@ -64,13 +68,6 @@ if (NOT (final_keyword))
   add_definitions(-DNO_EXPLICIT_OVERRIDE)
 endif()
 
-# --------------------------------
-#   Add Revision control targets
-# --------------------------------
-if(Subversion_FOUND)
-  add_custom_target(rccommit svn commit)
-endif()
- 
 # ---------------------------
 #   Add source directories
 # ---------------------------
@@ -80,6 +77,10 @@ add_subdirectory(scripts)
 add_subdirectory(doc EXCLUDE_FROM_ALL)
 
 if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
+  string(REPLACE "NDEBUG" "_ndebug" CMAKE_CXX_FLAGS_RELWITHDEBINFO ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
+  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}"
+    CACHE STRING "Flags used by the compiler during Release with Debug Info builds" FORCE)
+
   message(
     "...............................................................\n"
     "  Faunus is compiled in Debug mode to enable checks and\n"

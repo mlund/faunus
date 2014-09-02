@@ -97,14 +97,14 @@ namespace Faunus {
       }
 
     /**
-     * @brief Coordinate scaling used for NPT ensemble
+     * @brief Coordinate scaling used for NPT and NVT ensemble
      *
      * This will perform a volume scaling of the Point by
      * following the algorithm specified in the Geometry.
      */
     template<typename Tgeometry>
-      void scale(const Tgeometry &geo, double newvol) {
-        geo.scale(*this, newvol);
+      void scale(const Tgeometry &geo, PointBase &s, double xyz=1, double xy=1) {
+        geo.scale(*this,s,xyz,xy);
       }
 
     Tcoord len() const {
@@ -117,7 +117,7 @@ namespace Faunus {
         in >> (*this)[i];
       return *this;
     }
-    
+
     /** @brief Read from string */
     PointBase& operator<<(const std::string &in) {
       std::istringstream i(in);

@@ -7,6 +7,50 @@
 #include <faunus/picojson.h>
 
 namespace Faunus {
+  namespace json {
+  /**
+   * @brief Loads a JSON file, reads atom pair properties and returns a vector map
+   *
+   * Example:
+   * ~~~~
+   * auto map = atomPairMap("input.json", "pairproperties", "nemorep");
+   * for (auto &m : map)
+   *   cout << m.second.transpose() << endl; // -> 12 23 0.2 -2 3 4 5 ...
+   * ~~~~
+   * where the input json file could look like this:
+   * ~~~~
+   * {
+   *   "pairproperties" : {
+   *      "OW OW"  : { "nemorep":"12. 23. 0.2  -2   3   4   5" },
+   *      "HW HW"  : { "nemorep":"-2. 23. 0.2   2  99   4  -5 " },
+   *      "HW OW"  : { "nemorep":"112. 23. 0.2 129 391 238  23" }
+   *   }
+   * }
+   * ~~~~
+   */
+  inline std::map<opair<int>,Eigen::VectorXd>
+    atomPairMap(const string &file, const string &section, const string &key) {
+      assert(!section.empty() && !key.empty());
+      typedef Eigen::VectorXd Tvec;
+      typedef opair<int> Tpair;
+      std::map<Tpair,Tvec> map;
+      string atom1, atom2;
+      auto j=json::open(file);
+      for (auto &a : json::object(section, j)) {
+        std::istringstream is(a.first);
+        is >> atom1 >> atom2;
+        Tpair pair( atom[atom1].id, atom[atom2].id );
+        string str = json::value<string>(a.second, key,"");
+        std::istringstream is2(str), tmp(str);
+        int size = std::distance(std::istream_iterator<string>(tmp), std::istream_iterator<string>());
+        Tvec v(size);
+        for (int i=0; i<size; i++)
+          is2 >> v[i];
+        map[pair] = v;
+      }
+      return map;
+    }
+  }//namespace
 
   /**
    * @brief Approximation of erfc-function

@@ -20,7 +20,6 @@ int main() {
   InputMap mcp("bulk.input");         // open user input file
   MCLoop loop(mcp);                   // class for handling mc loops
   EnergyDrift sys;                    // class for tracking system energy drifts
-  UnitTest test(mcp);                 // class for unit testing
 
   // Construct Hamiltonian and Space
   Tspace spc(mcp);
@@ -44,7 +43,8 @@ int main() {
   spc.load("state");                               // load old config. from disk (if any)
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );// store initial total system energy
 
-  cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
+  cout << atom.info() + spc.info() + pot.info()
+    + textio::header("MC Simulation Begins!");
 
 #ifdef DEBYEHUCKEL
   cout << pot.first.pairpot.first.info(spc.p,spc.geo.getVolume()) << endl;
@@ -71,19 +71,22 @@ int main() {
 
   // save to disk
   FormatPQR::save("confout.pqr", spc.p); // final PQR snapshot for VMD etc.
-  rdf_ab.save("rdf.dat");         // g(r) - not normalized!
-  spc.save("state");              // final simulation state
+  rdf_ab.save("rdf.dat");                // g(r) - not normalized!
+  spc.save("state");                     // final simulation state
 
   // perform unit tests (irrelevant for the simulation)
+  UnitTest test(mcp);                    // class for unit testing
   iso.test(test);
   mv.test(test);
   sys.test(test);
 
   // print information
-  cout << loop.info() + sys.info() + mv.info() + iso.info() + virial.info() + test.info();
+  cout << loop.info() + sys.info() + mv.info() + iso.info()
+    + virial.info() + test.info();
 
   return test.numFailed();
 }
+
 /**
   @page example_bulk Example: Melted NaCl
 

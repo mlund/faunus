@@ -1182,9 +1182,9 @@ namespace Faunus {
             print = in.get<int>("tab_print",0);
 
             // Filling up matrix of tabulated data
-            atomlistsize = atom.list.size();
-            for (auto &i : atom.list) {
-              for (auto &j : atom.list) {
+            atomlistsize = atom.size();
+            for (auto &i : atom) {
+              for (auto &j : atom) {
                 particle a,b;
                 a = i;
                 b = j;
@@ -1340,9 +1340,9 @@ namespace Faunus {
         public:
           PotentialVecTabulated(InputMap &in) : base(in) {
             // Filling up matrix of empty tabulated data
-            atomlistsize = atom.list.size();
-            for (size_t i=0; i<atom.list.size(); i++)
-              for (size_t j=0; j<atom.list.size(); j++)
+            atomlistsize = atom.size();
+            for (size_t i=0; i<atom.size(); i++)
+              for (size_t j=0; j<atom.size(); j++)
                 vtab.push_back(tab.generate_empty());
 
             tab.setRange(
@@ -1375,8 +1375,8 @@ namespace Faunus {
             std::ostringstream o( base::info(w) );
             o << tab.info(w) << endl;
             using namespace Faunus::textio;
-            for (auto &i : atom.list)
-              for (auto &j : atom.list)
+            for (auto &i : atom)
+              for (auto &j : atom)
                 o << pad(SUB,w,"Nbr of elements in table ("+i.name+"<->"+j.name+"): ")
                   << vtab[i.id*atomlistsize+j.id].r2.size() << endl;
             o << endl;
@@ -1384,8 +1384,8 @@ namespace Faunus {
           }
 
           void print_tabulation(int n=1000) {
-            for (auto &i : atom.list) {
-              for (auto &j : atom.list) {
+            for (auto &i : atom) {
+              for (auto &j : atom) {
                 particle a,b;
                 a = i;
                 b = j;

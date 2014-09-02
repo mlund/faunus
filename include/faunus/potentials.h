@@ -389,6 +389,17 @@ namespace Faunus {
      * This will cut any pair potential at `prefix_cutoff` and shift to
      * zero at that distance. Slow but general.
      *
+     * Example:
+     *
+     * ~~~~
+     * using namespace Faunus::Potential;
+     * typedef CutShift<LennardJones> Tpairpot;
+     * ~~~~
+     *
+     * Upon construction with an `InputMap`, the `lj_cutoff`
+     * keyword will be used to set the cut-off.
+     *
+     *
      * @todo Implement force calculation
      */
     template<class Tpairpot>
@@ -440,15 +451,15 @@ namespace Faunus {
         public:
           LennardJonesMixed(InputMap &in) {
             name="Lennard-Jones";
-            size_t n=atom.list.size(); // number of atom types
+            size_t n=atom.size(); // number of atom types
             s2.resize(n); // not required...
             eps.resize(n);// ...but possible reduced mem. fragmentation
             for (size_t i=0; i<n; i++)
               for (size_t j=0; j<n; j++) {
                 s2.set(i,j,
-                    pow( mixer.mixSigma( atom.list[i].sigma, atom.list[j].sigma), 2));
+                    pow( mixer.mixSigma( atom[i].sigma, atom[j].sigma), 2));
                 eps.set(i,j,
-                    4*mixer.mixEpsilon( atom.list[i].eps, atom.list[j].eps ));
+                    4*mixer.mixEpsilon( atom[i].eps, atom[j].eps ));
                 eps.set(i,j,
                     pc::kJ2kT( eps(i,j) ) ); // convert to kT
               }
@@ -493,7 +504,7 @@ namespace Faunus {
             std::ostringstream o;
             o << indent(SUB) << name+" pair parameters:\n\n";
             o.precision(4);
-            int n=(int)atom.list.size();
+            int n=(int)atom.size();
             for (int i=0; i<n; i++)
               for (int j=0; j<n; j++)
                 if (i>=j)
@@ -515,14 +526,14 @@ namespace Faunus {
         public:
           CosAttractMixed(InputMap &in) : base(in) {
             base::name="Cos" + textio::squared + " attraction (mixed)";
-            size_t n=atom.list.size(); // number of atom types
+            size_t n=atom.size(); // number of atom types
             c.resize(n);
             rc.resize(n);
             rc2.resize(n);
             for (size_t i=0; i<n; i++)
               for (size_t j=i; j<n; j++) {
-                rc.set(i,j,base::mixer.mixSigma( atom.list[i].pdis, atom.list[j].pdis));
-                base::rcut2.set(i,j,base::mixer.mixSigma( atom.list[i].pswitch, atom.list[j].pswitch));
+                rc.set(i,j,base::mixer.mixSigma( atom[i].pdis, atom[j].pdis));
+                base::rcut2.set(i,j,base::mixer.mixSigma( atom[i].pswitch, atom[j].pswitch));
                 c.set(i,j, 0.5*pc::pi/base::rcut2(i,j) );
                 base::rcut2.set(i,j, base::rcut2(i,j) + rc(i,j) );
                 base::rcut2.set(i,j, base::rcut2(i,j) * base::rcut2(i,j) );
@@ -763,6 +774,15 @@ namespace Faunus {
      *              = \lambda_B \frac{z_i z_j}{r_{ij}}
      * @f]
      * where \f$\lambda_B\f$ is the Bjerrum length and \c z are the valencies.
+     *
+     * Upon construction, the following parameters are read from the
+     * `InputMap`:
+     *
+     * Keyword        |  Description
+     * :------------- | :---------------------
+     *  `temperature` | Absolute temperature (K) [default: 298.15 K]
+     *  `epsilon_r`   | Relative dielectric constant [default: 80]
+     *  `depsdt`      | Dielectric constant temperature derivative [default: -0.368]
      */
     class Coulomb : public PairPotentialBase {
       friend class Potential::DebyeHuckel;
@@ -775,7 +795,7 @@ namespace Faunus {
       double lB;          //!< Bjerrum length (angstrom)
 
       public:
-      Coulomb(InputMap&); //!< Construction from InputMap
+      Coulomb(InputMap&, string="coulomb"); //!< Construction from InputMap
       double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
 
       template<class Tparticle>
@@ -815,14 +835,21 @@ namespace Faunus {
     };
 
     /**
-     * @brief Coulomb pair potential shifted according to Wolf/Yonezawa (<http://dx.doi.org/10/j97>)
-     * @details The Coulomb potential has the form:
+     * @brief Coulomb pair potential shifted according to Wolf/Yonezawa
+     * @details The potential has the form:
      * @f[
      * \beta u_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT}
      * z_i z_j \left (
      * \frac{1}{r} - \frac{1}{R_c} + \frac{r-R_c}{R_c^2}
      * \right )
      * @f]
+     *
+     * and is hence a particular simple form of the original Wolf
+     * formulation. This potential is expected to work reasonably well
+     * for dense liquids, see [here](http://dx.doi.org/10/j97).
+     *
+     * Upon construction using an `InputMap` the keywords from `Potential::Coulomb`
+     * are used in addition to `coulomb_cut` to specifify the cut-off.
      */
     class CoulombWolf : public Coulomb {
       private:
@@ -997,7 +1024,7 @@ namespace Faunus {
           Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
 #ifdef FAU_APPROXMATH
             double rinv = invsqrtQuake(r2);
-            return lB * a.charge * b.charge * rinv * exp_cawley(-k/rinv) * ( 1/r2 + k/rinv ) * p;
+            return lB * a.charge * b.charge * rinv * exp_cawley(-k/rinv) * ( 1/r2 + k*rinv ) * p;
 #else
             double r=sqrt(r2);
             return lB * a.charge * b.charge / (r*r2) * exp(-k*r) * ( 1 + k*r ) * p;
@@ -1018,6 +1045,47 @@ namespace Faunus {
               k2_count_avg+=k2_count;   // sample average
             }
           } 
+    };
+    /**
+     * @brief Debye-Huckel potential
+     * @details Unlike in the Debye-Huckel/Yukawa potential,
+     * particle size is taken into account:
+     * \f[ \beta w_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT}
+     * \frac{z_i z_j}{r_{ij}(1+\kappa a)} \exp(-\kappa (r_{ij} - a)) \f]
+     * where \f$\kappa=1/D\f$ is the inverse Debye screening length
+     * and \f$a\f$ is the contact distance between two particles.
+     */
+    class DebyeHuckelSD : public DebyeHuckel {
+      public:
+        DebyeHuckelSD(InputMap &in) : DebyeHuckel(in) {}
+
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+            double contact=a.radius+b.radius;
+#ifdef FAU_APPROXMATH
+            double rinv = invsqrtQuake(r2);
+            return (rinv>1/contact) ? pc::infty : 
+              lB * a.charge * b.charge * rinv / (1 + k*contact) * exp_cawley(-k/rinv+k*contact);
+#else
+            double r=sqrt(r2);
+            return (r<contact) ? pc::infty : 
+              lB * a.charge * b.charge / r / (1 + k*contact) * exp(-k*(r-contact));
+#endif
+          }
+
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            double contact=a.radius+b.radius;
+#ifdef FAU_APPROXMATH
+            double rinv = invsqrtQuake(r2);
+            return (rinv>1/contact) ? -pc::infty*p :
+              lB * a.charge * b.charge * rinv / (1 + k*contact) * exp_cawley(-k/rinv+k*contact) * ( 1/r2 + k*rinv ) * p;
+#else
+            double r=sqrt(r2);
+            return (r<contact) ? -pc::infty*p :
+              lB * a.charge * b.charge / (r*r2) / (1 + k*contact) * exp(-k*(r-contact)) * ( 1 + k*r ) * p;
+#endif
+          }
     };
 
     /**
@@ -1062,7 +1130,7 @@ namespace Faunus {
             cout << "id = " << p_id*1660*1e3 << " ex = " << p_ex*1660*1e3 << "\n";
             return p_id + p_ex;
           }
- 
+
       public:
         DebyeHuckelDenton(InputMap &in) : DebyeHuckel(in) {
           name+="-Denton";
@@ -1246,6 +1314,69 @@ namespace Faunus {
       };
 
     /**
+     * @brief Base class for manybody potentials (dihedrals etc.)
+     *
+     * This is an inter-particle potential for interactions involving
+     * many particles such as angles and dihedrals.
+     * It works much in the same way as pair potentials, but instead
+     * of taking particles as input, it maintains a list of particle
+     * index that interact.
+     * Derived classes are expected to implement a function operator
+     * that takes as arguments a geometry and particle vector.
+     */
+    class ManybodyBase {
+      protected:
+        virtual string _brief() const=0;
+        typedef vector<int> Tivec;
+        Tivec v; // particle index
+        string ndxStr() const {
+          std::ostringstream o;
+          for (auto i : v)
+            o << i << " ";
+          return "[ " + o.str() + "]";
+        }
+      public:
+        string brief() const { return _brief(); }
+        void setIndex(const Tivec &index) { v = index; }
+        Tivec& getIndex() { return v; }
+        Tivec getIndex() const { return v; }
+        virtual ~ManybodyBase() {}
+    };
+
+    /**
+     * @brief Angular potential
+     * @warning unfinished!
+     */
+    class Angular : public ManybodyBase {
+      private:
+        static const string name;
+        typedef ManybodyBase base;
+        double c1,c2; // pot parameters
+        string _brief() const FOVERRIDE {
+          std::ostringstream o;
+          o << ndxStr() << " - " << name << ": " << c1 << " " << c2;
+          return o.str();
+        }
+      public:
+        Angular() : c1(0), c2(0) {}
+        Angular(const Tivec& ndx, double angle, double energy) {
+          assert(ndx.size()==3);
+          setIndex(ndx);
+        }
+
+        /** @brief Energy function (kT) */
+        template<class Tgeometry, class Tpvec>
+          double operator()(Tgeometry &g, const Tpvec &p) {
+            assert(v.size()==3);
+            assert((int)p.size()>*std::max_element(v.begin(), v.end()));
+            auto ab = g.vdist(p[v[0]], p[v[1]]);
+            auto ac = g.vdist(p[v[0]], p[v[2]]);
+            auto bc = g.vdist(p[v[1]], p[v[2]]);
+            return c1 * ab.dot(bc) / ac.norm(); // for example...
+          }
+    };
+
+    /**
      * @brief Combines two pair potentials
      * @details This combines two PairPotentialBases. The combined potential
      * can subsequently be used as a normal pair potential and even be
@@ -1267,8 +1398,8 @@ namespace Faunus {
             return first.brief() + " " + second.brief();
           }
           void setCutoff() {
-            for (size_t i=0; i<atom.list.size(); i++)
-              for (size_t j=0; j<atom.list.size(); j++) {
+            for (size_t i=0; i<atom.size(); i++)
+              for (size_t j=0; j<atom.size(); j++) {
                 if (first.rcut2(i,j) > second.rcut2(i,j))
                   PairPotentialBase::rcut2.set(i,j,first.rcut2(i,j));
                 else

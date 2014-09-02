@@ -13,7 +13,7 @@ int main() {
   UnitTest test(mcp);                // unit testing
 
   Tspace spc(mcp);                   // Simulation space (all particles and group info)
-  Energy::ExternalPotential<Tspace,Potential::GouyChapman<> > pot(mcp);
+  Energy::ExternalPotential<Tspace,Potential::GouyChapman<double,true> > pot(mcp);
   pot.expot.setSurfPositionZ( &spc.geo.len_half.z() ); // Pass position of GC surface
 
   // Load and add polymer to Space

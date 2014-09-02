@@ -5,10 +5,16 @@
 #include <faunus/common.h>
 #include <faunus/textio.h>
 #include <faunus/species.h>
-#include <faunus/physconst.h>
 #endif
 
 namespace Faunus {
+
+  namespace Experimental {
+    struct value {
+      string val, info;
+      bool accessed;
+    };
+  }
 
   /**
    * @brief Retrieve parameters from a formatted input file
@@ -56,7 +62,7 @@ namespace Faunus {
           }
           return fallback;
         }
-        
+
       //!< Set value associated with keyword
       template<typename T>
         void set(const string &key, T value, string infostring=string()) {
@@ -98,14 +104,12 @@ namespace Faunus {
         }
       }
       string atomfile = get<string>("atomlist", "");
-      pc::setT( get<double>("temperature", 298.15) );
       if (!atomfile.empty())
         atom.includefile(atomfile);
 
-      string topoFile = get<string>("topology", "");
+      std::string topoFile = get<std::string>("topology", "");
       if (!topoFile.empty())
-        topo.includefile(topoFile);
-
+        molecule.includefile(topoFile);
       return true;
     }
     return false;

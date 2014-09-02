@@ -10,7 +10,6 @@
 #include <faunus/textio.h>
 #include <faunus/energy.h>
 #include <Eigen/Core>
-
 #include <chrono>
 #include <thread>
 
@@ -197,361 +196,6 @@ namespace Faunus {
             Pid += N/V;
           }
     };
-
-    /**
-     * @brief General class for handling 2D tables - xy data, for example.
-     * @date Lund 2011
-     * @note `Tx` is used as the `std::map` key and which may be
-     * problematic due to direct floating point comparison (== operator).
-     * We have not experienced any issues with this, though. This uses
-     * `std::map` and table lookup is of complexity logarithmic with N.
-     */
-    template<typename Tx, typename Ty>
-      class Table2D {
-        protected:
-          typedef std::map<Tx,Ty> Tmap;
-          Ty count() {
-            Ty cnt=0;
-            for (auto &m : map)
-              cnt+=m.second;
-            return cnt;
-          }
-          Tx dx;
-          Tmap map;
-          string name;
-        private:
-          Tx round(Tx x) { return (x>=0) ? int( x/dx+0.5 )*dx : int( x/dx-0.5 )*dx; }
-          virtual double get(Tx x) { return operator()(x); }
-        public:
-          enum type {HISTOGRAM, XYDATA};
-          type tabletype;
-
-          /**
-           * @brief Constructor
-           * @param resolution Resolution of the x axis
-           * @param key Table type: HISTOGRAM or XYDATA
-           */
-          Table2D(Tx resolution=0.2, type key=XYDATA) {
-            tabletype=key;
-            setResolution(resolution);
-          }
-
-          void clear() { map.clear(); }
-
-          void setResolution(Tx resolution) {
-            assert( resolution>0 );
-            dx=resolution;
-            map.clear();
-          }
-
-          virtual ~Table2D() {}
-
-          /** @brief Access operator - returns reference to y(x) */
-          Ty& operator() (Tx x) {
-            return map[ round(x) ];
-          }
-
-          /** @brief Save table to disk */
-          template<class T=double>
-            void save(string filename, T scale=1) {
-              if (tabletype==HISTOGRAM) {
-                if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
-                if (map.size()>1) (--map.end())->second*=2; // -//-
-              }
-
-              if (!map.empty()) {
-                std::ofstream f(filename.c_str());
-                f.precision(10);
-                if (f) {
-                  for (auto m : map)
-                    f << m.first << " " << get( m.first ) * scale << "\n";
-                }
-              }
-
-              if (tabletype==HISTOGRAM) {
-                if (!map.empty()) map.begin()->second/=2;   // restore half bin width
-                if (map.size()>1) (--map.end())->second/=2; // -//-
-              }
-            }
-
-          /** @brief Sums up all previous elements and saves table to disk */
-          template<class T=double>
-            void sumSave(string filename, T scale=1) {
-              if (tabletype==HISTOGRAM) {
-                if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
-                if (map.size()>1) (--map.end())->second*=2; // -//-
-              }
-
-              if (!map.empty()) {
-                std::ofstream f(filename.c_str());
-                f.precision(10);
-                if (f) {
-                  Tx sum_t = 0.0;
-                  for (auto m : map) {
-                    sum_t += get( m.first );
-                    f << m.first << " " << sum_t * scale << "\n";
-                  }
-                }
-              }
-
-              if (tabletype==HISTOGRAM) {
-                if (!map.empty()) map.begin()->second/=2;   // restore half bin width
-                if (map.size()>1) (--map.end())->second/=2; // -//-
-              }
-            }
-
-          Tmap getMap() {
-            return map;
-          }
-
-          Tx getResolution() {
-            return dx;
-          }
-
-          /*! Returns x at minumum y */
-          Tx miny() {
-            assert(!map.empty());
-            Ty min=std::numeric_limits<Ty>::max();
-            Tx x=0;
-            for (auto &m : map)
-              if (m.second<min) {
-                min=m.second;
-                x=m.first;
-              }
-            return x;
-          }
-
-          /*! Returns x at minumum y */
-          Tx maxy() {
-            assert(!map.empty());
-            Ty max=std::numeric_limits<Ty>::min();
-            Tx x=0;
-            for (auto &m : map)
-              if (m.second>max) {
-                max=m.second;
-                x=m.first;
-              }
-            return x;
-          }
-
-          /*! Returns x at minumum x */
-          Tx minx() {
-            assert(!map.empty());
-            Tx x=0;
-            for (auto &m : map) {
-              x=m.first;
-              break;
-            }
-            return x;
-          }
-
-          /**
-           * @brief Load table from disk
-           * @note The first line - used for comments - is ignored.
-           * @todo Implement end bin compensation as in the save()
-           * function when loading HISTOGRAMs
-           */
-          bool load(const string &filename) {
-            std::ifstream f(filename.c_str());
-            if (f) {
-              map.clear();
-              while (!f.eof()) {
-                Tx x;
-                double y;
-                f >> x >> y;
-                operator()(x)=y;
-              }
-              return true;
-            }
-            return false;
-          }
-
-          /**
-           * @brief Convert table to matrix
-           */
-          Eigen::MatrixXd tableToMatrix() {
-            assert(!this->map.empty() && "Map is empty!");
-            Eigen::MatrixXd table(2,map.size());
-            table.setZero();
-            int I = 0;
-            for (auto &m : this->map) {
-              table(0,I) = m.first;
-              table(1,I) = m.second;
-              I++;
-            }
-            return table;
-          }
-      };
-
-    /**
-     * @brief Subtract two tables
-     */
-    template<class Tx, class Ty, class Tmap>
-      Table2D<Tx,Ty> operator-(Table2D<Tx,Ty> &a, Table2D<Tx,Ty> &b) {
-        assert(a.tabletype=b.tabletype && "Table a and b needs to be of same type");
-        Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()),a.tabletype);
-        Tmap a_map = a.getMap();
-        Tmap b_map = b.getMap();
-
-        if (a.tabletype=="HISTOGRAM") {
-          if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
-          if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
-          if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
-          if (b_map.size()>1) (--b_map.end())->second*=2; // -//-
-        }
-
-        for (auto &m1 : a_map) {
-          for (auto &m2 : b_map) {
-            c(m1.first) = m1.second-m2.second;
-            break;
-          }
-        }
-
-        if (a.tabletype=="HISTOGRAM") {
-          if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
-          if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
-          if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
-          if (b_map.size()>1) (--b_map.end())->second/=2; // -//-
-        }
-        return c;
-      }
-
-    /**
-     * @brief Addition two tables
-     */
-    template<class Tx, class Ty, class Tmap>
-      Table2D<Tx,Ty> operator+(Table2D<Tx,Ty> &a, Table2D<Tx,Ty> &b) {
-        assert(a.tabletype=b.tabletype && "Table a and b needs to be of same type");
-        Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()),a.tabletype);
-        Tmap a_map = a.getMap();
-        Tmap b_map = b.getMap();
-
-        if (a.tabletype=="HISTOGRAM") {
-          if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
-          if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
-          if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
-          if (b_map.size()>1) (--b_map.end())->second*=2; // -//-
-        }
-
-        for (auto &m : a_map) {
-          c(m.first) += m.second;
-        }
-        for (auto &m : b_map) {
-          c(m.first) += m.second;
-        }
-
-        if (a.tabletype=="HISTOGRAM") {
-          if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
-          if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
-          if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
-          if (b_map.size()>1) (--b_map.end())->second/=2; // -//-
-        }
-
-        return c;
-      }
-
-    /**
-      @brief General class for penalty functions along a coordinate
-      @date Malmo, 2011
-
-      This class stores a penalty function, f(x), along a given coordinate, x,
-      of type `Tcoordinate` which could be a distance, angle, volume etc.
-      Initially f(x) is zero for all x.
-      Each time the system visits x the update(x) function should be called
-      so as to add the penalty energy, du. In the energy evaluation, the
-      coordinate x should be associated with the extra energy f(x).
-
-      This will eventually ensure uniform sampling. Example:
-
-      ~~~
-      PenaltyFunction<double> f(0.1,1000,6.0); // 0.1 kT penalty
-      Point masscenter;           // some 3D coordinate...
-      ...
-      f.update(masscenter.z);     // update penalty energy for z component
-      double u = f(masscenter.z); // get accumulated penalty at coordinate (kT)
-      f.save("penalty.dat");      // save to disk
-      ~~~
-
-      In the above example, the penalty energy will be scaled by 0.5 if the
-      sampling along the coordinate is less than 6 kT between the least and
-      most likely position.
-      This threshold check is carried out every 1000th call to `update()`.
-      Note also that when the penalty energy is scaled, so is the threshold
-      (also by a factor of 0.5).
-      */
-    template<typename Tcoord=float>
-      class PenaltyFunction : public Table2D<Tcoord,double> {
-        private:
-          unsigned long long _cnt;
-          int _Ncheck;
-          double _kTthreshold;
-          typedef Table2D<Tcoord,double> Tbase;
-          typedef Table2D<Tcoord,unsigned long long int> Thist;
-          Thist hist;
-          Tcoord _du; //!< penalty energy
-          std::string _log;
-        public:
-          /**
-           * @brief Constructor
-           * @param penalty Penalty energy for each update (kT)
-           * @param Ncheck Check histogram every Nscale'th step
-           *        (put large number for no scaling, default)
-           * @param kTthreshold Half penalty energy once this
-           *        threshold in distribution has been reached
-           * @param res Resolution of the penalty function (default 0.1)
-           */
-          PenaltyFunction(double penalty, int Ncheck=1e9, double kTthreshold=5, Tcoord res=0.1)
-            : Tbase(res, Tbase::XYDATA), hist(res, Thist::HISTOGRAM) {
-              Tbase::name="penalty";
-              _cnt=0;
-              _Ncheck=Ncheck;
-              _kTthreshold=kTthreshold;
-              _du=penalty;
-              assert(Ncheck>0);
-              _log="#   initial penalty energy = "+std::to_string(_du)+"\n";
-            }
-
-          /** @brief Update penalty for coordinate */
-          double update(Tcoord coordinate) {
-            _cnt++;
-            Tbase::operator()(coordinate)+=_du;  // penalize coordinate
-            hist(coordinate)++;                  // increment internal histogram
-            if ((_cnt%_Ncheck)==0) {             // if Ncheck'th time
-              double deltakT=log( hist(hist.maxy()) / double(hist(hist.miny())) );
-              assert(deltakT>0);
-              std::ostringstream o;
-              o << "#   n=" << _cnt << " dkT=" << deltakT;
-              if (deltakT<_kTthreshold) {   // if histogram diff. is smaller than threshold
-                _kTthreshold*=0.5;          // ...downscale threshold
-                scale(0.5);                 // ...and penalty energy
-                o << " update: du=" << _du << " threshold=" << _kTthreshold;
-              }
-              _log += o.str() + "\n";       // save info to log
-            }
-            return _du;
-          }
-          /*! \brief Manually scale penalty energy */
-          void scale(double s) { _du*=s; }
-
-          /*! \brief Save table to disk */
-          void save(const string &filename) {
-            Tbase::save(filename);
-            hist.save(filename+".dist");
-          }
-
-          string info() {
-            return "# Penalty function log:\n" + _log;
-          }
-      };
-
-    template<typename Tx, typename Ty=unsigned long int>
-      class Histogram : public Table2D<Tx,Ty> {
-        public:
-          Histogram(Tx resolution=0.2) : Table2D<Tx,Ty>(resolution, Table2D<Tx,Ty>::HISTOGRAM) {
-            static_assert( std::is_integral<Ty>::value, "Histogram must be of integral type");
-            static_assert( std::is_unsigned<Ty>::value, "Histogram must be unsigned");
-          }
-      };
 
     /*!
      * \brief Radial distribution analysis
@@ -1577,19 +1221,21 @@ namespace Faunus {
     class DipoleAnalysis {
       private:
         Analysis::RadialDistribution<> rdf;
-        Analysis::Table2D<double,double> kw, mucorr_angle;
-        Analysis::Table2D<double,Average<double> > mucorr, mucorr_dist; 
-        Analysis::Histogram<double,unsigned int> HM_x,HM_y,HM_z,HM_x_box,HM_y_box,HM_z_box,HM2,HM2_box;
+        Table2D<double,double> kw, mucorr_angle;
+        Table2D<double,Average<double> > mucorr, mucorr_dist; 
+        Histogram<double,unsigned int> HM_x,HM_y,HM_z,HM_x_box,HM_y_box,HM_z_box,HM2,HM2_box;
         Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std, V_t;
         Average<double> mu_abs;
-        
+
         int sampleKW;
         double cutoff2, N;
         double const_Diel, const_DielTinfoil, const_DielCM, const_DielRF, epsRF, constEpsRF;
 
       public:
         template<class Tspace, class Tinputmap>
-          DipoleAnalysis(const Tspace &spc, Tinputmap &in) : rdf(0.1),kw(0.1),mucorr_angle(0.1),mucorr(0.1),mucorr_dist(0.1),HM_x(0.1),HM_y(0.1),HM_z(0.1),HM_x_box(0.1),HM_y_box(0.1),HM_z_box(0.1),HM2(0.1),HM2_box(0.1) {
+          DipoleAnalysis(const Tspace &spc, Tinputmap &in) : 
+            rdf(0.1),kw(0.1),mucorr_angle(0.1),mucorr(0.1),mucorr_dist(0.1),HM_x(0.1),HM_y(0.1),
+            HM_z(0.1),HM_x_box(0.1),HM_y_box(0.1),HM_z_box(0.1),HM2(0.1),HM2_box(0.1) {
             sampleKW = 0;
             setCutoff(spc.geo.len_half.x());
             N = spc.p.size();
@@ -1602,12 +1248,12 @@ namespace Faunus {
         void setCutoff(double cutoff) {
           cutoff2 = cutoff*cutoff;
         }
-        
+
         void updateDielectricConstantRF(double er) {
           epsRF = er;
           constEpsRF = 2*(epsRF - 1)/(2*epsRF + 1);
         }
-        
+
         void updateConstants(double volume) {
           V_t += volume;
           const_DielTinfoil = const_Diel/V_t.avg();
@@ -1718,7 +1364,7 @@ namespace Faunus {
           double temp = M2_box.avg()*const_DielCM;
           return ((1 + 2*temp)/(1 - temp));
         }  
-        
+
         /**
          * @brief Returns dielectric constant ( Reaction Field ).
          * 
@@ -1733,7 +1379,7 @@ namespace Faunus {
           //double two = 0.5*(2*constEpsRF - 4*avgRF + 1 - sqrtRF)/(constEpsRF + avgRF - 1);
           return one;
         }  
-        
+
         /**
          * @brief Saves data to files. 
          * @param nbr Extention of filename
@@ -1860,10 +1506,10 @@ namespace Faunus {
           std::ostringstream o;
           o << header("Dipole analysis");
           o << indent(SUB) << epsilon_m+subr+"(Tinfoil)" << setw(22) << getDielTinfoil() << ", "+sigma+"=" << diel_std.stdev() << ", "+sigma+"/"+epsilon_m+subr+"=" << (100*diel_std.stdev()/getDielTinfoil()) << percent << endl
-          << indent(SUB) << bracket("M"+squared) << setw(27) << pc::eA2D(M2_box.avg(),2) << " Debye"+squared+", "+sigma+"=" << pc::eA2D(M2_box.stdev(),2) << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg()) << percent << endl
-          << indent(SUB) << bracket("M") << setw(25) << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl 
-          << indent(SUBSUB) << sigma << setw(25) << "( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl
-          << indent(SUB) << bracket("|"+mu+"|") << setw(25) << pc::eA2D(mu_abs.avg()) << " Debye, "+sigma+"=" << pc::eA2D(mu_abs.stdev()) << ", "+sigma+"/"+bracket("|"+mu+"|")+"=" << (100*mu_abs.stdev()/mu_abs.avg()) << percent << endl;
+            << indent(SUB) << bracket("M"+squared) << setw(27) << pc::eA2D(M2_box.avg(),2) << " Debye"+squared+", "+sigma+"=" << pc::eA2D(M2_box.stdev(),2) << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg()) << percent << endl
+            << indent(SUB) << bracket("M") << setw(25) << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl 
+            << indent(SUBSUB) << sigma << setw(25) << "( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl
+            << indent(SUB) << bracket("|"+mu+"|") << setw(25) << pc::eA2D(mu_abs.avg()) << " Debye, "+sigma+"=" << pc::eA2D(mu_abs.stdev()) << ", "+sigma+"/"+bracket("|"+mu+"|")+"=" << (100*mu_abs.stdev()/mu_abs.avg()) << percent << endl;
           return o.str();
         }
     };

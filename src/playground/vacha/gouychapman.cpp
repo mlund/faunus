@@ -10,7 +10,7 @@
 using namespace Faunus;
 using namespace Faunus::Potential;
 
-typedef Geometry::Cuboidslit Tgeometry;
+typedef Space<Geometry::Cuboidslit> Tspace; 
 //typedef Potential::DebyeHuckelr12 Tpairpot;
 typedef CombinedPairPotential<DebyeHuckelr12,SquareWellHydrophobic> Tpairpot;
 
@@ -30,16 +30,12 @@ int main(int argc, char** argv) {
   FormatXTC xtc(1000);                 // XTC gromacs trajectory format for only cuboid geomtries
   EnergyDrift sys;                     // class for tracking system energy drifts
 
-  Energy::Hamiltonian pot;
-  auto nonbonded = pot.create( Energy::NonbondedCut<Tpairpot,Tgeometry>(mcp) );
-  auto gouy      = pot.create( Energy::GouyChapman(mcp) );
-  gouy->setPosition( nonbonded->geometry.len_half.z() );
-  //auto bonded    = pot.create( Energy::PairListHydrophobic() );
-  //bonded->add(true, true, SquareWellHydrophobic(mcp) );
+  Tspace spc(mcp);
 
-  Space spc( pot.getGeometry() );
-
-  nonbonded->setSpace(spc);
+  auto pot = Energy::Nonbonded<Tspace, Tpairpot>(mcp) + 
+    Energy::ExternalPotential<Tspace,Potential::GouyChapman<> >(mcp);
+  pot.second.setSurfPositionZ( &spc.geo.len_half.z() );
+  pot.setSpace(spc);
 
   // Add rigid molecules
   vector<GroupMolecular> pol( mcp.get("polymer_N",0));
@@ -53,9 +49,9 @@ int main(int argc, char** argv) {
     spc.enroll(g);
   }
 
-  Move::TranslateRotate gmv(mcp,pot,spc);
+  Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
 #ifdef TEMPER
-  Move::ParallelTempering temper(mcp,pot,spc,mpi);
+  Move::ParallelTempering<Tspace> temper(mcp,pot,spc,mpi);
 #endif
 
   Analysis::RadialDistribution<float,int> rdf(0.25);
@@ -90,7 +86,7 @@ int main(int argc, char** argv) {
       }
 
       if ( slp_global.runtest(0.0001) ) {
-        xtc.setbox( nonbonded->geometry.len );
+        xtc.setbox( spc.geo.len );
         xtc.save(textio::prefix+"traj.xtc", spc);  // gromacs xtc file output
       }
     } // end of micro loop
@@ -110,7 +106,7 @@ int main(int argc, char** argv) {
 
   } // end of macro loop
 
-  cout << loop.info() << nonbonded->info() << sys.info() << gmv.info();   
+  cout << loop.info() << pot.first.info() << sys.info() << gmv.info();   
 #ifdef TEMPER
   cout << temper.info();
 #endif

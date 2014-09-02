@@ -761,6 +761,7 @@ INPUT                  = doc \
                          src/examples/bulk.cpp \
                          src/examples/grand.cpp \
                          src/examples/temper.cpp \
+                         src/examples/penalty.cpp \
                          src/examples/polymers.cpp \
                          src/examples/slitpolymer.cpp \
                          src/examples/membrane.cpp \
@@ -1968,6 +1969,8 @@ PREDEFINED             = protected=private \
                          GROMACS \
                          BABEL \
                          ENABLE_MPI \
+                         FAU_POWERSASA \
+                         FOVERRIDE=override \
                          HYPERSPHERE
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this

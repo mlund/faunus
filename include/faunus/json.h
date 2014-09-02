@@ -2,20 +2,20 @@
 #define FAU_JSON
 #include <faunus/common.h>
 #include <faunus/auxiliary.h>
-#include <faunus/species.h>
+//#include <faunus/species.h>
 #include <faunus/picojson.h>
 
 namespace Faunus {
-  /*!
-   * \brief Function for handling JSON input files (www.json.org)
+  /**
+   * @brief Function for handling JSON input files (www.json.org)
    *
    *
-   * \details
+   * @details
    * The functions in this namespace are wrappers for the PicoJSON library:
    * http://github.com/kazuho/picojson
    *
    * Example code:
-   * \code
+   * @code
    * auto v = json::open("atoms.json");
    *  for (auto &atom : json::object("atomlist", v)) {
    *    string name = atom.first;
@@ -23,8 +23,8 @@ namespace Faunus {
    *    double charge = json::value<double>(atom.second, "q", 0.0);
    *    bool hydrophobic = json::value<bool>(atom.second, "hydrophobic", false);
    *  }
-   *  \endcode
-   * where the \c atoms.json file may look like the following:
+   * @endcode
+   * where the `atoms.json` file may look like the following:
    \code{.js}
    { "atomlist" :
      {
@@ -99,48 +99,6 @@ namespace Faunus {
         return fallback;
       }
 
-    /**
-     * @brief Loads a JSON file, reads atom pair properties and returns a vector map
-     *
-     * Example:
-     * ~~~~
-     * auto map = atomPairMap("input.json", "pairproperties", "nemorep");
-     * for (auto &m : map)
-     *   cout << m.second.transpose() << endl; // -> 12 23 0.2 -2 3 4 5 ...
-     * ~~~~
-     * where the input json file could look like this:
-     * ~~~~
-     * {
-     *   "pairproperties" : {
-     *      "OW OW"  : { "nemorep":"12. 23. 0.2  -2   3   4   5" },
-     *      "HW HW"  : { "nemorep":"-2. 23. 0.2   2  99   4  -5 " },
-     *      "HW OW"  : { "nemorep":"112. 23. 0.2 129 391 238  23" }
-     *   }
-     * }
-     * ~~~~
-     */
-    inline std::map<opair<int>,Eigen::VectorXd>
-      atomPairMap(const string &file, const string &section, const string &key) {
-        assert(!section.empty() && !key.empty());
-        typedef Eigen::VectorXd Tvec;
-        typedef opair<int> Tpair;
-        std::map<Tpair,Tvec> map;
-        string atom1, atom2;
-        auto j=json::open(file);
-        for (auto &a : json::object(section, j)) {
-          std::istringstream is(a.first);
-          is >> atom1 >> atom2;
-          Tpair pair( atom[atom1].id, atom[atom2].id );
-          string str = json::value<string>(a.second, key,"");
-          std::istringstream is2(str), tmp(str);
-          int size = std::distance(std::istream_iterator<string>(tmp), std::istream_iterator<string>());
-          Tvec v(size);
-          for (int i=0; i<size; i++)
-            is2 >> v[i];
-          map[pair] = v;
-        }
-        return map;
-      }
   }//namespace
 }//namespace
 #endif

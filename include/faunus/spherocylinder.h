@@ -727,8 +727,8 @@ namespace Faunus {
             }
             Point distvec = -r_cm + (a.dir*contt);
 
-            if (atom.list[a.id].patchtype ==0 ) 
-              if (atom.list[b.id].patchtype == 0) 
+            if (atom[a.id].patchtype ==0 ) 
+              if (atom[b.id].patchtype == 0) 
                 return pairpot(a,b,distvec.dot(distvec));
 
             //patchy interaction
@@ -786,8 +786,8 @@ namespace Faunus {
 
           double operator() (const CigarParticle &a, const CigarParticle &b, const Point &r_cm) {
               //0- isotropic, 1-PSC all-way patch,2 -CPSC cylindrical patch
-            if (atom.list[a.id].patchtype >0 ) {
-              if (atom.list[b.id].patchtype > 0) {
+            if (atom[a.id].patchtype >0 ) {
+              if (atom[b.id].patchtype > 0) {
                 //patchy sc with patchy sc
                 int i, intrs;
                 //  double rcut=11.2246204831+6.0;
@@ -805,10 +805,10 @@ namespace Faunus {
                   intersections[i]=0;
                 //1- do intersections of spherocylinder2 with patch of spherocylinder1 at.
                 // cut distance C
-                if (atom.list[a.id].patchtype == 1) {
+                if (atom[a.id].patchtype == 1) {
                   intrs=Geometry::psc_intersect(a,b,r_cm, intersections, rcut2);
                 } else {
-                  if (atom.list[a.id].patchtype == 2) {
+                  if (atom[a.id].patchtype == 2) {
                     intrs=Geometry::cpsc_intersect(a,b,r_cm, intersections, rcut2);
                   } else {
                     //we dont have anything like this
@@ -823,10 +823,10 @@ namespace Faunus {
                 //2- now do the same oposite way psc1 in patch of psc2
                 for(i=0;i<5;i++)
                   intersections[i]=0;
-                if (atom.list[a.id].patchtype == 1) {
+                if (atom[a.id].patchtype == 1) {
                   intrs=Geometry::psc_intersect(b,a,-r_cm, intersections, rcut2);
                 } else {
-                  if (atom.list[a.id].patchtype == 2) {
+                  if (atom[a.id].patchtype == 2) {
                     intrs=Geometry::cpsc_intersect(b,a,-r_cm, intersections, rcut2);
                   } else {
                     assert(!"Patchtype not implemented!");
@@ -877,7 +877,7 @@ namespace Faunus {
                 //patchy sc with isotropic sc - we dont have at the moment
               }
             } else {
-              if (atom.list[b.id].patchtype > 0) {
+              if (atom[b.id].patchtype > 0) {
                 assert(!"PSC w. isotropic cigar not implemented!");
                 //isotropic sc with patchy sc - we dont have at the moment
               }

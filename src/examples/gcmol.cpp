@@ -44,7 +44,6 @@ int main() {
   salt->addParticles(spc, na, 8);
   salt->addParticles(spc, cl, 8);
   salt->setMassCenter(spc);
-  salt->name = "salt";
   spc.enroll(*salt);
 
   // Add polymers
@@ -56,8 +55,7 @@ int main() {
     FormatAAM::load(file,v);                             // load AAM structure into v
     Geometry::FindSpace().find(spc.geo,spc.p,v);         // find empty spot in particle vector
     *g = spc.insert(v);
-    g->molName = "polymer";// insert into space
-    g->name="Polymer";
+    g->name="polymer";
     spc.enroll(*g);
   }
 
@@ -66,7 +64,6 @@ int main() {
   salt2->addParticles(spc, mg, 8);
   salt2->addParticles(spc, cl, 16);
   salt2->setMassCenter(spc);
-  salt2->name = "salt2";
   spc.enroll(*salt2);
 
   // Add polymers
@@ -78,8 +75,7 @@ int main() {
     FormatAAM::load(file,v);                             // load AAM structure into v
     Geometry::FindSpace().find(spc.geo,spc.p,v);         // find empty spot in particle vector
     *g = spc.insert(v);
-    g->molName = "polymer2";// insert into space
-    g->name="Polymer2";
+    g->name="polymer2";
     spc.enroll(*g);
   }
 
@@ -87,7 +83,6 @@ int main() {
   chloride->setfront(spc.p.size());
   chloride->addParticles(spc, cl, 16);
   chloride->setMassCenter(spc);
-  chloride->name = "chloride";
   spc.enroll(*chloride);
 
   salt = salt2 = chloride = NULL;
@@ -106,14 +101,14 @@ int main() {
   //
   p_vec conf;
   FormatAAM::load(file,conf);
-  topo.pushConfiguration("polymer", conf);
-  topo.pushConfiguration("polymer2",conf);
+  molecule.pushConfiguration("polymer", conf);
+  molecule.pushConfiguration("polymer2",conf);
   //////////////////////////////////////////////////////////////////////////////////////
 
   //spc.load("state");                                     // load old config. from disk (if any)
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );      // store initial total system energy
 
-  cout << atom.info() << topo.info() << gc.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
+  cout << atom.info() << molecule.info() << gc.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
 
     while ( loop.macroCnt() ) {  // Markov chain
         while ( loop.microCnt() ) {

@@ -7,6 +7,7 @@
 #include <faunus/physconst.h>
 #include <faunus/textio.h>
 #include <faunus/point.h>
+#include <faunus/slump.h>
 #endif
 
 namespace Faunus {
@@ -16,7 +17,8 @@ namespace Faunus {
    *
    * Used to collect properties for atoms, molecules etc.
    */
-  struct PropertyBase {
+  class PropertyBase {
+  public:
     typedef unsigned char Tid;
     typedef picojson::object::value_type Tjson;
     std::string name;  //!< Unique, user-defined name
@@ -70,7 +72,8 @@ namespace Faunus {
    * `tfe`         | Transfer free energy [J/mol/angstrom^2/M] (default: 0)
    */
 
-  struct AtomData : public PropertyBase {
+  class AtomData : public PropertyBase {
+  public:
     using PropertyBase::Tjson;
     double sigma,            //!< LJ diameter [angstrom]
            eps,              //!< LJ epsilon [kJ/mol] (pair potentials should convert to kT)
@@ -79,6 +82,7 @@ namespace Faunus {
            mw,               //!< Weight [g/mol]
            charge,           //!< Charge/valency [e]
            activity,         //!< Chemical activity [mol/l]
+           chemPot,          //!< Chemical potential, calculated from activity
            dp,               //!< Translational displacement parameter [angstrom]
            dprot,            //!< Rotational displacement parameter [degrees]
            mean,             //!< Mean value... (charge, sasa, etc.)
@@ -110,6 +114,7 @@ namespace Faunus {
     inline void readJSON(const Tjson &atom) FOVERRIDE {
       name = atom.first;
       activity = json::value<double>(atom.second, "activity", 0);
+      chemPot = log( activity*pc::Nav*1e-27);
       alpha << json::value<std::string>(atom.second, "alpha", "");
       alpha *= 4*pc::pi*pc::e0*(1e-10)*pc::kT()/(pc::e*pc::e);
       theta << json::value<std::string>(atom.second, "theta", "");
@@ -336,6 +341,133 @@ namespace Faunus {
         }
   };
 
-  extern AtomMap atom; //!< Global instance of AtomMap - can be accessed from anywhere
+    extern AtomMap atom; //!< Global instance of AtomMap - can be accessed from anywhere
+
+
+    /**
+     * @brief Informattion about single Molecule type
+     */
+    class MoleculeData  : public PropertyBase {
+        using PropertyBase::Tjson;
+    public:
+        /** @brief Constructor - by default data is initialized; mass set to unity */
+        inline MoleculeData(const Tjson &molecule=Tjson()) { readJSON(molecule); }
+
+        std::vector<particle::Tid> atoms;
+        std::vector<p_vec> conformations; ///< \brief Conformations of molecule
+
+        double activity;
+        double chemPot;
+
+        int initType;  ///< \brief sets how inserted combination will be initialized
+
+        bool isAtomic; // set in GCMolecular, used only in GCM, here for conveniency
+
+        bool operator==(const MoleculeData &d) const { return (*this==d); }
+
+        /** @brief Read data from a picojson object */
+        inline void readJSON(const Tjson &molecule) FOVERRIDE {
+            string::size_type pos = 0;
+            string::size_type oldPos = 0;
+            string token;
+            string line;
+
+            name = molecule.first;
+            activity = json::value<double>(molecule.second, "activity", 0);
+            chemPot = log( activity*pc::Nav*1e-27);
+
+            line = json::value<string>(molecule.second, "init", "Error");
+            initType=-1;
+            if(line.compare("POOL") == 0) initType = POOL;
+            if(line.compare("RANDOM") == 0) initType = RANDOM;
+
+            line = json::value<string>(molecule.second, "atoms", "Error");
+
+            // tokenize atoms string and save as atom TID
+            while(pos != string::npos) {
+                pos = line.find_first_of(',', oldPos);
+                token = line.substr(oldPos, pos-oldPos);
+                oldPos = pos+1;
+
+                for(auto &i : atom) {
+                    if(i.name.compare(token) == 0) {
+                        atoms.push_back(i.id);
+                        break;
+                    }
+                }
+            }
+        }
+    };
+
+
+    /**
+     * @brief The MoleculeMap class
+     */
+    class MoleculeMap : public PropertyVector<MoleculeData> {
+    public:
+        typedef PropertyVector<MoleculeData> base;
+
+        MoleculeMap() {
+          base::name = "Molecule Properties";
+        }
+
+        bool includefile(const std::string&); //!< Read JSON file
+        bool includefile(InputMap&);     //!< Read JSON file given through `InputMap`
+
+        int molTypeCount() {return size();}
+
+        p_vec& getRandomConformation(Tid molId) {
+            assert(!this->operator [](molId).conformations.empty());
+            return this->operator [](molId).conformations[slp_global.rand() % this->operator [](molId).conformations.size() ];
+        }
+
+        void pushConfiguration(string molName, p_vec& vec) {
+            for(auto& mol: *this)
+                if(molName.compare(mol.name) == 0) {
+                pushConfiguration(mol.id, vec);
+                break;
+            }
+        }
+
+        void pushConfiguration(Tid molId, p_vec& vec) {
+            this->operator [](molId).conformations.push_back(vec);
+        }
+
+        /** @brief Information string */
+        string info() {
+            char s=14;
+            using namespace textio;
+            ostringstream o;
+
+            o << header("Topology");
+
+            o << setw(4) << "" << std::left
+              << setw(s) << "Molecule" << setw(s) << "init"
+              << setw(s) << "atoms" << endl;
+
+            for (auto &i : *this) {
+
+                o << setw(4) << "" << setw(s) << i.name;
+
+                if(i.initType == RANDOM) o << setw(s) << "RANDOM";
+                else
+                    if(i.initType == POOL) o << setw(s) << "POOL";
+                    else o << setw(s) << "";
+
+                for ( auto j=i.atoms.begin(); j!=i.atoms.end(); ++j ) {
+                    o << setw(0) << atom[(*j)].name;
+
+                    if(j != i.atoms.end()-1)
+                        o<<",";
+                }
+                o<<"\n";
+            }
+
+            return o.str();
+        }
+
+  };
+
+  extern MoleculeMap molecule;
 }//namespace
 #endif

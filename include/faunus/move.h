@@ -218,6 +218,7 @@ namespace Faunus {
           virtual ~Movebase();
           double runfraction;                //!< Fraction of times calling move() should result in an actual move. 0=never, 1=always.
           double move(int=1);                //!< Attempt \c n moves and return energy change (kT)
+          std::pair<double,double> recycle();
           string info();                     //!< Returns information string
           void test(UnitTest&);              //!< Perform unit test
           double getAcceptance();            //!< Get acceptance [0:1]
@@ -241,6 +242,9 @@ namespace Faunus {
 
     template<class Tspace>
       void Movebase<Tspace>::trialMove() {
+        if (cnt==0)
+          for (auto i : spc->groupList())
+            i->setMassCenter(*spc);
         cnt++;
         _trialMove();
       }
@@ -268,9 +272,9 @@ namespace Faunus {
       }
 
     /**
-     * This function will perform a trial move and accept/reject using the
-     * Metropolis criteria (doi:10/ds736f).
-     * That is, it will perform the following `n` times:
+     * This function performs trial move and accept/reject using 
+     * the Metropolis criteria.
+     * It carries out the following `n` times:
      *
      * - Perform a trial move with `_trialMove()`
      * - Calulate the energy change, \f$\beta\Delta U\f$ with `_energyChange()`
@@ -279,6 +283,8 @@ namespace Faunus {
      *
      * @note Do not override this function in derived classes.
      * @param n Perform move `n` times (default=1)
+     *
+     * [More info](http://dx.doi.org/10.1063/1.1699114)
      */
     template<class Tspace>
       double Movebase<Tspace>::move(int n) {
@@ -300,6 +306,38 @@ namespace Faunus {
         }
         assert(spc->p == spc->trial && "Trial particle vector out of sync!");
         return utot;
+      }
+
+    /**
+     * This function performs trial move and accept/reject using 
+     * the Metropolis criteria
+     * It differs from move in that:
+     * 1. it returns a pair of energy change values;
+     * 2. it performs one move at a time.
+     * The second member of the pair stores the energy change, du.
+     * The first is zero in case of rejection and otherwise equal to du.
+     * The information on the energy change in case of rejection is useful in Waste-Recycling MC.
+     * 
+     * [More info](http://dx.doi.org/10.1007/3-540-35273-2_4)
+     */
+    template<class Tspace>
+      std::pair<double,double> Movebase<Tspace>::recycle() {
+        double du_accepted=0, du=0;
+        if (run()) {
+          trialMove();
+          du=energyChange();
+          if ( !metropolis(du) )
+            rejectMove();
+          else {
+            acceptMove();
+            if (useAlternateReturnEnergy)
+              du=alternateReturnEnergy;
+            dusum+=du;
+            du_accepted+=du;
+          }
+        }
+        assert(spc->p == spc->trial && "Trial particle vector out of sync!");
+        return std::make_pair(du_accepted,du);
       }
 
     /**
@@ -794,7 +832,7 @@ namespace Faunus {
           if ( spc->geo.collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
 
-        double unew = pot->external(spc->trial) +pot->g_external(spc->trial, *igroup);
+        double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
         if (unew==pc::infty)
           return pc::infty;       // early rejection
         double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
@@ -1016,12 +1054,24 @@ namespace Faunus {
      * function. Whether particles are considered part of the cluster is
      * determined by the private virtual function `ClusterProbability()`.
      * By default this is a simple step function with P=1 when an atomic particle
-     * in the group set by setMobile is closer than a certain threshold to a
+     * in the group set by `setMobile()` is within a certain threshold to a
      * particle in the main group; P=0 otherwise.
      *
      * The implemented cluster algorithm is general - see Frenkel&Smith,
      * 2nd ed, p405 - and derived classes can re-implement `ClusterProbability()`
      * for arbitrary probability functions.
+     *
+     * Upon construction, the `InputMap` is scanned for the
+     * following keywords,
+     *
+     * Keyword                | Description
+     * :--------------------- | :----------------
+     * `transrot_clustersize` | Surface threshold from mobile ion to particle in group (angstrom)
+     *
+     * @todo Energy evaluation puts all moved particles in an index vector used
+     * to sum the interaction energy with static particles. This could be optimized
+     * by only adding mobile ions and calculate i.e. group-group interactions in a
+     * more traditional (and faster) way.
      */
     template<class Tspace>
       class TranslateRotateCluster : public TranslateRotate<Tspace> {
@@ -1049,16 +1099,10 @@ namespace Faunus {
           using base::spc;
           TranslateRotateCluster(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="transrot");
           virtual ~TranslateRotateCluster();
-          void setMobile(Group&); //!< Select atomic species to move with the main group
-          double threshold;  //!< Distance between particles to define a cluster
+          void setMobile(Group&);  //!< Pool of atomic species to move with the main group
+          double threshold;        //!< Distance between particles to define a cluster
       };
 
-    /**
-     * The cluster threshold is set with the InputMap keyword
-     * `transrot_clustersize` and gives specifies the SURFACE
-     * distance between macromolecular particles and atomic particles
-     * to be clustered.
-     */
     template<class Tspace>
       TranslateRotateCluster<Tspace>::TranslateRotateCluster(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(in,e,s,pfx) {
         base::title="Cluster "+base::title;
@@ -1174,6 +1218,7 @@ namespace Faunus {
         }
 
         // pair energy between static and moved particles
+        // note: this could be optimized!
         double du=0;
 #pragma omp parallel for reduction (+:du)
         for (int j=0; j<(int)spc->p.size(); j++)
@@ -1183,9 +1228,15 @@ namespace Faunus {
         return unew - uold + du - log(bias); // exp[ -( dU-log(bias) ) ] = exp(-dU)*bias
       }
 
+    /**
+     * This is the default function for determining the probability, P,
+     * that a mobile particle is considered part of the cluster. This
+     * is here a simple distance critera but derived classes can reimplement
+     * this (virtual) function to arbitrary probability functions.
+     */
     template<class Tspace>
       double TranslateRotateCluster<Tspace>::ClusterProbability(p_vec &p, int i) {
-        for (auto j : *igroup)
+        for (auto j : *igroup) // loop over main group
           if (i!=j) {
             double r=threshold+p[i].radius+p[j].radius;
             if (spc->geo.sqdist(p[i],p[j])<r*r )
@@ -1226,22 +1277,33 @@ namespace Faunus {
     /**
      * @brief Non-rejective cluster translation.
      *
-     * This type of move will attempt to move collective sets of macromolecules that
-     * obeys some criteria (here a hardcore overlap(?)) with a symmetric transition
-     * matrix (no flow through the clusters).
+     * This type of move will attempt to translate collective sets of macromolecules that
+     * with a symmetric transition matrix (no flow through the clusters).
+     * See detailed description [here](http://dx.doi.org/10/fthw8k).
      *
-     * Setting the boolen `skipEnergyUpdate` to true (default is false) updates of the
+     * Setting the boolean `skipEnergyUpdate` to true (default is false) updates of the
      * total energy are skipped to speed up the move.
      * While this has no influence on the Markov chain it will cause an apparent energy
      * drift. It is recommended that this is enabled only for long production runs after
      * having properly checked that no drifts occur with `skipEnergyUpdate=false`.
      *
-     * @author Bjoern Persson
-     * @date Lund 2009-2010
+     * Upon construction the following keywords are read from `InputMap`,
+     *
+     * Keyword                | Description
+     * :--------------------  | :-------------------------------
+     * `ctransnr_dp`          | Displacement parameter
+     * `ctransnr_skipenergy`  | Skip energy update, see above (default: false)
+     * `ctransnr_runfraction` | Runfraction (default: 1.0)
+     *
      * @note Requirements for usage:
      * - Compatible only with purely molecular systems
      * - Works only with periodic containers
      * - External potentials are ignored
+     *
+     * @author Bjoern Persson
+     * @date Lund 2009-2010
+     * @todo Energy calc. before and after can be optimized by only looping over `moved` with
+     * `remaining`
      */
     template<class Tspace>
       class ClusterTranslateNR : public Movebase<Tspace> {
@@ -1250,6 +1312,7 @@ namespace Faunus {
           using base::w;
           using base::spc;
           using base::pot;
+          using base::prefix;
           vector<int> moved, remaining;
           void _trialMove();
           void _acceptMove();
@@ -1264,13 +1327,17 @@ namespace Faunus {
           bool skipEnergyUpdate;    //!< True if energy updates should be skipped (faster evaluation!)
       };
 
+    /** @brief Constructor */
     template<class Tspace>
       ClusterTranslateNR<Tspace>::ClusterTranslateNR(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(e,s,pfx) {
         base::title="Rejection Free Cluster Translation";
         base::cite="doi:10/fthw8k";
         base::useAlternateReturnEnergy=true;
-        dp=in.get<double>("ctransnr_dp", 0);
-        skipEnergyUpdate=in.get<bool>("ctransnr_skipenergy", false);
+        base::runfraction=in.get<double>(prefix+"_runfraction", 1.0);
+        skipEnergyUpdate=in.get<bool>(prefix+"_skipenergy", false);
+        dp=in.get<double>(prefix+"_dp", 0);
+        if (dp<1e-6)
+          base::runfraction=0;
         g=spc->groupList(); // currently ALL groups in the system will be moved!
       }
 
@@ -1281,16 +1348,25 @@ namespace Faunus {
         o << pad(SUB,w,"Displacement") << dp << _angstrom << endl
           << pad(SUB,w,"Skip energy update") << std::boolalpha
           << skipEnergyUpdate << endl;
-        if (movefrac.cnt>0)
-          o << pad(SUB,w,"Move fraction") << movefrac.avg() << endl;
+        if (movefrac.cnt>0) {
+          o << pad(SUB,w,"Move fraction") << movefrac.avg()*100 << percent << endl
+            << pad(SUB,w,"Avg. moved groups") << movefrac.avg()*spc->groupList().size() << endl;
+        }
         return o.str();
       }
 
     template<class Tspace>
       void ClusterTranslateNR<Tspace>::_trialMove() {
         double du=0;
+        g=spc->groupList();
         moved.clear();
-        remaining.clear();
+        remaining.resize( g.size() );
+
+        for (size_t i=0; i<g.size(); i++) {
+          remaining[i] = i;
+          if (base::cnt<=1)
+            g[i]->setMassCenter(*spc);
+        }
 
         if (skipEnergyUpdate==false)
 #pragma omp parallel for reduction (+:du) schedule (dynamic)
@@ -1303,8 +1379,6 @@ namespace Faunus {
         ip.y()*=slp_global.randHalf();
         ip.z()*=slp_global.randHalf();
 
-        for (size_t i=0; i<g.size(); i++)
-          remaining.push_back(i);
         int f=slp_global()*remaining.size();
         moved.push_back(remaining[f]);
         remaining.erase(remaining.begin()+f);    // Pick first index in m to move
@@ -1318,7 +1392,7 @@ namespace Faunus {
             if (slp_global() < (1.-std::exp(-udiff)) ) {
               moved.push_back(remaining[j]);
               remaining.erase(remaining.begin()+j);
-              j=j-1;
+              j--;
             }
           }
           g[moved[i]]->accept(*spc);
@@ -1331,7 +1405,10 @@ namespace Faunus {
               du+=pot->g2g(spc->p, *g[i], *g[j]);
 
         base::alternateReturnEnergy=du;
-        movefrac+=double(moved.size()) / double((moved.size()+remaining.size()));
+        movefrac+=double(moved.size()) / (moved.size()+remaining.size());
+
+        assert( moved.size() >= 1);
+        assert( spc->groupList().size() == moved.size()+remaining.size() );
       }
 
     template<class Tspace>
@@ -1462,7 +1539,7 @@ namespace Faunus {
         for (auto g : spc->groupList())
           if (g!=gPtr)
             du+=pot->g2g(spc->trial, *g, *gPtr) - pot->g2g(spc->p, *g, *gPtr);
-
+        du+=pot->external(spc->trial) - pot->external(spc->p);
         //for (auto i : index)
         //  du += pot->i2all(spc->trial, i) - pot->i2all(spc->p, i);
         return du;
@@ -1709,122 +1786,122 @@ namespace Faunus {
      * @date Lund, 2014
      */
     template<class Tspace>
-    class GCMolecular : public Movebase<Tspace> {
-    private:
-      typedef Movebase<Tspace> base;
-      typedef std::map<short, Average<double> > map_type;
-      bool use2D;
-      Point dir;
-      int inmol; // molecule to be inserted
-      int outmol; // molecule to be deleted
-      int imol;
-      int idel;
-      
-      // structure for molecular data
-      struct MolData {
-        string name;
-        double activity; // in 1/angstrom^3 (3D) or 1/angstrom^2 (2D)
-        typename Tspace::ParticleVector p;
-      };
-      
-      std::vector<MolData> molvec;
-      
-      template<typename pvec>
-      void randomRotate(pvec &p) {
-        Geometry::QuaternionRotate rot;
-      }
-      
-      template<typename pvec>
-      void randomState(pvec &p) {
-        Point a;
-        base::spc->randomPos(a);
-        a=a*dir+offset;
-        auto dp = a-Geometry::massCenter(base::spc->geo, p);
-        for (auto i : &p) {
-          i=i+dp;
-          base::spc->geo.boundary(i);
-        }
-      }
-      
-      int randomMol() {
-        return slp_global.rand() % molvec.size();
-      }
-      
-      bool insert() {
-        inmol = randomMol();
-        randomState( molvec[inmol] );
-        return true;
-      }
-      
-    protected:
-      bool deleteBool;
-      string _info();
-      void _acceptMove() FOVERRIDE;
-      void _rejectMove() FOVERRIDE;
-      
-      double _energyChange() FOVERRIDE {
-        double uold=0;//, unew=0;
-        
-        // count molecules
-        int N=0;
-        for (auto g : base::spc->groupList())
-          if (g->isMolecular())
-            if ( g->name==molvec[imol] )
-              N++;
-        
-        // calc. volume or area
-        double V = base::spc->geo.getVolume();
-        if (use2D)
-          V = V / base::spc->geo.len.z();
-        
-        // in case of deletion
-        if (deleteBool) {
-          auto gi = base::spc->findGroup(idel);
-          for (auto gj : base::spc->groupList())
-            if (gi!=gj)
-              uold += base::pot->g2g( base::spc->p, *gi, *gj )
-                + base::pot->g_external( base::spc->p, *gi );
-        } else {
-          // in case of insertion
-          
-        }
+      class GCMolecular : public Movebase<Tspace> {
+        private:
+          typedef Movebase<Tspace> base;
+          typedef std::map<short, Average<double> > map_type;
+          bool use2D;
+          Point dir;
+          int inmol; // molecule to be inserted
+          int outmol; // molecule to be deleted
+          int imol;
+          int idel;
 
-        return 0;
-          
-      }
-      
-      void _trialMove() {
-        
-        // insert
-        if (slp_global()>0.5) {
-          inmol = randomMol();
-          outmol=-1;
-          randomState( molvec[inmol] );
-        }
-        // delete
-        else {
-          inmol=-1;
-          outmol=randomMol();
-          //for (auto i : base::spc->groupList())
-          //  if ()
-          
-        }
-        
-      }
-      using base::spc;
-      map_type accmap; //!< acceptance map
-      
-    public:
-      Point offset;
-      GCMolecular(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, string pfx="gcmol_") : base(e,s,pfx) {
-        dir=Point(1,1,1);
-        offset=Point(0,0,0);
-        use2D=in(pfx+"2d", true);
-        if (use2D)
-          dir.z()=1;
-      }
-    };
-    
+          // structure for molecular data
+          struct MolData {
+            string name;
+            double activity; // in 1/angstrom^3 (3D) or 1/angstrom^2 (2D)
+            typename Tspace::ParticleVector p;
+          };
+
+          std::vector<MolData> molvec;
+
+          template<typename pvec>
+            void randomRotate(pvec &p) {
+              Geometry::QuaternionRotate rot;
+            }
+
+          template<typename pvec>
+            void randomState(pvec &p) {
+              Point a;
+              base::spc->randomPos(a);
+              a=a*dir+offset;
+              auto dp = a-Geometry::massCenter(base::spc->geo, p);
+              for (auto i : &p) {
+                i=i+dp;
+                base::spc->geo.boundary(i);
+              }
+            }
+
+          int randomMol() {
+            return slp_global.rand() % molvec.size();
+          }
+
+          bool insert() {
+            inmol = randomMol();
+            randomState( molvec[inmol] );
+            return true;
+          }
+
+        protected:
+          bool deleteBool;
+          string _info();
+          void _acceptMove() FOVERRIDE;
+          void _rejectMove() FOVERRIDE;
+
+          double _energyChange() FOVERRIDE {
+            double uold=0;//, unew=0;
+
+            // count molecules
+            int N=0;
+            for (auto g : base::spc->groupList())
+              if (g->isMolecular())
+                if ( g->name==molvec[imol] )
+                  N++;
+
+            // calc. volume or area
+            double V = base::spc->geo.getVolume();
+            if (use2D)
+              V = V / base::spc->geo.len.z();
+
+            // in case of deletion
+            if (deleteBool) {
+              auto gi = base::spc->findGroup(idel);
+              for (auto gj : base::spc->groupList())
+                if (gi!=gj)
+                  uold += base::pot->g2g( base::spc->p, *gi, *gj )
+                    + base::pot->g_external( base::spc->p, *gi );
+            } else {
+              // in case of insertion
+
+            }
+
+            return 0;
+
+          }
+
+          void _trialMove() {
+
+            // insert
+            if (slp_global()>0.5) {
+              inmol = randomMol();
+              outmol=-1;
+              randomState( molvec[inmol] );
+            }
+            // delete
+            else {
+              inmol=-1;
+              outmol=randomMol();
+              //for (auto i : base::spc->groupList())
+              //  if ()
+
+            }
+
+          }
+          using base::spc;
+          map_type accmap; //!< acceptance map
+
+        public:
+          Point offset;
+          GCMolecular(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, string pfx="gcmol_") : base(e,s,pfx) {
+            dir=Point(1,1,1);
+            offset=Point(0,0,0);
+            use2D=in(pfx+"2d", true);
+            if (use2D)
+              dir.z()=1;
+          }
+      };
+
     /**
      * @brief Isobaric volume move
      *
@@ -1840,16 +1917,14 @@ namespace Faunus {
      * `npt_runfraction`| Runfraction [default=1]
      *
      * Note that new volumes are generated according to
-     * \f$ V^{\prime} = \exp\left ( \log V \pm \delta dV \right ) \f$
+     * \f$ V^{\prime} = \exp\left ( \log V \pm \delta dp \right ) \f$
      * where \f$\delta\f$ is a random number between zero and one half.
      */
     template<class Tspace>
       class Isobaric : public Movebase<Tspace> {
         private:
           typedef Movebase<Tspace> base;
-          using base::spc;
-          using base::pot;
-          using base::w;
+        protected:
           string _info();
           void _test(UnitTest&);
           void _trialMove();
@@ -1857,29 +1932,32 @@ namespace Faunus {
           void _rejectMove();
           template<class Tpvec> double _energy(const Tpvec&);
           double _energyChange();
-          double dV; //!< Volume displacement parameter
-          double oldV;
-          double newV;
+          using base::spc;
+          using base::pot;
+          using base::w;
           double P; //!< Pressure
-          Average<double> sqrV;       //!< Mean squared volume displacement
-          Average<double> V;          //!< Average volume
-          Average<double> rV;         //!< Average 1/volume
+          double dp; //!< Volume displacement parameter
+          double oldval;
+          double newval;
+          Point oldlen;
+          Point newlen;
+          Average<double> msd;       //!< Mean squared volume displacement
+          Average<double> val;          //!< Average volume
+          Average<double> rval;         //!< Average 1/volume
         public:
-          template<class Tenergy>
-            Isobaric(InputMap&, Tenergy&, Tspace&, string="npt");
+          Isobaric(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="npt");
       };
 
     template<class Tspace>
-      template<class Tenergy>
-      Isobaric<Tspace>::Isobaric(InputMap &in, Tenergy &e, Tspace &s, string pfx) : base(e,s,pfx) {
+      Isobaric<Tspace>::Isobaric(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(e,s,pfx) {
         this->title="Isobaric Volume Fluctuations";
         this->w=30;
-        dV=in.get<double>(pfx+"_dV", 0.,
+        dp=in.get<double>(pfx+"_dV", 0.,
             "NPT volume displacement parameter");
         P=in.get<double>(pfx+"_P", 0.,
             "NPT external pressure P/kT (mM)")/1e30*pc::Nav; //mM -> 1/A^3
         this->runfraction = in.get<double>(pfx+"_runfraction",1.0);
-        if (dV<1e-6)
+        if (dp<1e-6)
           base::runfraction=0;
       }
 
@@ -1896,7 +1974,7 @@ namespace Faunus {
             Nmol+=g->numMolecules();
         N = Natom + Nmol;
         double Pascal = P*pc::kB*pc::T()*1e30;
-        o << pad(SUB,w, "Displacement parameter") << dV << endl
+        o << pad(SUB,w, "Displacement parameter") << dp << endl
           << pad(SUB,w, "Number of molecules")
           << N << " (" <<Nmol<< " molecular + " <<Natom<< " atomic)\n"
           << pad(SUB,w, "Pressure")
@@ -1906,9 +1984,9 @@ namespace Faunus {
         if (base::cnt>0) {
           char l=14;
           o << pad(SUB,w, "Mean displacement")
-            << cuberoot+rootof+bracket("dV"+squared)
-            << " = " << pow(sqrV.avg(), 1/6.) << _angstrom << endl
-            << pad(SUB,w, "Osmotic coefficient") << P / (N*rV.avg()) << endl
+            << cuberoot+rootof+bracket("dp"+squared)
+            << " = " << pow(msd.avg(), 1/6.) << _angstrom << endl
+            << pad(SUB,w, "Osmotic coefficient") << P / (N*rval.avg()) << endl
             << endl
             << indent(SUBSUB) << std::right << setw(10) << ""
             << setw(l+5) << bracket("V")
@@ -1916,38 +1994,43 @@ namespace Faunus {
             << setw(l+8) << bracket("1/V")
             << setw(l+8) << bracket("N/V") << endl
             << indent(SUB) << setw(10) << "Averages"
-            << setw(l) << V.avg() << _angstrom + cubed
-            << setw(l) << std::cbrt(V.avg()) << _angstrom
-            << setw(l) << rV.avg() << " 1/" + _angstrom + cubed
-            << setw(l) << N*rV.avg()*tomM << " mM\n";
+            << setw(l) << val.avg() << _angstrom + cubed
+            << setw(l) << std::cbrt(val.avg()) << _angstrom
+            << setw(l) << rval.avg() << " 1/" + _angstrom + cubed
+            << setw(l) << N*rval.avg()*tomM << " mM\n";
         }
         return o.str();
       }
 
     template<class Tspace>
       void Isobaric<Tspace>::_test(UnitTest &t) {
-        t(this->prefix+"_averageSideLength", std::cbrt(V.avg()) );
-        t(this->prefix+"_MSQDisplacement", pow(sqrV.avg(), 1/6.) );
+        t(this->prefix+"_averageSideLength", std::cbrt(val.avg()) );
+        t(this->prefix+"_MSQDisplacement", pow(msd.avg(), 1/6.) );
       }
 
     template<class Tspace>
       void Isobaric<Tspace>::_trialMove() {
         assert(spc->groupList().size()>0
             && "Space has empty group vector - NPT move not possible.");
-        oldV = spc->geo.getVolume();
-        newV = std::exp( std::log(oldV) + slp_global.randHalf()*dV );
+        oldval = spc->geo.getVolume();
+        oldlen = newlen = spc->geo.len;
+        newval = std::exp( std::log(oldval) + slp_global.randHalf()*dp );
+        Point s = Point(1,1,1);
+        double xyz = cbrt(newval/oldval);
+        double xy = sqrt(newval/oldval);
+        newlen.scale(spc->geo,s,xyz,xy);
         for (auto g : spc->groupList()) {
           g->setMassCenter(*spc);
-          g->scale(*spc, newV); // scale trial coordinates to new volume
+          g->scale(*spc, s, xyz, xy); // scale trial coordinates to new volume
         }
       }
 
     template<class Tspace>
       void Isobaric<Tspace>::_acceptMove() {
-        V += newV;
-        sqrV += pow( oldV-newV, 2 );
-        rV += 1./newV;
-        spc->geo.setVolume(newV);
+        val += newval;
+        msd += pow( oldval-newval, 2 );
+        rval += 1./newval;
+        spc->geo.setlen(newlen);
         pot->setSpace(*spc);
         for (auto g : spc->groupList() )
           g->accept(*spc);
@@ -1955,10 +2038,10 @@ namespace Faunus {
 
     template<class Tspace>
       void Isobaric<Tspace>::_rejectMove() {
-        sqrV += 0;
-        V += oldV;
-        rV += 1./oldV;
-        spc->geo.setVolume(oldV);
+        msd += 0;
+        val += oldval;
+        rval += 1./oldval;
+        spc->geo.setlen(oldlen);
         pot->setSpace(*spc);
         for (auto g : spc->groupList() )
           g->undo(*spc);
@@ -1972,7 +2055,7 @@ namespace Faunus {
       template<class Tpvec>
       double Isobaric<Tspace>::_energy(const Tpvec &p) {
         double u=0;
-        if (dV<1e-6)
+        if (dp<1e-6)
           return u;
         size_t n=spc->groupList().size();  // number of groups
         for (size_t i=0; i<n-1; ++i)      // group-group
@@ -1994,7 +2077,7 @@ namespace Faunus {
     template<class Tspace>
       double Isobaric<Tspace>::_energyChange() {
         double uold = _energy(spc->p);
-        spc->geo.setVolume(newV);
+        spc->geo.setlen(newlen);
         pot->setSpace(*spc); // potential must know about volume, too
 
         // In spherical geometries, molecules may collide with
@@ -2007,6 +2090,88 @@ namespace Faunus {
         return unew-uold;
       }
 
+    /**
+     * @brief Isochoric scaling move in Cuboid geometry
+     *
+     * @details This class will expand/shrink along the z-axis
+     * and shrink/expand in the xy-plane atomic as well as molecular groups 
+     * as long as these are known to Space - see Space.enroll().
+     * The InputMap class is scanned for the following keys:
+     *
+     * Key                | Description
+     * :----------------- | :-----------------------------
+     * `nvt_dz`            | Length displacement parameter
+     * `nvt_runfraction`  | Runfraction [default=1]
+     *
+     */
+    template<class Tspace>
+       class Isochoric : public Isobaric<Tspace> {
+         protected:
+           typedef Isobaric<Tspace> base;
+           using base::spc;
+           using base::pot;
+           using base::w;
+           using base::dp;
+           using base::oldval;
+           using base::newval;
+           using base::oldlen;
+           using base::newlen;
+           using base::msd;
+           using base::val;
+           void _trialMove();
+           string _info();
+         public:
+           Isochoric(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="nvt");
+       };
+
+    template<class Tspace>
+      Isochoric<Tspace>::Isochoric(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(in,e,s,pfx) {
+        this->title="Isochoric Side Lengths Fluctuations";
+        this->w=30;
+        dp=in.get<double>(pfx+"_dz", 0.,
+            "z-displacement parameter");
+        this->runfraction = in.get<double>(pfx+"_runfraction",1.0);
+        if (dp<1e-6)
+          base::runfraction=0;
+      }
+
+    template<class Tspace>
+      string Isochoric<Tspace>::_info() {
+        using namespace textio;
+        std::ostringstream o;
+        o << pad(SUB,w, "Displacement parameter") << dp << endl
+          << pad(SUB,w, "Temperature") << pc::T() << " K\n";
+        if (base::cnt>0) {
+          char l=14;
+          o << pad(SUB,w, "Mean displacement")
+            << rootof+bracket("dz"+squared)
+            << " = " << pow(msd.avg(), 1/2.) << _angstrom << endl
+            << endl
+            << indent(SUBSUB) << std::right << setw(10) << ""
+            << setw(l+5) << bracket("Lz") << endl
+            << indent(SUB) << setw(10) << "Averages"
+            << setw(l) << val.avg() << _angstrom + cubed;
+        }
+        return o.str();
+      }
+
+    template<class Tspace>
+      void Isochoric<Tspace>::_trialMove() {
+        assert(spc->groupList().size()>0
+            && "Space has empty group vector - Isochoric scaling move not possible.");
+        oldlen = spc->geo.len;
+        newlen = oldlen;
+        oldval = spc->geo.len.z();
+        newval = oldval+slp_global.randHalf()*dp;
+        Point s;
+        s.z() = newval / oldval;
+        s.x() = s.y() = 1 / std::sqrt(s.z());
+        newlen.scale(spc->geo,s);
+        for (auto g : spc->groupList()) {
+          g->setMassCenter(*spc);
+          g->scale(*spc,s); // scale trial coordinates to new coordinates
+        }
+      }
 
     /**
      * @brief Auxillary class for tracking atomic species
@@ -2668,9 +2833,13 @@ namespace Faunus {
       }
 
     /**
-     * @brief Make a flip-flip move on lipids
+     * @brief Flip-flop move of lipids in planar and cylindrical geometry
      *
-     * @date Lund, 2013
+     * Key                    | Description
+     * :--------------------- | :-----------------------------
+     * `flipflop_geometry`    | Geometry of the bilayer [planar(default) or cylindrical]
+     * `flipflop_runfraction` | Runfraction [default=1]
+     *
      */
     template<class Tspace>
       class FlipFlop : public Movebase<Tspace> {
@@ -2691,10 +2860,11 @@ namespace Faunus {
           map_type accmap;   //!< Group particle acceptance map
           Group* igroup;
           Point* cntr;
+          string geometry;
         public:
-          FlipFlop(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="flipflop");
+          FlipFlop(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="flipflop"); // if cylindrical geometry, string=cylinder
           void setGroup(Group&); //!< Select Group to move
-          void setCenter(Point&); //!< Select Center of Mass of the vescicle
+          void setCenter(Point&); //!< Select Center of Mass of the bilayer
       };
 
     template<class Tspace>
@@ -2703,7 +2873,8 @@ namespace Faunus {
         base::w=30;
         igroup=nullptr;
         cntr=nullptr;
-        this->runfraction = in.get<double>(base::prefix+"_runfraction",1.0);
+        geometry=in.get<string>(base::prefix+"_geometry","planar");
+        this->runfraction=in.get<double>(base::prefix+"_runfraction",1.0);
       }
 
     template<class Tspace>
@@ -2724,22 +2895,26 @@ namespace Faunus {
         assert(igroup!=nullptr);
         assert(cntr!=nullptr);
         Point startpoint=spc->p[igroup->back()];
-        Point head=spc->p[igroup->front()];
-        cntr->z()=head.z()=startpoint.z();
-        Point dir = spc->geo.vdist(*cntr, startpoint)
-          / sqrt(spc->geo.sqdist(*cntr, startpoint)) * 1.1*spc->p[igroup->back()].radius;
-        if (spc->geo.sqdist(*cntr, startpoint) > spc->geo.sqdist(*cntr, head))
-          startpoint.translate(spc->geo,-dir);      // set startpoint for rotation
-        else startpoint.translate(spc->geo, dir);
-        double x1=cntr->x();
-        double y1=cntr->y();
-        double x2=startpoint.x();
-        double y2=startpoint.y();
-        Point endpoint; // rot endpoint for on axis ⊥ to line connecting cm of cylinder with 2nd TL
-        endpoint.x()=x2+1;
-        endpoint.y()=-(x2-x1)/(y2-y1)+y2;
-        endpoint.z()=startpoint.z();
-        double angle=pc::pi;
+        Point endpoint=*cntr;
+        startpoint.z()=cntr->z();
+        if (geometry.compare("cylindrical") == 0) { // MC move in case of cylindrical geometry
+          startpoint=spc->p[igroup->back()];
+          Point head=spc->p[igroup->front()];
+          cntr->z()=head.z()=startpoint.z();
+          Point dir = spc->geo.vdist(*cntr, startpoint)
+            / sqrt(spc->geo.sqdist(*cntr, startpoint)) * 1.1*spc->p[igroup->back()].radius;
+          if (spc->geo.sqdist(*cntr, startpoint) > spc->geo.sqdist(*cntr, head))
+            startpoint.translate(spc->geo,-dir); // set startpoint for rotation
+          else startpoint.translate(spc->geo, dir);
+          double x1=cntr->x();
+          double y1=cntr->y();
+          double x2=startpoint.x();
+          double y2=startpoint.y();
+          endpoint.x()=x2+1; // rot endpoint of axis ⊥ to line connecting cm of cylinder with 2nd TL
+          endpoint.y()=-(x2-x1)/(y2-y1)+y2;
+          endpoint.z()=startpoint.z();
+        }
+        double angle=pc::pi; // MC move in case of planar geometry
         Geometry::QuaternionRotate vrot;
         vrot.setAxis(spc->geo, startpoint, endpoint, angle); //rot around startpoint->endpoint vec
         for (auto i : *igroup)
@@ -2766,10 +2941,10 @@ namespace Faunus {
           if ( spc->geo.collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
 
-        double unew = pot->g_external(spc->trial, *igroup);
+        double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
         if (unew==pc::infty)
           return pc::infty;       // early rejection
-        double uold = pot->g_external(spc->p, *igroup);
+        double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
 
         for (auto g : spc->groupList()) {
           if (g!=igroup) {

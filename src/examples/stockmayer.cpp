@@ -41,7 +41,7 @@ int main() {
         sys+=trans.move( sol.size() );                // translate
       else
         sys+=rot.move( sol.size() );                  // rotate
-      
+
       if (slp_global()<0.5)
         dian.sampleMuCorrelationAndKirkwood(spc);
       if (slp_global()>0.99)
@@ -49,7 +49,7 @@ int main() {
       dian.sampleDP(spc);
     }    
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
-    cout << loop.timing();
+    cout << loop.timing() << std::flush;
   }
 
   // perform unit tests

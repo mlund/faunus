@@ -204,7 +204,7 @@ TEST_CASE("Quaternion", "Check vector rotation")
 
 TEST_CASE("Tables and averages","Check table of averages")
 {
-  typedef Analysis::Table2D<float,Average<float> > Ttable;
+  typedef Table2D<float,Average<float> > Ttable;
   Ttable table(0.1, Ttable::XYDATA);
   table(2.1)+=1;
   table(2.1)+=3;

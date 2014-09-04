@@ -1,45 +1,80 @@
 /*
  * Copyright 2009-2010 Cybozu Labs, Inc.
- * Copyright 2011 Kazuho Oku
- * 
+ * Copyright 2011-2014 Kazuho Oku
+ * All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
+ *
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * THIS SOFTWARE IS PROVIDED BY CYBOZU LABS, INC. ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
- * EVENT SHALL CYBOZU LABS, INC. OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * The views and conclusions contained in the software and documentation are
- * those of the authors and should not be interpreted as representing official
- * policies, either expressed or implied, of Cybozu Labs, Inc.
  *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 #ifndef picojson_h
 #define picojson_h
 
-#include <cassert>
-#include <cmath>
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <iterator>
+#include <limits>
 #include <map>
+#include <stdexcept>
 #include <string>
 #include <vector>
+
+// for isnan/isinf
+#if __cplusplus>=201103L
+# include <cmath>
+#else
+extern "C" {
+# ifdef _MSC_VER
+#  include <float.h>
+# elif defined(__INTEL_COMPILER)
+#  include <mathimf.h>
+# else
+#  include <math.h>
+# endif
+}
+#endif
+
+// experimental support for int64_t (see README.mkdn for detail)
+#ifdef PICOJSON_USE_INT64
+# define __STDC_FORMAT_MACROS
+# include <errno.h>
+# include <inttypes.h>
+#endif
+
+// to disable the use of localeconv(3), set PICOJSON_USE_LOCALE to 0
+#ifndef PICOJSON_USE_LOCALE
+# define PICOJSON_USE_LOCALE 1
+#endif
+#if PICOJSON_USE_LOCALE
+extern "C" {
+# include <locale.h>
+}
+#endif
+
+#ifndef PICOJSON_ASSERT
+# define PICOJSON_ASSERT(e) do { if (! (e)) throw std::runtime_error(#e); } while (0)
+#endif
 
 #ifdef _MSC_VER
     #define SNPRINTF _snprintf_s
@@ -58,27 +93,41 @@ namespace picojson {
     string_type,
     array_type,
     object_type
+#ifdef PICOJSON_USE_INT64
+    , int64_type
+#endif
   };
   
+  enum {
+    INDENT_WIDTH = 2
+  };
+
   struct null {};
   
   class value {
   public:
     typedef std::vector<value> array;
     typedef std::map<std::string, value> object;
-  protected:
-    int type_;
-    union {
+    union _storage {
       bool boolean_;
       double number_;
+#ifdef PICOJSON_USE_INT64
+      int64_t int64_;
+#endif
       std::string* string_;
       array* array_;
       object* object_;
     };
+  protected:
+    int type_;
+    _storage u_;
   public:
     value();
     value(int type, bool);
     explicit value(bool b);
+#ifdef PICOJSON_USE_INT64
+    explicit value(int64_t i);
+#endif
     explicit value(double n);
     explicit value(const std::string& s);
     explicit value(const array& a);
@@ -88,19 +137,26 @@ namespace picojson {
     ~value();
     value(const value& x);
     value& operator=(const value& x);
+    void swap(value& x);
     template <typename T> bool is() const;
     template <typename T> const T& get() const;
     template <typename T> T& get();
     bool evaluate_as_boolean() const;
     const value& get(size_t idx) const;
     const value& get(const std::string& key) const;
+    value& get(size_t idx);
+    value& get(const std::string& key);
+
     bool contains(size_t idx) const;
     bool contains(const std::string& key) const;
     std::string to_str() const;
-    template <typename Iter> void serialize(Iter os) const;
-    std::string serialize() const;
+    template <typename Iter> void serialize(Iter os, bool prettify = false) const;
+    std::string serialize(bool prettify = false) const;
   private:
     template <typename T> value(const T*); // intentionally defined to block implicit conversion of pointer to bool
+    template <typename Iter> static void _indent(Iter os, int indent);
+    template <typename Iter> void _serialize(Iter os, int indent) const;
+    std::string _serialize(int indent) const;
   };
   
   typedef value::array array;
@@ -110,9 +166,12 @@ namespace picojson {
   
   inline value::value(int type, bool) : type_(type) {
     switch (type) {
-#define INIT(p, v) case p##type: p = v; break
+#define INIT(p, v) case p##type: u_.p = v; break
       INIT(boolean_, false);
       INIT(number_, 0.0);
+#ifdef PICOJSON_USE_INT64
+      INIT(int64_, 0);
+#endif
       INIT(string_, new std::string());
       INIT(array_, new array());
       INIT(object_, new object());
@@ -122,36 +181,53 @@ namespace picojson {
   }
   
   inline value::value(bool b) : type_(boolean_type) {
-    boolean_ = b;
+    u_.boolean_ = b;
   }
-  
+
+#ifdef PICOJSON_USE_INT64
+  inline value::value(int64_t i) : type_(int64_type) {
+    u_.int64_ = i;
+  }
+#endif
+
   inline value::value(double n) : type_(number_type) {
-    number_ = n;
+    if (
+#ifdef _MSC_VER
+        ! _finite(n)
+#elif __cplusplus>=201103L || !(defined(isnan) && defined(isinf))
+		std::isnan(n) || std::isinf(n)
+#else
+        isnan(n) || isinf(n)
+#endif
+        ) {
+      throw std::overflow_error("");
+    }
+    u_.number_ = n;
   }
   
   inline value::value(const std::string& s) : type_(string_type) {
-    string_ = new std::string(s);
+    u_.string_ = new std::string(s);
   }
   
   inline value::value(const array& a) : type_(array_type) {
-    array_ = new array(a);
+    u_.array_ = new array(a);
   }
   
   inline value::value(const object& o) : type_(object_type) {
-    object_ = new object(o);
+    u_.object_ = new object(o);
   }
   
   inline value::value(const char* s) : type_(string_type) {
-    string_ = new std::string(s);
+    u_.string_ = new std::string(s);
   }
   
   inline value::value(const char* s, size_t len) : type_(string_type) {
-    string_ = new std::string(s, len);
+    u_.string_ = new std::string(s, len);
   }
   
   inline value::~value() {
     switch (type_) {
-#define DEINIT(p) case p##type: delete p; break
+#define DEINIT(p) case p##type: delete u_.p; break
       DEINIT(string_);
       DEINIT(array_);
       DEINIT(object_);
@@ -162,14 +238,14 @@ namespace picojson {
   
   inline value::value(const value& x) : type_(x.type_) {
     switch (type_) {
-#define INIT(p, v) case p##type: p = v; break
-      INIT(boolean_, x.boolean_);
-      INIT(number_, x.number_);
-      INIT(string_, new std::string(*x.string_));
-      INIT(array_, new array(*x.array_));
-      INIT(object_, new object(*x.object_));
+#define INIT(p, v) case p##type: u_.p = v; break
+      INIT(string_, new std::string(*x.u_.string_));
+      INIT(array_, new array(*x.u_.array_));
+      INIT(object_, new object(*x.u_.object_));
 #undef INIT
-    default: break;
+    default:
+      u_ = x.u_;
+      break;
     }
   }
   
@@ -181,35 +257,53 @@ namespace picojson {
     return *this;
   }
   
+  inline void value::swap(value& x) {
+    std::swap(type_, x.type_);
+    std::swap(u_, x.u_);
+  }
+  
 #define IS(ctype, jtype)			     \
   template <> inline bool value::is<ctype>() const { \
     return type_ == jtype##_type;		     \
   }
   IS(null, null)
   IS(bool, boolean)
-  IS(int, number)
-  IS(double, number)
+#ifdef PICOJSON_USE_INT64
+  IS(int64_t, int64)
+#endif
   IS(std::string, string)
   IS(array, array)
   IS(object, object)
 #undef IS
+  template <> inline bool value::is<double>() const {
+    return type_ == number_type
+#ifdef PICOJSON_USE_INT64
+      || type_ == int64_type
+#endif
+      ;
+  }
   
 #define GET(ctype, var)						\
   template <> inline const ctype& value::get<ctype>() const {	\
-    assert("type mismatch! call vis<type>() before get<type>()" \
+    PICOJSON_ASSERT("type mismatch! call is<type>() before get<type>()" \
 	   && is<ctype>());				        \
     return var;							\
   }								\
   template <> inline ctype& value::get<ctype>() {		\
-    assert("type mismatch! call is<type>() before get<type>()"	\
+    PICOJSON_ASSERT("type mismatch! call is<type>() before get<type>()"	\
 	   && is<ctype>());					\
     return var;							\
   }
-  GET(bool, boolean_)
-  GET(double, number_)
-  GET(std::string, *string_)
-  GET(array, *array_)
-  GET(object, *object_)
+  GET(bool, u_.boolean_)
+  GET(std::string, *u_.string_)
+  GET(array, *u_.array_)
+  GET(object, *u_.object_)
+#ifdef PICOJSON_USE_INT64
+  GET(double, (type_ == int64_type && (const_cast<value*>(this)->type_ = number_type, const_cast<value*>(this)->u_.number_ = u_.int64_), u_.number_))
+  GET(int64_t, u_.int64_)
+#else
+  GET(double, u_.number_)
+#endif
 #undef GET
   
   inline bool value::evaluate_as_boolean() const {
@@ -217,11 +311,11 @@ namespace picojson {
     case null_type:
       return false;
     case boolean_type:
-      return boolean_;
+      return u_.boolean_;
     case number_type:
-      return number_ != 0;
+      return u_.number_ != 0;
     case string_type:
-      return ! string_->empty();
+      return ! u_.string_->empty();
     default:
       return true;
     }
@@ -229,42 +323,73 @@ namespace picojson {
   
   inline const value& value::get(size_t idx) const {
     static value s_null;
-    assert(is<array>());
-    return idx < array_->size() ? (*array_)[idx] : s_null;
+    PICOJSON_ASSERT(is<array>());
+    return idx < u_.array_->size() ? (*u_.array_)[idx] : s_null;
+  }
+
+  inline value& value::get(size_t idx) {
+    static value s_null;
+    PICOJSON_ASSERT(is<array>());
+    return idx < u_.array_->size() ? (*u_.array_)[idx] : s_null;
   }
 
   inline const value& value::get(const std::string& key) const {
     static value s_null;
-    assert(is<object>());
-    object::const_iterator i = object_->find(key);
-    return i != object_->end() ? i->second : s_null;
+    PICOJSON_ASSERT(is<object>());
+    object::const_iterator i = u_.object_->find(key);
+    return i != u_.object_->end() ? i->second : s_null;
+  }
+
+  inline value& value::get(const std::string& key) {
+    static value s_null;
+    PICOJSON_ASSERT(is<object>());
+    object::iterator i = u_.object_->find(key);
+    return i != u_.object_->end() ? i->second : s_null;
   }
 
   inline bool value::contains(size_t idx) const {
-    assert(is<array>());
-    return idx < array_->size();
+    PICOJSON_ASSERT(is<array>());
+    return idx < u_.array_->size();
   }
 
   inline bool value::contains(const std::string& key) const {
-    assert(is<object>());
-    object::const_iterator i = object_->find(key);
-    return i != object_->end();
+    PICOJSON_ASSERT(is<object>());
+    object::const_iterator i = u_.object_->find(key);
+    return i != u_.object_->end();
   }
   
   inline std::string value::to_str() const {
     switch (type_) {
     case null_type:      return "null";
-    case boolean_type:   return boolean_ ? "true" : "false";
+    case boolean_type:   return u_.boolean_ ? "true" : "false";
+#ifdef PICOJSON_USE_INT64
+    case int64_type: {
+      char buf[sizeof("-9223372036854775808")];
+      SNPRINTF(buf, sizeof(buf), "%" PRId64, u_.int64_);
+      return buf;
+    }
+#endif
     case number_type:    {
       char buf[256];
       double tmp;
-      SNPRINTF(buf, sizeof(buf), fabs(number_) < (1ULL << 53) && modf(number_, &tmp) == 0 ? "%.f" : "%.17g", number_);
+      SNPRINTF(buf, sizeof(buf), fabs(u_.number_) < (1ULL << 53) && modf(u_.number_, &tmp) == 0 ? "%.f" : "%.17g", u_.number_);
+#if PICOJSON_USE_LOCALE
+      char *decimal_point = localeconv()->decimal_point;
+      if (strcmp(decimal_point, ".") != 0) {
+        size_t decimal_point_len = strlen(decimal_point);
+        for (char *p = buf; *p != '\0'; ++p) {
+          if (strncmp(p, decimal_point, decimal_point_len) == 0) {
+            return std::string(buf, p) + "." + (p + decimal_point_len);
+          }
+        }
+      }
+#endif
       return buf;
     }
-    case string_type:    return *string_;
+    case string_type:    return *u_.string_;
     case array_type:     return "array";
     case object_type:    return "object";
-    default:             assert(0);
+    default:             PICOJSON_ASSERT(0);
 #ifdef _MSC_VER
       __assume(0);
 #endif
@@ -291,7 +416,7 @@ namespace picojson {
 	MAP('\t', "\\t");
 #undef MAP
       default:
-	if ((unsigned char)*i < 0x20 || *i == 0x7f) {
+	if (static_cast<unsigned char>(*i) < 0x20 || *i == 0x7f) {
 	  char buf[7];
 	  SNPRINTF(buf, sizeof(buf), "\\u%04x", *i & 0xff);
 	  copy(buf, buf + 6, oi);
@@ -303,34 +428,78 @@ namespace picojson {
     }
     *oi++ = '"';
   }
+
+  template <typename Iter> void value::serialize(Iter oi, bool prettify) const {
+    return _serialize(oi, prettify ? 0 : -1);
+  }
   
-  template <typename Iter> void value::serialize(Iter oi) const {
+  inline std::string value::serialize(bool prettify) const {
+    return _serialize(prettify ? 0 : -1);
+  }
+
+  template <typename Iter> void value::_indent(Iter oi, int indent) {
+    *oi++ = '\n';
+    for (int i = 0; i < indent * INDENT_WIDTH; ++i) {
+      *oi++ = ' ';
+    }
+  }
+
+  template <typename Iter> void value::_serialize(Iter oi, int indent) const {
     switch (type_) {
     case string_type:
-      serialize_str(*string_, oi);
+      serialize_str(*u_.string_, oi);
       break;
     case array_type: {
       *oi++ = '[';
-      for (array::const_iterator i = array_->begin(); i != array_->end(); ++i) {
-	if (i != array_->begin()) {
+      if (indent != -1) {
+        ++indent;
+      }
+      for (array::const_iterator i = u_.array_->begin();
+           i != u_.array_->end();
+           ++i) {
+	if (i != u_.array_->begin()) {
 	  *oi++ = ',';
 	}
-	i->serialize(oi);
+        if (indent != -1) {
+          _indent(oi, indent);
+        }
+	i->_serialize(oi, indent);
+      }
+      if (indent != -1) {
+        --indent;
+        if (! u_.array_->empty()) {
+          _indent(oi, indent);
+        }
       }
       *oi++ = ']';
       break;
     }
     case object_type: {
       *oi++ = '{';
-      for (object::const_iterator i = object_->begin();
-	   i != object_->end();
+      if (indent != -1) {
+        ++indent;
+      }
+      for (object::const_iterator i = u_.object_->begin();
+	   i != u_.object_->end();
 	   ++i) {
-	if (i != object_->begin()) {
+	if (i != u_.object_->begin()) {
 	  *oi++ = ',';
 	}
+        if (indent != -1) {
+          _indent(oi, indent);
+        }
 	serialize_str(i->first, oi);
 	*oi++ = ':';
-	i->second.serialize(oi);
+        if (indent != -1) {
+          *oi++ = ' ';
+        }
+        i->second._serialize(oi, indent);
+      }
+      if (indent != -1) {
+        --indent;
+        if (! u_.object_->empty()) {
+          _indent(oi, indent);
+        }
       }
       *oi++ = '}';
       break;
@@ -339,11 +508,14 @@ namespace picojson {
       copy(to_str(), oi);
       break;
     }
+    if (indent == 0) {
+      *oi++ = '\n';
+    }
   }
   
-  inline std::string value::serialize() const {
+  inline std::string value::_serialize(int indent) const {
     std::string s;
-    serialize(std::back_inserter(s));
+    _serialize(std::back_inserter(s), indent);
     return s;
   }
   
@@ -367,12 +539,13 @@ namespace picojson {
       if (last_ch_ == '\n') {
 	line_++;
       }
-      last_ch_ = *cur_++ & 0xff;
+      last_ch_ = *cur_ & 0xff;
+      ++cur_;
       return last_ch_;
     }
     void ungetc() {
       if (last_ch_ != -1) {
-	assert(! ungot_);
+	PICOJSON_ASSERT(! ungot_);
 	ungot_ = true;
       }
     }
@@ -512,17 +685,17 @@ namespace picojson {
     if (! ctx.parse_array_start()) {
       return false;
     }
-    if (in.expect(']')) {
-      return true;
-    }
     size_t idx = 0;
+    if (in.expect(']')) {
+      return ctx.parse_array_stop(idx);
+    }
     do {
       if (! ctx.parse_array_item(in, idx)) {
 	return false;
       }
       idx++;
     } while (in.expect(','));
-    return in.expect(']');
+    return in.expect(']') && ctx.parse_array_stop(idx);
   }
   
   template <typename Context, typename Iter> inline bool _parse_object(Context& ctx, input<Iter>& in) {
@@ -546,21 +719,25 @@ namespace picojson {
     return in.expect('}');
   }
   
-  template <typename Iter> inline bool _parse_number(double& out, input<Iter>& in) {
+  template <typename Iter> inline std::string _parse_number(input<Iter>& in) {
     std::string num_str;
     while (1) {
       int ch = in.getc();
-      if (('0' <= ch && ch <= '9') || ch == '+' || ch == '-' || ch == '.'
-	  || ch == 'e' || ch == 'E') {
-	num_str.push_back(ch);
+      if (('0' <= ch && ch <= '9') || ch == '+' || ch == '-'
+          || ch == 'e' || ch == 'E') {
+        num_str.push_back(ch);
+      } else if (ch == '.') {
+#if PICOJSON_USE_LOCALE
+        num_str += localeconv()->decimal_point;
+#else
+        num_str.push_back('.');
+#endif
       } else {
 	in.ungetc();
 	break;
       }
     }
-    char* endp;
-    out = strtod(num_str.c_str(), &endp);
-    return endp == num_str.c_str() + num_str.size();
+    return num_str;
   }
   
   template <typename Context, typename Iter> inline bool _parse(Context& ctx, input<Iter>& in) {
@@ -585,14 +762,32 @@ namespace picojson {
       return _parse_object(ctx, in);
     default:
       if (('0' <= ch && ch <= '9') || ch == '-') {
+        double f;
+        char *endp;
 	in.ungetc();
-	double f;
-	if (_parse_number(f, in)) {
-	  ctx.set_number(f);
-	  return true;
-	} else {
-	  return false;
-	}
+        std::string num_str = _parse_number(in);
+        if (num_str.empty()) {
+          return false;
+        }
+#ifdef PICOJSON_USE_INT64
+        {
+          errno = 0;
+          intmax_t ival = strtoimax(num_str.c_str(), &endp, 10);
+          if (errno == 0
+              && std::numeric_limits<int64_t>::min() <= ival
+              && ival <= std::numeric_limits<int64_t>::max()
+              && endp == num_str.c_str() + num_str.size()) {
+            ctx.set_int64(ival);
+            return true;
+          }
+        }
+#endif
+        f = strtod(num_str.c_str(), &endp);
+        if (endp == num_str.c_str() + num_str.size()) {
+          ctx.set_number(f);
+          return true;
+        }
+        return false;
       }
       break;
     }
@@ -604,12 +799,16 @@ namespace picojson {
   public:
     bool set_null() { return false; }
     bool set_bool(bool) { return false; }
+#ifdef PICOJSON_USE_INT64
+    bool set_int64(int64_t) { return false; }
+#endif
     bool set_number(double) { return false; }
     template <typename Iter> bool parse_string(input<Iter>&) { return false; }
     bool parse_array_start() { return false; }
     template <typename Iter> bool parse_array_item(input<Iter>&, size_t) {
       return false;
     }
+    bool parse_array_stop(size_t) { return false; }
     bool parse_object_start() { return false; }
     template <typename Iter> bool parse_object_item(input<Iter>&, const std::string&) {
       return false;
@@ -629,6 +828,12 @@ namespace picojson {
       *out_ = value(b);
       return true;
     }
+#ifdef PICOJSON_USE_INT64
+    bool set_int64(int64_t i) {
+      *out_ = value(i);
+      return true;
+    }
+#endif
     bool set_number(double f) {
       *out_ = value(f);
       return true;
@@ -647,6 +852,7 @@ namespace picojson {
       default_parse_context ctx(&a.back());
       return _parse(ctx, in);
     }
+    bool parse_array_stop(size_t) { return true; }
     bool parse_object_start() {
       *out_ = value(object_type, false);
       return true;
@@ -670,6 +876,9 @@ namespace picojson {
     null_parse_context() {}
     bool set_null() { return true; }
     bool set_bool(bool) { return true; }
+#ifdef PICOJSON_USE_INT64
+    bool set_int64(int64_t) { return true; }
+#endif
     bool set_number(double) { return true; }
     template <typename Iter> bool parse_string(input<Iter>& in) {
       dummy_str s;
@@ -679,6 +888,7 @@ namespace picojson {
     template <typename Iter> bool parse_array_item(input<Iter>& in, size_t) {
       return _parse(*this, in);
     }
+    bool parse_array_stop(size_t) { return true; }
     bool parse_object_start() { return true; }
     template <typename Iter> bool parse_object_item(input<Iter>& in, const std::string&) {
       return _parse(*this, in);
@@ -750,7 +960,7 @@ namespace picojson {
     PICOJSON_CMP(array);
     PICOJSON_CMP(object);
 #undef PICOJSON_CMP
-    assert(0);
+    PICOJSON_ASSERT(0);
 #ifdef _MSC_VER
     __assume(0);
 #endif
@@ -760,6 +970,13 @@ namespace picojson {
   inline bool operator!=(const value& x, const value& y) {
     return ! (x == y);
   }
+}
+
+namespace std {
+  template<> inline void swap(picojson::value& x, picojson::value& y)
+    {
+      x.swap(y);
+    }
 }
 
 inline std::istream& operator>>(std::istream& is, picojson::value& x)
@@ -790,19 +1007,19 @@ inline std::ostream& operator<<(std::ostream& os, const picojson::value& x)
 
 using namespace std;
   
-static void plan(int num)
-{
-  printf("1..%d\n", num);
-}
-
 static bool success = true;
+static int test_num = 0;
 
 static void ok(bool b, const char* name = "")
 {
-  static int n = 1;
   if (! b)
     success = false;
-  printf("%s %d - %s\n", b ? "ok" : "ng", n++, name);
+  printf("%s %d - %s\n", b ? "ok" : "ng", ++test_num, name);
+}
+
+static void done_testing()
+{
+  printf("1..%d\n", test_num);
 }
 
 template <typename T> void is(const T& x, const T& y, const char* name = "")
@@ -814,14 +1031,16 @@ template <typename T> void is(const T& x, const T& y, const char* name = "")
   }
 }
 
-/*
 #include <algorithm>
 #include <sstream>
+#include <float.h>
 #include <limits.h>
 
 int main(void)
 {
-  plan(75);
+#if PICOJSON_USE_LOCALE
+  setlocale(LC_ALL, "");
+#endif
 
   // constructors
 #define TEST(expr, expected) \
@@ -874,6 +1093,11 @@ int main(void)
   TEST("\"\\u0061\\u30af\\u30ea\\u30b9\"", string,
        string("a\xe3\x82\xaf\xe3\x83\xaa\xe3\x82\xb9"), false);
   TEST("\"\\ud840\\udc0b\"", string, string("\xf0\xa0\x80\x8b"), false);
+#ifdef PICOJSON_USE_INT64
+  TEST("0", int64_t, 0, true);
+  TEST("-9223372036854775808", int64_t, std::numeric_limits<int64_t>::min(), true);
+  TEST("9223372036854775807", int64_t, std::numeric_limits<int64_t>::max(), true);
+#endif
 #undef TEST
 
 #define TEST(type, expr) {					       \
@@ -994,8 +1218,82 @@ int main(void)
     ok(err.empty(), "null_parse_context");
   }
   
+  {
+    picojson::value v1, v2;
+    v1 = picojson::value(true);
+    swap(v1, v2);
+    ok(v1.is<picojson::null>(), "swap (null)");
+    ok(v2.get<bool>() == true, "swap (bool)");
+
+    v1 = picojson::value("a");
+    v2 = picojson::value(1.0);
+    swap(v1, v2);
+    ok(v1.get<double>() == 1.0, "swap (dobule)");
+    ok(v2.get<string>() == "a", "swap (string)");
+
+    v1 = picojson::value(picojson::object());
+    v2 = picojson::value(picojson::array());
+    swap(v1, v2);
+    ok(v1.is<picojson::array>(), "swap (array)");
+    ok(v2.is<picojson::object>(), "swap (object)");
+  }
+  
+  {
+    picojson::value v;
+    const char *s = "{ \"a\": 1, \"b\": [ 2, { \"b1\": \"abc\" } ], \"c\": {}, \"d\": [] }";
+    string err;
+    err = picojson::parse(v, s, s + strlen(s));
+    ok(err.empty(), "parse test data for prettifying output");
+    ok(v.serialize() == "{\"a\":1,\"b\":[2,{\"b1\":\"abc\"}],\"c\":{},\"d\":[]}", "non-prettifying output");
+    ok(v.serialize(true) == "{\n  \"a\": 1,\n  \"b\": [\n    2,\n    {\n      \"b1\": \"abc\"\n    }\n  ],\n  \"c\": {},\n  \"d\": []\n}\n", "prettifying output");
+  }
+
+  try {
+    picojson::value v(std::numeric_limits<double>::quiet_NaN());
+    ok(false, "should not accept NaN");
+  } catch (std::overflow_error e) {
+    ok(true, "should not accept NaN");
+  }
+
+  try {
+    picojson::value v(std::numeric_limits<double>::infinity());
+    ok(false, "should not accept infinity");
+  } catch (std::overflow_error e) {
+    ok(true, "should not accept infinity");
+  }
+
+  try {
+    picojson::value v(123.);
+    ok(! v.is<bool>(), "is<wrong_type>() should return false");
+    v.get<bool>();
+    ok(false, "get<wrong_type>() should raise an error");
+  } catch (std::runtime_error e) {
+    ok(true, "get<wrong_type>() should raise an error");
+  }
+
+#ifdef PICOJSON_USE_INT64
+  {
+    picojson::value v1((int64_t)123);
+    ok(v1.is<int64_t>(), "is int64_t");
+    ok(v1.is<double>(), "is double as well");
+    ok(v1.serialize() == "123", "serialize the value");
+    ok(v1.get<int64_t>() == 123, "value is correct as int64_t");
+    ok(v1.get<double>(), "value is correct as double");
+
+    ok(! v1.is<int64_t>(), "is no more int64_type once get<double>() is called");
+    ok(v1.is<double>(), "and is still a double");
+
+    const char *s = "-9223372036854775809";
+    ok(picojson::parse(v1, s, s + strlen(s)).empty(), "parse underflowing int64_t");
+    ok(! v1.is<int64_t>(), "underflowing int is not int64_t");
+    ok(v1.is<double>(), "underflowing int is double");
+    ok(v1.get<double>() + 9.22337203685478e+18 < 65536, "double value is somewhat correct");
+  }
+#endif
+
+  done_testing();
+
   return success ? 0 : 1;
 }
-*/
 
 #endif

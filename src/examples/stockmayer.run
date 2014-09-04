@@ -35,6 +35,7 @@ test_file          stockmayer.test
 
 exe=./stockmayer
 if [ -x $exe ]; then
+ rm -f gofr.dat mucorr*.dat
  $exe
  rc=$?
  exit $rc

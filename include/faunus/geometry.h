@@ -61,7 +61,7 @@ namespace Faunus {
         virtual bool collision(const particle&, collisiontype=BOUNDARY) const=0;//!< Check for collision with boundaries, forbidden zones, matter,..
         virtual void randompos(Point &)=0;              //!< Random point within container
         virtual void boundary(Point &) const=0;             //!< Apply boundary conditions to a point
-        virtual void scale(Point&, const double&) const;    //!< Scale point to a new volume - for NPT ensemble
+        virtual void scale(Point&, Point &, const double, const double) const;  //!< Scale point
         virtual double sqdist(const Point &a, const Point &b) const=0; //!< Squared distance between two points
         virtual Point vdist(const Point&, const Point&)=0;  //!< Distance in vector form
         virtual ~Geometrybase();
@@ -80,6 +80,8 @@ namespace Faunus {
         double _getVolume() const;
         string _info(char);
       public:
+        Point len;
+        bool setlen(Point);                      //!< Reset radius (angstrom)
         void setRadius(double);                 //!< Set radius (angstrom)
         Sphere(double);                         //!< Construct from radius (angstrom)
         Sphere(InputMap&, string="sphere");     //!< Construct from InputMap key \c prefix_radius
@@ -90,7 +92,7 @@ namespace Faunus {
           return (a-b).squaredNorm();
         }
         inline Point vdist(const Point &a, const Point &b) { return a-b; }
-        void scale(Point&, const double&) const; //!< Linear scaling along radius (NPT ensemble)
+        void scale(Point&, Point &, const double, const double) const; //!< Linear scaling along radius (NPT ensemble)
     };
 
     /*! \brief Cuboid geometry with periodic boundaries
@@ -108,6 +110,7 @@ namespace Faunus {
         double _getVolume() const;
         enum scaletype {XYZ,XY};
         scaletype scaledir;                      //!< Scale directions for pressure scaling
+        string scaledirstr;
       protected:
         Point len_inv;                           //!< Inverse sidelengths
       public:
@@ -125,6 +128,7 @@ namespace Faunus {
           if (std::abs(a.z())>len_half.z()) return true;
           return false;
         }
+
 
         /**
          * For reviews of minimum image algorithms,
@@ -165,7 +169,7 @@ namespace Faunus {
           if (std::abs(a.z())>len_half.z()) a.z()-=len.z()*anint(a.z()*len_inv.z());
         }
 
-        void scale(Point&, const double&) const;
+        void scale(Point&, Point&, const double, const double) const;
     };
 
     /*!
@@ -408,15 +412,6 @@ namespace Faunus {
         translate(geo, p, -chargeCenter(geo, p) );
       }
 
-    /*!
-      \brief Geometric transform of a Point (rotation, translation...)
-      */
-    template<typename Ttransformer>
-      void transform(const Geometrybase &geo, const Ttransformer &t, Point &x) {
-        x=t*x;
-        geo.boundary(x);
-      }
-
     /**
      * @brief Find an empty space for a particle vector in a space of other particles
      * @author Mikael Lund
@@ -590,6 +585,93 @@ namespace Faunus {
             }
         }
         return hit/double(cnt) * pow(L,3);
+      }
+
+    /**
+     * @brief Calculates the gyration tensor of a molecular group
+     *
+     * @param geo Geometry to use for periodic boundaries (if any)
+     * @param p Particle vector
+     * @param g Molecular group
+     * @param cm Center-of-mass of the molecular group
+     *
+     * The gyration tensor is computed from the dyadic product of the position
+     * vectors in the c-o-m reference system, \f$ t_{i} = r_{i} - cm \f$:
+     * \f$ S = \sum_{i=0}^{N} t_{i} t_{i}^{T} \f$
+     *
+     */
+    template<typename Tgeometry, typename Tpvec, typename Tgroup>
+      Tensor<double> gyration(Tgeometry &geo, Tpvec &p, Tgroup &g, const Point &cm) {
+        Tensor<double> S;
+        for (auto i : g) {
+          Point t = p[i] - cm;
+          geo.boundary(t);
+          S += t * t.transpose();
+        }
+        return S*(1/g.size());
+      }
+
+    /** 
+     * @brief Calculate mass center of cluster of particles in unbounded environment 
+     * 
+     * @param geo Geometry to use
+     * @param p Particle vector
+     * @param g Molecular group
+     * @param str Component(s) of the c-o-m to be calculated
+     *
+     * [More info](http://dx.doi.org/10.1080/2151237X.2008.10129266)
+     */
+    template<class Tgeo, class Tpvec, class TGroup>
+      Point trigoCom(const Tgeo &geo, const Tpvec &p, const TGroup &g, string str="Z") {
+        double N = g.size(),
+               lx = geo.len.x(), xhi_x=0, zeta_x=0, theta_x=0, com_x=0,
+               ly = geo.len.y(), xhi_y=0, zeta_y=0, theta_y=0, com_y=0,
+               lz = geo.len.z(), xhi_z=0, zeta_z=0, theta_z=0, com_z=0;
+        if (str=="Z") {
+          for (auto i : g) {
+            theta_z = p[i].z()/lz*2*pc::pi;
+            xhi_z += std::cos(theta_z);
+            zeta_z += std::sin(theta_z);
+          }
+          theta_z = std::atan2(-zeta_z/N,-xhi_z/N) + pc::pi;
+          com_z = lz*theta_z/2/pc::pi;
+        }
+        if (str=="XY") {
+          for (auto i : g) {
+            theta_x = p[i].x()/lx*2*pc::pi;
+            xhi_x += std::cos(theta_x);
+            zeta_x += std::sin(theta_x);
+            theta_y = p[i].y()/ly*2*pc::pi;
+            xhi_y += std::cos(theta_y);
+            zeta_y += std::sin(theta_y);
+          }
+          theta_x = std::atan2(-zeta_x/N,-xhi_x/N) + pc::pi;
+          theta_y = std::atan2(-zeta_y/N,-xhi_y/N) + pc::pi;
+          com_x = lx*theta_x/2/pc::pi;
+          com_y = ly*theta_y/2/pc::pi;
+        }
+        if (str=="XYZ") {
+          for (auto i : g) {
+            theta_x = p[i].x()/lx*2*pc::pi;
+            xhi_x += std::cos(theta_x);
+            zeta_x += std::sin(theta_x);
+            theta_y = p[i].y()/ly*2*pc::pi;
+            xhi_y += std::cos(theta_y);
+            zeta_y += std::sin(theta_y);
+            theta_z = p[i].z()/lz*2*pc::pi;
+            xhi_z += std::cos(theta_z);
+            zeta_z += std::sin(theta_z);
+          }
+          theta_x = std::atan2(-zeta_x/N,-xhi_x/N) + pc::pi;
+          theta_y = std::atan2(-zeta_y/N,-xhi_y/N) + pc::pi;
+          theta_z = std::atan2(-zeta_z/N,-xhi_z/N) + pc::pi;
+          com_x = lx*theta_x/2/pc::pi;
+          com_y = ly*theta_y/2/pc::pi;
+          com_z = lz*theta_z/2/pc::pi;
+        }
+        Point com = Point(com_x,com_y,com_z);
+        geo.boundary(com);
+        return com;
       }
 
   }//namespace Geometry

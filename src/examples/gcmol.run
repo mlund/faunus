@@ -5,7 +5,7 @@
 # TO UPDATE THE TEST.
 
 source_tests_dir="`dirname $0`"
-cp -f $source_tests_dir/polymers.test . 2> /dev/null
+cp -f $source_tests_dir/gcmol.test . 2> /dev/null
 
 #-----------------------------------------------------------
 # Create input file with atom properties

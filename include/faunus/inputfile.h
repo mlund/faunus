@@ -107,7 +107,7 @@ namespace Faunus {
       if (!atomfile.empty())
         atom.includefile(atomfile);
 
-      std::string topoFile = get<std::string>("topology", "");
+      const string topoFile = get<string>("topology", "");
       if (!topoFile.empty())
         molecule.includefile(topoFile);
       return true;

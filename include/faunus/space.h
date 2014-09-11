@@ -102,13 +102,13 @@ namespace Faunus {
         void linkGroupsToTopo();
 
         /// \brief insert p_vec of MolID to end of p and trial
-        Group* insert(Tid, const p_vec&); // inserts to trial and p
+        Group* insert(PropertyBase::Tid, const p_vec&); // inserts to trial and p
 
         ///
         /// \brief insert p_vec of MolID
         /// \param enlarge - sets whether to enlarge group of MolID, or to add new isMolecular()==true group
         ///
-        Group* insert(const p_vec&, Tid, bool enlarge=true);
+        Group* insert(const p_vec&, PropertyBase::Tid, bool enlarge=true);
 
         Group insert(const p_vec&, int=-1);
         bool insert(const Tparticle&, int=-1); //!< Insert particle at pos n (old n will be pushed forward).
@@ -565,7 +565,7 @@ namespace Faunus {
       * @todo Implement insertion at random position
       */
   template<class Tgeometry, class Tparticle>
-    Group* Space<Tgeometry,Tparticle>::insert(Tid molId, const p_vec &pin) {
+    Group* Space<Tgeometry,Tparticle>::insert(PropertyBase::Tid molId, const p_vec &pin) {
       Group* group = new Group(molecule[molId].name);
       group->molId = molId;
 
@@ -593,7 +593,7 @@ namespace Faunus {
       *
       */
   template<class Tgeometry, class Tparticle>
-    Group* Space<Tgeometry,Tparticle>::insert(const p_vec &pin, Tid molId, bool enlarge) {
+    Group* Space<Tgeometry,Tparticle>::insert(const p_vec &pin, PropertyBase::Tid molId, bool enlarge) {
 
       assert(!pin.empty());
 

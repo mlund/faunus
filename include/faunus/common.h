@@ -82,11 +82,6 @@ namespace Faunus {
   // FUNCTORS
   typedef std::function<double()> RandFunctor;
 
-  // Grand Canonical ensemble - type of initialization of insertion combinations
-  enum{RANDOM,POOL};
-
-  typedef unsigned char Tid;
-
 }//namespace
 
 #endif

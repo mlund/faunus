@@ -102,7 +102,7 @@ exe=./gcmol
 if [ -x $exe ]; then
   $exe
   rc=$?
-  rm -f confout.pqr gcmol.input gcmol.aam gcmol.json gcmol.topo
+  rm -f confout.pqr
   exit $rc
 fi
 exit 1

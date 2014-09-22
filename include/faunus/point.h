@@ -10,31 +10,12 @@ namespace Faunus {
   class AtomData;
 
   /**
-   * @page points_and_particles Points and Particles
-   * 
-   * Faunus offers a number of points and particle types
-   * as listed in the table below.
-   *
-   * Class           | Properties
-   * :-------------- | :--------------------
-   * Eigen::Vector3d | 
-   * PointBase       |
-   * HyperPoint      |
-   * PointParticle   |
-   * DipoleParticle  |
-   * CigarParticle   |
-   *
-   */
-
-  /**
    * @brief Cartesian coordinates
    *
    * This is the base class for all particles and takes care
-   * of positions, only. It is derived from Eigen::Vector3d
+   * of positions, only. It is derived from `Eigen::Vector3d`
    * vector and all particles in faunus can hence be freely
    * mixed with Eigen objects.
-   *
-   * @date 2002-2007
    */
   struct PointBase : public Eigen::Vector3d {
     typedef double Tcoord;        //!< Floating point type for Point coordinates
@@ -139,7 +120,7 @@ namespace Faunus {
 
       /** @brief Default constructor. Data is zeroed */
       Tensor() {
-        (*this).clear();
+        (*this).setZero();
       }
 
       Tensor(T xx, T xy, T xz, T yy, T yz, T zz) {
@@ -155,12 +136,9 @@ namespace Faunus {
           return *this;
         }
 
-      /** @brief Zero data */
-      void clear() { Tmat::setZero(); }
-
       /** @brief Read from stream */
       Tensor& operator<<(std::istream &in) {
-        (*this).clear();
+        (*this).setZero();
         for (int i=0; i<(*this).rows(); i++) {
           for (int j=i; j < (*this).cols();j++) {
             in >> (*this)(i,j);

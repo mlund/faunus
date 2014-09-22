@@ -38,8 +38,8 @@ int main() {
 
   cout << spc.info() + pot.info() + pol.info() + textio::header("MC Simulation Begins!");
 
-  while ( loop.macroCnt() ) {  // Markov chain 
-    while ( loop.microCnt() ) {
+  while ( loop[0] ) {  // Markov chain 
+    while ( loop[1] ) {
       int i=slp_global.rand() % 4;
       switch (i) {
         case 0: // translate and rotate polymer

@@ -191,6 +191,27 @@ namespace Faunus {
     }
 
   /**
+   * @brief n'th integer power of float
+   *
+   * On GCC/Clang this will use the fast `__builtin_powi` function.
+   * If not, and `n<7`, a simple loop (that can be unrolled at compile
+   * time) is performed. Of none of the above, `std::pow` is used.
+   */
+  template<int n, typename T=double>
+    T _powi(T &x) {
+#if defined(__GNUG__)
+      return __builtin_powi(x,n);
+#else
+      if (n>6)
+        return std::pow(x,n);
+      while (--n>0)
+        x*=x;
+      return x;
+#endif
+    }
+
+
+  /**
    * @brief Approximate exp() function
    * @note see [Cawley 2000](http://dx.doi.org/10.1162/089976600300015033)
    * @warning Does not work in big endian systems!
@@ -986,7 +1007,7 @@ namespace Faunus {
         void buf2hist(vector<double> &v) {
           this->clear();
           assert(!v.empty());
-          for (int i=0; i<v.size(); i+=3) {
+          for (size_t i=0; i<v.size(); i+=3) {
             if (v[i+2]>1e-20) this->operator()(v[i],v[i+1])+=int(v[i+2]);
           }
         }

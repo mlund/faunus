@@ -344,7 +344,7 @@ namespace Faunus {
   extern AtomMap atom; //!< Global instance of AtomMap - can be accessed from anywhere
 
   /**
-   * @brief Storage for molecule properties
+   * @brief Storage for molecular properties
    *
    * Values can be read from a JSON object with the following format:
    *
@@ -353,8 +353,6 @@ namespace Faunus {
    * "polymer": {"activity": 0.05, "atoms": "MM,MM,MM,MM", "init": "POOL"}
    * ~~~~
    *
-   * or more advanced like in atomData type
-   *
    * The key of type string is the `name` followed, in no particular order,
    * by properties:
    *
@@ -362,10 +360,13 @@ namespace Faunus {
    * :------------ | :-------------------------------------------------------
    * `activity`    | Chemical activity for grand canonical MC [mol/l]
    * `init`        | RANDOM or POOL - using pregenerated configurations
-   * `atoms`       | List of atoms in molecule (use atomsTypes names)
+   * `atoms`       | List of atoms in molecule (use `AtomData` names)
    *
    * NOTE: RANDOM for atomic molecules - for example salt
    *       POOL for molecular molecules - for example polymer
+   *       
+   * @todo Use space separated list of atoms instead of comma
+   *       (simpler loading)
    */
   class MoleculeData  : public PropertyBase {
       using PropertyBase::Tjson;
@@ -376,15 +377,15 @@ namespace Faunus {
       /** @brief Constructor - by default data is initialized; mass set to unity */
       inline MoleculeData(const Tjson &molecule=Tjson()) { readJSON(molecule); }
 
-      std::vector<particle::Tid> atoms; ///< \brief List of atoms in molecule
-      std::vector<p_vec> conformations; ///< \brief Conformations of molecule
+      std::vector<particle::Tid> atoms; //!< List of atoms in molecule
+      std::vector<p_vec> conformations; //!< Conformations of molecule
 
       double activity;
       double chemPot;
 
-      int initType;  ///< \brief sets how inserted combination will be initialized
+      int initType;  //!< Sets how inserted combination will be initialized
 
-      bool isAtomic; // set in GCMolecular, used only in GCM, here for conveniency
+      bool isAtomic; //!< Set in GCMolecular, used only in GCM, here for conveniency
 
       bool operator==(const MoleculeData &d) const { return (*this==d); }
 
@@ -472,11 +473,11 @@ namespace Faunus {
         return this->operator [](molId).conformations[slp_global.rand() % this->operator [](molId).conformations.size() ];
       }
 
-      ///
-      /// \brief Store a single configuration for grand canonical POOL insert
-      /// \param molName of moleculeType
-      /// \param vec of particles
-      ///
+      /**
+       * @brief Store a single configuration for grand canonical POOL insert
+       * @param molName of moleculeType
+       * @param vec of particles
+       */
       void pushConfiguration(string molName, p_vec& vec) {
         for(auto& mol: *this)
           if(molName.compare(mol.name) == 0) {
@@ -499,28 +500,25 @@ namespace Faunus {
         char s=14;
         using namespace textio;
         ostringstream o;
-
-        o << header("Topology");
-
-        o << setw(4) << "" << std::left
+        o << header("Topology")
+          << setw(4) << "" << std::left
           << setw(s) << "Molecule" << setw(s) << "init"
-          << setw(s) << "atoms" << endl;
+          << setw(s) << "atoms\n";
 
         for (auto &i : *this) {
           o << setw(4) << "" << setw(s) << i.name;
-
-          if(i.initType == MoleculeData::RANDOM) o << setw(s) << "RANDOM";
+          if (i.initType == MoleculeData::RANDOM) o << setw(s) << "RANDOM";
           else
-            if(i.initType == MoleculeData::POOL) o << setw(s) << "POOL";
+            if (i.initType == MoleculeData::POOL) o << setw(s) << "POOL";
             else o << setw(s) << "";
 
           for ( auto j=i.atoms.begin(); j!=i.atoms.end(); ++j ) {
             o << setw(0) << atom[(*j)].name;
 
-            if(j != i.atoms.end()-1)
-              o<<",";
+            if (j != i.atoms.end()-1)
+              o << ",";
           }
-          o<<"\n";
+          o << "\n";
         }
         return o.str();
       }

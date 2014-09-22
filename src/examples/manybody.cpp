@@ -94,8 +94,8 @@ int main(int argc, char** argv) {
   vector<Point> cm_vec; // vector of mass centers
 
   MCLoop loop(mcp);
-  while ( loop.macroCnt() ) {  // Markov chain
-    while ( loop.microCnt() ) {
+  while ( loop[0] ) {  // Markov chain
+    while ( loop[1] ) {
       int k,i=rand() % 4;
       switch (i) {
         case 0: // move all proteins
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
                   cmfile << "H " << ((m+spc.geo.len_half)/10).transpose() << "\n";
               }
             if (energyfile)
-              energyfile << loop.count() << " " << sys.current()
+              energyfile << loop.innerCount() << " " << sys.current()
                 << " " << std::cbrt(spc.geo.getVolume()) << "\n";
           }
           break;

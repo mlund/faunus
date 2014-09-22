@@ -99,8 +99,8 @@ int main() {
 
   cout << atom.info() << molecule.info() << gc.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
 
-  while ( loop.macroCnt() ) {  // Markov chain
-    while ( loop.microCnt() ) {
+  while ( loop[0] ) {  // Markov chain
+    while ( loop[1] ) {
       sys+=gc.move();
     }
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current

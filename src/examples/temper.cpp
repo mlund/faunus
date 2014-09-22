@@ -41,8 +41,8 @@ int main() {
 
   mpi.cout << spc.info() << loop.info();      //print initial info
 
-  while ( loop.macroCnt() ) {                 //start markov chain
-    while ( loop.microCnt() ) {
+  while ( loop[0] ) {                 //start markov chain
+    while ( loop[1] ) {
       trans.move();                           //translate particle
       dst(spc.p[0].x())++;                    //update histogram
     }

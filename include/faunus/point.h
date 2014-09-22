@@ -114,7 +114,7 @@ namespace Faunus {
 
   };
 
-  template<class T>
+  template<class T=double>
     struct Tensor : public Eigen::Matrix<T,3,3> {
       typedef Eigen::Matrix<T,3,3> Tmat; //!< Matrix from Eigen
 

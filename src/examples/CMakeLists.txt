@@ -43,6 +43,10 @@ fau_example(example_polymers "./" polymers.cpp)
 set_target_properties(example_polymers PROPERTIES OUTPUT_NAME "polymers")
 add_test( example_polymers ${CMAKE_CURRENT_SOURCE_DIR}/polymers.run )
 
+fau_example(example_gcmol "./" gcmol.cpp)
+set_target_properties(example_gcmol PROPERTIES OUTPUT_NAME "gcmol")
+add_test( example_gcmol ${CMAKE_CURRENT_SOURCE_DIR}/gcmol.run )
+
 fau_example(example_slitpolymer "./" slitpolymer.cpp)
 set_target_properties(example_slitpolymer PROPERTIES OUTPUT_NAME "slitpolymer")
 add_test( example_slitpolymer ${CMAKE_CURRENT_SOURCE_DIR}/slitpolymer.run )

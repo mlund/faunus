@@ -26,7 +26,13 @@ namespace Faunus {
        * @param front First index
        * @param back Last index
        */
-      Group(int front=-1, int back=-1) : Range(front,back-front+1) {
+      Group(int front=-1, int back=-1) : Range(front,back-front+1), name("") {
+        setMolSize(-1);
+        if (front<0 || back<0)
+          resize(0);
+      }
+
+      Group(string name, int front=-1, int back=-1) : Range(front,back-front+1), name(name) {
         setMolSize(-1);
         if (front<0 || back<0)
           resize(0);
@@ -35,6 +41,14 @@ namespace Faunus {
       string name;                            //!< Information time (and short) name
       Point cm_trial;                         //!< mass center vector for trial position
       Point cm;                               //!< mass center vector
+      PropertyBase::Tid molId;                ///< \brief starts at 0, cooperation with MoleculeMap
+
+      int getMolSize() {return molsize;}
+
+      bool operator== (Group& other) {
+        return ((this->front() == other.front()) && (this->back() == other.back()));
+      }
+
 
       /** @brief Information string */
       std::string info() {
@@ -169,6 +183,24 @@ namespace Faunus {
           assert( find( sel.back()  ) );
         }
 
+        /**
+          * @brief Get the i'th molecule in the group
+          * @warning You must manually update the mass center of the returned group
+          */
+        Group getMolecule(int i) const {
+          Group sel(name, front()+i*molsize, front()+i*molsize+molsize-1);
+          sel.molId = this->molId;
+          sel.setMolSize(molsize);
+
+          assert( sel.back() <= this->back());
+          assert( sel.molsize>0 );
+          assert( (sel.size()%molsize)==0 );
+          assert( sel.isMolecular() );
+          assert( find( sel.front() ) );
+          assert( find( sel.back()  ) );
+          return sel;
+        }
+
       /** @brief Scaling for isobaric and isochoric moves */ 
       template<class Tspace>
         void scale(Tspace &spc, Point &s, double xyz=1, double xy=1) {
@@ -297,6 +329,24 @@ namespace Faunus {
           setMolSize(1);
           setMassCenter(spc);
           spc.enroll(*this);
+        }
+
+      /**
+        * @brief Add atomic particles, checks overlaps
+        * @param name of particle type
+        * @param number of particles
+        */
+      template<class Tspace>
+        void addParticles(Tspace &spc, string& name, int count) {
+          if(spc.insert(name, count) ) {
+            if(size() < 0) resize(count);
+            else resize(size()+count);
+            setMolSize(1);
+            setMassCenter(spc);
+          } else {
+            cout << "Error inserting particles, group.h:329";
+            cout << " Group::addParticles(Tspace &spc, string& name, int count)" << endl;
+          }
         }
 
       /**

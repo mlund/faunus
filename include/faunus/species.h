@@ -343,7 +343,6 @@ namespace Faunus {
 
   extern AtomMap atom; //!< Global instance of AtomMap - can be accessed from anywhere
 
-
   /**
    * @brief Storage for molecule properties
    *
@@ -423,14 +422,11 @@ namespace Faunus {
       }
     };
 
-
   /**
    * @brief Class for loading and storing Molecule properties
    *
-   * State topology "filename" in *.input file
-   *
    * This will load molecule properties from disk and store them in a
-   * vector of `AtomData`. The file format is JSON (<http://www.json.org>)
+   * vector of `MoleculeData`. The file format is JSON (<http://www.json.org>)
    * and all molecule properties must be inclosed in an object with
    * the keyword `topology`.
    * While not strictly JSON compliant, comments beginning
@@ -438,6 +434,7 @@ namespace Faunus {
    *
    * For example:
    *
+   * ~~~~
    * {
    *   "topology": {
    *     "salt": { "atoms": "Na,Cl", "init":"RANDOM"},
@@ -447,15 +444,12 @@ namespace Faunus {
    *     "polymer2": {"activity": 0.05, "atoms": "MM,MM,MM,MM", "init": "POOL"}
    *   }
    * }
+   * ~~~~
    *
    * Note that faunus currently has a global instance of `MoleculeMap`,
    * simply named `molecule`. This can be accessed from anywhere.
    *
-   * @note
-   * For simple JSON syntax highlighting in the VIM editor, add
-   * the following to `~/.vimrc`:
-   *
-   *     au! BufRead,BufNewFile *.json set filetype=javascript
+   * @tody More documentation
    */
   class MoleculeMap : public PropertyVector<MoleculeData> {
     public:
@@ -532,6 +526,6 @@ namespace Faunus {
       }
   };
 
-  extern MoleculeMap molecule;
+  extern MoleculeMap molecule; //!< Global instance of MoleculeMap - can be accessed from anywhere
 }//namespace
 #endif

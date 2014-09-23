@@ -724,7 +724,7 @@ namespace Faunus {
           template<class Tgroup>
             Tensor<double> quadrupoleMoment(const Tspace &s, const Tgroup &g) const {
               Tensor<double> theta;
-              theta.clear();
+              theta.setZero();
               assert(g.size()<=(int)s.p.size());
               for (auto i : g) {
                 Point t=s.p[i] - g.cm;

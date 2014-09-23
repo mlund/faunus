@@ -35,8 +35,8 @@ int main() {
   DipoleWRL sdp;
   FormatXTC xtc(spc.geo.len.norm());
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );   // initial energy
-  while ( loop.macroCnt() ) {                         // Markov chain 
-    while ( loop.microCnt() ) {
+  while ( loop[0] ) {                         // Markov chain 
+    while ( loop[1] ) {
       if (slp_global() > 0.5)
         sys+=trans.move( sol.size() );                // translate
       else

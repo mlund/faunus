@@ -117,8 +117,8 @@ int main() {
   cout << atom.info() + spc.info() + pot.info();
 
   MCLoop loop(mcp);            // class for handling mc loops
-  while ( loop.macroCnt() ) {  // Markov chain 
-    while ( loop.microCnt() ) {
+  while ( loop[0]         ) {  // Markov chain 
+    while ( loop[1] ) {
       int i=slp_global.rand() % 3;
       int k=lipids.size(), j;
       Group g;

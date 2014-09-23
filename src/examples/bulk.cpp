@@ -50,8 +50,8 @@ int main() {
   cout << pot.first.pairpot.first.info(spc.p,spc.geo.getVolume()) << endl;
 #endif
 
-  while ( loop.macroCnt() ) {  // Markov chain 
-    while ( loop.microCnt() ) {
+  while ( loop[0] ) {  // Markov chain 
+    while ( loop[1] ) {
       if (slp_global() < 0.5)
         sys+=mv.move( salt.size() );  // translate salt
       else 

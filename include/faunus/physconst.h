@@ -114,6 +114,78 @@ namespace Faunus {
 
   typedef PhysicalConstants<double> pc;      //!< Typedef for PhysicalConstants
 
+  /**
+   * @brief Chemistry units
+   *
+   * Property           | Unit
+   * :----------------- | :--------------------------
+   * Energy             | Thermal energy (kT)
+   * Temperature        | Kelvin (K)
+   * Length             | Angstrom (A) 
+   * Charge             | Electron unit charge (e)
+   * Dipole moment      | Electron angstrom (eA)
+   * Concentration      | Particles / angstrom^3
+   * Pressure           | Particles / angstrom^3
+   * Angle              | Radians
+   */
+  namespace ChemistryUnits {
+
+    // dipole moment (->electron angstrom)
+    constexpr long double operator "" _Debye(long double mu)
+    { return mu * 0.20819434; }
+
+    // length (-> angstrom)
+    constexpr long double operator "" _angstrom(long double l)
+    { return l; }
+
+    constexpr long double operator "" _m(long double l)
+    { return l * 1e10; }
+
+    constexpr long double operator "" _nm(long double l)
+    { return l*10; }
+
+    // volume and conc
+    constexpr long double operator "" _liter(long double v)
+    { return v*1e27; } // -> angstrom^3
+
+    inline long double operator "" _mol(long double n)
+    { return n*PhysicalConstants<double>::Nav; } // -> particles
+
+    inline long double operator "" _molar(long double c)
+    { return c * 1.0_mol / 1.0_liter; } // -> particle / angstrom^3
+
+    // pressure (-> particle/angstrom^3)
+    inline long double operator "" _Pa(long double p)
+    { return p / PhysicalConstants<double>::kT() / 1.0_liter; }
+
+    inline long double operator "" _atm(long double p)
+    { return p*101325.0_Pa; }
+
+    inline long double operator "" _bar(long double p)
+    { return p*100000.0_Pa; }
+
+    // angle (-> rad)
+    constexpr long double operator"" _rad ( long double a )
+    { return a; }
+
+    inline long double operator"" _deg ( long double a )
+    { return a*PhysicalConstants<double>::pi/180; }
+
+    // energy (-> kT)
+    constexpr long double operator"" _kT (long double u)
+    { return u; }
+
+    inline long double operator"" _kJmol (long double u)
+    { return u / PhysicalConstants<double>::kT() / PhysicalConstants<double>::Nav * 1e3; }
+
+    inline long double operator"" _kcalmol (long double u)
+    { return u * 4.1868_kJmol; }
+
+  }//namespace
+
+  // set default unit system
+  using namespace ChemistryUnits;
+
 }// namespace
 #endif
 

@@ -43,9 +43,9 @@ int main() {
 
   cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
 
-  MCLoop loop(mcp);            // class for handling mc loops
-  while ( loop.macroCnt() ) {  // Markov chain 
-    while ( loop.microCnt() ) {
+  MCLoop loop(mcp);    // class for handling mc loops
+  while ( loop[0] ) {          // Markov chain 
+    while ( loop[1] ) {
       int i=slp_global.rand() % 2;
       int j,k=water.size();
       Group g;

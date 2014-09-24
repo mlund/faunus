@@ -35,8 +35,8 @@ int main() {
     + textio::header("MC Simulation Begins!");
 
   MCLoop loop(mcp);            // class for handling mc loops
-  while ( loop.macroCnt() ) {  // Markov chain 
-    while ( loop.microCnt() ) {
+  while ( loop[0] ) {  // Markov chain 
+    while ( loop[1] ) {
       sys+=tit.move();
       mp.sample(g,spc);
     } // end of micro loop

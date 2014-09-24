@@ -36,9 +36,9 @@ int main() {
 
   cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
 
-  mxyz.save("cigars2fibrils-mov", spc.p, spc.geo.len, loop.count());
-  while ( loop.macroCnt() ) {  // Markov chain 
-    while ( loop.microCnt() ) {
+  mxyz.save("cigars2fibrils-mov", spc.p, spc.geo.len, loop.innerCount());
+  while ( loop[0] ) {  // Markov chain 
+    while ( loop[1] ) {
       int i=slp_global.rand() % 2;
       switch (i) {
         case 0:
@@ -55,7 +55,7 @@ int main() {
 
     cout << loop.timing();
 
-    mxyz.save("cigars2fibrils-mov", spc.p, spc.geo.len, loop.count());
+    mxyz.save("cigars2fibrils-mov", spc.p, spc.geo.len, loop.innerCount());
   } // end of macro loop
 
   // print information about simulationat the end

@@ -8,6 +8,7 @@
 #include <faunus/textio.h>
 #include <faunus/point.h>
 #include <faunus/slump.h>
+#include <faunus/average.h>
 #endif
 
 namespace Faunus {
@@ -182,8 +183,9 @@ namespace Faunus {
   template<class Tproperty, class base=std::vector<Tproperty> >
     class PropertyVector : private base {
       protected:
-        string jsonfile; // keep name of json file
-        string name;     // name of properties
+        string jsonfile;    // keep name of json file
+        string jsonsection; // section to look for elements
+        string name;        // name of properties
       public:
         using typename base::value_type;
         using typename base::size_type;
@@ -242,11 +244,12 @@ namespace Faunus {
          * @param section Section in JSON file to scan
          * @note All data is reset before loading
          */
-        bool includefile(const string& file, const string& section) {
+        bool includefile(const string& file) {
+          assert(!jsonsection.empty() && "json section empty");
           jsonfile=file;
           base::resize(1); // keep default property
           auto j = json::open(file);
-          for (auto &a : json::object(section, j) )
+          for (auto &a : json::object(jsonsection, j) )
             push_back( value_type(a) );
           return ( empty() ? false : true );
         }
@@ -327,10 +330,11 @@ namespace Faunus {
 
       AtomMap() {
         base::name = "Atom Properties";
+        base::jsonsection = "atomlist";
       }
 
-      bool includefile(const std::string&); //!< Read JSON file
-      bool includefile(InputMap&);     //!< Read JSON file given through `InputMap`
+      bool includefile(InputMap&);      /// Read JSON file given through `InputMap`
+      bool includefile(const string &); /// Read JSON file directly
 
       /**
        * @brief Copy properties into particle vector.
@@ -459,11 +463,12 @@ namespace Faunus {
       typedef PropertyVector<MoleculeData> base;
 
       MoleculeMap() {
+        base::jsonsection = "topology";
         base::name = "Molecule Properties";
       }
 
-      bool includefile(const string&); //!< Read JSON file
-      bool includefile(InputMap&);     //!< Read JSON file given through `InputMap`
+      bool includefile(InputMap&);     /// Read JSON file given through `InputMap`
+      bool includefile(const string&); /// Read JSON file directly
 
       ///
       /// \return count of moleculeTypes stored
@@ -527,5 +532,68 @@ namespace Faunus {
   };
 
   extern MoleculeMap molecule; //!< Global instance of MoleculeMap - can be accessed from anywhere
+
+  /**
+   * @brief Molecular combinations for Grand Canonical moves, Widom insertion etc.
+   *
+   * JSON entry examples:
+   *
+   * ~~~~
+   * "topology" : {
+   *    "ion1" : { "atoms" : "Na" },
+   *    "ion2" : { "atoms" : "Cl" }
+   * },
+   *
+   * "combinations" : {
+   *    "NaCl" : { "species" : "ion1 ion2", "prob" : 0.5 },
+   * }
+   * ~~~~
+   *
+   * The key of type string is the `name` followed, in no particular order,
+   * by properties:
+   *
+   * Key           | Description
+   * :------------ | :--------------------------------------
+   * `species`     | list of molecule types, space separated
+   * `prob`        | insertion probability [0:1]
+   *
+   * the final probability of combination is: prob_i / (sum_all prob_i)
+   */
+  struct MoleculeCombo : public PropertyBase {
+    inline void readJSON(const Tjson &comb) FOVERRIDE {
+      molComb.clear();
+      name = comb.first;
+      probability = json::value<double>(comb.second, "prob", 1.0);
+      string l = json::value<string>(comb.second, "species", "");
+      if (!l.empty()) {
+        std::stringstream s(l);
+        for (int i=0; s>>l; i++) {
+          auto it = molecule.find(l);
+          if (it!=molecule.end())
+            molComb.push_back(it->id);
+        }
+      }
+    }
+    inline MoleculeCombo(const Tjson &comb=Tjson()) { readJSON(comb); }   
+    Average<unsigned int> acceptance; /// +=1 if accepted, +=0 if rejected
+    vector<PropertyBase::Tid> molComb;/// list of molecule types in combination
+    double probability;               /// probability of this combination in GC-MC move
+  };
+
+  /**
+   * @brief Vector of molecular combinations
+   *
+   * When examining a JSON file, individual entries must be placed
+   * in a section called `moleculecombo`.
+   */
+  struct MoleculeComboMap : public PropertyVector<MoleculeCombo> {
+    typedef PropertyVector<MoleculeCombo> base;
+    bool includefile(InputMap &); 
+    MoleculeComboMap() {
+      base::name = "GC Combinations";
+      base::jsonsection = "moleculecombo";
+    }
+  };
+
 }//namespace
 #endif

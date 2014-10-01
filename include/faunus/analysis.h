@@ -583,7 +583,7 @@ namespace Faunus {
             Rg2x[pol.name] += r2.x();
             Rg2y[pol.name] += r2.y();
             Rg2z[pol.name] += r2.z();
-            Rg[pol.name]   += r2.norm();
+            Rg[pol.name]   += sqrt(r2.x()+r2.y()+r2.z());
             Re2[pol.name]  += re2; //end-2-end squared
             double rs = Re2[pol.name].avg()/Rg2[pol.name].avg(); // fluctuations in shape factor
             Rs[pol.name]   += rs;

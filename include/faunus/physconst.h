@@ -203,6 +203,10 @@ namespace Faunus {
     constexpr long double operator"" _kT (long double u)
     { return u; }
 
+    /// Energy in Joule
+    inline long double operator"" _J (long double u)
+    { return u / PhysicalConstants<double>::kT(); }
+
     /// Energy in kJ/mol
     inline long double operator"" _kJmol (long double u)
     { return u / PhysicalConstants<double>::kT() / PhysicalConstants<double>::Nav * 1e3; }
@@ -211,9 +215,9 @@ namespace Faunus {
     inline long double operator"" _kcalmol (long double u)
     { return u * 4.1868_kJmol; }
 
-    /// Energy in hartree (Check this; temperature?)
-    constexpr long double operator"" _hartree (long double u)
-    { return u * 4.3597441775*pow(10,-18); }
+    /// Energy in hartree
+    inline long double operator"" _hartree (long double u)
+    { return u * 4.35974434e-18_J; }
 
   }//namespace
 

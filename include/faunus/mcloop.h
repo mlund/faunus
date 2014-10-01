@@ -113,11 +113,11 @@ namespace Faunus {
       inline std::string timing() const {
         using namespace textio;
         std::ostringstream o;
-        o << indent(SUB) << "Steps: " << std::right << std::setw(3) << base::count(0)
-          << " / " << std::left << std::setw(8) << base::innerCount()
-          << indent(SUB) << "Speed: " << std::left << std::setw(9)
+        o << indent(SUB) << "Steps: " << std::right << std::setw(4) << base::count(0)
+          << " / " << std::left << std::setw(10) << base::innerCount()
+          << indent(SUB) << "Macrosteps/min: " << std::left << std::setw(6)
           << int(1./(base::speed()/1000./60))
-          << "ETA: " << eta() << std::flush;
+          << "  ETA: " << eta() << std::flush;
         return o.str();
       }
 

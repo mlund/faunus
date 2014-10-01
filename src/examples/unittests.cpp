@@ -222,5 +222,6 @@ TEST_CASE("String literals","Check unit conversion")
   CHECK( 1.0_bar == Approx( 0.987_atm ) );
   CHECK( 1.0_atm == Approx( 101325._Pa) );
   CHECK( 1.0_kT == Approx( 2.47897_kJmol ) );
+  CHECK( 1.0_hartree == Approx( 2625.499_kJmol ) );
 }
 

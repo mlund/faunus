@@ -252,6 +252,8 @@ namespace Faunus {
         }
 
         PropertyVector() {
+          static_assert(std::is_base_of<PropertyBase, Tproperty>::value,
+              "Elements must be derived from `PropertyBase`");
           push_back( value_type() ); // add default property
         }
 

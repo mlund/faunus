@@ -200,8 +200,10 @@ namespace Faunus {
     /*!
      * \brief Radial distribution analysis
      *
-     * This radial distribution is defined as \f$ g(r) = \rho(r) / \rho(\infty) \f$ where \f$ \rho \f$ are
-     * the particle densities in spherical volume element `rdr` and in the bulk, respectively.
+     * This radial distribution is defined as
+     * @f$ g(r) = \rho(r) / \rho(\infty) @f$
+     * where @f$\rho@f$ are particle densities in a spherical volume element
+     * `rdr` and in the bulk, respectively.
      *
      * Example:
      *
@@ -213,7 +215,7 @@ namespace Faunus {
      * rdf.save("rdf.dat");
      * ~~~
      *
-     * \date Lund 2011
+     * @date Lund 2011
      */
     template<typename Tx=float, typename Ty=unsigned long long int>
       class RadialDistribution : public Table2D<Tx,Ty> {
@@ -232,10 +234,10 @@ namespace Faunus {
             if (bulkconc.avg()<1e-6) bulkconc+=1;
             if (Npart.cnt==0) Npart+=1;
 
-            return ((double)this->operator()(x)*Npart.avg()) / (volume(x) *(double)this->count() * bulkconc.avg())
-              ;
-
+            return ((double)this->operator()(x)*Npart.avg())
+              / (volume(x) *(double)this->count() * bulkconc.avg());
           }
+
           Average<double> bulkconc; //!< Average bulk concentration
           Average<double> Npart;
         public:
@@ -548,7 +550,8 @@ namespace Faunus {
         PolymerShape();
 
         /** 
-         * @note This functions is now public and const. I don't see the point of making it static, yet. - Joao Henriques.
+         * @note This functions is now public and const.
+         * I don't see the point of making it static, yet. - Joao Henriques.
          */
         template<class Tgroup, class Tspace>
           Point vectorgyrationRadiusSquared(const Tgroup &pol, const Tspace &spc) const {
@@ -580,7 +583,7 @@ namespace Faunus {
             Rg2x[pol.name] += r2.x();
             Rg2y[pol.name] += r2.y();
             Rg2z[pol.name] += r2.z();
-            Rg[pol.name]   += sqrt(r2.x()+r2.y()+r2.z());
+            Rg[pol.name]   += r2.norm();
             Re2[pol.name]  += re2; //end-2-end squared
             double rs = Re2[pol.name].avg()/Rg2[pol.name].avg(); // fluctuations in shape factor
             Rs[pol.name]   += rs;

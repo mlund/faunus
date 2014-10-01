@@ -271,26 +271,35 @@ namespace Faunus {
     void Cylinder::init(double length, double radius) {
       name="Cylindrical (hard ends)";
       assert(length>0 && radius>0 && "Cylinder length and radius must be bigger than zero.");
-      len=length;
-      setVolume( pc::pi*radius*radius*len );
+      _len=length;
+      setVolume( pc::pi*radius*radius*_len );
+    }
+
+    /**
+     * Dummy function not be used other than for compatibility
+     * reasons. Sets length to x component of vector.
+     */
+    bool Cylinder::setlen(const Point &l) {
+      init( l.x(), r); 
+      return true;
     }
 
     void Cylinder::_setVolume(double newV) {
-      r2=newV/(pc::pi*len);
+      r2=newV/(pc::pi*_len);
       r=sqrt(r2);
       diameter=2*r;
-      halflen=len/2;
+      _halflen=_len/2;
     }
 
     double Cylinder::_getVolume() const {
-      return r2*pc::pi*len;
+      return r2*pc::pi*_len;
     }
 
     void Cylinder::boundary(Point &p) const {}
 
     void Cylinder::randompos(Point &m) {
       double l=r2+1;
-      m.z() = slp.randHalf()*len;
+      m.z() = slp.randHalf()*_len;
       while (l>r2) {
         m.x() = slp.randHalf()*diameter;
         m.y() = slp.randHalf()*diameter;
@@ -299,16 +308,16 @@ namespace Faunus {
     }
 
     bool Cylinder::collision(const particle &a, collisiontype type) const {
-      assert( (halflen-len/2)<1e-9 && "Cylinder length initialization problems" );
-      if ( a.z()<-halflen ) return true;
-      if ( a.z()>halflen ) return true;
+      assert( (_halflen-_len/2)<1e-9 && "Cylinder length initialization problems" );
+      if ( a.z()<-_halflen ) return true;
+      if ( a.z()>_halflen ) return true;
       if ( a.x()*a.x()+a.y()*a.y()>r2 ) return true;
       return false;
     }
 
     string Cylinder::_info(char w) {
       std::ostringstream o;
-      o << pad(SUB,w, "Length") << halflen*2 << textio::_angstrom << endl
+      o << pad(SUB,w, "Length") << _halflen*2 << textio::_angstrom << endl
         << pad(SUB,w, "Radius") << sqrt(r2) << textio::_angstrom << endl;
       return o.str();
     }
@@ -322,8 +331,8 @@ namespace Faunus {
     }
 
     void PeriodicCylinder::boundary(Point &a) const {
-      if (std::abs(a.z())>halflen)
-        a.z()-=len*anint(a.z()/len);
+      if (std::abs(a.z())>_halflen)
+        a.z()-=_len*anint(a.z()/_len);
     }
 
 #ifdef HYPERSPHERE

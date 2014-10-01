@@ -131,6 +131,8 @@ namespace Faunus {
           << pad(SUB,25,"Time elapsed") << s/60. << " min = " << s/3600. << " h\n";
         return o.str();
       }
+      bool macroCnt() { return base::operator[](0); }
+      bool microCnt() { return base::operator[](1); }
   };
 
 }// namespace

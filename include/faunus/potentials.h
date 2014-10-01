@@ -347,7 +347,8 @@ namespace Faunus {
      * \left ((\sigma_{ij}/r_{ij})^{12}-(\sigma_{ij}/r_{ij})^6\right )
      * @f$
      * where
-     * \f$\sigma_{ij} = (\sigma_i+\sigma_j)/2\f$ and \f$\epsilon_{lj}=\epsilon\f$
+     * \f$\sigma_{ij} = (\sigma_i+\sigma_j)/2\f$
+     * and \f$\epsilon_{lj}=\epsilon\f$
      * is the same for all pairs in this class.
      */
     class LennardJones : public PairPotentialBase {
@@ -400,7 +401,7 @@ namespace Faunus {
      * keyword will be used to set the cut-off.
      *
      *
-     * @todo Implement force calculation
+     * @todo Implement continuous force calculation
      */
     template<class Tpairpot>
       class CutShift : public Tpairpot {
@@ -429,11 +430,13 @@ namespace Faunus {
     /**
      * @brief Lennard-Jones with arbitrary mixing rule
      *
-     * @details This is a template for Lennard-Jones pair interactions where the template parameter
-     * must be a class for the epsilon and sigma mixed rules. The atomic values for 
-     * sigma and epsilon are taken from `AtomMap` via the global instance
-     * `atom`. In your InputMap configuration file you would typically set the atom list file using
-     * the keyword `atomlist`. Note that sigma for each atom is set to two times the radius found in
+     * @details This is a template for Lennard-Jones pair interactions where the
+     * template parameter must be a class for the epsilon and sigma mixed rules.
+     * The atomic values for sigma and epsilon are taken from `AtomMap` via the
+     * global instance `atom`.
+     * In your InputMap configuration file you would typically set the atom list
+     * file using the keyword `atomlist`.
+     * Note that sigma for each atom is set to two times the radius found in
      * `AtomMap`. Epsilon is stored internally in `kT*4`.
      *
      * For example:
@@ -454,14 +457,12 @@ namespace Faunus {
             size_t n=atom.size(); // number of atom types
             s2.resize(n); // not required...
             eps.resize(n);// ...but possible reduced mem. fragmentation
-            for (size_t i=0; i<n; i++)
-              for (size_t j=0; j<n; j++) {
-                s2.set(i,j,
-                    pow( mixer.mixSigma( atom[i].sigma, atom[j].sigma), 2));
-                eps.set(i,j,
-                    4*mixer.mixEpsilon( atom[i].eps, atom[j].eps ));
-                eps.set(i,j,
-                    pc::kJ2kT( eps(i,j) ) ); // convert to kT
+            for (auto &i : atom)
+              for (auto &j : atom) {
+                s2.set(i.id, j.id,
+                    pow( mixer.mixSigma( i.sigma, j.sigma), 2));
+                eps.set(i.id, j.id,
+                    4.0_kJmol * mixer.mixEpsilon( i.eps, j.eps ));
               }
           }
 
@@ -1032,6 +1033,16 @@ namespace Faunus {
           }
 
         /**
+         * @brief Scaled charge according to
+         * @f$ z^{\prime} = z \sinh(\kappa a) / \kappa a @f$
+         */ 
+        template<class Tparticle>
+          double scaledCharge(const Tparticle &p) const {
+            double ka=p.radius/debyeLength();
+            return std::sinh(ka)/ka*p.charge;
+          }
+
+        /**
          * @brief Adds counter ions to kappa
          */
         template<class Tspace>
@@ -1242,6 +1253,64 @@ namespace Faunus {
             return lB * a.charge * b.charge * ( exp(-k*r) / r2 * (k + 1/r) + dudrc / r) * p;
 #endif
           }
+    };
+
+    /**
+     * @brief Cardinaux pair potential:
+     *        @f$ \beta u_{ij}=4\beta\epsilon_{ij}
+     *        ( (\frac{\sigma_{ij}}{r_{ij}})^{2\alpha}
+     *        - (\frac{\sigma_{ij}}{r_{ij}})^{\alpha}  )@f$
+     *
+     * The interaction strength, @f$\epsilon@f$ is set by the
+     * quadratic mean of individual values from `AtomData`.
+     * By default @f$\alpha=90@f$ and may be changed via
+     * the `cardinaux_alpha` keyword in the `InputMap`.
+     * More info at
+     * [http://dx.doi.org/doi:10.1209/0295-5075/77/48004]
+     *
+     * @todo Force calculation can be slightly optimized
+     */
+    class Cardinaux : public Potential::PairPotentialBase {
+      private:
+        string _brief() {
+          return name+": a=" + std::to_string(alpha);
+        }
+        int alpha,alphahalf;
+        PairMatrix<double> eps; // 4*beta*epsilon for all pairs
+      public:
+        Cardinaux(InputMap &in, string pfx="cardinaux") {
+          name="Cardinaux";
+          alpha=in.get<int>(pfx+"_alpha", 90);
+          alphahalf=0.5*alpha;
+          for (auto &i : atom)
+            for (auto &j : atom)
+              eps.set(i.id, j.id, sqrt( i.eps*j.eps )*4.0_kJmol );
+        }
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
+            double s=a.radius+b.radius;
+            s=s*s/r2; // ^2
+#if defined(__GNUG__)
+            s=__builtin_powi(s,alphahalf); // = (s/r)^a
+#else
+            s=pow(s,alphahalf); // (s/r)^2
+#endif
+            return eps(a.id,b.id)*(s*s - s);
+          }
+
+        template<typename Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            double s=a.radius+b.radius;
+            s=s*s/r2; //^2
+#if defined(__GNUG__)
+            s=__builtin_powi(s,alphahalf); // = (s/r)^a
+#else
+            s=pow(s,alphahalf);
+#endif
+            return alpha*eps(a.id,b.id)*s*(2*s-1)/r2 * p; // extra division can be avoided
+          }
+
+        string info(char w) { return "  "+_brief()+"\n"; }
     };
 
     /**

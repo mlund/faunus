@@ -114,17 +114,17 @@ namespace Faunus {
     inline void readJSON(const Tjson &atom) FOVERRIDE {
       name = atom.first;
       activity = json::value<double>(atom.second, "activity", 0);
-      chemPot = log( activity*pc::Nav*1e-27);
+      chemPot = log( activity * 1.0_molar );
       alpha << json::value<std::string>(atom.second, "alpha", "");
       alpha *= 4*pc::pi*pc::e0*(1e-10)*pc::kT()/(pc::e*pc::e);
       theta << json::value<std::string>(atom.second, "theta", "");
-      theta *= 0.20819434; // Debye Å -> e Å^2
+      theta *= 1.0_Debye;
       dp = json::value<double>(atom.second, "dp", 0);
-      dprot = json::value<double>(atom.second, "dprot", 0) * pc::pi / 180.; // deg->rads
+      dprot = json::value<double>(atom.second, "dprot", 0) * 1._deg; // deg->rads
       eps = json::value<double>(atom.second, "eps", 0);
       hydrophobic = json::value<bool>(atom.second, "hydrophobic", false);
       mu << json::value<std::string>(atom.second, "mu", "0 0 0");
-      muscalar = mu.len()*pc::D2eA();
+      muscalar = mu.len()* 1.0_Debye;
       if (mu.len()>1e-6)
         mu = mu/mu.len();
       mw = json::value<double>(atom.second, "Mw", 1.);
@@ -138,9 +138,9 @@ namespace Faunus {
       patchtype = json::value<double>(atom.second, "patchtype", 0);
       pswitch = json::value<double>(atom.second, "patchswitch", 0);
       pdis = json::value<double>(atom.second, "patchdistance", 0);
-      pangl = json::value<double>(atom.second, "patchangle", 0)/180.0*pc::pi;
-      panglsw = json::value<double>(atom.second, "patchangleswitch", 0)/180.0*pc::pi;
-      chiral_angle = json::value<double>(atom.second, "patchchiralangle", 0)/180.0*pc::pi;
+      pangl = json::value<double>(atom.second, "patchangle", 0) * 1._deg;
+      panglsw = json::value<double>(atom.second, "patchangleswitch", 0) * 1._deg;
+      chiral_angle = json::value<double>(atom.second, "patchchiralangle", 0) * 1._deg;
       betaC = json::value<double>(atom.second, "betaC", pc::infty);
       betaD = json::value<double>(atom.second, "betaD", pc::infty);
       betaQ = json::value<double>(atom.second, "betaQ", pc::infty);

@@ -2132,11 +2132,10 @@ namespace Faunus {
      * @brief Grand canonical move for molecular species
      * @date Lund, 2014
      *
-     * USAGE PRESUMES FOLLOWING:
-     * =========================
+     * Please consider the following:
      *
      *   - for atomic species use only one large group per Molecular type
-     *   - for molecular species ise only molecular groups
+     *   - for molecular species use only molecular groups
      */
     template<class Tspace>
       class GCMolecular : public Movebase<Tspace> {
@@ -2176,11 +2175,11 @@ namespace Faunus {
 
             prob = 1.0/prob;
 
-            o << header("Grand Canonical Combinations");
-
-            o << setw(4) << "" << std::left
+            o << header("Grand Canonical Combinations")
+              << setw(4) << "" << std::left
               << setw(s) << "Name" << setw(s) << "probability"
-              << setw(s) << "Del acc" << setw(s) << "Ins acc" << setw(s) << "molecules" << endl;
+              << setw(s) << "Del acc" << setw(s) << "Ins acc" << setw(s)
+              << "molecules" << endl;
 
             for (auto &i : gCCombinations) {
               o << setw(4) << "" << setw(s) << i.name
@@ -2191,7 +2190,8 @@ namespace Faunus {
                   << "-";
               } else {
                 o << setw(s)
-                  << std::to_string(100*i.delAcceptance/i.delCnt).append("%") << setw(s)
+                  << std::to_string(100*i.delAcceptance/i.delCnt).append("%")
+                  << setw(s)
                   << std::to_string(100*i.insAcceptance/i.insCnt).append("%");
               }
 
@@ -2242,8 +2242,9 @@ namespace Faunus {
             *
             *  alternateEnergy = E_all + E_external + E_internal
             *
-            *  NOTE: i_total used for atomic species -> internal energy == 0
-            *        i_total -> for atomic species calculates interaction within delGroup twice
+            *  @note `i_total` used for atomic species -> internal energy == 0
+            *        `i_total` -> for atomic species calculates interaction
+            *        within delGroup twice
             */
           double _energyChange();
 
@@ -2393,27 +2394,22 @@ namespace Faunus {
 
     template<class Tspace>
       string GCMolecular<Tspace>::_info() {
-
         char s=10;
         using namespace textio;
         ostringstream o;
 
-        o << pad(SUB,base::w,"Number of GC species") << "\n\n";
-        o << setw(4) << "" << std::left
+        o << pad(SUB,base::w,"Number of GC species") << "\n\n"
+          << setw(4) << "" << std::left
           << setw(s) << "Atom" << setw(s) << "activity"
           << setw(s+4) << bracket("c/M") << setw(s+6) << bracket( gamma+pm )
-          << setw(s+4) << bracket("N") << "\n";
-
-        o << tracker.infoAtoms(spc->geo.getVolume());
-
-        o << "\n";
-        o << setw(4) << "" << std::left
+          << setw(s+4) << bracket("N") << "\n"
+          << tracker.infoAtoms(spc->geo.getVolume())
+          << "\n"
+          << setw(4) << "" << std::left
           << setw(s) << "Molecule" << setw(s) << "activity"
-          << setw(s+4) << bracket("N") << "\n";
-
-        o << tracker.infoMolecules();
-
-        o << infoCombinations();
+          << setw(s+4) << bracket("N") << "\n"
+          << tracker.infoMolecules()
+          << infoCombinations();
 
         return o.str();
       }

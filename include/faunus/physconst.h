@@ -117,6 +117,11 @@ namespace Faunus {
   /**
    * @brief Chemistry units
    *
+   * This is the default and currently only unit system in Faunus.
+   * By using string literals one may specify properties in
+   * arbitrary units that will automatically be converted to the
+   * following:
+   *
    * Property           | Unit
    * :----------------- | :--------------------------
    * Energy             | Thermal energy (kT)
@@ -127,59 +132,88 @@ namespace Faunus {
    * Concentration      | Particles / angstrom^3
    * Pressure           | Particles / angstrom^3
    * Angle              | Radians
+   *
+   * Example:
+   *
+   * ~~~~
+   * std::cout << 1.0_nm;       // 10
+   * std::cout << 180.0_deg;    // 3.1415...
+   * std::cout << 25_C;         // 298.15
+   * std::cout << 50_K;         // 50
+   * ~~~~
    */
   namespace ChemistryUnits {
+    /// Temperature in kelvin
+    constexpr long double operator "" _K(long double T)
+    { return T; }
 
-    // dipole moment (->electron angstrom)
+    /// Temperature in celcius
+    constexpr long double operator "" _C(long double T)
+    { return 273.15+T; }
+
+    /// Dipole moment in Debye
     constexpr long double operator "" _Debye(long double mu)
     { return mu * 0.20819434; }
 
-    // length (-> angstrom)
+    /// Length in angstrom
     constexpr long double operator "" _angstrom(long double l)
     { return l; }
 
+    /// Length in meters
     constexpr long double operator "" _m(long double l)
     { return l * 1e10; }
 
+    /// Length in nanometers
     constexpr long double operator "" _nm(long double l)
     { return l*10; }
 
-    // volume and conc
+    /// Volume in litres
     constexpr long double operator "" _liter(long double v)
-    { return v*1e27; } // -> angstrom^3
+    { return v*1e27; }
 
+    /// Number of molecules in moles
     inline long double operator "" _mol(long double n)
     { return n*PhysicalConstants<double>::Nav; } // -> particles
 
+    /// Concentration in moles per liter
     inline long double operator "" _molar(long double c)
     { return c * 1.0_mol / 1.0_liter; } // -> particle / angstrom^3
 
-    // pressure (-> particle/angstrom^3)
+    /// Pressure in Pascal
     inline long double operator "" _Pa(long double p)
     { return p / PhysicalConstants<double>::kT() / 1.0_liter; }
 
+    /// Pressure in atmosphere
     inline long double operator "" _atm(long double p)
     { return p*101325.0_Pa; }
 
+    /// Pressure in bar
     inline long double operator "" _bar(long double p)
     { return p*100000.0_Pa; }
 
-    // angle (-> rad)
+    /// Angle in radians
     constexpr long double operator"" _rad ( long double a )
     { return a; }
 
+    /// Angle in degrees
     inline long double operator"" _deg ( long double a )
     { return a*PhysicalConstants<double>::pi/180; }
 
-    // energy (-> kT)
+    /// Energy in kT
     constexpr long double operator"" _kT (long double u)
     { return u; }
 
+    /// Energy in kJ/mol
     inline long double operator"" _kJmol (long double u)
     { return u / PhysicalConstants<double>::kT() / PhysicalConstants<double>::Nav * 1e3; }
 
+    /// Energy in kcal/mol
     inline long double operator"" _kcalmol (long double u)
     { return u * 4.1868_kJmol; }
+
+    /// Energy in hartree (Check this; temperature?)
+    constexpr long double operator"" _hartree (long double u)
+    { return u * 4.3597441775*pow(10,-18); }
 
   }//namespace
 

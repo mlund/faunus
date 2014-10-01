@@ -2549,7 +2549,9 @@ namespace Faunus {
                 if( Geometry::FindSpace().find(spc->p, pin, spc->geo) ) {
                   insList.push_back(Ins(spc->insert(mol->id, pin), pin));
                 } else {
-                  for(auto it =  insList.begin(); it!= insList.end(); ++it) {
+                  for(auto it =  insList.rbegin(); it!= insList.rend(); ++it) {
+                    assert( spc->p.begin()+it->group->back() < spc->p.end()  );
+                    assert( spc->trial.begin()+it->group->back() < spc->trial.end());
                     spc->p.erase( spc->p.begin()+ it->group->front(), spc->p.begin()+it->group->back()+1);
                     spc->trial.erase( spc->trial.begin()+it->group->front(), spc->trial.begin()+it->group->back()+1 );
                     delete it->group;
@@ -2594,7 +2596,9 @@ namespace Faunus {
         // insMove
         Group* in;
         // erasing insList groups from back of p and trial
-        for(auto it =  insList.begin(); it!= insList.end(); ++it) {
+        for(auto it =  insList.rbegin(); it!= insList.rend(); ++it) {
+          assert( spc->p.begin()+ it->group->front() < spc->p.end() );
+          assert( spc->trial.begin()+ it->group->front() < spc->trial.end() );
           spc->p.erase( spc->p.begin()+ it->group->front(), spc->p.begin()+it->group->back()+1);
           spc->trial.erase( spc->trial.begin()+it->group->front(), spc->trial.begin()+it->group->back()+1 );
         }

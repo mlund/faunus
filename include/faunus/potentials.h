@@ -513,7 +513,7 @@ namespace Faunus {
                     o << indent(SUBSUB) << setw(12) << atom[i].name+"<->"+atom[j].name
                       << indent(SUB) << sigma+" = " << setw(7) << sqrt( s2(i,j) ) << _angstrom
                       << indent(SUB) << epsilon+" = " << setw(7) << eps(i,j)/4 << kT+" = "
-                      << pc::kT2kJ(eps(i,j)/4) << " kJ/mol"
+                      << eps(i,j) / 4.0_kJmol << " kJ/mol"
                       << endl;
             return o.str();
           }

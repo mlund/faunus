@@ -217,6 +217,8 @@ TEST_CASE("String literals","Check unit conversion")
   pc::setT(298.15);
   CHECK( 1.0e-10_m == 1 );
   CHECK( (1/1.0_Debye) == Approx(4.8032) );
+  CHECK( 1.0_Debye == Approx( 3.33564e-30_Cm ) );
+  CHECK( 1.0_Debye == Approx( 0.20819434_eA ) );
   CHECK( 360.0_deg == Approx( 2*std::acos(-1) ) );
   CHECK( (1.0_mol / 1.0_liter) == Approx( 1.0_molar ) );
   CHECK( 1.0_bar == Approx( 0.987_atm ) );

@@ -1508,11 +1508,23 @@ namespace Faunus {
           using namespace Faunus::textio;
           std::ostringstream o;
           o << header("Dipole analysis");
-          o << indent(SUB) << epsilon_m+subr+"(Tinfoil)" << setw(22) << getDielTinfoil() << ", "+sigma+"=" << diel_std.stdev() << ", "+sigma+"/"+epsilon_m+subr+"=" << (100*diel_std.stdev()/getDielTinfoil()) << percent << endl
-            << indent(SUB) << bracket("M"+squared) << setw(27) << pc::eA2D(M2_box.avg(),2) << " Debye"+squared+", "+sigma+"=" << pc::eA2D(M2_box.stdev(),2) << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg()) << percent << endl
-            << indent(SUB) << bracket("M") << setw(25) << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl 
-            << indent(SUBSUB) << sigma << setw(25) << "( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl
-            << indent(SUB) << bracket("|"+mu+"|") << setw(25) << pc::eA2D(mu_abs.avg()) << " Debye, "+sigma+"=" << pc::eA2D(mu_abs.stdev()) << ", "+sigma+"/"+bracket("|"+mu+"|")+"=" << (100*mu_abs.stdev()/mu_abs.avg()) << percent << endl;
+          o << indent(SUB) << epsilon_m+subr+"(Tinfoil)" << setw(22) << getDielTinfoil()
+            << ", "+sigma+"=" << diel_std.stdev() << ", "+sigma+"/"+epsilon_m+subr+"="
+            << (100*diel_std.stdev()/getDielTinfoil()) << percent << endl
+            << indent(SUB) << bracket("M"+squared) << setw(27) << M2_box.avg()
+            << " eA"+squared+", "+sigma+"=" << M2_box.stdev()
+            << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg())
+            << percent << "\n"
+            << indent(SUB) << bracket("M") << setw(25) << "( " << M_x_box.avg()
+            << " , " << M_y_box.avg() << " , " << M_z_box.avg()
+            << " ) eA\n" 
+            << indent(SUBSUB) << sigma << setw(25) << "( " << M_x_box.stdev()
+            << " , " << M_y_box.stdev() << " , " << M_z_box.stdev()
+            << " )\n"
+            << indent(SUB) << bracket("|"+mu+"|") << setw(25) << mu_abs.avg()
+            << " eA, "+sigma+"=" << mu_abs.stdev()
+            << ", "+sigma+"/"+bracket("|"+mu+"|")+"="
+            << 100 * mu_abs.stdev() / mu_abs.avg() << percent << "\n";
           return o.str();
         }
     };

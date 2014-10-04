@@ -67,9 +67,8 @@ namespace Faunus {
         virtual ~Geometrybase();
     };
 
-    /*!
-     * \brief Spherical geometry
-     * \author Mikael Lund
+    /**
+     * @brief Spherical geometry
      *
      * This is a spherical simulation container, surrounded by a hard wall.
      */
@@ -81,7 +80,7 @@ namespace Faunus {
         string _info(char);
       public:
         Point len;
-        bool setlen(Point);                      //!< Reset radius (angstrom)
+        bool setlen(Point);                     //!< Reset radius (angstrom)
         void setRadius(double);                 //!< Set radius (angstrom)
         Sphere(double);                         //!< Construct from radius (angstrom)
         Sphere(InputMap&, string="sphere");     //!< Construct from InputMap key \c prefix_radius
@@ -209,12 +208,15 @@ namespace Faunus {
         }
     };
 
-    /*!
-     * \brief Cylindrical simulation container
-     * \author Mikael Lund and Bjorn Persson
+    /**
+     * @brief Cylindrical simulation container
      *
      * This is a cylindrical simulation container where all walls
      * are HARD. The origin is in the middle of the cylinder.
+     *
+     * @todo Fix cylinder class so that it will work with
+     *       isobaric volume moves. Currently, the variable
+     *       `Point len` is merely a dummy.
      */
     class Cylinder : public Geometrybase {
       private:
@@ -226,11 +228,13 @@ namespace Faunus {
         double r;     //!< Cylinder radius
         double diameter;
       protected:
-        double len;   //!< Cylinder length
-        double halflen; //!< Cylinder half length
+        double _len;   //!< Cylinder length
+        double _halflen; //!< Cylinder half length
       public:
+        Point len;                     //!< Dummy
         Cylinder(double, double);      //!< Construct from length and radius
         Cylinder(InputMap &);          //!< Construct from inputmap
+        bool setlen(const Point&);     //!< Set length via vector (dummy function)
         void randompos(Point &);
         void boundary(Point &) const;
         bool collision(const particle&, collisiontype=BOUNDARY) const;
@@ -242,10 +246,8 @@ namespace Faunus {
         }
     };
 
-    /*!
-     * \brief Cylinder with periodic boundaries in the z direction
-     * \author Mikael Lund
-     * \warning something seems rotten...
+    /**
+     * @brief Cylinder with periodic boundaries in the z direction
      */
     class PeriodicCylinder : public Cylinder {
       public:
@@ -257,17 +259,17 @@ namespace Faunus {
           double dx=a.x()-b.x();
           double dy=a.y()-b.y();
           double dz=std::abs(a.z()-b.z());
-          if (dz>halflen)
-            dz-=len;
+          if (dz>_halflen)
+            dz-=_len;
           return dx*dx + dy*dy + dz*dz;
         }
 
         inline Point vdist(const Point &a, const Point &b) FOVERRIDE {
           Point r=a-b;
-          if (r.z()>halflen)
-            r.z()-=len;
-          else if (r.z()<-halflen)
-            r.z()+=len;
+          if (r.z()>_halflen)
+            r.z()-=_len;
+          else if (r.z()<-_halflen)
+            r.z()+=_len;
           return r;
         }
     };

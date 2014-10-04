@@ -424,11 +424,13 @@ namespace Faunus {
         std::ostringstream o;
         if (_type == "sqwl")
           o << pad(textio::SUB, 50, ">>> USING: square well potential <<<") << endl
-            << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(SQWL)") << _depth << textio::kT + " = " << pc::kT2kJ(_depth) << " kJ/mol" << endl
+            << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(SQWL)") << _depth
+            << textio::kT + " = " << _depth/1.0_kJmol << " kJ/mol" << endl
             << pad(textio::SUB, 25, "Threshold") << _threshold << textio::_angstrom << " (particle - wall distance)" << endl;
         if (_type == "lj")
           o << pad(textio::SUB, 50, ">>> USING: Lennard-Jones potential <<<") << endl
-            << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(LJ)") << _depth << textio::kT + " = " << pc::kT2kJ(_depth) << " kJ/mol"<< endl;
+            << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(LJ)") << _depth
+            << textio::kT + " = " << _depth/1.0_kJmol << " kJ/mol"<< endl;
         return o.str();
       }
 

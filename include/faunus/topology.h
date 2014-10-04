@@ -1,5 +1,15 @@
 
 namespace Faunus {
+
+  class System {
+    Space p,trial;
+
+    vector<Group> g;
+
+    
+
+  }
+
   class topology {
     protected:
 

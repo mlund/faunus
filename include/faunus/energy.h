@@ -1009,7 +1009,7 @@ namespace Faunus {
           ExternalPressure(InputMap &in) {
             this->name="External Pressure";
             P=in.get<double>("npt_P",0,
-                "NPT external pressure P/kT (mM)")/1e30*pc::Nav;
+                "NPT external pressure P/kT (mM)") * 1.0e-3_molar;
             assert(P>=0 && "Specify non-negative pressure");
           }
 
@@ -1071,10 +1071,12 @@ namespace Faunus {
      * @author Joao Henriques
      * @date Lund, 2013     
      * 
-     * This energy class will restrain the mass center of a given group within a certain window/bin along the z-axis.
-     * Mainly for use with free energy vs. surface distance simulations, where the the surface is too attractive and prevents
-     * correct sampling. Can also be used to restrain the mass center of a group to a subset of the simulation cell volume in 
-     * other type of systems.
+     * This energy class will restrain the mass center of a given group within a certain
+     * window/bin along the z-axis.
+     * Mainly for use with free energy vs. surface distance simulations, where the
+     * surface is too attractive and prevents
+     * correct sampling. Can also be used to restrain the mass center of a group to
+     * a subset of the simulation cell volume in other type of systems.
      *
      * The InputMap parameters are:
      *
@@ -1091,7 +1093,8 @@ namespace Faunus {
           typedef typename Tspace::p_vec Tpvec;
           string _info() {
             std::ostringstream o;
-            o << pad(textio::SUB,25,"Bin limits (z-axis)") << "[" << min << ":" << max << "]" << textio::_angstrom << endl;
+            o << pad(textio::SUB,25,"Bin limits (z-axis)")
+              << "[" << min << ":" << max << "]" << textio::_angstrom << endl;
             return o.str();
           };
           double min, max;
@@ -1125,11 +1128,12 @@ namespace Faunus {
     /**
      * @brief Constrain two group mass centre separations to a distance interval [mindist:maxdist]
      *
-     * This energy class will constrain the mass center separation between selected groups to a certain
-     * interval. This can be useful to sample rare events and the constraint is implemented as an external
-     * group energy that return infinity if the mass center separation are outside the defined range.
-     * An arbitrary number of group pairs can be added with the addPair() command, although one would
-     * rarely want to have more than one.
+     * This energy class will constrain the mass center separation between selected groups
+     * to a certain interval. This can be useful to sample rare events and the constraint
+     * is implemented as an external group energy that return infinity if the mass center
+     * separation are outside the defined range.
+     * An arbitrary number of group pairs can be added with the `addPair()` command,
+     * although one would rarely want to have more than one.
      * In the following example, the distance between `mygroup1` and `mygroup2`
      * are constrained to the range `[10:50]` angstrom:
      *

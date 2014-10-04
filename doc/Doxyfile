@@ -758,6 +758,7 @@ INPUT                  = doc \
                          src \
                          src/tools \
                          src/examples/minimal.cpp \
+                         src/examples/keesom.cpp \
                          src/examples/bulk.cpp \
                          src/examples/grand.cpp \
                          src/examples/temper.cpp \

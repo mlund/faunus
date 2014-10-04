@@ -44,8 +44,8 @@ int main(int argc, char** argv) {
 
   // set hydrophobic-hydrophobic LJ epsilon
   double epsh = mcp.get("eps_hydrophobic", 0.05);
-  for (size_t i=0; i<atom.list.size()-1; i++)
-    for (size_t j=i+1; j<atom.list.size(); j++)
+  for (size_t i=0; i<atom.size()-1; i++)
+    for (size_t j=i+1; j<atom.size(); j++)
       if (atom[i].hydrophobic)
         if (atom[j].hydrophobic)
           pot.first.first.first.pairpot.second.customEpsilon(i,j,epsh);
@@ -88,6 +88,7 @@ int main(int argc, char** argv) {
   Analysis::LineDistribution<> rdf(0.5);
   Analysis::ChargeMultipole mpol;
   Analysis::MultipoleDistribution<Tspace> mpoldist(mcp);
+  FormatQtraj qtrj("qtrj.dat");
 
   spc.load("state");
 
@@ -145,6 +146,7 @@ int main(int argc, char** argv) {
       if ( movie==true && xi>0.995 ) {
         xtc.setbox( 1000. );
         xtc.save("traj.xtc", spc.p);
+        qtrj.save(spc.p);
       }
     } // end of micro loop
 

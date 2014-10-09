@@ -87,14 +87,8 @@ namespace Faunus {
 
           if (cnt>0) {
             vector<double> P(3);
-#ifdef __INTEL_COMPILER
-            vector<string> id(3);
-            id[0]="Ideal";
-            id[1]="Excess";
-            id[2]="Total";
-#else
             vector<string> id = {"Ideal", "Excess", "Total"};
-#endif
+
             P[0] = Pid.avg();       // ideal
             P[1] = (T/cnt).trace(); // excess
             P[2] = P[0] + P[1];     // total
@@ -1385,7 +1379,7 @@ namespace Faunus {
 
         /**
          * @brief Saves data to files. 
-         * @param nbr Extention of filename
+         * @param ext Extention of filename
          * 
          * @note \f$ g(r) \rightarrow \f$ gofr.dat+nbr
          *       \f$ \mu(0)\cdot\mu(r) \rightarrow \f$ mucorr.dat+nbr

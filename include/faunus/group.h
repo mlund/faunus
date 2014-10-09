@@ -333,8 +333,9 @@ namespace Faunus {
 
       /**
         * @brief Add atomic particles, checks overlaps
-        * @param name of particle type
-        * @param number of particles
+        * @param spc Space
+        * @param name Name of particle type
+        * @param count Number of particles
         */
       template<class Tspace>
         void addParticles(Tspace &spc, string& name, int count) {

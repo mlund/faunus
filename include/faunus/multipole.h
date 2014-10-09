@@ -283,13 +283,18 @@ namespace Faunus {
    */
   template<class Tvec>
     double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r) {
+#ifdef FAU_APPROXMATH
+      double r1i = invsqrtQuake( r.squaredNorm() );
+      double r2i = r1i*r1i;
+#else
       double r2i = 1/r.squaredNorm();
       double r1i = sqrt(r2i);
+#endif
       double r3i = r1i*r2i;
-      double r5i = r3i*r2i;
+      //double r5i = r3i*r2i;
       //Eigen::Matrix3d T = 3*r5i*r*r.transpose() - r3i*Matrix3d::Identity();
       //double W = -muA.transpose()*T*muB;
-      double W = 3*muA.dot(r)*muB.dot(r)*r5i - muA.dot(muB)*r3i;
+      double W = r3i*(3*muA.dot(r)*muB.dot(r)*r2i - muA.dot(muB));
       return -W*muAxmuB;
     }
 
@@ -868,6 +873,11 @@ namespace Faunus {
             protected:
               double _lB;
             public:
+              DipoleDipole(double T_kelvin, double epsilon_r) {
+                pc::setT(T_kelvin);
+                _lB = pc::lB(epsilon_r);
+              }
+              
               DipoleDipole(InputMap &in) {
                 name="Dipole-dipole";
                 pc::setT ( in.get<double>("temperature", 298.15,

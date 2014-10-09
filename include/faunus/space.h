@@ -556,11 +556,9 @@ namespace Faunus {
     }
 
     /**
-      * This will insert a particle vector into the current space. No overlap checks are performed; this should
+      * This will insert a particle vector into the current space.
+      * No overlap checks are performed; this should
       * be done prior to insertion by for example the `Geometry::FindSpace` class.
-      *
-      * @param pin Particle vector to insert
-      * @param i Insert position (PRESENTLY IGNORED). Default = -1 which means end of current vector
       *
       * @todo Implement insertion at random position
       */
@@ -588,9 +586,9 @@ namespace Faunus {
       * be done prior to insertion by for example the `Geometry::FindSpace` class.
       *
       * @param pin Particle vector to insert
-      * @param type of molecule
+      * @param molId Id of molecule
+      * @param enlarge bool
       * @return new Group
-      *
       */
   template<class Tgeometry, class Tparticle>
     Group* Space<Tgeometry,Tparticle>::insert(const p_vec &pin, PropertyBase::Tid molId, bool enlarge) {

@@ -86,7 +86,8 @@ In chronological order:
 Ondrej Marsalek     Christophe Labbez     Andre Teixeira     
   Anil Kurut           Chris Evers         Magnus Ullner      
  Robert Vacha         Axel Thuresson      Bjorn Stenqvist
- Joao Henriques        Giulio Tesei        Lukas Sukenik
+ Joao Henriques     Alexei Abrikossov      Giulio Tesei
+ Lukas Sukenik
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Citing Faunus

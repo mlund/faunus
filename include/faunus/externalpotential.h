@@ -341,17 +341,17 @@ namespace Faunus {
       };
 
     /**
-     * @brief Hydrophobic wall potential
+     * @brief Sticky wall potential
      * @author Joao Henriques
      * @date Lund, 2014
      *
-     * This (external) potential class is used to simulate hydrophobic interactions between 
+     * This (external) potential class is used to simulate attractive interactions between 
      * particle(s) and a surface, using a simple square well (the default) or a Lennard-Jones
      * potential. Surface position must be specified in the program even if one has already
      * done it for the Gouy-Chapman potential (both classes inherit from ExternalPotentialBase<>
      * but are for the most part independent).
      *
-     * See doi:10.1021/la300892p for more details on the square well potential.
+     * See DOI:10.1016/j.foodhyd.2014.07.002 for a possible application. 
      *
      * The Lennard-Jones potential has the form:
      * @f$
@@ -360,42 +360,52 @@ namespace Faunus {
      * @f$
      * where
      * \f$\sigma_{i}\f$ is the residue/particle radius. The potential reaches its minimum when
-     * \f$r_{i,s} = \sigma_{i}\f$, ie. the residue/particle is in close contact with the wall.
+     * \f$r_{i,s} = \sigma_{i}\f$, ie. the residue/particle is at close contact with the wall.
      *   
      * The InputMap parameters are:
      *
-     * Key                  | Description
-     * :------------------- | :---------------------------
-     * `hydrwl_type`        | Type of potential, ie. square well ("sqwl", default) or Lennard-Jones ("lj") 
-     * `hydrwl_depth`       | Depth, \f$\epsilon\f$ [kT] (positive number)
-     * `hydrwl_threshold    | Threshold, [angstrom] (particle center-to-wall distance) - for "sqwl" type only!
-     *
+     * Key                      | Description
+     * :----------------------- | :---------------------------
+     * `stickywall_type`        | Type of potential, ie. square well ("sqwl", default) or Lennard-Jones ("lj") 
+     * `stickywall_depth`       | Depth, \f$\epsilon\f$ [kT] (positive number)
+     * `stickywall_threshold    | Threshold, [angstrom] (particle center-to-wall distance) - for "sqwl" type only!
      */
     template<class T=double>
-      class HydrophobicWall : public ExternalPotentialBase<> {
+      class StickyWall : public ExternalPotentialBase<> {
         protected:
           T _depth;
           T _threshold;
           std::string _type;
           std::string _info();
+	  enum InteractionType {SQWL, LJ};    //
+	  InteractionType _type;              // faster than evaluating strings
         public:
-          HydrophobicWall(InputMap&);
-          void setSurfPositionZ(T*);        // sets position of surface
+          StickyWall(InputMap&);
+          void setSurfPositionZ(T*);          // sets position of surface
           template<typename Tparticle>
             T operator()(const Tparticle &p); // returns energy
       };
 
     template<class T>
-      HydrophobicWall<T>::HydrophobicWall(InputMap &in) {
-        string prefix = "hydrwl_";
-        name          = "Hydrophobic Wall";
-        _type         = in.get<string>(prefix + "type", "sqwl");
+      StickyWall<T>::StickyWall(InputMap &in) {
+        string prefix = "stickywall_";
+        name          = "Sticky Wall";
         _depth        = in.get<double>(prefix + "depth"    , 0);
         _threshold    = in.get<double>(prefix + "threshold", 0);
+	switch (in.get<string>(prefix + "type", "sqwl")) {
+	case ("sqwl"):
+          _type = SQWL;
+	  break;
+        case ("lj"):
+	  _type = LJ;
+	  break;
+        default:
+	  _type = SQWL;
+	}
       }
 
     template<class T>
-      void HydrophobicWall<T>::setSurfPositionZ(T* z) {
+      void StickyWall<T>::setSurfPositionZ(T* z) {
         this->setCoordinateFunc
           (
            [=](const Point &p) { return std::abs(*z-p.z()); }
@@ -404,35 +414,63 @@ namespace Faunus {
 
     template<class T>
       template<typename Tparticle>
-      T HydrophobicWall<T>::operator()(const Tparticle &p) {
-        if (p.hydrophobic) {
-          if (_type == "sqwl")
+      T StickyWall<T>::operator()(const Tparticle &p) {
+        if (_depth < 1e-6) // save CPU cycles if _depth is zero 
+          return 0
+        else {
+          if (_type == SQWL)
             if (this->p2c(p) < _threshold)
               return -_depth;
-          if (_type == "lj") {
+          if (_type == LJ) {
             double r2  = (p.radius * p.radius) / (this->p2c(p) * this->p2c(p));
             double r6  = r2 * r2 * r2;
             double val = _depth * ((r6 * r6) - (2 * r6));
             return val;
           } 
         }
-        return 0;
       }
 
     template<class T>
-      std::string HydrophobicWall<T>::_info() {
+      std::string StickyWall<T>::_info() {
         std::ostringstream o;
-        if (_type == "sqwl")
+        if (_type == SQWL)
           o << pad(textio::SUB, 50, ">>> USING: square well potential <<<") << endl
             << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(SQWL)") << _depth
             << textio::kT + " = " << _depth/1.0_kJmol << " kJ/mol" << endl
             << pad(textio::SUB, 25, "Threshold") << _threshold << textio::_angstrom << " (particle - wall distance)" << endl;
-        if (_type == "lj")
+        if (_type == LJ)
           o << pad(textio::SUB, 50, ">>> USING: Lennard-Jones potential <<<") << endl
             << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(LJ)") << _depth
             << textio::kT + " = " << _depth/1.0_kJmol << " kJ/mol"<< endl;
         return o.str();
       }
+
+    /* SOLUTIONS TO THE PROBLEM:
+     * 1) CHANGE THE WALL COLLISION MECHANISM
+     * 2) CHANGE THE LJ SHAPE (SHIFT ON THE X-AXIS
+     * 3) USE A SMALLER HARD-SPHERE INSIDE THE SOFT-SPHERE REPRESENTATION OF THE RESIDUES 
+     * 4) FORGET ALL ABOVE AND PRETEND YOU DIDN'T NOTICE THE ERROR :)
+     */
+
+    /**
+     * @brief Hydrophobic wall potential
+     * @author Joao Henriques
+     * @date Lund, 2014
+     *
+     * As `StickyWall` but with a p.hydrophobic check. Only hydrophobic residues will be considered here. 
+     */
+    template<class T=double, Tbase=StickyWall<T> >
+      struct HydrophobicWall : public Tbase {
+        HydrophobicWall(InputMap &in) : Tbase(in) {
+          this->name="Hydrophobic Wall";
+        }
+        template<typename Tparticle>
+          T operator()(const Tparticle &p) {
+            if (p.hydrophobic)
+              return Tbase::operator()(p);
+            return 0;
+        }
+    };
 
     /**
      * @brief Hydrophobic wall potential w. linear slope
@@ -443,9 +481,9 @@ namespace Faunus {
      * the particle-surface separation is zero.
      */
     template<class T=double>
-      struct HydrophobicWallLinear : public HydrophobicWall<T> {
-        HydrophobicWallLinear(InputMap &in) : HydrophobicWall<T>::HydrophobicWall(in) {
-          this->name+=" Linear";
+      struct HydrophobicWallLinear : public StickyWall<T> {
+        HydrophobicWallLinear(InputMap &in) : StickyWall<T>::StickyWall(in) {
+          this->name="Hydrophobic Wall Linear";
         }
         template<typename Tparticle>
           T operator()(const Tparticle &p) {

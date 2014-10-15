@@ -2,17 +2,16 @@
 #define FAU_JSON
 #include <faunus/common.h>
 #include <faunus/auxiliary.h>
-//#include <faunus/species.h>
 #include <faunus/picojson.h>
 
 namespace Faunus {
   /**
-   * @brief Function for handling JSON input files (www.json.org)
+   * @brief Functions for handling JSON input files (www.json.org)
    *
    *
    * @details
-   * The functions in this namespace are wrappers for the PicoJSON library:
-   * http://github.com/kazuho/picojson
+   * The functions in this namespace are wrappers for the
+   * [PicoJSON library](http://github.com/kazuho/picojson/):
    *
    * Example code:
    * @code
@@ -36,12 +35,13 @@ namespace Faunus {
    \endcode
    */
   namespace json {
+
     typedef picojson::value Tval;  //!< JSOB value object
     typedef picojson::object Tobj; //!< JSON object object (merely a std::map)
 
     const Tobj emptyObject;
 
-    /* Note in C++11 stringstream is "moveable" and can be return from a function
+    /* Note in C++11 stringstream is "moveable" and can be returned from a function
      * Requires gcc 4.7?
      */
     inline void stripComments(std::ifstream &in, std::stringstream &out, string id="//") {
@@ -55,8 +55,8 @@ namespace Faunus {
       }
     }
 
-    /*!
-     * \brief Load entire JSON file - "//" style comments are allowed.
+    /**
+     * @brief Load entire JSON file - "//" style comments are allowed.
      */
     inline Tval open(const std::string& file) {
       std::ifstream in(file.c_str());
@@ -68,14 +68,15 @@ namespace Faunus {
         if (v.is<Tobj>())
           return v;
       }
-      std::cerr << "Error loading JSON file, '" << file << "', or invalid content.\n";
+      std::cerr << "# Error loading JSON file, '" << file
+        << "', or invalid content.\n";
       return Tval();
     }
 
-    /*!
-     * \brief Returns object associated with a keyword
-     * \param key Keyword to look for - associated value must be an object
-     * \param v The object in which to search for key
+    /**
+     * @brief Returns object associated with a keyword
+     * @param key Keyword to look for - associated value must be an object
+     * @param v The object in which to search for key
      */
     inline const Tobj& object(const std::string& key, const Tval& v) {
       if (v.is<Tobj>())
@@ -84,11 +85,11 @@ namespace Faunus {
       return emptyObject;
     }
 
-    /*!
-     * \brief Search object for key and return associated value
-     * \param v Object to be seached
-     * \param key Keyword to search for
-     * \param fallback Default value if the keyword is not found
+    /**
+     * @brief Search object for key and return associated value
+     * @param v Object to be seached
+     * @param key Keyword to search for
+     * @param fallback Default value if the keyword is not found
      */
     template<typename T>
       static T value(const Tval& v, const std::string& key, const T& fallback) {

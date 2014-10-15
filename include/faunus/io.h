@@ -45,7 +45,7 @@ namespace Faunus {
      * @param s String to write
      * @param mode `std::ios_base::out` (new, default) or `std::ios_base::app` (append)
      */
-    inline bool writeFile(string file, string s,
+    inline bool writeFile(const string &file, const string &s,
       std::ios_base::openmode mode=std::ios_base::out) {
       std::ofstream f(file.c_str(), mode);
       cout << "Writing to file '" << file << "'. ";
@@ -152,24 +152,24 @@ namespace Faunus {
   class DipoleWRL {
     public:
       template<class Tspace>
-        void saveDipoleWRL(string filename, Tspace &spc, Group &sol) {
+        void saveDipoleWRL(const string &filename, Tspace &spc, Group &sol) {
           auto L = spc.geo.len.x();
           auto L2 = L/2;
 
           std::ofstream f;
           f.open(filename);
           f << "#VRML V2.0 utf8\n" << endl;
-          f << "Viewpoint {description" << "\"View 1\"" << "position" << "  "  << L*2 
-            << "  " << "0.00    0.00" << endl
-            << "orientation 0 1 0 0 }"<< endl
-            << " Shape {appearance Appearance { material Material { " << endl
-            << "diffuseColor 0.9 0.9 0.9 transparency 1.0 }}" << endl
-            << "geometry Box { size"<< "  " << L << "  " << L << "  " << L << "}}" << endl
-            << "Shape {appearance Appearance {material Material {" << endl
-            << "emissiveColor 0.8 1.0 0.6 }}" << endl
-            << "geometry IndexedLineSet {coord Coordinate {" << endl 
-            << "point [" << endl
-
+          f << "Viewpoint {description" << "\"View 1\"" << "position "
+            << L*2 << "  0.00    0.00\n"
+            << "orientation 0 1 0 0 }\n"
+            << " Shape {appearance Appearance { material Material {\n"
+            << "diffuseColor 0.9 0.9 0.9 transparency 1.0 }}\n"
+            << "geometry Box { size  "
+            << spc.geo.len.transpose() << "}}\n"
+            << "Shape {appearance Appearance {material Material {\n"
+            << "emissiveColor 0.8 1.0 0.6 }}\n"
+            << "geometry IndexedLineSet {coord Coordinate {\n"
+            << "point [\n"
             << -L2 << "  " <<   L2  << "  " <<   L2 << endl 
             <<  L2 << "  " <<   L2  << "  " <<   L2 << endl 
             <<  L2 << "  " <<   L2  << "  " <<  -L2 << endl 
@@ -178,52 +178,43 @@ namespace Faunus {
             <<  L2 << "  " <<  -L2  << "  " <<   L2 << endl 
             <<  L2 << "  " <<  -L2  << "  " <<  -L2 << endl 
             << -L2 << "  " <<  -L2  << "  " <<  -L2 << endl 
-            << "]}" << endl 
-            << "coordIndex [" << endl 
-            << "0, 1, 2, 3, 0, -1," << endl 
-            << "4, 5, 6, 7, 4, -1," << endl 
-            << "0, 4, -1," << endl 
-            << "1, 5, -1," << endl 
-            << "2, 6, -1," << endl 
-            << "3, 7, -1," << endl 
-            << "]}}" << endl;
-
-
+            << "]}\n"
+            << "coordIndex [\n" 
+            << "0, 1, 2, 3, 0, -1,\n"
+            << "4, 5, 6, 7, 4, -1,\n"
+            << "0, 4, -1,\n"
+            << "1, 5, -1,\n"
+            << "2, 6, -1,\n"
+            << "3, 7, -1,\n"
+            << "]}}\n";
 
           for (auto i : sol) { 
-            auto  x = Point(spc.p[i]).transpose().x(); 
-            auto  y = Point(spc.p[i]).transpose().y(); 
-            auto  z = Point(spc.p[i]).transpose().z(); 
-            auto dipx = spc.p[i].mu.transpose().x();
-            auto dipy = spc.p[i].mu.transpose().y();
-            auto dipz = spc.p[i].mu.transpose().z();
+            auto dipx = spc.p[i].mu.x();
+            auto dipy = spc.p[i].mu.y();
+            auto dipz = spc.p[i].mu.z();
             auto r = spc.p[i].radius;
-            f << "Transform { translation" << "  " <<  x << "  " << y << "  "<< z << endl
-              << " children [ DEF par_0 Shape{ appearance Appearance { material" << endl
-              << " Material {diffuseColor       0.00      1.00      1.00 transparency 0.2 }}" << endl 
-              << "  geometry Sphere {radius" <<"  " << r <<"}}]}" << endl;
+            f << "Transform { translation " << spc.p[i].transpose() << "\n"
+              << " children [ DEF par_0 Shape{ appearance Appearance { material\n"
+              << " Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}\n"
+              << "  geometry Sphere {radius " << r <<"}}]}\n";
 
-            auto size = sqrt((dipx * dipx) + (dipy*dipy) + (dipz*dipz)); 
+            auto size = spc.p[i].mu.norm(); // always unity??
             auto cosT = dipy/size;
             auto angle = acos(cosT);
+            auto Xdipx = -dipx;
 
-            auto Xdipx = (-1.0) * dipx;
-
-            f << "Transform { translation" << "  " <<  x << "  " << y << "  "<< z << endl
-              <<" rotation" << "  "<< dipz << "  " << " 0" << "  "<< Xdipx << " " <<  angle << endl 
-
-              <<  " children[DEF tip_0 Shape{appearance Appearance{material Material{" << endl 
-
-              <<  "diffuseColor       1.00      0.00      0.00 }}  geometry Cone { bottomRadius"<<"  "<< 0.3*r<<"  "<< "height" << "  "<< 0.6*r << "}}]}" << endl;
+            f << "Transform { translation  "
+              << spc.p[i].transpose() << endl
+              << " rotation  " << dipz << "   0  " << Xdipx
+              << " " << angle << endl 
+              <<  " children[DEF tip_0 Shape{appearance Appearance{material Material{"
+              << endl 
+              << "diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  "
+              << 0.3*r << "  height  " << 0.6*r << "}}]}\n";
           }
           f.close();
         }
-
-
-
   };
-
-
 
   /**
    * @brief PQR format
@@ -345,15 +336,15 @@ namespace Faunus {
           assert(cnt==spc.p.size());
           return IO::writeFile(file, o.str());
         }
-
   };
 
   /**
    * @brief XYZ format
    * @date June 2013
    *
-   * Saves particles as a XYZ file. This format has number of particles at the first line
-   * comment on second line followed by positions of all particles xyz position on each line
+   * Saves particles as a XYZ file. This format has number of particles at
+   * the first line; comment on second line followed by positions of all
+   * particles xyz position on each line
    */
   class FormatXYZ {
     public:
@@ -365,7 +356,6 @@ namespace Faunus {
             o << atom[i.id].name << " " << Tvec(i).transpose() << "\n";
           return IO::writeFile(file, o.str());
         }
-
   };
 
   /**
@@ -382,8 +372,8 @@ namespace Faunus {
         static std::string p2s(const Tparticle &a, int i) {
           std::ostringstream o;
           o.precision(5);
-          o << a.x() << " " << a.y() <<" "<< a.z() << " " << a.dir.x() << " " << a.dir.y() <<" "<< a.dir.z() << " "
-            << a.patchdir.x() << " " << a.patchdir.y() <<" "<< a.patchdir.z() << " " << std::endl;
+          o << a.transpose() << "\n" << a.dir.transpose() << "\n"
+            << a.patchdir.transpose() << "\n";
           return o.str();
         }
 
@@ -397,14 +387,11 @@ namespace Faunus {
         }
     public:
       template<class Tpvec, class Tvec=Point>
-        static bool save(const string &file, const Tpvec &p, const Point &len, const unsigned int time) {
-          char buf[200];
-
+        static bool save(const string &file, const Tpvec &p, const Point &len, int time) {
           std::ostringstream o;
-          o << p.size() << "\n";
-          sprintf(buf, "sweep %d; box %f %f %f \n", time, len.x(),len.y(),len.z());
-          o << buf;
-          for (size_t i=0; i< p.size(); i++)
+          o << p.size() << "\n"
+            << "sweep " << time << "; box " << len.transpose() << "\n";
+          for (size_t i=0; i<p.size(); i++)
             o << p2s(p[i], i);
           return IO::writeFile(file, o.str(), std::ios_base::app);
         }
@@ -414,23 +401,20 @@ namespace Faunus {
         static bool load(const string &file, Tpvec &p, Point &len) {
           std::stringstream o;
           vector<string> v;
-
           if (IO::readFile(file,v)==true) {
             IO::strip(v,"#");
-            unsigned int n=atoi(v[0].c_str());
-            //target.resize(n);
+            size_t n=atoi(v[0].c_str());
             if (p.size() != n)
               std::cerr << "# mxyz load error: number of particles in xyz file " << n
                 << " does not match input file (" << p.size() << ")!" << endl;
             o << v[1].erase(0, v[1].find_last_of("x")+1);
             o >> len.x() >> len.y() >> len.z();
-            for (unsigned int i=2; i<n+2; i++)
+            for (size_t i=2; i<n+2; i++)
               s2p(v.at(i), p.at(i-2));
             return true;
           }
           return false;
         }
-
   };
 
   /**
@@ -786,52 +770,82 @@ namespace Faunus {
       return o.str();
     }  
 
-  /** @brief Trajectory of charges per particle
-   *  @author Chris Evers
-   *  @date May 2011, Lund
+  /** 
+   * @brief Trajectory of charges per particle
+   * @author Chris Evers
+   * @date May 2011, Lund
    *
-   *  Saves a trajectory of the charges for all particles in a particle vector
+   * This saves a trajectory of charges which can be used to
+   * visualize charge fluctuations. The file can be loaded into i.e.
+   * VMD with the following TCL script that should be sourced after
+   * loading the main coordinate trajectory:
+   *
+   * ~~~~ 
+   * set molid 0
+   * set n [molinfo $molid get numframes]
+   * puts "reading charges"
+   * set fp [open "qtraj.dat" r]
+   * for {set i 0} {$i < $n} {incr i} {
+   *   set chrg($i) [gets $fp]
+   * }
+   * close $fp
+   *
+   * proc do_charge {args} {
+   *   global chrg molid
+   *   set a [molinfo $molid get numatoms]
+   *   set f [molinfo $molid get frame]
+   *   for {set i 0} {$i < $a} {incr i} {
+   *     set s [atomselect $molid "index $i"]
+   *     $s set charge [lindex $chrg($f) $i]
+   *   }
+   * }
+   * trace variable vmd_frame($molid) w do_charge
+   * animate goto start
+   * do_charge
+   * ~~~~
    */
   class FormatQtraj {
     private:
-      bool append;
+      std::ofstream f;
     public:
-      FormatQtraj() : append(false) {};
+      /** @brief Constructor that opens `file` for writing */
+      FormatQtraj(const string &file) {
+        f.open(file);
+        f.precision(6);
+      }
 
-      /** @brief Save groups */
+      /** @brief Save a frame using specific groups */
       template<class Tpvec>
-        bool save(const string &file, const Tpvec &p, vector<Group> &g) {
-          decltype(p) t;
-          for (size_t i=0; i<g.size(); i++)
-            for (auto j : g[i])
-              t.push_back( p[j] );
-          return save(file, t);
+        bool save(const Tpvec &p, const vector<Group> &g) {
+          Tpvec t;
+          for (auto &gi : g)
+            for (auto i : gi)
+              t.push_back(p[i]);
+          return save(t);
         }
 
-      /** @brief Save a frame to trj file */
+      /** @brief Save a frame */
       template<class Tpvec>
-        bool save(const string &file, const Tpvec &p) {
-          std::ostringstream o;
-          o.precision(6);
-          for (size_t i=0; i<p.size(); i++)
-            o << p[i].charge << " ";
-          o << endl;
-          if ( append==true )
-            return IO::writeFile(file, o.str(), std::ios_base::app);
-          else
-            append=true;
-          return IO::writeFile(file, o.str(), std::ios_base::out);
+        bool save(const Tpvec &p) {
+          if (f) {
+            for (auto &i : p)
+              f << i.charge << " ";
+            f << "\n";
+            return true;
+          }
+          return false;
         }
   };
 
-  /*
+  /**
    * @brief Add bonded peptide from fasta sequence
    * @param spc Space
    * @param bonded Bonded energy class, i.e. `Energy::Bonded`
    * @param pairpot Bond potential, i.e. `Potential::Harmonic`
-   * @param fasta Fasta sequence (captital letters, no spacing)
+   * @param fasta Fasta sequence (capital letters, no spacing)
    * @return Group with peptide -- remember to enroll in space using `Space::enroll`
    * @note Untested
+   * @todo Use initializer list `map` data filling
    */
   template<class Tspace, class Tbonded, class Tpairpot>
     Group addFastaSequence(Tspace &spc, Tbonded &bonded, const Tpairpot &pairpot, const string &fasta) {

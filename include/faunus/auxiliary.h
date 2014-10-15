@@ -133,6 +133,44 @@ namespace Faunus {
       }
     };
 
+  /**
+   * @brief Approximation of erfc-function
+   * @param x Value for which erfc should be calculated 
+   * @details Reference for this approximation is found in Abramowitz and Stegun, 
+   *          Handbook of mathematical functions, eq. 7.1.26
+   *
+   * @f[
+   *     \erf(x) = 1 - (a_1t + a_2t^2 + a_3t^3 + a_4t^4 + a_5t^5)e^{-x^2} + \epsilon(x)
+   * @f]
+   * @f[
+   *     t = \frac{1}{1 + px}
+   * @f]
+   * @f[
+   *     |\epsilon(x)| \le 1.5\times 10^{-7}
+   * @f]
+   * 
+   * @warning Needs modification if x < 0
+   */
+  template<typename T>
+    T erfc_x(T x) {
+      static_assert(std::is_floating_point<T>::value, "type must be floating point" );
+      assert(x>=0 && "x cannot be negative");
+      T t = 1.0/(1.0+0.3275911*x);
+      const T a1 = 0.254829592;
+      const T a2 = -0.284496736;
+      const T a3 = 1.421413741;
+      const T a4 = -1.453152027;
+      const T a5 = 1.061405429;
+      return t*(a1+t*(a2+t*(a3+t*(a4+t*a5)))) * exp(-x*x);
+    }
+
+  /**
+   * @brief Approximate 1 - erfc_x
+   * @param x Value for which erf should be calculated 
+   */
+  template<typename T>
+    T erf_x(T x) { return (1 - erfc_x(x)); }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
   /**
@@ -151,6 +189,27 @@ namespace Faunus {
       //      y  = y * ( 1.5F - ( x2 * y * y ) );   // 2nd iteration, this can be removed
       return y;
     }
+
+  /**
+   * @brief n'th integer power of float
+   *
+   * On GCC/Clang this will use the fast `__builtin_powi` function.
+   * If not, and `n<7`, a simple loop (that can be unrolled at compile
+   * time) is performed. Of none of the above, `std::pow` is used.
+   */
+  template<int n, typename T=double>
+    T _powi(T &x) {
+#if defined(__GNUG__)
+      return __builtin_powi(x,n);
+#else
+      if (n>6)
+        return std::pow(x,n);
+      while (--n>0)
+        x*=x;
+      return x;
+#endif
+    }
+
 
   /**
    * @brief Approximate exp() function
@@ -619,7 +678,7 @@ namespace Faunus {
         void buf2hist(vector<double> &v) {
           this->clear();
           assert(!v.empty());
-          for (int i=0; i<v.size(); i+=2) {
+          for (int i=0; i<(int)v.size(); i+=2) {
             if (int(v[i+1])>1e-20) this->operator()(v[i])+=int(v[i+1]);
           }
         }
@@ -948,7 +1007,7 @@ namespace Faunus {
         void buf2hist(vector<double> &v) {
           this->clear();
           assert(!v.empty());
-          for (int i=0; i<v.size(); i+=3) {
+          for (size_t i=0; i<v.size(); i+=3) {
             if (v[i+2]>1e-20) this->operator()(v[i],v[i+1])+=int(v[i+2]);
           }
         }

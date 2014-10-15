@@ -87,14 +87,8 @@ namespace Faunus {
 
           if (cnt>0) {
             vector<double> P(3);
-#ifdef __INTEL_COMPILER
-            vector<string> id(3);
-            id[0]="Ideal";
-            id[1]="Excess";
-            id[2]="Total";
-#else
             vector<string> id = {"Ideal", "Excess", "Total"};
-#endif
+
             P[0] = Pid.avg();       // ideal
             P[1] = (T/cnt).trace(); // excess
             P[2] = P[0] + P[1];     // total
@@ -200,8 +194,10 @@ namespace Faunus {
     /*!
      * \brief Radial distribution analysis
      *
-     * This radial distribution is defined as \f$ g(r) = \rho(r) / \rho(\infty) \f$ where \f$ \rho \f$ are
-     * the particle densities in spherical volume element `rdr` and in the bulk, respectively.
+     * This radial distribution is defined as
+     * @f$ g(r) = \rho(r) / \rho(\infty) @f$
+     * where @f$\rho@f$ are particle densities in a spherical volume element
+     * `rdr` and in the bulk, respectively.
      *
      * Example:
      *
@@ -213,7 +209,7 @@ namespace Faunus {
      * rdf.save("rdf.dat");
      * ~~~
      *
-     * \date Lund 2011
+     * @date Lund 2011
      */
     template<typename Tx=float, typename Ty=unsigned long long int>
       class RadialDistribution : public Table2D<Tx,Ty> {
@@ -232,10 +228,10 @@ namespace Faunus {
             if (bulkconc.avg()<1e-6) bulkconc+=1;
             if (Npart.cnt==0) Npart+=1;
 
-            return ((double)this->operator()(x)*Npart.avg()) / (volume(x) *(double)this->count() * bulkconc.avg())
-              ;
-
+            return ((double)this->operator()(x)*Npart.avg())
+              / (volume(x) *(double)this->count() * bulkconc.avg());
           }
+
           Average<double> bulkconc; //!< Average bulk concentration
           Average<double> Npart;
         public:
@@ -548,7 +544,8 @@ namespace Faunus {
         PolymerShape();
 
         /** 
-         * @note This functions is now public and const. I don't see the point of making it static, yet. - Joao Henriques.
+         * @note This functions is now public and const.
+         * I don't see the point of making it static, yet. - Joao Henriques.
          */
         template<class Tgroup, class Tspace>
           Point vectorgyrationRadiusSquared(const Tgroup &pol, const Tspace &spc) const {
@@ -724,7 +721,7 @@ namespace Faunus {
           template<class Tgroup>
             Tensor<double> quadrupoleMoment(const Tspace &s, const Tgroup &g) const {
               Tensor<double> theta;
-              theta.clear();
+              theta.setZero();
               assert(g.size()<=(int)s.p.size());
               for (auto i : g) {
                 Point t=s.p[i] - g.cm;
@@ -1382,7 +1379,7 @@ namespace Faunus {
 
         /**
          * @brief Saves data to files. 
-         * @param nbr Extention of filename
+         * @param ext Extention of filename
          * 
          * @note \f$ g(r) \rightarrow \f$ gofr.dat+nbr
          *       \f$ \mu(0)\cdot\mu(r) \rightarrow \f$ mucorr.dat+nbr
@@ -1505,11 +1502,23 @@ namespace Faunus {
           using namespace Faunus::textio;
           std::ostringstream o;
           o << header("Dipole analysis");
-          o << indent(SUB) << epsilon_m+subr+"(Tinfoil)" << setw(22) << getDielTinfoil() << ", "+sigma+"=" << diel_std.stdev() << ", "+sigma+"/"+epsilon_m+subr+"=" << (100*diel_std.stdev()/getDielTinfoil()) << percent << endl
-            << indent(SUB) << bracket("M"+squared) << setw(27) << pc::eA2D(M2_box.avg(),2) << " Debye"+squared+", "+sigma+"=" << pc::eA2D(M2_box.stdev(),2) << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg()) << percent << endl
-            << indent(SUB) << bracket("M") << setw(25) << "( " << pc::eA2D(M_x_box.avg()) << " , " << pc::eA2D(M_y_box.avg()) << " , " << pc::eA2D(M_z_box.avg()) << " ) Debye" << endl 
-            << indent(SUBSUB) << sigma << setw(25) << "( " << pc::eA2D(M_x_box.stdev()) << " , " << pc::eA2D(M_y_box.stdev()) << " , " << pc::eA2D(M_z_box.stdev()) << " )" << endl
-            << indent(SUB) << bracket("|"+mu+"|") << setw(25) << pc::eA2D(mu_abs.avg()) << " Debye, "+sigma+"=" << pc::eA2D(mu_abs.stdev()) << ", "+sigma+"/"+bracket("|"+mu+"|")+"=" << (100*mu_abs.stdev()/mu_abs.avg()) << percent << endl;
+          o << indent(SUB) << epsilon_m+subr+"(Tinfoil)" << setw(22) << getDielTinfoil()
+            << ", "+sigma+"=" << diel_std.stdev() << ", "+sigma+"/"+epsilon_m+subr+"="
+            << (100*diel_std.stdev()/getDielTinfoil()) << percent << endl
+            << indent(SUB) << bracket("M"+squared) << setw(27) << M2_box.avg()
+            << " eA"+squared+", "+sigma+"=" << M2_box.stdev()
+            << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg())
+            << percent << "\n"
+            << indent(SUB) << bracket("M") << setw(25) << "( " << M_x_box.avg()
+            << " , " << M_y_box.avg() << " , " << M_z_box.avg()
+            << " ) eA\n" 
+            << indent(SUBSUB) << sigma << setw(25) << "( " << M_x_box.stdev()
+            << " , " << M_y_box.stdev() << " , " << M_z_box.stdev()
+            << " )\n"
+            << indent(SUB) << bracket("|"+mu+"|") << setw(25) << mu_abs.avg()
+            << " eA, "+sigma+"=" << mu_abs.stdev()
+            << ", "+sigma+"/"+bracket("|"+mu+"|")+"="
+            << 100 * mu_abs.stdev() / mu_abs.avg() << percent << "\n";
           return o.str();
         }
     };

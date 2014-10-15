@@ -208,7 +208,7 @@ namespace Faunus {
       eps = 4*in(prefix+"_eps", 0.);
       string unit = in.get<string>(prefix+"_unit", "kT");
       if (unit=="kJ/mol")
-        eps=eps/pc::kT2kJ(1.);
+        eps *= 1.0_kJmol;
     }
 
     string LennardJones::_brief() {
@@ -221,7 +221,7 @@ namespace Faunus {
       using namespace Faunus::textio;
       std::ostringstream o;
       o << pad(SUB,w+1,epsilon+"(LJ)") << eps/4 << kT
-        << " = " << pc::kT2kJ(eps/4) << " kJ/mol" << endl;
+        << " = " << eps/4.0_kJmol << " kJ/mol" << endl;
       return o.str();
     }
 

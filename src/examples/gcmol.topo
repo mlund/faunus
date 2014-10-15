@@ -1,0 +1,20 @@
+{
+  "topology": {
+    "salt": { "atoms": "Na,Cl", "init":"RANDOM"},
+    "salt2": { "atoms": "Mg,Cl,Cl", "init":"RANDOM"},
+    "chloride": { "atoms": "Cl,Cl,Cl,Cl", "init":"RANDOM"},
+    "polymer": {"activity": 0.000000000000000005, "atoms": "MM,MM,MM,MM", "init": "POOL"},
+    "polymer2": {"activity": 0.000000000000000005, "atoms": "MM,MM,MM,MM", "init": "POOL"}
+  },
+  "combinations": {
+    "polymer": {"species": "polymer", "prob": 0.2},
+    "polymer2": {"species": "polymer2", "prob": 0.2},
+    "salt": {"species": "salt", "prob": 0.2},
+    "salt2": {"species": "salt2", "prob": 0.2},
+    "chloride": {"species": "chloride", "prob": 0.2},
+    "2xsalt+salt2": {"species": "salt,salt,salt2", "prob": 0.2},
+    "poly+4xCL": {"species": "polymer,chloride", "prob": 0.2},
+    "poly+poly2": {"species": "polymer,polymer2", "prob": 0.2}
+  }
+}
+

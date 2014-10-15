@@ -61,8 +61,8 @@ int main() {
 
   cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
 
-  while ( loop.macroCnt() ) {  // Markov chain 
-    while ( loop.microCnt() ) {
+  while ( loop[0] ) {  // Markov chain 
+    while ( loop[1] ) {
       int k,i=slp_global.rand() % 6;
       switch (i) {
         case 0:

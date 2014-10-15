@@ -32,8 +32,8 @@ int main() {
   cout << atom.info() + spc.info() + pot.info() + "\n";
 
   MCLoop loop(mcp);                             // class for handling mc loops
-  while ( loop.macroCnt() ) {
-    while ( loop.microCnt() ) {
+  while ( loop[0] ) {
+    while ( loop[1] ) {
       if (slp_global() < 0.5)
         sys+=mv.move( salt.size() );            // translate salt
       else 

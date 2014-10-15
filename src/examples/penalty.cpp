@@ -51,8 +51,8 @@ int main() {
   int seed_value = mcp.get<int>("seed_value",-13);
   slp_global.seed(seed_value);
   int sweeps = 0;
-  while ( loop.macroCnt() ) {                 //start markov chain
-    while ( loop.microCnt() ) {
+  while ( loop[0] ) {                 //start markov chain
+    while ( loop[1] ) {
       sys(trans.recycle());                    //translate particle
       ++sweeps;
       //increment the histogram and/or update the penalty function using waste recycling

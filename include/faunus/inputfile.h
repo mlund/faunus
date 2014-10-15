@@ -106,6 +106,10 @@ namespace Faunus {
       string atomfile = get<string>("atomlist", "");
       if (!atomfile.empty())
         atom.includefile(atomfile);
+
+      const string topoFile = get<string>("topology", "");
+      if (!topoFile.empty())
+        molecule.includefile(topoFile);
       return true;
     }
     return false;

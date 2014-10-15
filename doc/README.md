@@ -24,7 +24,7 @@ Get the latest revision from GitHub:
 Requirements
 ============
 
-- C/C++11 compiler (clang3+, gcc4.6+, intel13+, ...)
+- C/C++11 compiler (clang3+, gcc4.8+, intel13+, ...)
 - CMake 2.8.5+
 
 Optional:
@@ -74,8 +74,7 @@ Resetting the build system
 --------------------------
 
     $ make clean
-    $ rm CMakeCache.txt
-    $ (rm -fR CMakeFiles/)
+    $ rm -fR CMakeCache.txt CMakeFiles
 
 Contributors
 ============
@@ -87,7 +86,8 @@ In chronological order:
 Ondrej Marsalek     Christophe Labbez     Andre Teixeira     
   Anil Kurut           Chris Evers         Magnus Ullner      
  Robert Vacha         Axel Thuresson      Bjorn Stenqvist
- Joao Henriques        Giulio Tesei
+ Joao Henriques     Alexei Abrikossov      Giulio Tesei
+ Lukas Sukenik
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Citing Faunus

@@ -440,7 +440,7 @@ namespace Faunus {
           return 0
         else {
           if (_type == SQWL)
-            if (this->p2c(p) < _threshold) // wall collision handles the case where _threshold < 0
+            if (this->p2c(p) < _threshold) // wall collision handles the case where this->p2c(p) < 0
               return -_depth;
           if (_type == LJ) {
             double r1  = p.radius / (this->p2c(p) + p.radius)

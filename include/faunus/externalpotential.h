@@ -347,10 +347,13 @@ namespace Faunus {
      *
      * This (external) potential class is used to simulate attractive interactions between 
      * particle(s) and a surface, using a simple square well (the default), a shifted Lennard-Jones
-     * potential, a 1/r6 or 1/r3 attractive potential. Surface position must be specified in the program 
-     * even if one has already done it for the Gouy-Chapman potential (both classes inherit from ExternalPotentialBase<>
-     * but are for the most part independent).
+     * potential, a 1/r6 or 1/r3 attractive (and also shifted) potentials. Surface position must be specified 
+     * in the program even if one has already done it for the Gouy-Chapman potential (both classes 
+     * inherit from ExternalPotentialBase<> but are for the most part independent).
      *
+     * LJ, 1/r6 and 1/r3 potentials will yield \f$-\varepsilon kT\f$ at zero particle center of mass - surface distance,
+     * hence the prefix `shifted`.
+     * 
      * See DOI:10.1016/j.foodhyd.2014.07.002 for a possible application (using a non-shifted LJ potential). 
      *
      * The shifted Lennard-Jones potential has the form:
@@ -390,7 +393,7 @@ namespace Faunus {
         protected:
           T _depth;
           T _threshold;
-          std::string _info();
+	  std::string _info();
           enum InteractionType {SQWL, LJ, R6, R3}; //
           InteractionType _type;                   // faster than evaluating strings
         public:
@@ -406,7 +409,15 @@ namespace Faunus {
         name          = "Sticky Wall";
         _depth        = in.get<double>(prefix + "depth"    , 0);
         _threshold    = in.get<double>(prefix + "threshold", 0);
-        assert(_threshold > 1e-6 && "Threshold must be positive");
+        string type = in.get<string>(prefix + "type"); // got rid of the default value because the following block turns anything that is not 'lj', 'r6' or 'r3' to 'sqwl'.
+        if      (type.compare("lj") == 0) _type = LJ;
+        else if (type.compare("r6") == 0) _type = R6;
+        else if (type.compare("r3") == 0) _type = R3;
+        else                              _type = SQWL;
+
+        /* 
+         * SWITCH DOESN'T WORK WITH STRINGS
+         *
         switch (in.get<string>(prefix + "type", "sqwl")) {
         case ("sqwl"):
           _type = SQWL;
@@ -423,6 +434,8 @@ namespace Faunus {
         default:
           _type = SQWL;
         }
+	*/
+
       }
 
     template<class T>
@@ -437,29 +450,31 @@ namespace Faunus {
       template<typename Tparticle>
       T StickyWall<T>::operator()(const Tparticle &p) {
         if (_depth < 1e-6) // save CPU cycles if _depth is zero 
-          return 0
+          return 0;
         else {
           if (_type == SQWL)
-            if (this->p2c(p) < _threshold) // wall collision handles the case where this->p2c(p) < 0
+            if (this->p2c(p) < _threshold) // wall collision doesn't let this->p2c(p) be < 0, hence if _threshold can never be < 0
               return -_depth;
           if (_type == LJ) {
-            double r1  = p.radius / (this->p2c(p) + p.radius)
-            double r6  = r1 * r1 * r1 * r1 * r1 * r1
+            double r1  = p.radius / (this->p2c(p) + p.radius);
+            double r6  = r1 * r1 * r1 * r1 * r1 * r1;
             double val = _depth * ((r6 * r6) - (2 * r6));
             return val;
           }
           if (_type == R6) {
-            double r1  = p.radius / (this->p2c(p) + p.radius)
-            double r6  = r1 * r1 * r1 * r1 * r1 * r1 
-            double val = -_depth * r6
+            double r1  = p.radius / (this->p2c(p) + p.radius);
+            double r6  = r1 * r1 * r1 * r1 * r1 * r1;
+            double val = -_depth * r6;
             return val;
           }
           if (_type == R3) {
-            double r1  = p.radius / (this->p2c(p) + p.radius)
-            double r3  = r1 * r1 * r1
-            double val = -_depth * r3
+            double r1  = p.radius / (this->p2c(p) + p.radius);
+            double r3  = r1 * r1 * r1;
+            double val = -_depth * r3;
             return val;
-          } 
+          }
+          else
+            return 0;
         }
       }
 
@@ -493,15 +508,15 @@ namespace Faunus {
      *
      * As `StickyWall` but with a p.hydrophobic check. Only hydrophobic residues will be considered here. 
      */
-    template<class T=double, Tbase=StickyWall<T> >
-      struct HydrophobicWall : public Tbase {
-        HydrophobicWall(InputMap &in) : Tbase(in) {
+    template<class T=double>
+      struct HydrophobicWall : public StickyWall<T> {
+        HydrophobicWall(InputMap &in) : StickyWall<T>::StickyWall(in) {
           this->name="Hydrophobic Wall";
         }
         template<typename Tparticle>
           T operator()(const Tparticle &p) {
             if (p.hydrophobic)
-              return Tbase::operator()(p);
+              return StickyWall<T>::operator()(p);
             return 0;
         }
     };

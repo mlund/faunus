@@ -346,27 +346,42 @@ namespace Faunus {
      * @date Lund, 2014
      *
      * This (external) potential class is used to simulate attractive interactions between 
-     * particle(s) and a surface, using a simple square well (the default) or a Lennard-Jones
-     * potential. Surface position must be specified in the program even if one has already
-     * done it for the Gouy-Chapman potential (both classes inherit from ExternalPotentialBase<>
+     * particle(s) and a surface, using a simple square well (the default), a shifted Lennard-Jones
+     * potential, a 1/r6 or 1/r3 attractive potential. Surface position must be specified in the program 
+     * even if one has already done it for the Gouy-Chapman potential (both classes inherit from ExternalPotentialBase<>
      * but are for the most part independent).
      *
-     * See DOI:10.1016/j.foodhyd.2014.07.002 for a possible application. 
+     * See DOI:10.1016/j.foodhyd.2014.07.002 for a possible application (using a non-shifted LJ potential). 
      *
-     * The Lennard-Jones potential has the form:
+     * The shifted Lennard-Jones potential has the form:
      * @f$
-     * \beta u=\epsilon
-     * \left ((\sigma_{i}/r_{i,s})^{12}-2(\sigma_{i}/r_{i,s})^6\right )
+     * \beta u(r_{i,s})=\varepsilon
+     * \left [ \left ( \frac{\sigma_{i}}{(r_{i,s}+\sigma_{i})} \right ) ^{12} - 2 \left ( \frac{\sigma_{i}}{(r_{i,s}+\sigma_{i})} \right ) ^6 \right ] 
      * @f$
      * where
-     * \f$\sigma_{i}\f$ is the residue/particle radius. The potential reaches its minimum when
-     * \f$r_{i,s} = \sigma_{i}\f$, ie. the residue/particle is at close contact with the wall.
+     * \f$\sigma_{i}\f$ is the residue/particle radius, and \f$r_{i,s}\f$ is the particle (center of mass) - surface distance.
+     * The potential reaches its minimum when \f$r_{i,s} = 0\f$, ie. the distance between the ideal surface and the 
+     * residue/particle center of mass is zero.
+     *
+     * The 1/r6 and 1/r3 potentials are as follows:
+     * @f$
+     * \beta u(r_{i,s})=-\varepsilon \left [ \frac{\sigma_{i}}{(r_{i,s}+\sigma_{i})} \right ] ^{N}
+     * @f$
+     * with \f$N\f$ being either 3 or 6.
+     * 
+     * NOTE(S):    
+     * This is coherent with how particle-surface collisions are handled in a `cuboidslit`, i.e. volume exclusions are
+     * not considered for collision purposes, since the surface is not `real` in a physical sense.
+     * Using a non-shifted LJ potential could lead to counter-intuitive (wrong) results, due to the fact that particles
+     * can be at zero distance (mass center - surface), when considering Gouy-Chapman electrostatics between a surface and
+     * a particle of opposite charge. The addition of the non-shifted LJ potential to the same system would make the particles 
+     * enter in a repulsive regime at distances greater than zero, thus decreasing adsorption, which defeating its purpose. 
      *   
      * The InputMap parameters are:
      *
      * Key                      | Description
      * :----------------------- | :---------------------------
-     * `stickywall_type`        | Type of potential, ie. square well ("sqwl", default) or Lennard-Jones ("lj") 
+     * `stickywall_type`        | Type of potential, ie. square well ("sqwl", default), shifted Lennard-Jones ("lj"), 1/r6 ("r6"), and 1/r3 ("r3") 
      * `stickywall_depth`       | Depth, \f$\epsilon\f$ [kT] (positive number)
      * `stickywall_threshold    | Threshold, [angstrom] (particle center-to-wall distance) - for "sqwl" type only!
      */
@@ -375,10 +390,9 @@ namespace Faunus {
         protected:
           T _depth;
           T _threshold;
-          std::string _type;
           std::string _info();
-	  enum InteractionType {SQWL, LJ};    //
-	  InteractionType _type;              // faster than evaluating strings
+	enum InteractionType {SQWL, LJ, R6, R3};    //
+          InteractionType _type;              // faster than evaluating strings
         public:
           StickyWall(InputMap&);
           void setSurfPositionZ(T*);          // sets position of surface
@@ -392,16 +406,23 @@ namespace Faunus {
         name          = "Sticky Wall";
         _depth        = in.get<double>(prefix + "depth"    , 0);
         _threshold    = in.get<double>(prefix + "threshold", 0);
-	switch (in.get<string>(prefix + "type", "sqwl")) {
-	case ("sqwl"):
+        assert(_threshold > 1e-6 && "Threshold must be positive");
+        switch (in.get<string>(prefix + "type", "sqwl")) {
+        case ("sqwl"):
           _type = SQWL;
-	  break;
+          break;
         case ("lj"):
-	  _type = LJ;
-	  break;
+          _type = LJ;
+          break;
+        case ("r6"):
+          _type = R6;
+          break;
+        case ("r3"):
+          _type = R3;
+          break;
         default:
-	  _type = SQWL;
-	}
+          _type = SQWL;
+        }
       }
 
     template<class T>
@@ -419,12 +440,24 @@ namespace Faunus {
           return 0
         else {
           if (_type == SQWL)
-            if (this->p2c(p) < _threshold)
+            if (this->p2c(p) < _threshold) // wall collision handles the case where _threshold < 0
               return -_depth;
           if (_type == LJ) {
-            double r2  = (p.radius * p.radius) / (this->p2c(p) * this->p2c(p));
-            double r6  = r2 * r2 * r2;
+            double r1  = p.radius / (this->p2c(p) + p.radius)
+            double r6  = r1 * r1 * r1 * r1 * r1 * r1
             double val = _depth * ((r6 * r6) - (2 * r6));
+            return val;
+          }
+          if (_type == R6) {
+            double r1  = p.radius / (this->p2c(p) + p.radius)
+            double r6  = r1 * r1 * r1 * r1 * r1 * r1 
+            double val = -_depth * r6
+            return val;
+          }
+          if (_type == R3) {
+            double r1  = p.radius / (this->p2c(p) + p.radius)
+            double r3  = r1 * r1 * r1
+            double val = -_depth * r3
             return val;
           } 
         }
@@ -439,18 +472,19 @@ namespace Faunus {
             << textio::kT + " = " << _depth/1.0_kJmol << " kJ/mol" << endl
             << pad(textio::SUB, 25, "Threshold") << _threshold << textio::_angstrom << " (particle - wall distance)" << endl;
         if (_type == LJ)
-          o << pad(textio::SUB, 50, ">>> USING: Lennard-Jones potential <<<") << endl
+          o << pad(textio::SUB, 50, ">>> USING: shifted Lennard-Jones potential <<<") << endl
             << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(LJ)") << _depth
-            << textio::kT + " = " << _depth/1.0_kJmol << " kJ/mol"<< endl;
+            << textio::kT + " = " << _depth/1.0_kJmol << " kJ/mol"<< endl; 
+        if (_type == R6)
+          o << pad(textio::SUB, 50, ">>> USING: 1/r6 potential <<<") << endl
+            << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(R6)") << _depth
+            << textio::kT + " = " << _depth/1.0_kJmol << " kJ/mol"<< endl; 
+        if (_type == R3)
+          o << pad(textio::SUB, 50, ">>> USING: 1/r3 potential <<<") << endl
+            << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(R3)") << _depth
+            << textio::kT + " = " << _depth/1.0_kJmol << " kJ/mol"<< endl; 
         return o.str();
       }
-
-    /* SOLUTIONS TO THE PROBLEM:
-     * 1) CHANGE THE WALL COLLISION MECHANISM
-     * 2) CHANGE THE LJ SHAPE (SHIFT ON THE X-AXIS
-     * 3) USE A SMALLER HARD-SPHERE INSIDE THE SOFT-SPHERE REPRESENTATION OF THE RESIDUES 
-     * 4) FORGET ALL ABOVE AND PRETEND YOU DIDN'T NOTICE THE ERROR :)
-     */
 
     /**
      * @brief Hydrophobic wall potential

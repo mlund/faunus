@@ -1,10 +1,7 @@
 #!/bin/sh
 #
 # Joao Henriques
-# 2014.05.23
-#
-# Script is not ready to use, some values are ill-defined on purpose.
-# It's just a template.
+# 2014.10.16
 #
 function mkinput() {
 echo "##### files needed #####
@@ -13,8 +10,8 @@ eq_processfile           param.json
 molecule                 molecule.aam
 
 ##### MC loop #####
-loop_macrosteps          100
-loop_microsteps          100000
+loop_macrosteps          10
+loop_microsteps          100
 
 ##### general parameters #####
 cuboid_len               3000             # > 2 * peptide full length
@@ -30,11 +27,11 @@ harmonic_eqdist          4.9              # A
 harmonic_forceconst      0.76             # kT/A^2
 squarewell_depth         0.5              # kT
 squarewell_threshold     3                # A
-hydrwl_type              lj               # LJ potential
-hydrwl_depth             2.75             # kT
-# hydrwl_threshold         3                # A
-bin_min                  xxx              # A
-bin_max                  yyy              # A
+stickywall_type          lj               # LJ potential
+stickywall_depth         2.75             # kT
+# stickywall_threshold     3                # A
+# bin_min                  xxx              # A
+# bin_max                  yyy              # A
 
 ##### move parameters #####
 mv_particle_genericdp    5                # ~= harmonic_eqdist 
@@ -51,18 +48,18 @@ pivot_maxlen             210              # N-1
 test_stable              no" > simulation.input
 }
 # ext params
-dens=zzz # g/L
-pH=kkk
+dens=1.4 # g/L
+pH=8.5
 # run stuff
-scr="path_to_script"
-exe="path_to_program"
-mdl="path_to_peptide_model"
+scr=/Volumes/Data1/joaoh/simulations/stickywallclass_testing/sims
+exe=/Volumes/Data1/joaoh/simulations/stickywallclass_testing/program
+mdl=/Volumes/Data1/joaoh/simulations/stickywallclass_testing/model
 if [ -x $exe ]; then
     rm -f param.json simulation.{input,gro,pqr,state} molecule.aam surf_{mc,res}_dist.dat netq_dist.dat rg2_dist.dat rg_step.dat
-    $scr/mkinput.py json $dens $pH > param.json
-    $scr/mkinput.py aam $mdl/"name".fasta $dens > molecule.aam
+    $scr/mkinput.py json $dens                  $pH   > param.json
+    $scr/mkinput.py aam  $mdl/b-casein_A1.fasta $dens > molecule.aam
     mkinput
-    $exe
+    $exe/peptide_surface
     rc=$?
     exit $rc
 fi

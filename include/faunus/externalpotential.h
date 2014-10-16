@@ -350,9 +350,6 @@ namespace Faunus {
      * potential, a 1/r6 or 1/r3 attractive (and also shifted) potentials. Surface position must be specified 
      * in the program even if one has already done it for the Gouy-Chapman potential (both classes 
      * inherit from ExternalPotentialBase<> but are for the most part independent).
-     *
-     * LJ, 1/r6 and 1/r3 potentials will yield \f$-\varepsilon kT\f$ at zero particle center of mass - surface distance,
-     * hence the prefix `shifted`.
      * 
      * See DOI:10.1016/j.foodhyd.2014.07.002 for a possible application (using a non-shifted LJ potential). 
      *
@@ -371,6 +368,9 @@ namespace Faunus {
      * \beta u(r_{i,s})=-\varepsilon \left [ \frac{\sigma_{i}}{(r_{i,s}+\sigma_{i})} \right ] ^{N}
      * @f$
      * with \f$N\f$ being either 3 or 6.
+     *
+     * LJ, 1/r6 and 1/r3 potentials will yield \f$-\varepsilon kT\f$ at zero particle center of mass - surface distance,
+     * hence the prefix `shifted`.
      * 
      * NOTE(S):    
      * This is coherent with how particle-surface collisions are handled in a `cuboidslit`, i.e. volume exclusions are
@@ -393,7 +393,7 @@ namespace Faunus {
         protected:
           T _depth;
           T _threshold;
-	  std::string _info();
+          std::string _info();
           enum InteractionType {SQWL, LJ, R6, R3}; //
           InteractionType _type;                   // faster than evaluating strings
         public:
@@ -414,28 +414,6 @@ namespace Faunus {
         else if (type.compare("r6") == 0) _type = R6;
         else if (type.compare("r3") == 0) _type = R3;
         else                              _type = SQWL;
-
-        /* 
-         * SWITCH DOESN'T WORK WITH STRINGS
-         *
-        switch (in.get<string>(prefix + "type", "sqwl")) {
-        case ("sqwl"):
-          _type = SQWL;
-          break;
-        case ("lj"):
-          _type = LJ;
-          break;
-        case ("r6"):
-          _type = R6;
-          break;
-        case ("r3"):
-          _type = R3;
-          break;
-        default:
-          _type = SQWL;
-        }
-	*/
-
       }
 
     template<class T>

@@ -431,37 +431,37 @@ namespace Faunus {
     template<class T>
       template<typename Tparticle>
       T StickyWall<T>::operator()(const Tparticle &p) {
-        if (_depth < 1e-6) // save CPU cycles if _depth is zero 
-          return 0;
-        else {
-          if (_type == SQWL)
+        if (_depth > 1e-6) {               // save CPU cycles if _depth is zero
+          if (_type == SQWL) {
             if (this->p2c(p) < _threshold) // wall collision doesn't let this->p2c(p) be < 0, hence it will never be accepted that _threshold < 0
               return -_depth;
-          if (_type == LJ) {
+          }
+          else if (_type == LJ) {
             double r1  = p.radius / (this->p2c(p) + p.radius);
             double r6  = r1 * r1 * r1 * r1 * r1 * r1;
             double val = _depth * ((r6 * r6) - (2 * r6));
             return val;
           }
-          if (_type == R6) {
+          else if (_type == R6) {
             double r1  = p.radius / (this->p2c(p) + p.radius);
             double r6  = r1 * r1 * r1 * r1 * r1 * r1;
             double val = -_depth * r6;
             return val;
           }
-          if (_type == R3) {
+          else if (_type == R3) {
             double r1  = p.radius / (this->p2c(p) + p.radius);
             double r3  = r1 * r1 * r1;
             double val = -_depth * r3;
             return val;
           }
-          if (_type == LINEAR) {
+          else if (_type == LINEAR) {
             if (this->p2c(p) < _threshold)
               return -_depth * (1 - (this->p2c(p) / _threshold));
-          else
-            return 0;
+          }
         }
-      }
+        else
+          return 0;
+      } //warning: control may reach end of non-void function (I don't see how, but the machine is always right.)
 
     template<class T>
       std::string StickyWall<T>::_info() {
@@ -471,19 +471,19 @@ namespace Faunus {
             << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(SQWL)") << _depth
             << textio::kT + " = " << _depth/1.0_kJmol << " kJ/mol" << endl
             << pad(textio::SUB, 25, "Threshold") << _threshold << textio::_angstrom << " (particle - wall distance)" << endl;
-        if (_type == LJ)
+        else if (_type == LJ)
           o << pad(textio::SUB, 50, ">>> USING: shifted Lennard-Jones potential <<<") << endl
             << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(LJ)") << _depth
             << textio::kT + " = " << _depth/1.0_kJmol << " kJ/mol"<< endl; 
-        if (_type == R6)
+        else if (_type == R6)
           o << pad(textio::SUB, 50, ">>> USING: 1/r6 potential <<<") << endl
             << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(R6)") << _depth
             << textio::kT + " = " << _depth/1.0_kJmol << " kJ/mol"<< endl; 
-        if (_type == R3)
+        else if (_type == R3)
           o << pad(textio::SUB, 50, ">>> USING: 1/r3 potential <<<") << endl
             << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(R3)") << _depth
             << textio::kT + " = " << _depth/1.0_kJmol << " kJ/mol"<< endl; 
-        if (_type == LINEAR)
+        else if (_type == LINEAR)
           o << pad(textio::SUB, 50, ">>> USING: linear potential <<<") << endl
             << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(LINEAR)") << _depth
             << textio::kT + " = " << _depth/1.0_kJmol << " kJ/mol" << endl

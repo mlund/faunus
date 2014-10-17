@@ -347,46 +347,49 @@ namespace Faunus {
      *
      * This (external) potential class is used to simulate attractive interactions between 
      * particle(s) and a surface, using a simple square well (the default), a shifted Lennard-Jones
-     * potential, a 1/r6 or 1/r3 attractive (and also shifted) potentials. Surface position must be specified 
-     * in the program even if one has already done it for the Gouy-Chapman potential (both classes 
-     * inherit from ExternalPotentialBase<> but are for the most part independent).
+     * potential, \f$r^{-6}\f$ or \f$r^{-3}\f$ attractive (and also shifted) potentials, or a simple linear dependence. 
+     * Surface position must be specified in the program even if one has already done it for the 
+     * Gouy-Chapman potential (both classes inherit from ExternalPotentialBase<> but are for the 
+     * most part independent).
      * 
-     * See DOI:10.1016/j.foodhyd.2014.07.002 for a possible application (using a non-shifted LJ potential). 
+     * See DOI:10.1016/j.foodhyd.2014.07.002 for a possible application (using a regular, i.e. non-shifted, LJ potential). 
      *
-     * The shifted Lennard-Jones potential has the form:
+     * The shifted Lennard-Jones potential has the form:\n\n
      * @f$
      * \beta u(r_{i,s})=\varepsilon
-     * \left [ \left ( \frac{\sigma_{i}}{(r_{i,s}+\sigma_{i})} \right ) ^{12} - 2 \left ( \frac{\sigma_{i}}{(r_{i,s}+\sigma_{i})} \right ) ^6 \right ] 
+     * \left [ \left ( \frac{\sigma_{i}}{(r_{i,s}+\sigma_{i})} \right ) ^{12} - 2 \left ( \frac{\sigma_{i}}{(r_{i,s}+\sigma_{i})} \right ) ^6 \right ], 
      * @f$
-     * where
+     * \n\n where
      * \f$\sigma_{i}\f$ is the residue/particle radius, and \f$r_{i,s}\f$ is the particle (center of mass) - surface distance.
      * The potential reaches its minimum when \f$r_{i,s} = 0\f$, ie. the distance between the ideal surface and the 
      * residue/particle center of mass is zero.
      *
-     * The 1/r6 and 1/r3 potentials are as follows:
+     * The \f$r^{-6}\f$ and \f$r^{-3}\f$ potentials are as follows:\n\n
      * @f$
-     * \beta u(r_{i,s})=-\varepsilon \left [ \frac{\sigma_{i}}{(r_{i,s}+\sigma_{i})} \right ] ^{N}
+     * \beta u(r_{i,s})=-\varepsilon \left [ \frac{\sigma_{i}}{(r_{i,s}+\sigma_{i})} \right ] ^{N},
      * @f$
-     * with \f$N\f$ being either 3 or 6.
+     * \n\n with \f$N\f$ being either 3 or 6.
      *
-     * LJ, 1/r6 and 1/r3 potentials will yield \f$-\varepsilon kT\f$ at zero particle center of mass - surface distance,
-     * hence the prefix `shifted`.
+     * All potentials will yield \f$-\varepsilon\f$ at zero particle center of mass - surface distance,
+     * hence the prefix "shifted" (see figure).
      * 
-     * NOTE(S):    
-     * This is coherent with how particle-surface collisions are handled in a `cuboidslit`, i.e. volume exclusions are
-     * not considered for collision purposes, since the surface is not `real` in a physical sense.
+     * ![Shapes of all available potentials.](stickywall.png)
+     *
+     * <b>NOTE(S):</b>    
+     * This is coherent with how particle-surface collisions are handled in a `Cuboidslit`, i.e. volume exclusions are
+     * not considered for collision purposes, since the surface is not "real" in a physical sense.\n
      * Using a non-shifted LJ potential could lead to counter-intuitive (wrong) results, due to the fact that particles
      * can be at zero distance (mass center - surface), when considering Gouy-Chapman electrostatics between a surface and
      * a particle of opposite charge. The addition of the non-shifted LJ potential to the same system would make the particles 
-     * enter in a repulsive regime at distances greater than zero, thus decreasing adsorption, which defeating its purpose. 
+     * enter in a repulsive regime at distances greater than zero, thus decreasing adsorption, which defeats its purpose. 
      *   
      * The InputMap parameters are:
      *
      * Key                      | Description
      * :----------------------- | :---------------------------
-     * `stickywall_type`        | Type of potential, ie. square well ("sqwl", default), shifted Lennard-Jones ("lj"), 1/r6 ("r6"), and 1/r3 ("r3") 
-     * `stickywall_depth`       | Depth, \f$\epsilon\f$ [kT] (positive number)
-     * `stickywall_threshold    | Threshold, [angstrom] (particle center-to-wall distance) - for "sqwl" type only!
+     * `stickywall_type`        | Type of potential, ie. square well ("sqwl", default), shifted Lennard-Jones ("lj"), \f$r^{-6}\f$ ("r6"), \f$r^{-3}\f$ ("r3") and linear ("linear") - <b>case sensitive!</b>
+     * `stickywall_depth`       | Depth, \f$\varepsilon\f$ [`kT`] (positive number)
+     * `stickywall_threshold`   | Threshold, [`angstrom`] (particle center-to-wall distance) - <b>required for "sqwl" and "linear" types only.</b>
      */
     template<class T=double>
       class StickyWall : public ExternalPotentialBase<> {
@@ -409,11 +412,12 @@ namespace Faunus {
         name          = "Sticky Wall";
         _depth        = in.get<double>(prefix + "depth"    , 0);
         _threshold    = in.get<double>(prefix + "threshold", 0);
-        string type = in.get<string>(prefix + "type"); // got rid of the default value because the following block turns anything that is not 'lj', 'r6' or 'r3' to 'sqwl'.
-        if      (type.compare("lj") == 0) _type = LJ;
-        else if (type.compare("r6") == 0) _type = R6;
-        else if (type.compare("r3") == 0) _type = R3;
-        else                              _type = SQWL;
+        string type = in.get<string>(prefix + "type"); // got rid of the default value because the following block turns anything that is not 'lj', 'r6', 'r3' or 'linear' into 'sqwl'.
+        if      (type.compare("lj")     == 0) _type = LJ;
+        else if (type.compare("r6")     == 0) _type = R6;
+        else if (type.compare("r3")     == 0) _type = R3;
+        else if (type.compare("linear") == 0) _type = LINEAR;
+        else                                  _type = SQWL;
       }
 
     template<class T>
@@ -431,7 +435,7 @@ namespace Faunus {
           return 0;
         else {
           if (_type == SQWL)
-            if (this->p2c(p) < _threshold) // wall collision doesn't let this->p2c(p) be < 0, hence if _threshold can never be < 0
+            if (this->p2c(p) < _threshold) // wall collision doesn't let this->p2c(p) be < 0, hence it will never be accepted that _threshold < 0
               return -_depth;
           if (_type == LJ) {
             double r1  = p.radius / (this->p2c(p) + p.radius);
@@ -451,6 +455,9 @@ namespace Faunus {
             double val = -_depth * r3;
             return val;
           }
+          if (_type == LINEAR) {
+            if (this->p2c(p) < _threshold)
+              return -_depth * (1 - (this->p2c(p) / _threshold));
           else
             return 0;
         }
@@ -476,6 +483,11 @@ namespace Faunus {
           o << pad(textio::SUB, 50, ">>> USING: 1/r3 potential <<<") << endl
             << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(R3)") << _depth
             << textio::kT + " = " << _depth/1.0_kJmol << " kJ/mol"<< endl; 
+        if (_type == LINEAR)
+          o << pad(textio::SUB, 50, ">>> USING: linear potential <<<") << endl
+            << pad(textio::SUB, 26, "Depth, " + textio::epsilon + "(LINEAR)") << _depth
+            << textio::kT + " = " << _depth/1.0_kJmol << " kJ/mol" << endl
+            << pad(textio::SUB, 25, "Threshold") << _threshold << textio::_angstrom << " (particle - wall distance)" << endl;
         return o.str();
       }
 
@@ -484,7 +496,7 @@ namespace Faunus {
      * @author Joao Henriques
      * @date Lund, 2014
      *
-     * As `StickyWall` but with a p.hydrophobic check. Only hydrophobic residues will be considered here. 
+     * As `StickyWall` but with a p.hydrophobic check. Only hydrophobic residues will be considered here.
      */
     template<class T=double>
       struct HydrophobicWall : public StickyWall<T> {
@@ -498,31 +510,6 @@ namespace Faunus {
             return 0;
         }
     };
-
-    /**
-     * @brief Hydrophobic wall potential w. linear slope
-     * @date Lund, 2014
-     *
-     * As `HydrophobicWall` but the potential is varying linearly with
-     * distance. It the potential is zero at `threshold` and `depth` when
-     * the particle-surface separation is zero.
-     */
-    template<class T=double>
-      struct HydrophobicWallLinear : public StickyWall<T> {
-        HydrophobicWallLinear(InputMap &in) : StickyWall<T>::StickyWall(in) {
-          this->name="Hydrophobic Wall Linear";
-        }
-        template<typename Tparticle>
-          T operator()(const Tparticle &p) {
-            if (p.hydrophobic) {
-              double d = this->p2c(p);
-              assert(d>0 && "Particle-surface distance must be positive");
-              if (d<this->_threshold)
-                return -(this->_depth) * (1-d/this->_threshold);
-            }
-            return 0;
-          }
-      };
 
   } //namespace
 } //namespace

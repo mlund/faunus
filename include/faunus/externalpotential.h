@@ -397,8 +397,8 @@ namespace Faunus {
           T _depth;
           T _threshold;
           std::string _info();
-          enum InteractionType {SQWL, LJ, R6, R3}; //
-          InteractionType _type;                   // faster than evaluating strings
+          enum InteractionType {SQWL, LJ, R6, R3, LINEAR}; //
+          InteractionType _type;                           // faster than evaluating strings
         public:
           StickyWall(InputMap&);
           void setSurfPositionZ(T*);               // sets position of surface

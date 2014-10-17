@@ -459,9 +459,8 @@ namespace Faunus {
               return -_depth * (1 - (this->p2c(p) / _threshold));
           }
         }
-        else
-          return 0;
-      } //warning: control may reach end of non-void function (I don't see how, but the machine is always right.)
+        return 0;
+      }
 
     template<class T>
       std::string StickyWall<T>::_info() {

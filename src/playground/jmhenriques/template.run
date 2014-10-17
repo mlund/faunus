@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # Joao Henriques
-# 2014.10.16
+# 2014.10.17
 #
 function mkinput() {
 echo "##### files needed #####
@@ -10,18 +10,18 @@ eq_processfile           param.json
 molecule                 molecule.aam
 
 ##### MC loop #####
-loop_macrosteps          10
-loop_microsteps          100
+loop_macrosteps          100
+loop_microsteps          100000
 
 ##### general parameters #####
 cuboid_len               3000             # > 2 * peptide full length
 # temperature            298              # K
 # epsilon_r              78.7             # Water dielectric const
 # dh_debyelength         10.8             # A
-dh_ionicstrength         0.15             # mol/dm^3
+dh_ionicstrength         0.1              # mol/dm^3
 r12rep_eps               0.2              # kT
 r12repex_eps             -0.199999        # kT
-gouychapman_rho          -3.1207e-3       # e/A^2
+gouychapman_rho          -4.68111e-3      # e/A^2
 gouychapman_linearize    no               # non-linear GC
 harmonic_eqdist          4.9              # A
 harmonic_forceconst      0.76             # kT/A^2
@@ -51,11 +51,11 @@ test_stable              no" > simulation.input
 dens=1.4 # g/L
 pH=8.5
 # run stuff
-scr=/Volumes/Data1/joaoh/simulations/stickywallclass_testing/sims
-exe=/Volumes/Data1/joaoh/simulations/stickywallclass_testing/program
-mdl=/Volumes/Data1/joaoh/simulations/stickywallclass_testing/model
+scr='...'
+exe='...'
+mdl='...'
 if [ -x $exe ]; then
-    rm -f param.json simulation.{input,gro,pqr,state} molecule.aam surf_{mc,res}_dist.dat netq_dist.dat rg2_dist.dat rg_step.dat
+    rm -f param.json simulation.{input,gro,pqr} molecule.aam surf_{mc,res}_dist.dat netq_dist.dat rg2_dist.dat rg_step.dat
     $scr/mkinput.py json $dens                  $pH   > param.json
     $scr/mkinput.py aam  $mdl/b-casein_A1.fasta $dens > molecule.aam
     mkinput

@@ -352,22 +352,22 @@ namespace Faunus {
      * Gouy-Chapman potential (both classes inherit from ExternalPotentialBase<> but are for the 
      * most part independent).
      * 
-     * See DOI:10.1016/j.foodhyd.2014.07.002 for a possible application (using a regular, i.e. non-shifted, LJ potential). 
+     * See <a href="http://www.sciencedirect.com/science/article/pii/S0268005X14002458">DOI:10.1016/j.foodhyd.2014.07.002</a> for a possible application (using a regular, i.e. non-shifted, LJ potential). 
      *
      * The shifted Lennard-Jones potential has the form:\n\n
-     * @f$
+     * \f[
      * \beta u(r_{i,s})=\varepsilon
      * \left [ \left ( \frac{\sigma_{i}}{(r_{i,s}+\sigma_{i})} \right ) ^{12} - 2 \left ( \frac{\sigma_{i}}{(r_{i,s}+\sigma_{i})} \right ) ^6 \right ], 
-     * @f$
+     * \f]
      * \n\n where
      * \f$\sigma_{i}\f$ is the residue/particle radius, and \f$r_{i,s}\f$ is the particle (center of mass) - surface distance.
      * The potential reaches its minimum when \f$r_{i,s} = 0\f$, ie. the distance between the ideal surface and the 
      * residue/particle center of mass is zero.
      *
      * The \f$r^{-6}\f$ and \f$r^{-3}\f$ potentials are as follows:\n\n
-     * @f$
+     * \f[
      * \beta u(r_{i,s})=-\varepsilon \left [ \frac{\sigma_{i}}{(r_{i,s}+\sigma_{i})} \right ] ^{N},
-     * @f$
+     * \f]
      * \n\n with \f$N\f$ being either 3 or 6.
      *
      * All potentials will yield \f$-\varepsilon\f$ at zero particle center of mass - surface distance,
@@ -375,8 +375,7 @@ namespace Faunus {
      * 
      * ![Shapes of all available potentials.](stickywall.png)
      *
-     * <b>NOTE(S):</b>    
-     * This is coherent with how particle-surface collisions are handled in a `Cuboidslit`, i.e. volume exclusions are
+     * @note This is coherent with how particle-surface collisions are handled in a `Cuboidslit`, i.e. volume exclusions are
      * not considered for collision purposes, since the surface is not "real" in a physical sense.\n
      * Using a non-shifted LJ potential could lead to counter-intuitive (wrong) results, due to the fact that particles
      * can be at zero distance (mass center - surface), when considering Gouy-Chapman electrostatics between a surface and
@@ -401,9 +400,9 @@ namespace Faunus {
           InteractionType _type;                           // faster than evaluating strings
         public:
           StickyWall(InputMap&);
-          void setSurfPositionZ(T*);               // sets position of surface
+          void setSurfPositionZ(T*);                       // sets position of surface
           template<typename Tparticle>
-            T operator()(const Tparticle &p);      // returns energy
+            T operator()(const Tparticle &p);              // returns energy
       };
 
     template<class T>
@@ -412,7 +411,7 @@ namespace Faunus {
         name          = "Sticky Wall";
         _depth        = in.get<double>(prefix + "depth"    , 0);
         _threshold    = in.get<double>(prefix + "threshold", 0);
-        string type = in.get<string>(prefix + "type"); // got rid of the default value because the following block turns anything that is not 'lj', 'r6', 'r3' or 'linear' into 'sqwl'.
+        string type = in.get<string>(prefix + "type");     // got rid of the default value because the following block turns anything that is not 'lj', 'r6', 'r3' or 'linear' into 'sqwl'.
         if      (type.compare("lj")     == 0) _type = LJ;
         else if (type.compare("r6")     == 0) _type = R6;
         else if (type.compare("r3")     == 0) _type = R3;
@@ -425,39 +424,38 @@ namespace Faunus {
         this->setCoordinateFunc
           (
            [=](const Point &p) { return std::abs(*z-p.z()); }
-          ); // c++11 lambda
+          );                                               // c++11 lambda
       }
 
     template<class T>
       template<typename Tparticle>
       T StickyWall<T>::operator()(const Tparticle &p) {
-        if (_depth > 1e-6) {               // save CPU cycles if _depth is zero
+        if (_depth > 1e-6) {                               // save CPU cycles if _depth is zero
+          double value;                                    // don't see the point in making it global
           if (_type == SQWL) {
-            if (this->p2c(p) < _threshold) // wall collision doesn't let this->p2c(p) be < 0, hence it will never be accepted that _threshold < 0
-              return -_depth;
+            if (this->p2c(p) < _threshold)                 // wall collision doesn't let this->p2c(p) be < 0, hence it will never be accepted that _threshold < 0
+              value    = -1;
           }
           else if (_type == LJ) {
             double r1  = p.radius / (this->p2c(p) + p.radius);
             double r6  = r1 * r1 * r1 * r1 * r1 * r1;
-            double val = _depth * ((r6 * r6) - (2 * r6));
-            return val;
+            value      = ((r6 * r6) - (2 * r6));
           }
           else if (_type == R6) {
             double r1  = p.radius / (this->p2c(p) + p.radius);
             double r6  = r1 * r1 * r1 * r1 * r1 * r1;
-            double val = -_depth * r6;
-            return val;
+            value      = -r6;
           }
           else if (_type == R3) {
             double r1  = p.radius / (this->p2c(p) + p.radius);
             double r3  = r1 * r1 * r1;
-            double val = -_depth * r3;
-            return val;
+            value      = -r3;
           }
           else if (_type == LINEAR) {
             if (this->p2c(p) < _threshold)
-              return -_depth * (1 - (this->p2c(p) / _threshold));
+              value    = -(1 - (this->p2c(p) / _threshold));
           }
+          return _depth * value;
         }
         return 0;
       }
@@ -500,13 +498,11 @@ namespace Faunus {
     template<class T=double>
       struct HydrophobicWall : public StickyWall<T> {
         HydrophobicWall(InputMap &in) : StickyWall<T>::StickyWall(in) {
-          this->name="Hydrophobic Wall";
+          this->name+=" (Hydrophobic)";
         }
         template<typename Tparticle>
           T operator()(const Tparticle &p) {
-            if (p.hydrophobic)
-              return StickyWall<T>::operator()(p);
-            return 0;
+            return (p.hydrophobic) ? StickyWall<T>::operator()(p) : 0;
         }
     };
 

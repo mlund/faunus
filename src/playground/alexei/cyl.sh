@@ -35,11 +35,10 @@ molecule1_N            1
 molecule1              mol.pqr
 molecule2_N            1
 molecule2              mol.pqr
-muscalar               $muscalar     # magnitude of off-center dipoles
+muscalar               $muscalar # magnitude of off-center dipoles
 
-movie                  no      # save trajectory? (gromacs xtc format)
+movie                  no        # save trajectory? (gromacs xtc format)
 
-# Atomic species - add up to ten different kinds
 tion1                  Na
 nion1                  $Nion
 tion2                  Cl
@@ -48,7 +47,7 @@ mv_particle_genericdp  40
 
 " > cyl.input
 
-# Generate some simple molecules in PQR format:
+# Charged colloid with off-center dipole, 1 angstrom below surface
 # atom# atomname resname res#    x        y        z      q     r
 echo "
 ATOM      1 PROT PROT    1       0.000    0.000    0.000  10.00 10.00
@@ -65,36 +64,37 @@ eqrun=true
 prodrun=true
 copy=true
 
-for muscalar in 1.0 #2.0
+for muscalar in 1.0 #2.0    # off-center dipole moment (Debye), 90 deg. hard coded
 do
-  for salt in 0.020 0.040 0.080 0.160 # salt concentraion (1:1), mol/l
+  for salt in 0.020 #0.040 0.080 0.160 # 1:1 salt concentraion (mol/l)
   do
     vol=`python -c "print 3.1416*($cylinder_radius)**2 * $cylinder_len"`
     conc=`python -c "print 1e-27 * 6.022e23 * $salt"`
     Nion=`python -c "print int(round($conc * $vol))"`
     prefix="salt${salt}-mu$muscalar"
 
-    Nanion=`python -c "print $Nion+2*10"`
+    Nanion=`python -c "print $Nion+2*10"`  # number of chloride ions
 
     if [ "$eqrun" = true ]; then
       echo "Equilibration run...(state file deleted)"
       rm -fR state
       micro=2000
       mkinput
-      $exe
+      $exe > $prefix.eq
     fi
 
     if [ "$prodrun" = true ]; then
       echo "Production run..."
       micro=1000000
       mkinput
-      $exe #> $prefix.out
+      $exe > $prefix.out
     fi
-    exit
 
     if [ "$copy" = true ]; then
       cp "$0" $prefix.sh
       cp state $prefix.state
+      cp rdf_p2p.dat $prefix.rdf
+      cp confout.pqr $prefix.pqr
     fi
   done
 done

@@ -37,6 +37,7 @@ molecule2_N            1
 molecule2              mol.pqr
 muscalar               $muscalar # magnitude of off-center dipoles
 
+molecule_plane         yes
 movie                  no        # save trajectory? (gromacs xtc format)
 
 tion1                  Na

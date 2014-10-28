@@ -127,8 +127,11 @@ int main(int argc, char** argv) {
 
   spc.load("state");
 
-  Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
   Move::AtomicTranslation<Tspace> mv(mcp, pot, spc);
+  Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
+  if (inPlane)
+    for (auto &m : pol)                                                       
+      gmv.directions[ m.name ]=Point(0,0,1);    
 
   sys.init( mySystemEnergy(spc,pot,spc.p) );    // Store total system energy
 

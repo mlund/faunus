@@ -128,7 +128,7 @@ namespace Faunus {
       muscalar = mu.len()* 1.0_Debye;
       if (mu.len()>1e-6)
         mu = mu/mu.len();
-      mw = json::value<double>(atom.second, "Mw", 1.);
+      mw = json::value<double>(atom.second, "mw", 1.);
       charge = json::value<double>(atom.second, "q", 0);
       radius = json::value<double>(atom.second, "r", 0) * 1.0_angstrom;
       sigma = 2*radius;

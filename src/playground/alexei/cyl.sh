@@ -44,7 +44,7 @@ tion1                  Na
 nion1                  $Nion
 tion2                  Cl
 nion2                  $Nanion
-mv_particle_genericdp  40
+mv_particle_genericdp  80
 
 " > cyl.input
 
@@ -65,28 +65,30 @@ eqrun=true
 prodrun=true
 copy=true
 
-for muscalar in 1.0 #2.0    # off-center dipole moment (Debye), 90 deg. hard coded
+for muscalar in 2 4 8 16 32 64    # off-center dipole moment (Debye), 90 deg. hard coded
 do
-  for salt in 0.020 #0.040 0.080 0.160 # 1:1 salt concentraion (mol/l)
+  for salt in 0.010 0.020 0.040 0.080 0.160 # 1:1 salt concentraion (mol/l)
   do
     vol=`python -c "print 3.1416*($cylinder_radius)**2 * $cylinder_len"`
     conc=`python -c "print 1e-27 * 6.022e23 * $salt"`
     Nion=`python -c "print int(round($conc * $vol))"`
-    prefix="salt${salt}-mu$muscalar"
+    prefix="cs${salt}-mu$muscalar"
+
+    echo $prefix
 
     Nanion=`python -c "print $Nion+2*10"`  # number of chloride ions
 
     if [ "$eqrun" = true ]; then
-      echo "Equilibration run...(state file deleted)"
+      echo "  Equilibration run...(state file deleted)"
       rm -fR state
-      micro=2000
+      micro=10000
       mkinput
       $exe > $prefix.eq
     fi
 
     if [ "$prodrun" = true ]; then
-      echo "Production run..."
-      micro=1000000
+      echo "  Production run..."
+      micro=10000000
       mkinput
       $exe > $prefix.out
     fi
@@ -96,6 +98,7 @@ do
       cp state $prefix.state
       cp rdf_p2p.dat $prefix.rdf
       cp confout.pqr $prefix.pqr
+      cp mdout.mdp $prefix.mdp
     fi
   done
 done

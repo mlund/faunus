@@ -431,7 +431,7 @@ namespace Faunus {
       template<typename Tparticle>
       T StickyWall<T>::operator()(const Tparticle &p) {
         if (_depth > 1e-6) {                               // save CPU cycles if _depth is zero
-          double value;                                    // don't see the point in making it global
+          double value=0;
           if (_type == SQWL) {
             if (this->p2c(p) < _threshold)                 // wall collision doesn't let this->p2c(p) be < 0, hence it will never be accepted that _threshold < 0
               value    = -1;

@@ -117,22 +117,22 @@ namespace Faunus {
       activity = json::value<double>(atom.second, "activity", 0);
       chemPot = log( activity * 1.0_molar );
       alpha << json::value<std::string>(atom.second, "alpha", "");
-      alpha *= 4*pc::pi*pc::e0*(1e-10)*pc::kT()/(pc::e*pc::e);
+      alpha /= pc::lB(1.0);
       theta << json::value<std::string>(atom.second, "theta", "");
       theta *= 1.0_Debye;
       dp = json::value<double>(atom.second, "dp", 0);
       dprot = json::value<double>(atom.second, "dprot", 0) * 1._deg; // deg->rads
-      eps = json::value<double>(atom.second, "eps", 0);
+      eps = json::value<double>(atom.second, "eps", 0) * 1._kT;
       hydrophobic = json::value<bool>(atom.second, "hydrophobic", false);
       mu << json::value<std::string>(atom.second, "mu", "0 0 0");
       muscalar = mu.len()* 1.0_Debye;
       if (mu.len()>1e-6)
         mu = mu/mu.len();
-      mw = json::value<double>(atom.second, "Mw", 1.);
+      mw = json::value<double>(atom.second, "mw", 1.);
       charge = json::value<double>(atom.second, "q", 0);
-      radius = json::value<double>(atom.second, "r", 0);
+      radius = json::value<double>(atom.second, "r", 0) * 1.0_angstrom;
       sigma = 2*radius;
-      sigma = json::value<double>(atom.second, "sigma", sigma);
+      sigma = json::value<double>(atom.second, "sigma", sigma) * 1.0_angstrom;
       radius = sigma/2;
       tfe = json::value<double>(atom.second, "tfe", 0);
       half_len = 0.5 * json::value<double>(atom.second, "len", 0);
@@ -228,7 +228,7 @@ namespace Faunus {
         }
 
         /**
-         * @brief Access element by string - exception if not found. 
+         * @brief Access element by string. 
          * @details If not found, return default property at index 0
          */
         reference operator[](const std::string &name) {
@@ -241,7 +241,6 @@ namespace Faunus {
         /**
          * @brief Read properties from JSON file
          * @param file Filename
-         * @param section Section in JSON file to scan
          * @note All data is reset before loading
          */
         bool includefile(const string& file) {
@@ -456,7 +455,7 @@ namespace Faunus {
    * Note that faunus currently has a global instance of `MoleculeMap`,
    * simply named `molecule`. This can be accessed from anywhere.
    *
-   * @tody More documentation
+   * @todo More documentation
    */
   class MoleculeMap : public PropertyVector<MoleculeData> {
     public:

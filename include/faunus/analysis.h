@@ -87,14 +87,8 @@ namespace Faunus {
 
           if (cnt>0) {
             vector<double> P(3);
-#ifdef __INTEL_COMPILER
-            vector<string> id(3);
-            id[0]="Ideal";
-            id[1]="Excess";
-            id[2]="Total";
-#else
             vector<string> id = {"Ideal", "Excess", "Total"};
-#endif
+
             P[0] = Pid.avg();       // ideal
             P[1] = (T/cnt).trace(); // excess
             P[2] = P[0] + P[1];     // total
@@ -939,13 +933,14 @@ namespace Faunus {
      * @author Martin Trulsson and Mikael Lund
      * @date Lund / Prague 2007-2008.
      */
-    template<class Tparticle>
+    template<class Tspace>
       class WidomScaled : public AnalysisBase {
 
         private:
 
           typedef std::vector<double> Tvec;
-          p_vec g;            //!< list of test particles
+          typedef typename Tspace::ParticleType Tparticle;
+          typename Tspace::ParticleVector g;//!< list of test particles
           Tvec chel;          //!< electrostatic
           Tvec chhc;          //!< hard collision
           Tvec chex;          //!< excess
@@ -1385,7 +1380,7 @@ namespace Faunus {
 
         /**
          * @brief Saves data to files. 
-         * @param nbr Extention of filename
+         * @param ext Extention of filename
          * 
          * @note \f$ g(r) \rightarrow \f$ gofr.dat+nbr
          *       \f$ \mu(0)\cdot\mu(r) \rightarrow \f$ mucorr.dat+nbr

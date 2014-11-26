@@ -390,7 +390,11 @@ namespace Faunus {
 
       int initType;  //!< Sets how inserted combination will be initialized
 
-      bool isAtomic; //!< Set in GCMolecular, used only in GCM, here for conveniency
+      bool isAtomic() {
+          if(initType == RANDOM) return true;
+          if(initType == POOL) return false;
+          assert(false && "This should never happen");
+      }
 
       bool operator==(const MoleculeData &d) const { return (*this==d); }
 

@@ -6,6 +6,7 @@
 #include <faunus/slump.h>
 #include <faunus/textio.h>
 #include <faunus/physconst.h>
+#include <faunus/species.h>
 #include <Eigen/Geometry>
 #endif
 
@@ -415,10 +416,97 @@ namespace Faunus {
       }
 
     /**
+     * @brief Base class for molecule inserters
+     *
+     * Molecule inserters take care of generating molecules
+     * for insertion into space and can be used in Grand Canonical moves,
+     * Widom analysis, and for generating initial configurations.
+     * Inserters will not actually insert anything, but rather
+     * return a particle vector with proposed coordinates.
+     *
+     * All inserters are function objects, expecting
+     * a geometry, particle vector, and molecule data via
+     * the pure virtual function operator.
+     *
+     * @todo Under construction
+     */
+    template<class Tspace>
+      struct MoleculeInserterBase {
+        std::string name;
+        typedef typename Tspace::ParticleVector Tpvec;
+        typedef typename Tspace::GeometryType Tgeo;
+        virtual Tpvec operator() (Tgeo&, const Tpvec&, const MoleculeData&)=0;
+      };
+
+    /** @brief Random position and orientation - typical for rigid bodies */
+    template<class Tspace, class base=MoleculeInserterBase<Tspace> >
+      struct InsertRandom : public base {
+        using typename base::Tpvec;
+        using typename base::Tgeo;
+        Point dir; //!< Scalars for random mass center position. Default (1,1,1) 
+
+        InsertRandom() : base::name("random"), dir(1,1,1) {}
+
+        Tpvec operator() (Tgeo &geo, const Tpvec &p, const MoleculeData &mol) FOVERRIDE {
+          assert(!"Unfinished");
+          Tpvec v;
+          Point r, cm = massCenter(geo, v);
+          geo.randompos(r);
+          r = r.cwiseProduct(dir);
+          Geometry::translate(geo, v, -cm+r);
+          // ...generate random orientation...
+          return v;
+        }
+      };
+
+    /** @brief Insert at vacant position, avoiding matter overlap */
+    template<class Tspace, class base=InsertRandom<Tspace> >
+      class InsertFreeSpace : public base {
+        private:
+          using typename base::Tpvec;
+          using typename base::Tgeo;
+
+          bool matterOverlap(const Tgeo &geo, const Tpvec &p1, const Tpvec &p2) const {
+            for (auto &i : p1)
+              for (auto &j : p2) {
+                double max=i.radius+j.radius;
+                if ( geo.sqdist(i,j)<max*max )
+                  return true;
+              }
+            return false;
+          }
+
+          bool containerOverlap(const Tgeo &geo, const Tpvec &p) const {
+            for (auto &i : p)
+              if (geo.collision(i)) return true;
+            return false;
+          }
+
+        public:
+          int maxtrials; //!< Maximum number of attempts to find a hole (default: 1000)
+
+          InsertFreeSpace(int maxtrials=1000) : maxtrials(maxtrials) {}
+
+          Tpvec operator() (Tgeo &geo, const Tpvec &p, const MoleculeData &mol) FOVERRIDE {
+            int n=maxtrials;
+            Tpvec v;
+            do {
+              v = base(geo,p,mol);
+            } while (--n>0 && matterOverlap(geo,v,p) && containerOverlap(geo,v));
+            if (n==0) {
+              std::cerr << "Timeout - found no space for particle(s)\n";
+              v.clear();
+            }
+            return v;
+          } 
+      };
+
+    /**
      * @brief Find an empty space for a particle vector in a space of other particles
      * @author Mikael Lund
      * @date Asljunga 2011
      * @todo Implement random rotation in addition to current translation scheme.
+     *       Reimplement as derivative of `MoleculeInserterBase`
      */
     class FindSpace {
       private:
@@ -481,8 +569,8 @@ namespace Faunus {
             return false;
           }
 
-          template<class Tgeometry, class Tpvec>
-            bool find(const Tpvec &dst, Tpvec &p, Tgeometry &geo) const {
+        template<class Tgeometry, class Tpvec>
+          bool find(const Tpvec &dst, Tpvec &p, Tgeometry &geo) const {
 
             Point v;
             Point cm = massCenter(geo, p);

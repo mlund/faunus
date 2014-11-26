@@ -1395,6 +1395,7 @@ namespace Faunus {
      */
     class ManybodyBase {
       protected:
+        typedef picojson::object::value_type Tjson;
         virtual string _brief() const=0;
         typedef vector<int> Tivec;
         Tivec v; // particle index
@@ -1414,34 +1415,41 @@ namespace Faunus {
 
     /**
      * @brief Angular potential
-     * @warning unfinished!
+     * @warning Just a test - unfinished!
      */
     class Angular : public ManybodyBase {
       private:
         static const string name;
         typedef ManybodyBase base;
-        double c1,c2; // pot parameters
-        string _brief() const FOVERRIDE {
+        double k;
+        inline string _brief() const FOVERRIDE {
           std::ostringstream o;
-          o << ndxStr() << " - " << name << ": " << c1 << " " << c2;
+          o << ndxStr() << " - " << name << ": k=" << k;
           return o.str();
         }
       public:
-        Angular() : c1(0), c2(0) {}
-        Angular(const Tivec& ndx, double angle, double energy) {
+        inline Angular() : k(0) {}
+
+        inline Angular(const Tivec& ndx, double k) : k(k) {
           assert(ndx.size()==3);
           setIndex(ndx);
         }
 
+        /** @brief Construct from a picojson object */
+        inline Angular(const Tjson &js) {
+          assert( js.first=="angle-harmonic" );
+          k = json::value<double>(js.second, "k", 0);
+        }
+
         /** @brief Energy function (kT) */
         template<class Tgeometry, class Tpvec>
-          double operator()(Tgeometry &g, const Tpvec &p) {
+          double operator()(Tgeometry &geo, const Tpvec &p) {
             assert(v.size()==3);
             assert((int)p.size()>*std::max_element(v.begin(), v.end()));
-            auto ab = g.vdist(p[v[0]], p[v[1]]);
-            auto ac = g.vdist(p[v[0]], p[v[2]]);
-            auto bc = g.vdist(p[v[1]], p[v[2]]);
-            return c1 * ab.dot(bc) / ac.norm(); // for example...
+            auto ab = geo.vdist(p[v[0]], p[v[1]]);
+            auto ac = geo.vdist(p[v[0]], p[v[2]]);
+            auto bc = geo.vdist(p[v[1]], p[v[2]]);
+            return ab.dot(bc) / ac.norm(); // for example...
           }
     };
 

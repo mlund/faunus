@@ -2304,7 +2304,7 @@ namespace Faunus {
     template<class Tspace>
       GCMolecular<Tspace>::GCMolecular(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, string pfx): base(e,s,pfx) {
 
-        cout << "Initializing GCMolecular, be sure all Groups and particles are already loaded" << endl;
+        cout << "Initializing GCMolecular" << endl;
 
         base::title = "Group insertion/deletion move";
         base::useAlternateReturnEnergy=true;
@@ -2312,6 +2312,7 @@ namespace Faunus {
         base::runfraction = in.get<double>(pfx+"_runfraction",1.0);
 
         spc->linkGroupsToTopo();
+
         string topoFile = in.get<string>("topology", "");
 
         if (!topoFile.empty())
@@ -2319,6 +2320,41 @@ namespace Faunus {
             cout << "Could not open *.topo file" << endl;
             exit(1);
           }
+
+        assert(!gCCombinations.empty());
+        tracker.initATypes(gCCombinations);
+
+        if(spc->groupList().empty()) {// add few particles
+          comb = randomComb();
+
+          for(auto* mol: comb->molComb) { // for each molecule in combination
+            Group *group=NULL;
+            if(mol->isAtomic()) {
+              group = new Group(mol->name); // group for salt particles
+
+              group->setfront(spc->p.size());
+              for(auto aType: mol->atoms) { // for each atom type of molecule
+                group->addParticles(*spc, atom[aType].name, 1);
+              }
+              group->setMassCenter(*spc);
+              spc->enroll(*group);
+
+            } else {
+              group = new Group(mol->name); // group for salt particles
+              assert(!mol->conformations.empty() && "Push configuration for Pool insert before declaring GCMol class");
+              p_vec v = mol->conformations[0];                       // temporary, empty particle vector
+              cout << mol->conformations[0].size() << endl;
+              Geometry::FindSpace().find(spc->geo,spc->p,v);         // find empty spot in particle vector
+              *group = spc->insert(v);
+              group->name=mol->name;
+              spc->enroll(*group);
+            }
+
+            break;
+          }
+
+          spc->linkGroupsToTopo();
+        }
 
         vector<bool> gCGroups;
         getGrandCanonicalGroups(gCGroups);
@@ -2331,10 +2367,8 @@ namespace Faunus {
           cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
           exit(1);
         }
-
-        assert(!gCCombinations.empty());
-        tracker.initATypes(gCCombinations);
       }
+
 
     template<class Tspace>
       void GCMolecular<Tspace>::initMolTracker(vector<bool>& gCGroups) {
@@ -2431,7 +2465,7 @@ namespace Faunus {
 
           for(auto* mol: comb->molComb) {                       // for each molecule in combination
 
-            if(mol->isAtomic) {
+            if(mol->isAtomic()) {
               for(auto aType: mol->atoms) {   // for each atom type of that molecule
                 if(tracker.sizeOf(mol->id, aType) == 0) { delList.clear(); return; }
                 if(tracker.sizeOf(mol->id, aType) <= tidCount[aType]) { delList.clear(); return; }
@@ -2492,7 +2526,7 @@ namespace Faunus {
         } else { // insert
           for(auto* mol: comb->molComb) {// for each molecule in combination
             if(mol->initType == MoleculeData::RANDOM) {
-              if(mol->isAtomic) {
+              if(mol->isAtomic()) {
                 for(auto aType: mol->atoms) { // for each atom type of molecule
                   p_vec pin;
                   pin.push_back(particle());
@@ -2515,7 +2549,7 @@ namespace Faunus {
             } // RANDOM
 
             if(mol->initType == MoleculeData::POOL) {
-              if(mol->isAtomic) {
+              if(mol->isAtomic()) {
                 cout << mol->name << " POOL INSERTION OF ATOMIC SPECIES NOT IMPLEMENTED, USE RANDOM" << endl;
                 exit(1);
               } else {
@@ -2599,7 +2633,7 @@ namespace Faunus {
           spc->trial.erase( spc->trial.begin()+it->group->front(), spc->trial.begin()+it->group->back()+1 );
         }
         for(auto it =  insList.begin(); it!= insList.end(); ++it) {
-          if(molecule[it->group->molId].isAtomic) {
+          if(molecule[it->group->molId].isAtomic()) {
             in = spc->insert(it->pin, it->group->molId, true);
             assert(it->pin.size() == 1);
             tracker.push(in->molId, spc->p[in->back()].id, in->back());
@@ -2705,7 +2739,7 @@ namespace Faunus {
               for (auto j=i+1; j!=ins.pin.end(); j++)
                 molInner += pot->p2p(*i,*j);
 
-            if(molecule[ins.group->molId].isAtomic) {
+            if(molecule[ins.group->molId].isAtomic()) {
               for(auto& i: ins.pin) {
                 potENew += pot->p_external(i); // external energy
                 chemPot += atom[i.id].chemPot;

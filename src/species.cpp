@@ -17,12 +17,12 @@ namespace Faunus {
   }
 
   bool MoleculeMap::includefile(InputMap &in) {
-    string file = in("topology", string("topo.json") );
+    string file = in("moleculelist", string("topo.json") );
     return base::includefile(file);
   }
 
-  bool MoleculeComboMap::includefile(InputMap &in) {
-    return base::includefile( in("moleculecombo", string("") ) );
+  bool MoleculeCombinationMap::includefile(InputMap &in) {
+    return base::includefile( in("moleculecombinations", string("") ) );
   }
 
   AtomMap atom; // Instantiate global copy

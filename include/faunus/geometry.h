@@ -6,6 +6,7 @@
 #include <faunus/slump.h>
 #include <faunus/textio.h>
 #include <faunus/physconst.h>
+#include <faunus/species.h>
 #include <Eigen/Geometry>
 #endif
 
@@ -23,16 +24,15 @@ namespace Faunus {
    */
   namespace Geometry {
 
-    /*!
-     * \brief Polymorphic class for simulation geometries
-     * \author Mikael Lund
+    /**
+     * @brief Polymorphic class for simulation geometries
      *
      * This is a polymorph class that handles simulation geometries.
      * It contains distance calculation functions, boundary conditions, volume
      * etc. A number of functions are defined as pure virtual (=0) meaning
      * that these MUST be defined in derived classes.
      *
-     * \note This class uses dynamic polymorphism, i.e. virtual functions, which
+     * @note This class uses dynamic polymorphism, i.e. virtual functions, which
      *       may have negative impact on performance as function inlining may not be
      *       possible. This is usually a problem only for inner loop distance calculations.
      *       To get optimum performance in inner loops use a derived class directly and do
@@ -415,89 +415,6 @@ namespace Faunus {
       }
 
     /**
-     * @brief Find an empty space for a particle vector in a space of other particles
-     * @author Mikael Lund
-     * @date Asljunga 2011
-     * @todo Implement random rotation in addition to current translation scheme.
-     */
-    class FindSpace {
-      private:
-        template<class Tgeometry, class Tpvec>
-          bool matterOverlap(const Tgeometry &geo, const Tpvec &p1, const Tpvec &p2) const {
-            if (allowMatterOverlap==false)
-              for (auto &i : p1)
-                for (auto &j : p2) {
-                  double max=i.radius+j.radius;
-                  if ( geo.sqdist(i,j)<max*max )
-                    return true;
-                }
-            return false;
-          }
-
-        template<class Tgeometry, class Tpvec>
-          bool containerOverlap(const Tgeometry &geo, const Tpvec &p) const {
-            if (allowContainerOverlap==false)
-              for (auto &i : p)
-                if (geo.collision(i)) return true;
-            return false;
-          }
-
-      public:
-        Point dir;                  //!< default = [1,1,1]
-        bool allowContainerOverlap; //!< default = false;
-        bool allowMatterOverlap;    //!< default = false;
-
-        inline FindSpace() {
-          dir=Point(1,1,1);
-          allowContainerOverlap=false;
-          allowMatterOverlap=false;   
-        }
-
-        /**
-         * @param geo Geometry to use
-         * @param dst Destination particle vector (will not be touched!)
-         * @param p Particle vector to find space for. Coordinates will be changed.
-         * @param maxtrials Number of times to try before timeout.
-         */
-        template<class Tgeometry, class Tpvec>
-          bool find(Tgeometry &geo, const Tpvec &dst, Tpvec &p, int maxtrials=1e3) const {
-            using namespace textio;
-            cout << "Trying to insert " << p.size() << " particle(s)";
-            Point v;
-            do {
-              cout << ".";
-              maxtrials--;
-              Point cm = massCenter(geo, p);
-              geo.randompos(v);
-              v = v.cwiseProduct(dir);
-              translate(geo, p, -cm+v);
-            } while (maxtrials>0 && (containerOverlap(geo,p) || matterOverlap(geo,p,dst)));
-            if (maxtrials>0) {
-              cout << " OK!\n";
-              return true;
-            }
-            cout << " timeout!\n";
-            assert(!"Timeout - found no space for particle(s).");
-            return false;
-          }
-
-          template<class Tgeometry, class Tpvec>
-            bool find(const Tpvec &dst, Tpvec &p, Tgeometry &geo) const {
-
-            Point v;
-            Point cm = massCenter(geo, p);
-            geo.randompos(v);
-            v = v.cwiseProduct(dir);
-            translate(geo, p, -cm+v);
-
-            if(!containerOverlap(geo,p) && !matterOverlap(geo,p,dst))
-              return true;
-
-            return false;
-          }
-    };
-
-    /**
      * @brief Quaternion rotation routine using the Eigen library
      * @note Boundary condition are respected.
      */
@@ -562,6 +479,182 @@ namespace Faunus {
           a = rot_mat*a*rot_mat.transpose();
           return a;
         }
+    };
+
+    /**
+     * @brief Base class for molecule inserters
+     *
+     * Molecule inserters take care of generating molecules
+     * for insertion into space and can be used in Grand Canonical moves,
+     * Widom analysis, and for generating initial configurations.
+     * Inserters will not actually insert anything, but rather
+     * return a particle vector with proposed coordinates.
+     *
+     * All inserters are function objects, expecting
+     * a geometry, particle vector, and molecule data via
+     * the pure virtual function operator.
+     *
+     * @todo Under construction
+     */
+    template<class Tspace>
+      struct MoleculeInserterBase {
+        std::string name;
+        typedef typename Tspace::ParticleVector Tpvec;
+        typedef typename Tspace::GeometryType Tgeo;
+        virtual Tpvec operator() (Tgeo&, const Tpvec&, const MoleculeData&)=0;
+        virtual ~MoleculeInserterBase() {}
+      };
+
+    /** @brief Random position and orientation - typical for rigid bodies */
+    template<class Tspace, class base=MoleculeInserterBase<Tspace> >
+      struct InsertRandom : public base {
+        using typename base::Tpvec;
+        using typename base::Tgeo;
+        Point dir; //!< Scalars for random mass center position. Default (1,1,1) 
+
+        InsertRandom() : base::name("random"), dir(1,1,1) {}
+
+        Tpvec operator() (Tgeo &geo, const Tpvec &p, const MoleculeData &mol) {
+          Tpvec v;
+          Point a,b;
+          geo.randompos(a);
+          a = a.cwiseProduct(dir);
+          Geometry::cm2origo(geo,v);
+          Geometry::QuaternionRotate rot;
+          b.ranunit(slp_global);
+          rot.setAxis(geo, {0,0,0}, b, slp_global()*2*pc::pi); 
+          for (auto &i : v) {
+            i = rot(i) + a;
+            geo.boundary(i);
+          }
+          return v;
+        }
+      };
+
+    /** @brief Insert at vacant position, avoiding matter overlap */
+    template<class Tspace, class base=InsertRandom<Tspace> >
+      class InsertFreeSpace : public base {
+        private:
+          using typename base::Tpvec;
+          using typename base::Tgeo;
+
+          bool matterOverlap(const Tgeo &geo, const Tpvec &p1, const Tpvec &p2) const {
+            for (auto &i : p1)
+              for (auto &j : p2) {
+                double max=i.radius+j.radius;
+                if ( geo.sqdist(i,j)<max*max )
+                  return true;
+              }
+            return false;
+          }
+
+          bool containerOverlap(const Tgeo &geo, const Tpvec &p) const {
+            for (auto &i : p)
+              if (geo.collision(i)) return true;
+            return false;
+          }
+
+        public:
+          int maxtrials; //!< Maximum number of attempts to find a hole (default: 1000)
+
+          InsertFreeSpace(int maxtrials=1000) : maxtrials(maxtrials) {}
+
+          Tpvec operator() (Tgeo &geo, const Tpvec &p, const MoleculeData &mol) {
+            int n=maxtrials;
+            Tpvec v;
+            do {
+              v = base(geo,p,mol);
+            } while (--n>0 && matterOverlap(geo,v,p) && containerOverlap(geo,v));
+            if (n==0) {
+              std::cerr << "Timeout - found no space for particle(s)\n";
+              v.clear();
+            }
+            return v;
+          } 
+      };
+
+    /**
+     * @brief Find an empty space for a particle vector in a space of other particles
+     * @author Mikael Lund
+     * @date Asljunga 2011
+     * @todo Implement random rotation in addition to current translation scheme.
+     *       Reimplement as derivative of `MoleculeInserterBase`
+     */
+    class FindSpace {
+      private:
+        template<class Tgeometry, class Tpvec>
+          bool matterOverlap(const Tgeometry &geo, const Tpvec &p1, const Tpvec &p2) const {
+            if (allowMatterOverlap==false)
+              for (auto &i : p1)
+                for (auto &j : p2) {
+                  double max=i.radius+j.radius;
+                  if ( geo.sqdist(i,j)<max*max )
+                    return true;
+                }
+            return false;
+          }
+
+        template<class Tgeometry, class Tpvec>
+          bool containerOverlap(const Tgeometry &geo, const Tpvec &p) const {
+            if (allowContainerOverlap==false)
+              for (auto &i : p)
+                if (geo.collision(i)) return true;
+            return false;
+          }
+
+      public:
+        Point dir;                  //!< default = [1,1,1]
+        bool allowContainerOverlap; //!< default = false;
+        bool allowMatterOverlap;    //!< default = false;
+
+        inline FindSpace() {
+          dir=Point(1,1,1);
+          allowContainerOverlap=false;
+          allowMatterOverlap=false;   
+        }
+
+        /**
+         * @param geo Geometry to use
+         * @param dst Destination particle vector (will not be touched!)
+         * @param p Particle vector to find space for. Coordinates will be changed.
+         * @param maxtrials Number of times to try before timeout.
+         */
+        template<class Tgeometry, class Tpvec>
+          bool find(Tgeometry &geo, const Tpvec &dst, Tpvec &p, int maxtrials=1e3) const {
+            using namespace textio;
+            cout << "Trying to insert " << p.size() << " particle(s)";
+            Point v;
+            do {
+              cout << ".";
+              maxtrials--;
+              Point cm = massCenter(geo, p);
+              geo.randompos(v);
+              v = v.cwiseProduct(dir);
+              translate(geo, p, -cm+v);
+            } while (maxtrials>0 && (containerOverlap(geo,p) || matterOverlap(geo,p,dst)));
+            if (maxtrials>0) {
+              cout << " OK!\n";
+              return true;
+            }
+            cout << " timeout!\n";
+            assert(!"Timeout - found no space for particle(s).");
+            return false;
+          }
+
+        template<class Tgeometry, class Tpvec>
+          bool find(const Tpvec &dst, Tpvec &p, Tgeometry &geo) const {
+
+            Point v;
+            Point cm = massCenter(geo, p);
+            geo.randompos(v);
+            v = v.cwiseProduct(dir);
+            translate(geo, p, -cm+v);
+
+            if(!containerOverlap(geo,p) && !matterOverlap(geo,p,dst))
+              return true;
+
+            return false;
+          }
     };
 
     /**

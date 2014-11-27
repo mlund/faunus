@@ -438,7 +438,7 @@ namespace Faunus {
    * This will load molecule properties from disk and store them in a
    * vector of `MoleculeData`. The file format is JSON (<http://www.json.org>)
    * and all molecule properties must be inclosed in an object with
-   * the keyword `topology`.
+   * the keyword `moleculelist`.
    * While not strictly JSON compliant, comments beginning
    * with `//` are allowed.
    *
@@ -446,7 +446,7 @@ namespace Faunus {
    *
    * ~~~~
    * {
-   *   "topology": {
+   *   "moleculelist": {
    *     "salt": { "atoms": "Na,Cl", "init":"RANDOM"},
    *     "salt2": { "atoms": "Mg,Cl,Cl", "init":"RANDOM"},
    *     "chloride": { "atoms": "Cl,Cl,Cl,Cl", "init":"RANDOM"},
@@ -466,16 +466,14 @@ namespace Faunus {
       typedef PropertyVector<MoleculeData> base;
 
       MoleculeMap() {
-        base::jsonsection = "topology";
+        base::jsonsection = "moleculelist";
         base::name = "Molecule Properties";
       }
 
       bool includefile(InputMap&);     /// Read JSON file given through `InputMap`
       bool includefile(const string&); /// Read JSON file directly
 
-      ///
-      /// \return count of moleculeTypes stored
-      ///
+      /** @brief Count of moleculeTypes stored */
       int molTypeCount() {return size();}
 
       p_vec& getRandomConformation(PropertyBase::Tid molId) {
@@ -496,11 +494,11 @@ namespace Faunus {
           }
       }
 
-      ///
-      /// \brief Store a single configuration for grand canonical POOL insert
-      /// \param molId of moleculeType
-      /// \param vec of particles
-      ///
+      /**
+       * @brief Store a single configuration for grand canonical POOL insert
+       * @param molId of moleculeType
+       * @param vec of particles
+       */
       void pushConfiguration(PropertyBase::Tid molId, p_vec& vec) {
         this->operator [](molId).conformations.push_back(vec);
       }
@@ -510,7 +508,7 @@ namespace Faunus {
         char s=14;
         using namespace textio;
         ostringstream o;
-        o << header("Topology")
+        o << header("Molecule list")
           << setw(4) << "" << std::left
           << setw(s) << "Molecule" << setw(s) << "init"
           << setw(s) << "atoms\n";
@@ -542,12 +540,12 @@ namespace Faunus {
    * JSON entry examples:
    *
    * ~~~~
-   * "topology" : {
+   * "moleculelist" : {
    *    "ion1" : { "atoms" : "Na" },
    *    "ion2" : { "atoms" : "Cl" }
    * },
    *
-   * "combinations" : {
+   * "moleculecombinations" : {
    *    "NaCl" : { "species" : "ion1 ion2", "prob" : 0.5 },
    * }
    * ~~~~
@@ -562,7 +560,7 @@ namespace Faunus {
    *
    * the final probability of combination is: prob_i / (sum_all prob_i)
    */
-  struct MoleculeCombo : public PropertyBase {
+  struct MoleculeCombination : public PropertyBase {
     inline void readJSON(const Tjson &comb) FOVERRIDE {
       molComb.clear();
       name = comb.first;
@@ -577,7 +575,7 @@ namespace Faunus {
         }
       }
     }
-    inline MoleculeCombo(const Tjson &comb=Tjson()) { readJSON(comb); }   
+    inline MoleculeCombination(const Tjson &comb=Tjson()) { readJSON(comb); }
     Average<unsigned int> acceptance; /// +=1 if accepted, +=0 if rejected
     vector<PropertyBase::Tid> molComb;/// list of molecule types in combination
     double probability;               /// probability of this combination in GC-MC move
@@ -589,12 +587,12 @@ namespace Faunus {
    * When examining a JSON file, individual entries must be placed
    * in a section called `moleculecombo`.
    */
-  struct MoleculeComboMap : public PropertyVector<MoleculeCombo> {
-    typedef PropertyVector<MoleculeCombo> base;
+  struct MoleculeCombinationMap : public PropertyVector<MoleculeCombination> {
+    typedef PropertyVector<MoleculeCombination> base;
     bool includefile(InputMap &); 
-    MoleculeComboMap() {
-      base::name = "GC Combinations";
-      base::jsonsection = "moleculecombo";
+    MoleculeCombinationMap() {
+      base::name = "Molecule Combinations";
+      base::jsonsection = "moleculecombinations";
     }
   };
 

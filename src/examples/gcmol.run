@@ -11,22 +11,38 @@ cp -f $source_tests_dir/gcmol.test . 2> /dev/null
 # Create input file with atom properties
 #-----------------------------------------------------------
 echo '{
-  // dp = Displacement parameter [angstrom]
-  // q  = Valency/charge number [e]
-  // r  = Radius [angstrom]
   "atomlist" : {
     "Na" : { "q": 1.0, "activity":0.005, "r":2.0, "dp":110 },  // sodium ion
     "Cl" : { "q":-1.0, "activity":0.005, "r":2.0, "dp":110 },  // chloride ion
     "Mg" : { "q": 2.0, "activity":0.005, "r":2.0, "dp":110 }, 
     "MM" : { "q": 1.0, "r":3.0, "dp":10 }    // monomer
+  },
+
+  "moleculelist" : {
+    "salt"     : { "atoms" : "Na,Cl" },
+    "salt2"    : { "atoms" : "Mg,Cl,Cl" },
+    "chloride" : { "atoms" : "Cl,Cl,Cl,Cl" },
+    "polymer"  : { "activity" : 0.000000000000000005, "atoms" : "MM,MM,MM,MM" },
+    "polymer2":  { "activity" : 0.000000000000000005, "atoms" : "MM,MM,MM,MM" }
+  },
+
+  "moleculecombinations" : {
+    "polymer"      : {"species" : "polymer", "prob": 0.2},
+    "polymer2"     : {"species" : "polymer2", "prob": 0.2},
+    "salt"         : {"species" : "salt", "prob": 0.2},
+    "salt2"        : {"species" : "salt2", "prob": 0.2},
+    "chloride"     : {"species" : "chloride", "prob": 0.2},
+    "2xsalt+salt2" : {"species" : "salt,salt,salt2", "prob": 0.2},
+    "poly+4xCL"    : {"species" : "polymer,chloride", "prob": 0.2},
+    "poly+poly2"   : {"species" : "polymer,polymer2", "prob": 0.2}
   }
 }' > gcmol.json
 
 #-----------------------------------------------------------
 # Create user input file
 #-----------------------------------------------------------
-echo "atomlist               gcmol.json
-topology               gcmol.topo           # topology of simulation
+echo "
+atomlist               gcmol.json
 loop_macrosteps        10
 loop_microsteps        10000
 cuboid_len             200     # Box side length Angstrom
@@ -70,30 +86,6 @@ echo "4
  MM  2   0.00   7.60   0.00    1.0   1  3.0
  MM  3   7.60   7.60   0.00    1.0   1  3.0
 " > gcmol.aam
-
-#-----------------------------------------------------------
-# Make file with topology
-#-----------------------------------------------------------
-echo '{
-  "topology": {
-    "salt": { "atoms": "Na,Cl", "init":"RANDOM"},
-    "salt2": { "atoms": "Mg,Cl,Cl", "init":"RANDOM"},
-    "chloride": { "atoms": "Cl,Cl,Cl,Cl", "init":"RANDOM"},
-    "polymer": {"activity": 0.000000000000000005, "atoms": "MM,MM,MM,MM", "init": "POOL"},
-    "polymer2": {"activity": 0.000000000000000005, "atoms": "MM,MM,MM,MM", "init": "POOL"}
-  },
-  "combinations": {
-    "polymer": {"species": "polymer", "prob": 0.2},
-    "polymer2": {"species": "polymer2", "prob": 0.2},
-    "salt": {"species": "salt", "prob": 0.2},
-    "salt2": {"species": "salt2", "prob": 0.2},
-    "chloride": {"species": "chloride", "prob": 0.2},
-    "2xsalt+salt2": {"species": "salt,salt,salt2", "prob": 0.2},
-    "poly+4xCL": {"species": "polymer,chloride", "prob": 0.2},
-    "poly+poly2": {"species": "polymer,polymer2", "prob": 0.2}
-  }
-}
-' > gcmol.topo
 
 #-----------------------------------------------------------
 # Run simulation

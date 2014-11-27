@@ -1787,7 +1787,7 @@ namespace Faunus {
      *
      * Example:
      *
-     * "combinations": {
+     * "moleculecombinations": {
      * "polymer": {"species": "polymer", "prob": 0.2},
      * "polymer2": {"species": "polymer2", "prob": 0.2},
      * "salt": {"species": "salt", "prob": 0.2},
@@ -2148,6 +2148,7 @@ namespace Faunus {
             }
           }
 
+          // move to `MoleculeCombinationMap`?
           string infoCombinations() {
             char s=14;
             using namespace textio;
@@ -2189,10 +2190,13 @@ namespace Faunus {
         private:
           Tracker tracker;  ///< @brief Tracker for inserted/deleted species for speedUp
 
+          std::map<int, Geometry::MoleculeInserterBase<Tspace>*> inserter;
+
           // delList and insList: groups are always molecular (isMolecular() == true)
           vector<Group> delList;
           vector<Ins> insList;
 
+          // Use `MoleculeCombinationMap` instead.
           vector<Combination > gCCombinations;
           Combination* comb;      ///< \brief choosen comb for move()
 
@@ -2306,11 +2310,13 @@ namespace Faunus {
 
         spc->linkGroupsToTopo();
 
-        string topoFile = in.get<string>("topology", "");
+        string topoFile = in.get<string>("atomlist", "");
+
+        cout << topoFile << endl;
 
         if (!topoFile.empty())
           if(!includefile(topoFile)) {
-            cout << "Could not open *.topo file" << endl;
+            std::cerr << "Could not open *.json file" << endl;
             exit(1);
           }
 
@@ -2355,9 +2361,7 @@ namespace Faunus {
 
         string check = checkGroups(gCGroups);
         if(check.compare("") != 0) {
-          std::cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
-          std::cerr << "MORE THAN ONE ATOMIC GRAND-CANONICAL GROUP OF TYPE: " << check << endl;
-          std::cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+          std::cerr << "More than one atomic GC group of type " << check << endl;
           exit(1);
         }
       }
@@ -2365,7 +2369,6 @@ namespace Faunus {
 
     template<class Tspace>
       void GCMolecular<Tspace>::initMolTracker(vector<bool>& gCGroups) {
-
         int i=0;
         for(auto* group: spc->groupList()) { // for each group
           if(gCGroups[i]) {
@@ -2383,26 +2386,20 @@ namespace Faunus {
 
     template<class Tspace>
       string GCMolecular<Tspace>::checkGroups(vector<bool>& gCGroups) {
-
-        for(int i=0; i<(int)spc->groupList().size()-1; i++) {
-          for(int j=i+1; j<(int)spc->groupList().size(); j++) {
+        for(int i=0; i<(int)spc->groupList().size()-1; i++)
+          for(int j=i+1; j<(int)spc->groupList().size(); j++)
             if(gCGroups[j] && spc->groupList()[i]->molId == spc->groupList()[j]->molId
                 && spc->groupList()[i]->isAtomic()) {
               return spc->groupList()[i]->name;
             }
-          }
-        }
         return "";
       }
 
     template<class Tspace>
       void GCMolecular<Tspace>::getGrandCanonicalGroups(vector<bool>& gCGroups) {
-
         gCGroups.reserve(spc->groupList().size());
-
         for(int i=0; i<(int)spc->groupList().size(); i++) {
           gCGroups[i] = false;
-
           for(auto& comb: gCCombinations) {
             for(auto* mol: comb.molComb) {
               if(spc->groupList()[i]->molId == mol->id) {
@@ -2756,7 +2753,7 @@ namespace Faunus {
 
     template<class Tspace>
       bool GCMolecular<Tspace>::includefile(string combFile) {
-        if(combFile.find(".topo") == string::npos)
+        if(combFile.find(".json") == string::npos)
           return false;
 
         bool load = false;
@@ -2769,7 +2766,7 @@ namespace Faunus {
         //
         // Load Grand Canon Combinantions
         //
-        for (auto &comb : json::object("combinations", file)) {
+        for (auto &comb : json::object("moleculecombinations", file)) {
           load = true;
           pos = 0;
           oldPos = 0;
@@ -2796,7 +2793,7 @@ namespace Faunus {
             }
           }
         }
-        if(!load) cout << "*.topo file loaded, but no combinations found" << endl;
+        if(!load) cout << "*.json file loaded, but no combinations found" << endl;
 
         return true;
       }

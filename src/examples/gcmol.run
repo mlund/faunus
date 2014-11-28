@@ -19,9 +19,9 @@ echo '{
   },
 
   "moleculelist" : {
-    "salt"     : { "atoms" : "Na,Cl" },
-    "salt2"    : { "atoms" : "Mg,Cl,Cl" },
-    "chloride" : { "atoms" : "Cl,Cl,Cl,Cl" },
+    "salt"     : { "atoms" : "Na,Cl", "atomic":true },
+    "salt2"    : { "atoms" : "Mg,Cl,Cl", "atomic":true },
+    "chloride" : { "atoms" : "Cl,Cl,Cl,Cl", "atomic":true },
     "polymer"  : { "activity" : 0.000000000000000005, "atoms" : "MM,MM,MM,MM" },
     "polymer2":  { "activity" : 0.000000000000000005, "atoms" : "MM,MM,MM,MM" }
   },
@@ -43,6 +43,7 @@ echo '{
 #-----------------------------------------------------------
 echo "
 atomlist               gcmol.json
+moleculelist           gcmol.json # with moleculecombinationlist
 loop_macrosteps        10
 loop_microsteps        10000
 cuboid_len             200     # Box side length Angstrom

@@ -2312,8 +2312,6 @@ namespace Faunus {
 
         string topoFile = in.get<string>("atomlist", "");
 
-        cout << topoFile << endl;
-
         if (!topoFile.empty())
           if(!includefile(topoFile)) {
             std::cerr << "Could not open *.json file" << endl;
@@ -2321,6 +2319,9 @@ namespace Faunus {
           }
 
         assert(!gCCombinations.empty());
+        for(auto& comb: gCCombinations) {
+            assert(!comb.molComb.empty() && "molCombinations empty!!!");
+        }
         tracker.initATypes(gCCombinations);
 
         if(spc->groupList().empty()) {// add few particles
@@ -2351,6 +2352,8 @@ namespace Faunus {
 
             break;
           }
+
+          assert(!spc->groupList().empty());
 
           spc->linkGroupsToTopo();
         }
@@ -2512,73 +2515,61 @@ namespace Faunus {
 #endif
           }
         } else { // insert
+
           for(auto* mol: comb->molComb) {// for each molecule in combination
-            if(mol->initType == MoleculeData::RANDOM) {
-              if(mol->isAtomic()) {
-                for(auto aType: mol->atoms) { // for each atom type of molecule
-                  p_vec pin;
-                  pin.push_back(particle());
-                  pin.back() = atom[aType];   // set part type
+            if(mol->isAtomic()) {
+              for(auto aType: mol->atoms) { // for each atom type of molecule
+                p_vec pin;
+                pin.push_back(particle());
+                pin.back() = atom[aType];   // set part type
 
-                  Geometry::QuaternionRotate rot;
-                  Point u;
-                  u.ranunit(slp_global);
-                  rot.setAxis(spc->geo, Point(0,0,0), u, pc::pi*slp_global() );
-                  pin.back().rotate(rot);
+                Geometry::QuaternionRotate rot;
+                Point u;
+                u.ranunit(slp_global);
+                rot.setAxis(spc->geo, Point(0,0,0), u, pc::pi*slp_global() );
+                pin.back().rotate(rot);
 
-                  spc->geo.randompos(pin.back());
-                  insList.push_back(Ins(spc->insert(mol->id, pin), pin) );
-                }
-              } else {
-                cout << mol->name
-                  << " RANDOM INSERTION OF MOLECULAR SPECIES NOT IMPLEMENTED, USE POOL" << endl;
-                exit(1);
+                spc->geo.randompos(pin.back());
+                insList.push_back(Ins(spc->insert(mol->id, pin), pin) );
               }
-            } // RANDOM
+            } else {
+              // get random conformation
+              p_vec pin = molecule.getRandomConformation(mol->id);
 
-            if(mol->initType == MoleculeData::POOL) {
-              if(mol->isAtomic()) {
-                cout << mol->name << " POOL INSERTION OF ATOMIC SPECIES NOT IMPLEMENTED, USE RANDOM" << endl;
-                exit(1);
-              } else {
-                // get random conformation
-                p_vec pin = molecule.getRandomConformation(mol->id);
+              // randomize it, rotate and translate operates on trial vec
+              Point u; // aka endpoint
+              spc->geo.randompos(u );
+              double angle = slp_global()*pc::pi;
 
-                // randomize it, rotate and translate operates on trial vec
-                Point u; // aka endpoint
-                spc->geo.randompos(u );
-                double angle = slp_global()*pc::pi;
-
-                Point cm = Geometry::massCenter(spc->geo, pin);
+              Point cm = Geometry::massCenter(spc->geo, pin);
 #ifndef NDEBUG
-                Point cm_trial = cm;
+              Point cm_trial = cm;
 #endif
-                Geometry::QuaternionRotate vrot1;
-                vrot1.setAxis(spc->geo, cm, u, angle);//rot around CM->point vec
-                auto vrot2 = vrot1;
-                vrot2.getOrigin() = Point(0,0,0);
-                for (auto i : pin) {
-                  i = vrot1(i); // rotate coordinates
-                  i.rotate(vrot2);         // rotate internal coordinates
-                }
-                assert( spc->geo.dist(cm_trial, massCenter(spc->geo, pin))<1e-9
-                    && "Rotation messed up mass center. Is the box too small?");
-
-                if( Geometry::FindSpace().find(spc->p, pin, spc->geo) ) {
-                  insList.push_back(Ins(spc->insert(mol->id, pin), pin));
-                } else {
-                  for(auto it =  insList.rbegin(); it!= insList.rend(); ++it) {
-                    assert( spc->p.begin()+it->group->back() < spc->p.end()  );
-                    assert( spc->trial.begin()+it->group->back() < spc->trial.end());
-                    spc->p.erase( spc->p.begin()+ it->group->front(), spc->p.begin()+it->group->back()+1);
-                    spc->trial.erase( spc->trial.begin()+it->group->front(), spc->trial.begin()+it->group->back()+1 );
-                    delete it->group;
-                  }
-                  insList.clear();
-                  break;
-                }
+              Geometry::QuaternionRotate vrot1;
+              vrot1.setAxis(spc->geo, cm, u, angle);//rot around CM->point vec
+              auto vrot2 = vrot1;
+              vrot2.getOrigin() = Point(0,0,0);
+              for (auto i : pin) {
+                i = vrot1(i); // rotate coordinates
+                i.rotate(vrot2);         // rotate internal coordinates
               }
-            } // POOL
+              assert( spc->geo.dist(cm_trial, massCenter(spc->geo, pin))<1e-9
+                  && "Rotation messed up mass center. Is the box too small?");
+
+              if( Geometry::FindSpace().find(spc->p, pin, spc->geo) ) {
+                insList.push_back(Ins(spc->insert(mol->id, pin), pin));
+              } else {
+                for(auto it =  insList.rbegin(); it!= insList.rend(); ++it) {
+                  assert( spc->p.begin()+it->group->back() < spc->p.end()  );
+                  assert( spc->trial.begin()+it->group->back() < spc->trial.end());
+                  spc->p.erase( spc->p.begin()+ it->group->front(), spc->p.begin()+it->group->back()+1);
+                  spc->trial.erase( spc->trial.begin()+it->group->front(), spc->trial.begin()+it->group->back()+1 );
+                  delete it->group;
+                }
+                insList.clear();
+                break;
+              }
+            }
           }   // for molecules
         } // insert
       }
@@ -2768,8 +2759,6 @@ namespace Faunus {
         //
         for (auto &comb : json::object("moleculecombinations", file)) {
           load = true;
-          pos = 0;
-          oldPos = 0;
 
           gCCombinations.push_back(Combination() );
           gCCombinations.back().name = comb.first;
@@ -2781,6 +2770,9 @@ namespace Faunus {
           assert(line.compare("Error"));
 
           // tokenize atoms string and save as atom TID, molecules as references
+          pos = 0;
+          oldPos = 0;
+
           while(pos != string::npos) {
             pos = line.find_first_of(',', oldPos);
             token = line.substr(oldPos, pos-oldPos);

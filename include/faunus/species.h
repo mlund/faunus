@@ -383,11 +383,14 @@ namespace Faunus {
 
       /** @brief Constructor - by default data is initialized; mass set to unity */
       inline MoleculeData(const Tjson &molecule=Tjson()) : _isAtomic(false) { readJSON(molecule); }
+<<<<<<< HEAD
 
       p_vec getRandomConformation() const {
         assert(!conformations.empty());
         return conformations[slp_global.rand() % conformations.size() ];
       }
+=======
+>>>>>>> 941e758d2afe72db0eeacdbbf5af794077857f4f
 
       std::vector<particle::Tid> atoms; //!< List of atoms in molecule
       std::vector<p_vec> conformations; //!< Conformations of molecule
@@ -395,7 +398,13 @@ namespace Faunus {
       double activity;
       double chemPot;
 
+<<<<<<< HEAD
       bool isAtomic() const {
+=======
+      int initType;  //!< Sets how inserted combination will be initialized
+
+      bool isAtomic() {
+>>>>>>> 941e758d2afe72db0eeacdbbf5af794077857f4f
           return _isAtomic;
       }
 
@@ -413,10 +422,16 @@ namespace Faunus {
         activity = json::value<double>(molecule.second, "activity", 0);
         chemPot = log( activity*pc::Nav*1e-27);
 
+<<<<<<< HEAD
         /*line = json::value<string>(molecule.second, "inserter", "Error");
+=======
+        line = json::value<string>(molecule.second, "inserter", "Error");
+>>>>>>> 941e758d2afe72db0eeacdbbf5af794077857f4f
         initType=-1;
         if(line.compare("POOL") == 0) initType = POOL;
         if(line.compare("RANDOM") == 0) initType = RANDOM;*/
+
+        _isAtomic = json::value<bool>(molecule.second, "atomic", false);
 
         _isAtomic = json::value<bool>(molecule.second, "atomic", false);
 

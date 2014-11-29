@@ -21,12 +21,21 @@ echo '{
     "MM" : { "q": 0.0, "r":0.0, "dp":0 }    // monomer
   },
 
+<<<<<<< HEAD
 "moleculelist": {
     "salt": { "atoms": "Na,Cl", "atomic":true},
     "salt2": { "atoms": "K,I", "atomic":true},
     "salt3": { "atoms": "Mg, F, F", "atomic":true},
     "polymer": {"activity": 0.01, "atoms": "MM,MM,MM,MM"},
     "polymer2": {"activity": 0.01, "atoms": "MM,MM,MM,MM"}
+=======
+  "moleculelist" : {
+    "salt"     : { "atoms" : "Na,Cl", "atomic":true },
+    "salt2"    : { "atoms" : "Mg,Cl,Cl", "atomic":true },
+    "chloride" : { "atoms" : "Cl,Cl,Cl,Cl", "atomic":true },
+    "polymer"  : { "activity" : 0.000000000000000005, "atoms" : "MM,MM,MM,MM" },
+    "polymer2":  { "activity" : 0.000000000000000005, "atoms" : "MM,MM,MM,MM" }
+>>>>>>> 941e758d2afe72db0eeacdbbf5af794077857f4f
   },
 
   "moleculecombinations" : {
@@ -46,7 +55,11 @@ echo '{
 #-----------------------------------------------------------
 echo "
 atomlist               gcmol.json
+<<<<<<< HEAD
 moleculelist           gcmol.json
+=======
+moleculelist           gcmol.json # with moleculecombinationlist
+>>>>>>> 941e758d2afe72db0eeacdbbf5af794077857f4f
 loop_macrosteps        10
 loop_microsteps        10000
 cuboid_len             100     # Box side length Angstrom

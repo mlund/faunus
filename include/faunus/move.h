@@ -2530,6 +2530,7 @@ namespace Faunus {
 
           for(auto* mol: comb->molComb) {// for each molecule in combination
             if(mol->isAtomic()) {
+<<<<<<< HEAD
               p_vec pin = (*inserter[mol->id])(spc->geo, spc->p, *mol);
               for(unsigned int i=0; i<pin.size(); i++) {
                 p_vec pin2;
@@ -2541,6 +2542,47 @@ namespace Faunus {
               p_vec pin = (*inserter[mol->id])(spc->geo, spc->p, *mol);
 
               if(!pin.empty()) {
+=======
+              for(auto aType: mol->atoms) { // for each atom type of molecule
+                p_vec pin;
+                pin.push_back(particle());
+                pin.back() = atom[aType];   // set part type
+
+                Geometry::QuaternionRotate rot;
+                Point u;
+                u.ranunit(slp_global);
+                rot.setAxis(spc->geo, Point(0,0,0), u, pc::pi*slp_global() );
+                pin.back().rotate(rot);
+
+                spc->geo.randompos(pin.back());
+                insList.push_back(Ins(spc->insert(mol->id, pin), pin) );
+              }
+            } else {
+              // get random conformation
+              p_vec pin = molecule.getRandomConformation(mol->id);
+
+              // randomize it, rotate and translate operates on trial vec
+              Point u; // aka endpoint
+              spc->geo.randompos(u );
+              double angle = slp_global()*pc::pi;
+
+              Point cm = Geometry::massCenter(spc->geo, pin);
+#ifndef NDEBUG
+              Point cm_trial = cm;
+#endif
+              Geometry::QuaternionRotate vrot1;
+              vrot1.setAxis(spc->geo, cm, u, angle);//rot around CM->point vec
+              auto vrot2 = vrot1;
+              vrot2.getOrigin() = Point(0,0,0);
+              for (auto i : pin) {
+                i = vrot1(i); // rotate coordinates
+                i.rotate(vrot2);         // rotate internal coordinates
+              }
+              assert( spc->geo.dist(cm_trial, massCenter(spc->geo, pin))<1e-9
+                  && "Rotation messed up mass center. Is the box too small?");
+
+              if( Geometry::FindSpace().find(spc->p, pin, spc->geo) ) {
+>>>>>>> 941e758d2afe72db0eeacdbbf5af794077857f4f
                 insList.push_back(Ins(spc->insert(mol->id, pin), pin));
               } else {
                 for(auto it =  insList.rbegin(); it!= insList.rend(); ++it) {

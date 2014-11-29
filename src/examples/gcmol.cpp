@@ -1,11 +1,7 @@
 #include <faunus/faunus.h>
 using namespace Faunus;
 
-#ifdef CUBOID
 typedef Geometry::Cuboid Tgeometry;   // specify geometry - here cube w. periodic boundaries
-#else
-typedef Geometry::Sphere Tgeometry;   // sphere with hard boundaries
-#endif
 typedef Potential::CoulombHS Tpairpot;// particle pair potential: primitive model
 
 typedef Space<Tgeometry,PointParticle> Tspace;
@@ -21,11 +17,8 @@ int main() {
   Tspace spc(mcp);
   auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp);
 
-  string file = mcp.get<string>("polymer_file", "");
-
-  //
   //    ADD CONFIGURATIONS FOR POOL INSERTS
-  //
+  string file = mcp.get<string>("polymer_file", "");
   p_vec conf;
   FormatAAM::load(file,conf);
   molecule.pushConfiguration("polymer", conf);   // p_vec is one molecule large
@@ -33,7 +26,6 @@ int main() {
 
   // Markov moves and analysis
   Move::GCMolecular<Tspace> gc(mcp, pot, spc);
-  Move::TranslateRotate<Tspace> mv(mcp,pot,spc);
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );      // store initial total system energy
 
@@ -47,20 +39,13 @@ int main() {
     cout << loop.timing();
   } // end of macro loop
 
-  // save to disk
-
-  spc.save("state");
-  FormatPQR::save("confout.pqr", spc.p);
-
   sys.test(test);
   gc.test(test);
 
   // print information
-  cout << loop.info() << sys.info() << gc.info() << spc.info() << test.info();
+  cout << loop.info() << sys.info() << gc.info() << spc.info() <<test.info() << endl;
 
-  //
   // clean allocated memory
-  //
   spc.freeGroups();
 
   return test.numFailed();

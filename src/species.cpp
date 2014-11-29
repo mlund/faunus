@@ -8,7 +8,7 @@ namespace Faunus {
   }
 
   bool AtomMap::includefile(InputMap &in) {
-    string file = in("atomlist", string("atom.json") );
+    string file = in("atomlist", string("") );
     return base::includefile(file);
   }
 
@@ -17,7 +17,7 @@ namespace Faunus {
   }
 
   bool MoleculeMap::includefile(InputMap &in) {
-    string file = in("moleculelist", string("topo.json") );
+    string file = in("moleculelist", string("") );
     return base::includefile(file);
   }
 

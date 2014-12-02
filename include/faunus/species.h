@@ -384,15 +384,18 @@ namespace Faunus {
       /** @brief Constructor - by default data is initialized; mass set to unity */
       inline MoleculeData(const Tjson &molecule=Tjson()) : _isAtomic(false) { readJSON(molecule); }
 
+      p_vec getRandomConformation() const {
+        assert(!conformations.empty());
+        return conformations[slp_global.rand() % conformations.size() ];
+      }
+
       std::vector<particle::Tid> atoms; //!< List of atoms in molecule
       std::vector<p_vec> conformations; //!< Conformations of molecule
 
       double activity;
       double chemPot;
 
-      int initType;  //!< Sets how inserted combination will be initialized
-
-      bool isAtomic() {
+      bool isAtomic() const {
           return _isAtomic;
       }
 
@@ -410,10 +413,7 @@ namespace Faunus {
         activity = json::value<double>(molecule.second, "activity", 0);
         chemPot = log( activity*pc::Nav*1e-27);
 
-        line = json::value<string>(molecule.second, "inserter", "Error");
-        initType=-1;
-        if(line.compare("POOL") == 0) initType = POOL;
-        if(line.compare("RANDOM") == 0) initType = RANDOM;
+        //line = json::value<string>(molecule.second, "inserter", "Error");
 
         _isAtomic = json::value<bool>(molecule.second, "atomic", false);
 
@@ -479,11 +479,6 @@ namespace Faunus {
       /** @brief Count of moleculeTypes stored */
       int molTypeCount() {return size();}
 
-      p_vec& getRandomConformation(PropertyBase::Tid molId) {
-        assert(!this->operator [](molId).conformations.empty());
-        return this->operator [](molId).conformations[slp_global.rand() % this->operator [](molId).conformations.size() ];
-      }
-
       /**
        * @brief Store a single configuration for grand canonical POOL insert
        * @param molName of moleculeType
@@ -518,10 +513,10 @@ namespace Faunus {
 
         for (auto &i : *this) {
           o << setw(4) << "" << setw(s) << i.name;
-          if (i.initType == MoleculeData::RANDOM) o << setw(s) << "RANDOM";
+          /*if (i.initType == MoleculeData::RANDOM) o << setw(s) << "RANDOM";
           else
             if (i.initType == MoleculeData::POOL) o << setw(s) << "POOL";
-            else o << setw(s) << "";
+            else o << setw(s) << "";*/
 
           for ( auto j=i.atoms.begin(); j!=i.atoms.end(); ++j ) {
             o << setw(0) << atom[(*j)].name;

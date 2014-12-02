@@ -1833,8 +1833,8 @@ namespace Faunus {
         std::map<PropertyBase::Tid, vector<unsigned int> > molList;
 
         /// \brief average density map per all active Tid
-        std::map<particle::Tid,Average<double>> rho;
-        std::map<PropertyBase::Tid,Average<double>> count;
+        std::map<particle::Tid,Average<double>> rhoAtoms;
+        std::map<PropertyBase::Tid,Average<double>> rhoMolecules;
 
         /// \brief list of active atom Types
         std::vector<particle::Tid> aTypes;
@@ -1856,12 +1856,9 @@ namespace Faunus {
 
         void calcDensity(double volume) {
           for(auto aType: aTypes)
-            rho[aType] += numOfParticles(aType) / volume;
-        }
-
-        void calcMolCount() {
+            rhoAtoms[aType] += numOfParticles(aType) / volume;
           for(auto molType: molList)
-            count[molType.first] += numOfMolecules(molType.first);
+            rhoMolecules[molType.first] += numOfMolecules(molType.first) / volume;
         }
 
         /// @brief number of particles of atomType of moleculeType
@@ -2008,7 +2005,7 @@ namespace Faunus {
         }
 
         string infoAtoms(double volume);
-        string infoMolecules();
+        string infoMolecules(double volume);
 
 #ifndef NDEBUG
         /// @brief check system neutrality, only on Atomic GrandCanonical particles
@@ -2039,12 +2036,14 @@ namespace Faunus {
           return true;
         }
 #endif
+        std::map<PropertyBase::Tid, Average<double> > getCount() const;
+        void setCount(const std::map<PropertyBase::Tid, Average<double> > &value);
     };
 
     void Tracker::eraseAt(PropertyBase::Tid Tid, unsigned int delIndex) {
-      unsigned int index = 0;
-      particle::Tid tid=0;
-      for(auto super = atList.begin(); super != atList.end(); ++super) {
+        unsigned int index = 0;
+        particle::Tid tid=0;
+        for(auto super = atList.begin(); super != atList.end(); ++super) {
         for (auto it=super->second.begin(); it!=super->second.end(); ++it) {
           for(unsigned int i=0; i< it->second.size(); i++) {
             if(delIndex < it->second[i]) { // decrement indexes
@@ -2073,7 +2072,7 @@ namespace Faunus {
       ostringstream o;
       particle::Tid id;
 
-      for (auto &m : rho) {
+      for (auto &m : rhoAtoms) {
         id=m.first;
         if(atom[id].activity == 0) continue;
         o.precision(5);
@@ -2086,18 +2085,20 @@ namespace Faunus {
       return o.str();
     }
 
-    string Tracker::infoMolecules() {
+    string Tracker::infoMolecules(double volume) {
       char s=10;
       using namespace textio;
       ostringstream o;
-
       PropertyBase::Tid id;
-      for (auto &m : count) {
+
+      for (auto &m : rhoMolecules) {
         id=m.first;
         if(molecule[id].activity == 0) continue;
         o.precision(5);
         o << std::left << setw(4) << "" << setw(s) << molecule[id].name
-          << setw(s) << molecule[id].activity << setw(s) << m.second.avg()
+          << setw(s) << molecule[id].activity << setw(s) << m.second.avg()/pc::Nav/1e-27
+           << setw(s) << molecule[id].activity / (m.second.avg()/pc::Nav/1e-27)
+           << setw(s) << m.second.avg()*volume
           << "\n";
       }
 
@@ -2132,7 +2133,7 @@ namespace Faunus {
             double volume = spc->geo.getVolume();
 
             typename Tspace::ParticleType::Tid id;
-            for (auto &m : tracker.rho) {
+            for (auto &m : tracker.rhoAtoms) {
               id=m.first;
               if(atom[id].activity == 0) continue;
               auto s=base::prefix+"_"+atom[id].name;
@@ -2140,11 +2141,11 @@ namespace Faunus {
             }
 
             PropertyBase::Tid Tid;
-            for (auto &m : tracker.count) {
+            for (auto &m : tracker.rhoMolecules) {
               Tid=m.first;
               if(molecule[Tid].activity == 0) continue;
               auto s=base::prefix+"_"+molecule[Tid].name;
-              t(s+"_average", m.second.avg());
+              t(s+"_average", m.second.avg()*volume);
             }
           }
 
@@ -2172,12 +2173,19 @@ namespace Faunus {
                   << "-" << setw(s)
                   << "-";
               } else {
-                o << setw(s)
-                  << std::to_string(100*i.delAcceptance/i.delCnt).append("%")
-                  << setw(s)
-                  << std::to_string(100*i.insAcceptance/i.insCnt).append("%");
+                if(i.delCnt != 0)
+                  o << setw(s)
+                    << std::to_string(100*i.delAcceptance/i.delCnt).append("%");
+                else
+                    o << setw(s)
+                      << "-%";
+                if(i.insCnt != 0)
+                  o << setw(s)
+                    << std::to_string(100*i.insAcceptance/i.insCnt).append("%");
+                else
+                    o << setw(s)
+                      << "-%";
               }
-
               for(auto mol=i.molComb.begin(); mol!=i.molComb.end(); ++mol) {
                 o << setw(0) << (*mol)->name;
                 if(mol != i.molComb.end()-1) o<<",";
@@ -2190,7 +2198,7 @@ namespace Faunus {
         private:
           Tracker tracker;  ///< @brief Tracker for inserted/deleted species for speedUp
 
-          std::map<int, Geometry::MoleculeInserterBase<Tspace>*> inserter;
+          std::map<int, Geometry::MoleculeInserterBase<Tspace>*> inserter; ///< @brief molId:inserter
 
           // delList and insList: groups are always molecular (isMolecular() == true)
           vector<Group> delList;
@@ -2255,7 +2263,6 @@ namespace Faunus {
             insList.clear();
 
             tracker.calcDensity(spc->geo.getVolume());
-            tracker.calcMolCount();
           }
 
           bool includefile(string combFile);  //!< Append topology parameters from file
@@ -2356,6 +2363,8 @@ namespace Faunus {
           assert(!spc->groupList().empty());
 
           spc->linkGroupsToTopo();
+
+
         }
 
         vector<bool> gCGroups;
@@ -2366,6 +2375,11 @@ namespace Faunus {
         if(check.compare("") != 0) {
           std::cerr << "More than one atomic GC group of type " << check << endl;
           exit(1);
+        }
+
+        // init inserter
+        for(unsigned int i=0; i<molecule.size(); i++) {
+            inserter[i] = new Geometry::InsertRandom<Tspace>();
         }
       }
 
@@ -2427,8 +2441,9 @@ namespace Faunus {
           << tracker.infoAtoms(spc->geo.getVolume()) << "\n"
           << setw(4) << "" << std::left
           << setw(s) << "Molecule" << setw(s) << "activity"
+          << setw(s+4) << bracket("c/M") << setw(s+6) << bracket( gamma+pm )
           << setw(s+4) << bracket("N") << "\n"
-          << tracker.infoMolecules()
+          << tracker.infoMolecules(spc->geo.getVolume())
           << infoCombinations();
         return o.str();
       }
@@ -2480,13 +2495,10 @@ namespace Faunus {
             } else {
 
               if(tracker.numOfMolecules(mol->id) == 0) { // no molecules left to delete
-                delList.clear();
-                return;
+                delList.clear(); return;
               }
-
-              if(tracker.numOfMolecules(mol->id) <= molCount[mol->id]) {
-                delList.clear();
-                return;
+              if(tracker.numOfMolecules(mol->id) <= molCount[mol->id]) { // no molecules left to delete
+                delList.clear(); return;
               }
 
               do {
@@ -2518,45 +2530,17 @@ namespace Faunus {
 
           for(auto* mol: comb->molComb) {// for each molecule in combination
             if(mol->isAtomic()) {
-              for(auto aType: mol->atoms) { // for each atom type of molecule
-                p_vec pin;
-                pin.push_back(particle());
-                pin.back() = atom[aType];   // set part type
-
-                Geometry::QuaternionRotate rot;
-                Point u;
-                u.ranunit(slp_global);
-                rot.setAxis(spc->geo, Point(0,0,0), u, pc::pi*slp_global() );
-                pin.back().rotate(rot);
-
-                spc->geo.randompos(pin.back());
-                insList.push_back(Ins(spc->insert(mol->id, pin), pin) );
+              p_vec pin = (*inserter[mol->id])(spc->geo, spc->p, *mol);
+              for(unsigned int i=0; i<pin.size(); i++) {
+                p_vec pin2;
+                pin2.push_back(pin[i]);
+                insList.push_back(Ins(spc->insert(mol->id, pin2), pin2) );
               }
             } else {
               // get random conformation
-              p_vec pin = molecule.getRandomConformation(mol->id);
+              p_vec pin = (*inserter[mol->id])(spc->geo, spc->p, *mol);
 
-              // randomize it, rotate and translate operates on trial vec
-              Point u; // aka endpoint
-              spc->geo.randompos(u );
-              double angle = slp_global()*pc::pi;
-
-              Point cm = Geometry::massCenter(spc->geo, pin);
-#ifndef NDEBUG
-              Point cm_trial = cm;
-#endif
-              Geometry::QuaternionRotate vrot1;
-              vrot1.setAxis(spc->geo, cm, u, angle);//rot around CM->point vec
-              auto vrot2 = vrot1;
-              vrot2.getOrigin() = Point(0,0,0);
-              for (auto i : pin) {
-                i = vrot1(i); // rotate coordinates
-                i.rotate(vrot2);         // rotate internal coordinates
-              }
-              assert( spc->geo.dist(cm_trial, massCenter(spc->geo, pin))<1e-9
-                  && "Rotation messed up mass center. Is the box too small?");
-
-              if( Geometry::FindSpace().find(spc->p, pin, spc->geo) ) {
+              if(!pin.empty()) {
                 insList.push_back(Ins(spc->insert(mol->id, pin), pin));
               } else {
                 for(auto it =  insList.rbegin(); it!= insList.rend(); ++it) {
@@ -2630,7 +2614,6 @@ namespace Faunus {
         insList.clear();
 
         tracker.calcDensity(spc->geo.getVolume());
-        tracker.calcMolCount();
 
         assert(consistent() && "Test if all indexes of Tracker are in p_vec");
 #ifndef NDEBUG
@@ -2650,6 +2633,7 @@ namespace Faunus {
         double inverted_V= 1.0 / spc->geo.getVolume();
 
         int atomArray[256] = {0}; // for idFactor calculation
+        int moleculeArray[256] = {0}; // for idFactor calculation
 
         assert(!(!delList.empty() && !insList.empty()) && "delList and insList both full!!!");
 
@@ -2661,26 +2645,22 @@ namespace Faunus {
               potENew -= pot->g2g(spc->p, *i, *j); // between groups
 
           for(auto& group: delList) { // for each del Group
-            for(auto i: group) {          // each particle of group
-              idFactor *= (tracker.numOfParticles(spc->p[i].id) - atomArray[spc->p[i].id]) *inverted_V;
-              atomArray[spc->p[i].id]++;
-            }
-
-            if(group.isAtomic()) { // atomic delete energy
-              for(int i = group.front(); i<group.back(); i++)
-                for (int j=i+1; j<=group.back(); j++)
-                  potENew -= pot->i2i(spc->p, i, j); // internal
-
-              for(auto i: group) {          // each particle of group
+            if(group.isAtomic() ) {
+              for(auto i: group) { // each particle of group
+                idFactor *= (tracker.numOfParticles(spc->p[i].id) - atomArray[spc->p[i].id]) *inverted_V;
+                atomArray[spc->p[i].id]++;
                 potENew += pot->i_total(spc->p, i); // all, external, twice internal
                 chemPot += atom[spc->p[i].id].chemPot;
               }
-            } else { // molecular delete energy
-              //
-              //  cant use g2g() with atomic species -> overlapping of delete group with groupList
-              //
-              chemPot += molecule[group.molId].chemPot;
+              for(int i = group.front(); i<group.back(); i++) // atomic delete energy
+                for (int j=i+1; j<=group.back(); j++)
+                  potENew -= pot->i2i(spc->p, i, j); // internal
 
+            } else {
+              idFactor *= (tracker.numOfMolecules(group.molId) - moleculeArray[group.molId]) *inverted_V;
+              moleculeArray[group.molId]++;
+
+              chemPot += molecule[group.molId].chemPot;
               potENew += pot->g_external(spc->p, group);
               molInner += pot->g_internal(spc->p, group);
 
@@ -2718,19 +2698,18 @@ namespace Faunus {
               for (auto j=i+1; j!=ins.pin.end(); j++)
                 molInner += pot->p2p(*i,*j);
 
-            if(molecule[ins.group->molId].isAtomic()) {
+            if(molecule[ins.group->molId].isAtomic()) { // atomic
               for(auto& i: ins.pin) {
                 potENew += pot->p_external(i); // external energy
                 chemPot += atom[i.id].chemPot;
+                idFactor *= (tracker.numOfParticles(i.id) + atomArray[i.id] + 1) * inverted_V;
+                atomArray[i.id]++;
               }
-            } else {
+            } else { // molecular
               chemPot += molecule[ins.group->molId].chemPot;
               potENew += pot->g_external(spc->p, *(ins.group) );
-            }
-
-            for(auto& i: ins.pin) {
-              idFactor *= (tracker.numOfParticles(i.id) + atomArray[i.id] + 1) * inverted_V;
-              atomArray[i.id]++;
+              idFactor *= (tracker.numOfMolecules(ins.group->molId) + moleculeArray[ins.group->molId] + 1) * inverted_V;
+              moleculeArray[ins.group->molId]++;
             }
           }
 

@@ -1,10 +1,12 @@
-# Generated on Aug 25 2014 13:11:30 using 4.9.1
-energyAverage                      11.7835             
+# Generated on Nov 29 2014 16:35:41 using 4.9.1 20140903 (prerelease)
+energyAverage                      0                   
 gc_particle_acceptance             35.83               
-gcmol_Cl_average                   31.6685             
-gcmol_Mg_average                   5.04158             
-gcmol_Na_average                   6.72388             
-gcmol_acceptance                   34.236              
-gcmol_polymer2_average             2.79711             
-gcmol_polymer_average              3.13787             
-relativeEnergyDrift                1.56843e-14         
+gcmol_Cl_average                   5.70542             
+gcmol_I_average                    5.72938             
+gcmol_K_average                    5.72938             
+gcmol_Mg_average                   6.0393              
+gcmol_Na_average                   5.70542             
+gcmol_acceptance                   77.673              
+gcmol_polymer2_average             6.12818             
+gcmol_polymer_average              6.00454             
+relativeEnergyDrift                nan                 

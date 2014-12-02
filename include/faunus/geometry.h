@@ -512,21 +512,63 @@ namespace Faunus {
         using typename base::Tgeo;
         Point dir; //!< Scalars for random mass center position. Default (1,1,1) 
 
-        InsertRandom() : base::name("random"), dir(1,1,1) {}
+        InsertRandom() : dir(1,1,1) {base::name = "random";}
 
         Tpvec operator() (Tgeo &geo, const Tpvec &p, const MoleculeData &mol) {
           Tpvec v;
-          Point a,b;
-          geo.randompos(a);
-          a = a.cwiseProduct(dir);
-          Geometry::cm2origo(geo,v);
-          Geometry::QuaternionRotate rot;
-          b.ranunit(slp_global);
-          rot.setAxis(geo, {0,0,0}, b, slp_global()*2*pc::pi); 
-          for (auto &i : v) {
-            i = rot(i) + a;
-            geo.boundary(i);
+
+          if(mol.isAtomic()) {
+          for(auto aType: mol.atoms) { // for each atom type of molecule
+              v.push_back(particle());
+              v.back() = atom[aType];   // set part type
+
+              Geometry::QuaternionRotate rot;
+              Point u;
+              u.ranunit(slp_global);
+              rot.setAxis(geo, Point(0,0,0), u, pc::pi*slp_global() );
+              v.back().rotate(rot);
+
+              geo.randompos(v.back());
+            }
+          } else {
+
+            v = mol.getRandomConformation();
+
+            // randomize it, rotate and translate operates on trial vec
+            /*Point a,b;
+            geo.randompos(a);
+            a = a.cwiseProduct(dir);
+            Geometry::cm2origo(geo,v);
+            Geometry::QuaternionRotate rot;
+            b.ranunit(slp_global);
+            rot.setAxis(geo, {0,0,0}, b, slp_global()*2*pc::pi);
+            for (auto &i : v) {
+              i = rot(i) + a;
+              geo.boundary(i);
+            }*/
+
+            Point a,b;
+            geo.randompos(a);
+            geo.randompos(b);
+
+            Point cm = Geometry::massCenter(geo, v);
+
+            Geometry::QuaternionRotate rot;
+            rot.setAxis(geo, cm, a, slp_global()*2*pc::pi);//rot around CM->point vec
+            auto vrot2 = rot;
+            vrot2.getOrigin() = Point(0,0,0);
+            for (auto i : v) {
+              i = rot(i);     // rotate coordinates
+              i.rotate(vrot2);  // rotate internal coordinates
+            }
+            assert( geo.dist(cm, massCenter(geo, v))<1e-9
+                && "Rotation messed up mass center. Is the box too small?");
+
+            //cm = Geometry::massCenter(geo, v); // unnecesary?
+            b = b.cwiseProduct(dir);
+            translate(geo, v, -cm+b);
           }
+
           return v;
         }
       };

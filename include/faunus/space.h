@@ -98,7 +98,7 @@ namespace Faunus {
         bool save(string);                  //!< Save container state to disk
         bool load(string, keys=NORESIZE);   //!< Load container state from disk
 
-        /// \brief Sets molId of groups and molecules based on molName
+        /// \brief Sets molId of groups based on MoleculeMap
         void linkGroupsToTopo();
 
         /// \brief insert p_vec of MolID to end of p and trial
@@ -549,7 +549,7 @@ namespace Faunus {
         for(auto& mol : molecule) { // for each molecule
           if(mol.name.compare(group->name)==0) {
             group->molId = mol.id;
-            mol.isAtomic = group->isAtomic();
+            assert(mol.isAtomic() == group->isAtomic() );
           }
         }
       }

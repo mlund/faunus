@@ -103,6 +103,8 @@ int main() {
   Average<double> rg2;
   Analysis::RadialDistribution<> rdf(0.2);
   Analysis::ChargeMultipole mp;
+  Analysis::LineDistribution<> rg2dist(0.2);
+  Analysis::LineDistribution<> allrg2dist(0.2);
   // Scatter::DebyeFormula<Scatter::FormFactorUnity<> > debye(mcp); // do later
   //
   spc.load("simulation.state");
@@ -113,7 +115,7 @@ int main() {
   EnergyDrift sys;
   sys.init(Energy::systemEnergy(spc, pot, spc.p));
   //
-  std::ofstream rgfile("rg_step.dat");
+  std::ofstream rgstep("rg_step.dat");
   //
   cout << atom.info()
        << spc.info() 
@@ -127,17 +129,25 @@ int main() {
       switch (i) {
       // Particle translation.
       case 0:
+	{
       	mv.setGroup(peptides);
 	sys += mv.move(peptides.size());
+	// (Aggregate) Rg distribution.
+	peptides.setMassCenter(spc);
+	Point pt = shape.vectorgyrationRadiusSquared(peptides, spc);
+	double val = pt.x() + pt.y() + pt.z();
+	allrg2dist(val)++;
         // Sample shape.
 	for (auto &element : pepvec) {
 	  element.setMassCenter(spc);
 	  shape.sample(element, spc);
 	  Point pt = shape.vectorgyrationRadiusSquared(element, spc);
 	  double val = pt.x() + pt.y() + pt.z();
-	  rg2.add(val);  
+	  rg2.add(val);
+	  rg2dist(val)++;
 	}
 	break;
+	}
       // Group translation/rotation.
       case 1:
 	k = pepvec.size();
@@ -184,13 +194,15 @@ int main() {
     }
     // Sample Scattering.
     // debye.sample(spc.p); // do later
-    rgfile << loop.innerCount() << " " << sqrt(rg2.avg()) << "\n";
+    rgstep << loop.innerCount() << " " << sqrt(rg2.avg()) << "\n";
     sys.checkDrift(Energy::systemEnergy(spc, pot, spc.p));
     cout << loop.timing();
     gro.save("simulation.gro", spc.p, "append");
     // End of loop[0].
   } 
   rdf.save("rdf_p2p.dat");
+  rg2dist.save("rg_dist.dat");
+  allrg2dist.save("all_rg_dist.dat");
   // debye.save("debye.dat"); // do later
   spc.save("simulation.state");  
   FormatPQR::save("simulation.pqr", spc.p);

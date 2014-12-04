@@ -12,6 +12,9 @@
  * @date   2014/12/04 
  */
 //
+using namespace Faunus;
+typedef Space<Geometry::Cuboid> Tspace;
+//
 #ifdef SPECIAL
 namespace Faunus {
   namespace Energy {

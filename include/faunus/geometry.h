@@ -325,7 +325,6 @@ namespace Faunus {
      */
     template<class Tgeo, class Tpvec, class TGroup, class Tweightf>
       Point anyCenter(const Tgeo &geo, const Tpvec &p, const TGroup &g, Tweightf weight) {
-        assert(!p.empty());
         assert(g.back() < (int)p.size());
         Point cm(0,0,0);
         if (!g.empty()) {

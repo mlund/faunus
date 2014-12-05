@@ -9,7 +9,7 @@
  *         while the other handles inter-protein interactions.
  *
  * @author Joao Henriques
- * @date   2014/12/04 
+ * @date   2014/12/05 
  */
 //
 using namespace Faunus;
@@ -35,7 +35,6 @@ namespace Faunus {
 	return nb.g2g(p, g1, g2);
       }
       double i2g(const typename base::Tpvec &p, Group &g, int i) FOVERRIDE {
-	double u = 0;
 	if (&g != base::spc->findGroup(i))
 	  return nb.i2g(p, g, i);
 	return base::i2g(p, g, i);
@@ -101,6 +100,7 @@ int main() {
   //
   Analysis::PolymerShape shape;
   Average<double> rg2;
+  Average<double> rg2all;
   Analysis::RadialDistribution<> rdf(0.2);
   Analysis::ChargeMultipole mp;
   Analysis::LineDistribution<> rg2dist(0.2);
@@ -116,6 +116,7 @@ int main() {
   sys.init(Energy::systemEnergy(spc, pot, spc.p));
   //
   std::ofstream rgstep("rg_step.dat");
+  std::ofstream allrgstep("all_rg_step.dat");
   //
   cout << atom.info()
        << spc.info() 
@@ -136,6 +137,7 @@ int main() {
 	peptides.setMassCenter(spc);
 	Point pt = shape.vectorgyrationRadiusSquared(peptides, spc);
 	double val = pt.x() + pt.y() + pt.z();
+	rg2all.add(val);
 	allrg2dist(val)++;
         // Sample shape.
 	for (auto &element : pepvec) {
@@ -195,6 +197,7 @@ int main() {
     // Sample Scattering.
     // debye.sample(spc.p); // do later
     rgstep << loop.innerCount() << " " << sqrt(rg2.avg()) << "\n";
+    allrgstep << loop.innerCount() << " " << sqrt(rg2all.avg()) << "\n";
     sys.checkDrift(Energy::systemEnergy(spc, pot, spc.p));
     cout << loop.timing();
     gro.save("simulation.gro", spc.p, "append");

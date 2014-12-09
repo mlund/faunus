@@ -556,7 +556,7 @@ namespace Faunus {
             rot.setAxis(geo, cm, a, slp_global()*2*pc::pi);//rot around CM->point vec
             auto vrot2 = rot;
             vrot2.getOrigin() = Point(0,0,0);
-            for (auto i : v) {
+            for (auto &i : v) {
               i = rot(i);     // rotate coordinates
               i.rotate(vrot2);  // rotate internal coordinates
             }

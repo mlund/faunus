@@ -15,6 +15,7 @@ namespace Faunus {
 
   /**
    * @brief Defines a continuous range of particles as described in `ContinuousRange`
+   * @todo Include `molId` in stream io (will require updating of all tests)
    */
   class Group : public Range {
     private:
@@ -265,7 +266,7 @@ namespace Faunus {
 
       /** @brief Write group data to stream */
       friend std::ostream& operator<<(std::ostream &o, const Group &g) {
-        o << g.front() << " " << g.back() << " " << g.cm;
+        o << g.front() << " " << g.back() << " " << g.cm.transpose();
         return o;
       }
 

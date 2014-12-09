@@ -397,7 +397,7 @@ namespace Faunus {
      * Derived classes should expand on this so that *all* data is written.
      */
     friend std::ostream& operator<<(std::ostream &o, const PointParticle &p) {
-      o << Point(p)
+      o << Point(p).transpose()
         << " " << p.charge << " " << p.radius << " " << p.mw << " "
         << (short)p.id << " " << p.hydrophobic;
       return o;

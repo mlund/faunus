@@ -17,7 +17,7 @@
 #endif
 
 namespace Faunus {
-  
+
   // currently not used for anything!
   template<typename T, typename Tparticle=particle>
     class ParticleVector {
@@ -91,8 +91,8 @@ namespace Faunus {
         Space(InputMap&);
 
         void freeGroups() {
-            for(auto it = g.begin(); it != g.end(); ++it) delete *it;
-            g.clear();
+          for(auto it = g.begin(); it != g.end(); ++it) delete *it;
+          g.clear();
         }
 
         bool save(string);                  //!< Save container state to disk
@@ -181,8 +181,10 @@ namespace Faunus {
     bool Space<Tgeometry,Tparticle>::checkSanity() {
       assert(p.size()==trial.size() && "Trial/P vector-size mismatch!");
       assert(p==trial && "Trial/P vector mismatch!");
-      bool rc=false;
-      if (p.size()==trial.size())
+      bool rc=true;
+      if (p.size()!=trial.size())
+        rc=false;
+      else {
         for (size_t i=0; i<p.size(); i++) {
           if ( geo.collision(p[i]) ) {
             rc=false;
@@ -195,27 +197,25 @@ namespace Faunus {
               p[i].charge!=trial[i].charge)
           {
             rc=false;
-            assert(!"Trial/P vector mismatch!");
+            std::cerr << "Trial/P vector mismatch!\n";
             break;
-          } else rc=true;
+          };
         }
-      size_t cnt=0;
-      for (auto gi : g)
-        if (!gi->empty())
-          cnt+=gi->size();
+        size_t cnt=0;
+        for (auto gi : g)
+          if (!gi->empty())
+            cnt+=gi->size();
 
-      if (cnt!=p.size()) {
-        assert(!"Sum enrolled group sizes does not match particle vector");
-        std::cerr << "Space sanity check failed. This is serious!";
-        rc=false;
+        if (cnt!=p.size()) {
+          std::cerr << "Sum of enrolled group sizes does not match particle vector";
+          rc=false;
+        }
       }
 
       if (rc==false) {
-        assert(!"Space sanity check failed. This is serious!");
         std::cerr << "Space sanity check failed. This is serious!";
-      }
-      if (rc==false)
         std::exit(1);
+      }
       return rc;
     }
 
@@ -341,7 +341,7 @@ namespace Faunus {
       assert(cnt==p.size() && "Particle mismatch while erasing a group!");
       return true;
     }
- 
+
   template<class Tgeometry, class Tparticle>
     bool Space<Tgeometry,Tparticle>::overlap_container() const {
       for (auto &i : p)
@@ -433,7 +433,13 @@ namespace Faunus {
               p[i] << fin;
             trial=p;
             cout << indent(SUB) << "Read " << n << " particle(s)." << endl;
+            // Read groups
             fin >> n;
+            if (g.empty()) {  // group list is empty!
+              g.resize(n);
+              for (auto &i : g)
+                i = new Group();
+            }
             if (n==(int)g.size()) {
               for (auto g_i : g) {
                 *g_i << fin;
@@ -555,13 +561,13 @@ namespace Faunus {
       }
     }
 
-    /**
-      * This will insert a particle vector into the current space.
-      * No overlap checks are performed; this should
-      * be done prior to insertion by for example the `Geometry::FindSpace` class.
-      *
-      * @todo Implement insertion at random position
-      */
+  /**
+   * This will insert a particle vector into the current space.
+   * No overlap checks are performed; this should
+   * be done prior to insertion by for example the `Geometry::FindSpace` class.
+   *
+   * @todo Implement insertion at random position
+   */
   template<class Tgeometry, class Tparticle>
     Group* Space<Tgeometry,Tparticle>::insert(PropertyBase::Tid molId, const p_vec &pin) {
       Group* group = new Group(molecule[molId].name);
@@ -581,15 +587,15 @@ namespace Faunus {
       return group;
     }
 
-    /**
-      * This will insert a particle vector into the current space at the end of its group. No overlap checks are performed; this should
-      * be done prior to insertion by for example the `Geometry::FindSpace` class.
-      *
-      * @param pin Particle vector to insert
-      * @param molId Id of molecule
-      * @param enlarge bool
-      * @return new Group
-      */
+  /**
+   * This will insert a particle vector into the current space at the end of its group. No overlap checks are performed; this should
+   * be done prior to insertion by for example the `Geometry::FindSpace` class.
+   *
+   * @param pin Particle vector to insert
+   * @param molId Id of molecule
+   * @param enlarge bool
+   * @return new Group
+   */
   template<class Tgeometry, class Tparticle>
     Group* Space<Tgeometry,Tparticle>::insert(const p_vec &pin, PropertyBase::Tid molId, bool enlarge) {
 
@@ -619,58 +625,58 @@ namespace Faunus {
             retGroup = g[i];
             g[i]->setMassCenter(*this);
 
-            } else {
-              retGroup = new Group(g[i]->name);
-              retGroup->setback(g[i]->back() + pin.size());
-              retGroup->setfront(g[i]->back()+1);
-              retGroup->setMolSize(g[i]->getMolSize());
-              retGroup->name = g[i]->name;
-              retGroup->molId = molId;
+          } else {
+            retGroup = new Group(g[i]->name);
+            retGroup->setback(g[i]->back() + pin.size());
+            retGroup->setfront(g[i]->back()+1);
+            retGroup->setMolSize(g[i]->getMolSize());
+            retGroup->name = g[i]->name;
+            retGroup->molId = molId;
 
-              retGroup->setMassCenter(*this);
+            retGroup->setMassCenter(*this);
 
-              g.insert(g.begin() + i+1, retGroup);
-            }
+            g.insert(g.begin() + i+1, retGroup);
           }
         }
-
-        if(!found) { // no groups of molId -> adding at end of g
-          Group* newGroup = insert(molId, pin);
-          newGroup->name = newGroup->name = molecule[molId].name;
-          g.push_back(newGroup);
-          return newGroup;
-        }
-        assert(retGroup != NULL);
-        return retGroup;
       }
 
+      if(!found) { // no groups of molId -> adding at end of g
+        Group* newGroup = insert(molId, pin);
+        newGroup->name = newGroup->name = molecule[molId].name;
+        g.push_back(newGroup);
+        return newGroup;
+      }
+      assert(retGroup != NULL);
+      return retGroup;
+    }
 
-      /**
-        * This will remove the specified group
-        * from the space. Later groups will be shufled down.
-        *
-        */
-    template<class Tgeometry, class Tparticle>
-      bool Space<Tgeometry,Tparticle>::eraseGroup(Group& group) {
-        int n = group.size(); // number of particles in group
-        int beg = group.front(); // first particle
-        int end = group.back();  // last particle
-        bool del = false;
-        int i=0;
-        auto it = g.begin();
 
-        // group isnt in group list
-        p.erase( p.begin()+beg, p.begin()+end+1); // remove particles -> doest remove partice pointed by last (+1)
-        trial.erase( trial.begin()+beg, trial.begin()+end+1 );
+  /**
+   * This will remove the specified group
+   * from the space. Later groups will be shufled down.
+   *
+   */
+  template<class Tgeometry, class Tparticle>
+    bool Space<Tgeometry,Tparticle>::eraseGroup(Group& group) {
+      int n = group.size(); // number of particles in group
+      int beg = group.front(); // first particle
+      int end = group.back();  // last particle
+      bool del = false;
+      int i=0;
+      auto it = g.begin();
 
-        for (auto* l : g) {
-          // group overlaps with l -> all 4 possibilities condensed (== ==, < >=, <= >, < >)
-          if( (l->front() == beg && l->back() == end) ) {
-            it += i;
-            del = true;
-          } else { if(l->front() <= beg && l->back() >= end) {
-            l->setback( l->back()-n );
-          }
+      // group isnt in group list
+      p.erase( p.begin()+beg, p.begin()+end+1); // remove particles -> doest remove partice pointed by last (+1)
+      trial.erase( trial.begin()+beg, trial.begin()+end+1 );
+
+      for (auto* l : g) {
+        // group overlaps with l -> all 4 possibilities condensed (== ==, < >=, <= >, < >)
+        if( (l->front() == beg && l->back() == end) ) {
+          it += i;
+          del = true;
+        } else { if(l->front() <= beg && l->back() >= end) {
+          l->setback( l->back()-n );
+        }
         }
 
         // later groups
@@ -689,10 +695,10 @@ namespace Faunus {
       }
 
 #ifndef NDEBUG
-  size_t cnt=0;
-  for (auto* l : g)
-    cnt+=l->size(); // count particles in each group
-  assert(cnt==p.size() && "Particle mismatch while erasing a group!");
+      size_t cnt=0;
+      for (auto* l : g)
+        cnt+=l->size(); // count particles in each group
+      assert(cnt==p.size() && "Particle mismatch while erasing a group!");
 #endif
       return true;
     }

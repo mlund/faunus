@@ -58,7 +58,7 @@ namespace Faunus {
           typedef Tspace SpaceType;
           typedef typename Tspace::ParticleType Tparticle;
           typedef typename Tspace::GeometryType Tgeometry;
-          typedef typename Tspace::ParticleVector Tpvec;
+          typedef typename Space<Tgeometry, Tparticle>::ParticleVector Tpvec;
 
           string name;  //!< Short informative name
 

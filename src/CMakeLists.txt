@@ -3,6 +3,22 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 # -------------------------------
 #   Faunus library object files
 # -------------------------------
+set(hdrs
+  ${CMAKE_SOURCE_DIR}/include/faunus/average.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/json.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/point.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/move.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/io.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/space.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/geometry.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/energy.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/species.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/mcloop.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/auxiliary.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/physconst.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/textio.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/potentials.h
+  )
 set(objs
   geometry potentials slump species analysis)
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
@@ -43,7 +59,7 @@ if(GIT_FOUND)
     COMMAND ${GIT_EXECUTABLE} describe
     OUTPUT_VARIABLE DESCRIBE_BUILD
     OUTPUT_STRIP_TRAILING_WHITESPACE)
-  string(REGEX MATCH "[0-9]+" BUILD_NUMBER ${DESCRIBE_BUILD})
+  #string(REGEX MATCH "[0-9]+" BUILD_NUMBER ${DESCRIBE_BUILD})
   #message(${BUILD_NUMBER})
 endif()
 
@@ -104,9 +120,9 @@ endif()
 #   Faunus libraries
 # --------------------
 if (ENABLE_STATIC)
-  add_library(libfaunus STATIC ${objs})
+  add_library(libfaunus STATIC ${objs} ${hdrs})
 else()
-  add_library(libfaunus SHARED ${objs})
+  add_library(libfaunus SHARED ${objs} ${hdrs})
 endif()
 set_target_properties(libfaunus PROPERTIES OUTPUT_NAME faunus)
 target_link_libraries(libfaunus xdrfile ${LINKLIBS})

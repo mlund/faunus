@@ -1,15 +1,15 @@
 #include <faunus/faunus.h>
 /**
- * @brief  Peptide in bulk OR at a charged (and/or sticky/hydrophobic) surface.
- *         Coarse-grained constant-pH, NVT, MC simulation with implicit 
- *         solvent and salt.
+ * @brief  Single polymer/peptide/protein in bulk OR at a charged (and/or sticky/hydrophobic) 
+ *         surface. Coarse-grained constant-pH, NVT, MC simulation with implicit solvent and 
+ *         salt.
  *        
  * @author Joao Henriques
- * @date   2014/10/16
+ * @date   2014/12/04
  */
 using namespace Faunus;
 //
-#ifdef SLIT
+#ifdef SURFACE
 typedef Space<Geometry::Cuboidslit> Tspace;
 typedef Potential::GouyChapman<>    Textpot1;
 typedef Potential::StickyWall<>     Textpot2;
@@ -32,7 +32,7 @@ int main() {
   EnergyDrift sys;
   Tspace spc(mcp);
   //  
-#ifdef SLIT
+#ifdef SURFACE
   auto pot = Energy::Nonbonded<Tspace, Tpairpot2>(mcp) 
            + Energy::ExternalPotential<Tspace, Textpot1>(mcp)
            + Energy::ExternalPotential<Tspace, Textpot2>(mcp)
@@ -95,7 +95,7 @@ int main() {
   Analysis::PolymerShape shape;
   Average<double> avrg2;
   Analysis::ChargeMultipole mp;
-#ifdef SLIT
+#ifdef SURFACE
   Analysis::LineDistribution<> surfmcdist;
   int scnt = 0;
   double nmax;              // avoid 
@@ -122,7 +122,7 @@ int main() {
                          "  So, wake up, Mister Freeman. Wake up and smell the ashes.");
   //
   std::ofstream f1("rg_step.dat");
-#ifdef SLIT
+#ifdef SURFACE
   std::ofstream f2("surf_res_dist.dat");
 #endif  
   //
@@ -150,6 +150,7 @@ int main() {
       case 4:
         sys += tit.move();
         mp.sample(pol,spc);
+	break;
       }
       //   
       double rnd = slp_global();
@@ -160,7 +161,7 @@ int main() {
         avrg2 += rg2;
       }
       //
-#ifdef SLIT
+#ifdef SURFACE
       if (rnd < 0.05) {
         Point mc = Geometry::massCenter(spc.geo, spc.p, pol);                // mass center coord
         double dist = pot.first.first.first.first.second.expot.surfDist(mc); // mc dist to surf
@@ -185,7 +186,7 @@ int main() {
     //
     f1 << loop.innerCount() << " " << sqrt(avrg2.avg()) << "\n";
     //    
-#ifdef SLIT  
+#ifdef SURFACE  
     netqtable.save("netq_dist.dat");
     rg2table.save("rg2_dist.dat");
 #endif
@@ -197,7 +198,7 @@ int main() {
   //
   FormatPQR::save("simulation.pqr", spc.p, spc.geo.len);
   //
-#ifdef SLIT
+#ifdef SURFACE
   surfmcdist.save("surf_mc_dist.dat");
   for (double d = spc.geo.len.z() - nmax; d <= spc.geo.len.z() - min; d += 0.25) {
     for (int i = pol.front(); i <= pol.back(); i++)
@@ -207,7 +208,7 @@ int main() {
 #endif
   // 
   f1.close();
-#ifdef SLIT
+#ifdef SURFACE
   f2.close();
 #endif
   //

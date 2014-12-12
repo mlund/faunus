@@ -1,10 +1,15 @@
 #include <faunus/faunus.h>
+#include <faunus/ewald.h>
 
 using namespace Faunus;
 using namespace Faunus::Potential;
 
 typedef Space<Geometry::Cuboid> Tspace;
+#ifdef EWALD
+typedef LennardJonesLB Tpairpot;
+#else
 typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot;
+#endif
 
 int main() {
 
@@ -12,8 +17,13 @@ int main() {
   InputMap mcp("water2.input");  // read input file
 
   // Energy functions and space
+#ifdef EWALD
+  auto pot = Energy::NonbondedEwald<Tspace,Tpairpot>(mcp)
+    + Energy::ExternalPressure<Tspace>(mcp);
+#else
   auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp);
+#endif
   Tspace spc(mcp);
 
   // Load and add molecules to Space
@@ -37,6 +47,7 @@ int main() {
   Analysis::RadialDistribution<> rdf(0.05);
 
   spc.load("state"); // load old config. from disk (if any)
+  pot.setSpace(spc);
 
   EnergyDrift sys;   // class for tracking system energy drifts
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy

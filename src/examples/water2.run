@@ -29,6 +29,11 @@ temperature        300          # K
 epsilon_r          1            # dielectric const.
 coulomb_cut        9.           # coulomb cutoff [angstrom]
 g2g_cutoff         10.          # Group-to-group cutoff
+
+ewald_precision    0.01
+ewald_eps_surf     1e11
+ewald_cutoff       9.
+ewald_alpha        0.2
                   
 loop_macrosteps    5            # number of macro loops
 loop_microsteps    250          # number of micro loops

@@ -6,359 +6,349 @@
 
 namespace Faunus {
 
-  /*!
-   * @brief Ewald Summation for long-ranged electrostatics
-   *
-   * Energies are calculated using Ewald
-   * the class also contains a optimization concerning
-   * cutoff in the Fourier room
-   * Cutoff in realspace is set equal to half the box
-   *
-   * @author Martin Trulsson
-   */
+  namespace Potential {
 
-  template<typename T=double>
-    class Ewald {
-      private:
-        T a1,a2,a3,a4,a5,p1;
-        T boxlen, halfboxlen;
-        T lB; // Bjerrum length (AA)
-        T twopi;
-        T ewaldpres;
-        T alpha; 
-        T alphasqrt;
-        T pisqrt;
-        T Ewapre;
-        T rcut2;   // Squared real space cut-off
-        int totk;
-        vector<T> kvec;
-        vector<complex<T> > eikr, eikrold;
-        vector< vector< complex<T> > > eix, eiy, eiz, eixold, eiyold, eizold;
-        int kmax, ksqmax;
-        void kSpaceInit();//< initialize k-Space
+    /**
+     * @brief Pair potential for real-space part of Ewald
+     */
+    template<bool useIonIon=true, bool useIonDipole=false, bool useDipoleDipole=false> 
+      struct EwaldReal : public Potential::Coulomb {
 
-      public:
-        Ewald(InputMap&, std::string="ewald_");
-        string info();
+        typedef Potential::Coulomb base;
+        double alpha, rc2i;
 
-        void setVolume(T);
-
-        void store() {
-          eikrold = eikr;
-          eixold  = eix;
-          eiyold  = eiy;
-          eizold  = eiz;
+        EwaldReal(InputMap &in, string pfx="coulomb") : base(in,pfx), alpha(0), rc2i(0) {
+          base::name="Ewald Real";
         }
 
-        void restore() {
-          swap(eikr,eikrold);
-          swap(eix,eixold);
-          swap(eiy,eiyold);
-          swap(eiz,eizold);
-        }
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
+            double r2i = 1.0/r.squaredNorm();
+            if (r2i < rc2i)
+              return 0;
+            double E=0;
+            double r1i = sqrt(r2i);
+            double r1i_d = erfc_x(alpha/r1i)*r1i;
 
-        /** @brief Real-space particle-particle energy */
-        T rSpaceEnergy(T, T);
+            if(useIonIon)
+              E = r1i_d*a.charge*b.charge;
+#ifdef DIPOLEPARTICLE
+            double T1;
+            if(useIonDipole) {
+              expK = constant*exp(-alpha2/r2i);
+              T1 = (expK + r1i_d)*r2i;
+              E += a.charge*r.dot(b.mu)*b.muscalar*T1;
+              E -= b.charge*r.dot(a.mu)*a.muscalar*T1;
+            }
+            if(useDipoleDipole) {
+              if(!useIonDipole) {
+                expK = constant*exp(-alpha2/r2i);
+                T1 = (expK + r1i_d)*r2i;
+              }
+              double t3 = -b.mu.dot(a.mu)*T1;
+              double t5 = b.mu.dot(r)*a.mu.dot(r)*(3.*r1i_d*r2i + (3.*r2i + 2.*alpha2)*expK)*r2i;
+              E += -(t5 + t3)*b.muscalar*a.muscalar;
+            }
+#endif
+            return base::bjerrumLength() * E; 
+          }
+      };
+  }//namespace
 
-        /** @brief Update k-vectors */
-        template<class Tpvec>
-          void kSpaceUpdate(const Tpvec&);
+  namespace Energy {
 
-        /** @brief Update k-vectors */
-        template<class Tpvec>
-          void kSpaceUpdate(const Tpvec&, int);
+    /**
+     * @brief Ewald summation for electrostatic interactions
+     * @date Lund 2014
+     *
+     * This will....(description, formulas, refs. etc.)
+     *
+     *  Keyword          |  Description
+     * :--------------   | :---------------
+     * `ewald_precision` |  Precision ...
+     *
+     * @todo arbitrary box dimensions; documentation; optimization; automatic alpha calc.
+     *      prettify _info() output (see other energy classes)
+     */
+    template<class Tspace, class Tpairpot, bool useIonIon=true, bool useIonDipole=false, bool useDipoleDipole=false>
+      class NonbondedEwald : public NonbondedVector<Tspace,
+      Potential::CombinedPairPotential<Potential::EwaldReal<useIonIon,useIonDipole,useDipoleDipole>, Tpairpot> > {
+        private:
+          typedef NonbondedVector<Tspace,
+                  Potential::CombinedPairPotential<
+                    Potential::EwaldReal<useIonIon,useIonDipole,useDipoleDipole>, Tpairpot> > base;
 
-        /** @brief k-space energy */
-        template<class Tpvec>
-          T kSpaceEnergy(const Tpvec&);
+          using base::spc;
+          typedef typename base::Tparticle Tparticle;
+          typedef typename base::Tpvec Tpvec;
 
-        /** @brief k-space energy */
-        template<class Tpvec>
-          T kSpaceEnergy(const Tpvec&, int);
+          void updateKVectors() {
+            kVectors.setZero();
+            k2s.setZero();
+            Aks.setZero();
+            wavefunctions = 0;
+            for (int kx = 0; kx <= maxK; kx++) 
+              for (int ky = -maxK; ky <= maxK; ky++) 
+                for (int kz = -maxKz; kz <= maxKz; kz++) {
+                  Point kv = 2*pc::pi*Point(kx,ky,kz)/L;
+                  double k2 = kv.dot(kv);
+                  if (k2 < check_k2_zero) // Check if k2 != 0
+                    continue;
+                  if(k2 > k2max)
+                    continue;
+                  kVectors.col(wavefunctions) = kv; 
+                  k2s[wavefunctions] = k2;
+                  Aks[wavefunctions] = exp(-k2/(4*alpha2))/k2;
+                  wavefunctions++;
+                }
+          }
 
-        template<class Tpvec>
-          T selfEwald(const Tpvec&);            //< Self-Interaction
+          template<class Tpvec, class Tgroup>
+            double getSelfEnergy(const Tpvec &p, const Tgroup &g) {
+              double Eq = 0.0;
+              double Emu = 0.0;
+              for (auto n : g) {
+                if (useIonIon || useIonDipole)
+                  Eq = Eq + p[n].charge*p[n].charge;
+#ifdef DIPOLEPARTICLE
+                if (useIonDipole || useDipoleDipole)
+                  Emu = Emu + p[n].mu.dot(p[n].mu)*p[n].muscalar*p[n].muscalar;
+#endif
+              }
+              return -(alpha/sqrt(pc::pi))*( Eq + (2*alpha2/3)*Emu );
+            }
 
-        /** @brief Optimize alpha */
-        void calcAlpha(int, T=0.001);
-    };
+          template<class Tpvec, class Tgroup>
+            double getSurfEnergy(const Tpvec &p, const Tgroup &g) {
+              Point mus(0,0,0), qrs(0,0,0);
+              for (auto n : g) {
+                if (useIonIon || useIonDipole)
+                  qrs = qrs + p[n].charge*p[n];
+#ifdef DIPOLEPARTICLE
+                if (useIonDipole || useDipoleDipole)
+                  mus = mus + p[n].mu*p[n].muscalar;
+#endif
+              }
+              return const_inf*(2*pc::pi/(( 2*eps_surf + 1)*V))*(qrs.dot(qrs) + 2*qrs.dot(mus) +  mus.dot(mus) );
+            }
 
-  template<class T>
-    void Ewald<T>::kSpaceInit() {
-      int ksq;
-      T b;
-      T rkx,rky,rkz;
-      T rksq;
-      b=1./4./alpha;
-      T twopii=twopi/boxlen;
-      T vol=pow(boxlen,3);
-      totk=0;
+          /**
+           * @brief ... 
+           */
+          template<class Tpvec, class Tgroup>
+            double getQ2(const Tpvec &p, const Tgroup &g, const Point &kv) {
+              std::complex<double> Q2(0, 0);
+              for (auto i : g) {
+                double dotP = kv.dot( p[i] );
+                if (useIonIon || useIonDipole) {
+                  std::complex<double> temp0(cos(dotP),sin(dotP));
+                  Q2 = Q2 + p[i].charge*temp0;
+                }
+#ifdef DIPOLEPARTICLE
+                if (useIonDipole || useDipoleDipole) {
+                  std::complex<double> temp1(-sin(dotP),cos(dotP));
+                  Q2 = Q2 + kv.dot(p[i].mu)*p[i].muscalar*temp1;
+                }
+#endif
+              }
+              double dQ2 = std::abs(Q2);
+              return dQ2*dQ2;
+            }
 
-      for (int kx=0; kx<(kmax+1); kx++) {      // uses symmetry
-        rkx = twopii*T(kx);
-        for (int ky=-kmax; ky<(kmax+1); ky++) {
-          rky = twopii*T(ky);
-          for (int kz=-kmax; kz<(kmax+1); kz++) {
-            rkz = twopii*T(kz);
-            ksq = kx*kx+ky*ky+kz*kz;
-            if (ksq < ksqmax && ksq!=0) {
-              totk+=1;
-              assert(totk<=2000 && "K vector too small");
-              rksq = rkx*rkx + rky*rky + rkz*rkz;
-              kvec.push_back( twopi * exp( -b*rksq ) / rksq / vol );
+          template<class Tpvec, class Tgroup>
+            double getReciEnergy(const Tpvec &p, const Tgroup &g) {
+              double E = 0.0;
+              if(alpha2 == 0)
+                return E;
+              double Q2;
+              for(int i = 0; i < kVectorsLength; i++) {
+                Q2 = getQ2(p,g,kVectors.col(i));
+                E += Aks[i]*Q2;
+              }
+              return (2*pc::pi/V)*E;
+            }
+
+
+          void calcMaxK(double alpha2_in, double L_in) {
+            maxK  = std::ceil(1.0 + alpha2_in*Rc*L_in/pc::pi);
+            maxKz = std::ceil(1.0 + alpha2_in*Rc*lamsep/pc::pi);
+            kVectorsLength = (maxK + 1)*(2*maxK + 1)*(2*maxKz + 1) - 1;
+            kVectors.resize(3, kVectorsLength); 
+            k2s.resize(kVectorsLength);
+            Aks.resize(kVectorsLength);
+          }
+
+          /**
+           * @brief ....
+           * @param rcut2 Real space cut-off
+           * @param ....
+           */
+          void calcAlpha(double inewaldpression, double rcut2) {
+            double ewaldpres = inewaldpression;
+            int i = 0;
+            double incr = 1e-5;
+            double A = 10.0;
+
+            while( A > (1.+1e-10) || A < (1-1e-10)) {
+              A=sqrt(alpha) * ewaldpres / exp(-alpha * rcut2);
+
+              if(A>1){
+                while(A > 1.){
+                  alpha-= incr;
+                  A = sqrt(alpha) * ewaldpres / exp(-alpha*rcut2);
+                  i++;
+                  if( i > 10000){
+                    cout << "ERROR ewaldpres = " << 1/sqrt(alpha)*exp(-alpha*rcut2) << endl;
+                    exit(1);
+                    return;
+                  };
+                };
+                if( i > 10000){
+                  cout << "ERROR ewaldpres = " << 1/sqrt(alpha)*exp(-alpha*rcut2) << endl;
+                  exit(1);
+                  return;
+                };
+
+                if( A < (1.-1e-10)) {
+                  alpha += 2*incr;
+                  A = sqrt(alpha)*ewaldpres / exp(-alpha*rcut2);
+                  incr = incr*0.1;
+                };  
+              } else {
+                while( A < 1.){
+                  alpha += incr;
+                  A = sqrt(alpha)*ewaldpres / exp(-alpha*rcut2);
+                  if( i > 10000){
+                    cout << "ERROR ewaldpres = " << 1/sqrt(alpha)*exp(-alpha*rcut2) << endl;
+                    exit(1);
+                    return;
+                  };
+                };
+                if( i > 10000){
+                  cout << "ERROR ewaldpres = " << 1/sqrt(alpha)*exp(-alpha*rcut2) << endl;
+                  exit(1);
+                  return;
+                };
+
+                if( A < (1.-1e-10)) {
+                  alpha += 2*incr;
+                  A = sqrt(alpha)*ewaldpres / exp(-alpha*rcut2);
+                  incr = incr*0.1;
+                };
+
+              }; 
+            };
+
+            assert( alpha >= 0 && "Alpha negative!");
+
+            alpha2 = alpha;
+            alpha = sqrt(alpha);
+            constant = 2*alpha/sqrt(pc::pi);
+          }
+
+          string _info() {
+            std::ostringstream o;
+            o << base::_info()
+              << "maxK                    = " << maxK << endl
+              << "wavefunctions           = " << wavefunctions << endl
+              << "alpha                   = " << alpha << endl
+              << "R_c                     = " << Rc << endl
+              << "<Self energy>           = " << selfEA.avg() << endl
+              << "<Surf energy>           = " << surfEA.avg() << endl
+              << "<Real energy>           = " << realEA.avg() << endl
+              << "<Reci energy>           = " << reciEA.avg() << endl;
+            return o.str();
+          }
+
+          int N, maxK, maxKz, kVectorsLength, k2max, wavefunctions;
+          double alpha, alpha2, V, eps_surf, eps_r, Rc, Rc2, rc2i,
+                 constant, L, lB, T, const_inf,
+                 check_k2_zero, ewapre, lamsep, lamell;
+
+          bool user_alpha, user_maxK;
+
+          Average<double> selfEA, surfEA, realEA, reciEA;
+          Eigen::MatrixXd kVectors;
+          Eigen::VectorXd k2s, Aks;  // explain...
+
+        public:
+          NonbondedEwald(InputMap &in, string pfx="ewald") : base(in) {
+            base::name += " (Ewald)";
+            ewapre = in.get<double>(pfx+"_precision",0.01);
+
+            lB = base::pairpot.first.bjerrumLength();
+            L = typename Tspace::GeometryType(in).len.norm(); //in.get<double>("cuboid_len",pc::infty);
+            lamell = in.get<double>(pfx+"_lamell",0.0);
+            lamsep = lamell + L;
+            Rc = in.get<double>(pfx+"_cutoff", L/2);
+            if (Rc>L/2)
+              Rc=L/2.;
+            Rc2 = Rc*Rc;
+            rc2i = 1.0/(Rc*Rc);
+            base::pairpot.first.rc2i=rc2i;
+            eps_surf = in.get<double>(pfx+"_eps_surf",pc::infty);
+            const_inf = 1;
+            if(eps_surf > 1e10)  // \epsilon_{Surface} = \infty
+              const_inf = 0.0;
+
+            alpha = 0.01;
+            user_alpha = false;
+            if (in.get<double>(pfx+"_alpha", -1.0  ) != -1.0 ) {
+              user_alpha = true;
+              alpha = in.get<double>(pfx+"_alpha", -1.0  );
+              constant = 2*alpha/sqrt(pc::pi);
+            }
+
+            user_maxK = false;
+            if (in.get<double>(pfx+"_maxK", -1.0  ) != -1.0 ) {
+              user_maxK = true;
+              maxK = in.get<double>(pfx+"_maxK", -1.0  );
+              maxKz = maxK;
+              kVectorsLength = (maxK + 1)*(2*maxK + 1)*(2*maxKz + 1) - 1;
+              kVectors.resize(3, kVectorsLength); 
+              k2s.resize(kVectorsLength);
+              Aks.resize(kVectorsLength);
             }
           }
-        }
-      }
-      kvec.resize(totk);
-      eikr.resize(totk);
-      eikrold.resize(totk);
-      cout << "# Number of wavefunctions :" << totk << endl;
-    }
 
-  template<class T>
-    void Ewald<T>::setVolume(T vol) {
-      assert(vol>0);
-      boxlen=pow(vol,1/3.);
-      halfboxlen=boxlen/2;
-      kSpaceInit();
-      store();
-    }
-
-  /**
-   * @param qq particle-particle charge product
-   * @param r particle-particle distance
-   */
-  template<class T>
-    T Ewald<T>::rSpaceEnergy(T qq, T r) {
-      return  (r*r>rcut2 ? 0 :
-          qq*std::erfc(r*alphasqrt)/r );
-    }
-
-  template<class T>
-    Ewald<T>::Ewald(InputMap &in, std::string pfx) {
-      a1=0.254829592;
-      a2=-0.284496736;
-      a3=1.421413741;
-      a4=-1.453152027;
-      a5=1.061405429;
-      p1=0.3275911;
-
-      int size  = in(pfx+"size",0);
-      kmax      = in(pfx+"kmax",5);
-      alpha     = in(pfx+"alpha",0.001);
-      Ewapre    = in(pfx+"Ewapre",0.01);
-      lB        = in("bjerrum",7.12591);
-      boxlen    = in("cuboid_len",0);
-      rcut2     = in(pfx+"cutoff", boxlen/2);
-      rcut2 = pow(rcut2,2);
-      halfboxlen= boxlen/2;
-      alphasqrt=sqrt(alpha);
-      T pi=std::acos(-1.);
-      twopi = 2*pi;
-      pisqrt = sqrt(pi);
-      ksqmax=kmax*kmax+1;
-      eix.resize(size);
-      eiy.resize(size);
-      eiz.resize(size);
-      eixold.resize(size);
-      eiyold.resize(size);
-      eizold.resize(size);
-      for (int i=0; i<size; i++) {
-        eix[i].resize(kmax+1);
-        eiy[i].resize(2*kmax+1);
-        eiz[i].resize(2*kmax+1);
-        eixold[i].resize(kmax+1);
-        eiyold[i].resize(2*kmax+1);
-        eizold[i].resize(2*kmax+1);
-      }
-      kSpaceInit();
-    }
-
-  template<class T>
-    string Ewald<T>::info() {
-      std::ostringstream o;
-      o << "# kmax                    = " << kmax << endl
-        << "# Number of wavefunctions = " << totk << endl;
-      return o.str();
-    }
-
-  template<class T>
-    void Ewald<T>::calcAlpha(int size, T inewaldpression) {
-      ewaldpres=inewaldpression;
-      int i=0;
-      T incr=1e-3, A=10;
-
-      while( A > (1.+1e-10) || A < (1-1e-10)) {
-        A=sqrt(alpha) * ewaldpres / exp( -alpha*rcut2 );
-
-        if (A>1) {
-          while (A > 1.) {
-            alpha-= incr;
-            A = sqrt(alpha) * ewaldpres / exp(-alpha*rcut2);
-            i++;
-            assert(i<=10000);
+          double g_external(const Tpvec &p, Group &g) FOVERRIDE {
+            return lB * ( getSelfEnergy(p,g) + getReciEnergy(p,g) );
           }
-          assert(i<=10000);
 
-          if (A < (1.-1e-10)) {
-            alpha += 2*incr;
-            A = sqrt(alpha)*ewaldpres / exp(-alpha*rcut2);
-            incr = incr*0.1;
-          }  
-        } else {
-          while (A < 1.) {
-            alpha += incr;
-            A = sqrt(alpha)*ewaldpres / exp(-alpha*rcut2);
-            assert(i<=10000);
+          double external(const Tpvec &p) FOVERRIDE {
+            Group g(0, p.size());
+            return lB * getSurfEnergy(p,g);
           }
-          assert(i<=10000);
 
-          if (A < (1.-1e-10)) {
-            alpha += 2*incr;
-            A = sqrt(alpha)*ewaldpres / exp(-alpha*rcut2);
-            incr = incr*0.1;
+          /**
+           * @brief Set space and update k-vectors and alpha
+           */
+          void setSpace(Tspace &s) {
+            base::setSpace(s);
+            V = spc->geo.getVolume();
+            L = std::cbrt(V);
+            N = 0;
+            for (auto &i : spc->p)
+              if (fabs(i.charge)>1e-6)
+                N++;
+            if(!user_alpha)
+              calcAlpha(ewapre,Rc2);
+            alpha2 = alpha*alpha;
+            if(!user_maxK)
+              calcMaxK(alpha2,L);
+            check_k2_zero = 0.1*L*L/(4*pc::pi*pc::pi);
+
+            k2max = std::ceil(4.0*pow(((pc::pi/L) + alpha2*Rc),2));  // From Martin's program
+            int k2maxtemp = std::ceil(4*pow(((pc::pi/lamsep) + alpha2*Rc),2));
+            if(k2maxtemp > k2max) 
+              k2max = std::ceil(k2maxtemp);
+
+            updateKVectors();
+
+            base::pairpot.first.alpha = alpha;
           }
-        }
-      }
+      };
 
-      assert(alpha>=0 && "Alpha negative!");
-
-      cout << "# New alpha fit = " << alpha << endl;
-      alphasqrt=sqrt(alpha);
-
-      kmax = 1. + alpha*halfboxlen*boxlen/twopi*2.;
-      //ksqmax = (1.+alpha*halfboxlen*boxlen/twopi*2.)*(1.+alpha*halfboxlen*boxlen/twopi*2.);
-      ksqmax = kmax*kmax;
-      cout << "# New kmax fit = " << kmax << endl;
-
-      for (int i=0; i<size; i++) {
-        eix[i].resize(kmax+1);
-        eiy[i].resize(2*kmax+1);
-        eiz[i].resize(2*kmax+1);
-        eixold[i].resize(kmax+1);
-        eiyold[i].resize(2*kmax+1);
-        eizold[i].resize(2*kmax+1);
-      }
-    }
-
-  template<class T>
-    template<class Tpvec>
-    T Ewald<T>::selfEwald(const Tpvec &p) {
-      T u=0;
-      for (auto &i : p)
-        u += i.charge * i.charge;
-      return -u*lB*alphasqrt/pisqrt;
-    }
-
-  template<class T>
-    template<class Tpvec>
-    void Ewald<T>::kSpaceUpdate(const Tpvec &p) {
-      int size=p.size();
-      T twopii=twopi/boxlen;
-
-      for (int i=0; i<size; i++) {
-        eix[i][0]=complex<T>(1,0);
-        eiy[i][kmax]=complex<T>(1,0);      //kmax = defines the '0'
-        eiz[i][kmax]=complex<T>(1,0);
-
-        eix[i][1] = complex<T>( cos( twopii*p[i].x() ), sin( twopii*p[i].x() ) );
-        eiy[i][kmax+1] = complex<T>( cos( twopii*p[i].y() ), sin( twopii*p[i].y() ) );
-        eiz[i][kmax+1] = complex<T>( cos( twopii*p[i].z() ), sin( twopii*p[i].z() ) );
-
-        eiy[i][kmax-1] = conj(eiy[i][kmax+1]);
-        eiz[i][kmax-1] = conj(eiz[i][kmax+1]);
-      }
-
-      for (int kk=2; kk<(kmax+1); kk++) {
-        for (int i=0; i<size; i++) {
-          eix[i][kk]=eix[i][kk-1]*eix[i][1];
-          eiy[i][kmax+kk]=eiy[i][kmax+kk-1]*eiy[i][kmax+1];
-          eiy[i][kmax-kk]=conj(eiy[i][kmax+kk]);
-          eiz[i][kmax+kk]=eiz[i][kmax+kk-1]*eiz[i][kmax+1];
-          eiz[i][kmax-kk]=conj(eiz[i][kmax+kk]);
-        }
-      }
-    }
-
-  template<class T>
-    template<class Tpvec>
-    void Ewald<T>::kSpaceUpdate(const Tpvec &p, int j) {
-      T twopii=twopi/boxlen;
-
-      eix[j][0]    = complex<T>(1,0);
-      eiy[j][kmax] = complex<T>(1,0);
-      eiz[j][kmax] = complex<T>(1,0);
-
-      eix[j][1]      = complex<T>( cos(twopii*p[j].x() ), sin(twopii*p[j].x()) );
-      eiy[j][kmax+1] = complex<T>( cos(twopii*p[j].y() ), sin(twopii*p[j].y()) );
-      eiz[j][kmax+1] = complex<T>( cos(twopii*p[j].z() ), sin(twopii*p[j].z()) );
-
-      eiy[j][kmax-1] = conj( eiy[j][kmax+1] ); //1+kmax = -1   2+kmax = -2 osv.
-      eiz[j][kmax-1] = conj( eiz[j][kmax+1] );
-
-      for (int kk=2; kk<(kmax+1); kk++) {
-        eix[j][kk]      = eix[j][kk-1] * eix[j][1];
-        eiy[j][kmax+kk] = eiy[j][kmax+kk-1] * eiy[j][kmax+1];
-        eiy[j][kmax-kk] = conj(eiy[j][kmax+kk]);
-        eiz[j][kmax+kk] = eiz[j][kmax+kk-1] * eiz[j][kmax+1];
-        eiz[j][kmax-kk] = conj( eiz[j][kmax+kk] );
-      }
-    }
-
-  template<class T>
-    template<class Tpvec>
-    T Ewald<T>::kSpaceEnergy(const Tpvec &p) {
-      complex<T> sum;
-      int ksq;
-      T u=0, fact;
-      totk=0;
-      for (int kx=0; kx<(kmax+1); kx++) {
-        if (kx==0)
-          fact=1.;
-        else
-          fact=2.;
-        for (int ky=0; ky<(2*kmax+1); ky++) {
-          for (int kz=0; kz<(2*kmax+1); kz++) {
-            ksq=kx*kx+(ky-kmax)*(ky-kmax)+(kz-kmax)*(kz-kmax);
-            if ( ksq < ksqmax && ksq!=0 ) {
-              sum = complex<T>(0,0);
-              for (int i=0; i<(int)p.size(); i++)
-                sum += p[i].charge * eix[i][kx]*eiy[i][ky]*eiz[i][kz];
-              eikr[totk] = sum;
-              u += fact*kvec[totk]*std::real( sum*conj(sum) );
-              totk+=1;
-            }
-          }
-        }
-      }
-      return u*lB;
-    }
-
-  template<class T>
-    template<class Tpvec>
-    T Ewald<T>::kSpaceEnergy(const Tpvec &p, int j) {
-      complex<T> sum;
-      T u=0, fact;
-      totk=0;
-      for (int kx=0; kx<(kmax+1); kx++) {
-        (kx==0 ? fact=1 : fact=2);
-        for (int ky=0; ky<(2*kmax+1); ky++) {
-          for (int kz=0; kz<(2*kmax+1); kz++) {
-            int ksq=kx*kx+(ky-kmax)*(ky-kmax)+(kz-kmax)*(kz-kmax);
-            if (ksq < ksqmax && ksq!=0) {
-              eikr[totk] = eikrold[totk]+p[j].charge *
-                ( eix[j][kx]*eiy[j][ky]*eiz[j][kz]
-                  - eixold[j][kx]*eiyold[j][ky]*eizold[j][kz] );
-              sum = eikr[totk];
-              u += fact*kvec[totk] * std::real( sum*conj(sum) );
-              totk+=1;
-            }
-          }
-        }
-      }
-      return u*lB;
-    }
-
+  }//namespace
 }//namespace
 #endif

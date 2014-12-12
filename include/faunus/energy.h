@@ -377,7 +377,7 @@ namespace Faunus {
      */
     template<class Tspace, class Tpairpot>
       class NonbondedVector : public Energybase<Tspace> {
-        private:
+        protected:
           string _info() { return pairpot.info(25); }
           typedef Energybase<Tspace> Tbase;
           typedef typename Tbase::Tparticle Tparticle;

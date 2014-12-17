@@ -33,15 +33,6 @@ endif()
 if(NOT ENABLE_UNICODE)
   add_definitions(-DAVOID_UNICODE)
 endif()
-# -------------------------------------
-#   Mersenne Twister requires
-# ----=--------------------------------
-if(ENABLE_TWISTER)
-  check_include_file_cxx("random" HAVERANDOM)
-  if(HAVERANDOM)
-    add_definitions(-DMERSENNETWISTER)
-  endif()
-endif()
 
 # -------------------------------------
 #   Use approximate math funtion?

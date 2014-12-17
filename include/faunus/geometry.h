@@ -380,6 +380,13 @@ namespace Faunus {
             [](const typename Tpvec::value_type &x) {return 1.0;} );
       }
 
+    /**
+     * @brief Electric dipole moment
+     * @param s Space
+     * @param g Group or other contained with atom index
+     * @param cutoff Spherical cutoff (default: 1e9 angstrom)
+     * @param mu Initial dipole moment (default: [0,0,0])
+     */
     template<class Tspace, class Tgroup>
       Point dipoleMoment(const Tspace &s, const Tgroup &g, double cutoff=1e9,Point mu=Point(0,0,0)) {
         assert(g.size()<=(int)s.p.size());

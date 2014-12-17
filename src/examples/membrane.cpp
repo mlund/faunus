@@ -116,26 +116,27 @@ int main() {
 
   cout << atom.info() + spc.info() + pot.info();
 
-  MCLoop loop(mcp);            // class for handling mc loops
-  while ( loop[0]         ) {  // Markov chain 
+  MCLoop loop(mcp);                      // class for handling mc loops
+  while ( loop[0]         ) {            // Markov chain 
     while ( loop[1] ) {
       int i=slp_global.rand() % 3;
-      int k=lipids.size(), j;
+      int k=lipids.size();
+      decltype(lipids.begin()) it;       // iterator for random lipid
       Group g;
       switch (i) {
         case 0:
           mv.setGroup(allLipids);
-          sys+=mv.move(allLipids.size()); // translate lipid monomers
+          sys+=mv.move(allLipids.size());// translate lipid monomers
           break;
         case 1:
           while (k-->0) {
-            j=slp_global.rand() % (lipids.size());
+            it = randomElement(lipids.begin(), lipids.end());
             if (slp_global()>0.5) {
-              gmv.setGroup(lipids[j]);          // tell what to move
-              sys+=gmv.move();          // translate/rotate polymers
+              gmv.setGroup(*it);         // tell what to move
+              sys+=gmv.move();           // translate/rotate polymers
             } else {
-              piv.setGroup(lipids[j]);          // tell what to move
-              sys+=piv.move();          // translate/rotate polymers
+              piv.setGroup(*it);         // tell what to move
+              sys+=piv.move();           // translate/rotate polymers
             }
           }
           break;

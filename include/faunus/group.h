@@ -15,7 +15,7 @@ namespace Faunus {
 
   /**
    * @brief Defines a continuous range of particles as described in `ContinuousRange`
-   * @todo Include `molId` in stream io (will require updating of all tests)
+   * @todo Is `isRange()` functionality needed?
    */
   class Group : public Range {
     private:
@@ -70,13 +70,10 @@ namespace Faunus {
         return o.str();
       }
 
-      /** @brief Pick random particle index in Group */
+      /** @brief Random particle index */
       int random() const {
-        if (!empty()) {
-          int i = front() + slp_global.rand() % size();
-          assert(find(i) && "Generated random element out of range!");
-          return i;
-        }
+        if (!empty())
+          return *randomElement(begin(), end());
         return -1;
       }
 
@@ -123,15 +120,17 @@ namespace Faunus {
         }
 
       /** @brief Calculates electric dipole moment */
+      /*
       template<class Tspace>
         Point dipolemoment(const Tspace &s, Point mu=Point(0,0,0)) const {
+          return Geometry::dipoleMoment(s,*this, 1e9, mu);
           for (auto i : *this) {
             Point t=s.p[i] - cm;
             s.geo.boundary(t);
             mu += t*s.p[i].charge;
           }
           return mu;
-        }
+        }*/
 
       /**
        * @brief Translate along a vector
@@ -356,7 +355,6 @@ namespace Faunus {
 
       /**
        * @todo rename to addGroup or implement operator
-       */
       template<class Tgroup>
         void addMolecule(const Tgroup &g) {
           if ((g.size()%molsize)==0) {
@@ -367,6 +365,7 @@ namespace Faunus {
           }
           assert( (size()%molsize)==0 && "GroupArray not a multiple of N");
         }
+       */
   };
 
   /** @brief Number of hydrophobic sites */

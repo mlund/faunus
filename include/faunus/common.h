@@ -31,6 +31,7 @@
   #define FOVERRIDE override
 #endif
 
+/// @brief Name space for Faunus
 namespace Faunus {
   //Keep this at a minimum, please!
   using std::string;

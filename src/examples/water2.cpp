@@ -57,14 +57,14 @@ int main() {
   MCLoop loop(mcp);    // class for handling mc loops
   while ( loop[0] ) {          // Markov chain 
     while ( loop[1] ) {
-      int i=slp_global.rand() % 2;
-      int j,k=water.size();
+      int i=slp_global.range(0,1);
+      int k=water.size();
       Group g;
       switch (i) {
         case 0:
           while (k-->0) {
-            j=slp_global.rand() % (water.size());
-            gmv.setGroup(water[j]);
+            gmv.setGroup( 
+                *randomElement(water.begin(), water.end()) );
             sys+=gmv.move();   // translate/rotate polymers
           }
           break;

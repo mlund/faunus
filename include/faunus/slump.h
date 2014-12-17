@@ -5,6 +5,7 @@
 #include <random>
 #include <cassert>
 
+/// @brief Namespace for Faunus
 namespace Faunus {
 
   /**

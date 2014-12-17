@@ -32,21 +32,20 @@ namespace Faunus {
    *   Tracker<Group*> molTrack;
    *   Tracker<int> atomTrack;
    *
-   *   // build list of molecules
-   *   for (auto i : spc.groupList())
-   *     molTrack.insert(i->molId, i);
-   *
-   *   // build list of atoms
-   *   for (size_t i=0; i<spc.p.size(); i++)
-   *     atomTrack.insert(spc.p[i].id, i);
+   *   // build list of atoms and molecules
+   *   for ( auto g : spc.groupList() )
+   *     if ( g->isAtomic() )
+   *       for ( auto i : *g )
+   *         atomTrack.insert( spc.p[i].id, i );
+   *     else
+   *       molTrack.insert( g->molId, g );
    *
    *   // find three random sodium atoms
-   *   auto id = atom["Na"].id;
-   *   vector<int> dst;
-   *   atomTrack.find(id, 3, dst);
+   *   vector<int> result;
+   *   atomTrack.find( atom["Na"].id, 3, result );
    *
    *   // erase one of the sodium atoms from tracker
-   *   atomTrack.erase(id, dst[0]);
+   *   atomTrack.erase( id, result[0] );
    * ~~~~
    *
    * @todo Optimize private random function (currently uses `random_shuffle`)

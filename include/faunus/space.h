@@ -18,6 +18,112 @@
 
 namespace Faunus {
 
+  /**
+   * @brief Particle and molecule tracker
+   *
+   * This will track data (`T`) associated with an
+   * id (`Tid`). Typically used to track atoms and
+   * molecules in grand canonical moves. Only one
+   * item of each data element is guarantied.
+   *
+   * Example:
+   *
+   * ~~~~
+   *   Tracker<Group*> molTrack;
+   *   Tracker<int> atomTrack;
+   *
+   *   // build list of molecules
+   *   for (auto i : spc.groupList())
+   *     molTrack.insert(i->molId, i);
+   *
+   *   // build list of atoms
+   *   for (size_t i=0; i<spc.p.size(); i++)
+   *     atomTrack.insert(spc.p[i].id, i);
+   *
+   *   // find three random sodium atoms
+   *   auto id = atom["Na"].id;
+   *   vector<int> dst;
+   *   atomTrack.find(id, 3, dst);
+   *
+   *   // erase one of the sodium atoms from tracker
+   *   atomTrack.erase(id, dst[0]);
+   * ~~~~
+   *
+   * @todo Optimize private random function (currently uses `random_shuffle`)
+   */
+  template<class T, class Tid=int>
+    class Tracker {
+      private:
+        std::map<Tid, std::vector<T> > map;
+
+        template<class Tcontainer>
+          auto random(Tcontainer &c) -> decltype(c.begin()) {
+            std::random_shuffle(c.begin(), c.end());
+            return c.begin();
+          }
+
+      public:
+        /** @brief Number of elements of type id */
+        size_t size(Tid id) const {
+          auto i=map.find(id);
+          if (i!=map.end())
+            return i->second.size();
+          return 0;
+        }
+
+        /**
+         * @brief Find random data based on id
+         * @param id Id for data
+         * @param N Number of unique elements (data) to return
+         * @param dst Destination vector
+         * @return True if found; false otherwise
+         */
+        bool find(Tid id, size_t N, std::vector<T> &dst) {
+          auto i=map.find(id);
+          if (i!=map.end())
+            if (i->second.size()>=N) {
+              dst.clear();
+              dst.reserve(N);
+              do {
+                auto j=random(i->second);
+                if ( std::find(dst.begin(), dst.end(), *j)==dst.end() )
+                  dst.push_back(*j);
+              } while (dst.size()!=N);
+              return true;
+            }
+          return false;
+        }
+
+        /**
+         * @brief Insert data (if not already present)
+         * @param id Id of data
+         * @param data Data to track
+         */
+        void insert(Tid id, T data) {
+          auto i = map.find(id);
+          if (i!=map.end()) {
+            auto pos=std::find(i->second.begin(), i->second.end(), data);
+            if (pos==i->second.end())
+              i->second.push_back(data);
+          }
+        }
+
+        /**
+         * @brief Erase data
+         * @param id Id of data
+         * @param data Data to track
+         */
+        void erase(Tid id, const T &data) {
+          auto i = map.find(id);
+          if (i!=map.end()) {
+            auto pos=std::find(i->second.begin(), i->second.end(), data);
+            if (pos!=i->second.end())
+              i->second.erase(pos);
+          }
+        } 
+
+    };
+
   // currently not used for anything!
   template<typename T, typename Tparticle=particle>
     class ParticleVector {

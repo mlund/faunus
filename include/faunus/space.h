@@ -102,14 +102,16 @@ namespace Faunus {
         /**
          * @brief Erase data
          * @param id Id of data
-         * @param data Data to track
+         * @param data Data to be deleted
          */
         void erase(Tid id, const T &data) {
           auto i = map.find(id);
           if (i!=map.end()) {
             auto pos=std::find(i->second.begin(), i->second.end(), data);
-            if (pos!=i->second.end())
-              i->second.erase(pos);
+            if (pos!=i->second.end()) {
+              std::swap( *pos, i->second.back() );
+              i->second.pop_back();
+            }
           }
         } 
 

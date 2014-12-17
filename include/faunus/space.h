@@ -6,7 +6,6 @@
 #include <faunus/slump.h>
 #include <faunus/point.h>
 
-//#include <faunus/geometry.h>
 #include <faunus/inputfile.h>
 #include <faunus/species.h>
 #include <faunus/physconst.h>
@@ -22,9 +21,12 @@ namespace Faunus {
    * @brief Particle and molecule tracker
    *
    * This will track data (`T`) associated with an
-   * id (`Tid`). Typically used to track atoms and
-   * molecules in grand canonical moves. Only one
-   * item of each data element is guarantied.
+   * id (`Tid`) and is typically used to track atoms and
+   * molecules in grand canonical moves. Only one instance
+   * of a data element can exist at any given time.
+   *
+   * Internally, the structure is a map of `Tid` key and
+   * a vector of `T`.
    *
    * Example:
    *
@@ -104,7 +106,7 @@ namespace Faunus {
          * @param id Id of data
          * @param data Data to be deleted
          */
-        void erase(Tid id, const T &data) {
+        void erase(Tid id, T data) {
           auto i = map.find(id);
           if (i!=map.end()) {
             auto pos=std::find(i->second.begin(), i->second.end(), data);

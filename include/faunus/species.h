@@ -195,7 +195,11 @@ namespace Faunus {
         using typename base::const_reference;
 
         /** @brief Iterator to random element */
-        iterator random() const { return randomElement(this->begin(), this->end()); }
+        const_iterator random() const { return randomElement(this->begin(), this->end()); }
+
+        /** @brief Iterator to random element */
+        iterator random() { return randomElement(this->begin(), this->end()); }
+
 
         /** @brief Add element at the end */
         void push_back(const value_type &d) {

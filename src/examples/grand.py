@@ -11,7 +11,7 @@ def mkinput():
       fmt("sphere_radius", 80, "radius of container (angstrom)"),\
       fmt("atomlist", "grand.json", "atom property file"),\
       fmt("loop_macrosteps", 10, "number of macro loops"),\
-      fmt("loop_microsteps", 20000, "number of micro loops"),\
+      fmt("loop_microsteps", 100000, "number of micro loops"),\
       fmt("tion1", "Na", "ion type 1"),\
       fmt("tion2", "Cl", "ion type 2"),\
       fmt("nion1", 20, "initial number of ion type 1"),\

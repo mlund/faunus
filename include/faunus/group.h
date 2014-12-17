@@ -28,12 +28,14 @@ namespace Faunus {
        * @param back Last index
        */
       Group(int front=-1, int back=-1) : Range(front,back-front+1), name("") {
+        molId=0;
         setMolSize(-1);
         if (front<0 || back<0)
           resize(0);
       }
 
       Group(string name, int front=-1, int back=-1) : Range(front,back-front+1), name(name) {
+        molId=0;
         setMolSize(-1);
         if (front<0 || back<0)
           resize(0);
@@ -266,15 +268,16 @@ namespace Faunus {
 
       /** @brief Write group data to stream */
       friend std::ostream& operator<<(std::ostream &o, const Group &g) {
-        o << g.front() << " " << g.back() << " " << g.cm.transpose();
+        o << g.front() << " " << g.back() << " "
+          << int(g.molId) << " " << g.molsize << " " << g.cm.transpose();
         return o;
       }
 
       /** @brief Read group data from stream */
       Group& operator<<(std::istream &in) {
-        int front;
-        int back;
-        in >> front >> back;
+        int front, back, id;
+        in >> front >> back >> id >> molsize;
+        molId=PropertyBase::Tid(id);
         setrange(front,back);
         assert( size()==back-front+1 && "Problem with Group range");
         cm.operator<<(in);
@@ -333,11 +336,11 @@ namespace Faunus {
         }
 
       /**
-        * @brief Add atomic particles, checks overlaps
-        * @param spc Space
-        * @param name Name of particle type
-        * @param count Number of particles
-        */
+       * @brief Add atomic particles, checks overlaps
+       * @param spc Space
+       * @param name Name of particle type
+       * @param count Number of particles
+       */
       template<class Tspace>
         void addParticles(Tspace &spc, string& name, int count) {
           if(spc.insert(name, count) ) {

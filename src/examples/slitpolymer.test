@@ -5,7 +5,7 @@ crank_acceptance                   94.1386
 energyAverage                      -0.911416           
 pivot_Acceptancepolymer            0.915374            
 pivot_acceptance                   91.5374             
-relativeEnergyDrift                6.12886e-15         
+relativeEnergyDrift                1.78457e-08 
 reptation_Acceptancepolymer        0.90869             
 reptation_acceptance               90.869              
 transrot_acceptance                56.032              

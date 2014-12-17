@@ -1,10 +1,10 @@
-# Generated on Aug 26 2013 15:21:42 using 4.2.1 Compatible Apple LLVM 4.2 (clang-425.0.28)
-energyAverage                      -31.7457            
-mv_particle_acceptance             60.1173             
-relativeEnergyDrift                3.85349e-15         
+# Generated on Dec 17 2014 14:06:47 using 4.2.1 Compatible Apple LLVM 6.0 (clang-600.0.56)
+energyAverage                      -32.2989            
+mv_particle_acceptance             60.025              
+relativeEnergyDrift                1.45501e-14         
 saltbath_Cl_activity               0.05                
-saltbath_Cl_conc                   0.0595863           
+saltbath_Cl_conc                   0.0599804           
 saltbath_Na_activity               0.05                
-saltbath_Na_conc                   0.0595863           
-saltbath_acceptance                68.2469             
-widom_muex                         -0.186367           
+saltbath_Na_conc                   0.0599804           
+saltbath_acceptance                68.1877             
+widom_muex                         -0.186618           

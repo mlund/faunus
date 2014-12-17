@@ -9,6 +9,7 @@ namespace Faunus {
 
   /*@
    * @brief Base class for random number generation
+   * @todo To be removed -- C++11 random twister should be default.
    *
    * Derived classes need only provide `_randone()` and `seed()` function.
    */
@@ -42,6 +43,7 @@ namespace Faunus {
    * @date Lund, 2008
    * @note A class for ran2 from 'Numerical Recipies'.
    * @warning Not thread safe!
+   * @todo To be removed -- C++11 random twister should be default.
    */
   class RandomRan2: public RandomBase {
     private:
@@ -81,15 +83,24 @@ namespace Faunus {
           return x;
         }
       public:
+        /** @brief Constructor -- default deterministic seed is used */
         RandomTwister() : dist(0,1) {
-          name="Mersenne Twister";
+          name="Mersenne-Twister";
+        }
+
+        /** @brief Integer in range [min:max] */
+        int range(int min, int max) {
+          std::uniform_int_distribution<int> d(min,max);
+          return d(eng);
         }
 
         /**
-         * @brief Seed generator
+         * @brief Seed random number engine
          *
          * The default value is obtained from `std::random_device`
-         * but an integer can be given as well. Note that `seed()`
+         * which will give a non-deterministic run.
+         * An 32-bit integer can be given as well for a
+         * deterministic seed. Note that `seed()`
          * is *not* called upon construction.
          */
         template<typename Tint>
@@ -99,11 +110,26 @@ namespace Faunus {
           }
     };
 
+#define MERSENNETWISTER
+
 #if defined(MERSENNETWISTER)
   typedef Faunus::RandomTwister<double,std::mt19937> slump;
 #else
   typedef Faunus::RandomRan2 slump;
 #endif
   extern slump slp_global;
-}
+
+  /**
+   * @brief Get random element from STL container
+   * @return Iterator to random element
+   */
+  template<class Titer>
+    Titer randomElement(const Titer &beg, const Titer &end) {
+      auto i=beg;
+      std::advance(i, slp_global.range( 0,std::distance(beg, end)-1 ) );
+      return i;
+    }
+
+} // namespace
+
 #endif

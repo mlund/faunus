@@ -375,7 +375,7 @@ namespace Faunus {
     /**
      * @brief Copy from stream
      *
-     * This will read all data from stream in the same order as writte.
+     * This will read all data from stream in the same order as written.
      * Note that a short integer is expected for the particle id
      * since chars (Tid=char) does not print well on screen.
      * Derived classes should expand on this so
@@ -474,7 +474,7 @@ namespace Faunus {
     /* write data members to stream */
     friend std::ostream &operator<<(std::ostream &o, const DipoleParticle &p)
     {
-      o << PointParticle(p) << " " << p.mu << " " << p.muscalar
+      o << PointParticle(p) << " " << p.mu.transpose() << " " << p.muscalar
         << " " << p.mup << " " << p.alpha << " " << p.theta;
       return o;
     }
@@ -564,7 +564,7 @@ namespace Faunus {
       /* write data members to stream */
       friend std::ostream &operator<<(std::ostream &o, const CigarParticle &p) {
         o << PointParticle(p)
-          << " " << p.dir << " " << p.patchdir
+          << " " << p.dir.transpose() << " " << p.patchdir.transpose()
           << " " << p.halfl;
         return o;
       }

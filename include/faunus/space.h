@@ -40,26 +40,19 @@ namespace Faunus {
    *     else
    *       molTrack.insert( g->molId, g );
    *
-   *   // find three random sodium atoms
+   *   // find three, random sodium atoms
    *   vector<int> result;
-   *   atomTrack.find( atom["Na"].id, 3, result );
+   *   auto id = name["Na"].id
+   *   atomTrack.find( id, 3, result );
    *
-   *   // erase one of the sodium atoms from tracker
+   *   // erase one of the found atoms from tracker
    *   atomTrack.erase( id, result[0] );
    * ~~~~
-   *
-   * @todo Optimize private random function (currently uses `random_shuffle`)
    */
   template<class T, class Tid=int>
     class Tracker {
       private:
         std::map<Tid, std::vector<T> > map;
-
-        template<class Tcontainer>
-          auto random(Tcontainer &c) -> decltype(c.begin()) {
-            std::random_shuffle(c.begin(), c.end());
-            return c.begin();
-          }
 
       public:
         /** @brief Number of elements of type id */
@@ -74,20 +67,19 @@ namespace Faunus {
          * @brief Find random data based on id
          * @param id Id for data
          * @param N Number of unique elements (data) to return
-         * @param dst Destination vector
+         * @param dst Destination vector -- new elements added to end
          * @return True if found; false otherwise
          */
         bool find(Tid id, size_t N, std::vector<T> &dst) {
+          size_t Ninit=dst.size();
           auto i=map.find(id);
-          if (i!=map.end())
-            if (i->second.size()>=N) {
-              dst.clear();
-              dst.reserve(N);
+          if (i!=map.end()) // id found
+            if (i->second.size()>=N) {  // enough elements?
               do {
-                auto j=random(i->second);
+                auto j=randomElement(i->second.begin(), i->second.end());
                 if ( std::find(dst.begin(), dst.end(), *j)==dst.end() )
                   dst.push_back(*j);
-              } while (dst.size()!=N);
+              } while (dst.size()!=Ninit+N);
               return true;
             }
           return false;
@@ -533,6 +525,7 @@ namespace Faunus {
             cout << indent(SUB) << "Resizing particle vector from " << p.size() << " --> " << n << ".\n";
             p.resize(n);
           }
+          assert(n==(int)p.size());
           if (n == (int)p.size() ) {
             for (int i=0; i<n; i++)
               p[i] << fin;
@@ -549,6 +542,8 @@ namespace Faunus {
               for (auto g_i : g) {
                 *g_i << fin;
                 g_i->setMassCenter(*this);
+                if (g_i->name.empty())
+                  g_i->name = molecule[g_i->molId].name;
               }
               cout << indent(SUB) << "Read " << n << " group(s)." << endl;
               return true;

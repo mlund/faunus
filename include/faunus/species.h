@@ -194,6 +194,9 @@ namespace Faunus {
         using typename base::const_iterator;
         using typename base::const_reference;
 
+        /** @brief Iterator to random element */
+        iterator random() const { return randomElement(this->begin(), this->end()); }
+
         /** @brief Add element at the end */
         void push_back(const value_type &d) {
           base::push_back(d);
@@ -475,9 +478,6 @@ namespace Faunus {
 
       bool includefile(InputMap&);     /// Read JSON file given through `InputMap`
       bool includefile(const string&); /// Read JSON file directly
-
-      /** @brief Count of moleculeTypes stored */
-      int molTypeCount() {return size();}
 
       /**
        * @brief Store a single configuration for grand canonical POOL insert

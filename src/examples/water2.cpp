@@ -49,6 +49,19 @@ int main() {
   spc.load("state"); // load old config. from disk (if any)
   pot.setSpace(spc);
 
+  Tracker<Group*> molTrack;
+  Tracker<int> atomTrack;
+  for ( auto g : spc.groupList() )
+    if ( g->isAtomic() )
+      for ( auto i : *g )
+        atomTrack.insert( spc.p[i].id, i );
+    else
+      molTrack.insert( g->molId, g );
+
+  vector<int> result;
+  atomTrack.find( atom["Na"].id, 3, result );
+  atomTrack.erase( atom["Na"].id, result[0] );
+
   EnergyDrift sys;   // class for tracking system energy drifts
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
 

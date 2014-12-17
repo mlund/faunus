@@ -51,7 +51,6 @@ Option                             | Description
 `-DENABLE_MPI=OFF`                 | Build MPI programs (parallel tempering etc.)
 `-DENABLE_OPENMP=OFF`              | Enable OpenMP support
 `-DENABLE_STATIC=OFF`              | Static linkage of faunus as opposed to default dynamic linkage
-`-DENABLE_TWISTER=OFF`             | Use Mersenne Twister for random numbers
 `-DENABLE_UNICODE=ON`              | Use Unicode UTF-16 encoding for pretty output
 `-ENABLE_POWERSASA=OFF`            | Enable SASA routines
 `-DCMAKE_BUILD_TYPE=RelWithDebInfo`| Alternatives: `Debug` or `Release` (faster)

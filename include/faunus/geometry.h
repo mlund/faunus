@@ -513,12 +513,11 @@ namespace Faunus {
 
         InsertRandom() : dir(1,1,1) {base::name = "random";}
 
-        Tpvec operator() (Tgeo &geo, const Tpvec &p, const MoleculeData &mol) {
+        Tpvec operator() (Tgeo &geo, const Tpvec &p, const MoleculeData &mol) FOVERRIDE {
           Tpvec v;
-
-          if(mol.isAtomic()) {
-          for(auto aType: mol.atoms) { // for each atom type of molecule
-              v.push_back(particle());
+          if (mol.isAtomic()) {
+            for (auto &aType: mol.atoms) { // for each atom type of molecule
+              v.push_back( typename Tspace::ParticleType() );
               v.back() = atom[aType];   // set part type
 
               Geometry::QuaternionRotate rot;
@@ -535,16 +534,16 @@ namespace Faunus {
 
             // randomize it, rotate and translate operates on trial vec
             /*Point a,b;
-            geo.randompos(a);
-            a = a.cwiseProduct(dir);
-            Geometry::cm2origo(geo,v);
-            Geometry::QuaternionRotate rot;
-            b.ranunit(slp_global);
-            rot.setAxis(geo, {0,0,0}, b, slp_global()*2*pc::pi);
-            for (auto &i : v) {
+              geo.randompos(a);
+              a = a.cwiseProduct(dir);
+              Geometry::cm2origo(geo,v);
+              Geometry::QuaternionRotate rot;
+              b.ranunit(slp_global);
+              rot.setAxis(geo, {0,0,0}, b, slp_global()*2*pc::pi);
+              for (auto &i : v) {
               i = rot(i) + a;
               geo.boundary(i);
-            }*/
+              }*/
 
             Point a,b;
             geo.randompos(a);

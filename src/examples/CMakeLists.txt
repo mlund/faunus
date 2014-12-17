@@ -75,9 +75,9 @@ fau_example(example_bulk_dh "./" bulk.cpp)
 set_target_properties(example_bulk_dh PROPERTIES OUTPUT_NAME "bulk_dh" EXCLUDE_FROM_ALL TRUE)
 set_target_properties(example_bulk_dh PROPERTIES COMPILE_DEFINITIONS "DEBYEHUCKEL")
 
-fau_example(example_water "./" water.cpp)
-set_target_properties(example_water PROPERTIES OUTPUT_NAME "water")
-add_test( example_water ${CMAKE_CURRENT_SOURCE_DIR}/water.run )
+#fau_example(example_water "./" water.cpp)
+#set_target_properties(example_water PROPERTIES OUTPUT_NAME "water")
+#add_test( example_water ${CMAKE_CURRENT_SOURCE_DIR}/water.run )
 
 fau_example(example_water2 "./" water2.cpp)
 set_target_properties(example_water2 PROPERTIES OUTPUT_NAME "water2")

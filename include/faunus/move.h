@@ -2453,7 +2453,7 @@ namespace Faunus {
           vector<int> chosen;
           vector<unsigned int> tidCount; // count of selected atoms
           vector<int> molCount; // count of selected molecules
-          molCount.resize(molecule.molTypeCount(),0);
+          molCount.resize(molecule.size(),0);
           tidCount.resize(atom.size(),0);
           bool exist = false;
 

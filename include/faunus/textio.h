@@ -66,7 +66,7 @@ namespace Faunus {
 #endif
 
     /** @brief Remove white space from string */
-    inline string trim(string s) {
+    inline std::string trim(std::string s) {
       s.erase( std::remove_if(s.begin(), s.end(), isspace), s.end());
       return s;
     }
@@ -103,6 +103,27 @@ namespace Faunus {
       return std::distance(std::istream_iterator<std::string>(
             std::istringstream(s) >> std::ws), std::istream_iterator<std::string>());
     }
+
+    /**
+     * @brief Convert whitespace separated words into vector of given type
+     *
+     * Example:
+     *
+     * ~~~~
+     * auto v = textio::words2vec<double>( "0.2 1 100" );
+     * for (auto i : v)
+     *   cout << 2*i << " "; // -> 0.4 2 200
+     * ~~~~
+     */
+
+    template<class T>
+      std::vector<T> words2vec(const std::string &w) {
+        std::vector<T> v( numWords(w) );
+        std::stringstream s(w);
+        size_t i=0;
+        while (i<v.size()) { s >> v[i++]; }
+        return v;
+      }
 
     /**
      * @brief Show Faunus welcome text, version etc.

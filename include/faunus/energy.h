@@ -104,7 +104,12 @@ namespace Faunus {
           double i_total(Tpvec &p, int i)
           { return i2all(p,i) + i_external(p,i) + i_internal(p,i); }
 
+          /* @brief Group to group */
           virtual double g2g(const Tpvec&, Group&, Group&)     // Group-Group energy
+          { return 0; }
+
+          /* @brief Group in vector 1 with group in vector 2 */
+          virtual double g1g2(const Tpvec&, Group&, const Tpvec&, Group&)
           { return 0; }
 
           virtual double g_external(const Tpvec&, Group&)      // External energy of group
@@ -180,6 +185,9 @@ namespace Faunus {
 
           double g2g(const Tpvec&p, Group&g1, Group&g2) FOVERRIDE
           { return first.g2g(p,g1,g2)+second.g2g(p,g1,g2); }
+
+          double g1g2(const Tpvec&p1, Group&g1, const Tpvec&p2, Group&g2) FOVERRIDE
+          { return first.g1g2(p1,g1,p2,g2)+second.g1g2(p1,g1,p2,g2); }
 
           double g_external(const Tpvec&p, Group&g) FOVERRIDE
           { return first.g_external(p,g)+second.g_external(p,g); }
@@ -346,6 +354,14 @@ namespace Faunus {
             return u;
           }
 
+          double g1g2(const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2) FOVERRIDE {
+            double u=0;
+            for (auto i : g1)
+              for (auto j : g2)
+                u += pairpot( p1[i], p2[j], geo.sqdist( p1[i],p2[j] ) );
+            return u;
+          }
+
           double g_internal(const Tpvec &p, Group &g) FOVERRIDE { 
             double u=0;
             int b=g.back(), f=g.front();
@@ -488,6 +504,14 @@ namespace Faunus {
             return u;
           }
 
+          double g1g2(const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2) FOVERRIDE {
+            double u=0;
+            for (auto i : g1)
+              for (auto j : g2)
+                u += pairpot( p1[i], p2[j], geo.vdist( p1[i], p2[j] ) );
+            return u;
+          }
+
           double g_internal(const Tpvec &p, Group &g) { 
             double u=0;
             const int b=g.back(), f=g.front();
@@ -599,6 +623,7 @@ namespace Faunus {
       class NonbondedCutg2g : public Tnonbonded {
         private:
           typedef Tnonbonded base;
+          using typename base::Tpvec;
           double rcut2;
 
           Point getMassCenter(const typename base::Tpvec &p, const Group &g) {
@@ -606,11 +631,15 @@ namespace Faunus {
             return (&p==&base::spc->p) ? g.cm : g.cm_trial;
           }
 
-          bool cut(const typename base::Tpvec &p, const Group &g1, const Group &g2) {
+          bool cut(const Tpvec &p, const Group &g1, const Group &g2) {
+            return cut(p,g1,p,g2);
+          }
+
+          bool cut(const Tpvec &p1, const Group &g1, const Tpvec &p2, const Group &g2) {
             if (g1.isMolecular())
               if (g2.isMolecular()) {
-                Point a = getMassCenter(p,g1);
-                Point b = getMassCenter(p,g2);
+                Point a = getMassCenter(p1,g1);
+                Point b = getMassCenter(p2,g2);
                 if (base::geo.sqdist(a,b)>rcut2)
                   return true;
               }
@@ -627,11 +656,15 @@ namespace Faunus {
               + textio::_angstrom + ")";
           }
 
-          double g2g(const typename base::Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+          double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
             return cut(p,g1,g2) ? 0 : base::g2g(p,g1,g2);
           }
 
-          double i2g(const typename base::Tpvec &p, Group &g, int i) FOVERRIDE {
+          double g1g2(const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2) FOVERRIDE {
+            return cut(p1,g1,p2,g2) ? 0 : base::g1g2(p1,g1,p2,g2);
+          }
+
+          double i2g(const Tpvec &p, Group &g, int i) FOVERRIDE {
             auto gi=base::spc->findGroup(i);
             return cut(p,g,*gi) ? 0 : base::i2g(p,g,i);
           }

@@ -32,7 +32,7 @@ endif()
 # -----------------
 #   User options
 # -----------------
-option(ENABLE_BABEL    "Try to use OpenBabel for file I/O" off)
+option(ENABLE_BABEL    "Try to use OpenBabel for file I/O (experimental)" off)
 option(ENABLE_OPENMP   "Try to use OpenMP parallization" off)
 option(ENABLE_MPI      "Enable MPI code" off)
 option(ENABLE_STATIC   "Use static instead of dynamic linkage of faunus library" off)

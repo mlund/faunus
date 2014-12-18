@@ -41,19 +41,6 @@ if(ENABLE_APPROXMATH)
   add_definitions(-DFAU_APPROXMATH)
 endif()
 
-# -------------------------------------
-#   Get source revision (unfinished)
-# -------------------------------------
-find_package(Git)
-if(GIT_FOUND)
-  execute_process(
-    COMMAND ${GIT_EXECUTABLE} describe
-    OUTPUT_VARIABLE DESCRIBE_BUILD
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-  #string(REGEX MATCH "[0-9]+" BUILD_NUMBER ${DESCRIBE_BUILD})
-  #message(${BUILD_NUMBER})
-endif()
-
 # ----------------------------
 #  Fetch 3rd-party sasa class
 # ----------------------------
@@ -100,13 +87,6 @@ if(ENABLE_MPI)
   endif()
 endif()
 
-# -----------------------------
-#   Link with fortran library
-# -----------------------------
-if(ENABLE_FORTRAN AND CMAKE_Fortran_COMPILER_WORKS)
-  set(LINKLIBS ${LINKLIBS} fortranfunc)
-endif()
-
 # --------------------
 #   Faunus libraries
 # --------------------
@@ -151,7 +131,7 @@ target_link_libraries(libhyperfaunus xdrfile ${LINKLIBS})
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/faunus
   DESTINATION include
   FILES_MATCHING PATTERN "*.h"
-  PATTERN ".svn" EXCLUDE
+  PATTERN ".git" EXCLUDE
   PATTERN "CMakeFiles" EXCLUDE)
 
 # -----------------------------------------

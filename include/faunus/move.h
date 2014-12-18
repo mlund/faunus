@@ -3820,6 +3820,7 @@ namespace Faunus {
 
           typedef typename Tspace::ParticleVector Tpvec;
           using base::spc;
+          using base::pot;
 
           bool insertBool;                     // current status - either insert or delete
 
@@ -3866,6 +3867,7 @@ namespace Faunus {
               if (empty) {        // nothing left to delete
                 molDel.clear();
                 atomDel.clear();
+                pmap.clear();
               }
             }
 
@@ -3887,17 +3889,47 @@ namespace Faunus {
               Natom[i.first] = atomTrack.size(i.first);
 
             double V=spc->geo.getVolume();
+            double u=0;
 
             // energy if insertion move
             if ( insertBool ) {
-              // loop over pmap
+              for ( auto &p : pmap ) {                      // loop over molecules
+                Group g( 0, p.second.size()-1 );
+                g.molId = p.first;
+
+                u += pot->g_external( p.second, g );        // atoms/mols with external pot
+
+                if ( molecule[g.molId].isAtomic() ) 
+                  for (size_t i=0; i<p.second.size(); i++)  // atoms with all particles
+                    u += pot->all2p( spc->p, p.second[i] );
+                else
+                  for ( auto g2 : spc->groupList() )        // molecules with all groups
+                    u += pot->g1g2(p.second, g, spc->p, *g2);
+              }
+              return u; // ...add activity terms
             }
 
             // energy if deletion move
-            if ( !insertBool ) {
-              //loop over atomDel and molDel
+            else {
+              for ( auto i : molDel ) {                     // loop over molecules/atoms 
+                u += pot->g_external( spc->p, *i );         // molecule w. external pot.
+                if ( !i->isAtomic() )
+                  for ( auto j : spc->groupList() )         // molecule w. all groups
+                    u += pot->g2g( spc->p, *i, *j );
+              }
+              for ( auto i : atomDel )                      // atoms w. all particles
+                u += pot->i_total( spc->p, i );
+              for ( size_t i=0; i<atomDel.size()-1; i++ )   // subtract double counted 
+                for ( size_t j=i+1; j<atomDel.size(); j++ ) // internal energy 
+                  u -= pot->i2i(spc->p, i, j);
+
+              return -u; // ...add activity terms
             }
-            return 0;
+
+            assert(!insertBool);
+            assert(fabs(u)<1e-6 && "We should only reach here when out of particles");
+
+            return pc::infty;
           }
 
           void _acceptMove() {

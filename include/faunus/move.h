@@ -3828,8 +3828,8 @@ namespace Faunus {
           vector<Group*> molDel;               // groups to delete
           vector<int> atomDel;                 // atom index to delete
           MoleculeCombinationMap comb;         // map of combinations to insert
-          std::map<int,int> molcnt, atomcnt;   // id's&number of inserted/deleted mols and atoms
-          std::map<int, Tpvec> pmap;           // map of all new coordinates
+          std::map<int,int> molcnt, atomcnt;   // id's and number of inserted/deleted mols and atoms
+          std::map<int, Tpvec> pmap;           // coordinates of mols and atoms to be inserted
           std::map<int, Geometry::MoleculeInserterBase<Tspace>* > inserter; // inserter
 
           MoleculeCombinationMap::iterator it; // current combination
@@ -3840,10 +3840,10 @@ namespace Faunus {
             molcnt.clear();
             atomcnt.clear();
             it = comb.random();
-            for (auto id : it->molComb) {
+            for ( auto id : it->molComb ) {
               molcnt[id]++;
-              if (molecule[id].isAtomic())
-                for (auto i : molecule[id].atoms)
+              if ( molecule[id].isAtomic() )
+                for ( auto i : molecule[id].atoms )
                   atomcnt[i]++;
             }
 
@@ -3863,13 +3863,17 @@ namespace Faunus {
                 if ( !molecule[m.first].isAtomic() )
                   if ( !molTrack.find( m.first, m.second, molDel ) )
                     empty = true;
+              if (empty) {        // nothing left to delete
+                molDel.clear();
+                atomDel.clear();
+              }
             }
 
             // try insert move
             if (insertBool) {
               pmap.clear();
-              for (auto id : it->molComb)
-                pmap[id] = (*inserter[id])(base::spc->geo, base::spc->p, molecule[id]);
+              for ( auto id : it->molComb )
+                pmap[id] = (*inserter[id])( base::spc->geo, base::spc->p, molecule[id] );
             }
           }
 
@@ -3877,20 +3881,20 @@ namespace Faunus {
 
             // count number of atoms and molecules before move
             std::map<int,int> Nmol, Natom;
-            for (auto i : molcnt)
+            for ( auto i : molcnt )
               Nmol[i.first] = molTrack.size(i.first);
-            for (auto i : atomcnt)
+            for ( auto i : atomcnt )
               Natom[i.first] = atomTrack.size(i.first);
 
             double V=spc->geo.getVolume();
 
             // energy if insertion move
-            if (insertBool) {
+            if ( insertBool ) {
               // loop over pmap
             }
 
             // energy if deletion move
-            if (!insertBool) {
+            if ( !insertBool ) {
               //loop over atomDel and molDel
             }
             return 0;
@@ -3899,12 +3903,12 @@ namespace Faunus {
           void _acceptMove() {
 
             // accept a deletion move
-            if (!insertBool) {
-              for (auto m : molDel) { // loop over Group pointers
+            if ( !insertBool ) {
+              for ( auto m : molDel ) { // loop over Group pointers
                 //base::spc->erase(m); // should also free group and Space::g
                 molTrack.erase(m->molId, m);
               }
-              for (auto a : atomDel) { // loop over particle index
+              for ( auto a : atomDel ) { // loop over particle index
                 auto id = base::spc->p[a].id;
                 //base::spc->erase(a); // should also delete group if all atoms are purged
                 atomTrack.erase(id, a);
@@ -3913,10 +3917,10 @@ namespace Faunus {
             }
 
             // accept an insertion move
-            if (insertBool) {
-              for (auto &p : pmap) { // loop over sets of new coordinates
+            if ( insertBool ) {
+              for ( auto &p : pmap ) { // loop over sets of new coordinates
                 auto molid = p.first;
-                if (molecule[molid].isAtomic()) {
+                if ( molecule[molid].isAtomic() ) {
                   //auto g = spc.insert( molid, p.second );
                   //for (auto i : g)
                   //  atomTrack.insert( spc.p[i].id, i );
@@ -3929,7 +3933,7 @@ namespace Faunus {
             }
           }
 
-          void _rejectMove() { /* no need for anything here */ }
+          void _rejectMove() {}
 
           string _info() { return base::title; }
 
@@ -3948,7 +3952,7 @@ namespace Faunus {
                 molTrack.insert( g->molId, g );
 
             // add default inserters
-            for (auto &i : molecule)
+            for ( auto &i : molecule )
               inserter[i.id] = new Geometry::InsertRandom<Tspace>();
 
             // load combinations

@@ -396,51 +396,27 @@ namespace Faunus {
         return conformations[slp_global.rand() % conformations.size() ];
       }
 
+      /**
+       * @brief Store a single configuration for grand canonical POOL insert
+       * @param vec of particles
+       */
+      void pushConfiguration(const p_vec& vec) {
+        conformations.push_back(vec);
+      }
+
       std::vector<particle::Tid> atoms; //!< List of atoms in molecule
       std::vector<p_vec> conformations; //!< Conformations of molecule
 
       double activity;
       double chemPot;
 
-      bool isAtomic() const {
-          return _isAtomic;
-      }
+      bool isAtomic() const { return _isAtomic; }
 
       bool operator==(const MoleculeData &d) const { return (*this==d); }
 
-      /** @brief Read data from a picojson object */
-      inline void readJSON(const Tjson &molecule) FOVERRIDE {
-        string::size_type pos = 0;
-        string::size_type oldPos = 0;
-        string token;
-        string line;
+      void readJSON(const Tjson&) FOVERRIDE;
 
-        name = molecule.first;
-
-        activity = json::value<double>(molecule.second, "activity", 0);
-        chemPot = log( activity*pc::Nav*1e-27);
-
-        //line = json::value<string>(molecule.second, "inserter", "Error");
-
-        _isAtomic = json::value<bool>(molecule.second, "atomic", false);
-
-        line = json::value<string>(molecule.second, "atoms", "Error");
-
-        // tokenize atoms string and save as atom TID
-        while(pos != string::npos) {
-          pos = line.find_first_of(',', oldPos);
-          token = line.substr(oldPos, pos-oldPos);
-          oldPos = pos+1;
-
-          for(auto &i : atom) {
-            if(i.name.compare(token) == 0) {
-              atoms.push_back(i.id);
-              break;
-            }
-          }
-        }
-      }
-    };
+  };
 
   /**
    * @brief Class for loading and storing Molecule properties
@@ -483,28 +459,6 @@ namespace Faunus {
       bool includefile(InputMap&);     /// Read JSON file given through `InputMap`
       bool includefile(const string&); /// Read JSON file directly
 
-      /**
-       * @brief Store a single configuration for grand canonical POOL insert
-       * @param molName of moleculeType
-       * @param vec of particles
-       */
-      void pushConfiguration(string molName, p_vec& vec) {
-        for(auto& mol: *this)
-          if(molName.compare(mol.name) == 0) {
-            pushConfiguration(mol.id, vec);
-            break;
-          }
-      }
-
-      /**
-       * @brief Store a single configuration for grand canonical POOL insert
-       * @param molId of moleculeType
-       * @param vec of particles
-       */
-      void pushConfiguration(PropertyBase::Tid molId, p_vec& vec) {
-        this->operator [](molId).conformations.push_back(vec);
-      }
-
       /** @brief Information string */
       string info() {
         char s=14;
@@ -518,7 +472,7 @@ namespace Faunus {
         for (auto &i : *this) {
           o << setw(4) << "" << setw(s) << i.name;
           /*if (i.initType == MoleculeData::RANDOM) o << setw(s) << "RANDOM";
-          else
+            else
             if (i.initType == MoleculeData::POOL) o << setw(s) << "POOL";
             else o << setw(s) << "";*/
 
@@ -568,7 +522,7 @@ namespace Faunus {
       name = comb.first;
       probability = json::value<double>(comb.second, "prob", 1.0);
       string l = json::value<string>(comb.second, "species", "");
-      if (!l.empty()) {
+      if ( !l.empty() ) {
         std::stringstream s(l);
         for (int i=0; s>>l; i++) {
           auto it = molecule.find(l);

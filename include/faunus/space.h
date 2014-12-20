@@ -99,6 +99,8 @@ namespace Faunus {
             if (pos==i->second.end())
               i->second.push_back(data);
           }
+          else
+            map[id].push_back(data);
         }
 
         /**
@@ -214,7 +216,7 @@ namespace Faunus {
         Group insert(const p_vec&, int=-1);
         bool insert(const Tparticle&, int=-1); //!< Insert particle at pos n (old n will be pushed forward).
         bool insert(string, int, keys=OVERLAP_CHECK); 
-        bool erase(int);             //!< Remove n'th particle
+        bool erase(int);             //!< Remove n'th particle and downshift/remove groups
         bool eraseGroup(Group& group); ///< find and remove group in g and its particles from p and trial
         bool eraseGroup(int);        //!< Remove n'th group as well as its particles
         int enroll(Group&);          //!< Store group pointer
@@ -225,7 +227,7 @@ namespace Faunus {
         void displace(const Point&); //!< Displace system by a vector
 
         /**
-         * @brief Find which group given particle index belongs to
+         * @brief Find which group given particle index belongs to.
          *
          * If not found, `nullptr` is returned.
          */
@@ -237,6 +239,16 @@ namespace Faunus {
         }
 
         /**
+         * @brief Find group index for given group pointer.
+         *
+         * If not found, `-1` is returned.
+         */
+        inline int findIndex(Group* group) {
+          auto it = std::find(g.begin(), g.end(), group); 
+          return (it!=g.end()) ? it-g.begin() : -1;
+        }
+
+        /**
          * @brief Finds index of particle using addresses
          *
          * Given a particle reference, this function will try
@@ -245,7 +257,7 @@ namespace Faunus {
          * that order. If the particle is not from `Space`
          * -1 will be returned.
          */
-        int findIndex(const Tparticle &a) const {
+        inline int findIndex(const Tparticle &a) const {
           int i=&a-&p.at(0); // calc. index from addresses
           if (i>=0)
             if (i<(int)p.size())
@@ -256,19 +268,13 @@ namespace Faunus {
               return i;
           return -1;
         }
-
-        inline double dist(int i, int j) const {
-          return geo.dist(p[i],p[j]);
-        }
     };
 
   template<class Tgeometry, class Tparticle>
     Space<Tgeometry,Tparticle>::Space(InputMap &in) : geo(in) {}
 
   template<class Tgeometry, class Tparticle>
-    vector<Group*>& Space<Tgeometry,Tparticle>::groupList() {
-      return g;
-    }
+    vector<Group*>& Space<Tgeometry,Tparticle>::groupList() { return g; }
 
   template<class Tgeometry, class Tparticle>
     double Space<Tgeometry,Tparticle>::charge() const {
@@ -321,13 +327,10 @@ namespace Faunus {
     }
 
   /**
-   * This will insert a particle vector into the current space. No overlap checks are performed; this should
-   * be done prior to insertion by for example the `Geometry::FindSpace` class.
+   * This will insert a particle vector into the end current space (p and trial).
    *
    * @param pin Particle vector to insert
    * @param i Insert position (PRESENTLY IGNORED). Default = -1 which means end of current vector
-   *
-   * @todo Implement insertion at random position
    */
   template<class Tgeometry, class Tparticle>
     Group Space<Tgeometry,Tparticle>::insert(const p_vec &pin, int i) {
@@ -337,17 +340,12 @@ namespace Faunus {
         g.setrange( p.size(), -1);
         assert(g.size()==0 && "Group range broken!");
 
-        p.insert(p.end(), pin.begin(), pin.end());
-        g.resize(pin.size());
+        p.insert( p.end(), pin.begin(), pin.end() );
+        trial.insert( trial.end(), pin.begin(), pin.end() );
 
-        //for (auto &i : pin) {
-        //  p.push_back(i);
-        //  trial.push_back(i);
-        //  g.resize( g.size()+1 );
-        //}
-
-        g.setMassCenter(*this);
-        g.setMolSize(pin.size());
+        g.resize( pin.size() );
+        g.setMassCenter( *this );
+        g.setMolSize( pin.size() );
       }
       return g;
     }
@@ -398,49 +396,68 @@ namespace Faunus {
 
   template<class Tgeometry, class Tparticle>
     bool Space<Tgeometry,Tparticle>::erase(int i) {
-      assert( !p.empty() && i<(int)p.size() &&
-          "Tried to delete non-existing particle or particle vector empty!" );
-      if (i>=(int)p.size())
-        return false;
-      p.erase( p.begin()+i );
-      trial.erase( trial.begin()+i );
-      for (auto gj : g) {
-        if ( i<gj->front() ) gj->setfront( gj->front()-1  ); // gj->beg--;
-        if ( i<=gj->back() ) gj->setback( gj->back()-1);     //gj->last--;
-        assert( gj->back()>=0 && "Particle removal resulted in empty Group");
+      if (i<(int)p.size()) {
+        p.erase( p.begin()+i );
+        trial.erase( trial.begin()+i );
+
+        Group* is_empty=nullptr;
+        for (auto gj : g) {               // downshift groups
+          if ( i < gj->front() )
+            gj->setfront( gj->front()-1);
+          if ( i<=gj->back() )
+            gj->setback( gj->back()-1);
+          if (gj->size()==0)
+            is_empty=gj;
+        }
+
+        if (is_empty!=nullptr) {          // remove empty group
+          g.erase( g.begin()+findIndex(is_empty) );
+          delete(is_empty);
+        }
+        return true;
       }
-      return true;
+      return false;
     }
 
   /**
    * This will remove the specified group (given as index in `groupList()`)
    * from the space. Later groups will be shufled down.
-   * The `groupList()` contains pointers to groups and it is important
-   * that you clean up the deleted group only *after* having called this function.
+   * The group pointer in `groupList` will be destructed.
    *
-   * @warning untested
+   * @todo Optimize by swapping groups of similar size to delete always at
+   * the end of `g`.
    */
   template<class Tgeometry, class Tparticle>
     bool Space<Tgeometry,Tparticle>::eraseGroup(int i) {
-      int n=g.at(i)->size(); // number of particles in group
-      int beg=g[i]->front(); // first particle
-      int end=g[i]->back();  // last particle
 
-      g.erase( g.begin()+i );// remove group pointer
-      p.erase( p.begin()+beg, p.begin()+end); // remove particles
-      trial.erase( trial.begin()+beg, trial.begin()+end );
+      if ( !groupList().empty() ) {
 
-      // move later groups down to reflect new particle index
-      size_t cnt=0;
-      for (auto l : g) { // loop over groups (pointers)
-        cnt+=l->size(); // count particles in each group
-        if (l->front()>end) {
-          l->setfront( l->front()-n );
-          l->setback( l->back()-n );
+        assert( checkSanity() );
+        assert( !g.empty() );
+        assert( i < (int)g.size() );
+
+        int n   = g.at(i)->size(); // number of particles in group
+        int beg = g[i]->front();   // first particle
+        int end = g[i]->back();    // last particle
+        delete( g[i] );            // destruct group
+
+        g.erase( g.begin()+i );    // remove group pointer
+        p.erase( p.begin()+beg, p.begin()+end+1); // remove particles
+        trial.erase( trial.begin()+beg, trial.begin()+end+1 );
+
+        // move later groups down to reflect new particle index
+        size_t cnt=0;
+        for (auto l : groupList()) { // loop over groups (pointers)
+          cnt+=l->size(); // count particles in each group
+          if (l->front()>end) {
+            l->setfront( l->front()-n );
+            l->setback( l->back()-n );
+          }
         }
+        assert(cnt==p.size() && "Particle mismatch while erasing a group!");
+        return true;
       }
-      assert(cnt==p.size() && "Particle mismatch while erasing a group!");
-      return true;
+      return false;
     }
 
   template<class Tgeometry, class Tparticle>
@@ -666,34 +683,64 @@ namespace Faunus {
     }
 
   /**
-   * This will insert a particle vector into the current space.
-   * No overlap checks are performed; this should
-   * be done prior to insertion by for example the `Geometry::FindSpace` class.
-   *
-   * @todo Implement insertion at random position
+   * This will insert a particle vector into the end of current space.
+   * If `isAtomic()==true` for the molecule, the inserter will, if present,
+   * insert at the end of the last group with matching molid.
    */
   template<class Tgeometry, class Tparticle>
     Group* Space<Tgeometry,Tparticle>::insert(PropertyBase::Tid molId, const p_vec &pin) {
-      Group* group = new Group(molecule[molId].name);
-      group->molId = molId;
-
       if ( !pin.empty() ) {
-        group->setrange( p.size(), -1);
-        assert(group->size()==0 && "Group range broken!");
+        int nold=p.size();
 
-        p.insert(p.end(), pin.begin(), pin.end());
-        trial.insert(trial.end(), pin.begin(), pin.end());
-        group->resize(pin.size());
+        // insert atomic groups into existing group, if present
+        if (molecule[molId].isAtomic() && !g.empty()) {
+          int max=-1, imax=-1; 
+          for ( size_t i=0; i<g.size(); i++ ) // search for existing group
+            if ( g[i]->molId == molId )          // ...and find last
+              if ( g[i]->back() > max ) {
+                max=g[i]->back();
+                imax=i;                     // index of latest group
+              }
+          // group exists -- now add particles
+          if (imax>=0) {
+            cout << "Adding to existing group..." << endl;
+            p.insert( p.begin() + g[imax]->back()+1, pin.begin(), pin.end() );
+            trial.insert( trial.begin() + g[imax]->back()+1, pin.begin(), pin.end() );
+            g[imax]->setback( g[imax]->back() + pin.size() );
+            for (auto i : g)
+              if (*i > *g[imax])
+                i->shift( pin.size() );
 
-        group->setMassCenter(*this);
-        group->setMolSize(pin.size());
+            assert(nold+pin.size()==p.size());
+            return g[imax];
+          }
+        }
+        // create and add molecule to end of particle vector
+        Group* x = new Group( molecule[molId].name );
+        x->molId = molId;
+        x->setrange( p.size(), -1 );
+        x->resize( pin.size() );
+
+        assert( (size_t)x->front() == p.size() );
+        assert( (size_t)x->back()  == p.size() + pin.size() - 1 );
+
+        groupList().push_back(x);
+        p.insert( p.end(), pin.begin(), pin.end() );
+        trial.insert( trial.end(), pin.begin(), pin.end() );
+
+        if ( molecule[molId].isAtomic() )
+          x->setMolSize(1);
+        else x->setMolSize( pin.size() );
+
+        x->setMassCenter( *this );
+
+        return x;
       }
-      return group;
+      return nullptr;
     }
 
   /**
-   * This will insert a particle vector into the current space at the end of its group. No overlap checks are performed; this should
-   * be done prior to insertion by for example the `Geometry::FindSpace` class.
+   * This will insert a particle vector into the current space at the end of its group.
    *
    * @param pin Particle vector to insert
    * @param molId Id of molecule

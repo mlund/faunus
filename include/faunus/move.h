@@ -1780,965 +1780,6 @@ namespace Faunus {
         return o.str();
       }
 
-    /** @brief Combinations for Grand Canonical move
-     *
-     * State topology "filename" in *.input
-     * Note: same file as MoleculeMap
-     *
-     * Example:
-     *
-     * "moleculecombinations": {
-     * "polymer": {"species": "polymer", "prob": 0.2},
-     * "polymer2": {"species": "polymer2", "prob": 0.2},
-     * "salt": {"species": "salt", "prob": 0.2},
-     * "salt2": {"species": "salt2", "prob": 0.2},
-     * "chloride": {"species": "chloride", "prob": 0.2},
-     * "2xsalt+salt2": {"species": "salt,salt,salt2", "prob": 0.2},
-     * "poly+4xCL": {"species": "polymer,chloride", "prob": 0.2},
-     * "poly+poly2": {"species": "polymer,polymer2", "prob": 0.2}
-     * }
-     *
-     * The key of type string is the `name` followed, in no particular order,
-     * by properties:
-     *
-     * Key           | Description
-     * :------------ | :---------------------
-     * `species`     | list of moleculeTypes
-     * `prob`        | probability
-     *
-     * the final probability of combination is: prob_i / (sum_all prob_i)
-     */
-    class Combination {
-      public:
-        Combination(): delAcceptance(0), delCnt(0), insAcceptance(0), insCnt(0) {}
-
-        vector<MoleculeData*> molComb; /// list of molecule types in combination
-        double probability;            /// probability of this combination in GC-MC move
-        string name;
-        int delAcceptance;
-        int delCnt;
-        int insAcceptance;
-        int insCnt;
-    };
-
-    /// @brief Tracks atomic and molecular species for Grand Canonical move
-    class Tracker {
-      public:
-        Tracker() {}
-
-        /// @brief GrandCanon atomic list: -> per Tid -> per Tid track index of particles
-        std::map<PropertyBase::Tid, std::map<particle::Tid, vector<unsigned int> > > atList;
-
-        /// @brief GrandCanon molecule list, per Tid -> first particle of molecule index
-        std::map<PropertyBase::Tid, vector<unsigned int> > molList;
-
-        /// @brief average density map per all active Tid
-        std::map<particle::Tid,Average<double>> rhoAtoms;
-        std::map<PropertyBase::Tid,Average<double>> rhoMolecules;
-
-        /// @brief list of active atom Types
-        std::vector<particle::Tid> aTypes;
-
-        void initATypes(vector<Combination >& list) {
-          bool exists = false;
-
-          for(auto& comb : list)
-            for(auto* mol : comb.molComb)
-              for(auto tid: mol->atoms) {
-                exists=false;
-                for(auto stored: aTypes)
-                  if(stored == tid)
-                    exists=true;
-                if(!exists)
-                  aTypes.push_back(tid);
-              }
-        }
-
-        void calcDensity(double volume) {
-          for(auto aType: aTypes)
-            rhoAtoms[aType] += numOfParticles(aType) / volume;
-          for(auto molType: molList)
-            rhoMolecules[molType.first] += numOfMolecules(molType.first) / volume;
-        }
-
-        /// @brief number of particles of atomType of moleculeType
-        unsigned int sizeOf(PropertyBase::Tid molId, particle::Tid tid) {
-          int count=0;
-          for (auto at : molecule[molId].atoms)
-            if (at==tid) count++;
-          return atList[molId][tid].size() + molList[molId].size()*count;
-        }
-
-        /// @brief number of particles of atomType
-        unsigned int numOfParticles(particle::Tid tid) {
-          int count=0, size=0;
-          for (auto at : atList) 
-            for(auto partId : at.second) 
-              if(partId.first == tid)
-                count += partId.second.size();
-          for (auto mol : molList) {
-            size = 0;
-            for(auto at : molecule[mol.first].atoms)
-              if(at == tid) size++;
-            count += mol.second.size()*size;
-          }
-          return count;
-        }
-
-        /// @brief number of molecules of moleculeType
-        int numOfMolecules(PropertyBase::Tid molId) {return molList[molId].size();}
-
-        /// @brief number of all particles in Tracker
-        unsigned int size() {
-          unsigned int count=0;
-          for(auto& a: atList)
-            for(auto& b : a.second)
-              count += b.second.size();
-          for(auto& b: molList)
-            count += (b.second.size() * molecule[b.first].atoms.size());
-          return count;
-        }
-
-        int indexOfMol(PropertyBase::Tid Tid, int num) {
-          assert(num < (int)molList[Tid].size());
-          return molList[Tid][num];
-        }
-
-        int indexOfAtom(PropertyBase::Tid Tid, particle::Tid tid, int num) {
-          return atList[Tid][tid][num];
-        }
-
-      private:
-        /**
-         * @brief Ensures consistency of Tracker
-         * @param index of inserted/removed particle(first particle of molecule)
-         * @param molSize. Negative means removal
-         */
-        void ensureConsistencyAt(PropertyBase::Tid Tid, unsigned int index, int molSize) {
-          for(auto super = atList.begin(); super != atList.end(); ++super)
-            for (auto it=super->second.begin(); it!=super->second.end(); ++it)
-              for(unsigned int i=0; i< it->second.size(); i++)
-                if(index < it->second[i]) {
-                  it->second[i] += molSize;
-                } else {
-                  if(index == it->second[i] && super->first != Tid)
-                    it->second[i] += molSize;
-                }
-        }
-
-      public:
-        /// Erase molecule from tracker
-        void eraseMol(PropertyBase::Tid Tid, unsigned int molSize, unsigned int delIndex) {
-          unsigned int index = 0;
-          for(auto& molType : molList) {
-            for(unsigned int i=0; i< molType.second.size(); i++) {
-              if(delIndex < molType.second[i]) {
-                molType.second[i] -= molSize;
-              } else if(molType.second[i] == delIndex && molType.first == Tid) {
-                index = i;
-              }
-            }
-          }
-          molList[Tid].erase(molList[Tid].begin() + index);
-          ensureConsistencyAt(Tid, delIndex, -molSize);
-        }
-
-        /// @brief erase atom of atomic group from tracker
-        void eraseAt(PropertyBase::Tid Tid, unsigned int delIndex);
-
-        /// @brief push molecule to tracker
-        void pushMol(PropertyBase::Tid Tid, unsigned int molIndex) {
-          molList[Tid].push_back(molIndex);
-          ensureConsistencyAt(Tid, molIndex, molecule[Tid].atoms.size());
-
-          for (auto it = molList.begin(); it!= molList.end(); ++it)
-            for (unsigned int i=0; i<it->second.size(); i++)
-              if(molIndex < it->second[i]) {
-                it->second[i] += molecule[Tid].atoms.size();
-              } else {
-                if(molIndex == it->second[i] && it->first != Tid)
-                  it->second[i] += molecule[Tid].atoms.size();
-              }
-        }
-
-        /// @brief push atom of atomic group to tracker
-        void push(PropertyBase::Tid Tid, particle::Tid tid, unsigned int index) {
-          atList[Tid][tid].push_back(index);
-
-          ensureConsistencyAt(Tid, index, 1);
-
-          for (auto it = molList.begin(); it!= molList.end(); ++it)
-            for (unsigned int i=0; i<it->second.size(); i++)
-              if (index <= it->second[i])
-                it->second[i]++;
-        }
-
-        void printAtomList() {
-          cout << "\n\nTracker:\n\n" << "MolList:\n";
-          for(auto it = molList.begin(); it != molList.end(); ++it) {
-            cout << "MolType: " << molecule[it->first].name
-              << ", size: " << it->second.size() << endl;
-          }
-
-          cout << "\nAtomList:\n";
-
-          for (auto super = atList.begin(); super != atList.end(); ++super) {
-
-            cout << "MolType: " << molecule[super->first].name << endl;
-            for (auto it=super->second.begin(); it!=super->second.end(); ++it)
-              cout << "ParticleType:" << atom[it->first].name
-                << " size: " << it->second.size() << endl;
-          }
-          for (auto& mol: atList) {
-            cout << "molType:" << mol.first << endl;
-            for (auto& tid: mol.second) {
-              cout << "Tid: " << tid.first << endl;
-              for (auto i: tid.second)
-                cout << "index: " << i << endl;
-            }
-          }
-        }
-
-        string infoAtoms(double volume);
-        string infoMolecules(double volume);
-
-#ifndef NDEBUG
-        /// @brief check system neutrality, only on Atomic GrandCanonical particles
-        bool checkNeutrality() {
-          int charge = 0;
-
-          for (auto& mol: atList)
-            for (auto& tid: mol.second)
-              charge += atom[tid.first].charge * tid.second.size();
-
-          for (auto& mol: molList)
-            for (auto& tid: molecule[mol.first].atoms)
-              charge += atom[tid].charge * mol.second.size();
-
-          return charge == 0;
-        }
-
-        bool testIndexesAtomic(Group* group) {
-          if (group->isAtomic()) {
-            for (auto& tid : atList[group->molId])
-              for( auto at: tid.second)
-                if ((int)at > group->back() || (int)at < group->front() ) {
-                  cout << molecule[group->molId].name << ":" << at
-                    << ":" << group->front() << ":" << group->back() << endl;
-                  return false;
-                }
-          }
-          return true;
-        }
-#endif
-        std::map<PropertyBase::Tid, Average<double> > getCount() const;
-        void setCount(const std::map<PropertyBase::Tid, Average<double> > &value);
-    };
-
-    void Tracker::eraseAt(PropertyBase::Tid Tid, unsigned int delIndex) {
-      unsigned int index = 0;
-      particle::Tid tid=0;
-      for (auto super = atList.begin(); super != atList.end(); ++super) {
-        for (auto it=super->second.begin(); it!=super->second.end(); ++it) {
-          for (unsigned int i=0; i< it->second.size(); i++) {
-            if (delIndex < it->second[i]) { // decrement indexes
-              it->second[i]--;
-            } else {
-              if (it->second[i] == delIndex && Tid == super->first) {
-                index = i;
-                tid = it->first;
-              }
-            }
-          }
-        }
-      }
-      assert(tid != 0);
-      atList[Tid][tid].erase(atList[Tid][tid].begin() + index);
-      for (auto it = molList.begin(); it!= molList.end(); ++it)
-        for (size_t i=0; i<it->second.size(); i++)
-          if(delIndex <= it->second[i]) {
-            it->second[i]--;
-          }
-    }
-
-    string Tracker::infoAtoms(double volume) {
-      char s=10;
-      using namespace textio;
-      ostringstream o;
-      particle::Tid id;
-
-      for (auto &m : rhoAtoms) {
-        id=m.first;
-        if(atom[id].activity == 0) continue;
-        o.precision(5);
-        o << std::left << setw(4) << "" << setw(s) << atom[id].name
-          << setw(s) << atom[id].activity << setw(s) << m.second.avg()/pc::Nav/1e-27
-          << setw(s) << atom[id].activity / (m.second.avg()/pc::Nav/1e-27)
-          << setw(s) << m.second.avg()*volume
-          << "\n";
-      }
-      return o.str();
-    }
-
-    string Tracker::infoMolecules(double volume) {
-      char s=10;
-      using namespace textio;
-      ostringstream o;
-      PropertyBase::Tid id;
-      for (auto &m : rhoMolecules) {
-        id=m.first;
-        if (molecule[id].activity == 0) continue;
-        o.precision(5);
-        o << std::left << setw(4) << "" << setw(s) << molecule[id].name
-          << setw(s) << molecule[id].activity << setw(s) << m.second.avg()/pc::Nav/1e-27
-          << setw(s) << molecule[id].activity / (m.second.avg()/pc::Nav/1e-27)
-          << setw(s) << m.second.avg()*volume
-          << "\n";
-      }
-      return o.str();
-    }
-
-    /**
-     * @brief Grand canonical move for molecular species
-     * @date Lund, 2014
-     *
-     * Please consider the following:
-     *
-     *   - for atomic species use only one large group per Molecular type
-     *   - for molecular species use only molecular groups
-     */
-    template<class Tspace>
-      class GCMolecular : public Movebase<Tspace> {
-        private:
-          typedef Movebase<Tspace> base;
-
-          /** @brief temporary data structure for insertList of GCMolecular */
-          struct Ins {
-            Group* group;
-            p_vec pin;
-            Ins(Group* group, p_vec pin) : group(group), pin(pin) {}
-          };
-
-          void _test(UnitTest &t) {
-            double volume = spc->geo.getVolume();
-            typename Tspace::ParticleType::Tid id;
-            for (auto &m : tracker.rhoAtoms) {
-              id=m.first;
-              if (atom[id].activity==0)
-                continue;
-              string s=base::prefix+"_"+atom[id].name;
-              t(s+"_average", m.second.avg()*volume);
-            }
-            PropertyBase::Tid Tid;
-            for (auto &m : tracker.rhoMolecules) {
-              Tid=m.first;
-              if (molecule[Tid].activity==0)
-                continue;
-              string s=base::prefix+"_"+molecule[Tid].name;
-              t(s+"_average", m.second.avg()*volume);
-            }
-          }
-
-          //!< Return random combination based on probability
-          Combination* randomComb() {
-            double randIndex = slp_global()*gCCombinations.size();
-            while (slp_global() >= gCCombinations[randIndex].probability) {
-              randIndex = slp_global()*gCCombinations.size();
-            }
-            return &gCCombinations[randIndex];
-          }
-
-        public:
-          GCMolecular(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, string pfx="gcmol");
-
-          // move to `MoleculeCombinationMap`?
-          string infoCombinations() {
-            char s=14;
-            using namespace textio;
-            ostringstream o;
-            string num;
-            double prob=0.0;
-            for (auto &i : gCCombinations)
-              prob+=i.probability;
-
-            o << header("Grand Canonical Combinations")
-              << setw(4) << "" << std::left
-              << setw(s) << "Name" << setw(s) << "probability"
-              << setw(s) << "Del acc" << setw(s) << "Ins acc" << setw(s)
-              << "molecules" << endl;
-
-            for (auto &i : gCCombinations) {
-              o << setw(4) << "" << setw(s) << i.name
-                << setw(s) << i.probability / prob;
-              if(i.delCnt==0 && i.insCnt==0) {
-                o << setw(s)
-                  << "-" << setw(s)
-                  << "-";
-              } else {
-                if(i.delCnt != 0)
-                  o << setw(s)
-                    << std::to_string(100*i.delAcceptance/i.delCnt).append("%");
-                else
-                  o << setw(s)
-                    << "-%";
-                if(i.insCnt != 0)
-                  o << setw(s)
-                    << std::to_string(100*i.insAcceptance/i.insCnt).append("%");
-                else
-                  o << setw(s)
-                    << "-%";
-              }
-              for(auto mol=i.molComb.begin(); mol!=i.molComb.end(); ++mol) {
-                o << setw(0) << (*mol)->name;
-                if(mol != i.molComb.end()-1) o<<",";
-                else o<<"\n";
-              }
-            }
-            return o.str();
-          }
-
-        private:
-          Tracker tracker;  //!< Tracker for inserted/deleted species for speedUp
-
-          std::map<int, Geometry::MoleculeInserterBase<Tspace>*> inserter; //< molId:inserter
-
-          // delList and insList: groups are always molecular (isMolecular() == true)
-          vector<Group> delList;
-          vector<Ins> insList;
-
-          // Use `MoleculeCombinationMap` instead.
-          vector<Combination> gCCombinations;
-          Combination* comb;      //!< choosen comb for move()
-
-          /**
-           * @brief initialize gCGroups from groupList, synch on index
-           *
-           * `true == group` is active for GrandCanonical move
-           */
-          void getGrandCanonicalGroups(vector<bool>& gCGroups);
-
-          /// @brief sets initial state of molTracker from GrandCanonical groupList
-          void initMolTracker(vector<bool>& gCGroups);
-
-          /// @brief check whether atomic groups active in GrandCanocical move are "one per molType"
-          string checkGroups(vector<bool> &gCGroups);
-
-          string _info();
-          void _trialMove();
-
-          /**
-           *  @return du = E_all + E_external + chempot + factor
-           *
-           *  alternateEnergy = E_all + E_external + E_internal
-           *
-           *  @note `i_total` used for atomic species -> internal energy == 0
-           *        `i_total` -> for atomic species calculates interaction
-           *        within delGroup twice
-           */
-          double _energyChange();
-
-          void _acceptMove();
-
-          void _rejectMove() {
-            if(!delList.empty()) comb->delCnt++;
-            if(!insList.empty()) comb->insCnt++;
-
-            delList.clear();
-            for(auto it =  insList.rbegin(); it!= insList.rend(); ++it) {
-              assert( spc->p.begin()+it->group->front() < spc->p.end()  );
-              assert( spc->trial.begin()+it->group->front() < spc->trial.end());
-              spc->p.erase( spc->p.begin()+ it->group->front(), spc->p.begin()+ it->group->back()+1);
-              spc->trial.erase( spc->trial.begin()+ it->group->front(), spc->trial.begin()+ it->group->back()+1 );
-              delete it->group;
-            }
-            insList.clear();
-
-            tracker.calcDensity(spc->geo.getVolume());
-          }
-
-          bool includefile(string combFile);  //!< Append topology parameters from file
-
-#ifndef NDEBUG
-          bool consistent() {
-            // indexes of atom list in p
-            for(auto& mol : tracker.atList)
-              for(auto& vec: mol.second)
-                for(auto i: vec.second)
-                  if(i >= spc->p.size()) {
-                    cout << "atList inconsistent" << endl;
-                    return false;
-                  }
-            //indexes of molList in p
-            for (auto& mol : tracker.molList)
-              for (auto& j : mol.second)
-                if (j >= spc->p.size()) {
-                  cout << "molList inconsistent, p.size(): "
-                    << spc->p.size() << " index: " << j << endl;
-                  return false;
-                }
-            // no same index in atomList and molList
-            for (auto& mol : tracker.atList)
-              for (auto& vec: mol.second)
-                for (auto i: vec.second)
-                  for (auto& mol : tracker.molList)
-                    for (auto& j : mol.second)
-                      if (j == i) {
-                        cout << "same index in atList and molList " << i << endl;
-                        return false;
-                      }
-            return true;
-          }
-#endif
-
-        protected:
-          using base::pot;
-          using base::spc;
-          using base::prefix;
-          using base::w;
-      };
-
-    template<class Tspace>
-      GCMolecular<Tspace>::GCMolecular(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, string pfx): base(e,s,pfx) {
-        base::title = "Group insertion/deletion move";
-        base::useAlternateReturnEnergy=true;
-        w=30;
-        base::runfraction = in.get<double>(pfx+"_runfraction",1.0);
-
-        spc->linkGroupsToTopo();
-
-        string topoFile = in.get<string>("atomlist", "");
-
-        if (!topoFile.empty())
-          if (!includefile(topoFile)) {
-            std::cerr << "Could not open *.json file" << endl;
-            exit(1);
-          }
-
-        assert(!gCCombinations.empty());
-
-        for (auto& comb: gCCombinations)
-          if (comb.molComb.empty()) {
-            std::cerr << "molCombinations empty\n";
-            exit(1);
-          }
-
-        tracker.initATypes(gCCombinations);
-
-        if (spc->groupList().empty()) {// add few particles
-          comb = randomComb();
-
-          for (auto* mol : comb->molComb) { // for each molecule in combination
-            Group *group=NULL;
-            if (mol->isAtomic()) {
-              group = new Group(mol->name); // group for salt particles
-              group->setfront(spc->p.size());
-              for (auto aType : mol->atoms)   // for each atom type of molecule
-                group->addParticles(*spc, atom[aType].name, 1);
-              group->setMassCenter(*spc);
-              spc->enroll(*group);
-
-            } else {
-              assert(!mol->conformations.empty()
-                  && "Push configuration before initialization");
-              group = new Group(mol->name); // group for salt particles
-              p_vec v = mol->conformations[0];   // temp, empty particle vector
-              cout << mol->conformations[0].size() << endl;
-              Geometry::FindSpace().find(spc->geo,spc->p,v);  // find empty spot in particle vector
-              *group = spc->insert(v);
-              group->name=mol->name;
-              spc->enroll(*group);
-            }
-            break;
-          }
-
-          assert(!spc->groupList().empty());
-          spc->linkGroupsToTopo();
-        }
-
-        vector<bool> gCGroups;
-        getGrandCanonicalGroups(gCGroups);
-        initMolTracker(gCGroups);
-
-        string check = checkGroups(gCGroups);
-        if (check.compare("") != 0) {
-          std::cerr << "More than one atomic GC group of type " << check << endl;
-          exit(1);
-        }
-
-        // init inserter
-        for (unsigned int i=0; i<molecule.size(); i++) {
-          inserter[i] = new Geometry::InsertRandom<Tspace>();
-        }
-      }
-
-    template<class Tspace>
-      void GCMolecular<Tspace>::initMolTracker(vector<bool>& gCGroups) {
-        int i=0;
-        for (auto* group: spc->groupList()) { // for each group
-          if (gCGroups[i]) {
-            if (group->isAtomic()) {
-              for (auto at: *group)  // for each particle of group
-                tracker.atList[group->molId][spc->p[at].id].push_back(at);
-            } else {
-              for (int i=group->front(); i<=group->back(); i+= group->getMolSize())
-                tracker.pushMol(group->molId, i);
-            }
-          }
-          i++;
-        }
-      }
-
-    template<class Tspace>
-      string GCMolecular<Tspace>::checkGroups(vector<bool>& gCGroups) {
-        for (int i=0; i<(int)spc->groupList().size()-1; i++)
-          for (int j=i+1; j<(int)spc->groupList().size(); j++)
-            if (gCGroups[j] && spc->groupList()[i]->molId == spc->groupList()[j]->molId
-                && spc->groupList()[i]->isAtomic()) {
-              return spc->groupList()[i]->name;
-            }
-        return "";
-      }
-
-    template<class Tspace>
-      void GCMolecular<Tspace>::getGrandCanonicalGroups(vector<bool>& gCGroups) {
-        gCGroups.reserve(spc->groupList().size());
-        for(int i=0; i<(int)spc->groupList().size(); i++) {
-          gCGroups[i] = false;
-          for(auto& comb: gCCombinations) {
-            for(auto* mol: comb.molComb) {
-              if(spc->groupList()[i]->molId == mol->id) {
-                gCGroups[i] = true;
-              }
-            }
-          }
-        }
-      }
-
-    template<class Tspace>
-      string GCMolecular<Tspace>::_info() {
-        char s=10;
-        using namespace textio;
-        ostringstream o;
-
-        o << pad(SUB,base::w,"Number of GC species") << "\n\n"
-          << setw(4) << "" << std::left
-          << setw(s) << "Atom" << setw(s) << "activity"
-          << setw(s+4) << bracket("c/M") << setw(s+6) << bracket( gamma+pm )
-          << setw(s+4) << bracket("N") << "\n"
-          << tracker.infoAtoms(spc->geo.getVolume()) << "\n"
-          << setw(4) << "" << std::left
-          << setw(s) << "Molecule" << setw(s) << "activity"
-          << setw(s+4) << bracket("c/M") << setw(s+6) << bracket( gamma+pm )
-          << setw(s+4) << bracket("N") << "\n"
-          << tracker.infoMolecules(spc->geo.getVolume())
-          << infoCombinations();
-        return o.str();
-      }
-
-    /**
-     * @todo
-     * - Move generation of new configurations (POOL,RANDOM...) to `MoleculeData`. 
-     * - Use space::insert and space::erase to modify particle vector, not directly
-     *   on `spc.p` / `spc.trial`. 
-     */
-    template<class Tspace>
-      void GCMolecular<Tspace>::_trialMove() {
-        // choose combination
-        comb = randomComb();
-
-        // choose del/ins
-        if(slp_global.rand() % 2) { // del
-          int i=0;
-
-          vector<int> chosen;
-          vector<unsigned int> tidCount; // count of selected atoms
-          vector<int> molCount; // count of selected molecules
-          molCount.resize(molecule.size(),0);
-          tidCount.resize(atom.size(),0);
-          bool exist = false;
-
-          for(auto* mol: comb->molComb) {     // for each molecule in combination
-            if(mol->isAtomic()) {
-              for(auto aType: mol->atoms) {   // for each atom type of that molecule
-                if(tracker.sizeOf(mol->id, aType) == 0) { delList.clear(); return; }
-                if(tracker.sizeOf(mol->id, aType) <= tidCount[aType]) { delList.clear(); return; }
-
-                do {
-                  exist = false;
-                  i = slp_global.rand() % (tracker.sizeOf(mol->id, aType));// get random particle
-                  i=tracker.indexOfAtom(mol->id, aType, i);                // get index of random particle
-                  assert(aType == spc->p[i].id);
-                  for(auto index: chosen)
-                    if(i==index) exist = true;
-                } while(exist);
-
-                tidCount[aType]++;
-                chosen.push_back(i);
-
-                Group* group = spc->findGroup(i);       // get Group particle belongs to
-                delList.push_back( group->getMolecule( i - group->front() ) );  // create new Group of only this particle
-                assert(delList.back().isAtomic());
-              }
-            } else {
-
-              if(tracker.numOfMolecules(mol->id) == 0) { // no molecules left to delete
-                delList.clear(); return;
-              }
-              if(tracker.numOfMolecules(mol->id) <= molCount[mol->id]) { // no molecules left to delete
-                delList.clear(); return;
-              }
-
-              do {
-                exist = false;
-                i = slp_global.rand() % tracker.numOfMolecules(mol->id);     // get random molecule
-                i = tracker.indexOfMol(mol->id,i);                   // get index of first particle od that molecule
-                for(auto index: chosen)
-                  if(i==index) exist = true;
-              } while(exist);
-
-              molCount[mol->id]++;
-              chosen.push_back(i);
-
-              Group* group = spc->findGroup(i);           // get Group molecule belongs to
-              // create new Group of only this molecule
-              delList.push_back( group->getMolecule( (i - group->front()) / group->getMolSize()) );
-              assert(!delList.back().isAtomic());
-            }
-
-#ifndef NDEBUG   
-            for (auto it=delList.begin(); it!= delList.end()-1; ++it)
-              for (auto it2=it+1; it2!=delList.end(); ++it2)
-                assert(it2->front() != it->front() && "same index twice in delList");
-#endif
-          }
-        } else { // insert
-
-          for (auto* mol: comb->molComb) {// for each molecule in combination
-            if(mol->isAtomic()) {
-              p_vec pin = (*inserter[mol->id])(spc->geo, spc->p, *mol);
-              for(unsigned int i=0; i<pin.size(); i++) {
-                p_vec pin2;
-                pin2.push_back(pin[i]);
-                insList.push_back(Ins(spc->insert(mol->id, pin2), pin2) );
-              }
-            } else {
-              // get random conformation
-              p_vec pin = inserter[mol->id]->operator()(spc->geo, spc->p, *mol);
-
-              if(!pin.empty()) {
-                insList.push_back(Ins(spc->insert(mol->id, pin), pin));
-              } else {
-                for(auto it =  insList.rbegin(); it!= insList.rend(); ++it) {
-                  assert( spc->p.begin()+it->group->back() < spc->p.end()  );
-                  assert( spc->trial.begin()+it->group->back() < spc->trial.end());
-                  spc->p.erase( spc->p.begin()+ it->group->front(), spc->p.begin()+it->group->back()+1);
-                  spc->trial.erase( spc->trial.begin()+it->group->front(), spc->trial.begin()+it->group->back()+1 );
-                  delete it->group;
-                }
-                insList.clear();
-                break;
-              }
-            }
-          }   // for molecules
-        } // insert
-      }
-
-    template<class Tspace>
-      void GCMolecular<Tspace>::_acceptMove(){
-
-        // Delete move
-        for (auto& group: delList) { // for each del Group
-          if (group.isAtomic())
-            tracker.eraseAt(group.molId, group.front()); // keeps Tracker consistent
-          else
-            tracker.eraseMol(group.molId, group.getMolSize(), group.front());
-
-          spc->eraseGroup(group);
-
-          for (auto& group2 : delList) {
-            if (group2.front() > group.front())
-              group2.setfront(group2.front() - group.size());
-            if (group2.back() > group.back())
-              group2.setback(group2.back() - group.size());
-          }
-        }
-        if(!delList.empty()) {
-          comb->delAcceptance++;
-          comb->delCnt++;
-        }
-        delList.clear();
-
-        // Insertion move
-        Group* in;
-        // erasing insList groups from back of p and trial
-        for (auto it =  insList.rbegin(); it!= insList.rend(); ++it) {
-          assert( spc->p.begin()+ it->group->front() < spc->p.end() );
-          assert( spc->trial.begin()+ it->group->front() < spc->trial.end() );
-          spc->p.erase( spc->p.begin()+ it->group->front(), spc->p.begin()+it->group->back()+1);
-          spc->trial.erase( spc->trial.begin()+it->group->front(), spc->trial.begin()+it->group->back()+1 );
-        }
-        for (auto it=insList.begin(); it!=insList.end(); ++it) {
-          if (molecule[it->group->molId].isAtomic()) {
-            in = spc->insert(it->pin, it->group->molId, true);
-            assert(it->pin.size() == 1);
-            tracker.push(in->molId, spc->p[in->back()].id, in->back());
-          } else {
-            in = spc->insert(it->pin, it->group->molId, false);
-            tracker.pushMol(in->molId, in->back() - it->pin.size() + 1);
-          }
-          in = NULL;
-          delete it->group;
-        }
-        if (!insList.empty()) {
-          comb->insAcceptance++;
-          comb->insCnt++;
-        }
-        insList.clear();
-
-        tracker.calcDensity(spc->geo.getVolume());
-
-        assert(consistent() && "Test if all indexes of Tracker are in p_vec");
-#ifndef NDEBUG
-        for (auto *group:spc->groupList())
-          assert(tracker.testIndexesAtomic(group));
-#endif
-      }
-
-    template<class Tspace>
-      double GCMolecular<Tspace>::_energyChange(){
-        double uNew=0.0; // energy change due to interactions
-        double potENew = 0.0;
-        double molInner = 0.0;
-        double idFactor = 1.0;
-        double chemPot = 0.0;
-        double inverted_V= 1.0 / spc->geo.getVolume();
-
-        int atomArray[256] = {0}; // for idFactor calculation
-        int moleculeArray[256] = {0}; // for idFactor calculation
-
-        assert(!(!delList.empty() && !insList.empty()) && "delList and insList both full!!!");
-
-        // delMove
-        if(!delList.empty()) {
-          // each particle group with each other particle of other groups, once
-          for (auto i=delList.begin(); i!=delList.end()-1; i++)
-            for (auto j=i+1; j!=delList.end(); j++)
-              potENew -= pot->g2g(spc->p, *i, *j); // between groups
-
-          for (auto& group: delList) { // for each del Group
-            if (group.isAtomic() ) {
-              for (auto i: group) { // each particle of group
-                idFactor *= (tracker.numOfParticles(spc->p[i].id)
-                    - atomArray[spc->p[i].id]) *inverted_V;
-                atomArray[spc->p[i].id]++;
-                potENew += pot->i_total(spc->p, i); // all, external, twice internal
-                chemPot += atom[spc->p[i].id].chemPot;
-              }
-              for (int i = group.front(); i<group.back(); i++) // atomic delete energy
-                for (int j=i+1; j<=group.back(); j++)
-                  potENew -= pot->i2i(spc->p, i, j); // internal
-
-            } else {
-              idFactor *= (tracker.numOfMolecules(group.molId)
-                  - moleculeArray[group.molId]) *inverted_V;
-              moleculeArray[group.molId]++;
-
-              chemPot += molecule[group.molId].chemPot;
-              potENew += pot->g_external(spc->p, group);
-              molInner += pot->g_internal(spc->p, group);
-
-              for (auto* other : spc->groupList())
-                if (!(*other == group)) // class Group::operator==, operator != not implemented
-                  potENew += pot->g2g(spc->p, group, *other);
-            }
-          }
-
-          uNew = -log(idFactor) - potENew + chemPot;
-          base::alternateReturnEnergy = -potENew - molInner;
-          return uNew;
-        }
-
-        // insMove
-        if (!insList.empty()) {
-          // interaction between groups of insList
-          for (auto i=insList.begin(); i!=insList.end()-1; i++)
-            for (auto j=i+1; j!=insList.end(); j++)
-              potENew += pot->g2g(spc->p, *(i->group), *(j->group) );
-
-          // interaction insList - particle vector
-          for (auto& ins: insList){
-            for (auto* group : spc->groupList() )
-              potENew += pot->g2g(spc->p, *(ins.group), *group);
-
-            // inner, all group are molecular -> automatickly not calculated for atomic species
-            for (auto i=ins.pin.begin(); i!=ins.pin.end()-1; i++)
-              for (auto j=i+1; j!=ins.pin.end(); j++)
-                molInner += pot->p2p(*i,*j);
-
-            if(molecule[ins.group->molId].isAtomic()) { // atomic
-              for(auto& i: ins.pin) {
-                potENew += pot->p_external(i); // external energy
-                chemPot += atom[i.id].chemPot;
-                idFactor *= (tracker.numOfParticles(i.id) + atomArray[i.id] + 1) * inverted_V;
-                atomArray[i.id]++;
-              }
-            } else { // molecular
-              chemPot += molecule[ins.group->molId].chemPot;
-              potENew += pot->g_external(spc->p, *(ins.group) );
-              idFactor *= (tracker.numOfMolecules(ins.group->molId)
-                  + moleculeArray[ins.group->molId] + 1) * inverted_V;
-              moleculeArray[ins.group->molId]++;
-            }
-          }
-
-          uNew = log(idFactor) + potENew - chemPot;
-          base::alternateReturnEnergy = potENew + molInner;
-
-          return uNew;
-        }
-        return pc::infty;
-      }
-
-    template<class Tspace>
-      bool GCMolecular<Tspace>::includefile(string combFile) {
-        if (combFile.find(".json") == string::npos)
-          return false;
-
-        bool load = false;
-        string token, line;
-        auto file = json::open( combFile );
-
-        // GC Combinantions
-        for (auto &comb : json::object("moleculecombinations", file)) {
-          load = true;
-
-          gCCombinations.push_back(Combination() );
-          gCCombinations.back().name = comb.first;
-
-          gCCombinations.back().probability = json::value<double>(comb.second, "prob", 0);
-          assert(gCCombinations.back().probability >= 0 && gCCombinations.back().probability <=1);
-
-          line = json::value<string>(comb.second, "species", "Error");
-          assert(line.compare("Error"));
-
-          // tokenize atoms string and save as atom TID, molecules as references
-          string::size_type pos=0, oldPos=0;
-
-          while (pos != string::npos) {
-            pos = line.find_first_of(',', oldPos);
-            token = line.substr(oldPos, pos-oldPos);
-            oldPos = pos+1;
-
-            for (size_t i=0; i<molecule.size(); i++)
-              if (molecule[i].name.compare(token) == 0)
-                gCCombinations.back().molComb.push_back(&molecule[i]);
-          }
-        }
-        if (!load)
-          std::cerr << "*.json file loaded, but no combinations found." << endl;
-        return true;
-      }
-
     /**
      * @brief Isobaric volume move
      *
@@ -3822,8 +2863,6 @@ namespace Faunus {
           using base::spc;
           using base::pot;
 
-          bool insertBool;                     // current status - either insert or delete
-
           Faunus::Tracker<Group*> molTrack;    // tracker for molecules
           Faunus::Tracker<int> atomTrack;      // tracker for atoms
           vector<Group*> molDel;               // groups to delete
@@ -3832,7 +2871,8 @@ namespace Faunus {
           std::map<int,int> molcnt, atomcnt;   // id's and number of inserted/deleted mols and atoms
           std::map<int, Tpvec> pmap;           // coordinates of mols and atoms to be inserted
           std::map<int, Geometry::MoleculeInserterBase<Tspace>* > inserter; // inserter
-
+          unsigned int Ndeleted, Ninserted;    // Number of accepted deletions and insertions
+          bool insertBool;                     // current status - either insert or delete
           MoleculeCombinationMap::iterator it; // current combination
 
           void _trialMove() {
@@ -3841,7 +2881,8 @@ namespace Faunus {
             molcnt.clear();
             atomcnt.clear();
             it = comb.random();
-            for ( auto id : it->molComb ) {
+            for ( auto id : it->molComb ) { // loop over molecules in combination
+              assert( molecule[id].activity > 1e-6 );
               molcnt[id]++;
               if ( molecule[id].isAtomic() )
                 for ( auto i : molecule[id].atoms )
@@ -3879,16 +2920,24 @@ namespace Faunus {
             }
           }
 
+          // contribution from external chemical potential
+          double externalEnergy() {
+            double u    = 0;
+            double V    = spc->geo.getVolume();
+            int    bit  = ( insertBool ) ?  1 : 0;
+            double sign = ( insertBool ) ?  1 : -1;
+
+            for ( auto i : molcnt )
+              if (!molecule[i.first].isAtomic())
+                u += log(( molTrack.size(i.first) + bit*i.second ) / V) - molecule[i.first].chemPot;
+            for ( auto i : atomcnt )
+              u += log(( atomTrack.size(i.first) + bit*i.second ) / V) - atom[i.first].chemPot;
+
+            return sign * u;
+          }
+
           double _energyChange() {
 
-            // count number of atoms and molecules before move
-            std::map<int,int> Nmol, Natom;
-            for ( auto i : molcnt )
-              Nmol[i.first] = molTrack.size(i.first);
-            for ( auto i : atomcnt )
-              Natom[i.first] = atomTrack.size(i.first);
-
-            double V=spc->geo.getVolume();
             double u=0;
 
             // energy if insertion move
@@ -3899,14 +2948,19 @@ namespace Faunus {
 
                 u += pot->g_external( p.second, g );        // atoms/mols with external pot
 
-                if ( molecule[g.molId].isAtomic() ) 
+                if ( molecule[g.molId].isAtomic() ) { 
+                  u += pot->g_internal( spc->p, g );
                   for (size_t i=0; i<p.second.size(); i++)  // atoms with all particles
                     u += pot->all2p( spc->p, p.second[i] );
+                }
                 else
                   for ( auto g2 : spc->groupList() )        // molecules with all groups
                     u += pot->g1g2(p.second, g, spc->p, *g2);
               }
-              return u; // ...add activity terms
+
+              base::alternateReturnEnergy = u; 
+
+              return u + externalEnergy();
             }
 
             // energy if deletion move
@@ -3915,19 +2969,25 @@ namespace Faunus {
                 u += pot->g_external( spc->p, *i );         // molecule w. external pot.
                 if ( !i->isAtomic() )
                   for ( auto j : spc->groupList() )         // molecule w. all groups
-                    u += pot->g2g( spc->p, *i, *j );
+                    if (i!=j)
+                      u += pot->g2g( spc->p, *i, *j );
               }
               for ( auto i : atomDel )                      // atoms w. all particles
                 u += pot->i_total( spc->p, i );
-              for ( size_t i=0; i<atomDel.size()-1; i++ )   // subtract double counted 
-                for ( size_t j=i+1; j<atomDel.size(); j++ ) // internal energy 
+              for ( int i=0; i<(int)atomDel.size()-1; i++ )   // subtract double counted 
+                for ( int j=i+1; j<(int)atomDel.size(); j++ ) // internal energy 
                   u -= pot->i2i(spc->p, i, j);
 
-              return -u; // ...add activity terms
+              base::alternateReturnEnergy = -u; 
+
+              return -u + externalEnergy(); // ...add activity terms
             }
 
+            // if we reach here, we're out of particles -> reject
+
             assert(!insertBool);
-            assert(fabs(u)<1e-6 && "We should only reach here when out of particles");
+            assert(fabs(u)<1e-6);
+            base::alternateReturnEnergy = 0;
 
             return pc::infty;
           }
@@ -3936,30 +2996,33 @@ namespace Faunus {
 
             // accept a deletion move
             if ( !insertBool ) {
+              Ndeleted++;
               for ( auto m : molDel ) { // loop over Group pointers
-                //base::spc->erase(m); // should also free group and Space::g
+                base::spc->eraseGroup( spc->findIndex(m) );
                 molTrack.erase(m->molId, m);
               }
               for ( auto a : atomDel ) { // loop over particle index
                 auto id = base::spc->p[a].id;
-                //base::spc->erase(a); // should also delete group if all atoms are purged
-                atomTrack.erase(id, a);
+                base::spc->erase(a);
+                int n=atomTrack.size(id);
               }
               return;
             }
 
             // accept an insertion move
             if ( insertBool ) {
+              Ninserted++;
               for ( auto &p : pmap ) { // loop over sets of new coordinates
                 auto molid = p.first;
                 if ( molecule[molid].isAtomic() ) {
-                  //auto g = spc.insert( molid, p.second );
-                  //for (auto i : g)
-                  //  atomTrack.insert( spc.p[i].id, i );
+                  auto g = spc->insert( molid, p.second );
+                  for ( auto i : *g )
+                    atomTrack.insert( spc->p[i].id, i );
                 }
                 else {
-                  //auto g = spc.insert(molid, p.second ); // auto gen. group
-                  //molTrack.insert(molid, g);
+                  auto g = spc->insert( molid, p.second ); // auto gen. group
+                  molTrack.insert( molid, g );
+                  assert( molTrack.size(molid) > 0 );
                 }
               }
             }
@@ -3967,35 +3030,55 @@ namespace Faunus {
 
           void _rejectMove() {}
 
-          string _info() { return base::title; }
+          string _info() {
+            using namespace textio;
+            std::ostringstream o;
+            for ( auto &c : comb )
+              cout << c.name << " " << c.molComb.size() << "\n";
+
+            o << pad( SUB,base::w,"Flux (Nins/Ndel)" ) << Ninserted / double(Ndeleted) << "\n";
+
+            return o.str();
+          }
 
         public:
-          GreenGC(Energy::Energybase<Tspace> &e, \
-              Tspace &s, InputMap &in, string pfx="gc_") : base(e,s,pfx) {
+          /** @brief Constructor -- load combinations, initialize trackers and default inserters */
 
+          GreenGC(
+              InputMap &in, 
+              Energy::Energybase<Tspace> &e,
+              Tspace &s,
+              string pfx="gc_") : base( e, s, pfx ) {
+
+            Ninserted = 0;
+            Ndeleted  = 0;
             base::title = "GC move";
+            base::useAlternateReturnEnergy = true;
+            base::runfraction = in.get<double>(pfx+"_runfraction",1.0);
 
-            // update tracker
+            // update tracker with GC molecules and atoms
             for ( auto g : spc->groupList() )
-              if ( g->isAtomic() )
+              if ( g->isAtomic() ) {
                 for ( auto i : *g )
-                  atomTrack.insert( spc->p[i].id, i );
+                  if ( atom[ spc->p[i].id ].activity > 1e-9 ) 
+                    atomTrack.insert( spc->p[i].id, i );
+              }
               else
-                molTrack.insert( g->molId, g );
+                if ( molecule[g->molId].activity > 1e-9 )
+                  molTrack.insert( g->molId, g );
 
             // add default inserters
             for ( auto &i : molecule )
-              inserter[i.id] = new Geometry::InsertRandom<Tspace>();
+              if (i.activity>1e-6)
+                inserter[i.id] = new Geometry::InsertRandom<Tspace>();
 
             // load combinations
             comb.includefile(in);
           } 
 
           ~GreenGC() {
-            // delete inserters here
-            // also if user defined, these should be added through a wrapper
-            // function as we cannot release interters created outside
-            // class. How about shared_ptr?
+            for (auto &i : inserter)
+              delete(i.second);
           }
       };
 

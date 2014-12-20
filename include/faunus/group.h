@@ -46,12 +46,21 @@ namespace Faunus {
       Point cm;                               //!< mass center vector
       PropertyBase::Tid molId;                ///< \brief starts at 0, cooperation with MoleculeMap
 
-      int getMolSize() {return molsize;}
+      inline int getMolSize() {return molsize;}
+
+      /* @brief Shift front and back index by `n` */
+      inline void shift(int n) {
+        setfront( front()+n );
+        setback( back()+n );
+        assert(front()>=0);
+      }
+
+      /* @brief Greater than operator w. respect to back element */
+      bool operator> (Group &other) { return this->back() > other.back(); }
 
       bool operator== (Group& other) {
         return ((this->front() == other.front()) && (this->back() == other.back()));
       }
-
 
       /** @brief Information string */
       std::string info() {
@@ -101,7 +110,7 @@ namespace Faunus {
       /**
        *  @brief   Calculates mass center - does not touch group!
        *  @warning Intra-molecular distances must not exceed half
-       *           the box size for cubouid geometry.
+       *           the box size for cuboid geometry.
        *  @todo    Implement assertion to catch failure when molecule
        *           is bigger than half the box size.
        */
@@ -118,19 +127,6 @@ namespace Faunus {
           cm_trial=cm;
           return cm;
         }
-
-      /** @brief Calculates electric dipole moment */
-      /*
-      template<class Tspace>
-        Point dipolemoment(const Tspace &s, Point mu=Point(0,0,0)) const {
-          return Geometry::dipoleMoment(s,*this, 1e9, mu);
-          for (auto i : *this) {
-            Point t=s.p[i] - cm;
-            s.geo.boundary(t);
-            mu += t*s.p[i].charge;
-          }
-          return mu;
-        }*/
 
       /**
        * @brief Translate along a vector

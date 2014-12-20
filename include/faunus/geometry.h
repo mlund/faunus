@@ -536,44 +536,20 @@ namespace Faunus {
               geo.randompos(v.back());
             }
           } else {
-
             v = mol.getRandomConformation();
-
-            // randomize it, rotate and translate operates on trial vec
-            /*Point a,b;
-              geo.randompos(a);
-              a = a.cwiseProduct(dir);
-              Geometry::cm2origo(geo,v);
-              Geometry::QuaternionRotate rot;
-              b.ranunit(slp_global);
-              rot.setAxis(geo, {0,0,0}, b, slp_global()*2*pc::pi);
-              for (auto &i : v) {
-              i = rot(i) + a;
-              geo.boundary(i);
-              }*/
-
             Point a,b;
-            geo.randompos(a);
-            geo.randompos(b);
-
-            Point cm = Geometry::massCenter(geo, v);
-
+            geo.randompos(a);                  // random point in container
+            a = a.cwiseProduct(dir);           // apply user defined directions (default: 1,1,1)
+            Geometry::cm2origo(geo,v);         // translate to origo - obey boundary conditions
             Geometry::QuaternionRotate rot;
-            rot.setAxis(geo, cm, a, slp_global()*2*pc::pi);//rot around CM->point vec
-            auto vrot2 = rot;
-            vrot2.getOrigin() = Point(0,0,0);
-            for (auto &i : v) {
-              i = rot(i);     // rotate coordinates
-              i.rotate(vrot2);  // rotate internal coordinates
+            b.ranunit(slp_global);             // random unit vector
+            rot.setAxis(geo, {0,0,0}, b, slp_global()*2*pc::pi); // random rot around random vector
+
+            for ( auto &i : v ) {              // apply roation to all points
+              i = rot(i) + a;                  // ...and translate
+              geo.boundary(i);                 // ...and obey boundaries
             }
-            assert( geo.dist(cm, massCenter(geo, v))<1e-9
-                && "Rotation messed up mass center. Is the box too small?");
-
-            //cm = Geometry::massCenter(geo, v); // unnecesary?
-            b = b.cwiseProduct(dir);
-            translate(geo, v, -cm+b);
           }
-
           return v;
         }
       };

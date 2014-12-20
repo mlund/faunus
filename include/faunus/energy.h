@@ -2147,8 +2147,8 @@ namespace Faunus {
         double u = pot.external(p);
         for (auto g : spc.groupList())
           u += pot.g_external(p, *g) + pot.g_internal(p, *g);
-        for (size_t i=0; i<spc.groupList().size()-1; i++)
-          for (size_t j=i+1; j<spc.groupList().size(); j++)
+        for (int i=0; i<(int)spc.groupList().size()-1; i++)
+          for (int j=i+1; j<(int)spc.groupList().size(); j++)
             u += pot.g2g(p, *spc.groupList()[i], *spc.groupList()[j]);
         return u;
       }

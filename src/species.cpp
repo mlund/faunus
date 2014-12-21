@@ -28,9 +28,6 @@ namespace Faunus {
 
   /** @brief Read data from a picojson object */
   void MoleculeData::readJSON(const MoleculeData::Tjson &molecule) {
-    string::size_type pos = 0;
-    string::size_type oldPos = 0;
-    string token;
 
     name = molecule.first;
 
@@ -39,36 +36,30 @@ namespace Faunus {
 
     _isAtomic = json::value<bool>(molecule.second, "atomic", false);
 
-    string line = json::value<string>(molecule.second, "atoms", "Error");
-
-    // read coordinates from disk
+    // read conformation from disk
     string structure = json::value<string>( molecule.second, "structure", "" );
     if ( !structure.empty() ) {
       p_vec v;
       if ( FormatAAM::load( structure, v ) ) {
         if ( !v.empty() ) {
+          conformations.push_back( v ); // add conformation
+          for ( auto &p : v )           // add atoms to atomlist
+            atoms.push_back(p.id);
           cout << "# added molecular structure: " << structure << endl;
-          conformations.push_back( v );
         }
       }
       else
         std::cerr << "# error loading molecule: " << structure << endl;
     }
 
-    // tokenize atoms string and save as atom TID
-    while(pos != string::npos) {
-      pos = line.find_first_of(',', oldPos);
-      token = line.substr(oldPos, pos-oldPos);
-      oldPos = pos+1;
-
-      for(auto &i : atom) {
-        if(i.name.compare(token) == 0) {
-          atoms.push_back(i.id);
-          break;
-        }
-      }
+    // add atoms to atom list
+    if ( atoms.empty() ) {
+      string atomlist = json::value<string>(molecule.second, "atoms", "");
+      for ( auto &a : textio::words2vec<string>(atomlist) )
+        if ( atom[a].id > 0 )
+          atoms.push_back( atom[a].id );
     }
-
+    
     // for atomic groups, add particles
     if ( isAtomic() ) {
       decltype(conformations)::value_type _vec;
@@ -79,6 +70,9 @@ namespace Faunus {
       }
       conformations.push_back( _vec );
     }
+    
+    //assert( id==0 || !atoms.empty() );
+    
   }
 
   AtomMap atom; // Instantiate global copy

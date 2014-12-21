@@ -545,7 +545,7 @@ namespace Faunus {
             b.ranunit(slp_global);             // random unit vector
             rot.setAxis(geo, {0,0,0}, b, slp_global()*2*pc::pi); // random rot around random vector
 
-            for ( auto &i : v ) {              // apply roation to all points
+            for ( auto &i : v ) {              // apply rotation to all points
               i = rot(i) + a;                  // ...and translate
               geo.boundary(i);                 // ...and obey boundaries
             }

@@ -156,8 +156,7 @@ namespace Faunus {
    * must by derived from `PropertyBase` and can be inserted only
    * using `push_back()`. This enforces that `id` of the data
    * is always equal to the vector index. Elements can be accessed
-   * by either index of string matching. Due to compatibility, a
-   * default fallback property is added upon construction (index 0);
+   * by either index of string matching. 
    *
    * Example:
    *
@@ -248,12 +247,10 @@ namespace Faunus {
         /**
          * @brief Read properties from JSON file
          * @param file Filename
-         * @note All data is reset before loading
          */
         bool includefile(const string& file) {
           assert(!jsonsection.empty() && "json section empty");
           jsonfile=file;
-          base::resize(1); // keep default property
           auto j = json::open(file);
           for (auto &a : json::object(jsonsection, j) )
             push_back( value_type(a) );
@@ -263,7 +260,6 @@ namespace Faunus {
         PropertyVector() {
           static_assert(std::is_base_of<PropertyBase, Tproperty>::value,
               "Elements must be derived from `PropertyBase`");
-          push_back( value_type() ); // add default property
         }
 
         string info() {
@@ -292,8 +288,8 @@ namespace Faunus {
    * vector of `AtomData`. The file format is JSON (<http://www.json.org>)
    * and all atom properties must be inclosed in an object with
    * the keyword `atomlist`.
-   * While not strictly JSON compliant, comments beginning
-   * with `//` are allowed.
+   * Due to compatibility, a default fallback property is added upon construction
+   * (index 0).
    *
    * For example:
    *
@@ -337,6 +333,7 @@ namespace Faunus {
       AtomMap() {
         base::name = "Atom Properties";
         base::jsonsection = "atomlist";
+        push_back( base::value_type() ); // add default property
       }
 
       bool includefile(InputMap&);      /// Read JSON file given through `InputMap`
@@ -361,8 +358,8 @@ namespace Faunus {
    * Values can be read from a JSON object with the following format:
    *
    * ~~~~
-   * "salt": { "atoms": "Na,Cl", "init":"RANDOM"},
-   * "polymer": {"activity": 0.05, "atoms": "MM,MM,MM,MM", "init": "POOL"}
+   * "salt": { "atoms" : "Na,Cl", "init":"RANDOM" },
+   * "polymer": { "activity" : 0.05, "atoms" : "MM,MM,MM,MM" }
    * ~~~~
    *
    * The key of type string is the `name` followed, in no particular order,
@@ -371,51 +368,73 @@ namespace Faunus {
    * Key           | Description
    * :------------ | :-------------------------------------------------------
    * `activity`    | Chemical activity for grand canonical MC [mol/l]
-   * `init`        | RANDOM or POOL - using pregenerated configurations
    * `atoms`       | List of atoms in molecule (use `AtomData` names)
+   * `structure`   | Read conformation and species from AAM file
    *
-   * NOTE: RANDOM for atomic molecules - for example salt
-   *       POOL for molecular molecules - for example polymer
-   *       
-   * @todo Use space separated list of atoms instead of comma
-   *       (simpler loading)
    */
   class MoleculeData  : public PropertyBase {
+    private:
+    
       using PropertyBase::Tjson;
-
       bool _isAtomic;
+    
     public:
-      // Grand Canonical ensemble - type of initialization of insertion combinations
-      enum{RANDOM,POOL};
+    
+      std::vector<particle::Tid> atoms; //!< List of atoms in molecule
+      std::vector<p_vec> conformations; //!< Conformations of molecule
+    
+      double activity;     //!< Chemical activity (mol/l)
+      double chemPot;      //!< Chemical potential (kT)
+      Average<double> rho; //!< Average concentration (1/angstrom^3)
 
       /** @brief Constructor - by default data is initialized; mass set to unity */
-      inline MoleculeData(const Tjson &molecule=Tjson()) : _isAtomic(false) { readJSON(molecule); }
+      inline MoleculeData( const Tjson &molecule=Tjson()) : _isAtomic(false) {
+        readJSON(molecule);
+      }
 
+      /** @brief Get a random conformation */
       p_vec getRandomConformation() const {
         assert(!conformations.empty());
-        return conformations[slp_global.rand() % conformations.size() ];
+        return conformations[slp_global.range(0, conformations.size()-1) ];
       }
 
       /**
-       * @brief Store a single configuration for grand canonical POOL insert
+       * @brief Store a single configuration
        * @param vec of particles
        */
       void pushConfiguration(const p_vec& vec) {
         conformations.push_back(vec);
       }
 
-      std::vector<particle::Tid> atoms; //!< List of atoms in molecule
-      std::vector<p_vec> conformations; //!< Conformations of molecule
-
-      double activity;
-      double chemPot;
 
       bool isAtomic() const { return _isAtomic; }
 
       bool operator==(const MoleculeData &d) const { return (*this==d); }
 
       void readJSON(const Tjson&) FOVERRIDE;
-
+    
+      inline string info() {
+        
+        using namespace textio;
+        ostringstream o;
+        char w=22;
+        
+        o << header("Molecule: " + name)
+          << pad(SUB, w, "Activity") << activity << " mol/l\n"
+          << pad(SUB, w, "Chem. pot.") << chemPot << " kT\n"
+          << pad(SUB, w, "Atomic") << std::boolalpha << isAtomic() << "\n"
+          << pad(SUB, w, "Conformations") << conformations.size() << "\n"
+          << pad(SUB, w, "Number of atoms") << std::max(atoms.size(), conformations.size()) << "\n";
+        
+        if (rho.cnt>0) {
+          o << pad(SUB, w, "Average conc.") << rho.avg() << " 1/"+angstrom+" = "
+            << rho.avg() / 1.0_molar << " mol/l\n"
+            << pad(SUB, w, "Activity coefficient") << activity / rho.avg() << "\n";
+        }
+        
+        return o.str();
+      }
+    
   };
 
   /**
@@ -432,12 +451,12 @@ namespace Faunus {
    *
    * ~~~~
    * {
-   *   "moleculelist": {
-   *     "salt": { "atoms": "Na,Cl", "init":"RANDOM"},
-   *     "salt2": { "atoms": "Mg,Cl,Cl", "init":"RANDOM"},
-   *     "chloride": { "atoms": "Cl,Cl,Cl,Cl", "init":"RANDOM"},
-   *     "polymer": {"activity": 0.05, "atoms": "MM,MM,MM,MM", "init": "POOL"},
-   *     "polymer2": {"activity": 0.05, "atoms": "MM,MM,MM,MM", "init": "POOL"}
+   *   "moleculelist" : {
+   *     "salt" : { "atoms": "Na,Cl" },
+   *     "salt2" : { "atoms": "Mg,Cl,Cl" },
+   *     "chloride" : { "atoms": "Cl,Cl,Cl,Cl" },
+   *     "polymer" : { "activity": 0.05, "atoms": "MM,MM,MM,MM" },
+   *     "polymer2" : { "activity": 0.05, "atoms": "MM,MM,MM,MM" }
    *   }
    * }
    * ~~~~
@@ -454,6 +473,7 @@ namespace Faunus {
       MoleculeMap() {
         base::jsonsection = "moleculelist";
         base::name = "Molecule Properties";
+        push_back( base::value_type() ); // add default property
       }
 
       bool includefile(InputMap&);     /// Read JSON file given through `InputMap`
@@ -461,29 +481,20 @@ namespace Faunus {
 
       /** @brief Information string */
       string info() {
-        char s=14;
+        char w=15;
         using namespace textio;
         ostringstream o;
-        o << header("Molecule list")
-          << setw(4) << "" << std::left
-          << setw(s) << "Molecule" << setw(s) << "init"
-          << setw(s) << "atoms\n";
+        o << header("Molecule list") << "\n"
+          << std::left << setw(w+4) << "  Molecule" << setw(w) << "activity"
+          << setw(w) << "atoms" << setw(w) << "atomic" << "\n"
+          << "  " << string(4*w, '-') << "\n";
 
-        for (auto &i : *this) {
-          o << setw(4) << "" << setw(s) << i.name;
-          /*if (i.initType == MoleculeData::RANDOM) o << setw(s) << "RANDOM";
-            else
-            if (i.initType == MoleculeData::POOL) o << setw(s) << "POOL";
-            else o << setw(s) << "";*/
-
-          for ( auto j=i.atoms.begin(); j!=i.atoms.end(); ++j ) {
-            o << setw(0) << atom[(*j)].name;
-
-            if (j != i.atoms.end()-1)
-              o << ",";
-          }
-          o << "\n";
-        }
+        for (auto &i : *this)
+          if ( !i.name.empty() )
+            o << setw(w+4) << "  "+i.name << setw(w) << i.activity
+              << setw(w) << std::max(i.conformations.size(), i.atoms.size())
+              << std::boolalpha << i.isAtomic()
+              << "\n";
         return o.str();
       }
   };
@@ -511,45 +522,67 @@ namespace Faunus {
    *
    * Key           | Description
    * :------------ | :--------------------------------------
-   * `species`     | list of molecule types, space separated
-   * `prob`        | insertion probability [0:1]
+   * `species`     | list of space separated molecule types
+   * `prob`        | insertion probability [0:1] (default: 1=100%)
    *
    * the final probability of combination is: prob_i / (sum_all prob_i)
    */
   struct MoleculeCombination : public PropertyBase {
+    
     inline void readJSON(const Tjson &comb) FOVERRIDE {
       molComb.clear();
       name = comb.first;
-      probability = json::value<double>(comb.second, "prob", 1.0);
-      string l = json::value<string>(comb.second, "species", "");
-      if ( !l.empty() ) {
-        std::stringstream s(l);
-        for (int i=0; s>>l; i++) {
-          auto it = molecule.find(l);
-          if (it!=molecule.end())
-            molComb.push_back(it->id);
-        }
+      probability = json::value<double>( comb.second, "prob", 1.0 );
+      string mollist = json::value<string>( comb.second, "species", "" );
+      for ( auto &mol : textio::words2vec<string>(mollist) ) {
+        auto it = molecule.find(mol);
+        if ( it!=molecule.end() )
+          molComb.push_back(it->id);
       }
     }
+    
     inline MoleculeCombination(const Tjson &comb=Tjson()) { readJSON(comb); }
+    
     Average<unsigned int> acceptance; /// +=1 if accepted, +=0 if rejected
+    
     vector<PropertyBase::Tid> molComb;/// list of molecule types in combination
+    
     double probability;               /// probability of this combination in GC-MC move
+    
   };
 
   /**
    * @brief Vector of molecular combinations
    *
    * When examining a JSON file, individual entries must be placed
-   * in a section called `moleculecombo`.
+   * in a section called `moleculecombinations`.
    */
   struct MoleculeCombinationMap : public PropertyVector<MoleculeCombination> {
+    
     typedef PropertyVector<MoleculeCombination> base;
-    bool includefile(InputMap &); 
+    
+    bool includefile(InputMap &);
+    
     MoleculeCombinationMap() {
       base::name = "Molecule Combinations";
       base::jsonsection = "moleculecombinations";
     }
+    
+    /** @brief Information on molecule combinations */
+    inline string info() {
+      
+      std::ostringstream o;
+      o << textio::header(base::name);
+
+      for (auto i : *this) { // i=i'th combination
+        o << "  " << std::left << setw(20) << (i.name+":");
+        for (auto id : i.molComb)
+          o << molecule[id].name << " ";
+        o << "\n";
+      }
+      return o.str();
+    }
+
   };
 
 }//namespace

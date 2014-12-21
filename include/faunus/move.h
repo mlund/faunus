@@ -2875,9 +2875,11 @@ namespace Faunus {
           bool insertBool;                     // current status - either insert or delete
           MoleculeCombinationMap::iterator it; // current combination
 
+          /** @brief Perform an insertion or deletion trial move */
           void _trialMove() {
 
             // pick random combination and count mols and atoms
+            base::alternateReturnEnergy=0;
             molcnt.clear();
             atomcnt.clear();
             it = comb.random();
@@ -2897,8 +2899,8 @@ namespace Faunus {
               atomDel.clear();
 
               // find atom index and group pointers
-              bool empty = false; // true if too few atoms/mols are present
-              for ( auto &a : atomcnt )
+              bool empty = false;           // true if too few atoms/mols are present
+              for ( auto &a : atomcnt )     // (first=type, second=count)
                 if ( !atomTrack.find( a.first, a.second, atomDel ) )
                   empty = true;
               for ( auto &m : molcnt )
@@ -2943,52 +2945,71 @@ namespace Faunus {
             // energy if insertion move
             if ( insertBool ) {
               for ( auto &p : pmap ) {                      // loop over molecules
-                Group g( 0, p.second.size()-1 );
+                Group g( 0, p.second.size()-1 );            // (first=id, second=pvec)
                 g.molId = p.first;
+                g.setMolSize( p.second.size() );
 
-                u += pot->g_external( p.second, g );        // atoms/mols with external pot
+                u += pot->g_external( p.second, g );        // ...atoms/mols with external pot
 
-                if ( molecule[g.molId].isAtomic() ) { 
-                  u += pot->g_internal( spc->p, g );
-                  for (size_t i=0; i<p.second.size(); i++)  // atoms with all particles
-                    u += pot->all2p( spc->p, p.second[i] );
+                if ( molecule[g.molId].isAtomic() ) {
+                  u += pot->g_internal( spc->p, g );        // ...between inserted atoms
+                  for ( auto &pi : p.second )               // ...atoms with all particles
+                    u += pot->all2p( spc->p, pi );
                 }
                 else
-                  for ( auto g2 : spc->groupList() )        // molecules with all groups
+                  for ( auto g2 : spc->groupList() )        // ...molecules with all groups
                     u += pot->g1g2(p.second, g, spc->p, *g2);
               }
+              
+              for ( auto i=pmap.begin(); i!=pmap.end(); ++i)//...between inserted molecules
+                for ( auto j=i; ++j!=pmap.end(); ) {
+                  Group gi( 0, i->second.size()-1 );
+                  Group gj( 0, i->second.size()-1 );
+                  gi.molId = i->first;
+                  gj.molId = j->first;
+                  u += pot->g1g2( i->second, gi, j->second, gj);
+                }
 
-              base::alternateReturnEnergy = u; 
-
+              assert( !pmap.empty() );
+              base::alternateReturnEnergy = u;
               return u + externalEnergy();
+
             }
 
             // energy if deletion move
             else {
-              for ( auto i : molDel ) {                     // loop over molecules/atoms 
-                u += pot->g_external( spc->p, *i );         // molecule w. external pot.
-                if ( !i->isAtomic() )
-                  for ( auto j : spc->groupList() )         // molecule w. all groups
-                    if (i!=j)
-                      u += pot->g2g( spc->p, *i, *j );
+              if ( ! molDel.empty() || ! atomDel.empty() ) {
+                for ( auto i : molDel ) {                     // loop over molecules/atoms
+                  u += pot->g_external( spc->p, *i );         // molecule w. external pot.
+
+                  if ( ! molecule[i->molId].isAtomic() )
+                    for ( auto j : spc->groupList() )         // molecule w. all groups
+                      if ( find(molDel.begin(), molDel.end(), j) == molDel.end() ) // slow!
+                        u += pot->g2g( spc->p, *i, *j );
+                }
+
+                // energy between deleted molecules
+                for ( auto i=molDel.begin(); i!=molDel.end(); ++i )
+                  for ( auto j=i; ++j!=molDel.end(); )
+                    u += pot->g2g( spc->p, **i, **j );
+
+                for ( auto i : atomDel )                      // atoms w. all particles
+                  u += pot->i_total( spc->p, i );
+
+                for ( int i=0; i<(int)atomDel.size()-1; i++ )   // subtract double counted 
+                  for ( int j=i+1; j<(int)atomDel.size(); j++ ) // internal energy (atoms)
+                    u -= pot->i2i(spc->p, i, j);
+
+                base::alternateReturnEnergy = -u;
+                return -u + externalEnergy(); // ...add activity terms
               }
-              for ( auto i : atomDel )                      // atoms w. all particles
-                u += pot->i_total( spc->p, i );
-              for ( int i=0; i<(int)atomDel.size()-1; i++ )   // subtract double counted 
-                for ( int j=i+1; j<(int)atomDel.size(); j++ ) // internal energy 
-                  u -= pot->i2i(spc->p, i, j);
-
-              base::alternateReturnEnergy = -u; 
-
-              return -u + externalEnergy(); // ...add activity terms
             }
 
             // if we reach here, we're out of particles -> reject
 
             assert(!insertBool);
-            assert(fabs(u)<1e-6);
+            assert(fabs(u)<1e-10);
             base::alternateReturnEnergy = 0;
-
             return pc::infty;
           }
 
@@ -3004,7 +3025,6 @@ namespace Faunus {
               for ( auto a : atomDel ) { // loop over particle index
                 auto id = base::spc->p[a].id;
                 base::spc->erase(a);
-                int n=atomTrack.size(id);
               }
               return;
             }
@@ -3026,9 +3046,15 @@ namespace Faunus {
                 }
               }
             }
+            molTrack.updateAvg();   // update average number of molecules
+            atomTrack.updateAvg();  // ...and atoms
+
           }
 
-          void _rejectMove() {}
+          void _rejectMove() {
+            molTrack.updateAvg();   // update average number of molecules
+            atomTrack.updateAvg();  // ...and atoms
+          }
 
           string _info() {
             using namespace textio;
@@ -3037,8 +3063,34 @@ namespace Faunus {
               cout << c.name << " " << c.molComb.size() << "\n";
 
             o << pad( SUB,base::w,"Flux (Nins/Ndel)" ) << Ninserted / double(Ndeleted) << "\n";
+            o << "\n";
 
-            return o.str();
+            char w=15;
+            double V=spc->geo.getVolume();
+            o << std::left
+              << setw(w+5) << "  Molecule/Atom"
+              << setw(w) << "a (mol/l)"
+              << setw(w) << "c (mol/l)"
+              << setw(w) << textio::gamma+"=a/c" << "\n"
+              << "  " << string(4*w,'-') << "\n";
+
+            for (auto &m : molecule) {
+              if ( m.activity > 1e-6 )
+                o << setw(w+5) << ("  "+m.name) << setw(w) << m.activity
+                  << setw(w) << molTrack.getAvg(m.id)/V/1.0_molar
+                  << setw(w) << m.activity / (molTrack.getAvg(m.id)/V/1.0_molar) << "\n";
+            }
+
+            o << "\n";
+
+            for (auto &m : atom) {
+              if ( m.activity > 1e-6 )
+                o << setw(w+5) << ("  "+m.name) << setw(w) << m.activity
+                  << setw(w) << atomTrack.getAvg(m.id)/V/1.0_molar
+                  << setw(w) << m.activity / (atomTrack.getAvg(m.id)/V/1.0_molar) << "\n";
+            }
+
+            return o.str() + molecule.info() + comb.info();
           }
 
         public:
@@ -3058,7 +3110,7 @@ namespace Faunus {
 
             // update tracker with GC molecules and atoms
             for ( auto g : spc->groupList() )
-              if ( g->isAtomic() ) {
+              if ( molecule[g->molId].isAtomic() ) {
                 for ( auto i : *g )
                   if ( atom[ spc->p[i].id ].activity > 1e-9 ) 
                     atomTrack.insert( spc->p[i].id, i );

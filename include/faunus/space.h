@@ -55,6 +55,7 @@ namespace Faunus {
     class Tracker {
       private:
         std::map<Tid, std::vector<T> > map;
+        std::map<Tid, Average<double> > Navg;
 
       public:
         /** @brief Number of elements of type id */
@@ -64,6 +65,17 @@ namespace Faunus {
             return i->second.size();
           return 0;
         }
+      
+        /**
+         * @brief Update average number of particles
+         */
+        void updateAvg() {
+          for (auto &m : map)
+            Navg[m.first] += m.second.size();
+        }
+      
+        /** @brief Get average number of particles */
+        Average<double> getAvg(Tid id) { return Navg[id]; }
 
         /**
          * @brief Find random data based on id
@@ -660,25 +672,6 @@ namespace Faunus {
         i->translate(*this, v);
         i->accept(*this);
         assert( geo.sqdist(i->cm, i->cm_trial) < 1e-6 );
-      }
-    }
-
-
-  template<class Tgeometry, class Tparticle>
-    void Space<Tgeometry,Tparticle>::linkGroupsToTopo() {
-      char c = 0;
-      for(auto& mol : molecule) {  // for each molecule
-        mol.id = c;
-        c++;
-      }
-
-      for(auto* group: g) { // for each group
-        for(auto& mol : molecule) { // for each molecule
-          if(mol.name.compare(group->name)==0) {
-            group->molId = mol.id;
-            assert(mol.isAtomic() == group->isAtomic() );
-          }
-        }
       }
     }
 

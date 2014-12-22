@@ -5,7 +5,6 @@
 #include <faunus/common.h>
 #include <faunus/geometry.h>
 #include <faunus/group.h>
-#include <faunus/space.h>
 
 #ifndef __cplusplus
 #define __cplusplus
@@ -46,7 +45,7 @@ namespace Faunus {
      * @param mode `std::ios_base::out` (new, default) or `std::ios_base::app` (append)
      */
     inline bool writeFile(const string &file, const string &s,
-      std::ios_base::openmode mode=std::ios_base::out) {
+        std::ios_base::openmode mode=std::ios_base::out) {
       std::ofstream f(file.c_str(), mode);
       cout << "Writing to file '" << file << "'. ";
       if (f) {
@@ -309,33 +308,34 @@ namespace Faunus {
          residbuf, insertion[0], x, y, z, occ, beta, segnamebuf, elementsymbol);
          */
 
-      template<class Tgeo, class Tparticle>
-        static bool save(const string &file, Space<Tgeo,Tparticle> &spc) {
-          Group* oldg=nullptr;
-          unsigned int nres=0, natom=1, cnt=0;
-          char buf[100];
-          string name, resname;
-          std::ostringstream o;
-          o << writeCryst1(spc.geo.len);
-          for (auto i : spc.p) {
-            name=atom[i.id].name;
-            Group* g = spc.findGroup(cnt++);
-            if (g!=oldg) {
-              oldg=g;
-              nres++;
-            }
-            resname = (g->name.empty() ? name : g->name);
-            resname.resize(3,'x'); 
-            i+=spc.geo.len/2;
-            sprintf(buf, "ATOM  %5d %-4s %-4s%5d    %8.3f %8.3f %8.3f %.3f %.3f\n",
-                natom++, name.c_str(), resname.c_str(), nres, i.x(), i.y(), i.z(),
-                i.charge, i.radius);
-            o << buf;
-          }
-          o << "END\n";
-          assert(cnt==spc.p.size());
-          return IO::writeFile(file, o.str());
-        }
+      /*
+         template<class Tgeo, class Tparticle>
+         static bool save(const string &file, Space<Tgeo,Tparticle> &spc) {
+         Group* oldg=nullptr;
+         unsigned int nres=0, natom=1, cnt=0;
+         char buf[100];
+         string name, resname;
+         std::ostringstream o;
+         o << writeCryst1(spc.geo.len);
+         for (auto i : spc.p) {
+         name=atom[i.id].name;
+         Group* g = spc.findGroup(cnt++);
+         if (g!=oldg) {
+         oldg=g;
+         nres++;
+         }
+         resname = (g->name.empty() ? name : g->name);
+         resname.resize(3,'x'); 
+         i+=spc.geo.len/2;
+         sprintf(buf, "ATOM  %5d %-4s %-4s%5d    %8.3f %8.3f %8.3f %.3f %.3f\n",
+         natom++, name.c_str(), resname.c_str(), nres, i.x(), i.y(), i.z(),
+         i.charge, i.radius);
+         o << buf;
+         }
+         o << "END\n";
+         assert(cnt==spc.p.size());
+         return IO::writeFile(file, o.str());
+         }*/
   };
 
   /**
@@ -614,33 +614,34 @@ namespace Faunus {
        *
        * @warning This is broken!
        */
-      template<class T1, class T2>
-        bool save(const string &file, Space<T1,T2> &c) {
-          Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(&c.geo);
-          assert(geo!=nullptr && "Only Cuboid geometries classes allowed.");
-          if (geo==nullptr)
-            return false;
-          setbox(geo->len.x(), geo->len.y(), geo->len.z());
-          auto p=c.p;
-          for (auto gi : g) {
-            gi->translate( c, -gi->cm );  // b.trial is moved to origo -> whole!
-            for (auto j : *gi)
-              p[j] = c.trial[j] + gi->cm; // move back to cm without periodicity
-            gi->undo(c);                  // restore to original PBC location
-          }
-          for (auto &pi : p)
-            pi+=geo->len_half;            // gromacs origo is in the corner of the box
-          return save(file, p);           // while in Cuboid we use the middle
-        }
+      /*
+         template<class T1, class T2>
+         bool save(const string &file, Space<T1,T2> &c) {
+         Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(&c.geo);
+         assert(geo!=nullptr && "Only Cuboid geometries classes allowed.");
+         if (geo==nullptr)
+         return false;
+         setbox(geo->len.x(), geo->len.y(), geo->len.z());
+         auto p=c.p;
+         for (auto gi : g) {
+         gi->translate( c, -gi->cm );  // b.trial is moved to origo -> whole!
+         for (auto j : *gi)
+         p[j] = c.trial[j] + gi->cm; // move back to cm without periodicity
+         gi->undo(c);                  // restore to original PBC location
+         }
+         for (auto &pi : p)
+         pi+=geo->len_half;            // gromacs origo is in the corner of the box
+         return save(file, p);           // while in Cuboid we use the middle
+         }
 
-      template<class Tpvec>
-        bool save(const string &file, Tpvec &p, std::vector<Group> &g) {
-          p_vec t;
-          for (auto &gi : g)
-            for (auto j : gi)
-              t.push_back( p[j] );
-          return save(file, t);
-        }
+         template<class Tpvec>
+         bool save(const string &file, Tpvec &p, std::vector<Group> &g) {
+         p_vec t;
+         for (auto &gi : g)
+         for (auto j : gi)
+         t.push_back( p[j] );
+         return save(file, t);
+         }*/
 
       /**
        * This will open an xtc file for reading. The number of atoms in each frame

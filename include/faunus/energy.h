@@ -362,7 +362,8 @@ namespace Faunus {
             return u;
           }
 
-          double g_internal(const Tpvec &p, Group &g) FOVERRIDE { 
+          double g_internal(const Tpvec &p, Group &g) FOVERRIDE {
+            assert( g.size() <= (int)p.size() );
             double u=0;
             int b=g.back(), f=g.front();
             if (!g.empty())

@@ -163,6 +163,23 @@ TEST_CASE("Math", "Checks mathematical functions")
   CHECK( invsqrtQuake(20.) == Approx(1/std::sqrt(20.)).epsilon(0.05) );
 }
 
+TEST_CASE("Space", "Space tests")
+{
+  std::ofstream js("polar_test.json"), inp("polar_test.input");
+  js << "{ \"atomlist\" : \n { \n "
+  << "\"x\" : {\"q\":0, \"dp\":0, \"dprot\":0}\n"
+  << "} \n }";
+  inp << "cuboid_len 1000\n";
+  js.close();
+  inp.close();
+  
+  ::atom.includefile("polar_test.json");
+  InputMap in("polar_test.input");
+  using namespace Faunus::Potential;
+  typedef Space<Geometry::Cuboid, DipoleParticle> Tspace;
+  Tspace spc(in);
+}
+
 TEST_CASE("Geometries", "Geometry tests")
 {
   Geometry::Sphere geoSph(1000);

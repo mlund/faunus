@@ -507,7 +507,7 @@ namespace Faunus {
         std::string name;
         typedef typename Tspace::ParticleVector Tpvec;
         typedef typename Tspace::GeometryType Tgeo;
-        virtual Tpvec operator() (Tgeo&, const Tpvec&, const MoleculeData&)=0;
+        virtual Tpvec operator() (Tgeo&, const Tpvec&, const typename Tspace::MoleculeType&)=0;
         virtual ~MoleculeInserterBase() {}
       };
 
@@ -520,21 +520,24 @@ namespace Faunus {
 
         InsertRandom() : dir(1,1,1) {base::name = "random";}
 
-        Tpvec operator() (Tgeo &geo, const Tpvec &p, const MoleculeData &mol) FOVERRIDE {
+        Tpvec operator() (Tgeo &geo, const Tpvec &p, const typename Tspace::MoleculeType &mol) FOVERRIDE {
           Tpvec v;
           if (mol.isAtomic()) {
+            
+            int _i=0;
+            v.resize( mol.atoms.size(), typename Tspace::ParticleType());
+           
             for (auto &aType: mol.atoms) { // for each atom type of molecule
-              v.push_back( typename Tspace::ParticleType() );
-              v.back() = atom[aType];   // set part type
-
+              v[_i] = atom[aType];   // set part type
               Geometry::QuaternionRotate rot;
               Point u;
-              u.ranunit(slp_global);
-              rot.setAxis(geo, Point(0,0,0), u, pc::pi*slp_global() );
-              v.back().rotate(rot);
-
-              geo.randompos(v.back());
+              u.ranunit( slp_global );
+              rot.setAxis( geo, {0,0,0}, u, pc::pi*slp_global() );
+              v[_i].rotate(rot);
+              geo.randompos( v[_i] );
+              _i++;
             }
+            
           } else {
             v = mol.getRandomConformation();
             Point a,b;
@@ -550,6 +553,8 @@ namespace Faunus {
               geo.boundary(i);                 // ...and obey boundaries
             }
           }
+          
+          assert(!v.empty());
           return v;
         }
       };
@@ -582,7 +587,7 @@ namespace Faunus {
 
           InsertFreeSpace(int maxtrials=1000) : maxtrials(maxtrials) {}
 
-          Tpvec operator() (Tgeo &geo, const Tpvec &p, const MoleculeData &mol) {
+          Tpvec operator() (Tgeo &geo, const Tpvec &p, const typename Tspace::MoleculeType &mol) {
             int n=maxtrials;
             Tpvec v;
             do {

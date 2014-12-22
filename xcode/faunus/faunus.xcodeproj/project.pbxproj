@@ -267,6 +267,7 @@
 		738C138913FB13510056EF71 /* xdrfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 738C137E13FB133A0056EF71 /* xdrfile.c */; };
 		738C138A13FB13510056EF71 /* xdrfile_trr.c in Sources */ = {isa = PBXBuildFile; fileRef = 738C137F13FB133A0056EF71 /* xdrfile_trr.c */; };
 		738C138B13FB13510056EF71 /* xdrfile_xtc.c in Sources */ = {isa = PBXBuildFile; fileRef = 738C138013FB133A0056EF71 /* xdrfile_xtc.c */; };
+		738D689E1A48198300CC9BCA /* molecule.h in Headers */ = {isa = PBXBuildFile; fileRef = 738D689D1A48198300CC9BCA /* molecule.h */; };
 		73B67CDD1423E28E00E44DD9 /* geometry.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD41423E28E00E44DD9 /* geometry.cpp */; };
 		73B67CE21423E28E00E44DD9 /* potentials.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73B67CD91423E28E00E44DD9 /* potentials.cpp */; };
 		73CB4DA616D9297500DED45D /* externalpotential.h in Headers */ = {isa = PBXBuildFile; fileRef = 73CB4DA516D9297500DED45D /* externalpotential.h */; };
@@ -609,6 +610,7 @@
 		738C137E13FB133A0056EF71 /* xdrfile.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xdrfile.c; sourceTree = "<group>"; };
 		738C137F13FB133A0056EF71 /* xdrfile_trr.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xdrfile_trr.c; sourceTree = "<group>"; };
 		738C138013FB133A0056EF71 /* xdrfile_xtc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xdrfile_xtc.c; sourceTree = "<group>"; };
+		738D689D1A48198300CC9BCA /* molecule.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = molecule.h; sourceTree = "<group>"; };
 		73B67CD41423E28E00E44DD9 /* geometry.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = geometry.cpp; path = ../../src/geometry.cpp; sourceTree = "<group>"; };
 		73B67CD91423E28E00E44DD9 /* potentials.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = potentials.cpp; path = ../../src/potentials.cpp; sourceTree = "<group>"; };
 		73CB4DA516D9297500DED45D /* externalpotential.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = externalpotential.h; sourceTree = "<group>"; };
@@ -1291,6 +1293,7 @@
 				73011C5A1423E30100509B7B /* io.h */,
 				8B6B1C7A1797F2B700FDF9F4 /* json.h */,
 				73011C5B1423E30100509B7B /* mcloop.h */,
+				738D689D1A48198300CC9BCA /* molecule.h */,
 				73011C5C1423E30100509B7B /* move.h */,
 				7316FA2F15C546B20024F084 /* mpi.h */,
 				8BB0BCB0170B2CF300467E2D /* multipole.h */,
@@ -1647,6 +1650,7 @@
 				730472A316B72E1300A191AE /* SuperLUSupport.h in Headers */,
 				730472A416B72E1300A191AE /* JacobiSVD.h in Headers */,
 				730472A516B72E1300A191AE /* JacobiSVD_MKL.h in Headers */,
+				738D689E1A48198300CC9BCA /* molecule.h in Headers */,
 				730472A616B72E1300A191AE /* UpperBidiagonalization.h in Headers */,
 				730472A716B72E1300A191AE /* UmfPackSupport.h in Headers */,
 				73CB4DA616D9297500DED45D /* externalpotential.h in Headers */,

@@ -13,6 +13,7 @@ set(hdrs
   ${CMAKE_SOURCE_DIR}/include/faunus/geometry.h
   ${CMAKE_SOURCE_DIR}/include/faunus/energy.h
   ${CMAKE_SOURCE_DIR}/include/faunus/species.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/molecule.h
   ${CMAKE_SOURCE_DIR}/include/faunus/mcloop.h
   ${CMAKE_SOURCE_DIR}/include/faunus/auxiliary.h
   ${CMAKE_SOURCE_DIR}/include/faunus/physconst.h

@@ -1,12 +1,6 @@
-# Generated on Nov 29 2014 16:35:41 using 4.9.1 20140903 (prerelease)
-energyAverage                      0                   
-gc_particle_acceptance             35.83               
-gcmol_Cl_average                   5.70542             
-gcmol_I_average                    5.72938             
-gcmol_K_average                    5.72938             
-gcmol_Mg_average                   6.0393              
-gcmol_Na_average                   5.70542             
-gcmol_acceptance                   77.673              
-gcmol_polymer2_average             6.12818             
-gcmol_polymer_average              6.00454             
-relativeEnergyDrift                nan                 
+# Generated on Dec 22 2014 15:01:54 using 4.2.1 Compatible Apple LLVM 6.0 (clang-600.0.56)
+energyAverage                      -0.0538922          
+gcmol__acceptance                  83.623              
+gcmol__flux                        0.999999            
+gcmol__mol_triangle_gamma          0.953624            
+relativeEnergyDrift                2.09678e-13         

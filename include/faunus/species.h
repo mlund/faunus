@@ -130,7 +130,7 @@ namespace Faunus {
      * @param file Filename
      */
     bool includefile(const string& file) {
-      assert(!jsonsection.empty() && "json section empty");
+      assert( !jsonsection.empty() && "json section empty" );
       jsonfile=file;
       auto j = json::open(file);
       for (auto &a : json::object(jsonsection, j) ) {

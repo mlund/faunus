@@ -44,7 +44,7 @@ namespace Faunus {
         virtual void _setVolume(double)=0;
         virtual double _getVolume() const=0;
       protected:
-        slump slp;
+        RandomTwister<> slp;
         string name;                                        //!< Name of the geometry
         inline int anint(double x) const {
           return int(x>0. ? x+.5 : x-.5);
@@ -758,6 +758,9 @@ namespace Faunus {
      * @param str Component(s) of the c-o-m to be calculated
      *
      * [More info](http://dx.doi.org/10.1080/2151237X.2008.10129266)
+     *
+     * @todo Simplify using Eigen?; directions as template arguments;
+     *       String->char comparison; rename?
      */
     template<class Tgeo, class Tpvec, class TGroup>
       Point trigoCom(const Tgeo &geo, const Tpvec &p, const TGroup &g, string str="Z") {
@@ -811,7 +814,39 @@ namespace Faunus {
         geo.boundary(com);
         return com;
       }
-
+   
+    /* 
+     * @brief Calculate mass center of cluster of particles in unbounded environment 
+     * @warning Untested
+     * 
+     * @param geo Geometry to use
+     * @param p Particle vector
+     * @param g Molecular group
+     * @param dir Direction to loop over: x=0, y=1, z=2. Default: xyz={0,1,2}
+     *
+     * [More info](http://dx.doi.org/10.1080/2151237X.2008.10129266)
+     *
+     * Usage:
+     *
+     *     auto com = unboundCOM( spc.geo, spc.p, g, {0,1,2} ); // xyz
+     *     auto com = unboundCOM( spc.geo, spc.p, g, {2} );     // z only
+     */
+    template<class Tgeo, class Tpvec, class TGroup>
+      Point trigoCOM2(const Tgeo &geo, const Tpvec &p, const TGroup &g, const vector<int> &dir={0,1,2}) {
+        double N = g.size();
+        Point xhi(0,0,0), zeta(0,0,0), theta(0,0,0), com(0,0,0);
+        for (auto k : dir) {
+          for (auto i : g) {
+            theta[k] += p[i][k] / geo.len[k] * 2*pc::pi;
+            zeta[k] += std::sin( theta[k] );
+            xhi[k] += std::cos( theta[k] );
+          }
+          theta[k] = std::atan2( -zeta[k]/N, -xhi[k]/N ) + pc::pi;
+          com[k] = geo.len[k] * theta[k] / (2*pc::pi);
+        }
+        geo.boundary(com);
+        return com;
+      }
   }//namespace Geometry
 }//namespace Faunus
 #endif

@@ -63,7 +63,7 @@ namespace Faunus {
 
   template<class T> T Average<T>::avg() const {
     if (cnt<=0) {
-      std::cerr << "Warning average counter is empty.\n";
+      std::cerr << "Warning average counter is empty." << endl;
       return 0;
     }
     return double(sum)/cnt;

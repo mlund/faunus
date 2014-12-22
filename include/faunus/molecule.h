@@ -256,13 +256,15 @@ namespace Faunus {
    * @brief Vector of molecular combinations
    *
    * When examining a JSON file, individual entries must be placed
-   * in a section called `moleculecombinations`.
+   * in a section called `moleculecombinations`. When loading
+   * from `InputMap` the keyword for the json file is
+   * also `moleculecombinations`.
    */
   template<class Tpvec, class base=PropertyVector< MoleculeCombination<Tpvec> >>
     class MoleculeCombinationMap : public base {
       private:
 
-        MoleculeMap<Tpvec> *molmap;
+        MoleculeMap<Tpvec> *molmap; // typically points to `Space::molecule`
 
         void update() { // convert name (string) -> id (int) using MoleculeMap
           for (auto &i : *this) {
@@ -272,17 +274,18 @@ namespace Faunus {
               if ( it!=molmap->end() )
                 i.molComb.push_back(it->id);
             }
+            assert( i.molName.size() == i.molComb.size() );
+            assert( !i.molName.empty() );
           }
         }
 
       public:
 
-        template<class TInputMap>
-          bool includefile(TInputMap &in) {
-            bool rc = base::includefile( in(base::jsonsection, string("") ) );
-            update();
-            return rc;
-          }
+        bool includefile(InputMap &in) {
+          bool rc = base::includefile( in(base::jsonsection, string("") ) );
+          update();
+          return rc;
+        }
 
         bool includefile(const string& file) {
           bool rc = base::includefile(file);
@@ -294,6 +297,25 @@ namespace Faunus {
           assert( molmap != nullptr);
           base::name = "Molecule Combinations";
           base::jsonsection = "moleculecombinations";
+        }
+
+        string info() {
+          using namespace textio;
+          char w=25;
+          std::ostringstream o;
+          o << header(base::name)
+            << pad(SUB,w,"Number of entries:") << base::size() << endl;
+          if (!base::jsonfile.empty())
+            o << pad(SUB,w,"Input JSON file:") << base::jsonfile << endl;
+          o << indent(SUB) << "Element info:\n";
+          for (auto &i : *this) {
+            o << std::left << setw(w) << "    "+i.name+":";
+            for (auto &n : i.molName)
+              o << setw(10) << n;
+            o << "\n";
+          }
+          o << endl;
+          return o.str();
         }
 
     };

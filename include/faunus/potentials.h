@@ -1048,7 +1048,7 @@ namespace Faunus {
         template<class Tspace>
           void setSpace(Tspace &s) {
             if (std::fabs(z_count)>1e-6) {
-              double N=s.charge() / std::fabs(z_count);
+              double N=netCharge(s.p.begin(), s.p.end()) / std::fabs(z_count);
               double V=s.geo.getVolume();
               double k2=k*k - k2_count; // salt contribution
               k2_count = 4*pc::pi*lB*N/V*std::pow(z_count,2); // counter ion contrib

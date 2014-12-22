@@ -6,38 +6,26 @@
 
 source_tests_dir="`dirname $0`"
 cp -f $source_tests_dir/gcmol.test . 2> /dev/null
+cp -f $source_tests_dir/gcmol.state state 2> /dev/null
 
 #-----------------------------------------------------------
 # Create input file with atom properties
 #-----------------------------------------------------------
 echo '{
   "atomlist" : {
-    "Na" : { "q": 0.0, "activity":0.01, "r":0.0, "dp":0 },
-    "Mg" : { "q": 0.0, "activity":0.01, "r":0.0, "dp":0 },
-    "K"  : { "q": 0.0, "activity":0.01, "r":0.0, "dp":0 },
-    "Cl" : { "q": 0.0, "activity":0.01, "r":0.0, "dp":0 },
-    "F" : { "q": 0.0, "activity":0.01, "r":0.0, "dp":0 }, 
-    "I" : { "q": 0.0, "activity":0.01, "r":0.0, "dp":0 }, 
-    "MM" : { "q": 0.0, "r":0.0, "dp":0 }    // monomer
+    "Na" : { "q": 0.0, "r":0.0, "dp":40.0, "activity":0.01 },
+    "Cl" : { "q": 0.0, "r":0.0, "dp":40.0, "activity":0.01 },
+    "MM" : { "q": 0.0, "r":2.0, "dp":10.0 }
   },
 
-"moleculelist": {
-    "salt": { "atoms": "Na,Cl", "atomic":true},
-    "salt2": { "atoms": "K,I", "atomic":true},
-    "salt3": { "atoms": "Mg, F, F", "atomic":true},
-    "polymer": {"activity": 0.01, "atoms": "MM,MM,MM,MM"},
-    "polymer2": {"activity": 0.01, "atoms": "MM,MM,MM,MM"}
+  "moleculelist": {
+    "salt": { "atoms": "Na Cl", "atomic":true},
+    "triangle": {"activity": 0.01, "atoms": "MM MM MM", "structure":"gcmol-3.aam"},
+    "square"  : {"activity": 0.01, "atoms": "MM MM MM MM", "structure":"gcmol-4.aam"}
   },
 
   "moleculecombinations" : {
-    "polymer"       : {"species" : "polymer", "prob": 0.2},
-    "polymer2"      : {"species" : "polymer2", "prob": 0.2},
-    "salt"          : {"species" : "salt", "prob": 0.2},
-    "salt2"         : {"species" : "salt2", "prob": 0.2},
-    "salt3"         : {"species" : "salt3", "prob": 0.2},
-    "salt2+2xsalt3" : {"species" : "salt2,salt3,salt3", "prob": 0.2},
-    "poly2+salt3"    : {"species" : "polymer,salt3", "prob": 0.2},
-    "poly+poly2"    : {"species" : "polymer,polymer2", "prob": 0.2}
+    "shapemix" : {"molecules" : "triangle", "prob": 1.0}
   }
 }' > gcmol.json
 
@@ -47,32 +35,32 @@ echo '{
 echo "
 atomlist               gcmol.json
 moleculelist           gcmol.json
+moleculecombinations   gcmol.json
 loop_macrosteps        10
-loop_microsteps        10000
+loop_microsteps        500000
 cuboid_len             100     # Box side length Angstrom
 temperature            298     # Kelvin
 epsilon_r              78.7    # Water dielectric const
-polymer_N              2
-polymer_file           gcmol.aam
-polymer_eqdist         0
-polymer_forceconst     0.0  # kT/A^2
-polymer2_N             2
-polymer2_file          gcmol.aam
-polymer2_eqdist        0
-polymer2_forceconst    0.0  # kT/A^2
-test_stable            no
+lj_eps                 0.05    # Lennard-Jones strength (kT)
+test_stable            no 
 test_file              gcmol.test
 " > gcmol.input
 
 #-----------------------------------------------------------
-# Make file with molecule of four atoms
+# Make some molecules...
 #-----------------------------------------------------------
 echo "4
- MM  0   0.00   0.00   0.00    0.0   0  0.0
- MM  1   7.60   0.00   0.00    0.0   0  0.0
- MM  2   0.00   7.60   0.00    0.0   0  0.0
- MM  3   7.60   7.60   0.00    0.0   0  0.0
-" > gcmol.aam
+ MM  0   0.00   0.00   0.00    0.0   1  2.0
+ MM  1   7.60   0.00   0.00    0.0   1  2.0
+ MM  2   0.00   7.60   0.00    0.0   1  2.0
+ MM  3   7.60   7.60   0.00    0.0   1  2.0
+" > gcmol-4.aam
+
+echo "3
+ MM  0   0.00   0.00   0.00    0.0   1  2.0
+ MM  1   7.60   0.00   0.00    0.0   1  2.0
+ MM  2   0.00   7.60   0.00    0.0   1  2.0
+" > gcmol-3.aam
 
 #-----------------------------------------------------------
 # Run simulation

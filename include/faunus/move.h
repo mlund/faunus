@@ -2854,7 +2854,16 @@ namespace Faunus {
         return o.str();
       }
 
-    /** @brief Untested grand canonical class */
+    /**
+     * @brief Grand Canonical Monte Carlo Move
+     *
+     * This is a general class for GCMC that can handle both
+     * atomic and molecular species at constant chemical potential.
+     *
+     * @todo Currently tested only with rigid, molecular species.
+     * @date Brno/Lund 2014
+     * @author Lukas Sukenik and Mikael Lund
+     */
     template<class Tspace, class base=Movebase<Tspace> >
       class GreenGC : public base {
         private:
@@ -2933,7 +2942,7 @@ namespace Faunus {
               if (!spc->molecule[i.first].isAtomic())
                 for (int n=0; n<i.second; n++)       // loop over n number of molecules
                   u += log(( molTrack.size(i.first) + bit ) / V) - spc->molecule[i.first].chemPot;
-            
+
             for ( auto i : atomcnt )                 // loop over atom types
               for (int n=0; n<i.second; n++)         // loop over n number of atoms
                 u += log(( atomTrack.size(i.first) + bit ) / V) - atom[i.first].chemPot;
@@ -2965,9 +2974,9 @@ namespace Faunus {
                     u += pot->g1g2(p.second, g, spc->p, *g2);
                   uinternal += pot->g_internal( p.second, g ); // ...internal mol energy (dummy)
                 }
-                
+
               }
-              
+
               for ( auto i=pmap.begin(); i!=pmap.end(); ++i )  //...between inserted molecules
                 for ( auto j=i; ++j!=pmap.end(); ) {
                   Group gi( 0, i->second.size()-1 );
@@ -2976,7 +2985,7 @@ namespace Faunus {
                   gj.molId = j->first;
                   u += pot->g1g2( i->second, gi, j->second, gj);
                 }
-              
+
               assert( !pmap.empty() );
               base::alternateReturnEnergy = u + uinternal;
               return u + externalEnergy();
@@ -3020,7 +3029,7 @@ namespace Faunus {
             base::alternateReturnEnergy = 0;
             return pc::infty;
           }
-        
+
           void _acceptMove() {
 
             // accept a deletion move
@@ -3032,7 +3041,7 @@ namespace Faunus {
               }
               for ( auto i : atomDel )  // loop over particle index
                 base::spc->erase(i);
-              
+
               atomTrack.update( spc->p );
               return;
             }
@@ -3066,8 +3075,6 @@ namespace Faunus {
           string _info() {
             using namespace textio;
             std::ostringstream o;
-            for ( auto &c : comb )
-              cout << c.name << " " << c.molComb.size() << "\n";
 
             o << pad( SUB,base::w,"Flux (Nins/Ndel)" ) << Ninserted / double(Ndeleted) << "\n";
             o << "\n";
@@ -3083,38 +3090,57 @@ namespace Faunus {
 
             for (auto &m : spc->molecule) {
               if ( m.activity > 1e-6 )
-                o << setw(w+5) << ("  "+m.name) << setw(w) << m.activity
-                  << setw(w) << molTrack.getAvg(m.id)/V/1.0_molar
-                  << setw(w) << m.activity / (molTrack.getAvg(m.id)/V/1.0_molar) << "\n";
+                if ( molTrack.getAvg(m.id).cnt>0 )
+                  o << setw(w+5) << ("  "+m.name) << setw(w) << m.activity
+                    << setw(w) << molTrack.getAvg(m.id)/V/1.0_molar
+                    << setw(w) << m.activity / (molTrack.getAvg(m.id)/V/1.0_molar) << "\n";
             }
 
             o << "\n";
 
             for (auto &m : atom) {
               if ( m.activity > 1e-6 )
-                o << setw(w+5) << ("  "+m.name) << setw(w) << m.activity
-                  << setw(w) << atomTrack.getAvg(m.id)/V/1.0_molar
-                  << setw(w) << m.activity / (atomTrack.getAvg(m.id)/V/1.0_molar) << "\n";
+                if ( atomTrack.getAvg(m.id).cnt>0 )
+                  o << setw(w+5) << ("  "+m.name) << setw(w) << m.activity
+                    << setw(w) << atomTrack.getAvg(m.id)/V/1.0_molar
+                    << setw(w) << m.activity / (atomTrack.getAvg(m.id)/V/1.0_molar) << "\n";
             }
 
             return o.str() + spc->molecule.info() + comb.info();
           }
+        
+          void _test( UnitTest &t ) {
+            double V=spc->geo.getVolume();
+            t( this->prefix + "_flux", Ninserted / double(Ndeleted) );
+            for (auto &m : spc->molecule)
+              if ( m.activity > 1e-6 )
+                if ( molTrack.getAvg(m.id).cnt>0 )
+                  if ( !m.name.empty() )
+                    t( this->prefix + "_mol_" + m.name + "_gamma", m.activity / (molTrack.getAvg(m.id)/V/1.0_molar));
+            for (auto &m : atom)
+              if ( m.activity > 1e-6 )
+                if ( !m.name.empty() )
+                  if ( atomTrack.getAvg(m.id).cnt>0 )
+                    t( this->prefix + "_atom_" + m.name + "_gamma", m.activity / (atomTrack.getAvg(m.id)/V/1.0_molar));
+          }
 
         public:
+        
           /** @brief Constructor -- load combinations, initialize trackers and default inserters */
-
           GreenGC(
               InputMap &in, 
               Energy::Energybase<Tspace> &e,
               Tspace &s,
-                  string pfx="gc_") : base( e, s, pfx ), comb(s.molecule) {
-
+              string pfx="gcmol_") : base( e, s, pfx ), comb(s.molecule) {
+            
             Ninserted = 0;
             Ndeleted  = 0;
             base::title = "GC move";
             base::useAlternateReturnEnergy = true;
             base::runfraction = in.get<double>(pfx+"_runfraction",1.0);
 
+            slp_global.seed(); // attempt non-deterministic random number sequence
+            
             // update tracker with GC molecules and atoms
             for ( auto g : spc->groupList() )
               if ( spc->molecule[g->molId].isAtomic() ) {

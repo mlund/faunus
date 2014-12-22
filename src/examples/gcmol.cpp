@@ -1,63 +1,48 @@
 #include <faunus/faunus.h>
 using namespace Faunus;
 
-typedef Geometry::Cuboid Tgeometry;   // specify geometry - here cube w. periodic boundaries
-typedef Potential::CoulombHS Tpairpot;// particle pair potential: primitive model
-
-typedef Space<Tgeometry,PointParticle> Tspace;
+typedef Space<Geometry::Cuboid,PointParticle> Tspace;
 
 int main() {
-  
-  InputMap mcp("gcmol.input");     // open user input file
-  MCLoop loop(mcp);                   // class for handling mc loops
-  EnergyDrift sys;                    // class for tracking system energy drifts
-  UnitTest test(mcp);
 
-  // Create Space and a Hamiltonian with three terms
-  Tspace spc(mcp);
-  auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp);
+  InputMap mcp( "gcmol.input" );
 
-  //    ADD CONFIGURATIONS FOR POOL INSERTS
-  string file = mcp.get<string>("polymer_file", "");
-  p_vec conf;
-  FormatAAM::load(file,conf);
-  molecule.pushConfiguration("polymer", conf);   // p_vec is one molecule large
-  molecule.pushConfiguration("polymer2",conf);
+  Tspace spc( mcp );
+  spc.load( "state", Tspace::RESIZE );
 
-  // Markov moves and analysis
-  Move::GCMolecular<Tspace> gc(mcp, pot, spc);
+  auto pot = Energy::Nonbonded<Tspace, Potential::CoulombLJ>( mcp );
+  Move::GreenGC<Tspace> gc( mcp, pot, spc );
 
-  sys.init( Energy::systemEnergy(spc,pot,spc.p)  );      // store initial total system energy
+  EnergyDrift sys;
+  sys.init( Energy::systemEnergy( spc,pot,spc.p ) );
 
-  cout << atom.info() << molecule.info() << gc.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
+  cout << atom.info() << pot.info() << spc.info() << textio::header( "MC Simulation Begins!" );
 
-  while ( loop[0] ) {  // Markov chain
+  MCLoop loop( mcp );
+  while ( loop[0] ) {
     while ( loop[1] ) {
-      sys+=gc.move();
+      sys += gc.move();
     }
-    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
     cout << loop.timing();
-  } // end of macro loop
+  }
 
-  sys.test(test);
-  gc.test(test);
+  sys.checkDrift( Energy::systemEnergy( spc,pot,spc.p ) );
+  spc.save("state");
 
-  // print information
-  cout << loop.info() << sys.info() << gc.info() << spc.info() <<test.info() << endl;
+  UnitTest test( mcp );
+  sys.test( test );
+  gc.test( test );
 
-  // clean allocated memory
-  spc.freeGroups();
+  cout << loop.info() << sys.info() << spc.info() << gc.info() << test.info() << endl;
 
   return test.numFailed();
 }
 
 /**
- * @page example_GCMolecular Example: Grand Canonical ensemble
+ * @page example_GCMolecular Example: Grand Canonical Molecules
  *
  * This is a example of Grand Canonical Monte Carlo simulation
- * with the following characteristics:
- * - Polymer insertion/deletion move
- * - Salt insertion/deletion move
+ * of rigid molecules.
  *
  * Run the example directly from the faunus directory:
  *
@@ -65,38 +50,24 @@ int main() {
  *     $ cd src/examples/
  *     $ ./gcmol.run
  *
-*
-* Input
-* =====
-* All listed files including the above C++ and python programs can be found in `src/examples/`
-*
-* gcmol.input    {#gcmol_input}
-* -----------
-* \include gcmol.input
-*
-*
-* gcmol.aam    {#gcmol_aam}
-* -----------
-* configuration of rigid polymer
-* \include gcmol.aam
-*
-*
-* gcmol.json    {#gcmol_json}
-* -----------
-* State atom types
-* \include gcmol.json
-*
-*
-* gcmol.topo    {#gcmol_topo}
-* -----------
-* State molecular types and combinations for grand canonical move
-*
-* \include gcmol.topo
-*
-* * gcmol.cpp    {#gcmol_cpp}
-* -----------
-*
-* \include gcmol.cpp
-*/
+ *
+ * Input
+ * =====
+ * All listed files including the above C++ and python programs can be found in `src/examples/`
+ *
+ * gcmol.input    {#gcmol_input}
+ * -----------
+ * @include gcmol.input
+ *
+ * gcmol.json    {#gcmol_json}
+ * -----------
+ * State atom types
+ * @include gcmol.json
+ *
+ * * gcmol.cpp    {#gcmol_cpp}
+ * -----------
+ *
+ * @include gcmol.cpp
+ */
 
 

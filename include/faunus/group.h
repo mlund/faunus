@@ -377,10 +377,17 @@ namespace Faunus {
    * @param g Range (`Group` or arbitrary container with index)
    * @param Z Starting charge (default: 0)
    */
-  template<class Tpvec, class Tindex>
-    double netCharge(const Tpvec &p, const Tindex &g, double Z=0) {
+  template<class Tparticle, class Talloc, class Tindex>
+    double netCharge(const std::vector<Tparticle,Talloc> &p, const Tindex &g, double Z=0) {
       for (auto i : g)
         Z += p[i].charge;
+      return Z;
+    }
+
+  template<class Titer>
+    double netCharge(const Titer &beg, const Titer &end, double Z=0) {
+      for (auto i=beg; i!=end; i++)
+        Z += i->charge;
       return Z;
     }
 

@@ -1235,7 +1235,7 @@ namespace Faunus {
           }
 
           /** @brief Constrain treated as external potential */
-          double g_external(const p_vec &p, Group &g1) {
+          double g_external(const typename Tspace::ParticleVector &p, Group &g1) FOVERRIDE {
             for (auto m : gmap)              // scan through pair map
               if (m.first.find(&g1)) {       // and look for group g1
                 Group *g2ptr;                // pointer to constrained partner

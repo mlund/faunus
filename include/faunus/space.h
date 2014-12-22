@@ -161,14 +161,11 @@ namespace Faunus {
       protected:
         std::ifstream fin;
       private:
-        bool overlap_container() const;
-        bool overlap() const;
-        bool overlap(const Tparticle&) const;  //!< Check hardspheres overlap with particle
         bool checkSanity();                    //!< Check group length and vector sync
         std::vector<Group*> g;                 //!< Pointers to ALL groups in the system
 
       public:
-        typedef std::vector<Tparticle, Eigen::aligned_allocator<particle> > p_vec;
+        typedef std::vector<Tparticle, Eigen::aligned_allocator<Tparticle> > p_vec;
         typedef p_vec ParticleVector;          //!< Particle vector type
         typedef Tparticle ParticleType;        //!< Particle type
         typedef Tgeometry GeometryType;        //!< Geometry type
@@ -195,10 +192,10 @@ namespace Faunus {
         /** @brief insert p_vec of MolID to end of p and trial */
         Group* insert(PropertyBase::Tid, const p_vec&); // inserts to trial and p
 
-        ///
-        /// \brief insert p_vec of MolID
-        /// \param enlarge - sets whether to enlarge group of MolID, or to add new isMolecular()==true group
-        ///
+        /*
+         * @brief insert p_vec of MolID
+         * @param enlarge - sets whether to enlarge group of MolID, or to add new isMolecular()==true group
+         */
         //Group* insert(const p_vec&, PropertyBase::Tid, bool enlarge=true);
 
         Group insert(const p_vec&, int=-1);
@@ -265,7 +262,7 @@ namespace Faunus {
         rc=false;
       else {
         for (size_t i=0; i<p.size(); i++) {
-          if ( geo.collision(p[i]) ) {
+          if ( geo.collision(p[i], p[i].radius) ) {
             rc=false;
             assert(!"Particle/container collision!");
             break;
@@ -354,11 +351,11 @@ namespace Faunus {
    */
   template<class Tgeometry, class Tparticle>
     bool Space<Tgeometry,Tparticle>::insert(string atomname, int n, keys key) {
-      particle a;
+      Tparticle a;
       a=atom[atomname];
       while (n>0) {
         geo.randompos(a);
-        if (!overlap(a) || key==NOOVERLAP_CHECK) {
+        if ( !Geometry::overlap(geo,p,a) || key==NOOVERLAP_CHECK) {
           insert(a,-1);
           n--;
         }
@@ -431,38 +428,6 @@ namespace Faunus {
         }
         assert(cnt==p.size() && "Particle mismatch while erasing a group!");
         return true;
-      }
-      return false;
-    }
-
-  template<class Tgeometry, class Tparticle>
-    bool Space<Tgeometry,Tparticle>::overlap_container() const {
-      for (auto &i : p)
-        if (geo.collision(i))
-          return true;
-      return false;
-    }
-
-  template<class Tgeometry, class Tparticle>
-    bool Space<Tgeometry,Tparticle>::overlap() const {
-      for (auto &i : p)
-        if (geo.collision(i))
-          return true;
-      for (auto i=p.begin(); i!=p.end()-1; ++i)
-        for (auto j=i+1; j!=p.end(); ++j) {
-          double s=i->radius + j->radius;
-          if (geo.sqdist(*i,*j)<s*s)
-            return true;
-        }
-      return false;
-    }
-
-  template<class Tgeometry, class Tparticle>
-    bool Space<Tgeometry,Tparticle>::overlap(const Tparticle &a) const {
-      for (auto &p_i : p) {
-        double contact = a.radius + p_i.radius;
-        if (geo.sqdist(a,p_i) < contact*contact)
-          return true;
       }
       return false;
     }
@@ -544,14 +509,14 @@ namespace Faunus {
               cout << indent(SUB) << "Read " << n << " group(s)." << endl;
               return true;
             } else {
-              cout << "FAILED! (space groups do not match).\n";
+              std::cerr << "FAILED! (space groups do not match)." << endl;
               return false;
             }
           }
           return true;
         }
       }
-      cout << "FAILED!\n";
+      std::cerr << "FAILED!" << endl;
       return false;
     }
 
@@ -681,13 +646,13 @@ namespace Faunus {
       return nullptr;
     }
 
-  /**
+  /*
    * This will insert a particle vector into the current space at the end of its group.
    *
-   * @param pin Particle vector to insert
-   * @param molId Id of molecule
-   * @param enlarge bool
-   * @return new Group
+   * param pin Particle vector to insert
+   * param molId Id of molecule
+   * param enlarge bool
+   * return new Group
    */
   /*
      template<class Tgeometry, class Tparticle>

@@ -1063,11 +1063,11 @@ namespace Faunus {
            */
           template<class Tpvec>
             void add(const Tpvec &p) {
-              std::set<particle::Tid> ids;
+              std::set<typename Tparticle::Tid> ids;
               for (auto &i : p)
                 ids.insert(i.id);
               for (auto i : ids) {
-                particle a;
+                Tparticle a;
                 a=atom[i];
                 add(a);
               }

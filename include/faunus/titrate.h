@@ -41,10 +41,12 @@ namespace Faunus {
      */
     class EquilibriumController {
       private:
+        typedef int Tid;                 //!< Particle type id
         bool includeJSON(const string&); //!< Read equilibrium processes
       public:
         class processdata {
           public:
+            typedef int Tid;             //!< Particle type id
             double mu_AX;                //!< chemical potential of AX
             double mu_A;                 //!< chemical potential of A
             double mu_X;                 //!< chemical potential of X (this is the titrant)
@@ -52,11 +54,11 @@ namespace Faunus {
             int cnt;                     //!< number of sites for this process
 
           public:
-            particle::Tid id_AX, id_A;   //!< Particle id's for AX and A
+            Tid id_AX, id_A;   //!< Particle id's for AX and A
 
-            bool one_of_us(const particle::Tid&);//!< Does the particle belong to this process?
+            bool one_of_us(const Tid&);//!< Does the particle belong to this process?
 
-            double energy(const particle::Tid&); //!< Returns intrinsic energy of particle id
+            double energy(const Tid&); //!< Returns intrinsic energy of particle id
 
             template<class Tparticle>
               double swap(Tparticle&);   //!< Swap AX<->A and return intrinsic energy change
@@ -78,7 +80,7 @@ namespace Faunus {
         template<class Tpvec>
           void findSites(const Tpvec&);            //!< Locate all titratable sites
 
-        double intrinsicEnergy(const particle::Tid&);    //!< Intrinsic energy of particle id (kT)
+        double intrinsicEnergy(const Tid&);    //!< Intrinsic energy of particle id (kT)
         string info(char=25);                      //!< Get information string
 
         template<class Tpvec>
@@ -119,7 +121,7 @@ namespace Faunus {
     /**
      * Returns `true` if the particle either matches AX or A.
      */
-    bool EquilibriumController::processdata::one_of_us(const particle::Tid &id) {
+    bool EquilibriumController::processdata::one_of_us(const Tid &id) {
       if (id==id_AX || id==id_A)
         return true;
       return false;
@@ -130,7 +132,7 @@ namespace Faunus {
      * means the energy stemming from the equilibrium expression when
      * no external interactions are accounted for (activity factors unity).
      */
-    double EquilibriumController::processdata::energy(const particle::Tid &id) {
+    double EquilibriumController::processdata::energy(const Tid &id) {
       if (id==id_AX) return mu_AX;
       if (id==id_A)  return mu_A;
       return 0;
@@ -202,7 +204,7 @@ namespace Faunus {
       if (file.substr(file.find_last_of(".") + 1) == "json") {
         includeJSON(file);
         // update reference states
-        particle::Tid i_AX,i_A, j_AX, j_A;
+        Tid i_AX,i_A, j_AX, j_A;
         if (!process.empty())
           for (size_t i=0; i<process.size()-1; i++) {
             for (size_t j=i+1; j<process.size(); j++) {
@@ -247,7 +249,7 @@ namespace Faunus {
      * and the current state of the site. Explicit interactions with the surroundings
      * are not included.
      */
-    double EquilibriumController::intrinsicEnergy(const particle::Tid &id) {
+    double EquilibriumController::intrinsicEnergy(const Tid &id) {
       for (auto &p : process)
         if ( p.one_of_us(id) )
           return p.energy(id);
@@ -351,7 +353,7 @@ namespace Faunus {
           string _info() { return eq.info(); }
 
         protected:
-          std::map<particle::Tid, double> energymap;//!< Intrinsic site energy
+          std::map<int, double> energymap;//!< Intrinsic site energy
 
         public:
           EquilibriumController eq;
@@ -476,10 +478,10 @@ namespace Faunus {
 
     template<class Tspace>
       double SwapMove<Tspace>::_energyChange() {
-        assert( spc->geo.collision(this->spc->p[ipart])==false
+        assert( spc->geo.collision( spc->p[ipart], spc->p[ipart].radius )==false
             && "Accepted particle collides with container");
 
-        if (spc->geo.collision(spc->trial[ipart]))  // trial<->container collision?
+        if (spc->geo.collision(spc->trial[ipart], spc->trial[ipart].radius))  // trial<->container collision?
           return pc::infty;
         double uold = pot->external(spc->p) + pot->i_total(spc->p,ipart);
         double unew = pot->external(spc->trial) + pot->i_total(spc->trial,ipart);

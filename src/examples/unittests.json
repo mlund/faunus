@@ -1,0 +1,16 @@
+{
+  "atomlist" : {
+    "Na" : { "q": 0.0, "r":0.0, "dp":40.0, "activity":0.01 },
+    "Cl" : { "q": 0.0, "r":0.0, "dp":40.0, "activity":0.01 },
+    "MM" : { "q": 0.0, "r":2.0, "dp":10.0 }
+  },
+
+  "moleculelist": {
+    "salt": { "atoms": "Na Cl", "atomic":true},
+    "square"  : {"activity": 0.01, "atoms": "MM MM MM MM", "structure":"unittests.aam"}
+  },
+
+  "moleculecombinations" : {
+    "shapemix" : {"molecules" : "triangle", "prob": 1.0}
+  }
+}

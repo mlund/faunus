@@ -69,17 +69,6 @@ namespace Faunus {
   class DipoleParticle;
   class CigarParticle;
 
-#if defined(CIGARPARTICLE)
-  typedef CigarParticle particle;
-#elif defined(DIPOLEPARTICLE)
-  typedef DipoleParticle particle;
-#else
-  typedef PointParticle particle;
-#endif
-
-  // to be removed:
-  typedef std::vector< particle, Eigen::aligned_allocator<particle> > p_vec;
-
   // FUNCTORS
   typedef std::function<double()> RandFunctor;
 

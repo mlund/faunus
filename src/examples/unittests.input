@@ -1,0 +1,9 @@
+atomlist      unittests.json
+moleculelist  unittests.json
+cuboid_len    1000    
+temperature   298     
+epsilon_r     78.7    
+tion1         Na      
+tion2         Cl      
+nion1         10      
+nion2         10      

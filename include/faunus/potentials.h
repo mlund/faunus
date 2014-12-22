@@ -130,12 +130,12 @@ namespace Faunus {
      * save(pot, atom["Na"].id, atom["Cl"].id, "mytable.dat");
      * ~~~~
      */
-    template<class Tpairpot, class Tid>
+    template<class Tparticle=PointParticle, class Tpairpot, class Tid>
       bool save(Tpairpot pot, Tid ida, Tid idb, string file) {
         std::ofstream f(file.c_str());
         if (f) {
           double min=atom[ida].radius+atom[idb].radius;
-          particle a,b;
+          Tparticle a,b;
           a = atom[ida];
           b = atom[idb];
           f << "# Pair potential: " << pot.brief() << endl
@@ -492,11 +492,11 @@ namespace Faunus {
            * @param j Particle id of second particle
            * @param eps_kT epsilon in units of kT
            */
-          void customEpsilon(particle::Tid i, particle::Tid j, double eps_kT) {
+          void customEpsilon(int i, int j, double eps_kT) {
             eps.set(i,j,4*eps_kT);
           }
 
-          void customSigma(particle::Tid i, particle::Tid j, double sigma) {
+          void customSigma(int i, int j, double sigma) {
             s2.set(i,j,sigma*sigma);
           }
 
@@ -1341,7 +1341,7 @@ namespace Faunus {
             struct ForceFunctionObject {
               Tpairpot pot;
               ForceFunctionObject(const Tpairpot &p) : pot(p) {}
-              Point operator()(const particle &a, const particle &b, double r2, const Point &r) {
+              Point operator()(const Tparticle &a, const Tparticle &b, double r2, const Point &r) {
                 return pot.force(a,b,r2,r);
               }
             };

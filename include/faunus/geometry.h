@@ -58,7 +58,7 @@ namespace Faunus {
         bool save(string);                                  //!< Save geometry state to disk
         bool load(string,bool=false);                       //!< Load geometry state from disk
 
-        virtual bool collision(const particle&, collisiontype=BOUNDARY) const=0;//!< Check for collision with boundaries, forbidden zones, matter,..
+        virtual bool collision(const Point&, double, collisiontype=BOUNDARY) const=0;//!< Check for collision with boundaries, forbidden zones, matter,..
         virtual void randompos(Point &)=0;              //!< Random point within container
         virtual void boundary(Point &) const=0;             //!< Apply boundary conditions to a point
         virtual void scale(Point&, Point &, const double, const double) const;  //!< Scale point
@@ -86,7 +86,7 @@ namespace Faunus {
         Sphere(InputMap&, string="sphere");     //!< Construct from InputMap key \c prefix_radius
         void randompos(Point &);
         void boundary(Point &p) const {};
-        bool collision(const particle &, collisiontype=BOUNDARY) const;
+        bool collision(const Point&, double, collisiontype=BOUNDARY) const;
         inline double sqdist(const Point &a, const Point &b) const {
           return (a-b).squaredNorm();
         }
@@ -121,7 +121,7 @@ namespace Faunus {
         void randompos(Point&);      
         bool save(string);           
         bool load(string,bool=false);
-        inline bool collision(const particle &a, collisiontype type=BOUNDARY) const {
+        inline bool collision(const Point &a, double radius, collisiontype type=BOUNDARY) const {
           if (std::abs(a.x())>len_half.x()) return true;
           if (std::abs(a.y())>len_half.y()) return true;
           if (std::abs(a.z())>len_half.z()) return true;
@@ -237,7 +237,7 @@ namespace Faunus {
         bool setlen(const Point&);     //!< Set length via vector (dummy function)
         void randompos(Point &);
         void boundary(Point &) const;
-        bool collision(const particle&, collisiontype=BOUNDARY) const;
+        bool collision(const Point&, double, collisiontype=BOUNDARY) const;
         inline double sqdist(const Point &a, const Point &b) const {
           return (a-b).squaredNorm();
         }
@@ -273,43 +273,6 @@ namespace Faunus {
           return r;
         }
     };
-
-#ifdef HYPERSPHERE
-    /*  \brief HyperSphere simulation container
-     *  \author Martin Trulsson
-     *  \date Lund, 2009
-     */
-    class hyperSphere : public Sphere {
-      private:
-        const double pi;
-        string _info(char);
-      public:
-        hyperSphere(InputMap&);
-        void randompos(Point&);
-        bool collision(const particle&, collisiontype=BOUNDARY) const;
-
-        // dist() is not virtual...
-        double dist(const Point &a, const Point &b) {
-          return r*a.geodesic(b);
-        }
-
-        inline double sqdist(const Point &a, const Point &b) const FOVERRIDE {
-          return pow(dist(a,b),2);
-        }
-
-        bool overlap(const particle &a) {
-          for (int i=0; i<p.size(); i++)
-            if (hyperoverlap(a,p[i])==true)
-              return true;
-          return false;
-        }
-
-        inline bool hyperoverlap(const particle &a, const particle &b) {
-          return (r*a.geodesic(b)<a.radius+b.radius);
-        }
-    };
-
-#endif
 
     /**
      * @brief Calculate center of cluster of particles
@@ -523,10 +486,10 @@ namespace Faunus {
         Tpvec operator() (Tgeo &geo, const Tpvec &p, const typename Tspace::MoleculeType &mol) FOVERRIDE {
           Tpvec v;
           if (mol.isAtomic()) {
-            
+
             int _i=0;
             v.resize( mol.atoms.size(), typename Tspace::ParticleType());
-           
+
             for (auto &aType: mol.atoms) { // for each atom type of molecule
               v[_i] = atom[aType];   // set part type
               Geometry::QuaternionRotate rot;
@@ -537,7 +500,7 @@ namespace Faunus {
               geo.randompos( v[_i] );
               _i++;
             }
-            
+
           } else {
             v = mol.getRandomConformation();
             Point a,b;
@@ -553,7 +516,7 @@ namespace Faunus {
               geo.boundary(i);                 // ...and obey boundaries
             }
           }
-          
+
           assert(!v.empty());
           return v;
         }
@@ -578,7 +541,7 @@ namespace Faunus {
 
           bool containerOverlap(const Tgeo &geo, const Tpvec &p) const {
             for (auto &i : p)
-              if (geo.collision(i)) return true;
+              if (geo.collision(i, i.radius)) return true;
             return false;
           }
 
@@ -626,7 +589,7 @@ namespace Faunus {
           bool containerOverlap(const Tgeometry &geo, const Tpvec &p) const {
             if (allowContainerOverlap==false)
               for (auto &i : p)
-                if (geo.collision(i)) return true;
+                if (geo.collision(i, i.radius)) return true;
             return false;
           }
 
@@ -725,6 +688,22 @@ namespace Faunus {
         return hit/double(cnt) * pow(L,3);
       }
 
+    /** @brief Check for hard-core overlap between two particles (true if overlap) */
+    template<typename Tgeometry, typename Tparticle>
+      bool overlap(const Tgeometry &geo, const Tparticle &a, const Tparticle &b) {
+        auto dmin = a.radius+b.radius;
+        return ( geo.sqdist(a,b) < dmin*dmin) ? true : false;
+      }
+
+    /** @brief Check for hard-core overlap between a vector of particles and a particle (true if overlap) */
+    template<typename Tgeometry, typename Tparticle, typename Talloc>
+      bool overlap(const Tgeometry &geo, const std::vector<Tparticle,Talloc> &p, const Tparticle &j) {
+        for (auto &i : p)
+          if (overlap(geo,i,j))
+            return true;
+        return false;
+      }
+
     /**
      * @brief Calculates the gyration tensor of a molecular group
      *
@@ -749,72 +728,6 @@ namespace Faunus {
         return S*(1/g.size());
       }
 
-    /** 
-     * @brief Calculate mass center of cluster of particles in unbounded environment 
-     * 
-     * @param geo Geometry to use
-     * @param p Particle vector
-     * @param g Molecular group
-     * @param str Component(s) of the c-o-m to be calculated
-     *
-     * [More info](http://dx.doi.org/10.1080/2151237X.2008.10129266)
-     *
-     * @todo Simplify using Eigen?; directions as template arguments;
-     *       String->char comparison; rename?
-     */
-    template<class Tgeo, class Tpvec, class TGroup>
-      Point trigoCom(const Tgeo &geo, const Tpvec &p, const TGroup &g, string str="Z") {
-        double N = g.size(),
-               lx = geo.len.x(), xhi_x=0, zeta_x=0, theta_x=0, com_x=0,
-               ly = geo.len.y(), xhi_y=0, zeta_y=0, theta_y=0, com_y=0,
-               lz = geo.len.z(), xhi_z=0, zeta_z=0, theta_z=0, com_z=0;
-        if (str=="Z") {
-          for (auto i : g) {
-            theta_z = p[i].z()/lz*2*pc::pi;
-            xhi_z += std::cos(theta_z);
-            zeta_z += std::sin(theta_z);
-          }
-          theta_z = std::atan2(-zeta_z/N,-xhi_z/N) + pc::pi;
-          com_z = lz*theta_z/2/pc::pi;
-        }
-        if (str=="XY") {
-          for (auto i : g) {
-            theta_x = p[i].x()/lx*2*pc::pi;
-            xhi_x += std::cos(theta_x);
-            zeta_x += std::sin(theta_x);
-            theta_y = p[i].y()/ly*2*pc::pi;
-            xhi_y += std::cos(theta_y);
-            zeta_y += std::sin(theta_y);
-          }
-          theta_x = std::atan2(-zeta_x/N,-xhi_x/N) + pc::pi;
-          theta_y = std::atan2(-zeta_y/N,-xhi_y/N) + pc::pi;
-          com_x = lx*theta_x/2/pc::pi;
-          com_y = ly*theta_y/2/pc::pi;
-        }
-        if (str=="XYZ") {
-          for (auto i : g) {
-            theta_x = p[i].x()/lx*2*pc::pi;
-            xhi_x += std::cos(theta_x);
-            zeta_x += std::sin(theta_x);
-            theta_y = p[i].y()/ly*2*pc::pi;
-            xhi_y += std::cos(theta_y);
-            zeta_y += std::sin(theta_y);
-            theta_z = p[i].z()/lz*2*pc::pi;
-            xhi_z += std::cos(theta_z);
-            zeta_z += std::sin(theta_z);
-          }
-          theta_x = std::atan2(-zeta_x/N,-xhi_x/N) + pc::pi;
-          theta_y = std::atan2(-zeta_y/N,-xhi_y/N) + pc::pi;
-          theta_z = std::atan2(-zeta_z/N,-xhi_z/N) + pc::pi;
-          com_x = lx*theta_x/2/pc::pi;
-          com_y = ly*theta_y/2/pc::pi;
-          com_z = lz*theta_z/2/pc::pi;
-        }
-        Point com = Point(com_x,com_y,com_z);
-        geo.boundary(com);
-        return com;
-      }
-   
     /* 
      * @brief Calculate mass center of cluster of particles in unbounded environment 
      * @warning Untested
@@ -822,22 +735,26 @@ namespace Faunus {
      * @param geo Geometry to use
      * @param p Particle vector
      * @param g Molecular group
-     * @param dir Direction to loop over: x=0, y=1, z=2. Default: xyz={0,1,2}
+     * @param dir Directions to loop over: x=0, y=1, z=2. Default: xyz={0,1,2}
      *
      * [More info](http://dx.doi.org/10.1080/2151237X.2008.10129266)
      *
-     * Usage:
+     * Example:
      *
-     *     auto com = unboundCOM( spc.geo, spc.p, g, {0,1,2} ); // xyz
-     *     auto com = unboundCOM( spc.geo, spc.p, g, {2} );     // z only
+     *     auto com = trigoCom( spc.geo, spc.p, g, {0,1,2} ); // xyz
+     *     auto com = trigoCom( spc.geo, spc.p, g, {2} );     // z only
+     *
+     * @todo Rename?
      */
     template<class Tgeo, class Tpvec, class TGroup>
-      Point trigoCOM2(const Tgeo &geo, const Tpvec &p, const TGroup &g, const vector<int> &dir={0,1,2}) {
+      Point trigoCom(const Tgeo &geo, const Tpvec &p, const TGroup &g, const vector<int> &dir={0,1,2}) {
+        assert( !dir.empty() && dir.size()<=3 );
         double N = g.size();
         Point xhi(0,0,0), zeta(0,0,0), theta(0,0,0), com(0,0,0);
         for (auto k : dir) {
+          double q = 2*pc::pi / geo.len[k];
           for (auto i : g) {
-            theta[k] += p[i][k] / geo.len[k] * 2*pc::pi;
+            theta[k] += p[i][k] * q;
             zeta[k] += std::sin( theta[k] );
             xhi[k] += std::cos( theta[k] );
           }

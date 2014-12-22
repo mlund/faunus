@@ -12,7 +12,7 @@ namespace Faunus {
    * Values can be read from a JSON object with the following format:
    *
    * ~~~~
-   * "salt": { "atoms" : "Na,Cl", "init":"RANDOM" },
+   * "salt": { "atoms" : "Na Cl", "init":"RANDOM" },
    * "polymer": { "activity" : 0.05, "atoms" : "MM MM MM MM" }
    * ~~~~
    *
@@ -48,7 +48,7 @@ namespace Faunus {
         }
 
         /** @brief Get a random conformation */
-        p_vec getRandomConformation() const {
+        Tpvec getRandomConformation() const {
           assert(!conformations.empty());
           return conformations[slp_global.range(0, conformations.size()-1) ];
         }
@@ -78,7 +78,7 @@ namespace Faunus {
           // read conformation from disk
           string structure = json::value<string>( molecule.second, "structure", "" );
           if ( !structure.empty() ) {
-            p_vec v;
+            Tpvec v;
             if ( FormatAAM::load( structure, v ) ) {
               if ( !v.empty() ) {
                 conformations.push_back( v ); // add conformation

@@ -1160,7 +1160,7 @@ namespace Faunus {
      *
      * All pair-potentials are tabulated in constructor
      */
-    template<typename Tpairpot, typename Ttabulator=Tabulate::Andrea<double> >
+    template<typename Tpairpot, typename Ttabulator=Tabulate::Andrea<double>, typename Tparticle=PointParticle>
       class PotentialTabulateVec : public Tpairpot {
         private:
           Ttabulator tab;
@@ -1185,7 +1185,7 @@ namespace Faunus {
             atomlistsize = atom.size();
             for (auto &i : atom) {
               for (auto &j : atom) {
-                particle a,b;
+                Tparticle a,b;
                 a = i;
                 b = j;
                 std::function<double(double)> func = [=](double r2) {return Tpairpot(*this)(a,b,r2);};
@@ -1215,10 +1215,9 @@ namespace Faunus {
             }
           }
 
-          template<class Tparticle>
-            double operator()(const Tparticle &a, const Tparticle &b, double r2) {
-              return tab.eval(vtab[a.id*atomlistsize+b.id], r2);
-            }
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+            return tab.eval(vtab[a.id*atomlistsize+b.id], r2);
+          }
       };
 
     /**
@@ -1228,7 +1227,7 @@ namespace Faunus {
      * `add()` function, the `Tdefault` pair potential is used.
      * If the pair is found then a tabulation will be used.
      */
-    template<typename Tdefault, typename Ttabulator=Tabulate::Andrea<double> >
+    template<typename Tdefault, typename Ttabulator=Tabulate::Andrea<double>, typename Tparticle=PointParticle >
       class PotentialMapTabulated : public PotentialMap<Tdefault> {
         private:
           typedef opair<int> Tpair;
@@ -1255,22 +1254,21 @@ namespace Faunus {
             print = in.get<int>("tab_print",0);
           }
 
-          template<class Tparticle>
-            double operator()(const Tparticle &a, const Tparticle &b, double r2) {
-              auto ab = Tpair(a.id,b.id);
-              auto it=mtab.find(ab);
-              if (it!=mtab.end()) {
-                if (r2<it->second.rmax2)
-                  if (r2>it->second.rmin2) 
-                    return tab.eval(it->second, r2);
-                return base::m[ab](a,b,r2); // fall back to original
-              }
-              return Tdefault::operator()(a,b,r2); // fall back to default
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+            auto ab = Tpair(a.id,b.id);
+            auto it=mtab.find(ab);
+            if (it!=mtab.end()) {
+              if (r2<it->second.rmax2)
+                if (r2>it->second.rmin2)
+                  return tab.eval(it->second, r2);
+              return base::m[ab](a,b,r2); // fall back to original
             }
+            return Tdefault::operator()(a,b,r2); // fall back to default
+          }
 
           template<class Tpairpot>
             void add(AtomData::Tid id1, AtomData::Tid id2, Tpairpot pot) {
-              particle a,b;
+              Tparticle a,b;
               a = atom[id1];
               b = atom[id2];
               base::add(a.id,b.id,pot);
@@ -1299,7 +1297,7 @@ namespace Faunus {
               auto ab = Tpair(i.first.first,i.first.second);
               auto it=mtab.find(ab);
 
-              particle a,b;
+              Tparticle a,b;
               a = atom[i.first.first];
               b = atom[i.first.second];
 
@@ -1328,7 +1326,7 @@ namespace Faunus {
      * `add()` function, the pairpotential will use generate_empty().
      * Recommended for the user to specify all pairs in `add()`
      */
-    template<typename Tdefault, typename Ttabulator=Tabulate::Andrea<double> >
+    template<typename Tdefault, typename Ttabulator=Tabulate::Andrea<double>, typename Tparticle=PointParticle >
       class PotentialVecTabulated : public PotentialMap<Tdefault> {
         private:
           typedef opair<int> Tpair;
@@ -1354,14 +1352,13 @@ namespace Faunus {
                 in.get<double>("tab_fmaxtol", -1));
           }
 
-          template<class Tparticle>
-            double operator()(const Tparticle &a, const Tparticle &b, double r2) {
-              return tab.eval(vtab[a.id*atomlistsize+b.id], r2);
-            }
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+            return tab.eval(vtab[a.id*atomlistsize+b.id], r2);
+          }
 
           template<class Tpairpot>
             void add(int id1, int id2, Tpairpot pot) {
-              particle a,b;
+              Tparticle a,b;
               a = atom[id1];
               b = atom[id2];
               base::add(a.id,b.id,pot);
@@ -1386,7 +1383,7 @@ namespace Faunus {
           void print_tabulation(int n=1000) {
             for (auto &i : atom) {
               for (auto &j : atom) {
-                particle a,b;
+                Tparticle a,b;
                 a = i;
                 b = j;
                 if (vtab[a.id*atomlistsize+b.id].r2.size() > 2) {

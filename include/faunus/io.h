@@ -426,32 +426,39 @@ namespace Faunus {
     private:
       std::vector<string> v;
 
-      inline particle s2p(const string &s) {
-        std::stringstream o;
-        string name;
-        double x,y,z;
-        o << s.substr(10,5) << s.substr(20,8) << s.substr(28,8) << s.substr(36,8);
-        o >> name >> x >> y >> z;
-        particle p;
-        p=atom[name]; 
-        return 10*p; //nm->angstrom
-      }
+      template<class Tparticle>
+        inline void s2p(const string &s, Tparticle &dst) {
+          std::stringstream o;
+          string name;
+          o << s.substr(10,5) << s.substr(20,8) << s.substr(28,8) << s.substr(36,8);
+          o >> name >> dst.x >> dst.y >> dst.z;
+          dst=atom[name];
+          return 10*dst; //nm->angstrom
+        }
 
     public:
       double len;            //!< Box side length (cubic so far)
-      p_vec p;
 
-      inline bool load(const string &file) {
-        p.clear();
-        v.resize(0);
-        if (IO::readFile(file,v)==true) {
-          int last=atoi(v[1].c_str())+1;
-          for (int i=2; i<=last; i++)
-            p.push_back( s2p(v[i]) );
-          return true;
+      /**
+       * @brief Load GRO file into particle vector
+       * @param file Filename
+       * @param p Destination particle vector
+       */
+      template<class Tparticle, class Talloc>
+        bool load(const string &file, std::vector<Tparticle,Talloc> &p) {
+          p.clear();
+          v.resize(0);
+          if (IO::readFile(file,v)==true) {
+            int last=atoi(v[1].c_str())+1;
+            for (int i=2; i<=last; i++) {
+              Tparticle a;
+              s2p( v[i], a );
+              p.push_back( a );
+            }
+            return true;
+          }
+          return false;
         }
-        return false;
-      }
 
       template<class Tparticle, class Talloc>
         bool save(const string &file, std::vector<Tparticle,Talloc> &p, string mode="") {
@@ -702,7 +709,7 @@ namespace Faunus {
           std::ostringstream o;
           o.precision(6);
           o << endl << "[ atomtypes ]" << endl;
-          std::set<particle::Tid> ids; // found particle id's in Space
+          std::set<typename Tspace::ParticleType::Tid> ids; // found particle id's in Space
           for (auto &p : spc.p)
             ids.insert( p.id );
           for (auto i : ids) {
@@ -718,7 +725,7 @@ namespace Faunus {
           if (g.empty() || g.isAtomic())
             return "";
           rescnt++;
-          std::map<particle::Tid, unsigned short> idcnt;
+          std::map<typename Tspace::ParticleType::Tid, unsigned short> idcnt;
           char w=10;
           std::ostringstream o;
           o.precision(6);

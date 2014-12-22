@@ -764,6 +764,7 @@ INPUT                  = doc \
                          src/examples/temper.cpp \
                          src/examples/penalty.cpp \
                          src/examples/polymers.cpp \
+                         src/examples/gcmol.cpp \
                          src/examples/slitpolymer.cpp \
                          src/examples/membrane.cpp \
                          src/examples/water2.cpp \

@@ -165,19 +165,12 @@ TEST_CASE("Math", "Checks mathematical functions")
 
 TEST_CASE("Space", "Space tests")
 {
-  std::ofstream js("polar_test.json"), inp("polar_test.input");
-  js << "{ \"atomlist\" : \n { \n "
-  << "\"x\" : {\"q\":0, \"dp\":0, \"dprot\":0}\n"
-  << "} \n }";
-  inp << "cuboid_len 1000\n";
-  js.close();
-  inp.close();
-  
-  ::atom.includefile("polar_test.json");
-  InputMap in("polar_test.input");
-  using namespace Faunus::Potential;
-  typedef Space<Geometry::Cuboid, DipoleParticle> Tspace;
+  ::atom.includefile("unittests.json");
+  InputMap in("unittests.input");
+  typedef Space<Geometry::Cuboid, PointParticle> Tspace;
   Tspace spc(in);
+  //PointParticle a;
+  //spc.insert(a);
 }
 
 TEST_CASE("Geometries", "Geometry tests")

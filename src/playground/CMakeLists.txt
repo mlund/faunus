@@ -1,17 +1,3 @@
-#----- function to add a generic C++ example (CIGARPARTICLES) -----
-function( fau_dipoleexample tname tdir tsrc )
-  add_executable( ${tname} "${tdir}/${tsrc}" )
-  set_source_files_properties( "${tdir}/${tsrc}" PROPERTIES LANGUAGE CXX)
-  set_target_properties(${tname}
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${tdir}/"
-    COMPILE_DEFINITIONS "DIPOLEPARTICLE"
-    EXCLUDE_FROM_ALL TRUE )
-  target_link_libraries(${tname} libdipolefaunus)
-  install (DIRECTORY "${tdir}"
-           DESTINATION "share/faunus/examples"
-           PATTERN ".svn" EXCLUDE)
-endfunction( fau_dipoleexample )
-
 # Bosse's playground
 fau_example(boj-grand "./bosse" grand.cpp)
 
@@ -41,10 +27,6 @@ if(ENABLE_MPI AND MPI_CXX_FOUND)
   fau_example(mlund-rennes "./mlund/rennes" twobody.cpp)
 endif()
 
-if(ENABLE_MPI AND MPI_CXX_FOUND)
-#  fau_example(mpitest "./mlund" mpitest.cpp)
-endif()
-
 # Anil's playground
 fau_example(akurut-manybody "./akurut" manybody.cpp)
 fau_example(akurut-gouychapman "./akurut" gouychapman.cpp)
@@ -56,25 +38,17 @@ fau_example(cedric-polymers "./cedric" polymers.cpp)
 
 # Robert's playground
 fau_example(vacha-gouychapman "./vacha" gouychapman.cpp)
-
 fau_example(vacha-gouychapman-temper "./vacha" gouychapman.cpp)
 set_target_properties( vacha-gouychapman-temper
   PROPERTIES COMPILE_DEFINITIONS "TEMPER")
 
-fau_cigarexample(cigar "./vacha" cigar.cpp)
-set_target_properties( cigar PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
-
-fau_cigarexample(sc-npt "./vacha" sc-npt.cpp)
-set_target_properties( sc-npt PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
-
-fau_cigarexample(psc-nvt "./vacha" psc-nvt.cpp)
-set_target_properties( psc-nvt PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
-
-fau_cigarexample(test2 "./vacha" test2.cpp)
-set_target_properties( psc-nvt PROPERTIES COMPILE_DEFINITIONS "CIGARPARTICLE")
+fau_example(cigar "./vacha" cigar.cpp)
+fau_example(sc-npt "./vacha" sc-npt.cpp)
+fau_example(psc-nvt "./vacha" psc-nvt.cpp)
+fau_example(test2 "./vacha" test2.cpp)
 
 # Stenqvist playground
-fau_dipoleexample(stenqvist-nemo "./stenqvist" nemo.cpp)
+fau_example(stenqvist-nemo "./stenqvist" nemo.cpp)
 set_target_properties(stenqvist-nemo PROPERTIES OUTPUT_NAME "nemo")
 
 # Axels playground
@@ -87,12 +61,8 @@ set_target_properties(axel-tempertest PROPERTIES OUTPUT_NAME "tempertest")
 # Alexei's playground
 fau_example(alexei-hs "./alexei" HS.cpp)
 set_target_properties(alexei-hs PROPERTIES OUTPUT_NAME "HS")
-fau_dipoleexample(alexei_cyl "./alexei" cyl.cpp)
+fau_example(alexei_cyl "./alexei" cyl.cpp)
 set_target_properties(alexei_cyl PROPERTIES OUTPUT_NAME "cyl")
-#fau_dipoleexample(alexei_stockmayer_polarizable "./alexei" stockmayer.cpp)
-#set_target_properties(alexei_stockmayer PROPERTIES OUTPUT_NAME "stockmayer")
-#set_target_properties(alexei_stockmayer_polarizable PROPERTIES OUTPUT_NAME "stockmayer_polarizable")
-#set_target_properties(alexei_stockmayer_polarizable PROPERTIES COMPILE_DEFINITIONS "POLARIZE;DIPOLEPARTICLE")
 
 # Jana's playground
 fau_example(jana-wall "./jana" wall.cpp)

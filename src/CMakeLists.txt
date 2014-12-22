@@ -19,6 +19,7 @@ set(hdrs
   ${CMAKE_SOURCE_DIR}/include/faunus/physconst.h
   ${CMAKE_SOURCE_DIR}/include/faunus/textio.h
   ${CMAKE_SOURCE_DIR}/include/faunus/potentials.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/titrate.h
   )
 set(objs
   geometry potentials slump species analysis)
@@ -100,33 +101,6 @@ set_target_properties(libfaunus PROPERTIES OUTPUT_NAME faunus)
 target_link_libraries(libfaunus xdrfile ${LINKLIBS})
 export(TARGETS xdrfile libfaunus FILE libfaunus.cmake)
 #install(TARGETS libfaunus LIBRARY DESTINATION lib)
-
-# dynamic for cigarparticles
-add_library(libcigarfaunus SHARED ${objs})
-set_target_properties(libcigarfaunus PROPERTIES
-  OUTPUT_NAME cigarfaunus
-  COMPILE_DEFINITIONS "CIGARPARTICLE"
-  EXCLUDE_FROM_ALL TRUE
-  )
-target_link_libraries(libcigarfaunus xdrfile ${LINKLIBS})
-
-# dynamic for dipolar particles
-add_library(libdipolefaunus SHARED ${objs})
-set_target_properties(libdipolefaunus PROPERTIES
-  OUTPUT_NAME dipolefaunus
-  COMPILE_DEFINITIONS "DIPOLEPARTICLE"
-  EXCLUDE_FROM_ALL TRUE
-  )
-target_link_libraries(libdipolefaunus xdrfile ${LINKLIBS})
-
-# dynamic for hypersphere
-add_library(libhyperfaunus SHARED ${objs})
-set_target_properties(libhyperfaunus PROPERTIES
-  OUTPUT_NAME hyperfaunus
-  COMPILE_DEFINITIONS "HYPERSPHERE"
-  EXCLUDE_FROM_ALL TRUE
-  )
-target_link_libraries(libhyperfaunus xdrfile ${LINKLIBS})
 
 #----- header install target -----
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/faunus

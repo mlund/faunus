@@ -130,7 +130,7 @@ namespace Faunus {
       } while ( a.squaredNorm()>r2 );
     }
 
-    bool Sphere::collision(const particle &a, collisiontype type) const {
+    bool Sphere::collision(const Point &a, double radius, collisiontype type) const {
       return (a.squaredNorm()>r2) ? true:false;
     }
 
@@ -307,7 +307,7 @@ namespace Faunus {
       }
     }
 
-    bool Cylinder::collision(const particle &a, collisiontype type) const {
+    bool Cylinder::collision(const Point &a, double radius, collisiontype type) const {
       assert( (_halflen-_len/2)<1e-9 && "Cylinder length initialization problems" );
       if ( a.z()<-_halflen ) return true;
       if ( a.z()>_halflen ) return true;
@@ -334,44 +334,6 @@ namespace Faunus {
       if (std::abs(a.z())>_halflen)
         a.z()-=_len*anint(a.z()/_len);
     }
-
-#ifdef HYPERSPHERE
-    const double hyperSphere::pi=pc::pi;
-
-    hyperSphere::hyperSphere(InputMap &in) : Sphere(in) {
-    }
-
-    bool hyperSphere::collision(const particle &p) const {
-      return false;
-    }
-
-    void hyperSphere::randompos(point &m) {
-      double rho=sqrt(slp.random_one());
-      double omega=slp.random_one()*2.*pi;
-      double fi=slp.random_one()*2.*pi;
-      m.z1=sqrt(1.-rho*rho);
-      m.z2=m.z1*cos(omega);
-      m.z1=m.z1*sin(omega);
-      m.z3=rho*sin(fi);
-      m.z4=rho*cos(fi);
-    }
-
-    string hyperSphere::_info() {
-      std::ostringstream o;
-      o << "#   Shape                = Hyperspherical" << endl
-        << "#   Radius               = " << r << endl;
-      return o.str();
-    }
-
-    /*
-       void hyperSphere::move(int i, double dangle) {
-       double nfi=2.*acos(-1.)*slp.random_one();
-       double nrho=sqrt((slp.random_one()-1.)*sin(dangle)*sin(dangle)+1.);
-       double nomega=(2.*slp.random_one()-1.)*acos(cos(dangle)/nrho);
-       move(trial[i],nrho,nomega,nfi);
-       }
-       */
-#endif
 
   }//namespace geometry
 }//namespace

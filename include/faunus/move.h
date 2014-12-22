@@ -567,10 +567,10 @@ namespace Faunus {
     template<class Tspace>
       double AtomicTranslation<Tspace>::_energyChange() {
         if (iparticle>-1) {
-          assert( spc->geo.collision(spc->p[iparticle])==false
+          assert( spc->geo.collision(spc->p[iparticle], spc->p[iparticle].radius)==false
               && "An untouched particle collides with simulation container.");
           if ( spc->geo.collision(
-                spc->trial[iparticle], Geometry::Geometrybase::BOUNDARY ) )
+                spc->trial[iparticle], spc->trial[iparticle].radius, Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
           return
             (base::pot->i_total(spc->trial, iparticle)
@@ -682,7 +682,7 @@ namespace Faunus {
             << setw(l+7) << bracket("r"+squared)+"/"+angstrom+squared
             << rootof+bracket("r"+squared)+"/"+angstrom << endl;
           for (auto m : base::sqrmap) {
-            particle::Tid id=m.first;
+            typename Tspace::ParticleType::Tid id=m.first;
             o << indent(SUBSUB) << std::left << setw(7) << atom[id].name
               << setw(l-6) << ( (atom[id].dprot<1e-6) ? genericdp : atom[id].dp);
             o.precision(3);
@@ -829,7 +829,7 @@ namespace Faunus {
           return 0;
 
         for (auto i : *igroup)
-          if ( spc->geo.collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
+          if ( spc->geo.collision( spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
 
         double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
@@ -1077,6 +1077,7 @@ namespace Faunus {
       class TranslateRotateCluster : public TranslateRotate<Tspace> {
         protected:
           typedef TranslateRotate<Tspace> base;
+          typedef typename Tspace::ParticleVector Tpvec;
           using base::pot;
           using base::w;
           using base::cnt;
@@ -1094,7 +1095,7 @@ namespace Faunus {
           Average<double> avgsize; //!< Average number of ions in cluster
           Average<double> avgbias; //!< Average bias
           Group* gmobile;          //!< Pointer to group with potential cluster particles
-          virtual double ClusterProbability(p_vec&,int); //!< Probability that particle index belongs to cluster
+          virtual double ClusterProbability(Tpvec&,int); //!< Probability that particle index belongs to cluster
         public:
           using base::spc;
           TranslateRotateCluster(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="transrot");
@@ -1202,7 +1203,7 @@ namespace Faunus {
 
         // container boundary collision?
         for (auto i : imoved)
-          if ( spc->geo.collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
+          if ( spc->geo.collision( spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
 
         // external potential on macromolecule
@@ -1235,7 +1236,7 @@ namespace Faunus {
      * this (virtual) function to arbitrary probability functions.
      */
     template<class Tspace>
-      double TranslateRotateCluster<Tspace>::ClusterProbability(p_vec &p, int i) {
+      double TranslateRotateCluster<Tspace>::ClusterProbability(Tpvec &p, int i) {
         for (auto j : *igroup) // loop over main group
           if (i!=j) {
             double r=threshold+p[i].radius+p[j].radius;
@@ -1266,7 +1267,7 @@ namespace Faunus {
               i->setMassCenter(*base::spc);
           }
           string _info() FOVERRIDE { return base::base::_info(); }
-          double ClusterProbability(p_vec &p, int i) FOVERRIDE { return 1; }
+          double ClusterProbability(typename base::Tpvec &p, int i) FOVERRIDE { return 1; }
         public:
           TranslateRotateGroupCluster(InputMap &in, Energy::Energybase<Tspace> &e,
               Tspace &s, string pfx="transrot") : base(in,e,s,pfx) {
@@ -1531,7 +1532,7 @@ namespace Faunus {
       double CrankShaft<Tspace>::_energyChange() {
         double du=0;
         for (auto i : index)
-          if ( spc->geo.collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
+          if ( spc->geo.collision( spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
         du=pot->g_internal(spc->trial, *gPtr) - pot->g_internal(spc->p, *gPtr);
         for (auto i : index)
@@ -1751,7 +1752,7 @@ namespace Faunus {
     template<class Tspace>
       double Reptation<Tspace>::_energyChange() {
         for (auto i : *gPtr)
-          if ( spc->geo.collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
+          if ( spc->geo.collision( spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
 
         double unew = pot->g_external(spc->trial, *gPtr) + pot->g_internal(spc->trial,*gPtr);
@@ -1962,7 +1963,7 @@ namespace Faunus {
         // cell boundary upon mass center scaling:
         for (auto g : spc->groupList())
           for (auto i : *g)
-            if ( spc->geo.collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
+            if ( spc->geo.collision( spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY ) )
               return pc::infty;
         double unew = _energy(spc->trial);
         return unew-uold;
@@ -2071,19 +2072,21 @@ namespace Faunus {
         public:
           typedef int Tindex; // particle index type
         private:
+          typedef typename Tspace::ParticleType::Tid Tid;
+          typedef typename Tspace::ParticleType Tparticle;
           Tspace* spc;
           class data {
             public:
               vector<Tindex> index;
               Tindex random();                  //!< Pick random particle index
           };
-          std::map<particle::Tid,data> map;
+          std::map<Tid,data> map;
         public:
           AtomTracker(Tspace&);
-          particle::Tid randomAtomType() const; //!< Select a random atomtype from the list
-          bool insert(const particle&, Tindex); //!< Insert particle into Space and track position
+          Tid randomAtomType() const;           //!< Select a random atomtype from the list
+          bool insert(const Tparticle&, Tindex);//!< Insert particle into Space and track position
           bool erase(Tindex);                   //!< Delete particle from Space at specific particle index
-          data& operator[] (particle::Tid);     //!< Access operator to atomtype data
+          data& operator[] (Tid);               //!< Access operator to atomtype data
           void clear();                         //!< Clear all atom lists (does not touch Space)
           bool empty();                         //!< Test if atom list is empty
       };
@@ -2094,9 +2097,9 @@ namespace Faunus {
       }
 
     template<class Tspace>
-      particle::Tid AtomTracker<Tspace>::randomAtomType() const {
+      typename AtomTracker<Tspace>::Tid AtomTracker<Tspace>::randomAtomType() const {
         assert(!map.empty() && "No atom types have been added yet");
-        vector<particle::Tid> vid;
+        vector<Tid> vid;
         vid.reserve( map.size() );
         for (auto &m : map)
           vid.push_back(m.first);
@@ -2119,7 +2122,7 @@ namespace Faunus {
       }
 
     template<class Tspace>
-      typename AtomTracker<Tspace>::data& AtomTracker<Tspace>::operator[](particle::Tid id) {
+      typename AtomTracker<Tspace>::data& AtomTracker<Tspace>::operator[](Tid id) {
         return map[id];
       }
 
@@ -2128,7 +2131,7 @@ namespace Faunus {
      * that all other particles are correctly tracked.
      */
     template<class Tspace>
-      bool AtomTracker<Tspace>::insert(const particle &a, Tindex index) {
+      bool AtomTracker<Tspace>::insert(const Tparticle &a, Tindex index) {
         assert( a.id == spc->p[ map[a.id].index.back() ].id && "Id mismatch");
         spc->insert(a, index); // insert into Space
         for (auto &m : map)    // loop over all maps
@@ -2175,6 +2178,9 @@ namespace Faunus {
       class GrandCanonicalSalt : public Movebase<Tspace> {
         private:
           typedef Movebase<Tspace> base;
+          typedef typename Tspace::ParticleType Tparticle;
+          typedef typename Tspace::ParticleVector Tpvec;
+          typedef typename Tparticle::Tid Tid;
           using base::pot;
           using base::spc;
           using base::w;
@@ -2187,15 +2193,15 @@ namespace Faunus {
 
           AtomTracker<Tspace> tracker;
           struct ionprop {
-            particle p;
+            Tparticle p;
             double chempot;       // chemical potential log(1/A3)
             Average<double> rho;  // average density
           };
-          std::map<particle::Tid,ionprop> map;
-          void randomIonPair(particle::Tid&, particle::Tid&);  // Generate random ion pair
-          p_vec trial_insert;
+          std::map<typename Tparticle::Tid,ionprop> map;
+          void randomIonPair(typename Tparticle::Tid&, typename Tparticle::Tid&);  // Generate random ion pair
+          Tpvec trial_insert;
           vector<int> trial_delete;
-          particle::Tid ida, idb;     // particle id's of current salt pair (a=cation, b=anion)
+          typename Tparticle::Tid ida, idb;     // particle id's of current salt pair (a=cation, b=anion)
 
           Group* saltPtr;  // GC ions *must* be in this group
 
@@ -2241,7 +2247,7 @@ namespace Faunus {
       }
 
     template<class Tspace>
-      void GrandCanonicalSalt<Tspace>::randomIonPair(particle::Tid &id_cation, particle::Tid &id_anion) {
+      void GrandCanonicalSalt<Tspace>::randomIonPair(typename Tparticle::Tid &id_cation, typename Tparticle::Tid &id_anion) {
         do id_anion  = tracker.randomAtomType(); while ( map[id_anion].p.charge>=0);
         do id_cation = tracker.randomAtomType(); while ( map[id_cation].p.charge<=0);
         assert( !tracker[id_anion].index.empty() && "Ion list is empty");
@@ -2368,7 +2374,7 @@ namespace Faunus {
           << setw(s+4) << bracket("c/M") << setw(s+6) << bracket( gamma+pm )
           << setw(s+4) << bracket("N") << "\n";
         for (auto &m : map) {
-          particle::Tid id=m.first;
+          Tid id=m.first;
           o.precision(5);
           o << setw(4) << "" << setw(s) << atom[id].name
             << setw(s) << atom[id].activity << setw(s) << m.second.rho.avg()/pc::Nav/1e-27
@@ -2816,7 +2822,7 @@ namespace Faunus {
       double FlipFlop<Tspace>::_energyChange() {
 
         for (auto i : *igroup)
-          if ( spc->geo.collision( spc->trial[i], Geometry::Geometrybase::BOUNDARY ) )
+          if ( spc->geo.collision( spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
 
         double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);

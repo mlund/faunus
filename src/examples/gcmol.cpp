@@ -55,19 +55,18 @@ int main() {
  * =====
  * All listed files including the above C++ and python programs can be found in `src/examples/`
  *
- * gcmol.input    {#gcmol_input}
+ * gcmol.input
  * -----------
- * @include gcmol.input
+ * \include gcmol.input
  *
- * gcmol.json    {#gcmol_json}
- * -----------
+ * gcmol.json
+ * ----------
  * State atom types
- * @include gcmol.json
+ * \include gcmol.json
  *
- * * gcmol.cpp    {#gcmol_cpp}
- * -----------
- *
- * @include gcmol.cpp
+ * gcmol.cpp
+ * ---------
+ * \include gcmol.cpp
  */
 
 

@@ -117,12 +117,12 @@ int main() {
   cout << atom.info() + spc.info() + pot.info();
 
   MCLoop loop(mcp);                      // class for handling mc loops
-  while ( loop[0]         ) {            // Markov chain 
+  while ( loop[0] ) {                    // Markov chain 
     while ( loop[1] ) {
-      int i=slp_global.range(0,2);
-      int k=lipids.size();
-      decltype(lipids.begin()) it;       // iterator for random lipid
       Group g;
+      decltype(lipids)::iterator it;     // iterator for lipids
+      int k = lipids.size();
+      int i = slp_global.range(0,2);
       switch (i) {
         case 0:
           mv.setGroup(allLipids);
@@ -130,13 +130,13 @@ int main() {
           break;
         case 1:
           while (k-->0) {
-            it = randomElement(lipids.begin(), lipids.end());
+            it = randomElement( lipids.begin(), lipids.end() );
             if (slp_global()>0.5) {
               gmv.setGroup(*it);         // tell what to move
-              sys+=gmv.move();           // translate/rotate polymers
+              sys+=gmv.move();           // lipid translate/rotate
             } else {
               piv.setGroup(*it);         // tell what to move
-              sys+=piv.move();           // translate/rotate polymers
+              sys+=piv.move();           // lipid pivot
             }
           }
           break;
@@ -174,9 +174,8 @@ int main() {
   sys.test(test);
   lipidstruct.test(test);
 
-  // print information
   cout << loop.info() + mv.info() + gmv.info() + iso.info() + piv.info()
-    + lipidstruct.info() + test.info() + sys.info() + virial.info();
+    + lipidstruct.info() + sys.info() + virial.info() + test.info();
 
   return test.numFailed();
 }
@@ -207,6 +206,7 @@ int main() {
   membrane.cpp
   ============
 
-  \includelineno examples/membrane.cpp
-  */
+  @includelineno examples/membrane.cpp
+
+*/
 

@@ -1324,7 +1324,6 @@ namespace Faunus {
      *     PotentialMap<CoulombLJ> pot(...);
      *     pot.add( atom["Na"].id ,atom["CH4"].id, ChargeNonpolar(...) );
      *     pot.add( atom["Cl"].id ,atom["CH4"].id, ChargeNonpolar(...) );
-     *
      */
     template<typename Tdefault, typename Tparticle=PointParticle, typename Tdist=double>
       class PotentialMap : public Tdefault {

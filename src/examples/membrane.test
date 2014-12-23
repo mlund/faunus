@@ -1,10 +1,10 @@
 # Generated on Aug 26 2014 07:29:37 using 4.2.1 Compatible Apple LLVM 5.1 (clang-503.0.40)
 bilayer_area                       1.16585             
-bilayer_order                      0.767603            
+bilayer_order                      0.852092            
 energyAverage                      2672.88             
 mv_particle_acceptance             24.9637             
-npt_MSQDisplacement                12.4828             
-npt_acceptance                     4.83619             
+npt_MSQDisplacement                14.2044             
+npt_acceptance                     4.31433             
 npt_averageSideLength              97.3421             
 pivot_Acceptancelipid              0.478701            
 pivot_acceptance                   47.8701             

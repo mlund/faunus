@@ -297,12 +297,12 @@ namespace Faunus {
 
     template<class Tpvec>
       EquilibriumController::processdata& EquilibriumController::random(const Tpvec &p, int &j) {
-        int i=slp_global.range( 0, sites.size()-1 );// pick random titratable site
-        //int i=slp_global.rand() % sites.size();     // pick random titratable site
+        int i= slump.range( 0, sites.size()-1 );// pick random titratable site
+        //int i=slump.rand() % sites.size();     // pick random titratable site
         j=sites[i];                                 // corresponding particle
         int k;
         do
-          k=slp_global.range( 0, process.size()-1 );// pick random process..
+          k= slump.range( 0, process.size()-1 );// pick random process..
         while (!process[k].one_of_us( p[j].id ));   // ..that involves particle j
         return process[k];
       }
@@ -467,13 +467,13 @@ namespace Faunus {
     template<class Tspace>
       void SwapMove<Tspace>::_trialMove() {
         if (!eqpot->eq.sites.empty()) {
-          int i=slp_global.range( 0, eqpot->eq.sites.size()-1); // pick random site
-          //int i=slp_global.rand() % eqpot->eq.sites.size(); // pick random site
+          int i= slump.range( 0, eqpot->eq.sites.size()-1); // pick random site
+          //int i=slump.rand() % eqpot->eq.sites.size(); // pick random site
           ipart=eqpot->eq.sites.at(i);                      // and corresponding particle
           int k;
           do {
-            k=slp_global.range( 0, eqpot->eq.process.size()-1 );// pick random process..
-            //k=slp_global.rand() % eqpot->eq.process.size(); // pick random process..
+            k= slump.range( 0, eqpot->eq.process.size()-1 );// pick random process..
+            //k=slump.rand() % eqpot->eq.process.size(); // pick random process..
           } while (!eqpot->eq.process[k].one_of_us( this->spc->p[ipart].id )); //that match particle j
           eqpot->eq.process[k].swap( this->spc->trial[ipart] ); // change state and get intrinsic energy change
         }

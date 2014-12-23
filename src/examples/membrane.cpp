@@ -77,9 +77,9 @@ int main() {
     FormatAAM::load(file,v);                    // load AAM structure into v
     Geometry::FindSpace().find(spc.geo,spc.p,v);// find empty spot in particle vector
     Group pol = spc.insert(v);                  // Insert into Space
-    if (slp_global()>0.5)
+    if (slump()>0.5)
       std::swap( spc.p[pol.front()].z(), spc.p[pol.back()].z() );
-    if (slp_global()<mcp("lipid_chargefraction", 0.0))
+    if (slump()<mcp("lipid_chargefraction", 0.0))
       spc.p[ pol.front() ].charge = -1;
     pol.name="lipid";
     lipids[i]=pol;
@@ -122,7 +122,7 @@ int main() {
       Group g;
       decltype(lipids)::iterator it;     // iterator for lipids
       int k = lipids.size();
-      int i = slp_global.range(0,2);
+      int i = slump.range(0,2);
       switch (i) {
         case 0:
           mv.setGroup(allLipids);
@@ -130,8 +130,8 @@ int main() {
           break;
         case 1:
           while (k-->0) {
-            it = randomElement( lipids.begin(), lipids.end() );
-            if (slp_global()>0.5) {
+            it = slump.element( lipids.begin(), lipids.end() );
+            if (slump()>0.5) {
               gmv.setGroup(*it);         // tell what to move
               sys+=gmv.move();           // lipid translate/rotate
             } else {
@@ -144,7 +144,7 @@ int main() {
           sys+=iso.move();
           break;
       }
-      double ran = slp_global();
+      double ran = slump();
       if (ran>0.99) {
         xtc.setbox( spc.geo.len );
         xtc.save("traj.xtc", spc.p);

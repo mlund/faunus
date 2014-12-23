@@ -57,14 +57,14 @@ int main() {
   MCLoop loop(mcp);    // class for handling mc loops
   while ( loop[0] ) {          // Markov chain 
     while ( loop[1] ) {
-      int i=slp_global.range(0,1);
+      int i= slump.range(0,1);
       int k=water.size();
       Group g;
       switch (i) {
         case 0:
           while (k-->0) {
             gmv.setGroup( 
-                *randomElement(water.begin(), water.end()) );
+                *slump.element(water.begin(), water.end()) );
             sys+=gmv.move();   // translate/rotate polymers
           }
           break;
@@ -74,7 +74,7 @@ int main() {
       }
 
       // sample oxygen-oxygen rdf
-      if (slp_global()>0.9) {
+      if (slump()>0.9) {
         auto id = atom["OW"].id;
         rdf.sample(spc,id,id);
       }

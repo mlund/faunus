@@ -70,7 +70,7 @@ int main() {
   MCLoop loop(mcp);                             // class for handling mc loops
   while ( loop.macroCnt() ) {
     while ( loop.microCnt() ) {
-      if (slp_global() < 0.5)
+      if (slump() < 0.5)
         sys+=mv.move( salt.size() );            // translate salt
       else 
         sys+=gc.move( salt.size()/2 );          // grand canonical exchange

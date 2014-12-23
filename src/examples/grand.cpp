@@ -34,7 +34,7 @@ int main() {
   MCLoop loop(mcp);                             // class for handling mc loops
   while ( loop[0] ) {
     while ( loop[1] ) {
-      if (slp_global() < 0.5)
+      if (slump() < 0.5)
         sys+=mv.move( salt.size() );            // translate salt
       else 
         sys+=gc.move();                         // grand canonical exchange

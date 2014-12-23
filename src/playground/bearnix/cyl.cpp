@@ -109,12 +109,12 @@ int main(int argc, char** argv) {
 
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int k,i=slp_global.range(0,1);
+      int k,i= slump.range(0,1);
       switch (i) {
         case 0:
           k=pol.size();
           while (k-->0) {
-            gmv.setGroup( *randomElemenr(pol.begin(), pol.end()) );;
+            gmv.setGroup( *slump.element(pol.begin(), pol.end()) );;
             sys+=gmv.move();
           }
           for (auto i=pol.begin(); i!=pol.end()-1; i++)
@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
           break;
       }
 
-      double xi = slp_global(); // random number [0,1)
+      double xi = slump(); // random number [0,1)
 
       // Sample multipolar moments and distribution
       if ( xi>0.95 ) {

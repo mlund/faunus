@@ -37,14 +37,14 @@ int main() {
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );   // initial energy
   while ( loop[0] ) {                         // Markov chain 
     while ( loop[1] ) {
-      if (slp_global() > 0.5)
+      if (slump() > 0.5)
         sys+=trans.move( sol.size() );                // translate
       else
         sys+=rot.move( sol.size() );                  // rotate
 
-      if (slp_global()<0.5)
+      if (slump()<0.5)
         dian.sampleMuCorrelationAndKirkwood(spc);
-      if (slp_global()>0.99)
+      if (slump()>0.99)
         xtc.save(textio::prefix+"out.xtc", spc.p);  
       dian.sampleDP(spc);
     }    

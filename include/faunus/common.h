@@ -62,7 +62,6 @@ namespace Faunus {
   class GroupMolecular;
   class InputMap;
   class UnitTest;
-  class RandomBase;
 
   //class Point;
   class PointParticle;

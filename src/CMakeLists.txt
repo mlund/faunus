@@ -5,27 +5,42 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 # -------------------------------
 set(hdrs
   ${CMAKE_SOURCE_DIR}/include/faunus/average.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/analysis.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/common.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/auxiliary.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/drift.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/ewald.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/externalpotential.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/faunus.h
   ${CMAKE_SOURCE_DIR}/include/faunus/json.h
   ${CMAKE_SOURCE_DIR}/include/faunus/point.h
   ${CMAKE_SOURCE_DIR}/include/faunus/move.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/inputfile.h
   ${CMAKE_SOURCE_DIR}/include/faunus/io.h
-  ${CMAKE_SOURCE_DIR}/include/faunus/space.h
   ${CMAKE_SOURCE_DIR}/include/faunus/geometry.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/group.h
   ${CMAKE_SOURCE_DIR}/include/faunus/energy.h
   ${CMAKE_SOURCE_DIR}/include/faunus/species.h
-  ${CMAKE_SOURCE_DIR}/include/faunus/molecule.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/mpi.h
   ${CMAKE_SOURCE_DIR}/include/faunus/mcloop.h
-  ${CMAKE_SOURCE_DIR}/include/faunus/auxiliary.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/molecule.h
   ${CMAKE_SOURCE_DIR}/include/faunus/physconst.h
-  ${CMAKE_SOURCE_DIR}/include/faunus/textio.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/picojson.h
   ${CMAKE_SOURCE_DIR}/include/faunus/potentials.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/range.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/slump.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/scatter.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/space.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/spherocylinder.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/tabulate.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/textio.h
   ${CMAKE_SOURCE_DIR}/include/faunus/titrate.h
+  ${CMAKE_SOURCE_DIR}/include/faunus/topology.h
   )
 set(objs
   geometry potentials slump species analysis)
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
-#----- xdrfile static library for gromacs output -----
 add_subdirectory(xdrfile)
 
 if(ENABLE_HASHTABLE)
@@ -37,7 +52,7 @@ if(NOT ENABLE_UNICODE)
 endif()
 
 # -------------------------------------
-#   Use approximate math funtion?
+#   Use approximate math funtions?
 # -------------------------------------
 if(ENABLE_APPROXMATH)
   add_definitions(-DFAU_APPROXMATH)
@@ -138,9 +153,6 @@ function( fau_example tname tdir tsrc )
     PATTERN ".svn" EXCLUDE)
 endfunction( fau_example )
 
-
-#----- Add example programs -----
-add_subdirectory(tools)
 add_subdirectory(playground EXCLUDE_FROM_ALL)
 add_subdirectory(examples)
 

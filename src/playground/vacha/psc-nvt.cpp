@@ -30,8 +30,8 @@ int main() {
   cigars.addParticles(spc, mcp);
   cigars.name="PSC";
   for (auto i : cigars) {
-    spc.p[i].dir.ranunit(slp_global);
-    spc.p[i].patchdir.ranunit(slp_global);
+    spc.p[i].dir.ranunit(slump);
+    spc.p[i].patchdir.ranunit(slump);
     Geometry::cigar_initialize(spc.geo, spc.p[i]);
     spc.trial[i]=spc.p[i];
   }
@@ -42,7 +42,7 @@ int main() {
   mxyz.save("cigars2fibrils-mov", spc.p, spc.geo.len, loop.count());
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int i=slp_global.rand() % 2;
+      int i= slump.rand() % 2;
       switch (i) {
         case 0:
           mv.setGroup(cigars);

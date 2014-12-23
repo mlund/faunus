@@ -1,6 +1,6 @@
 #include <faunus/slump.h>
 
 namespace Faunus {
-  RandomTwister<> slp_global;
+  RandomTwister<> slump;
 }//namespace
 

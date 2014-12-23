@@ -56,7 +56,7 @@ int main() {
   std::ofstream m("snapshot");
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int i=slp_global.rand() % 2;
+      int i=slump.rand() % 2;
         
       switch (i) {
         case 0:
@@ -70,7 +70,7 @@ int main() {
       }
 
       // movie
-      if (slp_global()<0.001)
+      if (slump()<0.001)
       {
         m << spc.p.size() << "\n"
           << "sweep " << loop.count() << "; box "

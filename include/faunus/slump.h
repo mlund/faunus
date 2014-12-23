@@ -54,22 +54,22 @@ namespace Faunus {
         }
 
         /** @brief Random number in uniform range `[-0.5,0.5)` */
-        T randHalf() { return operator()() - 0.5; }
+        T half() { return operator()() - 0.5; }
+
+        /**
+         * @brief Get random element from iterable container (vector, map, group etc.)
+         * @return Iterator to random element
+         * @note Constant-time complexity for random access iterators; otherwise linear.
+         */
+        template<class Titer>
+          Titer element(const Titer &beg, const Titer &end) {
+            auto i=beg;
+            std::advance(i, range( 0, std::distance(beg, end)-1 ) );
+            return i;
+          }
     };
 
-  extern RandomTwister<> slp_global;
-
-  /**
-   * @brief Get random element from iterable container (vector, map, group etc.)
-   * @return Iterator to random element
-   * @note Constant-time complexity for random access iterators; otherwise linear.
-   */
-  template<class Titer>
-    Titer randomElement(const Titer &beg, const Titer &end) {
-      auto i=beg;
-      std::advance(i, slp_global.range( 0, std::distance(beg, end)-1 ) );
-      return i;
-    }
+  extern RandomTwister<> slump;
 
 } // namespace
 

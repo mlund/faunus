@@ -66,12 +66,12 @@ int main(int argc, char** argv) {
 
   while ( loop.macroCnt() ) {                      // Markov chain 
     while ( loop.microCnt() ) {
-      int k,i=slp_global.rand() % 1;
+      int k,i= slump.rand() % 1;
       switch (i) {
         case 0:                                    // translate and rotate molecules
           k=pol.size();
           while (k-->0) {
-            gmv.setGroup( pol[ slp_global.rand() % pol.size() ] );
+            gmv.setGroup( pol[ slump.rand() % pol.size() ] );
             sys+=gmv.move();
           }
 
@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
           break;
       }
 
-      if ( slp_global.runtest(0.0001) ) {
+      if ( slump.runtest(0.0001) ) {
         xtc.setbox( spc.geo.len );
         xtc.save(textio::prefix+"traj.xtc", spc);  // gromacs xtc file output
       }

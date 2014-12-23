@@ -6,6 +6,9 @@
 
 mpicommand=$1
 
+source_tests_dir="`dirname $0`"
+cp -f $source_tests_dir/penalty.test . 2> /dev/null
+
 # Make input files for each MPI process with different random seed
 for rank in {0..3}
 do

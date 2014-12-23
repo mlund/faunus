@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
     macronum++;
     while ( loop.microCnt() ) {
       
-      if (slp_global()>pxtc)
+      if (slump()>pxtc)
         xtc.save(textio::prefix+"out.xtc", spc.p);
       
       int k,i=rand() % 3;

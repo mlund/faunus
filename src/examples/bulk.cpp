@@ -52,12 +52,12 @@ int main() {
 
   while ( loop[0] ) {  // Markov chain 
     while ( loop[1] ) {
-      if (slp_global() < 0.5)
+      if (slump() < 0.5)
         sys+=mv.move( salt.size() );  // translate salt
       else 
         sys+=iso.move();              // isobaric volume move
 
-      if (slp_global() < 0.05) {
+      if (slump() < 0.05) {
         rdf_ab.sample(spc,salt,atom["Na"].id,atom["Cl"].id);
         virial.sample(spc,pot);
         //pm+=pot.first.pairpot.first.virial(spc.p,spc.geo);

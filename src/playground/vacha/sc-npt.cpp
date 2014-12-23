@@ -32,7 +32,7 @@ int main() {
   cigars.name="cigars";
   for (auto i : cigars) {
     spc.p[i].halfl = 2.5;
-    spc.p[i].dir.ranunit(slp_global);
+    spc.p[i].dir.ranunit(slump);
     spc.trial[i]=spc.p[i];
   }
 
@@ -45,7 +45,7 @@ int main() {
   std::ofstream m("snapshot");
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int i=slp_global.rand() % 3;
+      int i= slump.rand() % 3;
       switch (i) {
         case 0:
           mv.setGroup(cigars);
@@ -61,7 +61,7 @@ int main() {
       }
 
       // movie
-      if (slp_global()<0.001)
+      if (slump()<0.001)
       {
         m << spc.p.size() << "\n"
           << "sweep " << loop.count() << "; box "

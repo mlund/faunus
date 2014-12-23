@@ -174,11 +174,11 @@ int main() {
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
       int k=mem.lipids.sizeMol(); //number of lipids
-      int i=slp_global.rand() % 4;
+      int i= slump.rand() % 4;
       Group g;
       switch (i) {
         case 0:
-          if (slp_global()>0.5) {
+          if (slump()>0.5) {
             mv.setGroup(mem.lipids);
             sys+=mv.move( mem.lipids.size() ); // translate lipid monomers
           } else {
@@ -198,7 +198,7 @@ int main() {
           }
           break;
         case 2:
-          if (slp_global()>0.5) {
+          if (slump()>0.5) {
             gmvpol.setGroup(pol);
             sys+=gmvpol.move();
           } else {
@@ -207,7 +207,7 @@ int main() {
           }
           break;
         case 30:
-          if (slp_global()>0.9)
+          if (slump()>0.9)
             sys+=tit.move();
           break;
       }
@@ -223,7 +223,7 @@ int main() {
 #endif
 
       // gromacs trajectory
-      if ( slp_global()<0.01 )
+      if ( slump()<0.01 )
         xtc.save("traj.xtc", spc);
 
     } // end of micro loop

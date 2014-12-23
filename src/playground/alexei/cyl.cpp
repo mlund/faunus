@@ -161,7 +161,7 @@ int main(int argc, char** argv) {
           break;
       }
 
-      double xi = slp_global(); // random number [0,1)
+      double xi = slump(); // random number [0,1)
 
       if ( movie==true && xi>0.995 ) {
         xtc.setbox( 1000. );

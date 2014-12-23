@@ -16,7 +16,7 @@ typedef CombinedPairPotential<LennardJonesLB,MultipoleWolf<true,true,true,false>
 
 int main() {
   InputMap mcp("water2.input");//read input file
-  slp_global.seed(mcp.get<int>("seed", -7));
+  slump.seed(mcp.get<int>("seed", -7));
 
   // Energy functions and space
   auto pot = Energy::NonbondedVector<Tspace,Tpairpot>(mcp)
@@ -61,13 +61,13 @@ int main() {
   MCLoop loop(mcp);            // class for handling mc loops
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int i=slp_global.rand() % 2;
+      int i= slump.rand() % 2;
       int j,k=water.size();
       Group g;
       switch (i) {
         case 0:
           while (k-->0) {
-            j=slp_global.rand() % (water.size());
+            j= slump.rand() % (water.size());
             gmv.setGroup(water[j]);
             sys+=gmv.move();          // translate/rotate polymers
           }
@@ -78,7 +78,7 @@ int main() {
       }
       dian.sampleDP(spc);
       // sample oxygen-oxygen rdf
-      if (slp_global()>0.5) {
+      if (slump()>0.5) {
         dian.sampleMuCorrelationAndKirkwood(spc);
         auto idO = atom["OW"].id;
         auto idH = atom["HW"].id;

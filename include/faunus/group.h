@@ -82,7 +82,7 @@ namespace Faunus {
       /** @brief Random particle index */
       int random() const {
         if (!empty())
-          return *randomElement(begin(), end());
+          return *slump.element(begin(), end());
         return -1;
       }
 

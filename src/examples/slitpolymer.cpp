@@ -40,7 +40,7 @@ int main() {
 
   while ( loop[0] ) {  // Markov chain 
     while ( loop[1] ) {
-      int i=slp_global.range(0,3);
+      int i= slump.range(0,3);
       switch (i) {
         case 0: // translate and rotate polymer
           gmv.setGroup(pol);
@@ -60,7 +60,7 @@ int main() {
           break;
       }
 
-      double rnd = slp_global(); // [0:1[
+      double rnd = slump(); // [0:1[
       if (rnd<0.05)
         shape.sample(pol,spc);   // sample polymer shape - gyration radius etc.
       if (rnd<0.05)

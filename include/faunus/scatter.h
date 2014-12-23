@@ -341,7 +341,7 @@ namespace Faunus {
                 if (Nq==0 && qdir.squaredNorm()>1e-6)
                   Nq=1;
                 else
-                  qdir.ranunit(slp_global);
+                  qdir.ranunit(slump);
 
                 // N^2 loop over all particles
                 for (int i=0; i<n-1; i++) {
@@ -380,7 +380,7 @@ namespace Faunus {
               int n=(int)p.size();
               for (int k=0; k<Nq; k++) { // random q directions
                 Point qdir(1,0,0);
-                qdir.ranunit(slp_global);
+                qdir.ranunit(slump);
                 std::map<T,T> _cos, _sin;
                 for (T q=qmin; q<=qmax; q+=dq) {
                   double ssum=0,csum=0; // tmp to avoid map lookup
@@ -404,7 +404,7 @@ namespace Faunus {
               int n=(int)p.size();
               for (int k=0; k<Nq; k++) { // random q directions
                 Point qdir(1,0,0);
-                //qdir.ranunit(slp_global);
+                //qdir.ranunit(slump);
                 std::map<T,T> _cos, _sin;
                 for (T q=qmin; q<=qmax; q+=dq) {
                   for (int i=0; i<n-1; i++) {

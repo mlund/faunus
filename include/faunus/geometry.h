@@ -494,8 +494,8 @@ namespace Faunus {
               v[_i] = atom[aType];   // set part type
               Geometry::QuaternionRotate rot;
               Point u;
-              u.ranunit( slp_global );
-              rot.setAxis( geo, {0,0,0}, u, pc::pi*slp_global() );
+              u.ranunit(slump);
+              rot.setAxis( geo, {0,0,0}, u, pc::pi*slump() );
               v[_i].rotate(rot);
               geo.randompos( v[_i] );
               _i++;
@@ -508,8 +508,8 @@ namespace Faunus {
             a = a.cwiseProduct(dir);           // apply user defined directions (default: 1,1,1)
             Geometry::cm2origo(geo,v);         // translate to origo - obey boundary conditions
             Geometry::QuaternionRotate rot;
-            b.ranunit(slp_global);             // random unit vector
-            rot.setAxis(geo, {0,0,0}, b, slp_global()*2*pc::pi); // random rot around random vector
+            b.ranunit(slump);             // random unit vector
+            rot.setAxis(geo, {0,0,0}, b, slump()*2*pc::pi); // random rot around random vector
 
             for ( auto &i : v ) {              // apply rotation to all points
               i = rot(i) + a;                  // ...and translate
@@ -675,9 +675,9 @@ namespace Faunus {
         Point r;
         unsigned int hit=0, cnt=0;
         while (++cnt<n) {
-          r.x() = slp_global.randHalf();
-          r.y() = slp_global.randHalf();
-          r.z() = slp_global.randHalf();
+          r.x() = slump.half();
+          r.y() = slump.half();
+          r.z() = slump.half();
           r = r*L + gc;
           for (auto &i : p)
             if ((i-r).squaredNorm()<pow(i.radius+pradius,2)) {

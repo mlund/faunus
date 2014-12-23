@@ -63,7 +63,7 @@ int main() {
 
   while ( loop[0] ) {  // Markov chain 
     while ( loop[1] ) {
-      int k,i=slp_global.range(0,5);
+      int k,i= slump.range(0,5);
       switch (i) {
         case 0:
           mv.setGroup(salt);
@@ -80,7 +80,7 @@ int main() {
         case 2:
           k=pol.size();
           while (k-->0) {
-            gmv.setGroup( *randomElement(pol.begin(), pol.end() ) );
+            gmv.setGroup( *slump.element(pol.begin(), pol.end() ) );
             sys+=gmv.move();            // translate/rotate polymers
           }
           break;
@@ -90,14 +90,14 @@ int main() {
         case 4:
           k=pol.size();
           while (k-->0) {
-            crank.setGroup( *randomElement(pol.begin(), pol.end() ) );
+            crank.setGroup( *slump.element(pol.begin(), pol.end() ) );
             sys+=crank.move();          // crank shaft move
           }
           break;
         case 5:
           k=pol.size();
           while (k-->0) {
-            pivot.setGroup( *randomElement(pol.begin(), pol.end() ) );
+            pivot.setGroup( *slump.element(pol.begin(), pol.end() ) );
             sys+=pivot.move();          // pivot move
           }
           break;

@@ -103,7 +103,7 @@ namespace Faunus {
           if (i!=map.end()) // id found
             if (i->second.size()>=N) {  // enough elements?
               do {
-                auto j=randomElement(i->second.begin(), i->second.end());
+                auto j= slump.element(i->second.begin(), i->second.end());
                 if ( std::find(dst.begin(), dst.end(), *j)==dst.end() )
                   dst.push_back(*j);
               } while (dst.size()!=Ninit+N);

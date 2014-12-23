@@ -50,7 +50,7 @@ namespace Faunus {
         /** @brief Get a random conformation */
         Tpvec getRandomConformation() const {
           assert(!conformations.empty());
-          return conformations[slp_global.range(0, conformations.size()-1) ];
+          return conformations[slump.range(0, conformations.size()-1) ];
         }
 
         /**

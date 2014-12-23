@@ -189,7 +189,7 @@ TEST_CASE("Random numbers", "Check random number generator")
   int min=10, max=0, N=1e7;
   double x=0;
   for (int i=0; i<N; i++) {
-    int j = slp_global.range(0,9);
+    int j = slump.range(0,9);
     if (j<min) min=j;
     if (j>max) max=j;
     x+=j;

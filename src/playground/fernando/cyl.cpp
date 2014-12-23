@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
           sys+=iso.move();
           break;
         case 3:
-          if (slp_global()<0.5)
+          if (slump()<0.5)
             mv.setGroup(salt);
           else
             mv.setGroup(pol[2]);
@@ -156,7 +156,7 @@ int main(int argc, char** argv) {
           break;
       }
 
-      double xi = slp_global(); // random number [0,1)
+      double xi = slump(); // random number [0,1)
 
       // Sample multipolar moments and distribution
       if ( xi>0.95 ) {

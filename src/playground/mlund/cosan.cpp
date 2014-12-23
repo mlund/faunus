@@ -62,14 +62,14 @@ int main() {
   MCLoop loop(mcp);            // class for handling mc loops
   while ( loop.macroCnt() ) {  // Markov chain 
     while ( loop.microCnt() ) {
-      int i=slp_global.rand() % 2;
+      int i= slump.rand() % 2;
       int j,k=water.size();
       Group g;
       switch (i) {
         case 0:
           while (k-->0) {
-            j=slp_global.rand() % (water.size());
-            if (slp_global()>0.5) {
+            j= slump.rand() % (water.size());
+            if (slump()>0.5) {
               gmv.setGroup(water[j]);
               sys+=gmv.move();          // translate/rotate polymers
             }
@@ -85,7 +85,7 @@ int main() {
       }
 
       // sample oxygen-oxygen rdf
-      if (slp_global()>0.95) {
+      if (slump()>0.95) {
         //auto id = atom["OW"].id;
         //rdf.sample(spc,id,id);
         cm_vec.clear();
@@ -93,7 +93,7 @@ int main() {
           cm_vec.push_back(i.cm);
         debye.sample(cm_vec,spc.geo.getVolume());
       }
-      if (slp_global()<0.01 ) {
+      if (slump()<0.01 ) {
         xtc.setbox( spc.geo.len );
         xtc.save("traj.xtc", spc);
       }

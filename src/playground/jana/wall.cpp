@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
             sys+=gmv.move();
           }
 
-          if (slp_global()>0.999) {
+          if (slump()>0.999) {
             if (energyfile)
               energyfile << loop.count() << " " << sys.current()
                 << " " << std::cbrt(spc.geo.getVolume()) << "\n";
@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
           break;
       }
 
-      if (slp_global()>0.99 ) {
+      if (slump()>0.99 ) {
         // 2D pressure calculation (see i.e. Frenkel+Smit)
         double sum=0;
         for (size_t i=0; i<pol.size()-1; i++) // double loop over proteins
@@ -152,7 +152,7 @@ int main(int argc, char** argv) {
         P_ex += sum / (2*spc.geo.len.x() * spc.geo.len.y());
       }
 
-      if (slp_global()>0.999 ) {
+      if (slump()>0.999 ) {
         xtc.setbox(spc.geo.len);
         xtc.save("traj.xtc", spc.p); // save gromacs trajectory
       }

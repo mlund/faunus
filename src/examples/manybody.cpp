@@ -96,16 +96,16 @@ int main(int argc, char** argv) {
   MCLoop loop(mcp);
   while ( loop[0] ) {  // Markov chain
     while ( loop[1] ) {
-      int k,i=slp_global.range(0,3);
+      int k,i= slump.range(0,3);
       switch (i) {
         case 0: // move all proteins
           k=pol.size();
           while (k-->0) {
-            gmv.setGroup( *randomElement( pol.begin(), pol.end() ) );
+            gmv.setGroup( *slump.element( pol.begin(), pol.end() ) );
             sys+=gmv.move();
           }
 
-          if (slp_global()>0.995) {
+          if (slump()>0.995) {
             // sample g(r)
             for (auto i=pol.begin(); i!=pol.end()-1; i++)
               for (auto j=i+1; j!=pol.end(); j++)
@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
           sys+=mv.move();
           break;
       }
-      if (slp_global()>0.99 ) {
+      if (slump()>0.99 ) {
         xtc.setbox( spc.geo.len );
         xtc.save("traj.xtc", spc.p);
       }

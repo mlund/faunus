@@ -16,7 +16,7 @@ namespace Faunus {
 
 
     bool AnalysisBase::run() {
-      if (slp_global() > runfraction)
+      if (slump() > runfraction)
         return false;
       cnt++;
       return true;

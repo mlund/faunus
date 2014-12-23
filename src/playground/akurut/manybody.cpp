@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
               rdf( spc.geo.dist(i->cm,j->cm) )++;
 
           // sample S(q)
-          if (slp_global()>0.95) {
+          if (slump()>0.95) {
             cm_vec.clear();
             for (auto &i : pol)
               cm_vec.push_back(i.cm);
@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
           sys+=mv.move();
           break;
       }
-      if (slp_global()>0.99 ) {
+      if (slump()>0.99 ) {
         xtc.setbox( spc.geo.len );
         xtc.save("traj.xtc", spc);
       }

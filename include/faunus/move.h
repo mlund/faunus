@@ -347,19 +347,19 @@ namespace Faunus {
      * One could put in `if (du>0)` before the first line, but
      * certain MPI communications require the random number
      * generator to be in sync, i.e. each rank must call
-     * `slp_global()` equal number of times, independent of
+     * `slump()` equal number of times, independent of
      * dU.
      */
     template<class Tspace>
       bool Movebase<Tspace>::metropolis(const double &du) const {
-        if ( slp_global()>std::exp(-du) ) // core of MC!
+        if ( slump()>std::exp(-du) ) // core of MC!
           return false;
         return true;
       }
 
     template<class Tspace>
       bool Movebase<Tspace>::run() const {
-        if (slp_global() < runfraction)
+        if (slump() < runfraction)
           return true;
         return false;
       }
@@ -519,9 +519,9 @@ namespace Faunus {
           assert(iparticle<(int)spc->p.size()
               && "Trial particle out of range");
           Point t = dir*dp;
-          t.x() *= slp_global()-0.5;
-          t.y() *= slp_global()-0.5;
-          t.z() *= slp_global()-0.5;
+          t.x() *= slump()-0.5;
+          t.y() *= slump()-0.5;
+          t.z() *= slump()-0.5;
           spc->trial[iparticle].translate(spc->geo, t);
 
           // make sure trial mass center is updated for molecular groups
@@ -657,8 +657,8 @@ namespace Faunus {
             dprot = base::genericdp;
 
           Point u;
-          u.ranunit(slp_global);
-          rot.setAxis(spc->geo, Point(0,0,0), u, dprot*slp_global.randHalf() );
+          u.ranunit(slump);
+          rot.setAxis(spc->geo, Point(0,0,0), u, dprot* slump.half() );
           spc->trial[iparticle].rotate(rot);
         }
       }
@@ -793,15 +793,15 @@ namespace Faunus {
         assert(igroup!=nullptr);
         Point p;
         if (dp_rot>1e-6) {
-          p.ranunit(slp_global);             // random unit vector
+          p.ranunit(slump);             // random unit vector
           p=igroup->cm+p;                    // set endpoint for rotation
-          angle=dp_rot*slp_global.randHalf();
+          angle=dp_rot* slump.half();
           igroup->rotate(*spc, p, angle);
         }
         if (dp_trans>1e-6) {
-          p.x()=dir.x() * dp_trans * slp_global.randHalf();
-          p.y()=dir.y() * dp_trans * slp_global.randHalf();
-          p.z()=dir.z() * dp_trans * slp_global.randHalf();
+          p.x()=dir.x() * dp_trans * slump.half();
+          p.y()=dir.y() * dp_trans * slump.half();
+          p.z()=dir.z() * dp_trans * slump.half();
           igroup->translate(*spc, p);
         }
       }
@@ -922,14 +922,14 @@ namespace Faunus {
               if (g->isMolecular()) {
                 Point p;
                 if (base::dp_rot>1e-6) {
-                  p.ranunit(slp_global);        // random unit vector
+                  p.ranunit(slump);        // random unit vector
                   p=g->cm+p;                    // set endpoint for rotation
-                  double angle=base::dp_rot*slp_global.randHalf();
+                  double angle=base::dp_rot* slump.half();
                   g->rotate(*base::spc, p, angle);
                   angle2[g->name] += pow(angle*180/pc::pi, 2); // sum angular movement^2
                 }
                 if (base::dp_trans>1e-6) {
-                  p.ranunit(slp_global);
+                  p.ranunit(slump);
                   p=base::dp_trans*p.cwiseProduct(base::dir);
                   g->translate(*base::spc, p);
                 }
@@ -1144,14 +1144,14 @@ namespace Faunus {
         // find clustered particles
         cindex.clear();
         for (auto i : *gmobile)
-          if (ClusterProbability(spc->p, i) > slp_global() )
+          if (ClusterProbability(spc->p, i) > slump() )
             cindex.push_back(i); // generate cluster list
         avgsize += cindex.size();
 
         // rotation
         if (dp_rot>1e-6) {
-          base::angle=dp_rot*slp_global.randHalf();
-          p.ranunit(slp_global);
+          base::angle=dp_rot* slump.half();
+          p.ranunit(slump);
           p=igroup->cm+p; // set endpoint for rotation
           igroup->rotate(*spc, p, base::angle);
           vrot.setAxis(spc->geo, igroup->cm, p, base::angle); // rot. around line CM->p
@@ -1161,9 +1161,9 @@ namespace Faunus {
 
         // translation
         if (dp_trans>1e-6) {
-          p.x()=dir.x() * dp_trans * slp_global.randHalf();
-          p.y()=dir.y() * dp_trans * slp_global.randHalf();
-          p.z()=dir.z() * dp_trans * slp_global.randHalf();
+          p.x()=dir.x() * dp_trans * slump.half();
+          p.y()=dir.y() * dp_trans * slump.half();
+          p.z()=dir.z() * dp_trans * slump.half();
           igroup->translate(*spc, p);
           for (auto i : cindex)
             spc->trial[i].translate(spc->geo,p);
@@ -1376,11 +1376,11 @@ namespace Faunus {
               du-=pot->g2g(spc->p, *g[i], *g[j]);
 
         Point ip(dp,dp,dp);
-        ip.x()*=slp_global.randHalf();
-        ip.y()*=slp_global.randHalf();
-        ip.z()*=slp_global.randHalf();
+        ip.x()*= slump.half();
+        ip.y()*= slump.half();
+        ip.z()*= slump.half();
 
-        int f=slp_global()*remaining.size();
+        int f= slump()*remaining.size();
         moved.push_back(remaining[f]);
         remaining.erase(remaining.begin()+f);    // Pick first index in m to move
 
@@ -1390,7 +1390,7 @@ namespace Faunus {
             double uo=pot->g2g(spc->p,     *g[moved[i]], *g[remaining[j]]);
             double un=pot->g2g(spc->trial, *g[moved[i]], *g[remaining[j]]);
             double udiff=un-uo;
-            if (slp_global() < (1.-std::exp(-udiff)) ) {
+            if (slump() < (1.-std::exp(-udiff)) ) {
               moved.push_back(remaining[j]);
               remaining.erase(remaining.begin()+j);
               j--;
@@ -1561,7 +1561,7 @@ namespace Faunus {
           len = std::abs(beg-end) - 1;    // number of particles between end points
         } while ( len<minlen || len>maxlen  );
 
-        angle = dp*slp_global.randHalf();  // random angle
+        angle = dp* slump.half();  // random angle
         vrot.setAxis(spc->geo, spc->p[beg], spc->p[end], angle );
 
         index.clear();
@@ -1634,14 +1634,14 @@ namespace Faunus {
             len = std::abs(beg-end);
           } while ( len<base::minlen || len>base::maxlen );
 
-          if (slp_global.randHalf() > 0)
+          if (slump.half() > 0)
             for (int i=end+1; i<=gPtr->back(); i++)
               index.push_back(i);
           else
             for (int i=gPtr->front(); i<end; i++)
               index.push_back(i);
         }
-        base::angle = base::dp*slp_global.randHalf();
+        base::angle = base::dp* slump.half();
         base::vrot.setAxis(spc->geo, spc->p[beg], spc->p[end], base::angle );
         return true;
       }
@@ -1704,7 +1704,7 @@ namespace Faunus {
           return;
 
         int first, second; // "first" is end point, "second" is the neighbor
-        if (slp_global.randHalf()>0) {
+        if (slump.half()>0) {
           first=gPtr->front();
           second=first+1;
         } else {
@@ -1727,7 +1727,7 @@ namespace Faunus {
 
         // generate new position for end point ("first")
         Point u;
-        u.ranunit(slp_global);                          // generate random unit vector
+        u.ranunit(slump);                          // generate random unit vector
         spc->trial[first].translate(spc->geo, u*bond); // trans. 1st w. scaled unit vector
         assert( std::abs( spc->geo.dist(spc->p[first],spc->trial[first])-bond ) < 1e-7  );
 
@@ -1893,7 +1893,7 @@ namespace Faunus {
             && "Space has empty group vector - NPT move not possible.");
         oldval = spc->geo.getVolume();
         oldlen = newlen = spc->geo.len;
-        newval = std::exp( std::log(oldval) + slp_global.randHalf()*dp );
+        newval = std::exp( std::log(oldval) + slump.half()*dp );
         Point s = Point(1,1,1);
         double xyz = cbrt(newval/oldval);
         double xy = sqrt(newval/oldval);
@@ -2041,7 +2041,7 @@ namespace Faunus {
         oldlen = spc->geo.len;
         newlen = oldlen;
         oldval = spc->geo.len.z();
-        newval = oldval+slp_global.randHalf()*dp;
+        newval = oldval+ slump.half()*dp;
         Point s;
         s.z() = newval / oldval;
         s.x() = s.y() = 1 / std::sqrt(s.z());
@@ -2671,12 +2671,12 @@ namespace Faunus {
         assert(!swappableParticles.empty());
         auto vi=swappableParticles.begin();
         auto vj=swappableParticles.begin();
-        //std::advance(vi, slp_global.rand() % swappableParticles.size());
-        //std::advance(vj, slp_global.rand() % swappableParticles.size());
+        //std::advance(vi, slump.rand() % swappableParticles.size());
+        //std::advance(vj, slump.rand() % swappableParticles.size());
         //ip=*(vi);
         //jp=*(vj);
-        ip=*( randomElement(swappableParticles.begin(), swappableParticles.end() ) );
-        jp=*( randomElement(swappableParticles.begin(), swappableParticles.end() ) );
+        ip=*( slump.element(swappableParticles.begin(), swappableParticles.end() ) );
+        jp=*( slump.element(swappableParticles.begin(), swappableParticles.end() ) );
         if ( spc->trial[ip].charge != spc->trial[jp].charge ) {
           std::swap( spc->trial[ip].charge, spc->trial[jp].charge );
         }
@@ -2911,7 +2911,7 @@ namespace Faunus {
                 molcnt[id]++;                   // count number of molecules per type
             }
 
-            insertBool = slp_global.range(0,1) == 1;
+            insertBool = slump.range(0,1) == 1;
 
             // try delete move
             if (!insertBool) {
@@ -3150,7 +3150,7 @@ namespace Faunus {
             base::useAlternateReturnEnergy = true;
             base::runfraction = in.get<double>(pfx+"_runfraction",1.0);
 
-            slp_global.seed(); // attempt non-deterministic random number sequence
+            slump.seed(); // attempt non-deterministic random number sequence
 
             // update tracker with GC molecules and atoms
             for ( auto g : spc->groupList() )

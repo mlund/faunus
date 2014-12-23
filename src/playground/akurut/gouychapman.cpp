@@ -201,14 +201,14 @@ int main(int argc, char** argv) {
          // break;
         }
 
-      if ( slp_global.runtest(0.00001) ) {
+      if ( slump.runtest(0.00001) ) {
         xtc.setbox( nonbonded->geometry.len );
         xtc.save(textio::prefix+"traj.xtc", spc);
       }
-      //if ( slp_global.runtest(0.1) ) 
+      //if ( slump.runtest(0.1) )
         //(*mfc).sample(spc.p, )
 #ifdef SLIT
-      if ( slp_global.runtest(0.1) ) {
+      if ( slump.runtest(0.1) ) {
          for (auto &g : pol) {
            double d = gouy->dist2surf(g.cm);
            dst_map["Q"]( d )+=g.charge(spc.p);

@@ -50,7 +50,7 @@ int main() {
   coordinates::pg = &mygroup;                         //set penalized group
   sys.init( Energy::systemEnergy(spc,pot,spc.p) ); // store total energy
   int seed_value = mcp.get<int>("seed_value",-13);
-  slp_global.seed(seed_value);
+  slump.seed(seed_value);
   int sweeps = 0;
   while ( loop[0] ) {                 //start markov chain
     while ( loop[1] ) {

@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
           mpol.sample(pol,spc);
           break;
       }
-      if ( slp_global.runtest(0.001) ) {
+      if ( slump.runtest(0.001) ) {
         xtc.setbox( nonbonded->geometry.len );
         xtc.save("traj.xtc", spc.p);
       }

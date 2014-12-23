@@ -39,7 +39,7 @@ int main() {
   mxyz.save("cigars2fibrils-mov", spc.p, spc.geo.len, loop.innerCount());
   while ( loop[0] ) {  // Markov chain 
     while ( loop[1] ) {
-      int i=slp_global.rand() % 2;
+      int i=slp_global.range(0,1);
       switch (i) {
         case 0:
           mv.setGroup(cigars);

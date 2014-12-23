@@ -5,7 +5,8 @@ typedef Space<Geometry::Cuboid> Tspace;
 
 struct myenergy : public Energy::Energybase<Tspace> { //custom energy class
   public:
-    double i_external(const p_vec &p, int i)  { //pot. on particle
+    typedef typename Tspace::ParticleVector Tpvec;
+    double i_external(const Tpvec &p, int i) FOVERRIDE { //pot. on particle
       double s= 1 + std::sin(2*pc::pi*p[i].x()) + std::cos(2*pc::pi*p[i].y());
       if (p[i].x() >=-2.00 && p[i].x() <=-1.25) return 1*s;
       if (p[i].x() >=-1.25 && p[i].x() <=-0.25) return 2*s;
@@ -15,7 +16,7 @@ struct myenergy : public Energy::Energybase<Tspace> { //custom energy class
       return pc::infty;
 
     }
-    double g_external(const p_vec &p, Group &g) { //pot. on group
+    double g_external(const Tpvec &p, Group &g) FOVERRIDE { //pot. on group
       double u=0;
       for (auto i : g)
         u+=i_external(p, i);
@@ -26,7 +27,7 @@ struct myenergy : public Energy::Energybase<Tspace> { //custom energy class
 
 struct coordinates { //function that defines the reaction coordinates
   static Group* pg; // penalized group
-  std::pair<double,double> operator()(const p_vec &p) {
+  std::pair<double,double> operator()(const typename Tspace::ParticleVector &p) {
     return std::make_pair(p[pg->front()].x(),p[pg->front()].y());
   }
 };
@@ -100,7 +101,7 @@ int main() {
 
   A gnuplot script to generate the plots of the probability distributions and 
   penalty function is provided:
-  
+
   ~~~
   $ gnuplot penalty.gnu
   ~~~

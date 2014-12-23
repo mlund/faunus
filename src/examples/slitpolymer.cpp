@@ -40,7 +40,7 @@ int main() {
 
   while ( loop[0] ) {  // Markov chain 
     while ( loop[1] ) {
-      int i=slp_global.rand() % 4;
+      int i=slp_global.range(0,3);
       switch (i) {
         case 0: // translate and rotate polymer
           gmv.setGroup(pol);

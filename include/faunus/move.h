@@ -2410,6 +2410,7 @@ namespace Faunus {
     template<class Tspace>
       class ParallelTempering : public Movebase<Tspace> {
         private:
+          typedef typename Tspace::ParticleVector Tpvec;
           typedef Movebase<Tspace> base;
           using base::pot;
           using base::spc;
@@ -2436,14 +2437,16 @@ namespace Faunus {
 
           Faunus::MPI::MPIController *mpiPtr; //!< Controller class for MPI calls
           Faunus::MPI::FloatTransmitter ft;   //!< Class for transmitting floats over MPI
-          Faunus::MPI::ParticleTransmitter pt;//!< Class for transmitting particles over MPI
-          std::function<double (Tspace&, Energy::Energybase<Tspace>&, const p_vec&)> usys; //!< Defaults to Energy::systemEnergy but can be replaced!
+          Faunus::MPI::ParticleTransmitter<Tpvec> pt;//!< Class for transmitting particles over MPI
+
+          typedef std::function<double(Tspace&, Energy::Energybase<Tspace>&, const Tpvec&)> Tenergyfunc;
+          Tenergyfunc usys; //!< Defaults to Energy::systemEnergy but can be replaced!
 
         public:
           ParallelTempering(InputMap&, Energy::Energybase<Tspace>&, Tspace&, Faunus::MPI::MPIController &mpi, string="temper");
           virtual ~ParallelTempering();
           void setCurrentEnergy(double); //!< Set energy of configuration before move (for increased speed)
-          void setEnergyFunction( std::function<double (Tspace&,Energy::Energybase<Tspace>&,const p_vec&)> );
+          void setEnergyFunction( Tenergyfunc );
       };
 
     template<class Tspace>
@@ -2461,7 +2464,7 @@ namespace Faunus {
         pt.sendExtra.resize(1);
         pt.setFormat( in.get<string>(pfx+"_format", "XYZQI") );
         setEnergyFunction(
-            Energy::systemEnergy<Tspace,Energy::Energybase<Tspace>,p_vec> );
+            Energy::systemEnergy<Tspace,Energy::Energybase<Tspace>,Tpvec> );
         this->haveCurrentEnergy=false;
         //temperPath.open(textio::prefix+"temperpath.dat");
       }
@@ -2470,7 +2473,7 @@ namespace Faunus {
       ParallelTempering<Tspace>::~ParallelTempering() {}
 
     template<class Tspace>
-      void ParallelTempering<Tspace>::setEnergyFunction( std::function<double (Tspace&,Energy::Energybase<Tspace>&,const p_vec&)> f ) {
+      void ParallelTempering<Tspace>::setEnergyFunction( Tenergyfunc f ) {
         usys = f;
       }
 
@@ -2668,10 +2671,12 @@ namespace Faunus {
         assert(!swappableParticles.empty());
         auto vi=swappableParticles.begin();
         auto vj=swappableParticles.begin();
-        std::advance(vi, slp_global.rand() % swappableParticles.size());
-        std::advance(vj, slp_global.rand() % swappableParticles.size());
-        ip=*(vi);
-        jp=*(vj);
+        //std::advance(vi, slp_global.rand() % swappableParticles.size());
+        //std::advance(vj, slp_global.rand() % swappableParticles.size());
+        //ip=*(vi);
+        //jp=*(vj);
+        ip=*( randomElement(swappableParticles.begin(), swappableParticles.end() ) );
+        jp=*( randomElement(swappableParticles.begin(), swappableParticles.end() ) );
         if ( spc->trial[ip].charge != spc->trial[jp].charge ) {
           std::swap( spc->trial[ip].charge, spc->trial[jp].charge );
         }
@@ -2906,7 +2911,7 @@ namespace Faunus {
                 molcnt[id]++;                   // count number of molecules per type
             }
 
-            insertBool = slp_global.rand() % 2 == 1;
+            insertBool = slp_global.range(0,1) == 1;
 
             // try delete move
             if (!insertBool) {
@@ -3114,7 +3119,7 @@ namespace Faunus {
 
             return o.str() + spc->molecule.info() + comb.info();
           }
-        
+
           void _test( UnitTest &t ) {
             double V=spc->geo.getVolume();
             t( this->prefix + "_flux", Ninserted / double(Ndeleted) );
@@ -3131,14 +3136,14 @@ namespace Faunus {
           }
 
         public:
-        
+
           /** @brief Constructor -- load combinations, initialize trackers and default inserters */
           GreenGC(
               InputMap &in, 
               Energy::Energybase<Tspace> &e,
               Tspace &s,
               string pfx="gcmol_") : base( e, s, pfx ), comb(s.molecule) {
-            
+
             Ninserted = 0;
             Ndeleted  = 0;
             base::title = "GC move";
@@ -3146,7 +3151,7 @@ namespace Faunus {
             base::runfraction = in.get<double>(pfx+"_runfraction",1.0);
 
             slp_global.seed(); // attempt non-deterministic random number sequence
-            
+
             // update tracker with GC molecules and atoms
             for ( auto g : spc->groupList() )
               if ( spc->molecule[g->molId].isAtomic() ) {

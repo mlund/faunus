@@ -608,48 +608,6 @@ namespace Faunus {
           return false;
         }
 
-      /*
-       * @brief Save a frame to trj file (PBC)
-       *
-       * Save all particles in Cuboid to xtc file. Molecules added to the `ioxtc::g`
-       * vector will be made whole (periodic boundaries are temporarily undone). Box
-       * dimensions are taken from the Cuboid class and the particles are shifted so
-       * that origin is in the corner of the box (Gromacs practice)
-       *
-       * @param file Name of the output xtc file
-       * @param c Cuboid container from which particles and box dimensions are read.
-       *
-       * @warning This is broken!
-       */
-      /*
-         template<class T1, class T2>
-         bool save(const string &file, Space<T1,T2> &c) {
-         Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(&c.geo);
-         assert(geo!=nullptr && "Only Cuboid geometries classes allowed.");
-         if (geo==nullptr)
-         return false;
-         setbox(geo->len.x(), geo->len.y(), geo->len.z());
-         auto p=c.p;
-         for (auto gi : g) {
-         gi->translate( c, -gi->cm );  // b.trial is moved to origo -> whole!
-         for (auto j : *gi)
-         p[j] = c.trial[j] + gi->cm; // move back to cm without periodicity
-         gi->undo(c);                  // restore to original PBC location
-         }
-         for (auto &pi : p)
-         pi+=geo->len_half;            // gromacs origo is in the corner of the box
-         return save(file, p);           // while in Cuboid we use the middle
-         }
-
-         template<class Tpvec>
-         bool save(const string &file, Tpvec &p, std::vector<Group> &g) {
-         p_vec t;
-         for (auto &gi : g)
-         for (auto j : gi)
-         t.push_back( p[j] );
-         return save(file, t);
-         }*/
-
       /**
        * This will open an xtc file for reading. The number of atoms in each frame
        * is saved and memory for the coordinate array is allocated.
@@ -846,6 +804,55 @@ namespace Faunus {
   };
 
   /**
+   * @brief Convert FASTA sequence to atom id sequence
+   * @param fasta FASTA sequence, capital letters.
+   * @return vector of atom id's
+   */
+  inline std::vector<int> FastaToAtoms(const string &fasta) {
+
+    std::map<char,string> map = {
+      {'A',"ALA"},
+      {'R',"ARG"},
+      {'N',"ASN"},
+      {'D',"ASP"},
+      {'C',"CYS"},
+      {'E',"GLU"},
+      {'Q',"GLN"},
+      {'G',"GLY"},
+      {'H',"HIS"},
+      {'I',"ILE"},
+      {'L',"LEU"},
+      {'K',"LYS"},
+      {'M',"MET"},
+      {'F',"PHE"},
+      {'P',"PRO"},
+      {'S',"SER"},
+      {'T',"THR"},
+      {'W',"TRP"},
+      {'Y',"TYR"},
+      {'V',"VAL"}
+    };
+
+    std::vector<int> atomid;
+    atomid.reserve( fasta.size() );
+
+    for (auto c : fasta) {
+      auto it = map.find(c);
+      if ( it!=map.end() ) {
+        auto id = atom[ it->second ].id;
+        if (id>0)
+          atomid.push_back( atom[ it->second ].id );
+        else
+          std::cerr << "! Residue '" << it->second << "' not found in atom list." << endl;
+      }
+      else
+        std::cerr << "! Unknown character '" << c << "' in fasta sequence." << endl;
+    }
+    assert( fasta.size() == atomid.size() );
+    return atomid;
+  }
+
+  /**
    * @brief Add bonded peptide from fasta sequence
    * @param spc Space
    * @param bonded Bonded energy class, i.e. `Energy::Bonded`
@@ -853,50 +860,27 @@ namespace Faunus {
    * @param fasta Fasta sequence (capital letters, no spacing)
    * @return Group with peptide -- remember to enroll in space using `Space::enroll`
    * @note Untested
-   * @todo Use initializer list `map` data filling
+   * @todo Split out function `FastaToAtoms()`.
    */
   template<class Tspace, class Tbonded, class Tpairpot>
     Group addFastaSequence(Tspace &spc, Tbonded &bonded, const Tpairpot &pairpot, const string &fasta) {
-      std::map<char,string> map;
-      map['A']="ALA";
-      map['R']="ARG";
-      map['N']="ASN";
-      map['D']="ASP";
-      map['C']="CYS";
-      map['E']="GLU";
-      map['Q']="GLN";
-      map['G']="GLY";
-      map['H']="HIS";
-      map['I']="ILE";
-      map['L']="LEU";
-      map['K']="LYS";
-      map['M']="MET";
-      map['F']="PHE";
-      map['P']="PRO";
-      map['S']="SER";
-      map['T']="THR";
-      map['W']="TRP";
-      map['Y']="TYR";
-      map['V']="VAL";
+
+      typedef typename Tspace::ParticleVector Tpvec;
+      typedef typename Tspace::ParticleVector::value_type Tparticle;
 
       Group g;
-      typename Tspace::ParticleVector p;
-      typename Tspace::ParticleVector::value_type a;
+      auto atomid = FastaToAtoms( fasta );
 
-      // interpret fasta sequence
-      for (auto c : fasta) {
-        if (map.find(c)!=map.end() ) {
-          a=atom[ map[c] ];
-          p.push_back(a);
-        } else std::cerr << "Unknown character in fasta sequence!";
-      }
-
-      if (!p.empty()) {
-        for (auto &i : p)
-          spc.geo.randompos(i);        // random positions
-        g = spc.insert(p);             // add to space
+      if ( !atomid.empty() ) {
+        Tpvec t;
+        t.reserve( atomid.size() );
+        for (auto id : atomid) {
+          t.push_back( Tparticle() );
+          t.back() = atom[id];
+          spc.geo.randompos(t.back()); // random position
+        }
+        g = spc.insert(t);             // add to space
         g.name = fasta;
-        cout << "FASTA group: " << g.info() << "\n";
         for (int i=g.front(); i<g.back(); i++)
           bonded.add(i, i+1, pairpot); // add bonds
       }

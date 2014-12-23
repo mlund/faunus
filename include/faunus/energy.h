@@ -1942,6 +1942,7 @@ namespace Faunus {
            Tspace* spcPtr;
            string pfx = "penalty";
            Tfunction f;
+           typedef typename Tspace::ParticleVector Tpvec;
            typedef decltype(f(spcPtr->p)) Treturn; // type of coordinate
            typedef Energybase<Tspace> Tbase;
            typedef typename Energy::PenaltyFunction1D<double> Tone;
@@ -1961,21 +1962,30 @@ namespace Faunus {
                  in.get<float>(pfx+"_hi2",20)
                ) {}
            string info() { return pf.info(); }
+
            void test(UnitTest &t) { pf.test(t); }
+
            void load(const string &filename) { pf.load(filename); }
+
            void save(const string &filename) { pf.save(filename); }
+
            void save_final(const string &filename, double a, double b, double c=0, double d=0) { 
              pf.save_final(filename, a, b, c, d); 
            }
+
            double update(Treturn &c) {
              return pf.update(c);
            }
+
            double update(std::pair<Treturn,Treturn> &c, double &w, bool &r) {
              return pf.update(c, w, r);
            }
+
            std::map<Treturn,double> getMap() { return pf.getMap(); }
+
            double find(Treturn c) { return pf.find(c); }
-           double external(const p_vec &p) {
+
+           double external(const Tpvec &p) FOVERRIDE {
              Treturn coor = f(p);
              double du;
              if (!Tbase::isTrial(p)) coordpair.first=coor; // trial coordinate is stored

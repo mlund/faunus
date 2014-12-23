@@ -4,8 +4,9 @@ typedef Space<Geometry::Cuboid> Tspace;
 
 template<class Tspace>
 struct myenergy : public Energy::Energybase<Tspace> {  //custom energy class
+  typedef typename Tspace::ParticleVector Tpvec;
   double Tscale;                               //reduced temperature
-  double i_external(const p_vec &p, int i)  {  //pot. on particle
+  double i_external(const Tpvec &p, int i) FOVERRIDE {  //pot. on particle
     double s=( 1+std::sin(2*pc::pi*p[i].x()) ) / Tscale;
     if (p[i].x() >=-2.00 && p[i].x() <=-1.25) return 1*s;
     if (p[i].x() >=-1.25 && p[i].x() <=-0.25) return 2*s;
@@ -14,7 +15,7 @@ struct myenergy : public Energy::Energybase<Tspace> {  //custom energy class
     if (p[i].x() >= 1.75 && p[i].x() <= 2.00) return 5*s;
     return pc::infty;
   }
-  double g_external(const p_vec &p, Group &g) {//pot. on group
+  double g_external(const Tpvec &p, Group &g) FOVERRIDE {//pot. on group
     double u=0;
     for (auto i : g)
       u+=i_external(p, i);

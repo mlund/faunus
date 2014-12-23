@@ -7,7 +7,7 @@ fau_example(bearnix-cyl "./bearnix" cyl.cpp)
 # Carolina's playground
 fau_example(cc-polymers "./cragnell" polymers.cpp)
 
-# Carolina's playground
+# Fernando's playground
 fau_example(fer-cyl "./fernando" cyl.cpp)
 
 # Mikael's playground
@@ -47,11 +47,11 @@ fau_example(sc-npt "./vacha" sc-npt.cpp)
 fau_example(psc-nvt "./vacha" psc-nvt.cpp)
 fau_example(test2 "./vacha" test2.cpp)
 
-# Stenqvist playground
+# Stenqvist's playground
 fau_example(stenqvist-nemo "./stenqvist" nemo.cpp)
 set_target_properties(stenqvist-nemo PROPERTIES OUTPUT_NAME "nemo")
 
-# Axels playground
+# Axel's playground
 fau_example(axel-clustertest "./axel/clustertest" cluster.cpp)
 set_target_properties(axel-clustertest PROPERTIES OUTPUT_NAME "clustertest")
 

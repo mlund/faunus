@@ -1,9 +1,7 @@
 #ifndef FAU_slump_h
 #define FAU_slump_h
 
-#include <string>
 #include <random>
-#include <cassert>
 
 /// @brief Namespace for Faunus
 namespace Faunus {
@@ -27,7 +25,7 @@ namespace Faunus {
 
       public:
 
-        /** @brief Constructor -- default deterministic seed is used */
+        /** @brief Constructor -- default deterministic seed */
         RandomTwister() : dist(0,1) {}
 
         /** @brief Integer in uniform range [min:max] */
@@ -57,9 +55,6 @@ namespace Faunus {
 
         /** @brief Random number in uniform range `[-0.5,0.5)` */
         T randHalf() { return operator()() - 0.5; }
-
-        /** @brief Random number in range `[0,max unsigned int)` (TO BE DELETED) */
-        unsigned int rand() { return range(0, std::numeric_limits<unsigned int>::max()-1); }
     };
 
   extern RandomTwister<> slp_global;
@@ -67,7 +62,7 @@ namespace Faunus {
   /**
    * @brief Get random element from iterable container (vector, map, group etc.)
    * @return Iterator to random element
-   * @note Linear complexity for random access iterators; log(N) otherwise.
+   * @note Constant-time complexity for random access iterators; otherwise linear.
    */
   template<class Titer>
     Titer randomElement(const Titer &beg, const Titer &end) {

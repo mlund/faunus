@@ -68,8 +68,9 @@ namespace Faunus {
         if (v.is<Tobj>())
           return v;
       }
-      std::cerr << "# Error loading JSON file, '" << file
-        << "', or invalid content.\n";
+      if ( !file.empty() )
+        std::cerr << "# Error loading JSON file, '" << file
+          << "', or invalid content." << endl;
       return Tval();
     }
 

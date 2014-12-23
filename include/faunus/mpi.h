@@ -45,7 +45,7 @@ namespace Faunus {
         int rank();       //!< Rank of process
         int rankMaster(); //!< Rank number of the master
         bool isMaster();  //!< Test if current process is master
-        slump random;     //!< Random number generator for MPI calls
+        RandomTwister<> random; //!< Random number generator for MPI calls
         string id;        //!< Unique name associated with current rank
         std::ofstream cout; //!< Redirect stdout to here for rank-based file output
 
@@ -139,27 +139,30 @@ namespace Faunus {
      * @date Lund 2012
      *
      */
-    class ParticleTransmitter : public FloatTransmitter {
-      public:
-        enum dataformat {XYZ=3, XYZQ=4, XYZQI=5};
-        vector<floatp> sendExtra;                      //!< Put extra data to send here.
-        vector<floatp> recvExtra;                      //!< Received extra data will be stored here
+    template<typename p_vec>
+      class ParticleTransmitter : public FloatTransmitter {
+        private:
+          typedef typename p_vec::value_type particle; 
+        public:
+          enum dataformat {XYZ=3, XYZQ=4, XYZQI=5};
+          vector<floatp> sendExtra;                      //!< Put extra data to send here.
+          vector<floatp> recvExtra;                      //!< Received extra data will be stored here
 
-        ParticleTransmitter();
-        void send(MPIController&, const p_vec&, int); //!< Send particle vector to another node 
-        void recv(MPIController&, int, p_vec&);       //!< Receive particle vector from another node
-        void waitrecv();
-        void setFormat(dataformat);
-        void setFormat(string);
-        dataformat getFormat();
+          ParticleTransmitter();
+          void send(MPIController&, const p_vec&, int); //!< Send particle vector to another node 
+          void recv(MPIController&, int, p_vec&);       //!< Receive particle vector from another node
+          void waitrecv();
+          void setFormat(dataformat);
+          void setFormat(string);
+          dataformat getFormat();
 
-      private:
-        dataformat format;                             //!< Data format to send/receive - default is XYZQ
-        vector<floatp> sendBuf, recvBuf;
-        p_vec *dstPtr;  //!< pointer to receiving particle vector
-        void pvec2buf(const p_vec&); //!< Copy source particle vector to send buffer
-        void buf2pvec(p_vec&);       //!< Copy receive buffer to target particle vector
-    };
+        private:
+          dataformat format;                             //!< Data format to send/receive - default is XYZQ
+          vector<floatp> sendBuf, recvBuf;
+          p_vec *dstPtr;  //!< pointer to receiving particle vector
+          void pvec2buf(const p_vec&); //!< Copy source particle vector to send buffer
+          void buf2pvec(p_vec&);       //!< Copy receive buffer to target particle vector
+      };
 
     /*!
      * Besides initiating MPI, the current rank will be added to the global
@@ -209,15 +212,16 @@ namespace Faunus {
       MPI_Wait(&recvReq, &recvStat);
     }
 
-    /*!
+    /**
      * This will send a vector of floats and at the same time wait for the destination process
      * to send back another vector of the same size.
      * 
-     * \param mpi MPI controller to use
-     * \param src Vector to send
-     * \param dst Node to send/receive to/from
+     * @param mpi MPI controller to use
+     * @param src Vector to send
+     * @param dst Node to send/receive to/from
      *
-     * \todo Use MPI_Sendrecv( sendbuf, sendcount, sendtype, dest, sendtag, recvbuf, recvcount, recvtype, source, recvtag, comm, &status);
+     * @todo Use MPI_Sendrecv( sendbuf, sendcount, sendtype, dest, sendtag, recvbuf, recvcount,
+     *       recvtype, source, recvtag, comm, &status);
      */
     vector<FloatTransmitter::floatp> FloatTransmitter::swapf(MPIController &mpi, vector<floatp> &src, int dst) {
       vector<floatp> v( src.size() );
@@ -228,96 +232,104 @@ namespace Faunus {
       return v;
     }
 
-    ParticleTransmitter::ParticleTransmitter() {
-      setFormat(XYZQI);
-    }
+    template<typename p_vec>
+      ParticleTransmitter<p_vec>::ParticleTransmitter() { setFormat(XYZQI); }
 
-    void ParticleTransmitter::setFormat(dataformat d) { format = d; }
+    template<typename p_vec>
+      void ParticleTransmitter<p_vec>::setFormat(dataformat d) { format = d; }
 
-    void ParticleTransmitter::setFormat(string s) {
-      setFormat(XYZQI);
-      if (s=="XYZQ")
-        setFormat(XYZQ);
-      if (s=="XYZ")
-        setFormat(XYZ);
-    }
+    template<typename p_vec>
+      void ParticleTransmitter<p_vec>::setFormat(string s) {
+        setFormat(XYZQI);
+        if (s=="XYZQ")
+          setFormat(XYZQ);
+        if (s=="XYZ")
+          setFormat(XYZ);
+      }
 
-    ParticleTransmitter::dataformat ParticleTransmitter::getFormat() { return format; }
+    template<typename p_vec>
+      typename ParticleTransmitter<p_vec>::dataformat
+      ParticleTransmitter<p_vec>::getFormat() { return format; }
 
     /*!
      * \param mpi MPI controller to use
      * \param src Source particle vector
      * \param dst Destination node
      */
-    void ParticleTransmitter::send(MPIController &mpi, const p_vec &src, int dst) {
-      assert(dst>=0 && dst<mpi.nproc() && "Invalid MPI destination");
-      pvec2buf(src);
-      FloatTransmitter::sendf(mpi, sendBuf, dst);
-    }
-
-    void ParticleTransmitter::pvec2buf(const p_vec &src) {
-      sendBuf.clear();
-      for (auto &p : src) {
-        sendBuf.push_back(p.x());
-        sendBuf.push_back(p.y());
-        sendBuf.push_back(p.z());
-        if (format==XYZQ)
-          sendBuf.push_back(p.charge);
-        if (format==XYZQI) {
-          sendBuf.push_back(p.charge);
-          sendBuf.push_back( (floatp)p.id );
-        }
+    template<typename p_vec>
+      void ParticleTransmitter<p_vec>::send(MPIController &mpi, const p_vec &src, int dst) {
+        assert(dst>=0 && dst<mpi.nproc() && "Invalid MPI destination");
+        pvec2buf(src);
+        FloatTransmitter::sendf(mpi, sendBuf, dst);
       }
-      for (auto i : sendExtra)
-        sendBuf.push_back(i);
-    }
+
+    template<typename p_vec>
+      void ParticleTransmitter<p_vec>::pvec2buf(const p_vec &src) {
+        sendBuf.clear();
+        for (auto &p : src) {
+          sendBuf.push_back(p.x());
+          sendBuf.push_back(p.y());
+          sendBuf.push_back(p.z());
+          if (format==XYZQ)
+            sendBuf.push_back(p.charge);
+          if (format==XYZQI) {
+            sendBuf.push_back(p.charge);
+            sendBuf.push_back( (floatp)p.id );
+          }
+        }
+        for (auto i : sendExtra)
+          sendBuf.push_back(i);
+      }
 
     /*!
      * \param mpi MPI controller to use
      * \param src Source node
      * \param dst Destination particle vector
      */
-    void ParticleTransmitter::recv(MPIController &mpi, int src, p_vec &dst) {
-      assert(src>=0 && src<mpi.nproc() && "Invalid MPI source");
-      dstPtr=&dst;   // save a pointer to the destination particle vector
-      if (format==XYZ)
-        recvBuf.resize( 3*dst.size() );
-      if (format==XYZQ)
-        recvBuf.resize( 4*dst.size() );
-      if (format==XYZQI)
-        recvBuf.resize( 5*dst.size() );
-
-      // resize to fit extra data (if any)
-      recvExtra.resize( sendExtra.size() );
-      recvBuf.resize( recvBuf.size() + recvExtra.size() );
-
-      FloatTransmitter::recvf(mpi, src, recvBuf);
-    }
-
-    void ParticleTransmitter::waitrecv() {
-      FloatTransmitter::waitrecv();
-      buf2pvec(*dstPtr);
-    }
-
-    void ParticleTransmitter::buf2pvec(p_vec &dst) {
-      int i=0;
-      for (auto &p : dst) {
-        p.x()=recvBuf[i++];
-        p.y()=recvBuf[i++];
-        p.z()=recvBuf[i++];
+    template<typename p_vec>
+      void ParticleTransmitter<p_vec>::recv(MPIController &mpi, int src, p_vec &dst) {
+        assert(src>=0 && src<mpi.nproc() && "Invalid MPI source");
+        dstPtr=&dst;   // save a pointer to the destination particle vector
+        if (format==XYZ)
+          recvBuf.resize( 3*dst.size() );
         if (format==XYZQ)
-          p.charge=recvBuf[i++];
-        if (format==XYZQI) {
-          p.charge=recvBuf[i++];
-          p.id=(particle::Tid)recvBuf[i++];
-        }
+          recvBuf.resize( 4*dst.size() );
+        if (format==XYZQI)
+          recvBuf.resize( 5*dst.size() );
+
+        // resize to fit extra data (if any)
+        recvExtra.resize( sendExtra.size() );
+        recvBuf.resize( recvBuf.size() + recvExtra.size() );
+
+        FloatTransmitter::recvf(mpi, src, recvBuf);
       }
-      for (auto &x : recvExtra)
-        x=recvBuf[i++];
-      assert( (size_t)i==recvBuf.size() );
-      if ( (size_t)i!=recvBuf.size() )
-        cout << "!!!!!!!!!!!\n";
-    }
+
+    template<typename p_vec>
+      void ParticleTransmitter<p_vec>::waitrecv() {
+        FloatTransmitter::waitrecv();
+        buf2pvec(*dstPtr);
+      }
+
+    template<typename p_vec>
+      void ParticleTransmitter<p_vec>::buf2pvec(p_vec &dst) {
+        int i=0;
+        for (auto &p : dst) {
+          p.x()=recvBuf[i++];
+          p.y()=recvBuf[i++];
+          p.z()=recvBuf[i++];
+          if (format==XYZQ)
+            p.charge=recvBuf[i++];
+          if (format==XYZQI) {
+            p.charge=recvBuf[i++];
+            p.id=(typename particle::Tid)recvBuf[i++];
+          }
+        }
+        for (auto &x : recvExtra)
+          x=recvBuf[i++];
+        assert( (size_t)i==recvBuf.size() );
+        if ( (size_t)i!=recvBuf.size() )
+          std::cerr << "Particle transmitter says: !!!!!!!!!!!" << endl;
+      }
 
   } //end of mpi namespace
 }//end of faunus namespace

@@ -119,7 +119,7 @@ int main() {
   MCLoop loop(mcp);                      // class for handling mc loops
   while ( loop[0]         ) {            // Markov chain 
     while ( loop[1] ) {
-      int i=slp_global.rand() % 3;
+      int i=slp_global.range(0,2);
       int k=lipids.size();
       decltype(lipids.begin()) it;       // iterator for random lipid
       Group g;

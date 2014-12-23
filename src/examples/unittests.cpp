@@ -165,10 +165,10 @@ TEST_CASE("Math", "Checks mathematical functions")
 
 TEST_CASE("Space", "Space tests")
 {
-  ::atom.includefile("unittests.json");
-  InputMap in("unittests.input");
-  typedef Space<Geometry::Cuboid, PointParticle> Tspace;
-  Tspace spc(in);
+  //::atom.includefile("unittests.json");
+  //InputMap in("unittests.input");
+  //typedef Space<Geometry::Cuboid, PointParticle> Tspace;
+  //Tspace spc(in);
   //PointParticle a;
   //spc.insert(a);
 }

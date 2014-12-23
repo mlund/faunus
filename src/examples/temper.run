@@ -6,6 +6,8 @@
 
 mpicommand=$1
 
+source_tests_dir="`dirname $0`"
+
 # Make input files for each MPI process with different temperatures
 for proc in {0..3}
 do
@@ -13,6 +15,9 @@ if [ "$proc" == "0" ]; then Tscale=0.05; fi
 if [ "$proc" == "1" ]; then Tscale=0.3; fi 
 if [ "$proc" == "2" ]; then Tscale=1.0; fi 
 if [ "$proc" == "3" ]; then Tscale=2.0; fi 
+
+cp -f $source_tests_dir/temper.test$proc mpi$proc.temper.test 2> /dev/null
+
 echo "
 loop_macrosteps         2000    # number of temper moves
 loop_microsteps         10000   # number of translational moves per temper move
@@ -21,6 +26,8 @@ temper_runfraction      1.0     # Set to one/zero to turn on/off tempering
 temper_format           XYZ     # Exchange only coordinates while tempering
 mv_particle_genericdp   0.5     # translational displacement [angstrom]
 Tscale                  $Tscale # Reduced temperature
+test_stable             no
+test_file               mpi$proc.temper.test
 " > mpi$proc.temper.input
 done
 

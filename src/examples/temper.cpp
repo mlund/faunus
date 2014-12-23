@@ -21,38 +21,50 @@ struct myenergy : public Energy::Energybase<Tspace> {  //custom energy class
       u+=i_external(p, i);
     return u; // in kT
   }
-  string _info() { return "myenergy"; }       //mandatory info 
+  string _info() { return "myenergy"; }         //mandatory info 
 };
 
 int main() {
-  Faunus::MPI::MPIController mpi;             //init MPI
-  InputMap mcp(textio::prefix+"temper.input");//read input file
-  MCLoop loop(mcp);                           //handle mc loops
-  myenergy<Tspace> pot;                       //our custom potential!
-  pot.Tscale = mcp.get("Tscale",1.0);         //temperature from input
-  Tspace spc(mcp);                            //create simulation space
-  spc.insert( PointParticle() );              //insert a single particle
-  Group mygroup(0,0);                         //group with single particle
-  spc.enroll(mygroup);                        //tell space about group
+  Faunus::MPI::MPIController mpi;               //init MPI
+  InputMap mcp(textio::prefix+"temper.input");  //read input file
+  MCLoop loop(mcp);                             //handle mc loops
+  myenergy<Tspace> pot;                         //our custom potential!
+  pot.Tscale = mcp.get("Tscale",1.0);           //temperature from input
+  Tspace spc(mcp);                              //create simulation space
+  spc.insert( PointParticle() );                //insert a single particle
+  Group mygroup(0,0);                           //group with single particle
+  spc.enroll(mygroup);                          //tell space about group
 
-  Analysis::LineDistribution<> dst(.05);      //distribution func.
+  Analysis::LineDistribution<> dst(.05);        //distribution func.
   Move::ParallelTempering<Tspace> pt(mcp,pot,spc,mpi);//temper move
   Move::AtomicTranslation<Tspace> trans(mcp,pot,spc); //translational move
-  trans.setGroup(mygroup);                    //set translation group
+  trans.setGroup(mygroup);                      //set translation group
 
-  mpi.cout << spc.info() << loop.info();      //print initial info
+  EnergyDrift sys;                              // class for tracking system energy drifts
+  sys.init(Energy::systemEnergy(spc,pot,spc.p));// store initial total system energy
 
-  while ( loop[0] ) {                 //start markov chain
-    while ( loop[1] ) {
-      trans.move();                           //translate particle
-      dst(spc.p[0].x())++;                    //update histogram
-    }
-    pt.move();                                //do temper move
-    mpi.cout << loop.timing();                //print progress
-  }
+  mpi.cout << spc.info() << loop.info();        //print initial info
+                                               
+  while ( loop[0] ) {                           //start markov chain
+    while ( loop[1] ) {                        
+      sys+=trans.move();                        //translate particle
+      dst(spc.p[0].x())++;                      //update histogram
+    }                                          
+    sys+=pt.move();                             //do temper move
+    mpi.cout << loop.timing();                  //print progress
+  }                                            
 
-  dst.save(textio::prefix+"dist");            //save histogram
-  mpi.cout << trans.info() << pt.info();      //print final info
+  UnitTest test( mcp );                         //unit testing
+  trans.test( test );                          
+  sys.test( test );
+  pt.test( test );                             
+
+  sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // calc. energy drift
+  dst.save(textio::prefix+"dist");              //save histogram
+  mpi.cout << trans.info() << pt.info()         //print final info
+    << sys.info() << test.info();
+
+  return test.numFailed();
 }
 /**
   @page example_temper Example: Parallel Tempering

@@ -20,10 +20,10 @@ namespace Faunus {
     class RandomTwister {
 
       private:
-        Tengine eng; //random number engine
         std::uniform_real_distribution<T> dist;
 
       public:
+        Tengine eng; //!< Random number engine
 
         /** @brief Constructor -- default deterministic seed */
         RandomTwister() : dist(0,1) {}

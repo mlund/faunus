@@ -2931,7 +2931,7 @@ namespace Faunus {
                 molDel.clear();
                 atomDel.clear();
                 pmap.clear();
-              }
+              } else assert( !molDel.empty() || !atomDel.empty() );
             }
 
             // try insert move
@@ -2939,6 +2939,7 @@ namespace Faunus {
               pmap.clear();
               for ( auto id : it->molComb )
                 pmap.insert( {id, (*inserter[id])( base::spc->geo, base::spc->p, spc->molecule[id] ) } );
+              assert( !pmap.empty() );
             }
           }
 
@@ -2985,7 +2986,6 @@ namespace Faunus {
                     u += pot->g1g2(p.second, g, spc->p, *g2);
                   uinternal += pot->g_internal( p.second, g ); // ...internal mol energy (dummy)
                 }
-
               }
 
               for ( auto i=pmap.begin(); i!=pmap.end(); ++i )  //...between inserted molecules
@@ -3047,11 +3047,13 @@ namespace Faunus {
             if ( !insertBool ) {
               Ndeleted++;
               for ( auto m : molDel ) { // loop over Group pointers
-                base::spc->eraseGroup( spc->findIndex(m) );
                 molTrack.erase(m->molId, m);
+                base::spc->eraseGroup( spc->findIndex(m) );
               }
-              for ( auto i : atomDel )  // loop over particle index
+              for ( auto i : atomDel ) {// loop over particle index
+                assert(1==2 && "Under construction");
                 base::spc->erase(i);
+              }
 
               atomTrack.update( spc->p );
               return;
@@ -3063,10 +3065,12 @@ namespace Faunus {
               for ( auto &p : pmap ) { // loop over sets of new coordinates
                 auto molid = p.first;
                 if ( spc->molecule[molid].isAtomic() ) {
+                  assert(1==2 && "Under construction");
                   auto g = spc->insert( molid, p.second );
                   atomTrack.update( spc->p );
                 }
                 else {
+                  assert( !p.second.empty() );
                   auto g = spc->insert( molid, p.second ); // auto gen. group
                   molTrack.insert( molid, g );
                   assert( molTrack.size(molid) > 0 );
@@ -3075,7 +3079,6 @@ namespace Faunus {
             }
             molTrack.updateAvg();   // update average number of molecules
             atomTrack.updateAvg();  // ...and atoms
-
           }
 
           void _rejectMove() {
@@ -3087,8 +3090,10 @@ namespace Faunus {
             using namespace textio;
             std::ostringstream o;
 
-            o << pad( SUB,base::w,"Flux (Nins/Ndel)" ) << Ninserted / double(Ndeleted) << "\n";
-            o << "\n";
+            o << pad( SUB,base::w,"Accepted insertions" ) << Ninserted << "\n"
+              << pad( SUB,base::w,"Accepted deletions" ) << Ndeleted << "\n"
+              << pad( SUB,base::w,"Flux (Nins/Ndel)" ) << Ninserted / double(Ndeleted) << "\n"
+              << "\n";
 
             char w=15;
             double V=spc->geo.getVolume();

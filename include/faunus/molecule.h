@@ -3,6 +3,7 @@
 
 #include <faunus/io.h>
 #include <faunus/inputfile.h>
+#include <faunus/nonbonded.h>
 
 namespace Faunus {
 
@@ -12,8 +13,7 @@ namespace Faunus {
    * Values can be read from a JSON object with the following format:
    *
    * ~~~~
-   * "salt": { "atoms" : "Na Cl", "init":"RANDOM" },
-   * "polymer": { "activity" : 0.05, "atoms" : "MM MM MM MM" }
+   *    "mymolecule" : { "atoms":"ARG ARG GLU", "structure":"peptide.aam" }
    * ~~~~
    *
    * The key of type string is the `name` followed, in no particular order,
@@ -23,8 +23,10 @@ namespace Faunus {
    * :------------ | :-------------------------------------------------------
    * `activity`    | Chemical activity for grand canonical MC [mol/l]
    * `atoms`       | List of atoms in molecule (use `AtomData` names)
-   * `structure`   | Read conformation and species from AAM file
-   *
+   * `atomic`      | `True` if molecule is to be considered as a collection of free atomic species (default: false)
+   * `structure`   | Read conformation from AAM file
+   * `bonds`       | List of harmonic bonds - index 0 corresponds to first atom in structure
+   * `dihedrals`   | List of dihedrals (under construction!)
    */
   template<class Tpvec>
     class MoleculeData  : public PropertyBase {
@@ -41,6 +43,8 @@ namespace Faunus {
         double activity;                            //!< Chemical activity (mol/l)
         double chemPot;                             //!< Chemical potential (kT)
         Average<double> rho;                        //!< Average concentration (1/angstrom^3)
+        vector<Bonded::HarmonicBondData> bonds;     //!< List of harmonic bonds
+        vector<Bonded::DihedralData> dihedrals;     //!< List of harmonic bonds
 
         /** @brief Constructor - by default data is initialized; mass set to unity */
         inline MoleculeData( const Tjson &molecule=Tjson()) : _isAtomic(false) {
@@ -74,6 +78,14 @@ namespace Faunus {
           chemPot = log( activity * 1.0_molar );
 
           _isAtomic = json::value<bool>(molecule.second, "atomic", false);
+
+          // create bond list
+          for (auto &i : json::object("bonds", molecule.second) )
+            bonds.push_back( Bonded::HarmonicBondData(i) );
+
+          // create dihedral list
+          for (auto &i : json::object("dihedrals", molecule.second) )
+            dihedrals.push_back( Bonded::DihedralData(i) );
 
           // read conformation from disk
           string structure = json::value<string>( molecule.second, "structure", "" );
@@ -149,12 +161,22 @@ namespace Faunus {
    *
    * ~~~~
    * {
-   *   "moleculelist" : {
-   *     "salt" : { "atoms": "Na,Cl" },
-   *     "salt2" : { "atoms": "Mg,Cl,Cl" },
-   *     "chloride" : { "atoms": "Cl,Cl,Cl,Cl" },
-   *     "polymer" : { "activity": 0.05, "atoms": "MM,MM,MM,MM" },
-   *     "polymer2" : { "activity": 0.05, "atoms": "MM,MM,MM,MM" }
+   *   "moleculelist" :
+   *   {
+   *     "salt" : { "atoms":"Na Cl", "atomic":True },
+   *     "polymer" :
+   *        { "activity":0.05, "atoms":"MM MM MM MM",
+   *         "bonds" :
+   *         {
+   *           "0 1" : { "k":0.5, "req":4.0 },
+   *           "1 2" : { "k":0.5, "req":4.0 },
+   *           "2 3" : { "k":0.5, "req":4.0 }
+   *         },
+   *         "dihedrals" :
+   *         {
+   *           "0 1 2 3" : { "k1":0.01, "k2":2.123 }
+   *         }
+   *       }
    *   }
    * }
    * ~~~~

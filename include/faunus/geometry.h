@@ -479,45 +479,60 @@ namespace Faunus {
       struct InsertRandom : public base {
         using typename base::Tpvec;
         using typename base::Tgeo;
-        Point dir; //!< Scalars for random mass center position. Default (1,1,1) 
+        Point dir;         //!< Scalars for random mass center position. Default (1,1,1)
+        bool checkOverlap; //!< Set to true to enable container overlap check
 
-        InsertRandom() : dir(1,1,1) {base::name = "random";}
+        InsertRandom() : dir(1,1,1), checkOverlap(true) { base::name = "random"; }
 
         Tpvec operator() (Tgeo &geo, const Tpvec &p, const typename Tspace::MoleculeType &mol) FOVERRIDE {
           Tpvec v;
-          if (mol.isAtomic()) {
+          bool _overlap=true;
 
-            int _i=0;
-            v.resize( mol.atoms.size(), typename Tspace::ParticleType());
+          do {
 
-            for (auto &aType: mol.atoms) { // for each atom type of molecule
-              v[_i] = atom[aType];   // set part type
+            if (mol.isAtomic()) {
+              int _i = 0;
+              v.resize(mol.atoms.size(), typename Tspace::ParticleType());
+
+              for (auto &aType: mol.atoms) { // for each atom type of molecule
+                v[_i] = atom[aType];   // set part type
+                Geometry::QuaternionRotate rot;
+                Point u;
+                u.ranunit(slump);
+                rot.setAxis(geo, {0, 0, 0}, u, pc::pi * slump());
+                v[_i].rotate(rot);
+                geo.randompos(v[_i]);
+                _i++;
+              }
+
+            } else {
+              v = mol.getRandomConformation();
+              Point a, b;
+              geo.randompos(a);                  // random point in container
+              a = a.cwiseProduct(dir);           // apply user defined directions (default: 1,1,1)
+              Geometry::cm2origo(geo, v);         // translate to origo - obey boundary conditions
               Geometry::QuaternionRotate rot;
-              Point u;
-              u.ranunit(slump);
-              rot.setAxis( geo, {0,0,0}, u, pc::pi*slump() );
-              v[_i].rotate(rot);
-              geo.randompos( v[_i] );
-              _i++;
+              b.ranunit(slump);             // random unit vector
+              rot.setAxis(geo, {0, 0, 0}, b, slump() * 2 * pc::pi); // random rot around random vector
+
+              for (auto &i : v) {              // apply rotation to all points
+                i = rot(i) + a;                  // ...and translate
+                geo.boundary(i);                 // ...and obey boundaries
+              }
             }
 
-          } else {
-            v = mol.getRandomConformation();
-            Point a,b;
-            geo.randompos(a);                  // random point in container
-            a = a.cwiseProduct(dir);           // apply user defined directions (default: 1,1,1)
-            Geometry::cm2origo(geo,v);         // translate to origo - obey boundary conditions
-            Geometry::QuaternionRotate rot;
-            b.ranunit(slump);             // random unit vector
-            rot.setAxis(geo, {0,0,0}, b, slump()*2*pc::pi); // random rot around random vector
+            assert( !v.empty() );
 
-            for ( auto &i : v ) {              // apply rotation to all points
-              i = rot(i) + a;                  // ...and translate
-              geo.boundary(i);                 // ...and obey boundaries
-            }
-          }
+            _overlap=false;
+            if ( checkOverlap )                  // check for container overlap
+              for ( auto &i : v )
+                if ( geo.collision(i, i.radius) ) {
+                  _overlap = true;
+                  break;
+                }
 
-          assert(!v.empty());
+          } while ( _overlap == true );
+
           return v;
         }
       };

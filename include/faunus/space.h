@@ -402,6 +402,9 @@ namespace Faunus {
   template<class Tgeometry, class Tparticle>
     bool Space<Tgeometry,Tparticle>::eraseGroup(int i) {
 
+      assert( !groupList().empty() );
+      assert( i>=0 && i<(int)g.size() );
+
       if ( !groupList().empty() ) {
 
         assert( checkSanity() );
@@ -436,7 +439,7 @@ namespace Faunus {
     bool Space<Tgeometry,Tparticle>::save(string file) {
       using std::numeric_limits;
       if (checkSanity()) {
-        cout << "Writing space state file '" << file << "'. ";
+        cout << "  Writing space state file '" << file << "'. ";
         std::ofstream fout( file.c_str() );
         if (fout) {
           fout.precision( numeric_limits<double>::digits10 + 1 );
@@ -449,6 +452,8 @@ namespace Faunus {
           fout << g.size() << "\n";
           for (auto g_i : g)
             fout << *g_i << "\n";
+          fout << "randomstate\n";
+          fout << slump.eng;
           cout << "OK!\n";
           return true;
         }
@@ -507,12 +512,19 @@ namespace Faunus {
                   g_i->name = molecule[g_i->molId].name;
               }
               cout << indent(SUB) << "Read " << n << " group(s)." << endl;
-              return true;
             } else {
               std::cerr << "FAILED! (space groups do not match)." << endl;
               return false;
             }
           }
+          //string id;
+          string id;
+          fin >> id;
+          if ( id=="randomstate" ) {
+            cout << indent(SUB) << "Restoring random number generator state." << endl;
+            fin >> slump.eng;
+          }
+
           return true;
         }
       }
@@ -637,7 +649,8 @@ namespace Faunus {
 
         if ( molecule[molId].isAtomic() )
           x->setMolSize(1);
-        else x->setMolSize( pin.size() );
+        else
+          x->setMolSize( pin.size() );
 
         x->setMassCenter( *this );
 

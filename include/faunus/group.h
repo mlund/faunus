@@ -59,7 +59,11 @@ namespace Faunus {
       bool operator> (Group &other) { return this->back() > other.back(); }
 
       bool operator== (Group& other) {
-        return ((this->front() == other.front()) && (this->back() == other.back()));
+        return (
+            (this->front() == other.front()) &&
+            (this->back() == other.back()) &&
+            (this->molId == other.molId) &&
+            (this->molsize == other.molsize)  );
       }
 
       /** @brief Information string */
@@ -181,23 +185,23 @@ namespace Faunus {
           assert( find( sel.back()  ) );
         }
 
-        /**
-          * @brief Get the i'th molecule in the group
-          * @warning You must manually update the mass center of the returned group
-          */
-        Group getMolecule(int i) const {
-          Group sel(name, front()+i*molsize, front()+i*molsize+molsize-1);
-          sel.molId = this->molId;
-          sel.setMolSize(molsize);
+      /**
+       * @brief Get the i'th molecule in the group
+       * @warning You must manually update the mass center of the returned group
+       */
+      Group getMolecule(int i) const {
+        Group sel(name, front()+i*molsize, front()+i*molsize+molsize-1);
+        sel.molId = this->molId;
+        sel.setMolSize(molsize);
 
-          assert( sel.back() <= this->back());
-          assert( sel.molsize>0 );
-          assert( (sel.size()%molsize)==0 );
-          assert( sel.isMolecular() );
-          assert( find( sel.front() ) );
-          assert( find( sel.back()  ) );
-          return sel;
-        }
+        assert( sel.back() <= this->back());
+        assert( sel.molsize>0 );
+        assert( (sel.size()%molsize)==0 );
+        assert( sel.isMolecular() );
+        assert( find( sel.front() ) );
+        assert( find( sel.back()  ) );
+        return sel;
+      }
 
       /** @brief Scaling for isobaric and isochoric moves */ 
       template<class Tspace>
@@ -272,19 +276,12 @@ namespace Faunus {
       Group& operator<<(std::istream &in) {
         int front, back, id;
         in >> front >> back >> id >> molsize;
-        molId=PropertyBase::Tid(id);
         setrange(front,back);
+        molId=PropertyBase::Tid(id);
         assert( size()==back-front+1 && "Problem with Group range");
         cm.operator<<(in);
+        cm_trial=cm;
         return *this;
-      }
-
-      /** @brief Select random molecule */
-      int randomMol() const {
-        int i=(random()-front())/molsize;
-        assert(molsize>0);
-        assert(find(i) && "Out of range!");
-        return i;
       }
 
       /**
@@ -348,20 +345,6 @@ namespace Faunus {
             cout << " Group::addParticles(Tspace &spc, string& name, int count)" << endl;
           }
         }
-
-      /**
-       * @todo rename to addGroup or implement operator
-      template<class Tgroup>
-        void addMolecule(const Tgroup &g) {
-          if ((g.size()%molsize)==0) {
-            if (empty())
-              setrange(g.front(), g.back());
-            else if (g.front()==back()+1)
-              setback(g.back());
-          }
-          assert( (size()%molsize)==0 && "GroupArray not a multiple of N");
-        }
-       */
   };
 
   /** @brief Number of hydrophobic sites */

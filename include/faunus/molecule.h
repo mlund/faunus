@@ -3,7 +3,7 @@
 
 #include <faunus/io.h>
 #include <faunus/inputfile.h>
-#include <faunus/nonbonded.h>
+#include <faunus/bonded.h>
 
 namespace Faunus {
 

@@ -27,7 +27,7 @@ int main() {
       if ( slump() > 0.5 ) 
         sys += gc.move();
       else 
-        for (size_t i=0; i<spc.groupList().size(); i++) {
+        for ( auto cnt : spc.groupList() ) {
           auto it = slump.element( spc.groupList().begin(), spc.groupList().end() ) ;
           tr.setGroup( **it );
           sys += tr.move();

@@ -102,7 +102,8 @@ namespace Faunus {
         static std::string p2s(const Tparticle &a, int i) {
           std::ostringstream o;
           o.precision(5);
-          o << atom[a.id].name << " " << i+1 << " " << a.x() << " " << a.y() <<" "<< a.z() << " "
+          o << atom[a.id].name << " " << i+1 << " "
+            << a.transpose() << " "
             << a.charge << " " << a.mw << " " << a.radius << endl;
           return o.str();
         }

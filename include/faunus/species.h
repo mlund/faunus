@@ -75,11 +75,10 @@ namespace Faunus {
     using typename base::const_reference;
     
     /** @brief Iterator to random element */
-    const_iterator random() const { return slump.element(this->begin(), this->end()); }
+    const_iterator random() const { return slump.element( begin(), end() ); }
     
     /** @brief Iterator to random element */
-    iterator random() { return slump.element(this->begin(), this->end()); }
-    
+    iterator random() { return slump.element( begin(), end() ); }
     
     /** @brief Add element at the end */
     void push_back(const value_type &d) {
@@ -96,12 +95,12 @@ namespace Faunus {
     
     /** @brief Find element by name */
     const_iterator find(const string &name) const {
-      for (auto &i : *this)
-        if (i.name==name)
-          return begin()+i.id;
-      return end();
+      return std::find_if( begin(), end(), [&name](const value_type &i){return i.name==name;} );
     }
-    
+
+    /** @brief Access element by string */
+    const_reference operator[](const std::string &name) const { return *find(name); }
+  
     /** @brief Access element */
     const_reference operator[](size_type i) const {
       assert( i==base::operator[](i).id && "Property out of sync");
@@ -111,20 +110,10 @@ namespace Faunus {
     /** @brief Access element */
     reference operator[](size_type i) {
       assert( i==base::operator[](i).id && "Property out of sync");
+      assert( i<base::size() );
       return base::operator[](i);
-    }
-    
-    /**
-     * @brief Access element by string.
-     * @details If not found, return default property at index 0
-     */
-    reference operator[](const std::string &name) {
-      for (auto &i : *this)
-        if (i.name==name)
-          return i;
-      return base::front(); // fallback
-    }
-    
+    }    
+   
     /**
      * @brief Read properties from JSON file
      * @param file Filename

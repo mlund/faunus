@@ -10,6 +10,7 @@
 #include <faunus/textio.h>
 #include <faunus/potentials.h>
 #include <faunus/auxiliary.h>
+#include <faunus/bonded.h>
 #endif
 #ifdef ENABLE_MPI
 #include <faunus/mpi.h>
@@ -821,6 +822,7 @@ namespace Faunus {
         Bonded() {
           this->name="Bonded particles";
           CrossGroupBonds=false;
+          //add( spc->groupList() );
         }
 
         /**
@@ -944,11 +946,22 @@ namespace Faunus {
               = ForceFunctionObject<decltype(pot)>(pot);
           }
 
-        /* Commented to allow for gcc 4.6 compatibility
-           auto getBondList() -> decltype(this->list) {
-           return Tbase::getBondList();
-           }
-           */
+        /** @brief Add harmonic bond */
+        void add( const Faunus::Bonded::HarmonicBondData &hb ) {
+          add( hb.index[0], hb.index[1], Potential::Harmonic(hb.k, hb.req) );
+        }
+
+        /** @brief Add all bonds found in a list of groups */
+        void add( const std::vector<Group*> &groups ) {
+          for ( auto g : groups )
+            if ( spc->molecule.size() > g->molId )
+              for ( auto b : spc->molecule[ g->molId ].getBondList() ) {
+                b.shift( g->front() );
+                add( b );
+              }
+        }
+
+        auto getBondList() -> decltype(this->list) { return Tbase::getBondList(); }
 
     };
 

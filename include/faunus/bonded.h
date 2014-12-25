@@ -17,13 +17,18 @@ namespace Faunus {
      * @brief Base class for two- and manybody potentials
      */
     struct BondDataBase {
-
       vector<int> index; //!< Particle index
 
       inline BondDataBase() {};
 
       bool find(int i) const { //!< Determine if particle exists in `index`
         return (std::find(index.begin(), index.end(), i)!=index.end()) ? true : false;
+      }
+
+      /** @brief Add offset to each index */
+      void shift(int offset) {
+        assert(offset>=0);
+        std::for_each( index.begin(), index.end(), [&](int& d) { d+=offset;} );
       }
     };
 
@@ -63,7 +68,6 @@ namespace Faunus {
         in >> index[0] >> index[1] >> k >> req;
         return *this;
       }
-
     };
 
     /**

@@ -36,6 +36,9 @@ namespace Faunus {
         using PropertyBase::Tjson;
         bool _isAtomic;
 
+        typedef std::function<Tpvec(Geometry::Geometrybase&,
+            const Tpvec&, const MoleculeData<Tpvec>&)> TinserterFunc;
+
       public:
 
         std::vector<typename Tparticle::Tid> atoms; //!< List of atoms in molecule
@@ -46,15 +49,21 @@ namespace Faunus {
         vector<Bonded::HarmonicBondData> bonds;     //!< List of harmonic bonds
         vector<Bonded::DihedralData> dihedrals;     //!< List of harmonic bonds
 
+        TinserterFunc inserter;                     //!< Function for insertion into space
+
         /** @brief Constructor - by default data is initialized; mass set to unity */
         inline MoleculeData( const Tjson &molecule=Tjson()) : _isAtomic(false) {
           readJSON(molecule);
+          inserter=nullptr;
         }
+
+        /** @brief Get list of bonds for molecule */
+        std::vector<Bonded::HarmonicBondData>& getBondList() { return bonds; }
 
         /** @brief Get a random conformation */
         Tpvec getRandomConformation() const {
-          assert(!conformations.empty());
-          return conformations[slump.range(0, conformations.size()-1) ];
+          assert( !conformations.empty() );
+          return *slump.element( conformations.begin(), conformations.end() );
         }
 
         /**
@@ -194,7 +203,6 @@ namespace Faunus {
         MoleculeMap() {
           base::jsonsection = "moleculelist";
           base::name = "Molecule Properties";
-          base::push_back( typename base::value_type() ); // add default property
         }
 
         /** @brief Read JSON file given through `InputMap` */

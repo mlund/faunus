@@ -71,9 +71,7 @@ namespace Faunus {
         /** @brief Clear map -- preserve averages */
         void clearMap() { map.clear(); }
 
-        /**
-         * @brief Update average number of particles
-         */
+        /** @brief Update average number of particles */
         void updateAvg() {
           for (auto &m : map)
             Navg[m.first] += m.second.size();
@@ -82,6 +80,7 @@ namespace Faunus {
         /** @brief Get average number of particles */
         Average<double> getAvg(Tid id) { return Navg[id]; }
 
+        /** @brief Update atom tracker  */
         template<class Tpvec>
           void update(const Tpvec &p) {
             map.clear();
@@ -251,6 +250,24 @@ namespace Faunus {
               return i;
           return -1;
         }
+
+        /** @brief Returns vector of molecules with matching name */
+        inline std::vector<Group*> findMolecules( int molId ) const {
+          std::vector<Group*> v;
+          for ( auto i : groupList() )
+            if (i->molId == molId)
+              v.push_back( i );
+          return v;
+        }
+
+        /** @brief Returns vector of molecules with matching molid */
+        inline std::vector<Group*> findMolecules( const std::string &name ) const {
+          auto it = molecule.find(name);
+          if ( it != molecule.end() )
+            return findMolecules( it->molId );
+          else return std::vector<Group*>();
+        }
+
     };
 
   template<class Tgeometry, class Tparticle>
@@ -488,7 +505,8 @@ namespace Faunus {
             geo.setVolume(vol);
           }
           if (key==RESIZE && n!=(int)p.size()) {
-            cout << indent(SUB) << "Resizing particle vector from " << p.size() << " --> " << n << ".\n";
+            cout << indent(SUB) << "Resizing particle vector from "
+              << p.size() << " --> " << n << ".\n";
             p.resize(n);
           }
           assert(n==(int)p.size());
@@ -505,11 +523,11 @@ namespace Faunus {
                 i = new Group();
             }
             if (n==(int)g.size()) {
-              for (auto g_i : g) {
-                *g_i << fin;
-                g_i->setMassCenter(*this);
-                if (g_i->name.empty())
-                  g_i->name = molecule[g_i->molId].name;
+              for ( auto i : g ) {
+                *i << fin;
+                i->setMassCenter(*this);
+                if ( i->name.empty() )
+                  i->name = molecule[i->molId].name;
               }
               cout << indent(SUB) << "Read " << n << " group(s)." << endl;
             } else {
@@ -517,14 +535,12 @@ namespace Faunus {
               return false;
             }
           }
-          //string id;
           string id;
           fin >> id;
           if ( id=="randomstate" ) {
             cout << indent(SUB) << "Restoring random number generator state." << endl;
             fin >> slump.eng;
           }
-
           return true;
         }
       }
@@ -580,9 +596,10 @@ namespace Faunus {
         << geo.info(w)
         << pad(SUB,w,"Number of particles") << p.size() << endl
         << pad(SUB,w,"Electroneutrality")
-        << ((abs(z)>1e-7) ? "NO!" : "Yes") << " "  << z << endl
+        << ((fabs(z)>1e-7) ? "NO!" : "Yes") << " "  << z << endl
         << pad(SUB,w,"System sanity check")
         << (checkSanity() ? "Passed" : "Failed") << endl
+        << pad(SUB,w,"Number of molecule types") << molecule.size() << endl
         << indent(SUB) << "Groups:" << endl;
       for ( size_t i=0; i<g.size(); i++ ) {
         std::ostringstream range;

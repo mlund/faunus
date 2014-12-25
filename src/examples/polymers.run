@@ -12,13 +12,27 @@ cp -f $source_tests_dir/polymers.state state 2> /dev/null
 # Create input file with atom properties
 #-----------------------------------------------------------
 echo '{
+
   // dp = Displacement parameter [angstrom]
   // q  = Valency/charge number [e]
   // r  = Radius [angstrom]
+
   "atomlist" : {
     "Na" : { "q": 1.0, "r":2.0, "dp":110 },  // sodium ion
     "Cl" : { "q":-1.0, "r":2.0, "dp":110 },  // chloride ion
     "MM" : { "q": 1.0, "r":3.0, "dp":10 }    // monomer
+  },
+
+  "moleculelist" : {
+     "polymer" :
+     {
+       "structure":"polymers.aam",
+       "bonds" : {
+         "0 1" : { "k":0.0557, "req:0" },
+         "1 2" : { "k":0.0557, "req:0" },
+         "3 4" : { "k":0.0557, "req:0" }
+       }
+     }
   }
 }' > polymers.json
 

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <utility>
 #include <regex>
+#include <cstdint>
 
 #ifdef FAU_HASHTABLE
 #include <unordered_map>
@@ -176,10 +177,9 @@ namespace Faunus {
   /**
    * @brief Quake inverse square root approximation
    */
-  template<class Tint=int>
+  template<class Tint=std::int32_t>
     float invsqrtQuake(float number) {
-      static_assert(sizeof(Tint)==4,
-          "Integer size must be 4 bytes for quake invsqrt.");
+      static_assert(sizeof(Tint)==4, "Integer size must be 4 bytes for quake invsqrt.");
       float y  = number;
       float x2 = y * 0.5F;
       Tint i  = * ( Tint * ) &y;
@@ -195,7 +195,7 @@ namespace Faunus {
    *
    * On GCC/Clang this will use the fast `__builtin_powi` function.
    * If not, and `n<7`, a simple loop (that can be unrolled at compile
-   * time) is performed. Of none of the above, `std::pow` is used.
+   * time) is performed. If none of the above, `std::pow` is used.
    */
   template<int n, typename T=double>
     T _powi(T &x) {
@@ -210,17 +210,14 @@ namespace Faunus {
 #endif
     }
 
-
   /**
    * @brief Approximate exp() function
    * @note see [Cawley 2000](http://dx.doi.org/10.1162/089976600300015033)
    * @warning Does not work in big endian systems!
    */
-  template<class Tint=int>
+  template<class Tint=std::int32_t>
     double exp_cawley(double y) {
-      static_assert(2*sizeof(Tint)==sizeof(double),
-          "Approximate exp() requires 4-byte integer" );
-      //static double EXPA=1048576/std::log(2);
+      static_assert(2*sizeof(Tint)==sizeof(double), "Approximate exp() requires 4-byte integer" );
       union {
         double d;
         struct { Tint j, i; } n;  // little endian
@@ -231,7 +228,7 @@ namespace Faunus {
       return eco.d;
     }
 
-  template<class Tint>
+  template<class Tint=std::int32_t>
     double exp_untested(double y) {
       static_assert(2*sizeof(Tint)==sizeof(double),
           "Approximate exp() requires 4-byte integer");

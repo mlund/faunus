@@ -2890,7 +2890,6 @@ namespace Faunus {
           MoleculeCombinationMap<Tpvec> comb;  // map of combinations to insert
           std::map<int,int> molcnt, atomcnt;   // id's and number of inserted/deleted mols and atoms
           std::multimap<int, Tpvec> pmap;      // coordinates of mols and atoms to be inserted
-          std::map<int, Geometry::MoleculeInserterBase<Tspace>* > inserter; // inserter
           unsigned int Ndeleted, Ninserted;    // Number of accepted deletions and insertions
           bool insertBool;                     // current status - either insert or delete
           typename MoleculeCombinationMap<Tpvec>::iterator it; // current combination
@@ -2934,11 +2933,12 @@ namespace Faunus {
               } else assert( !molDel.empty() || !atomDel.empty() );
             }
 
-            // try insert move
+            // try insert move (nothing is actually inserter - just a proposed configuration)
             if (insertBool) {
               pmap.clear();
-              for ( auto id : it->molComb )
-                pmap.insert( {id, (*inserter[id])( base::spc->geo, base::spc->p, spc->molecule[id] ) } );
+              for ( auto molid : it->molComb ) // loop over molecules in combination
+                pmap.insert(
+                    { molid, spc->molecule[molid].inserter( base::spc->geo, base::spc->p ) } );
               assert( !pmap.empty() );
             }
           }
@@ -3142,7 +3142,7 @@ namespace Faunus {
 
         public:
 
-          /** @brief Constructor -- load combinations, initialize trackers and default inserters */
+          /** @brief Constructor -- load combinations, initialize trackers */
           GreenGC(
               InputMap &in, 
               Energy::Energybase<Tspace> &e,
@@ -3155,7 +3155,7 @@ namespace Faunus {
             base::useAlternateReturnEnergy = true;
             base::runfraction = in.get<double>(pfx+"_runfraction",1.0);
 
-            slump.seed(); // attempt non-deterministic random number sequence
+            // slump.seed(); // attempt non-deterministic random number sequence
 
             // update tracker with GC molecules and atoms
             for ( auto g : spc->groupList() )
@@ -3168,18 +3168,11 @@ namespace Faunus {
                 if ( spc->molecule[g->molId].activity > 1e-9 )
                   molTrack.insert( g->molId, g );
 
-            // add default inserters
-            for ( auto &i : spc->molecule )
-              inserter[i.id] = new Geometry::InsertRandom<Tspace>();
-
             // load combinations
             comb.includefile(in);
           } 
 
-          ~GreenGC() {
-            for (auto &i : inserter)
-              delete(i.second);
-          }
+          ~GreenGC() {}
       };
 
 

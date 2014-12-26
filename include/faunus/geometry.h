@@ -450,134 +450,48 @@ namespace Faunus {
         }
     };
 
-    /**
-     * @brief Base class for molecule inserters
-     *
-     * Molecule inserters take care of generating molecules
-     * for insertion into space and can be used in Grand Canonical moves,
-     * Widom analysis, and for generating initial configurations.
-     * Inserters will not actually insert anything, but rather
-     * return a particle vector with proposed coordinates.
-     *
-     * All inserters are function objects, expecting
-     * a geometry, particle vector, and molecule data via
-     * the pure virtual function operator.
-     *
-     * @todo Under construction
-     */
-    template<class Tspace>
-      struct MoleculeInserterBase {
-        std::string name;
-        typedef typename Tspace::ParticleVector Tpvec;
-        typedef typename Tspace::GeometryType Tgeo;
-        virtual Tpvec operator() (Tgeo&, const Tpvec&, const typename Tspace::MoleculeType&)=0;
-        virtual ~MoleculeInserterBase() {}
-      };
-
-    /** @brief Random position and orientation - typical for rigid bodies */
-    template<class Tspace, class base=MoleculeInserterBase<Tspace> >
-      struct InsertRandom : public base {
-        using typename base::Tpvec;
-        using typename base::Tgeo;
-        Point dir;         //!< Scalars for random mass center position. Default (1,1,1)
-        bool checkOverlap; //!< Set to true to enable container overlap check
-
-        InsertRandom() : dir(1,1,1), checkOverlap(true) { base::name = "random"; }
-
-        Tpvec operator() (Tgeo &geo, const Tpvec &p, const typename Tspace::MoleculeType &mol) FOVERRIDE {
-          Tpvec v;
-          bool _overlap=true;
-
-          do {
-
-            if (mol.isAtomic()) {
-              int _i = 0;
-              v.resize(mol.atoms.size(), typename Tspace::ParticleType());
-
-              for (auto &aType: mol.atoms) { // for each atom type of molecule
-                v[_i] = atom[aType];   // set part type
-                Geometry::QuaternionRotate rot;
-                Point u;
-                u.ranunit(slump);
-                rot.setAxis(geo, {0, 0, 0}, u, pc::pi * slump());
-                v[_i].rotate(rot);
-                geo.randompos(v[_i]);
-                _i++;
-              }
-
-            } else {
-              v = mol.getRandomConformation();
-              Point a, b;
-              geo.randompos(a);                  // random point in container
-              a = a.cwiseProduct(dir);           // apply user defined directions (default: 1,1,1)
-              Geometry::cm2origo(geo, v);         // translate to origo - obey boundary conditions
-              Geometry::QuaternionRotate rot;
-              b.ranunit(slump);             // random unit vector
-              rot.setAxis(geo, {0, 0, 0}, b, slump() * 2 * pc::pi); // random rot around random vector
-
-              for (auto &i : v) {              // apply rotation to all points
-                i = rot(i) + a;                  // ...and translate
-                geo.boundary(i);                 // ...and obey boundaries
-              }
-            }
-
-            assert( !v.empty() );
-
-            _overlap=false;
-            if ( checkOverlap )                  // check for container overlap
-              for ( auto &i : v )
-                if ( geo.collision(i, i.radius) ) {
-                  _overlap = true;
-                  break;
-                }
-
-          } while ( _overlap == true );
-
-          return v;
-        }
-      };
-
-    /** @brief Insert at vacant position, avoiding matter overlap */
-    template<class Tspace, class base=InsertRandom<Tspace> >
+    /** @brief Insert at vacant position, avoiding matter overlap 
+      template<class Tspace, class base=InsertRandom<Tspace> >
       class InsertFreeSpace : public base {
-        private:
-          using typename base::Tpvec;
-          using typename base::Tgeo;
+      private:
+      using typename base::Tpvec;
+      using typename base::Tgeo;
 
-          bool matterOverlap(const Tgeo &geo, const Tpvec &p1, const Tpvec &p2) const {
-            for (auto &i : p1)
-              for (auto &j : p2) {
-                double max=i.radius+j.radius;
-                if ( geo.sqdist(i,j)<max*max )
-                  return true;
-              }
-            return false;
-          }
+      bool matterOverlap(const Tgeo &geo, const Tpvec &p1, const Tpvec &p2) const {
+      for (auto &i : p1)
+      for (auto &j : p2) {
+      double max=i.radius+j.radius;
+      if ( geo.sqdist(i,j)<max*max )
+      return true;
+      }
+      return false;
+      }
 
-          bool containerOverlap(const Tgeo &geo, const Tpvec &p) const {
-            for (auto &i : p)
-              if (geo.collision(i, i.radius)) return true;
-            return false;
-          }
+      bool containerOverlap(const Tgeo &geo, const Tpvec &p) const {
+      for (auto &i : p)
+      if (geo.collision(i, i.radius)) return true;
+      return false;
+      }
 
-        public:
-          int maxtrials; //!< Maximum number of attempts to find a hole (default: 1000)
+      public:
+      int maxtrials; //!< Maximum number of attempts to find a hole (default: 1000)
 
-          InsertFreeSpace(int maxtrials=1000) : maxtrials(maxtrials) {}
+      InsertFreeSpace(int maxtrials=1000) : maxtrials(maxtrials) {}
 
-          Tpvec operator() (Tgeo &geo, const Tpvec &p, const typename Tspace::MoleculeType &mol) {
-            int n=maxtrials;
-            Tpvec v;
-            do {
-              v = base(geo,p,mol);
-            } while (--n>0 && matterOverlap(geo,v,p) && containerOverlap(geo,v));
-            if (n==0) {
-              std::cerr << "Timeout - found no space for particle(s)\n";
-              v.clear();
-            }
-            return v;
-          } 
+      Tpvec operator() (Tgeo &geo, const Tpvec &p, const typename Tspace::MoleculeType &mol) {
+      int n=maxtrials;
+      Tpvec v;
+      do {
+      v = base(geo,p,mol);
+      } while (--n>0 && matterOverlap(geo,v,p) && containerOverlap(geo,v));
+      if (n==0) {
+      std::cerr << "Timeout - found no space for particle(s)\n";
+      v.clear();
+      }
+      return v;
+      } 
       };
+      */
 
     /**
      * @brief Find an empty space for a particle vector in a space of other particles

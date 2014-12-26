@@ -4,8 +4,76 @@
 #include <faunus/io.h>
 #include <faunus/inputfile.h>
 #include <faunus/bonded.h>
+#include <faunus/geometry.h>
 
 namespace Faunus {
+
+  /**
+   * @brief Random position and orientation - typical for rigid bodies
+   *
+   * Molecule inserters take care of generating molecules
+   * for insertion into space and can be used in Grand Canonical moves,
+   * Widom analysis, and for generating initial configurations.
+   * Inserters will not actually insert anything, but rather
+   * return a particle vector with proposed coordinates.
+   *
+   * All inserters are function objects, expecting
+   * a geometry, particle vector, and molecule data.
+   */
+  template<typename TMoleculeData>
+    struct RandomInserter {
+      typedef typename TMoleculeData::TParticleVector Tpvec;
+      string name;
+      Point dir;         //!< Scalars for random mass center position. Default (1,1,1)
+      bool checkOverlap; //!< Set to true to enable container overlap check
+
+      RandomInserter() : dir(1,1,1), checkOverlap(true) { name = "random"; }
+
+      Tpvec operator() (Geometry::Geometrybase &geo, const Tpvec &p, const TMoleculeData &mol) {
+        bool _overlap=true;
+        Tpvec v;
+        do {
+          if (mol.isAtomic()) {
+            int _i = 0;
+            v.resize( mol.atoms.size() );
+            for (auto &aType: mol.atoms) { // for each atom type of molecule
+              v[_i] = atom[aType];   // set part type
+              Geometry::QuaternionRotate rot;
+              Point u;
+              u.ranunit(slump);
+              rot.setAxis(geo, {0, 0, 0}, u, pc::pi * slump());
+              v[_i].rotate(rot);
+              geo.randompos(v[_i]);
+              _i++;
+            }
+          } else {
+            v = mol.getRandomConformation();
+            Point a, b;
+            geo.randompos(a);                  // random point in container
+            a = a.cwiseProduct(dir);           // apply user defined directions (default: 1,1,1)
+            Geometry::cm2origo(geo, v);         // translate to origo - obey boundary conditions
+            Geometry::QuaternionRotate rot;
+            b.ranunit(slump);             // random unit vector
+            rot.setAxis(geo, {0,0,0}, b, slump() * 2 * pc::pi); // random rot around random vector
+
+            for (auto &i : v) {              // apply rotation to all points
+              i = rot(i) + a;                  // ...and translate
+              geo.boundary(i);                 // ...and obey boundaries
+            }
+          }
+
+          assert( !v.empty() );
+          _overlap=false;
+          if ( checkOverlap )                  // check for container overlap
+            for ( auto &i : v )
+              if ( geo.collision(i, i.radius) ) {
+                _overlap = true;
+                break;
+              }
+        } while ( _overlap == true );
+        return v;
+      }
+    };
 
   /**
    * @brief Storage for molecular properties
@@ -31,15 +99,18 @@ namespace Faunus {
   template<class Tpvec>
     class MoleculeData  : public PropertyBase {
       private:
-
-        typedef typename Tpvec::value_type Tparticle;
         using PropertyBase::Tjson;
         bool _isAtomic;
 
-        typedef std::function<Tpvec(Geometry::Geometrybase&,
-            const Tpvec&, const MoleculeData<Tpvec>&)> TinserterFunc;
+        /** @brief Signature for inserted function */
+        typedef std::function<Tpvec( Geometry::Geometrybase&,
+            const Tpvec&, const MoleculeData<Tpvec>& )> TinserterFunc;
+
+        TinserterFunc inserterFunctor;              //!< Function for insertion into space
 
       public:
+        typedef Tpvec TParticleVector;
+        typedef typename Tpvec::value_type Tparticle;
 
         std::vector<typename Tparticle::Tid> atoms; //!< List of atoms in molecule
         vector<Tpvec> conformations;                //!< Conformations of molecule
@@ -49,16 +120,32 @@ namespace Faunus {
         vector<Bonded::HarmonicBondData> bonds;     //!< List of harmonic bonds
         vector<Bonded::DihedralData> dihedrals;     //!< List of harmonic bonds
 
-        TinserterFunc inserter;                     //!< Function for insertion into space
-
         /** @brief Constructor - by default data is initialized; mass set to unity */
         inline MoleculeData( const Tjson &molecule=Tjson()) : _isAtomic(false) {
           readJSON(molecule);
-          inserter=nullptr;
+          inserterFunctor = RandomInserter<MoleculeData<Tpvec>>();
         }
 
         /** @brief Get list of bonds for molecule */
         std::vector<Bonded::HarmonicBondData>& getBondList() { return bonds; }
+
+
+        /**
+         * @brief Specify function to be used when inserting into space.
+         *
+         * By default a random position and orientation is generator and overlap
+         * with container is avoided.
+         */
+        void setInserter( const TinserterFunc &ifunc ) { inserterFunctor = ifunc; };
+
+        /**
+         * @brief Generate particle positions for inserting into space
+         * @param geo Geometry
+         * @param otherparticles Typically `spc.p` is insertion depends on other particle
+         */
+        Tpvec inserter( Geometry::Geometrybase &geo, const Tpvec &otherparticles=Tpvec() ) {
+          return inserterFunctor( geo, otherparticles, *this );
+        }
 
         /** @brief Get a random conformation */
         Tpvec getRandomConformation() const {
@@ -349,7 +436,6 @@ namespace Faunus {
         }
 
     };
-
 
 }//namespace
 

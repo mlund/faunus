@@ -5,6 +5,6 @@ npt_acceptance                     20.462
 npt_averageSideLength              19.0288             
 relativeEnergyDrift                1.67865e-15         
 transrot_acceptance                27.7569             
-transrot_h2o_acceptance            27.7569             
-transrot_h2o_dRot                  4.05379             
-transrot_h2o_dTrans                0.118618            
+transrot_water_acceptance            27.7569             
+transrot_water_dRot                  4.05379             
+transrot_water_dTrans                0.118618            

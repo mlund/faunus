@@ -958,7 +958,7 @@ namespace Faunus {
 
         /** @brief Add harmonic bond */
         void add( const Faunus::Bonded::BondData &hb ) {
-          if ( hb.type == Faunus::Bonded::BondData::HARMONIC )
+          if ( hb.type == Faunus::Bonded::BondData::Type::HARMONIC )
             add( hb.index.at(0), hb.index.at(1), Potential::Harmonic(hb.k, hb.req) );
         }
 

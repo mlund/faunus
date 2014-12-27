@@ -3,6 +3,7 @@
 
 #include <faunus/json.h>
 #include "faunus/textio.h"
+#include <faunus/potentials.h>
 
 namespace Faunus {
 
@@ -48,15 +49,15 @@ namespace Faunus {
      */
     struct BondData : public BondedBase {
 
-      enum bondType {HARMONIC=0, FENE};
+      enum class Type : char {HARMONIC, FENE};
 
       double k;   //!< Force constant
       double req; //!< Equilibrium distance
 
-      bondType type; //!< Bond type (default: HARMONIC)
+      Type type;  //!< Bond type (default: HARMONIC)
 
-      inline BondData( int i, int j, double k, double req, bondType type=HARMONIC ) : k(k), req(req), type(type) {
-        index = {0,1};
+      inline BondData( int i, int j, double k, double req, Type type ) : k(k), req(req), type(type) {
+        index = {i,j};
       }
 
       inline BondData( const Tjson &d ) {
@@ -66,7 +67,7 @@ namespace Faunus {
         req = json::value<double>( d.second, "req", 0 );
         string t = json::value<string>( d.second, "type", "harmonic" );
         if ( t == "harmonic" )
-          type = HARMONIC;
+          type = Type::HARMONIC;
       }
 
       /** @brief Write to stream */

@@ -24,30 +24,15 @@ int main() {
   auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp);
 #endif
-  Tspace spc(mcp);
 
-  // Load and add molecules to Space
-  auto N    = mcp.get<int>("mol_N",1);
-  auto file = mcp.get<string>("mol_file");
-  vector<Group> water(N);
-  Tspace::ParticleVector v;      // temporary, empty particle vector
-  FormatAAM::load(file,v);       // load AAM structure into v
-  for (auto &i : water) {
-    Geometry::FindSpace f;
-    f.allowMatterOverlap=true;
-    f.find(spc.geo,spc.p,v);     // find empty spot in particle vector
-    i = spc.insert(v);           // Insert into Space
-    i.name="h2o";
-    spc.enroll(i);
-  }
+  Tspace spc(mcp);
+  spc.load("state"); // load old config. from disk (if any)
+  auto waters = spc.findMolecules("water");
 
   // Markov moves and analysis
   Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
   Move::Isobaric<Tspace> iso(mcp,pot,spc);
   Analysis::RadialDistribution<> rdf(0.05);
-
-  spc.load("state"); // load old config. from disk (if any)
-  pot.setSpace(spc);
 
   EnergyDrift sys;   // class for tracking system energy drifts
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
@@ -57,14 +42,13 @@ int main() {
   MCLoop loop(mcp);    // class for handling mc loops
   while ( loop[0] ) {          // Markov chain 
     while ( loop[1] ) {
-      int i= slump.range(0,1);
-      int k=water.size();
+      int i=slump.range(0,1);
+      int k=waters.size();
       Group g;
       switch (i) {
         case 0:
           while (k-->0) {
-            gmv.setGroup( 
-                *slump.element(water.begin(), water.end()) );
+            gmv.setGroup( **slump.element(waters.begin(), waters.end()) );
             sys+=gmv.move();   // translate/rotate polymers
           }
           break;

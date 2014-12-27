@@ -5,7 +5,7 @@ npt_MSQDisplacement                32.8056
 npt_acceptance                     15.8253             
 npt_averageSideLength              79.7627             
 relativeEnergyDrift                1.00912e-12         
-transrot_Polymer_acceptance        14.1504             
-transrot_Polymer_dRot              37.3486             
-transrot_Polymer_dTrans            8.09601             
+transrot_polymer_acceptance        14.1504             
+transrot_polymer_dRot              37.3486             
+transrot_polymer_dTrans            8.09601             
 transrot_acceptance                14.1504             

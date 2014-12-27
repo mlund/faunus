@@ -178,12 +178,24 @@ namespace Faunus {
         MoleculeMap<ParticleVector> molecule;  //!< Map of molecules
 
 
-        /** @brief Constructor */
+        /**
+         * @brief Constructor
+         *
+         * This will pass the `InputMap` object to `MoleculeMap`
+         * in order to load all molecule types. The molecule map
+         * is searched for molecules with non-zero `Ninit` and
+         * will insert accordingly.
+         */
         Space(InputMap &in) : geo(in) {
           molecule.includefile(in);
+          for (auto mol : molecule)
+            while (mol.Ninit-- > 0)
+              insert( mol.id, mol.getRandomConformation(geo, p) );
         }
 
         std::vector<Group*>& groupList() { return g; };   //!< Vector with pointers to all groups
+
+        MoleculeMap<ParticleVector>& molList() { return molecule; } //!< Vector of molecules
 
         bool save(string);                  //!< Save container state to disk
         bool load(string, keys=NORESIZE);   //!< Load container state from disk
@@ -251,20 +263,35 @@ namespace Faunus {
           return -1;
         }
 
-        /** @brief Returns vector of molecules with matching name */
+        /** @brief Returns vector of molecules with matching molid */
         inline std::vector<Group*> findMolecules( int molId ) const {
           std::vector<Group*> v;
-          for ( auto i : groupList() )
+          for ( auto i : g )
             if (i->molId == molId)
               v.push_back( i );
           return v;
         }
 
-        /** @brief Returns vector of molecules with matching molid */
+        /**
+         * @brief Returns vector of molecules with matching name
+         *
+         * @todo Add regex support? Inspiration,
+         *
+         * ~~~~
+         * bool ExpandWildCard(vector<string>& names, vector<string>& result, string& wildcard) {
+         *   auto oldsize = result.size();
+         *   std::copy_if(std::begin(names), std::end(names),
+         *       std::back_inserter(result),
+         *       [&](string const& name) {
+         *       return std::regex_match(name, make_regex(wildcard)); } );
+         *   return (result.size() > oldsize);
+         * }
+         * ~~~~
+         */
         inline std::vector<Group*> findMolecules( const std::string &name ) const {
           auto it = molecule.find(name);
           if ( it != molecule.end() )
-            return findMolecules( it->molId );
+            return findMolecules( it->id );
           else return std::vector<Group*>();
         }
 

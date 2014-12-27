@@ -822,7 +822,17 @@ namespace Faunus {
         Bonded() {
           this->name="Bonded particles";
           CrossGroupBonds=false;
-          //add( spc->groupList() );
+        }
+
+        ~Bonded() {
+          if ( ! Tbase::list.empty() )
+            IO::writeFile("bondlist.tcl", VMDBonds( Tbase::list ) );
+        }
+
+        void setSpace(Tspace &s) FOVERRIDE {
+          Energybase<Tspace>::setSpace(s);
+          if ( Tbase::mlist.empty() )
+            add( spc->groupList() ); // search for bonds
         }
 
         /**
@@ -947,14 +957,15 @@ namespace Faunus {
           }
 
         /** @brief Add harmonic bond */
-        void add( const Faunus::Bonded::HarmonicBondData &hb ) {
-          add( hb.index[0], hb.index[1], Potential::Harmonic(hb.k, hb.req) );
+        void add( const Faunus::Bonded::BondData &hb ) {
+          if ( hb.type == Faunus::Bonded::BondData::HARMONIC )
+            add( hb.index.at(0), hb.index.at(1), Potential::Harmonic(hb.k, hb.req) );
         }
 
         /** @brief Add all bonds found in a list of groups */
         void add( const std::vector<Group*> &groups ) {
           for ( auto g : groups )
-            if ( spc->molecule.size() > g->molId )
+            if ( g->molId < spc->molecule.size() )
               for ( auto b : spc->molecule[ g->molId ].getBondList() ) {
                 b.shift( g->front() );
                 add( b );

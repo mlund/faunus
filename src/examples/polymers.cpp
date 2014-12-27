@@ -18,33 +18,11 @@ int main() {
   EnergyDrift sys;                    // class for tracking system energy drifts
   UnitTest test(mcp);                 // class for unit testing
 
+  Tspace spc(mcp);                    // instantiate space and load molecules/atoms
+
   // Create Space and a Hamiltonian with three terms
-  Tspace spc(mcp);
   auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp) + Energy::Bonded<Tspace>();
-
-  auto bonded = &pot.second; // pointer to bond energy class
-
-  // Add salt
-  Group salt;
-  salt.addParticles(spc, mcp);
-
-  // Add polymers
-  vector<Group> pol( mcp.get("polymer_N",0));            // vector of polymers
-  string file = mcp.get<string>("polymer_file", "");
-  double req = mcp.get<double>("polymer_eqdist", 0);
-  double k   = mcp.get<double>("polymer_forceconst", 0);
-  for (auto &g : pol) {                                  // load polymers
-    Tspace::ParticleVector v;                            // temporary, empty particle vector
-    FormatAAM::load(file,v);                             // load AAM structure into v
-    Geometry::FindSpace().find(spc.geo,spc.p,v);         // find empty spot in particle vector
-    g = spc.insert(v);                                   // insert into space
-    g.name="Polymer";
-    spc.enroll(g);
-    for (int i=g.front(); i<g.back(); i++)
-      bonded->add(i, i+1, Potential::Harmonic(k,req));   // add bonds
-  }
-  Group allpol( pol.front().front(), pol.back().back() );// make group w. all polymers
 
   // Markov moves and analysis
   Move::Isobaric<Tspace> iso(mcp,pot,spc);
@@ -52,6 +30,7 @@ int main() {
   Move::AtomicTranslation<Tspace> mv(mcp, pot, spc);
   Move::CrankShaft<Tspace> crank(mcp, pot, spc);
   Move::Pivot<Tspace> pivot(mcp, pot, spc);
+
   Analysis::PolymerShape shape;
   Analysis::RadialDistribution<> rdf(0.2);
   Scatter::DebyeFormula<Scatter::FormFactorUnity<>> debye(mcp);
@@ -59,28 +38,28 @@ int main() {
   spc.load("state");                                     // load old config. from disk (if any)
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );      // store initial total system energy
 
+  // locate salt and polymers
+  auto pol = spc.findMolecules("polymer");               // grop vector w. all molecules named "polymer" 
+  Group all = Group(0, spc.p.size()-1);                  // group w. all atoms
+
   cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
 
   while ( loop[0] ) {  // Markov chain 
     while ( loop[1] ) {
-      int k,i= slump.range(0,5);
+      int k, i = slump.range(0,5);
       switch (i) {
         case 0:
-          mv.setGroup(salt);
-          sys+=mv.move( salt.size() );  // translate salt
-          break;
-        case 1:
-          mv.setGroup(allpol);
-          sys+=mv.move( allpol.size() );// translate monomers
+          mv.setGroup(all);
+          sys+=mv.move( all.size() );    // translate salt and monomers
           for (auto &g : pol) {
-            g.setMassCenter(spc);
-            shape.sample(g,spc);        // sample gyration radii etc.
+            g->setMassCenter(spc);
+            shape.sample(*g,spc);        // sample gyration radii etc.
           }
           break;
         case 2:
           k=pol.size();
           while (k-->0) {
-            gmv.setGroup( *slump.element(pol.begin(), pol.end() ) );
+            gmv.setGroup( **slump.element(pol.begin(), pol.end() ) );
             sys+=gmv.move();            // translate/rotate polymers
           }
           break;
@@ -90,23 +69,23 @@ int main() {
         case 4:
           k=pol.size();
           while (k-->0) {
-            crank.setGroup( *slump.element(pol.begin(), pol.end() ) );
+            crank.setGroup( **slump.element(pol.begin(), pol.end() ) );
             sys+=crank.move();          // crank shaft move
           }
           break;
         case 5:
           k=pol.size();
           while (k-->0) {
-            pivot.setGroup( *slump.element(pol.begin(), pol.end() ) );
+            pivot.setGroup( **slump.element(pol.begin(), pol.end() ) );
             sys+=pivot.move();          // pivot move
           }
           break;
       }
 
       // polymer-polymer mass center rdf
-      for (auto i=pol.begin(); i!=pol.end()-1; i++)
-        for (auto j=i+1; j!=pol.end(); j++)
-          rdf( spc.geo.dist(i->cm,j->cm) )++;
+      for (auto i = pol.begin(); i != pol.end(); ++i )
+        for (auto j = i; ++j != pol.end(); )
+          rdf( spc.geo.dist( (**i).cm, (**j).cm) )++;
 
     } // end of micro loop
 
@@ -136,32 +115,32 @@ int main() {
 
   return test.numFailed();
 }
-/*! \page example_polymers Example: Polymers
+/** 
+ * @page example_polymers Example: Polymers
  *
- This will simulate an arbitrary number of linear polymers in the NPT ensemble
- with explicit salt particles and implicit solvent (dielectric continuum).
- We include the following Monte Carlo moves:
-
- - salt translation
- - monomer translation
- - polymer translation and rotation
- - polymer crankshaft and pivot rotations
- - isobaric volume move (NPT ensemble)
-
- ![Hardsphere polyelectrolytes with counter ions](polymers.png)
-
- Run this example from the `examples` directory:
-
- ~~~~~~~~~~~~~~~~~~~
- $ make
- $ cd src/examples
- $ ./polymers.run
- ~~~~~~~~~~~~~~~~~~~
-
- polymers.cpp
- ============
-
- \includelineno examples/polymers.cpp
-
-*/
+ * This will simulate an arbitrary number of linear polymers in the NPT ensemble
+ * with explicit salt particles and implicit solvent (dielectric continuum).
+ * We include the following Monte Carlo moves:
+ *
+ * - salt translation
+ * - monomer translation
+ * - polymer translation and rotation
+ * - polymer crankshaft and pivot rotations
+ * - isobaric volume move (NPT ensemble)
+ *
+ * ![Hardsphere polyelectrolytes with counter ions](polymers.png)
+ *
+ * Run this example from the `examples` directory:
+ *
+ * ~~~~~~~~~~~~~~~~~~~
+ * $ make
+ * $ cd src/examples
+ * $ ./polymers.run
+ * ~~~~~~~~~~~~~~~~~~~
+ *
+ * polymers.cpp
+ * ============
+ *
+ * @includelineno examples/polymers.cpp
+ */
 

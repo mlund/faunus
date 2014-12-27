@@ -104,14 +104,22 @@ namespace Faunus {
     /** @brief Access element */
     const_reference operator[](size_type i) const {
       assert( i==base::operator[](i).id && "Property out of sync");
+#ifdef NDEBUG
       return base::operator[](i);
+#else
+      return base::at(i);
+#endif
     }
     
     /** @brief Access element */
     reference operator[](size_type i) {
       assert( i==base::operator[](i).id && "Property out of sync");
       assert( i<base::size() );
+#ifdef NDEBUG
       return base::operator[](i);
+#else
+      return base::at(i);
+#endif
     }    
    
     /**
@@ -187,6 +195,7 @@ namespace Faunus {
    * `eps`         | Epsilon energy scaling commonly used for Lennard-Jones interactions etc. [kJ/mol] 
    * `hydrophobic` | Is the particle hydrophobic? [true/false]
    * `mu`          | Dipole moment vector [Debye]
+   * `Ninit`       | Initial number of atoms (used by `MoleculeData` to insert atoms
    * `theta`       | Quadrupole moment tensor [Debye \f$ \unicode{x212B} \f$]
    * `mw`          | Molecular weight [g/mol]
    * `patchtype`   | Patchtype for sphero-cylinders
@@ -223,6 +232,7 @@ namespace Faunus {
              betaQ,            //!< Value of the quadrupole distribution (inverse) width [1/angstrom] 
              tfe;              //!< Transfer free energy (J/mol/angstrom^2/M)
       Point mu;                //!< Dipolemoment vector
+      int Ninit;               //!<
       short int patchtype;     //!< If patchy particle, which type of patch
       bool hydrophobic;        //!< Are we hydrophobic?
       Tensor<double>
@@ -252,6 +262,7 @@ namespace Faunus {
         if (mu.len()>1e-6)
           mu = mu/mu.len();
         mw = json::value<double>(atom.second, "mw", 1.);
+        Ninit = json::value<double>(atom.second, "Ninit", 0);
         charge = json::value<double>(atom.second, "q", 0);
         radius = json::value<double>(atom.second, "r", 0) * 1.0_angstrom;
         sigma = 2*radius;

@@ -16,10 +16,10 @@ namespace Faunus {
     /**
      * @brief Base class for two- and manybody potentials
      */
-    struct BondDataBase {
+    struct BondedBase {
       vector<int> index; //!< Particle index
 
-      inline BondDataBase() {};
+      inline BondedBase() {};
 
       bool find(int i) const { //!< Determine if particle exists in `index`
         return (std::find(index.begin(), index.end(), i)!=index.end()) ? true : false;
@@ -28,43 +28,55 @@ namespace Faunus {
       /** @brief Add offset to each index */
       void shift(int offset) {
         assert(offset>=0);
-        std::for_each( index.begin(), index.end(), [&](int& d) { d+=offset;} );
+        for (auto &i : index)
+          i += offset;
       }
     };
 
     /**
-     * @brief Data for harmonic bond
+     * @brief Data for linear bonds
      *
      * The constructor accepts a json object with the following format:
      *
      * ~~~~{.js}
-     *   "0 2" : { "k":0.5, "req":4.0 }
+     *   "0 2" : { "k":0.5, "req":4.0, "type":"harmonic" }
      * ~~~~
      *
      * where the first filed specifies the two particle index; `k` (kT) and `req` (angstrom)
-     * are the force constant and equilibrium distance, respectively.
+     * are the force constant and equilibrium distance, respectively. By default, the bond
+     * type is set to `HARMONIC`.
      */
-    struct HarmonicBondData : public BondDataBase {
+    struct BondData : public BondedBase {
+
+      enum bondType {HARMONIC=0, FENE};
+
       double k;   //!< Force constant
       double req; //!< Equilibrium distance
 
-      inline HarmonicBondData( int i, int j, double k, double req ) : k(k), req(req) { index = {0,1}; }
+      bondType type; //!< Bond type (default: HARMONIC)
 
-      inline HarmonicBondData( const Tjson &d ) {
+      inline BondData( int i, int j, double k, double req, bondType type=HARMONIC ) : k(k), req(req), type(type) {
+        index = {0,1};
+      }
+
+      inline BondData( const Tjson &d ) {
         index = textio::words2vec<int>( d.first );
         assert( index.size() == 2);
         k =   json::value<double>( d.second, "k", 0 );
         req = json::value<double>( d.second, "req", 0 );
+        string t = json::value<string>( d.second, "type", "harmonic" );
+        if ( t == "harmonic" )
+          type = HARMONIC;
       }
 
       /** @brief Write to stream */
-      friend std::ostream &operator<<(std::ostream &o, const HarmonicBondData &b) {
+      friend std::ostream &operator<<(std::ostream &o, const BondData &b) {
         o << b.index[0] << " " << b.index[1] << " " << b.k << " " << b.req;
         return o;
       }
 
       /** @brief Read from stream */
-      HarmonicBondData& operator<<(std::istream &in) {
+      BondData& operator<<(std::istream &in) {
         in >> index[0] >> index[1] >> k >> req;
         return *this;
       }
@@ -84,7 +96,7 @@ namespace Faunus {
      * 
      * @todo Under construction
      */
-    struct DihedralData : public BondDataBase {
+    struct DihedralData : public BondedBase {
       double k1;  //!< Some constant
       double k2;  //!< ...andother constant
 

@@ -264,10 +264,8 @@ namespace Faunus {
     template<class Tspace>
       double Movebase<Tspace>::energyChange() {
         double du = _energyChange();
-        if (std::isnan(du)) {
-          std::cerr << "Error: energy change returns not-a-number (NaN)\n";
-          std::exit(1);
-        }
+        if (std::isnan(du))
+          std::cerr << "Warning: energy change from move returns not-a-number (NaN)" << endl;
         return du;
       }
 
@@ -2938,7 +2936,7 @@ namespace Faunus {
               pmap.clear();
               for ( auto molid : it->molComb ) // loop over molecules in combination
                 pmap.insert(
-                    { molid, spc->molecule[molid].inserter( base::spc->geo, base::spc->p ) } );
+                    { molid, spc->molecule[molid].getRandomConformation( base::spc->geo, base::spc->p ) } );
               assert( !pmap.empty() );
             }
           }

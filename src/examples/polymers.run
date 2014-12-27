@@ -18,19 +18,21 @@ echo '{
   // r  = Radius [angstrom]
 
   "atomlist" : {
-    "Na" : { "q": 1.0, "r":2.0, "dp":110 },  // sodium ion
-    "Cl" : { "q":-1.0, "r":2.0, "dp":110 },  // chloride ion
-    "MM" : { "q": 1.0, "r":3.0, "dp":10 }    // monomer
+    "Na" : { "q": 1.0, "r":2.0, "dp":110, "Ninit":0  },  // sodium ion
+    "Cl" : { "q":-1.0, "r":2.0, "dp":110, "Ninit":32 },  // chloride ion
+    "MM" : { "q": 1.0, "r":3.0, "dp":10 }                // monomer
   },
 
   "moleculelist" : {
+     "salt" : { "atoms":"Na Cl", "atomic":true, "Ninit":1 },
+
      "polymer" :
      {
-       "structure":"polymers.aam",
+       "structure":"polymers.aam", "Ninit":8,
        "bonds" : {
-         "0 1" : { "k":0.0557, "req:0" },
-         "1 2" : { "k":0.0557, "req:0" },
-         "3 4" : { "k":0.0557, "req:0" }
+         "0 1" : { "type":"harmonic", "k":0.0557, "req":0.0 }, // kT/AA^2, AA
+         "1 2" : { "type":"harmonic", "k":0.0557, "req":0.0 },
+         "2 3" : { "type":"harmonic", "k":0.0557, "req":0.0 }
        }
      }
   }
@@ -41,19 +43,16 @@ echo '{
 #-----------------------------------------------------------
 echo "
 atomlist               polymers.json
+moleculelist           polymers.json
 loop_macrosteps        10
 loop_microsteps        20000
 cuboid_len             200     # Box side length Angstrom
 sphere_radius          100
 temperature            298     # Kelvin
 epsilon_r              78.7    # Water dielectric const
-lj_eps                 0.05    # kT
 npt_P                  113.2   # mM
 npt_dV                 2       # log(dV)
-polymer_N              8
-polymer_file           polymers.aam
-polymer_eqdist         0
-polymer_forceconst     0.0557  # kT/A^2
+npt_runfraction        0.1
 crank_dp               6.3
 crank_minlen           2
 crank_maxlen           10
@@ -62,8 +61,6 @@ pivot_minlen           1
 pivot_maxlen           1000
 transrot_transdp       50
 transrot_rotdp         6
-tion1                  Cl
-nion1                  32
 qmin                   0.25
 qmax                   4.0
 dq                     0.01
@@ -88,7 +85,7 @@ exe=./polymers
 if [ -x $exe ]; then
   $exe
   rc=$?
-  rm -f confout.gro polymers.input polymers.aam polymers.atoms
+  #rm -f confout.gro polymers.input polymers.aam polymers.atoms
   exit $rc
 fi
 exit 1

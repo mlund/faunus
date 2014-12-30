@@ -25,9 +25,10 @@ namespace Faunus {
       typedef typename TMoleculeData::TParticleVector Tpvec;
       string name;
       Point dir;         //!< Scalars for random mass center position. Default (1,1,1)
+      Point offset;      //!< Added to random position. Default (0,0,0)
       bool checkOverlap; //!< Set to true to enable container overlap check
 
-      RandomInserter() : dir(1,1,1), checkOverlap(true) { name = "random"; }
+      RandomInserter() : dir(1,1,1), offset(0,0,0), checkOverlap(true) { name = "random"; }
 
       Tpvec operator() (Geometry::Geometrybase &geo, const Tpvec &p, const TMoleculeData &mol) {
         typedef typename Tpvec::value_type Tparticle;
@@ -51,6 +52,8 @@ namespace Faunus {
                 rot.setAxis(geo, {0,0,0}, u, pc::pi * slump());
                 v.back().rotate(rot);
                 geo.randompos( v.back() );
+                v.back() = v.back().cwiseProduct(dir) + offset;
+                geo.boundary( v.back() );
               }
               atom[id].Ninit = -1;
             }
@@ -59,12 +62,12 @@ namespace Faunus {
             Point a, b;
             geo.randompos(a);                  // random point in container
             a = a.cwiseProduct(dir);           // apply user defined directions (default: 1,1,1)
-            Geometry::cm2origo(geo, v);         // translate to origo - obey boundary conditions
+            Geometry::cm2origo(geo, v);        // translate to origo - obey boundary conditions
             Geometry::QuaternionRotate rot;
-            b.ranunit(slump);             // random unit vector
+            b.ranunit(slump);                  // random unit vector
             rot.setAxis(geo, {0,0,0}, b, slump() * 2 * pc::pi); // random rot around random vector
-            for (auto &i : v) {              // apply rotation to all points
-              i = rot(i) + a;                  // ...and translate
+            for (auto &i : v) {                // apply rotation to all points
+              i = rot(i) + a + offset;         // ...and translate
               geo.boundary(i);                 // ...and obey boundaries
             }
           }
@@ -101,6 +104,8 @@ namespace Faunus {
    * `atomic`      | bool    | `true` if molecule is to be considered as a collection of free atomic species (default: false)
    * `bonds`       | string  | List of harmonic bonds - index 0 corresponds to first atom in structure
    * `dihedrals`   | string  | List of dihedrals (under construction!)
+   * `insdir`      | string  | Directions for generation of random position. Default: "1 1 1" = XYZ
+   * `insoffset`   | string  | Translate generated random position. Default: "0 0 0" = no translation
    * `Ninit`       | int     | Initial number of molecules
    * `structure`   | string  | Read conformation from AAM file
    */                         
@@ -132,7 +137,10 @@ namespace Faunus {
         /** @brief Constructor - by default data is initialized; mass set to unity */
         inline MoleculeData( const Tjson &molecule=Tjson()) : _isAtomic(false), Ninit(0) {
           readJSON(molecule);
-          inserterFunctor = RandomInserter<MoleculeData<Tpvec>>();
+          auto ins = RandomInserter<MoleculeData<Tpvec>>();
+          ins.dir    << json::value<string>( molecule.second, "insdir", "1 1 1" );
+          ins.offset << json::value<string>( molecule.second, "insoffset", "0 0 0" );
+          setInserter( ins );
         }
 
         /** @brief Get list of bonds for molecule */

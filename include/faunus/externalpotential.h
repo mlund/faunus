@@ -109,6 +109,10 @@ namespace Faunus {
           T surfDist(const Point&);        //!< Point<->GC surface distance
           template<typename Tparticle>
             T operator()(const Tparticle&);//!< Particle<->GC interaction energy
+
+          auto tuple() -> decltype(std::make_tuple(this)) {
+            return std::make_tuple( this );
+          }
       };
 
     /**
@@ -503,8 +507,8 @@ namespace Faunus {
         template<typename Tparticle>
           T operator()(const Tparticle &p) {
             return (p.hydrophobic) ? StickyWall<T>::operator()(p) : 0;
-        }
-    };
+          }
+      };
 
   } //namespace
 } //namespace

@@ -146,9 +146,14 @@ namespace Faunus {
           typedef Energybase<typename T1::SpaceType> Tbase;
           typedef typename Tbase::Tparticle Tparticle;
           typedef typename Tbase::Tpvec Tpvec;
+
         public:
           T1 first;
           T2 second;
+
+          auto tuple() -> decltype( std::tuple_cat(first.tuple(), second.tuple()) ) {
+            return std::tuple_cat( first.tuple(), second.tuple() );
+          }
 
           CombinedEnergy(const T1 &a, const T2 &b) : first(a), second(b) {}
 
@@ -260,6 +265,10 @@ namespace Faunus {
                 std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
                 "Tpairpot must be a pair potential" );
             Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
+          }
+
+          auto tuple() -> decltype(std::make_tuple(this)) {
+            return std::make_tuple(this);
           }
 
           void setSpace(Tspace &s) FOVERRIDE {
@@ -418,6 +427,10 @@ namespace Faunus {
             geo=s.geo;
             Tbase::setSpace(s);
           } 
+
+          auto tuple() -> decltype(std::make_tuple(this)) {
+            return std::make_tuple(this);
+          }
 
           //!< Particle-particle energy (kT)
           inline double p2p(const Tparticle &a, const Tparticle &b) {
@@ -720,6 +733,10 @@ namespace Faunus {
                   if (i!=j)
                     E.col(i)+=base::pairpot.field(p[j],base::geo.vdist(p[i],p[j]));
           }
+
+          auto tuple() -> decltype(std::make_tuple(this)) {
+            return std::make_tuple(this);
+          }
       };
 
     /**
@@ -833,6 +850,10 @@ namespace Faunus {
           Energybase<Tspace>::setSpace(s);
           if ( Tbase::mlist.empty() )
             add( spc->groupList() ); // search for bonds
+        }
+
+        auto tuple() -> decltype(std::make_tuple(this)) {
+          return std::make_tuple(this);
         }
 
         /**
@@ -1071,6 +1092,10 @@ namespace Faunus {
             assert(P>=0 && "Specify non-negative pressure");
           }
 
+          auto tuple() -> decltype(std::make_tuple(this)) {
+            return std::make_tuple(this);
+          }
+
           /** @brief External energy working on system. pV/kT-lnV */
           double external(const Tpvec&p) FOVERRIDE {
             double V=this->getSpace().geo.getVolume();
@@ -1121,6 +1146,10 @@ namespace Faunus {
             assert((int)p.size()==E.cols());
             for (size_t i=0; i<p.size(); i++)
               E.col(i) += expot.field(p[i]);
+          }
+
+          auto tuple() -> decltype(std::make_tuple(this)) {
+            return std::make_tuple(this);
           }
       };
 

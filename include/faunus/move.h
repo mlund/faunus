@@ -3173,6 +3173,24 @@ namespace Faunus {
           ~GreenGC() {}
       };
 
+    template<typename Tspace>
+      class Propagator : public Movebase<Tspace> {
+        private:
+          typedef Movebase<Tspace> base;
+        public:
+          Propagator(
+              InputMap &in, 
+              Energy::Energybase<Tspace> &e,
+              Tspace &s,
+              string pfx="iterator_") : base( e, s, pfx ) {
+
+            string file="polymers.json";
+            auto j = json::open(file);
+            for (auto &a : json::object("propagator", j) ) {
+              cout << a.first << endl;
+            }
+          }
+      };
 
     /** @brief Atomic translation with dipolar polarizability */
     //typedef PolarizeMove<AtomicTranslation> AtomicTranslationPol;

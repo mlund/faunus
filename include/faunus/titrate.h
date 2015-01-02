@@ -363,6 +363,10 @@ namespace Faunus {
             this->name="Equilibrium State Energy";
           }
 
+          auto tuple() -> decltype(std::make_tuple(this)) {
+            return std::make_tuple(this);
+          }
+
           template<class Tpvec>
             int findSites(const Tpvec &p) {
               eq.findSites(p);

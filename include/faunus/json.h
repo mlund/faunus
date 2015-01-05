@@ -37,7 +37,8 @@ namespace Faunus {
   namespace json {
 
     typedef picojson::value Tval;  //!< JSOB value object
-    typedef picojson::object Tobj; //!< JSON object object (merely a std::map)
+    typedef picojson::object Tobj; //!< JSON object object (`std::map<string,value>`)
+    typedef Tobj::value_type Tobjitem; //!< Type if item in Tobj (std::pair<string,value>)
 
     const Tobj emptyObject;
 

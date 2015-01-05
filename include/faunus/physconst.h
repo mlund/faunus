@@ -161,6 +161,11 @@ namespace Faunus {
     inline long double operator "" _molar(long double c)
     { return c * 1.0_mol / 1.0_liter; } // -> particle / angstrom^3
 
+    /// Concentration in millimoles per liter
+    inline long double operator "" _mM(long double c)
+    { return c * 1.0e-3_mol / 1.0_liter; } // -> particle / angstrom^3
+
+
     /// Pressure in Pascal
     inline long double operator "" _Pa(long double p)
     { return p / PhysicalConstants<double>::kT() / 1.0_liter; }

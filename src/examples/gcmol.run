@@ -23,7 +23,15 @@ echo '{
 
   "moleculecombinations" : {
     "water" : { "molecules" : "water" }
+  },
+
+  "moves" : {
+     "gc" : { "prop":1.0, "molcombfile":"gcmol.json" },
+     "moltransrot" : {
+        "water" : { "dp":0.5, "dprot":0.5, "prop":0.005, "permol":true } 
+     } 
   }
+
 }
 ' > gcmol.json
 
@@ -41,10 +49,6 @@ cuboid_len             19.0288 # Box side length Angstrom
 temperature            298     # Kelvin
 epsilon_r              1.0     # Water dielectric const
 coulomb_cut            10. 
-
-transrot_transdp       0.5
-transrot_rotdp         0.5
-transrot_runfraction   0.005
 
 test_stable            no
 test_file              gcmol.test

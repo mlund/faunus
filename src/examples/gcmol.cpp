@@ -13,8 +13,7 @@ int main() {
   spc.load( "state", Tspace::RESIZE );
 
   auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp);
-  Move::GreenGC<Tspace> gc( mcp, pot, spc );
-  Move::TranslateRotate<Tspace> tr(mcp,pot,spc);
+  Move::Propagator<Tspace> mv( "gcmol.json", pot, spc );
 
   EnergyDrift sys;
   sys.init( Energy::systemEnergy( spc,pot,spc.p ) );
@@ -23,16 +22,8 @@ int main() {
 
   MCLoop loop( mcp );
   while ( loop[0] ) {
-    while ( loop[1] ) {
-      if ( slump() > 0.5 ) 
-        sys += gc.move();
-      else 
-        for ( auto cnt : spc.groupList() ) {
-          auto it = slump.element( spc.groupList().begin(), spc.groupList().end() ) ;
-          tr.setGroup( **it );
-          sys += tr.move();
-        }
-    }
+    while ( loop[1] )
+      sys += mv.move();
     cout << loop.timing();
   }
 
@@ -42,10 +33,9 @@ int main() {
 
   UnitTest test( mcp );
   sys.test( test );
-  gc.test( test );
-  tr.test( test );
+  mv.test( test );
 
-  cout << loop.info() << sys.info() << spc.info() << tr.info() << gc.info() << test.info() << endl;
+  cout << loop.info() << sys.info() << spc.info() << mv.info() << test.info() << endl;
 
   return test.numFailed();
 }

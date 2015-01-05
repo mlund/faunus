@@ -9,6 +9,7 @@
 #include <faunus/geometry.h>
 #include <faunus/energy.h>
 #include <faunus/textio.h>
+#include <faunus/json.h>
 
 #ifdef ENABLE_MPI
 #include <faunus/mpi.h>
@@ -41,12 +42,14 @@ namespace Faunus {
             o << indent(SUB) << "Move Statistics:" << endl
               << indent(SUBSUB) << std::left << setw(20) << "Id"
               << setw(l+1) << "Acc. "+percent
+              << setw(l) << "Nmoves"
               << setw(l+9) << rootof+bracket("msq"+squared)+"/"+angstrom << endl;
             for (auto m : accmap) {
               string id=m.first;
               o << indent(SUBSUB) << std::left << setw(20) << id;
               o.precision(3);
               o << setw(l) << accmap[id].avg()*100
+                << setw(l) << accmap[id].cnt
                 << setw(l) << sqrt(sqrmap[id].avg()) << endl;
             }
             return o.str();
@@ -213,15 +216,45 @@ namespace Faunus {
           bool useAlternateReturnEnergy;   //!< Return a different energy than returned by _energyChange(). [false]
           double alternateReturnEnergy;    //!< Alternative return energy
 
+          struct MolListData {
+            double prop;  // probability of performing a move
+            bool perAtom; // repeat move for each molecule?
+            bool perMol;  // repeat move for atom in molecules?
+            int repeat;   // total number of repeats
+            unsigned long Nattempts;  // # of attempted moves
+            unsigned long Naccepted;  // # of accepted moves
+            Point dir;    // translational move directions
+            double dp1;   // displacement parameter 1
+            double dp2;   // displacement parameter 2
+
+            MolListData() : prop(1.0), perAtom(false), perMol(false),
+            repeat(1), Nattempts(0), Naccepted(0), dir(1,1,1), dp1(0), dp2(0) {}
+
+            MolListData(const json::Tval &i) {
+              *this = MolListData();
+              prop = json::value<double>(i, "prop", 1);
+              dir << json::value<string>(i, "dir", "1 1 1");
+              perMol = json::value<bool>(i, "permol", false);
+              perAtom = json::value<bool>(i, "peratom", false);
+            }
+          };
+          std::map<int,MolListData> mollist;    //!< Move acts on these molecule id's
+
         public:
           Movebase(Energy::Energybase<Tspace>&, Tspace&, string);//!< Constructor
           virtual ~Movebase();
           double runfraction;                //!< Fraction of times calling move() should result in an actual move. 0=never, 1=always.
-          double move(int=1);                //!< Attempt \c n moves and return energy change (kT)
+          virtual double move(int=1);                //!< Attempt `n` moves and return energy change (kT)
           std::pair<double,double> recycle();
           string info();                     //!< Returns information string
           void test(UnitTest&);              //!< Perform unit test
           double getAcceptance();            //!< Get acceptance [0:1]
+
+          void addMol(int, const MolListData&d=MolListData()); //!< Specify molecule id to act upon
+          Group* randomMol();
+          int randomMolId();                 //!< Random mol id from mollist
+          int currentMolId;                  //!< Current molid to act upon
+          virtual void readJSON(const json::Tobj&);//!< Setup via json object
       };
 
     template<class Tspace>
@@ -239,6 +272,48 @@ namespace Faunus {
 
     template<class Tspace>
       Movebase<Tspace>::~Movebase() {}
+
+    template<class Tspace>
+      void Movebase<Tspace>::addMol(int molid, const MolListData &d) {
+        mollist[ molid ] = d;
+      }
+
+    template<class Tspace>
+      int Movebase<Tspace>::randomMolId() {
+        if ( !mollist.empty() ) {
+          auto it = slump.element( mollist.begin(), mollist.end() );
+          if (it != mollist.end() ) {
+            it->second.repeat = 1;
+            if ( it->second.perMol )
+              it->second.repeat *= spc->numMolecules( it->first );
+            if ( it->second.perAtom )
+              it->second.repeat *= spc->findMolecules( it->first ).front()->size(); 
+            return it->first;
+          }
+        }
+        return -1;
+      }
+
+    /**
+     * Returns pointer to a random group matching a molecule id
+     * in `mollist`
+     */
+    template<class Tspace>
+      Group* Movebase<Tspace>::randomMol() {
+        Group* gPtr=nullptr;
+        if ( !mollist.empty() ) {
+          auto it = slump.element( mollist.begin(), mollist.end() );
+          auto g = spc->findMolecules( it->first ); // vector of group pointers
+          if ( !g.empty() )
+            gPtr = *slump.element( g.begin(), g.end() );
+        }
+        return gPtr;
+      }
+
+    template<class Tspace>
+      void Movebase<Tspace>::readJSON(const json::Tobj &val) {
+        assert(!"not implemented");
+      }
 
     template<class Tspace>
       void Movebase<Tspace>::trialMove() {
@@ -287,7 +362,16 @@ namespace Faunus {
     template<class Tspace>
       double Movebase<Tspace>::move(int n) {
         double utot=0;
-        if (run()) {
+
+        if ( ! mollist.empty() ) {
+          currentMolId = randomMolId();
+          n = mollist[ currentMolId ].repeat;
+          runfraction = mollist[ currentMolId ].prop;
+          assert( n>0 );
+          assert( currentMolId >=0 );
+        }
+
+        if ( run() ) {
           while (n-->0) {
             trialMove();
             double du=energyChange();
@@ -446,9 +530,11 @@ namespace Faunus {
           Group* igroup;   //!< Group pointer in which particles are moved randomly (NULL if none, default)
           double genericdp;//!< Generic atom displacement parameter - ignores individual dps
           Average<unsigned long long int> gsize; //!< Average size of igroup;
+          void readJSON(const json::Tobj&); //!< Set up from json object
 
         public:
           AtomicTranslation(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="mv_particle");
+          AtomicTranslation(const json::Tobj&, Energy::Energybase<Tspace>&, Tspace&, string="mv_particle");
           void setGroup(Group&); //!< Select group in which to randomly pick particles from
           void setParticle(int); //!< Select single particle in Space::p to move
           void setGenericDisplacement(double); //!< Set single displacement for all atoms
@@ -456,6 +542,8 @@ namespace Faunus {
       };
 
     /**
+     * @brief Constructor
+     *
      * The InputMap is searched for the following keywords:
      *
      * Key                  | Description
@@ -471,10 +559,60 @@ namespace Faunus {
         base::title="Single Particle Translation";
         iparticle=-1;
         igroup=nullptr;
-        dir.x()=dir.y()=dir.z()=1;
+        dir={1,1,1};
         this->w=30; //width of output
         this->runfraction = in.get<double>(pfx+"_runfraction",1.);
         setGenericDisplacement( in.get<double>(pfx+"_genericdp",0) );
+      }
+
+    /**
+     * @brief Constructor
+     *
+     * The JSON entry is read from section `atomictranslation`
+     * with each element being the molecule name with the following
+     * values:
+     *
+     * Value                | Description
+     * :------------------- | :-------------------------------------------------------------
+     * `dir`                | Move directions (default: "1 1 1" = xyz)
+     * `peratom`            | Repeat move for each atom in molecule (default: false)
+     * `permol`             | Repeat move for each molecule in system (default: false) 
+     * `prop`               | Probability of performing the move (default: 1)
+     *
+     * Example:
+     *
+     *     atomictranslation {
+     *       "salt" : { "dir":"1 1 0", "peratom":true }
+     *     } 
+     *
+     * Atomic displacement parameters are read from `Faunus::AtomData`.
+     */
+    template<class Tspace>
+      AtomicTranslation<Tspace>::AtomicTranslation(const json::Tobj &js, \
+          Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : Movebase<Tspace>(e,s,pfx) {
+
+        base::title="Single Particle Translation";
+        iparticle=-1;
+        igroup=nullptr;
+        dir = {1,1,1};
+        this->w=30; //width of output
+        setGenericDisplacement( 0 );
+        readJSON(js);
+      }
+
+    template<class Tspace>
+      void AtomicTranslation<Tspace>::readJSON(const json::Tobj &js) {
+        auto it = js.find("atomtranslate");
+        if ( it != js.end() )
+          for ( auto &i : it->second.get<json::Tobj>() ) { // loop over molecules
+            auto it = spc->molList().find( i.first ); // is molecule defined?
+            if ( it != spc->molList().end() )
+              this->addMol( it->id, typename Movebase<Tspace>::MolListData(i.second) );
+            else {
+              std::cerr << "Error: Molecule '" << i.first << "' not defined." << endl;
+              exit(1);
+            }
+          }
       }
 
     /**
@@ -490,23 +628,35 @@ namespace Faunus {
       void AtomicTranslation<Tspace>::setGroup(Group &g) {
         igroup=&g;
         iparticle=-1;
+        this->currentMolId=g.molId;
       }
 
     template<class Tspace>
       void AtomicTranslation<Tspace>::setParticle(int i) {
         iparticle=i;
         igroup=nullptr;
+        this->currentMolId=-1;
       }
 
     template<class Tspace>
       bool AtomicTranslation<Tspace>::run() const {
-        if ( igroup->empty() )
-          return false;
+        if ( igroup != nullptr )
+          if ( igroup->empty() )
+            return false;
         return base::run();
       }
 
     template<class Tspace>
       void AtomicTranslation<Tspace>::_trialMove() {
+
+        if ( ! this->mollist.empty() ) {
+          auto gvec = spc->findMolecules( this->currentMolId );
+          assert( !gvec.empty() );
+          igroup = *slump.element( gvec.begin(), gvec.end() );
+          assert( ! igroup->empty() );
+          dir = this->mollist[ this->currentMolId ].dir;
+        }
+
         if (igroup!=nullptr) {
           iparticle=igroup->random();
           gsize += igroup->size();
@@ -598,6 +748,7 @@ namespace Faunus {
             << indent(SUBSUB) << std::left << string(7,' ')
             << setw(l-6) << "dp"
             << setw(l+1) << "Acc. "+percent
+            << setw(l) << "Nmoves"
             << setw(l+7) << bracket("r"+squared)+"/"+angstrom+squared
             << rootof+bracket("r"+squared)+"/"+angstrom << endl;
           for (auto m : sqrmap) {
@@ -606,6 +757,7 @@ namespace Faunus {
               << setw(l-6) << ( (atom[id].dp<1e-6) ? genericdp : atom[id].dp);
             o.precision(3);
             o << setw(l) << accmap[id].avg()*100
+              << setw(l) << accmap[id].cnt
               << setw(l) << sqrmap[id].avg()
               << setw(l) << sqrt(sqrmap[id].avg()) << endl;
           }
@@ -734,8 +886,10 @@ namespace Faunus {
           double dp_trans;   //!< Translational displacement parameter
           double angle;      //!< Temporary storage for current angle
           Point dir;         //!< Translation directions (default: x=y=z=1). This will be set by setGroup()
+          void readJSON(const json::Tobj&);
         public:
           TranslateRotate(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="transrot");
+          TranslateRotate(const json::Tobj&, Energy::Energybase<Tspace>&, Tspace&, string="transrot");
           void setGroup(Group&); //!< Select Group to move
           bool groupWiseEnergy;  //!< Attempt to evaluate energy over groups from vector in Space (default=false)
           std::map<string,Point> directions; //!< Specify special group translation directions (default: x=y=z=1)
@@ -773,8 +927,61 @@ namespace Faunus {
 #endif
       }
 
+    /**
+     * @brief Constructor
+     *
+     * The JSON entry is read from section `translaterotate`
+     * with each element being the molecule name with the following
+     * values:
+     *
+     * Value                | Description
+     * :------------------- | :-------------------------------------------------------------
+     * `dir`                | Move directions (default: "1 1 1" = xyz)
+     * `permol`             | Repeat move for each molecule in system (default: true) 
+     * `prop`               | Probability of performing the move (default: 1)
+     * `dp`                 | Translational displacement parameter
+     * `dprot`              | Angular displacement parameter
+     *
+     * Example:
+     *
+     *     translaterotate {
+     *       "water" : { "dp":0.5, "dprot":0.5 }
+     *     } 
+     *
+     * Atomic displacement parameters are read from `AtomData`.
+     */
+    template<class Tspace>
+      TranslateRotate<Tspace>::TranslateRotate(const json::Tobj &js,Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(e,s,pfx) {
+        base::title="Group Rotation/Translation";
+        base::w=30;
+        igroup=nullptr;
+        groupWiseEnergy=false;
+        readJSON(js);
+      }
+
+    template<class Tspace>
+      void TranslateRotate<Tspace>::readJSON(const json::Tobj &js) {
+        auto it = js.find("moltransrot");
+        if ( it != js.end() )
+          for ( auto &i : it->second.get<json::Tobj>() ) {
+            auto it = spc->molList().find( i.first );
+            if ( it == spc->molList().end() ) {
+              std::cerr << "Error: molecule '" << i.first << "' not defined." << endl;
+              exit(1);
+            } else {
+              typename Movebase<Tspace>::MolListData d(i.second);
+              d.dp1 = json::value<double>(i.second, "dp", 0); // trans. dp.
+              d.dp2 = json::value<double>(i.second, "dprot", 0); // rot. dp.
+              if (d.dp2>4*pc::pi) // no need to rotate more than
+                d.dp2=4*pc::pi;   // +/- 2 pi.
+              this->addMol( it->id, d );
+            }
+          }
+      }
+
     template<class Tspace>
       void TranslateRotate<Tspace>::setGroup(Group &g) {
+        assert( this->mollist.empty() && "Use either JSON data or setGroup");
         assert(&g!=nullptr);
         assert(!g.name.empty() && "Group should have a name.");
         assert(g.isMolecular());
@@ -788,6 +995,22 @@ namespace Faunus {
 
     template<class Tspace>
       void TranslateRotate<Tspace>::_trialMove() {
+
+        // if `mollist` has data, favor this over `setGroup()`
+        // Note that `currentMolId` is set by Movebase::move()
+        if ( ! this->mollist.empty() ) {
+          auto gvec = spc->findMolecules( this->currentMolId );
+          assert( !gvec.empty() );
+          igroup = *slump.element( gvec.begin(), gvec.end() );
+          assert( ! igroup->empty() );
+          auto it = this->mollist.find( this->currentMolId );
+          if ( it != this->mollist.end() ) {
+            dp_trans = it->second.dp1;
+            dp_rot = it->second.dp2;
+            dir = it->second.dir;
+          }
+        }
+
         assert(igroup!=nullptr);
         Point p;
         if (dp_rot>1e-6) {
@@ -1823,6 +2046,9 @@ namespace Faunus {
           Average<double> rval;         //!< Average 1/volume
         public:
           Isobaric(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="npt");
+
+          template<typename Tenergy>
+            Isobaric(const json::Tobj&, Tenergy&, Tspace&, string="npt");
       };
 
     template<class Tspace>
@@ -1836,6 +2062,29 @@ namespace Faunus {
         this->runfraction = in.get<double>(pfx+"_runfraction",1.0);
         if (dp<1e-6)
           base::runfraction=0;
+      }
+
+    template<class Tspace>
+      template<class Tenergy> Isobaric<Tspace>::Isobaric(
+          const json::Tobj &js,
+          Tenergy &e, Tspace &s, string pfx) : base(e,s,pfx) {
+
+        this->title="Isobaric Volume Fluctuations";
+        this->w=30;
+        auto it = js.find("isobaric");
+        assert( it != js.end() );
+        dp = json::value<double>( it->second, "dp", 0. );
+        P = json::value<double>( it->second, "pressure", 0. ) * 1.0_mM;
+        base::runfraction = json::value<double>( it->second, "prop", 1 );
+        if (dp<1e-6)
+          base::runfraction=0;
+#if __cplusplus >= 201305L
+        /*
+        //transfer pressure to energy class (C++14, only)
+        auto npt = std::get< Energy::ExternalPressure<Tspace>* >( e.tuple() );
+        npt->setPressure( P );
+        */
+#endif
       }
 
     template<class Tspace>
@@ -3138,22 +3387,11 @@ namespace Faunus {
                     t( this->prefix + "_atom_" + m.name + "_gamma", m.activity / (atomTrack.getAvg(m.id)/V/1.0_molar));
           }
 
-        public:
-
-          /** @brief Constructor -- load combinations, initialize trackers */
-          GreenGC(
-              InputMap &in, 
-              Energy::Energybase<Tspace> &e,
-              Tspace &s,
-              string pfx="gcmol_") : base( e, s, pfx ), comb(s.molecule) {
-
+          void init() { // call this upon construction
             Ninserted = 0;
             Ndeleted  = 0;
             base::title = "GC move";
             base::useAlternateReturnEnergy = true;
-            base::runfraction = in.get<double>(pfx+"_runfraction",1.0);
-
-            // slump.seed(); // attempt non-deterministic random number sequence
 
             // update tracker with GC molecules and atoms
             for ( auto g : spc->groupList() )
@@ -3165,31 +3403,100 @@ namespace Faunus {
               else
                 if ( spc->molecule[g->molId].activity > 1e-9 )
                   molTrack.insert( g->molId, g );
+          }
 
-            // load combinations
-            comb.includefile(in);
-          } 
-
-          ~GreenGC() {}
-      };
-
-    template<typename Tspace>
-      class Propagator : public Movebase<Tspace> {
-        private:
-          typedef Movebase<Tspace> base;
         public:
-          Propagator(
+
+          /** @brief Constructor -- load combinations, initialize trackers */
+          GreenGC(
               InputMap &in, 
               Energy::Energybase<Tspace> &e,
               Tspace &s,
-              string pfx="iterator_") : base( e, s, pfx ) {
+              string pfx="gcmol_") : base( e, s, pfx ), comb(s.molecule) {
 
-            string file="polymers.json";
-            auto j = json::open(file);
-            for (auto &a : json::object("propagator", j) ) {
-              cout << a.first << endl;
-            }
+            base::runfraction = in.get<double>(pfx+"_runfraction",1.0);
+            init();
+            comb.includefile(in); // load combinations
+          } 
+
+          /** @brief Constructor -- load combinations, initialize trackers */
+          GreenGC(
+              const json::Tobj &js, 
+              Energy::Energybase<Tspace> &e,
+              Tspace &s,
+              string pfx="gcmol_") : base( e, s, pfx ), comb(s.molecule) {
+
+            auto it = js.find("gc");
+            assert( it != js.end() );
+            base::runfraction = json::value<double>( it->second, "prop", 1 );
+            init();
+            string combfile = json::value<string>( it->second, "molcombfile", "");
+            assert( !combfile.empty() );
+            comb.includefile(combfile); // load combinations
+          } 
+      };
+
+    /**
+     * @brief Multiple moves controlled via JSON input
+     *
+     * This is a move class that randomly picks between a number of
+     * moves as defined in a JSON file. The available moves are shown
+     * in the table below; each can occur only once and are picked
+     * with uniform weight.
+     *
+     * Keyword         | Move class                | Description
+     * :-------------- | :------------------------ | :----------------
+     * `atomtranslate` | `Move::AtomicTranslation` | Translate atoms
+     * `moltransrot`   | `Move::TranslateRotate`   | Translate/rotate molecules
+     * `isobaric`      | `Move::Isobaric`          | Volume move (NPT ensemple)
+     * `gc`            | `Move::GreenGC`           | Grand canonical move
+     */
+    template<typename Tspace, typename base=Movebase<Tspace>>
+      class Propagator : public base {
+        private:
+          typedef std::shared_ptr<base> basePtr;
+          std::vector<basePtr> mPtr; 
+
+          string _info() {
+            string o;
+            for ( auto i : mPtr )
+              o += i->info();
+            return o;
           }
+
+          void _acceptMove() { assert(1==2); }
+          void _rejectMove() { assert(1==2); }
+          void _trialMove()  { assert(1==2); }
+          double _energyChange() { assert(1==2); return 0;}
+
+        public:
+          template<typename Tenergy>
+            Propagator(const string &jsonfile, Tenergy &e, Tspace &s) 
+            : base( e, s, "_" )
+            {
+              this->title = "P R O P A G A T O R S";
+              json::Tval js = json::open(jsonfile);
+              json::Tobj js_prop = json::object("moves", js);
+              for ( auto &i : js_prop ) {
+                if (i.first=="atomtranslate")
+                  mPtr.push_back( basePtr( new AtomicTranslation<Tspace>(js_prop,e,s) ) ); 
+                if (i.first=="moltransrot")
+                  mPtr.push_back( basePtr( new TranslateRotate<Tspace>(js_prop,e,s) ) ); 
+                if (i.first=="isobaric")
+                  mPtr.push_back( basePtr( new Isobaric<Tspace>(js_prop,e,s) ) ); 
+                if (i.first=="gc")
+                  mPtr.push_back( basePtr( new GreenGC<Tspace>(js_prop,e,s) ) ); 
+              }
+              assert( !mPtr.empty() && "No moves - check JSON file" );
+            }
+
+          double move(int n=1) FOVERRIDE {
+            return ( mPtr.empty() ) ?
+              0 : (*slump.element( mPtr.begin(), mPtr.end() ))->move();
+          }
+
+          void test(UnitTest &t) { for (auto i : mPtr) i->test(t); }
+
       };
 
     /** @brief Atomic translation with dipolar polarizability */

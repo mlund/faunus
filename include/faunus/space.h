@@ -266,12 +266,22 @@ namespace Faunus {
         /** @brief Returns vector of molecules with matching molid */
         inline std::vector<Group*> findMolecules( int molId ) const {
           std::vector<Group*> v;
+          v.reserve( g.size() );
           for ( auto i : g )
             if (i->molId == molId)
               v.push_back( i );
           return v;
         }
 
+        /** @brief Count number of molecules with matching molid */
+        inline int numMolecules( int molId ) const {
+          int cnt=0;
+          for (auto i : g)
+            if (i->molId == molId)
+              cnt++;
+          return cnt;
+        }
+ 
         /**
          * @brief Returns vector of molecules with matching name
          *

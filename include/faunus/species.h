@@ -129,7 +129,7 @@ namespace Faunus {
     bool includefile(const string& file) {
       assert( !jsonsection.empty() && "json section empty" );
       jsonfile=file;
-      auto j = json::open(file);
+      json::Tval j = json::open(file);
       for (auto &a : json::object(jsonsection, j) ) {
         push_back( value_type(a) );
       }

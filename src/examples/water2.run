@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# THIS RUN SCRIPT IS USED AS A UNIT TEST SO PLEASE
-# DO NOT UPLOAD ANY MODIFIED VERSIONS TO SVN UNLESS
-# TO UPDATE THE TEST.
-
 source_tests_dir="`dirname $0`"
 cp -f $source_tests_dir/water2.test . 2> /dev/null
 cp -f $source_tests_dir/water2.state state 2> /dev/null
@@ -15,7 +11,14 @@ echo '{
   },
 
   "moleculelist" : {
-    "water" : { "structure":"water2.aam", "Ninit":216  }
+    "water" : { "structure":"water2.aam", "Ninit":216, "insdir":"1 1 1" }
+  },
+
+  "moves" : {
+     "moltransrot" : {
+        "water" : { "dp":0.5, "dprot":0.5, "dir":"1 1 1", "permol":true } 
+     },
+     "isobaric" : { "dp":0.1, "pressure":39.3155, "prop":1.0 }
   }
 }' > water2.json
 
@@ -34,21 +37,15 @@ temperature        300          # K
 epsilon_r          1            # dielectric const.
 coulomb_cut        9.           # coulomb cutoff [angstrom]
 g2g_cutoff         10.          # Group-to-group cutoff
+npt_P              39.3155      # external pressure [mM]
 
 ewald_precision    0.01
 ewald_eps_surf     1e11
 ewald_cutoff       9.
 ewald_alpha        0.2
                   
-loop_macrosteps    5            # number of macro loops
-loop_microsteps    250          # number of micro loops
-
-npt_dV             0.1          # 0.04 (0=no volume displacement=NVT)
-npt_P              39.3155      # external pressure [mM]
-npt_runfraction    1.0
-
-transrot_transdp   0.5
-transrot_rotdp     0.5
+loop_macrosteps    10           # number of macro loops
+loop_microsteps    400          # number of micro loops
 
 test_stable        no
 test_file          water2.test

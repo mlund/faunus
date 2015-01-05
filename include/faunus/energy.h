@@ -1085,6 +1085,12 @@ namespace Faunus {
         public:
           std::set<Group*> ignore; //!< Ignore groups added here
 
+          /**
+           * @brief Set pressure
+           * @param pressure Pressure in 1/A^3
+           */
+          void setPressure( double pressure ) { P = pressure; }
+
           ExternalPressure(InputMap &in) {
             this->name="External Pressure";
             P=in.get<double>("npt_P",0,

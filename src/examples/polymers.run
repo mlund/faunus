@@ -35,6 +35,16 @@ echo '{
          "2 3" : { "type":"harmonic", "k":0.0557, "req":0.0 }
        }
      }
+  },
+
+  "propagator" : {
+     "atomictranslation" : {
+        "salt"    : { "prop":1.0, "peratom":true },
+        "polymer" : { "prop":1.0, "permol":true, "peratom":true }
+     },
+     "translaterotate" : {
+        "polymer" : { "prop":1.0, "dprot":4, "dp":10, "permol":true, "dir":"1 1 1" } 
+     }
   }
 }' > polymers.json
 

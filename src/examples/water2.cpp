@@ -30,9 +30,9 @@ int main() {
   auto waters = spc.findMolecules("water");
 
   // Markov moves and analysis
-  Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
-  Move::Isobaric<Tspace> iso(mcp,pot,spc);
+  Move::Propagator<Tspace> mv("water2.json",pot,spc);
   Analysis::RadialDistribution<> rdf(0.05);
+  FormatXTC xtc(1000);
 
   EnergyDrift sys;   // class for tracking system energy drifts
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
@@ -42,27 +42,17 @@ int main() {
   MCLoop loop(mcp);    // class for handling mc loops
   while ( loop[0] ) {          // Markov chain 
     while ( loop[1] ) {
-      int i=slump.range(0,1);
-      int k=waters.size();
-      Group g;
-      switch (i) {
-        case 0:
-          while (k-->0) {
-            gmv.setGroup( **slump.element(waters.begin(), waters.end()) );
-            sys+=gmv.move();   // translate/rotate polymers
-          }
-          break;
-        case 1:
-          sys+=iso.move();
-          break;
-      }
 
-      // sample oxygen-oxygen rdf
-      if (slump()>0.9) {
-        auto id = atom["OW"].id;
-        rdf.sample(spc,id,id);
-      }
+      sys+=mv.move();
 
+      double rnd = slump();
+      if ( rnd>0.9 ) {
+        rdf.sample( spc, atom["OW"].id, atom["OW"].id ); // O-O g(r)
+        if ( rnd > 0.99 ) {
+          xtc.setbox( spc.geo.len );
+          xtc.save( "traj.xtc", spc.p );
+        }
+      }
     } // end of micro loop
 
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // energy drift?
@@ -71,20 +61,18 @@ int main() {
   } // end of macro loop
 
   // save to disk
-  FormatPQR::save("confout.pqr", spc.p);
+  FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
   spc.save("state");
   rdf.save("rdf.dat");
   spc.save("state");
-  FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
 
   // perform unit 
   UnitTest test(mcp);
-  iso.test(test);
-  gmv.test(test);
   sys.test(test);
+  mv.test(test);
 
   // print information
-  cout << loop.info() + sys.info() + gmv.info() + iso.info() + test.info();
+  cout << loop.info() + sys.info() + mv.info() + test.info();
 
   return test.numFailed();
 }

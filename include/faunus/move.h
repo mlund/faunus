@@ -64,7 +64,7 @@ namespace Faunus {
       };
 
     /**
-     * @brief Add polarization step to an arbitrary move
+     * @brief Add polarisation step to an arbitrary move
      *
      * This class will modify any MC move to account for polarization
      * using an iterative procedure.
@@ -74,81 +74,109 @@ namespace Faunus {
      * The energy change function will evaluate the *total*
      * system energy as all dipoles in the system may have changed.
      * This is thus an expensive computation and is best used with
-     * MC moves that propagate many or all particles.
+     * MC moves that propagate  all particles.
      *
-     * @todo Unfinished - fix polarization catastrophy!
+     * ### Update frequency ###
+     *
+     *  Updating induced moments is an iterative N*N operation and
+     *  very inefficient for MC moves that update only a subset of the system.
+     *  In liquid systems that propagate only slowly as a function of MC steps
+     *  one may attempt to update induced dipoles less frequently at the
+     *  expense of some accuracy.
+     *  For repeating moves -- i.e. molecular translate/rotate or atomic
+     *  translation -- polarisation is updated only after all moves have
+     *  been carried out.
+     *
+     * @note Will currently not work for Grand Caninical moves
      */
     template<class Tmove>
       class PolarizeMove : public Tmove {
         private:
           using Tmove::spc;
           using Tmove::pot;
+          int Ntrials;                    // Number of repeats within move
           int max_iter;                   // max numbr of iterations
           double threshold;       	  // threshold for iteration
+          bool updateDip;                 // true if ind. dipoles should be updated
           Eigen::MatrixXd field;  	  // field on each particle
           Average<int> numIter;           // average number of iterations per move
-          bool broke_loop;
-          bool groupBasedField;
 
           /**
-           *  @brief Replaces dipole moment with permanent dipole moment plus induced dipole moment
+           *  @brief Updates dipole moment w. permanent plus induced dipole moment
            *  @param pot Hamiltonian
            *  @param p Particles to update
            */
           template<typename Tenergy,typename Tparticles>
             void induceDipoles(Tenergy &pot, Tparticles &p) { 
-              Eigen::VectorXd mu_err_norm((int)p.size());
+              Eigen::VectorXd mu_err_norm( (int)p.size() );
               int cnt=0;
               do {
                 cnt++;
                 mu_err_norm.setZero();
                 field.setZero();
                 pot.field(p,field);
-                for (size_t i=0; i<p.size(); i++) {
-                  Point E = field.col(i); // field on i, in e/Å
-                  Point mu_trial = p[i].alpha*E + p[i].mup; // New tot dipole
-                  Point mu_err = mu_trial - p[i].mu*p[i].muscalar;     // Difference between former and current state
-                  mu_err_norm[i] = mu_err.norm();// Get norm of previous row
-                  p[i].muscalar = mu_trial.norm();// Update dip scalar in particle
+                for ( size_t i=0; i<p.size(); i++ ) {
+                  Point E = field.col(i);                  // field on i
+                  Point mu_trial = p[i].alpha*E + p[i].mup;// new tot. dipole
+                  Point mu_err = mu_trial - p[i].mu*p[i].muscalar;// mu difference
+                  mu_err_norm[i] = mu_err.norm();          // norm of previous row
+                  p[i].muscalar = mu_trial.norm();         // update dip scalar in particle
                   if (p[i].muscalar > 1e-6)
-                    p[i].mu = mu_trial/p[i].muscalar;// Update article dip.
+                    p[i].mu = mu_trial/p[i].muscalar;      // update article dip.
                 }
-                if(cnt > max_iter) {
-                  cout << "Reached " << max_iter << " iterations. Breaking loop!" << endl;
-                  broke_loop = true;
-                  break;
+                if ( cnt > max_iter ) {
+                  std::cerr << "Error: Field induction aborted after "
+                    << max_iter << " iterations." << endl;
+                  exit(1);
                 }
-              } while (mu_err_norm.maxCoeff() > threshold);                 // Check if threshold is ok
-              numIter+=cnt; // average number of iterations
+              } while ( mu_err_norm.maxCoeff() > threshold ); // is threshold OK?
+              numIter += cnt; // average number of iterations
             }
 
           void _trialMove() FOVERRIDE {
-            Tmove::_trialMove();                     // base class MC move
-            field.resize(3,Tmove::spc->trial.size());// match sizes
-            induceDipoles(*Tmove::pot,Tmove::spc->trial);
+            Tmove::_trialMove();
+
+            Ntrials++;
+            int updateAt = 1;  // default: dipoles are always updated
+            if ( ! Tmove::mollist.empty() )
+              updateAt = Tmove::mollist[ Tmove::currentMolId ].repeat;
+            else
+              Ntrials = 1;      // in case move(n) is called w. n>1
+
+            updateDip = ( Ntrials == updateAt ); 
+
+            if ( updateDip ) {
+              field.resize(3,Tmove::spc->trial.size());
+              induceDipoles(*Tmove::pot,Tmove::spc->trial);
+            }
           }
 
           double _energyChange() FOVERRIDE {
-            return Energy::systemEnergy(*spc,*pot,spc->trial) - Energy::systemEnergy(*spc,*pot,spc->p);
+            if ( updateDip )
+              return Energy::systemEnergy(*spc,*pot,spc->trial)
+                - Energy::systemEnergy(*spc,*pot,spc->p);
+            else
+              return Tmove::_energyChange();
           }
 
           void _rejectMove() FOVERRIDE {
             Tmove::_rejectMove();
-            Tmove::spc->trial = Tmove::spc->p;
+            if (updateDip)
+              Tmove::spc->trial = Tmove::spc->p;
           }
 
           void _acceptMove() FOVERRIDE {
             Tmove::_acceptMove();
-            Tmove::spc->p = Tmove::spc->trial;
+            if (updateDip)
+              Tmove::spc->p = Tmove::spc->trial;
           }
 
           string _info() FOVERRIDE {
             std::ostringstream o;
             using namespace textio;
-            o << pad(SUB,Tmove::w,"Polarization iterations") << numIter.avg() << endl;
-            if(broke_loop)
-              o << "Maximum number of iterations reached. Loop was broken!" << endl;
-            o  << Tmove::_info();
+            o << pad(SUB,Tmove::w,"Polarisation updates") << numIter.cnt << "\n"
+              << pad(SUB,Tmove::w,"Polarisation iterations") << numIter.avg() << "\n"
+              << Tmove::_info();
             return o.str();
           }
 
@@ -156,11 +184,20 @@ namespace Faunus {
           template<class Tspace>
             PolarizeMove(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s) :
               Tmove(in,e,s) {
-                broke_loop = false;
-                threshold = in.get<double>("pol_threshold", 0.001, "Iterative polarization precision");
-                max_iter = in.get<int>("max_iterations", 40, "Maximum number of iteratins");
-                groupBasedField = in.get<bool>("pol_g2g", false, "Group based field calculation");
+                threshold = in.get<double>("pol_threshold", 0.001, "Iteration precision");
+                max_iter = in.get<int>("max_iterations", 40, "Max. iterations");
               }
+
+          template<class Tspace>
+            PolarizeMove(const json::Tobj &js, Energy::Energybase<Tspace> &e, Tspace &s) :
+              max_iter(40), threshold(0.001), Tmove(js,e,s) {}
+
+          PolarizeMove(const Tmove &m) : max_iter(40), threshold(0.001), Tmove(m) {};
+
+          double move(int n) FOVERRIDE {
+            Ntrials = 0;
+            return Tmove::move(n);
+          }
       };
 
     /**
@@ -209,6 +246,7 @@ namespace Faunus {
           string title;                    //!< Title of move (mandatory!)
           string cite;                     //!< Reference, url, DOI etc.
           string prefix;                   //!< inputmap prefix
+          string jsonsection;              //!< json section
           char w;                          //!< info text width. Adjust this in constructor if needed.
           unsigned long int cnt;           //!< total number of trial moves
           virtual bool run() const;        //!< Runfraction test
@@ -372,17 +410,17 @@ namespace Faunus {
         }
 
         if ( run() ) {
-          while (n-->0) {
+          while ( n-->0 ) {
             trialMove();
-            double du=energyChange();
+            double du = energyChange();
             if ( !metropolis(du) )
               rejectMove();
             else {
               acceptMove();
-              if (useAlternateReturnEnergy)
-                du=alternateReturnEnergy;
-              dusum+=du;
-              utot+=du;
+              if ( useAlternateReturnEnergy )
+                du = alternateReturnEnergy;
+              dusum += du;
+              utot += du;
             }
           }
         }
@@ -523,6 +561,7 @@ namespace Faunus {
           double _energyChange() FOVERRIDE;
           void _trialMove() FOVERRIDE;
           using base::spc;
+          using base::jsonsection;
           map_type accmap; //!< Single particle acceptance map
           map_type sqrmap; //!< Single particle mean square displacement map
 
@@ -596,15 +635,16 @@ namespace Faunus {
         igroup=nullptr;
         dir = {1,1,1};
         this->w=30; //width of output
+        this->jsonsection = "atomtranslate";
         setGenericDisplacement( 0 );
         readJSON(js);
       }
 
     template<class Tspace>
       void AtomicTranslation<Tspace>::readJSON(const json::Tobj &js) {
-        auto it = js.find("atomtranslate");
+        auto it = js.find( jsonsection );
         if ( it != js.end() )
-          for ( auto &i : it->second.get<json::Tobj>() ) { // loop over molecules
+          for ( auto &i : it->second.template get<json::Tobj>() ) { // loop over molecules
             auto it = spc->molList().find( i.first ); // is molecule defined?
             if ( it != spc->molList().end() )
               this->addMol( it->id, typename Movebase<Tspace>::MolListData(i.second) );
@@ -956,14 +996,15 @@ namespace Faunus {
         base::w=30;
         igroup=nullptr;
         groupWiseEnergy=false;
+        this->jsonsection = "moltransrot";
         readJSON(js);
       }
 
     template<class Tspace>
       void TranslateRotate<Tspace>::readJSON(const json::Tobj &js) {
-        auto it = js.find("moltransrot");
+        auto it = js.find( this->jsonsection );
         if ( it != js.end() )
-          for ( auto &i : it->second.get<json::Tobj>() ) {
+          for ( auto &i : it->second.template get<json::Tobj>() ) {
             auto it = spc->molList().find( i.first );
             if ( it == spc->molList().end() ) {
               std::cerr << "Error: molecule '" << i.first << "' not defined." << endl;
@@ -2071,7 +2112,8 @@ namespace Faunus {
 
         this->title="Isobaric Volume Fluctuations";
         this->w=30;
-        auto it = js.find("isobaric");
+        this->jsonsection = "isobaric";
+        auto it = js.find( this->jsonsection );
         assert( it != js.end() );
         dp = json::value<double>( it->second, "dp", 0. );
         P = json::value<double>( it->second, "pressure", 0. ) * 1.0_mM;
@@ -3426,7 +3468,8 @@ namespace Faunus {
               Tspace &s,
               string pfx="gcmol_") : base( e, s, pfx ), comb(s.molecule) {
 
-            auto it = js.find("gc");
+            this->jsonsection = "gc";
+            auto it = js.find( this->jsonsection );
             assert( it != js.end() );
             base::runfraction = json::value<double>( it->second, "prop", 1 );
             init();
@@ -3451,7 +3494,7 @@ namespace Faunus {
      * `isobaric`      | `Move::Isobaric`          | Volume move (NPT ensemple)
      * `gc`            | `Move::GreenGC`           | Grand canonical move
      */
-    template<typename Tspace, typename base=Movebase<Tspace>>
+    template<typename Tspace, bool polarise=false, typename base=Movebase<Tspace>>
       class Propagator : public base {
         private:
           typedef std::shared_ptr<base> basePtr;
@@ -3469,9 +3512,15 @@ namespace Faunus {
           void _trialMove()  { assert(1==2); }
           double _energyChange() { assert(1==2); return 0;}
 
+          template<typename Tmove>
+            basePtr toPtr(Tmove m) {
+              typedef typename std::conditional<polarise, PolarizeMove<Tmove>, Tmove>::type T;
+              return basePtr( new T(m) );
+            }
+
         public:
           template<typename Tenergy>
-            Propagator(const string &jsonfile, Tenergy &e, Tspace &s) 
+            Propagator(const string &jsonfile, Tenergy &e, Tspace &s)
             : base( e, s, "_" )
             {
               this->title = "P R O P A G A T O R S";
@@ -3479,13 +3528,13 @@ namespace Faunus {
               json::Tobj js_prop = json::object("moves", js);
               for ( auto &i : js_prop ) {
                 if (i.first=="atomtranslate")
-                  mPtr.push_back( basePtr( new AtomicTranslation<Tspace>(js_prop,e,s) ) ); 
+                  mPtr.push_back( toPtr( AtomicTranslation<Tspace>(js_prop,e,s) ) ); 
                 if (i.first=="moltransrot")
-                  mPtr.push_back( basePtr( new TranslateRotate<Tspace>(js_prop,e,s) ) ); 
+                  mPtr.push_back( toPtr( TranslateRotate<Tspace>(js_prop,e,s) ) ); 
                 if (i.first=="isobaric")
-                  mPtr.push_back( basePtr( new Isobaric<Tspace>(js_prop,e,s) ) ); 
+                  mPtr.push_back( toPtr( Isobaric<Tspace>(js_prop,e,s) ) ); 
                 if (i.first=="gc")
-                  mPtr.push_back( basePtr( new GreenGC<Tspace>(js_prop,e,s) ) ); 
+                  mPtr.push_back( toPtr( GreenGC<Tspace>(js_prop,e,s) ) ); 
               }
               assert( !mPtr.empty() && "No moves - check JSON file" );
             }

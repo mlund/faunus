@@ -37,7 +37,6 @@ temperature        300          # K
 epsilon_r          1            # dielectric const.
 coulomb_cut        9.           # coulomb cutoff [angstrom]
 g2g_cutoff         10.          # Group-to-group cutoff
-npt_P              39.3155      # external pressure [mM]
 
 ewald_precision    0.01
 ewald_eps_surf     1e11

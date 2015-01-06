@@ -1052,5 +1052,55 @@ namespace Faunus {
           static_assert( std::is_unsigned<Ty>::value, "Histogram must be unsigned");
         }
     };
+
+  /**
+   * @brief Finds pointer to element in tuple with specified type. `nullptr` if not found.
+   *
+   * Example:
+   *
+   *     std::tuple<int,float,bool> t( 1, 2.1, false );
+   *     std::cout << *TupleFindType::get<float>( t ); // -> 2.1
+   */
+  class TupleFindType {
+    private:
+      template<class T>
+        struct findtype {
+          T* ptr;
+          findtype() : ptr(nullptr) {}
+          template<class E>
+            void operator()( E &t, typename std::enable_if< std::is_same<T,E>::value >::type* = 0 ) { ptr = &t; }
+          template<class E>
+            void operator()( E &t, typename std::enable_if< ! std::is_same<T,E>::value >::type* = 0 ) { }
+        };
+
+      template<class Tuple, std::size_t N>
+        struct TuplePrinter {
+          template<class Tfunc>
+            static void print(Tuple& t, Tfunc &f) {
+              TuplePrinter<Tuple, N-1>::print(t,f);
+              f( std::get<N-1>(t) );
+            }
+        };
+
+      template<class Tuple>
+        struct TuplePrinter<Tuple, 1>{
+          template<class Tfunc>
+            static void print(Tuple& t, Tfunc &f)  { f( std::get<0>(t) ); }
+        };
+
+      template<class... Args, class Tfunc>
+        static void for_each(std::tuple<Args...>& t, Tfunc &f) {
+          TuplePrinter<decltype(t), sizeof...(Args)>::print(t,f);
+        }
+
+    public:
+      template<class T, class... Args>
+        static T* get(std::tuple<Args...>& t) {
+          findtype<T> func;   // apply function object `func` ...
+          for_each(t, func);  // ... on all elements
+          return func.ptr;
+        } 
+  };
+
 }//namespace
 #endif

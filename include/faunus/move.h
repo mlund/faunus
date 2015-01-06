@@ -10,6 +10,7 @@
 #include <faunus/energy.h>
 #include <faunus/textio.h>
 #include <faunus/json.h>
+#include <faunus/titrate.h>
 
 #ifdef ENABLE_MPI
 #include <faunus/mpi.h>
@@ -221,7 +222,7 @@ namespace Faunus {
      *
      * @date Lund, 2007-2011
      */
-    template<class Tspace>
+    template<class Tspace=Space<class Tgeometry,class Tparticle> >
       class Movebase {
         private:
           unsigned long int cnt_accepted;  //!< number of accepted moves
@@ -2120,13 +2121,15 @@ namespace Faunus {
         base::runfraction = json::value<double>( it->second, "prop", 1 );
         if (dp<1e-6)
           base::runfraction=0;
-#if __cplusplus >= 201305L
-        /*
-        //transfer pressure to energy class (C++14, only)
-        auto npt = std::get< Energy::ExternalPressure<Tspace>* >( e.tuple() );
-        npt->setPressure( P );
-        */
-#endif
+
+        auto t = e.tuple(); // tuple w. pointers to all energy terms
+        auto ptr = TupleFindType::get< Energy::ExternalPressure<Tspace>* >( t );
+        if ( ptr != nullptr )
+          (*ptr)->setPressure( P ); 
+        else {
+          std::cerr << "Error: Volume move requires pressure term in Hamiltonian." << endl;
+          exit(1);
+        }
       }
 
     template<class Tspace>
@@ -3480,6 +3483,291 @@ namespace Faunus {
       };
 
     /**
+     * @brief Move for swapping species types - i.e. implicit titration
+     *
+     * Upon construction this class will add an instance of
+     * Energy::EquilibriumEnergy to the Hamiltonian. For details
+     * about the titration procedure see Energy::EquilibriumController.
+     */
+    template<class Tspace>
+      class SwapMove : public Movebase<Tspace> {
+        private:
+          std::map<int, Average<double> > accmap; //!< Site acceptance map
+          string _info();
+          void _trialMove();
+          void _acceptMove();
+          void _rejectMove();
+
+        protected:
+          using Movebase<Tspace>::spc;
+          using Movebase<Tspace>::pot;
+          double _energyChange();
+          int ipart;                              //!< Particle to be swapped
+          Energy::EquilibriumEnergy<Tspace>* eqpot;
+
+        public:
+          SwapMove(InputMap&, Energy::Energybase<Tspace>&, Tspace&,
+              Energy::EquilibriumEnergy<Tspace>&, string="swapmv_"); //!< Constructor
+
+          template<class Tenergy>
+            SwapMove(const json::Tobj &js, Tenergy&, Tspace&); //!< Constructor
+
+          template<class Tpvec>
+            int findSites(const Tpvec&); //!< Search for titratable sites (old ones are discarded)
+
+          double move();
+
+          template<class Tpvec>
+            void applycharges(Tpvec &);
+
+#ifdef ENABLE_MPI
+          Faunus::MPI::MPIController* mpi;
+#endif
+      };
+
+    /**
+     * This will set up swap move routines and search for
+     * titratable sites in `Space`.
+     */
+    template<class Tspace>
+      SwapMove<Tspace>::SwapMove(
+          InputMap &in,
+          Energy::Energybase<Tspace> &ham,
+          Tspace &spc,
+          Energy::EquilibriumEnergy<Tspace> &eq,
+          string pfx) : Movebase<Tspace>(ham,spc,pfx) {
+
+        this->title="Site Titration - Swap Move";
+        this->runfraction=in.get<double>(pfx+"runfraction",1);
+        eqpot=&eq;
+        ipart=-1;
+
+        findSites(spc.p);
+
+        /* Sync particle charges with `AtomMap` */
+        for (auto i : eqpot->eq.sites)
+          spc.trial[i].charge = spc.p[i].charge = atom[ spc.p[i].id ].charge;
+#ifdef ENABLE_MPI
+        mpi=nullptr;
+#endif
+      }
+
+    template<class Tspace>
+      template<class Tenergy> SwapMove<Tspace>::SwapMove(
+          const json::Tobj &js, Tenergy &e, Tspace &spc) : Movebase<Tspace>(e,spc,"?") {
+
+        this->title="Site Titration - Swap Move";
+        this->jsonsection = "titrate";
+        auto it = js.find( this->jsonsection );
+        assert( it != js.end() );
+        //this->runfraction = json::value<double>( it->second, "prop", 1 );
+
+        auto t = e.tuple();
+        auto ptr = TupleFindType::get< Energy::EquilibriumEnergy<Tspace>* >( t );
+        if ( ptr != nullptr )
+          eqpot = *ptr; 
+        else {
+          std::cerr << "Error: Equilibrium energy required in Hamiltonian for titration swap moves." << endl;
+          exit(1);
+        }
+
+        ipart=-1;
+
+        findSites(spc.p);
+
+        /* Sync particle charges with `AtomMap` */
+        for (auto i : eqpot->eq.sites)
+          spc.trial[i].charge = spc.p[i].charge = atom[ spc.p[i].id ].charge;
+#ifdef ENABLE_MPI
+        mpi=nullptr;
+#endif
+      }
+
+    /**
+     * @brief Search for titratable sites and store internally
+     *
+     * Use this to re-scan for titratable sites. Called by default
+     * in the constructor
+     */
+    template<class Tspace>
+      template<class Tpvec>
+      int SwapMove<Tspace>::findSites(const Tpvec &p) {
+        accmap.clear();
+        return eqpot->findSites(p);
+      }
+
+    template<class Tspace>
+      void SwapMove<Tspace>::_trialMove() {
+        if (!eqpot->eq.sites.empty()) {
+          int i= slump.range( 0, eqpot->eq.sites.size()-1); // pick random site
+          //int i=slump.rand() % eqpot->eq.sites.size(); // pick random site
+          ipart=eqpot->eq.sites.at(i);                      // and corresponding particle
+          int k;
+          do {
+            k= slump.range( 0, eqpot->eq.process.size()-1 );// pick random process..
+            //k=slump.rand() % eqpot->eq.process.size(); // pick random process..
+          } while (!eqpot->eq.process[k].one_of_us( this->spc->p[ipart].id )); //that match particle j
+          eqpot->eq.process[k].swap( this->spc->trial[ipart] ); // change state and get intrinsic energy change
+        }
+      }
+
+    template<class Tspace>
+      double SwapMove<Tspace>::_energyChange() {
+        assert( spc->geo.collision( spc->p[ipart], spc->p[ipart].radius )==false
+            && "Accepted particle collides with container");
+
+        if (spc->geo.collision(spc->trial[ipart], spc->trial[ipart].radius))  // trial<->container collision?
+          return pc::infty;
+        double uold = pot->external(spc->p) + pot->i_total(spc->p,ipart);
+        double unew = pot->external(spc->trial) + pot->i_total(spc->trial,ipart);
+#ifdef ENABLE_MPI
+        if (mpi!=nullptr) {
+          double sum=0;
+          auto r = Faunus::MPI::splitEven(*mpi, (int)spc->p.size());
+          for (int i=r.first; i<=r.second; ++i)
+            if (i!=ipart)
+              sum+=pot->i2i(spc->trial,i,ipart) - pot->i2i(spc->p,i,ipart);
+
+          sum = Faunus::MPI::reduceDouble(*mpi, sum);
+
+          return sum + pot->i_external(spc->trial, ipart) - pot->i_external(spc->p, ipart)
+            + pot->i_internal(spc->trial, ipart) - pot->i_internal(spc->p, ipart);
+        }
+#endif
+
+        return unew - uold;
+      }
+
+    template<class Tspace>
+      void SwapMove<Tspace>::_acceptMove() {
+        accmap[ipart] += 1;
+        spc->p[ipart] = spc->trial[ipart];
+      }
+
+    template<class Tspace>
+      void SwapMove<Tspace>::_rejectMove() {
+        accmap[ipart] += 0;
+        spc->trial[ipart] = spc->p[ipart];
+      }
+
+    template<class Tspace>
+      double SwapMove<Tspace>::move() {
+        double du=0;
+        if (this->run()) {
+          size_t i=eqpot->eq.sites.size();
+          while (i-->0)
+            du+=Movebase<Tspace>::move();
+          eqpot->eq.sampleCharge(spc->p);
+        }
+        return du;
+      }
+
+    template<class Tspace>
+      template<class Tpvec>
+      void SwapMove<Tspace>::applycharges(Tpvec &p){
+        eqpot->eq.applycharges(p);
+      }
+
+    template<class Tspace>
+      string SwapMove<Tspace>::_info() {
+        using namespace textio;
+        std::ostringstream o;
+        if (this->cnt>0 && !eqpot->eq.sites.empty()) {
+          o << indent(SUB) << "Site statistics:" << endl
+            << indent(SUBSUB) << std::left
+            << setw(16) << "Site"
+            << setw(14) << bracket("z")
+            << "Acceptance" << endl;
+          for (auto i : eqpot->eq.sites) {
+            if (accmap[i].cnt>0) {
+              std::ostringstream a;
+              o.precision(5);
+              o.setf( std::ios::fixed, std::ios::floatfield );
+              a << std::left << setw(5) << atom[ spc->p[i].id ].name << std::right << setw(5) << i;
+              o << pad(SUBSUB,15, a.str())
+                << setw(8) << std::right << eqpot->eq.q[i].avg()
+                << setw(11) << std::right << accmap[i].avg()*100. << " " << percent
+                << endl;
+            }
+          }
+        }
+        return o.str();
+      }
+
+    /**
+     * @brief As SwapMove but Minimizes Short Ranged interactions
+     *        within a molecule upon swapping
+     *
+     * Before calculating dU of an attempted swap move, radii on
+     * particles within the SAME group are set to minus radius of
+     * the swapped particle and hydrophobicity is set to false.
+     * This to minimize large interactions in molecules with overlapping
+     * particles - i.e LJ will be zero. It can also be used to avoid
+     * internal hydrophobic interactions in rigid groups upon swapping
+     * between hydrophobic and non-hydrophobic species.
+     */
+    template<class Tspace>
+      class SwapMoveMSR : public SwapMove<Tspace> {
+        private:
+          using SwapMove<Tspace>::spc;
+          using SwapMove<Tspace>::pot;
+          std::map<int, double> radiusbak;    // backup for radii
+          std::map<int, bool> hydrophobicbak; // backup for hydrophobic state
+
+          void modify() {
+            radiusbak.clear();
+            hydrophobicbak.clear();
+            for (auto g : spc->groupList() )   // loop over all groups
+              if (g->find(this->ipart)) {  //   is ipart part of a group?
+                for (auto i : *g)    //     if so, loop over that group
+                  if (i!=this->ipart) {    //       and ignore ipart
+                    assert( abs(spc->p[i].radius-spc->trial[i].radius)<1e-9);
+                    assert( spc->p[i].hydrophobic==spc->trial[i].hydrophobic);
+
+                    //radiusbak[i]         = spc->p[i].radius;
+                    //spc->p[i].radius     = -spc->p[ipart].radius;
+                    //spc->trial[i].radius = -spc->p[ipart].radius;
+
+                    hydrophobicbak[i]         = spc->p[i].hydrophobic;
+                    spc->p[i].hydrophobic     = false;
+                    spc->trial[i].hydrophobic = false;
+                  }
+                return; // a particle can be part of a single group, only
+              }
+          }
+
+          void restore() {
+            for (auto &m : radiusbak) {
+              spc->p[m.first].radius = m.second;
+              spc->trial[m.first].radius = m.second;
+            }
+            for (auto &m : hydrophobicbak) {
+              spc->p[m.first].hydrophobic = m.second;
+              spc->trial[m.first].hydrophobic = m.second;
+            }
+          }
+
+          double _energyChange() {
+            double du_orig = SwapMove<Tspace>::_energyChange();
+            modify();
+            double du = SwapMove<Tspace>::_energyChange();
+            restore();
+            this->alternateReturnEnergy=du_orig;
+            return du;
+          }
+
+        public:
+          SwapMoveMSR(
+              InputMap &in, Energy::Energybase<Tspace> &ham, Tspace &spc,
+              string pfx="swapmv_") : SwapMove<Tspace>(in,ham,spc,pfx)
+          {
+            this->title+=" (min. shortrange)";
+            this->useAlternateReturnEnergy=true;
+          }
+      };
+
+
+    /**
      * @brief Multiple moves controlled via JSON input
      *
      * This is a move class that randomly picks between a number of
@@ -3535,6 +3823,8 @@ namespace Faunus {
                   mPtr.push_back( toPtr( Isobaric<Tspace>(js_prop,e,s) ) ); 
                 if (i.first=="gc")
                   mPtr.push_back( toPtr( GreenGC<Tspace>(js_prop,e,s) ) ); 
+                if (i.first=="titrate")
+                  mPtr.push_back( toPtr( SwapMove<Tspace>(js_prop,e,s) ) ); 
               }
               assert( !mPtr.empty() && "No moves - check JSON file" );
             }

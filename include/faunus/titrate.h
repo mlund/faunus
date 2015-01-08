@@ -179,6 +179,7 @@ namespace Faunus {
     }
 
     bool EquilibriumController::includeJSON(const string &file) {
+      process.clear();
       auto j=json::open(file);
       for (auto &p : json::object("processes", j)) {
         cout << "Reading process " << p.first << " ... ";
@@ -232,6 +233,8 @@ namespace Faunus {
       void EquilibriumController::findSites(const Tpvec &p) {
         q.clear(); // clear average charge vector
         sites.clear(); // empty sites vector
+        sites.reserve( p.size() );
+
         for (auto &prs : process)
           prs.cnt=0;
 
@@ -388,6 +391,12 @@ namespace Faunus {
               u+=i_internal(p, i);
             return u;
           }
+
+          void setSpace(Tspace &s) FOVERRIDE {
+            Energybase<Tspace>::setSpace(s);
+            findSites( s.p );
+          } 
+
       };
 
   }//Energy namespace 

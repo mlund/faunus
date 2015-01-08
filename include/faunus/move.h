@@ -406,8 +406,8 @@ namespace Faunus {
           currentMolId = randomMolId();
           n = mollist[ currentMolId ].repeat;
           runfraction = mollist[ currentMolId ].prop;
-          assert( n>0 );
-          assert( currentMolId >=0 );
+          //assert( n>0 );
+          //assert( currentMolId >=0 );
         }
 
         if ( run() ) {
@@ -3371,6 +3371,7 @@ namespace Faunus {
             }
             molTrack.updateAvg();   // update average number of molecules
             atomTrack.updateAvg();  // ...and atoms
+            pot->setSpace( *spc );
           }
 
           void _rejectMove() {
@@ -3498,6 +3499,13 @@ namespace Faunus {
           void _acceptMove();
           void _rejectMove();
 
+          std::map<int, std::map<int, Average<double> >> molCharge;
+
+          void updateMolCharge( int pindex ) {
+            auto g = spc->findGroup( pindex );
+            molCharge[ g->molId ][ pindex - g->front() ] += spc->p[pindex].charge; 
+          }
+
         protected:
           using Movebase<Tspace>::spc;
           using Movebase<Tspace>::pot;
@@ -3515,7 +3523,17 @@ namespace Faunus {
           template<class Tpvec>
             int findSites(const Tpvec&); //!< Search for titratable sites (old ones are discarded)
 
-          double move();
+          double move(int n=1) override {
+            double du=0;
+            if (this->run()) {
+              eqpot->findSites( this->spc->p );
+              size_t i = eqpot->eq.sites.size();
+              while (i-->0)
+                du+=Movebase<Tspace>::move();
+              eqpot->eq.sampleCharge(spc->p);
+            }
+            return du;
+          }
 
           template<class Tpvec>
             void applycharges(Tpvec &);
@@ -3560,7 +3578,7 @@ namespace Faunus {
         this->jsonsection = "titrate";
         auto it = js.find( this->jsonsection );
         assert( it != js.end() );
-        //this->runfraction = json::value<double>( it->second, "prop", 1 );
+        this->runfraction = json::value<double>( it->second, "prop", 1 );
 
         auto t = e.tuple();
         auto ptr = TupleFindType::get< Energy::EquilibriumEnergy<Tspace>* >( t );
@@ -3573,6 +3591,8 @@ namespace Faunus {
 
         ipart=-1;
 
+        string processfile = json::value<string>( it->second, "processfile", "");
+        eqpot->eq.include( processfile );
         findSites(spc.p);
 
         /* Sync particle charges with `AtomMap` */
@@ -3599,14 +3619,13 @@ namespace Faunus {
     template<class Tspace>
       void SwapMove<Tspace>::_trialMove() {
         if (!eqpot->eq.sites.empty()) {
-          int i= slump.range( 0, eqpot->eq.sites.size()-1); // pick random site
-          //int i=slump.rand() % eqpot->eq.sites.size(); // pick random site
-          ipart=eqpot->eq.sites.at(i);                      // and corresponding particle
+          int i = slump.range( 0, eqpot->eq.sites.size()-1); // pick random site
+          ipart = eqpot->eq.sites.at(i);                      // and corresponding particle
           int k;
           do {
-            k= slump.range( 0, eqpot->eq.process.size()-1 );// pick random process..
-            //k=slump.rand() % eqpot->eq.process.size(); // pick random process..
+            k = slump.range( 0, eqpot->eq.process.size()-1 );// pick random process..
           } while (!eqpot->eq.process[k].one_of_us( this->spc->p[ipart].id )); //that match particle j
+
           eqpot->eq.process[k].swap( this->spc->trial[ipart] ); // change state and get intrinsic energy change
         }
       }
@@ -3642,24 +3661,14 @@ namespace Faunus {
       void SwapMove<Tspace>::_acceptMove() {
         accmap[ipart] += 1;
         spc->p[ipart] = spc->trial[ipart];
+        updateMolCharge( ipart );
       }
 
     template<class Tspace>
       void SwapMove<Tspace>::_rejectMove() {
         accmap[ipart] += 0;
         spc->trial[ipart] = spc->p[ipart];
-      }
-
-    template<class Tspace>
-      double SwapMove<Tspace>::move() {
-        double du=0;
-        if (this->run()) {
-          size_t i=eqpot->eq.sites.size();
-          while (i-->0)
-            du+=Movebase<Tspace>::move();
-          eqpot->eq.sampleCharge(spc->p);
-        }
-        return du;
+        updateMolCharge( ipart );
       }
 
     template<class Tspace>
@@ -3672,24 +3681,15 @@ namespace Faunus {
       string SwapMove<Tspace>::_info() {
         using namespace textio;
         std::ostringstream o;
-        if (this->cnt>0 && !eqpot->eq.sites.empty()) {
-          o << indent(SUB) << "Site statistics:" << endl
-            << indent(SUBSUB) << std::left
-            << setw(16) << "Site"
-            << setw(14) << bracket("z")
-            << "Acceptance" << endl;
-          for (auto i : eqpot->eq.sites) {
-            if (accmap[i].cnt>0) {
-              std::ostringstream a;
-              o.precision(5);
-              o.setf( std::ios::fixed, std::ios::floatfield );
-              a << std::left << setw(5) << atom[ spc->p[i].id ].name << std::right << setw(5) << i;
-              o << pad(SUBSUB,15, a.str())
-                << setw(8) << std::right << eqpot->eq.q[i].avg()
-                << setw(11) << std::right << accmap[i].avg()*100. << " " << percent
-                << endl;
-            }
-          }
+        for (auto &m : molCharge) {
+          int molid = m.first;
+          o << "\n" << indent(SUB) << "Molecule: " << spc->molList()[ molid ].name << "\n\n"
+            << std::left << "    " << setw(8) << "index" << setw(12) << "name"
+            << setw(12) << "Z" << "\n";
+          for (auto &i : m.second)
+            o << "    " << setw(8) << i.first
+              << setw(12) << atom[ spc->molList()[molid].atoms[i.first] ].name
+              << setw(12) << i.second << "\n"; 
         }
         return o.str();
       }

@@ -252,12 +252,12 @@ namespace Faunus {
        *       respect the PQR fixed column format. Has been tested to
        *       work with files from VMD, pdb2pqr, and Faunus.
        */
-      template<class Tpvec>
-        static Point load(const std::string &file, Tpvec &p) {
+      template<class Tparticle, class Talloc>
+        static Point load(const std::string &file, vector<Tparticle,Talloc> &p) {
           Point len(0,0,0);
           std::ifstream in(file);
           if (in) {
-            typename Tpvec::value_type a;
+            Tparticle a;
             int iatom, ires;
             std::string line,key,aname,rname;
             while (std::getline(in, line)) {
@@ -274,6 +274,37 @@ namespace Faunus {
             }
           }
           return len;
+        }
+
+      /**
+       * @brief Read trajectory. Each frame must be separated by the "END" keyword.
+       * @param file File name
+       * @param v Vector of particle vectors
+       */
+      template<class Tparticle, class Talloc>
+        static void load(const std::string &file, vector< vector<Tparticle,Talloc> > &v) {
+          std::ifstream in( file );
+          if ( in ) {
+            Tparticle a;
+            vector<Tparticle,Talloc> p;
+            int iatom, ires;
+            std::string line,key,aname,rname;
+            while ( std::getline( in, line ) ) {
+              std::stringstream o( line );
+              while ( o >> key )
+                if ( key=="ATOM" || key=="HETATM" ) {
+                  o >> iatom >> aname;
+                  a=atom[aname];
+                  o >> rname >> ires >> a.x() >> a.y() >> a.z() >> a.charge >> a.radius; 
+                  p.push_back(a);
+                } else if ( key=="END" ) {
+                  v.push_back( p );
+                  p.clear();
+                  p.reserve( v.back().size() );
+                }
+            }
+          } else
+            std::cerr << "Warning: PQR trajectory " + file + " could not be opened." << endl;
         }
 
       /**

@@ -30,7 +30,7 @@ namespace Faunus {
 
       RandomInserter() : dir(1,1,1), offset(0,0,0), checkOverlap(true) { name = "random"; }
 
-      Tpvec operator() (Geometry::Geometrybase &geo, const Tpvec &p, const TMoleculeData &mol) {
+      Tpvec operator() (Geometry::Geometrybase &geo, const Tpvec &p, TMoleculeData &mol) {
         typedef typename Tpvec::value_type Tparticle;
         bool _overlap=true;
         Tpvec v;
@@ -86,6 +86,25 @@ namespace Faunus {
     };
 
   /**
+   * @brief Weight molecule according to deviation from mean charge
+   *
+   * This is a weight function to be used with Grand Canonical insertion
+   * by associating molecular configurations with a weight defined by how
+   * much it deviates from the average, bulk charge. It is required that
+   * both `MoleculeData::capacitance` and `MoleculeData::meancharge` have
+   * been specified.
+   * 
+   * [Details: J. Am. Chem. Soc. 2010, 132:17337](http://dx.doi.org/10.1021/ja106480a)
+   */
+  template<class Tpvec, class TMoleculeData>
+    double WeightByCharge(Geometry::Geometrybase &geo, const Tpvec &p, const Group &g, const TMoleculeData &m) {
+      double dz = netCharge( p, g ) - m.meancharge; 
+      if (m.capacitance > 1e-9)
+        return exp( -0.5 * dz*dz / m.capacitance ); 
+      return 1;
+    }
+
+  /**
    * @brief Storage for molecular properties
    *
    * Values can be read from a JSON object with the following format:
@@ -108,31 +127,40 @@ namespace Faunus {
    * `insoffset`   | string  | Translate generated random position. Default: "0 0 0" = no translation
    * `Ninit`       | int     | Initial number of molecules
    * `structure`   | string  | Read conformation from AAM file
+   * `trj`         | string  | Read conformations from PQR trajectory (`structure` will be ignored)
+   * `trjweight`   | string  | One column file w. relative weights for each conformations. Must match `traj` file.
+   * `Cavg`        | float   | Charge capacitance [e^2]
+   * `Zavg`        | float   | Average charge number [e]
    */                         
   template<class Tpvec>
     class MoleculeData  : public PropertyBase {
-      private:
-        using PropertyBase::Tjson;
-        bool _isAtomic;
-
-        /** @brief Signature for inserted function */
-        typedef std::function<Tpvec( Geometry::Geometrybase&,
-            const Tpvec&, const MoleculeData<Tpvec>& )> TinserterFunc;
-
-        TinserterFunc inserterFunctor;              //!< Function for insertion into space
-
       public:
         typedef Tpvec TParticleVector;
         typedef typename Tpvec::value_type Tparticle;
 
+        /** @brief Signature for inserted function */
+        typedef std::function<Tpvec( Geometry::Geometrybase&,
+            const Tpvec&, MoleculeData<Tpvec>& )> TinserterFunc;
+
         std::vector<typename Tparticle::Tid> atoms; //!< List of atoms in molecule
-        vector<Tpvec> conformations;                //!< Conformations of molecule
+        std::vector<Tpvec> conformations;           //!< Conformations of molecule
+        std::discrete_distribution<> confDist;      //!< Weight of conformations
         double activity;                            //!< Chemical activity (mol/l)
         double chemPot;                             //!< Chemical potential (kT)
         Average<double> rho;                        //!< Average concentration (1/angstrom^3)
         vector<Bonded::BondData> bonds;             //!< List of harmonic bonds
         vector<Bonded::DihedralData> dihedrals;     //!< List of harmonic bonds
         int Ninit;                                  //!< Initial number of molecules
+
+        double capacitance;                         //!< Charge capacitance
+        double meancharge;                          //!< Mean charge
+
+      private:
+        using PropertyBase::Tjson;
+        bool _isAtomic;
+
+      public:
+        TinserterFunc inserterFunctor;              //!< Function for insertion into space
 
         /** @brief Constructor - by default data is initialized; mass set to unity */
         inline MoleculeData( const Tjson &molecule=Tjson()) : _isAtomic(false), Ninit(0) {
@@ -155,9 +183,10 @@ namespace Faunus {
         void setInserter( const TinserterFunc &ifunc ) { inserterFunctor = ifunc; };
 
         /** @brief Get a random conformation */
-        Tpvec getRandomConformation() const {
-          assert( !conformations.empty() );
-          return *slump.element( conformations.begin(), conformations.end() );
+        Tpvec getRandomConformation() {
+          assert( size_t(confDist.max()) == conformations.size()-1 );
+          assert( atoms.size() == conformations.front().size() );
+          return conformations[ confDist(slump.eng) ];
         }
 
         /**
@@ -174,12 +203,18 @@ namespace Faunus {
         }
 
         /**
-         * @brief Store a single configuration
+         * @brief Store a single conformation
          * @param vec Vector of particles
-         * @todo Add weight parameter for chance of picking it
+         * @param weight Relative weight of conformation (default: 1)
          */
-        void pushConfiguration(const Tpvec& vec) {
-          conformations.push_back(vec);
+        void pushConformation(const Tpvec& vec, double weight=1) {
+          if ( !conformations.empty() ) {     // resize weights
+            auto w = confDist.probabilities();// (defaults to 1) 
+            w.push_back(weight);
+            confDist = std::discrete_distribution<>(w.begin(), w.end());
+          }
+          conformations.push_back( vec );
+          assert( confDist.probabilities().size() == conformations.size() );
         }
 
         /** True if molecule holds individual atoms */
@@ -199,8 +234,9 @@ namespace Faunus {
           chemPot = log( activity * 1.0_molar );
 
           _isAtomic = json::value<bool>(molecule.second, "atomic", false);
-
           Ninit = json::value<double>(molecule.second, "Ninit", 0 );
+          capacitance = json::value<double>(molecule.second, "Cavg", 0 );
+          meancharge  = json::value<double>(molecule.second, "Zavg", 0 );
 
           // create bond list
           for (auto &i : json::object("bonds", molecule.second) ) {
@@ -211,20 +247,60 @@ namespace Faunus {
           for (auto &i : json::object("dihedrals", molecule.second) )
             dihedrals.push_back( Bonded::DihedralData(i) );
 
-          // read conformation from disk
-          string structure = json::value<string>( molecule.second, "structure", "" );
-          if ( !structure.empty() ) {
-            Tpvec v;
-            if ( FormatAAM::load( structure, v ) ) {
-              if ( !v.empty() ) {
-                conformations.push_back( v ); // add conformation
-                for ( auto &p : v )           // add atoms to atomlist
-                  atoms.push_back(p.id);
-                cout << "# added molecular structure: " << structure << endl;
+          {
+            // read conformation from disk
+            string structure = json::value<string>( molecule.second, "structure", "" );
+            if ( !structure.empty() ) {
+              Tpvec v;
+              if ( FormatAAM::load( structure, v ) ) {
+                if ( !v.empty() ) {
+                  pushConformation( v );        // add conformation
+                  for ( auto &p : v )           // add atoms to atomlist
+                    atoms.push_back(p.id);
+                }
               }
+              else
+                std::cerr << "Warning: structure " + structure + " not loaded." << endl;
             }
-            else
-              std::cerr << "# error loading molecule: " << structure << endl;
+          }
+
+          // read tracjectory w. conformations from disk
+          string traj = json::value<string>( molecule.second, "trj", "" );
+          if ( !traj.empty() ) {
+            conformations.clear();
+            FormatPQR::load( traj, conformations );
+            if ( !conformations.empty() ) {
+              // create atom list
+              atoms.clear();
+              atoms.reserve( conformations.front().size() );
+              for ( auto &p : conformations.front() )           // add atoms to atomlist
+                atoms.push_back(p.id);
+
+              // set default uniform weight
+              vector<float> w(conformations.size(), 1);
+              confDist = std::discrete_distribution<>(w.begin(), w.end());
+
+              // look for weight file
+              string weightfile = json::value<string>( molecule.second, "trjweight", "" );
+              if (!weightfile.empty()) {
+                std::ifstream f(weightfile.c_str());
+                if (f) {
+                  w.clear();
+                  w.reserve( conformations.size() );
+                  double _val;
+                  while (f >> _val)
+                    w.push_back(_val);
+                  if ( w.size() == conformations.size() )
+                    confDist = std::discrete_distribution<>(w.begin(), w.end());
+                  else
+                    std::cerr << "Warning: Number of weights does not match conformations." << endl; 
+                } else
+                  std::cerr << "Warning: Weight file " + weightfile + " not found." << endl;
+              }
+            } else {
+              std::cerr << "Error: trajectory " + traj + " not loaded or empty." << endl;
+              exit(1);
+            }
           }
 
           // add atoms to atom list
@@ -251,16 +327,22 @@ namespace Faunus {
 
           using namespace textio;
           ostringstream o;
-          char w=22;
+          char w=30;
 
           o << header("Molecule: " + name)
             << pad(SUB, w, "Activity") << activity << " mol/l\n"
             << pad(SUB, w, "Chem. pot.") << chemPot << " kT\n"
             << pad(SUB, w, "Atomic") << std::boolalpha << isAtomic() << "\n"
-            << pad(SUB, w, "Conformations") << conformations.size() << "\n"
-            << pad(SUB, w, "Number of atoms") << std::max(atoms.size(), conformations.size()) << "\n";
+            << pad(SUB, w, "Number of atoms") << std::max(atoms.size(), conformations.size()) << "\n"
+            << pad(SUB, w, "Number of conformations") << conformations.size() << "\n";
           if (Ninit>0)
             o << pad(SUB, w, "N initial") << Ninit << "\n";
+          if (confDist.probabilities().size()>1) {
+            o << pad(SUB, w, "Number of weigts") << confDist.probabilities().size() << "\n";
+            for (auto w : confDist.probabilities())
+              o << w << " ";
+            o << "\n";
+          }
 
           if (rho.cnt>0) {
             o << pad(SUB, w, "Average conc.") << rho.avg() << " 1/"+angstrom+" = "
@@ -270,7 +352,6 @@ namespace Faunus {
 
           return o.str();
         }
-
     };
 
   /**

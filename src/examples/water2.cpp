@@ -15,6 +15,7 @@ int main() {
 
   cout << textio::splash();      // show faunus banner and credits
   InputMap mcp("water2.input");  // read input file
+  auto js = json::open("water2.json");
 
   // Energy functions and space
 #ifdef EWALD
@@ -30,7 +31,7 @@ int main() {
   auto waters = spc.findMolecules("water");
 
   // Markov moves and analysis
-  Move::Propagator<Tspace> mv("water2.json",pot,spc);
+  Move::Propagator<Tspace> mv( js, pot, spc );
   Analysis::RadialDistribution<> rdf(0.05);
   FormatXTC xtc(1000);
 

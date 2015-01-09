@@ -3808,23 +3808,21 @@ namespace Faunus {
 
         public:
           template<typename Tenergy>
-            Propagator(const string &jsonfile, Tenergy &e, Tspace &s)
-            : base( e, s, "_" )
+            Propagator(const json::Tval &js, Tenergy &e, Tspace &s) : base( e, s, "_" )
             {
               this->title = "P R O P A G A T O R S";
-              json::Tval js = json::open(jsonfile);
-              json::Tobj js_prop = json::object("moves", js);
-              for ( auto &i : js_prop ) {
+              json::Tobj m = json::object("moves", js);
+              for ( auto &i : m ) {
                 if (i.first=="atomtranslate")
-                  mPtr.push_back( toPtr( AtomicTranslation<Tspace>(js_prop,e,s) ) ); 
+                  mPtr.push_back( toPtr( AtomicTranslation<Tspace>(m,e,s) ) ); 
                 if (i.first=="moltransrot")
-                  mPtr.push_back( toPtr( TranslateRotate<Tspace>(js_prop,e,s) ) ); 
+                  mPtr.push_back( toPtr( TranslateRotate<Tspace>(m,e,s) ) ); 
                 if (i.first=="isobaric")
-                  mPtr.push_back( toPtr( Isobaric<Tspace>(js_prop,e,s) ) ); 
+                  mPtr.push_back( toPtr( Isobaric<Tspace>(m,e,s) ) ); 
                 if (i.first=="gc")
-                  mPtr.push_back( toPtr( GreenGC<Tspace>(js_prop,e,s) ) ); 
+                  mPtr.push_back( toPtr( GreenGC<Tspace>(m,e,s) ) ); 
                 if (i.first=="titrate")
-                  mPtr.push_back( toPtr( SwapMove<Tspace>(js_prop,e,s) ) ); 
+                  mPtr.push_back( toPtr( SwapMove<Tspace>(m,e,s) ) ); 
               }
               if ( mPtr.empty() ) {
                 std::cerr << "Error: No moves defined - check JSON file" << endl;

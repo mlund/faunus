@@ -129,24 +129,29 @@ namespace Faunus {
     bool includefile(const string& file) {
       assert( !jsonsection.empty() && "json section empty" );
       jsonfile=file;
-      json::Tval j = json::open(file);
-      for (auto &a : json::object(jsonsection, j) ) {
+      if (file.empty())
+        return false;
+      return includejson( json::open(jsonfile) );
+    }
+
+    bool includejson( const json::Tval &js ) {
+      this->reserve( json::object(jsonsection, js).size() );
+      for (auto &a : json::object(jsonsection, js) )
         push_back( value_type(a) );
-      }
       return ( empty() ? false : true );
     }
-    
+
     PropertyVector() {
       static_assert(std::is_base_of<PropertyBase, Tproperty>::value,
-                    "Elements must be derived from `PropertyBase`");
+          "Elements must be derived from `PropertyBase`");
     }
-    
+
     string info() {
       using namespace textio;
       char w=25;
       std::ostringstream o;
       o << header(name)
-      << pad(SUB,w,"Number of entries:") << size() << endl;
+        << pad(SUB,w,"Number of entries:") << size() << endl;
       if (!jsonfile.empty())
         o << pad(SUB,w,"Input JSON file:") << jsonfile << endl;
       o << indent(SUB) << "Element info:";

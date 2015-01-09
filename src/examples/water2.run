@@ -5,6 +5,10 @@ cp -f $source_tests_dir/water2.test . 2> /dev/null
 cp -f $source_tests_dir/water2.state state 2> /dev/null
 
 echo '{
+  "general" : {
+    "cuboid"  : { "xyzlen" : "27. 27. 27." }
+  },
+
   "atomlist" : {
     "OW" : { "q":-0.8476, "sigma":3.2, "eps":0.65 },
     "HW" : { "q": 0.4238, "sigma":0.0, "eps":0    }

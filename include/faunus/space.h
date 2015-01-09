@@ -193,7 +193,16 @@ namespace Faunus {
               insert( mol.id, mol.getRandomConformation(geo, p) );
         }
 
+        Space( const json::Tval &js ) : geo(js) {
+          molecule.includejson( js );
+          for (auto mol : molecule)
+            while (mol.Ninit-- > 0)
+              insert( mol.id, mol.getRandomConformation(geo, p) );
+        }
+
         std::vector<Group*>& groupList() { return g; };   //!< Vector with pointers to all groups
+
+        AtomMap& atomList() { return atom; } //!< Vector of atoms
 
         MoleculeMap<ParticleVector>& molList() { return molecule; } //!< Vector of molecules
 

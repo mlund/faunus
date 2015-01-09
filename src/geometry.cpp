@@ -104,7 +104,7 @@ namespace Faunus {
       setRadius( cbrt( 3*vol/(4*pc::pi) ) );
     }
 
-    bool Sphere::setlen(Point l) {
+    bool Sphere::setlen(const Point &l) {
       if (l.x()<=0) return false;
       Sphere::setRadius(l.x());
       return true;
@@ -162,7 +162,11 @@ namespace Faunus {
       setlen(len);
     }
 
-    bool Cuboid::setlen(Point l) {
+    bool Cuboid::setlen(const Point &l) {
+      //if ( l.squaredNorm() < 1e-6 ) {
+      //  std::cerr << "Error: cuboid volume is zero. " << endl;
+      //  exit(1);
+      //}
       assert(l.x()>0 && l.y()>0 && l.z()>0);
       if (l.x()<=0||l.y()<=0||l.z()<=0) 
         return false;

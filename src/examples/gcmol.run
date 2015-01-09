@@ -12,6 +12,10 @@ cp -f $source_tests_dir/gcmol.state state 2> /dev/null
 # Create input file with atom properties
 #-----------------------------------------------------------
 echo '{
+  "general" : {
+    "cuboid"  : { "xyzlen" : "19.0288 19.0288 19.0288" }
+  },
+
   "atomlist" : {
     "OW" : { "q":-0.8476, "sigma":3.2, "eps":0.65 },
     "HW" : { "q": 0.4238, "sigma":0.0, "eps":0    }
@@ -44,11 +48,11 @@ moleculelist           gcmol.json
 moleculecombinations   gcmol.json
 loop_macrosteps        10
 loop_microsteps        50000
-cuboid_len             19.0288 # Box side length Angstrom
 
 temperature            298     # Kelvin
 epsilon_r              1.0     # Water dielectric const
 coulomb_cut            10. 
+cuboid_len             19.0288 # angstrom
 
 test_stable            no
 test_file              gcmol.test

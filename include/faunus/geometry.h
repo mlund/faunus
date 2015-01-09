@@ -46,6 +46,7 @@ namespace Faunus {
       protected:
         RandomTwister<> slp;
         string name;                                        //!< Name of the geometry
+        string jsonsection;                                 //!< json section
         inline int anint(double x) const {
           return int(x>0. ? x+.5 : x-.5);
         }
@@ -64,6 +65,8 @@ namespace Faunus {
         virtual void scale(Point&, Point &, const double, const double) const;  //!< Scale point
         virtual double sqdist(const Point &a, const Point &b) const=0; //!< Squared distance between two points
         virtual Point vdist(const Point&, const Point&)=0;  //!< Distance in vector form
+
+        inline Geometrybase() : jsonsection("general") {}
         virtual ~Geometrybase();
     };
 
@@ -80,7 +83,7 @@ namespace Faunus {
         string _info(char);
       public:
         Point len;
-        bool setlen(Point);                     //!< Reset radius (angstrom)
+        bool setlen(const Point&);              //!< Reset radius (angstrom)
         void setRadius(double);                 //!< Set radius (angstrom)
         Sphere(double);                         //!< Construct from radius (angstrom)
         Sphere(InputMap&, string="sphere");     //!< Construct from InputMap key \c prefix_radius
@@ -112,9 +115,30 @@ namespace Faunus {
         string scaledirstr;
       protected:
         Point len_inv;                           //!< Inverse sidelengths
+
       public:
-        Cuboid(InputMap&);                       //!< Construct from input file
-        bool setlen(Point);                      //!< Reset Cuboid sidelengths
+
+        Cuboid(InputMap &);
+
+        inline Cuboid( const json::Tval &js ) {
+          name = "Cuboid";
+          json::Tobj m = json::object(jsonsection, js);
+          auto it = m.find("cuboid");
+          if (it != m.end() ) {
+            string scaledirstr = json::value<string>(it->second,"scaledir","XYZ");
+            if (scaledirstr=="XY")
+              scaledir=XY;
+            else
+              scaledir=XYZ;
+            len << json::value<string>( it->second, "xyzlen", "0 0 0" );
+            setlen(len);
+          } else {
+            std::cerr << "Error: No json " + jsonsection + "/" + name + " section." << endl;
+            exit(1);
+          }
+        }
+
+        bool setlen(const Point&);               //!< Reset Cuboid sidelengths
         Point len;                               //!< Sidelengths
         Point len_half;                          //!< Half sidelength
         Point randompos();           
@@ -179,6 +203,8 @@ namespace Faunus {
     class Cuboidslit : public Cuboid {
       public:
         Cuboidslit(InputMap &);
+
+        inline Cuboidslit( const json::Tval &js ) : Cuboid( js ) {}
 
         inline double sqdist(const Point &a, const Point &b) const {
           double dx=std::abs(a.x()-b.x());

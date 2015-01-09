@@ -68,10 +68,10 @@ namespace Faunus {
         stripped >> v;
         if (v.is<Tobj>())
           return v;
+      } else {
+        std::cerr << "Error: JSON file " + file + " not loaded." << endl;
+        exit(1);
       }
-      if ( !file.empty() )
-        std::cerr << "# Error loading JSON file, '" << file
-          << "', or invalid content." << endl;
       return Tval();
     }
 

@@ -122,20 +122,14 @@ namespace Faunus {
 
         inline Cuboid( const json::Tval &js ) {
           name = "Cuboid";
-          json::Tobj m = json::object(jsonsection, js);
-          auto it = m.find("cuboid");
-          if (it != m.end() ) {
-            string scaledirstr = json::value<string>(it->second,"scaledir","XYZ");
-            if (scaledirstr=="XY")
-              scaledir=XY;
-            else
-              scaledir=XYZ;
-            len << json::value<string>( it->second, "xyzlen", "0 0 0" );
-            setlen(len);
-          } else {
-            std::cerr << "Error: No json " + jsonsection + "/" + name + " section." << endl;
-            exit(1);
-          }
+          auto val = json::find(jsonsection, "cuboid", js); // note: error if not found!
+          string scaledirstr = json::value<string>( val, "scaledir", "XYZ" );
+          if (scaledirstr=="XY")
+            scaledir=XY;
+          else
+            scaledir=XYZ;
+          len << json::value<string>( val, "xyzlen", "0 0 0" );
+          setlen(len);
         }
 
         bool setlen(const Point&);               //!< Reset Cuboid sidelengths

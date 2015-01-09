@@ -15,6 +15,7 @@ namespace Faunus {
 
     PairPotentialBase::PairPotentialBase(std::string pfx) {
       prefix=pfx;
+      jsonsection = "pairpotential";
       rcut2.resize(atom.size());
     }
 

@@ -102,6 +102,16 @@ namespace Faunus {
         return fallback;
       }
 
+    static Tval find( const string &sec, const string &subsec, const Tval &v) {
+      json::Tobj m = json::object(sec, v);
+      auto it = m.find( subsec );
+      if ( it == m.end() ) {
+        std::cerr << "Error: No json " + sec + "/" + subsec + " section." << endl;
+        exit(1);
+      }
+      return it->second;
+    }
+
   }//namespace
 }//namespace
 #endif

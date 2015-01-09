@@ -73,6 +73,8 @@ namespace Faunus {
         virtual string _brief();
         //void initCutoff(size_t, float);       //!< Initialize all cut-off distances to single value
         //void setCutoff(size_t, size_t, float);//!< Specialized cut-off for a pair
+      protected:
+        string jsonsection;
       public:
         typedef PairMatrix<double> Tcutoff;
         Tcutoff rcut2;                        //!< Squared cut-off distance (angstrom^2)
@@ -796,6 +798,15 @@ namespace Faunus {
       double lB;          //!< Bjerrum length (angstrom)
 
       public:
+
+      Coulomb( const json::Tval &js ) {
+        name="Coulomb";
+        auto val = json::find(jsonsection, "coulomb", js); // note: error if not found!
+        epsilon_r = json::value<double>(val, "epsilon_r", 80.);
+        depsdt    = json::value<double>(val, "depsdt", -0.368) * pc::T() / epsilon_r;
+        lB=pc::lB( epsilon_r );
+      }
+
       Coulomb(InputMap&, string="coulomb"); //!< Construction from InputMap
       double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
 

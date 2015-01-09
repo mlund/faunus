@@ -127,8 +127,8 @@ namespace Faunus {
    * `insoffset`   | string  | Translate generated random position. Default: "0 0 0" = no translation
    * `Ninit`       | int     | Initial number of molecules
    * `structure`   | string  | Read conformation from AAM file
-   * `trj`         | string  | Read conformations from PQR trajectory (`structure` will be ignored)
-   * `trjweight`   | string  | One column file w. relative weights for each conformations. Must match `traj` file.
+   * `traj`        | string  | Read conformations from PQR trajectory (`structure` will be ignored)
+   * `trajweight`  | string  | One column file w. relative weights for each conformations. Must match `traj` file.
    * `Cavg`        | float   | Charge capacitance [e^2]
    * `Zavg`        | float   | Average charge number [e]
    */                         
@@ -259,13 +259,15 @@ namespace Faunus {
                     atoms.push_back(p.id);
                 }
               }
-              else
-                std::cerr << "Warning: structure " + structure + " not loaded." << endl;
+              else {
+                std::cerr << "Error: structure " + structure + " not loaded." << endl;
+                exit(1);
+              }
             }
           }
 
           // read tracjectory w. conformations from disk
-          string traj = json::value<string>( molecule.second, "trj", "" );
+          string traj = json::value<string>( molecule.second, "traj", "" );
           if ( !traj.empty() ) {
             conformations.clear();
             FormatPQR::load( traj, conformations );
@@ -281,7 +283,7 @@ namespace Faunus {
               confDist = std::discrete_distribution<>(w.begin(), w.end());
 
               // look for weight file
-              string weightfile = json::value<string>( molecule.second, "trjweight", "" );
+              string weightfile = json::value<string>( molecule.second, "trajweight", "" );
               if (!weightfile.empty()) {
                 std::ifstream f(weightfile.c_str());
                 if (f) {
@@ -294,8 +296,10 @@ namespace Faunus {
                     confDist = std::discrete_distribution<>(w.begin(), w.end());
                   else
                     std::cerr << "Warning: Number of weights does not match conformations." << endl; 
-                } else
-                  std::cerr << "Warning: Weight file " + weightfile + " not found." << endl;
+                } else {
+                  std::cerr << "Error: Weight file " + weightfile + " not found." << endl;
+                  exit(1);
+                }
               }
             } else {
               std::cerr << "Error: trajectory " + traj + " not loaded or empty." << endl;

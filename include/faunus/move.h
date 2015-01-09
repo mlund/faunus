@@ -2625,8 +2625,8 @@ namespace Faunus {
               potold-=pot->i2i(spc->p, *i, *j);
           uold+=potold;
         } else {
-          assert(!"No salt to insert or delete!");
-          std::cerr << "!! No salt to insert or delete !!";
+          std::cerr << "!! No salt to insert or delete !!" << endl;
+          exit(1);
         }
         base::alternateReturnEnergy=potnew-potold; // track only pot. energy
         return unew-uold;
@@ -3826,7 +3826,10 @@ namespace Faunus {
                 if (i.first=="titrate")
                   mPtr.push_back( toPtr( SwapMove<Tspace>(js_prop,e,s) ) ); 
               }
-              assert( !mPtr.empty() && "No moves - check JSON file" );
+              if ( mPtr.empty() ) {
+                std::cerr << "Error: No moves defined - check JSON file" << endl;
+                exit(1);
+              }
             }
 
           double move(int n=1) FOVERRIDE {

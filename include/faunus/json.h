@@ -102,6 +102,7 @@ namespace Faunus {
         return fallback;
       }
 
+    /** @brief Demand value from subsection of section. Exit if not found */
     static Tval find( const string &sec, const string &subsec, const Tval &v) {
       json::Tobj m = json::object(sec, v);
       auto it = m.find( subsec );

@@ -62,10 +62,6 @@ namespace Faunus {
 
     void PairPotentialBase::test(UnitTest&) {}
 
-    Harmonic::Harmonic(double forceconst, double eqdist) : k(forceconst), req(eqdist) {
-      name="Harmonic";
-    }
-
     Harmonic::Harmonic(InputMap &in, string pfx) : PairPotentialBase(pfx) {
       name="Harmonic";
       k  = in(prefix+"_forceconst", 0.0);
@@ -224,21 +220,6 @@ namespace Faunus {
       o << pad(SUB,w+1,epsilon+"(LJ)") << eps/4 << kT
         << " = " << eps/4.0_kJmol << " kJ/mol" << endl;
       return o.str();
-    }
-
-    WeeksChandlerAndersen::WeeksChandlerAndersen(InputMap &in) :
-      Tbase(in), onefourth(1/4.), twototwosixth(std::pow(2,2/6.))  {
-        name="WeeksChandlerAnderson";
-      }
-
-    LorentzBerthelot::LorentzBerthelot() : name("Lorentz-Berthelot Mixing Rule") {}
-
-    double LorentzBerthelot::mixSigma(double sigma1, double sigma2) const {
-      return 0.5*(sigma1+sigma2);
-    }
-
-    double LorentzBerthelot::mixEpsilon(double eps1, double eps2) const {
-      return sqrt(eps1*eps2);
     }
 
     LennardJonesR12::LennardJonesR12(InputMap &in, string pfx) : LennardJones(in,pfx) {

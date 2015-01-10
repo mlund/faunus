@@ -44,32 +44,6 @@ namespace Faunus {
       return _getVolume();
     }
 
-    bool Geometrybase::save(string file) {
-      std::ofstream fout( file.c_str());
-      if (fout) {
-        fout.precision(10);
-        fout <<  getVolume() << endl;
-        return true;
-      }
-      return false;
-    }
-
-    /*!
-     * \param file Filename
-     * \param resize True if the current geometry should be resized to match file content (default: false)
-     */
-    bool Geometrybase::load(string file, bool resize) {
-      std::ifstream f( file.c_str() );
-      if (f) {
-        double vol;
-        f >> vol;
-        setVolume(vol);
-        return true;
-      }
-      std::cerr << "!! Geometry data NOT read from file " << file << endl;
-      return false;
-    }
-
     Sphere::Sphere(double radius) {
       setRadius(radius);
       len = Point(r,diameter,0);
@@ -211,32 +185,6 @@ namespace Faunus {
       m.x() = slp.half()*len.x();
       m.y() = slp.half()*len.y();
       m.z() = slp.half()*len.z();
-    }
-
-    bool Cuboid::save(string file) {
-      if ( Geometrybase::save(file) ) {
-        std::ofstream fout( file.c_str(), std::ios_base::app);
-        if (fout) {
-          fout.precision(10);
-          fout << len.transpose() << endl;
-          return true;
-        }
-      }
-      return false;
-    }
-
-    bool Cuboid::load(string file, bool resize) {
-      Point l;
-      if ( Geometrybase::load(file, resize) ) {
-        std::ifstream f( file.c_str() );
-        if (f) {
-          f >> l.x() >> l.y() >> l.z();
-          setlen(l);
-          return true;
-        }
-      }
-      std::cerr << "# Container data NOT read from file " << file << endl;
-      return false;
     }
 
     void Cuboid::scale(Point &a, Point &s, const double xyz=1, const double xy=1) const {

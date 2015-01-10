@@ -60,7 +60,7 @@ namespace Faunus {
      * @brief Base class for pair potential classes
      *
      * This is a base class for all pair potentials. All derived classes
-     * are class functions, i.e. they the function operator returns the
+     * are class functions, i.e. the function operator returns the
      * energy. For example:
      *
      *     PointParticle a,b;
@@ -115,7 +115,6 @@ namespace Faunus {
         virtual void test(UnitTest&);                    //!< Perform unit test
 
         virtual std::string info(char=20);
-
     };
 
     /**
@@ -163,16 +162,24 @@ namespace Faunus {
     class Harmonic : public PairPotentialBase {
       private:
         string _brief();
+
       public:
         double k;   //!< Force constant (kT/A^2) - Remember to divide by two!
         double req; //!< Equilibrium distance (angstrom)
 
-        Harmonic(double=0, double=0);
+        inline Harmonic( double k=0, double req=0 ) : k(k), req(req) {};
 
-        Harmonic(InputMap&, string="harmonic");
+        Harmonic( InputMap&, string="harmonic" );
+
+        inline Harmonic( const json::Tval &js, string pfx="harmonic" ) {
+          name = "Harmonic";
+          auto v = json::find(jsonsection, pfx, js); // note: error if not found!
+          k   = json::value(v, "forceconst", 0.0);
+          req = json::value(v, "eqdist", 0.0);
+        }
 
         template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+          double operator()( const Tparticle &a, const Tparticle &b, double r2 ) {
             double d=sqrt(r2)-req;
             return k*d*d;
           }
@@ -325,7 +332,8 @@ namespace Faunus {
         HardSphere();
 
         /** @brief Compatibility constructor - no data is read from the InputMap. */
-        inline HardSphere(InputMap& in) { name="Hardsphere"; }
+        template<typename T>
+          HardSphere(const T&) { name="Hardsphere"; }
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -424,9 +432,16 @@ namespace Faunus {
     /** @brief Lorentz-Berthelot Mixing Rule for sigma and epsilon */
     struct LorentzBerthelot {
       string name;
-      LorentzBerthelot();
-      double mixSigma(double,double) const;
-      double mixEpsilon(double,double) const;
+
+      inline LorentzBerthelot() : name("Lorentz-Berthelot Mixing") {}
+
+      inline double mixSigma(double sigma1, double sigma2) const {
+        return 0.5*(sigma1+sigma2);
+      }
+
+      inline double mixEpsilon(double eps1, double eps2) const {
+        return sqrt(eps1*eps2);
+      }
     };
 
     /**
@@ -447,15 +462,14 @@ namespace Faunus {
      *     LennardJonesMixed<LorentzBerthelot> lj(mcp);
      *
      */
-    template<class Tmixingrule>
+    template<class Tmixingrule = LorentzBerthelot>
       class LennardJonesMixed : public PairPotentialBase {
         protected:
           Tmixingrule mixer; // mixing rule class for sigma and epsilon
           string _brief() { return name + " w. " + mixer.name; }
           PairMatrix<double> s2,eps; // matrix of sigma_ij^2 and eps_ij
-        public:
-          LennardJonesMixed(InputMap &in) {
-            name="Lennard-Jones";
+
+          inline void init() {
             size_t n=atom.size(); // number of atom types
             s2.resize(n); // not required...
             eps.resize(n);// ...but possible reduced mem. fragmentation
@@ -468,6 +482,13 @@ namespace Faunus {
               }
           }
 
+        public:
+          template<typename T>
+            LennardJonesMixed(const T&) {
+              name="Lennard-Jones";
+              init();
+            }
+
           template<class Tparticle>
             double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
               double x=s2(a.id,b.id)/r2; //s2/r2
@@ -477,7 +498,7 @@ namespace Faunus {
 
           template<typename Tparticle>
             Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
-              double s6=pow(s2(a.id,b.id),3);
+              double s6=_powi<3>( s2(a.id,b.id) );
               double r6=r2*r2*r2;
               double r14=r6*r6*r2;
               return 6.*eps(a.id,b.id) * s6 * (2*s6-r6) / r14 * p;
@@ -527,22 +548,23 @@ namespace Faunus {
           typedef LennardJonesMixed<Tmixingrule> base;
           PairMatrix<double> rc2,rc,c; // matrix of sigma_ij^2 and eps_ij
         public:
-          CosAttractMixed(InputMap &in) : base(in) {
-            base::name="Cos" + textio::squared + " attraction (mixed)";
-            size_t n=atom.size(); // number of atom types
-            c.resize(n);
-            rc.resize(n);
-            rc2.resize(n);
-            for (size_t i=0; i<n; i++)
-              for (size_t j=i; j<n; j++) {
-                rc.set(i,j,base::mixer.mixSigma( atom[i].pdis, atom[j].pdis));
-                base::rcut2.set(i,j,base::mixer.mixSigma( atom[i].pswitch, atom[j].pswitch));
-                c.set(i,j, 0.5*pc::pi/base::rcut2(i,j) );
-                base::rcut2.set(i,j, base::rcut2(i,j) + rc(i,j) );
-                base::rcut2.set(i,j, base::rcut2(i,j) * base::rcut2(i,j) );
-                rc2.set(i,j, rc(i,j)*rc(i,j) );
-              }
-          }
+          template<class T>
+            CosAttractMixed(const T &dummy) : base( dummy ) {
+              base::name="Cos" + textio::squared + " attraction (mixed)";
+              size_t n=atom.size(); // number of atom types
+              c.resize(n);
+              rc.resize(n);
+              rc2.resize(n);
+              for (size_t i=0; i<n; i++)
+                for (size_t j=i; j<n; j++) {
+                  rc.set(i,j,base::mixer.mixSigma( atom[i].pdis, atom[j].pdis));
+                  base::rcut2.set(i,j,base::mixer.mixSigma( atom[i].pswitch, atom[j].pswitch));
+                  c.set(i,j, 0.5*pc::pi/base::rcut2(i,j) );
+                  base::rcut2.set(i,j, base::rcut2(i,j) + rc(i,j) );
+                  base::rcut2.set(i,j, base::rcut2(i,j) * base::rcut2(i,j) );
+                  rc2.set(i,j, rc(i,j)*rc(i,j) );
+                }
+            }
 
           template<class Tparticle>
             double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
@@ -578,7 +600,11 @@ namespace Faunus {
         double onefourth, twototwosixth;
       public:
         typedef LennardJonesMixed<LorentzBerthelot> Tbase;
-        WeeksChandlerAndersen(InputMap&);
+
+        template<class T>
+          inline WeeksChandlerAndersen(const T &dummy) : Tbase( dummy ), onefourth(1/4.), twototwosixth(std::pow(2,2/6.))  {
+            name="WeeksChandlerAnderson";
+          }
 
         template<class Tparticle>
           inline double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -616,6 +642,13 @@ namespace Faunus {
         double threshold;                           //!< Threshold between particle *surface* [A]
         double depth;                               //!< Energy depth [kT] (positive number)
         SquareWell(InputMap&, string="squarewell"); //!< Constructor
+
+        inline SquareWell( const json::Tval &js, string pfx="squarewell") : PairPotentialBase(pfx) {
+          name="Square Well";
+          json::Tval v = json::find( jsonsection, pfx, js);
+          threshold = json::value( v, "threshold", 0.0);
+          depth = json::value( v, "depth", 0.0);
+        }
 
         template<class Tparticle>
           inline double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -1014,6 +1047,19 @@ namespace Faunus {
         double c,k,k2_count, z_count;
         Average<double> k2_count_avg;
       public:
+
+        inline DebyeHuckel( const json::Tval &js ) : Coulomb(js) {
+          name="Debye-Huckel";
+          auto val = json::find(jsonsection, "coulomb", js);
+          c = 8*lB*pc::pi*pc::Nav/1e27;
+          double I = json::value<double>(js, "ionicstrength", 0);
+          z_count=json::value<double>(js, "countervalency", 0);
+          k2_count=0;
+          k = sqrt( I*c );
+          if ( k < 1e-10 )
+            k = 1 / json::value<double>(js, "debyelength", 1e10);
+        }
+
         DebyeHuckel(InputMap&);                       //!< Construction from InputMap
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {

@@ -56,8 +56,6 @@ namespace Faunus {
         void setVolume(double);                             //!< Specify new volume (A^3)
         double dist(const Point&,const Point&) const;       //!< Distance between two points (A)
         string info(char=20);                               //!< Return info string
-        bool save(string);                                  //!< Save geometry state to disk
-        bool load(string,bool=false);                       //!< Load geometry state from disk
 
         virtual bool collision(const Point&, double, collisiontype=BOUNDARY) const=0;//!< Check for collision with boundaries, forbidden zones, matter,..
         virtual void randompos(Point &)=0;              //!< Random point within container
@@ -90,20 +88,29 @@ namespace Faunus {
         void randompos(Point &);
         void boundary(Point &p) const {};
         bool collision(const Point&, double, collisiontype=BOUNDARY) const;
+
         inline double sqdist(const Point &a, const Point &b) const {
           return (a-b).squaredNorm();
         }
+
         inline Point vdist(const Point &a, const Point &b) { return a-b; }
+
         void scale(Point&, Point &, const double, const double) const; //!< Linear scaling along radius (NPT ensemble)
+
+        inline Sphere( const json::Tval &js) {
+          name = "sphere";
+          json::Tval v = json::find( jsonsection, name, js);
+          setRadius( json::value(v, "radius", -1.0) );
+        }
     };
 
-    /*! \brief Cuboid geometry with periodic boundaries
+    /** @brief Cuboid geometry with periodic boundaries
      *
      *  The Cuboid simulation container has right angles, rectangular faces 
      *  and periodic boundaries.
      *
-     *  \author Chris Evers
-     *  \date Lund, nov 2010
+     *  @author Chris Evers
+     *  @date Lund, nov 2010
      */
     class Cuboid : public Geometrybase {
       private:
@@ -121,8 +128,8 @@ namespace Faunus {
         Cuboid(InputMap &);
 
         inline Cuboid( const json::Tval &js ) {
-          name = "Cuboid";
-          auto val = json::find(jsonsection, "cuboid", js); // note: error if not found!
+          name = "cuboid";
+          json::Tval val = json::find(jsonsection, name, js); // note: error if not found!
           string scaledirstr = json::value<string>( val, "scaledir", "XYZ" );
           if (scaledirstr=="XY")
             scaledir=XY;
@@ -137,15 +144,13 @@ namespace Faunus {
         Point len_half;                          //!< Half sidelength
         Point randompos();           
         void randompos(Point&);      
-        bool save(string);           
-        bool load(string,bool=false);
+
         inline bool collision(const Point &a, double radius, collisiontype type=BOUNDARY) const {
           if (std::abs(a.x())>len_half.x()) return true;
           if (std::abs(a.y())>len_half.y()) return true;
           if (std::abs(a.z())>len_half.z()) return true;
           return false;
         }
-
 
         /**
          * For reviews of minimum image algorithms,
@@ -189,10 +194,10 @@ namespace Faunus {
         void scale(Point&, Point&, const double, const double) const;
     };
 
-    /*!
-     * \brief Cuboid with no periodic boundaries in z direction
-     * \author Chris Evers
-     * \date Lund, nov 2010
+    /**
+     * @brief Cuboid with no periodic boundaries in z direction
+     * @author Chris Evers
+     * @date Lund, nov 2010
      */
     class Cuboidslit : public Cuboid {
       public:
@@ -264,6 +269,12 @@ namespace Faunus {
         inline Point vdist(const Point &a, const Point &b) FOVERRIDE {
           return a-b;
         }
+
+        inline Cylinder( const json::Tval &js ) {
+          name = "cylinder";
+          auto i = json::find( jsonsection, name, js );
+          init( json::value(i, "radius", 0.0), json::value(i, "length", 0.0));
+        }
     };
 
     /**
@@ -273,6 +284,9 @@ namespace Faunus {
       public:
         PeriodicCylinder(double, double);
         PeriodicCylinder(InputMap&);
+
+        inline PeriodicCylinder( const json::Tval &js ) : Cylinder(js) {};
+
         void boundary(Point&) const;
 
         inline double sqdist(const Point &a, const Point &b) const {
@@ -469,49 +483,6 @@ namespace Faunus {
           return a;
         }
     };
-
-    /** @brief Insert at vacant position, avoiding matter overlap 
-      template<class Tspace, class base=InsertRandom<Tspace> >
-      class InsertFreeSpace : public base {
-      private:
-      using typename base::Tpvec;
-      using typename base::Tgeo;
-
-      bool matterOverlap(const Tgeo &geo, const Tpvec &p1, const Tpvec &p2) const {
-      for (auto &i : p1)
-      for (auto &j : p2) {
-      double max=i.radius+j.radius;
-      if ( geo.sqdist(i,j)<max*max )
-      return true;
-      }
-      return false;
-      }
-
-      bool containerOverlap(const Tgeo &geo, const Tpvec &p) const {
-      for (auto &i : p)
-      if (geo.collision(i, i.radius)) return true;
-      return false;
-      }
-
-      public:
-      int maxtrials; //!< Maximum number of attempts to find a hole (default: 1000)
-
-      InsertFreeSpace(int maxtrials=1000) : maxtrials(maxtrials) {}
-
-      Tpvec operator() (Tgeo &geo, const Tpvec &p, const typename Tspace::MoleculeType &mol) {
-      int n=maxtrials;
-      Tpvec v;
-      do {
-      v = base(geo,p,mol);
-      } while (--n>0 && matterOverlap(geo,v,p) && containerOverlap(geo,v));
-      if (n==0) {
-      std::cerr << "Timeout - found no space for particle(s)\n";
-      v.clear();
-      }
-      return v;
-      } 
-      };
-      */
 
     /**
      * @brief Find an empty space for a particle vector in a space of other particles

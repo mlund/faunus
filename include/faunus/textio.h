@@ -125,6 +125,12 @@ namespace Faunus {
         return v;
       }
 
+    /** @brief Convert string to lower case */
+    inline std::string lowercase( std::string s ) {
+      std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+      return s;
+    }
+
     /**
      * @brief Show Faunus welcome text, version etc.
      * @note See http://patorjk.com/software/taag for ASCII art generation

@@ -1550,7 +1550,12 @@ namespace Faunus {
           }
 
           CombinedPairPotential(InputMap &in) : first(in), second(in) {
-            name=first.name+"+"+second.name;
+            name = first.name + "+" + second.name;
+            setCutoff();
+          }
+
+          CombinedPairPotential( const json::Tval &js ) : first(js), second(js) {
+            name = first.name + "+" + second.name;
             setCutoff();
           }
 

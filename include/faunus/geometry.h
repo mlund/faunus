@@ -99,7 +99,7 @@ namespace Faunus {
 
         inline Sphere( const json::Tval &js) {
           name = "sphere";
-          json::Tval v = json::find( jsonsection, name, js);
+          json::Tval v = json::find( js, jsonsection, name );
           setRadius( json::value(v, "radius", -1.0) );
         }
     };
@@ -129,7 +129,7 @@ namespace Faunus {
 
         inline Cuboid( const json::Tval &js ) {
           name = "cuboid";
-          json::Tval val = json::find(jsonsection, name, js); // note: error if not found!
+          json::Tval val = json::find(js, jsonsection, name); // note: error if not found!
           string scaledirstr = json::value<string>( val, "scaledir", "XYZ" );
           if (scaledirstr=="XY")
             scaledir=XY;
@@ -272,7 +272,7 @@ namespace Faunus {
 
         inline Cylinder( const json::Tval &js ) {
           name = "cylinder";
-          auto i = json::find( jsonsection, name, js );
+          auto i = json::find( js, jsonsection, name );
           init( json::value(i, "radius", 0.0), json::value(i, "length", 0.0));
         }
     };

@@ -167,13 +167,15 @@ namespace Faunus {
         double k;   //!< Force constant (kT/A^2) - Remember to divide by two!
         double req; //!< Equilibrium distance (angstrom)
 
-        inline Harmonic( double k=0, double req=0 ) : k(k), req(req) {};
+        inline Harmonic( double k=0, double req=0 ) : k(k), req(req) {
+          name = "Harmonic";
+        };
 
         Harmonic( InputMap&, string="harmonic" );
 
         inline Harmonic( const json::Tval &js, string pfx="harmonic" ) {
           name = "Harmonic";
-          auto v = json::find(jsonsection, pfx, js); // note: error if not found!
+          auto v = json::find(js, jsonsection, pfx); // note: error if not found!
           k   = json::value(v, "forceconst", 0.0);
           req = json::value(v, "eqdist", 0.0);
         }
@@ -645,7 +647,7 @@ namespace Faunus {
 
         inline SquareWell( const json::Tval &js, string pfx="squarewell") : PairPotentialBase(pfx) {
           name="Square Well";
-          json::Tval v = json::find( jsonsection, pfx, js);
+          json::Tval v = json::find( js, jsonsection, pfx );
           threshold = json::value( v, "threshold", 0.0);
           depth = json::value( v, "depth", 0.0);
         }
@@ -834,7 +836,7 @@ namespace Faunus {
 
       Coulomb( const json::Tval &js ) {
         name="Coulomb";
-        auto val = json::find(jsonsection, "coulomb", js); // note: error if not found!
+        auto val = json::find(js, jsonsection, "coulomb"); // note: error if not found!
         epsilon_r = json::value<double>(val, "epsilon_r", 80.);
         depsdt    = json::value<double>(val, "depsdt", -0.368) * pc::T() / epsilon_r;
         lB=pc::lB( epsilon_r );
@@ -1050,7 +1052,7 @@ namespace Faunus {
 
         inline DebyeHuckel( const json::Tval &js ) : Coulomb(js) {
           name="Debye-Huckel";
-          auto val = json::find(jsonsection, "coulomb", js);
+          auto val = json::find(js, jsonsection, "coulomb");
           c = 8*lB*pc::pi*pc::Nav/1e27;
           double I = json::value<double>(js, "ionicstrength", 0);
           z_count=json::value<double>(js, "countervalency", 0);

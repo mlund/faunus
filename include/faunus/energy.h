@@ -267,6 +267,10 @@ namespace Faunus {
             Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
           }
 
+          Nonbonded( const json::Tval &js) : geo(js), pairpot(js) {
+            Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
+          }
+
           auto tuple() -> decltype(std::make_tuple(this)) {
             return std::make_tuple(this);
           }
@@ -2199,6 +2203,180 @@ namespace Faunus {
           }
       };
 #endif
+
+    template<class Tspace, class Tbase=Energybase<Tspace>>
+      class Hamiltonian : public Tbase {
+        private:
+          typedef Tbase* baseptr;
+          vector<baseptr> baselist;
+          typedef typename Tspace::ParticleType Tparticle;
+          typedef typename Tspace::ParticleVector Tpvec;
+
+        public:
+          Hamiltonian() { Tbase::name="Hamiltonian"; }
+
+          Hamiltonian( const json::Tval &js ) {
+            Tbase::name = "Hamiltonian";
+            json::Tobj m = json::object("hamiltonian", js);
+            for ( auto &i : m ) {
+              if (i.first=="nb_lj")
+                push_back( Energy::Nonbonded<Tspace, Potential::LennardJonesLB>(js) ); 
+            }
+          }
+
+          /** @brief Add energy term to Hamiltonian. Local copy created. */
+          template<class Tenergychild>
+            Hamiltonian<Tspace>& push_back(const Tenergychild &pot) {
+              baselist.push_back( baseptr( new Tenergychild(pot) ) );
+              return *this;
+            }
+
+          /** @brief Find pointer to given energy type; `nullptr` if not found. */
+          template<class Tenergy>
+            Tenergy* find() {
+              static_assert( std::is_base_of<Tbase, Tenergy>::value,
+                  "`Tenergy` must be derived from `Energy::Energybase`");
+              for (auto b : baselist) {
+                auto ptr = dynamic_cast< Tenergy* >( b );
+                if ( ptr != nullptr )
+                  return ptr;
+              }
+              return nullptr;
+            }
+
+          void setSpace(Tspace &s) FOVERRIDE {
+            Tbase::setSpace(s);
+            for (auto b : baselist)
+              b->setSpace(s);
+          } 
+
+          double p2p( const Tparticle &p1, const Tparticle &p2 ) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->p2p( p1, p2 );
+            return u;
+          }
+
+          Point f_p2p( const Tparticle &p1, const Tparticle &p2 ) FOVERRIDE {
+            Point p(0,0,0);
+            for (auto b : baselist)
+              p += b->f_p2p( p1, p2 );
+            return p;
+          }
+
+          double all2p( const Tpvec &p, const Tparticle &a ) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->all2p( p, a );
+            return u;
+          }
+
+          // single particle interactions
+          double i2i( const Tpvec &p, int i, int j ) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->i2i( p, i, j );
+            return u;
+          }
+
+          double i2g( const Tpvec &p, Group &g, int i ) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->i2g( p, g, i );
+            return u;
+          }
+
+          double i2all(Tpvec &p, int i) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->i2all(p,i);
+            return u;
+          }
+
+          double i_external(const Tpvec &p, int i) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->i_external(p,i);
+            return u;
+          }
+          double i_internal(const Tpvec &p, int i) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->i_internal(p,i);
+            return u;
+          }
+
+          // Group interactions
+          double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->g2g(p,g1,g2);
+            return u;
+          }
+
+          /*!
+           * For early rejection we do a reverse loop over energy
+           * classes to test if the energy is infinity. Reverse
+           * because constraining energy classes are often added
+           * last.
+           */
+          double g_external(const Tpvec &p, Group &g) FOVERRIDE {
+            double u=0;
+            for (auto b=baselist.rbegin(); b!=baselist.rend(); ++b) {
+              u += (*b)->g_external(p,g);
+              if (u>=pc::infty)
+                break;
+            }
+            return u;
+          }
+
+          double g_internal(const Tpvec &p, Group &g) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->g_internal(p,g);
+            return u;
+          }
+
+          double external( const Tpvec &p ) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->external( p );
+            return u;
+          }
+
+          double v2v(const Tpvec &v1, const Tpvec &v2) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->v2v(v1,v2);
+            return u;
+          }
+
+          double g1g2(const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->g1g2( p1, g2, p2, g2 );
+            return u;
+          }
+
+          string _info() FOVERRIDE {
+            using namespace textio;
+            std::ostringstream o;
+            o << indent(SUB) << "Registered Energy Functions:"<< endl;
+            int i=1;
+            for (auto e : baselist)
+              o << indent(SUBSUB) << std::left << setw(4) << i++ << e->name << endl;
+            for (auto e : baselist)
+              o << e->info();
+            return o.str();
+          }
+
+          void field(const Tpvec &p, Eigen::MatrixXd&E) FOVERRIDE {
+            assert( (int)p.size()==E.size() );
+            for (auto b : baselist)
+              b->field(p,E);
+          }
+      };
+
 
     /**
      * @brief Calculates the total system energy

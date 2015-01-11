@@ -5,16 +5,10 @@
 #include <faunus/common.h>
 #include <faunus/textio.h>
 #include <faunus/species.h>
+#include <faunus/json.h>
 #endif
 
 namespace Faunus {
-
-  namespace Experimental {
-    struct value {
-      string val, info;
-      bool accessed;
-    };
-  }
 
   /**
    * @brief Retrieve parameters from a formatted input file
@@ -35,12 +29,47 @@ namespace Faunus {
       std::map<string,string> map, keyinfo;
       vector<string> usedkeys;
       vector<string> incfiles;
+      bool isjson;
+      json::Tval js;
+      json::Tval jsdir;
+
     public:
       InputMap();
       InputMap(string);      //!< Construct and include input file.
+
       bool include(string);  //!< Include keyword/value file.
       bool save(string);     //!< Save map to disk
       string info();         //!< Information string about read files and keywords
+
+      /**
+       * @brief CD (change dir) like functionality
+       * 
+       * Example:
+       *
+       * ~~~~
+       *   InputMap in( "input.json" );
+       *   in.cd ( "general/system" );
+       *   double T = in.get( "temperature", 298.15 );
+       * ~~~~
+       *
+       * where the json file may look like this,
+       *
+       * ~~~~
+       *   {
+       *     "general" : {
+       *        "system" : { "temperature":341. },
+       *        "other subsection" : { ... }
+       *     }
+       *   }
+       * ~~~~
+       */
+      inline void cd( std::string dir ) {
+        if ( isjson ) { 
+          std::replace( dir.begin(), dir.end(), '/', ' ');
+          jsdir = json::cd( js, textio::words2vec<std::string>( dir ) ); 
+        }
+      } 
+
       //!< Add a keyword and an associated value
       template<typename T>
         void add(const string &key, T value, string infostring=string()) {
@@ -54,6 +83,12 @@ namespace Faunus {
       //!< Get value associated with keyword
       template<typename T>
         T get(const string &key, T fallback=T(), string infostring=string()) {
+          if (isjson) {
+            typedef typename std::conditional< std::is_same<int, T>::value,
+                    double,T>::type Tjson;
+            return json::value<Tjson>( jsdir, key, fallback );
+          }
+
           if ( !infostring.empty() )
             keyinfo[key] = infostring;               // save information string (if any)
           if ( map.find(key) != map.end() ) {
@@ -82,33 +117,47 @@ namespace Faunus {
         }
   };
 
-  inline InputMap::InputMap() {}
+  inline InputMap::InputMap() : isjson(false) {}
 
-  inline InputMap::InputMap(string filename) { include(filename); }
+  inline InputMap::InputMap(string filename) : isjson(false) { include(filename); }
 
   /** @todo Remove ugly atom loader */
   inline bool InputMap::include(string filename) {
     string line,key,val;
-    std::ifstream f( filename.c_str() );
-    if (f) {
-      incfiles.push_back(filename);
-      while (std::getline(f,line)) {
-        std::istringstream i(line);
-        i >> key >> val;
-        if (!key.empty() && !val.empty() ) {
-          if (key.find("#")==string::npos) {
-            if (val=="yes" || val=="true") val="1";
-            if (val=="no" || val=="false") val="0";
-            map[key]=val;
+
+    isjson = std::regex_match( filename,
+        std::regex( "(.+?)(\\.json)", std::regex_constants::icase) );
+
+    if ( isjson ) {
+      jsdir = json::Tval();
+      js = json::open( filename );
+      assert( js != json::Tval() && "Error loading json file" );
+    }
+
+    if ( !isjson ) {
+      std::ifstream f( filename.c_str() );
+      if (f) {
+        incfiles.push_back(filename);
+        while (std::getline(f,line)) {
+          std::istringstream i(line);
+          i >> key >> val;
+          if (!key.empty() && !val.empty() ) {
+            if (key.find("#")==string::npos) {
+              if (val=="yes" || val=="true") val="1";
+              if (val=="no" || val=="false") val="0";
+              map[key]=val;
+            }
           }
         }
-      }
-      string atomfile = get<string>("atomlist", "");
-      if (!atomfile.empty())
-        atom.includefile(atomfile);
-      return true;
+      } else return false;
     }
-    return false;
+
+    cd("general");
+    string atomfile = get<string>("atomlist", "");
+    if ( !atomfile.empty() )
+      atom.includefile(atomfile);
+
+    return true;
   }
 
   inline string InputMap::info() {

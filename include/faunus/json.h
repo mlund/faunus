@@ -102,8 +102,46 @@ namespace Faunus {
         return fallback;
       }
 
+    /**
+     * @brief CD (change dir) like functionality
+     * 
+     * Example:
+     *
+     * ~~~~
+     *   auto a = json::open("myfile.json");
+     *   auto b = json::cd ( a, {"general","system"} );
+     *   double T = value( b, "temperature", 298.15 );
+     * ~~~~
+     *
+     * where the json file may look like this:
+     *
+     * ~~~~
+     *   {
+     *     "general" : {
+     *        "system" : { "temperature":341. },
+     *        "other subsection" : { ... }
+     *     }
+     *   }
+     * ~~~~
+     */
+    static Tval cd( const Tval &v, std::vector<string> dir) {
+      if ( dir.empty() )
+        return v;
+      string s = dir.front();
+      dir.erase( dir.begin() );
+      if ( v.contains(s) )
+        return cd( v.get(s), dir );
+      std::cerr << "Error: Unable to find json section " << s << endl;
+      exit(1);
+      return Tval(); // suppresses compiler warning
+    }
+
     /** @brief Demand value from subsection of section. Exit if not found */
-    static Tval find( const string &sec, const string &subsec, const Tval &v) {
+    static Tval find( const Tval &v, const string &sec, const string &subsec="") {
+      if ( subsec.empty() )
+        if (v.contains(sec))
+          return v.get(sec);
+
       json::Tobj m = json::object(sec, v);
       auto it = m.find( subsec );
       if ( it == m.end() ) {

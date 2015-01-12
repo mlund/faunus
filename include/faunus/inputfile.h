@@ -48,8 +48,9 @@ namespace Faunus {
        *
        * ~~~~
        *   InputMap in( "input.json" );
-       *   in.cd ( "general/system" );
+       *   in.cd( "general/system" );
        *   double T = in.get( "temperature", 298.15 );
+       *   in.cd(); // back to upper level (root)
        * ~~~~
        *
        * where the json file may look like this,
@@ -63,12 +64,23 @@ namespace Faunus {
        *   }
        * ~~~~
        */
-      inline void cd( std::string dir ) {
+      inline void cd( std::string dir="" ) {
         if ( isjson ) { 
-          std::replace( dir.begin(), dir.end(), '/', ' ');
-          jsdir = json::cd( js, textio::words2vec<std::string>( dir ) ); 
+          if ( dir.empty() ) {
+            jsdir = js;
+          } else {
+            std::replace( dir.begin(), dir.end(), '/', ' ');
+            jsdir = json::cd( js, textio::words2vec<std::string>( dir ) ); 
+          }
         }
       } 
+
+      inline json::Tobj getMap() {
+        if (isjson)
+          if (jsdir.is<json::Tobj>())
+            return jsdir.get<json::Tobj>();
+        return json::Tobj();
+      }
 
       //!< Add a keyword and an associated value
       template<typename T>
@@ -129,8 +141,7 @@ namespace Faunus {
         std::regex( "(.+?)(\\.json)", std::regex_constants::icase) );
 
     if ( isjson ) {
-      jsdir = json::Tval();
-      js = json::open( filename );
+      jsdir = js = json::open( filename );
       assert( js != json::Tval() && "Error loading json file" );
     }
 

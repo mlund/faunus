@@ -110,7 +110,7 @@ int main() {
   Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
   Move::Pivot<Tspace> piv(mcp,pot,spc);
   Move::Isobaric<Tspace> iso(mcp,pot,spc);
-  Move::SwapMove<Tspace> swap(mcp,pot,spc,*eqenergy);
+  Move::SwapMove<Tspace> swap(mcp,pot,spc);
   Analysis::BilayerStructure lipidstruct;
   Analysis::VirialPressure virial;
 

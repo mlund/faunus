@@ -49,18 +49,6 @@ namespace Faunus {
       len = Point(r,diameter,0);
     }
 
-    /**
-     * The InputMap is scanned for the following parameters:
-     *
-     * Key               | Description
-     * :---------------- | :-------------------------------------------------------
-     * `sphere_radius`   | Sphere radius [angstrom]
-     */
-    Sphere::Sphere(InputMap &in, string prefix)  {
-      setRadius(
-          in.get<double>(prefix+"_radius", -1.0, "Spherical container radius (A)") );
-    }
-
     void Sphere::setRadius(double radius) {
       assert(radius>0 && "Radius must be larger than zero.");
       name="Spherical";
@@ -106,34 +94,6 @@ namespace Faunus {
 
     bool Sphere::collision(const Point &a, double radius, collisiontype type) const {
       return (a.squaredNorm()>r2) ? true:false;
-    }
-
-    /**
-     * The InputMap is scanned for the following parameters:
-     *
-     * Key               | Description
-     * :---------------- | :-------------------------------------------------------
-     * `cuboid_len`      | Uniform sidelength [angstrom]. If negative, continue to...
-     * `cuboid_xlen`     | x sidelength [angstrom]
-     * `cuboid_ylen`     | y sidelength [angstrom]
-     * `cuboid_zlen`     | z sidelength [angstrom]
-     * `cuboid_scaledir` | Isobaric scaling directions (`XYZ`=isotropic, `XY`=xy only).
-     */
-    Cuboid::Cuboid(InputMap &in) {
-      name="Cuboid";
-      string scaledirstr = in.get<string>("cuboid_scaledir","XYZ");
-      if (scaledirstr=="XY")
-        scaledir=XY;
-      else
-        scaledir=XYZ;
-      double cubelen=in.get<double>("cuboid_len",-1, name+" sidelength (AA)");
-      if (cubelen<1e-6) {
-        len.x()=in.get<double>("cuboid_xlen",0);
-        len.y()=in.get<double>("cuboid_ylen",0);
-        len.z()=in.get<double>("cuboid_zlen",0);
-      } else
-        len.x()=len.y()=len.z()=cubelen;
-      setlen(len);
     }
 
     bool Cuboid::setlen(const Point &l) {
@@ -195,10 +155,6 @@ namespace Faunus {
         a = Point(a.x()*s.x()*xy,a.y()*s.y()*xy,a.z()*s.z());
     }
 
-    Cuboidslit::Cuboidslit(InputMap &in) : Cuboid(in) {
-      name="Cuboid XY-periodicity";
-    }
-
     /**
      * @param length Length of the Cylinder (angstrom)
      * @param radius Radius of the Cylinder (angstrom)
@@ -208,16 +164,17 @@ namespace Faunus {
     }
 
     /**
-     * The InputMap is scanned for the following parameters:
+     * The InputMap is scanned for the following parameters
+     * (section `general`):
      *
-     * Key               | Description
-     * :---------------- | :-------------------------------------------------------
-     * `cylinder_len`    | Cylinder length [angstrom]
-     * `cylinder_radius` | Cylinder radius [angstrom] 
+     * Key      | Description
+     * :------- | :-------------------------
+     * `length` | Cylinder length [angstrom]
+     * `radius` | Cylinder radius [angstrom] 
      */
-    Cylinder::Cylinder(InputMap &in) {
-      init(
-          in.get<double>("cylinder_len", 0), in.get<double>("cylinder_radius", 0) );
+    Cylinder::Cylinder(InputMap &in, const string &dir) {
+      in.cd( dir+"/cylinder" );
+      init( in.get("length", 0.0), in.get("radius", 0.0) );
     }
 
     void Cylinder::init(double length, double radius) {
@@ -278,9 +235,8 @@ namespace Faunus {
       name="Cylindrical (periodic ends)";
     }
 
-    PeriodicCylinder::PeriodicCylinder(InputMap &in) : Cylinder(in) {
-      name="Cylindrical (periodic ends)";
-    }
+    PeriodicCylinder::PeriodicCylinder(InputMap &in, const string &dir)
+      : Cylinder(in,dir) { name="Cylindrical (periodic ends)"; }
 
     void PeriodicCylinder::boundary(Point &a) const {
       if (std::abs(a.z())>_halflen)

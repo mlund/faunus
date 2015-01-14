@@ -14,8 +14,7 @@ typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot;
 int main() {
 
   cout << textio::splash();      // show faunus banner and credits
-  InputMap mcp("water2.input");  // read input file
-  auto js = json::open("water2.json");
+  InputMap mcp("water2.json");   // read input file
 
   // Energy functions and space
 #ifdef EWALD
@@ -31,7 +30,7 @@ int main() {
   auto waters = spc.findMolecules("water");
 
   // Markov moves and analysis
-  Move::Propagator<Tspace> mv( js, pot, spc );
+  Move::Propagator<Tspace> mv( mcp, pot, spc );
   Analysis::RadialDistribution<> rdf(0.05);
   FormatXTC xtc(1000);
 
@@ -79,7 +78,7 @@ int main() {
 }
 
 /**  @page example_water2 Example: SPC Water (V2)
- *
+
  This will simulate SPC water in a cubic volume using
  the Wolf method for electrostatic interactions.
  This version uses a fake cell list to discard
@@ -97,8 +96,13 @@ int main() {
  ![Water](water.png)
 
  water2.cpp
- ============
+ ==========
 
  @includelineno examples/water2.cpp
+
+ water2.json
+ -----------
+
+ @includelineno examples/water2.json
 
 */

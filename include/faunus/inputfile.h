@@ -168,6 +168,9 @@ namespace Faunus {
     if ( !atomfile.empty() )
       atom.includefile(atomfile);
 
+    if ( atom.empty() )
+     std::cerr << "Warning: AtomMap is empty." << endl; 
+
     return true;
   }
 
@@ -240,10 +243,12 @@ namespace Faunus {
     file=testfile;
   }
 
-  inline UnitTest::UnitTest(InputMap &in) : InputMap(in.get<string>("test_file","")) {
+  inline UnitTest::UnitTest(InputMap &in) {
     cnt=0;
-    file=in.get<string>("test_file","");
-    stable=in.get<bool>("test_stable", true);
+    in.cd ("general/unittest");
+    file = in.get<string>( "testfile","" );
+    stable = in.get<bool>( "stable", true );
+    include( file );
   }
 
   inline bool UnitTest::operator()(const string &key, double value, double precision) {

@@ -8,10 +8,11 @@ namespace Faunus {
     // let's make a new pair potential
     struct CoreShell : public PairPotentialBase {
       double a1,a2,eps;
-      inline CoreShell(InputMap& in) {
+      inline CoreShell(InputMap& in, string dir="general") {
         name="Coreshell";
-        a1 = pow( in("core_radius",1.0), 2);
-        a2 = pow( in("shell_radius",2.5), 2);
+        in.cd (dir+"/coreshell");
+        a1 = pow( in("radius",1.0), 2);
+        a2 = pow( in("radius",2.5), 2);
         eps = in("epsilon", 0.2);
       }
       template<class Tparticle>
@@ -25,10 +26,9 @@ namespace Faunus {
 }
 
 int main() {
-  ::atom.includefile("stripes.json");     // load atom properties
-  InputMap in("stripes.input");           // open parameter file for user input
-  Energy::Nonbonded<Tspace,Potential::CoreShell> pot(in);// Hamiltonian, non-bonded only
+  InputMap in("stripes.json");            // open parameter file for user input
   Tspace spc(in);                         // simulation space, particles etc.
+  Energy::Nonbonded<Tspace,Potential::CoreShell> pot(in);// Hamiltonian, non-bonded only
   Group salt;                             // group for salt particles
   salt.addParticles(spc,in);              // add according to user input
 

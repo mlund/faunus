@@ -27,15 +27,19 @@ namespace Faunus {
         Tvec l, cnt;
         T inner;
 
+      public:
+        Counter() {} ;
+
+        Counter(const Tvec &levels) { set(levels); }
+
+        /** @brief Set levels, for example `set( {10,100} );` */
         void set(const Tvec &levels) {
           l=cnt=levels;
           std::fill(cnt.begin(), cnt.end(), 0);
           inner=0;
         }
-      public:
-        Counter(const Tvec &levels) { set(levels); }
 
-         /** @brief Increase counter for level and check if maximum reached */
+        /** @brief Increase counter for level and check if maximum reached */
         bool operator[](T level) {
           assert(level<T(cnt.size()));
           if (cnt[level]++ < l[level] ) {
@@ -73,6 +77,7 @@ namespace Faunus {
 
       public:
         TimedCounter(const typename base::Tvec &levels) : base(levels) {}
+        TimedCounter() {}
 
         bool operator[](T level) {
           if (level==0 && base::cnt[0]==0)
@@ -107,8 +112,10 @@ namespace Faunus {
     private:
       typedef TimedCounter<int> base;
     public:
-      inline MCLoop(InputMap &in, const string &pfx="loop_") :
-        base( {in.get<int>(pfx+"macrosteps",10), in.get<int>(pfx+"microsteps",100)} ) {}
+      inline MCLoop(InputMap &in, string dir="general") {
+        in.cd (dir+"/mcloop");
+        base::set( {in("macro", 10), in("micro", 1000)} );
+      }
 
       inline std::string timing() const {
         using namespace textio;

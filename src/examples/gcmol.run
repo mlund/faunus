@@ -13,7 +13,14 @@ cp -f $source_tests_dir/gcmol.state state 2> /dev/null
 #-----------------------------------------------------------
 echo '{
   "general" : {
-    "cuboid"  : { "xyzlen" : "19.0288 19.0288 19.0288" }
+    "cuboid"   : { "len" : 19.0288 },
+    "coulomb"  : { "epsr":1.0, "cutoff":11.1 },
+    "mcloop"   : { "macro":10, "micro":50000 },
+    "unittest" : { "testfile":"gcmol.test", "stable":false },
+
+    "atomlist"              : "gcmol.json",
+    "moleculelist"          : "gcmol.json",
+    "moleculecombinations"  : "gcmol.json"
   },
 
   "atomlist" : {
@@ -38,25 +45,6 @@ echo '{
 
 }
 ' > gcmol.json
-
-#-----------------------------------------------------------
-# Create user input file
-#-----------------------------------------------------------
-echo "
-atomlist               gcmol.json
-moleculelist           gcmol.json
-moleculecombinations   gcmol.json
-loop_macrosteps        10
-loop_microsteps        50000
-
-temperature            298     # Kelvin
-epsilon_r              1.0     # Water dielectric const
-coulomb_cut            10. 
-cuboid_len             19.0288 # angstrom
-
-test_stable            no
-test_file              gcmol.test
-" > gcmol.input
 
 #-----------------------------------------------------------
 # Make water molecule...

@@ -24,27 +24,48 @@ echo '{
   },
 
   "moleculelist" : {
-     "salt" : { "atoms":"Na Cl", "atomic":true, "Ninit":1 },
+    "salt" : { "atoms":"Na Cl", "atomic":true, "Ninit":1 },
 
-     "polymer" :
-     {
-       "structure":"polymers.aam", "Ninit":8,
-       "bonds" : {
-         "0 1" : { "type":"harmonic", "k":0.0557, "req":0.0 }, // kT/AA^2, AA
-         "1 2" : { "type":"harmonic", "k":0.0557, "req":0.0 },
-         "2 3" : { "type":"harmonic", "k":0.0557, "req":0.0 }
-       }
-     }
+    "polymer" :
+    {
+      "structure":"polymers.aam", "Ninit":8,
+      "bonds" : {
+        "0 1" : { "type":"harmonic", "k":0.0557, "req":0.0 }, // kT/AA^2, AA
+        "1 2" : { "type":"harmonic", "k":0.0557, "req":0.0 },
+        "2 3" : { "type":"harmonic", "k":0.0557, "req":0.0 }
+      }
+    }
   },
 
-  "propagator" : {
-     "atomictranslation" : {
-        "salt"    : { "prop":1.0, "peratom":true },
-        "polymer" : { "prop":1.0, "permol":true, "peratom":true }
-     },
-     "translaterotate" : {
-        "polymer" : { "prop":1.0, "dprot":4, "dp":10, "permol":true, "dir":"1 1 1" } 
-     }
+  "hamiltonian" : {
+    "nonbonded" : {}
+  },
+
+  "moves" : {
+    "atomtranslate" : {
+      "salt"    : { "prop":1.0, "peratom":true },
+      "polymer" : { "prop":1.0, "permol":true, "peratom":true }
+    },
+    "moltransrot" : {
+      "polymer" : { "dp":50, "dprot":6, "permol":true, "dir":"1 1 1" } 
+    },
+    "crankshaft" : {
+      "polymer" : { "dp":6.3, "minlen":2, "maxlen":10, "permol":true }
+    },
+    "pivot" : {
+      "polymer" : { "dp":6.3, "minlen":1, "maxlen":1000, "permol":true }
+    },
+    "isobaric" : { "dp":2, "pressure":113.2, "prop":0.1 }
+  },
+
+  "general" : {
+    "cuboid"       : { "len" : 200. },
+    "sphere"       : { "radius" : 100. },
+    "coulomb"      : { "epsr" : 78.7 },
+    "mcloop"       : { "macro":10, "micro":20000 },
+    "unittest"     : { "testfile":"polymers.test", "stable":false },
+    "atomlist"     : "polymers.json",
+    "moleculelist" : "polymers.json"
   }
 }' > polymers.json
 
@@ -52,30 +73,9 @@ echo '{
 # Create user input file
 #-----------------------------------------------------------
 echo "
-atomlist               polymers.json
-moleculelist           polymers.json
-loop_macrosteps        10
-loop_microsteps        20000
-cuboid_len             200     # Box side length Angstrom
-sphere_radius          100
-temperature            298     # Kelvin
-epsilon_r              78.7    # Water dielectric const
-npt_P                  113.2   # mM
-npt_dV                 2       # log(dV)
-npt_runfraction        0.1
-crank_dp               6.3
-crank_minlen           2
-crank_maxlen           10
-pivot_dp               6.3
-pivot_minlen           1
-pivot_maxlen           1000
-transrot_transdp       50
-transrot_rotdp         6
 qmin                   0.25
 qmax                   4.0
 dq                     0.01
-test_stable            no
-test_file              polymers.test
 " > polymers.input
 
 #-----------------------------------------------------------

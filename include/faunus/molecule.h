@@ -409,7 +409,8 @@ namespace Faunus {
 
         /** @brief Read JSON file given through `InputMap` */
         bool includefile(InputMap &in) {
-          string file = in("moleculelist", string("") );
+          in.cd ("general");
+          string file = in( "moleculelist", string("") );
           return base::includefile(file);
         }
 

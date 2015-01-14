@@ -6,7 +6,19 @@ cp -f $source_tests_dir/water2.state state 2> /dev/null
 
 echo '{
   "general" : {
-    "cuboid"  : { "xyzlen" : "27. 27. 27." }
+    "cuboid"   : { "len" : 27. },
+    "coulomb"  : { "epsr":1.0, "cutoff":9. },
+    "mcloop"   : { "macro":10, "micro":400 },
+    "unittest" : { "testfile":"water2.test", "stable":false },
+    "ewald"    : { "precision":0.01, "epsr_surf":1e11, "cutoff":9, "alpha":0.2 },
+ 
+    "atomlist"              : "water2.json",
+    "moleculelist"          : "water2.json",
+    "moleculecombinations"  : "water2.json"
+  },
+
+  "hamiltonian" : {
+    "nonbonded" : { "cutoff_g2g":10. }
   },
 
   "atomlist" : {
@@ -31,28 +43,6 @@ OW    1    2.30    6.28    1.13 -0.8476  15.99940 1.6
 HW    2    1.37    6.26    1.50  0.4238   1.00800 1
 HW    3    2.31    5.89    0.21  0.4238   1.00800 1
 " > water2.aam
-
-echo "
-atomlist           water2.json  # atom properties
-moleculelist       water2.json  # atom properties
-cuboid_len         27           # angstrom
-                  
-temperature        300          # K
-epsilon_r          1            # dielectric const.
-coulomb_cut        9.           # coulomb cutoff [angstrom]
-g2g_cutoff         10.          # Group-to-group cutoff
-
-ewald_precision    0.01
-ewald_eps_surf     1e11
-ewald_cutoff       9.
-ewald_alpha        0.2
-                  
-loop_macrosteps    10           # number of macro loops
-loop_microsteps    400          # number of micro loops
-
-test_stable        no
-test_file          water2.test
-" > water2.input
 
 exe=./water2
 if [ -x $exe ]; then

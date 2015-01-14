@@ -62,10 +62,11 @@ namespace Faunus {
 
     void PairPotentialBase::test(UnitTest&) {}
 
-    Harmonic::Harmonic(InputMap &in, string pfx) : PairPotentialBase(pfx) {
+    Harmonic::Harmonic(InputMap &in, const string &dir) : PairPotentialBase(dir) {
       name="Harmonic";
-      k  = in(prefix+"_forceconst", 0.0);
-      req= in(prefix+"_eqdist", 0.0);
+      in.cd ( dir+"/hamonic" );
+      k  = in("k", 0.0);
+      req= in("req", 0.0);
     }
 
     string Harmonic::_brief() {
@@ -85,10 +86,11 @@ namespace Faunus {
       r02inv=1/r02;
     }
 
-    FENE::FENE(InputMap &in, string pfx) : PairPotentialBase(pfx) {
+    FENE::FENE(InputMap &in, const string &dir) : PairPotentialBase(dir) {
       name="FENE";
-      k  = in.get<double>( prefix+"_stiffness", 0);
-      r02 = pow( in.get<double>( prefix+"_maxsep", 0), 2);
+      in.cd ( dir+"/fene" );
+      k  = in( "stiffness", 0.0);
+      r02 = pow( in( "maxsep", 0.0), 2);
       r02inv = 1/r02;
     }
 
@@ -99,11 +101,10 @@ namespace Faunus {
       return o.str();
     }
 
-    Hertz::Hertz(InputMap &in, string pfx) : PairPotentialBase(pfx) {
+    Hertz::Hertz(InputMap &in, const string &dir) : PairPotentialBase(dir) {
       name = "Hertz";
-      //  Y = in(prefix+"_Y", 0.0);
-      //nu = in(prefix+"_nu", 0.0);
-      E = in(prefix+"_E",0.0);
+      in.cd ( dir+"/hertz" );
+      E = in( "_E", 0.0);
     }
 
     string Hertz::_brief() {
@@ -120,14 +121,15 @@ namespace Faunus {
       return o.str();
     }
 
-    YukawaGel::YukawaGel(InputMap &in) : Coulomb(in) {
+    YukawaGel::YukawaGel(InputMap &in, const string &dir) : Coulomb(in, dir) {
       name = "YukawaGel";
+      in.cd ( dir+"/yukawagel" );
 
-      Z = in.get<double>("yukawagel_Z", 0.0);
-      nc = in.get<double>("yukawagel_nc", 0.0);
-      ns = in.get<double>("yukawagel_ns", 0.0);
-      v = in.get<double>("yukawagel_v",1.0);
-      d = in.get<double>("yukawagel_d",1.0);
+      Z  = in("yukawagel_Z", 0.0);
+      nc = in("yukawagel_nc", 0.0);
+      ns = in("yukawagel_ns", 0.0);
+      v  = in("yukawagel_v", 1.0);
+      d  = in("yukawagel_d", 1.0);
 
       k = sqrt(4.*pc::pi*(nc+2.*ns)*v*v*bjerrumLength());
       Z2e2overER = Z*Z*bjerrumLength();
@@ -155,11 +157,12 @@ namespace Faunus {
       return o.str();
     }
 
-    CosAttract::CosAttract(InputMap &in, string pfx) : PairPotentialBase(pfx) {
+    CosAttract::CosAttract(InputMap &in, const string &dir) : PairPotentialBase(dir) {
       name="CosAttract";
-      eps = in(prefix+"_eps", 0.0);
-      rc  = in(prefix+"_rc", 0.0);
-      wc  = in(prefix+"_wc", 0.0);
+      in.cd ( dir+"/cosattract" );
+      eps = in("eps", 0.0);
+      rc  = in("rc",  0.0);
+      wc  = in("wc",  0.0);
       rc2=rc*rc;
       c=pc::pi/2/wc;
       rcwc2=pow((rc+wc),2);
@@ -200,11 +203,12 @@ namespace Faunus {
      * @param in InputMap is scanned for the `lj_eps` and should be in units of kT
      * @param pfx Prefix for InputMap - default is `ls_`
      */
-    LennardJones::LennardJones(InputMap &in, string pfx) : PairPotentialBase(pfx) {
+    LennardJones::LennardJones(InputMap &in, const string &dir) : PairPotentialBase(dir) {
       name="Lennard-Jones";
-      eps = 4*in(prefix+"_eps", 0.);
-      string unit = in.get<string>(prefix+"_unit", "kT");
-      if (unit=="kJ/mol")
+      in.cd ( dir+"/ljsimple" );
+      eps = 4*in("eps", 0.);
+      string unit = in.get<string>("unit", "kT");
+      if ( unit=="kJ/mol" )
         eps *= 1.0_kJmol;
     }
 
@@ -222,11 +226,11 @@ namespace Faunus {
       return o.str();
     }
 
-    LennardJonesR12::LennardJonesR12(InputMap &in, string pfx) : LennardJones(in,pfx) {
+    LennardJonesR12::LennardJonesR12(InputMap &in, const string &dir) : LennardJones(in,dir) {
       name+="R12";
     }
 
-    LennardJonesTrunkShift::LennardJonesTrunkShift(InputMap &in, string pfx) : LennardJones(in,pfx) {
+    LennardJonesTrunkShift::LennardJonesTrunkShift(InputMap &in, const string &dir) : LennardJones(in,dir) {
       name+=" Truncated and shifted to sigma";
     }
 
@@ -235,10 +239,11 @@ namespace Faunus {
      *        and `prefix_depth` (kT).
      * @param pfx InputMap keyword prefix. Default is `squarewell`
      */
-    SquareWell::SquareWell(InputMap &in, string pfx) : PairPotentialBase(pfx) {
+    SquareWell::SquareWell(InputMap &in, const string &dir) : PairPotentialBase(dir) {
       name="Square Well";
-      threshold = in.get<double>(prefix+"_threshold", 0, name+" upper threshold (AA)");
-      depth     = in.get<double>(prefix+"_depth", 0, name+" depth (kT)");
+      in.cd ( dir+"/squarewell" );
+      threshold = in( "threshold", 0.0 );
+      depth     = in( "depth", 0.0 );
     }
 
     string SquareWell::_brief() {
@@ -260,9 +265,9 @@ namespace Faunus {
      * searched for:
      * - `prefix_threshold_lower`
      */
-    SquareWellShifted::SquareWellShifted(InputMap &in, string pfx): SquareWell(in,pfx) {
+    SquareWellShifted::SquareWellShifted(InputMap &in, const string &dir): SquareWell(in,dir) {
       name+=" Shifted";
-      threshold_lower = in.get<double>(prefix+"_threshold_lower", 0, name+" lower threshold (AA)");
+      threshold_lower = in( "threshold_lower", 0.0 );
     }
 
     string SquareWellShifted::_brief() {
@@ -281,16 +286,17 @@ namespace Faunus {
       return o.str();
     }
 
-    SquareWellHydrophobic::SquareWellHydrophobic(InputMap &in, string pfx) : SquareWell(in,pfx) {
+    SquareWellHydrophobic::SquareWellHydrophobic(InputMap &in, const string &dir) : SquareWell(in,dir) {
       name="Hydrophobic " + name;
     }
 
     /**
      * @param in InputMap is scanned for the keyword `softrep_sigma` which should be in angstrom
      */
-    SoftRepulsion::SoftRepulsion(InputMap &in) {
+    SoftRepulsion::SoftRepulsion(InputMap &in, const string &dir) {
       name="Repulsive r6";
-      sigma6 = pow( in.get<double>( "softrep_sigma", 5 ), 6);
+      in.cd ( dir+"/softrep" );
+      sigma6 = pow( in( "sigma", 5.0 ), 6);
     }
 
     string SoftRepulsion::_brief() {
@@ -314,9 +320,10 @@ namespace Faunus {
      * @param in InputMap is scanned for the keyword `lj_eps` and should be in units of kT
      * @param pfx InputMap prefix
      */
-    R12Repulsion::R12Repulsion(InputMap &in, string pfx) : PairPotentialBase(pfx) {
+    R12Repulsion::R12Repulsion(InputMap &in, const string &dir) : PairPotentialBase(dir) {
       name="r12-Repulsion";
-      eps = 4*in(prefix+"_eps", 0.05);
+      in.cd ( dir+"/lj" );
+      eps = 4*in( "eps", 0.05 );
     }
 
     string R12Repulsion::_brief() {
@@ -339,11 +346,11 @@ namespace Faunus {
      * - `depsdt` - temperature dependence of dielectric constant,
      *   \f$ \partial\epsilon_r/\partial T\approx-0.368\f$ for water.
      */
-    Coulomb::Coulomb(InputMap &in, string pfx) : PairPotentialBase(pfx) {
+    Coulomb::Coulomb(InputMap &in, const string &dir) : PairPotentialBase(dir) {
       name="Coulomb";
-      pc::setT ( in.get<double>("temperature", 298.15, "Absolute temperature (K)") );
-      epsilon_r = in.get<double>("epsilon_r",80., "Dielectric constant");
-      depsdt = in.get<double>("depsdt", -0.368, "See documentation") * pc::T() / epsilon_r;
+      in.cd ( dir+"/coulomb" );
+      epsilon_r = in("epsr",80. );
+      depsdt = in("depsdt", -0.368 ) * pc::T() / epsilon_r;
       lB=pc::lB( epsilon_r );
     }
 
@@ -372,8 +379,8 @@ namespace Faunus {
       t("bjerrum", bjerrumLength(), 1e-6);
     }
 
-    CoulombWolf::CoulombWolf(InputMap &in) : Coulomb(in) {
-      double Rc=in.get<double>("coulomb_cut", 10.);
+    CoulombWolf::CoulombWolf(InputMap &in, const string &dir) : Coulomb(in, dir) {
+      double Rc=in( "cutoff", 10. );
       Rcinv=1/Rc;
       Rc2=Rc*Rc;
       name+="Wolf/Yonezawa";
@@ -388,9 +395,9 @@ namespace Faunus {
       return o.str();
     }
 
-    ChargeNonpolar::ChargeNonpolar(InputMap &in) : Coulomb(in) {
+    ChargeNonpolar::ChargeNonpolar(InputMap &in, const string &dir) : Coulomb(in, dir) {
       name="Charge-Nonpolar";
-      c=bjerrumLength()/2*in.get<double>("excess_polarization", -1);
+      c = bjerrumLength()/2 * in("excess_polarization", -1.0);
     }
 
     string ChargeNonpolar::info(char w) {
@@ -406,17 +413,17 @@ namespace Faunus {
      * - `dh_ionicstrength` [mol/l] 
      * - `dh_debyelength` [angstrom] (only if I=0, default)
      */
-    DebyeHuckel::DebyeHuckel(InputMap &in) : Coulomb(in) {
+    DebyeHuckel::DebyeHuckel(InputMap &in, const string &dir) : Coulomb(in, dir) {
       double I;
       const double zero=1e-10;
       name="Debye-Huckel";
       c=8 * lB * pc::pi * pc::Nav / 1e27;
-      I=in.get<double>("dh_ionicstrength",0, "Ionic strength (mol/l)");  // [mol/l]
-      z_count=in.get<double>("dh_countervalency",0, "Counter ion valency");  // [e]
+      I=in( "ionicstrength", 0.0 );  // [mol/l]
+      z_count = in( "countervalency", 0.0 );  // [e]
       k2_count=0;
       k=sqrt( I*c );
       if (k<zero)
-        k=1/in.get<double>("dh_debyelength", 1/zero, "Debye length (AA)"); // [A]
+        k = 1/in( "debyelength", 1.0/zero ); // [A]
     }
 
     string DebyeHuckel::_brief() {
@@ -490,8 +497,6 @@ namespace Faunus {
       }
       return o.str();
     }
-
-    const string Angular::name = "Angle";
 
   } //Potential namespace
 

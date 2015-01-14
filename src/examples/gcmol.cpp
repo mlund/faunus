@@ -7,14 +7,13 @@ typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot;
 
 int main() {
 
-  InputMap mcp( "gcmol.input" );
-  auto js = json::open("gcmol.json");
+  InputMap mcp( "gcmol.json" );
 
   Tspace spc( mcp );
   spc.load( "state", Tspace::RESIZE );
 
   auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp);
-  Move::Propagator<Tspace> mv( js, pot, spc );
+  Move::Propagator<Tspace> mv( mcp, pot, spc );
 
   EnergyDrift sys;
   sys.init( Energy::systemEnergy( spc,pot,spc.p ) );

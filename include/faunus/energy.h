@@ -47,6 +47,7 @@ namespace Faunus {
     template<class Tspace>
       class Energybase {
         protected:
+          string prefix;  // inputmap section
           virtual std::string _info()=0;
           char w; //!< Width of info output
           Tspace* spc;
@@ -65,7 +66,7 @@ namespace Faunus {
 
           inline virtual ~Energybase() {}
 
-          inline Energybase() : w(25), spc(nullptr) {}
+          inline Energybase(const string &pfx="") : prefix(pfx), w(25), spc(nullptr) {}
 
           inline virtual void setSpace(Tspace &s) { spc=&s; } 
 
@@ -260,12 +261,14 @@ namespace Faunus {
           typename Tspace::GeometryType geo;
           Tpairpot pairpot;
 
-          Nonbonded(InputMap &in) : geo(in), pairpot(in) {
-            static_assert(
-                std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
-                "Tpairpot must be a pair potential" );
-            Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
-          }
+          Nonbonded(InputMap &in, const string &dir="hamiltonian")
+            : Tbase(dir+"/nonbonded"), geo(in), pairpot(in, "general") {
+              in.cd ( Tbase::prefix );
+              static_assert(
+                  std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
+                  "Tpairpot must be a pair potential" );
+              Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
+            }
 
           Nonbonded( const json::Tval &js) : geo(js), pairpot(js) {
             Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
@@ -419,13 +422,14 @@ namespace Faunus {
           typename Tspace::GeometryType geo;
           Tpairpot pairpot;
 
-          NonbondedVector(InputMap &in) : geo(in), pairpot(in) {
-            static_assert(
-                std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
-                "Tpairpot must be a pair potential" );
-            Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
-            groupBasedField = in.get<bool>("pol_g2g",false,"Field will exclude own group");
-          }
+          NonbondedVector(InputMap &in, const string &dir="hamiltonian")
+            : Tbase(dir+"/nonbonded"), geo(in), pairpot(in) {
+              static_assert(
+                  std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
+                  "Tpairpot must be a pair potential" );
+              Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
+              groupBasedField = in.get<bool>("pol_g2g",false,"Field will exclude own group");
+            }
 
           void setSpace(Tspace &s) FOVERRIDE {
             geo=s.geo;
@@ -668,10 +672,10 @@ namespace Faunus {
         public:
           bool noPairPotentialCutoff; //!< Set if range of pairpot is longer than rcut (default: false)
 
-          NonbondedCutg2g(InputMap &in) : base(in) {
+          NonbondedCutg2g(InputMap &in, string dir="hamiltonian") : base(in,dir) {
             noPairPotentialCutoff=false;
-            rcut2 = pow(in.get<double>("g2g_cutoff",pc::infty), 2);
-            base::name+=" (g2g cut=" + std::to_string(sqrt(rcut2))
+            rcut2 = pow( in("cutoff_g2g", pc::infty), 2);
+            base::name += " (g2g cut=" + std::to_string(sqrt(rcut2))
               + textio::_angstrom + ")";
           }
 

@@ -7,6 +7,7 @@
 #include <faunus/textio.h>
 #include <faunus/physconst.h>
 #include <faunus/species.h>
+#include <faunus/inputfile.h>
 #include <Eigen/Geometry>
 #endif
 
@@ -46,7 +47,6 @@ namespace Faunus {
       protected:
         RandomTwister<> slp;
         string name;                                        //!< Name of the geometry
-        string jsonsection;                                 //!< json section
         inline int anint(double x) const {
           return int(x>0. ? x+.5 : x-.5);
         }
@@ -64,7 +64,7 @@ namespace Faunus {
         virtual double sqdist(const Point &a, const Point &b) const=0; //!< Squared distance between two points
         virtual Point vdist(const Point&, const Point&)=0;  //!< Distance in vector form
 
-        inline Geometrybase() : jsonsection("general") {}
+        inline Geometrybase() {}
         virtual ~Geometrybase();
     };
 
@@ -84,7 +84,22 @@ namespace Faunus {
         bool setlen(const Point&);              //!< Reset radius (angstrom)
         void setRadius(double);                 //!< Set radius (angstrom)
         Sphere(double);                         //!< Construct from radius (angstrom)
-        Sphere(InputMap&, string="sphere");     //!< Construct from InputMap key \c prefix_radius
+
+        /**
+         * @brief Construct from InputMap
+         *
+         * Keywords in default dir `general` are scanned for,
+         *
+         * Key               | Description
+         * :---------------- | :----------------------
+         * radius`   | Sphere radius [angstrom]
+         */
+        inline Sphere(InputMap &in, const string &dir="general") {
+          in.cd( dir+"/sphere" ); 
+          setRadius(
+              in.get("radius", -1.0, "Spherical container radius (A)") );
+        }
+
         void randompos(Point &);
         void boundary(Point &p) const {};
         bool collision(const Point&, double, collisiontype=BOUNDARY) const;
@@ -97,11 +112,6 @@ namespace Faunus {
 
         void scale(Point&, Point &, const double, const double) const; //!< Linear scaling along radius (NPT ensemble)
 
-        inline Sphere( const json::Tval &js) {
-          name = "sphere";
-          json::Tval v = json::find( js, jsonsection, name );
-          setRadius( json::value(v, "radius", -1.0) );
-        }
     };
 
     /** @brief Cuboid geometry with periodic boundaries
@@ -125,17 +135,30 @@ namespace Faunus {
 
       public:
 
-        Cuboid(InputMap &);
-
-        inline Cuboid( const json::Tval &js ) {
-          name = "cuboid";
-          json::Tval val = json::find(js, jsonsection, name); // note: error if not found!
-          string scaledirstr = json::value<string>( val, "scaledir", "XYZ" );
+        /**
+         * The InputMap is scanned for the following parameters:
+         *
+         * Key               | Description
+         * :---------------- | :-------------------------------------------------------
+         * `cuboid_len`      | Uniform sidelength [angstrom]. If negative, continue to...
+         * `cuboid_xlen`     | x sidelength [angstrom]
+         * `cuboid_ylen`     | y sidelength [angstrom]
+         * `cuboid_zlen`     | z sidelength [angstrom]
+         * `cuboid_scaledir` | Isobaric scaling directions (`XYZ`=isotropic, `XY`=xy only).
+         */
+        inline Cuboid(InputMap &in, const string &dir="general") {
+          name="cuboid";
+          in.cd( dir+"/"+name );
+          string scaledirstr = in.get<string>("scaledir","XYZ");
           if (scaledirstr=="XY")
             scaledir=XY;
           else
             scaledir=XYZ;
-          len << json::value<string>( val, "xyzlen", "0 0 0" );
+          double cubelen=in.get( "len", -1.0 );
+          if (cubelen<1e-6) {
+            len << in.get<string>( "xyzlen", "0 0 0" );
+          } else
+            len.x()=len.y()=len.z()=cubelen;
           setlen(len);
         }
 
@@ -201,9 +224,9 @@ namespace Faunus {
      */
     class Cuboidslit : public Cuboid {
       public:
-        Cuboidslit(InputMap &);
-
-        inline Cuboidslit( const json::Tval &js ) : Cuboid( js ) {}
+        Cuboidslit(InputMap &in, const string &dir="general") : Cuboid(in,dir) {
+          name="Cuboid XY-periodicity";
+        }
 
         inline double sqdist(const Point &a, const Point &b) const {
           double dx=std::abs(a.x()-b.x());
@@ -258,7 +281,7 @@ namespace Faunus {
       public:
         Point len;                     //!< Dummy
         Cylinder(double, double);      //!< Construct from length and radius
-        Cylinder(InputMap &);          //!< Construct from inputmap
+        Cylinder(InputMap&, const string& dir="general"); //!< Construct from inputmap
         bool setlen(const Point&);     //!< Set length via vector (dummy function)
         void randompos(Point &);
         void boundary(Point &) const;
@@ -269,12 +292,6 @@ namespace Faunus {
         inline Point vdist(const Point &a, const Point &b) FOVERRIDE {
           return a-b;
         }
-
-        inline Cylinder( const json::Tval &js ) {
-          name = "cylinder";
-          auto i = json::find( js, jsonsection, name );
-          init( json::value(i, "radius", 0.0), json::value(i, "length", 0.0));
-        }
     };
 
     /**
@@ -283,9 +300,7 @@ namespace Faunus {
     class PeriodicCylinder : public Cylinder {
       public:
         PeriodicCylinder(double, double);
-        PeriodicCylinder(InputMap&);
-
-        inline PeriodicCylinder( const json::Tval &js ) : Cylinder(js) {};
+        PeriodicCylinder(InputMap&, const string& dir="general");
 
         void boundary(Point&) const;
 

@@ -839,7 +839,7 @@ namespace Faunus {
             protected:
               double _lB;
             public:
-              IonDipole(InputMap &in) {
+              IonDipole(InputMap &in, const string &dir="") {
                 pc::setT ( in.get<double>("temperature", 298.15, "Absolute temperature (K)") );
                 double epsilon_r = in.get<double>("epsilon_r",80., "Dielectric constant");
                 _lB=pc::lB( epsilon_r );
@@ -878,13 +878,9 @@ namespace Faunus {
                 _lB = pc::lB(epsilon_r);
               }
               
-              DipoleDipole(InputMap &in) {
+              DipoleDipole(InputMap &in, const string &dir="") {
                 name="Dipole-dipole";
-                pc::setT ( in.get<double>("temperature", 298.15,
-                      "Absolute temperature (K)") );
-                double epsilon_r = in.get<double>("epsilon_r",80.,
-                    "Dielectric constant");
-                _lB = pc::lB(epsilon_r);
+                _lB = Coulomb(in,dir).bjerrumLength();
               }
               template<class Tparticle>
                 double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
